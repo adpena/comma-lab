@@ -59,3 +59,5 @@ Track B canonical floor: 2.12 @ 524x394 SVT-AV1 p0 CRF34 film-grain22 lanczos+un
 
 ## WORKING MEMORY
 [2026-04-06T18:16:32.820Z] 2026-04-06 site/frontend pass: added generated experiment manifest, code callouts, browser-preview comparison media with synced controls, contest/about/last-updated context, GitHub link (adpena/comma-lab), comparison posters, and mobile-safe horizontal scroll for the frontier table. Verified with Playwright desktop+iPhone screenshots against reports/graphs/site/index.html.
+
+[2026-04-06T18:20:27.646Z] 2026-04-06 deployed writeup/frontend pass preview: https://d911022c.comma-lab.pages.dev (commit 572122b). Includes contest/about/last-updated context, experiment manifest, code callouts, comparison media with posters + sync controls, and mobile-safe frontier table scrolling.

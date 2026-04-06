@@ -311,6 +311,11 @@
       "category": "deploy",
       "content": "Landing page now includes explicit challenge context, repo identity, localized last-updated metadata, GitHub link, synced comparison media, posters, and mobile-safe table scrolling. Keep tone factual and understated; avoid marketing language.",
       "timestamp": "2026-04-06T18:16:32.841Z"
+    },
+    {
+      "category": "deploy",
+      "content": "Preview deploy for writeup/frontend pass: https://d911022c.comma-lab.pages.dev from commit 572122b. Local desktop and iPhone screenshots were checked before deploy.",
+      "timestamp": "2026-04-06T18:20:27.651Z"
     }
   ]
 }
