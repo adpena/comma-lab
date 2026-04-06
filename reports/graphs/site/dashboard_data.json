@@ -558,22 +558,22 @@
   ],
   "key_turning_points": [
     {
-      "label": "First honest floor",
+      "label": "Initial honest floor",
       "run_id": "robust_current-baseline-cpu-2026-04-03",
       "score": 4.06
     },
     {
-      "label": "First big win",
+      "label": "512x384 / crf23",
       "run_id": "robust_current-medium23-cpu-2026-04-03",
       "score": 3.62
     },
     {
-      "label": "ROI failure",
+      "label": "ROI branch rejection",
       "run_id": "robust_current-dynamic-main-roi-cpu-2026-04-05",
       "score": 4.47
     },
     {
-      "label": "Current best floor",
+      "label": "Current floor",
       "run_id": "robust_current-av1-524x394-colorspace-hardening-promoted-cpu-2026-04-06",
       "score": 2.12
     }

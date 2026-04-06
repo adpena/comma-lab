@@ -33,6 +33,8 @@ Track B canonical floor: 2.12 @ 524x394 SVT-AV1 p0 CRF34 film-grain22 lanczos+un
 
 - [2026-04-06T17:42:34.610074+00:00] 2026-04-06 frontend cleanup iteration: reduced card density, simplified the hero to a brief, clarified scatter semantics, omitted the 97.45 outlier from the main plot, trimmed the page to overview scope, and redeployed. Latest Wrangler-confirmed preview: https://287dff0d.comma-lab.pages.dev .
 
+- [2026-04-06T17:44:35.179899+00:00] 2026-04-06 frontend cleanup iteration: further reduced chrome, removed remaining winner-language labels, and tightened the brief-style landing page. Latest Wrangler-confirmed preview: https://131d3d84.comma-lab.pages.dev .
+
 ## MANUAL
 - Persistent lab memory:
   - Only Track A / exact_current is explicitly non-rule-faithful.

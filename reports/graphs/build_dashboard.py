@@ -166,10 +166,10 @@ def main() -> int:
     ]
 
     key_turning_points = [
-        {'label': 'First honest floor', 'run_id': 'robust_current-baseline-cpu-2026-04-03', 'score': 4.06},
-        {'label': 'First big win', 'run_id': 'robust_current-medium23-cpu-2026-04-03', 'score': 3.62},
-        {'label': 'ROI failure', 'run_id': 'robust_current-dynamic-main-roi-cpu-2026-04-05', 'score': 4.47},
-        {'label': 'Current best floor', 'run_id': best['run_id'], 'score': best['current_workflow_score']},
+        {'label': 'Initial honest floor', 'run_id': 'robust_current-baseline-cpu-2026-04-03', 'score': 4.06},
+        {'label': '512x384 / crf23', 'run_id': 'robust_current-medium23-cpu-2026-04-03', 'score': 3.62},
+        {'label': 'ROI branch rejection', 'run_id': 'robust_current-dynamic-main-roi-cpu-2026-04-05', 'score': 4.47},
+        {'label': 'Current floor', 'run_id': best['run_id'], 'score': best['current_workflow_score']},
     ]
 
     local_frontier_run_ids = [
@@ -790,7 +790,7 @@ score: 2.12</div>
       <p class="muted">A branch view of the measured search path: x265 reductions, ROI failures, the AV1 byte-layout failure, and the later hardening step that moved the floor to 2.12.</p>
       <div class="legend-row" aria-label="Lineage legend">
         <span class="legend-key"><span class="legend-dot" style="background:#2ad4a0"></span>x265 / earlier promotions</span>
-        <span class="legend-key"><span class="legend-dot" style="background:#8ab4ff"></span>current best floor</span>
+        <span class="legend-key"><span class="legend-dot" style="background:#8ab4ff"></span>current floor</span>
         <span class="legend-key"><span class="legend-dot" style="background:#f6c14b"></span>diagnostic bug node</span>
         <span class="legend-key"><span class="legend-dot" style="background:#ff6b6b"></span>rejection / failed branch</span>
       </div>
