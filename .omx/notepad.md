@@ -55,3 +55,7 @@ Track B canonical floor: 2.12 @ 524x394 SVT-AV1 p0 CRF34 film-grain22 lanczos+un
     - reports/promotion_reviews/2026-04-06-av1-colorspace-hardening-promotion-review.md
   - FFmpeg / hardening review: reports/ffmpeg_path_review.md
   - Canonical Pages URL: https://comma-lab.pages.dev
+
+
+## WORKING MEMORY
+[2026-04-06T18:16:32.820Z] 2026-04-06 site/frontend pass: added generated experiment manifest, code callouts, browser-preview comparison media with synced controls, contest/about/last-updated context, GitHub link (adpena/comma-lab), comparison posters, and mobile-safe horizontal scroll for the frontier table. Verified with Playwright desktop+iPhone screenshots against reports/graphs/site/index.html.

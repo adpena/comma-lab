@@ -57,6 +57,20 @@ python3 -m src.comma_lab.cli package-submission robust_current \
 
 This uses the requested challenge root for packaging instead of silently falling back to the default workspace clone.
 
+## one-command site rebuild
+
+```bash
+just rebuild-site
+```
+
+This refreshes:
+
+- canonical structured experiment manifest
+- code callouts
+- dashboard JSON / HTML
+- browser-preview comparison media
+- static site export
+
 ## required report fields
 
 - track

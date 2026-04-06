@@ -22,6 +22,10 @@
       "purpose": "latest senior-engineer promotion review"
     },
     {
+      "path": "reports/graphs/code_callouts.md",
+      "purpose": "small source snippets tied to the major measured changes"
+    },
+    {
       "path": "reports/graphs/experiment_journal.md",
       "purpose": "hypothesis / estimate / result / reflection ledger"
     },
@@ -54,6 +58,10 @@
       "purpose": "claim-to-evidence map"
     },
     {
+      "path": "reports/graphs/experiment_manifest.json",
+      "purpose": "canonical structured experiment manifest for downstream reuse"
+    },
+    {
       "path": "reports/graphs/release_checklist.md",
       "purpose": "completion checklist"
     },
@@ -68,6 +76,10 @@
     {
       "path": "submissions/robust_current/config.av1-2.12.env",
       "purpose": "named snapshot of the current promoted AV1 configuration"
+    },
+    {
+      "path": "reports/graphs/media/comparison_manifest.json",
+      "purpose": "media generation manifest for original vs inflated comparison assets"
     }
   ],
   "turning_points": [

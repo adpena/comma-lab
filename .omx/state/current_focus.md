@@ -20,3 +20,9 @@
 ## immediate next step
 
 The highest-value next move is writeup-first: the repo now has a production-hardening win that materially improved score, which is unusually strong Best Write-up material.
+
+## writeup / site pass in flight
+
+- The site now exposes the contest context, maintainer/repo identity, and a visible localized last-updated stamp near the top of the brief.
+- Repro/writeup assets are now generated into durable site artifacts: experiment manifest, code callouts, browser-preview comparison media, and a single refresh entrypoint.
+- The current frontend focus is readability and restraint: less dashboard chrome, cleaner context, video comparison with sync controls, and mobile-safe horizontal scrolling for dense tables.

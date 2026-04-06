@@ -6,6 +6,7 @@ import shutil
 
 ROOT = Path(__file__).resolve().parent
 SITE = ROOT / 'site'
+MEDIA = ROOT / 'media'
 FILES = [
     ('index.html', 'index.html'),
     ('dashboard_data.json', 'dashboard_data.json'),
@@ -14,6 +15,7 @@ FILES = [
     ('experiment_graph.json', 'experiment_graph.json'),
     ('promotion_accounting.md', 'promotion_accounting.md'),
     ('promotion_review_latest.md', 'promotion_review_latest.md'),
+    ('code_callouts.md', 'code_callouts.md'),
     ('writeup_outline.md', 'writeup_outline.md'),
     ('final_writeup_draft.md', 'final_writeup_draft.md'),
     ('experiment_journal.md', 'experiment_journal.md'),
@@ -25,6 +27,7 @@ FILES = [
     ('judges_one_pager.md', 'judges_one_pager.md'),
     ('evidence_index.md', 'evidence_index.md'),
     ('asset_manifest.json', 'asset_manifest.json'),
+    ('experiment_manifest.json', 'experiment_manifest.json'),
     ('frontend_audit.md', 'frontend_audit.md'),
 ]
 
@@ -33,6 +36,12 @@ for src_name, dest_name in FILES:
     src = ROOT / src_name
     if src.exists():
         shutil.copy2(src, SITE / dest_name)
+
+if MEDIA.exists():
+    media_dst = SITE / 'media'
+    if media_dst.exists():
+        shutil.rmtree(media_dst)
+    shutil.copytree(MEDIA, media_dst)
 
 (SITE / '_headers').write_text('''
 /*
@@ -49,6 +58,10 @@ for src_name, dest_name in FILES:
 
 /*.md
   Content-Type: text/markdown; charset=utf-8
+  Cache-Control: public, max-age=300
+
+/*.mp4
+  Content-Type: video/mp4
   Cache-Control: public, max-age=300
 
 /index.html

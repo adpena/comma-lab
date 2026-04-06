@@ -1,0 +1,22 @@
+{
+  "source_video": "workspace/upstream/comma_video_compression_challenge/videos/0.mkv",
+  "submission_archive": "submissions/robust_current/archive.zip",
+  "clip_start_sec": 12,
+  "clip_duration_sec": 6,
+  "zoom_crop": {
+    "x": 372,
+    "y": 286,
+    "w": 420,
+    "h": 316
+  },
+  "assets": [
+    "original_preview.mp4",
+    "inflated_preview.mp4",
+    "original_zoom_preview.mp4",
+    "inflated_zoom_preview.mp4",
+    "original_poster.jpg",
+    "inflated_poster.jpg",
+    "original_zoom_poster.jpg",
+    "inflated_zoom_poster.jpg"
+  ]
+}

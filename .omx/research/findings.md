@@ -78,3 +78,20 @@ If AV1 + ROI is revisited, the required implementation plan is now explicitly re
 5. fresh scorer-backed evidence that it actually helps
 
 This remains speculative until those steps are complete and measured.
+
+## 2026-04-06 writeup system / frontend pass
+
+### what changed
+
+- Added a generated experiment manifest for durable reuse.
+- Added generated code callouts tied to measured findings.
+- Added reproducibility commands in `justfile` plus `docs/repro_checklist.md`.
+- Added browser-preview comparison media with synced full-frame and crop-zoom playback controls.
+- Added top-of-page contest context, repo identity, GitHub link, and localized last-updated metadata.
+- Added poster images for the comparison videos and mobile-safe horizontal scrolling for the local-frontier table.
+
+### interpretation
+
+- The writeup is now easier to audit because the evidence surfaces and reproduction path are generated, not hand-maintained.
+- The landing page is now closer to a technical brief than a generic dashboard.
+- Remaining frontend work is refinement, not missing infrastructure.

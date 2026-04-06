@@ -51,6 +51,14 @@
     .muted { color: var(--muted); }
     .subnav { display:flex; gap:14px; flex-wrap:wrap; font-size: 13px; color: var(--muted); }
     .subnav a { text-decoration: none; }
+    .context-strip { display:grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 0; margin-top: 12px; border-top: 1px solid var(--stroke); border-bottom: 1px solid var(--stroke); }
+    .context-item { padding: 16px 16px 18px; }
+    .context-item + .context-item { border-left: 1px solid var(--stroke); }
+    .context-label { color: var(--muted); font-size: 11px; text-transform: uppercase; letter-spacing: 0.08em; }
+    .context-copy { margin: 8px 0 0; color: var(--soft); font-size: 13px; line-height: 1.6; max-width: 38ch; }
+    .context-meta { margin: 8px 0 0; color: var(--muted); font-size: 12px; }
+    .context-links { display:flex; flex-wrap:wrap; gap: 10px 14px; margin-top: 8px; color: var(--muted); font-size: 12px; }
+    .context-links a { text-decoration: none; }
     .summary-shell { margin-top: 18px; padding: 4px 0 0; border-top: 1px solid var(--stroke); border-bottom: 1px solid var(--stroke); }
     .summary-grid { display:grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 0; border-top: 1px solid var(--stroke); border-bottom: 1px solid var(--stroke); }
     .summary-stat { padding: 14px 16px; }
@@ -69,6 +77,8 @@
     table { width: 100%; border-collapse: collapse; }
     th, td { border-bottom: 1px solid var(--stroke); padding: 10px 8px; text-align: left; vertical-align: top; }
     th { color: var(--muted); font-size: 12px; text-transform: uppercase; letter-spacing: 0.08em; }
+    .table-wrap { overflow-x: auto; -webkit-overflow-scrolling: touch; }
+    .table-wrap table { min-width: 760px; }
     ul { margin: 0; padding-left: 18px; }
     li + li { margin-top: 8px; }
     svg { width: 100%; height: auto; background: #0b0f14; border: 1px solid var(--stroke); border-radius: 10px; }
@@ -96,13 +106,28 @@
     .metric-delta { color: var(--muted); font-size: 12px; margin-top: 6px; }
     .frontier-callout { color: var(--soft); font-size: 14px; line-height: 1.6; margin: 0 0 14px; }
     .footnote { color: var(--muted); font-size: 13px; }
+    .table-hint { margin-top: 8px; color: var(--muted); font-size: 12px; }
     .axis-label { fill: var(--muted); font-size: 12px; letter-spacing: 0.02em; }
     .axis-tick { fill: var(--muted); font-size: 11px; }
     .config-line { margin: 10px 0 0; color: var(--muted); font: 500 12px/1.6 ui-monospace, SFMono-Regular, Menlo, monospace; }
     .list-tight { margin: 0; padding-left: 18px; }
     .list-tight li + li { margin-top: 6px; }
-    @media (max-width: 980px) { .two { grid-template-columns: 1fr 1fr; } .summary-grid { grid-template-columns: 1fr; } .summary-stat + .summary-stat { border-left: 0; border-top: 1px solid var(--stroke); } }
-    @media (max-width: 720px) { .two, .summary-grid { grid-template-columns: 1fr; } .summary-stat + .summary-stat { border-left: 0; border-top: 1px solid var(--stroke); } .wrap { padding-inline: 16px; } h1 { font-size: clamp(36px, 15vw, 64px); } }
+    .compare-head { display:flex; justify-content:space-between; align-items:flex-end; gap: 16px; flex-wrap: wrap; }
+    .compare-controls { display:flex; gap:10px; flex-wrap:wrap; align-items:center; margin-top: 12px; }
+    .compare-controls button { background:#11161d; color:var(--soft); border:1px solid var(--stroke); border-radius:999px; padding:8px 12px; font:inherit; cursor:pointer; }
+    .compare-controls button.is-active { border-color: var(--accent); color: var(--text); }
+    .compare-controls input[type="range"] { width: min(320px, 50vw); }
+    .compare-grid { display:grid; grid-template-columns: 1fr 1fr; gap:16px; margin-top: 16px; }
+    .compare-pane { border:1px solid var(--stroke); border-radius:10px; padding:10px; background:#0b0f14; }
+    .compare-pane h3 { margin: 0 0 8px; font-size: 13px; letter-spacing: -0.01em; }
+    .compare-pane video { width:100%; display:block; border-radius:8px; background:#000; }
+    .compare-pane p { margin: 8px 0 0; color: var(--muted); font-size: 12px; }
+    .compare-mode { display:none; }
+    .compare-mode.is-active { display:block; }
+    .footer-meta { display:flex; justify-content:space-between; gap: 16px; flex-wrap:wrap; margin-top: 18px; padding-top: 16px; border-top: 1px solid var(--stroke); color: var(--muted); font-size: 12px; }
+    .footer-meta a { text-decoration: none; }
+    @media (max-width: 980px) { .two { grid-template-columns: 1fr 1fr; } .context-strip, .summary-grid { grid-template-columns: 1fr; } .context-item + .context-item, .summary-stat + .summary-stat { border-left: 0; border-top: 1px solid var(--stroke); } }
+    @media (max-width: 720px) { .two, .context-strip, .summary-grid, .compare-grid { grid-template-columns: 1fr; } .context-item + .context-item, .summary-stat + .summary-stat { border-left: 0; border-top: 1px solid var(--stroke); } .wrap { padding-inline: 16px; } h1 { font-size: clamp(36px, 15vw, 64px); } .compare-controls input[type="range"] { width: 100%; } }
     @media (prefers-reduced-motion: reduce) { html { scroll-behavior: auto; } * { animation: none !important; transition: none !important; } }
   </style>
 </head>
@@ -112,7 +137,7 @@
     <header class="hero" aria-labelledby="site-title">
       <div class="eyebrow">comma-lab</div>
       <h1 id="site-title">comma-lab</h1>
-      <p class="lede">Scorer-backed compression experiments for the comma video challenge. This page is the brief: current state, search path, and supporting references.</p>
+      <p class="lede">Scorer-backed compression experiments for the comma.ai video compression challenge. This page is the brief: current state, search path, and supporting evidence.</p>
       <nav class="subnav" aria-label="Primary resources">
         <a href="./judges_one_pager.md">Judges one-pager</a>
         <a href="./submission_packet.md">Submission packet</a>
@@ -122,13 +147,36 @@
     </header>
 
   <main id="content">
+    <section class="context-strip" aria-label="Project context">
+      <div class="context-item">
+        <div class="context-label">Contest</div>
+        <p class="context-copy">comma.ai’s public challenge asks entrants to ship an <code>archive.zip</code> that inflates to video. The published score combines archive bytes, SegNet distortion, and PoseNet distortion on the public test clip.</p>
+        <div class="context-links">
+          <a href="https://github.com/commaai/comma_video_compression_challenge">Official challenge repo</a>
+        </div>
+      </div>
+      <div class="context-item">
+        <div class="context-label">Who we are</div>
+        <p class="context-copy">comma-lab is a public experiment log and submission repo maintained by Alejandro Pena. It keeps the literal <code>current_workflow</code> path separate from the stricter <code>rule_faithful</code> accounting path.</p>
+        <div class="context-links">
+          <a href="https://github.com/adpena/comma-lab">adpena/comma-lab</a>
+          <a href="./experiment_manifest.json">Experiment manifest</a>
+        </div>
+      </div>
+      <div class="context-item">
+        <div class="context-label">Last updated</div>
+        <p class="context-copy">Apr 6, 2026, 1:18 PM CDT</p>
+        <p class="context-meta">Generated from repository state plus scorer-backed artifacts stored in this repo.</p>
+      </div>
+    </section>
+
     <section class="summary-shell" aria-label="Current state">
       <div class="summary-grid">
         <div class="summary-stat"><div class="summary-label">Track B current_workflow</div><div class="summary-value">2.12</div><div class="summary-meta">864,486 bytes</div></div>
         <div class="summary-stat"><div class="summary-label">Track B rule_faithful</div><div class="summary-value">2.142</div><div class="summary-meta">897,745 bytes</div></div>
-        <div class="summary-stat"><div class="summary-label">Run ledger</div><div class="summary-value">35</div><div class="summary-meta">10 promotions / 15 rejections</div></div>
+        <div class="summary-stat"><div class="summary-label">Delta vs prior floor</div><div class="summary-value">-0.06</div><div class="summary-meta">+31 bytes</div></div>
       </div>
-      <p class="footnote">Track A remains separate: `current_workflow` 0.00 at 167 bytes. It is preserved for transparency and is not part of the honest promotion path.</p>
+      <p class="footnote">Track A remains separate: `current_workflow` 0.00 at 167 bytes. The robust run ledger currently contains 35 measured runs, 10 promotions, and 15 explicit rejections.</p>
       <p class="config-line" aria-label="Current promoted method">robust_current · libsvtav1 · 524x394 · film-grain=22 · lanczos/lanczos · rgb24(pc)</p>
     </section>
 
@@ -169,6 +217,50 @@
       <p class="footnote">This graph is selective by design. It shows the runs that changed the operating point or changed the lab’s understanding of the evaluator.</p>
     </section>
 
+    <section class="panel" aria-labelledby="compare-title">
+      <div class="compare-head">
+        <div>
+          <h2 id="compare-title">Original vs inflated output</h2>
+          <p class="muted">Browser preview assets for inspection only. Official scoring still comes from the scorer-backed reports.</p>
+        </div>
+        <div class="compare-controls" aria-label="Comparison controls">
+          <button type="button" class="is-active" data-compare-mode="full">full frame</button>
+          <button type="button" data-compare-mode="zoom">crop zoom</button>
+          <button type="button" data-compare-toggle>play / pause</button>
+          <input type="range" min="0" max="100" value="0" step="0.1" data-compare-scrub aria-label="Comparison scrubber" />
+        </div>
+      </div>
+      <div class="compare-mode is-active" data-compare-panel="full">
+        <div class="compare-grid">
+          <figure class="compare-pane">
+            <h3>Original</h3>
+            <video data-compare-video preload="metadata" muted playsinline poster="./media/original_poster.jpg" src="./media/original_preview.mp4"></video>
+            <p>Source contest video excerpt.</p>
+          </figure>
+          <figure class="compare-pane">
+            <h3>Inflated output</h3>
+            <video data-compare-video preload="metadata" muted playsinline poster="./media/inflated_poster.jpg" src="./media/inflated_preview.mp4"></video>
+            <p>Current promoted inflate path rendered to a browser preview.</p>
+          </figure>
+        </div>
+      </div>
+      <div class="compare-mode" data-compare-panel="zoom">
+        <div class="compare-grid">
+          <figure class="compare-pane">
+            <h3>Original zoom</h3>
+            <video data-compare-video preload="metadata" muted playsinline poster="./media/original_zoom_poster.jpg" src="./media/original_zoom_preview.mp4"></video>
+            <p>Crop focused on task-relevant structure.</p>
+          </figure>
+          <figure class="compare-pane">
+            <h3>Inflated zoom</h3>
+            <video data-compare-video preload="metadata" muted playsinline poster="./media/inflated_zoom_poster.jpg" src="./media/inflated_zoom_preview.mp4"></video>
+            <p>Same crop after compression and inflate.</p>
+          </figure>
+        </div>
+      </div>
+      <p class="footnote">Compression: 864,486 bytes. Distortion: PoseNet 0.09384175, SegNet 0.00575313. Total score: 2.12.</p>
+    </section>
+
     <section class="panel" aria-labelledby="mechanism-title">
       <h2 id="mechanism-title">Walkthrough</h2>
       <ol class="walkthrough">
@@ -199,13 +291,44 @@
       </ol>
     </section>
 
+    <section class="panel" aria-labelledby="explain-title">
+      <h2 id="explain-title">Why 2.12 beat 2.18</h2>
+      <svg viewBox="0 0 920 230" role="img" aria-label="Comparison between the prior 2.18 floor and the current 2.12 floor">
+        <rect x="40" y="28" width="250" height="56" rx="10" ry="10" fill="#0b0f14" stroke="rgba(255,255,255,0.10)" />
+        <text x="56" y="50" fill="#9aa6b2" font-size="12">prior floor</text>
+        <text x="56" y="72" fill="#f5f7fb" font-size="24" font-weight="700">2.18</text>
+        <text x="140" y="72" fill="#9aa6b2" font-size="13">864,455 bytes</text>
+        <text x="56" y="92" fill="#9aa6b2" font-size="12">implicit color handling</text>
+
+        <path d="M 318 56 L 398 56" stroke="#8ab4ff" stroke-width="2" />
+        <circle cx="398" cy="56" r="3.5" fill="#8ab4ff" />
+
+        <rect x="430" y="28" width="320" height="56" rx="10" ry="10" fill="#0b0f14" stroke="rgba(255,255,255,0.10)" />
+        <text x="446" y="50" fill="#9aa6b2" font-size="12">current floor</text>
+        <text x="446" y="72" fill="#f5f7fb" font-size="24" font-weight="700">2.12</text>
+        <text x="530" y="72" fill="#9aa6b2" font-size="13">864,486 bytes</text>
+        <text x="446" y="92" fill="#9aa6b2" font-size="12">explicit bt709/tv encode tags · explicit rgb24(pc) decode</text>
+
+        <line x1="40" y1="116" x2="880" y2="116" stroke="rgba(255,255,255,0.08)" />
+        <text x="48" y="136" fill="#9aa6b2" font-size="11" text-transform="uppercase">metric</text>
+        <text x="270" y="136" fill="#9aa6b2" font-size="11">prior</text>
+        <text x="440" y="136" fill="#9aa6b2" font-size="11">current</text>
+        <text x="640" y="136" fill="#9aa6b2" font-size="11">delta</text>
+        <text x="48" y="114" fill="#9aa6b2" font-size="12">current_workflow score</text><text x="270" y="114" fill="#f5f7fb" font-size="14">2.18</text><text x="440" y="114" fill="#8ab4ff" font-size="14">2.12</text><text x="640" y="114" fill="#2ad4a0" font-size="14">-0.06</text><text x="48" y="142" fill="#9aa6b2" font-size="12">archive bytes</text><text x="270" y="142" fill="#f5f7fb" font-size="14">864,455</text><text x="440" y="142" fill="#8ab4ff" font-size="14">864,486</text><text x="640" y="142" fill="#ff6b6b" font-size="14">+31</text><text x="48" y="170" fill="#9aa6b2" font-size="12">PoseNet distortion</text><text x="270" y="170" fill="#f5f7fb" font-size="14">0.10656800</text><text x="440" y="170" fill="#8ab4ff" font-size="14">0.09384175</text><text x="640" y="170" fill="#2ad4a0" font-size="14">-0.01272625</text><text x="48" y="198" fill="#9aa6b2" font-size="12">SegNet distortion</text><text x="270" y="198" fill="#f5f7fb" font-size="14">0.00569617</text><text x="440" y="198" fill="#8ab4ff" font-size="14">0.00575313</text><text x="640" y="198" fill="#ff6b6b" font-size="14">+0.00005696</text>
+      </svg>
+      <p class="footnote">The bytes barely moved. The score change came primarily from lower PoseNet distortion.</p>
+    </section>
+
     <section class="panel" aria-labelledby="frontier-title">
       <h2 id="frontier-title">Local neighborhood</h2>
       <p class="frontier-callout">This table isolates the local AV1 neighborhood around the promoted floor. It shows which nearby changes improved the result and which did not.</p>
-      <table>
-        <thead><tr><th scope="col">Run</th><th scope="col">Changed axis</th><th scope="col">Score</th><th scope="col">Bytes</th><th scope="col">Δ score</th><th scope="col">Δ bytes</th><th scope="col">Verdict</th></tr></thead>
-        <tbody><tr><td>robust_current-av1-524x394-rgb24-promoted-cpu-2026-04-05</td><td>crf 33</td><td>2.20</td><td>920,457</td><td></td><td></td><td>promoted</td></tr><tr><td>robust_current-av1-524x394-crf34-promoted-cpu-2026-04-06</td><td>crf 34</td><td>2.19</td><td>864,455</td><td>-0.01</td><td>-56,002</td><td>promoted</td></tr><tr><td>robust_current-av1-524x394-crf35-rejected-cpu-2026-04-06</td><td>crf 35</td><td>2.21</td><td>808,036</td><td>+0.02</td><td>-56,419</td><td>rejected</td></tr><tr><td>robust_current-av1-524x394-unsharp030-rejected-cpu-2026-04-06</td><td>postfilter unsharp=9:9:0.30:9:9:0.0</td><td>2.20</td><td>864,455</td><td>-0.01</td><td>+56,419</td><td>rejected</td></tr><tr><td>robust_current-av1-524x394-filmgrain0-rejected-cpu-2026-04-06</td><td>film-grain 0</td><td>3.33</td><td>719,096</td><td>+1.13</td><td>-145,359</td><td>rejected</td></tr><tr><td>robust_current-av1-522x392-rejected-cpu-2026-04-06</td><td>geometry 522x392</td><td>2.23</td><td>862,238</td><td>+0.04</td><td>-2,217</td><td>rejected</td></tr><tr><td>robust_current-av1-524x394-upscale-lanczos-promoted-cpu-2026-04-06</td><td>upscale lanczos</td><td>2.18</td><td>864,455</td><td>-0.01</td><td>+0</td><td>promoted</td></tr><tr><td>robust_current-av1-524x394-colorspace-hardening-promoted-cpu-2026-04-06</td><td>explicit bt709/tv -&gt; rgb24(pc)</td><td>2.12</td><td>864,486</td><td>-0.06</td><td>+31</td><td>promoted</td></tr></tbody>
-      </table>
+      <div class="table-wrap">
+        <table>
+          <thead><tr><th scope="col">Variant</th><th scope="col">Changed axis</th><th scope="col">Score</th><th scope="col">Bytes</th><th scope="col">Δ score</th><th scope="col">Δ bytes</th><th scope="col">Verdict</th></tr></thead>
+          <tbody><tr><td><span title="robust_current-av1-524x394-rgb24-promoted-cpu-2026-04-05">crf 33</span></td><td>crf 33</td><td>2.20</td><td>920,457</td><td></td><td></td><td>promoted</td></tr><tr><td><span title="robust_current-av1-524x394-crf34-promoted-cpu-2026-04-06">crf 34</span></td><td>crf 34</td><td>2.19</td><td>864,455</td><td>-0.01</td><td>-56,002</td><td>promoted</td></tr><tr><td><span title="robust_current-av1-524x394-crf35-rejected-cpu-2026-04-06">crf 35</span></td><td>crf 35</td><td>2.21</td><td>808,036</td><td>+0.02</td><td>-56,419</td><td>rejected</td></tr><tr><td><span title="robust_current-av1-524x394-unsharp030-rejected-cpu-2026-04-06">unsharp 0.30</span></td><td>postfilter unsharp=9:9:0.30:9:9:0.0</td><td>2.20</td><td>864,455</td><td>-0.01</td><td>+56,419</td><td>rejected</td></tr><tr><td><span title="robust_current-av1-524x394-filmgrain0-rejected-cpu-2026-04-06">film-grain 0</span></td><td>film-grain 0</td><td>3.33</td><td>719,096</td><td>+1.13</td><td>-145,359</td><td>rejected</td></tr><tr><td><span title="robust_current-av1-522x392-rejected-cpu-2026-04-06">522x392</span></td><td>geometry 522x392</td><td>2.23</td><td>862,238</td><td>+0.04</td><td>-2,217</td><td>rejected</td></tr><tr><td><span title="robust_current-av1-524x394-upscale-lanczos-promoted-cpu-2026-04-06">lanczos upscale</span></td><td>upscale lanczos</td><td>2.18</td><td>864,455</td><td>-0.01</td><td>+0</td><td>promoted</td></tr><tr><td><span title="robust_current-av1-524x394-colorspace-hardening-promoted-cpu-2026-04-06">color hardening</span></td><td>explicit bt709/tv -&gt; rgb24(pc)</td><td>2.12</td><td>864,486</td><td>-0.06</td><td>+31</td><td>promoted</td></tr></tbody>
+        </table>
+      </div>
+      <p class="table-hint">On narrow screens, swipe horizontally to inspect the full table.</p>
     </section>
 
     <section class="panel">
@@ -217,6 +340,8 @@
             <li><a href="./submission_packet.md">Submission packet</a></li>
             <li><a href="./promotion_review_latest.md">Promotion review</a></li>
             <li><a href="./promotion_accounting.md">Promotion accounting</a></li>
+            <li><a href="./code_callouts.md">Code callouts</a></li>
+            <li><a href="./experiment_manifest.json">Experiment manifest</a></li>
             <li><a href="./ffmpeg_path_review.md">ffmpeg path review</a></li>
             <li><a href="./experiment_journal.md">Experiment journal</a></li>
             <li><a href="./evidence_index.md">Evidence index</a></li>
@@ -227,7 +352,77 @@
         </div>
       </div>
     </section>
+    <footer class="footer-meta" aria-label="Site metadata">
+      <span>Last updated Apr 6, 2026, 1:18 PM CDT</span>
+      <span><a href="https://github.com/adpena/comma-lab">GitHub</a> · <a href="https://github.com/commaai/comma_video_compression_challenge">Challenge</a> · <a href="https://comma-lab.pages.dev/">Canonical site</a></span>
+    </footer>
   </main>
 </div>
+<script>
+(() => {
+  const modeButtons = Array.from(document.querySelectorAll('[data-compare-mode]'));
+  const panels = Array.from(document.querySelectorAll('[data-compare-panel]'));
+  const videos = Array.from(document.querySelectorAll('[data-compare-video]'));
+  const toggle = document.querySelector('[data-compare-toggle]');
+  const scrub = document.querySelector('[data-compare-scrub]');
+
+  const activeVideos = () => videos.filter(v => v.closest('.compare-mode')?.classList.contains('is-active'));
+
+  const syncCurrentTime = (time) => {
+    activeVideos().forEach(v => {
+      if (!Number.isNaN(v.duration) && v.duration > 0) {
+        v.currentTime = Math.min(time, v.duration);
+      }
+    });
+  };
+
+  modeButtons.forEach(btn => {
+    btn.addEventListener('click', () => {
+      const mode = btn.getAttribute('data-compare-mode');
+      modeButtons.forEach(b => b.classList.toggle('is-active', b === btn));
+      panels.forEach(panel => panel.classList.toggle('is-active', panel.getAttribute('data-compare-panel') === mode));
+      syncCurrentTime(0);
+      if (scrub) scrub.value = '0';
+    });
+  });
+
+  if (toggle) {
+    toggle.addEventListener('click', async () => {
+      const active = activeVideos();
+      if (!active.length) return;
+      const shouldPlay = active.every(v => v.paused);
+      if (shouldPlay) {
+        await Promise.all(active.map(v => v.play().catch(() => null)));
+      } else {
+        active.forEach(v => v.pause());
+      }
+    });
+  }
+
+  if (scrub) {
+    scrub.addEventListener('input', () => {
+      const active = activeVideos();
+      if (!active.length) return;
+      const ref = active[0];
+      const duration = ref.duration || 0;
+      const t = duration * (Number(scrub.value) / 100);
+      syncCurrentTime(t);
+    });
+  }
+
+  videos.forEach(video => {
+    video.addEventListener('timeupdate', () => {
+      const active = activeVideos();
+      if (!active.includes(video) || !scrub || !video.duration) return;
+      scrub.value = String((video.currentTime / video.duration) * 100);
+      active.forEach(other => {
+        if (other !== video && Math.abs(other.currentTime - video.currentTime) > 0.08) {
+          other.currentTime = video.currentTime;
+        }
+      });
+    });
+  });
+})();
+</script>
 </body>
 </html>

@@ -1988,5 +1988,35 @@
     "BAT00 became useful as a research-only ranking lane, not as a score authority.",
     "ROI-style multi-stream ideas were informative negative results but too expensive in the tested forms.",
     "The x265 ladder still matters as evidence: it established a 3.25 local floor before the repaired AV1 branch advanced through 2.20, 2.19, 2.18, and 2.12."
-  ]
+  ],
+  "media_manifest": {
+    "source_video": "workspace/upstream/comma_video_compression_challenge/videos/0.mkv",
+    "submission_archive": "submissions/robust_current/archive.zip",
+    "clip_start_sec": 12,
+    "clip_duration_sec": 6,
+    "zoom_crop": {
+      "x": 372,
+      "y": 286,
+      "w": 420,
+      "h": 316
+    },
+    "assets": [
+      "original_preview.mp4",
+      "inflated_preview.mp4",
+      "original_zoom_preview.mp4",
+      "inflated_zoom_preview.mp4",
+      "original_poster.jpg",
+      "inflated_poster.jpg",
+      "original_zoom_poster.jpg",
+      "inflated_zoom_poster.jpg"
+    ]
+  },
+  "site_meta": {
+    "challenge_url": "https://github.com/commaai/comma_video_compression_challenge",
+    "github_url": "https://github.com/adpena/comma-lab",
+    "repo_slug": "adpena/comma-lab",
+    "maintainer": "Alejandro Pena",
+    "updated_at_utc": "2026-04-06T18:18:29.716003Z",
+    "updated_at_local": "Apr 6, 2026, 1:18 PM CDT"
+  }
 }

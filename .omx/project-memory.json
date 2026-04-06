@@ -119,7 +119,7 @@
     },
     {
       "category": "test",
-      "content": "Rejected AV1 continuation: crf35 scored 2.21 at 808,036 bytes after an estimated 2.17\u20132.20 outcome. The 2.19 crf34 floor remains canonical and the crf34->crf35 pair is now key writeup evidence for the local frontier shape.",
+      "content": "Rejected AV1 continuation: crf35 scored 2.21 at 808,036 bytes after an estimated 2.17–2.20 outcome. The 2.19 crf34 floor remains canonical and the crf34->crf35 pair is now key writeup evidence for the local frontier shape.",
       "recorded_at": "2026-04-06T05:29:44.366311+00:00"
     },
     {
@@ -134,7 +134,7 @@
     },
     {
       "category": "test",
-      "content": "Rejected AV1 continuation: crf35 scored 2.21 at 808,036 bytes after an estimated 2.17\u20132.20 outcome. The 2.19 crf34 floor remains canonical; the crf34->crf35 pair is key evidence for the local frontier knee.",
+      "content": "Rejected AV1 continuation: crf35 scored 2.21 at 808,036 bytes after an estimated 2.17–2.20 outcome. The 2.19 crf34 floor remains canonical; the crf34->crf35 pair is key evidence for the local frontier knee.",
       "recorded_at": "2026-04-06T05:41:03.068089+00:00"
     },
     {
@@ -144,7 +144,7 @@
     },
     {
       "category": "test",
-      "content": "Rejected AV1 continuation: unsharp 0.30 scored 2.20 at 864,455 bytes after an estimated 2.18\u20132.20 outcome. No byte savings, slight pose/seg regressions. The 2.19 crf34/unsharp0.35 floor remained canonical at that time.",
+      "content": "Rejected AV1 continuation: unsharp 0.30 scored 2.20 at 864,455 bytes after an estimated 2.18–2.20 outcome. No byte savings, slight pose/seg regressions. The 2.19 crf34/unsharp0.35 floor remained canonical at that time.",
       "recorded_at": "2026-04-06T06:14:47.363878+00:00"
     },
     {
@@ -154,7 +154,7 @@
     },
     {
       "category": "test",
-      "content": "Rejected AV1 reconstruction-side continuation: unsharp 0.30 scored 2.20 at unchanged 864,455 bytes after an estimated 2.18\u20132.20 outcome. The 2.19 floor with unsharp 0.35 remained canonical at that time and is now supported by a nearby reconstruction-side loss.",
+      "content": "Rejected AV1 reconstruction-side continuation: unsharp 0.30 scored 2.20 at unchanged 864,455 bytes after an estimated 2.18–2.20 outcome. The 2.19 floor with unsharp 0.35 remained canonical at that time and is now supported by a nearby reconstruction-side loss.",
       "recorded_at": "2026-04-06T06:16:37.114639+00:00"
     },
     {
@@ -169,7 +169,7 @@
     },
     {
       "category": "test",
-      "content": "Rejected AV1 synthesis-side continuation: film-grain=0 scored 3.33 at 719,096 bytes after an estimated 2.16\u20132.24 outcome. The 2.19 floor with film-grain22 remains canonical; film-grain synthesis now looks functionally important, not cosmetic.",
+      "content": "Rejected AV1 synthesis-side continuation: film-grain=0 scored 3.33 at 719,096 bytes after an estimated 2.16–2.24 outcome. The 2.19 floor with film-grain22 remains canonical; film-grain synthesis now looks functionally important, not cosmetic.",
       "recorded_at": "2026-04-06T07:14:15.740145+00:00"
     },
     {
@@ -179,7 +179,7 @@
     },
     {
       "category": "test",
-      "content": "Rejected AV1 synthesis-side continuation: film-grain=0 scored 3.33 at 719,096 bytes after an estimated 2.16\u20132.24 outcome. The 2.19 floor with film-grain22 remains canonical; this is strong evidence that AV1 film-grain synthesis is functionally important here.",
+      "content": "Rejected AV1 synthesis-side continuation: film-grain=0 scored 3.33 at 719,096 bytes after an estimated 2.16–2.24 outcome. The 2.19 floor with film-grain22 remains canonical; this is strong evidence that AV1 film-grain synthesis is functionally important here.",
       "recorded_at": "2026-04-06T07:15:18.112606+00:00"
     },
     {
@@ -189,7 +189,7 @@
     },
     {
       "category": "test",
-      "content": "Rejected AV1 geometry continuation: 522x392 scored 2.23 at 862,238 bytes after an estimated 2.17\u20132.22 outcome. The 2.19 floor at 524x394 remains canonical; this is further evidence the local AV1 operating point is tight.",
+      "content": "Rejected AV1 geometry continuation: 522x392 scored 2.23 at 862,238 bytes after an estimated 2.17–2.22 outcome. The 2.19 floor at 524x394 remains canonical; this is further evidence the local AV1 operating point is tight.",
       "recorded_at": "2026-04-06T12:59:45.131173+00:00"
     },
     {
@@ -204,7 +204,7 @@
     },
     {
       "category": "test",
-      "content": "Rejected AV1 geometry-side continuation: 522x392 scored 2.23 at 862,238 bytes after an estimated 2.17\u20132.22 outcome. The 2.19 floor at 524x394 remains canonical; this is evidence that the current geometry is near a local knee.",
+      "content": "Rejected AV1 geometry-side continuation: 522x392 scored 2.23 at 862,238 bytes after an estimated 2.17–2.22 outcome. The 2.19 floor at 524x394 remains canonical; this is evidence that the current geometry is near a local knee.",
       "recorded_at": "2026-04-06T13:01:53.094603+00:00"
     },
     {
@@ -214,7 +214,7 @@
     },
     {
       "category": "test",
-      "content": "Promoted AV1 upscale-axis win: Lanczos upscale scored 2.18 at unchanged 864,455 bytes after an estimated 2.16\u20132.19 outcome. Both pose and seg improved slightly versus the prior 2.19 bicubic-upscale floor.",
+      "content": "Promoted AV1 upscale-axis win: Lanczos upscale scored 2.18 at unchanged 864,455 bytes after an estimated 2.16–2.19 outcome. Both pose and seg improved slightly versus the prior 2.19 bicubic-upscale floor.",
       "recorded_at": "2026-04-06T14:02:14.929839+00:00"
     },
     {
@@ -229,7 +229,7 @@
     },
     {
       "category": "test",
-      "content": "Promoted AV1 upscale-axis win: bicubic -> lanczos scored 2.18 at unchanged 864,455 bytes after an estimated 2.16\u20132.19 outcome. This was the canonical honest floor before the later 2.12 hardening promotion and a rare clean win where bytes stayed fixed while both pose and seg improved.",
+      "content": "Promoted AV1 upscale-axis win: bicubic -> lanczos scored 2.18 at unchanged 864,455 bytes after an estimated 2.16–2.19 outcome. This was the canonical honest floor before the later 2.12 hardening promotion and a rare clean win where bytes stayed fixed while both pose and seg improved.",
       "recorded_at": "2026-04-06T14:03:16.917002+00:00"
     },
     {
@@ -301,6 +301,16 @@
       "category": "deploy",
       "content": "Latest Wrangler-confirmed preview after the walkthrough-style frontend cleanup: https://3464cd88.comma-lab.pages.dev .",
       "timestamp": "2026-04-06T17:50:35.013871+00:00"
+    },
+    {
+      "category": "architecture",
+      "content": "Writeup/site system now has a single refresh path via reports/graphs/refresh_site.py (also just rebuild-site). It regenerates manifest, code callouts, dashboard, comparison media, and static site export from repo-backed evidence.",
+      "timestamp": "2026-04-06T18:16:32.823Z"
+    },
+    {
+      "category": "deploy",
+      "content": "Landing page now includes explicit challenge context, repo identity, localized last-updated metadata, GitHub link, synced comparison media, posters, and mobile-safe table scrolling. Keep tone factual and understated; avoid marketing language.",
+      "timestamp": "2026-04-06T18:16:32.841Z"
     }
   ]
 }

@@ -62,3 +62,14 @@ The promoted honest Track B floor is now **`2.12`**.
 - Estimate before run: modest gain from lower evaluator mismatch
 - Measured: **`2.12`** at `864,486` bytes
 - Reflection: bytes barely moved, SegNet worsened slightly, but PoseNet improved sharply enough to produce a materially better total score.
+
+## writeup / reproducibility status
+
+- The site now includes explicit challenge context, repo identity (`adpena/comma-lab`), and a localized last-updated stamp.
+- Rebuild path is now scripted via `just rebuild-site` / `python3 reports/graphs/refresh_site.py`.
+- Durable generated artifacts now include:
+  - `reports/graphs/experiment_manifest.json`
+  - `reports/graphs/code_callouts.md`
+  - `reports/graphs/media/*`
+- Browser-preview comparison media is present for both full-frame and crop-zoom inspection.
+- Desktop and mobile local screenshots were used to verify the current layout.

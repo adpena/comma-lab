@@ -32,3 +32,9 @@
    - Cost: high.
    - Risk: high.
    - Rule: keep this speculative and non-canonical until scorer evidence justifies promotion.
+
+5. **Frontend / editorial polish pass**
+   - Scope: keep tightening typography, lower-page density, and lineage annotation placement without adding product-marketing tone.
+   - Expected payoff: high for Best Write-up.
+   - Cost: medium.
+   - Risk: low.

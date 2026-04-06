@@ -51,3 +51,17 @@
   4. matching inflate/smoke/scorer parity checks
   5. fresh scorer-backed evidence that it actually helps
 - Rule: do not promote until scorer evidence justifies it.
+
+## 2026-04-06 — writeup system / frontend pass
+
+- Added generated artifacts for reproducibility and reuse:
+  - `reports/graphs/build_experiment_manifest.py`
+  - `reports/graphs/build_code_callouts.py`
+  - `reports/graphs/build_comparison_media.py`
+  - `reports/graphs/refresh_site.py`
+  - `docs/repro_checklist.md`
+  - `just rebuild-site`
+- Added site-level context so the landing page now states the contest, the repo identity, the GitHub source, and when the page was last rebuilt.
+- Added browser-preview comparison media with synced play/pause + scrubber and crop zoom.
+- Added posters for the comparison videos and horizontal-scroll handling for the dense frontier table on mobile.
+- Verified with local desktop and iPhone screenshots generated via Playwright.

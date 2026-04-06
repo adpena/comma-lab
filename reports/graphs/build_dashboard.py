@@ -3,8 +3,10 @@ from __future__ import annotations
 
 import json
 import math
+from datetime import datetime, timezone
 from html import escape
 from pathlib import Path
+from zoneinfo import ZoneInfo
 
 ROOT = Path(__file__).resolve().parents[2]
 RESULTS = ROOT / 'reports' / 'results.jsonl'
@@ -13,11 +15,39 @@ OUT_JSON = ROOT / 'reports' / 'graphs' / 'dashboard_data.json'
 OUT_HTML = ROOT / 'reports' / 'graphs' / 'index.html'
 OUT_TIMELINE = ROOT / 'reports' / 'graphs' / 'score_timeline.json'
 OUT_GRAPH = ROOT / 'reports' / 'graphs' / 'experiment_graph.json'
+MEDIA_MANIFEST = ROOT / 'reports' / 'graphs' / 'media' / 'comparison_manifest.json'
 CANONICAL_URL = 'https://comma-lab.pages.dev/'
+CHALLENGE_URL = 'https://github.com/commaai/comma_video_compression_challenge'
+GITHUB_URL = 'https://github.com/adpena/comma-lab'
+LOCAL_TZ = ZoneInfo('America/Chicago')
 
 
 def load_jsonl(path: Path):
     return [json.loads(line) for line in path.read_text().splitlines() if line.strip()]
+
+
+def load_json(path: Path):
+    return json.loads(path.read_text()) if path.exists() else None
+
+
+def parse_utc_timestamp(value: str | None) -> datetime | None:
+    if not value:
+        return None
+    try:
+        return datetime.fromisoformat(value.replace('Z', '+00:00'))
+    except ValueError:
+        return None
+
+
+def format_local_datetime(value: datetime | str | None) -> str:
+    if value is None:
+        return ''
+    dt = parse_utc_timestamp(value) if isinstance(value, str) else value
+    if dt is None:
+        return ''
+    local = dt.astimezone(LOCAL_TZ)
+    hour = local.strftime('%I').lstrip('0') or '12'
+    return f"{local.strftime('%b')} {local.day}, {local.year}, {hour}:{local.strftime('%M %p %Z')}"
 
 
 def derive_promoted_run_ids(robust_runs: list[dict], timeline: list[dict]) -> list[str]:
@@ -100,6 +130,8 @@ def short_label(run: dict) -> str:
 def main() -> int:
     results = load_jsonl(RESULTS)
     timeline = load_jsonl(TIMELINE)
+    media_manifest = load_json(MEDIA_MANIFEST)
+    build_time_utc = datetime.now(timezone.utc)
     results.sort(key=lambda r: r['ts_utc'])
     timeline.sort(key=lambda r: r['ts_utc'])
 
@@ -230,6 +262,15 @@ def main() -> int:
             'ROI-style multi-stream ideas were informative negative results but too expensive in the tested forms.',
             'The x265 ladder still matters as evidence: it established a 3.25 local floor before the repaired AV1 branch advanced through 2.20, 2.19, 2.18, and 2.12.',
         ],
+        'media_manifest': media_manifest,
+        'site_meta': {
+            'challenge_url': CHALLENGE_URL,
+            'github_url': GITHUB_URL,
+            'repo_slug': 'adpena/comma-lab',
+            'maintainer': 'Alejandro Pena',
+            'updated_at_utc': build_time_utc.isoformat().replace('+00:00', 'Z'),
+            'updated_at_local': format_local_datetime(build_time_utc),
+        },
     }
     OUT_JSON.write_text(json.dumps(data, indent=2))
     OUT_TIMELINE.write_text(json.dumps([
@@ -399,7 +440,7 @@ def main() -> int:
     timeline_rows = []
     for e in notable_events[-14:]:
         timeline_rows.append(
-            f"<tr><td>{escape(e.get('ts_utc',''))}</td><td>{escape(e.get('type',''))}</td><td>{escape(e.get('summary',''))}</td></tr>"
+            f"<tr><td>{escape(format_local_datetime(e.get('ts_utc')))}</td><td>{escape(e.get('type',''))}</td><td>{escape(e.get('summary',''))}</td></tr>"
         )
 
     ladder_items = []
@@ -451,25 +492,33 @@ def main() -> int:
         cfg = r['config']
         run_id = r['run_id']
         if '522x392' in run_id:
+            label = '522x392'
             axis = 'geometry 522x392'
         elif 'upscale-lanczos' in run_id:
+            label = 'lanczos upscale'
             axis = 'upscale lanczos'
         elif 'colorspace-hardening' in run_id:
+            label = 'color hardening'
             axis = 'explicit bt709/tv -> rgb24(pc)'
         elif 'filmgrain0' in run_id or cfg.get('film_grain') == 0:
+            label = 'film-grain 0'
             axis = f"film-grain {cfg.get('film_grain')}"
         elif 'unsharp030' in run_id:
+            label = 'unsharp 0.30'
             axis = f"postfilter {cfg['inflate_postfilter']}"
         elif cfg.get('crf') is not None:
+            label = f"crf {cfg['crf']}"
             axis = f"crf {cfg['crf']}"
         elif cfg.get('inflate_postfilter'):
+            label = 'postfilter'
             axis = f"postfilter {cfg['inflate_postfilter']}"
         else:
+            label = short_label(r)
             axis = describe_config(cfg)
         verdict = 'promoted' if 'promoted' in r['run_id'] else 'rejected'
         frontier_rows.append(
             '<tr>'
-            f"<td>{escape(r['run_id'])}</td>"
+            f'<td><span title="{escape(r["run_id"])}">{escape(label)}</span></td>'
             f"<td>{escape(axis)}</td>"
             f"<td>{r['score']:.2f}</td>"
             f"<td>{r['archive_bytes']:,}</td>"
@@ -630,6 +679,24 @@ def main() -> int:
         },
     ]
 
+    delta_svg_rows = [
+        ('current_workflow score', f'{prev_best["current_workflow_score"]:.2f}', f'{best["current_workflow_score"]:.2f}', f'{best_delta_score:+.2f}'),
+        ('archive bytes', f'{prev_best["archive_bytes"]:,}', f'{best["archive_bytes"]:,}', f'{best_delta_bytes:+,}'),
+        ('PoseNet distortion', f'{prev_best.get("posenet_distortion", 0.0):.8f}', f'{best.get("posenet_distortion", 0.0):.8f}', f'{best_delta_pose:+.8f}'),
+        ('SegNet distortion', f'{prev_best.get("segnet_distortion", 0.0):.8f}', f'{best.get("segnet_distortion", 0.0):.8f}', f'{best_delta_seg:+.8f}'),
+    ]
+    delta_rows_svg = []
+    row_y = 114
+    for label, old, new, delta in delta_svg_rows:
+        delta_color = '#2ad4a0' if delta.startswith('-') else '#ff6b6b'
+        delta_rows_svg.append(
+            f'<text x="48" y="{row_y}" fill="#9aa6b2" font-size="12">{escape(label)}</text>'
+            f'<text x="270" y="{row_y}" fill="#f5f7fb" font-size="14">{escape(old)}</text>'
+            f'<text x="440" y="{row_y}" fill="#8ab4ff" font-size="14">{escape(new)}</text>'
+            f'<text x="640" y="{row_y}" fill="{delta_color}" font-size="14">{escape(delta)}</text>'
+        )
+        row_y += 28
+
     html = f'''<!doctype html>
 <html lang="en">
 <head>
@@ -683,6 +750,14 @@ def main() -> int:
     .muted {{ color: var(--muted); }}
     .subnav {{ display:flex; gap:14px; flex-wrap:wrap; font-size: 13px; color: var(--muted); }}
     .subnav a {{ text-decoration: none; }}
+    .context-strip {{ display:grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 0; margin-top: 12px; border-top: 1px solid var(--stroke); border-bottom: 1px solid var(--stroke); }}
+    .context-item {{ padding: 16px 16px 18px; }}
+    .context-item + .context-item {{ border-left: 1px solid var(--stroke); }}
+    .context-label {{ color: var(--muted); font-size: 11px; text-transform: uppercase; letter-spacing: 0.08em; }}
+    .context-copy {{ margin: 8px 0 0; color: var(--soft); font-size: 13px; line-height: 1.6; max-width: 38ch; }}
+    .context-meta {{ margin: 8px 0 0; color: var(--muted); font-size: 12px; }}
+    .context-links {{ display:flex; flex-wrap:wrap; gap: 10px 14px; margin-top: 8px; color: var(--muted); font-size: 12px; }}
+    .context-links a {{ text-decoration: none; }}
     .summary-shell {{ margin-top: 18px; padding: 4px 0 0; border-top: 1px solid var(--stroke); border-bottom: 1px solid var(--stroke); }}
     .summary-grid {{ display:grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 0; border-top: 1px solid var(--stroke); border-bottom: 1px solid var(--stroke); }}
     .summary-stat {{ padding: 14px 16px; }}
@@ -701,6 +776,8 @@ def main() -> int:
     table {{ width: 100%; border-collapse: collapse; }}
     th, td {{ border-bottom: 1px solid var(--stroke); padding: 10px 8px; text-align: left; vertical-align: top; }}
     th {{ color: var(--muted); font-size: 12px; text-transform: uppercase; letter-spacing: 0.08em; }}
+    .table-wrap {{ overflow-x: auto; -webkit-overflow-scrolling: touch; }}
+    .table-wrap table {{ min-width: 760px; }}
     ul {{ margin: 0; padding-left: 18px; }}
     li + li {{ margin-top: 8px; }}
     svg {{ width: 100%; height: auto; background: #0b0f14; border: 1px solid var(--stroke); border-radius: 10px; }}
@@ -728,13 +805,28 @@ def main() -> int:
     .metric-delta {{ color: var(--muted); font-size: 12px; margin-top: 6px; }}
     .frontier-callout {{ color: var(--soft); font-size: 14px; line-height: 1.6; margin: 0 0 14px; }}
     .footnote {{ color: var(--muted); font-size: 13px; }}
+    .table-hint {{ margin-top: 8px; color: var(--muted); font-size: 12px; }}
     .axis-label {{ fill: var(--muted); font-size: 12px; letter-spacing: 0.02em; }}
     .axis-tick {{ fill: var(--muted); font-size: 11px; }}
     .config-line {{ margin: 10px 0 0; color: var(--muted); font: 500 12px/1.6 ui-monospace, SFMono-Regular, Menlo, monospace; }}
     .list-tight {{ margin: 0; padding-left: 18px; }}
     .list-tight li + li {{ margin-top: 6px; }}
-    @media (max-width: 980px) {{ .two {{ grid-template-columns: 1fr 1fr; }} .summary-grid {{ grid-template-columns: 1fr; }} .summary-stat + .summary-stat {{ border-left: 0; border-top: 1px solid var(--stroke); }} }}
-    @media (max-width: 720px) {{ .two, .summary-grid {{ grid-template-columns: 1fr; }} .summary-stat + .summary-stat {{ border-left: 0; border-top: 1px solid var(--stroke); }} .wrap {{ padding-inline: 16px; }} h1 {{ font-size: clamp(36px, 15vw, 64px); }} }}
+    .compare-head {{ display:flex; justify-content:space-between; align-items:flex-end; gap: 16px; flex-wrap: wrap; }}
+    .compare-controls {{ display:flex; gap:10px; flex-wrap:wrap; align-items:center; margin-top: 12px; }}
+    .compare-controls button {{ background:#11161d; color:var(--soft); border:1px solid var(--stroke); border-radius:999px; padding:8px 12px; font:inherit; cursor:pointer; }}
+    .compare-controls button.is-active {{ border-color: var(--accent); color: var(--text); }}
+    .compare-controls input[type="range"] {{ width: min(320px, 50vw); }}
+    .compare-grid {{ display:grid; grid-template-columns: 1fr 1fr; gap:16px; margin-top: 16px; }}
+    .compare-pane {{ border:1px solid var(--stroke); border-radius:10px; padding:10px; background:#0b0f14; }}
+    .compare-pane h3 {{ margin: 0 0 8px; font-size: 13px; letter-spacing: -0.01em; }}
+    .compare-pane video {{ width:100%; display:block; border-radius:8px; background:#000; }}
+    .compare-pane p {{ margin: 8px 0 0; color: var(--muted); font-size: 12px; }}
+    .compare-mode {{ display:none; }}
+    .compare-mode.is-active {{ display:block; }}
+    .footer-meta {{ display:flex; justify-content:space-between; gap: 16px; flex-wrap:wrap; margin-top: 18px; padding-top: 16px; border-top: 1px solid var(--stroke); color: var(--muted); font-size: 12px; }}
+    .footer-meta a {{ text-decoration: none; }}
+    @media (max-width: 980px) {{ .two {{ grid-template-columns: 1fr 1fr; }} .context-strip, .summary-grid {{ grid-template-columns: 1fr; }} .context-item + .context-item, .summary-stat + .summary-stat {{ border-left: 0; border-top: 1px solid var(--stroke); }} }}
+    @media (max-width: 720px) {{ .two, .context-strip, .summary-grid, .compare-grid {{ grid-template-columns: 1fr; }} .context-item + .context-item, .summary-stat + .summary-stat {{ border-left: 0; border-top: 1px solid var(--stroke); }} .wrap {{ padding-inline: 16px; }} h1 {{ font-size: clamp(36px, 15vw, 64px); }} .compare-controls input[type="range"] {{ width: 100%; }} }}
     @media (prefers-reduced-motion: reduce) {{ html {{ scroll-behavior: auto; }} * {{ animation: none !important; transition: none !important; }} }}
   </style>
 </head>
@@ -744,7 +836,7 @@ def main() -> int:
     <header class="hero" aria-labelledby="site-title">
       <div class="eyebrow">comma-lab</div>
       <h1 id="site-title">comma-lab</h1>
-      <p class="lede">Scorer-backed compression experiments for the comma video challenge. This page is the brief: current state, search path, and supporting references.</p>
+      <p class="lede">Scorer-backed compression experiments for the comma.ai video compression challenge. This page is the brief: current state, search path, and supporting evidence.</p>
       <nav class="subnav" aria-label="Primary resources">
         <a href="./judges_one_pager.md">Judges one-pager</a>
         <a href="./submission_packet.md">Submission packet</a>
@@ -754,13 +846,36 @@ def main() -> int:
     </header>
 
   <main id="content">
+    <section class="context-strip" aria-label="Project context">
+      <div class="context-item">
+        <div class="context-label">Contest</div>
+        <p class="context-copy">comma.ai’s public challenge asks entrants to ship an <code>archive.zip</code> that inflates to video. The published score combines archive bytes, SegNet distortion, and PoseNet distortion on the public test clip.</p>
+        <div class="context-links">
+          <a href="{data['site_meta']['challenge_url']}">Official challenge repo</a>
+        </div>
+      </div>
+      <div class="context-item">
+        <div class="context-label">Who we are</div>
+        <p class="context-copy">comma-lab is a public experiment log and submission repo maintained by {escape(data['site_meta']['maintainer'])}. It keeps the literal <code>current_workflow</code> path separate from the stricter <code>rule_faithful</code> accounting path.</p>
+        <div class="context-links">
+          <a href="{data['site_meta']['github_url']}">{escape(data['site_meta']['repo_slug'])}</a>
+          <a href="./experiment_manifest.json">Experiment manifest</a>
+        </div>
+      </div>
+      <div class="context-item">
+        <div class="context-label">Last updated</div>
+        <p class="context-copy">{escape(data['site_meta']['updated_at_local'])}</p>
+        <p class="context-meta">Generated from repository state plus scorer-backed artifacts stored in this repo.</p>
+      </div>
+    </section>
+
     <section class="summary-shell" aria-label="Current state">
       <div class="summary-grid">
         <div class="summary-stat"><div class="summary-label">Track B current_workflow</div><div class="summary-value">{data['summary']['best_track_b_score']:.2f}</div><div class="summary-meta">{data['summary']['best_track_b_bytes']:,} bytes</div></div>
         <div class="summary-stat"><div class="summary-label">Track B rule_faithful</div><div class="summary-value">{best.get('rule_faithful_score', 0):.3f}</div><div class="summary-meta">{fmt_int(best.get('rule_faithful_bundle_bytes'))} bytes</div></div>
-        <div class="summary-stat"><div class="summary-label">Run ledger</div><div class="summary-value">{data['summary']['robust_run_count']}</div><div class="summary-meta">{data['summary']['promotion_count']} promotions / {data['summary']['rejection_count']} rejections</div></div>
+        <div class="summary-stat"><div class="summary-label">Delta vs prior floor</div><div class="summary-value">{best_delta_score:+.2f}</div><div class="summary-meta">{best_delta_bytes:+,} bytes</div></div>
       </div>
-      <p class="footnote">Track A remains separate: `current_workflow` 0.00 at 167 bytes. It is preserved for transparency and is not part of the honest promotion path.</p>
+      <p class="footnote">Track A remains separate: `current_workflow` 0.00 at 167 bytes. The robust run ledger currently contains {data['summary']['robust_run_count']} measured runs, {data['summary']['promotion_count']} promotions, and {data['summary']['rejection_count']} explicit rejections.</p>
       <p class="config-line" aria-label="Current promoted method">robust_current · libsvtav1 · 524x394 · film-grain=22 · lanczos/lanczos · rgb24(pc)</p>
     </section>
 
@@ -801,6 +916,50 @@ def main() -> int:
       <p class="footnote">This graph is selective by design. It shows the runs that changed the operating point or changed the lab’s understanding of the evaluator.</p>
     </section>
 
+    <section class="panel" aria-labelledby="compare-title">
+      <div class="compare-head">
+        <div>
+          <h2 id="compare-title">Original vs inflated output</h2>
+          <p class="muted">Browser preview assets for inspection only. Official scoring still comes from the scorer-backed reports.</p>
+        </div>
+        <div class="compare-controls" aria-label="Comparison controls">
+          <button type="button" class="is-active" data-compare-mode="full">full frame</button>
+          <button type="button" data-compare-mode="zoom">crop zoom</button>
+          <button type="button" data-compare-toggle>play / pause</button>
+          <input type="range" min="0" max="100" value="0" step="0.1" data-compare-scrub aria-label="Comparison scrubber" />
+        </div>
+      </div>
+      <div class="compare-mode is-active" data-compare-panel="full">
+        <div class="compare-grid">
+          <figure class="compare-pane">
+            <h3>Original</h3>
+            <video data-compare-video preload="metadata" muted playsinline poster="./media/original_poster.jpg" src="./media/original_preview.mp4"></video>
+            <p>Source contest video excerpt.</p>
+          </figure>
+          <figure class="compare-pane">
+            <h3>Inflated output</h3>
+            <video data-compare-video preload="metadata" muted playsinline poster="./media/inflated_poster.jpg" src="./media/inflated_preview.mp4"></video>
+            <p>Current promoted inflate path rendered to a browser preview.</p>
+          </figure>
+        </div>
+      </div>
+      <div class="compare-mode" data-compare-panel="zoom">
+        <div class="compare-grid">
+          <figure class="compare-pane">
+            <h3>Original zoom</h3>
+            <video data-compare-video preload="metadata" muted playsinline poster="./media/original_zoom_poster.jpg" src="./media/original_zoom_preview.mp4"></video>
+            <p>Crop focused on task-relevant structure.</p>
+          </figure>
+          <figure class="compare-pane">
+            <h3>Inflated zoom</h3>
+            <video data-compare-video preload="metadata" muted playsinline poster="./media/inflated_zoom_poster.jpg" src="./media/inflated_zoom_preview.mp4"></video>
+            <p>Same crop after compression and inflate.</p>
+          </figure>
+        </div>
+      </div>
+      <p class="footnote">Compression: {best['archive_bytes']:,} bytes. Distortion: PoseNet {best.get('posenet_distortion', 0):.8f}, SegNet {best.get('segnet_distortion', 0):.8f}. Total score: {best['current_workflow_score']:.2f}.</p>
+    </section>
+
     <section class="panel" aria-labelledby="mechanism-title">
       <h2 id="mechanism-title">Walkthrough</h2>
       <ol class="walkthrough">
@@ -831,13 +990,44 @@ def main() -> int:
       </ol>
     </section>
 
+    <section class="panel" aria-labelledby="explain-title">
+      <h2 id="explain-title">Why 2.12 beat 2.18</h2>
+      <svg viewBox="0 0 920 230" role="img" aria-label="Comparison between the prior 2.18 floor and the current 2.12 floor">
+        <rect x="40" y="28" width="250" height="56" rx="10" ry="10" fill="#0b0f14" stroke="rgba(255,255,255,0.10)" />
+        <text x="56" y="50" fill="#9aa6b2" font-size="12">prior floor</text>
+        <text x="56" y="72" fill="#f5f7fb" font-size="24" font-weight="700">2.18</text>
+        <text x="140" y="72" fill="#9aa6b2" font-size="13">864,455 bytes</text>
+        <text x="56" y="92" fill="#9aa6b2" font-size="12">implicit color handling</text>
+
+        <path d="M 318 56 L 398 56" stroke="#8ab4ff" stroke-width="2" />
+        <circle cx="398" cy="56" r="3.5" fill="#8ab4ff" />
+
+        <rect x="430" y="28" width="320" height="56" rx="10" ry="10" fill="#0b0f14" stroke="rgba(255,255,255,0.10)" />
+        <text x="446" y="50" fill="#9aa6b2" font-size="12">current floor</text>
+        <text x="446" y="72" fill="#f5f7fb" font-size="24" font-weight="700">2.12</text>
+        <text x="530" y="72" fill="#9aa6b2" font-size="13">864,486 bytes</text>
+        <text x="446" y="92" fill="#9aa6b2" font-size="12">explicit bt709/tv encode tags · explicit rgb24(pc) decode</text>
+
+        <line x1="40" y1="116" x2="880" y2="116" stroke="rgba(255,255,255,0.08)" />
+        <text x="48" y="136" fill="#9aa6b2" font-size="11" text-transform="uppercase">metric</text>
+        <text x="270" y="136" fill="#9aa6b2" font-size="11">prior</text>
+        <text x="440" y="136" fill="#9aa6b2" font-size="11">current</text>
+        <text x="640" y="136" fill="#9aa6b2" font-size="11">delta</text>
+        {''.join(delta_rows_svg)}
+      </svg>
+      <p class="footnote">The bytes barely moved. The score change came primarily from lower PoseNet distortion.</p>
+    </section>
+
     <section class="panel" aria-labelledby="frontier-title">
       <h2 id="frontier-title">Local neighborhood</h2>
       <p class="frontier-callout">This table isolates the local AV1 neighborhood around the promoted floor. It shows which nearby changes improved the result and which did not.</p>
-      <table>
-        <thead><tr><th scope="col">Run</th><th scope="col">Changed axis</th><th scope="col">Score</th><th scope="col">Bytes</th><th scope="col">Δ score</th><th scope="col">Δ bytes</th><th scope="col">Verdict</th></tr></thead>
-        <tbody>{''.join(frontier_rows)}</tbody>
-      </table>
+      <div class="table-wrap">
+        <table>
+          <thead><tr><th scope="col">Variant</th><th scope="col">Changed axis</th><th scope="col">Score</th><th scope="col">Bytes</th><th scope="col">Δ score</th><th scope="col">Δ bytes</th><th scope="col">Verdict</th></tr></thead>
+          <tbody>{''.join(frontier_rows)}</tbody>
+        </table>
+      </div>
+      <p class="table-hint">On narrow screens, swipe horizontally to inspect the full table.</p>
     </section>
 
     <section class="panel">
@@ -849,6 +1039,8 @@ def main() -> int:
             <li><a href="./submission_packet.md">Submission packet</a></li>
             <li><a href="./promotion_review_latest.md">Promotion review</a></li>
             <li><a href="./promotion_accounting.md">Promotion accounting</a></li>
+            <li><a href="./code_callouts.md">Code callouts</a></li>
+            <li><a href="./experiment_manifest.json">Experiment manifest</a></li>
             <li><a href="./ffmpeg_path_review.md">ffmpeg path review</a></li>
             <li><a href="./experiment_journal.md">Experiment journal</a></li>
             <li><a href="./evidence_index.md">Evidence index</a></li>
@@ -859,8 +1051,78 @@ def main() -> int:
         </div>
       </div>
     </section>
+    <footer class="footer-meta" aria-label="Site metadata">
+      <span>Last updated {escape(data['site_meta']['updated_at_local'])}</span>
+      <span><a href="{data['site_meta']['github_url']}">GitHub</a> · <a href="{data['site_meta']['challenge_url']}">Challenge</a> · <a href="{CANONICAL_URL}">Canonical site</a></span>
+    </footer>
   </main>
 </div>
+<script>
+(() => {{
+  const modeButtons = Array.from(document.querySelectorAll('[data-compare-mode]'));
+  const panels = Array.from(document.querySelectorAll('[data-compare-panel]'));
+  const videos = Array.from(document.querySelectorAll('[data-compare-video]'));
+  const toggle = document.querySelector('[data-compare-toggle]');
+  const scrub = document.querySelector('[data-compare-scrub]');
+
+  const activeVideos = () => videos.filter(v => v.closest('.compare-mode')?.classList.contains('is-active'));
+
+  const syncCurrentTime = (time) => {{
+    activeVideos().forEach(v => {{
+      if (!Number.isNaN(v.duration) && v.duration > 0) {{
+        v.currentTime = Math.min(time, v.duration);
+      }}
+    }});
+  }};
+
+  modeButtons.forEach(btn => {{
+    btn.addEventListener('click', () => {{
+      const mode = btn.getAttribute('data-compare-mode');
+      modeButtons.forEach(b => b.classList.toggle('is-active', b === btn));
+      panels.forEach(panel => panel.classList.toggle('is-active', panel.getAttribute('data-compare-panel') === mode));
+      syncCurrentTime(0);
+      if (scrub) scrub.value = '0';
+    }});
+  }});
+
+  if (toggle) {{
+    toggle.addEventListener('click', async () => {{
+      const active = activeVideos();
+      if (!active.length) return;
+      const shouldPlay = active.every(v => v.paused);
+      if (shouldPlay) {{
+        await Promise.all(active.map(v => v.play().catch(() => null)));
+      }} else {{
+        active.forEach(v => v.pause());
+      }}
+    }});
+  }}
+
+  if (scrub) {{
+    scrub.addEventListener('input', () => {{
+      const active = activeVideos();
+      if (!active.length) return;
+      const ref = active[0];
+      const duration = ref.duration || 0;
+      const t = duration * (Number(scrub.value) / 100);
+      syncCurrentTime(t);
+    }});
+  }}
+
+  videos.forEach(video => {{
+    video.addEventListener('timeupdate', () => {{
+      const active = activeVideos();
+      if (!active.includes(video) || !scrub || !video.duration) return;
+      scrub.value = String((video.currentTime / video.duration) * 100);
+      active.forEach(other => {{
+        if (other !== video && Math.abs(other.currentTime - video.currentTime) > 0.08) {{
+          other.currentTime = video.currentTime;
+        }}
+      }});
+    }});
+  }});
+}})();
+</script>
 </body>
 </html>
 '''
