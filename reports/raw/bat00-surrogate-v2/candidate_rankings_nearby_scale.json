@@ -1,0 +1,29 @@
+{
+  "devices": [
+    "cuda:0"
+  ],
+  "jax_version": "0.9.2",
+  "ranked_candidates": [
+    {
+      "predicted_score": 1.7841418981552124,
+      "run_id": "cand-428x320-crf23-g48-b4-r4"
+    },
+    {
+      "predicted_score": 1.7939356565475464,
+      "run_id": "cand-426x320-crf23-g48-b4-r4"
+    },
+    {
+      "predicted_score": 1.8396294116973877,
+      "run_id": "cand-422x316-crf23-g48-b4-r4"
+    },
+    {
+      "predicted_score": 1.8494230508804321,
+      "run_id": "cand-420x316-crf23-g48-b4-r4"
+    },
+    {
+      "predicted_score": 1.921290636062622,
+      "run_id": "cand-420x316-crf23-g64-b4-r4"
+    }
+  ],
+  "training_rows": 16
+}

@@ -1,0 +1,5 @@
+variant,keyint,bframes,ref,status,current_workflow_score,archive_bytes,rule_faithful_score
+keyint32-reference,32,4,4,reused,3.56,1978141,3.562551302986074
+keyint24,24,4,4,done,3.64,2018006,3.646726000239659
+keyint48,48,4,4,done,3.56,1901606,3.5617568220853544
+keyint64,64,4,4,done,3.61,1862992,3.613706858354431

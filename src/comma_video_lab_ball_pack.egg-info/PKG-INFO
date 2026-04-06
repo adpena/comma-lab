@@ -1,0 +1,117 @@
+Metadata-Version: 2.4
+Name: comma-video-lab-ball-pack
+Version: 0.2.0
+Summary: One-command dual-track starter pack for the comma video compression challenge
+Requires-Python: >=3.11
+Description-Content-Type: text/markdown
+License-File: LICENSE
+Dynamic: license-file
+
+# comma video lab ball pack
+
+A single-zip starter repo for the `comma_video_compression_challenge`, shaped for a one-command bootstrap and a one-prompt kickoff in an oh-my-codex Ralph loop.
+
+This pack keeps two tracks alive from day one:
+
+- `exact_current`: the current-workflow submission shaped around the challenge exactly as it is published and evaluated today.
+- `robust_current`: the patched-world submission shaped to survive stricter counting and evaluator changes.
+
+It also includes:
+
+- a small auditable Python CLI
+- one-shot bootstrap and launch scripts
+- an `AGENTS.md` contract for Codex and oh-my-codex
+- a single top-level `PROMPT.md` designed for a `$ralph`-style loop
+- docs, budgets, search spaces, and promotion rules
+- Rust, CUDA, Mojo, and JAX side lanes
+
+## The shortest path
+
+```bash
+cd comma_video_lab_ball_pack
+bash start.sh
+```
+
+Then, when the Codex/OMX session opens, paste the contents of:
+
+```text
+PROMPT.md
+```
+
+That is the intended "one `.sh` + one prompt" path.
+
+## What `start.sh` does
+
+- creates a local Python virtual environment for this pack
+- installs the local `comma-lab` helper CLI
+- clones or refreshes the upstream comma challenge repo into `workspace/upstream/comma_video_compression_challenge`
+- snapshots the upstream files that matter for the two-track strategy
+- installs `exact_current` and `robust_current` into the upstream repo
+- attempts a local install of Codex CLI, oh-my-codex, and Ralph into `.tooling/`
+- runs `omx setup` and `omx doctor` when available
+- launches `omx --madmax --high` when available
+
+The script is conservative about system mutation. It prefers local installs under this repo over global installs.
+
+## Repo map
+
+```text
+AGENTS.md                           repo contract for Codex/OMX
+PROGRAM.md                          operating constitution for the lab
+PROMPT.md                           single kickoff prompt to paste into OMX/Codex
+start.sh                            one-shot bootstrap and launch script
+configs/                            budgets, search spaces, promotion rules
+cuda/                               CUDA side lane
+docs/                               challenge notes, runbooks, speculative notes
+jax/                                JAX side lane for surrogates/search
+mojo/                               experimental Mojo lane
+prompts/                            internal role prompts
+runtime-rs/                         Rust hot-path workspace
+scripts/                            convenience wrappers
+src/comma_lab/                      local helper CLI
+submissions/exact_current/          current-workflow submission
+submissions/robust_current/         patched-world baseline submission
+workspace/                          upstream clone and snapshots
+.omx/                               durable OMX state scaffold
+.ralph/                             file-based Ralph state scaffold
+.agents/tasks/                      seeded task and PRD files
+```
+
+## First-run assumptions
+
+- macOS, Linux, or WSL2 with bash
+- `git`, `python3`, and `curl`
+- `node` + `npm` if you want the oh-my-codex path
+- `git-lfs` and `ffmpeg` for real challenge runs
+- Codex auth already configured if you want the script to launch an agent session immediately
+
+## Practical guidance
+
+- Use the MacBook Pro as the control plane, analysis box, and MPS lane.
+- Use the Windows RTX machine through WSL2 or Linux for CUDA work and promoted candidate checks.
+- Keep `exact_current` and `robust_current` both healthy.
+- Treat JAX and Mojo as research lanes, not as required runtime dependencies.
+- Treat handwritten assembly as a last-mile optimization after profiling.
+
+## Notes on speculative lanes
+
+- JAX is good for fast local surrogate training, differentiable search, and vectorized experiment code. It is **not** the first choice for the shipped inflator.
+- Mojo is interesting for performance experiments, but still a side lane.
+- "WASM in the weights" or overfitting a generative model is a fun idea, but it is a moonshot lane; the mainline should stay smaller, cheaper, and easier to score.
+- TurboQuant is about aggressive LLM/vector quantization and KV-cache compression, so it is mostly relevant as inspiration for how we quantize tiny side models or caches, not as a direct solution path for this challenge.
+
+## After bootstrap
+
+Inside the upstream repo, the two core manual checks remain:
+
+```bash
+cd workspace/upstream/comma_video_compression_challenge
+bash evaluate.sh --submission-dir ./submissions/exact_current --device cpu
+bash ./submissions/robust_current/compress.sh
+bash evaluate.sh --submission-dir ./submissions/robust_current --device cpu
+```
+
+## Important intent
+
+The harness is designed so the **score** is the authority and the agent is the mutator.
+The repo should feel easy to operate, but not magical.

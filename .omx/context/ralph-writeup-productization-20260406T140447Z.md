@@ -1,0 +1,24 @@
+# Ralph context snapshot
+
+- task statement: Continue the approved Ralph plan from the canonical 2.18 AV1 floor while keeping the repo resumable and packaging views explicit.
+- desired outcome: Strengthen the writeup/site as a serious product artifact, preserve the 2.18 floor on the runnable path, and leave durable state for the next loop.
+- known facts/evidence:
+  - Track A exact_current remains current_workflow 0.00 and is the only explicitly non-rule-faithful lane.
+  - Track B live floor is 2.18 at 524x394 / SVT-AV1 p0 / CRF34 / film-grain22 / lanczos / unsharp=0.35.
+  - The local frontier now has measured losses on CRF35, unsharp0.30, film-grain0, and 522x392.
+  - Smoke gate exists and both the live floor and recent candidates have passed it.
+  - Current site already has lineage, mechanism cards, and score decomposition.
+- constraints:
+  - edit only within mutation frontier.
+  - do not disturb the live robust_current floor unless running a scorer-backed promotion path.
+  - keep current_workflow vs rule_faithful explicit.
+  - preserve Track A as the only explicit non-rule-faithful exception.
+- unknowns/open questions:
+  - what highest-value productization improvements will most strengthen the Best Write-up submission now that the local frontier is bounded.
+- likely touchpoints:
+  - reports/graphs/build_dashboard.py
+  - reports/graphs/build_static_site.py
+  - reports/graphs/*.md
+  - reports/graphs/site/*
+  - reports/latest.md
+  - .omx/state/*

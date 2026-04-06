@@ -1,0 +1,6 @@
+name: fast
+max_experiments: 3
+max_wall_minutes: 30
+allow_full_eval: false
+notes:
+  - use for smoke tests and search-space sanity checks

@@ -1,0 +1,12 @@
+track: mojo_lane
+objective: test whether a tiny high-performance kernel in Mojo beats the Python/Rust prototype for one hot path
+variables:
+  kernel:
+    - upsample
+    - roi_apply
+  deployment_mode:
+    - local_only
+    - optional_plugin
+gates:
+  - do_not_block_mainline
+  - do_not_make_mojo_a_required_dependency

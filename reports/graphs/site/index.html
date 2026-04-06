@@ -1,0 +1,226 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>comma-lab</title>
+  <meta name="description" content="Scorer-backed compression experiments, evidence, and reporting for the comma video challenge." />
+  <meta name="robots" content="index,follow" />
+  <meta name="theme-color" content="#0b1020" />
+  <meta name="color-scheme" content="dark" />
+  <link rel="canonical" href="https://comma-lab.pages.dev/" />
+  <meta property="og:title" content="comma-lab" />
+  <meta property="og:description" content="Scorer-backed compression experiments and evidence for the comma video challenge." />
+  <meta property="og:type" content="website" />
+  <meta property="og:url" content="https://comma-lab.pages.dev/" />
+  <meta name="twitter:card" content="summary_large_image" />
+  <script type="application/ld+json">{"@context":"https://schema.org","@type":"WebSite","name":"comma-lab","url":"https://comma-lab.pages.dev/"}</script>
+  <style>
+    :root {
+      --bg: #0a0d12;
+      --panel: rgba(255,255,255,0.045);
+      --panel-strong: rgba(255,255,255,0.035);
+      --stroke: rgba(255,255,255,0.09);
+      --text: #f5f7fb;
+      --muted: #9aa6b2;
+      --soft: #cbd5df;
+      --accent: #8ab4ff;
+      --accent-2: #8ab4ff;
+      --danger: #ff6b6b;
+      --shadow: none;
+      --radius: 20px;
+      --radius-sm: 14px;
+      --max: 1200px;
+    }
+    * { box-sizing: border-box; }
+    html { scroll-behavior: smooth; }
+    body { margin: 0; background: #0b0d10; color: var(--text); font: 500 16px/1.6 Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "SF Pro Display", sans-serif; text-rendering: optimizeLegibility; }
+    a { color: inherit; text-underline-offset: 0.2em; }
+    a:focus-visible, button:focus-visible { outline: 3px solid var(--accent-2); outline-offset: 3px; border-radius: 6px; }
+    .skip { position: absolute; left: 12px; top: -48px; background: #fff; color: #000; padding: 10px 14px; border-radius: 10px; z-index: 99; }
+    .skip:focus { top: 12px; }
+    .wrap { max-width: var(--max); margin: 0 auto; padding: 28px 24px 72px; }
+    .hero { padding: 28px 0 10px; display: grid; gap: 14px; }
+    .eyebrow { color: var(--muted); font-size: 11px; letter-spacing: 0.12em; text-transform: uppercase; font-weight: 700; }
+    h1 { margin: 0; font-size: clamp(40px, 6vw, 72px); line-height: 0.96; letter-spacing: -0.045em; font-weight: 760; }
+    .lede { max-width: 760px; color: var(--soft); font-size: 16px; margin: 0; }
+    .two { display: grid; gap: 16px; }
+    .two { grid-template-columns: 1.25fr 0.75fr; }
+    .panel { background: #0f1318; border: 1px solid var(--stroke); border-radius: 12px; box-shadow: none; padding: 20px; margin-top: 18px; }
+    .panel h2 { margin: 0 0 10px; font-size: 20px; letter-spacing: -0.03em; }
+    .muted { color: var(--muted); }
+    .subnav { display:flex; gap:14px; flex-wrap:wrap; font-size: 13px; color: var(--muted); }
+    .subnav a { text-decoration: none; }
+    .summary-grid { display:grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 0; border-top: 1px solid var(--stroke); border-bottom: 1px solid var(--stroke); }
+    .summary-stat { padding: 14px 16px; }
+    .summary-stat + .summary-stat { border-left: 1px solid var(--stroke); }
+    .summary-label { color: var(--muted); font-size: 11px; text-transform: uppercase; letter-spacing: 0.08em; }
+    .summary-value { font-size: 28px; line-height: 1; margin-top: 8px; font-weight: 720; letter-spacing: -0.04em; }
+    .summary-meta { color: var(--muted); font-size: 12px; margin-top: 8px; }
+    .note-grid { display:grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 18px; }
+    .note { padding: 0 14px 0 0; }
+    .note + .note { border-left: 1px solid var(--stroke); padding-left: 18px; }
+    .note h3 { margin: 0 0 8px; font-size: 14px; letter-spacing: -0.02em; }
+    .note p { margin: 0; color: var(--soft); font-size: 13px; line-height: 1.55; }
+    .note p + p { margin-top: 8px; color: var(--muted); }
+    table { width: 100%; border-collapse: collapse; }
+    th, td { border-bottom: 1px solid var(--stroke); padding: 10px 8px; text-align: left; vertical-align: top; }
+    th { color: var(--muted); font-size: 12px; text-transform: uppercase; letter-spacing: 0.08em; }
+    ul { margin: 0; padding-left: 18px; }
+    li + li { margin-top: 8px; }
+    svg { width: 100%; height: auto; background: #0b0f14; border: 1px solid var(--stroke); border-radius: 10px; }
+    .lineage-wrap { overflow-x: auto; }
+    .lineage-edge { fill: none; stroke-width: 2.2; opacity: 0.92; stroke-linecap: round; }
+    .lineage-edge-promotion { stroke: #2ad4a0; }
+    .lineage-edge-rejection { stroke: #ff6b6b; stroke-dasharray: 6 7; }
+    .lineage-edge-diagnostic { stroke: #f6c14b; stroke-dasharray: 2 10; }
+    .lineage-edge-repair { stroke: #8ab4ff; stroke-width: 3.2; }
+    .lineage-node { stroke: rgba(255,255,255,0.18); stroke-width: 1.2; }
+    .lineage-node-x265 { fill: #2ad4a0; }
+    .lineage-node-best { fill: #8ab4ff; }
+    .lineage-node-bug { fill: #f6c14b; }
+    .lineage-node-roi, .lineage-node-rejection { fill: #ff6b6b; }
+    .lineage-note-box { fill: rgba(12,16,22,0.94); stroke: rgba(255,255,255,0.09); stroke-width: 1; }
+    .lineage-note-title { font-size: 12px; font-weight: 650; fill: var(--text); letter-spacing: -0.01em; }
+    .lineage-note-meta { font-size: 10px; fill: var(--muted); }
+    .legend-row { display:flex; gap:10px; flex-wrap:wrap; margin: 12px 0 0; }
+    .legend-key { display:inline-flex; align-items:center; gap:8px; color: var(--muted); font-size: 12px; }
+    .legend-dot { width:10px; height:10px; border-radius:999px; display:inline-block; }
+    .legend-line { width:22px; height:0; border-top:2px solid currentColor; display:inline-block; }
+    .bug-box { display:grid; grid-template-columns: 1fr auto 1fr; gap: 10px; align-items:center; margin-top: 12px; }
+    .bug-side { border: 1px solid var(--stroke); border-radius: var(--radius-sm); padding: 12px; background: rgba(255,255,255,0.03); }
+    .bug-side strong { display:block; margin-bottom: 6px; }
+    .metric-delta { color: var(--muted); font-size: 12px; margin-top: 6px; }
+    .frontier-callout { color: var(--soft); font-size: 14px; line-height: 1.6; margin: 0 0 14px; }
+    .footnote { color: var(--muted); font-size: 13px; }
+    .axis-label { fill: var(--muted); font-size: 12px; letter-spacing: 0.02em; }
+    .axis-tick { fill: var(--muted); font-size: 11px; }
+    .mono-block { margin: 12px 0 0; padding: 14px; border: 1px solid var(--stroke); border-radius: 10px; background: #0b0f14; color: var(--soft); font: 500 13px/1.6 ui-monospace, SFMono-Regular, Menlo, monospace; white-space: pre-wrap; }
+    .list-tight { margin: 0; padding-left: 18px; }
+    .list-tight li + li { margin-top: 6px; }
+    @media (max-width: 980px) { .two, .note-grid { grid-template-columns: 1fr 1fr; } .summary-grid { grid-template-columns: 1fr; } .summary-stat + .summary-stat { border-left: 0; border-top: 1px solid var(--stroke); } .note:nth-child(3) { border-left: 0; padding-left: 0; } }
+    @media (max-width: 720px) { .two, .note-grid, .summary-grid { grid-template-columns: 1fr; } .summary-stat + .summary-stat { border-left: 0; border-top: 1px solid var(--stroke); } .note + .note { border-left: 0; border-top: 1px solid var(--stroke); padding-left: 0; padding-top: 14px; } .wrap { padding-inline: 16px; } h1 { font-size: clamp(36px, 15vw, 64px); } }
+    @media (prefers-reduced-motion: reduce) { html { scroll-behavior: auto; } * { animation: none !important; transition: none !important; } }
+  </style>
+</head>
+<body>
+<a class="skip" href="#content">Skip to content</a>
+<div class="wrap">
+    <header class="hero" aria-labelledby="site-title">
+      <div class="eyebrow">comma-lab</div>
+      <h1 id="site-title">comma-lab</h1>
+      <p class="lede">Scorer-backed compression experiments for the comma video challenge. This page is the brief: current state, search path, and supporting references.</p>
+      <nav class="subnav" aria-label="Primary resources">
+        <a href="./judges_one_pager.md">Judges one-pager</a>
+        <a href="./submission_packet.md">Submission packet</a>
+        <a href="./promotion_review_latest.md">Promotion review</a>
+        <a href="./evidence_index.md">Evidence index</a>
+      </nav>
+    </header>
+
+  <main id="content">
+    <section class="panel" aria-label="Current state">
+      <div class="summary-grid">
+        <div class="summary-stat"><div class="summary-label">Track B current_workflow</div><div class="summary-value">2.12</div><div class="summary-meta">864,486 bytes</div></div>
+        <div class="summary-stat"><div class="summary-label">Track B rule_faithful</div><div class="summary-value">2.142</div><div class="summary-meta">897,745 bytes</div></div>
+        <div class="summary-stat"><div class="summary-label">Run ledger</div><div class="summary-value">35</div><div class="summary-meta">10 promotions / 15 rejections</div></div>
+      </div>
+      <p class="footnote">Track A remains separate: `current_workflow` 0.00 at 167 bytes. It is preserved for transparency and is not part of the honest promotion path.</p>
+      <div class="mono-block" aria-label="Current promoted method">track: robust_current
+codec: libsvtav1
+scale: 524x394
+decode: explicit rgb24(pc)
+archive: 864,486 bytes
+score: 2.12</div>
+    </section>
+
+    <section class="panel" aria-labelledby="scatter-title">
+      <h2 id="scatter-title">Score vs bytes</h2>
+      <p class="muted">Track B runs only. The x-axis uses log scaling. The y-axis is linear. The severe AV1 bug run at 97.45 is omitted here so the operating range stays legible; it remains documented in the search-path section.</p>
+      <svg viewBox="0 0 920 420" role="img" aria-label="Score versus bytes scatterplot for Track B runs">
+        <line x1="146.4" y1="52" x2="146.4" y2="368" stroke="rgba(255,255,255,0.08)" /><text x="146.4" y="388" text-anchor="middle" class="axis-tick">900k</text><line x1="267.4" y1="52" x2="267.4" y2="368" stroke="rgba(255,255,255,0.08)" /><text x="267.4" y="388" text-anchor="middle" class="axis-tick">1.2M</text><line x1="413.8" y1="52" x2="413.8" y2="368" stroke="rgba(255,255,255,0.08)" /><text x="413.8" y="388" text-anchor="middle" class="axis-tick">1.7M</text><line x1="576.0" y1="52" x2="576.0" y2="368" stroke="rgba(255,255,255,0.08)" /><text x="576.0" y="388" text-anchor="middle" class="axis-tick">2.5M</text><line x1="773.7" y1="52" x2="773.7" y2="368" stroke="rgba(255,255,255,0.08)" /><text x="773.7" y="388" text-anchor="middle" class="axis-tick">4.0M</text><line x1="867.5" y1="52" x2="867.5" y2="368" stroke="rgba(255,255,255,0.08)" /><text x="867.5" y="388" text-anchor="middle" class="axis-tick">5.0M</text><line x1="52" y1="334.7" x2="868" y2="334.7" stroke="rgba(255,255,255,0.08)" /><text x="42" y="338.7" text-anchor="end" class="axis-tick">2.5</text><line x1="52" y1="291.0" x2="868" y2="291.0" stroke="rgba(255,255,255,0.08)" /><text x="42" y="295.0" text-anchor="end" class="axis-tick">3</text><line x1="52" y1="203.4" x2="868" y2="203.4" stroke="rgba(255,255,255,0.08)" /><text x="42" y="207.4" text-anchor="end" class="axis-tick">4</text><line x1="52" y1="115.9" x2="868" y2="115.9" stroke="rgba(255,255,255,0.08)" /><text x="42" y="119.9" text-anchor="end" class="axis-tick">5</text>
+        <line x1="52" y1="368" x2="868" y2="368" stroke="#475569" />
+        <line x1="52" y1="52" x2="52" y2="368" stroke="#475569" />
+        <circle cx="745.0" cy="198.2" r="5.5" fill="#8ab4ff"><title>robust_current-baseline-cpu-2026-04-03 | score=4.06 | bytes=3735828</title></circle><circle cx="868.0" cy="138.7" r="5.5" fill="#8ab4ff"><title>robust_current-medium21-cpu-2026-04-03 | score=4.74 | bytes=5005390</title></circle><circle cx="626.6" cy="236.7" r="5.5" fill="#2ad4a0"><title>robust_current-medium23-cpu-2026-04-03 | score=3.62 | bytes=2819374</title></circle><circle cx="753.5" cy="192.1" r="5.5" fill="#8ab4ff"><title>robust_current-slow22-cpu-2026-04-03 | score=4.13 | bytes=3812776</title></circle><circle cx="477.6" cy="242.0" r="5.5" fill="#2ad4a0"><title>robust_current-448x336-medium23-cpu-2026-04-03 | score=3.56 | bytes=1978141</title></circle><circle cx="759.6" cy="180.7" r="5.5" fill="#8ab4ff"><title>robust_current-576x432-medium23-cpu-2026-04-03 | score=4.26 | bytes=3868552</title></circle><circle cx="486.0" cy="234.9" r="5.5" fill="#8ab4ff"><title>robust_current-keyint24-cpu-2026-04-04 | score=3.64 | bytes=2018006</title></circle><circle cx="461.0" cy="242.0" r="5.5" fill="#2ad4a0"><title>robust_current-keyint48-cpu-2026-04-04 | score=3.56 | bytes=1901606</title></circle><circle cx="452.3" cy="237.6" r="5.5" fill="#8ab4ff"><title>robust_current-keyint64-cpu-2026-04-04 | score=3.61 | bytes=1862992</title></circle><circle cx="444.7" cy="232.3" r="5.5" fill="#8ab4ff"><title>robust_current-bicubic-bicubic-cpu-2026-04-04 | score=3.67 | bytes=1829217</title></circle><circle cx="461.0" cy="243.7" r="5.5" fill="#2ad4a0"><title>robust_current-lanczos-lanczos-cpu-2026-04-04 | score=3.54 | bytes=1901606</title></circle><circle cx="486.7" cy="241.1" r="5.5" fill="#8ab4ff"><title>robust_current-bframes3-ref4-cpu-2026-04-04 | score=3.57 | bytes=2021782</title></circle><circle cx="460.1" cy="228.8" r="5.5" fill="#8ab4ff"><title>robust_current-bframes5-ref4-cpu-2026-04-04 | score=3.71 | bytes=1897819</title></circle><circle cx="459.4" cy="242.8" r="5.5" fill="#8ab4ff"><title>robust_current-bframes4-ref5-cpu-2026-04-04 | score=3.55 | bytes=1894366</title></circle><circle cx="353.4" cy="52.0" r="5.5" fill="#ff6b6b"><title>robust_current-roi-two-pass-cpu-2026-04-04 | score=5.73 | bytes=1472589</title></circle><circle cx="433.5" cy="262.1" r="5.5" fill="#2ad4a0"><title>robust_current-432x324-cpu-2026-04-04 | score=3.33 | bytes=1781129</title></circle><circle cx="510.5" cy="252.5" r="5.5" fill="#ff6b6b"><title>robust_current-464x348-cpu-2026-04-04 | score=3.44 | bytes=2139211</title></circle><circle cx="602.2" cy="162.3" r="5.5" fill="#ff6b6b"><title>robust_current-dynamic-main-roi-cpu-2026-04-05 | score=4.47 | bytes=2660388</title></circle><circle cx="460.3" cy="253.3" r="5.5" fill="#ff6b6b"><title>robust_current-cand-432x324-crf23-g48-b3-r4-cpu-2026-04-05 | score=3.43 | bytes=1898751</title></circle><circle cx="426.9" cy="257.7" r="5.5" fill="#ff6b6b"><title>robust_current-cand-432x324-crf23-g64-b4-r4-cpu-2026-04-05 | score=3.38 | bytes=1753611</title></circle><circle cx="406.4" cy="269.1" r="5.5" fill="#2ad4a0"><title>robust_current-cand-424x318-crf23-g48-b4-r4-cpu-2026-04-05 | score=3.25 | bytes=1669984</title></circle><circle cx="432.2" cy="267.3" r="5.5" fill="#ff6b6b"><title>robust_current-cand-424x318-crf23-g48-b3-r4-cpu-2026-04-05 | score=3.27 | bytes=1776026</title></circle><circle cx="400.5" cy="268.2" r="5.5" fill="#ff6b6b"><title>robust_current-cand-424x318-crf23-g64-b4-r4-cpu-2026-04-06 | score=3.26 | bytes=1646886</title></circle><circle cx="381.4" cy="252.5" r="5.5" fill="#ff6b6b"><title>robust_current-cand-416x312-crf23-g48-b4-r4-cpu-2026-04-05 | score=3.44 | bytes=1573803</title></circle><circle cx="424.1" cy="263.0" r="5.5" fill="#ff6b6b"><title>robust_current-cand-428x320-crf23-g48-b4-r4-cpu-2026-04-05 | score=3.32 | bytes=1741924</title></circle><circle cx="430.0" cy="257.7" r="5.5" fill="#ff6b6b"><title>robust_current-cand-426x320-crf23-g48-b4-r4-cpu-2026-04-06 | score=3.38 | bytes=1766456</title></circle><circle cx="155.8" cy="361.0" r="5.5" fill="#2ad4a0"><title>robust_current-av1-524x394-rgb24-promoted-cpu-2026-04-05 | score=2.2 | bytes=920457</title></circle><circle cx="129.4" cy="361.9" r="5.5" fill="#2ad4a0"><title>robust_current-av1-524x394-crf34-promoted-cpu-2026-04-06 | score=2.19 | bytes=864455</title></circle><circle cx="101.0" cy="360.1" r="5.5" fill="#ff6b6b"><title>robust_current-av1-524x394-crf35-rejected-cpu-2026-04-06 | score=2.21 | bytes=808036</title></circle><circle cx="129.4" cy="361.0" r="5.5" fill="#ff6b6b"><title>robust_current-av1-524x394-unsharp030-rejected-cpu-2026-04-06 | score=2.2 | bytes=864455</title></circle><circle cx="52.0" cy="262.1" r="5.5" fill="#ff6b6b"><title>robust_current-av1-524x394-filmgrain0-rejected-cpu-2026-04-06 | score=3.33 | bytes=719096</title></circle><circle cx="128.3" cy="358.4" r="5.5" fill="#ff6b6b"><title>robust_current-av1-522x392-rejected-cpu-2026-04-06 | score=2.23 | bytes=862238</title></circle><circle cx="129.4" cy="362.7" r="5.5" fill="#2ad4a0"><title>robust_current-av1-524x394-upscale-lanczos-promoted-cpu-2026-04-06 | score=2.18 | bytes=864455</title></circle><circle cx="129.4" cy="368.0" r="5.5" fill="#2ad4a0"><title>robust_current-av1-524x394-colorspace-hardening-promoted-cpu-2026-04-06 | score=2.12 | bytes=864486</title></circle>
+        <text x="460.0" y="410" text-anchor="middle" class="axis-label">archive size (bytes, log scale)</text>
+        <text x="16" y="210.0" transform="rotate(-90 16 210.0)" text-anchor="middle" class="axis-label">current_workflow score (linear, lower is better)</text>
+      </svg>
+      <div class="legend-row" aria-label="Scatter legend">
+        <span class="legend-key"><span class="legend-dot" style="background:#2ad4a0"></span>promotion</span>
+        <span class="legend-key"><span class="legend-dot" style="background:#ff6b6b"></span>explicit rejection</span>
+        <span class="legend-key"><span class="legend-dot" style="background:#8ab4ff"></span>measured run</span>
+      </div>
+      <p class="footnote">Lower is better. The plot is generated directly from scorer-backed artifacts in the repository.</p>
+    </section>
+
+    <section class="panel" aria-labelledby="lineage-title">
+      <h2 id="lineage-title">Search path</h2>
+      <p class="muted">A branch view of the measured search path: x265 reductions, ROI failures, the AV1 byte-layout failure, and the later hardening step that moved the floor to 2.12.</p>
+      <div class="legend-row" aria-label="Lineage legend">
+        <span class="legend-key"><span class="legend-dot" style="background:#2ad4a0"></span>x265 / earlier promotions</span>
+        <span class="legend-key"><span class="legend-dot" style="background:#8ab4ff"></span>current best floor</span>
+        <span class="legend-key"><span class="legend-dot" style="background:#f6c14b"></span>diagnostic bug node</span>
+        <span class="legend-key"><span class="legend-dot" style="background:#ff6b6b"></span>rejection / failed branch</span>
+      </div>
+      <div class="lineage-wrap">
+        <svg viewBox="0 0 1180 360" role="img" aria-label="Experimental lineage graph showing promotions, failures, and repaired AV1 branch">
+          <path class="lineage-edge lineage-edge-promotion" d="M 90 270 Q 165.0 192.0 240 238" /><path class="lineage-edge lineage-edge-promotion" d="M 240 238 Q 315.0 172.0 390 218" /><path class="lineage-edge lineage-edge-promotion" d="M 390 218 Q 462.5 159.0 535 205" /><path class="lineage-edge lineage-edge-promotion" d="M 535 205 Q 605.0 138.0 675 184" /><path class="lineage-edge lineage-edge-promotion" d="M 675 184 Q 747.5 119.0 820 165" /><path class="lineage-edge lineage-edge-rejection" d="M 675 184 Q 675.0 32.0 675 78" /><path class="lineage-edge lineage-edge-rejection" d="M 820 165 Q 820.0 119.0 820 285" /><path class="lineage-edge lineage-edge-diagnostic" d="M 820 165 Q 892.5 32.0 965 78" /><path class="lineage-edge lineage-edge-repair" d="M 965 78 Q 1025.0 32.0 1085 160" />
+          <circle class="lineage-node lineage-node-x265" cx="90" cy="270" r="9"><title>robust_current-baseline-cpu-2026-04-03 | score=4.06 | bytes=3,735,828</title></circle><g class="lineage-note"><rect class="lineage-note-box" x="10.0" y="288.0" width="178" height="54" rx="10" ry="10"></rect><text class="lineage-note-title" x="20.0" y="304.0">baseline</text><text class="lineage-note-meta" x="20.0" y="318.0">4.06 · 512x384 · crf 22</text><text class="lineage-note-meta" x="20.0" y="330.0">k32 · lanczos/bicubic</text></g><circle class="lineage-node lineage-node-x265" cx="240" cy="238" r="9"><title>robust_current-medium23-cpu-2026-04-03 | score=3.62 | bytes=2,819,374</title></circle><g class="lineage-note"><rect class="lineage-note-box" x="151.0" y="162.0" width="178" height="54" rx="10" ry="10"></rect><text class="lineage-note-title" x="161.0" y="178.0">512x384 / crf23</text><text class="lineage-note-meta" x="161.0" y="192.0">3.62 · 512x384 · crf 23</text><text class="lineage-note-meta" x="161.0" y="204.0">k32 · lanczos/bicubic</text></g><circle class="lineage-node lineage-node-x265" cx="390" cy="218" r="9"><title>robust_current-448x336-medium23-cpu-2026-04-03 | score=3.56 | bytes=1,978,141</title></circle><g class="lineage-note"><rect class="lineage-note-box" x="301.0" y="236.0" width="178" height="54" rx="10" ry="10"></rect><text class="lineage-note-title" x="311.0" y="252.0">448x336</text><text class="lineage-note-meta" x="311.0" y="266.0">3.56 · 448x336 · crf 23</text><text class="lineage-note-meta" x="311.0" y="278.0">k32 · lanczos/bicubic</text></g><circle class="lineage-node lineage-node-x265" cx="535" cy="205" r="9"><title>robust_current-lanczos-lanczos-cpu-2026-04-04 | score=3.54 | bytes=1,901,606</title></circle><g class="lineage-note"><rect class="lineage-note-box" x="446.0" y="129.0" width="178" height="54" rx="10" ry="10"></rect><text class="lineage-note-title" x="456.0" y="145.0">lanczos/lanczos</text><text class="lineage-note-meta" x="456.0" y="159.0">3.54 · 448x336 · crf 23</text><text class="lineage-note-meta" x="456.0" y="171.0">k48 · lanczos/lanczos</text></g><circle class="lineage-node lineage-node-x265" cx="675" cy="184" r="9"><title>robust_current-432x324-cpu-2026-04-04 | score=3.33 | bytes=1,781,129</title></circle><g class="lineage-note"><rect class="lineage-note-box" x="586.0" y="202.0" width="178" height="54" rx="10" ry="10"></rect><text class="lineage-note-title" x="596.0" y="218.0">432x324</text><text class="lineage-note-meta" x="596.0" y="232.0">3.33 · 432x324 · crf 23</text><text class="lineage-note-meta" x="596.0" y="244.0">k48 · lanczos/lanczos</text></g><circle class="lineage-node lineage-node-x265" cx="820" cy="165" r="9"><title>robust_current-cand-424x318-crf23-g48-b4-r4-cpu-2026-04-05 | score=3.25 | bytes=1,669,984</title></circle><g class="lineage-note"><rect class="lineage-note-box" x="731.0" y="89.0" width="178" height="54" rx="10" ry="10"></rect><text class="lineage-note-title" x="741.0" y="105.0">x265 floor</text><text class="lineage-note-meta" x="741.0" y="119.0">3.25 · 424x318 · crf 23</text><text class="lineage-note-meta" x="741.0" y="131.0">k48 · lanczos/lanczos</text></g><circle class="lineage-node lineage-node-roi" cx="675" cy="78" r="9"><title>robust_current-dynamic-main-roi-cpu-2026-04-05 | score=4.47 | bytes=2,660,388</title></circle><g class="lineage-note"><rect class="lineage-note-box" x="586.0" y="2.0" width="178" height="54" rx="10" ry="10"></rect><text class="lineage-note-title" x="596.0" y="18.0">dynamic ROI</text><text class="lineage-note-meta" x="596.0" y="32.0">4.47 · 432x324 · crf 23</text><text class="lineage-note-meta" x="596.0" y="44.0">k48 · lanczos/lanczos</text></g><circle class="lineage-node lineage-node-rejection" cx="820" cy="285" r="9"><title>robust_current-cand-428x320-crf23-g48-b4-r4-cpu-2026-04-05 | score=3.32 | bytes=1,741,924</title></circle><g class="lineage-note"><rect class="lineage-note-box" x="731.0" y="303.0" width="178" height="54" rx="10" ry="10"></rect><text class="lineage-note-title" x="741.0" y="319.0">nearby scale</text><text class="lineage-note-meta" x="741.0" y="333.0">3.32 · 428x320 · crf 23</text><text class="lineage-note-meta" x="741.0" y="345.0">k48 · lanczos/lanczos</text></g><circle class="lineage-node lineage-node-bug" cx="965" cy="78" r="9"><title>robust_current-av1-524x394-cpu-2026-04-05 | score=97.45 | bytes=920,457</title></circle><g class="lineage-note"><rect class="lineage-note-box" x="876.0" y="2.0" width="178" height="54" rx="10" ry="10"></rect><text class="lineage-note-title" x="886.0" y="18.0">AV1 failure</text><text class="lineage-note-meta" x="886.0" y="32.0">97.45 · 524x394 · crf 33</text><text class="lineage-note-meta" x="886.0" y="44.0">svtav1-p0 · lanczos/bicubic</text></g><circle class="lineage-node lineage-node-best" cx="1085" cy="160" r="9"><title>robust_current-av1-524x394-colorspace-hardening-promoted-cpu-2026-04-06 | score=2.12 | bytes=864,486</title></circle><g class="lineage-note"><rect class="lineage-note-box" x="992.0" y="84.0" width="178" height="54" rx="10" ry="10"></rect><text class="lineage-note-title" x="1002.0" y="100.0">current floor</text><text class="lineage-note-meta" x="1002.0" y="114.0">2.12 · 524x394 · crf 34</text><text class="lineage-note-meta" x="1002.0" y="126.0">svtav1-p0 · explicit color</text></g>
+        </svg>
+      </div>
+      <p class="footnote">This graph is selective by design. It shows the runs that changed the operating point or changed the lab’s understanding of the evaluator.</p>
+    </section>
+
+    <section class="panel" aria-labelledby="mechanism-title">
+      <h2 id="mechanism-title">Operational notes</h2>
+      <div class="note-grid">
+        <article class="note">
+          <h3>Evaluator path</h3>
+          <p>The scorer resizes frames and measures task distortion. It is sensitive to pipeline details, not just visual appearance.</p>
+          <p>PoseNet sees both frames. SegNet sees only the last frame in each pair. That asymmetry is why small encoding or decode-path changes can move the score.</p>
+        </article>
+        <article class="note">
+          <h3>Current operating point</h3>
+          <p>The current honest floor is 2.12 at 864,486 bytes.</p>
+          <p>Against the first honest baseline (4.06 at 3,735,828 bytes), the lab reduced bytes while preserving task signal well enough to keep the score moving down.</p>
+        </article>
+        <article class="note">
+          <h3>Critical bug</h3>
+          <p>The main AV1 failure was a byte-layout error, not a codec-limit problem.</p>
+          <p>The failed path emitted rawvideo as yuv444p bytes. The corrected path forces rgb24, which matches the evaluator’s raw-frame expectation.</p>
+        </article>
+      </div>
+    </section>
+
+    <section class="panel" aria-labelledby="frontier-title">
+      <h2 id="frontier-title">Local neighborhood</h2>
+      <p class="frontier-callout">This table isolates the local AV1 neighborhood around the promoted floor. It shows which nearby changes improved the result and which did not.</p>
+      <table>
+        <thead><tr><th scope="col">Run</th><th scope="col">Changed axis</th><th scope="col">Score</th><th scope="col">Bytes</th><th scope="col">Δ score</th><th scope="col">Δ bytes</th><th scope="col">Verdict</th></tr></thead>
+        <tbody><tr><td>robust_current-av1-524x394-rgb24-promoted-cpu-2026-04-05</td><td>crf 33</td><td>2.20</td><td>920,457</td><td></td><td></td><td>promoted</td></tr><tr><td>robust_current-av1-524x394-crf34-promoted-cpu-2026-04-06</td><td>crf 34</td><td>2.19</td><td>864,455</td><td>-0.01</td><td>-56,002</td><td>promoted</td></tr><tr><td>robust_current-av1-524x394-crf35-rejected-cpu-2026-04-06</td><td>crf 35</td><td>2.21</td><td>808,036</td><td>+0.02</td><td>-56,419</td><td>rejected</td></tr><tr><td>robust_current-av1-524x394-unsharp030-rejected-cpu-2026-04-06</td><td>postfilter unsharp=9:9:0.30:9:9:0.0</td><td>2.20</td><td>864,455</td><td>-0.01</td><td>+56,419</td><td>rejected</td></tr><tr><td>robust_current-av1-524x394-filmgrain0-rejected-cpu-2026-04-06</td><td>film-grain 0</td><td>3.33</td><td>719,096</td><td>+1.13</td><td>-145,359</td><td>rejected</td></tr><tr><td>robust_current-av1-522x392-rejected-cpu-2026-04-06</td><td>geometry 522x392</td><td>2.23</td><td>862,238</td><td>+0.04</td><td>-2,217</td><td>rejected</td></tr><tr><td>robust_current-av1-524x394-upscale-lanczos-promoted-cpu-2026-04-06</td><td>upscale lanczos</td><td>2.18</td><td>864,455</td><td>-0.01</td><td>+0</td><td>promoted</td></tr><tr><td>robust_current-av1-524x394-colorspace-hardening-promoted-cpu-2026-04-06</td><td>explicit bt709/tv -&gt; rgb24(pc)</td><td>2.12</td><td>864,486</td><td>-0.06</td><td>+31</td><td>promoted</td></tr></tbody>
+      </table>
+    </section>
+
+    <section class="panel">
+      <h2>References</h2>
+      <div class="two">
+        <div>
+          <ul class="list-tight">
+            <li><a href="./judges_one_pager.md">Judges one-pager</a></li>
+            <li><a href="./submission_packet.md">Submission packet</a></li>
+            <li><a href="./promotion_review_latest.md">Promotion review</a></li>
+            <li><a href="./promotion_accounting.md">Promotion accounting</a></li>
+            <li><a href="./ffmpeg_path_review.md">ffmpeg path review</a></li>
+            <li><a href="./experiment_journal.md">Experiment journal</a></li>
+            <li><a href="./evidence_index.md">Evidence index</a></li>
+          </ul>
+        </div>
+        <div>
+          <ul class="list-tight"><li><strong>Current best floor</strong> — robust_current-av1-524x394-colorspace-hardening-promoted-cpu-2026-04-06 (2.12)</li><li><strong>ROI failure</strong> — robust_current-dynamic-main-roi-cpu-2026-04-05 (4.47)</li><li><strong>First big win</strong> — robust_current-medium23-cpu-2026-04-03 (3.62)</li><li><strong>First honest floor</strong> — robust_current-baseline-cpu-2026-04-03 (4.06)</li></ul>
+        </div>
+      </div>
+    </section>
+  </main>
+</div>
+</body>
+</html>

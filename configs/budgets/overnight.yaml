@@ -1,0 +1,6 @@
+name: overnight
+max_experiments: 24
+max_wall_minutes: 600
+allow_full_eval: true
+notes:
+  - use for x265 sweeps, codec grids, and surrogate data collection

@@ -1,0 +1,24 @@
+# Python bytecode and caches
+__pycache__/
+*.py[cod]
+*.pyo
+*.pyd
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+
+# Local environments
+.venv/
+
+# macOS / Finder noise
+.DS_Store
+
+# Local upstream checkout and machine-specific workspace state
+workspace/upstream/
+workspace/upstream_snapshot.json
+.wrangler/cache/
+.tooling/node_modules/
+
+# Generated submission scratch artifacts
+submissions/robust_current/archive/
+submissions/robust_current/inflated/

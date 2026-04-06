@@ -1,0 +1,22 @@
+# Ralph context snapshot
+
+- task statement: Continue the approved Ralph plan from the canonical 2.19 AV1 floor while keeping the repo resumable and packaging views explicit.
+- desired outcome: Run one justified one-axis AV1 experiment on the upscale axis, preserve the 2.19 floor unless a better scorer-backed result is proven, and continue strengthening the writeup story.
+- known facts/evidence:
+  - Track A exact_current remains current_workflow 0.00 and is the only explicitly non-rule-faithful lane.
+  - Track B live floor is 2.19 at 524x394 / SVT-AV1 p0 / CRF34 / film-grain22 / bicubic / unsharp 0.35.
+  - Nearby losses now exist on compression (crf35), reconstruction (unsharp0.30), synthesis (film-grain0), and geometry (522x392).
+  - Smoke gate exists and the live floor passed it.
+- constraints:
+  - edit only within mutation frontier.
+  - preserve current_workflow vs rule_faithful separation.
+  - use one-axis experiments with explicit hypothesis / estimate / result / reflection.
+  - default all lanes to faithful/compliance-checked except Track A.
+- unknowns/open questions:
+  - whether a different upscale kernel can help while holding the live 2.19 AV1 recipe constant.
+- likely touchpoints:
+  - submissions/robust_current/config.*.env
+  - reports/raw/2026-04-06-*
+  - reports/results.jsonl
+  - reports/timeline.jsonl
+  - reports/graphs/*

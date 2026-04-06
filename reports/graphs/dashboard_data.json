@@ -1,0 +1,1992 @@
+{
+  "summary": {
+    "best_track_b_score": 2.12,
+    "best_track_b_bytes": 864486,
+    "best_track_b_run_id": "robust_current-av1-524x394-colorspace-hardening-promoted-cpu-2026-04-06",
+    "latest_track_b_score": 2.12,
+    "track_a_current_workflow_score": 0.0,
+    "robust_run_count": 35,
+    "promotion_count": 10,
+    "rejection_count": 15
+  },
+  "promotion_ladder": [
+    {
+      "run_id": "robust_current-medium23-cpu-2026-04-03",
+      "score": 3.62,
+      "archive_bytes": 2819374,
+      "config": {
+        "bframes": 4,
+        "crf": 23,
+        "filters": "lanczos/bicubic",
+        "gop": 32,
+        "preset": "medium",
+        "ref": 4,
+        "scale_h": 384,
+        "scale_w": 512
+      },
+      "ts_utc": "2026-04-04T16:19:02.890872+00:00"
+    },
+    {
+      "run_id": "robust_current-448x336-medium23-cpu-2026-04-03",
+      "score": 3.56,
+      "archive_bytes": 1978141,
+      "config": {
+        "bframes": 4,
+        "crf": 23,
+        "filters": "lanczos/bicubic",
+        "gop": 32,
+        "preset": "medium",
+        "ref": 4,
+        "scale_h": 336,
+        "scale_w": 448
+      },
+      "ts_utc": "2026-04-04T16:19:02.890945+00:00"
+    },
+    {
+      "run_id": "robust_current-keyint48-cpu-2026-04-04",
+      "score": 3.56,
+      "archive_bytes": 1901606,
+      "config": {
+        "bframes": 4,
+        "crf": 23,
+        "filters": "lanczos/bicubic",
+        "gop": 48,
+        "preset": "medium",
+        "ref": 4,
+        "scale_h": 336,
+        "scale_w": 448
+      },
+      "ts_utc": "2026-04-04T16:19:02.891052+00:00"
+    },
+    {
+      "run_id": "robust_current-lanczos-lanczos-cpu-2026-04-04",
+      "score": 3.54,
+      "archive_bytes": 1901606,
+      "config": {
+        "bframes": 4,
+        "crf": 23,
+        "filters": "lanczos/lanczos",
+        "gop": 48,
+        "preset": "medium",
+        "ref": 4,
+        "scale_h": 336,
+        "scale_w": 448
+      },
+      "ts_utc": "2026-04-04T16:19:02.891154+00:00"
+    },
+    {
+      "run_id": "robust_current-432x324-cpu-2026-04-04",
+      "score": 3.33,
+      "archive_bytes": 1781129,
+      "config": {
+        "bframes": 4,
+        "crf": 23,
+        "filters": "lanczos/lanczos",
+        "gop": 48,
+        "preset": "medium",
+        "ref": 4,
+        "scale_h": 324,
+        "scale_w": 432
+      },
+      "ts_utc": "2026-04-04T19:11:30.673618+00:00"
+    },
+    {
+      "run_id": "robust_current-cand-424x318-crf23-g48-b4-r4-cpu-2026-04-05",
+      "score": 3.25,
+      "archive_bytes": 1669984,
+      "config": {
+        "bframes": 4,
+        "crf": 23,
+        "filters": "lanczos/lanczos",
+        "gop": 48,
+        "preset": "medium",
+        "ref": 4,
+        "scale_h": 318,
+        "scale_w": 424
+      },
+      "ts_utc": "2026-04-05T08:13:15.197566+00:00"
+    },
+    {
+      "run_id": "robust_current-av1-524x394-rgb24-promoted-cpu-2026-04-05",
+      "score": 2.2,
+      "archive_bytes": 920457,
+      "config": {
+        "bframes": null,
+        "crf": 33,
+        "film_grain": 22,
+        "filters": "lanczos/bicubic",
+        "gop": 180,
+        "inflate_postfilter": "unsharp=9:9:0.35:9:9:0.0",
+        "preset": "svtav1-p0",
+        "ref": null,
+        "scale_h": 394,
+        "scale_w": 524,
+        "video_codec": "libsvtav1"
+      },
+      "ts_utc": "2026-04-05T18:20:08.762518+00:00"
+    },
+    {
+      "run_id": "robust_current-av1-524x394-crf34-promoted-cpu-2026-04-06",
+      "score": 2.19,
+      "archive_bytes": 864455,
+      "config": {
+        "bframes": null,
+        "crf": 34,
+        "film_grain": 22,
+        "filters": "lanczos/bicubic",
+        "gop": 180,
+        "inflate_postfilter": "unsharp=9:9:0.35:9:9:0.0",
+        "preset": "svtav1-p0",
+        "ref": null,
+        "scale_h": 394,
+        "scale_w": 524,
+        "video_codec": "libsvtav1"
+      },
+      "ts_utc": "2026-04-06T04:40:00.694888+00:00"
+    },
+    {
+      "run_id": "robust_current-av1-524x394-upscale-lanczos-promoted-cpu-2026-04-06",
+      "score": 2.18,
+      "archive_bytes": 864455,
+      "config": {
+        "bframes": null,
+        "crf": 34,
+        "film_grain": 22,
+        "filters": "lanczos/lanczos",
+        "gop": 180,
+        "inflate_postfilter": "unsharp=9:9:0.35:9:9:0.0",
+        "preset": "svtav1-p0",
+        "ref": null,
+        "scale_h": 394,
+        "scale_w": 524,
+        "video_codec": "libsvtav1"
+      },
+      "ts_utc": "2026-04-06T13:59:06.248174+00:00"
+    },
+    {
+      "run_id": "robust_current-av1-524x394-colorspace-hardening-promoted-cpu-2026-04-06",
+      "score": 2.12,
+      "archive_bytes": 864486,
+      "config": {
+        "bframes": null,
+        "crf": 34,
+        "film_grain": 22,
+        "filters": "lanczos/lanczos + explicit bt709/tv->rgb(pc)",
+        "gop": 180,
+        "inflate_postfilter": "unsharp=9:9:0.35:9:9:0.0",
+        "preset": "svtav1-p0",
+        "ref": null,
+        "scale_h": 394,
+        "scale_w": 524,
+        "video_codec": "libsvtav1"
+      },
+      "ts_utc": "2026-04-06T15:43:00+00:00"
+    }
+  ],
+  "promotion_accounting": [
+    {
+      "run_id": "robust_current-medium23-cpu-2026-04-03",
+      "current_workflow_score": 3.62,
+      "current_workflow_bytes": 2819374,
+      "rule_faithful_score": 3.6183889310448754,
+      "rule_faithful_bytes": 2822418,
+      "config": {
+        "bframes": 4,
+        "crf": 23,
+        "filters": "lanczos/bicubic",
+        "gop": 32,
+        "preset": "medium",
+        "ref": 4,
+        "scale_h": 384,
+        "scale_w": 512
+      }
+    },
+    {
+      "run_id": "robust_current-448x336-medium23-cpu-2026-04-03",
+      "current_workflow_score": 3.56,
+      "current_workflow_bytes": 1978141,
+      "rule_faithful_score": 3.562551302986074,
+      "rule_faithful_bytes": 1981185,
+      "config": {
+        "bframes": 4,
+        "crf": 23,
+        "filters": "lanczos/bicubic",
+        "gop": 32,
+        "preset": "medium",
+        "ref": 4,
+        "scale_h": 336,
+        "scale_w": 448
+      }
+    },
+    {
+      "run_id": "robust_current-keyint48-cpu-2026-04-04",
+      "current_workflow_score": 3.56,
+      "current_workflow_bytes": 1901606,
+      "rule_faithful_score": 3.5617568220853544,
+      "rule_faithful_bytes": 1904650,
+      "config": {
+        "bframes": 4,
+        "crf": 23,
+        "filters": "lanczos/bicubic",
+        "gop": 48,
+        "preset": "medium",
+        "ref": 4,
+        "scale_h": 336,
+        "scale_w": 448
+      }
+    },
+    {
+      "run_id": "robust_current-lanczos-lanczos-cpu-2026-04-04",
+      "current_workflow_score": 3.54,
+      "current_workflow_bytes": 1901606,
+      "rule_faithful_score": 3.546277389901901,
+      "rule_faithful_bytes": 1904650,
+      "config": {
+        "bframes": 4,
+        "crf": 23,
+        "filters": "lanczos/lanczos",
+        "gop": 48,
+        "preset": "medium",
+        "ref": 4,
+        "scale_h": 336,
+        "scale_w": 448
+      }
+    },
+    {
+      "run_id": "robust_current-432x324-cpu-2026-04-04",
+      "current_workflow_score": 3.33,
+      "current_workflow_bytes": 1781129,
+      "rule_faithful_score": 3.330344634381239,
+      "rule_faithful_bytes": 1787266,
+      "config": {
+        "bframes": 4,
+        "crf": 23,
+        "filters": "lanczos/lanczos",
+        "gop": 48,
+        "preset": "medium",
+        "ref": 4,
+        "scale_h": 324,
+        "scale_w": 432
+      }
+    },
+    {
+      "run_id": "robust_current-cand-424x318-crf23-g48-b4-r4-cpu-2026-04-05",
+      "current_workflow_score": 3.25,
+      "current_workflow_bytes": 1669984,
+      "rule_faithful_score": 3.2745265845292972,
+      "rule_faithful_bytes": 1704163,
+      "config": {
+        "bframes": 4,
+        "crf": 23,
+        "filters": "lanczos/lanczos",
+        "gop": 48,
+        "preset": "medium",
+        "ref": 4,
+        "scale_h": 318,
+        "scale_w": 424
+      }
+    },
+    {
+      "run_id": "robust_current-av1-524x394-rgb24-promoted-cpu-2026-04-05",
+      "current_workflow_score": 2.2,
+      "current_workflow_bytes": 920457,
+      "rule_faithful_score": 2.2277190123173027,
+      "rule_faithful_bytes": 956424,
+      "config": {
+        "bframes": null,
+        "crf": 33,
+        "film_grain": 22,
+        "filters": "lanczos/bicubic",
+        "gop": 180,
+        "inflate_postfilter": "unsharp=9:9:0.35:9:9:0.0",
+        "preset": "svtav1-p0",
+        "ref": null,
+        "scale_h": 394,
+        "scale_w": 524,
+        "video_codec": "libsvtav1"
+      }
+    },
+    {
+      "run_id": "robust_current-av1-524x394-crf34-promoted-cpu-2026-04-06",
+      "current_workflow_score": 2.19,
+      "current_workflow_bytes": 864455,
+      "rule_faithful_score": 2.2146293679221243,
+      "rule_faithful_bytes": 900954,
+      "config": {
+        "bframes": null,
+        "crf": 34,
+        "film_grain": 22,
+        "filters": "lanczos/bicubic",
+        "gop": 180,
+        "inflate_postfilter": "unsharp=9:9:0.35:9:9:0.0",
+        "preset": "svtav1-p0",
+        "ref": null,
+        "scale_h": 394,
+        "scale_w": 524,
+        "video_codec": "libsvtav1"
+      }
+    },
+    {
+      "run_id": "robust_current-av1-524x394-upscale-lanczos-promoted-cpu-2026-04-06",
+      "current_workflow_score": 2.18,
+      "current_workflow_bytes": 864455,
+      "rule_faithful_score": 2.196195252141633,
+      "rule_faithful_bytes": 892472,
+      "config": {
+        "bframes": null,
+        "crf": 34,
+        "film_grain": 22,
+        "filters": "lanczos/lanczos",
+        "gop": 180,
+        "inflate_postfilter": "unsharp=9:9:0.35:9:9:0.0",
+        "preset": "svtav1-p0",
+        "ref": null,
+        "scale_h": 394,
+        "scale_w": 524,
+        "video_codec": "libsvtav1"
+      }
+    },
+    {
+      "run_id": "robust_current-av1-524x394-colorspace-hardening-promoted-cpu-2026-04-06",
+      "current_workflow_score": 2.12,
+      "current_workflow_bytes": 864486,
+      "rule_faithful_score": 2.1418040615200598,
+      "rule_faithful_bytes": 897745,
+      "config": {
+        "bframes": null,
+        "crf": 34,
+        "film_grain": 22,
+        "filters": "lanczos/lanczos + explicit bt709/tv->rgb(pc)",
+        "gop": 180,
+        "inflate_postfilter": "unsharp=9:9:0.35:9:9:0.0",
+        "preset": "svtav1-p0",
+        "ref": null,
+        "scale_h": 394,
+        "scale_w": 524,
+        "video_codec": "libsvtav1"
+      }
+    }
+  ],
+  "negative_results": [
+    {
+      "run_id": "robust_current-av1-524x394-cpu-2026-04-05",
+      "score": 97.45,
+      "archive_bytes": 920457,
+      "notes": [
+        "public-style AV1 reproduction attempt",
+        "severe regression",
+        "reject"
+      ],
+      "config": {
+        "bframes": null,
+        "crf": 33,
+        "film_grain": 22,
+        "filters": "lanczos/bicubic",
+        "gop": 180,
+        "inflate_postfilter": "unsharp=9:9:0.35:9:9:0.0",
+        "preset": "svtav1-p0",
+        "ref": null,
+        "scale_h": 394,
+        "scale_w": 524,
+        "video_codec": "libsvtav1"
+      }
+    },
+    {
+      "run_id": "robust_current-av1-524x394-filmgrain0-rejected-cpu-2026-04-06",
+      "score": 3.33,
+      "archive_bytes": 719096,
+      "notes": [
+        "AV1 neighborhood probe",
+        "hypothesis: film-grain off might reduce evaluator-facing synthetic-noise side effects",
+        "rejected"
+      ],
+      "config": {
+        "bframes": null,
+        "crf": 34,
+        "film_grain": 0,
+        "filters": "lanczos/bicubic",
+        "gop": 180,
+        "inflate_postfilter": "unsharp=9:9:0.35:9:9:0.0",
+        "preset": "svtav1-p0",
+        "ref": null,
+        "scale_h": 394,
+        "scale_w": 524,
+        "video_codec": "libsvtav1"
+      }
+    },
+    {
+      "run_id": "robust_current-dynamic-main-roi-cpu-2026-04-05",
+      "score": 4.47,
+      "archive_bytes": 2660388,
+      "notes": [
+        "research prototype",
+        "rejected",
+        "main ROI preserved explicitly but multi-window overhead was too expensive"
+      ],
+      "config": {
+        "bframes": 4,
+        "crf": 23,
+        "filters": "lanczos/lanczos",
+        "gop": 48,
+        "preset": "medium",
+        "prototype": "dynamic-main-roi",
+        "ref": 4,
+        "roi2_enabled": true,
+        "roi_base_crf_delta": 1,
+        "roi_crf_delta": -1,
+        "sample_step": 10,
+        "scale_h": 324,
+        "scale_w": 432,
+        "tile_grid": "12x9",
+        "window_frames": 200
+      }
+    },
+    {
+      "run_id": "robust_current-roi-two-pass-cpu-2026-04-04",
+      "score": 5.73,
+      "archive_bytes": 1472589,
+      "notes": [
+        "research prototype",
+        "rejected",
+        "bytes dropped sharply but semantic/task distortion exploded"
+      ],
+      "config": {
+        "bframes": 4,
+        "filters": "lanczos/lanczos",
+        "gop": 48,
+        "prototype": "fixed-roi-two-pass",
+        "ref": 4,
+        "roi_base_crf_delta": 5,
+        "roi_crf_delta": 0,
+        "roi_h_frac": 0.55,
+        "roi_w_frac": 0.7,
+        "roi_x_frac": 0.15,
+        "roi_y_frac": 0.22,
+        "scale_h": 336,
+        "scale_w": 448
+      }
+    },
+    {
+      "run_id": "robust_current-av1-524x394-crf35-rejected-cpu-2026-04-06",
+      "score": 2.21,
+      "archive_bytes": 808036,
+      "notes": [
+        "AV1 neighborhood probe",
+        "hypothesis: further byte reduction would still beat 2.19",
+        "rejected"
+      ],
+      "config": {
+        "bframes": null,
+        "crf": 35,
+        "film_grain": 22,
+        "filters": "lanczos/bicubic",
+        "gop": 180,
+        "inflate_postfilter": "unsharp=9:9:0.35:9:9:0.0",
+        "preset": "svtav1-p0",
+        "ref": null,
+        "scale_h": 394,
+        "scale_w": 524,
+        "video_codec": "libsvtav1"
+      }
+    },
+    {
+      "run_id": "robust_current-av1-522x392-rejected-cpu-2026-04-06",
+      "score": 2.23,
+      "archive_bytes": 862238,
+      "notes": [
+        "AV1 neighborhood probe",
+        "hypothesis: slight geometry reduction might preserve score while cutting bytes",
+        "rejected"
+      ],
+      "config": {
+        "bframes": null,
+        "crf": 34,
+        "film_grain": 22,
+        "filters": "lanczos/bicubic",
+        "gop": 180,
+        "inflate_postfilter": "unsharp=9:9:0.35:9:9:0.0",
+        "preset": "svtav1-p0",
+        "ref": null,
+        "scale_h": 392,
+        "scale_w": 522,
+        "video_codec": "libsvtav1"
+      }
+    },
+    {
+      "run_id": "robust_current-av1-524x394-unsharp030-rejected-cpu-2026-04-06",
+      "score": 2.2,
+      "archive_bytes": 864455,
+      "notes": [
+        "AV1 neighborhood probe",
+        "hypothesis: lighter unsharp might reduce task-facing artifacts",
+        "rejected"
+      ],
+      "config": {
+        "bframes": null,
+        "crf": 34,
+        "film_grain": 22,
+        "filters": "lanczos/bicubic",
+        "gop": 180,
+        "inflate_postfilter": "unsharp=9:9:0.30:9:9:0.0",
+        "preset": "svtav1-p0",
+        "ref": null,
+        "scale_h": 394,
+        "scale_w": 524,
+        "video_codec": "libsvtav1"
+      }
+    },
+    {
+      "run_id": "robust_current-cand-428x320-crf23-g48-b4-r4-cpu-2026-04-05",
+      "score": 3.32,
+      "archive_bytes": 1741924,
+      "notes": [
+        "nearby-scale follow-up",
+        "BAT00-ranked #1 nearby-scale",
+        "rejected"
+      ],
+      "config": {
+        "bframes": 4,
+        "crf": 23,
+        "filters": "lanczos/lanczos",
+        "gop": 48,
+        "preset": "medium",
+        "ref": 4,
+        "scale_h": 320,
+        "scale_w": 428
+      }
+    }
+  ],
+  "key_turning_points": [
+    {
+      "label": "First honest floor",
+      "run_id": "robust_current-baseline-cpu-2026-04-03",
+      "score": 4.06
+    },
+    {
+      "label": "First big win",
+      "run_id": "robust_current-medium23-cpu-2026-04-03",
+      "score": 3.62
+    },
+    {
+      "label": "ROI failure",
+      "run_id": "robust_current-dynamic-main-roi-cpu-2026-04-05",
+      "score": 4.47
+    },
+    {
+      "label": "Current best floor",
+      "run_id": "robust_current-av1-524x394-colorspace-hardening-promoted-cpu-2026-04-06",
+      "score": 2.12
+    }
+  ],
+  "local_frontier": [
+    {
+      "run_id": "robust_current-av1-524x394-rgb24-promoted-cpu-2026-04-05",
+      "score": 2.2,
+      "archive_bytes": 920457,
+      "notes": [
+        "public-style AV1 reproduction repaired",
+        "rgb24 rawvideo fix",
+        "new promoted floor"
+      ],
+      "config": {
+        "bframes": null,
+        "crf": 33,
+        "film_grain": 22,
+        "filters": "lanczos/bicubic",
+        "gop": 180,
+        "inflate_postfilter": "unsharp=9:9:0.35:9:9:0.0",
+        "preset": "svtav1-p0",
+        "ref": null,
+        "scale_h": 394,
+        "scale_w": 524,
+        "video_codec": "libsvtav1"
+      },
+      "parts": {
+        "seg_component": 0.5569219999999999,
+        "pose_component": 1.033953528936383,
+        "rate_component": 0.6128945
+      }
+    },
+    {
+      "run_id": "robust_current-av1-524x394-crf34-promoted-cpu-2026-04-06",
+      "score": 2.19,
+      "archive_bytes": 864455,
+      "notes": [
+        "AV1 neighborhood follow-up",
+        "hypothesis held narrowly",
+        "new promoted floor"
+      ],
+      "config": {
+        "bframes": null,
+        "crf": 34,
+        "film_grain": 22,
+        "filters": "lanczos/bicubic",
+        "gop": 180,
+        "inflate_postfilter": "unsharp=9:9:0.35:9:9:0.0",
+        "preset": "svtav1-p0",
+        "ref": null,
+        "scale_h": 394,
+        "scale_w": 524,
+        "video_codec": "libsvtav1"
+      },
+      "parts": {
+        "seg_component": 0.570503,
+        "pose_component": 1.0442180806708914,
+        "rate_component": 0.575605
+      }
+    },
+    {
+      "run_id": "robust_current-av1-524x394-crf35-rejected-cpu-2026-04-06",
+      "score": 2.21,
+      "archive_bytes": 808036,
+      "notes": [
+        "AV1 neighborhood probe",
+        "hypothesis: further byte reduction would still beat 2.19",
+        "rejected"
+      ],
+      "config": {
+        "bframes": null,
+        "crf": 35,
+        "film_grain": 22,
+        "filters": "lanczos/bicubic",
+        "gop": 180,
+        "inflate_postfilter": "unsharp=9:9:0.35:9:9:0.0",
+        "preset": "svtav1-p0",
+        "ref": null,
+        "scale_h": 394,
+        "scale_w": 524,
+        "video_codec": "libsvtav1"
+      },
+      "parts": {
+        "seg_component": 0.594515,
+        "pose_component": 1.0813542897681592,
+        "rate_component": 0.538038
+      }
+    },
+    {
+      "run_id": "robust_current-av1-524x394-unsharp030-rejected-cpu-2026-04-06",
+      "score": 2.2,
+      "archive_bytes": 864455,
+      "notes": [
+        "AV1 neighborhood probe",
+        "hypothesis: lighter unsharp might reduce task-facing artifacts",
+        "rejected"
+      ],
+      "config": {
+        "bframes": null,
+        "crf": 34,
+        "film_grain": 22,
+        "filters": "lanczos/bicubic",
+        "gop": 180,
+        "inflate_postfilter": "unsharp=9:9:0.30:9:9:0.0",
+        "preset": "svtav1-p0",
+        "ref": null,
+        "scale_h": 394,
+        "scale_w": 524,
+        "video_codec": "libsvtav1"
+      },
+      "parts": {
+        "seg_component": 0.5709650000000001,
+        "pose_component": 1.0484528601706422,
+        "rate_component": 0.575605
+      }
+    },
+    {
+      "run_id": "robust_current-av1-524x394-filmgrain0-rejected-cpu-2026-04-06",
+      "score": 3.33,
+      "archive_bytes": 719096,
+      "notes": [
+        "AV1 neighborhood probe",
+        "hypothesis: film-grain off might reduce evaluator-facing synthetic-noise side effects",
+        "rejected"
+      ],
+      "config": {
+        "bframes": null,
+        "crf": 34,
+        "film_grain": 0,
+        "filters": "lanczos/bicubic",
+        "gop": 180,
+        "inflate_postfilter": "unsharp=9:9:0.35:9:9:0.0",
+        "preset": "svtav1-p0",
+        "ref": null,
+        "scale_h": 394,
+        "scale_w": 524,
+        "video_codec": "libsvtav1"
+      },
+      "parts": {
+        "seg_component": 0.560021,
+        "pose_component": 2.2886853431610032,
+        "rate_component": 0.4788165
+      }
+    },
+    {
+      "run_id": "robust_current-av1-522x392-rejected-cpu-2026-04-06",
+      "score": 2.23,
+      "archive_bytes": 862238,
+      "notes": [
+        "AV1 neighborhood probe",
+        "hypothesis: slight geometry reduction might preserve score while cutting bytes",
+        "rejected"
+      ],
+      "config": {
+        "bframes": null,
+        "crf": 34,
+        "film_grain": 22,
+        "filters": "lanczos/bicubic",
+        "gop": 180,
+        "inflate_postfilter": "unsharp=9:9:0.35:9:9:0.0",
+        "preset": "svtav1-p0",
+        "ref": null,
+        "scale_h": 392,
+        "scale_w": 522,
+        "video_codec": "libsvtav1"
+      },
+      "parts": {
+        "seg_component": 0.576573,
+        "pose_component": 1.079233061020649,
+        "rate_component": 0.574129
+      }
+    },
+    {
+      "run_id": "robust_current-av1-524x394-upscale-lanczos-promoted-cpu-2026-04-06",
+      "score": 2.18,
+      "archive_bytes": 864455,
+      "notes": [
+        "AV1 neighborhood probe",
+        "hypothesis: sharper upscale kernel might improve task fidelity at fixed bytes",
+        "new promoted floor"
+      ],
+      "config": {
+        "bframes": null,
+        "crf": 34,
+        "film_grain": 22,
+        "filters": "lanczos/lanczos",
+        "gop": 180,
+        "inflate_postfilter": "unsharp=9:9:0.35:9:9:0.0",
+        "preset": "svtav1-p0",
+        "ref": null,
+        "scale_h": 394,
+        "scale_w": 524,
+        "video_codec": "libsvtav1"
+      },
+      "parts": {
+        "seg_component": 0.569617,
+        "pose_component": 1.0323177805307822,
+        "rate_component": 0.575605
+      }
+    },
+    {
+      "run_id": "robust_current-av1-524x394-colorspace-hardening-promoted-cpu-2026-04-06",
+      "score": 2.12,
+      "archive_bytes": 864486,
+      "notes": [
+        "production-hardening pass",
+        "hypothesis: explicit colorspace/range handling would reduce evaluator mismatch",
+        "new promoted floor"
+      ],
+      "config": {
+        "bframes": null,
+        "crf": 34,
+        "film_grain": 22,
+        "filters": "lanczos/lanczos + explicit bt709/tv->rgb(pc)",
+        "gop": 180,
+        "inflate_postfilter": "unsharp=9:9:0.35:9:9:0.0",
+        "preset": "svtav1-p0",
+        "ref": null,
+        "scale_h": 394,
+        "scale_w": 524,
+        "video_codec": "libsvtav1"
+      },
+      "parts": {
+        "seg_component": 0.5753130000000001,
+        "pose_component": 0.9687195156493958,
+        "rate_component": 0.5756257499999999
+      }
+    }
+  ],
+  "results": [
+    {
+      "run_id": "exact_current-baseline-cpu-2026-04-03",
+      "track": "exact_current",
+      "score": 0.0,
+      "archive_bytes": 167,
+      "ts_utc": "2026-04-04T16:19:02.890361+00:00",
+      "notes": [
+        "official scorer path via upstream evaluate.sh",
+        "not rule-faithful; keep alive only as Track A"
+      ],
+      "config": {
+        "mode": "repo-side inflate exploit"
+      },
+      "is_promotion": false
+    },
+    {
+      "run_id": "robust_current-baseline-cpu-2026-04-03",
+      "track": "robust_current",
+      "score": 4.06,
+      "archive_bytes": 3735828,
+      "ts_utc": "2026-04-04T16:19:02.890784+00:00",
+      "notes": [
+        "official scorer path via upstream evaluate.sh",
+        "baseline before first sweep cycle",
+        "historical baseline artifact paths were superseded before canonical per-run retention was enforced"
+      ],
+      "config": {
+        "bframes": 4,
+        "crf": 22,
+        "filters": "lanczos/bicubic",
+        "gop": 32,
+        "preset": "medium",
+        "ref": 4,
+        "scale_h": 384,
+        "scale_w": 512
+      },
+      "is_promotion": false
+    },
+    {
+      "run_id": "robust_current-medium21-cpu-2026-04-03",
+      "track": "robust_current",
+      "score": 4.74,
+      "archive_bytes": 5005390,
+      "ts_utc": "2026-04-04T16:19:02.890832+00:00",
+      "notes": [
+        "sweep candidate",
+        "regressed badly versus baseline and published baseline"
+      ],
+      "config": {
+        "bframes": 4,
+        "crf": 21,
+        "filters": "lanczos/bicubic",
+        "gop": 32,
+        "preset": "medium",
+        "ref": 4,
+        "scale_h": 384,
+        "scale_w": 512
+      },
+      "is_promotion": false
+    },
+    {
+      "run_id": "robust_current-medium23-cpu-2026-04-03",
+      "track": "robust_current",
+      "score": 3.62,
+      "archive_bytes": 2819374,
+      "ts_utc": "2026-04-04T16:19:02.890872+00:00",
+      "notes": [
+        "sweep candidate",
+        "won first CRF/preset cycle"
+      ],
+      "config": {
+        "bframes": 4,
+        "crf": 23,
+        "filters": "lanczos/bicubic",
+        "gop": 32,
+        "preset": "medium",
+        "ref": 4,
+        "scale_h": 384,
+        "scale_w": 512
+      },
+      "is_promotion": true
+    },
+    {
+      "run_id": "robust_current-slow22-cpu-2026-04-03",
+      "track": "robust_current",
+      "score": 4.13,
+      "archive_bytes": 3812776,
+      "ts_utc": "2026-04-04T16:19:02.890909+00:00",
+      "notes": [
+        "sweep candidate",
+        "worse than medium/23"
+      ],
+      "config": {
+        "bframes": 4,
+        "crf": 22,
+        "filters": "lanczos/bicubic",
+        "gop": 32,
+        "preset": "slow",
+        "ref": 4,
+        "scale_h": 384,
+        "scale_w": 512
+      },
+      "is_promotion": false
+    },
+    {
+      "run_id": "robust_current-448x336-medium23-cpu-2026-04-03",
+      "track": "robust_current",
+      "score": 3.56,
+      "archive_bytes": 1978141,
+      "ts_utc": "2026-04-04T16:19:02.890945+00:00",
+      "notes": [
+        "resolution sweep candidate",
+        "won first resolution cycle"
+      ],
+      "config": {
+        "bframes": 4,
+        "crf": 23,
+        "filters": "lanczos/bicubic",
+        "gop": 32,
+        "preset": "medium",
+        "ref": 4,
+        "scale_h": 336,
+        "scale_w": 448
+      },
+      "is_promotion": true
+    },
+    {
+      "run_id": "robust_current-576x432-medium23-cpu-2026-04-03",
+      "track": "robust_current",
+      "score": 4.26,
+      "archive_bytes": 3868552,
+      "ts_utc": "2026-04-04T16:19:02.890981+00:00",
+      "notes": [
+        "resolution sweep candidate",
+        "regressed badly"
+      ],
+      "config": {
+        "bframes": 4,
+        "crf": 23,
+        "filters": "lanczos/bicubic",
+        "gop": 32,
+        "preset": "medium",
+        "ref": 4,
+        "scale_h": 432,
+        "scale_w": 576
+      },
+      "is_promotion": false
+    },
+    {
+      "run_id": "robust_current-keyint24-cpu-2026-04-04",
+      "track": "robust_current",
+      "score": 3.64,
+      "archive_bytes": 2018006,
+      "ts_utc": "2026-04-04T16:19:02.891018+00:00",
+      "notes": [
+        "gop sweep candidate",
+        "worse than promoted floor"
+      ],
+      "config": {
+        "bframes": 4,
+        "crf": 23,
+        "filters": "lanczos/bicubic",
+        "gop": 24,
+        "preset": "medium",
+        "ref": 4,
+        "scale_h": 336,
+        "scale_w": 448
+      },
+      "is_promotion": false
+    },
+    {
+      "run_id": "robust_current-keyint48-cpu-2026-04-04",
+      "track": "robust_current",
+      "score": 3.56,
+      "archive_bytes": 1901606,
+      "ts_utc": "2026-04-04T16:19:02.891052+00:00",
+      "notes": [
+        "gop sweep candidate",
+        "won on bytes + stricter estimate"
+      ],
+      "config": {
+        "bframes": 4,
+        "crf": 23,
+        "filters": "lanczos/bicubic",
+        "gop": 48,
+        "preset": "medium",
+        "ref": 4,
+        "scale_h": 336,
+        "scale_w": 448
+      },
+      "is_promotion": true
+    },
+    {
+      "run_id": "robust_current-keyint64-cpu-2026-04-04",
+      "track": "robust_current",
+      "score": 3.61,
+      "archive_bytes": 1862992,
+      "ts_utc": "2026-04-04T16:19:02.891086+00:00",
+      "notes": [
+        "gop sweep candidate",
+        "worse than keyint48 on score"
+      ],
+      "config": {
+        "bframes": 4,
+        "crf": 23,
+        "filters": "lanczos/bicubic",
+        "gop": 64,
+        "preset": "medium",
+        "ref": 4,
+        "scale_h": 336,
+        "scale_w": 448
+      },
+      "is_promotion": false
+    },
+    {
+      "run_id": "robust_current-bicubic-bicubic-cpu-2026-04-04",
+      "track": "robust_current",
+      "score": 3.67,
+      "archive_bytes": 1829217,
+      "ts_utc": "2026-04-04T16:19:02.891121+00:00",
+      "notes": [
+        "filter sweep candidate",
+        "regressed despite lower bytes"
+      ],
+      "config": {
+        "bframes": 4,
+        "crf": 23,
+        "filters": "bicubic/bicubic",
+        "gop": 48,
+        "preset": "medium",
+        "ref": 4,
+        "scale_h": 336,
+        "scale_w": 448
+      },
+      "is_promotion": false
+    },
+    {
+      "run_id": "robust_current-lanczos-lanczos-cpu-2026-04-04",
+      "track": "robust_current",
+      "score": 3.54,
+      "archive_bytes": 1901606,
+      "ts_utc": "2026-04-04T16:19:02.891154+00:00",
+      "notes": [
+        "filter sweep candidate",
+        "new promoted floor"
+      ],
+      "config": {
+        "bframes": 4,
+        "crf": 23,
+        "filters": "lanczos/lanczos",
+        "gop": 48,
+        "preset": "medium",
+        "ref": 4,
+        "scale_h": 336,
+        "scale_w": 448
+      },
+      "is_promotion": true
+    },
+    {
+      "run_id": "robust_current-bframes3-ref4-cpu-2026-04-04",
+      "track": "robust_current",
+      "score": 3.57,
+      "archive_bytes": 2021782,
+      "ts_utc": "2026-04-04T16:19:02.891189+00:00",
+      "notes": [
+        "bframe/ref sweep candidate",
+        "regressed"
+      ],
+      "config": {
+        "bframes": 3,
+        "crf": 23,
+        "filters": "lanczos/lanczos",
+        "gop": 48,
+        "preset": "medium",
+        "ref": 4,
+        "scale_h": 336,
+        "scale_w": 448
+      },
+      "is_promotion": false
+    },
+    {
+      "run_id": "robust_current-bframes5-ref4-cpu-2026-04-04",
+      "track": "robust_current",
+      "score": 3.71,
+      "archive_bytes": 1897819,
+      "ts_utc": "2026-04-04T16:19:02.891224+00:00",
+      "notes": [
+        "bframe/ref sweep candidate",
+        "clear regression"
+      ],
+      "config": {
+        "bframes": 5,
+        "crf": 23,
+        "filters": "lanczos/lanczos",
+        "gop": 48,
+        "preset": "medium",
+        "ref": 4,
+        "scale_h": 336,
+        "scale_w": 448
+      },
+      "is_promotion": false
+    },
+    {
+      "run_id": "robust_current-bframes4-ref5-cpu-2026-04-04",
+      "track": "robust_current",
+      "score": 3.55,
+      "archive_bytes": 1894366,
+      "ts_utc": "2026-04-04T16:19:02.891259+00:00",
+      "notes": [
+        "bframe/ref sweep candidate",
+        "very close, but still worse than promoted floor"
+      ],
+      "config": {
+        "bframes": 4,
+        "crf": 23,
+        "filters": "lanczos/lanczos",
+        "gop": 48,
+        "preset": "medium",
+        "ref": 5,
+        "scale_h": 336,
+        "scale_w": 448
+      },
+      "is_promotion": false
+    },
+    {
+      "run_id": "robust_current-roi-two-pass-cpu-2026-04-04",
+      "track": "robust_current",
+      "score": 5.73,
+      "archive_bytes": 1472589,
+      "ts_utc": "2026-04-04T17:46:16.347003+00:00",
+      "notes": [
+        "research prototype",
+        "rejected",
+        "bytes dropped sharply but semantic/task distortion exploded"
+      ],
+      "config": {
+        "bframes": 4,
+        "filters": "lanczos/lanczos",
+        "gop": 48,
+        "prototype": "fixed-roi-two-pass",
+        "ref": 4,
+        "roi_base_crf_delta": 5,
+        "roi_crf_delta": 0,
+        "roi_h_frac": 0.55,
+        "roi_w_frac": 0.7,
+        "roi_x_frac": 0.15,
+        "roi_y_frac": 0.22,
+        "scale_h": 336,
+        "scale_w": 448
+      },
+      "is_promotion": false
+    },
+    {
+      "run_id": "robust_current-432x324-cpu-2026-04-04",
+      "track": "robust_current",
+      "score": 3.33,
+      "archive_bytes": 1781129,
+      "ts_utc": "2026-04-04T19:11:30.673618+00:00",
+      "notes": [
+        "tiny resolution revisit",
+        "promoted new floor"
+      ],
+      "config": {
+        "bframes": 4,
+        "crf": 23,
+        "filters": "lanczos/lanczos",
+        "gop": 48,
+        "preset": "medium",
+        "ref": 4,
+        "scale_h": 324,
+        "scale_w": 432
+      },
+      "is_promotion": true
+    },
+    {
+      "run_id": "robust_current-464x348-cpu-2026-04-04",
+      "track": "robust_current",
+      "score": 3.44,
+      "archive_bytes": 2139211,
+      "ts_utc": "2026-04-04T19:11:30.674033+00:00",
+      "notes": [
+        "tiny resolution revisit",
+        "rejected"
+      ],
+      "config": {
+        "bframes": 4,
+        "crf": 23,
+        "filters": "lanczos/lanczos",
+        "gop": 48,
+        "preset": "medium",
+        "ref": 4,
+        "scale_h": 348,
+        "scale_w": 464
+      },
+      "is_promotion": false
+    },
+    {
+      "run_id": "robust_current-dynamic-main-roi-cpu-2026-04-05",
+      "track": "robust_current",
+      "score": 4.47,
+      "archive_bytes": 2660388,
+      "ts_utc": "2026-04-05T05:53:25.231029+00:00",
+      "notes": [
+        "research prototype",
+        "rejected",
+        "main ROI preserved explicitly but multi-window overhead was too expensive"
+      ],
+      "config": {
+        "bframes": 4,
+        "crf": 23,
+        "filters": "lanczos/lanczos",
+        "gop": 48,
+        "preset": "medium",
+        "prototype": "dynamic-main-roi",
+        "ref": 4,
+        "roi2_enabled": true,
+        "roi_base_crf_delta": 1,
+        "roi_crf_delta": -1,
+        "sample_step": 10,
+        "scale_h": 324,
+        "scale_w": 432,
+        "tile_grid": "12x9",
+        "window_frames": 200
+      },
+      "is_promotion": false
+    },
+    {
+      "run_id": "robust_current-cand-432x324-crf23-g48-b3-r4-cpu-2026-04-05",
+      "track": "robust_current",
+      "score": 3.43,
+      "archive_bytes": 1898751,
+      "ts_utc": "2026-04-05T07:42:28.845608+00:00",
+      "notes": [
+        "codec shortlist candidate",
+        "surrogate-ranked #1",
+        "rejected"
+      ],
+      "config": {
+        "bframes": 3,
+        "crf": 23,
+        "filters": "lanczos/lanczos",
+        "gop": 48,
+        "preset": "medium",
+        "ref": 4,
+        "scale_h": 324,
+        "scale_w": 432
+      },
+      "is_promotion": false
+    },
+    {
+      "run_id": "robust_current-cand-432x324-crf23-g64-b4-r4-cpu-2026-04-05",
+      "track": "robust_current",
+      "score": 3.38,
+      "archive_bytes": 1753611,
+      "ts_utc": "2026-04-05T07:42:28.847030+00:00",
+      "notes": [
+        "codec shortlist candidate",
+        "surrogate-ranked #2",
+        "rejected but closer than bframes3"
+      ],
+      "config": {
+        "bframes": 4,
+        "crf": 23,
+        "filters": "lanczos/lanczos",
+        "gop": 64,
+        "preset": "medium",
+        "ref": 4,
+        "scale_h": 324,
+        "scale_w": 432
+      },
+      "is_promotion": false
+    },
+    {
+      "run_id": "robust_current-cand-424x318-crf23-g48-b4-r4-cpu-2026-04-05",
+      "track": "robust_current",
+      "score": 3.25,
+      "archive_bytes": 1669984,
+      "ts_utc": "2026-04-05T08:13:15.197566+00:00",
+      "notes": [
+        "codec shortlist candidate",
+        "surrogate-ranked #3",
+        "new promoted floor"
+      ],
+      "config": {
+        "bframes": 4,
+        "crf": 23,
+        "filters": "lanczos/lanczos",
+        "gop": 48,
+        "preset": "medium",
+        "ref": 4,
+        "scale_h": 318,
+        "scale_w": 424
+      },
+      "is_promotion": true
+    },
+    {
+      "run_id": "robust_current-cand-424x318-crf23-g48-b3-r4-cpu-2026-04-05",
+      "track": "robust_current",
+      "score": 3.27,
+      "archive_bytes": 1776026,
+      "ts_utc": "2026-04-05T08:48:02.862906+00:00",
+      "notes": [
+        "nearby-floor follow-up",
+        "rejected"
+      ],
+      "config": {
+        "bframes": 3,
+        "crf": 23,
+        "filters": "lanczos/lanczos",
+        "gop": 48,
+        "preset": "medium",
+        "ref": 4,
+        "scale_h": 318,
+        "scale_w": 424
+      },
+      "is_promotion": false
+    },
+    {
+      "run_id": "robust_current-cand-424x318-crf23-g64-b4-r4-cpu-2026-04-06",
+      "track": "robust_current",
+      "score": 3.26,
+      "archive_bytes": 1646886,
+      "ts_utc": "2026-04-05T09:47:41.997305+00:00",
+      "notes": [
+        "nearby-floor follow-up",
+        "rejected",
+        "very close but still worse than 3.25 floor"
+      ],
+      "config": {
+        "bframes": 4,
+        "crf": 23,
+        "filters": "lanczos/lanczos",
+        "gop": 64,
+        "preset": "medium",
+        "ref": 4,
+        "scale_h": 318,
+        "scale_w": 424
+      },
+      "is_promotion": false
+    },
+    {
+      "run_id": "robust_current-cand-416x312-crf23-g48-b4-r4-cpu-2026-04-05",
+      "track": "robust_current",
+      "score": 3.44,
+      "archive_bytes": 1573803,
+      "ts_utc": "2026-04-05T14:29:14.554386+00:00",
+      "notes": [
+        "lower-resolution follow-up",
+        "BAT00-ranked #1 lower-res",
+        "rejected"
+      ],
+      "config": {
+        "bframes": 4,
+        "crf": 23,
+        "filters": "lanczos/lanczos",
+        "gop": 48,
+        "preset": "medium",
+        "ref": 4,
+        "scale_h": 312,
+        "scale_w": 416
+      },
+      "is_promotion": false
+    },
+    {
+      "run_id": "robust_current-cand-428x320-crf23-g48-b4-r4-cpu-2026-04-05",
+      "track": "robust_current",
+      "score": 3.32,
+      "archive_bytes": 1741924,
+      "ts_utc": "2026-04-05T15:10:07.424166+00:00",
+      "notes": [
+        "nearby-scale follow-up",
+        "BAT00-ranked #1 nearby-scale",
+        "rejected"
+      ],
+      "config": {
+        "bframes": 4,
+        "crf": 23,
+        "filters": "lanczos/lanczos",
+        "gop": 48,
+        "preset": "medium",
+        "ref": 4,
+        "scale_h": 320,
+        "scale_w": 428
+      },
+      "is_promotion": false
+    },
+    {
+      "run_id": "robust_current-cand-426x320-crf23-g48-b4-r4-cpu-2026-04-06",
+      "track": "robust_current",
+      "score": 3.38,
+      "archive_bytes": 1766456,
+      "ts_utc": "2026-04-05T16:07:20.966613+00:00",
+      "notes": [
+        "nearby-scale follow-up",
+        "BAT00-ranked #2 nearby-scale",
+        "rejected"
+      ],
+      "config": {
+        "bframes": 4,
+        "crf": 23,
+        "filters": "lanczos/lanczos",
+        "gop": 48,
+        "preset": "medium",
+        "ref": 4,
+        "scale_h": 320,
+        "scale_w": 426
+      },
+      "is_promotion": false
+    },
+    {
+      "run_id": "robust_current-av1-524x394-cpu-2026-04-05",
+      "track": "robust_current",
+      "score": 97.45,
+      "archive_bytes": 920457,
+      "ts_utc": "2026-04-05T17:12:42.980642+00:00",
+      "notes": [
+        "public-style AV1 reproduction attempt",
+        "severe regression",
+        "reject"
+      ],
+      "config": {
+        "bframes": null,
+        "crf": 33,
+        "film_grain": 22,
+        "filters": "lanczos/bicubic",
+        "gop": 180,
+        "inflate_postfilter": "unsharp=9:9:0.35:9:9:0.0",
+        "preset": "svtav1-p0",
+        "ref": null,
+        "scale_h": 394,
+        "scale_w": 524,
+        "video_codec": "libsvtav1"
+      },
+      "is_promotion": false
+    },
+    {
+      "run_id": "robust_current-av1-524x394-rgb24-promoted-cpu-2026-04-05",
+      "track": "robust_current",
+      "score": 2.2,
+      "archive_bytes": 920457,
+      "ts_utc": "2026-04-05T18:20:08.762518+00:00",
+      "notes": [
+        "public-style AV1 reproduction repaired",
+        "rgb24 rawvideo fix",
+        "new promoted floor"
+      ],
+      "config": {
+        "bframes": null,
+        "crf": 33,
+        "film_grain": 22,
+        "filters": "lanczos/bicubic",
+        "gop": 180,
+        "inflate_postfilter": "unsharp=9:9:0.35:9:9:0.0",
+        "preset": "svtav1-p0",
+        "ref": null,
+        "scale_h": 394,
+        "scale_w": 524,
+        "video_codec": "libsvtav1"
+      },
+      "is_promotion": true
+    },
+    {
+      "run_id": "robust_current-av1-524x394-crf34-promoted-cpu-2026-04-06",
+      "track": "robust_current",
+      "score": 2.19,
+      "archive_bytes": 864455,
+      "ts_utc": "2026-04-06T04:40:00.694888+00:00",
+      "notes": [
+        "AV1 neighborhood follow-up",
+        "hypothesis held narrowly",
+        "new promoted floor"
+      ],
+      "config": {
+        "bframes": null,
+        "crf": 34,
+        "film_grain": 22,
+        "filters": "lanczos/bicubic",
+        "gop": 180,
+        "inflate_postfilter": "unsharp=9:9:0.35:9:9:0.0",
+        "preset": "svtav1-p0",
+        "ref": null,
+        "scale_h": 394,
+        "scale_w": 524,
+        "video_codec": "libsvtav1"
+      },
+      "is_promotion": true
+    },
+    {
+      "run_id": "robust_current-av1-524x394-crf35-rejected-cpu-2026-04-06",
+      "track": "robust_current",
+      "score": 2.21,
+      "archive_bytes": 808036,
+      "ts_utc": "2026-04-06T05:26:53.551355+00:00",
+      "notes": [
+        "AV1 neighborhood probe",
+        "hypothesis: further byte reduction would still beat 2.19",
+        "rejected"
+      ],
+      "config": {
+        "bframes": null,
+        "crf": 35,
+        "film_grain": 22,
+        "filters": "lanczos/bicubic",
+        "gop": 180,
+        "inflate_postfilter": "unsharp=9:9:0.35:9:9:0.0",
+        "preset": "svtav1-p0",
+        "ref": null,
+        "scale_h": 394,
+        "scale_w": 524,
+        "video_codec": "libsvtav1"
+      },
+      "is_promotion": false
+    },
+    {
+      "run_id": "robust_current-av1-524x394-unsharp030-rejected-cpu-2026-04-06",
+      "track": "robust_current",
+      "score": 2.2,
+      "archive_bytes": 864455,
+      "ts_utc": "2026-04-06T06:13:03.889813+00:00",
+      "notes": [
+        "AV1 neighborhood probe",
+        "hypothesis: lighter unsharp might reduce task-facing artifacts",
+        "rejected"
+      ],
+      "config": {
+        "bframes": null,
+        "crf": 34,
+        "film_grain": 22,
+        "filters": "lanczos/bicubic",
+        "gop": 180,
+        "inflate_postfilter": "unsharp=9:9:0.30:9:9:0.0",
+        "preset": "svtav1-p0",
+        "ref": null,
+        "scale_h": 394,
+        "scale_w": 524,
+        "video_codec": "libsvtav1"
+      },
+      "is_promotion": false
+    },
+    {
+      "run_id": "robust_current-av1-524x394-filmgrain0-rejected-cpu-2026-04-06",
+      "track": "robust_current",
+      "score": 3.33,
+      "archive_bytes": 719096,
+      "ts_utc": "2026-04-06T07:12:44.279648+00:00",
+      "notes": [
+        "AV1 neighborhood probe",
+        "hypothesis: film-grain off might reduce evaluator-facing synthetic-noise side effects",
+        "rejected"
+      ],
+      "config": {
+        "bframes": null,
+        "crf": 34,
+        "film_grain": 0,
+        "filters": "lanczos/bicubic",
+        "gop": 180,
+        "inflate_postfilter": "unsharp=9:9:0.35:9:9:0.0",
+        "preset": "svtav1-p0",
+        "ref": null,
+        "scale_h": 394,
+        "scale_w": 524,
+        "video_codec": "libsvtav1"
+      },
+      "is_promotion": false
+    },
+    {
+      "run_id": "robust_current-av1-522x392-rejected-cpu-2026-04-06",
+      "track": "robust_current",
+      "score": 2.23,
+      "archive_bytes": 862238,
+      "ts_utc": "2026-04-06T12:58:11.103191+00:00",
+      "notes": [
+        "AV1 neighborhood probe",
+        "hypothesis: slight geometry reduction might preserve score while cutting bytes",
+        "rejected"
+      ],
+      "config": {
+        "bframes": null,
+        "crf": 34,
+        "film_grain": 22,
+        "filters": "lanczos/bicubic",
+        "gop": 180,
+        "inflate_postfilter": "unsharp=9:9:0.35:9:9:0.0",
+        "preset": "svtav1-p0",
+        "ref": null,
+        "scale_h": 392,
+        "scale_w": 522,
+        "video_codec": "libsvtav1"
+      },
+      "is_promotion": false
+    },
+    {
+      "run_id": "robust_current-av1-524x394-upscale-lanczos-promoted-cpu-2026-04-06",
+      "track": "robust_current",
+      "score": 2.18,
+      "archive_bytes": 864455,
+      "ts_utc": "2026-04-06T13:59:06.248174+00:00",
+      "notes": [
+        "AV1 neighborhood probe",
+        "hypothesis: sharper upscale kernel might improve task fidelity at fixed bytes",
+        "new promoted floor"
+      ],
+      "config": {
+        "bframes": null,
+        "crf": 34,
+        "film_grain": 22,
+        "filters": "lanczos/lanczos",
+        "gop": 180,
+        "inflate_postfilter": "unsharp=9:9:0.35:9:9:0.0",
+        "preset": "svtav1-p0",
+        "ref": null,
+        "scale_h": 394,
+        "scale_w": 524,
+        "video_codec": "libsvtav1"
+      },
+      "is_promotion": true
+    },
+    {
+      "run_id": "robust_current-av1-524x394-colorspace-hardening-promoted-cpu-2026-04-06",
+      "track": "robust_current",
+      "score": 2.12,
+      "archive_bytes": 864486,
+      "ts_utc": "2026-04-06T15:43:00+00:00",
+      "notes": [
+        "production-hardening pass",
+        "hypothesis: explicit colorspace/range handling would reduce evaluator mismatch",
+        "new promoted floor"
+      ],
+      "config": {
+        "bframes": null,
+        "crf": 34,
+        "film_grain": 22,
+        "filters": "lanczos/lanczos + explicit bt709/tv->rgb(pc)",
+        "gop": 180,
+        "inflate_postfilter": "unsharp=9:9:0.35:9:9:0.0",
+        "preset": "svtav1-p0",
+        "ref": null,
+        "scale_h": 394,
+        "scale_w": 524,
+        "video_codec": "libsvtav1"
+      },
+      "is_promotion": true
+    }
+  ],
+  "timeline": [
+    {
+      "current_workflow_score": 3.62,
+      "event_id": "cold-start-baseline-promoted-medium23",
+      "summary": "Promoted robust_current medium/23 at 512x384 after CRF sweep.",
+      "track": "robust_current",
+      "ts_utc": "2026-04-03T22:00:00Z",
+      "type": "promotion"
+    },
+    {
+      "current_workflow_score": 3.56,
+      "event_id": "resolution-sweep-promoted-448x336",
+      "summary": "Promoted robust_current 448x336 / medium / 23 after resolution sweep.",
+      "track": "robust_current",
+      "ts_utc": "2026-04-03T23:00:00Z",
+      "type": "promotion"
+    },
+    {
+      "event_id": "bat00-side-lane-bootstrapped",
+      "host": "BAT00",
+      "ip": "192.168.1.216",
+      "summary": "Confirmed bat00 access and bootstrapped /home/adpena/pact-side with uv sync under WSL Ubuntu 24.04.",
+      "ts_utc": "2026-04-04T01:49:11.290324+00:00",
+      "type": "infra"
+    },
+    {
+      "current_workflow_score": 3.56,
+      "event_id": "gop-sweep-promoted-keyint48",
+      "summary": "Promoted robust_current 448x336 / medium / 23 / keyint 48 after GOP sweep.",
+      "track": "robust_current",
+      "ts_utc": "2026-04-04T09:29:11.298606+00:00",
+      "type": "promotion"
+    },
+    {
+      "current_workflow_score": 3.63,
+      "event_id": "bat00-runtime-benchmark-captured",
+      "host": "BAT00",
+      "summary": "Captured non-authoritative bat00 side benchmark for the then-promoted 448x336 / medium / 23 / keyint32 config.",
+      "ts_utc": "2026-04-04T09:29:11.298612+00:00",
+      "type": "infra"
+    },
+    {
+      "current_workflow_score": 3.54,
+      "event_id": "filter-sweep-promoted-lanczos-lanczos",
+      "summary": "Promoted robust_current 448x336 / medium / 23 / keyint48 / lanczos+lanczos after filter sweep.",
+      "track": "robust_current",
+      "ts_utc": "2026-04-04T14:18:58.594023+00:00",
+      "type": "promotion"
+    },
+    {
+      "current_workflow_score": 3.54,
+      "event_id": "bframe-ref-sweep-no-promotion",
+      "summary": "Completed B-frame/ref sweep around the 3.54 floor; no candidate beat the promoted config.",
+      "track": "robust_current",
+      "ts_utc": "2026-04-04T16:19:02.891695+00:00",
+      "type": "decision"
+    },
+    {
+      "current_workflow_score": 3.56,
+      "event_id": "bat00-runtime-benchmark-keyint48-lanczos",
+      "host": "BAT00",
+      "summary": "Captured non-authoritative bat00 side benchmark for the current promoted keyint48/lanczos config.",
+      "ts_utc": "2026-04-04T16:19:02.891698+00:00",
+      "type": "infra"
+    },
+    {
+      "current_workflow_score": 3.54,
+      "event_id": "runtime-note-local-vs-bat00-complete",
+      "summary": "Captured a like-for-like local vs BAT00 runtime note for the promoted 3.54 floor.",
+      "track": "robust_current",
+      "ts_utc": "2026-04-04T16:57:19.828536+00:00",
+      "type": "analysis"
+    },
+    {
+      "event_id": "bat00-jax-cuda-ready",
+      "host": "BAT00",
+      "summary": "BAT00 JAX/CUDA surrogate environment is ready under uv with JAX seeing CudaDevice(0).",
+      "ts_utc": "2026-04-04T16:57:19.828726+00:00",
+      "type": "infra"
+    },
+    {
+      "event_id": "bat00-surrogate-prototype-complete",
+      "host": "BAT00",
+      "summary": "Completed first BAT00 JAX/CUDA surrogate prototype; environment works but dataset is too small for decision authority.",
+      "ts_utc": "2026-04-04T17:06:44.600707+00:00",
+      "type": "research"
+    },
+    {
+      "current_workflow_score": 5.73,
+      "event_id": "roi-two-pass-prototype-rejected",
+      "summary": "Tiny fixed-ROI two-pass prototype cut bytes but regressed badly on the official scorer, so it stays rejected.",
+      "track": "robust_current",
+      "ts_utc": "2026-04-04T17:46:16.346354+00:00",
+      "type": "research"
+    },
+    {
+      "current_workflow_score": 3.33,
+      "event_id": "tiny-resolution-revisit-promoted-432x324",
+      "summary": "Promoted robust_current 432x324 / medium / 23 / keyint48 / lanczos+lanczos after the tiny local resolution revisit.",
+      "track": "robust_current",
+      "ts_utc": "2026-04-04T19:11:30.675723+00:00",
+      "type": "promotion"
+    },
+    {
+      "current_workflow_score": 4.47,
+      "event_id": "dynamic-main-roi-rejected",
+      "summary": "Measured dynamic main-ROI prototype rejected: main ROI was preserved explicitly, but score regressed to 4.47 and bytes rose to about 2.66 MB.",
+      "track": "robust_current",
+      "ts_utc": "2026-04-05T05:53:25.231667+00:00",
+      "type": "research"
+    },
+    {
+      "current_workflow_score": 3.33,
+      "event_id": "floor-regression-reverified-2026-04-05",
+      "summary": "Fresh local CPU regression confirmed the restored promoted floor still scores 3.33.",
+      "track": "robust_current",
+      "ts_utc": "2026-04-05T06:35:49.299885+00:00",
+      "type": "verification"
+    },
+    {
+      "event_id": "bat00-surrogate-v2-codec-only-usable",
+      "host": "BAT00",
+      "summary": "BAT00 surrogate v2 remained noisy on the full mixed set, but the codec-only subset improved enough to use as a research-only ranking aid.",
+      "ts_utc": "2026-04-05T06:35:49.299885+00:00",
+      "type": "research"
+    },
+    {
+      "event_id": "bat00-codec-shortlist-generated",
+      "host": "BAT00",
+      "summary": "BAT00 codec-only surrogate ranked a small codec shortlist, then the top two local CPU candidates were tested sequentially.",
+      "ts_utc": "2026-04-05T07:42:28.847777+00:00",
+      "type": "research"
+    },
+    {
+      "current_workflow_score": 3.43,
+      "event_id": "codec-shortlist-top1-rejected",
+      "summary": "Local CPU test of surrogate-ranked #1 candidate (432x324 / crf23 / g48 / b3 / r4) scored 3.43 and was rejected.",
+      "track": "robust_current",
+      "ts_utc": "2026-04-05T07:42:28.847777+00:00",
+      "type": "decision"
+    },
+    {
+      "current_workflow_score": 3.38,
+      "event_id": "codec-shortlist-top2-rejected",
+      "summary": "Local CPU test of surrogate-ranked #2 candidate (432x324 / crf23 / g64 / b4 / r4) scored 3.38 and was rejected.",
+      "track": "robust_current",
+      "ts_utc": "2026-04-05T07:42:28.847777+00:00",
+      "type": "decision"
+    },
+    {
+      "current_workflow_score": 3.25,
+      "event_id": "codec-shortlist-top3-promoted",
+      "summary": "Local CPU test of surrogate-ranked #3 candidate (424x318 / crf23 / g48 / b4 / r4) scored 3.25 and became the new promoted floor.",
+      "track": "robust_current",
+      "ts_utc": "2026-04-05T08:13:15.198319+00:00",
+      "type": "promotion"
+    },
+    {
+      "current_workflow_score": 3.27,
+      "event_id": "nearby-424x318-b3-rejected",
+      "summary": "Nearby follow-up on the new 424x318 floor (bframes3) scored 3.27 and was rejected.",
+      "track": "robust_current",
+      "ts_utc": "2026-04-05T08:48:02.864256+00:00",
+      "type": "decision"
+    },
+    {
+      "current_workflow_score": 3.26,
+      "event_id": "nearby-424x318-g64-rejected",
+      "summary": "Nearby follow-up on the 424x318 floor (keyint64) scored 3.26 and was rejected.",
+      "track": "robust_current",
+      "ts_utc": "2026-04-05T09:47:41.998084+00:00",
+      "type": "decision"
+    },
+    {
+      "current_workflow_score": 3.44,
+      "event_id": "lower-res-416x312-rejected",
+      "summary": "Lower-resolution BAT00-ranked follow-up at 416x312 scored 3.44 and was rejected.",
+      "track": "robust_current",
+      "ts_utc": "2026-04-05T14:29:14.555005+00:00",
+      "type": "decision"
+    },
+    {
+      "current_workflow_score": 3.32,
+      "event_id": "nearby-scale-428x320-rejected",
+      "summary": "BAT00-ranked nearby-scale follow-up at 428x320 scored 3.32 and was rejected.",
+      "track": "robust_current",
+      "ts_utc": "2026-04-05T15:10:07.425100+00:00",
+      "type": "decision"
+    },
+    {
+      "current_workflow_score": 3.38,
+      "event_id": "nearby-scale-426x320-rejected",
+      "summary": "BAT00-ranked nearby-scale follow-up at 426x320 scored 3.38 and was rejected.",
+      "track": "robust_current",
+      "ts_utc": "2026-04-05T16:07:20.968299+00:00",
+      "type": "decision"
+    },
+    {
+      "current_workflow_score": 97.45,
+      "event_id": "av1-frontier-524x394-rejected",
+      "summary": "Public-style AV1/SVT-AV1 reproduction attempt at 524x394 regressed severely to 97.45 and was rejected.",
+      "track": "robust_current",
+      "ts_utc": "2026-04-05T17:12:42.981688+00:00",
+      "type": "research"
+    },
+    {
+      "current_workflow_score": 2.2,
+      "event_id": "av1-rgb24-root-cause-identified",
+      "summary": "AV1 failure root cause was a rawvideo pixel-format mismatch: inflate emitted yuv444p bytes instead of rgb24. Forcing rgb24 recovered the same 524x394 SVT-AV1 recipe from 97.45 to 2.20.",
+      "track": "robust_current",
+      "ts_utc": "2026-04-05T18:20:08.762518+00:00",
+      "type": "analysis"
+    },
+    {
+      "current_workflow_score": 2.2,
+      "event_id": "av1-frontier-524x394-promoted",
+      "summary": "Canonical robust_current AV1 floor at 524x394 / svtav1-p0 / crf33 / film-grain22 / bicubic / unsharp scored 2.20 and became the new promoted floor.",
+      "track": "robust_current",
+      "ts_utc": "2026-04-05T18:20:08.762518+00:00",
+      "type": "promotion"
+    },
+    {
+      "current_workflow_score": 2.19,
+      "event_id": "av1-neighborhood-crf34-analysis",
+      "summary": "CRF34 AV1 neighborhood probe cut bytes by 56,002 (6.08%) versus the 2.20 CRF33 AV1 floor, while pose and seg distortion rose slightly; net score improved by 0.01 to 2.19.",
+      "track": "robust_current",
+      "ts_utc": "2026-04-06T04:41:42.160831+00:00",
+      "type": "analysis"
+    },
+    {
+      "current_workflow_score": 2.19,
+      "event_id": "av1-neighborhood-crf34-promoted",
+      "summary": "Canonical robust_current AV1 floor at 524x394 / svtav1-p0 / crf34 / film-grain22 / bicubic / unsharp scored 2.19 and replaced the prior 2.20 CRF33 floor.",
+      "track": "robust_current",
+      "ts_utc": "2026-04-06T04:41:42.160831+00:00",
+      "type": "promotion"
+    },
+    {
+      "current_workflow_score": 2.21,
+      "event_id": "av1-neighborhood-crf35-analysis",
+      "summary": "CRF35 was estimated to maybe land around 2.17-2.20 if byte savings still dominated, but it regressed to 2.21. Bytes fell by 56,419 (6.53%), yet pose and seg rose too far.",
+      "track": "robust_current",
+      "ts_utc": "2026-04-06T05:26:53.551355+00:00",
+      "type": "analysis"
+    },
+    {
+      "current_workflow_score": 2.21,
+      "event_id": "av1-neighborhood-crf35-rejected",
+      "summary": "One-axis AV1 probe at crf35 scored 2.21 and was rejected; the 2.19 crf34 floor remains canonical.",
+      "track": "robust_current",
+      "ts_utc": "2026-04-06T05:26:53.551355+00:00",
+      "type": "decision"
+    },
+    {
+      "current_workflow_score": 2.2,
+      "event_id": "av1-unsharp030-analysis",
+      "summary": "Unsharp 0.30 was estimated to maybe land around 2.18-2.20 by reducing postfilter aggression, but it stayed at 864,455 bytes and regressed to 2.20. Pose and seg both worsened slightly.",
+      "track": "robust_current",
+      "ts_utc": "2026-04-06T06:13:03.889813+00:00",
+      "type": "analysis"
+    },
+    {
+      "current_workflow_score": 2.2,
+      "event_id": "av1-unsharp030-rejected",
+      "summary": "One-axis AV1 probe with lighter unsharp (0.30) scored 2.20 and was rejected; the 2.19 unsharp 0.35 floor remains canonical.",
+      "track": "robust_current",
+      "ts_utc": "2026-04-06T06:13:03.889813+00:00",
+      "type": "decision"
+    },
+    {
+      "current_workflow_score": 3.33,
+      "event_id": "av1-filmgrain0-analysis",
+      "summary": "Film-grain 0 was estimated to maybe land around 2.16-2.24 if synthetic grain was hurting task metrics, but it regressed badly to 3.33. Bytes fell by 145,359 (16.82%), yet PoseNet distortion exploded.",
+      "track": "robust_current",
+      "ts_utc": "2026-04-06T07:12:44.279648+00:00",
+      "type": "analysis"
+    },
+    {
+      "current_workflow_score": 3.33,
+      "event_id": "av1-filmgrain0-rejected",
+      "summary": "One-axis AV1 probe with film-grain disabled scored 3.33 and was rejected; the 2.19 film-grain22 floor remains canonical.",
+      "track": "robust_current",
+      "ts_utc": "2026-04-06T07:12:44.279648+00:00",
+      "type": "decision"
+    },
+    {
+      "current_workflow_score": 2.23,
+      "event_id": "av1-522x392-analysis",
+      "summary": "522x392 was estimated to maybe land around 2.17-2.22 by trimming geometry slightly, but it regressed to 2.23. Bytes fell by 2,217 (0.26%), while pose and seg both worsened.",
+      "track": "robust_current",
+      "ts_utc": "2026-04-06T12:58:11.103191+00:00",
+      "type": "analysis"
+    },
+    {
+      "current_workflow_score": 2.23,
+      "event_id": "av1-522x392-rejected",
+      "summary": "One-axis AV1 geometry probe at 522x392 scored 2.23 and was rejected; the 2.19 524x394 floor remains canonical.",
+      "track": "robust_current",
+      "ts_utc": "2026-04-06T12:58:11.103191+00:00",
+      "type": "decision"
+    },
+    {
+      "current_workflow_score": 2.18,
+      "event_id": "av1-upscale-lanczos-analysis",
+      "summary": "Lanczos upscale was estimated to maybe land around 2.16-2.19 by improving reconstructed edge fidelity at fixed bytes. It scored 2.18 at unchanged bytes, with both pose and seg improving slightly.",
+      "track": "robust_current",
+      "ts_utc": "2026-04-06T13:59:06.248174+00:00",
+      "type": "analysis"
+    },
+    {
+      "current_workflow_score": 2.18,
+      "event_id": "av1-upscale-lanczos-promoted",
+      "summary": "Canonical robust_current AV1 floor at 524x394 / svtav1-p0 / crf34 / film-grain22 / lanczos upscale / unsharp scored 2.18 and replaced the prior 2.19 bicubic-upscale floor.",
+      "track": "robust_current",
+      "ts_utc": "2026-04-06T13:59:06.248174+00:00",
+      "type": "promotion"
+    },
+    {
+      "current_workflow_score": 2.12,
+      "event_id": "av1-colorspace-hardening-analysis",
+      "summary": "Explicit bt709/tv tagging on encode plus explicit rgb24(pc) decode conversion reduced evaluator mismatch. Archive bytes rose by 31, SegNet distortion worsened slightly, but PoseNet distortion improved sharply enough to move the score from 2.18 to 2.12.",
+      "track": "robust_current",
+      "ts_utc": "2026-04-06T15:43:00+00:00",
+      "type": "analysis"
+    },
+    {
+      "current_workflow_score": 2.12,
+      "event_id": "av1-colorspace-hardening-promoted",
+      "summary": "Canonical robust_current AV1 floor at 524x394 / svtav1-p0 / crf34 / film-grain22 / lanczos / unsharp with explicit bt709/tv encode tags and explicit rgb24(pc) decode scored 2.12 and replaced the prior 2.18 floor.",
+      "track": "robust_current",
+      "ts_utc": "2026-04-06T15:43:00+00:00",
+      "type": "promotion"
+    }
+  ],
+  "theses": [
+    "Strong standard-codec AV1 was already viable here; the real blocker was a rawvideo byte-format bug in the inflator.",
+    "BAT00 became useful as a research-only ranking lane, not as a score authority.",
+    "ROI-style multi-stream ideas were informative negative results but too expensive in the tested forms.",
+    "The x265 ladder still matters as evidence: it established a 3.25 local floor before the repaired AV1 branch advanced through 2.20, 2.19, 2.18, and 2.12."
+  ]
+}

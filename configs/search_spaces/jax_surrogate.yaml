@@ -1,0 +1,14 @@
+enabled: false
+purpose: "surrogate experiments only"
+model_families:
+  - tiny_mlp
+  - patch_mlp
+  - low_rank_linear
+batch_sizes: [64, 128, 256]
+loss_mix:
+  segnet_proxy: [0.3, 0.5, 0.7]
+  posenet_proxy: [0.3, 0.5, 0.7]
+  rgb_prior: [0.0, 0.05, 0.1]
+promote_only_if:
+  - "proxy ranking correlates with official eval on promoted candidates"
+  - "runtime benefit clearly exceeds added complexity"

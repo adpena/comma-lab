@@ -1,0 +1,26 @@
+# Context Snapshot
+
+- task statement: Continue the Ralph loop by pushing the honest score floor while preserving the writeup-first package.
+- desired outcome: run one additional nearby-scale scorer-backed candidate after BAT00 ranking, then update durable state and keep the promoted floor if it loses.
+- known facts/evidence:
+  - Promoted Track B floor is 3.25 at 424x318 / medium / 23 / keyint48 / bframes4 / ref4 / lanczos+lanczos.
+  - Nearby failures: 424x318/b3 -> 3.27, 424x318/g64 -> 3.26, 416x312 -> 3.44, 428x320 -> 3.32.
+  - BAT00 nearby-scale ranking placed 428x320 first, 426x320 second, 422x316 third.
+  - BAT00 remains research-only; local CPU scorer remains authoritative.
+- constraints:
+  - stay inside mutation frontier
+  - keep current_workflow vs rule_faithful explicit
+  - restore promoted floor if the candidate loses
+  - preserve writeup-first package
+- unknowns/open questions:
+  - whether 426x320 can beat 3.25
+  - whether nearby geometric tweaks are now exhausted
+- likely codebase touchpoints:
+  - submissions/robust_current/configs/*
+  - reports/raw/**
+  - reports/results.jsonl
+  - reports/timeline.jsonl
+  - reports/latest.md
+  - .omx/state/**
+  - .omx/research/findings.md
+  - .ralph/run_log.md

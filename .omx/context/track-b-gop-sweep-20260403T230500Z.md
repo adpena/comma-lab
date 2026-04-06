@@ -1,0 +1,25 @@
+# Context Snapshot: track-b-gop-sweep
+
+- Task statement: Run the next approved measured cycle: a Track B GOP sweep around the promoted 3.56 floor.
+- Desired outcome: Obtain scorer-backed CPU results for keyint 24, 48, and 64 around the promoted 448x336 medium/23 config, compare against the 3.56 floor and the published 4.39 baseline, and promote the best reversible config only if justified.
+- Known facts/evidence:
+  - Upstream snapshot is verified at commit ec82c291ffeae5212e9a38253791d58995518a80.
+  - exact_current remains alive but is a current_workflow-only exploit lane.
+  - robust_current promoted floor is 3.56 on CPU at 1,978,141 archive bytes with medium/23/448x336/keyint32/bframes4/ref4.
+  - repo-local helper `comma-lab eval-submission` handles upstream sync, packaging, and durable raw report copying.
+  - structured results live in reports/results.jsonl.
+- Constraints:
+  - Keep both tracks alive.
+  - Stay inside mutation frontier.
+  - Use official scorer path for claimed measured results.
+  - Prefer at most 3 experiments this cycle.
+  - Keep current_workflow vs rule_faithful explicit.
+- Unknowns/open questions:
+  - Whether shorter or longer GOP beats the promoted keyint 32 floor.
+  - Whether temporal structure remains a useful honest lever after CRF and resolution wins.
+- Likely codebase touchpoints:
+  - submissions/robust_current/config.env
+  - reports/raw/2026-04-03-gop-sweep/
+  - experiments/runs/2026-04-03-gop-sweep/
+  - reports/results.jsonl, reports/writeup_working.md
+  - .omx/state/*, .omx/research/findings.md, .ralph/run_log.md, reports/latest.md

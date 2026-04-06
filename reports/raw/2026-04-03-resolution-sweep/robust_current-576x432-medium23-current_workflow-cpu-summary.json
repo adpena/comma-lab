@@ -1,0 +1,16 @@
+{
+  "copied_report_path": "reports/raw/2026-04-03-resolution-sweep/robust_current-576x432-medium23-current_workflow-cpu-report.txt",
+  "current_workflow_archive_bytes": 3868552,
+  "current_workflow_rate": 0.1030364,
+  "current_workflow_score": 4.26,
+  "device": "cpu",
+  "original_uncompressed_bytes": 37545489,
+  "pose_distortion": 0.16646987,
+  "report_path": "/Users/adpena/Projects/pact/workspace/upstream/comma_video_compression_challenge/submissions/robust_current/report.txt",
+  "rule_faithful_bundle_bytes": 3871596,
+  "rule_faithful_rate": 0.10311747437887944,
+  "rule_faithful_score": 4.263703892867531,
+  "rule_faithful_status": "estimated_from_scorer_distortions_plus_honest_bytes",
+  "seg_distortion": 0.00395535,
+  "track": "robust_current"
+}

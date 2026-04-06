@@ -1,0 +1,96 @@
+{
+  "best_track_b_current_workflow": {
+    "score": 2.12,
+    "bytes": 864486,
+    "run_id": "robust_current-av1-524x394-colorspace-hardening-promoted-cpu-2026-04-06"
+  },
+  "artifact_layers": [
+    {
+      "path": "reports/graphs/index.html",
+      "purpose": "static dashboard"
+    },
+    {
+      "path": "reports/graphs/dashboard_data.json",
+      "purpose": "structured summary for dashboard"
+    },
+    {
+      "path": "reports/graphs/promotion_accounting.md",
+      "purpose": "promotion accounting across packaging views"
+    },
+    {
+      "path": "reports/graphs/promotion_review_latest.md",
+      "purpose": "latest senior-engineer promotion review"
+    },
+    {
+      "path": "reports/graphs/experiment_journal.md",
+      "purpose": "hypothesis / estimate / result / reflection ledger"
+    },
+    {
+      "path": "reports/graphs/ffmpeg_path_review.md",
+      "purpose": "ffmpeg-contributor-grade path review and caveats"
+    },
+    {
+      "path": "reports/graphs/writeup_outline.md",
+      "purpose": "narrative spine"
+    },
+    {
+      "path": "reports/graphs/final_writeup_draft.md",
+      "purpose": "prose draft"
+    },
+    {
+      "path": "reports/graphs/judges_one_pager.md",
+      "purpose": "top-line reviewer summary"
+    },
+    {
+      "path": "reports/graphs/submission_packet.md",
+      "purpose": "submitter-facing packet summary"
+    },
+    {
+      "path": "reports/graphs/final_submission_notes.md",
+      "purpose": "concise closing notes for final delivery"
+    },
+    {
+      "path": "reports/graphs/evidence_index.md",
+      "purpose": "claim-to-evidence map"
+    },
+    {
+      "path": "reports/graphs/release_checklist.md",
+      "purpose": "completion checklist"
+    },
+    {
+      "path": "reports/raw/2026-04-06-hardening/robust_current-hardening-smoke.json",
+      "purpose": "pre-scorer smoke-gate evidence for the live 2.12 floor"
+    },
+    {
+      "path": "reports/raw/2026-04-06-hardening/encoded-ffprobe.json",
+      "purpose": "encoded AV1 metadata evidence for the explicit bt709/tv color contract"
+    },
+    {
+      "path": "submissions/robust_current/config.av1-2.12.env",
+      "purpose": "named snapshot of the current promoted AV1 configuration"
+    }
+  ],
+  "turning_points": [
+    {
+      "label": "First honest floor",
+      "run_id": "robust_current-baseline-cpu-2026-04-03",
+      "score": 4.06
+    },
+    {
+      "label": "First big win",
+      "run_id": "robust_current-medium23-cpu-2026-04-03",
+      "score": 3.62
+    },
+    {
+      "label": "AV1 bug fixed",
+      "run_id": "robust_current-av1-524x394-rgb24-promoted-cpu-2026-04-05",
+      "score": 2.2
+    },
+    {
+      "label": "Current best floor",
+      "run_id": "robust_current-av1-524x394-colorspace-hardening-promoted-cpu-2026-04-06",
+      "score": 2.12
+    }
+  ],
+  "negative_result_count": 12
+}

@@ -1,0 +1,1222 @@
+{
+  "nodes": [
+    {
+      "id": "track:exact_current",
+      "type": "track"
+    },
+    {
+      "id": "codec:libx265",
+      "type": "codec"
+    },
+    {
+      "id": "track:robust_current",
+      "type": "track"
+    },
+    {
+      "id": "scale:512x384",
+      "type": "scale"
+    },
+    {
+      "id": "filters:lanczos/bicubic",
+      "type": "filters"
+    },
+    {
+      "id": "crf:22",
+      "type": "crf"
+    },
+    {
+      "id": "gop:32",
+      "type": "gop"
+    },
+    {
+      "id": "crf:21",
+      "type": "crf"
+    },
+    {
+      "id": "crf:23",
+      "type": "crf"
+    },
+    {
+      "id": "scale:448x336",
+      "type": "scale"
+    },
+    {
+      "id": "scale:576x432",
+      "type": "scale"
+    },
+    {
+      "id": "gop:24",
+      "type": "gop"
+    },
+    {
+      "id": "gop:48",
+      "type": "gop"
+    },
+    {
+      "id": "gop:64",
+      "type": "gop"
+    },
+    {
+      "id": "filters:bicubic/bicubic",
+      "type": "filters"
+    },
+    {
+      "id": "filters:lanczos/lanczos",
+      "type": "filters"
+    },
+    {
+      "id": "scale:432x324",
+      "type": "scale"
+    },
+    {
+      "id": "scale:464x348",
+      "type": "scale"
+    },
+    {
+      "id": "scale:424x318",
+      "type": "scale"
+    },
+    {
+      "id": "scale:416x312",
+      "type": "scale"
+    },
+    {
+      "id": "scale:428x320",
+      "type": "scale"
+    },
+    {
+      "id": "scale:426x320",
+      "type": "scale"
+    },
+    {
+      "id": "codec:libsvtav1",
+      "type": "codec"
+    },
+    {
+      "id": "scale:524x394",
+      "type": "scale"
+    },
+    {
+      "id": "crf:33",
+      "type": "crf"
+    },
+    {
+      "id": "gop:180",
+      "type": "gop"
+    },
+    {
+      "id": "crf:34",
+      "type": "crf"
+    },
+    {
+      "id": "crf:35",
+      "type": "crf"
+    },
+    {
+      "id": "scale:522x392",
+      "type": "scale"
+    },
+    {
+      "id": "filters:lanczos/lanczos + explicit bt709/tv->rgb(pc)",
+      "type": "filters"
+    },
+    {
+      "id": "exact_current-baseline-cpu-2026-04-03",
+      "type": "run",
+      "score": 0.0,
+      "bytes": 167,
+      "track": "exact_current"
+    },
+    {
+      "id": "robust_current-baseline-cpu-2026-04-03",
+      "type": "run",
+      "score": 4.06,
+      "bytes": 3735828,
+      "track": "robust_current"
+    },
+    {
+      "id": "robust_current-medium21-cpu-2026-04-03",
+      "type": "run",
+      "score": 4.74,
+      "bytes": 5005390,
+      "track": "robust_current"
+    },
+    {
+      "id": "robust_current-medium23-cpu-2026-04-03",
+      "type": "run",
+      "score": 3.62,
+      "bytes": 2819374,
+      "track": "robust_current"
+    },
+    {
+      "id": "robust_current-slow22-cpu-2026-04-03",
+      "type": "run",
+      "score": 4.13,
+      "bytes": 3812776,
+      "track": "robust_current"
+    },
+    {
+      "id": "robust_current-448x336-medium23-cpu-2026-04-03",
+      "type": "run",
+      "score": 3.56,
+      "bytes": 1978141,
+      "track": "robust_current"
+    },
+    {
+      "id": "robust_current-576x432-medium23-cpu-2026-04-03",
+      "type": "run",
+      "score": 4.26,
+      "bytes": 3868552,
+      "track": "robust_current"
+    },
+    {
+      "id": "robust_current-keyint24-cpu-2026-04-04",
+      "type": "run",
+      "score": 3.64,
+      "bytes": 2018006,
+      "track": "robust_current"
+    },
+    {
+      "id": "robust_current-keyint48-cpu-2026-04-04",
+      "type": "run",
+      "score": 3.56,
+      "bytes": 1901606,
+      "track": "robust_current"
+    },
+    {
+      "id": "robust_current-keyint64-cpu-2026-04-04",
+      "type": "run",
+      "score": 3.61,
+      "bytes": 1862992,
+      "track": "robust_current"
+    },
+    {
+      "id": "robust_current-bicubic-bicubic-cpu-2026-04-04",
+      "type": "run",
+      "score": 3.67,
+      "bytes": 1829217,
+      "track": "robust_current"
+    },
+    {
+      "id": "robust_current-lanczos-lanczos-cpu-2026-04-04",
+      "type": "run",
+      "score": 3.54,
+      "bytes": 1901606,
+      "track": "robust_current"
+    },
+    {
+      "id": "robust_current-bframes3-ref4-cpu-2026-04-04",
+      "type": "run",
+      "score": 3.57,
+      "bytes": 2021782,
+      "track": "robust_current"
+    },
+    {
+      "id": "robust_current-bframes5-ref4-cpu-2026-04-04",
+      "type": "run",
+      "score": 3.71,
+      "bytes": 1897819,
+      "track": "robust_current"
+    },
+    {
+      "id": "robust_current-bframes4-ref5-cpu-2026-04-04",
+      "type": "run",
+      "score": 3.55,
+      "bytes": 1894366,
+      "track": "robust_current"
+    },
+    {
+      "id": "robust_current-roi-two-pass-cpu-2026-04-04",
+      "type": "run",
+      "score": 5.73,
+      "bytes": 1472589,
+      "track": "robust_current"
+    },
+    {
+      "id": "robust_current-432x324-cpu-2026-04-04",
+      "type": "run",
+      "score": 3.33,
+      "bytes": 1781129,
+      "track": "robust_current"
+    },
+    {
+      "id": "robust_current-464x348-cpu-2026-04-04",
+      "type": "run",
+      "score": 3.44,
+      "bytes": 2139211,
+      "track": "robust_current"
+    },
+    {
+      "id": "robust_current-dynamic-main-roi-cpu-2026-04-05",
+      "type": "run",
+      "score": 4.47,
+      "bytes": 2660388,
+      "track": "robust_current"
+    },
+    {
+      "id": "robust_current-cand-432x324-crf23-g48-b3-r4-cpu-2026-04-05",
+      "type": "run",
+      "score": 3.43,
+      "bytes": 1898751,
+      "track": "robust_current"
+    },
+    {
+      "id": "robust_current-cand-432x324-crf23-g64-b4-r4-cpu-2026-04-05",
+      "type": "run",
+      "score": 3.38,
+      "bytes": 1753611,
+      "track": "robust_current"
+    },
+    {
+      "id": "robust_current-cand-424x318-crf23-g48-b4-r4-cpu-2026-04-05",
+      "type": "run",
+      "score": 3.25,
+      "bytes": 1669984,
+      "track": "robust_current"
+    },
+    {
+      "id": "robust_current-cand-424x318-crf23-g48-b3-r4-cpu-2026-04-05",
+      "type": "run",
+      "score": 3.27,
+      "bytes": 1776026,
+      "track": "robust_current"
+    },
+    {
+      "id": "robust_current-cand-424x318-crf23-g64-b4-r4-cpu-2026-04-06",
+      "type": "run",
+      "score": 3.26,
+      "bytes": 1646886,
+      "track": "robust_current"
+    },
+    {
+      "id": "robust_current-cand-416x312-crf23-g48-b4-r4-cpu-2026-04-05",
+      "type": "run",
+      "score": 3.44,
+      "bytes": 1573803,
+      "track": "robust_current"
+    },
+    {
+      "id": "robust_current-cand-428x320-crf23-g48-b4-r4-cpu-2026-04-05",
+      "type": "run",
+      "score": 3.32,
+      "bytes": 1741924,
+      "track": "robust_current"
+    },
+    {
+      "id": "robust_current-cand-426x320-crf23-g48-b4-r4-cpu-2026-04-06",
+      "type": "run",
+      "score": 3.38,
+      "bytes": 1766456,
+      "track": "robust_current"
+    },
+    {
+      "id": "robust_current-av1-524x394-cpu-2026-04-05",
+      "type": "run",
+      "score": 97.45,
+      "bytes": 920457,
+      "track": "robust_current"
+    },
+    {
+      "id": "robust_current-av1-524x394-rgb24-promoted-cpu-2026-04-05",
+      "type": "run",
+      "score": 2.2,
+      "bytes": 920457,
+      "track": "robust_current"
+    },
+    {
+      "id": "robust_current-av1-524x394-crf34-promoted-cpu-2026-04-06",
+      "type": "run",
+      "score": 2.19,
+      "bytes": 864455,
+      "track": "robust_current"
+    },
+    {
+      "id": "robust_current-av1-524x394-crf35-rejected-cpu-2026-04-06",
+      "type": "run",
+      "score": 2.21,
+      "bytes": 808036,
+      "track": "robust_current"
+    },
+    {
+      "id": "robust_current-av1-524x394-unsharp030-rejected-cpu-2026-04-06",
+      "type": "run",
+      "score": 2.2,
+      "bytes": 864455,
+      "track": "robust_current"
+    },
+    {
+      "id": "robust_current-av1-524x394-filmgrain0-rejected-cpu-2026-04-06",
+      "type": "run",
+      "score": 3.33,
+      "bytes": 719096,
+      "track": "robust_current"
+    },
+    {
+      "id": "robust_current-av1-522x392-rejected-cpu-2026-04-06",
+      "type": "run",
+      "score": 2.23,
+      "bytes": 862238,
+      "track": "robust_current"
+    },
+    {
+      "id": "robust_current-av1-524x394-upscale-lanczos-promoted-cpu-2026-04-06",
+      "type": "run",
+      "score": 2.18,
+      "bytes": 864455,
+      "track": "robust_current"
+    },
+    {
+      "id": "robust_current-av1-524x394-colorspace-hardening-promoted-cpu-2026-04-06",
+      "type": "run",
+      "score": 2.12,
+      "bytes": 864486,
+      "track": "robust_current"
+    }
+  ],
+  "edges": [
+    {
+      "source": "track:exact_current",
+      "target": "exact_current-baseline-cpu-2026-04-03"
+    },
+    {
+      "source": "codec:libx265",
+      "target": "exact_current-baseline-cpu-2026-04-03"
+    },
+    {
+      "source": "track:robust_current",
+      "target": "robust_current-baseline-cpu-2026-04-03"
+    },
+    {
+      "source": "codec:libx265",
+      "target": "robust_current-baseline-cpu-2026-04-03"
+    },
+    {
+      "source": "scale:512x384",
+      "target": "robust_current-baseline-cpu-2026-04-03"
+    },
+    {
+      "source": "filters:lanczos/bicubic",
+      "target": "robust_current-baseline-cpu-2026-04-03"
+    },
+    {
+      "source": "crf:22",
+      "target": "robust_current-baseline-cpu-2026-04-03"
+    },
+    {
+      "source": "gop:32",
+      "target": "robust_current-baseline-cpu-2026-04-03"
+    },
+    {
+      "source": "track:robust_current",
+      "target": "robust_current-medium21-cpu-2026-04-03"
+    },
+    {
+      "source": "codec:libx265",
+      "target": "robust_current-medium21-cpu-2026-04-03"
+    },
+    {
+      "source": "scale:512x384",
+      "target": "robust_current-medium21-cpu-2026-04-03"
+    },
+    {
+      "source": "filters:lanczos/bicubic",
+      "target": "robust_current-medium21-cpu-2026-04-03"
+    },
+    {
+      "source": "crf:21",
+      "target": "robust_current-medium21-cpu-2026-04-03"
+    },
+    {
+      "source": "gop:32",
+      "target": "robust_current-medium21-cpu-2026-04-03"
+    },
+    {
+      "source": "track:robust_current",
+      "target": "robust_current-medium23-cpu-2026-04-03"
+    },
+    {
+      "source": "codec:libx265",
+      "target": "robust_current-medium23-cpu-2026-04-03"
+    },
+    {
+      "source": "scale:512x384",
+      "target": "robust_current-medium23-cpu-2026-04-03"
+    },
+    {
+      "source": "filters:lanczos/bicubic",
+      "target": "robust_current-medium23-cpu-2026-04-03"
+    },
+    {
+      "source": "crf:23",
+      "target": "robust_current-medium23-cpu-2026-04-03"
+    },
+    {
+      "source": "gop:32",
+      "target": "robust_current-medium23-cpu-2026-04-03"
+    },
+    {
+      "source": "track:robust_current",
+      "target": "robust_current-slow22-cpu-2026-04-03"
+    },
+    {
+      "source": "codec:libx265",
+      "target": "robust_current-slow22-cpu-2026-04-03"
+    },
+    {
+      "source": "scale:512x384",
+      "target": "robust_current-slow22-cpu-2026-04-03"
+    },
+    {
+      "source": "filters:lanczos/bicubic",
+      "target": "robust_current-slow22-cpu-2026-04-03"
+    },
+    {
+      "source": "crf:22",
+      "target": "robust_current-slow22-cpu-2026-04-03"
+    },
+    {
+      "source": "gop:32",
+      "target": "robust_current-slow22-cpu-2026-04-03"
+    },
+    {
+      "source": "track:robust_current",
+      "target": "robust_current-448x336-medium23-cpu-2026-04-03"
+    },
+    {
+      "source": "codec:libx265",
+      "target": "robust_current-448x336-medium23-cpu-2026-04-03"
+    },
+    {
+      "source": "scale:448x336",
+      "target": "robust_current-448x336-medium23-cpu-2026-04-03"
+    },
+    {
+      "source": "filters:lanczos/bicubic",
+      "target": "robust_current-448x336-medium23-cpu-2026-04-03"
+    },
+    {
+      "source": "crf:23",
+      "target": "robust_current-448x336-medium23-cpu-2026-04-03"
+    },
+    {
+      "source": "gop:32",
+      "target": "robust_current-448x336-medium23-cpu-2026-04-03"
+    },
+    {
+      "source": "track:robust_current",
+      "target": "robust_current-576x432-medium23-cpu-2026-04-03"
+    },
+    {
+      "source": "codec:libx265",
+      "target": "robust_current-576x432-medium23-cpu-2026-04-03"
+    },
+    {
+      "source": "scale:576x432",
+      "target": "robust_current-576x432-medium23-cpu-2026-04-03"
+    },
+    {
+      "source": "filters:lanczos/bicubic",
+      "target": "robust_current-576x432-medium23-cpu-2026-04-03"
+    },
+    {
+      "source": "crf:23",
+      "target": "robust_current-576x432-medium23-cpu-2026-04-03"
+    },
+    {
+      "source": "gop:32",
+      "target": "robust_current-576x432-medium23-cpu-2026-04-03"
+    },
+    {
+      "source": "track:robust_current",
+      "target": "robust_current-keyint24-cpu-2026-04-04"
+    },
+    {
+      "source": "codec:libx265",
+      "target": "robust_current-keyint24-cpu-2026-04-04"
+    },
+    {
+      "source": "scale:448x336",
+      "target": "robust_current-keyint24-cpu-2026-04-04"
+    },
+    {
+      "source": "filters:lanczos/bicubic",
+      "target": "robust_current-keyint24-cpu-2026-04-04"
+    },
+    {
+      "source": "crf:23",
+      "target": "robust_current-keyint24-cpu-2026-04-04"
+    },
+    {
+      "source": "gop:24",
+      "target": "robust_current-keyint24-cpu-2026-04-04"
+    },
+    {
+      "source": "track:robust_current",
+      "target": "robust_current-keyint48-cpu-2026-04-04"
+    },
+    {
+      "source": "codec:libx265",
+      "target": "robust_current-keyint48-cpu-2026-04-04"
+    },
+    {
+      "source": "scale:448x336",
+      "target": "robust_current-keyint48-cpu-2026-04-04"
+    },
+    {
+      "source": "filters:lanczos/bicubic",
+      "target": "robust_current-keyint48-cpu-2026-04-04"
+    },
+    {
+      "source": "crf:23",
+      "target": "robust_current-keyint48-cpu-2026-04-04"
+    },
+    {
+      "source": "gop:48",
+      "target": "robust_current-keyint48-cpu-2026-04-04"
+    },
+    {
+      "source": "track:robust_current",
+      "target": "robust_current-keyint64-cpu-2026-04-04"
+    },
+    {
+      "source": "codec:libx265",
+      "target": "robust_current-keyint64-cpu-2026-04-04"
+    },
+    {
+      "source": "scale:448x336",
+      "target": "robust_current-keyint64-cpu-2026-04-04"
+    },
+    {
+      "source": "filters:lanczos/bicubic",
+      "target": "robust_current-keyint64-cpu-2026-04-04"
+    },
+    {
+      "source": "crf:23",
+      "target": "robust_current-keyint64-cpu-2026-04-04"
+    },
+    {
+      "source": "gop:64",
+      "target": "robust_current-keyint64-cpu-2026-04-04"
+    },
+    {
+      "source": "track:robust_current",
+      "target": "robust_current-bicubic-bicubic-cpu-2026-04-04"
+    },
+    {
+      "source": "codec:libx265",
+      "target": "robust_current-bicubic-bicubic-cpu-2026-04-04"
+    },
+    {
+      "source": "scale:448x336",
+      "target": "robust_current-bicubic-bicubic-cpu-2026-04-04"
+    },
+    {
+      "source": "filters:bicubic/bicubic",
+      "target": "robust_current-bicubic-bicubic-cpu-2026-04-04"
+    },
+    {
+      "source": "crf:23",
+      "target": "robust_current-bicubic-bicubic-cpu-2026-04-04"
+    },
+    {
+      "source": "gop:48",
+      "target": "robust_current-bicubic-bicubic-cpu-2026-04-04"
+    },
+    {
+      "source": "track:robust_current",
+      "target": "robust_current-lanczos-lanczos-cpu-2026-04-04"
+    },
+    {
+      "source": "codec:libx265",
+      "target": "robust_current-lanczos-lanczos-cpu-2026-04-04"
+    },
+    {
+      "source": "scale:448x336",
+      "target": "robust_current-lanczos-lanczos-cpu-2026-04-04"
+    },
+    {
+      "source": "filters:lanczos/lanczos",
+      "target": "robust_current-lanczos-lanczos-cpu-2026-04-04"
+    },
+    {
+      "source": "crf:23",
+      "target": "robust_current-lanczos-lanczos-cpu-2026-04-04"
+    },
+    {
+      "source": "gop:48",
+      "target": "robust_current-lanczos-lanczos-cpu-2026-04-04"
+    },
+    {
+      "source": "track:robust_current",
+      "target": "robust_current-bframes3-ref4-cpu-2026-04-04"
+    },
+    {
+      "source": "codec:libx265",
+      "target": "robust_current-bframes3-ref4-cpu-2026-04-04"
+    },
+    {
+      "source": "scale:448x336",
+      "target": "robust_current-bframes3-ref4-cpu-2026-04-04"
+    },
+    {
+      "source": "filters:lanczos/lanczos",
+      "target": "robust_current-bframes3-ref4-cpu-2026-04-04"
+    },
+    {
+      "source": "crf:23",
+      "target": "robust_current-bframes3-ref4-cpu-2026-04-04"
+    },
+    {
+      "source": "gop:48",
+      "target": "robust_current-bframes3-ref4-cpu-2026-04-04"
+    },
+    {
+      "source": "track:robust_current",
+      "target": "robust_current-bframes5-ref4-cpu-2026-04-04"
+    },
+    {
+      "source": "codec:libx265",
+      "target": "robust_current-bframes5-ref4-cpu-2026-04-04"
+    },
+    {
+      "source": "scale:448x336",
+      "target": "robust_current-bframes5-ref4-cpu-2026-04-04"
+    },
+    {
+      "source": "filters:lanczos/lanczos",
+      "target": "robust_current-bframes5-ref4-cpu-2026-04-04"
+    },
+    {
+      "source": "crf:23",
+      "target": "robust_current-bframes5-ref4-cpu-2026-04-04"
+    },
+    {
+      "source": "gop:48",
+      "target": "robust_current-bframes5-ref4-cpu-2026-04-04"
+    },
+    {
+      "source": "track:robust_current",
+      "target": "robust_current-bframes4-ref5-cpu-2026-04-04"
+    },
+    {
+      "source": "codec:libx265",
+      "target": "robust_current-bframes4-ref5-cpu-2026-04-04"
+    },
+    {
+      "source": "scale:448x336",
+      "target": "robust_current-bframes4-ref5-cpu-2026-04-04"
+    },
+    {
+      "source": "filters:lanczos/lanczos",
+      "target": "robust_current-bframes4-ref5-cpu-2026-04-04"
+    },
+    {
+      "source": "crf:23",
+      "target": "robust_current-bframes4-ref5-cpu-2026-04-04"
+    },
+    {
+      "source": "gop:48",
+      "target": "robust_current-bframes4-ref5-cpu-2026-04-04"
+    },
+    {
+      "source": "track:robust_current",
+      "target": "robust_current-roi-two-pass-cpu-2026-04-04"
+    },
+    {
+      "source": "codec:libx265",
+      "target": "robust_current-roi-two-pass-cpu-2026-04-04"
+    },
+    {
+      "source": "scale:448x336",
+      "target": "robust_current-roi-two-pass-cpu-2026-04-04"
+    },
+    {
+      "source": "filters:lanczos/lanczos",
+      "target": "robust_current-roi-two-pass-cpu-2026-04-04"
+    },
+    {
+      "source": "gop:48",
+      "target": "robust_current-roi-two-pass-cpu-2026-04-04"
+    },
+    {
+      "source": "track:robust_current",
+      "target": "robust_current-432x324-cpu-2026-04-04"
+    },
+    {
+      "source": "codec:libx265",
+      "target": "robust_current-432x324-cpu-2026-04-04"
+    },
+    {
+      "source": "scale:432x324",
+      "target": "robust_current-432x324-cpu-2026-04-04"
+    },
+    {
+      "source": "filters:lanczos/lanczos",
+      "target": "robust_current-432x324-cpu-2026-04-04"
+    },
+    {
+      "source": "crf:23",
+      "target": "robust_current-432x324-cpu-2026-04-04"
+    },
+    {
+      "source": "gop:48",
+      "target": "robust_current-432x324-cpu-2026-04-04"
+    },
+    {
+      "source": "track:robust_current",
+      "target": "robust_current-464x348-cpu-2026-04-04"
+    },
+    {
+      "source": "codec:libx265",
+      "target": "robust_current-464x348-cpu-2026-04-04"
+    },
+    {
+      "source": "scale:464x348",
+      "target": "robust_current-464x348-cpu-2026-04-04"
+    },
+    {
+      "source": "filters:lanczos/lanczos",
+      "target": "robust_current-464x348-cpu-2026-04-04"
+    },
+    {
+      "source": "crf:23",
+      "target": "robust_current-464x348-cpu-2026-04-04"
+    },
+    {
+      "source": "gop:48",
+      "target": "robust_current-464x348-cpu-2026-04-04"
+    },
+    {
+      "source": "track:robust_current",
+      "target": "robust_current-dynamic-main-roi-cpu-2026-04-05"
+    },
+    {
+      "source": "codec:libx265",
+      "target": "robust_current-dynamic-main-roi-cpu-2026-04-05"
+    },
+    {
+      "source": "scale:432x324",
+      "target": "robust_current-dynamic-main-roi-cpu-2026-04-05"
+    },
+    {
+      "source": "filters:lanczos/lanczos",
+      "target": "robust_current-dynamic-main-roi-cpu-2026-04-05"
+    },
+    {
+      "source": "crf:23",
+      "target": "robust_current-dynamic-main-roi-cpu-2026-04-05"
+    },
+    {
+      "source": "gop:48",
+      "target": "robust_current-dynamic-main-roi-cpu-2026-04-05"
+    },
+    {
+      "source": "track:robust_current",
+      "target": "robust_current-cand-432x324-crf23-g48-b3-r4-cpu-2026-04-05"
+    },
+    {
+      "source": "codec:libx265",
+      "target": "robust_current-cand-432x324-crf23-g48-b3-r4-cpu-2026-04-05"
+    },
+    {
+      "source": "scale:432x324",
+      "target": "robust_current-cand-432x324-crf23-g48-b3-r4-cpu-2026-04-05"
+    },
+    {
+      "source": "filters:lanczos/lanczos",
+      "target": "robust_current-cand-432x324-crf23-g48-b3-r4-cpu-2026-04-05"
+    },
+    {
+      "source": "crf:23",
+      "target": "robust_current-cand-432x324-crf23-g48-b3-r4-cpu-2026-04-05"
+    },
+    {
+      "source": "gop:48",
+      "target": "robust_current-cand-432x324-crf23-g48-b3-r4-cpu-2026-04-05"
+    },
+    {
+      "source": "track:robust_current",
+      "target": "robust_current-cand-432x324-crf23-g64-b4-r4-cpu-2026-04-05"
+    },
+    {
+      "source": "codec:libx265",
+      "target": "robust_current-cand-432x324-crf23-g64-b4-r4-cpu-2026-04-05"
+    },
+    {
+      "source": "scale:432x324",
+      "target": "robust_current-cand-432x324-crf23-g64-b4-r4-cpu-2026-04-05"
+    },
+    {
+      "source": "filters:lanczos/lanczos",
+      "target": "robust_current-cand-432x324-crf23-g64-b4-r4-cpu-2026-04-05"
+    },
+    {
+      "source": "crf:23",
+      "target": "robust_current-cand-432x324-crf23-g64-b4-r4-cpu-2026-04-05"
+    },
+    {
+      "source": "gop:64",
+      "target": "robust_current-cand-432x324-crf23-g64-b4-r4-cpu-2026-04-05"
+    },
+    {
+      "source": "track:robust_current",
+      "target": "robust_current-cand-424x318-crf23-g48-b4-r4-cpu-2026-04-05"
+    },
+    {
+      "source": "codec:libx265",
+      "target": "robust_current-cand-424x318-crf23-g48-b4-r4-cpu-2026-04-05"
+    },
+    {
+      "source": "scale:424x318",
+      "target": "robust_current-cand-424x318-crf23-g48-b4-r4-cpu-2026-04-05"
+    },
+    {
+      "source": "filters:lanczos/lanczos",
+      "target": "robust_current-cand-424x318-crf23-g48-b4-r4-cpu-2026-04-05"
+    },
+    {
+      "source": "crf:23",
+      "target": "robust_current-cand-424x318-crf23-g48-b4-r4-cpu-2026-04-05"
+    },
+    {
+      "source": "gop:48",
+      "target": "robust_current-cand-424x318-crf23-g48-b4-r4-cpu-2026-04-05"
+    },
+    {
+      "source": "track:robust_current",
+      "target": "robust_current-cand-424x318-crf23-g48-b3-r4-cpu-2026-04-05"
+    },
+    {
+      "source": "codec:libx265",
+      "target": "robust_current-cand-424x318-crf23-g48-b3-r4-cpu-2026-04-05"
+    },
+    {
+      "source": "scale:424x318",
+      "target": "robust_current-cand-424x318-crf23-g48-b3-r4-cpu-2026-04-05"
+    },
+    {
+      "source": "filters:lanczos/lanczos",
+      "target": "robust_current-cand-424x318-crf23-g48-b3-r4-cpu-2026-04-05"
+    },
+    {
+      "source": "crf:23",
+      "target": "robust_current-cand-424x318-crf23-g48-b3-r4-cpu-2026-04-05"
+    },
+    {
+      "source": "gop:48",
+      "target": "robust_current-cand-424x318-crf23-g48-b3-r4-cpu-2026-04-05"
+    },
+    {
+      "source": "track:robust_current",
+      "target": "robust_current-cand-424x318-crf23-g64-b4-r4-cpu-2026-04-06"
+    },
+    {
+      "source": "codec:libx265",
+      "target": "robust_current-cand-424x318-crf23-g64-b4-r4-cpu-2026-04-06"
+    },
+    {
+      "source": "scale:424x318",
+      "target": "robust_current-cand-424x318-crf23-g64-b4-r4-cpu-2026-04-06"
+    },
+    {
+      "source": "filters:lanczos/lanczos",
+      "target": "robust_current-cand-424x318-crf23-g64-b4-r4-cpu-2026-04-06"
+    },
+    {
+      "source": "crf:23",
+      "target": "robust_current-cand-424x318-crf23-g64-b4-r4-cpu-2026-04-06"
+    },
+    {
+      "source": "gop:64",
+      "target": "robust_current-cand-424x318-crf23-g64-b4-r4-cpu-2026-04-06"
+    },
+    {
+      "source": "track:robust_current",
+      "target": "robust_current-cand-416x312-crf23-g48-b4-r4-cpu-2026-04-05"
+    },
+    {
+      "source": "codec:libx265",
+      "target": "robust_current-cand-416x312-crf23-g48-b4-r4-cpu-2026-04-05"
+    },
+    {
+      "source": "scale:416x312",
+      "target": "robust_current-cand-416x312-crf23-g48-b4-r4-cpu-2026-04-05"
+    },
+    {
+      "source": "filters:lanczos/lanczos",
+      "target": "robust_current-cand-416x312-crf23-g48-b4-r4-cpu-2026-04-05"
+    },
+    {
+      "source": "crf:23",
+      "target": "robust_current-cand-416x312-crf23-g48-b4-r4-cpu-2026-04-05"
+    },
+    {
+      "source": "gop:48",
+      "target": "robust_current-cand-416x312-crf23-g48-b4-r4-cpu-2026-04-05"
+    },
+    {
+      "source": "track:robust_current",
+      "target": "robust_current-cand-428x320-crf23-g48-b4-r4-cpu-2026-04-05"
+    },
+    {
+      "source": "codec:libx265",
+      "target": "robust_current-cand-428x320-crf23-g48-b4-r4-cpu-2026-04-05"
+    },
+    {
+      "source": "scale:428x320",
+      "target": "robust_current-cand-428x320-crf23-g48-b4-r4-cpu-2026-04-05"
+    },
+    {
+      "source": "filters:lanczos/lanczos",
+      "target": "robust_current-cand-428x320-crf23-g48-b4-r4-cpu-2026-04-05"
+    },
+    {
+      "source": "crf:23",
+      "target": "robust_current-cand-428x320-crf23-g48-b4-r4-cpu-2026-04-05"
+    },
+    {
+      "source": "gop:48",
+      "target": "robust_current-cand-428x320-crf23-g48-b4-r4-cpu-2026-04-05"
+    },
+    {
+      "source": "track:robust_current",
+      "target": "robust_current-cand-426x320-crf23-g48-b4-r4-cpu-2026-04-06"
+    },
+    {
+      "source": "codec:libx265",
+      "target": "robust_current-cand-426x320-crf23-g48-b4-r4-cpu-2026-04-06"
+    },
+    {
+      "source": "scale:426x320",
+      "target": "robust_current-cand-426x320-crf23-g48-b4-r4-cpu-2026-04-06"
+    },
+    {
+      "source": "filters:lanczos/lanczos",
+      "target": "robust_current-cand-426x320-crf23-g48-b4-r4-cpu-2026-04-06"
+    },
+    {
+      "source": "crf:23",
+      "target": "robust_current-cand-426x320-crf23-g48-b4-r4-cpu-2026-04-06"
+    },
+    {
+      "source": "gop:48",
+      "target": "robust_current-cand-426x320-crf23-g48-b4-r4-cpu-2026-04-06"
+    },
+    {
+      "source": "track:robust_current",
+      "target": "robust_current-av1-524x394-cpu-2026-04-05"
+    },
+    {
+      "source": "codec:libsvtav1",
+      "target": "robust_current-av1-524x394-cpu-2026-04-05"
+    },
+    {
+      "source": "scale:524x394",
+      "target": "robust_current-av1-524x394-cpu-2026-04-05"
+    },
+    {
+      "source": "filters:lanczos/bicubic",
+      "target": "robust_current-av1-524x394-cpu-2026-04-05"
+    },
+    {
+      "source": "crf:33",
+      "target": "robust_current-av1-524x394-cpu-2026-04-05"
+    },
+    {
+      "source": "gop:180",
+      "target": "robust_current-av1-524x394-cpu-2026-04-05"
+    },
+    {
+      "source": "track:robust_current",
+      "target": "robust_current-av1-524x394-rgb24-promoted-cpu-2026-04-05"
+    },
+    {
+      "source": "codec:libsvtav1",
+      "target": "robust_current-av1-524x394-rgb24-promoted-cpu-2026-04-05"
+    },
+    {
+      "source": "scale:524x394",
+      "target": "robust_current-av1-524x394-rgb24-promoted-cpu-2026-04-05"
+    },
+    {
+      "source": "filters:lanczos/bicubic",
+      "target": "robust_current-av1-524x394-rgb24-promoted-cpu-2026-04-05"
+    },
+    {
+      "source": "crf:33",
+      "target": "robust_current-av1-524x394-rgb24-promoted-cpu-2026-04-05"
+    },
+    {
+      "source": "gop:180",
+      "target": "robust_current-av1-524x394-rgb24-promoted-cpu-2026-04-05"
+    },
+    {
+      "source": "track:robust_current",
+      "target": "robust_current-av1-524x394-crf34-promoted-cpu-2026-04-06"
+    },
+    {
+      "source": "codec:libsvtav1",
+      "target": "robust_current-av1-524x394-crf34-promoted-cpu-2026-04-06"
+    },
+    {
+      "source": "scale:524x394",
+      "target": "robust_current-av1-524x394-crf34-promoted-cpu-2026-04-06"
+    },
+    {
+      "source": "filters:lanczos/bicubic",
+      "target": "robust_current-av1-524x394-crf34-promoted-cpu-2026-04-06"
+    },
+    {
+      "source": "crf:34",
+      "target": "robust_current-av1-524x394-crf34-promoted-cpu-2026-04-06"
+    },
+    {
+      "source": "gop:180",
+      "target": "robust_current-av1-524x394-crf34-promoted-cpu-2026-04-06"
+    },
+    {
+      "source": "track:robust_current",
+      "target": "robust_current-av1-524x394-crf35-rejected-cpu-2026-04-06"
+    },
+    {
+      "source": "codec:libsvtav1",
+      "target": "robust_current-av1-524x394-crf35-rejected-cpu-2026-04-06"
+    },
+    {
+      "source": "scale:524x394",
+      "target": "robust_current-av1-524x394-crf35-rejected-cpu-2026-04-06"
+    },
+    {
+      "source": "filters:lanczos/bicubic",
+      "target": "robust_current-av1-524x394-crf35-rejected-cpu-2026-04-06"
+    },
+    {
+      "source": "crf:35",
+      "target": "robust_current-av1-524x394-crf35-rejected-cpu-2026-04-06"
+    },
+    {
+      "source": "gop:180",
+      "target": "robust_current-av1-524x394-crf35-rejected-cpu-2026-04-06"
+    },
+    {
+      "source": "track:robust_current",
+      "target": "robust_current-av1-524x394-unsharp030-rejected-cpu-2026-04-06"
+    },
+    {
+      "source": "codec:libsvtav1",
+      "target": "robust_current-av1-524x394-unsharp030-rejected-cpu-2026-04-06"
+    },
+    {
+      "source": "scale:524x394",
+      "target": "robust_current-av1-524x394-unsharp030-rejected-cpu-2026-04-06"
+    },
+    {
+      "source": "filters:lanczos/bicubic",
+      "target": "robust_current-av1-524x394-unsharp030-rejected-cpu-2026-04-06"
+    },
+    {
+      "source": "crf:34",
+      "target": "robust_current-av1-524x394-unsharp030-rejected-cpu-2026-04-06"
+    },
+    {
+      "source": "gop:180",
+      "target": "robust_current-av1-524x394-unsharp030-rejected-cpu-2026-04-06"
+    },
+    {
+      "source": "track:robust_current",
+      "target": "robust_current-av1-524x394-filmgrain0-rejected-cpu-2026-04-06"
+    },
+    {
+      "source": "codec:libsvtav1",
+      "target": "robust_current-av1-524x394-filmgrain0-rejected-cpu-2026-04-06"
+    },
+    {
+      "source": "scale:524x394",
+      "target": "robust_current-av1-524x394-filmgrain0-rejected-cpu-2026-04-06"
+    },
+    {
+      "source": "filters:lanczos/bicubic",
+      "target": "robust_current-av1-524x394-filmgrain0-rejected-cpu-2026-04-06"
+    },
+    {
+      "source": "crf:34",
+      "target": "robust_current-av1-524x394-filmgrain0-rejected-cpu-2026-04-06"
+    },
+    {
+      "source": "gop:180",
+      "target": "robust_current-av1-524x394-filmgrain0-rejected-cpu-2026-04-06"
+    },
+    {
+      "source": "track:robust_current",
+      "target": "robust_current-av1-522x392-rejected-cpu-2026-04-06"
+    },
+    {
+      "source": "codec:libsvtav1",
+      "target": "robust_current-av1-522x392-rejected-cpu-2026-04-06"
+    },
+    {
+      "source": "scale:522x392",
+      "target": "robust_current-av1-522x392-rejected-cpu-2026-04-06"
+    },
+    {
+      "source": "filters:lanczos/bicubic",
+      "target": "robust_current-av1-522x392-rejected-cpu-2026-04-06"
+    },
+    {
+      "source": "crf:34",
+      "target": "robust_current-av1-522x392-rejected-cpu-2026-04-06"
+    },
+    {
+      "source": "gop:180",
+      "target": "robust_current-av1-522x392-rejected-cpu-2026-04-06"
+    },
+    {
+      "source": "track:robust_current",
+      "target": "robust_current-av1-524x394-upscale-lanczos-promoted-cpu-2026-04-06"
+    },
+    {
+      "source": "codec:libsvtav1",
+      "target": "robust_current-av1-524x394-upscale-lanczos-promoted-cpu-2026-04-06"
+    },
+    {
+      "source": "scale:524x394",
+      "target": "robust_current-av1-524x394-upscale-lanczos-promoted-cpu-2026-04-06"
+    },
+    {
+      "source": "filters:lanczos/lanczos",
+      "target": "robust_current-av1-524x394-upscale-lanczos-promoted-cpu-2026-04-06"
+    },
+    {
+      "source": "crf:34",
+      "target": "robust_current-av1-524x394-upscale-lanczos-promoted-cpu-2026-04-06"
+    },
+    {
+      "source": "gop:180",
+      "target": "robust_current-av1-524x394-upscale-lanczos-promoted-cpu-2026-04-06"
+    },
+    {
+      "source": "track:robust_current",
+      "target": "robust_current-av1-524x394-colorspace-hardening-promoted-cpu-2026-04-06"
+    },
+    {
+      "source": "codec:libsvtav1",
+      "target": "robust_current-av1-524x394-colorspace-hardening-promoted-cpu-2026-04-06"
+    },
+    {
+      "source": "scale:524x394",
+      "target": "robust_current-av1-524x394-colorspace-hardening-promoted-cpu-2026-04-06"
+    },
+    {
+      "source": "filters:lanczos/lanczos + explicit bt709/tv->rgb(pc)",
+      "target": "robust_current-av1-524x394-colorspace-hardening-promoted-cpu-2026-04-06"
+    },
+    {
+      "source": "crf:34",
+      "target": "robust_current-av1-524x394-colorspace-hardening-promoted-cpu-2026-04-06"
+    },
+    {
+      "source": "gop:180",
+      "target": "robust_current-av1-524x394-colorspace-hardening-promoted-cpu-2026-04-06"
+    }
+  ]
+}

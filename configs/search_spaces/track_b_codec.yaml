@@ -1,0 +1,39 @@
+track: robust_current
+objective: improve official score under a rule-faithful interpretation
+variables:
+  scale:
+    - [512, 384]
+    - [576, 432]
+    - [640, 480]
+  x265_preset:
+    - medium
+    - slow
+    - slower
+  x265_crf:
+    - 18
+    - 20
+    - 22
+    - 24
+    - 26
+  x265_gop:
+    - 16
+    - 32
+    - 48
+    - 64
+  x265_bframes:
+    - 0
+    - 2
+    - 4
+  x265_ref:
+    - 2
+    - 4
+    - 6
+  downscale_flags:
+    - bicubic
+    - lanczos
+  upscale_flags:
+    - bicubic
+    - lanczos
+promotion:
+  keep_top_k: 8
+  require_archive_bytes_under: 8000000

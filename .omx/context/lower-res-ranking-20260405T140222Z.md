@@ -1,0 +1,28 @@
+# Context Snapshot
+
+- task statement: Continue the Ralph loop by pushing the main compression lane while preserving the 3.25 floor and improving writeup assets.
+- desired outcome: use BAT00 to rank a small lower-resolution candidate set, run the top local CPU candidate, update results/state based on evidence, and strengthen the writeup packet in parallel.
+- known facts/evidence:
+  - Promoted Track B floor is 3.25 at 424x318 / medium / 23 / keyint48 / bframes4 / ref4 / lanczos+lanczos.
+  - Nearby 424x318 follow-ups at bframes3 and keyint64 lost at 3.27 and 3.26.
+  - BAT00 ranking support is useful but non-authoritative.
+  - Lowering resolution repeatedly helped earlier in the search.
+- constraints:
+  - local CPU scorer is authoritative
+  - BAT00 remains research-only
+  - keep current_workflow vs rule_faithful explicit
+  - stay inside mutation frontier
+- unknowns/open questions:
+  - whether 416x312 or 408x306 can beat 3.25
+  - whether the next best value is one more score probe or mostly writeup refinement
+- likely codebase touchpoints:
+  - submissions/robust_current/configs/*
+  - reports/raw/**
+  - reports/results.jsonl
+  - reports/timeline.jsonl
+  - reports/latest.md
+  - reports/writeup_working.md
+  - reports/graphs/**
+  - .omx/state/**
+  - .omx/research/findings.md
+  - .ralph/run_log.md

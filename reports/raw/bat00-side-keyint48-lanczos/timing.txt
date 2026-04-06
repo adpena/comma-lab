@@ -1,0 +1,3 @@
+encode_sec=14.63
+sync_sec=0.20
+eval_sec=162.64

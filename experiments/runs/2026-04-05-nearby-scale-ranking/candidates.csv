@@ -1,0 +1,6 @@
+run_id,archive_bytes,scale_w,scale_h,crf,gop,bframes,ref,preset_medium,preset_slow,filter_lanczos_bicubic,filter_lanczos_lanczos,filter_bicubic_bicubic
+cand-420x316-crf23-g48-b4-r4,0,420,316,23,48,4,4,1,0,0,1,0
+cand-422x316-crf23-g48-b4-r4,0,422,316,23,48,4,4,1,0,0,1,0
+cand-426x320-crf23-g48-b4-r4,0,426,320,23,48,4,4,1,0,0,1,0
+cand-428x320-crf23-g48-b4-r4,0,428,320,23,48,4,4,1,0,0,1,0
+cand-420x316-crf23-g64-b4-r4,0,420,316,23,64,4,4,1,0,0,1,0

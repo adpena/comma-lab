@@ -1,0 +1,17 @@
+track: robust_current_residual
+objective: spend bits only where the published score appears sensitive
+variables:
+  roi_kind:
+    - last_frame_edges
+    - lane_like_regions
+    - motion_sensitive_regions
+  coeff_quant:
+    - 4
+    - 6
+    - 8
+  patch_size:
+    - 8
+    - 16
+    - 32
+notes:
+  - treat this as a future lane after the codec floor is established

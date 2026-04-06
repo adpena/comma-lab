@@ -1,0 +1,32 @@
+ffmpeg version 8.1 Copyright (c) 2000-2026 the FFmpeg developers
+  built with Apple clang version 17.0.0 (clang-1700.6.4.2)
+  configuration: --prefix=/opt/homebrew/Cellar/ffmpeg/8.1 --enable-shared --enable-pthreads --enable-version3 --cc=clang --host-cflags= --host-ldflags= --enable-ffplay --enable-gpl --enable-libsvtav1 --enable-libopus --enable-libx264 --enable-libmp3lame --enable-libdav1d --enable-libvpx --enable-libx265 --enable-openssl --enable-videotoolbox --enable-audiotoolbox --enable-neon
+  libavutil      60. 26.100 / 60. 26.100
+  libavcodec     62. 28.100 / 62. 28.100
+  libavformat    62. 12.100 / 62. 12.100
+  libavdevice    62.  3.100 / 62.  3.100
+  libavfilter    11. 14.100 / 11. 14.100
+  libswscale      9.  5.100 /  9.  5.100
+  libswresample   6.  3.100 /  6.  3.100
+Input #0, matroska,webm, from 'reports/raw/2026-04-05-av1-debug-rerun/smoke/smoke.mkv':
+  Metadata:
+    SEGMENT         : b0c9d2329ad1606b|2018-07-27--06-03-57/10/video.hevc
+    ENCODER         : Lavf62.12.100
+  Duration: 00:00:02.00, start: 0.000000, bitrate: 134 kb/s
+  Stream #0:0: Video: av1 (libdav1d) (Main), yuv420p(tv, progressive), 524x394 [SAR 1:1 DAR 262:197], 20 fps, 20 tbr, 1k tbn
+    Metadata:
+      ENCODER         : Lavc62.28.100 libsvtav1
+      DURATION        : 00:00:02.000000000
+Stream mapping:
+  Stream #0:0 -> #0:0 (av1 (libdav1d) -> rawvideo (native))
+Press [q] to stop, [?] for help
+Output #0, rawvideo, to 'reports/raw/2026-04-05-av1-debug-rerun/smoke/smoke.raw':
+  Metadata:
+    SEGMENT         : b0c9d2329ad1606b|2018-07-27--06-03-57/10/video.hevc
+    encoder         : Lavf62.12.100
+  Stream #0:0: Video: rawvideo (RGB[24] / 0x18424752), rgb24(pc, gbr/unknown/unknown, progressive), 1164x874 [SAR 57247:57327 DAR 262:197], q=2-31, 488321 kb/s, 20 fps, 20 tbn
+    Metadata:
+      encoder         : Lavc62.28.100 rawvideo
+      DURATION        : 00:00:02.000000000
+frame=   21 fps=0.0 q=-0.0 size=   59392KiB time=00:00:01.05 bitrate=463370.7kbits/s speed=2.09x elapsed=0:00:00.50    [out#0/rawvideo @ 0xc4f044180] video:119219KiB audio:0KiB subtitle:0KiB other streams:0KiB global headers:0KiB muxing overhead: 0.000000%
+frame=   40 fps=0.0 q=-0.0 Lsize=  119219KiB time=00:00:02.00 bitrate=488321.3kbits/s speed=2.43x elapsed=0:00:00.82    

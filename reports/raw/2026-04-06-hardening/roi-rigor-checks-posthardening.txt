@@ -1,0 +1,16 @@
+## ROI guard on AV1 config
+guard_returncode=1
+guard_stderr=ERROR: ROI packaging currently supports VIDEO_CODEC=libx265 only. | Disable ROI or switch VIDEO_CODEC to libx265 before packaging.
+
+## ROI metadata path ffmpeg/ffprobe propagation
+wrapper_log=ffmpeg,ffmpeg,ffmpeg,ffmpeg,ffmpeg,ffmpeg,ffmpeg,ffprobe
+
+## ROI_X_FRAC effect
+roi_x_frac_same=False
+roi_left_bytes=799222
+roi_right_bytes=857236
+
+## ROI INFLATE_POSTFILTER symmetry
+inflate_postfilter_same=False
+plain_raw_bytes=3662409600
+filter_raw_bytes=3662409600

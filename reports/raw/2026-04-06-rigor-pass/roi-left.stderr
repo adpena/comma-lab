@@ -1,0 +1,92 @@
+ffmpeg version 8.1 Copyright (c) 2000-2026 the FFmpeg developers
+  built with Apple clang version 17.0.0 (clang-1700.6.4.2)
+  configuration: --prefix=/opt/homebrew/Cellar/ffmpeg/8.1 --enable-shared --enable-pthreads --enable-version3 --cc=clang --host-cflags= --host-ldflags= --enable-ffplay --enable-gpl --enable-libsvtav1 --enable-libopus --enable-libx264 --enable-libmp3lame --enable-libdav1d --enable-libvpx --enable-libx265 --enable-openssl --enable-videotoolbox --enable-audiotoolbox --enable-neon
+  libavutil      60. 26.100 / 60. 26.100
+  libavcodec     62. 28.100 / 62. 28.100
+  libavformat    62. 12.100 / 62. 12.100
+  libavdevice    62.  3.100 / 62.  3.100
+  libavfilter    11. 14.100 / 11. 14.100
+  libswscale      9.  5.100 /  9.  5.100
+  libswresample   6.  3.100 /  6.  3.100
+Input #0, matroska,webm, from '/Users/adpena/Projects/pact/workspace/upstream/comma_video_compression_challenge/videos/0.mkv':
+  Metadata:
+    SEGMENT         : b0c9d2329ad1606b|2018-07-27--06-03-57/10/video.hevc
+    ENCODER         : Lavf60.16.100
+  Duration: 00:01:00.00, start: 0.000000, bitrate: 5006 kb/s
+  Stream #0:0: Video: hevc (Main), yuv420p(tv), 1164x874, 20 fps, 20 tbr, 1k tbn
+    Metadata:
+      DURATION        : 00:01:00.000000000
+Stream mapping:
+  Stream #0:0 (hevc) -> scale:default
+  split -> Stream #0:0 (libx265)
+  crop:default -> Stream #1:0 (libx265)
+Press [q] to stop, [?] for help
+x265 [info]: HEVC encoder version 4.1+1-1d117be
+x265 [info]: build info [Mac OS X][clang 17.0.0][64 bit] 8bit+10bit+12bit
+x265 [info]: using cpu capabilities: NEON Neon_DotProd Neon_I8MM
+x265 [info]: Main profile, Level-2.1 (Main tier)
+x265 [info]: Thread pool created using 18 threads
+x265 [info]: Slices                              : 1
+x265 [info]: frame threads / pool features       : 4 / wpp(5 rows)
+x265 [warning]: Source height < 720p; disabling lookahead-slices
+x265 [info]: Coding QT: max CU size, min CU size : 64 / 8
+x265 [info]: Residual QT: max TU size, max depth : 32 / 1 inter / 1 intra
+x265 [info]: ME / range / subpel / merge         : hex / 57 / 2 / 3
+x265 [info]: Lookahead / bframes / badapt        : 20 / 4 / 2
+x265 [info]: b-pyramid / weightp / weightb       : 1 / 1 / 0
+x265 [info]: References / ref-limit  cu / depth  : 4 / off / on
+x265 [info]: AQ: mode / str / qg-size / cu-tree  : 2 / 1.0 / 32 / 1
+x265 [info]: Rate Control / qCompress            : CRF-27.0 / 0.60
+x265 [info]: tools: rd=3 psy-rd=2.00 early-skip rskip mode=1 signhide tmvp
+x265 [info]: tools: b-intra strong-intra-smoothing deblock sao
+Output #0, matroska, to '/var/folders/xr/cdmnz18s68j8sybt6vcwjs200000gn/T//robust_current_archive.qXwEnA/archive/0/base.mkv':
+  Metadata:
+    SEGMENT         : b0c9d2329ad1606b|2018-07-27--06-03-57/10/video.hevc
+    encoder         : Lavf62.12.100
+  Stream #0:0: Video: hevc, yuv420p(tv, progressive), 424x318, q=2-31, 20 fps, 1k tbn
+    Metadata:
+      encoder         : Lavc62.28.100 libx265
+    Side data:
+      CPB properties: bitrate max/min/avg: 0/0/0 buffer size: 0 vbv_delay: N/A
+x265 [info]: HEVC encoder version 4.1+1-1d117be
+x265 [info]: build info [Mac OS X][clang 17.0.0][64 bit] 8bit+10bit+12bit
+x265 [info]: using cpu capabilities: NEON Neon_DotProd Neon_I8MM
+x265 [info]: Main profile, Level-2 (Main tier)
+x265 [info]: Thread pool created using 18 threads
+x265 [info]: Slices                              : 1
+x265 [info]: frame threads / pool features       : 4 / wpp(3 rows)
+x265 [warning]: Source height < 720p; disabling lookahead-slices
+x265 [info]: Coding QT: max CU size, min CU size : 64 / 8
+x265 [info]: Residual QT: max TU size, max depth : 32 / 1 inter / 1 intra
+x265 [info]: ME / range / subpel / merge         : hex / 57 / 2 / 3
+x265 [info]: Lookahead / bframes / badapt        : 20 / 4 / 2
+x265 [info]: b-pyramid / weightp / weightb       : 1 / 1 / 0
+x265 [info]: References / ref-limit  cu / depth  : 4 / off / on
+x265 [info]: AQ: mode / str / qg-size / cu-tree  : 2 / 1.0 / 32 / 1
+x265 [info]: Rate Control / qCompress            : CRF-23.0 / 0.60
+x265 [info]: tools: rd=3 psy-rd=2.00 early-skip rskip mode=1 signhide tmvp
+x265 [info]: tools: b-intra strong-intra-smoothing deblock sao
+Output #1, matroska, to '/var/folders/xr/cdmnz18s68j8sybt6vcwjs200000gn/T//robust_current_archive.qXwEnA/archive/0/roi.mkv':
+  Metadata:
+    SEGMENT         : b0c9d2329ad1606b|2018-07-27--06-03-57/10/video.hevc
+    encoder         : Lavf62.12.100
+  Stream #1:0: Video: hevc, yuv420p(tv, progressive), 296x174, q=2-31, 20 fps, 1k tbn
+    Metadata:
+      encoder         : Lavc62.28.100 libx265
+    Side data:
+      CPB properties: bitrate max/min/avg: 0/0/0 buffer size: 0 vbv_delay: N/A
+frame=   32 fps=0.0 q=31.9 q=27.9 size=       3KiB time=00:00:01.50 bitrate=  16.2kbits/s speed=2.96x elapsed=0:00:00.50    frame=   91 fps= 90 q=33.2 q=27.5 size=      27KiB time=00:00:04.40 bitrate=  50.8kbits/s speed=4.35x elapsed=0:00:01.01    frame=  149 fps= 98 q=33.1 q=26.9 size=      75KiB time=00:00:07.35 bitrate=  84.0kbits/s speed=4.84x elapsed=0:00:01.52    frame=  210 fps=104 q=32.8 q=28.3 size=     105KiB time=00:00:10.40 bitrate=  82.6kbits/s speed=5.13x elapsed=0:00:02.02    frame=  262 fps=104 q=31.8 q=25.4 size=     136KiB time=00:00:13.05 bitrate=  85.1kbits/s speed=5.16x elapsed=0:00:02.53    frame=  322 fps=106 q=33.2 q=26.3 size=     171KiB time=00:00:16.00 bitrate=  87.5kbits/s speed=5.28x elapsed=0:00:03.03    frame=  388 fps=110 q=33.0 q=23.3 size=     218KiB time=00:00:19.30 bitrate=  92.7kbits/s speed=5.46x elapsed=0:00:03.53    frame=  459 fps=114 q=29.1 q=26.1 size=     235KiB time=00:00:22.70 bitrate=  84.8kbits/s speed=5.62x elapsed=0:00:04.04    frame=  520 fps=114 q=28.1 q=27.2 size=     254KiB time=00:00:25.95 bitrate=  80.2kbits/s speed=5.71x elapsed=0:00:04.54    frame=  608 fps=120 q=27.9 q=27.4 size=     256KiB time=00:00:30.30 bitrate=  69.2kbits/s speed=   6x elapsed=0:00:05.04    frame=  679 fps=122 q=27.9 q=27.5 size=     256KiB time=00:00:33.85 bitrate=  62.0kbits/s speed= 6.1x elapsed=0:00:05.55    frame=  761 fps=126 q=32.9 q=28.1 size=     256KiB time=00:00:37.90 bitrate=  55.3kbits/s speed=6.26x elapsed=0:00:06.05    frame=  825 fps=126 q=32.8 q=27.5 size=     256KiB time=00:00:41.15 bitrate=  51.0kbits/s speed=6.27x elapsed=0:00:06.56    frame=  897 fps=127 q=32.8 q=23.5 size=     256KiB time=00:00:44.75 bitrate=  46.9kbits/s speed=6.33x elapsed=0:00:07.07    frame=  974 fps=129 q=27.9 q=25.5 size=     256KiB time=00:00:48.60 bitrate=  43.2kbits/s speed=6.42x elapsed=0:00:07.57    frame= 1037 fps=128 q=32.7 q=23.4 size=     256KiB time=00:00:51.80 bitrate=  40.5kbits/s speed=6.41x elapsed=0:00:08.08    frame= 1105 fps=129 q=27.9 q=27.7 size=     512KiB time=00:00:55.10 bitrate=  76.1kbits/s speed=6.42x elapsed=0:00:08.58    frame= 1174 fps=129 q=27.8 q=27.8 size=     512KiB time=00:00:58.60 bitrate=  71.6kbits/s speed=6.44x elapsed=0:00:09.09    [out#0/matroska @ 0xb35014000] video:629KiB audio:0KiB subtitle:0KiB other streams:0KiB global headers:2KiB muxing overhead: 1.914890%
+[out#1/matroska @ 0xb35014600] video:768KiB audio:0KiB subtitle:0KiB other streams:0KiB global headers:2KiB muxing overhead: 1.569794%
+frame= 1200 fps=130 q=32.2 Lq=27.7 size=     642KiB time=00:00:59.90 bitrate=  87.7kbits/s speed= 6.5x elapsed=0:00:09.21    
+x265 [info]: frame I:     25, Avg QP:26.73  kb/s: 458.57  
+x265 [info]: frame P:    236, Avg QP:28.07  kb/s: 191.94  
+x265 [info]: frame B:    939, Avg QP:32.12  kb/s: 48.56   
+x265 [info]: Weighted P-Frames: Y:5.1% UV:3.8%
+
+encoded 1200 frames in 9.15s (131.08 fps), 85.30 kb/s, Avg QP:31.21
+x265 [info]: frame I:     25, Avg QP:22.31  kb/s: 438.81  
+x265 [info]: frame P:    262, Avg QP:23.44  kb/s: 217.03  
+x265 [info]: frame B:    913, Avg QP:27.11  kb/s: 62.76   
+x265 [info]: Weighted P-Frames: Y:9.9% UV:8.0%
+
+encoded 1200 frames in 9.15s (131.22 fps), 104.27 kb/s, Avg QP:26.21

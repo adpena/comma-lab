@@ -1,0 +1,10 @@
+{
+  "name": "comma-video-lab-tools",
+  "private": true,
+  "version": "0.1.0",
+  "dependencies": {
+    "@iannuttall/ralph": "^0.1.3",
+    "@openai/codex": "^0.118.0",
+    "oh-my-codex": "^0.11.12"
+  }
+}

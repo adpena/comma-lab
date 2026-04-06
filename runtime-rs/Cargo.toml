@@ -1,0 +1,7 @@
+[workspace]
+members = [
+  "crates/inflate-cli",
+  "crates/raw-writer",
+  "crates/residual-codec"
+]
+resolver = "2"

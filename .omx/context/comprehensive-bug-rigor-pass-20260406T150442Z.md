@@ -1,0 +1,29 @@
+# Ralph Context Snapshot — comprehensive-bug-rigor-pass
+
+- timestamp_utc: 2026-04-06T15:04:42Z
+- task: comprehensive bug and rigor pass for the comma compression lab, plus repo cleanup within the mutation frontier
+- desired_outcome:
+  - fix confirmed packaging/eval/ROI bugs
+  - keep Track B runnable and honest
+  - keep both packaging views explicit
+  - leave durable memory and repo hygiene improved for the next fresh loop
+- known_facts:
+  - live Track B floor remains 2.18 current_workflow
+  - Track A exact_current remains the only explicitly non-rule-faithful lane
+  - corrected rule_faithful estimate now charges installed runtime payload under test
+  - workspace is not a git repository, so git history cleanup is impossible here
+- constraints:
+  - stay inside AGENTS.md mutation frontier
+  - do not edit Track A inflate files
+  - no new dependencies
+  - prefer measured evidence over elegance
+- unknowns_open_questions:
+  - whether colorspace/range should be made fully explicit in a later dedicated pass
+  - whether AV1+ROI should ever be made real rather than fail-fast
+- likely_touchpoints:
+  - src/comma_lab/{cli.py,install.py,evaluate.py,smoke.py}
+  - submissions/robust_current/{compress.sh,inflate.sh,analyze_roi.py,README.md}
+  - docs/**
+  - reports/**
+  - .omx/**
+  - .ralph/**

@@ -1,0 +1,24 @@
+# Ralph context snapshot
+
+- task statement: Continue the approved Ralph plan from the promoted 2.19 AV1 floor while keeping the repo resumable and packaging views explicit.
+- desired outcome: Run one more disciplined one-axis AV1 experiment, promote only if scorer-backed evidence plus review justify it, and leave the writeup/state stronger.
+- known facts/evidence:
+  - Track A exact_current remains current_workflow 0.00 and is the only explicitly non-rule-faithful lane.
+  - Track B live floor is 2.19 at 524x394 / libsvtav1 / preset0 / crf34 / film-grain22 / bicubic / unsharp.
+  - AV1 rawvideo byte-layout bug is fixed via explicit rgb24 output.
+  - Promotion gate now requires scorer-backed result, canonical default-config regression, written promotion review, and bug-audit notes.
+- constraints:
+  - edit only within mutation frontier.
+  - default all lanes to faithful/compliance-checked except Track A.
+  - keep current_workflow vs rule_faithful explicit.
+  - prefer one-axis experiments with pre-run estimate and post-run reflection.
+- unknowns/open questions:
+  - whether one more one-axis AV1 probe can beat 2.19.
+  - which one-axis change is the best next local move.
+- likely touchpoints:
+  - submissions/robust_current/config.*.env
+  - reports/raw/2026-04-06-*
+  - reports/results.jsonl
+  - reports/timeline.jsonl
+  - reports/latest.md
+  - reports/graphs/*

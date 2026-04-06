@@ -1,0 +1,59 @@
+ffmpeg version 8.1 Copyright (c) 2000-2026 the FFmpeg developers
+  built with Apple clang version 17.0.0 (clang-1700.6.4.2)
+  configuration: --prefix=/opt/homebrew/Cellar/ffmpeg/8.1 --enable-shared --enable-pthreads --enable-version3 --cc=clang --host-cflags= --host-ldflags= --enable-ffplay --enable-gpl --enable-libsvtav1 --enable-libopus --enable-libx264 --enable-libmp3lame --enable-libdav1d --enable-libvpx --enable-libx265 --enable-openssl --enable-videotoolbox --enable-audiotoolbox --enable-neon
+  libavutil      60. 26.100 / 60. 26.100
+  libavcodec     62. 28.100 / 62. 28.100
+  libavformat    62. 12.100 / 62. 12.100
+  libavdevice    62.  3.100 / 62.  3.100
+  libavfilter    11. 14.100 / 11. 14.100
+  libswscale      9.  5.100 /  9.  5.100
+  libswresample   6.  3.100 /  6.  3.100
+Input #0, matroska,webm, from '/Users/adpena/Projects/pact/reports/raw/2026-04-06-rigor-pass/roi-right/0/base.mkv':
+  Metadata:
+    SEGMENT         : b0c9d2329ad1606b|2018-07-27--06-03-57/10/video.hevc
+    ENCODER         : Lavf62.12.100
+  Duration: 00:01:00.00, start: 0.000000, bitrate: 87 kb/s
+  Stream #0:0: Video: hevc (Main), yuv420p(tv, progressive), 424x318, 20 fps, 20 tbr, 1k tbn
+    Metadata:
+      ENCODER         : Lavc62.28.100 libx265
+      DURATION        : 00:01:00.000000000
+Input #1, matroska,webm, from '/Users/adpena/Projects/pact/reports/raw/2026-04-06-rigor-pass/roi-right/0/roi.mkv':
+  Metadata:
+    SEGMENT         : b0c9d2329ad1606b|2018-07-27--06-03-57/10/video.hevc
+    ENCODER         : Lavf62.12.100
+  Duration: 00:01:00.00, start: 0.000000, bitrate: 114 kb/s
+  Stream #1:0: Video: hevc (Main), yuv420p(tv, progressive), 296x174, 20 fps, 20 tbr, 1k tbn
+    Metadata:
+      ENCODER         : Lavc62.28.100 libx265
+      DURATION        : 00:01:00.000000000
+Stream mapping:
+  Stream #0:0 (hevc) -> scale:default
+  Stream #1:0 (hevc) -> scale:default
+  hflip:default -> Stream #0:0 (rawvideo)
+Press [q] to stop, [?] for help
+[swscaler @ 0xb251f8000] No accelerated colorspace conversion found from yuva420p to rgb24.
+[swscaler @ 0xb251f8000] [swscaler @ 0xb25208000] No accelerated colorspace conversion found from yuva420p to rgb24.
+[swscaler @ 0xb251f8000] [swscaler @ 0xb25218000] No accelerated colorspace conversion found from yuva420p to rgb24.
+[swscaler @ 0xb251f8000] [swscaler @ 0xb25228000] No accelerated colorspace conversion found from yuva420p to rgb24.
+[swscaler @ 0xb251f8000] [swscaler @ 0xb25238000] No accelerated colorspace conversion found from yuva420p to rgb24.
+[swscaler @ 0xb251f8000] [swscaler @ 0xb25248000] No accelerated colorspace conversion found from yuva420p to rgb24.
+[swscaler @ 0xb251f8000] [swscaler @ 0xb25258000] No accelerated colorspace conversion found from yuva420p to rgb24.
+[swscaler @ 0xb251f8000] [swscaler @ 0xb25268000] No accelerated colorspace conversion found from yuva420p to rgb24.
+[swscaler @ 0xb251f8000] [swscaler @ 0xb25278000] No accelerated colorspace conversion found from yuva420p to rgb24.
+[swscaler @ 0xb251f8000] [swscaler @ 0xb25288000] No accelerated colorspace conversion found from yuva420p to rgb24.
+[swscaler @ 0xb251f8000] [swscaler @ 0xb25298000] No accelerated colorspace conversion found from yuva420p to rgb24.
+[swscaler @ 0xb251f8000] [swscaler @ 0xb252a8000] No accelerated colorspace conversion found from yuva420p to rgb24.
+[swscaler @ 0xb251f8000] [swscaler @ 0xb252b8000] No accelerated colorspace conversion found from yuva420p to rgb24.
+[swscaler @ 0xb251f8000] [swscaler @ 0xb252c8000] No accelerated colorspace conversion found from yuva420p to rgb24.
+[swscaler @ 0xb251f8000] [swscaler @ 0xb252d8000] No accelerated colorspace conversion found from yuva420p to rgb24.
+[swscaler @ 0xb251f8000] [swscaler @ 0xb252e8000] No accelerated colorspace conversion found from yuva420p to rgb24.
+[swscaler @ 0xb251f8000] [swscaler @ 0xb252f8000] No accelerated colorspace conversion found from yuva420p to rgb24.
+Output #0, rawvideo, to '/Users/adpena/Projects/pact/reports/raw/2026-04-06-rigor-pass/roi-inflate-filter/0.raw':
+  Metadata:
+    SEGMENT         : b0c9d2329ad1606b|2018-07-27--06-03-57/10/video.hevc
+    encoder         : Lavf62.12.100
+  Stream #0:0: Video: rawvideo (RGB[24] / 0x18424752), rgb24(pc, gbr/unknown/unknown, progressive), 1164x874, q=2-31, 488321 kb/s, 20 fps, 20 tbn
+    Metadata:
+      encoder         : Lavc62.28.100 rawvideo
+frame=   23 fps=0.0 q=-0.0 size=   65536KiB time=00:00:01.15 bitrate=466844.3kbits/s speed=2.27x elapsed=0:00:00.50    frame=   52 fps= 51 q=-0.0 size=  151808KiB time=00:00:02.60 bitrate=478312.0kbits/s speed=2.56x elapsed=0:00:01.01    frame=   81 fps= 53 q=-0.0 size=  238336KiB time=00:00:04.05 bitrate=482086.1kbits/s speed=2.66x elapsed=0:00:01.52    frame=  109 fps= 54 q=-0.0 size=  321792KiB time=00:00:05.45 bitrate=483691.8kbits/s speed=2.69x elapsed=0:00:02.02    frame=  140 fps= 55 q=-0.0 size=  414208KiB time=00:00:07.00 bitrate=484741.7kbits/s speed=2.76x elapsed=0:00:02.53    frame=  166 fps= 55 q=-0.0 size=  491776KiB time=00:00:08.30 bitrate=485377.0kbits/s speed=2.73x elapsed=0:00:03.03    frame=  193 fps= 54 q=-0.0 size=  572160KiB time=00:00:09.65 bitrate=485713.4kbits/s speed=2.72x elapsed=0:00:03.54    frame=  223 fps= 55 q=-0.0 size=  661504KiB time=00:00:11.15 bitrate=486012.6kbits/s speed=2.76x elapsed=0:00:04.04    frame=  251 fps= 55 q=-0.0 size=  744960KiB time=00:00:12.55 bitrate=486271.9kbits/s speed=2.75x elapsed=0:00:04.55    frame=  277 fps= 55 q=-0.0 size=  822528KiB time=00:00:13.85 bitrate=486509.0kbits/s speed=2.74x elapsed=0:00:05.06    frame=  308 fps= 55 q=-0.0 size=  914944KiB time=00:00:15.40 bitrate=486702.7kbits/s speed=2.77x elapsed=0:00:05.56    frame=  337 fps= 55 q=-0.0 size= 1001216KiB time=00:00:16.85 bitrate=486763.3kbits/s speed=2.77x elapsed=0:00:06.07    frame=  363 fps= 55 q=-0.0 size= 1078784KiB time=00:00:18.15 bitrate=486909.0kbits/s speed=2.76x elapsed=0:00:06.57    frame=  398 fps= 56 q=-0.0 size= 1183232KiB time=00:00:19.90 bitrate=487087.3kbits/s speed=2.81x elapsed=0:00:07.08    frame=  437 fps= 58 q=-0.0 size= 1299456KiB time=00:00:21.85 bitrate=487191.9kbits/s speed=2.88x elapsed=0:00:07.58    frame=  473 fps= 58 q=-0.0 size= 1406720KiB time=00:00:23.65 bitrate=487266.4kbits/s speed=2.92x elapsed=0:00:08.09    frame=  507 fps= 59 q=-0.0 size= 1508096KiB time=00:00:25.35 bitrate=487350.0kbits/s speed=2.95x elapsed=0:00:08.59    frame=  539 fps= 59 q=-0.0 size= 1603328KiB time=00:00:26.95 bitrate=487364.1kbits/s speed=2.96x elapsed=0:00:09.09    frame=  577 fps= 60 q=-0.0 size= 1716736KiB time=00:00:28.85 bitrate=487469.7kbits/s speed=   3x elapsed=0:00:09.60    frame=  615 fps= 61 q=-0.0 size= 1829888KiB time=00:00:30.75 bitrate=487494.1kbits/s speed=3.04x elapsed=0:00:10.10    frame=  655 fps= 62 q=-0.0 size= 1949184KiB time=00:00:32.75 bitrate=487563.8kbits/s speed=3.09x elapsed=0:00:10.61    frame=  695 fps= 63 q=-0.0 size= 2068224KiB time=00:00:34.75 bitrate=487565.2kbits/s speed=3.13x elapsed=0:00:11.11    frame=  729 fps= 63 q=-0.0 size= 2169600KiB time=00:00:36.45 bitrate=487609.4kbits/s speed=3.14x elapsed=0:00:11.62    frame=  762 fps= 63 q=-0.0 size= 2267904KiB time=00:00:38.10 bitrate=487629.1kbits/s speed=3.14x elapsed=0:00:12.12    frame=  793 fps= 63 q=-0.0 size= 2360320KiB time=00:00:39.65 bitrate=487660.6kbits/s speed=3.14x elapsed=0:00:12.62    frame=  820 fps= 62 q=-0.0 size= 2440960KiB time=00:00:41.00 bitrate=487715.7kbits/s speed=3.12x elapsed=0:00:13.13    frame=  848 fps= 62 q=-0.0 size= 2524416KiB time=00:00:42.40 bitrate=487736.2kbits/s speed=3.11x elapsed=0:00:13.64    frame=  881 fps= 62 q=-0.0 size= 2622720KiB time=00:00:44.05 bitrate=487748.5kbits/s speed=3.11x elapsed=0:00:14.14    frame=  910 fps= 62 q=-0.0 size= 2709248KiB time=00:00:45.50 bitrate=487783.7kbits/s speed= 3.1x elapsed=0:00:14.65    frame=  943 fps= 62 q=-0.0 size= 2807552KiB time=00:00:47.15 bitrate=487793.6kbits/s speed=3.11x elapsed=0:00:15.16    frame=  978 fps= 62 q=-0.0 size= 2911744KiB time=00:00:48.90 bitrate=487791.6kbits/s speed=3.12x elapsed=0:00:15.66    frame= 1011 fps= 63 q=-0.0 size= 3010048KiB time=00:00:50.55 bitrate=487800.5kbits/s speed=3.13x elapsed=0:00:16.16    frame= 1042 fps= 63 q=-0.0 size= 3102464KiB time=00:00:52.10 bitrate=487819.3kbits/s speed=3.13x elapsed=0:00:16.66    frame= 1077 fps= 63 q=-0.0 size= 3206912KiB time=00:00:53.85 bitrate=487855.6kbits/s speed=3.14x elapsed=0:00:17.17    frame= 1106 fps= 63 q=-0.0 size= 3293184KiB time=00:00:55.30 bitrate=487843.8kbits/s speed=3.13x elapsed=0:00:17.67    frame= 1138 fps= 63 q=-0.0 size= 3388672KiB time=00:00:56.90 bitrate=487873.5kbits/s speed=3.13x elapsed=0:00:18.18    frame= 1169 fps= 63 q=-0.0 size= 3481088KiB time=00:00:58.45 bitrate=487888.3kbits/s speed=3.13x elapsed=0:00:18.68    [out#0/rawvideo @ 0xb22c10b40] video:3576572KiB audio:0KiB subtitle:0KiB other streams:0KiB global headers:0KiB muxing overhead: 0.000000%
+frame= 1200 fps= 63 q=-0.0 Lsize= 3576572KiB time=00:01:00.00 bitrate=488321.3kbits/s speed=3.13x elapsed=0:00:19.14    

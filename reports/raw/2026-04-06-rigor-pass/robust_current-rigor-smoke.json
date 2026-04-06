@@ -1,0 +1,38 @@
+{
+  "all_passed": true,
+  "archive_path": "/Users/adpena/Projects/pact/workspace/upstream/comma_video_compression_challenge/submissions/robust_current/archive.zip",
+  "file_count_matches": true,
+  "inflated_dir": "/Users/adpena/Projects/pact/workspace/upstream/comma_video_compression_challenge/submissions/robust_current/inflated",
+  "results": [
+    {
+      "actual_frames": 1200,
+      "actual_total_bytes": 3662409600,
+      "expected_frame_bytes": 3052008,
+      "expected_frames": 1200,
+      "expected_total_bytes": 3662409600,
+      "fps": 20.0,
+      "frame_count_matches": true,
+      "height": 874,
+      "raw_exists": true,
+      "semantic_channel_mean_abs_diff": [
+        6.4287282340020075,
+        3.457301225946983,
+        6.330954899200789
+      ],
+      "semantic_check_passed": true,
+      "semantic_mae_max": 6.2137451802223325,
+      "semantic_mae_mean": 5.405661453049927,
+      "semantic_sample_indices": [
+        0,
+        600,
+        1199
+      ],
+      "size_matches": true,
+      "video": "0.mkv",
+      "width": 1164
+    }
+  ],
+  "track": "robust_current",
+  "upstream_root": "/Users/adpena/Projects/pact/workspace/upstream/comma_video_compression_challenge",
+  "video_names_file": "/Users/adpena/Projects/pact/workspace/upstream/comma_video_compression_challenge/public_test_video_names.txt"
+}

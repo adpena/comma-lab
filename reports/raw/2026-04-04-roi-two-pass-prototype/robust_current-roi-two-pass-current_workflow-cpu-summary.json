@@ -1,0 +1,16 @@
+{
+  "copied_report_path": "reports/raw/2026-04-04-roi-two-pass-prototype/robust_current-roi-two-pass-current_workflow-cpu-report.txt",
+  "current_workflow_archive_bytes": 1472589,
+  "current_workflow_rate": 0.03922146,
+  "current_workflow_score": 5.73,
+  "device": "cpu",
+  "original_uncompressed_bytes": 37545489,
+  "pose_distortion": 0.72704047,
+  "report_path": "/Users/adpena/Projects/pact/workspace/upstream/comma_video_compression_challenge/submissions/robust_current/report.txt",
+  "rule_faithful_bundle_bytes": 1478840,
+  "rule_faithful_rate": 0.03938795416940768,
+  "rule_faithful_score": 5.736802653194266,
+  "rule_faithful_status": "estimated_from_scorer_distortions_plus_honest_bytes",
+  "seg_distortion": 0.02055735,
+  "track": "robust_current"
+}

@@ -1,0 +1,8 @@
+[package]
+name = "inflate-cli"
+version = "0.1.0"
+edition = "2021"
+
+[dependencies]
+raw-writer = { path = "../raw-writer" }
+residual-codec = { path = "../residual-codec" }

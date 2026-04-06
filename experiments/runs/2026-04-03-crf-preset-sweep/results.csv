@@ -1,0 +1,5 @@
+variant,preset,crf,status,current_workflow_score,archive_bytes,rule_faithful_score
+baseline,medium,22,done,4.06,3735828,4.065705339595394
+medium21,medium,21,done,4.74,5005390,4.740559607331766
+medium23,medium,23,done,3.62,2819374,3.6183889310448754
+slow22,slow,22,done,4.13,3812776,4.128791779915672

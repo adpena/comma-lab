@@ -1,0 +1,136 @@
+{
+  "devices": [
+    "cuda:0"
+  ],
+  "features": [
+    "archive_bytes",
+    "scale_w",
+    "scale_h",
+    "crf",
+    "gop",
+    "bframes",
+    "ref",
+    "preset_medium",
+    "preset_slow",
+    "filter_lanczos_bicubic",
+    "filter_lanczos_lanczos",
+    "filter_bicubic_bicubic"
+  ],
+  "jax_version": "0.9.2",
+  "loo_predictions": [
+    {
+      "abs_error": 0.043486595153808594,
+      "actual": 4.059999942779541,
+      "predicted": 4.10348653793335,
+      "run_id": "robust_current-baseline-cpu-2026-04-03"
+    },
+    {
+      "abs_error": 0.016521453857421875,
+      "actual": 4.739999771118164,
+      "predicted": 4.723478317260742,
+      "run_id": "robust_current-medium21-cpu-2026-04-03"
+    },
+    {
+      "abs_error": 0.21338677406311035,
+      "actual": 3.619999885559082,
+      "predicted": 3.8333866596221924,
+      "run_id": "robust_current-medium23-cpu-2026-04-03"
+    },
+    {
+      "abs_error": 0.02248382568359375,
+      "actual": 4.130000114440918,
+      "predicted": 4.152483940124512,
+      "run_id": "robust_current-slow22-cpu-2026-04-03"
+    },
+    {
+      "abs_error": 0.00397801399230957,
+      "actual": 3.559999942779541,
+      "predicted": 3.5639779567718506,
+      "run_id": "robust_current-448x336-medium23-cpu-2026-04-03"
+    },
+    {
+      "abs_error": 0.5160484313964844,
+      "actual": 4.260000228881836,
+      "predicted": 3.7439517974853516,
+      "run_id": "robust_current-576x432-medium23-cpu-2026-04-03"
+    },
+    {
+      "abs_error": 0.1669750213623047,
+      "actual": 3.640000104904175,
+      "predicted": 3.47302508354187,
+      "run_id": "robust_current-keyint24-cpu-2026-04-04"
+    },
+    {
+      "abs_error": 0.0018405914306640625,
+      "actual": 3.559999942779541,
+      "predicted": 3.558159351348877,
+      "run_id": "robust_current-keyint48-cpu-2026-04-04"
+    },
+    {
+      "abs_error": 0.07571673393249512,
+      "actual": 3.609999895095825,
+      "predicted": 3.53428316116333,
+      "run_id": "robust_current-keyint64-cpu-2026-04-04"
+    },
+    {
+      "abs_error": 0.22656989097595215,
+      "actual": 3.6700000762939453,
+      "predicted": 3.443430185317993,
+      "run_id": "robust_current-bicubic-bicubic-cpu-2026-04-04"
+    },
+    {
+      "abs_error": 0.08863115310668945,
+      "actual": 3.5399999618530273,
+      "predicted": 3.451368808746338,
+      "run_id": "robust_current-lanczos-lanczos-cpu-2026-04-04"
+    },
+    {
+      "abs_error": 0.37084102630615234,
+      "actual": 3.569999933242798,
+      "predicted": 3.1991589069366455,
+      "run_id": "robust_current-bframes3-ref4-cpu-2026-04-04"
+    },
+    {
+      "abs_error": 0.3710463047027588,
+      "actual": 3.7100000381469727,
+      "predicted": 3.338953733444214,
+      "run_id": "robust_current-bframes5-ref4-cpu-2026-04-04"
+    },
+    {
+      "abs_error": 0.08517646789550781,
+      "actual": 3.549999952316284,
+      "predicted": 3.4648234844207764,
+      "run_id": "robust_current-bframes4-ref5-cpu-2026-04-04"
+    },
+    {
+      "abs_error": 0.24605917930603027,
+      "actual": 3.3299999237060547,
+      "predicted": 3.576059103012085,
+      "run_id": "robust_current-432x324-cpu-2026-04-04"
+    },
+    {
+      "abs_error": 0.14670157432556152,
+      "actual": 3.440000057220459,
+      "predicted": 3.5867016315460205,
+      "run_id": "robust_current-464x348-cpu-2026-04-04"
+    }
+  ],
+  "mae": 0.1622164398431778,
+  "pairwise_accuracy": 0.6134453781512605,
+  "rows": 16,
+  "weights": [
+    3.749375104904175,
+    0.9677137136459351,
+    -0.18990762531757355,
+    -0.1898338794708252,
+    0.33882084488868713,
+    0.046190351247787476,
+    0.04649800807237625,
+    0.020700685679912567,
+    0.002826214302331209,
+    -0.002826167270541191,
+    0.008995197713375092,
+    -0.033349670469760895,
+    0.04872936010360718
+  ]
+}

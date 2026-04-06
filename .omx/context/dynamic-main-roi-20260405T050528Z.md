@@ -1,0 +1,25 @@
+# Context Snapshot
+
+- task statement: Execute the approved dynamic main-ROI plan to completion under Ralph, without neglecting the main ROI.
+- desired outcome: implement compression-side ROI analysis, wire metadata-driven ROI packaging/inflate compatibility, run authoritative local CPU evaluation, update durable state, and promote only on measured evidence.
+- known facts/evidence:
+  - Track B promoted floor is 3.33 at 432x324 / medium / 23 / keyint48 / bframes4 / ref4 / lanczos+lanczos.
+  - Naive fixed ROI two-pass prototype failed badly at 5.73.
+  - Official challenge rules imply heavy inflate-time model artifacts should ship and count.
+  - Use uv for Python package management and execution.
+- constraints:
+  - stay inside mutation frontier
+  - keep current_workflow vs rule_faithful explicit
+  - local CPU scorer is authoritative
+  - BAT00 remains non-authoritative
+  - main ROI must remain mandatory and central
+- unknowns/open questions:
+  - how much dynamic ROI metadata helps vs byte cost
+  - whether existing inflate path can consume per-video metadata without format churn
+- likely codebase touchpoints:
+  - submissions/robust_current/compress.sh
+  - submissions/robust_current/inflate.sh
+  - submissions/robust_current/config.env
+  - submissions/robust_current/analyze_roi.py
+  - reports/raw/**
+  - .omx/**, .ralph/**, reports/**, experiments/**

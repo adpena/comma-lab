@@ -1,0 +1,61 @@
+Encoding /Users/adpena/projects/pact/workspace/upstream/comma_video_compression_challenge/videos/0.mkv -> /Users/adpena/projects/pact/submissions/robust_current/archive/0.mkv
+ffmpeg version 8.1 Copyright (c) 2000-2026 the FFmpeg developers
+  built with Apple clang version 17.0.0 (clang-1700.6.4.2)
+  configuration: --prefix=/opt/homebrew/Cellar/ffmpeg/8.1 --enable-shared --enable-pthreads --enable-version3 --cc=clang --host-cflags= --host-ldflags= --enable-ffplay --enable-gpl --enable-libsvtav1 --enable-libopus --enable-libx264 --enable-libmp3lame --enable-libdav1d --enable-libvpx --enable-libx265 --enable-openssl --enable-videotoolbox --enable-audiotoolbox --enable-neon
+  libavutil      60. 26.100 / 60. 26.100
+  libavcodec     62. 28.100 / 62. 28.100
+  libavformat    62. 12.100 / 62. 12.100
+  libavdevice    62.  3.100 / 62.  3.100
+  libavfilter    11. 14.100 / 11. 14.100
+  libswscale      9.  5.100 /  9.  5.100
+  libswresample   6.  3.100 /  6.  3.100
+Input #0, matroska,webm, from '/Users/adpena/projects/pact/workspace/upstream/comma_video_compression_challenge/videos/0.mkv':
+  Metadata:
+    SEGMENT         : b0c9d2329ad1606b|2018-07-27--06-03-57/10/video.hevc
+    ENCODER         : Lavf60.16.100
+  Duration: 00:01:00.00, start: 0.000000, bitrate: 5006 kb/s
+  Stream #0:0: Video: hevc (Main), yuv420p(tv), 1164x874, 20 fps, 20 tbr, 1k tbn
+    Metadata:
+      DURATION        : 00:01:00.000000000
+Stream mapping:
+  Stream #0:0 -> #0:0 (hevc (native) -> hevc (libx265))
+Press [q] to stop, [?] for help
+x265 [info]: HEVC encoder version 4.1+1-1d117be
+x265 [info]: build info [Mac OS X][clang 17.0.0][64 bit] 8bit+10bit+12bit
+x265 [info]: using cpu capabilities: NEON Neon_DotProd Neon_I8MM
+x265 [info]: Main profile, Level-2.1 (Main tier)
+x265 [info]: Thread pool created using 18 threads
+x265 [info]: Slices                              : 1
+x265 [info]: frame threads / pool features       : 4 / wpp(5 rows)
+x265 [warning]: Source height < 720p; disabling lookahead-slices
+x265 [info]: Coding QT: max CU size, min CU size : 64 / 8
+x265 [info]: Residual QT: max TU size, max depth : 32 / 1 inter / 1 intra
+x265 [info]: ME / range / subpel / merge         : hex / 57 / 2 / 3
+x265 [info]: Lookahead / bframes / badapt        : 20 / 4 / 2
+x265 [info]: b-pyramid / weightp / weightb       : 1 / 1 / 0
+x265 [info]: References / ref-limit  cu / depth  : 4 / off / on
+x265 [info]: AQ: mode / str / qg-size / cu-tree  : 2 / 1.0 / 32 / 1
+x265 [info]: Rate Control / qCompress            : CRF-23.0 / 0.60
+x265 [info]: tools: rd=3 psy-rd=2.00 early-skip rskip mode=1 signhide tmvp
+x265 [info]: tools: b-intra strong-intra-smoothing deblock sao
+Output #0, matroska, to '/Users/adpena/projects/pact/submissions/robust_current/archive/0.mkv':
+  Metadata:
+    SEGMENT         : b0c9d2329ad1606b|2018-07-27--06-03-57/10/video.hevc
+    encoder         : Lavf62.12.100
+  Stream #0:0: Video: hevc, yuv420p(tv, progressive), 424x318, q=2-31, 20 fps, 1k tbn
+    Metadata:
+      encoder         : Lavc62.28.100 libx265
+      DURATION        : 00:01:00.000000000
+    Side data:
+      CPB properties: bitrate max/min/avg: 0/0/0 buffer size: 0 vbv_delay: N/A
+frame=   24 fps=0.0 q=25.7 size=       3KiB time=00:00:01.10 bitrate=  22.2kbits/s speed=2.13x elapsed=0:00:00.51    frame=   87 fps= 85 q=23.7 size=      61KiB time=00:00:04.30 bitrate= 116.2kbits/s speed= 4.2x elapsed=0:00:01.02    frame=  141 fps= 92 q=22.7 size=     116KiB time=00:00:07.00 bitrate= 136.2kbits/s speed=4.59x elapsed=0:00:01.52    frame=  202 fps= 99 q=26.9 size=     251KiB time=00:00:10.00 bitrate= 205.7kbits/s speed=4.91x elapsed=0:00:02.03    frame=  258 fps=101 q=27.1 size=     256KiB time=00:00:12.85 bitrate= 163.2kbits/s speed=5.04x elapsed=0:00:02.55    frame=  317 fps=103 q=27.1 size=     256KiB time=00:00:15.75 bitrate= 133.2kbits/s speed=5.14x elapsed=0:00:03.06    frame=  371 fps=104 q=23.8 size=     256KiB time=00:00:18.45 bitrate= 113.7kbits/s speed=5.16x elapsed=0:00:03.57    frame=  439 fps=108 q=23.8 size=     512KiB time=00:00:21.85 bitrate= 192.0kbits/s speed=5.36x elapsed=0:00:04.07    frame=  494 fps=108 q=25.3 size=     512KiB time=00:00:24.65 bitrate= 170.2kbits/s speed=5.37x elapsed=0:00:04.59    frame=  554 fps=109 q=25.6 size=     512KiB time=00:00:27.60 bitrate= 152.0kbits/s speed=5.42x elapsed=0:00:05.09    frame=  614 fps=109 q=27.2 size=     512KiB time=00:00:30.65 bitrate= 136.8kbits/s speed=5.47x elapsed=0:00:05.60    frame=  674 fps=110 q=23.8 size=     768KiB time=00:00:33.60 bitrate= 187.2kbits/s speed= 5.5x elapsed=0:00:06.11    frame=  729 fps=110 q=25.7 size=     768KiB time=00:00:36.40 bitrate= 172.8kbits/s speed= 5.5x elapsed=0:00:06.62    frame=  790 fps=111 q=25.8 size=     768KiB time=00:00:39.40 bitrate= 159.7kbits/s speed=5.52x elapsed=0:00:07.13    frame=  848 fps=111 q=25.8 size=    1024KiB time=00:00:42.35 bitrate= 198.1kbits/s speed=5.54x elapsed=0:00:07.64    frame=  908 fps=111 q=27.1 size=    1024KiB time=00:00:45.30 bitrate= 185.2kbits/s speed=5.55x elapsed=0:00:08.15    frame=  962 fps=111 q=23.7 size=    1024KiB time=00:00:48.00 bitrate= 174.8kbits/s speed=5.54x elapsed=0:00:08.66    frame= 1023 fps=112 q=24.1 size=    1280KiB time=00:00:51.05 bitrate= 205.4kbits/s speed=5.57x elapsed=0:00:09.17    frame= 1081 fps=112 q=27.0 size=    1280KiB time=00:00:53.95 bitrate= 194.4kbits/s speed=5.57x elapsed=0:00:09.68    frame= 1135 fps=111 q=27.2 size=    1280KiB time=00:00:56.65 bitrate= 185.1kbits/s speed=5.56x elapsed=0:00:10.18    [out#0/matroska @ 0x9d900c240] video:1621KiB audio:0KiB subtitle:0KiB other streams:0KiB global headers:2KiB muxing overhead: 0.744412%
+frame= 1200 fps=113 q=27.2 Lsize=    1633KiB time=00:00:59.90 bitrate= 223.3kbits/s speed=5.62x elapsed=0:00:10.65    
+x265 [info]: frame I:     25, Avg QP:22.74  kb/s: 1018.50 
+x265 [info]: frame P:    236, Avg QP:23.78  kb/s: 465.68  
+x265 [info]: frame B:    939, Avg QP:26.68  kb/s: 137.81  
+x265 [info]: Weighted P-Frames: Y:5.1% UV:3.8%
+
+encoded 1200 frames in 10.58s (113.40 fps), 220.64 kb/s, Avg QP:26.02
+  adding: 0.mkv (deflated 0%)
+
+Wrote /Users/adpena/projects/pact/submissions/robust_current/archive.zip

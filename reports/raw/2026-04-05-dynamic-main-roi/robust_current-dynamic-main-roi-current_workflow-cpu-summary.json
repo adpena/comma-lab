@@ -1,0 +1,16 @@
+{
+  "copied_report_path": "reports/raw/2026-04-05-dynamic-main-roi/robust_current-dynamic-main-roi-current_workflow-cpu-report.txt",
+  "current_workflow_archive_bytes": 2660388,
+  "current_workflow_rate": 0.07085773,
+  "current_workflow_score": 4.47,
+  "device": "cpu",
+  "original_uncompressed_bytes": 37545489,
+  "pose_distortion": 0.39123508,
+  "report_path": "/Users/adpena/Projects/pact/workspace/upstream/comma_video_compression_challenge/submissions/robust_current/report.txt",
+  "rule_faithful_bundle_bytes": 2694567,
+  "rule_faithful_rate": 0.071768062469502,
+  "rule_faithful_score": 4.488615891076854,
+  "rule_faithful_status": "estimated_from_scorer_distortions_plus_honest_bytes",
+  "seg_distortion": 0.00716448,
+  "track": "robust_current"
+}

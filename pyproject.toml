@@ -1,0 +1,17 @@
+[build-system]
+requires = ["setuptools>=69"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "comma-video-lab-ball-pack"
+version = "0.2.0"
+description = "One-command dual-track starter pack for the comma video compression challenge"
+readme = "README.md"
+requires-python = ">=3.11"
+dependencies = []
+
+[project.scripts]
+comma-lab = "comma_lab.cli:main"
+
+[tool.setuptools.packages.find]
+where = ["src"]

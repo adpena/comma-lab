@@ -1,0 +1,41 @@
+{
+  "promoted_config": {
+    "scale_w": 448,
+    "scale_h": 336,
+    "preset": "medium",
+    "crf": 23,
+    "gop": 48,
+    "bframes": 4,
+    "ref": 4,
+    "filters": "lanczos/lanczos"
+  },
+  "local_cpu": {
+    "current_workflow_score": 3.54,
+    "archive_bytes": 1901606,
+    "rule_faithful_score": 3.546277389901901,
+    "package_eval_sec": 1418.4024670124054
+  },
+  "bat00_cpu_side": {
+    "host": "BAT00",
+    "lane": "speculative-runtime-side",
+    "authoritative_for_claimed_scores": false,
+    "config": {
+      "scale_w": 448,
+      "scale_h": 336,
+      "preset": "medium",
+      "crf": 23,
+      "gop": 48,
+      "bframes": 4,
+      "ref": 4,
+      "filters": "lanczos/lanczos"
+    },
+    "current_workflow_score": 3.56,
+    "archive_bytes": 1888251,
+    "rule_faithful_score": 3.562605739029033,
+    "timing": {
+      "encode_sec": 14.63,
+      "sync_sec": 0.2,
+      "eval_sec": 162.64
+    }
+  }
+}

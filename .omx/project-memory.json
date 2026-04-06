@@ -1,0 +1,286 @@
+{
+  "directives": [
+    {
+      "directive": "Treat the canonical honest Track B floor as the one recorded in reports/raw/robust_current-current_workflow-cpu-summary.json, reports/latest.md, and .omx/state/current_focus.md. Superseded numeric floor directives must not be treated as current truth.",
+      "priority": "high",
+      "recorded_at": "2026-04-06T15:20:00Z"
+    },
+    {
+      "directive": "Rule-faithful accounting must charge only the installed runtime payload under test: archive.zip, inflate.sh, config.env, and analyze_roi.py. Do not revert to broader repo-local byte counting.",
+      "priority": "high",
+      "recorded_at": "2026-04-06T15:20:00Z"
+    },
+    {
+      "directive": "Before canonicalizing any future robust_current floor, require scorer-backed candidate, canonical default-config regression, smoke gate, written promotion review, and a bug audit over pixel format, colorspace/range, frame parity/count, geometry, and branch-specific path differences.",
+      "priority": "high",
+      "recorded_at": "2026-04-06T15:20:00Z"
+    }
+  ],
+  "notes": [
+    {
+      "category": "architecture",
+      "content": "Robust_current inflator correctness is byte-layout sensitive: rawvideo output must be explicit rgb24. AV1 failure at 97.45 was caused by yuv444p rawvideo bytes; forcing -pix_fmt rgb24 in inflate.sh and analyze_roi.py repaired the same AV1 recipe to 2.20.",
+      "timestamp": "2026-04-06T03:39:36.799Z"
+    },
+    {
+      "category": "test",
+      "content": "Authoritative evidence for the live Track B floor: reports/raw/2026-04-05-av1-debug-rerun/robust_current-av1-524x394-rgb24-current_workflow-cpu-summary.json and reports/raw/2026-04-05-av1-floor-promotion/robust_current-av1-floor-current_workflow-cpu-summary.json. Canonical synced summary/report: reports/raw/robust_current-current_workflow-cpu-summary.json and ...-report.txt.",
+      "timestamp": "2026-04-06T03:39:36.800Z"
+    },
+    {
+      "category": "architecture",
+      "content": "Preserved comparison point: prior x265 floor scored 3.25 at 424x318 / medium / 23 / keyint48 / bframes4 / ref4 / lanczos+lanczos. Keep submissions/robust_current/config.x265-3.25.env for controlled comparisons and rollback safety.",
+      "timestamp": "2026-04-06T03:39:36.801Z"
+    },
+    {
+      "category": "deploy",
+      "content": "Best-writeup artifacts are continuously publishable. Canonical Cloudflare Pages project is comma-lab with canonical URL https://comma-lab.pages.dev . Latest preview observed in current cycle: https://ccb8ffa3.comma-lab.pages.dev . Deploy command: npx wrangler pages deploy reports/graphs/site --project-name comma-lab .",
+      "timestamp": "2026-04-06T03:39:36.802Z"
+    },
+    {
+      "category": "build",
+      "content": "Post-promotion verification baseline: python3 -m py_compile src/comma_lab/*.py submissions/robust_current/analyze_roi.py reports/graphs/build_dashboard.py reports/graphs/build_static_site.py ; bash -n submissions/robust_current/compress.sh ; bash -n submissions/robust_current/inflate.sh ; python3 reports/graphs/build_dashboard.py && python3 reports/graphs/build_static_site.py .",
+      "timestamp": "2026-04-06T03:39:36.803Z"
+    },
+    {
+      "category": "test",
+      "content": "2026-04-06 promotion: AV1 CRF34 candidate beat prior 2.20 floor. Candidate summary: reports/raw/2026-04-06-av1-neighborhood/robust_current-av1-524x394-crf34-current_workflow-cpu-summary.json (2.19 @ 864,456 bytes). Canonical default-config regression matched: reports/raw/2026-04-06-av1-floor-promotion/robust_current-av1-crf34-floor-current_workflow-cpu-summary.json (2.19 @ 864,455 bytes).",
+      "timestamp": "2026-04-06T04:45:23.424Z"
+    },
+    {
+      "category": "architecture",
+      "content": "Promotion review standard is now explicit: every new would-be floor needs scorer-backed result, canonical default-config regression, written senior-engineer promotion review, and explicit current_workflow vs rule_faithful separation. Latest review: reports/promotion_reviews/2026-04-06-av1-crf34-promotion-review.md .",
+      "timestamp": "2026-04-06T04:45:23.435Z"
+    },
+    {
+      "category": "deploy",
+      "content": "Writeup product now includes experiment_journal.md and richer lineage/mechanism visuals. Latest Pages preview after 2.19 promotion refresh: https://4f265fd9.comma-lab.pages.dev . Canonical URL remains https://comma-lab.pages.dev .",
+      "timestamp": "2026-04-06T04:45:23.461Z"
+    },
+    {
+      "category": "test",
+      "content": "Historical canonical honest floor after disciplined AV1 neighborhood probe: current_workflow 2.19 at 864,455 bytes and rule_faithful estimate 2.2146293679221243 at 900,954 bytes. Canonical evidence: reports/raw/2026-04-06-av1-floor-promotion/robust_current-av1-crf34-floor-current_workflow-cpu-summary.json plus reports/raw/robust_current-current_workflow-cpu-summary.json.",
+      "timestamp": "2026-04-06T04:46:56.255Z"
+    },
+    {
+      "category": "architecture",
+      "content": "Promotion discipline hardened: every new would-be baseline now requires a written senior-engineer promotion review against the official scoring path/rules before canonicalization. Current live review artifact: reports/promotion_reviews/2026-04-06-av1-crf34-promotion-review.md.",
+      "timestamp": "2026-04-06T04:46:56.258Z"
+    },
+    {
+      "category": "deploy",
+      "content": "Writeup site now presents richer experiment storytelling: lineage/branch graph, AV1 mechanism cards, experiment journal, promotion review summary. Canonical URL remains https://comma-lab.pages.dev ; latest preview this cycle: https://23d58cf3.comma-lab.pages.dev .",
+      "timestamp": "2026-04-06T04:46:56.264Z"
+    },
+    {
+      "category": "test",
+      "content": "Current promoted Track B floor is 2.19 at 524x394 / libsvtav1 / preset0 / crf34 / film-grain22 / bicubic / unsharp. Evidence: reports/raw/2026-04-06-av1-floor-promotion/robust_current-av1-crf34-floor-current_workflow-cpu-summary.json plus canonical reports/raw/robust_current-current_workflow-cpu-summary.json.",
+      "timestamp": "2026-04-06T04:49:54.957Z"
+    },
+    {
+      "category": "architecture",
+      "content": "Latest winning tradeoff: CRF33 -> CRF34 on the repaired AV1 path reduced bytes by ~6.08% and improved total score from 2.20 to 2.19 despite mild pose/seg increases. This is a model experiment for future one-axis neighborhood probes.",
+      "timestamp": "2026-04-06T04:49:54.958Z"
+    },
+    {
+      "category": "deploy",
+      "content": "Writeup/site now includes richer lineage/mechanism surfaces plus experiment journal and promotion review pages. Canonical URL remains https://comma-lab.pages.dev ; latest Wrangler-confirmed preview in this cycle: https://7628099e.comma-lab.pages.dev .",
+      "timestamp": "2026-04-06T04:49:54.960Z"
+    },
+    {
+      "category": "test",
+      "content": "Live Track B floor: 2.19 at 524x394 / libsvtav1 / preset0 / crf34 / film-grain22 / bicubic / unsharp. Candidate and canonical default-config regression both passed at 2.19. Promoted raw evidence: reports/raw/2026-04-06-av1-floor-promotion/robust_current-av1-crf34-floor-current_workflow-cpu-summary.json and matching report.",
+      "recorded_at": "2026-04-06T04:52:14.005271+00:00"
+    },
+    {
+      "category": "architecture",
+      "content": "Promotion discipline upgraded: every future honest baseline candidate must clear docs/promotion_gate.md with scorer-backed measurement, canonical default-config regression, written promotion review, explicit current_workflow vs rule_faithful separation, and bug audit. Track A exact_current remains the only explicitly non-rule-faithful lane.",
+      "recorded_at": "2026-04-06T04:52:14.005271+00:00"
+    },
+    {
+      "category": "architecture",
+      "content": "ffmpeg-contributor-grade review caveats: ROI branches remain x265-centric and do not yet cleanly honor live AV1 codec selection; no dedicated pre-scorer frame-count/geometry smoke gate exists yet; colorspace/range drift still deserves a deeper audit. See reports/ffmpeg_path_review.md.",
+      "recorded_at": "2026-04-06T04:52:14.005271+00:00"
+    },
+    {
+      "category": "deploy",
+      "content": "Writeup site now includes lineage graph, mechanism cards, experiment journal, promotion review, and ffmpeg path review. Latest Wrangler-confirmed preview after CRF34 promotion refresh: https://b3d143f3.comma-lab.pages.dev . Canonical URL remains https://comma-lab.pages.dev .",
+      "recorded_at": "2026-04-06T04:52:14.005271+00:00"
+    },
+    {
+      "category": "test",
+      "content": "CRF35 AV1 probe rejected: 2.21 at 808,036 bytes versus live 2.19 floor at CRF34. This is useful frontier-shape evidence and should stay in the experiment journal and timeline.",
+      "recorded_at": "2026-04-06T05:27:59.101511+00:00"
+    },
+    {
+      "category": "deploy",
+      "content": "Latest Wrangler-confirmed preview after CRF35-writeup refresh: https://457010ad.comma-lab.pages.dev . Canonical URL remains https://comma-lab.pages.dev .",
+      "recorded_at": "2026-04-06T05:27:59.101511+00:00"
+    },
+    {
+      "category": "test",
+      "content": "Rejected AV1 continuation: crf35 scored 2.21 at 808,036 bytes after an estimated 2.17\u20132.20 outcome. The 2.19 crf34 floor remains canonical and the crf34->crf35 pair is now key writeup evidence for the local frontier shape.",
+      "recorded_at": "2026-04-06T05:29:44.366311+00:00"
+    },
+    {
+      "category": "deploy",
+      "content": "Latest Wrangler-confirmed preview after CRF35 rejection writeup refresh: https://457010ad.comma-lab.pages.dev . Canonical URL remains https://comma-lab.pages.dev .",
+      "recorded_at": "2026-04-06T05:29:44.366311+00:00"
+    },
+    {
+      "category": "test",
+      "content": "Smoke gate added: python3 -m src.comma_lab.cli smoke-submission robust_current --package . Live 2.19 AV1 floor passed exact raw file cardinality, exact frame count (1200), and exact geometry-derived byte size (3,662,409,600 bytes). Evidence: reports/raw/2026-04-06-smoke-gate/robust_current-av1-crf34-smoke.json.",
+      "recorded_at": "2026-04-06T05:41:03.068089+00:00"
+    },
+    {
+      "category": "test",
+      "content": "Rejected AV1 continuation: crf35 scored 2.21 at 808,036 bytes after an estimated 2.17\u20132.20 outcome. The 2.19 crf34 floor remains canonical; the crf34->crf35 pair is key evidence for the local frontier knee.",
+      "recorded_at": "2026-04-06T05:41:03.068089+00:00"
+    },
+    {
+      "category": "deploy",
+      "content": "Latest Wrangler-confirmed preview after smoke-gate and CRF35 rejection refresh: https://de095e94.comma-lab.pages.dev . Canonical URL remains https://comma-lab.pages.dev .",
+      "recorded_at": "2026-04-06T05:41:03.068089+00:00"
+    },
+    {
+      "category": "test",
+      "content": "Rejected AV1 continuation: unsharp 0.30 scored 2.20 at 864,455 bytes after an estimated 2.18\u20132.20 outcome. No byte savings, slight pose/seg regressions. The 2.19 crf34/unsharp0.35 floor remained canonical at that time.",
+      "recorded_at": "2026-04-06T06:14:47.363878+00:00"
+    },
+    {
+      "category": "deploy",
+      "content": "Latest Wrangler-confirmed preview after unsharp030 rejection writeup refresh: https://2f1800e7.comma-lab.pages.dev . Canonical URL remains https://comma-lab.pages.dev .",
+      "recorded_at": "2026-04-06T06:14:47.363878+00:00"
+    },
+    {
+      "category": "test",
+      "content": "Rejected AV1 reconstruction-side continuation: unsharp 0.30 scored 2.20 at unchanged 864,455 bytes after an estimated 2.18\u20132.20 outcome. The 2.19 floor with unsharp 0.35 remained canonical at that time and is now supported by a nearby reconstruction-side loss.",
+      "recorded_at": "2026-04-06T06:16:37.114639+00:00"
+    },
+    {
+      "category": "test",
+      "content": "Smoke gate evidence for live 2.19 floor remains reports/raw/2026-04-06-smoke-gate/robust_current-av1-crf34-smoke.json with all_passed=true, frame_count_matches=true, size_matches=true.",
+      "recorded_at": "2026-04-06T06:16:37.114639+00:00"
+    },
+    {
+      "category": "deploy",
+      "content": "Latest Wrangler-confirmed preview after smoke-gate + unsharp030 rejection refresh: https://2f1800e7.comma-lab.pages.dev . Canonical URL remains https://comma-lab.pages.dev .",
+      "recorded_at": "2026-04-06T06:16:37.114639+00:00"
+    },
+    {
+      "category": "test",
+      "content": "Rejected AV1 synthesis-side continuation: film-grain=0 scored 3.33 at 719,096 bytes after an estimated 2.16\u20132.24 outcome. The 2.19 floor with film-grain22 remains canonical; film-grain synthesis now looks functionally important, not cosmetic.",
+      "recorded_at": "2026-04-06T07:14:15.740145+00:00"
+    },
+    {
+      "category": "deploy",
+      "content": "Latest Wrangler-confirmed preview after film-grain0 rejection refresh: https://a9c110e6.comma-lab.pages.dev . Canonical URL remains https://comma-lab.pages.dev .",
+      "recorded_at": "2026-04-06T07:14:15.740145+00:00"
+    },
+    {
+      "category": "test",
+      "content": "Rejected AV1 synthesis-side continuation: film-grain=0 scored 3.33 at 719,096 bytes after an estimated 2.16\u20132.24 outcome. The 2.19 floor with film-grain22 remains canonical; this is strong evidence that AV1 film-grain synthesis is functionally important here.",
+      "recorded_at": "2026-04-06T07:15:18.112606+00:00"
+    },
+    {
+      "category": "test",
+      "content": "Smoke gate passed both live floor and film-grain0 candidate. Evidence: reports/raw/2026-04-06-smoke-gate/robust_current-av1-crf34-smoke.json and reports/raw/2026-04-06-av1-filmgrain0/robust_current-av1-filmgrain0-smoke.json.",
+      "recorded_at": "2026-04-06T07:15:18.112606+00:00"
+    },
+    {
+      "category": "test",
+      "content": "Rejected AV1 geometry continuation: 522x392 scored 2.23 at 862,238 bytes after an estimated 2.17\u20132.22 outcome. The 2.19 floor at 524x394 remains canonical; this is further evidence the local AV1 operating point is tight.",
+      "recorded_at": "2026-04-06T12:59:45.131173+00:00"
+    },
+    {
+      "category": "test",
+      "content": "Smoke gate passed the 522x392 candidate before scorer execution. Evidence: reports/raw/2026-04-06-av1-522x392/robust_current-av1-522x392-smoke.json.",
+      "recorded_at": "2026-04-06T12:59:45.131173+00:00"
+    },
+    {
+      "category": "deploy",
+      "content": "Latest Wrangler-confirmed preview after 522x392 rejection refresh: https://ee5bbfe6.comma-lab.pages.dev . Canonical URL remains https://comma-lab.pages.dev .",
+      "recorded_at": "2026-04-06T12:59:45.131173+00:00"
+    },
+    {
+      "category": "test",
+      "content": "Rejected AV1 geometry-side continuation: 522x392 scored 2.23 at 862,238 bytes after an estimated 2.17\u20132.22 outcome. The 2.19 floor at 524x394 remains canonical; this is evidence that the current geometry is near a local knee.",
+      "recorded_at": "2026-04-06T13:01:53.094603+00:00"
+    },
+    {
+      "category": "deploy",
+      "content": "Latest Wrangler-confirmed preview after 522x392 rejection writeup refresh: https://ee5bbfe6.comma-lab.pages.dev . Canonical URL remains https://comma-lab.pages.dev .",
+      "recorded_at": "2026-04-06T13:01:53.094603+00:00"
+    },
+    {
+      "category": "test",
+      "content": "Promoted AV1 upscale-axis win: Lanczos upscale scored 2.18 at unchanged 864,455 bytes after an estimated 2.16\u20132.19 outcome. Both pose and seg improved slightly versus the prior 2.19 bicubic-upscale floor.",
+      "recorded_at": "2026-04-06T14:02:14.929839+00:00"
+    },
+    {
+      "category": "test",
+      "content": "Smoke gate evidence for historical 2.18 floor: reports/raw/2026-04-06-av1-upscale-lanczos/robust_current-av1-upscale-lanczos-smoke.json .",
+      "recorded_at": "2026-04-06T14:02:14.929839+00:00"
+    },
+    {
+      "category": "deploy",
+      "content": "Latest Wrangler-confirmed preview after Lanczos-upscale promotion refresh: https://5a45e8a4.comma-lab.pages.dev . Canonical URL remains https://comma-lab.pages.dev .",
+      "recorded_at": "2026-04-06T14:02:14.929839+00:00"
+    },
+    {
+      "category": "test",
+      "content": "Promoted AV1 upscale-axis win: bicubic -> lanczos scored 2.18 at unchanged 864,455 bytes after an estimated 2.16\u20132.19 outcome. This was the canonical honest floor before the later 2.12 hardening promotion and a rare clean win where bytes stayed fixed while both pose and seg improved.",
+      "recorded_at": "2026-04-06T14:03:16.917002+00:00"
+    },
+    {
+      "category": "test",
+      "content": "Smoke gate evidence for historical 2.18 floor: reports/raw/2026-04-06-av1-upscale-lanczos/robust_current-av1-upscale-lanczos-smoke.json . Canonical scorer evidence: reports/raw/2026-04-06-av1-lanczos-floor-promotion/robust_current-av1-lanczos-floor-current_workflow-cpu-summary.json .",
+      "recorded_at": "2026-04-06T14:03:16.917002+00:00"
+    },
+    {
+      "category": "deploy",
+      "content": "Latest Wrangler-confirmed preview after dashboard coherence fix: https://80c389c1.comma-lab.pages.dev . Canonical URL remains https://comma-lab.pages.dev .",
+      "recorded_at": "2026-04-06T14:12:54.037734+00:00"
+    },
+    {
+      "category": "architecture",
+      "content": "2026-04-06 comprehensive rigor pass: robust_current packaging now honors the requested upstream root; package-without-sync is rejected; eval clears stale inflated/ raws before scoring; AV1+ROI now fails fast; ROI metadata analysis honors FFMPEG_BIN and FFPROBE_BIN; ROI_X_FRAC and ROI-side INFLATE_POSTFILTER are now live knobs; root .gitignore now covers cache/scratch artifacts.",
+      "timestamp": "2026-04-06T15:00:32.758252+00:00"
+    },
+    {
+      "category": "test",
+      "content": "Rigor-pass evidence: reports/raw/2026-04-06-rigor-pass/robust_current-rigor-smoke.json (live floor smoke pass) and reports/raw/2026-04-06-rigor-pass/roi-rigor-checks.txt (AV1 ROI guard deliberate failure, ffprobe/ffmpeg wrapper propagation, ROI_X_FRAC artifact delta, ROI postfilter symmetry).",
+      "timestamp": "2026-04-06T15:00:32.758252+00:00"
+    },
+    {
+      "category": "test",
+      "content": "Current promoted floor evidence: reports/raw/2026-04-06-hardening/robust_current-hardening-current_workflow-cpu-summary.json (2.12 @ 864486 bytes), smoke evidence reports/raw/2026-04-06-hardening/robust_current-hardening-smoke.json, encoded ffprobe evidence reports/raw/2026-04-06-hardening/encoded-ffprobe.json .",
+      "timestamp": "2026-04-06T15:48:41.055937+00:00"
+    },
+    {
+      "category": "deploy",
+      "content": "Latest Wrangler-confirmed preview after the 2.12 production-hardening promotion: https://4faa3d95.comma-lab.pages.dev . Deploy command remains `npx wrangler pages deploy reports/graphs/site --project-name comma-lab` .",
+      "timestamp": "2026-04-06T15:54:48.646151+00:00"
+    },
+    {
+      "category": "architecture",
+      "content": "Speculative AV1+ROI parity lane recorded. Do not treat AV1+ROI as live support until codec-agnostic ROI encode, AV1-aware metadata path, inflate/smoke/scorer parity, and scorer-backed evidence are complete.",
+      "timestamp": "2026-04-06T16:01:39.598655+00:00"
+    },
+    {
+      "category": "deploy",
+      "content": "Latest Wrangler-confirmed preview after final packet/site sync: https://ab2fa023.comma-lab.pages.dev .",
+      "timestamp": "2026-04-06T16:48:41.839297+00:00"
+    },
+    {
+      "category": "test",
+      "content": "Fresh exact_current regression after shared tooling changes remained 0.00 at 167 bytes; canonical summary refreshed at reports/raw/exact_current-current_workflow-cpu-summary.json .",
+      "timestamp": "2026-04-06T16:48:41.839297+00:00"
+    },
+    {
+      "category": "deploy",
+      "content": "Latest Wrangler-confirmed preview after closing remaining risks: https://ee631431.comma-lab.pages.dev .",
+      "timestamp": "2026-04-06T17:01:15.922308+00:00"
+    }
+  ]
+}

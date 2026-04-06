@@ -1,0 +1,26 @@
+# Context Snapshot
+
+- task statement: Continue the Ralph loop by pushing the main compression lane while also using BAT00 for ranking support.
+- desired outcome: rank a small lower-resolution nearby candidate set on BAT00, run the top local CPU candidate, and update durable state whether it wins or loses.
+- known facts/evidence:
+  - Promoted Track B floor is 3.25 at 424x318 / medium / 23 / keyint48 / bframes4 / ref4 / lanczos+lanczos.
+  - Nearby follow-ups at 424x318 / bframes3 and 424x318 / keyint64 both lost at 3.27 and 3.26.
+  - Earlier tiny resolution reductions repeatedly helped the honest lane.
+  - BAT00 ranking support is useful but non-authoritative.
+- constraints:
+  - local CPU scorer remains authoritative
+  - BAT00 remains research-only for ranking/profiling
+  - keep current_workflow vs rule_faithful explicit
+  - stay inside mutation frontier
+- unknowns/open questions:
+  - whether one more small resolution reduction around 416x312 or 408x306 can beat 3.25
+  - whether the floor is now truly stable against further tiny scale reductions
+- likely codebase touchpoints:
+  - submissions/robust_current/configs/*
+  - reports/raw/**
+  - reports/results.jsonl
+  - reports/timeline.jsonl
+  - .omx/state/**
+  - .omx/research/findings.md
+  - .ralph/run_log.md
+  - reports/latest.md

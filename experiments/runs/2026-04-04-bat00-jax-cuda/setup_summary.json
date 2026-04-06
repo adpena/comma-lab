@@ -1,0 +1,10 @@
+{
+  "host": "BAT00",
+  "lane": "jax-cuda-surrogate-setup",
+  "authoritative_for_claimed_scores": false,
+  "python": "3.12.3",
+  "uv": "0.10.9",
+  "jax_version": "0.9.2",
+  "devices": ["CudaDevice(id=0)"],
+  "status": "ready"
+}

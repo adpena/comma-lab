@@ -1,0 +1,22 @@
+# Context Snapshot: track-b-tiny-resolution-revisit
+
+- Task statement: Run the next approved measured cycle: a tiny local resolution revisit around the promoted 3.54 floor.
+- Desired outcome: Obtain scorer-backed CPU results for two nearby resolution variants around the promoted 448x336 medium/23 keyint48 lanczos/lanczos config, compare against the 3.54 floor and the published 4.39 baseline, and promote only if the new result is clearly better.
+- Known facts/evidence:
+  - Upstream snapshot is verified at commit ec82c291ffeae5212e9a38253791d58995518a80.
+  - robust_current promoted floor is 3.54 on CPU at 1,901,606 archive bytes with 448x336 / medium / 23 / keyint48 / bframes4 / ref4 / lanczos+lanczos.
+  - Prior broad resolution sweep showed 448x336 beat 512x384 and 576x432.
+  - Subsequent GOP/filter sweeps improved the same neighborhood, so only a very small local revisit is justified now.
+- Constraints:
+  - Keep both tracks alive.
+  - Stay inside mutation frontier.
+  - Use official scorer path for claimed measured results.
+  - Prefer at most 3 experiments this cycle.
+  - Keep current_workflow vs rule_faithful explicit.
+- Unknowns/open questions:
+  - Whether 432x324 or 464x348 can beat the promoted 448x336 floor.
+- Likely codebase touchpoints:
+  - submissions/robust_current/config.env
+  - reports/raw/2026-04-04-tiny-resolution-revisit/
+  - experiments/runs/2026-04-04-tiny-resolution-revisit/
+  - reports/results.jsonl, reports/timeline.jsonl, reports/latest.md

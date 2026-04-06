@@ -1,0 +1,16 @@
+{
+  "copied_report_path": "reports/raw/2026-04-05-codec-shortlist/robust_current-cand-432x324-crf23-g64-b4-r4-current_workflow-cpu-report.txt",
+  "current_workflow_archive_bytes": 1753611,
+  "current_workflow_rate": 0.0467063,
+  "current_workflow_score": 3.38,
+  "device": "cpu",
+  "original_uncompressed_bytes": 37545489,
+  "pose_distortion": 0.2780596,
+  "report_path": "/Users/adpena/Projects/pact/workspace/upstream/comma_video_compression_challenge/submissions/robust_current/report.txt",
+  "rule_faithful_bundle_bytes": 1787790,
+  "rule_faithful_rate": 0.04761663911209147,
+  "rule_faithful_score": 3.4043148968001695,
+  "rule_faithful_status": "estimated_from_scorer_distortions_plus_honest_bytes",
+  "seg_distortion": 0.00546387,
+  "track": "robust_current"
+}

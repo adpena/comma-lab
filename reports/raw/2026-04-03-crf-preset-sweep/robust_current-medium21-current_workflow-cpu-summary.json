@@ -1,0 +1,16 @@
+{
+  "copied_report_path": "reports/raw/2026-04-03-crf-preset-sweep/robust_current-medium21-current_workflow-cpu-report.txt",
+  "current_workflow_archive_bytes": 5005390,
+  "current_workflow_rate": 0.13331535,
+  "current_workflow_score": 4.74,
+  "device": "cpu",
+  "original_uncompressed_bytes": 37545489,
+  "pose_distortion": 0.10718999,
+  "report_path": "/Users/adpena/Projects/pact/workspace/upstream/comma_video_compression_challenge/submissions/robust_current/report.txt",
+  "rule_faithful_bundle_bytes": 5008434,
+  "rule_faithful_rate": 0.13339642480085956,
+  "rule_faithful_score": 4.740559607331766,
+  "rule_faithful_status": "estimated_from_scorer_distortions_plus_honest_bytes",
+  "seg_distortion": 0.00370323,
+  "track": "robust_current"
+}

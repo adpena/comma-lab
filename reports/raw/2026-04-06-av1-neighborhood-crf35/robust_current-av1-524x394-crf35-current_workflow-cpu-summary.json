@@ -1,0 +1,16 @@
+{
+  "copied_report_path": "reports/raw/2026-04-06-av1-neighborhood-crf35/robust_current-av1-524x394-crf35-current_workflow-cpu-report.txt",
+  "current_workflow_archive_bytes": 808036,
+  "current_workflow_rate": 0.02152152,
+  "current_workflow_score": 2.21,
+  "device": "cpu",
+  "original_uncompressed_bytes": 37545489,
+  "pose_distortion": 0.11693271,
+  "report_path": "/Users/adpena/Projects/pact/workspace/upstream/comma_video_compression_challenge/submissions/robust_current/report.txt",
+  "rule_faithful_bundle_bytes": 844353,
+  "rule_faithful_rate": 0.02248880018582259,
+  "rule_faithful_score": 2.238089294413724,
+  "rule_faithful_status": "estimated_from_scorer_distortions_plus_honest_bytes",
+  "seg_distortion": 0.00594515,
+  "track": "robust_current"
+}

@@ -1,0 +1,16 @@
+{
+  "copied_report_path": "reports/raw/2026-04-04-smart-roi-prototype/robust_current-smart-roi-current_workflow-cpu-report.txt",
+  "current_workflow_archive_bytes": 2053359,
+  "current_workflow_rate": 0.0546899,
+  "current_workflow_score": 5.01,
+  "device": "cpu",
+  "original_uncompressed_bytes": 37545489,
+  "pose_distortion": 0.54364634,
+  "report_path": "/Users/adpena/Projects/pact/workspace/upstream/comma_video_compression_challenge/submissions/robust_current/report.txt",
+  "rule_faithful_bundle_bytes": 2063290,
+  "rule_faithful_rate": 0.054954404775497796,
+  "rule_faithful_score": 5.017403601694562,
+  "rule_faithful_status": "estimated_from_scorer_distortions_plus_honest_bytes",
+  "seg_distortion": 0.01311921,
+  "track": "robust_current"
+}

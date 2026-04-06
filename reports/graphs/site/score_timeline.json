@@ -1,0 +1,760 @@
+[
+  {
+    "run_id": "robust_current-baseline-cpu-2026-04-03",
+    "ts_utc": "2026-04-04T16:19:02.890784+00:00",
+    "score": 4.06,
+    "archive_bytes": 3735828,
+    "config": {
+      "bframes": 4,
+      "crf": 22,
+      "filters": "lanczos/bicubic",
+      "gop": 32,
+      "preset": "medium",
+      "ref": 4,
+      "scale_h": 384,
+      "scale_w": 512
+    },
+    "notes": [
+      "official scorer path via upstream evaluate.sh",
+      "baseline before first sweep cycle",
+      "historical baseline artifact paths were superseded before canonical per-run retention was enforced"
+    ]
+  },
+  {
+    "run_id": "robust_current-medium21-cpu-2026-04-03",
+    "ts_utc": "2026-04-04T16:19:02.890832+00:00",
+    "score": 4.74,
+    "archive_bytes": 5005390,
+    "config": {
+      "bframes": 4,
+      "crf": 21,
+      "filters": "lanczos/bicubic",
+      "gop": 32,
+      "preset": "medium",
+      "ref": 4,
+      "scale_h": 384,
+      "scale_w": 512
+    },
+    "notes": [
+      "sweep candidate",
+      "regressed badly versus baseline and published baseline"
+    ]
+  },
+  {
+    "run_id": "robust_current-medium23-cpu-2026-04-03",
+    "ts_utc": "2026-04-04T16:19:02.890872+00:00",
+    "score": 3.62,
+    "archive_bytes": 2819374,
+    "config": {
+      "bframes": 4,
+      "crf": 23,
+      "filters": "lanczos/bicubic",
+      "gop": 32,
+      "preset": "medium",
+      "ref": 4,
+      "scale_h": 384,
+      "scale_w": 512
+    },
+    "notes": [
+      "sweep candidate",
+      "won first CRF/preset cycle"
+    ]
+  },
+  {
+    "run_id": "robust_current-slow22-cpu-2026-04-03",
+    "ts_utc": "2026-04-04T16:19:02.890909+00:00",
+    "score": 4.13,
+    "archive_bytes": 3812776,
+    "config": {
+      "bframes": 4,
+      "crf": 22,
+      "filters": "lanczos/bicubic",
+      "gop": 32,
+      "preset": "slow",
+      "ref": 4,
+      "scale_h": 384,
+      "scale_w": 512
+    },
+    "notes": [
+      "sweep candidate",
+      "worse than medium/23"
+    ]
+  },
+  {
+    "run_id": "robust_current-448x336-medium23-cpu-2026-04-03",
+    "ts_utc": "2026-04-04T16:19:02.890945+00:00",
+    "score": 3.56,
+    "archive_bytes": 1978141,
+    "config": {
+      "bframes": 4,
+      "crf": 23,
+      "filters": "lanczos/bicubic",
+      "gop": 32,
+      "preset": "medium",
+      "ref": 4,
+      "scale_h": 336,
+      "scale_w": 448
+    },
+    "notes": [
+      "resolution sweep candidate",
+      "won first resolution cycle"
+    ]
+  },
+  {
+    "run_id": "robust_current-576x432-medium23-cpu-2026-04-03",
+    "ts_utc": "2026-04-04T16:19:02.890981+00:00",
+    "score": 4.26,
+    "archive_bytes": 3868552,
+    "config": {
+      "bframes": 4,
+      "crf": 23,
+      "filters": "lanczos/bicubic",
+      "gop": 32,
+      "preset": "medium",
+      "ref": 4,
+      "scale_h": 432,
+      "scale_w": 576
+    },
+    "notes": [
+      "resolution sweep candidate",
+      "regressed badly"
+    ]
+  },
+  {
+    "run_id": "robust_current-keyint24-cpu-2026-04-04",
+    "ts_utc": "2026-04-04T16:19:02.891018+00:00",
+    "score": 3.64,
+    "archive_bytes": 2018006,
+    "config": {
+      "bframes": 4,
+      "crf": 23,
+      "filters": "lanczos/bicubic",
+      "gop": 24,
+      "preset": "medium",
+      "ref": 4,
+      "scale_h": 336,
+      "scale_w": 448
+    },
+    "notes": [
+      "gop sweep candidate",
+      "worse than promoted floor"
+    ]
+  },
+  {
+    "run_id": "robust_current-keyint48-cpu-2026-04-04",
+    "ts_utc": "2026-04-04T16:19:02.891052+00:00",
+    "score": 3.56,
+    "archive_bytes": 1901606,
+    "config": {
+      "bframes": 4,
+      "crf": 23,
+      "filters": "lanczos/bicubic",
+      "gop": 48,
+      "preset": "medium",
+      "ref": 4,
+      "scale_h": 336,
+      "scale_w": 448
+    },
+    "notes": [
+      "gop sweep candidate",
+      "won on bytes + stricter estimate"
+    ]
+  },
+  {
+    "run_id": "robust_current-keyint64-cpu-2026-04-04",
+    "ts_utc": "2026-04-04T16:19:02.891086+00:00",
+    "score": 3.61,
+    "archive_bytes": 1862992,
+    "config": {
+      "bframes": 4,
+      "crf": 23,
+      "filters": "lanczos/bicubic",
+      "gop": 64,
+      "preset": "medium",
+      "ref": 4,
+      "scale_h": 336,
+      "scale_w": 448
+    },
+    "notes": [
+      "gop sweep candidate",
+      "worse than keyint48 on score"
+    ]
+  },
+  {
+    "run_id": "robust_current-bicubic-bicubic-cpu-2026-04-04",
+    "ts_utc": "2026-04-04T16:19:02.891121+00:00",
+    "score": 3.67,
+    "archive_bytes": 1829217,
+    "config": {
+      "bframes": 4,
+      "crf": 23,
+      "filters": "bicubic/bicubic",
+      "gop": 48,
+      "preset": "medium",
+      "ref": 4,
+      "scale_h": 336,
+      "scale_w": 448
+    },
+    "notes": [
+      "filter sweep candidate",
+      "regressed despite lower bytes"
+    ]
+  },
+  {
+    "run_id": "robust_current-lanczos-lanczos-cpu-2026-04-04",
+    "ts_utc": "2026-04-04T16:19:02.891154+00:00",
+    "score": 3.54,
+    "archive_bytes": 1901606,
+    "config": {
+      "bframes": 4,
+      "crf": 23,
+      "filters": "lanczos/lanczos",
+      "gop": 48,
+      "preset": "medium",
+      "ref": 4,
+      "scale_h": 336,
+      "scale_w": 448
+    },
+    "notes": [
+      "filter sweep candidate",
+      "new promoted floor"
+    ]
+  },
+  {
+    "run_id": "robust_current-bframes3-ref4-cpu-2026-04-04",
+    "ts_utc": "2026-04-04T16:19:02.891189+00:00",
+    "score": 3.57,
+    "archive_bytes": 2021782,
+    "config": {
+      "bframes": 3,
+      "crf": 23,
+      "filters": "lanczos/lanczos",
+      "gop": 48,
+      "preset": "medium",
+      "ref": 4,
+      "scale_h": 336,
+      "scale_w": 448
+    },
+    "notes": [
+      "bframe/ref sweep candidate",
+      "regressed"
+    ]
+  },
+  {
+    "run_id": "robust_current-bframes5-ref4-cpu-2026-04-04",
+    "ts_utc": "2026-04-04T16:19:02.891224+00:00",
+    "score": 3.71,
+    "archive_bytes": 1897819,
+    "config": {
+      "bframes": 5,
+      "crf": 23,
+      "filters": "lanczos/lanczos",
+      "gop": 48,
+      "preset": "medium",
+      "ref": 4,
+      "scale_h": 336,
+      "scale_w": 448
+    },
+    "notes": [
+      "bframe/ref sweep candidate",
+      "clear regression"
+    ]
+  },
+  {
+    "run_id": "robust_current-bframes4-ref5-cpu-2026-04-04",
+    "ts_utc": "2026-04-04T16:19:02.891259+00:00",
+    "score": 3.55,
+    "archive_bytes": 1894366,
+    "config": {
+      "bframes": 4,
+      "crf": 23,
+      "filters": "lanczos/lanczos",
+      "gop": 48,
+      "preset": "medium",
+      "ref": 5,
+      "scale_h": 336,
+      "scale_w": 448
+    },
+    "notes": [
+      "bframe/ref sweep candidate",
+      "very close, but still worse than promoted floor"
+    ]
+  },
+  {
+    "run_id": "robust_current-roi-two-pass-cpu-2026-04-04",
+    "ts_utc": "2026-04-04T17:46:16.347003+00:00",
+    "score": 5.73,
+    "archive_bytes": 1472589,
+    "config": {
+      "bframes": 4,
+      "filters": "lanczos/lanczos",
+      "gop": 48,
+      "prototype": "fixed-roi-two-pass",
+      "ref": 4,
+      "roi_base_crf_delta": 5,
+      "roi_crf_delta": 0,
+      "roi_h_frac": 0.55,
+      "roi_w_frac": 0.7,
+      "roi_x_frac": 0.15,
+      "roi_y_frac": 0.22,
+      "scale_h": 336,
+      "scale_w": 448
+    },
+    "notes": [
+      "research prototype",
+      "rejected",
+      "bytes dropped sharply but semantic/task distortion exploded"
+    ]
+  },
+  {
+    "run_id": "robust_current-432x324-cpu-2026-04-04",
+    "ts_utc": "2026-04-04T19:11:30.673618+00:00",
+    "score": 3.33,
+    "archive_bytes": 1781129,
+    "config": {
+      "bframes": 4,
+      "crf": 23,
+      "filters": "lanczos/lanczos",
+      "gop": 48,
+      "preset": "medium",
+      "ref": 4,
+      "scale_h": 324,
+      "scale_w": 432
+    },
+    "notes": [
+      "tiny resolution revisit",
+      "promoted new floor"
+    ]
+  },
+  {
+    "run_id": "robust_current-464x348-cpu-2026-04-04",
+    "ts_utc": "2026-04-04T19:11:30.674033+00:00",
+    "score": 3.44,
+    "archive_bytes": 2139211,
+    "config": {
+      "bframes": 4,
+      "crf": 23,
+      "filters": "lanczos/lanczos",
+      "gop": 48,
+      "preset": "medium",
+      "ref": 4,
+      "scale_h": 348,
+      "scale_w": 464
+    },
+    "notes": [
+      "tiny resolution revisit",
+      "rejected"
+    ]
+  },
+  {
+    "run_id": "robust_current-dynamic-main-roi-cpu-2026-04-05",
+    "ts_utc": "2026-04-05T05:53:25.231029+00:00",
+    "score": 4.47,
+    "archive_bytes": 2660388,
+    "config": {
+      "bframes": 4,
+      "crf": 23,
+      "filters": "lanczos/lanczos",
+      "gop": 48,
+      "preset": "medium",
+      "prototype": "dynamic-main-roi",
+      "ref": 4,
+      "roi2_enabled": true,
+      "roi_base_crf_delta": 1,
+      "roi_crf_delta": -1,
+      "sample_step": 10,
+      "scale_h": 324,
+      "scale_w": 432,
+      "tile_grid": "12x9",
+      "window_frames": 200
+    },
+    "notes": [
+      "research prototype",
+      "rejected",
+      "main ROI preserved explicitly but multi-window overhead was too expensive"
+    ]
+  },
+  {
+    "run_id": "robust_current-cand-432x324-crf23-g48-b3-r4-cpu-2026-04-05",
+    "ts_utc": "2026-04-05T07:42:28.845608+00:00",
+    "score": 3.43,
+    "archive_bytes": 1898751,
+    "config": {
+      "bframes": 3,
+      "crf": 23,
+      "filters": "lanczos/lanczos",
+      "gop": 48,
+      "preset": "medium",
+      "ref": 4,
+      "scale_h": 324,
+      "scale_w": 432
+    },
+    "notes": [
+      "codec shortlist candidate",
+      "surrogate-ranked #1",
+      "rejected"
+    ]
+  },
+  {
+    "run_id": "robust_current-cand-432x324-crf23-g64-b4-r4-cpu-2026-04-05",
+    "ts_utc": "2026-04-05T07:42:28.847030+00:00",
+    "score": 3.38,
+    "archive_bytes": 1753611,
+    "config": {
+      "bframes": 4,
+      "crf": 23,
+      "filters": "lanczos/lanczos",
+      "gop": 64,
+      "preset": "medium",
+      "ref": 4,
+      "scale_h": 324,
+      "scale_w": 432
+    },
+    "notes": [
+      "codec shortlist candidate",
+      "surrogate-ranked #2",
+      "rejected but closer than bframes3"
+    ]
+  },
+  {
+    "run_id": "robust_current-cand-424x318-crf23-g48-b4-r4-cpu-2026-04-05",
+    "ts_utc": "2026-04-05T08:13:15.197566+00:00",
+    "score": 3.25,
+    "archive_bytes": 1669984,
+    "config": {
+      "bframes": 4,
+      "crf": 23,
+      "filters": "lanczos/lanczos",
+      "gop": 48,
+      "preset": "medium",
+      "ref": 4,
+      "scale_h": 318,
+      "scale_w": 424
+    },
+    "notes": [
+      "codec shortlist candidate",
+      "surrogate-ranked #3",
+      "new promoted floor"
+    ]
+  },
+  {
+    "run_id": "robust_current-cand-424x318-crf23-g48-b3-r4-cpu-2026-04-05",
+    "ts_utc": "2026-04-05T08:48:02.862906+00:00",
+    "score": 3.27,
+    "archive_bytes": 1776026,
+    "config": {
+      "bframes": 3,
+      "crf": 23,
+      "filters": "lanczos/lanczos",
+      "gop": 48,
+      "preset": "medium",
+      "ref": 4,
+      "scale_h": 318,
+      "scale_w": 424
+    },
+    "notes": [
+      "nearby-floor follow-up",
+      "rejected"
+    ]
+  },
+  {
+    "run_id": "robust_current-cand-424x318-crf23-g64-b4-r4-cpu-2026-04-06",
+    "ts_utc": "2026-04-05T09:47:41.997305+00:00",
+    "score": 3.26,
+    "archive_bytes": 1646886,
+    "config": {
+      "bframes": 4,
+      "crf": 23,
+      "filters": "lanczos/lanczos",
+      "gop": 64,
+      "preset": "medium",
+      "ref": 4,
+      "scale_h": 318,
+      "scale_w": 424
+    },
+    "notes": [
+      "nearby-floor follow-up",
+      "rejected",
+      "very close but still worse than 3.25 floor"
+    ]
+  },
+  {
+    "run_id": "robust_current-cand-416x312-crf23-g48-b4-r4-cpu-2026-04-05",
+    "ts_utc": "2026-04-05T14:29:14.554386+00:00",
+    "score": 3.44,
+    "archive_bytes": 1573803,
+    "config": {
+      "bframes": 4,
+      "crf": 23,
+      "filters": "lanczos/lanczos",
+      "gop": 48,
+      "preset": "medium",
+      "ref": 4,
+      "scale_h": 312,
+      "scale_w": 416
+    },
+    "notes": [
+      "lower-resolution follow-up",
+      "BAT00-ranked #1 lower-res",
+      "rejected"
+    ]
+  },
+  {
+    "run_id": "robust_current-cand-428x320-crf23-g48-b4-r4-cpu-2026-04-05",
+    "ts_utc": "2026-04-05T15:10:07.424166+00:00",
+    "score": 3.32,
+    "archive_bytes": 1741924,
+    "config": {
+      "bframes": 4,
+      "crf": 23,
+      "filters": "lanczos/lanczos",
+      "gop": 48,
+      "preset": "medium",
+      "ref": 4,
+      "scale_h": 320,
+      "scale_w": 428
+    },
+    "notes": [
+      "nearby-scale follow-up",
+      "BAT00-ranked #1 nearby-scale",
+      "rejected"
+    ]
+  },
+  {
+    "run_id": "robust_current-cand-426x320-crf23-g48-b4-r4-cpu-2026-04-06",
+    "ts_utc": "2026-04-05T16:07:20.966613+00:00",
+    "score": 3.38,
+    "archive_bytes": 1766456,
+    "config": {
+      "bframes": 4,
+      "crf": 23,
+      "filters": "lanczos/lanczos",
+      "gop": 48,
+      "preset": "medium",
+      "ref": 4,
+      "scale_h": 320,
+      "scale_w": 426
+    },
+    "notes": [
+      "nearby-scale follow-up",
+      "BAT00-ranked #2 nearby-scale",
+      "rejected"
+    ]
+  },
+  {
+    "run_id": "robust_current-av1-524x394-cpu-2026-04-05",
+    "ts_utc": "2026-04-05T17:12:42.980642+00:00",
+    "score": 97.45,
+    "archive_bytes": 920457,
+    "config": {
+      "bframes": null,
+      "crf": 33,
+      "film_grain": 22,
+      "filters": "lanczos/bicubic",
+      "gop": 180,
+      "inflate_postfilter": "unsharp=9:9:0.35:9:9:0.0",
+      "preset": "svtav1-p0",
+      "ref": null,
+      "scale_h": 394,
+      "scale_w": 524,
+      "video_codec": "libsvtav1"
+    },
+    "notes": [
+      "public-style AV1 reproduction attempt",
+      "severe regression",
+      "reject"
+    ]
+  },
+  {
+    "run_id": "robust_current-av1-524x394-rgb24-promoted-cpu-2026-04-05",
+    "ts_utc": "2026-04-05T18:20:08.762518+00:00",
+    "score": 2.2,
+    "archive_bytes": 920457,
+    "config": {
+      "bframes": null,
+      "crf": 33,
+      "film_grain": 22,
+      "filters": "lanczos/bicubic",
+      "gop": 180,
+      "inflate_postfilter": "unsharp=9:9:0.35:9:9:0.0",
+      "preset": "svtav1-p0",
+      "ref": null,
+      "scale_h": 394,
+      "scale_w": 524,
+      "video_codec": "libsvtav1"
+    },
+    "notes": [
+      "public-style AV1 reproduction repaired",
+      "rgb24 rawvideo fix",
+      "new promoted floor"
+    ]
+  },
+  {
+    "run_id": "robust_current-av1-524x394-crf34-promoted-cpu-2026-04-06",
+    "ts_utc": "2026-04-06T04:40:00.694888+00:00",
+    "score": 2.19,
+    "archive_bytes": 864455,
+    "config": {
+      "bframes": null,
+      "crf": 34,
+      "film_grain": 22,
+      "filters": "lanczos/bicubic",
+      "gop": 180,
+      "inflate_postfilter": "unsharp=9:9:0.35:9:9:0.0",
+      "preset": "svtav1-p0",
+      "ref": null,
+      "scale_h": 394,
+      "scale_w": 524,
+      "video_codec": "libsvtav1"
+    },
+    "notes": [
+      "AV1 neighborhood follow-up",
+      "hypothesis held narrowly",
+      "new promoted floor"
+    ]
+  },
+  {
+    "run_id": "robust_current-av1-524x394-crf35-rejected-cpu-2026-04-06",
+    "ts_utc": "2026-04-06T05:26:53.551355+00:00",
+    "score": 2.21,
+    "archive_bytes": 808036,
+    "config": {
+      "bframes": null,
+      "crf": 35,
+      "film_grain": 22,
+      "filters": "lanczos/bicubic",
+      "gop": 180,
+      "inflate_postfilter": "unsharp=9:9:0.35:9:9:0.0",
+      "preset": "svtav1-p0",
+      "ref": null,
+      "scale_h": 394,
+      "scale_w": 524,
+      "video_codec": "libsvtav1"
+    },
+    "notes": [
+      "AV1 neighborhood probe",
+      "hypothesis: further byte reduction would still beat 2.19",
+      "rejected"
+    ]
+  },
+  {
+    "run_id": "robust_current-av1-524x394-unsharp030-rejected-cpu-2026-04-06",
+    "ts_utc": "2026-04-06T06:13:03.889813+00:00",
+    "score": 2.2,
+    "archive_bytes": 864455,
+    "config": {
+      "bframes": null,
+      "crf": 34,
+      "film_grain": 22,
+      "filters": "lanczos/bicubic",
+      "gop": 180,
+      "inflate_postfilter": "unsharp=9:9:0.30:9:9:0.0",
+      "preset": "svtav1-p0",
+      "ref": null,
+      "scale_h": 394,
+      "scale_w": 524,
+      "video_codec": "libsvtav1"
+    },
+    "notes": [
+      "AV1 neighborhood probe",
+      "hypothesis: lighter unsharp might reduce task-facing artifacts",
+      "rejected"
+    ]
+  },
+  {
+    "run_id": "robust_current-av1-524x394-filmgrain0-rejected-cpu-2026-04-06",
+    "ts_utc": "2026-04-06T07:12:44.279648+00:00",
+    "score": 3.33,
+    "archive_bytes": 719096,
+    "config": {
+      "bframes": null,
+      "crf": 34,
+      "film_grain": 0,
+      "filters": "lanczos/bicubic",
+      "gop": 180,
+      "inflate_postfilter": "unsharp=9:9:0.35:9:9:0.0",
+      "preset": "svtav1-p0",
+      "ref": null,
+      "scale_h": 394,
+      "scale_w": 524,
+      "video_codec": "libsvtav1"
+    },
+    "notes": [
+      "AV1 neighborhood probe",
+      "hypothesis: film-grain off might reduce evaluator-facing synthetic-noise side effects",
+      "rejected"
+    ]
+  },
+  {
+    "run_id": "robust_current-av1-522x392-rejected-cpu-2026-04-06",
+    "ts_utc": "2026-04-06T12:58:11.103191+00:00",
+    "score": 2.23,
+    "archive_bytes": 862238,
+    "config": {
+      "bframes": null,
+      "crf": 34,
+      "film_grain": 22,
+      "filters": "lanczos/bicubic",
+      "gop": 180,
+      "inflate_postfilter": "unsharp=9:9:0.35:9:9:0.0",
+      "preset": "svtav1-p0",
+      "ref": null,
+      "scale_h": 392,
+      "scale_w": 522,
+      "video_codec": "libsvtav1"
+    },
+    "notes": [
+      "AV1 neighborhood probe",
+      "hypothesis: slight geometry reduction might preserve score while cutting bytes",
+      "rejected"
+    ]
+  },
+  {
+    "run_id": "robust_current-av1-524x394-upscale-lanczos-promoted-cpu-2026-04-06",
+    "ts_utc": "2026-04-06T13:59:06.248174+00:00",
+    "score": 2.18,
+    "archive_bytes": 864455,
+    "config": {
+      "bframes": null,
+      "crf": 34,
+      "film_grain": 22,
+      "filters": "lanczos/lanczos",
+      "gop": 180,
+      "inflate_postfilter": "unsharp=9:9:0.35:9:9:0.0",
+      "preset": "svtav1-p0",
+      "ref": null,
+      "scale_h": 394,
+      "scale_w": 524,
+      "video_codec": "libsvtav1"
+    },
+    "notes": [
+      "AV1 neighborhood probe",
+      "hypothesis: sharper upscale kernel might improve task fidelity at fixed bytes",
+      "new promoted floor"
+    ]
+  },
+  {
+    "run_id": "robust_current-av1-524x394-colorspace-hardening-promoted-cpu-2026-04-06",
+    "ts_utc": "2026-04-06T15:43:00+00:00",
+    "score": 2.12,
+    "archive_bytes": 864486,
+    "config": {
+      "bframes": null,
+      "crf": 34,
+      "film_grain": 22,
+      "filters": "lanczos/lanczos + explicit bt709/tv->rgb(pc)",
+      "gop": 180,
+      "inflate_postfilter": "unsharp=9:9:0.35:9:9:0.0",
+      "preset": "svtav1-p0",
+      "ref": null,
+      "scale_h": 394,
+      "scale_w": 524,
+      "video_codec": "libsvtav1"
+    },
+    "notes": [
+      "production-hardening pass",
+      "hypothesis: explicit colorspace/range handling would reduce evaluator mismatch",
+      "new promoted floor"
+    ]
+  }
+]

@@ -1,0 +1,24 @@
+# Context Snapshot: track-b-resolution-sweep
+
+- Task statement: Run the next approved measured cycle: a Track B resolution sweep around the promoted 3.62 floor.
+- Desired outcome: Obtain scorer-backed CPU results for 448x336 and 576x432 around the promoted 512x384 medium/23 config, compare against the 3.62 floor and the published 4.39 baseline, and promote the best reversible config only if justified.
+- Known facts/evidence:
+  - Upstream snapshot is verified at commit ec82c291ffeae5212e9a38253791d58995518a80.
+  - exact_current remains alive but is a current_workflow-only exploit lane.
+  - robust_current promoted floor is 3.62 on CPU at 2,819,374 archive bytes with medium/23/512x384.
+  - repo-local helper `comma-lab eval-submission` handles upstream sync, packaging, and durable raw report copying.
+  - structured results live in reports/results.jsonl.
+- Constraints:
+  - Keep both tracks alive.
+  - Stay inside mutation frontier.
+  - Keep current_workflow vs rule_faithful explicit.
+  - Use official scorer path for claimed measured results.
+- Unknowns/open questions:
+  - Whether 448x336 or 576x432 beats the promoted 512x384 floor.
+  - Whether resolution is a stronger lever than further preset complexity in this scorer region.
+- Likely codebase touchpoints:
+  - submissions/robust_current/config.env
+  - reports/raw/2026-04-03-resolution-sweep/
+  - experiments/runs/2026-04-03-resolution-sweep/
+  - reports/results.jsonl, reports/writeup_working.md
+  - .omx/state/*, .omx/research/findings.md, .ralph/run_log.md, reports/latest.md

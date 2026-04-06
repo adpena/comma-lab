@@ -1,0 +1,120 @@
+Encoding /Users/adpena/Projects/pact/workspace/upstream/comma_video_compression_challenge/videos/0.mkv -> /Users/adpena/Projects/pact/submissions/robust_current/archive/0.mkv
+ffmpeg version 8.1 Copyright (c) 2000-2026 the FFmpeg developers
+  built with Apple clang version 17.0.0 (clang-1700.6.4.2)
+  configuration: --prefix=/opt/homebrew/Cellar/ffmpeg/8.1 --enable-shared --enable-pthreads --enable-version3 --cc=clang --host-cflags= --host-ldflags= --enable-ffplay --enable-gpl --enable-libsvtav1 --enable-libopus --enable-libx264 --enable-libmp3lame --enable-libdav1d --enable-libvpx --enable-libx265 --enable-openssl --enable-videotoolbox --enable-audiotoolbox --enable-neon
+  libavutil      60. 26.100 / 60. 26.100
+  libavcodec     62. 28.100 / 62. 28.100
+  libavformat    62. 12.100 / 62. 12.100
+  libavdevice    62.  3.100 / 62.  3.100
+  libavfilter    11. 14.100 / 11. 14.100
+  libswscale      9.  5.100 /  9.  5.100
+  libswresample   6.  3.100 /  6.  3.100
+Input #0, matroska,webm, from '/Users/adpena/Projects/pact/workspace/upstream/comma_video_compression_challenge/videos/0.mkv':
+  Metadata:
+    SEGMENT         : b0c9d2329ad1606b|2018-07-27--06-03-57/10/video.hevc
+    ENCODER         : Lavf60.16.100
+  Duration: 00:01:00.00, start: 0.000000, bitrate: 5006 kb/s
+  Stream #0:0: Video: hevc (Main), yuv420p(tv), 1164x874, 20 fps, 20 tbr, 1k tbn
+    Metadata:
+      DURATION        : 00:01:00.000000000
+Stream mapping:
+  Stream #0:0 -> #0:0 (hevc (native) -> hevc (libx265))
+Press [q] to stop, [?] for help
+x265 [info]: HEVC encoder version 4.1+1-1d117be
+x265 [info]: build info [Mac OS X][clang 17.0.0][64 bit] 8bit+10bit+12bit
+x265 [info]: using cpu capabilities: NEON Neon_DotProd Neon_I8MM
+x265 [info]: Main profile, Level-2.1 (Main tier)
+x265 [info]: Thread pool created using 18 threads
+x265 [info]: Slices                              : 1
+x265 [info]: frame threads / pool features       : 4 / wpp(5 rows)
+x265 [warning]: Source height < 720p; disabling lookahead-slices
+x265 [info]: Coding QT: max CU size, min CU size : 64 / 8
+x265 [info]: Residual QT: max TU size, max depth : 32 / 1 inter / 1 intra
+x265 [info]: ME / range / subpel / merge         : hex / 57 / 2 / 3
+x265 [info]: Lookahead / bframes / badapt        : 20 / 4 / 2
+x265 [info]: b-pyramid / weightp / weightb       : 1 / 1 / 0
+x265 [info]: References / ref-limit  cu / depth  : 4 / off / on
+x265 [info]: AQ: mode / str / qg-size / cu-tree  : 2 / 1.0 / 32 / 1
+x265 [info]: Rate Control / qCompress            : CRF-23.0 / 0.60
+x265 [info]: tools: rd=3 psy-rd=2.00 early-skip rskip mode=1 signhide tmvp
+x265 [info]: tools: b-intra strong-intra-smoothing deblock sao
+Output #0, matroska, to '/Users/adpena/Projects/pact/submissions/robust_current/archive/0.mkv':
+  Metadata:
+    SEGMENT         : b0c9d2329ad1606b|2018-07-27--06-03-57/10/video.hevc
+    encoder         : Lavf62.12.100
+  Stream #0:0: Video: hevc, yuv420p(tv, progressive), 428x320, q=2-31, 20 fps, 1k tbn
+    Metadata:
+      encoder         : Lavc62.28.100 libx265
+      DURATION        : 00:01:00.000000000
+    Side data:
+      CPB properties: bitrate max/min/avg: 0/0/0 buffer size: 0 vbv_delay: N/A
+frame=   30 fps=0.0 q=26.9 size=       3KiB time=00:00:01.45 bitrate=  16.8kbits/s speed=2.87x elapsed=0:00:00.50    frame=   97 fps= 96 q=27.3 size=     120KiB time=00:00:04.75 bitrate= 207.4kbits/s speed= 4.7x elapsed=0:00:01.00    frame=  157 fps=104 q=25.8 size=     187KiB time=00:00:07.75 bitrate= 198.2kbits/s speed=5.12x elapsed=0:00:01.51    frame=  218 fps=108 q=23.7 size=     256KiB time=00:00:10.80 bitrate= 194.2kbits/s speed=5.34x elapsed=0:00:02.02    frame=  270 fps=107 q=27.1 size=     256KiB time=00:00:13.45 bitrate= 155.9kbits/s speed=5.32x elapsed=0:00:02.52    frame=  335 fps=110 q=26.9 size=     256KiB time=00:00:16.65 bitrate= 126.0kbits/s speed=5.48x elapsed=0:00:03.03    frame=  386 fps=109 q=23.8 size=     512KiB time=00:00:19.20 bitrate= 218.5kbits/s speed=5.43x elapsed=0:00:03.53    frame=  444 fps=110 q=23.7 size=     512KiB time=00:00:22.10 bitrate= 189.8kbits/s speed=5.47x elapsed=0:00:04.03    frame=  494 fps=109 q=25.3 size=     512KiB time=00:00:24.65 bitrate= 170.2kbits/s speed=5.42x elapsed=0:00:04.54    frame=  550 fps=109 q=25.0 size=     512KiB time=00:00:27.40 bitrate= 153.1kbits/s speed=5.43x elapsed=0:00:05.04    frame=  602 fps=108 q=27.1 size=     768KiB time=00:00:30.00 bitrate= 209.7kbits/s speed= 5.4x elapsed=0:00:05.55    frame=  661 fps=109 q=24.0 size=     768KiB time=00:00:32.95 bitrate= 190.9kbits/s speed=5.44x elapsed=0:00:06.06    frame=  707 fps=108 q=27.1 size=     768KiB time=00:00:35.25 bitrate= 178.5kbits/s speed=5.37x elapsed=0:00:06.56    frame=  765 fps=108 q=27.0 size=     768KiB time=00:00:38.15 bitrate= 164.9kbits/s speed=5.39x elapsed=0:00:07.07    frame=  803 fps=106 q=25.3 size=     768KiB time=00:00:40.05 bitrate= 157.1kbits/s speed=5.29x elapsed=0:00:07.57    frame=  856 fps=106 q=27.5 size=    1024KiB time=00:00:42.70 bitrate= 196.5kbits/s speed=5.28x elapsed=0:00:08.08    frame=  909 fps=106 q=22.5 size=    1024KiB time=00:00:45.35 bitrate= 185.0kbits/s speed=5.28x elapsed=0:00:08.58    frame=  962 fps=106 q=23.8 size=    1280KiB time=00:00:48.00 bitrate= 218.5kbits/s speed=5.28x elapsed=0:00:09.09    frame= 1015 fps=106 q=27.2 size=    1280KiB time=00:00:50.70 bitrate= 206.8kbits/s speed=5.28x elapsed=0:00:09.59    frame= 1068 fps=106 q=27.1 size=    1280KiB time=00:00:53.30 bitrate= 196.7kbits/s speed=5.28x elapsed=0:00:10.10    frame= 1130 fps=107 q=27.3 size=    1536KiB time=00:00:56.40 bitrate= 223.1kbits/s speed=5.32x elapsed=0:00:10.60    frame= 1191 fps=107 q=27.4 size=    1536KiB time=00:00:59.45 bitrate= 211.7kbits/s speed=5.35x elapsed=0:00:11.11    [out#0/matroska @ 0x98d010240] video:1691KiB audio:0KiB subtitle:0KiB other streams:0KiB global headers:2KiB muxing overhead: 0.713510%
+frame= 1200 fps=108 q=26.9 Lsize=    1703KiB time=00:00:59.90 bitrate= 232.9kbits/s speed=5.37x elapsed=0:00:11.14    
+x265 [info]: frame I:     25, Avg QP:22.72  kb/s: 1040.21 
+x265 [info]: frame P:    237, Avg QP:23.78  kb/s: 477.60  
+x265 [info]: frame B:    938, Avg QP:26.67  kb/s: 146.13  
+x265 [info]: Weighted P-Frames: Y:5.5% UV:5.5%
+
+encoded 1200 frames in 11.02s (108.93 fps), 230.22 kb/s, Avg QP:26.02
+  adding: 0.mkv (deflated 0%)
+
+Wrote /Users/adpena/Projects/pact/submissions/robust_current/archive.zip
+Archive:  /Users/adpena/Projects/pact/workspace/upstream/comma_video_compression_challenge/submissions/robust_current/archive.zip
+  inflating: /Users/adpena/Projects/pact/workspace/upstream/comma_video_compression_challenge/submissions/robust_current/archive/0.mkv  
+Inflating /Users/adpena/Projects/pact/workspace/upstream/comma_video_compression_challenge/submissions/robust_current/archive/0.mkv -> /Users/adpena/Projects/pact/workspace/upstream/comma_video_compression_challenge/submissions/robust_current/inflated/0.raw
+ffmpeg version 8.1 Copyright (c) 2000-2026 the FFmpeg developers
+  built with Apple clang version 17.0.0 (clang-1700.6.4.2)
+  configuration: --prefix=/opt/homebrew/Cellar/ffmpeg/8.1 --enable-shared --enable-pthreads --enable-version3 --cc=clang --host-cflags= --host-ldflags= --enable-ffplay --enable-gpl --enable-libsvtav1 --enable-libopus --enable-libx264 --enable-libmp3lame --enable-libdav1d --enable-libvpx --enable-libx265 --enable-openssl --enable-videotoolbox --enable-audiotoolbox --enable-neon
+  libavutil      60. 26.100 / 60. 26.100
+  libavcodec     62. 28.100 / 62. 28.100
+  libavformat    62. 12.100 / 62. 12.100
+  libavdevice    62.  3.100 / 62.  3.100
+  libavfilter    11. 14.100 / 11. 14.100
+  libswscale      9.  5.100 /  9.  5.100
+  libswresample   6.  3.100 /  6.  3.100
+Input #0, matroska,webm, from '/Users/adpena/Projects/pact/workspace/upstream/comma_video_compression_challenge/submissions/robust_current/archive/0.mkv':
+  Metadata:
+    SEGMENT         : b0c9d2329ad1606b|2018-07-27--06-03-57/10/video.hevc
+    ENCODER         : Lavf62.12.100
+  Duration: 00:01:00.00, start: 0.000000, bitrate: 232 kb/s
+  Stream #0:0: Video: hevc (Main), yuv420p(tv, progressive), 428x320, 20 fps, 20 tbr, 1k tbn
+    Metadata:
+      ENCODER         : Lavc62.28.100 libx265
+      DURATION        : 00:01:00.000000000
+Stream mapping:
+  Stream #0:0 -> #0:0 (hevc (native) -> rawvideo (native))
+Press [q] to stop, [?] for help
+Output #0, rawvideo, to '/Users/adpena/Projects/pact/workspace/upstream/comma_video_compression_challenge/submissions/robust_current/inflated/0.raw':
+  Metadata:
+    SEGMENT         : b0c9d2329ad1606b|2018-07-27--06-03-57/10/video.hevc
+    encoder         : Lavf62.12.100
+  Stream #0:0: Video: rawvideo (RGB[24] / 0x18424752), rgb24(pc, gbr/unknown/unknown, progressive), 1164x874, q=2-31, 488321 kb/s, 20 fps, 20 tbn
+    Metadata:
+      encoder         : Lavc62.28.100 rawvideo
+      DURATION        : 00:01:00.000000000
+frame=   72 fps=0.0 q=-0.0 size=  211456KiB time=00:00:03.60 bitrate=481179.9kbits/s speed= 7.1x elapsed=0:00:00.50    frame=  168 fps=166 q=-0.0 size=  497664KiB time=00:00:08.40 bitrate=485340.9kbits/s speed=8.29x elapsed=0:00:01.01    frame=  277 fps=183 q=-0.0 size=  822528KiB time=00:00:13.85 bitrate=486509.0kbits/s speed=9.13x elapsed=0:00:01.51    frame=  348 fps=172 q=-0.0 size= 1033984KiB time=00:00:17.40 bitrate=486804.4kbits/s speed=8.59x elapsed=0:00:02.02    frame=  492 fps=194 q=-0.0 size= 1463296KiB time=00:00:24.60 bitrate=487289.5kbits/s speed=9.72x elapsed=0:00:02.53    frame=  581 fps=191 q=-0.0 size= 1728512KiB time=00:00:29.05 bitrate=487434.4kbits/s speed=9.56x elapsed=0:00:03.03    frame=  688 fps=194 q=-0.0 size= 2047488KiB time=00:00:34.45 bitrate=486880.2kbits/s speed=9.71x elapsed=0:00:03.54    frame=  793 fps=196 q=-0.0 size= 2360320KiB time=00:00:39.65 bitrate=487660.6kbits/s speed= 9.8x elapsed=0:00:04.04    frame=  905 fps=199 q=-0.0 size= 2694144KiB time=00:00:45.25 bitrate=487744.3kbits/s speed=9.94x elapsed=0:00:04.55    frame=  985 fps=195 q=-0.0 size= 2932736KiB time=00:00:49.25 bitrate=487816.7kbits/s speed=9.73x elapsed=0:00:05.06    frame= 1084 fps=195 q=-0.0 size= 3227648KiB time=00:00:54.20 bitrate=487839.3kbits/s speed=9.74x elapsed=0:00:05.56    frame= 1189 fps=196 q=-0.0 size= 3540736KiB time=00:00:59.45 bitrate=487900.9kbits/s speed=9.79x elapsed=0:00:06.07    [out#0/rawvideo @ 0xb54c10780] video:3576572KiB audio:0KiB subtitle:0KiB other streams:0KiB global headers:0KiB muxing overhead: 0.000000%
+frame= 1200 fps=196 q=-0.0 Lsize= 3576572KiB time=00:01:00.00 bitrate=488321.3kbits/s speed= 9.8x elapsed=0:00:06.12    
+All videos inflated to /Users/adpena/Projects/pact/workspace/upstream/comma_video_compression_challenge/submissions/robust_current/inflated
+=== Evaluation config ===
+  batch_size: 16
+  device: cpu
+  num_threads: 2
+  prefetch_queue_depth: 4
+  report: /Users/adpena/Projects/pact/workspace/upstream/comma_video_compression_challenge/submissions/robust_current/report.txt
+  seed: 1234
+  submission_dir: /Users/adpena/Projects/pact/workspace/upstream/comma_video_compression_challenge/submissions/robust_current
+  uncompressed_dir: /Users/adpena/Projects/pact/workspace/upstream/comma_video_compression_challenge/videos
+  video_names_file: /Users/adpena/Projects/pact/workspace/upstream/comma_video_compression_challenge/public_test_video_names.txt
+AVVideoDataset on rank 0 with 1 files.
+TensorVideoDataset on rank 0 with 1 files.
+0it [00:00, ?it/s]/Users/adpena/Projects/pact/workspace/upstream/comma_video_compression_challenge/frame_utils.py:232: UserWarning: The given NumPy array is not writable, and PyTorch does not support non-writable tensors. This means writing to this tensor will result in undefined behavior. You may want to copy the array to protect its data or make it writable before converting it to a tensor. This type of warning will be suppressed for the rest of this program. (Triggered internally at /Users/runner/work/pytorch/pytorch/pytorch/torch/csrc/utils/tensor_numpy.cpp:219.)
+  frames = torch.from_numpy(mm)  # (N, H, W, C), shares mmap memory
+1it [01:00, 60.98s/it]2it [02:05, 63.11s/it]3it [03:12, 64.91s/it]4it [04:09, 61.78s/it]5it [05:08, 60.84s/it]6it [06:15, 62.74s/it]7it [07:16, 62.18s/it]8it [08:05, 58.09s/it]9it [08:55, 55.49s/it]10it [09:27, 48.25s/it]11it [10:04, 44.84s/it]12it [10:41, 42.32s/it]13it [11:16, 40.10s/it]14it [11:52, 38.88s/it]15it [12:28, 38.24s/it]16it [13:05, 37.82s/it]17it [13:39, 36.70s/it]18it [14:16, 36.62s/it]19it [14:51, 36.08s/it]20it [15:28, 36.59s/it]21it [16:04, 36.19s/it]22it [16:39, 36.06s/it]23it [17:17, 36.66s/it]24it [17:54, 36.75s/it]25it [18:30, 36.41s/it]26it [19:05, 36.14s/it]27it [19:39, 35.33s/it]28it [20:14, 35.25s/it]29it [20:49, 35.31s/it]30it [21:26, 35.62s/it]31it [22:01, 35.48s/it]32it [22:38, 35.95s/it]33it [23:15, 36.19s/it]34it [23:52, 36.48s/it]35it [24:29, 36.70s/it]36it [25:06, 36.67s/it]37it [25:45, 37.45s/it]38it [27:15, 53.13s/it]38it [27:15, 43.03s/it]
+=== Evaluation results over 600 samples ===
+  Average PoseNet Distortion: 0.25955856
+  Average SegNet Distortion: 0.00544155
+  Submission file size: 1,741,924 bytes
+  Original uncompressed size: 37,545,489 bytes
+  Compression Rate: 0.04639503
+  Final score: 100*segnet_dist + √(10*posenet_dist) + 25*rate = 3.32
+Evaluation complete. Report saved to /Users/adpena/Projects/pact/workspace/upstream/comma_video_compression_challenge/submissions/robust_current/report.txt

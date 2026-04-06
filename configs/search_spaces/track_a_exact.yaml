@@ -1,0 +1,15 @@
+track: exact_current
+objective: keep archive tiny while preserving exact or near-exact reconstruction under the current workflow
+variables:
+  archive_payload_kind:
+    - placeholder_text
+    - empty_dir_entry
+  archive_comment:
+    - false
+    - true
+  decoder_preference:
+    - upstream_yuv420_to_rgb
+    - pyav_rgb24_fallback
+promotion:
+  must_reconstruct_all_requested_videos: true
+  target_archive_bytes_max: 4096

@@ -1,0 +1,16 @@
+track_a:
+  smoke_must_pass: true
+  upstream_snapshot_must_match: true
+  demote_if_changed: true
+
+track_b:
+  smoke_must_pass: true
+  proxy_eval_must_pass: true
+  full_eval_required_for_promotion: true
+  require_score_improvement_over_best: true
+
+shared:
+  store_full_command: true
+  store_archive_size: true
+  store_upstream_snapshot_hash: true
+  report_both_packaging_views: true

@@ -1,0 +1,24 @@
+# Ralph context snapshot
+
+- task statement: Execute the approved plan to completion under $ralph, staying inside the mutation frontier and leaving the repo resumable.
+- desired outcome: Make measured progress from the promoted 2.20 AV1 floor, keep packaging views explicit, update durable state/writeup, and leave the repo clean for the next loop.
+- known facts/evidence:
+  - exact_current remains alive at current_workflow 0.00 with a 167-byte archive.
+  - robust_current live floor is 2.20 at 524x394 / libsvtav1 / preset0 / crf33 / film-grain22 / bicubic / unsharp.
+  - AV1 root cause is already fixed: rawvideo outputs must be rgb24, not yuv444p.
+  - prior honest x265 floor 3.25 is preserved in config.x265-3.25.env.
+- constraints:
+  - edit only inside mutation frontier.
+  - at most 3 experiments this cycle.
+  - never claim a win without scorer-backed evidence.
+  - preserve current_workflow vs rule_faithful separation.
+- unknowns/open questions:
+  - whether a nearby AV1 parameter change can beat 2.20.
+  - whether this cycle ends in promotion or a recorded rejection.
+- likely codebase touchpoints:
+  - submissions/robust_current/config.*.env
+  - reports/raw/*
+  - reports/results.jsonl
+  - reports/timeline.jsonl
+  - reports/latest.md
+  - .omx/state/*

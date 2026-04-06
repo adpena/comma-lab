@@ -1,0 +1,17 @@
+{
+  "copied_report_path": "reports/raw/exact_current-current_workflow-cpu-report.txt",
+  "current_workflow_archive_bytes": 167,
+  "current_workflow_rate": 4.45e-06,
+  "current_workflow_score": 0.0,
+  "device": "cpu",
+  "original_uncompressed_bytes": 37545489,
+  "pose_distortion": 0.0,
+  "report_path": "/Users/adpena/Projects/pact/workspace/upstream/comma_video_compression_challenge/submissions/exact_current/report.txt",
+  "rule_faithful_bundle_bytes": null,
+  "rule_faithful_bundle_paths": null,
+  "rule_faithful_rate": null,
+  "rule_faithful_score": null,
+  "rule_faithful_status": "invalid_repo_side_dependency",
+  "seg_distortion": 0.0,
+  "track": "exact_current"
+}

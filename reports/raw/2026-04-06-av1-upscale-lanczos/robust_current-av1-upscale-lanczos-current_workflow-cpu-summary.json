@@ -1,0 +1,16 @@
+{
+  "copied_report_path": "reports/raw/2026-04-06-av1-upscale-lanczos/robust_current-av1-upscale-lanczos-current_workflow-cpu-report.txt",
+  "current_workflow_archive_bytes": 864455,
+  "current_workflow_rate": 0.0230242,
+  "current_workflow_score": 2.18,
+  "device": "cpu",
+  "original_uncompressed_bytes": 37545489,
+  "pose_distortion": 0.106568,
+  "report_path": "/Users/adpena/Projects/pact/workspace/upstream/comma_video_compression_challenge/submissions/robust_current/report.txt",
+  "rule_faithful_bundle_bytes": 902024,
+  "rule_faithful_rate": 0.02402483025324294,
+  "rule_faithful_score": 2.2025555368618557,
+  "rule_faithful_status": "estimated_from_scorer_distortions_plus_honest_bytes",
+  "seg_distortion": 0.00569617,
+  "track": "robust_current"
+}

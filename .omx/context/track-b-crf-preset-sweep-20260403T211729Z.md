@@ -1,0 +1,22 @@
+# Context Snapshot: track-b-crf-preset-sweep
+
+- Task statement: Run the next approved measured cycle: a Track B CRF/preset sweep around the current 4.06 floor.
+- Desired outcome: Obtain scorer-backed CPU results for the three queued codec-only variants, compare against the 4.06 baseline and the published 4.39 baseline, and promote the best reversible config only if justified.
+- Known facts/evidence:
+  - Upstream snapshot is verified at commit ec82c291ffeae5212e9a38253791d58995518a80.
+  - exact_current remains alive but is a current_workflow-only exploit lane.
+  - robust_current baseline is 4.06 on CPU at 3,735,828 archive bytes with medium/22/512x384.
+  - repo-local helper `comma-lab eval-submission` now handles upstream sync, packaging, and durable raw report copying.
+- Constraints:
+  - Keep both tracks alive.
+  - Stay inside mutation frontier.
+  - Prefer at most 3 experiments this cycle.
+  - Keep current_workflow vs rule_faithful explicit.
+- Unknowns/open questions:
+  - Which of (medium,21), (medium,23), (slow,22) yields the best scorer result.
+  - Whether any variant materially improves on the 4.06 floor.
+- Likely codebase touchpoints:
+  - submissions/robust_current/config.env
+  - reports/raw/
+  - experiments/runs/
+  - .omx/state/*, .omx/research/findings.md, .ralph/run_log.md, reports/latest.md

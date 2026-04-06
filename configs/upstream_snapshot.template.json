@@ -1,0 +1,15 @@
+{
+  "repo_url": "https://github.com/commaai/comma_video_compression_challenge.git",
+  "branch": "master",
+  "last_verified_at": null,
+  "commit": null,
+  "files": {
+    "README.md": null,
+    "evaluate.py": null,
+    "evaluate.sh": null,
+    "frame_utils.py": null,
+    "modules.py": null,
+    "public_test_video_names.txt": null,
+    ".github/workflows/eval.yml": null
+  }
+}

@@ -1,0 +1,16 @@
+{
+  "copied_report_path": "reports/raw/bat00-side-keyint48-lanczos/robust_current-promoted-current_workflow-cpu-report.txt",
+  "current_workflow_archive_bytes": 1888251,
+  "current_workflow_rate": 0.05029235,
+  "current_workflow_score": 3.56,
+  "device": "cpu",
+  "original_uncompressed_bytes": 37545489,
+  "pose_distortion": 0.31267789,
+  "report_path": "/home/adpena/pact-side/workspace/upstream/comma_video_compression_challenge/submissions/robust_current/report.txt",
+  "rule_faithful_bundle_bytes": 1891295,
+  "rule_faithful_rate": 0.05037342834980788,
+  "rule_faithful_score": 3.562605739029033,
+  "rule_faithful_status": "estimated_from_scorer_distortions_plus_honest_bytes",
+  "seg_distortion": 0.00535,
+  "track": "robust_current"
+}

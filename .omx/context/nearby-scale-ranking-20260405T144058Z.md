@@ -1,0 +1,28 @@
+# Context Snapshot
+
+- task statement: Execute the next Ralph cycle to keep pushing the honest score floor while continuing writeup refinement.
+- desired outcome: use BAT00 to rank a small nearby-scale candidate set around the promoted 424x318 floor, run the strongest local CPU candidate, and update durable state based on measured evidence.
+- known facts/evidence:
+  - Promoted Track B floor is 3.25 at 424x318 / medium / 23 / keyint48 / bframes4 / ref4 / lanczos+lanczos.
+  - Nearby 424x318 follow-ups at bframes3 and keyint64 lost at 3.27 and 3.26.
+  - A further lower-resolution probe at 416x312 lost badly at 3.44.
+  - BAT00 ranking support is useful but non-authoritative.
+- constraints:
+  - local CPU scorer is authoritative
+  - BAT00 remains research-only
+  - keep current_workflow vs rule_faithful explicit
+  - stay inside mutation frontier
+- unknowns/open questions:
+  - whether a smaller-but-not-too-small nearby scale like 420x316 can beat 3.25
+  - whether the floor is now effectively stable against nearby geometric tweaks
+- likely codebase touchpoints:
+  - submissions/robust_current/configs/*
+  - reports/raw/**
+  - reports/results.jsonl
+  - reports/timeline.jsonl
+  - reports/latest.md
+  - reports/writeup_working.md
+  - reports/graphs/**
+  - .omx/state/**
+  - .omx/research/findings.md
+  - .ralph/run_log.md

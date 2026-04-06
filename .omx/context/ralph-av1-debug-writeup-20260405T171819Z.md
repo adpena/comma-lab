@@ -1,0 +1,26 @@
+# Ralph context snapshot
+
+- task statement: Execute the approved plan to completion under $ralph, staying within mutation frontier and leaving the repo resumable.
+- desired outcome: Make measured progress on the approved plan, keep current_workflow vs rule_faithful explicit, preserve the promoted 3.25 robust_current floor, and update durable state.
+- known facts/evidence:
+  - exact_current remains alive at current_workflow 0.00 with 167-byte archive.
+  - robust_current promoted floor is 3.25 at 424x318 / medium / 23 / keyint48 / bframes4 / ref4 / lanczos+lanczos.
+  - nearby probes at 3.27, 3.26, 3.44, 3.32, and 3.38 were rejected.
+  - first public-style AV1 attempt at 524x394 / libsvtav1 / preset0 / crf33 / film-grain22 / keyint180 / bicubic / unsharp failed catastrophically at 97.45.
+  - writeup site package exists under reports/graphs and canonical Pages project is comma-lab.
+- constraints:
+  - edit only within mutation frontier from AGENTS.md / PROGRAM.md.
+  - keep both packaging views explicit.
+  - at most 3 experiments this cycle.
+  - never claim a win without measured score.
+- unknowns/open questions:
+  - root cause of catastrophic AV1 result.
+  - whether AV1 can be repaired into a competitive local baseline quickly.
+  - whether any writeup/site gaps remain worth fixing this cycle.
+- likely codebase touchpoints:
+  - submissions/robust_current/compress.sh
+  - submissions/robust_current/inflate.sh
+  - submissions/robust_current/README.md
+  - reports/raw/2026-04-05-av1-frontier/*
+  - reports/latest.md
+  - .omx/state/*

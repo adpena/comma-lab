@@ -1,0 +1,25 @@
+# Context Snapshot: track-b-filter-sweep
+
+- Task statement: Run the next approved measured cycle: a Track B filter sweep around the promoted 3.56 floor.
+- Desired outcome: Obtain scorer-backed CPU results for bicubic/bicubic and lanczos/lanczos around the promoted 448x336 medium/23 keyint48 config, compare against the 3.56 floor and the published 4.39 baseline, and promote the best reversible config only if justified.
+- Known facts/evidence:
+  - Upstream snapshot is verified at commit ec82c291ffeae5212e9a38253791d58995518a80.
+  - exact_current remains alive but is a current_workflow-only exploit lane.
+  - robust_current promoted floor is 3.56 on CPU at 1,901,606 archive bytes with 448x336 / medium / 23 / keyint48 / bframes4 / ref4 / lanczos+bicubic.
+  - repo-local helper `comma-lab eval-submission` handles upstream sync, packaging, and durable raw report copying.
+  - bat00 side lane is available for non-authoritative runtime evidence.
+- Constraints:
+  - Keep both tracks alive.
+  - Stay inside mutation frontier.
+  - Prefer at most 3 experiments this cycle.
+  - Keep current_workflow vs rule_faithful explicit.
+  - Use the upstream scorer path for claimed measured results.
+- Unknowns/open questions:
+  - Whether bicubic/bicubic or lanczos/lanczos beats the promoted lanczos/bicubic floor.
+  - Whether filter choice is still worth more than a runtime-only lane at this point.
+- Likely codebase touchpoints:
+  - submissions/robust_current/config.env
+  - reports/raw/2026-04-04-filter-sweep/
+  - experiments/runs/2026-04-04-filter-sweep/
+  - reports/results.jsonl, reports/timeline.jsonl, reports/writeup_working.md
+  - .omx/state/*, .omx/research/findings.md, .ralph/run_log.md, reports/latest.md

@@ -1,0 +1,6 @@
+Encoding ROI two-pass /Users/adpena/Projects/pact/workspace/upstream/comma_video_compression_challenge/videos/0.mkv -> /var/folders/xr/cdmnz18s68j8sybt6vcwjs200000gn/T//robust_current_archive.qXwEnA/archive/0/base.mkv + /var/folders/xr/cdmnz18s68j8sybt6vcwjs200000gn/T//robust_current_archive.qXwEnA/archive/0/roi.mkv
+  adding: 0/ (stored 0%)
+  adding: 0/base.mkv (deflated 1%)
+  adding: 0/roi.mkv (deflated 1%)
+
+Wrote /Users/adpena/Projects/pact/submissions/robust_current/archive.zip

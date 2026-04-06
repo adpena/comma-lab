@@ -1,0 +1,34 @@
+# Context Snapshot: cold-start-dual-track
+
+- Task statement: Clarify project state and highest-leverage next step from repo files alone, then drive a small reversible cold-start plan to first measured progress.
+- Desired outcome: Repo is grounded, both submission tracks are verified as alive or explicitly demoted, first measured evidence is recorded, and next experiments are queued.
+- Stated solution: Run deep-interview -> ralplan -> ralph from repo evidence, not human Q&A.
+- Probable intent hypothesis: Establish a resumable evidence-based operating loop that quickly detects whether the exact-current exploit path still works and whether robust-current can produce honest baseline measurements.
+- Known facts/evidence:
+  - PROGRAM.md and AGENTS.md define a dual-track lab with a strict mutation frontier and required durable state updates.
+  - docs/challenge_snapshot.md pins the upstream assumptions as of 2026-04-03 and points to workspace/upstream/comma_video_compression_challenge as the local upstream mirror.
+  - docs/current_workflow_vs_rule_faithful.md requires all results to be labeled by packaging view.
+  - reports/latest.md says there are no promoted runs yet; intended first checks are exact_current smoke, robust_current package smoke, and upstream snapshot verification.
+  - workspace/upstream_snapshot.json records commit ec82c291ffeae5212e9a38253791d58995518a80 and digests for the pinned upstream files.
+  - Upstream working tree currently has untracked submissions/exact_current and submissions/robust_current directories, implying the starter-pack tracks have already been installed into the upstream checkout.
+  - robust_current currently uses ffmpeg+x265 with 512x384 downscale, bicubic upsample, CRF 22, GOP 32, B-frames 4, refs 4.
+  - exact_current is intentionally archive-light and depends on repo-side originals during inflate.
+- Constraints:
+  - Do not edit the pinned upstream snapshot or submissions/exact_current/inflate.py|inflate.sh.
+  - Keep both tracks alive unless evidence forces demotion.
+  - Never claim a win without measured score.
+  - Prefer <=3 experiments and small reversible edits.
+  - Must update .omx/state/current_focus.md, .omx/state/next_experiments.md, .omx/research/findings.md, .ralph/run_log.md, and reports/latest.md before stopping.
+- Unknowns/open questions:
+  - Whether the live upstream checkout still matches the stored snapshot digests.
+  - Whether exact_current still evaluates successfully under the current workflow.
+  - Whether robust_current packaging and evaluation succeed from cold start in the current environment.
+  - Whether local binaries (ffmpeg, python env, upstream deps) are sufficient for scoring.
+- Decision-boundary unknowns:
+  - If exact_current exploit behavior is broken, it should be demoted quickly to a research note and effort shifted to robust_current.
+  - Any CUDA work may use SSH to bat00, but only if local CPU path blocks or a CUDA lane clearly earns its cost.
+- Likely codebase touchpoints:
+  - scripts/*.sh for smoke/package/eval flows
+  - src/comma_lab/*.py for snapshot/package/install helpers
+  - submissions/robust_current/* for Track B packaging
+  - .omx/*, .ralph/*, reports/*, docs/speculative_lanes.md for durable evidence/state

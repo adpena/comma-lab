@@ -1,0 +1,6 @@
+name: weekend
+max_experiments: 72
+max_wall_minutes: 2400
+allow_full_eval: true
+notes:
+  - use for broader searches, residual sweeps, and optional neural side bets

@@ -1,0 +1,25 @@
+# Context Snapshot
+
+- task statement: Execute the next Ralph cycle to completion from the stable 3.25 floor, focusing on the Best Write-up track.
+- desired outcome: refine the writeup/dashboard assets, keep scorer-backed claims aligned, preserve the promoted floor, and leave the repo resumable.
+- known facts/evidence:
+  - Promoted Track B floor is 3.25 at 424x318 / medium / 23 / keyint48 / bframes4 / ref4 / lanczos+lanczos.
+  - Nearby local follow-ups at 3.27 and 3.26 were both rejected.
+  - Writeup dashboard and graph artifacts now exist under reports/graphs/.
+  - Best Write-up is a co-equal target with the score prize.
+- constraints:
+  - stay inside mutation frontier
+  - keep current_workflow vs rule_faithful explicit
+  - do not overclaim beyond scorer-backed evidence
+  - local CPU remains authoritative for promotions
+  - keep environment clean of stale OMX/MCP processes
+- unknowns/open questions:
+  - what additional writeup polish yields the most value now
+  - whether to surface more structured summaries or explanation aids in the dashboard/data
+- likely codebase touchpoints:
+  - reports/graphs/**
+  - reports/latest.md
+  - reports/writeup_working.md
+  - .omx/state/**
+  - .omx/research/findings.md
+  - .ralph/run_log.md

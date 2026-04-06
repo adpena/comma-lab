@@ -1,0 +1,16 @@
+{
+  "copied_report_path": "reports/raw/2026-04-04-filter-sweep/robust_current-bicubic-bicubic-current_workflow-cpu-report.txt",
+  "current_workflow_archive_bytes": 1829217,
+  "current_workflow_rate": 0.04872002,
+  "current_workflow_score": 3.67,
+  "device": "cpu",
+  "original_uncompressed_bytes": 37545489,
+  "pose_distortion": 0.36666328,
+  "report_path": "/Users/adpena/Projects/pact/workspace/upstream/comma_video_compression_challenge/submissions/robust_current/report.txt",
+  "rule_faithful_bundle_bytes": 1832261,
+  "rule_faithful_rate": 0.04880109565226331,
+  "rule_faithful_score": 3.6692647636539166,
+  "rule_faithful_status": "estimated_from_scorer_distortions_plus_honest_bytes",
+  "seg_distortion": 0.00534392,
+  "track": "robust_current"
+}

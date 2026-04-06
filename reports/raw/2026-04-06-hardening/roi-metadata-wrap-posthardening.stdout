@@ -1,0 +1,22 @@
+Encoding dynamic ROI window 000 /Users/adpena/Projects/pact/workspace/upstream/comma_video_compression_challenge/videos/0.mkv -> /var/folders/xr/cdmnz18s68j8sybt6vcwjs200000gn/T/robust_current_archive.hGMgnU/archive/0/base_000.mkv + /var/folders/xr/cdmnz18s68j8sybt6vcwjs200000gn/T/robust_current_archive.hGMgnU/archive/0/roi_000.mkv
+Encoding dynamic ROI window 001 /Users/adpena/Projects/pact/workspace/upstream/comma_video_compression_challenge/videos/0.mkv -> /var/folders/xr/cdmnz18s68j8sybt6vcwjs200000gn/T/robust_current_archive.hGMgnU/archive/0/base_001.mkv + /var/folders/xr/cdmnz18s68j8sybt6vcwjs200000gn/T/robust_current_archive.hGMgnU/archive/0/roi_001.mkv
+Encoding dynamic ROI window 002 /Users/adpena/Projects/pact/workspace/upstream/comma_video_compression_challenge/videos/0.mkv -> /var/folders/xr/cdmnz18s68j8sybt6vcwjs200000gn/T/robust_current_archive.hGMgnU/archive/0/base_002.mkv + /var/folders/xr/cdmnz18s68j8sybt6vcwjs200000gn/T/robust_current_archive.hGMgnU/archive/0/roi_002.mkv
+Encoding dynamic ROI window 003 /Users/adpena/Projects/pact/workspace/upstream/comma_video_compression_challenge/videos/0.mkv -> /var/folders/xr/cdmnz18s68j8sybt6vcwjs200000gn/T/robust_current_archive.hGMgnU/archive/0/base_003.mkv + /var/folders/xr/cdmnz18s68j8sybt6vcwjs200000gn/T/robust_current_archive.hGMgnU/archive/0/roi_003.mkv
+Encoding dynamic ROI window 004 /Users/adpena/Projects/pact/workspace/upstream/comma_video_compression_challenge/videos/0.mkv -> /var/folders/xr/cdmnz18s68j8sybt6vcwjs200000gn/T/robust_current_archive.hGMgnU/archive/0/base_004.mkv + /var/folders/xr/cdmnz18s68j8sybt6vcwjs200000gn/T/robust_current_archive.hGMgnU/archive/0/roi_004.mkv
+Encoding dynamic ROI window 005 /Users/adpena/Projects/pact/workspace/upstream/comma_video_compression_challenge/videos/0.mkv -> /var/folders/xr/cdmnz18s68j8sybt6vcwjs200000gn/T/robust_current_archive.hGMgnU/archive/0/base_005.mkv + /var/folders/xr/cdmnz18s68j8sybt6vcwjs200000gn/T/robust_current_archive.hGMgnU/archive/0/roi_005.mkv
+  adding: 0/ (stored 0%)
+  adding: 0/roi_002.mkv (deflated 1%)
+  adding: 0/roi_003.mkv (deflated 1%)
+  adding: 0/roi_001.mkv (deflated 1%)
+  adding: 0/roi_000.mkv (deflated 1%)
+  adding: 0/roi_004.mkv (deflated 1%)
+  adding: 0/roi_005.mkv (deflated 1%)
+  adding: 0/base_002.mkv (deflated 2%)
+  adding: 0/base_003.mkv (deflated 2%)
+  adding: 0/base_001.mkv (deflated 1%)
+  adding: 0/base_000.mkv (deflated 1%)
+  adding: 0/base_004.mkv (deflated 1%)
+  adding: 0/base_005.mkv (deflated 1%)
+  adding: 0/roi_metadata.json (deflated 76%)
+
+Wrote /Users/adpena/Projects/pact/submissions/robust_current/archive.zip

@@ -1,0 +1,16 @@
+{
+  "copied_report_path": "reports/raw/2026-04-06-av1-filmgrain0/robust_current-av1-filmgrain0-current_workflow-cpu-report.txt",
+  "current_workflow_archive_bytes": 719096,
+  "current_workflow_rate": 0.01915266,
+  "current_workflow_score": 3.33,
+  "device": "cpu",
+  "original_uncompressed_bytes": 37545489,
+  "pose_distortion": 0.52380806,
+  "report_path": "/Users/adpena/Projects/pact/workspace/upstream/comma_video_compression_challenge/submissions/robust_current/report.txt",
+  "rule_faithful_bundle_bytes": 756179,
+  "rule_faithful_rate": 0.020140342292518817,
+  "rule_faithful_score": 3.3522149004739736,
+  "rule_faithful_status": "estimated_from_scorer_distortions_plus_honest_bytes",
+  "seg_distortion": 0.00560021,
+  "track": "robust_current"
+}

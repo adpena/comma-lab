@@ -1,0 +1,22 @@
+# Context Snapshot: track-b-smart-roi-prototype
+
+- Task statement: Run one smarter dual-ROI proxy experiment against the promoted 3.33 floor.
+- Desired outcome: Determine whether a less-naive, dual-ROI, byte-honest two-pass proxy can compete with or beat the current floor under the official CPU scorer path.
+- Known facts/evidence:
+  - Current promoted floor is 3.33 at 432x324 / medium / 23 / keyint48 / bframes4 / ref4 / lanczos+lanczos.
+  - Prior naive single-ROI prototype failed badly at 5.73 despite lower bytes.
+  - Staticness analysis showed the middle band is more dynamic than top/bottom, with several high-diff blocks on the right side.
+  - The code now supports an optional second ROI stream.
+- Constraints:
+  - One small measured prototype only.
+  - Keep the current promoted floor recoverable after the experiment.
+  - Charge all ROI streams honestly in the archive.
+  - Use official scorer path for any claimed measured result.
+- Unknowns/open questions:
+  - Whether a gentler base degradation plus second ROI can preserve enough task signal.
+- Likely touchpoints:
+  - submissions/robust_current/compress.sh
+  - submissions/robust_current/inflate.sh
+  - submissions/robust_current/config.env
+  - reports/raw/2026-04-04-smart-roi-prototype/
+  - experiments/runs/2026-04-04-smart-roi-prototype/

@@ -1,0 +1,16 @@
+{
+  "copied_report_path": "reports/raw/2026-04-03-gop-sweep/robust_current-keyint64-medium23-current_workflow-cpu-report.txt",
+  "current_workflow_archive_bytes": 1862992,
+  "current_workflow_rate": 0.0496196,
+  "current_workflow_score": 3.61,
+  "device": "cpu",
+  "original_uncompressed_bytes": 37545489,
+  "pose_distortion": 0.33802664,
+  "report_path": "/Users/adpena/Projects/pact/workspace/upstream/comma_video_compression_challenge/submissions/robust_current/report.txt",
+  "rule_faithful_bundle_bytes": 1866036,
+  "rule_faithful_rate": 0.049700671097931366,
+  "rule_faithful_score": 3.613706858354431,
+  "rule_faithful_status": "estimated_from_scorer_distortions_plus_honest_bytes",
+  "seg_distortion": 0.0053264,
+  "track": "robust_current"
+}
