@@ -80,3 +80,9 @@ The promoted honest Track B floor is now **`2.12`**.
 - The `Why 2.12 beat 2.18` section now uses semantic HTML instead of fragile SVG text columns.
 - The summary strip now includes delta vs the published baseline.
 - The scatter plot now has a focused operating-range view, smaller markers, and explicit lower-left-is-better guidance.
+
+## final writeup/frontend status
+
+- The frontend pass is closed.
+- No remaining high-confidence UI or interaction blockers were found in the final desktop/mobile audit.
+- The current preview should be treated as the final writeup/frontend baseline unless new measured content requires new surfaces.

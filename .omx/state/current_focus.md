@@ -33,3 +33,8 @@ The highest-value next move is writeup-first: the repo now has a production-hard
 - Hidden comparison videos are now paused on mode switches instead of continuing in the background.
 - The scatter plot now has a focused operating-range view, smaller markers, and hover/focus detail instead of browser-default titles.
 - The top summary now includes delta vs the published baseline, not just delta vs the prior local floor.
+
+## final frontend pass closed
+
+- The landing page now reads cleanly top-to-bottom on both desktop and mobile without any remaining high-confidence layout or interaction blockers.
+- The final UI pass closed the last known issues: fixed summary-line duplication, stabilized the 2.18→2.12 comparison, added published-baseline comparison, anchored scatter guidance and detail better, cleaned the references block, and tightened the lower-half spacing.

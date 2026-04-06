@@ -110,3 +110,11 @@ This remains speculative until those steps are complete and measured.
 - Fix: replaced the brittle SVG metric rows with semantic HTML cards and table layout.
 - The search-path failure branch now hangs downward so the temporary regression reads visually as a detour, not an improvement.
 - The scatter plot now includes a focused operating-range view, smaller markers, and explicit lower-left-is-better guidance.
+
+## 2026-04-06 final frontend closeout
+
+### closeout status
+
+- No remaining high-confidence frontend blockers were found in the final desktop/mobile audit.
+- The landing page now behaves coherently as a static technical brief: clear context, correct directional semantics, stable comparison media, and lighter but still evidence-dense charts.
+- Further work from here would be optional refinement, not issue-driven repair.

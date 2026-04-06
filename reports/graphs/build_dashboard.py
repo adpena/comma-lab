@@ -851,8 +851,8 @@ def main() -> int:
     .scatter-shell {{ position: relative; }}
     .scatter-point {{ cursor: pointer; transition: transform 120ms ease; }}
     .scatter-point:hover, .scatter-point:focus-visible {{ transform: scale(1.18); stroke: rgba(255,255,255,0.95); stroke-width: 1.8; outline: none; }}
-    .scatter-tooltip {{ position: absolute; top: 14px; left: 14px; max-width: min(320px, calc(100% - 28px)); padding: 10px 12px; border: 1px solid var(--stroke); border-radius: 10px; background: rgba(8,11,15,0.96); box-shadow: 0 12px 28px rgba(0,0,0,0.28); opacity: 0; transform: translateY(4px); transition: opacity 120ms ease, transform 120ms ease; pointer-events: none; }}
-    .scatter-tooltip.is-visible {{ opacity: 1; transform: translateY(0); }}
+    .scatter-tooltip {{ position: absolute; top: 0; left: 0; max-width: min(320px, calc(100% - 28px)); padding: 10px 12px; border: 1px solid var(--stroke); border-radius: 10px; background: rgba(8,11,15,0.96); box-shadow: 0 12px 28px rgba(0,0,0,0.28); opacity: 0; transform: translate(var(--tip-x, 14px), calc(var(--tip-y, 14px) + 4px)); transition: opacity 120ms ease, transform 120ms ease; pointer-events: none; }}
+    .scatter-tooltip.is-visible {{ opacity: 1; transform: translate(var(--tip-x, 14px), var(--tip-y, 14px)); }}
     .scatter-tooltip strong {{ display:block; font-size: 13px; color: var(--text); }}
     .scatter-tooltip span {{ display:block; color: var(--muted); font-size: 12px; margin-top: 4px; }}
     .bug-box {{ display:grid; grid-template-columns: 1fr auto 1fr; gap: 10px; align-items:center; margin-top: 12px; }}
@@ -862,6 +862,10 @@ def main() -> int:
     .frontier-callout {{ color: var(--soft); font-size: 14px; line-height: 1.6; margin: 0 0 14px; }}
     .footnote {{ color: var(--muted); font-size: 13px; }}
     .table-hint {{ margin-top: 8px; color: var(--muted); font-size: 12px; }}
+    .refs-grid {{ align-items: start; }}
+    .refs-group + .refs-group {{ border-left: 1px solid var(--stroke); padding-left: 18px; }}
+    .refs-group-title {{ margin: 0 0 10px; color: var(--muted); font-size: 11px; text-transform: uppercase; letter-spacing: 0.08em; }}
+    .refs-note {{ margin-top: 12px; }}
     .axis-label {{ fill: var(--muted); font-size: 12px; letter-spacing: 0.02em; }}
     .axis-tick {{ fill: var(--muted); font-size: 11px; }}
     .config-line {{ margin: 10px 0 0; color: var(--muted); font: 500 12px/1.6 ui-monospace, SFMono-Regular, Menlo, monospace; }}
@@ -894,7 +898,7 @@ def main() -> int:
     .footer-meta {{ display:flex; justify-content:space-between; gap: 16px; flex-wrap:wrap; margin-top: 18px; padding-top: 16px; border-top: 1px solid var(--stroke); color: var(--muted); font-size: 12px; }}
     .footer-meta a {{ text-decoration: none; }}
     @media (max-width: 980px) {{ .two {{ grid-template-columns: 1fr 1fr; }} .context-strip, .summary-grid {{ grid-template-columns: 1fr; }} .context-item + .context-item, .summary-stat + .summary-stat {{ border-left: 0; border-top: 1px solid var(--stroke); }} }}
-    @media (max-width: 720px) {{ .two, .context-strip, .summary-grid, .compare-grid, .delta-head {{ grid-template-columns: 1fr; }} .context-item + .context-item, .summary-stat + .summary-stat {{ border-left: 0; border-top: 1px solid var(--stroke); }} .wrap {{ padding-inline: 16px; }} h1 {{ font-size: clamp(36px, 15vw, 64px); }} .compare-controls input[type="range"] {{ width: 100%; }} .delta-arrow {{ display:none; }} }}
+    @media (max-width: 720px) {{ .two, .context-strip, .summary-grid, .compare-grid, .delta-head {{ grid-template-columns: 1fr; }} .context-item + .context-item, .summary-stat + .summary-stat {{ border-left: 0; border-top: 1px solid var(--stroke); }} .wrap {{ padding-inline: 16px; }} h1 {{ font-size: clamp(36px, 15vw, 64px); }} .panel {{ padding: 16px; }} .panel h2 {{ font-size: 18px; }} .walkthrough li {{ grid-template-columns: 24px 1fr; gap: 12px; padding: 12px 0; }} .compare-controls input[type="range"] {{ width: 100%; }} .delta-arrow {{ display:none; }} .refs-group + .refs-group {{ border-left: 0; border-top: 1px solid var(--stroke); padding-left: 0; padding-top: 16px; }} }}
     @media (prefers-reduced-motion: reduce) {{ html {{ scroll-behavior: auto; }} * {{ animation: none !important; transition: none !important; }} }}
   </style>
 </head>
@@ -1111,10 +1115,11 @@ def main() -> int:
       <p class="table-hint">On narrow screens, swipe horizontally to inspect the full table.</p>
     </section>
 
-    <section class="panel">
-      <h2>References</h2>
-      <div class="two">
-        <div>
+    <section class="panel" aria-labelledby="references-title">
+      <h2 id="references-title">References</h2>
+      <div class="two refs-grid">
+        <div class="refs-group">
+          <p class="refs-group-title">Primary artifacts</p>
           <ul class="list-tight">
             <li><a href="./judges_one_pager.md">Judges one-pager</a></li>
             <li><a href="./submission_packet.md">Submission packet</a></li>
@@ -1127,10 +1132,12 @@ def main() -> int:
             <li><a href="./evidence_index.md">Evidence index</a></li>
           </ul>
         </div>
-        <div>
+        <div class="refs-group">
+          <p class="refs-group-title">Turning points</p>
           <ul class="list-tight">{''.join(turning_items)}</ul>
         </div>
       </div>
+      <p class="footnote refs-note">The landing page stays as the brief. Full detail lives in the linked artifacts.</p>
     </section>
     <footer class="footer-meta" aria-label="Site metadata">
       <span>Last updated {escape(data['site_meta']['updated_at_local'])}</span>
@@ -1263,6 +1270,19 @@ def main() -> int:
       title.textContent = point.getAttribute('data-tip-label') || '';
       meta.textContent = point.getAttribute('data-tip-meta') || '';
       detail.textContent = point.getAttribute('data-tip-detail') || '';
+      const shellRect = shell.getBoundingClientRect();
+      const pointRect = point.getBoundingClientRect();
+      const tooltipWidth = Math.min(320, Math.max(220, shellRect.width - 28));
+      const left = Math.min(
+        shellRect.width - tooltipWidth - 14,
+        Math.max(14, pointRect.left - shellRect.left - tooltipWidth / 2)
+      );
+      const preferAbove = pointRect.top - shellRect.top > 82;
+      const top = preferAbove
+        ? pointRect.top - shellRect.top - 74
+        : pointRect.bottom - shellRect.top + 12;
+      tooltip.style.setProperty('--tip-x', `${{left}}px`);
+      tooltip.style.setProperty('--tip-y', `${{Math.max(14, top)}}px`);
       tooltip.classList.add('is-visible');
     }};
 

@@ -74,3 +74,9 @@
 - Flipped the bug detour downward in the lineage graph so failures read as failures.
 - Added a focused operating-range scatter view plus lighter markers and hover/focus details.
 - Verified via Chrome DevTools browser automation and local desktop/iPhone screenshots.
+
+## 2026-04-06 — final frontend closeout
+
+- Added point-anchored scatter feedback, tighter mobile spacing, and cleaner grouped references.
+- Re-ran desktop and mobile screenshot audits.
+- Marked the visual-verdict pass as closed with no remaining concrete issues or suggestions.
