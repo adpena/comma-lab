@@ -359,7 +359,7 @@ def main() -> int:
 
     width = 920
     height = 420
-    pad = 52
+    pad = 68
 
     def sx(x: float) -> float:
         if log_max_bytes == log_min_bytes:
@@ -683,18 +683,21 @@ def main() -> int:
     .muted {{ color: var(--muted); }}
     .subnav {{ display:flex; gap:14px; flex-wrap:wrap; font-size: 13px; color: var(--muted); }}
     .subnav a {{ text-decoration: none; }}
+    .summary-shell {{ margin-top: 18px; padding: 4px 0 0; border-top: 1px solid var(--stroke); border-bottom: 1px solid var(--stroke); }}
     .summary-grid {{ display:grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 0; border-top: 1px solid var(--stroke); border-bottom: 1px solid var(--stroke); }}
     .summary-stat {{ padding: 14px 16px; }}
     .summary-stat + .summary-stat {{ border-left: 1px solid var(--stroke); }}
     .summary-label {{ color: var(--muted); font-size: 11px; text-transform: uppercase; letter-spacing: 0.08em; }}
     .summary-value {{ font-size: 28px; line-height: 1; margin-top: 8px; font-weight: 720; letter-spacing: -0.04em; }}
     .summary-meta {{ color: var(--muted); font-size: 12px; margin-top: 8px; }}
-    .note-grid {{ display:grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 18px; }}
-    .note {{ padding: 0 14px 0 0; }}
-    .note + .note {{ border-left: 1px solid var(--stroke); padding-left: 18px; }}
-    .note h3 {{ margin: 0 0 8px; font-size: 14px; letter-spacing: -0.02em; }}
-    .note p {{ margin: 0; color: var(--soft); font-size: 13px; line-height: 1.55; }}
-    .note p + p {{ margin-top: 8px; color: var(--muted); }}
+    .walkthrough {{ list-style: none; margin: 0; padding: 0; counter-reset: step; }}
+    .walkthrough li {{ counter-increment: step; display: grid; grid-template-columns: 28px 1fr; gap: 14px; padding: 14px 0; border-top: 1px solid var(--stroke); }}
+    .walkthrough li:first-child {{ border-top: 0; }}
+    .step-num {{ color: var(--muted); font: 700 12px/1 ui-monospace, SFMono-Regular, Menlo, monospace; padding-top: 4px; }}
+    .step-num::before {{ content: counter(step, decimal-leading-zero); }}
+    .step-body h3 {{ margin: 0 0 6px; font-size: 14px; letter-spacing: -0.02em; }}
+    .step-body p {{ margin: 0; color: var(--soft); font-size: 13px; line-height: 1.55; }}
+    .step-body p + p {{ margin-top: 6px; color: var(--muted); }}
     table {{ width: 100%; border-collapse: collapse; }}
     th, td {{ border-bottom: 1px solid var(--stroke); padding: 10px 8px; text-align: left; vertical-align: top; }}
     th {{ color: var(--muted); font-size: 12px; text-transform: uppercase; letter-spacing: 0.08em; }}
@@ -727,11 +730,11 @@ def main() -> int:
     .footnote {{ color: var(--muted); font-size: 13px; }}
     .axis-label {{ fill: var(--muted); font-size: 12px; letter-spacing: 0.02em; }}
     .axis-tick {{ fill: var(--muted); font-size: 11px; }}
-    .mono-block {{ margin: 12px 0 0; padding: 14px; border: 1px solid var(--stroke); border-radius: 10px; background: #0b0f14; color: var(--soft); font: 500 13px/1.6 ui-monospace, SFMono-Regular, Menlo, monospace; white-space: pre-wrap; }}
+    .config-line {{ margin: 10px 0 0; color: var(--muted); font: 500 12px/1.6 ui-monospace, SFMono-Regular, Menlo, monospace; }}
     .list-tight {{ margin: 0; padding-left: 18px; }}
     .list-tight li + li {{ margin-top: 6px; }}
-    @media (max-width: 980px) {{ .two, .note-grid {{ grid-template-columns: 1fr 1fr; }} .summary-grid {{ grid-template-columns: 1fr; }} .summary-stat + .summary-stat {{ border-left: 0; border-top: 1px solid var(--stroke); }} .note:nth-child(3) {{ border-left: 0; padding-left: 0; }} }}
-    @media (max-width: 720px) {{ .two, .note-grid, .summary-grid {{ grid-template-columns: 1fr; }} .summary-stat + .summary-stat {{ border-left: 0; border-top: 1px solid var(--stroke); }} .note + .note {{ border-left: 0; border-top: 1px solid var(--stroke); padding-left: 0; padding-top: 14px; }} .wrap {{ padding-inline: 16px; }} h1 {{ font-size: clamp(36px, 15vw, 64px); }} }}
+    @media (max-width: 980px) {{ .two {{ grid-template-columns: 1fr 1fr; }} .summary-grid {{ grid-template-columns: 1fr; }} .summary-stat + .summary-stat {{ border-left: 0; border-top: 1px solid var(--stroke); }} }}
+    @media (max-width: 720px) {{ .two, .summary-grid {{ grid-template-columns: 1fr; }} .summary-stat + .summary-stat {{ border-left: 0; border-top: 1px solid var(--stroke); }} .wrap {{ padding-inline: 16px; }} h1 {{ font-size: clamp(36px, 15vw, 64px); }} }}
     @media (prefers-reduced-motion: reduce) {{ html {{ scroll-behavior: auto; }} * {{ animation: none !important; transition: none !important; }} }}
   </style>
 </head>
@@ -751,19 +754,14 @@ def main() -> int:
     </header>
 
   <main id="content">
-    <section class="panel" aria-label="Current state">
+    <section class="summary-shell" aria-label="Current state">
       <div class="summary-grid">
         <div class="summary-stat"><div class="summary-label">Track B current_workflow</div><div class="summary-value">{data['summary']['best_track_b_score']:.2f}</div><div class="summary-meta">{data['summary']['best_track_b_bytes']:,} bytes</div></div>
         <div class="summary-stat"><div class="summary-label">Track B rule_faithful</div><div class="summary-value">{best.get('rule_faithful_score', 0):.3f}</div><div class="summary-meta">{fmt_int(best.get('rule_faithful_bundle_bytes'))} bytes</div></div>
         <div class="summary-stat"><div class="summary-label">Run ledger</div><div class="summary-value">{data['summary']['robust_run_count']}</div><div class="summary-meta">{data['summary']['promotion_count']} promotions / {data['summary']['rejection_count']} rejections</div></div>
       </div>
       <p class="footnote">Track A remains separate: `current_workflow` 0.00 at 167 bytes. It is preserved for transparency and is not part of the honest promotion path.</p>
-      <div class="mono-block" aria-label="Current promoted method">track: robust_current
-codec: libsvtav1
-scale: 524x394
-decode: explicit rgb24(pc)
-archive: 864,486 bytes
-score: 2.12</div>
+      <p class="config-line" aria-label="Current promoted method">robust_current · libsvtav1 · 524x394 · film-grain=22 · lanczos/lanczos · rgb24(pc)</p>
     </section>
 
     <section class="panel" aria-labelledby="scatter-title">
@@ -804,24 +802,33 @@ score: 2.12</div>
     </section>
 
     <section class="panel" aria-labelledby="mechanism-title">
-      <h2 id="mechanism-title">Operational notes</h2>
-      <div class="note-grid">
-        <article class="note">
-          <h3>Evaluator path</h3>
-          <p>{escape(hypothesis_cards[0]['summary'])}</p>
-          <p>{escape(hypothesis_cards[0]['detail'])}</p>
-        </article>
-        <article class="note">
-          <h3>Current operating point</h3>
-          <p>{escape(hypothesis_cards[2]['summary'])}</p>
-          <p>{escape(hypothesis_cards[2]['detail'])}</p>
-        </article>
-        <article class="note">
-          <h3>Critical bug</h3>
-          <p>{escape(hypothesis_cards[1]['summary'])}</p>
-          <p>{escape(hypothesis_cards[1]['detail'])}</p>
-        </article>
-      </div>
+      <h2 id="mechanism-title">Walkthrough</h2>
+      <ol class="walkthrough">
+        <li>
+          <div class="step-num"></div>
+          <div class="step-body">
+            <h3>Evaluator path</h3>
+            <p>{escape(hypothesis_cards[0]['summary'])}</p>
+            <p>{escape(hypothesis_cards[0]['detail'])}</p>
+          </div>
+        </li>
+        <li>
+          <div class="step-num"></div>
+          <div class="step-body">
+            <h3>Critical bug</h3>
+            <p>{escape(hypothesis_cards[1]['summary'])}</p>
+            <p>{escape(hypothesis_cards[1]['detail'])}</p>
+          </div>
+        </li>
+        <li>
+          <div class="step-num"></div>
+          <div class="step-body">
+            <h3>Current operating point</h3>
+            <p>{escape(hypothesis_cards[2]['summary'])}</p>
+            <p>{escape(hypothesis_cards[2]['detail'])}</p>
+          </div>
+        </li>
+      </ol>
     </section>
 
     <section class="panel" aria-labelledby="frontier-title">
