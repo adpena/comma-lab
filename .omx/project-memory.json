@@ -321,6 +321,11 @@
       "category": "test",
       "content": "Video comparison UI verified via Chrome DevTools automation on local static export: posters present, play/pause label updates, mode switches preserve playhead, hidden videos pause, scrub keeps all four videos aligned, scatter tooltip and scatter view toggles work.",
       "timestamp": "2026-04-06T18:39:10.014Z"
+    },
+    {
+      "category": "deploy",
+      "content": "Preview deploy for player/scatter coherence pass: https://78803cbe.comma-lab.pages.dev from commit afa1017. Live spot-check confirmed published-baseline summary cell, cleaned context copy, scatter mode toggles, and comparison controls initial state.",
+      "timestamp": "2026-04-06T18:40:25.236Z"
     }
   ]
 }
