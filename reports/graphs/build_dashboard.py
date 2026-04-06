@@ -432,7 +432,7 @@ def main() -> int:
         )
 
     turning_items = []
-    for t in reversed(key_turning_points):
+    for t in key_turning_points:
         turning_items.append(f"<li><strong>{escape(t['label'])}</strong> — {escape(t['run_id'])} ({t['score']:.2f})</li>")
 
     frontier_rows = []

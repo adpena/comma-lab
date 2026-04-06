@@ -29,6 +29,10 @@ Track B canonical floor: 2.12 @ 524x394 SVT-AV1 p0 CRF34 film-grain22 lanczos+un
 
 - [2026-04-06T17:01:15.922308+00:00] 2026-04-06 final remaining-risk sweep closed. Promotion accounting now includes the 2.12 floor, exact_current re-regressed to 0.00 / 167 bytes, and the latest Wrangler-confirmed preview is https://ee631431.comma-lab.pages.dev .
 
+- [2026-04-06T17:38:18.929863+00:00] 2026-04-06 frontend/editorial pass: reduced the landing page from a generic dashboard shell toward a tighter technical brief. Changes included a simpler header, a thinner summary strip, corrected scatter semantics, boxed-but-decluttered lineage notes, lighter operational note styling, and reduced lower-page density. Latest Wrangler-confirmed preview: https://805e7d79.comma-lab.pages.dev .
+
+- [2026-04-06T17:42:34.610074+00:00] 2026-04-06 frontend cleanup iteration: reduced card density, simplified the hero to a brief, clarified scatter semantics, omitted the 97.45 outlier from the main plot, trimmed the page to overview scope, and redeployed. Latest Wrangler-confirmed preview: https://287dff0d.comma-lab.pages.dev .
+
 ## MANUAL
 - Persistent lab memory:
   - Only Track A / exact_current is explicitly non-rule-faithful.

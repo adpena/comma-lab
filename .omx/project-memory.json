@@ -281,6 +281,16 @@
       "category": "deploy",
       "content": "Latest Wrangler-confirmed preview after closing remaining risks: https://ee631431.comma-lab.pages.dev .",
       "timestamp": "2026-04-06T17:01:15.922308+00:00"
+    },
+    {
+      "category": "deploy",
+      "content": "Latest Wrangler-confirmed preview after the frontend/editorial cleanup: https://805e7d79.comma-lab.pages.dev .",
+      "timestamp": "2026-04-06T17:38:18.929863+00:00"
+    },
+    {
+      "category": "deploy",
+      "content": "Latest Wrangler-confirmed preview after the latest frontend cleanup iteration: https://287dff0d.comma-lab.pages.dev .",
+      "timestamp": "2026-04-06T17:42:34.610074+00:00"
     }
   ]
 }
