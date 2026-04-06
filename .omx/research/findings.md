@@ -95,3 +95,18 @@ This remains speculative until those steps are complete and measured.
 - The writeup is now easier to audit because the evidence surfaces and reproduction path are generated, not hand-maintained.
 - The landing page is now closer to a technical brief than a generic dashboard.
 - Remaining frontend work is refinement, not missing infrastructure.
+
+## 2026-04-06 player / scatter coherence pass
+
+### player findings
+
+- Root cause: the comparison UI only reset the newly active mode and did not pause the hidden pair, so a full-to-zoom switch left the hidden videos playing in the background.
+- Fix: pause all videos on mode changes, sync all four players to the shared playhead, then resume only the active pair if playback was already running.
+- Result: full/zoom switching now preserves context instead of resetting the comparison.
+
+### chart / layout findings
+
+- The prior `Why 2.12 beat 2.18` SVG metric rows were brittle under real browser layout and could overlap.
+- Fix: replaced the brittle SVG metric rows with semantic HTML cards and table layout.
+- The search-path failure branch now hangs downward so the temporary regression reads visually as a detour, not an improvement.
+- The scatter plot now includes a focused operating-range view, smaller markers, and explicit lower-left-is-better guidance.

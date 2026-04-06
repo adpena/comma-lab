@@ -389,53 +389,95 @@ def main() -> int:
     robust_only = [r for r in data['results'] if r['track'] == 'robust_current']
     scatter_runs = [r for r in robust_only if r['score'] <= 10.0]
     omitted_outliers = [r for r in robust_only if r['score'] > 10.0]
-    min_score = min(r['score'] for r in scatter_runs)
-    max_score = max(r['score'] for r in scatter_runs)
-    min_bytes = min(r['archive_bytes'] for r in scatter_runs)
-    max_bytes = max(r['archive_bytes'] for r in scatter_runs)
-    log_min_score = math.log10(min_score)
-    log_max_score = math.log10(max_score)
-    log_min_bytes = math.log10(min_bytes)
-    log_max_bytes = math.log10(max_bytes)
-
     width = 920
     height = 420
     pad = 68
-
-    def sx(x: float) -> float:
-        if log_max_bytes == log_min_bytes:
-            return width / 2
-        return pad + (math.log10(x) - log_min_bytes) * (width - 2 * pad) / (log_max_bytes - log_min_bytes)
-
-    plot_max_score = min(max_score, 6.0)
-
-    def sy(y: float) -> float:
-        if plot_max_score == min_score:
-            return height / 2
-        return height - pad - (y - min_score) * (height - 2 * pad) / (plot_max_score - min_score)
 
     def fmt_axis_bytes(value: int) -> str:
         if value >= 1_000_000:
             return f'{value / 1_000_000:.1f}M'
         return f'{value / 1_000:.0f}k'
 
-    x_ticks = [v for v in [700_000, 900_000, 1_200_000, 1_700_000, 2_500_000, 4_000_000, 5_000_000] if min_bytes <= v <= max_bytes]
-    y_ticks = [v for v in [2.0, 2.5, 3.0, 4.0, 5.0, 6.0] if min_score <= v <= plot_max_score]
-    grid_lines = []
-    for tick in x_ticks:
-        x = sx(tick)
-        grid_lines.append(f'<line x1="{x:.1f}" y1="{pad}" x2="{x:.1f}" y2="{height-pad}" stroke="rgba(255,255,255,0.08)" />')
-        grid_lines.append(f'<text x="{x:.1f}" y="{height-pad+20}" text-anchor="middle" class="axis-tick">{fmt_axis_bytes(tick)}</text>')
-    for tick in y_ticks:
-        y = sy(tick)
-        grid_lines.append(f'<line x1="{pad}" y1="{y:.1f}" x2="{width-pad}" y2="{y:.1f}" stroke="rgba(255,255,255,0.08)" />')
-        grid_lines.append(f'<text x="{pad-10}" y="{y+4:.1f}" text-anchor="end" class="axis-tick">{tick:g}</text>')
+    def scatter_color(run: dict) -> str:
+        return '#2ad4a0' if run['is_promotion'] else '#ff6b6b' if any('reject' in n.lower() for n in run['notes']) else '#8ab4ff'
 
-    points = []
-    for r in scatter_runs:
-        color = '#2ad4a0' if r['is_promotion'] else '#ff6b6b' if any('reject' in n.lower() for n in r['notes']) else '#8ab4ff'
-        label = escape(f"{r['run_id']} | score={r['score']} | bytes={r['archive_bytes']}")
-        points.append(f'<circle cx="{sx(r["archive_bytes"]):.1f}" cy="{sy(r["score"]):.1f}" r="5.5" fill="{color}"><title>{label}</title></circle>')
+    def scatter_status(run: dict) -> str:
+        if run['is_promotion']:
+            return 'promotion'
+        if any('reject' in n.lower() for n in run['notes']):
+            return 'explicit rejection'
+        return 'measured run'
+
+    def render_scatter_svg(
+        runs: list[dict],
+        *,
+        x_min: int | None = None,
+        x_max: int | None = None,
+        y_min: float | None = None,
+        y_max: float | None = None,
+    ) -> str:
+        plot_runs = [
+            r for r in runs
+            if (x_min is None or r['archive_bytes'] >= x_min)
+            and (x_max is None or r['archive_bytes'] <= x_max)
+            and (y_min is None or r['score'] >= y_min)
+            and (y_max is None or r['score'] <= y_max)
+        ] or runs
+
+        min_score = y_min if y_min is not None else min(r['score'] for r in plot_runs)
+        max_score = y_max if y_max is not None else min(max(r['score'] for r in plot_runs), 6.0)
+        min_bytes = x_min if x_min is not None else min(r['archive_bytes'] for r in plot_runs)
+        max_bytes = x_max if x_max is not None else max(r['archive_bytes'] for r in plot_runs)
+        log_min_bytes = math.log10(min_bytes)
+        log_max_bytes = math.log10(max_bytes)
+
+        def sx(x: float) -> float:
+            if log_max_bytes == log_min_bytes:
+                return width / 2
+            return pad + (math.log10(x) - log_min_bytes) * (width - 2 * pad) / (log_max_bytes - log_min_bytes)
+
+        def sy(y: float) -> float:
+            if max_score == min_score:
+                return height / 2
+            return height - pad - (y - min_score) * (height - 2 * pad) / (max_score - min_score)
+
+        x_ticks = [v for v in [700_000, 900_000, 1_200_000, 1_700_000, 2_500_000, 4_000_000, 5_000_000] if min_bytes <= v <= max_bytes]
+        y_ticks = [v for v in [2.0, 2.5, 3.0, 4.0, 5.0, 6.0] if min_score <= v <= max_score]
+        grid_lines = []
+        for tick in x_ticks:
+            x = sx(tick)
+            grid_lines.append(f'<line x1="{x:.1f}" y1="{pad}" x2="{x:.1f}" y2="{height-pad}" stroke="rgba(255,255,255,0.08)" />')
+            grid_lines.append(f'<text x="{x:.1f}" y="{height-pad+20}" text-anchor="middle" class="axis-tick">{fmt_axis_bytes(tick)}</text>')
+        for tick in y_ticks:
+            y = sy(tick)
+            grid_lines.append(f'<line x1="{pad}" y1="{y:.1f}" x2="{width-pad}" y2="{y:.1f}" stroke="rgba(255,255,255,0.08)" />')
+            grid_lines.append(f'<text x="{pad-10}" y="{y+4:.1f}" text-anchor="end" class="axis-tick">{tick:g}</text>')
+
+        points = []
+        for r in plot_runs:
+            tip_label = short_label(r)
+            tip_meta = f'{scatter_status(r)} · score {r["score"]:.2f} · {r["archive_bytes"]:,} bytes'
+            tip_detail = describe_config(r.get('config', {}))
+            aria = escape(f'{tip_label}. {tip_meta}. {tip_detail}.')
+            points.append(
+                f'<circle class="scatter-point" data-scatter-point tabindex="0" role="button" '
+                f'data-tip-label="{escape(tip_label)}" data-tip-meta="{escape(tip_meta)}" data-tip-detail="{escape(tip_detail)}" '
+                f'aria-label="{aria}" cx="{sx(r["archive_bytes"]):.1f}" cy="{sy(r["score"]):.1f}" r="4.25" fill="{scatter_color(r)}"></circle>'
+            )
+
+        return (
+            f'<svg viewBox="0 0 {width} {height}" role="img" aria-label="Score versus bytes scatterplot for Track B runs">'
+            f'{"".join(grid_lines)}'
+            f'<line x1="{pad}" y1="{height-pad}" x2="{width-pad}" y2="{height-pad}" stroke="#475569" />'
+            f'<line x1="{pad}" y1="{pad}" x2="{pad}" y2="{height-pad}" stroke="#475569" />'
+            f'{"".join(points)}'
+            f'<text x="{width/2:.1f}" y="{height-10}" text-anchor="middle" class="axis-label">archive size (bytes, log scale)</text>'
+            f'<text x="16" y="{height/2:.1f}" transform="rotate(-90 16 {height/2:.1f})" text-anchor="middle" class="axis-label">current_workflow score (linear, lower is better)</text>'
+            f'</svg>'
+        )
+
+    full_scatter_svg = render_scatter_svg(scatter_runs)
+    focus_scatter_svg = render_scatter_svg(scatter_runs, x_min=780_000, x_max=2_900_000, y_min=2.0, y_max=4.8)
 
     timeline_rows = []
     for e in notable_events[-14:]:
@@ -576,9 +618,9 @@ def main() -> int:
     add_lineage_node('robust_current-lanczos-lanczos-cpu-2026-04-04', 'lanczos/lanczos', 'x265', 535, 205)
     add_lineage_node('robust_current-432x324-cpu-2026-04-04', '432x324', 'x265', 675, 184)
     add_lineage_node(x265_floor_id, 'x265 floor', 'x265', 820, 165)
-    add_lineage_node(roi_fail_id, 'dynamic ROI', 'roi', 675, 78)
-    add_lineage_node(nearby_reject_id, 'nearby scale', 'rejection', 820, 285)
-    add_lineage_node(av1_bug_id, 'AV1 failure', 'bug', 965, 78)
+    add_lineage_node(roi_fail_id, 'dynamic ROI', 'roi', 675, 292)
+    add_lineage_node(nearby_reject_id, 'nearby scale', 'rejection', 820, 316)
+    add_lineage_node(av1_bug_id, 'AV1 failure', 'bug', 965, 286)
     if current_best_id not in {n['run_id'] for n in lineage_nodes}:
         add_lineage_node(current_best_id, 'current floor', 'best', 1085, 160 if current_best_id != av1_bug_id else 118)
 
@@ -635,7 +677,7 @@ def main() -> int:
         if node['family'] in {'roi', 'bug'}:
             box_y = node['y'] - 76
         elif node['family'] == 'rejection':
-            box_y = node['y'] + 18
+            box_y = node['y'] - 76 if node['y'] > 250 else node['y'] + 18
         else:
             box_y = node['y'] - 76 if idx % 2 else node['y'] + 18
         box_x = max(10, min(node['x'] - box_w / 2, svg_width - box_w - 10))
@@ -656,6 +698,11 @@ def main() -> int:
     baseline_run = run_index.get('robust_current-baseline-cpu-2026-04-03')
     baseline_score = baseline_run['current_workflow_score'] if baseline_run else None
     baseline_bytes = baseline_run['archive_bytes'] if baseline_run else None
+    published_baseline_score = best.get('published_baseline_score')
+    published_delta_score = (
+        best['current_workflow_score'] - published_baseline_score
+        if published_baseline_score is not None else None
+    )
     fixed_av1_score = first_av1_promo['current_workflow_score'] if first_av1_promo else best['current_workflow_score']
     hypothesis_cards = [
         {
@@ -679,23 +726,25 @@ def main() -> int:
         },
     ]
 
-    delta_svg_rows = [
+    delta_metric_rows = [
         ('current_workflow score', f'{prev_best["current_workflow_score"]:.2f}', f'{best["current_workflow_score"]:.2f}', f'{best_delta_score:+.2f}'),
         ('archive bytes', f'{prev_best["archive_bytes"]:,}', f'{best["archive_bytes"]:,}', f'{best_delta_bytes:+,}'),
         ('PoseNet distortion', f'{prev_best.get("posenet_distortion", 0.0):.8f}', f'{best.get("posenet_distortion", 0.0):.8f}', f'{best_delta_pose:+.8f}'),
         ('SegNet distortion', f'{prev_best.get("segnet_distortion", 0.0):.8f}', f'{best.get("segnet_distortion", 0.0):.8f}', f'{best_delta_seg:+.8f}'),
     ]
-    delta_rows_svg = []
-    row_y = 114
-    for label, old, new, delta in delta_svg_rows:
-        delta_color = '#2ad4a0' if delta.startswith('-') else '#ff6b6b'
-        delta_rows_svg.append(
-            f'<text x="48" y="{row_y}" fill="#9aa6b2" font-size="12">{escape(label)}</text>'
-            f'<text x="270" y="{row_y}" fill="#f5f7fb" font-size="14">{escape(old)}</text>'
-            f'<text x="440" y="{row_y}" fill="#8ab4ff" font-size="14">{escape(new)}</text>'
-            f'<text x="640" y="{row_y}" fill="{delta_color}" font-size="14">{escape(delta)}</text>'
+    delta_rows_html = []
+    for label, old, new, delta in delta_metric_rows:
+        delta_class = 'delta-negative' if delta.startswith('-') else 'delta-positive'
+        delta_rows_html.append(
+            '<tr>'
+            f'<td>{escape(label)}</td>'
+            f'<td>{escape(old)}</td>'
+            f'<td>{escape(new)}</td>'
+            f'<td class="{delta_class}">{escape(delta)}</td>'
+            '</tr>'
         )
-        row_y += 28
+    published_delta_display = '' if published_delta_score is None else f'{published_delta_score:+.2f}'
+    published_baseline_display = '' if published_baseline_score is None else f'{published_baseline_score:.2f}'
 
     html = f'''<!doctype html>
 <html lang="en">
@@ -758,8 +807,8 @@ def main() -> int:
     .context-meta {{ margin: 8px 0 0; color: var(--muted); font-size: 12px; }}
     .context-links {{ display:flex; flex-wrap:wrap; gap: 10px 14px; margin-top: 8px; color: var(--muted); font-size: 12px; }}
     .context-links a {{ text-decoration: none; }}
-    .summary-shell {{ margin-top: 18px; padding: 4px 0 0; border-top: 1px solid var(--stroke); border-bottom: 1px solid var(--stroke); }}
-    .summary-grid {{ display:grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 0; border-top: 1px solid var(--stroke); border-bottom: 1px solid var(--stroke); }}
+    .summary-shell {{ margin-top: 18px; padding: 4px 0 0; }}
+    .summary-grid {{ display:grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 0; border-top: 1px solid var(--stroke); border-bottom: 1px solid var(--stroke); }}
     .summary-stat {{ padding: 14px 16px; }}
     .summary-stat + .summary-stat {{ border-left: 1px solid var(--stroke); }}
     .summary-label {{ color: var(--muted); font-size: 11px; text-transform: uppercase; letter-spacing: 0.08em; }}
@@ -799,6 +848,13 @@ def main() -> int:
     .legend-key {{ display:inline-flex; align-items:center; gap:8px; color: var(--muted); font-size: 12px; }}
     .legend-dot {{ width:10px; height:10px; border-radius:999px; display:inline-block; }}
     .legend-line {{ width:22px; height:0; border-top:2px solid currentColor; display:inline-block; }}
+    .scatter-shell {{ position: relative; }}
+    .scatter-point {{ cursor: pointer; transition: transform 120ms ease; }}
+    .scatter-point:hover, .scatter-point:focus-visible {{ transform: scale(1.18); stroke: rgba(255,255,255,0.95); stroke-width: 1.8; outline: none; }}
+    .scatter-tooltip {{ position: absolute; top: 14px; left: 14px; max-width: min(320px, calc(100% - 28px)); padding: 10px 12px; border: 1px solid var(--stroke); border-radius: 10px; background: rgba(8,11,15,0.96); box-shadow: 0 12px 28px rgba(0,0,0,0.28); opacity: 0; transform: translateY(4px); transition: opacity 120ms ease, transform 120ms ease; pointer-events: none; }}
+    .scatter-tooltip.is-visible {{ opacity: 1; transform: translateY(0); }}
+    .scatter-tooltip strong {{ display:block; font-size: 13px; color: var(--text); }}
+    .scatter-tooltip span {{ display:block; color: var(--muted); font-size: 12px; margin-top: 4px; }}
     .bug-box {{ display:grid; grid-template-columns: 1fr auto 1fr; gap: 10px; align-items:center; margin-top: 12px; }}
     .bug-side {{ border: 1px solid var(--stroke); border-radius: var(--radius-sm); padding: 12px; background: rgba(255,255,255,0.03); }}
     .bug-side strong {{ display:block; margin-bottom: 6px; }}
@@ -823,10 +879,22 @@ def main() -> int:
     .compare-pane p {{ margin: 8px 0 0; color: var(--muted); font-size: 12px; }}
     .compare-mode {{ display:none; }}
     .compare-mode.is-active {{ display:block; }}
+    .delta-compare {{ display:grid; gap: 16px; }}
+    .delta-head {{ display:grid; grid-template-columns: 1fr auto 1fr; gap: 14px; align-items: stretch; }}
+    .delta-card {{ border: 1px solid var(--stroke); border-radius: 10px; padding: 14px 16px; background: #0b0f14; }}
+    .delta-kicker {{ color: var(--muted); font-size: 11px; text-transform: uppercase; letter-spacing: 0.08em; }}
+    .delta-scoreline {{ display:flex; align-items:baseline; gap: 12px; margin-top: 8px; flex-wrap: wrap; }}
+    .delta-score {{ font-size: 38px; line-height: 0.95; font-weight: 760; letter-spacing: -0.05em; }}
+    .delta-bytes {{ color: var(--muted); font-size: 13px; }}
+    .delta-note {{ margin-top: 10px; color: var(--muted); font-size: 12px; line-height: 1.55; }}
+    .delta-arrow {{ display:grid; place-items:center; color: var(--accent); font-size: 28px; }}
+    .delta-table td:nth-child(3) {{ color: var(--accent); }}
+    .delta-negative {{ color: #2ad4a0; }}
+    .delta-positive {{ color: #ff6b6b; }}
     .footer-meta {{ display:flex; justify-content:space-between; gap: 16px; flex-wrap:wrap; margin-top: 18px; padding-top: 16px; border-top: 1px solid var(--stroke); color: var(--muted); font-size: 12px; }}
     .footer-meta a {{ text-decoration: none; }}
     @media (max-width: 980px) {{ .two {{ grid-template-columns: 1fr 1fr; }} .context-strip, .summary-grid {{ grid-template-columns: 1fr; }} .context-item + .context-item, .summary-stat + .summary-stat {{ border-left: 0; border-top: 1px solid var(--stroke); }} }}
-    @media (max-width: 720px) {{ .two, .context-strip, .summary-grid, .compare-grid {{ grid-template-columns: 1fr; }} .context-item + .context-item, .summary-stat + .summary-stat {{ border-left: 0; border-top: 1px solid var(--stroke); }} .wrap {{ padding-inline: 16px; }} h1 {{ font-size: clamp(36px, 15vw, 64px); }} .compare-controls input[type="range"] {{ width: 100%; }} }}
+    @media (max-width: 720px) {{ .two, .context-strip, .summary-grid, .compare-grid, .delta-head {{ grid-template-columns: 1fr; }} .context-item + .context-item, .summary-stat + .summary-stat {{ border-left: 0; border-top: 1px solid var(--stroke); }} .wrap {{ padding-inline: 16px; }} h1 {{ font-size: clamp(36px, 15vw, 64px); }} .compare-controls input[type="range"] {{ width: 100%; }} .delta-arrow {{ display:none; }} }}
     @media (prefers-reduced-motion: reduce) {{ html {{ scroll-behavior: auto; }} * {{ animation: none !important; transition: none !important; }} }}
   </style>
 </head>
@@ -856,7 +924,7 @@ def main() -> int:
       </div>
       <div class="context-item">
         <div class="context-label">Who we are</div>
-        <p class="context-copy">comma-lab is a public experiment log and submission repo maintained by {escape(data['site_meta']['maintainer'])}. It keeps the literal <code>current_workflow</code> path separate from the stricter <code>rule_faithful</code> accounting path.</p>
+        <p class="context-copy">comma-lab is a public experiment log and submission repo maintained by {escape(data['site_meta']['maintainer'])}. It publishes measured runs, rejected branches, and the current promoted operating point in one place.</p>
         <div class="context-links">
           <a href="{data['site_meta']['github_url']}">{escape(data['site_meta']['repo_slug'])}</a>
           <a href="./experiment_manifest.json">Experiment manifest</a>
@@ -873,6 +941,7 @@ def main() -> int:
       <div class="summary-grid">
         <div class="summary-stat"><div class="summary-label">Track B current_workflow</div><div class="summary-value">{data['summary']['best_track_b_score']:.2f}</div><div class="summary-meta">{data['summary']['best_track_b_bytes']:,} bytes</div></div>
         <div class="summary-stat"><div class="summary-label">Track B rule_faithful</div><div class="summary-value">{best.get('rule_faithful_score', 0):.3f}</div><div class="summary-meta">{fmt_int(best.get('rule_faithful_bundle_bytes'))} bytes</div></div>
+        <div class="summary-stat"><div class="summary-label">Delta vs published baseline</div><div class="summary-value">{published_delta_display}</div><div class="summary-meta">{published_baseline_display} → {best['current_workflow_score']:.2f}</div></div>
         <div class="summary-stat"><div class="summary-label">Delta vs prior floor</div><div class="summary-value">{best_delta_score:+.2f}</div><div class="summary-meta">{best_delta_bytes:+,} bytes</div></div>
       </div>
       <p class="footnote">Track A remains separate: `current_workflow` 0.00 at 167 bytes. The robust run ledger currently contains {data['summary']['robust_run_count']} measured runs, {data['summary']['promotion_count']} promotions, and {data['summary']['rejection_count']} explicit rejections.</p>
@@ -881,15 +950,23 @@ def main() -> int:
 
     <section class="panel" aria-labelledby="scatter-title">
       <h2 id="scatter-title">Score vs bytes</h2>
-      <p class="muted">Track B runs only. The x-axis uses log scaling. The y-axis is linear. The severe AV1 bug run at 97.45 is omitted here so the operating range stays legible; it remains documented in the search-path section.</p>
-      <svg viewBox="0 0 {width} {height}" role="img" aria-label="Score versus bytes scatterplot for Track B runs">
-        {''.join(grid_lines)}
-        <line x1="{pad}" y1="{height-pad}" x2="{width-pad}" y2="{height-pad}" stroke="#475569" />
-        <line x1="{pad}" y1="{pad}" x2="{pad}" y2="{height-pad}" stroke="#475569" />
-        {''.join(points)}
-        <text x="{width/2:.1f}" y="{height-10}" text-anchor="middle" class="axis-label">archive size (bytes, log scale)</text>
-        <text x="16" y="{height/2:.1f}" transform="rotate(-90 16 {height/2:.1f})" text-anchor="middle" class="axis-label">current_workflow score (linear, lower is better)</text>
-      </svg>
+      <p class="muted">Track B runs only. Better runs move toward the lower-left. The x-axis uses log scaling. The y-axis is linear. The severe AV1 bug run at 97.45 is omitted here so the operating range stays legible; it remains documented in the search-path section.</p>
+      <div class="compare-controls" aria-label="Scatter view controls">
+        <button type="button" class="is-active" data-scatter-mode="full">full range</button>
+        <button type="button" data-scatter-mode="focus">operating range</button>
+      </div>
+      <div class="compare-mode is-active" data-scatter-panel="full">
+        <div class="scatter-shell" data-scatter-shell>
+          {full_scatter_svg}
+          <div class="scatter-tooltip" data-scatter-tooltip><strong></strong><span></span><span></span></div>
+        </div>
+      </div>
+      <div class="compare-mode" data-scatter-panel="focus">
+        <div class="scatter-shell" data-scatter-shell>
+          {focus_scatter_svg}
+          <div class="scatter-tooltip" data-scatter-tooltip><strong></strong><span></span><span></span></div>
+        </div>
+      </div>
       <div class="legend-row" aria-label="Scatter legend">
         <span class="legend-key"><span class="legend-dot" style="background:#2ad4a0"></span>promotion</span>
         <span class="legend-key"><span class="legend-dot" style="background:#ff6b6b"></span>explicit rejection</span>
@@ -992,29 +1069,33 @@ def main() -> int:
 
     <section class="panel" aria-labelledby="explain-title">
       <h2 id="explain-title">Why 2.12 beat 2.18</h2>
-      <svg viewBox="0 0 920 230" role="img" aria-label="Comparison between the prior 2.18 floor and the current 2.12 floor">
-        <rect x="40" y="28" width="250" height="56" rx="10" ry="10" fill="#0b0f14" stroke="rgba(255,255,255,0.10)" />
-        <text x="56" y="50" fill="#9aa6b2" font-size="12">prior floor</text>
-        <text x="56" y="72" fill="#f5f7fb" font-size="24" font-weight="700">2.18</text>
-        <text x="140" y="72" fill="#9aa6b2" font-size="13">864,455 bytes</text>
-        <text x="56" y="92" fill="#9aa6b2" font-size="12">implicit color handling</text>
-
-        <path d="M 318 56 L 398 56" stroke="#8ab4ff" stroke-width="2" />
-        <circle cx="398" cy="56" r="3.5" fill="#8ab4ff" />
-
-        <rect x="430" y="28" width="320" height="56" rx="10" ry="10" fill="#0b0f14" stroke="rgba(255,255,255,0.10)" />
-        <text x="446" y="50" fill="#9aa6b2" font-size="12">current floor</text>
-        <text x="446" y="72" fill="#f5f7fb" font-size="24" font-weight="700">2.12</text>
-        <text x="530" y="72" fill="#9aa6b2" font-size="13">864,486 bytes</text>
-        <text x="446" y="92" fill="#9aa6b2" font-size="12">explicit bt709/tv encode tags · explicit rgb24(pc) decode</text>
-
-        <line x1="40" y1="116" x2="880" y2="116" stroke="rgba(255,255,255,0.08)" />
-        <text x="48" y="136" fill="#9aa6b2" font-size="11" text-transform="uppercase">metric</text>
-        <text x="270" y="136" fill="#9aa6b2" font-size="11">prior</text>
-        <text x="440" y="136" fill="#9aa6b2" font-size="11">current</text>
-        <text x="640" y="136" fill="#9aa6b2" font-size="11">delta</text>
-        {''.join(delta_rows_svg)}
-      </svg>
+      <div class="delta-compare">
+        <div class="delta-head" aria-label="Comparison between the prior 2.18 floor and the current 2.12 floor">
+          <div class="delta-card">
+            <div class="delta-kicker">prior floor</div>
+            <div class="delta-scoreline">
+              <span class="delta-score">{prev_best["current_workflow_score"]:.2f}</span>
+              <span class="delta-bytes">{prev_best["archive_bytes"]:,} bytes</span>
+            </div>
+            <div class="delta-note">implicit color handling</div>
+          </div>
+          <div class="delta-arrow" aria-hidden="true">→</div>
+          <div class="delta-card">
+            <div class="delta-kicker">current floor</div>
+            <div class="delta-scoreline">
+              <span class="delta-score">{best["current_workflow_score"]:.2f}</span>
+              <span class="delta-bytes">{best["archive_bytes"]:,} bytes</span>
+            </div>
+            <div class="delta-note">explicit bt709/tv encode tags · explicit rgb24(pc) decode</div>
+          </div>
+        </div>
+        <div class="table-wrap">
+          <table class="delta-table">
+            <thead><tr><th scope="col">Metric</th><th scope="col">Prior</th><th scope="col">Current</th><th scope="col">Delta</th></tr></thead>
+            <tbody>{''.join(delta_rows_html)}</tbody>
+          </table>
+        </div>
+      </div>
       <p class="footnote">The bytes barely moved. The score change came primarily from lower PoseNet distortion.</p>
     </section>
 
@@ -1061,27 +1142,70 @@ def main() -> int:
 (() => {{
   const modeButtons = Array.from(document.querySelectorAll('[data-compare-mode]'));
   const panels = Array.from(document.querySelectorAll('[data-compare-panel]'));
+  const scatterModeButtons = Array.from(document.querySelectorAll('[data-scatter-mode]'));
+  const scatterPanels = Array.from(document.querySelectorAll('[data-scatter-panel]'));
   const videos = Array.from(document.querySelectorAll('[data-compare-video]'));
   const toggle = document.querySelector('[data-compare-toggle]');
   const scrub = document.querySelector('[data-compare-scrub]');
 
   const activeVideos = () => videos.filter(v => v.closest('.compare-mode')?.classList.contains('is-active'));
+  const currentDuration = () => activeVideos()[0]?.duration || 0;
+  const anyActivePlaying = () => activeVideos().some(v => !v.paused && !v.ended);
 
-  const syncCurrentTime = (time) => {{
-    activeVideos().forEach(v => {{
+  const setScrubFromTime = (time) => {{
+    if (!scrub) return;
+    const duration = currentDuration();
+    scrub.value = duration > 0 ? String((Math.min(time, duration) / duration) * 100) : '0';
+  }};
+
+  const pauseVideos = (list) => {{
+    list.forEach(v => v.pause());
+  }};
+
+  const syncCurrentTime = (time, list = videos) => {{
+    list.forEach(v => {{
       if (!Number.isNaN(v.duration) && v.duration > 0) {{
         v.currentTime = Math.min(time, v.duration);
       }}
     }});
   }};
 
+  const updateToggleLabel = () => {{
+    if (!toggle) return;
+    const playing = anyActivePlaying();
+    toggle.textContent = playing ? 'pause' : 'play';
+    toggle.setAttribute('aria-pressed', playing ? 'true' : 'false');
+  }};
+
+  const playVideos = async (list) => {{
+    await Promise.all(list.map(v => v.play().catch(() => null)));
+  }};
+
+  const switchMode = async (mode) => {{
+    const currentTime = activeVideos()[0]?.currentTime || 0;
+    const shouldResume = anyActivePlaying();
+    pauseVideos(videos);
+    modeButtons.forEach(b => b.classList.toggle('is-active', b.getAttribute('data-compare-mode') === mode));
+    panels.forEach(panel => panel.classList.toggle('is-active', panel.getAttribute('data-compare-panel') === mode));
+    syncCurrentTime(currentTime, videos);
+    setScrubFromTime(currentTime);
+    if (shouldResume) {{
+      await playVideos(activeVideos());
+    }}
+    updateToggleLabel();
+  }};
+
   modeButtons.forEach(btn => {{
+    btn.addEventListener('click', async () => {{
+      await switchMode(btn.getAttribute('data-compare-mode'));
+    }});
+  }});
+
+  scatterModeButtons.forEach(btn => {{
     btn.addEventListener('click', () => {{
-      const mode = btn.getAttribute('data-compare-mode');
-      modeButtons.forEach(b => b.classList.toggle('is-active', b === btn));
-      panels.forEach(panel => panel.classList.toggle('is-active', panel.getAttribute('data-compare-panel') === mode));
-      syncCurrentTime(0);
-      if (scrub) scrub.value = '0';
+      const mode = btn.getAttribute('data-scatter-mode');
+      scatterModeButtons.forEach(b => b.classList.toggle('is-active', b === btn));
+      scatterPanels.forEach(panel => panel.classList.toggle('is-active', panel.getAttribute('data-scatter-panel') === mode));
     }});
   }});
 
@@ -1089,23 +1213,28 @@ def main() -> int:
     toggle.addEventListener('click', async () => {{
       const active = activeVideos();
       if (!active.length) return;
-      const shouldPlay = active.every(v => v.paused);
+      const shouldPlay = active.every(v => v.paused || v.ended);
       if (shouldPlay) {{
-        await Promise.all(active.map(v => v.play().catch(() => null)));
+        await playVideos(active);
       }} else {{
-        active.forEach(v => v.pause());
+        pauseVideos(active);
       }}
+      updateToggleLabel();
     }});
   }}
 
   if (scrub) {{
-    scrub.addEventListener('input', () => {{
-      const active = activeVideos();
-      if (!active.length) return;
-      const ref = active[0];
-      const duration = ref.duration || 0;
+    scrub.addEventListener('input', async () => {{
+      const duration = currentDuration();
+      if (!duration) return;
+      const shouldResume = anyActivePlaying();
       const t = duration * (Number(scrub.value) / 100);
-      syncCurrentTime(t);
+      pauseVideos(videos);
+      syncCurrentTime(t, videos);
+      if (shouldResume) {{
+        await playVideos(activeVideos());
+      }}
+      updateToggleLabel();
     }});
   }}
 
@@ -1113,14 +1242,39 @@ def main() -> int:
     video.addEventListener('timeupdate', () => {{
       const active = activeVideos();
       if (!active.includes(video) || !scrub || !video.duration) return;
-      scrub.value = String((video.currentTime / video.duration) * 100);
-      active.forEach(other => {{
+      setScrubFromTime(video.currentTime);
+      videos.forEach(other => {{
         if (other !== video && Math.abs(other.currentTime - video.currentTime) > 0.08) {{
           other.currentTime = video.currentTime;
         }}
       }});
     }});
+    video.addEventListener('play', updateToggleLabel);
+    video.addEventListener('pause', updateToggleLabel);
+    video.addEventListener('ended', updateToggleLabel);
   }});
+
+  document.querySelectorAll('[data-scatter-shell]').forEach(shell => {{
+    const tooltip = shell.querySelector('[data-scatter-tooltip]');
+    if (!tooltip) return;
+    const [title, meta, detail] = tooltip.querySelectorAll('strong, span');
+    const hide = () => tooltip.classList.remove('is-visible');
+    const show = (point) => {{
+      title.textContent = point.getAttribute('data-tip-label') || '';
+      meta.textContent = point.getAttribute('data-tip-meta') || '';
+      detail.textContent = point.getAttribute('data-tip-detail') || '';
+      tooltip.classList.add('is-visible');
+    }};
+
+    shell.querySelectorAll('[data-scatter-point]').forEach(point => {{
+      point.addEventListener('mouseenter', () => show(point));
+      point.addEventListener('focus', () => show(point));
+      point.addEventListener('mouseleave', hide);
+      point.addEventListener('blur', hide);
+    }});
+  }});
+
+  updateToggleLabel();
 }})();
 </script>
 </body>

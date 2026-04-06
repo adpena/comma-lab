@@ -65,3 +65,12 @@
 - Added browser-preview comparison media with synced play/pause + scrubber and crop zoom.
 - Added posters for the comparison videos and horizontal-scroll handling for the dense frontier table on mobile.
 - Verified with local desktop and iPhone screenshots generated via Playwright.
+
+## 2026-04-06 — player / scatter coherence pass
+
+- Reworked the comparison-player state model so mode switches preserve playhead and pause hidden videos.
+- Replaced the brittle 2.18→2.12 SVG metric rows with semantic HTML layout.
+- Added published-baseline comparison to the summary strip.
+- Flipped the bug detour downward in the lineage graph so failures read as failures.
+- Added a focused operating-range scatter view plus lighter markers and hover/focus details.
+- Verified via Chrome DevTools browser automation and local desktop/iPhone screenshots.

@@ -73,3 +73,10 @@ The promoted honest Track B floor is now **`2.12`**.
   - `reports/graphs/media/*`
 - Browser-preview comparison media is present for both full-frame and crop-zoom inspection.
 - Desktop and mobile local screenshots were used to verify the current layout.
+
+## frontend / interaction status
+
+- Comparison media controls now preserve playhead across mode switches and pause hidden videos.
+- The `Why 2.12 beat 2.18` section now uses semantic HTML instead of fragile SVG text columns.
+- The summary strip now includes delta vs the published baseline.
+- The scatter plot now has a focused operating-range view, smaller markers, and explicit lower-left-is-better guidance.

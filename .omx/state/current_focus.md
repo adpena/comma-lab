@@ -26,3 +26,10 @@ The highest-value next move is writeup-first: the repo now has a production-hard
 - The site now exposes the contest context, maintainer/repo identity, and a visible localized last-updated stamp near the top of the brief.
 - Repro/writeup assets are now generated into durable site artifacts: experiment manifest, code callouts, browser-preview comparison media, and a single refresh entrypoint.
 - The current frontend focus is readability and restraint: less dashboard chrome, cleaner context, video comparison with sync controls, and mobile-safe horizontal scrolling for dense tables.
+
+## frontend / player coherence pass
+
+- The comparison players now preserve the shared playhead across full-frame and crop-zoom mode switches.
+- Hidden comparison videos are now paused on mode switches instead of continuing in the background.
+- The scatter plot now has a focused operating-range view, smaller markers, and hover/focus detail instead of browser-default titles.
+- The top summary now includes delta vs the published baseline, not just delta vs the prior local floor.
