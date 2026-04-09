@@ -2080,3 +2080,32 @@ The partner's `save_best_checkpoint` function evaluates the EMA weights AFTER in
 - film-grain sweep is exhausted — not worth pursuing for rate reduction
 - the codec is already aggressive at CRF 34; grain synthesis is visual-only
 - focus rate efforts on resolution micro-tuning or CRF fractional (if any headroom)
+
+## 2026-04-09 15:30:00 -0500 - Modal deployed, PSD converging, Kaggle P100 blocked
+
+### training status
+- PSD v2: ep 91, scorer 3.836 (promoted floor: 3.547, gap: 0.289)
+- PSD long1000 v2: ep 101, scorer 3.953
+- 2 local MPS trainers alive
+- Modal A10G h=96 deployment attempted (image built, need to verify execution at modal.com/apps)
+- Kaggle: P100 CUDA incompatible with PyTorch 2.x — dead end for GPU training
+
+### infrastructure
+- Modal authed and operational
+- Self-contained cloud_h96_trainer.py (977 lines) deployed
+- bat00 RTX 2070 Super alive and reachable
+
+### council roadmap execution
+- [x] LSQ quantization implemented in tac library
+- [x] Film-grain sweep (dead end — no rate savings at CRF 34)
+- [x] Top-K checkpoint averaging tool built
+- [x] Cloud GPU: Modal deployed, Kaggle blocked by P100
+- [ ] SegNet boundary-band attack (council #2, next after PSD converges)
+- [ ] Pair-aware 6-channel input (council #4, needs data pipeline)
+- [ ] h=96 long training on cloud GPU (council #1, Modal pending)
+
+### decision
+- continue monitoring PSD v2 convergence
+- when PSD v2 < 3.55, proxy-score it
+- fix Modal training execution (check logs at dashboard)
+- keep bat00 as backup GPU resource
