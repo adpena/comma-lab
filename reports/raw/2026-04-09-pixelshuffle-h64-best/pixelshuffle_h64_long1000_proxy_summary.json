@@ -1,0 +1,10 @@
+{
+  "weights": "/private/tmp/pact-mine/experiments/postfilter_weights/postfilter_pixelshuffle_h64_long1000_best_int8.pt",
+  "archive": "/Users/adpena/Projects/pact/submissions/robust_current/archive.zip",
+  "device": "cpu",
+  "pose_distortion": 0.0728246,
+  "seg_distortion": 0.0056208,
+  "current_workflow_rate": 0.02301653,
+  "current_workflow_score": 1.99,
+  "current_workflow_archive_bytes": 864167
+}

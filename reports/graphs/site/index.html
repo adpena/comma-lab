@@ -3,7 +3,7 @@
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>comma-lab | Task-aware video compression research</title>
+  <title>comma-lab</title>
   <meta name="description" content="Scorer-backed compression experiments, evidence, and reporting for the comma video challenge." />
   <meta name="robots" content="noindex,nofollow" />
   <meta name="theme-color" content="#0f1724" />
@@ -35,7 +35,10 @@
     html { scroll-behavior: smooth; }
     body {
       margin: 0;
-      background: #0f1724;
+      background:
+        radial-gradient(circle at top left, rgba(142,209,192,0.14), transparent 32%),
+        radial-gradient(circle at top right, rgba(240,179,95,0.12), transparent 30%),
+        linear-gradient(180deg, #111b2c 0%, #0c1320 48%, #0a1018 100%);
       color: var(--text);
       font: 500 16px/1.6 ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "SF Pro Display", sans-serif;
       text-rendering: optimizeLegibility;
@@ -45,27 +48,30 @@
     .skip { position: absolute; left: 12px; top: -48px; background: #fff; color: #000; padding: 10px 14px; border-radius: 10px; z-index: 99; }
     .skip:focus { top: 12px; }
     .wrap { max-width: var(--max); margin: 0 auto; padding: 28px 24px 72px; }
-    .hero { padding: 48px 0 24px; display: grid; gap: 16px; }
+    .hero { padding: 28px 0 10px; display: grid; gap: 18px; }
     .eyebrow { color: var(--muted); font-size: 11px; letter-spacing: 0.12em; text-transform: uppercase; font-weight: 700; }
-    h1 { margin: 0; font-family: "Iowan Old Style", "Palatino Linotype", "Book Antiqua", Georgia, ui-serif, serif; font-size: clamp(28px, 3.2vw, 44px); line-height: 1.15; letter-spacing: -0.03em; font-weight: 700; max-width: 100%; }
+    h1 { margin: 0; font-family: "Iowan Old Style", "Palatino Linotype", "Book Antiqua", Georgia, ui-serif, serif; font-size: clamp(42px, 6vw, 78px); line-height: 0.94; letter-spacing: -0.05em; font-weight: 700; max-width: 11ch; }
     h2, h3 { font-family: "Iowan Old Style", "Palatino Linotype", "Book Antiqua", Georgia, ui-serif, serif; }
-    .lede { max-width: 680px; color: var(--muted); font-size: 15px; line-height: 1.65; margin: 0; }
-    .hero-grid { display:grid; grid-template-columns: 1fr; gap: 24px; }
-    .hero-stack { display:grid; gap: 16px; }
+    .lede { max-width: 760px; color: var(--soft); font-size: 17px; margin: 0; }
+    .hero-grid { display:grid; grid-template-columns: 1.1fr 0.9fr; gap: 18px; align-items: start; }
+    .hero-stack { display:grid; gap: 14px; }
     .pill-row { display:flex; gap:10px; flex-wrap:wrap; }
-    .pill { border: 1px solid var(--stroke); padding: 5px 10px; border-radius: 999px; color: var(--muted); font-size: 12px; font-weight: 500; }
+    .pill { border: 1px solid var(--stroke); background: rgba(255,255,255,0.035); padding: 8px 12px; border-radius: 999px; color: var(--soft); font-size: 12px; }
     .hero-card-grid { display:grid; gap: 12px; grid-template-columns: repeat(3, minmax(0, 1fr)); }
     .hero-card {
-      border-top: 1px solid var(--stroke);
-      padding: 16px 0 0;
+      background: linear-gradient(180deg, rgba(255,255,255,0.05), rgba(255,255,255,0.025));
+      border: 1px solid var(--stroke);
+      border-radius: 16px;
+      padding: 16px;
+      min-height: 100%;
     }
-    .hero-card h2 { margin: 0 0 6px; font-size: 14px; letter-spacing: -0.01em; color: var(--text); }
-    .hero-card p { margin: 0; color: var(--muted); font-size: 13px; line-height: 1.55; }
+    .hero-card h2 { margin: 0 0 8px; font-size: 18px; letter-spacing: -0.03em; }
+    .hero-card p { margin: 0; color: var(--soft); font-size: 14px; line-height: 1.6; }
     .hero-links { display:flex; flex-wrap:wrap; gap: 10px 14px; margin-top: 10px; font-size: 13px; color: var(--muted); }
     .hero-links a { text-decoration: none; }
     .two { display: grid; gap: 16px; }
     .two { grid-template-columns: 1.25fr 0.75fr; }
-    .panel { background: rgba(14,20,30,0.95); border: 1px solid var(--stroke); border-radius: 14px; padding: 20px; margin-top: 18px; }
+    .panel { background: linear-gradient(180deg, rgba(16,23,36,0.92), rgba(10,14,20,0.92)); border: 1px solid var(--stroke); border-radius: 14px; box-shadow: none; padding: 20px; margin-top: 18px; }
     .panel h2 { margin: 0 0 10px; font-size: 20px; letter-spacing: -0.03em; }
     .muted { color: var(--muted); }
     .subnav { display:flex; gap:14px; flex-wrap:wrap; font-size: 13px; color: var(--muted); }
@@ -222,11 +228,11 @@
     .explorer-grid { display:grid; grid-template-columns: 1fr 1fr; gap:16px; margin-top: 16px; }
     .explorer-stage {
       border:1px solid var(--stroke);
-      border-radius:8px;
+      border-radius:12px;
       background:#0b0f14;
-      padding:10px;
+      padding:12px;
     }
-    .explorer-stage h3 { margin:0 0 6px; font-size:12px; color: var(--muted); text-transform: uppercase; letter-spacing: 0.06em; }
+    .explorer-stage h3 { margin:0 0 8px; font-size: 13px; }
     .zoom-stage {
       position:relative;
       overflow:hidden;
@@ -249,11 +255,11 @@
     .zoom-grid { display:grid; grid-template-columns: 1fr 1fr; gap:16px; margin-top:16px; }
     .zoom-pane {
       border:1px solid var(--stroke);
-      border-radius:8px;
+      border-radius:12px;
       background:#0b0f14;
-      padding:10px;
+      padding:12px;
     }
-    .zoom-pane h3 { margin:0 0 6px; font-size:12px; color: var(--muted); text-transform: uppercase; letter-spacing: 0.06em; }
+    .zoom-pane h3 { margin:0 0 8px; font-size:13px; }
     .zoom-viewport {
       position:relative;
       overflow:hidden;
@@ -262,15 +268,6 @@
       aspect-ratio: 420 / 316;
     }
     .zoom-viewport video {
-      position:absolute;
-      inset:0;
-      width:100%;
-      height:100%;
-      object-fit: fill;
-      transform-origin: top left;
-      will-change: transform;
-    }
-    .zoom-viewport img.zoom-poster {
       position:absolute;
       inset:0;
       width:100%;
@@ -315,8 +312,8 @@
       <div class="eyebrow">comma-lab</div>
       <div class="hero-grid">
         <div class="hero-stack">
-          <h1 id="site-title">Task-aware codec research for the <a href="https://comma.ai/leaderboard" style="color:var(--accent);text-decoration-thickness:2px">comma.ai lossy video compression challenge</a>.</h1>
-          <p class="lede">Compress a driving video into an <code>archive.zip</code> that inflates back to frames. Score&nbsp;=&nbsp;<code>100&times;seg + &radic;(10&times;pose) + 25&times;rate</code>, where rate&nbsp;=&nbsp;archive_bytes&nbsp;/&nbsp;uncompressed_bytes. Lower wins. The scorer uses frozen <a href="https://github.com/commaai/comma_video_compression_challenge">PoseNet&nbsp;+&nbsp;SegNet</a> perception networks&nbsp;&mdash; your compressed video must preserve what the self-driving system sees, not just what humans see.</p>
+          <h1 id="site-title">A lab notebook for compression that machines can trust and people can follow.</h1>
+          <p class="lede">This site tracks scorer-backed experiments for the comma.ai video compression challenge. It is designed to work at two levels: a plain-English executive layer for judges and newcomers, and a deeper evidence trail for researchers who want the exact runs, artifacts, and failure cases.</p>
           <div class="pill-row" aria-label="Current highlights">
             <span class="pill">Current floor: 1.73</span>
             <span class="pill">Rule-faithful: 1.795</span>
@@ -390,7 +387,7 @@
         <div class="summary-stat"><div class="summary-label">Delta vs published baseline</div><div class="summary-value">-2.66</div><div class="summary-meta">4.39 → 1.73</div></div>
         <div class="summary-stat"><div class="summary-label">Delta vs prior floor</div><div class="summary-value">-0.11</div><div class="summary-meta">-1 bytes</div></div>
       </div>
-      <p class="footnote">Track A (<code>exact_current</code>) remains separate: score 0.00 at 167 bytes via a known packaging exploit &mdash; documented but not submitted. Track B (<code>robust_current</code>) is our honest submission track with 46 measured runs, 18 promotions, and 18 explicit rejections.</p>
+      <p class="footnote">Track A remains separate: `current_workflow` 0.00 at 167 bytes. The robust run ledger currently contains 46 measured runs, 18 promotions, and 18 explicit rejections.</p>
       <p class="config-line" aria-label="Current promoted method">robust_current · libsvtav1 · 524x394 · film-grain=22 · lanczos/long1000-qat-ema-postfilter-h64 · long1000 QAT+EMA learned int8 post-filter h64</p>
     </section>
 
@@ -471,7 +468,7 @@
           <p class="explorer-meta">Internal media explorer last refreshed Apr 9, 2026, 10:52 AM CDT. Public entries below are reference metadata only because we do not have their artifacts or synced media. Official reference: <a href="https://comma.ai/leaderboard">comma.ai leaderboard</a> and the public PR stream in the official challenge repo.</p>
         </div>
         <div class="leaderboard-band" aria-label="Unofficial community leaderboard snapshot">
-          <div class="leaderboard-label">Unofficial community leaderboard snapshot (Apr 9, 2026)</div>
+          <div class="leaderboard-label">Unofficial community leaderboard snapshot</div>
           <span class="leader-pill"><strong>Public #1</strong><span>1.89</span><span>neural_inflate</span></span><span class="leader-pill"><strong>Public #2</strong><span>1.94</span><span>roi_v2</span></span><span class="leader-pill"><strong>Public #3</strong><span>1.95</span><span>av1_roi_lanczos_unsharp</span></span>
         </div>
       </div>
@@ -480,7 +477,7 @@
           <button type="button" data-run-button data-run-id="floor_173" data-run-label="1.73 current floor" data-run-note="long1000 h64" data-run-score="1.73" class="is-active"><span>1.73 current floor</span><small>long1000 h64</small></button><button type="button" data-run-button data-run-id="floor_184" data-run-label="1.84 prior floor" data-run-note="ensemble h32 + MC 75/25" data-run-score="1.84" class=""><span>1.84 prior floor</span><small>ensemble h32 + MC 75/25</small></button><button type="button" data-run-button data-run-id="floor_185" data-run-label="1.85 older floor" data-run-note="long1000 h32" data-run-score="1.85" class=""><span>1.85 older floor</span><small>long1000 h32</small></button>
         </div>
         <div class="compare-controls" aria-label="Explorer controls">
-          <button type="button" data-compare-toggle>Play</button>
+          <button type="button" data-compare-toggle>play / pause</button>
           <input type="range" min="0" max="100" value="0" step="0.1" data-compare-scrub aria-label="Comparison scrubber" />
           <input type="range" min="16" max="36" value="22" step="1" data-zoom-size aria-label="Zoom window size" />
         </div>
@@ -506,12 +503,12 @@
         <figure class="zoom-pane">
           <h3>Original zoom</h3>
           <div class="zoom-viewport" data-zoom-viewport>
-            <video data-compare-video data-run-id="original" preload="auto" muted playsinline poster="./media/original_poster.jpg" src="./media/original_preview.mp4">Video not supported</video>
+            <video data-compare-video data-run-id="original" preload="metadata" muted playsinline poster="./media/original_poster.jpg" src="./media/original_preview.mp4"></video>
           </div>
         </figure>
         <figure class="zoom-pane">
           <h3 data-selected-run-title>1.73 current floor zoom</h3>
-          <div class="run-panel is-active" data-run-zoom-panel="floor_173"><div class="zoom-viewport" data-zoom-viewport><video data-compare-video data-run-id="floor_173" preload="auto" muted playsinline poster="./media/inflated_poster.jpg" src="./media/inflated_preview.mp4">Video not supported</video></div></div><div class="run-panel " data-run-zoom-panel="floor_184"><div class="zoom-viewport" data-zoom-viewport><video data-compare-video data-run-id="floor_184" preload="auto" muted playsinline poster="./media/inflated_184_poster.jpg" src="./media/inflated_184_preview.mp4">Video not supported</video></div></div><div class="run-panel " data-run-zoom-panel="floor_185"><div class="zoom-viewport" data-zoom-viewport><video data-compare-video data-run-id="floor_185" preload="auto" muted playsinline poster="./media/inflated_185_poster.jpg" src="./media/inflated_185_preview.mp4">Video not supported</video></div></div>
+          <div class="run-panel is-active" data-run-zoom-panel="floor_173"><div class="zoom-viewport" data-zoom-viewport><video data-compare-video data-run-id="floor_173" preload="metadata" muted playsinline poster="./media/inflated_poster.jpg" src="./media/inflated_preview.mp4"></video></div></div><div class="run-panel " data-run-zoom-panel="floor_184"><div class="zoom-viewport" data-zoom-viewport><video data-compare-video data-run-id="floor_184" preload="metadata" muted playsinline poster="./media/inflated_184_poster.jpg" src="./media/inflated_184_preview.mp4"></video></div></div><div class="run-panel " data-run-zoom-panel="floor_185"><div class="zoom-viewport" data-zoom-viewport><video data-compare-video data-run-id="floor_185" preload="metadata" muted playsinline poster="./media/inflated_185_poster.jpg" src="./media/inflated_185_preview.mp4"></video></div></div>
         </figure>
       </div>
       <p class="footnote" data-selected-run-metrics>Selected run: 1.73 current floor · score 1.73 · long1000 h64.</p>
@@ -847,18 +844,6 @@
   activateRun(activeRun);
   updateZoomGeometry();
   updateToggleLabel();
-
-  // Ensure zoom geometry updates after videos load their first frame
-  document.querySelectorAll('[data-zoom-viewport] video').forEach(video => {
-    video.addEventListener('loadeddata', updateZoomGeometry);
-    video.addEventListener('canplay', updateZoomGeometry);
-    // Force a currentTime seek to render the first frame for poster
-    video.addEventListener('loadedmetadata', () => {
-      if (video.paused && video.currentTime === 0) {
-        video.currentTime = 0.01;
-      }
-    });
-  });
 })();
 </script>
 </body>
