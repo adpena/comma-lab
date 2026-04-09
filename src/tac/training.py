@@ -57,6 +57,9 @@ class TrainConfig:
     boundary_weight: float = 1.0  # >1.0 enables boundary weighting
     use_ste_segnet: bool = False
 
+    # Resumption
+    resume_from: str | None = None  # path to a training_state.pt checkpoint
+
     # Output
     output_dir: str = "experiments/postfilter_weights"
     tag: str = "untitled"
@@ -104,6 +107,7 @@ class Trainer:
         self.best_scorer = float("inf")
         self.best_epoch = -1
         self._patched_scorers = False
+        self._current_epoch = 0
 
         self.optimizer = torch.optim.AdamW(
             model.parameters(), lr=config.lr, weight_decay=1e-4
@@ -117,6 +121,43 @@ class Trainer:
             self.scheduler = torch.optim.lr_scheduler.CosineAnnealingWarmRestarts(
                 self.optimizer, T_0=config.restart_t0, T_mult=config.restart_tmult, eta_min=1e-6
             )
+
+        # Resume from checkpoint if specified (must come after optimizer/scheduler init)
+        if config.resume_from and Path(config.resume_from).exists():
+            self.load_training_state(config.resume_from)
+
+    def save_training_state(self, path: str | Path | None = None):
+        """Save full training state for resumption.
+
+        Saves model weights, EMA shadow, optimizer state, scheduler state,
+        epoch counter, and best scorer. The watchdog or user can restart
+        from this checkpoint without losing training progress.
+        """
+        if path is None:
+            path = Path(self.config.output_dir) / f"training_state_{self.config.tag}.pt"
+        path = Path(path)
+        path.parent.mkdir(parents=True, exist_ok=True)
+        torch.save({
+            "model": self.model.state_dict(),
+            "ema_shadow": self.ema.shadow,
+            "optimizer": self.optimizer.state_dict(),
+            "scheduler": self.scheduler.state_dict(),
+            "epoch": self._current_epoch,
+            "best_scorer": self.best_scorer,
+            "best_epoch": self.best_epoch,
+        }, path)
+
+    def load_training_state(self, path: str | Path):
+        """Resume training from a saved state."""
+        state = torch.load(str(path), map_location=self.device, weights_only=False)
+        self.model.load_state_dict(state["model"])
+        self.ema.shadow = state["ema_shadow"]
+        self.optimizer.load_state_dict(state["optimizer"])
+        self.scheduler.load_state_dict(state["scheduler"])
+        self._current_epoch = state.get("epoch", 0)
+        self.best_scorer = state.get("best_scorer", float("inf"))
+        self.best_epoch = state.get("best_epoch", -1)
+        print(f"[trainer] Resumed from epoch {self._current_epoch}, best {self.best_scorer:.4f}")
 
     @staticmethod
     def _patch_scorers_for_training(posenet, segnet):
@@ -314,8 +355,11 @@ class Trainer:
               f"h={cfg.hidden}, alpha={cfg.alpha}, device={self.device}")
         if use_boundary:
             print(f"[trainer] SegNet STE + boundary weighting ({cfg.boundary_weight}x)")
+        if self._current_epoch > 0:
+            print(f"[trainer] Resuming from epoch {self._current_epoch}")
 
-        for epoch in range(cfg.epochs):
+        for epoch in range(self._current_epoch, cfg.epochs):
+            self._current_epoch = epoch
             self.model.train()
             total_loss, total_pose, total_seg = 0.0, 0.0, 0.0
 
@@ -387,6 +431,11 @@ class Trainer:
             if callback:
                 callback(epoch, avg_loss, avg_pose, avg_seg, scorer_val)
 
+            # Save training state every 50 epochs for crash recovery
+            if epoch % 50 == 0 and epoch > 0:
+                self.save_training_state()
+
+        self.save_training_state()
         print(f"[trainer] Complete. Best: {self.best_scorer:.4f} at epoch {self.best_epoch}")
         return self.best_scorer
 
@@ -425,8 +474,11 @@ class Trainer:
         print(f"[trainer-lazy] {cfg.epochs} epochs, {train_size}/{n_pairs} pairs/ep, "
               f"h={cfg.hidden}, alpha={cfg.alpha}, device={self.device}")
         print(f"[trainer-lazy] Frames on CPU, pairs built on-the-fly (MPS-safe)")
+        if self._current_epoch > 0:
+            print(f"[trainer-lazy] Resuming from epoch {self._current_epoch}")
 
-        for epoch in range(cfg.epochs):
+        for epoch in range(self._current_epoch, cfg.epochs):
+            self._current_epoch = epoch
             self.model.train()
             total_loss, total_pose, total_seg = 0.0, 0.0, 0.0
 
@@ -497,6 +549,12 @@ class Trainer:
             print(f"[ep {epoch:4d}] loss={avg_loss:.4f} pose={avg_pose:.6f} "
                   f"seg={avg_seg:.6f} scorer={scorer_val:.4f} best={self.best_scorer:.4f} lr={lr:.6f}")
 
+            # Save training state every 50 epochs for crash recovery
+            if epoch % 50 == 0 and epoch > 0:
+                self.save_training_state()
+
+        # Final save
+        self.save_training_state()
         print(f"[trainer-lazy] Complete. Best: {self.best_scorer:.4f} at epoch {self.best_epoch}")
         return self.best_scorer
 

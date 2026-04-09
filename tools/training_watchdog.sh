@@ -16,7 +16,14 @@ LOG="/tmp/watchdog.log"
 CHECK_INTERVAL=60
 
 # Primary experiment — runs first, always
-PRIMARY_CMD="$VENV -u experiments/train_postfilter_qat_ema.py --hidden 64 --epochs 2500 --alpha 20 --tag standard_h64_long2500"
+# Check for resumable training state
+RESUME_PATH="experiments/postfilter_weights/training_state_standard_h64_long2500.pt"
+if [ -f "$RESUME_PATH" ]; then
+    PRIMARY_CMD="$VENV -u experiments/train_postfilter_qat_ema.py --hidden 64 --epochs 2500 --alpha 20 --tag standard_h64_long2500"
+    # TODO: wire --resume-from when the partner's trainer supports it
+else
+    PRIMARY_CMD="$VENV -u experiments/train_postfilter_qat_ema.py --hidden 64 --epochs 2500 --alpha 20 --tag standard_h64_long2500"
+fi
 PRIMARY_LOG="/tmp/standard_h64.log"
 PRIMARY_TAG="standard_h64"
 
