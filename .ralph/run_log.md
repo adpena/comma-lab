@@ -2322,3 +2322,25 @@ The partner's `save_best_checkpoint` function evaluates the EMA weights AFTER in
 
 ### training
 - standard h=64 long-2500: scorer below 4.0, converging steadily
+
+## 2026-04-09 18:50:00 -0500 - tac v0.5.0 shipped, fleet stabilized
+
+### tac library
+- v0.5.0 feature-complete: 7 modules, 12 architectures, 3 weight averaging
+- 10 review rounds + council approval + ship review = CERTIFIED
+- All 13 experiment scripts' patterns canonicalized
+- Critical additions: load_scorers, lazy pair loading, gradient accum, resume
+
+### training status
+- h=48 α=30: ep 160, scorer 4.004 (partner's run, solid)
+- standard h=64: restarted (ep 2), watchdog monitoring
+- segnet boundary h=32: ep 17, scorer 4.36
+- all prior h=64 runs keep dying on MPS — the h=64 that reached 3.799 lost
+
+### leaderboard discovery
+- neural_inflate confirmed 1.89 from PR #49 eval bot (PR closed, iterating)
+- we haven't submitted any PR yet — our 1.727 would be #1
+
+### council strategic review
+- dispatched full council (Tao, Karpathy, LeCun, Jensen, Rubin, Collier)
+- question: optimal 24-day strategy, submission timing, writeup approach
