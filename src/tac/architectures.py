@@ -203,6 +203,8 @@ class FiLMPostFilter(nn.Module):
         self.conv3 = nn.Conv2d(hidden, 3, kernel, padding=pad, bias=True)
         self.film = nn.Linear(3, hidden * 2, bias=True)
         self.act = nn.ReLU(inplace=True)
+        nn.init.zeros_(self.conv3.weight)
+        nn.init.zeros_(self.conv3.bias)
 
     def _descriptor(self, x: torch.Tensor) -> torch.Tensor:
         y = x[:, 0:1] * 0.299 + x[:, 1:2] * 0.587 + x[:, 2:3] * 0.114
