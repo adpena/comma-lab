@@ -44,7 +44,7 @@ from train_postfilter_saliency import (
     apply_filter_to_pair, init_ema_state, update_ema_state,
     compute_pair_loss,
 )
-from train_postfilter_qat_ema import save_best_checkpoint, quantize_state_dict_like_saved_int8
+from train_postfilter_qat_ema import quantize_state_dict_like_saved_int8
 
 
 def compute_boundary_masks(gt_pairs, segnet, device="cpu"):
@@ -271,13 +271,34 @@ def main():
 
         if scorer_val < best_scorer:
             best_scorer = scorer_val
-            save_best_checkpoint(
-                model, ema_state, epoch, scorer_val, args,
-                tag=args.tag,
-                meta={"variant": "standard", "hidden": args.hidden,
-                      "kernel": args.kernel, "alpha": args.alpha,
-                      "boundary_weight": args.boundary_weight},
-            )
+            import json
+            out_dir = PROJECT / "experiments" / "postfilter_weights"
+            out_dir.mkdir(parents=True, exist_ok=True)
+            fp32_path = out_dir / f"postfilter_{args.tag}_best_fp32.pt"
+            int8_path = out_dir / f"postfilter_{args.tag}_best_int8.pt"
+            meta_path = out_dir / f"postfilter_{args.tag}_best_meta.json"
+            torch.save(ema_state, fp32_path)
+            q_state = quantize_state_dict_like_saved_int8(ema_state)
+            # Save int8
+            int8_data = {}
+            for name, param in q_state.items():
+                p = param.detach().cpu().float()
+                scale = p.abs().max() / 127.0
+                if scale.item() == 0: scale = torch.tensor(1.0)
+                int8_data[name + ".q"] = (p / scale).round().clamp(-128, 127).to(torch.int8)
+                int8_data[name + ".s"] = scale
+            int8_data["__meta__"] = {"variant": "standard", "hidden": args.hidden,
+                                     "kernel": args.kernel, "alpha": args.alpha,
+                                     "boundary_weight": args.boundary_weight}
+            torch.save(int8_data, int8_path)
+            int8_size = int8_path.stat().st_size
+            meta_path.write_text(json.dumps({
+                "epoch": epoch, "scorer": scorer_val,
+                "fp32_path": str(fp32_path), "int8_path": str(int8_path),
+                "int8_size": int8_size,
+                "meta": int8_data["__meta__"],
+            }, indent=2))
+            print(f"  ** NEW BEST: ep {epoch}, scorer {scorer_val:.4f}, int8 {int8_size} bytes **")
 
         print(f"[ep {epoch:4d}] loss={avg_loss:.4f} pose={avg_pose:.6f} seg={avg_seg:.6f} "
               f"scorer={scorer_val:.4f} best={best_scorer:.4f} lr={optimizer.param_groups[0]['lr']:.6f}")
