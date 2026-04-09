@@ -34,6 +34,7 @@ from __future__ import annotations
 
 import argparse
 import gc
+import json
 import math
 import os
 import sys
@@ -188,6 +189,56 @@ def evaluate_ema_model(
     avg_seg = total_seg / len(eval_indices)
     score = 100.0 * avg_seg + math.sqrt(10.0 * avg_pose)
     return score, avg_pose, avg_seg
+
+
+def save_final_artifacts(
+    *,
+    model: nn.Module,
+    output_dir: Path,
+    tag: str,
+    meta: dict[str, object],
+    baseline_loss: float,
+    final_loss: float,
+    final_pose: float,
+    final_seg: float,
+    best_eval_payload: dict[str, object] | None = None,
+) -> dict[str, object]:
+    """Persist final fp32/int8 artifacts plus durable metadata.
+
+    The SegNet lane proved it could transfer, but older runs were hard to rank
+    because they only wrote the final `fp32.pt`/`int8.pt` pair. This helper
+    keeps the final artifacts and always emits a final metadata record. If the
+    training loop already captured a best-checkpoint payload, it also backstops
+    the adjacent `*_best_meta.json` so downstream triage can rely on it.
+    """
+    output_dir.mkdir(parents=True, exist_ok=True)
+    fp32_path = output_dir / f"postfilter_{tag}_fp32.pt"
+    int8_path = output_dir / f"postfilter_{tag}_int8.pt"
+    final_meta_path = output_dir / f"postfilter_{tag}_final_meta.json"
+    best_meta_path = output_dir / f"postfilter_{tag}_best_meta.json"
+
+    torch.save(model.state_dict(), fp32_path)
+    int8_size = save_model_int8(model, int8_path, meta=meta)
+
+    if best_eval_payload is not None and not best_meta_path.exists():
+        best_meta_path.write_text(json.dumps(best_eval_payload, indent=2))
+
+    payload = {
+        "tag": tag,
+        "fp32_path": str(fp32_path),
+        "int8_path": str(int8_path),
+        "int8_size": int8_size,
+        "baseline_loss": baseline_loss,
+        "final_loss": final_loss,
+        "final_pose": final_pose,
+        "final_seg": final_seg,
+        "meta": meta,
+        "best_eval": best_eval_payload,
+        "best_meta_path": str(best_meta_path) if best_eval_payload is not None else None,
+        "final_meta_path": str(final_meta_path),
+    }
+    final_meta_path.write_text(json.dumps(payload, indent=2))
+    return payload
 
 
 # ── Main ──────────────────────────────────────────────────────────────────
@@ -388,13 +439,22 @@ def main(argv: list[str] | None = None) -> dict:
             f"int8={best_eval_payload['int8_size']} bytes"
         )
 
-    OUTPUT_DIR.mkdir(parents=True, exist_ok=True)
-    fp32_path = OUTPUT_DIR / f"postfilter_{tag}_fp32.pt"
-    int8_path = OUTPUT_DIR / f"postfilter_{tag}_int8.pt"
-    torch.save(model.state_dict(), fp32_path)
-    int8_size = save_model_int8(model, int8_path, meta=meta)
-    print(f"\nSaved fp32: {fp32_path}")
-    print(f"Saved int8: {int8_path} ({int8_size} bytes)")
+    final_payload = save_final_artifacts(
+        model=model,
+        output_dir=OUTPUT_DIR,
+        tag=tag,
+        meta=meta,
+        baseline_loss=baseline_loss,
+        final_loss=final_loss,
+        final_pose=final_pose,
+        final_seg=final_seg,
+        best_eval_payload=best_eval_payload,
+    )
+    print(f"\nSaved fp32: {final_payload['fp32_path']}")
+    print(f"Saved int8: {final_payload['int8_path']} ({final_payload['int8_size']} bytes)")
+    print(f"Saved final meta: {final_payload['final_meta_path']}")
+    if best_eval_payload is not None:
+        print(f"Ensured best meta: {final_payload['best_meta_path']}")
     return {"tag": tag, "baseline_loss": baseline_loss, "final_loss": final_loss}
 
 

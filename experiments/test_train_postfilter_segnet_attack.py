@@ -1,7 +1,9 @@
 from __future__ import annotations
 
 import importlib.util
+import json
 import sys
+import tempfile
 import unittest
 from pathlib import Path
 
@@ -25,6 +27,7 @@ class TrainPostfilterSegnetAttackTests(unittest.TestCase):
     def test_module_exposes_best_checkpoint_helper(self) -> None:
         mod = load_module()
         self.assertTrue(callable(mod.save_best_checkpoint))
+        self.assertTrue(callable(mod.save_final_artifacts))
 
     def test_evaluate_ema_model_runs_on_small_dummy_pairs(self) -> None:
         mod = load_module()
@@ -72,6 +75,47 @@ class TrainPostfilterSegnetAttackTests(unittest.TestCase):
         self.assertGreaterEqual(score, 0.0)
         self.assertGreaterEqual(pose, 0.0)
         self.assertGreaterEqual(seg, 0.0)
+
+    def test_save_final_artifacts_writes_final_and_best_metadata(self) -> None:
+        mod = load_module()
+        model = mod.QATPostFilter(hidden=4, kernel=3)
+        meta = {"variant": "saliency_weighted", "hidden": 4, "kernel": 3, "alpha": 20.0}
+
+        with tempfile.TemporaryDirectory() as tmpdir:
+            output_dir = Path(tmpdir)
+            best_payload = {
+                "epoch": 12,
+                "scorer": 1.84,
+                "fp32_path": str(output_dir / "postfilter_unit_best_fp32.pt"),
+                "int8_path": str(output_dir / "postfilter_unit_best_int8.pt"),
+                "int8_size": 12345,
+                "meta": meta,
+            }
+            result = mod.save_final_artifacts(
+                model=model,
+                output_dir=output_dir,
+                tag="unit",
+                meta=meta,
+                baseline_loss=1.4248,
+                final_loss=1.2233,
+                final_pose=0.047042,
+                final_seg=0.005374,
+                best_eval_payload=best_payload,
+            )
+
+            self.assertTrue((output_dir / "postfilter_unit_fp32.pt").exists())
+            self.assertTrue((output_dir / "postfilter_unit_int8.pt").exists())
+            self.assertTrue((output_dir / "postfilter_unit_final_meta.json").exists())
+            self.assertTrue((output_dir / "postfilter_unit_best_meta.json").exists())
+
+            final_meta = json.loads((output_dir / "postfilter_unit_final_meta.json").read_text())
+            best_meta = json.loads((output_dir / "postfilter_unit_best_meta.json").read_text())
+
+        self.assertEqual(result["final_meta_path"], str(output_dir / "postfilter_unit_final_meta.json"))
+        self.assertEqual(final_meta["final_loss"], 1.2233)
+        self.assertEqual(final_meta["best_eval"]["epoch"], 12)
+        self.assertEqual(best_meta["epoch"], 12)
+        self.assertEqual(best_meta["scorer"], 1.84)
 
 
 if __name__ == "__main__":
