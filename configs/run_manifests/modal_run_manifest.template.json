@@ -1,0 +1,24 @@
+{
+  "slug": null,
+  "host": "modal",
+  "platform": "modal",
+  "status": "draft",
+  "remote_root": "/root/pact",
+  "remote_log": "/root/pact/experiments/postfilter_weights/train_<slug>.log",
+  "remote_command": null,
+  "manifest_path": null,
+  "status_path": "/root/pact/.omx/status/<slug>.json",
+  "best_checkpoint": null,
+  "latest_printed_checkpoint": null,
+  "platform_config": {
+    "app_name": null,
+    "function_name": null,
+    "image_ref": null,
+    "mounts": [],
+    "secrets": [],
+    "timeout_minutes": null,
+    "gpu": null
+  },
+  "notes": null,
+  "written_at": null
+}

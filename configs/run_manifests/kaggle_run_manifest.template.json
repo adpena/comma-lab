@@ -1,0 +1,22 @@
+{
+  "slug": null,
+  "host": "kaggle",
+  "platform": "kaggle",
+  "status": "draft",
+  "remote_root": "/kaggle/working/pact",
+  "remote_log": "/kaggle/working/pact/experiments/postfilter_weights/train_<slug>.log",
+  "remote_command": null,
+  "manifest_path": null,
+  "status_path": "/kaggle/working/pact/.omx/status/<slug>.json",
+  "best_checkpoint": null,
+  "latest_printed_checkpoint": null,
+  "platform_config": {
+    "workspace_root": "/kaggle/working/pact",
+    "input_root": "/kaggle/input",
+    "notebook_name": null,
+    "kernel_name": null,
+    "session_id": null
+  },
+  "notes": null,
+  "written_at": null
+}

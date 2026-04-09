@@ -1,0 +1,111 @@
+{
+  "version": 1,
+  "platforms": [
+    {
+      "name": "local",
+      "kind": "local",
+      "result_devices": [
+        "cpu",
+        "mps"
+      ],
+      "manifest_globs": [
+        ".omx/logs/remote_jobs/local-*.json",
+        ".omx/logs/remote_jobs/v2-*.json"
+      ],
+      "budget": {
+        "max_runs": 24,
+        "max_active_runs": 4,
+        "max_archive_bytes": 12000000
+      }
+    },
+    {
+      "name": "bat00",
+      "kind": "remote",
+      "manifest_globs": [
+        ".omx/logs/remote_jobs/bat00-*.json",
+        "remote-runs/bat00/*/manifest.json"
+      ],
+      "status_globs": [
+        ".omx/status/bat00-*.json",
+        "remote-runs/bat00/*/status.json"
+      ],
+      "ledger_paths": [
+        "remote-runs/bat00/_ledger.jsonl"
+      ],
+      "budget": {
+        "max_active_runs": 2,
+        "max_failed_runs": 2,
+        "max_archive_bytes": 6000000
+      }
+    },
+    {
+      "name": "kaggle",
+      "kind": "remote",
+      "result_devices": [
+        "kaggle"
+      ],
+      "manifest_globs": [
+        ".omx/logs/remote_jobs/kaggle-*.json",
+        "remote-runs/kaggle/*/manifest.json"
+      ],
+      "status_globs": [
+        ".omx/status/kaggle-*.json",
+        "remote-runs/kaggle/*/status.json"
+      ],
+      "ledger_paths": [
+        "remote-runs/kaggle/_ledger.jsonl"
+      ],
+      "budget": {
+        "max_active_runs": 2,
+        "max_failed_runs": 3,
+        "max_archive_bytes": 6000000
+      }
+    },
+    {
+      "name": "modal",
+      "kind": "remote",
+      "result_devices": [
+        "modal"
+      ],
+      "manifest_globs": [
+        ".omx/logs/remote_jobs/modal-*.json",
+        "remote-runs/modal/*/manifest.json"
+      ],
+      "status_globs": [
+        ".omx/status/modal-*.json",
+        "remote-runs/modal/*/status.json"
+      ],
+      "ledger_paths": [
+        "remote-runs/modal/_ledger.jsonl"
+      ],
+      "budget": {
+        "max_active_runs": 2,
+        "max_failed_runs": 3,
+        "max_archive_bytes": 6000000
+      }
+    },
+    {
+      "name": "coiled",
+      "kind": "remote",
+      "result_devices": [
+        "coiled"
+      ],
+      "manifest_globs": [
+        ".omx/logs/remote_jobs/coiled-*.json",
+        "remote-runs/coiled/*/manifest.json"
+      ],
+      "status_globs": [
+        ".omx/status/coiled-*.json",
+        "remote-runs/coiled/*/status.json"
+      ],
+      "ledger_paths": [
+        "remote-runs/coiled/_ledger.jsonl"
+      ],
+      "budget": {
+        "max_active_runs": 8,
+        "max_failed_runs": 4,
+        "max_archive_bytes": 16000000
+      }
+    }
+  ]
+}

@@ -1,0 +1,18 @@
+{
+  "slug": null,
+  "host": null,
+  "platform": null,
+  "status": "draft",
+  "phase": null,
+  "manifest_path": null,
+  "status_path": null,
+  "last_poll_at": null,
+  "heartbeat_at": null,
+  "remote_pid": null,
+  "session_id": null,
+  "best_checkpoint": null,
+  "latest_printed_checkpoint": null,
+  "result": null,
+  "notes": null,
+  "written_at": null
+}

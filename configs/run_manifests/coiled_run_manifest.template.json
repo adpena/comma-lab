@@ -1,0 +1,22 @@
+{
+  "slug": null,
+  "host": "coiled",
+  "platform": "coiled",
+  "status": "draft",
+  "remote_root": "/workspace/pact",
+  "remote_log": "/workspace/pact/experiments/postfilter_weights/train_<slug>.log",
+  "remote_command": null,
+  "manifest_path": null,
+  "status_path": "/workspace/pact/.omx/status/<slug>.json",
+  "best_checkpoint": null,
+  "latest_printed_checkpoint": null,
+  "platform_config": {
+    "cluster_name": null,
+    "environment_name": null,
+    "worker_class": null,
+    "jobs": null,
+    "scheduler": null
+  },
+  "notes": null,
+  "written_at": null
+}
