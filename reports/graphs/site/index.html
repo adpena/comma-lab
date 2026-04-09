@@ -302,83 +302,29 @@
     .footer-meta a { text-decoration: none; }
     @media (max-width: 980px) { .hero-grid, .hero-card-grid, .concept-grid, .two { grid-template-columns: 1fr; } .context-strip, .summary-grid { grid-template-columns: 1fr; } .context-item + .context-item, .summary-stat + .summary-stat { border-left: 0; border-top: 1px solid var(--stroke); } }
     @media (max-width: 720px) { .hero-grid, .hero-card-grid, .concept-grid, .two, .context-strip, .summary-grid, .compare-grid, .delta-head, .explorer-grid, .zoom-grid { grid-template-columns: 1fr; } .context-item + .context-item, .summary-stat + .summary-stat { border-left: 0; border-top: 1px solid var(--stroke); } .wrap { padding-inline: 16px; } h1 { font-size: clamp(36px, 15vw, 64px); max-width: none; } .panel { padding: 16px; } .panel h2 { font-size: 18px; } .walkthrough li { grid-template-columns: 24px 1fr; gap: 12px; padding: 12px 0; } .compare-controls input[type="range"] { width: 100%; } .delta-arrow { display:none; } .refs-group + .refs-group { border-left: 0; border-top: 1px solid var(--stroke); padding-left: 0; padding-top: 16px; } }
-    /* Sticky nav */
-    .sticky-nav {
-      position: sticky; top: 0; z-index: 50;
-      background: rgba(15,23,36,0.92); backdrop-filter: blur(16px); -webkit-backdrop-filter: blur(16px);
-      border-bottom: 1px solid var(--stroke);
-      margin: 0; transition: box-shadow 200ms ease;
-    }
-    .sticky-nav.scrolled { box-shadow: 0 8px 32px rgba(0,0,0,0.3); }
-    .sticky-nav-inner {
-      max-width: var(--max); margin: 0 auto;
-      padding: 10px 24px;
-      display: flex; align-items: center; gap: 6px;
-      overflow-x: auto; scrollbar-width: none; -ms-overflow-style: none;
-    }
-    .sticky-nav-inner::-webkit-scrollbar { display: none; }
-    .sticky-nav .nav-brand {
-      color: var(--accent); font: 700 14px/1 "Iowan Old Style", Georgia, serif;
-      text-decoration: none; white-space: nowrap; margin-right: 12px;
-      letter-spacing: -0.03em;
-    }
-    .sticky-nav a:not(.nav-brand) {
-      color: var(--muted); text-decoration: none; font-size: 12px; font-weight: 600;
-      padding: 5px 11px; border-radius: 999px; white-space: nowrap;
-      transition: all 150ms ease; border: 1px solid transparent;
-    }
-    .sticky-nav a:not(.nav-brand):hover {
-      color: var(--soft); background: rgba(255,255,255,0.05);
-    }
-    .sticky-nav a.is-active {
-      color: var(--text); background: rgba(142,209,192,0.10);
-      border-color: rgba(142,209,192,0.32);
-    }
-    .sticky-nav .nav-sep { width: 1px; height: 16px; background: var(--stroke); margin: 0 4px; flex-shrink: 0; }
-    .sticky-nav .nav-ext { color: var(--accent); font-size: 11px; opacity: 0.7; }
-    .sticky-nav .nav-ext:hover { opacity: 1; }
     @media (prefers-reduced-motion: reduce) { html { scroll-behavior: auto; } * { animation: none !important; transition: none !important; } }
   </style>
 </head>
 <body>
 <a class="skip" href="#content">Skip to content</a>
-
-<nav class="sticky-nav" id="stickyNav" aria-label="Section navigation">
-  <div class="sticky-nav-inner">
-    <a href="#" class="nav-brand">comma-lab</a>
-    <a href="#concepts" data-nav>Score</a>
-    <a href="#scatter-title" data-nav>Scatter</a>
-    <a href="#lineage-title" data-nav>Trajectory</a>
-    <a href="#compare-title" data-nav>Explorer</a>
-    <a href="#lab-timeline" data-nav>Tree</a>
-    <a href="#doc-evolution" data-nav>Docs</a>
-    <span class="nav-sep"></span>
-    <a href="https://github.com/commaai/comma_video_compression_challenge" target="_blank" rel="noopener" class="nav-ext">Challenge repo</a>
-    <a href="https://comma.ai/leaderboard" target="_blank" rel="noopener" class="nav-ext">Leaderboard</a>
-  </div>
-</nav>
-
 <div class="wrap">
     <header class="hero" aria-labelledby="site-title">
-      <div class="eyebrow">comma-lab · <a href="https://github.com/commaai/comma_video_compression_challenge" style="color:var(--muted);text-decoration:none">lossy video compression challenge</a></div>
+      <div class="eyebrow">comma-lab</div>
       <div class="hero-grid">
         <div class="hero-stack">
-          <h1 id="site-title">Task-aware codec research for the <a href="https://comma.ai/leaderboard" style="color:var(--accent);text-decoration-thickness:2px">comma.ai lossy video compression challenge</a>.</h1>
-          <p class="lede">Compress a driving video into an <code>archive.zip</code> that inflates back to frames. Score = <code>100&times;seg + &radic;(10&times;pose) + 25&times;rate</code>. Lower wins. The scorer uses frozen <a href="https://github.com/commaai/comma_video_compression_challenge">PoseNet + SegNet</a> perception networks &mdash; your compressed video must preserve what the self-driving system sees, not just what humans see. This site documents every experiment, score, and failure on the path from 4.06 to 1.73.</p>
+          <h1 id="site-title">A lab notebook for compression that machines can trust and people can follow.</h1>
+          <p class="lede">This site tracks scorer-backed experiments for the comma.ai video compression challenge. It is designed to work at two levels: a plain-English executive layer for judges and newcomers, and a deeper evidence trail for researchers who want the exact runs, artifacts, and failure cases.</p>
           <div class="pill-row" aria-label="Current highlights">
             <span class="pill">Current floor: 1.73</span>
             <span class="pill">Rule-faithful: 1.795</span>
             <span class="pill">46 measured runs</span>
           </div>
           <nav class="subnav" aria-label="Primary resources">
-            <a href="#concepts">Score formula</a>
-            <a href="#scatter-title">Score vs bytes</a>
-            <a href="#lineage-title">Trajectory</a>
-            <a href="#compare-title">Video explorer</a>
-            <a href="#lab-timeline">Experiment tree</a>
-            <a href="#doc-evolution">Doc evolution</a>
-            <a href="https://github.com/commaai/comma_video_compression_challenge" style="color:var(--accent)">Challenge repo</a>
-            <a href="https://comma.ai/leaderboard" style="color:var(--accent)">Leaderboard</a>
+            <a href="./judges_one_pager.md">Judges one-pager</a>
+            <a href="./submission_packet.md">Submission packet</a>
+            <a href="./lab_notebook.md">Lab notebook</a>
+            <a href="./promotion_review_latest.md">Promotion review</a>
+            <a href="./evidence_index.md">Evidence index</a>
           </nav>
         </div>
         <div class="hero-card-grid" aria-label="Entry points">
@@ -414,7 +360,7 @@
     <section class="context-strip" aria-label="Project context">
       <div class="context-item">
         <div class="context-label">Contest</div>
-        <p class="context-copy"><a href="https://comma.ai/leaderboard">comma.ai’s public challenge</a> asks entrants to ship an <code>archive.zip</code> that inflates to video. The published score combines archive bytes, SegNet distortion, and PoseNet distortion on the public test clip.</p>
+        <p class="context-copy">comma.ai’s public challenge asks entrants to ship an <code>archive.zip</code> that inflates to video. The published score combines archive bytes, SegNet distortion, and PoseNet distortion on the public test clip.</p>
         <div class="context-links">
           <a href="https://github.com/commaai/comma_video_compression_challenge">Official challenge repo</a>
         </div>
@@ -666,40 +612,9 @@
       </div>
       <p class="footnote refs-note">The landing page is the guided entry point. Full depth lives in the linked notebook, packet, and raw evidence artifacts.</p>
     </section>
-    <section class="panel" id="lab-timeline" aria-labelledby="lab-timeline-title">
-      <h2 id="lab-timeline-title">Experiment tree</h2>
-      <p class="muted">How each experiment branched from its parent. Scroll the timeline to watch the tree grow. Green stroke marks promoted floors. Node size reflects hidden channel width.</p>
-      <div class="legend-row" id="tree-legend"></div>
-      <div style="margin:12px 0;display:flex;align-items:center;gap:12px;">
-        <button type="button" id="treePlayBtn" style="background:rgba(142,209,192,0.10);border:1px solid rgba(142,209,192,0.42);color:var(--text);padding:6px 14px;border-radius:999px;cursor:pointer;font:600 12px/1 inherit;">Play</button>
-        <input type="range" id="treeTimeSlider" min="0" max="100" value="100" style="flex:1;accent-color:var(--accent);">
-        <span id="treeTimeLabel" style="font:600 12px/1 ui-monospace,Menlo,monospace;color:var(--accent);min-width:140px;text-align:right;">--</span>
-      </div>
-      <svg id="tree-svg" style="background:rgba(0,0,0,0.15);border-radius:12px;"></svg>
-    </section>
-
-    <section class="panel" id="doc-evolution" aria-labelledby="doc-evolution-title">
-      <h2 id="doc-evolution-title">Document evolution</h2>
-      <p class="muted">Browse any tracked markdown file across git commits. Switch to Diff mode to see additions and deletions highlighted. Every document version is extracted from git history.</p>
-      <div style="display:flex;gap:10px;align-items:center;flex-wrap:wrap;margin-top:12px;">
-        <select id="docPicker" style="background:rgba(255,255,255,0.04);color:var(--text);border:1px solid rgba(255,255,255,0.10);padding:8px 12px;border-radius:10px;font:inherit;font-size:13px;min-width:280px;">
-          <option value="">-- select document --</option>
-        </select>
-        <button type="button" id="docPrev" style="background:rgba(255,255,255,0.03);color:var(--muted);border:1px solid rgba(255,255,255,0.10);padding:6px 12px;border-radius:999px;cursor:pointer;font:600 12px/1 inherit;">&larr; Older</button>
-        <span id="docVersionLabel" style="min-width:200px;text-align:center;font-size:12px;color:var(--accent)">--</span>
-        <button type="button" id="docNext" style="background:rgba(255,255,255,0.03);color:var(--muted);border:1px solid rgba(255,255,255,0.10);padding:6px 12px;border-radius:999px;cursor:pointer;font:600 12px/1 inherit;">Newer &rarr;</button>
-        <div style="margin-left:auto;display:flex;gap:4px;">
-          <button type="button" id="docModeContent" class="is-active" style="background:rgba(142,209,192,0.10);border:1px solid rgba(142,209,192,0.42);color:var(--text);padding:6px 12px;border-radius:999px;cursor:pointer;font:600 12px/1 inherit;">Content</button>
-          <button type="button" id="docModeDiff" style="background:rgba(255,255,255,0.03);color:var(--muted);border:1px solid rgba(255,255,255,0.10);padding:6px 12px;border-radius:999px;cursor:pointer;font:600 12px/1 inherit;">Diff</button>
-        </div>
-      </div>
-      <div id="docStats" style="font-size:12px;color:var(--muted);margin:10px 0;display:flex;gap:14px;"></div>
-      <pre id="docContent" style="white-space:pre-wrap;word-wrap:break-word;font:500 13px/1.7 ui-monospace,SFMono-Regular,Menlo,monospace;color:var(--soft);padding:16px;border-radius:10px;background:rgba(0,0,0,0.25);border:1px solid rgba(255,255,255,0.10);max-height:600px;overflow-y:auto;">Select a document to begin.</pre>
-    </section>
-
     <footer class="footer-meta" aria-label="Site metadata">
-      <span>Last updated Apr 9, 2026</span>
-      <span><a href="https://github.com/commaai/comma_video_compression_challenge">Challenge repo</a> · <a href="https://comma.ai/leaderboard">Leaderboard</a></span>
+      <span>Last updated Apr 9, 2026, 10:57 AM CDT</span>
+      <span><a href="https://github.com/adpena/comma-lab">GitHub</a> · <a href="https://github.com/commaai/comma_video_compression_challenge">Challenge</a></span>
     </footer>
   </main>
 </div>
@@ -929,193 +844,6 @@
   activateRun(activeRun);
   updateZoomGeometry();
   updateToggleLabel();
-
-  // ── D3 Experiment Tree ─────────────────────────────────────────────
-  const d3Src = document.createElement('script');
-  d3Src.src = 'https://d3js.org/d3.v7.min.js';
-  d3Src.onload = initD3Sections;
-  document.head.appendChild(d3Src);
-
-  function initD3Sections() {
-    const COLORS = { accent:'#8ed1c0', accent2:'#f0b35f', danger:'#ff6b6b', purple:'#b8a9e8', pink:'#f0a0c0', blue:'#8ab4ff', gray:'#6b7280' };
-    const experiments = [
-      {id:'baseline',name:'Baseline (no filter)',hidden:0,platform:'local',parent:null,color:COLORS.gray,
-       dp:[{date:'2026-04-06T12:00',score:2.08}]},
-      {id:'h8',name:'PostFilter h=8',hidden:8,platform:'local',parent:'baseline',color:COLORS.gray,
-       dp:[{date:'2026-04-07T10:00',ep:50,score:2.01},{date:'2026-04-07T14:00',ep:200,score:1.99}]},
-      {id:'h16',name:'Saliency h=16',hidden:16,platform:'local',parent:'h8',color:COLORS.accent2,
-       dp:[{date:'2026-04-07T18:00',ep:100,score:1.985},{date:'2026-04-08T02:00',ep:300,score:1.945}]},
-      {id:'h32',name:'QAT+EMA h=32',hidden:32,platform:'local',parent:'h16',color:COLORS.blue,
-       dp:[{date:'2026-04-08T10:00',ep:100,score:1.985},{date:'2026-04-08T22:00',ep:500,score:1.845}]},
-      {id:'h32b',name:'h=32 bat00',hidden:32,platform:'bat00',parent:'h32',color:COLORS.blue,
-       dp:[{date:'2026-04-09T00:00',ep:500,score:1.87},{date:'2026-04-09T06:00',ep:1000,score:1.845}]},
-      {id:'h48',name:'h=48',hidden:48,platform:'local',parent:'h32',color:COLORS.accent,
-       dp:[{date:'2026-04-09T03:00',ep:200,score:1.82},{date:'2026-04-09T06:00',ep:400,score:1.762}]},
-      {id:'h64',name:'h=64 (promoted)',hidden:64,platform:'local',parent:'h48',color:COLORS.accent,
-       dp:[{date:'2026-04-09T04:00',ep:100,score:1.85},{date:'2026-04-09T10:00',ep:700,score:1.727}]},
-      {id:'h96',name:'h=96 (OOM)',hidden:96,platform:'local',parent:'h64',color:COLORS.gray,
-       dp:[{date:'2026-04-09T05:00',ep:66,score:1.90}]},
-      {id:'kalman',name:'Kalman h=48',hidden:48,platform:'tertiary',parent:'h48',color:COLORS.purple,
-       dp:[{date:'2026-04-09T08:00',ep:600,score:1.863}]},
-      {id:'cvar',name:'CVaR DRO',hidden:32,platform:'local',parent:'h32',color:COLORS.purple,
-       dp:[{date:'2026-04-09T04:00',ep:200,score:1.95}]},
-      {id:'dilated',name:'Dilated h=64',hidden:64,platform:'local',parent:'h64',color:COLORS.accent2,
-       dp:[{date:'2026-04-09T08:00',ep:75,score:1.86},{date:'2026-04-09T12:00',ep:220,score:1.79}]},
-      {id:'ps',name:'PixelShuffle h=64',hidden:64,platform:'local',parent:'h64',color:COLORS.pink,
-       dp:[{date:'2026-04-09T12:00',ep:166,score:1.84}]},
-      {id:'psd',name:'PSD h=64 (council)',hidden:64,platform:'local',parent:'h64',color:COLORS.danger,
-       dp:[{date:'2026-04-09T12:00',ep:63,score:1.87}]},
-      {id:'seg',name:'SegNet attack',hidden:32,platform:'local',parent:'h32',color:COLORS.danger,
-       dp:[{date:'2026-04-09T08:00',ep:590,score:0.98}]},
-    ];
-
-    const promoted = new Set(['h64','h48','h32']);
-    const allDates = experiments.flatMap(e=>e.dp.map(d=>new Date(d.date)));
-    const minDate = d3.min(allDates), maxDate = d3.max(allDates);
-    let treeTime = 1.0, treePlaying = false;
-
-    function drawTree() {
-      const svg = d3.select('#tree-svg');
-      svg.selectAll('*').remove();
-      const W = svg.node().parentElement.clientWidth - 44;
-      const H = Math.max(440, experiments.length * 40);
-      svg.attr('viewBox', `0 0 ${W} ${H}`);
-
-      const root = {id:'__r__',children:[]};
-      const map = {'__r__':root};
-      experiments.forEach(e=>{map[e.id]={...e,children:[]};});
-      experiments.forEach(e=>{(e.parent?map[e.parent]:root).children.push(map[e.id]);});
-      const tree = d3.tree().size([H-40,W-220]);
-      const hier = d3.hierarchy(root);
-      tree(hier);
-
-      svg.selectAll('.tl').data(hier.links().filter(l=>l.source.depth>0||l.target.depth===1)).join('path')
-        .attr('fill','none').attr('stroke',d=>promoted.has(d.target.data.id)?'#8ed1c0':'rgba(255,255,255,0.10)')
-        .attr('stroke-width',d=>promoted.has(d.target.data.id)?2.5:1.5)
-        .attr('d',d3.linkHorizontal().x(d=>d.y+100).y(d=>d.x+20));
-
-      const nodes = svg.selectAll('.tn').data(hier.descendants().filter(d=>d.data.id!=='__r__')).join('g')
-        .attr('class','tn').attr('transform',d=>`translate(${d.y+100},${d.x+20})`);
-      nodes.append('circle')
-        .attr('r',d=>Math.max(5,Math.min(14,(d.data.hidden||8)/5)))
-        .attr('fill',d=>d.data.color).attr('stroke',d=>promoted.has(d.data.id)?'#8ed1c0':'none').attr('stroke-width',3)
-        .style('cursor','pointer');
-      nodes.append('text').attr('dx',d=>Math.max(5,Math.min(14,(d.data.hidden||8)/5))+6).attr('dy',4)
-        .attr('fill','#a8b1bc').attr('font-size',10)
-        .text(d=>{const b=Math.min(...d.data.dp.map(p=>p.score));return `${d.data.name} (${b.toFixed(3)})`;});
-
-      updateTreeTime();
-    }
-
-    function updateTreeTime() {
-      const cur = new Date(+minDate + treeTime*(+maxDate - +minDate));
-      document.getElementById('treeTimeLabel').textContent = cur.toLocaleDateString()+' '+cur.toLocaleTimeString([],{hour:'2-digit',minute:'2-digit'});
-      d3.selectAll('.tn').each(function(d){
-        const vis = d.data.dp && d.data.dp.some(p=>new Date(p.date)<=cur);
-        d3.select(this).style('opacity',vis?1:0.1).style('transition','opacity 300ms ease');
-      });
-    }
-
-    document.getElementById('treeTimeSlider').oninput = function(){
-      treeTime = parseInt(this.value)/100; updateTreeTime();
-    };
-    document.getElementById('treePlayBtn').onclick = function(){
-      if(treePlaying){treePlaying=false;this.textContent='Play';return;}
-      treePlaying=true;this.textContent='Pause';
-      if(treeTime>=1){treeTime=0;document.getElementById('treeTimeSlider').value=0;}
-      let last=performance.now();
-      (function frame(now){
-        if(!treePlaying)return;
-        treeTime=Math.min(1,treeTime+(now-last)/1000*0.08);last=now;
-        document.getElementById('treeTimeSlider').value=Math.round(treeTime*100);
-        updateTreeTime();
-        if(treeTime>=1){treePlaying=false;document.getElementById('treePlayBtn').textContent='Play';return;}
-        requestAnimationFrame(frame);
-      })(performance.now());
-    };
-
-    const platforms=[...new Set(experiments.map(e=>e.platform))];
-    const pColors={local:'#8ed1c0',bat00:'#8ed1c0',tertiary:'#b8a9e8'};
-    d3.select('#tree-legend').selectAll('span').data(platforms).join('span').attr('class','legend-key')
-      .html(d=>`<span class="legend-dot" style="background:${pColors[d]||'#6b7280'}"></span>${d}`);
-
-    drawTree();
-    let rt;window.addEventListener('resize',()=>{clearTimeout(rt);rt=setTimeout(drawTree,250);});
-
-    // ── Doc Evolution ──────────────────────────────────────────────────
-    let docData=null, docFile='', docIdx=0, docMode='content';
-    fetch('timeline_docs.json').then(r=>r.ok?r.json():null).then(d=>{
-      if(!d||!d.timelines)return;
-      docData=d;
-      const picker=document.getElementById('docPicker');
-      Object.entries(d.timelines).sort((a,b)=>b[1].commits.length-a[1].commits.length).forEach(([path,tl])=>{
-        const opt=document.createElement('option');
-        opt.value=path;opt.textContent=`${path} (${tl.commits.length} versions)`;
-        picker.appendChild(opt);
-      });
-      picker.onchange=()=>{docFile=picker.value;docIdx=0;renderDoc();};
-    });
-
-    document.getElementById('docPrev').onclick=()=>{if(docIdx<getC().length-1){docIdx++;renderDoc();}};
-    document.getElementById('docNext').onclick=()=>{if(docIdx>0){docIdx--;renderDoc();}};
-    document.getElementById('docModeContent').onclick=()=>{docMode='content';updDocBtns();renderDoc();};
-    document.getElementById('docModeDiff').onclick=()=>{docMode='diff';updDocBtns();renderDoc();};
-
-    function updDocBtns(){
-      const cb=document.getElementById('docModeContent'),db=document.getElementById('docModeDiff');
-      cb.style.background=docMode==='content'?'rgba(142,209,192,0.10)':'rgba(255,255,255,0.03)';
-      cb.style.borderColor=docMode==='content'?'rgba(142,209,192,0.42)':'rgba(255,255,255,0.10)';
-      cb.style.color=docMode==='content'?'var(--text)':'var(--muted)';
-      db.style.background=docMode==='diff'?'rgba(142,209,192,0.10)':'rgba(255,255,255,0.03)';
-      db.style.borderColor=docMode==='diff'?'rgba(142,209,192,0.42)':'rgba(255,255,255,0.10)';
-      db.style.color=docMode==='diff'?'var(--text)':'var(--muted)';
-    }
-
-    function getC(){return docFile&&docData&&docData.timelines[docFile]?docData.timelines[docFile].commits:[];}
-    function esc(s){return(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');}
-
-    function renderDoc(){
-      const cs=getC();if(!cs.length)return;
-      const c=cs[docIdx],tl=docData.timelines[docFile];
-      document.getElementById('docVersionLabel').textContent=`${c.short_hash} \u2014 ${c.date.slice(0,16)} (${docIdx+1}/${cs.length})`;
-      const diff=tl.diffs.find(d=>d.to===c.short_hash);
-      document.getElementById('docStats').innerHTML=diff
-        ?`<span style="color:var(--accent)">+${diff.additions}</span><span style="color:#ff6b6b">\u2212${diff.deletions}</span><span>${esc(c.message)}</span>`
-        :`<span>${esc(c.message)}</span>`;
-      const el=document.getElementById('docContent');
-      if(docMode==='content'){el.innerHTML=esc(tl.versions[c.short_hash]||'(not available)');}
-      else{el.innerHTML=diff?diff.html:(docIdx>=cs.length-1?'<span style="color:var(--muted)">Earliest version.</span>':'No diff data.');}
-    }
-  }
-
-  // ── Sticky nav scroll spy ────────────────────────────────────────────
-  const stickyNav = document.getElementById('stickyNav');
-  const navLinks = stickyNav.querySelectorAll('[data-nav]');
-  const sections = [];
-  navLinks.forEach(link => {
-    const id = link.getAttribute('href').slice(1);
-    const el = document.getElementById(id);
-    if (el) sections.push({ el, link });
-  });
-
-  let ticking = false;
-  window.addEventListener('scroll', () => {
-    if (!ticking) {
-      requestAnimationFrame(() => {
-        // Add shadow when scrolled
-        stickyNav.classList.toggle('scrolled', window.scrollY > 60);
-        // Highlight active section
-        let active = sections[0];
-        for (const s of sections) {
-          if (s.el.getBoundingClientRect().top <= 120) active = s;
-        }
-        navLinks.forEach(l => l.classList.remove('is-active'));
-        if (active) active.link.classList.add('is-active');
-        ticking = false;
-      });
-      ticking = true;
-    }
-  });
 })();
 </script>
 </body>
