@@ -1,0 +1,18 @@
+{
+  "slug": "local-segnet-attack-fixed-ste-h32-proxy",
+  "host": "local-cpu",
+  "status": "completed_no_promotion",
+  "session_id": 4113,
+  "command": "env PYTHONUNBUFFERED=1 uv run --with torch --with av --with safetensors --with timm --with einops --with segmentation-models-pytorch --with numpy python experiments/proxy_score_faithful.py /private/tmp/pact-mine/experiments/postfilter_weights/postfilter_segnet_attack_fixed_ste_h32_int8.pt | tee /private/tmp/pact-mine/proxy_segnet_attack_fixed_ste_h32.log",
+  "weights_path": "/private/tmp/pact-mine/experiments/postfilter_weights/postfilter_segnet_attack_fixed_ste_h32_int8.pt",
+  "log_path": "/private/tmp/pact-mine/proxy_segnet_attack_fixed_ste_h32.log",
+  "result": {
+    "current_workflow_score": 1.84,
+    "pose_distortion": 0.05168364,
+    "seg_distortion": 0.00543626,
+    "current_workflow_rate": 0.02301653,
+    "current_workflow_archive_bytes": 864167
+  },
+  "notes": "Launched after segnet_attack_fixed_v2 wrote real fp32/int8 artifacts. The faithful proxy resolved cleanly at 1.84, which is a real transfer but still not enough to beat the promoted 1.73 floor.",
+  "written_at": "2026-04-09T17:57:39-05:00"
+}
