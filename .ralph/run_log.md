@@ -2033,3 +2033,38 @@ The partner's `save_best_checkpoint` function evaluates the EMA weights AFTER in
 - keep polishing site design (whitespace, symmetry, no AI gimmicks)
 - monitor PSD/dilated training convergence
 - deploy to Cloudflare Pages after next design pass
+
+## 2026-04-09 14:30:00 -0500 - expert council consensus on sub-1.6 path
+
+### Tao (math)
+- SegNet is 11.5x more score per unit improvement than PoseNet (100x coeff vs sqrt compression)
+- seg 0.00576 → 0.003 saves 0.276 alone (nearly enough for 1.45)
+- SegNet boundary-band attack with h=64 is the highest-leverage single experiment
+
+### Karpathy (arch)
+- h=128 scaling law predicts 1.61 but rate crossover nearly cancels it
+- pair-aware 6-channel is the highest-EV architectural change (PoseNet scores pairs, we filter frames independently)
+- skip adding more layers — dilation is more parameter-efficient for RF expansion
+
+### LeCun (representation)
+- h=96 is the sweet spot (rate crossover at h=128)
+- run 2500 epochs not 1000 — more lottery tickets for best-checkpoint
+- LSQ quantization: 5-line change, expected 0.03-0.08 improvement
+- fp16 inference would unlock h=128 without rate penalty
+
+### Jensen (compute)
+- get cloud GPU online THIS WEEK
+- 6 training slots left in 24 days
+- week 1: infra + h=96, week 2: compound, week 3: polish, week 4: buffer
+
+### consensus projection
+- conservative: 1.60 (h=96 + LSQ + mild SegNet)
+- central: 1.50 (SegNet boundary attack + h=96 compound)
+- optimistic: 1.40 (everything works)
+- hard floor: ~1.2
+
+### decision
+- priority 1: get Modal/Kaggle GPU online for h=96 training
+- priority 2: SegNet boundary-band attack on local Mac
+- priority 3: LSQ quantization (5-line change)
+- continue PSD/dilated training as insurance
