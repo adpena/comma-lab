@@ -78,6 +78,7 @@
 24. The scheduler foundation is intentionally conservative. It is cross-platform and stdlib-first, but it is reporting-only for now: no fake remote execution, no unsafe shell templating, and `sched budget` requires an explicit or default `configs/platforms.json` registry.
 25. The report-history viewer is already usable as a standalone static page, but it is not yet linked from the main dashboard. That is a product/navigation choice, not a missing build step.
 26. `pixelshuffle_h64_long1000` is now the first post-h64 packaged lane to earn an honest faithful proxy attempt after the runtime-path fixes. The earlier proxy failure was a real loader bug, not a bad candidate. The loader now supports the pixelshuffle-dilated architecture and can infer it from the artifact state layout even when the saved metadata is wrong.
+27. That faithful proxy has now resolved cleanly, and it is not close. `pixelshuffle_h64_long1000` landed at **`1.99`** with PoseNet `0.07282460`, SegNet `0.00562080`, and `864,167` bytes. That is a real transfer, but it is nowhere near the promoted `1.73` floor.
 
 ## 2026-04-08 prior long1000 h32 QAT+EMA post-filter promotion
 

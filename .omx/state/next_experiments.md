@@ -58,19 +58,23 @@ The promoted honest floor is now `long1000_h64` at **`1.73`** on the current pub
 4. **PF-PIXELSHUFFLE-H64**
    - Why fourth:
       - this is now the strongest packaged lane that is both deploy-ready and inside the local proxy gate
-   - Status: **PROXY_RUNNING**
+   - Status: **COMPLETED_NO_PROMOTION**
    - Current local best:
-      - epoch `229`
-      - scorer `3.797689816157023`
+      - epoch `243`
+      - scorer `3.7007833894093833`
       - int8 `94,285` bytes
-   - Proxy lane:
-      - `experiments/proxy_score_faithful.py`
-      - weights: `/private/tmp/pact-mine/experiments/postfilter_weights/postfilter_pixelshuffle_h64_long1000_best_int8.pt`
    - Important blocker resolved:
       - `submissions/robust_current/inflate_postfilter.py` now supports the pixelshuffle-dilated runtime path and can infer it from the artifact state layout
+   - Faithful proxy result:
+      - current_workflow `1.99`
+      - PoseNet `0.07282460`
+      - SegNet `0.00562080`
+      - bytes `864,167`
+      - repo evidence: `reports/raw/2026-04-09-pixelshuffle-h64-best/pixelshuffle_h64_long1000_proxy_summary.json`
+      - durable log: `reports/raw/2026-04-09-pixelshuffle-h64-best/proxy_pixelshuffle_h64_long1000_best.log`
    - Decision:
-      - wait for the faithful proxy result
-      - if it misses, keep the lane as a non-promoted alternate; if it hits, it earns scorer consideration
+      - reject for promotion
+      - keep the lane as a non-promoted alternate reference
 
 5. **READY-TO-RELAUNCH SCAFFOLDS**
    - `experiments/train_postfilter_dilated_h64.py`

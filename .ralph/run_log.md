@@ -1,6 +1,6 @@
 # run log
 
-## 2026-04-09 13:38:11 -0500 - pixelshuffle proxy lane opened for real
+## 2026-04-09 14:40:01 -0500 - pixelshuffle faithful proxy resolved as a clean reject
 
 ### runtime-path fix
 - Root cause:
@@ -12,16 +12,22 @@
 - Regression:
   - `experiments/test_postfilter_loader.py`
 
-### active proxy lane
+### faithful proxy result
 - Candidate:
   - `postfilter_pixelshuffle_h64_long1000_best_int8.pt`
 - Local best:
-  - epoch `229`
-  - scorer `3.797689816157023`
+  - epoch `243`
+  - scorer `3.7007833894093833`
   - int8 `94,285`
-- Status:
-  - faithful proxy session is now running
-  - advanced past loader setup and entered inflation on CPU successfully
+- Faithful proxy result:
+  - current_workflow `1.99`
+  - PoseNet `0.07282460`
+  - SegNet `0.00562080`
+  - bytes `864,167`
+  - rate `0.02301653`
+- Decision:
+  - reject for promotion
+  - keep as a non-promoted alternate reference
 
 ## 2026-04-09 13:13:08 -0500 - packaged side lanes tightened again
 

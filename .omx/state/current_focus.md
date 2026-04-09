@@ -29,3 +29,4 @@
 - Cross-browser test
 - Wire conversation timeline into site
 - Proxy-score PSD/dilated when they converge
+- Pixelshuffle proxy resolved to `1.99`; keep as a non-promoted alternate reference
