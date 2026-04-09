@@ -51,6 +51,19 @@ ROI_METADATA_WINDOW_FRAMES="${ROI_METADATA_WINDOW_FRAMES:-200}"
 ROI_METADATA_SAMPLE_STEP="${ROI_METADATA_SAMPLE_STEP:-10}"
 ROI_METADATA_TILE_COLS="${ROI_METADATA_TILE_COLS:-12}"
 ROI_METADATA_TILE_ROWS="${ROI_METADATA_TILE_ROWS:-9}"
+ROI_PREPROCESS_ENABLE="${ROI_PREPROCESS_ENABLE:-0}"
+ROI_PREPROCESS_SCRIPT="${ROI_PREPROCESS_SCRIPT:-$SELF_DIR/roi_preprocess.py}"
+ROI_PREPROCESS_BLUR_SIGMA="${ROI_PREPROCESS_BLUR_SIGMA:-2.5}"
+ROI_PREPROCESS_FEATHER_RADIUS="${ROI_PREPROCESS_FEATHER_RADIUS:-48}"
+ROI_PREPROCESS_BLEND="${ROI_PREPROCESS_BLEND:-0.60}"
+ROI_PREPROCESS_CORRIDOR_TL="${ROI_PREPROCESS_CORRIDOR_TL:-0.20,0.45}"
+ROI_PREPROCESS_CORRIDOR_TR="${ROI_PREPROCESS_CORRIDOR_TR:-0.80,0.45}"
+ROI_PREPROCESS_CORRIDOR_BR="${ROI_PREPROCESS_CORRIDOR_BR:-1.0,1.0}"
+ROI_PREPROCESS_CORRIDOR_BL="${ROI_PREPROCESS_CORRIDOR_BL:-0.0,1.0}"
+ROI_PREPROCESS_ADAPTIVE="${ROI_PREPROCESS_ADAPTIVE:-0}"
+ROI_PREPROCESS_CHROMA_ONLY="${ROI_PREPROCESS_CHROMA_ONLY:-0}"
+ROI_PREPROCESS_MASK_FILE="${ROI_PREPROCESS_MASK_FILE:-}"
+PRE_DENOISE="${PRE_DENOISE:-}"
 TMP_ROOT="${TMPDIR:-/tmp}"
 if [ ! -d "$TMP_ROOT" ]; then
   TMP_ROOT="/tmp"
@@ -65,11 +78,55 @@ cleanup() {
 
 trap cleanup EXIT
 
-if [ "$ROI_ENABLE" = "1" ] && [ "$VIDEO_CODEC" != "libx265" ]; then
-  echo "ERROR: ROI packaging currently supports VIDEO_CODEC=libx265 only." >&2
-  echo "Disable ROI or switch VIDEO_CODEC to libx265 before packaging." >&2
+if [ "$ROI_ENABLE" = "1" ] && [ "$VIDEO_CODEC" != "libx265" ] && [ "$VIDEO_CODEC" != "libsvtav1" ]; then
+  echo "ERROR: ROI packaging supports VIDEO_CODEC=libx265 or libsvtav1 only." >&2
+  echo "Disable ROI or switch VIDEO_CODEC before packaging." >&2
   exit 1
 fi
+
+require_cmd() {
+  local bin="$1"
+  if ! command -v "$bin" >/dev/null 2>&1; then
+    echo "ERROR: required tool not found in PATH: $bin" >&2
+    exit 1
+  fi
+}
+
+ffmpeg_encoder_available() {
+  local encoder="$1"
+  local encoders
+  encoders="$("$FFMPEG_BIN" -hide_banner -encoders 2>/dev/null | tr -d '\r')"
+  grep -q "$encoder" <<<"$encoders"
+}
+
+ffmpeg_filter_option_available() {
+  local option="$1"
+  local scale_help
+  scale_help="$("$FFMPEG_BIN" -hide_banner -h filter=scale 2>/dev/null)"
+  grep -q "$option" <<<"$scale_help"
+}
+
+require_ffmpeg_parity() {
+  require_cmd "$FFMPEG_BIN"
+  require_cmd "$FFPROBE_BIN"
+  require_cmd "$UV_BIN"
+
+  if [ "$VIDEO_CODEC" = "libsvtav1" ] && ! ffmpeg_encoder_available "libsvtav1"; then
+    echo "ERROR: $FFMPEG_BIN does not provide the libsvtav1 encoder required by the AV1 lanes." >&2
+    echo "Set FFMPEG_BIN/FFPROBE_BIN to a newer parity-compatible ffmpeg toolchain." >&2
+    exit 1
+  fi
+
+  for opt in in_range out_range in_color_matrix out_color_matrix in_primaries out_primaries in_transfer out_transfer; do
+    if ! ffmpeg_filter_option_available "$opt"; then
+      echo "ERROR: $FFMPEG_BIN scale filter is missing required option '$opt' for the explicit color-contract path." >&2
+      echo "This environment would drift from the canonical path. Set FFMPEG_BIN/FFPROBE_BIN to a parity-compatible ffmpeg build." >&2
+      exit 1
+    fi
+  done
+}
+
+require_ffmpeg_parity
 
 
 encode_video() {
@@ -103,16 +160,31 @@ encode_video() {
   fi
 }
 
+codec_encode_args() {
+  local crf_val="$1"
+  if [ "$VIDEO_CODEC" = "libsvtav1" ]; then
+    printf '%s' "-c:v libsvtav1 -preset ${SVT_AV1_PRESET} -crf ${crf_val} -svtav1-params ${SVT_AV1_PARAMS}"
+  else
+    printf '%s' "-c:v libx265 -preset ${X265_PRESET} -crf ${crf_val} -x265-params keyint=${X265_GOP}:min-keyint=${X265_GOP}:scenecut=0:bframes=${X265_BFRAMES}:ref=${X265_REF}"
+  fi
+}
+
 downscale_filter() {
   local width="$1"
   local height="$2"
   local flags="$3"
-  printf 'scale=%s:%s:flags=%s:in_range=%s:out_range=%s:in_color_matrix=%s:out_color_matrix=%s:in_primaries=%s:out_primaries=%s:in_transfer=%s:out_transfer=%s,format=yuv420p' \
+  local base_filter
+  base_filter="$(printf 'scale=%s:%s:flags=%s:in_range=%s:out_range=%s:in_color_matrix=%s:out_color_matrix=%s:in_primaries=%s:out_primaries=%s:in_transfer=%s:out_transfer=%s,format=yuv420p' \
     "$width" "$height" "$flags" \
     "$SOURCE_COLOR_RANGE" "$SOURCE_COLOR_RANGE" \
     "$SOURCE_COLOR_MATRIX" "$SOURCE_COLOR_MATRIX" \
     "$SOURCE_COLOR_PRIMARIES" "$SOURCE_COLOR_PRIMARIES" \
-    "$SOURCE_COLOR_TRC" "$SOURCE_COLOR_TRC"
+    "$SOURCE_COLOR_TRC" "$SOURCE_COLOR_TRC")"
+  if [ -n "$PRE_DENOISE" ]; then
+    printf '%s,%s' "$PRE_DENOISE" "$base_filter"
+  else
+    printf '%s' "$base_filter"
+  fi
 }
 
 calc_even_dim() {
@@ -149,12 +221,38 @@ while IFS= read -r rel; do
   in_path="$UPSTREAM_ROOT/videos/$rel"
   stem="${rel%.*}"
 
+  # ROI preprocessing: degrade non-corridor regions before encoding
+  if [ "$ROI_PREPROCESS_ENABLE" = "1" ]; then
+    preprocessed_path="$WORK_DIR/${stem}_preprocessed.mkv"
+    "$UV_BIN" run --with numpy --with scipy python "$ROI_PREPROCESS_SCRIPT" \
+      --input "$in_path" \
+      --output "$preprocessed_path" \
+      --ffmpeg-bin "$FFMPEG_BIN" \
+      --ffprobe-bin "$FFPROBE_BIN" \
+      --corridor-top-left "$ROI_PREPROCESS_CORRIDOR_TL" \
+      --corridor-top-right "$ROI_PREPROCESS_CORRIDOR_TR" \
+      --corridor-bottom-right "$ROI_PREPROCESS_CORRIDOR_BR" \
+      --corridor-bottom-left "$ROI_PREPROCESS_CORRIDOR_BL" \
+      --outside-blur-sigma "$ROI_PREPROCESS_BLUR_SIGMA" \
+      --feather-radius "$ROI_PREPROCESS_FEATHER_RADIUS" \
+      --outside-blend "$ROI_PREPROCESS_BLEND" \
+      $([ "$ROI_PREPROCESS_ADAPTIVE" = "1" ] && echo "--adaptive-mask") \
+      $([ "$ROI_PREPROCESS_CHROMA_ONLY" = "1" ] && echo "--chroma-only") \
+      $([ -n "$ROI_PREPROCESS_MASK_FILE" ] && echo "--mask-file $ROI_PREPROCESS_MASK_FILE")
+    in_path="$preprocessed_path"
+  fi
+
   if [ "$ROI_ENABLE" = "1" ]; then
     out_dir="$ARCHIVE_DIR/$stem"
     mkdir -p "$out_dir"
-    base_crf=$((X265_CRF + ROI_BASE_CRF_DELTA))
-    roi_crf=$((X265_CRF + ROI_CRF_DELTA))
-    roi2_crf=$((X265_CRF + ROI2_CRF_DELTA))
+    if [ "$VIDEO_CODEC" = "libsvtav1" ]; then
+      _codec_base_crf="$SVT_AV1_CRF"
+    else
+      _codec_base_crf="$X265_CRF"
+    fi
+    base_crf=$((_codec_base_crf + ROI_BASE_CRF_DELTA))
+    roi_crf=$((_codec_base_crf + ROI_CRF_DELTA))
+    roi2_crf=$((_codec_base_crf + ROI2_CRF_DELTA))
 
     if [ "$ROI_METADATA_ENABLE" = "1" ]; then
       metadata_path="$out_dir/roi_metadata.json"
@@ -173,7 +271,6 @@ while IFS= read -r rel; do
         --tile-cols "$ROI_METADATA_TILE_COLS" \
         --tile-rows "$ROI_METADATA_TILE_ROWS" \
         --out "$metadata_path"
-      x265_params="keyint=${X265_GOP}:min-keyint=${X265_GOP}:scenecut=0:bframes=${X265_BFRAMES}:ref=${X265_REF}"
       encode_cmd=("$UV_BIN" run python "$ROI_SCRIPT_PY" encode-metadata
         --video "$in_path"
         --metadata "$metadata_path"
@@ -186,11 +283,19 @@ while IFS= read -r rel; do
         --source-color-matrix "$SOURCE_COLOR_MATRIX"
         --source-color-primaries "$SOURCE_COLOR_PRIMARIES"
         --source-color-trc "$SOURCE_COLOR_TRC"
-        --preset "$X265_PRESET"
+        --codec "$VIDEO_CODEC"
         --base-crf "$base_crf"
         --roi-crf "$roi_crf"
-        --roi2-crf "$roi2_crf"
-        --x265-params "$x265_params")
+        --roi2-crf "$roi2_crf")
+      if [ "$VIDEO_CODEC" = "libsvtav1" ]; then
+        encode_cmd+=(--svtav1-preset "$SVT_AV1_PRESET")
+        encode_cmd+=(--svtav1-crf "$SVT_AV1_CRF")
+        encode_cmd+=(--svtav1-params "$SVT_AV1_PARAMS")
+      else
+        x265_params="keyint=${X265_GOP}:min-keyint=${X265_GOP}:scenecut=0:bframes=${X265_BFRAMES}:ref=${X265_REF}"
+        encode_cmd+=(--preset "$X265_PRESET")
+        encode_cmd+=(--x265-params "$x265_params")
+      fi
       if [ "$ROI2_ENABLE" = "1" ]; then
         encode_cmd+=(--roi2-enable)
       fi
@@ -211,19 +316,26 @@ while IFS= read -r rel; do
         roi2_y="$(calc_even_origin "$SCALE_H" "$ROI2_Y_FRAC" "$roi2_h")"
       fi
 
+      # Build codec-specific args for each CRF level
+      read -ra base_codec_args <<< "$(codec_encode_args "$base_crf")"
+      read -ra roi_codec_args  <<< "$(codec_encode_args "$roi_crf")"
+
+      color_args=(-color_range "$SOURCE_COLOR_RANGE" -colorspace "$SOURCE_COLOR_MATRIX" -color_primaries "$SOURCE_COLOR_PRIMARIES" -color_trc "$SOURCE_COLOR_TRC")
+
       if [ "$ROI2_ENABLE" = "1" ]; then
+        read -ra roi2_codec_args <<< "$(codec_encode_args "$roi2_crf")"
         echo "Encoding ROI two-pass+aux $in_path -> $base_path + $roi_path + $roi2_path"
         "$FFMPEG_BIN" -y -i "$in_path" \
           -filter_complex "[0:v]$(downscale_filter "$SCALE_W" "$SCALE_H" "$DOWNSCALE_FLAGS"),split=3[base][crop1][crop2];[crop1]crop=${roi_w}:${roi_h}:${roi_x}:${roi_y}[roi1];[crop2]crop=${roi2_w}:${roi2_h}:${roi2_x}:${roi2_y}[roi2]" \
-          -map "[base]" -an -c:v libx265 -preset "${X265_PRESET}" -crf "${base_crf}" -x265-params "keyint=${X265_GOP}:min-keyint=${X265_GOP}:scenecut=0:bframes=${X265_BFRAMES}:ref=${X265_REF}" -color_range "$SOURCE_COLOR_RANGE" -colorspace "$SOURCE_COLOR_MATRIX" -color_primaries "$SOURCE_COLOR_PRIMARIES" -color_trc "$SOURCE_COLOR_TRC" "$base_path" \
-          -map "[roi1]" -an -c:v libx265 -preset "${X265_PRESET}" -crf "${roi_crf}" -x265-params "keyint=${X265_GOP}:min-keyint=${X265_GOP}:scenecut=0:bframes=${X265_BFRAMES}:ref=${X265_REF}" -color_range "$SOURCE_COLOR_RANGE" -colorspace "$SOURCE_COLOR_MATRIX" -color_primaries "$SOURCE_COLOR_PRIMARIES" -color_trc "$SOURCE_COLOR_TRC" "$roi_path" \
-          -map "[roi2]" -an -c:v libx265 -preset "${X265_PRESET}" -crf "${roi2_crf}" -x265-params "keyint=${X265_GOP}:min-keyint=${X265_GOP}:scenecut=0:bframes=${X265_BFRAMES}:ref=${X265_REF}" -color_range "$SOURCE_COLOR_RANGE" -colorspace "$SOURCE_COLOR_MATRIX" -color_primaries "$SOURCE_COLOR_PRIMARIES" -color_trc "$SOURCE_COLOR_TRC" "$roi2_path"
+          -map "[base]" -an "${base_codec_args[@]}" "${color_args[@]}" "$base_path" \
+          -map "[roi1]" -an "${roi_codec_args[@]}" "${color_args[@]}" "$roi_path" \
+          -map "[roi2]" -an "${roi2_codec_args[@]}" "${color_args[@]}" "$roi2_path"
       else
         echo "Encoding ROI two-pass $in_path -> $base_path + $roi_path"
         "$FFMPEG_BIN" -y -i "$in_path" \
           -filter_complex "[0:v]$(downscale_filter "$SCALE_W" "$SCALE_H" "$DOWNSCALE_FLAGS"),split=2[base][crop];[crop]crop=${roi_w}:${roi_h}:${roi_x}:${roi_y}[roi]" \
-          -map "[base]" -an -c:v libx265 -preset "${X265_PRESET}" -crf "${base_crf}" -x265-params "keyint=${X265_GOP}:min-keyint=${X265_GOP}:scenecut=0:bframes=${X265_BFRAMES}:ref=${X265_REF}" -color_range "$SOURCE_COLOR_RANGE" -colorspace "$SOURCE_COLOR_MATRIX" -color_primaries "$SOURCE_COLOR_PRIMARIES" -color_trc "$SOURCE_COLOR_TRC" "$base_path" \
-          -map "[roi]" -an -c:v libx265 -preset "${X265_PRESET}" -crf "${roi_crf}" -x265-params "keyint=${X265_GOP}:min-keyint=${X265_GOP}:scenecut=0:bframes=${X265_BFRAMES}:ref=${X265_REF}" -color_range "$SOURCE_COLOR_RANGE" -colorspace "$SOURCE_COLOR_MATRIX" -color_primaries "$SOURCE_COLOR_PRIMARIES" -color_trc "$SOURCE_COLOR_TRC" "$roi_path"
+          -map "[base]" -an "${base_codec_args[@]}" "${color_args[@]}" "$base_path" \
+          -map "[roi]" -an "${roi_codec_args[@]}" "${color_args[@]}" "$roi_path"
       fi
     fi
   else

@@ -37,7 +37,38 @@ ROI2_Y_FRAC="${ROI2_Y_FRAC:-0.10}"
 ROI2_W_FRAC="${ROI2_W_FRAC:-0.22}"
 ROI2_H_FRAC="${ROI2_H_FRAC:-0.55}"
 ROI_METADATA_ENABLE="${ROI_METADATA_ENABLE:-0}"
+PYTHON_INFLATE="${PYTHON_INFLATE:-0}"
 mkdir -p "$INFLATED_DIR"
+
+require_cmd() {
+  local bin="$1"
+  if ! command -v "$bin" >/dev/null 2>&1; then
+    echo "ERROR: required tool not found in PATH: $bin" >&2
+    exit 1
+  fi
+}
+
+ffmpeg_filter_option_available() {
+  local option="$1"
+  local scale_help
+  scale_help="$("$FFMPEG_BIN" -hide_banner -h filter=scale 2>/dev/null)"
+  grep -q "$option" <<<"$scale_help"
+}
+
+require_ffmpeg_parity() {
+  require_cmd "$FFMPEG_BIN"
+  require_cmd "$UV_BIN"
+
+  for opt in in_range out_range in_color_matrix in_primaries in_transfer; do
+    if ! ffmpeg_filter_option_available "$opt"; then
+      echo "ERROR: $FFMPEG_BIN scale filter is missing required option '$opt' for the explicit decode color-contract path." >&2
+      echo "This environment would drift from the canonical path. Set FFMPEG_BIN to a parity-compatible ffmpeg build." >&2
+      exit 1
+    fi
+  done
+}
+
+require_ffmpeg_parity
 
 
 upscale_rgb_base_filter() {
@@ -142,7 +173,27 @@ while IFS= read -r rel; do
   else
     in_rel="${stem}.mkv"
     in_path="$ARCHIVE_DIR/$in_rel"
-    echo "Inflating $in_path -> $out_path"
-    "$FFMPEG_BIN" -y -i "$in_path" -vf "$(upscale_filter "$SOURCE_W" "$SOURCE_H" "$UPSCALE_FLAGS")" -an -sn -pix_fmt rgb24 -f rawvideo "$out_path"
+    if [ "$PYTHON_INFLATE" = "postfilter" ]; then
+      echo "Inflating (canonical + learned post-filter) $ARCHIVE_DIR -> $INFLATED_DIR"
+      "$UV_BIN" run --with av --with torch --with numpy python "$SELF_DIR/inflate_postfilter.py" \
+        "$ARCHIVE_DIR" "$INFLATED_DIR" "$VIDEO_NAMES_FILE" \
+        "${POSTFILTER_PATH:-$SELF_DIR/postfilter_int8.pt}"
+      break
+    elif [ "$PYTHON_INFLATE" = "grain_mask" ]; then
+      echo "Inflating (saliency-masked grain) $ARCHIVE_DIR -> $INFLATED_DIR"
+      "$UV_BIN" run --with av --with torch --with numpy python "$SELF_DIR/inflate_grain_mask.py" \
+        "$ARCHIVE_DIR" "$INFLATED_DIR" "$VIDEO_NAMES_FILE" \
+        "${GRAIN_MASK_SALIENCY:-experiments/masks/posenet_saliency.npy}" \
+        "${GRAIN_MASK_STRENGTH:-8.0}"
+      break
+    elif [ "$PYTHON_INFLATE" = "1" ]; then
+      echo "Inflating (canonical PyAV + torch bicubic) $ARCHIVE_DIR -> $INFLATED_DIR"
+      "$UV_BIN" run --with av --with torch --with numpy python "$SELF_DIR/inflate.py" \
+        "$ARCHIVE_DIR" "$INFLATED_DIR" "$VIDEO_NAMES_FILE"
+      break  # Python script handles all videos in one call
+    else
+      echo "Inflating $in_path -> $out_path"
+      "$FFMPEG_BIN" -y -i "$in_path" -vf "$(upscale_filter "$SOURCE_W" "$SOURCE_H" "$UPSCALE_FLAGS")" -an -sn -pix_fmt rgb24 -f rawvideo "$out_path"
+    fi
   fi
 done < "$VIDEO_NAMES_FILE"

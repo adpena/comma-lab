@@ -492,6 +492,14 @@ def _upscale_rgb_filter(
     )
 
 
+def _codec_encode_args(args: argparse.Namespace, crf: int) -> list:
+    """Return ffmpeg codec args for the given CRF, branching on args.codec."""
+    if args.codec == 'libsvtav1':
+        return ['-c:v', 'libsvtav1', '-preset', str(args.svtav1_preset), '-crf', str(crf), '-svtav1-params', args.svtav1_params]
+    # default: libx265
+    return ['-c:v', 'libx265', '-preset', args.preset, '-crf', str(crf), '-x265-params', args.x265_params]
+
+
 def encode_metadata(args: argparse.Namespace) -> int:
     data = _load_metadata(Path(args.metadata))
     out_dir = Path(args.out_dir)
@@ -524,9 +532,9 @@ def encode_metadata(args: argparse.Namespace) -> int:
             cmd = [
                 args.ffmpeg_bin, '-y', '-i', args.video,
                 '-filter_complex', filter_complex,
-                '-map', '[base]', '-an', '-c:v', 'libx265', '-preset', args.preset, '-crf', str(args.base_crf), '-x265-params', args.x265_params, '-color_range', args.source_color_range, '-colorspace', args.source_color_matrix, '-color_primaries', args.source_color_primaries, '-color_trc', args.source_color_trc, str(base_path),
-                '-map', '[roi1]', '-an', '-c:v', 'libx265', '-preset', args.preset, '-crf', str(args.roi_crf), '-x265-params', args.x265_params, '-color_range', args.source_color_range, '-colorspace', args.source_color_matrix, '-color_primaries', args.source_color_primaries, '-color_trc', args.source_color_trc, str(roi_path),
-                '-map', '[roi2]', '-an', '-c:v', 'libx265', '-preset', args.preset, '-crf', str(args.roi2_crf), '-x265-params', args.x265_params, '-color_range', args.source_color_range, '-colorspace', args.source_color_matrix, '-color_primaries', args.source_color_primaries, '-color_trc', args.source_color_trc, str(roi2_path),
+                '-map', '[base]', '-an', *_codec_encode_args(args, args.base_crf), '-color_range', args.source_color_range, '-colorspace', args.source_color_matrix, '-color_primaries', args.source_color_primaries, '-color_trc', args.source_color_trc, str(base_path),
+                '-map', '[roi1]', '-an', *_codec_encode_args(args, args.roi_crf), '-color_range', args.source_color_range, '-colorspace', args.source_color_matrix, '-color_primaries', args.source_color_primaries, '-color_trc', args.source_color_trc, str(roi_path),
+                '-map', '[roi2]', '-an', *_codec_encode_args(args, args.roi2_crf), '-color_range', args.source_color_range, '-colorspace', args.source_color_matrix, '-color_primaries', args.source_color_primaries, '-color_trc', args.source_color_trc, str(roi2_path),
             ]
         else:
             print(f"Encoding dynamic ROI window {idx} {args.video} -> {base_path} + {roi_path}", flush=True)
@@ -538,8 +546,8 @@ def encode_metadata(args: argparse.Namespace) -> int:
             cmd = [
                 args.ffmpeg_bin, '-y', '-i', args.video,
                 '-filter_complex', filter_complex,
-                '-map', '[base]', '-an', '-c:v', 'libx265', '-preset', args.preset, '-crf', str(args.base_crf), '-x265-params', args.x265_params, '-color_range', args.source_color_range, '-colorspace', args.source_color_matrix, '-color_primaries', args.source_color_primaries, '-color_trc', args.source_color_trc, str(base_path),
-                '-map', '[roi]', '-an', '-c:v', 'libx265', '-preset', args.preset, '-crf', str(args.roi_crf), '-x265-params', args.x265_params, '-color_range', args.source_color_range, '-colorspace', args.source_color_matrix, '-color_primaries', args.source_color_primaries, '-color_trc', args.source_color_trc, str(roi_path),
+                '-map', '[base]', '-an', *_codec_encode_args(args, args.base_crf), '-color_range', args.source_color_range, '-colorspace', args.source_color_matrix, '-color_primaries', args.source_color_primaries, '-color_trc', args.source_color_trc, str(base_path),
+                '-map', '[roi]', '-an', *_codec_encode_args(args, args.roi_crf), '-color_range', args.source_color_range, '-colorspace', args.source_color_matrix, '-color_primaries', args.source_color_primaries, '-color_trc', args.source_color_trc, str(roi_path),
             ]
         _subprocess_run(cmd)
     return 0
@@ -652,12 +660,16 @@ def build_parser() -> argparse.ArgumentParser:
     p.add_argument('--source-color-matrix', default='bt709')
     p.add_argument('--source-color-primaries', default='bt709')
     p.add_argument('--source-color-trc', default='bt709')
+    p.add_argument('--codec', required=True, choices=['libx265', 'libsvtav1'])
     p.add_argument('--preset', required=True)
     p.add_argument('--base-crf', type=int, required=True)
     p.add_argument('--roi-crf', type=int, required=True)
     p.add_argument('--roi2-crf', type=int, default=0)
     p.add_argument('--roi2-enable', action='store_true')
-    p.add_argument('--x265-params', required=True)
+    p.add_argument('--x265-params', default=None)
+    p.add_argument('--svtav1-preset', default=None)
+    p.add_argument('--svtav1-crf', type=int, default=None)
+    p.add_argument('--svtav1-params', default=None)
     p.set_defaults(func=encode_metadata)
 
     p = sub.add_parser("inflate-metadata")

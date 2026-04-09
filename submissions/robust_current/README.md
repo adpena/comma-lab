@@ -1,40 +1,36 @@
 # robust_current submission
 
-An honest patched-world submission lane built around stock ffmpeg codecs and a lightweight inflator.
+An honest patched-world submission lane built around stock AV1 compression plus a tiny learned inflate-side post-filter.
 
 ## current promoted floor
 
-- `524x394 / libsvtav1 / preset0 / crf34 / film-grain22 / lanczos / unsharp=0.35`
-- explicit encoded stream tags: `tv / bt709 / bt709 / bt709`
-- explicit decode conversion: `rgb24(pc)`
-- `current_workflow`: `2.12`
-- local `rule_faithful` estimate: `2.142`
+- `522x392 / libsvtav1 / preset0 / crf34 / film-grain22 / lanczos / sharpness=1 / learned post-filter`
+- `current_workflow`: `2.05`
+- local `rule_faithful` estimate: `2.078`
+- current_workflow bytes: `861,986`
+- rule_faithful bytes: `896,432`
 
 ## design
 
-- standard codec path using ffmpeg + x265 or SVT-AV1
-- no heavy decoder dependencies
-- inflator uses ffmpeg to decode the archived stream and upscale to raw RGB frames
-- rawvideo outputs are explicitly forced to `rgb24`
-- the flat AV1 path now carries explicit color assumptions instead of implicit ffmpeg defaults:
-  - encoded stream tagged `tv / bt709 / bt709 / bt709`
-  - decoded raw RGB path explicitly converts to `rgb24(pc)`
-- installed runtime payload is intentionally minimal:
+- standard codec path using SVT-AV1
+- no GPU requirement in the promoted inflate path
+- decode/inflate path uses a tiny shipped int8 post-filter after upscale
+- installed runtime payload is explicit:
   - `archive.zip`
   - `inflate.sh`
+  - `inflate.py`
+  - `inflate_postfilter.py`
+  - `inflate_grain_mask.py`
+  - `postfilter_int8.pt`
   - `config.env`
   - `analyze_roi.py`
-- every future promotion should come with a written promotion review and bug audit
 
-## bug / rigor guardrails
+## current findings
 
-- local packaging now cleans transient `archive/` scratch instead of leaving it in the submission tree
-- local packaging now falls back to `/tmp` if `TMPDIR` is invalid instead of failing
-- ROI branches are currently guarded to `libx265` only; AV1 + ROI is not silently allowed
-- ROI metadata analysis now honors both `FFMPEG_BIN` and `FFPROBE_BIN`
-- `ROI_X_FRAC` now actually affects the static ROI branch
-- `INFLATE_POSTFILTER` now applies on ROI inflate paths too
-- evaluation clears stale `inflated/` output before scorer runs so smoke/eval share the same clean-run assumption
+- the learned post-filter is the first decode-side lane in this repo to beat the `2.08` sharpness-only floor
+- grain-mask synthesis recovered much of the `film-grain=0` catastrophe but still only scored `2.30`
+- broad preprocessing remains a losing family because PoseNet is too sensitive
+- encoder-side sharpness and tiny task-aware decode correction are currently the highest-signal combination
 
 ## pre-scorer smoke gate
 
@@ -49,7 +45,7 @@ This checks raw output existence, file cardinality, exact frame count, exact geo
 ## preserved comparison configs
 
 - `config.env` — live promoted floor
-- `config.av1-2.12.env` — named current AV1 snapshot
-- `config.av1-2.18.env` — previous AV1 floor for comparison
-- `config.av1-2.19.env` — previous AV1 floor for comparison
+- `config.av1-2.05-postfilter.env` — named current AV1 snapshot
+- `config.av1-2.12.env` — previous honest floor
+- `config.av1-2.18.env` — previous AV1 floor
 - `config.x265-3.25.env` — preserved x265 floor
