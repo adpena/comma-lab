@@ -2151,3 +2151,23 @@ The partner's `save_best_checkpoint` function evaluates the EMA weights AFTER in
 - orphan media removed (4 files, ~16MB)
 - run_log_timeline rebuilt (47 entries)
 - CSP re-fixed for Cloudflare deployment
+
+## 2026-04-09 16:45:00 -0500 - fleet stabilized: local h=32, bat00 h=64, Modal h=96
+
+### findings
+- SegNet boundary h=16: VALIDATED (ep 0, scorer 4.565, clean exit)
+- SegNet boundary h=64: MPS OOM (silent kill after boundary mask computation)
+- SegNet boundary h=32: completed ep 1 (scorer 4.54) then MPS killed it
+- bat00 h=96: CUDA OOM on RTX 2070 Super (8GB not enough)
+- fix: PYTORCH_MPS_HIGH_WATERMARK_RATIO=0.0 to prevent MPS memory pressure
+
+### current fleet
+- local MPS: h=32 boundary attack (with MPS watermark fix)
+- bat00 CUDA: h=64 standard (fits in 8GB)
+- Modal A10G: h=96 standard (24GB, plenty)
+
+### decision
+- h=32 boundary attack is the highest-leverage experiment on local MPS
+- h=64 on bat00 CUDA will be ~4x faster than MPS
+- h=96 on Modal A10G is the council's width scaling recommendation
+- multi-lane parallel execution across 3 machines
