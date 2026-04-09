@@ -123,38 +123,68 @@ class Trainer:
 
         The upstream PoseNet.preprocess_input uses rgb_to_yuv6 decorated with
         @torch.no_grad(), which kills gradients through the color space conversion.
-        We replace it with a differentiable version. AllNorm.forward uses .view()
-        which we replace with .reshape() for robustness.
+        We replace it with a differentiable version that faithfully reproduces
+        the upstream math: full-range BT.601, 4:2:0 chroma subsampling, resize
+        to scorer input size, and proper einops rearrange.
+
+        AllNorm.forward uses .view() which we replace with .reshape() for
+        robustness with non-contiguous tensors.
 
         This is REQUIRED for training — without it, PoseNet gradients are zero.
         """
         import einops
+        import types
 
         # Patch AllNorm to not break gradients
         for module in list(posenet.modules()) + list(segnet.modules()):
             if type(module).__name__ == "AllNorm":
                 def _patched_forward(self, x):
                     return self.bn(x.reshape(-1, 1)).reshape(x.shape)
-                import types
                 module.forward = types.MethodType(_patched_forward, module)
 
-        # Patch PoseNet.preprocess_input to be differentiable
+        # Differentiable rgb_to_yuv6: full-range BT.601 with 4:2:0 subsampling
+        # Matches upstream frame_utils.py rgb_to_yuv6 exactly, minus @torch.no_grad
+        def _rgb_to_yuv6_diff(rgb_chw: torch.Tensor) -> torch.Tensor:
+            H, W = rgb_chw.shape[-2], rgb_chw.shape[-1]
+            H2, W2 = H // 2, W // 2
+            rgb = rgb_chw[..., :, :2 * H2, :2 * W2]
+            R = rgb[..., 0, :, :]
+            G = rgb[..., 1, :, :]
+            B = rgb[..., 2, :, :]
+            Y = (R * 0.299 + G * 0.587 + B * 0.114).clamp(0.0, 255.0)
+            U = ((B - Y) / 1.772 + 128.0).clamp(0.0, 255.0)
+            V = ((R - Y) / 1.402 + 128.0).clamp(0.0, 255.0)
+            U_sub = (U[..., 0::2, 0::2] + U[..., 1::2, 0::2] +
+                     U[..., 0::2, 1::2] + U[..., 1::2, 1::2]) * 0.25
+            V_sub = (V[..., 0::2, 0::2] + V[..., 1::2, 0::2] +
+                     V[..., 0::2, 1::2] + V[..., 1::2, 1::2]) * 0.25
+            y00 = Y[..., 0::2, 0::2]
+            y10 = Y[..., 1::2, 0::2]
+            y01 = Y[..., 0::2, 1::2]
+            y11 = Y[..., 1::2, 1::2]
+            return torch.stack([y00, y10, y01, y11, U_sub, V_sub], dim=-3)
+
+        # Get scorer input size from upstream module
+        # PoseNet expects (B, 12, 192, 256) after preprocess
+        try:
+            from modules import segnet_model_input_size
+        except ImportError:
+            segnet_model_input_size = (512, 384)  # (W, H) default
+
         def _diff_preprocess(self, x):
-            batch_size = x.shape[0]
-            seq_len_local = x.shape[1]
+            batch_size, seq_len_local = x.shape[0], x.shape[1]
             x = einops.rearrange(x, 'b t c h w -> (b t) c h w',
                                  b=batch_size, t=seq_len_local, c=3)
-            # Differentiable BT.601 limited-range RGB->YUV
-            r, g, b = x[:, 0:1], x[:, 1:2], x[:, 2:3]
-            y = 16.0 + (65.481 * r + 128.553 * g + 24.966 * b) / 255.0
-            u = 128.0 + (-37.797 * r - 74.203 * g + 112.0 * b) / 255.0
-            v = 128.0 + (112.0 * r - 93.786 * g - 18.214 * b) / 255.0
-            y2 = y.clamp(16, 235)
-            u2 = u.clamp(16, 240)
-            v2 = v.clamp(16, 240)
-            yuv = torch.cat([y2, u2, v2, y2, u2, v2], dim=1)
-            return yuv
-        import types
+            # Resize to scorer input size (bilinear, matching upstream)
+            x = nn.functional.interpolate(
+                x, size=(segnet_model_input_size[1], segnet_model_input_size[0]),
+                mode='bilinear', align_corners=False,
+            )
+            # Differentiable YUV conversion with 4:2:0 subsampling
+            yuv = _rgb_to_yuv6_diff(x)
+            return einops.rearrange(yuv, '(b t) c h w -> b (t c) h w',
+                                    b=batch_size, t=seq_len_local, c=6).contiguous()
+
         posenet.preprocess_input = types.MethodType(_diff_preprocess, posenet)
 
     def _apply_filter_to_pair(self, comp_pair: torch.Tensor) -> torch.Tensor:
