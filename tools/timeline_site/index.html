@@ -1,0 +1,915 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>PACT Lab Timeline</title>
+<script src="https://d3js.org/d3.v7.min.js"></script>
+<style>
+:root {
+    --bg: #0d1117; --surface: #161b22; --border: #30363d;
+    --text: #c9d1d9; --muted: #8b949e; --accent: #58a6ff;
+    --green: #3fb950; --red: #f85149; --orange: #d29922;
+    --purple: #bc8cff;
+}
+* { box-sizing: border-box; margin: 0; padding: 0; }
+body { font-family: -apple-system, BlinkMacSystemFont, 'SF Mono', monospace; background: var(--bg); color: var(--text); }
+.app { display: flex; flex-direction: column; height: 100vh; }
+header {
+    background: var(--surface); border-bottom: 1px solid var(--border);
+    padding: 12px 24px; display: flex; align-items: center; gap: 20px;
+}
+header h1 { font-size: 18px; color: var(--accent); }
+header .subtitle { font-size: 12px; color: var(--muted); }
+.tabs { display: flex; gap: 4px; }
+.tab {
+    background: transparent; color: var(--muted); border: 1px solid transparent;
+    padding: 6px 14px; border-radius: 6px; cursor: pointer; font-size: 13px;
+    font-family: inherit;
+}
+.tab:hover { background: var(--surface); color: var(--text); }
+.tab.active { background: var(--accent); color: #fff; border-color: var(--accent); }
+.controls {
+    margin-left: auto; display: flex; align-items: center; gap: 12px;
+}
+.controls label { font-size: 12px; color: var(--muted); }
+.controls input[type="range"] { width: 120px; accent-color: var(--accent); }
+.controls button {
+    background: var(--surface); color: var(--text); border: 1px solid var(--border);
+    padding: 4px 10px; border-radius: 4px; cursor: pointer; font-size: 12px;
+}
+.controls button:hover { border-color: var(--accent); }
+main { flex: 1; display: flex; overflow: hidden; }
+.panel { flex: 1; padding: 20px; overflow: auto; display: none; }
+.panel.active { display: block; }
+svg { width: 100%; }
+.tooltip {
+    position: fixed; background: var(--surface); border: 1px solid var(--border);
+    padding: 8px 12px; border-radius: 6px; font-size: 12px; pointer-events: none;
+    z-index: 1000; max-width: 300px; display: none;
+}
+.tooltip .title { color: var(--accent); font-weight: bold; }
+.tooltip .detail { color: var(--muted); margin-top: 4px; }
+.tooltip .score { color: var(--green); font-size: 16px; }
+footer {
+    background: var(--surface); border-top: 1px solid var(--border);
+    padding: 6px 24px; font-size: 11px; color: var(--muted);
+    display: flex; justify-content: space-between;
+}
+/* Tree specific */
+.tree-link { fill: none; stroke: var(--border); stroke-width: 1.5; }
+.tree-link.promoted { stroke: var(--green); stroke-width: 2.5; }
+.tree-node circle { cursor: pointer; }
+.tree-label { font-size: 10px; fill: var(--muted); }
+/* Trajectory specific */
+.trajectory-line { fill: none; stroke-width: 2; opacity: 0.8; }
+.trajectory-dot { cursor: pointer; }
+.milestone-line { stroke: var(--green); stroke-dasharray: 4 2; opacity: 0.5; }
+.milestone-label { fill: var(--green); font-size: 10px; opacity: 0.7; }
+/* Scatter specific */
+.scatter-dot { cursor: pointer; stroke-width: 1.5; }
+/* Timeline bar */
+.timeline-bar {
+    background: var(--surface); border-top: 1px solid var(--border);
+    padding: 8px 24px; display: flex; align-items: center; gap: 12px;
+}
+.timeline-bar input[type="range"] { flex: 1; accent-color: var(--accent); }
+.timeline-bar .date-label { font-size: 12px; color: var(--accent); min-width: 160px; }
+.legend { display: flex; gap: 16px; flex-wrap: wrap; margin: 12px 0; }
+.legend-item { display: flex; align-items: center; gap: 6px; font-size: 11px; }
+.legend-dot { width: 10px; height: 10px; border-radius: 50%; }
+.axis text { fill: var(--muted); font-size: 11px; }
+.axis line, .axis path { stroke: var(--border); }
+.grid line { stroke: var(--border); opacity: 0.3; }
+/* Markdown viewer */
+.md-viewer { max-width: 800px; margin: 0 auto; }
+.md-viewer .version-nav { display: flex; gap: 8px; margin-bottom: 16px; align-items: center; }
+.md-viewer pre { white-space: pre-wrap; line-height: 1.6; font-size: 13px; }
+.md-viewer ins { background: #2ea04333; color: var(--green); text-decoration: none; padding: 1px 2px; border-radius: 2px; }
+.md-viewer del { background: #f8514933; color: var(--red); text-decoration: line-through; padding: 1px 2px; border-radius: 2px; }
+</style>
+</head>
+<body>
+<div class="app">
+
+<header>
+    <h1>PACT Lab Timeline</h1>
+    <span class="subtitle">Experiment evolution across the fleet</span>
+    <div class="tabs">
+        <button class="tab active" data-panel="tree">Tree</button>
+        <button class="tab" data-panel="trajectory">Trajectory</button>
+        <button class="tab" data-panel="scatter">Scatter</button>
+        <button class="tab" data-panel="docs">Docs</button>
+        <button class="tab" data-panel="video">Video</button>
+    </div>
+    <div class="controls">
+        <button id="playBtn">Play</button>
+        <label>Speed</label>
+        <input type="range" id="speedSlider" min="1" max="10" value="5">
+    </div>
+</header>
+
+<div class="timeline-bar">
+    <input type="range" id="timeSlider" min="0" max="100" value="100">
+    <span class="date-label" id="timeLabel">--</span>
+</div>
+
+<main>
+    <div class="panel active" id="panel-tree">
+        <div class="legend" id="tree-legend"></div>
+        <svg id="tree-svg"></svg>
+    </div>
+    <div class="panel" id="panel-trajectory">
+        <div class="legend" id="traj-legend"></div>
+        <svg id="traj-svg"></svg>
+    </div>
+    <div class="panel" id="panel-scatter">
+        <div class="legend" id="scatter-legend"></div>
+        <svg id="scatter-svg"></svg>
+    </div>
+    <div class="panel" id="panel-docs">
+        <div class="md-viewer" id="docs-viewer">
+            <div class="version-nav">
+                <select id="docPicker" style="background:var(--bg);color:var(--text);border:1px solid var(--border);padding:6px 10px;border-radius:6px;font-size:13px;min-width:300px;">
+                    <option value="">-- select document --</option>
+                </select>
+                <button id="docPrev" style="background:var(--surface);color:var(--text);border:1px solid var(--border);padding:4px 10px;border-radius:4px;cursor:pointer;">&larr; Prev</button>
+                <span id="docVersionLabel" style="font-size:12px;color:var(--muted);min-width:200px;text-align:center;">--</span>
+                <button id="docNext" style="background:var(--surface);color:var(--text);border:1px solid var(--border);padding:4px 10px;border-radius:4px;cursor:pointer;">Next &rarr;</button>
+                <div style="margin-left:auto;display:flex;gap:4px;">
+                    <button id="docModeContent" class="tab active" style="font-size:11px;padding:4px 8px;">Content</button>
+                    <button id="docModeDiff" class="tab" style="font-size:11px;padding:4px 8px;">Diff</button>
+                    <button id="docModeAnimate" class="tab" style="font-size:11px;padding:4px 8px;">Animate</button>
+                </div>
+            </div>
+            <div id="docStats" style="font-size:11px;color:var(--muted);margin-bottom:12px;display:flex;gap:16px;"></div>
+            <pre id="docContent" style="white-space:pre-wrap;line-height:1.6;font-size:13px;"></pre>
+        </div>
+    </div>
+    <div class="panel" id="panel-video">
+        <div style="text-align:center;padding:40px;">
+            <h2 style="color:var(--accent);margin-bottom:16px;">Video Frame Comparisons</h2>
+            <p style="color:var(--muted);margin-bottom:24px;">Side-by-side visualization of original vs post-filtered frames</p>
+            <div id="videoGrid" style="display:grid;grid-template-columns:repeat(auto-fit,minmax(400px,1fr));gap:16px;"></div>
+            <p style="color:var(--muted);margin-top:24px;font-size:12px;">
+                Run <code>python experiments/generate_visual_comparison.py</code> to generate frame comparisons,<br>
+                then rebuild with <code>python tools/md_timeline_build.py --frames experiments/frames/</code>
+            </p>
+        </div>
+    </div>
+</main>
+
+<div class="tooltip" id="tooltip"></div>
+
+<footer>
+    <span id="statusLeft">Loading data...</span>
+    <span id="statusRight"></span>
+</footer>
+
+</div>
+
+<script>
+// ── Data Loading ──────────────────────────────────────────────────────
+let DATA = null;
+let currentTime = 1.0; // 0..1 normalized time
+let playing = false;
+let playInterval = null;
+
+async function loadData() {
+    try {
+        const res = await fetch('data.json');
+        DATA = await res.json();
+    } catch (e) {
+        // Use embedded fallback data if no data.json
+        DATA = buildFallbackData();
+    }
+    document.getElementById('statusLeft').textContent =
+        `${DATA.experiments.length} experiments, ${DATA.milestones.length} milestones`;
+    document.getElementById('statusRight').textContent =
+        `Sources: ${DATA.sources.join(', ')} | Generated: ${DATA.generated_at || 'embedded'}`;
+    initAll();
+}
+
+function buildFallbackData() {
+    // Hardcoded from the run_log analysis — the score evolution story
+    return {
+        generated_at: "embedded",
+        sources: ["local", "bat00", "tertiary"],
+        experiments: [
+            // Each experiment: { id, name, variant, hidden, platform, datapoints: [{date, epoch, score, pose, seg, rate}] }
+            { id: "baseline", name: "No filter (CRF34+FG22)", variant: "none", hidden: 0, platform: "local",
+              datapoints: [{ date: "2026-04-06T12:00", score: 2.08, pose: 0.052, seg: 0.0069, rate: 0.023 }],
+              parent: null, color: "#8b949e" },
+            { id: "h8", name: "PostFilter h=8", variant: "standard", hidden: 8, platform: "local",
+              datapoints: [
+                { date: "2026-04-07T10:00", epoch: 50, score: 2.01 },
+                { date: "2026-04-07T14:00", epoch: 200, score: 1.99 },
+              ],
+              parent: "baseline", color: "#8b949e" },
+            { id: "h16_sal", name: "Saliency h=16 α=10", variant: "standard", hidden: 16, platform: "local",
+              datapoints: [
+                { date: "2026-04-07T18:00", epoch: 100, score: 1.985 },
+                { date: "2026-04-08T02:00", epoch: 300, score: 1.945 },
+              ],
+              parent: "h8", color: "#d29922" },
+            { id: "h16_long", name: "Long-1000 h=16", variant: "standard", hidden: 16, platform: "local",
+              datapoints: [
+                { date: "2026-04-08T08:00", epoch: 500, score: 1.92 },
+                { date: "2026-04-08T14:00", epoch: 800, score: 1.92 },
+              ],
+              parent: "h16_sal", color: "#d29922" },
+            { id: "h32_qat", name: "QAT+EMA h=32", variant: "standard", hidden: 32, platform: "local",
+              datapoints: [
+                { date: "2026-04-08T10:00", epoch: 100, score: 1.985 },
+                { date: "2026-04-08T16:00", epoch: 300, score: 1.945 },
+                { date: "2026-04-08T20:00", epoch: 500, score: 1.92 },
+              ],
+              parent: "h16_sal", color: "#58a6ff" },
+            { id: "h32_long500", name: "Long-500 h=32 QAT+EMA", variant: "standard", hidden: 32, platform: "local",
+              datapoints: [
+                { date: "2026-04-08T22:00", epoch: 400, score: 1.845 },
+                { date: "2026-04-09T02:00", epoch: 500, score: 1.845 },
+              ],
+              parent: "h32_qat", color: "#58a6ff" },
+            { id: "h32_long1000", name: "Long-1000 h=32", variant: "standard", hidden: 32, platform: "bat00",
+              datapoints: [
+                { date: "2026-04-09T00:00", epoch: 500, score: 1.87 },
+                { date: "2026-04-09T04:00", epoch: 800, score: 1.845 },
+                { date: "2026-04-09T06:00", epoch: 1000, score: 1.845 },
+              ],
+              parent: "h32_long500", color: "#58a6ff" },
+            { id: "h48", name: "h=48 QAT+EMA", variant: "standard", hidden: 48, platform: "local",
+              datapoints: [
+                { date: "2026-04-09T03:00", epoch: 200, score: 1.82 },
+                { date: "2026-04-09T06:00", epoch: 400, score: 1.762 },
+              ],
+              parent: "h32_long500", color: "#3fb950" },
+            { id: "h64_long1000", name: "Long-1000 h=64 QAT+EMA", variant: "standard", hidden: 64, platform: "local",
+              datapoints: [
+                { date: "2026-04-09T04:00", epoch: 100, score: 1.85 },
+                { date: "2026-04-09T08:00", epoch: 400, score: 1.76 },
+                { date: "2026-04-09T10:00", epoch: 700, score: 1.727 },
+                { date: "2026-04-09T12:00", epoch: 1000, score: 1.727 },
+              ],
+              parent: "h48", color: "#3fb950" },
+            { id: "h96", name: "h=96 (OOM at ep 143)", variant: "standard", hidden: 96, platform: "local",
+              datapoints: [
+                { date: "2026-04-09T05:00", epoch: 66, score: 1.90 },
+                { date: "2026-04-09T07:00", epoch: 143, score: 1.85 },
+              ],
+              parent: "h64_long1000", color: "#8b949e" },
+            { id: "h32_a30", name: "α=30 h=32", variant: "standard", hidden: 32, platform: "local",
+              datapoints: [
+                { date: "2026-04-09T06:00", epoch: 200, score: 1.90 },
+                { date: "2026-04-09T12:00", epoch: 423, score: 1.87 },
+              ],
+              parent: "h32_long1000", color: "#d29922" },
+            { id: "kalman_h48", name: "Kalman h=48", variant: "standard", hidden: 48, platform: "tertiary",
+              datapoints: [
+                { date: "2026-04-09T04:00", epoch: 200, score: 1.92 },
+                { date: "2026-04-09T08:00", epoch: 600, score: 1.863 },
+              ],
+              parent: "h48", color: "#bc8cff" },
+            { id: "cvar_h32", name: "CVaR DRO h=32", variant: "standard", hidden: 32, platform: "local",
+              datapoints: [
+                { date: "2026-04-09T04:00", epoch: 200, score: 1.95 },
+              ],
+              parent: "h32_qat", color: "#bc8cff" },
+            { id: "dilated_h64", name: "Dilated h=64", variant: "dilated", hidden: 64, platform: "local",
+              datapoints: [
+                { date: "2026-04-09T08:00", epoch: 75, score: 1.86 },
+                { date: "2026-04-09T10:00", epoch: 123, score: 1.82 },
+                { date: "2026-04-09T12:00", epoch: 220, score: 1.79 },
+              ],
+              parent: "h64_long1000", color: "#f0883e" },
+            { id: "pixelshuffle_h64", name: "PixelShuffle h=64", variant: "pixelshuffle", hidden: 64, platform: "local",
+              datapoints: [
+                { date: "2026-04-09T08:00", epoch: 41, score: 1.91 },
+                { date: "2026-04-09T10:00", epoch: 97, score: 1.86 },
+                { date: "2026-04-09T12:00", epoch: 166, score: 1.84 },
+              ],
+              parent: "h64_long1000", color: "#f778ba" },
+            { id: "psd_h64", name: "PSD h=64 (council pick)", variant: "psd", hidden: 64, platform: "local",
+              datapoints: [
+                { date: "2026-04-09T10:00", epoch: 26, score: 1.93 },
+                { date: "2026-04-09T11:00", epoch: 58, score: 1.88 },
+                { date: "2026-04-09T12:00", epoch: 63, score: 1.87 },
+              ],
+              parent: "h64_long1000", color: "#f85149" },
+            { id: "segnet_attack", name: "SegNet STE Attack", variant: "standard", hidden: 32, platform: "local",
+              datapoints: [
+                { date: "2026-04-09T04:00", epoch: 300, score: 1.11 },
+                { date: "2026-04-09T08:00", epoch: 590, score: 0.98 },
+                { date: "2026-04-09T12:00", epoch: 840, score: 0.98 },
+              ],
+              parent: "h32_qat", color: "#f85149" },
+            { id: "segnet_h64", name: "SegNet h=64 Attack", variant: "standard", hidden: 64, platform: "local",
+              datapoints: [
+                { date: "2026-04-09T10:00", epoch: 150, score: 1.17 },
+                { date: "2026-04-09T12:00", epoch: 310, score: 1.11 },
+              ],
+              parent: "h64_long1000", color: "#f85149" },
+          ],
+        milestones: [
+            { date: "2026-04-06T12:00", score: 2.08, label: "Baseline (no filter)" },
+            { date: "2026-04-07T14:00", score: 2.01, label: "First post-filter" },
+            { date: "2026-04-07T18:00", score: 1.99, label: "Sub-2.0" },
+            { date: "2026-04-08T02:00", score: 1.945, label: "Tie #1 on leaderboard" },
+            { date: "2026-04-08T22:00", score: 1.845, label: "h=32 long-500" },
+            { date: "2026-04-09T06:00", score: 1.762, label: "h=48 scaling" },
+            { date: "2026-04-09T10:00", score: 1.727, label: "h=64 PROMOTED" },
+        ],
+        leaderboard: [
+            { rank: 1, name: "PACT (ours)", score: 1.727, date: "2026-04-09" },
+            { rank: 2, name: "neural_inflate", score: 1.89, date: "2026-04-06" },
+        ],
+        scaling_law: { a: -0.159, b: 2.382, label: "score = -0.159 ln(h) + 2.382" },
+        target: 1.45,
+        docs: {},  // populated by build script
+    };
+}
+
+// ── Initialization ────────────────────────────────────────────────────
+
+function initAll() {
+    setupTabs();
+    setupTimeline();
+    setupPlayback();
+    drawTree();
+    drawTrajectory();
+    drawScatter();
+    initDocs();
+}
+
+function setupTabs() {
+    document.querySelectorAll('.tab').forEach(tab => {
+        tab.onclick = () => {
+            document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+            document.querySelectorAll('.panel').forEach(p => p.classList.remove('active'));
+            tab.classList.add('active');
+            document.getElementById('panel-' + tab.dataset.panel).classList.add('active');
+        };
+    });
+}
+
+function setupTimeline() {
+    const slider = document.getElementById('timeSlider');
+    slider.oninput = () => {
+        currentTime = parseInt(slider.value) / 100;
+        updateAllViews();
+    };
+}
+
+function setupPlayback() {
+    const btn = document.getElementById('playBtn');
+    const speed = document.getElementById('speedSlider');
+    btn.onclick = () => {
+        if (playing) {
+            clearInterval(playInterval);
+            playing = false;
+            btn.textContent = 'Play';
+        } else {
+            playing = true;
+            btn.textContent = 'Pause';
+            const slider = document.getElementById('timeSlider');
+            if (currentTime >= 1.0) {
+                currentTime = 0;
+                slider.value = 0;
+            }
+            playInterval = setInterval(() => {
+                currentTime = Math.min(1.0, currentTime + 0.005 * parseInt(speed.value));
+                slider.value = Math.round(currentTime * 100);
+                updateAllViews();
+                if (currentTime >= 1.0) {
+                    clearInterval(playInterval);
+                    playing = false;
+                    btn.textContent = 'Play';
+                }
+            }, 50);
+        }
+    };
+}
+
+function updateAllViews() {
+    // Update date label
+    const allDates = DATA.experiments.flatMap(e => e.datapoints.map(d => new Date(d.date)));
+    const minDate = d3.min(allDates);
+    const maxDate = d3.max(allDates);
+    const currentDate = new Date(+minDate + currentTime * (+maxDate - +minDate));
+    document.getElementById('timeLabel').textContent = currentDate.toLocaleString();
+
+    // Update each view
+    updateTree(currentDate);
+    updateTrajectory(currentDate);
+    updateScatter(currentDate);
+}
+
+// ── Tooltip ───────────────────────────────────────────────────────────
+
+const tooltip = document.getElementById('tooltip');
+function showTooltip(evt, html) {
+    tooltip.innerHTML = html;
+    tooltip.style.display = 'block';
+    tooltip.style.left = (evt.clientX + 12) + 'px';
+    tooltip.style.top = (evt.clientY - 12) + 'px';
+}
+function hideTooltip() { tooltip.style.display = 'none'; }
+
+// ── Tree View ─────────────────────────────────────────────────────────
+
+function drawTree() {
+    const svg = d3.select('#tree-svg');
+    const width = svg.node().parentElement.clientWidth - 40;
+    const height = Math.max(500, DATA.experiments.length * 45);
+    svg.attr('viewBox', `0 0 ${width} ${height}`);
+
+    // Build hierarchy
+    const root = { id: '__root__', name: 'Start', children: [] };
+    const nodeMap = { '__root__': root };
+
+    // First pass: create all nodes
+    DATA.experiments.forEach(exp => {
+        nodeMap[exp.id] = { ...exp, children: [] };
+    });
+    // Second pass: link to parents
+    DATA.experiments.forEach(exp => {
+        const parent = exp.parent ? nodeMap[exp.parent] : root;
+        if (parent) parent.children.push(nodeMap[exp.id]);
+    });
+
+    const treeLayout = d3.tree().size([height - 40, width - 200]);
+    const hierarchy = d3.hierarchy(root);
+    treeLayout(hierarchy);
+
+    // Links
+    svg.selectAll('.tree-link')
+        .data(hierarchy.links().filter(l => l.source.data.id !== '__root__' || l.target.depth === 1))
+        .join('path')
+        .attr('class', d => 'tree-link' + (isPromoted(d.target.data) ? ' promoted' : ''))
+        .attr('d', d3.linkHorizontal().x(d => d.y + 100).y(d => d.x + 20));
+
+    // Nodes
+    const nodes = svg.selectAll('.tree-node')
+        .data(hierarchy.descendants().filter(d => d.data.id !== '__root__'))
+        .join('g')
+        .attr('class', 'tree-node')
+        .attr('transform', d => `translate(${d.y + 100},${d.x + 20})`);
+
+    nodes.selectAll('circle').data(d => [d]).join('circle')
+        .attr('r', d => getNodeRadius(d.data))
+        .attr('fill', d => d.data.color || '#58a6ff')
+        .attr('stroke', d => isPromoted(d.data) ? '#3fb950' : 'none')
+        .attr('stroke-width', 3)
+        .on('mouseover', (evt, d) => {
+            const dp = d.data.datapoints;
+            const best = dp ? dp.reduce((a, b) => (a.score || 99) < (b.score || 99) ? a : b) : {};
+            showTooltip(evt, `
+                <div class="title">${d.data.name || d.data.id}</div>
+                <div class="score">${best.score ? best.score.toFixed(3) : '--'}</div>
+                <div class="detail">
+                    ${d.data.variant || ''} h=${d.data.hidden || '?'}<br>
+                    Platform: ${d.data.platform || 'local'}<br>
+                    ${best.epoch ? 'Best epoch: ' + best.epoch : ''}
+                </div>
+            `);
+        })
+        .on('mouseout', hideTooltip);
+
+    nodes.selectAll('.tree-label').data(d => [d]).join('text')
+        .attr('class', 'tree-label')
+        .attr('dx', d => getNodeRadius(d.data) + 6)
+        .attr('dy', 4)
+        .text(d => {
+            const best = getBestScore(d.data);
+            return `${d.data.name || d.data.id} ${best ? '(' + best.toFixed(3) + ')' : ''}`;
+        });
+
+    // Legend
+    const platforms = [...new Set(DATA.experiments.map(e => e.platform))];
+    const legend = d3.select('#tree-legend');
+    legend.selectAll('.legend-item').data(platforms).join('div')
+        .attr('class', 'legend-item')
+        .html(d => `<span class="legend-dot" style="background:${platformColor(d)}"></span>${d}`);
+}
+
+function updateTree(currentDate) {
+    d3.selectAll('.tree-node').each(function(d) {
+        const visible = d.data.datapoints &&
+            d.data.datapoints.some(dp => new Date(dp.date) <= currentDate);
+        d3.select(this).style('opacity', visible ? 1 : 0.15);
+    });
+}
+
+function isPromoted(data) {
+    // The promoted experiments (ones that became the floor)
+    return ['h64_long1000', 'h32_long500', 'h48'].includes(data.id);
+}
+
+function getNodeRadius(data) {
+    if (!data.hidden) return 6;
+    return Math.max(6, Math.min(16, data.hidden / 6));
+}
+
+function getBestScore(data) {
+    if (!data.datapoints || !data.datapoints.length) return null;
+    return Math.min(...data.datapoints.map(d => d.score).filter(Boolean));
+}
+
+// ── Trajectory View ───────────────────────────────────────────────────
+
+function drawTrajectory() {
+    const svg = d3.select('#traj-svg');
+    const margin = { top: 30, right: 30, bottom: 50, left: 60 };
+    const width = svg.node().parentElement.clientWidth - margin.left - margin.right - 40;
+    const height = 500;
+    svg.attr('viewBox', `0 0 ${width + margin.left + margin.right} ${height + margin.top + margin.bottom}`);
+
+    const g = svg.append('g').attr('transform', `translate(${margin.left},${margin.top})`);
+
+    const allDates = DATA.experiments.flatMap(e => e.datapoints.map(d => new Date(d.date)));
+    const allScores = DATA.experiments.flatMap(e => e.datapoints.map(d => d.score)).filter(Boolean);
+
+    const x = d3.scaleTime()
+        .domain([d3.min(allDates), d3.max(allDates)])
+        .range([0, width]);
+
+    const y = d3.scaleLinear()
+        .domain([Math.min(0.9, d3.min(allScores) - 0.1), Math.max(2.2, d3.max(allScores) + 0.1)])
+        .range([height, 0]);
+
+    // Grid
+    g.append('g').attr('class', 'grid')
+        .call(d3.axisLeft(y).tickSize(-width).tickFormat(''));
+
+    // Axes
+    g.append('g').attr('class', 'axis')
+        .attr('transform', `translate(0,${height})`)
+        .call(d3.axisBottom(x).ticks(8).tickFormat(d3.timeFormat('%b %d %H:%M')));
+
+    g.append('g').attr('class', 'axis').call(d3.axisLeft(y));
+
+    // Target line
+    g.append('line')
+        .attr('x1', 0).attr('x2', width)
+        .attr('y1', y(DATA.target)).attr('y2', y(DATA.target))
+        .attr('stroke', '#f85149').attr('stroke-dasharray', '6 3').attr('opacity', 0.6);
+    g.append('text').attr('x', width - 60).attr('y', y(DATA.target) - 6)
+        .attr('fill', '#f85149').attr('font-size', 11).text(`Target: ${DATA.target}`);
+
+    // Leaderboard line
+    if (DATA.leaderboard && DATA.leaderboard[1]) {
+        g.append('line')
+            .attr('x1', 0).attr('x2', width)
+            .attr('y1', y(DATA.leaderboard[1].score)).attr('y2', y(DATA.leaderboard[1].score))
+            .attr('stroke', '#d29922').attr('stroke-dasharray', '4 2').attr('opacity', 0.5);
+        g.append('text').attr('x', width - 120).attr('y', y(DATA.leaderboard[1].score) - 6)
+            .attr('fill', '#d29922').attr('font-size', 11)
+            .text(`#2 ${DATA.leaderboard[1].name}: ${DATA.leaderboard[1].score}`);
+    }
+
+    // Milestone lines
+    DATA.milestones.forEach(m => {
+        g.append('line')
+            .attr('class', 'milestone-line')
+            .attr('x1', 0).attr('x2', width)
+            .attr('y1', y(m.score)).attr('y2', y(m.score));
+    });
+
+    // Experiment lines
+    const line = d3.line()
+        .x(d => x(new Date(d.date)))
+        .y(d => y(d.score))
+        .curve(d3.curveMonotoneX);
+
+    // Filter to non-segnet experiments for main trajectory
+    const mainExps = DATA.experiments.filter(e => !e.id.includes('segnet'));
+
+    mainExps.forEach(exp => {
+        if (exp.datapoints.length < 2) return;
+        g.append('path')
+            .datum(exp.datapoints.filter(d => d.score))
+            .attr('class', 'trajectory-line')
+            .attr('stroke', exp.color || '#58a6ff')
+            .attr('d', line)
+            .attr('data-exp', exp.id);
+    });
+
+    // Dots
+    DATA.experiments.filter(e => !e.id.includes('segnet')).forEach(exp => {
+        g.selectAll(`.dot-${exp.id}`)
+            .data(exp.datapoints.filter(d => d.score))
+            .join('circle')
+            .attr('class', `trajectory-dot dot-${exp.id}`)
+            .attr('cx', d => x(new Date(d.date)))
+            .attr('cy', d => y(d.score))
+            .attr('r', 5)
+            .attr('fill', exp.color || '#58a6ff')
+            .attr('data-exp', exp.id)
+            .on('mouseover', (evt, d) => {
+                showTooltip(evt, `
+                    <div class="title">${exp.name}</div>
+                    <div class="score">${d.score.toFixed(3)}</div>
+                    <div class="detail">
+                        Epoch: ${d.epoch || '--'}<br>
+                        ${new Date(d.date).toLocaleString()}<br>
+                        Platform: ${exp.platform}
+                    </div>
+                `);
+            })
+            .on('mouseout', hideTooltip);
+    });
+
+    // Legend
+    const legend = d3.select('#traj-legend');
+    const legendExps = DATA.experiments.filter(e => !e.id.includes('segnet'));
+    legend.selectAll('.legend-item').data(legendExps).join('div')
+        .attr('class', 'legend-item')
+        .html(d => `<span class="legend-dot" style="background:${d.color}"></span>${d.name}`);
+}
+
+function updateTrajectory(currentDate) {
+    d3.selectAll('.trajectory-dot').each(function(d) {
+        const visible = new Date(d.date) <= currentDate;
+        d3.select(this).style('opacity', visible ? 1 : 0.1);
+    });
+    d3.selectAll('.trajectory-line').style('opacity', 0.8); // Could clip, but simple fade works
+}
+
+// ── Scatter View ──────────────────────────────────────────────────────
+
+function drawScatter() {
+    const svg = d3.select('#scatter-svg');
+    const margin = { top: 30, right: 30, bottom: 60, left: 60 };
+    const width = svg.node().parentElement.clientWidth - margin.left - margin.right - 40;
+    const height = 500;
+    svg.attr('viewBox', `0 0 ${width + margin.left + margin.right} ${height + margin.top + margin.bottom}`);
+
+    const g = svg.append('g').attr('transform', `translate(${margin.left},${margin.top})`);
+
+    // Flatten all datapoints with experiment metadata
+    const allPoints = DATA.experiments.flatMap(exp =>
+        exp.datapoints
+            .filter(d => d.score)
+            .map(d => ({ ...d, exp, date: new Date(d.date) }))
+    );
+
+    // Time color scale
+    const timeExtent = d3.extent(allPoints, d => d.date);
+    const timeColor = d3.scaleSequential(d3.interpolateViridis)
+        .domain(timeExtent);
+
+    // X: hidden width, Y: score, Color: time, Size: epoch
+    const x = d3.scaleLog()
+        .domain([4, 128])
+        .range([0, width]);
+
+    const y = d3.scaleLinear()
+        .domain([0.8, 2.2])
+        .range([height, 0]);
+
+    const rScale = d3.scaleSqrt()
+        .domain([0, 1000])
+        .range([4, 16]);
+
+    // Grid
+    g.append('g').attr('class', 'grid')
+        .call(d3.axisLeft(y).tickSize(-width).tickFormat(''));
+
+    // Axes
+    g.append('g').attr('class', 'axis')
+        .attr('transform', `translate(0,${height})`)
+        .call(d3.axisBottom(x).tickValues([8, 16, 32, 48, 64, 96]).tickFormat(d => d));
+    g.append('text').attr('x', width / 2).attr('y', height + 45)
+        .attr('fill', 'var(--muted)').attr('text-anchor', 'middle').attr('font-size', 12)
+        .text('Hidden Width (h)');
+
+    g.append('g').attr('class', 'axis').call(d3.axisLeft(y));
+    g.append('text').attr('transform', 'rotate(-90)')
+        .attr('x', -height / 2).attr('y', -45)
+        .attr('fill', 'var(--muted)').attr('text-anchor', 'middle').attr('font-size', 12)
+        .text('Score (lower = better)');
+
+    // Scaling law line
+    if (DATA.scaling_law) {
+        const lawPoints = [8, 16, 32, 48, 64, 96, 128].map(h => ({
+            h, score: DATA.scaling_law.a * Math.log(h) + DATA.scaling_law.b
+        }));
+        const lawLine = d3.line().x(d => x(d.h)).y(d => y(d.score));
+        g.append('path')
+            .datum(lawPoints)
+            .attr('d', lawLine)
+            .attr('fill', 'none')
+            .attr('stroke', 'var(--accent)')
+            .attr('stroke-dasharray', '6 3')
+            .attr('opacity', 0.5);
+        g.append('text')
+            .attr('x', x(96) + 5).attr('y', y(lawPoints[5].score))
+            .attr('fill', 'var(--accent)').attr('font-size', 10)
+            .text(DATA.scaling_law.label);
+    }
+
+    // Target line
+    g.append('line')
+        .attr('x1', 0).attr('x2', width)
+        .attr('y1', y(DATA.target)).attr('y2', y(DATA.target))
+        .attr('stroke', '#f85149').attr('stroke-dasharray', '6 3').attr('opacity', 0.4);
+
+    // Dots
+    g.selectAll('.scatter-dot')
+        .data(allPoints.filter(d => d.exp.hidden > 0))
+        .join('circle')
+        .attr('class', 'scatter-dot')
+        .attr('cx', d => x(d.exp.hidden))
+        .attr('cy', d => y(d.score))
+        .attr('r', d => rScale(d.epoch || 100))
+        .attr('fill', d => timeColor(d.date))
+        .attr('stroke', d => d.exp.color)
+        .attr('opacity', 0.8)
+        .on('mouseover', (evt, d) => {
+            showTooltip(evt, `
+                <div class="title">${d.exp.name}</div>
+                <div class="score">${d.score.toFixed(3)}</div>
+                <div class="detail">
+                    h=${d.exp.hidden}, epoch ${d.epoch || '--'}<br>
+                    ${d.date.toLocaleString()}<br>
+                    Variant: ${d.exp.variant}<br>
+                    Platform: ${d.exp.platform}
+                </div>
+            `);
+        })
+        .on('mouseout', hideTooltip);
+
+    // Color scale legend
+    const legend = d3.select('#scatter-legend');
+    legend.html(`
+        <div class="legend-item">
+            <span style="display:inline-block;width:80px;height:10px;background:linear-gradient(to right, ${timeColor(timeExtent[0])}, ${timeColor(timeExtent[1])});border-radius:2px;"></span>
+            Time (early → late)
+        </div>
+        <div class="legend-item">Size = epoch count</div>
+        <div class="legend-item">Border color = experiment family</div>
+    `);
+}
+
+function updateScatter(currentDate) {
+    d3.selectAll('.scatter-dot').each(function(d) {
+        const visible = d.date <= currentDate;
+        d3.select(this).style('opacity', visible ? 0.8 : 0.05);
+    });
+}
+
+// ── Helpers ───────────────────────────────────────────────────────────
+
+function platformColor(platform) {
+    const colors = { local: '#58a6ff', bat00: '#3fb950', tertiary: '#bc8cff', colab: '#f0883e' };
+    return colors[platform] || '#8b949e';
+}
+
+// ── Docs Viewer ───────────────────────────────────────────────────────
+
+let docCurrentFile = '';
+let docCurrentIdx = 0;
+let docMode = 'content'; // content | diff | animate
+let animating = false;
+let animTimer = null;
+
+function initDocs() {
+    if (!DATA.timelines) return;
+
+    const picker = document.getElementById('docPicker');
+    // Sort files by number of commits (most interesting first)
+    const files = Object.entries(DATA.timelines)
+        .sort((a, b) => b[1].commits.length - a[1].commits.length)
+        .map(([path]) => path);
+
+    files.forEach(f => {
+        const opt = document.createElement('option');
+        opt.value = f;
+        const numVersions = DATA.timelines[f].commits.length;
+        opt.textContent = `${f} (${numVersions} versions)`;
+        picker.appendChild(opt);
+    });
+
+    picker.onchange = () => selectDoc(picker.value);
+    document.getElementById('docPrev').onclick = () => {
+        if (docCurrentIdx < getDocCommits().length - 1) { docCurrentIdx++; renderDoc(); }
+    };
+    document.getElementById('docNext').onclick = () => {
+        if (docCurrentIdx > 0) { docCurrentIdx--; renderDoc(); }
+    };
+
+    ['Content', 'Diff', 'Animate'].forEach(mode => {
+        document.getElementById('docMode' + mode).onclick = () => {
+            docMode = mode.toLowerCase();
+            document.querySelectorAll('#panel-docs .tab').forEach(t => t.classList.remove('active'));
+            document.getElementById('docMode' + mode).classList.add('active');
+            if (mode === 'Animate') startDocAnimation();
+            else { stopDocAnimation(); renderDoc(); }
+        };
+    });
+}
+
+function getDocCommits() {
+    if (!docCurrentFile || !DATA.timelines[docCurrentFile]) return [];
+    return DATA.timelines[docCurrentFile].commits;
+}
+
+function selectDoc(filepath) {
+    docCurrentFile = filepath;
+    docCurrentIdx = 0;
+    stopDocAnimation();
+    renderDoc();
+}
+
+function renderDoc() {
+    const commits = getDocCommits();
+    if (!commits.length) return;
+
+    const commit = commits[docCurrentIdx];
+    const timeline = DATA.timelines[docCurrentFile];
+
+    // Update version label
+    document.getElementById('docVersionLabel').textContent =
+        `${commit.short_hash} — ${commit.date.slice(0, 16)} (${docCurrentIdx + 1}/${commits.length})`;
+
+    // Stats
+    const stats = document.getElementById('docStats');
+    if (docCurrentIdx < commits.length - 1) {
+        const diff = timeline.diffs.find(d => d.to === commit.short_hash);
+        if (diff) {
+            stats.innerHTML = `
+                <span style="color:var(--green)">+${diff.additions} additions</span>
+                <span style="color:var(--red)">-${diff.deletions} deletions</span>
+                <span>${commit.message}</span>
+            `;
+        } else {
+            stats.innerHTML = `<span>${commit.message}</span>`;
+        }
+    } else {
+        stats.innerHTML = `<span>Initial version — ${commit.message}</span>`;
+    }
+
+    const content = document.getElementById('docContent');
+
+    if (docMode === 'content') {
+        const version = timeline.versions[commit.short_hash];
+        content.innerHTML = escHtml(version || '(not available at this commit)');
+    } else if (docMode === 'diff') {
+        if (docCurrentIdx >= commits.length - 1) {
+            content.innerHTML = '<span style="color:var(--muted)">This is the earliest version.</span>';
+            return;
+        }
+        const diff = timeline.diffs.find(d => d.to === commit.short_hash);
+        if (diff) {
+            content.innerHTML = diff.html;
+        } else {
+            content.innerHTML = '<span style="color:var(--muted)">No diff data available.</span>';
+        }
+    }
+}
+
+function startDocAnimation() {
+    const commits = getDocCommits();
+    if (commits.length < 2) return;
+
+    animating = true;
+    docCurrentIdx = commits.length - 1; // Start from earliest
+
+    function step() {
+        if (!animating || docCurrentIdx <= 0) {
+            stopDocAnimation();
+            return;
+        }
+        docCurrentIdx--;
+        docMode = 'diff';
+        renderDoc();
+
+        // Animate the diff: briefly show each diff, then advance
+        const speedMs = 2000 / parseInt(document.getElementById('speedSlider').value);
+        animTimer = setTimeout(step, Math.max(500, speedMs));
+    }
+
+    step();
+}
+
+function stopDocAnimation() {
+    animating = false;
+    if (animTimer) { clearTimeout(animTimer); animTimer = null; }
+}
+
+function escHtml(s) {
+    return s.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+}
+
+// ── Boot ──────────────────────────────────────────────────────────────
+
+loadData();
+window.addEventListener('resize', () => {
+    d3.select('#tree-svg').selectAll('*').remove();
+    d3.select('#traj-svg').selectAll('*').remove();
+    d3.select('#scatter-svg').selectAll('*').remove();
+    drawTree(); drawTrajectory(); drawScatter();
+});
+</script>
+</body>
+</html>
