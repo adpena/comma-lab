@@ -76,7 +76,23 @@ The promoted honest floor is now `long1000_h64` at **`1.73`** on the current pub
       - reject for promotion
       - keep the lane as a non-promoted alternate reference
 
-5. **READY-TO-RELAUNCH SCAFFOLDS**
+5. **PF-PSD-H64**
+   - Why fifth:
+      - after the pixelshuffle reject, this is now the strongest packaged lane that is both deploy-ready and still unresolved
+   - Status: **PROXY_RUNNING**
+   - Current local best:
+      - epoch `296`
+      - scorer `3.604202709197998`
+      - int8 `94,087` bytes
+   - Proxy lane:
+      - `experiments/proxy_score_faithful.py`
+      - weights: `/private/tmp/pact-mine/experiments/postfilter_weights/postfilter_psd_h64_long1000_best_int8.pt`
+      - durable log: `/private/tmp/pact-mine/proxy_psd_h64_long1000_best.log`
+   - Decision:
+      - wait for the faithful proxy result
+      - if it misses, keep the lane as a non-promoted alternate; if it hits, it earns scorer consideration
+
+6. **READY-TO-RELAUNCH SCAFFOLDS**
    - `experiments/train_postfilter_dilated_h64.py`
      - repo-side deploy-correct wrapper for the dilated h64 lane with `variant: "dilated"` metadata
    - `experiments/train_postfilter_pixelshuffle_dilated.py`
@@ -87,7 +103,7 @@ The promoted honest floor is now `long1000_h64` at **`1.73`** on the current pub
      - these are code-complete sidecars, not scored results
      - use them for the next clean relaunch once a local slot is deliberately reassigned
 
-6. **FOUNDATION-BUILD FOLLOW-THROUGHS**
+7. **FOUNDATION-BUILD FOLLOW-THROUGHS**
    - `src/comma_lab/task_codec/`
      - landed scorer, architecture, quantization, and evaluation/proxy record abstractions
      - next step: wire these into higher-level tooling instead of duplicating artifact parsing ad hoc

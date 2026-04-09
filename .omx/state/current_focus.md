@@ -1,32 +1,21 @@
-# Current Focus — 2026-04-09 14:00 CDT
+# Current Focus — 2026-04-09 16:20 CDT
 
 ## Floor
-- **Promoted**: 1.727 (h=64 long-1000 QAT+EMA, 45.6KB int8)
+- **Promoted**: 1.727 (h=64 standard, 45.6KB int8)
 - **Leaderboard #1**: 1.89 (neural_inflate). Our lead: 0.163.
-- **Target**: 1.45. Days remaining: 24.
 
 ## Active training
-- PSD h=64 long-1000 v2 — launched, council #1 pick architecture
-- Dilated h=64 long-1000 v2 — launched, strongest non-promoted challenger
+- Standard h=64 long-2500: ep 143, scorer 3.928
+- SegNet boundary h=64: ep 4, scorer 4.46 (council's highest-leverage)
+- bat00 h=96: installing PyTorch on RTX 2070 Super
 
-## Site status
-- Pushed to adpena/comma-lab (private)
-- CSP fixed (was blocking ALL JS in production!)
-- Hero updated with scoring formula
-- Gradients stripped (user: "nothing that looks AI-designed")
-- Sticky nav + conversation timeline pending integration
-- Need Cloudflare Pages deployment
-
-## Infrastructure
-- Kaggle API connected (legacy key)
-- Modal needs `modal setup` completion
-- auto_commit.sh ready
-- Conversation timeline extracted (1,360 events, 865KB)
+## Key pivot
+- Killed PSD/PixelShuffle (proxy reject 1.99, hurts PoseNet)
+- Boundary attack targets 2.39% of pixels where SegNet can flip
+- Tao: seg 0.006→0.003 alone saves 0.276 points
 
 ## Next
-- Deploy to Cloudflare Pages
-- Polish site design (whitespace, symmetry, no AI gimmicks)
-- Cross-browser test
-- Wire conversation timeline into site
-- Proxy-score PSD/dilated when they converge
-- Pixelshuffle proxy resolved to `1.99`; keep as a non-promoted alternate reference
+- Monitor training convergence
+- Proxy-score first candidate under 3.55
+- Deploy site to Cloudflare Pages
+- Submit PR for current 1.727 floor

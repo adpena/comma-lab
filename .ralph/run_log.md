@@ -29,6 +29,19 @@
   - reject for promotion
   - keep as a non-promoted alternate reference
 
+## 2026-04-09 16:21:35 -0500 - PSD proxy lane opened
+
+### active proxy lane
+- Candidate:
+  - `postfilter_psd_h64_long1000_best_int8.pt`
+- Local best:
+  - epoch `296`
+  - scorer `3.604202709197998`
+  - int8 `94,087`
+- Status:
+  - faithful proxy session is now running
+  - advanced past loader setup and entered inflation on CPU successfully
+
 ## 2026-04-09 13:13:08 -0500 - packaged side lanes tightened again
 
 ### packaged side lanes
@@ -2115,3 +2128,26 @@ The partner's `save_best_checkpoint` function evaluates the EMA weights AFTER in
 - when PSD v2 < 3.55, proxy-score it
 - fix Modal training execution (check logs at dashboard)
 - keep bat00 as backup GPU resource
+
+## 2026-04-09 16:20:00 -0500 - pivot to SegNet boundary attack, multi-submission strategy
+
+### pivot rationale
+- PixelShuffle h=64 proxy: 1.99 (REJECT — hurts PoseNet)
+- competitor neural_inflate: seg=0.00434, pose=0.071 — proves PixelShuffle trades PoseNet for SegNet
+- our standard h=64: seg=0.00576, pose=0.0332 — PoseNet 2x better
+- council consensus: SegNet boundary attack is highest-leverage (11.5x PoseNet)
+
+### active training
+- standard h=64 long-2500: ep 143, scorer 3.928 (insurance lane)
+- SegNet boundary h=64: ep 4, scorer 4.46 (just started, council #2)
+- bat00 h=96: PyTorch installing, will launch on RTX 2070 Super
+
+### multi-submission strategy
+- PR #1: current promoted h=64 (1.727) — submit immediately as baseline
+- PR #2: boundary attack h=64 — if seg drops to 0.003, projected 1.45
+- PR #3: h=96 from bat00/Modal — different capacity point
+
+### site
+- orphan media removed (4 files, ~16MB)
+- run_log_timeline rebuilt (47 entries)
+- CSP re-fixed for Cloudflare deployment
