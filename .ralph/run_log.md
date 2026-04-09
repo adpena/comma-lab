@@ -2068,3 +2068,15 @@ The partner's `save_best_checkpoint` function evaluates the EMA weights AFTER in
 - priority 2: SegNet boundary-band attack on local Mac
 - priority 3: LSQ quantization (5-line change)
 - continue PSD/dilated training as insurance
+
+## 2026-04-09 14:45:00 -0500 - film-grain sweep: dead end for rate
+
+### results
+- fg=18: 854KB (preset 0), fg=22 (current): ~844KB — only 10KB difference
+- at preset 4: fg=20-32 all within 875-877KB — flat, no meaningful rate variation
+- film-grain parameter barely affects archive size at CRF 34
+
+### decision
+- film-grain sweep is exhausted — not worth pursuing for rate reduction
+- the codec is already aggressive at CRF 34; grain synthesis is visual-only
+- focus rate efforts on resolution micro-tuning or CRF fractional (if any headroom)
