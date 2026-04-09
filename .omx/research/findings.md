@@ -1,5 +1,35 @@
 # findings
 
+## 2026-04-09 PSD proxy resolution and free-tier platform hardening
+
+### new measured result
+
+- `psd_h64_long1000` faithfully proxied to **`1.85`**
+- Distortions: PoseNet `0.05271273`, SegNet `0.00551752`
+- Current-workflow bytes: `864,167`
+- Evidence:
+  - `reports/raw/2026-04-09-psd-h64-best/psd_h64_long1000_proxy_summary.json`
+  - `reports/raw/2026-04-09-psd-h64-best/proxy_psd_h64_long1000_best.log`
+
+### verdict
+
+- The PSD family is a real transfer, not a loader mirage.
+- It is still a reject for promotion because it does not beat the promoted `1.73` floor.
+- `pixelshuffle_h64_long1000` (`1.99`) and `psd_h64_long1000` (`1.85`) should now be treated as resolved non-promoted alternates, not active promotion lanes.
+
+### platform/scheduler findings
+
+1. `configs/platforms.json` now makes `local`, `bat00`, `kaggle`, `modal`, and `coiled` first-class scheduler platforms instead of chat-only intentions.
+2. The scheduler had a real compatibility bug against repo history: several legacy `.omx/logs/remote_jobs/*.json` manifests omit `run_id`. The loader now falls back to `slug`, which keeps historical operator state readable instead of crashing `comma-lab sched ...`.
+3. The scheduler also had a vocabulary bug: repo-local live states like `launching` and `running_managed_session` were real active runs but were not counted as active. That is now fixed.
+4. Kaggle/Modal/Coiled integration is now grounded in operator templates, not just plans:
+   - `configs/run_manifests/kaggle_run_manifest.template.json`
+   - `configs/run_manifests/modal_run_manifest.template.json`
+   - `configs/run_manifests/coiled_run_manifest.template.json`
+   - `configs/run_manifests/run_status.template.json`
+   - `docs/operator_run_manifest_templates.md`
+5. Under a free-tier-first strategy, Kaggle is the primary GPU training surface, Modal is the secondary GPU fallback, and Coiled is best treated as CPU-side fan-out for audits/reporting rather than the main training path.
+
 ## 2026-04-09 h64 authoritative promotion
 
 ### new authoritative floor
@@ -46,8 +76,8 @@
 6. The “headroom paradox” review surfaced a real code-path mismatch. The repo already had per-channel runtime quantization support in `inflate_postfilter.py` and quantized checkpoint selection in `train_postfilter_v2.py`, but the winning QAT+EMA recipe had not yet inherited either mechanism. `train_postfilter_qat_ema.py` now has explicit `--checkpoint-select-int8`, `--per-channel-int8`, and `--checkpoint-eval-every` controls so that hypothesis can be tested directly.
 7. The bat00 WSL quantization-parity rerun produced a clean saved reference artifact but did not earn promotion. Its final useful state was a saved best checkpoint at epoch `199` with local scorer `3.9258260917663574` and a `16,781`-byte int8 payload; the trainer was no longer alive when checked at `2026-04-09 10:59:38 -0500`.
 8. The local `h64` long-run produced a real transfer, not just a proxy mirage. Its saved best checkpoint on disk is epoch `918` with local scorer `3.5472697671254476` and a `45,587`-byte int8 payload, and both the authoritative scorer path and the repo-side official-path proxy landed the same rounded `1.73`.
-9. The post-promotion local fleet widened, but not yet enough to challenge the promoted line. The strongest newly packaged side lanes are now `dilated h64` at local scorer `3.7600972843170166`, `pixelshuffle_h64` at `3.8106321811676027`, `alpha30 h32` at `3.8314755090077717`, and `h96` at `3.8944560209910075`, all still materially weaker than the promoted h64 best at `3.5472697671254476`.
-10. The SegNet side lane still has attractive theoretical headroom, but it remains operationally blocked. `segnet_attack_fixed_v2` has improved its local training metric through epoch `890` with a best observed scorer line of `0.9819` at epoch `590`, `segnet_attack_h64` has reached epoch `340` with latest printed scorer `1.1381`, `pixelshuffle_h64` has improved to a saved best of `3.8106321811676027`, and `psd_h64` has reached `3.8837292766571045`; the two live SegNet trainers still have no saved best artifact, and the packaging-aware side lanes are still too weak.
+9. The post-promotion local fleet widened materially, but still has not beaten the promoted line. The strongest packaged side lanes are now `dilated h64` at local scorer `3.5753838920593264`, `psd_h64` at `3.604202709197998`, `pixelshuffle_h64` at `3.6048873551686604`, `h96` at `3.8016996637980145`, and `alpha30 h32` at `3.802276372909546`, all still weaker than the promoted h64 best at `3.5472697671254476`.
+10. The SegNet side lane still has attractive theoretical headroom, but it remains operationally blocked. `segnet_attack_fixed_v2` has now printed through epoch `1000` with latest visible scorer `1.0671`, `segnet_attack_h64` has printed through epoch `480` with latest visible scorer `1.0544`, and neither lane has written a fresh `best_*` artifact; the best explanation remains stale long-running processes rather than a fresh code-path failure.
 11. A machine-readable fleet snapshot at `2026-04-09 13:13:08 -0500` confirmed that the widened local host still has no honest proxy candidate. `dilated h64` improved its saved best further to epoch `253`, `pixelshuffle_h64` to epoch `211`, `psd_h64` to epoch `115`, `alpha30 h32` held at epoch `423`, and `h96` held at epoch `217`; the saved packaged standings still remained too weak to justify proxy time.
 12. Sidecar automation is now in-tree and tested:
    - `experiments/proxy_gate_triage.py`
@@ -56,9 +86,9 @@
 13. The refreshed proxy-gate triage output at `reports/raw/2026-04-09-sidecar-analysis/proxy_gate_triage.json` kept the same operational conclusion while syncing the newer side-lane values: `postfilter_long1000_h48_best` is already resolved because a proxy log already exists for it, `postfilter_dilated_h64_long1000` remains the strongest *unproxied* packaged lane, `postfilter_long1000_h32_a30` remains ahead of the old h32 rerun, and the newer `psd_h64_long1000` lane is visible on the board but still weak.
 14. The proxy-gate triage is now deployability-aware. It preserves the ranking and proxy-log logic, but it now blocks `postfilter_dilated_h64_long1000` from ever appearing `proxy_ready` while its saved meta still reports the wrong variant for that special lane.
 15. The quantization drift audit at `reports/raw/2026-04-09-sidecar-analysis/quantization_drift_audit.json` suggests the promoted `h64` line is not winning because it has the lowest fp32→int8 drift. Across the audited packaged lanes, aggregate drift is actually slightly lower on `dilated_h64` and `h96` than on the promoted `h64`, which pushes the explanation back toward architecture or optimization rather than quantization alone.
-16. A new `reports/raw/2026-04-09-sidecar-analysis/live_fleet_snapshot.json` snapshot made one operational issue obvious: the earlier hand-tail polling was understating several live lanes. The machine-readable snapshot now shows `pixelshuffle_h64_long1000` improved to epoch `211 / 3.8106321811676027`, `psd_h64_long1000` to epoch `115 / 3.8837292766571045`, `segnet_attack_fixed_v2` has printed through epoch `890`, and `segnet_attack_h64` through epoch `340`.
+16. The refreshed `reports/raw/2026-04-09-sidecar-analysis/live_fleet_snapshot.json` keeps proving the same operational lesson: hand-tail polling was understating several lanes. The machine-readable snapshot now shows `dilated_h64_long1000` at epoch `386 / 3.5753838920593264`, `pixelshuffle_h64_long1000` at `383 / 3.6048873551686604`, `psd_h64_long1000` at `296 / 3.604202709197998`, `segnet_attack_fixed_v2` printed through epoch `1000`, and `segnet_attack_h64` through epoch `480`.
 17. The snapshot tool needed one more hardening pass beyond simple log/meta parsing: special-case log slugs and best-meta slugs were initially being treated as separate lanes. After merging `dilated_h64` -> `dilated_h64_long1000`, `pixelshuffle_h64` -> `pixelshuffle_h64_long1000`, and `psd_h64` -> `psd_h64_long1000`, the fleet view became honest enough to use as the default polling surface.
-18. Even after correcting the polling method, the decision did not change. The strongest non-promoted packaged lanes are now `dilated h64` (`3.7601`), `pixelshuffle_h64` (`3.8106`), `alpha30 h32` (`3.8315`), and `h96` (`3.8945`), all still materially weaker than the promoted h64 best at `3.5472697671254476`.
+18. Even after correcting the polling method, the decision still did not change. The strongest non-promoted packaged lanes are now `dilated h64` (`3.5754`), `psd_h64` (`3.6042`), `pixelshuffle_h64` (`3.6049`), `h96` (`3.8017`), and `alpha30 h32` (`3.8023`), all still weaker than the promoted h64 best at `3.5472697671254476`.
 19. The new best `dilated h64` artifact is now even closer to the promoted h64 local regime than before, but the proxy gate still keeps it out for two concrete reasons: it is still deploy-blocked by the wrong saved variant metadata, and its local gap is still `0.2128`, just above the current `0.20` threshold.
 20. Three previously chat-only architecture ideas are now concrete repo scaffolds:
    - `experiments/train_postfilter_dilated_h64.py`
@@ -77,9 +107,10 @@
    - `reports/graphs/build_report_history.py` now emits `report_history.json`, and `reports/graphs/report_history.html` renders a git-backed history/time-machine view that exports through the static site pipeline.
 24. The scheduler foundation is intentionally conservative. It is cross-platform and stdlib-first, but it is reporting-only for now: no fake remote execution, no unsafe shell templating, and `sched budget` requires an explicit or default `configs/platforms.json` registry.
 25. The report-history viewer is already usable as a standalone static page, but it is not yet linked from the main dashboard. That is a product/navigation choice, not a missing build step.
-26. `pixelshuffle_h64_long1000` is now the first post-h64 packaged lane to earn an honest faithful proxy attempt after the runtime-path fixes. The earlier proxy failure was a real loader bug, not a bad candidate. The loader now supports the pixelshuffle-dilated architecture and can infer it from the artifact state layout even when the saved metadata is wrong.
-27. That faithful proxy has now resolved cleanly, and it is not close. `pixelshuffle_h64_long1000` landed at **`1.99`** with PoseNet `0.07282460`, SegNet `0.00562080`, and `864,167` bytes. That is a real transfer, but it is nowhere near the promoted `1.73` floor.
-28. With pixelshuffle resolved, `psd_h64_long1000` becomes the strongest packaged lane that is both deploy-ready and still unresolved. Its local best is now `3.604202709197998`, and a faithful proxy run is in flight.
+26. Modal / Coiled / Kaggle integration work is still in progress. Keep those operational notes private-facing for now and avoid exposing any sensitive launch details in report surfaces.
+27. `pixelshuffle_h64_long1000` is now the first post-h64 packaged lane to earn an honest faithful proxy attempt after the runtime-path fixes. The earlier proxy failure was a real loader bug, not a bad candidate. The loader now supports the pixelshuffle-dilated architecture and can infer it from the artifact state layout even when the saved metadata is wrong.
+28. That faithful proxy has now resolved cleanly, and it is not close. `pixelshuffle_h64_long1000` landed at **`1.99`** with PoseNet `0.07282460`, SegNet `0.00562080`, and `864,167` bytes. That is a real transfer, but it is nowhere near the promoted `1.73` floor.
+29. With pixelshuffle resolved, `psd_h64_long1000` briefly became the strongest packaged lane that was both deploy-ready and unresolved. That proxy has now landed at `1.85`, so the family moves from “active decision lane” to “resolved non-promoted alternate.”
 
 ## 2026-04-08 prior long1000 h32 QAT+EMA post-filter promotion
 

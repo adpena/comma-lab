@@ -1,5 +1,53 @@
 # run log
 
+## 2026-04-09 16:54:51 -0500 - PSD proxy resolved and free-tier scheduler surfaces became real
+
+### faithful proxy result
+- Candidate:
+  - `postfilter_psd_h64_long1000_best_int8.pt`
+- Local best:
+  - epoch `296`
+  - scorer `3.604202709197998`
+  - int8 `94,087`
+- Faithful proxy result:
+  - current_workflow `1.85`
+  - PoseNet `0.05271273`
+  - SegNet `0.00551752`
+  - bytes `864,167`
+  - rate `0.02301653`
+- Decision:
+  - reject for promotion
+  - keep as a resolved non-promoted alternate reference
+
+### platform integration
+- Added:
+  - `configs/platforms.json`
+  - `configs/run_manifests/kaggle_run_manifest.template.json`
+  - `configs/run_manifests/modal_run_manifest.template.json`
+  - `configs/run_manifests/coiled_run_manifest.template.json`
+  - `configs/run_manifests/run_status.template.json`
+  - `docs/operator_run_manifest_templates.md`
+- Scheduler hardening:
+  - `src/comma_lab/scheduler/repository.py` now falls back to `slug` when legacy manifests/status files omit `run_id`
+  - `src/comma_lab/scheduler/reporting.py` now treats `launching` and `running_managed_session` as active states
+- Result:
+  - `comma-lab sched status/results/budget` now works against the real repo with the default registry file present
+
+### sidecar refresh
+- Refreshed:
+  - `reports/raw/2026-04-09-sidecar-analysis/live_fleet_snapshot.json`
+  - `reports/raw/2026-04-09-sidecar-analysis/proxy_gate_triage.json`
+- Captured:
+  - `reports/raw/2026-04-09-psd-h64-best/psd_h64_long1000_proxy_summary.json`
+  - `reports/raw/2026-04-09-psd-h64-best/proxy_psd_h64_long1000_best.log`
+
+### verification
+- `python3 -m unittest experiments.test_scheduler_registry experiments.test_scheduler_cli`
+- `python3 -m src.comma_lab.cli sched status --repo-root /Users/adpena/Projects/pact --json`
+- `python3 -m src.comma_lab.cli sched budget --repo-root /Users/adpena/Projects/pact --json`
+- `python3 -m src.comma_lab.cli sched results --repo-root /Users/adpena/Projects/pact --limit 5 --json`
+- `python3 reports/graphs/build_static_site.py --check`
+
 ## 2026-04-09 14:40:01 -0500 - pixelshuffle faithful proxy resolved as a clean reject
 
 ### runtime-path fix
@@ -2171,3 +2219,22 @@ The partner's `save_best_checkpoint` function evaluates the EMA weights AFTER in
 - h=64 on bat00 CUDA will be ~4x faster than MPS
 - h=96 on Modal A10G is the council's width scaling recommendation
 - multi-lane parallel execution across 3 machines
+
+## 2026-04-09 17:15:00 -0500 - tac library passes council + round 4 review
+
+### rigor review results
+- Round 1: 1 CRITICAL + 3 HIGH fixed
+- Round 2: 2 CRITICAL + 4 IMPORTANT fixed  
+- Round 3: 1 CRITICAL fixed (wrong color space in monkey-patch)
+- Round 4: **CLEAN PASS 1/5** — zero issues found
+- Council (Tao, Karpathy, LeCun, Jensen): **UNANIMOUS APPROVE**
+
+### tac library status
+- v0.2.0, 6 modules, 603+ lines
+- All scorer math verified (BT.601, STE, boundary weighting, saliency)
+- Quantization round-trip verified (save/load faithful)
+- EMA + best-checkpoint mechanism correct
+- Monkey-patch 1:1 port from proven scripts
+
+### training
+- standard h=64 long-2500: ep 120, best ep 117 scorer 4.027

@@ -1,21 +1,39 @@
-# Current Focus — 2026-04-09 16:20 CDT
+# Current Focus — 2026-04-09 16:54 CDT
 
 ## Floor
-- **Promoted**: 1.727 (h=64 standard, 45.6KB int8)
-- **Leaderboard #1**: 1.89 (neural_inflate). Our lead: 0.163.
+- **Promoted honest floor**: `1.73` from `robust_current-long1000-h64-promoted-cpu-2026-04-09`
+- **Public target to beat**: last verified public first was `1.89`, but re-check before citing again
 
-## Active training
-- Standard h=64 long-2500: ep 143, scorer 3.928
-- SegNet boundary h=64: ep 4, scorer 4.46 (council's highest-leverage)
-- bat00 h=96: installing PyTorch on RTX 2070 Super
+## Resolved proxy lanes
+- `pixelshuffle_h64_long1000`
+  - faithful proxy: `1.99`
+  - decision: reject for promotion
+- `psd_h64_long1000`
+  - faithful proxy: `1.85`
+  - PoseNet `0.05271273`
+  - SegNet `0.00551752`
+  - bytes `864,167`
+  - decision: real transfer, still reject for promotion
 
-## Key pivot
-- Killed PSD/PixelShuffle (proxy reject 1.99, hurts PoseNet)
-- Boundary attack targets 2.39% of pixels where SegNet can flip
-- Tao: seg 0.006→0.003 alone saves 0.276 points
+## Best unresolved local lane
+- `dilated_h64_long1000`
+  - best local scorer: `3.5753838920593264`
+  - proxy-gap delta vs promoted h64 best: `0.0281`
+  - blocker: not deploy-ready because saved meta still advertises `variant: "saliency_weighted"`
 
-## Next
-- Monitor training convergence
-- Proxy-score first candidate under 3.55
-- Deploy site to Cloudflare Pages
-- Submit PR for current 1.727 floor
+## Infra focus
+- `configs/platforms.json` now exists and makes `local`, `bat00`, `kaggle`, `modal`, and `coiled` first-class scheduler platforms
+- scheduler compatibility is hardened:
+  - legacy manifests/status files may omit `run_id`; loader now falls back to `slug`
+  - `launching` and `running_managed_session` now count as active states
+- operator templates now exist under `configs/run_manifests/`
+- private ops surfaces stay in-repo:
+  - `reports/graphs/report_history.html`
+  - `comma-lab sched status`
+  - `comma-lab sched results`
+  - `comma-lab sched budget`
+
+## Next real moves
+1. Relaunch `dilated_h64_long1000` with deploy-correct metadata on Kaggle or Modal.
+2. Relaunch a fresh SegNet lane that actually emits `best_*` artifacts.
+3. Use Kaggle/Modal for GPU training lanes and Coiled for CPU-side audits only.
