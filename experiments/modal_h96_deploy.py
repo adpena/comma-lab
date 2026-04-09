@@ -34,11 +34,15 @@ def train_h96():
     print("Starting h=96 training on Modal A10G...")
     print(f"GPU: {os.popen('nvidia-smi --query-gpu=name --format=csv,noheader').read().strip()}")
 
+    # Set env so the script saves to the persistent volume
+    import os
+    os.environ["PERSIST_DIR"] = "/results"
+
     result = subprocess.run(
         ["python", "/root/cloud_h96_trainer.py",
-         "--hidden", "96", "--epochs", "2500", "--alpha", "20",
-         "--output-dir", "/results"],
+         "--hidden", "96", "--epochs", "2500", "--alpha", "20"],
         cwd="/tmp",
+        env={**os.environ},
     )
     vol.commit()
     return result.returncode

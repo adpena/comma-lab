@@ -1,0 +1,66 @@
+{
+  "timestamp": "2026-04-07T22:52:07Z",
+  "crf_range": {
+    "min": 32.0,
+    "max": 36.0,
+    "step": 1.0
+  },
+  "results": [
+    {
+      "crf": 32.0,
+      "archive_bytes": null,
+      "smoke_mae_mean": null,
+      "smoke_mae_max": null,
+      "smoke_passed": false,
+      "encode_secs": 0,
+      "smoke_secs": 0,
+      "full_score": null,
+      "error": "Smoke failed:\nInflating (saliency-masked grain) /Users/adpena/Projects/pact/workspace/upstream/comma_video_compression_challenge/submissions/robust_current/archive -> /Users/adpena/Projects/pact/workspace/upstream/comma_video_compression_challenge/submissions/robust_current/inflated\nwarning: The `requires-python` specifier (`~=3.11`) in `comma-video-compression-challenge` uses the tilde specifier (`~=`) without a patch version. This will be interpreted as `>=3.11, <4`. Did you mean `~=3.11.0` to constrain the version as `>=3.11.0, <3.12`? We recommend only using the tilde specifier with a patch version to avoid ambiguity.\nwarning: `VIRTUAL_ENV=/Users/adpena/Projects/pact/.venv` does not match the project environment path `/Users/adpena/Projects/pact/workspace/upstream/comma_video_compression_challenge/.venv` and will be ignored; use `--active` to target the active environment instead\nInflating /Users/adpena/Projects/pact/workspace/upstream/comma_video_compression_challenge/submissions/robust_current/archive/0.mkv -> /Users/adpena/Projects/pact/workspace/upstream/comma_video_compression_challenge/submissions/robust_current/inflated/0.raw (saliency-masked grain)\nTraceback (most recent call last):\n  File \"/Users/adpena/Projects/pact/workspace/upstream/comma_video_compression_challenge/submissions/robust_current/inflate_grain_mask.py\", line 142, in <module>\n    inflate_with_grain_mask(str(mkv_path), str(out_path), saliency_path, grain_strength=grain_strength)\n  File \"/Users/adpena/Projects/pact/workspace/upstream/comma_video_compression_challenge/submissions/robust_current/inflate_grain_mask.py\", line 72, in inflate_with_grain_mask\n    saliency = np.load(saliency_path)  # (N_pairs, H, W)\n               ^^^^^^^^^^^^^^^^^^^^^^\n  File \"/Users/adpena/Projects/pact/workspace/upstream/comma_video_compression_challenge/.venv/lib/python3.11/site-packages/numpy/lib/_npyio_impl.py\", line 454, in load\n    fid = stack.enter_context(open(os.fspath(file), \"rb\"))\n                              ^^^^^^^^^^^^^^^^^^^^^^^^^^^\nFileNotFoundError: [Errno 2] No such file or directory: 'experiments/masks/posenet_saliency.npy'\nTraceback (most recent call last):\n  File \"<frozen runpy>\", line 198, in _run_module_as_main\n  File \"<frozen runpy>\", line 88, in _run_code\n  File \"/Users/adpena/Projects/pact/src/comma_lab/cli.py\", line 187, in <module>\n    raise SystemExit(main())\n                     ~~~~^^\n  File \"/Users/adpena/Projects/pact/src/comma_lab/cli.py\", line 180, in main\n    return args.func(args)\n           ~~~~~~~~~^^^^^^\n  File \"/Users/adpena/Projects/pact/src/comma_lab/cli.py\", line 99, in cmd_smoke_submission\n    summary = smoke_submission(\n        args.name,\n    ...<2 lines>...\n        package=args.package,\n    )\n  File \"/Users/adpena/Projects/pact/src/comma_lab/smoke.py\", line 263, in smoke_submission\n    _run(\n    ~~~~^\n        [\n        ^\n    ...<7 lines>...\n        env=env,\n        ^^^^^^^^\n    )\n    ^\n  File \"/Users/adpena/Projects/pact/src/comma_lab/smoke.py\", line 82, in _run\n    return subprocess.run(\n           ~~~~~~~~~~~~~~^\n        cmd,\n        ^^^^\n    ...<5 lines>...\n        stderr=sys.stderr,\n        ^^^^^^^^^^^^^^^^^^\n    )\n    ^\n  File \"/opt/homebrew/Cellar/python@3.14/3.14.3_1/Frameworks/Python.framework/Versions/3.14/lib/python3.14/subprocess.py\", line 577, in run\n    raise CalledProcessError(retcode, process.args,\n                             output=stdout, stderr=stderr)\nsubprocess.CalledProcessError: Command '['bash', '/Users/adpena/Projects/pact/workspace/upstream/comma_video_compression_challenge/submissions/robust_current/inflate.sh', '/Users/adpena/Projects/pact/workspace/upstream/comma_video_compression_challenge/submissions/robust_current/archive', '/Users/adpena/Projects/pact/workspace/upstream/comma_video_compression_challenge/submissions/robust_current/inflated', '/Users/adpena/Projects/pact/workspace/upstream/comma_video_compression_challenge/public_test_video_names.txt']' returned non-zero exit status 1.\n"
+    },
+    {
+      "crf": 33.0,
+      "archive_bytes": 771826,
+      "smoke_mae_mean": 5.673235019916942,
+      "smoke_mae_max": 6.2407038251538,
+      "smoke_passed": true,
+      "encode_secs": 96.5302448340226,
+      "smoke_secs": 189.23428695800249,
+      "full_score": null,
+      "error": null
+    },
+    {
+      "crf": 34.0,
+      "archive_bytes": 716796,
+      "smoke_mae_mean": 5.682322916584753,
+      "smoke_mae_max": 6.246333561379918,
+      "smoke_passed": true,
+      "encode_secs": 108.39537333301269,
+      "smoke_secs": 212.14047979202587,
+      "full_score": null,
+      "error": null
+    },
+    {
+      "crf": 35.0,
+      "archive_bytes": 663037,
+      "smoke_mae_mean": 5.692700128352656,
+      "smoke_mae_max": 6.254331246838147,
+      "smoke_passed": true,
+      "encode_secs": 149.16672654100694,
+      "smoke_secs": 266.9831952920067,
+      "full_score": null,
+      "error": null
+    },
+    {
+      "crf": 36.0,
+      "archive_bytes": 611861,
+      "smoke_mae_mean": 5.699955351798991,
+      "smoke_mae_max": 6.270332843164238,
+      "smoke_passed": true,
+      "encode_secs": 172.08023645798676,
+      "smoke_secs": 321.8105595000088,
+      "full_score": null,
+      "error": null
+    }
+  ],
+  "best_proxy_crf": 33.0
+}

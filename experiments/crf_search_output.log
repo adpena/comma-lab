@@ -1,0 +1,93 @@
+=== CRF Search: testing 5 values: [32.0, 33.0, 34.0, 35.0, 36.0] ===
+
+--- [1/5] CRF=32.0 ---
+  Encoding at CRF 32.0...
+  Encoded in 108.5s, archive=834,686 bytes
+  Running smoke proxy...
+  ERROR: Smoke failed:
+Inflating (saliency-masked grain) /Users/adpena/Projects/pact/workspace/upstream/comma_video_compression_challenge/submissions/robust_current/archive -> /Users/adpena/Projects/pact/workspace/upstream/comma_video_compression_challenge/submissions/robust_current/inflated
+warning: The `requires-python` specifier (`~=3.11`) in `comma-video-compression-challenge` uses the tilde specifier (`~=`) without a patch version. This will be interpreted as `>=3.11, <4`. Did you mean `~=3.11.0` to constrain the version as `>=3.11.0, <3.12`? We recommend only using the tilde specifier with a patch version to avoid ambiguity.
+warning: `VIRTUAL_ENV=/Users/adpena/Projects/pact/.venv` does not match the project environment path `/Users/adpena/Projects/pact/workspace/upstream/comma_video_compression_challenge/.venv` and will be ignored; use `--active` to target the active environment instead
+Inflating /Users/adpena/Projects/pact/workspace/upstream/comma_video_compression_challenge/submissions/robust_current/archive/0.mkv -> /Users/adpena/Projects/pact/workspace/upstream/comma_video_compression_challenge/submissions/robust_current/inflated/0.raw (saliency-masked grain)
+Traceback (most recent call last):
+  File "/Users/adpena/Projects/pact/workspace/upstream/comma_video_compression_challenge/submissions/robust_current/inflate_grain_mask.py", line 142, in <module>
+    inflate_with_grain_mask(str(mkv_path), str(out_path), saliency_path, grain_strength=grain_strength)
+  File "/Users/adpena/Projects/pact/workspace/upstream/comma_video_compression_challenge/submissions/robust_current/inflate_grain_mask.py", line 72, in inflate_with_grain_mask
+    saliency = np.load(saliency_path)  # (N_pairs, H, W)
+               ^^^^^^^^^^^^^^^^^^^^^^
+  File "/Users/adpena/Projects/pact/workspace/upstream/comma_video_compression_challenge/.venv/lib/python3.11/site-packages/numpy/lib/_npyio_impl.py", line 454, in load
+    fid = stack.enter_context(open(os.fspath(file), "rb"))
+                              ^^^^^^^^^^^^^^^^^^^^^^^^^^^
+FileNotFoundError: [Errno 2] No such file or directory: 'experiments/masks/posenet_saliency.npy'
+Traceback (most recent call last):
+  File "<frozen runpy>", line 198, in _run_module_as_main
+  File "<frozen runpy>", line 88, in _run_code
+  File "/Users/adpena/Projects/pact/src/comma_lab/cli.py", line 187, in <module>
+    raise SystemExit(main())
+                     ~~~~^^
+  File "/Users/adpena/Projects/pact/src/comma_lab/cli.py", line 180, in main
+    return args.func(args)
+           ~~~~~~~~~^^^^^^
+  File "/Users/adpena/Projects/pact/src/comma_lab/cli.py", line 99, in cmd_smoke_submission
+    summary = smoke_submission(
+        args.name,
+    ...<2 lines>...
+        package=args.package,
+    )
+  File "/Users/adpena/Projects/pact/src/comma_lab/smoke.py", line 263, in smoke_submission
+    _run(
+    ~~~~^
+        [
+        ^
+    ...<7 lines>...
+        env=env,
+        ^^^^^^^^
+    )
+    ^
+  File "/Users/adpena/Projects/pact/src/comma_lab/smoke.py", line 82, in _run
+    return subprocess.run(
+           ~~~~~~~~~~~~~~^
+        cmd,
+        ^^^^
+    ...<5 lines>...
+        stderr=sys.stderr,
+        ^^^^^^^^^^^^^^^^^^
+    )
+    ^
+  File "/opt/homebrew/Cellar/python@3.14/3.14.3_1/Frameworks/Python.framework/Versions/3.14/lib/python3.14/subprocess.py", line 577, in run
+    raise CalledProcessError(retcode, process.args,
+                             output=stdout, stderr=stderr)
+subprocess.CalledProcessError: Command '['bash', '/Users/adpena/Projects/pact/workspace/upstream/comma_video_compression_challenge/submissions/robust_current/inflate.sh', '/Users/adpena/Projects/pact/workspace/upstream/comma_video_compression_challenge/submissions/robust_current/archive', '/Users/adpena/Projects/pact/workspace/upstream/comma_video_compression_challenge/submissions/robust_current/inflated', '/Users/adpena/Projects/pact/workspace/upstream/comma_video_compression_challenge/public_test_video_names.txt']' returned non-zero exit status 1.
+
+--- [2/5] CRF=33.0 ---
+  Encoding at CRF 33.0...
+  Encoded in 96.5s, archive=771,826 bytes
+  Running smoke proxy...
+  Smoke: MAE mean=5.6732, max=6.2407, passed=True (189.2s)
+--- [3/5] CRF=34.0 ---
+  Encoding at CRF 34.0...
+  Encoded in 108.4s, archive=716,796 bytes
+  Running smoke proxy...
+  Smoke: MAE mean=5.6823, max=6.2463, passed=True (212.1s)
+--- [4/5] CRF=35.0 ---
+  Encoding at CRF 35.0...
+  Encoded in 149.2s, archive=663,037 bytes
+  Running smoke proxy...
+  Smoke: MAE mean=5.6927, max=6.2543, passed=True (267.0s)
+--- [5/5] CRF=36.0 ---
+  Encoding at CRF 36.0...
+  Encoded in 172.1s, archive=611,861 bytes
+  Running smoke proxy...
+  Smoke: MAE mean=5.7000, max=6.2703, passed=True (321.8s)
+
+=== PROXY RESULTS (sorted by MAE mean) ===
+   CRF      Archive   MAE mean    MAE max   Pass   Encode    Smoke
+----------------------------------------------------------------------
+  33.0      771,826     5.6732     6.2407      Y    96.5s   189.2s
+  34.0      716,796     5.6823     6.2463      Y   108.4s   212.1s
+  35.0      663,037     5.6927     6.2543      Y   149.2s   267.0s
+  36.0      611,861     5.7000     6.2703      Y   172.1s   321.8s
+
+Best proxy CRF: 33.0 (MAE mean=5.6732, archive=771,826 bytes)
+
+Results saved to: /Users/adpena/Projects/pact/experiments/crf_search_results.json
