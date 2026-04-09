@@ -3,7 +3,7 @@
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>comma-lab</title>
+  <title>comma-lab | Task-aware video compression research</title>
   <meta name="description" content="Scorer-backed compression experiments, evidence, and reporting for the comma video challenge." />
   <meta name="robots" content="noindex,nofollow" />
   <meta name="theme-color" content="#0f1724" />
@@ -312,8 +312,8 @@
       <div class="eyebrow">comma-lab</div>
       <div class="hero-grid">
         <div class="hero-stack">
-          <h1 id="site-title">A lab notebook for compression that machines can trust and people can follow.</h1>
-          <p class="lede">This site tracks scorer-backed experiments for the comma.ai video compression challenge. It is designed to work at two levels: a plain-English executive layer for judges and newcomers, and a deeper evidence trail for researchers who want the exact runs, artifacts, and failure cases.</p>
+          <h1 id="site-title">Task-aware codec research for the <a href="https://comma.ai/leaderboard" style="color:var(--accent);text-decoration-thickness:2px">comma.ai lossy video compression challenge</a>.</h1>
+          <p class="lede">Compress a driving video into an <code>archive.zip</code> that inflates back to frames. Score&nbsp;=&nbsp;<code>100&times;seg + &radic;(10&times;pose) + 25&times;rate</code>, where rate&nbsp;=&nbsp;archive_bytes&nbsp;/&nbsp;uncompressed_bytes. Lower wins. The scorer uses frozen <a href="https://github.com/commaai/comma_video_compression_challenge">PoseNet&nbsp;+&nbsp;SegNet</a> perception networks&nbsp;&mdash; your compressed video must preserve what the self-driving system sees, not just what humans see.</p>
           <div class="pill-row" aria-label="Current highlights">
             <span class="pill">Current floor: 1.73</span>
             <span class="pill">Rule-faithful: 1.795</span>
@@ -387,7 +387,7 @@
         <div class="summary-stat"><div class="summary-label">Delta vs published baseline</div><div class="summary-value">-2.66</div><div class="summary-meta">4.39 → 1.73</div></div>
         <div class="summary-stat"><div class="summary-label">Delta vs prior floor</div><div class="summary-value">-0.11</div><div class="summary-meta">-1 bytes</div></div>
       </div>
-      <p class="footnote">Track A remains separate: `current_workflow` 0.00 at 167 bytes. The robust run ledger currently contains 46 measured runs, 18 promotions, and 18 explicit rejections.</p>
+      <p class="footnote">Track A (<code>exact_current</code>) remains separate: score 0.00 at 167 bytes via a known packaging exploit &mdash; documented but not submitted. Track B (<code>robust_current</code>) is our honest submission track with 46 measured runs, 18 promotions, and 18 explicit rejections.</p>
       <p class="config-line" aria-label="Current promoted method">robust_current · libsvtav1 · 524x394 · film-grain=22 · lanczos/long1000-qat-ema-postfilter-h64 · long1000 QAT+EMA learned int8 post-filter h64</p>
     </section>
 
@@ -468,7 +468,7 @@
           <p class="explorer-meta">Internal media explorer last refreshed Apr 9, 2026, 10:52 AM CDT. Public entries below are reference metadata only because we do not have their artifacts or synced media. Official reference: <a href="https://comma.ai/leaderboard">comma.ai leaderboard</a> and the public PR stream in the official challenge repo.</p>
         </div>
         <div class="leaderboard-band" aria-label="Unofficial community leaderboard snapshot">
-          <div class="leaderboard-label">Unofficial community leaderboard snapshot</div>
+          <div class="leaderboard-label">Unofficial community leaderboard snapshot (Apr 9, 2026)</div>
           <span class="leader-pill"><strong>Public #1</strong><span>1.89</span><span>neural_inflate</span></span><span class="leader-pill"><strong>Public #2</strong><span>1.94</span><span>roi_v2</span></span><span class="leader-pill"><strong>Public #3</strong><span>1.95</span><span>av1_roi_lanczos_unsharp</span></span>
         </div>
       </div>
@@ -477,7 +477,7 @@
           <button type="button" data-run-button data-run-id="floor_173" data-run-label="1.73 current floor" data-run-note="long1000 h64" data-run-score="1.73" class="is-active"><span>1.73 current floor</span><small>long1000 h64</small></button><button type="button" data-run-button data-run-id="floor_184" data-run-label="1.84 prior floor" data-run-note="ensemble h32 + MC 75/25" data-run-score="1.84" class=""><span>1.84 prior floor</span><small>ensemble h32 + MC 75/25</small></button><button type="button" data-run-button data-run-id="floor_185" data-run-label="1.85 older floor" data-run-note="long1000 h32" data-run-score="1.85" class=""><span>1.85 older floor</span><small>long1000 h32</small></button>
         </div>
         <div class="compare-controls" aria-label="Explorer controls">
-          <button type="button" data-compare-toggle>play / pause</button>
+          <button type="button" data-compare-toggle>Play</button>
           <input type="range" min="0" max="100" value="0" step="0.1" data-compare-scrub aria-label="Comparison scrubber" />
           <input type="range" min="16" max="36" value="22" step="1" data-zoom-size aria-label="Zoom window size" />
         </div>
