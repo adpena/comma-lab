@@ -1,5 +1,28 @@
 # run log
 
+## 2026-04-09 13:38:11 -0500 - pixelshuffle proxy lane opened for real
+
+### runtime-path fix
+- Root cause:
+  - the first faithful proxy attempt on `pixelshuffle_h64_long1000` failed because `submissions/robust_current/inflate_postfilter.py` could not reconstruct the pixelshuffle-dilated architecture from the artifact
+- Fix:
+  - added `PixelShuffleDilatedPostFilter`
+  - added explicit `pixelshuffle_dilated` loader support
+  - added state-layout inference so the loader can recover the correct architecture even when the saved metadata still says `saliency_weighted`
+- Regression:
+  - `experiments/test_postfilter_loader.py`
+
+### active proxy lane
+- Candidate:
+  - `postfilter_pixelshuffle_h64_long1000_best_int8.pt`
+- Local best:
+  - epoch `229`
+  - scorer `3.797689816157023`
+  - int8 `94,285`
+- Status:
+  - faithful proxy session is now running
+  - advanced past loader setup and entered inflation on CPU successfully
+
 ## 2026-04-09 13:13:08 -0500 - packaged side lanes tightened again
 
 ### packaged side lanes

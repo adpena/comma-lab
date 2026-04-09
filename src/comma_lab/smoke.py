@@ -9,6 +9,7 @@ from fractions import Fraction
 from pathlib import Path
 
 from .install import install_submission
+from .lock import submission_lock
 from .paths import default_upstream_root, repo_root
 from .tracks.exact_current import create_minimal_archive
 
@@ -16,6 +17,14 @@ SOURCE_COLOR_RANGE = "tv"
 SOURCE_COLOR_MATRIX = "bt709"
 SOURCE_COLOR_PRIMARIES = "bt709"
 SOURCE_COLOR_TRC = "bt709"
+
+
+def _ffmpeg_bin() -> str:
+    return os.environ.get("FFMPEG_BIN", "ffmpeg")
+
+
+def _ffprobe_bin() -> str:
+    return os.environ.get("FFPROBE_BIN", "ffprobe")
 
 
 @dataclass
@@ -89,7 +98,7 @@ def _fps_from_rate(rate: str) -> float:
 def _video_meta(path: Path) -> dict[str, int | float]:
     cp = _run(
         [
-            "ffprobe",
+            _ffprobe_bin(),
             "-v",
             "error",
             "-select_streams",
@@ -136,7 +145,7 @@ def _extract_reference_rgb_frames(video: Path, frame_indices: list[int], frame_s
     expr = "+".join(f"eq(n\\,{idx})" for idx in frame_indices)
     cp = subprocess.run(
         [
-            "ffmpeg",
+            _ffmpeg_bin(),
             "-v",
             "error",
             "-i",
@@ -218,122 +227,122 @@ def smoke_submission(
     root = repo_root()
     upstream_root = upstream_root or default_upstream_root()
     source_submission_dir = root / "submissions" / name
+    with submission_lock(name, upstream_root):
+        if package and not sync:
+            raise ValueError("Packaging without sync is unsupported because the packaged artifact would not be the one under test.")
 
-    if package and not sync:
-        raise ValueError("Packaging without sync is unsupported because the packaged artifact would not be the one under test.")
+        if package:
+            if name == "exact_current":
+                create_minimal_archive(source_submission_dir / "archive.zip")
+            elif name == "robust_current":
+                package_env = os.environ.copy()
+                package_env["COMMA_CHALLENGE_ROOT"] = str(upstream_root)
+                _run(["bash", str(source_submission_dir / "compress.sh")], cwd=root, env=package_env)
+            else:
+                raise ValueError(f"Unsupported submission for packaging: {name}")
 
-    if package:
-        if name == "exact_current":
-            create_minimal_archive(source_submission_dir / "archive.zip")
-        elif name == "robust_current":
-            package_env = os.environ.copy()
-            package_env["COMMA_CHALLENGE_ROOT"] = str(upstream_root)
-            _run(["bash", str(source_submission_dir / "compress.sh")], cwd=root, env=package_env)
-        else:
-            raise ValueError(f"Unsupported submission for packaging: {name}")
+        if sync:
+            install_submission(name, upstream_root=upstream_root, force=True)
 
-    if sync:
-        install_submission(name, upstream_root=upstream_root, force=True)
+        submission_dir = upstream_root / "submissions" / name
+        archive_path = submission_dir / "archive.zip"
+        archive_dir = submission_dir / "archive"
+        inflated_dir = submission_dir / "inflated"
+        video_names_file = upstream_root / "public_test_video_names.txt"
 
-    submission_dir = upstream_root / "submissions" / name
-    archive_path = submission_dir / "archive.zip"
-    archive_dir = submission_dir / "archive"
-    inflated_dir = submission_dir / "inflated"
-    video_names_file = upstream_root / "public_test_video_names.txt"
+        if archive_dir.exists():
+            subprocess.run(["rm", "-rf", str(archive_dir)], check=True)
+        if inflated_dir.exists():
+            subprocess.run(["rm", "-rf", str(inflated_dir)], check=True)
+        archive_dir.mkdir(parents=True, exist_ok=True)
+        inflated_dir.mkdir(parents=True, exist_ok=True)
 
-    if archive_dir.exists():
-        subprocess.run(["rm", "-rf", str(archive_dir)], check=True)
-    if inflated_dir.exists():
-        subprocess.run(["rm", "-rf", str(inflated_dir)], check=True)
-    archive_dir.mkdir(parents=True, exist_ok=True)
-    inflated_dir.mkdir(parents=True, exist_ok=True)
-
-    _run(["unzip", "-q", str(archive_path), "-d", str(archive_dir)], cwd=submission_dir)
-    env = os.environ.copy()
-    env["COMMA_CHALLENGE_ROOT"] = str(upstream_root)
-    _run(
-        [
-            "bash",
-            str(submission_dir / "inflate.sh"),
-            str(archive_dir),
-            str(inflated_dir),
-            str(video_names_file),
-        ],
-        cwd=submission_dir,
-        env=env,
-    )
-
-    results: list[VideoSmokeResult] = []
-    listed = [line.strip() for line in video_names_file.read_text().splitlines() if line.strip()]
-    for rel in listed:
-        source_video = upstream_root / "videos" / rel
-        meta = _video_meta(source_video)
-        stem = rel.rsplit(".", 1)[0]
-        raw_path = inflated_dir / f"{stem}.raw"
-        frame_bytes = int(meta["width"]) * int(meta["height"]) * 3
-        expected_total_bytes = int(meta["frames"]) * frame_bytes
-        raw_exists = raw_path.exists()
-        actual_total_bytes = raw_path.stat().st_size if raw_exists else None
-        actual_frames = (
-            actual_total_bytes // frame_bytes
-            if raw_exists and actual_total_bytes is not None and actual_total_bytes % frame_bytes == 0
-            else None
+        _run(["unzip", "-q", str(archive_path), "-d", str(archive_dir)], cwd=submission_dir)
+        env = os.environ.copy()
+        env["COMMA_CHALLENGE_ROOT"] = str(upstream_root)
+        _run(
+            [
+                "bash",
+                str(submission_dir / "inflate.sh"),
+                str(archive_dir),
+                str(inflated_dir),
+                str(video_names_file),
+            ],
+            cwd=submission_dir,
+            env=env,
         )
-        size_matches = actual_total_bytes == expected_total_bytes
-        frame_count_matches = actual_frames == int(meta["frames"])
-        semantic_indices = _semantic_sample_indices(int(meta["frames"]))
-        semantic_mae_mean: float | None = None
-        semantic_mae_max: float | None = None
-        semantic_channel_mean_abs_diff: list[float] | None = None
-        semantic_check_passed = False
-        if raw_exists and frame_count_matches:
-            try:
-                reference_frames = _extract_reference_rgb_frames(source_video, semantic_indices, frame_bytes)
-                candidate_frames = _read_candidate_rgb_frames(raw_path, semantic_indices, frame_bytes)
-                semantic_mae_mean, semantic_mae_max, semantic_channel_mean_abs_diff = _semantic_metrics(reference_frames, candidate_frames)
-                semantic_check_passed = (
-                    semantic_mae_mean <= 80.0
-                    and semantic_mae_max <= 120.0
-                    and max(semantic_channel_mean_abs_diff) <= 100.0
-                )
-            except Exception:
-                semantic_check_passed = False
-        results.append(
-            VideoSmokeResult(
-                video=rel,
-                width=int(meta["width"]),
-                height=int(meta["height"]),
-                fps=float(meta["fps"]),
-                expected_frames=int(meta["frames"]),
-                expected_frame_bytes=frame_bytes,
-                expected_total_bytes=expected_total_bytes,
-                actual_total_bytes=actual_total_bytes,
-                actual_frames=actual_frames,
-                raw_exists=raw_exists,
-                size_matches=size_matches,
-                frame_count_matches=frame_count_matches,
-                semantic_sample_indices=semantic_indices,
-                semantic_mae_mean=semantic_mae_mean,
-                semantic_mae_max=semantic_mae_max,
-                semantic_channel_mean_abs_diff=semantic_channel_mean_abs_diff,
-                semantic_check_passed=semantic_check_passed,
+
+        results: list[VideoSmokeResult] = []
+        listed = [line.strip() for line in video_names_file.read_text().splitlines() if line.strip()]
+        for rel in listed:
+            source_video = upstream_root / "videos" / rel
+            meta = _video_meta(source_video)
+            stem = rel.rsplit(".", 1)[0]
+            raw_path = inflated_dir / f"{stem}.raw"
+            frame_bytes = int(meta["width"]) * int(meta["height"]) * 3
+            expected_total_bytes = int(meta["frames"]) * frame_bytes
+            raw_exists = raw_path.exists()
+            actual_total_bytes = raw_path.stat().st_size if raw_exists else None
+            actual_frames = (
+                actual_total_bytes // frame_bytes
+                if raw_exists and actual_total_bytes is not None and actual_total_bytes % frame_bytes == 0
+                else None
             )
-        )
+            size_matches = actual_total_bytes == expected_total_bytes
+            frame_count_matches = actual_frames == int(meta["frames"])
+            semantic_indices = _semantic_sample_indices(int(meta["frames"]))
+            semantic_mae_mean: float | None = None
+            semantic_mae_max: float | None = None
+            semantic_channel_mean_abs_diff: list[float] | None = None
+            semantic_check_passed = False
+            if raw_exists and frame_count_matches:
+                try:
+                    reference_frames = _extract_reference_rgb_frames(source_video, semantic_indices, frame_bytes)
+                    candidate_frames = _read_candidate_rgb_frames(raw_path, semantic_indices, frame_bytes)
+                    semantic_mae_mean, semantic_mae_max, semantic_channel_mean_abs_diff = _semantic_metrics(reference_frames, candidate_frames)
+                    semantic_check_passed = (
+                        semantic_mae_mean <= 80.0
+                        and semantic_mae_max <= 120.0
+                        and max(semantic_channel_mean_abs_diff) <= 100.0
+                    )
+                except Exception:
+                    semantic_check_passed = False
+            results.append(
+                VideoSmokeResult(
+                    video=rel,
+                    width=int(meta["width"]),
+                    height=int(meta["height"]),
+                    fps=float(meta["fps"]),
+                    expected_frames=int(meta["frames"]),
+                    expected_frame_bytes=frame_bytes,
+                    expected_total_bytes=expected_total_bytes,
+                    actual_total_bytes=actual_total_bytes,
+                    actual_frames=actual_frames,
+                    raw_exists=raw_exists,
+                    size_matches=size_matches,
+                    frame_count_matches=frame_count_matches,
+                    semantic_sample_indices=semantic_indices,
+                    semantic_mae_mean=semantic_mae_mean,
+                    semantic_mae_max=semantic_mae_max,
+                    semantic_channel_mean_abs_diff=semantic_channel_mean_abs_diff,
+                    semantic_check_passed=semantic_check_passed,
+                )
+            )
 
-    actual_raws = sorted(p.relative_to(inflated_dir).as_posix() for p in inflated_dir.rglob("*.raw"))
-    expected_raws = sorted(f"{rel.rsplit('.', 1)[0]}.raw" for rel in listed)
-    file_count_matches = actual_raws == expected_raws
-    all_passed = file_count_matches and all(
-        r.raw_exists and r.size_matches and r.frame_count_matches and r.semantic_check_passed
-        for r in results
-    )
-    return SmokeSummary(
-        track=name,
-        upstream_root=str(upstream_root),
-        video_names_file=str(video_names_file),
-        archive_path=str(archive_path),
-        inflated_dir=str(inflated_dir),
-        all_passed=all_passed,
-        file_count_matches=file_count_matches,
-        results=results,
-    )
+        actual_raws = sorted(p.relative_to(inflated_dir).as_posix() for p in inflated_dir.rglob("*.raw"))
+        expected_raws = sorted(f"{rel.rsplit('.', 1)[0]}.raw" for rel in listed)
+        file_count_matches = actual_raws == expected_raws
+        all_passed = file_count_matches and all(
+            r.raw_exists and r.size_matches and r.frame_count_matches and r.semantic_check_passed
+            for r in results
+        )
+        return SmokeSummary(
+            track=name,
+            upstream_root=str(upstream_root),
+            video_names_file=str(video_names_file),
+            archive_path=str(archive_path),
+            inflated_dir=str(inflated_dir),
+            all_passed=all_passed,
+            file_count_matches=file_count_matches,
+            results=results,
+        )

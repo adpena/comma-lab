@@ -1,5 +1,5 @@
 {
-  "enabled": true,
+  "enabled": false,
   "target": {
     "type": "pane",
     "value": "%0"

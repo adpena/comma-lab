@@ -1,0 +1,84 @@
+{
+  "checkpoints": [
+    {
+      "epoch": 1,
+      "pose": 0.077411,
+      "scorer": 4.4007,
+      "seg": 0.036713
+    },
+    {
+      "epoch": 10,
+      "pose": 0.07804,
+      "scorer": 4.385,
+      "seg": 0.03661
+    },
+    {
+      "epoch": 20,
+      "pose": 0.100303,
+      "scorer": 4.349,
+      "seg": 0.035598
+    },
+    {
+      "epoch": 30,
+      "pose": 0.100318,
+      "scorer": 4.3449,
+      "seg": 0.035599
+    },
+    {
+      "epoch": 40,
+      "pose": 0.063619,
+      "scorer": 4.1235,
+      "seg": 0.035225
+    },
+    {
+      "epoch": 50,
+      "pose": 0.079513,
+      "scorer": 4.2486,
+      "seg": 0.035418
+    },
+    {
+      "epoch": 60,
+      "pose": 0.085587,
+      "scorer": 4.278,
+      "seg": 0.035742
+    },
+    {
+      "epoch": 70,
+      "pose": 0.069419,
+      "scorer": 4.1821,
+      "seg": 0.035489
+    },
+    {
+      "epoch": 80,
+      "pose": 0.062075,
+      "scorer": 4.1112,
+      "seg": 0.034961
+    },
+    {
+      "epoch": 90,
+      "pose": 0.067211,
+      "scorer": 4.1309,
+      "seg": 0.034822
+    },
+    {
+      "epoch": 100,
+      "pose": 0.063125,
+      "scorer": 4.2193,
+      "seg": 0.035608
+    },
+    {
+      "epoch": 110,
+      "pose": 0.070566,
+      "scorer": 4.121,
+      "seg": 0.034784
+    }
+  ],
+  "command": "PYTHONUNBUFFERED=1 uv run --with av --with torch --with safetensors --with timm --with einops --with segmentation-models-pytorch --with numpy python -u experiments/train_postfilter_qat_ema.py --alpha 20 --hidden 24 --epochs 500 --tag long500_qat_ema_alpha20_h24",
+  "host": "local-mps",
+  "last_observed_at": "2026-04-08T19:26:00-05:00",
+  "notes": "Managed-session recovery never turned into a compelling frontier story. The lane was intentionally stopped after the 1.92 promotion so long1000 h32 could hold the local training slot without h24 contention.",
+  "session_id": 42898,
+  "slug": "local-long500-h24",
+  "status": "stopped_by_owner",
+  "written_at": "2026-04-08T23:33:39.644188+00:00"
+}

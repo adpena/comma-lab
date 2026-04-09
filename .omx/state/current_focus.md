@@ -36,6 +36,7 @@
    - `src/comma_lab/task_codec/` for scorer, architecture, quantization, and evaluation record abstractions
    - `src/comma_lab/scheduler/` plus `comma-lab sched ...` read-only reporting commands
    - `reports/graphs/report_history.html` + `report_history.json` for git-backed markdown/history exploration
+11. `pixelshuffle_h64_long1000` is now the active faithful proxy lane. It is the strongest packaged lane that is both deploy-ready and inside the local proxy gate, and the earlier runtime loader mismatch has been fixed in `submissions/robust_current/inflate_postfilter.py`.
 
 ## current honest frontier
 

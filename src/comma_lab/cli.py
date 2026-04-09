@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import argparse
+import json
 import os
 import subprocess
 import shutil
@@ -10,7 +11,11 @@ from pathlib import Path
 from .bootstrap import bootstrap_upstream
 from .evaluate import evaluate_submission
 from .install import install_submission
+from .lock import submission_lock
 from .paths import default_upstream_root, repo_root, upstream_snapshot_path
+from .scheduler.registry import load_platform_registry
+from .scheduler.reporting import build_budget_report, build_status_report, select_result_records
+from .scheduler.repository import collect_run_records
 from .smoke import smoke_submission
 from .snapshot import load_snapshot
 from .tracks.exact_current import create_minimal_archive
@@ -107,19 +112,117 @@ def cmd_smoke_submission(args: argparse.Namespace) -> int:
 
 def cmd_package_submission(args: argparse.Namespace) -> int:
     sub_dir = repo_root() / "submissions" / args.name
-    if args.name == "exact_current":
-        archive = create_minimal_archive(sub_dir / "archive.zip")
-        print(f"Updated exact-current archive: {archive}")
+    upstream_root = Path(args.upstream_root) if args.upstream_root else default_upstream_root()
+    with submission_lock(args.name, upstream_root):
+        if args.name == "exact_current":
+            archive = create_minimal_archive(sub_dir / "archive.zip")
+            print(f"Updated exact-current archive: {archive}")
+            return 0
+        if args.name == "robust_current":
+            env = os.environ.copy()
+            env["COMMA_CHALLENGE_ROOT"] = str(upstream_root)
+            subprocess.run(["bash", str(sub_dir / "compress.sh")], cwd=repo_root(), env=env, check=True)
+            archive = sub_dir / "archive.zip"
+            print(f"Updated robust-current archive: {archive}")
+            return 0
+        print(f"No package action implemented for '{args.name}'.")
         return 0
-    if args.name == "robust_current":
-        upstream_root = Path(args.upstream_root) if args.upstream_root else default_upstream_root()
-        env = os.environ.copy()
-        env["COMMA_CHALLENGE_ROOT"] = str(upstream_root)
-        subprocess.run(["bash", str(sub_dir / "compress.sh")], cwd=repo_root(), env=env, check=True)
-        archive = sub_dir / "archive.zip"
-        print(f"Updated robust-current archive: {archive}")
+
+
+def _scheduler_repo_root(args: argparse.Namespace) -> Path:
+    return Path(args.repo_root) if getattr(args, "repo_root", None) else repo_root()
+
+
+def _scheduler_registry_path(root: Path, explicit_path: str | None) -> Path | None:
+    if explicit_path:
+        return Path(explicit_path)
+    default_path = root / "configs" / "platforms.json"
+    if default_path.exists():
+        return default_path
+    return None
+
+
+def _load_scheduler_registry(args: argparse.Namespace, *, required: bool) -> object:
+    root = _scheduler_repo_root(args)
+    registry_path = _scheduler_registry_path(root, getattr(args, "registry", None))
+    if registry_path is None:
+        if required:
+            raise ValueError("`sched budget` requires --registry or configs/platforms.json")
+        return None
+    return load_platform_registry(registry_path)
+
+
+def _print_json(payload: dict[str, object]) -> None:
+    print(json.dumps(payload, indent=2, sort_keys=True))
+
+
+def cmd_sched_status(args: argparse.Namespace) -> int:
+    root = _scheduler_repo_root(args)
+    registry = _load_scheduler_registry(args, required=False)
+    records = collect_run_records(root, registry)
+    report = build_status_report(root, records)
+    if args.json:
+        _print_json(report.to_dict())
         return 0
-    print(f"No package action implemented for '{args.name}'.")
+
+    print(f"Repo root: {root}")
+    print(f"Measured results: {report.result_count}")
+    print(f"Total run records: {report.run_record_count}")
+    if not report.tracks:
+        print("No measured results found.")
+    else:
+        print("Latest by track:")
+        for item in report.tracks:
+            latest = item.latest_result
+            score = "n/a" if latest.score is None else f"{latest.score:.4f}"
+            print(f"  {item.track}: {score} ({latest.run_id})")
+    if report.active_runs:
+        print("Active runs:")
+        for run in report.active_runs:
+            print(f"  {run.platform}: {run.run_id} [{run.status}]")
+    return 0
+
+
+def cmd_sched_results(args: argparse.Namespace) -> int:
+    root = _scheduler_repo_root(args)
+    if args.limit <= 0:
+        raise ValueError("--limit must be positive")
+    registry = _load_scheduler_registry(args, required=False)
+    records = collect_run_records(root, registry)
+    results = select_result_records(records, track=args.track, limit=args.limit)
+    if args.json:
+        _print_json({"results": [record.to_dict() for record in results]})
+        return 0
+
+    if not results:
+        print("No matching measured results found.")
+        return 0
+    for record in results:
+        score = "n/a" if record.score is None else f"{record.score:.4f}"
+        finished = record.finished_at or "unknown-time"
+        track = record.track or "unknown-track"
+        print(f"{finished}  {track:<16} {record.platform:<8} {score:<8} {record.run_id}")
+    return 0
+
+
+def cmd_sched_budget(args: argparse.Namespace) -> int:
+    root = _scheduler_repo_root(args)
+    registry = _load_scheduler_registry(args, required=True)
+    records = collect_run_records(root, registry)
+    report = build_budget_report(registry, records)
+    if args.json:
+        _print_json(report.to_dict())
+        return 0
+
+    for name in sorted(report.platforms):
+        item = report.platforms[name]
+        status = "OVER" if item.over_budget else "OK"
+        print(f"{name} ({item.platform.kind}) [{status}]")
+        print(
+            "  "
+            f"runs={item.usage.total_runs} active={item.usage.active_runs} "
+            f"failed={item.usage.failed_runs} archive_bytes={item.usage.archive_bytes}"
+        )
     return 0
 
 
@@ -156,7 +259,7 @@ def build_parser() -> argparse.ArgumentParser:
     p.add_argument("--report-copy", default=None, help="optional repo-local path to copy the raw report to after evaluation")
     p.set_defaults(func=cmd_eval_submission)
 
-    p = sub.add_parser("smoke-submission", help="package/sync/inflate a submission and verify raw output count/geometry before scorer runs")
+    p = sub.add_parser("smoke-submission", help="package/sync/inflate a submission and verify raw output count, geometry, and sampled RGB semantics before scorer runs")
     p.add_argument("name", choices=["exact_current", "robust_current"])
     p.add_argument("--upstream-root", default=None)
     p.add_argument("--package", action="store_true", help="package the submission before the smoke check")
@@ -168,12 +271,35 @@ def build_parser() -> argparse.ArgumentParser:
     p.add_argument("--upstream-root", default=None, help="override the challenge root used during packaging")
     p.set_defaults(func=cmd_package_submission)
 
+    p = sub.add_parser("sched", help="inspect scheduler-friendly repo state")
+    sched_sub = p.add_subparsers(dest="sched_cmd", required=True)
+
+    sp = sched_sub.add_parser("status", help="summarize latest measured results and active discovered runs")
+    sp.add_argument("--repo-root", default=None, help="override the repo root to inspect")
+    sp.add_argument("--registry", default=None, help="platform registry path; defaults to configs/platforms.json when present")
+    sp.add_argument("--json", action="store_true", help="emit machine-readable JSON")
+    sp.set_defaults(func=cmd_sched_status)
+
+    sp = sched_sub.add_parser("results", help="list measured scorer results from reports/results.jsonl")
+    sp.add_argument("--repo-root", default=None, help="override the repo root to inspect")
+    sp.add_argument("--registry", default=None, help="optional platform registry path for device-to-platform mapping")
+    sp.add_argument("--track", default=None, help="optional track filter")
+    sp.add_argument("--limit", type=int, default=10, help="maximum number of results to show")
+    sp.add_argument("--json", action="store_true", help="emit machine-readable JSON")
+    sp.set_defaults(func=cmd_sched_results)
+
+    sp = sched_sub.add_parser("budget", help="compare discovered run usage against a platform registry budget")
+    sp.add_argument("--repo-root", default=None, help="override the repo root to inspect")
+    sp.add_argument("--registry", default=None, help="platform registry path; defaults to configs/platforms.json when present")
+    sp.add_argument("--json", action="store_true", help="emit machine-readable JSON")
+    sp.set_defaults(func=cmd_sched_budget)
+
     return parser
 
 
-def main() -> int:
+def main(argv: list[str] | None = None) -> int:
     parser = build_parser()
-    args = parser.parse_args()
+    args = parser.parse_args(argv)
     try:
         return args.func(args)
     except (ValueError, FileNotFoundError, FileExistsError) as exc:

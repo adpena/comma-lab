@@ -1,0 +1,24 @@
+# Ralph context snapshot
+
+- task statement: Execute the approved plan to completion under the dual-track comma lab contract, with measured progress, durable state, and explicit current_workflow vs rule_faithful accounting.
+- desired outcome: Keep both tracks healthy, close the next highest-value rigor lane without speculative promotion, and leave the repo resumable for the next loop.
+- known facts/evidence:
+  - exact_current current_workflow remains 0.00 in the latest recorded scorer run.
+  - robust_current promoted floor is 2.12 current_workflow with a 2.1418040615200598 rule_faithful estimate.
+  - frontend/writeup pass is closed; no remaining high-confidence UI blockers.
+  - smoke gate already checks count, geometry, and semantic RGB sample MAE, but repo docs still understate that capability.
+- constraints:
+  - stay inside mutation frontier
+  - no new dependencies
+  - do not promote speculative lanes without scorer evidence
+  - preserve both packaging views explicitly
+- unknowns/open questions:
+  - whether current smoke/eval evidence still matches the documented rigor story after the latest tooling/frontend iterations
+  - whether doc/report surfaces still inaccurately describe smoke as count/geometry-only
+- likely codebase touchpoints:
+  - src/comma_lab/smoke.py
+  - src/comma_lab/cli.py
+  - docs/compliance_audit.md
+  - reports/scoring_rigor_review.md
+  - reports/latest.md
+  - .omx state/memory files

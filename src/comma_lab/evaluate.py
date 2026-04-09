@@ -11,6 +11,7 @@ from dataclasses import asdict, dataclass
 from pathlib import Path
 
 from .install import install_payload_bytes, install_payload_manifest, install_submission
+from .lock import submission_lock
 from .paths import default_upstream_root, repo_root
 from .tracks.exact_current import create_minimal_archive
 
@@ -116,79 +117,80 @@ def evaluate_submission(
     source_submission_dir = root / "submissions" / name
     submission_dir = upstream_root / "submissions" / name
 
-    if package and not sync:
-        raise ValueError("Packaging without sync is unsupported because the packaged artifact would not be the one under test.")
+    with submission_lock(name, upstream_root):
+        if package and not sync:
+            raise ValueError("Packaging without sync is unsupported because the packaged artifact would not be the one under test.")
 
-    if package:
-        if name == "exact_current":
-            create_minimal_archive(source_submission_dir / "archive.zip")
-        elif name == "robust_current":
-            package_env = os.environ.copy()
-            package_env["COMMA_CHALLENGE_ROOT"] = str(upstream_root)
-            _run(["bash", str(source_submission_dir / "compress.sh")], cwd=root, env=package_env)
+        if package:
+            if name == "exact_current":
+                create_minimal_archive(source_submission_dir / "archive.zip")
+            elif name == "robust_current":
+                package_env = os.environ.copy()
+                package_env["COMMA_CHALLENGE_ROOT"] = str(upstream_root)
+                _run(["bash", str(source_submission_dir / "compress.sh")], cwd=root, env=package_env)
+            else:
+                raise ValueError(f"Unsupported submission for packaging: {name}")
+
+        if sync:
+            install_submission(name, upstream_root=upstream_root, force=True)
+
+        env = _upstream_env(upstream_root)
+        evaluate_sh = upstream_root / "evaluate.sh"
+        inflated_dir = submission_dir / "inflated"
+        if inflated_dir.exists():
+            shutil.rmtree(inflated_dir)
+        _run([
+            "bash",
+            str(evaluate_sh),
+            "--submission-dir",
+            str(submission_dir),
+            "--device",
+            device,
+        ], cwd=root, env=env)
+
+        report_path = submission_dir / "report.txt"
+        if not report_path.exists():
+            raise FileNotFoundError(f"Expected report not found: {report_path}")
+
+        copied_report_path: str | None = None
+        if report_copy is not None:
+            report_copy.parent.mkdir(parents=True, exist_ok=True)
+            shutil.copy2(report_path, report_copy)
+            copied_report_path = str(report_copy)
+
+        parsed = _parse_report(report_path)
+        pose = float(parsed["pose"])
+        seg = float(parsed["seg"])
+        archive_bytes = int(parsed["submission_bytes"])
+        original_bytes = int(parsed["original_bytes"])
+        current_rate = float(parsed["rate"])
+        current_score = float(parsed["final_score"])
+
+        rule_bytes = _rule_faithful_bundle_bytes(name, submission_dir)
+        rule_paths = _rule_faithful_bundle_paths(name, submission_dir)
+        if rule_bytes is None:
+            rule_rate = None
+            rule_score = None
+            rule_status = "invalid_repo_side_dependency"
         else:
-            raise ValueError(f"Unsupported submission for packaging: {name}")
+            rule_rate = rule_bytes / original_bytes
+            rule_score = _score(seg, pose, rule_rate)
+            rule_status = "estimated_from_scorer_distortions_plus_installed_runtime_payload"
 
-    if sync:
-        install_submission(name, upstream_root=upstream_root, force=True)
-
-    env = _upstream_env(upstream_root)
-    evaluate_sh = upstream_root / "evaluate.sh"
-    inflated_dir = submission_dir / "inflated"
-    if inflated_dir.exists():
-        shutil.rmtree(inflated_dir)
-    _run([
-        "bash",
-        str(evaluate_sh),
-        "--submission-dir",
-        str(submission_dir),
-        "--device",
-        device,
-    ], cwd=root, env=env)
-
-    report_path = submission_dir / "report.txt"
-    if not report_path.exists():
-        raise FileNotFoundError(f"Expected report not found: {report_path}")
-
-    copied_report_path: str | None = None
-    if report_copy is not None:
-        report_copy.parent.mkdir(parents=True, exist_ok=True)
-        shutil.copy2(report_path, report_copy)
-        copied_report_path = str(report_copy)
-
-    parsed = _parse_report(report_path)
-    pose = float(parsed["pose"])
-    seg = float(parsed["seg"])
-    archive_bytes = int(parsed["submission_bytes"])
-    original_bytes = int(parsed["original_bytes"])
-    current_rate = float(parsed["rate"])
-    current_score = float(parsed["final_score"])
-
-    rule_bytes = _rule_faithful_bundle_bytes(name, submission_dir)
-    rule_paths = _rule_faithful_bundle_paths(name, submission_dir)
-    if rule_bytes is None:
-        rule_rate = None
-        rule_score = None
-        rule_status = "invalid_repo_side_dependency"
-    else:
-        rule_rate = rule_bytes / original_bytes
-        rule_score = _score(seg, pose, rule_rate)
-        rule_status = "estimated_from_scorer_distortions_plus_installed_runtime_payload"
-
-    return EvaluationSummary(
-        track=name,
-        device=device,
-        report_path=str(report_path),
-        copied_report_path=copied_report_path,
-        current_workflow_archive_bytes=archive_bytes,
-        pose_distortion=pose,
-        seg_distortion=seg,
-        original_uncompressed_bytes=original_bytes,
-        current_workflow_rate=current_rate,
-        current_workflow_score=current_score,
-        rule_faithful_bundle_bytes=rule_bytes,
-        rule_faithful_bundle_paths=rule_paths,
-        rule_faithful_rate=rule_rate,
-        rule_faithful_score=rule_score,
-        rule_faithful_status=rule_status,
-    )
+        return EvaluationSummary(
+            track=name,
+            device=device,
+            report_path=str(report_path),
+            copied_report_path=copied_report_path,
+            current_workflow_archive_bytes=archive_bytes,
+            pose_distortion=pose,
+            seg_distortion=seg,
+            original_uncompressed_bytes=original_bytes,
+            current_workflow_rate=current_rate,
+            current_workflow_score=current_score,
+            rule_faithful_bundle_bytes=rule_bytes,
+            rule_faithful_bundle_paths=rule_paths,
+            rule_faithful_rate=rule_rate,
+            rule_faithful_score=rule_score,
+            rule_faithful_status=rule_status,
+        )

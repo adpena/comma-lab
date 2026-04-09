@@ -15,6 +15,10 @@ INSTALL_PAYLOADS: dict[str, tuple[str, ...]] = {
     "robust_current": (
         "archive.zip",
         "inflate.sh",
+        "inflate.py",
+        "inflate_postfilter.py",
+        "inflate_grain_mask.py",
+        "postfilter_int8.pt",
         "config.env",
         "analyze_roi.py",
     ),

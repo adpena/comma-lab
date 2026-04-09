@@ -1,0 +1,30 @@
+# Ralph context snapshot
+
+- task: continue the approved exploration plan to completion without trampling partner work
+- desired outcome: finish the low-hanging-fruit exploration round with authoritative evidence, keep BAT00 saturated with valid side-lane work, and leave resumable durable state
+- constraints:
+  - stay inside mutation frontier
+  - do not overwrite trusted-partner shared-tree work
+  - keep `current_workflow` and `rule_faithful` explicit
+  - no promotion without measured evidence
+  - BAT00 side lane is non-authoritative until rerun locally
+- known facts:
+  - best valid authoritative result is 2.08 from `sharpness=1`
+  - authoritative reject: `exp_h_sharpness1_consensus` = 2.13 @ 909307 bytes
+  - BAT00 queue bug was fixed; first remote batch is invalid, later isolated runs are valid
+  - valid BAT00 smoke results: exp_j 787244 bytes, exp_l 858827, exp_m 863994, exp_n 860551
+  - authoritative local scorer is running on `exp_j_sharpness1_preprocess`
+- unknowns:
+  - final authoritative scorer result for `exp_j`
+  - whether shared-tree `exp_l` eval finishes with useful rough signal
+- touchpoints:
+  - /tmp/pact-authoritative/reports/raw/2026-04-06-pre-submit-round/*
+  - experiments/bat00_sync.sh
+  - experiments/run_bat00_smoke_job.sh
+  - experiments/launch_bat00_smokes.sh
+  - experiments/poll_bat00_runs.sh
+  - .omx/state/current_focus.md
+  - .omx/state/next_experiments.md
+  - .omx/research/findings.md
+  - .ralph/run_log.md
+  - reports/latest.md

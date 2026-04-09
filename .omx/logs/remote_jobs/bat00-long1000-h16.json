@@ -1,0 +1,10 @@
+{
+  "artifact_family": "long1000_qat_ema_alpha20_h16",
+  "host": "bat00",
+  "notes": "auth/cuda ok; reaches decode, saliency load, and baseline; still fails during first epoch on bat00",
+  "remote_log": "experiments/postfilter_weights/train_long1000_qat_ema_alpha20_h16.log",
+  "remote_root": "/home/adpena/pact-side",
+  "slug": "bat00-long1000-h16",
+  "status": "blocked_after_baseline",
+  "written_at": "2026-04-08T21:58:50.580586+00:00"
+}

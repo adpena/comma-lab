@@ -1,0 +1,9 @@
+{
+  "slug": "local-long1000-h32-rerun",
+  "host": "local-mps",
+  "status": "running_managed_session",
+  "session_id": 64668,
+  "command": "cd /private/tmp/pact-mine && PYTHONUNBUFFERED=1 uv run --with av --with torch --with safetensors --with timm --with einops --with segmentation-models-pytorch --with numpy python -u experiments/train_postfilter_qat_ema.py --alpha 20 --hidden 32 --epochs 1000 --tag long1000_qat_ema_alpha20_h32_rerun",
+  "log_path": "/private/tmp/pact-mine/experiments/postfilter_weights/train_long1000_h32_rerun.log",
+  "written_at": "2026-04-08T21:50:00-05:00"
+}

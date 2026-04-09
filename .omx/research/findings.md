@@ -77,6 +77,7 @@
    - `reports/graphs/build_report_history.py` now emits `report_history.json`, and `reports/graphs/report_history.html` renders a git-backed history/time-machine view that exports through the static site pipeline.
 24. The scheduler foundation is intentionally conservative. It is cross-platform and stdlib-first, but it is reporting-only for now: no fake remote execution, no unsafe shell templating, and `sched budget` requires an explicit or default `configs/platforms.json` registry.
 25. The report-history viewer is already usable as a standalone static page, but it is not yet linked from the main dashboard. That is a product/navigation choice, not a missing build step.
+26. `pixelshuffle_h64_long1000` is now the first post-h64 packaged lane to earn an honest faithful proxy attempt after the runtime-path fixes. The earlier proxy failure was a real loader bug, not a bad candidate. The loader now supports the pixelshuffle-dilated architecture and can infer it from the artifact state layout even when the saved metadata is wrong.
 
 ## 2026-04-08 prior long1000 h32 QAT+EMA post-filter promotion
 
