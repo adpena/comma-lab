@@ -1,218 +1,206 @@
-#!/usr/bin/env swift
-// FleetMonitor — macOS menubar competition tracker
-//
-// Build & run:
-//   swiftc -framework Cocoa tools/FleetMonitor/FleetMonitor.swift \
-//     -o tools/FleetMonitor/FleetMonitor
-//   ./tools/FleetMonitor/FleetMonitor
-
 import Cocoa
+import UserNotifications
 import Foundation
 
-// ── Competition constants ──────────────────────────────────────────
-let CONTEST_DEADLINE = {
-    var c = DateComponents()
-    c.year = 2026; c.month = 5; c.day = 3; c.hour = 23; c.minute = 59
+let WEIGHTS_DIR = NSString(string: "~/Projects/pact/experiments/postfilter_weights").expandingTildeInPath
+let CONTEST_END: Date = {
+    var c = DateComponents(); c.year=2026; c.month=5; c.day=3; c.hour=23; c.minute=59
     c.timeZone = TimeZone(identifier: "America/Los_Angeles")
     return Calendar.current.date(from: c)!
 }()
-
-let PROMOTED_SCORE: Double = 1.727
-let PROMOTED_DATE = {
-    var c = DateComponents()
-    c.year = 2026; c.month = 4; c.day = 9; c.hour = 10; c.minute = 0
+let BREAKTHROUGH_DATE: Date = {
+    var c = DateComponents(); c.year=2026; c.month=4; c.day=9; c.hour=10; c.minute=0
     c.timeZone = TimeZone(identifier: "America/Chicago")
     return Calendar.current.date(from: c)!
 }()
+let PROMOTED: Double = 1.727
+let LB2: Double = 1.89
+let TARGET: Double = 1.60
+let PRACTICAL_FLOOR: Double = 1.50
 
-let LEADERBOARD: [(name: String, score: Double)] = [
-    ("PACT (ours)", 1.727),
-    ("neural_inflate", 1.89),
-    ("roi_v2", 1.94),
-    ("av1_roi_lanczos_unsharp", 1.95),
-]
-
-let THEORETICAL_FLOOR: Double = 1.20  // council estimate
-let PRACTICAL_FLOOR: Double = 1.50    // council central estimate
-let NEXT_TARGET: Double = 1.60        // council conservative target
-
-let WEIGHTS_DIR = NSString(string: "~/Projects/pact/experiments/postfilter_weights").expandingTildeInPath
-
-// ── App ────────────────────────────────────────────────────────────
-
-class AppDelegate: NSObject, NSApplicationDelegate {
-    var statusItem: NSStatusItem!
+class App: NSObject, NSApplicationDelegate, UNUserNotificationCenterDelegate {
+    var item: NSStatusItem!
     var timer: Timer?
-    var trainers: Int = 0
+    var bestScorer: Double = 999
+    var lastTrainerCount: Int = -1
+    var notifiedTags: Set<String> = []
 
-    func applicationDidFinishLaunching(_ notification: Notification) {
-        statusItem = NSStatusBar.system.statusItem(withLength: NSStatusItem.variableLength)
-        statusItem.button?.font = NSFont.monospacedSystemFont(ofSize: 11, weight: .medium)
-        refresh()
-        timer = Timer.scheduledTimer(withTimeInterval: 10.0, repeats: true) { [weak self] _ in
-            self?.refresh()
+    func applicationDidFinishLaunching(_ n: Notification) {
+        UNUserNotificationCenter.current().delegate = self
+        UNUserNotificationCenter.current().requestAuthorization(options: [.alert, .sound, .badge]) { ok, _ in
+            if ok { print("Notifications enabled") }
         }
+        item = NSStatusBar.system.statusItem(withLength: NSStatusItem.variableLength)
+        item.button?.font = NSFont.monospacedSystemFont(ofSize: 11, weight: .medium)
+        refresh()
+        timer = Timer.scheduledTimer(withTimeInterval: 10, repeats: true) { [weak self] _ in self?.refresh() }
     }
 
     func refresh() {
         let now = Date()
+        let daysLeft = CONTEST_END.timeIntervalSince(now) / 86400
+        let hrsSince = now.timeIntervalSince(BREAKTHROUGH_DATE) / 3600
 
-        // Time to deadline
-        let secsLeft = CONTEST_DEADLINE.timeIntervalSince(now)
-        let daysLeft = secsLeft / 86400
+        // Count trainers (only actual python training processes)
+        let trainers = countTrainers()
 
-        // Time since last breakthrough
-        let sinceLast = now.timeIntervalSince(PROMOTED_DATE)
-        let hoursSinceLast = sinceLast / 3600
+        // Read checkpoints
+        let ckpts = readCheckpoints()
+        let active = ckpts.filter { $0.age < 600 }
+        let best = ckpts.min(by: { $0.scorer < $1.scorer })
 
-        // Active trainers
-        let ps = shell("ps aux | grep python | grep -E 'train|segnet' | grep -v grep | grep -v dashboard | wc -l").trimmingCharacters(in: .whitespacesAndNewlines)
-        trainers = Int(ps) ?? 0
-
-        // Menubar title: score + days left
+        // Menubar title
         let icon = trainers > 0 ? "⚡" : "⏸"
+        let scoreStr = String(format: "%.3f", PROMOTED)
         DispatchQueue.main.async {
-            self.statusItem.button?.title = "\(icon) \(String(format: "%.3f", PROMOTED_SCORE)) · \(Int(daysLeft))d left"
+            self.item.button?.title = "\(icon) \(scoreStr) · \(trainers)t · \(Int(daysLeft))d"
+        }
+
+        // Notifications
+        if trainers == 0 && lastTrainerCount > 0 {
+            notify("Training stopped", "All trainers have exited. Restart needed.")
+        }
+        if trainers > 0 && lastTrainerCount == 0 {
+            notify("Training resumed", "\(trainers) trainer(s) running")
+        }
+        lastTrainerCount = trainers
+
+        // New best checkpoint
+        for c in ckpts where c.age < 30 {
+            let key = "\(c.tag)_\(c.epoch)"
+            if !notifiedTags.contains(key) && c.scorer < bestScorer {
+                bestScorer = c.scorer
+                notify("New best: \(String(format: "%.4f", c.scorer))",
+                       "\(c.tag) epoch \(c.epoch)")
+                notifiedTags.insert(key)
+            }
+        }
+
+        // Deadline warnings
+        if daysLeft < 5.01 && daysLeft > 4.99 {
+            notify("⚠️ 5 days left", "Contest deadline approaching")
+        }
+        if daysLeft < 1.01 && daysLeft > 0.99 {
+            notify("🔴 FINAL DAY", "Less than 24 hours remaining")
         }
 
         // Build menu
         let menu = NSMenu()
+        sec(menu, "COMPETITION")
+        row(menu, "Official score", String(format: "%.3f (#1)", PROMOTED))
+        row(menu, "Lead over #2", String(format: "+%.3f over neural_inflate", LB2 - PROMOTED))
+        row(menu, "Headroom to target", String(format: "%.3f to %.2f", PROMOTED - TARGET, TARGET))
+        row(menu, "Practical floor", String(format: "%.2f (council est.)", PRACTICAL_FLOOR))
 
-        // ── Header ──
-        let header = NSMenuItem(title: "comma-lab", action: nil, keyEquivalent: "")
-        header.attributedTitle = NSAttributedString(string: "comma-lab fleet monitor", attributes: [.font: NSFont.boldSystemFont(ofSize: 13), .foregroundColor: NSColor.systemTeal])
-        menu.addItem(header)
         menu.addItem(NSMenuItem.separator())
+        sec(menu, "TIMELINE")
+        row(menu, "Days remaining", String(format: "%.1f", daysLeft))
+        row(menu, "Since breakthrough", hrsSince < 24 ? String(format: "%.1fh", hrsSince) : String(format: "%.1fd", hrsSince/24))
+        let df = DateFormatter(); df.dateFormat = "MMM d, h:mm a"
+        row(menu, "Deadline", df.string(from: CONTEST_END))
 
-        // ── Score section ──
-        addSection(menu, "SCORE")
-        addRow(menu, "Official score", String(format: "%.3f", PROMOTED_SCORE))
-        addRow(menu, "Lead over #2", String(format: "+%.3f", LEADERBOARD[1].score - PROMOTED_SCORE))
-        addRow(menu, "Leaderboard rank", "#1 of \(LEADERBOARD.count)")
+        if daysLeft < 5 { row(menu, "⚠️ WARNING", String(format: "%.1f days left!", daysLeft)) }
+
         menu.addItem(NSMenuItem.separator())
-
-        // ── Targets ──
-        addSection(menu, "HEADROOM")
-        addRow(menu, "Next target", String(format: "%.2f (need %.3f)", NEXT_TARGET, PROMOTED_SCORE - NEXT_TARGET))
-        addRow(menu, "Practical floor", String(format: "%.2f (council central)", PRACTICAL_FLOOR))
-        addRow(menu, "Theoretical floor", String(format: "%.2f (hard limit)", THEORETICAL_FLOOR))
-        addRow(menu, "Remaining headroom", String(format: "%.3f to practical", PROMOTED_SCORE - PRACTICAL_FLOOR))
-        menu.addItem(NSMenuItem.separator())
-
-        // ── Timeline ──
-        addSection(menu, "TIMELINE")
-        addRow(menu, "Last breakthrough", formatDuration(hoursSinceLast) + " ago")
-        addRow(menu, "Breakthrough date", formatDate(PROMOTED_DATE))
-        addRow(menu, "Contest deadline", formatDate(CONTEST_DEADLINE))
-        addRow(menu, "Time remaining", String(format: "%.1f days", daysLeft))
-
-        let fiveDayMark = CONTEST_DEADLINE.addingTimeInterval(-5 * 86400)
-        let oneDayMark = CONTEST_DEADLINE.addingTimeInterval(-1 * 86400)
-        if now < fiveDayMark {
-            let toFive = fiveDayMark.timeIntervalSince(now) / 86400
-            addRow(menu, "Until 5-day warning", String(format: "%.1f days", toFive))
-        } else if now < oneDayMark {
-            addRow(menu, "⚠️ UNDER 5 DAYS", String(format: "%.1f days left", daysLeft))
-        } else {
-            addRow(menu, "🔴 FINAL DAY", String(format: "%.1f hours left", secsLeft / 3600))
+        sec(menu, "LIVE EXPERIMENTS (\(active.count) active)")
+        for c in active.sorted(by: { $0.scorer < $1.scorer }) {
+            let age = c.age < 60 ? "\(c.age)s" : "\(c.age/60)m"
+            let trend = c.trend != 0 ? String(format: " Δ%.4f/ep", c.trend) : ""
+            let eta = c.etaEpochs.map { $0 < 9999 ? " ~\($0)ep to proxy" : "" } ?? ""
+            row(menu, String(format: "%.4f", c.scorer), "ep \(c.epoch) · \(c.tag) · \(age)\(trend)\(eta)")
         }
-        menu.addItem(NSMenuItem.separator())
+        if active.isEmpty { row(menu, "--", "no active experiments") }
 
-        // ── Fleet ──
-        addSection(menu, "FLEET")
-        addRow(menu, "Active trainers", "\(trainers)")
-        let cpuUsage = shell("ps aux | grep python | grep -E 'train|segnet' | grep -v grep | grep -v dashboard | awk '{sum+=$3} END {printf \"%.0f\", sum}'").trimmingCharacters(in: .whitespacesAndNewlines)
-        addRow(menu, "Total CPU", "\(cpuUsage)%")
-        let memUsage = shell("ps aux | grep python | grep -E 'train|segnet' | grep -v grep | grep -v dashboard | awk '{sum+=$6/1048576} END {printf \"%.1f\", sum}'").trimmingCharacters(in: .whitespacesAndNewlines)
-        addRow(menu, "Total RAM", "\(memUsage) GB")
         menu.addItem(NSMenuItem.separator())
-
-        // ── Leaderboard ──
-        addSection(menu, "LEADERBOARD")
-        for (i, entry) in LEADERBOARD.enumerated() {
-            let marker = entry.name.contains("ours") ? " ← us" : ""
-            addRow(menu, "#\(i+1)", String(format: "%.3f  %@%@", entry.score, entry.name, marker))
+        sec(menu, "FLEET")
+        row(menu, "Trainers", "\(trainers)")
+        if trainers == 0 {
+            let warn = NSMenuItem(title: "  ⚠️ NO TRAINERS — restart needed", action: nil, keyEquivalent: "")
+            warn.isEnabled = false
+            menu.addItem(warn)
         }
-        menu.addItem(NSMenuItem.separator())
-
-        // ── Actions ──
-        let dashItem = NSMenuItem(title: "Open Live Dashboard", action: #selector(openDashboard), keyEquivalent: "d")
-        dashItem.target = self
-        menu.addItem(dashItem)
-
-        let siteItem = NSMenuItem(title: "Open Writeup Site", action: #selector(openSite), keyEquivalent: "s")
-        siteItem.target = self
-        menu.addItem(siteItem)
-
-        let cfItem = NSMenuItem(title: "Open Cloudflare Site", action: #selector(openCF), keyEquivalent: "c")
-        cfItem.target = self
-        menu.addItem(cfItem)
 
         menu.addItem(NSMenuItem.separator())
-        menu.addItem(NSMenuItem(title: "Quit", action: #selector(NSApplication.terminate(_:)), keyEquivalent: "q"))
+        sec(menu, "ALL CHECKPOINTS")
+        for c in ckpts.prefix(8) {
+            let age = c.age < 60 ? "\(c.age)s" : c.age < 3600 ? "\(c.age/60)m" : "\(c.age/3600)h"
+            let fresh = c.age < 600 ? "●" : "○"
+            row(menu, "\(fresh) \(String(format: "%.4f", c.scorer))", "ep \(c.epoch) · \(c.tag) · \(age)")
+        }
 
-        statusItem.menu = menu
+        menu.addItem(NSMenuItem.separator())
+        let q = NSMenuItem(title: "Quit Fleet Monitor", action: #selector(NSApplication.terminate(_:)), keyEquivalent: "q")
+        menu.addItem(q)
+
+        item.menu = menu
     }
 
-    func addSection(_ menu: NSMenu, _ title: String) {
-        let item = NSMenuItem(title: title, action: nil, keyEquivalent: "")
-        item.attributedTitle = NSAttributedString(string: title, attributes: [
-            .font: NSFont.systemFont(ofSize: 10, weight: .bold),
-            .foregroundColor: NSColor.secondaryLabelColor,
-        ])
-        item.isEnabled = false
-        menu.addItem(item)
+    struct Checkpoint {
+        let tag: String; let epoch: Int; let scorer: Double; let age: Int
+        let trend: Double; let etaEpochs: Int?
     }
 
-    func addRow(_ menu: NSMenu, _ label: String, _ value: String) {
-        let item = NSMenuItem(title: "\(label):  \(value)", action: nil, keyEquivalent: "")
-        item.attributedTitle = {
-            let s = NSMutableAttributedString()
-            s.append(NSAttributedString(string: label + "  ", attributes: [
-                .font: NSFont.systemFont(ofSize: 12),
-                .foregroundColor: NSColor.secondaryLabelColor,
-            ]))
-            s.append(NSAttributedString(string: value, attributes: [
-                .font: NSFont.monospacedSystemFont(ofSize: 12, weight: .medium),
-                .foregroundColor: NSColor.labelColor,
-            ]))
-            return s
-        }()
-        item.isEnabled = false
-        menu.addItem(item)
+    func readCheckpoints() -> [Checkpoint] {
+        let fm = FileManager.default
+        guard let files = try? fm.contentsOfDirectory(atPath: WEIGHTS_DIR) else { return [] }
+        var results: [Checkpoint] = []
+        for f in files where f.hasSuffix("_best_meta.json") {
+            let path = "\(WEIGHTS_DIR)/\(f)"
+            guard let data = fm.contents(atPath: path),
+                  let j = try? JSONSerialization.jsonObject(with: data) as? [String:Any],
+                  let scorer = j["scorer"] as? Double,
+                  let epoch = j["epoch"] as? Int else { continue }
+            let tag = f.replacingOccurrences(of: "postfilter_", with: "").replacingOccurrences(of: "_best_meta.json", with: "")
+            let attrs = try? fm.attributesOfItem(atPath: path)
+            let mod = (attrs?[.modificationDate] as? Date) ?? .distantPast
+            let age = Int(Date().timeIntervalSince(mod))
+            // Skip test/debug checkpoints
+            if tag.contains("test") || tag.contains("debug") { continue }
+            results.append(Checkpoint(tag: tag, epoch: epoch, scorer: scorer, age: age, trend: 0, etaEpochs: nil))
+        }
+        return results.sorted { $0.scorer < $1.scorer }
     }
 
-    func formatDuration(_ hours: Double) -> String {
-        if hours < 1 { return "\(Int(hours * 60))m" }
-        if hours < 24 { return String(format: "%.1fh", hours) }
-        return String(format: "%.1f days", hours / 24)
+    func countTrainers() -> Int {
+        let out = sh("ps aux | grep python | grep -E 'train_postfilter|segnet_boundary' | grep -v grep | grep -v dashboard | wc -l")
+        return Int(out.trimmingCharacters(in: .whitespacesAndNewlines)) ?? 0
     }
 
-    func formatDate(_ date: Date) -> String {
-        let f = DateFormatter()
-        f.dateFormat = "MMM d, h:mm a"
-        return f.string(from: date)
+    func notify(_ title: String, _ body: String) {
+        let c = UNMutableNotificationContent()
+        c.title = title; c.body = body; c.sound = .default
+        let r = UNNotificationRequest(identifier: UUID().uuidString, content: c, trigger: nil)
+        UNUserNotificationCenter.current().add(r)
     }
 
-    @objc func openDashboard() { NSWorkspace.shared.open(URL(string: "http://localhost:8780")!) }
-    @objc func openSite() { NSWorkspace.shared.open(URL(string: "http://localhost:8767")!) }
-    @objc func openCF() { NSWorkspace.shared.open(URL(string: "https://comma-lab.pages.dev")!) }
+    func userNotificationCenter(_ center: UNUserNotificationCenter, willPresent n: UNNotification, withCompletionHandler h: @escaping (UNNotificationPresentationOptions) -> Void) {
+        h([.banner, .sound])
+    }
 
-    func shell(_ command: String) -> String {
-        let task = Process()
-        let pipe = Pipe()
-        task.standardOutput = pipe
-        task.standardError = FileHandle.nullDevice
-        task.arguments = ["-c", command]
-        task.launchPath = "/bin/zsh"
-        task.launch()
-        let data = pipe.fileHandleForReading.readDataToEndOfFile()
-        return String(data: data, encoding: .utf8) ?? ""
+    func sec(_ m: NSMenu, _ t: String) {
+        let i = NSMenuItem(title: t, action: nil, keyEquivalent: "")
+        i.attributedTitle = NSAttributedString(string: t, attributes: [.font: NSFont.systemFont(ofSize: 10, weight: .bold), .foregroundColor: NSColor.secondaryLabelColor])
+        i.isEnabled = false; m.addItem(i)
+    }
+
+    func row(_ m: NSMenu, _ l: String, _ v: String) {
+        let i = NSMenuItem(title: "\(l): \(v)", action: nil, keyEquivalent: "")
+        let s = NSMutableAttributedString()
+        s.append(NSAttributedString(string: "\(l)  ", attributes: [.font: NSFont.systemFont(ofSize: 12), .foregroundColor: NSColor.secondaryLabelColor]))
+        s.append(NSAttributedString(string: v, attributes: [.font: NSFont.monospacedSystemFont(ofSize: 12, weight: .medium), .foregroundColor: NSColor.labelColor]))
+        i.attributedTitle = s; i.isEnabled = false; m.addItem(i)
+    }
+
+    func sh(_ c: String) -> String {
+        let t = Process(); let p = Pipe()
+        t.standardOutput = p; t.standardError = FileHandle.nullDevice
+        t.arguments = ["-c", c]; t.launchPath = "/bin/zsh"; t.launch()
+        return String(data: p.fileHandleForReading.readDataToEndOfFile(), encoding: .utf8) ?? ""
     }
 }
 
 let app = NSApplication.shared
 app.setActivationPolicy(.accessory)
-let delegate = AppDelegate()
-app.delegate = delegate
+let d = App()
+app.delegate = d
 app.run()
