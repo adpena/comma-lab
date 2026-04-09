@@ -19,6 +19,14 @@ workspace/upstream_snapshot.json
 .wrangler/cache/
 .tooling/node_modules/
 
+# Large binary files (GitHub 100MB limit)
+*.raw
+*.npy
+*.safetensors
+experiments/cache/
+experiments/postfilter_weights/
+workspace/tools/
+
 # Generated submission scratch artifacts
 submissions/robust_current/archive/
 submissions/robust_current/inflated/
