@@ -214,10 +214,11 @@ class AppDel: NSObject, NSApplicationDelegate, UNUserNotificationCenterDelegate 
         popover.behavior = .transient
         popover.contentViewController = NSHostingController(rootView: FleetView(state: state))
 
-        state.refresh()
+        state.refreshCheckpoints()  // cheap: just file stat
         updateTitle()
-        timer = Timer.scheduledTimer(withTimeInterval: 5, repeats: true) { [weak self] _ in
-            self?.state.refresh()
+        // Light refresh every 30s (file stat only — zero CPU)
+        timer = Timer.scheduledTimer(withTimeInterval: 30, repeats: true) { [weak self] _ in
+            self?.state.refreshCheckpoints()
             self?.updateTitle()
         }
     }
