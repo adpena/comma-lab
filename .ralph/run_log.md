@@ -1995,3 +1995,41 @@ The partner's `save_best_checkpoint` function evaluates the EMA weights AFTER in
 - Decision:
   - reject for authoritative promotion; h32 under the scorer-faithful v2 family is still only a close miss
   - verified `molt` is reachable and has `uv`, but it still needs package/cache hardening before active use
+
+## 2026-04-09 14:00:00 -0500 - site + infra + training relaunch
+
+### site
+- pushed to adpena/comma-lab (private GitHub)
+- CRITICAL CSP fix: `script-src 'self'` was blocking ALL JS in production
+- hero text updated: technical tagline with scoring formula + rate definition
+- stripped radial gradients (user: "nothing that looks AI-designed")
+- video explorer zoom: preload=auto, first-frame seek, loadeddata geometry update
+- cards: flatter borders, muted uppercase labels
+- Track A "0.00" explained as documented exploit
+- leaderboard snapshot dated
+- research diary: 41 run-log entries scrubable with play/pause
+
+### infra
+- Kaggle legacy API connected
+- Modal CLI installed (auth pending)
+- auto_commit.sh tool written
+- conversation transcript parser: 1,360 events, 4,144 score trajectory points
+- CLAUDE.md git discipline rules added
+- 20+ commits creating proper research history (was 10)
+- .gitignore: exclude .raw, .npy, .safetensors >100MB
+- git filter-branch removed 116MB smoke.raw from history
+
+### training
+- PSD h=64 v2 relaunched in tmux (1000 epochs, alpha=20)
+- Dilated h=64 v2 relaunched in tmux (1000 epochs, alpha=20)
+- both using .venv/bin/python with MPS
+
+### research
+- competition landscape: our challenge is unique (only task-aware scoring)
+- ISCAS 2026 neural video coding (May 24-27, $4,500/track)
+- no Kaggle competitions for video compression exist
+
+### decision
+- keep polishing site design (whitespace, symmetry, no AI gimmicks)
+- monitor PSD/dilated training convergence
+- deploy to Cloudflare Pages after next design pass
