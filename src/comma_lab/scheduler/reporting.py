@@ -13,7 +13,13 @@ from .models import (
 )
 
 
-ACTIVE_STATUSES = {"queued", "running", "starting"}
+ACTIVE_STATUSES = {
+    "queued",
+    "starting",
+    "launching",
+    "running",
+    "running_managed_session",
+}
 FAILED_STATUSES = {"failed", "error"}
 
 

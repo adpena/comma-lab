@@ -23,6 +23,90 @@ def write_jsonl(path: Path, rows: list[dict]) -> None:
     path.write_text("".join(json.dumps(row) + "\n" for row in rows))
 
 
+def registry_payload() -> dict[str, object]:
+    return {
+        "version": 1,
+        "platforms": [
+            {
+                "name": "local",
+                "kind": "local",
+                "result_devices": ["cpu", "mps"],
+                "manifest_globs": [
+                    ".omx/logs/remote_jobs/local-*.json",
+                    ".omx/logs/remote_jobs/v2-*.json",
+                ],
+                "budget": {
+                    "max_runs": 2,
+                    "max_active_runs": 2,
+                    "max_archive_bytes": 2000000,
+                },
+            },
+            {
+                "name": "bat00",
+                "kind": "remote",
+                "manifest_globs": [
+                    ".omx/logs/remote_jobs/bat00-*.json",
+                    "remote-runs/bat00/*/manifest.json",
+                ],
+                "status_globs": [
+                    ".omx/status/bat00-*.json",
+                    "remote-runs/bat00/*/status.json",
+                ],
+                "ledger_paths": ["remote-runs/bat00/_ledger.jsonl"],
+                "budget": {
+                    "max_active_runs": 1,
+                    "max_failed_runs": 1,
+                },
+            },
+            {
+                "name": "kaggle",
+                "kind": "remote",
+                "result_devices": ["kaggle"],
+                "manifest_globs": [
+                    ".omx/logs/remote_jobs/kaggle-*.json",
+                    "remote-runs/kaggle/*/manifest.json",
+                ],
+                "status_globs": [
+                    ".omx/status/kaggle-*.json",
+                    "remote-runs/kaggle/*/status.json",
+                ],
+                "ledger_paths": ["remote-runs/kaggle/_ledger.jsonl"],
+                "budget": {"max_runs": 2, "max_active_runs": 1},
+            },
+            {
+                "name": "modal",
+                "kind": "remote",
+                "result_devices": ["modal"],
+                "manifest_globs": [
+                    ".omx/logs/remote_jobs/modal-*.json",
+                    "remote-runs/modal/*/manifest.json",
+                ],
+                "status_globs": [
+                    ".omx/status/modal-*.json",
+                    "remote-runs/modal/*/status.json",
+                ],
+                "ledger_paths": ["remote-runs/modal/_ledger.jsonl"],
+                "budget": {"max_runs": 2, "max_active_runs": 1},
+            },
+            {
+                "name": "coiled",
+                "kind": "remote",
+                "result_devices": ["coiled"],
+                "manifest_globs": [
+                    ".omx/logs/remote_jobs/coiled-*.json",
+                    "remote-runs/coiled/*/manifest.json",
+                ],
+                "status_globs": [
+                    ".omx/status/coiled-*.json",
+                    "remote-runs/coiled/*/status.json",
+                ],
+                "ledger_paths": ["remote-runs/coiled/_ledger.jsonl"],
+                "budget": {"max_runs": 2, "max_active_runs": 1},
+            },
+        ],
+    }
+
+
 class SchedulerCliTests(unittest.TestCase):
     def setUp(self) -> None:
         self.tmpdir = tempfile.TemporaryDirectory()
@@ -30,39 +114,13 @@ class SchedulerCliTests(unittest.TestCase):
         self.repo_root = Path(self.tmpdir.name)
         self.registry_path = self.repo_root / "configs" / "platforms.json"
 
-        write_json(
-            self.registry_path,
-            {
-                "version": 1,
-                "platforms": [
-                    {
-                        "name": "cpu",
-                        "kind": "local",
-                        "result_devices": ["cpu"],
-                        "budget": {
-                            "max_runs": 2,
-                            "max_archive_bytes": 2000000,
-                        },
-                    },
-                    {
-                        "name": "bat00",
-                        "kind": "remote",
-                        "manifest_globs": ["remote-runs/*/manifest.json"],
-                        "status_globs": ["remote-runs/*/status.json"],
-                        "budget": {
-                            "max_active_runs": 1,
-                            "max_failed_runs": 1,
-                        },
-                    },
-                ],
-            },
-        )
+        write_json(self.registry_path, registry_payload())
 
         write_jsonl(
             self.repo_root / "reports" / "results.jsonl",
             [
                 {
-                    "run_id": "robust_current-long1000-h64-promoted-cpu-2026-04-09",
+                    "run_id": "robust_current-local-promoted-cpu-2026-04-09",
                     "track": "robust_current",
                     "device": "cpu",
                     "packaging_view": "current_workflow",
@@ -70,11 +128,41 @@ class SchedulerCliTests(unittest.TestCase):
                     "archive_bytes": 864167,
                     "ts_utc": "2026-04-09T15:07:00+00:00",
                     "artifacts": {"summary_json": "reports/raw/demo/summary.json"},
-                }
+                },
+                {
+                    "run_id": "robust_current-kaggle-promoted-2026-04-09",
+                    "track": "robust_current",
+                    "device": "kaggle",
+                    "packaging_view": "current_workflow",
+                    "current_workflow_score": 1.71,
+                    "archive_bytes": 864100,
+                    "ts_utc": "2026-04-09T15:08:00+00:00",
+                    "artifacts": {"summary_json": "reports/raw/demo/kaggle-summary.json"},
+                },
+                {
+                    "run_id": "robust_current-modal-promoted-2026-04-09",
+                    "track": "robust_current",
+                    "device": "modal",
+                    "packaging_view": "current_workflow",
+                    "current_workflow_score": 1.70,
+                    "archive_bytes": 864090,
+                    "ts_utc": "2026-04-09T15:09:00+00:00",
+                    "artifacts": {"summary_json": "reports/raw/demo/modal-summary.json"},
+                },
+                {
+                    "run_id": "robust_current-coiled-promoted-2026-04-09",
+                    "track": "robust_current",
+                    "device": "coiled",
+                    "packaging_view": "current_workflow",
+                    "current_workflow_score": 1.69,
+                    "archive_bytes": 864080,
+                    "ts_utc": "2026-04-09T15:10:00+00:00",
+                    "artifacts": {"summary_json": "reports/raw/demo/coiled-summary.json"},
+                },
             ],
         )
         write_json(
-            self.repo_root / "remote-runs" / "lane-alpha" / "manifest.json",
+            self.repo_root / "remote-runs" / "bat00" / "lane-alpha" / "manifest.json",
             {
                 "slug": "lane-alpha",
                 "run_id": "20260409T120000Z",
@@ -84,12 +172,40 @@ class SchedulerCliTests(unittest.TestCase):
             },
         )
         write_json(
-            self.repo_root / "remote-runs" / "lane-alpha" / "status.json",
+            self.repo_root / "remote-runs" / "bat00" / "lane-alpha" / "status.json",
             {
                 "slug": "lane-alpha",
                 "run_id": "20260409T120000Z",
                 "status": "running",
                 "pid": 1234,
+            },
+        )
+        write_json(
+            self.repo_root / "remote-runs" / "kaggle" / "lane-beta" / "status.json",
+            {
+                "slug": "kaggle-pairaware-h64",
+                "run_id": "kgl-20260409T121000Z",
+                "status": "running",
+                "phase": "training",
+            },
+        )
+        write_json(
+            self.repo_root / "remote-runs" / "coiled" / "lane-gamma" / "status.json",
+            {
+                "slug": "coiled-quant-audit",
+                "run_id": "coiled-20260409T122000Z",
+                "status": "running",
+                "phase": "quantization_audit",
+            },
+        )
+        write_json(
+            self.repo_root / ".omx" / "logs" / "remote_jobs" / "local-legacy-rerun.json",
+            {
+                "slug": "local-legacy-rerun",
+                "host": "local-mps",
+                "status": "running_managed_session",
+                "session_id": 64668,
+                "written_at": "2026-04-08T21:50:00-05:00",
             },
         )
 
@@ -106,11 +222,21 @@ class SchedulerCliTests(unittest.TestCase):
         records = collect_run_records(self.repo_root, registry)
         budget = build_budget_report(registry, records)
 
-        self.assertEqual(len(records), 2)
-        self.assertEqual({record.platform for record in records}, {"bat00", "cpu"})
-        self.assertEqual(budget.platforms["cpu"].usage.total_runs, 1)
-        self.assertEqual(budget.platforms["cpu"].usage.archive_bytes, 864167)
+        self.assertEqual(len(records), 8)
+        self.assertEqual(
+            {record.platform for record in records},
+            {"bat00", "coiled", "kaggle", "local", "modal"},
+        )
+        self.assertEqual(budget.platforms["local"].usage.total_runs, 2)
+        self.assertEqual(budget.platforms["local"].usage.archive_bytes, 864167)
+        self.assertEqual(budget.platforms["local"].usage.active_runs, 1)
         self.assertEqual(budget.platforms["bat00"].usage.active_runs, 1)
+        self.assertEqual(budget.platforms["kaggle"].usage.active_runs, 1)
+        self.assertEqual(budget.platforms["coiled"].usage.active_runs, 1)
+        self.assertEqual(budget.platforms["modal"].usage.total_runs, 1)
+        legacy = next(record for record in records if record.run_id == "local-legacy-rerun")
+        self.assertEqual(legacy.platform, "local")
+        self.assertEqual(legacy.status, "running_managed_session")
 
     def test_sched_status_json_reports_latest_results_and_active_runs(self) -> None:
         rc, stdout, stderr = self.run_cli(
@@ -118,17 +244,19 @@ class SchedulerCliTests(unittest.TestCase):
             "status",
             "--repo-root",
             str(self.repo_root),
-            "--registry",
-            str(self.registry_path),
             "--json",
         )
 
         self.assertEqual(rc, 0, stderr)
         payload = json.loads(stdout)
-        self.assertEqual(payload["result_count"], 1)
+        self.assertEqual(payload["result_count"], 4)
         self.assertEqual(payload["tracks"][0]["track"], "robust_current")
-        self.assertEqual(payload["tracks"][0]["latest_result"]["score"], 1.73)
-        self.assertEqual(payload["active_runs"][0]["platform"], "bat00")
+        self.assertEqual(payload["tracks"][0]["latest_result"]["score"], 1.69)
+        self.assertEqual(payload["tracks"][0]["latest_result"]["platform"], "coiled")
+        self.assertEqual(
+            {item["platform"] for item in payload["active_runs"]},
+            {"bat00", "coiled", "kaggle", "local"},
+        )
 
     def test_sched_results_json_honors_limit(self) -> None:
         rc, stdout, stderr = self.run_cli(
@@ -137,15 +265,17 @@ class SchedulerCliTests(unittest.TestCase):
             "--repo-root",
             str(self.repo_root),
             "--limit",
-            "1",
+            "2",
             "--json",
         )
 
         self.assertEqual(rc, 0, stderr)
         payload = json.loads(stdout)
-        self.assertEqual(len(payload["results"]), 1)
-        self.assertEqual(payload["results"][0]["run_id"], "robust_current-long1000-h64-promoted-cpu-2026-04-09")
-        self.assertEqual(payload["results"][0]["archive_bytes"], 864167)
+        self.assertEqual(len(payload["results"]), 2)
+        self.assertEqual(payload["results"][0]["run_id"], "robust_current-coiled-promoted-2026-04-09")
+        self.assertEqual(payload["results"][0]["platform"], "coiled")
+        self.assertEqual(payload["results"][1]["run_id"], "robust_current-modal-promoted-2026-04-09")
+        self.assertEqual(payload["results"][1]["platform"], "modal")
 
     def test_sched_budget_json_reports_usage_against_registry(self) -> None:
         rc, stdout, stderr = self.run_cli(
@@ -153,19 +283,24 @@ class SchedulerCliTests(unittest.TestCase):
             "budget",
             "--repo-root",
             str(self.repo_root),
-            "--registry",
-            str(self.registry_path),
             "--json",
         )
 
         self.assertEqual(rc, 0, stderr)
         payload = json.loads(stdout)
-        cpu = next(item for item in payload["platforms"] if item["name"] == "cpu")
+        local = next(item for item in payload["platforms"] if item["name"] == "local")
         bat00 = next(item for item in payload["platforms"] if item["name"] == "bat00")
-        self.assertEqual(cpu["usage"]["total_runs"], 1)
-        self.assertEqual(cpu["usage"]["archive_bytes"], 864167)
-        self.assertFalse(cpu["over_budget"])
+        kaggle = next(item for item in payload["platforms"] if item["name"] == "kaggle")
+        modal = next(item for item in payload["platforms"] if item["name"] == "modal")
+        coiled = next(item for item in payload["platforms"] if item["name"] == "coiled")
+        self.assertEqual(local["usage"]["total_runs"], 2)
+        self.assertEqual(local["usage"]["archive_bytes"], 864167)
+        self.assertFalse(local["over_budget"])
+        self.assertEqual(local["usage"]["active_runs"], 1)
         self.assertEqual(bat00["usage"]["active_runs"], 1)
+        self.assertEqual(kaggle["usage"]["active_runs"], 1)
+        self.assertEqual(modal["usage"]["total_runs"], 1)
+        self.assertEqual(coiled["usage"]["active_runs"], 1)
 
     def test_sched_budget_requires_registry(self) -> None:
         self.registry_path.unlink()

@@ -41,6 +41,18 @@ def _archive_bytes_from_payload(payload: dict[str, object]) -> int | None:
     return None
 
 
+def _run_id_from_payload_or_path(payload: dict[str, object], path: Path, *, kind: str) -> str:
+    run_id = payload.get("run_id")
+    if isinstance(run_id, str) and run_id.strip():
+        return run_id
+    slug = payload.get("slug")
+    if isinstance(slug, str) and slug.strip():
+        return slug.strip()
+    if path.stem:
+        return path.stem
+    raise SchedulerValidationError(f"{kind} missing run_id and slug: {path}")
+
+
 def _merge_record(existing: RunRecord | None, incoming: RunRecord) -> RunRecord:
     if existing is None:
         return incoming
@@ -111,9 +123,7 @@ def _collect_result_records(
 
 
 def _record_from_manifest(platform_name: str, repo_root: Path, path: Path, payload: dict[str, object]) -> RunRecord:
-    run_id = payload.get("run_id")
-    if not isinstance(run_id, str) or not run_id.strip():
-        raise SchedulerValidationError(f"manifest missing run_id: {path}")
+    run_id = _run_id_from_payload_or_path(payload, path, kind="manifest")
     return RunRecord(
         run_id=run_id,
         source="manifest.json",
@@ -130,9 +140,7 @@ def _record_from_manifest(platform_name: str, repo_root: Path, path: Path, paylo
 
 
 def _record_from_status(platform_name: str, repo_root: Path, path: Path, payload: dict[str, object]) -> RunRecord:
-    run_id = payload.get("run_id")
-    if not isinstance(run_id, str) or not run_id.strip():
-        raise SchedulerValidationError(f"status missing run_id: {path}")
+    run_id = _run_id_from_payload_or_path(payload, path, kind="status")
     return RunRecord(
         run_id=run_id,
         source="status.json",
