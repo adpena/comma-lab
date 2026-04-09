@@ -5,12 +5,15 @@ through frozen perception networks (scorers). The filter learns corrections that
 minimize the scorer's distortion metric, not generic pixel quality.
 
 Modules:
-  - tac.architectures: PostFilter, DilatedPostFilter, PixelShufflePostFilter, PSD
-  - tac.training: Trainer class (QAT+EMA, best-checkpoint int8 selection)
-  - tac.losses: scorer_loss, segnet_ste_loss, boundary weighting
-  - tac.data: video decoding, pair construction, saliency loading
-  - tac.quantization: int8 save/load, FakeQuant STE, LSQ
-  - tac.scorer: scoring formula, sensitivity analysis
+  - tac.architectures: 7 architectures (PostFilter, Dilated, PixelShuffle, PSD,
+    Depthwise, Luma, FiLM) + 12 variant aliases
+  - tac.training: Trainer (QAT+EMA+SWA, best-checkpoint, lazy loading, resume),
+    EMA, SWA, KalmanWeightFilter
+  - tac.losses: scorer_loss, segnet_ste_loss, boundary weighting, saliency recon
+  - tac.data: video decoding, lazy pair construction, saliency loading
+  - tac.quantization: FakeQuant STE, LSQ, QATPostFilter, int8 save/load
+  - tac.scorer: scoring formula, sensitivity analysis, load_scorers, detect_device
+  - tac.evaluate: proxy scoring, top-K checkpoint averaging, checkpoint discovery
 
 Quick start::
 
@@ -24,4 +27,4 @@ Quick start::
     trainer.fit(comp_pairs, gt_pairs, posenet, segnet, sal_weights)
 """
 
-__version__ = "0.4.0"
+__version__ = "0.5.0"

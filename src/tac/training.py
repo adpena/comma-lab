@@ -88,6 +88,80 @@ class EMA:
         return {k: v.clone() for k, v in self.shadow.items()}
 
 
+class SWA:
+    """Stochastic Weight Averaging — averages EMA snapshots over time.
+
+    Takes periodic snapshots of the EMA shadow and averages them.
+    Used on top of EMA for smoother final weights.
+    """
+
+    def __init__(self):
+        self.avg: dict[str, torch.Tensor] | None = None
+        self.count = 0
+
+    def update(self, state_dict: dict[str, torch.Tensor]):
+        if self.avg is None:
+            self.avg = {k: v.clone() for k, v in state_dict.items()}
+            self.count = 1
+        else:
+            self.count += 1
+            for k in self.avg:
+                self.avg[k] += (state_dict[k] - self.avg[k]) / self.count
+
+    def state_dict(self) -> dict[str, torch.Tensor]:
+        return {k: v.clone() for k, v in self.avg.items()} if self.avg else {}
+
+
+class KalmanWeightFilter:
+    """Per-parameter scalar Kalman filter as an alternative to EMA.
+
+    Uses inverse-variance weighting: parameters with low observation noise
+    (stable across epochs) get more weight. Parameters with high observation
+    noise (noisy across epochs) get less weight.
+    """
+
+    def __init__(
+        self,
+        model: nn.Module,
+        process_noise: float = 1e-6,
+        obs_noise_base: float = 1e-4,
+        obs_noise_scale: float = 10.0,
+    ):
+        self.process_noise = process_noise
+        self.obs_noise_base = obs_noise_base
+        self.obs_noise_scale = obs_noise_scale
+
+        # Initialize state estimate = model weights, variance = 1.0
+        self.state = {k: v.clone().detach() for k, v in model.state_dict().items()}
+        self.variance = {k: torch.ones_like(v) for k, v in model.state_dict().items()}
+
+    def update(self, model: nn.Module):
+        with torch.no_grad():
+            for k, obs in model.state_dict().items():
+                if not torch.is_floating_point(obs):
+                    self.state[k] = obs.clone()
+                    continue
+
+                # Predict step: variance grows by process noise
+                pred_var = self.variance[k] + self.process_noise
+
+                # Observation noise: adaptive based on parameter magnitude
+                obs_noise = self.obs_noise_base + self.obs_noise_scale * obs.detach().abs()
+
+                # Kalman gain
+                gain = pred_var / (pred_var + obs_noise)
+
+                # Update
+                self.state[k] = self.state[k] + gain * (obs.detach() - self.state[k])
+                self.variance[k] = (1 - gain) * pred_var
+
+    def apply(self, model: nn.Module):
+        model.load_state_dict(self.state)
+
+    def state_dict(self) -> dict[str, torch.Tensor]:
+        return {k: v.clone() for k, v in self.state.items()}
+
+
 class Trainer:
     """QAT+EMA trainer with best-checkpoint int8 selection.
 

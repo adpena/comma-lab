@@ -139,6 +139,94 @@ class PSDPostFilter(nn.Module):
         return (x_norm + residual).clamp(0, 1) * 255.0
 
 
+class DepthwisePostFilter(nn.Module):
+    """Depthwise-separable 3-layer residual post-filter.
+
+    Uses pointwise(1x1) → depthwise(3x3, groups=h) → pointwise(1x1).
+    More parameter-efficient than standard convolutions.
+    """
+
+    def __init__(self, hidden: int = 16, kernel: int = 3):
+        super().__init__()
+        pad = kernel // 2
+        self.pw_in = nn.Conv2d(3, hidden, 1, bias=True)
+        self.dw = nn.Conv2d(hidden, hidden, kernel, padding=pad, groups=hidden, bias=True)
+        self.pw_out = nn.Conv2d(hidden, 3, 1, bias=True)
+        self.act = nn.ReLU(inplace=True)
+        nn.init.zeros_(self.pw_out.weight)
+        nn.init.zeros_(self.pw_out.bias)
+
+    def forward(self, x: torch.Tensor) -> torch.Tensor:
+        residual = self.act(self.pw_in(x))
+        residual = self.act(self.dw(residual))
+        residual = self.pw_out(residual)
+        return (x + residual).clamp(0, 255)
+
+
+class LumaPostFilter(nn.Module):
+    """Luma-only processing — extracts Y channel, processes, broadcasts back.
+
+    Lighter than full RGB processing. Correction is the same for all channels.
+    """
+
+    def __init__(self, hidden: int = 16, kernel: int = 3):
+        super().__init__()
+        pad = kernel // 2
+        self.conv1 = nn.Conv2d(1, hidden, kernel, padding=pad, bias=True)
+        self.conv2 = nn.Conv2d(hidden, hidden, kernel, padding=pad, bias=True)
+        self.conv3 = nn.Conv2d(hidden, 1, kernel, padding=pad, bias=True)
+        self.act = nn.ReLU(inplace=True)
+        nn.init.zeros_(self.conv3.weight)
+        nn.init.zeros_(self.conv3.bias)
+
+    def forward(self, x: torch.Tensor) -> torch.Tensor:
+        y = x[:, 0:1] * 0.299 + x[:, 1:2] * 0.587 + x[:, 2:3] * 0.114
+        residual = self.act(self.conv1(y))
+        residual = self.act(self.conv2(residual))
+        residual = self.conv3(residual)
+        return (x + residual.repeat(1, 3, 1, 1)).clamp(0, 255)
+
+
+class FiLMPostFilter(nn.Module):
+    """Feature-wise Linear Modulation conditioned on per-frame statistics.
+
+    Computes a descriptor (luma mean, std, edge density) and uses it to
+    modulate intermediate features via gamma/beta scaling. Allows the
+    correction to adapt to frame content.
+    """
+
+    def __init__(self, hidden: int = 16, kernel: int = 3):
+        super().__init__()
+        pad = kernel // 2
+        self.conv1 = nn.Conv2d(3, hidden, kernel, padding=pad, bias=True)
+        self.conv2 = nn.Conv2d(hidden, hidden, kernel, padding=pad, bias=True)
+        self.conv3 = nn.Conv2d(hidden, 3, kernel, padding=pad, bias=True)
+        self.film = nn.Linear(3, hidden * 2, bias=True)
+        self.act = nn.ReLU(inplace=True)
+
+    def _descriptor(self, x: torch.Tensor) -> torch.Tensor:
+        y = x[:, 0:1] * 0.299 + x[:, 1:2] * 0.587 + x[:, 2:3] * 0.114
+        y_norm = y / 255.0
+        mean = y_norm.mean(dim=(2, 3))
+        std = y_norm.std(dim=(2, 3), unbiased=False)
+        dx = y_norm[..., :, 1:] - y_norm[..., :, :-1]
+        dy = y_norm[..., 1:, :] - y_norm[..., :-1, :]
+        edge = 0.5 * (dx.abs().mean(dim=(2, 3)) + dy.abs().mean(dim=(2, 3)))
+        return torch.cat([mean, std, edge], dim=1)
+
+    def forward(self, x: torch.Tensor) -> torch.Tensor:
+        film = self.film(self._descriptor(x))
+        gamma, beta = film.chunk(2, dim=1)
+        gamma = 1.0 + 0.25 * torch.tanh(gamma).unsqueeze(-1).unsqueeze(-1)
+        beta = 8.0 * torch.tanh(beta).unsqueeze(-1).unsqueeze(-1)
+        residual = self.act(self.conv1(x))
+        residual = residual * gamma + beta
+        residual = self.act(self.conv2(residual))
+        residual = residual * gamma + beta
+        residual = self.conv3(residual)
+        return (x + residual).clamp(0, 255)
+
+
 # ── Factory ──────────────────────────────────────────────────────────────
 
 
@@ -148,11 +236,15 @@ VARIANTS = {
     "dilated": DilatedPostFilter,
     "pixelshuffle": PixelShufflePostFilter,
     "psd": PSDPostFilter,
+    "depthwise": DepthwisePostFilter,
+    "luma": LumaPostFilter,
+    "film": FiLMPostFilter,
     # Legacy aliases (from deploy inflate_postfilter.py)
     "residual": PostFilter,
     "saliency_weighted": PostFilter,
     "segaware": PostFilter,
     "pixelshuffle_dilated": PSDPostFilter,
+    "film_conditioned": FiLMPostFilter,
 }
 
 
