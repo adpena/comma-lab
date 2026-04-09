@@ -103,7 +103,7 @@ def main():
     size = os.path.getsize(out_path)
     print(f"Saved averaged int8 to {out_path} ({size} bytes)")
     print(f"Source epochs: {[c['epoch'] for c in top_k]}")
-    print(f"Source scorers: {[f'{c[\"scorer\"]:.4f}' for c in top_k]}")
+    print("Source scorers:", [round(c["scorer"], 4) for c in top_k])
 
 
 if __name__ == "__main__":
