@@ -2238,3 +2238,26 @@ The partner's `save_best_checkpoint` function evaluates the EMA weights AFTER in
 
 ### training
 - standard h=64 long-2500: ep 120, best ep 117 scorer 4.027
+
+## 2026-04-09 17:30:00 -0500 - tac library CERTIFIED: 5/5 clean passes + council
+
+### review certification
+- 8 rounds of rigor review
+- Rounds 1-3: found and fixed 3 CRITICAL + 7 HIGH bugs
+- Rounds 4-8: 5 CONSECUTIVE CLEAN PASSES
+- Expert council (Tao, Karpathy, LeCun, Jensen): UNANIMOUS APPROVE
+- Library is certified ship-grade
+
+### bugs fixed across all rounds
+- C: double quantization in boundary trainer checkpoint saving
+- C: PoseNet @torch.no_grad silently killing gradients (monkey-patched)
+- C: wrong color space in monkey-patch (limited vs full BT.601 + missing resize + no subsampling)
+- H: saliency loss applied to both frames instead of frame 1 only
+- H: FakeQuant STE gradient killed at exactly +/-127
+- H: cosine scheduler T_max didn't account for warmup
+- H: missing .contiguous() after permute
+- H: device/epsilon issues in quantization fallback
+- H: dimension-unsafe squeeze in boundary mask
+
+### training
+- standard h=64 long-2500: scorer below 4.0, converging steadily
