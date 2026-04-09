@@ -40,29 +40,26 @@ def train_h96():
     gpu = os.popen('nvidia-smi --query-gpu=name,memory.total --format=csv,noheader').read().strip()
     print(f"GPU: {gpu}")
 
+    os.makedirs("/results/weights", exist_ok=True)
+
+    # Symlink the output dir so checkpoints save directly to the volume
+    # This means EVERY checkpoint is persisted immediately — no signal loss
+    os.environ["POSTFILTER_OUTPUT_DIR"] = "/results/weights"
+
     result = subprocess.run(
         ["python", "/root/cloud_h96_trainer.py",
          "--hidden", "96", "--epochs", "2500", "--alpha", "20"],
         cwd="/tmp",
     )
 
-    # Copy ALL weight files to the persistent volume
-    print("Copying results to persistent volume...")
-    os.makedirs("/results/weights", exist_ok=True)
-
-    # Find all .pt and .json checkpoint files the trainer produced
-    for pattern in ["/tmp/**/*.pt", "/tmp/**/*.json", "/tmp/**/postfilter_*"]:
+    # Also copy any files the trainer put elsewhere
+    for pattern in ["/tmp/**/*.pt", "/tmp/**/*.json"]:
         for f in glob.glob(pattern, recursive=True):
             dest = f"/results/weights/{os.path.basename(f)}"
-            shutil.copy2(f, dest)
-            print(f"  Saved: {dest} ({os.path.getsize(dest)} bytes)")
+            if not os.path.exists(dest):
+                shutil.copy2(f, dest)
 
-    # Also save the training log
-    for log in glob.glob("/tmp/**/*.log", recursive=True):
-        dest = f"/results/{os.path.basename(log)}"
-        shutil.copy2(log, dest)
-        print(f"  Log: {dest}")
-
+    # Commit volume to persist everything
     vol.commit()
     print(f"Training exit code: {result.returncode}")
     print("Results committed to Modal Volume 'comma-lab-weights'")

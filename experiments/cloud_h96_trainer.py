@@ -127,8 +127,10 @@ else:
     DEVICE = torch.device("cpu")
 print(f"[cloud-trainer] device: {DEVICE}")
 
-# Output directory
-if os.path.exists("/kaggle/working"):
+# Output directory — check env var first (set by Modal deploy for persistent volume)
+if os.environ.get("POSTFILTER_OUTPUT_DIR"):
+    OUTPUT_DIR = Path(os.environ["POSTFILTER_OUTPUT_DIR"])
+elif os.path.exists("/kaggle/working"):
     OUTPUT_DIR = Path("/kaggle/working")
 elif os.path.exists("/content/drive/MyDrive"):
     OUTPUT_DIR = Path("/content/drive/MyDrive/postfilter_weights")
