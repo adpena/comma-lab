@@ -30,6 +30,25 @@
    - `docs/operator_run_manifest_templates.md`
 5. Under a free-tier-first strategy, Kaggle is the primary GPU training surface, Modal is the secondary GPU fallback, and Coiled is best treated as CPU-side fan-out for audits/reporting rather than the main training path.
 
+## 2026-04-09 SegNet fixed faithful proxy resolution
+
+### new measured result
+
+- `segnet_attack_fixed_ste_h32` faithfully proxied to **`1.84`**
+- Distortions: PoseNet `0.05168364`, SegNet `0.00543626`
+- Current-workflow bytes: `864,167`
+- Evidence:
+  - `reports/raw/2026-04-09-segnet-attack-fixed-best/segnet_attack_fixed_ste_h32_proxy_summary.json`
+  - `reports/raw/2026-04-09-segnet-attack-fixed-best/proxy_segnet_attack_fixed_ste_h32.log`
+
+### verdict
+
+- This is the strongest resolved SegNet-family alternate so far.
+- It transfers honestly and ties the old ensemble floor numerically at `1.84`.
+- It is still not a promotion because it does not beat the promoted `1.73` h64 floor.
+- The main remaining operational weakness is packaging metadata: the trainer wrote fp32/int8 weights, but not a proper `best_meta` record.
+- That metadata weakness is now fixed for future reruns: `experiments/train_postfilter_segnet_attack.py` writes a durable `*_final_meta.json` and backstops `*_best_meta.json` when a best-checkpoint payload exists.
+
 ## 2026-04-09 h64 authoritative promotion
 
 ### new authoritative floor
@@ -77,7 +96,7 @@
 7. The bat00 WSL quantization-parity rerun produced a clean saved reference artifact but did not earn promotion. Its final useful state was a saved best checkpoint at epoch `199` with local scorer `3.9258260917663574` and a `16,781`-byte int8 payload; the trainer was no longer alive when checked at `2026-04-09 10:59:38 -0500`.
 8. The local `h64` long-run produced a real transfer, not just a proxy mirage. Its saved best checkpoint on disk is epoch `918` with local scorer `3.5472697671254476` and a `45,587`-byte int8 payload, and both the authoritative scorer path and the repo-side official-path proxy landed the same rounded `1.73`.
 9. The post-promotion local fleet widened materially, but still has not beaten the promoted line. The strongest packaged side lanes are now `dilated h64` at local scorer `3.5753838920593264`, `psd_h64` at `3.604202709197998`, `pixelshuffle_h64` at `3.6048873551686604`, `h96` at `3.8016996637980145`, and `alpha30 h32` at `3.802276372909546`, all still weaker than the promoted h64 best at `3.5472697671254476`.
-10. The SegNet side lane still has attractive theoretical headroom, but it remains operationally blocked. `segnet_attack_fixed_v2` has now printed through epoch `1000` with latest visible scorer `1.0671`, `segnet_attack_h64` has printed through epoch `480` with latest visible scorer `1.0544`, and neither lane has written a fresh `best_*` artifact; the best explanation remains stale long-running processes rather than a fresh code-path failure.
+10. The SegNet side lane still has attractive theoretical headroom, but it remains only partially operationalized. `segnet_attack_fixed_v2` printed through epoch `1000`, wrote a real fp32/int8 pair, and faithfully proxied to `1.84`, but it still did not emit a proper `best_meta` record; `segnet_attack_h64` has printed through epoch `480` with latest visible scorer `1.0544` and still has no rankable saved artifact.
 11. A machine-readable fleet snapshot at `2026-04-09 13:13:08 -0500` confirmed that the widened local host still has no honest proxy candidate. `dilated h64` improved its saved best further to epoch `253`, `pixelshuffle_h64` to epoch `211`, `psd_h64` to epoch `115`, `alpha30 h32` held at epoch `423`, and `h96` held at epoch `217`; the saved packaged standings still remained too weak to justify proxy time.
 12. Sidecar automation is now in-tree and tested:
    - `experiments/proxy_gate_triage.py`

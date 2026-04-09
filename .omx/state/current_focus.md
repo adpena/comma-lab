@@ -1,4 +1,4 @@
-# Current Focus — 2026-04-09 16:54 CDT
+# Current Focus — 2026-04-09 17:57 CDT
 
 ## Floor
 - **Promoted honest floor**: `1.73` from `robust_current-long1000-h64-promoted-cpu-2026-04-09`
@@ -14,6 +14,12 @@
   - SegNet `0.00551752`
   - bytes `864,167`
   - decision: real transfer, still reject for promotion
+- `segnet_attack_fixed_ste_h32`
+  - faithful proxy: `1.84`
+  - PoseNet `0.05168364`
+  - SegNet `0.00543626`
+  - bytes `864,167`
+  - decision: strongest resolved SegNet-family alternate so far, still reject for promotion
 
 ## Best unresolved local lane
 - `dilated_h64_long1000`
@@ -26,6 +32,9 @@
 - scheduler compatibility is hardened:
   - legacy manifests/status files may omit `run_id`; loader now falls back to `slug`
   - `launching` and `running_managed_session` now count as active states
+- SegNet trainer hardening landed:
+  - `experiments/train_postfilter_segnet_attack.py` now writes a durable `postfilter_<tag>_final_meta.json`
+  - if a best checkpoint payload exists, it also backstops the adjacent `postfilter_<tag>_best_meta.json`
 - operator templates now exist under `configs/run_manifests/`
 - private ops surfaces stay in-repo:
   - `reports/graphs/report_history.html`
@@ -35,5 +44,5 @@
 
 ## Next real moves
 1. Relaunch `dilated_h64_long1000` with deploy-correct metadata on Kaggle or Modal.
-2. Relaunch a fresh SegNet lane that actually emits `best_*` artifacts.
+2. Turn the new `segnet_attack_fixed_ste_h32` result into a proper repeatable lane with real `best_meta` writing, then relaunch the family cleanly on GPU.
 3. Use Kaggle/Modal for GPU training lanes and Coiled for CPU-side audits only.

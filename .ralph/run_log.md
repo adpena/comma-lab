@@ -1,5 +1,66 @@
 # run log
 
+## 2026-04-09 18:00:00 -0500 - SegNet trainer metadata gap hardened
+
+### bug surface
+- `segnet_attack_fixed_v2` transferred to `1.84`, but the trainer only left raw `fp32.pt` / `int8.pt` files
+- missing durable metadata made the lane harder to rank, automate, and trust
+
+### fix
+- `experiments/train_postfilter_segnet_attack.py`
+  - added `save_final_artifacts(...)`
+  - final save path now always writes `postfilter_<tag>_final_meta.json`
+  - if a best-checkpoint payload exists, it also backstops `postfilter_<tag>_best_meta.json`
+- regression:
+  - `experiments/test_train_postfilter_segnet_attack.py`
+
+### verification
+- `uv run --with torch --with av --with safetensors --with timm --with einops --with segmentation-models-pytorch --with numpy python -m unittest experiments.test_train_postfilter_segnet_attack`
+- `python3 -m py_compile experiments/train_postfilter_segnet_attack.py experiments/test_train_postfilter_segnet_attack.py`
+
+## 2026-04-09 17:57:39 -0500 - SegNet fixed faithful proxy resolved as a near-miss
+
+### faithful proxy result
+- Candidate:
+  - `postfilter_segnet_attack_fixed_ste_h32_int8.pt`
+- Faithful proxy result:
+  - current_workflow `1.84`
+  - PoseNet `0.05168364`
+  - SegNet `0.00543626`
+  - bytes `864,167`
+  - rate `0.02301653`
+- Decision:
+  - strongest resolved SegNet-family alternate so far
+  - still reject for promotion because it does not beat the promoted `1.73`
+
+### operational note
+- `segnet_attack_fixed_v2` is no longer just a stale-log lane:
+  - it wrote real fp32/int8 artifacts
+  - it still did **not** write a proper `best_meta.json`
+- that packaging gap is now the next concrete cleanup item for the SegNet family
+
+## 2026-04-09 16:54:51 -0500 - SegNet fixed lane became proxyable
+
+### new real artifact
+- `segnet_attack_fixed_v2` finally wrote real weights:
+  - `/private/tmp/pact-mine/experiments/postfilter_weights/postfilter_segnet_attack_fixed_ste_h32_fp32.pt`
+  - `/private/tmp/pact-mine/experiments/postfilter_weights/postfilter_segnet_attack_fixed_ste_h32_int8.pt`
+- Final local eval block from the trainer:
+  - baseline loss `1.4248`
+  - filtered loss `1.2233`
+  - pose `0.047042`
+  - seg `0.005374`
+  - delta `-0.2015`
+
+### decision
+- that is enough to justify the freed CPU faithful-proxy slot
+- launched:
+  - `.omx/logs/remote_jobs/local-segnet-attack-fixed-ste-h32-proxy.json`
+  - log: `/private/tmp/pact-mine/proxy_segnet_attack_fixed_ste_h32.log`
+- important constraint:
+  - `1.7987` is only an inference from adding the current archive rate term to the local distortion-only `1.2233`
+  - no measured promotion claim exists until the faithful proxy resolves
+
 ## 2026-04-09 16:54:51 -0500 - PSD proxy resolved and free-tier scheduler surfaces became real
 
 ### faithful proxy result

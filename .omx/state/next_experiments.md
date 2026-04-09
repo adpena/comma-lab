@@ -1,11 +1,18 @@
 # next experiments
 
-## 2026-04-09 queue after PSD faithful proxy resolution
+## 2026-04-09 queue after SegNet fixed faithful proxy resolution
 
 The promoted honest floor is still `1.73` from `long1000_h64`. Two deploy-ready alternates have now been resolved honestly and rejected:
 
 - `pixelshuffle_h64_long1000` -> faithful proxy `1.99`
 - `psd_h64_long1000` -> faithful proxy `1.85`
+
+The first real saved SegNet-family artifact has now resolved honestly:
+
+- `segnet_attack_fixed_ste_h32` -> faithful proxy `1.84`
+- PoseNet `0.05168364`
+- SegNet `0.00543626`
+- bytes `864,167`
 
 That means the next cycle should stop pretending those families are active promotion candidates in their current form.
 
@@ -32,10 +39,11 @@ That means the next cycle should stop pretending those families are active promo
 2. **PF-SEGNET CHECKPOINTING RELAUNCH**
    - Why second:
      - SegNet remains the highest-leverage theoretical headroom
-     - current live SegNet processes still do not emit rankable `best_*` artifacts
+     - `segnet_attack_fixed_ste_h32` just proved the family can transfer honestly to `1.84`
+     - the metadata gap is now fixed for future reruns, so the next launch can be both rankable and automatable
    - Action:
      - launch a fresh checkpoint-saving rerun from the synced repo-side trainer
-     - reject any run that only prints pretty logs without writing artifacts
+     - reject any run that only prints pretty logs without writing durable artifact metadata
 
 3. **PF-PAIRAWARE**
    - Why third:
@@ -84,7 +92,7 @@ That means the next cycle should stop pretending those families are active promo
 
 ## queue hygiene
 
-1. Do not reopen `pixelshuffle_h64_long1000` or `psd_h64_long1000` without a material architecture or objective change.
+1. Do not reopen `pixelshuffle_h64_long1000`, `psd_h64_long1000`, or `segnet_attack_fixed_ste_h32` without a material architecture/objective or packaging-metadata change.
 2. Do not proxy deploy-blocked artifacts.
 3. Do not claim Kaggle/Modal/Coiled are integrated unless the run is recorded on disk.
 4. Leave the next agent a truthful queue, not a chat-memory queue.
