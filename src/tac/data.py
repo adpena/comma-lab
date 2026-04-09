@@ -89,6 +89,45 @@ def build_pairs(frames: list[torch.Tensor]) -> list[torch.Tensor]:
     return pairs
 
 
+def pair_from_frames(frames: list[torch.Tensor], start_idx: int) -> torch.Tensor:
+    """Build a single pair on-the-fly from a frame list. Returns (1, 2, H, W, 3).
+
+    This avoids pre-building all 600 pairs in memory, which is the key
+    pattern for surviving MPS memory pressure on long training runs.
+    """
+    return torch.stack(frames[start_idx : start_idx + SEQ_LEN]).unsqueeze(0)
+
+
+def pair_start_indices(frame_count: int) -> list[int]:
+    """Get valid pair start indices for a given frame count."""
+    return list(range(0, frame_count - 1, SEQ_LEN))
+
+
+def saliency_for_pair(
+    base_saliency: torch.Tensor,
+    start_idx: int,
+    alpha: float,
+    device: str | torch.device = "cpu",
+) -> torch.Tensor:
+    """Build saliency weights for a single pair on-the-fly.
+
+    Returns (2, 1, H, W) weight tensor. Avoids pre-building all saliency
+    pairs in memory.
+    """
+    slices = []
+    last = base_saliency[-1]
+    for offset in range(SEQ_LEN):
+        frame_idx = start_idx + offset
+        sal = base_saliency[frame_idx] if frame_idx < base_saliency.shape[0] else last
+        slices.append((1.0 + alpha * sal).unsqueeze(0))
+    return torch.stack(slices, dim=0).to(device)
+
+
+def load_raw_saliency(saliency_path: str | Path) -> torch.Tensor:
+    """Load raw saliency map (N, H, W) without applying alpha weighting."""
+    return torch.from_numpy(np.load(str(saliency_path))).float()
+
+
 def load_saliency_weights(
     saliency_path: str | Path,
     alpha: float,

@@ -24,4 +24,4 @@ Quick start::
     trainer.fit(comp_pairs, gt_pairs, posenet, segnet, sal_weights)
 """
 
-__version__ = "0.2.0"
+__version__ = "0.3.0"

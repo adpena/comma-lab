@@ -96,6 +96,73 @@ def apply_lsq(model: nn.Module) -> dict[str, LSQScale]:
     return scales
 
 
+# ── QAT Wrapper ─────────────────────────────────────────────────────
+
+
+class QATPostFilter(nn.Module):
+    """Wraps any PostFilter with FakeQuant STE on weights during training.
+
+    Forward pass quantizes weights to int8 (simulated) before each conv.
+    Backward pass uses straight-through estimator. Biases are NOT quantized
+    (matching the fp32_bias deployment path).
+    """
+
+    def __init__(self, base_model: nn.Module):
+        super().__init__()
+        self.base = base_model
+
+    def forward(self, x: torch.Tensor) -> torch.Tensor:
+        # Temporarily replace conv weights with fake-quantized versions
+        originals = {}
+        for name, module in self.base.named_modules():
+            if isinstance(module, nn.Conv2d):
+                originals[name] = module.weight
+                module.weight = nn.Parameter(fake_quant(module.weight))
+
+        out = self.base(x)
+
+        # Restore originals (so optimizer sees real weights)
+        for name, module in self.base.named_modules():
+            if isinstance(module, nn.Conv2d) and name in originals:
+                module.weight = originals[name]
+
+        return out
+
+
+def quantize_state_dict(
+    state_dict: dict[str, torch.Tensor],
+    per_channel: bool = False,
+) -> dict[str, torch.Tensor]:
+    """Simulate int8 quantization on a state dict (for eval or checkpoint selection).
+
+    Returns a new state dict with quantize-then-dequantize applied to all
+    floating-point tensors. This is what the model will look like after
+    save_int8 + load_int8 round-trip.
+    """
+    result = {}
+    for name, tensor in state_dict.items():
+        if not torch.is_floating_point(tensor):
+            result[name] = tensor.clone()
+            continue
+        p = tensor.detach().float()
+        if per_channel and p.ndim >= 2:
+            C = p.shape[0]
+            flat = p.reshape(C, -1)
+            scales = flat.abs().max(dim=1).values / 127.0
+            scales = torch.where(scales < 1e-10, torch.ones_like(scales), scales)
+            scales_bc = scales.view(C, *([1] * (p.ndim - 1)))
+            q = (p / scales_bc).round().clamp(-128, 127)
+            result[name] = q * scales_bc
+        else:
+            scale = p.abs().max() / 127.0
+            if scale.item() < 1e-10:
+                result[name] = p.clone()
+            else:
+                q = (p / scale).round().clamp(-128, 127)
+                result[name] = q * scale
+    return result
+
+
 # ── Save / Load ──────────────────────────────────────────────────────────
 
 

@@ -29,8 +29,9 @@ from typing import Callable
 import torch
 import torch.nn as nn
 
+from .data import pair_from_frames, pair_start_indices, saliency_for_pair, load_raw_saliency, SEQ_LEN
 from .losses import scorer_loss, segnet_ste_loss, saliency_reconstruction_loss
-from .quantization import save_int8, load_int8
+from .quantization import save_int8, load_int8, quantize_state_dict
 
 
 @dataclass
@@ -388,3 +389,147 @@ class Trainer:
 
         print(f"[trainer] Complete. Best: {self.best_scorer:.4f} at epoch {self.best_epoch}")
         return self.best_scorer
+
+    def fit_lazy(
+        self,
+        comp_frames: list[torch.Tensor],
+        gt_frames: list[torch.Tensor],
+        posenet,
+        segnet,
+        raw_saliency: torch.Tensor,
+        subsample: int = 8,
+    ):
+        """Memory-efficient training using lazy pair construction.
+
+        This is the partner agent's proven pattern that survives MPS memory
+        pressure for 1000+ epoch runs. Instead of pre-building all 600 pairs
+        in memory (~12GB), pairs are constructed on-the-fly from frame lists.
+
+        Args:
+            comp_frames: list of (H, W, 3) uint8 compressed frames (on CPU)
+            gt_frames: list of (H, W, 3) uint8 ground-truth frames (on CPU)
+            posenet: frozen PoseNet (on device)
+            segnet: frozen SegNet (on device)
+            raw_saliency: (N, H, W) raw saliency map (on CPU)
+            subsample: train on 1/subsample of pairs per epoch
+        """
+        if not self._patched_scorers:
+            self._patch_scorers_for_training(posenet, segnet)
+            self._patched_scorers = True
+
+        cfg = self.config
+        pair_starts = pair_start_indices(len(comp_frames))
+        n_pairs = len(pair_starts)
+        train_size = max(1, n_pairs // subsample)
+
+        print(f"[trainer-lazy] {cfg.epochs} epochs, {train_size}/{n_pairs} pairs/ep, "
+              f"h={cfg.hidden}, alpha={cfg.alpha}, device={self.device}")
+        print(f"[trainer-lazy] Frames on CPU, pairs built on-the-fly (MPS-safe)")
+
+        for epoch in range(cfg.epochs):
+            self.model.train()
+            total_loss, total_pose, total_seg = 0.0, 0.0, 0.0
+
+            if epoch < cfg.warmup_epochs:
+                lr = cfg.lr * (epoch + 1) / cfg.warmup_epochs
+                for pg in self.optimizer.param_groups:
+                    pg["lr"] = lr
+
+            # Random subset of pair indices
+            perm = torch.randperm(n_pairs)[:train_size]
+
+            for step, pair_idx in enumerate(perm):
+                start = pair_starts[pair_idx.item()]
+
+                # Build pair on-the-fly (CPU → device)
+                comp_pair = pair_from_frames(comp_frames, start).to(self.device)
+                gt_pair = pair_from_frames(gt_frames, start).to(self.device)
+
+                # Apply filter
+                filtered = self._apply_filter_to_pair(comp_pair)
+
+                # Scorer loss
+                loss, pd, sd = scorer_loss(filtered, gt_pair, posenet, segnet)
+
+                # Saliency reconstruction (frame 1 only)
+                sal_w = saliency_for_pair(raw_saliency, start, cfg.alpha, self.device)
+                filtered_bchw = filtered[:, 1].permute(0, 3, 1, 2)
+                comp_bchw = comp_pair[:, 1].float().permute(0, 3, 1, 2)
+                sal_recon = saliency_reconstruction_loss(
+                    filtered_bchw, comp_bchw, sal_w[1:2]  # frame 1 saliency only
+                )
+
+                total = loss + cfg.sal_lambda * sal_recon
+
+                self.optimizer.zero_grad()
+                total.backward()
+                torch.nn.utils.clip_grad_norm_(self.model.parameters(), cfg.grad_clip)
+                self.optimizer.step()
+                self.ema.update(self.model)
+
+                total_loss += loss.item()
+                total_pose += pd
+                total_seg += sd
+
+                # Free pair memory immediately
+                del comp_pair, gt_pair, filtered, filtered_bchw, comp_bchw, sal_w
+
+            if epoch >= cfg.warmup_epochs:
+                self.scheduler.step()
+
+            n = len(perm)
+            avg_loss = total_loss / n
+            avg_pose = total_pose / n
+            avg_seg = total_seg / n
+
+            # Best-checkpoint int8 evaluation (subsample for speed)
+            scorer_val = self._evaluate_int8_lazy(
+                comp_frames, gt_frames, posenet, segnet
+            )
+
+            if scorer_val < self.best_scorer:
+                self.best_scorer = scorer_val
+                self.best_epoch = epoch
+                self._save_checkpoint(epoch, scorer_val)
+                print(f"  ** NEW BEST: ep {epoch}, scorer {scorer_val:.4f} **")
+
+            lr = self.optimizer.param_groups[0]["lr"]
+            print(f"[ep {epoch:4d}] loss={avg_loss:.4f} pose={avg_pose:.6f} "
+                  f"seg={avg_seg:.6f} scorer={scorer_val:.4f} best={self.best_scorer:.4f} lr={lr:.6f}")
+
+        print(f"[trainer-lazy] Complete. Best: {self.best_scorer:.4f} at epoch {self.best_epoch}")
+        return self.best_scorer
+
+    def _evaluate_int8_lazy(
+        self, comp_frames, gt_frames, posenet, segnet, subsample: int = 4,
+    ) -> float:
+        """Evaluate EMA model after int8 quantization, using lazy pair loading."""
+        orig_state = {k: v.clone() for k, v in self.model.state_dict().items()}
+
+        self.ema.apply(self.model)
+        q_state = quantize_state_dict(self.model.state_dict())
+        self.model.load_state_dict(q_state)
+        self.model.eval()
+
+        pair_starts = pair_start_indices(len(comp_frames))
+        total_p, total_s, count = 0.0, 0.0, 0
+
+        with torch.no_grad():
+            for i, start in enumerate(pair_starts):
+                if i % subsample != 0:
+                    continue
+                comp_pair = pair_from_frames(comp_frames, start).to(self.device)
+                gt_pair = pair_from_frames(gt_frames, start).to(self.device)
+                filtered = self._apply_filter_to_pair(comp_pair)
+                loss, pd, sd = scorer_loss(filtered, gt_pair, posenet, segnet)
+                total_p += pd
+                total_s += sd
+                count += 1
+                del comp_pair, gt_pair, filtered
+
+        import math
+        scorer = 100.0 * (total_s / count) + math.sqrt(10.0 * (total_p / count))
+
+        self.model.load_state_dict(orig_state)
+        self.model.train()
+        return scorer
