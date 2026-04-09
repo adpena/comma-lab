@@ -76,7 +76,7 @@
     .muted { color: var(--muted); }
     .subnav { display:flex; gap:14px; flex-wrap:wrap; font-size: 13px; color: var(--muted); }
     .subnav a { text-decoration: none; }
-    .context-strip { display:grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 0; margin-top: 12px; border-top: 1px solid var(--stroke); border-bottom: 1px solid var(--stroke); }
+    .context-strip { display:grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 0; margin-top: 12px; border-top: 1px solid var(--stroke); border-bottom: 1px solid var(--stroke); }
     .context-item { padding: 16px 16px 18px; }
     .context-item + .context-item { border-left: 1px solid var(--stroke); }
     .context-label { color: var(--muted); font-size: 11px; text-transform: uppercase; letter-spacing: 0.08em; }
@@ -324,6 +324,7 @@
             <a href="./submission_packet.md">Submission packet</a>
             <a href="./lab_notebook.md">Lab notebook</a>
             <a href="./promotion_review_latest.md">Promotion review</a>
+            <a href="./report_history.html">Report history</a>
             <a href="./evidence_index.md">Evidence index</a>
           </nav>
         </div>
@@ -374,8 +375,13 @@
         </div>
       </div>
       <div class="context-item">
+        <div class="context-label">Private ops</div>
+        <p class="context-copy">Private-facing surfaces stay in-repo: <a href="./report_history.html">report history</a> and <code>comma-lab sched status</code> for scheduler state.</p>
+        <p class="context-meta">Scheduler details remain read-only and are not exposed as a public launch surface.</p>
+      </div>
+      <div class="context-item">
         <div class="context-label">Last updated</div>
-        <p class="context-copy">Apr 9, 2026, 10:57 AM CDT</p>
+        <p class="context-copy">Apr 9, 2026, 4:58 PM CDT</p>
         <p class="context-meta">Generated from repository state plus scorer-backed artifacts stored in this repo.</p>
       </div>
     </section>
@@ -613,7 +619,7 @@
       <p class="footnote refs-note">The landing page is the guided entry point. Full depth lives in the linked notebook, packet, and raw evidence artifacts.</p>
     </section>
     <footer class="footer-meta" aria-label="Site metadata">
-      <span>Last updated Apr 9, 2026, 10:57 AM CDT</span>
+      <span>Last updated Apr 9, 2026, 4:58 PM CDT</span>
       <span><a href="https://github.com/adpena/comma-lab">GitHub</a> · <a href="https://github.com/commaai/comma_video_compression_challenge">Challenge</a></span>
     </footer>
   </main>

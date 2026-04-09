@@ -963,7 +963,7 @@ def main() -> int:
     .muted {{ color: var(--muted); }}
     .subnav {{ display:flex; gap:14px; flex-wrap:wrap; font-size: 13px; color: var(--muted); }}
     .subnav a {{ text-decoration: none; }}
-    .context-strip {{ display:grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 0; margin-top: 12px; border-top: 1px solid var(--stroke); border-bottom: 1px solid var(--stroke); }}
+    .context-strip {{ display:grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 0; margin-top: 12px; border-top: 1px solid var(--stroke); border-bottom: 1px solid var(--stroke); }}
     .context-item {{ padding: 16px 16px 18px; }}
     .context-item + .context-item {{ border-left: 1px solid var(--stroke); }}
     .context-label {{ color: var(--muted); font-size: 11px; text-transform: uppercase; letter-spacing: 0.08em; }}
@@ -1211,6 +1211,7 @@ def main() -> int:
             <a href="./submission_packet.md">Submission packet</a>
             <a href="./lab_notebook.md">Lab notebook</a>
             <a href="./promotion_review_latest.md">Promotion review</a>
+            <a href="./report_history.html">Report history</a>
             <a href="./evidence_index.md">Evidence index</a>
           </nav>
         </div>
@@ -1259,6 +1260,11 @@ def main() -> int:
           <a href="{data['site_meta']['github_url']}">{escape(data['site_meta']['repo_slug'])}</a>
           <a href="./experiment_manifest.json">Experiment manifest</a>
         </div>
+      </div>
+      <div class="context-item">
+        <div class="context-label">Private ops</div>
+        <p class="context-copy">Private-facing surfaces stay in-repo: <a href="./report_history.html">report history</a> and <code>comma-lab sched status</code> for scheduler state.</p>
+        <p class="context-meta">Scheduler details remain read-only and are not exposed as a public launch surface.</p>
       </div>
       <div class="context-item">
         <div class="context-label">Last updated</div>

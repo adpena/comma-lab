@@ -4,6 +4,14 @@
 
 Track B's promoted honest floor is now **`1.73`** after the `h64` long-horizon QAT+EMA promotion. Track A remains transparency-only and must stay runnable, but it is not part of the honest frontier.
 
+## private ops
+
+- Report history viewer: `reports/graphs/report_history.html`
+- Scheduler status: `comma-lab sched status`
+- Scheduler results: `comma-lab sched results`
+- Scheduler budget: `comma-lab sched budget`
+- Default platform registry: `configs/platforms.json`
+
 ## authoritative promoted floor
 
 - Track: `robust_current`
@@ -33,6 +41,7 @@ Track B's promoted honest floor is now **`1.73`** after the `h64` long-horizon Q
 - `1.73` - long1000 QAT+EMA learned int8 post-filter (`alpha=20 h64`), promoted
 - `1.84` - weighted ensemble learned int8 post-filter (`long1000 h32 + MC refine1`, `75/25`), prior promoted floor
 - `1.85` - long1000 QAT+EMA learned int8 post-filter (`alpha=20 h32`), older promoted floor
+- `1.85` - PSD h64 faithful proxy, resolved non-promoted alternate
 - `1.86` - Monte Carlo / layer-scale refinements, strongest non-promoted alternate family
 - `1.90` - SegNet-native learned int8 post-filter, close miss
 
@@ -42,12 +51,13 @@ Track B's promoted honest floor is now **`1.73`** after the `h64` long-horizon Q
 - The local ensemble micro-tuning lane is closed; the three-way `h32 + MC + Kalman` blend only managed `1.89`.
 - The local `h64` training run is complete, and the repo-side official-path proxy on its saved-best artifact independently matched the authoritative `1.73` scorer result.
 - The completed `bat00` WSL quantization-parity rerun is now just a reference artifact: its best saved checkpoint was epoch `199` at local scorer `3.9258`, and the trainer was no longer alive when last checked.
-- The local MPS host is now running the real active side-lane fleet. The strongest newly packaged local artifacts are `dilated h64` at `3.7601`, `pixelshuffle_h64` at `3.8106`, `alpha30 h32` at `3.8315`, and `h96` at `3.8945`; the latest printed checkpoints are now `250`, `210`, `480`, and `220` respectively, but none is yet close enough to the promoted h64 local regime to justify proxy time.
-- A new machine-readable fleet snapshot is now on disk at `reports/raw/2026-04-09-sidecar-analysis/live_fleet_snapshot.json`. It corrected the earlier hand-tail undercounts further and now merges special-case log slugs back into their canonical best-artifact lanes: `pixelshuffle_h64` improved to saved best `3.8106`, `psd_h64` to `3.8837`, `alpha30 h32` had printed through `480`, `dilated h64` through `250`, and the two live SegNet lanes through `890` and `340`.
-- The current live `dilated h64` artifact also has one operational caveat: its `/private/tmp` saved meta still reports `variant: "saliency_weighted"`, so it should stay observation-only until it is relaunched with the repo-side deploy-correct wrapper. Even after the new best at `3.7601`, the refreshed proxy gate still keeps it out because it is both deploy-blocked and still `0.2128` above the promoted h64 local reference.
+- The local MPS host is still the real side-lane factory. The strongest packaged local artifacts are now `dilated h64` at `3.5754`, `psd_h64` at `3.6042`, `pixelshuffle_h64` at `3.6049`, `h96` at `3.8017`, and `alpha30 h32` at `3.8023`; the latest printed checkpoints are `380`, `300`, `380`, `310`, and `660` respectively.
+- The refreshed machine-readable fleet snapshot at `reports/raw/2026-04-09-sidecar-analysis/live_fleet_snapshot.json` now reflects those newer bests and the latest visible SegNet rows: `segnet_attack_fixed_v2` through epoch `1000 / 1.0671` and `segnet_attack_h64` through epoch `480 / 1.0544`.
+- The current live `dilated h64` artifact still has one operational caveat: its `/private/tmp` saved meta reports `variant: "saliency_weighted"`, so it should stay observation-only until it is relaunched with the repo-side deploy-correct wrapper. The refreshed proxy gate now shows the raw local gap is only `0.0281`, but deployability still blocks it.
 - `pixelshuffle_h64_long1000` was the strongest deploy-ready packaged side lane, and its faithful proxy has now resolved as a clean reject at **`1.99`**. That is a real transfer, but it is nowhere near the promoted `1.73` floor.
-- With pixelshuffle resolved, `psd_h64_long1000` is now the strongest deploy-ready packaged lane still unresolved, and a faithful proxy run on that artifact is now in flight.
-- The SegNet/research side lanes remain non-promoted for now: `segnet_attack_fixed_v2` has reached epoch `890` with best observed local scorer `0.9819` at epoch `590`, `segnet_attack_h64` is through epoch `340` with latest printed scorer `1.1381`, `pixelshuffle_h64` has improved to a still-weak saved best at `3.8106`, and `psd_h64` has improved to `3.8837`; the live SegNet trainers still have no saved best artifact, and the active SegNet PIDs predate the trainer file now on disk, so the missing saves are best explained by stale running processes rather than a fresh code-path failure.
+- `psd_h64_long1000` has now also resolved honestly at **`1.85`** with PoseNet `0.05271273` and SegNet `0.00551752`. That is a real near-miss, but still a reject for promotion.
+- The next honest promotion path is no longer “proxy PSD/pixelshuffle again”; it is to make `dilated_h64_long1000` deploy-correct and to get fresh SegNet lanes that actually emit `best_*` artifacts.
+- The SegNet/research side lanes remain non-promoted for now: `segnet_attack_fixed_v2` has printed through epoch `1000 / 1.0671`, `segnet_attack_h64` through epoch `480 / 1.0544`, and neither has written a fresh `best_*` artifact. The best explanation is still stale long-running processes rather than a fresh code-path failure.
 - Sidecar tooling is now on disk:
   - `reports/raw/2026-04-09-sidecar-analysis/live_fleet_snapshot.json`
   - `reports/raw/2026-04-09-sidecar-analysis/proxy_gate_triage.json`
@@ -58,6 +68,10 @@ Track B's promoted honest floor is now **`1.73`** after the `h64` long-horizon Q
   - `src/comma_lab/task_codec/` for scorer/architecture/quantization/evaluation records
   - `comma-lab sched ...` read-only scheduler reporting
   - `reports/graphs/report_history.html` + `report_history.json` for git-backed markdown/time-machine browsing
+- Free-tier operator plumbing is now grounded in repo state rather than chat memory:
+  - `configs/platforms.json` now defines `local`, `bat00`, `kaggle`, `modal`, and `coiled`
+  - `configs/run_manifests/` now contains neutral Kaggle/Modal/Coiled manifest templates plus a shared status template
+  - scheduler compatibility now tolerates legacy manifests without `run_id` and counts `running_managed_session` as active
 - Future-facing experiment code is now on disk too:
   - `experiments/train_postfilter_dilated_h64.py`
   - `experiments/train_postfilter_pixelshuffle_dilated.py`

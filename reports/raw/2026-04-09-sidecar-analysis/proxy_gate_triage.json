@@ -100,11 +100,11 @@
       },
       "rank": 4,
       "delta_vs_reference": 0.056932942072550397,
-      "proxy_already_run": false,
-      "proxy_log": null,
+      "proxy_already_run": true,
+      "proxy_log": "/private/tmp/pact-mine/proxy_psd_h64_long1000_best.log",
       "deploy_ready": true,
       "deploy_blockers": [],
-      "proxy_ready": true
+      "proxy_ready": false
     },
     {
       "slug": "postfilter_pixelshuffle_h64_long1000",
@@ -217,6 +217,28 @@
       "proxy_ready": false
     },
     {
+      "slug": "postfilter_long2000_h32",
+      "meta_path": "/private/tmp/pact-mine/experiments/postfilter_weights/postfilter_long2000_h32_best_meta.json",
+      "epoch": 45,
+      "scorer": 4.178845802942912,
+      "int8_size": 16019,
+      "fp32_path": "/private/tmp/pact-mine/experiments/postfilter_weights/postfilter_long2000_h32_best_fp32.pt",
+      "int8_path": "/private/tmp/pact-mine/experiments/postfilter_weights/postfilter_long2000_h32_best_int8.pt",
+      "meta": {
+        "variant": "saliency_weighted",
+        "hidden": 32,
+        "kernel": 3,
+        "alpha": 20.0
+      },
+      "rank": 10,
+      "delta_vs_reference": 0.6315760358174645,
+      "proxy_already_run": false,
+      "proxy_log": null,
+      "deploy_ready": true,
+      "deploy_blockers": [],
+      "proxy_ready": false
+    },
+    {
       "slug": "postfilter_dct_midband_a20_block8",
       "meta_path": "/private/tmp/pact-mine/experiments/postfilter_weights/postfilter_dct_midband_a20_block8_best_meta.json",
       "epoch": 10,
@@ -231,7 +253,7 @@
         "alpha": 20.0,
         "block": 8
       },
-      "rank": 10,
+      "rank": 11,
       "delta_vs_reference": 0.9706142590279327,
       "proxy_already_run": false,
       "proxy_log": null,
