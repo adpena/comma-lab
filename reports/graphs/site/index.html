@@ -45,25 +45,22 @@
     .skip { position: absolute; left: 12px; top: -48px; background: #fff; color: #000; padding: 10px 14px; border-radius: 10px; z-index: 99; }
     .skip:focus { top: 12px; }
     .wrap { max-width: var(--max); margin: 0 auto; padding: 28px 24px 72px; }
-    .hero { padding: 28px 0 10px; display: grid; gap: 18px; }
+    .hero { padding: 48px 0 24px; display: grid; gap: 16px; }
     .eyebrow { color: var(--muted); font-size: 11px; letter-spacing: 0.12em; text-transform: uppercase; font-weight: 700; }
-    h1 { margin: 0; font-family: "Iowan Old Style", "Palatino Linotype", "Book Antiqua", Georgia, ui-serif, serif; font-size: clamp(42px, 6vw, 78px); line-height: 0.94; letter-spacing: -0.05em; font-weight: 700; max-width: 11ch; }
+    h1 { margin: 0; font-family: "Iowan Old Style", "Palatino Linotype", "Book Antiqua", Georgia, ui-serif, serif; font-size: clamp(28px, 3.2vw, 44px); line-height: 1.15; letter-spacing: -0.03em; font-weight: 700; max-width: 100%; }
     h2, h3 { font-family: "Iowan Old Style", "Palatino Linotype", "Book Antiqua", Georgia, ui-serif, serif; }
-    .lede { max-width: 760px; color: var(--soft); font-size: 17px; margin: 0; }
-    .hero-grid { display:grid; grid-template-columns: 1.1fr 0.9fr; gap: 18px; align-items: start; }
-    .hero-stack { display:grid; gap: 14px; }
+    .lede { max-width: 680px; color: var(--muted); font-size: 15px; line-height: 1.65; margin: 0; }
+    .hero-grid { display:grid; grid-template-columns: 1fr; gap: 24px; }
+    .hero-stack { display:grid; gap: 16px; }
     .pill-row { display:flex; gap:10px; flex-wrap:wrap; }
-    .pill { border: 1px solid var(--stroke); background: rgba(255,255,255,0.035); padding: 8px 12px; border-radius: 999px; color: var(--soft); font-size: 12px; }
+    .pill { border: 1px solid var(--stroke); padding: 5px 10px; border-radius: 999px; color: var(--muted); font-size: 12px; font-weight: 500; }
     .hero-card-grid { display:grid; gap: 12px; grid-template-columns: repeat(3, minmax(0, 1fr)); }
     .hero-card {
-      background: linear-gradient(180deg, rgba(255,255,255,0.05), rgba(255,255,255,0.025));
-      border: 1px solid var(--stroke);
-      border-radius: 16px;
-      padding: 16px;
-      min-height: 100%;
+      border-top: 1px solid var(--stroke);
+      padding: 16px 0 0;
     }
-    .hero-card h2 { margin: 0 0 8px; font-size: 18px; letter-spacing: -0.03em; }
-    .hero-card p { margin: 0; color: var(--soft); font-size: 14px; line-height: 1.6; }
+    .hero-card h2 { margin: 0 0 6px; font-size: 14px; letter-spacing: -0.01em; color: var(--text); }
+    .hero-card p { margin: 0; color: var(--muted); font-size: 13px; line-height: 1.55; }
     .hero-links { display:flex; flex-wrap:wrap; gap: 10px 14px; margin-top: 10px; font-size: 13px; color: var(--muted); }
     .hero-links a { text-decoration: none; }
     .two { display: grid; gap: 16px; }
