@@ -278,10 +278,9 @@ def main():
             int8_path = out_dir / f"postfilter_{args.tag}_best_int8.pt"
             meta_path = out_dir / f"postfilter_{args.tag}_best_meta.json"
             torch.save(ema_state, fp32_path)
-            q_state = quantize_state_dict_like_saved_int8(ema_state)
-            # Save int8
+            # Save int8 directly from EMA state (single quantization, no double-quant)
             int8_data = {}
-            for name, param in q_state.items():
+            for name, param in ema_state.items():
                 p = param.detach().cpu().float()
                 scale = p.abs().max() / 127.0
                 if scale.item() == 0: scale = torch.tensor(1.0)

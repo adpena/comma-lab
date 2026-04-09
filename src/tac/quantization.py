@@ -34,7 +34,9 @@ class FakeQuantSTE(torch.autograd.Function):
                 ctx.save_for_backward(torch.zeros_like(w, dtype=torch.bool))
                 return w
             q = (w / scale).round().clamp(-128.0, 127.0)
-            saturated = q.abs() >= 127.0
+            # Zero gradient only for values that were ACTUALLY clipped,
+            # not those that merely round to the boundary. Pre-round check.
+            saturated = (w / scale).abs() > 127.5
             ctx.save_for_backward(saturated)
             return q * scale
 

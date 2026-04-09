@@ -341,14 +341,14 @@ def compute_combined_loss(filtered_pair_hwc, gt_pair_hwc, comp_pair_hwc,
         filtered_pair_hwc, gt_pair_hwc, posenet, segnet
     )
 
-    # Saliency-weighted reconstruction penalty
-    # Penalize corrections on low-saliency pixels to protect SegNet
+    # Saliency-weighted reconstruction penalty on frame 1 only
+    # SegNet only uses the last frame (index 1), so only protect that one
     B, T, H, W, C = filtered_pair_hwc.shape
-    filtered_bchw = filtered_pair_hwc.reshape(B * T, H, W, C).permute(0, 3, 1, 2)
-    comp_bchw = comp_pair_hwc.float().reshape(B * T, H, W, C).permute(0, 3, 1, 2)
+    filtered_bchw = filtered_pair_hwc[:, 1].permute(0, 3, 1, 2)  # frame 1 only
+    comp_bchw = comp_pair_hwc[:, 1].float().permute(0, 3, 1, 2)
 
     sal_recon_loss = compute_saliency_reconstruction_loss(
-        filtered_bchw, comp_bchw, sal_weights_pair
+        filtered_bchw, comp_bchw, sal_weights_pair[1:2]  # frame 1 saliency only
     )
 
     total_loss = scorer_loss + sal_lambda * sal_recon_loss

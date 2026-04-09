@@ -109,7 +109,7 @@ class Trainer:
 
         if config.scheduler == "cosine":
             self.scheduler = torch.optim.lr_scheduler.CosineAnnealingLR(
-                self.optimizer, T_max=config.epochs, eta_min=1e-6
+                self.optimizer, T_max=config.epochs - config.warmup_epochs, eta_min=1e-6
             )
         else:
             self.scheduler = torch.optim.lr_scheduler.CosineAnnealingWarmRestarts(
