@@ -1,194 +1,73 @@
 import Cocoa
+import SwiftUI
 import UserNotifications
 import Foundation
+import Combine
 
-let WEIGHTS_DIR = NSString(string: "~/Projects/pact/experiments/postfilter_weights").expandingTildeInPath
-let CONTEST_END: Date = {
-    var c = DateComponents(); c.year=2026; c.month=5; c.day=3; c.hour=23; c.minute=59
-    c.timeZone = TimeZone(identifier: "America/Los_Angeles")
+// ── Constants ──────────────────────────────────────────────────────
+let WEIGHTS = NSString(string: "~/Projects/pact/experiments/postfilter_weights").expandingTildeInPath
+let DEADLINE: Date = {
+    // May 3, 2026 11:59 PM AOE (Anywhere on Earth = UTC-12)
+    // = May 4, 2026 11:59 AM UTC = May 4, 2026 6:59 AM CDT
+    var c = DateComponents(); c.year=2026; c.month=5; c.day=4; c.hour=11; c.minute=59
+    c.timeZone = TimeZone(identifier: "UTC")
     return Calendar.current.date(from: c)!
 }()
-let BREAKTHROUGH_DATE: Date = {
-    var c = DateComponents(); c.year=2026; c.month=4; c.day=9; c.hour=10; c.minute=0
+let LAST_BREAK = {
+    var c = DateComponents(); c.year=2026; c.month=4; c.day=9; c.hour=10
     c.timeZone = TimeZone(identifier: "America/Chicago")
     return Calendar.current.date(from: c)!
 }()
-let PROMOTED: Double = 1.727
-let LB2: Double = 1.89
-let TARGET: Double = 1.60
-let PRACTICAL_FLOOR: Double = 1.50
+let SCORE: Double = 1.727
+let LB = [(n: "PACT (ours)", s: 1.727), (n: "neural_inflate", s: 1.89), (n: "roi_v2", s: 1.94), (n: "av1_roi_lanczos", s: 1.95)]
 
-class App: NSObject, NSApplicationDelegate, UNUserNotificationCenterDelegate {
-    var item: NSStatusItem!
-    var timer: Timer?
-    var bestScorer: Double = 999
-    var lastTrainerCount: Int = -1
-    var notifiedTags: Set<String> = []
+// ── Data Model ─────────────────────────────────────────────────────
+struct Experiment: Identifiable {
+    let id = UUID()
+    let tag: String; let epoch: Int; let scorer: Double; let age: Int; let active: Bool
+}
 
-    func applicationDidFinishLaunching(_ n: Notification) {
-        UNUserNotificationCenter.current().delegate = self
-        UNUserNotificationCenter.current().requestAuthorization(options: [.alert, .sound, .badge]) { ok, _ in
-            if ok { print("Notifications enabled") }
-        }
-        item = NSStatusBar.system.statusItem(withLength: NSStatusItem.variableLength)
-        item.button?.font = NSFont.monospacedSystemFont(ofSize: 11, weight: .medium)
-        refresh()
-        timer = Timer.scheduledTimer(withTimeInterval: 10, repeats: true) { [weak self] _ in self?.refresh() }
-    }
+class FleetState: ObservableObject {
+    @Published var trainers = 0
+    @Published var experiments: [Experiment] = []
+    @Published var bestScorer: Double = 999
+    var notifiedKeys: Set<String> = []
 
     func refresh() {
-        let now = Date()
-        let daysLeft = CONTEST_END.timeIntervalSince(now) / 86400
-        let hrsSince = now.timeIntervalSince(BREAKTHROUGH_DATE) / 3600
+        let t = sh("ps aux | grep python | grep -E 'train_postfilter|segnet_boundary' | grep -v grep | grep -v dashboard | wc -l")
+        let newCount = Int(t.trimmingCharacters(in: .whitespacesAndNewlines)) ?? 0
 
-        // Count trainers (only actual python training processes)
-        let trainers = countTrainers()
+        // Notify on trainer death/restart
+        if newCount == 0 && trainers > 0 { notify("⚠️ Training stopped", "All trainers exited") }
+        if newCount > 0 && trainers == 0 && trainers != -1 { notify("✅ Training resumed", "\(newCount) trainer(s)") }
+        trainers = newCount
 
         // Read checkpoints
-        let ckpts = readCheckpoints()
-        let active = ckpts.filter { $0.age < 600 }
-        let best = ckpts.min(by: { $0.scorer < $1.scorer })
-
-        // Menubar title
-        let icon = trainers > 0 ? "⚡" : "⏸"
-        let scoreStr = String(format: "%.3f", PROMOTED)
-        DispatchQueue.main.async {
-            self.item.button?.title = "\(icon) \(scoreStr) · \(trainers)t · \(Int(daysLeft))d"
-        }
-
-        // Notifications
-        if trainers == 0 && lastTrainerCount > 0 {
-            notify("Training stopped", "All trainers have exited. Restart needed.")
-        }
-        if trainers > 0 && lastTrainerCount == 0 {
-            notify("Training resumed", "\(trainers) trainer(s) running")
-        }
-        lastTrainerCount = trainers
-
-        // New best checkpoint
-        for c in ckpts where c.age < 30 {
-            let key = "\(c.tag)_\(c.epoch)"
-            if !notifiedTags.contains(key) && c.scorer < bestScorer {
-                bestScorer = c.scorer
-                notify("New best: \(String(format: "%.4f", c.scorer))",
-                       "\(c.tag) epoch \(c.epoch)")
-                notifiedTags.insert(key)
-            }
-        }
-
-        // Deadline warnings
-        if daysLeft < 5.01 && daysLeft > 4.99 {
-            notify("⚠️ 5 days left", "Contest deadline approaching")
-        }
-        if daysLeft < 1.01 && daysLeft > 0.99 {
-            notify("🔴 FINAL DAY", "Less than 24 hours remaining")
-        }
-
-        // Build menu
-        let menu = NSMenu()
-        sec(menu, "COMPETITION")
-        row(menu, "Official score", String(format: "%.3f (#1)", PROMOTED))
-        row(menu, "Lead over #2", String(format: "+%.3f over neural_inflate", LB2 - PROMOTED))
-        row(menu, "Headroom to target", String(format: "%.3f to %.2f", PROMOTED - TARGET, TARGET))
-        row(menu, "Practical floor", String(format: "%.2f (council est.)", PRACTICAL_FLOOR))
-
-        menu.addItem(NSMenuItem.separator())
-        sec(menu, "TIMELINE")
-        row(menu, "Days remaining", String(format: "%.1f", daysLeft))
-        row(menu, "Since breakthrough", hrsSince < 24 ? String(format: "%.1fh", hrsSince) : String(format: "%.1fd", hrsSince/24))
-        let df = DateFormatter(); df.dateFormat = "MMM d, h:mm a"
-        row(menu, "Deadline", df.string(from: CONTEST_END))
-
-        if daysLeft < 5 { row(menu, "⚠️ WARNING", String(format: "%.1f days left!", daysLeft)) }
-
-        menu.addItem(NSMenuItem.separator())
-        sec(menu, "LIVE EXPERIMENTS (\(active.count) active)")
-        for c in active.sorted(by: { $0.scorer < $1.scorer }) {
-            let age = c.age < 60 ? "\(c.age)s" : "\(c.age/60)m"
-            let trend = c.trend != 0 ? String(format: " Δ%.4f/ep", c.trend) : ""
-            let eta = c.etaEpochs.map { $0 < 9999 ? " ~\($0)ep to proxy" : "" } ?? ""
-            row(menu, String(format: "%.4f", c.scorer), "ep \(c.epoch) · \(c.tag) · \(age)\(trend)\(eta)")
-        }
-        if active.isEmpty { row(menu, "--", "no active experiments") }
-
-        menu.addItem(NSMenuItem.separator())
-        sec(menu, "FLEET")
-        row(menu, "Trainers", "\(trainers)")
-        if trainers == 0 {
-            let warn = NSMenuItem(title: "  ⚠️ NO TRAINERS — restart needed", action: nil, keyEquivalent: "")
-            warn.isEnabled = false
-            menu.addItem(warn)
-        }
-
-        menu.addItem(NSMenuItem.separator())
-        sec(menu, "ALL CHECKPOINTS")
-        for c in ckpts.prefix(8) {
-            let age = c.age < 60 ? "\(c.age)s" : c.age < 3600 ? "\(c.age/60)m" : "\(c.age/3600)h"
-            let fresh = c.age < 600 ? "●" : "○"
-            row(menu, "\(fresh) \(String(format: "%.4f", c.scorer))", "ep \(c.epoch) · \(c.tag) · \(age)")
-        }
-
-        menu.addItem(NSMenuItem.separator())
-        let q = NSMenuItem(title: "Quit Fleet Monitor", action: #selector(NSApplication.terminate(_:)), keyEquivalent: "q")
-        menu.addItem(q)
-
-        item.menu = menu
-    }
-
-    struct Checkpoint {
-        let tag: String; let epoch: Int; let scorer: Double; let age: Int
-        let trend: Double; let etaEpochs: Int?
-    }
-
-    func readCheckpoints() -> [Checkpoint] {
         let fm = FileManager.default
-        guard let files = try? fm.contentsOfDirectory(atPath: WEIGHTS_DIR) else { return [] }
-        var results: [Checkpoint] = []
+        guard let files = try? fm.contentsOfDirectory(atPath: WEIGHTS) else { return }
+        var exps: [Experiment] = []
         for f in files where f.hasSuffix("_best_meta.json") {
-            let path = "\(WEIGHTS_DIR)/\(f)"
+            let path = "\(WEIGHTS)/\(f)"
             guard let data = fm.contents(atPath: path),
                   let j = try? JSONSerialization.jsonObject(with: data) as? [String:Any],
                   let scorer = j["scorer"] as? Double,
                   let epoch = j["epoch"] as? Int else { continue }
             let tag = f.replacingOccurrences(of: "postfilter_", with: "").replacingOccurrences(of: "_best_meta.json", with: "")
+            if tag.contains("test") || tag.contains("debug") { continue }
             let attrs = try? fm.attributesOfItem(atPath: path)
             let mod = (attrs?[.modificationDate] as? Date) ?? .distantPast
             let age = Int(Date().timeIntervalSince(mod))
-            // Skip test/debug checkpoints
-            if tag.contains("test") || tag.contains("debug") { continue }
-            results.append(Checkpoint(tag: tag, epoch: epoch, scorer: scorer, age: age, trend: 0, etaEpochs: nil))
+            exps.append(Experiment(tag: tag, epoch: epoch, scorer: scorer, age: age, active: age < 600))
+
+            // Notify new best
+            let key = "\(tag)_\(epoch)"
+            if age < 30 && scorer < bestScorer && !notifiedKeys.contains(key) {
+                bestScorer = scorer
+                notifiedKeys.insert(key)
+                notify("📉 New best: \(String(format: "%.4f", scorer))", "\(tag) ep \(epoch)")
+            }
         }
-        return results.sorted { $0.scorer < $1.scorer }
-    }
-
-    func countTrainers() -> Int {
-        let out = sh("ps aux | grep python | grep -E 'train_postfilter|segnet_boundary' | grep -v grep | grep -v dashboard | wc -l")
-        return Int(out.trimmingCharacters(in: .whitespacesAndNewlines)) ?? 0
-    }
-
-    func notify(_ title: String, _ body: String) {
-        let c = UNMutableNotificationContent()
-        c.title = title; c.body = body; c.sound = .default
-        let r = UNNotificationRequest(identifier: UUID().uuidString, content: c, trigger: nil)
-        UNUserNotificationCenter.current().add(r)
-    }
-
-    func userNotificationCenter(_ center: UNUserNotificationCenter, willPresent n: UNNotification, withCompletionHandler h: @escaping (UNNotificationPresentationOptions) -> Void) {
-        h([.banner, .sound])
-    }
-
-    func sec(_ m: NSMenu, _ t: String) {
-        let i = NSMenuItem(title: t, action: nil, keyEquivalent: "")
-        i.attributedTitle = NSAttributedString(string: t, attributes: [.font: NSFont.systemFont(ofSize: 10, weight: .bold), .foregroundColor: NSColor.secondaryLabelColor])
-        i.isEnabled = false; m.addItem(i)
-    }
-
-    func row(_ m: NSMenu, _ l: String, _ v: String) {
-        let i = NSMenuItem(title: "\(l): \(v)", action: nil, keyEquivalent: "")
-        let s = NSMutableAttributedString()
-        s.append(NSAttributedString(string: "\(l)  ", attributes: [.font: NSFont.systemFont(ofSize: 12), .foregroundColor: NSColor.secondaryLabelColor]))
-        s.append(NSAttributedString(string: v, attributes: [.font: NSFont.monospacedSystemFont(ofSize: 12, weight: .medium), .foregroundColor: NSColor.labelColor]))
-        i.attributedTitle = s; i.isEnabled = false; m.addItem(i)
+        experiments = exps.sorted { $0.scorer < $1.scorer }
     }
 
     func sh(_ c: String) -> String {
@@ -197,10 +76,176 @@ class App: NSObject, NSApplicationDelegate, UNUserNotificationCenterDelegate {
         t.arguments = ["-c", c]; t.launchPath = "/bin/zsh"; t.launch()
         return String(data: p.fileHandleForReading.readDataToEndOfFile(), encoding: .utf8) ?? ""
     }
+
+    func notify(_ title: String, _ body: String) {
+        let c = UNMutableNotificationContent()
+        c.title = title; c.body = body; c.sound = .default
+        UNUserNotificationCenter.current().add(UNNotificationRequest(identifier: UUID().uuidString, content: c, trigger: nil))
+    }
+}
+
+// ── SwiftUI Popover ────────────────────────────────────────────────
+struct FleetView: View {
+    @ObservedObject var state: FleetState
+    let now = Date()
+
+    var daysLeft: Double { DEADLINE.timeIntervalSince(now) / 86400 }
+    var hrsSince: Double { now.timeIntervalSince(LAST_BREAK) / 3600 }
+    var active: [Experiment] { state.experiments.filter { $0.active } }
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 0) {
+            // Header
+            HStack {
+                Text("comma-lab").font(.system(size: 13, weight: .bold, design: .monospaced)).foregroundColor(.teal)
+                Spacer()
+                Text(state.trainers > 0 ? "⚡ \(state.trainers) training" : "⏸ idle")
+                    .font(.system(size: 11, design: .monospaced))
+                    .foregroundColor(state.trainers > 0 ? .green : .red)
+            }.padding(.horizontal, 12).padding(.top, 10).padding(.bottom, 6)
+
+            Divider().padding(.horizontal, 8)
+
+            // Score bar
+            HStack(spacing: 16) {
+                VStack(alignment: .leading, spacing: 2) {
+                    Text("SCORE").font(.system(size: 9, weight: .bold)).foregroundColor(.secondary)
+                    Text(String(format: "%.3f", SCORE)).font(.system(size: 24, weight: .bold, design: .monospaced)).foregroundColor(.teal)
+                    Text("#1 · +\(String(format: "%.3f", LB[1].s - SCORE)) lead").font(.system(size: 10, design: .monospaced)).foregroundColor(.secondary)
+                }
+                Spacer()
+                VStack(alignment: .trailing, spacing: 2) {
+                    Text("DEADLINE").font(.system(size: 9, weight: .bold)).foregroundColor(.secondary)
+                    Text(String(format: "%.1fd", daysLeft)).font(.system(size: 24, weight: .bold, design: .monospaced)).foregroundColor(daysLeft < 5 ? .orange : .primary)
+                    Text("May 3 11:59pm AOE").font(.system(size: 10, design: .monospaced)).foregroundColor(.secondary)
+                }
+            }.padding(.horizontal, 12).padding(.vertical, 8)
+
+            // Progress bars
+            HStack(spacing: 8) {
+                VStack(alignment: .leading, spacing: 2) {
+                    Text("HEADROOM TO 1.50").font(.system(size: 9, weight: .bold)).foregroundColor(.secondary)
+                    GeometryReader { g in
+                        let pct = min(1, (SCORE - 1.50) / (2.08 - 1.50))
+                        ZStack(alignment: .leading) {
+                            RoundedRectangle(cornerRadius: 3).fill(Color.gray.opacity(0.2)).frame(height: 6)
+                            RoundedRectangle(cornerRadius: 3).fill(Color.teal).frame(width: g.size.width * (1 - pct), height: 6)
+                        }
+                    }.frame(height: 6)
+                    Text("\(String(format: "%.3f", SCORE - 1.50)) remaining").font(.system(size: 9, design: .monospaced)).foregroundColor(.secondary)
+                }
+                VStack(alignment: .leading, spacing: 2) {
+                    Text("TIME ELAPSED").font(.system(size: 9, weight: .bold)).foregroundColor(.secondary)
+                    GeometryReader { g in
+                        let total: Double = 30 // ~30 day contest
+                        let elapsed = total - daysLeft
+                        let pct = min(1, elapsed / total)
+                        ZStack(alignment: .leading) {
+                            RoundedRectangle(cornerRadius: 3).fill(Color.gray.opacity(0.2)).frame(height: 6)
+                            RoundedRectangle(cornerRadius: 3).fill(daysLeft < 5 ? Color.orange : Color.blue).frame(width: g.size.width * pct, height: 6)
+                        }
+                    }.frame(height: 6)
+                    Text("\(String(format: "%.1fh", hrsSince)) since breakthrough").font(.system(size: 9, design: .monospaced)).foregroundColor(.secondary)
+                }
+            }.padding(.horizontal, 12).padding(.bottom, 8)
+
+            Divider().padding(.horizontal, 8)
+
+            // Active experiments
+            Text("LIVE EXPERIMENTS").font(.system(size: 9, weight: .bold)).foregroundColor(.secondary).padding(.horizontal, 12).padding(.top, 6)
+            if active.isEmpty {
+                Text("No active experiments").font(.system(size: 11)).foregroundColor(.red).padding(.horizontal, 12).padding(.vertical, 4)
+            } else {
+                ForEach(active) { e in
+                    HStack {
+                        Circle().fill(e.age < 120 ? Color.green : Color.orange).frame(width: 6, height: 6)
+                        Text(String(format: "%.4f", e.scorer)).font(.system(size: 12, weight: .bold, design: .monospaced)).foregroundColor(.teal)
+                        Text("ep \(e.epoch)").font(.system(size: 11, design: .monospaced)).foregroundColor(.secondary)
+                        Spacer()
+                        Text(e.tag.prefix(20)).font(.system(size: 10, design: .monospaced)).foregroundColor(.orange).lineLimit(1)
+                        Text(e.age < 60 ? "\(e.age)s" : "\(e.age/60)m").font(.system(size: 10, design: .monospaced)).foregroundColor(e.age < 120 ? .green : .secondary)
+                    }.padding(.horizontal, 12).padding(.vertical, 2)
+                }
+            }
+
+            Divider().padding(.horizontal, 8).padding(.top, 4)
+
+            // Leaderboard
+            Text("LEADERBOARD").font(.system(size: 9, weight: .bold)).foregroundColor(.secondary).padding(.horizontal, 12).padding(.top, 4)
+            ForEach(0..<LB.count, id: \.self) { i in
+                HStack {
+                    Text("#\(i+1)").font(.system(size: 10, weight: .bold, design: .monospaced)).foregroundColor(.secondary).frame(width: 20)
+                    Text(String(format: "%.3f", LB[i].s)).font(.system(size: 11, weight: .bold, design: .monospaced)).foregroundColor(i == 0 ? .teal : .primary)
+                    Text(LB[i].n).font(.system(size: 10, design: .monospaced)).foregroundColor(.secondary)
+                    if i == 0 { Text("←").font(.system(size: 10)).foregroundColor(.teal) }
+                }.padding(.horizontal, 12).padding(.vertical, 1)
+            }
+
+            Divider().padding(.horizontal, 8).padding(.top, 4)
+
+            // Quit
+            Button("Quit Fleet Monitor") { NSApplication.shared.terminate(nil) }
+                .buttonStyle(.plain).font(.system(size: 11)).foregroundColor(.secondary)
+                .padding(.horizontal, 12).padding(.vertical, 6)
+        }
+        .frame(width: 340)
+        .background(Color(nsColor: .windowBackgroundColor))
+    }
+}
+
+// ── App Delegate with Popover ──────────────────────────────────────
+class AppDel: NSObject, NSApplicationDelegate, UNUserNotificationCenterDelegate {
+    var statusItem: NSStatusItem!
+    var popover: NSPopover!
+    var state = FleetState()
+    var timer: Timer?
+
+    func applicationDidFinishLaunching(_ n: Notification) {
+        UNUserNotificationCenter.current().delegate = self
+        UNUserNotificationCenter.current().requestAuthorization(options: [.alert, .sound]) { _, _ in }
+
+        statusItem = NSStatusBar.system.statusItem(withLength: NSStatusItem.variableLength)
+        statusItem.button?.font = NSFont.monospacedSystemFont(ofSize: 11, weight: .medium)
+        statusItem.button?.action = #selector(toggle)
+        statusItem.button?.target = self
+
+        popover = NSPopover()
+        popover.contentSize = NSSize(width: 340, height: 460)
+        popover.behavior = .transient
+        popover.contentViewController = NSHostingController(rootView: FleetView(state: state))
+
+        state.refresh()
+        updateTitle()
+        timer = Timer.scheduledTimer(withTimeInterval: 5, repeats: true) { [weak self] _ in
+            self?.state.refresh()
+            self?.updateTitle()
+        }
+    }
+
+    func updateTitle() {
+        let days = DEADLINE.timeIntervalSince(Date()) / 86400
+        let icon = state.trainers > 0 ? "⚡" : "⏸"
+        DispatchQueue.main.async {
+            self.statusItem.button?.title = "\(icon) \(String(format: "%.3f", SCORE)) · \(self.state.trainers)t · \(Int(days))d"
+        }
+    }
+
+    @objc func toggle() {
+        if popover.isShown {
+            popover.performClose(nil)
+        } else if let btn = statusItem.button {
+            state.refresh()
+            popover.show(relativeTo: btn.bounds, of: btn, preferredEdge: .minY)
+        }
+    }
+
+    func userNotificationCenter(_ c: UNUserNotificationCenter, willPresent n: UNNotification, withCompletionHandler h: @escaping (UNNotificationPresentationOptions) -> Void) {
+        h([.banner, .sound])
+    }
 }
 
 let app = NSApplication.shared
 app.setActivationPolicy(.accessory)
-let d = App()
-app.delegate = d
+let del = AppDel()
+app.delegate = del
 app.run()
