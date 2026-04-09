@@ -1,0 +1,41 @@
+[proxy-faithful] weights: /private/tmp/pact-mine/experiments/postfilter_weights/postfilter_segnet_attack_fixed_ste_h32_int8.pt
+[proxy-faithful] archive: /Users/adpena/Projects/pact/submissions/robust_current/archive.zip
+[proxy-faithful] device: cpu
+[proxy-faithful] Inflating /var/folders/xr/cdmnz18s68j8sybt6vcwjs200000gn/T/tmp_3ly2oz_/archive/0.mkv with post-filter...
+[proxy-faithful] Inflated 1200 frames
+[proxy-faithful] Running upstream evaluate.py...
+=== Evaluation config ===
+  batch_size: 16
+  device: cpu
+  num_threads: 2
+  prefetch_queue_depth: 4
+  report: /var/folders/xr/cdmnz18s68j8sybt6vcwjs200000gn/T/tmp_3ly2oz_/submission/report.txt
+  seed: 1234
+  submission_dir: /var/folders/xr/cdmnz18s68j8sybt6vcwjs200000gn/T/tmp_3ly2oz_/submission
+  uncompressed_dir: /Users/adpena/Projects/pact/workspace/upstream/comma_video_compression_challenge/videos
+  video_names_file: /Users/adpena/Projects/pact/workspace/upstream/comma_video_compression_challenge/public_test_video_names.txt
+AVVideoDataset on rank 0 with 1 files.
+TensorVideoDataset on rank 0 with 1 files.
+=== Evaluation results over 600 samples ===
+  Average PoseNet Distortion: 0.05168364
+  Average SegNet Distortion: 0.00543626
+  Submission file size: 864,167 bytes
+  Original uncompressed size: 37,545,489 bytes
+  Compression Rate: 0.02301653
+  Final score: 100*segnet_dist + √(10*posenet_dist) + 25*rate = 1.84
+
+[proxy-faithful] Results:
+  PoseNet distortion: 0.05168364
+  SegNet distortion:  0.00543626
+  Compression rate:   0.02301653
+  Final score:        1.8400
+{
+  "pose_distortion": 0.05168364,
+  "seg_distortion": 0.00543626,
+  "current_workflow_rate": 0.02301653,
+  "current_workflow_score": 1.84,
+  "current_workflow_archive_bytes": 864167,
+  "weights": "/private/tmp/pact-mine/experiments/postfilter_weights/postfilter_segnet_attack_fixed_ste_h32_int8.pt",
+  "archive": "/Users/adpena/Projects/pact/submissions/robust_current/archive.zip",
+  "device": "cpu"
+}

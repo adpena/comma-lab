@@ -40,6 +40,7 @@ Track B's promoted honest floor is now **`1.73`** after the `h64` long-horizon Q
 
 - `1.73` - long1000 QAT+EMA learned int8 post-filter (`alpha=20 h64`), promoted
 - `1.84` - weighted ensemble learned int8 post-filter (`long1000 h32 + MC refine1`, `75/25`), prior promoted floor
+- `1.84` - SegNet fixed h32 faithful proxy, strongest resolved SegNet-family alternate
 - `1.85` - long1000 QAT+EMA learned int8 post-filter (`alpha=20 h32`), older promoted floor
 - `1.85` - PSD h64 faithful proxy, resolved non-promoted alternate
 - `1.86` - Monte Carlo / layer-scale refinements, strongest non-promoted alternate family
@@ -56,8 +57,10 @@ Track B's promoted honest floor is now **`1.73`** after the `h64` long-horizon Q
 - The current live `dilated h64` artifact still has one operational caveat: its `/private/tmp` saved meta reports `variant: "saliency_weighted"`, so it should stay observation-only until it is relaunched with the repo-side deploy-correct wrapper. The refreshed proxy gate now shows the raw local gap is only `0.0281`, but deployability still blocks it.
 - `pixelshuffle_h64_long1000` was the strongest deploy-ready packaged side lane, and its faithful proxy has now resolved as a clean reject at **`1.99`**. That is a real transfer, but it is nowhere near the promoted `1.73` floor.
 - `psd_h64_long1000` has now also resolved honestly at **`1.85`** with PoseNet `0.05271273` and SegNet `0.00551752`. That is a real near-miss, but still a reject for promotion.
+- The first real saved SegNet-family artifact, `segnet_attack_fixed_ste_h32`, has now also resolved honestly at **`1.84`** with PoseNet `0.05168364` and SegNet `0.00543626`. That makes it the strongest resolved SegNet-family alternate so far, but it still does not beat the promoted `1.73` floor.
+- The SegNet trainer itself is now less bug-prone for future reruns: `experiments/train_postfilter_segnet_attack.py` now always writes a durable `*_final_meta.json` and backstops `*_best_meta.json` when a best-checkpoint payload exists.
 - The next honest promotion path is no longer “proxy PSD/pixelshuffle again”; it is to make `dilated_h64_long1000` deploy-correct and to get fresh SegNet lanes that actually emit `best_*` artifacts.
-- The SegNet/research side lanes remain non-promoted for now: `segnet_attack_fixed_v2` has printed through epoch `1000 / 1.0671`, `segnet_attack_h64` through epoch `480 / 1.0544`, and neither has written a fresh `best_*` artifact. The best explanation is still stale long-running processes rather than a fresh code-path failure.
+- The SegNet/research side lanes remain non-promoted for now: `segnet_attack_fixed_v2` has printed through epoch `1000 / 1.0671` and did finally write a real fp32/int8 pair, but still no proper `best_meta` record; `segnet_attack_h64` is through epoch `480 / 1.0544` and still has no rankable saved artifact.
 - Sidecar tooling is now on disk:
   - `reports/raw/2026-04-09-sidecar-analysis/live_fleet_snapshot.json`
   - `reports/raw/2026-04-09-sidecar-analysis/proxy_gate_triage.json`

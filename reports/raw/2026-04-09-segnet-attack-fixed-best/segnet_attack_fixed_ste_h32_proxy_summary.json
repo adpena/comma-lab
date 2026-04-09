@@ -1,0 +1,10 @@
+{
+  "pose_distortion": 0.05168364,
+  "seg_distortion": 0.00543626,
+  "current_workflow_rate": 0.02301653,
+  "current_workflow_score": 1.84,
+  "current_workflow_archive_bytes": 864167,
+  "weights": "/private/tmp/pact-mine/experiments/postfilter_weights/postfilter_segnet_attack_fixed_ste_h32_int8.pt",
+  "archive": "/Users/adpena/Projects/pact/submissions/robust_current/archive.zip",
+  "device": "cpu"
+}
