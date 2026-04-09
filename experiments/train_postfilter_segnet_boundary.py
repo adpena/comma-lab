@@ -36,13 +36,15 @@ import torch.nn.functional as F
 # Import the base training infrastructure
 sys.path.insert(0, str(Path(__file__).parent))
 from train_postfilter_saliency import (
-    PROJECT, ARCHIVE_ZIP, GT_VIDEO,
+    PROJECT, ARCHIVE_ZIP, VIDEOS_DIR,
     DEVICE, PostFilter, QATPostFilter,
-    decode_archive, decode_gt_video, build_pairs,
-    load_scorer_models, compute_saliency_reconstruction_loss,
-    pair_from_frames, maybe_to_device,
-    save_best_checkpoint, evaluate_ema_model,
+    decode_archive, decode_video, build_pairs,
+    load_scorers, compute_saliency_reconstruction_loss,
+    load_saliency_weights, scorer_forward_pair,
+    apply_filter_to_pair, init_ema_state, update_ema_state,
+    compute_pair_loss,
 )
+from train_postfilter_qat_ema import save_best_checkpoint, quantize_state_dict_like_saved_int8
 
 
 def compute_boundary_masks(gt_pairs, segnet, device="cpu"):
@@ -101,11 +103,10 @@ def compute_pair_loss_segnet_boundary(
     more gradient than non-boundary pixels. This focuses learning on the pixels
     that can actually flip the scorer.
     """
-    from train_postfilter_saliency import scorer_forward_pair
-
     B, T, H, W, C = filtered_pair_hwc.shape
-    fx = filtered_pair_hwc
-    gx = gt_pair_hwc
+    # scorer_forward_pair expects (B, T, C, H, W) float
+    fx = filtered_pair_hwc.float().permute(0, 1, 4, 2, 3).contiguous()
+    gx = gt_pair_hwc.float().permute(0, 1, 4, 2, 3).contiguous()
 
     fp_out, fs_out = scorer_forward_pair(fx, posenet, segnet)
     with torch.no_grad():
@@ -162,13 +163,13 @@ def main():
     print(f"[segnet-boundary] h={args.hidden}, boundary_weight={args.boundary_weight}")
 
     # Load models
-    posenet, segnet = load_scorer_models()
+    posenet, segnet = load_scorers(DEVICE)
 
     # Decode frames
     print("[segnet-boundary] Decoding compressed archive...")
     comp_frames = decode_archive(str(ARCHIVE_ZIP))
     print(f"[segnet-boundary] Decoding GT video...")
-    gt_frames = decode_gt_video(str(GT_VIDEO))
+    gt_frames = decode_video(str(VIDEOS_DIR / "0.mkv"))
 
     comp_pairs = build_pairs(comp_frames)
     gt_pairs = build_pairs(gt_frames)
@@ -183,12 +184,11 @@ def main():
     gt_pairs = [p.to(DEVICE) for p in gt_pairs]
 
     # Compute saliency weights
-    from train_postfilter_saliency import compute_saliency_weights
-    sal_weights = compute_saliency_weights(gt_frames, posenet, DEVICE, args.alpha)
+    sal_weights = load_saliency_weights(args.alpha, len(gt_frames), DEVICE)
 
     # Build model
     model = QATPostFilter(hidden=args.hidden, kernel=args.kernel).to(DEVICE)
-    ema_state = {k: v.clone() for k, v in model.state_dict().items()}
+    ema_state = init_ema_state(model)
 
     optimizer = torch.optim.AdamW(model.parameters(), lr=args.lr, weight_decay=1e-4)
     scheduler = torch.optim.lr_scheduler.CosineAnnealingWarmRestarts(
@@ -213,21 +213,21 @@ def main():
         indices = torch.randperm(n_pairs)
         for step_i, idx in enumerate(indices):
             idx = idx.item()
-            filtered = model(comp_pairs[idx][:, 1:2].permute(0, 1, 4, 2, 3).reshape(-1, 3, *comp_pairs[idx].shape[2:4]).float())
-            # Rebuild the pair with filtered frame
-            filtered_pair = comp_pairs[idx].clone().float()
-            filtered_pair[:, 1] = filtered.permute(0, 2, 3, 1)
+            # Apply filter to pair (handles format conversion)
+            filtered_pair = apply_filter_to_pair(model, comp_pairs[idx], DEVICE)
 
             loss, pd, sd = compute_pair_loss_segnet_boundary(
                 filtered_pair, gt_pairs[idx], posenet, segnet,
                 boundary_masks[idx], args.boundary_weight,
             )
 
-            # Add saliency reconstruction
-            comp_bchw = comp_pairs[idx][:, 1].permute(0, 3, 1, 2).float()
+            # Saliency reconstruction on the filtered frame
+            B, T, H, W, C = filtered_pair.shape
+            filtered_bchw = filtered_pair[:, 1].permute(0, 3, 1, 2)
+            comp_bchw = comp_pairs[idx][:, 1].float().permute(0, 3, 1, 2)
+            sal_idx = min(idx * 2 + 1, len(sal_weights) - 1)
             sal_recon = compute_saliency_reconstruction_loss(
-                filtered, comp_bchw,
-                sal_weights[idx * 2 + 1: idx * 2 + 2] if idx * 2 + 1 < len(sal_weights) else sal_weights[-1:]
+                filtered_bchw, comp_bchw, sal_weights[sal_idx:sal_idx+1]
             )
             total = loss + args.sal_lambda * sal_recon
 
@@ -252,8 +252,22 @@ def main():
         avg_pose = total_pose / n_pairs
         avg_seg = total_seg / n_pairs
 
-        # Evaluate EMA with int8
-        scorer_val = evaluate_ema_model(model, ema_state, comp_pairs, gt_pairs, posenet, segnet, DEVICE)
+        # Evaluate EMA with int8 quantization
+        orig_state = {k: v.clone() for k, v in model.state_dict().items()}
+        model.load_state_dict(ema_state)
+        q_state = quantize_state_dict_like_saved_int8(model.state_dict())
+        model.load_state_dict(q_state)
+        model.eval()
+        total_p, total_s = 0.0, 0.0
+        with torch.no_grad():
+            for idx in range(n_pairs):
+                filtered = apply_filter_to_pair(model, comp_pairs[idx], DEVICE)
+                _, pd, sd = compute_pair_loss(filtered, gt_pairs[idx], posenet, segnet)
+                total_p += pd
+                total_s += sd
+        scorer_val = 100.0 * (total_s / n_pairs) + math.sqrt(10.0 * (total_p / n_pairs))
+        model.load_state_dict(orig_state)
+        model.train()
 
         if scorer_val < best_scorer:
             best_scorer = scorer_val
