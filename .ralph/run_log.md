@@ -2344,3 +2344,36 @@ The partner's `save_best_checkpoint` function evaluates the EMA weights AFTER in
 ### council strategic review
 - dispatched full council (Tao, Karpathy, LeCun, Jensen, Rubin, Collier)
 - question: optimal 24-day strategy, submission timing, writeup approach
+
+## 2026-04-09 19:00:00 -0500 - council strategic review: stop exploring, start exploiting
+
+### unanimous recommendations
+1. h=96 on Modal A10G (launched — expected 1.65)
+2. submit current 1.727 as PR in 3-5 days (claim #1)
+3. start writeup draft now (writeup prize is $1000)
+4. killed all non-promoted local experiments
+5. h=128 on Modal next (after h=96 converges)
+6. SegNet STE on Modal parallel lane
+
+### what NOT to do (council unanimous)
+- LSQ (marginal vs width scaling)
+- pair-aware 6-channel (PoseNet leverage too low)
+- any more preprocessing (dead end)
+- new architecture variants (all rejected)
+- film-grain or CRF sweeps (dead end)
+
+### Rubin on writeup
+- story arc: discovery → math → mechanism → scaling law → negative results
+- site is an asset — reference in PR
+- submit draft writeup with first PR
+
+### Collier on composition
+- sequential stacking (A→B) worth trying after h=96 converges
+- temporal consistency loss worth adding (cheap, no arch change)
+- but: "get h=96 trained first, then refine"
+
+### Jensen on compute
+- Modal A10G is primary training surface from now on
+- Local Mac = proxy/scoring factory
+- bat00 = authoritative scorer only
+- Modal cost: ~$120-240 for 10-20 days continuous, trivially justified for $1000+ prize
