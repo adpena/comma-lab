@@ -38,6 +38,25 @@ You must not edit without explicit human approval:
 - `LICENSE`
 - `THIRD_PARTY_NOTICES.md`
 
+## Non-Negotiable Upstream Rule
+
+- The pinned upstream snapshot is the source of truth for official scorer behavior and contest mechanics.
+- Never edit, patch, monkeypatch, hotfix, or "temporarily" modify anything inside the pinned upstream snapshot unless the human explicitly approves that exact action.
+- Never hack around upstream behavior by altering upstream files to make local experiments or scores look better.
+- If upstream behavior appears wrong, inconvenient, or blocking, work around it only from the allowed mutation frontier and record the issue in repo state instead of changing upstream.
+- If any experiment, proxy, or tooling change depends on upstream edits, stop treating it as compliant until the human has explicitly authorized that upstream modification.
+
+## Strategic Secrecy Rule
+
+- Protect competitive details for as long as that is strategically useful.
+- Do not assume the right time to disclose is "now". Delay irreversible public disclosure until the human explicitly decides it is time to submit or publish.
+- Treat the official public PR to the challenge repo as a disclosure moment. Until then, prefer private/local execution, private artifacts, and controlled summaries.
+- Do not volunteer exact secret-sauce implementation details, hidden operational levers, or step-by-step reproduction recipes on public-facing surfaces unless the human explicitly wants that level of disclosure.
+- Do not publish or surface unpublished private artifacts, credentials, private host details, or anything the human has not approved for disclosure.
+- If there is a tradeoff between public writeup richness and preserving competitive edge, bias toward preserving edge unless the human says otherwise.
+- **Explicit current exception:** the Cloudflare site may remain specific and detailed for now because the human explicitly approved that. Even there, still avoid exposing credentials, private infrastructure details, or anything the human has not approved for disclosure.
+- **Explicit current restriction:** do not proactively publicize or advertise the Cloudflare site URL. Keep that link confined to private repo documentation and the eventual official submission until the human explicitly says the link itself can be shared broadly.
+
 ## Operating rules
 
 - Prefer at most 3 experiments per cycle.
@@ -47,10 +66,24 @@ You must not edit without explicit human approval:
 - Keep both tracks healthy even if one looks dominant.
 - Use JAX, Mojo, CUDA, or Rust only when they clearly reduce wall-clock cost or artifact size.
 - Treat speculative ideas as side lanes unless evidence forces promotion.
+- Keep public-facing detail intentional: specific enough to be credible, not automatically exhaustive.
+
+## Git discipline
+
+We need a fine-grained history of every file touched. Git is our lab notebook's version control.
+
+- **Commit early and often.** After writing or updating any document, log, report, config, or experiment file, `git add` and `git commit` immediately with a descriptive message. Do not batch up changes across unrelated work.
+- **One logical change per commit.** A run-log update is one commit. A new experiment script is another. A writeup edit is another. Do not combine them.
+- **Always commit durable state files.** Every time you update `.ralph/run_log.md`, `.omx/state/*`, `.omx/research/*`, `reports/**`, or `docs/**`, commit right away. These are the research record.
+- **Commit experiment artifacts.** New training scripts, config files, analysis outputs — commit on creation.
+- **Never leave docs uncommitted overnight.** If a cycle touches documentation or state files, those changes must be committed before the cycle ends.
+- **Commit message format:** `<what changed>: <why>` — e.g., `run_log: record h=64 breakthrough at 1.727` or `writeup: update hero tagline and nav links`.
+
+This is critical for the doc evolution viewer and the competition writeup. Our git history IS our research timeline. Every uncommitted change is invisible history.
 
 ## Required durable state
 
-After each serious cycle, update at least:
+After each serious cycle, update and **commit** at least:
 
 - `.omx/state/current_focus.md`
 - `.omx/state/next_experiments.md`
@@ -87,3 +120,4 @@ A candidate may be promoted only after:
 Treat files and git as memory.
 Each iteration should be resumable from disk.
 Do not rely on long chat context for continuity.
+Commit after every meaningful file change — git history is the research timeline.
