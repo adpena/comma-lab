@@ -47,9 +47,29 @@ print(f"Workdir: {WORKDIR}")
 print(f"Persist: {PERSIST}")
 
 # ── Install dependencies ──────────────────────────────────────
+# Check GPU CUDA capability — P100 is sm_60, needs older PyTorch
+try:
+    import torch as _t
+    if _t.cuda.is_available():
+        cap = _t.cuda.get_device_capability(0)
+        if cap[0] < 7:
+            print(f"GPU capability sm_{cap[0]}{cap[1]} < 7.0 — installing compatible PyTorch...")
+            subprocess.run([sys.executable, '-m', 'pip', 'install', '-q',
+                            'torch==2.1.2+cu118', '--index-url',
+                            'https://download.pytorch.org/whl/cu118'], check=False)
+except ImportError:
+    pass
+
 subprocess.run([sys.executable, '-m', 'pip', 'install', '-q',
-                'torch', 'av', 'safetensors', 'timm', 'einops',
+                'av', 'safetensors', 'timm', 'einops',
                 'segmentation-models-pytorch', 'numpy'], check=True)
+
+# Ensure torch is available (install if not already)
+try:
+    import torch
+except ImportError:
+    subprocess.run([sys.executable, '-m', 'pip', 'install', '-q', 'torch'], check=True)
+    import torch
 
 # ── Clone upstream repo ──────────────────────────────────────
 UPSTREAM = os.path.join(WORKDIR, 'comma_video_compression_challenge')
