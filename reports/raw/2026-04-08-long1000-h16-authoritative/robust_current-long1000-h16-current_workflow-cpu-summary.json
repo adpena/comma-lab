@@ -1,0 +1,26 @@
+{
+  "copied_report_path": "/Users/adpena/Projects/pact/reports/raw/2026-04-08-long1000-h16-authoritative/robust_current-long1000-h16-current_workflow-cpu-report.txt",
+  "current_workflow_archive_bytes": 864167,
+  "current_workflow_rate": 0.02301653,
+  "current_workflow_score": 1.92,
+  "device": "cpu",
+  "original_uncompressed_bytes": 37545489,
+  "pose_distortion": 0.05890975,
+  "report_path": "/private/tmp/pact-mine/workspace/upstream/comma_video_compression_challenge/submissions/robust_current/report.txt",
+  "rule_faithful_bundle_bytes": 927230,
+  "rule_faithful_bundle_paths": [
+    "archive.zip",
+    "inflate.sh",
+    "inflate.py",
+    "inflate_postfilter.py",
+    "inflate_grain_mask.py",
+    "postfilter_int8.pt",
+    "config.env",
+    "analyze_roi.py"
+  ],
+  "rule_faithful_rate": 0.024696175884138836,
+  "rule_faithful_score": 1.9642242695971968,
+  "rule_faithful_status": "estimated_from_scorer_distortions_plus_installed_runtime_payload",
+  "seg_distortion": 0.00579293,
+  "track": "robust_current"
+}

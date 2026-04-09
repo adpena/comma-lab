@@ -1,0 +1,81 @@
+Archive:  /Users/adpena/Projects/pact/workspace/upstream/comma_video_compression_challenge/submissions/robust_current/archive.zip
+  inflating: /Users/adpena/Projects/pact/workspace/upstream/comma_video_compression_challenge/submissions/robust_current/archive/0.mkv  
+Inflating /Users/adpena/Projects/pact/workspace/upstream/comma_video_compression_challenge/submissions/robust_current/archive/0.mkv -> /Users/adpena/Projects/pact/workspace/upstream/comma_video_compression_challenge/submissions/robust_current/inflated/0.raw
+ffmpeg version 8.1 Copyright (c) 2000-2026 the FFmpeg developers
+  built with Apple clang version 17.0.0 (clang-1700.6.4.2)
+  configuration: --prefix=/opt/homebrew/Cellar/ffmpeg/8.1 --enable-shared --enable-pthreads --enable-version3 --cc=clang --host-cflags= --host-ldflags= --enable-ffplay --enable-gpl --enable-libsvtav1 --enable-libopus --enable-libx264 --enable-libmp3lame --enable-libdav1d --enable-libvpx --enable-libx265 --enable-openssl --enable-videotoolbox --enable-audiotoolbox --enable-neon
+  libavutil      60. 26.100 / 60. 26.100
+  libavcodec     62. 28.100 / 62. 28.100
+  libavformat    62. 12.100 / 62. 12.100
+  libavdevice    62.  3.100 / 62.  3.100
+  libavfilter    11. 14.100 / 11. 14.100
+  libswscale      9.  5.100 /  9.  5.100
+  libswresample   6.  3.100 /  6.  3.100
+Input #0, matroska,webm, from '/Users/adpena/Projects/pact/workspace/upstream/comma_video_compression_challenge/submissions/robust_current/archive/0.mkv':
+  Metadata:
+    SEGMENT         : b0c9d2329ad1606b|2018-07-27--06-03-57/10/video.hevc
+    ENCODER         : Lavf62.12.100
+  Duration: 00:01:00.00, start: 0.000000, bitrate: 112 kb/s
+  Stream #0:0: Video: av1 (libdav1d) (Main), yuv420p(tv, bt709, progressive), 528x392 [SAR 1:1 DAR 66:49], 20 fps, 20 tbr, 1k tbn
+    Metadata:
+      ENCODER         : Lavc62.28.100 libsvtav1
+      DURATION        : 00:01:00.000000000
+Stream mapping:
+  Stream #0:0 -> #0:0 (av1 (libdav1d) -> rawvideo (native))
+Press [q] to stop, [?] for help
+Output #0, rawvideo, to '/Users/adpena/Projects/pact/workspace/upstream/comma_video_compression_challenge/submissions/robust_current/inflated/0.raw':
+  Metadata:
+    SEGMENT         : b0c9d2329ad1606b|2018-07-27--06-03-57/10/video.hevc
+    encoder         : Lavf62.12.100
+  Stream #0:0: Video: rawvideo (RGB[24] / 0x18424752), rgb24(pc, gbr/bt709/bt709, progressive), 1164x874 [SAR 4807:4753 DAR 66:49], q=2-31, 488321 kb/s, 20 fps, 20 tbn
+    Metadata:
+      encoder         : Lavc62.28.100 rawvideo
+      DURATION        : 00:01:00.000000000
+frame=   19 fps=0.0 q=-0.0 size=   53504KiB time=00:00:00.95 bitrate=461373.4kbits/s speed=1.88x elapsed=0:00:00.50    frame=   41 fps= 41 q=-0.0 size=  119040KiB time=00:00:02.05 bitrate=475695.5kbits/s speed=2.03x elapsed=0:00:01.01    frame=   63 fps= 42 q=-0.0 size=  184576KiB time=00:00:03.15 bitrate=480014.8kbits/s speed=2.08x elapsed=0:00:01.51    frame=   83 fps= 41 q=-0.0 size=  244224KiB time=00:00:04.15 bitrate=482092.3kbits/s speed=2.05x elapsed=0:00:02.02    frame=  108 fps= 43 q=-0.0 size=  318720KiB time=00:00:05.40 bitrate=483510.0kbits/s speed=2.13x elapsed=0:00:02.53    frame=  131 fps= 43 q=-0.0 size=  387328KiB time=00:00:06.55 bitrate=484426.1kbits/s speed=2.16x elapsed=0:00:03.03    frame=  156 fps= 44 q=-0.0 size=  461824KiB time=00:00:07.80 bitrate=485033.6kbits/s speed= 2.2x elapsed=0:00:03.54    frame=  178 fps= 44 q=-0.0 size=  527360KiB time=00:00:08.90 bitrate=485408.2kbits/s speed= 2.2x elapsed=0:00:04.05    frame=  203 fps= 45 q=-0.0 size=  601856KiB time=00:00:10.15 bitrate=485754.1kbits/s speed=2.23x elapsed=0:00:04.55    frame=  225 fps= 44 q=-0.0 size=  667392KiB time=00:00:11.25 bitrate=485980.0kbits/s speed=2.22x elapsed=0:00:05.06    frame=  248 fps= 45 q=-0.0 size=  736000KiB time=00:00:12.40 bitrate=486234.8kbits/s speed=2.23x elapsed=0:00:05.56    frame=  271 fps= 45 q=-0.0 size=  804608KiB time=00:00:13.55 bitrate=486446.4kbits/s speed=2.23x elapsed=0:00:06.06    frame=  293 fps= 45 q=-0.0 size=  870144KiB time=00:00:14.65 bitrate=486567.9kbits/s speed=2.23x elapsed=0:00:06.57    frame=  317 fps= 45 q=-0.0 size=  941824KiB time=00:00:15.85 bitrate=486777.4kbits/s speed=2.24x elapsed=0:00:07.07    frame=  337 fps= 44 q=-0.0 size= 1001216KiB time=00:00:16.85 bitrate=486763.3kbits/s speed=2.22x elapsed=0:00:07.58    frame=  360 fps= 45 q=-0.0 size= 1069824KiB time=00:00:18.00 bitrate=486888.8kbits/s speed=2.23x elapsed=0:00:08.08    frame=  383 fps= 45 q=-0.0 size= 1138432KiB time=00:00:19.15 bitrate=486999.2kbits/s speed=2.23x elapsed=0:00:08.58    frame=  405 fps= 45 q=-0.0 size= 1203968KiB time=00:00:20.25 bitrate=487057.1kbits/s speed=2.23x elapsed=0:00:09.09    frame=  427 fps= 44 q=-0.0 size= 1269504KiB time=00:00:21.35 bitrate=487109.0kbits/s speed=2.22x elapsed=0:00:09.59    frame=  450 fps= 45 q=-0.0 size= 1338112KiB time=00:00:22.50 bitrate=487191.7kbits/s speed=2.23x elapsed=0:00:10.10    frame=  470 fps= 44 q=-0.0 size= 1397760KiB time=00:00:23.50 bitrate=487253.2kbits/s speed=2.21x elapsed=0:00:10.61    frame=  493 fps= 44 q=-0.0 size= 1466368KiB time=00:00:24.65 bitrate=487322.0kbits/s speed=2.22x elapsed=0:00:11.12    frame=  514 fps= 44 q=-0.0 size= 1528832KiB time=00:00:25.70 bitrate=487322.6kbits/s speed=2.21x elapsed=0:00:11.62    frame=  539 fps= 44 q=-0.0 size= 1603328KiB time=00:00:26.95 bitrate=487364.1kbits/s speed=2.22x elapsed=0:00:12.13    frame=  560 fps= 44 q=-0.0 size= 1666048KiB time=00:00:28.00 bitrate=487438.0kbits/s speed=2.21x elapsed=0:00:12.64    frame=  587 fps= 45 q=-0.0 size= 1746432KiB time=00:00:29.35 bitrate=487453.9kbits/s speed=2.23x elapsed=0:00:13.14    frame=  610 fps= 45 q=-0.0 size= 1815040KiB time=00:00:30.50 bitrate=487501.9kbits/s speed=2.23x elapsed=0:00:13.65    frame=  634 fps= 45 q=-0.0 size= 1886464KiB time=00:00:31.70 bitrate=487505.1kbits/s speed=2.24x elapsed=0:00:14.15    frame=  656 fps= 45 q=-0.0 size= 1952000KiB time=00:00:32.80 bitrate=487523.9kbits/s speed=2.24x elapsed=0:00:14.66    frame=  678 fps= 45 q=-0.0 size= 2017536KiB time=00:00:33.90 bitrate=487541.4kbits/s speed=2.23x elapsed=0:00:15.17    frame=  702 fps= 45 q=-0.0 size= 2089216KiB time=00:00:35.10 bitrate=487602.8kbits/s speed=2.24x elapsed=0:00:15.68    frame=  723 fps= 45 q=-0.0 size= 2151680KiB time=00:00:36.15 bitrate=487595.1kbits/s speed=2.23x elapsed=0:00:16.18    frame=  747 fps= 45 q=-0.0 size= 2223360KiB time=00:00:37.35 bitrate=487651.0kbits/s speed=2.24x elapsed=0:00:16.68    frame=  773 fps= 45 q=-0.0 size= 2300672KiB time=00:00:38.65 bitrate=487635.3kbits/s speed=2.25x elapsed=0:00:17.19    frame=  796 fps= 45 q=-0.0 size= 2369280KiB time=00:00:39.80 bitrate=487666.9kbits/s speed=2.25x elapsed=0:00:17.70    frame=  817 fps= 45 q=-0.0 size= 2432000KiB time=00:00:40.85 bitrate=487709.8kbits/s speed=2.24x elapsed=0:00:18.20    frame=  842 fps= 45 q=-0.0 size= 2506496KiB time=00:00:42.10 bitrate=487724.8kbits/s speed=2.25x elapsed=0:00:18.71    frame=  862 fps= 45 q=-0.0 size= 2566144KiB time=00:00:43.15 bitrate=487180.8kbits/s speed=2.24x elapsed=0:00:19.22    frame=  886 fps= 45 q=-0.0 size= 2637568KiB time=00:00:44.30 bitrate=487741.7kbits/s speed=2.25x elapsed=0:00:19.73    frame=  908 fps= 45 q=-0.0 size= 2703104KiB time=00:00:45.40 bitrate=487749.5kbits/s speed=2.24x elapsed=0:00:20.23    frame=  930 fps= 45 q=-0.0 size= 2768640KiB time=00:00:46.50 bitrate=487757.0kbits/s speed=2.24x elapsed=0:00:20.74    frame=  950 fps= 45 q=-0.0 size= 2828288KiB time=00:00:47.50 bitrate=487775.5kbits/s speed=2.24x elapsed=0:00:21.24    frame=  973 fps= 45 q=-0.0 size= 2896896KiB time=00:00:48.65 bitrate=487798.0kbits/s speed=2.24x elapsed=0:00:21.75    frame=  994 fps= 45 q=-0.0 size= 2959360KiB time=00:00:49.70 bitrate=487788.3kbits/s speed=2.23x elapsed=0:00:22.26    frame= 1021 fps= 45 q=-0.0 size= 3040000KiB time=00:00:51.05 bitrate=487829.2kbits/s speed=2.24x elapsed=0:00:22.77    frame= 1045 fps= 45 q=-0.0 size= 3111424KiB time=00:00:52.25 bitrate=487823.6kbits/s speed=2.24x elapsed=0:00:23.28    frame= 1065 fps= 45 q=-0.0 size= 3171072KiB time=00:00:53.25 bitrate=487838.9kbits/s speed=2.24x elapsed=0:00:23.78    frame= 1091 fps= 45 q=-0.0 size= 3248640KiB time=00:00:54.55 bitrate=487861.8kbits/s speed=2.25x elapsed=0:00:24.28    frame= 1116 fps= 45 q=-0.0 size= 3323136KiB time=00:00:55.80 bitrate=487869.7kbits/s speed=2.25x elapsed=0:00:24.78    frame= 1137 fps= 45 q=-0.0 size= 3385600KiB time=00:00:56.85 bitrate=487859.9kbits/s speed=2.25x elapsed=0:00:25.29    frame= 1161 fps= 45 q=-0.0 size= 3457280KiB time=00:00:58.05 bitrate=487890.4kbits/s speed=2.25x elapsed=0:00:25.79    frame= 1183 fps= 45 q=-0.0 size= 3522816KiB time=00:00:59.15 bitrate=487893.6kbits/s speed=2.25x elapsed=0:00:26.30    [out#0/rawvideo @ 0xbc342c180] video:3576572KiB audio:0KiB subtitle:0KiB other streams:0KiB global headers:0KiB muxing overhead: 0.000000%
+frame= 1200 fps= 45 q=-0.0 Lsize= 3576572KiB time=00:01:00.00 bitrate=488321.3kbits/s speed=2.25x elapsed=0:00:26.62    
+All videos inflated to /Users/adpena/Projects/pact/workspace/upstream/comma_video_compression_challenge/submissions/robust_current/inflated
+=== Evaluation config ===
+  batch_size: 16
+  device: cpu
+  num_threads: 2
+  prefetch_queue_depth: 4
+  report: /Users/adpena/Projects/pact/workspace/upstream/comma_video_compression_challenge/submissions/robust_current/report.txt
+  seed: 1234
+  submission_dir: /Users/adpena/Projects/pact/workspace/upstream/comma_video_compression_challenge/submissions/robust_current
+  uncompressed_dir: /Users/adpena/Projects/pact/workspace/upstream/comma_video_compression_challenge/videos
+  video_names_file: /Users/adpena/Projects/pact/workspace/upstream/comma_video_compression_challenge/public_test_video_names.txt
+AVVideoDataset on rank 0 with 1 files.
+TensorVideoDataset on rank 0 with 1 files.
+0it [00:00, ?it/s]/Users/adpena/Projects/pact/workspace/upstream/comma_video_compression_challenge/frame_utils.py:232: UserWarning: The given NumPy array is not writable, and PyTorch does not support non-writable tensors. This means writing to this tensor will result in undefined behavior. You may want to copy the array to protect its data or make it writable before converting it to a tensor. This type of warning will be suppressed for the rest of this program. (Triggered internally at /Users/runner/work/pytorch/pytorch/pytorch/torch/csrc/utils/tensor_numpy.cpp:219.)
+  frames = torch.from_numpy(mm)  # (N, H, W, C), shares mmap memory
+1it [00:39, 39.10s/it]2it [01:18, 39.48s/it]3it [01:57, 39.11s/it]4it [02:37, 39.42s/it]5it [03:18, 39.98s/it]6it [03:51, 37.80s/it]7it [04:31, 38.43s/it]8it [05:12, 39.16s/it]9it [05:52, 39.42s/it]10it [06:32, 39.50s/it]11it [07:12, 39.72s/it]12it [07:52, 39.78s/it]13it [08:32, 40.03s/it]14it [09:10, 39.32s/it]15it [09:50, 39.56s/it]16it [10:24, 37.96s/it]17it [11:03, 38.28s/it]18it [11:44, 38.90s/it]19it [12:25, 39.55s/it]20it [13:05, 39.68s/it]21it [13:44, 39.66s/it]22it [14:24, 39.59s/it]23it [15:03, 39.37s/it]24it [15:44, 39.90s/it]25it [16:24, 39.88s/it]26it [17:03, 39.74s/it]27it [17:41, 39.16s/it]28it [18:18, 38.52s/it]29it [18:53, 37.46s/it]30it [19:30, 37.32s/it]31it [20:05, 36.53s/it]32it [20:42, 36.78s/it]33it [21:18, 36.70s/it]34it [21:55, 36.65s/it]35it [22:33, 36.97s/it]36it [23:09, 36.75s/it]37it [23:46, 36.73s/it]38it [25:13, 51.92s/it]38it [25:13, 39.83s/it]
+=== Evaluation results over 600 samples ===
+  Average PoseNet Distortion: 0.10351682
+  Average SegNet Distortion: 0.00593794
+  Submission file size: 834,304 bytes
+  Original uncompressed size: 37,545,489 bytes
+  Compression Rate: 0.02222115
+  Final score: 100*segnet_dist + √(10*posenet_dist) + 25*rate = 2.17
+Evaluation complete. Report saved to /Users/adpena/Projects/pact/workspace/upstream/comma_video_compression_challenge/submissions/robust_current/report.txt
+{
+  "copied_report_path": "reports/raw/2026-04-06-av1-roi-experiments/exp_t_report.txt",
+  "current_workflow_archive_bytes": 834304,
+  "current_workflow_rate": 0.02222115,
+  "current_workflow_score": 2.17,
+  "device": "cpu",
+  "original_uncompressed_bytes": 37545489,
+  "pose_distortion": 0.10351682,
+  "report_path": "/Users/adpena/Projects/pact/workspace/upstream/comma_video_compression_challenge/submissions/robust_current/report.txt",
+  "rule_faithful_bundle_bytes": 868802,
+  "rule_faithful_bundle_paths": [
+    "archive.zip",
+    "inflate.sh",
+    "config.env",
+    "analyze_roi.py"
+  ],
+  "rule_faithful_rate": 0.02313998360761795,
+  "rule_faithful_score": 2.189725750091049,
+  "rule_faithful_status": "estimated_from_scorer_distortions_plus_installed_runtime_payload",
+  "seg_distortion": 0.00593794,
+  "track": "robust_current"
+}

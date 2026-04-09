@@ -1,0 +1,22 @@
+{
+  "copied_report_path": "reports/raw/2026-04-06-pre-submit-round/robust_current-sharpness1-current_workflow-cpu-report.txt",
+  "current_workflow_archive_bytes": 864168,
+  "current_workflow_rate": 0.02301656,
+  "current_workflow_score": 2.08,
+  "device": "cpu",
+  "original_uncompressed_bytes": 37545489,
+  "pose_distortion": 0.08694527,
+  "report_path": "/Users/adpena/Projects/pact/workspace/upstream/comma_video_compression_challenge/submissions/robust_current/report.txt",
+  "rule_faithful_bundle_bytes": 922416,
+  "rule_faithful_bundle_paths": [
+    "archive.zip",
+    "inflate.sh",
+    "config.env",
+    "analyze_roi.py"
+  ],
+  "rule_faithful_rate": 0.02456795808412563,
+  "rule_faithful_score": 2.1235784276618737,
+  "rule_faithful_status": "estimated_from_scorer_distortions_plus_installed_runtime_payload",
+  "seg_distortion": 0.00576935,
+  "track": "robust_current"
+}

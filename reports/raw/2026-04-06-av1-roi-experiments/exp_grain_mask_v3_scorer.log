@@ -1,0 +1,13 @@
+Archive:  /Users/adpena/Projects/pact/workspace/upstream/comma_video_compression_challenge/submissions/robust_current/archive.zip
+  inflating: /Users/adpena/Projects/pact/workspace/upstream/comma_video_compression_challenge/submissions/robust_current/archive/0.mkv  
+Inflating (saliency-masked grain) /Users/adpena/Projects/pact/workspace/upstream/comma_video_compression_challenge/submissions/robust_current/archive -> /Users/adpena/Projects/pact/workspace/upstream/comma_video_compression_challenge/submissions/robust_current/inflated
+warning: `VIRTUAL_ENV=workspace/upstream/comma_video_compression_challenge/.venv` does not match the project environment path `.venv` and will be ignored; use `--active` to target the active environment instead
+Inflating /Users/adpena/Projects/pact/workspace/upstream/comma_video_compression_challenge/submissions/robust_current/archive/0.mkv -> /Users/adpena/Projects/pact/workspace/upstream/comma_video_compression_challenge/submissions/robust_current/inflated/0.raw (saliency-masked grain)
+  Saliency: shape=(30, 874, 1164), mean=0.0144
+  Processed 300 frames ...
+  Processed 600 frames ...
+  Processed 900 frames ...
+  Processed 1200 frames ...
+Inflated 1200 frames with saliency-masked grain -> /Users/adpena/Projects/pact/workspace/upstream/comma_video_compression_challenge/submissions/robust_current/inflated/0.raw
+ERROR: missing inflated file: /Users/adpena/Projects/pact/workspace/upstream/comma_video_compression_challenge/submissions/robust_current/inflated/0.raw
+ERROR: 1 video(s) not inflated

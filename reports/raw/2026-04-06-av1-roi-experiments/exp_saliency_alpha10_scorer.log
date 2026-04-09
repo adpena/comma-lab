@@ -1,0 +1,37 @@
+Archive:  /Users/adpena/Projects/pact/workspace/upstream/comma_video_compression_challenge/submissions/robust_current/archive.zip
+  inflating: /Users/adpena/Projects/pact/workspace/upstream/comma_video_compression_challenge/submissions/robust_current/archive/0.mkv  
+Inflating (canonical + learned post-filter) /Users/adpena/Projects/pact/workspace/upstream/comma_video_compression_challenge/submissions/robust_current/archive -> /Users/adpena/Projects/pact/workspace/upstream/comma_video_compression_challenge/submissions/robust_current/inflated
+warning: `VIRTUAL_ENV=workspace/upstream/comma_video_compression_challenge/.venv` does not match the project environment path `.venv` and will be ignored; use `--active` to target the active environment instead
+Inflating /Users/adpena/Projects/pact/workspace/upstream/comma_video_compression_challenge/submissions/robust_current/archive/0.mkv -> /Users/adpena/Projects/pact/workspace/upstream/comma_video_compression_challenge/submissions/robust_current/inflated/0.raw (post-filter)
+  Loading post-filter from /Users/adpena/Projects/pact/workspace/upstream/comma_video_compression_challenge/submissions/robust_current/postfilter_int8.pt
+Traceback (most recent call last):
+  File "/Users/adpena/Projects/pact/workspace/upstream/comma_video_compression_challenge/submissions/robust_current/inflate_postfilter.py", line 202, in <module>
+    inflate_with_postfilter(str(mkv_path), str(out_path), postfilter_path)
+  File "/Users/adpena/Projects/pact/workspace/upstream/comma_video_compression_challenge/submissions/robust_current/inflate_postfilter.py", line 134, in inflate_with_postfilter
+    model = load_postfilter_int8(postfilter_path, device=device)
+            ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/Users/adpena/Projects/pact/workspace/upstream/comma_video_compression_challenge/submissions/robust_current/inflate_postfilter.py", line 97, in load_postfilter_int8
+    model = build_postfilter(meta)
+            ^^^^^^^^^^^^^^^^^^^^^^
+  File "/Users/adpena/Projects/pact/workspace/upstream/comma_video_compression_challenge/submissions/robust_current/inflate_postfilter.py", line 84, in build_postfilter
+    raise ValueError(f"Unsupported post-filter variant: {variant}")
+ValueError: Unsupported post-filter variant: saliency_weighted
+Traceback (most recent call last):
+  File "<frozen runpy>", line 198, in _run_module_as_main
+  File "<frozen runpy>", line 88, in _run_code
+  File "/Users/adpena/Projects/pact/src/comma_lab/cli.py", line 187, in <module>
+    raise SystemExit(main())
+                     ^^^^^^
+  File "/Users/adpena/Projects/pact/src/comma_lab/cli.py", line 180, in main
+    return args.func(args)
+           ^^^^^^^^^^^^^^^
+  File "/Users/adpena/Projects/pact/src/comma_lab/cli.py", line 86, in cmd_eval_submission
+    summary = evaluate_submission(
+              ^^^^^^^^^^^^^^^^^^^^
+  File "/Users/adpena/Projects/pact/src/comma_lab/evaluate.py", line 142, in evaluate_submission
+    _run([
+  File "/Users/adpena/Projects/pact/src/comma_lab/evaluate.py", line 67, in _run
+    subprocess.run(
+  File "/Users/adpena/.local/share/uv/python/cpython-3.12.13-macos-aarch64-none/lib/python3.12/subprocess.py", line 571, in run
+    raise CalledProcessError(retcode, process.args,
+subprocess.CalledProcessError: Command '['bash', '/Users/adpena/Projects/pact/workspace/upstream/comma_video_compression_challenge/evaluate.sh', '--submission-dir', '/Users/adpena/Projects/pact/workspace/upstream/comma_video_compression_challenge/submissions/robust_current', '--device', 'cpu']' returned non-zero exit status 1.

@@ -1,0 +1,26 @@
+{
+  "copied_report_path": "/tmp/pact-authoritative/reports/raw/2026-04-07-postfilter/robust_current-exp-postfilter-current_workflow-cpu-report.txt",
+  "current_workflow_archive_bytes": 861986,
+  "current_workflow_rate": 0.02295844,
+  "current_workflow_score": 2.05,
+  "device": "cpu",
+  "original_uncompressed_bytes": 37545489,
+  "pose_distortion": 0.07996829,
+  "report_path": "/tmp/pact-authoritative/workspace/upstream/comma_video_compression_challenge/submissions/robust_current/report.txt",
+  "rule_faithful_bundle_bytes": 896432,
+  "rule_faithful_bundle_paths": [
+    "archive.zip",
+    "inflate.sh",
+    "inflate.py",
+    "inflate_postfilter.py",
+    "inflate_grain_mask.py",
+    "postfilter_int8.pt",
+    "config.env",
+    "analyze_roi.py"
+  ],
+  "rule_faithful_rate": 0.023875890922608573,
+  "rule_faithful_score": 2.0778631822069484,
+  "rule_faithful_status": "estimated_from_scorer_distortions_plus_installed_runtime_payload",
+  "seg_distortion": 0.00586716,
+  "track": "robust_current"
+}

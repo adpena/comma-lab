@@ -1,0 +1,326 @@
+{
+  "directory": "/private/tmp/pact-mine/experiments/postfilter_weights",
+  "lanes": [
+    {
+      "slug": "alpha30",
+      "active": true,
+      "latest": {
+        "epoch": 100,
+        "scorer": 4.3157,
+        "pose": 0.090456,
+        "seg": 0.03561
+      }
+    },
+    {
+      "slug": "crf35",
+      "active": true,
+      "latest": {
+        "epoch": 500,
+        "scorer": 4.2662,
+        "pose": 0.087482,
+        "seg": 0.035405
+      }
+    },
+    {
+      "slug": "crf36",
+      "active": true,
+      "latest": {
+        "epoch": 500,
+        "scorer": 4.3243,
+        "pose": 0.082257,
+        "seg": 0.03594
+      }
+    },
+    {
+      "slug": "cvar",
+      "active": true,
+      "latest": {
+        "epoch": 1000,
+        "scorer": 4.7638,
+        "pose": 0.16081,
+        "seg": 0.035544
+      }
+    },
+    {
+      "slug": "dct",
+      "active": true,
+      "latest": {
+        "epoch": 70,
+        "scorer": 0.074159,
+        "pose": 0.036567,
+        "seg": 0.000286
+      }
+    },
+    {
+      "slug": "dct_midband_a20_block8",
+      "active": false,
+      "best": {
+        "epoch": 10,
+        "scorer": 4.51788402615338,
+        "int8_size": 5125
+      }
+    },
+    {
+      "slug": "dilated_h64_long1000",
+      "active": true,
+      "best": {
+        "epoch": 253,
+        "scorer": 3.7600972843170166,
+        "int8_size": 45731
+      },
+      "latest": {
+        "epoch": 270,
+        "scorer": 3.8618,
+        "pose": 0.053316,
+        "seg": 0.032933
+      }
+    },
+    {
+      "slug": "featmatch_a20",
+      "active": true,
+      "latest": {
+        "epoch": 120,
+        "scorer": 4.2318,
+        "pose": 0.078824,
+        "seg": 0.03553
+      }
+    },
+    {
+      "slug": "kalman",
+      "active": true,
+      "latest": {
+        "epoch": 1000,
+        "scorer": 3.9325,
+        "pose": 0.05221,
+        "seg": 0.033808
+      }
+    },
+    {
+      "slug": "long1000_h16",
+      "active": true,
+      "latest": {
+        "epoch": 1000,
+        "scorer": 4.1044,
+        "pose": 0.075126,
+        "seg": 0.034588
+      }
+    },
+    {
+      "slug": "long1000_h32",
+      "active": true,
+      "latest": {
+        "epoch": 1000,
+        "scorer": 3.8807,
+        "pose": 0.055166,
+        "seg": 0.033254
+      }
+    },
+    {
+      "slug": "long1000_h32_a30",
+      "active": true,
+      "best": {
+        "epoch": 423,
+        "scorer": 3.8314755090077717,
+        "int8_size": 16091
+      },
+      "latest": {
+        "epoch": 520,
+        "scorer": 3.9135,
+        "pose": 0.053922,
+        "seg": 0.033749
+      }
+    },
+    {
+      "slug": "long1000_h32_rerun",
+      "active": false
+    },
+    {
+      "slug": "long1000_h48",
+      "active": true,
+      "best": {
+        "epoch": 780,
+        "scorer": 3.572383762995402,
+        "int8_size": 28563
+      },
+      "latest": {
+        "epoch": 1000,
+        "scorer": 3.6787,
+        "pose": 0.031889,
+        "seg": 0.033022
+      }
+    },
+    {
+      "slug": "long1000_h64",
+      "active": true,
+      "best": {
+        "epoch": 918,
+        "scorer": 3.5472697671254476,
+        "int8_size": 45587
+      },
+      "latest": {
+        "epoch": 1000,
+        "scorer": 3.7245,
+        "pose": 0.033759,
+        "seg": 0.033504
+      }
+    },
+    {
+      "slug": "long1000_qat_ema_alpha20_h32_rerun",
+      "active": false,
+      "best": {
+        "epoch": 191,
+        "scorer": 3.873950522740682,
+        "int8_size": 16735
+      }
+    },
+    {
+      "slug": "long1500_h96",
+      "active": true,
+      "best": {
+        "epoch": 217,
+        "scorer": 3.8944560209910075,
+        "int8_size": 93331
+      },
+      "latest": {
+        "epoch": 230,
+        "scorer": 3.9244,
+        "pose": 0.048749,
+        "seg": 0.033597
+      }
+    },
+    {
+      "slug": "long500_a20",
+      "active": true,
+      "latest": {
+        "epoch": 500,
+        "scorer": 4.0804,
+        "pose": 0.068368,
+        "seg": 0.034653
+      }
+    },
+    {
+      "slug": "long500_h24",
+      "active": false
+    },
+    {
+      "slug": "long500_h32",
+      "active": true,
+      "latest": {
+        "epoch": 500,
+        "scorer": 4.1499,
+        "pose": 0.07389,
+        "seg": 0.035291
+      }
+    },
+    {
+      "slug": "pixelshuffle_h64_long1000",
+      "active": true,
+      "best": {
+        "epoch": 243,
+        "scorer": 3.7007833894093833,
+        "int8_size": 94285
+      },
+      "latest": {
+        "epoch": 240,
+        "scorer": 3.8734,
+        "pose": 0.080581,
+        "seg": 0.032312
+      }
+    },
+    {
+      "slug": "psd_h64_long1000",
+      "active": true,
+      "best": {
+        "epoch": 161,
+        "scorer": 3.84155016263326,
+        "int8_size": 94087
+      },
+      "latest": {
+        "epoch": 160,
+        "scorer": 3.9822,
+        "pose": 0.069671,
+        "seg": 0.03292
+      }
+    },
+    {
+      "slug": "segnet_attack",
+      "active": true,
+      "latest": {
+        "epoch": 1000,
+        "scorer": 1.0835,
+        "pose": 0.045191,
+        "seg": 0.005923
+      }
+    },
+    {
+      "slug": "segnet_attack_fixed",
+      "active": true,
+      "latest": {
+        "epoch": 600,
+        "scorer": 1.1708,
+        "pose": 0.077963,
+        "seg": 0.005503
+      }
+    },
+    {
+      "slug": "segnet_attack_fixed_v2",
+      "active": true,
+      "latest": {
+        "epoch": 920,
+        "scorer": 1.1033,
+        "pose": 0.06032,
+        "seg": 0.005517
+      }
+    },
+    {
+      "slug": "segnet_attack_h64",
+      "active": true,
+      "latest": {
+        "epoch": 360,
+        "scorer": 1.057,
+        "pose": 0.049262,
+        "seg": 0.005213
+      }
+    },
+    {
+      "slug": "uint8ste",
+      "active": true,
+      "latest": {
+        "epoch": 1000,
+        "scorer": 3.8127,
+        "pose": 0.042751,
+        "seg": 0.033581
+      }
+    },
+    {
+      "slug": "v2_a20",
+      "active": true,
+      "latest": {
+        "epoch": 200,
+        "scorer": 1.2866,
+        "pose": 0.090471,
+        "seg": 0.005486
+      }
+    },
+    {
+      "slug": "v2_h32",
+      "active": true,
+      "latest": {
+        "epoch": 200,
+        "scorer": 1.2827,
+        "pose": 0.071492,
+        "seg": 0.005977
+      }
+    },
+    {
+      "slug": "v2_lowlr_a20",
+      "active": true,
+      "latest": {
+        "epoch": 300,
+        "scorer": 1.2668,
+        "pose": 0.070727,
+        "seg": 0.005688
+      }
+    }
+  ]
+}

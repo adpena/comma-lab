@@ -1,0 +1,26 @@
+{
+  "copied_report_path": "/tmp/pact-authoritative/reports/raw/2026-04-08-saliency-alpha20-h32-postfilter-isolated/robust_current-exp-saliency-alpha20-h32-postfilter-current_workflow-cpu-report.txt",
+  "current_workflow_archive_bytes": 864167,
+  "current_workflow_rate": 0.02301653,
+  "current_workflow_score": 2.04,
+  "device": "cpu",
+  "original_uncompressed_bytes": 37545489,
+  "pose_distortion": 0.08001617,
+  "report_path": "/tmp/pact-authoritative/workspace/upstream/comma_video_compression_challenge/submissions/robust_current/report.txt",
+  "rule_faithful_bundle_bytes": 934044,
+  "rule_faithful_bundle_paths": [
+    "archive.zip",
+    "inflate.sh",
+    "inflate.py",
+    "inflate_postfilter.py",
+    "inflate_grain_mask.py",
+    "postfilter_int8.pt",
+    "config.env",
+    "analyze_roi.py"
+  ],
+  "rule_faithful_rate": 0.024877662400401818,
+  "rule_faithful_score": 2.0876541394907395,
+  "rule_faithful_status": "estimated_from_scorer_distortions_plus_installed_runtime_payload",
+  "seg_distortion": 0.00571195,
+  "track": "robust_current"
+}

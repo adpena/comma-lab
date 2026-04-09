@@ -9,9 +9,9 @@
   uncompressed_dir: /Users/adpena/Projects/pact/workspace/upstream/comma_video_compression_challenge/videos
   video_names_file: /Users/adpena/Projects/pact/workspace/upstream/comma_video_compression_challenge/public_test_video_names.txt
 === Evaluation results over 600 samples ===
-  Average PoseNet Distortion: 0.03317023
-  Average SegNet Distortion: 0.00575544
-  Submission file size: 864,167 bytes
+  Average PoseNet Distortion: 0.12874402
+  Average SegNet Distortion: 0.00640642
+  Submission file size: 864,168 bytes
   Original uncompressed size: 37,545,489 bytes
-  Compression Rate: 0.02301653
-  Final score: 100*segnet_dist + √(10*posenet_dist) + 25*rate = 1.73
+  Compression Rate: 0.02301656
+  Final score: 100*segnet_dist + √(10*posenet_dist) + 25*rate = 2.35

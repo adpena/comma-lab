@@ -1,0 +1,12 @@
+{
+  "track": "robust_current",
+  "device": "cpu",
+  "source": "official_upstream_proxy",
+  "artifact": "experiments/postfilter_weights/postfilter_long500_qat_ema_alpha20_h16_pc_int8.pt",
+  "current_workflow_archive_bytes": 864167,
+  "pose_distortion": 0.06952669,
+  "seg_distortion": 0.00579276,
+  "current_workflow_rate": 0.02301653,
+  "current_workflow_score": 1.99,
+  "notes": "Per-channel scales + fp32 biases; smaller artifact but slightly worse distortions than promoted tensorwise artifact."
+}

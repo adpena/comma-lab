@@ -1,0 +1,36 @@
+Archive:  /tmp/pact-parallel-scorer/comma_video_compression_challenge/submissions/robust_current/archive.zip
+  inflating: /tmp/pact-parallel-scorer/comma_video_compression_challenge/submissions/robust_current/archive/0.mkv  
+Inflating (canonical + learned post-filter) /tmp/pact-parallel-scorer/comma_video_compression_challenge/submissions/robust_current/archive -> /tmp/pact-parallel-scorer/comma_video_compression_challenge/submissions/robust_current/inflated
+warning: `VIRTUAL_ENV=/tmp/pact-parallel-scorer/comma_video_compression_challenge/.venv` does not match the project environment path `.venv` and will be ignored; use `--active` to target the active environment instead
+Inflating /tmp/pact-parallel-scorer/comma_video_compression_challenge/submissions/robust_current/archive/0.mkv -> /tmp/pact-parallel-scorer/comma_video_compression_challenge/submissions/robust_current/inflated/0.raw (post-filter)
+  Loading post-filter from /tmp/pact-parallel-scorer/comma_video_compression_challenge/submissions/robust_current/postfilter_int8.pt
+  Processed 300 frames ...
+  Processed 600 frames ...
+  Processed 900 frames ...
+  Processed 1200 frames ...
+Inflated 1200 frames with post-filter -> /tmp/pact-parallel-scorer/comma_video_compression_challenge/submissions/robust_current/inflated/0.raw
+All videos inflated to /tmp/pact-parallel-scorer/comma_video_compression_challenge/submissions/robust_current/inflated
+=== Evaluation config ===
+  batch_size: 16
+  device: cpu
+  num_threads: 2
+  prefetch_queue_depth: 4
+  report: /tmp/pact-parallel-scorer/comma_video_compression_challenge/submissions/robust_current/report.txt
+  seed: 1234
+  submission_dir: /tmp/pact-parallel-scorer/comma_video_compression_challenge/submissions/robust_current
+  uncompressed_dir: /tmp/pact-parallel-scorer/comma_video_compression_challenge/videos
+  video_names_file: /tmp/pact-parallel-scorer/comma_video_compression_challenge/public_test_video_names.txt
+AVVideoDataset on rank 0 with 1 files.
+TensorVideoDataset on rank 0 with 1 files.
+0it [00:00, ?it/s]/private/tmp/pact-parallel-scorer/comma_video_compression_challenge/frame_utils.py:232: UserWarning: The given NumPy array is not writable, and PyTorch does not support non-writable tensors. This means writing to this tensor will result in undefined behavior. You may want to copy the array to protect its data or make it writable before converting it to a tensor. This type of warning will be suppressed for the rest of this program. (Triggered internally at /Users/runner/work/pytorch/pytorch/pytorch/torch/csrc/utils/tensor_numpy.cpp:219.)
+  frames = torch.from_numpy(mm)  # (N, H, W, C), shares mmap memory
+1it [01:09, 69.06s/it]2it [02:22, 71.41s/it]3it [04:06, 86.45s/it]4it [05:22, 82.37s/it]5it [06:33, 78.09s/it]6it [07:47, 76.71s/it]7it [09:02, 76.25s/it]8it [10:16, 75.61s/it]9it [11:30, 75.00s/it]10it [12:36, 72.13s/it]11it [13:46, 71.74s/it]12it [14:55, 70.94s/it]13it [16:11, 72.20s/it]14it [17:26, 73.07s/it]15it [18:38, 72.74s/it]16it [20:17, 80.69s/it]17it [21:45, 82.81s/it]18it [23:11, 84.02s/it]19it [24:43, 86.45s/it]20it [26:28, 92.00s/it]21it [28:14, 95.97s/it]22it [29:56, 97.87s/it]23it [31:36, 98.46s/it]24it [33:18, 99.52s/it]25it [35:05, 101.86s/it]26it [37:04, 106.94s/it]27it [39:06, 111.58s/it]28it [40:55, 110.84s/it]29it [42:36, 107.88s/it]30it [44:20, 106.56s/it]31it [46:08, 107.05s/it]32it [48:04, 109.68s/it]33it [49:53, 109.43s/it]34it [51:44, 110.02s/it]35it [53:34, 109.90s/it]36it [55:25, 110.20s/it]37it [57:13, 109.79s/it]38it [1:00:05, 128.23s/it]38it [1:00:05, 94.87s/it] 
+=== Evaluation results over 600 samples ===
+  Average PoseNet Distortion: 0.08038763
+  Average SegNet Distortion: 0.00650397
+  Submission file size: 886,707 bytes
+  Original uncompressed size: 37,545,489 bytes
+  Compression Rate: 0.02361687
+  Final score: 100*segnet_dist + √(10*posenet_dist) + 25*rate = 2.14
+Evaluation complete. Report saved to /tmp/pact-parallel-scorer/comma_video_compression_challenge/submissions/robust_current/report.txt
+ERROR: Required payload entry missing for robust_current: /tmp/pact-parallel-scorer/comma_video_compression_challenge/submissions/robust_current/inflate_grain_mask.py

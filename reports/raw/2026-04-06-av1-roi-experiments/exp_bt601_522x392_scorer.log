@@ -1,0 +1,57 @@
+Archive:  /Users/adpena/Projects/pact/workspace/upstream/comma_video_compression_challenge/submissions/robust_current/archive.zip
+  inflating: /Users/adpena/Projects/pact/workspace/upstream/comma_video_compression_challenge/submissions/robust_current/archive/0.mkv  
+Inflating (Python bicubic + USM 0.40) /Users/adpena/Projects/pact/workspace/upstream/comma_video_compression_challenge/submissions/robust_current/archive/0.mkv -> /Users/adpena/Projects/pact/workspace/upstream/comma_video_compression_challenge/submissions/robust_current/inflated/0.raw
+warning: `VIRTUAL_ENV=workspace/upstream/comma_video_compression_challenge/.venv` does not match the project environment path `.venv` and will be ignored; use `--active` to target the active environment instead
+Inflating /Users/adpena/Projects/pact/workspace/upstream/comma_video_compression_challenge/submissions/robust_current/archive/0.mkv -> /Users/adpena/Projects/pact/workspace/upstream/comma_video_compression_challenge/submissions/robust_current/inflated/0.raw
+  Inflated 300 frames ...
+  Inflated 600 frames ...
+  Inflated 900 frames ...
+  Inflated 1200 frames ...
+Inflated 1200 frames -> /Users/adpena/Projects/pact/workspace/upstream/comma_video_compression_challenge/submissions/robust_current/inflated/0.raw
+All videos inflated to /Users/adpena/Projects/pact/workspace/upstream/comma_video_compression_challenge/submissions/robust_current/inflated
+=== Evaluation config ===
+  batch_size: 16
+  device: cpu
+  num_threads: 2
+  prefetch_queue_depth: 4
+  report: /Users/adpena/Projects/pact/workspace/upstream/comma_video_compression_challenge/submissions/robust_current/report.txt
+  seed: 1234
+  submission_dir: /Users/adpena/Projects/pact/workspace/upstream/comma_video_compression_challenge/submissions/robust_current
+  uncompressed_dir: /Users/adpena/Projects/pact/workspace/upstream/comma_video_compression_challenge/videos
+  video_names_file: /Users/adpena/Projects/pact/workspace/upstream/comma_video_compression_challenge/public_test_video_names.txt
+AVVideoDataset on rank 0 with 1 files.
+TensorVideoDataset on rank 0 with 1 files.
+0it [00:00, ?it/s]/Users/adpena/Projects/pact/workspace/upstream/comma_video_compression_challenge/frame_utils.py:232: UserWarning: The given NumPy array is not writable, and PyTorch does not support non-writable tensors. This means writing to this tensor will result in undefined behavior. You may want to copy the array to protect its data or make it writable before converting it to a tensor. This type of warning will be suppressed for the rest of this program. (Triggered internally at /Users/runner/work/pytorch/pytorch/pytorch/torch/csrc/utils/tensor_numpy.cpp:219.)
+  frames = torch.from_numpy(mm)  # (N, H, W, C), shares mmap memory
+1it [00:50, 50.14s/it]2it [01:39, 49.42s/it]3it [02:28, 49.29s/it]4it [03:23, 51.54s/it]5it [04:07, 48.96s/it]6it [05:02, 50.86s/it]7it [05:58, 52.65s/it]8it [06:52, 53.10s/it]9it [07:47, 53.72s/it]10it [08:46, 55.20s/it]11it [09:39, 54.63s/it]12it [10:32, 54.24s/it]13it [11:21, 52.58s/it]14it [12:09, 51.28s/it]15it [12:54, 49.33s/it]16it [13:39, 47.91s/it]17it [14:18, 45.37s/it]18it [14:57, 43.47s/it]19it [15:42, 43.94s/it]20it [16:23, 42.90s/it]21it [17:04, 42.49s/it]22it [17:47, 42.63s/it]23it [18:27, 41.63s/it]24it [19:08, 41.55s/it]25it [19:43, 39.50s/it]26it [20:23, 39.63s/it]27it [21:04, 40.26s/it]28it [21:47, 40.96s/it]29it [22:31, 41.91s/it]30it [23:14, 42.22s/it]31it [23:56, 42.30s/it]32it [24:38, 42.14s/it]33it [25:20, 41.90s/it]34it [26:03, 42.40s/it]35it [26:47, 42.72s/it]36it [27:28, 42.28s/it]37it [28:07, 41.21s/it]38it [29:48, 59.39s/it]38it [29:48, 47.08s/it]
+=== Evaluation results over 600 samples ===
+  Average PoseNet Distortion: 0.08829740
+  Average SegNet Distortion: 0.00575843
+  Submission file size: 861,986 bytes
+  Original uncompressed size: 37,545,489 bytes
+  Compression Rate: 0.02295844
+  Final score: 100*segnet_dist + √(10*posenet_dist) + 25*rate = 2.09
+Evaluation complete. Report saved to /Users/adpena/Projects/pact/workspace/upstream/comma_video_compression_challenge/submissions/robust_current/report.txt
+{
+  "copied_report_path": "reports/raw/2026-04-06-av1-roi-experiments/exp_bt601_522x392_report.txt",
+  "current_workflow_archive_bytes": 861986,
+  "current_workflow_rate": 0.02295844,
+  "current_workflow_score": 2.09,
+  "device": "cpu",
+  "original_uncompressed_bytes": 37545489,
+  "pose_distortion": 0.0882974,
+  "report_path": "/Users/adpena/Projects/pact/workspace/upstream/comma_video_compression_challenge/submissions/robust_current/report.txt",
+  "rule_faithful_bundle_bytes": 906608,
+  "rule_faithful_bundle_paths": [
+    "archive.zip",
+    "inflate.sh",
+    "inflate_python.py",
+    "config.env",
+    "analyze_roi.py"
+  ],
+  "rule_faithful_rate": 0.024146922150887422,
+  "rule_faithful_score": 2.119183016051907,
+  "rule_faithful_status": "estimated_from_scorer_distortions_plus_installed_runtime_payload",
+  "seg_distortion": 0.00575843,
+  "track": "robust_current"
+}

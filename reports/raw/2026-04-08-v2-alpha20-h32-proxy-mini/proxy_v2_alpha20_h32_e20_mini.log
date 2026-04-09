@@ -1,0 +1,53 @@
+Downloading numpy (19.4MiB)
+ Downloaded numpy
+Installed 36 packages in 295ms
+  Loading post-filter from experiments/postfilter_weights/postfilter_v2_alpha20_h32_e20_int8.pt
+  Processed 300 frames ...
+  Processed 600 frames ...
+  Processed 900 frames ...
+  Processed 1200 frames ...
+Inflated 1200 frames with post-filter -> /var/folders/l5/lbcm7t4s4yzg1z39mcngspk40000gn/T/tmp6t30m2fh/inflated.raw
+=== Evaluation config ===
+  batch_size: 16
+  device: cpu
+  num_threads: 2
+  prefetch_queue_depth: 4
+  report: /var/folders/l5/lbcm7t4s4yzg1z39mcngspk40000gn/T/tmp6t30m2fh/submission/report.txt
+  seed: 1234
+  submission_dir: /var/folders/l5/lbcm7t4s4yzg1z39mcngspk40000gn/T/tmp6t30m2fh/submission
+  uncompressed_dir: /private/tmp/pact-remote-mini/workspace/upstream/comma_video_compression_challenge/videos
+  video_names_file: /private/tmp/pact-remote-mini/workspace/upstream/comma_video_compression_challenge/public_test_video_names.txt
+AVVideoDataset on rank 0 with 1 files.
+TensorVideoDataset on rank 0 with 1 files.
+0it [00:00, ?it/s]/private/tmp/pact-remote-mini/workspace/upstream/comma_video_compression_challenge/frame_utils.py:232: UserWarning: The given NumPy array is not writable, and PyTorch does not support non-writable tensors. This means writing to this tensor will result in undefined behavior. You may want to copy the array to protect its data or make it writable before converting it to a tensor. This type of warning will be suppressed for the rest of this program. (Triggered internally at /Users/runner/work/pytorch/pytorch/pytorch/torch/csrc/utils/tensor_numpy.cpp:212.)
+  frames = torch.from_numpy(mm)  # (N, H, W, C), shares mmap memory
+1it [00:12, 12.13s/it]2it [00:23, 11.90s/it]3it [00:35, 11.82s/it]4it [00:48, 12.09s/it]5it [00:59, 11.97s/it]6it [01:11, 11.80s/it]7it [01:22, 11.72s/it]8it [01:34, 11.70s/it]9it [01:46, 11.81s/it]10it [01:58, 11.84s/it]11it [02:10, 11.77s/it]12it [02:21, 11.71s/it]13it [02:33, 11.65s/it]14it [02:45, 11.80s/it]15it [02:56, 11.72s/it]16it [03:08, 11.74s/it]17it [03:20, 11.69s/it]18it [03:32, 11.78s/it]19it [03:44, 11.85s/it]20it [03:56, 11.87s/it]21it [04:07, 11.79s/it]22it [04:19, 11.76s/it]23it [04:30, 11.64s/it]24it [04:42, 11.68s/it]25it [04:54, 11.69s/it]26it [05:05, 11.61s/it]27it [05:17, 11.52s/it]28it [05:28, 11.51s/it]29it [05:40, 11.54s/it]30it [05:52, 11.66s/it]31it [06:03, 11.57s/it]32it [06:14, 11.57s/it]33it [06:26, 11.56s/it]34it [06:38, 11.58s/it]35it [06:49, 11.65s/it]36it [07:01, 11.67s/it]37it [07:13, 11.62s/it]38it [07:19,  9.92s/it]38it [07:19, 11.56s/it]
+=== Evaluation results over 600 samples ===
+  Average PoseNet Distortion: 0.07943186
+  Average SegNet Distortion: 0.00568828
+  Submission file size: 864,167 bytes
+  Original uncompressed size: 37,545,489 bytes
+  Compression Rate: 0.02301653
+  Final score: 100*segnet_dist + √(10*posenet_dist) + 25*rate = 2.04
+[proxy-faithful] weights: experiments/postfilter_weights/postfilter_v2_alpha20_h32_e20_int8.pt
+[proxy-faithful] archive: /private/tmp/pact-remote-mini/submissions/robust_current/archive.zip
+[proxy-faithful] device: cpu
+[proxy-faithful] Inflating /var/folders/l5/lbcm7t4s4yzg1z39mcngspk40000gn/T/tmp6t30m2fh/archive/0.mkv with post-filter...
+[proxy-faithful] Inflated 1200 frames
+[proxy-faithful] Running upstream evaluate.py...
+
+[proxy-faithful] Results:
+  PoseNet distortion: 0.07943186
+  SegNet distortion:  0.00568828
+  Compression rate:   0.02301653
+  Final score:        2.0400
+{
+  "pose_distortion": 0.07943186,
+  "seg_distortion": 0.00568828,
+  "current_workflow_rate": 0.02301653,
+  "current_workflow_score": 2.04,
+  "current_workflow_archive_bytes": 864167,
+  "weights": "experiments/postfilter_weights/postfilter_v2_alpha20_h32_e20_int8.pt",
+  "archive": "/private/tmp/pact-remote-mini/submissions/robust_current/archive.zip",
+  "device": "cpu"
+}

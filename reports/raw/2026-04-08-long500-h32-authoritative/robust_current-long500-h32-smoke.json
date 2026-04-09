@@ -1,0 +1,38 @@
+{
+  "all_passed": true,
+  "archive_path": "/private/tmp/pact-mine/workspace/upstream/comma_video_compression_challenge/submissions/robust_current/archive.zip",
+  "file_count_matches": true,
+  "inflated_dir": "/private/tmp/pact-mine/workspace/upstream/comma_video_compression_challenge/submissions/robust_current/inflated",
+  "results": [
+    {
+      "actual_frames": 1200,
+      "actual_total_bytes": 3662409600,
+      "expected_frame_bytes": 3052008,
+      "expected_frames": 1200,
+      "expected_total_bytes": 3662409600,
+      "fps": 20.0,
+      "frame_count_matches": true,
+      "height": 874,
+      "raw_exists": true,
+      "semantic_channel_mean_abs_diff": [
+        6.645945226880139,
+        3.0853008904301693,
+        6.3162331160337715
+      ],
+      "semantic_check_passed": true,
+      "semantic_mae_max": 6.168292153886884,
+      "semantic_mae_mean": 5.349159744448027,
+      "semantic_sample_indices": [
+        0,
+        600,
+        1199
+      ],
+      "size_matches": true,
+      "video": "0.mkv",
+      "width": 1164
+    }
+  ],
+  "track": "robust_current",
+  "upstream_root": "/private/tmp/pact-mine/workspace/upstream/comma_video_compression_challenge",
+  "video_names_file": "/private/tmp/pact-mine/workspace/upstream/comma_video_compression_challenge/public_test_video_names.txt"
+}

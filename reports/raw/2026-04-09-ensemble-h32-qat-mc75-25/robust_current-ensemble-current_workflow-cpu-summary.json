@@ -1,13 +1,13 @@
 {
-  "copied_report_path": "reports/raw/2026-04-09-long1000-h64-authoritative/robust_current-long1000-h64-current_workflow-cpu-report.txt",
-  "current_workflow_archive_bytes": 864167,
-  "current_workflow_rate": 0.02301653,
-  "current_workflow_score": 1.73,
+  "copied_report_path": "reports/raw/2026-04-09-ensemble-h32-qat-mc75-25/robust_current-ensemble-current_workflow-cpu-report.txt",
+  "current_workflow_archive_bytes": 864168,
+  "current_workflow_rate": 0.02301656,
+  "current_workflow_score": 1.84,
   "device": "cpu",
   "original_uncompressed_bytes": 37545489,
-  "pose_distortion": 0.03317023,
+  "pose_distortion": 0.04678315,
   "report_path": "/Users/adpena/Projects/pact/workspace/upstream/comma_video_compression_challenge/submissions/robust_current/report.txt",
-  "rule_faithful_bundle_bytes": 966071,
+  "rule_faithful_bundle_bytes": 936886,
   "rule_faithful_bundle_paths": [
     "archive.zip",
     "inflate.sh",
@@ -18,9 +18,9 @@
     "config.env",
     "analyze_roi.py"
   ],
-  "rule_faithful_rate": 0.025730680988067568,
-  "rule_faithful_score": 1.7947470454539947,
+  "rule_faithful_rate": 0.024953357246192746,
+  "rule_faithful_score": 1.8894260215636247,
   "rule_faithful_status": "estimated_from_scorer_distortions_plus_installed_runtime_payload",
-  "seg_distortion": 0.00575544,
+  "seg_distortion": 0.0058161,
   "track": "robust_current"
 }

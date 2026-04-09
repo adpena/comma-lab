@@ -1,0 +1,278 @@
+[
+  {
+    "meta_path": "/private/tmp/pact-mine/experiments/postfilter_weights/postfilter_long1000_h64_best_meta.json",
+    "epoch": 918,
+    "scorer": 3.5472697671254476,
+    "fp32_path": "/private/tmp/pact-mine/experiments/postfilter_weights/postfilter_long1000_h64_best_fp32.pt",
+    "int8_path": "/private/tmp/pact-mine/experiments/postfilter_weights/postfilter_long1000_h64_best_int8.pt",
+    "layer_count": 6,
+    "aggregate": {
+      "max_abs": 0.002340853214263916,
+      "mean_abs": 0.001133467968085318,
+      "rmse": 0.0013198309226261514
+    },
+    "layers": [
+      {
+        "name": "conv2.weight",
+        "numel": 36864,
+        "max_abs": 0.002340853214263916,
+        "mean_abs": 0.0011860396480187774,
+        "rmse": 0.0013661860721185803,
+        "relative_l2": 0.017056914439430894,
+        "cosine": 0.9998460412025452
+      },
+      {
+        "name": "conv1.bias",
+        "numel": 64,
+        "max_abs": 0.001389235258102417,
+        "mean_abs": 0.0007919539930298924,
+        "rmse": 0.0008687244262546301,
+        "relative_l2": 0.003958115127305247,
+        "cosine": 0.9999931454658508
+      },
+      {
+        "name": "conv1.weight",
+        "numel": 1728,
+        "max_abs": 0.0011753812432289124,
+        "mean_abs": 0.0006106630899012089,
+        "rmse": 0.0007000063196755946,
+        "relative_l2": 0.005615125175321892,
+        "cosine": 0.9999843835830688
+      },
+      {
+        "name": "conv3.weight",
+        "numel": 1728,
+        "max_abs": 0.0011146480683237314,
+        "mean_abs": 0.0005723472568206489,
+        "rmse": 0.000654944044072181,
+        "relative_l2": 0.008535090597078479,
+        "cosine": 0.9999638795852661
+      },
+      {
+        "name": "conv2.bias",
+        "numel": 64,
+        "max_abs": 0.000973530113697052,
+        "mean_abs": 0.0005128138000145555,
+        "rmse": 0.0005885268910788,
+        "relative_l2": 0.0043865254018195,
+        "cosine": 0.999990701675415
+      },
+      {
+        "name": "conv3.bias",
+        "numel": 3,
+        "max_abs": 1.551816239953041e-07,
+        "mean_abs": 5.818825954406748e-08,
+        "rmse": 9.029034941931968e-08,
+        "relative_l2": 0.00013032448006313618,
+        "cosine": 1.0
+      }
+    ]
+  },
+  {
+    "meta_path": "/private/tmp/pact-mine/experiments/postfilter_weights/postfilter_dilated_h64_long1000_best_meta.json",
+    "epoch": 123,
+    "scorer": 3.8193325742085773,
+    "fp32_path": "/private/tmp/pact-mine/experiments/postfilter_weights/postfilter_dilated_h64_long1000_best_fp32.pt",
+    "int8_path": "/private/tmp/pact-mine/experiments/postfilter_weights/postfilter_dilated_h64_long1000_best_int8.pt",
+    "layer_count": 6,
+    "aggregate": {
+      "max_abs": 0.0013546640984714031,
+      "mean_abs": 0.0006547057106856916,
+      "rmse": 0.0007614265470925003
+    },
+    "layers": [
+      {
+        "name": "conv2.weight",
+        "numel": 36864,
+        "max_abs": 0.0013546640984714031,
+        "mean_abs": 0.0006741189281456172,
+        "rmse": 0.0007792594260536134,
+        "relative_l2": 0.01818544247567577,
+        "cosine": 0.9998340606689453
+      },
+      {
+        "name": "conv1.weight",
+        "numel": 1728,
+        "max_abs": 0.0011477896478027105,
+        "mean_abs": 0.0005744340596720576,
+        "rmse": 0.0006657831836491823,
+        "relative_l2": 0.005846526676451681,
+        "cosine": 0.9999830722808838
+      },
+      {
+        "name": "conv1.bias",
+        "numel": 64,
+        "max_abs": 0.0010744892060756683,
+        "mean_abs": 0.0005499445833265781,
+        "rmse": 0.000641852559056133,
+        "relative_l2": 0.004707980395110101,
+        "cosine": 0.9999891519546509
+      },
+      {
+        "name": "conv3.weight",
+        "numel": 1728,
+        "max_abs": 0.0006903447210788727,
+        "mean_abs": 0.0003394058148842305,
+        "rmse": 0.00039352316525764763,
+        "relative_l2": 0.014251702458465357,
+        "cosine": 0.9998986124992371
+      },
+      {
+        "name": "conv2.bias",
+        "numel": 64,
+        "max_abs": 0.0005234126001596451,
+        "mean_abs": 0.00028857437428086996,
+        "rmse": 0.00032767083030194044,
+        "relative_l2": 0.006389761206485793,
+        "cosine": 0.9999797344207764
+      },
+      {
+        "name": "conv3.bias",
+        "numel": 3,
+        "max_abs": 1.9266735762357712e-08,
+        "mean_abs": 6.422245402148974e-09,
+        "rmse": 1.1123654886091572e-08,
+        "relative_l2": 1.6069243584293816e-05,
+        "cosine": 1.0
+      }
+    ]
+  },
+  {
+    "meta_path": "/private/tmp/pact-mine/experiments/postfilter_weights/postfilter_long1000_h32_a30_best_meta.json",
+    "epoch": 353,
+    "scorer": 3.8521939086914063,
+    "fp32_path": "/private/tmp/pact-mine/experiments/postfilter_weights/postfilter_long1000_h32_a30_best_fp32.pt",
+    "int8_path": "/private/tmp/pact-mine/experiments/postfilter_weights/postfilter_long1000_h32_a30_best_int8.pt",
+    "layer_count": 6,
+    "aggregate": {
+      "max_abs": 0.0015756785869598389,
+      "mean_abs": 0.0007465674116542804,
+      "rmse": 0.0008683236618146524
+    },
+    "layers": [
+      {
+        "name": "conv2.weight",
+        "numel": 9216,
+        "max_abs": 0.0015756785869598389,
+        "mean_abs": 0.000786810414865613,
+        "rmse": 0.0009080747258849442,
+        "relative_l2": 0.012386496827958948,
+        "cosine": 0.999923586845398
+      },
+      {
+        "name": "conv1.weight",
+        "numel": 864,
+        "max_abs": 0.0012136250734329224,
+        "mean_abs": 0.0006182779907248914,
+        "rmse": 0.0007055173045955598,
+        "relative_l2": 0.005747829542979496,
+        "cosine": 0.9999836087226868
+      },
+      {
+        "name": "conv1.bias",
+        "numel": 32,
+        "max_abs": 0.00112248957157135,
+        "mean_abs": 0.0005455147475004196,
+        "rmse": 0.0006421077996492386,
+        "relative_l2": 0.0035762038153526643,
+        "cosine": 0.9999936819076538
+      },
+      {
+        "name": "conv2.bias",
+        "numel": 32,
+        "max_abs": 0.0009216070175170898,
+        "mean_abs": 0.0004568689619190991,
+        "rmse": 0.0005439295200631022,
+        "relative_l2": 0.0036749688194275963,
+        "cosine": 0.9999933242797852
+      },
+      {
+        "name": "conv3.weight",
+        "numel": 864,
+        "max_abs": 0.0009213350713253021,
+        "mean_abs": 0.00046636592014692724,
+        "rmse": 0.0005378145724534988,
+        "relative_l2": 0.009013927578589731,
+        "cosine": 0.9999595284461975
+      },
+      {
+        "name": "conv3.bias",
+        "numel": 3,
+        "max_abs": 3.686291165649891e-07,
+        "mean_abs": 1.228763721883297e-07,
+        "rmse": 2.1282812667777762e-07,
+        "relative_l2": 0.0003072319579451698,
+        "cosine": 0.9999999403953552
+      }
+    ]
+  },
+  {
+    "meta_path": "/private/tmp/pact-mine/experiments/postfilter_weights/postfilter_long1500_h96_best_meta.json",
+    "epoch": 169,
+    "scorer": 3.95241400718689,
+    "fp32_path": "/private/tmp/pact-mine/experiments/postfilter_weights/postfilter_long1500_h96_best_fp32.pt",
+    "int8_path": "/private/tmp/pact-mine/experiments/postfilter_weights/postfilter_long1500_h96_best_int8.pt",
+    "layer_count": 6,
+    "aggregate": {
+      "max_abs": 0.001464078202843666,
+      "mean_abs": 0.0007158043589270935,
+      "rmse": 0.000830403071554594
+    },
+    "layers": [
+      {
+        "name": "conv2.weight",
+        "numel": 82944,
+        "max_abs": 0.001464078202843666,
+        "mean_abs": 0.0007320038857869804,
+        "rmse": 0.000845497939735651,
+        "relative_l2": 0.022527031676506427,
+        "cosine": 0.9997629523277283
+      },
+      {
+        "name": "conv1.bias",
+        "numel": 96,
+        "max_abs": 0.001252995803952217,
+        "mean_abs": 0.0005886068684048951,
+        "rmse": 0.0006998744211159647,
+        "relative_l2": 0.004085019919548102,
+        "cosine": 0.9999916553497314
+      },
+      {
+        "name": "conv1.weight",
+        "numel": 2592,
+        "max_abs": 0.0010867491364479065,
+        "mean_abs": 0.0005483202403411269,
+        "rmse": 0.0006316111539490521,
+        "relative_l2": 0.005542127337156846,
+        "cosine": 0.9999849796295166
+      },
+      {
+        "name": "conv3.weight",
+        "numel": 2592,
+        "max_abs": 0.0007685516029596329,
+        "mean_abs": 0.00038249039789661765,
+        "rmse": 0.0004435486625880003,
+        "relative_l2": 0.015805851489457602,
+        "cosine": 0.9998754262924194
+      },
+      {
+        "name": "conv2.bias",
+        "numel": 96,
+        "max_abs": 0.000765657052397728,
+        "mean_abs": 0.0003905270714312792,
+        "rmse": 0.0004555236082524061,
+        "relative_l2": 0.007602922243624591,
+        "cosine": 0.999971330165863
+      },
+      {
+        "name": "conv3.bias",
+        "numel": 3,
+        "max_abs": 3.882450982928276e-08,
+        "mean_abs": 1.9421955599341345e-08,
+        "rmse": 2.5068633391356343e-08,
+        "relative_l2": 3.618378853980097e-05,
+        "cosine": 0.9999998807907104
+      }
+    ]
+  }
+]

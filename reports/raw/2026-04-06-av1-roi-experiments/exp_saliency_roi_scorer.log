@@ -1,0 +1,54 @@
+Archive:  /tmp/pact-parallel-scorer/comma_video_compression_challenge/submissions/robust_current/archive.zip
+  inflating: /tmp/pact-parallel-scorer/comma_video_compression_challenge/submissions/robust_current/archive/0.mkv  
+Inflating (canonical PyAV + torch bicubic) /tmp/pact-parallel-scorer/comma_video_compression_challenge/submissions/robust_current/archive -> /tmp/pact-parallel-scorer/comma_video_compression_challenge/submissions/robust_current/inflated
+warning: `VIRTUAL_ENV=/tmp/pact-parallel-scorer/comma_video_compression_challenge/.venv` does not match the project environment path `.venv` and will be ignored; use `--active` to target the active environment instead
+Inflating /tmp/pact-parallel-scorer/comma_video_compression_challenge/submissions/robust_current/archive/0.mkv -> /tmp/pact-parallel-scorer/comma_video_compression_challenge/submissions/robust_current/inflated/0.raw
+  1200 frames
+All videos inflated to /tmp/pact-parallel-scorer/comma_video_compression_challenge/submissions/robust_current/inflated
+=== Evaluation config ===
+  batch_size: 16
+  device: cpu
+  num_threads: 2
+  prefetch_queue_depth: 4
+  report: /tmp/pact-parallel-scorer/comma_video_compression_challenge/submissions/robust_current/report.txt
+  seed: 1234
+  submission_dir: /tmp/pact-parallel-scorer/comma_video_compression_challenge/submissions/robust_current
+  uncompressed_dir: /tmp/pact-parallel-scorer/comma_video_compression_challenge/videos
+  video_names_file: /tmp/pact-parallel-scorer/comma_video_compression_challenge/public_test_video_names.txt
+AVVideoDataset on rank 0 with 1 files.
+TensorVideoDataset on rank 0 with 1 files.
+0it [00:00, ?it/s]/private/tmp/pact-parallel-scorer/comma_video_compression_challenge/frame_utils.py:232: UserWarning: The given NumPy array is not writable, and PyTorch does not support non-writable tensors. This means writing to this tensor will result in undefined behavior. You may want to copy the array to protect its data or make it writable before converting it to a tensor. This type of warning will be suppressed for the rest of this program. (Triggered internally at /Users/runner/work/pytorch/pytorch/pytorch/torch/csrc/utils/tensor_numpy.cpp:219.)
+  frames = torch.from_numpy(mm)  # (N, H, W, C), shares mmap memory
+1it [00:50, 50.30s/it]2it [01:32, 45.65s/it]3it [02:09, 41.65s/it]4it [02:51, 41.82s/it]5it [03:35, 42.52s/it]6it [04:22, 44.08s/it]7it [05:08, 44.73s/it]8it [05:54, 45.07s/it]9it [06:33, 43.20s/it]10it [07:15, 42.80s/it]11it [07:56, 42.15s/it]12it [08:41, 43.13s/it]13it [09:15, 40.28s/it]14it [09:51, 39.23s/it]15it [10:22, 36.67s/it]16it [10:59, 36.82s/it]17it [11:38, 37.35s/it]18it [12:19, 38.44s/it]19it [12:55, 37.84s/it]20it [13:33, 37.64s/it]21it [14:14, 38.69s/it]22it [14:54, 39.23s/it]23it [15:36, 40.10s/it]24it [16:21, 41.46s/it]25it [17:02, 41.25s/it]26it [17:46, 42.08s/it]27it [18:23, 40.51s/it]28it [19:01, 39.74s/it]29it [19:37, 38.88s/it]30it [20:15, 38.43s/it]31it [20:54, 38.78s/it]32it [21:39, 40.67s/it]33it [22:22, 41.24s/it]34it [23:03, 41.10s/it]35it [23:39, 39.50s/it]36it [24:23, 40.91s/it]37it [25:09, 42.60s/it]38it [27:23, 69.79s/it]38it [27:23, 43.24s/it]
+=== Evaluation results over 600 samples ===
+  Average PoseNet Distortion: 0.08725528
+  Average SegNet Distortion: 0.00574072
+  Submission file size: 878,142 bytes
+  Original uncompressed size: 37,545,489 bytes
+  Compression Rate: 0.02338875
+  Final score: 100*segnet_dist + √(10*posenet_dist) + 25*rate = 2.09
+Evaluation complete. Report saved to /tmp/pact-parallel-scorer/comma_video_compression_challenge/submissions/robust_current/report.txt
+{
+  "copied_report_path": "reports/raw/2026-04-06-av1-roi-experiments/exp_saliency_roi_report.txt",
+  "current_workflow_archive_bytes": 878142,
+  "current_workflow_rate": 0.02338875,
+  "current_workflow_score": 2.09,
+  "device": "cpu",
+  "original_uncompressed_bytes": 37545489,
+  "pose_distortion": 0.08725528,
+  "report_path": "/tmp/pact-parallel-scorer/comma_video_compression_challenge/submissions/robust_current/report.txt",
+  "rule_faithful_bundle_bytes": 925856,
+  "rule_faithful_bundle_paths": [
+    "archive.zip",
+    "inflate.sh",
+    "inflate.py",
+    "inflate_python.py",
+    "config.env",
+    "analyze_roi.py"
+  ],
+  "rule_faithful_rate": 0.024659580276075243,
+  "rule_faithful_score": 2.1246668542797877,
+  "rule_faithful_status": "estimated_from_scorer_distortions_plus_installed_runtime_payload",
+  "seg_distortion": 0.00574072,
+  "track": "robust_current"
+}

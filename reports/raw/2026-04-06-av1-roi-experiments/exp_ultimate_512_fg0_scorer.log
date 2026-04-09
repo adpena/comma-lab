@@ -1,0 +1,68 @@
+Archive:  /tmp/pact-parallel-scorer/comma_video_compression_challenge/submissions/robust_current/archive.zip
+  inflating: /tmp/pact-parallel-scorer/comma_video_compression_challenge/submissions/robust_current/archive/0.mkv  
+Inflating (canonical PyAV + torch bicubic) /tmp/pact-parallel-scorer/comma_video_compression_challenge/submissions/robust_current/archive -> /tmp/pact-parallel-scorer/comma_video_compression_challenge/submissions/robust_current/inflated
+warning: `VIRTUAL_ENV=/tmp/pact-parallel-scorer/comma_video_compression_challenge/.venv` does not match the project environment path `.venv` and will be ignored; use `--active` to target the active environment instead
+Inflating /tmp/pact-parallel-scorer/comma_video_compression_challenge/submissions/robust_current/archive/0.mkv -> /tmp/pact-parallel-scorer/comma_video_compression_challenge/submissions/robust_current/inflated/0.raw
+  1200 frames
+All videos inflated to /tmp/pact-parallel-scorer/comma_video_compression_challenge/submissions/robust_current/inflated
+=== Evaluation config ===
+  batch_size: 16
+  device: cpu
+  num_threads: 2
+  prefetch_queue_depth: 4
+  report: /tmp/pact-parallel-scorer/comma_video_compression_challenge/submissions/robust_current/report.txt
+  seed: 1234
+  submission_dir: /tmp/pact-parallel-scorer/comma_video_compression_challenge/submissions/robust_current
+  uncompressed_dir: /tmp/pact-parallel-scorer/comma_video_compression_challenge/videos
+  video_names_file: /tmp/pact-parallel-scorer/comma_video_compression_challenge/public_test_video_names.txt
+Traceback (most recent call last):
+  File "/tmp/pact-parallel-scorer/comma_video_compression_challenge/evaluate.py", line 112, in <module>
+    main()
+  File "/tmp/pact-parallel-scorer/comma_video_compression_challenge/evaluate.py", line 53, in main
+    distortion_net.load_state_dicts(posenet_sd_path, segnet_sd_path, device)
+  File "/private/tmp/pact-parallel-scorer/comma_video_compression_challenge/modules.py", line 137, in load_state_dicts
+    posenet_sd = load_file(posenet_sd_path, device=str(device))
+                 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/private/tmp/pact-parallel-scorer/comma_video_compression_challenge/.venv/lib/python3.11/site-packages/safetensors/torch.py", line 381, in load_file
+    with safe_open(filename, framework="pt", device=device) as f:
+         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+FileNotFoundError: No such file or directory: /private/tmp/pact-parallel-scorer/comma_video_compression_challenge/models/posenet.safetensors
+Traceback (most recent call last):
+  File "<frozen runpy>", line 198, in _run_module_as_main
+  File "<frozen runpy>", line 88, in _run_code
+  File "/Users/adpena/Projects/pact/src/comma_lab/cli.py", line 187, in <module>
+    raise SystemExit(main())
+                     ~~~~^^
+  File "/Users/adpena/Projects/pact/src/comma_lab/cli.py", line 180, in main
+    return args.func(args)
+           ~~~~~~~~~^^^^^^
+  File "/Users/adpena/Projects/pact/src/comma_lab/cli.py", line 86, in cmd_eval_submission
+    summary = evaluate_submission(
+        args.name,
+    ...<4 lines>...
+        report_copy=Path(args.report_copy) if args.report_copy else None,
+    )
+  File "/Users/adpena/Projects/pact/src/comma_lab/evaluate.py", line 142, in evaluate_submission
+    _run([
+    ~~~~^^
+        "bash",
+        ^^^^^^^
+    ...<4 lines>...
+        device,
+        ^^^^^^^
+    ], cwd=root, env=env)
+    ^^^^^^^^^^^^^^^^^^^^^
+  File "/Users/adpena/Projects/pact/src/comma_lab/evaluate.py", line 67, in _run
+    subprocess.run(
+    ~~~~~~~~~~~~~~^
+        cmd,
+        ^^^^
+    ...<5 lines>...
+        stderr=sys.stderr,
+        ^^^^^^^^^^^^^^^^^^
+    )
+    ^
+  File "/opt/homebrew/Cellar/python@3.14/3.14.3_1/Frameworks/Python.framework/Versions/3.14/lib/python3.14/subprocess.py", line 577, in run
+    raise CalledProcessError(retcode, process.args,
+                             output=stdout, stderr=stderr)
+subprocess.CalledProcessError: Command '['bash', '/tmp/pact-parallel-scorer/comma_video_compression_challenge/evaluate.sh', '--submission-dir', '/tmp/pact-parallel-scorer/comma_video_compression_challenge/submissions/robust_current', '--device', 'cpu']' returned non-zero exit status 1.

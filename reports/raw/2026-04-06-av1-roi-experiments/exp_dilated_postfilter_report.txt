@@ -1,0 +1,17 @@
+=== Evaluation config ===
+  batch_size: 16
+  device: cpu
+  num_threads: 2
+  prefetch_queue_depth: 4
+  report: /tmp/pact-parallel-scorer/comma_video_compression_challenge/submissions/robust_current/report.txt
+  seed: 1234
+  submission_dir: /tmp/pact-parallel-scorer/comma_video_compression_challenge/submissions/robust_current
+  uncompressed_dir: /tmp/pact-parallel-scorer/comma_video_compression_challenge/videos
+  video_names_file: /tmp/pact-parallel-scorer/comma_video_compression_challenge/public_test_video_names.txt
+=== Evaluation results over 600 samples ===
+  Average PoseNet Distortion: 0.07549243
+  Average SegNet Distortion: 0.00624139
+  Submission file size: 864,168 bytes
+  Original uncompressed size: 37,545,489 bytes
+  Compression Rate: 0.02301656
+  Final score: 100*segnet_dist + √(10*posenet_dist) + 25*rate = 2.07
