@@ -102,6 +102,7 @@ class Trainer:
         self.ema = EMA(model, decay=config.ema_decay)
         self.best_scorer = float("inf")
         self.best_epoch = -1
+        self._patched_scorers = False
 
         self.optimizer = torch.optim.AdamW(
             model.parameters(), lr=config.lr, weight_decay=1e-4
@@ -116,6 +117,46 @@ class Trainer:
                 self.optimizer, T_0=config.restart_t0, T_mult=config.restart_tmult, eta_min=1e-6
             )
 
+    @staticmethod
+    def _patch_scorers_for_training(posenet, segnet):
+        """Monkey-patch upstream scorer models for differentiable training.
+
+        The upstream PoseNet.preprocess_input uses rgb_to_yuv6 decorated with
+        @torch.no_grad(), which kills gradients through the color space conversion.
+        We replace it with a differentiable version. AllNorm.forward uses .view()
+        which we replace with .reshape() for robustness.
+
+        This is REQUIRED for training — without it, PoseNet gradients are zero.
+        """
+        import einops
+
+        # Patch AllNorm to not break gradients
+        for module in list(posenet.modules()) + list(segnet.modules()):
+            if type(module).__name__ == "AllNorm":
+                def _patched_forward(self, x):
+                    return self.bn(x.reshape(-1, 1)).reshape(x.shape)
+                import types
+                module.forward = types.MethodType(_patched_forward, module)
+
+        # Patch PoseNet.preprocess_input to be differentiable
+        def _diff_preprocess(self, x):
+            batch_size = x.shape[0]
+            seq_len_local = x.shape[1]
+            x = einops.rearrange(x, 'b t c h w -> (b t) c h w',
+                                 b=batch_size, t=seq_len_local, c=3)
+            # Differentiable BT.601 limited-range RGB->YUV
+            r, g, b = x[:, 0:1], x[:, 1:2], x[:, 2:3]
+            y = 16.0 + (65.481 * r + 128.553 * g + 24.966 * b) / 255.0
+            u = 128.0 + (-37.797 * r - 74.203 * g + 112.0 * b) / 255.0
+            v = 128.0 + (112.0 * r - 93.786 * g - 18.214 * b) / 255.0
+            y2 = y.clamp(16, 235)
+            u2 = u.clamp(16, 240)
+            v2 = v.clamp(16, 240)
+            yuv = torch.cat([y2, u2, v2, y2, u2, v2], dim=1)
+            return yuv
+        import types
+        posenet.preprocess_input = types.MethodType(_diff_preprocess, posenet)
+
     def _apply_filter_to_pair(self, comp_pair: torch.Tensor) -> torch.Tensor:
         """Apply the post-filter to both frames of a pair.
 
@@ -123,7 +164,7 @@ class Trainer:
         Output: (1, 2, H, W, 3) float [0, 255]
         """
         B, T, H, W, C = comp_pair.shape
-        frames_bchw = comp_pair.float().reshape(B * T, H, W, C).permute(0, 3, 1, 2)
+        frames_bchw = comp_pair.float().reshape(B * T, H, W, C).permute(0, 3, 1, 2).contiguous()
         filtered_bchw = self.model(frames_bchw)
         return filtered_bchw.permute(0, 2, 3, 1).reshape(B, T, H, W, C)
 
@@ -144,8 +185,8 @@ class Trainer:
         for name, param in self.model.state_dict().items():
             p = param.detach().float()
             scale = p.abs().max() / 127.0
-            if scale.item() == 0:
-                scale = torch.tensor(1.0)
+            if scale.item() < 1e-10:
+                scale = torch.tensor(1.0, device=p.device)
             q = (p / scale).round().clamp(-128, 127) * scale
             q_state[name] = q
         self.model.load_state_dict(q_state)
@@ -185,8 +226,8 @@ class Trainer:
         for name, param in self.ema.shadow.items():
             p = param.detach().cpu().float()
             scale = p.abs().max() / 127.0
-            if scale.item() == 0:
-                scale = torch.tensor(1.0)
+            if scale.item() < 1e-10:
+                scale = torch.tensor(1.0, device=p.device)
             int8_state[name + ".q"] = (p / scale).round().clamp(-128, 127).to(torch.int8)
             int8_state[name + ".s"] = scale
         int8_state["__meta__"] = {
@@ -227,6 +268,12 @@ class Trainer:
             boundary_masks: optional list of (H, W) boundary masks per pair
             callback: optional (epoch, loss, pose, seg, scorer) callback
         """
+        # Patch scorer models for differentiable training (CRITICAL: without this,
+        # PoseNet gradients are zero due to upstream @torch.no_grad on rgb_to_yuv6)
+        if not self._patched_scorers:
+            self._patch_scorers_for_training(posenet, segnet)
+            self._patched_scorers = True
+
         n_pairs = len(comp_pairs)
         cfg = self.config
         pairs_per_epoch = cfg.pairs_per_epoch or n_pairs

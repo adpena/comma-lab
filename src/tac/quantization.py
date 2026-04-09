@@ -30,7 +30,7 @@ class FakeQuantSTE(torch.autograd.Function):
     def forward(ctx, w: torch.Tensor) -> torch.Tensor:
         with torch.no_grad():
             scale = w.detach().abs().max() / 127.0
-            if scale.item() == 0.0:
+            if scale.item() < 1e-10:
                 ctx.save_for_backward(torch.zeros_like(w, dtype=torch.bool))
                 return w
             q = (w / scale).round().clamp(-128.0, 127.0)

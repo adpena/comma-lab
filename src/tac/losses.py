@@ -105,7 +105,7 @@ def segnet_ste_loss(
 
     if boundary_mask is not None and boundary_weight > 1.0:
         bm = boundary_mask.to(fs_out.device).unsqueeze(0).unsqueeze(0)
-        bm_resized = F.interpolate(bm, size=(H_seg, W_seg), mode="nearest").squeeze()
+        bm_resized = F.interpolate(bm, size=(H_seg, W_seg), mode="nearest").squeeze(0).squeeze(0)
         pixel_weights = torch.where(bm_resized > 0.5, boundary_weight, 1.0)
         pixel_weights = pixel_weights / pixel_weights.mean()
         flat_weights = pixel_weights.expand(B, -1, -1).reshape(-1)
