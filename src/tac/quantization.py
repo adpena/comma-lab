@@ -259,6 +259,30 @@ def load_int8(
     return model.eval().to(device)
 
 
+def save_int8_from_state_dict(
+    state_dict: dict[str, torch.Tensor],
+    path: str | os.PathLike,
+    meta: dict[str, Any] | None = None,
+) -> int:
+    """Save int8 from a bare state dict (no model needed).
+
+    Useful for checkpoint averaging workflows that produce a state dict
+    without a model instance.
+    """
+    state: dict[str, Any] = {}
+    for name, param in state_dict.items():
+        p = param.detach().cpu().float()
+        scale = p.abs().max() / 127.0
+        if scale.item() < 1e-10:
+            scale = torch.tensor(1.0)
+        state[name + ".q"] = (p / scale).round().clamp(-128, 127).to(torch.int8)
+        state[name + ".s"] = scale
+    if meta is not None:
+        state["__meta__"] = dict(meta)
+    torch.save(state, path)
+    return os.path.getsize(path)
+
+
 def get_meta(path: str | os.PathLike) -> dict[str, Any]:
     """Read metadata from an int8 weight file without loading all weights."""
     state = torch.load(path, map_location="cpu", weights_only=True)

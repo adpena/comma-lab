@@ -143,10 +143,16 @@ class PSDPostFilter(nn.Module):
 
 
 VARIANTS = {
+    # Canonical names
     "standard": PostFilter,
     "dilated": DilatedPostFilter,
     "pixelshuffle": PixelShufflePostFilter,
     "psd": PSDPostFilter,
+    # Legacy aliases (from deploy inflate_postfilter.py)
+    "residual": PostFilter,
+    "saliency_weighted": PostFilter,
+    "segaware": PostFilter,
+    "pixelshuffle_dilated": PSDPostFilter,
 }
 
 
@@ -158,7 +164,9 @@ def build_postfilter(
     """Build a post-filter by variant name.
 
     Args:
-        variant: one of "standard", "dilated", "pixelshuffle", "psd"
+        variant: one of "standard", "dilated", "pixelshuffle", "psd",
+                 or legacy aliases: "residual", "saliency_weighted",
+                 "segaware", "pixelshuffle_dilated"
         hidden: hidden channel width
         kernel: conv kernel size (default 3)
 

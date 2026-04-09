@@ -21,6 +21,8 @@ Example::
 from __future__ import annotations
 
 import math
+import sys
+from pathlib import Path
 from typing import Protocol
 
 import torch
@@ -68,6 +70,61 @@ class Scorer(Protocol):
         Returns: (N, H, W) float tensor of gradient magnitudes.
         """
         ...
+
+
+def detect_device() -> torch.device:
+    """Auto-detect best available device: cuda > mps > cpu."""
+    if torch.cuda.is_available():
+        return torch.device("cuda")
+    if hasattr(torch.backends, "mps") and torch.backends.mps.is_available():
+        return torch.device("mps")
+    return torch.device("cpu")
+
+
+def load_scorers(
+    posenet_path: str | Path,
+    segnet_path: str | Path,
+    device: str | torch.device | None = None,
+    upstream_dir: str | Path | None = None,
+) -> tuple:
+    """Load frozen PoseNet and SegNet scorer models.
+
+    This is the single most-used function across all experiment scripts.
+    Loads from safetensors, freezes parameters, moves to device.
+
+    Args:
+        posenet_path: path to posenet.safetensors
+        segnet_path: path to segnet.safetensors
+        device: target device (auto-detected if None)
+        upstream_dir: if set, adds to sys.path for importing modules.py
+
+    Returns:
+        (posenet, segnet) tuple, both frozen and on device
+    """
+    if device is None:
+        device = detect_device()
+    device = torch.device(device) if isinstance(device, str) else device
+
+    # Ensure upstream modules are importable
+    if upstream_dir:
+        p = str(Path(upstream_dir))
+        if p not in sys.path:
+            sys.path.insert(0, p)
+
+    from modules import PoseNet, SegNet
+    from safetensors.torch import load_file
+
+    posenet = PoseNet().eval().to(device)
+    segnet = SegNet().eval().to(device)
+    posenet.load_state_dict(load_file(str(posenet_path), device=str(device)))
+    segnet.load_state_dict(load_file(str(segnet_path), device=str(device)))
+
+    for p in posenet.parameters():
+        p.requires_grad = False
+    for p in segnet.parameters():
+        p.requires_grad = False
+
+    return posenet, segnet
 
 
 def comma_score(pose_dist: float, seg_dist: float, rate: float) -> float:

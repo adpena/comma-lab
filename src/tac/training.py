@@ -57,6 +57,9 @@ class TrainConfig:
     boundary_weight: float = 1.0  # >1.0 enables boundary weighting
     use_ste_segnet: bool = False
 
+    # Training dynamics
+    accum_steps: int = 4  # gradient accumulation steps (effective batch size)
+
     # Resumption
     resume_from: str | None = None  # path to a training_state.pt checkpoint
 
@@ -490,6 +493,9 @@ class Trainer:
             # Random subset of pair indices
             perm = torch.randperm(n_pairs)[:train_size]
 
+            accum = cfg.accum_steps
+            self.optimizer.zero_grad()
+
             for step, pair_idx in enumerate(perm):
                 start = pair_starts[pair_idx.item()]
 
@@ -508,20 +514,22 @@ class Trainer:
                 filtered_bchw = filtered[:, 1].permute(0, 3, 1, 2)
                 comp_bchw = comp_pair[:, 1].float().permute(0, 3, 1, 2)
                 sal_recon = saliency_reconstruction_loss(
-                    filtered_bchw, comp_bchw, sal_w[1:2]  # frame 1 saliency only
+                    filtered_bchw, comp_bchw, sal_w[1:2]
                 )
 
-                total = loss + cfg.sal_lambda * sal_recon
-
-                self.optimizer.zero_grad()
+                total = (loss + cfg.sal_lambda * sal_recon) / accum
                 total.backward()
-                torch.nn.utils.clip_grad_norm_(self.model.parameters(), cfg.grad_clip)
-                self.optimizer.step()
-                self.ema.update(self.model)
 
                 total_loss += loss.item()
                 total_pose += pd
                 total_seg += sd
+
+                # Gradient accumulation: step every accum_steps
+                if (step + 1) % accum == 0 or (step + 1) == len(perm):
+                    torch.nn.utils.clip_grad_norm_(self.model.parameters(), cfg.grad_clip)
+                    self.optimizer.step()
+                    self.ema.update(self.model)
+                    self.optimizer.zero_grad()
 
                 # Free pair memory immediately
                 del comp_pair, gt_pair, filtered, filtered_bchw, comp_bchw, sal_w
