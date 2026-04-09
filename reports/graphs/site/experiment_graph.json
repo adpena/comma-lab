@@ -121,6 +121,42 @@
       "type": "filters"
     },
     {
+      "id": "filters:lanczos/lanczos + roi preprocess",
+      "type": "filters"
+    },
+    {
+      "id": "filters:lanczos/grain-mask",
+      "type": "filters"
+    },
+    {
+      "id": "filters:lanczos/learned-postfilter",
+      "type": "filters"
+    },
+    {
+      "id": "filters:lanczos/long500-qat-ema-postfilter-h16",
+      "type": "filters"
+    },
+    {
+      "id": "filters:lanczos/long500-qat-ema-postfilter-h32",
+      "type": "filters"
+    },
+    {
+      "id": "filters:lanczos/long1000-qat-ema-postfilter-h16",
+      "type": "filters"
+    },
+    {
+      "id": "filters:lanczos/long1000-qat-ema-postfilter-h32",
+      "type": "filters"
+    },
+    {
+      "id": "filters:lanczos/ensemble-postfilter-h32-mc75-25",
+      "type": "filters"
+    },
+    {
+      "id": "filters:lanczos/long1000-qat-ema-postfilter-h64",
+      "type": "filters"
+    },
+    {
       "id": "exact_current-baseline-cpu-2026-04-03",
       "type": "run",
       "score": 0.0,
@@ -370,6 +406,83 @@
       "type": "run",
       "score": 2.12,
       "bytes": 864486,
+      "track": "robust_current"
+    },
+    {
+      "id": "robust_current-sharpness1-promoted-cpu-2026-04-06",
+      "type": "run",
+      "score": 2.08,
+      "bytes": 864168,
+      "track": "robust_current"
+    },
+    {
+      "id": "robust_current-exp-h-sharpness1-consensus-rejected-cpu-2026-04-07",
+      "type": "run",
+      "score": 2.13,
+      "bytes": 909307,
+      "track": "robust_current"
+    },
+    {
+      "id": "robust_current-exp-j-preprocess-rejected-cpu-2026-04-07",
+      "type": "run",
+      "score": 2.52,
+      "bytes": 785302,
+      "track": "robust_current"
+    },
+    {
+      "id": "robust_current-grain-mask-final-rejected-cpu-2026-04-07",
+      "type": "run",
+      "score": 2.3,
+      "bytes": 716797,
+      "track": "robust_current"
+    },
+    {
+      "id": "robust_current-av1-522x392-postfilter-promoted-cpu-2026-04-07",
+      "type": "run",
+      "score": 2.05,
+      "bytes": 861986,
+      "track": "robust_current"
+    },
+    {
+      "id": "robust_current-long500-h16-promoted-cpu-2026-04-08",
+      "type": "run",
+      "score": 1.99,
+      "bytes": 864167,
+      "track": "robust_current"
+    },
+    {
+      "id": "robust_current-long500-h32-promoted-cpu-2026-04-08",
+      "type": "run",
+      "score": 1.95,
+      "bytes": 864168,
+      "track": "robust_current"
+    },
+    {
+      "id": "robust_current-long1000-h16-promoted-cpu-2026-04-08",
+      "type": "run",
+      "score": 1.92,
+      "bytes": 864167,
+      "track": "robust_current"
+    },
+    {
+      "id": "robust_current-long1000-h32-promoted-cpu-2026-04-08",
+      "type": "run",
+      "score": 1.85,
+      "bytes": 864167,
+      "track": "robust_current"
+    },
+    {
+      "id": "robust_current-ensemble-h32-mc75-25-promoted-cpu-2026-04-09",
+      "type": "run",
+      "score": 1.84,
+      "bytes": 864168,
+      "track": "robust_current"
+    },
+    {
+      "id": "robust_current-long1000-h64-promoted-cpu-2026-04-09",
+      "type": "run",
+      "score": 1.73,
+      "bytes": 864167,
       "track": "robust_current"
     }
   ],
@@ -1217,6 +1330,270 @@
     {
       "source": "gop:180",
       "target": "robust_current-av1-524x394-colorspace-hardening-promoted-cpu-2026-04-06"
+    },
+    {
+      "source": "track:robust_current",
+      "target": "robust_current-sharpness1-promoted-cpu-2026-04-06"
+    },
+    {
+      "source": "codec:libsvtav1",
+      "target": "robust_current-sharpness1-promoted-cpu-2026-04-06"
+    },
+    {
+      "source": "scale:524x394",
+      "target": "robust_current-sharpness1-promoted-cpu-2026-04-06"
+    },
+    {
+      "source": "filters:lanczos/lanczos",
+      "target": "robust_current-sharpness1-promoted-cpu-2026-04-06"
+    },
+    {
+      "source": "crf:34",
+      "target": "robust_current-sharpness1-promoted-cpu-2026-04-06"
+    },
+    {
+      "source": "gop:180",
+      "target": "robust_current-sharpness1-promoted-cpu-2026-04-06"
+    },
+    {
+      "source": "track:robust_current",
+      "target": "robust_current-exp-h-sharpness1-consensus-rejected-cpu-2026-04-07"
+    },
+    {
+      "source": "codec:libsvtav1",
+      "target": "robust_current-exp-h-sharpness1-consensus-rejected-cpu-2026-04-07"
+    },
+    {
+      "source": "scale:524x394",
+      "target": "robust_current-exp-h-sharpness1-consensus-rejected-cpu-2026-04-07"
+    },
+    {
+      "source": "filters:lanczos/lanczos",
+      "target": "robust_current-exp-h-sharpness1-consensus-rejected-cpu-2026-04-07"
+    },
+    {
+      "source": "crf:33",
+      "target": "robust_current-exp-h-sharpness1-consensus-rejected-cpu-2026-04-07"
+    },
+    {
+      "source": "gop:180",
+      "target": "robust_current-exp-h-sharpness1-consensus-rejected-cpu-2026-04-07"
+    },
+    {
+      "source": "track:robust_current",
+      "target": "robust_current-exp-j-preprocess-rejected-cpu-2026-04-07"
+    },
+    {
+      "source": "codec:libsvtav1",
+      "target": "robust_current-exp-j-preprocess-rejected-cpu-2026-04-07"
+    },
+    {
+      "source": "scale:524x394",
+      "target": "robust_current-exp-j-preprocess-rejected-cpu-2026-04-07"
+    },
+    {
+      "source": "filters:lanczos/lanczos + roi preprocess",
+      "target": "robust_current-exp-j-preprocess-rejected-cpu-2026-04-07"
+    },
+    {
+      "source": "crf:34",
+      "target": "robust_current-exp-j-preprocess-rejected-cpu-2026-04-07"
+    },
+    {
+      "source": "gop:180",
+      "target": "robust_current-exp-j-preprocess-rejected-cpu-2026-04-07"
+    },
+    {
+      "source": "track:robust_current",
+      "target": "robust_current-grain-mask-final-rejected-cpu-2026-04-07"
+    },
+    {
+      "source": "codec:libsvtav1",
+      "target": "robust_current-grain-mask-final-rejected-cpu-2026-04-07"
+    },
+    {
+      "source": "scale:522x392",
+      "target": "robust_current-grain-mask-final-rejected-cpu-2026-04-07"
+    },
+    {
+      "source": "filters:lanczos/grain-mask",
+      "target": "robust_current-grain-mask-final-rejected-cpu-2026-04-07"
+    },
+    {
+      "source": "crf:34",
+      "target": "robust_current-grain-mask-final-rejected-cpu-2026-04-07"
+    },
+    {
+      "source": "gop:180",
+      "target": "robust_current-grain-mask-final-rejected-cpu-2026-04-07"
+    },
+    {
+      "source": "track:robust_current",
+      "target": "robust_current-av1-522x392-postfilter-promoted-cpu-2026-04-07"
+    },
+    {
+      "source": "codec:libsvtav1",
+      "target": "robust_current-av1-522x392-postfilter-promoted-cpu-2026-04-07"
+    },
+    {
+      "source": "scale:522x392",
+      "target": "robust_current-av1-522x392-postfilter-promoted-cpu-2026-04-07"
+    },
+    {
+      "source": "filters:lanczos/learned-postfilter",
+      "target": "robust_current-av1-522x392-postfilter-promoted-cpu-2026-04-07"
+    },
+    {
+      "source": "crf:34",
+      "target": "robust_current-av1-522x392-postfilter-promoted-cpu-2026-04-07"
+    },
+    {
+      "source": "gop:180",
+      "target": "robust_current-av1-522x392-postfilter-promoted-cpu-2026-04-07"
+    },
+    {
+      "source": "track:robust_current",
+      "target": "robust_current-long500-h16-promoted-cpu-2026-04-08"
+    },
+    {
+      "source": "codec:libsvtav1",
+      "target": "robust_current-long500-h16-promoted-cpu-2026-04-08"
+    },
+    {
+      "source": "scale:524x394",
+      "target": "robust_current-long500-h16-promoted-cpu-2026-04-08"
+    },
+    {
+      "source": "filters:lanczos/long500-qat-ema-postfilter-h16",
+      "target": "robust_current-long500-h16-promoted-cpu-2026-04-08"
+    },
+    {
+      "source": "crf:34",
+      "target": "robust_current-long500-h16-promoted-cpu-2026-04-08"
+    },
+    {
+      "source": "gop:180",
+      "target": "robust_current-long500-h16-promoted-cpu-2026-04-08"
+    },
+    {
+      "source": "track:robust_current",
+      "target": "robust_current-long500-h32-promoted-cpu-2026-04-08"
+    },
+    {
+      "source": "codec:libsvtav1",
+      "target": "robust_current-long500-h32-promoted-cpu-2026-04-08"
+    },
+    {
+      "source": "scale:524x394",
+      "target": "robust_current-long500-h32-promoted-cpu-2026-04-08"
+    },
+    {
+      "source": "filters:lanczos/long500-qat-ema-postfilter-h32",
+      "target": "robust_current-long500-h32-promoted-cpu-2026-04-08"
+    },
+    {
+      "source": "crf:34",
+      "target": "robust_current-long500-h32-promoted-cpu-2026-04-08"
+    },
+    {
+      "source": "gop:180",
+      "target": "robust_current-long500-h32-promoted-cpu-2026-04-08"
+    },
+    {
+      "source": "track:robust_current",
+      "target": "robust_current-long1000-h16-promoted-cpu-2026-04-08"
+    },
+    {
+      "source": "codec:libsvtav1",
+      "target": "robust_current-long1000-h16-promoted-cpu-2026-04-08"
+    },
+    {
+      "source": "scale:524x394",
+      "target": "robust_current-long1000-h16-promoted-cpu-2026-04-08"
+    },
+    {
+      "source": "filters:lanczos/long1000-qat-ema-postfilter-h16",
+      "target": "robust_current-long1000-h16-promoted-cpu-2026-04-08"
+    },
+    {
+      "source": "crf:34",
+      "target": "robust_current-long1000-h16-promoted-cpu-2026-04-08"
+    },
+    {
+      "source": "gop:180",
+      "target": "robust_current-long1000-h16-promoted-cpu-2026-04-08"
+    },
+    {
+      "source": "track:robust_current",
+      "target": "robust_current-long1000-h32-promoted-cpu-2026-04-08"
+    },
+    {
+      "source": "codec:libsvtav1",
+      "target": "robust_current-long1000-h32-promoted-cpu-2026-04-08"
+    },
+    {
+      "source": "scale:524x394",
+      "target": "robust_current-long1000-h32-promoted-cpu-2026-04-08"
+    },
+    {
+      "source": "filters:lanczos/long1000-qat-ema-postfilter-h32",
+      "target": "robust_current-long1000-h32-promoted-cpu-2026-04-08"
+    },
+    {
+      "source": "crf:34",
+      "target": "robust_current-long1000-h32-promoted-cpu-2026-04-08"
+    },
+    {
+      "source": "gop:180",
+      "target": "robust_current-long1000-h32-promoted-cpu-2026-04-08"
+    },
+    {
+      "source": "track:robust_current",
+      "target": "robust_current-ensemble-h32-mc75-25-promoted-cpu-2026-04-09"
+    },
+    {
+      "source": "codec:libsvtav1",
+      "target": "robust_current-ensemble-h32-mc75-25-promoted-cpu-2026-04-09"
+    },
+    {
+      "source": "scale:524x394",
+      "target": "robust_current-ensemble-h32-mc75-25-promoted-cpu-2026-04-09"
+    },
+    {
+      "source": "filters:lanczos/ensemble-postfilter-h32-mc75-25",
+      "target": "robust_current-ensemble-h32-mc75-25-promoted-cpu-2026-04-09"
+    },
+    {
+      "source": "crf:34",
+      "target": "robust_current-ensemble-h32-mc75-25-promoted-cpu-2026-04-09"
+    },
+    {
+      "source": "gop:180",
+      "target": "robust_current-ensemble-h32-mc75-25-promoted-cpu-2026-04-09"
+    },
+    {
+      "source": "track:robust_current",
+      "target": "robust_current-long1000-h64-promoted-cpu-2026-04-09"
+    },
+    {
+      "source": "codec:libsvtav1",
+      "target": "robust_current-long1000-h64-promoted-cpu-2026-04-09"
+    },
+    {
+      "source": "scale:524x394",
+      "target": "robust_current-long1000-h64-promoted-cpu-2026-04-09"
+    },
+    {
+      "source": "filters:lanczos/long1000-qat-ema-postfilter-h64",
+      "target": "robust_current-long1000-h64-promoted-cpu-2026-04-09"
+    },
+    {
+      "source": "crf:34",
+      "target": "robust_current-long1000-h64-promoted-cpu-2026-04-09"
+    },
+    {
+      "source": "gop:180",
+      "target": "robust_current-long1000-h64-promoted-cpu-2026-04-09"
     }
   ]
 }

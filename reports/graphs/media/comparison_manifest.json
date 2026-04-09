@@ -9,13 +9,69 @@
     "w": 420,
     "h": 316
   },
+  "source_size": {
+    "w": 1164,
+    "h": 874
+  },
+  "preview_size": {
+    "w": 960,
+    "h": 720
+  },
+  "variants": [
+    {
+      "id": "floor_173",
+      "label": "1.73 current floor",
+      "note": "long1000 h64",
+      "score": 1.73,
+      "preview": "inflated_preview.mp4",
+      "poster": "inflated_poster.jpg"
+    },
+    {
+      "id": "floor_184",
+      "label": "1.84 prior floor",
+      "note": "ensemble h32 + MC 75/25",
+      "score": 1.84,
+      "preview": "inflated_184_preview.mp4",
+      "poster": "inflated_184_poster.jpg"
+    },
+    {
+      "id": "floor_185",
+      "label": "1.85 older floor",
+      "note": "long1000 h32",
+      "score": 1.85,
+      "preview": "inflated_185_preview.mp4",
+      "poster": "inflated_185_poster.jpg"
+    }
+  ],
+  "leaderboard_refs": [
+    {
+      "label": "Public #1",
+      "score": 1.89,
+      "note": "neural_inflate"
+    },
+    {
+      "label": "Public #2",
+      "score": 1.94,
+      "note": "roi_v2"
+    },
+    {
+      "label": "Public #3",
+      "score": 1.95,
+      "note": "av1_roi_lanczos_unsharp"
+    }
+  ],
+  "updated_at_utc": "2026-04-09T15:52:42.635748Z",
   "assets": [
     "original_preview.mp4",
     "inflated_preview.mp4",
+    "inflated_184_preview.mp4",
+    "inflated_185_preview.mp4",
     "original_zoom_preview.mp4",
     "inflated_zoom_preview.mp4",
     "original_poster.jpg",
     "inflated_poster.jpg",
+    "inflated_184_poster.jpg",
+    "inflated_185_poster.jpg",
     "original_zoom_poster.jpg",
     "inflated_zoom_poster.jpg"
   ]

@@ -5,27 +5,26 @@
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <title>comma-lab</title>
   <meta name="description" content="Scorer-backed compression experiments, evidence, and reporting for the comma video challenge." />
-  <meta name="robots" content="index,follow" />
-  <meta name="theme-color" content="#0b1020" />
+  <meta name="robots" content="noindex,nofollow" />
+  <meta name="theme-color" content="#0f1724" />
   <meta name="color-scheme" content="dark" />
-  <link rel="canonical" href="https://comma-lab.pages.dev/" />
   <meta property="og:title" content="comma-lab" />
   <meta property="og:description" content="Scorer-backed compression experiments and evidence for the comma video challenge." />
   <meta property="og:type" content="website" />
-  <meta property="og:url" content="https://comma-lab.pages.dev/" />
   <meta name="twitter:card" content="summary_large_image" />
-  <script type="application/ld+json">{"@context":"https://schema.org","@type":"WebSite","name":"comma-lab","url":"https://comma-lab.pages.dev/"}</script>
+  <script type="application/ld+json">{"@context":"https://schema.org","@type":"WebSite","name":"comma-lab"}</script>
   <style>
     :root {
-      --bg: #0a0d12;
-      --panel: rgba(255,255,255,0.045);
-      --panel-strong: rgba(255,255,255,0.035);
-      --stroke: rgba(255,255,255,0.09);
-      --text: #f5f7fb;
-      --muted: #9aa6b2;
-      --soft: #cbd5df;
-      --accent: #8ab4ff;
-      --accent-2: #8ab4ff;
+      --bg: #0f1724;
+      --bg-2: #101d2f;
+      --panel: rgba(255,255,255,0.055);
+      --panel-strong: rgba(255,255,255,0.045);
+      --stroke: rgba(255,255,255,0.10);
+      --text: #f4f1e8;
+      --muted: #a8b1bc;
+      --soft: #d9e0e8;
+      --accent: #8ed1c0;
+      --accent-2: #f0b35f;
       --danger: #ff6b6b;
       --shadow: none;
       --radius: 20px;
@@ -34,19 +33,45 @@
     }
     * { box-sizing: border-box; }
     html { scroll-behavior: smooth; }
-    body { margin: 0; background: #0b0d10; color: var(--text); font: 500 16px/1.6 Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "SF Pro Display", sans-serif; text-rendering: optimizeLegibility; }
+    body {
+      margin: 0;
+      background:
+        radial-gradient(circle at top left, rgba(142,209,192,0.14), transparent 32%),
+        radial-gradient(circle at top right, rgba(240,179,95,0.12), transparent 30%),
+        linear-gradient(180deg, #111b2c 0%, #0c1320 48%, #0a1018 100%);
+      color: var(--text);
+      font: 500 16px/1.6 ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "SF Pro Display", sans-serif;
+      text-rendering: optimizeLegibility;
+    }
     a { color: inherit; text-underline-offset: 0.2em; }
     a:focus-visible, button:focus-visible { outline: 3px solid var(--accent-2); outline-offset: 3px; border-radius: 6px; }
     .skip { position: absolute; left: 12px; top: -48px; background: #fff; color: #000; padding: 10px 14px; border-radius: 10px; z-index: 99; }
     .skip:focus { top: 12px; }
     .wrap { max-width: var(--max); margin: 0 auto; padding: 28px 24px 72px; }
-    .hero { padding: 28px 0 10px; display: grid; gap: 14px; }
+    .hero { padding: 28px 0 10px; display: grid; gap: 18px; }
     .eyebrow { color: var(--muted); font-size: 11px; letter-spacing: 0.12em; text-transform: uppercase; font-weight: 700; }
-    h1 { margin: 0; font-size: clamp(40px, 6vw, 72px); line-height: 0.96; letter-spacing: -0.045em; font-weight: 760; }
-    .lede { max-width: 760px; color: var(--soft); font-size: 16px; margin: 0; }
+    h1 { margin: 0; font-family: "Iowan Old Style", "Palatino Linotype", "Book Antiqua", Georgia, ui-serif, serif; font-size: clamp(42px, 6vw, 78px); line-height: 0.94; letter-spacing: -0.05em; font-weight: 700; max-width: 11ch; }
+    h2, h3 { font-family: "Iowan Old Style", "Palatino Linotype", "Book Antiqua", Georgia, ui-serif, serif; }
+    .lede { max-width: 760px; color: var(--soft); font-size: 17px; margin: 0; }
+    .hero-grid { display:grid; grid-template-columns: 1.1fr 0.9fr; gap: 18px; align-items: start; }
+    .hero-stack { display:grid; gap: 14px; }
+    .pill-row { display:flex; gap:10px; flex-wrap:wrap; }
+    .pill { border: 1px solid var(--stroke); background: rgba(255,255,255,0.035); padding: 8px 12px; border-radius: 999px; color: var(--soft); font-size: 12px; }
+    .hero-card-grid { display:grid; gap: 12px; grid-template-columns: repeat(3, minmax(0, 1fr)); }
+    .hero-card {
+      background: linear-gradient(180deg, rgba(255,255,255,0.05), rgba(255,255,255,0.025));
+      border: 1px solid var(--stroke);
+      border-radius: 16px;
+      padding: 16px;
+      min-height: 100%;
+    }
+    .hero-card h2 { margin: 0 0 8px; font-size: 18px; letter-spacing: -0.03em; }
+    .hero-card p { margin: 0; color: var(--soft); font-size: 14px; line-height: 1.6; }
+    .hero-links { display:flex; flex-wrap:wrap; gap: 10px 14px; margin-top: 10px; font-size: 13px; color: var(--muted); }
+    .hero-links a { text-decoration: none; }
     .two { display: grid; gap: 16px; }
     .two { grid-template-columns: 1.25fr 0.75fr; }
-    .panel { background: #0f1318; border: 1px solid var(--stroke); border-radius: 12px; box-shadow: none; padding: 20px; margin-top: 18px; }
+    .panel { background: linear-gradient(180deg, rgba(16,23,36,0.92), rgba(10,14,20,0.92)); border: 1px solid var(--stroke); border-radius: 14px; box-shadow: none; padding: 20px; margin-top: 18px; }
     .panel h2 { margin: 0 0 10px; font-size: 20px; letter-spacing: -0.03em; }
     .muted { color: var(--muted); }
     .subnav { display:flex; gap:14px; flex-wrap:wrap; font-size: 13px; color: var(--muted); }
@@ -66,6 +91,10 @@
     .summary-label { color: var(--muted); font-size: 11px; text-transform: uppercase; letter-spacing: 0.08em; }
     .summary-value { font-size: 28px; line-height: 1; margin-top: 8px; font-weight: 720; letter-spacing: -0.04em; }
     .summary-meta { color: var(--muted); font-size: 12px; margin-top: 8px; }
+    .concept-grid { display:grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 14px; }
+    .concept-card { border: 1px solid var(--stroke); border-radius: 14px; padding: 16px; background: rgba(255,255,255,0.03); }
+    .concept-card h3 { margin: 0 0 8px; font-size: 18px; letter-spacing: -0.02em; }
+    .concept-card p { margin: 0; color: var(--soft); font-size: 14px; line-height: 1.6; }
     .walkthrough { list-style: none; margin: 0; padding: 0; counter-reset: step; }
     .walkthrough li { counter-increment: step; display: grid; grid-template-columns: 28px 1fr; gap: 14px; padding: 14px 0; border-top: 1px solid var(--stroke); }
     .walkthrough li:first-child { border-top: 0; }
@@ -96,6 +125,18 @@
     .lineage-note-box { fill: rgba(12,16,22,0.94); stroke: rgba(255,255,255,0.09); stroke-width: 1; }
     .lineage-note-title { font-size: 12px; font-weight: 650; fill: var(--text); letter-spacing: -0.01em; }
     .lineage-note-meta { font-size: 10px; fill: var(--muted); }
+    .trajectory-edge { fill: none; stroke-linecap: round; stroke-width: 2.4; }
+    .trajectory-edge-main { stroke: #8ed1c0; }
+    .trajectory-edge-branch { stroke: #ff8f8f; stroke-dasharray: 5 6; }
+    .trajectory-edge-diagnostic { stroke: #f0b35f; stroke-dasharray: 2 8; }
+    .trajectory-node { stroke: rgba(255,255,255,0.16); stroke-width: 1.4; }
+    .trajectory-node-main { fill: #8ed1c0; }
+    .trajectory-node-branch { fill: #ff8f8f; }
+    .trajectory-node-diagnostic { fill: #f0b35f; }
+    .trajectory-label { fill: var(--text); font-size: 11px; font-weight: 650; letter-spacing: -0.01em; }
+    .trajectory-meta { fill: var(--muted); font-size: 10px; }
+    .trajectory-stem { stroke: rgba(255,255,255,0.10); stroke-width: 1; }
+    .trajectory-offscale { fill: #f0b35f; font-size: 10px; letter-spacing: 0.04em; text-transform: uppercase; }
     .legend-row { display:flex; gap:10px; flex-wrap:wrap; margin: 12px 0 0; }
     .legend-key { display:inline-flex; align-items:center; gap:8px; color: var(--muted); font-size: 12px; }
     .legend-dot { width:10px; height:10px; border-radius:999px; display:inline-block; }
@@ -124,10 +165,120 @@
     .list-tight { margin: 0; padding-left: 18px; }
     .list-tight li + li { margin-top: 6px; }
     .compare-head { display:flex; justify-content:space-between; align-items:flex-end; gap: 16px; flex-wrap: wrap; }
-    .compare-controls { display:flex; gap:10px; flex-wrap:wrap; align-items:center; margin-top: 12px; }
-    .compare-controls button { background:#11161d; color:var(--soft); border:1px solid var(--stroke); border-radius:999px; padding:8px 12px; font:inherit; cursor:pointer; }
-    .compare-controls button.is-active { border-color: var(--accent); color: var(--text); }
-    .compare-controls input[type="range"] { width: min(320px, 50vw); }
+    .compare-controls { display:flex; gap:12px; row-gap:10px; flex-wrap:wrap; align-items:center; margin-top: 12px; }
+    .compare-controls button {
+      min-height: 36px;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      background: rgba(255,255,255,0.025);
+      color: var(--muted);
+      border: 1px solid rgba(255,255,255,0.10);
+      border-radius: 999px;
+      padding: 0 14px;
+      font: 600 13px/1 inherit;
+      letter-spacing: -0.01em;
+      cursor: pointer;
+    }
+    .compare-controls button:hover { background: rgba(255,255,255,0.045); color: var(--soft); }
+    .compare-controls button.is-active {
+      background: rgba(142,209,192,0.10);
+      border-color: rgba(142,209,192,0.42);
+      color: var(--text);
+      box-shadow: inset 0 0 0 1px rgba(142,209,192,0.14);
+    }
+    .compare-controls input[type="range"] {
+      width: min(280px, 42vw);
+      margin: 0 2px;
+      accent-color: var(--accent);
+    }
+    .explorer-toolbar { display:grid; gap: 14px; margin-top: 14px; }
+    .run-picker { display:flex; gap:10px; flex-wrap:wrap; }
+    .run-picker button {
+      min-width: 156px;
+      min-height: 48px;
+      display:grid;
+      gap:4px;
+      text-align:left;
+      align-content:center;
+      justify-items:start;
+      background: rgba(255,255,255,0.028);
+      color: var(--soft);
+      border: 1px solid rgba(255,255,255,0.09);
+      border-radius: 16px;
+      padding: 10px 14px;
+      font: inherit;
+      cursor: pointer;
+    }
+    .run-picker button small { color: var(--muted); font-size: 11px; }
+    .run-picker button.is-active { border-color: rgba(142,209,192,0.42); background: rgba(142,209,192,0.09); }
+    .leaderboard-band { display:flex; gap:10px; flex-wrap:wrap; align-items:center; }
+    .leaderboard-label { color: var(--muted); font-size: 11px; text-transform: uppercase; letter-spacing: 0.08em; }
+    .leader-pill {
+      display:inline-grid;
+      gap:2px;
+      padding: 9px 12px;
+      border:1px solid rgba(255,255,255,0.08);
+      border-radius: 14px;
+      background: rgba(255,255,255,0.025);
+      color: var(--soft);
+      font-size: 12px;
+    }
+    .leader-pill strong { font-size: 11px; color: var(--muted); text-transform: uppercase; letter-spacing: 0.08em; }
+    .explorer-grid { display:grid; grid-template-columns: 1fr 1fr; gap:16px; margin-top: 16px; }
+    .explorer-stage {
+      border:1px solid var(--stroke);
+      border-radius:12px;
+      background:#0b0f14;
+      padding:12px;
+    }
+    .explorer-stage h3 { margin:0 0 8px; font-size: 13px; }
+    .zoom-stage {
+      position:relative;
+      overflow:hidden;
+      border-radius:10px;
+      background:#000;
+    }
+    .zoom-stage video { width:100%; display:block; }
+    .zoom-window {
+      position:absolute;
+      inset:20% auto auto 35%;
+      width:22%;
+      aspect-ratio: 420 / 316;
+      border: 2px solid rgba(240,179,95,0.95);
+      border-radius: 14px;
+      box-shadow: 0 0 0 9999px rgba(0,0,0,0.22);
+      cursor: grab;
+      touch-action: none;
+    }
+    .zoom-window.is-dragging { cursor: grabbing; }
+    .zoom-grid { display:grid; grid-template-columns: 1fr 1fr; gap:16px; margin-top:16px; }
+    .zoom-pane {
+      border:1px solid var(--stroke);
+      border-radius:12px;
+      background:#0b0f14;
+      padding:12px;
+    }
+    .zoom-pane h3 { margin:0 0 8px; font-size:13px; }
+    .zoom-viewport {
+      position:relative;
+      overflow:hidden;
+      border-radius:10px;
+      background:#000;
+      aspect-ratio: 420 / 316;
+    }
+    .zoom-viewport video {
+      position:absolute;
+      inset:0;
+      width:100%;
+      height:100%;
+      object-fit: fill;
+      transform-origin: top left;
+      will-change: transform;
+    }
+    .run-panel { display:none; }
+    .run-panel.is-active { display:block; }
+    .explorer-meta { margin-top: 12px; color: var(--muted); font-size: 12px; line-height: 1.6; }
     .compare-grid { display:grid; grid-template-columns: 1fr 1fr; gap:16px; margin-top: 16px; }
     .compare-pane { border:1px solid var(--stroke); border-radius:10px; padding:10px; background:#0b0f14; }
     .compare-pane h3 { margin: 0 0 8px; font-size: 13px; letter-spacing: -0.01em; }
@@ -149,31 +300,121 @@
     .delta-positive { color: #ff6b6b; }
     .footer-meta { display:flex; justify-content:space-between; gap: 16px; flex-wrap:wrap; margin-top: 18px; padding-top: 16px; border-top: 1px solid var(--stroke); color: var(--muted); font-size: 12px; }
     .footer-meta a { text-decoration: none; }
-    @media (max-width: 980px) { .two { grid-template-columns: 1fr 1fr; } .context-strip, .summary-grid { grid-template-columns: 1fr; } .context-item + .context-item, .summary-stat + .summary-stat { border-left: 0; border-top: 1px solid var(--stroke); } }
-    @media (max-width: 720px) { .two, .context-strip, .summary-grid, .compare-grid, .delta-head { grid-template-columns: 1fr; } .context-item + .context-item, .summary-stat + .summary-stat { border-left: 0; border-top: 1px solid var(--stroke); } .wrap { padding-inline: 16px; } h1 { font-size: clamp(36px, 15vw, 64px); } .panel { padding: 16px; } .panel h2 { font-size: 18px; } .walkthrough li { grid-template-columns: 24px 1fr; gap: 12px; padding: 12px 0; } .compare-controls input[type="range"] { width: 100%; } .delta-arrow { display:none; } .refs-group + .refs-group { border-left: 0; border-top: 1px solid var(--stroke); padding-left: 0; padding-top: 16px; } }
+    @media (max-width: 980px) { .hero-grid, .hero-card-grid, .concept-grid, .two { grid-template-columns: 1fr; } .context-strip, .summary-grid { grid-template-columns: 1fr; } .context-item + .context-item, .summary-stat + .summary-stat { border-left: 0; border-top: 1px solid var(--stroke); } }
+    @media (max-width: 720px) { .hero-grid, .hero-card-grid, .concept-grid, .two, .context-strip, .summary-grid, .compare-grid, .delta-head, .explorer-grid, .zoom-grid { grid-template-columns: 1fr; } .context-item + .context-item, .summary-stat + .summary-stat { border-left: 0; border-top: 1px solid var(--stroke); } .wrap { padding-inline: 16px; } h1 { font-size: clamp(36px, 15vw, 64px); max-width: none; } .panel { padding: 16px; } .panel h2 { font-size: 18px; } .walkthrough li { grid-template-columns: 24px 1fr; gap: 12px; padding: 12px 0; } .compare-controls input[type="range"] { width: 100%; } .delta-arrow { display:none; } .refs-group + .refs-group { border-left: 0; border-top: 1px solid var(--stroke); padding-left: 0; padding-top: 16px; } }
+    /* Sticky nav */
+    .sticky-nav {
+      position: sticky; top: 0; z-index: 50;
+      background: rgba(15,23,36,0.92); backdrop-filter: blur(16px); -webkit-backdrop-filter: blur(16px);
+      border-bottom: 1px solid var(--stroke);
+      margin: 0; transition: box-shadow 200ms ease;
+    }
+    .sticky-nav.scrolled { box-shadow: 0 8px 32px rgba(0,0,0,0.3); }
+    .sticky-nav-inner {
+      max-width: var(--max); margin: 0 auto;
+      padding: 10px 24px;
+      display: flex; align-items: center; gap: 6px;
+      overflow-x: auto; scrollbar-width: none; -ms-overflow-style: none;
+    }
+    .sticky-nav-inner::-webkit-scrollbar { display: none; }
+    .sticky-nav .nav-brand {
+      color: var(--accent); font: 700 14px/1 "Iowan Old Style", Georgia, serif;
+      text-decoration: none; white-space: nowrap; margin-right: 12px;
+      letter-spacing: -0.03em;
+    }
+    .sticky-nav a:not(.nav-brand) {
+      color: var(--muted); text-decoration: none; font-size: 12px; font-weight: 600;
+      padding: 5px 11px; border-radius: 999px; white-space: nowrap;
+      transition: all 150ms ease; border: 1px solid transparent;
+    }
+    .sticky-nav a:not(.nav-brand):hover {
+      color: var(--soft); background: rgba(255,255,255,0.05);
+    }
+    .sticky-nav a.is-active {
+      color: var(--text); background: rgba(142,209,192,0.10);
+      border-color: rgba(142,209,192,0.32);
+    }
+    .sticky-nav .nav-sep { width: 1px; height: 16px; background: var(--stroke); margin: 0 4px; flex-shrink: 0; }
+    .sticky-nav .nav-ext { color: var(--accent); font-size: 11px; opacity: 0.7; }
+    .sticky-nav .nav-ext:hover { opacity: 1; }
     @media (prefers-reduced-motion: reduce) { html { scroll-behavior: auto; } * { animation: none !important; transition: none !important; } }
   </style>
 </head>
 <body>
 <a class="skip" href="#content">Skip to content</a>
+
+<nav class="sticky-nav" id="stickyNav" aria-label="Section navigation">
+  <div class="sticky-nav-inner">
+    <a href="#" class="nav-brand">comma-lab</a>
+    <a href="#concepts" data-nav>Score</a>
+    <a href="#scatter-title" data-nav>Scatter</a>
+    <a href="#lineage-title" data-nav>Trajectory</a>
+    <a href="#compare-title" data-nav>Explorer</a>
+    <a href="#lab-timeline" data-nav>Tree</a>
+    <a href="#doc-evolution" data-nav>Docs</a>
+    <span class="nav-sep"></span>
+    <a href="https://github.com/commaai/comma_video_compression_challenge" target="_blank" rel="noopener" class="nav-ext">Challenge repo</a>
+    <a href="https://comma.ai/leaderboard" target="_blank" rel="noopener" class="nav-ext">Leaderboard</a>
+  </div>
+</nav>
+
 <div class="wrap">
     <header class="hero" aria-labelledby="site-title">
-      <div class="eyebrow">comma-lab</div>
-      <h1 id="site-title">comma-lab</h1>
-      <p class="lede">Scorer-backed compression experiments for the comma.ai video compression challenge. This page is the brief: current state, search path, and supporting evidence.</p>
-      <nav class="subnav" aria-label="Primary resources">
-        <a href="./judges_one_pager.md">Judges one-pager</a>
-        <a href="./submission_packet.md">Submission packet</a>
-        <a href="./promotion_review_latest.md">Promotion review</a>
-        <a href="./evidence_index.md">Evidence index</a>
-      </nav>
+      <div class="eyebrow">comma-lab · <a href="https://github.com/commaai/comma_video_compression_challenge" style="color:var(--muted);text-decoration:none">lossy video compression challenge</a></div>
+      <div class="hero-grid">
+        <div class="hero-stack">
+          <h1 id="site-title">Task-aware codec research for the <a href="https://comma.ai/leaderboard" style="color:var(--accent);text-decoration-thickness:2px">comma.ai lossy video compression challenge</a>.</h1>
+          <p class="lede">Compress a driving video into an <code>archive.zip</code> that inflates back to frames. Score = <code>100&times;seg + &radic;(10&times;pose) + 25&times;rate</code>. Lower wins. The scorer uses frozen <a href="https://github.com/commaai/comma_video_compression_challenge">PoseNet + SegNet</a> perception networks &mdash; your compressed video must preserve what the self-driving system sees, not just what humans see. This site documents every experiment, score, and failure on the path from 4.06 to 1.73.</p>
+          <div class="pill-row" aria-label="Current highlights">
+            <span class="pill">Current floor: 1.73</span>
+            <span class="pill">Rule-faithful: 1.795</span>
+            <span class="pill">46 measured runs</span>
+          </div>
+          <nav class="subnav" aria-label="Primary resources">
+            <a href="#concepts">Score formula</a>
+            <a href="#scatter-title">Score vs bytes</a>
+            <a href="#lineage-title">Trajectory</a>
+            <a href="#compare-title">Video explorer</a>
+            <a href="#lab-timeline">Experiment tree</a>
+            <a href="#doc-evolution">Doc evolution</a>
+            <a href="https://github.com/commaai/comma_video_compression_challenge" style="color:var(--accent)">Challenge repo</a>
+            <a href="https://comma.ai/leaderboard" style="color:var(--accent)">Leaderboard</a>
+          </nav>
+        </div>
+        <div class="hero-card-grid" aria-label="Entry points">
+          <article class="hero-card">
+            <h2>Start here</h2>
+            <p>Read this page first if you want the outcome, the score, and the plain-English explanation of what is being optimized.</p>
+            <div class="hero-links">
+              <a href="#concepts">What the score means</a>
+              <a href="#compare-title">Visual proof</a>
+            </div>
+          </article>
+          <article class="hero-card">
+            <h2>For judges</h2>
+            <p>Jump to the compact packet and the promotion review if you want the measured result, the evidence root, and the short argument for why it matters.</p>
+            <div class="hero-links">
+              <a href="./submission_packet.md">Submission packet</a>
+              <a href="./judges_one_pager.md">Judges one-pager</a>
+            </div>
+          </article>
+          <article class="hero-card">
+            <h2>For researchers</h2>
+            <p>Use the notebook, manifests, and raw evidence if you want the experimental path, the exact artifacts, and the rejected branches too.</p>
+            <div class="hero-links">
+              <a href="./lab_notebook.md">Lab notebook</a>
+              <a href="./experiment_manifest.json">Experiment manifest</a>
+            </div>
+          </article>
+        </div>
+      </div>
     </header>
 
   <main id="content">
     <section class="context-strip" aria-label="Project context">
       <div class="context-item">
         <div class="context-label">Contest</div>
-        <p class="context-copy">comma.ai’s public challenge asks entrants to ship an <code>archive.zip</code> that inflates to video. The published score combines archive bytes, SegNet distortion, and PoseNet distortion on the public test clip.</p>
+        <p class="context-copy"><a href="https://comma.ai/leaderboard">comma.ai’s public challenge</a> asks entrants to ship an <code>archive.zip</code> that inflates to video. The published score combines archive bytes, SegNet distortion, and PoseNet distortion on the public test clip.</p>
         <div class="context-links">
           <a href="https://github.com/commaai/comma_video_compression_challenge">Official challenge repo</a>
         </div>
@@ -188,20 +429,39 @@
       </div>
       <div class="context-item">
         <div class="context-label">Last updated</div>
-        <p class="context-copy">Apr 6, 2026, 1:57 PM CDT</p>
+        <p class="context-copy">Apr 9, 2026, 10:57 AM CDT</p>
         <p class="context-meta">Generated from repository state plus scorer-backed artifacts stored in this repo.</p>
       </div>
     </section>
 
     <section class="summary-shell" aria-label="Current state">
       <div class="summary-grid">
-        <div class="summary-stat"><div class="summary-label">Track B current_workflow</div><div class="summary-value">2.12</div><div class="summary-meta">864,486 bytes</div></div>
-        <div class="summary-stat"><div class="summary-label">Track B rule_faithful</div><div class="summary-value">2.142</div><div class="summary-meta">897,745 bytes</div></div>
-        <div class="summary-stat"><div class="summary-label">Delta vs published baseline</div><div class="summary-value">-2.27</div><div class="summary-meta">4.39 → 2.12</div></div>
-        <div class="summary-stat"><div class="summary-label">Delta vs prior floor</div><div class="summary-value">-0.06</div><div class="summary-meta">+31 bytes</div></div>
+        <div class="summary-stat"><div class="summary-label">Track B current_workflow</div><div class="summary-value">1.73</div><div class="summary-meta">864,167 bytes</div></div>
+        <div class="summary-stat"><div class="summary-label">Track B rule_faithful</div><div class="summary-value">1.795</div><div class="summary-meta">966,071 bytes</div></div>
+        <div class="summary-stat"><div class="summary-label">Delta vs published baseline</div><div class="summary-value">-2.66</div><div class="summary-meta">4.39 → 1.73</div></div>
+        <div class="summary-stat"><div class="summary-label">Delta vs prior floor</div><div class="summary-value">-0.11</div><div class="summary-meta">-1 bytes</div></div>
       </div>
-      <p class="footnote">Track A remains separate: `current_workflow` 0.00 at 167 bytes. The robust run ledger currently contains 35 measured runs, 10 promotions, and 15 explicit rejections.</p>
-      <p class="config-line" aria-label="Current promoted method">robust_current · libsvtav1 · 524x394 · film-grain=22 · lanczos/lanczos · rgb24(pc)</p>
+      <p class="footnote">Track A remains separate: `current_workflow` 0.00 at 167 bytes. The robust run ledger currently contains 46 measured runs, 18 promotions, and 18 explicit rejections.</p>
+      <p class="config-line" aria-label="Current promoted method">robust_current · libsvtav1 · 524x394 · film-grain=22 · lanczos/long1000-qat-ema-postfilter-h64 · long1000 QAT+EMA learned int8 post-filter h64</p>
+    </section>
+
+    <section class="panel" id="concepts" aria-labelledby="concepts-title">
+      <h2 id="concepts-title">What the score means</h2>
+      <p class="muted">The challenge score mixes filesize and task distortion. Lower is better, but the score is not a generic visual metric. It rewards preserving the signals that the scorer models actually use.</p>
+      <div class="concept-grid">
+        <article class="concept-card">
+          <h3>Archive bytes</h3>
+          <p>Smaller is better, but only if the reconstructed video still preserves the task signal that the scorer measures.</p>
+        </article>
+        <article class="concept-card">
+          <h3>PoseNet distortion</h3>
+          <p>This term measures how much the compressed video changes driving-related pose outputs. Lower is better.</p>
+        </article>
+        <article class="concept-card">
+          <h3>SegNet distortion</h3>
+          <p>This term measures disagreement on segmentation labels. At the current operating point, tiny SegNet regressions matter a lot.</p>
+        </article>
+      </div>
     </section>
 
     <section class="panel" aria-labelledby="scatter-title">
@@ -213,13 +473,13 @@
       </div>
       <div class="compare-mode is-active" data-scatter-panel="full">
         <div class="scatter-shell" data-scatter-shell>
-          <svg viewBox="0 0 920 420" role="img" aria-label="Score versus bytes scatterplot for Track B runs"><line x1="158.7" y1="68" x2="158.7" y2="352" stroke="rgba(255,255,255,0.08)" /><text x="158.7" y="372" text-anchor="middle" class="axis-tick">900k</text><line x1="274.9" y1="68" x2="274.9" y2="352" stroke="rgba(255,255,255,0.08)" /><text x="274.9" y="372" text-anchor="middle" class="axis-tick">1.2M</text><line x1="415.7" y1="68" x2="415.7" y2="352" stroke="rgba(255,255,255,0.08)" /><text x="415.7" y="372" text-anchor="middle" class="axis-tick">1.7M</text><line x1="571.5" y1="68" x2="571.5" y2="352" stroke="rgba(255,255,255,0.08)" /><text x="571.5" y="372" text-anchor="middle" class="axis-tick">2.5M</text><line x1="761.4" y1="68" x2="761.4" y2="352" stroke="rgba(255,255,255,0.08)" /><text x="761.4" y="372" text-anchor="middle" class="axis-tick">4.0M</text><line x1="851.6" y1="68" x2="851.6" y2="352" stroke="rgba(255,255,255,0.08)" /><text x="851.6" y="372" text-anchor="middle" class="axis-tick">5.0M</text><line x1="68" y1="322.1" x2="852" y2="322.1" stroke="rgba(255,255,255,0.08)" /><text x="58" y="326.1" text-anchor="end" class="axis-tick">2.5</text><line x1="68" y1="282.8" x2="852" y2="282.8" stroke="rgba(255,255,255,0.08)" /><text x="58" y="286.8" text-anchor="end" class="axis-tick">3</text><line x1="68" y1="204.1" x2="852" y2="204.1" stroke="rgba(255,255,255,0.08)" /><text x="58" y="208.1" text-anchor="end" class="axis-tick">4</text><line x1="68" y1="125.4" x2="852" y2="125.4" stroke="rgba(255,255,255,0.08)" /><text x="58" y="129.4" text-anchor="end" class="axis-tick">5</text><line x1="68" y1="352" x2="852" y2="352" stroke="#475569" /><line x1="68" y1="68" x2="68" y2="352" stroke="#475569" /><circle class="scatter-point" data-scatter-point tabindex="0" role="button" data-tip-label="x265 512x384 / crf 22" data-tip-meta="measured run · score 4.06 · 3,735,828 bytes" data-tip-detail="512x384, lanczos/bicubic, crf 22, keyint 32, bframes 4, ref 4" aria-label="x265 512x384 / crf 22. measured run · score 4.06 · 3,735,828 bytes. 512x384, lanczos/bicubic, crf 22, keyint 32, bframes 4, ref 4." cx="733.8" cy="199.4" r="4.25" fill="#8ab4ff"></circle><circle class="scatter-point" data-scatter-point tabindex="0" role="button" data-tip-label="x265 512x384 / crf 21" data-tip-meta="measured run · score 4.74 · 5,005,390 bytes" data-tip-detail="512x384, lanczos/bicubic, crf 21, keyint 32, bframes 4, ref 4" aria-label="x265 512x384 / crf 21. measured run · score 4.74 · 5,005,390 bytes. 512x384, lanczos/bicubic, crf 21, keyint 32, bframes 4, ref 4." cx="852.0" cy="145.9" r="4.25" fill="#8ab4ff"></circle><circle class="scatter-point" data-scatter-point tabindex="0" role="button" data-tip-label="x265 512x384 / crf 23" data-tip-meta="promotion · score 3.62 · 2,819,374 bytes" data-tip-detail="512x384, lanczos/bicubic, crf 23, keyint 32, bframes 4, ref 4" aria-label="x265 512x384 / crf 23. promotion · score 3.62 · 2,819,374 bytes. 512x384, lanczos/bicubic, crf 23, keyint 32, bframes 4, ref 4." cx="620.1" cy="234.0" r="4.25" fill="#2ad4a0"></circle><circle class="scatter-point" data-scatter-point tabindex="0" role="button" data-tip-label="x265 512x384 / crf 22" data-tip-meta="measured run · score 4.13 · 3,812,776 bytes" data-tip-detail="512x384, lanczos/bicubic, crf 22, keyint 32, bframes 4, ref 4" aria-label="x265 512x384 / crf 22. measured run · score 4.13 · 3,812,776 bytes. 512x384, lanczos/bicubic, crf 22, keyint 32, bframes 4, ref 4." cx="742.0" cy="193.9" r="4.25" fill="#8ab4ff"></circle><circle class="scatter-point" data-scatter-point tabindex="0" role="button" data-tip-label="x265 448x336 / crf 23" data-tip-meta="promotion · score 3.56 · 1,978,141 bytes" data-tip-detail="448x336, lanczos/bicubic, crf 23, keyint 32, bframes 4, ref 4" aria-label="x265 448x336 / crf 23. promotion · score 3.56 · 1,978,141 bytes. 448x336, lanczos/bicubic, crf 23, keyint 32, bframes 4, ref 4." cx="476.9" cy="238.7" r="4.25" fill="#2ad4a0"></circle><circle class="scatter-point" data-scatter-point tabindex="0" role="button" data-tip-label="x265 576x432 / crf 23" data-tip-meta="measured run · score 4.26 · 3,868,552 bytes" data-tip-detail="576x432, lanczos/bicubic, crf 23, keyint 32, bframes 4, ref 4" aria-label="x265 576x432 / crf 23. measured run · score 4.26 · 3,868,552 bytes. 576x432, lanczos/bicubic, crf 23, keyint 32, bframes 4, ref 4." cx="747.9" cy="183.6" r="4.25" fill="#8ab4ff"></circle><circle class="scatter-point" data-scatter-point tabindex="0" role="button" data-tip-label="x265 448x336 / crf 23" data-tip-meta="measured run · score 3.64 · 2,018,006 bytes" data-tip-detail="448x336, lanczos/bicubic, crf 23, keyint 24, bframes 4, ref 4" aria-label="x265 448x336 / crf 23. measured run · score 3.64 · 2,018,006 bytes. 448x336, lanczos/bicubic, crf 23, keyint 24, bframes 4, ref 4." cx="484.9" cy="232.4" r="4.25" fill="#8ab4ff"></circle><circle class="scatter-point" data-scatter-point tabindex="0" role="button" data-tip-label="x265 448x336 / crf 23" data-tip-meta="promotion · score 3.56 · 1,901,606 bytes" data-tip-detail="448x336, lanczos/bicubic, crf 23, keyint 48, bframes 4, ref 4" aria-label="x265 448x336 / crf 23. promotion · score 3.56 · 1,901,606 bytes. 448x336, lanczos/bicubic, crf 23, keyint 48, bframes 4, ref 4." cx="460.9" cy="238.7" r="4.25" fill="#2ad4a0"></circle><circle class="scatter-point" data-scatter-point tabindex="0" role="button" data-tip-label="x265 448x336 / crf 23" data-tip-meta="measured run · score 3.61 · 1,862,992 bytes" data-tip-detail="448x336, lanczos/bicubic, crf 23, keyint 64, bframes 4, ref 4" aria-label="x265 448x336 / crf 23. measured run · score 3.61 · 1,862,992 bytes. 448x336, lanczos/bicubic, crf 23, keyint 64, bframes 4, ref 4." cx="452.6" cy="234.8" r="4.25" fill="#8ab4ff"></circle><circle class="scatter-point" data-scatter-point tabindex="0" role="button" data-tip-label="x265 448x336 / crf 23" data-tip-meta="measured run · score 3.67 · 1,829,217 bytes" data-tip-detail="448x336, bicubic/bicubic, crf 23, keyint 48, bframes 4, ref 4" aria-label="x265 448x336 / crf 23. measured run · score 3.67 · 1,829,217 bytes. 448x336, bicubic/bicubic, crf 23, keyint 48, bframes 4, ref 4." cx="445.3" cy="230.1" r="4.25" fill="#8ab4ff"></circle><circle class="scatter-point" data-scatter-point tabindex="0" role="button" data-tip-label="x265 448x336 / crf 23" data-tip-meta="promotion · score 3.54 · 1,901,606 bytes" data-tip-detail="448x336, lanczos/lanczos, crf 23, keyint 48, bframes 4, ref 4" aria-label="x265 448x336 / crf 23. promotion · score 3.54 · 1,901,606 bytes. 448x336, lanczos/lanczos, crf 23, keyint 48, bframes 4, ref 4." cx="460.9" cy="240.3" r="4.25" fill="#2ad4a0"></circle><circle class="scatter-point" data-scatter-point tabindex="0" role="button" data-tip-label="x265 448x336 / crf 23" data-tip-meta="measured run · score 3.57 · 2,021,782 bytes" data-tip-detail="448x336, lanczos/lanczos, crf 23, keyint 48, bframes 3, ref 4" aria-label="x265 448x336 / crf 23. measured run · score 3.57 · 2,021,782 bytes. 448x336, lanczos/lanczos, crf 23, keyint 48, bframes 3, ref 4." cx="485.7" cy="237.9" r="4.25" fill="#8ab4ff"></circle><circle class="scatter-point" data-scatter-point tabindex="0" role="button" data-tip-label="x265 448x336 / crf 23" data-tip-meta="measured run · score 3.71 · 1,897,819 bytes" data-tip-detail="448x336, lanczos/lanczos, crf 23, keyint 48, bframes 5, ref 4" aria-label="x265 448x336 / crf 23. measured run · score 3.71 · 1,897,819 bytes. 448x336, lanczos/lanczos, crf 23, keyint 48, bframes 5, ref 4." cx="460.1" cy="226.9" r="4.25" fill="#8ab4ff"></circle><circle class="scatter-point" data-scatter-point tabindex="0" role="button" data-tip-label="x265 448x336 / crf 23" data-tip-meta="measured run · score 3.55 · 1,894,366 bytes" data-tip-detail="448x336, lanczos/lanczos, crf 23, keyint 48, bframes 4, ref 5" aria-label="x265 448x336 / crf 23. measured run · score 3.55 · 1,894,366 bytes. 448x336, lanczos/lanczos, crf 23, keyint 48, bframes 4, ref 5." cx="459.4" cy="239.5" r="4.25" fill="#8ab4ff"></circle><circle class="scatter-point" data-scatter-point tabindex="0" role="button" data-tip-label="x265 448x336 / crf None" data-tip-meta="explicit rejection · score 5.73 · 1,472,589 bytes" data-tip-detail="448x336, lanczos/lanczos, crf None, keyint 48, bframes 4, ref 4" aria-label="x265 448x336 / crf None. explicit rejection · score 5.73 · 1,472,589 bytes. 448x336, lanczos/lanczos, crf None, keyint 48, bframes 4, ref 4." cx="357.6" cy="68.0" r="4.25" fill="#ff6b6b"></circle><circle class="scatter-point" data-scatter-point tabindex="0" role="button" data-tip-label="x265 432x324 / crf 23" data-tip-meta="promotion · score 3.33 · 1,781,129 bytes" data-tip-detail="432x324, lanczos/lanczos, crf 23, keyint 48, bframes 4, ref 4" aria-label="x265 432x324 / crf 23. promotion · score 3.33 · 1,781,129 bytes. 432x324, lanczos/lanczos, crf 23, keyint 48, bframes 4, ref 4." cx="434.5" cy="256.8" r="4.25" fill="#2ad4a0"></circle><circle class="scatter-point" data-scatter-point tabindex="0" role="button" data-tip-label="x265 464x348 / crf 23" data-tip-meta="explicit rejection · score 3.44 · 2,139,211 bytes" data-tip-detail="464x348, lanczos/lanczos, crf 23, keyint 48, bframes 4, ref 4" aria-label="x265 464x348 / crf 23. explicit rejection · score 3.44 · 2,139,211 bytes. 464x348, lanczos/lanczos, crf 23, keyint 48, bframes 4, ref 4." cx="508.5" cy="248.2" r="4.25" fill="#ff6b6b"></circle><circle class="scatter-point" data-scatter-point tabindex="0" role="button" data-tip-label="x265 432x324 / crf 23" data-tip-meta="explicit rejection · score 4.47 · 2,660,388 bytes" data-tip-detail="432x324, lanczos/lanczos, crf 23, keyint 48, bframes 4, ref 4" aria-label="x265 432x324 / crf 23. explicit rejection · score 4.47 · 2,660,388 bytes. 432x324, lanczos/lanczos, crf 23, keyint 48, bframes 4, ref 4." cx="596.6" cy="167.1" r="4.25" fill="#ff6b6b"></circle><circle class="scatter-point" data-scatter-point tabindex="0" role="button" data-tip-label="x265 432x324 / crf 23" data-tip-meta="explicit rejection · score 3.43 · 1,898,751 bytes" data-tip-detail="432x324, lanczos/lanczos, crf 23, keyint 48, bframes 3, ref 4" aria-label="x265 432x324 / crf 23. explicit rejection · score 3.43 · 1,898,751 bytes. 432x324, lanczos/lanczos, crf 23, keyint 48, bframes 3, ref 4." cx="460.3" cy="248.9" r="4.25" fill="#ff6b6b"></circle><circle class="scatter-point" data-scatter-point tabindex="0" role="button" data-tip-label="x265 432x324 / crf 23" data-tip-meta="explicit rejection · score 3.38 · 1,753,611 bytes" data-tip-detail="432x324, lanczos/lanczos, crf 23, keyint 64, bframes 4, ref 4" aria-label="x265 432x324 / crf 23. explicit rejection · score 3.38 · 1,753,611 bytes. 432x324, lanczos/lanczos, crf 23, keyint 64, bframes 4, ref 4." cx="428.2" cy="252.9" r="4.25" fill="#ff6b6b"></circle><circle class="scatter-point" data-scatter-point tabindex="0" role="button" data-tip-label="x265 424x318 / crf 23" data-tip-meta="promotion · score 3.25 · 1,669,984 bytes" data-tip-detail="424x318, lanczos/lanczos, crf 23, keyint 48, bframes 4, ref 4" aria-label="x265 424x318 / crf 23. promotion · score 3.25 · 1,669,984 bytes. 424x318, lanczos/lanczos, crf 23, keyint 48, bframes 4, ref 4." cx="408.5" cy="263.1" r="4.25" fill="#2ad4a0"></circle><circle class="scatter-point" data-scatter-point tabindex="0" role="button" data-tip-label="x265 424x318 / crf 23" data-tip-meta="explicit rejection · score 3.27 · 1,776,026 bytes" data-tip-detail="424x318, lanczos/lanczos, crf 23, keyint 48, bframes 3, ref 4" aria-label="x265 424x318 / crf 23. explicit rejection · score 3.27 · 1,776,026 bytes. 424x318, lanczos/lanczos, crf 23, keyint 48, bframes 3, ref 4." cx="433.3" cy="261.5" r="4.25" fill="#ff6b6b"></circle><circle class="scatter-point" data-scatter-point tabindex="0" role="button" data-tip-label="x265 424x318 / crf 23" data-tip-meta="explicit rejection · score 3.26 · 1,646,886 bytes" data-tip-detail="424x318, lanczos/lanczos, crf 23, keyint 64, bframes 4, ref 4" aria-label="x265 424x318 / crf 23. explicit rejection · score 3.26 · 1,646,886 bytes. 424x318, lanczos/lanczos, crf 23, keyint 64, bframes 4, ref 4." cx="402.8" cy="262.3" r="4.25" fill="#ff6b6b"></circle><circle class="scatter-point" data-scatter-point tabindex="0" role="button" data-tip-label="x265 416x312 / crf 23" data-tip-meta="explicit rejection · score 3.44 · 1,573,803 bytes" data-tip-detail="416x312, lanczos/lanczos, crf 23, keyint 48, bframes 4, ref 4" aria-label="x265 416x312 / crf 23. explicit rejection · score 3.44 · 1,573,803 bytes. 416x312, lanczos/lanczos, crf 23, keyint 48, bframes 4, ref 4." cx="384.5" cy="248.2" r="4.25" fill="#ff6b6b"></circle><circle class="scatter-point" data-scatter-point tabindex="0" role="button" data-tip-label="x265 428x320 / crf 23" data-tip-meta="explicit rejection · score 3.32 · 1,741,924 bytes" data-tip-detail="428x320, lanczos/lanczos, crf 23, keyint 48, bframes 4, ref 4" aria-label="x265 428x320 / crf 23. explicit rejection · score 3.32 · 1,741,924 bytes. 428x320, lanczos/lanczos, crf 23, keyint 48, bframes 4, ref 4." cx="425.5" cy="257.6" r="4.25" fill="#ff6b6b"></circle><circle class="scatter-point" data-scatter-point tabindex="0" role="button" data-tip-label="x265 426x320 / crf 23" data-tip-meta="explicit rejection · score 3.38 · 1,766,456 bytes" data-tip-detail="426x320, lanczos/lanczos, crf 23, keyint 48, bframes 4, ref 4" aria-label="x265 426x320 / crf 23. explicit rejection · score 3.38 · 1,766,456 bytes. 426x320, lanczos/lanczos, crf 23, keyint 48, bframes 4, ref 4." cx="431.1" cy="252.9" r="4.25" fill="#ff6b6b"></circle><circle class="scatter-point" data-scatter-point tabindex="0" role="button" data-tip-label="AV1 524x394 / crf 33" data-tip-meta="promotion · score 2.20 · 920,457 bytes" data-tip-detail="524x394, svtav1-p0, crf 33, keyint 180, film-grain 22, lanczos/bicubic" aria-label="AV1 524x394 / crf 33. promotion · score 2.20 · 920,457 bytes. 524x394, svtav1-p0, crf 33, keyint 180, film-grain 22, lanczos/bicubic." cx="167.8" cy="345.7" r="4.25" fill="#2ad4a0"></circle><circle class="scatter-point" data-scatter-point tabindex="0" role="button" data-tip-label="AV1 524x394 / crf 34" data-tip-meta="promotion · score 2.19 · 864,455 bytes" data-tip-detail="524x394, svtav1-p0, crf 34, keyint 180, film-grain 22, lanczos/bicubic" aria-label="AV1 524x394 / crf 34. promotion · score 2.19 · 864,455 bytes. 524x394, svtav1-p0, crf 34, keyint 180, film-grain 22, lanczos/bicubic." cx="142.4" cy="346.5" r="4.25" fill="#2ad4a0"></circle><circle class="scatter-point" data-scatter-point tabindex="0" role="button" data-tip-label="AV1 524x394 / crf 35" data-tip-meta="explicit rejection · score 2.21 · 808,036 bytes" data-tip-detail="524x394, svtav1-p0, crf 35, keyint 180, film-grain 22, lanczos/bicubic" aria-label="AV1 524x394 / crf 35. explicit rejection · score 2.21 · 808,036 bytes. 524x394, svtav1-p0, crf 35, keyint 180, film-grain 22, lanczos/bicubic." cx="115.1" cy="344.9" r="4.25" fill="#ff6b6b"></circle><circle class="scatter-point" data-scatter-point tabindex="0" role="button" data-tip-label="AV1 524x394 / crf 34" data-tip-meta="explicit rejection · score 2.20 · 864,455 bytes" data-tip-detail="524x394, svtav1-p0, crf 34, keyint 180, film-grain 22, lanczos/bicubic" aria-label="AV1 524x394 / crf 34. explicit rejection · score 2.20 · 864,455 bytes. 524x394, svtav1-p0, crf 34, keyint 180, film-grain 22, lanczos/bicubic." cx="142.4" cy="345.7" r="4.25" fill="#ff6b6b"></circle><circle class="scatter-point" data-scatter-point tabindex="0" role="button" data-tip-label="AV1 524x394 / crf 34" data-tip-meta="explicit rejection · score 3.33 · 719,096 bytes" data-tip-detail="524x394, svtav1-p0, crf 34, keyint 180, film-grain 0, lanczos/bicubic" aria-label="AV1 524x394 / crf 34. explicit rejection · score 3.33 · 719,096 bytes. 524x394, svtav1-p0, crf 34, keyint 180, film-grain 0, lanczos/bicubic." cx="68.0" cy="256.8" r="4.25" fill="#ff6b6b"></circle><circle class="scatter-point" data-scatter-point tabindex="0" role="button" data-tip-label="AV1 522x392 / crf 34" data-tip-meta="explicit rejection · score 2.23 · 862,238 bytes" data-tip-detail="522x392, svtav1-p0, crf 34, keyint 180, film-grain 22, lanczos/bicubic" aria-label="AV1 522x392 / crf 34. explicit rejection · score 2.23 · 862,238 bytes. 522x392, svtav1-p0, crf 34, keyint 180, film-grain 22, lanczos/bicubic." cx="141.4" cy="343.3" r="4.25" fill="#ff6b6b"></circle><circle class="scatter-point" data-scatter-point tabindex="0" role="button" data-tip-label="AV1 524x394 / crf 34" data-tip-meta="promotion · score 2.18 · 864,455 bytes" data-tip-detail="524x394, svtav1-p0, crf 34, keyint 180, film-grain 22, lanczos/lanczos" aria-label="AV1 524x394 / crf 34. promotion · score 2.18 · 864,455 bytes. 524x394, svtav1-p0, crf 34, keyint 180, film-grain 22, lanczos/lanczos." cx="142.4" cy="347.3" r="4.25" fill="#2ad4a0"></circle><circle class="scatter-point" data-scatter-point tabindex="0" role="button" data-tip-label="AV1 524x394 / crf 34" data-tip-meta="promotion · score 2.12 · 864,486 bytes" data-tip-detail="524x394, svtav1-p0, crf 34, keyint 180, film-grain 22, lanczos/lanczos + explicit bt709/tv-&gt;rgb(pc)" aria-label="AV1 524x394 / crf 34. promotion · score 2.12 · 864,486 bytes. 524x394, svtav1-p0, crf 34, keyint 180, film-grain 22, lanczos/lanczos + explicit bt709/tv-&gt;rgb(pc)." cx="142.4" cy="352.0" r="4.25" fill="#2ad4a0"></circle><text x="460.0" y="410" text-anchor="middle" class="axis-label">archive size (bytes, log scale)</text><text x="16" y="210.0" transform="rotate(-90 16 210.0)" text-anchor="middle" class="axis-label">current_workflow score (linear, lower is better)</text></svg>
+          <svg viewBox="0 0 920 420" role="img" aria-label="Score versus bytes scatterplot for Track B runs"><line x1="159.8" y1="68" x2="159.8" y2="352" stroke="rgba(255,255,255,0.08)" /><text x="159.8" y="372" text-anchor="middle" class="axis-tick">900k</text><line x1="275.9" y1="68" x2="275.9" y2="352" stroke="rgba(255,255,255,0.08)" /><text x="275.9" y="372" text-anchor="middle" class="axis-tick">1.2M</text><line x1="416.4" y1="68" x2="416.4" y2="352" stroke="rgba(255,255,255,0.08)" /><text x="416.4" y="372" text-anchor="middle" class="axis-tick">1.7M</text><line x1="571.9" y1="68" x2="571.9" y2="352" stroke="rgba(255,255,255,0.08)" /><text x="571.9" y="372" text-anchor="middle" class="axis-tick">2.5M</text><line x1="761.5" y1="68" x2="761.5" y2="352" stroke="rgba(255,255,255,0.08)" /><text x="761.5" y="372" text-anchor="middle" class="axis-tick">4.0M</text><line x1="851.6" y1="68" x2="851.6" y2="352" stroke="rgba(255,255,255,0.08)" /><text x="851.6" y="372" text-anchor="middle" class="axis-tick">5.0M</text><line x1="68" y1="332.8" x2="852" y2="332.8" stroke="rgba(255,255,255,0.08)" /><text x="58" y="336.8" text-anchor="end" class="axis-tick">2</text><line x1="68" y1="297.3" x2="852" y2="297.3" stroke="rgba(255,255,255,0.08)" /><text x="58" y="301.3" text-anchor="end" class="axis-tick">2.5</text><line x1="68" y1="261.8" x2="852" y2="261.8" stroke="rgba(255,255,255,0.08)" /><text x="58" y="265.8" text-anchor="end" class="axis-tick">3</text><line x1="68" y1="190.8" x2="852" y2="190.8" stroke="rgba(255,255,255,0.08)" /><text x="58" y="194.8" text-anchor="end" class="axis-tick">4</text><line x1="68" y1="119.8" x2="852" y2="119.8" stroke="rgba(255,255,255,0.08)" /><text x="58" y="123.8" text-anchor="end" class="axis-tick">5</text><line x1="68" y1="352" x2="852" y2="352" stroke="#475569" /><line x1="68" y1="68" x2="68" y2="352" stroke="#475569" /><circle class="scatter-point" data-scatter-point tabindex="0" role="button" data-tip-label="x265 512x384 / crf 22" data-tip-meta="measured run · score 4.06 · 3,735,828 bytes" data-tip-detail="512x384, lanczos/bicubic, crf 22, keyint 32, bframes 4, ref 4" aria-label="x265 512x384 / crf 22. measured run · score 4.06 · 3,735,828 bytes. 512x384, lanczos/bicubic, crf 22, keyint 32, bframes 4, ref 4." cx="734.0" cy="186.6" r="4.25" fill="#8ab4ff"></circle><circle class="scatter-point" data-scatter-point tabindex="0" role="button" data-tip-label="x265 512x384 / crf 21" data-tip-meta="measured run · score 4.74 · 5,005,390 bytes" data-tip-detail="512x384, lanczos/bicubic, crf 21, keyint 32, bframes 4, ref 4" aria-label="x265 512x384 / crf 21. measured run · score 4.74 · 5,005,390 bytes. 512x384, lanczos/bicubic, crf 21, keyint 32, bframes 4, ref 4." cx="852.0" cy="138.3" r="4.25" fill="#8ab4ff"></circle><circle class="scatter-point" data-scatter-point tabindex="0" role="button" data-tip-label="x265 512x384 / crf 23" data-tip-meta="promotion · score 3.62 · 2,819,374 bytes" data-tip-detail="512x384, lanczos/bicubic, crf 23, keyint 32, bframes 4, ref 4" aria-label="x265 512x384 / crf 23. promotion · score 3.62 · 2,819,374 bytes. 512x384, lanczos/bicubic, crf 23, keyint 32, bframes 4, ref 4." cx="620.4" cy="217.8" r="4.25" fill="#2ad4a0"></circle><circle class="scatter-point" data-scatter-point tabindex="0" role="button" data-tip-label="x265 512x384 / crf 22" data-tip-meta="measured run · score 4.13 · 3,812,776 bytes" data-tip-detail="512x384, lanczos/bicubic, crf 22, keyint 32, bframes 4, ref 4" aria-label="x265 512x384 / crf 22. measured run · score 4.13 · 3,812,776 bytes. 512x384, lanczos/bicubic, crf 22, keyint 32, bframes 4, ref 4." cx="742.2" cy="181.6" r="4.25" fill="#8ab4ff"></circle><circle class="scatter-point" data-scatter-point tabindex="0" role="button" data-tip-label="x265 448x336 / crf 23" data-tip-meta="promotion · score 3.56 · 1,978,141 bytes" data-tip-detail="448x336, lanczos/bicubic, crf 23, keyint 32, bframes 4, ref 4" aria-label="x265 448x336 / crf 23. promotion · score 3.56 · 1,978,141 bytes. 448x336, lanczos/bicubic, crf 23, keyint 32, bframes 4, ref 4." cx="477.5" cy="222.1" r="4.25" fill="#2ad4a0"></circle><circle class="scatter-point" data-scatter-point tabindex="0" role="button" data-tip-label="x265 576x432 / crf 23" data-tip-meta="measured run · score 4.26 · 3,868,552 bytes" data-tip-detail="576x432, lanczos/bicubic, crf 23, keyint 32, bframes 4, ref 4" aria-label="x265 576x432 / crf 23. measured run · score 4.26 · 3,868,552 bytes. 576x432, lanczos/bicubic, crf 23, keyint 32, bframes 4, ref 4." cx="748.1" cy="172.4" r="4.25" fill="#8ab4ff"></circle><circle class="scatter-point" data-scatter-point tabindex="0" role="button" data-tip-label="x265 448x336 / crf 23" data-tip-meta="measured run · score 3.64 · 2,018,006 bytes" data-tip-detail="448x336, lanczos/bicubic, crf 23, keyint 24, bframes 4, ref 4" aria-label="x265 448x336 / crf 23. measured run · score 3.64 · 2,018,006 bytes. 448x336, lanczos/bicubic, crf 23, keyint 24, bframes 4, ref 4." cx="485.5" cy="216.4" r="4.25" fill="#8ab4ff"></circle><circle class="scatter-point" data-scatter-point tabindex="0" role="button" data-tip-label="x265 448x336 / crf 23" data-tip-meta="promotion · score 3.56 · 1,901,606 bytes" data-tip-detail="448x336, lanczos/bicubic, crf 23, keyint 48, bframes 4, ref 4" aria-label="x265 448x336 / crf 23. promotion · score 3.56 · 1,901,606 bytes. 448x336, lanczos/bicubic, crf 23, keyint 48, bframes 4, ref 4." cx="461.6" cy="222.1" r="4.25" fill="#2ad4a0"></circle><circle class="scatter-point" data-scatter-point tabindex="0" role="button" data-tip-label="x265 448x336 / crf 23" data-tip-meta="measured run · score 3.61 · 1,862,992 bytes" data-tip-detail="448x336, lanczos/bicubic, crf 23, keyint 64, bframes 4, ref 4" aria-label="x265 448x336 / crf 23. measured run · score 3.61 · 1,862,992 bytes. 448x336, lanczos/bicubic, crf 23, keyint 64, bframes 4, ref 4." cx="453.3" cy="218.5" r="4.25" fill="#8ab4ff"></circle><circle class="scatter-point" data-scatter-point tabindex="0" role="button" data-tip-label="x265 448x336 / crf 23" data-tip-meta="measured run · score 3.67 · 1,829,217 bytes" data-tip-detail="448x336, bicubic/bicubic, crf 23, keyint 48, bframes 4, ref 4" aria-label="x265 448x336 / crf 23. measured run · score 3.67 · 1,829,217 bytes. 448x336, bicubic/bicubic, crf 23, keyint 48, bframes 4, ref 4." cx="445.9" cy="214.3" r="4.25" fill="#8ab4ff"></circle><circle class="scatter-point" data-scatter-point tabindex="0" role="button" data-tip-label="x265 448x336 / crf 23" data-tip-meta="promotion · score 3.54 · 1,901,606 bytes" data-tip-detail="448x336, lanczos/lanczos, crf 23, keyint 48, bframes 4, ref 4" aria-label="x265 448x336 / crf 23. promotion · score 3.54 · 1,901,606 bytes. 448x336, lanczos/lanczos, crf 23, keyint 48, bframes 4, ref 4." cx="461.6" cy="223.5" r="4.25" fill="#2ad4a0"></circle><circle class="scatter-point" data-scatter-point tabindex="0" role="button" data-tip-label="x265 448x336 / crf 23" data-tip-meta="measured run · score 3.57 · 2,021,782 bytes" data-tip-detail="448x336, lanczos/lanczos, crf 23, keyint 48, bframes 3, ref 4" aria-label="x265 448x336 / crf 23. measured run · score 3.57 · 2,021,782 bytes. 448x336, lanczos/lanczos, crf 23, keyint 48, bframes 3, ref 4." cx="486.3" cy="221.4" r="4.25" fill="#8ab4ff"></circle><circle class="scatter-point" data-scatter-point tabindex="0" role="button" data-tip-label="x265 448x336 / crf 23" data-tip-meta="measured run · score 3.71 · 1,897,819 bytes" data-tip-detail="448x336, lanczos/lanczos, crf 23, keyint 48, bframes 5, ref 4" aria-label="x265 448x336 / crf 23. measured run · score 3.71 · 1,897,819 bytes. 448x336, lanczos/lanczos, crf 23, keyint 48, bframes 5, ref 4." cx="460.8" cy="211.4" r="4.25" fill="#8ab4ff"></circle><circle class="scatter-point" data-scatter-point tabindex="0" role="button" data-tip-label="x265 448x336 / crf 23" data-tip-meta="measured run · score 3.55 · 1,894,366 bytes" data-tip-detail="448x336, lanczos/lanczos, crf 23, keyint 48, bframes 4, ref 5" aria-label="x265 448x336 / crf 23. measured run · score 3.55 · 1,894,366 bytes. 448x336, lanczos/lanczos, crf 23, keyint 48, bframes 4, ref 5." cx="460.0" cy="222.8" r="4.25" fill="#8ab4ff"></circle><circle class="scatter-point" data-scatter-point tabindex="0" role="button" data-tip-label="x265 448x336 / crf None" data-tip-meta="explicit rejection · score 5.73 · 1,472,589 bytes" data-tip-detail="448x336, lanczos/lanczos, crf None, keyint 48, bframes 4, ref 4" aria-label="x265 448x336 / crf None. explicit rejection · score 5.73 · 1,472,589 bytes. 448x336, lanczos/lanczos, crf None, keyint 48, bframes 4, ref 4." cx="358.4" cy="68.0" r="4.25" fill="#ff6b6b"></circle><circle class="scatter-point" data-scatter-point tabindex="0" role="button" data-tip-label="x265 432x324 / crf 23" data-tip-meta="promotion · score 3.33 · 1,781,129 bytes" data-tip-detail="432x324, lanczos/lanczos, crf 23, keyint 48, bframes 4, ref 4" aria-label="x265 432x324 / crf 23. promotion · score 3.33 · 1,781,129 bytes. 432x324, lanczos/lanczos, crf 23, keyint 48, bframes 4, ref 4." cx="435.2" cy="238.4" r="4.25" fill="#2ad4a0"></circle><circle class="scatter-point" data-scatter-point tabindex="0" role="button" data-tip-label="x265 464x348 / crf 23" data-tip-meta="explicit rejection · score 3.44 · 2,139,211 bytes" data-tip-detail="464x348, lanczos/lanczos, crf 23, keyint 48, bframes 4, ref 4" aria-label="x265 464x348 / crf 23. explicit rejection · score 3.44 · 2,139,211 bytes. 464x348, lanczos/lanczos, crf 23, keyint 48, bframes 4, ref 4." cx="509.1" cy="230.6" r="4.25" fill="#ff6b6b"></circle><circle class="scatter-point" data-scatter-point tabindex="0" role="button" data-tip-label="x265 432x324 / crf 23" data-tip-meta="explicit rejection · score 4.47 · 2,660,388 bytes" data-tip-detail="432x324, lanczos/lanczos, crf 23, keyint 48, bframes 4, ref 4" aria-label="x265 432x324 / crf 23. explicit rejection · score 4.47 · 2,660,388 bytes. 432x324, lanczos/lanczos, crf 23, keyint 48, bframes 4, ref 4." cx="597.0" cy="157.5" r="4.25" fill="#ff6b6b"></circle><circle class="scatter-point" data-scatter-point tabindex="0" role="button" data-tip-label="x265 432x324 / crf 23" data-tip-meta="explicit rejection · score 3.43 · 1,898,751 bytes" data-tip-detail="432x324, lanczos/lanczos, crf 23, keyint 48, bframes 3, ref 4" aria-label="x265 432x324 / crf 23. explicit rejection · score 3.43 · 1,898,751 bytes. 432x324, lanczos/lanczos, crf 23, keyint 48, bframes 3, ref 4." cx="461.0" cy="231.3" r="4.25" fill="#ff6b6b"></circle><circle class="scatter-point" data-scatter-point tabindex="0" role="button" data-tip-label="x265 432x324 / crf 23" data-tip-meta="explicit rejection · score 3.38 · 1,753,611 bytes" data-tip-detail="432x324, lanczos/lanczos, crf 23, keyint 64, bframes 4, ref 4" aria-label="x265 432x324 / crf 23. explicit rejection · score 3.38 · 1,753,611 bytes. 432x324, lanczos/lanczos, crf 23, keyint 64, bframes 4, ref 4." cx="428.9" cy="234.9" r="4.25" fill="#ff6b6b"></circle><circle class="scatter-point" data-scatter-point tabindex="0" role="button" data-tip-label="x265 424x318 / crf 23" data-tip-meta="promotion · score 3.25 · 1,669,984 bytes" data-tip-detail="424x318, lanczos/lanczos, crf 23, keyint 48, bframes 4, ref 4" aria-label="x265 424x318 / crf 23. promotion · score 3.25 · 1,669,984 bytes. 424x318, lanczos/lanczos, crf 23, keyint 48, bframes 4, ref 4." cx="409.2" cy="244.1" r="4.25" fill="#2ad4a0"></circle><circle class="scatter-point" data-scatter-point tabindex="0" role="button" data-tip-label="x265 424x318 / crf 23" data-tip-meta="explicit rejection · score 3.27 · 1,776,026 bytes" data-tip-detail="424x318, lanczos/lanczos, crf 23, keyint 48, bframes 3, ref 4" aria-label="x265 424x318 / crf 23. explicit rejection · score 3.27 · 1,776,026 bytes. 424x318, lanczos/lanczos, crf 23, keyint 48, bframes 3, ref 4." cx="434.0" cy="242.7" r="4.25" fill="#ff6b6b"></circle><circle class="scatter-point" data-scatter-point tabindex="0" role="button" data-tip-label="x265 424x318 / crf 23" data-tip-meta="explicit rejection · score 3.26 · 1,646,886 bytes" data-tip-detail="424x318, lanczos/lanczos, crf 23, keyint 64, bframes 4, ref 4" aria-label="x265 424x318 / crf 23. explicit rejection · score 3.26 · 1,646,886 bytes. 424x318, lanczos/lanczos, crf 23, keyint 64, bframes 4, ref 4." cx="403.6" cy="243.4" r="4.25" fill="#ff6b6b"></circle><circle class="scatter-point" data-scatter-point tabindex="0" role="button" data-tip-label="x265 416x312 / crf 23" data-tip-meta="explicit rejection · score 3.44 · 1,573,803 bytes" data-tip-detail="416x312, lanczos/lanczos, crf 23, keyint 48, bframes 4, ref 4" aria-label="x265 416x312 / crf 23. explicit rejection · score 3.44 · 1,573,803 bytes. 416x312, lanczos/lanczos, crf 23, keyint 48, bframes 4, ref 4." cx="385.3" cy="230.6" r="4.25" fill="#ff6b6b"></circle><circle class="scatter-point" data-scatter-point tabindex="0" role="button" data-tip-label="x265 428x320 / crf 23" data-tip-meta="explicit rejection · score 3.32 · 1,741,924 bytes" data-tip-detail="428x320, lanczos/lanczos, crf 23, keyint 48, bframes 4, ref 4" aria-label="x265 428x320 / crf 23. explicit rejection · score 3.32 · 1,741,924 bytes. 428x320, lanczos/lanczos, crf 23, keyint 48, bframes 4, ref 4." cx="426.2" cy="239.1" r="4.25" fill="#ff6b6b"></circle><circle class="scatter-point" data-scatter-point tabindex="0" role="button" data-tip-label="x265 426x320 / crf 23" data-tip-meta="explicit rejection · score 3.38 · 1,766,456 bytes" data-tip-detail="426x320, lanczos/lanczos, crf 23, keyint 48, bframes 4, ref 4" aria-label="x265 426x320 / crf 23. explicit rejection · score 3.38 · 1,766,456 bytes. 426x320, lanczos/lanczos, crf 23, keyint 48, bframes 4, ref 4." cx="431.8" cy="234.9" r="4.25" fill="#ff6b6b"></circle><circle class="scatter-point" data-scatter-point tabindex="0" role="button" data-tip-label="AV1 524x394 / crf 33" data-tip-meta="promotion · score 2.20 · 920,457 bytes" data-tip-detail="524x394, svtav1-p0, crf 33, keyint 180, film-grain 22, lanczos/bicubic" aria-label="AV1 524x394 / crf 33. promotion · score 2.20 · 920,457 bytes. 524x394, svtav1-p0, crf 33, keyint 180, film-grain 22, lanczos/bicubic." cx="168.9" cy="318.6" r="4.25" fill="#2ad4a0"></circle><circle class="scatter-point" data-scatter-point tabindex="0" role="button" data-tip-label="AV1 524x394 / crf 34" data-tip-meta="promotion · score 2.19 · 864,455 bytes" data-tip-detail="524x394, svtav1-p0, crf 34, keyint 180, film-grain 22, lanczos/bicubic" aria-label="AV1 524x394 / crf 34. promotion · score 2.19 · 864,455 bytes. 524x394, svtav1-p0, crf 34, keyint 180, film-grain 22, lanczos/bicubic." cx="143.6" cy="319.3" r="4.25" fill="#2ad4a0"></circle><circle class="scatter-point" data-scatter-point tabindex="0" role="button" data-tip-label="AV1 524x394 / crf 35" data-tip-meta="explicit rejection · score 2.21 · 808,036 bytes" data-tip-detail="524x394, svtav1-p0, crf 35, keyint 180, film-grain 22, lanczos/bicubic" aria-label="AV1 524x394 / crf 35. explicit rejection · score 2.21 · 808,036 bytes. 524x394, svtav1-p0, crf 35, keyint 180, film-grain 22, lanczos/bicubic." cx="116.3" cy="317.9" r="4.25" fill="#ff6b6b"></circle><circle class="scatter-point" data-scatter-point tabindex="0" role="button" data-tip-label="AV1 524x394 / crf 34" data-tip-meta="explicit rejection · score 2.20 · 864,455 bytes" data-tip-detail="524x394, svtav1-p0, crf 34, keyint 180, film-grain 22, lanczos/bicubic" aria-label="AV1 524x394 / crf 34. explicit rejection · score 2.20 · 864,455 bytes. 524x394, svtav1-p0, crf 34, keyint 180, film-grain 22, lanczos/bicubic." cx="143.6" cy="318.6" r="4.25" fill="#ff6b6b"></circle><circle class="scatter-point" data-scatter-point tabindex="0" role="button" data-tip-label="AV1 524x394 / crf 34" data-tip-meta="explicit rejection · score 3.33 · 719,096 bytes" data-tip-detail="524x394, svtav1-p0, crf 34, keyint 180, film-grain 0, lanczos/bicubic" aria-label="AV1 524x394 / crf 34. explicit rejection · score 3.33 · 719,096 bytes. 524x394, svtav1-p0, crf 34, keyint 180, film-grain 0, lanczos/bicubic." cx="69.3" cy="238.4" r="4.25" fill="#ff6b6b"></circle><circle class="scatter-point" data-scatter-point tabindex="0" role="button" data-tip-label="AV1 522x392 / crf 34" data-tip-meta="explicit rejection · score 2.23 · 862,238 bytes" data-tip-detail="522x392, svtav1-p0, crf 34, keyint 180, film-grain 22, lanczos/bicubic" aria-label="AV1 522x392 / crf 34. explicit rejection · score 2.23 · 862,238 bytes. 522x392, svtav1-p0, crf 34, keyint 180, film-grain 22, lanczos/bicubic." cx="142.5" cy="316.5" r="4.25" fill="#ff6b6b"></circle><circle class="scatter-point" data-scatter-point tabindex="0" role="button" data-tip-label="AV1 524x394 / crf 34" data-tip-meta="promotion · score 2.18 · 864,455 bytes" data-tip-detail="524x394, svtav1-p0, crf 34, keyint 180, film-grain 22, lanczos/lanczos" aria-label="AV1 524x394 / crf 34. promotion · score 2.18 · 864,455 bytes. 524x394, svtav1-p0, crf 34, keyint 180, film-grain 22, lanczos/lanczos." cx="143.6" cy="320.1" r="4.25" fill="#2ad4a0"></circle><circle class="scatter-point" data-scatter-point tabindex="0" role="button" data-tip-label="AV1 524x394 / crf 34" data-tip-meta="promotion · score 2.12 · 864,486 bytes" data-tip-detail="524x394, svtav1-p0, crf 34, keyint 180, film-grain 22, lanczos/lanczos + explicit bt709/tv-&gt;rgb(pc)" aria-label="AV1 524x394 / crf 34. promotion · score 2.12 · 864,486 bytes. 524x394, svtav1-p0, crf 34, keyint 180, film-grain 22, lanczos/lanczos + explicit bt709/tv-&gt;rgb(pc)." cx="143.6" cy="324.3" r="4.25" fill="#2ad4a0"></circle><circle class="scatter-point" data-scatter-point tabindex="0" role="button" data-tip-label="AV1 524x394 / crf 34" data-tip-meta="promotion · score 2.08 · 864,168 bytes" data-tip-detail="524x394, svtav1-p0, crf 34, keyint 180, film-grain 22, lanczos/lanczos" aria-label="AV1 524x394 / crf 34. promotion · score 2.08 · 864,168 bytes. 524x394, svtav1-p0, crf 34, keyint 180, film-grain 22, lanczos/lanczos." cx="143.4" cy="327.1" r="4.25" fill="#2ad4a0"></circle><circle class="scatter-point" data-scatter-point tabindex="0" role="button" data-tip-label="AV1 524x394 / crf 33" data-tip-meta="explicit rejection · score 2.13 · 909,307 bytes" data-tip-detail="524x394, svtav1-p0, crf 33, keyint 180, film-grain 22, lanczos/lanczos" aria-label="AV1 524x394 / crf 33. explicit rejection · score 2.13 · 909,307 bytes. 524x394, svtav1-p0, crf 33, keyint 180, film-grain 22, lanczos/lanczos." cx="164.0" cy="323.6" r="4.25" fill="#ff6b6b"></circle><circle class="scatter-point" data-scatter-point tabindex="0" role="button" data-tip-label="AV1 524x394 / crf 34" data-tip-meta="explicit rejection · score 2.52 · 785,302 bytes" data-tip-detail="524x394, svtav1-p0, crf 34, keyint 180, film-grain 22, lanczos/lanczos + roi preprocess" aria-label="AV1 524x394 / crf 34. explicit rejection · score 2.52 · 785,302 bytes. 524x394, svtav1-p0, crf 34, keyint 180, film-grain 22, lanczos/lanczos + roi preprocess." cx="104.8" cy="295.9" r="4.25" fill="#ff6b6b"></circle><circle class="scatter-point" data-scatter-point tabindex="0" role="button" data-tip-label="AV1 522x392 / crf 34" data-tip-meta="explicit rejection · score 2.30 · 716,797 bytes" data-tip-detail="522x392, svtav1-p0, crf 34, keyint 180, film-grain 0, lanczos/grain-mask" aria-label="AV1 522x392 / crf 34. explicit rejection · score 2.30 · 716,797 bytes. 522x392, svtav1-p0, crf 34, keyint 180, film-grain 0, lanczos/grain-mask." cx="68.0" cy="311.5" r="4.25" fill="#ff6b6b"></circle><circle class="scatter-point" data-scatter-point tabindex="0" role="button" data-tip-label="AV1 522x392 / crf 34" data-tip-meta="promotion · score 2.05 · 861,986 bytes" data-tip-detail="522x392, svtav1-p0, crf 34, keyint 180, film-grain 22, lanczos/learned-postfilter" aria-label="AV1 522x392 / crf 34. promotion · score 2.05 · 861,986 bytes. 522x392, svtav1-p0, crf 34, keyint 180, film-grain 22, lanczos/learned-postfilter." cx="142.4" cy="329.3" r="4.25" fill="#2ad4a0"></circle><circle class="scatter-point" data-scatter-point tabindex="0" role="button" data-tip-label="AV1 524x394 / crf 34" data-tip-meta="promotion · score 1.99 · 864,167 bytes" data-tip-detail="524x394, svtav1-p0, crf 34, keyint 180, film-grain 22, lanczos/long500-qat-ema-postfilter-h16" aria-label="AV1 524x394 / crf 34. promotion · score 1.99 · 864,167 bytes. 524x394, svtav1-p0, crf 34, keyint 180, film-grain 22, lanczos/long500-qat-ema-postfilter-h16." cx="143.4" cy="333.5" r="4.25" fill="#2ad4a0"></circle><circle class="scatter-point" data-scatter-point tabindex="0" role="button" data-tip-label="AV1 524x394 / crf 34" data-tip-meta="promotion · score 1.95 · 864,168 bytes" data-tip-detail="524x394, svtav1-p0, crf 34, keyint 180, film-grain 22, lanczos/long500-qat-ema-postfilter-h32" aria-label="AV1 524x394 / crf 34. promotion · score 1.95 · 864,168 bytes. 524x394, svtav1-p0, crf 34, keyint 180, film-grain 22, lanczos/long500-qat-ema-postfilter-h32." cx="143.4" cy="336.4" r="4.25" fill="#2ad4a0"></circle><circle class="scatter-point" data-scatter-point tabindex="0" role="button" data-tip-label="AV1 524x394 / crf 34" data-tip-meta="promotion · score 1.92 · 864,167 bytes" data-tip-detail="524x394, svtav1-p0, crf 34, keyint 180, film-grain 22, lanczos/long1000-qat-ema-postfilter-h16" aria-label="AV1 524x394 / crf 34. promotion · score 1.92 · 864,167 bytes. 524x394, svtav1-p0, crf 34, keyint 180, film-grain 22, lanczos/long1000-qat-ema-postfilter-h16." cx="143.4" cy="338.5" r="4.25" fill="#2ad4a0"></circle><circle class="scatter-point" data-scatter-point tabindex="0" role="button" data-tip-label="AV1 524x394 / crf 34" data-tip-meta="promotion · score 1.85 · 864,167 bytes" data-tip-detail="524x394, svtav1-p0, crf 34, keyint 180, film-grain 22, lanczos/long1000-qat-ema-postfilter-h32" aria-label="AV1 524x394 / crf 34. promotion · score 1.85 · 864,167 bytes. 524x394, svtav1-p0, crf 34, keyint 180, film-grain 22, lanczos/long1000-qat-ema-postfilter-h32." cx="143.4" cy="343.5" r="4.25" fill="#2ad4a0"></circle><circle class="scatter-point" data-scatter-point tabindex="0" role="button" data-tip-label="AV1 524x394 / crf 34" data-tip-meta="promotion · score 1.84 · 864,168 bytes" data-tip-detail="524x394, svtav1-p0, crf 34, keyint 180, film-grain 22, lanczos/ensemble-postfilter-h32-mc75-25" aria-label="AV1 524x394 / crf 34. promotion · score 1.84 · 864,168 bytes. 524x394, svtav1-p0, crf 34, keyint 180, film-grain 22, lanczos/ensemble-postfilter-h32-mc75-25." cx="143.4" cy="344.2" r="4.25" fill="#2ad4a0"></circle><circle class="scatter-point" data-scatter-point tabindex="0" role="button" data-tip-label="AV1 524x394 / crf 34" data-tip-meta="promotion · score 1.73 · 864,167 bytes" data-tip-detail="524x394, svtav1-p0, crf 34, keyint 180, film-grain 22, lanczos/long1000-qat-ema-postfilter-h64" aria-label="AV1 524x394 / crf 34. promotion · score 1.73 · 864,167 bytes. 524x394, svtav1-p0, crf 34, keyint 180, film-grain 22, lanczos/long1000-qat-ema-postfilter-h64." cx="143.4" cy="352.0" r="4.25" fill="#2ad4a0"></circle><text x="460.0" y="410" text-anchor="middle" class="axis-label">archive size (bytes, log scale)</text><text x="16" y="210.0" transform="rotate(-90 16 210.0)" text-anchor="middle" class="axis-label">current_workflow score (linear, lower is better)</text></svg>
           <div class="scatter-tooltip" data-scatter-tooltip><strong></strong><span></span><span></span></div>
         </div>
       </div>
       <div class="compare-mode" data-scatter-panel="focus">
         <div class="scatter-shell" data-scatter-shell>
-          <svg viewBox="0 0 920 420" role="img" aria-label="Score versus bytes scatterplot for Track B runs"><line x1="153.4" y1="68" x2="153.4" y2="352" stroke="rgba(255,255,255,0.08)" /><text x="153.4" y="372" text-anchor="middle" class="axis-tick">900k</text><line x1="325.2" y1="68" x2="325.2" y2="352" stroke="rgba(255,255,255,0.08)" /><text x="325.2" y="372" text-anchor="middle" class="axis-tick">1.2M</text><line x1="533.1" y1="68" x2="533.1" y2="352" stroke="rgba(255,255,255,0.08)" /><text x="533.1" y="372" text-anchor="middle" class="axis-tick">1.7M</text><line x1="763.4" y1="68" x2="763.4" y2="352" stroke="rgba(255,255,255,0.08)" /><text x="763.4" y="372" text-anchor="middle" class="axis-tick">2.5M</text><line x1="68" y1="352.0" x2="852" y2="352.0" stroke="rgba(255,255,255,0.08)" /><text x="58" y="356.0" text-anchor="end" class="axis-tick">2</text><line x1="68" y1="301.3" x2="852" y2="301.3" stroke="rgba(255,255,255,0.08)" /><text x="58" y="305.3" text-anchor="end" class="axis-tick">2.5</text><line x1="68" y1="250.6" x2="852" y2="250.6" stroke="rgba(255,255,255,0.08)" /><text x="58" y="254.6" text-anchor="end" class="axis-tick">3</text><line x1="68" y1="149.1" x2="852" y2="149.1" stroke="rgba(255,255,255,0.08)" /><text x="58" y="153.1" text-anchor="end" class="axis-tick">4</text><line x1="68" y1="352" x2="852" y2="352" stroke="#475569" /><line x1="68" y1="68" x2="68" y2="352" stroke="#475569" /><circle class="scatter-point" data-scatter-point tabindex="0" role="button" data-tip-label="x265 512x384 / crf 23" data-tip-meta="promotion · score 3.62 · 2,819,374 bytes" data-tip-detail="512x384, lanczos/bicubic, crf 23, keyint 32, bframes 4, ref 4" aria-label="x265 512x384 / crf 23. promotion · score 3.62 · 2,819,374 bytes. 512x384, lanczos/bicubic, crf 23, keyint 32, bframes 4, ref 4." cx="835.2" cy="187.7" r="4.25" fill="#2ad4a0"></circle><circle class="scatter-point" data-scatter-point tabindex="0" role="button" data-tip-label="x265 448x336 / crf 23" data-tip-meta="promotion · score 3.56 · 1,978,141 bytes" data-tip-detail="448x336, lanczos/bicubic, crf 23, keyint 32, bframes 4, ref 4" aria-label="x265 448x336 / crf 23. promotion · score 3.56 · 1,978,141 bytes. 448x336, lanczos/bicubic, crf 23, keyint 32, bframes 4, ref 4." cx="623.6" cy="193.8" r="4.25" fill="#2ad4a0"></circle><circle class="scatter-point" data-scatter-point tabindex="0" role="button" data-tip-label="x265 448x336 / crf 23" data-tip-meta="measured run · score 3.64 · 2,018,006 bytes" data-tip-detail="448x336, lanczos/bicubic, crf 23, keyint 24, bframes 4, ref 4" aria-label="x265 448x336 / crf 23. measured run · score 3.64 · 2,018,006 bytes. 448x336, lanczos/bicubic, crf 23, keyint 24, bframes 4, ref 4." cx="635.5" cy="185.7" r="4.25" fill="#8ab4ff"></circle><circle class="scatter-point" data-scatter-point tabindex="0" role="button" data-tip-label="x265 448x336 / crf 23" data-tip-meta="promotion · score 3.56 · 1,901,606 bytes" data-tip-detail="448x336, lanczos/bicubic, crf 23, keyint 48, bframes 4, ref 4" aria-label="x265 448x336 / crf 23. promotion · score 3.56 · 1,901,606 bytes. 448x336, lanczos/bicubic, crf 23, keyint 48, bframes 4, ref 4." cx="600.0" cy="193.8" r="4.25" fill="#2ad4a0"></circle><circle class="scatter-point" data-scatter-point tabindex="0" role="button" data-tip-label="x265 448x336 / crf 23" data-tip-meta="measured run · score 3.61 · 1,862,992 bytes" data-tip-detail="448x336, lanczos/bicubic, crf 23, keyint 64, bframes 4, ref 4" aria-label="x265 448x336 / crf 23. measured run · score 3.61 · 1,862,992 bytes. 448x336, lanczos/bicubic, crf 23, keyint 64, bframes 4, ref 4." cx="587.8" cy="188.7" r="4.25" fill="#8ab4ff"></circle><circle class="scatter-point" data-scatter-point tabindex="0" role="button" data-tip-label="x265 448x336 / crf 23" data-tip-meta="measured run · score 3.67 · 1,829,217 bytes" data-tip-detail="448x336, bicubic/bicubic, crf 23, keyint 48, bframes 4, ref 4" aria-label="x265 448x336 / crf 23. measured run · score 3.67 · 1,829,217 bytes. 448x336, bicubic/bicubic, crf 23, keyint 48, bframes 4, ref 4." cx="576.9" cy="182.6" r="4.25" fill="#8ab4ff"></circle><circle class="scatter-point" data-scatter-point tabindex="0" role="button" data-tip-label="x265 448x336 / crf 23" data-tip-meta="promotion · score 3.54 · 1,901,606 bytes" data-tip-detail="448x336, lanczos/lanczos, crf 23, keyint 48, bframes 4, ref 4" aria-label="x265 448x336 / crf 23. promotion · score 3.54 · 1,901,606 bytes. 448x336, lanczos/lanczos, crf 23, keyint 48, bframes 4, ref 4." cx="600.0" cy="195.8" r="4.25" fill="#2ad4a0"></circle><circle class="scatter-point" data-scatter-point tabindex="0" role="button" data-tip-label="x265 448x336 / crf 23" data-tip-meta="measured run · score 3.57 · 2,021,782 bytes" data-tip-detail="448x336, lanczos/lanczos, crf 23, keyint 48, bframes 3, ref 4" aria-label="x265 448x336 / crf 23. measured run · score 3.57 · 2,021,782 bytes. 448x336, lanczos/lanczos, crf 23, keyint 48, bframes 3, ref 4." cx="636.6" cy="192.8" r="4.25" fill="#8ab4ff"></circle><circle class="scatter-point" data-scatter-point tabindex="0" role="button" data-tip-label="x265 448x336 / crf 23" data-tip-meta="measured run · score 3.71 · 1,897,819 bytes" data-tip-detail="448x336, lanczos/lanczos, crf 23, keyint 48, bframes 5, ref 4" aria-label="x265 448x336 / crf 23. measured run · score 3.71 · 1,897,819 bytes. 448x336, lanczos/lanczos, crf 23, keyint 48, bframes 5, ref 4." cx="598.9" cy="178.6" r="4.25" fill="#8ab4ff"></circle><circle class="scatter-point" data-scatter-point tabindex="0" role="button" data-tip-label="x265 448x336 / crf 23" data-tip-meta="measured run · score 3.55 · 1,894,366 bytes" data-tip-detail="448x336, lanczos/lanczos, crf 23, keyint 48, bframes 4, ref 5" aria-label="x265 448x336 / crf 23. measured run · score 3.55 · 1,894,366 bytes. 448x336, lanczos/lanczos, crf 23, keyint 48, bframes 4, ref 5." cx="597.8" cy="194.8" r="4.25" fill="#8ab4ff"></circle><circle class="scatter-point" data-scatter-point tabindex="0" role="button" data-tip-label="x265 432x324 / crf 23" data-tip-meta="promotion · score 3.33 · 1,781,129 bytes" data-tip-detail="432x324, lanczos/lanczos, crf 23, keyint 48, bframes 4, ref 4" aria-label="x265 432x324 / crf 23. promotion · score 3.33 · 1,781,129 bytes. 432x324, lanczos/lanczos, crf 23, keyint 48, bframes 4, ref 4." cx="561.0" cy="217.1" r="4.25" fill="#2ad4a0"></circle><circle class="scatter-point" data-scatter-point tabindex="0" role="button" data-tip-label="x265 464x348 / crf 23" data-tip-meta="explicit rejection · score 3.44 · 2,139,211 bytes" data-tip-detail="464x348, lanczos/lanczos, crf 23, keyint 48, bframes 4, ref 4" aria-label="x265 464x348 / crf 23. explicit rejection · score 3.44 · 2,139,211 bytes. 464x348, lanczos/lanczos, crf 23, keyint 48, bframes 4, ref 4." cx="670.3" cy="205.9" r="4.25" fill="#ff6b6b"></circle><circle class="scatter-point" data-scatter-point tabindex="0" role="button" data-tip-label="x265 432x324 / crf 23" data-tip-meta="explicit rejection · score 4.47 · 2,660,388 bytes" data-tip-detail="432x324, lanczos/lanczos, crf 23, keyint 48, bframes 4, ref 4" aria-label="x265 432x324 / crf 23. explicit rejection · score 4.47 · 2,660,388 bytes. 432x324, lanczos/lanczos, crf 23, keyint 48, bframes 4, ref 4." cx="800.5" cy="101.5" r="4.25" fill="#ff6b6b"></circle><circle class="scatter-point" data-scatter-point tabindex="0" role="button" data-tip-label="x265 432x324 / crf 23" data-tip-meta="explicit rejection · score 3.43 · 1,898,751 bytes" data-tip-detail="432x324, lanczos/lanczos, crf 23, keyint 48, bframes 3, ref 4" aria-label="x265 432x324 / crf 23. explicit rejection · score 3.43 · 1,898,751 bytes. 432x324, lanczos/lanczos, crf 23, keyint 48, bframes 3, ref 4." cx="599.2" cy="207.0" r="4.25" fill="#ff6b6b"></circle><circle class="scatter-point" data-scatter-point tabindex="0" role="button" data-tip-label="x265 432x324 / crf 23" data-tip-meta="explicit rejection · score 3.38 · 1,753,611 bytes" data-tip-detail="432x324, lanczos/lanczos, crf 23, keyint 64, bframes 4, ref 4" aria-label="x265 432x324 / crf 23. explicit rejection · score 3.38 · 1,753,611 bytes. 432x324, lanczos/lanczos, crf 23, keyint 64, bframes 4, ref 4." cx="551.7" cy="212.0" r="4.25" fill="#ff6b6b"></circle><circle class="scatter-point" data-scatter-point tabindex="0" role="button" data-tip-label="x265 424x318 / crf 23" data-tip-meta="promotion · score 3.25 · 1,669,984 bytes" data-tip-detail="424x318, lanczos/lanczos, crf 23, keyint 48, bframes 4, ref 4" aria-label="x265 424x318 / crf 23. promotion · score 3.25 · 1,669,984 bytes. 424x318, lanczos/lanczos, crf 23, keyint 48, bframes 4, ref 4." cx="522.5" cy="225.2" r="4.25" fill="#2ad4a0"></circle><circle class="scatter-point" data-scatter-point tabindex="0" role="button" data-tip-label="x265 424x318 / crf 23" data-tip-meta="explicit rejection · score 3.27 · 1,776,026 bytes" data-tip-detail="424x318, lanczos/lanczos, crf 23, keyint 48, bframes 3, ref 4" aria-label="x265 424x318 / crf 23. explicit rejection · score 3.27 · 1,776,026 bytes. 424x318, lanczos/lanczos, crf 23, keyint 48, bframes 3, ref 4." cx="559.3" cy="223.2" r="4.25" fill="#ff6b6b"></circle><circle class="scatter-point" data-scatter-point tabindex="0" role="button" data-tip-label="x265 424x318 / crf 23" data-tip-meta="explicit rejection · score 3.26 · 1,646,886 bytes" data-tip-detail="424x318, lanczos/lanczos, crf 23, keyint 64, bframes 4, ref 4" aria-label="x265 424x318 / crf 23. explicit rejection · score 3.26 · 1,646,886 bytes. 424x318, lanczos/lanczos, crf 23, keyint 64, bframes 4, ref 4." cx="514.2" cy="224.2" r="4.25" fill="#ff6b6b"></circle><circle class="scatter-point" data-scatter-point tabindex="0" role="button" data-tip-label="x265 416x312 / crf 23" data-tip-meta="explicit rejection · score 3.44 · 1,573,803 bytes" data-tip-detail="416x312, lanczos/lanczos, crf 23, keyint 48, bframes 4, ref 4" aria-label="x265 416x312 / crf 23. explicit rejection · score 3.44 · 1,573,803 bytes. 416x312, lanczos/lanczos, crf 23, keyint 48, bframes 4, ref 4." cx="487.1" cy="205.9" r="4.25" fill="#ff6b6b"></circle><circle class="scatter-point" data-scatter-point tabindex="0" role="button" data-tip-label="x265 428x320 / crf 23" data-tip-meta="explicit rejection · score 3.32 · 1,741,924 bytes" data-tip-detail="428x320, lanczos/lanczos, crf 23, keyint 48, bframes 4, ref 4" aria-label="x265 428x320 / crf 23. explicit rejection · score 3.32 · 1,741,924 bytes. 428x320, lanczos/lanczos, crf 23, keyint 48, bframes 4, ref 4." cx="547.7" cy="218.1" r="4.25" fill="#ff6b6b"></circle><circle class="scatter-point" data-scatter-point tabindex="0" role="button" data-tip-label="x265 426x320 / crf 23" data-tip-meta="explicit rejection · score 3.38 · 1,766,456 bytes" data-tip-detail="426x320, lanczos/lanczos, crf 23, keyint 48, bframes 4, ref 4" aria-label="x265 426x320 / crf 23. explicit rejection · score 3.38 · 1,766,456 bytes. 426x320, lanczos/lanczos, crf 23, keyint 48, bframes 4, ref 4." cx="556.0" cy="212.0" r="4.25" fill="#ff6b6b"></circle><circle class="scatter-point" data-scatter-point tabindex="0" role="button" data-tip-label="AV1 524x394 / crf 33" data-tip-meta="promotion · score 2.20 · 920,457 bytes" data-tip-detail="524x394, svtav1-p0, crf 33, keyint 180, film-grain 22, lanczos/bicubic" aria-label="AV1 524x394 / crf 33. promotion · score 2.20 · 920,457 bytes. 524x394, svtav1-p0, crf 33, keyint 180, film-grain 22, lanczos/bicubic." cx="166.9" cy="331.7" r="4.25" fill="#2ad4a0"></circle><circle class="scatter-point" data-scatter-point tabindex="0" role="button" data-tip-label="AV1 524x394 / crf 34" data-tip-meta="promotion · score 2.19 · 864,455 bytes" data-tip-detail="524x394, svtav1-p0, crf 34, keyint 180, film-grain 22, lanczos/bicubic" aria-label="AV1 524x394 / crf 34. promotion · score 2.19 · 864,455 bytes. 524x394, svtav1-p0, crf 34, keyint 180, film-grain 22, lanczos/bicubic." cx="129.4" cy="332.7" r="4.25" fill="#2ad4a0"></circle><circle class="scatter-point" data-scatter-point tabindex="0" role="button" data-tip-label="AV1 524x394 / crf 35" data-tip-meta="explicit rejection · score 2.21 · 808,036 bytes" data-tip-detail="524x394, svtav1-p0, crf 35, keyint 180, film-grain 22, lanczos/bicubic" aria-label="AV1 524x394 / crf 35. explicit rejection · score 2.21 · 808,036 bytes. 524x394, svtav1-p0, crf 35, keyint 180, film-grain 22, lanczos/bicubic." cx="89.1" cy="330.7" r="4.25" fill="#ff6b6b"></circle><circle class="scatter-point" data-scatter-point tabindex="0" role="button" data-tip-label="AV1 524x394 / crf 34" data-tip-meta="explicit rejection · score 2.20 · 864,455 bytes" data-tip-detail="524x394, svtav1-p0, crf 34, keyint 180, film-grain 22, lanczos/bicubic" aria-label="AV1 524x394 / crf 34. explicit rejection · score 2.20 · 864,455 bytes. 524x394, svtav1-p0, crf 34, keyint 180, film-grain 22, lanczos/bicubic." cx="129.4" cy="331.7" r="4.25" fill="#ff6b6b"></circle><circle class="scatter-point" data-scatter-point tabindex="0" role="button" data-tip-label="AV1 522x392 / crf 34" data-tip-meta="explicit rejection · score 2.23 · 862,238 bytes" data-tip-detail="522x392, svtav1-p0, crf 34, keyint 180, film-grain 22, lanczos/bicubic" aria-label="AV1 522x392 / crf 34. explicit rejection · score 2.23 · 862,238 bytes. 522x392, svtav1-p0, crf 34, keyint 180, film-grain 22, lanczos/bicubic." cx="127.8" cy="328.7" r="4.25" fill="#ff6b6b"></circle><circle class="scatter-point" data-scatter-point tabindex="0" role="button" data-tip-label="AV1 524x394 / crf 34" data-tip-meta="promotion · score 2.18 · 864,455 bytes" data-tip-detail="524x394, svtav1-p0, crf 34, keyint 180, film-grain 22, lanczos/lanczos" aria-label="AV1 524x394 / crf 34. promotion · score 2.18 · 864,455 bytes. 524x394, svtav1-p0, crf 34, keyint 180, film-grain 22, lanczos/lanczos." cx="129.4" cy="333.7" r="4.25" fill="#2ad4a0"></circle><circle class="scatter-point" data-scatter-point tabindex="0" role="button" data-tip-label="AV1 524x394 / crf 34" data-tip-meta="promotion · score 2.12 · 864,486 bytes" data-tip-detail="524x394, svtav1-p0, crf 34, keyint 180, film-grain 22, lanczos/lanczos + explicit bt709/tv-&gt;rgb(pc)" aria-label="AV1 524x394 / crf 34. promotion · score 2.12 · 864,486 bytes. 524x394, svtav1-p0, crf 34, keyint 180, film-grain 22, lanczos/lanczos + explicit bt709/tv-&gt;rgb(pc)." cx="129.4" cy="339.8" r="4.25" fill="#2ad4a0"></circle><text x="460.0" y="410" text-anchor="middle" class="axis-label">archive size (bytes, log scale)</text><text x="16" y="210.0" transform="rotate(-90 16 210.0)" text-anchor="middle" class="axis-label">current_workflow score (linear, lower is better)</text></svg>
+          <svg viewBox="0 0 920 420" role="img" aria-label="Score versus bytes scatterplot for Track B runs"><line x1="153.4" y1="68" x2="153.4" y2="352" stroke="rgba(255,255,255,0.08)" /><text x="153.4" y="372" text-anchor="middle" class="axis-tick">900k</text><line x1="325.2" y1="68" x2="325.2" y2="352" stroke="rgba(255,255,255,0.08)" /><text x="325.2" y="372" text-anchor="middle" class="axis-tick">1.2M</text><line x1="533.1" y1="68" x2="533.1" y2="352" stroke="rgba(255,255,255,0.08)" /><text x="533.1" y="372" text-anchor="middle" class="axis-tick">1.7M</text><line x1="763.4" y1="68" x2="763.4" y2="352" stroke="rgba(255,255,255,0.08)" /><text x="763.4" y="372" text-anchor="middle" class="axis-tick">2.5M</text><line x1="68" y1="352.0" x2="852" y2="352.0" stroke="rgba(255,255,255,0.08)" /><text x="58" y="356.0" text-anchor="end" class="axis-tick">2</text><line x1="68" y1="301.3" x2="852" y2="301.3" stroke="rgba(255,255,255,0.08)" /><text x="58" y="305.3" text-anchor="end" class="axis-tick">2.5</text><line x1="68" y1="250.6" x2="852" y2="250.6" stroke="rgba(255,255,255,0.08)" /><text x="58" y="254.6" text-anchor="end" class="axis-tick">3</text><line x1="68" y1="149.1" x2="852" y2="149.1" stroke="rgba(255,255,255,0.08)" /><text x="58" y="153.1" text-anchor="end" class="axis-tick">4</text><line x1="68" y1="352" x2="852" y2="352" stroke="#475569" /><line x1="68" y1="68" x2="68" y2="352" stroke="#475569" /><circle class="scatter-point" data-scatter-point tabindex="0" role="button" data-tip-label="x265 512x384 / crf 23" data-tip-meta="promotion · score 3.62 · 2,819,374 bytes" data-tip-detail="512x384, lanczos/bicubic, crf 23, keyint 32, bframes 4, ref 4" aria-label="x265 512x384 / crf 23. promotion · score 3.62 · 2,819,374 bytes. 512x384, lanczos/bicubic, crf 23, keyint 32, bframes 4, ref 4." cx="835.2" cy="187.7" r="4.25" fill="#2ad4a0"></circle><circle class="scatter-point" data-scatter-point tabindex="0" role="button" data-tip-label="x265 448x336 / crf 23" data-tip-meta="promotion · score 3.56 · 1,978,141 bytes" data-tip-detail="448x336, lanczos/bicubic, crf 23, keyint 32, bframes 4, ref 4" aria-label="x265 448x336 / crf 23. promotion · score 3.56 · 1,978,141 bytes. 448x336, lanczos/bicubic, crf 23, keyint 32, bframes 4, ref 4." cx="623.6" cy="193.8" r="4.25" fill="#2ad4a0"></circle><circle class="scatter-point" data-scatter-point tabindex="0" role="button" data-tip-label="x265 448x336 / crf 23" data-tip-meta="measured run · score 3.64 · 2,018,006 bytes" data-tip-detail="448x336, lanczos/bicubic, crf 23, keyint 24, bframes 4, ref 4" aria-label="x265 448x336 / crf 23. measured run · score 3.64 · 2,018,006 bytes. 448x336, lanczos/bicubic, crf 23, keyint 24, bframes 4, ref 4." cx="635.5" cy="185.7" r="4.25" fill="#8ab4ff"></circle><circle class="scatter-point" data-scatter-point tabindex="0" role="button" data-tip-label="x265 448x336 / crf 23" data-tip-meta="promotion · score 3.56 · 1,901,606 bytes" data-tip-detail="448x336, lanczos/bicubic, crf 23, keyint 48, bframes 4, ref 4" aria-label="x265 448x336 / crf 23. promotion · score 3.56 · 1,901,606 bytes. 448x336, lanczos/bicubic, crf 23, keyint 48, bframes 4, ref 4." cx="600.0" cy="193.8" r="4.25" fill="#2ad4a0"></circle><circle class="scatter-point" data-scatter-point tabindex="0" role="button" data-tip-label="x265 448x336 / crf 23" data-tip-meta="measured run · score 3.61 · 1,862,992 bytes" data-tip-detail="448x336, lanczos/bicubic, crf 23, keyint 64, bframes 4, ref 4" aria-label="x265 448x336 / crf 23. measured run · score 3.61 · 1,862,992 bytes. 448x336, lanczos/bicubic, crf 23, keyint 64, bframes 4, ref 4." cx="587.8" cy="188.7" r="4.25" fill="#8ab4ff"></circle><circle class="scatter-point" data-scatter-point tabindex="0" role="button" data-tip-label="x265 448x336 / crf 23" data-tip-meta="measured run · score 3.67 · 1,829,217 bytes" data-tip-detail="448x336, bicubic/bicubic, crf 23, keyint 48, bframes 4, ref 4" aria-label="x265 448x336 / crf 23. measured run · score 3.67 · 1,829,217 bytes. 448x336, bicubic/bicubic, crf 23, keyint 48, bframes 4, ref 4." cx="576.9" cy="182.6" r="4.25" fill="#8ab4ff"></circle><circle class="scatter-point" data-scatter-point tabindex="0" role="button" data-tip-label="x265 448x336 / crf 23" data-tip-meta="promotion · score 3.54 · 1,901,606 bytes" data-tip-detail="448x336, lanczos/lanczos, crf 23, keyint 48, bframes 4, ref 4" aria-label="x265 448x336 / crf 23. promotion · score 3.54 · 1,901,606 bytes. 448x336, lanczos/lanczos, crf 23, keyint 48, bframes 4, ref 4." cx="600.0" cy="195.8" r="4.25" fill="#2ad4a0"></circle><circle class="scatter-point" data-scatter-point tabindex="0" role="button" data-tip-label="x265 448x336 / crf 23" data-tip-meta="measured run · score 3.57 · 2,021,782 bytes" data-tip-detail="448x336, lanczos/lanczos, crf 23, keyint 48, bframes 3, ref 4" aria-label="x265 448x336 / crf 23. measured run · score 3.57 · 2,021,782 bytes. 448x336, lanczos/lanczos, crf 23, keyint 48, bframes 3, ref 4." cx="636.6" cy="192.8" r="4.25" fill="#8ab4ff"></circle><circle class="scatter-point" data-scatter-point tabindex="0" role="button" data-tip-label="x265 448x336 / crf 23" data-tip-meta="measured run · score 3.71 · 1,897,819 bytes" data-tip-detail="448x336, lanczos/lanczos, crf 23, keyint 48, bframes 5, ref 4" aria-label="x265 448x336 / crf 23. measured run · score 3.71 · 1,897,819 bytes. 448x336, lanczos/lanczos, crf 23, keyint 48, bframes 5, ref 4." cx="598.9" cy="178.6" r="4.25" fill="#8ab4ff"></circle><circle class="scatter-point" data-scatter-point tabindex="0" role="button" data-tip-label="x265 448x336 / crf 23" data-tip-meta="measured run · score 3.55 · 1,894,366 bytes" data-tip-detail="448x336, lanczos/lanczos, crf 23, keyint 48, bframes 4, ref 5" aria-label="x265 448x336 / crf 23. measured run · score 3.55 · 1,894,366 bytes. 448x336, lanczos/lanczos, crf 23, keyint 48, bframes 4, ref 5." cx="597.8" cy="194.8" r="4.25" fill="#8ab4ff"></circle><circle class="scatter-point" data-scatter-point tabindex="0" role="button" data-tip-label="x265 432x324 / crf 23" data-tip-meta="promotion · score 3.33 · 1,781,129 bytes" data-tip-detail="432x324, lanczos/lanczos, crf 23, keyint 48, bframes 4, ref 4" aria-label="x265 432x324 / crf 23. promotion · score 3.33 · 1,781,129 bytes. 432x324, lanczos/lanczos, crf 23, keyint 48, bframes 4, ref 4." cx="561.0" cy="217.1" r="4.25" fill="#2ad4a0"></circle><circle class="scatter-point" data-scatter-point tabindex="0" role="button" data-tip-label="x265 464x348 / crf 23" data-tip-meta="explicit rejection · score 3.44 · 2,139,211 bytes" data-tip-detail="464x348, lanczos/lanczos, crf 23, keyint 48, bframes 4, ref 4" aria-label="x265 464x348 / crf 23. explicit rejection · score 3.44 · 2,139,211 bytes. 464x348, lanczos/lanczos, crf 23, keyint 48, bframes 4, ref 4." cx="670.3" cy="205.9" r="4.25" fill="#ff6b6b"></circle><circle class="scatter-point" data-scatter-point tabindex="0" role="button" data-tip-label="x265 432x324 / crf 23" data-tip-meta="explicit rejection · score 4.47 · 2,660,388 bytes" data-tip-detail="432x324, lanczos/lanczos, crf 23, keyint 48, bframes 4, ref 4" aria-label="x265 432x324 / crf 23. explicit rejection · score 4.47 · 2,660,388 bytes. 432x324, lanczos/lanczos, crf 23, keyint 48, bframes 4, ref 4." cx="800.5" cy="101.5" r="4.25" fill="#ff6b6b"></circle><circle class="scatter-point" data-scatter-point tabindex="0" role="button" data-tip-label="x265 432x324 / crf 23" data-tip-meta="explicit rejection · score 3.43 · 1,898,751 bytes" data-tip-detail="432x324, lanczos/lanczos, crf 23, keyint 48, bframes 3, ref 4" aria-label="x265 432x324 / crf 23. explicit rejection · score 3.43 · 1,898,751 bytes. 432x324, lanczos/lanczos, crf 23, keyint 48, bframes 3, ref 4." cx="599.2" cy="207.0" r="4.25" fill="#ff6b6b"></circle><circle class="scatter-point" data-scatter-point tabindex="0" role="button" data-tip-label="x265 432x324 / crf 23" data-tip-meta="explicit rejection · score 3.38 · 1,753,611 bytes" data-tip-detail="432x324, lanczos/lanczos, crf 23, keyint 64, bframes 4, ref 4" aria-label="x265 432x324 / crf 23. explicit rejection · score 3.38 · 1,753,611 bytes. 432x324, lanczos/lanczos, crf 23, keyint 64, bframes 4, ref 4." cx="551.7" cy="212.0" r="4.25" fill="#ff6b6b"></circle><circle class="scatter-point" data-scatter-point tabindex="0" role="button" data-tip-label="x265 424x318 / crf 23" data-tip-meta="promotion · score 3.25 · 1,669,984 bytes" data-tip-detail="424x318, lanczos/lanczos, crf 23, keyint 48, bframes 4, ref 4" aria-label="x265 424x318 / crf 23. promotion · score 3.25 · 1,669,984 bytes. 424x318, lanczos/lanczos, crf 23, keyint 48, bframes 4, ref 4." cx="522.5" cy="225.2" r="4.25" fill="#2ad4a0"></circle><circle class="scatter-point" data-scatter-point tabindex="0" role="button" data-tip-label="x265 424x318 / crf 23" data-tip-meta="explicit rejection · score 3.27 · 1,776,026 bytes" data-tip-detail="424x318, lanczos/lanczos, crf 23, keyint 48, bframes 3, ref 4" aria-label="x265 424x318 / crf 23. explicit rejection · score 3.27 · 1,776,026 bytes. 424x318, lanczos/lanczos, crf 23, keyint 48, bframes 3, ref 4." cx="559.3" cy="223.2" r="4.25" fill="#ff6b6b"></circle><circle class="scatter-point" data-scatter-point tabindex="0" role="button" data-tip-label="x265 424x318 / crf 23" data-tip-meta="explicit rejection · score 3.26 · 1,646,886 bytes" data-tip-detail="424x318, lanczos/lanczos, crf 23, keyint 64, bframes 4, ref 4" aria-label="x265 424x318 / crf 23. explicit rejection · score 3.26 · 1,646,886 bytes. 424x318, lanczos/lanczos, crf 23, keyint 64, bframes 4, ref 4." cx="514.2" cy="224.2" r="4.25" fill="#ff6b6b"></circle><circle class="scatter-point" data-scatter-point tabindex="0" role="button" data-tip-label="x265 416x312 / crf 23" data-tip-meta="explicit rejection · score 3.44 · 1,573,803 bytes" data-tip-detail="416x312, lanczos/lanczos, crf 23, keyint 48, bframes 4, ref 4" aria-label="x265 416x312 / crf 23. explicit rejection · score 3.44 · 1,573,803 bytes. 416x312, lanczos/lanczos, crf 23, keyint 48, bframes 4, ref 4." cx="487.1" cy="205.9" r="4.25" fill="#ff6b6b"></circle><circle class="scatter-point" data-scatter-point tabindex="0" role="button" data-tip-label="x265 428x320 / crf 23" data-tip-meta="explicit rejection · score 3.32 · 1,741,924 bytes" data-tip-detail="428x320, lanczos/lanczos, crf 23, keyint 48, bframes 4, ref 4" aria-label="x265 428x320 / crf 23. explicit rejection · score 3.32 · 1,741,924 bytes. 428x320, lanczos/lanczos, crf 23, keyint 48, bframes 4, ref 4." cx="547.7" cy="218.1" r="4.25" fill="#ff6b6b"></circle><circle class="scatter-point" data-scatter-point tabindex="0" role="button" data-tip-label="x265 426x320 / crf 23" data-tip-meta="explicit rejection · score 3.38 · 1,766,456 bytes" data-tip-detail="426x320, lanczos/lanczos, crf 23, keyint 48, bframes 4, ref 4" aria-label="x265 426x320 / crf 23. explicit rejection · score 3.38 · 1,766,456 bytes. 426x320, lanczos/lanczos, crf 23, keyint 48, bframes 4, ref 4." cx="556.0" cy="212.0" r="4.25" fill="#ff6b6b"></circle><circle class="scatter-point" data-scatter-point tabindex="0" role="button" data-tip-label="AV1 524x394 / crf 33" data-tip-meta="promotion · score 2.20 · 920,457 bytes" data-tip-detail="524x394, svtav1-p0, crf 33, keyint 180, film-grain 22, lanczos/bicubic" aria-label="AV1 524x394 / crf 33. promotion · score 2.20 · 920,457 bytes. 524x394, svtav1-p0, crf 33, keyint 180, film-grain 22, lanczos/bicubic." cx="166.9" cy="331.7" r="4.25" fill="#2ad4a0"></circle><circle class="scatter-point" data-scatter-point tabindex="0" role="button" data-tip-label="AV1 524x394 / crf 34" data-tip-meta="promotion · score 2.19 · 864,455 bytes" data-tip-detail="524x394, svtav1-p0, crf 34, keyint 180, film-grain 22, lanczos/bicubic" aria-label="AV1 524x394 / crf 34. promotion · score 2.19 · 864,455 bytes. 524x394, svtav1-p0, crf 34, keyint 180, film-grain 22, lanczos/bicubic." cx="129.4" cy="332.7" r="4.25" fill="#2ad4a0"></circle><circle class="scatter-point" data-scatter-point tabindex="0" role="button" data-tip-label="AV1 524x394 / crf 35" data-tip-meta="explicit rejection · score 2.21 · 808,036 bytes" data-tip-detail="524x394, svtav1-p0, crf 35, keyint 180, film-grain 22, lanczos/bicubic" aria-label="AV1 524x394 / crf 35. explicit rejection · score 2.21 · 808,036 bytes. 524x394, svtav1-p0, crf 35, keyint 180, film-grain 22, lanczos/bicubic." cx="89.1" cy="330.7" r="4.25" fill="#ff6b6b"></circle><circle class="scatter-point" data-scatter-point tabindex="0" role="button" data-tip-label="AV1 524x394 / crf 34" data-tip-meta="explicit rejection · score 2.20 · 864,455 bytes" data-tip-detail="524x394, svtav1-p0, crf 34, keyint 180, film-grain 22, lanczos/bicubic" aria-label="AV1 524x394 / crf 34. explicit rejection · score 2.20 · 864,455 bytes. 524x394, svtav1-p0, crf 34, keyint 180, film-grain 22, lanczos/bicubic." cx="129.4" cy="331.7" r="4.25" fill="#ff6b6b"></circle><circle class="scatter-point" data-scatter-point tabindex="0" role="button" data-tip-label="AV1 522x392 / crf 34" data-tip-meta="explicit rejection · score 2.23 · 862,238 bytes" data-tip-detail="522x392, svtav1-p0, crf 34, keyint 180, film-grain 22, lanczos/bicubic" aria-label="AV1 522x392 / crf 34. explicit rejection · score 2.23 · 862,238 bytes. 522x392, svtav1-p0, crf 34, keyint 180, film-grain 22, lanczos/bicubic." cx="127.8" cy="328.7" r="4.25" fill="#ff6b6b"></circle><circle class="scatter-point" data-scatter-point tabindex="0" role="button" data-tip-label="AV1 524x394 / crf 34" data-tip-meta="promotion · score 2.18 · 864,455 bytes" data-tip-detail="524x394, svtav1-p0, crf 34, keyint 180, film-grain 22, lanczos/lanczos" aria-label="AV1 524x394 / crf 34. promotion · score 2.18 · 864,455 bytes. 524x394, svtav1-p0, crf 34, keyint 180, film-grain 22, lanczos/lanczos." cx="129.4" cy="333.7" r="4.25" fill="#2ad4a0"></circle><circle class="scatter-point" data-scatter-point tabindex="0" role="button" data-tip-label="AV1 524x394 / crf 34" data-tip-meta="promotion · score 2.12 · 864,486 bytes" data-tip-detail="524x394, svtav1-p0, crf 34, keyint 180, film-grain 22, lanczos/lanczos + explicit bt709/tv-&gt;rgb(pc)" aria-label="AV1 524x394 / crf 34. promotion · score 2.12 · 864,486 bytes. 524x394, svtav1-p0, crf 34, keyint 180, film-grain 22, lanczos/lanczos + explicit bt709/tv-&gt;rgb(pc)." cx="129.4" cy="339.8" r="4.25" fill="#2ad4a0"></circle><circle class="scatter-point" data-scatter-point tabindex="0" role="button" data-tip-label="AV1 524x394 / crf 34" data-tip-meta="promotion · score 2.08 · 864,168 bytes" data-tip-detail="524x394, svtav1-p0, crf 34, keyint 180, film-grain 22, lanczos/lanczos" aria-label="AV1 524x394 / crf 34. promotion · score 2.08 · 864,168 bytes. 524x394, svtav1-p0, crf 34, keyint 180, film-grain 22, lanczos/lanczos." cx="129.2" cy="343.9" r="4.25" fill="#2ad4a0"></circle><circle class="scatter-point" data-scatter-point tabindex="0" role="button" data-tip-label="AV1 524x394 / crf 33" data-tip-meta="explicit rejection · score 2.13 · 909,307 bytes" data-tip-detail="524x394, svtav1-p0, crf 33, keyint 180, film-grain 22, lanczos/lanczos" aria-label="AV1 524x394 / crf 33. explicit rejection · score 2.13 · 909,307 bytes. 524x394, svtav1-p0, crf 33, keyint 180, film-grain 22, lanczos/lanczos." cx="159.6" cy="338.8" r="4.25" fill="#ff6b6b"></circle><circle class="scatter-point" data-scatter-point tabindex="0" role="button" data-tip-label="AV1 524x394 / crf 34" data-tip-meta="explicit rejection · score 2.52 · 785,302 bytes" data-tip-detail="524x394, svtav1-p0, crf 34, keyint 180, film-grain 22, lanczos/lanczos + roi preprocess" aria-label="AV1 524x394 / crf 34. explicit rejection · score 2.52 · 785,302 bytes. 524x394, svtav1-p0, crf 34, keyint 180, film-grain 22, lanczos/lanczos + roi preprocess." cx="72.0" cy="299.3" r="4.25" fill="#ff6b6b"></circle><circle class="scatter-point" data-scatter-point tabindex="0" role="button" data-tip-label="AV1 522x392 / crf 34" data-tip-meta="promotion · score 2.05 · 861,986 bytes" data-tip-detail="522x392, svtav1-p0, crf 34, keyint 180, film-grain 22, lanczos/learned-postfilter" aria-label="AV1 522x392 / crf 34. promotion · score 2.05 · 861,986 bytes. 522x392, svtav1-p0, crf 34, keyint 180, film-grain 22, lanczos/learned-postfilter." cx="127.7" cy="346.9" r="4.25" fill="#2ad4a0"></circle><text x="460.0" y="410" text-anchor="middle" class="axis-label">archive size (bytes, log scale)</text><text x="16" y="210.0" transform="rotate(-90 16 210.0)" text-anchor="middle" class="axis-label">current_workflow score (linear, lower is better)</text></svg>
           <div class="scatter-tooltip" data-scatter-tooltip><strong></strong><span></span><span></span></div>
         </div>
       </div>
@@ -232,69 +492,84 @@
     </section>
 
     <section class="panel" aria-labelledby="lineage-title">
-      <h2 id="lineage-title">Search path</h2>
-      <p class="muted">A branch view of the measured search path: x265 reductions, ROI failures, the AV1 byte-layout failure, and the later hardening step that moved the floor to 2.12.</p>
+      <h2 id="lineage-title">Trajectory and branch points</h2>
+      <p class="muted">The x-axis is turning-point order. The y-axis is actual current_workflow score. Lower is better. The AV1 failure is called out as an off-scale diagnostic spike rather than squeezed into the honest operating range.</p>
       <div class="legend-row" aria-label="Lineage legend">
-        <span class="legend-key"><span class="legend-dot" style="background:#2ad4a0"></span>x265 / earlier promotions</span>
-        <span class="legend-key"><span class="legend-dot" style="background:#8ab4ff"></span>current floor</span>
-        <span class="legend-key"><span class="legend-dot" style="background:#f6c14b"></span>diagnostic bug node</span>
-        <span class="legend-key"><span class="legend-dot" style="background:#ff6b6b"></span>rejection / failed branch</span>
+        <span class="legend-key"><span class="legend-line" style="color:#8ed1c0"></span>mainline improvements</span>
+        <span class="legend-key"><span class="legend-line" style="color:#ff8f8f"></span>rejected side branches</span>
+        <span class="legend-key"><span class="legend-line" style="color:#f0b35f"></span>diagnostic off-scale event</span>
       </div>
       <div class="lineage-wrap">
-        <svg viewBox="0 0 1180 360" role="img" aria-label="Experimental lineage graph showing promotions, failures, and repaired AV1 branch">
-          <path class="lineage-edge lineage-edge-promotion" d="M 90 270 Q 165.0 192.0 240 238" /><path class="lineage-edge lineage-edge-promotion" d="M 240 238 Q 315.0 172.0 390 218" /><path class="lineage-edge lineage-edge-promotion" d="M 390 218 Q 462.5 159.0 535 205" /><path class="lineage-edge lineage-edge-promotion" d="M 535 205 Q 605.0 138.0 675 184" /><path class="lineage-edge lineage-edge-promotion" d="M 675 184 Q 747.5 119.0 820 165" /><path class="lineage-edge lineage-edge-rejection" d="M 675 184 Q 675.0 138.0 675 292" /><path class="lineage-edge lineage-edge-rejection" d="M 820 165 Q 820.0 119.0 820 316" /><path class="lineage-edge lineage-edge-diagnostic" d="M 820 165 Q 892.5 119.0 965 286" /><path class="lineage-edge lineage-edge-repair" d="M 965 286 Q 1025.0 114.0 1085 160" />
-          <circle class="lineage-node lineage-node-x265" cx="90" cy="270" r="9"><title>robust_current-baseline-cpu-2026-04-03 | score=4.06 | bytes=3,735,828</title></circle><g class="lineage-note"><rect class="lineage-note-box" x="10.0" y="288.0" width="178" height="54" rx="10" ry="10"></rect><text class="lineage-note-title" x="20.0" y="304.0">baseline</text><text class="lineage-note-meta" x="20.0" y="318.0">4.06 · 512x384 · crf 22</text><text class="lineage-note-meta" x="20.0" y="330.0">k32 · lanczos/bicubic</text></g><circle class="lineage-node lineage-node-x265" cx="240" cy="238" r="9"><title>robust_current-medium23-cpu-2026-04-03 | score=3.62 | bytes=2,819,374</title></circle><g class="lineage-note"><rect class="lineage-note-box" x="151.0" y="162.0" width="178" height="54" rx="10" ry="10"></rect><text class="lineage-note-title" x="161.0" y="178.0">512x384 / crf23</text><text class="lineage-note-meta" x="161.0" y="192.0">3.62 · 512x384 · crf 23</text><text class="lineage-note-meta" x="161.0" y="204.0">k32 · lanczos/bicubic</text></g><circle class="lineage-node lineage-node-x265" cx="390" cy="218" r="9"><title>robust_current-448x336-medium23-cpu-2026-04-03 | score=3.56 | bytes=1,978,141</title></circle><g class="lineage-note"><rect class="lineage-note-box" x="301.0" y="236.0" width="178" height="54" rx="10" ry="10"></rect><text class="lineage-note-title" x="311.0" y="252.0">448x336</text><text class="lineage-note-meta" x="311.0" y="266.0">3.56 · 448x336 · crf 23</text><text class="lineage-note-meta" x="311.0" y="278.0">k32 · lanczos/bicubic</text></g><circle class="lineage-node lineage-node-x265" cx="535" cy="205" r="9"><title>robust_current-lanczos-lanczos-cpu-2026-04-04 | score=3.54 | bytes=1,901,606</title></circle><g class="lineage-note"><rect class="lineage-note-box" x="446.0" y="129.0" width="178" height="54" rx="10" ry="10"></rect><text class="lineage-note-title" x="456.0" y="145.0">lanczos/lanczos</text><text class="lineage-note-meta" x="456.0" y="159.0">3.54 · 448x336 · crf 23</text><text class="lineage-note-meta" x="456.0" y="171.0">k48 · lanczos/lanczos</text></g><circle class="lineage-node lineage-node-x265" cx="675" cy="184" r="9"><title>robust_current-432x324-cpu-2026-04-04 | score=3.33 | bytes=1,781,129</title></circle><g class="lineage-note"><rect class="lineage-note-box" x="586.0" y="202.0" width="178" height="54" rx="10" ry="10"></rect><text class="lineage-note-title" x="596.0" y="218.0">432x324</text><text class="lineage-note-meta" x="596.0" y="232.0">3.33 · 432x324 · crf 23</text><text class="lineage-note-meta" x="596.0" y="244.0">k48 · lanczos/lanczos</text></g><circle class="lineage-node lineage-node-x265" cx="820" cy="165" r="9"><title>robust_current-cand-424x318-crf23-g48-b4-r4-cpu-2026-04-05 | score=3.25 | bytes=1,669,984</title></circle><g class="lineage-note"><rect class="lineage-note-box" x="731.0" y="89.0" width="178" height="54" rx="10" ry="10"></rect><text class="lineage-note-title" x="741.0" y="105.0">x265 floor</text><text class="lineage-note-meta" x="741.0" y="119.0">3.25 · 424x318 · crf 23</text><text class="lineage-note-meta" x="741.0" y="131.0">k48 · lanczos/lanczos</text></g><circle class="lineage-node lineage-node-roi" cx="675" cy="292" r="9"><title>robust_current-dynamic-main-roi-cpu-2026-04-05 | score=4.47 | bytes=2,660,388</title></circle><g class="lineage-note"><rect class="lineage-note-box" x="586.0" y="216.0" width="178" height="54" rx="10" ry="10"></rect><text class="lineage-note-title" x="596.0" y="232.0">dynamic ROI</text><text class="lineage-note-meta" x="596.0" y="246.0">4.47 · 432x324 · crf 23</text><text class="lineage-note-meta" x="596.0" y="258.0">k48 · lanczos/lanczos</text></g><circle class="lineage-node lineage-node-rejection" cx="820" cy="316" r="9"><title>robust_current-cand-428x320-crf23-g48-b4-r4-cpu-2026-04-05 | score=3.32 | bytes=1,741,924</title></circle><g class="lineage-note"><rect class="lineage-note-box" x="731.0" y="240.0" width="178" height="54" rx="10" ry="10"></rect><text class="lineage-note-title" x="741.0" y="256.0">nearby scale</text><text class="lineage-note-meta" x="741.0" y="270.0">3.32 · 428x320 · crf 23</text><text class="lineage-note-meta" x="741.0" y="282.0">k48 · lanczos/lanczos</text></g><circle class="lineage-node lineage-node-bug" cx="965" cy="286" r="9"><title>robust_current-av1-524x394-cpu-2026-04-05 | score=97.45 | bytes=920,457</title></circle><g class="lineage-note"><rect class="lineage-note-box" x="876.0" y="210.0" width="178" height="54" rx="10" ry="10"></rect><text class="lineage-note-title" x="886.0" y="226.0">AV1 failure</text><text class="lineage-note-meta" x="886.0" y="240.0">97.45 · 524x394 · crf 33</text><text class="lineage-note-meta" x="886.0" y="252.0">svtav1-p0 · lanczos/bicubic</text></g><circle class="lineage-node lineage-node-best" cx="1085" cy="160" r="9"><title>robust_current-av1-524x394-colorspace-hardening-promoted-cpu-2026-04-06 | score=2.12 | bytes=864,486</title></circle><g class="lineage-note"><rect class="lineage-note-box" x="992.0" y="84.0" width="178" height="54" rx="10" ry="10"></rect><text class="lineage-note-title" x="1002.0" y="100.0">current floor</text><text class="lineage-note-meta" x="1002.0" y="114.0">2.12 · 524x394 · crf 34</text><text class="lineage-note-meta" x="1002.0" y="126.0">svtav1-p0 · explicit color</text></g>
+        <svg viewBox="0 0 1180 360" role="img" aria-label="Scaled milestone trajectory with branch points and an off-scale AV1 diagnostic failure">
+          <line x1="78" y1="295.9" x2="1152" y2="295.9" stroke="rgba(255,255,255,0.08)" /><text x="68" y="299.9" text-anchor="end" class="axis-tick">2.0</text><line x1="78" y1="250.6" x2="1152" y2="250.6" stroke="rgba(255,255,255,0.08)" /><text x="68" y="254.6" text-anchor="end" class="axis-tick">2.5</text><line x1="78" y1="205.2" x2="1152" y2="205.2" stroke="rgba(255,255,255,0.08)" /><text x="68" y="209.2" text-anchor="end" class="axis-tick">3.0</text><line x1="78" y1="159.9" x2="1152" y2="159.9" stroke="rgba(255,255,255,0.08)" /><text x="68" y="163.9" text-anchor="end" class="axis-tick">3.5</text><line x1="78" y1="114.6" x2="1152" y2="114.6" stroke="rgba(255,255,255,0.08)" /><text x="68" y="118.6" text-anchor="end" class="axis-tick">4.0</text><line x1="78" y1="69.3" x2="1152" y2="69.3" stroke="rgba(255,255,255,0.08)" /><text x="68" y="73.3" text-anchor="end" class="axis-tick">4.5</text><line x1="78" y1="24.0" x2="1152" y2="24.0" stroke="rgba(255,255,255,0.08)" /><text x="68" y="28.0" text-anchor="end" class="axis-tick">5.0</text>
+          <line x1="78" y1="314" x2="1152" y2="314" stroke="#475569" />
+          <line x1="78" y1="24" x2="78" y2="314" stroke="#475569" />
+          <path class="trajectory-edge trajectory-edge-main" d="M 78.0 109.2 L 257.0 182.6 L 436.0 277.8 L 615.0 288.6 L 794.0 291.3 L 973.0 296.8 L 1152.0 320.3" />
+          <path class="trajectory-edge trajectory-edge-branch" d="M 257.0 182.6 C 275.0 182.6, 285.0 176.2, 303.0 176.2" /><circle class="trajectory-node trajectory-node-branch" cx="303.0" cy="176.2" r="5.5"><title>robust_current-cand-428x320-crf23-g48-b4-r4-cpu-2026-04-05 | score=3.32 | bytes=1,741,924</title></circle><text class="trajectory-label" x="303.0" y="204.2" text-anchor="middle">nearby scale</text><text class="trajectory-meta" x="303.0" y="217.2" text-anchor="middle">3.32 · x265</text><path class="trajectory-edge trajectory-edge-diagnostic" d="M 436.0 277.8 C 454.0 277.8, 464.0 32.0, 482.0 32.0" /><circle class="trajectory-node trajectory-node-diagnostic" cx="482.0" cy="32.0" r="5.5"><title>robust_current-av1-524x394-cpu-2026-04-05 | score=97.45 | bytes=920,457</title></circle><text class="trajectory-label" x="482.0" y="8.0" text-anchor="middle">AV1 failure</text><text class="trajectory-meta" x="482.0" y="21.0" text-anchor="middle">97.45 off-scale</text><text class="trajectory-offscale" x="482.0" y="20.0" text-anchor="middle">off-scale diagnostic spike</text>
+          <path class="trajectory-stem" d="M 78.0 109.2 L 78.0 83.2" /><circle class="trajectory-node trajectory-node-main" cx="78.0" cy="109.2" r="6.5"><title>robust_current-baseline-cpu-2026-04-03 | score=4.06 | bytes=3,735,828</title></circle><text class="trajectory-label" x="78.0" y="91.2" text-anchor="middle">baseline</text><text class="trajectory-meta" x="78.0" y="104.2" text-anchor="middle">4.06 · x265</text><path class="trajectory-stem" d="M 257.0 182.6 L 257.0 202.6" /><circle class="trajectory-node trajectory-node-main" cx="257.0" cy="182.6" r="6.5"><title>robust_current-cand-424x318-crf23-g48-b4-r4-cpu-2026-04-05 | score=3.25 | bytes=1,669,984</title></circle><text class="trajectory-label" x="257.0" y="210.6" text-anchor="middle">x265 floor</text><text class="trajectory-meta" x="257.0" y="223.6" text-anchor="middle">3.25 · x265</text><path class="trajectory-stem" d="M 436.0 277.8 L 436.0 251.8" /><circle class="trajectory-node trajectory-node-main" cx="436.0" cy="277.8" r="6.5"><title>robust_current-av1-524x394-rgb24-promoted-cpu-2026-04-05 | score=2.20 | bytes=920,457</title></circle><text class="trajectory-label" x="436.0" y="259.8" text-anchor="middle">AV1 repair</text><text class="trajectory-meta" x="436.0" y="272.8" text-anchor="middle">2.20 · 524x394</text><path class="trajectory-stem" d="M 615.0 288.6 L 615.0 308.6" /><circle class="trajectory-node trajectory-node-main" cx="615.0" cy="288.6" r="6.5"><title>robust_current-sharpness1-promoted-cpu-2026-04-06 | score=2.08 | bytes=864,168</title></circle><text class="trajectory-label" x="615.0" y="316.6" text-anchor="middle">sharpness=1</text><text class="trajectory-meta" x="615.0" y="329.6" text-anchor="middle">2.08 · 524x394</text><path class="trajectory-stem" d="M 794.0 291.3 L 794.0 265.3" /><circle class="trajectory-node trajectory-node-main" cx="794.0" cy="291.3" r="6.5"><title>robust_current-av1-522x392-postfilter-promoted-cpu-2026-04-07 | score=2.05 | bytes=861,986</title></circle><text class="trajectory-label" x="794.0" y="273.3" text-anchor="middle">first post-filter</text><text class="trajectory-meta" x="794.0" y="286.3" text-anchor="middle">2.05 · 522x392</text><path class="trajectory-stem" d="M 973.0 296.8 L 973.0 316.8" /><circle class="trajectory-node trajectory-node-main" cx="973.0" cy="296.8" r="6.5"><title>robust_current-long500-h16-promoted-cpu-2026-04-08 | score=1.99 | bytes=864,167</title></circle><text class="trajectory-label" x="973.0" y="324.8" text-anchor="middle">long500 h16</text><text class="trajectory-meta" x="973.0" y="337.8" text-anchor="middle">1.99 · 524x394</text><path class="trajectory-stem" d="M 1152.0 320.3 L 1152.0 294.3" /><circle class="trajectory-node trajectory-node-main" cx="1152.0" cy="320.3" r="6.5"><title>robust_current-long1000-h64-promoted-cpu-2026-04-09 | score=1.73 | bytes=864,167</title></circle><text class="trajectory-label" x="1152.0" y="302.3" text-anchor="middle">current floor</text><text class="trajectory-meta" x="1152.0" y="315.3" text-anchor="middle">1.73 · 524x394</text>
+          <text x="590.0" y="350" text-anchor="middle" class="axis-label">measured turning-point order</text>
+          <text x="16" y="180.0" transform="rotate(-90 16 180.0)" text-anchor="middle" class="axis-label">actual current_workflow score</text>
         </svg>
       </div>
-      <p class="footnote">This graph is selective by design. It shows the runs that changed the operating point or changed the lab’s understanding of the evaluator.</p>
+      <p class="footnote">This chart is selective by design. It shows the milestones that changed the operating point or changed the lab’s understanding of the evaluator.</p>
     </section>
 
     <section class="panel" aria-labelledby="compare-title">
       <div class="compare-head">
         <div>
-          <h2 id="compare-title">Original vs inflated output</h2>
-          <p class="muted">Browser preview assets for inspection only. Official scoring still comes from the scorer-backed reports.</p>
+          <h2 id="compare-title">Top runs explorer</h2>
+          <p class="muted">Compare the strongest scorer-backed internal runs against the source clip. drag to move the zoom window, change its size, and keep every pane frame-synced.</p>
+          <p class="explorer-meta">Internal media explorer last refreshed Apr 9, 2026, 10:52 AM CDT. Public entries below are reference metadata only because we do not have their artifacts or synced media. Official reference: <a href="https://comma.ai/leaderboard">comma.ai leaderboard</a> and the public PR stream in the official challenge repo.</p>
         </div>
-        <div class="compare-controls" aria-label="Comparison controls">
-          <button type="button" class="is-active" data-compare-mode="full">full frame</button>
-          <button type="button" data-compare-mode="zoom">crop zoom</button>
+        <div class="leaderboard-band" aria-label="Unofficial community leaderboard snapshot">
+          <div class="leaderboard-label">Unofficial community leaderboard snapshot</div>
+          <span class="leader-pill"><strong>Public #1</strong><span>1.89</span><span>neural_inflate</span></span><span class="leader-pill"><strong>Public #2</strong><span>1.94</span><span>roi_v2</span></span><span class="leader-pill"><strong>Public #3</strong><span>1.95</span><span>av1_roi_lanczos_unsharp</span></span>
+        </div>
+      </div>
+      <div class="explorer-toolbar">
+        <div class="run-picker" data-run-picker aria-label="Top run picker">
+          <button type="button" data-run-button data-run-id="floor_173" data-run-label="1.73 current floor" data-run-note="long1000 h64" data-run-score="1.73" class="is-active"><span>1.73 current floor</span><small>long1000 h64</small></button><button type="button" data-run-button data-run-id="floor_184" data-run-label="1.84 prior floor" data-run-note="ensemble h32 + MC 75/25" data-run-score="1.84" class=""><span>1.84 prior floor</span><small>ensemble h32 + MC 75/25</small></button><button type="button" data-run-button data-run-id="floor_185" data-run-label="1.85 older floor" data-run-note="long1000 h32" data-run-score="1.85" class=""><span>1.85 older floor</span><small>long1000 h32</small></button>
+        </div>
+        <div class="compare-controls" aria-label="Explorer controls">
           <button type="button" data-compare-toggle>play / pause</button>
           <input type="range" min="0" max="100" value="0" step="0.1" data-compare-scrub aria-label="Comparison scrubber" />
+          <input type="range" min="16" max="36" value="22" step="1" data-zoom-size aria-label="Zoom window size" />
         </div>
       </div>
-      <div class="compare-mode is-active" data-compare-panel="full">
-        <div class="compare-grid">
-          <figure class="compare-pane">
-            <h3>Original</h3>
-            <video data-compare-video preload="metadata" muted playsinline poster="./media/original_poster.jpg" src="./media/original_preview.mp4"></video>
-            <p>Source contest video excerpt.</p>
-          </figure>
-          <figure class="compare-pane">
-            <h3>Inflated output</h3>
-            <video data-compare-video preload="metadata" muted playsinline poster="./media/inflated_poster.jpg" src="./media/inflated_preview.mp4"></video>
-            <p>Current promoted inflate path rendered to a browser preview.</p>
-          </figure>
-        </div>
+      <div class="explorer-grid">
+        <figure class="explorer-stage">
+          <h3>Original</h3>
+          <div class="zoom-stage" data-zoom-stage>
+            <video data-compare-video data-run-id="original" preload="metadata" muted playsinline poster="./media/original_poster.jpg" src="./media/original_preview.mp4"></video>
+            <div class="zoom-window" data-zoom-window></div>
+          </div>
+          <p class="explorer-meta">Drag to move the zoom window.</p>
+        </figure>
+        <figure class="explorer-stage">
+          <h3 data-selected-run-title>1.73 current floor</h3>
+          <div class="zoom-stage">
+            <div class="run-panel is-active" data-run-panel="floor_173"><video data-compare-video data-run-id="floor_173" preload="metadata" muted playsinline poster="./media/inflated_poster.jpg" src="./media/inflated_preview.mp4"></video></div><div class="run-panel " data-run-panel="floor_184"><video data-compare-video data-run-id="floor_184" preload="metadata" muted playsinline poster="./media/inflated_184_poster.jpg" src="./media/inflated_184_preview.mp4"></video></div><div class="run-panel " data-run-panel="floor_185"><video data-compare-video data-run-id="floor_185" preload="metadata" muted playsinline poster="./media/inflated_185_poster.jpg" src="./media/inflated_185_preview.mp4"></video></div>
+          </div>
+          <p class="explorer-meta" data-selected-run-note>long1000 h64</p>
+        </figure>
       </div>
-      <div class="compare-mode" data-compare-panel="zoom">
-        <div class="compare-grid">
-          <figure class="compare-pane">
-            <h3>Original zoom</h3>
-            <video data-compare-video preload="metadata" muted playsinline poster="./media/original_zoom_poster.jpg" src="./media/original_zoom_preview.mp4"></video>
-            <p>Crop focused on task-relevant structure.</p>
-          </figure>
-          <figure class="compare-pane">
-            <h3>Inflated zoom</h3>
-            <video data-compare-video preload="metadata" muted playsinline poster="./media/inflated_zoom_poster.jpg" src="./media/inflated_zoom_preview.mp4"></video>
-            <p>Same crop after compression and inflate.</p>
-          </figure>
-        </div>
+      <div class="zoom-grid">
+        <figure class="zoom-pane">
+          <h3>Original zoom</h3>
+          <div class="zoom-viewport" data-zoom-viewport>
+            <video data-compare-video data-run-id="original" preload="metadata" muted playsinline poster="./media/original_poster.jpg" src="./media/original_preview.mp4"></video>
+          </div>
+        </figure>
+        <figure class="zoom-pane">
+          <h3 data-selected-run-title>1.73 current floor zoom</h3>
+          <div class="run-panel is-active" data-run-zoom-panel="floor_173"><div class="zoom-viewport" data-zoom-viewport><video data-compare-video data-run-id="floor_173" preload="metadata" muted playsinline poster="./media/inflated_poster.jpg" src="./media/inflated_preview.mp4"></video></div></div><div class="run-panel " data-run-zoom-panel="floor_184"><div class="zoom-viewport" data-zoom-viewport><video data-compare-video data-run-id="floor_184" preload="metadata" muted playsinline poster="./media/inflated_184_poster.jpg" src="./media/inflated_184_preview.mp4"></video></div></div><div class="run-panel " data-run-zoom-panel="floor_185"><div class="zoom-viewport" data-zoom-viewport><video data-compare-video data-run-id="floor_185" preload="metadata" muted playsinline poster="./media/inflated_185_poster.jpg" src="./media/inflated_185_preview.mp4"></video></div></div>
+        </figure>
       </div>
-      <p class="footnote">Compression: 864,486 bytes. Distortion: PoseNet 0.09384175, SegNet 0.00575313. Total score: 2.12.</p>
+      <p class="footnote" data-selected-run-metrics>Selected run: 1.73 current floor · score 1.73 · long1000 h64.</p>
     </section>
 
     <section class="panel" aria-labelledby="mechanism-title">
-      <h2 id="mechanism-title">Walkthrough</h2>
+      <h2 id="mechanism-title">How to read this lab</h2>
       <ol class="walkthrough">
         <li>
           <div class="step-num"></div>
@@ -316,7 +591,7 @@
           <div class="step-num"></div>
           <div class="step-body">
             <h3>Current operating point</h3>
-            <p>The current honest floor is 2.12 at 864,486 bytes.</p>
+            <p>The current honest floor is 1.73 at 864,167 bytes.</p>
             <p>Against the first honest baseline (4.06 at 3,735,828 bytes), the lab reduced bytes while preserving task signal well enough to keep the score moving down.</p>
           </div>
         </li>
@@ -324,35 +599,35 @@
     </section>
 
     <section class="panel" aria-labelledby="explain-title">
-      <h2 id="explain-title">Why 2.12 beat 2.18</h2>
+      <h2 id="explain-title">Why 1.73 beat 1.84</h2>
       <div class="delta-compare">
-        <div class="delta-head" aria-label="Comparison between the prior 2.18 floor and the current 2.12 floor">
+        <div class="delta-head" aria-label="Comparison between the prior floor and the current promoted floor">
           <div class="delta-card">
             <div class="delta-kicker">prior floor</div>
             <div class="delta-scoreline">
-              <span class="delta-score">2.18</span>
-              <span class="delta-bytes">864,455 bytes</span>
+              <span class="delta-score">1.84</span>
+              <span class="delta-bytes">864,168 bytes</span>
             </div>
-            <div class="delta-note">implicit color handling</div>
+            <div class="delta-note">weighted ensemble h32 + MC 75/25</div>
           </div>
           <div class="delta-arrow" aria-hidden="true">→</div>
           <div class="delta-card">
             <div class="delta-kicker">current floor</div>
             <div class="delta-scoreline">
-              <span class="delta-score">2.12</span>
-              <span class="delta-bytes">864,486 bytes</span>
+              <span class="delta-score">1.73</span>
+              <span class="delta-bytes">864,167 bytes</span>
             </div>
-            <div class="delta-note">explicit bt709/tv encode tags · explicit rgb24(pc) decode</div>
+            <div class="delta-note">long1000 QAT+EMA learned int8 post-filter h64</div>
           </div>
         </div>
         <div class="table-wrap">
           <table class="delta-table">
             <thead><tr><th scope="col">Metric</th><th scope="col">Prior</th><th scope="col">Current</th><th scope="col">Delta</th></tr></thead>
-            <tbody><tr><td>current_workflow score</td><td>2.18</td><td>2.12</td><td class="delta-negative">-0.06</td></tr><tr><td>archive bytes</td><td>864,455</td><td>864,486</td><td class="delta-positive">+31</td></tr><tr><td>PoseNet distortion</td><td>0.10656800</td><td>0.09384175</td><td class="delta-negative">-0.01272625</td></tr><tr><td>SegNet distortion</td><td>0.00569617</td><td>0.00575313</td><td class="delta-positive">+0.00005696</td></tr></tbody>
+            <tbody><tr><td>current_workflow score</td><td>1.84</td><td>1.73</td><td class="delta-negative">-0.11</td></tr><tr><td>archive bytes</td><td>864,168</td><td>864,167</td><td class="delta-negative">-1</td></tr><tr><td>PoseNet distortion</td><td>0.04678315</td><td>0.03317023</td><td class="delta-negative">-0.01361292</td></tr><tr><td>SegNet distortion</td><td>0.00581610</td><td>0.00575544</td><td class="delta-negative">-0.00006066</td></tr></tbody>
           </table>
         </div>
       </div>
-      <p class="footnote">The bytes barely moved. The score change came primarily from lower PoseNet distortion.</p>
+      <p class="footnote">The new floor kept bytes in the same regime while lowering the distortion that mattered most in this comparison.</p>
     </section>
 
     <section class="panel" aria-labelledby="frontier-title">
@@ -361,7 +636,7 @@
       <div class="table-wrap">
         <table>
           <thead><tr><th scope="col">Variant</th><th scope="col">Changed axis</th><th scope="col">Score</th><th scope="col">Bytes</th><th scope="col">Δ score</th><th scope="col">Δ bytes</th><th scope="col">Verdict</th></tr></thead>
-          <tbody><tr><td><span title="robust_current-av1-524x394-rgb24-promoted-cpu-2026-04-05">crf 33</span></td><td>crf 33</td><td>2.20</td><td>920,457</td><td></td><td></td><td>promoted</td></tr><tr><td><span title="robust_current-av1-524x394-crf34-promoted-cpu-2026-04-06">crf 34</span></td><td>crf 34</td><td>2.19</td><td>864,455</td><td>-0.01</td><td>-56,002</td><td>promoted</td></tr><tr><td><span title="robust_current-av1-524x394-crf35-rejected-cpu-2026-04-06">crf 35</span></td><td>crf 35</td><td>2.21</td><td>808,036</td><td>+0.02</td><td>-56,419</td><td>rejected</td></tr><tr><td><span title="robust_current-av1-524x394-unsharp030-rejected-cpu-2026-04-06">unsharp 0.30</span></td><td>postfilter unsharp=9:9:0.30:9:9:0.0</td><td>2.20</td><td>864,455</td><td>-0.01</td><td>+56,419</td><td>rejected</td></tr><tr><td><span title="robust_current-av1-524x394-filmgrain0-rejected-cpu-2026-04-06">film-grain 0</span></td><td>film-grain 0</td><td>3.33</td><td>719,096</td><td>+1.13</td><td>-145,359</td><td>rejected</td></tr><tr><td><span title="robust_current-av1-522x392-rejected-cpu-2026-04-06">522x392</span></td><td>geometry 522x392</td><td>2.23</td><td>862,238</td><td>+0.04</td><td>-2,217</td><td>rejected</td></tr><tr><td><span title="robust_current-av1-524x394-upscale-lanczos-promoted-cpu-2026-04-06">lanczos upscale</span></td><td>upscale lanczos</td><td>2.18</td><td>864,455</td><td>-0.01</td><td>+0</td><td>promoted</td></tr><tr><td><span title="robust_current-av1-524x394-colorspace-hardening-promoted-cpu-2026-04-06">color hardening</span></td><td>explicit bt709/tv -&gt; rgb24(pc)</td><td>2.12</td><td>864,486</td><td>-0.06</td><td>+31</td><td>promoted</td></tr></tbody>
+          <tbody><tr><td><span title="robust_current-av1-524x394-rgb24-promoted-cpu-2026-04-05">crf 33</span></td><td>crf 33</td><td>2.20</td><td>920,457</td><td></td><td></td><td>promoted</td></tr><tr><td><span title="robust_current-av1-524x394-crf34-promoted-cpu-2026-04-06">crf 34</span></td><td>crf 34</td><td>2.19</td><td>864,455</td><td>-0.01</td><td>-56,002</td><td>promoted</td></tr><tr><td><span title="robust_current-av1-524x394-crf35-rejected-cpu-2026-04-06">crf 35</span></td><td>crf 35</td><td>2.21</td><td>808,036</td><td>+0.02</td><td>-56,419</td><td>rejected</td></tr><tr><td><span title="robust_current-av1-524x394-unsharp030-rejected-cpu-2026-04-06">unsharp 0.30</span></td><td>postfilter unsharp=9:9:0.30:9:9:0.0</td><td>2.20</td><td>864,455</td><td>-0.01</td><td>+56,419</td><td>rejected</td></tr><tr><td><span title="robust_current-av1-524x394-filmgrain0-rejected-cpu-2026-04-06">film-grain 0</span></td><td>film-grain 0</td><td>3.33</td><td>719,096</td><td>+1.13</td><td>-145,359</td><td>rejected</td></tr><tr><td><span title="robust_current-av1-522x392-rejected-cpu-2026-04-06">522x392</span></td><td>geometry 522x392</td><td>2.23</td><td>862,238</td><td>+0.04</td><td>-2,217</td><td>rejected</td></tr><tr><td><span title="robust_current-av1-524x394-upscale-lanczos-promoted-cpu-2026-04-06">lanczos upscale</span></td><td>upscale lanczos</td><td>2.18</td><td>864,455</td><td>-0.01</td><td>+0</td><td>promoted</td></tr><tr><td><span title="robust_current-sharpness1-promoted-cpu-2026-04-06">crf 34</span></td><td>crf 34</td><td>2.08</td><td>864,168</td><td>-0.10</td><td>-287</td><td>promoted</td></tr><tr><td><span title="robust_current-exp-h-sharpness1-consensus-rejected-cpu-2026-04-07">consensus stack</span></td><td>crf33 + scd0 + hqdn3d</td><td>2.13</td><td>909,307</td><td>+0.05</td><td>+45,139</td><td>rejected</td></tr><tr><td><span title="robust_current-exp-j-preprocess-rejected-cpu-2026-04-07">ROI preprocess</span></td><td>corridor preprocessing</td><td>2.52</td><td>785,302</td><td>+0.39</td><td>-124,005</td><td>rejected</td></tr><tr><td><span title="robust_current-grain-mask-final-rejected-cpu-2026-04-07">grain mask</span></td><td>decode saliency-masked grain synthesis</td><td>2.30</td><td>716,797</td><td>-0.22</td><td>-68,505</td><td>rejected</td></tr><tr><td><span title="robust_current-av1-522x392-postfilter-promoted-cpu-2026-04-07">522x392</span></td><td>geometry 522x392</td><td>2.05</td><td>861,986</td><td>-0.14</td><td>-2,469</td><td>promoted</td></tr></tbody>
         </table>
       </div>
       <p class="table-hint">On narrow screens, swipe horizontally to inspect the full table.</p>
@@ -386,28 +661,80 @@
         </div>
         <div class="refs-group">
           <p class="refs-group-title">Turning points</p>
-          <ul class="list-tight"><li><strong>Initial honest floor</strong> — robust_current-baseline-cpu-2026-04-03 (4.06)</li><li><strong>512x384 / crf23</strong> — robust_current-medium23-cpu-2026-04-03 (3.62)</li><li><strong>ROI branch rejection</strong> — robust_current-dynamic-main-roi-cpu-2026-04-05 (4.47)</li><li><strong>Current floor</strong> — robust_current-av1-524x394-colorspace-hardening-promoted-cpu-2026-04-06 (2.12)</li></ul>
+          <ul class="list-tight"><li><strong>Initial honest floor</strong> — robust_current-baseline-cpu-2026-04-03 (4.06)</li><li><strong>512x384 / crf23</strong> — robust_current-medium23-cpu-2026-04-03 (3.62)</li><li><strong>ROI branch rejection</strong> — robust_current-dynamic-main-roi-cpu-2026-04-05 (4.47)</li><li><strong>Current floor</strong> — robust_current-long1000-h64-promoted-cpu-2026-04-09 (1.73)</li></ul>
         </div>
       </div>
-      <p class="footnote refs-note">The landing page stays as the brief. Full detail lives in the linked artifacts.</p>
+      <p class="footnote refs-note">The landing page is the guided entry point. Full depth lives in the linked notebook, packet, and raw evidence artifacts.</p>
     </section>
+    <section class="panel" id="lab-timeline" aria-labelledby="lab-timeline-title">
+      <h2 id="lab-timeline-title">Experiment tree</h2>
+      <p class="muted">How each experiment branched from its parent. Scroll the timeline to watch the tree grow. Green stroke marks promoted floors. Node size reflects hidden channel width.</p>
+      <div class="legend-row" id="tree-legend"></div>
+      <div style="margin:12px 0;display:flex;align-items:center;gap:12px;">
+        <button type="button" id="treePlayBtn" style="background:rgba(142,209,192,0.10);border:1px solid rgba(142,209,192,0.42);color:var(--text);padding:6px 14px;border-radius:999px;cursor:pointer;font:600 12px/1 inherit;">Play</button>
+        <input type="range" id="treeTimeSlider" min="0" max="100" value="100" style="flex:1;accent-color:var(--accent);">
+        <span id="treeTimeLabel" style="font:600 12px/1 ui-monospace,Menlo,monospace;color:var(--accent);min-width:140px;text-align:right;">--</span>
+      </div>
+      <svg id="tree-svg" style="background:rgba(0,0,0,0.15);border-radius:12px;"></svg>
+    </section>
+
+    <section class="panel" id="doc-evolution" aria-labelledby="doc-evolution-title">
+      <h2 id="doc-evolution-title">Document evolution</h2>
+      <p class="muted">Browse any tracked markdown file across git commits. Switch to Diff mode to see additions and deletions highlighted. Every document version is extracted from git history.</p>
+      <div style="display:flex;gap:10px;align-items:center;flex-wrap:wrap;margin-top:12px;">
+        <select id="docPicker" style="background:rgba(255,255,255,0.04);color:var(--text);border:1px solid rgba(255,255,255,0.10);padding:8px 12px;border-radius:10px;font:inherit;font-size:13px;min-width:280px;">
+          <option value="">-- select document --</option>
+        </select>
+        <button type="button" id="docPrev" style="background:rgba(255,255,255,0.03);color:var(--muted);border:1px solid rgba(255,255,255,0.10);padding:6px 12px;border-radius:999px;cursor:pointer;font:600 12px/1 inherit;">&larr; Older</button>
+        <span id="docVersionLabel" style="min-width:200px;text-align:center;font-size:12px;color:var(--accent)">--</span>
+        <button type="button" id="docNext" style="background:rgba(255,255,255,0.03);color:var(--muted);border:1px solid rgba(255,255,255,0.10);padding:6px 12px;border-radius:999px;cursor:pointer;font:600 12px/1 inherit;">Newer &rarr;</button>
+        <div style="margin-left:auto;display:flex;gap:4px;">
+          <button type="button" id="docModeContent" class="is-active" style="background:rgba(142,209,192,0.10);border:1px solid rgba(142,209,192,0.42);color:var(--text);padding:6px 12px;border-radius:999px;cursor:pointer;font:600 12px/1 inherit;">Content</button>
+          <button type="button" id="docModeDiff" style="background:rgba(255,255,255,0.03);color:var(--muted);border:1px solid rgba(255,255,255,0.10);padding:6px 12px;border-radius:999px;cursor:pointer;font:600 12px/1 inherit;">Diff</button>
+        </div>
+      </div>
+      <div id="docStats" style="font-size:12px;color:var(--muted);margin:10px 0;display:flex;gap:14px;"></div>
+      <pre id="docContent" style="white-space:pre-wrap;word-wrap:break-word;font:500 13px/1.7 ui-monospace,SFMono-Regular,Menlo,monospace;color:var(--soft);padding:16px;border-radius:10px;background:rgba(0,0,0,0.25);border:1px solid rgba(255,255,255,0.10);max-height:600px;overflow-y:auto;">Select a document to begin.</pre>
+    </section>
+
     <footer class="footer-meta" aria-label="Site metadata">
-      <span>Last updated Apr 6, 2026, 1:57 PM CDT</span>
-      <span><a href="https://github.com/adpena/comma-lab">GitHub</a> · <a href="https://github.com/commaai/comma_video_compression_challenge">Challenge</a> · <a href="https://comma-lab.pages.dev/">Canonical site</a></span>
+      <span>Last updated Apr 9, 2026</span>
+      <span><a href="https://github.com/commaai/comma_video_compression_challenge">Challenge repo</a> · <a href="https://comma.ai/leaderboard">Leaderboard</a></span>
     </footer>
   </main>
 </div>
 <script>
 (() => {
-  const modeButtons = Array.from(document.querySelectorAll('[data-compare-mode]'));
-  const panels = Array.from(document.querySelectorAll('[data-compare-panel]'));
   const scatterModeButtons = Array.from(document.querySelectorAll('[data-scatter-mode]'));
   const scatterPanels = Array.from(document.querySelectorAll('[data-scatter-panel]'));
   const videos = Array.from(document.querySelectorAll('[data-compare-video]'));
   const toggle = document.querySelector('[data-compare-toggle]');
   const scrub = document.querySelector('[data-compare-scrub]');
+  const zoomSize = document.querySelector('[data-zoom-size]');
+  const runButtons = Array.from(document.querySelectorAll('[data-run-button]'));
+  const runPanels = Array.from(document.querySelectorAll('[data-run-panel]'));
+  const runZoomPanels = Array.from(document.querySelectorAll('[data-run-zoom-panel]'));
+  const zoomStage = document.querySelector('[data-zoom-stage]');
+  const zoomWindow = document.querySelector('[data-zoom-window]');
+  const selectedTitles = Array.from(document.querySelectorAll('[data-selected-run-title]'));
+  const selectedNote = document.querySelector('[data-selected-run-note]');
+  const selectedMetrics = document.querySelector('[data-selected-run-metrics]');
+  const cropMeta = {"x": 372, "y": 286, "w": 420, "h": 316};
+  const sourceMeta = {"w": 1164, "h": 874};
+  const previewMeta = {"w": 960, "h": 720};
+  const variantMeta = [{"id": "floor_173", "label": "1.73 current floor", "note": "long1000 h64", "score": 1.73, "preview": "inflated_preview.mp4", "poster": "inflated_poster.jpg"}, {"id": "floor_184", "label": "1.84 prior floor", "note": "ensemble h32 + MC 75/25", "score": 1.84, "preview": "inflated_184_preview.mp4", "poster": "inflated_184_poster.jpg"}, {"id": "floor_185", "label": "1.85 older floor", "note": "long1000 h32", "score": 1.85, "preview": "inflated_185_preview.mp4", "poster": "inflated_185_poster.jpg"}];
+  let activeRun = runButtons[0]?.getAttribute('data-run-id') || variantMeta[0]?.id || null;
+  let zoomWidth = Number(zoomSize?.value || 22) / 100;
+  const zoomAspect = cropMeta.w / cropMeta.h;
+  let zoomHeight = zoomWidth / zoomAspect;
+  let zoomX = cropMeta.x / sourceMeta.w;
+  let zoomY = cropMeta.y / sourceMeta.h;
+  let dragState = null;
 
-  const activeVideos = () => videos.filter(v => v.closest('.compare-mode')?.classList.contains('is-active'));
+  const activeVideos = () => videos.filter(v => {
+    const runId = v.getAttribute('data-run-id');
+    return runId === 'original' || runId === activeRun;
+  });
   const currentDuration = () => activeVideos()[0]?.duration || 0;
   const anyActivePlaying = () => activeVideos().some(v => !v.paused && !v.ended);
 
@@ -440,24 +767,41 @@
     await Promise.all(list.map(v => v.play().catch(() => null)));
   };
 
-  const switchMode = async (mode) => {
-    const currentTime = activeVideos()[0]?.currentTime || 0;
-    const shouldResume = anyActivePlaying();
-    pauseVideos(videos);
-    modeButtons.forEach(b => b.classList.toggle('is-active', b.getAttribute('data-compare-mode') === mode));
-    panels.forEach(panel => panel.classList.toggle('is-active', panel.getAttribute('data-compare-panel') === mode));
-    syncCurrentTime(currentTime, videos);
-    setScrubFromTime(currentTime);
-    if (shouldResume) {
-      await playVideos(activeVideos());
-    }
-    updateToggleLabel();
+  const clamp = (value, min, max) => Math.max(min, Math.min(max, value));
+
+  const updateZoomGeometry = () => {
+    if (!zoomWindow || !zoomStage) return;
+    zoomHeight = clamp(zoomWidth / zoomAspect, 0.12, 0.72);
+    zoomX = clamp(zoomX, 0, 1 - zoomWidth);
+    zoomY = clamp(zoomY, 0, 1 - zoomHeight);
+    zoomWindow.style.left = `${zoomX * 100}%`;
+    zoomWindow.style.top = `${zoomY * 100}%`;
+    zoomWindow.style.width = `${zoomWidth * 100}%`;
+    zoomWindow.style.height = `${zoomHeight * 100}%`;
+    document.querySelectorAll('[data-zoom-viewport] video').forEach(video => {
+      video.style.width = `${100 / zoomWidth}%`;
+      video.style.height = `${100 / zoomHeight}%`;
+      video.style.transform = `translate(-${(zoomX * 100) / zoomWidth}%, -${(zoomY * 100) / zoomHeight}%)`;
+    });
   };
 
-  modeButtons.forEach(btn => {
-    btn.addEventListener('click', async () => {
-      await switchMode(btn.getAttribute('data-compare-mode'));
-    });
+  const activateRun = (runId) => {
+    activeRun = runId;
+    const variant = variantMeta.find(v => v.id === runId);
+    runButtons.forEach(btn => btn.classList.toggle('is-active', btn.getAttribute('data-run-id') === runId));
+    runPanels.forEach(panel => panel.classList.toggle('is-active', panel.getAttribute('data-run-panel') === runId));
+    runZoomPanels.forEach(panel => panel.classList.toggle('is-active', panel.getAttribute('data-run-zoom-panel') === runId));
+    if (variant) {
+      selectedTitles.forEach(el => {
+        el.textContent = el.textContent?.includes('zoom') ? `${variant.label} zoom` : variant.label;
+      });
+      if (selectedNote) selectedNote.textContent = variant.note;
+      if (selectedMetrics) selectedMetrics.textContent = `Selected run: ${variant.label} · score ${variant.score.toFixed(2)} · ${variant.note}.`;
+    }
+  };
+
+  runButtons.forEach(btn => {
+    btn.addEventListener('click', () => activateRun(btn.getAttribute('data-run-id')));
   });
 
   scatterModeButtons.forEach(btn => {
@@ -494,6 +838,42 @@
         await playVideos(activeVideos());
       }
       updateToggleLabel();
+    });
+  }
+
+  if (zoomSize) {
+    zoomSize.addEventListener('input', () => {
+      zoomWidth = Number(zoomSize.value) / 100;
+      updateZoomGeometry();
+    });
+  }
+
+  if (zoomStage && zoomWindow) {
+    const updateFromPointer = (event) => {
+      const rect = zoomStage.getBoundingClientRect();
+      const x = clamp((event.clientX - rect.left) / rect.width - zoomWidth / 2, 0, 1 - zoomWidth);
+      const y = clamp((event.clientY - rect.top) / rect.height - zoomHeight / 2, 0, 1 - zoomHeight);
+      zoomX = x;
+      zoomY = y;
+      updateZoomGeometry();
+    };
+    zoomWindow.addEventListener('pointerdown', (event) => {
+      dragState = true;
+      zoomWindow.classList.add('is-dragging');
+      zoomWindow.setPointerCapture(event.pointerId);
+      updateFromPointer(event);
+    });
+    zoomStage.addEventListener('pointermove', (event) => {
+      if (!dragState) return;
+      updateFromPointer(event);
+    });
+    zoomStage.addEventListener('pointerup', () => {
+      dragState = null;
+      zoomWindow.classList.remove('is-dragging');
+    });
+    zoomStage.addEventListener('pointerleave', () => {
+      dragState = null;
+      zoomWindow.classList.remove('is-dragging');
     });
   }
 
@@ -546,7 +926,196 @@
     });
   });
 
+  activateRun(activeRun);
+  updateZoomGeometry();
   updateToggleLabel();
+
+  // ── D3 Experiment Tree ─────────────────────────────────────────────
+  const d3Src = document.createElement('script');
+  d3Src.src = 'https://d3js.org/d3.v7.min.js';
+  d3Src.onload = initD3Sections;
+  document.head.appendChild(d3Src);
+
+  function initD3Sections() {
+    const COLORS = { accent:'#8ed1c0', accent2:'#f0b35f', danger:'#ff6b6b', purple:'#b8a9e8', pink:'#f0a0c0', blue:'#8ab4ff', gray:'#6b7280' };
+    const experiments = [
+      {id:'baseline',name:'Baseline (no filter)',hidden:0,platform:'local',parent:null,color:COLORS.gray,
+       dp:[{date:'2026-04-06T12:00',score:2.08}]},
+      {id:'h8',name:'PostFilter h=8',hidden:8,platform:'local',parent:'baseline',color:COLORS.gray,
+       dp:[{date:'2026-04-07T10:00',ep:50,score:2.01},{date:'2026-04-07T14:00',ep:200,score:1.99}]},
+      {id:'h16',name:'Saliency h=16',hidden:16,platform:'local',parent:'h8',color:COLORS.accent2,
+       dp:[{date:'2026-04-07T18:00',ep:100,score:1.985},{date:'2026-04-08T02:00',ep:300,score:1.945}]},
+      {id:'h32',name:'QAT+EMA h=32',hidden:32,platform:'local',parent:'h16',color:COLORS.blue,
+       dp:[{date:'2026-04-08T10:00',ep:100,score:1.985},{date:'2026-04-08T22:00',ep:500,score:1.845}]},
+      {id:'h32b',name:'h=32 bat00',hidden:32,platform:'bat00',parent:'h32',color:COLORS.blue,
+       dp:[{date:'2026-04-09T00:00',ep:500,score:1.87},{date:'2026-04-09T06:00',ep:1000,score:1.845}]},
+      {id:'h48',name:'h=48',hidden:48,platform:'local',parent:'h32',color:COLORS.accent,
+       dp:[{date:'2026-04-09T03:00',ep:200,score:1.82},{date:'2026-04-09T06:00',ep:400,score:1.762}]},
+      {id:'h64',name:'h=64 (promoted)',hidden:64,platform:'local',parent:'h48',color:COLORS.accent,
+       dp:[{date:'2026-04-09T04:00',ep:100,score:1.85},{date:'2026-04-09T10:00',ep:700,score:1.727}]},
+      {id:'h96',name:'h=96 (OOM)',hidden:96,platform:'local',parent:'h64',color:COLORS.gray,
+       dp:[{date:'2026-04-09T05:00',ep:66,score:1.90}]},
+      {id:'kalman',name:'Kalman h=48',hidden:48,platform:'tertiary',parent:'h48',color:COLORS.purple,
+       dp:[{date:'2026-04-09T08:00',ep:600,score:1.863}]},
+      {id:'cvar',name:'CVaR DRO',hidden:32,platform:'local',parent:'h32',color:COLORS.purple,
+       dp:[{date:'2026-04-09T04:00',ep:200,score:1.95}]},
+      {id:'dilated',name:'Dilated h=64',hidden:64,platform:'local',parent:'h64',color:COLORS.accent2,
+       dp:[{date:'2026-04-09T08:00',ep:75,score:1.86},{date:'2026-04-09T12:00',ep:220,score:1.79}]},
+      {id:'ps',name:'PixelShuffle h=64',hidden:64,platform:'local',parent:'h64',color:COLORS.pink,
+       dp:[{date:'2026-04-09T12:00',ep:166,score:1.84}]},
+      {id:'psd',name:'PSD h=64 (council)',hidden:64,platform:'local',parent:'h64',color:COLORS.danger,
+       dp:[{date:'2026-04-09T12:00',ep:63,score:1.87}]},
+      {id:'seg',name:'SegNet attack',hidden:32,platform:'local',parent:'h32',color:COLORS.danger,
+       dp:[{date:'2026-04-09T08:00',ep:590,score:0.98}]},
+    ];
+
+    const promoted = new Set(['h64','h48','h32']);
+    const allDates = experiments.flatMap(e=>e.dp.map(d=>new Date(d.date)));
+    const minDate = d3.min(allDates), maxDate = d3.max(allDates);
+    let treeTime = 1.0, treePlaying = false;
+
+    function drawTree() {
+      const svg = d3.select('#tree-svg');
+      svg.selectAll('*').remove();
+      const W = svg.node().parentElement.clientWidth - 44;
+      const H = Math.max(440, experiments.length * 40);
+      svg.attr('viewBox', `0 0 ${W} ${H}`);
+
+      const root = {id:'__r__',children:[]};
+      const map = {'__r__':root};
+      experiments.forEach(e=>{map[e.id]={...e,children:[]};});
+      experiments.forEach(e=>{(e.parent?map[e.parent]:root).children.push(map[e.id]);});
+      const tree = d3.tree().size([H-40,W-220]);
+      const hier = d3.hierarchy(root);
+      tree(hier);
+
+      svg.selectAll('.tl').data(hier.links().filter(l=>l.source.depth>0||l.target.depth===1)).join('path')
+        .attr('fill','none').attr('stroke',d=>promoted.has(d.target.data.id)?'#8ed1c0':'rgba(255,255,255,0.10)')
+        .attr('stroke-width',d=>promoted.has(d.target.data.id)?2.5:1.5)
+        .attr('d',d3.linkHorizontal().x(d=>d.y+100).y(d=>d.x+20));
+
+      const nodes = svg.selectAll('.tn').data(hier.descendants().filter(d=>d.data.id!=='__r__')).join('g')
+        .attr('class','tn').attr('transform',d=>`translate(${d.y+100},${d.x+20})`);
+      nodes.append('circle')
+        .attr('r',d=>Math.max(5,Math.min(14,(d.data.hidden||8)/5)))
+        .attr('fill',d=>d.data.color).attr('stroke',d=>promoted.has(d.data.id)?'#8ed1c0':'none').attr('stroke-width',3)
+        .style('cursor','pointer');
+      nodes.append('text').attr('dx',d=>Math.max(5,Math.min(14,(d.data.hidden||8)/5))+6).attr('dy',4)
+        .attr('fill','#a8b1bc').attr('font-size',10)
+        .text(d=>{const b=Math.min(...d.data.dp.map(p=>p.score));return `${d.data.name} (${b.toFixed(3)})`;});
+
+      updateTreeTime();
+    }
+
+    function updateTreeTime() {
+      const cur = new Date(+minDate + treeTime*(+maxDate - +minDate));
+      document.getElementById('treeTimeLabel').textContent = cur.toLocaleDateString()+' '+cur.toLocaleTimeString([],{hour:'2-digit',minute:'2-digit'});
+      d3.selectAll('.tn').each(function(d){
+        const vis = d.data.dp && d.data.dp.some(p=>new Date(p.date)<=cur);
+        d3.select(this).style('opacity',vis?1:0.1).style('transition','opacity 300ms ease');
+      });
+    }
+
+    document.getElementById('treeTimeSlider').oninput = function(){
+      treeTime = parseInt(this.value)/100; updateTreeTime();
+    };
+    document.getElementById('treePlayBtn').onclick = function(){
+      if(treePlaying){treePlaying=false;this.textContent='Play';return;}
+      treePlaying=true;this.textContent='Pause';
+      if(treeTime>=1){treeTime=0;document.getElementById('treeTimeSlider').value=0;}
+      let last=performance.now();
+      (function frame(now){
+        if(!treePlaying)return;
+        treeTime=Math.min(1,treeTime+(now-last)/1000*0.08);last=now;
+        document.getElementById('treeTimeSlider').value=Math.round(treeTime*100);
+        updateTreeTime();
+        if(treeTime>=1){treePlaying=false;document.getElementById('treePlayBtn').textContent='Play';return;}
+        requestAnimationFrame(frame);
+      })(performance.now());
+    };
+
+    const platforms=[...new Set(experiments.map(e=>e.platform))];
+    const pColors={local:'#8ed1c0',bat00:'#8ed1c0',tertiary:'#b8a9e8'};
+    d3.select('#tree-legend').selectAll('span').data(platforms).join('span').attr('class','legend-key')
+      .html(d=>`<span class="legend-dot" style="background:${pColors[d]||'#6b7280'}"></span>${d}`);
+
+    drawTree();
+    let rt;window.addEventListener('resize',()=>{clearTimeout(rt);rt=setTimeout(drawTree,250);});
+
+    // ── Doc Evolution ──────────────────────────────────────────────────
+    let docData=null, docFile='', docIdx=0, docMode='content';
+    fetch('timeline_docs.json').then(r=>r.ok?r.json():null).then(d=>{
+      if(!d||!d.timelines)return;
+      docData=d;
+      const picker=document.getElementById('docPicker');
+      Object.entries(d.timelines).sort((a,b)=>b[1].commits.length-a[1].commits.length).forEach(([path,tl])=>{
+        const opt=document.createElement('option');
+        opt.value=path;opt.textContent=`${path} (${tl.commits.length} versions)`;
+        picker.appendChild(opt);
+      });
+      picker.onchange=()=>{docFile=picker.value;docIdx=0;renderDoc();};
+    });
+
+    document.getElementById('docPrev').onclick=()=>{if(docIdx<getC().length-1){docIdx++;renderDoc();}};
+    document.getElementById('docNext').onclick=()=>{if(docIdx>0){docIdx--;renderDoc();}};
+    document.getElementById('docModeContent').onclick=()=>{docMode='content';updDocBtns();renderDoc();};
+    document.getElementById('docModeDiff').onclick=()=>{docMode='diff';updDocBtns();renderDoc();};
+
+    function updDocBtns(){
+      const cb=document.getElementById('docModeContent'),db=document.getElementById('docModeDiff');
+      cb.style.background=docMode==='content'?'rgba(142,209,192,0.10)':'rgba(255,255,255,0.03)';
+      cb.style.borderColor=docMode==='content'?'rgba(142,209,192,0.42)':'rgba(255,255,255,0.10)';
+      cb.style.color=docMode==='content'?'var(--text)':'var(--muted)';
+      db.style.background=docMode==='diff'?'rgba(142,209,192,0.10)':'rgba(255,255,255,0.03)';
+      db.style.borderColor=docMode==='diff'?'rgba(142,209,192,0.42)':'rgba(255,255,255,0.10)';
+      db.style.color=docMode==='diff'?'var(--text)':'var(--muted)';
+    }
+
+    function getC(){return docFile&&docData&&docData.timelines[docFile]?docData.timelines[docFile].commits:[];}
+    function esc(s){return(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');}
+
+    function renderDoc(){
+      const cs=getC();if(!cs.length)return;
+      const c=cs[docIdx],tl=docData.timelines[docFile];
+      document.getElementById('docVersionLabel').textContent=`${c.short_hash} \u2014 ${c.date.slice(0,16)} (${docIdx+1}/${cs.length})`;
+      const diff=tl.diffs.find(d=>d.to===c.short_hash);
+      document.getElementById('docStats').innerHTML=diff
+        ?`<span style="color:var(--accent)">+${diff.additions}</span><span style="color:#ff6b6b">\u2212${diff.deletions}</span><span>${esc(c.message)}</span>`
+        :`<span>${esc(c.message)}</span>`;
+      const el=document.getElementById('docContent');
+      if(docMode==='content'){el.innerHTML=esc(tl.versions[c.short_hash]||'(not available)');}
+      else{el.innerHTML=diff?diff.html:(docIdx>=cs.length-1?'<span style="color:var(--muted)">Earliest version.</span>':'No diff data.');}
+    }
+  }
+
+  // ── Sticky nav scroll spy ────────────────────────────────────────────
+  const stickyNav = document.getElementById('stickyNav');
+  const navLinks = stickyNav.querySelectorAll('[data-nav]');
+  const sections = [];
+  navLinks.forEach(link => {
+    const id = link.getAttribute('href').slice(1);
+    const el = document.getElementById(id);
+    if (el) sections.push({ el, link });
+  });
+
+  let ticking = false;
+  window.addEventListener('scroll', () => {
+    if (!ticking) {
+      requestAnimationFrame(() => {
+        // Add shadow when scrolled
+        stickyNav.classList.toggle('scrolled', window.scrollY > 60);
+        // Highlight active section
+        let active = sections[0];
+        for (const s of sections) {
+          if (s.el.getBoundingClientRect().top <= 120) active = s;
+        }
+        navLinks.forEach(l => l.classList.remove('is-active'));
+        if (active) active.link.classList.add('is-active');
+        ticking = false;
+      });
+      ticking = true;
+    }
+  });
 })();
 </script>
 </body>

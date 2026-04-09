@@ -1,14 +1,19 @@
 #!/usr/bin/env python3
 from __future__ import annotations
 
+import argparse
+import filecmp
 from pathlib import Path
 import shutil
+import sys
 
 ROOT = Path(__file__).resolve().parent
 SITE = ROOT / 'site'
 MEDIA = ROOT / 'media'
 FILES = [
     ('index.html', 'index.html'),
+    ('report_history.html', 'report_history.html'),
+    ('report_history.json', 'report_history.json'),
     ('dashboard_data.json', 'dashboard_data.json'),
     ('score_timeline.json', 'score_timeline.json'),
     ('score_timeline.mmd', 'score_timeline.mmd'),
@@ -31,19 +36,7 @@ FILES = [
     ('frontend_audit.md', 'frontend_audit.md'),
 ]
 
-SITE.mkdir(parents=True, exist_ok=True)
-for src_name, dest_name in FILES:
-    src = ROOT / src_name
-    if src.exists():
-        shutil.copy2(src, SITE / dest_name)
-
-if MEDIA.exists():
-    media_dst = SITE / 'media'
-    if media_dst.exists():
-        shutil.rmtree(media_dst)
-    shutil.copytree(MEDIA, media_dst)
-
-(SITE / '_headers').write_text('''
+HEADERS_TEXT = '''
 /*
   X-Content-Type-Options: nosniff
   X-Frame-Options: DENY
@@ -67,7 +60,74 @@ if MEDIA.exists():
 /index.html
   Cache-Control: public, max-age=60
   Content-Security-Policy: default-src 'self'; img-src 'self' data:; style-src 'self' 'unsafe-inline'; script-src 'self'; connect-src 'self'; object-src 'none'; base-uri 'self'; frame-ancestors 'none'
-'''.strip() + '\n')
+'''.strip() + '\n'
 
-(SITE / '_redirects').write_text('/ /index.html 200\n')
-print('site_ready', SITE)
+REDIRECTS_TEXT = '/ /index.html 200\n'
+
+
+def copy_site() -> None:
+    SITE.mkdir(parents=True, exist_ok=True)
+    for src_name, dest_name in FILES:
+        src = ROOT / src_name
+        if src.exists():
+            shutil.copy2(src, SITE / dest_name)
+
+    if MEDIA.exists():
+        media_dst = SITE / 'media'
+        if media_dst.exists():
+            shutil.rmtree(media_dst)
+        shutil.copytree(MEDIA, media_dst)
+
+    (SITE / '_headers').write_text(HEADERS_TEXT)
+    (SITE / '_redirects').write_text(REDIRECTS_TEXT)
+
+
+def check_site_parity() -> int:
+    problems: list[str] = []
+    for src_name, dest_name in FILES:
+        src = ROOT / src_name
+        dst = SITE / dest_name
+        if not src.exists():
+            continue
+        if not dst.exists():
+            problems.append(f'missing site copy: {dst}')
+            continue
+        if not filecmp.cmp(src, dst, shallow=False):
+            problems.append(f'drift detected: {src} != {dst}')
+
+    if MEDIA.exists():
+        media_dst = SITE / 'media'
+        if not media_dst.exists():
+            problems.append(f'missing media dir: {media_dst}')
+
+    headers = SITE / '_headers'
+    redirects = SITE / '_redirects'
+    if not headers.exists() or headers.read_text() != HEADERS_TEXT:
+        problems.append(f'drift detected: {headers}')
+    if not redirects.exists() or redirects.read_text() != REDIRECTS_TEXT:
+        problems.append(f'drift detected: {redirects}')
+
+    if problems:
+        print('Drift detected between reports/graphs and reports/graphs/site:', file=sys.stderr)
+        for item in problems:
+            print(f'- {item}', file=sys.stderr)
+        return 1
+    print('site_in_sync', SITE)
+    return 0
+
+
+def main() -> int:
+    parser = argparse.ArgumentParser()
+    parser.add_argument('--check', action='store_true', help='verify that site copies match source artifacts')
+    args = parser.parse_args()
+
+    if args.check:
+        return check_site_parity()
+
+    copy_site()
+    print('site_ready', SITE)
+    return 0
+
+
+if __name__ == '__main__':
+    raise SystemExit(main())

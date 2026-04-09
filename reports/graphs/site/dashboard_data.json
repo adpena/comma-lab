@@ -1,13 +1,13 @@
 {
   "summary": {
-    "best_track_b_score": 2.12,
-    "best_track_b_bytes": 864486,
-    "best_track_b_run_id": "robust_current-av1-524x394-colorspace-hardening-promoted-cpu-2026-04-06",
-    "latest_track_b_score": 2.12,
+    "best_track_b_score": 1.73,
+    "best_track_b_bytes": 864167,
+    "best_track_b_run_id": "robust_current-long1000-h64-promoted-cpu-2026-04-09",
+    "latest_track_b_score": 1.73,
     "track_a_current_workflow_score": 0.0,
-    "robust_run_count": 35,
-    "promotion_count": 10,
-    "rejection_count": 15
+    "robust_run_count": 46,
+    "promotion_count": 18,
+    "rejection_count": 18
   },
   "promotion_ladder": [
     {
@@ -181,6 +181,158 @@
         "video_codec": "libsvtav1"
       },
       "ts_utc": "2026-04-06T15:43:00+00:00"
+    },
+    {
+      "run_id": "robust_current-sharpness1-promoted-cpu-2026-04-06",
+      "score": 2.08,
+      "archive_bytes": 864168,
+      "config": {
+        "bframes": null,
+        "crf": 34,
+        "film_grain": 22,
+        "filters": "lanczos/lanczos",
+        "gop": 180,
+        "inflate_postfilter": "unsharp=9:9:0.35:9:9:0.0",
+        "preset": "svtav1-p0",
+        "ref": null,
+        "scale_h": 394,
+        "scale_w": 524,
+        "video_codec": "libsvtav1"
+      },
+      "ts_utc": "2026-04-06T18:00:00+00:00"
+    },
+    {
+      "run_id": "robust_current-av1-522x392-postfilter-promoted-cpu-2026-04-07",
+      "score": 2.05,
+      "archive_bytes": 861986,
+      "config": {
+        "bframes": null,
+        "crf": 34,
+        "film_grain": 22,
+        "filters": "lanczos/learned-postfilter",
+        "gop": 180,
+        "inflate_postfilter": "tiny learned post-filter int8",
+        "preset": "svtav1-p0",
+        "ref": null,
+        "scale_h": 392,
+        "scale_w": 522,
+        "video_codec": "libsvtav1"
+      },
+      "ts_utc": "2026-04-07T23:55:00+00:00"
+    },
+    {
+      "run_id": "robust_current-long500-h16-promoted-cpu-2026-04-08",
+      "score": 1.99,
+      "archive_bytes": 864167,
+      "config": {
+        "bframes": null,
+        "crf": 34,
+        "film_grain": 22,
+        "filters": "lanczos/long500-qat-ema-postfilter-h16",
+        "gop": 180,
+        "inflate_postfilter": "long500 qat+ema learned post-filter int8 h16",
+        "preset": "svtav1-p0",
+        "ref": null,
+        "scale_h": 394,
+        "scale_w": 524,
+        "video_codec": "libsvtav1"
+      },
+      "ts_utc": "2026-04-08T19:57:15+00:00"
+    },
+    {
+      "run_id": "robust_current-long500-h32-promoted-cpu-2026-04-08",
+      "score": 1.95,
+      "archive_bytes": 864168,
+      "config": {
+        "bframes": null,
+        "crf": 34,
+        "film_grain": 22,
+        "filters": "lanczos/long500-qat-ema-postfilter-h32",
+        "gop": 180,
+        "inflate_postfilter": "long500 qat+ema learned post-filter int8 h32",
+        "preset": "svtav1-p0",
+        "ref": null,
+        "scale_h": 394,
+        "scale_w": 524,
+        "video_codec": "libsvtav1"
+      },
+      "ts_utc": "2026-04-08T23:08:27+00:00"
+    },
+    {
+      "run_id": "robust_current-long1000-h16-promoted-cpu-2026-04-08",
+      "score": 1.92,
+      "archive_bytes": 864167,
+      "config": {
+        "bframes": null,
+        "crf": 34,
+        "film_grain": 22,
+        "filters": "lanczos/long1000-qat-ema-postfilter-h16",
+        "gop": 180,
+        "inflate_postfilter": "long1000 qat+ema learned post-filter int8 h16",
+        "preset": "svtav1-p0",
+        "ref": null,
+        "scale_h": 394,
+        "scale_w": 524,
+        "video_codec": "libsvtav1"
+      },
+      "ts_utc": "2026-04-09T00:12:26+00:00"
+    },
+    {
+      "run_id": "robust_current-long1000-h32-promoted-cpu-2026-04-08",
+      "score": 1.85,
+      "archive_bytes": 864167,
+      "config": {
+        "bframes": null,
+        "crf": 34,
+        "film_grain": 22,
+        "filters": "lanczos/long1000-qat-ema-postfilter-h32",
+        "gop": 180,
+        "inflate_postfilter": "long1000 qat+ema learned post-filter int8 h32",
+        "preset": "svtav1-p0",
+        "ref": null,
+        "scale_h": 394,
+        "scale_w": 524,
+        "video_codec": "libsvtav1"
+      },
+      "ts_utc": "2026-04-09T02:36:54+00:00"
+    },
+    {
+      "run_id": "robust_current-ensemble-h32-mc75-25-promoted-cpu-2026-04-09",
+      "score": 1.84,
+      "archive_bytes": 864168,
+      "config": {
+        "bframes": null,
+        "crf": 34,
+        "film_grain": 22,
+        "filters": "lanczos/ensemble-postfilter-h32-mc75-25",
+        "gop": 180,
+        "inflate_postfilter": "weighted ensemble learned post-filter int8 (long1000 h32 + MC refine1, 75/25)",
+        "preset": "svtav1-p0",
+        "ref": null,
+        "scale_h": 394,
+        "scale_w": 524,
+        "video_codec": "libsvtav1"
+      },
+      "ts_utc": "2026-04-09T11:37:51+00:00"
+    },
+    {
+      "run_id": "robust_current-long1000-h64-promoted-cpu-2026-04-09",
+      "score": 1.73,
+      "archive_bytes": 864167,
+      "config": {
+        "bframes": null,
+        "crf": 34,
+        "film_grain": 22,
+        "filters": "lanczos/long1000-qat-ema-postfilter-h64",
+        "gop": 180,
+        "inflate_postfilter": "long1000 qat+ema learned post-filter int8 h64",
+        "preset": "svtav1-p0",
+        "ref": null,
+        "scale_h": 394,
+        "scale_w": 524,
+        "video_codec": "libsvtav1"
+      },
+      "ts_utc": "2026-04-09T15:07:00+00:00"
     }
   ],
   "promotion_accounting": [
@@ -359,6 +511,166 @@
         "filters": "lanczos/lanczos + explicit bt709/tv->rgb(pc)",
         "gop": 180,
         "inflate_postfilter": "unsharp=9:9:0.35:9:9:0.0",
+        "preset": "svtav1-p0",
+        "ref": null,
+        "scale_h": 394,
+        "scale_w": 524,
+        "video_codec": "libsvtav1"
+      }
+    },
+    {
+      "run_id": "robust_current-sharpness1-promoted-cpu-2026-04-06",
+      "current_workflow_score": 2.08,
+      "current_workflow_bytes": 864168,
+      "rule_faithful_score": 2.1235784276618737,
+      "rule_faithful_bytes": 922416,
+      "config": {
+        "bframes": null,
+        "crf": 34,
+        "film_grain": 22,
+        "filters": "lanczos/lanczos",
+        "gop": 180,
+        "inflate_postfilter": "unsharp=9:9:0.35:9:9:0.0",
+        "preset": "svtav1-p0",
+        "ref": null,
+        "scale_h": 394,
+        "scale_w": 524,
+        "video_codec": "libsvtav1"
+      }
+    },
+    {
+      "run_id": "robust_current-av1-522x392-postfilter-promoted-cpu-2026-04-07",
+      "current_workflow_score": 2.05,
+      "current_workflow_bytes": 861986,
+      "rule_faithful_score": 2.0778631822069484,
+      "rule_faithful_bytes": 896432,
+      "config": {
+        "bframes": null,
+        "crf": 34,
+        "film_grain": 22,
+        "filters": "lanczos/learned-postfilter",
+        "gop": 180,
+        "inflate_postfilter": "tiny learned post-filter int8",
+        "preset": "svtav1-p0",
+        "ref": null,
+        "scale_h": 392,
+        "scale_w": 522,
+        "video_codec": "libsvtav1"
+      }
+    },
+    {
+      "run_id": "robust_current-long500-h16-promoted-cpu-2026-04-08",
+      "current_workflow_score": 1.99,
+      "current_workflow_bytes": 864167,
+      "rule_faithful_score": 2.026595600341607,
+      "rule_faithful_bytes": 926090,
+      "config": {
+        "bframes": null,
+        "crf": 34,
+        "film_grain": 22,
+        "filters": "lanczos/long500-qat-ema-postfilter-h16",
+        "gop": 180,
+        "inflate_postfilter": "long500 qat+ema learned post-filter int8 h16",
+        "preset": "svtav1-p0",
+        "ref": null,
+        "scale_h": 394,
+        "scale_w": 524,
+        "video_codec": "libsvtav1"
+      }
+    },
+    {
+      "run_id": "robust_current-long500-h32-promoted-cpu-2026-04-08",
+      "current_workflow_score": 1.95,
+      "current_workflow_bytes": 864168,
+      "rule_faithful_score": 1.9923143481540724,
+      "rule_faithful_bytes": 935149,
+      "config": {
+        "bframes": null,
+        "crf": 34,
+        "film_grain": 22,
+        "filters": "lanczos/long500-qat-ema-postfilter-h32",
+        "gop": 180,
+        "inflate_postfilter": "long500 qat+ema learned post-filter int8 h32",
+        "preset": "svtav1-p0",
+        "ref": null,
+        "scale_h": 394,
+        "scale_w": 524,
+        "video_codec": "libsvtav1"
+      }
+    },
+    {
+      "run_id": "robust_current-long1000-h16-promoted-cpu-2026-04-08",
+      "current_workflow_score": 1.92,
+      "current_workflow_bytes": 864167,
+      "rule_faithful_score": 1.9642242695971968,
+      "rule_faithful_bytes": 927230,
+      "config": {
+        "bframes": null,
+        "crf": 34,
+        "film_grain": 22,
+        "filters": "lanczos/long1000-qat-ema-postfilter-h16",
+        "gop": 180,
+        "inflate_postfilter": "long1000 qat+ema learned post-filter int8 h16",
+        "preset": "svtav1-p0",
+        "ref": null,
+        "scale_h": 394,
+        "scale_w": 524,
+        "video_codec": "libsvtav1"
+      }
+    },
+    {
+      "run_id": "robust_current-long1000-h32-promoted-cpu-2026-04-08",
+      "current_workflow_score": 1.85,
+      "current_workflow_bytes": 864167,
+      "rule_faithful_score": 1.8925757653476154,
+      "rule_faithful_bytes": 935166,
+      "config": {
+        "bframes": null,
+        "crf": 34,
+        "film_grain": 22,
+        "filters": "lanczos/long1000-qat-ema-postfilter-h32",
+        "gop": 180,
+        "inflate_postfilter": "long1000 qat+ema learned post-filter int8 h32",
+        "preset": "svtav1-p0",
+        "ref": null,
+        "scale_h": 394,
+        "scale_w": 524,
+        "video_codec": "libsvtav1"
+      }
+    },
+    {
+      "run_id": "robust_current-ensemble-h32-mc75-25-promoted-cpu-2026-04-09",
+      "current_workflow_score": 1.84,
+      "current_workflow_bytes": 864168,
+      "rule_faithful_score": 1.8894260215636247,
+      "rule_faithful_bytes": 936886,
+      "config": {
+        "bframes": null,
+        "crf": 34,
+        "film_grain": 22,
+        "filters": "lanczos/ensemble-postfilter-h32-mc75-25",
+        "gop": 180,
+        "inflate_postfilter": "weighted ensemble learned post-filter int8 (long1000 h32 + MC refine1, 75/25)",
+        "preset": "svtav1-p0",
+        "ref": null,
+        "scale_h": 394,
+        "scale_w": 524,
+        "video_codec": "libsvtav1"
+      }
+    },
+    {
+      "run_id": "robust_current-long1000-h64-promoted-cpu-2026-04-09",
+      "current_workflow_score": 1.73,
+      "current_workflow_bytes": 864167,
+      "rule_faithful_score": 1.7947470454539947,
+      "rule_faithful_bytes": 966071,
+      "config": {
+        "bframes": null,
+        "crf": 34,
+        "film_grain": 22,
+        "filters": "lanczos/long1000-qat-ema-postfilter-h64",
+        "gop": 180,
+        "inflate_postfilter": "long1000 qat+ema learned post-filter int8 h64",
         "preset": "svtav1-p0",
         "ref": null,
         "scale_h": 394,
@@ -574,8 +886,8 @@
     },
     {
       "label": "Current floor",
-      "run_id": "robust_current-av1-524x394-colorspace-hardening-promoted-cpu-2026-04-06",
-      "score": 2.12
+      "run_id": "robust_current-long1000-h64-promoted-cpu-2026-04-09",
+      "score": 1.73
     }
   ],
   "local_frontier": [
@@ -776,19 +1088,19 @@
       }
     },
     {
-      "run_id": "robust_current-av1-524x394-colorspace-hardening-promoted-cpu-2026-04-06",
-      "score": 2.12,
-      "archive_bytes": 864486,
+      "run_id": "robust_current-sharpness1-promoted-cpu-2026-04-06",
+      "score": 2.08,
+      "archive_bytes": 864168,
       "notes": [
-        "production-hardening pass",
-        "hypothesis: explicit colorspace/range handling would reduce evaluator mismatch",
+        "low-hanging-fruit round",
+        "sharpness=1",
         "new promoted floor"
       ],
       "config": {
         "bframes": null,
         "crf": 34,
         "film_grain": 22,
-        "filters": "lanczos/lanczos + explicit bt709/tv->rgb(pc)",
+        "filters": "lanczos/lanczos",
         "gop": 180,
         "inflate_postfilter": "unsharp=9:9:0.35:9:9:0.0",
         "preset": "svtav1-p0",
@@ -798,9 +1110,125 @@
         "video_codec": "libsvtav1"
       },
       "parts": {
-        "seg_component": 0.5753130000000001,
-        "pose_component": 0.9687195156493958,
-        "rate_component": 0.5756257499999999
+        "seg_component": 0.5769350000000001,
+        "pose_component": 0.9324444755587327,
+        "rate_component": 0.5754139998016805
+      }
+    },
+    {
+      "run_id": "robust_current-exp-h-sharpness1-consensus-rejected-cpu-2026-04-07",
+      "score": 2.13,
+      "archive_bytes": 909307,
+      "notes": [
+        "authoritative isolated scorer",
+        "consensus stack",
+        "rejected"
+      ],
+      "config": {
+        "bframes": null,
+        "crf": 33,
+        "film_grain": 22,
+        "filters": "lanczos/lanczos",
+        "gop": 180,
+        "inflate_postfilter": "unsharp=9:9:0.35:9:9:0.0",
+        "preset": "svtav1-p0",
+        "ref": null,
+        "scale_h": 394,
+        "scale_w": 524,
+        "video_codec": "libsvtav1",
+        "scd": 0,
+        "pre_denoise": "hqdn3d=1.5:0:0:0",
+        "sharpness": 1
+      },
+      "parts": {
+        "seg_component": 0.577822,
+        "pose_component": 0.9446953477179826,
+        "rate_component": 0.60547025
+      }
+    },
+    {
+      "run_id": "robust_current-exp-j-preprocess-rejected-cpu-2026-04-07",
+      "score": 2.52,
+      "archive_bytes": 785302,
+      "notes": [
+        "authoritative isolated scorer",
+        "roi preprocess",
+        "rejected"
+      ],
+      "config": {
+        "bframes": null,
+        "crf": 34,
+        "film_grain": 22,
+        "filters": "lanczos/lanczos + roi preprocess",
+        "gop": 180,
+        "inflate_postfilter": "unsharp=9:9:0.35:9:9:0.0",
+        "preset": "svtav1-p0",
+        "ref": null,
+        "scale_h": 394,
+        "scale_w": 524,
+        "video_codec": "libsvtav1",
+        "roi_preprocess": true
+      },
+      "parts": {
+        "seg_component": 0.612312,
+        "pose_component": 1.3846862821592478,
+        "rate_component": 0.52290025
+      }
+    },
+    {
+      "run_id": "robust_current-grain-mask-final-rejected-cpu-2026-04-07",
+      "score": 2.3,
+      "archive_bytes": 716797,
+      "notes": [
+        "saliency-masked grain synthesis",
+        "verified scorer result",
+        "rejected"
+      ],
+      "config": {
+        "bframes": null,
+        "crf": 34,
+        "film_grain": 0,
+        "filters": "lanczos/grain-mask",
+        "gop": 180,
+        "inflate_postfilter": "saliency grain mask",
+        "preset": "svtav1-p0",
+        "ref": null,
+        "scale_h": 392,
+        "scale_w": 522,
+        "video_codec": "libsvtav1"
+      },
+      "parts": {
+        "seg_component": 0.577725,
+        "pose_component": 1.2421152925554053,
+        "rate_component": 0.47728575
+      }
+    },
+    {
+      "run_id": "robust_current-av1-522x392-postfilter-promoted-cpu-2026-04-07",
+      "score": 2.05,
+      "archive_bytes": 861986,
+      "notes": [
+        "learned post-filter",
+        "authoritative isolated scorer",
+        "new promoted floor"
+      ],
+      "config": {
+        "bframes": null,
+        "crf": 34,
+        "film_grain": 22,
+        "filters": "lanczos/learned-postfilter",
+        "gop": 180,
+        "inflate_postfilter": "tiny learned post-filter int8",
+        "preset": "svtav1-p0",
+        "ref": null,
+        "scale_h": 392,
+        "scale_w": 522,
+        "video_codec": "libsvtav1"
+      },
+      "parts": {
+        "seg_component": 0.586716,
+        "pose_component": 0.8942499091417343,
+        "rate_component": 0.573961
       }
     }
   ],
@@ -1647,6 +2075,296 @@
         "video_codec": "libsvtav1"
       },
       "is_promotion": true
+    },
+    {
+      "run_id": "robust_current-sharpness1-promoted-cpu-2026-04-06",
+      "track": "robust_current",
+      "score": 2.08,
+      "archive_bytes": 864168,
+      "ts_utc": "2026-04-06T18:00:00+00:00",
+      "notes": [
+        "low-hanging-fruit round",
+        "sharpness=1",
+        "new promoted floor"
+      ],
+      "config": {
+        "bframes": null,
+        "crf": 34,
+        "film_grain": 22,
+        "filters": "lanczos/lanczos",
+        "gop": 180,
+        "inflate_postfilter": "unsharp=9:9:0.35:9:9:0.0",
+        "preset": "svtav1-p0",
+        "ref": null,
+        "scale_h": 394,
+        "scale_w": 524,
+        "video_codec": "libsvtav1"
+      },
+      "is_promotion": true
+    },
+    {
+      "run_id": "robust_current-exp-h-sharpness1-consensus-rejected-cpu-2026-04-07",
+      "track": "robust_current",
+      "score": 2.13,
+      "archive_bytes": 909307,
+      "ts_utc": "2026-04-07T00:00:00+00:00",
+      "notes": [
+        "authoritative isolated scorer",
+        "consensus stack",
+        "rejected"
+      ],
+      "config": {
+        "bframes": null,
+        "crf": 33,
+        "film_grain": 22,
+        "filters": "lanczos/lanczos",
+        "gop": 180,
+        "inflate_postfilter": "unsharp=9:9:0.35:9:9:0.0",
+        "preset": "svtav1-p0",
+        "ref": null,
+        "scale_h": 394,
+        "scale_w": 524,
+        "video_codec": "libsvtav1",
+        "scd": 0,
+        "pre_denoise": "hqdn3d=1.5:0:0:0",
+        "sharpness": 1
+      },
+      "is_promotion": false
+    },
+    {
+      "run_id": "robust_current-exp-j-preprocess-rejected-cpu-2026-04-07",
+      "track": "robust_current",
+      "score": 2.52,
+      "archive_bytes": 785302,
+      "ts_utc": "2026-04-07T00:20:00+00:00",
+      "notes": [
+        "authoritative isolated scorer",
+        "roi preprocess",
+        "rejected"
+      ],
+      "config": {
+        "bframes": null,
+        "crf": 34,
+        "film_grain": 22,
+        "filters": "lanczos/lanczos + roi preprocess",
+        "gop": 180,
+        "inflate_postfilter": "unsharp=9:9:0.35:9:9:0.0",
+        "preset": "svtav1-p0",
+        "ref": null,
+        "scale_h": 394,
+        "scale_w": 524,
+        "video_codec": "libsvtav1",
+        "roi_preprocess": true
+      },
+      "is_promotion": false
+    },
+    {
+      "run_id": "robust_current-grain-mask-final-rejected-cpu-2026-04-07",
+      "track": "robust_current",
+      "score": 2.3,
+      "archive_bytes": 716797,
+      "ts_utc": "2026-04-07T01:00:00+00:00",
+      "notes": [
+        "saliency-masked grain synthesis",
+        "verified scorer result",
+        "rejected"
+      ],
+      "config": {
+        "bframes": null,
+        "crf": 34,
+        "film_grain": 0,
+        "filters": "lanczos/grain-mask",
+        "gop": 180,
+        "inflate_postfilter": "saliency grain mask",
+        "preset": "svtav1-p0",
+        "ref": null,
+        "scale_h": 392,
+        "scale_w": 522,
+        "video_codec": "libsvtav1"
+      },
+      "is_promotion": false
+    },
+    {
+      "run_id": "robust_current-av1-522x392-postfilter-promoted-cpu-2026-04-07",
+      "track": "robust_current",
+      "score": 2.05,
+      "archive_bytes": 861986,
+      "ts_utc": "2026-04-07T23:55:00+00:00",
+      "notes": [
+        "learned post-filter",
+        "authoritative isolated scorer",
+        "new promoted floor"
+      ],
+      "config": {
+        "bframes": null,
+        "crf": 34,
+        "film_grain": 22,
+        "filters": "lanczos/learned-postfilter",
+        "gop": 180,
+        "inflate_postfilter": "tiny learned post-filter int8",
+        "preset": "svtav1-p0",
+        "ref": null,
+        "scale_h": 392,
+        "scale_w": 522,
+        "video_codec": "libsvtav1"
+      },
+      "is_promotion": true
+    },
+    {
+      "run_id": "robust_current-long500-h16-promoted-cpu-2026-04-08",
+      "track": "robust_current",
+      "score": 1.99,
+      "archive_bytes": 864167,
+      "ts_utc": "2026-04-08T19:57:15+00:00",
+      "notes": [
+        "long500 qAT+EMA h16",
+        "authoritative isolated scorer",
+        "new promoted floor"
+      ],
+      "config": {
+        "bframes": null,
+        "crf": 34,
+        "film_grain": 22,
+        "filters": "lanczos/long500-qat-ema-postfilter-h16",
+        "gop": 180,
+        "inflate_postfilter": "long500 qat+ema learned post-filter int8 h16",
+        "preset": "svtav1-p0",
+        "ref": null,
+        "scale_h": 394,
+        "scale_w": 524,
+        "video_codec": "libsvtav1"
+      },
+      "is_promotion": true
+    },
+    {
+      "run_id": "robust_current-long500-h32-promoted-cpu-2026-04-08",
+      "track": "robust_current",
+      "score": 1.95,
+      "archive_bytes": 864168,
+      "ts_utc": "2026-04-08T23:08:27+00:00",
+      "notes": [
+        "long500 qAT+EMA h32",
+        "authoritative isolated scorer",
+        "new promoted floor"
+      ],
+      "config": {
+        "bframes": null,
+        "crf": 34,
+        "film_grain": 22,
+        "filters": "lanczos/long500-qat-ema-postfilter-h32",
+        "gop": 180,
+        "inflate_postfilter": "long500 qat+ema learned post-filter int8 h32",
+        "preset": "svtav1-p0",
+        "ref": null,
+        "scale_h": 394,
+        "scale_w": 524,
+        "video_codec": "libsvtav1"
+      },
+      "is_promotion": true
+    },
+    {
+      "run_id": "robust_current-long1000-h16-promoted-cpu-2026-04-08",
+      "track": "robust_current",
+      "score": 1.92,
+      "archive_bytes": 864167,
+      "ts_utc": "2026-04-09T00:12:26+00:00",
+      "notes": [
+        "long1000 qAT+EMA h16",
+        "authoritative isolated scorer",
+        "new promoted floor"
+      ],
+      "config": {
+        "bframes": null,
+        "crf": 34,
+        "film_grain": 22,
+        "filters": "lanczos/long1000-qat-ema-postfilter-h16",
+        "gop": 180,
+        "inflate_postfilter": "long1000 qat+ema learned post-filter int8 h16",
+        "preset": "svtav1-p0",
+        "ref": null,
+        "scale_h": 394,
+        "scale_w": 524,
+        "video_codec": "libsvtav1"
+      },
+      "is_promotion": true
+    },
+    {
+      "run_id": "robust_current-long1000-h32-promoted-cpu-2026-04-08",
+      "track": "robust_current",
+      "score": 1.85,
+      "archive_bytes": 864167,
+      "ts_utc": "2026-04-09T02:36:54+00:00",
+      "notes": [
+        "long1000 qAT+EMA h32",
+        "authoritative isolated scorer",
+        "new promoted floor"
+      ],
+      "config": {
+        "bframes": null,
+        "crf": 34,
+        "film_grain": 22,
+        "filters": "lanczos/long1000-qat-ema-postfilter-h32",
+        "gop": 180,
+        "inflate_postfilter": "long1000 qat+ema learned post-filter int8 h32",
+        "preset": "svtav1-p0",
+        "ref": null,
+        "scale_h": 394,
+        "scale_w": 524,
+        "video_codec": "libsvtav1"
+      },
+      "is_promotion": true
+    },
+    {
+      "run_id": "robust_current-ensemble-h32-mc75-25-promoted-cpu-2026-04-09",
+      "track": "robust_current",
+      "score": 1.84,
+      "archive_bytes": 864168,
+      "ts_utc": "2026-04-09T11:37:51+00:00",
+      "notes": [
+        "weighted ensemble h32 + monte carlo refine1",
+        "authoritative isolated scorer",
+        "new promoted floor"
+      ],
+      "config": {
+        "bframes": null,
+        "crf": 34,
+        "film_grain": 22,
+        "filters": "lanczos/ensemble-postfilter-h32-mc75-25",
+        "gop": 180,
+        "inflate_postfilter": "weighted ensemble learned post-filter int8 (long1000 h32 + MC refine1, 75/25)",
+        "preset": "svtav1-p0",
+        "ref": null,
+        "scale_h": 394,
+        "scale_w": 524,
+        "video_codec": "libsvtav1"
+      },
+      "is_promotion": true
+    },
+    {
+      "run_id": "robust_current-long1000-h64-promoted-cpu-2026-04-09",
+      "track": "robust_current",
+      "score": 1.73,
+      "archive_bytes": 864167,
+      "ts_utc": "2026-04-09T15:07:00+00:00",
+      "notes": [
+        "long1000 qAT+EMA h64",
+        "authoritative isolated scorer",
+        "new promoted floor"
+      ],
+      "config": {
+        "bframes": null,
+        "crf": 34,
+        "film_grain": 22,
+        "filters": "lanczos/long1000-qat-ema-postfilter-h64",
+        "gop": 180,
+        "inflate_postfilter": "long1000 qat+ema learned post-filter int8 h64",
+        "preset": "svtav1-p0",
+        "ref": null,
+        "scale_h": 394,
+        "scale_w": 524,
+        "video_codec": "libsvtav1"
+      },
+      "is_promotion": true
     }
   ],
   "timeline": [
@@ -1981,13 +2699,149 @@
       "track": "robust_current",
       "ts_utc": "2026-04-06T15:43:00+00:00",
       "type": "promotion"
+    },
+    {
+      "current_workflow_score": 2.08,
+      "event_id": "sharpness1-promoted",
+      "summary": "Encoder-side sharpness=1 improved the honest AV1 floor to 2.08 and became the promoted post-2.12 exploration baseline.",
+      "track": "robust_current",
+      "ts_utc": "2026-04-06T18:00:00+00:00",
+      "type": "promotion"
+    },
+    {
+      "current_workflow_score": 2.13,
+      "event_id": "exp-h-consensus-rejected",
+      "summary": "Consensus stack (crf33 + sharpness1 + scd0 + hqdn3d) scored 2.13 at 909,307 bytes and was rejected.",
+      "track": "robust_current",
+      "ts_utc": "2026-04-07T00:00:00+00:00",
+      "type": "decision"
+    },
+    {
+      "current_workflow_score": 2.52,
+      "event_id": "exp-j-preprocess-rejected",
+      "summary": "ROI preprocessing stack scored 2.52 at 785,302 bytes and was rejected; preprocessing remained too destructive for PoseNet.",
+      "track": "robust_current",
+      "ts_utc": "2026-04-07T00:20:00+00:00",
+      "type": "decision"
+    },
+    {
+      "current_workflow_score": 2.3,
+      "event_id": "grain-mask-final-rejected",
+      "summary": "Saliency-masked grain synthesis recovered much of the film-grain=0 catastrophe but still scored only 2.30, so it was rejected.",
+      "track": "robust_current",
+      "ts_utc": "2026-04-07T01:00:00+00:00",
+      "type": "decision"
+    },
+    {
+      "current_workflow_score": 2.05,
+      "event_id": "postfilter-analysis",
+      "summary": "A tiny 7.5 KB learned post-filter survived real smoke locally and on BAT00, then improved the authoritative local score from 2.08 to 2.05 at 861,986 bytes by reducing PoseNet distortion to 0.07996829.",
+      "track": "robust_current",
+      "ts_utc": "2026-04-07T23:55:00+00:00",
+      "type": "analysis"
+    },
+    {
+      "current_workflow_score": 2.05,
+      "event_id": "postfilter-promoted",
+      "summary": "Canonical robust_current floor at 522x392 / svtav1-p0 / crf34 / film-grain22 / sharpness1 with learned int8 post-filter scored 2.05 and replaced the prior 2.08 floor.",
+      "track": "robust_current",
+      "ts_utc": "2026-04-07T23:55:00+00:00",
+      "type": "promotion"
+    },
+    {
+      "current_workflow_score": 1.99,
+      "event_id": "long500-h16-analysis",
+      "summary": "Long-horizon QAT+EMA with the h16 post-filter scored 1.99 at 864,167 bytes and replaced the prior 2.01 saliency floor while staying in the same tiny shipped-operator family.",
+      "track": "robust_current",
+      "ts_utc": "2026-04-08T19:57:15+00:00",
+      "type": "analysis"
+    },
+    {
+      "current_workflow_score": 1.99,
+      "event_id": "long500-h16-promoted",
+      "summary": "Canonical robust_current floor at 524x394 / svtav1-p0 / crf34 / film-grain22 with long-500 QAT+EMA h16 learned post-filter scored 1.99 and replaced the prior 2.05 floor.",
+      "track": "robust_current",
+      "ts_utc": "2026-04-08T19:57:15+00:00",
+      "type": "promotion"
+    },
+    {
+      "current_workflow_score": 1.95,
+      "event_id": "long500-h32-promoted",
+      "summary": "Long-horizon QAT+EMA with the h32 post-filter scored 1.95 at 864,168 bytes and replaced the 1.99 h16 floor.",
+      "track": "robust_current",
+      "ts_utc": "2026-04-08T23:08:27+00:00",
+      "type": "promotion"
+    },
+    {
+      "current_workflow_score": 1.92,
+      "event_id": "long1000-h16-analysis",
+      "summary": "Long-horizon QAT+EMA with the h16 post-filter extended to 1000 epochs scored 1.92 at 864,167 bytes, with PoseNet falling to 0.05890975 while SegNet stayed in the same narrow band.",
+      "track": "robust_current",
+      "ts_utc": "2026-04-09T00:12:26+00:00",
+      "type": "analysis"
+    },
+    {
+      "current_workflow_score": 1.92,
+      "event_id": "long1000-h16-promoted",
+      "summary": "Canonical robust_current floor at 524x394 / svtav1-p0 / crf34 / film-grain22 with long1000 QAT+EMA h16 learned post-filter scored 1.92 and replaced the prior 1.95 h32 floor.",
+      "track": "robust_current",
+      "ts_utc": "2026-04-09T00:12:26+00:00",
+      "type": "promotion"
+    },
+    {
+      "current_workflow_score": 1.85,
+      "event_id": "long1000-h32-analysis",
+      "summary": "Long-horizon QAT+EMA with the h32 post-filter extended to 1000 epochs scored 1.85 at 864,167 bytes. PoseNet fell to 0.04809216 while SegNet held at 0.00576402, pushing the floor materially below the public 1.95 lead.",
+      "track": "robust_current",
+      "ts_utc": "2026-04-09T02:36:54+00:00",
+      "type": "analysis"
+    },
+    {
+      "current_workflow_score": 1.85,
+      "event_id": "long1000-h32-promoted",
+      "summary": "Canonical robust_current floor at 524x394 / svtav1-p0 / crf34 / film-grain22 with long1000 QAT+EMA h32 learned post-filter scored 1.85 and replaced the prior 1.92 h16 floor.",
+      "track": "robust_current",
+      "ts_utc": "2026-04-09T02:36:54+00:00",
+      "type": "promotion"
+    },
+    {
+      "current_workflow_score": 1.84,
+      "event_id": "ensemble-h32-mc75-25-analysis",
+      "summary": "A bounded 75/25 weighted ensemble of the 1.85 h32 winner and the strongest Monte Carlo refinement scored 1.84 at 864,168 bytes. PoseNet improved to 0.04678315 while SegNet stayed in the same narrow band at 0.00581610.",
+      "track": "robust_current",
+      "ts_utc": "2026-04-09T11:37:51+00:00",
+      "type": "analysis"
+    },
+    {
+      "current_workflow_score": 1.84,
+      "event_id": "ensemble-h32-mc75-25-promoted",
+      "summary": "Canonical robust_current floor at 524x394 / svtav1-p0 / crf34 / film-grain22 with a weighted ensemble learned post-filter (long1000 h32 + MC refine1, 75/25) scored 1.84 and replaced the prior 1.85 h32 floor.",
+      "track": "robust_current",
+      "ts_utc": "2026-04-09T11:37:51+00:00",
+      "type": "promotion"
+    },
+    {
+      "current_workflow_score": 1.73,
+      "event_id": "long1000-h64-analysis",
+      "summary": "Long-horizon QAT+EMA with the h64 post-filter scored 1.73 at 864,167 bytes. PoseNet fell to 0.03317023 while SegNet held at 0.00575544, breaking materially below the 1.84 ensemble floor.",
+      "track": "robust_current",
+      "ts_utc": "2026-04-09T15:07:00+00:00",
+      "type": "analysis"
+    },
+    {
+      "current_workflow_score": 1.73,
+      "event_id": "long1000-h64-promoted",
+      "summary": "Canonical robust_current floor at 524x394 / svtav1-p0 / crf34 / film-grain22 with long1000 QAT+EMA h64 learned post-filter scored 1.73 and replaced the prior 1.84 ensemble floor.",
+      "track": "robust_current",
+      "ts_utc": "2026-04-09T15:07:00+00:00",
+      "type": "promotion"
     }
   ],
   "theses": [
     "Strong standard-codec AV1 was already viable here; the real blocker was a rawvideo byte-format bug in the inflator.",
     "BAT00 became useful as a research-only ranking lane, not as a score authority.",
     "ROI-style multi-stream ideas were informative negative results but too expensive in the tested forms.",
-    "The x265 ladder still matters as evidence: it established a 3.25 local floor before the repaired AV1 branch advanced through 2.20, 2.19, 2.18, and 2.12."
+    "The x265 ladder still matters as evidence: it established a 3.25 local floor before the repaired AV1 branch advanced through 2.20, 2.19, 2.18, 2.12, 2.08, 2.05, 1.99, 1.95, 1.92, 1.85, 1.84, and now 1.73."
   ],
   "media_manifest": {
     "source_video": "workspace/upstream/comma_video_compression_challenge/videos/0.mkv",
@@ -2000,13 +2854,69 @@
       "w": 420,
       "h": 316
     },
+    "source_size": {
+      "w": 1164,
+      "h": 874
+    },
+    "preview_size": {
+      "w": 960,
+      "h": 720
+    },
+    "variants": [
+      {
+        "id": "floor_173",
+        "label": "1.73 current floor",
+        "note": "long1000 h64",
+        "score": 1.73,
+        "preview": "inflated_preview.mp4",
+        "poster": "inflated_poster.jpg"
+      },
+      {
+        "id": "floor_184",
+        "label": "1.84 prior floor",
+        "note": "ensemble h32 + MC 75/25",
+        "score": 1.84,
+        "preview": "inflated_184_preview.mp4",
+        "poster": "inflated_184_poster.jpg"
+      },
+      {
+        "id": "floor_185",
+        "label": "1.85 older floor",
+        "note": "long1000 h32",
+        "score": 1.85,
+        "preview": "inflated_185_preview.mp4",
+        "poster": "inflated_185_poster.jpg"
+      }
+    ],
+    "leaderboard_refs": [
+      {
+        "label": "Public #1",
+        "score": 1.89,
+        "note": "neural_inflate"
+      },
+      {
+        "label": "Public #2",
+        "score": 1.94,
+        "note": "roi_v2"
+      },
+      {
+        "label": "Public #3",
+        "score": 1.95,
+        "note": "av1_roi_lanczos_unsharp"
+      }
+    ],
+    "updated_at_utc": "2026-04-09T15:52:42.635748Z",
     "assets": [
       "original_preview.mp4",
       "inflated_preview.mp4",
+      "inflated_184_preview.mp4",
+      "inflated_185_preview.mp4",
       "original_zoom_preview.mp4",
       "inflated_zoom_preview.mp4",
       "original_poster.jpg",
       "inflated_poster.jpg",
+      "inflated_184_poster.jpg",
+      "inflated_185_poster.jpg",
       "original_zoom_poster.jpg",
       "inflated_zoom_poster.jpg"
     ]
@@ -2016,7 +2926,7 @@
     "github_url": "https://github.com/adpena/comma-lab",
     "repo_slug": "adpena/comma-lab",
     "maintainer": "Alejandro Pena",
-    "updated_at_utc": "2026-04-06T18:57:13.477819Z",
-    "updated_at_local": "Apr 6, 2026, 1:57 PM CDT"
+    "updated_at_utc": "2026-04-09T15:57:20.627845Z",
+    "updated_at_local": "Apr 9, 2026, 10:57 AM CDT"
   }
 }

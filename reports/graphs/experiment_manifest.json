@@ -4,8 +4,8 @@
     "repo_slug": "adpena/comma-lab",
     "github_url": "https://github.com/adpena/comma-lab",
     "challenge_url": "https://github.com/commaai/comma_video_compression_challenge",
-    "updated_at_utc": "2026-04-06T18:18:29.643526Z",
-    "updated_at_local": "Apr 6, 2026, 1:18 PM CDT"
+    "updated_at_utc": "2026-04-09T00:31:51.305762Z",
+    "updated_at_local": "Apr 8, 2026, 7:31 PM CDT"
   },
   "tracks": {
     "exact_current": {
@@ -43,28 +43,32 @@
     "robust_current": {
       "canonical_summary_path": "reports/raw/robust_current-current_workflow-cpu-summary.json",
       "canonical_current_workflow": {
-        "copied_report_path": "reports/raw/2026-04-06-hardening/robust_current-hardening-current_workflow-cpu-report.txt",
-        "current_workflow_archive_bytes": 864486,
-        "current_workflow_rate": 0.02302503,
-        "current_workflow_score": 2.12,
+        "copied_report_path": "/Users/adpena/Projects/pact/reports/raw/2026-04-08-long1000-h16-authoritative/robust_current-long1000-h16-current_workflow-cpu-report.txt",
+        "current_workflow_archive_bytes": 864167,
+        "current_workflow_rate": 0.02301653,
+        "current_workflow_score": 1.92,
         "device": "cpu",
         "original_uncompressed_bytes": 37545489,
-        "pose_distortion": 0.09384175,
-        "report_path": "/Users/adpena/Projects/pact/workspace/upstream/comma_video_compression_challenge/submissions/robust_current/report.txt",
-        "rule_faithful_bundle_bytes": 897745,
+        "pose_distortion": 0.05890975,
+        "report_path": "/private/tmp/pact-mine/workspace/upstream/comma_video_compression_challenge/submissions/robust_current/report.txt",
+        "rule_faithful_bundle_bytes": 927230,
         "rule_faithful_bundle_paths": [
           "archive.zip",
           "inflate.sh",
+          "inflate.py",
+          "inflate_postfilter.py",
+          "inflate_grain_mask.py",
+          "postfilter_int8.pt",
           "config.env",
           "analyze_roi.py"
         ],
-        "rule_faithful_rate": 0.02391086183482655,
-        "rule_faithful_score": 2.1418040615200598,
+        "rule_faithful_rate": 0.024696175884138836,
+        "rule_faithful_score": 1.9642242695971968,
         "rule_faithful_status": "estimated_from_scorer_distortions_plus_installed_runtime_payload",
-        "seg_distortion": 0.00575313,
+        "seg_distortion": 0.00579293,
         "track": "robust_current"
       },
-      "best_run_id": "robust_current-av1-524x394-colorspace-hardening-promoted-cpu-2026-04-06"
+      "best_run_id": "robust_current-long1000-h16-promoted-cpu-2026-04-08"
     }
   },
   "promotion_runs": [
@@ -233,6 +237,218 @@
       "segnet_distortion": 0.00575313,
       "track": "robust_current",
       "ts_utc": "2026-04-06T15:43:00+00:00",
+      "upstream_commit": "ec82c291ffeae5212e9a38253791d58995518a80"
+    },
+    {
+      "archive_bytes": 864168,
+      "artifacts": {
+        "raw_report": "reports/raw/2026-04-06-pre-submit-round/robust_current-sharpness1-current_workflow-cpu-report.txt",
+        "summary_json": "reports/raw/2026-04-06-pre-submit-round/robust_current-sharpness1-current_workflow-cpu-summary.json",
+        "smoke_json": "reports/raw/2026-04-06-pre-submit-round/robust_current-sharpness1-smoke.json"
+      },
+      "config": {
+        "bframes": null,
+        "crf": 34,
+        "film_grain": 22,
+        "filters": "lanczos/lanczos",
+        "gop": 180,
+        "inflate_postfilter": "unsharp=9:9:0.35:9:9:0.0",
+        "preset": "svtav1-p0",
+        "ref": null,
+        "scale_h": 394,
+        "scale_w": 524,
+        "video_codec": "libsvtav1"
+      },
+      "current_workflow_score": 2.08,
+      "delta_vs_published_baseline": -2.31,
+      "device": "cpu",
+      "notes": [
+        "low-hanging-fruit round",
+        "sharpness=1",
+        "new promoted floor"
+      ],
+      "packaging_view": "current_workflow",
+      "posenet_distortion": 0.08694527,
+      "published_baseline_score": 4.39,
+      "rate": 0.023016559992067222,
+      "rule_faithful_bundle_bytes": 922416,
+      "rule_faithful_rate": 0.02456795808412563,
+      "rule_faithful_score": 2.1235784276618737,
+      "rule_faithful_status": "estimated_from_scorer_distortions_plus_installed_runtime_payload",
+      "run_id": "robust_current-sharpness1-promoted-cpu-2026-04-06",
+      "segnet_distortion": 0.00576935,
+      "track": "robust_current",
+      "ts_utc": "2026-04-06T18:00:00+00:00",
+      "upstream_commit": "ec82c291ffeae5212e9a38253791d58995518a80"
+    },
+    {
+      "archive_bytes": 861986,
+      "artifacts": {
+        "raw_report": "reports/raw/2026-04-07-postfilter/robust_current-exp-postfilter-current_workflow-cpu-report.txt",
+        "summary_json": "reports/raw/2026-04-07-postfilter/robust_current-exp-postfilter-current_workflow-cpu-summary.json",
+        "smoke_json": "reports/raw/2026-04-07-postfilter/robust_current-exp-postfilter-smoke.json"
+      },
+      "config": {
+        "bframes": null,
+        "crf": 34,
+        "film_grain": 22,
+        "filters": "lanczos/learned-postfilter",
+        "gop": 180,
+        "inflate_postfilter": "tiny learned post-filter int8",
+        "preset": "svtav1-p0",
+        "ref": null,
+        "scale_h": 392,
+        "scale_w": 522,
+        "video_codec": "libsvtav1"
+      },
+      "current_workflow_score": 2.05,
+      "delta_vs_published_baseline": -2.34,
+      "device": "cpu",
+      "notes": [
+        "learned post-filter",
+        "authoritative isolated scorer",
+        "new promoted floor"
+      ],
+      "packaging_view": "current_workflow",
+      "posenet_distortion": 0.07996829,
+      "published_baseline_score": 4.39,
+      "rate": 0.02295844,
+      "rule_faithful_bundle_bytes": 896432,
+      "rule_faithful_rate": 0.023875890922608573,
+      "rule_faithful_score": 2.0778631822069484,
+      "rule_faithful_status": "estimated_from_scorer_distortions_plus_installed_runtime_payload",
+      "run_id": "robust_current-av1-522x392-postfilter-promoted-cpu-2026-04-07",
+      "segnet_distortion": 0.00586716,
+      "track": "robust_current",
+      "ts_utc": "2026-04-07T23:55:00+00:00",
+      "upstream_commit": "ec82c291ffeae5212e9a38253791d58995518a80"
+    },
+    {
+      "archive_bytes": 864167,
+      "artifacts": {
+        "raw_report": "reports/raw/2026-04-08-long500-qat-ema/robust_current-long500-current_workflow-cpu-report.txt",
+        "summary_json": "reports/raw/2026-04-08-long500-qat-ema/robust_current-long500-current_workflow-cpu-summary.json",
+        "smoke_json": "reports/raw/2026-04-08-long500-qat-ema/robust_current-long500-smoke.json"
+      },
+      "config": {
+        "bframes": null,
+        "crf": 34,
+        "film_grain": 22,
+        "filters": "lanczos/long500-qat-ema-postfilter-h16",
+        "gop": 180,
+        "inflate_postfilter": "long500 qat+ema learned post-filter int8 h16",
+        "preset": "svtav1-p0",
+        "ref": null,
+        "scale_h": 394,
+        "scale_w": 524,
+        "video_codec": "libsvtav1"
+      },
+      "current_workflow_score": 1.99,
+      "delta_vs_published_baseline": -2.4,
+      "device": "cpu",
+      "notes": [
+        "long500 qAT+EMA h16",
+        "authoritative isolated scorer",
+        "new promoted floor"
+      ],
+      "packaging_view": "current_workflow",
+      "posenet_distortion": 0.06924924,
+      "published_baseline_score": 4.39,
+      "rate": 0.02301653,
+      "rule_faithful_bundle_bytes": 926090,
+      "rule_faithful_rate": 0.024665812715876468,
+      "rule_faithful_score": 2.026595600341607,
+      "rule_faithful_status": "estimated_from_scorer_distortions_plus_installed_runtime_payload",
+      "run_id": "robust_current-long500-h16-promoted-cpu-2026-04-08",
+      "segnet_distortion": 0.00577789,
+      "track": "robust_current",
+      "ts_utc": "2026-04-08T19:57:15+00:00",
+      "upstream_commit": "ec82c291ffeae5212e9a38253791d58995518a80"
+    },
+    {
+      "archive_bytes": 864168,
+      "artifacts": {
+        "raw_report": "reports/raw/2026-04-08-long500-h32-authoritative/robust_current-long500-h32-current_workflow-cpu-report.txt",
+        "summary_json": "reports/raw/2026-04-08-long500-h32-authoritative/robust_current-long500-h32-current_workflow-cpu-summary.json",
+        "smoke_json": "reports/raw/2026-04-08-long500-h32-authoritative/robust_current-long500-h32-smoke.json"
+      },
+      "config": {
+        "bframes": null,
+        "crf": 34,
+        "film_grain": 22,
+        "filters": "lanczos/long500-qat-ema-postfilter-h32",
+        "gop": 180,
+        "inflate_postfilter": "long500 qat+ema learned post-filter int8 h32",
+        "preset": "svtav1-p0",
+        "ref": null,
+        "scale_h": 394,
+        "scale_w": 524,
+        "video_codec": "libsvtav1"
+      },
+      "current_workflow_score": 1.95,
+      "delta_vs_published_baseline": -2.44,
+      "device": "cpu",
+      "notes": [
+        "long500 qAT+EMA h32",
+        "authoritative isolated scorer",
+        "new promoted floor",
+        "ties public leaderboard lead"
+      ],
+      "packaging_view": "current_workflow",
+      "posenet_distortion": 0.06215462,
+      "published_baseline_score": 4.39,
+      "rate": 0.02301656,
+      "rule_faithful_bundle_bytes": 935149,
+      "rule_faithful_rate": 0.024907093366129816,
+      "rule_faithful_score": 1.9923143481540724,
+      "rule_faithful_status": "estimated_from_scorer_distortions_plus_installed_runtime_payload",
+      "run_id": "robust_current-long500-h32-promoted-cpu-2026-04-08",
+      "segnet_distortion": 0.00581255,
+      "track": "robust_current",
+      "ts_utc": "2026-04-08T23:08:27+00:00",
+      "upstream_commit": "ec82c291ffeae5212e9a38253791d58995518a80"
+    },
+    {
+      "archive_bytes": 864167,
+      "artifacts": {
+        "raw_report": "reports/raw/2026-04-08-long1000-h16-authoritative/robust_current-long1000-h16-current_workflow-cpu-report.txt",
+        "summary_json": "reports/raw/2026-04-08-long1000-h16-authoritative/robust_current-long1000-h16-current_workflow-cpu-summary.json",
+        "smoke_json": "reports/raw/2026-04-08-long1000-h16-authoritative/robust_current-long1000-h16-smoke.json"
+      },
+      "config": {
+        "bframes": null,
+        "crf": 34,
+        "film_grain": 22,
+        "filters": "lanczos/long1000-qat-ema-postfilter-h16",
+        "gop": 180,
+        "inflate_postfilter": "long1000 qat+ema learned post-filter int8 h16",
+        "preset": "svtav1-p0",
+        "ref": null,
+        "scale_h": 394,
+        "scale_w": 524,
+        "video_codec": "libsvtav1"
+      },
+      "current_workflow_score": 1.92,
+      "delta_vs_published_baseline": -2.47,
+      "device": "cpu",
+      "notes": [
+        "long1000 qAT+EMA h16",
+        "authoritative isolated scorer",
+        "new promoted floor",
+        "beats public leaderboard lead"
+      ],
+      "packaging_view": "current_workflow",
+      "posenet_distortion": 0.05890975,
+      "published_baseline_score": 4.39,
+      "rate": 0.02301653,
+      "rule_faithful_bundle_bytes": 927230,
+      "rule_faithful_rate": 0.024696175884138836,
+      "rule_faithful_score": 1.9642242695971968,
+      "rule_faithful_status": "estimated_from_scorer_distortions_plus_installed_runtime_payload",
+      "run_id": "robust_current-long1000-h16-promoted-cpu-2026-04-08",
+      "segnet_distortion": 0.00579293,
+      "track": "robust_current",
+      "ts_utc": "2026-04-09T00:12:26+00:00",
       "upstream_commit": "ec82c291ffeae5212e9a38253791d58995518a80"
     }
   ],
@@ -574,6 +790,94 @@
       "summary": "Canonical robust_current AV1 floor at 524x394 / svtav1-p0 / crf34 / film-grain22 / lanczos / unsharp with explicit bt709/tv encode tags and explicit rgb24(pc) decode scored 2.12 and replaced the prior 2.18 floor.",
       "track": "robust_current",
       "ts_utc": "2026-04-06T15:43:00+00:00",
+      "type": "promotion"
+    },
+    {
+      "current_workflow_score": 2.08,
+      "event_id": "sharpness1-promoted",
+      "summary": "Encoder-side sharpness=1 improved the honest AV1 floor to 2.08 and became the promoted post-2.12 exploration baseline.",
+      "track": "robust_current",
+      "ts_utc": "2026-04-06T18:00:00+00:00",
+      "type": "promotion"
+    },
+    {
+      "current_workflow_score": 2.13,
+      "event_id": "exp-h-consensus-rejected",
+      "summary": "Consensus stack (crf33 + sharpness1 + scd0 + hqdn3d) scored 2.13 at 909,307 bytes and was rejected.",
+      "track": "robust_current",
+      "ts_utc": "2026-04-07T00:00:00+00:00",
+      "type": "decision"
+    },
+    {
+      "current_workflow_score": 2.52,
+      "event_id": "exp-j-preprocess-rejected",
+      "summary": "ROI preprocessing stack scored 2.52 at 785,302 bytes and was rejected; preprocessing remained too destructive for PoseNet.",
+      "track": "robust_current",
+      "ts_utc": "2026-04-07T00:20:00+00:00",
+      "type": "decision"
+    },
+    {
+      "current_workflow_score": 2.3,
+      "event_id": "grain-mask-final-rejected",
+      "summary": "Saliency-masked grain synthesis recovered much of the film-grain=0 catastrophe but still scored only 2.30, so it was rejected.",
+      "track": "robust_current",
+      "ts_utc": "2026-04-07T01:00:00+00:00",
+      "type": "decision"
+    },
+    {
+      "current_workflow_score": 2.05,
+      "event_id": "postfilter-analysis",
+      "summary": "A tiny 7.5 KB learned post-filter survived real smoke locally and on BAT00, then improved the authoritative local score from 2.08 to 2.05 at 861,986 bytes by reducing PoseNet distortion to 0.07996829.",
+      "track": "robust_current",
+      "ts_utc": "2026-04-07T23:55:00+00:00",
+      "type": "analysis"
+    },
+    {
+      "current_workflow_score": 2.05,
+      "event_id": "postfilter-promoted",
+      "summary": "Canonical robust_current floor at 522x392 / svtav1-p0 / crf34 / film-grain22 / sharpness1 with learned int8 post-filter scored 2.05 and replaced the prior 2.08 floor.",
+      "track": "robust_current",
+      "ts_utc": "2026-04-07T23:55:00+00:00",
+      "type": "promotion"
+    },
+    {
+      "current_workflow_score": 1.99,
+      "event_id": "long500-h16-analysis",
+      "summary": "Long-horizon QAT+EMA with the h16 post-filter scored 1.99 at 864,167 bytes and replaced the prior 2.01 saliency floor while staying in the same tiny shipped-operator family.",
+      "track": "robust_current",
+      "ts_utc": "2026-04-08T19:57:15+00:00",
+      "type": "analysis"
+    },
+    {
+      "current_workflow_score": 1.99,
+      "event_id": "long500-h16-promoted",
+      "summary": "Canonical robust_current floor at 524x394 / svtav1-p0 / crf34 / film-grain22 with long-500 QAT+EMA h16 learned post-filter scored 1.99 and replaced the prior 2.05 floor.",
+      "track": "robust_current",
+      "ts_utc": "2026-04-08T19:57:15+00:00",
+      "type": "promotion"
+    },
+    {
+      "current_workflow_score": 1.95,
+      "event_id": "long500-h32-promoted",
+      "summary": "Long-horizon QAT+EMA with the h32 post-filter scored 1.95 at 864,168 bytes and replaced the 1.99 h16 floor.",
+      "track": "robust_current",
+      "ts_utc": "2026-04-08T23:08:27+00:00",
+      "type": "promotion"
+    },
+    {
+      "current_workflow_score": 1.92,
+      "event_id": "long1000-h16-analysis",
+      "summary": "Long-horizon QAT+EMA with the h16 post-filter extended to 1000 epochs scored 1.92 at 864,167 bytes, with PoseNet falling to 0.05890975 while SegNet stayed in the same narrow band.",
+      "track": "robust_current",
+      "ts_utc": "2026-04-09T00:12:26+00:00",
+      "type": "analysis"
+    },
+    {
+      "current_workflow_score": 1.92,
+      "event_id": "long1000-h16-promoted",
+      "summary": "Canonical robust_current floor at 524x394 / svtav1-p0 / crf34 / film-grain22 with long1000 QAT+EMA h16 learned post-filter scored 1.92 and replaced the prior 1.95 h32 floor.",
+      "track": "robust_current",
+      "ts_utc": "2026-04-09T00:12:26+00:00",
       "type": "promotion"
     }
   ],

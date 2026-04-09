@@ -12,3 +12,11 @@
 | `robust_current-av1-524x394-crf34-promoted-cpu-2026-04-06` | 524x394 | lanczos/bicubic | 2.19 | 864,455 | 2.215 | 900,954 |
 | `robust_current-av1-524x394-upscale-lanczos-promoted-cpu-2026-04-06` | 524x394 | lanczos/lanczos | 2.18 | 864,455 | 2.196 | 892,472 |
 | `robust_current-av1-524x394-colorspace-hardening-promoted-cpu-2026-04-06` | 524x394 | lanczos/lanczos + explicit bt709/tv->rgb(pc) | 2.12 | 864,486 | 2.142 | 897,745 |
+| `robust_current-sharpness1-promoted-cpu-2026-04-06` | 524x394 | lanczos/lanczos | 2.08 | 864,168 | 2.124 | 922,416 |
+| `robust_current-av1-522x392-postfilter-promoted-cpu-2026-04-07` | 522x392 | lanczos/learned-postfilter | 2.05 | 861,986 | 2.078 | 896,432 |
+| `robust_current-long500-h16-promoted-cpu-2026-04-08` | 524x394 | lanczos/long500-qat-ema-postfilter-h16 | 1.99 | 864,167 | 2.027 | 926,090 |
+| `robust_current-long500-h32-promoted-cpu-2026-04-08` | 524x394 | lanczos/long500-qat-ema-postfilter-h32 | 1.95 | 864,168 | 1.992 | 935,149 |
+| `robust_current-long1000-h16-promoted-cpu-2026-04-08` | 524x394 | lanczos/long1000-qat-ema-postfilter-h16 | 1.92 | 864,167 | 1.964 | 927,230 |
+| `robust_current-long1000-h32-promoted-cpu-2026-04-08` | 524x394 | lanczos/long1000-qat-ema-postfilter-h32 | 1.85 | 864,167 | 1.893 | 935,166 |
+| `robust_current-ensemble-h32-mc75-25-promoted-cpu-2026-04-09` | 524x394 | lanczos/ensemble-postfilter-h32-mc75-25 | 1.84 | 864,168 | 1.889 | 936,886 |
+| `robust_current-long1000-h64-promoted-cpu-2026-04-09` | 524x394 | lanczos/long1000-qat-ema-postfilter-h64 | 1.73 | 864,167 | 1.795 | 966,071 |

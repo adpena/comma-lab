@@ -15,32 +15,25 @@ def extract(path: Path, start: int, end: int) -> str:
 def main() -> int:
     snippets = [
         (
-            "Byte-layout fix",
+            "Learned post-filter selector",
             ROOT / "submissions" / "robust_current" / "inflate.sh",
-            132,
-            133,
-            "The flat path forces rawvideo output to `rgb24`.",
+            176,
+            181,
+            "The promoted inflate path can route into the tiny learned post-filter.",
         ),
         (
-            "Explicit color contract",
-            ROOT / "submissions" / "robust_current" / "compress.sh",
-            79,
-            90,
-            "The encoded AV1 stream now carries explicit `tv/bt709` metadata.",
-        ),
-        (
-            "Rule-faithful payload accounting",
+            "Runtime payload includes learned assets",
             ROOT / "src" / "comma_lab" / "install.py",
-            9,
-            20,
-            "The honest payload under test is explicit and small.",
+            12,
+            22,
+            "The honest installed payload explicitly includes the post-filter script and weights.",
         ),
         (
-            "AV1 + ROI fail-fast guard",
-            ROOT / "submissions" / "robust_current" / "compress.sh",
-            68,
-            71,
-            "Unsupported AV1+ROI combinations fail loudly instead of silently drifting into x265-only behavior.",
+            "Shipped post-filter module",
+            ROOT / "submissions" / "robust_current" / "inflate_postfilter.py",
+            1,
+            40,
+            "The filter is a tiny residual CNN loaded from shipped int8 weights.",
         ),
     ]
 

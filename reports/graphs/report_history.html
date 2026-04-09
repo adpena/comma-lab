@@ -1,0 +1,671 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Report History Viewer</title>
+    <style>
+      :root {
+        --bg: #f2efe8;
+        --panel: rgba(255, 255, 255, 0.86);
+        --ink: #1d2329;
+        --muted: #59636e;
+        --line: rgba(31, 41, 51, 0.14);
+        --accent: #0f766e;
+        --accent-soft: rgba(15, 118, 110, 0.12);
+        --warn: #b45309;
+        --warn-soft: rgba(180, 83, 9, 0.14);
+      }
+
+      * {
+        box-sizing: border-box;
+      }
+
+      body {
+        margin: 0;
+        font-family: "IBM Plex Sans", "Avenir Next", "Segoe UI", sans-serif;
+        color: var(--ink);
+        background:
+          radial-gradient(circle at top left, rgba(15, 118, 110, 0.10), transparent 28rem),
+          linear-gradient(180deg, #f7f4ec 0%, var(--bg) 100%);
+      }
+
+      a {
+        color: inherit;
+      }
+
+      .shell {
+        width: min(1300px, calc(100vw - 2rem));
+        margin: 0 auto;
+        padding: 1.2rem 0 2rem;
+      }
+
+      .hero,
+      .panel {
+        border: 1px solid var(--line);
+        border-radius: 18px;
+        background: var(--panel);
+        backdrop-filter: blur(12px);
+        box-shadow: 0 20px 50px rgba(31, 41, 51, 0.08);
+      }
+
+      .hero {
+        padding: 1.4rem;
+        margin-bottom: 1rem;
+      }
+
+      .hero h1 {
+        margin: 0 0 0.4rem;
+        font-size: clamp(1.8rem, 4vw, 3rem);
+        line-height: 1;
+      }
+
+      .hero p,
+      .meta,
+      .empty,
+      .search-hit p,
+      .variant p {
+        margin: 0;
+        color: var(--muted);
+      }
+
+      .layout {
+        display: grid;
+        gap: 1rem;
+        grid-template-columns: 320px minmax(0, 1fr);
+      }
+
+      .panel {
+        padding: 1rem;
+      }
+
+      .panel h2,
+      .panel h3,
+      .panel h4 {
+        margin: 0 0 0.75rem;
+      }
+
+      label {
+        display: block;
+        margin-bottom: 0.8rem;
+        font-size: 0.92rem;
+        font-weight: 600;
+      }
+
+      input,
+      select {
+        width: 100%;
+        margin-top: 0.35rem;
+        padding: 0.7rem 0.8rem;
+        border: 1px solid var(--line);
+        border-radius: 10px;
+        background: rgba(255, 255, 255, 0.92);
+        color: var(--ink);
+        font: inherit;
+      }
+
+      .stats,
+      .detail-grid {
+        display: grid;
+        gap: 0.75rem;
+      }
+
+      .stats {
+        grid-template-columns: repeat(3, minmax(0, 1fr));
+        margin-top: 1rem;
+      }
+
+      .stat {
+        padding: 0.8rem;
+        border: 1px solid var(--line);
+        border-radius: 14px;
+        background: rgba(255, 255, 255, 0.78);
+      }
+
+      .stat strong {
+        display: block;
+        margin-top: 0.3rem;
+        font-size: 1.15rem;
+      }
+
+      .timeline,
+      .search-results,
+      .variants {
+        display: grid;
+        gap: 0.55rem;
+      }
+
+      .timeline {
+        max-height: 28rem;
+        overflow: auto;
+      }
+
+      .timeline button,
+      .search-hit,
+      .variant {
+        width: 100%;
+        padding: 0.8rem;
+        border: 1px solid var(--line);
+        border-radius: 14px;
+        background: rgba(255, 255, 255, 0.74);
+        color: inherit;
+        text-align: left;
+      }
+
+      .timeline button {
+        cursor: pointer;
+      }
+
+      .timeline button.active {
+        border-color: var(--accent);
+        background: var(--accent-soft);
+      }
+
+      .badge-row,
+      .compare-meta {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 0.45rem;
+      }
+
+      .badge {
+        display: inline-flex;
+        align-items: center;
+        padding: 0.18rem 0.5rem;
+        border-radius: 999px;
+        background: var(--accent-soft);
+        color: var(--accent);
+        font-size: 0.78rem;
+        font-weight: 700;
+        letter-spacing: 0.02em;
+      }
+
+      .compare-grid {
+        display: grid;
+        gap: 1rem;
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+      }
+
+      .diff-panel {
+        border: 1px solid var(--line);
+        border-radius: 16px;
+        overflow: hidden;
+        background: rgba(255, 255, 255, 0.8);
+      }
+
+      .diff-panel header {
+        padding: 0.8rem;
+        border-bottom: 1px solid var(--line);
+        background: rgba(255, 255, 255, 0.92);
+      }
+
+      .diff-body {
+        max-height: 34rem;
+        overflow: auto;
+        padding: 0.6rem 0;
+        font-family: "IBM Plex Mono", "SFMono-Regular", monospace;
+        font-size: 0.84rem;
+        line-height: 1.45;
+      }
+
+      .line {
+        display: grid;
+        grid-template-columns: 4rem minmax(0, 1fr);
+        gap: 0.75rem;
+        padding: 0.05rem 0.8rem;
+        white-space: pre-wrap;
+        word-break: break-word;
+      }
+
+      .line.changed {
+        background: var(--warn-soft);
+      }
+
+      .line-number {
+        color: var(--muted);
+        text-align: right;
+      }
+
+      .meta-card {
+        padding: 0.9rem;
+        border: 1px solid var(--line);
+        border-radius: 16px;
+        background: rgba(255, 255, 255, 0.78);
+      }
+
+      .media-grid {
+        display: grid;
+        gap: 1rem;
+        grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+      }
+
+      video,
+      img {
+        width: 100%;
+        border-radius: 12px;
+        background: #d8d4cc;
+      }
+
+      .search-hit {
+        cursor: pointer;
+      }
+
+      .search-hit strong,
+      .timeline strong,
+      .variant strong {
+        display: block;
+        margin-bottom: 0.15rem;
+      }
+
+      @media (max-width: 980px) {
+        .layout,
+        .compare-grid {
+          grid-template-columns: 1fr;
+        }
+      }
+    </style>
+  </head>
+  <body>
+    <div class="shell">
+      <section class="hero">
+        <h1>Report History Viewer</h1>
+        <p>Git-backed history for report surfaces and durable state docs, with timeline, commit context, and simple split-view comparison.</p>
+        <div class="stats" id="stats"></div>
+      </section>
+
+      <div class="layout">
+        <aside class="panel">
+          <h2>Browse</h2>
+          <label>
+            File
+            <select id="fileSelect"></select>
+          </label>
+          <label>
+            Snapshot
+            <select id="snapshotSelect"></select>
+          </label>
+          <label>
+            Compare Against
+            <select id="compareSelect"></select>
+          </label>
+          <label>
+            Search
+            <input id="searchInput" type="search" placeholder="Search file, commit, or text">
+          </label>
+
+          <h3>Search Results</h3>
+          <div class="search-results" id="searchResults"></div>
+
+          <h3 style="margin-top: 1rem;">Timeline</h3>
+          <div class="timeline" id="timeline"></div>
+        </aside>
+
+        <main style="display: grid; gap: 1rem;">
+          <section class="panel">
+            <h2>Commit Context</h2>
+            <div class="detail-grid" id="commitDetail"></div>
+          </section>
+
+          <section class="panel">
+            <h2>Split View</h2>
+            <div class="compare-grid">
+              <div class="diff-panel">
+                <header id="leftHeader"></header>
+                <div class="diff-body" id="leftBody"></div>
+              </div>
+              <div class="diff-panel">
+                <header id="rightHeader"></header>
+                <div class="diff-body" id="rightBody"></div>
+              </div>
+            </div>
+          </section>
+
+          <section class="panel" id="mediaSection" hidden>
+            <h2>Visual Comparison</h2>
+            <p class="meta" style="margin-bottom: 0.9rem;">Optional media browser backed by the existing comparison manifest.</p>
+            <div class="variants media-grid" id="mediaGrid"></div>
+          </section>
+        </main>
+      </div>
+    </div>
+
+    <script>
+      const state = {
+        payload: null,
+        byPath: new Map(),
+        filePath: "",
+        snapshotCommit: "",
+        compareCommit: "",
+        search: "",
+      };
+
+      const el = {
+        stats: document.getElementById("stats"),
+        fileSelect: document.getElementById("fileSelect"),
+        snapshotSelect: document.getElementById("snapshotSelect"),
+        compareSelect: document.getElementById("compareSelect"),
+        searchInput: document.getElementById("searchInput"),
+        searchResults: document.getElementById("searchResults"),
+        timeline: document.getElementById("timeline"),
+        commitDetail: document.getElementById("commitDetail"),
+        leftHeader: document.getElementById("leftHeader"),
+        rightHeader: document.getElementById("rightHeader"),
+        leftBody: document.getElementById("leftBody"),
+        rightBody: document.getElementById("rightBody"),
+        mediaSection: document.getElementById("mediaSection"),
+        mediaGrid: document.getElementById("mediaGrid"),
+      };
+
+      function fmtDate(value) {
+        if (!value) return "unknown";
+        return new Date(value).toLocaleString();
+      }
+
+      function option(label, value) {
+        const node = document.createElement("option");
+        node.value = value;
+        node.textContent = label;
+        return node;
+      }
+
+      function snapshotLabel(snapshot) {
+        return `${snapshot.timestamp_utc.slice(0, 16).replace("T", " ")} | ${snapshot.short_commit} | ${snapshot.subject}`;
+      }
+
+      function escapeHtml(text) {
+        return text
+          .replaceAll("&", "&amp;")
+          .replaceAll("<", "&lt;")
+          .replaceAll(">", "&gt;");
+      }
+
+      function buildStats() {
+        el.stats.innerHTML = "";
+        const stats = [
+          ["Generated", fmtDate(state.payload.generated_at_utc)],
+          ["Files", String(state.payload.file_count)],
+          ["Snapshots", String(state.payload.snapshot_count)],
+        ];
+        for (const [label, value] of stats) {
+          const card = document.createElement("div");
+          card.className = "stat";
+          card.innerHTML = `<span>${label}</span><strong>${escapeHtml(value)}</strong>`;
+          el.stats.append(card);
+        }
+      }
+
+      function getCurrentFile() {
+        return state.byPath.get(state.filePath);
+      }
+
+      function getSnapshot(file, commit) {
+        if (!file) return null;
+        return file.snapshots.find((snapshot) => snapshot.commit === commit) || null;
+      }
+
+      function syncSelectors() {
+        const file = getCurrentFile();
+        el.snapshotSelect.innerHTML = "";
+        el.compareSelect.innerHTML = "";
+        if (!file) return;
+
+        for (const snapshot of file.snapshots) {
+          el.snapshotSelect.append(option(snapshotLabel(snapshot), snapshot.commit));
+        }
+
+        el.compareSelect.append(option("Previous snapshot", "__previous__"));
+        el.compareSelect.append(option("No comparison", "__none__"));
+        for (const snapshot of file.snapshots) {
+          el.compareSelect.append(option(snapshotLabel(snapshot), snapshot.commit));
+        }
+
+        el.snapshotSelect.value = state.snapshotCommit;
+        el.compareSelect.value = state.compareCommit;
+      }
+
+      function renderTimeline() {
+        const file = getCurrentFile();
+        el.timeline.innerHTML = "";
+        if (!file) {
+          el.timeline.innerHTML = '<p class="empty">No file selected.</p>';
+          return;
+        }
+        for (const snapshot of file.snapshots) {
+          const button = document.createElement("button");
+          button.type = "button";
+          button.className = snapshot.commit === state.snapshotCommit ? "active" : "";
+          button.innerHTML = `
+            <strong>${escapeHtml(snapshot.subject)}</strong>
+            <p>${escapeHtml(snapshot.short_commit)} · ${escapeHtml(fmtDate(snapshot.timestamp_utc))}</p>
+          `;
+          button.addEventListener("click", () => {
+            state.snapshotCommit = snapshot.commit;
+            render();
+          });
+          el.timeline.append(button);
+        }
+      }
+
+      function renderSearchResults() {
+        const term = state.search.trim().toLowerCase();
+        el.searchResults.innerHTML = "";
+        if (!term) {
+          el.searchResults.innerHTML = '<p class="empty">Search commit subjects, paths, and snapshot text.</p>';
+          return;
+        }
+
+        const hits = [];
+        for (const file of state.payload.files) {
+          for (const snapshot of file.snapshots) {
+            const haystack = [
+              file.path,
+              snapshot.subject,
+              snapshot.body,
+              snapshot.content,
+              snapshot.author_name,
+              snapshot.short_commit,
+            ].join("\n").toLowerCase();
+            if (haystack.includes(term)) {
+              hits.push({ file, snapshot });
+            }
+          }
+        }
+
+        if (!hits.length) {
+          el.searchResults.innerHTML = '<p class="empty">No matching snapshots.</p>';
+          return;
+        }
+
+        for (const hit of hits.slice(0, 40)) {
+          const card = document.createElement("button");
+          card.type = "button";
+          card.className = "search-hit";
+          card.innerHTML = `
+            <strong>${escapeHtml(hit.file.path)}</strong>
+            <p>${escapeHtml(hit.snapshot.short_commit)} · ${escapeHtml(hit.snapshot.subject)}</p>
+          `;
+          card.addEventListener("click", () => {
+            state.filePath = hit.file.path;
+            state.snapshotCommit = hit.snapshot.commit;
+            state.compareCommit = "__previous__";
+            render();
+          });
+          el.searchResults.append(card);
+        }
+      }
+
+      function resolveCompareSnapshot(file) {
+        if (!file) return null;
+        if (state.compareCommit === "__none__") return null;
+        if (state.compareCommit && state.compareCommit !== "__previous__") {
+          return getSnapshot(file, state.compareCommit);
+        }
+        const index = file.snapshots.findIndex((snapshot) => snapshot.commit === state.snapshotCommit);
+        return index >= 0 ? file.snapshots[index + 1] || null : null;
+      }
+
+      function renderSplitPanel(target, text, otherText) {
+        target.innerHTML = "";
+        const left = (text || "").split("\n");
+        const right = (otherText || "").split("\n");
+        const rowCount = Math.max(left.length, right.length);
+        for (let i = 0; i < rowCount; i += 1) {
+          const line = document.createElement("div");
+          line.className = "line";
+          if ((left[i] || "") !== (right[i] || "")) {
+            line.classList.add("changed");
+          }
+          const lineNumber = document.createElement("div");
+          lineNumber.className = "line-number";
+          lineNumber.textContent = String(i + 1);
+          const content = document.createElement("div");
+          content.textContent = left[i] || "";
+          line.append(lineNumber, content);
+          target.append(line);
+        }
+      }
+
+      function renderCommitDetail(selected, compare, file) {
+        const blocks = [];
+        const compareMeta = compare
+          ? `<div class="compare-meta"><span class="badge">Compare ${escapeHtml(compare.short_commit)}</span><span>${escapeHtml(compare.subject)}</span></div>`
+          : '<div class="compare-meta"><span class="badge">Compare none</span></div>';
+
+        blocks.push(`
+          <div class="meta-card">
+            <div class="badge-row">
+              <span class="badge">${escapeHtml(file.category)}</span>
+              <span class="badge">${selected.content_available ? "blob" : "content missing"}</span>
+            </div>
+            <h3 style="margin-top: 0.7rem;">${escapeHtml(file.path)}</h3>
+            <p class="meta">${escapeHtml(selected.subject)}</p>
+          </div>
+        `);
+
+        blocks.push(`
+          <div class="meta-card">
+            <h4>Selected Snapshot</h4>
+            <p class="meta">${escapeHtml(fmtDate(selected.timestamp_utc))}</p>
+            <p><strong>${escapeHtml(selected.short_commit)}</strong> by ${escapeHtml(selected.author_name)}</p>
+            <p class="meta" style="margin-top: 0.45rem;">git show ${escapeHtml(selected.commit)} -- ${escapeHtml(file.path)}</p>
+          </div>
+        `);
+
+        blocks.push(`
+          <div class="meta-card">
+            <h4>Comparison</h4>
+            ${compareMeta}
+            <p class="meta" style="margin-top: 0.45rem;">Use the file selector, timeline, or search results to move across time.</p>
+          </div>
+        `);
+
+        el.commitDetail.innerHTML = blocks.join("");
+      }
+
+      function renderSplitView() {
+        const file = getCurrentFile();
+        const selected = getSnapshot(file, state.snapshotCommit);
+        const compare = resolveCompareSnapshot(file);
+        if (!selected) return;
+
+        el.leftHeader.innerHTML = `<strong>${escapeHtml(selected.short_commit)}</strong><p class="meta">${escapeHtml(selected.subject)}</p>`;
+        el.rightHeader.innerHTML = compare
+          ? `<strong>${escapeHtml(compare.short_commit)}</strong><p class="meta">${escapeHtml(compare.subject)}</p>`
+          : `<strong>none</strong><p class="meta">No comparison snapshot</p>`;
+
+        renderSplitPanel(el.leftBody, selected.content, compare ? compare.content : "");
+        renderSplitPanel(el.rightBody, compare ? compare.content : "", selected.content);
+        renderCommitDetail(selected, compare, file);
+      }
+
+      function render() {
+        syncSelectors();
+        renderTimeline();
+        renderSearchResults();
+        renderSplitView();
+      }
+
+      async function loadMediaManifest() {
+        try {
+          const response = await fetch("./media/comparison_manifest.json");
+          if (!response.ok) return;
+          const manifest = await response.json();
+          const variants = manifest.variants || [];
+          if (!variants.length) return;
+
+          el.mediaGrid.innerHTML = "";
+          for (const variant of variants) {
+            const card = document.createElement("article");
+            card.className = "variant";
+            const preview = variant.preview ? `<video controls preload="metadata" poster="./media/${variant.poster || ""}" src="./media/${variant.preview}"></video>` : "";
+            card.innerHTML = `
+              ${preview}
+              <strong style="margin-top: 0.75rem;">${escapeHtml(variant.label || variant.id || "variant")}</strong>
+              <p>${escapeHtml(variant.note || "")}</p>
+            `;
+            el.mediaGrid.append(card);
+          }
+          el.mediaSection.hidden = false;
+        } catch (error) {
+          console.warn("media manifest unavailable", error);
+        }
+      }
+
+      async function main() {
+        const response = await fetch("./report_history.json");
+        if (!response.ok) {
+          throw new Error(`unable to load report_history.json (${response.status})`);
+        }
+        state.payload = await response.json();
+        for (const file of state.payload.files) {
+          state.byPath.set(file.path, file);
+        }
+        const first = state.payload.files[0];
+        if (!first) {
+          throw new Error("report_history.json did not contain any files");
+        }
+        state.filePath = first.path;
+        state.snapshotCommit = first.snapshots[0].commit;
+        state.compareCommit = "__previous__";
+
+        el.fileSelect.innerHTML = "";
+        for (const file of state.payload.files) {
+          el.fileSelect.append(option(file.path, file.path));
+        }
+        el.fileSelect.value = state.filePath;
+
+        el.fileSelect.addEventListener("change", () => {
+          const file = state.byPath.get(el.fileSelect.value);
+          state.filePath = el.fileSelect.value;
+          state.snapshotCommit = file.snapshots[0].commit;
+          state.compareCommit = "__previous__";
+          render();
+        });
+
+        el.snapshotSelect.addEventListener("change", () => {
+          state.snapshotCommit = el.snapshotSelect.value;
+          render();
+        });
+
+        el.compareSelect.addEventListener("change", () => {
+          state.compareCommit = el.compareSelect.value;
+          render();
+        });
+
+        el.searchInput.addEventListener("input", () => {
+          state.search = el.searchInput.value;
+          renderSearchResults();
+        });
+
+        buildStats();
+        render();
+        await loadMediaManifest();
+      }
+
+      main().catch((error) => {
+        document.body.innerHTML = `<div class="shell"><section class="panel"><h1>History viewer unavailable</h1><p>${escapeHtml(String(error))}</p></section></div>`;
+        console.error(error);
+      });
+    </script>
+  </body>
+</html>

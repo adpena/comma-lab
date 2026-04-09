@@ -1,0 +1,698 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Lab Timeline — comma-lab</title>
+  <meta name="description" content="Interactive experiment timeline, animated document diffs, and score trajectory visualizations." />
+  <meta name="robots" content="noindex,nofollow" />
+  <meta name="theme-color" content="#0f1724" />
+  <meta name="color-scheme" content="dark" />
+  <script src="https://d3js.org/d3.v7.min.js" integrity="sha384-yOE5j2kRg3vQUugDJpT4rMRevagCFMmP6/1kDVfMHA/8mEMJ0gJbYwQJcjpHb0X" crossorigin="anonymous"></script>
+  <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline' https://d3js.org; style-src 'self' 'unsafe-inline'; img-src 'self' data:">
+  <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>&#x1f9ea;</text></svg>">
+  <style>
+    :root {
+      --bg: #0f1724;
+      --bg-2: #101d2f;
+      --panel: rgba(255,255,255,0.055);
+      --stroke: rgba(255,255,255,0.10);
+      --stroke-strong: rgba(255,255,255,0.16);
+      --text: #f4f1e8;
+      --muted: #a8b1bc;
+      --soft: #d9e0e8;
+      --accent: #8ed1c0;
+      --accent-2: #f0b35f;
+      --danger: #ff6b6b;
+      --radius: 20px;
+      --radius-sm: 14px;
+      --max: min(1200px, calc(100vw - 48px));
+    }
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    html { scroll-behavior: smooth; }
+
+    @keyframes ambientPulse {
+      0%, 100% { opacity: 0.14; }
+      50% { opacity: 0.22; }
+    }
+
+    body {
+      background:
+        radial-gradient(circle at 15% 0%, rgba(142,209,192,0.14), transparent 32%),
+        radial-gradient(circle at 85% 5%, rgba(240,179,95,0.12), transparent 30%),
+        linear-gradient(180deg, #111b2c 0%, #0c1320 48%, #0a1018 100%);
+      color: var(--text);
+      font: 500 clamp(14px, 1vw + 12px, 16px)/1.6 ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "SF Pro Display", sans-serif;
+      text-rendering: optimizeLegibility;
+      -webkit-font-smoothing: antialiased;
+      min-height: 100vh;
+    }
+    body::before {
+      content: '';
+      position: fixed; inset: 0; z-index: -1;
+      background: radial-gradient(ellipse at 50% 0%, rgba(142,209,192,0.06), transparent 60%);
+      animation: ambientPulse 10s ease-in-out infinite;
+      pointer-events: none;
+    }
+
+    a { color: inherit; text-underline-offset: 0.2em; transition: color 160ms ease; }
+    a:hover { color: var(--accent); }
+    a:focus-visible, button:focus-visible { outline: 3px solid var(--accent-2); outline-offset: 3px; border-radius: 6px; }
+
+    .wrap { max-width: var(--max); margin: 0 auto; padding: clamp(20px, 3vw, 32px) clamp(16px, 2vw, 24px) 72px; }
+
+    .eyebrow {
+      color: var(--muted); font-size: 11px; letter-spacing: 0.12em;
+      text-transform: uppercase; font-weight: 700;
+    }
+    h1 {
+      font-family: "Iowan Old Style", "Palatino Linotype", "Book Antiqua", Georgia, ui-serif, serif;
+      font-size: clamp(24px, 4vw, 40px); line-height: 1.05;
+      letter-spacing: -0.04em; font-weight: 700;
+    }
+    h2, h3 {
+      font-family: "Iowan Old Style", "Palatino Linotype", "Book Antiqua", Georgia, ui-serif, serif;
+      letter-spacing: -0.03em;
+    }
+    .muted { color: var(--muted); font-size: clamp(13px, 0.9vw + 10px, 15px); }
+
+    /* Glassmorphic panels */
+    .panel {
+      background: linear-gradient(180deg, rgba(16,23,36,0.88), rgba(10,14,20,0.92));
+      backdrop-filter: blur(12px); -webkit-backdrop-filter: blur(12px);
+      border: 1px solid var(--stroke);
+      border-radius: var(--radius);
+      padding: clamp(16px, 2vw, 24px);
+      margin-top: 18px;
+      box-shadow: 0 18px 40px rgba(0,0,0,0.12), inset 0 1px 0 rgba(255,255,255,0.04);
+      transition: transform 200ms ease, box-shadow 200ms ease;
+    }
+    .panel:hover {
+      transform: translateY(-1px);
+      box-shadow: 0 22px 48px rgba(0,0,0,0.16), inset 0 1px 0 rgba(255,255,255,0.06);
+    }
+    .panel h2 { margin: 0 0 8px; font-size: clamp(18px, 2vw, 22px); }
+
+    /* Header */
+    .header {
+      display: flex; align-items: center; gap: clamp(12px, 2vw, 20px); flex-wrap: wrap;
+      padding: clamp(14px, 2vw, 20px) 0; border-bottom: 1px solid var(--stroke);
+    }
+    .header .back {
+      color: var(--accent); text-decoration: none; font-size: 13px;
+      transition: transform 160ms ease;
+    }
+    .header .back:hover { transform: translateX(-2px); }
+    .nav-tabs { display: flex; gap: 6px; margin-left: auto; }
+    .nav-tab {
+      background: transparent; color: var(--muted); border: 1px solid transparent;
+      padding: 8px 16px; border-radius: 999px; cursor: pointer;
+      font: 600 13px/1 inherit; transition: all 160ms ease;
+    }
+    .nav-tab:hover { background: rgba(255,255,255,0.05); color: var(--soft); transform: translateY(-1px); }
+    .nav-tab.active {
+      background: rgba(142,209,192,0.12); border-color: rgba(142,209,192,0.42);
+      color: var(--text); box-shadow: inset 0 0 0 1px rgba(142,209,192,0.14);
+    }
+
+    /* Timeline bar */
+    .time-bar {
+      display: flex; align-items: center; gap: clamp(10px, 1.5vw, 16px);
+      padding: 14px 0; margin-top: 14px;
+    }
+    .time-bar input[type="range"] {
+      flex: 1; accent-color: var(--accent); height: 6px;
+    }
+    .time-bar .date-label {
+      font: 600 13px/1 ui-monospace, SFMono-Regular, Menlo, monospace;
+      color: var(--accent); min-width: clamp(120px, 15vw, 180px); text-align: right;
+    }
+    .play-btn {
+      background: rgba(142,209,192,0.12); border: 1px solid rgba(142,209,192,0.42);
+      color: var(--text); padding: 8px 18px; border-radius: 999px; cursor: pointer;
+      font: 600 13px/1 inherit; transition: all 160ms ease;
+      box-shadow: 0 2px 8px rgba(142,209,192,0.1);
+    }
+    .play-btn:hover { background: rgba(142,209,192,0.2); transform: translateY(-1px); box-shadow: 0 4px 12px rgba(142,209,192,0.15); }
+
+    /* Panels */
+    .view-panel { display: none; }
+    .view-panel.active { display: block; animation: fadeIn 300ms ease; }
+    @keyframes fadeIn { from { opacity: 0; transform: translateY(8px); } to { opacity: 1; transform: none; } }
+    svg { width: 100%; height: auto; background: rgba(0,0,0,0.15); border-radius: 12px; }
+
+    /* Tooltip */
+    .tip {
+      position: fixed; max-width: min(320px, calc(100vw - 32px)); padding: 12px 16px;
+      background: rgba(8,11,15,0.96); backdrop-filter: blur(16px);
+      border: 1px solid var(--stroke-strong);
+      border-radius: 12px; box-shadow: 0 16px 32px rgba(0,0,0,0.4);
+      pointer-events: none; z-index: 1000; display: none; font-size: 13px;
+    }
+    .tip .tip-title { color: var(--accent); font-weight: 700; font-size: 14px; }
+    .tip .tip-score { color: var(--accent); font-size: 24px; font-weight: 700; letter-spacing: -0.03em; line-height: 1.2; }
+    .tip .tip-detail { color: var(--muted); margin-top: 6px; font-size: 12px; line-height: 1.5; }
+
+    /* Legend */
+    .legend-row { display: flex; gap: 16px; flex-wrap: wrap; margin: 14px 0 8px; }
+    .legend-key { display: inline-flex; align-items: center; gap: 8px; color: var(--muted); font-size: 12px; }
+    .legend-dot { width: 10px; height: 10px; border-radius: 999px; display: inline-block; box-shadow: 0 0 6px currentColor; }
+
+    /* D3 chart styles */
+    .axis text { fill: var(--muted); font-size: 11px; }
+    .axis line, .axis path { stroke: var(--stroke); }
+    .grid line { stroke: var(--stroke); opacity: 0.15; }
+    .tree-link { fill: none; stroke: rgba(255,255,255,0.10); stroke-width: 1.5; transition: opacity 300ms ease; }
+    .tree-link.promoted { stroke: var(--accent); stroke-width: 2.5; filter: drop-shadow(0 0 4px rgba(142,209,192,0.3)); }
+    .tree-label { font-size: 10px; fill: var(--muted); transition: opacity 300ms ease; }
+    .tree-g { transition: opacity 300ms ease; }
+    .tree-g circle { transition: transform 160ms ease; }
+    .tree-g:hover circle { transform: scale(1.2); }
+    .traj-line { fill: none; stroke-width: 2.2; opacity: 0.85; stroke-linecap: round; }
+    .traj-dot { cursor: pointer; transition: all 160ms ease; }
+    .traj-dot:hover { transform: scale(1.4); filter: drop-shadow(0 0 6px currentColor); }
+
+    /* Docs viewer */
+    .doc-controls { display: flex; gap: 10px; align-items: center; flex-wrap: wrap; }
+    .doc-controls select {
+      background: rgba(255,255,255,0.04); color: var(--text);
+      border: 1px solid var(--stroke); padding: 10px 14px;
+      border-radius: 12px; font: inherit; font-size: 13px; min-width: 280px;
+      transition: border-color 160ms ease;
+    }
+    .doc-controls select:focus { border-color: var(--accent); outline: none; }
+    .doc-btn {
+      background: rgba(255,255,255,0.03); color: var(--muted);
+      border: 1px solid var(--stroke); padding: 8px 14px;
+      border-radius: 999px; cursor: pointer; font: 600 12px/1 inherit;
+      transition: all 160ms ease;
+    }
+    .doc-btn:hover { background: rgba(255,255,255,0.07); color: var(--soft); transform: translateY(-1px); }
+    .doc-btn.active {
+      background: rgba(142,209,192,0.12); border-color: rgba(142,209,192,0.42);
+      color: var(--text); box-shadow: inset 0 0 0 1px rgba(142,209,192,0.14);
+    }
+    .doc-stats { font-size: 12px; color: var(--muted); margin: 12px 0; display: flex; gap: 16px; }
+    .doc-content {
+      white-space: pre-wrap; word-wrap: break-word;
+      font: 500 13px/1.7 ui-monospace, SFMono-Regular, Menlo, monospace;
+      color: var(--soft); padding: clamp(14px, 2vw, 20px); border-radius: 12px;
+      background: rgba(0,0,0,0.25); border: 1px solid var(--stroke);
+      max-height: 600px; overflow-y: auto;
+      scrollbar-width: thin; scrollbar-color: rgba(255,255,255,0.12) transparent;
+    }
+    .doc-content ins {
+      background: rgba(142,209,192,0.18); color: var(--accent);
+      text-decoration: none; padding: 1px 4px; border-radius: 4px;
+      box-shadow: inset 0 0 0 1px rgba(142,209,192,0.12);
+    }
+    .doc-content del {
+      background: rgba(255,107,107,0.18); color: var(--danger);
+      text-decoration: line-through; padding: 1px 4px; border-radius: 4px;
+      box-shadow: inset 0 0 0 1px rgba(255,107,107,0.12);
+    }
+    .doc-content .hunk-header {
+      display: inline-block; background: rgba(142,209,192,0.08);
+      color: var(--accent); padding: 3px 10px; border-radius: 6px;
+      font-size: 11px; margin: 10px 0;
+    }
+
+    /* Footer */
+    .footer {
+      display: flex; justify-content: space-between; flex-wrap: wrap; gap: 8px;
+      padding: 16px 0; margin-top: 24px;
+      border-top: 1px solid var(--stroke);
+      font-size: 11px; color: var(--muted);
+    }
+
+    /* Responsive */
+    @media (max-width: 768px) {
+      .header { flex-direction: column; align-items: flex-start; }
+      .nav-tabs { margin-left: 0; width: 100%; overflow-x: auto; }
+      .time-bar { flex-wrap: wrap; }
+      .time-bar .date-label { order: -1; width: 100%; text-align: left; }
+      .doc-controls { flex-direction: column; align-items: stretch; }
+      .doc-controls select { width: 100%; min-width: 0; }
+    }
+    @media (max-width: 480px) {
+      .wrap { padding: 16px 12px 48px; }
+      .panel { padding: 14px; border-radius: 14px; }
+      .nav-tab { padding: 6px 10px; font-size: 12px; }
+    }
+  </style>
+</head>
+<body>
+<div class="wrap">
+
+  <div class="header">
+    <a href="./index.html" class="back">&larr; writeup</a>
+    <h1>Lab Timeline</h1>
+    <span class="eyebrow">Experiment evolution across the fleet</span>
+    <div class="nav-tabs">
+      <button class="nav-tab active" data-tab="tree">Tree</button>
+      <button class="nav-tab" data-tab="trajectory">Trajectory</button>
+      <button class="nav-tab" data-tab="scatter">Scatter</button>
+      <button class="nav-tab" data-tab="docs">Docs</button>
+    </div>
+  </div>
+
+  <div class="time-bar">
+    <button class="play-btn" id="playBtn">Play</button>
+    <input type="range" id="timeSlider" min="0" max="100" value="100">
+    <span class="date-label" id="timeLabel">--</span>
+  </div>
+
+  <!-- Tree View -->
+  <div class="view-panel active" id="panel-tree">
+    <section class="panel">
+      <h2>Experiment tree</h2>
+      <p class="muted">How each experiment branched from its parent. Green stroke marks promoted floors. Node size reflects hidden width.</p>
+      <div class="legend-row" id="tree-legend"></div>
+      <svg id="tree-svg"></svg>
+    </section>
+  </div>
+
+  <!-- Trajectory View -->
+  <div class="view-panel" id="panel-trajectory">
+    <section class="panel">
+      <h2>Score trajectory</h2>
+      <p class="muted">Score evolution over time across all experiments. Red dashed line is the 1.45 target. Gold dashed line is leaderboard #2.</p>
+      <div class="legend-row" id="traj-legend"></div>
+      <svg id="traj-svg"></svg>
+    </section>
+  </div>
+
+  <!-- Scatter View -->
+  <div class="view-panel" id="panel-scatter">
+    <section class="panel">
+      <h2>Width vs score</h2>
+      <p class="muted">Hidden width on x-axis (log scale), score on y-axis. Color encodes time (early=purple, late=yellow). Size encodes epoch count. Blue dashed line is LeCun's scaling law fit.</p>
+      <div class="legend-row" id="scatter-legend"></div>
+      <svg id="scatter-svg"></svg>
+    </section>
+  </div>
+
+  <!-- Docs View -->
+  <div class="view-panel" id="panel-docs">
+    <section class="panel">
+      <h2>Document evolution</h2>
+      <p class="muted">Browse any tracked markdown file across git commits. Switch to Diff mode to see additions and deletions highlighted, or Animate to auto-play through all versions.</p>
+      <div class="doc-controls">
+        <select id="docPicker"><option value="">-- select document --</option></select>
+        <button class="doc-btn" id="docPrev">&larr; Older</button>
+        <span id="docVersionLabel" style="min-width:200px;text-align:center;font-size:12px;color:var(--accent)">--</span>
+        <button class="doc-btn" id="docNext">Newer &rarr;</button>
+        <div style="margin-left:auto;display:flex;gap:4px;">
+          <button class="doc-btn active" id="docModeContent">Content</button>
+          <button class="doc-btn" id="docModeDiff">Diff</button>
+          <button class="doc-btn" id="docModeAnimate">Animate</button>
+        </div>
+      </div>
+      <div class="doc-stats" id="docStats"></div>
+      <pre class="doc-content" id="docContent">Select a document to begin.</pre>
+    </section>
+  </div>
+
+  <div class="footer">
+    <span id="statusLeft">Loading data...</span>
+    <span id="statusRight"></span>
+  </div>
+
+</div>
+
+<div class="tip" id="tooltip"></div>
+
+<script>
+// ── Data ──────────────────────────────────────────────────────────────
+let DATA = null;
+let currentTime = 1.0;
+let playing = false;
+let playInterval = null;
+
+const COLORS = {
+  accent: '#8ed1c0', accent2: '#f0b35f', danger: '#ff6b6b',
+  purple: '#b8a9e8', pink: '#f0a0c0', blue: '#8ab4ff',
+  gray: '#6b7280',
+};
+
+async function loadData() {
+  try {
+    const [expRes, docRes] = await Promise.all([
+      fetch('timeline_experiments.json').then(r => r.ok ? r.json() : null),
+      fetch('timeline_docs.json').then(r => r.ok ? r.json() : null),
+    ]);
+    DATA = buildData(expRes, docRes);
+  } catch (e) {
+    DATA = buildData(null, null);
+  }
+  document.getElementById('statusLeft').textContent =
+    `${DATA.experiments.length} experiments, ${DATA.milestones.length} milestones` +
+    (DATA.timelines ? `, ${Object.keys(DATA.timelines).length} documents` : '');
+  initAll();
+}
+
+function buildData(expData, docData) {
+  const base = {
+    sources: ['local', 'bat00', 'tertiary'],
+    experiments: [
+      { id: 'baseline', name: 'No filter (CRF34+FG22)', variant: 'none', hidden: 0, platform: 'local',
+        datapoints: [{ date: '2026-04-06T12:00', score: 2.08, pose: 0.052, seg: 0.0069, rate: 0.023 }],
+        parent: null, color: COLORS.gray },
+      { id: 'h8', name: 'PostFilter h=8', variant: 'standard', hidden: 8, platform: 'local',
+        datapoints: [{ date: '2026-04-07T10:00', epoch: 50, score: 2.01 }, { date: '2026-04-07T14:00', epoch: 200, score: 1.99 }],
+        parent: 'baseline', color: COLORS.gray },
+      { id: 'h16_sal', name: 'Saliency h=16', variant: 'standard', hidden: 16, platform: 'local',
+        datapoints: [{ date: '2026-04-07T18:00', epoch: 100, score: 1.985 }, { date: '2026-04-08T02:00', epoch: 300, score: 1.945 }],
+        parent: 'h8', color: COLORS.accent2 },
+      { id: 'h32_qat', name: 'QAT+EMA h=32', variant: 'standard', hidden: 32, platform: 'local',
+        datapoints: [{ date: '2026-04-08T10:00', epoch: 100, score: 1.985 }, { date: '2026-04-08T16:00', epoch: 300, score: 1.945 }, { date: '2026-04-08T22:00', epoch: 500, score: 1.845 }],
+        parent: 'h16_sal', color: COLORS.blue },
+      { id: 'h32_bat00', name: 'Long-1000 h=32 (bat00)', variant: 'standard', hidden: 32, platform: 'bat00',
+        datapoints: [{ date: '2026-04-09T00:00', epoch: 500, score: 1.87 }, { date: '2026-04-09T06:00', epoch: 1000, score: 1.845 }],
+        parent: 'h32_qat', color: COLORS.blue },
+      { id: 'h48', name: 'h=48 QAT+EMA', variant: 'standard', hidden: 48, platform: 'local',
+        datapoints: [{ date: '2026-04-09T03:00', epoch: 200, score: 1.82 }, { date: '2026-04-09T06:00', epoch: 400, score: 1.762 }],
+        parent: 'h32_qat', color: COLORS.accent },
+      { id: 'h64', name: 'Long-1000 h=64', variant: 'standard', hidden: 64, platform: 'local',
+        datapoints: [{ date: '2026-04-09T04:00', epoch: 100, score: 1.85 }, { date: '2026-04-09T08:00', epoch: 400, score: 1.76 }, { date: '2026-04-09T10:00', epoch: 700, score: 1.727 }],
+        parent: 'h48', color: COLORS.accent },
+      { id: 'h96', name: 'h=96 (OOM)', variant: 'standard', hidden: 96, platform: 'local',
+        datapoints: [{ date: '2026-04-09T05:00', epoch: 66, score: 1.90 }, { date: '2026-04-09T07:00', epoch: 143, score: 1.85 }],
+        parent: 'h64', color: COLORS.gray },
+      { id: 'kalman', name: 'Kalman h=48', variant: 'standard', hidden: 48, platform: 'tertiary',
+        datapoints: [{ date: '2026-04-09T04:00', epoch: 200, score: 1.92 }, { date: '2026-04-09T08:00', epoch: 600, score: 1.863 }],
+        parent: 'h48', color: COLORS.purple },
+      { id: 'cvar', name: 'CVaR DRO h=32', variant: 'standard', hidden: 32, platform: 'local',
+        datapoints: [{ date: '2026-04-09T04:00', epoch: 200, score: 1.95 }],
+        parent: 'h32_qat', color: COLORS.purple },
+      { id: 'dilated', name: 'Dilated h=64', variant: 'dilated', hidden: 64, platform: 'local',
+        datapoints: [{ date: '2026-04-09T08:00', epoch: 75, score: 1.86 }, { date: '2026-04-09T10:00', epoch: 123, score: 1.82 }, { date: '2026-04-09T12:00', epoch: 220, score: 1.79 }],
+        parent: 'h64', color: COLORS.accent2 },
+      { id: 'pixelshuffle', name: 'PixelShuffle h=64', variant: 'pixelshuffle', hidden: 64, platform: 'local',
+        datapoints: [{ date: '2026-04-09T08:00', epoch: 41, score: 1.91 }, { date: '2026-04-09T12:00', epoch: 166, score: 1.84 }],
+        parent: 'h64', color: COLORS.pink },
+      { id: 'psd', name: 'PSD h=64 (council)', variant: 'psd', hidden: 64, platform: 'local',
+        datapoints: [{ date: '2026-04-09T10:00', epoch: 26, score: 1.93 }, { date: '2026-04-09T12:00', epoch: 63, score: 1.87 }],
+        parent: 'h64', color: COLORS.danger },
+      { id: 'segnet', name: 'SegNet STE Attack', variant: 'standard', hidden: 32, platform: 'local',
+        datapoints: [{ date: '2026-04-09T04:00', epoch: 300, score: 1.11 }, { date: '2026-04-09T08:00', epoch: 590, score: 0.98 }],
+        parent: 'h32_qat', color: COLORS.danger },
+    ],
+    milestones: [
+      { date: '2026-04-06T12:00', score: 2.08, label: 'Baseline' },
+      { date: '2026-04-07T14:00', score: 2.01, label: 'First filter' },
+      { date: '2026-04-08T02:00', score: 1.945, label: 'Tie #1' },
+      { date: '2026-04-08T22:00', score: 1.845, label: 'h=32 long-500' },
+      { date: '2026-04-09T06:00', score: 1.762, label: 'h=48' },
+      { date: '2026-04-09T10:00', score: 1.727, label: 'h=64 PROMOTED' },
+    ],
+    leaderboard: [
+      { rank: 1, name: 'PACT (ours)', score: 1.727 },
+      { rank: 2, name: 'neural_inflate', score: 1.89 },
+    ],
+    scaling_law: { a: -0.159, b: 2.382, label: 'score = -0.159 ln(h) + 2.382' },
+    target: 1.45,
+    timelines: docData ? docData.timelines : null,
+    files: docData ? docData.files : [],
+  };
+  return base;
+}
+
+// ── Init ──────────────────────────────────────────────────────────────
+
+function initAll() {
+  setupTabs();
+  setupTimeline();
+  setupPlayback();
+  drawTree();
+  drawTrajectory();
+  drawScatter();
+  initDocs();
+}
+
+function setupTabs() {
+  document.querySelectorAll('.nav-tab').forEach(tab => {
+    tab.onclick = () => {
+      document.querySelectorAll('.nav-tab').forEach(t => t.classList.remove('active'));
+      document.querySelectorAll('.view-panel').forEach(p => p.classList.remove('active'));
+      tab.classList.add('active');
+      document.getElementById('panel-' + tab.dataset.tab).classList.add('active');
+    };
+  });
+}
+
+function setupTimeline() {
+  document.getElementById('timeSlider').oninput = function() {
+    currentTime = parseInt(this.value) / 100;
+    updateAllViews();
+  };
+}
+
+function setupPlayback() {
+  const btn = document.getElementById('playBtn');
+  btn.onclick = () => {
+    if (playing) { playing = false; btn.textContent = 'Play'; return; }
+    playing = true; btn.textContent = 'Pause';
+    const slider = document.getElementById('timeSlider');
+    if (currentTime >= 1) { currentTime = 0; slider.value = 0; }
+    let last = performance.now();
+    function frame(now) {
+      if (!playing) return;
+      const dt = (now - last) / 1000;
+      last = now;
+      currentTime = Math.min(1, currentTime + dt * 0.08);
+      slider.value = Math.round(currentTime * 100);
+      updateAllViews();
+      if (currentTime >= 1) { playing = false; btn.textContent = 'Play'; return; }
+      requestAnimationFrame(frame);
+    }
+    requestAnimationFrame(frame);
+  };
+}
+
+function updateAllViews() {
+  const dates = DATA.experiments.flatMap(e => e.datapoints.map(d => new Date(d.date)));
+  const min = d3.min(dates), max = d3.max(dates);
+  const cur = new Date(+min + currentTime * (+max - +min));
+  document.getElementById('timeLabel').textContent = cur.toLocaleString();
+  updateTree(cur); updateTrajectory(cur); updateScatter(cur);
+}
+
+// ── Tooltip ───────────────────────────────────────────────────────────
+
+const tip = document.getElementById('tooltip');
+function showTip(evt, html) { tip.innerHTML = html; tip.style.display = 'block'; tip.style.left = (evt.clientX + 14) + 'px'; tip.style.top = (evt.clientY - 14) + 'px'; }
+function hideTip() { tip.style.display = 'none'; }
+
+// ── Tree ──────────────────────────────────────────────────────────────
+
+function drawTree() {
+  const svg = d3.select('#tree-svg');
+  const W = svg.node().parentElement.clientWidth - 44;
+  const H = Math.max(440, DATA.experiments.length * 42);
+  svg.attr('viewBox', `0 0 ${W} ${H}`);
+
+  const root = { id: '__root__', children: [] };
+  const map = { '__root__': root };
+  DATA.experiments.forEach(e => { map[e.id] = { ...e, children: [] }; });
+  DATA.experiments.forEach(e => { (e.parent ? map[e.parent] : root).children.push(map[e.id]); });
+
+  const tree = d3.tree().size([H - 40, W - 220]);
+  const hier = d3.hierarchy(root);
+  tree(hier);
+
+  svg.selectAll('.tree-link').data(hier.links().filter(l => l.source.depth > 0 || l.target.depth === 1)).join('path')
+    .attr('class', d => 'tree-link' + (['h64','h48','h32_qat'].includes(d.target.data.id) ? ' promoted' : ''))
+    .attr('d', d3.linkHorizontal().x(d => d.y + 100).y(d => d.x + 20));
+
+  const nodes = svg.selectAll('.tree-g').data(hier.descendants().filter(d => d.data.id !== '__root__')).join('g')
+    .attr('class', 'tree-g').attr('transform', d => `translate(${d.y+100},${d.x+20})`);
+
+  nodes.selectAll('circle').data(d => [d]).join('circle')
+    .attr('r', d => Math.max(5, Math.min(14, (d.data.hidden||8)/5)))
+    .attr('fill', d => d.data.color || COLORS.accent)
+    .attr('stroke', d => ['h64','h48','h32_qat'].includes(d.data.id) ? COLORS.accent : 'none')
+    .attr('stroke-width', 3)
+    .on('mouseover', (ev, d) => {
+      const best = d.data.datapoints ? Math.min(...d.data.datapoints.map(p => p.score).filter(Boolean)) : null;
+      showTip(ev, `<div class="tip-title">${esc(d.data.name||d.data.id)}</div>${best ? '<div class="tip-score">'+best.toFixed(3)+'</div>' : ''}<div class="tip-detail">${esc(d.data.variant||'')} h=${d.data.hidden||'?'}<br>Platform: ${esc(d.data.platform||'local')}</div>`);
+    }).on('mouseout', hideTip);
+
+  nodes.selectAll('.tree-label').data(d => [d]).join('text').attr('class', 'tree-label')
+    .attr('dx', d => Math.max(5, Math.min(14, (d.data.hidden||8)/5)) + 6).attr('dy', 4)
+    .text(d => { const b = d.data.datapoints ? Math.min(...d.data.datapoints.map(p=>p.score).filter(Boolean)) : null; return `${d.data.name} ${b ? '('+b.toFixed(3)+')' : ''}`; });
+
+  const platforms = [...new Set(DATA.experiments.map(e => e.platform))];
+  d3.select('#tree-legend').selectAll('.legend-key').data(platforms).join('span').attr('class', 'legend-key')
+    .html(d => `<span class="legend-dot" style="background:${platformColor(d)}"></span>${d}`);
+}
+
+function updateTree(date) {
+  d3.selectAll('.tree-g').each(function(d) {
+    d3.select(this).style('opacity', d.data.datapoints && d.data.datapoints.some(p => new Date(p.date) <= date) ? 1 : 0.12);
+  });
+}
+
+// ── Trajectory ────────────────────────────────────────────────────────
+
+function drawTrajectory() {
+  const svg = d3.select('#traj-svg');
+  const m = { top: 28, right: 28, bottom: 48, left: 56 };
+  const W = svg.node().parentElement.clientWidth - m.left - m.right - 44;
+  const H = 420;
+  svg.attr('viewBox', `0 0 ${W+m.left+m.right} ${H+m.top+m.bottom}`);
+  const g = svg.append('g').attr('transform', `translate(${m.left},${m.top})`);
+
+  const dates = DATA.experiments.flatMap(e => e.datapoints.map(d => new Date(d.date)));
+  const scores = DATA.experiments.filter(e=>!e.id.includes('segnet')).flatMap(e => e.datapoints.map(d => d.score)).filter(Boolean);
+  const x = d3.scaleTime().domain(d3.extent(dates)).range([0, W]);
+  const y = d3.scaleLinear().domain([Math.min(1.4, d3.min(scores)-0.1), Math.max(2.2, d3.max(scores)+0.1)]).range([H, 0]);
+
+  g.append('g').attr('class','grid').call(d3.axisLeft(y).tickSize(-W).tickFormat(''));
+  g.append('g').attr('class','axis').attr('transform',`translate(0,${H})`).call(d3.axisBottom(x).ticks(6).tickFormat(d3.timeFormat('%b %d %H:%M')));
+  g.append('g').attr('class','axis').call(d3.axisLeft(y));
+
+  // Target + leaderboard
+  g.append('line').attr('x1',0).attr('x2',W).attr('y1',y(DATA.target)).attr('y2',y(DATA.target)).attr('stroke',COLORS.danger).attr('stroke-dasharray','6 3').attr('opacity',0.5);
+  g.append('text').attr('x',W-60).attr('y',y(DATA.target)-6).attr('fill',COLORS.danger).attr('font-size',11).text('Target: '+DATA.target);
+  if (DATA.leaderboard[1]) {
+    g.append('line').attr('x1',0).attr('x2',W).attr('y1',y(DATA.leaderboard[1].score)).attr('y2',y(DATA.leaderboard[1].score)).attr('stroke',COLORS.accent2).attr('stroke-dasharray','4 2').attr('opacity',0.4);
+    g.append('text').attr('x',W-110).attr('y',y(DATA.leaderboard[1].score)-6).attr('fill',COLORS.accent2).attr('font-size',11).text('#2 '+DATA.leaderboard[1].name+': '+DATA.leaderboard[1].score);
+  }
+
+  const line = d3.line().x(d=>x(new Date(d.date))).y(d=>y(d.score)).curve(d3.curveMonotoneX);
+  DATA.experiments.filter(e=>!e.id.includes('segnet')).forEach(exp => {
+    const pts = exp.datapoints.filter(d=>d.score);
+    if (pts.length < 2) return;
+    g.append('path').datum(pts).attr('class','traj-line').attr('stroke', exp.color).attr('d', line).attr('data-exp', exp.id);
+  });
+
+  DATA.experiments.filter(e=>!e.id.includes('segnet')).forEach(exp => {
+    g.selectAll(null).data(exp.datapoints.filter(d=>d.score)).join('circle')
+      .attr('class','traj-dot').attr('cx',d=>x(new Date(d.date))).attr('cy',d=>y(d.score)).attr('r',5)
+      .attr('fill',exp.color).attr('data-exp',exp.id).attr('data-date',d=>d.date)
+      .on('mouseover',(ev,d)=>showTip(ev,`<div class="tip-title">${esc(exp.name)}</div><div class="tip-score">${d.score.toFixed(3)}</div><div class="tip-detail">Epoch ${d.epoch||'--'}<br>${new Date(d.date).toLocaleString()}</div>`))
+      .on('mouseout',hideTip);
+  });
+
+  const legend = d3.select('#traj-legend');
+  DATA.experiments.filter(e=>!e.id.includes('segnet')).forEach(exp => {
+    legend.append('span').attr('class','legend-key').html(`<span class="legend-dot" style="background:${exp.color}"></span>${exp.name}`);
+  });
+}
+
+function updateTrajectory(date) {
+  d3.selectAll('.traj-dot').each(function(d) { d3.select(this).style('opacity', new Date(d.date) <= date ? 1 : 0.08); });
+}
+
+// ── Scatter ───────────────────────────────────────────────────────────
+
+function drawScatter() {
+  const svg = d3.select('#scatter-svg');
+  const m = { top: 28, right: 28, bottom: 56, left: 56 };
+  const W = svg.node().parentElement.clientWidth - m.left - m.right - 44;
+  const H = 420;
+  svg.attr('viewBox', `0 0 ${W+m.left+m.right} ${H+m.top+m.bottom}`);
+  const g = svg.append('g').attr('transform', `translate(${m.left},${m.top})`);
+
+  const pts = DATA.experiments.flatMap(exp => exp.datapoints.filter(d=>d.score&&exp.hidden>0).map(d=>({...d,exp,dt:new Date(d.date)})));
+  const tExt = d3.extent(pts, d=>d.dt);
+  const tColor = d3.scaleSequential(d3.interpolateViridis).domain(tExt);
+  const x = d3.scaleLog().domain([4,128]).range([0,W]);
+  const y = d3.scaleLinear().domain([0.8,2.2]).range([H,0]);
+  const r = d3.scaleSqrt().domain([0,1000]).range([4,15]);
+
+  g.append('g').attr('class','grid').call(d3.axisLeft(y).tickSize(-W).tickFormat(''));
+  g.append('g').attr('class','axis').attr('transform',`translate(0,${H})`).call(d3.axisBottom(x).tickValues([8,16,32,48,64,96]).tickFormat(d=>d));
+  g.append('g').attr('class','axis').call(d3.axisLeft(y));
+  g.append('text').attr('x',W/2).attr('y',H+42).attr('fill','var(--muted)').attr('text-anchor','middle').attr('font-size',12).text('Hidden Width (h)');
+  g.append('text').attr('transform','rotate(-90)').attr('x',-H/2).attr('y',-42).attr('fill','var(--muted)').attr('text-anchor','middle').attr('font-size',12).text('Score');
+
+  // Scaling law
+  const law = [8,16,32,48,64,96,128].map(h=>({h,s:DATA.scaling_law.a*Math.log(h)+DATA.scaling_law.b}));
+  g.append('path').datum(law).attr('d',d3.line().x(d=>x(d.h)).y(d=>y(d.s))).attr('fill','none').attr('stroke',COLORS.blue).attr('stroke-dasharray','6 3').attr('opacity',0.5);
+
+  g.append('line').attr('x1',0).attr('x2',W).attr('y1',y(DATA.target)).attr('y2',y(DATA.target)).attr('stroke',COLORS.danger).attr('stroke-dasharray','6 3').attr('opacity',0.3);
+
+  g.selectAll(null).data(pts).join('circle')
+    .attr('cx',d=>x(d.exp.hidden)).attr('cy',d=>y(d.score)).attr('r',d=>r(d.epoch||100))
+    .attr('fill',d=>tColor(d.dt)).attr('stroke',d=>d.exp.color).attr('stroke-width',1.5).attr('opacity',0.8)
+    .attr('data-date',d=>d.date).style('cursor','pointer')
+    .on('mouseover',(ev,d)=>showTip(ev,`<div class="tip-title">${esc(d.exp.name)}</div><div class="tip-score">${d.score.toFixed(3)}</div><div class="tip-detail">h=${d.exp.hidden} epoch ${d.epoch||'--'}<br>${d.dt.toLocaleString()}<br>Variant: ${esc(d.exp.variant)}</div>`))
+    .on('mouseout',hideTip);
+
+  d3.select('#scatter-legend').html(`
+    <span class="legend-key"><span style="display:inline-block;width:70px;height:10px;background:linear-gradient(to right,${tColor(tExt[0])},${tColor(tExt[1])});border-radius:2px;"></span>Time</span>
+    <span class="legend-key">Size = epoch count</span>
+    <span class="legend-key">Border = experiment family</span>
+  `);
+}
+
+function updateScatter(date) {
+  d3.selectAll('#scatter-svg circle').each(function(d) { if(d&&d.dt) d3.select(this).style('opacity', d.dt<=date?0.8:0.05); });
+}
+
+// ── Docs ──────────────────────────────────────────────────────────────
+
+let docFile='', docIdx=0, docMode='content', docAnimTimer=null;
+
+function initDocs() {
+  if (!DATA.timelines) return;
+  const picker = document.getElementById('docPicker');
+  Object.entries(DATA.timelines).sort((a,b)=>b[1].commits.length-a[1].commits.length).forEach(([path,tl])=>{
+    const opt = document.createElement('option');
+    opt.value = path; opt.textContent = `${path} (${tl.commits.length} versions)`;
+    picker.appendChild(opt);
+  });
+  picker.onchange = () => { docFile = picker.value; docIdx = 0; renderDoc(); };
+  document.getElementById('docPrev').onclick = () => { if(docIdx < getDocC().length-1){docIdx++;renderDoc();} };
+  document.getElementById('docNext').onclick = () => { if(docIdx > 0){docIdx--;renderDoc();} };
+  ['Content','Diff','Animate'].forEach(m => {
+    document.getElementById('docMode'+m).onclick = () => {
+      docMode = m.toLowerCase();
+      ['Content','Diff','Animate'].forEach(n => document.getElementById('docMode'+n).classList.remove('active'));
+      document.getElementById('docMode'+m).classList.add('active');
+      if(m==='Animate') startAnim(); else { stopAnim(); renderDoc(); }
+    };
+  });
+}
+
+function getDocC() { return docFile && DATA.timelines[docFile] ? DATA.timelines[docFile].commits : []; }
+
+function renderDoc() {
+  const cs = getDocC(); if(!cs.length) return;
+  const c = cs[docIdx], tl = DATA.timelines[docFile];
+  document.getElementById('docVersionLabel').textContent = `${c.short_hash} \u2014 ${c.date.slice(0,16)} (${docIdx+1}/${cs.length})`;
+  const stats = document.getElementById('docStats');
+  const diff = tl.diffs.find(d=>d.to===c.short_hash);
+  stats.innerHTML = diff ? `<span style="color:var(--accent)">+${diff.additions}</span><span style="color:var(--danger)">\u2212${diff.deletions}</span><span>${esc(c.message)}</span>` : `<span>${esc(c.message)}</span>`;
+  const el = document.getElementById('docContent');
+  if(docMode==='content') { el.innerHTML = esc(tl.versions[c.short_hash]||'(not available)'); }
+  else if(docMode==='diff'||docMode==='animate') { el.innerHTML = diff ? diff.html : (docIdx>=cs.length-1?'<span style="color:var(--muted)">Earliest version.</span>':'No diff data.'); }
+}
+
+function startAnim() {
+  const cs=getDocC(); if(cs.length<2)return; docIdx=cs.length-1; docMode='animate';
+  function step(){ if(docIdx<=0){stopAnim();return;} docIdx--; renderDoc(); docAnimTimer=setTimeout(step,1200); }
+  step();
+}
+function stopAnim(){ if(docAnimTimer){clearTimeout(docAnimTimer);docAnimTimer=null;} }
+
+function esc(s){ return (s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); }
+function platformColor(p){ return {local:COLORS.accent,bat00:COLORS.accent,tertiary:COLORS.purple,colab:COLORS.accent2}[p]||COLORS.gray; }
+
+// ── Boot ──────────────────────────────────────────────────────────────
+
+loadData();
+
+let resizeTimer;
+window.addEventListener('resize', () => {
+  clearTimeout(resizeTimer);
+  resizeTimer = setTimeout(() => {
+    ['tree-svg','traj-svg','scatter-svg'].forEach(id => d3.select('#'+id).selectAll('*').remove());
+    drawTree(); drawTrajectory(); drawScatter();
+  }, 250);
+});
+</script>
+</body>
+</html>

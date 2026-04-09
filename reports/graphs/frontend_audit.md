@@ -5,7 +5,7 @@
 - understated, dark, editorial layout
 - system-font stack only
 - no client-side framework
-- no runtime JavaScript on the page body
+- minimal runtime JavaScript only for compare-mode toggles, scatter-mode toggles, scrub sync, and tooltip behavior
 - simple information hierarchy: headline -> frontier -> evidence -> narrative
 
 ## accessibility
@@ -20,7 +20,7 @@
 ## performance
 
 - static HTML output
-- no application JS bundle
+- no application JS bundle; only a small inline interaction script on the homepage
 - no external fonts
 - no tracking scripts
 - small number of static assets

@@ -1,8 +1,8 @@
 {
   "best_track_b_current_workflow": {
-    "score": 2.12,
-    "bytes": 864486,
-    "run_id": "robust_current-av1-524x394-colorspace-hardening-promoted-cpu-2026-04-06"
+    "score": 2.05,
+    "bytes": 861986,
+    "run_id": "robust_current-av1-522x392-postfilter-promoted-cpu-2026-04-07"
   },
   "artifact_layers": [
     {
@@ -66,15 +66,15 @@
       "purpose": "completion checklist"
     },
     {
-      "path": "reports/raw/2026-04-06-hardening/robust_current-hardening-smoke.json",
-      "purpose": "pre-scorer smoke-gate evidence for the live 2.12 floor"
+      "path": "reports/raw/2026-04-07-postfilter/robust_current-exp-postfilter-smoke.json",
+      "purpose": "pre-scorer smoke-gate evidence for the live 2.05 floor"
     },
     {
       "path": "reports/raw/2026-04-06-hardening/encoded-ffprobe.json",
       "purpose": "encoded AV1 metadata evidence for the explicit bt709/tv color contract"
     },
     {
-      "path": "submissions/robust_current/config.av1-2.12.env",
+      "path": "submissions/robust_current/config.av1-2.05-postfilter.env",
       "purpose": "named snapshot of the current promoted AV1 configuration"
     },
     {
@@ -100,9 +100,9 @@
     },
     {
       "label": "Current best floor",
-      "run_id": "robust_current-av1-524x394-colorspace-hardening-promoted-cpu-2026-04-06",
-      "score": 2.12
+      "run_id": "robust_current-av1-522x392-postfilter-promoted-cpu-2026-04-07",
+      "score": 2.05
     }
   ],
-  "negative_result_count": 12
+  "negative_result_count": 18
 }

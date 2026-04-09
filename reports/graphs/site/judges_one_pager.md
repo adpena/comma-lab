@@ -1,16 +1,22 @@
 # judges one-pager
 
-## current result
+## headline
 
-- Best honest Track B **current_workflow** score: **`2.12`**
-- Best honest Track B **current_workflow** bytes: `864,486`
-- Best honest Track B **rule_faithful estimate**: `2.142` at `897,745` bytes
-- Best config: `524x394 / libsvtav1 / preset0 / crf34 / film-grain22 / lanczos / unsharp=0.35 / explicit bt709-tv encode / explicit rgb24(pc) decode`
+- Best honest Track B **current_workflow** score: **`1.73`**
+- Best honest Track B **current_workflow** bytes: `864,167`
+- Best honest Track B **rule_faithful estimate**: `1.795` at `966,071` bytes
+- Best config: `524x394 / libsvtav1 / preset0 / crf34 / film-grain22 / lanczos / sharpness=1 / long1000 QAT+EMA learned int8 post-filter (alpha=20, h=64)`
 
-## latest winning change
+## why it won
 
-- prior floor: `2.18`
-- change: explicit `tv/bt709` encode tags + explicit `rgb24(pc)` decode
-- estimate before run: lower evaluator mismatch at essentially the same byte budget
-- result: **`2.12`**
-- reflection: bytes barely moved, SegNet worsened slightly, but PoseNet improved enough to win materially
+- prior floor: `1.84`
+- change: keep the long-horizon QAT+EMA recipe, scale width to `h64`, and let the saved-best int8 checkpoint carry the deployment path
+- result: **`1.73`** at `864,167` bytes, with a local **rule_faithful** estimate of `1.795` at `966,071` bytes
+- reflection: the next real gain came from width scaling, not more ensemble tuning
+
+## proof points
+
+- local smoke passed before the promoted scorer run
+- local CPU scorer run established the promoted floor
+- written promotion review exists for the promoted run
+- at the promoted `1.73` operating point, the score is still much more sensitive to SegNet than PoseNet, though the ratio has narrowed to about **11.5x**

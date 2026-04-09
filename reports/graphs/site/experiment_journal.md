@@ -210,3 +210,36 @@ The flat AV1 path still relied on implicit ffmpeg color defaults. Making the enc
 ### reflection
 
 The hypothesis held strongly. Explicit `tv/bt709` encode tags plus explicit `rgb24(pc)` decode conversion materially improved the scorer-backed result at essentially the same archive size. That is strong evidence that evaluator-facing color semantics mattered at this operating point.
+
+
+## Grain-mask recovery lane: verified but rejected
+
+### measured result
+
+- candidate: `2.30` at `716,797` bytes
+- PoseNet recovered substantially relative to the catastrophic `film-grain=0` path but remained far worse than the floor
+
+### reflection
+
+This lane proved that task-aware grain synthesis can recover a lot of lost PoseNet signal, but not enough to beat the honest floor. It is a useful research branch, not a promotion candidate.
+
+## Learned post-filter: `2.08 -> 2.05`
+
+### prior baseline
+
+- `2.08` at `864,168` bytes
+
+### hypothesis
+
+A tiny learned int8 post-filter might outperform fixed decode sharpening at roughly the same byte cost.
+
+### measured result
+
+- candidate: `2.05` at `861,986` bytes
+- local smoke MAE mean: `5.355835021839174`
+- BAT00 smoke MAE mean: `5.450389819860672`
+- scorer result: PoseNet `0.07996829`, SegNet `0.00586716`
+
+### reflection
+
+This is the first small learned decode-side lane in the repo that survived smoke and improved the full scorer-backed result. The smoke advantage transferred to the real scorer, which makes this a real promotion rather than a proxy-only curiosity.

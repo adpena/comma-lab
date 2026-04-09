@@ -2,64 +2,83 @@
 
 Small, measured implementation details tied to the major score and rigor changes.
 
-## Byte-layout fix
+## Learned post-filter selector
 
 - file: `submissions/robust_current/inflate.sh`
-- why it matters: The flat path forces rawvideo output to `rgb24`.
+- why it matters: The promoted inflate path can route into the tiny learned post-filter.
 
 ```bash
-        "$FFMPEG_BIN" -y -i "$base_path" -i "$roi_path" -i "$roi2_path" \
-          -filter_complex "[0:v]$(upscale_rgb_base_filter "$SOURCE_W" "$SOURCE_H" "$UPSCALE_FLAGS")[base];[1:v]$(upscale_rgb_base_filter "$roi_w" "$roi_h" "$UPSCALE_FLAGS")[roi1];[2:v]$(upscale_rgb_base_filter "$roi2_w" "$roi2_h" "$UPSCALE_FLAGS")[roi2];[base][roi1]overlay=${roi_x}:${roi_y}[tmp];[tmp][roi2]overlay=${roi2_x}:${roi2_y}$(if [ -n "$INFLATE_POSTFILTER" ]; then printf ',format=rgb24,%s' "$INFLATE_POSTFILTER"; else printf ',format=rgb24'; fi)[out]" \
+    if [ "$PYTHON_INFLATE" = "postfilter" ]; then
+      echo "Inflating (canonical + learned post-filter) $ARCHIVE_DIR -> $INFLATED_DIR"
+      "$UV_BIN" run --with av --with torch --with numpy python "$SELF_DIR/inflate_postfilter.py" \
+        "$ARCHIVE_DIR" "$INFLATED_DIR" "$VIDEO_NAMES_FILE" \
+        "${POSTFILTER_PATH:-$SELF_DIR/postfilter_int8.pt}"
+      break
 ```
 
-## Explicit color contract
-
-- file: `submissions/robust_current/compress.sh`
-- why it matters: The encoded AV1 stream now carries explicit `tv/bt709` metadata.
-
-```bash
-  if [ "$VIDEO_CODEC" = "libsvtav1" ]; then
-    "$FFMPEG_BIN" -y -i "$in_path" \
-      -vf "$vf_chain" \
-      -an -c:v libsvtav1 \
-      -preset "$SVT_AV1_PRESET" \
-      -crf "$SVT_AV1_CRF" \
-      -svtav1-params "$SVT_AV1_PARAMS" \
-      -color_range "$SOURCE_COLOR_RANGE" \
-      -colorspace "$SOURCE_COLOR_MATRIX" \
-      -color_primaries "$SOURCE_COLOR_PRIMARIES" \
-      -color_trc "$SOURCE_COLOR_TRC" \
-      "$out_path"
-```
-
-## Rule-faithful payload accounting
+## Runtime payload includes learned assets
 
 - file: `src/comma_lab/install.py`
-- why it matters: The honest payload under test is explicit and small.
+- why it matters: The honest installed payload explicitly includes the post-filter script and weights.
 
 ```bash
-INSTALL_PAYLOADS: dict[str, tuple[str, ...]] = {
-    "exact_current": (
-        "archive.zip",
         "inflate.sh",
         "inflate.py",
     ),
     "robust_current": (
         "archive.zip",
         "inflate.sh",
+        "inflate.py",
+        "inflate_postfilter.py",
+        "inflate_grain_mask.py",
+        "postfilter_int8.pt",
         "config.env",
-        "analyze_roi.py",
-    ),
 ```
 
-## AV1 + ROI fail-fast guard
+## Shipped post-filter module
 
-- file: `submissions/robust_current/compress.sh`
-- why it matters: Unsupported AV1+ROI combinations fail loudly instead of silently drifting into x265-only behavior.
+- file: `submissions/robust_current/inflate_postfilter.py`
+- why it matters: The filter is a tiny residual CNN loaded from shipped int8 weights.
 
 ```bash
-if [ "$ROI_ENABLE" = "1" ] && [ "$VIDEO_CODEC" != "libx265" ]; then
-  echo "ERROR: ROI packaging currently supports VIDEO_CODEC=libx265 only." >&2
-  echo "Disable ROI or switch VIDEO_CODEC to libx265 before packaging." >&2
-  exit 1
+#!/usr/bin/env python
+"""Inflate path with learned post-filter applied after bicubic upscale.
+
+The post-filter is a tiny CNN (3,203 params, 7.5KB int8) trained directly
+against the scorer's loss function via backprop. It learns to correct the
+decoded video to maximize PoseNet+SegNet scores.
+"""
+import sys
+from pathlib import Path
+
+import numpy as np
+import torch
+import torch.nn as nn
+import torch.nn.functional as F
+import av
+
+
+DEFAULT_POSTFILTER_META = {
+    "variant": "residual",
+    "hidden": 16,
+    "kernel": 3,
+}
+
+
+# ============================================================
+# Post-filter model (matches training architecture)
+# ============================================================
+class PostFilter(nn.Module):
+    def __init__(self, hidden=16, kernel=3):
+        super().__init__()
+        pad = kernel // 2
+        self.conv1 = nn.Conv2d(3, hidden, kernel, padding=pad, bias=True)
+        self.conv2 = nn.Conv2d(hidden, hidden, kernel, padding=pad, bias=True)
+        self.conv3 = nn.Conv2d(hidden, 3, kernel, padding=pad, bias=True)
+        self.act = nn.ReLU(inplace=True)
+
+    def forward(self, x):
+        residual = self.act(self.conv1(x))
+        residual = self.act(self.conv2(residual))
+        residual = self.conv3(residual)
 ```
