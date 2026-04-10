@@ -2516,3 +2516,24 @@ The partner's `save_best_checkpoint` function evaluates the EMA weights AFTER in
 ### writeup
 - competition writeup draft completed (1800 words)
 - ready for PR submission with current 1.727 floor
+
+## 2026-04-09 20:30:00 -0500 - full experiment inventory, dilated variant bug rediscovered
+
+### complete inventory (ranked by scorer)
+- promoted floor: 3.547 (long1000_h64, ep 918 → 1.727 official)
+- dilated_h64: 3.575 (partner, ep 386) — NEVER proxy-scored, variant meta bug
+- standard_h64_long2500: 3.658 (active, ep 523, saliency-fixed run)
+- h=96: 3.802 (partner, ep 286, OOM'd — Modal should beat this)
+- 30+ total checkpoints across all experiments
+
+### dilated variant bug
+- dilated_h64_long1000 scorer 3.575 — BELOW promoted floor
+- BUT meta says variant="saliency_weighted" (wrong — should be "dilated")
+- the 1.99 proxy rejection was for PixelShuffle, NOT plain dilated
+- plain dilated was never proxy-scored due to this metadata mismatch
+- could be a quick promotion candidate if meta is fixed
+
+### decision
+- continue standard h=64 (3.658, converging, saliency fix working)
+- wait for Modal h=96 results
+- the dilated variant is interesting but council says focus on width scaling
