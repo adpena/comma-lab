@@ -115,6 +115,18 @@ A candidate may be promoted only after:
 - Add sparse residuals before adding heavier learned components.
 - Only promote a neural side-model if its bytes and runtime clearly justify themselves.
 
+## Tooling — non-negotiable
+
+- **Always use `uv`** for Python package management. Never use raw `pip`, `pip3`, or `pip install`.
+  - Install packages: `uv pip install <pkg>`
+  - Create venvs: `uv venv`
+  - Run scripts: `.venv/bin/python` (the uv-managed venv)
+  - On remote machines: install uv first (`curl -LsSf https://astral.sh/uv/install.sh | sh`), then `uv venv && uv pip install ...`
+- **Always use the tac library** for new training experiments. The canonical entry point is `experiments/train_tac.py`.
+  - Do NOT duplicate training code in new experiment scripts.
+  - All loss functions, architectures, data loading, and training loops live in `src/tac/`.
+- **Always commit after every change.** Git history is the research timeline.
+
 ## Ralph-style execution model
 
 Treat files and git as memory.
