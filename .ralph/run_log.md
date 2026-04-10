@@ -73,7 +73,7 @@
 ### verification
 - `python3 -m unittest -q experiments.test_task_codec_core`
 
-## 2026-04-09 19:56:00 -0500 - Kaggle v4 switched to direct code files and is running
+## 2026-04-09 20:14:00 -0500 - Kaggle v5 added P100-safe fallback and is running
 
 ### new execution model
 - `experiments/build_kaggle_kernels.py` now points the Kaggle kernels at the self-contained trainers directly:
@@ -82,9 +82,13 @@
 - `kaggle_kernel_builder.py` now supports direct code-file kernels in addition to launcher-based bundles
 
 ### remote status
-- `adpena/comma-lab-dilated-h64-long1000`: `KernelWorkerStatus.RUNNING`
-- `adpena/comma-lab-segnet-attack-fixed-h32`: `KernelWorkerStatus.RUNNING`
+- `adpena/comma-lab-dilated-h64-long1000`: `KernelWorkerStatus.RUNNING` on version 5
+- `adpena/comma-lab-segnet-attack-fixed-h32`: `KernelWorkerStatus.RUNNING` on version 5
 - `adpena/comma-lab-pairaware-smoke`: still blocked by the 2-session GPU quota
+
+### additional hardening
+- `train_postfilter_dilated_h64.py` now resolves flattened archive assets by basename and falls back to CPU when Kaggle exposes unsupported P100 CUDA
+- `cloud_segnet_attack_h32_trainer.py` now does the same
 
 ### verification
 - `python3 -m unittest -q experiments.test_kaggle_kernel_builder experiments.test_kaggle_status_sync`

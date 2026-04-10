@@ -1,4 +1,4 @@
-# Current Focus — 2026-04-09 19:56 CDT
+# Current Focus — 2026-04-09 20:14 CDT
 
 ## Floor
 - **Promoted honest floor**: `1.73` from `robust_current-long1000-h64-promoted-cpu-2026-04-09`
@@ -36,9 +36,10 @@
   - `experiments/train_postfilter_segnet_attack.py` now writes a durable `postfilter_<tag>_final_meta.json`
   - if a best checkpoint payload exists, it also backstops the adjacent `postfilter_<tag>_best_meta.json`
 - Kaggle integration is now on the repaired direct-code-file path:
-  - `adpena/comma-lab-dilated-h64-long1000` version 4 is running
-  - `adpena/comma-lab-segnet-attack-fixed-h32` version 4 is running
+  - `adpena/comma-lab-dilated-h64-long1000` version 5 is running
+  - `adpena/comma-lab-segnet-attack-fixed-h32` version 5 is running
   - root fix: stop relying on helper-module imports and make the kernel code file the self-contained trainer itself
+  - the trainers now also fall back to CPU on Kaggle's unsupported P100 CUDA path instead of crashing immediately
   - `adpena/comma-lab-pairaware-smoke` is still ready but blocked by Kaggle's maximum batch GPU session count of `2`
 - operator templates now exist under `configs/run_manifests/`
 - private ops surfaces stay in-repo:
