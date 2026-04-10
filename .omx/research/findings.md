@@ -29,8 +29,9 @@
    - `configs/run_manifests/run_status.template.json`
    - `docs/operator_run_manifest_templates.md`
 5. Under a free-tier-first strategy, Kaggle is the primary GPU training surface, Modal is the secondary GPU fallback, and Coiled is best treated as CPU-side fan-out for audits/reporting rather than the main training path.
-6. Kaggle is now not just “integrated” on paper; it is actually saturated. `adpena/comma-lab-dilated-h64-long1000` and `adpena/comma-lab-segnet-attack-fixed-h32` are both running as private GPU kernels, and `pairaware_smoke` was blocked by Kaggle's maximum batch GPU session count of `2`.
-7. The first Kaggle launch attempt exposed a real bootstrap bug: the generic runner assumed the image already had our Python/video dependencies and `git-lfs`. That is now hardened in `experiments/kaggle_kernel_builder.py`, and version 2 of both real training kernels has been pushed with runtime dependency installation plus upstream clone/LFS bootstrap.
+6. Kaggle is now not just “integrated” on paper; it is actually being exercised. But the current helper-file bundle strategy is still broken. Version 3 of both `adpena/comma-lab-dilated-h64-long1000` and `adpena/comma-lab-segnet-attack-fixed-h32` errored even after the writable-root bootstrap fix, and `pairaware_smoke` remains blocked by Kaggle's maximum batch GPU session count of `2`.
+7. The first Kaggle launch attempt exposed a real bootstrap bug: the generic runner assumed the image already had our Python/video dependencies and `git-lfs`. That is now hardened in `experiments/kaggle_kernel_builder.py`.
+8. The next Kaggle failure exposed the deeper integration truth: Kaggle effectively executes only the main code file, so helper modules from the uploaded bundle are not reliably importable at runtime. The evidence is now on disk under `reports/raw/2026-04-09-kaggle-launch-debug/`, where both version-3 logs fail on `ModuleNotFoundError` for the helper trainer modules.
 
 ## 2026-04-09 SegNet fixed faithful proxy resolution
 

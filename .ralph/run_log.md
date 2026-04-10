@@ -40,6 +40,39 @@
   - `.omx/status/kaggle-segnet-attack-fixed-h32.json`
   - `.omx/status/kaggle-pairaware-smoke.json`
 
+## 2026-04-09 19:15:00 -0500 - Kaggle v3 exposed the deeper code-file-only constraint
+
+### status reality
+- `adpena/comma-lab-dilated-h64-long1000`: `KernelWorkerStatus.ERROR`
+- `adpena/comma-lab-segnet-attack-fixed-h32`: `KernelWorkerStatus.ERROR`
+
+### evidence
+- `reports/raw/2026-04-09-kaggle-launch-debug/comma-lab-dilated-h64-long1000-v3.log`
+- `reports/raw/2026-04-09-kaggle-launch-debug/comma-lab-segnet-attack-fixed-h32-v3.log`
+
+### root cause
+- the writable-root bootstrap fixed the old `/kaggle/src/workspace` read-only failure
+- but Kaggle still only executes the main code file
+- helper trainer modules like `train_postfilter_dilated_h64` and `train_postfilter_segnet_attack` are not reliably present/importable at runtime
+
+### decision
+- stop pretending the current helper-file Kaggle bundle strategy is viable
+- next Kaggle fix must use truly self-contained single-script trainers
+
+## 2026-04-09 19:15:00 -0500 - task_codec resume state landed
+
+### additions
+- `src/comma_lab/task_codec/state.py`
+- resume-state exports added in `src/comma_lab/task_codec/__init__.py`
+- `src/comma_lab/task_codec/quantization.py` now supports hydrating from in-memory best payloads
+
+### capability
+- `FinalMetadata` and `ResumeState` can now reconstruct best/final sidecar state from `*_best_meta.json` and `*_final_meta.json`
+- this gives the next remote relaunches a disk-backed resume surface instead of relying on chat memory
+
+### verification
+- `python3 -m unittest -q experiments.test_task_codec_core`
+
 ## 2026-04-09 18:00:00 -0500 - SegNet trainer metadata gap hardened
 
 ### bug surface

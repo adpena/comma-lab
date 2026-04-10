@@ -1,6 +1,6 @@
 # next experiments
 
-## 2026-04-09 queue after Kaggle launch saturation
+## 2026-04-09 queue after Kaggle multi-file launch failure
 
 The promoted honest floor is still `1.73` from `long1000_h64`. Two deploy-ready alternates have now been resolved honestly and rejected:
 
@@ -32,11 +32,11 @@ That means the next cycle should stop pretending those families are active promo
      - saved meta still says `variant: "saliency_weighted"`
      - current artifact is observation-only until relaunched through the repo-side deploy-correct wrapper
    - Status:
-     - Kaggle kernel `adpena/comma-lab-dilated-h64-long1000` is now running
-     - manifest: `.omx/logs/remote_jobs/kaggle-dilated-h64-long1000.json`
+     - Kaggle kernel `adpena/comma-lab-dilated-h64-long1000` version 3 errored
+     - latest log: `reports/raw/2026-04-09-kaggle-launch-debug/comma-lab-dilated-h64-long1000-v3.log`
    - Action:
-     - poll Kaggle status until the first artifact lands
-     - mirror progress into `.omx/status/kaggle-dilated-h64-long1000.json`
+     - replace the current multi-file Kaggle bundle with a truly self-contained single-script kernel
+     - keep deploy-correct metadata as a non-negotiable requirement
 
 2. **PF-SEGNET CHECKPOINTING RELAUNCH**
    - Why second:
@@ -44,11 +44,11 @@ That means the next cycle should stop pretending those families are active promo
      - `segnet_attack_fixed_ste_h32` just proved the family can transfer honestly to `1.84`
      - the metadata gap is now fixed for future reruns, so the next launch can be both rankable and automatable
    - Status:
-     - Kaggle kernel `adpena/comma-lab-segnet-attack-fixed-h32` is now running
-     - manifest: `.omx/logs/remote_jobs/kaggle-segnet-attack-fixed-h32.json`
+     - Kaggle kernel `adpena/comma-lab-segnet-attack-fixed-h32` version 3 errored
+     - latest log: `reports/raw/2026-04-09-kaggle-launch-debug/comma-lab-segnet-attack-fixed-h32-v3.log`
    - Action:
-     - poll Kaggle status until the first artifact lands
-     - confirm the hardened metadata path is actually exercised in the remote run
+     - replace the current multi-file Kaggle bundle with a truly self-contained single-script kernel
+     - keep the hardened metadata path from `train_postfilter_segnet_attack.py`
 
 3. **PF-PAIRAWARE**
    - Why third:
@@ -64,9 +64,8 @@ That means the next cycle should stop pretending those families are active promo
 
 - **Kaggle**
   - primary free-tier GPU lane for long training jobs
-  - currently saturated with:
-    - deploy-correct dilated
-    - fresh SegNet fixed rerun
+  - current hard blocker:
+    - code-file-only execution means the current helper-file bundle strategy is not sufficient
 - **Modal**
   - secondary GPU lane when Kaggle is blocked or you need a cleaner Python/runtime story
   - immediate fallback for pair-aware if the Kaggle quota does not clear
