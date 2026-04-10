@@ -11,6 +11,7 @@ Track B's promoted honest floor is now **`1.73`** after the `h64` long-horizon Q
 - Scheduler results: `comma-lab sched results`
 - Scheduler budget: `comma-lab sched budget`
 - Default platform registry: `configs/platforms.json`
+- Kaggle bundle builder: `experiments/build_kaggle_kernels.py`
 
 ## authoritative promoted floor
 
@@ -75,6 +76,14 @@ Track B's promoted honest floor is now **`1.73`** after the `h64` long-horizon Q
   - `configs/platforms.json` now defines `local`, `bat00`, `kaggle`, `modal`, and `coiled`
   - `configs/run_manifests/` now contains neutral Kaggle/Modal/Coiled manifest templates plus a shared status template
   - scheduler compatibility now tolerates legacy manifests without `run_id` and counts `running_managed_session` as active
+- Kaggle is now doing real GPU work, not just sitting in the plan:
+  - `adpena/comma-lab-dilated-h64-long1000` is running on Kaggle GPU
+  - `adpena/comma-lab-segnet-attack-fixed-h32` is running on Kaggle GPU
+  - `pairaware_smoke` is built and ready, but currently blocked by Kaggle's free-tier maximum of two batch GPU sessions
+- The Kaggle launch surface itself is now hardened:
+  - `experiments/kaggle_kernel_builder.py`
+  - `experiments/build_kaggle_kernels.py`
+  - the version-2 Kaggle kernels install missing Python deps plus `git-lfs` before cloning upstream
 - Future-facing experiment code is now on disk too:
   - `experiments/train_postfilter_dilated_h64.py`
   - `experiments/train_postfilter_pixelshuffle_dilated.py`
