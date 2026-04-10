@@ -48,6 +48,11 @@ DEFAULTS = {
 def main():
     parser = argparse.ArgumentParser(description="Train with tac library")
 
+    # Named profiles (council-recommended settings)
+    parser.add_argument("--profile", default=None,
+                        help="Named profile from tac.profiles (e.g., council_v1, segnet_attack, smoke). "
+                        "CLI args override profile values.")
+
     # Paths (all overridable, with sensible local defaults)
     parser.add_argument("--archive", default=os.environ.get("TAC_ARCHIVE", DEFAULTS["archive"]),
                         help="Compressed archive.zip to train on")
@@ -79,6 +84,8 @@ def main():
                         help="Evaluate int8 checkpoint every N epochs (default 5)")
     parser.add_argument("--hard-frame-ratio", type=float, default=0.0,
                         help="Fraction of hard SegNet pairs to oversample (0=uniform, 0.5=half hard)")
+    parser.add_argument("--error-replay-every", type=int, default=0,
+                        help="Recompute hard-frame weights using model output every N epochs (0=static)")
 
     # Loss mode
     parser.add_argument("--loss-mode", default="standard", choices=["standard", "temperature", "focal_ste", "kl_distill"])
@@ -147,28 +154,46 @@ def main():
     print(f"[train_tac] Model: {args.variant} h={args.hidden} "
           f"({sum(p.numel() for p in model.parameters())} params)")
 
-    # Build config
+    # Build config — profile provides defaults, CLI args override
+    profile_defaults = {}
+    if args.profile:
+        from tac.profiles import PROFILES
+        if args.profile not in PROFILES:
+            print(f"ERROR: unknown profile '{args.profile}'. Available: {list(PROFILES.keys())}")
+            sys.exit(1)
+        profile_defaults = PROFILES[args.profile]
+        print(f"[train_tac] Using profile: {args.profile}")
+
+    def _val(cli_arg, profile_key, cli_default):
+        """CLI arg wins if explicitly set (differs from argparse default), else profile."""
+        cli_val = getattr(args, cli_arg.replace("-", "_"))
+        if cli_val != cli_default and cli_arg.replace("-", "_") in vars(args):
+            return cli_val
+        return profile_defaults.get(profile_key, cli_val)
+
     config = TrainConfig(
-        hidden=args.hidden,
-        kernel=args.kernel,
-        variant=args.variant,
-        epochs=args.epochs,
-        alpha=args.alpha,
-        sal_lambda=args.sal_lambda,
-        lr=args.lr,
-        ema_decay=args.ema_decay,
-        accum_steps=args.accum_steps,
-        eval_every=args.eval_every,
-        hard_frame_ratio=args.hard_frame_ratio,
-        loss_mode=args.loss_mode,
-        temperature_start=args.temperature_start,
-        temperature_end=args.temperature_end,
-        focal_gamma=args.focal_gamma,
-        segnet_loss_weight=args.segnet_loss_weight,
-        use_dual_saliency=args.use_dual_saliency,
-        alpha_seg=args.alpha_seg,
-        use_ste_segnet=args.use_ste,
-        boundary_weight=args.boundary_weight,
+        hidden=_val("hidden", "hidden", 64),
+        kernel=_val("kernel", "kernel", 3),
+        variant=_val("variant", "variant", "standard"),
+        epochs=_val("epochs", "epochs", 2500),
+        alpha=_val("alpha", "alpha", 20.0),
+        sal_lambda=_val("sal-lambda", "sal_lambda", 1.0),
+        lr=_val("lr", "lr", 5e-4),
+        ema_decay=_val("ema-decay", "ema_decay", 0.997),
+        accum_steps=_val("accum-steps", "accum_steps", 4),
+        eval_every=_val("eval-every", "eval_every", 5),
+        hard_frame_ratio=_val("hard-frame-ratio", "hard_frame_ratio", 0.0),
+        error_replay_every=_val("error-replay-every", "error_replay_every", 0),
+        loss_mode=_val("loss-mode", "loss_mode", "standard"),
+        temperature_start=_val("temperature-start", "temperature_start", 1.0),
+        temperature_end=_val("temperature-end", "temperature_end", 0.05),
+        focal_gamma=_val("focal-gamma", "focal_gamma", 2.0),
+        segnet_loss_weight=_val("segnet-loss-weight", "segnet_loss_weight", 100.0),
+        use_dual_saliency=args.use_dual_saliency or profile_defaults.get("use_dual_saliency", False),
+        alpha_seg=_val("alpha-seg", "alpha_seg", 200.0),
+        use_ste_segnet=args.use_ste or profile_defaults.get("use_ste_segnet", False),
+        boundary_weight=_val("boundary-weight", "boundary_weight", 1.0),
+        boundary_anneal=profile_defaults.get("boundary_anneal", False),
         resume_from=args.resume_from,
         output_dir=args.output_dir,
         tag=args.tag,

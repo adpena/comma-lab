@@ -367,9 +367,13 @@ def kl_distill_scorer_loss(
     # KL(q || p) per pixel: sum over classes, keep spatial dims
     kl_per_pixel = F.kl_div(log_p, q, reduction="none").sum(dim=1)  # (B, H, W)
 
+    # T² scaling FIRST (Hinton 2015): compensates for KL compression at high T.
+    # Applied per-pixel before spatial averaging — this is a property of the KL
+    # divergence geometry, independent of spatial weighting.
+    kl_per_pixel = kl_per_pixel * (T * T)
+
     # Boundary weighting: amplify gradients at class boundaries
     if boundary_mask is not None:
-        # Resize boundary mask to match SegNet resolution (384, 512)
         bm = boundary_mask.to(kl_per_pixel.device)
         if bm.shape != kl_per_pixel.shape[-2:]:
             bm = F.interpolate(
@@ -378,12 +382,16 @@ def kl_distill_scorer_loss(
                 mode="nearest",
             ).squeeze(0).squeeze(0)
         weight = 1.0 + boundary_weight * bm
+        weight = weight / weight.mean()  # normalize to preserve loss scale
         kl_per_pixel = kl_per_pixel * weight
 
-    # T² scaling (Hinton 2015): keeps gradient magnitude consistent across temperatures
-    seg_kl = kl_per_pixel.mean() * (T * T)
+    seg_kl = kl_per_pixel.mean()
 
-    loss = segnet_weight * seg_kl + torch.sqrt(10.0 * pose_dist + 1e-8)
+    # PoseNet gradient cap: stop pushing PoseNet once it's already good.
+    # At pose < 0.005, further improvement yields diminishing score returns
+    # (sqrt is concave). Redirect all capacity to SegNet.
+    pose_capped = torch.clamp(pose_dist, min=0.001)
+    loss = segnet_weight * seg_kl + torch.sqrt(10.0 * pose_capped + 1e-8)
     return loss, pose_dist.item(), seg_kl.item()
 
 

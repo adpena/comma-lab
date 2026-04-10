@@ -28,16 +28,27 @@ class FakeQuantSTE(torch.autograd.Function):
     @staticmethod
     def forward(ctx, w: torch.Tensor) -> torch.Tensor:
         with torch.no_grad():
-            scale = w.detach().abs().max() / 127.0
-            if scale.item() < 1e-10:
-                ctx.save_for_backward(torch.zeros_like(w, dtype=torch.bool))
-                return w
-            q = (w / scale).round().clamp(-128.0, 127.0)
-            # Zero gradient only for values that were ACTUALLY clipped,
-            # not those that merely round to the boundary. Pre-round check.
-            saturated = (w / scale).abs() > 127.5
-            ctx.save_for_backward(saturated)
-            return q * scale
+            if w.ndim >= 2:
+                # Per-channel: scale per output channel (dim 0)
+                # Matches _save_checkpoint and _evaluate_int8 per-channel path
+                flat = w.detach().reshape(w.shape[0], -1)
+                scale = flat.abs().amax(dim=1) / 127.0
+                scale = scale.clamp(min=1e-10)
+                scale_view = scale.reshape(-1, *([1] * (w.ndim - 1)))
+                q = (w / scale_view).round().clamp(-128.0, 127.0)
+                saturated = (w / scale_view).abs() > 127.5
+                ctx.save_for_backward(saturated)
+                return q * scale_view
+            else:
+                # Per-tensor for 1D (bias)
+                scale = w.detach().abs().max() / 127.0
+                if scale.item() < 1e-10:
+                    ctx.save_for_backward(torch.zeros_like(w, dtype=torch.bool))
+                    return w
+                q = (w / scale).round().clamp(-128.0, 127.0)
+                saturated = (w / scale).abs() > 127.5
+                ctx.save_for_backward(saturated)
+                return q * scale
 
     @staticmethod
     def backward(ctx, grad_out: torch.Tensor) -> torch.Tensor:

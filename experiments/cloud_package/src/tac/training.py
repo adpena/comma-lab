@@ -91,6 +91,11 @@ class TrainConfig(BaseModel):
     hard_frame_ratio: float = Field(0.0, ge=0.0, le=1.0,
                                      description="Fraction of training pairs to oversample from hardest SegNet frames. "
                                      "0.0 = uniform sampling, 0.5 = half hard / half uniform.")
+    error_replay_every: int = Field(0, ge=0,
+                                     description="Recompute hard-frame weights using current model output every N epochs. "
+                                     "0 = static (compute once at start). 200 = adaptive every 200 epochs.")
+    boundary_anneal: bool = Field(False, description="Couple boundary_weight to temperature: "
+                                  "increases boundary attention as T decreases (maintains gradient pressure)")
     eval_holdout: float = Field(0.0, ge=0.0, le=0.5,
                                 description="Fraction of pairs held out for eval. "
                                 "0.0 = contest mode (train+eval on all pairs). "
@@ -117,10 +122,10 @@ class TrainConfig(BaseModel):
                     f"kl_distill requires temperature_start >= 2.0 (Hinton: anneal 5.0→1.0). "
                     f"Got {self.temperature_start}. Use --temperature-start 5.0 --temperature-end 1.0"
                 )
-            if self.temperature_end < 1.0:
+            if self.temperature_end < 0.1:
                 raise ValueError(
-                    f"kl_distill requires temperature_end >= 1.0 (never go below T=1). "
-                    f"Got {self.temperature_end}. Use --temperature-end 1.0"
+                    f"kl_distill requires temperature_end >= 0.1 (below 0.1 is numerically unstable). "
+                    f"Got {self.temperature_end}. Use --temperature-end 0.2 for aggressive argmax pressure"
                 )
         return self
 
@@ -249,11 +254,11 @@ class Trainer:
 
         if config.scheduler == "cosine":
             self.scheduler = torch.optim.lr_scheduler.CosineAnnealingLR(
-                self.optimizer, T_max=config.epochs - config.warmup_epochs, eta_min=1e-6
+                self.optimizer, T_max=config.epochs - config.warmup_epochs, eta_min=1e-5
             )
         else:
             self.scheduler = torch.optim.lr_scheduler.CosineAnnealingWarmRestarts(
-                self.optimizer, T_0=config.restart_t0, T_mult=config.restart_tmult, eta_min=1e-6
+                self.optimizer, T_0=config.restart_t0, T_mult=config.restart_tmult, eta_min=1e-5
             )
 
         # Resume from checkpoint if specified (must come after optimizer/scheduler init)
@@ -743,24 +748,53 @@ class Trainer:
 
         # Hard-frame curriculum: precompute per-pair SegNet disagreement for weighted sampling
         hard_frame_weights = None
-        if cfg.hard_frame_ratio > 0:
+
+        def _compute_hard_frame_weights(use_model: bool = False, label: str = "init"):
+            """Compute weighted sampling from per-pair SegNet difficulty.
+
+            Args:
+                use_model: if True, run current model on compressed frames first (error replay).
+                    if False, measure raw compressed vs GT (static curriculum).
+                label: log label for this recomputation.
+            """
             from .losses import eval_scorer_loss
-            print(f"[trainer-lazy] Precomputing per-pair SegNet difficulty for hard-frame curriculum...")
+            print(f"[trainer-lazy] Computing hard-frame weights ({label}, "
+                  f"{'model output' if use_model else 'raw compressed'})...")
             pair_difficulties = []
+            self.model.eval()
             with torch.no_grad():
                 for start in train_pair_starts:
                     gt_pair = pair_from_frames(gt_frames, start).to(self.device)
                     comp_pair = pair_from_frames(comp_frames, start).to(self.device)
-                    _, _, seg_d = eval_scorer_loss(comp_pair, gt_pair, posenet, segnet)
+                    if use_model:
+                        # Error replay: measure difficulty on model's CURRENT output
+                        filtered = self._apply_filter_to_pair(comp_pair)
+                        filtered = filtered.round().clamp(0, 255).to(torch.uint8).float()
+                        _, _, seg_d = eval_scorer_loss(filtered, gt_pair, posenet, segnet)
+                    else:
+                        _, _, seg_d = eval_scorer_loss(comp_pair, gt_pair, posenet, segnet)
                     pair_difficulties.append(seg_d)
+            self.model.train()
             difficulties = torch.tensor(pair_difficulties)
-            # Top 20% hardest get boosted weight
-            threshold = difficulties.quantile(0.8)
-            hard_frame_weights = torch.where(difficulties >= threshold, 3.0, 1.0)
-            hard_frame_weights = hard_frame_weights / hard_frame_weights.sum()
-            n_hard = (difficulties >= threshold).sum().item()
-            print(f"[trainer-lazy] Hard frames: {n_hard}/{n_train} (top 20%), "
-                  f"ratio={cfg.hard_frame_ratio:.1f}, avg difficulty={difficulties.mean():.6f}")
+            # Power-law continuous weighting (DeepSeek recommendation):
+            # ratio=0 → uniform, ratio=1 → linear rank, ratio=2 → quadratic emphasis
+            # Avoids the cliff-edge of a step function at the 80th percentile
+            ranks = torch.argsort(torch.argsort(difficulties)).float()
+            normalized_ranks = ranks / max(ranks.max().item(), 1.0)
+            # Add small epsilon so easiest frame still has nonzero weight
+            weights = (normalized_ranks + 0.01) ** max(cfg.hard_frame_ratio, 0.01)
+            weights = weights / weights.sum()
+            # Log the effective weight ratio
+            hardest_w = weights.max().item()
+            median_w = weights.median().item()
+            ratio_str = f"{hardest_w/median_w:.1f}x" if median_w > 0 else "inf"
+            print(f"[trainer-lazy] Hard frames: power-law ratio={cfg.hard_frame_ratio:.1f}, "
+                  f"hardest/median weight={ratio_str}, "
+                  f"avg difficulty={difficulties.mean():.6f}")
+            return weights
+
+        if cfg.hard_frame_ratio > 0:
+            hard_frame_weights = _compute_hard_frame_weights(use_model=False, label="init")
 
         if self._current_epoch > 0:
             print(f"[trainer-lazy] Resuming from epoch {self._current_epoch}")
@@ -775,9 +809,18 @@ class Trainer:
                 for pg in self.optimizer.param_groups:
                     pg["lr"] = lr
 
+            # Error replay: recompute hard-frame weights using current model output
+            if (hard_frame_weights is not None
+                    and cfg.error_replay_every > 0
+                    and epoch > 0
+                    and epoch % cfg.error_replay_every == 0):
+                hard_frame_weights = _compute_hard_frame_weights(
+                    use_model=True, label=f"error-replay-ep{epoch}")
+
             # Weighted or uniform sampling of training pairs
             if hard_frame_weights is not None and cfg.hard_frame_ratio > 0:
-                perm = torch.multinomial(hard_frame_weights, train_size, replacement=True)
+                # replacement=False preserves batch diversity within each epoch
+                perm = torch.multinomial(hard_frame_weights, min(train_size, n_train), replacement=False)
             else:
                 perm = torch.randperm(n_train)[:train_size]
 
@@ -812,11 +855,15 @@ class Trainer:
                     progress = epoch / max(cfg.epochs - 1, 1)
                     temp = cfg.temperature_start + progress * (cfg.temperature_end - cfg.temperature_start)
                     bm = self._boundary_masks.get(start) if self._boundary_masks else None
+                    # Coupled boundary annealing: increase boundary attention as T decreases
+                    bw = cfg.boundary_weight
+                    if cfg.boundary_anneal and temp > 0:
+                        bw = cfg.boundary_weight * min(3.0, cfg.temperature_start / max(temp, cfg.temperature_end))
                     loss, pd, sd = kl_distill_scorer_loss(
                         filtered, gt_pair, posenet, segnet,
                         temperature=temp,
                         boundary_mask=bm,
-                        boundary_weight=cfg.boundary_weight,
+                        boundary_weight=bw,
                         segnet_weight=cfg.segnet_loss_weight,
                     )
                 else:
@@ -928,7 +975,8 @@ class Trainer:
         total_p, total_s, count = 0.0, 0.0, 0
 
         # autocast reduces VRAM from ~6GB to ~0.2GB for scorer forward pass
-        autocast = torch.amp.autocast(str(self.device), enabled=torch.cuda.is_available())
+        use_autocast = str(self.device).startswith("cuda") and torch.cuda.is_available()
+        autocast = torch.amp.autocast("cuda", enabled=use_autocast)
         with torch.no_grad(), autocast:
             for start in eval_pair_starts:
                 comp_pair = pair_from_frames(comp_frames, start).to(self.device)

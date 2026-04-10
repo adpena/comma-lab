@@ -60,3 +60,6 @@ $PYTHON train_tac.py \
     --models-dir ./upstream/models \
     --upstream-dir ./upstream \
     $EXTRA_ARGS
+
+# Profile override (e.g., PROFILE=council_v1)
+[ -n "${PROFILE:-}" ] && EXTRA_ARGS="$EXTRA_ARGS --profile $PROFILE"
