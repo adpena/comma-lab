@@ -197,18 +197,28 @@ At our operating point, SegNet has roughly 590x more marginal impact than PoseNe
 
 Dual saliency with high alpha_seg (5000) tells the CNN to correct freely at SegNet boundaries while being cautious elsewhere. This is in training now.
 
-## Techniques staged or in progress
+## Hard-frame curriculum
 
-| Direction | Target | Status |
-|-----------|--------|--------|
-| Dual saliency (alpha_seg=5000) | SegNet boundaries | In training |
-| KL distillation (T=5→2→1) | SegNet soft targets | In training (Lightning T4 CUDA) |
-| Per-channel int8 quantization | Both (better fidelity) | Implemented, all new runs |
-| STE boundary weighting (5x) | SegNet gradient at edges | In training, stacked with dual sal |
-| Hard-frame curriculum | SegNet worst pairs | Next implementation |
-| Pair-aware 6ch architecture | PoseNet temporal | Implemented, undeployed |
-| h=96 dilated width scaling | Both | Modal A10G, ep 759 |
-| Test-time optimization | Both | Concept stage |
+The most impactful training-time discovery came from asking: which frame pairs actually matter?
+
+SegNet disagreement can only change at class boundary pixels — roughly 5% of each frame. Most of the 600 training pairs have very low SegNet error because the codec handles smooth regions well. Training uniformly across all pairs wastes 80% of gradient signal on pairs where SegNet is already correct.
+
+The fix: precompute per-pair SegNet disagreement at training start, then oversample the hardest 20% of pairs (6x boost with ratio=0.5). This concentrates the training budget where the score can actually improve. Combined with KL distillation, the hard-frame curriculum brought the training scorer to 1.38 within 47 epochs — a rate of convergence that previously took 900 epochs to achieve.
+
+## Encoder optimization
+
+We swept 6 encoder variants inspired by concurrent work in the competition: infinite GOP (keyint=-1), 10-bit YUV420, film-grain=30 with denoising disabled, and larger downscale resolution. All variants produced archives within 2% of our current 877KB. The full stack of encoder changes saved 1.7% on file size — equivalent to 0.01 score points on the rate term. Encoder-level optimization appears near its efficient frontier at these settings.
+
+## Techniques in progress
+
+| Direction | Target | Early Signal |
+|-----------|--------|-------------|
+| KL distillation + hard-frame | SegNet | 1.38 at ep 47 (Modal A10G) |
+| Dual saliency (alpha_seg=5000) | SegNet boundaries | 1.47 at ep 18 (Local MPS) |
+| KL distillation (T=5→1) | SegNet soft targets | 1.40 at ep 19 (Local MPS) |
+| h=96 dilated + dual sal | Both (scaling) | 1.46 at ep 46 (Modal A10G) |
+| Per-channel int8 quantization | Both | Implemented, all runs |
+| Hard-frame curriculum | SegNet worst pairs | Implemented, all new runs |
 
 The theoretical floor if all techniques compound: SegNet 0.003, PoseNet 0.001, rate 0.023 → score ~0.98.
 
