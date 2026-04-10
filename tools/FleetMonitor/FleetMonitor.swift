@@ -16,8 +16,8 @@ let LAST_BREAK = {
     c.timeZone = TimeZone(identifier: "America/Chicago")
     return Calendar.current.date(from: c)!
 }()
-let SCORE: Double = 1.727
-let LB = [(n: "PACT (ours)", s: 1.727), (n: "neural_inflate", s: 1.89), (n: "roi_v2", s: 1.94), (n: "av1_roi_lanczos", s: 1.95)]
+let SCORE: Double = 1.557
+let LB = [(n: "PACT (ours)", s: 1.557), (n: "neural_inflate", s: 1.89), (n: "roi_v2", s: 1.94), (n: "av1_roi_lanczos", s: 1.95)]
 
 // ── Data Model ─────────────────────────────────────────────────────
 struct Experiment: Identifiable {

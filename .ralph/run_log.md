@@ -1,5 +1,70 @@
 # run log
 
+## 2026-04-10 00:15:00 -0500 - tac v0.7.0 hardening session + 1.557 promoted
+
+### what happened
+- Found proxy scorer was using soft cosine SegNet (inflated, wrong metric). Fixed to hard argmax matching official scorer.
+- Found checkpoint selection used same soft metric — was picking suboptimal checkpoints. Fixed.
+- Found compute_boundary_mask bypassed preprocess_input (wrong resolution) and missing T-dimension. Fixed both.
+- Found inflate_postfilter.py crashed on "standard" variant. Fixed.
+- Found training state saves were non-atomic — MPS crash could destroy resume state. Fixed with tmp+rename.
+- Added signal handlers + atexit for emergency saves.
+- Converted TrainConfig to pydantic with 12 validators.
+- Wrote 54 tests (compliance, quantization, training, config). All passing.
+- Set up ruff + hypothesis fuzzing.
+- **Hardened proxy confirmed**: h=64 v1 checkpoint = 1.557 (vs promoted 1.718 = official 1.727)
+- **Promoted** 1.557 checkpoint to submissions/robust_current/postfilter_int8.pt
+- **Launched** v2 training with hardened evaluator: ep 11, scorer 1.4215
+
+### key numbers
+- promoted floor: 1.557 (hardened proxy, down from 1.727)
+- v2 training: ep 11, scorer 1.4215 (hard argmax, directly comparable to official)
+- leaderboard gap: +0.333 ahead of #2 (1.89)
+- 8 bugs fixed across 3 audit rounds
+
+## 2026-04-09 22:58:00 -0500 - standard_h64_long2500 faithfully proxied to 1.57
+
+### measured result
+- Artifact:
+  - `experiments/postfilter_weights/postfilter_standard_h64_long2500_best_int8.pt`
+- Saved-best metadata now on disk:
+  - epoch `1303`
+  - local scorer `3.443498338063558`
+  - int8 size `45,749`
+- Faithful local current_workflow result:
+  - score `1.57`
+  - PoseNet `0.01718145`
+  - SegNet `0.00580069`
+  - bytes `864,167`
+
+### interpretation
+- this is the strongest empirical result on the board now
+- it is below the promoted `1.73` floor by a large margin
+- but promotion still waits on a clean submission-path authoritative eval because the current eval lock/process lifecycle is stale
+
+## 2026-04-09 21:57:00 -0500 - standard_h64_long2500 took the free CPU proxy slot
+
+### new top empirical question
+- partner-produced artifact found on disk:
+  - `experiments/postfilter_weights/postfilter_standard_h64_long2500_best_meta.json`
+  - `experiments/postfilter_weights/postfilter_standard_h64_long2500_best_int8.pt`
+- saved best metadata:
+  - epoch `1090`
+  - scorer `3.501068318684896`
+  - int8 size `45,749`
+
+### interpretation
+- this is better locally than the promoted h64 best (`3.5472697671254476`)
+- simple proportional transfer points to roughly `1.704`
+- that makes it more urgent than further theory arguments about which lane “should” be best
+
+### action
+- launched faithful proxy:
+  - `.omx/logs/remote_jobs/local-standard-h64-long2500-proxy.json`
+  - log: `/tmp/pact-standard-h64-long2500-proxy.log`
+- decision:
+  - wait for the measured result before reprioritizing the whole queue
+
 ## 2026-04-09 19:05:00 -0500 - Kaggle became a real active GPU lane
 
 ### launch surface
