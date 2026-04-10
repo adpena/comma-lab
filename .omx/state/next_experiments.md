@@ -35,8 +35,10 @@ That means the next cycle should stop pretending those families are active promo
      - Kaggle kernel `adpena/comma-lab-dilated-h64-long1000` is currently `CANCEL_ACKNOWLEDGED`
      - the direct-code-file plus P100 fallback path is in place
      - private dataset `adpena/comma-lab-private-assets` now exists for the baseline archive
+     - Modal fallback `modal-dilated-h64-long1000` is now running as app `ap-oe1x7fZOSx1lQ2R4WTt51O`
    - Action:
-     - repush as soon as Kaggle frees a slot
+     - monitor the live Modal fallback
+     - repush on Kaggle as soon as Kaggle frees a slot
      - keep deploy-correct metadata as a non-negotiable requirement
      - `experiments/kaggle_queue_tick.py` now selects this lane automatically once the slot is really free
 

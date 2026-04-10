@@ -43,6 +43,9 @@
   - the baseline archive is now available as a private Kaggle dataset: `adpena/comma-lab-private-assets`
   - `experiments/kaggle_queue_tick.py` now picks the correct next repush candidate automatically; the current repush still fails only because Kaggle says the 2-session GPU cap is full
   - `adpena/comma-lab-pairaware-smoke` is still ready but blocked by Kaggle's maximum batch GPU session count of `2`
+- Modal fallback is now live:
+  - `modal-dilated-h64-long1000` is running as app `ap-oe1x7fZOSx1lQ2R4WTt51O`
+  - this relaunch got past the previous missing-archive failure after bundling `decode_base_archive.zip` into the image
 - operator templates now exist under `configs/run_manifests/`
 - private ops surfaces stay in-repo:
   - `reports/graphs/report_history.html`
@@ -52,5 +55,5 @@
 
 ## Next real moves
 1. Monitor the live Kaggle SegNet kernel and capture first checkpoint/artifact signals back into `.omx/status`.
-2. Repush the dataset-backed dilated kernel as soon as Kaggle frees a slot.
-3. Push `pairaware_smoke` only after that slot logic is clear, or move it to Modal.
+2. Monitor the live Modal dilated fallback for first checkpoint/artifact signals.
+3. Repush the dataset-backed Kaggle dilated kernel as soon as Kaggle frees a slot; push `pairaware_smoke` only after that slot logic is clear.

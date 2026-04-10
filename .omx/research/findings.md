@@ -35,6 +35,7 @@
 9. The right Kaggle execution model is therefore simpler than the original bundle plan: the kernel code file itself must be the self-contained trainer. The repo now has that path for both the deploy-correct dilated lane and the SegNet fixed h32 lane.
 10. Kaggle's Tesla P100 is still a real constraint. The self-contained cloud trainers now fall back to CPU when they detect unsupported sm_60 CUDA instead of crashing immediately, which keeps the run alive long enough to produce checkpoints and logs.
 11. The baseline archive is now staged through a private Kaggle dataset, `adpena/comma-lab-private-assets`, so future kernel attempts no longer need to depend on bundle-side data files for that asset.
+12. Modal is now a real active fallback, not just a design note. After bundling `decode_base_archive.zip` into the image, `modal-dilated-h64-long1000` is running as app `ap-oe1x7fZOSx1lQ2R4WTt51O`, which gives the blocked dilated family a live cloud path even while Kaggle slot churn continues.
 
 ## 2026-04-09 SegNet fixed faithful proxy resolution
 

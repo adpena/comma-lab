@@ -112,6 +112,24 @@
   - `Kernel push error: Maximum batch GPU session count of 2 reached.`
 - so the next actual action is still gated on Kaggle freeing a slot, not on local orchestration
 
+## 2026-04-09 21:47:41 -0500 - Modal dilated fallback is live
+
+### root cause / fix
+- the first Modal dilated launch failed because the image only shipped the trainer, not the baseline archive
+- `experiments/modal_dilated_h64_deploy.py` now also mounts `decode_base_archive.zip` into the image
+
+### current state
+- relaunch succeeded past the old missing-archive failure
+- Modal app:
+  - `ap-oe1x7fZOSx1lQ2R4WTt51O`
+  - app URL: `https://modal.com/apps/adpena/main/ap-oe1x7fZOSx1lQ2R4WTt51O`
+- durable state:
+  - `.omx/logs/remote_jobs/modal-dilated-h64-long1000.json`
+  - `.omx/status/modal-dilated-h64-long1000.json`
+
+### decision
+- keep Modal running as the live fallback for dilated while Kaggle slot churn blocks the Kaggle repush
+
 ## 2026-04-09 18:00:00 -0500 - SegNet trainer metadata gap hardened
 
 ### bug surface
@@ -2641,3 +2659,5 @@ The partner's `save_best_checkpoint` function evaluates the EMA weights AFTER in
 ### all 6 research docs complete
 - paper outline, portfolio plan, production analysis, openpilot pipeline,
   saliency deep-dive, SegNet headroom — all in docs/
+
+## 2026-04-09 21:45:21 - 🎯 standard_h64_long2500 crossed proxy threshold at scorer 3.5226, ep 960
