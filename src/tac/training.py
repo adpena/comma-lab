@@ -94,6 +94,8 @@ class TrainConfig(BaseModel):
     error_replay_every: int = Field(0, ge=0,
                                      description="Recompute hard-frame weights using current model output every N epochs. "
                                      "0 = static (compute once at start). 200 = adaptive every 200 epochs.")
+    boundary_anneal: bool = Field(False, description="Couple boundary_weight to temperature: "
+                                  "increases boundary attention as T decreases (maintains gradient pressure)")
     eval_holdout: float = Field(0.0, ge=0.0, le=0.5,
                                 description="Fraction of pairs held out for eval. "
                                 "0.0 = contest mode (train+eval on all pairs). "
@@ -774,14 +776,20 @@ class Trainer:
                     pair_difficulties.append(seg_d)
             self.model.train()
             difficulties = torch.tensor(pair_difficulties)
-            threshold = difficulties.quantile(0.8)
-            boost = 1.0 + cfg.hard_frame_ratio * 10.0
-            weights = torch.where(difficulties >= threshold, boost, 1.0)
+            # Power-law continuous weighting (DeepSeek recommendation):
+            # ratio=0 → uniform, ratio=1 → linear rank, ratio=2 → quadratic emphasis
+            # Avoids the cliff-edge of a step function at the 80th percentile
+            ranks = torch.argsort(torch.argsort(difficulties)).float()
+            normalized_ranks = ranks / max(ranks.max().item(), 1.0)
+            # Add small epsilon so easiest frame still has nonzero weight
+            weights = (normalized_ranks + 0.01) ** max(cfg.hard_frame_ratio, 0.01)
             weights = weights / weights.sum()
-            n_hard = (difficulties >= threshold).sum().item()
-            eff_prob = (weights[difficulties >= threshold].sum() * 100).item()
-            print(f"[trainer-lazy] Hard frames: {n_hard}/{n_train} (top 20%), "
-                  f"boost={boost:.0f}x, share={eff_prob:.0f}%, "
+            # Log the effective weight ratio
+            hardest_w = weights.max().item()
+            median_w = weights.median().item()
+            ratio_str = f"{hardest_w/median_w:.1f}x" if median_w > 0 else "inf"
+            print(f"[trainer-lazy] Hard frames: power-law ratio={cfg.hard_frame_ratio:.1f}, "
+                  f"hardest/median weight={ratio_str}, "
                   f"avg difficulty={difficulties.mean():.6f}")
             return weights
 
@@ -847,11 +855,15 @@ class Trainer:
                     progress = epoch / max(cfg.epochs - 1, 1)
                     temp = cfg.temperature_start + progress * (cfg.temperature_end - cfg.temperature_start)
                     bm = self._boundary_masks.get(start) if self._boundary_masks else None
+                    # Coupled boundary annealing: increase boundary attention as T decreases
+                    bw = cfg.boundary_weight
+                    if cfg.boundary_anneal and temp > 0:
+                        bw = cfg.boundary_weight * min(3.0, cfg.temperature_start / max(temp, cfg.temperature_end))
                     loss, pd, sd = kl_distill_scorer_loss(
                         filtered, gt_pair, posenet, segnet,
                         temperature=temp,
                         boundary_mask=bm,
-                        boundary_weight=cfg.boundary_weight,
+                        boundary_weight=bw,
                         segnet_weight=cfg.segnet_loss_weight,
                     )
                 else:
