@@ -77,8 +77,22 @@ SMOKE = {
     "loss_mode": "standard",
 }
 
+# Council V2: Adaptive weights (Einstein/Tao derivation, 2026-04-10)
+# Static placeholders below are overridden by AdaptiveWeights.rebalance() at runtime.
+# See src/tac/adaptive.py for the full mathematical derivation.
+COUNCIL_V2_ADAPTIVE = {
+    **COUNCIL_V1,
+    "segnet_loss_weight": 30.0,       # placeholder — overridden by AdaptiveWeights at runtime
+    "boundary_weight": 100.0,         # placeholder — overridden by AdaptiveWeights at runtime
+    "boundary_anneal": False,         # disabled: adaptive rebalance handles weight scheduling
+    "adaptive_rebalance": True,       # flag for Trainer to invoke AdaptiveWeights.rebalance()
+    "rebalance_every": 50,            # epochs between adaptive weight updates
+    "boundary_fraction": 0.05,        # measured beta for AdaptiveWeights init
+}
+
 PROFILES = {
     "council_v1": COUNCIL_V1,
+    "council_v2_adaptive": COUNCIL_V2_ADAPTIVE,
     "segnet_attack": SEGNET_ATTACK,
     "proven_baseline": PROVEN_BASELINE,
     "h96_council": H96_COUNCIL,

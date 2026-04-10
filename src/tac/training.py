@@ -100,6 +100,11 @@ class TrainConfig(BaseModel):
                                   "increases boundary attention as T decreases (maintains gradient pressure)")
     use_swa: bool = Field(False, description="Stochastic Weight Averaging over final 20% of training. "
                           "Wider minima → better int8 robustness.")
+    adaptive_rebalance: bool = Field(False, description="Enable adaptive weight rebalancing from "
+                                     "src/tac/adaptive.py. Derives segnet_weight and boundary_weight "
+                                     "from current (pose, seg) at each eval epoch.")
+    rebalance_every: int = Field(50, ge=1, description="Epochs between adaptive weight updates")
+    boundary_fraction: float = Field(0.05, gt=0.0, lt=1.0, description="Measured boundary pixel fraction (beta)")
     eval_holdout: float = Field(0.0, ge=0.0, le=0.5,
                                 description="Fraction of pairs held out for eval. "
                                 "0.0 = contest mode (train+eval on all pairs). "
@@ -251,6 +256,18 @@ class Trainer:
         self.best_epoch = -1
         self._patched_scorers = False
         self._current_epoch = 0
+        self._last_eval_pose = None
+        self._last_eval_seg = None
+        self._baseline_pose = None
+        self._baseline_seg = None
+
+        # Adaptive weights (council_v2_adaptive profile)
+        self._adaptive = None
+        if getattr(config, 'adaptive_rebalance', False):
+            from .adaptive import AdaptiveWeights
+            beta = getattr(config, 'boundary_fraction', 0.05)
+            self._adaptive = AdaptiveWeights(boundary_fraction=beta)
+            print(f"[trainer] Adaptive weights enabled (beta={beta})")
 
         self.optimizer = torch.optim.AdamW(
             model.parameters(), lr=config.lr, weight_decay=1e-4
@@ -874,23 +891,36 @@ class Trainer:
                         gamma=cfg.focal_gamma,
                     )
                 elif cfg.loss_mode == "kl_distill":
-                    # Hinton-style KL distillation: T anneals from 5.0 → 1.0
+                    # Hinton-style KL distillation: T anneals from 5.0 → 0.5
                     progress = epoch / max(cfg.epochs - 1, 1)
                     if cfg.temp_schedule == "exponential" and cfg.temperature_start > cfg.temperature_end:
                         temp = cfg.temperature_start * (cfg.temperature_end / cfg.temperature_start) ** progress
                     else:
                         temp = cfg.temperature_start + progress * (cfg.temperature_end - cfg.temperature_start)
                     bm = self._boundary_masks.get(start) if self._boundary_masks else None
-                    # Coupled boundary annealing: increase boundary attention as T decreases
-                    bw = cfg.boundary_weight
-                    if cfg.boundary_anneal and temp > 0:
-                        bw = cfg.boundary_weight * min(3.0, cfg.temperature_start / max(temp, cfg.temperature_end))
+
+                    # Adaptive or static weights
+                    if self._adaptive and self._last_eval_pose is not None:
+                        # Mathematically-derived: w_s*(p,T) = 20*sqrt(p/0.1)/T²
+                        result = self._adaptive.rebalance(
+                            eval_pose=self._last_eval_pose,
+                            eval_seg=self._last_eval_seg or 0.01,
+                            temperature=temp,
+                        )
+                        sw = result["segnet_weight"]
+                        bw = result["boundary_weight"]
+                    else:
+                        sw = cfg.segnet_loss_weight
+                        bw = cfg.boundary_weight
+                        if cfg.boundary_anneal and temp > 0:
+                            bw = bw * min(3.0, cfg.temperature_start / max(temp, cfg.temperature_end))
+
                     loss, pd, sd = kl_distill_scorer_loss(
                         filtered, gt_pair, posenet, segnet,
                         temperature=temp,
                         boundary_mask=bm,
                         boundary_weight=bw,
-                        segnet_weight=cfg.segnet_loss_weight,
+                        segnet_weight=sw,
                     )
                 else:
                     loss, pd, sd = scorer_loss(filtered, gt_pair, posenet, segnet)
