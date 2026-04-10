@@ -1,5 +1,15 @@
 #!/bin/bash
 set -euo pipefail
+
+# Find the right Python: conda cloudspace (Lightning), or system python3
+if [ -x /home/zeus/miniconda3/envs/cloudspace/bin/python ]; then
+    PYTHON=/home/zeus/miniconda3/envs/cloudspace/bin/python
+elif command -v python3 &>/dev/null; then
+    PYTHON=python3
+else
+    PYTHON=python
+fi
+
 export PYTHONPATH="$(pwd)/src:$(pwd)/upstream:${PYTHONPATH:-}"
 export PYTHONUNBUFFERED=1
 
@@ -26,7 +36,7 @@ echo "=== Training: tag=$TAG variant=$VARIANT h=$HIDDEN epochs=$EPOCHS loss=$LOS
 [ -n "$DUAL_SAL" ] && echo "=== Dual saliency: alpha_seg=$ALPHA_SEG ==="
 [ -n "$USE_STE" ] && echo "=== STE: boundary_weight=$BOUNDARY_WEIGHT ==="
 
-python3 train_tac.py \
+$PYTHON train_tac.py \
     --tag "$TAG" \
     --variant "$VARIANT" \
     --hidden "$HIDDEN" \
