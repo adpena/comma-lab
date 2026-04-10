@@ -1,16 +1,17 @@
-# Current Focus — 2026-04-10 13:00 CDT
+# Current Focus — 2026-04-10 21:00 CDT
 
 ## Floor
-- **Official score**: 1.52 (CPU)
+- **Official score**: 1.51 (authoritative scorer, confirmed)
 - **Leaderboard #1** by 0.37
 
-## Active training fleet (all free)
+## Active training fleet (all free, 5 lanes)
 | Lane | GPU | Epoch | Scorer | Notes |
 |------|-----|-------|--------|-------|
-| Local MPS | Apple Silicon | 119 | 1.459 | Standard h=64 |
-| Lightning T4 | NVIDIA T4 | 1 | 1.478 | Standard h=64, 79h/mo free |
-| Modal A10G | NVIDIA A10 | 741 | 0.940 | h=96 standard |
-| Colab T4 | NVIDIA T4 | ~0 | — | Standard h=64, 12h/wk free |
+| Local MPS | Apple Silicon | ~190 | 1.452 | Standard h=64 v5 |
+| bat00 RTX 2070 | CUDA 8GB | ~0 | — | Just launched, autocast fp16 |
+| Modal A10G | NVIDIA A10 | 759 | 0.940 | h=96 standard |
+| Modal Dilated | NVIDIA A10 | — | — | Dilated h=64 fallback |
+| Lightning T4 | NVIDIA T4 | ~53 | 1.455 | Standard h=64, 79h/mo free |
 
 ## tac v0.8.0 — battle hardened
 - 4 bug sweep rounds: 15+ bugs found and fixed
@@ -24,3 +25,7 @@
 - Pair-aware 6ch architecture
 - Nuclear H100 deploy
 - Video comparison tool for writeup
+
+## Stale items fixed this session
+- status.json updated from 1.727 to 1.51
+- Writeup updated from 1.52 to 1.51 (authoritative)

@@ -1,6 +1,6 @@
 # Beating the Leaderboard with a 45KB CNN: Task-Aware Compression for comma.ai's Video Challenge
 
-**Score: 1.52** | seg=0.00581, pose=0.0112, rate=0.0230 | **#1 by 0.37 margin**
+**Score: 1.51** | seg=0.00580, pose=0.01229, rate=0.0230 | **#1 by 0.37 margin**
 
 ---
 
@@ -94,7 +94,7 @@ We solved this with three techniques that compound:
 
 **Best-checkpoint int8 selection:** This is the key trick. At each checkpoint, we take the EMA weights, actually quantize them to int8, and evaluate the quantized model on the scorer -- using the corrected metric (hard argmax SegNet, uint8 round-trip, held-out frames). Most epochs produce bad int8 models. We save the rare epoch where the quantized weights happen to land in a good configuration.
 
-This mechanism is why our deployed score (1.52) nearly matches our canonical proxy (1.49). Without it, the gap would erase most of the CNN's benefit.
+This mechanism is why our deployed score (1.51) nearly matches our canonical proxy (1.49). Without it, the gap would erase most of the CNN's benefit.
 
 ## The critical insight: train on the submission archive
 
@@ -116,7 +116,7 @@ score = -0.159 * ln(h) + 2.382
 | 16 | ~3K | 1.92 |
 | 32 | ~12K | 1.845 |
 | 48 | ~19K | 1.762 |
-| 64 | ~40K | 1.52 |
+| 64 | ~40K | 1.51 |
 
 Each doubling of width buys measurable score improvement. The relationship held across all data points and told us that widening the model -- not inventing new architectures -- was the highest-leverage move available.
 
@@ -148,11 +148,11 @@ Apr 8:  1.99  -- QAT + EMA
         1.845 -- h=32
 Apr 9:  1.762 -- h=48
         1.727 -- h=64
-        1.52  -- hardening: fixed proxy metric, checkpoint selection,
+        1.51  -- hardening: fixed proxy metric, checkpoint selection,
                  boundary mask resolution, train/eval leakage, float32/uint8 gap
 ```
 
-The trajectory splits into three phases. Codec tuning (4.06 to 2.08) found the right AV1 configuration. Post-filter scaling (2.08 to 1.727) was capacity-driven improvement from a growing CNN. Hardening (1.727 to 1.52) came from fixing every place where our measurement diverged from the official scorer. The last phase delivered the largest single improvement and required zero architecture changes.
+The trajectory splits into three phases. Codec tuning (4.06 to 2.08) found the right AV1 configuration. Post-filter scaling (2.08 to 1.727) was capacity-driven improvement from a growing CNN. Hardening (1.727 to 1.51) came from fixing every place where our measurement diverged from the official scorer. The last phase delivered the largest single improvement and required zero architecture changes.
 
 ## What failed: 18 experiments and why
 
@@ -200,6 +200,7 @@ Three directions are staged and partially validated but not yet promoted to the 
 Training runs on a fleet of free-tier GPUs to maximize experiment throughput:
 
 - **Local MPS** (Apple Silicon) -- fast iteration, small models
+- **bat00 RTX 2070 Super** (WSL2 CUDA) -- 8GB VRAM with autocast fp16
 - **Colab T4** -- medium runs, free tier
 - **Modal A10G** -- large h=96 training, serverless
 - **Lightning T4** -- parallel sweeps
@@ -220,7 +221,7 @@ No paid compute was used. All results are reproducible on consumer hardware.
 
 1. **Task-aware beats task-agnostic.** A 45KB CNN trained against the actual scorer outperforms every codec-level optimization we tried. The insight is general: if you know what the downstream task cares about, optimizing for that task directly is more efficient than optimizing for generic quality.
 
-2. **Measurement rigor beats architecture search.** The 0.2-point improvement from hardening (1.727 to 1.52) was larger than any single architecture change. Five bugs in our proxy scorer were hiding 0.2 points of real performance. Fixing measurement before inventing new methods is the highest-ROI activity in any ML competition.
+2. **Measurement rigor beats architecture search.** The 0.22-point improvement from hardening (1.727 to 1.51) was larger than any single architecture change. Five bugs in our proxy scorer were hiding 0.22 points of real performance. Fixing measurement before inventing new methods is the highest-ROI activity in any ML competition.
 
 3. **Quantization is the bottleneck, not architecture.** The gap between float32 training and int8 deployment dominated our error budget. Best-checkpoint selection -- treating quantization as a stochastic process and searching for good realizations -- was the single most impactful training technique.
 
@@ -234,4 +235,4 @@ No paid compute was used. All results are reproducible on consumer hardware.
 
 ---
 
-*Score: 1.52 | #1 by 0.37 | 45KB int8 CNN | 40K params | SVT-AV1 CRF 34 | 864KB archive | CPU inference < 30s | 61 tests | 15 bugs fixed*
+*Score: 1.51 | #1 by 0.37 | 45KB int8 CNN | 40K params | SVT-AV1 CRF 34 | 864KB archive | CPU inference < 30s | 61 tests | 15 bugs fixed*

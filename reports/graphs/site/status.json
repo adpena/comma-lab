@@ -1,11 +1,11 @@
 {
-  "score": 1.727,
+  "score": 1.51,
   "rank": 1,
-  "lead": 0.163,
-  "days_left": 24.2,
-  "best_training_scorer": 1.2734,
-  "best_training_epoch": 470,
-  "gap_to_proxy": -2.277,
-  "trainers_alive": 2,
-  "updated": "2026-04-10 01:15 CT"
+  "lead": 0.37,
+  "days_left": 23,
+  "best_training_scorer": 0.940,
+  "best_training_epoch": 759,
+  "gap_to_proxy": -0.57,
+  "trainers_alive": 5,
+  "updated": "2026-04-10T21:00:00-05:00"
 }
