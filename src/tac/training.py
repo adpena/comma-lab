@@ -453,6 +453,8 @@ class Trainer:
         with torch.no_grad():
             for idx in range(0, len(comp_pairs), subsample):
                 filtered = self._apply_filter_to_pair(comp_pairs[idx])
+                # uint8 round-trip: matches official inflate → scorer pipeline
+                filtered = filtered.round().clamp(0, 255).to(torch.uint8).float()
                 score, pd, sd = eval_scorer_loss(filtered, gt_pairs[idx], posenet, segnet)
                 total_p += pd
                 total_s += sd
@@ -511,10 +513,13 @@ class Trainer:
         meta_tmp.rename(meta_path)
 
         # Durable backup — survives MPS SIGKILL which can't be caught
-        backup_dir = Path(".backups")
-        backup_dir.mkdir(parents=True, exist_ok=True)
+        # Use output_dir-relative path so it works on cloud platforms too
         import shutil
-        shutil.copy2(int8_path, backup_dir / f"postfilter_{tag}_best_int8.pt")
+        backup_dir = out_dir / ".backups"
+        backup_dir.mkdir(parents=True, exist_ok=True)
+        backup_tmp = backup_dir / f"postfilter_{tag}_best_int8.pt.tmp"
+        shutil.copy2(int8_path, backup_tmp)
+        backup_tmp.rename(backup_dir / f"postfilter_{tag}_best_int8.pt")
 
     def fit(
         self,
@@ -690,9 +695,10 @@ class Trainer:
         if cfg.sal_lambda == 0:
             print("[trainer-lazy] Saliency reconstruction DISABLED (sal_lambda=0)")
 
-        # Precompute boundary masks if dual saliency is enabled
+        # Precompute boundary masks if needed (dual saliency OR kl_distill with boundary weighting)
         self._boundary_masks = None
-        if cfg.use_dual_saliency:
+        needs_boundary = cfg.use_dual_saliency or (cfg.loss_mode == "kl_distill" and cfg.boundary_weight > 1.0)
+        if needs_boundary:
             from .losses import compute_boundary_mask
             print("[trainer-lazy] Computing SegNet boundary masks for dual saliency...")
             self._boundary_masks = {}

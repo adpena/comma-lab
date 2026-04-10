@@ -41,6 +41,26 @@ class PostFilter(nn.Module):
         return (x + residual).clamp(0, 255)
 
 
+class PairAwarePostFilter(nn.Module):
+    """6-channel pair-aware post-filter (target + context frames)."""
+    def __init__(self, hidden=64, kernel=3):
+        super().__init__()
+        pad = kernel // 2
+        self.conv1 = nn.Conv2d(6, hidden, kernel, padding=pad, bias=True)
+        self.conv2 = nn.Conv2d(hidden, hidden, kernel, padding=pad, bias=True)
+        self.conv3 = nn.Conv2d(hidden, 3, kernel, padding=pad, bias=True)
+        self.act = nn.ReLU(inplace=True)
+        nn.init.zeros_(self.conv3.weight)
+        nn.init.zeros_(self.conv3.bias)
+
+    def forward(self, x):
+        target = x[:, :3]
+        residual = self.act(self.conv1(x))
+        residual = self.act(self.conv2(residual))
+        residual = self.conv3(residual)
+        return (target + residual).clamp(0, 255)
+
+
 class DepthwisePostFilter(nn.Module):
     def __init__(self, hidden=16, kernel=3):
         super().__init__()
@@ -236,6 +256,10 @@ def build_postfilter(meta: object | None = None) -> PostFilter:
         return DilatedPostFilter(hidden=hidden, kernel=kernel)
     if variant == "film_conditioned":
         return FiLMPostFilter(hidden=hidden, kernel=kernel)
+    if variant == "psd":
+        return PixelShuffleDilatedPostFilter(hidden=hidden, kernel=kernel)
+    if variant == "pair_aware":
+        return PairAwarePostFilter(hidden=hidden, kernel=kernel)
     raise ValueError(f"Unsupported post-filter variant: {variant}")
 
 

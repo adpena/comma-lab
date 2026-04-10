@@ -99,10 +99,13 @@ def main():
     parser.add_argument("--output-dir", default="experiments/postfilter_weights")
     args = parser.parse_args()
 
-    # Validate paths
+    # Validate paths — saliency + models always needed, archive/video only without precomputed
+    for name, path in [("saliency", args.saliency), ("models-dir", args.models_dir)]:
+        if not Path(path).exists():
+            print(f"[train_tac] ERROR: {name} not found: {path}", file=sys.stderr)
+            sys.exit(1)
     if not args.precomputed:
-        for name, path in [("archive", args.archive), ("gt-video", args.gt_video),
-                           ("saliency", args.saliency), ("models-dir", args.models_dir)]:
+        for name, path in [("archive", args.archive), ("gt-video", args.gt_video)]:
             if not Path(path).exists():
                 print(f"[train_tac] ERROR: {name} not found: {path}", file=sys.stderr)
                 sys.exit(1)
