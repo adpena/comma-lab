@@ -1,6 +1,6 @@
 # next experiments
 
-## 2026-04-09 queue after Kaggle v5 stabilization
+## 2026-04-09 queue after Kaggle v5/v6 slot churn
 
 The promoted honest floor is still `1.73` from `long1000_h64`. Two deploy-ready alternates have now been resolved honestly and rejected:
 
@@ -32,11 +32,11 @@ That means the next cycle should stop pretending those families are active promo
      - saved meta still says `variant: "saliency_weighted"`
      - current artifact is observation-only until relaunched through the repo-side deploy-correct wrapper
    - Status:
-     - Kaggle kernel `adpena/comma-lab-dilated-h64-long1000` version 5 is running
-     - manifest: `.omx/logs/remote_jobs/kaggle-dilated-h64-long1000.json`
-     - status: `.omx/status/kaggle-dilated-h64-long1000.json`
+     - Kaggle kernel `adpena/comma-lab-dilated-h64-long1000` is currently `CANCEL_ACKNOWLEDGED`
+     - the direct-code-file plus P100 fallback path is in place
+     - private dataset `adpena/comma-lab-private-assets` now exists for the baseline archive
    - Action:
-     - monitor for first checkpoint/artifact signal
+     - repush as soon as Kaggle frees a slot
      - keep deploy-correct metadata as a non-negotiable requirement
 
 2. **PF-SEGNET CHECKPOINTING RELAUNCH**
@@ -45,7 +45,7 @@ That means the next cycle should stop pretending those families are active promo
      - `segnet_attack_fixed_ste_h32` just proved the family can transfer honestly to `1.84`
      - the metadata gap is now fixed for future reruns, so the next launch can be both rankable and automatable
    - Status:
-     - Kaggle kernel `adpena/comma-lab-segnet-attack-fixed-h32` version 5 is running
+     - Kaggle kernel `adpena/comma-lab-segnet-attack-fixed-h32` is running
      - manifest: `.omx/logs/remote_jobs/kaggle-segnet-attack-fixed-h32.json`
      - status: `.omx/status/kaggle-segnet-attack-fixed-h32.json`
    - Action:

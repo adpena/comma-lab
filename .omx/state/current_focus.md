@@ -1,4 +1,4 @@
-# Current Focus — 2026-04-09 20:14 CDT
+# Current Focus — 2026-04-09 20:34 CDT
 
 ## Floor
 - **Promoted honest floor**: `1.73` from `robust_current-long1000-h64-promoted-cpu-2026-04-09`
@@ -36,10 +36,11 @@
   - `experiments/train_postfilter_segnet_attack.py` now writes a durable `postfilter_<tag>_final_meta.json`
   - if a best checkpoint payload exists, it also backstops the adjacent `postfilter_<tag>_best_meta.json`
 - Kaggle integration is now on the repaired direct-code-file path:
-  - `adpena/comma-lab-dilated-h64-long1000` version 5 is running
-  - `adpena/comma-lab-segnet-attack-fixed-h32` version 5 is running
+  - `adpena/comma-lab-segnet-attack-fixed-h32` is currently the only live Kaggle kernel
+  - `adpena/comma-lab-dilated-h64-long1000` is now `CANCEL_ACKNOWLEDGED` and queued for repush once Kaggle frees a slot
   - root fix: stop relying on helper-module imports and make the kernel code file the self-contained trainer itself
   - the trainers now also fall back to CPU on Kaggle's unsupported P100 CUDA path instead of crashing immediately
+  - the baseline archive is now available as a private Kaggle dataset: `adpena/comma-lab-private-assets`
   - `adpena/comma-lab-pairaware-smoke` is still ready but blocked by Kaggle's maximum batch GPU session count of `2`
 - operator templates now exist under `configs/run_manifests/`
 - private ops surfaces stay in-repo:
@@ -49,6 +50,6 @@
   - `comma-lab sched budget`
 
 ## Next real moves
-1. Monitor the two running Kaggle v4 kernels and capture first checkpoint/artifact signals back into `.omx/status`.
-2. Push `pairaware_smoke` only after a GPU slot frees up or move it to Modal.
-3. Use Coiled only for CPU-side audits/reporting while Kaggle handles the active GPU queue.
+1. Monitor the live Kaggle SegNet kernel and capture first checkpoint/artifact signals back into `.omx/status`.
+2. Repush the dataset-backed dilated kernel as soon as Kaggle frees a slot.
+3. Push `pairaware_smoke` only after that slot logic is clear, or move it to Modal.

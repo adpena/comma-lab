@@ -29,11 +29,12 @@
    - `configs/run_manifests/run_status.template.json`
    - `docs/operator_run_manifest_templates.md`
 5. Under a free-tier-first strategy, Kaggle is the primary GPU training surface, Modal is the secondary GPU fallback, and Coiled is best treated as CPU-side fan-out for audits/reporting rather than the main training path.
-6. Kaggle is now not just “integrated” on paper; it is actually being exercised. The helper-file bundle strategy failed, but the direct-code-file pivot is now live: version 5 of both `adpena/comma-lab-dilated-h64-long1000` and `adpena/comma-lab-segnet-attack-fixed-h32` is running, while `pairaware_smoke` remains blocked by Kaggle's maximum batch GPU session count of `2`.
+6. Kaggle is now not just “integrated” on paper; it is actually being exercised. The helper-file bundle strategy failed, but the direct-code-file pivot is now live. At the moment `adpena/comma-lab-segnet-attack-fixed-h32` is the live Kaggle run, `adpena/comma-lab-dilated-h64-long1000` has fallen to `CANCEL_ACKNOWLEDGED` and is queued for repush, and `pairaware_smoke` remains blocked by Kaggle's maximum batch GPU session count of `2`.
 7. The first Kaggle launch attempt exposed a real bootstrap bug: the generic runner assumed the image already had our Python/video dependencies and `git-lfs`. That is now hardened in `experiments/kaggle_kernel_builder.py`.
 8. The next Kaggle failure exposed the deeper integration truth: Kaggle effectively executes only the main code file, so helper modules from the uploaded bundle are not reliably importable at runtime. The evidence is on disk under `reports/raw/2026-04-09-kaggle-launch-debug/`, where both version-3 logs fail on `ModuleNotFoundError` for the helper trainer modules.
 9. The right Kaggle execution model is therefore simpler than the original bundle plan: the kernel code file itself must be the self-contained trainer. The repo now has that path for both the deploy-correct dilated lane and the SegNet fixed h32 lane.
 10. Kaggle's Tesla P100 is still a real constraint. The self-contained cloud trainers now fall back to CPU when they detect unsupported sm_60 CUDA instead of crashing immediately, which keeps the run alive long enough to produce checkpoints and logs.
+11. The baseline archive is now staged through a private Kaggle dataset, `adpena/comma-lab-private-assets`, so future kernel attempts no longer need to depend on bundle-side data files for that asset.
 
 ## 2026-04-09 SegNet fixed faithful proxy resolution
 
