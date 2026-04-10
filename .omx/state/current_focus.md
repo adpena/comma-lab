@@ -41,6 +41,7 @@
   - root fix: stop relying on helper-module imports and make the kernel code file the self-contained trainer itself
   - the trainers now also fall back to CPU on Kaggle's unsupported P100 CUDA path instead of crashing immediately
   - the baseline archive is now available as a private Kaggle dataset: `adpena/comma-lab-private-assets`
+  - `experiments/kaggle_queue_tick.py` now picks the correct next repush candidate automatically; the current repush still fails only because Kaggle says the 2-session GPU cap is full
   - `adpena/comma-lab-pairaware-smoke` is still ready but blocked by Kaggle's maximum batch GPU session count of `2`
 - operator templates now exist under `configs/run_manifests/`
 - private ops surfaces stay in-repo:

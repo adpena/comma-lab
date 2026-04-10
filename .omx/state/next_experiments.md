@@ -38,6 +38,7 @@ That means the next cycle should stop pretending those families are active promo
    - Action:
      - repush as soon as Kaggle frees a slot
      - keep deploy-correct metadata as a non-negotiable requirement
+     - `experiments/kaggle_queue_tick.py` now selects this lane automatically once the slot is really free
 
 2. **PF-SEGNET CHECKPOINTING RELAUNCH**
    - Why second:

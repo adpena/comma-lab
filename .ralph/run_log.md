@@ -94,6 +94,24 @@
 - `python3 -m unittest -q experiments.test_kaggle_kernel_builder experiments.test_kaggle_status_sync`
 - `python3 -m py_compile experiments/kaggle_kernel_builder.py experiments/build_kaggle_kernels.py experiments/kaggle_status_sync.py`
 
+## 2026-04-09 20:36:00 -0500 - Kaggle queue automation now picks the right candidate
+
+### additions
+- `experiments/kaggle_output_ingest.py`
+- `experiments/test_kaggle_output_ingest.py`
+- `experiments/kaggle_queue_tick.py`
+- `experiments/test_kaggle_queue_tick.py`
+
+### effect
+- queue automation now no longer treats local `repush_submitted` state as if it consumed a real Kaggle GPU slot
+- it also understands `KernelWorkerStatus.CANCEL_ACKNOWLEDGED` as a repushable terminal state
+- on the current queue it selects the correct next candidate: `kaggle-dilated-h64-long1000`
+
+### remaining blocker
+- the automatic repush still fails with the same hard platform limit:
+  - `Kernel push error: Maximum batch GPU session count of 2 reached.`
+- so the next actual action is still gated on Kaggle freeing a slot, not on local orchestration
+
 ## 2026-04-09 18:00:00 -0500 - SegNet trainer metadata gap hardened
 
 ### bug surface
