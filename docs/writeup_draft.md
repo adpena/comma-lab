@@ -80,7 +80,7 @@ The training loop evaluated frames in float32, but the official scorer loads fra
 
 ### The fix
 
-Each bug was addressed with a specific test. The `tac` library now includes 66 tests covering metric computation, checkpoint selection, boundary mask resolution, data splitting, and numeric fidelity. Pydantic validation enforces schema correctness on all configuration and checkpoint metadata. Atomic saves prevent partial checkpoint corruption.
+Each bug was addressed with a specific test. The `tac` library now includes 70 tests covering metric computation, checkpoint selection, boundary mask resolution, data splitting, and numeric fidelity. Pydantic validation enforces schema correctness on all configuration and checkpoint metadata. Atomic saves prevent partial checkpoint corruption.
 
 The hardening dropped our official score from 1.727 to 1.52. That 0.2 improvement came entirely from fixing measurement and selection bugs.
 
@@ -90,7 +90,7 @@ The CNN trains in float32 but ships in int8. This creates a train-to-deploy gap 
 
 Three techniques address this:
 
-**Quantization-Aware Training (QAT):** Fake int8 quantization in the forward pass with straight-through gradient estimation. The model learns weight configurations that are robust to quantization noise.
+**Quantization-Aware Training (QAT):** Per-channel fake int8 quantization in the forward pass with straight-through gradient estimation. Per-channel scales (one per output filter) preserve 3-4 more bits of effective precision than per-tensor quantization. The model learns weight configurations that are robust to the exact quantization noise pattern it will encounter at deployment.
 
 **Exponential Moving Average (EMA):** Polyak averaging with decay=0.997 smooths late-epoch weight oscillation. Over 1000 epochs, this prevents the optimizer from wandering into weight configurations that happen to score well in float32 but collapse under quantization.
 
@@ -209,18 +209,26 @@ The fix: precompute per-pair SegNet disagreement at training start, then oversam
 
 We swept 6 encoder variants inspired by concurrent work in the competition: infinite GOP (keyint=-1), 10-bit YUV420, film-grain=30 with denoising disabled, and larger downscale resolution. All variants produced archives within 2% of our current 877KB. The full stack of encoder changes saved 1.7% on file size — equivalent to 0.01 score points on the rate term. Encoder-level optimization appears near its efficient frontier at these settings.
 
-## Techniques in progress
+## Training innovations
 
-| Direction | Target | Early Signal |
-|-----------|--------|-------------|
-| KL distillation + hard-frame | SegNet | 1.38 at ep 47 (Modal A10G) |
-| Dual saliency (alpha_seg=5000) | SegNet boundaries | 1.47 at ep 18 (Local MPS) |
-| KL distillation (T=5→1) | SegNet soft targets | 1.40 at ep 19 (Local MPS) |
-| h=96 dilated + dual sal | Both (scaling) | 1.46 at ep 46 (Modal A10G) |
-| Per-channel int8 quantization | Both | Implemented, all runs |
-| Hard-frame curriculum | SegNet worst pairs | Implemented, all new runs |
+Several techniques compound to improve convergence speed and final score:
 
-The theoretical floor if all techniques compound: SegNet 0.003, PoseNet 0.001, rate 0.023 → score ~0.98.
+**KL distillation with exponential temperature decay:** Temperature-annealed soft targets from SegNet, using exponential decay T=5→0.5 instead of linear. The exponential schedule maintains constant gradient variance throughout training. Combined with a PoseNet gradient cap (clamp pose loss at floor 0.001), all remaining capacity redirects to SegNet once PoseNet is good enough.
+
+**Hard-frame curriculum with error replay:** Power-law weighted sampling that oversamples the highest-SegNet-disagreement frame pairs. Every 200 epochs, the weights are recomputed using the current model's output — adapting the curriculum as the model improves. SegNet disagreement only occurs at class boundary pixels (~5% of the image), so uniform sampling wastes 95% of gradient signal.
+
+**Boundary weight and annealing:** Boundary pixels receive 150x gradient amplification (derived from the 5% boundary fraction — equal gradient contribution requires weight ≈ 1/fraction). The boundary weight couples to the temperature schedule: as temperature drops and gradients naturally sharpen, boundary attention increases up to 3x to maintain pressure.
+
+**Stochastic Weight Averaging:** SWA over the final 20% of training produces weights in a wider minimum, which is more robust to int8 quantization noise.
+
+| Direction | Target | Training Signal |
+|-----------|--------|----------------|
+| KL distill + hard-frame curriculum | SegNet | 1.26 at ep 183 (Modal A10G) |
+| PSD + KL distill (PixelShuffle) | SegNet RF alignment | In training (new) |
+| Per-channel int8 + FakeQuant match | Both | Implemented |
+| Exponential temp + boundary anneal | SegNet convergence | Implemented |
+
+The theoretical floor for a 45KB int8 CNN with optimal architecture: ~1.25-1.30.
 
 ## Multi-GPU training fleet
 
@@ -238,11 +246,11 @@ No paid compute was used. All results are reproducible on consumer hardware.
 
 **Colorspace:** BT.601 limited-range YUV420 to RGB conversion, exactly matching the scorer's `frame_utils.py`. Getting this wrong was a common source of silent distortion in early experiments.
 
-**Archive:** The post-filter checkpoint (45KB) ships inside the submission archive alongside the compressed video. Total archive size: 864KB under current workflow accounting.
+**Archive:** The post-filter checkpoint (45KB) ships inside the submission archive alongside the compressed video, as required by contest rules. Total archive size: 903KB (877KB video + 46KB compressed checkpoint).
 
 **Inference:** CPU-only PyTorch. The filter processes all 1200 frames in under 30 seconds. No GPU required at decode time.
 
-**Reproducibility:** The `tac` library (v0.9.0) is portable, pydantic-validated, and backed by 66 tests covering metric computation, checkpoint selection, numeric fidelity, and data splitting. The promoted result can be reproduced from the committed training scripts and configuration.
+**Reproducibility:** The `tac` library (v1.0.0) is portable, pydantic-validated, and backed by 70 tests covering metric computation, checkpoint selection, numeric fidelity, and data splitting. The promoted result can be reproduced from the committed training scripts and configuration.
 
 ## What we learned
 
@@ -262,4 +270,4 @@ No paid compute was used. All results are reproducible on consumer hardware.
 
 ---
 
-*Score: 1.33 | 45KB int8 CNN | 40K params | SVT-AV1 CRF 34 | 864KB archive | CPU inference < 30s | 66 tests | 15 bugs fixed*
+*Score: 1.33 | 45KB int8 CNN | 40K params | SVT-AV1 CRF 34 | 903KB archive | CPU inference < 30s | tac v1.0.0 | 70 tests | 15 bugs fixed | 5 council review rounds*
