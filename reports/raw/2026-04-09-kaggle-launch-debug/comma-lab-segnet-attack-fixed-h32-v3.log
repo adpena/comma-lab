@@ -1,0 +1,18 @@
+[{"stream_name":"stdout","time":5.11324379,"data":"   ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ 36.4/36.4 MB 38.8 MB/s eta 0:00:00\n"}
+,{"stream_name":"stdout","time":26.788945224,"data":"   ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ 154.8/154.8 kB 3.9 MB/s eta 0:00:00\n"}
+,{"stream_name":"stderr","time":29.369675569,"data":"Cloning into '/kaggle/working/pact_kernel/comma-lab-segnet-attack-fixed-h32/workspace/upstream/comma_video_compression_challenge'...\n"}
+,{"stream_name":"stderr","time":34.69695592,"data":"Filtering content:  80% (4/5), 37.65 MiB | 18.21 MiB/s\rFiltering content: 100% (5/5), 37.65 MiB | 18.21 MiB/s\rFiltering content: 100% (5/5), 126.70 MiB | 36.80 MiB/s, done.\n"}
+,{"stream_name":"stderr","time":35.231080022,"data":"Traceback (most recent call last):\n"}
+,{"stream_name":"stderr","time":35.231162627,"data":"  File \"/kaggle/src/script.py\", line 83, in \u003cmodule\u003e\n"}
+,{"stream_name":"stderr","time":35.231385705,"data":"    raise SystemExit(main())\n"}
+,{"stream_name":"stderr","time":35.232207122,"data":"                     ^^^^^^\n"}
+,{"stream_name":"stderr","time":35.232223692,"data":"  File \"/kaggle/src/script.py\", line 75, in main\n"}
+,{"stream_name":"stderr","time":35.232373529,"data":"    import train_postfilter_segnet_attack as target_module\n"}
+,{"stream_name":"stderr","time":35.232527516,"data":"ModuleNotFoundError: No module named 'train_postfilter_segnet_attack'\n"}
+,{"stream_name":"stderr","time":40.186973044,"data":"/usr/local/lib/python3.12/dist-packages/mistune.py:435: SyntaxWarning: invalid escape sequence '\\|'\n"}
+,{"stream_name":"stderr","time":40.187009654,"data":"  cells[i][c] = re.sub('\\\\\\\\\\|', '|', cell)\n"}
+,{"stream_name":"stderr","time":40.488675488,"data":"/usr/local/lib/python3.12/dist-packages/nbconvert/filters/filter_links.py:36: SyntaxWarning: invalid escape sequence '\\_'\n"}
+,{"stream_name":"stderr","time":40.488709158,"data":"  text = re.sub(r'_', '\\_', text) # Escape underscores in display text\n"}
+,{"stream_name":"stderr","time":41.224633866,"data":"[NbConvertApp] Converting notebook __script__.ipynb to html\n"}
+,{"stream_name":"stderr","time":42.713252925,"data":"[NbConvertApp] Writing 284997 bytes to __results__.html\n"}
+]
