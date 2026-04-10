@@ -80,6 +80,8 @@ class TrainConfig(BaseModel):
     loss_mode: Literal["standard", "temperature", "focal_ste", "kl_distill"] = "standard"
     temperature_start: float = Field(1.0, gt=0.0)
     temperature_end: float = Field(0.05, gt=0.0)
+    temp_schedule: str = Field("exponential", pattern=r"^(linear|exponential)$",
+                                description="Temperature decay: 'linear' or 'exponential' (recommended)")
     focal_gamma: float = Field(2.0, ge=0.0)
     segnet_loss_weight: float = Field(100.0, ge=0.0)
     use_dual_saliency: bool = False
@@ -96,6 +98,8 @@ class TrainConfig(BaseModel):
                                      "0 = static (compute once at start). 200 = adaptive every 200 epochs.")
     boundary_anneal: bool = Field(False, description="Couple boundary_weight to temperature: "
                                   "increases boundary attention as T decreases (maintains gradient pressure)")
+    use_swa: bool = Field(False, description="Stochastic Weight Averaging over final 20% of training. "
+                          "Wider minima → better int8 robustness.")
     eval_holdout: float = Field(0.0, ge=0.0, le=0.5,
                                 description="Fraction of pairs held out for eval. "
                                 "0.0 = contest mode (train+eval on all pairs). "
@@ -841,7 +845,10 @@ class Trainer:
                 if cfg.loss_mode == "temperature":
                     # Anneal temperature from start to end over training
                     progress = epoch / max(cfg.epochs - 1, 1)
-                    temp = cfg.temperature_start + progress * (cfg.temperature_end - cfg.temperature_start)
+                    if cfg.temp_schedule == "exponential" and cfg.temperature_start > cfg.temperature_end:
+                        temp = cfg.temperature_start * (cfg.temperature_end / cfg.temperature_start) ** progress
+                    else:
+                        temp = cfg.temperature_start + progress * (cfg.temperature_end - cfg.temperature_start)
                     loss, pd, sd = temperature_scorer_loss(
                         filtered, gt_pair, posenet, segnet, temperature=temp,
                     )
@@ -853,7 +860,10 @@ class Trainer:
                 elif cfg.loss_mode == "kl_distill":
                     # Hinton-style KL distillation: T anneals from 5.0 → 1.0
                     progress = epoch / max(cfg.epochs - 1, 1)
-                    temp = cfg.temperature_start + progress * (cfg.temperature_end - cfg.temperature_start)
+                    if cfg.temp_schedule == "exponential" and cfg.temperature_start > cfg.temperature_end:
+                        temp = cfg.temperature_start * (cfg.temperature_end / cfg.temperature_start) ** progress
+                    else:
+                        temp = cfg.temperature_start + progress * (cfg.temperature_end - cfg.temperature_start)
                     bm = self._boundary_masks.get(start) if self._boundary_masks else None
                     # Coupled boundary annealing: increase boundary attention as T decreases
                     bw = cfg.boundary_weight
@@ -907,6 +917,13 @@ class Trainer:
 
             if epoch >= cfg.warmup_epochs:
                 self.scheduler.step()
+
+            # SWA: snapshot weights in final 20% of training for wider minima
+            if cfg.use_swa and epoch >= int(cfg.epochs * 0.8):
+                if not hasattr(self, '_swa'):
+                    self._swa = SWA(self.model)
+                    print(f"[trainer-lazy] SWA started at epoch {epoch}")
+                self._swa.update(self.model)
 
             # Empty CUDA cache once per epoch (not per step — avoids sync stalls)
             if torch.cuda.is_available():

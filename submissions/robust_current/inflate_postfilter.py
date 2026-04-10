@@ -5,6 +5,7 @@ The post-filter is a tiny CNN (3,203 params, 7.5KB int8) trained directly
 against the scorer's loss function via backprop. It learns to correct the
 decoded video to maximize PoseNet+SegNet scores.
 """
+import os
 import sys
 from pathlib import Path
 
@@ -338,6 +339,7 @@ def yuv420_to_rgb(frame) -> torch.Tensor:
 
 
 BATCH_SIZE = 8  # batched inference: 3-5x speedup on CPU
+MULTI_PASS = int(os.environ.get("INFLATE_MULTI_PASS", "1"))  # run CNN N times (2=double pass)
 
 
 def inflate_with_postfilter(
@@ -371,6 +373,9 @@ def inflate_with_postfilter(
         x = torch.cat(batch_tensors, dim=0).to(device)
         with torch.inference_mode():
             out = model(x)
+            # Multi-pass: run the CNN again on its own output (deeper effective network)
+            for _ in range(MULTI_PASS - 1):
+                out = model(out)
         for i in range(out.shape[0]):
             t = out[i].permute(1, 2, 0).round().clamp(0, 255).to(torch.uint8).cpu()
             f.write(t.contiguous().numpy().tobytes())

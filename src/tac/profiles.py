@@ -22,6 +22,7 @@ COUNCIL_V1 = {
     "loss_mode": "kl_distill",
     "temperature_start": 5.0,
     "temperature_end": 0.5,          # sub-1.0 regime for argmax pressure (floor relaxed to 0.1)
+    "temp_schedule": "exponential",   # Tao: exponential decay is provably better than linear
     "boundary_weight": 150.0,        # was 5-10; optimal ~150 for 5% boundary fraction
     "boundary_anneal": True,          # couple bw to temperature schedule
     "hard_frame_ratio": 0.3,         # power-law curriculum, 0.3 = moderate emphasis
@@ -29,6 +30,7 @@ COUNCIL_V1 = {
     "eval_every": 5,                  # skip eval on 4/5 epochs (ramps to 1 in final 10%)
     "accum_steps": 4,
     "segnet_loss_weight": 100.0,      # formula-derived, matches 100*seg in score
+    "use_swa": True,                  # SWA over final 20% for wider minima (better int8)
 }
 
 # Aggressive SegNet-focused (contrarian + DeepSeek recommendation)
