@@ -397,6 +397,40 @@
       <p class="config-line" aria-label="Current promoted method">robust_current · libsvtav1 · 524x394 · film-grain=22 · lanczos/long1000-qat-ema-postfilter-h64 · long1000 QAT+EMA learned int8 post-filter h64</p>
     </section>
 
+    <section class="panel" id="video-comparison" aria-labelledby="video-comparison-title" style="margin-top: 18px;">
+      <h2 id="video-comparison-title">Visual comparison</h2>
+      <p class="muted">Side-by-side SegNet class overlay at 4x speed. Left: baseline (compressed, no post-filter). Right: ours (learned int8 post-filter). Colored masks show SegNet class predictions at 40% opacity. Fewer disagreements vs ground truth = better task preservation.</p>
+      <div style="margin-top: 14px; border-radius: var(--radius-sm); overflow: hidden; border: 1px solid var(--stroke); background: #080b0f;">
+        <video autoplay loop muted playsinline style="width: 100%; display: block;" poster="comparison/frames/frame_0000.png">
+          <source src="comparison/comparison.mp4" type="video/mp4" />
+          Your browser does not support the video tag.
+        </video>
+      </div>
+      <div style="display: grid; grid-template-columns: repeat(5, minmax(0, 1fr)); gap: 10px; margin-top: 14px;">
+        <div style="display: flex; align-items: center; gap: 8px;">
+          <span style="width: 12px; height: 12px; border-radius: 3px; background: rgb(64,64,64); display: inline-block; flex-shrink: 0;"></span>
+          <span style="color: var(--muted); font-size: 12px;">Road</span>
+        </div>
+        <div style="display: flex; align-items: center; gap: 8px;">
+          <span style="width: 12px; height: 12px; border-radius: 3px; background: rgb(255,255,0); display: inline-block; flex-shrink: 0;"></span>
+          <span style="color: var(--muted); font-size: 12px;">Lane marking</span>
+        </div>
+        <div style="display: flex; align-items: center; gap: 8px;">
+          <span style="width: 12px; height: 12px; border-radius: 3px; background: rgb(0,0,255); display: inline-block; flex-shrink: 0;"></span>
+          <span style="color: var(--muted); font-size: 12px;">Vehicle</span>
+        </div>
+        <div style="display: flex; align-items: center; gap: 8px;">
+          <span style="width: 12px; height: 12px; border-radius: 3px; background: rgb(255,0,0); display: inline-block; flex-shrink: 0;"></span>
+          <span style="color: var(--muted); font-size: 12px;">Pedestrian</span>
+        </div>
+        <div style="display: flex; align-items: center; gap: 8px;">
+          <span style="width: 12px; height: 12px; border-radius: 3px; background: rgb(0,255,0); display: inline-block; flex-shrink: 0;"></span>
+          <span style="color: var(--muted); font-size: 12px;">Other</span>
+        </div>
+      </div>
+      <p class="footnote" style="margin-top: 10px;">Generated with <code style="font-size: 12px; color: var(--soft);">tools/generate_comparison_video.py</code>. The post-filter reduces SegNet class disagreements by correcting compression artifacts in regions the scorer weights most heavily.</p>
+    </section>
+
     <section class="panel" id="concepts" aria-labelledby="concepts-title">
       <h2 id="concepts-title">What the score means</h2>
       <p class="muted">The challenge score mixes filesize and task distortion. Lower is better, but the score is not a generic visual metric. It rewards preserving the signals that the scorer models actually use.</p>
