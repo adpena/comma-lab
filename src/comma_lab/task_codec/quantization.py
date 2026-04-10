@@ -75,7 +75,18 @@ class QuantizationMetadata:
         payload: dict[str, object] = {}
         if best_meta_path is not None:
             payload = json.loads(best_meta_path.read_text())
+        return cls.from_payload(source_path, payload, best_meta_path=best_meta_path)
 
+    @classmethod
+    def from_payload(
+        cls,
+        source_path: str | Path,
+        payload: Mapping[str, object],
+        *,
+        best_meta_path: str | Path | None = None,
+    ) -> "QuantizationMetadata":
+        source_path = Path(source_path)
+        best_meta = None if best_meta_path is None else Path(best_meta_path)
         meta = dict(payload.get("meta", {})) if isinstance(payload.get("meta"), dict) else {}
         int8_path = _resolve_int8_path(source_path, payload)
         fp32_path_value = payload.get("fp32_path")
@@ -88,7 +99,7 @@ class QuantizationMetadata:
         epoch = payload.get("epoch", payload.get("iteration"))
         return cls(
             source_path=source_path,
-            best_meta_path=best_meta_path,
+            best_meta_path=best_meta,
             int8_path=int8_path,
             fp32_path=fp32_path,
             epoch=None if epoch is None else int(epoch),

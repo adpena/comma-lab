@@ -13,8 +13,10 @@ sys.path.insert(0, str(ROOT / "src"))
 from comma_lab.task_codec import (
     ArchitectureRegistry,
     EvaluationRecord,
+    FinalMetadata,
     ProxyEvaluationRecord,
     QuantizationMetadata,
+    ResumeState,
     ScorerRegistry,
     register_default_architectures,
 )
@@ -125,6 +127,85 @@ class TaskCodecCoreTests(unittest.TestCase):
         self.assertEqual(record.variant, "residual")
         self.assertEqual(record.scorer, 4.25)
         self.assertEqual(record.hidden, 16)
+
+    def test_resume_state_from_best_meta_loads_checkpoint_without_final_metadata(self) -> None:
+        with tempfile.TemporaryDirectory() as tmpdir:
+            root = Path(tmpdir)
+            best_meta_path = root / "postfilter_lane_best_meta.json"
+            best_fp32_path = root / "postfilter_lane_best_fp32.pt"
+            best_int8_path = root / "postfilter_lane_best_int8.pt"
+            best_fp32_path.write_bytes(b"fp32")
+            best_int8_path.write_bytes(b"int8")
+            best_meta_path.write_text(
+                json.dumps(
+                    {
+                        "epoch": 12,
+                        "scorer": 3.25,
+                        "fp32_path": str(best_fp32_path),
+                        "int8_path": str(best_int8_path),
+                        "int8_size": 4096,
+                        "meta": {"variant": "residual", "hidden": 16, "kernel": 3},
+                    }
+                )
+            )
+
+            state = ResumeState.from_path(best_meta_path)
+
+        self.assertIsNone(state.final)
+        self.assertIsNotNone(state.best_checkpoint)
+        self.assertEqual(state.best_meta_path, best_meta_path)
+        self.assertEqual(state.best_checkpoint.int8_path, best_int8_path)
+        self.assertEqual(state.preferred_int8_path, best_int8_path)
+
+    def test_resume_state_from_final_meta_loads_nested_best_checkpoint(self) -> None:
+        with tempfile.TemporaryDirectory() as tmpdir:
+            root = Path(tmpdir)
+            final_meta_path = root / "postfilter_lane_final_meta.json"
+            final_fp32_path = root / "postfilter_lane_fp32.pt"
+            final_int8_path = root / "postfilter_lane_int8.pt"
+            best_meta_path = root / "postfilter_lane_best_meta.json"
+            best_fp32_path = root / "postfilter_lane_best_fp32.pt"
+            best_int8_path = root / "postfilter_lane_best_int8.pt"
+            final_fp32_path.write_bytes(b"final-fp32")
+            final_int8_path.write_bytes(b"final-int8")
+            best_fp32_path.write_bytes(b"best-fp32")
+            best_int8_path.write_bytes(b"best-int8")
+            best_payload = {
+                "epoch": 7,
+                "scorer": 1.99,
+                "fp32_path": str(best_fp32_path),
+                "int8_path": str(best_int8_path),
+                "int8_size": 1024,
+                "meta": {"variant": "film_conditioned", "hidden": 32, "kernel": 3, "alpha": 20.0},
+            }
+            final_meta_path.write_text(
+                json.dumps(
+                    {
+                        "tag": "lane",
+                        "fp32_path": str(final_fp32_path),
+                        "int8_path": str(final_int8_path),
+                        "int8_size": 2048,
+                        "baseline_loss": 1.8,
+                        "final_loss": 1.6,
+                        "final_pose": 0.04,
+                        "final_seg": 0.005,
+                        "meta": {"variant": "film_conditioned", "hidden": 32, "kernel": 3, "alpha": 20.0},
+                        "best_eval": best_payload,
+                        "best_meta_path": str(best_meta_path),
+                        "final_meta_path": str(final_meta_path),
+                    }
+                )
+            )
+
+            state = ResumeState.from_path(final_meta_path)
+
+        self.assertIsNotNone(state.final)
+        self.assertIsNotNone(state.best_checkpoint)
+        self.assertEqual(state.final.best_meta_path, best_meta_path)
+        self.assertEqual(state.final.final_meta_path, final_meta_path)
+        self.assertEqual(state.best_checkpoint.int8_path, best_int8_path)
+        self.assertEqual(state.preferred_int8_path, best_int8_path)
+        self.assertIsInstance(state.final, FinalMetadata)
 
     def test_evaluation_record_loads_current_workflow_summary_json(self) -> None:
         with tempfile.TemporaryDirectory() as tmpdir:

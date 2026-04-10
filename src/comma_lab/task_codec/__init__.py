@@ -15,6 +15,7 @@ from .architectures import (
     register_default_architectures,
 )
 from .quantization import QuantizationMetadata
+from .state import FinalMetadata, ResumeState
 from .records import EvaluationRecord, ProxyEvaluationRecord
 from .scorers import RegisteredScorer, ScorerRegistry, ScorerSpec
 
@@ -23,8 +24,10 @@ __all__ = [
     "ArchitectureRegistry",
     "ArchitectureSpec",
     "EvaluationRecord",
+    "FinalMetadata",
     "ProxyEvaluationRecord",
     "QuantizationMetadata",
+    "ResumeState",
     "RegisteredScorer",
     "ScorerRegistry",
     "ScorerSpec",

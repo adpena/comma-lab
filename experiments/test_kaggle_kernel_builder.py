@@ -51,6 +51,8 @@ class KaggleKernelBuilderTests(unittest.TestCase):
         self.assertIn("import pkg.helper as target_module", launcher)
         self.assertIn("--epochs", launcher)
         self.assertIn("ensure_runtime_dependencies()", launcher)
+        self.assertIn("ensure_writable_root()", launcher)
+        self.assertIn("/kaggle/working", launcher)
         self.assertIn("git-lfs", launcher)
         self.assertEqual(copied, "VALUE = 1\n")
 

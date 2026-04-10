@@ -44,6 +44,7 @@ def _launcher_source(spec: KaggleKernelSpec) -> str:
     return f"""#!/usr/bin/env python3
 from __future__ import annotations
 
+import shutil
 import os
 import importlib
 import subprocess
@@ -51,10 +52,8 @@ import sys
 from pathlib import Path
 
 
-ROOT = Path(__file__).resolve().parent
-sys.path.insert(0, str(ROOT))
-sys.path.insert(0, str(ROOT / "experiments"))
-sys.path.insert(0, str(ROOT / "submissions" / "robust_current"))
+READ_ONLY_ROOT = Path(__file__).resolve().parent
+ACTIVE_ROOT = READ_ONLY_ROOT
 
 PIP_DEPS = [
     "av",
@@ -78,8 +77,23 @@ def ensure_runtime_dependencies() -> None:
         subprocess.check_call(["bash", "-lc", "apt-get update && apt-get install -y git-lfs"])
 
 
+def ensure_writable_root() -> Path:
+    if not Path("/kaggle/working").exists():
+        return READ_ONLY_ROOT
+
+    writable_root = Path("/kaggle/working") / "pact_kernel" / "{spec.slug}"
+    writable_root.mkdir(parents=True, exist_ok=True)
+
+    for name in ("experiments", "submissions", "reports", "prompts", "docs"):
+        source = READ_ONLY_ROOT / name
+        if source.exists():
+            shutil.copytree(source, writable_root / name, dirs_exist_ok=True)
+
+    return writable_root
+
+
 def ensure_upstream() -> Path:
-    workspace = ROOT / "workspace" / "upstream"
+    workspace = ACTIVE_ROOT / "workspace" / "upstream"
     upstream = workspace / "comma_video_compression_challenge"
     workspace.mkdir(parents=True, exist_ok=True)
     if not upstream.exists():
@@ -93,7 +107,12 @@ def ensure_upstream() -> Path:
 
 
 def main() -> int:
+    global ACTIVE_ROOT
     os.environ.setdefault("PYTHONUNBUFFERED", "1")
+    ACTIVE_ROOT = ensure_writable_root()
+    sys.path.insert(0, str(ACTIVE_ROOT))
+    sys.path.insert(0, str(ACTIVE_ROOT / "experiments"))
+    sys.path.insert(0, str(ACTIVE_ROOT / "submissions" / "robust_current"))
     ensure_runtime_dependencies()
     ensure_upstream()
     import {spec.module_name} as target_module
