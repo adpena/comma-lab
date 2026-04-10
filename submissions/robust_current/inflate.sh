@@ -175,7 +175,7 @@ while IFS= read -r rel; do
     in_path="$ARCHIVE_DIR/$in_rel"
     if [ "$PYTHON_INFLATE" = "postfilter" ]; then
       echo "Inflating (canonical + learned post-filter) $ARCHIVE_DIR -> $INFLATED_DIR"
-      "$UV_BIN" run --with av --with torch --with numpy python "$SELF_DIR/inflate_postfilter.py" \
+      "$UV_BIN" run python "$SELF_DIR/inflate_postfilter.py" \
         "$ARCHIVE_DIR" "$INFLATED_DIR" "$VIDEO_NAMES_FILE" \
         "${POSTFILTER_PATH:-$SELF_DIR/postfilter_int8.pt}"
       break

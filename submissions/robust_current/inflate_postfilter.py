@@ -337,24 +337,40 @@ def yuv420_to_rgb(frame) -> torch.Tensor:
     return torch.stack([r, g, b], dim=-1).round().to(torch.uint8)
 
 
+BATCH_SIZE = 8  # batched inference: 3-5x speedup on CPU
+
+
 def inflate_with_postfilter(
-    video_path: str, dst: str, postfilter_path: str,
+    video_path: str, dst: str, model: nn.Module,
     target_w: int = 1164, target_h: int = 874, device: str = "cpu"
 ) -> int:
-    """Decode, upscale, apply learned post-filter, write raw RGB."""
-    print(f"  Loading post-filter from {postfilter_path}", file=sys.stderr)
-    model = load_postfilter_int8(postfilter_path, device=device)
+    """Decode, upscale, apply learned post-filter, write raw RGB.
+
+    Uses batched inference for throughput. Model is passed in (loaded once).
+    """
+    import time
+    t0 = time.monotonic()
 
     container = av.open(video_path)
     stream = container.streams.video[0]
     n = 0
+    batch = []
+
+    def _flush_batch(f, batch_tensors):
+        if not batch_tensors:
+            return
+        x = torch.cat(batch_tensors, dim=0).to(device)
+        with torch.inference_mode():
+            out = model(x)
+        for i in range(out.shape[0]):
+            t = out[i].permute(1, 2, 0).round().clamp(0, 255).to(torch.uint8).cpu()
+            f.write(t.contiguous().numpy().tobytes())
 
     with open(dst, 'wb') as f:
         for frame in container.decode(stream):
             t = yuv420_to_rgb(frame)  # (H, W, 3) uint8
             H, W, _ = t.shape
 
-            # Bicubic upscale (canonical inflate)
             if H != target_h or W != target_w:
                 x = t.permute(2, 0, 1).unsqueeze(0).float()
                 x = F.interpolate(x, size=(target_h, target_w), mode='bicubic', align_corners=False)
@@ -362,24 +378,31 @@ def inflate_with_postfilter(
             else:
                 x = t.permute(2, 0, 1).unsqueeze(0).float()
 
-            # Apply learned post-filter
-            with torch.no_grad():
-                x = model(x.to(device))
-
-            # Convert back to uint8 (H, W, 3)
-            t = x.squeeze(0).permute(1, 2, 0).round().clamp(0, 255).to(torch.uint8).cpu()
-            f.write(t.contiguous().numpy().tobytes())
+            batch.append(x)
             n += 1
+
+            if len(batch) >= BATCH_SIZE:
+                _flush_batch(f, batch)
+                batch.clear()
 
             if n % 300 == 0:
                 print(f"  Processed {n} frames ...", file=sys.stderr, flush=True)
 
+        # Flush remaining
+        _flush_batch(f, batch)
+        batch.clear()
+
     container.close()
-    print(f"Inflated {n} frames with post-filter -> {dst}", file=sys.stderr)
+    elapsed = time.monotonic() - t0
+    print(f"Inflated {n} frames with post-filter -> {dst} ({elapsed:.1f}s)",
+          file=sys.stderr)
     return n
 
 
 if __name__ == "__main__":
+    import time
+    t_start = time.monotonic()
+
     archive_dir = sys.argv[1]
     inflated_dir = sys.argv[2]
     video_names_file = sys.argv[3]
@@ -399,6 +422,10 @@ if __name__ == "__main__":
             print("ERROR: postfilter_int8.pt not found", file=sys.stderr)
             sys.exit(1)
 
+    # Load model ONCE (not per-video)
+    print(f"  Loading post-filter from {postfilter_path}", file=sys.stderr)
+    model = load_postfilter_int8(postfilter_path, device="cpu")
+
     inflated_dir = Path(inflated_dir)
     inflated_dir.mkdir(parents=True, exist_ok=True)
 
@@ -411,4 +438,7 @@ if __name__ == "__main__":
         out_path = inflated_dir / f"{stem}.raw"
         out_path.parent.mkdir(parents=True, exist_ok=True)
         print(f"Inflating {mkv_path} -> {out_path} (post-filter)", file=sys.stderr)
-        inflate_with_postfilter(str(mkv_path), str(out_path), postfilter_path)
+        inflate_with_postfilter(str(mkv_path), str(out_path), model)
+
+    t_total = time.monotonic() - t_start
+    print(f"  Total inflate time: {t_total:.1f}s", file=sys.stderr)
