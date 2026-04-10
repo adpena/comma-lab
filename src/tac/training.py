@@ -648,13 +648,22 @@ class Trainer:
             self._patched_scorers = True
 
         cfg = self.config
-        pair_starts = pair_start_indices(len(comp_frames))
-        n_pairs = len(pair_starts)
-        train_size = max(1, n_pairs // subsample)
+        all_pair_starts = pair_start_indices(len(comp_frames))
+        n_total = len(all_pair_starts)
 
-        print(f"[trainer-lazy] {cfg.epochs} epochs, {train_size}/{n_pairs} pairs/ep, "
+        # CRITICAL: Partition into train/eval with NO overlap.
+        # Use last 25% as held-out eval. Training never sees these pairs.
+        eval_size = max(1, n_total // 4)
+        train_pair_starts = all_pair_starts[:-eval_size]
+        eval_pair_starts = all_pair_starts[-eval_size:]
+        n_train = len(train_pair_starts)
+        train_size = max(1, n_train // subsample)
+
+        print(f"[trainer-lazy] {cfg.epochs} epochs, {train_size}/{n_train} train pairs/ep, "
+              f"{len(eval_pair_starts)} held-out eval pairs, "
               f"h={cfg.hidden}, alpha={cfg.alpha}, device={self.device}")
         print("[trainer-lazy] Frames on CPU, pairs built on-the-fly (MPS-safe)")
+        print(f"[trainer-lazy] Train/eval split: {n_train}/{len(eval_pair_starts)} (NO overlap)")
         if cfg.loss_mode != "standard":
             print(f"[trainer-lazy] Loss mode: {cfg.loss_mode}")
         if cfg.sal_lambda == 0:
@@ -666,7 +675,7 @@ class Trainer:
             from .losses import compute_boundary_mask
             print("[trainer-lazy] Computing SegNet boundary masks for dual saliency...")
             self._boundary_masks = {}
-            for start in pair_starts:
+            for start in train_pair_starts:
                 gt_pair = pair_from_frames(gt_frames, start)
                 mask = compute_boundary_mask(gt_pair, segnet, device=self.device)
                 self._boundary_masks[start] = mask
@@ -686,14 +695,14 @@ class Trainer:
                 for pg in self.optimizer.param_groups:
                     pg["lr"] = lr
 
-            # Random subset of pair indices
-            perm = torch.randperm(n_pairs)[:train_size]
+            # Random subset of TRAINING pair indices only (eval pairs are held out)
+            perm = torch.randperm(n_train)[:train_size]
 
             accum = cfg.accum_steps
             self.optimizer.zero_grad()
 
             for step, pair_idx in enumerate(perm):
-                start = pair_starts[pair_idx.item()]
+                start = train_pair_starts[pair_idx.item()]
 
                 # Build pair on-the-fly (CPU → device)
                 comp_pair = pair_from_frames(comp_frames, start).to(self.device)
@@ -762,9 +771,10 @@ class Trainer:
             avg_pose = total_pose / n
             avg_seg = total_seg / n
 
-            # Best-checkpoint int8 evaluation (subsample for speed)
+            # Best-checkpoint int8 evaluation on HELD-OUT pairs only
             scorer_val = self._evaluate_int8_lazy(
-                comp_frames, gt_frames, posenet, segnet
+                comp_frames, gt_frames, posenet, segnet,
+                eval_pair_starts=eval_pair_starts,
             )
 
             if scorer_val < self.best_scorer:
@@ -787,9 +797,14 @@ class Trainer:
         return self.best_scorer
 
     def _evaluate_int8_lazy(
-        self, comp_frames, gt_frames, posenet, segnet, subsample: int = 2,
+        self, comp_frames, gt_frames, posenet, segnet,
+        eval_pair_starts: list[int] | None = None,
     ) -> float:
-        """Evaluate EMA model after int8 quantization, using lazy pair loading."""
+        """Evaluate EMA model after int8 quantization on HELD-OUT pairs only.
+
+        Uses eval_pair_starts (set by fit_lazy's train/eval partition).
+        These pairs are NEVER seen during training — no leakage.
+        """
         orig_state = {k: v.clone() for k, v in self.model.state_dict().items()}
 
         self.ema.apply(self.model)
@@ -797,13 +812,16 @@ class Trainer:
         self.model.load_state_dict(q_state)
         self.model.eval()
 
-        pair_starts = pair_start_indices(len(comp_frames))
+        if eval_pair_starts is None:
+            # Fallback: use last 25% as eval (matches fit_lazy partition)
+            all_starts = pair_start_indices(len(comp_frames))
+            eval_size = max(1, len(all_starts) // 4)
+            eval_pair_starts = all_starts[-eval_size:]
+
         total_p, total_s, count = 0.0, 0.0, 0
 
         with torch.no_grad():
-            for i, start in enumerate(pair_starts):
-                if i % subsample != 0:
-                    continue
+            for start in eval_pair_starts:
                 comp_pair = pair_from_frames(comp_frames, start).to(self.device)
                 gt_pair = pair_from_frames(gt_frames, start).to(self.device)
                 filtered = self._apply_filter_to_pair(comp_pair)
