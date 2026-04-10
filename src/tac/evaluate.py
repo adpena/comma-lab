@@ -1,32 +1,38 @@
 """Canonical evaluation for task-aware codec post-filters.
 
 ONE evaluation path. Matches the official scorer exactly.
-No ambiguity, no archive mismatches, no sampling shortcuts.
+No hardcoded paths. No ambiguity. Fully portable.
 
-Usage:
+Usage as library:
     from tac.evaluate import canonical_score
-    result = canonical_score("path/to/int8.pt")  # that's it
+    result = canonical_score(
+        int8_path="weights/best.pt",
+        archive_path="submission/archive.zip",
+        gt_video_path="videos/0.mkv",
+        gt_dir="videos/",
+        models_dir="models/",
+    )
+
+Usage as CLI:
+    python -m tac.evaluate --checkpoint weights/best.pt --upstream /path/to/upstream
 """
 from __future__ import annotations
 
 import json
 import math
 import os
-import sys
 from pathlib import Path
 
 import torch
 
-REPO = Path(__file__).parent.parent.parent
-UPSTREAM = REPO / "workspace" / "upstream" / "comma_video_compression_challenge"
-SUBMISSION_ARCHIVE = REPO / "submissions" / "robust_current" / "archive.zip"
-GT_VIDEO = UPSTREAM / "videos" / "0.mkv"
-GT_DIR = UPSTREAM / "videos"
-MODELS_DIR = UPSTREAM / "models"
-
 
 def canonical_score(
     int8_path: str | Path,
+    archive_path: str | Path,
+    gt_video_path: str | Path,
+    gt_dir: str | Path,
+    models_dir: str | Path,
+    upstream_dir: str | Path | None = None,
     variant: str = "standard",
     hidden: int = 64,
     kernel: int = 3,
@@ -34,47 +40,47 @@ def canonical_score(
 ) -> dict[str, float]:
     """The ONE canonical evaluation function.
 
+    All paths are explicit parameters — nothing hardcoded.
     Matches the official evaluate.py exactly:
-    - Loads int8 checkpoint
-    - Decodes the SUBMISSION archive (same as what gets scored)
-    - Decodes GT video
-    - Runs official PoseNet + SegNet distortion computation
-    - Computes rate from submission archive size
-    - Returns score = 100*seg + sqrt(10*pose) + 25*rate
-
-    This is the single source of truth for all proxy scoring.
+    - Hard argmax SegNet disagreement
+    - MSE on first 6 PoseNet outputs
+    - Rate = archive_size / uncompressed_size
+    - Score = 100*seg + sqrt(10*pose) + 25*rate
     """
-    from .architectures import build_postfilter
+    from .architectures import PairAwarePostFilter, build_postfilter
     from .data import build_pairs, decode_archive, decode_video
     from .quantization import load_int8
     from .scorer import detect_device, load_scorers
 
     if device is None:
         device = str(detect_device())
+    if upstream_dir is None:
+        upstream_dir = str(Path(models_dir).parent)
 
     # Load model
     model = build_postfilter(variant, hidden=hidden, kernel=kernel)
     load_int8(int8_path, model, device=device)
     model = model.eval().to(device)
 
-    # Load data — ALWAYS from the submission archive
-    comp_frames = decode_archive(str(SUBMISSION_ARCHIVE))
-    gt_frames = decode_video(str(GT_VIDEO))
+    # Load data
+    comp_frames = decode_archive(str(archive_path))
+    gt_frames = decode_video(str(gt_video_path))
     assert len(comp_frames) == len(gt_frames), (
         f"Frame count mismatch: {len(comp_frames)} comp vs {len(gt_frames)} GT"
     )
 
     # Load scorers
     posenet, segnet = load_scorers(
-        MODELS_DIR / "posenet.safetensors",
-        MODELS_DIR / "segnet.safetensors",
+        Path(models_dir) / "posenet.safetensors",
+        Path(models_dir) / "segnet.safetensors",
         device=device,
-        upstream_dir=str(UPSTREAM),
+        upstream_dir=str(upstream_dir),
     )
 
-    # Compute rate — matches official formula exactly
-    archive_size = Path(SUBMISSION_ARCHIVE).stat().st_size
-    uncompressed_size = sum(f.stat().st_size for f in GT_DIR.rglob("*") if f.is_file())
+    # Compute rate
+    archive_size = Path(archive_path).stat().st_size
+    gt_dir = Path(gt_dir)
+    uncompressed_size = sum(f.stat().st_size for f in gt_dir.rglob("*") if f.is_file())
     rate = archive_size / uncompressed_size
 
     # Build pairs and evaluate — ALL pairs, no subsampling
@@ -82,16 +88,15 @@ def canonical_score(
     gt_pairs = build_pairs(gt_frames)
     assert len(comp_pairs) == len(gt_pairs)
 
+    is_pair_aware = isinstance(model, PairAwarePostFilter)
     total_pose, total_seg, n_samples = 0.0, 0.0, 0
     with torch.no_grad():
         for cp, gp in zip(comp_pairs, gt_pairs, strict=True):
             cp = cp.to(device)
             gp = gp.to(device)
 
-            # Apply filter to both frames
             B, T, H, W, C = cp.shape
-            from .architectures import PairAwarePostFilter
-            if isinstance(model, PairAwarePostFilter):
+            if is_pair_aware:
                 f0 = cp[:, 0].float().permute(0, 3, 1, 2).contiguous()
                 f1 = cp[:, 1].float().permute(0, 3, 1, 2).contiguous()
                 out0 = model(torch.cat([f0, f1], dim=1))
@@ -104,11 +109,11 @@ def canonical_score(
                 filtered = model(frames)
                 filtered_pair = filtered.permute(0, 2, 3, 1).reshape(B, T, H, W, C)
 
-            # Convert to scorer input format: (B, T, C, H, W)
+            # Scorer input format: (B, T, C, H, W)
             fx = filtered_pair.float().permute(0, 1, 4, 2, 3).contiguous()
             gx = gp.float().permute(0, 1, 4, 2, 3).contiguous()
 
-            # PoseNet: MSE on first 6 outputs (matches upstream compute_distortion)
+            # PoseNet: per-sample MSE on first 6 outputs
             fp_in = posenet.preprocess_input(fx)
             gp_in = posenet.preprocess_input(gx)
             fp_out = posenet(fp_in)
@@ -119,7 +124,7 @@ def canonical_score(
                 .mean(dim=tuple(range(1, fp_out["pose"].ndim)))
             )
 
-            # SegNet: hard argmax disagreement (matches upstream compute_distortion)
+            # SegNet: hard argmax disagreement
             fs_in = segnet.preprocess_input(fx)
             gs_in = segnet.preprocess_input(gx)
             fs_out = segnet(fs_in)
@@ -144,7 +149,7 @@ def canonical_score(
         "pose_contribution": math.sqrt(10.0 * avg_pose),
         "seg_contribution": 100.0 * avg_seg,
         "n_samples": n_samples,
-        "archive": str(SUBMISSION_ARCHIVE),
+        "archive": str(archive_path),
         "checkpoint": str(int8_path),
     }
 
@@ -209,23 +214,43 @@ def average_top_k_checkpoints(
 
 
 if __name__ == "__main__":
-    """CLI: python -m tac.evaluate path/to/int8.pt"""
-    path = sys.argv[1] if len(sys.argv) > 1 else str(
-        REPO / "submissions" / "robust_current" / "postfilter_int8.pt"
-    )
-    hidden = int(sys.argv[2]) if len(sys.argv) > 2 else 64
+    """CLI: python -m tac.evaluate --checkpoint path/to/int8.pt --upstream /path/to/upstream"""
+    import argparse
 
-    print(f"Canonical evaluation: {path}")
-    print(f"  variant=standard, hidden={hidden}, kernel=3")
+    parser = argparse.ArgumentParser(description="Canonical tac evaluation")
+    parser.add_argument("--checkpoint", required=True, help="Path to int8 checkpoint")
+    parser.add_argument("--upstream", required=True, help="Path to upstream repo")
+    parser.add_argument("--archive", default=None, help="Path to archive.zip (default: upstream/../submissions/robust_current/archive.zip)")
+    parser.add_argument("--hidden", type=int, default=64)
+    parser.add_argument("--variant", default="standard")
+    parser.add_argument("--device", default=None)
+    args = parser.parse_args()
+
+    upstream = Path(args.upstream)
+    archive = Path(args.archive) if args.archive else upstream.parent / "submissions" / "robust_current" / "archive.zip"
+
+    print("Canonical evaluation")
+    print(f"  checkpoint: {args.checkpoint}")
+    print(f"  archive:    {archive}")
+    print(f"  upstream:   {upstream}")
     print()
 
-    result = canonical_score(path, hidden=hidden)
+    result = canonical_score(
+        int8_path=args.checkpoint,
+        archive_path=archive,
+        gt_video_path=upstream / "videos" / "0.mkv",
+        gt_dir=upstream / "videos",
+        models_dir=upstream / "models",
+        upstream_dir=upstream,
+        variant=args.variant,
+        hidden=args.hidden,
+        device=args.device,
+    )
 
     print(f"{'=' * 60}")
-    print(f"  CANONICAL SCORE:     {result['score']:.4f}")
-    print(f"  SegNet contribution: {result['seg_contribution']:.4f}  (seg={result['seg']:.8f})")
-    print(f"  PoseNet contribution:{result['pose_contribution']:.4f}  (pose={result['pose']:.8f})")
-    print(f"  Rate contribution:   {result['rate_contribution']:.4f}  (rate={result['rate']:.8f})")
-    print(f"  N samples:           {result['n_samples']}")
-    print(f"  Archive:             {result['archive']}")
+    print(f"  CANONICAL SCORE:      {result['score']:.4f}")
+    print(f"  SegNet contribution:  {result['seg_contribution']:.4f}  (seg={result['seg']:.8f})")
+    print(f"  PoseNet contribution: {result['pose_contribution']:.4f}  (pose={result['pose']:.8f})")
+    print(f"  Rate contribution:    {result['rate_contribution']:.4f}  (rate={result['rate']:.8f})")
+    print(f"  N samples:            {result['n_samples']}")
     print(f"{'=' * 60}")
