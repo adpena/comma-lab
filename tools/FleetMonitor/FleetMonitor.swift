@@ -1,8 +1,6 @@
 import Cocoa
 import SwiftUI
-import UserNotifications
 import Foundation
-import Combine
 
 // ── Constants ──────────────────────────────────────────────────────
 let WEIGHTS = NSString(string: "~/Projects/pact/experiments/postfilter_weights").expandingTildeInPath
@@ -78,9 +76,16 @@ class FleetState: ObservableObject {
     }
 
     func notify(_ title: String, _ body: String) {
-        let c = UNMutableNotificationContent()
-        c.title = title; c.body = body; c.sound = .default
-        UNUserNotificationCenter.current().add(UNNotificationRequest(identifier: UUID().uuidString, content: c, trigger: nil))
+        // Use osascript — always works, no permission dialog needed
+        let escaped_title = title.replacingOccurrences(of: "\"", with: "\\\"")
+        let escaped_body = body.replacingOccurrences(of: "\"", with: "\\\"")
+        let script = "display notification \"\(escaped_body)\" with title \"\(escaped_title)\" sound name \"Glass\""
+        let task = Process()
+        task.launchPath = "/usr/bin/osascript"
+        task.arguments = ["-e", script]
+        task.standardOutput = FileHandle.nullDevice
+        task.standardError = FileHandle.nullDevice
+        task.launch()
     }
 }
 
@@ -194,16 +199,13 @@ struct FleetView: View {
 }
 
 // ── App Delegate with Popover ──────────────────────────────────────
-class AppDel: NSObject, NSApplicationDelegate, UNUserNotificationCenterDelegate {
+class AppDel: NSObject, NSApplicationDelegate {
     var statusItem: NSStatusItem!
     var popover: NSPopover!
     var state = FleetState()
     var timer: Timer?
 
     func applicationDidFinishLaunching(_ n: Notification) {
-        UNUserNotificationCenter.current().delegate = self
-        UNUserNotificationCenter.current().requestAuthorization(options: [.alert, .sound]) { _, _ in }
-
         statusItem = NSStatusBar.system.statusItem(withLength: NSStatusItem.variableLength)
         statusItem.button?.font = NSFont.monospacedSystemFont(ofSize: 11, weight: .medium)
         statusItem.button?.action = #selector(toggle)
@@ -214,11 +216,11 @@ class AppDel: NSObject, NSApplicationDelegate, UNUserNotificationCenterDelegate 
         popover.behavior = .transient
         popover.contentViewController = NSHostingController(rootView: FleetView(state: state))
 
-        state.refreshCheckpoints()  // cheap: just file stat
+        state.refresh()  // cheap: just file stat
         updateTitle()
         // Light refresh every 30s (file stat only — zero CPU)
         timer = Timer.scheduledTimer(withTimeInterval: 30, repeats: true) { [weak self] _ in
-            self?.state.refreshCheckpoints()
+            self?.state.refresh()
             self?.updateTitle()
         }
     }
@@ -240,9 +242,6 @@ class AppDel: NSObject, NSApplicationDelegate, UNUserNotificationCenterDelegate 
         }
     }
 
-    func userNotificationCenter(_ c: UNUserNotificationCenter, willPresent n: UNNotification, withCompletionHandler h: @escaping (UNNotificationPresentationOptions) -> Void) {
-        h([.banner, .sound])
-    }
 }
 
 let app = NSApplication.shared
