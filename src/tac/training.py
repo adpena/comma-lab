@@ -91,6 +91,9 @@ class TrainConfig(BaseModel):
     hard_frame_ratio: float = Field(0.0, ge=0.0, le=1.0,
                                      description="Fraction of training pairs to oversample from hardest SegNet frames. "
                                      "0.0 = uniform sampling, 0.5 = half hard / half uniform.")
+    error_replay_every: int = Field(0, ge=0,
+                                     description="Recompute hard-frame weights using current model output every N epochs. "
+                                     "0 = static (compute once at start). 200 = adaptive every 200 epochs.")
     eval_holdout: float = Field(0.0, ge=0.0, le=0.5,
                                 description="Fraction of pairs held out for eval. "
                                 "0.0 = contest mode (train+eval on all pairs). "
@@ -743,27 +746,47 @@ class Trainer:
 
         # Hard-frame curriculum: precompute per-pair SegNet disagreement for weighted sampling
         hard_frame_weights = None
-        if cfg.hard_frame_ratio > 0:
+
+        def _compute_hard_frame_weights(use_model: bool = False, label: str = "init"):
+            """Compute weighted sampling from per-pair SegNet difficulty.
+
+            Args:
+                use_model: if True, run current model on compressed frames first (error replay).
+                    if False, measure raw compressed vs GT (static curriculum).
+                label: log label for this recomputation.
+            """
             from .losses import eval_scorer_loss
-            print(f"[trainer-lazy] Precomputing per-pair SegNet difficulty for hard-frame curriculum...")
+            print(f"[trainer-lazy] Computing hard-frame weights ({label}, "
+                  f"{'model output' if use_model else 'raw compressed'})...")
             pair_difficulties = []
+            self.model.eval()
             with torch.no_grad():
                 for start in train_pair_starts:
                     gt_pair = pair_from_frames(gt_frames, start).to(self.device)
                     comp_pair = pair_from_frames(comp_frames, start).to(self.device)
-                    _, _, seg_d = eval_scorer_loss(comp_pair, gt_pair, posenet, segnet)
+                    if use_model:
+                        # Error replay: measure difficulty on model's CURRENT output
+                        filtered = self._apply_filter_to_pair(comp_pair)
+                        filtered = filtered.round().clamp(0, 255).to(torch.uint8).float()
+                        _, _, seg_d = eval_scorer_loss(filtered, gt_pair, posenet, segnet)
+                    else:
+                        _, _, seg_d = eval_scorer_loss(comp_pair, gt_pair, posenet, segnet)
                     pair_difficulties.append(seg_d)
+            self.model.train()
             difficulties = torch.tensor(pair_difficulties)
-            # hard_frame_ratio controls boost: 0.5 → 6x boost on top 20%, 1.0 → 11x
             threshold = difficulties.quantile(0.8)
-            boost = 1.0 + cfg.hard_frame_ratio * 10.0  # ratio=0.5 → 6x, ratio=1.0 → 11x
-            hard_frame_weights = torch.where(difficulties >= threshold, boost, 1.0)
-            hard_frame_weights = hard_frame_weights / hard_frame_weights.sum()
+            boost = 1.0 + cfg.hard_frame_ratio * 10.0
+            weights = torch.where(difficulties >= threshold, boost, 1.0)
+            weights = weights / weights.sum()
             n_hard = (difficulties >= threshold).sum().item()
-            eff_prob = (hard_frame_weights[difficulties >= threshold].sum() * 100).item()
+            eff_prob = (weights[difficulties >= threshold].sum() * 100).item()
             print(f"[trainer-lazy] Hard frames: {n_hard}/{n_train} (top 20%), "
-                  f"boost={boost:.0f}x, eff. sampling share={eff_prob:.0f}%, "
+                  f"boost={boost:.0f}x, share={eff_prob:.0f}%, "
                   f"avg difficulty={difficulties.mean():.6f}")
+            return weights
+
+        if cfg.hard_frame_ratio > 0:
+            hard_frame_weights = _compute_hard_frame_weights(use_model=False, label="init")
 
         if self._current_epoch > 0:
             print(f"[trainer-lazy] Resuming from epoch {self._current_epoch}")
@@ -777,6 +800,14 @@ class Trainer:
                 lr = cfg.lr * (epoch + 1) / cfg.warmup_epochs
                 for pg in self.optimizer.param_groups:
                     pg["lr"] = lr
+
+            # Error replay: recompute hard-frame weights using current model output
+            if (hard_frame_weights is not None
+                    and cfg.error_replay_every > 0
+                    and epoch > 0
+                    and epoch % cfg.error_replay_every == 0):
+                hard_frame_weights = _compute_hard_frame_weights(
+                    use_model=True, label=f"error-replay-ep{epoch}")
 
             # Weighted or uniform sampling of training pairs
             if hard_frame_weights is not None and cfg.hard_frame_ratio > 0:

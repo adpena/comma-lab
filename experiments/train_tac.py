@@ -79,6 +79,8 @@ def main():
                         help="Evaluate int8 checkpoint every N epochs (default 5)")
     parser.add_argument("--hard-frame-ratio", type=float, default=0.0,
                         help="Fraction of hard SegNet pairs to oversample (0=uniform, 0.5=half hard)")
+    parser.add_argument("--error-replay-every", type=int, default=0,
+                        help="Recompute hard-frame weights using model output every N epochs (0=static)")
 
     # Loss mode
     parser.add_argument("--loss-mode", default="standard", choices=["standard", "temperature", "focal_ste", "kl_distill"])
@@ -160,6 +162,7 @@ def main():
         accum_steps=args.accum_steps,
         eval_every=args.eval_every,
         hard_frame_ratio=args.hard_frame_ratio,
+        error_replay_every=args.error_replay_every,
         loss_mode=args.loss_mode,
         temperature_start=args.temperature_start,
         temperature_end=args.temperature_end,
