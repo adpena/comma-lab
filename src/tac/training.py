@@ -275,7 +275,7 @@ class Trainer:
         """Resume training from a saved state."""
         state = torch.load(str(path), map_location=self.device, weights_only=False)
         self.model.load_state_dict(state["model"])
-        self.ema.shadow = state["ema_shadow"]
+        self.ema.shadow = {k: v.to(self.device) for k, v in state["ema_shadow"].items()}
         self.optimizer.load_state_dict(state["optimizer"])
         self.scheduler.load_state_dict(state["scheduler"])
         self._current_epoch = state.get("epoch", 0)
@@ -376,15 +376,8 @@ class Trainer:
         # Load EMA weights
         self.ema.apply(self.model)
 
-        # Simulate int8 quantization
-        q_state = {}
-        for name, param in self.model.state_dict().items():
-            p = param.detach().float()
-            scale = p.abs().max() / 127.0
-            if scale.item() < 1e-10:
-                scale = torch.tensor(1.0, device=p.device)
-            q = (p / scale).round().clamp(-128, 127) * scale
-            q_state[name] = q
+        # Simulate int8 quantization (single source of truth)
+        q_state = quantize_state_dict(self.model.state_dict())
         self.model.load_state_dict(q_state)
         self.model.eval()
 
@@ -438,7 +431,8 @@ class Trainer:
         torch.save(int8_state, int8_tmp)
         int8_tmp.rename(int8_path)
 
-        meta_path.write_text(json.dumps({
+        meta_tmp = meta_path.with_suffix(".json.tmp")
+        meta_tmp.write_text(json.dumps({
             "epoch": epoch,
             "scorer": scorer,
             "fp32_path": str(fp32_path),
@@ -446,6 +440,7 @@ class Trainer:
             "int8_size": int8_path.stat().st_size,
             "meta": int8_state["__meta__"],
         }, indent=2))
+        meta_tmp.rename(meta_path)
 
     def fit(
         self,

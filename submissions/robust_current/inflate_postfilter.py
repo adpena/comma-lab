@@ -222,7 +222,7 @@ def build_postfilter(meta: object | None = None) -> PostFilter:
     variant = normalized["variant"]
     hidden = int(normalized["hidden"])
     kernel = int(normalized["kernel"])
-    if variant in {"residual", "saliency_weighted", "segaware"}:
+    if variant in {"standard", "residual", "saliency_weighted", "segaware"}:
         return PostFilter(hidden=hidden, kernel=kernel)
     if variant == "depthwise":
         return DepthwisePostFilter(hidden=hidden, kernel=kernel)
@@ -275,7 +275,7 @@ def load_postfilter_int8(path: str, device: str = "cpu") -> PostFilter:
             seen.add(raw_key)
     meta = normalize_postfilter_meta(state.get("__meta__"))
     if (
-        meta.get("variant") in {"residual", "saliency_weighted", "segaware"}
+        meta.get("variant") in {"standard", "residual", "saliency_weighted", "segaware"}
         and "conv4.weight" in float_state
         and "conv1.weight" in float_state
         and float_state["conv1.weight"].ndim == 4

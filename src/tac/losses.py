@@ -317,10 +317,12 @@ def compute_boundary_mask(
     """
     p = gt_pair.to(device).float()
     frame = p[:, 1]  # SegNet uses last frame
-    frame_chw = frame.permute(0, 3, 1, 2)
+    frame_chw = frame.permute(0, 3, 1, 2).contiguous()
 
     with torch.no_grad():
-        seg_out = segnet(frame_chw)
+        # Must go through preprocess_input to resize to (384, 512) — matches upstream
+        seg_in = segnet.preprocess_input(frame_chw)
+        seg_out = segnet(seg_in)
         labels = seg_out.argmax(dim=1).float().unsqueeze(1)
 
     pad = kernel_size // 2
