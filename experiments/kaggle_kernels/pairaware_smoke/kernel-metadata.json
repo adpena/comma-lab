@@ -1,7 +1,7 @@
 {
   "id": "adpena/comma-lab-pairaware-smoke",
   "title": "comma-lab pairaware smoke",
-  "code_file": "run_kernel.py",
+  "code_file": "train_postfilter_pairaware.py",
   "language": "python",
   "kernel_type": "script",
   "is_private": true,

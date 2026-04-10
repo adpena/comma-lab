@@ -10,7 +10,9 @@ from pathlib import Path
 class KaggleKernelSpec:
     slug: str
     title: str
-    module_name: str
+    module_name: str | None = None
+    code_source: Path | None = None
+    code_file: str = "run_kernel.py"
     args: tuple[str, ...] = ()
     include_paths: tuple[Path, ...] = ()
 
@@ -40,6 +42,8 @@ def build_kernel_metadata(
 
 
 def _launcher_source(spec: KaggleKernelSpec) -> str:
+    if spec.module_name is None:
+        raise ValueError("module_name is required for launcher-based kernels")
     args_literal = repr(list(spec.args))
     return f"""#!/usr/bin/env python3
 from __future__ import annotations
@@ -139,13 +143,21 @@ def write_bundle(
         username=username,
         slug=spec.slug,
         title=spec.title,
-        code_file="run_kernel.py",
+        code_file=spec.code_file,
     )
     (bundle_dir / "kernel-metadata.json").write_text(json.dumps(metadata, indent=2))
-    (bundle_dir / "run_kernel.py").write_text(_launcher_source(spec))
+    if spec.code_source is not None:
+        code_source = Path(spec.code_source)
+        code_destination = bundle_dir / spec.code_file
+        code_destination.parent.mkdir(parents=True, exist_ok=True)
+        shutil.copy2(code_source, code_destination)
+    else:
+        (bundle_dir / spec.code_file).write_text(_launcher_source(spec))
     root = repo_root.resolve() if repo_root is not None else None
     for source in spec.include_paths:
         source_path = Path(source)
+        if spec.code_source is not None and source_path.resolve() == Path(spec.code_source).resolve():
+            continue
         if root is not None:
             try:
                 rel = source_path.resolve().relative_to(root)

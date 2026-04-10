@@ -56,6 +56,34 @@ class KaggleKernelBuilderTests(unittest.TestCase):
         self.assertIn("git-lfs", launcher)
         self.assertEqual(copied, "VALUE = 1\n")
 
+    def test_write_bundle_supports_direct_code_file_mode(self) -> None:
+        with tempfile.TemporaryDirectory() as tmpdir:
+            root = Path(tmpdir)
+            source = root / "script.py"
+            source.write_text("print('hi')\n")
+            asset = root / "reports" / "raw" / "artifact.zip"
+            asset.parent.mkdir(parents=True)
+            asset.write_bytes(b"zip")
+
+            bundle = root / "bundle"
+            spec = mod.KaggleKernelSpec(
+                slug="comma-lab-direct",
+                title="comma-lab direct",
+                code_source=source,
+                code_file="script.py",
+                include_paths=(source, asset),
+            )
+
+            mod.write_bundle(bundle_dir=bundle, username="alice", spec=spec, repo_root=root)
+
+            metadata = json.loads((bundle / "kernel-metadata.json").read_text())
+            copied_script = (bundle / "script.py").read_text()
+            copied_asset = (bundle / "reports" / "raw" / "artifact.zip").read_bytes()
+
+        self.assertEqual(metadata["code_file"], "script.py")
+        self.assertEqual(copied_script, "print('hi')\n")
+        self.assertEqual(copied_asset, b"zip")
+
 
 if __name__ == "__main__":
     unittest.main()

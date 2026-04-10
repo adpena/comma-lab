@@ -1,7 +1,7 @@
 {
   "id": "adpena/comma-lab-segnet-attack-fixed-h32",
   "title": "comma-lab segnet attack fixed h32",
-  "code_file": "run_kernel.py",
+  "code_file": "cloud_segnet_attack_h32_trainer.py",
   "language": "python",
   "kernel_type": "script",
   "is_private": true,
