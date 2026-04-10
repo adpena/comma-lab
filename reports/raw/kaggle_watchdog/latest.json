@@ -1,5 +1,5 @@
 {
-  "ts_utc": "2026-04-10T02:25:39.535775Z",
+  "ts_utc": "2026-04-10T02:31:32.992976Z",
   "synced": [
     {
       "slug": "kaggle-dilated-h64-long1000",
@@ -18,7 +18,7 @@
       "best_checkpoint": null,
       "latest_printed_checkpoint": null,
       "notes": "Kaggle kernel version 5 is now running on the direct-code-file path. The self-contained dilated trainer now falls back to CPU on unsupported P100 CUDA and can resolve the archive by basename when it is flattened into the kernel bundle root.\nadpena/comma-lab-dilated-h64-long1000 has status \"KernelWorkerStatus.CANCEL_ACKNOWLEDGED\"",
-      "written_at": "2026-04-10T02:25:37.572035Z",
+      "written_at": "2026-04-10T02:31:31.355236Z",
       "phase": "kernel_cancel_acknowledged",
       "kernel_status": "adpena/comma-lab-dilated-h64-long1000 has status \"KernelWorkerStatus.CANCEL_ACKNOWLEDGED\""
     },
@@ -38,7 +38,7 @@
       "best_checkpoint": null,
       "latest_printed_checkpoint": null,
       "notes": "Push attempt blocked by Kaggle free-tier quota: maximum batch GPU session count of 2 reached. Bundle is ready but not launched yet.\nKernelWorkerStatus.NOT_PUSHED",
-      "written_at": "2026-04-10T02:25:37.973341Z",
+      "written_at": "2026-04-10T02:31:31.614874Z",
       "phase": "kernel_not_pushed",
       "kernel_status": "KernelWorkerStatus.NOT_PUSHED"
     },
@@ -59,7 +59,7 @@
       "best_checkpoint": null,
       "latest_printed_checkpoint": null,
       "notes": "Kaggle kernel version 5 is now running on the direct-code-file path. The self-contained SegNet trainer now falls back to CPU on unsupported P100 CUDA and can resolve the archive by basename from the bundle root.",
-      "written_at": "2026-04-10T02:25:38.353871Z",
+      "written_at": "2026-04-10T02:31:31.877776Z",
       "phase": "kernel_running",
       "kernel_status": "adpena/comma-lab-segnet-attack-fixed-h32 has status \"KernelWorkerStatus.RUNNING\""
     }
