@@ -14,6 +14,7 @@ Modules:
   - tac.quantization: FakeQuant STE, LSQ, QATPostFilter, int8 save/load
   - tac.scorer: scoring formula, sensitivity analysis, load_scorers, detect_device
   - tac.evaluate: proxy scoring, top-K checkpoint averaging, checkpoint discovery
+  - tac.models: Pydantic models (ScoreResult, CheckpointMeta, TrainConfig)
 
 Quick start::
 
@@ -27,4 +28,4 @@ Quick start::
     trainer.fit(comp_pairs, gt_pairs, posenet, segnet, sal_weights)
 """
 
-__version__ = "0.7.0"
+__version__ = "0.8.0"

@@ -25,6 +25,8 @@ from pathlib import Path
 
 import torch
 
+from .models import ScoreResult  # noqa: TC001 — runtime, not just type hints
+
 
 def canonical_score(
     int8_path: str | Path,
@@ -37,7 +39,7 @@ def canonical_score(
     hidden: int = 64,
     kernel: int = 3,
     device: str | None = None,
-) -> dict[str, float]:
+) -> ScoreResult:
     """The ONE canonical evaluation function.
 
     All paths are explicit parameters — nothing hardcoded.
@@ -143,18 +145,20 @@ def canonical_score(
     avg_seg = total_seg / n_samples
     score = 100.0 * avg_seg + math.sqrt(10.0 * avg_pose) + 25.0 * rate
 
-    return {
-        "score": score,
-        "pose": avg_pose,
-        "seg": avg_seg,
-        "rate": rate,
-        "rate_contribution": 25.0 * rate,
-        "pose_contribution": math.sqrt(10.0 * avg_pose),
-        "seg_contribution": 100.0 * avg_seg,
-        "n_samples": n_samples,
-        "archive": str(archive_path),
-        "checkpoint": str(int8_path),
-    }
+    from .models import ScoreResult
+
+    return ScoreResult(
+        score=score,
+        pose=avg_pose,
+        seg=avg_seg,
+        rate=rate,
+        rate_contribution=25.0 * rate,
+        pose_contribution=math.sqrt(10.0 * avg_pose),
+        seg_contribution=100.0 * avg_seg,
+        n_samples=n_samples,
+        archive=str(archive_path),
+        checkpoint=str(int8_path),
+    )
 
 
 def find_checkpoints(
@@ -251,9 +255,9 @@ if __name__ == "__main__":
     )
 
     print(f"{'=' * 60}")
-    print(f"  CANONICAL SCORE:      {result['score']:.4f}")
-    print(f"  SegNet contribution:  {result['seg_contribution']:.4f}  (seg={result['seg']:.8f})")
-    print(f"  PoseNet contribution: {result['pose_contribution']:.4f}  (pose={result['pose']:.8f})")
-    print(f"  Rate contribution:    {result['rate_contribution']:.4f}  (rate={result['rate']:.8f})")
-    print(f"  N samples:            {result['n_samples']}")
+    print(f"  CANONICAL SCORE:      {result.score:.4f}")
+    print(f"  SegNet contribution:  {result.seg_contribution:.4f}  (seg={result.seg:.8f})")
+    print(f"  PoseNet contribution: {result.pose_contribution:.4f}  (pose={result.pose:.8f})")
+    print(f"  Rate contribution:    {result.rate_contribution:.4f}  (rate={result.rate:.8f})")
+    print(f"  N samples:            {result.n_samples}")
     print(f"{'=' * 60}")
