@@ -7,14 +7,14 @@
   "latest_printed_checkpoint": null,
   "manifest_path": ".omx/logs/remote_jobs/kaggle-pairaware-smoke.json",
   "notes": "Push attempt blocked by Kaggle free-tier quota: maximum batch GPU session count of 2 reached. Bundle is ready but not launched yet.",
-  "phase": "quota_blocked",
+  "phase": "repush_submitted",
   "platform": "kaggle",
   "remote_command": "uv run --with kaggle kaggle kernels push -p /Users/adpena/Projects/pact/experiments/kaggle_kernels/pairaware_smoke --accelerator gpu",
   "remote_log": "kaggle://adpena/comma-lab-pairaware-smoke",
   "remote_root": "/kaggle/working",
   "run_id": "kaggle-pairaware-smoke-v1-20260410T000419Z",
   "slug": "kaggle-pairaware-smoke",
-  "status": "paused",
+  "status": "queued",
   "status_path": ".omx/status/kaggle-pairaware-smoke.json",
-  "written_at": "2026-04-10T00:12:24.791300Z"
+  "written_at": "2026-04-10T01:36:59.472804Z"
 }
