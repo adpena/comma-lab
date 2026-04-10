@@ -846,6 +846,24 @@ class Trainer:
                 for pg in self.optimizer.param_groups:
                     pg["lr"] = lr
 
+            # Adaptive weight rebalance (once per rebalance_every epochs, not per step)
+            if (self._adaptive and self._last_eval_pose is not None
+                    and epoch % getattr(cfg, 'rebalance_every', 50) == 0):
+                progress = epoch / max(cfg.epochs - 1, 1)
+                if cfg.temp_schedule == "exponential" and cfg.temperature_start > cfg.temperature_end:
+                    _T = cfg.temperature_start * (cfg.temperature_end / cfg.temperature_start) ** progress
+                else:
+                    _T = cfg.temperature_start + progress * (cfg.temperature_end - cfg.temperature_start)
+                result = self._adaptive.rebalance(
+                    eval_pose=self._last_eval_pose,
+                    eval_seg=self._last_eval_seg or 0.01,
+                    temperature=_T,
+                )
+                self._cached_sw = result["segnet_weight"]
+                self._cached_bw = result["boundary_weight"]
+                if epoch % (getattr(cfg, 'rebalance_every', 50) * 5) == 0:
+                    print(f"[adaptive] ep={epoch} T={_T:.2f} sw={self._cached_sw:.3f} bw={self._cached_bw:.1f}")
+
             # Error replay: recompute hard-frame weights using current model output
             if (hard_frame_weights is not None
                     and cfg.error_replay_every > 0
@@ -900,20 +918,13 @@ class Trainer:
                     bm = self._boundary_masks.get(start) if self._boundary_masks else None
 
                     # Adaptive or static weights
-                    if self._adaptive and self._last_eval_pose is not None:
-                        # Mathematically-derived: w_s*(p,T) = 20*sqrt(p/0.1)/T²
-                        result = self._adaptive.rebalance(
-                            eval_pose=self._last_eval_pose,
-                            eval_seg=self._last_eval_seg or 0.01,
-                            temperature=temp,
-                        )
-                        sw = result["segnet_weight"]
-                        bw = result["boundary_weight"]
-                    else:
-                        sw = cfg.segnet_loss_weight
-                        bw = cfg.boundary_weight
+                    # Use cached adaptive weights (computed once per epoch, not per step)
+                    sw = getattr(self, '_cached_sw', cfg.segnet_loss_weight)
+                    bw = getattr(self, '_cached_bw', cfg.boundary_weight)
+                    if not self._adaptive:
+                        # Static boundary anneal for non-adaptive mode
                         if cfg.boundary_anneal and temp > 0:
-                            bw = bw * min(3.0, cfg.temperature_start / max(temp, cfg.temperature_end))
+                            bw = cfg.boundary_weight * min(3.0, cfg.temperature_start / max(temp, cfg.temperature_end))
 
                     loss, pd, sd = kl_distill_scorer_loss(
                         filtered, gt_pair, posenet, segnet,
@@ -967,7 +978,7 @@ class Trainer:
             # SWA: snapshot weights in final 20% of training for wider minima
             if cfg.use_swa and epoch >= int(cfg.epochs * 0.8):
                 if not hasattr(self, '_swa'):
-                    self._swa = SWA(self.model)
+                    self._swa = SWA()
                     print(f"[trainer-lazy] SWA started at epoch {epoch}")
                 self._swa.update(self.model)
 

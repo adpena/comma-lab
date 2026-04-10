@@ -111,6 +111,8 @@ class AdaptiveWeights:
             raise ValueError(f"Temperature must be positive, got {temperature}")
         if pose < 0:
             raise ValueError(f"Pose distortion must be non-negative, got {pose}")
+        # Guard: pose=0 gives w_s=0 which kills SegNet gradient. Clamp to minimum.
+        pose = max(pose, 1e-6)
         # w_s* = 20 * sqrt(p / 0.1) / T^2
         return 20.0 * math.sqrt(pose / self.reference_pose) / (temperature ** 2)
 
