@@ -387,11 +387,10 @@ def kl_distill_scorer_loss(
 
     seg_kl = kl_per_pixel.mean()
 
-    # PoseNet gradient cap: stop pushing PoseNet once it's already good.
-    # At pose < 0.005, further improvement yields diminishing score returns
-    # (sqrt is concave). Redirect all capacity to SegNet.
-    pose_capped = torch.clamp(pose_dist, min=0.001)
-    loss = segnet_weight * seg_kl + torch.sqrt(10.0 * pose_capped + 1e-8)
+    # NOTE: PoseNet gradient cap REMOVED after authoritative regression (1.85 vs proxy 1.25).
+    # The clamp killed PoseNet gradient, letting PoseNet degrade unchecked while proxy didn't catch it.
+    # The sqrt formula already naturally de-emphasizes small pose values without a hard cutoff.
+    loss = segnet_weight * seg_kl + torch.sqrt(10.0 * pose_dist + 1e-8)
     return loss, pose_dist.item(), seg_kl.item()
 
 
