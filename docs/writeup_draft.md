@@ -41,8 +41,10 @@ AV1 beats x265 at this bitrate regime. Film-grain synthesis is not cosmetic -- r
 After decoding, a 3-layer residual CNN corrects each frame:
 
 ```
-input (3ch) -> Conv2d 3x3 (3->64) -> ReLU -> Conv2d 3x3 (64->64) -> ReLU -> Conv2d 3x3 (64->3) -> + input
+input (3ch) -> Conv2d 3x3 (3->64) -> ReLU -> Conv2d 3x3 dilation=2 (64->64) -> ReLU -> Conv2d 3x3 (64->3) -> + input
 ```
+
+The middle layer uses dilation=2, which expands the receptive field from 7x7 to 15x15 at the same parameter count. This matters because PoseNet's early convolutions integrate over mid-frequency spatial patterns — the wider RF lets the CNN correct the spatial correlations that PoseNet attends to.
 
 The output layer is zero-initialized, so at the start of training the filter is the identity function -- it does nothing. Every correction the filter learns has to earn its place by reducing the scorer loss.
 
@@ -78,7 +80,7 @@ The training loop evaluated frames in float32, but the official scorer loads fra
 
 ### The fix
 
-Each bug was addressed with a specific test. The `tac` library now includes 61 tests covering metric computation, checkpoint selection, boundary mask resolution, data splitting, and numeric fidelity. Pydantic validation enforces schema correctness on all configuration and checkpoint metadata. Atomic saves prevent partial checkpoint corruption.
+Each bug was addressed with a specific test. The `tac` library now includes 66 tests covering metric computation, checkpoint selection, boundary mask resolution, data splitting, and numeric fidelity. Pydantic validation enforces schema correctness on all configuration and checkpoint metadata. Atomic saves prevent partial checkpoint corruption.
 
 The hardening dropped our official score from 1.727 to 1.52. That 0.2 improvement came entirely from fixing measurement and selection bugs.
 
@@ -200,7 +202,7 @@ Dual saliency with high alpha_seg (5000) tells the CNN to correct freely at SegN
 | Direction | Target | Status |
 |-----------|--------|--------|
 | Dual saliency (alpha_seg=5000) | SegNet boundaries | In training |
-| KL distillation (T=5→2→1) | SegNet soft targets | Deploying to Lightning T4 |
+| KL distillation (T=5→2→1) | SegNet soft targets | In training (Lightning T4 CUDA) |
 | Per-channel int8 quantization | Both (better fidelity) | Implemented, all new runs |
 | STE boundary weighting (5x) | SegNet gradient at edges | In training, stacked with dual sal |
 | Hard-frame curriculum | SegNet worst pairs | Next implementation |
@@ -230,7 +232,7 @@ No paid compute was used. All results are reproducible on consumer hardware.
 
 **Inference:** CPU-only PyTorch. The filter processes all 1200 frames in under 30 seconds. No GPU required at decode time.
 
-**Reproducibility:** The `tac` library (v0.8.0) is portable, pydantic-validated, and backed by 61 tests covering metric computation, checkpoint selection, numeric fidelity, and data splitting. The promoted result can be reproduced from the committed training scripts and configuration.
+**Reproducibility:** The `tac` library (v0.9.0) is portable, pydantic-validated, and backed by 66 tests covering metric computation, checkpoint selection, numeric fidelity, and data splitting. The promoted result can be reproduced from the committed training scripts and configuration.
 
 ## What we learned
 
@@ -250,4 +252,4 @@ No paid compute was used. All results are reproducible on consumer hardware.
 
 ---
 
-*Score: 1.33 | 45KB int8 CNN | 40K params | SVT-AV1 CRF 34 | 864KB archive | CPU inference < 30s | 61 tests | 15 bugs fixed*
+*Score: 1.33 | 45KB int8 CNN | 40K params | SVT-AV1 CRF 34 | 864KB archive | CPU inference < 30s | 66 tests | 15 bugs fixed*
