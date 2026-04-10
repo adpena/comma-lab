@@ -75,6 +75,8 @@ def main():
     parser.add_argument("--ema-decay", type=float, default=0.997)
     parser.add_argument("--accum-steps", type=int, default=4)
     parser.add_argument("--subsample", type=int, default=8)
+    parser.add_argument("--eval-every", type=int, default=5,
+                        help="Evaluate int8 checkpoint every N epochs (default 5)")
 
     # Loss mode
     parser.add_argument("--loss-mode", default="standard", choices=["standard", "temperature", "focal_ste", "kl_distill"])
@@ -154,6 +156,7 @@ def main():
         lr=args.lr,
         ema_decay=args.ema_decay,
         accum_steps=args.accum_steps,
+        eval_every=args.eval_every,
         loss_mode=args.loss_mode,
         temperature_start=args.temperature_start,
         temperature_end=args.temperature_end,

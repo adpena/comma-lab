@@ -87,6 +87,7 @@ class TrainConfig(BaseModel):
 
     # Training dynamics
     accum_steps: int = Field(4, ge=1, le=64)
+    eval_every: int = Field(5, ge=1, description="Evaluate int8 checkpoint every N epochs")
     eval_holdout: float = Field(0.0, ge=0.0, le=0.5,
                                 description="Fraction of pairs held out for eval. "
                                 "0.0 = contest mode (train+eval on all pairs). "
@@ -627,7 +628,7 @@ class Trainer:
 
                 total = loss + cfg.sal_lambda * sal_recon
 
-                self.optimizer.zero_grad()
+                self.optimizer.zero_grad(set_to_none=True)
                 total.backward()
                 torch.nn.utils.clip_grad_norm_(self.model.parameters(), cfg.grad_clip)
                 self.optimizer.step()
@@ -754,7 +755,7 @@ class Trainer:
             perm = torch.randperm(n_train)[:train_size]
 
             accum = cfg.accum_steps
-            self.optimizer.zero_grad()
+            self.optimizer.zero_grad(set_to_none=True)
 
             for step, pair_idx in enumerate(perm):
                 start = train_pair_starts[pair_idx.item()]
@@ -825,26 +826,32 @@ class Trainer:
                     torch.nn.utils.clip_grad_norm_(self.model.parameters(), cfg.grad_clip)
                     self.optimizer.step()
                     self.ema.update(self.model)
-                    self.optimizer.zero_grad()
+                    self.optimizer.zero_grad(set_to_none=True)
 
                 # Free pair memory immediately
                 del comp_pair, gt_pair, filtered, filtered_bchw, comp_bchw, sal_w
-                if torch.cuda.is_available():
-                    torch.cuda.empty_cache()
 
             if epoch >= cfg.warmup_epochs:
                 self.scheduler.step()
+
+            # Empty CUDA cache once per epoch (not per step — avoids sync stalls)
+            if torch.cuda.is_available():
+                torch.cuda.empty_cache()
 
             n = len(perm)
             avg_loss = total_loss / n
             avg_pose = total_pose / n
             avg_seg = total_seg / n
 
-            # Best-checkpoint int8 evaluation on HELD-OUT pairs only
-            scorer_val = self._evaluate_int8_lazy(
-                comp_frames, gt_frames, posenet, segnet,
-                eval_pair_starts=eval_pair_starts,
-            )
+            # Best-checkpoint int8 evaluation — skip expensive eval on most epochs
+            is_eval_epoch = (epoch + 1) % cfg.eval_every == 0 or epoch == cfg.epochs - 1 or epoch == 0
+            if is_eval_epoch:
+                scorer_val = self._evaluate_int8_lazy(
+                    comp_frames, gt_frames, posenet, segnet,
+                    eval_pair_starts=eval_pair_starts,
+                )
+            else:
+                scorer_val = self.best_scorer  # reuse last known
 
             if scorer_val < self.best_scorer:
                 self.best_scorer = scorer_val
@@ -853,7 +860,8 @@ class Trainer:
                 print(f"  ** NEW BEST: ep {epoch}, scorer {scorer_val:.4f} **")
 
             lr = self.optimizer.param_groups[0]["lr"]
-            print(f"[ep {epoch:4d}] loss={avg_loss:.4f} pose={avg_pose:.6f} "
+            eval_tag = "*" if is_eval_epoch else " "
+            print(f"[ep {epoch:4d}]{eval_tag} loss={avg_loss:.4f} pose={avg_pose:.6f} "
                   f"seg={avg_seg:.6f} scorer={scorer_val:.4f} best={self.best_scorer:.4f} lr={lr:.6f}")
 
             # Save training state every 50 epochs for crash recovery
