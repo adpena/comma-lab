@@ -1,4 +1,4 @@
-# Current Focus — 2026-04-10 21:30 CDT
+# Current Focus — 2026-04-10 22:00 CDT
 
 ## Floor
 - **Official score**: 1.33 (authoritative scorer, dilated h=64 from Modal A10G)
@@ -27,6 +27,10 @@
 - Nuclear H100 deploy
 - Video comparison tool for writeup
 
-## Stale items fixed this session
-- status.json updated from 1.727 to 1.51
-- Writeup updated from 1.52 to 1.51 (authoritative)
+## This session
+- PROMOTED dilated h=64 from Modal: 1.51 → 1.33 (0.18 improvement)
+- Compliance re-run confirmed: bit-identical 1.33 on clean dir
+- tac v0.9.0: 8 council findings addressed, 66 tests
+- Inflate optimized: batched inference, timing, redundant uv removed
+- Writeup updated to 1.33, tone pass (no boastful language)
+- Mac-mini x86_64 compliance eval set up (torch version issue on Intel Mac)
