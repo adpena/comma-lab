@@ -120,10 +120,10 @@ class TrainConfig(BaseModel):
                     f"kl_distill requires temperature_start >= 2.0 (Hinton: anneal 5.0→1.0). "
                     f"Got {self.temperature_start}. Use --temperature-start 5.0 --temperature-end 1.0"
                 )
-            if self.temperature_end < 1.0:
+            if self.temperature_end < 0.1:
                 raise ValueError(
-                    f"kl_distill requires temperature_end >= 1.0 (never go below T=1). "
-                    f"Got {self.temperature_end}. Use --temperature-end 1.0"
+                    f"kl_distill requires temperature_end >= 0.1 (below 0.1 is numerically unstable). "
+                    f"Got {self.temperature_end}. Use --temperature-end 0.2 for aggressive argmax pressure"
                 )
         return self
 
@@ -252,11 +252,11 @@ class Trainer:
 
         if config.scheduler == "cosine":
             self.scheduler = torch.optim.lr_scheduler.CosineAnnealingLR(
-                self.optimizer, T_max=config.epochs - config.warmup_epochs, eta_min=1e-6
+                self.optimizer, T_max=config.epochs - config.warmup_epochs, eta_min=1e-5
             )
         else:
             self.scheduler = torch.optim.lr_scheduler.CosineAnnealingWarmRestarts(
-                self.optimizer, T_0=config.restart_t0, T_mult=config.restart_tmult, eta_min=1e-6
+                self.optimizer, T_0=config.restart_t0, T_mult=config.restart_tmult, eta_min=1e-5
             )
 
         # Resume from checkpoint if specified (must come after optimizer/scheduler init)

@@ -82,9 +82,14 @@ class TestTrainConfigInvalid:
         with pytest.raises(ValidationError, match="kl_distill requires temperature_start"):
             TrainConfig(loss_mode="kl_distill", temperature_start=1.0, temperature_end=0.05)
 
-    def test_kl_distill_requires_temperature_end_ge_1(self):
-        with pytest.raises(ValidationError, match=r"temperature_end >= 1\.0"):
-            TrainConfig(loss_mode="kl_distill", temperature_start=5.0, temperature_end=0.5)
+    def test_kl_distill_requires_temperature_end_ge_01(self):
+        with pytest.raises(ValidationError, match=r"temperature_end >= 0\.1"):
+            TrainConfig(loss_mode="kl_distill", temperature_start=5.0, temperature_end=0.05)
+
+    def test_kl_distill_allows_sub1_temperature(self):
+        """T_end=0.2 is now allowed for argmax pressure phase."""
+        c = TrainConfig(loss_mode="kl_distill", temperature_start=5.0, temperature_end=0.2)
+        assert c.temperature_end == 0.2
 
     def test_kl_distill_valid_config(self):
         c = TrainConfig(loss_mode="kl_distill", temperature_start=5.0, temperature_end=1.0)
