@@ -1,5 +1,18 @@
 # run log
 
+## 2026-04-10 01:15:00 -0500 - OFFICIAL SCORE 1.51 (MPS) / 1.52 (CPU) CONFIRMED
+
+### what happened
+- Ran the EXACT official evaluate.sh pipeline against our promoted submission
+- inflate.sh → inflate_postfilter.py → 1200 frames → evaluate.py
+- MPS result: 1.51 (pose=0.01229285, seg=0.00579905, rate=0.02301653)
+- CPU result: 1.52 (pose=0.01281782, seg=0.00583521, rate=0.02301653)
+- Small MPS/CPU variance is expected (floating point)
+- Official eval will be CPU → our score is **1.52**
+- Leaderboard #2 is 1.89 → our lead is **0.37**
+- MPS OOM during eval killed v2 training + all checkpoint files. V1 promoted copy safe.
+- Training restarted from scratch.
+
 ## 2026-04-10 00:15:00 -0500 - tac v0.7.0 hardening session + 1.557 promoted
 
 ### what happened
