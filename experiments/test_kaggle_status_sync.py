@@ -38,6 +38,15 @@ class KaggleStatusSyncTests(unittest.TestCase):
         self.assertEqual(payload["phase"], "quota_blocked")
         self.assertIn("quota", payload["notes"])
 
+    def test_parse_kaggle_status_text_marks_cancel_acknowledged(self) -> None:
+        mod = load_module()
+        payload = mod.parse_kaggle_status_text(
+            'adpena/comma-lab-demo has status "KernelWorkerStatus.CANCEL_ACKNOWLEDGED"'
+        )
+
+        self.assertEqual(payload["status"], "paused")
+        self.assertEqual(payload["phase"], "kernel_cancel_acknowledged")
+
     def test_sync_status_from_manifest_writes_status_payload(self) -> None:
         mod = load_module()
         with tempfile.TemporaryDirectory() as tmpdir:

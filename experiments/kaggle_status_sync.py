@@ -53,6 +53,20 @@ def parse_kaggle_status_text(text: str) -> dict[str, object]:
             "kernel_status": raw,
             "notes": raw,
         }
+    if "kernelworkerstatus.cancel_acknowledged" in lower:
+        return {
+            "status": "paused",
+            "phase": "kernel_cancel_acknowledged",
+            "kernel_status": raw,
+            "notes": raw,
+        }
+    if "kernelworkerstatus.cancelled" in lower:
+        return {
+            "status": "paused",
+            "phase": "kernel_cancelled",
+            "kernel_status": raw,
+            "notes": raw,
+        }
     if "kernelworkerstatus.running" in lower or " running" in f" {lower}" or lower == "running":
         return {
             "status": "running",
