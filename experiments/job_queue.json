@@ -4,57 +4,66 @@
     "cmd": "experiments/train_postfilter_qat_ema.py --hidden 64 --epochs 2500 --alpha 20 --tag standard_h64_long2500",
     "platform": "mps",
     "status": "running",
-    "priority": 1,
-    "notes": "Insurance lane \u2014 saliency fix makes this faster than previous runs"
+    "priority": 1
   },
   {
     "tag": "h96_modal",
     "cmd": "modal run experiments/modal_h96_deploy.py",
     "platform": "modal",
     "status": "running",
-    "priority": 1,
-    "notes": "Council #1 priority \u2014 width scaling to ~1.65"
+    "priority": 1
   },
   {
-    "tag": "standard_h64_extended",
-    "cmd": "experiments/train_postfilter_qat_ema.py --hidden 64 --epochs 2500 --alpha 20 --tag standard_h64_extended",
+    "tag": "h64_no_sal_recon",
+    "cmd": "experiments/train_tac.py --hidden 64 --epochs 2500 --sal-lambda 0 --tag h64_no_sal_recon",
+    "platform": "mps",
+    "status": "queued",
+    "priority": 1,
+    "notes": "Council #0: remove saliency recon entirely"
+  },
+  {
+    "tag": "h64_temp_anneal",
+    "cmd": "experiments/train_tac.py --hidden 64 --epochs 2500 --loss-mode temperature --tag h64_temp_anneal",
     "platform": "mps",
     "status": "queued",
     "priority": 2,
-    "depends_on": "standard_h64_long2500",
-    "notes": "If first h=64 doesn't beat promoted, restart with fresh init"
+    "depends_on": "h64_no_sal_recon",
+    "notes": "Council #2: temperature-annealed softmax"
+  },
+  {
+    "tag": "h64_focal_ste",
+    "cmd": "experiments/train_tac.py --hidden 64 --epochs 2500 --loss-mode focal_ste --use-ste --tag h64_focal_ste",
+    "platform": "mps",
+    "status": "queued",
+    "priority": 2,
+    "depends_on": "h64_temp_anneal",
+    "notes": "Council #3: focal cross-entropy STE"
+  },
+  {
+    "tag": "h64_dual_saliency",
+    "cmd": "experiments/train_tac.py --hidden 64 --epochs 2500 --use-dual-saliency --alpha-seg 200 --tag h64_dual_saliency",
+    "platform": "mps",
+    "status": "queued",
+    "priority": 2,
+    "depends_on": "h64_focal_ste",
+    "notes": "Council #1: PoseNet + SegNet boundary saliency"
+  },
+  {
+    "tag": "h64_segnet_overweight",
+    "cmd": "experiments/train_tac.py --hidden 64 --epochs 2500 --segnet-loss-weight 200 --tag h64_segnet_overweight",
+    "platform": "mps",
+    "status": "queued",
+    "priority": 3,
+    "depends_on": "h64_dual_saliency",
+    "notes": "Council #5: over-weight SegNet 200x"
   },
   {
     "tag": "h128_modal",
     "cmd": "modal run experiments/modal_h96_deploy.py",
     "platform": "modal",
     "status": "queued",
-    "priority": 2,
+    "priority": 3,
     "depends_on": "h96_modal",
-    "notes": "Width scaling continuation \u2014 rate crossover risk at h=128"
-  },
-  {
-    "tag": "h64_no_sal_recon",
-    "cmd": "experiments/train_postfilter_qat_ema.py --hidden 64 --epochs 2500 --alpha 20 --sal-lambda 0 --tag h64_no_sal_recon",
-    "platform": "mps",
-    "status": "running",
-    "priority": 1,
-    "notes": "COUNCIL PRIORITY: remove saliency recon to unlock SegNet headroom"
-  },
-  {
-    "tag": "h64_temp_anneal",
-    "cmd": "experiments/train_postfilter_qat_ema.py --hidden 64 --epochs 2500 --alpha 20 --tag h64_temp_anneal",
-    "platform": "mps",
-    "status": "queued",
-    "priority": 2,
-    "notes": "Council #2: temperature-annealed softmax (needs tac Trainer integration)"
-  },
-  {
-    "tag": "h64_focal_ste",
-    "cmd": "experiments/train_postfilter_qat_ema.py --hidden 64 --epochs 2500 --alpha 20 --tag h64_focal_ste",
-    "platform": "mps",
-    "status": "queued",
-    "priority": 2,
-    "notes": "Council #3: focal cross-entropy STE (needs tac Trainer integration)"
+    "notes": "Width scaling to h=128 (rate crossover risk)"
   }
 ]
