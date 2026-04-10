@@ -86,6 +86,10 @@ class TrainConfig(BaseModel):
 
     # Training dynamics
     accum_steps: int = Field(4, ge=1, le=64)
+    eval_holdout: float = Field(0.0, ge=0.0, le=0.5,
+                                description="Fraction of pairs held out for eval. "
+                                "0.0 = contest mode (train+eval on all pairs). "
+                                "0.25 = production mode (25% held-out eval split).")
 
     # Resumption
     resume_from: str | None = None
@@ -651,19 +655,24 @@ class Trainer:
         all_pair_starts = pair_start_indices(len(comp_frames))
         n_total = len(all_pair_starts)
 
-        # CRITICAL: Partition into train/eval with NO overlap.
-        # Use last 25% as held-out eval. Training never sees these pairs.
-        eval_size = max(1, n_total // 4)
-        train_pair_starts = all_pair_starts[:-eval_size]
-        eval_pair_starts = all_pair_starts[-eval_size:]
+        # Train/eval split controlled by eval_holdout:
+        #   0.0  = contest mode: train+eval on ALL pairs (maximize signal from 1 video)
+        #   0.25 = production mode: last 25% held out (proper generalization estimate)
+        if cfg.eval_holdout > 0:
+            eval_size = max(1, int(n_total * cfg.eval_holdout))
+            train_pair_starts = all_pair_starts[:-eval_size]
+            eval_pair_starts = all_pair_starts[-eval_size:]
+            split_label = f"train {len(train_pair_starts)} / eval {len(eval_pair_starts)} (held-out)"
+        else:
+            train_pair_starts = all_pair_starts
+            eval_pair_starts = all_pair_starts
+            split_label = f"all {n_total} pairs (contest mode, eval=train)"
         n_train = len(train_pair_starts)
         train_size = max(1, n_train // subsample)
 
-        print(f"[trainer-lazy] {cfg.epochs} epochs, {train_size}/{n_train} train pairs/ep, "
-              f"{len(eval_pair_starts)} held-out eval pairs, "
-              f"h={cfg.hidden}, alpha={cfg.alpha}, device={self.device}")
+        print(f"[trainer-lazy] {cfg.epochs} epochs, {train_size}/{n_train} pairs/ep, "
+              f"{split_label}, h={cfg.hidden}, alpha={cfg.alpha}, device={self.device}")
         print("[trainer-lazy] Frames on CPU, pairs built on-the-fly (MPS-safe)")
-        print(f"[trainer-lazy] Train/eval split: {n_train}/{len(eval_pair_starts)} (NO overlap)")
         if cfg.loss_mode != "standard":
             print(f"[trainer-lazy] Loss mode: {cfg.loss_mode}")
         if cfg.sal_lambda == 0:
