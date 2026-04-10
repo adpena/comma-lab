@@ -1,0 +1,13 @@
+{
+  "epoch": 1303,
+  "scorer": 3.443498338063558,
+  "fp32_path": "/Users/adpena/Projects/pact/experiments/postfilter_weights/postfilter_standard_h64_long2500_best_fp32.pt",
+  "int8_path": "/Users/adpena/Projects/pact/experiments/postfilter_weights/postfilter_standard_h64_long2500_best_int8.pt",
+  "int8_size": 45749,
+  "meta": {
+    "variant": "saliency_weighted",
+    "hidden": 64,
+    "kernel": 3,
+    "alpha": 20.0
+  }
+}

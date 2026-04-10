@@ -1,6 +1,6 @@
 # next experiments
 
-## 2026-04-09 queue after standard_h64_long2500 proxy launch
+## 2026-04-09 queue after standard_h64_long2500 faithful breakthrough
 
 The promoted honest floor is still `1.73` from `long1000_h64`. Two deploy-ready alternates have now been resolved honestly and rejected:
 
@@ -19,10 +19,10 @@ That means the next cycle should stop pretending those families are active promo
 The new top empirical question is now:
 
 - `standard_h64_long2500`
-- saved best epoch `1090`
-- local scorer `3.501068318684896`
+- saved best epoch `1303`
+- local scorer `3.443498338063558`
 - int8 size `45,749`
-- faithful proxy **running** locally
+- faithful proxy **resolved locally at 1.57**
 
 ## cycle budget
 
@@ -34,14 +34,14 @@ The new top empirical question is now:
 
 1. **PF-STANDARD-H64-LONG2500**
    - Why first:
-     - saved local scorer `3.501068318684896` is better than the promoted h64 local best
-     - proportional transfer suggests about `1.704`
+     - saved local scorer `3.443498338063558` is better than the promoted h64 local best
+     - faithful local current_workflow proxy already landed at `1.57`
    - Status:
-     - faithful proxy running locally
-     - manifest: `.omx/logs/remote_jobs/local-standard-h64-long2500-proxy.json`
+     - faithful proxy resolved locally at `1.57`
+     - evidence root: `reports/raw/2026-04-10-standard-h64-long2500-proxy/`
    - Action:
-     - wait for the measured proxy result
-     - if it transfers, it immediately outranks all speculative side lanes
+     - turn this into a clean submission-path authoritative eval
+     - if it confirms, it immediately becomes the new promoted floor
 
 2. **PF-DILATED-H64 DEPLOY-CORRECT RELAUNCH**
    - Why first:

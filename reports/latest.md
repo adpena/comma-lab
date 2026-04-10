@@ -39,6 +39,7 @@ Track B's promoted honest floor is now **`1.73`** after the `h64` long-horizon Q
 
 ## current frontier
 
+- `1.57` - standard h64 long2500 faithful local current_workflow proxy, awaiting clean submission-path confirmation
 - `1.73` - long1000 QAT+EMA learned int8 post-filter (`alpha=20 h64`), promoted
 - `1.84` - weighted ensemble learned int8 post-filter (`long1000 h32 + MC refine1`, `75/25`), prior promoted floor
 - `1.84` - SegNet fixed h32 faithful proxy, strongest resolved SegNet-family alternate
@@ -59,7 +60,7 @@ Track B's promoted honest floor is now **`1.73`** after the `h64` long-horizon Q
 - `pixelshuffle_h64_long1000` was the strongest deploy-ready packaged side lane, and its faithful proxy has now resolved as a clean reject at **`1.99`**. That is a real transfer, but it is nowhere near the promoted `1.73` floor.
 - `psd_h64_long1000` has now also resolved honestly at **`1.85`** with PoseNet `0.05271273` and SegNet `0.00551752`. That is a real near-miss, but still a reject for promotion.
 - The first real saved SegNet-family artifact, `segnet_attack_fixed_ste_h32`, has now also resolved honestly at **`1.84`** with PoseNet `0.05168364` and SegNet `0.00543626`. That makes it the strongest resolved SegNet-family alternate so far, but it still does not beat the promoted `1.73` floor.
-- The newest top empirical question is now `standard_h64_long2500`: its saved best artifact is real on disk at local scorer `3.501068318684896` (epoch `1090`, int8 `45,749` bytes), which is better than the promoted h64 local best. A faithful proxy on that artifact is now running locally.
+- The newest top empirical question is now `standard_h64_long2500`: its faithful local current_workflow proxy has already landed at **`1.57`**, and the saved-best local metadata improved further to epoch `1303` / scorer `3.443498338063558`. This is a real measured breakthrough, but it still needs a clean submission-path authoritative eval before it can be called the promoted floor.
 - The SegNet trainer itself is now less bug-prone for future reruns: `experiments/train_postfilter_segnet_attack.py` now always writes a durable `*_final_meta.json` and backstops `*_best_meta.json` when a best-checkpoint payload exists.
 - The next honest promotion path is no longer “proxy PSD/pixelshuffle again”; it is to make `dilated_h64_long1000` deploy-correct and to get fresh SegNet lanes that actually emit `best_*` artifacts.
 - The SegNet/research side lanes remain non-promoted for now: `segnet_attack_fixed_v2` has printed through epoch `1000 / 1.0671` and did finally write a real fp32/int8 pair, but still no proper `best_meta` record; `segnet_attack_h64` is through epoch `480 / 1.0544` and still has no rankable saved artifact.

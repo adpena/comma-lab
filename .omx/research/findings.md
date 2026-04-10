@@ -56,6 +56,23 @@
 - The main remaining operational weakness is packaging metadata: the trainer wrote fp32/int8 weights, but not a proper `best_meta` record.
 - That metadata weakness is now fixed for future reruns: `experiments/train_postfilter_segnet_attack.py` writes a durable `*_final_meta.json` and backstops `*_best_meta.json` when a best-checkpoint payload exists.
 
+## 2026-04-09 standard h64 long2500 faithful breakthrough
+
+### new measured result
+
+- `standard_h64_long2500` faithfully proxied to **`1.57`**
+- Distortions: PoseNet `0.01718145`, SegNet `0.00580069`
+- Current-workflow bytes: `864,167`
+- Evidence:
+  - `reports/raw/2026-04-10-standard-h64-long2500-proxy/standard_h64_long2500_proxy_summary.json`
+  - `reports/raw/2026-04-10-standard-h64-long2500-proxy/proxy_standard_h64_long2500.log`
+
+### verdict
+
+- This is a real measured breakthrough on the same current-workflow archive size.
+- It is substantially below the promoted `1.73` floor, but it is still waiting on a clean submission-path authoritative eval before being called fully promoted.
+- The saved-best local metadata also improved further during the run to epoch `1303` / local scorer `3.443498338063558`, which strengthens the case that the saliency fix changed the loss landscape favorably rather than just finding a lucky checkpoint.
+
 ## 2026-04-09 h64 authoritative promotion
 
 ### new authoritative floor

@@ -1,10 +1,17 @@
 Metadata-Version: 2.4
 Name: comma-video-lab-ball-pack
-Version: 0.2.0
+Version: 0.7.0
 Summary: One-command dual-track starter pack for the comma video compression challenge
 Requires-Python: >=3.11
 Description-Content-Type: text/markdown
 License-File: LICENSE
+Requires-Dist: torch>=2.0
+Requires-Dist: pydantic>=2.0
+Provides-Extra: dev
+Requires-Dist: pytest>=8.0; extra == "dev"
+Requires-Dist: pytest-timeout>=2.0; extra == "dev"
+Requires-Dist: hypothesis>=6.0; extra == "dev"
+Requires-Dist: ruff>=0.4; extra == "dev"
 Dynamic: license-file
 
 # comma video lab ball pack

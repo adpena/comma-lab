@@ -52,6 +52,9 @@ ignore = [
     "TC003",   # type-checking import optimization not worth the complexity
 ]
 
+[tool.ruff.lint.per-file-ignores]
+"experiments/*.py" = ["E402"]  # sys.path manipulation before imports is necessary
+
 [tool.ruff.lint.isort]
 known-first-party = ["tac", "comma_lab"]
 

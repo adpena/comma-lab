@@ -46,9 +46,22 @@ def train_h96():
     # This means EVERY checkpoint is persisted immediately — no signal loss
     os.environ["POSTFILTER_OUTPUT_DIR"] = "/results/weights"
 
+    # Extract compressed video from archive.zip on the volume
+    archive_path = "/results/archive.zip"
+    if not os.path.exists(archive_path):
+        print("ERROR: archive.zip not found on volume!")
+        print("Upload with: .venv/bin/modal volume put comma-lab-weights submissions/robust_current/archive.zip archive.zip")
+        return 1
+
+    os.makedirs("/tmp/archive", exist_ok=True)
+    subprocess.run(["unzip", "-o", archive_path, "-d", "/tmp/archive"], check=True)
+    compressed_mkv = "/tmp/archive/0.mkv"
+    print(f"Compressed video: {compressed_mkv} ({os.path.getsize(compressed_mkv)} bytes)")
+
     result = subprocess.run(
         ["python", "/root/cloud_h96_trainer.py",
-         "--hidden", "96", "--epochs", "2500", "--alpha", "20"],
+         "--hidden", "96", "--epochs", "2500", "--alpha", "20",
+         "--compressed-video", compressed_mkv],
         cwd="/tmp",
     )
 

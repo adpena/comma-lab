@@ -17,7 +17,7 @@
     "tag": "h64_no_sal_recon",
     "cmd": "experiments/train_tac.py --hidden 64 --epochs 2500 --sal-lambda 0 --tag h64_no_sal_recon",
     "platform": "mps",
-    "status": "queued",
+    "status": "running",
     "priority": 2,
     "notes": "BOUNDED SIDE LANE: sal_lambda=0 is high-variance. Run after h64 proxy confirms."
   },
