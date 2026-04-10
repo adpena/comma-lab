@@ -187,15 +187,28 @@ The only safe place to modify frames is after decoding, with a learned filter. P
 
 Of 18 alternative approaches tested, 17 failed and one (dilated convolutions) initially appeared to fail but later succeeded at larger scale. The winning recipe is highly constrained by the mathematical structure of the problem (rank-1 Jacobian, sub-pixel trust radius, quantization sensitivity), but architecture changes can work when given sufficient capacity and training time.
 
-## Next steps
+## The saliency inversion problem
 
-Three directions are staged but not yet promoted:
+The biggest remaining inefficiency is in our own training objective. The saliency-weighted reconstruction term (alpha=20) penalizes corrections at low-PoseNet-saliency pixels. SegNet class boundaries — the pixels that matter most for 46% of our remaining score — sit in exactly those low-PoseNet-saliency regions. The training loss is actively constraining corrections where they would help most.
 
-**KL distillation loss (Hinton-style):** Temperature-annealed soft targets from SegNet. This attacks the SegNet term directly by training the CNN to match SegNet's soft logit distribution, bypassing the hard argmax discontinuity. Preliminary proxy results are promising but await full evaluation.
+At our operating point, SegNet has roughly 590x more marginal impact than PoseNet per unit distortion (100 vs 0.17). But the saliency weighting was designed when PoseNet was the binding constraint. Now that PoseNet is 93% optimized, the saliency needs to flip.
 
-**Pair-aware 6-channel architecture:** Feed both the current and previous frame (6 input channels) so the CNN can exploit temporal coherence. PoseNet evaluates frame pairs; giving the CNN access to both frames aligns its information with the scorer's.
+Dual saliency with high alpha_seg (5000) tells the CNN to correct freely at SegNet boundaries while being cautious elsewhere. This is in training now.
 
-**h=96 dilated width scaling:** Training on Modal A10G, currently at epoch 759. The dilated h=64 already broke below the standard scaling law at 1.33. Dilated h=96 could push significantly lower.
+## Techniques staged or in progress
+
+| Direction | Target | Status |
+|-----------|--------|--------|
+| Dual saliency (alpha_seg=5000) | SegNet boundaries | In training |
+| KL distillation (T=5→2→1) | SegNet soft targets | Deploying to Lightning T4 |
+| Per-channel int8 quantization | Both (better fidelity) | Implemented, all new runs |
+| STE boundary weighting (5x) | SegNet gradient at edges | In training, stacked with dual sal |
+| Hard-frame curriculum | SegNet worst pairs | Next implementation |
+| Pair-aware 6ch architecture | PoseNet temporal | Implemented, undeployed |
+| h=96 dilated width scaling | Both | Modal A10G, ep 759 |
+| Test-time optimization | Both | Concept stage |
+
+The theoretical floor if all techniques compound: SegNet 0.003, PoseNet 0.001, rate 0.023 → score ~0.98.
 
 ## Multi-GPU training fleet
 

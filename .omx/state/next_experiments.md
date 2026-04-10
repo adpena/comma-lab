@@ -1,133 +1,65 @@
-# next experiments
+# next experiments — 2026-04-10 evening
 
-## 2026-04-09 queue after standard_h64_long2500 faithful breakthrough
+## promoted floor: 1.33 (dilated h=64, Modal A10G, 905 epochs)
 
-The promoted honest floor is still `1.73` from `long1000_h64`. Two deploy-ready alternates have now been resolved honestly and rejected:
+## active fleet
 
-- `pixelshuffle_h64_long1000` -> faithful proxy `1.99`
-- `psd_h64_long1000` -> faithful proxy `1.85`
+| Lane | Experiment | Config | Status |
+|------|-----------|--------|--------|
+| Local MPS | Dilated + dual saliency + STE | `--variant dilated --use-dual-saliency --alpha-seg 5000 --use-ste --boundary-weight 5.0 --alpha 5` | RUNNING (PID 11446) |
+| Lightning T4 | Dilated + KL distill | `VARIANT=dilated LOSS=kl_distill TEMP_START=5.0 TEMP_END=1.0` | DEPLOYING (fix uploaded) |
+| Modal A10G #1 | h=96 standard | ep 759, scorer 0.940 | RUNNING |
+| Modal A10G #2 | Dilated h=64 | Produced 1.33 checkpoint | RUNNING |
+| bat00 RTX 2070 | Standard h=64 | Just launched | REASSIGN to dilated + dual sal when user is at machine |
 
-The first real saved SegNet-family artifact has now resolved honestly:
+## stopped (superseded by dilated 1.33)
 
-- `segnet_attack_fixed_ste_h32` -> faithful proxy `1.84`
-- PoseNet `0.05168364`
-- SegNet `0.00543626`
-- bytes `864,167`
+- Local MPS standard h=64 v5 (was ep ~190, scorer 1.452) — KILLED
+- Local MPS standard h=64 temp anneal — KILLED
+- Lightning standard h=64 (was ep ~53, scorer 1.455) — REPLACING with KL distill
 
-That means the next cycle should stop pretending those families are active promotion candidates in their current form.
+## priority queue (council-endorsed, nothing abandoned)
 
-The new top empirical question is now:
+### Tier 1 — In flight or next
 
-- `standard_h64_long2500`
-- saved best epoch `1303`
-- local scorer `3.443498338063558`
-- int8 size `45,749`
-- faithful proxy **resolved locally at 1.57**
+1. **Dual saliency** (alpha_seg=5000 + STE boundary=5): Running locally. The saliency
+   inversion is the single highest-EV finding. SegNet has 590x marginal leverage.
 
-## cycle budget
+2. **KL distill** (T=5→2→1 stepwise): Deploying to Lightning. Soft SegNet targets
+   bypass the hard argmax discontinuity.
 
-1. Prefer at most **3** serious lanes in flight.
-2. Spend authoritative scorer time only after packaging, inflation, shape checks, and a promising faithful proxy.
-3. Treat free-tier GPUs as real resources only when the run is durably recorded under the scheduler surfaces.
+3. **Per-channel quantization**: Already implemented in tac v0.9.0. All new runs use it.
 
-## current priority order
+4. **Hard-frame upsampling**: Needs ~30 lines. Precompute per-pair SegNet disagreement,
+   oversample worst 20%. Next code change.
 
-1. **PF-STANDARD-H64-LONG2500**
-   - Why first:
-     - saved local scorer `3.443498338063558` is better than the promoted h64 local best
-     - faithful local current_workflow proxy already landed at `1.57`
-   - Status:
-     - faithful proxy resolved locally at `1.57`
-     - evidence root: `reports/raw/2026-04-10-standard-h64-long2500-proxy/`
-   - Action:
-     - turn this into a clean submission-path authoritative eval
-     - if it confirms, it immediately becomes the new promoted floor
+### Tier 2 — After Tier 1 results
 
-2. **PF-DILATED-H64 DEPLOY-CORRECT RELAUNCH**
-   - Why first:
-     - strongest raw local packaged lane now sits at `3.5753838920593264`
-     - gap to promoted h64 local best is only `0.0281`
-   - Current blocker:
-     - saved meta still says `variant: "saliency_weighted"`
-     - current artifact is observation-only until relaunched through the repo-side deploy-correct wrapper
-   - Status:
-     - Kaggle kernel `adpena/comma-lab-dilated-h64-long1000` is currently `CANCEL_ACKNOWLEDGED`
-     - the direct-code-file plus P100 fallback path is in place
-     - private dataset `adpena/comma-lab-private-assets` now exists for the baseline archive
-     - Modal fallback `modal-dilated-h64-long1000` is now running as app `ap-oe1x7fZOSx1lQ2R4WTt51O`
-   - Action:
-     - monitor the live Modal fallback
-     - repush on Kaggle as soon as Kaggle frees a slot
-     - keep deploy-correct metadata as a non-negotiable requirement
-     - `experiments/kaggle_queue_tick.py` now selects this lane automatically once the slot is really free
+5. **DualHead architecture** (1x1 seg + 3x3 pose heads): Same param budget, architectural
+   inductive bias for split objectives. Needs implementation.
 
-3. **PF-SEGNET CHECKPOINTING RELAUNCH**
-   - Why second:
-     - SegNet remains the highest-leverage theoretical headroom
-     - `segnet_attack_fixed_ste_h32` just proved the family can transfer honestly to `1.84`
-     - the metadata gap is now fixed for future reruns, so the next launch can be both rankable and automatable
-   - Status:
-     - Kaggle kernel `adpena/comma-lab-segnet-attack-fixed-h32` is running
-     - manifest: `.omx/logs/remote_jobs/kaggle-segnet-attack-fixed-h32.json`
-     - status: `.omx/status/kaggle-segnet-attack-fixed-h32.json`
-   - Action:
-     - monitor for first checkpoint/artifact signal
-     - keep the hardened metadata path from `train_postfilter_segnet_attack.py`
+6. **Test-time optimization**: 5 Adam steps per frame at inflate time against frozen scorer.
+   Highest variance/highest EV. Inflate budget: ~5 min available.
 
-4. **PF-PAIRAWARE**
-   - Why third:
-     - still the most plausible architecture delta that directly addresses PoseNet pair scoring
-   - Status:
-     - Kaggle smoke kernel bundle is ready at `experiments/kaggle_kernels/pairaware_smoke`
-     - push attempt was blocked by Kaggle's maximum batch GPU session count of `2`
-   - Action:
-     - launch on Kaggle when a slot frees up
-     - or move the same bundle to Modal if Kaggle remains saturated
+7. **Multi-pass inflate**: Run CNN twice. Free within inflate budget. Train with chained
+   loss for best second-pass quality.
 
-## platform guidance
+8. **Pair-aware 6ch**: Implemented in tac. Deploy when Tier 1 saturates.
 
-- **Kaggle**
-  - primary free-tier GPU lane for long training jobs
-  - current live queue:
-    - direct-code-file dilated h64
-    - direct-code-file SegNet fixed h32
-- **Modal**
-  - secondary GPU lane when Kaggle is blocked or you need a cleaner Python/runtime story
-  - immediate fallback for pair-aware if the Kaggle quota does not clear
-- **Coiled**
-  - CPU-side fan-out only
-  - use for: fleet snapshots, proxy-gate triage, quantization audits, report rebuilds
-  - do not treat Coiled as the default GPU training path under a free-tier-first strategy
+### Tier 3 — Scaling
 
-## operator surfaces now on disk
+9. **h=96 dilated**: Already running on Modal. Scaling law extrapolation.
 
-- platform registry:
-  - `configs/platforms.json`
-- manifest/status templates:
-  - `configs/run_manifests/kaggle_run_manifest.template.json`
-  - `configs/run_manifests/modal_run_manifest.template.json`
-  - `configs/run_manifests/coiled_run_manifest.template.json`
-  - `configs/run_manifests/run_status.template.json`
-- operator notes:
-  - `docs/operator_run_manifest_templates.md`
-- scheduler:
-  - `comma-lab sched status`
-  - `comma-lab sched results`
-  - `comma-lab sched budget`
+10. **LSQ learned step size**: Implemented but undeployed. `apply_lsq(model)` in Trainer.
 
-## sidecar outputs
+## theoretical minimum
 
-- refreshed live fleet snapshot:
-  - `reports/raw/2026-04-09-sidecar-analysis/live_fleet_snapshot.json`
-- refreshed proxy gate:
-  - `reports/raw/2026-04-09-sidecar-analysis/proxy_gate_triage.json`
-- resolved PSD proxy evidence:
-  - `reports/raw/2026-04-09-psd-h64-best/psd_h64_long1000_proxy_summary.json`
-  - `reports/raw/2026-04-09-psd-h64-best/proxy_psd_h64_long1000_best.log`
+SegNet 0.003 + PoseNet 0.001 + rate 0.023 → score 0.975
 
-## queue hygiene
+## cycle rules
 
-1. Do not reopen `pixelshuffle_h64_long1000`, `psd_h64_long1000`, or `segnet_attack_fixed_ste_h32` without a material architecture/objective or packaging-metadata change.
-2. Do not proxy deploy-blocked artifacts.
-3. Do not claim Kaggle/Modal/Coiled are integrated unless the run is recorded on disk.
-4. Leave the next agent a truthful queue, not a chat-memory queue.
+- At most 3 serious lanes in flight
+- Nothing abandoned — every technique attacks a different score component
+- Compounding gains: techniques are additive, not exclusive
+- Always use dilated architecture as base (proven 5.6x PoseNet gain)
+- Always use per-channel quantization (free precision)
