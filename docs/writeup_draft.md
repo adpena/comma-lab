@@ -1,12 +1,12 @@
-# Beating the Leaderboard with a 45KB CNN: Task-Aware Compression for comma.ai's Video Challenge
+# Task-Aware Post-Filter for comma.ai's Video Compression Challenge
 
-**Score: 1.51** | seg=0.00580, pose=0.01229, rate=0.0230 | **#1 by 0.37 margin**
+**Score: 1.33** | seg=0.00610, pose=0.00218, rate=0.0230
 
 ---
 
-## The idea in one sentence
+## Summary
 
-Instead of building a better codec, we trained a tiny CNN to undo the specific damage that AV1 compression does to PoseNet and SegNet -- by backpropagating directly through the frozen scorer networks.
+A small CNN (45KB, int8) corrects decoded AV1 frames by backpropagating through the frozen scorer networks. It learns pixel adjustments that reduce PoseNet and SegNet distortion without changing the codec or the bitstream.
 
 ## The scoring formula and why it matters
 
@@ -16,17 +16,17 @@ The challenge score is:
 score = 100 * seg + sqrt(10 * pose) + 25 * rate
 ```
 
-This formula has non-obvious properties at different operating points. At our final result (seg=0.00581, pose=0.0112, rate=0.0230):
+This formula has non-obvious properties at different operating points. At our final result (seg=0.00610, pose=0.00218, rate=0.0230):
 
 | Component | Value | Contribution |
 |-----------|-------|-------------|
-| 100 * seg | 100 * 0.00581 | 0.581 |
-| sqrt(10 * pose) | sqrt(10 * 0.0112) | 0.335 |
+| 100 * seg | 100 * 0.00610 | 0.610 |
+| sqrt(10 * pose) | sqrt(10 * 0.00218) | 0.148 |
 | 25 * rate | 25 * 0.0230 | 0.575 |
 
-PoseNet distortion dropped from 0.0332 to 0.0112 -- a 66% reduction -- and is now the smallest contributor to the total score. The remaining score is dominated by SegNet and rate, both near their efficient frontier. The next major gain requires breaking into SegNet's loss landscape, which is discontinuous (hard argmax) and much harder to optimize through.
+PoseNet distortion dropped from 0.0332 to 0.00218 with the dilated architecture. The remaining score is dominated by SegNet and rate.
 
-The formula also creates a leverage asymmetry: SegNet has 11.5x more marginal impact than PoseNet at this operating point (100 vs ~8.68 per unit distortion). But PoseNet has a smoother loss landscape that responds better to gradient descent. This tension shaped every architectural decision.
+At this operating point, SegNet has ~11.5x more marginal impact than PoseNet (100 vs ~8.68 per unit distortion), but PoseNet has a smoother loss landscape that responds better to gradient descent. This tension shaped most of the architectural decisions.
 
 ## The pipeline
 
@@ -52,13 +52,13 @@ The filter ships as a 45KB int8-quantized checkpoint (~40K parameters). At infer
 
 The training loss is the competition score itself, computed by running the corrected frames through frozen copies of PoseNet and SegNet. Gradients flow from the score, through the scorer networks, through the CNN, and into its weights.
 
-This is the core mechanism. The CNN does not learn to make frames "look better" in any generic sense. It learns to make frames that PoseNet and SegNet specifically evaluate as closer to the originals.
+The CNN does not optimize for generic visual quality. It optimizes for the specific metrics PoseNet and SegNet use to compare frames.
 
 A saliency-weighted reconstruction term (alpha=20) focuses the CNN's limited capacity on pixels that PoseNet's gradients identify as high-sensitivity, while a complementary term prevents unnecessary modification of pixels that SegNet cares about.
 
-## The hardening story: 15 bugs across 4 audit rounds
+## Hardening: 15 bugs across 4 audit rounds
 
-The gap between "looks good on proxy" and "holds up under the official scorer" nearly cost us everything. Over four audit rounds, we found and fixed 15+ bugs that collectively accounted for ~0.5 points of phantom score. This process was as important as any architectural decision.
+Over four audit rounds, we found and fixed 15+ bugs in our proxy scorer that collectively accounted for ~0.5 points of phantom score.
 
 ### Round 1: Proxy scorer fidelity
 
@@ -80,27 +80,27 @@ The training loop evaluated frames in float32, but the official scorer loads fra
 
 Each bug was addressed with a specific test. The `tac` library now includes 61 tests covering metric computation, checkpoint selection, boundary mask resolution, data splitting, and numeric fidelity. Pydantic validation enforces schema correctness on all configuration and checkpoint metadata. Atomic saves prevent partial checkpoint corruption.
 
-The hardening dropped our official score from 1.727 to 1.52. That 0.2 improvement came entirely from fixing measurement and selection bugs -- no architecture changes, no new training tricks. The model was always capable of 1.52; we were just selecting the wrong checkpoint with the wrong metric.
+The hardening dropped our official score from 1.727 to 1.52. That 0.2 improvement came entirely from fixing measurement and selection bugs.
 
 ## Training: the quantization gap problem
 
 The CNN trains in float32 but ships in int8. This creates a train-to-deploy gap that is much larger than you might expect: 2.25x on PoseNet distortion. A model that scores 0.021 PoseNet in training can score 0.047 after int8 quantization.
 
-We solved this with three techniques that compound:
+Three techniques address this:
 
 **Quantization-Aware Training (QAT):** Fake int8 quantization in the forward pass with straight-through gradient estimation. The model learns weight configurations that are robust to quantization noise.
 
 **Exponential Moving Average (EMA):** Polyak averaging with decay=0.997 smooths late-epoch weight oscillation. Over 1000 epochs, this prevents the optimizer from wandering into weight configurations that happen to score well in float32 but collapse under quantization.
 
-**Best-checkpoint int8 selection:** This is the key trick. At each checkpoint, we take the EMA weights, actually quantize them to int8, and evaluate the quantized model on the scorer -- using the corrected metric (hard argmax SegNet, uint8 round-trip, held-out frames). Most epochs produce bad int8 models. We save the rare epoch where the quantized weights happen to land in a good configuration.
+**Best-checkpoint int8 selection:** At each checkpoint, we take the EMA weights, quantize them to int8, and evaluate the quantized model on the scorer using the corrected metric (hard argmax SegNet, uint8 round-trip, held-out frames). Most epochs produce poor int8 models. We save the epoch where the quantized weights land in a good configuration.
 
-This mechanism is why our deployed score (1.51) nearly matches our canonical proxy (1.49). Without it, the gap would erase most of the CNN's benefit.
+This mechanism is why our deployed score (1.33) matches our canonical proxy (1.33). Without it, the gap would erase most of the CNN's benefit.
 
-## The critical insight: train on the submission archive
+## Train on the submission archive
 
-The single most important discovery was that training data distribution must exactly match scoring data distribution. The official scorer evaluates on 600 frame pairs extracted from the submission archive. Early post-filter versions trained on a different frame set and scored 2.35 despite looking good on proxy -- classic distribution shift.
+Training data distribution must match scoring data distribution. The official scorer evaluates on 600 frame pairs from the submission archive. Early post-filter versions trained on a different frame set and scored 2.35 despite looking fine on proxy.
 
-The fix: train on the actual submission archive frames, evaluate on all 600 pairs with uint8 round-trip. This closes every distribution gap between training and scoring. The CNN sees exactly what the scorer sees.
+The fix: train on the actual submission archive frames, evaluate on all 600 pairs with uint8 round-trip.
 
 ## Width scaling: a log-linear law
 
@@ -117,14 +117,15 @@ score = -0.159 * ln(h) + 2.382
 | 32 | ~12K | 1.845 |
 | 48 | ~19K | 1.762 |
 | 64 | ~40K | 1.51 |
+| 64 (dilated) | ~40K | 1.33 |
 
-Each doubling of width buys measurable score improvement. The relationship held across all data points and told us that widening the model -- not inventing new architectures -- was the highest-leverage move available.
+Each doubling of width buys measurable score improvement. The relationship held across all data points. At h=64, switching from standard to dilated convolutions broke below the scaling law prediction, showing that architecture changes at sufficient width can deliver outsized gains.
 
 ## Why closed-form corrections fail: a mathematical detour
 
 Early in the project, we tried the obvious shortcut: compute the Jacobian of PoseNet with respect to pixel values, and apply the Moore-Penrose pseudoinverse correction to minimize pose error in a single step.
 
-It failed catastrophically. Pose distortion went from 0.074 to 0.235 -- three times worse.
+It made things worse. Pose distortion went from 0.074 to 0.235.
 
 Three experiments explained why:
 
@@ -132,9 +133,9 @@ Three experiments explained why:
 
 2. **Jacobian SVD analysis:** The effective rank of PoseNet's Jacobian is ~1 out of 6 pose dimensions. 98% of pixel sensitivity lies along a single direction. The condition number is ~399. The problem is massively ill-conditioned.
 
-3. **CNN residual analysis:** The trained CNN moves 56.6% of pixels (vs 0.002% for the Jacobian correction) and concentrates 90.3% of its energy in the mid-frequency DCT band where PoseNet's early convolutions are most sensitive. The CNN discovered a strategy of dense, small, spatially-coherent corrections that stays inside every ReLU region boundary -- something no analytical method can find without iterative optimization.
+3. **CNN residual analysis:** The trained CNN moves 56.6% of pixels (vs 0.002% for the Jacobian correction) and concentrates 90.3% of its energy in the mid-frequency DCT band where PoseNet's early convolutions are most sensitive. It makes dense, small, spatially-coherent corrections that stay inside every ReLU region boundary.
 
-The CNN is not approximating a closed-form solution. It is solving a fundamentally different problem: navigating a razor-sharp rank-1 basin through thousands of tiny learned nudges.
+The CNN is not approximating a closed-form solution. It navigates a rank-1 basin through many small learned adjustments -- something analytical methods cannot find without iterative optimization.
 
 ## The score trajectory
 
@@ -150,9 +151,10 @@ Apr 9:  1.762 -- h=48
         1.727 -- h=64
         1.51  -- hardening: fixed proxy metric, checkpoint selection,
                  boundary mask resolution, train/eval leakage, float32/uint8 gap
+Apr 10: 1.33  -- dilated CNN architecture (Modal A10G, 905 epochs)
 ```
 
-The trajectory splits into three phases. Codec tuning (4.06 to 2.08) found the right AV1 configuration. Post-filter scaling (2.08 to 1.727) was capacity-driven improvement from a growing CNN. Hardening (1.727 to 1.51) came from fixing every place where our measurement diverged from the official scorer. The last phase delivered the largest single improvement and required zero architecture changes.
+The trajectory splits into four phases. Codec tuning (4.06 to 2.08) found the right AV1 configuration. Post-filter scaling (2.08 to 1.727) was capacity-driven improvement from a growing CNN. Hardening (1.727 to 1.51) came from fixing every place where our measurement diverged from the official scorer. Architecture (1.51 to 1.33) came from switching from standard to dilated convolutions, which gave a 5.6x PoseNet improvement by expanding the receptive field to capture spatial correlations PoseNet's early convolutions attend to.
 
 ## What failed: 18 experiments and why
 
@@ -162,7 +164,7 @@ Negative results are as informative as positive ones. Here is what we tried and 
 
 - **PixelShuffle / PSD upsampling:** Proxy rejected at 1.99. The sub-pixel shuffle helps SegNet but hurts PoseNet more -- PoseNet is extremely sensitive to any spatial rearrangement of information.
 - **DCT-domain filter:** Did not learn. The gain initialization placed the model in a region where gradients vanished.
-- **Dilated convolutions:** Improved local score but did not transfer to the deployed int8 model. The wider receptive field creates weight patterns that are less quantization-friendly.
+- **Dilated convolutions (early):** Initially appeared to fail -- improved local score but did not transfer to the deployed int8 model at h=32. The wider receptive field creates weight patterns that are less quantization-friendly at small widths. However, at h=64 with longer training (905 epochs on Modal A10G), dilated convolutions produced a 0.18-point improvement (1.51 to 1.33), primarily through a 5.6x PoseNet reduction. The lesson: architecture changes need sufficient capacity and training time to overcome quantization sensitivity.
 
 ### Preprocessing experiments
 
@@ -170,7 +172,7 @@ Negative results are as informative as positive ones. Here is what we tried and 
 - **Chroma subsampling:** PoseNet degradation cancels any rate savings.
 - **Denoising (any method):** PoseNet treats denoised frames as corrupted. Every preprocessing approach we tested made the score worse.
 
-This was a critical negative finding: the only safe place to modify frames is *after* decoding, using a learned filter that respects PoseNet's sensitivities. Preprocessing is a dead end.
+The only safe place to modify frames is after decoding, with a learned filter. Preprocessing is a dead end for this problem.
 
 ### Training experiments
 
@@ -183,21 +185,21 @@ This was a critical negative finding: the only safe place to modify frames is *a
 
 ### The lesson
 
-Of 18 alternative approaches tested against the QAT+EMA+best-checkpoint baseline, all 18 failed. The winning recipe is not a collection of tricks -- it is the *only* approach that works, because the mathematical structure of the problem (rank-1 Jacobian, sub-pixel trust radius, quantization sensitivity) rejects everything else.
+Of 18 alternative approaches tested, 17 failed and one (dilated convolutions) initially appeared to fail but later succeeded at larger scale. The winning recipe is highly constrained by the mathematical structure of the problem (rank-1 Jacobian, sub-pixel trust radius, quantization sensitivity), but architecture changes can work when given sufficient capacity and training time.
 
-## What is next: techniques ready but not yet deployed
+## Next steps
 
-Three directions are staged and partially validated but not yet promoted to the submission:
+Three directions are staged but not yet promoted:
 
 **KL distillation loss (Hinton-style):** Temperature-annealed soft targets from SegNet. This attacks the SegNet term directly by training the CNN to match SegNet's soft logit distribution, bypassing the hard argmax discontinuity. Preliminary proxy results are promising but await full evaluation.
 
 **Pair-aware 6-channel architecture:** Feed both the current and previous frame (6 input channels) so the CNN can exploit temporal coherence. PoseNet evaluates frame pairs; giving the CNN access to both frames aligns its information with the scorer's.
 
-**h=96 width scaling:** Training on Modal A10G, currently at epoch 741. The log-linear law predicts ~1.35 at h=96. Whether the prediction holds at this width will test the limits of the scaling relationship.
+**h=96 dilated width scaling:** Training on Modal A10G, currently at epoch 759. The dilated h=64 already broke below the standard scaling law at 1.33. Dilated h=96 could push significantly lower.
 
 ## Multi-GPU training fleet
 
-Training runs on a fleet of free-tier GPUs to maximize experiment throughput:
+All training used free-tier GPUs:
 
 - **Local MPS** (Apple Silicon) -- fast iteration, small models
 - **bat00 RTX 2070 Super** (WSL2 CUDA) -- 8GB VRAM with autocast fp16
@@ -219,20 +221,20 @@ No paid compute was used. All results are reproducible on consumer hardware.
 
 ## What we learned
 
-1. **Task-aware beats task-agnostic.** A 45KB CNN trained against the actual scorer outperforms every codec-level optimization we tried. The insight is general: if you know what the downstream task cares about, optimizing for that task directly is more efficient than optimizing for generic quality.
+1. **Task-aware training.** A 45KB CNN trained against the scorer outperformed every codec-level optimization. If the downstream task is known, optimizing for it directly is more efficient than optimizing for generic quality.
 
-2. **Measurement rigor beats architecture search.** The 0.22-point improvement from hardening (1.727 to 1.51) was larger than any single architecture change. Five bugs in our proxy scorer were hiding 0.22 points of real performance. Fixing measurement before inventing new methods is the highest-ROI activity in any ML competition.
+2. **Measurement rigor matters more than architecture search.** The 0.22-point improvement from hardening (1.727 to 1.51) was larger than any single architecture change. Five bugs in our proxy scorer were hiding 0.22 points of real performance.
 
-3. **Quantization is the bottleneck, not architecture.** The gap between float32 training and int8 deployment dominated our error budget. Best-checkpoint selection -- treating quantization as a stochastic process and searching for good realizations -- was the single most impactful training technique.
+3. **Quantization dominates.** The gap between float32 training and int8 deployment was larger than any architecture effect. Best-checkpoint selection -- treating quantization as a stochastic process and searching for good realizations -- was the most impactful training technique.
 
-4. **Negative results compound.** Each failed experiment narrowed the search space. The preprocessing dead end (all methods fail), the closed-form dead end (rank-1 Jacobian), and the architecture dead end (only residual CNN works) together prove that the solution space is extremely constrained. This is useful knowledge for anyone working on similar problems.
+4. **Negative results narrow the search space.** Each failed experiment (preprocessing, closed-form, most architectures) demonstrated how constrained the solution space is.
 
-5. **Scaling laws work even for tiny models.** The log-linear width relationship held from 800 parameters to 40,000 parameters. This gave us a reliable way to predict the return on additional compute before spending it.
+5. **Scaling laws hold for tiny models.** The log-linear width relationship held from 800 to 40,000 parameters and predicted returns on additional compute.
 
-6. **Distribution matching is non-negotiable.** Training on frames from a different source than the scorer evaluates on caused a 0.3-point gap. Closing that gap by training on the actual submission archive was the single most important data decision.
+6. **Distribution matching.** Training on frames from a different source than the scorer evaluates on caused a 0.3-point gap. Training on the actual submission archive closed it.
 
-7. **The scoring formula has hidden structure.** The three-way equilibrium at our operating point is not obvious from the formula. Understanding the marginal sensitivities of each term drove better resource allocation than treating the score as a black box.
+7. **The scoring formula has structure.** The marginal sensitivities of each term at different operating points are not obvious from the formula but drive resource allocation.
 
 ---
 
-*Score: 1.51 | #1 by 0.37 | 45KB int8 CNN | 40K params | SVT-AV1 CRF 34 | 864KB archive | CPU inference < 30s | 61 tests | 15 bugs fixed*
+*Score: 1.33 | 45KB int8 CNN | 40K params | SVT-AV1 CRF 34 | 864KB archive | CPU inference < 30s | 61 tests | 15 bugs fixed*

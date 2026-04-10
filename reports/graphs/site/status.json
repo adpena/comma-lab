@@ -1,11 +1,13 @@
 {
-  "score": 1.51,
+  "score": 1.33,
   "rank": 1,
-  "lead": 0.37,
+  "lead": 0.55,
   "days_left": 23,
   "best_training_scorer": 0.940,
-  "best_training_epoch": 759,
-  "gap_to_proxy": -0.57,
+  "best_training_epoch": 905,
+  "gap_to_proxy": 0.00,
   "trainers_alive": 5,
-  "updated": "2026-04-10T21:00:00-05:00"
+  "updated": "2026-04-10T21:30:00-05:00",
+  "promoted_from": "modal-dilated-h64-long1000",
+  "previous_floor": 1.51
 }

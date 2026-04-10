@@ -1,8 +1,9 @@
-# Current Focus — 2026-04-10 21:00 CDT
+# Current Focus — 2026-04-10 21:30 CDT
 
 ## Floor
-- **Official score**: 1.51 (authoritative scorer, confirmed)
-- **Leaderboard #1** by 0.37
+- **Official score**: 1.33 (authoritative scorer, dilated h=64 from Modal A10G)
+- **Previous floor**: 1.51 (standard h=64)
+- **Leaderboard #1** by 0.55
 
 ## Active training fleet (all free, 5 lanes)
 | Lane | GPU | Epoch | Scorer | Notes |
