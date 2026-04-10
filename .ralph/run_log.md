@@ -2597,3 +2597,25 @@ The partner's `save_best_checkpoint` function evaluates the EMA weights AFTER in
 - let training continue (2500 epochs target)
 - proxy-score when training plateaus or reaches ep 1500+
 - Modal h=96 still running — could compound with width scaling
+
+## 2026-04-09 21:50:00 -0500 - COUNCIL UNANIMOUS: saliency recon loss is suppressing SegNet
+
+### diagnosis (all three converge)
+- Tao: optimal weight should be alpha_s = 11.5 * alpha_p (not 0)
+- Karpathy: scorer loss and recon loss are FIGHTING each other at boundary pixels
+- LeCun: recon loss is double-regularization — residual arch already constrains
+
+### action plan (priority ordered)
+1. train with sal_lambda=0 (remove recon loss entirely)
+   - if SegNet improves + PoseNet holds → new baseline (est -0.03 to -0.08 score)
+2. if PoseNet regresses → use combined saliency (PoseNet + 10x boundary mask)
+3. sweep alpha_s in [5, 10, 20] with alpha_p=20
+
+### expected impact
+- 10% SegNet reduction: 0.00576 → 0.00520 → -0.056 score → ~1.67
+- 30% SegNet reduction: 0.00576 → 0.00400 → -0.176 score → ~1.55
+- THIS IS LARGER THAN WIDTH SCALING TO h=96
+
+### current training
+- h=64 saliency-fixed: ep 950, scorer 3.5253 (new all-time best)
+- Modal h=96: running ~3h on A10G

@@ -5,7 +5,7 @@
     "platform": "mps",
     "status": "running",
     "priority": 1,
-    "notes": "Insurance lane — saliency fix makes this faster than previous runs"
+    "notes": "Insurance lane \u2014 saliency fix makes this faster than previous runs"
   },
   {
     "tag": "h96_modal",
@@ -13,7 +13,7 @@
     "platform": "modal",
     "status": "running",
     "priority": 1,
-    "notes": "Council #1 priority — width scaling to ~1.65"
+    "notes": "Council #1 priority \u2014 width scaling to ~1.65"
   },
   {
     "tag": "standard_h64_extended",
@@ -31,6 +31,14 @@
     "status": "queued",
     "priority": 2,
     "depends_on": "h96_modal",
-    "notes": "Width scaling continuation — rate crossover risk at h=128"
+    "notes": "Width scaling continuation \u2014 rate crossover risk at h=128"
+  },
+  {
+    "tag": "h64_no_sal_recon",
+    "cmd": "experiments/train_postfilter_qat_ema.py --hidden 64 --epochs 2500 --alpha 20 --sal-lambda 0 --tag h64_no_sal_recon",
+    "platform": "mps",
+    "status": "queued",
+    "priority": 1,
+    "notes": "COUNCIL PRIORITY: remove saliency recon to unlock SegNet headroom"
   }
 ]
