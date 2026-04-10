@@ -1,5 +1,59 @@
 # findings
 
+## 2026-04-10 dilated h64 promotion — 1.33 authoritative
+
+### new authoritative floor
+
+- **Score: 1.33** (authoritative, CPU, compliance-verified)
+- Variant: dilated h=64, 905 epochs, Modal A10G
+- PoseNet: 0.00218374 (5.6x better than standard h=64)
+- SegNet: 0.00609921 (slightly worse than standard's 0.00580)
+- Rate: 0.02301653 (unchanged)
+- Checkpoint: `submissions/robust_current/postfilter_int8.pt` (MD5: 62e4b2dcd1d5c1c02b6f96e40bcc0f72)
+
+### council shower thoughts session
+
+Tier 1 (immediate, high EV):
+1. **Per-channel quantization** — IMPLEMENTED. Zero cost, ~3-4 bits better precision.
+2. **Dual saliency** — `--use-dual-saliency --alpha-seg 5000`. Current PoseNet-only saliency
+   actively fights SegNet at boundaries. SegNet has 590x marginal leverage over PoseNet.
+3. **Hard-frame upsampling** — Oversample worst 20% SegNet pairs in training.
+
+Tier 2 (after Tier 1):
+4. KL distillation T=5→2→1 stepwise schedule
+5. DualHeadPostFilter (1x1 seg head + 3x3 pose head)
+6. Test-time optimization (5 Adam steps per frame at inflate time)
+
+Contrarian insight: train on hard frames, not uniformly. SegNet only changes at
+boundary pixels (~5% of image). Current uniform sampling wastes 95% of gradient signal.
+
+Score target with Tier 1: 1.15-1.30.
+
+## 2026-04-10 standard h64 long2500 authoritative promotion
+
+### new authoritative floor
+
+- Track B now has a promoted honest floor at **`1.51`**
+- Config: `524x394 / libsvtav1 / preset0 / crf34 / film-grain22 / lanczos / sharpness=1 / standard h64 long2500 saliency-fixed learned int8 post-filter`
+- Current-workflow bytes: `864,167`
+- Rule-faithful estimate: `1.5767157883707679` at `970,478` bytes
+- Distortions: PoseNet `0.01229283`, SegNet `0.00579903`
+
+### authoritative evidence
+
+- scorer summary:
+  - `reports/raw/2026-04-10-standard-h64-long2500-authoritative/robust_current-standard-h64-long2500-current_workflow-cpu-summary.json`
+- scorer report:
+  - `reports/raw/2026-04-10-standard-h64-long2500-authoritative/robust_current-standard-h64-long2500-current_workflow-cpu-report.txt`
+- saved-best metadata:
+  - `reports/raw/2026-04-10-standard-h64-long2500-authoritative/postfilter_standard_h64_long2500_best_meta.json`
+
+### verdict
+
+- The saliency-fixed standard h64 long2500 line is now the best measured result in the repo.
+- The faithful proxy at `1.57` was directionally right; the clean submission-path authoritative eval improved further to `1.51`.
+- This is now the promoted current_workflow floor and supersedes the prior `1.73` h64 winner.
+
 ## 2026-04-09 PSD proxy resolution and free-tier platform hardening
 
 ### new measured result
