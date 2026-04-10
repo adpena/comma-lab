@@ -1,0 +1,13 @@
+{
+  "slug": "kaggle-dilated-h64-long1000",
+  "run_id": "kaggle-dilated-h64-long1000-v2-20260410T000419Z",
+  "host": "kaggle",
+  "platform": "kaggle",
+  "status": "running",
+  "phase": "kernel_running",
+  "manifest_path": ".omx/logs/remote_jobs/kaggle-dilated-h64-long1000.json",
+  "status_path": ".omx/status/kaggle-dilated-h64-long1000.json",
+  "kernel_ref": "adpena/comma-lab-dilated-h64-long1000",
+  "kernel_status": "KernelWorkerStatus.RUNNING",
+  "written_at": "2026-04-10T00:04:19Z"
+}

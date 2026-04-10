@@ -1,0 +1,19 @@
+{
+  "slug": "kaggle-dilated-h64-long1000",
+  "run_id": "kaggle-dilated-h64-long1000-v2-20260410T000419Z",
+  "host": "kaggle",
+  "platform": "kaggle",
+  "status": "running",
+  "remote_root": "/kaggle/working",
+  "remote_log": "kaggle://adpena/comma-lab-dilated-h64-long1000",
+  "remote_command": "uv run --with kaggle kaggle kernels push -p /Users/adpena/Projects/pact/experiments/kaggle_kernels/dilated_h64_long1000 --accelerator gpu",
+  "manifest_path": ".omx/logs/remote_jobs/kaggle-dilated-h64-long1000.json",
+  "status_path": ".omx/status/kaggle-dilated-h64-long1000.json",
+  "kernel_ref": "adpena/comma-lab-dilated-h64-long1000",
+  "kernel_url": "https://www.kaggle.com/code/adpena/comma-lab-dilated-h64-long1000",
+  "bundle_dir": "experiments/kaggle_kernels/dilated_h64_long1000",
+  "best_checkpoint": null,
+  "latest_printed_checkpoint": null,
+  "notes": "Kaggle kernel version 2 is now running with the hardened bootstrap runner. Goal is a deploy-correct dilated h64 relaunch using the QAT+EMA path.",
+  "written_at": "2026-04-10T00:04:19Z"
+}

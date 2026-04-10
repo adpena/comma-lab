@@ -1,0 +1,13 @@
+{
+  "slug": "kaggle-pairaware-smoke",
+  "run_id": "kaggle-pairaware-smoke-v1-20260410T000419Z",
+  "host": "kaggle",
+  "platform": "kaggle",
+  "status": "paused",
+  "phase": "quota_blocked",
+  "manifest_path": ".omx/logs/remote_jobs/kaggle-pairaware-smoke.json",
+  "status_path": ".omx/status/kaggle-pairaware-smoke.json",
+  "kernel_ref": "adpena/comma-lab-pairaware-smoke",
+  "kernel_status": "not_pushed",
+  "written_at": "2026-04-10T00:04:19Z"
+}

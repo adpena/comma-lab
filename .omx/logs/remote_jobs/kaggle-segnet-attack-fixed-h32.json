@@ -1,0 +1,19 @@
+{
+  "slug": "kaggle-segnet-attack-fixed-h32",
+  "run_id": "kaggle-segnet-attack-fixed-h32-v2-20260410T000419Z",
+  "host": "kaggle",
+  "platform": "kaggle",
+  "status": "running",
+  "remote_root": "/kaggle/working",
+  "remote_log": "kaggle://adpena/comma-lab-segnet-attack-fixed-h32",
+  "remote_command": "uv run --with kaggle kaggle kernels push -p /Users/adpena/Projects/pact/experiments/kaggle_kernels/segnet_attack_fixed_h32 --accelerator gpu",
+  "manifest_path": ".omx/logs/remote_jobs/kaggle-segnet-attack-fixed-h32.json",
+  "status_path": ".omx/status/kaggle-segnet-attack-fixed-h32.json",
+  "kernel_ref": "adpena/comma-lab-segnet-attack-fixed-h32",
+  "kernel_url": "https://www.kaggle.com/code/adpena/comma-lab-segnet-attack-fixed-h32",
+  "bundle_dir": "experiments/kaggle_kernels/segnet_attack_fixed_h32",
+  "best_checkpoint": null,
+  "latest_printed_checkpoint": null,
+  "notes": "Kaggle kernel version 2 is now running with the hardened bootstrap runner. Goal is a clean GPU rerun of the SegNet fixed h32 lane with durable metadata emission.",
+  "written_at": "2026-04-10T00:04:19Z"
+}

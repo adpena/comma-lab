@@ -1,0 +1,139 @@
+from __future__ import annotations
+
+import json
+import shutil
+from dataclasses import dataclass
+from pathlib import Path
+
+
+@dataclass(frozen=True)
+class KaggleKernelSpec:
+    slug: str
+    title: str
+    module_name: str
+    args: tuple[str, ...] = ()
+    include_paths: tuple[Path, ...] = ()
+
+
+def build_kernel_metadata(
+    *,
+    username: str,
+    slug: str,
+    title: str,
+    code_file: str,
+) -> dict[str, object]:
+    return {
+        "id": f"{username}/{slug}",
+        "title": title,
+        "code_file": code_file,
+        "language": "python",
+        "kernel_type": "script",
+        "is_private": True,
+        "enable_gpu": True,
+        "enable_tpu": False,
+        "enable_internet": True,
+        "dataset_sources": [],
+        "competition_sources": [],
+        "kernel_sources": [],
+        "model_sources": [],
+    }
+
+
+def _launcher_source(spec: KaggleKernelSpec) -> str:
+    args_literal = repr(list(spec.args))
+    return f"""#!/usr/bin/env python3
+from __future__ import annotations
+
+import os
+import importlib
+import subprocess
+import sys
+from pathlib import Path
+
+
+ROOT = Path(__file__).resolve().parent
+sys.path.insert(0, str(ROOT))
+sys.path.insert(0, str(ROOT / "experiments"))
+sys.path.insert(0, str(ROOT / "submissions" / "robust_current"))
+
+PIP_DEPS = [
+    "av",
+    "safetensors",
+    "timm",
+    "einops",
+    "segmentation-models-pytorch",
+    "numpy",
+]
+
+
+def ensure_runtime_dependencies() -> None:
+    for dep in PIP_DEPS:
+        module_name = dep.replace("-", "_")
+        try:
+            importlib.import_module(module_name)
+        except ImportError:
+            subprocess.check_call([sys.executable, "-m", "pip", "install", "-q", dep])
+
+    if subprocess.run(["bash", "-lc", "command -v git-lfs >/dev/null 2>&1"]).returncode != 0:
+        subprocess.check_call(["bash", "-lc", "apt-get update && apt-get install -y git-lfs"])
+
+
+def ensure_upstream() -> Path:
+    workspace = ROOT / "workspace" / "upstream"
+    upstream = workspace / "comma_video_compression_challenge"
+    workspace.mkdir(parents=True, exist_ok=True)
+    if not upstream.exists():
+        subprocess.check_call([
+            "git", "clone", "--depth", "1",
+            "https://github.com/commaai/comma_video_compression_challenge.git",
+            str(upstream),
+        ])
+        subprocess.check_call(["git", "lfs", "pull"], cwd=upstream)
+    return upstream
+
+
+def main() -> int:
+    os.environ.setdefault("PYTHONUNBUFFERED", "1")
+    ensure_runtime_dependencies()
+    ensure_upstream()
+    import {spec.module_name} as target_module
+    result = target_module.main({args_literal})
+    if isinstance(result, int):
+        return result
+    return 0
+
+
+if __name__ == "__main__":
+    raise SystemExit(main())
+"""
+
+
+def write_bundle(
+    *,
+    bundle_dir: Path,
+    username: str,
+    spec: KaggleKernelSpec,
+    repo_root: Path | None = None,
+) -> None:
+    bundle_dir.mkdir(parents=True, exist_ok=True)
+    metadata = build_kernel_metadata(
+        username=username,
+        slug=spec.slug,
+        title=spec.title,
+        code_file="run_kernel.py",
+    )
+    (bundle_dir / "kernel-metadata.json").write_text(json.dumps(metadata, indent=2))
+    (bundle_dir / "run_kernel.py").write_text(_launcher_source(spec))
+    root = repo_root.resolve() if repo_root is not None else None
+    for source in spec.include_paths:
+        source_path = Path(source)
+        if root is not None:
+            try:
+                rel = source_path.resolve().relative_to(root)
+                destination = bundle_dir / rel
+            except ValueError:
+                destination = bundle_dir / source_path.name
+        else:
+            destination = bundle_dir / source_path.name
+        destination.parent.mkdir(parents=True, exist_ok=True)
+        shutil.copy2(source_path, destination)
