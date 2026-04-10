@@ -31,6 +31,7 @@ EVAL_EVERY="${EVAL_EVERY:-5}"
 PRECOMPUTED="${PRECOMPUTED:-}"
 
 EXTRA_ARGS=""
+[ -n "${PROFILE:-}" ] && EXTRA_ARGS="$EXTRA_ARGS --profile $PROFILE"
 [ -n "$DUAL_SAL" ] && EXTRA_ARGS="$EXTRA_ARGS --use-dual-saliency --alpha-seg $ALPHA_SEG"
 [ -n "$USE_STE" ] && EXTRA_ARGS="$EXTRA_ARGS --use-ste --boundary-weight $BOUNDARY_WEIGHT"
 [ -n "$RESUME" ] && EXTRA_ARGS="$EXTRA_ARGS --resume-from $RESUME"
@@ -60,6 +61,3 @@ $PYTHON train_tac.py \
     --models-dir ./upstream/models \
     --upstream-dir ./upstream \
     $EXTRA_ARGS
-
-# Profile override (e.g., PROFILE=council_v1)
-[ -n "${PROFILE:-}" ] && EXTRA_ARGS="$EXTRA_ARGS --profile $PROFILE"
