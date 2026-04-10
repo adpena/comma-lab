@@ -844,7 +844,10 @@ class Trainer:
             avg_seg = total_seg / n
 
             # Best-checkpoint int8 evaluation — skip expensive eval on most epochs
-            is_eval_epoch = (epoch + 1) % cfg.eval_every == 0 or epoch == cfg.epochs - 1 or epoch == 0
+            # Eval every epoch for the final 10% of training to catch ephemeral best weights
+            final_phase = epoch >= cfg.epochs - max(cfg.epochs // 10, 50)
+            eval_freq = 1 if final_phase else cfg.eval_every
+            is_eval_epoch = (epoch + 1) % eval_freq == 0 or epoch == cfg.epochs - 1 or epoch == 0
             if is_eval_epoch:
                 scorer_val = self._evaluate_int8_lazy(
                     comp_frames, gt_frames, posenet, segnet,

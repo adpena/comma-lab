@@ -347,9 +347,18 @@ def inflate_with_postfilter(
     """Decode, upscale, apply learned post-filter, write raw RGB.
 
     Uses batched inference for throughput. Model is passed in (loaded once).
+    NOTE: Only supports single-frame architectures (standard, dilated, etc.).
+    PairAwarePostFilter requires 6-channel input and is not yet supported here.
     """
     import time
     t0 = time.monotonic()
+
+    # Guard: pair-aware models need 6ch input, not supported in this inflate path
+    if isinstance(model, PairAwarePostFilter):
+        raise NotImplementedError(
+            "PairAwarePostFilter requires 6-channel (frame-pair) input. "
+            "inflate_with_postfilter only supports single-frame architectures."
+        )
 
     container = av.open(video_path)
     stream = container.streams.video[0]
