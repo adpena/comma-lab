@@ -2377,3 +2377,23 @@ The partner's `save_best_checkpoint` function evaluates the EMA weights AFTER in
 - Local Mac = proxy/scoring factory
 - bat00 = authoritative scorer only
 - Modal cost: ~$120-240 for 10-20 days continuous, trivially justified for $1000+ prize
+
+## 2026-04-09 19:10:00 -0500 - partner proxy confirms SegNet attack h=32 at 1.84
+
+### result
+- segnet_attack_fixed_ste_h32: proxy 1.84 (CPU, faithful)
+- pose=0.0517 (worse than promoted 0.0332 — PoseNet degraded by 56%)
+- seg=0.00544 (slightly better than promoted 0.00576 — only 5.6% improvement)
+- the PoseNet degradation costs more than the SegNet improvement saves
+
+### analysis
+- 1.84 is WORSE than promoted 1.727 — SegNet attack at h=32 is not a promotion candidate
+- BUT: it confirms the STE recipe produces real deployed scores
+- at h=64, width scaling would bring this to ~1.72-1.75 range
+- the problem is PoseNet degradation from the SegNet-focused training
+- the boundary weighting was supposed to prevent this but OOM'd at h=64
+
+### decision
+- council is right: width scaling (h=96 on Modal) is higher leverage than SegNet attack
+- SegNet attack only viable if we can prevent PoseNet degradation
+- focus remains on h=96 standard QAT+EMA on Modal
