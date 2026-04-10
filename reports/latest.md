@@ -76,18 +76,17 @@ Track B's promoted honest floor is now **`1.73`** after the `h64` long-horizon Q
   - `configs/platforms.json` now defines `local`, `bat00`, `kaggle`, `modal`, and `coiled`
   - `configs/run_manifests/` now contains neutral Kaggle/Modal/Coiled manifest templates plus a shared status template
   - scheduler compatibility now tolerates legacy manifests without `run_id` and counts `running_managed_session` as active
-- Kaggle is now doing real launch attempts, but the current helper-file bundle strategy is still not viable:
-  - version 3 of `adpena/comma-lab-dilated-h64-long1000` errored
-  - version 3 of `adpena/comma-lab-segnet-attack-fixed-h32` errored
-  - both logs are now captured under `reports/raw/2026-04-09-kaggle-launch-debug/`
-  - the new failure is not the old read-only workspace bug; it is that Kaggle effectively executes only the main code file, so helper modules are unavailable at runtime
-  - `pairaware_smoke` is built and ready, but currently blocked by Kaggle's free-tier maximum of two batch GPU sessions
-- The Kaggle launch surface itself is now partially hardened:
+- Kaggle is now on the repaired direct-code-file path:
+  - version 4 of `adpena/comma-lab-dilated-h64-long1000` is running
+  - version 4 of `adpena/comma-lab-segnet-attack-fixed-h32` is running
+  - the earlier version-3 failure logs remain captured under `reports/raw/2026-04-09-kaggle-launch-debug/`
+  - `pairaware_smoke` is built and ready, but still blocked by Kaggle's free-tier maximum of two batch GPU sessions
+- The Kaggle launch surface itself is now materially hardened:
   - `experiments/kaggle_kernel_builder.py`
   - `experiments/build_kaggle_kernels.py`
   - `experiments/kaggle_status_sync.py`
-  - the current launcher installs missing Python deps plus `git-lfs` before cloning upstream
-  - the next fix must make the kernels truly self-contained single-script trainers
+  - `train_postfilter_dilated_h64.py` and `cloud_segnet_attack_h32_trainer.py` are now used as the kernel code files directly
+  - the launcher path still installs missing Python deps plus `git-lfs` before cloning upstream when needed
 - Future-facing experiment code is now on disk too:
   - `experiments/train_postfilter_dilated_h64.py`
   - `experiments/train_postfilter_pixelshuffle_dilated.py`
