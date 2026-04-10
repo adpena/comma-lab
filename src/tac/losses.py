@@ -63,6 +63,7 @@ def scorer_loss(
     return loss, pose_dist.item(), seg_dist.item()
 
 
+@torch.no_grad()
 def eval_scorer_loss(
     filtered_pair_hwc: torch.Tensor,
     gt_pair_hwc: torch.Tensor,
@@ -315,12 +316,13 @@ def compute_boundary_mask(
     Returns: (H, W) float tensor, 1.0 at boundaries, 0.0 elsewhere.
     """
     p = gt_pair.to(device).float()
-    frame = p[:, 1]  # SegNet uses last frame
-    frame_chw = frame.permute(0, 3, 1, 2).contiguous()
+    frame = p[:, 1]  # SegNet uses last frame — (B, H, W, C)
+    frame_chw = frame.permute(0, 3, 1, 2).contiguous()  # (B, C, H, W)
 
     with torch.no_grad():
-        # Must go through preprocess_input to resize to (384, 512) — matches upstream
-        seg_in = segnet.preprocess_input(frame_chw)
+        # preprocess_input expects (B, T, C, H, W) — add T dim, then it does x[:, -1, ...]
+        frame_btchw = frame_chw.unsqueeze(1)  # (B, 1, C, H, W)
+        seg_in = segnet.preprocess_input(frame_btchw)  # resizes to (384, 512)
         seg_out = segnet(seg_in)
         labels = seg_out.argmax(dim=1).float().unsqueeze(1)
 

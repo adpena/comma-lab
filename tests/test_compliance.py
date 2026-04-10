@@ -190,7 +190,9 @@ class TestFramePairing:
 class TestArchitectureIdentity:
     """Verify all architectures start as identity (zero output residual)."""
 
-    @pytest.mark.parametrize("variant", ["standard", "dilated", "depthwise", "luma"])
+    @pytest.mark.parametrize("variant", [
+        "standard", "dilated", "depthwise", "luma", "film_conditioned",
+    ])
     def test_identity_init(self, variant: str):
         from tac.architectures import build_postfilter
         model = build_postfilter(variant, hidden=16)
@@ -199,6 +201,18 @@ class TestArchitectureIdentity:
             y = model(x)
         torch.testing.assert_close(x, y, atol=1e-5, rtol=1e-5,
                                    msg=f"{variant} should be identity at init")
+
+    @pytest.mark.parametrize("variant", ["pixelshuffle", "psd"])
+    def test_pixelshuffle_variants_run(self, variant: str):
+        """PixelShuffle variants may not be identity but should not crash."""
+        from tac.architectures import build_postfilter
+        model = build_postfilter(variant, hidden=16)
+        # PixelShuffle needs dimensions divisible by 2
+        x = torch.rand(1, 3, 64, 64) * 255
+        with torch.no_grad():
+            y = model(x)
+        assert y.shape == x.shape, f"{variant} output shape mismatch"
+        assert torch.isfinite(y).all(), f"{variant} produced non-finite output"
 
 
 class TestAtomicSave:
@@ -211,11 +225,11 @@ class TestAtomicSave:
         from tac.architectures import build_postfilter
         from tac.training import TrainConfig, Trainer
 
-        model = build_postfilter("standard", hidden=16)
-        config = TrainConfig(hidden=16, epochs=100, tag="test-atomic")
-        trainer = Trainer(model, config, device="cpu")
-
         with tempfile.TemporaryDirectory() as tmpdir:
+            model = build_postfilter("standard", hidden=16)
+            config = TrainConfig(hidden=16, epochs=100, tag="test-atomic", output_dir=tmpdir)
+            trainer = Trainer(model, config, device="cpu")
+
             path = Path(tmpdir) / "state.pt"
             trainer.save_training_state(path)
             assert path.exists()
