@@ -85,10 +85,13 @@ Track B's promoted honest floor is now **`1.73`** after the `h64` long-horizon Q
   - `experiments/kaggle_kernel_builder.py`
   - `experiments/build_kaggle_kernels.py`
   - `experiments/kaggle_status_sync.py`
+  - `experiments/kaggle_output_ingest.py`
+  - `experiments/kaggle_queue_tick.py`
   - `train_postfilter_dilated_h64.py` and `cloud_segnet_attack_h32_trainer.py` are now used as the kernel code files directly
   - the trainers now also fall back to CPU on Kaggle's unsupported P100 CUDA path instead of crashing immediately
   - the baseline archive is now staged through a private Kaggle dataset: `adpena/comma-lab-private-assets`
   - the launcher path still installs missing Python deps plus `git-lfs` before cloning upstream when needed
+  - the queue tick now chooses the correct next repush candidate automatically; the only remaining blocker is Kaggle's hard 2-session GPU cap
 - Future-facing experiment code is now on disk too:
   - `experiments/train_postfilter_dilated_h64.py`
   - `experiments/train_postfilter_pixelshuffle_dilated.py`
