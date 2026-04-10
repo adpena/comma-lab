@@ -90,9 +90,19 @@ def canonical_score(
 
             # Apply filter to both frames
             B, T, H, W, C = cp.shape
-            frames = cp.float().reshape(B * T, H, W, C).permute(0, 3, 1, 2).contiguous()
-            filtered = model(frames)
-            filtered_pair = filtered.permute(0, 2, 3, 1).reshape(B, T, H, W, C)
+            from .architectures import PairAwarePostFilter
+            if isinstance(model, PairAwarePostFilter):
+                f0 = cp[:, 0].float().permute(0, 3, 1, 2).contiguous()
+                f1 = cp[:, 1].float().permute(0, 3, 1, 2).contiguous()
+                out0 = model(torch.cat([f0, f1], dim=1))
+                out1 = model(torch.cat([f1, f0], dim=1))
+                filtered_pair = torch.stack([
+                    out0.permute(0, 2, 3, 1), out1.permute(0, 2, 3, 1)
+                ], dim=1)
+            else:
+                frames = cp.float().reshape(B * T, H, W, C).permute(0, 3, 1, 2).contiguous()
+                filtered = model(frames)
+                filtered_pair = filtered.permute(0, 2, 3, 1).reshape(B, T, H, W, C)
 
             # Convert to scorer input format: (B, T, C, H, W)
             fx = filtered_pair.float().permute(0, 1, 4, 2, 3).contiguous()

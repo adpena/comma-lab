@@ -111,6 +111,30 @@ class TestCheckpointSaveLoad:
                 assert v.device == torch.device("cpu"), f"EMA {k} on wrong device"
 
 
+class TestPairAwareDispatch:
+    """Test that _apply_filter_to_pair correctly dispatches for pair-aware models."""
+
+    def test_standard_model_independent_frames(self):
+        model = build_postfilter("standard", hidden=8)
+        config = TrainConfig(hidden=8, epochs=100, tag="test-standard", variant="standard")
+        trainer = Trainer(model, config, device="cpu")
+        assert not trainer._is_pair_aware
+        pair = torch.randint(0, 256, (1, 2, 32, 32, 3), dtype=torch.uint8)
+        with torch.no_grad():
+            out = trainer._apply_filter_to_pair(pair)
+        assert out.shape == (1, 2, 32, 32, 3)
+
+    def test_pair_aware_model_uses_context(self):
+        model = build_postfilter("pair_aware", hidden=8)
+        config = TrainConfig(hidden=8, epochs=100, tag="test-pair", variant="pair_aware")
+        trainer = Trainer(model, config, device="cpu")
+        assert trainer._is_pair_aware
+        pair = torch.randint(0, 256, (1, 2, 32, 32, 3), dtype=torch.uint8)
+        with torch.no_grad():
+            out = trainer._apply_filter_to_pair(pair)
+        assert out.shape == (1, 2, 32, 32, 3)
+
+
 class TestBoundaryMask:
     """Test compute_boundary_mask shape handling."""
 

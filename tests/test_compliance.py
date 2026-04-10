@@ -214,6 +214,36 @@ class TestArchitectureIdentity:
         assert y.shape == x.shape, f"{variant} output shape mismatch"
         assert torch.isfinite(y).all(), f"{variant} produced non-finite output"
 
+    def test_pair_aware_identity_init(self):
+        """Pair-aware filter should be identity at init (zero residual)."""
+        from tac.architectures import build_postfilter
+        model = build_postfilter("pair_aware", hidden=16)
+        target = torch.rand(1, 3, 64, 64) * 255
+        context = torch.rand(1, 3, 64, 64) * 255
+        x = torch.cat([target, context], dim=1)  # (1, 6, 64, 64)
+        with torch.no_grad():
+            y = model(x)
+        assert y.shape == (1, 3, 64, 64)
+        torch.testing.assert_close(target, y, atol=1e-5, rtol=1e-5,
+                                   msg="pair_aware should be identity at init")
+
+    def test_pair_aware_uses_context(self):
+        """After training, different context should produce different corrections."""
+        from tac.architectures import build_postfilter
+        model = build_postfilter("pair_aware", hidden=16)
+        # Manually set non-zero weights so context matters
+        with torch.no_grad():
+            model.conv1.weight.fill_(0.01)
+            model.conv3.weight.fill_(0.01)
+        target = torch.rand(1, 3, 64, 64) * 128 + 64  # safe range
+        ctx_a = torch.zeros(1, 3, 64, 64)
+        ctx_b = torch.ones(1, 3, 64, 64) * 255
+        with torch.no_grad():
+            out_a = model(torch.cat([target, ctx_a], dim=1))
+            out_b = model(torch.cat([target, ctx_b], dim=1))
+        diff = (out_a - out_b).abs().max().item()
+        assert diff > 0.01, "Different contexts should produce different outputs"
+
 
 class TestAtomicSave:
     """Verify atomic save behavior."""

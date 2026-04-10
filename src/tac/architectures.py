@@ -228,6 +228,39 @@ class FiLMPostFilter(nn.Module):
         return (x + residual).clamp(0, 255)
 
 
+class PairAwarePostFilter(nn.Module):
+    """6-channel pair-aware post-filter.
+
+    Takes both frames of a pair concatenated along channels (6ch input).
+    This gives the CNN access to temporal difference signal — PoseNet
+    operates on pairs, so corrections that depend on inter-frame
+    relationships cannot be learned by a single-frame filter.
+
+    conv1: 6→h (sees both frames), conv2: h→h, conv3: h→3 (outputs per-frame correction).
+    The filter is applied once per frame, with the OTHER frame as context.
+
+    Forward: (B, 6, H, W) → (B, 3, H, W). First 3ch = target frame, last 3ch = context.
+    """
+
+    def __init__(self, hidden: int = 64, kernel: int = 3):
+        super().__init__()
+        pad = kernel // 2
+        self.conv1 = nn.Conv2d(6, hidden, kernel, padding=pad, bias=True)
+        self.conv2 = nn.Conv2d(hidden, hidden, kernel, padding=pad, bias=True)
+        self.conv3 = nn.Conv2d(hidden, 3, kernel, padding=pad, bias=True)
+        self.act = nn.ReLU(inplace=True)
+        nn.init.zeros_(self.conv3.weight)
+        nn.init.zeros_(self.conv3.bias)
+
+    def forward(self, x: torch.Tensor) -> torch.Tensor:
+        """x: (B, 6, H, W) — first 3ch target, last 3ch context."""
+        target = x[:, :3]  # the frame being corrected
+        residual = self.act(self.conv1(x))
+        residual = self.act(self.conv2(residual))
+        residual = self.conv3(residual)
+        return (target + residual).clamp(0, 255)
+
+
 # ── Factory ──────────────────────────────────────────────────────────────
 
 
@@ -240,6 +273,7 @@ VARIANTS = {
     "depthwise": DepthwisePostFilter,
     "luma": LumaPostFilter,
     "film": FiLMPostFilter,
+    "pair_aware": PairAwarePostFilter,
     # Legacy aliases (from deploy inflate_postfilter.py)
     "residual": PostFilter,
     "saliency_weighted": PostFilter,

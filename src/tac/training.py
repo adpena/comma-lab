@@ -375,16 +375,45 @@ class Trainer:
 
         posenet.preprocess_input = types.MethodType(_diff_preprocess, posenet)
 
+    @property
+    def _is_pair_aware(self) -> bool:
+        """Check if the model expects 6-channel pair input."""
+        from .architectures import PairAwarePostFilter
+        return isinstance(self.model, PairAwarePostFilter)
+
     def _apply_filter_to_pair(self, comp_pair: torch.Tensor) -> torch.Tensor:
         """Apply the post-filter to both frames of a pair.
 
         Input: (1, 2, H, W, 3) uint8
         Output: (1, 2, H, W, 3) float [0, 255]
+
+        For pair-aware models: concatenates both frames (6ch) and runs
+        the model twice — once for each frame with the other as context.
+        For standard models: processes each frame independently (3ch).
         """
         B, T, H, W, C = comp_pair.shape
-        frames_bchw = comp_pair.float().reshape(B * T, H, W, C).permute(0, 3, 1, 2).contiguous()
-        filtered_bchw = self.model(frames_bchw)
-        return filtered_bchw.permute(0, 2, 3, 1).reshape(B, T, H, W, C)
+
+        if self._is_pair_aware:
+            # Pair-aware: each frame sees the other as context
+            f0 = comp_pair[:, 0].float().permute(0, 3, 1, 2).contiguous()  # (B, 3, H, W)
+            f1 = comp_pair[:, 1].float().permute(0, 3, 1, 2).contiguous()  # (B, 3, H, W)
+            # Frame 0 correction: target=f0, context=f1
+            inp0 = torch.cat([f0, f1], dim=1)  # (B, 6, H, W)
+            out0 = self.model(inp0)  # (B, 3, H, W)
+            # Frame 1 correction: target=f1, context=f0
+            inp1 = torch.cat([f1, f0], dim=1)  # (B, 6, H, W)
+            out1 = self.model(inp1)  # (B, 3, H, W)
+            # Reassemble pair
+            result = torch.stack([
+                out0.permute(0, 2, 3, 1),  # (B, H, W, 3)
+                out1.permute(0, 2, 3, 1),
+            ], dim=1)  # (B, 2, H, W, 3)
+            return result
+        else:
+            # Standard: process each frame independently
+            frames_bchw = comp_pair.float().reshape(B * T, H, W, C).permute(0, 3, 1, 2).contiguous()
+            filtered_bchw = self.model(frames_bchw)
+            return filtered_bchw.permute(0, 2, 3, 1).reshape(B, T, H, W, C)
 
     def _evaluate_int8(
         self, comp_pairs, gt_pairs, posenet, segnet, subsample: int = 4,
