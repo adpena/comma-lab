@@ -1,9 +1,9 @@
 {
   "slug": "kaggle-segnet-attack-fixed-h32",
-  "run_id": "kaggle-segnet-attack-fixed-h32-v3-20260410T001251Z",
+  "run_id": "kaggle-segnet-attack-fixed-h32-v4-20260410T005635Z",
   "host": "kaggle",
   "platform": "kaggle",
-  "status": "error",
+  "status": "running",
   "remote_root": "/kaggle/working",
   "remote_log": "kaggle://adpena/comma-lab-segnet-attack-fixed-h32",
   "remote_command": "uv run --with kaggle kaggle kernels push -p /Users/adpena/Projects/pact/experiments/kaggle_kernels/segnet_attack_fixed_h32 --accelerator gpu",
@@ -14,6 +14,6 @@
   "bundle_dir": "experiments/kaggle_kernels/segnet_attack_fixed_h32",
   "best_checkpoint": null,
   "latest_printed_checkpoint": null,
-  "notes": "Kaggle kernel version 3 still errored. The writable-root bootstrap fixed the read-only /kaggle/src/workspace issue, but Kaggle still executed only the main code file, so helper modules such as train_postfilter_segnet_attack were unavailable at runtime. Next fix must use a truly self-contained single-script kernel.",
-  "written_at": "2026-04-10T00:12:51Z"
+  "notes": "Kaggle kernel version 4 is now running on the direct-code-file path. The bundle now uses the self-contained cloud_segnet_attack_h32_trainer.py script as the kernel code file instead of a helper-module launcher.",
+  "written_at": "2026-04-10T00:56:35Z"
 }
