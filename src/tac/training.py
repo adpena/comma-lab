@@ -448,8 +448,8 @@ class Trainer:
         # Load EMA weights
         self.ema.apply(self.model)
 
-        # Simulate int8 quantization (single source of truth)
-        q_state = quantize_state_dict(self.model.state_dict())
+        # Simulate int8 quantization — per-channel for better precision
+        q_state = quantize_state_dict(self.model.state_dict(), per_channel=True)
         self.model.load_state_dict(q_state)
         self.model.eval()
 
@@ -490,15 +490,25 @@ class Trainer:
         torch.save(self.ema.state_dict(), fp32_tmp)
         fp32_tmp.rename(fp32_path)
 
-        # Save int8 (atomic)
+        # Save int8 per-channel (atomic) — better precision for multi-channel convs
         int8_state = {}
         for name, param in self.ema.shadow.items():
             p = param.detach().cpu().float()
-            scale = p.abs().max() / 127.0
-            if scale.item() < 1e-10:
-                scale = torch.tensor(1.0, device=p.device)
-            int8_state[name + ".q"] = (p / scale).round().clamp(-128, 127).to(torch.int8)
-            int8_state[name + ".s"] = scale
+            if p.ndim >= 2 and "weight" in name:
+                # Per-channel: scale per output channel (dim 0)
+                flat = p.reshape(p.shape[0], -1)
+                scale = flat.abs().amax(dim=1) / 127.0
+                scale = scale.clamp(min=1e-10)
+                q = (p / scale.reshape(-1, *([1] * (p.ndim - 1)))).round().clamp(-128, 127).to(torch.int8)
+                int8_state[name + ".q"] = q
+                int8_state[name + ".s"] = scale
+            else:
+                # Bias or 1D: per-tensor
+                scale = p.abs().max() / 127.0
+                if scale.item() < 1e-10:
+                    scale = torch.tensor(1.0, device=p.device)
+                int8_state[name + ".q"] = (p / scale).round().clamp(-128, 127).to(torch.int8)
+                int8_state[name + ".s"] = scale
         int8_state["__meta__"] = {
             "variant": self.config.variant,
             "hidden": self.config.hidden,
@@ -867,7 +877,7 @@ class Trainer:
         orig_state = {k: v.clone() for k, v in self.model.state_dict().items()}
 
         self.ema.apply(self.model)
-        q_state = quantize_state_dict(self.model.state_dict())
+        q_state = quantize_state_dict(self.model.state_dict(), per_channel=True)
         self.model.load_state_dict(q_state)
         self.model.eval()
 
