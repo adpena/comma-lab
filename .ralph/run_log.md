@@ -2760,3 +2760,5 @@ The partner's `save_best_checkpoint` function evaluates the EMA weights AFTER in
 - let h=64 training continue (ep 1090, improving)
 - proxy-score the current best checkpoint TOMORROW MORNING
 - sal_lambda=0 runs AFTER proxy confirms h=64 improvement, not before
+
+## 2026-04-10 01:27:56 - 🎯 h64_no_sal_recon crossed proxy threshold at scorer 1.4541, ep 0
