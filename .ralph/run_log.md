@@ -2491,3 +2491,28 @@ The partner's `save_best_checkpoint` function evaluates the EMA weights AFTER in
 - council is right: width scaling (h=96 on Modal) is higher leverage than SegNet attack
 - SegNet attack only viable if we can prevent PoseNet degradation
 - focus remains on h=96 standard QAT+EMA on Modal
+
+## 2026-04-09 20:25:00 -0500 - saliency fix showing measurable impact
+
+### evidence
+- previous h=64 run (pre-fix): ep 389, scorer 3.799
+- current h=64 run (post-fix): ep 523, scorer 3.658
+- the saliency fix (H1: frame 1 only instead of both frames) is producing
+  BETTER scores at EARLIER epochs
+- at comparable epochs (~400), pre-fix was 3.80, post-fix is ~3.72
+- the fix doubled the effective saliency gradient by removing the wasted
+  frame 0 contribution (SegNet only uses frame 1)
+
+### trajectory
+- ep 65: 4.07
+- ep 222: 3.88  
+- ep 348: 3.85
+- ep 390: 3.75
+- ep 472: 3.73
+- ep 523: 3.66
+- gap to promoted floor (3.547): 0.11
+- ETA to promoted epoch (918): ~2.2 hours
+
+### writeup
+- competition writeup draft completed (1800 words)
+- ready for PR submission with current 1.727 floor
