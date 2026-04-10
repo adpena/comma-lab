@@ -2557,3 +2557,24 @@ The partner's `save_best_checkpoint` function evaluates the EMA weights AFTER in
 - the dilated variant is interesting but council says focus on width scaling
 
 ## 2026-04-09 20:49:45 - 🎯 standard_h64_long2500 crossed proxy threshold at scorer 3.5371, ep 678
+
+## 2026-04-09 21:35:00 -0500 - saliency frontier: PoseNet-only map suppresses SegNet fixes
+
+### insight
+- saliency weight = 1 + 20 * posenet_gradient_magnitude
+- reconstruction penalty = (1/weight) * residual^2
+- HIGH PoseNet saliency → low penalty → filter CAN correct
+- LOW PoseNet saliency → high penalty → filter CANNOT correct
+- BUT SegNet boundary pixels may have LOW PoseNet saliency
+- → the saliency weighting actively PREVENTS SegNet improvement
+- → this explains why SegNet barely improves despite 98.4% headroom
+
+### potential fix (not implemented yet)
+- combined saliency: weight = 1 + alpha_pose * pose_sal + alpha_seg * seg_boundary_mask
+- this would allow the filter to correct SegNet-important pixels too
+- cheap to implement — just change the saliency map, not the architecture or loss
+
+### status
+- documenting for the paper as "future work"
+- current training at 3.537 is working well with PoseNet-only saliency
+- council says don't explore new techniques with 24 days left
