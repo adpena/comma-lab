@@ -281,7 +281,7 @@ def dual_saliency_reconstruction_loss(
         combined = posenet_sal
 
     residual = filtered_bchw - original_bchw
-    inv_weight = 1.0 / combined
+    inv_weight = 1.0 / combined.clamp(min=1e-10)
     return (inv_weight * residual.pow(2)).mean()
 
 
@@ -301,7 +301,7 @@ def saliency_reconstruction_loss(
         sal_weights: (B, 1, H, W) per-pixel weights (1 + alpha * saliency)
     """
     residual = filtered_bchw - original_bchw
-    inv_weight = 1.0 / sal_weights
+    inv_weight = 1.0 / sal_weights.clamp(min=1e-10)
     return (inv_weight * residual.pow(2)).mean()
 
 
