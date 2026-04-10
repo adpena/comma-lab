@@ -290,6 +290,17 @@ No paid compute was used. All results are reproducible on consumer hardware.
 
 7. **The scoring formula has structure.** The marginal sensitivities of each term at different operating points are not obvious from the formula but drive resource allocation.
 
+8. **Gradient signal quality beats raw compute.** KL distillation with hard-frame curriculum achieved in 200 epochs what standard training could not achieve in 905. The bottleneck was not compute — it was where the gradients landed.
+
+---
+
+<!-- TODO: Generate before final submission -->
+<!-- 1. Score vs h width scaling graph (log-linear + dilated breakout) -->
+<!-- 2. Score vs epoch overlaid curves (standard / dilated / KL+hardframe) -->
+<!-- 3. Score component stacked bar (seg/pose/rate at each milestone) -->
+<!-- 4. Comparison GIFs with SegNet overlay (baseline vs ours) -->
+<!-- 5. Update score and all numbers once final checkpoint is promoted -->
+
 ---
 
 *Score: 1.33 | 45KB int8 CNN | 40K params | SVT-AV1 CRF 34 | 903KB archive | CPU inference < 30s | tac v1.0.0 | 70 tests | 15 bugs fixed | 5 council review rounds*
