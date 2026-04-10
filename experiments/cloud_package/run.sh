@@ -26,11 +26,16 @@ ALPHA_SEG="${ALPHA_SEG:-200}"
 USE_STE="${USE_STE:-}"
 BOUNDARY_WEIGHT="${BOUNDARY_WEIGHT:-1.0}"
 RESUME="${RESUME:-}"
+HARD_FRAME="${HARD_FRAME:-0.0}"
+EVAL_EVERY="${EVAL_EVERY:-5}"
+PRECOMPUTED="${PRECOMPUTED:-}"
 
 EXTRA_ARGS=""
 [ -n "$DUAL_SAL" ] && EXTRA_ARGS="$EXTRA_ARGS --use-dual-saliency --alpha-seg $ALPHA_SEG"
 [ -n "$USE_STE" ] && EXTRA_ARGS="$EXTRA_ARGS --use-ste --boundary-weight $BOUNDARY_WEIGHT"
 [ -n "$RESUME" ] && EXTRA_ARGS="$EXTRA_ARGS --resume-from $RESUME"
+[ "$HARD_FRAME" != "0.0" ] && EXTRA_ARGS="$EXTRA_ARGS --hard-frame-ratio $HARD_FRAME"
+[ -n "$PRECOMPUTED" ] && EXTRA_ARGS="$EXTRA_ARGS --precomputed $PRECOMPUTED"
 
 echo "=== Training: tag=$TAG variant=$VARIANT h=$HIDDEN epochs=$EPOCHS loss=$LOSS ==="
 [ -n "$DUAL_SAL" ] && echo "=== Dual saliency: alpha_seg=$ALPHA_SEG ==="
@@ -47,6 +52,7 @@ $PYTHON train_tac.py \
     --alpha "$ALPHA" \
     --sal-lambda 1.0 \
     --subsample 4 \
+    --eval-every "$EVAL_EVERY" \
     --output-dir ./weights \
     --archive ./archive.zip \
     --gt-video ./upstream/videos/0.mkv \

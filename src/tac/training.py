@@ -88,6 +88,9 @@ class TrainConfig(BaseModel):
     # Training dynamics
     accum_steps: int = Field(4, ge=1, le=64)
     eval_every: int = Field(5, ge=1, description="Evaluate int8 checkpoint every N epochs")
+    hard_frame_ratio: float = Field(0.0, ge=0.0, le=1.0,
+                                     description="Fraction of training pairs to oversample from hardest SegNet frames. "
+                                     "0.0 = uniform sampling, 0.5 = half hard / half uniform.")
     eval_holdout: float = Field(0.0, ge=0.0, le=0.5,
                                 description="Fraction of pairs held out for eval. "
                                 "0.0 = contest mode (train+eval on all pairs). "
@@ -738,6 +741,27 @@ class Trainer:
             avg_frac = sum(m.mean().item() for m in self._boundary_masks.values()) / len(self._boundary_masks)
             print(f"[trainer-lazy] Boundary masks: {len(self._boundary_masks)} pairs, avg {avg_frac:.4f} ({avg_frac*100:.2f}%)")
 
+        # Hard-frame curriculum: precompute per-pair SegNet disagreement for weighted sampling
+        hard_frame_weights = None
+        if cfg.hard_frame_ratio > 0:
+            from .losses import eval_scorer_loss
+            print(f"[trainer-lazy] Precomputing per-pair SegNet difficulty for hard-frame curriculum...")
+            pair_difficulties = []
+            with torch.no_grad():
+                for start in train_pair_starts:
+                    gt_pair = pair_from_frames(gt_frames, start).to(self.device)
+                    comp_pair = pair_from_frames(comp_frames, start).to(self.device)
+                    _, _, seg_d = eval_scorer_loss(comp_pair, gt_pair, posenet, segnet)
+                    pair_difficulties.append(seg_d)
+            difficulties = torch.tensor(pair_difficulties)
+            # Top 20% hardest get boosted weight
+            threshold = difficulties.quantile(0.8)
+            hard_frame_weights = torch.where(difficulties >= threshold, 3.0, 1.0)
+            hard_frame_weights = hard_frame_weights / hard_frame_weights.sum()
+            n_hard = (difficulties >= threshold).sum().item()
+            print(f"[trainer-lazy] Hard frames: {n_hard}/{n_train} (top 20%), "
+                  f"ratio={cfg.hard_frame_ratio:.1f}, avg difficulty={difficulties.mean():.6f}")
+
         if self._current_epoch > 0:
             print(f"[trainer-lazy] Resuming from epoch {self._current_epoch}")
 
@@ -751,8 +775,11 @@ class Trainer:
                 for pg in self.optimizer.param_groups:
                     pg["lr"] = lr
 
-            # Random subset of TRAINING pair indices only (eval pairs are held out)
-            perm = torch.randperm(n_train)[:train_size]
+            # Weighted or uniform sampling of training pairs
+            if hard_frame_weights is not None and cfg.hard_frame_ratio > 0:
+                perm = torch.multinomial(hard_frame_weights, train_size, replacement=True)
+            else:
+                perm = torch.randperm(n_train)[:train_size]
 
             accum = cfg.accum_steps
             self.optimizer.zero_grad(set_to_none=True)

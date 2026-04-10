@@ -77,6 +77,8 @@ def main():
     parser.add_argument("--subsample", type=int, default=8)
     parser.add_argument("--eval-every", type=int, default=5,
                         help="Evaluate int8 checkpoint every N epochs (default 5)")
+    parser.add_argument("--hard-frame-ratio", type=float, default=0.0,
+                        help="Fraction of hard SegNet pairs to oversample (0=uniform, 0.5=half hard)")
 
     # Loss mode
     parser.add_argument("--loss-mode", default="standard", choices=["standard", "temperature", "focal_ste", "kl_distill"])
@@ -157,6 +159,7 @@ def main():
         ema_decay=args.ema_decay,
         accum_steps=args.accum_steps,
         eval_every=args.eval_every,
+        hard_frame_ratio=args.hard_frame_ratio,
         loss_mode=args.loss_mode,
         temperature_start=args.temperature_start,
         temperature_end=args.temperature_end,
