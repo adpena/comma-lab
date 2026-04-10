@@ -2661,3 +2661,24 @@ The partner's `save_best_checkpoint` function evaluates the EMA weights AFTER in
   saliency deep-dive, SegNet headroom — all in docs/
 
 ## 2026-04-09 21:45:21 - 🎯 standard_h64_long2500 crossed proxy threshold at scorer 3.5226, ep 960
+
+## 2026-04-09 22:20:00 -0500 - operating doctrine: proxy the improved h=64 FIRST
+
+### doctrine
+1. standard_h64_long2500 (saliency-fixed) at scorer 3.5011 is the #1 empirical question
+   - it has real saved artifacts (fp32 + int8 + meta)
+   - it deserves proxy attention BEFORE any new experiment ideology
+2. the saliency fix (frame-1-only) is the ONLY change vs the promoted run
+   - this is strong causal evidence — write it clearly in findings/writeup
+   - promoted run: ep 918, scorer 3.547 → official 1.727
+   - saliency-fixed run: ep 1090, scorer 3.5011 → estimated ~1.70
+3. sal_lambda=0 is a HIGH VARIANCE experiment
+   - run as bounded side lane, not a replacement
+   - demand durable best_meta
+   - do NOT displace the improved h64 until sal_lambda=0 actually transfers
+4. SegNet headroom is still the bigger upside but empirics come first
+
+### immediate action
+- let h=64 training continue (ep 1090, improving)
+- proxy-score the current best checkpoint TOMORROW MORNING
+- sal_lambda=0 runs AFTER proxy confirms h=64 improvement, not before
