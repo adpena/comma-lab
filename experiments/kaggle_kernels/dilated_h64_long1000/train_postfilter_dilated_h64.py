@@ -84,6 +84,7 @@ def resolve_asset(relative_path: str) -> Path:
         SCRIPT_PATH.parent / "experiments" / Path(relative_path).name,
         SCRIPT_PATH.parent / basename,
         PROJECT_ROOT / basename,
+        Path("/kaggle/input/comma-lab-private-assets") / basename,
     ]
     for candidate in candidates:
         if candidate.exists():

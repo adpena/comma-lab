@@ -56,6 +56,16 @@ class TrainPostfilterDilatedH64Tests(unittest.TestCase):
         self.assertEqual(meta["hidden"], 64)
         self.assertEqual(meta["kernel"], 3)
 
+    def test_resolve_asset_uses_kaggle_dataset_fallback(self) -> None:
+        mod = load_module()
+        original_exists = mod.Path.exists
+        try:
+            mod.Path.exists = lambda self: str(self) == "/kaggle/input/comma-lab-private-assets/decode_base_archive.zip"
+            asset = mod.resolve_asset("reports/raw/2026-04-06-av1-roi-experiments/decode_base_archive.zip")
+        finally:
+            mod.Path.exists = original_exists
+        self.assertEqual(str(asset), "/kaggle/input/comma-lab-private-assets/decode_base_archive.zip")
+
     def test_qat_dilated_postfilter_uses_dilation_two(self) -> None:
         mod = load_module()
         model = mod.QATDilatedPostFilter(hidden=8, kernel=3)

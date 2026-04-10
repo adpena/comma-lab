@@ -15,6 +15,7 @@ class KaggleKernelSpec:
     code_file: str = "run_kernel.py"
     args: tuple[str, ...] = ()
     include_paths: tuple[Path, ...] = ()
+    dataset_sources: tuple[str, ...] = ()
 
 
 def build_kernel_metadata(
@@ -23,6 +24,7 @@ def build_kernel_metadata(
     slug: str,
     title: str,
     code_file: str,
+    dataset_sources: tuple[str, ...] = (),
 ) -> dict[str, object]:
     return {
         "id": f"{username}/{slug}",
@@ -34,7 +36,7 @@ def build_kernel_metadata(
         "enable_gpu": True,
         "enable_tpu": False,
         "enable_internet": True,
-        "dataset_sources": [],
+        "dataset_sources": list(dataset_sources),
         "competition_sources": [],
         "kernel_sources": [],
         "model_sources": [],
@@ -144,6 +146,7 @@ def write_bundle(
         slug=spec.slug,
         title=spec.title,
         code_file=spec.code_file,
+        dataset_sources=spec.dataset_sources,
     )
     (bundle_dir / "kernel-metadata.json").write_text(json.dumps(metadata, indent=2))
     if spec.code_source is not None:

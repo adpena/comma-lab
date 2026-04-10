@@ -17,6 +17,7 @@ from kaggle_kernel_builder import KaggleKernelSpec, write_bundle
 REPO_ROOT = Path(__file__).resolve().parents[1]
 KAGGLE_ROOT = REPO_ROOT / "experiments" / "kaggle_kernels"
 KAGGLE_CREDS = Path.home() / ".kaggle" / "kaggle.json"
+ASSET_DATASET_REF = "adpena/comma-lab-private-assets"
 
 
 def kaggle_username() -> str:
@@ -34,6 +35,7 @@ def kernel_specs() -> dict[str, KaggleKernelSpec]:
             title="comma-lab dilated h64 long1000",
             code_source=REPO_ROOT / "experiments" / "train_postfilter_dilated_h64.py",
             code_file="train_postfilter_dilated_h64.py",
+            dataset_sources=(ASSET_DATASET_REF,),
             include_paths=(
                 REPO_ROOT / "experiments" / "masks" / "posenet_saliency.npy",
                 REPO_ROOT / "reports" / "raw" / "2026-04-06-av1-roi-experiments" / "decode_base_archive.zip",
@@ -44,6 +46,7 @@ def kernel_specs() -> dict[str, KaggleKernelSpec]:
             title="comma-lab segnet attack fixed h32",
             code_source=REPO_ROOT / "experiments" / "cloud_segnet_attack_h32_trainer.py",
             code_file="cloud_segnet_attack_h32_trainer.py",
+            dataset_sources=(ASSET_DATASET_REF,),
             include_paths=(
                 REPO_ROOT / "reports" / "raw" / "2026-04-06-av1-roi-experiments" / "decode_base_archive.zip",
             ),

@@ -54,6 +54,16 @@ class CloudSegnetAttackH32TrainerTests(unittest.TestCase):
         self.assertEqual(args.alpha, 13.5)
         self.assertEqual(args.tag, "demo")
 
+    def test_resolve_asset_uses_kaggle_dataset_fallback(self) -> None:
+        mod = load_module()
+        original_exists = mod.Path.exists
+        try:
+            mod.Path.exists = lambda self: str(self) == "/kaggle/input/comma-lab-private-assets/decode_base_archive.zip"
+            asset = mod.resolve_asset("reports/raw/2026-04-06-av1-roi-experiments/decode_base_archive.zip")
+        finally:
+            mod.Path.exists = original_exists
+        self.assertEqual(str(asset), "/kaggle/input/comma-lab-private-assets/decode_base_archive.zip")
+
     def test_normalize_postfilter_meta_records_fixed_h32_family(self) -> None:
         mod = load_module()
         meta = mod.normalize_postfilter_meta(alpha=20.0, kernel=3)

@@ -8,7 +8,9 @@
   "enable_gpu": true,
   "enable_tpu": false,
   "enable_internet": true,
-  "dataset_sources": [],
+  "dataset_sources": [
+    "adpena/comma-lab-private-assets"
+  ],
   "competition_sources": [],
   "kernel_sources": [],
   "model_sources": []

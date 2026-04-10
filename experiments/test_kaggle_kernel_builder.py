@@ -15,6 +15,7 @@ class KaggleKernelBuilderTests(unittest.TestCase):
             slug="comma-lab-test",
             title="comma-lab test",
             code_file="run_kernel.py",
+            dataset_sources=("alice/private-assets",),
         )
 
         self.assertEqual(metadata["id"], "alice/comma-lab-test")
@@ -23,7 +24,7 @@ class KaggleKernelBuilderTests(unittest.TestCase):
         self.assertTrue(metadata["is_private"])
         self.assertTrue(metadata["enable_gpu"])
         self.assertTrue(metadata["enable_internet"])
-        self.assertEqual(metadata["dataset_sources"], [])
+        self.assertEqual(metadata["dataset_sources"], ["alice/private-assets"])
 
     def test_write_bundle_copies_files_and_launcher(self) -> None:
         with tempfile.TemporaryDirectory() as tmpdir:
