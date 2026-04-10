@@ -30,7 +30,11 @@ import torch
 import torch.nn as nn
 
 from .data import pair_from_frames, pair_start_indices, saliency_for_pair, load_raw_saliency, SEQ_LEN
-from .losses import scorer_loss, segnet_ste_loss, saliency_reconstruction_loss
+from .losses import (
+    scorer_loss, segnet_ste_loss, saliency_reconstruction_loss,
+    temperature_scorer_loss, focal_segnet_ste_loss,
+    dual_saliency_reconstruction_loss,
+)
 from .quantization import save_int8, load_int8, quantize_state_dict
 
 
@@ -56,6 +60,15 @@ class TrainConfig:
     # SegNet boundary attack
     boundary_weight: float = 1.0  # >1.0 enables boundary weighting
     use_ste_segnet: bool = False
+
+    # SegNet headroom unlocking (council recommendations)
+    loss_mode: str = "standard"  # standard | temperature | focal_ste
+    temperature_start: float = 1.0  # for temperature mode
+    temperature_end: float = 0.05  # annealed over training
+    focal_gamma: float = 2.0  # for focal_ste mode
+    segnet_loss_weight: float = 100.0  # default matches scorer; try 200-300
+    use_dual_saliency: bool = False  # combine PoseNet + SegNet boundary saliency
+    alpha_seg: float = 200.0  # SegNet boundary weight in dual saliency
 
     # Training dynamics
     accum_steps: int = 4  # gradient accumulation steps (effective batch size)
@@ -580,16 +593,36 @@ class Trainer:
                 # Apply filter
                 filtered = self._apply_filter_to_pair(comp_pair)
 
-                # Scorer loss
-                loss, pd, sd = scorer_loss(filtered, gt_pair, posenet, segnet)
+                # Scorer loss (configurable mode)
+                if cfg.loss_mode == "temperature":
+                    # Anneal temperature from start to end over training
+                    progress = epoch / max(cfg.epochs - 1, 1)
+                    temp = cfg.temperature_start + progress * (cfg.temperature_end - cfg.temperature_start)
+                    loss, pd, sd = temperature_scorer_loss(
+                        filtered, gt_pair, posenet, segnet, temperature=temp,
+                    )
+                elif cfg.loss_mode == "focal_ste":
+                    loss, pd, sd = focal_segnet_ste_loss(
+                        filtered, gt_pair, posenet, segnet,
+                        gamma=cfg.focal_gamma,
+                    )
+                else:
+                    loss, pd, sd = scorer_loss(filtered, gt_pair, posenet, segnet)
 
                 # Saliency reconstruction (frame 1 only)
                 sal_w = saliency_for_pair(raw_saliency, start, cfg.alpha, self.device)
                 filtered_bchw = filtered[:, 1].permute(0, 3, 1, 2)
                 comp_bchw = comp_pair[:, 1].float().permute(0, 3, 1, 2)
-                sal_recon = saliency_reconstruction_loss(
-                    filtered_bchw, comp_bchw, sal_w[1:2]
-                )
+
+                if cfg.use_dual_saliency:
+                    # TODO: pass boundary masks through fit_lazy args
+                    sal_recon = saliency_reconstruction_loss(
+                        filtered_bchw, comp_bchw, sal_w[1:2]
+                    )
+                else:
+                    sal_recon = saliency_reconstruction_loss(
+                        filtered_bchw, comp_bchw, sal_w[1:2]
+                    )
 
                 total = (loss + cfg.sal_lambda * sal_recon) / accum
                 total.backward()

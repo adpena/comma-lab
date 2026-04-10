@@ -121,6 +121,131 @@ def segnet_ste_loss(
     return loss, pose_dist.item(), hard_disagree.item()
 
 
+def temperature_scorer_loss(
+    filtered_pair_hwc: torch.Tensor,
+    gt_pair_hwc: torch.Tensor,
+    posenet,
+    segnet,
+    temperature: float = 1.0,
+) -> tuple[torch.Tensor, float, float]:
+    """Scorer loss with temperature-scaled softmax for SegNet.
+
+    Lower temperature → sharper softmax → closer to hard argmax.
+    Anneal T from 1.0 (smooth) to 0.05 (near-hard) during training
+    to gradually focus gradient on boundary pixels.
+
+    Council recommendation #2: expected -0.06 to -0.12 SegNet improvement.
+    """
+    fx = _hwc_to_chw(filtered_pair_hwc)
+    gx = _hwc_to_chw(gt_pair_hwc)
+
+    fp_out, fs_out = scorer_forward_pair(fx, posenet, segnet)
+    with torch.no_grad():
+        gp_out, gs_out = scorer_forward_pair(gx, posenet, segnet)
+
+    pose_dist = (fp_out["pose"][..., :6] - gp_out["pose"][..., :6]).pow(2).mean()
+
+    pred_sharp = F.softmax(fs_out / temperature, dim=1)
+    gt_sharp = F.softmax(gs_out / temperature, dim=1)
+    seg_dist = 1.0 - (pred_sharp * gt_sharp).sum(dim=1).mean()
+
+    loss = 100.0 * seg_dist + torch.sqrt(10.0 * pose_dist + 1e-8)
+    return loss, pose_dist.item(), seg_dist.item()
+
+
+def focal_segnet_ste_loss(
+    filtered_pair_hwc: torch.Tensor,
+    gt_pair_hwc: torch.Tensor,
+    posenet,
+    segnet,
+    gamma: float = 2.0,
+    boundary_mask: torch.Tensor | None = None,
+    boundary_weight: float = 1.0,
+) -> tuple[torch.Tensor, float, float]:
+    """SegNet STE with focal cross-entropy for automatic boundary focus.
+
+    Focal loss down-weights easy (confident) pixels and up-weights
+    hard (uncertain) pixels — exactly the boundary pixels where
+    argmax decisions can flip.
+
+    Council recommendation #3: expected -0.09 to -0.14 SegNet improvement.
+    """
+    fx = _hwc_to_chw(filtered_pair_hwc)
+    gx = _hwc_to_chw(gt_pair_hwc)
+
+    fp_out, fs_out = scorer_forward_pair(fx, posenet, segnet)
+    with torch.no_grad():
+        gp_out, gs_out = scorer_forward_pair(gx, posenet, segnet)
+
+    pose_dist = (fp_out["pose"][..., :6] - gp_out["pose"][..., :6]).pow(2).mean()
+
+    with torch.no_grad():
+        gt_labels = gs_out.argmax(dim=1)
+        pred_labels = fs_out.argmax(dim=1)
+        hard_disagree = (pred_labels != gt_labels).float().mean()
+
+    B, C, H_seg, W_seg = fs_out.shape
+    flat_labels = gt_labels.reshape(-1)
+    flat_logits = fs_out.permute(0, 2, 3, 1).reshape(-1, C)
+
+    # Focal loss: down-weight easy pixels, up-weight hard pixels
+    per_pixel_ce = F.cross_entropy(flat_logits, flat_labels, reduction="none")
+    pt = torch.exp(-per_pixel_ce)
+    focal_weight = (1 - pt) ** gamma
+
+    # Optional boundary weighting on top of focal
+    if boundary_mask is not None and boundary_weight > 1.0:
+        bm = boundary_mask.to(fs_out.device).unsqueeze(0).unsqueeze(0)
+        bm_resized = F.interpolate(bm, size=(H_seg, W_seg), mode="nearest").squeeze(0).squeeze(0)
+        pixel_bw = torch.where(bm_resized > 0.5, boundary_weight, 1.0)
+        pixel_bw = pixel_bw / pixel_bw.mean()
+        focal_weight = focal_weight * pixel_bw.expand(B, -1, -1).reshape(-1)
+
+    soft_ce = (focal_weight * per_pixel_ce).mean()
+    seg_dist = soft_ce + (hard_disagree - soft_ce).detach()
+
+    loss = 100.0 * seg_dist + torch.sqrt(10.0 * pose_dist + 1e-8)
+    return loss, pose_dist.item(), hard_disagree.item()
+
+
+def dual_saliency_reconstruction_loss(
+    filtered_bchw: torch.Tensor,
+    original_bchw: torch.Tensor,
+    posenet_sal: torch.Tensor,
+    segnet_boundary: torch.Tensor | None = None,
+    alpha_pose: float = 20.0,
+    alpha_seg: float = 200.0,
+) -> torch.Tensor:
+    """Combined PoseNet + SegNet saliency reconstruction loss.
+
+    Allows corrections at BOTH PoseNet-sensitive AND SegNet-boundary pixels.
+    The alpha_seg/alpha_pose ratio should approximate the scoring formula's
+    leverage ratio (100/8.68 ≈ 11.5, so alpha_seg ≈ 11.5 * alpha_pose).
+
+    Council recommendation #1: expected -0.06 to -0.12 SegNet improvement.
+
+    Args:
+        posenet_sal: (B, 1, H, W) PoseNet saliency weights (1 + alpha * sal)
+        segnet_boundary: (H, W) boundary mask (1.0 at boundaries, 0.0 elsewhere)
+        alpha_pose: weight for PoseNet saliency (default 20)
+        alpha_seg: weight for SegNet boundaries (default 200, ~10x alpha_pose)
+    """
+    if segnet_boundary is not None:
+        bm = segnet_boundary.to(filtered_bchw.device)
+        if bm.ndim == 2:
+            bm = bm.unsqueeze(0).unsqueeze(0)
+        # Resize boundary to match spatial dims
+        if bm.shape[-2:] != filtered_bchw.shape[-2:]:
+            bm = F.interpolate(bm, size=filtered_bchw.shape[-2:], mode="nearest")
+        combined = posenet_sal + alpha_seg * bm
+    else:
+        combined = posenet_sal
+
+    residual = filtered_bchw - original_bchw
+    inv_weight = 1.0 / combined
+    return (inv_weight * residual.pow(2)).mean()
+
+
 def saliency_reconstruction_loss(
     filtered_bchw: torch.Tensor,
     original_bchw: torch.Tensor,

@@ -37,8 +37,24 @@
     "tag": "h64_no_sal_recon",
     "cmd": "experiments/train_postfilter_qat_ema.py --hidden 64 --epochs 2500 --alpha 20 --sal-lambda 0 --tag h64_no_sal_recon",
     "platform": "mps",
-    "status": "queued",
+    "status": "running",
     "priority": 1,
     "notes": "COUNCIL PRIORITY: remove saliency recon to unlock SegNet headroom"
+  },
+  {
+    "tag": "h64_temp_anneal",
+    "cmd": "experiments/train_postfilter_qat_ema.py --hidden 64 --epochs 2500 --alpha 20 --tag h64_temp_anneal",
+    "platform": "mps",
+    "status": "queued",
+    "priority": 2,
+    "notes": "Council #2: temperature-annealed softmax (needs tac Trainer integration)"
+  },
+  {
+    "tag": "h64_focal_ste",
+    "cmd": "experiments/train_postfilter_qat_ema.py --hidden 64 --epochs 2500 --alpha 20 --tag h64_focal_ste",
+    "platform": "mps",
+    "status": "queued",
+    "priority": 2,
+    "notes": "Council #3: focal cross-entropy STE (needs tac Trainer integration)"
   }
 ]
