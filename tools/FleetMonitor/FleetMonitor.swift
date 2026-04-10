@@ -76,16 +76,20 @@ class FleetState: ObservableObject {
     }
 
     func notify(_ title: String, _ body: String) {
-        // Use osascript — always works, no permission dialog needed
         let escaped_title = title.replacingOccurrences(of: "\"", with: "\\\"")
         let escaped_body = body.replacingOccurrences(of: "\"", with: "\\\"")
-        let script = "display notification \"\(escaped_body)\" with title \"\(escaped_title)\" sound name \"Glass\""
-        let task = Process()
-        task.launchPath = "/usr/bin/osascript"
-        task.arguments = ["-e", script]
-        task.standardOutput = FileHandle.nullDevice
-        task.standardError = FileHandle.nullDevice
-        task.launch()
+        // Nice banner notification with sound
+        // These persist in Notification Center (swipe from right edge to see history)
+        // For truly persistent alerts: needs Xcode project + Apple Developer code signing
+        let script = "display notification \"\(escaped_body)\" with title \"\(escaped_title)\" subtitle \"comma-lab\" sound name \"Glass\""
+        DispatchQueue.global(qos: .userInitiated).async {
+            let t = Process()
+            t.launchPath = "/usr/bin/osascript"
+            t.arguments = ["-e", script]
+            t.standardOutput = FileHandle.nullDevice
+            t.standardError = FileHandle.nullDevice
+            t.launch()
+        }
     }
 }
 
