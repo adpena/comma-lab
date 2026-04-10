@@ -1,0 +1,684 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>SegNet Class Comparison — comma-lab</title>
+  <meta name="description" content="Side-by-side SegNet segmentation overlay comparison: baseline vs post-filter vs ground truth." />
+  <meta name="robots" content="noindex,nofollow" />
+  <meta name="theme-color" content="#0f1724" />
+  <meta name="color-scheme" content="dark" />
+  <style>
+    :root {
+      --bg: #0f1724;
+      --bg-2: #101d2f;
+      --panel: rgba(255,255,255,0.055);
+      --panel-strong: rgba(255,255,255,0.045);
+      --stroke: rgba(255,255,255,0.10);
+      --text: #f4f1e8;
+      --muted: #a8b1bc;
+      --soft: #d9e0e8;
+      --accent: #8ed1c0;
+      --accent-2: #f0b35f;
+      --danger: #ff6b6b;
+      --radius: 20px;
+      --radius-sm: 14px;
+      --max: 1400px;
+    }
+    * { box-sizing: border-box; }
+    html { scroll-behavior: smooth; }
+    body {
+      margin: 0;
+      background:
+        radial-gradient(circle at top left, rgba(142,209,192,0.14), transparent 32%),
+        radial-gradient(circle at top right, rgba(240,179,95,0.12), transparent 30%),
+        linear-gradient(180deg, #111b2c 0%, #0c1320 48%, #0a1018 100%);
+      color: var(--text);
+      font: 500 16px/1.6 ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "SF Pro Display", sans-serif;
+      text-rendering: optimizeLegibility;
+    }
+    a { color: inherit; text-underline-offset: 0.2em; }
+    a:focus-visible, button:focus-visible { outline: 3px solid var(--accent-2); outline-offset: 3px; border-radius: 6px; }
+    .wrap { max-width: var(--max); margin: 0 auto; padding: 28px 24px 72px; }
+
+    /* Header */
+    .header { padding: 28px 0 18px; display: grid; gap: 10px; }
+    .eyebrow { color: var(--muted); font-size: 11px; letter-spacing: 0.12em; text-transform: uppercase; font-weight: 700; }
+    h1 {
+      margin: 0;
+      font-family: "Iowan Old Style", "Palatino Linotype", "Book Antiqua", Georgia, ui-serif, serif;
+      font-size: clamp(28px, 4vw, 48px);
+      line-height: 1.05;
+      letter-spacing: -0.04em;
+      font-weight: 700;
+    }
+    .lede { max-width: 760px; color: var(--soft); font-size: 15px; margin: 0; }
+
+    /* Panels */
+    .panel {
+      background: linear-gradient(180deg, rgba(16,23,36,0.92), rgba(10,14,20,0.92));
+      border: 1px solid var(--stroke);
+      border-radius: 14px;
+      box-shadow: none;
+      padding: 20px;
+      margin-top: 18px;
+    }
+    .panel h2 {
+      margin: 0 0 10px;
+      font-family: "Iowan Old Style", "Palatino Linotype", "Book Antiqua", Georgia, ui-serif, serif;
+      font-size: 20px;
+      letter-spacing: -0.03em;
+    }
+    .muted { color: var(--muted); }
+
+    /* Controls */
+    .controls {
+      display: flex;
+      align-items: center;
+      gap: 14px;
+      flex-wrap: wrap;
+      margin-bottom: 16px;
+    }
+    .controls label {
+      color: var(--muted);
+      font-size: 13px;
+      font-weight: 600;
+    }
+    .controls input[type="range"] {
+      flex: 1;
+      min-width: 200px;
+      accent-color: var(--accent);
+    }
+    .frame-label {
+      font: 600 13px/1 ui-monospace, SFMono-Regular, Menlo, monospace;
+      color: var(--accent);
+      min-width: 10ch;
+    }
+    .controls select {
+      background: rgba(255,255,255,0.06);
+      color: var(--text);
+      border: 1px solid var(--stroke);
+      border-radius: 8px;
+      padding: 6px 10px;
+      font: 500 13px/1 inherit;
+    }
+
+    /* Comparison grid */
+    .compare-grid {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 14px;
+    }
+    .compare-col {
+      border: 1px solid var(--stroke);
+      border-radius: var(--radius-sm);
+      overflow: hidden;
+      background: rgba(255,255,255,0.02);
+    }
+    .compare-col-header {
+      padding: 10px 14px;
+      border-bottom: 1px solid var(--stroke);
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+    .compare-col-title {
+      font-size: 13px;
+      font-weight: 700;
+      letter-spacing: -0.01em;
+    }
+    .compare-col-stat {
+      font: 600 12px/1 ui-monospace, SFMono-Regular, Menlo, monospace;
+    }
+    .stat-good { color: var(--accent); }
+    .stat-bad { color: var(--danger); }
+    .stat-neutral { color: var(--muted); }
+
+    /* Canvas containers */
+    .canvas-wrap {
+      position: relative;
+      width: 100%;
+      aspect-ratio: 1164 / 874;
+      background: #080b0f;
+    }
+    .canvas-wrap canvas {
+      position: absolute;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      image-rendering: auto;
+    }
+
+    /* Summary strip */
+    .summary-strip {
+      display: grid;
+      grid-template-columns: repeat(4, 1fr);
+      gap: 0;
+      border-top: 1px solid var(--stroke);
+      border-bottom: 1px solid var(--stroke);
+      margin-top: 18px;
+    }
+    .summary-stat { padding: 14px 16px; }
+    .summary-stat + .summary-stat { border-left: 1px solid var(--stroke); }
+    .summary-label { color: var(--muted); font-size: 11px; text-transform: uppercase; letter-spacing: 0.08em; }
+    .summary-value {
+      font-size: 24px;
+      line-height: 1;
+      margin-top: 8px;
+      font-weight: 720;
+      letter-spacing: -0.04em;
+    }
+    .summary-meta { color: var(--muted); font-size: 12px; margin-top: 6px; }
+
+    /* Legend */
+    .legend-row { display: flex; gap: 14px; flex-wrap: wrap; margin: 14px 0 0; }
+    .legend-key { display: inline-flex; align-items: center; gap: 6px; color: var(--muted); font-size: 12px; }
+    .legend-dot { width: 12px; height: 12px; border-radius: 3px; display: inline-block; }
+
+    /* Disagreement chart */
+    .chart-wrap {
+      width: 100%;
+      height: 160px;
+      position: relative;
+      margin-top: 14px;
+    }
+    .chart-wrap canvas {
+      width: 100%;
+      height: 100%;
+    }
+
+    /* Overlay toggle */
+    .toggle-row {
+      display: flex;
+      gap: 14px;
+      align-items: center;
+      flex-wrap: wrap;
+    }
+    .toggle-btn {
+      min-height: 32px;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      background: rgba(255,255,255,0.025);
+      color: var(--muted);
+      border: 1px solid rgba(255,255,255,0.10);
+      border-radius: 999px;
+      padding: 0 14px;
+      font: 600 12px/1 inherit;
+      cursor: pointer;
+      transition: background 120ms, border-color 120ms, color 120ms;
+    }
+    .toggle-btn:hover { background: rgba(255,255,255,0.06); color: var(--text); }
+    .toggle-btn.active { background: rgba(142,209,192,0.15); border-color: var(--accent); color: var(--accent); }
+
+    /* Loading state */
+    .loading {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      min-height: 300px;
+      color: var(--muted);
+      font-size: 14px;
+    }
+    .loading.hidden { display: none; }
+    .content.hidden { display: none; }
+
+    /* Footer */
+    .foot {
+      margin-top: 48px;
+      padding-top: 18px;
+      border-top: 1px solid var(--stroke);
+      color: var(--muted);
+      font-size: 12px;
+    }
+    .foot a { color: var(--accent); text-decoration: none; }
+
+    /* Responsive */
+    @media (max-width: 900px) {
+      .compare-grid { grid-template-columns: 1fr; }
+      .summary-strip { grid-template-columns: repeat(2, 1fr); }
+    }
+  </style>
+</head>
+<body>
+  <div class="wrap">
+
+    <!-- Header -->
+    <div class="header">
+      <p class="eyebrow">comma-lab / segmentation analysis</p>
+      <h1>SegNet Class Comparison</h1>
+      <p class="lede">Per-pixel segmentation overlay: how the post-filter shifts SegNet class predictions toward ground truth.</p>
+    </div>
+
+    <!-- Loading state -->
+    <div id="loading" class="loading">Loading visualization data...</div>
+
+    <!-- Main content (hidden until data loads) -->
+    <div id="content" class="content hidden">
+
+      <!-- Controls -->
+      <div class="panel">
+        <div class="controls">
+          <label for="frame-slider">Frame</label>
+          <input type="range" id="frame-slider" min="0" max="0" value="0" />
+          <span id="frame-label" class="frame-label">---</span>
+          <div class="toggle-row">
+            <button class="toggle-btn active" id="toggle-overlay" type="button">Overlay</button>
+            <button class="toggle-btn" id="toggle-diff" type="button">Diff Only</button>
+          </div>
+          <label for="opacity-slider" style="margin-left: 8px;">Opacity</label>
+          <input type="range" id="opacity-slider" min="0" max="100" value="50" style="width: 100px; min-width: 80px;" />
+        </div>
+      </div>
+
+      <!-- Comparison panels -->
+      <div class="compare-grid" style="margin-top: 14px;">
+        <!-- Baseline -->
+        <div class="compare-col">
+          <div class="compare-col-header">
+            <span class="compare-col-title">Baseline (no filter)</span>
+            <span id="baseline-stat" class="compare-col-stat stat-bad">---</span>
+          </div>
+          <div class="canvas-wrap">
+            <canvas id="canvas-baseline"></canvas>
+          </div>
+        </div>
+        <!-- Ours -->
+        <div class="compare-col">
+          <div class="compare-col-header">
+            <span class="compare-col-title">Ours (post-filter)</span>
+            <span id="filtered-stat" class="compare-col-stat stat-good">---</span>
+          </div>
+          <div class="canvas-wrap">
+            <canvas id="canvas-filtered"></canvas>
+          </div>
+        </div>
+        <!-- Ground Truth -->
+        <div class="compare-col">
+          <div class="compare-col-header">
+            <span class="compare-col-title">Ground Truth</span>
+            <span class="compare-col-stat stat-neutral">reference</span>
+          </div>
+          <div class="canvas-wrap">
+            <canvas id="canvas-gt"></canvas>
+          </div>
+        </div>
+      </div>
+
+      <!-- Legend -->
+      <div class="panel" style="margin-top: 14px;">
+        <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 10px;">
+          <div class="legend-row" id="seg-legend"></div>
+          <span class="muted" style="font-size: 12px;">Disagreement = pixels where argmax(pred) differs from argmax(GT)</span>
+        </div>
+      </div>
+
+      <!-- Summary stats -->
+      <div class="summary-strip">
+        <div class="summary-stat">
+          <div class="summary-label">Baseline disagreements</div>
+          <div class="summary-value stat-bad" id="sum-baseline">---</div>
+          <div class="summary-meta" id="sum-baseline-pct"></div>
+        </div>
+        <div class="summary-stat">
+          <div class="summary-label">Filtered disagreements</div>
+          <div class="summary-value stat-good" id="sum-filtered">---</div>
+          <div class="summary-meta" id="sum-filtered-pct"></div>
+        </div>
+        <div class="summary-stat">
+          <div class="summary-label">Reduction</div>
+          <div class="summary-value" id="sum-reduction" style="color: var(--accent);">---</div>
+          <div class="summary-meta">fewer misclassified pixels</div>
+        </div>
+        <div class="summary-stat">
+          <div class="summary-label">Frames sampled</div>
+          <div class="summary-value" id="sum-frames">---</div>
+          <div class="summary-meta" id="sum-stride"></div>
+        </div>
+      </div>
+
+      <!-- Per-frame disagreement chart -->
+      <div class="panel">
+        <h2>Disagreement per Frame</h2>
+        <div class="chart-wrap">
+          <canvas id="chart-disagree"></canvas>
+        </div>
+        <div class="legend-row">
+          <span class="legend-key"><span class="legend-dot" style="background: #ff6b6b;"></span> Baseline</span>
+          <span class="legend-key"><span class="legend-dot" style="background: #8ed1c0;"></span> Filtered</span>
+        </div>
+      </div>
+
+    </div>
+
+    <!-- Footer -->
+    <div class="foot">
+      <a href="index.html">comma-lab</a> — SegNet class comparison visualization.
+      Data generated by <code style="color: var(--soft);">tools/generate_segnet_viz_data.py</code>.
+    </div>
+
+  </div>
+
+  <script>
+    // SegNet 5-class color palette
+    const CLASS_COLORS = [
+      [46, 204, 113],   // class 0: green (road)
+      [52, 152, 219],   // class 1: blue (lane markings)
+      [241, 196, 15],   // class 2: yellow (vehicles)
+      [231, 76, 60],    // class 3: red (obstacles)
+      [155, 89, 182],   // class 4: purple (other)
+    ];
+    const CLASS_NAMES = ['Road', 'Lane marks', 'Vehicles', 'Obstacles', 'Other'];
+
+    // State
+    let vizData = null;
+    let currentFrameIdx = 0;
+    let showOverlay = true;
+    let showDiffOnly = false;
+    let overlayOpacity = 0.5;
+
+    // DOM refs
+    const loading = document.getElementById('loading');
+    const content = document.getElementById('content');
+    const slider = document.getElementById('frame-slider');
+    const frameLabel = document.getElementById('frame-label');
+    const opacitySlider = document.getElementById('opacity-slider');
+    const toggleOverlay = document.getElementById('toggle-overlay');
+    const toggleDiff = document.getElementById('toggle-diff');
+    const canvasBaseline = document.getElementById('canvas-baseline');
+    const canvasFiltered = document.getElementById('canvas-filtered');
+    const canvasGT = document.getElementById('canvas-gt');
+
+    // Build legend
+    function buildLegend() {
+      const container = document.getElementById('seg-legend');
+      CLASS_NAMES.forEach((name, i) => {
+        const key = document.createElement('span');
+        key.className = 'legend-key';
+        const dot = document.createElement('span');
+        dot.className = 'legend-dot';
+        const [r, g, b] = CLASS_COLORS[i];
+        dot.style.background = `rgb(${r},${g},${b})`;
+        key.appendChild(dot);
+        key.appendChild(document.createTextNode(name));
+        container.appendChild(key);
+      });
+    }
+
+    // Render a segmentation map onto a canvas
+    // classes: flat array of class indices (H*W), dims: {w, h}
+    // gtClasses: if provided, used for diff mode (highlight only disagreements)
+    function renderSegMap(canvas, classes, dims, gtClasses) {
+      const ctx = canvas.getContext('2d');
+      canvas.width = dims.w;
+      canvas.height = dims.h;
+
+      const imageData = ctx.createImageData(dims.w, dims.h);
+      const data = imageData.data;
+      const totalPx = dims.w * dims.h;
+
+      if (showDiffOnly && gtClasses) {
+        // Show only disagreement pixels — red for wrong, transparent for correct
+        for (let i = 0; i < totalPx; i++) {
+          const off = i * 4;
+          if (classes[i] !== gtClasses[i]) {
+            data[off] = 255;
+            data[off + 1] = 80;
+            data[off + 2] = 80;
+            data[off + 3] = Math.round(overlayOpacity * 255);
+          } else {
+            data[off + 3] = 0;
+          }
+        }
+      } else if (showOverlay) {
+        for (let i = 0; i < totalPx; i++) {
+          const off = i * 4;
+          const cls = classes[i] < CLASS_COLORS.length ? classes[i] : CLASS_COLORS.length - 1;
+          const [r, g, b] = CLASS_COLORS[cls];
+          data[off] = r;
+          data[off + 1] = g;
+          data[off + 2] = b;
+          data[off + 3] = Math.round(overlayOpacity * 255);
+        }
+      } else {
+        // No overlay — clear
+        for (let i = 0; i < totalPx; i++) {
+          data[i * 4 + 3] = 0;
+        }
+      }
+
+      ctx.putImageData(imageData, 0, 0);
+    }
+
+    // Render the background as a solid dark fill (placeholder if no RGB data)
+    function renderBackground(canvas, dims) {
+      const ctx = canvas.getContext('2d');
+      canvas.width = dims.w;
+      canvas.height = dims.h;
+      ctx.fillStyle = '#0b0f14';
+      ctx.fillRect(0, 0, dims.w, dims.h);
+    }
+
+    // Update the display for the current frame
+    function updateFrame() {
+      if (!vizData || !vizData.frames.length) return;
+
+      const frame = vizData.frames[currentFrameIdx];
+      const dims = { w: vizData.width, h: vizData.height };
+
+      frameLabel.textContent = `Frame ${frame.frame_idx}`;
+
+      // Render canvases
+      renderBackground(canvasBaseline, dims);
+      renderBackground(canvasFiltered, dims);
+      renderBackground(canvasGT, dims);
+
+      renderSegMap(canvasBaseline, frame.baseline_classes, dims, frame.gt_classes);
+      renderSegMap(canvasFiltered, frame.filtered_classes, dims, frame.gt_classes);
+      renderSegMap(canvasGT, frame.gt_classes, dims, null);
+
+      // Update stats
+      const totalPx = dims.w * dims.h;
+      document.getElementById('baseline-stat').textContent =
+        `${frame.baseline_disagreements.toLocaleString()} px`;
+      document.getElementById('filtered-stat').textContent =
+        `${frame.filtered_disagreements.toLocaleString()} px`;
+    }
+
+    // Draw the per-frame disagreement bar chart
+    function drawDisagreementChart() {
+      if (!vizData || !vizData.frames.length) return;
+
+      const canvas = document.getElementById('chart-disagree');
+      const ctx = canvas.getContext('2d');
+      const dpr = window.devicePixelRatio || 1;
+      const rect = canvas.getBoundingClientRect();
+      canvas.width = rect.width * dpr;
+      canvas.height = rect.height * dpr;
+      ctx.scale(dpr, dpr);
+      const W = rect.width;
+      const H = rect.height;
+
+      ctx.clearRect(0, 0, W, H);
+
+      const frames = vizData.frames;
+      const n = frames.length;
+      const maxVal = Math.max(...frames.map(f => Math.max(f.baseline_disagreements, f.filtered_disagreements)));
+      const padL = 60, padR = 14, padT = 10, padB = 28;
+      const plotW = W - padL - padR;
+      const plotH = H - padT - padB;
+      const barW = Math.max(2, (plotW / n) * 0.4);
+      const gap = plotW / n;
+
+      // Y axis
+      ctx.strokeStyle = 'rgba(255,255,255,0.08)';
+      ctx.lineWidth = 1;
+      ctx.font = '11px ui-monospace, SFMono-Regular, Menlo, monospace';
+      ctx.fillStyle = '#a8b1bc';
+      ctx.textAlign = 'right';
+      for (let i = 0; i <= 4; i++) {
+        const y = padT + plotH * (1 - i / 4);
+        const val = Math.round(maxVal * i / 4);
+        ctx.beginPath();
+        ctx.moveTo(padL, y);
+        ctx.lineTo(W - padR, y);
+        ctx.stroke();
+        ctx.fillText(val.toLocaleString(), padL - 6, y + 4);
+      }
+
+      // Bars
+      frames.forEach((f, i) => {
+        const x = padL + i * gap + gap * 0.1;
+
+        // Baseline bar
+        const bh = (f.baseline_disagreements / maxVal) * plotH;
+        ctx.fillStyle = 'rgba(255,107,107,0.7)';
+        ctx.fillRect(x, padT + plotH - bh, barW, bh);
+
+        // Filtered bar
+        const fh = (f.filtered_disagreements / maxVal) * plotH;
+        ctx.fillStyle = 'rgba(142,209,192,0.8)';
+        ctx.fillRect(x + barW + 1, padT + plotH - fh, barW, fh);
+
+        // Highlight current frame
+        if (i === currentFrameIdx) {
+          ctx.strokeStyle = 'rgba(240,179,95,0.7)';
+          ctx.lineWidth = 2;
+          ctx.strokeRect(x - 2, padT, barW * 2 + 5, plotH);
+          ctx.lineWidth = 1;
+        }
+      });
+
+      // X labels (sparse)
+      ctx.fillStyle = '#a8b1bc';
+      ctx.textAlign = 'center';
+      ctx.font = '10px ui-monospace, SFMono-Regular, Menlo, monospace';
+      const step = Math.max(1, Math.floor(n / 10));
+      for (let i = 0; i < n; i += step) {
+        const x = padL + i * gap + gap * 0.5;
+        ctx.fillText(frames[i].frame_idx, x, H - 6);
+      }
+    }
+
+    // Update summary stats
+    function updateSummary() {
+      if (!vizData || !vizData.frames.length) return;
+
+      const frames = vizData.frames;
+      const totalPx = vizData.width * vizData.height;
+      const totalBaseline = frames.reduce((s, f) => s + f.baseline_disagreements, 0);
+      const totalFiltered = frames.reduce((s, f) => s + f.filtered_disagreements, 0);
+      const reduction = totalBaseline > 0 ? ((totalBaseline - totalFiltered) / totalBaseline * 100) : 0;
+
+      document.getElementById('sum-baseline').textContent = totalBaseline.toLocaleString();
+      document.getElementById('sum-baseline-pct').textContent =
+        `avg ${(totalBaseline / frames.length / totalPx * 100).toFixed(3)}% per frame`;
+      document.getElementById('sum-filtered').textContent = totalFiltered.toLocaleString();
+      document.getElementById('sum-filtered-pct').textContent =
+        `avg ${(totalFiltered / frames.length / totalPx * 100).toFixed(3)}% per frame`;
+      document.getElementById('sum-reduction').textContent = `${reduction.toFixed(1)}%`;
+      document.getElementById('sum-frames').textContent = frames.length;
+      document.getElementById('sum-stride').textContent =
+        vizData.stride ? `every ${vizData.stride}th frame` : '';
+    }
+
+    // Click on chart to jump to frame
+    function setupChartClick() {
+      const canvas = document.getElementById('chart-disagree');
+      canvas.style.cursor = 'pointer';
+      canvas.addEventListener('click', (e) => {
+        if (!vizData) return;
+        const rect = canvas.getBoundingClientRect();
+        const x = e.clientX - rect.left;
+        const padL = 60, padR = 14;
+        const plotW = rect.width - padL - padR;
+        const frac = (x - padL) / plotW;
+        const idx = Math.round(frac * (vizData.frames.length - 1));
+        if (idx >= 0 && idx < vizData.frames.length) {
+          currentFrameIdx = idx;
+          slider.value = idx;
+          updateFrame();
+          drawDisagreementChart();
+        }
+      });
+    }
+
+    // Load data
+    async function loadData() {
+      try {
+        const resp = await fetch('segnet-viz-data.json');
+        if (!resp.ok) throw new Error(`HTTP ${resp.status}: ${resp.statusText}`);
+        vizData = await resp.json();
+
+        slider.max = vizData.frames.length - 1;
+        slider.value = 0;
+        currentFrameIdx = 0;
+
+        loading.classList.add('hidden');
+        content.classList.remove('hidden');
+
+        buildLegend();
+        updateFrame();
+        updateSummary();
+        drawDisagreementChart();
+        setupChartClick();
+      } catch (err) {
+        loading.textContent = `Failed to load data: ${err.message}. Generate it with tools/generate_segnet_viz_data.py`;
+        loading.style.color = '#ff6b6b';
+      }
+    }
+
+    // Event listeners
+    slider.addEventListener('input', () => {
+      currentFrameIdx = parseInt(slider.value);
+      updateFrame();
+      drawDisagreementChart();
+    });
+
+    opacitySlider.addEventListener('input', () => {
+      overlayOpacity = parseInt(opacitySlider.value) / 100;
+      updateFrame();
+    });
+
+    toggleOverlay.addEventListener('click', () => {
+      showOverlay = true;
+      showDiffOnly = false;
+      toggleOverlay.classList.add('active');
+      toggleDiff.classList.remove('active');
+      updateFrame();
+    });
+
+    toggleDiff.addEventListener('click', () => {
+      showOverlay = false;
+      showDiffOnly = true;
+      toggleDiff.classList.add('active');
+      toggleOverlay.classList.remove('active');
+      updateFrame();
+    });
+
+    // Keyboard navigation
+    document.addEventListener('keydown', (e) => {
+      if (e.key === 'ArrowLeft' && currentFrameIdx > 0) {
+        currentFrameIdx--;
+        slider.value = currentFrameIdx;
+        updateFrame();
+        drawDisagreementChart();
+      } else if (e.key === 'ArrowRight' && vizData && currentFrameIdx < vizData.frames.length - 1) {
+        currentFrameIdx++;
+        slider.value = currentFrameIdx;
+        updateFrame();
+        drawDisagreementChart();
+      }
+    });
+
+    // Resize handler for chart
+    window.addEventListener('resize', () => {
+      if (vizData) drawDisagreementChart();
+    });
+
+    // Boot
+    loadData();
+  </script>
+</body>
+</html>
