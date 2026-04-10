@@ -92,6 +92,9 @@ Track B's promoted honest floor is now **`1.73`** after the `h64` long-horizon Q
   - the baseline archive is now staged through a private Kaggle dataset: `adpena/comma-lab-private-assets`
   - the launcher path still installs missing Python deps plus `git-lfs` before cloning upstream when needed
   - the queue tick now chooses the correct next repush candidate automatically; the only remaining blocker is Kaggle's hard 2-session GPU cap
+- Modal is now a real live fallback too:
+  - `modal-dilated-h64-long1000` is running as app `ap-oe1x7fZOSx1lQ2R4WTt51O`
+  - this relaunch got past the old missing-archive failure after bundling the baseline archive into the image
 - Future-facing experiment code is now on disk too:
   - `experiments/train_postfilter_dilated_h64.py`
   - `experiments/train_postfilter_pixelshuffle_dilated.py`
