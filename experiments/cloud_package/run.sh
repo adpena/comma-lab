@@ -1,6 +1,6 @@
 #!/bin/bash
 set -euo pipefail
-export PYTHONPATH="$(pwd)/src:$(pwd)/upstream:$PYTHONPATH"
+export PYTHONPATH="$(pwd)/src:$(pwd)/upstream:${PYTHONPATH:-}"
 export PYTHONUNBUFFERED=1
 
 TAG="${TAG:-cloud_h64_standard}"
@@ -9,7 +9,7 @@ HIDDEN="${HIDDEN:-64}"
 EPOCHS="${EPOCHS:-2500}"
 LOSS="${LOSS:-standard}"
 TEMP_START="${TEMP_START:-1.0}"
-TEMP_END="${TEMP_END:-0.05}"
+TEMP_END="${TEMP_END:-1.0}"
 ALPHA="${ALPHA:-20}"
 DUAL_SAL="${DUAL_SAL:-}"
 ALPHA_SEG="${ALPHA_SEG:-200}"
