@@ -614,6 +614,10 @@ class Trainer:
                 f"loss_mode='{cfg.loss_mode}' requires fit_lazy(). "
                 "fit() only supports 'standard' and boundary-weighted (use_ste_segnet) modes."
             )
+        if getattr(cfg, 'adaptive_rebalance', False):
+            raise NotImplementedError(
+                "adaptive_rebalance requires fit_lazy(). fit() does not support adaptive weights."
+            )
 
         # Patch scorer models for differentiable training (CRITICAL: without this,
         # PoseNet gradients are zero due to upstream @torch.no_grad on rgb_to_yuv6)
@@ -1021,7 +1025,7 @@ class Trainer:
                 telemetry_path.parent.mkdir(parents=True, exist_ok=True)
                 import time as _time
                 with open(telemetry_path, "a") as tf:
-                    tf.write(json.dumps({
+                    entry = {
                         "epoch": epoch,
                         "scorer": round(scorer_val, 6),
                         "eval_pose": self._last_eval_pose,
@@ -1033,7 +1037,15 @@ class Trainer:
                         "best_scorer": round(self.best_scorer, 6),
                         "best_epoch": self.best_epoch,
                         "ts": _time.time(),
-                    }) + "\n")
+                        "loss_mode": cfg.loss_mode,
+                        "variant": cfg.variant,
+                    }
+                    # Adaptive weight diagnostics
+                    if hasattr(self, '_cached_sw'):
+                        entry["adaptive_sw"] = round(self._cached_sw, 4)
+                    if hasattr(self, '_cached_bw'):
+                        entry["adaptive_bw"] = round(self._cached_bw, 2)
+                    tf.write(json.dumps(entry) + "\n")
 
             # Save training state every 50 epochs for crash recovery
             if epoch % 50 == 0 and epoch > 0:
