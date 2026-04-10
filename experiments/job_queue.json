@@ -17,7 +17,7 @@
     "tag": "h64_no_sal_recon",
     "cmd": "experiments/train_tac.py --hidden 64 --epochs 2500 --sal-lambda 0 --tag h64_no_sal_recon",
     "platform": "mps",
-    "status": "queued",
+    "status": "running",
     "priority": 1,
     "notes": "Council #0: remove saliency recon entirely"
   },
