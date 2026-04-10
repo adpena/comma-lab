@@ -19,9 +19,11 @@ Usage::
 """
 from __future__ import annotations
 
+import atexit
 import json
 import math
 import os
+import signal
 from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Callable
@@ -34,6 +36,7 @@ from .losses import (
     scorer_loss, segnet_ste_loss, saliency_reconstruction_loss,
     temperature_scorer_loss, focal_segnet_ste_loss,
     dual_saliency_reconstruction_loss,
+    eval_scorer_loss,
 )
 from .quantization import save_int8, load_int8, quantize_state_dict
 
@@ -216,17 +219,47 @@ class Trainer:
         if config.resume_from and Path(config.resume_from).exists():
             self.load_training_state(config.resume_from)
 
+        # Emergency save on signals and exit — never lose training state
+        self._emergency_registered = False
+        self._register_emergency_save()
+
+    def _register_emergency_save(self):
+        """Register signal handlers and atexit for crash-proof state saving."""
+        if self._emergency_registered:
+            return
+        self._emergency_registered = True
+
+        def _emergency_save(reason: str):
+            try:
+                print(f"\n[trainer] EMERGENCY SAVE ({reason}) at epoch {self._current_epoch}")
+                self.save_training_state()
+                print(f"[trainer] Emergency save complete.")
+            except Exception as e:
+                print(f"[trainer] Emergency save FAILED: {e}")
+
+        def _signal_handler(signum, frame):
+            _emergency_save(f"signal {signum}")
+            raise SystemExit(1)
+
+        for sig in (signal.SIGTERM, signal.SIGINT, signal.SIGHUP):
+            try:
+                signal.signal(sig, _signal_handler)
+            except (OSError, ValueError):
+                pass  # some signals can't be caught in threads
+
+        atexit.register(_emergency_save, "atexit")
+
     def save_training_state(self, path: str | Path | None = None):
         """Save full training state for resumption.
 
-        Saves model weights, EMA shadow, optimizer state, scheduler state,
-        epoch counter, and best scorer. The watchdog or user can restart
-        from this checkpoint without losing training progress.
+        Uses atomic write (tmp + rename) so a crash mid-save cannot corrupt
+        or delete the checkpoint.
         """
         if path is None:
             path = Path(self.config.output_dir) / f"training_state_{self.config.tag}.pt"
         path = Path(path)
         path.parent.mkdir(parents=True, exist_ok=True)
+        tmp_path = path.with_suffix(".pt.tmp")
         torch.save({
             "model": self.model.state_dict(),
             "ema_shadow": self.ema.shadow,
@@ -235,7 +268,8 @@ class Trainer:
             "epoch": self._current_epoch,
             "best_scorer": self.best_scorer,
             "best_epoch": self.best_epoch,
-        }, path)
+        }, tmp_path)
+        tmp_path.rename(path)  # atomic on POSIX
 
     def load_training_state(self, path: str | Path):
         """Resume training from a saved state."""
@@ -358,7 +392,7 @@ class Trainer:
         with torch.no_grad():
             for idx in range(0, len(comp_pairs), subsample):
                 filtered = self._apply_filter_to_pair(comp_pairs[idx])
-                loss, pd, sd = scorer_loss(filtered, gt_pairs[idx], posenet, segnet)
+                score, pd, sd = eval_scorer_loss(filtered, gt_pairs[idx], posenet, segnet)
                 total_p += pd
                 total_s += sd
                 count += 1
@@ -371,7 +405,7 @@ class Trainer:
         return scorer
 
     def _save_checkpoint(self, epoch: int, scorer: float):
-        """Save best int8 checkpoint."""
+        """Save best int8 checkpoint with atomic writes."""
         out_dir = Path(self.config.output_dir)
         out_dir.mkdir(parents=True, exist_ok=True)
         tag = self.config.tag
@@ -380,10 +414,12 @@ class Trainer:
         int8_path = out_dir / f"postfilter_{tag}_best_int8.pt"
         meta_path = out_dir / f"postfilter_{tag}_best_meta.json"
 
-        # Save EMA fp32
-        torch.save(self.ema.state_dict(), fp32_path)
+        # Save EMA fp32 (atomic)
+        fp32_tmp = fp32_path.with_suffix(".pt.tmp")
+        torch.save(self.ema.state_dict(), fp32_tmp)
+        fp32_tmp.rename(fp32_path)
 
-        # Save int8
+        # Save int8 (atomic)
         int8_state = {}
         for name, param in self.ema.shadow.items():
             p = param.detach().cpu().float()
@@ -398,7 +434,9 @@ class Trainer:
             "kernel": self.config.kernel,
             "alpha": self.config.alpha,
         }
-        torch.save(int8_state, int8_path)
+        int8_tmp = int8_path.with_suffix(".pt.tmp")
+        torch.save(int8_state, int8_tmp)
+        int8_tmp.rename(int8_path)
 
         meta_path.write_text(json.dumps({
             "epoch": epoch,
@@ -716,13 +754,12 @@ class Trainer:
                 comp_pair = pair_from_frames(comp_frames, start).to(self.device)
                 gt_pair = pair_from_frames(gt_frames, start).to(self.device)
                 filtered = self._apply_filter_to_pair(comp_pair)
-                loss, pd, sd = scorer_loss(filtered, gt_pair, posenet, segnet)
+                score, pd, sd = eval_scorer_loss(filtered, gt_pair, posenet, segnet)
                 total_p += pd
                 total_s += sd
                 count += 1
                 del comp_pair, gt_pair, filtered
 
-        import math
         scorer = 100.0 * (total_s / count) + math.sqrt(10.0 * (total_p / count))
 
         self.model.load_state_dict(orig_state)

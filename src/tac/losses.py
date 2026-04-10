@@ -63,6 +63,45 @@ def scorer_loss(
     return loss, pose_dist.item(), seg_dist.item()
 
 
+def eval_scorer_loss(
+    filtered_pair_hwc: torch.Tensor,
+    gt_pair_hwc: torch.Tensor,
+    posenet,
+    segnet,
+) -> tuple[float, float, float]:
+    """Hard evaluation loss matching the official scorer exactly.
+
+    PoseNet: per-sample MSE on first 6 outputs, averaged across batch.
+    SegNet: per-pixel argmax disagreement fraction, averaged across batch.
+    Score: 100*seg + sqrt(10*pose)
+
+    Use this for checkpoint selection and evaluation. For training gradients,
+    use scorer_loss (soft proxy) or segnet_ste_loss instead.
+
+    Returns: (score, pose_distortion, seg_distortion)
+    """
+    fx = _hwc_to_chw(filtered_pair_hwc)
+    gx = _hwc_to_chw(gt_pair_hwc)
+
+    fp_out, fs_out = scorer_forward_pair(fx, posenet, segnet)
+    gp_out, gs_out = scorer_forward_pair(gx, posenet, segnet)
+
+    # PoseNet: per-sample MSE (matches upstream compute_distortion)
+    pose_per_sample = (fp_out["pose"][..., :6] - gp_out["pose"][..., :6]).pow(2).mean(
+        dim=tuple(range(1, fp_out["pose"].ndim))
+    )
+
+    # SegNet: hard argmax disagreement (matches upstream compute_distortion)
+    diff = (fs_out.argmax(dim=1) != gs_out.argmax(dim=1)).float()
+    seg_per_sample = diff.mean(dim=tuple(range(1, diff.ndim)))
+
+    avg_p = pose_per_sample.mean().item()
+    avg_s = seg_per_sample.mean().item()
+    import math
+    score = 100.0 * avg_s + math.sqrt(10.0 * avg_p)
+    return score, avg_p, avg_s
+
+
 def segnet_ste_loss(
     filtered_pair_hwc: torch.Tensor,
     gt_pair_hwc: torch.Tensor,

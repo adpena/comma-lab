@@ -9,7 +9,7 @@ Modules:
     Depthwise, Luma, FiLM) + 12 variant aliases
   - tac.training: Trainer (QAT+EMA+SWA, best-checkpoint, lazy loading, resume),
     EMA, SWA, KalmanWeightFilter
-  - tac.losses: scorer_loss, segnet_ste_loss, boundary weighting, saliency recon
+  - tac.losses: scorer_loss (train), eval_scorer_loss (hard argmax), segnet_ste_loss, saliency recon
   - tac.data: video decoding, lazy pair construction, saliency loading
   - tac.quantization: FakeQuant STE, LSQ, QATPostFilter, int8 save/load
   - tac.scorer: scoring formula, sensitivity analysis, load_scorers, detect_device
@@ -27,4 +27,4 @@ Quick start::
     trainer.fit(comp_pairs, gt_pairs, posenet, segnet, sal_weights)
 """
 
-__version__ = "0.6.0"
+__version__ = "0.7.0"
