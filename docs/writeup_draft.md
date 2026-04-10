@@ -211,46 +211,53 @@ The only safe place to modify frames is after decoding, with a learned filter. P
 
 Of 18 alternative approaches tested, 17 failed and one (dilated convolutions) initially appeared to fail but later succeeded at larger scale. The winning recipe is highly constrained by the mathematical structure of the problem (rank-1 Jacobian, sub-pixel trust radius, quantization sensitivity), but architecture changes can work when given sufficient capacity and training time.
 
-## The saliency inversion problem
+## Deriving optimal hyperparameters from the scoring formula
 
-The biggest remaining inefficiency is in our own training objective. The saliency-weighted reconstruction term (alpha=20) penalizes corrections at low-PoseNet-saliency pixels. SegNet class boundaries — the pixels that matter most for 46% of our remaining score — sit in exactly those low-PoseNet-saliency regions. The training loss is actively constraining corrections where they would help most.
+Rather than tuning hyperparameters by trial and error, we derived them analytically from the scoring formula's structure.
 
-At our operating point, SegNet has roughly 590x more marginal impact than PoseNet per unit distortion (100 vs 0.17). But the saliency weighting was designed when PoseNet was the binding constraint. Now that PoseNet is 93% optimized, the saliency needs to flip.
+The score sensitivities at any operating point (p, s) are:
 
-Dual saliency with high alpha_seg (5000) tells the CNN to correct freely at SegNet boundaries while being cautious elsewhere. This is in training now.
+```
+d(score)/d(seg)  = 100                    (constant)
+d(score)/d(pose) = 5 / sqrt(10 * pose)   (decreasing as pose improves)
+```
 
-## Hard-frame curriculum
+At our operating point (pose=0.00218): `d(score)/d(pose) = 33.9`. SegNet is 2.95x more valuable per unit improvement. This ratio changes during training — as PoseNet improves, SegNet becomes increasingly more valuable.
 
-The most impactful training-time discovery came from asking: which frame pairs actually matter?
+For KL distillation with temperature T, Hinton's T² correction means the effective gradient magnitude scales quadratically. The compound invariant that must be maintained:
 
-SegNet disagreement can only change at class boundary pixels — roughly 5% of each frame. Most of the 600 training pairs have very low SegNet error because the codec handles smooth regions well. Training uniformly across all pairs wastes 80% of gradient signal on pairs where SegNet is already correct.
+```
+w_s * T² ≈ 20 * sqrt(pose / 0.1)
+```
 
-The fix: precompute per-pair SegNet disagreement at training start, then oversample the hardest 20% of pairs (6x boost with ratio=0.5). This concentrates the training budget where the score can actually improve. Combined with KL distillation, the hard-frame curriculum brought the training scorer to 1.38 within 47 epochs — a rate of convergence that previously took 900 epochs to achieve.
+This single equation replaces static hyperparameter guessing. At T=5 (training start), the optimal segnet_weight is 0.12. At T=0.5 (training end), it rises to 11.8. A static weight of 30 (our first attempt) gave w_s·T² = 750 at T=5 — 254x above optimal. This caused a catastrophic PoseNet regression that the proxy scorer failed to catch (proxy showed 1.25, authoritative showed 1.85).
 
-## Encoder optimization
+The adaptive weight system (`src/tac/adaptive.py`) recomputes optimal weights from measured (pose, seg) at each evaluation epoch. The training loop self-corrects: if PoseNet regresses, the formula automatically reduces SegNet pressure. These relationships are formally verified in Lean 4 (proofs/AdaptiveWeights.lean).
 
-We swept 6 encoder variants inspired by concurrent work in the competition: infinite GOP (keyint=-1), 10-bit YUV420, film-grain=30 with denoising disabled, and larger downscale resolution. All variants produced archives within 2% of our current 877KB. The full stack of encoder changes saved 1.7% on file size — equivalent to 0.01 score points on the rate term. Encoder-level optimization appears near its efficient frontier at these settings.
+## Hard-frame curriculum with error replay
 
-## Training innovations
+SegNet disagreement can only change at class boundary pixels — roughly 5% of each frame. Training uniformly wastes 95% of gradient signal on pixels where the argmax cannot flip.
 
-Several techniques compound to improve convergence speed and final score:
+Power-law weighted sampling oversamples the highest-disagreement pairs. Every 200 epochs, the difficulty scores are recomputed using the current model's output — the "error replay" mechanism. This adapts the curriculum as the model improves: frames that were hard at epoch 0 may be easy by epoch 500, and vice versa.
 
-**KL distillation with exponential temperature decay:** Temperature-annealed soft targets from SegNet, using exponential decay T=5→0.5 instead of linear. The exponential schedule maintains constant gradient variance throughout training. Combined with a PoseNet gradient cap (clamp pose loss at floor 0.001), all remaining capacity redirects to SegNet once PoseNet is good enough.
+## The proxy-authoritative gap
 
-**Hard-frame curriculum with error replay:** Power-law weighted sampling that oversamples the highest-SegNet-disagreement frame pairs. Every 200 epochs, the weights are recomputed using the current model's output — adapting the curriculum as the model improves. SegNet disagreement only occurs at class boundary pixels (~5% of the image), so uniform sampling wastes 95% of gradient signal.
+A KL distillation checkpoint with proxy score 1.25 scored 1.85 on the authoritative scorer — a 0.60-point gap. The SegNet improvement was real (0.00610 → 0.00493, 19% better) but PoseNet regressed 26x (0.00218 → 0.05725).
 
-**Boundary weight and annealing:** Boundary pixels receive 150x gradient amplification (derived from the 5% boundary fraction — equal gradient contribution requires weight ≈ 1/fraction). The boundary weight couples to the temperature schedule: as temperature drops and gradients naturally sharpen, boundary attention increases up to 3x to maintain pressure.
+Root cause: the training loss used a hard clamp on PoseNet distortion (`min=0.001`) that killed PoseNet gradients once PoseNet was briefly good. The clamp allowed the filter to freely rearrange pixels for SegNet benefit while PoseNet degraded unchecked. The proxy's uint8 round-trip did not fully replicate the inflate pipeline's amplification of PoseNet-sensitive texture degradation.
 
-**Stochastic Weight Averaging:** SWA over the final 20% of training produces weights in a wider minimum, which is more robust to int8 quantization noise.
+The fix was structural: remove the clamp, derive adaptive weights from the scoring formula, and add a PoseNet regression alarm (blocks checkpoint promotion if PoseNet exceeds 3x baseline). The adaptive system makes this class of error structurally impossible by continuously rebalancing based on measured distortions.
 
-| Direction | Target | Training Signal |
-|-----------|--------|----------------|
-| KL distill + hard-frame curriculum | SegNet | 1.26 at ep 183 (Modal A10G) |
-| PSD + KL distill (PixelShuffle) | SegNet RF alignment | In training (new) |
-| Per-channel int8 + FakeQuant match | Both | Implemented |
-| Exponential temp + boundary anneal | SegNet convergence | Implemented |
+## Formal verification
 
-The theoretical floor for a 45KB int8 CNN with optimal architecture: ~1.25-1.30.
+Key properties of the adaptive weight system are proved in Lean 4:
+
+1. The optimal segnet weight equals the score sensitivity ratio (d(score)/d(seg) / d(score)/d(pose))
+2. The compound invariant w_s·T² is preserved under the temperature rescaling transformation
+3. The boundary weight amplification ceiling is 1/β, and the amplification function is monotonically increasing
+4. Per-channel quantization provably dominates per-tensor in variance
+
+All proofs are complete with zero sorry obligations.
 
 ## Multi-GPU training fleet
 
@@ -303,4 +310,4 @@ No paid compute was used. All results are reproducible on consumer hardware.
 
 ---
 
-*Score: 1.33 | 45KB int8 CNN | 40K params | SVT-AV1 CRF 34 | 903KB archive | CPU inference < 30s | tac v1.0.0 | 70 tests | 15 bugs fixed | 5 council review rounds*
+*Score: 1.33 | 45KB int8 CNN | 40K params | SVT-AV1 CRF 34 | 903KB archive | CPU inference < 30s | tac v1.0.0 | 70 tests | Lean 4 verified | adaptive weights*
