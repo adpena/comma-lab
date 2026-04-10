@@ -2619,3 +2619,25 @@ The partner's `save_best_checkpoint` function evaluates the EMA weights AFTER in
 ### current training
 - h=64 saliency-fixed: ep 950, scorer 3.5253 (new all-time best)
 - Modal h=96: running ~3h on A10G
+
+## 2026-04-09 22:00:00 -0500 - SegNet headroom council: 7 ranked interventions
+
+### top recommendations
+1. dual-saliency (PoseNet + 10x boundary): -0.06 to -0.12 (1 hour to implement)
+2. temperature-annealed soft argmax (T: 1.0→0.05): -0.06 to -0.12 (2 hours)
+3. focal cross-entropy STE (gamma=2.0): -0.09 to -0.14 (3 hours)
+4. two-stage sequential training: -0.12 to -0.17 (6 hours)
+5. over-weight SegNet loss (200x or 300x): -0.03 to -0.06 (30 min)
+
+### critical validation test
+- any change: 100*delta_seg + sqrt(10*new_pose) - sqrt(10*old_pose) < 0
+- SegNet improvement must exceed 11.5x PoseNet degradation
+
+### training status
+- h=64: ep 960, scorer 3.5226 (NEW BEST, improving every check)
+- Modal h=96: alive, ~3h on A10G
+- sal_lambda=0 queued as next experiment
+
+### all 6 research docs complete
+- paper outline, portfolio plan, production analysis, openpilot pipeline,
+  saliency deep-dive, SegNet headroom — all in docs/
