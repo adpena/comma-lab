@@ -536,10 +536,26 @@ class Trainer:
         meta_tmp.write_text(json.dumps({
             "epoch": epoch,
             "scorer": scorer,
+            "pose": getattr(self, '_last_eval_pose', None),
+            "seg": getattr(self, '_last_eval_seg', None),
             "fp32_path": str(fp32_path),
             "int8_path": str(int8_path),
             "int8_size": int8_path.stat().st_size,
             "meta": int8_state["__meta__"],
+            "config": {
+                "variant": self.config.variant,
+                "hidden": self.config.hidden,
+                "loss_mode": self.config.loss_mode,
+                "boundary_weight": self.config.boundary_weight,
+                "segnet_loss_weight": self.config.segnet_loss_weight,
+                "hard_frame_ratio": self.config.hard_frame_ratio,
+                "temperature_start": self.config.temperature_start,
+                "temperature_end": self.config.temperature_end,
+                "temp_schedule": self.config.temp_schedule,
+                "alpha": self.config.alpha,
+            },
+            "baseline_pose": getattr(self, '_baseline_pose', None),
+            "baseline_seg": getattr(self, '_baseline_seg', None),
         }, indent=2))
         meta_tmp.rename(meta_path)
 
@@ -958,6 +974,26 @@ class Trainer:
             print(f"[ep {epoch:4d}]{eval_tag} loss={avg_loss:.4f} pose={avg_pose:.6f} "
                   f"seg={avg_seg:.6f} scorer={scorer_val:.4f} best={self.best_scorer:.4f} lr={lr:.6f}")
 
+            # JSONL telemetry log — structured data for council analysis
+            if is_eval_epoch:
+                telemetry_path = Path(cfg.output_dir) / f"telemetry_{cfg.tag}.jsonl"
+                telemetry_path.parent.mkdir(parents=True, exist_ok=True)
+                import time as _time
+                with open(telemetry_path, "a") as tf:
+                    tf.write(json.dumps({
+                        "epoch": epoch,
+                        "scorer": round(scorer_val, 6),
+                        "eval_pose": self._last_eval_pose,
+                        "eval_seg": self._last_eval_seg,
+                        "train_pose": round(avg_pose, 8),
+                        "train_seg": round(avg_seg, 8),
+                        "train_loss": round(avg_loss, 6),
+                        "lr": round(lr, 8),
+                        "best_scorer": round(self.best_scorer, 6),
+                        "best_epoch": self.best_epoch,
+                        "ts": _time.time(),
+                    }) + "\n")
+
             # Save training state every 50 epochs for crash recovery
             if epoch % 50 == 0 and epoch > 0:
                 self.save_training_state()
@@ -1009,7 +1045,30 @@ class Trainer:
                 if torch.cuda.is_available():
                     torch.cuda.empty_cache()
 
-        scorer = 100.0 * (total_s / count) + math.sqrt(10.0 * (total_p / count))
+        avg_p = total_p / count
+        avg_s = total_s / count
+        scorer = 100.0 * avg_s + math.sqrt(10.0 * avg_p)
+
+        # Store per-component for telemetry (meta.json, regression alarm)
+        self._last_eval_pose = round(avg_p, 8)
+        self._last_eval_seg = round(avg_s, 8)
+
+        # Baseline watermark: record raw compressed distortion at first eval
+        if not hasattr(self, '_baseline_pose') or self._baseline_pose is None:
+            self._baseline_pose = round(avg_p, 8)
+            self._baseline_seg = round(avg_s, 8)
+            print(f"[eval] Baseline watermark: pose={avg_p:.6f}, seg={avg_s:.6f}")
+
+        # Regression alarm: warn if PoseNet regresses 3x from baseline
+        if hasattr(self, '_baseline_pose') and self._baseline_pose and self._baseline_pose > 0:
+            pose_ratio = avg_p / self._baseline_pose
+            if pose_ratio > 3.0:
+                print(f"  !! POSENET REGRESSION ALARM: {avg_p:.6f} is {pose_ratio:.1f}x baseline {self._baseline_pose:.6f} !!")
+            if pose_ratio > 5.0:
+                print(f"  !! CRITICAL: PoseNet {pose_ratio:.0f}x baseline — checkpoint NOT saved !!")
+                self.model.load_state_dict(orig_state)
+                self.model.train()
+                return float('inf')  # prevent promotion of regressed checkpoint
 
         self.model.load_state_dict(orig_state)
         self.model.train()
