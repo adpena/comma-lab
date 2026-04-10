@@ -754,13 +754,16 @@ class Trainer:
                     _, _, seg_d = eval_scorer_loss(comp_pair, gt_pair, posenet, segnet)
                     pair_difficulties.append(seg_d)
             difficulties = torch.tensor(pair_difficulties)
-            # Top 20% hardest get boosted weight
+            # hard_frame_ratio controls boost: 0.5 → 6x boost on top 20%, 1.0 → 11x
             threshold = difficulties.quantile(0.8)
-            hard_frame_weights = torch.where(difficulties >= threshold, 3.0, 1.0)
+            boost = 1.0 + cfg.hard_frame_ratio * 10.0  # ratio=0.5 → 6x, ratio=1.0 → 11x
+            hard_frame_weights = torch.where(difficulties >= threshold, boost, 1.0)
             hard_frame_weights = hard_frame_weights / hard_frame_weights.sum()
             n_hard = (difficulties >= threshold).sum().item()
+            eff_prob = (hard_frame_weights[difficulties >= threshold].sum() * 100).item()
             print(f"[trainer-lazy] Hard frames: {n_hard}/{n_train} (top 20%), "
-                  f"ratio={cfg.hard_frame_ratio:.1f}, avg difficulty={difficulties.mean():.6f}")
+                  f"boost={boost:.0f}x, eff. sampling share={eff_prob:.0f}%, "
+                  f"avg difficulty={difficulties.mean():.6f}")
 
         if self._current_epoch > 0:
             print(f"[trainer-lazy] Resuming from epoch {self._current_epoch}")
@@ -777,7 +780,8 @@ class Trainer:
 
             # Weighted or uniform sampling of training pairs
             if hard_frame_weights is not None and cfg.hard_frame_ratio > 0:
-                perm = torch.multinomial(hard_frame_weights, train_size, replacement=True)
+                # replacement=False preserves batch diversity within each epoch
+                perm = torch.multinomial(hard_frame_weights, min(train_size, n_train), replacement=False)
             else:
                 perm = torch.randperm(n_train)[:train_size]
 
