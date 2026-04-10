@@ -30,3 +30,6 @@ workspace/tools/
 # Generated submission scratch artifacts
 submissions/robust_current/archive/
 submissions/robust_current/inflated/
+reports/graphs/site/comparison/*.mp4
+reports/graphs/site/comparison/*.gif
+reports/graphs/site/comparison/frames/
