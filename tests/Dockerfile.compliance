@@ -1,0 +1,28 @@
+# Replicates the official comma.ai evaluation environment exactly.
+# Usage:
+#   docker build -f tests/Dockerfile.compliance -t pact-compliance .
+#   docker run --rm -v $(pwd)/submissions/robust_current:/submission pact-compliance
+FROM python:3.12-slim
+
+# System deps matching their quickstart
+RUN apt-get update && apt-get install -y --no-install-recommends \
+    git git-lfs ffmpeg unzip curl ca-certificates && \
+    rm -rf /var/lib/apt/lists/*
+
+# Install uv (their recommended tool)
+RUN curl -LsSf https://astral.sh/uv/install.sh | sh
+ENV PATH="/root/.local/bin:$PATH"
+
+# Clone the upstream repo (their evaluation code)
+WORKDIR /eval
+RUN git clone --depth 1 https://github.com/commaai/comma_video_compression_challenge.git . && \
+    git lfs install && git lfs pull
+
+# Install Python deps via uv (their recommended method)
+RUN uv sync --group cpu
+
+# Copy submission
+COPY submissions/robust_current /eval/submissions/adpena
+
+# Run the official evaluation
+CMD ["bash", "evaluate.sh", "--submission-dir", "./submissions/adpena", "--device", "cpu"]
