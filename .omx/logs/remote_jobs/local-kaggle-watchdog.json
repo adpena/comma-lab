@@ -1,0 +1,10 @@
+{
+  "slug": "local-kaggle-watchdog",
+  "host": "local-cpu",
+  "status": "running_managed_session",
+  "pid": 52709,
+  "command": "PYTHONUNBUFFERED=1 python3 experiments/kaggle_watchdog.py --manifests-dir .omx/logs/remote_jobs --log-dir reports/raw/kaggle_watchdog --max-active 2 --interval-seconds 300 > /tmp/pact-kaggle-watchdog.log 2>&1",
+  "log_path": "/tmp/pact-kaggle-watchdog.log",
+  "watchdog_log_dir": "reports/raw/kaggle_watchdog",
+  "written_at": "2026-04-10T01:46:00Z"
+}
