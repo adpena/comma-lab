@@ -1,0 +1,17 @@
+=== Evaluation config ===
+  batch_size: 16
+  device: cpu
+  num_threads: 2
+  prefetch_queue_depth: 4
+  report: /tmp/auth_eval_kl_hf/report.txt
+  seed: 1234
+  submission_dir: /tmp/auth_eval_kl_hf
+  uncompressed_dir: /Users/adpena/projects/pact/workspace/upstream/comma_video_compression_challenge/videos
+  video_names_file: /Users/adpena/projects/pact/workspace/upstream/comma_video_compression_challenge/public_test_video_names.txt
+=== Evaluation results over 600 samples ===
+  Average PoseNet Distortion: 0.05724504
+  Average SegNet Distortion: 0.00492901
+  Submission file size: 901,140 bytes
+  Original uncompressed size: 37,545,489 bytes
+  Compression Rate: 0.02400129
+  Final score: 100*segnet_dist + √(10*posenet_dist) + 25*rate = 1.85
