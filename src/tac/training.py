@@ -416,11 +416,12 @@ class Trainer:
             return filtered_bchw.permute(0, 2, 3, 1).reshape(B, T, H, W, C)
 
     def _evaluate_int8(
-        self, comp_pairs, gt_pairs, posenet, segnet, subsample: int = 4,
+        self, comp_pairs, gt_pairs, posenet, segnet, subsample: int = 2,
     ) -> float:
         """Evaluate EMA model after int8 quantization.
 
         This is the best-checkpoint selection mechanism.
+        Uses subsample=2 (300/600 pairs) for faithful checkpoint selection.
         """
         orig_state = {k: v.clone() for k, v in self.model.state_dict().items()}
 
@@ -492,6 +493,12 @@ class Trainer:
             "meta": int8_state["__meta__"],
         }, indent=2))
         meta_tmp.rename(meta_path)
+
+        # Durable backup — survives MPS SIGKILL which can't be caught
+        backup_dir = Path(".backups")
+        backup_dir.mkdir(parents=True, exist_ok=True)
+        import shutil
+        shutil.copy2(int8_path, backup_dir / f"postfilter_{tag}_best_int8.pt")
 
     def fit(
         self,
@@ -780,7 +787,7 @@ class Trainer:
         return self.best_scorer
 
     def _evaluate_int8_lazy(
-        self, comp_frames, gt_frames, posenet, segnet, subsample: int = 4,
+        self, comp_frames, gt_frames, posenet, segnet, subsample: int = 2,
     ) -> float:
         """Evaluate EMA model after int8 quantization, using lazy pair loading."""
         orig_state = {k: v.clone() for k, v in self.model.state_dict().items()}
