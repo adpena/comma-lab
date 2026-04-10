@@ -1,0 +1,46 @@
+[{"stream_name":"stderr","time":7.06199613,"data":"/usr/local/lib/python3.12/dist-packages/torch/cuda/__init__.py:435: UserWarning: \n"}
+,{"stream_name":"stderr","time":7.062063498,"data":"    Found GPU0 Tesla P100-PCIE-16GB which is of cuda capability 6.0.\n"}
+,{"stream_name":"stderr","time":7.062069422,"data":"    Minimum and Maximum cuda capability supported by this version of PyTorch is\n"}
+,{"stream_name":"stderr","time":7.062073215,"data":"    (7.0) - (12.0)\n"}
+,{"stream_name":"stderr","time":7.062077183,"data":"    \n"}
+,{"stream_name":"stderr","time":7.062080816,"data":"  queued_call()\n"}
+,{"stream_name":"stderr","time":7.062084604,"data":"/usr/local/lib/python3.12/dist-packages/torch/cuda/__init__.py:435: UserWarning: \n"}
+,{"stream_name":"stderr","time":7.062089298,"data":"    Please install PyTorch with a following CUDA\n"}
+,{"stream_name":"stderr","time":7.062092803,"data":"    configurations:  12.6 following instructions at\n"}
+,{"stream_name":"stderr","time":7.062096221,"data":"    https://pytorch.org/get-started/locally/\n"}
+,{"stream_name":"stderr","time":7.062099666,"data":"    \n"}
+,{"stream_name":"stderr","time":7.062102997,"data":"  queued_call()\n"}
+,{"stream_name":"stderr","time":7.062118761,"data":"/usr/local/lib/python3.12/dist-packages/torch/cuda/__init__.py:435: UserWarning: \n"}
+,{"stream_name":"stderr","time":7.062122163,"data":"Tesla P100-PCIE-16GB with CUDA capability sm_60 is not compatible with the current PyTorch installation.\n"}
+,{"stream_name":"stderr","time":7.062124616,"data":"The current PyTorch install supports CUDA capabilities sm_70 sm_75 sm_80 sm_86 sm_90 sm_100 sm_120.\n"}
+,{"stream_name":"stderr","time":7.062127049,"data":"If you want to use the Tesla P100-PCIE-16GB GPU with PyTorch, please check the instructions at https://pytorch.org/get-started/locally/\n"}
+,{"stream_name":"stderr","time":7.062129521,"data":"\n"}
+,{"stream_name":"stderr","time":7.062131625,"data":"  queued_call()\n"}
+,{"stream_name":"stdout","time":7.08206045,"data":"[setup] Cloning upstream repo...\n"}
+,{"stream_name":"stderr","time":7.118216568,"data":"Cloning into '/kaggle/working/comma_video_compression_challenge'...\n"}
+,{"stream_name":"stderr","time":13.086435962,"data":"Filtering content:  80% (4/5), 36.73 MiB | 16.70 MiB/s\rFiltering content: 100% (5/5), 36.73 MiB | 16.70 MiB/s\rFiltering content: 100% (5/5), 126.70 MiB | 34.63 MiB/s\rFiltering content: 100% (5/5), 126.70 MiB | 31.48 MiB/s, done.\n"}
+,{"stream_name":"stdout","time":13.12250258,"data":"[setup] Installing av...\n"}
+,{"stream_name":"stdout","time":16.212502782,"data":"   ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ 36.4/36.4 MB 49.5 MB/s eta 0:00:00\n"}
+,{"stream_name":"stdout","time":29.611934365,"data":"[setup] Installing segmentation-models-pytorch...\n"}
+,{"stream_name":"stdout","time":31.098987397,"data":"   ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ 154.8/154.8 kB 3.6 MB/s eta 0:00:00\n"}
+,{"stream_name":"stdout","time":33.542573389,"data":"[dilated-h64] device=cpu alpha=20.0 hidden=64 ema=0.997 tag=dilated_qat_ema_h64_a20\n"}
+,{"stream_name":"stderr","time":68.004819083,"data":"Traceback (most recent call last):\n"}
+,{"stream_name":"stderr","time":68.00485339,"data":"  File \"/kaggle/src/script.py\", line 795, in \u003cmodule\u003e\n"}
+,{"stream_name":"stderr","time":68.005228132,"data":"    main()\n"}
+,{"stream_name":"stderr","time":68.005338501,"data":"  File \"/kaggle/src/script.py\", line 622, in main\n"}
+,{"stream_name":"stderr","time":68.005629159,"data":"    comp_frames = decode_archive(str(ARCHIVE_ZIP))\n"}
+,{"stream_name":"stderr","time":68.006967537,"data":"                  ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\n"}
+,{"stream_name":"stderr","time":68.006977883,"data":"  File \"/kaggle/src/script.py\", line 313, in decode_archive\n"}
+,{"stream_name":"stderr","time":68.006981331,"data":"    with zipfile.ZipFile(archive_path) as zf:\n"}
+,{"stream_name":"stderr","time":68.007266238,"data":"         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\n"}
+,{"stream_name":"stderr","time":68.007354219,"data":"  File \"/usr/lib/python3.12/zipfile/__init__.py\", line 1352, in __init__\n"}
+,{"stream_name":"stderr","time":68.009517591,"data":"    self.fp = io.open(file, filemode)\n"}
+,{"stream_name":"stderr","time":68.01059009,"data":"              ^^^^^^^^^^^^^^^^^^^^^^^\n"}
+,{"stream_name":"stderr","time":68.01068305,"data":"FileNotFoundError: [Errno 2] No such file or directory: '/kaggle/src/reports/raw/2026-04-06-av1-roi-experiments/decode_base_archive.zip'\n"}
+,{"stream_name":"stderr","time":72.678749416,"data":"/usr/local/lib/python3.12/dist-packages/mistune.py:435: SyntaxWarning: invalid escape sequence '\\|'\n"}
+,{"stream_name":"stderr","time":72.678782848,"data":"  cells[i][c] = re.sub('\\\\\\\\\\|', '|', cell)\n"}
+,{"stream_name":"stderr","time":72.935263511,"data":"/usr/local/lib/python3.12/dist-packages/nbconvert/filters/filter_links.py:36: SyntaxWarning: invalid escape sequence '\\_'\n"}
+,{"stream_name":"stderr","time":72.935290577,"data":"  text = re.sub(r'_', '\\_', text) # Escape underscores in display text\n"}
+,{"stream_name":"stderr","time":73.567816646,"data":"[NbConvertApp] Converting notebook __script__.ipynb to html\n"}
+,{"stream_name":"stderr","time":74.996456186,"data":"[NbConvertApp] Writing 458880 bytes to __results__.html\n"}
+]

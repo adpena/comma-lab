@@ -1,0 +1,7 @@
+{
+  "run_id": "kaggle-segnet-attack-fixed-h32-v5-20260410T011428Z",
+  "slug": "kaggle-segnet-attack-fixed-h32",
+  "kernel_ref": "adpena/comma-lab-segnet-attack-fixed-h32",
+  "evidence_dir": "reports/raw/kaggle_ingest/kaggle-segnet-attack-fixed-h32-v5-20260410T011428Z",
+  "logs": []
+}
