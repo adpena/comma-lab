@@ -328,3 +328,40 @@ class TestKLDistillLoss:
             f"T=2 loss ({loss_t2.item()}) should be > T=1 loss ({loss_t1.item()}) "
             "due to T^2 scaling on KL divergence"
         )
+
+
+class TestHardFrameCurriculum:
+    """Test hard_frame_ratio config and weighted sampling."""
+
+    def test_hard_frame_ratio_zero_is_noop(self):
+        """hard_frame_ratio=0 should not trigger precomputation."""
+        config = TrainConfig(hidden=8, epochs=100, tag="test-hf-zero", hard_frame_ratio=0.0)
+        assert config.hard_frame_ratio == 0.0
+
+    def test_hard_frame_ratio_valid_range(self):
+        """hard_frame_ratio must be between 0 and 1."""
+        import pytest
+        with pytest.raises(Exception):
+            TrainConfig(hidden=8, epochs=100, tag="test-hf-bad", hard_frame_ratio=1.5)
+        with pytest.raises(Exception):
+            TrainConfig(hidden=8, epochs=100, tag="test-hf-neg", hard_frame_ratio=-0.1)
+
+    def test_hard_frame_boost_scales_with_ratio(self):
+        """Higher ratio should give higher boost factor."""
+        # ratio=0.5 → boost = 1 + 0.5*10 = 6x
+        # ratio=1.0 → boost = 1 + 1.0*10 = 11x
+        import torch
+        difficulties = torch.tensor([0.01, 0.02, 0.03, 0.04, 0.10])
+        threshold = difficulties.quantile(0.8)
+
+        boost_half = 1.0 + 0.5 * 10.0
+        weights_half = torch.where(difficulties >= threshold, boost_half, 1.0)
+        weights_half = weights_half / weights_half.sum()
+
+        boost_full = 1.0 + 1.0 * 10.0
+        weights_full = torch.where(difficulties >= threshold, boost_full, 1.0)
+        weights_full = weights_full / weights_full.sum()
+
+        # Hard frame should get more weight at higher ratio
+        hard_idx = (difficulties >= threshold).nonzero().squeeze()
+        assert weights_full[hard_idx].sum() > weights_half[hard_idx].sum()

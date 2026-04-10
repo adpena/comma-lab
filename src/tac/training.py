@@ -932,7 +932,8 @@ class Trainer:
         total_p, total_s, count = 0.0, 0.0, 0
 
         # autocast reduces VRAM from ~6GB to ~0.2GB for scorer forward pass
-        autocast = torch.amp.autocast(str(self.device), enabled=torch.cuda.is_available())
+        use_autocast = str(self.device).startswith("cuda") and torch.cuda.is_available()
+        autocast = torch.amp.autocast("cuda", enabled=use_autocast)
         with torch.no_grad(), autocast:
             for start in eval_pair_starts:
                 comp_pair = pair_from_frames(comp_frames, start).to(self.device)
