@@ -78,7 +78,7 @@ class KaggleKernelBuilderTests(unittest.TestCase):
 
             metadata = json.loads((bundle / "kernel-metadata.json").read_text())
             copied_script = (bundle / "script.py").read_text()
-            copied_asset = (bundle / "reports" / "raw" / "artifact.zip").read_bytes()
+            copied_asset = (bundle / "artifact.zip").read_bytes()
 
         self.assertEqual(metadata["code_file"], "script.py")
         self.assertEqual(copied_script, "print('hi')\n")

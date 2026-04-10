@@ -24,6 +24,24 @@ def load_module():
 
 
 class TrainPostfilterDilatedH64Tests(unittest.TestCase):
+    def test_detect_device_falls_back_to_cpu_for_unsupported_cuda_capability(self) -> None:
+        original_is_available = torch.cuda.is_available
+        original_get_capability = torch.cuda.get_device_capability
+        original_mps = getattr(torch.backends, "mps", None)
+        original_mps_is_available = getattr(original_mps, "is_available", None)
+        try:
+            torch.cuda.is_available = lambda: True
+            torch.cuda.get_device_capability = lambda *_args, **_kwargs: (6, 0)
+            if original_mps is not None:
+                original_mps.is_available = lambda: False
+            mod = load_module()
+            self.assertEqual(str(mod.detect_device()), "cpu")
+        finally:
+            torch.cuda.is_available = original_is_available
+            torch.cuda.get_device_capability = original_get_capability
+            if original_mps is not None and original_mps_is_available is not None:
+                original_mps.is_available = original_mps_is_available
+
     def test_arg_parser_accepts_checkpoint_selection_flags(self) -> None:
         mod = load_module()
         args = mod.build_arg_parser().parse_args(["--checkpoint-select-int8", "--per-channel-int8"])

@@ -48,7 +48,12 @@ DEFAULT_ARCHIVE = PROJECT_ROOT / "reports" / "raw" / "2026-04-06-av1-roi-experim
 
 def select_device() -> torch.device:
     if torch.cuda.is_available():
-        return torch.device("cuda")
+        try:
+            capability = torch.cuda.get_device_capability(0)
+        except Exception:
+            capability = None
+        if capability is None or capability[0] >= 7:
+            return torch.device("cuda")
     if hasattr(torch.backends, "mps") and torch.backends.mps.is_available():
         return torch.device("mps")
     return torch.device("cpu")
@@ -78,10 +83,13 @@ def resolve_base_dir() -> Path:
 
 
 def resolve_asset(relative_path: str) -> Path:
+    basename = Path(relative_path).name
     candidates = [
         PROJECT_ROOT / relative_path,
         SCRIPT_PATH.parent / relative_path,
         SCRIPT_PATH.parent / "reports" / "raw" / Path(relative_path).name,
+        SCRIPT_PATH.parent / basename,
+        PROJECT_ROOT / basename,
     ]
     for candidate in candidates:
         if candidate.exists():

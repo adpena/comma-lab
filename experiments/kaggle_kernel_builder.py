@@ -158,7 +158,9 @@ def write_bundle(
         source_path = Path(source)
         if spec.code_source is not None and source_path.resolve() == Path(spec.code_source).resolve():
             continue
-        if root is not None:
+        if spec.code_source is not None and source_path.suffix not in {".py", ".pyi"}:
+            destination = bundle_dir / source_path.name
+        elif root is not None:
             try:
                 rel = source_path.resolve().relative_to(root)
                 destination = bundle_dir / rel
