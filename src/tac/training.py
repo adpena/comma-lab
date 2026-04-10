@@ -438,6 +438,10 @@ class Trainer:
 
         This is the best-checkpoint selection mechanism.
         Uses subsample=2 (300/600 pairs) for faithful checkpoint selection.
+
+        Assumes B=1 per pair (each comp_pairs[idx] is a single pair).
+        Accumulates mean-per-pair and divides by pair count, which is
+        equivalent to the global mean only when B=1.
         """
         orig_state = {k: v.clone() for k, v in self.model.state_dict().items()}
 
@@ -450,7 +454,9 @@ class Trainer:
         self.model.eval()
 
         total_p, total_s, count = 0.0, 0.0, 0
-        with torch.no_grad():
+        use_autocast = str(self.device).startswith("cuda") and torch.cuda.is_available()
+        autocast_ctx = torch.amp.autocast("cuda", enabled=use_autocast)
+        with torch.no_grad(), autocast_ctx:
             for idx in range(0, len(comp_pairs), subsample):
                 filtered = self._apply_filter_to_pair(comp_pairs[idx])
                 # uint8 round-trip: matches official inflate → scorer pipeline
@@ -459,6 +465,8 @@ class Trainer:
                 total_p += pd
                 total_s += sd
                 count += 1
+                if use_autocast:
+                    torch.cuda.empty_cache()
 
         scorer = 100.0 * (total_s / count) + math.sqrt(10.0 * (total_p / count))
 
@@ -542,6 +550,15 @@ class Trainer:
             boundary_masks: optional list of (H, W) boundary masks per pair
             callback: optional (epoch, loss, pose, seg, scorer) callback
         """
+        cfg = self.config
+
+        # Guard: fit() only supports standard and boundary-weighted loss modes
+        if cfg.loss_mode not in ("standard",) and not cfg.use_ste_segnet:
+            raise NotImplementedError(
+                f"loss_mode='{cfg.loss_mode}' requires fit_lazy(). "
+                "fit() only supports 'standard' and boundary-weighted (use_ste_segnet) modes."
+            )
+
         # Patch scorer models for differentiable training (CRITICAL: without this,
         # PoseNet gradients are zero due to upstream @torch.no_grad on rgb_to_yuv6)
         if not self._patched_scorers:
@@ -549,7 +566,7 @@ class Trainer:
             self._patched_scorers = True
 
         n_pairs = len(comp_pairs)
-        cfg = self.config
+
         pairs_per_epoch = cfg.pairs_per_epoch or n_pairs
         use_boundary = cfg.use_ste_segnet and boundary_masks is not None
 
@@ -576,7 +593,8 @@ class Trainer:
                 idx = idx.item()
                 filtered = self._apply_filter_to_pair(comp_pairs[idx])
 
-                # Scorer loss
+                # Scorer loss (fit() only supports standard and boundary-weighted modes;
+                # temperature/focal_ste/kl_distill require fit_lazy())
                 if use_boundary:
                     bm = boundary_masks[idx] if boundary_masks else None
                     loss, pd, sd = segnet_ste_loss(

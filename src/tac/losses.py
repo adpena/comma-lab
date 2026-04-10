@@ -117,7 +117,9 @@ def segnet_ste_loss(
     Boundary pixels get `boundary_weight`x more gradient.
 
     Args:
-        boundary_mask: (H, W) float tensor, 1.0 at boundaries, 0.0 elsewhere
+        boundary_mask: (H, W) float tensor, 1.0 at boundaries, 0.0 elsewhere.
+            Applied uniformly across the batch — assumes B=1 or all samples
+            share the same boundary mask.
         boundary_weight: multiplier for boundary pixels (default 1.0 = no weighting)
 
     Returns: (loss, pose_distortion, hard_disagree)

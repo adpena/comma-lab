@@ -221,3 +221,110 @@ class TestEvalScorerLoss:
         score, pose, seg = eval_scorer_loss(pair, pair, DetPoseNet(), DetSegNet())
         assert pose < 1e-6, f"Identical pairs should have ~0 pose dist, got {pose}"
         assert seg < 1e-6, f"Identical pairs should have ~0 seg dist, got {seg}"
+
+
+class TestFitLossModeGuard:
+    """fit() should reject loss_mode values it doesn't support."""
+
+    def test_fit_rejects_kl_distill(self):
+        import pytest
+        model = build_postfilter("standard", hidden=8)
+        config = TrainConfig(
+            hidden=8, epochs=100, tag="test-guard",
+            loss_mode="kl_distill", temperature_start=5.0, temperature_end=1.0,
+        )
+        trainer = Trainer(model, config, device="cpu")
+        with pytest.raises(NotImplementedError, match="loss_mode='kl_distill'"):
+            trainer.fit([], [], None, None, None)
+
+    def test_fit_rejects_temperature(self):
+        import pytest
+        model = build_postfilter("standard", hidden=8)
+        config = TrainConfig(
+            hidden=8, epochs=100, tag="test-guard-temp",
+            loss_mode="temperature",
+        )
+        trainer = Trainer(model, config, device="cpu")
+        with pytest.raises(NotImplementedError, match="loss_mode='temperature'"):
+            trainer.fit([], [], None, None, None)
+
+    def test_fit_accepts_standard(self):
+        """Standard loss_mode should pass the guard (not raise NotImplementedError)."""
+        model = build_postfilter("standard", hidden=8)
+        config = TrainConfig(hidden=8, epochs=100, tag="test-guard-ok")
+        trainer = Trainer(model, config, device="cpu")
+        # Pass empty lists — scorer patching will fail on None but that's
+        # after the guard, so we catch the AttributeError as expected
+        try:
+            trainer.fit([], [], None, None, None)
+        except AttributeError:
+            pass  # Expected — None scorers can't be patched
+        except NotImplementedError:
+            raise AssertionError("Standard loss_mode should not raise NotImplementedError")
+
+
+class TestKLDistillLoss:
+    """Tests for kl_distill_scorer_loss gradient flow and T^2 scaling."""
+
+    def test_gradients_flow_through_filter(self):
+        """kl_distill_scorer_loss should produce gradients on filtered input."""
+        from tac.losses import kl_distill_scorer_loss
+
+        class MockPoseNet(torch.nn.Module):
+            def preprocess_input(self, x):
+                return x.reshape(x.shape[0], -1, x.shape[-2], x.shape[-1])
+            def forward(self, x):
+                return {"pose": x.mean(dim=(2, 3))[:, :12]}
+
+        class MockSegNet(torch.nn.Module):
+            def preprocess_input(self, x):
+                return x[:, -1, ...]
+            def forward(self, x):
+                return x[:, :5, :, :]
+
+        filtered = (torch.rand(1, 2, 16, 16, 3) * 255).requires_grad_(True)
+        filtered.retain_grad()
+        gt = torch.rand(1, 2, 16, 16, 3) * 255
+
+        loss, pose, seg = kl_distill_scorer_loss(
+            filtered, gt, MockPoseNet(), MockSegNet(), temperature=3.0,
+        )
+        loss.backward()
+        assert filtered.grad is not None
+        assert filtered.grad.abs().sum() > 0, "Gradients should be non-zero"
+
+    def test_t2_scaling(self):
+        """Higher temperature should scale the loss by T^2."""
+        from tac.losses import kl_distill_scorer_loss
+
+        class MockPoseNet(torch.nn.Module):
+            def preprocess_input(self, x):
+                return x.reshape(x.shape[0], -1, x.shape[-2], x.shape[-1])
+            def forward(self, x):
+                return {"pose": x.mean(dim=(2, 3))[:, :12]}
+
+        class MockSegNet(torch.nn.Module):
+            def preprocess_input(self, x):
+                return x[:, -1, ...]
+            def forward(self, x):
+                return x[:, :5, :, :]
+
+        torch.manual_seed(42)
+        filtered = torch.rand(1, 2, 16, 16, 3) * 255
+        gt = torch.rand(1, 2, 16, 16, 3) * 255
+
+        # T=1 vs T=2: KL contribution should scale roughly by (2/1)^2 = 4x
+        loss_t1, _, _ = kl_distill_scorer_loss(
+            filtered.clone().requires_grad_(True), gt, MockPoseNet(), MockSegNet(),
+            temperature=1.0,
+        )
+        loss_t2, _, _ = kl_distill_scorer_loss(
+            filtered.clone().requires_grad_(True), gt, MockPoseNet(), MockSegNet(),
+            temperature=2.0,
+        )
+        # The ratio won't be exactly 4x because PoseNet loss is temperature-independent,
+        # but the KL component should be larger at T=2
+        assert loss_t2.item() > loss_t1.item(), (
+            f"T=2 loss ({loss_t2.item()}) should be > T=1 loss ({loss_t1.item()}) "
+            "due to T^2 scaling on KL divergence"
+        )

@@ -21,6 +21,7 @@ from __future__ import annotations
 import json
 import math
 import os
+import time
 from pathlib import Path
 
 import torch
@@ -54,6 +55,8 @@ def canonical_score(
     from .quantization import load_int8
     from .scorer import detect_device, load_scorers
 
+    t_start = time.monotonic()
+
     if device is None:
         device = str(detect_device())
     if upstream_dir is None:
@@ -63,6 +66,7 @@ def canonical_score(
     model = build_postfilter(variant, hidden=hidden, kernel=kernel)
     load_int8(int8_path, model, device=device)
     model = model.eval().to(device)
+    t_model = time.monotonic()
 
     # Load data
     comp_frames = decode_archive(str(archive_path))
@@ -70,6 +74,7 @@ def canonical_score(
     assert len(comp_frames) == len(gt_frames), (
         f"Frame count mismatch: {len(comp_frames)} comp vs {len(gt_frames)} GT"
     )
+    t_data = time.monotonic()
 
     # Load scorers
     posenet, segnet = load_scorers(
@@ -141,9 +146,22 @@ def canonical_score(
             total_seg += seg_per_sample.sum().item()
             n_samples += B
 
+    t_score = time.monotonic()
+
     avg_pose = total_pose / n_samples
     avg_seg = total_seg / n_samples
     score = 100.0 * avg_seg + math.sqrt(10.0 * avg_pose) + 25.0 * rate
+
+    t_total = time.monotonic() - t_start
+    timing = {
+        "model_load_s": round(t_model - t_start, 2),
+        "data_load_s": round(t_data - t_model, 2),
+        "scoring_s": round(t_score - t_data, 2),
+        "total_s": round(t_total, 2),
+    }
+    print(f"[eval] timing: model={timing['model_load_s']}s, "
+          f"data={timing['data_load_s']}s, scoring={timing['scoring_s']}s, "
+          f"total={timing['total_s']}s")
 
     from .models import ScoreResult
 
@@ -158,6 +176,7 @@ def canonical_score(
         n_samples=n_samples,
         archive=str(archive_path),
         checkpoint=str(int8_path),
+        timing=timing,
     )
 
 

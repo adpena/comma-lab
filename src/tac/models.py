@@ -22,6 +22,7 @@ class ScoreResult(BaseModel):
     n_samples: int = Field(description="Number of frame pairs evaluated")
     archive: str = Field(default="", description="Path to archive used")
     checkpoint: str = Field(default="", description="Path to checkpoint used")
+    timing: dict = Field(default_factory=dict, description="Timing breakdown in seconds")
 
 
 class CheckpointMeta(BaseModel):

@@ -104,6 +104,11 @@ class QATPostFilter(nn.Module):
     Forward pass quantizes weights to int8 (simulated) before each conv.
     Backward pass uses straight-through estimator. Biases are NOT quantized
     (matching the fp32_bias deployment path).
+
+    NOTE: This is an experimental wrapper, NOT used by the standard Trainer
+    pipeline. Trainer uses quantize_state_dict() at eval time instead.
+    The mid-forward weight replacement pattern is fragile — exceptions
+    between replacement and restore leave the model in a corrupt state.
     """
 
     def __init__(self, base_model: nn.Module):
