@@ -1,0 +1,72 @@
+{
+  "ts_utc": "2026-04-10T02:25:39.535775Z",
+  "synced": [
+    {
+      "slug": "kaggle-dilated-h64-long1000",
+      "run_id": "kaggle-dilated-h64-long1000-v5-20260410T011428Z",
+      "host": "kaggle",
+      "platform": "kaggle",
+      "status": "paused",
+      "remote_root": "/kaggle/working",
+      "remote_log": "kaggle://adpena/comma-lab-dilated-h64-long1000",
+      "remote_command": "uv run --with kaggle kaggle kernels push -p /Users/adpena/Projects/pact/experiments/kaggle_kernels/dilated_h64_long1000 --accelerator gpu",
+      "manifest_path": ".omx/logs/remote_jobs/kaggle-dilated-h64-long1000.json",
+      "status_path": ".omx/status/kaggle-dilated-h64-long1000.json",
+      "kernel_ref": "adpena/comma-lab-dilated-h64-long1000",
+      "kernel_url": "https://www.kaggle.com/code/adpena/comma-lab-dilated-h64-long1000",
+      "bundle_dir": "experiments/kaggle_kernels/dilated_h64_long1000",
+      "best_checkpoint": null,
+      "latest_printed_checkpoint": null,
+      "notes": "Kaggle kernel version 5 is now running on the direct-code-file path. The self-contained dilated trainer now falls back to CPU on unsupported P100 CUDA and can resolve the archive by basename when it is flattened into the kernel bundle root.\nadpena/comma-lab-dilated-h64-long1000 has status \"KernelWorkerStatus.CANCEL_ACKNOWLEDGED\"",
+      "written_at": "2026-04-10T02:25:37.572035Z",
+      "phase": "kernel_cancel_acknowledged",
+      "kernel_status": "adpena/comma-lab-dilated-h64-long1000 has status \"KernelWorkerStatus.CANCEL_ACKNOWLEDGED\""
+    },
+    {
+      "slug": "kaggle-pairaware-smoke",
+      "run_id": "kaggle-pairaware-smoke-v1-20260410T000419Z",
+      "host": "kaggle",
+      "platform": "kaggle",
+      "status": "paused",
+      "remote_root": "/kaggle/working",
+      "remote_log": "kaggle://adpena/comma-lab-pairaware-smoke",
+      "remote_command": "uv run --with kaggle kaggle kernels push -p /Users/adpena/Projects/pact/experiments/kaggle_kernels/pairaware_smoke --accelerator gpu",
+      "manifest_path": ".omx/logs/remote_jobs/kaggle-pairaware-smoke.json",
+      "status_path": ".omx/status/kaggle-pairaware-smoke.json",
+      "kernel_ref": "adpena/comma-lab-pairaware-smoke",
+      "bundle_dir": "experiments/kaggle_kernels/pairaware_smoke",
+      "best_checkpoint": null,
+      "latest_printed_checkpoint": null,
+      "notes": "Push attempt blocked by Kaggle free-tier quota: maximum batch GPU session count of 2 reached. Bundle is ready but not launched yet.\nKernelWorkerStatus.NOT_PUSHED",
+      "written_at": "2026-04-10T02:25:37.973341Z",
+      "phase": "kernel_not_pushed",
+      "kernel_status": "KernelWorkerStatus.NOT_PUSHED"
+    },
+    {
+      "slug": "kaggle-segnet-attack-fixed-h32",
+      "run_id": "kaggle-segnet-attack-fixed-h32-v5-20260410T011428Z",
+      "host": "kaggle",
+      "platform": "kaggle",
+      "status": "running",
+      "remote_root": "/kaggle/working",
+      "remote_log": "kaggle://adpena/comma-lab-segnet-attack-fixed-h32",
+      "remote_command": "uv run --with kaggle kaggle kernels push -p /Users/adpena/Projects/pact/experiments/kaggle_kernels/segnet_attack_fixed_h32 --accelerator gpu",
+      "manifest_path": ".omx/logs/remote_jobs/kaggle-segnet-attack-fixed-h32.json",
+      "status_path": ".omx/status/kaggle-segnet-attack-fixed-h32.json",
+      "kernel_ref": "adpena/comma-lab-segnet-attack-fixed-h32",
+      "kernel_url": "https://www.kaggle.com/code/adpena/comma-lab-segnet-attack-fixed-h32",
+      "bundle_dir": "experiments/kaggle_kernels/segnet_attack_fixed_h32",
+      "best_checkpoint": null,
+      "latest_printed_checkpoint": null,
+      "notes": "Kaggle kernel version 5 is now running on the direct-code-file path. The self-contained SegNet trainer now falls back to CPU on unsupported P100 CUDA and can resolve the archive by basename from the bundle root.",
+      "written_at": "2026-04-10T02:25:38.353871Z",
+      "phase": "kernel_running",
+      "kernel_status": "adpena/comma-lab-segnet-attack-fixed-h32 has status \"KernelWorkerStatus.RUNNING\""
+    }
+  ],
+  "queue": {
+    "action": "repush",
+    "manifest": ".omx/logs/remote_jobs/kaggle-dilated-h64-long1000.json",
+    "returncode": 1
+  }
+}
