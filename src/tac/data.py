@@ -146,3 +146,56 @@ def load_saliency_weights(
     sal_t = sal_t[:n_frames]
     weights = (1.0 + alpha * sal_t).unsqueeze(1).to(device)
     return weights
+
+
+def save_precomputed(
+    comp_frames: list[torch.Tensor],
+    gt_frames: list[torch.Tensor],
+    output_dir: str | Path,
+) -> None:
+    """Save decoded frames as tensors for fast cloud loading.
+
+    Skips the 5-10 min video decode on subsequent runs.
+    ~3.7GB per tensor (1200 × 874 × 1164 × 3 uint8).
+    """
+    out = Path(output_dir)
+    out.mkdir(parents=True, exist_ok=True)
+    torch.save(torch.stack(comp_frames), out / "comp_frames.pt")
+    torch.save(torch.stack(gt_frames), out / "gt_frames.pt")
+
+
+def load_precomputed(precomputed_dir: str | Path) -> tuple[list[torch.Tensor], list[torch.Tensor]]:
+    """Load precomputed frame tensors (instant, no video decode).
+
+    Returns (comp_frames, gt_frames) as lists of (H, W, 3) uint8 tensors.
+    """
+    d = Path(precomputed_dir)
+    comp = torch.load(d / "comp_frames.pt", map_location="cpu", weights_only=True)
+    gt = torch.load(d / "gt_frames.pt", map_location="cpu", weights_only=True)
+    return list(comp), list(gt)
+
+
+def load_frames(
+    archive_path: str | Path | None = None,
+    gt_video_path: str | Path | None = None,
+    precomputed_dir: str | Path | None = None,
+) -> tuple[list[torch.Tensor], list[torch.Tensor]]:
+    """Load frames from precomputed tensors or decode from video.
+
+    Precomputed path is checked first (instant). Falls back to video decode.
+    This is the recommended entry point for all training scripts.
+    """
+    if precomputed_dir and Path(precomputed_dir).exists():
+        comp_pt = Path(precomputed_dir) / "comp_frames.pt"
+        gt_pt = Path(precomputed_dir) / "gt_frames.pt"
+        if comp_pt.exists() and gt_pt.exists():
+            print("[data] Loading precomputed frames (fast path)")
+            return load_precomputed(precomputed_dir)
+
+    if archive_path is None or gt_video_path is None:
+        raise ValueError("Must provide archive_path + gt_video_path, or a valid precomputed_dir")
+
+    print("[data] Decoding from video (slow path)")
+    comp_frames = decode_archive(str(archive_path))
+    gt_frames = decode_video(str(gt_video_path))
+    return comp_frames, gt_frames

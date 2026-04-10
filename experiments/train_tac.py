@@ -30,7 +30,7 @@ if (_repo / "src" / "tac").exists():
     sys.path.insert(0, str(_repo / "src"))
 
 from tac.architectures import build_postfilter
-from tac.data import decode_archive, decode_video, load_raw_saliency
+from tac.data import load_raw_saliency
 from tac.scorer import detect_device, load_scorers
 from tac.training import TrainConfig, Trainer
 
@@ -53,6 +53,8 @@ def main():
                         help="Compressed archive.zip to train on")
     parser.add_argument("--gt-video", default=os.environ.get("TAC_GT_VIDEO", DEFAULTS["gt_video"]),
                         help="Ground truth video path")
+    parser.add_argument("--precomputed", default=os.environ.get("TAC_PRECOMPUTED", None),
+                        help="Directory with precomputed comp_frames.pt + gt_frames.pt (skips decode)")
     parser.add_argument("--saliency", default=os.environ.get("TAC_SALIENCY", DEFAULTS["saliency"]),
                         help="Saliency map .npy path")
     parser.add_argument("--models-dir", default=os.environ.get("TAC_MODELS_DIR", DEFAULTS["models_dir"]),
@@ -97,28 +99,27 @@ def main():
     parser.add_argument("--output-dir", default="experiments/postfilter_weights")
     args = parser.parse_args()
 
-    # Validate paths exist
-    for name, path in [("archive", args.archive), ("gt-video", args.gt_video),
-                       ("saliency", args.saliency), ("models-dir", args.models_dir)]:
-        if not Path(path).exists():
-            print(f"[train_tac] ERROR: {name} not found: {path}", file=sys.stderr)
-            sys.exit(1)
+    # Validate paths
+    if not args.precomputed:
+        for name, path in [("archive", args.archive), ("gt-video", args.gt_video),
+                           ("saliency", args.saliency), ("models-dir", args.models_dir)]:
+            if not Path(path).exists():
+                print(f"[train_tac] ERROR: {name} not found: {path}", file=sys.stderr)
+                sys.exit(1)
 
     device = detect_device()
     print(f"[train_tac] device: {device}")
     print(f"[train_tac] config: h={args.hidden} {args.variant} epochs={args.epochs} "
           f"alpha={args.alpha} sal_lambda={args.sal_lambda} loss={args.loss_mode}")
-    print(f"[train_tac] archive: {args.archive}")
-    print(f"[train_tac] gt_video: {args.gt_video}")
 
-    # Load data
-    print("[train_tac] Decoding compressed archive...")
-    comp_frames = decode_archive(args.archive)
-    print(f"[train_tac] {len(comp_frames)} compressed frames")
-
-    print("[train_tac] Decoding GT video...")
-    gt_frames = decode_video(args.gt_video)
-    print(f"[train_tac] {len(gt_frames)} GT frames")
+    # Load data — precomputed tensors (instant) or video decode (slow)
+    from tac.data import load_frames
+    comp_frames, gt_frames = load_frames(
+        archive_path=args.archive,
+        gt_video_path=args.gt_video,
+        precomputed_dir=args.precomputed,
+    )
+    print(f"[train_tac] {len(comp_frames)} compressed + {len(gt_frames)} GT frames")
 
     print("[train_tac] Loading saliency map...")
     raw_saliency = load_raw_saliency(args.saliency)
