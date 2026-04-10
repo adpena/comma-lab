@@ -1,0 +1,13 @@
+{
+  "slug": "modal-dilated-h64-long1000",
+  "run_id": "modal-dilated-h64-long1000-v2-20260410T024741Z",
+  "host": "modal",
+  "platform": "modal",
+  "status": "running",
+  "phase": "app_running",
+  "manifest_path": ".omx/logs/remote_jobs/modal-dilated-h64-long1000.json",
+  "status_path": ".omx/status/modal-dilated-h64-long1000.json",
+  "modal_app_id": "ap-oe1x7fZOSx1lQ2R4WTt51O",
+  "modal_app_url": "https://modal.com/apps/adpena/main/ap-oe1x7fZOSx1lQ2R4WTt51O",
+  "written_at": "2026-04-10T02:47:41Z"
+}
