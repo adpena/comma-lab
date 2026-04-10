@@ -1,59 +1,67 @@
 # Agent Onboarding — comma video compression challenge
 
-## Current state (updated 2026-04-10)
+## Current state (updated 2026-04-10 evening)
 
-- **Score: 1.33** (#1 by 0.55 margin, deadline May 3)
-- Best training proxy: **~1.30** and dropping (KL distill + hard-frame on Modal A10G)
-- Promoted checkpoint: `submissions/robust_current/postfilter_int8.pt` (dilated h=64)
+- **Score: 1.33** authoritative (#1 by 0.53 margin, deadline May 3)
+- **Compliant archive**: 903KB (includes postfilter_int8.pt inside archive.zip)
+- **Best trustworthy technique**: proven_baseline (standard loss, dilated h=64)
+- **Experimental**: council_v2_adaptive (first-ever run in progress on local MPS)
 
-## The approach
+## CRITICAL LESSONS LEARNED
 
-A 45KB int8 CNN post-filter corrects AV1-decoded frames by backpropagating through frozen PoseNet + SegNet scorers. Score = 100*seg + sqrt(10*pose) + 25*rate.
+1. **KL distill proxy is UNTRUSTWORTHY.** A checkpoint with proxy 1.25 scored 1.85 authoritative.
+   Root cause: w_s·T² = 750, optimal was 2.95 (254x over-weighted). PoseNet regressed 26x.
+   NEVER promote a KL distill checkpoint without authoritative eval.
+
+2. **Neural network artifacts MUST be inside archive.zip** per contest rules (affects rate calculation).
+
+3. **The adaptive weight system** (`src/tac/adaptive.py`) derives optimal hyperparameters from the
+   scoring formula instead of guessing. Use `--profile council_v2_adaptive` to enable.
+
+4. **Lean 4 proofs** (`proofs/AdaptiveWeights.lean`) formally verify the key equations.
+   Zero sorry obligations.
 
 ## Key files
 
-- `src/tac/` — the training library (v0.9.0, 70 tests)
+- `src/tac/` — training library v1.0.0, 70 tests
+- `src/tac/adaptive.py` — mathematically-derived adaptive weights
 - `src/tac/profiles.py` — named training profiles
+- `proofs/AdaptiveWeights.lean` — formal verification
 - `experiments/train_tac.py` — canonical training entry point
-- `submissions/robust_current/` — the submission
-- `docs/writeup_draft.md` — competition writeup
-- `.omx/state/` — current focus, next experiments
-- `.omx/research/findings.md` — all research findings
+- `submissions/robust_current/` — the submission (compliant archive)
 
 ## How to train
 
 ```bash
-# Use council_v1 profile (recommended default for all new runs)
+# RECOMMENDED: adaptive weights (self-correcting, derived from scoring formula)
 .venv/bin/python experiments/train_tac.py \
-    --profile council_v1 \
+    --profile council_v2_adaptive \
     --tag my_experiment \
     --precomputed experiments/precomputed_local
 
-# Available profiles: council_v1, segnet_attack, proven_baseline, h96_council, smoke
-# Profiles live in src/tac/profiles.py. CLI args override profile values.
+# SAFE FALLBACK: proven baseline (produced the 1.33 authoritative score)
+.venv/bin/python experiments/train_tac.py \
+    --profile proven_baseline \
+    --tag my_experiment \
+    --epochs 3500 \
+    --precomputed experiments/precomputed_local
+
+# Available profiles: council_v1, council_v2_adaptive, segnet_attack, proven_baseline, h96_council, smoke
 ```
-
-## Council-recommended settings (council_v1 profile)
-
-- **Architecture**: dilated h=64, kernel=3
-- **Loss**: KL distillation T=5->0.5 with PoseNet gradient cap
-- **Boundary weight**: 150 (5% boundary pixels need ~20x amplification)
-- **Boundary anneal**: True (couples boundary_weight to temperature)
-- **Hard-frame curriculum**: ratio=0.3 (power-law emphasis on worst SegNet pairs)
-- **Error replay**: every 200 epochs (recomputes using current model output)
-- **Quantization**: per-channel symmetric int8
-- **Eval**: every 5 epochs (ramps to 1 in final 10%)
 
 ## What NOT to do
 
-- Do NOT use alpha_seg=5000 (formula-derived optimal is ~200)
-- Do NOT use standard loss for new experiments (KL distill is better)
-- Do NOT run standard (non-dilated) architecture (superseded)
+- Do NOT use static segnet_loss_weight > 10 with KL distill (w_s·T² must be ~3, not 750)
+- Do NOT add PoseNet gradient caps/clamps (caused 26x regression)
+- Do NOT promote KL distill checkpoints without authoritative eval
+- Do NOT use alpha_seg > 500 (formula-derived optimal is ~200)
+- Do NOT store postfilter_int8.pt outside archive.zip (compliance violation)
 - Do NOT modify upstream scorer files
 
 ## Infrastructure
 
-- Local: M5 Max 128GB — run 3+ experiments in parallel with precomputed data
-- Lightning AI: SSH working, T4 CUDA, precomputed uploaded
-- Modal: A10G serverless, precomputed on volume
+- Local: M5 Max 128GB — run 3-4 experiments in parallel with precomputed data
+- Lightning AI: SSH working (`ssh s_...@ssh.lightning.ai`), T4 CUDA, code synced
+- Modal: A10G serverless (currently stopped, ready for fresh deploy)
+- Kaggle: 2 GPU sessions available (T4/P100)
 - Precomputed: `experiments/precomputed_local/` (7GB, instant loading)
