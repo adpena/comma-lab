@@ -46,6 +46,13 @@ def parse_kaggle_status_text(text: str) -> dict[str, object]:
     raw = _canonical_status_text(text)
     lower = raw.lower()
 
+    if "kernelworkerstatus.not_pushed" in lower:
+        return {
+            "status": "paused",
+            "phase": "kernel_not_pushed",
+            "kernel_status": raw,
+            "notes": raw,
+        }
     if "batch gpu session count" in lower or "quota" in lower or "not_pushed" in lower:
         return {
             "status": "paused",
@@ -121,6 +128,9 @@ def query_kaggle_status_text(
     returncode = getattr(result, "returncode", 0)
     stdout = getattr(result, "stdout", "")
     stderr = getattr(result, "stderr", "")
+    error_text = f"{stderr or ''}\n{stdout or ''}"
+    if returncode != 0 and "404 Client Error: Not Found" in error_text:
+        return "KernelWorkerStatus.NOT_PUSHED"
     if returncode != 0:
         raise RuntimeError(f"kaggle kernels status failed for {kernel_ref}: {stderr or stdout}".strip())
     text = stdout if isinstance(stdout, str) and stdout.strip() else stderr

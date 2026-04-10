@@ -193,6 +193,46 @@ class KaggleStatusSyncTests(unittest.TestCase):
         self.assertEqual(payload["status"], "running")
         self.assertEqual(payload["phase"], "kernel_running")
 
+    def test_sync_status_treats_not_found_kernel_as_not_pushed(self) -> None:
+        mod = load_module()
+        with tempfile.TemporaryDirectory() as tmpdir:
+            tmp = Path(tmpdir)
+            manifest_path = tmp / "remote_jobs" / "kaggle-demo.json"
+            status_path = tmp / "status" / "kaggle-demo.json"
+            manifest_path.parent.mkdir(parents=True, exist_ok=True)
+            manifest_path.write_text(
+                json.dumps(
+                    {
+                        "slug": "kaggle-demo",
+                        "run_id": "kaggle-demo-v1-20260410T000419Z",
+                        "host": "kaggle",
+                        "platform": "kaggle",
+                        "status": "draft",
+                        "manifest_path": str(manifest_path),
+                        "status_path": str(status_path),
+                        "kernel_ref": "adpena/comma-lab-demo",
+                    },
+                    indent=2,
+                )
+            )
+
+            def fake_run(_command: list[str]) -> object:
+                class Result:
+                    returncode = 1
+                    stdout = ""
+                    stderr = "404 Client Error: Not Found for url: https://api.kaggle.com/..."
+
+                return Result()
+
+            payload = mod.sync_kaggle_status(
+                manifest_path,
+                output_path=status_path,
+                command_runner=fake_run,
+            )
+
+        self.assertEqual(payload["status"], "paused")
+        self.assertEqual(payload["phase"], "kernel_not_pushed")
+
 
 if __name__ == "__main__":
     unittest.main()
