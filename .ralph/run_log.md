@@ -1,5 +1,14 @@
 # run log
 
+## 2026-04-10 11:30:00 -0500 - Multi-GPU fleet + KL distill + visualization
+
+- Local MPS: h=64 standard v5, ep 53, scorer 1.4709
+- Colab T4: h=64 standard, first run loading (automated via Playwright)
+- Modal A10G: h=96 standard, ep 607+
+- GCP: billing enabled, GPUS_ALL_REGIONS=0 (quota request opened)
+- New: kl_distill loss, pair_aware arch, video comparison tool, cloud deployer
+- tac v0.8.0: 61 tests, pydantic models, zero hardcoded paths
+
 ## 2026-04-10 01:15:00 -0500 - OFFICIAL SCORE 1.51 (MPS) / 1.52 (CPU) CONFIRMED
 
 ### what happened
@@ -2762,3 +2771,5 @@ The partner's `save_best_checkpoint` function evaluates the EMA weights AFTER in
 - sal_lambda=0 runs AFTER proxy confirms h=64 improvement, not before
 
 ## 2026-04-10 01:27:56 - 🎯 h64_no_sal_recon crossed proxy threshold at scorer 1.4541, ep 0
+
+## 2026-04-10 08:44:12 - 🎯 h64_temp_anneal crossed proxy threshold at scorer 1.4782, ep 0
