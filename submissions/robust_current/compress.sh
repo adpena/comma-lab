@@ -348,6 +348,12 @@ while IFS= read -r rel; do
   fi
 done < "$VIDEO_NAMES_FILE"
 
+# Bundle neural network artifact inside archive (contest rules require it)
+if [ -f "$SELF_DIR/postfilter_int8.pt" ]; then
+  cp "$SELF_DIR/postfilter_int8.pt" "$ARCHIVE_DIR/postfilter_int8.pt"
+  echo "Bundled postfilter_int8.pt ($(stat -f%z "$SELF_DIR/postfilter_int8.pt" 2>/dev/null || stat -c%s "$SELF_DIR/postfilter_int8.pt") bytes) into archive"
+fi
+
 (
   cd "$ARCHIVE_DIR"
   zip -9 -r "$ARCHIVE_ZIP_TMP" .
