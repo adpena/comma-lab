@@ -2555,3 +2555,5 @@ The partner's `save_best_checkpoint` function evaluates the EMA weights AFTER in
 - continue standard h=64 (3.658, converging, saliency fix working)
 - wait for Modal h=96 results
 - the dilated variant is interesting but council says focus on width scaling
+
+## 2026-04-09 20:49:45 - 🎯 standard_h64_long2500 crossed proxy threshold at scorer 3.5371, ep 678
