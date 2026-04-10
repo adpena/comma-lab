@@ -564,6 +564,24 @@ class Trainer:
         print(f"[trainer-lazy] {cfg.epochs} epochs, {train_size}/{n_pairs} pairs/ep, "
               f"h={cfg.hidden}, alpha={cfg.alpha}, device={self.device}")
         print(f"[trainer-lazy] Frames on CPU, pairs built on-the-fly (MPS-safe)")
+        if cfg.loss_mode != "standard":
+            print(f"[trainer-lazy] Loss mode: {cfg.loss_mode}")
+        if cfg.sal_lambda == 0:
+            print(f"[trainer-lazy] Saliency reconstruction DISABLED (sal_lambda=0)")
+
+        # Precompute boundary masks if dual saliency is enabled
+        self._boundary_masks = None
+        if cfg.use_dual_saliency:
+            from .losses import compute_boundary_mask
+            print(f"[trainer-lazy] Computing SegNet boundary masks for dual saliency...")
+            self._boundary_masks = {}
+            for start in pair_starts:
+                gt_pair = pair_from_frames(gt_frames, start)
+                mask = compute_boundary_mask(gt_pair, segnet, device=self.device)
+                self._boundary_masks[start] = mask
+            avg_frac = sum(m.mean().item() for m in self._boundary_masks.values()) / len(self._boundary_masks)
+            print(f"[trainer-lazy] Boundary masks: {len(self._boundary_masks)} pairs, avg {avg_frac:.4f} ({avg_frac*100:.2f}%)")
+
         if self._current_epoch > 0:
             print(f"[trainer-lazy] Resuming from epoch {self._current_epoch}")
 
@@ -614,10 +632,14 @@ class Trainer:
                 filtered_bchw = filtered[:, 1].permute(0, 3, 1, 2)
                 comp_bchw = comp_pair[:, 1].float().permute(0, 3, 1, 2)
 
-                if cfg.use_dual_saliency:
-                    # TODO: pass boundary masks through fit_lazy args
-                    sal_recon = saliency_reconstruction_loss(
-                        filtered_bchw, comp_bchw, sal_w[1:2]
+                if cfg.use_dual_saliency and hasattr(self, '_boundary_masks') and self._boundary_masks is not None:
+                    bm = self._boundary_masks.get(start)
+                    sal_recon = dual_saliency_reconstruction_loss(
+                        filtered_bchw, comp_bchw,
+                        posenet_sal=sal_w[1:2],
+                        segnet_boundary=bm,
+                        alpha_pose=cfg.alpha,
+                        alpha_seg=cfg.alpha_seg,
                     )
                 else:
                     sal_recon = saliency_reconstruction_loss(
