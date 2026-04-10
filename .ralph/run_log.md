@@ -2578,3 +2578,22 @@ The partner's `save_best_checkpoint` function evaluates the EMA weights AFTER in
 - documenting for the paper as "future work"
 - current training at 3.537 is working well with PoseNet-only saliency
 - council says don't explore new techniques with 24 days left
+
+## 2026-04-09 21:45:00 -0500 - NEW BEST: scorer 3.5253 at ep 950 (saliency-fixed run)
+
+### milestone
+- standard h=64 long2500 (saliency-fixed): ep 950, scorer 3.5253
+- BELOW promoted floor of 3.547 by 0.022
+- this run benefits from the H1 saliency fix (frame 1 only)
+- converging faster than ANY previous h=64 run
+- previous promoted run: ep 918, scorer 3.547
+
+### significance
+- if proxy-score confirms improvement, this is a NEW FLOOR
+- the saliency fix (frame 1 only instead of both) measurably improved training
+- 7 code review bugs fixed → better training → better score
+
+### next
+- let training continue (2500 epochs target)
+- proxy-score when training plateaus or reaches ep 1500+
+- Modal h=96 still running — could compound with width scaling
