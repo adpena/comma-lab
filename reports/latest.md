@@ -77,8 +77,8 @@ Track B's promoted honest floor is now **`1.73`** after the `h64` long-horizon Q
   - `configs/run_manifests/` now contains neutral Kaggle/Modal/Coiled manifest templates plus a shared status template
   - scheduler compatibility now tolerates legacy manifests without `run_id` and counts `running_managed_session` as active
 - Kaggle is now on the repaired direct-code-file path:
-  - version 4 of `adpena/comma-lab-dilated-h64-long1000` is running
-  - version 4 of `adpena/comma-lab-segnet-attack-fixed-h32` is running
+  - version 5 of `adpena/comma-lab-dilated-h64-long1000` is running
+  - version 5 of `adpena/comma-lab-segnet-attack-fixed-h32` is running
   - the earlier version-3 failure logs remain captured under `reports/raw/2026-04-09-kaggle-launch-debug/`
   - `pairaware_smoke` is built and ready, but still blocked by Kaggle's free-tier maximum of two batch GPU sessions
 - The Kaggle launch surface itself is now materially hardened:
@@ -86,6 +86,7 @@ Track B's promoted honest floor is now **`1.73`** after the `h64` long-horizon Q
   - `experiments/build_kaggle_kernels.py`
   - `experiments/kaggle_status_sync.py`
   - `train_postfilter_dilated_h64.py` and `cloud_segnet_attack_h32_trainer.py` are now used as the kernel code files directly
+  - the trainers now also fall back to CPU on Kaggle's unsupported P100 CUDA path instead of crashing immediately
   - the launcher path still installs missing Python deps plus `git-lfs` before cloning upstream when needed
 - Future-facing experiment code is now on disk too:
   - `experiments/train_postfilter_dilated_h64.py`
