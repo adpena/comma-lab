@@ -305,6 +305,86 @@ def saliency_reconstruction_loss(
     return (inv_weight * residual.pow(2)).mean()
 
 
+def kl_distill_scorer_loss(
+    filtered_pair_hwc: torch.Tensor,
+    gt_pair_hwc: torch.Tensor,
+    posenet,
+    segnet,
+    temperature: float = 5.0,
+    boundary_mask: torch.Tensor | None = None,
+    boundary_weight: float = 10.0,
+    segnet_weight: float = 100.0,
+) -> tuple[torch.Tensor, float, float]:
+    """Hinton-style KL distillation loss for SegNet + standard PoseNet MSE.
+
+    Instead of matching hard argmax or soft cosine, this matches the full
+    class probability distribution between filtered and GT frames using
+    KL divergence with temperature scaling.
+
+    At high T (5.0): soft distributions reveal inter-class relationships,
+    giving rich gradients for learning WHERE to push pixel values.
+    At low T (1.0): focuses on flipping the actual argmax at boundary pixels.
+
+    Boundary-weighted: pixels near SegNet class boundaries get amplified
+    gradients since those are the only pixels where argmax can flip.
+
+    T² scaling (Hinton 2015): compensates for gradient magnitude reduction
+    at high temperatures so gradient norms are consistent across T values.
+
+    Args:
+        temperature: softmax temperature (anneal from 5.0 → 1.0 over training)
+        boundary_mask: (H, W) float, 1.0 at class boundaries
+        boundary_weight: gradient amplification at boundaries (default 10×)
+        segnet_weight: weight on SegNet term (default 100, matches scorer formula)
+
+    Returns: (loss, pose_distortion, seg_kl_divergence)
+    """
+    fx = _hwc_to_chw(filtered_pair_hwc)
+    gx = _hwc_to_chw(gt_pair_hwc)
+
+    # PoseNet: standard MSE (unchanged)
+    fp_in = posenet.preprocess_input(fx)
+    gp_in = posenet.preprocess_input(gx)
+    fp_out = posenet(fp_in)
+    with torch.no_grad():
+        gp_out = posenet(gp_in)
+    pose_dist = (fp_out["pose"][..., :6] - gp_out["pose"][..., :6]).pow(2).mean()
+
+    # SegNet: KL divergence on temperature-softened distributions
+    fs_in = segnet.preprocess_input(fx)
+    with torch.no_grad():
+        gs_in = segnet.preprocess_input(gx)
+    fs_logits = segnet(fs_in)  # (B, 5, H, W) — gradients flow through
+    with torch.no_grad():
+        gs_logits = segnet(gs_in)  # (B, 5, H, W) — teacher, no gradients
+
+    T = temperature
+    log_p = F.log_softmax(fs_logits / T, dim=1)
+    q = F.softmax(gs_logits / T, dim=1)
+
+    # KL(q || p) per pixel: sum over classes, keep spatial dims
+    kl_per_pixel = F.kl_div(log_p, q, reduction="none").sum(dim=1)  # (B, H, W)
+
+    # Boundary weighting: amplify gradients at class boundaries
+    if boundary_mask is not None:
+        # Resize boundary mask to match SegNet resolution (384, 512)
+        bm = boundary_mask.to(kl_per_pixel.device)
+        if bm.shape != kl_per_pixel.shape[-2:]:
+            bm = F.interpolate(
+                bm.unsqueeze(0).unsqueeze(0).float(),
+                size=kl_per_pixel.shape[-2:],
+                mode="nearest",
+            ).squeeze(0).squeeze(0)
+        weight = 1.0 + boundary_weight * bm
+        kl_per_pixel = kl_per_pixel * weight
+
+    # T² scaling (Hinton 2015): keeps gradient magnitude consistent across temperatures
+    seg_kl = kl_per_pixel.mean() * (T * T)
+
+    loss = segnet_weight * seg_kl + torch.sqrt(10.0 * pose_dist + 1e-8)
+    return loss, pose_dist.item(), seg_kl.item()
+
+
 def compute_boundary_mask(
     gt_pair: torch.Tensor,
     segnet,

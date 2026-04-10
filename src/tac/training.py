@@ -36,6 +36,7 @@ from .losses import (
     dual_saliency_reconstruction_loss,
     eval_scorer_loss,
     focal_segnet_ste_loss,
+    kl_distill_scorer_loss,
     saliency_reconstruction_loss,
     scorer_loss,
     segnet_ste_loss,
@@ -76,7 +77,7 @@ class TrainConfig(BaseModel):
     use_ste_segnet: bool = False
 
     # SegNet headroom unlocking
-    loss_mode: Literal["standard", "temperature", "focal_ste"] = "standard"
+    loss_mode: Literal["standard", "temperature", "focal_ste", "kl_distill"] = "standard"
     temperature_start: float = Field(1.0, gt=0.0)
     temperature_end: float = Field(0.05, gt=0.0)
     focal_gamma: float = Field(2.0, ge=0.0)
@@ -106,6 +107,17 @@ class TrainConfig(BaseModel):
             raise ValueError(f"warmup_epochs ({self.warmup_epochs}) must be < epochs ({self.epochs})")
         if self.temperature_end > self.temperature_start:
             raise ValueError("temperature_end must be <= temperature_start")
+        if self.loss_mode == "kl_distill":
+            if self.temperature_start < 2.0:
+                raise ValueError(
+                    f"kl_distill requires temperature_start >= 2.0 (Hinton: anneal 5.0→1.0). "
+                    f"Got {self.temperature_start}. Use --temperature-start 5.0 --temperature-end 1.0"
+                )
+            if self.temperature_end < 1.0:
+                raise ValueError(
+                    f"kl_distill requires temperature_end >= 1.0 (never go below T=1). "
+                    f"Got {self.temperature_end}. Use --temperature-end 1.0"
+                )
         return self
 
 
@@ -732,6 +744,18 @@ class Trainer:
                     loss, pd, sd = focal_segnet_ste_loss(
                         filtered, gt_pair, posenet, segnet,
                         gamma=cfg.focal_gamma,
+                    )
+                elif cfg.loss_mode == "kl_distill":
+                    # Hinton-style KL distillation: T anneals from 5.0 → 1.0
+                    progress = epoch / max(cfg.epochs - 1, 1)
+                    temp = cfg.temperature_start + progress * (cfg.temperature_end - cfg.temperature_start)
+                    bm = self._boundary_masks.get(start) if self._boundary_masks else None
+                    loss, pd, sd = kl_distill_scorer_loss(
+                        filtered, gt_pair, posenet, segnet,
+                        temperature=temp,
+                        boundary_mask=bm,
+                        boundary_weight=cfg.boundary_weight,
+                        segnet_weight=cfg.segnet_loss_weight,
                     )
                 else:
                     loss, pd, sd = scorer_loss(filtered, gt_pair, posenet, segnet)

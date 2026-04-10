@@ -75,7 +75,7 @@ def main():
     parser.add_argument("--subsample", type=int, default=8)
 
     # Loss mode
-    parser.add_argument("--loss-mode", default="standard", choices=["standard", "temperature", "focal_ste"])
+    parser.add_argument("--loss-mode", default="standard", choices=["standard", "temperature", "focal_ste", "kl_distill"])
     parser.add_argument("--temperature-start", type=float, default=1.0)
     parser.add_argument("--temperature-end", type=float, default=0.05)
     parser.add_argument("--focal-gamma", type=float, default=2.0)
