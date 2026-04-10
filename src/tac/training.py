@@ -22,66 +22,87 @@ from __future__ import annotations
 import atexit
 import json
 import math
-import os
 import signal
-from dataclasses import dataclass, field
+from collections.abc import Callable
 from pathlib import Path
-from typing import Callable
+from typing import Literal
 
 import torch
 import torch.nn as nn
+from pydantic import BaseModel, Field, model_validator
 
-from .data import pair_from_frames, pair_start_indices, saliency_for_pair, load_raw_saliency, SEQ_LEN
+from .data import pair_from_frames, pair_start_indices, saliency_for_pair
 from .losses import (
-    scorer_loss, segnet_ste_loss, saliency_reconstruction_loss,
-    temperature_scorer_loss, focal_segnet_ste_loss,
     dual_saliency_reconstruction_loss,
     eval_scorer_loss,
+    focal_segnet_ste_loss,
+    saliency_reconstruction_loss,
+    scorer_loss,
+    segnet_ste_loss,
+    temperature_scorer_loss,
 )
-from .quantization import save_int8, load_int8, quantize_state_dict
+from .quantization import quantize_state_dict
 
 
-@dataclass
-class TrainConfig:
-    """Training hyperparameters."""
+class TrainConfig(BaseModel):
+    """Validated training hyperparameters.
 
-    hidden: int = 64
-    kernel: int = 3
-    variant: str = "standard"
-    epochs: int = 1000
-    alpha: float = 20.0
-    sal_lambda: float = 1.0
-    lr: float = 5e-4
-    warmup_epochs: int = 10
-    ema_decay: float = 0.997
-    grad_clip: float = 1.0
-    pairs_per_epoch: int | None = None  # None = all pairs
-    scheduler: str = "cosine"  # cosine | cosine_restart
-    restart_t0: int = 200
-    restart_tmult: int = 2
+    Uses pydantic for runtime validation — catches misconfiguration before
+    burning GPU hours on a broken run.
+    """
+
+    model_config = {"frozen": True}  # immutable after creation
+
+    # Architecture
+    hidden: int = Field(64, ge=4, le=512, description="Hidden channel width")
+    kernel: int = Field(3, ge=1, le=7, description="Convolution kernel size (must be odd)")
+    variant: str = Field("standard", description="Architecture variant name")
+
+    # Training schedule
+    epochs: int = Field(1000, ge=1, le=50000)
+    alpha: float = Field(20.0, ge=0.0, description="Scorer loss weight")
+    sal_lambda: float = Field(1.0, ge=0.0, description="Saliency reconstruction weight")
+    lr: float = Field(5e-4, gt=0.0, le=1.0)
+    warmup_epochs: int = Field(10, ge=0)
+    ema_decay: float = Field(0.997, ge=0.9, le=0.9999)
+    grad_clip: float = Field(1.0, gt=0.0)
+    pairs_per_epoch: int | None = Field(None, ge=1)
+    scheduler: Literal["cosine", "cosine_restart"] = "cosine"
+    restart_t0: int = Field(200, ge=1)
+    restart_tmult: int = Field(2, ge=1)
 
     # SegNet boundary attack
-    boundary_weight: float = 1.0  # >1.0 enables boundary weighting
+    boundary_weight: float = Field(1.0, ge=0.0)
     use_ste_segnet: bool = False
 
-    # SegNet headroom unlocking (council recommendations)
-    loss_mode: str = "standard"  # standard | temperature | focal_ste
-    temperature_start: float = 1.0  # for temperature mode
-    temperature_end: float = 0.05  # annealed over training
-    focal_gamma: float = 2.0  # for focal_ste mode
-    segnet_loss_weight: float = 100.0  # default matches scorer; try 200-300
-    use_dual_saliency: bool = False  # combine PoseNet + SegNet boundary saliency
-    alpha_seg: float = 200.0  # SegNet boundary weight in dual saliency
+    # SegNet headroom unlocking
+    loss_mode: Literal["standard", "temperature", "focal_ste"] = "standard"
+    temperature_start: float = Field(1.0, gt=0.0)
+    temperature_end: float = Field(0.05, gt=0.0)
+    focal_gamma: float = Field(2.0, ge=0.0)
+    segnet_loss_weight: float = Field(100.0, ge=0.0)
+    use_dual_saliency: bool = False
+    alpha_seg: float = Field(200.0, ge=0.0)
 
     # Training dynamics
-    accum_steps: int = 4  # gradient accumulation steps (effective batch size)
+    accum_steps: int = Field(4, ge=1, le=64)
 
     # Resumption
-    resume_from: str | None = None  # path to a training_state.pt checkpoint
+    resume_from: str | None = None
 
     # Output
     output_dir: str = "experiments/postfilter_weights"
-    tag: str = "untitled"
+    tag: str = Field("untitled", min_length=1, max_length=128, pattern=r"^[a-zA-Z0-9_\-]+$")
+
+    @model_validator(mode="after")
+    def _validate_config(self) -> TrainConfig:
+        if self.kernel % 2 == 0:
+            raise ValueError(f"kernel must be odd, got {self.kernel}")
+        if self.warmup_epochs >= self.epochs:
+            raise ValueError(f"warmup_epochs ({self.warmup_epochs}) must be < epochs ({self.epochs})")
+        if self.temperature_end > self.temperature_start:
+            raise ValueError("temperature_end must be <= temperature_start")
+        return self
 
 
 class EMA:
@@ -233,7 +254,7 @@ class Trainer:
             try:
                 print(f"\n[trainer] EMERGENCY SAVE ({reason}) at epoch {self._current_epoch}")
                 self.save_training_state()
-                print(f"[trainer] Emergency save complete.")
+                print("[trainer] Emergency save complete.")
             except Exception as e:
                 print(f"[trainer] Emergency save FAILED: {e}")
 
@@ -298,8 +319,9 @@ class Trainer:
 
         This is REQUIRED for training — without it, PoseNet gradients are zero.
         """
-        import einops
         import types
+
+        import einops
 
         # Patch AllNorm to not break gradients
         for module in list(posenet.modules()) + list(segnet.modules()):
@@ -596,17 +618,17 @@ class Trainer:
 
         print(f"[trainer-lazy] {cfg.epochs} epochs, {train_size}/{n_pairs} pairs/ep, "
               f"h={cfg.hidden}, alpha={cfg.alpha}, device={self.device}")
-        print(f"[trainer-lazy] Frames on CPU, pairs built on-the-fly (MPS-safe)")
+        print("[trainer-lazy] Frames on CPU, pairs built on-the-fly (MPS-safe)")
         if cfg.loss_mode != "standard":
             print(f"[trainer-lazy] Loss mode: {cfg.loss_mode}")
         if cfg.sal_lambda == 0:
-            print(f"[trainer-lazy] Saliency reconstruction DISABLED (sal_lambda=0)")
+            print("[trainer-lazy] Saliency reconstruction DISABLED (sal_lambda=0)")
 
         # Precompute boundary masks if dual saliency is enabled
         self._boundary_masks = None
         if cfg.use_dual_saliency:
             from .losses import compute_boundary_mask
-            print(f"[trainer-lazy] Computing SegNet boundary masks for dual saliency...")
+            print("[trainer-lazy] Computing SegNet boundary masks for dual saliency...")
             self._boundary_masks = {}
             for start in pair_starts:
                 gt_pair = pair_from_frames(gt_frames, start)

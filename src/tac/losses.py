@@ -97,7 +97,6 @@ def eval_scorer_loss(
 
     avg_p = pose_per_sample.mean().item()
     avg_s = seg_per_sample.mean().item()
-    import math
     score = 100.0 * avg_s + math.sqrt(10.0 * avg_p)
     return score, avg_p, avg_s
 

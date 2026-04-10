@@ -7,7 +7,6 @@ Provides:
 """
 from __future__ import annotations
 
-import glob
 import json
 import math
 import os
@@ -15,8 +14,7 @@ from pathlib import Path
 
 import torch
 
-from .quantization import save_int8_from_state_dict, load_int8
-from .scorer import comma_score
+from .quantization import save_int8_from_state_dict
 
 
 def proxy_score(
@@ -37,7 +35,6 @@ def proxy_score(
 
     Returns dict with: score, pose, seg, rate, n_pairs
     """
-    import torch.nn.functional as F
     from .data import build_pairs
 
     model = model.eval().to(device)
@@ -46,7 +43,7 @@ def proxy_score(
 
     total_p, total_s, n_samples = 0.0, 0.0, 0
     with torch.no_grad():
-        for cp, gp in zip(comp_pairs, gt_pairs):
+        for cp, gp in zip(comp_pairs, gt_pairs, strict=True):
             cp = cp.to(device)
             gp = gp.to(device)
 

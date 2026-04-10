@@ -15,7 +15,6 @@ from typing import Any
 import torch
 import torch.nn as nn
 
-
 # ── Fake Quantization (for training) ─────────────────────────────────────
 
 
@@ -73,7 +72,7 @@ class LSQScale(nn.Module):
         self.grad_scale = 1.0 / (numel * 127) ** 0.5
 
     @classmethod
-    def from_tensor(cls, t: torch.Tensor) -> "LSQScale":
+    def from_tensor(cls, t: torch.Tensor) -> LSQScale:
         init = t.detach().abs().max().item() / 127.0
         return cls(max(init, 1e-8), t.numel())
 
@@ -209,7 +208,7 @@ def save_int8(
         else:
             # Per-tensor: one global scale
             scale = p.abs().max() / 127.0
-            if scale.item() == 0.0:
+            if scale.item() < 1e-10:
                 scale = torch.tensor(1.0)
             quantized = (p / scale).round().clamp(-128, 127).to(torch.int8)
             state[name + ".q"] = quantized
@@ -236,7 +235,7 @@ def load_int8(
     float_state: dict[str, torch.Tensor] = {}
     seen: set[str] = set()
 
-    for raw_key in state.keys():
+    for raw_key in state:
         if raw_key == "__meta__":
             continue
         if raw_key.endswith(".q") or raw_key.endswith(".s"):

@@ -4,14 +4,61 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "comma-video-lab-ball-pack"
-version = "0.2.0"
+version = "0.7.0"
 description = "One-command dual-track starter pack for the comma video compression challenge"
 readme = "README.md"
 requires-python = ">=3.11"
-dependencies = []
+dependencies = [
+    "torch>=2.0",
+    "pydantic>=2.0",
+]
+
+[project.optional-dependencies]
+dev = [
+    "pytest>=8.0",
+    "pytest-timeout>=2.0",
+    "hypothesis>=6.0",
+    "ruff>=0.4",
+]
 
 [project.scripts]
 comma-lab = "comma_lab.cli:main"
 
 [tool.setuptools.packages.find]
 where = ["src"]
+
+[tool.ruff]
+target-version = "py311"
+line-length = 120
+
+[tool.ruff.lint]
+select = [
+    "E",    # pycodestyle errors
+    "W",    # pycodestyle warnings
+    "F",    # pyflakes
+    "I",    # isort
+    "B",    # flake8-bugbear
+    "C4",   # flake8-comprehensions
+    "UP",   # pyupgrade
+    "SIM",  # flake8-simplify
+    "TCH",  # type-checking imports
+    "RUF",  # ruff-specific
+]
+ignore = [
+    "E501",    # line length handled by formatter
+    "RUF002",  # unicode in docstrings is intentional (×, →)
+    "RUF059",  # unused unpacking is fine for shape destructuring
+    "SIM105",  # try/except/pass is clearer than contextlib.suppress for signals
+    "TC003",   # type-checking import optimization not worth the complexity
+]
+
+[tool.ruff.lint.isort]
+known-first-party = ["tac", "comma_lab"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+timeout = 60
+markers = [
+    "slow: marks tests that load scorer models (deselect with '-m \"not slow\"')",
+    "compliance: marks tests that verify upstream scorer compliance",
+]

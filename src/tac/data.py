@@ -14,7 +14,6 @@ import numpy as np
 import torch
 import torch.nn.functional as F
 
-
 # PoseNet uses seq_len=2 frame pairs
 SEQ_LEN = 2
 
@@ -60,7 +59,7 @@ def decode_video(
     for frame in container.decode(stream):
         t = yuv420_to_rgb(frame)
         H, W, _ = t.shape
-        if H != target_h or W != target_w:
+        if target_h != H or target_w != W:
             x = t.permute(2, 0, 1).unsqueeze(0).float()
             x = F.interpolate(x, size=(target_h, target_w), mode="bicubic", align_corners=False)
             t = x.clamp(0, 255).squeeze(0).permute(1, 2, 0).round().to(torch.uint8)
@@ -74,7 +73,7 @@ def decode_archive(archive_path: str | Path) -> list[torch.Tensor]:
     with tempfile.TemporaryDirectory() as tmpdir:
         with zipfile.ZipFile(str(archive_path)) as zf:
             zf.extractall(tmpdir)
-        mkv = list(Path(tmpdir).glob("*.mkv"))[0]
+        mkv = next(iter(Path(tmpdir).glob("*.mkv")))
         return decode_video(str(mkv))
 
 

@@ -26,7 +26,6 @@ from pathlib import Path
 from typing import Protocol
 
 import torch
-import torch.nn as nn
 
 
 class Scorer(Protocol):
