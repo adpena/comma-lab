@@ -801,6 +801,8 @@ class Trainer:
 
                 # Free pair memory immediately
                 del comp_pair, gt_pair, filtered, filtered_bchw, comp_bchw, sal_w
+                if torch.cuda.is_available():
+                    torch.cuda.empty_cache()
 
             if epoch >= cfg.warmup_epochs:
                 self.scheduler.step()
@@ -871,6 +873,8 @@ class Trainer:
                 total_s += sd
                 count += 1
                 del comp_pair, gt_pair, filtered
+                if torch.cuda.is_available():
+                    torch.cuda.empty_cache()
 
         scorer = 100.0 * (total_s / count) + math.sqrt(10.0 * (total_p / count))
 
