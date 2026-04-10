@@ -1,6 +1,6 @@
 # next experiments
 
-## 2026-04-09 queue after Kaggle v5/v6 slot churn
+## 2026-04-09 queue after standard_h64_long2500 proxy launch
 
 The promoted honest floor is still `1.73` from `long1000_h64`. Two deploy-ready alternates have now been resolved honestly and rejected:
 
@@ -16,6 +16,14 @@ The first real saved SegNet-family artifact has now resolved honestly:
 
 That means the next cycle should stop pretending those families are active promotion candidates in their current form.
 
+The new top empirical question is now:
+
+- `standard_h64_long2500`
+- saved best epoch `1090`
+- local scorer `3.501068318684896`
+- int8 size `45,749`
+- faithful proxy **running** locally
+
 ## cycle budget
 
 1. Prefer at most **3** serious lanes in flight.
@@ -24,7 +32,18 @@ That means the next cycle should stop pretending those families are active promo
 
 ## current priority order
 
-1. **PF-DILATED-H64 DEPLOY-CORRECT RELAUNCH**
+1. **PF-STANDARD-H64-LONG2500**
+   - Why first:
+     - saved local scorer `3.501068318684896` is better than the promoted h64 local best
+     - proportional transfer suggests about `1.704`
+   - Status:
+     - faithful proxy running locally
+     - manifest: `.omx/logs/remote_jobs/local-standard-h64-long2500-proxy.json`
+   - Action:
+     - wait for the measured proxy result
+     - if it transfers, it immediately outranks all speculative side lanes
+
+2. **PF-DILATED-H64 DEPLOY-CORRECT RELAUNCH**
    - Why first:
      - strongest raw local packaged lane now sits at `3.5753838920593264`
      - gap to promoted h64 local best is only `0.0281`
@@ -42,7 +61,7 @@ That means the next cycle should stop pretending those families are active promo
      - keep deploy-correct metadata as a non-negotiable requirement
      - `experiments/kaggle_queue_tick.py` now selects this lane automatically once the slot is really free
 
-2. **PF-SEGNET CHECKPOINTING RELAUNCH**
+3. **PF-SEGNET CHECKPOINTING RELAUNCH**
    - Why second:
      - SegNet remains the highest-leverage theoretical headroom
      - `segnet_attack_fixed_ste_h32` just proved the family can transfer honestly to `1.84`
@@ -55,7 +74,7 @@ That means the next cycle should stop pretending those families are active promo
      - monitor for first checkpoint/artifact signal
      - keep the hardened metadata path from `train_postfilter_segnet_attack.py`
 
-3. **PF-PAIRAWARE**
+4. **PF-PAIRAWARE**
    - Why third:
      - still the most plausible architecture delta that directly addresses PoseNet pair scoring
    - Status:

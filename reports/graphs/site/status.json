@@ -1,11 +1,12 @@
 {
   "score": 1.727,
+  "estimated_new": 1.705,
   "rank": 1,
   "lead": 0.163,
   "days_left": 24.4,
-  "best_training_scorer": 1.2734,
-  "best_training_epoch": 470,
-  "gap_to_proxy": -2.277,
-  "trainers_alive": 2,
-  "updated": "2026-04-09 22:13 CT"
+  "best_training_scorer": 3.4557,
+  "best_training_epoch": 1098,
+  "saliency_fix": "frame 1 only \u2014 scorer improved from 3.547 to 3.501",
+  "overnight": "h=64 training + Modal h=96, experiment runner monitoring",
+  "updated": "2026-04-09 22:27 CT"
 }

@@ -1,59 +1,28 @@
-# Current Focus — 2026-04-09 20:34 CDT
+# Current Focus — 2026-04-09 22:25 CDT
 
 ## Floor
-- **Promoted honest floor**: `1.73` from `robust_current-long1000-h64-promoted-cpu-2026-04-09`
-- **Public target to beat**: last verified public first was `1.89`, but re-check before citing again
+- **Promoted**: 1.727 (h=64 standard, ep 918, scorer 3.547)
+- **Saliency-fixed run**: ep 1090, scorer 3.5011 — BELOW promoted floor
+- **Estimated new score**: ~1.70 (needs proxy confirmation)
+- **Leaderboard #1**: 1.89 (neural_inflate). Our lead: 0.163+
 
-## Resolved proxy lanes
-- `pixelshuffle_h64_long1000`
-  - faithful proxy: `1.99`
-  - decision: reject for promotion
-- `psd_h64_long1000`
-  - faithful proxy: `1.85`
-  - PoseNet `0.05271273`
-  - SegNet `0.00551752`
-  - bytes `864,167`
-  - decision: real transfer, still reject for promotion
-- `segnet_attack_fixed_ste_h32`
-  - faithful proxy: `1.84`
-  - PoseNet `0.05168364`
-  - SegNet `0.00543626`
-  - bytes `864,167`
-  - decision: strongest resolved SegNet-family alternate so far, still reject for promotion
+## What changed this session
+- Fixed saliency bug (H1): reconstruction loss now frame 1 only (SegNet's frame)
+- Fixed 10 total bugs across 8 review rounds (3 CRITICAL, 7 HIGH)
+- tac library v0.6.0 shipped (7 modules, 12 architectures, 7 SegNet interventions)
+- Council identified saliency recon as SegNet suppressor (98.4% headroom blocked)
+- Writeup draft completed, paper outline done, portfolio plan done
 
-## Best unresolved local lane
-- `dilated_h64_long1000`
-  - best local scorer: `3.5753838920593264`
-  - proxy-gap delta vs promoted h64 best: `0.0281`
-  - blocker: not deploy-ready because saved meta still advertises `variant: "saliency_weighted"`
+## Training overnight
+- h=64 standard saliency-fixed: ep 1090+, grinding to 2500
+- Modal h=96: ~3.5h on A10G, results save at completion
+- Experiment runner monitoring with auto-restart
+- Fleet Monitor sending persistent notifications
 
-## Infra focus
-- `configs/platforms.json` now exists and makes `local`, `bat00`, `kaggle`, `modal`, and `coiled` first-class scheduler platforms
-- scheduler compatibility is hardened:
-  - legacy manifests/status files may omit `run_id`; loader now falls back to `slug`
-  - `launching` and `running_managed_session` now count as active states
-- SegNet trainer hardening landed:
-  - `experiments/train_postfilter_segnet_attack.py` now writes a durable `postfilter_<tag>_final_meta.json`
-  - if a best checkpoint payload exists, it also backstops the adjacent `postfilter_<tag>_best_meta.json`
-- Kaggle integration is now on the repaired direct-code-file path:
-  - `adpena/comma-lab-segnet-attack-fixed-h32` is currently the only live Kaggle kernel
-  - `adpena/comma-lab-dilated-h64-long1000` is now `CANCEL_ACKNOWLEDGED` and queued for repush once Kaggle frees a slot
-  - root fix: stop relying on helper-module imports and make the kernel code file the self-contained trainer itself
-  - the trainers now also fall back to CPU on Kaggle's unsupported P100 CUDA path instead of crashing immediately
-  - the baseline archive is now available as a private Kaggle dataset: `adpena/comma-lab-private-assets`
-  - `experiments/kaggle_queue_tick.py` now picks the correct next repush candidate automatically; the current repush still fails only because Kaggle says the 2-session GPU cap is full
-  - `adpena/comma-lab-pairaware-smoke` is still ready but blocked by Kaggle's maximum batch GPU session count of `2`
-- Modal fallback is now live:
-  - `modal-dilated-h64-long1000` is running as app `ap-oe1x7fZOSx1lQ2R4WTt51O`
-  - this relaunch got past the previous missing-archive failure after bundling `decode_base_archive.zip` into the image
-- operator templates now exist under `configs/run_manifests/`
-- private ops surfaces stay in-repo:
-  - `reports/graphs/report_history.html`
-  - `comma-lab sched status`
-  - `comma-lab sched results`
-  - `comma-lab sched budget`
-
-## Next real moves
-1. Monitor the live Kaggle SegNet kernel and capture first checkpoint/artifact signals back into `.omx/status`.
-2. Monitor the live Modal dilated fallback for first checkpoint/artifact signals.
-3. Repush the dataset-backed Kaggle dilated kernel as soon as Kaggle frees a slot; push `pairaware_smoke` only after that slot logic is clear.
+## Tomorrow morning priorities
+1. Check h=64 best checkpoint scorer
+2. Proxy-score it (on local Mac or tertiary)
+3. If proxy confirms → new promoted floor
+4. Check Modal h=96 results (download from volume)
+5. Launch sal_lambda=0 as bounded side lane
+6. Start writeup polishing

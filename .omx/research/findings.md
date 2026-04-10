@@ -552,3 +552,30 @@ This remains speculative until those steps are complete and measured.
 
 - `exp_h_sharpness1_consensus` full scorer result: **2.13** at `909307` bytes
 - verdict: reject
+
+## 2026-04-09 session findings
+
+### Saliency fix impact (CAUSAL)
+- The H1 saliency fix (frame 1 only) is the ONLY change between promoted and current run
+- Promoted: ep 918, scorer 3.547 → 1.727 official
+- Saliency-fixed: ep 1090, scorer 3.5011 → estimated ~1.70
+- The fix doubled effective SegNet protection gradient by removing wasted frame 0
+
+### SegNet headroom discovery
+- PoseNet-only saliency ACTIVELY SUPPRESSES SegNet improvement
+- SegNet boundary pixels likely have low PoseNet saliency → blocked from correction
+- 98.4% theoretical headroom, only 5.6% realized across ALL experiments
+- Council unanimous: saliency recon is THE bottleneck
+- 7 ranked interventions implemented in tac v0.6.0
+
+### Competition intelligence
+- amoghmunikote holds #1 (1.89) and #3 (1.95) — our main competitor
+- neural_inflate PR#49 closed (iterating), no new submissions since Apr 9
+- Our 1.727 would be #1, estimated ~1.70 with saliency fix
+
+### Key numbers
+- Width scaling law: score = -0.159*ln(h) + 2.382
+- SegNet leverage: 11.5x PoseNet (100 vs 8.68 marginal sensitivity)
+- 30% SegNet reduction: -0.176 score (more than width scaling to h=96)
+- Boundary band: 2.39% of pixels
+- Total experiments: 30+, promoted: 1 (soon 2?)
