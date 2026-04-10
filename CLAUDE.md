@@ -125,6 +125,10 @@ A candidate may be promoted only after:
 - **Always use the tac library** for new training experiments. The canonical entry point is `experiments/train_tac.py`.
   - Do NOT duplicate training code in new experiment scripts.
   - All loss functions, architectures, data loading, and training loops live in `src/tac/`.
+  - **Use named profiles** for new training runs: `--profile council_v1` loads all council-recommended settings.
+  - Available profiles: `council_v1` (recommended default), `segnet_attack` (aggressive), `proven_baseline` (1.33 settings), `h96_council`, `smoke` (quick test).
+  - Profiles live in `src/tac/profiles.py`. CLI args override profile values.
+  - **Use precomputed data** when available: `--precomputed experiments/precomputed_local` (skips 5-min video decode).
 - **Always commit after every change.** Git history is the research timeline.
 
 ## Ralph-style execution model

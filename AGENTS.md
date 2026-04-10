@@ -1,109 +1,59 @@
-# AGENTS
+# Agent Onboarding — comma video compression challenge
 
-You are operating inside a dual-track lab for the comma video compression challenge.
+## Current state (updated 2026-04-10)
 
-Read `PROGRAM.md` before making changes.
+- **Score: 1.33** (#1 by 0.55 margin, deadline May 3)
+- Best training proxy: **~1.30** and dropping (KL distill + hard-frame on Modal A10G)
+- Promoted checkpoint: `submissions/robust_current/postfilter_int8.pt` (dilated h=64)
 
-## Primary duties
+## The approach
 
-1. Keep `submissions/exact_current` runnable under the current published workflow.
-2. Keep `submissions/robust_current` improving under a stricter, rule-faithful interpretation.
-3. Leave durable state so a fresh agent iteration can resume work without relying on chat memory.
+A 45KB int8 CNN post-filter corrects AV1-decoded frames by backpropagating through frozen PoseNet + SegNet scorers. Score = 100*seg + sqrt(10*pose) + 25*rate.
 
-## Mutation frontier
+## Key files
 
-You may edit only:
+- `src/tac/` — the training library (v0.9.0, 70 tests)
+- `src/tac/profiles.py` — named training profiles
+- `experiments/train_tac.py` — canonical training entry point
+- `submissions/robust_current/` — the submission
+- `docs/writeup_draft.md` — competition writeup
+- `.omx/state/` — current focus, next experiments
+- `.omx/research/findings.md` — all research findings
 
-- `configs/**`
-- `docs/**`
-- `prompts/**`
-- `src/comma_lab/**`
-- `submissions/robust_current/**`
-- `runtime-rs/**`
-- `cuda/**`
-- `jax/**`
-- `mojo/**`
-- `.omx/**`
-- `.ralph/**`
-- `.agents/**`
-- `reports/**`
-- `experiments/**`
+## How to train
 
-You must not edit without explicit human approval:
+```bash
+# Use council_v1 profile (recommended default for all new runs)
+.venv/bin/python experiments/train_tac.py \
+    --profile council_v1 \
+    --tag my_experiment \
+    --precomputed experiments/precomputed_local
 
-- the pinned upstream snapshot
-- `submissions/exact_current/inflate.py`
-- `submissions/exact_current/inflate.sh`
-- `start.sh`
-- `LICENSE`
-- `THIRD_PARTY_NOTICES.md`
+# Available profiles: council_v1, segnet_attack, proven_baseline, h96_council, smoke
+# Profiles live in src/tac/profiles.py. CLI args override profile values.
+```
 
-## Non-Negotiable Upstream Rule
+## Council-recommended settings (council_v1 profile)
 
-- The pinned upstream snapshot is the source of truth for official scorer behavior and contest mechanics.
-- Never edit, patch, monkeypatch, hotfix, or "temporarily" modify anything inside the pinned upstream snapshot unless the human explicitly approves that exact action.
-- Never hack around upstream behavior by altering upstream files to make local experiments or scores look better.
-- If upstream behavior appears wrong, inconvenient, or blocking, work around it only from the allowed mutation frontier and record the issue in repo state instead of changing upstream.
-- If any experiment, proxy, or tooling change depends on upstream edits, stop treating it as compliant until the human has explicitly authorized that upstream modification.
+- **Architecture**: dilated h=64, kernel=3
+- **Loss**: KL distillation T=5->0.5 with PoseNet gradient cap
+- **Boundary weight**: 150 (5% boundary pixels need ~20x amplification)
+- **Boundary anneal**: True (couples boundary_weight to temperature)
+- **Hard-frame curriculum**: ratio=0.3 (power-law emphasis on worst SegNet pairs)
+- **Error replay**: every 200 epochs (recomputes using current model output)
+- **Quantization**: per-channel symmetric int8
+- **Eval**: every 5 epochs (ramps to 1 in final 10%)
 
-## Strategic Secrecy Rule
+## What NOT to do
 
-- Protect competitive details for as long as that is strategically useful.
-- Do not assume the right time to disclose is "now". Delay irreversible public disclosure until the human explicitly decides it is time to submit or publish.
-- Treat the official public PR to the challenge repo as a disclosure moment. Until then, prefer private/local execution, private artifacts, and controlled summaries.
-- Do not volunteer exact secret-sauce implementation details, hidden operational levers, or step-by-step reproduction recipes on public-facing surfaces unless the human explicitly wants that level of disclosure.
-- Do not publish or surface unpublished private artifacts, credentials, private host details, or anything the human has not approved for disclosure.
-- If there is a tradeoff between public writeup richness and preserving competitive edge, bias toward preserving edge unless the human says otherwise.
-- **Explicit current exception:** the Cloudflare site may remain specific and detailed for now because the human explicitly approved that. Even there, still avoid exposing credentials, private infrastructure details, or anything the human has not approved for disclosure.
-- **Explicit current restriction:** do not proactively publicize or advertise the Cloudflare site URL. Keep that link confined to private repo documentation and the eventual official submission until the human explicitly says the link itself can be shared broadly.
+- Do NOT use alpha_seg=5000 (formula-derived optimal is ~200)
+- Do NOT use standard loss for new experiments (KL distill is better)
+- Do NOT run standard (non-dilated) architecture (superseded)
+- Do NOT modify upstream scorer files
 
-## Operating rules
+## Infrastructure
 
-- Prefer at most 3 experiments per cycle.
-- Prefer small, reversible changes.
-- Never claim a win without a measured score.
-- Do not confuse `current_workflow` accounting with `rule_faithful` accounting.
-- Keep both tracks healthy even if one looks dominant.
-- Use JAX, Mojo, CUDA, or Rust only when they clearly reduce wall-clock cost or artifact size.
-- Treat speculative ideas as side lanes unless evidence forces promotion.
-- Keep public-facing detail intentional: specific enough to be credible, not automatically exhaustive.
-
-## Required durable state
-
-After each serious cycle, update at least:
-
-- `.omx/state/current_focus.md`
-- `.omx/state/next_experiments.md`
-- `.omx/research/findings.md`
-- `.ralph/run_log.md`
-- `reports/latest.md`
-
-## Promotion rules
-
-A candidate may be promoted only after:
-
-1. packaging succeeds
-2. inflation succeeds
-3. shape/frame-count checks pass
-4. proxy evaluation looks promising
-5. full evaluation confirms the gain or records the failure
-
-## Track-specific guidance
-
-### Track A: `exact_current`
-
-- Preserve transparency.
-- Use it as a live test of the currently published workflow.
-- If upstream changes invalidate the exploit assumptions, demote it immediately to a research note and keep the repo useful.
-
-### Track B: `robust_current`
-
-- Start with safer codec improvements and task-aware pre/post processing.
-- Add sparse residuals before adding heavier learned components.
-- Only promote a neural side-model if its bytes and runtime clearly justify themselves.
-
-## Ralph-style execution model
-
-Treat files and git as memory.
-Each iteration should be resumable from disk.
-Do not rely on long chat context for continuity.
+- Local: M5 Max 128GB — run 3+ experiments in parallel with precomputed data
+- Lightning AI: SSH working, T4 CUDA, precomputed uploaded
+- Modal: A10G serverless, precomputed on volume
+- Precomputed: `experiments/precomputed_local/` (7GB, instant loading)
