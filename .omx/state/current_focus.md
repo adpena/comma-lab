@@ -1,4 +1,4 @@
-# Current Focus — 2026-04-09 17:57 CDT
+# Current Focus — 2026-04-09 19:05 CDT
 
 ## Floor
 - **Promoted honest floor**: `1.73` from `robust_current-long1000-h64-promoted-cpu-2026-04-09`
@@ -35,6 +35,10 @@
 - SegNet trainer hardening landed:
   - `experiments/train_postfilter_segnet_attack.py` now writes a durable `postfilter_<tag>_final_meta.json`
   - if a best checkpoint payload exists, it also backstops the adjacent `postfilter_<tag>_best_meta.json`
+- Kaggle is now doing real work:
+  - `adpena/comma-lab-dilated-h64-long1000` is running
+  - `adpena/comma-lab-segnet-attack-fixed-h32` is running
+  - `adpena/comma-lab-pairaware-smoke` is ready but blocked by Kaggle's maximum batch GPU session count of `2`
 - operator templates now exist under `configs/run_manifests/`
 - private ops surfaces stay in-repo:
   - `reports/graphs/report_history.html`
@@ -43,6 +47,6 @@
   - `comma-lab sched budget`
 
 ## Next real moves
-1. Relaunch `dilated_h64_long1000` with deploy-correct metadata on Kaggle or Modal.
-2. Turn the new `segnet_attack_fixed_ste_h32` result into a proper repeatable lane with real `best_meta` writing, then relaunch the family cleanly on GPU.
-3. Use Kaggle/Modal for GPU training lanes and Coiled for CPU-side audits only.
+1. Monitor the two live Kaggle GPU kernels and capture the first real checkpoints back into `.omx/status/`.
+2. Push `pairaware_smoke` as soon as one Kaggle GPU slot frees up, or move it to Modal if Kaggle stays saturated.
+3. Use Coiled only for CPU-side audits/reporting while Kaggle handles the active GPU queue.

@@ -1,6 +1,6 @@
 # next experiments
 
-## 2026-04-09 queue after SegNet fixed faithful proxy resolution
+## 2026-04-09 queue after Kaggle launch saturation
 
 The promoted honest floor is still `1.73` from `long1000_h64`. Two deploy-ready alternates have now been resolved honestly and rejected:
 
@@ -31,34 +31,45 @@ That means the next cycle should stop pretending those families are active promo
    - Current blocker:
      - saved meta still says `variant: "saliency_weighted"`
      - current artifact is observation-only until relaunched through the repo-side deploy-correct wrapper
+   - Status:
+     - Kaggle kernel `adpena/comma-lab-dilated-h64-long1000` is now running
+     - manifest: `.omx/logs/remote_jobs/kaggle-dilated-h64-long1000.json`
    - Action:
-     - relaunch via `experiments/train_postfilter_dilated_h64.py`
-     - prefer Kaggle or Modal GPU
-     - record manifest under `.omx/logs/remote_jobs/` and status under `.omx/status/`
+     - poll Kaggle status until the first artifact lands
+     - mirror progress into `.omx/status/kaggle-dilated-h64-long1000.json`
 
 2. **PF-SEGNET CHECKPOINTING RELAUNCH**
    - Why second:
      - SegNet remains the highest-leverage theoretical headroom
      - `segnet_attack_fixed_ste_h32` just proved the family can transfer honestly to `1.84`
      - the metadata gap is now fixed for future reruns, so the next launch can be both rankable and automatable
+   - Status:
+     - Kaggle kernel `adpena/comma-lab-segnet-attack-fixed-h32` is now running
+     - manifest: `.omx/logs/remote_jobs/kaggle-segnet-attack-fixed-h32.json`
    - Action:
-     - launch a fresh checkpoint-saving rerun from the synced repo-side trainer
-     - reject any run that only prints pretty logs without writing durable artifact metadata
+     - poll Kaggle status until the first artifact lands
+     - confirm the hardened metadata path is actually exercised in the remote run
 
 3. **PF-PAIRAWARE**
    - Why third:
      - still the most plausible architecture delta that directly addresses PoseNet pair scoring
+   - Status:
+     - Kaggle smoke kernel bundle is ready at `experiments/kaggle_kernels/pairaware_smoke`
+     - push attempt was blocked by Kaggle's maximum batch GPU session count of `2`
    - Action:
-     - launch `experiments/train_postfilter_pairaware.py` on Kaggle or Modal
-     - do not proxy unless the local best closes materially toward the promoted h64 line
+     - launch on Kaggle when a slot frees up
+     - or move the same bundle to Modal if Kaggle remains saturated
 
 ## platform guidance
 
 - **Kaggle**
   - primary free-tier GPU lane for long training jobs
-  - use for: deploy-correct dilated, pair-aware, fresh SegNet reruns
+  - currently saturated with:
+    - deploy-correct dilated
+    - fresh SegNet fixed rerun
 - **Modal**
   - secondary GPU lane when Kaggle is blocked or you need a cleaner Python/runtime story
+  - immediate fallback for pair-aware if the Kaggle quota does not clear
 - **Coiled**
   - CPU-side fan-out only
   - use for: fleet snapshots, proxy-gate triage, quantization audits, report rebuilds

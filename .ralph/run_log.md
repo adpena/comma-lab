@@ -1,5 +1,45 @@
 # run log
 
+## 2026-04-09 19:05:00 -0500 - Kaggle became a real active GPU lane
+
+### launch surface
+- Added:
+  - `experiments/kaggle_kernel_builder.py`
+  - `experiments/build_kaggle_kernels.py`
+  - `experiments/test_kaggle_kernel_builder.py`
+- Built bundles:
+  - `experiments/kaggle_kernels/dilated_h64_long1000`
+  - `experiments/kaggle_kernels/segnet_attack_fixed_h32`
+  - `experiments/kaggle_kernels/pairaware_smoke`
+
+### first push / fix / repush loop
+- Kaggle CLI auth worked locally
+- initial version 1 pushes succeeded for dilated + SegNet, but the generic runner was under-bootstrapped
+- root cause:
+  - the runner assumed Kaggle already had the needed Python packages and `git-lfs`
+- fix:
+  - `experiments/kaggle_kernel_builder.py` now emits launchers that install missing Python deps and `git-lfs`, then clone upstream and `git lfs pull`
+- repush:
+  - `adpena/comma-lab-dilated-h64-long1000` version 2 pushed and now reports `KernelWorkerStatus.RUNNING`
+  - `adpena/comma-lab-segnet-attack-fixed-h32` version 2 pushed and now reports `KernelWorkerStatus.RUNNING`
+
+### quota finding
+- `adpena/comma-lab-pairaware-smoke` push attempt failed with:
+  - `Maximum batch GPU session count of 2 reached.`
+- decision:
+  - record pairaware as ready-but-paused on Kaggle
+  - wait for a Kaggle slot or move it to Modal
+
+### durable state
+- Added Kaggle manifests:
+  - `.omx/logs/remote_jobs/kaggle-dilated-h64-long1000.json`
+  - `.omx/logs/remote_jobs/kaggle-segnet-attack-fixed-h32.json`
+  - `.omx/logs/remote_jobs/kaggle-pairaware-smoke.json`
+- Added matching statuses:
+  - `.omx/status/kaggle-dilated-h64-long1000.json`
+  - `.omx/status/kaggle-segnet-attack-fixed-h32.json`
+  - `.omx/status/kaggle-pairaware-smoke.json`
+
 ## 2026-04-09 18:00:00 -0500 - SegNet trainer metadata gap hardened
 
 ### bug surface

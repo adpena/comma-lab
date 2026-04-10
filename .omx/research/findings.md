@@ -29,6 +29,8 @@
    - `configs/run_manifests/run_status.template.json`
    - `docs/operator_run_manifest_templates.md`
 5. Under a free-tier-first strategy, Kaggle is the primary GPU training surface, Modal is the secondary GPU fallback, and Coiled is best treated as CPU-side fan-out for audits/reporting rather than the main training path.
+6. Kaggle is now not just “integrated” on paper; it is actually saturated. `adpena/comma-lab-dilated-h64-long1000` and `adpena/comma-lab-segnet-attack-fixed-h32` are both running as private GPU kernels, and `pairaware_smoke` was blocked by Kaggle's maximum batch GPU session count of `2`.
+7. The first Kaggle launch attempt exposed a real bootstrap bug: the generic runner assumed the image already had our Python/video dependencies and `git-lfs`. That is now hardened in `experiments/kaggle_kernel_builder.py`, and version 2 of both real training kernels has been pushed with runtime dependency installation plus upstream clone/LFS bootstrap.
 
 ## 2026-04-09 SegNet fixed faithful proxy resolution
 
