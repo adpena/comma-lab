@@ -109,6 +109,9 @@ def canonical_score(
                 filtered = model(frames)
                 filtered_pair = filtered.permute(0, 2, 3, 1).reshape(B, T, H, W, C)
 
+            # uint8 round-trip: matches official inflate → disk → scorer pipeline
+            filtered_pair = filtered_pair.round().clamp(0, 255).to(torch.uint8).float()
+
             # Scorer input format: (B, T, C, H, W)
             fx = filtered_pair.float().permute(0, 1, 4, 2, 3).contiguous()
             gx = gp.float().permute(0, 1, 4, 2, 3).contiguous()

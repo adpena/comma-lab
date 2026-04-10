@@ -834,6 +834,8 @@ class Trainer:
                 comp_pair = pair_from_frames(comp_frames, start).to(self.device)
                 gt_pair = pair_from_frames(gt_frames, start).to(self.device)
                 filtered = self._apply_filter_to_pair(comp_pair)
+                # uint8 round-trip: matches official inflate → scorer pipeline exactly
+                filtered = filtered.round().clamp(0, 255).to(torch.uint8).float()
                 score, pd, sd = eval_scorer_loss(filtered, gt_pair, posenet, segnet)
                 total_p += pd
                 total_s += sd
