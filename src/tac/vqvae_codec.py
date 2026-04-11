@@ -421,7 +421,11 @@ class VQVAEPairGenerator(nn.Module):
     """Generate PoseNet-compatible frame pairs from VQ-VAE reconstruction.
 
     Integrates with the existing scorer training infrastructure by
-    producing (B, 2, H, W, 3) HWC pair format.
+    producing (B, 2, H, W, 3) HWC pair format from forward().
+
+    VQ loss and indices are available via the last_vq_loss and last_indices
+    attributes after each forward() call, keeping the return interface
+    consistent with other PairGenerator variants (single tensor output).
 
     For training: GT frames -> encoder -> VQ -> decoder -> pairs -> scorer
     For inference: stored indices -> VQ -> decoder -> pairs
@@ -433,34 +437,39 @@ class VQVAEPairGenerator(nn.Module):
     def __init__(self, vqvae: VQVAE):
         super().__init__()
         self.vqvae = vqvae
+        # Exposed after each forward() call for training code to consume
+        self.last_vq_loss: torch.Tensor | None = None
+        self.last_indices: tuple[torch.Tensor, torch.Tensor] | None = None
 
     def forward(
         self,
         frame_t: torch.Tensor,
         frame_t1: torch.Tensor,
-    ) -> tuple[torch.Tensor, torch.Tensor, torch.Tensor]:
+    ) -> torch.Tensor:
         """Generate a scored frame pair through VQ-VAE reconstruction.
+
+        After calling forward(), access self.last_vq_loss and
+        self.last_indices for the VQ loss and codebook indices.
 
         Args:
             frame_t: (B, 3, H, W) float [0, 255] -- frame at time t
             frame_t1: (B, 3, H, W) float [0, 255] -- frame at time t+1
 
         Returns:
-            pair: (B, 2, H, W, 3) float HWC pair for scorer
-            vq_loss: scalar VQ loss (sum of both frames)
-            indices: tuple of (B, 24, 32) indices for both frames
+            (B, 2, H, W, 3) float HWC pair for scorer
         """
         recon_t, vq_loss_t, idx_t = self.vqvae(frame_t)
         recon_t1, vq_loss_t1, idx_t1 = self.vqvae(frame_t1)
 
-        vq_loss = vq_loss_t + vq_loss_t1
+        self.last_vq_loss = vq_loss_t + vq_loss_t1
+        self.last_indices = (idx_t, idx_t1)
 
         # CHW -> HWC: (B, 3, H, W) -> (B, H, W, 3)
         f_t_hwc = recon_t.permute(0, 2, 3, 1)
         f_t1_hwc = recon_t1.permute(0, 2, 3, 1)
         pair = torch.stack([f_t_hwc, f_t1_hwc], dim=1)
 
-        return pair, vq_loss, (idx_t, idx_t1)
+        return pair
 
     def forward_from_indices(
         self,

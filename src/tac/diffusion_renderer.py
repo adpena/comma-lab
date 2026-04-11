@@ -557,6 +557,61 @@ class DiffusionRenderer(nn.Module):
 
         return (x.clamp(0.0, 1.0) * 255.0)
 
+    def ddim_sample_train(
+        self,
+        masks: torch.Tensor,
+        num_steps: int = 50,
+        eta: float = 0.0,
+    ) -> torch.Tensor:
+        """DDIM sampling WITH gradient flow — for progressive distillation.
+
+        Same algorithm as ddim_sample but without @torch.no_grad(), so
+        loss.backward() can propagate through the student's denoising steps.
+
+        Args:
+            masks: (B, H, W) integer segmentation masks
+            num_steps: number of denoising steps
+            eta: stochasticity parameter (0 = deterministic DDIM)
+
+        Returns:
+            (B, 3, H, W) generated frames in [0, 255]
+        """
+        B, H, W = masks.shape
+        device = masks.device
+        cond = self._masks_to_onehot(masks)
+
+        # Subsample timestep sequence
+        step_indices = torch.linspace(
+            self.num_timesteps - 1, 0, num_steps + 1, device=device
+        ).long()
+
+        x = torch.randn(B, 3, H, W, device=device)
+
+        for i in range(num_steps):
+            t = step_indices[i].item()
+            t_prev = step_indices[i + 1].item()
+
+            t_batch = torch.full((B,), t, device=device, dtype=torch.long)
+            eps_pred = self.denoiser(x, t_batch, cond)
+
+            # Predicted x_0
+            alpha_t = self.alphas_cumprod[t]
+            alpha_prev = self.alphas_cumprod[t_prev] if t_prev >= 0 else torch.tensor(1.0)
+            x0_pred = (x - torch.sqrt(1 - alpha_t) * eps_pred) / torch.sqrt(alpha_t)
+            x0_pred = x0_pred.clamp(-1.0, 2.0)
+
+            # DDIM update
+            sigma = eta * torch.sqrt(
+                (1 - alpha_prev) / (1 - alpha_t) * (1 - alpha_t / alpha_prev)
+            )
+            dir_xt = torch.sqrt(1 - alpha_prev - sigma ** 2) * eps_pred
+            x = torch.sqrt(alpha_prev) * x0_pred + dir_xt
+
+            if sigma > 0 and t_prev > 0:
+                x = x + sigma * torch.randn_like(x)
+
+        return (x.clamp(0.0, 1.0) * 255.0)
+
     def param_count(self) -> int:
         """Total trainable parameter count."""
         return sum(p.numel() for p in self.parameters() if p.requires_grad)
@@ -752,9 +807,8 @@ class ProgressiveDistiller:
             with torch.no_grad():
                 teacher_output = teacher.ddim_sample(masks, num_steps=teacher_steps, eta=0.0)
 
-            # Student: generate with student_steps
-            # We need gradients through the student's denoising
-            student_output = student.ddim_sample(masks, num_steps=student_steps, eta=0.0)
+            # Student: generate with student_steps (use _train variant for gradient flow)
+            student_output = student.ddim_sample_train(masks, num_steps=student_steps, eta=0.0)
 
             # Match teacher output
             loss = F.mse_loss(student_output / 255.0, teacher_output / 255.0)

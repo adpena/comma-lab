@@ -64,7 +64,8 @@ def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
     renderer_profiles = [k for k in PROFILES if k.startswith(("mask_renderer", "wavelet_renderer"))]
     p.add_argument("--profile", type=str, default=None, choices=list(PROFILES.keys()),
                    help=f"Named profile. Renderer profiles: {renderer_profiles}")
-    p.add_argument("--variant", type=str, default=None, choices=["mask_renderer", "wavelet_renderer"],
+    p.add_argument("--variant", type=str, default=None,
+                   choices=["mask_renderer", "wavelet_renderer", "dp_sims", "vqvae", "diffusion_teacher"],
                    help="Renderer variant (auto-detected from profile if not set)")
 
     # Architecture
@@ -301,6 +302,18 @@ def train(args: argparse.Namespace):
             hidden=args.base_ch,
             motion_hidden=args.motion_hidden,
         )
+    elif args.variant == "dp_sims":
+        from tac.dp_sims_renderer import build_dp_sims_renderer  # noqa: E402
+        model = build_dp_sims_renderer(
+            num_classes=5,
+            motion_hidden=args.motion_hidden,
+        )
+    elif args.variant == "vqvae":
+        from tac.vqvae_codec import build_vqvae_pair_generator  # noqa: E402
+        model = build_vqvae_pair_generator()
+    elif args.variant == "diffusion_teacher":
+        from tac.diffusion_renderer import build_diffusion_teacher  # noqa: E402
+        model = build_diffusion_teacher(num_classes=5)
     else:
         model = build_renderer(
             num_classes=5,

@@ -232,6 +232,7 @@ class CrossAttentionNoiseInjector(nn.Module):
     def __init__(self, channels: int, mask_channels: int = 5, noise_dim: int = 16):
         super().__init__()
         self.channels = channels
+        self.mask_channels = mask_channels
         self.noise_dim = noise_dim
 
         # Project features to queries
@@ -275,8 +276,7 @@ class CrossAttentionNoiseInjector(nn.Module):
             ).squeeze(1).long()
         else:
             mask_resized = mask
-        K_classes = 5  # hardcoded for comma
-        mask_onehot = torch.zeros(B, K_classes, H, W, device=x.device, dtype=x.dtype)
+        mask_onehot = torch.zeros(B, self.mask_channels, H, W, device=x.device, dtype=x.dtype)
         mask_onehot.scatter_(1, mask_resized.unsqueeze(1), 1.0)
 
         # Concatenate noise with mask encoding
@@ -372,6 +372,12 @@ class DPSIMSRenderer(nn.Module):
                 )
             in_ch = out_ch
 
+        # Learned final upsample (replaces non-learned bilinear for the last 2x)
+        # ConvTranspose2d with stride 2 performs learned upsampling
+        self.final_upsample = nn.ConvTranspose2d(
+            channels[-1], channels[-1], 4, stride=2, padding=1, bias=False,
+        )
+
         # Output head: final channels -> 3 RGB
         self.head = nn.Conv2d(channels[-1], 3, 3, padding=1, bias=True)
         # Init so sigmoid(head/50) ~ 0.5 -> ~128 at init (mid-gray)
@@ -407,15 +413,15 @@ class DPSIMSRenderer(nn.Module):
             if self.use_noise and i < len(self.noise_injectors):
                 x = self.noise_injectors[i](x, masks)
 
-            # Upsample 2x (bilinear for smooth gradients)
+            # Upsample 2x after every stage except the last
             if i < self.num_stages - 1:
                 x = F.interpolate(x, scale_factor=2, mode="bilinear", align_corners=False)
 
-        # Final upsample to target resolution if needed
+        # Learned final upsample to target resolution via ConvTranspose2d
         _, _, cur_h, cur_w = x.shape
         target_h, target_w = masks.shape[1], masks.shape[2]
         if cur_h != target_h or cur_w != target_w:
-            x = F.interpolate(x, size=(target_h, target_w), mode="bilinear", align_corners=False)
+            x = self.final_upsample(x)
 
         # Head: soft sigmoid output — gradients always flow, no dead zones
         # sigmoid(0/50) = 0.5 -> 127.5 at init (mid-gray)

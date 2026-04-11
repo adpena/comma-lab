@@ -234,11 +234,22 @@ def dequantize_fp4(
     state_dict: dict[str, torch.Tensor] = {}
     seen: set[str] = set()
 
+    # Collect all base names that have .packed entries (these are quantized)
+    quantized_names: set[str] = set()
     for key in packed_state:
-        if key.startswith("__") or key.endswith((".packed", ".scales", ".shape", ".numel")):
+        if key.endswith(".packed"):
+            quantized_names.add(key[:-7])
+
+    # Recover non-quantized entries: anything that isn't a metadata key,
+    # isn't a quantized sub-key (.packed/.scales/.shape/.numel), and isn't
+    # a base name that was quantized.
+    for key in packed_state:
+        if key.startswith("__"):
             continue
-        # Non-quantized tensor (e.g., integer metadata)
-        if not isinstance(packed_state[key], torch.Tensor) or not key.endswith((".packed", ".scales", ".shape", ".numel")):
+        if key.endswith((".packed", ".scales", ".shape", ".numel")):
+            continue
+        # This key was not quantized — pass it through directly
+        if key not in quantized_names:
             state_dict[key] = packed_state[key]
 
     for key in packed_state:
@@ -359,48 +370,31 @@ def fake_quant_fp4(
 # ── QAT Wrapper ─────────────────────────────────────────────────────────
 
 
-class _FP4ForwardHook:
-    """Forward pre-hook that applies FP4 fake quantization via STE.
+class FP4Parametrize(nn.Module):
+    """nn.utils.parametrize module that applies FP4 fake quantization via STE.
 
-    Uses the standard STE pattern: compute fake-quantized weight as a
-    *function* of the original weight (not by replacing it). This keeps
-    the computational graph connected so gradients flow to the original
-    parameters and the optimizer's references remain valid.
+    The parametrize pattern ensures the forward pass uses quantized weights
+    while gradients flow through the STE to the original FP32 parameters.
+    Unlike the old hook-based approach, this never mutates .data directly,
+    so the autograd graph is fully preserved.
     """
 
     def __init__(self, codebook: torch.Tensor, block_size: int):
-        self.codebook = codebook
+        super().__init__()
+        self.register_buffer("codebook", codebook)
         self.block_size = block_size
 
-    def __call__(self, module: nn.Module, inputs):
-        # Apply FP4 STE: w_q = w + (quantize(w) - w).detach()
-        # Forward uses quantized weights, backward flows through w
-        w = module.weight
-        w_q = fake_quant_fp4(w, self.codebook.to(w.device), self.block_size)
-        module._fp4_orig_weight = w.data
-        module.weight.data = w_q.data
-
-
-class _FP4BackwardHook:
-    """Forward hook (post) that restores original weights after forward pass.
-
-    This ensures the optimizer always sees the original FP32 weights, while
-    the forward pass uses FP4-quantized weights.
-    """
-
-    def __call__(self, module: nn.Module, inputs, output):
-        if hasattr(module, '_fp4_orig_weight'):
-            module.weight.data = module._fp4_orig_weight
-            del module._fp4_orig_weight
+    def forward(self, weight: torch.Tensor) -> torch.Tensor:
+        return fake_quant_fp4(weight, self.codebook, self.block_size)
 
 
 class QATRendererFP4(nn.Module):
     """Wraps a PairGenerator with FP4 fake quantization during training.
 
-    Uses forward pre/post hooks on Conv2d, ConvTranspose2d, and Embedding
-    layers to inject fake FP4 quantization noise. The hooks modify
-    weight.data in-place (not the Parameter object), so the optimizer's
-    parameter references remain valid and gradients flow correctly via STE.
+    Uses nn.utils.parametrize on Conv2d, ConvTranspose2d, and Embedding
+    layers to inject fake FP4 quantization noise. The parametrization
+    intercepts the weight access so the forward pass sees quantized weights
+    while gradients flow through the STE to the original FP32 parameters.
 
     Biases are left in full precision (negligible size contribution).
     """
@@ -415,24 +409,26 @@ class QATRendererFP4(nn.Module):
         self.base = base_model
         self.codebook = codebook if codebook is not None else DEFAULT_CODEBOOK.clone()
         self.block_size = block_size
-        self._hooks: list = []
-        self._register_hooks()
+        self._parametrized_modules: list[nn.Module] = []
+        self._register_parametrizations()
 
-    def _register_hooks(self):
-        """Attach FP4 STE hooks to all quantizable layers."""
-        pre_hook = _FP4ForwardHook(self.codebook, self.block_size)
-        post_hook = _FP4BackwardHook()
+    def _register_parametrizations(self):
+        """Attach FP4 STE parametrizations to all quantizable layers."""
         for module in self.base.modules():
             if isinstance(module, (nn.Conv2d, nn.ConvTranspose2d, nn.Embedding)):
-                h1 = module.register_forward_pre_hook(pre_hook)
-                h2 = module.register_forward_hook(post_hook)
-                self._hooks.extend([h1, h2])
+                if hasattr(module, 'weight') and module.weight.ndim >= 2:
+                    nn.utils.parametrize.register_parametrization(
+                        module, 'weight',
+                        FP4Parametrize(self.codebook.clone(), self.block_size),
+                    )
+                    self._parametrized_modules.append(module)
 
     def remove_hooks(self):
-        """Remove all FP4 hooks (for eval/export)."""
-        for h in self._hooks:
-            h.remove()
-        self._hooks.clear()
+        """Remove all FP4 parametrizations (for eval/export)."""
+        for module in self._parametrized_modules:
+            if nn.utils.parametrize.is_parametrized(module, 'weight'):
+                nn.utils.parametrize.remove_parametrizations(module, 'weight')
+        self._parametrized_modules.clear()
 
     def forward(self, *args, **kwargs):
         return self.base(*args, **kwargs)
