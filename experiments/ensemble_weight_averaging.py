@@ -39,12 +39,13 @@ sys.path.insert(0, str(HERE))
 PROJECT = HERE.parent
 sys.path.insert(0, str(PROJECT / "submissions" / "robust_current"))
 
-from train_postfilter_saliency import (  # type: ignore
-    OUTPUT_DIR,
-    normalize_postfilter_meta,
-    save_model_int8,
-)
-from inflate_postfilter import PostFilter  # type: ignore
+# Legacy: these used to come from train_postfilter_saliency (removed).
+# Now sourced from the tac package.
+from tac.quantization import normalize_postfilter_meta, save_int8 as save_model_int8
+from tac.entrypoints import resolve_cloud_output_dir
+from tac.architectures import PostFilter
+
+OUTPUT_DIR = resolve_cloud_output_dir(PROJECT)
 
 
 def build_arg_parser() -> argparse.ArgumentParser:

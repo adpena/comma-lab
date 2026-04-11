@@ -20,6 +20,7 @@ from __future__ import annotations
 
 import json
 import os
+import shlex
 import signal
 import subprocess
 import sys
@@ -63,10 +64,17 @@ DEFAULT_QUEUE = [
 ]
 
 
+def _escape_applescript(s: str) -> str:
+    """Escape a string for embedding in an AppleScript double-quoted literal."""
+    return s.replace("\\", "\\\\").replace('"', '\\"')
+
+
 def notify(title: str, body: str):
+    safe_title = _escape_applescript(title)
+    safe_body = _escape_applescript(body)
     subprocess.run(
         ["/usr/bin/osascript", "-e",
-         f'display notification "{body}" with title "{title}" sound name "Glass"'],
+         f'display notification "{safe_body}" with title "{safe_title}" sound name "Glass"'],
         capture_output=True,
     )
 
@@ -115,13 +123,15 @@ def launch_mps_job(job: dict) -> subprocess.Popen | None:
     log(f"Launching: {cmd}")
     log(f"Log: {log_path}")
 
+    log_fh = open(log_path, "w")
     proc = subprocess.Popen(
-        cmd.split(),
-        stdout=open(log_path, "w"),
+        shlex.split(cmd),
+        stdout=log_fh,
         stderr=subprocess.STDOUT,
         env=env,
         cwd=str(REPO),
     )
+    log_fh.close()
     return proc
 
 

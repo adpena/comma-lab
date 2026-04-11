@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import argparse
 import json
+import shlex
 import subprocess
 from datetime import datetime, timezone
 from pathlib import Path
@@ -62,7 +63,7 @@ def run_repush_command(
     command_runner: Callable[[str], object] | None = None,
 ) -> int:
     if command_runner is None:
-        result = subprocess.run(command, shell=True, text=True, capture_output=True)
+        result = subprocess.run(shlex.split(command), shell=False, text=True, capture_output=True)
     else:
         result = command_runner(command)
     returncode = int(getattr(result, "returncode", 0))

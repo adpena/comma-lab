@@ -125,13 +125,6 @@ def inflate_video(
     ]
 
     # Get compressed resolution from the MKV
-    probe = subprocess.run(
-        [ffmpeg_bin, "-v", "error", "-select_streams", "v:0",
-         "-show_entries", "stream=width,height", "-of", "csv=p=0",
-         str(mkv_path).replace(ffmpeg_bin, "ffprobe")],  # hack
-        capture_output=True, text=True
-    )
-    # Fallback: just use ffprobe
     ffprobe_bin = ffmpeg_bin.replace("ffmpeg", "ffprobe")
     probe = subprocess.run(
         [ffprobe_bin, "-v", "error", "-select_streams", "v:0",
@@ -159,52 +152,53 @@ def inflate_video(
     )
 
     frame_idx = 0
-    with out_path.open("wb") as out_f:
-        while True:
-            raw = decode_proc.stdout.read(frame_bytes_yuv)
-            if len(raw) < frame_bytes_yuv:
-                break
+    try:
+        with out_path.open("wb") as out_f:
+            while True:
+                raw = decode_proc.stdout.read(frame_bytes_yuv)
+                if len(raw) < frame_bytes_yuv:
+                    break
 
-            # Parse YUV420p planes
-            y = np.frombuffer(raw[:y_size], dtype=np.uint8).reshape((ch, cw)).astype(np.float32)
-            u = np.frombuffer(raw[y_size:y_size + uv_size], dtype=np.uint8).reshape((ch // 2, cw // 2)).astype(np.float32)
-            v = np.frombuffer(raw[y_size + uv_size:], dtype=np.uint8).reshape((ch // 2, cw // 2)).astype(np.float32)
+                # Parse YUV420p planes
+                y = np.frombuffer(raw[:y_size], dtype=np.uint8).reshape((ch, cw)).astype(np.float32)
+                u = np.frombuffer(raw[y_size:y_size + uv_size], dtype=np.uint8).reshape((ch // 2, cw // 2)).astype(np.float32)
+                v = np.frombuffer(raw[y_size + uv_size:], dtype=np.uint8).reshape((ch // 2, cw // 2)).astype(np.float32)
 
-            # Bilinear chroma upsampling — use torch F.interpolate to match evaluator EXACTLY
-            import torch
-            import torch.nn.functional as F_torch
-            u_t = torch.from_numpy(u).unsqueeze(0).unsqueeze(0)
-            v_t = torch.from_numpy(v).unsqueeze(0).unsqueeze(0)
-            u_up = F_torch.interpolate(u_t, size=(ch, cw), mode='bilinear', align_corners=False).squeeze().numpy()
-            v_up = F_torch.interpolate(v_t, size=(ch, cw), mode='bilinear', align_corners=False).squeeze().numpy()
+                # Bilinear chroma upsampling — use torch F.interpolate to match evaluator EXACTLY
+                import torch
+                import torch.nn.functional as F_torch
+                u_t = torch.from_numpy(u).unsqueeze(0).unsqueeze(0)
+                v_t = torch.from_numpy(v).unsqueeze(0).unsqueeze(0)
+                u_up = F_torch.interpolate(u_t, size=(ch, cw), mode='bilinear', align_corners=False).squeeze().numpy()
+                v_up = F_torch.interpolate(v_t, size=(ch, cw), mode='bilinear', align_corners=False).squeeze().numpy()
 
-            # BT.601 limited range conversion (matching evaluator's yuv420_to_rgb exactly)
-            yf = (y - 16.0) * (255.0 / 219.0)
-            uf = (u_up - 128.0) * (255.0 / 224.0)
-            vf = (v_up - 128.0) * (255.0 / 224.0)
+                # BT.601 limited range conversion (matching evaluator's yuv420_to_rgb exactly)
+                yf = (y - 16.0) * (255.0 / 219.0)
+                uf = (u_up - 128.0) * (255.0 / 224.0)
+                vf = (v_up - 128.0) * (255.0 / 224.0)
 
-            r = np.clip(yf + 1.402 * vf, 0, 255)
-            g = np.clip(yf - 0.344136 * uf - 0.714136 * vf, 0, 255)
-            b = np.clip(yf + 1.772 * uf, 0, 255)
+                r = np.clip(yf + 1.402 * vf, 0, 255)
+                g = np.clip(yf - 0.344136 * uf - 0.714136 * vf, 0, 255)
+                b = np.clip(yf + 1.772 * uf, 0, 255)
 
-            frame = np.round(np.stack([r, g, b], axis=-1)).astype(np.uint8)
+                frame = np.round(np.stack([r, g, b], axis=-1)).astype(np.uint8)
 
-            # Upscale with Python
-            upscaled = _upscale_frame(frame, source_h, source_w, upscale_method)
+                # Upscale with Python
+                upscaled = _upscale_frame(frame, source_h, source_w, upscale_method)
 
-            # Apply binomial USM
-            if usm_strength > 0:
-                upscaled = _apply_usm(upscaled, kernel, usm_strength)
+                # Apply binomial USM
+                if usm_strength > 0:
+                    upscaled = _apply_usm(upscaled, kernel, usm_strength)
 
-            # Write raw RGB
-            out_f.write(upscaled.tobytes())
+                # Write raw RGB
+                out_f.write(upscaled.tobytes())
 
-            frame_idx += 1
-            if frame_idx % 300 == 0:
-                print(f"  Inflated {frame_idx} frames ...", file=sys.stderr, flush=True)
-
-    decode_proc.stdout.close()
-    decode_proc.wait()
+                frame_idx += 1
+                if frame_idx % 300 == 0:
+                    print(f"  Inflated {frame_idx} frames ...", file=sys.stderr, flush=True)
+    finally:
+        decode_proc.stdout.close()
+        decode_proc.wait()
     print(f"Inflated {frame_idx} frames -> {out_path}", file=sys.stderr)
 
 

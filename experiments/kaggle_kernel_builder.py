@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import json
+import re
 import shutil
 from dataclasses import dataclass
 from pathlib import Path
@@ -50,9 +51,16 @@ def build_kernel_metadata(
     return metadata
 
 
+_MODULE_NAME_RE = re.compile(r"^[a-zA-Z0-9_.]+$")
+
+
 def _launcher_source(spec: KaggleKernelSpec) -> str:
     if spec.module_name is None:
         raise ValueError("module_name is required for launcher-based kernels")
+    if not _MODULE_NAME_RE.match(spec.module_name):
+        raise ValueError(
+            f"Invalid module_name {spec.module_name!r}: must match ^[a-zA-Z0-9_.]+$"
+        )
     args_literal = repr(list(spec.args))
     return f"""#!/usr/bin/env python3
 from __future__ import annotations

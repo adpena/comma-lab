@@ -390,22 +390,24 @@ def _decode_frames_for_tto(
     temporal coverage without decoding the entire video.
     """
     container = av.open(video_path)
-    stream = container.streams.video[0]
-    frames = []
-    i = 0
-    for frame in container.decode(stream):
-        if i % stride == 0:
-            t = yuv420_to_rgb(frame)
-            H, W, _ = t.shape
-            x = t.permute(2, 0, 1).unsqueeze(0).float()
-            if H != target_h or W != target_w:
-                x = F.interpolate(x, size=(target_h, target_w), mode='bicubic', align_corners=False)
-                x = x.clamp(0, 255)
-            frames.append(x)
-            if len(frames) >= max_frames:
-                break
-        i += 1
-    container.close()
+    try:
+        stream = container.streams.video[0]
+        frames = []
+        i = 0
+        for frame in container.decode(stream):
+            if i % stride == 0:
+                t = yuv420_to_rgb(frame)
+                H, W, _ = t.shape
+                x = t.permute(2, 0, 1).unsqueeze(0).float()
+                if H != target_h or W != target_w:
+                    x = F.interpolate(x, size=(target_h, target_w), mode='bicubic', align_corners=False)
+                    x = x.clamp(0, 255)
+                frames.append(x)
+                if len(frames) >= max_frames:
+                    break
+            i += 1
+    finally:
+        container.close()
     if frames:
         return torch.cat(frames, dim=0)
     return torch.empty(0, 3, target_h, target_w)

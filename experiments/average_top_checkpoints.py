@@ -59,12 +59,10 @@ def main():
     args = parser.parse_args()
 
     checkpoints = find_checkpoints(args.weights_dir, args.tag)
+    if not checkpoints:
+        raise ValueError(f"No checkpoints found for tag pattern '{args.tag}' in {args.weights_dir}")
     if len(checkpoints) < args.top_k:
         print(f"Only {len(checkpoints)} checkpoints found for '{args.tag}', need {args.top_k}")
-        # Still try with what we have
-        if not checkpoints:
-            print("No checkpoints found.")
-            return
 
     top_k = checkpoints[:args.top_k]
     print(f"Averaging top-{len(top_k)} checkpoints:")
@@ -73,8 +71,22 @@ def main():
 
     fp32_paths = [c["fp32_path"] for c in top_k if os.path.exists(c.get("fp32_path", ""))]
     if not fp32_paths:
-        print("No fp32 weight files found.")
-        return
+        raise ValueError(
+            f"No fp32 weight files found on disk for tag '{args.tag}'. "
+            f"Checked paths: {[c.get('fp32_path', '?') for c in top_k]}"
+        )
+
+    # Validate meta consistency across checkpoints (architecture must match)
+    meta_keys = ("variant", "hidden", "kernel")
+    ref_meta = {k: top_k[0].get("meta", {}).get(k) or top_k[0].get(k) for k in meta_keys}
+    for i, c in enumerate(top_k[1:], 1):
+        c_meta = {k: c.get("meta", {}).get(k) or c.get(k) for k in meta_keys}
+        for k in meta_keys:
+            if c_meta[k] is not None and ref_meta[k] is not None and c_meta[k] != ref_meta[k]:
+                raise ValueError(
+                    f"Checkpoint meta mismatch on '{k}': checkpoint 0 has {ref_meta[k]}, "
+                    f"checkpoint {i} has {c_meta[k]}. Cannot average different architectures."
+                )
 
     print(f"Averaging {len(fp32_paths)} fp32 weight sets...")
     avg_state = average_fp32_weights(fp32_paths)

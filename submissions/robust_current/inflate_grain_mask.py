@@ -73,49 +73,54 @@ def inflate_with_grain_mask(
     print(f"  Saliency: shape={saliency.shape}, mean={saliency.mean():.4f}", file=sys.stderr)
 
     container = av.open(video_path)
-    stream = container.streams.video[0]
-    n = 0
-    with open(dst, 'wb') as f:
-        for frame in container.decode(stream):
-            t = yuv420_to_rgb(frame)  # (H, W, 3) uint8
-            H, W, _ = t.shape
-            if H != target_h or W != target_w:
-                x = t.permute(2, 0, 1).unsqueeze(0).float()
-                x = F.interpolate(x, size=(target_h, target_w), mode='bicubic', align_corners=False)
-                t = x.clamp(0, 255).squeeze(0).permute(1, 2, 0).round().to(torch.uint8)
+    try:
+        stream = container.streams.video[0]
+        # Get total frame count for saliency interpolation (avoid hardcoded constants)
+        total_frames = stream.frames if stream.frames and stream.frames > 0 else None
+        n = 0
+        with open(dst, 'wb') as f:
+            for frame in container.decode(stream):
+                t = yuv420_to_rgb(frame)  # (H, W, 3) uint8
+                H, W, _ = t.shape
+                if H != target_h or W != target_w:
+                    x = t.permute(2, 0, 1).unsqueeze(0).float()
+                    x = F.interpolate(x, size=(target_h, target_w), mode='bicubic', align_corners=False)
+                    t = x.clamp(0, 255).squeeze(0).permute(1, 2, 0).round().to(torch.uint8)
 
-            # Get saliency mask for this frame (interpolate from keyframes)
-            if saliency.shape[0] > 0:
-                ratio = n / max(1199, 1)
-                sal_idx = ratio * (saliency.shape[0] - 1)
-                lo = int(sal_idx)
-                hi = min(lo + 1, saliency.shape[0] - 1)
-                interp = sal_idx - lo
-                sal_frame = saliency[lo] * (1.0 - interp) + saliency[hi] * interp
-            else:
-                sal_frame = np.ones((target_h, target_w), dtype=np.float32)
+                # Get saliency mask for this frame (interpolate from keyframes)
+                if saliency.shape[0] > 0:
+                    # Use known total if available, otherwise estimate from frames seen so far
+                    frame_total = total_frames if total_frames else max(n + 1, 1)
+                    ratio = n / max(frame_total - 1, 1)
+                    sal_idx = ratio * (saliency.shape[0] - 1)
+                    lo = int(sal_idx)
+                    hi = min(lo + 1, saliency.shape[0] - 1)
+                    interp = sal_idx - lo
+                    sal_frame = saliency[lo] * (1.0 - interp) + saliency[hi] * interp
+                else:
+                    sal_frame = np.ones((target_h, target_w), dtype=np.float32)
 
-            # Generate grain for this frame
-            grain = generate_grain(target_h, target_w, grain_strength, seed=n * 7 + 42)
+                # Generate grain for this frame
+                grain = generate_grain(target_h, target_w, grain_strength, seed=n * 7 + 42)
 
-            # Apply grain only where saliency exceeds threshold
-            mask = (sal_frame > saliency_threshold).astype(np.float32)
-            # Smooth the mask edges slightly
-            mask_t = torch.from_numpy(mask).unsqueeze(0).unsqueeze(0)
-            mask_smooth = F.avg_pool2d(mask_t, kernel_size=5, stride=1, padding=2).squeeze().numpy()
-            mask_smooth = np.clip(mask_smooth * 2, 0, 1)  # sharpen the smooth mask
+                # Apply grain only where saliency exceeds threshold
+                mask = (sal_frame > saliency_threshold).astype(np.float32)
+                # Smooth the mask edges slightly
+                mask_t = torch.from_numpy(mask).unsqueeze(0).unsqueeze(0)
+                mask_smooth = F.avg_pool2d(mask_t, kernel_size=5, stride=1, padding=2).squeeze().numpy()
+                mask_smooth = np.clip(mask_smooth * 2, 0, 1)  # sharpen the smooth mask
 
-            # Apply masked grain
-            frame_np = t.numpy().astype(np.float32)
-            frame_np += grain * mask_smooth[:, :, np.newaxis]
-            frame_np = np.clip(frame_np, 0, 255).astype(np.uint8)
+                # Apply masked grain
+                frame_np = t.numpy().astype(np.float32)
+                frame_np += grain * mask_smooth[:, :, np.newaxis]
+                frame_np = np.clip(frame_np, 0, 255).astype(np.uint8)
 
-            f.write(frame_np.tobytes())
-            n += 1
-            if n % 300 == 0:
-                print(f"  Processed {n} frames ...", file=sys.stderr, flush=True)
-
-    container.close()
+                f.write(frame_np.tobytes())
+                n += 1
+                if n % 300 == 0:
+                    print(f"  Processed {n} frames ...", file=sys.stderr, flush=True)
+    finally:
+        container.close()
     print(f"Inflated {n} frames with saliency-masked grain -> {dst}", file=sys.stderr)
     return n
 
