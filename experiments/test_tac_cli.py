@@ -146,6 +146,40 @@ class TacCliTests(unittest.TestCase):
         self.assertEqual(result["command"], "lossless_estimate")
         self.assertEqual(result["estimate"]["total_flat_tokens"], 774005000)
 
+    def test_lossless_prepare_subcommand_materializes_gpt_token_stream(self) -> None:
+        mod = load_module()
+        with tempfile.TemporaryDirectory() as tmpdir:
+            root = Path(tmpdir)
+            output = root / "train.bin"
+            with mock.patch.object(
+                mod,
+                "materialize_gpt_arithmetic_stream",
+                return_value={
+                    "command": "lossless_prepare",
+                    "profile": "gpt_arithmetic_small",
+                    "output_path": str(output),
+                    "example_count": 5000,
+                    "token_count": 774005000,
+                },
+            ) as mocked:
+                result = mod.main(
+                    [
+                        "lossless",
+                        "prepare",
+                        "--profile",
+                        "gpt_arithmetic_small",
+                        "--split",
+                        "0",
+                        "1",
+                        "--output",
+                        str(output),
+                    ]
+                )
+
+        mocked.assert_called_once_with("gpt_arithmetic_small", split=["0", "1"], output_path=output)
+        self.assertEqual(result["command"], "lossless_prepare")
+        self.assertEqual(result["token_count"], 774005000)
+
     def test_lossless_package_subcommand_builds_submission_zip(self) -> None:
         mod = load_module()
         with tempfile.TemporaryDirectory() as tmpdir:

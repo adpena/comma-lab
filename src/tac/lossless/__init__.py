@@ -19,6 +19,7 @@ from .arithmetic import (
     build_gpt_arithmetic_plan,
     estimate_gpt_arithmetic_workload,
     flatten_tokens_for_gpt_arithmetic,
+    materialize_gpt_arithmetic_stream,
     load_gpt_arithmetic_profile,
 )
 from .contracts import LosslessCompressionResult, LosslessVerificationResult
@@ -54,6 +55,7 @@ __all__ = [
     "evaluate_commavq_dataset_archive",
     "evaluate_lossless_archive",
     "flatten_tokens_for_gpt_arithmetic",
+    "materialize_gpt_arithmetic_stream",
     "build_submission_zip",
     "load_lossless_result",
     "load_gpt_arithmetic_profile",

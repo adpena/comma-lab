@@ -164,6 +164,24 @@ def _first_example(train_split):
         raise ValueError("train split is empty") from exc
 
 
+def _encode_example_to_ids(example: Mapping[str, object]) -> dict[str, object]:
+    if not isinstance(example, Mapping) or "token.npy" not in example:
+        raise ValueError("dataset example must provide token.npy")
+    ids = flatten_tokens_for_gpt_arithmetic(example["token.npy"]).astype("uint16")
+    return {
+        "ids": ids,
+        "len": int(ids.size),
+    }
+
+
+def _mapped_column(rows: object, key: str):
+    if isinstance(rows, Mapping):
+        return rows[key]
+    if hasattr(rows, "__getitem__"):
+        return rows[key]
+    raise ValueError(f"mapped dataset output is missing column {key!r}")
+
+
 def estimate_gpt_arithmetic_workload(
     profile: str,
     *,
@@ -208,6 +226,94 @@ def estimate_gpt_arithmetic_workload(
         flat_tokens_per_example=flat_tokens_per_example,
         total_flat_tokens=total_flat_tokens,
     )
+
+
+def materialize_gpt_arithmetic_stream(
+    profile: str,
+    *,
+    split: str | Sequence[str] | None = "challenge",
+    output_path: str | Path,
+    dataset_loader=None,
+    num_proc: Optional[int] = None,
+) -> dict[str, object]:
+    import numpy as np
+
+    estimate = estimate_gpt_arithmetic_workload(
+        profile,
+        split=split,
+        work_dir=None,
+        dataset_loader=dataset_loader,
+        num_proc=num_proc,
+    )
+    config = load_gpt_arithmetic_profile(profile)
+    dataset = load_commavq_dataset(
+        split=split,
+        dataset_loader=dataset_loader,
+        dataset_name=config.dataset_name,
+        num_proc=num_proc,
+    )
+    train_split = _train_split(dataset)
+    target = Path(output_path)
+    target.parent.mkdir(parents=True, exist_ok=True)
+
+    if hasattr(train_split, "map"):
+        mapped = train_split.map(
+            _encode_example_to_ids,
+            desc="prepare_gpt_arithmetic",
+            num_proc=num_proc,
+            load_from_cache_file=False,
+        )
+        lengths = _mapped_column(mapped, "len")
+        total_len = int(sum(int(item) for item in lengths))
+        if hasattr(mapped, "shard"):
+            arr = np.memmap(target, dtype=np.uint16, mode="w+", shape=(total_len,))
+            total_batches = min(max(len(lengths), 1), 1024)
+            idx = 0
+            for batch_idx in range(total_batches):
+                batch = mapped.shard(num_shards=total_batches, index=batch_idx, contiguous=True).with_format("numpy")
+                ids = batch.get("ids", [])
+                if not ids:
+                    continue
+                arr_batch = np.concatenate([np.asarray(item, dtype=np.uint16) for item in ids], axis=0)
+                arr[idx : idx + len(arr_batch)] = arr_batch
+                idx += len(arr_batch)
+            arr.flush()
+            token_count = total_len
+            return {
+                "command": "lossless_prepare",
+                "profile": estimate.profile,
+                "method": estimate.method,
+                "output_path": str(target),
+                "example_count": estimate.example_count,
+                "token_count": token_count,
+                "dtype": "uint16",
+                "split": list(estimate.split),
+                "measured": False,
+            }
+        ids_column = _mapped_column(mapped, "ids")
+        pieces = [np.asarray(item, dtype=np.uint16) for item in ids_column]
+    else:
+        pieces = []
+        for example in train_split:
+            encoded = _encode_example_to_ids(example)
+            pieces.append(np.asarray(encoded["ids"], dtype=np.uint16))
+
+    if pieces:
+        stream = np.concatenate(pieces, axis=0)
+    else:
+        stream = np.array([], dtype=np.uint16)
+    stream.tofile(target)
+    return {
+        "command": "lossless_prepare",
+        "profile": estimate.profile,
+        "method": estimate.method,
+        "output_path": str(target),
+        "example_count": estimate.example_count,
+        "token_count": int(stream.size),
+        "dtype": "uint16",
+        "split": list(estimate.split),
+        "measured": False,
+    }
 
 
 def build_gpt_arithmetic_plan(

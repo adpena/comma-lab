@@ -14,7 +14,12 @@ import os
 from pathlib import Path
 from typing import Any
 
-from .lossless.arithmetic import GPTArithmeticEstimate, build_gpt_arithmetic_plan, estimate_gpt_arithmetic_workload
+from .lossless.arithmetic import (
+    GPTArithmeticEstimate,
+    build_gpt_arithmetic_plan,
+    estimate_gpt_arithmetic_workload,
+    materialize_gpt_arithmetic_stream,
+)
 from .lossless.codecs import (
     compress_lossless_file,
     decompress_lossless_file,
@@ -107,6 +112,12 @@ def build_parser() -> argparse.ArgumentParser:
     sp.add_argument("--work-dir", default=None)
     sp.add_argument("--split", nargs="*", default=["challenge"])
     sp.set_defaults(lossless_handler="estimate")
+
+    sp = lossless_sub.add_parser("prepare", help="Materialize a GPT/arithmetic token stream")
+    sp.add_argument("--profile", required=True, choices=sorted(LOSSLESS_PROFILES))
+    sp.add_argument("--output", required=True)
+    sp.add_argument("--split", nargs="*", default=["challenge"])
+    sp.set_defaults(lossless_handler="prepare")
 
     sp = lossless_sub.add_parser("baseline", help="Build a real dataset-backed lossless baseline submission")
     sp.add_argument("--profile", required=True, choices=sorted(LOSSLESS_PROFILES))
@@ -273,6 +284,15 @@ def _run_lossless(args: argparse.Namespace) -> dict[str, Any]:
             "command": "lossless_estimate",
             "estimate": estimate_payload,
         }
+        print(json.dumps(payload, indent=2))
+        return payload
+
+    if args.lossless_handler == "prepare":
+        payload = materialize_gpt_arithmetic_stream(
+            args.profile,
+            split=args.split,
+            output_path=Path(args.output),
+        )
         print(json.dumps(payload, indent=2))
         return payload
 
