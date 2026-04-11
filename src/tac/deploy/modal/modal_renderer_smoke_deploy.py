@@ -14,9 +14,15 @@ from pathlib import Path
 import modal
 
 APP_NAME = "tac-renderer-smoke"
-REPO_ROOT = Path(__file__).resolve().parents[4]
 PRECOMPUTED_VOL = "tac-precomputed"
 RESULTS_VOL = "tac-renderer-results"
+
+# REPO_ROOT only needed locally for add_local_dir — guard for container env
+_script = Path(__file__).resolve()
+try:
+    REPO_ROOT = _script.parents[4]  # src/tac/deploy/modal -> repo root
+except IndexError:
+    REPO_ROOT = Path("/root")  # inside Modal container
 
 app = modal.App(APP_NAME)
 
