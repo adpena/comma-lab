@@ -1,0 +1,12 @@
+{
+  "command": "lossless_zstd_dict_benchmark",
+  "method": "zstd_dict",
+  "source_path": "/Users/adpena/Projects/pact/reports/raw/2026-04-11-commavq-gpt-arithmetic/position_major/train_split0.bin",
+  "compressed_path": "/Users/adpena/Projects/pact/reports/raw/2026-04-11-commavq-gpt-arithmetic/position_major/train_split0.zst",
+  "restored_path": "/Users/adpena/Projects/pact/reports/raw/2026-04-11-commavq-gpt-arithmetic/position_major/train_split0.zst.restored",
+  "dictionary_bytes": 131072,
+  "sample_count": 11730,
+  "archive_bytes": 393059915,
+  "original_bytes": 768645000,
+  "compression_rate": 1.95554156164716
+}

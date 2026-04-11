@@ -35,10 +35,36 @@
   - compression ratio: `1.635265656105499`
   - contexts: `1026`
   - outer header bytes: `4116`
+- A full exact previous-pair benchmark over the finished `position_major` split-0 stream is now on disk:
+  - metadata: `reports/raw/2026-04-11-commavq-gpt-arithmetic/position_major/train_split0_prev_pair_benchmark_full.json`
+  - original bytes: `768645000`
+  - encoded bytes: `278032654`
+  - compression ratio: `2.7645853425547635`
+  - contexts: `986185`
+- A full exact single-file `zstd_dict` benchmark over the finished `position_major` split-0 stream is now on disk:
+  - encoded artifact: `reports/raw/2026-04-11-commavq-gpt-arithmetic/position_major/train_split0.zst`
+  - original bytes: `768645000`
+  - encoded bytes: `393059915`
+  - compression ratio: `1.95554156164716`
+  - dictionary bytes: `131072`
+  - sample count after block splitting: `11730`
+- A full exact single-file `zstd_dict` benchmark over the finished `frame_major` split-0 stream is also on disk:
+  - encoded artifact: `reports/raw/2026-04-11-commavq-gpt-arithmetic/small/train_split0.zst`
+  - original bytes: `774005000`
+  - encoded bytes: `441684503`
+  - compression ratio: `1.7523933820245443`
+  - dictionary bytes: `131072`
+  - sample count after block splitting: `11812`
 - Reordering alone is not enough, but reordering plus simple conditional coding is already materially better than the static coder on the same sample.
 
 ## next implication
 
 - `position_major + previous-symbol conditioning` is now the strongest empirical direction in the lossless arithmetic lane.
 - The full exact file-level comparison now matches the earlier sample signal: `position_major` is dramatically better than `frame_major` under the same previous-symbol conditional coder.
+- Increasing the conditioning order naively is not automatically better:
+  - `position_major + prev-pair` is worse than `position_major + prev-symbol`
+  - likely cause: context explosion and fragmented statistics (`986185` contexts)
+- Classical shared-dictionary compression is a viable local comparator but still well behind the strongest conditional token coder:
+  - `position_major + zstd_dict` is better than `frame_major + zstd_dict`
+  - but both are much worse than `position_major + prev-symbol`
 - The next exact implementation cut should build on this `position_major` file-level conditional coder signal, not on more source-order experiments.

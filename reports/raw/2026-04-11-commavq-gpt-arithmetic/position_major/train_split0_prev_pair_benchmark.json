@@ -1,0 +1,8 @@
+{
+  "command": "lossless_prev_pair_frequency_benchmark",
+  "token_count": 384322500,
+  "context_count": 986185,
+  "encoded_bytes": 278032654,
+  "compression_ratio": 2.7645853425547635,
+  "source_path": "/Users/adpena/Projects/pact/reports/raw/2026-04-11-commavq-gpt-arithmetic/position_major/train_split0.bin"
+}
