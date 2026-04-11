@@ -617,6 +617,146 @@ def kl_distill_scorer_loss(
     return loss, pose_dist.item(), seg_kl.item()
 
 
+def feature_matching_loss(
+    filtered_pair_hwc: torch.Tensor,
+    gt_pair_hwc: torch.Tensor,
+    posenet,
+    segnet,
+    feature_layer: str = "stages.2",
+    segnet_weight: float = 100.0,
+) -> tuple[torch.Tensor, float, float]:
+    """Loss that matches PoseNet INTERMEDIATE features, not outputs.
+
+    Steganalysis insight: match what the detector LOOKS AT (texture statistics
+    in mid-layers), not what it OUTPUTS (6 pose values). This is strictly
+    more informative because intermediate features are higher-dimensional.
+
+    FastViT-T12 stages:
+        stages.0: 64 channels (low-level)
+        stages.1: 128 channels (low-mid)
+        stages.2: 256 channels (mid — texture statistics, DEFAULT)
+        stages.3: 512 channels (high-level, pre-classification)
+
+    The loss = MSE between intermediate features of filtered vs GT frames,
+    extracted from the frozen PoseNet's vision backbone. SegNet loss uses
+    the standard soft cosine proxy.
+
+    Args:
+        feature_layer: dot-separated path into posenet.vision (default "stages.2")
+        segnet_weight: weight for SegNet term (default 100, matches scorer formula)
+
+    Returns: (loss, pose_feature_mse, seg_distortion)
+    """
+    fx = _hwc_to_chw(filtered_pair_hwc)
+    gx = _hwc_to_chw(gt_pair_hwc)
+
+    # --- PoseNet feature extraction via hook ---
+    # Navigate to the target layer in the vision backbone
+    target_module = posenet.vision
+    for part in feature_layer.split("."):
+        target_module = target_module[int(part)] if part.isdigit() else getattr(target_module, part)
+
+    features_filtered = []
+    features_gt = []
+
+    def _hook_fn(storage):
+        def hook(module, input, output):
+            storage.append(output)
+        return hook
+
+    handle = target_module.register_forward_hook(_hook_fn(features_filtered))
+
+    # Forward pass for filtered frames (with gradients)
+    posenet_in_f = posenet.preprocess_input(fx)
+    fp_out = posenet(posenet_in_f)
+    handle.remove()
+
+    # Forward pass for GT frames (no gradients)
+    handle_gt = target_module.register_forward_hook(_hook_fn(features_gt))
+    with torch.no_grad():
+        posenet_in_g = posenet.preprocess_input(gx)
+        gp_out = posenet(posenet_in_g)
+    handle_gt.remove()
+
+    feat_f = features_filtered[0]
+    feat_g = features_gt[0]
+
+    # Feature MSE (higher-dimensional than 6-value pose output)
+    pose_feat_mse = (feat_f - feat_g).pow(2).mean()
+
+    # --- SegNet loss (standard soft cosine) ---
+    segnet_in_f = segnet.preprocess_input(fx)
+    fs_out = segnet(segnet_in_f)
+    with torch.no_grad():
+        segnet_in_g = segnet.preprocess_input(gx)
+        gs_out = segnet(segnet_in_g)
+
+    pred_soft = F.softmax(fs_out, dim=1)
+    gt_soft = F.softmax(gs_out, dim=1)
+    seg_dist = 1.0 - (pred_soft * gt_soft).sum(dim=1).mean()
+
+    # Scale feature MSE via sqrt (analogous to sqrt(10*pose) in scorer)
+    # The feature space is much higher-dimensional, so raw MSE is larger.
+    # Use sqrt to compress dynamic range, with a tunable coefficient.
+    loss = segnet_weight * seg_dist + torch.sqrt(pose_feat_mse + 1e-8)
+    return loss, pose_feat_mse.item(), seg_dist.item()
+
+
+def frequency_aware_loss(
+    rendered_hwc: torch.Tensor,
+    gt_hwc: torch.Tensor,
+    band_weights: dict[str, float] | None = None,
+) -> torch.Tensor:
+    """Frequency-domain shaping loss via Haar DWT.
+
+    PoseNet reads textures in the mid-high frequency band (1/16 to 1/4 Nyquist).
+    Decompose into wavelet bands and weight the loss per-band according to
+    PoseNet's sensitivity profile.
+
+    Default weights (from steganalysis literature):
+        LL (low-freq structure): 0.5  — PoseNet cares less about DC/coarse
+        LH/HL (mid-freq edges):  2.0  — PoseNet texture-sensitive band
+        HH (high-freq noise):    1.0  — some sensitivity, but less than mid
+
+    Args:
+        rendered_hwc: (B, T, H, W, C) rendered/filtered frames in [0, 255]
+        gt_hwc: (B, T, H, W, C) ground truth frames in [0, 255]
+        band_weights: optional dict with keys 'll', 'lh', 'hl', 'hh'
+
+    Returns:
+        Scalar weighted wavelet-domain loss.
+    """
+    from .wavelet_renderer import haar_dwt2d
+
+    if band_weights is None:
+        band_weights = {"ll": 0.5, "lh": 2.0, "hl": 2.0, "hh": 1.0}
+
+    # Convert to BCHW float
+    r = rendered_hwc.float().reshape(-1, *rendered_hwc.shape[2:])  # (B*T, H, W, C)
+    g = gt_hwc.float().reshape(-1, *gt_hwc.shape[2:])
+    r = r.permute(0, 3, 1, 2) / 255.0  # (B*T, C, H, W)
+    g = g.permute(0, 3, 1, 2) / 255.0
+
+    # Ensure even spatial dims for DWT
+    if r.shape[-2] % 2 != 0:
+        r = r[..., :-1, :]
+        g = g[..., :-1, :]
+    if r.shape[-1] % 2 != 0:
+        r = r[..., :-1]
+        g = g[..., :-1]
+
+    r_ll, r_lh, r_hl, r_hh = haar_dwt2d(r)
+    g_ll, g_lh, g_hl, g_hh = haar_dwt2d(g)
+
+    loss = (
+        band_weights["ll"] * F.mse_loss(r_ll, g_ll)
+        + band_weights["lh"] * F.mse_loss(r_lh, g_lh)
+        + band_weights["hl"] * F.mse_loss(r_hl, g_hl)
+        + band_weights["hh"] * F.mse_loss(r_hh, g_hh)
+    )
+    return loss
+
+
 def compute_boundary_mask(
     gt_pair: torch.Tensor,
     segnet,

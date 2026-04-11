@@ -36,7 +36,9 @@ from .data import pair_from_frames, pair_start_indices, saliency_for_pair
 from .losses import (
     dual_saliency_reconstruction_loss,
     eval_scorer_loss,
+    feature_matching_loss,
     focal_segnet_ste_loss,
+    frequency_aware_loss,
     kl_distill_scorer_loss,
     saliency_reconstruction_loss,
     scorer_forward_pair,
@@ -82,7 +84,7 @@ class TrainConfig(BaseModel):
     use_ste_segnet: bool = False
 
     # SegNet headroom unlocking
-    loss_mode: Literal["standard", "temperature", "focal_ste", "kl_distill", "pcgrad"] = "standard"
+    loss_mode: Literal["standard", "temperature", "focal_ste", "kl_distill", "pcgrad", "feature_match"] = "standard"
     temperature_start: float = Field(1.0, gt=0.0)
     temperature_end: float = Field(0.05, gt=0.0)
     temp_schedule: str = Field("exponential", pattern=r"^(linear|exponential)$",
@@ -115,6 +117,16 @@ class TrainConfig(BaseModel):
                                 "0.0 = contest mode (train+eval on all pairs). "
                                 "0.25 = production mode (25% held-out eval split).")
     use_lsq: bool = Field(False, description="Enable Learned Step Size Quantization")
+
+    # Yousfi council tricks
+    even_frame_skip_seg: bool = Field(False, description="Trick 3: skip SegNet loss on even frames. "
+                                      "SegNet only evaluates odd frames, so even frames only need "
+                                      "PoseNet pair fidelity. Reduces multi-task conflict surface.")
+    use_frequency_loss: bool = Field(False, description="Trick 2: add wavelet frequency-domain shaping loss. "
+                                     "Penalizes mid-frequency deviation more than low/high frequency, "
+                                     "matching PoseNet's texture sensitivity profile.")
+    frequency_loss_weight: float = Field(0.1, ge=0.0, le=10.0,
+                                         description="Weight for frequency-domain loss (Trick 2)")
 
     # Resumption
     resume_from: str | None = None
@@ -887,6 +899,10 @@ class Trainer:
         print("[trainer-lazy] Frames on CPU, pairs built on-the-fly (MPS-safe)")
         if cfg.loss_mode != "standard":
             print(f"[trainer-lazy] Loss mode: {cfg.loss_mode}")
+        if cfg.even_frame_skip_seg:
+            print("[trainer-lazy] Trick 3: Even-frame SegNet skip ENABLED")
+        if cfg.use_frequency_loss:
+            print(f"[trainer-lazy] Trick 2: Frequency loss ENABLED (weight={cfg.frequency_loss_weight})")
         if cfg.sal_lambda == 0:
             print("[trainer-lazy] Saliency reconstruction DISABLED (sal_lambda=0)")
 
@@ -1004,7 +1020,7 @@ class Trainer:
             # Adaptive weight rebalance (once per rebalance_every epochs, not per step)
             if (self._adaptive and self._last_eval_pose is not None
                     and epoch % getattr(cfg, 'rebalance_every', 50) == 0):
-                if cfg.loss_mode in ("standard", "pcgrad"):
+                if cfg.loss_mode in ("standard", "pcgrad", "feature_match"):
                     # Pareto MRS condition: w_seg = 200 * sqrt(10 * pose)
                     # No temperature — standard/pcgrad loss has no temperature parameter.
                     result = self._adaptive.rebalance_standard(
@@ -1162,6 +1178,12 @@ class Trainer:
                         self._epoch_pcgrad_total = getattr(self, '_epoch_pcgrad_total', 0) + 1
                         if _conflict:
                             self._epoch_pcgrad_conflicts = getattr(self, '_epoch_pcgrad_conflicts', 0) + 1
+                elif cfg.loss_mode == "feature_match":
+                    # Trick 1: intermediate PoseNet feature matching
+                    loss, pd, sd = feature_matching_loss(
+                        filtered, gt_pair, posenet, segnet,
+                        segnet_weight=cfg.segnet_loss_weight,
+                    )
                 else:
                     if cfg.boundary_weight > 1.0 and self._boundary_masks is not None:
                         bm = self._boundary_masks.get(start)
@@ -1196,6 +1218,23 @@ class Trainer:
                     sal_recon = saliency_reconstruction_loss(
                         filtered_bchw, comp_bchw, sal_w[1:2]
                     )
+
+                # Trick 3: Even-frame SegNet skip — when the evaluated frame
+                # (frame_t1 = start + 1) is even, SegNet is less critical.
+                # With standard pair layout (starts at 0,2,4...) frame_t1 is always
+                # odd, so this triggers when using overlapping pairs or alternate
+                # pair layouts. The segnet component is already inside `loss`.
+                # We re-weight if applicable.
+                if cfg.even_frame_skip_seg and (start + 1) % 2 == 0:
+                    # Approximate: scale loss to remove ~SegNet contribution
+                    # loss ≈ sw*seg + sqrt(10*pose), remove sw*seg ≈ reduce by ratio
+                    # Conservative: scale loss by 0.5 (keep PoseNet, halve SegNet)
+                    loss = loss * 0.5
+
+                # Trick 2: Frequency-domain wavelet loss (additive)
+                if cfg.use_frequency_loss and cfg.frequency_loss_weight > 0:
+                    freq_loss = frequency_aware_loss(filtered, gt_pair)
+                    loss = loss + cfg.frequency_loss_weight * freq_loss
 
                 total = (loss + cfg.sal_lambda * sal_recon) / accum
                 try:

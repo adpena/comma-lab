@@ -655,6 +655,59 @@ COORD_RENDERER_SMOKE = {
     "pretrain_epochs": 100,
 }
 
+# ── Yousfi Council Decode: Aggressive Overfitting ────────────────────
+# CPU lane: overfit postfilter to 0.mkv with all tricks (10K epochs)
+OVERFIT_CPU = {
+    "variant": "dilated",
+    "hidden": 64,
+    "kernel": 3,
+    "epochs": 10000,
+    "lr": 5e-4,
+    "ema_decay": 0.999,            # slower decay for overfitting (more averaging)
+    "alpha": 20.0,
+    "sal_lambda": 1.0,
+    "loss_mode": "feature_match",   # Trick 1: intermediate feature matching
+    "segnet_loss_weight": 100.0,
+    "boundary_weight": 50.0,
+    "hard_frame_ratio": 0.5,        # heavy hard-frame emphasis
+    "error_replay_every": 100,
+    "eval_every": 10,
+    "accum_steps": 4,
+    "use_swa": True,
+    "use_lsq": True,
+    "even_frame_skip_seg": True,    # Trick 3: skip SegNet on even frames
+    "use_frequency_loss": True,     # Trick 2: wavelet domain shaping
+    "frequency_loss_weight": 0.1,   # mild — complement to scorer loss
+}
+
+# GPU lane: overfit renderer to 0.mkv with all tricks (10K epochs)
+OVERFIT_GPU = {
+    "variant": "mask_renderer",
+    "hidden": 48,
+    "mid_ch": 80,
+    "embed_dim": 8,
+    "motion_hidden": 48,
+    "depth": 2,
+    "epochs": 10000,
+    "pretrain_epochs": 1000,
+    "lr": 1e-3,
+    "ema_decay": 0.999,
+    "alpha": 0.0,
+    "sal_lambda": 0.0,
+    "loss_mode": "standard",
+    "segnet_loss_weight": 100.0,
+    "boundary_weight": 50.0,
+    "hard_frame_ratio": 0.5,
+    "error_replay_every": 100,
+    "eval_every": 10,
+    "accum_steps": 4,
+    "use_swa": True,
+    "quantize_mode": "fp4",
+    "even_frame_skip_seg": True,    # Trick 3: skip SegNet on even frames
+    "use_frequency_loss": True,     # Trick 2: wavelet domain shaping
+    "frequency_loss_weight": 0.1,
+}
+
 PROFILES = {
     "council_v1": COUNCIL_V1,
     "council_v2_adaptive": COUNCIL_V2_ADAPTIVE,
@@ -691,4 +744,7 @@ PROFILES = {
     "depthwise_renderer_smoke": DEPTHWISE_RENDERER_SMOKE,
     "channel_recurrent_smoke": CHANNEL_RECURRENT_SMOKE,
     "coord_renderer_smoke": COORD_RENDERER_SMOKE,
+    # Yousfi council decode profiles
+    "overfit_cpu": OVERFIT_CPU,
+    "overfit_gpu": OVERFIT_GPU,
 }

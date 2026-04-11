@@ -321,6 +321,125 @@ def save_int8_from_state_dict(
     return os.path.getsize(path)
 
 
+def prune_and_compress_int8(
+    state_dict: dict[str, torch.Tensor],
+    prune_ratio: float = 0.3,
+    per_channel: bool = True,
+) -> dict[str, Any]:
+    """Prune smallest weights, then quantize to int8 with entropy-friendly encoding.
+
+    Archive size optimization trick: pruning sets small weights to zero,
+    which compresses extremely well under ZIP/zlib entropy coding (the
+    archive.zip format used by the contest). Combined with int8 quantization,
+    this can reduce model size by 30-50% vs vanilla int8.
+
+    Pipeline:
+        1. Global magnitude pruning: zero out the smallest `prune_ratio` fraction
+           of all weight values (biases excluded).
+        2. Per-channel int8 quantization on the pruned weights.
+        3. Return the quantized state dict (caller saves with torch.save or save_int8).
+
+    The zeros in the pruned weights become exact 0 int8 values, which have
+    very high entropy coding efficiency (long runs of zeros compress to bits).
+
+    Args:
+        state_dict: float state dict (e.g., from model.state_dict() or EMA)
+        prune_ratio: fraction of weight values to zero (default 0.3 = 30%)
+        per_channel: use per-channel int8 scales (default True)
+
+    Returns:
+        Packed state dict ready for torch.save (same format as save_int8).
+    """
+    # Step 1: Collect all weight magnitudes for global threshold
+    all_magnitudes = []
+    weight_keys = []
+    for name, tensor in state_dict.items():
+        if not torch.is_floating_point(tensor):
+            continue
+        if name.endswith(".bias"):
+            continue  # don't prune biases
+        all_magnitudes.append(tensor.detach().abs().reshape(-1))
+        weight_keys.append(name)
+
+    if not all_magnitudes:
+        # No prunable weights, fall back to plain quantization
+        return _pack_int8(state_dict, per_channel)
+
+    all_mag = torch.cat(all_magnitudes)
+    threshold = torch.quantile(all_mag.float(), prune_ratio).item()
+
+    # Step 2: Prune + quantize
+    pruned_sd: dict[str, torch.Tensor] = {}
+    total_zeros = 0
+    total_params = 0
+    for name, tensor in state_dict.items():
+        p = tensor.detach().cpu().float()
+        if name in weight_keys:
+            mask = p.abs() > threshold
+            p = p * mask.float()
+            total_zeros += (~mask).sum().item()
+            total_params += mask.numel()
+        pruned_sd[name] = p
+
+    # Step 3: Pack as int8
+    packed = _pack_int8(pruned_sd, per_channel)
+    sparsity = total_zeros / max(total_params, 1) * 100
+    packed["__prune_info__"] = {
+        "prune_ratio": prune_ratio,
+        "threshold": threshold,
+        "sparsity_pct": round(sparsity, 1),
+    }
+    return packed
+
+
+def _pack_int8(
+    state_dict: dict[str, torch.Tensor],
+    per_channel: bool = True,
+) -> dict[str, Any]:
+    """Pack a float state dict into int8 format (same as save_int8 internals)."""
+    state: dict[str, Any] = {}
+    for name, param in state_dict.items():
+        p = param.detach().cpu().float()
+        if not torch.is_floating_point(param):
+            state[name] = param.clone()
+            continue
+        if name.endswith(".bias"):
+            state[name] = p
+            continue
+        if per_channel and p.ndim >= 2:
+            C = p.shape[0]
+            flat = p.reshape(C, -1)
+            scales = flat.abs().max(dim=1).values / 127.0
+            scales = torch.where(scales < 1e-10, torch.ones_like(scales), scales)
+            scales_bc = scales.view(C, *([1] * (p.ndim - 1)))
+            quantized = (p / scales_bc).round().clamp(-128, 127).to(torch.int8)
+            state[name + ".q"] = quantized
+            state[name + ".s"] = scales
+        else:
+            scale = p.abs().max() / 127.0
+            if scale.item() < 1e-10:
+                scale = torch.tensor(1.0)
+            quantized = (p / scale).round().clamp(-128, 127).to(torch.int8)
+            state[name + ".q"] = quantized
+            state[name + ".s"] = scale
+    return state
+
+
+def save_pruned_int8(
+    model: nn.Module,
+    path: str | os.PathLike,
+    *,
+    prune_ratio: float = 0.3,
+    meta: dict[str, Any] | None = None,
+) -> int:
+    """Prune + int8 quantize + save. Returns file size in bytes."""
+    packed = prune_and_compress_int8(model.state_dict(), prune_ratio=prune_ratio)
+    if meta is not None:
+        packed["__meta__"] = dict(meta)
+    torch.save(packed, path)
+    return os.path.getsize(path)
+
+
 def get_meta(path: str | os.PathLike) -> dict[str, Any]:
     """Read metadata from an int8 weight file without loading all weights."""
     state = torch.load(path, map_location="cpu", weights_only=True)

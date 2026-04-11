@@ -92,6 +92,11 @@ def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
     p.add_argument("--use-qat", action="store_true", default=True,
                    help="Enable FP4 QAT (default: on)")
     p.add_argument("--no-qat", dest="use_qat", action="store_false")
+    p.add_argument("--even-frame-skip-seg", action="store_true", default=False,
+                   help="Trick 3: skip SegNet loss when frame_t1 is even-indexed "
+                   "(SegNet only evaluates odd frames in the scorer)")
+    p.add_argument("--frequency-loss-weight", type=float, default=0.0,
+                   help="Trick 2: wavelet frequency-domain loss weight (0=disabled)")
 
     # Data
     p.add_argument("--precomputed", type=str,
@@ -142,6 +147,12 @@ def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
     args.eval_every = _resolve(args.eval_every, "eval_every", 10)
     args.segnet_weight = _resolve(args.segnet_weight, "segnet_loss_weight", 100.0)
     args.pretrain_epochs = _resolve(args.pretrain_epochs, "pretrain_epochs", 0)
+
+    # Yousfi council tricks (resolve from profile if not set via CLI)
+    if not args.even_frame_skip_seg:
+        args.even_frame_skip_seg = profile_vals.get("even_frame_skip_seg", False)
+    if args.frequency_loss_weight == 0.0:
+        args.frequency_loss_weight = profile_vals.get("frequency_loss_weight", 0.0)
 
     return args
 
@@ -477,6 +488,19 @@ def train(args: argparse.Namespace):
                     del _gt_pose_6, _gt_seg_soft
                 else:
                     loss, pd, sd = scorer_loss(rendered_pair, gt_pair, posenet, segnet)
+
+            # Trick 3: Even-frame SegNet skip
+            # If frame_t1 (start+1) is even-indexed, SegNet won't evaluate it.
+            # Scale loss to reduce SegNet contribution (PoseNet-only emphasis).
+            if not in_pretrain and args.even_frame_skip_seg and (start + 1) % 2 == 0:
+                loss = loss * 0.5
+
+            # Trick 2: Frequency-domain wavelet loss
+            if not in_pretrain and args.frequency_loss_weight > 0:
+                from tac.losses import frequency_aware_loss
+                freq_loss = frequency_aware_loss(rendered_pair, gt_pair)
+                loss = loss + args.frequency_loss_weight * freq_loss
+
             scaled_loss = loss / accum
 
             try:
