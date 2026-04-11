@@ -115,17 +115,21 @@ class MaskRenderer(nn.Module):
         → down (strided conv + resblock)        [H/2, W/2]
         → bottleneck resblock
         → up (transposed conv + resblock)        [H, W]
-        → head (1x1 conv → 3ch RGB)
+        → head (1x1 conv → 3ch RGB, soft sigmoid output)
 
-    The skip connection from stem to decoder is critical — without it
-    the upsampled features lose high-frequency spatial detail that PoseNet
-    needs for accurate pose estimation.
+    CLADE per-class normalization: each ResBlock's GroupNorm is modulated by
+    per-class gamma/beta looked up from the segmentation mask, giving the
+    network class-specific feature statistics (arxiv 2012.04644).
+
+    Soft sigmoid output: 255 * sigmoid(logits / 50) provides always-flowing
+    gradients, replacing hard clamp(0, 255).
 
     Args:
         num_classes: number of segmentation classes (5 for comma SegNet)
         embed_dim: embedding dimension per class (input channels to U-Net)
         base_ch: base channel width (stem and decoder)
         mid_ch: bottleneck channel width (wider for capacity)
+        embedding: optional pre-created Embedding (for weight sharing)
 
     Competitor reference: base_ch=36, mid_ch=60, embed_dim=6 (~308K params in FP4).
     """
@@ -136,39 +140,39 @@ class MaskRenderer(nn.Module):
         embed_dim: int = 6,
         base_ch: int = 36,
         mid_ch: int = 60,
+        embedding: nn.Embedding | None = None,
     ):
         super().__init__()
         self.num_classes = num_classes
         self.embed_dim = embed_dim
 
         # Class embedding: each of 5 classes → learned embed_dim-dimensional vector
-        self.embedding = nn.Embedding(num_classes, embed_dim)
+        # Accepts external embedding for weight sharing with MotionPredictor
+        self.embedding = embedding if embedding is not None else nn.Embedding(num_classes, embed_dim)
 
         # Stem: embed_dim → base_ch at full resolution
         self.stem_conv = nn.Conv2d(embed_dim, base_ch, 3, padding=1, bias=True)
-        self.stem_res = ResBlock(base_ch)
+        self.stem_res = ResBlock(base_ch, num_classes=num_classes)
 
         # Downsample: base_ch → mid_ch at half resolution
         self.down_conv = nn.Conv2d(base_ch, mid_ch, 3, stride=2, padding=1, bias=True)
-        self.down_res = ResBlock(mid_ch)
+        self.down_res = ResBlock(mid_ch, num_classes=num_classes)
 
         # Bottleneck at half resolution
-        self.bottleneck = ResBlock(mid_ch)
+        self.bottleneck = ResBlock(mid_ch, num_classes=num_classes)
 
         # Upsample: mid_ch → base_ch at full resolution
         self.up_conv = nn.ConvTranspose2d(mid_ch, base_ch, 4, stride=2, padding=1, bias=True)
-        self.up_res = ResBlock(base_ch)
+        self.up_res = ResBlock(base_ch, num_classes=num_classes)
 
         # Fusion after skip: base_ch (skip) + base_ch (upsampled) → base_ch
         self.fuse_conv = nn.Conv2d(base_ch * 2, base_ch, 1, bias=True)
 
-        # Head: base_ch → 3 RGB channels
+        # Head: base_ch → 3 RGB channels (soft sigmoid output, no bias init needed)
         self.head = nn.Conv2d(base_ch, 3, 1, bias=True)
-
-        # Initialize head to produce mid-gray (128) — better starting point
-        # than zeros for RGB output
+        # Initialize head so sigmoid(head/50) ≈ 0.5 → ~128 at init
         nn.init.zeros_(self.head.weight)
-        nn.init.constant_(self.head.bias, 128.0)
+        nn.init.zeros_(self.head.bias)
 
     def forward(self, masks: torch.Tensor) -> torch.Tensor:
         """Render RGB frames from segmentation masks.
@@ -183,31 +187,32 @@ class MaskRenderer(nn.Module):
         x = self.embedding(masks)
         x = x.permute(0, 3, 1, 2).contiguous()
 
-        # Stem (full res)
+        # Stem (full res) — pass mask for CLADE conditioning
         stem = self.stem_conv(x)
-        stem = self.stem_res(stem)
+        stem = self.stem_res(stem, masks)
 
         # Down (half res)
         down = self.down_conv(stem)
-        down = self.down_res(down)
+        down = self.down_res(down, masks)
 
         # Bottleneck
-        mid = self.bottleneck(down)
+        mid = self.bottleneck(down, masks)
 
         # Up (back to full res)
         up = self.up_conv(mid)
         # Handle potential size mismatch from odd dimensions
         if up.shape[2:] != stem.shape[2:]:
             up = F.interpolate(up, size=stem.shape[2:], mode="bilinear", align_corners=False)
-        up = self.up_res(up)
+        up = self.up_res(up, masks)
 
         # Skip connection: concatenate stem features with upsampled
         fused = torch.cat([stem, up], dim=1)
         fused = self.fuse_conv(fused)
 
-        # Head: produce RGB
-        rgb = self.head(fused)
-        return rgb.clamp(0.0, 255.0)
+        # Head: soft sigmoid output — gradients always flow, no dead zones
+        # sigmoid(0/50) = 0.5 → 127.5 at init (mid-gray)
+        rgb = 255.0 * torch.sigmoid(self.head(fused) / 50.0)
+        return rgb
 
     def param_count(self) -> int:
         """Total trainable parameter count."""
@@ -272,6 +277,7 @@ class MotionPredictor(nn.Module):
         num_classes: segmentation classes
         embed_dim: per-class embedding dimension
         hidden: internal channel width
+        embedding: optional pre-created Embedding (for weight sharing)
     """
 
     def __init__(
@@ -279,10 +285,12 @@ class MotionPredictor(nn.Module):
         num_classes: int = 5,
         embed_dim: int = 6,
         hidden: int = 32,
+        embedding: nn.Embedding | None = None,
     ):
         super().__init__()
         self.num_classes = num_classes
-        self.embedding = nn.Embedding(num_classes, embed_dim)
+        # Accepts external embedding for weight sharing with MaskRenderer
+        self.embedding = embedding if embedding is not None else nn.Embedding(num_classes, embed_dim)
         in_ch = embed_dim * 2  # two masks concatenated
 
         self.net = nn.Sequential(
@@ -408,6 +416,11 @@ def build_renderer(
 
     Default settings match the competitor's proven ~300K param budget.
 
+    Features:
+        - Shared embedding between renderer and motion predictor
+        - CLADE per-class normalization in all ResBlocks
+        - Soft sigmoid output for always-flowing gradients
+
     Args:
         num_classes: segmentation classes (5 for comma)
         embed_dim: per-class embedding dimension
@@ -418,23 +431,33 @@ def build_renderer(
     Returns:
         PairGenerator wrapping MaskRenderer + MotionPredictor
     """
+    # Shared embedding: renderer and motion predictor learn a single
+    # class representation, reducing parameters and improving coherence
+    shared_embed = nn.Embedding(num_classes, embed_dim)
+
     renderer = MaskRenderer(
         num_classes=num_classes,
         embed_dim=embed_dim,
         base_ch=base_ch,
         mid_ch=mid_ch,
+        embedding=shared_embed,
     )
     motion = MotionPredictor(
         num_classes=num_classes,
         embed_dim=embed_dim,
         hidden=motion_hidden,
+        embedding=shared_embed,
     )
     pair_gen = PairGenerator(renderer, motion)
+
+    # Verify embedding is truly shared
+    assert renderer.embedding is motion.embedding, "Embedding sharing failed"
 
     total = pair_gen.param_count()
     r_count = renderer.param_count()
     m_count = motion.param_count()
     print(f"[renderer] Built PairGenerator: {total:,} params "
-          f"(renderer={r_count:,}, motion={m_count:,}, blend=1)")
+          f"(renderer={r_count:,}, motion={m_count:,}, blend=1, "
+          f"shared_embed={shared_embed.weight.numel()}, CLADE=on, sigmoid_out=on)")
 
     return pair_gen

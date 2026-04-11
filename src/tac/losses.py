@@ -188,6 +188,57 @@ def eval_scorer_loss(
     return score, avg_p, avg_s
 
 
+def renderer_scorer_loss(
+    rendered_pair_hwc: torch.Tensor,
+    gt_pair_hwc: torch.Tensor,
+    posenet,
+    segnet,
+    segnet_weight: float = 100.0,
+) -> tuple[torch.Tensor, float, float]:
+    """Scorer loss optimized for the renderer paradigm.
+
+    Key insight from scorer mechanics:
+    - SegNet evaluates only the LAST frame (frame_t1) via argmax
+    - PoseNet evaluates the full frame PAIR for ego-motion estimation
+
+    This loss applies SegNet loss only on frame_t1, freeing frame_t
+    to be optimized purely for PoseNet (ego-motion) without SegNet
+    interference. This reduces the multi-task conflict surface.
+
+    Returns: (loss, pose_distortion, seg_distortion)
+    """
+    fx = _hwc_to_chw(rendered_pair_hwc)
+    gx = _hwc_to_chw(gt_pair_hwc)
+
+    # Full pair PoseNet loss (both frames matter for ego-motion)
+    fp_out, _ = scorer_forward_pair(fx, posenet, segnet)
+    with torch.no_grad():
+        gp_out, _ = scorer_forward_pair(gx, posenet, segnet)
+    pose_dist = (fp_out["pose"][..., :6] - gp_out["pose"][..., :6]).pow(2).mean()
+
+    # Last-frame-only SegNet loss (scorer uses argmax of frame_t1 only)
+    # Extract last frame: (B, T, C, H, W) → (B, C, H, W) at T=-1
+    fx_last = fx[:, -1]  # (B, C, H, W)
+    gx_last = gx[:, -1]
+
+    # SegNet expects (B, T, C, H, W) with T=1 for single-frame eval
+    fx_last_bt = fx_last.unsqueeze(1)
+    gx_last_bt = gx_last.unsqueeze(1)
+
+    fs_in = segnet.preprocess_input(fx_last_bt)
+    fs_out = segnet(fs_in)
+    with torch.no_grad():
+        gs_in = segnet.preprocess_input(gx_last_bt)
+        gs_out = segnet(gs_in)
+
+    pred_soft = F.softmax(fs_out, dim=1)
+    gt_soft = F.softmax(gs_out, dim=1)
+    seg_dist = 1.0 - (pred_soft * gt_soft).sum(dim=1).mean()
+
+    loss = segnet_weight * seg_dist + torch.sqrt(10.0 * pose_dist + 1e-8)
+    return loss, pose_dist.item(), seg_dist.item()
+
+
 def segnet_ste_loss(
     filtered_pair_hwc: torch.Tensor,
     gt_pair_hwc: torch.Tensor,
