@@ -280,7 +280,7 @@ def build_postfilter(meta: object | None = None) -> PostFilter:
         return DilatedPostFilter(hidden=hidden, kernel=kernel)
     if variant == "gated_dilated":
         return GatedDilatedPostFilter(hidden=hidden, kernel=kernel)
-    if variant == "film_conditioned":
+    if variant in ("film", "film_conditioned"):
         return FiLMPostFilter(hidden=hidden, kernel=kernel)
     if variant == "psd":
         return PixelShuffleDilatedPostFilter(hidden=hidden, kernel=kernel)

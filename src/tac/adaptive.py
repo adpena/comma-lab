@@ -257,7 +257,7 @@ class AdaptiveWeights:
         Unlike rebalance() (which uses the vacuous KL formula), this derives
         the segnet weight from the score formula's first-order optimality condition:
 
-            w_seg = 200 * sqrt(10 * pose)
+            w_seg = 20 * sqrt(10 * pose)
 
         No temperature parameter — standard loss has no temperature.
 

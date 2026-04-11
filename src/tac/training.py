@@ -702,6 +702,13 @@ class Trainer:
             raise NotImplementedError(
                 "adaptive_rebalance requires fit_lazy(). fit() does not support adaptive weights."
             )
+        if cfg.use_swa:
+            import warnings
+            warnings.warn(
+                "use_swa=True has no effect in fit(). SWA is only implemented in fit_lazy(). "
+                "Either switch to fit_lazy() or set use_swa=False.",
+                stacklevel=2,
+            )
 
         # Patch scorer models for differentiable training (CRITICAL: without this,
         # PoseNet gradients are zero due to upstream @torch.no_grad on rgb_to_yuv6)
