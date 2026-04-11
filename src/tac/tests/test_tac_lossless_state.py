@@ -34,7 +34,7 @@ class TacLosslessStateTests(unittest.TestCase):
             payload_bytes=111,
             record_count=3,
             checked_items=3,
-            split=["0", "1"],
+            split=("0", "1"),
             evidence_root="reports/raw/example",
         )
 

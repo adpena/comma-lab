@@ -4,6 +4,7 @@ These tests compare our implementations against the upstream reference
 to catch any divergence that would make proxy scores unreliable.
 """
 import sys
+import unittest
 from pathlib import Path
 
 import pytest
@@ -14,7 +15,15 @@ REPO = Path(__file__).parent.parent
 UPSTREAM = REPO / "workspace" / "upstream" / "comma_video_compression_challenge"
 sys.path.insert(0, str(UPSTREAM))
 
+# Check if upstream is available (frame_utils importable)
+try:
+    import frame_utils as _frame_utils  # noqa: F401
+    _upstream_available = True
+except ImportError:
+    _upstream_available = False
 
+
+@pytest.mark.skipif(not _upstream_available, reason="requires upstream repo (frame_utils)")
 class TestYUV420Compliance:
     """Verify our differentiable YUV conversion matches upstream exactly."""
 

@@ -11,7 +11,7 @@ from pathlib import Path
 
 from src.comma_lab import cli
 
-ROOT = Path(__file__).resolve().parents[1]
+ROOT = Path(__file__).resolve().parents[3]
 
 
 def write_json(path: Path, payload: object) -> None:

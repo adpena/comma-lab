@@ -1,0 +1,14 @@
+{
+  "command": "lossless_global_prev_symbol_order_sample",
+  "output_path": "/Users/adpena/Projects/pact/reports/raw/2026-04-11-commavq-ordered-record-sample/canonical_1024_tool.json",
+  "encoded_dir": "/Users/adpena/Projects/pact/reports/raw/2026-04-11-commavq-ordered-record-sample/canonical_1024_tool",
+  "strategy": "canonical",
+  "frame_order": "canonical",
+  "labels_path": null,
+  "order_path": null,
+  "max_records": 1024,
+  "archive_bytes": 95995643,
+  "original_bytes": 196608000,
+  "compression_ratio": 2.048092953552069,
+  "exact_match": true
+}

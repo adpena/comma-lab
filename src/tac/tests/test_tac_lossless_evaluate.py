@@ -281,7 +281,7 @@ class TacLosslessEvaluateTests(unittest.TestCase):
                 num_proc=1,
             )
 
-            compression, verification, decompressed_root = evaluate_local_submission_contract(
+            compression, verification, decompressed_root, _cleanup = evaluate_local_submission_contract(
                 profile="lzma_baseline",
                 archive_path=baseline["archive_path"],
                 method="lzma",

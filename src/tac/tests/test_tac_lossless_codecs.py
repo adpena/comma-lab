@@ -475,7 +475,8 @@ class TacLosslessCodecsTests(unittest.TestCase):
             def fake_run(cmd, *, cwd=None, check=None, stdout=None, stderr=None):
                 self.assertFalse(isinstance(cmd, str))
                 if cmd[1] == "add":
-                    self.assertEqual(cmd[3], "tokens.bin")
+                    # Accept both "tokens.bin" and "./tokens.bin"
+                    self.assertIn(Path(cmd[3]).name, ["tokens.bin"])
                     Path(cmd[2]).write_bytes(b"zpaq-archive")
                 elif cmd[1] == "extract":
                     extract_dir = Path(cmd[cmd.index("-to") + 1])
