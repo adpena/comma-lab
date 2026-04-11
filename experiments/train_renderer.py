@@ -240,6 +240,13 @@ def pretrain_loss(rendered_pair: torch.Tensor, gt_pair: torch.Tensor) -> torch.T
     """
     r = rendered_pair / 255.0
     g = gt_pair.float() / 255.0
+    # Renderer output is at mask resolution (384×512), GT may be at full resolution (874×1164)
+    # Downscale GT to match renderer output if sizes differ
+    if r.shape[2:4] != g.shape[2:4]:
+        # (B, 2, H, W, 3) → (B*2, 3, H, W) for interpolation, then back
+        g_bchw_tmp = g.reshape(-1, *g.shape[2:]).permute(0, 3, 1, 2)
+        g_bchw_tmp = F.interpolate(g_bchw_tmp, size=r.shape[2:4], mode="bilinear", align_corners=False)
+        g = g_bchw_tmp.permute(0, 2, 3, 1).reshape(r.shape)
     l1 = F.l1_loss(r, g)
 
     # Simple edge loss via horizontal gradient magnitude
