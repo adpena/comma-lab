@@ -392,6 +392,56 @@ Under the proposed formula, our submission scores 0.587 (vs baseline 1.000), whi
 
 This analysis builds on Blau and Michaeli's rate-distortion-perception tradeoff (ICML 2019) and extends it to the multi-task setting. The MPEG VCM standard (ISO/IEC 23888-2) is moving toward task-driven compression metrics but has not yet specified a multi-task aggregation formula.
 
+## Deployment analysis: from competition to fleet
+
+The post-filter is a 3-layer CNN that ships as a 3-46KB int8 checkpoint and runs in under 30ms per frame on CPU. This section analyzes where and how it could operate in comma's production stack and at fleet scale.
+
+### Where the filter fits
+
+The comma four runs openpilot on a Qualcomm Snapdragon SA8295P with dedicated video encode/decode blocks, a Hexagon DSP/NPU, and an Adreno GPU. The live driving path — camera to supercombo inference at 20fps — does not compress the video and does not need the filter. The filter matters for compressed video: logged data uploaded over cellular for fleet learning, replayed for offline evaluation, and stored for simulation.
+
+The deployment target is the cloud decode pipeline, not the device. Compressed video arrives at comma's servers, gets decoded, and feeds into training data preparation. The filter runs once per frame at decode time, before the data enters the training pipeline. This avoids all on-device thermal, power, and safety certification concerns while capturing the primary value: better training data from the same compressed video.
+
+For on-device replay (local model evaluation), the filter could run on the Hexagon DSP. At h=16 (3,203 parameters, ~3KB), a single forward pass costs under 1ms per frame on the Hexagon 698 at int8 precision. Even h=64 stays under 5ms. The thermal cost is negligible against the 5W sustained envelope.
+
+### Fleet-scale numbers
+
+comma's fleet of 250K+ devices, each logging approximately 1 hour of driving per day at 20fps per camera, generates:
+
+```
+250,000 devices × 1 camera × 20 fps × 3,600 sec = 18 billion frames/day
+```
+
+At the current CRF 34 encoding (~1 GB per hour per camera), daily upload volume is approximately 250 TB. Moving to CRF 36 with the post-filter preserving task quality reduces this to approximately 170 TB/day — a saving of 80 TB/day, or 29 PB/year.
+
+At bulk cellular rates (~$0.01/GB) and cloud storage costs (~$0.02/GB-month), the annual savings are approximately $290K in bandwidth and $590K in reduced storage, totaling roughly $890K/year. These estimates are conservative: they assume one camera and one hour per device, and they exclude the value of improved training data quality.
+
+The compute cost of cloud-side filtering at h=16 on GPU (batched, T4-class hardware) is approximately 0.1ms per frame, or 42 GPU-days for the full fleet's daily volume. At $0.50/GPU-hour, that is $500/day or $182K/year. The return on compute investment is approximately 5x before counting training data quality improvements.
+
+### Model distribution
+
+The h=16 int8 checkpoint is approximately 3KB. Distributing it to 250K devices costs 750MB total — a rounding error against openpilot's typical 50-200MB OTA updates. Even h=64 at 46KB requires only 11.5GB fleet-wide. The filter can be updated via OTA without infrastructure changes.
+
+### Training data quality
+
+The post-filter preserves the visual features that PoseNet and SegNet rely on. If the driving model (supercombo) shares architectural heritage with these scorers — which it does, consuming the same resolution inputs and performing overlapping tasks — then filtered training data should improve data efficiency. The model extracts more signal per training frame because compression artifacts that would confuse it are reduced.
+
+The risk is systematic bias: the filter enhances features the current scorer networks value, which may not perfectly align with what future driving models need. If the supercombo evolves to use features the scorers ignore, the filter could suppress useful signal. The mitigation is to maintain an unfiltered data stream for 10-20% of training data and to retrain the filter whenever the downstream model is updated.
+
+### Beyond this competition
+
+The core technique — training a lightweight CNN by backpropagating through a frozen downstream task network — applies wherever compressed media feeds into neural network inference. The filter learns the saliency structure of the downstream network: which pixels, frequencies, and local patterns the network relies on.
+
+Concrete applications include medical imaging (preserving diagnostic CNN features in compressed DICOM), autonomous robotics (task-aware compression for logged perception data), satellite imagery (bandwidth-constrained downlink to ground-based analysis), and surveillance analytics (preserving detection-relevant features in compressed CCTV). In each case, the approach requires only a frozen downstream model and a differentiable path from the compressed output through that model.
+
+A natural extension is saliency-guided QP allocation within the codec itself. The gradient of the task loss with respect to input pixels identifies which spatial regions the downstream model is sensitive to. Feeding these saliency maps as per-CTU QP offsets to the AV1 encoder would make compression itself task-aware, eliminating the need for a post-filter entirely.
+
+### Validation requirements
+
+Deployment requires validation on diverse driving conditions beyond the competition's test set. The filter was trained on a specific distribution of road types, lighting, and weather. On out-of-distribution content (night driving, rain, snow, camera degradation), the zero-initialized residual architecture provides a safety margin — the filter starts as identity and learns small corrections, so truly novel content should receive minimal modification. But "should" is not "will." A minimum viable validation set of 1000+ hours covering night, weather, and geographic variation is needed before fleet deployment.
+
+The filter should be retrained whenever the downstream task model is updated. Training takes hours on a single GPU, and the filter retraining should be part of the model update CI/CD pipeline. The maintenance burden is proportional to the model update cadence, not to fleet size.
+
 ## Related work
 
 This work is a specific instance of task-aware video compression, an area gaining traction in both academia and standards bodies:
