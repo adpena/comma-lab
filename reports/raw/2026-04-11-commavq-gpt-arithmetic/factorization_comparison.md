@@ -85,6 +85,15 @@
   - bits/token: `1.7371709589676005`
   - perplexity: `3.333807860550116`
   - this is the strongest measured official-GPT signal in the repo so far
+- The first real GPT arithmetic encoded sample is now on disk:
+  - artifact: `reports/raw/2026-04-11-commavq-gpt-arithmetic/small/train_split0_gpt_arithmetic_sample_256_v2.gta`
+  - device: `mps`
+  - token count: `256`
+  - encoded bytes: `179`
+  - compression ratio: `2.8603351955307263`
+  - exact round-trip: `true`
+  - observed bits/token: `5.285045238888939`
+  - this is much worse than the scorer-only `2048`-token estimate, so the arithmetic lane still has a large implementation gap
 - The exact local-only `zpaq` rerun is now complete:
   - metadata: `reports/raw/2026-04-11-commavq-zpaq-baseline-rerun/zpaq_baseline_result.json`
   - archive bytes: `538876316`
