@@ -215,7 +215,7 @@ The only safe place to modify frames is after decoding, with a learned filter. P
 - **Test-time optimization:** 5 Adam steps per frame at inflate time against the frozen scorer. Council killed it: no ground truth available at inflate time (the loss function requires GT frames), SegNet loading would exceed the 30-minute time budget by 10+ minutes, and the CNN already learns optimal boundary corrections during training.
 - **Checkpoint ensemble at inflate:** Load multiple checkpoints and pixel-average their outputs. Council killed it: adding two extra 45KB checkpoints to the archive costs +0.075 on the rate term, and there was no evidence that errors from different training runs are complementary rather than correlated.
 - **512x384 encoding:** Encode at SegNet's native resolution to eliminate double interpolation. File size was 6% smaller but the scorer requires 1164x874 frames (asserted at evaluation time), and retraining would discard all accumulated training signal. Council ruled: distortion is the binding constraint, not rate.
-- **Encoder sweep (6 variants):** Infinite GOP, 10-bit YUV420, film-grain=30, denoise=0, larger resolution. All within 2% of current archive size. The encoder is already near its efficient frontier.
+- **Encoder sweep (6 variants):** Infinite GOP (keyint=-1), 10-bit YUV420, film-grain=30 with denoise=0, and 582x436 resolution. All within 2% of current archive size — file size only, distortion not yet measured. The full stack (10-bit + keyint=-1 + sharpness=0) saved 1.7% on file size (~0.01 score). These gains are real but marginal and require retraining the post-filter on the new archive distribution. Queued for the final submission push after the post-filter architecture is settled.
 
 ### The lesson
 
