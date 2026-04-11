@@ -188,4 +188,20 @@
   - compression ratio: `2.54252017380509`
   - bits/token: `6.29296875`
   - this is much weaker than the earlier frame-major GPT arithmetic sample lane, so simply switching to the raw global stream does not improve the GPT lane yet
+- The same semantic/ranking picture held at 1024 records:
+  - canonical: `reports/raw/2026-04-11-commavq-ordered-record-sample/canonical_1024_tool.json`
+    - compression ratio: `2.048092953552069`
+  - clip similarity: `reports/raw/2026-04-11-commavq-ordered-record-sample/clip_greedy_nn_1024_tool.json`
+    - compression ratio: `2.0480929748873393`
+  - pose grouping: `reports/raw/2026-04-11-commavq-ordered-record-sample/pose_label_grouped_1024_tool.json`
+    - compression ratio: `2.0480929748873393`
+  - exact match: `true` for all
+  - again, the current best ordering signal is only a repeatable `1` byte win over canonical
+- The canonical decoder bridge now also works through the official ONNX artifact:
+  - inspect note: `reports/raw/2026-04-11-commavq-onnx-inspect.md`
+  - sample metadata: `reports/raw/2026-04-11-commavq-token-rgb-bridge/example_tokens_rgb_16_onnx.json`
+  - backend: `onnx`
+  - provider: `CoreMLExecutionProvider`
+  - input contract: `(b, 8, 16)`
+  - output contract: `(b, 3, 128, 256)`
 - The next exact implementation cut should build on this `position_major` file-level conditional coder signal, not on more source-order experiments.

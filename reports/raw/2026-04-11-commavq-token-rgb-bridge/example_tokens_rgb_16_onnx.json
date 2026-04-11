@@ -1,0 +1,27 @@
+{
+  "command": "lossless_token_rgb_sample",
+  "token_path": "/Users/adpena/Projects/pact/workspace/upstream/commavq/examples/tokens.npy",
+  "output_path": "/Users/adpena/Projects/pact/reports/raw/2026-04-11-commavq-token-rgb-bridge/example_tokens_rgb_16_onnx.npy",
+  "frame_count": 16,
+  "frame_shape": [
+    128,
+    256,
+    3
+  ],
+  "batch_size": 8,
+  "device": "cpu",
+  "requested_dtype": "auto",
+  "dtype": "float32",
+  "commavq_root": "/Users/adpena/Projects/pact/workspace/upstream/commavq",
+  "decoder_url": "https://huggingface.co/commaai/commavq-gpt2m/resolve/main/decoder.onnx",
+  "measured": false,
+  "local_only": true,
+  "bridge_backend": "onnx",
+  "execution_provider": "CoreMLExecutionProvider",
+  "execution_providers": [
+    "CoreMLExecutionProvider",
+    "CPUExecutionProvider"
+  ],
+  "decoder_artifact_url": "https://huggingface.co/commaai/commavq-gpt2m/resolve/main/decoder.onnx",
+  "decoder_artifact_path": "/Users/adpena/.cache/tac/commavq-gpt2m/decoder.onnx"
+}
