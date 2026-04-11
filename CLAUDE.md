@@ -125,20 +125,21 @@ A candidate may be promoted only after:
 - **Always use the tac library** for new training experiments. The canonical entry point is `experiments/train_tac.py`.
   - Do NOT duplicate training code in new experiment scripts.
   - All loss functions, architectures, data loading, and training loops live in `src/tac/`.
-  - **Use named profiles** for new training runs: `--profile council_v2_adaptive` is recommended (self-correcting weights derived from scoring formula).
-  - Available profiles: `council_v2_adaptive` (adaptive weights), `council_v1` (static KL distill), `segnet_attack` (aggressive), `proven_baseline` (1.33 settings), `h96_council`, `smoke` (quick test).
+  - **Use named profiles** for new training runs: `--profile proven_baseline` is recommended (produced the 1.33 authoritative score).
+  - Available profiles: `proven_baseline` (1.33 settings), `psd_standard_adaptive` (PSD arch + frontier), `council_v1` (static, legacy), `segnet_attack` (aggressive), `h96_council`, `smoke` (quick test).
   - Profiles live in `src/tac/profiles.py`. CLI args override profile values.
   - **Use precomputed data** when available: `--precomputed experiments/precomputed_local` (skips 5-min video decode).
-  - **Adaptive weight system** (`src/tac/adaptive.py`): derives optimal segnet_weight and boundary_weight from the scoring formula at each eval epoch. The compound invariant w_s·T² ≈ 3 must be maintained. Formally verified in Lean 4 (`proofs/AdaptiveWeights.lean`).
+  - **Adaptive weight formula was retired** (`src/tac/adaptive.py`): T² cancels in the derivation, making the formula vacuous. Use standard loss with static weights instead.
 - **Always commit after every change.** Git history is the research timeline.
 
 ## Critical lessons — DO NOT repeat these mistakes
 
-- **KL distill proxy is untrustworthy.** A checkpoint with proxy 1.25 scored 1.85 authoritative. NEVER promote KL distill without authoritative eval.
+- **KL distill is DEAD.** Two authoritative evals confirmed PoseNet collapse: 1.85 and 2.05. NEVER use KL distill loss_mode.
 - **Neural artifacts must be inside archive.zip** per contest rules (affects rate calculation).
 - **Do NOT use PoseNet gradient caps/clamps.** Caused 26x PoseNet regression.
-- **Do NOT use static segnet_weight > 10 with KL distill at T=5.** The compound w_s·T² must be ~3, not 750.
-- **Do NOT use boundary_weight > 100 with KL distill.** Overwhelms PoseNet signal.
+- **Do NOT use KL distill loss_mode.** Two authoritative evals confirmed PoseNet collapse (1.85 and 2.05).
+- **Do NOT use adaptive_rebalance=True.** The formula was vacuous (T² cancels).
+- **Do NOT use segnet_loss_weight > 100 with any loss mode.** Overwhelms PoseNet signal.
 
 ## Ralph-style execution model
 

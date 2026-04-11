@@ -129,7 +129,7 @@ The approach scales along three axes: model capacity, training time, and trainin
 
 **Model capacity** follows the log-linear law above. A 45KB int8 budget constrains us to ~40K parameters with the dilated architecture. Removing this constraint (e.g., allowing 500KB or 5MB artifacts in the archive) would permit h=256 or deeper networks. The log-linear law predicts h=256 standard would score ~1.0. With dilated convolutions, which broke below the law at h=64, larger capacity could push significantly lower.
 
-**Training time** shows diminishing but persistent returns. The dilated h=64 standard-loss run improved from 1.48 to 1.33 over 905 epochs. The KL distill + hard-frame variant reached 1.25 proxy in 200 epochs — a 4.5x convergence speedup from better gradient signal. Both trajectories continue to improve beyond these points. With the 30-minute inflate time budget, we could also run larger models at inference time: a 500KB model with h=128 would process 1200 frames in ~40 seconds on CPU, well within budget.
+**Training time** shows diminishing but persistent returns. The dilated h=64 standard-loss run improved from 1.48 to 1.33 over 905 epochs. With the 30-minute inflate time budget, we could also run larger models at inference time: a 500KB model with h=128 would process 1200 frames in ~40 seconds on CPU, well within budget.
 
 **Training technique** is the multiplier. The score trajectory across technique generations:
 
@@ -137,13 +137,13 @@ The approach scales along three axes: model capacity, training time, and trainin
 |-----------|-----------|----------------|
 | Standard loss, h=64 | 1.51 | ~500 |
 | Standard loss, dilated h=64 | 1.33 | 905 |
-| KL distill + hard-frame, dilated h=64 | 1.25 proxy (auth: 2.05 — DEAD) | 200 |
+| KL distill + hard-frame, dilated h=64 | 1.25 proxy (auth: 2.05 -- DEAD) | 200 |
 
-Each technique generation achieves the previous best in fewer epochs, then continues past it. The KL distill + hard-frame combination reached in 200 epochs what standard loss could not reach in 905. This suggests the bottleneck at this scale is gradient signal quality, not raw compute.
+Standard loss with dilated convolutions is the only technique that transfers from proxy to authoritative scoring. The KL distill variant appeared to converge faster but the proxy improvement was phantom -- two independent authoritative evaluations (1.85 and 2.05) confirmed it does not transfer. The bottleneck for further improvement is architecture and capacity, not training technique.
 
 **Theoretical limits**: A panel analysis estimated the absolute floor for a 45KB int8 CNN at ~1.25-1.30, driven by the 15x15 receptive field covering only 2.5% of the scorer's input resolution. With an optimal architecture (larger RF via PixelShuffle or deeper dilation), the floor drops to ~1.10. Removing the size constraint entirely, the floor is ~0.875-0.975 — bounded by the irreducible rate term (0.575) and codec artifacts that no post-filter can reverse.
 
-The practical implication: this approach improves with more compute along every axis, and we have not yet hit the capacity ceiling. The remaining gap is in SegNet distortion, where our boundary weight optimization and hard-frame curriculum are still converging.
+The practical implication: this approach improves with more compute along every axis, and we have not yet hit the capacity ceiling. The remaining gap is in SegNet distortion, where architecture changes (e.g., PixelShuffle-Downscale or deeper dilation stacks) offer the most plausible path forward.
 
 ## Why closed-form corrections fail: a mathematical detour
 
@@ -237,22 +237,25 @@ Power-law weighted sampling oversamples the highest-disagreement pairs. Every 20
 
 ## The proxy-authoritative gap
 
-A KL distillation checkpoint with proxy score 1.25 scored 1.85 on the authoritative scorer — a 0.60-point gap. The SegNet improvement was real (0.00610 → 0.00493, 19% better) but PoseNet regressed 26x (0.00218 → 0.05725).
+Two independent authoritative evaluations of KL distillation checkpoints confirmed a structural proxy-to-authoritative gap:
 
-Root cause: the training loss used a hard clamp on PoseNet distortion (`min=0.001`) that killed PoseNet gradients once PoseNet was briefly good. The clamp allowed the filter to freely rearrange pixels for SegNet benefit while PoseNet degraded unchecked. The proxy's uint8 round-trip did not fully replicate the inflate pipeline's amplification of PoseNet-sensitive texture degradation.
+1. **First eval** (sw=100, PoseNet gradient cap): proxy 1.25, authoritative 1.85. SegNet improved 19% (0.00610 to 0.00493) but PoseNet regressed 26x (0.00218 to 0.05725).
+2. **Second eval** (sw=30, no cap): proxy 1.43, authoritative 2.05. Even after removing the gradient cap and reducing the SegNet weight, PoseNet regressed 37x (0.00218 to 0.081).
 
-The fix was structural: remove the clamp, derive 25+ experiments from the scoring formula, and add a PoseNet regression alarm (blocks checkpoint promotion if PoseNet exceeds 3x baseline). The adaptive system makes this class of error structurally impossible by continuously rebalancing based on measured distortions.
+The first failure could be attributed to the PoseNet gradient cap. The second could not -- it had no cap. The root cause is structural: KL distillation's gradient signal dominates PoseNet MSE at any segnet_weight above ~5, causing the CNN to rearrange pixels for SegNet benefit while PoseNet degrades unchecked. The proxy's uint8 round-trip does not fully replicate the inflate pipeline's amplification of PoseNet-sensitive texture degradation.
+
+The fix was to abandon KL distillation entirely and return to standard loss, which is the only technique that transfers reliably from proxy to authoritative scoring. A PoseNet regression alarm (blocks checkpoint promotion if PoseNet exceeds 3x baseline) prevents silent regression regardless of technique.
 
 ## Formal verification
 
-Key properties of the adaptive weight system are proved in Lean 4:
+We wrote Lean 4 proofs for the adaptive weight system. The proofs are correct and have zero sorry obligations, but they verify properties of a system that turned out to be vacuous in practice:
 
-1. The optimal segnet weight equals the score sensitivity ratio (d(score)/d(seg) / d(score)/d(pose))
-2. The compound invariant w_s·T² is preserved under the temperature rescaling transformation
-3. The boundary weight amplification ceiling is 1/β, and the amplification function is monotonically increasing
-4. Per-channel quantization provably dominates per-tensor in variance
+1. The optimal segnet weight equals the score sensitivity ratio -- correct, but the formula produced w_s=0.80 when the empirical winner used w_s=100 (a 125x mismatch).
+2. The compound invariant w_s*T^2 is preserved under temperature rescaling -- correct, but trivially so: T^2 cancels because the Hinton T^2 correction was already inside the KL loss, making the weight temperature-independent by construction, not by any physical property.
+3. The boundary weight amplification ceiling is 1/beta, and the amplification function is monotonically increasing.
+4. Per-channel quantization provably dominates per-tensor in variance -- this result remains useful and is independent of the adaptive weight system.
 
-All proofs are complete with zero sorry obligations.
+The score sensitivity analysis (d(score)/d(seg) = 100, d(score)/d(pose) = 5/sqrt(10p)) remains a useful diagnostic for understanding the scoring formula. The lesson: formal verification guarantees that theorems follow from axioms, but it cannot tell you whether the axioms match reality.
 
 ## Multi-GPU training fleet
 
@@ -292,7 +295,7 @@ No paid compute was used. All results are reproducible on consumer hardware.
 
 7. **The scoring formula has structure.** The marginal sensitivities of each term at different operating points are not obvious from the formula but drive resource allocation.
 
-8. **Gradient signal quality beats raw compute.** KL distillation with hard-frame curriculum achieved in 200 epochs what standard training could not achieve in 905. The bottleneck was not compute — it was where the gradients landed.
+8. **Proxy metrics lie.** KL distillation appeared to achieve in 200 epochs what standard training could not in 905 -- but the proxy improvement was phantom. Two authoritative evaluations (1.85, 2.05) confirmed the gains did not transfer. Always validate against the real scorer before claiming progress.
 
 ---
 
@@ -305,4 +308,4 @@ No paid compute was used. All results are reproducible on consumer hardware.
 
 ---
 
-*Score: 1.33 | 45KB int8 CNN | 40K params | SVT-AV1 CRF 34 | 903KB archive | CPU inference < 30s | tac v1.0.0 | 70 tests | Lean 4 verified | 25+ experiments*
+*Score: 1.33 | 45KB int8 CNN | 40K params | SVT-AV1 CRF 34 | 903KB archive | CPU inference < 30s | tac v1.0.0 | 70 tests | 25+ experiments*

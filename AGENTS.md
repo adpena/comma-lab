@@ -5,26 +5,26 @@
 - **Score: 1.33** authoritative (#1 by 0.53 margin, deadline May 3)
 - **Compliant archive**: 903KB (includes postfilter_int8.pt inside archive.zip)
 - **Best trustworthy technique**: proven_baseline (standard loss, dilated h=64)
-- **Experimental**: council_v2_adaptive (first-ever run in progress on local MPS)
+- **Experimental**: PSD (PixelShuffle+Dilated) with standard loss + 5 adaptive frontier items
 
 ## CRITICAL LESSONS LEARNED
 
-1. **KL distill proxy is UNTRUSTWORTHY.** A checkpoint with proxy 1.25 scored 1.85 authoritative.
+1. **KL distill is DEAD.** Two authoritative evals confirmed PoseNet collapse: 1.85 and 2.05.
    Root cause: w_s·T² = 750, optimal was 2.95 (254x over-weighted). PoseNet regressed 26x.
-   NEVER promote a KL distill checkpoint without authoritative eval.
+   NEVER use KL distill loss_mode.
 
 2. **Neural network artifacts MUST be inside archive.zip** per contest rules (affects rate calculation).
 
-3. **The adaptive weight system** (`src/tac/adaptive.py`) derives optimal hyperparameters from the
-   scoring formula instead of guessing. Use `--profile proven_baseline` to enable.
+3. **The adaptive weight formula was retired** after discovering T² cancels in the derivation.
+   Use standard loss with static weights.
 
-4. **Lean 4 proofs** (`proofs/AdaptiveWeights.lean`) formally verify the key equations.
-   Zero sorry obligations.
+4. **Lean 4 proofs** (`proofs/AdaptiveWeights.lean`) are mathematically correct with zero sorry obligations,
+   but they verify a vacuous identity (T² cancels by construction). The per-channel quantization proof remains useful.
 
 ## Key files
 
 - `src/tac/` — training library v1.0.0, 70 tests
-- `src/tac/adaptive.py` — mathematically-derived adaptive weights
+- `src/tac/adaptive.py` — adaptive weights (retired; formula was vacuous)
 - `src/tac/profiles.py` — named training profiles
 - `proofs/AdaptiveWeights.lean` — formal verification
 - `experiments/train_tac.py` — canonical training entry point
@@ -33,30 +33,37 @@
 ## How to train
 
 ```bash
-# RECOMMENDED: adaptive weights (self-correcting, derived from scoring formula)
+# RECOMMENDED: proven baseline (produced the 1.33 authoritative score)
 .venv/bin/python experiments/train_tac.py \
     --profile proven_baseline \
     --tag my_experiment \
     --precomputed experiments/precomputed_local
 
-# SAFE FALLBACK: proven baseline (produced the 1.33 authoritative score)
+# EXPERIMENTAL: PSD architecture with adaptive frontier
 .venv/bin/python experiments/train_tac.py \
-    --profile proven_baseline \
+    --profile psd_standard_adaptive \
     --tag my_experiment \
-    --epochs 3500 \
     --precomputed experiments/precomputed_local
 
-# Available profiles: council_v1, council_v2_adaptive, segnet_attack, proven_baseline, h96_council, smoke
+# Available profiles: proven_baseline, psd_standard_adaptive, council_v1, segnet_attack, h96_council, smoke
 ```
 
 ## What NOT to do
 
-- Do NOT use static segnet_loss_weight > 10 with KL distill (w_s·T² must be ~3, not 750)
+- Do NOT use KL distill loss_mode -- two authoritative evals confirmed PoseNet collapse (1.85 and 2.05)
+- Do NOT use adaptive_rebalance=True -- the formula was vacuous (T² cancels)
+- Do NOT use segnet_loss_weight > 100 with any loss mode
 - Do NOT add PoseNet gradient caps/clamps (caused 26x regression)
-- Do NOT promote KL distill checkpoints without authoritative eval
 - Do NOT use alpha_seg > 500 (formula-derived optimal is ~200)
 - Do NOT store postfilter_int8.pt outside archive.zip (compliance violation)
 - Do NOT modify upstream scorer files
+
+## Current frontier
+
+- **PSD architecture** (PixelShuffle+Dilated) being tested with standard loss
+- **5 adaptive frontier items** implemented: boundary dispatch, sin² ramp, replay gate, 3-phase eval, LR plateau
+- **Multi-pass inflate** being tested
+- **Profile**: `psd_standard_adaptive`
 
 ## Infrastructure
 

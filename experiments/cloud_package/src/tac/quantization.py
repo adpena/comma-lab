@@ -94,15 +94,38 @@ class LSQScale(nn.Module):
 
 
 def apply_lsq(model: nn.Module) -> dict[str, LSQScale]:
-    """Attach LSQ scales to all weight parameters in a model.
+    """Attach LSQ scales to all Conv2d layers via forward pre-hooks.
 
-    Returns a dict of LSQScale modules keyed by parameter name.
-    Add these to an optimizer group with a higher learning rate (e.g., 10x).
+    Each Conv2d gets an LSQScale that quantizes its weights before every
+    forward pass. The scale is a trainable parameter (add to optimizer
+    with higher lr). Hooks ensure LSQ is applied during training.
+
+    Returns a dict of LSQScale modules keyed by module name.
     """
     scales = {}
-    for name, param in model.named_parameters():
-        if param.ndim >= 2:  # conv/linear weights, not biases
-            scales[name] = LSQScale.from_tensor(param)
+    hooks = []
+
+    for name, module in model.named_modules():
+        if isinstance(module, nn.Conv2d):
+            lsq = LSQScale.from_tensor(module.weight)
+            scales[name] = lsq
+
+            # Pre-hook: save float weights, replace with LSQ-quantized
+            def _pre_hook(mod, inputs, *, _lsq=lsq):
+                mod._weight_float = mod.weight.data.clone()
+                mod.weight.data = _lsq(mod.weight).data
+
+            # Post-hook: restore float weights so optimizer sees originals
+            def _post_hook(mod, inputs, output):
+                if hasattr(mod, '_weight_float'):
+                    mod.weight.data.copy_(mod._weight_float)
+                    del mod._weight_float
+                return output
+
+            hooks.append(module.register_forward_pre_hook(_pre_hook))
+            hooks.append(module.register_forward_hook(_post_hook))
+
+    model._lsq_hooks = hooks
     return scales
 
 

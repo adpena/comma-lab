@@ -109,6 +109,7 @@ class TrainConfig(BaseModel):
                                 description="Fraction of pairs held out for eval. "
                                 "0.0 = contest mode (train+eval on all pairs). "
                                 "0.25 = production mode (25% held-out eval split).")
+    use_lsq: bool = Field(False, description="Enable Learned Step Size Quantization")
 
     # Resumption
     resume_from: str | None = None
@@ -260,6 +261,9 @@ class Trainer:
         self._last_eval_seg = None
         self._baseline_pose = None
         self._baseline_seg = None
+        self._last_replay_scorer = float("inf")
+        self._plateau_window: list[float] = []
+        self._plateau_reduced = False
 
         # Adaptive weights (council_v2_adaptive profile)
         self._adaptive = None
@@ -272,6 +276,22 @@ class Trainer:
         self.optimizer = torch.optim.AdamW(
             model.parameters(), lr=config.lr, weight_decay=1e-4
         )
+
+        # LSQ: Learned Step Size Quantization
+        self._lsq_scales: dict[str, nn.Module] | None = None
+        if config.use_lsq:
+            from .quantization import apply_lsq
+            self._lsq_scales = apply_lsq(self.model)
+            if self._lsq_scales:
+                lsq_params = []
+                for lsq_mod in self._lsq_scales.values():
+                    lsq_params.extend(lsq_mod.parameters())
+                self.optimizer.add_param_group({
+                    "params": lsq_params,
+                    "lr": config.lr * 5,
+                    "weight_decay": 0.0,
+                })
+                print(f"[trainer] LSQ enabled: {len(self._lsq_scales)} learned scales, lr={config.lr * 5:.6f}")
 
         if config.scheduler == "cosine":
             self.scheduler = torch.optim.lr_scheduler.CosineAnnealingLR(
@@ -335,6 +355,7 @@ class Trainer:
             "epoch": self._current_epoch,
             "best_scorer": self.best_scorer,
             "best_epoch": self.best_epoch,
+            "plateau_reduced": self._plateau_reduced,
         }, tmp_path)
         tmp_path.rename(path)  # atomic on POSIX
 
@@ -348,6 +369,7 @@ class Trainer:
         self._current_epoch = state.get("epoch", 0)
         self.best_scorer = state.get("best_scorer", float("inf"))
         self.best_epoch = state.get("best_epoch", -1)
+        self._plateau_reduced = state.get("plateau_reduced", False)
         print(f"[trainer] Resumed from epoch {self._current_epoch}, best {self.best_scorer:.4f}")
 
     @staticmethod
@@ -614,6 +636,10 @@ class Trainer:
                 f"loss_mode='{cfg.loss_mode}' requires fit_lazy(). "
                 "fit() only supports 'standard' and boundary-weighted (use_ste_segnet) modes."
             )
+        if getattr(cfg, 'adaptive_rebalance', False):
+            raise NotImplementedError(
+                "adaptive_rebalance requires fit_lazy(). fit() does not support adaptive weights."
+            )
 
         # Patch scorer models for differentiable training (CRITICAL: without this,
         # PoseNet gradients are zero due to upstream @torch.no_grad on rgb_to_yuv6)
@@ -771,7 +797,7 @@ class Trainer:
 
         # Precompute boundary masks if needed (dual saliency OR kl_distill with boundary weighting)
         self._boundary_masks = None
-        needs_boundary = cfg.use_dual_saliency or (cfg.loss_mode == "kl_distill" and cfg.boundary_weight > 1.0)
+        needs_boundary = cfg.use_dual_saliency or cfg.boundary_weight > 1.0
         if needs_boundary:
             from .losses import compute_boundary_mask
             print("[trainer-lazy] Computing SegNet boundary masks for dual saliency...")
@@ -813,21 +839,19 @@ class Trainer:
                     pair_difficulties.append(seg_d)
             self.model.train()
             difficulties = torch.tensor(pair_difficulties)
-            # Power-law continuous weighting (DeepSeek recommendation):
-            # ratio=0 → uniform, ratio=1 → linear rank, ratio=2 → quadratic emphasis
-            # Avoids the cliff-edge of a step function at the 80th percentile
+            # Store raw ranks for adaptive ratio ramping
             ranks = torch.argsort(torch.argsort(difficulties)).float()
             normalized_ranks = ranks / max(ranks.max().item(), 1.0)
-            # Add small epsilon so easiest frame still has nonzero weight
-            weights = (normalized_ranks + 0.01) ** max(cfg.hard_frame_ratio, 0.01)
+            self._hard_frame_ranks = normalized_ranks + 0.01  # epsilon for nonzero
+            self._hard_frame_avg_diff = difficulties.mean().item()
+            # Compute initial weights at current ratio
+            return _apply_hard_frame_ratio(cfg.hard_frame_ratio)
+
+        def _apply_hard_frame_ratio(ratio: float) -> torch.Tensor:
+            """Apply power-law weighting to cached ranks with given ratio."""
+            ranks = self._hard_frame_ranks
+            weights = ranks ** max(ratio, 0.01)
             weights = weights / weights.sum()
-            # Log the effective weight ratio
-            hardest_w = weights.max().item()
-            median_w = weights.median().item()
-            ratio_str = f"{hardest_w/median_w:.1f}x" if median_w > 0 else "inf"
-            print(f"[trainer-lazy] Hard frames: power-law ratio={cfg.hard_frame_ratio:.1f}, "
-                  f"hardest/median weight={ratio_str}, "
-                  f"avg difficulty={difficulties.mean():.6f}")
             return weights
 
         if cfg.hard_frame_ratio > 0:
@@ -864,23 +888,39 @@ class Trainer:
                 if epoch % (getattr(cfg, 'rebalance_every', 50) * 5) == 0:
                     print(f"[adaptive] ep={epoch} T={_T:.2f} sw={self._cached_sw:.3f} bw={self._cached_bw:.1f}")
 
+            # Adaptive hard_frame_ratio ramp: 0.1 → target over first 50% of training
+            # (DeepSeek recommendation: uniform exploration early, aggressive exploitation late)
+            if cfg.hard_frame_ratio > 0:
+                ramp_progress = min(1.0, epoch / max(cfg.epochs * 0.5, 1))
+                sin2_progress = math.sin(math.pi / 2 * ramp_progress) ** 2
+                effective_hfr = 0.1 + sin2_progress * (cfg.hard_frame_ratio - 0.1)
+            else:
+                effective_hfr = 0.0
+
             # Error replay: recompute hard-frame weights using current model output
             if (hard_frame_weights is not None
                     and cfg.error_replay_every > 0
                     and epoch > 0
                     and epoch % cfg.error_replay_every == 0):
-                hard_frame_weights = _compute_hard_frame_weights(
-                    use_model=True, label=f"error-replay-ep{epoch}")
+                improvement = self._last_replay_scorer - self.best_scorer
+                if improvement > 0.002 or self._last_replay_scorer == float("inf"):
+                    hard_frame_weights = _compute_hard_frame_weights(
+                        use_model=True, label=f"error-replay-ep{epoch}")
+                    self._last_replay_scorer = self.best_scorer
+                else:
+                    print(f"[trainer-lazy] Skipping error replay ep={epoch} (improvement={improvement:.4f} < threshold)")
 
             # Weighted or uniform sampling of training pairs
-            if hard_frame_weights is not None and cfg.hard_frame_ratio > 0:
-                # replacement=False preserves batch diversity within each epoch
+            if hard_frame_weights is not None and effective_hfr > 0:
+                # Recompute weights with ramped ratio (cheap: just re-exponentiate cached ranks)
+                hard_frame_weights = _apply_hard_frame_ratio(effective_hfr)
                 perm = torch.multinomial(hard_frame_weights, min(train_size, n_train), replacement=False)
             else:
                 perm = torch.randperm(n_train)[:train_size]
 
             accum = cfg.accum_steps
             self.optimizer.zero_grad(set_to_none=True)
+            epoch_grad_norms: list[float] = []
 
             for step, pair_idx in enumerate(perm):
                 start = train_pair_starts[pair_idx.item()]
@@ -934,7 +974,15 @@ class Trainer:
                         segnet_weight=sw,
                     )
                 else:
-                    loss, pd, sd = scorer_loss(filtered, gt_pair, posenet, segnet)
+                    if cfg.boundary_weight > 1.0 and self._boundary_masks is not None:
+                        bm = self._boundary_masks.get(start)
+                        loss, pd, sd = segnet_ste_loss(
+                            filtered, gt_pair, posenet, segnet,
+                            boundary_mask=bm,
+                            boundary_weight=cfg.boundary_weight,
+                        )
+                    else:
+                        loss, pd, sd = scorer_loss(filtered, gt_pair, posenet, segnet)
 
                 # Saliency reconstruction (frame 1 only)
                 sal_w = saliency_for_pair(raw_saliency, start, cfg.alpha, self.device)
@@ -964,7 +1012,8 @@ class Trainer:
 
                 # Gradient accumulation: step every accum_steps
                 if (step + 1) % accum == 0 or (step + 1) == len(perm):
-                    torch.nn.utils.clip_grad_norm_(self.model.parameters(), cfg.grad_clip)
+                    grad_norm = torch.nn.utils.clip_grad_norm_(self.model.parameters(), cfg.grad_clip)
+                    epoch_grad_norms.append(grad_norm.item())
                     self.optimizer.step()
                     self.ema.update(self.model)
                     self.optimizer.zero_grad(set_to_none=True)
@@ -991,10 +1040,14 @@ class Trainer:
             avg_pose = total_pose / n
             avg_seg = total_seg / n
 
-            # Best-checkpoint int8 evaluation — skip expensive eval on most epochs
-            # Eval every epoch for the final 10% of training to catch ephemeral best weights
-            final_phase = epoch >= cfg.epochs - max(cfg.epochs // 10, 50)
-            eval_freq = 1 if final_phase else cfg.eval_every
+            # Best-checkpoint int8 evaluation — three-phase frequency
+            epoch_frac = epoch / max(cfg.epochs - 1, 1)
+            if epoch_frac >= 0.8:
+                eval_freq = 1
+            elif epoch_frac >= 0.2:
+                eval_freq = max(2, cfg.eval_every // 2)
+            else:
+                eval_freq = cfg.eval_every
             is_eval_epoch = (epoch + 1) % eval_freq == 0 or epoch == cfg.epochs - 1 or epoch == 0
             if is_eval_epoch:
                 scorer_val = self._evaluate_int8_lazy(
@@ -1015,13 +1068,30 @@ class Trainer:
             print(f"[ep {epoch:4d}]{eval_tag} loss={avg_loss:.4f} pose={avg_pose:.6f} "
                   f"seg={avg_seg:.6f} scorer={scorer_val:.4f} best={self.best_scorer:.4f} lr={lr:.6f}")
 
+            # LR plateau detection for standard loss
+            if is_eval_epoch and cfg.loss_mode == "standard":
+                self._plateau_window.append(scorer_val)
+                if len(self._plateau_window) > 20:
+                    self._plateau_window.pop(0)
+                if (len(self._plateau_window) >= 20
+                        and not self._plateau_reduced
+                        and epoch > cfg.epochs * 0.3):
+                    recent_best = min(self._plateau_window)
+                    window_start_best = min(self._plateau_window[:10])
+                    if recent_best >= window_start_best - 0.005:
+                        for pg in self.optimizer.param_groups:
+                            pg["lr"] *= 0.5
+                        self._plateau_reduced = True
+                        print(f"[trainer-lazy] LR plateau detected ep={epoch}, halving LR to {self.optimizer.param_groups[0]['lr']:.6f}")
+
             # JSONL telemetry log — structured data for council analysis
             if is_eval_epoch:
                 telemetry_path = Path(cfg.output_dir) / f"telemetry_{cfg.tag}.jsonl"
                 telemetry_path.parent.mkdir(parents=True, exist_ok=True)
                 import time as _time
                 with open(telemetry_path, "a") as tf:
-                    tf.write(json.dumps({
+                    avg_grad_norm = sum(epoch_grad_norms) / max(len(epoch_grad_norms), 1)
+                    entry = {
                         "epoch": epoch,
                         "scorer": round(scorer_val, 6),
                         "eval_pose": self._last_eval_pose,
@@ -1029,11 +1099,27 @@ class Trainer:
                         "train_pose": round(avg_pose, 8),
                         "train_seg": round(avg_seg, 8),
                         "train_loss": round(avg_loss, 6),
+                        "avg_grad_norm": round(avg_grad_norm, 6),
                         "lr": round(lr, 8),
                         "best_scorer": round(self.best_scorer, 6),
                         "best_epoch": self.best_epoch,
                         "ts": _time.time(),
-                    }) + "\n")
+                        "loss_mode": cfg.loss_mode,
+                        "variant": cfg.variant,
+                    }
+                    # Adaptive weight diagnostics
+                    if hasattr(self, '_cached_sw'):
+                        entry["adaptive_sw"] = round(self._cached_sw, 4)
+                    if hasattr(self, '_cached_bw'):
+                        entry["adaptive_bw"] = round(self._cached_bw, 2)
+                    # Proxy hardening diagnostics
+                    if hasattr(self, '_proxy_confidence'):
+                        entry["proxy_confidence"] = self._proxy_confidence
+                    if hasattr(self, '_corrected_scorer'):
+                        entry["corrected_scorer"] = self._corrected_scorer
+                    if hasattr(self, '_baseline_pose') and self._baseline_pose:
+                        entry["baseline_pose"] = self._baseline_pose
+                    tf.write(json.dumps(entry) + "\n")
 
             # Save training state every 50 epochs for crash recovery
             if epoch % 50 == 0 and epoch > 0:
@@ -1100,9 +1186,25 @@ class Trainer:
             self._baseline_seg = round(avg_s, 8)
             print(f"[eval] Baseline watermark: pose={avg_p:.6f}, seg={avg_s:.6f}")
 
-        # Regression alarm: warn if PoseNet regresses 3x from baseline
+        # Proxy confidence: high when pose is in a credible range relative to baseline.
+        # Drops when pose regresses (ratio > 2) OR improves implausibly (ratio < 0.05).
+        # Normal training drives pose from baseline toward ~0.3x baseline over hundreds of epochs.
+        proxy_confidence = 1.0
         if hasattr(self, '_baseline_pose') and self._baseline_pose and self._baseline_pose > 0:
             pose_ratio = avg_p / self._baseline_pose
+
+            if pose_ratio > 2.0:
+                # PoseNet regressing — proxy may be masking damage
+                proxy_confidence = max(0.1, 1.0 / pose_ratio)
+                print(f"  !! PROXY CONFIDENCE LOW (regression): pose={avg_p:.6f} is "
+                      f"{pose_ratio:.1f}x baseline — authoritative eval recommended !!")
+            elif pose_ratio < 0.05:
+                # PoseNet suspiciously good — may be noise floor or measurement artifact
+                proxy_confidence = 0.5
+                print(f"  !! PROXY CONFIDENCE MODERATE: pose={avg_p:.6f} is "
+                      f"{pose_ratio:.2f}x baseline (suspiciously low) !!")
+
+            # Regression alarm: warn if PoseNet regresses 3x from baseline
             if pose_ratio > 3.0:
                 print(f"  !! POSENET REGRESSION ALARM: {avg_p:.6f} is {pose_ratio:.1f}x baseline {self._baseline_pose:.6f} !!")
             if pose_ratio > 5.0:
@@ -1110,6 +1212,19 @@ class Trainer:
                 self.model.load_state_dict(orig_state)
                 self.model.train()
                 return float('inf')  # prevent promotion of regressed checkpoint
+
+        # Store proxy confidence for telemetry
+        self._proxy_confidence = round(proxy_confidence, 4)
+
+        # Corrected score estimate using proxy correction factors (α_p, α_s)
+        # These are calibrated from authoritative eval runs. Default 1.0 = no correction.
+        alpha_p = getattr(self, '_proxy_alpha_p', 1.0)
+        alpha_s = getattr(self, '_proxy_alpha_s', 1.0)
+        corrected_scorer = 100.0 * (alpha_s * avg_s) + math.sqrt(10.0 * (alpha_p * avg_p))
+        self._corrected_scorer = round(corrected_scorer, 6)
+        if abs(corrected_scorer - scorer) > 0.01:
+            print(f"  [proxy-correction] raw={scorer:.4f} corrected={corrected_scorer:.4f} "
+                  f"(α_p={alpha_p:.2f}, α_s={alpha_s:.2f})")
 
         self.model.load_state_dict(orig_state)
         self.model.train()

@@ -355,6 +355,7 @@ class Trainer:
             "epoch": self._current_epoch,
             "best_scorer": self.best_scorer,
             "best_epoch": self.best_epoch,
+            "plateau_reduced": self._plateau_reduced,
         }, tmp_path)
         tmp_path.rename(path)  # atomic on POSIX
 
@@ -368,6 +369,7 @@ class Trainer:
         self._current_epoch = state.get("epoch", 0)
         self.best_scorer = state.get("best_scorer", float("inf"))
         self.best_epoch = state.get("best_epoch", -1)
+        self._plateau_reduced = state.get("plateau_reduced", False)
         print(f"[trainer] Resumed from epoch {self._current_epoch}, best {self.best_scorer:.4f}")
 
     @staticmethod
