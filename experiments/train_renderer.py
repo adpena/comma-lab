@@ -15,12 +15,15 @@ from __future__ import annotations
 import argparse
 import json
 import math
+import random
 import sys
 import time
+from datetime import datetime, timezone
 from pathlib import Path
 
 import torch
 import torch.nn as nn
+import torch.nn.functional as F
 
 # ── Path setup ──────────────────────────────────────────────────────────
 
@@ -47,6 +50,7 @@ from tac.profiles import PROFILES  # noqa: E402
 from tac.renderer import build_renderer  # noqa: E402
 from tac.scorer import detect_device, load_scorers  # noqa: E402
 from tac.training import EMA  # noqa: E402
+from tac.utils import setup_signal_handlers, write_telemetry, log_epoch  # noqa: E402
 
 
 # ── Argument parsing ────────────────────────────────────────────────────
@@ -65,6 +69,7 @@ def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
     p.add_argument("--mid-ch", type=int, default=None, help="MaskRenderer bottleneck channels")
     p.add_argument("--embed-dim", type=int, default=None, help="Per-class embedding dim")
     p.add_argument("--motion-hidden", type=int, default=None, help="MotionPredictor hidden channels")
+    p.add_argument("--depth", type=int, default=None, help="U-Net depth (1=single-scale, 2=two-scale)")
 
     # Training
     p.add_argument("--epochs", type=int, default=None)
@@ -73,6 +78,8 @@ def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
     p.add_argument("--grad-clip", type=float, default=1.0)
     p.add_argument("--accum-steps", type=int, default=None)
     p.add_argument("--warmup-epochs", type=int, default=10)
+    p.add_argument("--pretrain-epochs", type=int, default=None,
+                   help="Phase 1 epochs: L1+edge loss, no scorer (default: from profile or 0)")
     p.add_argument("--subsample", type=int, default=4,
                    help="Train on 1/N of pairs per epoch")
     p.add_argument("--eval-every", type=int, default=None)
@@ -91,6 +98,12 @@ def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
                    help="GT video path (used if no precomputed)")
     p.add_argument("--mask-batch-size", type=int, default=4,
                    help="Batch size for SegNet mask extraction")
+
+    # Resilience
+    p.add_argument("--wall-clock-timeout", type=int, default=0,
+                   help="Max wall-clock seconds before emergency save + clean exit (0=no limit)")
+    p.add_argument("--resume-from", type=str, default=None,
+                   help="Path to training_state_*.pt checkpoint to resume from")
 
     # Output
     p.add_argument("--tag", type=str, required=True)
@@ -114,12 +127,14 @@ def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
     args.mid_ch = _resolve(args.mid_ch, "mid_ch", 60)
     args.embed_dim = _resolve(args.embed_dim, "embed_dim", 6)
     args.motion_hidden = _resolve(args.motion_hidden, "motion_hidden", 32)
+    args.depth = _resolve(args.depth, "depth", 1)
     args.epochs = _resolve(args.epochs, "epochs", 200)
     args.lr = _resolve(args.lr, "lr", 1e-3)
     args.ema_decay = _resolve(args.ema_decay, "ema_decay", 0.997)
     args.accum_steps = _resolve(args.accum_steps, "accum_steps", 2)
     args.eval_every = _resolve(args.eval_every, "eval_every", 10)
     args.segnet_weight = _resolve(args.segnet_weight, "segnet_loss_weight", 100.0)
+    args.pretrain_epochs = _resolve(args.pretrain_epochs, "pretrain_epochs", 0)
 
     return args
 
@@ -207,6 +222,36 @@ def evaluate_fp4(
     return scorer, avg_p, avg_s
 
 
+# ── Pre-training loss ──────────────────────────────────────────────────
+
+
+def pretrain_loss(rendered_pair: torch.Tensor, gt_pair: torch.Tensor) -> torch.Tensor:
+    """L1 + edge-aware loss for renderer pre-training (Phase 1).
+
+    No scorer in the loop — just pixel reconstruction + edge matching.
+    This teaches basic texture synthesis from masks before scorer fine-tuning.
+
+    Args:
+        rendered_pair: (B, 2, H, W, 3) in [0, 255]
+        gt_pair: (B, 2, H, W, 3) in [0, 255]
+
+    Returns:
+        Scalar loss = L1 + 0.5 * edge_loss
+    """
+    r = rendered_pair / 255.0
+    g = gt_pair.float() / 255.0
+    l1 = F.l1_loss(r, g)
+
+    # Simple edge loss via horizontal gradient magnitude
+    r_bchw = r.reshape(-1, *r.shape[2:]).permute(0, 3, 1, 2)  # (B*2, 3, H, W)
+    g_bchw = g.reshape(-1, *g.shape[2:]).permute(0, 3, 1, 2)
+    edge_r = (r_bchw[:, :, :, 1:] - r_bchw[:, :, :, :-1]).abs().mean()
+    edge_g = (g_bchw[:, :, :, 1:] - g_bchw[:, :, :, :-1]).abs().mean()
+    edge_loss = F.l1_loss(edge_r, edge_g)
+
+    return l1 + 0.5 * edge_loss
+
+
 # ── Training loop ───────────────────────────────────────────────────────
 
 
@@ -242,6 +287,7 @@ def train(args: argparse.Namespace):
         base_ch=args.base_ch,
         mid_ch=args.mid_ch,
         motion_hidden=args.motion_hidden,
+        depth=args.depth,
     )
     model = model.to(device)
 
@@ -262,8 +308,9 @@ def train(args: argparse.Namespace):
     all_pair_starts = pair_start_indices(n_frames)
     n_total = len(all_pair_starts)
     train_size = max(1, n_total // args.subsample)
-    print(f"[train] {args.epochs} epochs, {train_size}/{n_total} pairs/epoch, "
-          f"accum={args.accum_steps}, lr={args.lr}")
+    print(f"[train] {args.epochs} epochs (pretrain={args.pretrain_epochs}), "
+          f"{train_size}/{n_total} pairs/epoch, "
+          f"accum={args.accum_steps}, lr={args.lr}, depth={args.depth}")
 
     # Output dir
     out_dir = Path(args.output_dir)
@@ -293,15 +340,67 @@ def train(args: argparse.Namespace):
 
     best_scorer = float("inf")
     best_epoch = -1
+    start_epoch = 0
+    baseline_pose = None
+    baseline_seg = None
+    start_wall_time = time.monotonic()
 
-    for epoch in range(args.epochs):
+    # ── Training state save/resume (Feature 6) ────────────────────────
+    def save_training_state(path: str | Path | None = None):
+        if path is None:
+            path = out_dir / f"training_state_{args.tag}.pt"
+        path = Path(path)
+        path.parent.mkdir(parents=True, exist_ok=True)
+        tmp_path = path.with_suffix(".pt.tmp")
+        torch.save({
+            "epoch": current_epoch,
+            "model": model.state_dict(),
+            "ema_shadow": ema.shadow,
+            "optimizer": optimizer.state_dict(),
+            "scheduler": scheduler.state_dict(),
+            "best_scorer": best_scorer,
+            "best_epoch": best_epoch,
+            "baseline_pose": baseline_pose,
+            "baseline_seg": baseline_seg,
+        }, tmp_path)
+        tmp_path.rename(path)  # atomic on POSIX
+
+    current_epoch = 0  # updated each epoch for signal handler visibility
+
+    # Resume from checkpoint if specified
+    if args.resume_from and Path(args.resume_from).exists():
+        state = torch.load(args.resume_from, map_location=device, weights_only=False)
+        model.load_state_dict(state["model"])
+        ema.shadow = {k: v.to(device) for k, v in state["ema_shadow"].items()}
+        optimizer.load_state_dict(state["optimizer"])
+        scheduler.load_state_dict(state["scheduler"])
+        start_epoch = state.get("epoch", 0) + 1
+        best_scorer = state.get("best_scorer", float("inf"))
+        best_epoch = state.get("best_epoch", -1)
+        baseline_pose = state.get("baseline_pose")
+        baseline_seg = state.get("baseline_seg")
+        print(f"[train] Resumed from epoch {start_epoch - 1}, best {best_scorer:.4f}")
+
+    # ── Emergency save signal handlers (Feature 2) ────────────────────
+    setup_signal_handlers(save_training_state)
+
+    is_pretrain = args.pretrain_epochs > 0
+
+    for epoch in range(start_epoch, args.epochs):
+        current_epoch = epoch
+        epoch_start = time.monotonic()
         model.train()
+        in_pretrain = is_pretrain and epoch < args.pretrain_epochs
 
         # Warmup LR
         if epoch < args.warmup_epochs:
             lr = args.lr * (epoch + 1) / args.warmup_epochs
             for pg in optimizer.param_groups:
                 pg["lr"] = lr
+
+        # Log phase transition
+        if is_pretrain and epoch == args.pretrain_epochs:
+            print(f"[train] === Phase 2 start (epoch {epoch}) === switching to scorer loss")
 
         # Sample pairs for this epoch
         perm = torch.randperm(n_total)[:train_size]
@@ -319,20 +418,31 @@ def train(args: argparse.Namespace):
             mask_t1 = mask_t1.to(device)
             gt_pair = pair_from_frames(gt_frames, start).to(device)
 
+            # Horizontal flip augmentation (50% probability)
+            if random.random() < 0.5:
+                mask_t = mask_t.flip(-1)      # flip W dimension of (B, H, W)
+                mask_t1 = mask_t1.flip(-1)
+                gt_pair = gt_pair.flip(-2)    # flip W in (B, 2, H, W, 3)
+
             # Forward: render pair from masks
             rendered_pair = model(mask_t, mask_t1)  # (1, 2, H, W, 3)
 
-            # Scorer loss (P0: use cached GT scorer outputs when available)
-            _cached_gt = gt_scorer_cache.get(start)
-            if _cached_gt is not None:
-                _gt_pose_6 = _cached_gt["pose_6"].to(device)
-                _gt_seg_soft = _cached_gt["seg_soft"].to(device)
-                loss, pd, sd = scorer_loss_cached(
-                    rendered_pair, _gt_pose_6, _gt_seg_soft, posenet, segnet,
-                )
-                del _gt_pose_6, _gt_seg_soft
+            if in_pretrain:
+                # Phase 1: L1 + edge loss only — no scorer, much faster
+                loss = pretrain_loss(rendered_pair, gt_pair)
+                pd, sd = 0.0, 0.0
             else:
-                loss, pd, sd = scorer_loss(rendered_pair, gt_pair, posenet, segnet)
+                # Phase 2: Scorer loss (use cached GT scorer outputs when available)
+                _cached_gt = gt_scorer_cache.get(start)
+                if _cached_gt is not None:
+                    _gt_pose_6 = _cached_gt["pose_6"].to(device)
+                    _gt_seg_soft = _cached_gt["seg_soft"].to(device)
+                    loss, pd, sd = scorer_loss_cached(
+                        rendered_pair, _gt_pose_6, _gt_seg_soft, posenet, segnet,
+                    )
+                    del _gt_pose_6, _gt_seg_soft
+                else:
+                    loss, pd, sd = scorer_loss(rendered_pair, gt_pair, posenet, segnet)
             scaled_loss = loss / accum
 
             try:
@@ -370,10 +480,11 @@ def train(args: argparse.Namespace):
         avg_seg = total_seg / max(n_steps, 1)
         lr = optimizer.param_groups[0]["lr"]
 
-        # FP4 evaluation
-        is_eval_epoch = ((epoch + 1) % args.eval_every == 0
-                         or epoch == args.epochs - 1
-                         or epoch == 0)
+        # FP4 evaluation (skip during Phase 1 — scorer scores are meaningless)
+        is_eval_epoch = (not in_pretrain and
+                         ((epoch + 1) % args.eval_every == 0
+                          or epoch == args.epochs - 1
+                          or epoch == args.pretrain_epochs))
         if is_eval_epoch:
             scorer_val, eval_pose, eval_seg = evaluate_fp4(
                 model, ema, all_masks, gt_frames,
@@ -403,6 +514,7 @@ def train(args: argparse.Namespace):
                 "mid_ch": args.mid_ch,
                 "embed_dim": args.embed_dim,
                 "motion_hidden": args.motion_hidden,
+                "depth": args.depth,
             }
             fp4_tmp = fp4_path.with_suffix(".pt.tmp")
             torch.save(fp4_packed, fp4_tmp)
@@ -431,6 +543,8 @@ def train(args: argparse.Namespace):
                     "mid_ch": args.mid_ch,
                     "embed_dim": args.embed_dim,
                     "motion_hidden": args.motion_hidden,
+                    "depth": args.depth,
+                    "pretrain_epochs": args.pretrain_epochs,
                     "epochs": args.epochs,
                     "lr": args.lr,
                     "profile": args.profile,
@@ -438,13 +552,14 @@ def train(args: argparse.Namespace):
                 },
             }, indent=2))
 
+        phase_tag = "P1" if in_pretrain else "P2"
         if is_eval_epoch:
-            print(f"[ep {epoch:4d}/{args.epochs}] loss={avg_loss:.4f} "
+            print(f"[ep {epoch:4d}/{args.epochs} {phase_tag}] loss={avg_loss:.4f} "
                   f"pose={avg_pose:.6f} seg={avg_seg:.6f} "
                   f"fp4_scorer={scorer_val:.4f} best={best_scorer:.4f} "
                   f"lr={lr:.6f}{marker}")
         elif epoch % 10 == 0:
-            print(f"[ep {epoch:4d}/{args.epochs}] loss={avg_loss:.4f} "
+            print(f"[ep {epoch:4d}/{args.epochs} {phase_tag}] loss={avg_loss:.4f} "
                   f"pose={avg_pose:.6f} seg={avg_seg:.6f} lr={lr:.6f}")
 
     print(f"\n[train] Complete. Best FP4 scorer: {best_scorer:.4f} at epoch {best_epoch}")

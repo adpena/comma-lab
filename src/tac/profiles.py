@@ -293,6 +293,7 @@ MASK_RENDERER_SMOKE = {
     "eval_every": 10,
     "accum_steps": 2,
     "quantize_mode": "fp4",                  # use FP4 instead of int8
+    "pretrain_epochs": 100,                  # Phase 1: L1+edge loss (no scorer)
 }
 
 MASK_RENDERER_FULL = {
@@ -315,6 +316,7 @@ MASK_RENDERER_FULL = {
     "accum_steps": 4,
     "use_swa": True,
     "quantize_mode": "fp4",
+    "pretrain_epochs": 500,                  # Phase 1: L1+edge loss (no scorer)
 }
 
 # Extended capacity variant: 48→80→48 (~500K params)
@@ -338,6 +340,14 @@ MASK_RENDERER_WIDE = {
     "accum_steps": 4,
     "use_swa": True,
     "quantize_mode": "fp4",
+    "pretrain_epochs": 500,
+}
+
+# Deep U-Net variant: depth=2 (two-level downscale, ~450K params)
+MASK_RENDERER_DEEP = {
+    **MASK_RENDERER_FULL,
+    "depth": 2,                              # two-scale U-Net
+    "pretrain_epochs": 500,
 }
 
 PROFILES = {
@@ -360,4 +370,5 @@ PROFILES = {
     "mask_renderer_smoke": MASK_RENDERER_SMOKE,
     "mask_renderer_full": MASK_RENDERER_FULL,
     "mask_renderer_wide": MASK_RENDERER_WIDE,
+    "mask_renderer_deep": MASK_RENDERER_DEEP,
 }

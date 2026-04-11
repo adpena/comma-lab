@@ -132,6 +132,9 @@ class MaskRenderer(nn.Module):
         embedding: optional pre-created Embedding (for weight sharing)
 
     Competitor reference: base_ch=36, mid_ch=60, embed_dim=6 (~308K params in FP4).
+
+    Args (extended):
+        depth: number of downscale levels (1 = original single-scale, 2 = two-scale ~450K params)
     """
 
     def __init__(
@@ -141,10 +144,12 @@ class MaskRenderer(nn.Module):
         base_ch: int = 36,
         mid_ch: int = 60,
         embedding: nn.Embedding | None = None,
+        depth: int = 1,
     ):
         super().__init__()
         self.num_classes = num_classes
         self.embed_dim = embed_dim
+        self.depth = depth
 
         # Class embedding: each of 5 classes → learned embed_dim-dimensional vector
         # Accepts external embedding for weight sharing with MotionPredictor
@@ -154,14 +159,26 @@ class MaskRenderer(nn.Module):
         self.stem_conv = nn.Conv2d(embed_dim, base_ch, 3, padding=1, bias=True)
         self.stem_res = ResBlock(base_ch, num_classes=num_classes)
 
-        # Downsample: base_ch → mid_ch at half resolution
+        # Downsample 1: base_ch → mid_ch at half resolution
         self.down_conv = nn.Conv2d(base_ch, mid_ch, 3, stride=2, padding=1, bias=True)
         self.down_res = ResBlock(mid_ch, num_classes=num_classes)
 
-        # Bottleneck at half resolution
+        if depth >= 2:
+            # Downsample 2: mid_ch → mid_ch at quarter resolution
+            self.down2_conv = nn.Conv2d(mid_ch, mid_ch, 3, stride=2, padding=1, bias=True)
+            self.down2_res = ResBlock(mid_ch, num_classes=num_classes)
+
+        # Bottleneck at lowest resolution
         self.bottleneck = ResBlock(mid_ch, num_classes=num_classes)
 
-        # Upsample: mid_ch → base_ch at full resolution
+        if depth >= 2:
+            # Upsample 2: mid_ch → mid_ch back to half resolution
+            self.up2_conv = nn.ConvTranspose2d(mid_ch, mid_ch, 4, stride=2, padding=1, bias=True)
+            self.up2_res = ResBlock(mid_ch, num_classes=num_classes)
+            # Fusion after skip at half resolution: mid_ch (skip) + mid_ch (upsampled) → mid_ch
+            self.fuse2_conv = nn.Conv2d(mid_ch * 2, mid_ch, 1, bias=True)
+
+        # Upsample 1: mid_ch → base_ch at full resolution
         self.up_conv = nn.ConvTranspose2d(mid_ch, base_ch, 4, stride=2, padding=1, bias=True)
         self.up_res = ResBlock(base_ch, num_classes=num_classes)
 
@@ -191,15 +208,33 @@ class MaskRenderer(nn.Module):
         stem = self.stem_conv(x)
         stem = self.stem_res(stem, masks)
 
-        # Down (half res)
-        down = self.down_conv(stem)
-        down = self.down_res(down, masks)
+        # Down 1 (half res)
+        down1 = self.down_conv(stem)
+        down1 = self.down_res(down1, masks)
 
-        # Bottleneck
-        mid = self.bottleneck(down, masks)
+        if self.depth >= 2:
+            # Down 2 (quarter res)
+            down2 = self.down2_conv(down1)
+            down2 = self.down2_res(down2, masks)
 
-        # Up (back to full res)
-        up = self.up_conv(mid)
+            # Bottleneck at quarter res
+            mid = self.bottleneck(down2, masks)
+
+            # Up 2 (quarter → half res)
+            up2 = self.up2_conv(mid)
+            if up2.shape[2:] != down1.shape[2:]:
+                up2 = F.interpolate(up2, size=down1.shape[2:], mode="bilinear", align_corners=False)
+            up2 = self.up2_res(up2, masks)
+
+            # Skip connection at half res
+            fused2 = torch.cat([down1, up2], dim=1)
+            half_res = self.fuse2_conv(fused2)
+        else:
+            # Bottleneck at half res (original behavior)
+            half_res = self.bottleneck(down1, masks)
+
+        # Up 1 (half → full res)
+        up = self.up_conv(half_res)
         # Handle potential size mismatch from odd dimensions
         if up.shape[2:] != stem.shape[2:]:
             up = F.interpolate(up, size=stem.shape[2:], mode="bilinear", align_corners=False)
@@ -477,6 +512,7 @@ def build_renderer(
     base_ch: int = 36,
     mid_ch: int = 60,
     motion_hidden: int = 32,
+    depth: int = 1,
 ) -> PairGenerator:
     """Build the full mask-to-pair rendering pipeline.
 
@@ -493,6 +529,7 @@ def build_renderer(
         base_ch: U-Net base channels (stem + decoder)
         mid_ch: U-Net bottleneck channels
         motion_hidden: MotionPredictor hidden channels
+        depth: U-Net downscale levels (1 = single-scale, 2 = two-scale)
 
     Returns:
         PairGenerator wrapping MaskRenderer + MotionPredictor
@@ -507,6 +544,7 @@ def build_renderer(
         base_ch=base_ch,
         mid_ch=mid_ch,
         embedding=shared_embed,
+        depth=depth,
     )
     motion = MotionPredictor(
         num_classes=num_classes,
