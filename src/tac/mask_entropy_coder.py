@@ -182,7 +182,7 @@ def encode_masks_entropy(
 
     # Compress both and pick smaller
     compress = (
-        (lambda d: lzma.compress(d, format=lzma.FORMAT_XZ, preset=9))
+        (lambda d: lzma.compress(d, format=lzma.FORMAT_XZ, preset=6))
         if backend == "lzma"
         else (lambda d: zlib.compress(d, 9))
     )
