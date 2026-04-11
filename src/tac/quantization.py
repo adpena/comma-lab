@@ -280,7 +280,7 @@ def save_int8(
             C = p.shape[0]
             flat = p.reshape(C, -1)
             scales = flat.abs().max(dim=1).values / 127.0
-            scales = torch.where(scales == 0, torch.ones_like(scales), scales)
+            scales = torch.where(scales < 1e-10, torch.ones_like(scales), scales)
             scales_bc = scales.view(C, *([1] * (p.ndim - 1)))
             quantized = (p / scales_bc).round().clamp(-128, 127).to(torch.int8)
             state[name + ".q"] = quantized
@@ -794,21 +794,35 @@ def load_postfilter_int8(
     float_state: dict[str, torch.Tensor] = {}
     seen: set[str] = set()
     for raw_key in state.keys():
-        if raw_key == "__meta__":
+        if raw_key == "__meta__" or raw_key == "__entropy_info__":
             continue
-        if raw_key.endswith(".q") or raw_key.endswith(".s"):
-            base = raw_key[:-2]
+        if raw_key.endswith((".q", ".s", ".log_scale")):
+            base = raw_key.rsplit(".", 1)[0]
             if base in seen:
                 continue
             seen.add(base)
             q = state[base + ".q"].float()
             s = state[base + ".s"]
-            if s.ndim == 0:
-                float_state[base] = q * s
+            is_log = (base + ".log_scale") in state and state[base + ".log_scale"].item()
+
+            if is_log:
+                # Reverse log-scale mapping from entropy_optimized_quantize
+                log127 = math.log(127.0)
+                q_norm = q / 127.0
+                q_abs = q_norm.abs() * log127
+                p_norm = torch.sign(q) * torch.expm1(q_abs) / 126.0
+                if s.ndim == 0:
+                    float_state[base] = p_norm * s
+                else:
+                    shape = [s.shape[0]] + [1] * (q.ndim - 1)
+                    float_state[base] = p_norm * s.view(*shape)
             else:
-                # per-channel: reshape s to (C, 1, 1, ...) matching q's rank
-                shape = [s.shape[0]] + [1] * (q.ndim - 1)
-                float_state[base] = q * s.view(*shape)
+                if s.ndim == 0:
+                    float_state[base] = q * s
+                else:
+                    # per-channel: reshape s to (C, 1, 1, ...) matching q's rank
+                    shape = [s.shape[0]] + [1] * (q.ndim - 1)
+                    float_state[base] = q * s.view(*shape)
         else:
             # uncompressed fp32 tensor (e.g., bias stored in full precision)
             float_state[raw_key] = state[raw_key].float()

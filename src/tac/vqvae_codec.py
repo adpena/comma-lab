@@ -593,6 +593,8 @@ class TemporalDeltaCoder:
         # Subsequent frames: apply deltas
         for _ in range(1, num_frames):
             num_changed = struct.unpack("<I", buf.read(4))[0]
+            if num_changed > H * W:
+                raise ValueError(f"num_changed {num_changed} exceeds frame size {H * W}")
             curr = prev.clone()
 
             if num_changed > 0:

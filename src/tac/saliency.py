@@ -52,9 +52,9 @@ def rgb_to_yuv6(frames: torch.Tensor) -> torch.Tensor:
     """Match frame_utils.py rgb_to_yuv6 exactly."""
     kYR, kYG, kYB = 0.299, 0.587, 0.114
     R, G, B = frames[..., 0], frames[..., 1], frames[..., 2]
-    Y = (R * kYR + G * kYG + B * kYB).clamp_(0.0, 255.0)
-    U = ((B - Y) / 1.772 + 128.0).clamp_(0.0, 255.0)
-    V = ((R - Y) / 1.402 + 128.0).clamp_(0.0, 255.0)
+    Y = (R * kYR + G * kYG + B * kYB).clamp(0.0, 255.0)
+    U = ((B - Y) / 1.772 + 128.0).clamp(0.0, 255.0)
+    V = ((R - Y) / 1.402 + 128.0).clamp(0.0, 255.0)
 
     U_sub = (U[..., 0::2, 0::2] + U[..., 1::2, 0::2] +
              U[..., 0::2, 1::2] + U[..., 1::2, 1::2]) * 0.25

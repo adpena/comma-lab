@@ -328,10 +328,10 @@ def test_time_optimize(
     t0 = time.monotonic()
 
     # Convert HWC -> CHW if needed
-    if frames.ndim == 4 and frames.shape[-1] == 3 and frames.shape[1] != 3:
-        frames = frames.permute(0, 3, 1, 2).float()
-    elif frames.ndim == 4 and frames.shape[1] == 3:
+    if frames.ndim == 4 and frames.shape[1] == 3 and frames.shape[-1] != 3:
         frames = frames.float()
+    elif frames.ndim == 4 and frames.shape[-1] == 3 and frames.shape[1] != 3:
+        frames = frames.permute(0, 3, 1, 2).float()
     else:
         raise ValueError(f"Expected frames shape (N, H, W, 3) or (N, 3, H, W), got {frames.shape}")
 
@@ -466,10 +466,10 @@ def supervised_tto(
     t0 = time.monotonic()
 
     # Convert HWC -> CHW if needed
-    if frames.ndim == 4 and frames.shape[-1] == 3 and frames.shape[1] != 3:
-        frames = frames.permute(0, 3, 1, 2).float()
-    elif frames.ndim == 4 and frames.shape[1] == 3:
+    if frames.ndim == 4 and frames.shape[1] == 3 and frames.shape[-1] != 3:
         frames = frames.float()
+    elif frames.ndim == 4 and frames.shape[-1] == 3 and frames.shape[1] != 3:
+        frames = frames.permute(0, 3, 1, 2).float()
     else:
         raise ValueError(f"Expected frames shape (N, H, W, 3) or (N, 3, H, W), got {frames.shape}")
 

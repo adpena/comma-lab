@@ -810,13 +810,9 @@ def segnet_kl_divergence_loss(
 
     loss = seg_weight * seg_kl
 
-    # Optionally include PoseNet MSE term
-    if posenet is not None:
-        gx = _hwc_to_chw(filtered_frames_hwc.detach())  # GT pair would be separate
-        fp_in = posenet.preprocess_input(fx)
-        fp_out = posenet(fp_in)
-        # Note: caller must pass GT pose separately for full loss; this is the KL-only term
-        loss = loss  # PoseNet term would be added by the caller
+    # TODO: PoseNet MSE term was stubbed out but never implemented.
+    # The caller is responsible for adding PoseNet loss if needed.
+    # Removed dead code that ran PoseNet forward without using the result.
 
     return loss, seg_kl.item(), seg_argmax_dist
 

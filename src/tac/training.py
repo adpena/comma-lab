@@ -523,10 +523,15 @@ class Trainer:
 
     def load_training_state(self, path: str | Path):
         """Resume training from a saved state."""
-        # weights_only=False required: checkpoint contains optimizer state dicts
-        # (torch.optim internals use non-tensor Python objects). Only load from
-        # trusted local checkpoints produced by save_training_state().
-        state = torch.load(str(path), map_location=self.device, weights_only=False)
+        try:
+            state = torch.load(str(path), map_location=self.device, weights_only=True)
+        except Exception:
+            print(
+                "WARNING: weights_only=True failed for checkpoint (likely optimizer state "
+                "contains non-tensor objects). Falling back to weights_only=False. "
+                "Only load checkpoints you trust."
+            )
+            state = torch.load(str(path), map_location=self.device, weights_only=False)
         self.model.load_state_dict(state["model"])
         self.ema.shadow = {k: v.to(self.device) for k, v in state["ema_shadow"].items()}
         self.optimizer.load_state_dict(state["optimizer"])
@@ -696,6 +701,7 @@ class Trainer:
                 if torch.cuda.is_available():
                     torch.cuda.empty_cache()
 
+        count = max(count, 1)
         scorer = 100.0 * (total_s / count) + math.sqrt(10.0 * (total_p / count))
 
         # Restore original training weights
@@ -1004,6 +1010,7 @@ class Trainer:
         cfg = self.config
         all_pair_starts = pair_start_indices(len(comp_frames))
         n_total = len(all_pair_starts)
+        eval_pair_starts: list[int] = []
 
         # Train/eval split controlled by eval_holdout:
         #   0.0  = contest mode: train+eval on ALL pairs (maximize signal from 1 video)
@@ -1670,6 +1677,7 @@ class Trainer:
                 if torch.cuda.is_available():
                     torch.cuda.empty_cache()
 
+        count = max(count, 1)
         avg_p = total_p / count
         avg_s = total_s / count
         scorer = 100.0 * avg_s + math.sqrt(10.0 * avg_p)

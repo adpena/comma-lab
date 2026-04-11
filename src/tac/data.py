@@ -55,17 +55,19 @@ def decode_video(
     Upscales to target resolution via bicubic if needed.
     """
     container = av.open(str(path))
-    stream = container.streams.video[0]
-    frames = []
-    for frame in container.decode(stream):
-        t = yuv420_to_rgb(frame)
-        H, W, _ = t.shape
-        if target_h != H or target_w != W:
-            x = t.permute(2, 0, 1).unsqueeze(0).float()
-            x = F.interpolate(x, size=(target_h, target_w), mode="bicubic", align_corners=False)
-            t = x.clamp(0, 255).squeeze(0).permute(1, 2, 0).round().to(torch.uint8)
-        frames.append(t)
-    container.close()
+    try:
+        stream = container.streams.video[0]
+        frames = []
+        for frame in container.decode(stream):
+            t = yuv420_to_rgb(frame)
+            H, W, _ = t.shape
+            if target_h != H or target_w != W:
+                x = t.permute(2, 0, 1).unsqueeze(0).float()
+                x = F.interpolate(x, size=(target_h, target_w), mode="bicubic", align_corners=False)
+                t = x.clamp(0, 255).squeeze(0).permute(1, 2, 0).round().to(torch.uint8)
+            frames.append(t)
+    finally:
+        container.close()
     return frames
 
 

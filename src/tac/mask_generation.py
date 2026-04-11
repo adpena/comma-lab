@@ -123,18 +123,23 @@ def extract_frames(
     sampled = np.empty((expected_n, h, w, 3), dtype=np.uint8)
     slot = 0
     idx = 0
-    while True:
-        raw = proc.stdout.read(frame_bytes)
-        if len(raw) < frame_bytes:
-            break
-        if idx % sample_step == 0 and slot < expected_n:
-            np.copyto(sampled[slot], np.frombuffer(raw, dtype=np.uint8).reshape((h, w, 3)))
-            slot += 1
-        idx += 1
-        if idx % 300 == 0:
-            print(f"  Extracted {idx}/{total} frames ...", file=sys.stderr, flush=True)
+    try:
+        while True:
+            raw = proc.stdout.read(frame_bytes)
+            if len(raw) < frame_bytes:
+                break
+            if idx % sample_step == 0 and slot < expected_n:
+                np.copyto(sampled[slot], np.frombuffer(raw, dtype=np.uint8).reshape((h, w, 3)))
+                slot += 1
+            idx += 1
+            if idx % 300 == 0:
+                print(f"  Extracted {idx}/{total} frames ...", file=sys.stderr, flush=True)
+    except Exception:
+        proc.kill()
+        raise
+    finally:
+        proc.stdout.close()
 
-    proc.stdout.close()
     proc.wait()
     if proc.returncode != 0:
         print(f"WARNING: ffmpeg exited with code {proc.returncode}", file=sys.stderr)
