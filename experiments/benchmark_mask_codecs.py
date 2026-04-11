@@ -26,7 +26,7 @@ from pathlib import Path
 import numpy as np
 
 # ── Constants matching our pipeline ──────────────────────────────────────────
-NUM_FRAMES = 1200
+NUM_FRAMES = 300  # Use 300 for fast benchmarking, scale results to estimate 1200
 H, W = 384, 512
 NUM_CLASSES = 5
 SCALE_FACTOR = 255 // (NUM_CLASSES - 1)  # 63

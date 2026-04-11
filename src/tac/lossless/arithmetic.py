@@ -314,7 +314,7 @@ def materialize_gpt_arithmetic_stream(
             for batch_idx in range(total_batches):
                 batch = mapped.shard(num_shards=total_batches, index=batch_idx, contiguous=True).with_format("numpy")
                 ids = batch["ids"]
-                if not ids:
+                if len(ids) == 0:
                     continue
                 arr_batch = np.concatenate([np.asarray(item, dtype=np.uint16) for item in ids], axis=0)
                 arr[idx : idx + len(arr_batch)] = arr_batch

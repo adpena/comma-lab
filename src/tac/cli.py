@@ -137,6 +137,7 @@ def build_parser() -> argparse.ArgumentParser:
 
     sp = lossless_sub.add_parser("prev-symbol-benchmark", help="Benchmark a previous-symbol conditional static coder over a prepared stream")
     sp.add_argument("--tokens", required=True)
+    sp.add_argument("--max-tokens", type=int, default=None)
     sp.set_defaults(lossless_handler="prev_symbol_benchmark")
 
     sp = lossless_sub.add_parser("baseline", help="Build a real dataset-backed lossless baseline submission")
@@ -338,7 +339,14 @@ def _run_lossless(args: argparse.Namespace) -> dict[str, Any]:
     if args.lossless_handler == "prev_symbol_benchmark":
         import numpy as np
 
-        tokens = np.fromfile(Path(args.tokens), dtype=np.uint16)
+        token_path = Path(args.tokens)
+        if token_path.stat().st_size % 2 != 0:
+            raise ValueError(f"token stream must contain an even number of bytes: {token_path}")
+        tokens = np.fromfile(token_path, dtype=np.uint16)
+        if args.max_tokens is not None:
+            if args.max_tokens <= 0:
+                raise ValueError("--max-tokens must be positive")
+            tokens = tokens[: args.max_tokens]
         payload = benchmark_prev_symbol_frequency_stream(tokens)
         print(json.dumps(payload, indent=2))
         return payload

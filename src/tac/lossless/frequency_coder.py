@@ -5,6 +5,7 @@ import heapq
 
 
 STREAM_MAGIC = b"TFC1"
+PREV_SYMBOL_STREAM_MAGIC = b"TPC1"
 UINT16_MAX = 0xFFFF
 
 
@@ -30,6 +31,27 @@ class FrequencyEncodedStream:
             raise ValueError("header_bytes + payload_bytes must match encoded length")
         if self.max_code_bits < 0:
             raise ValueError("max_code_bits must be non-negative")
+
+
+@dataclass(frozen=True)
+class PrevSymbolEncodedStream:
+    encoded_bytes: bytes
+    token_count: int
+    context_count: int
+    header_bytes: int
+    payload_bytes: int
+
+    def __post_init__(self) -> None:
+        if self.token_count < 0:
+            raise ValueError("token_count must be non-negative")
+        if self.context_count < 0:
+            raise ValueError("context_count must be non-negative")
+        if self.header_bytes <= 0:
+            raise ValueError("header_bytes must be positive")
+        if self.payload_bytes < 0:
+            raise ValueError("payload_bytes must be non-negative")
+        if self.header_bytes + self.payload_bytes != len(self.encoded_bytes):
+            raise ValueError("header_bytes + payload_bytes must match encoded length")
 
 
 @dataclass(frozen=True)
@@ -483,6 +505,162 @@ def benchmark_prev_symbol_frequency_stream(tokens) -> dict[str, object]:
     }
 
 
+def encode_uint16_prev_symbol_stream(tokens) -> PrevSymbolEncodedStream:
+    normalized = _normalize_uint16_tokens(tokens)
+    if normalized.size == 0:
+        header = bytearray(PREV_SYMBOL_STREAM_MAGIC)
+        header.extend(_encode_varint(0))
+        header.extend(_encode_varint(0))
+        return PrevSymbolEncodedStream(
+            encoded_bytes=bytes(header),
+            token_count=0,
+            context_count=0,
+            header_bytes=len(header),
+            payload_bytes=0,
+        )
+
+    first_symbol = int(normalized[0])
+    contexts: dict[int, list[int]] = {}
+    for previous, current in zip(normalized[:-1], normalized[1:]):
+        contexts.setdefault(int(previous), []).append(int(current))
+
+    payload = bytearray()
+    header = bytearray(PREV_SYMBOL_STREAM_MAGIC)
+    header.extend(_encode_varint(int(normalized.size)))
+    header.extend(_encode_varint(first_symbol))
+    header.extend(_encode_varint(len(contexts)))
+    previous_symbol = 0
+    for index, symbol in enumerate(sorted(contexts)):
+        delta = symbol if index == 0 else symbol - previous_symbol
+        encoded = encode_uint16_frequency_stream(contexts[symbol])
+        header.extend(_encode_varint(delta))
+        header.extend(_encode_varint(len(encoded.encoded_bytes)))
+        payload.extend(encoded.encoded_bytes)
+        previous_symbol = symbol
+
+    encoded_bytes = bytes(header) + bytes(payload)
+    return PrevSymbolEncodedStream(
+        encoded_bytes=encoded_bytes,
+        token_count=int(normalized.size),
+        context_count=len(contexts),
+        header_bytes=len(header),
+        payload_bytes=len(payload),
+    )
+
+
+def decode_uint16_prev_symbol_stream(encoded: bytes | bytearray | memoryview):
+    np = _require_numpy()
+    data = bytes(encoded)
+    if not data.startswith(PREV_SYMBOL_STREAM_MAGIC):
+        raise ValueError("invalid prev-symbol stream header")
+
+    cursor = len(PREV_SYMBOL_STREAM_MAGIC)
+    token_count, cursor = _decode_varint(data, cursor, label="token count")
+    if token_count == 0:
+        context_count, cursor = _decode_varint(data, cursor, label="context count")
+        if context_count != 0:
+            raise ValueError("empty prev-symbol stream must not declare contexts")
+        if cursor != len(data):
+            raise ValueError("trailing payload bytes")
+        return np.array([], dtype=np.uint16)
+
+    first_symbol, cursor = _decode_varint(data, cursor, label="first symbol")
+    context_count, cursor = _decode_varint(data, cursor, label="context count")
+    contexts: dict[int, tuple[int, int]] = {}
+    previous_symbol = 0
+    for index in range(context_count):
+        delta, cursor = _decode_varint(data, cursor, label="context header")
+        payload_size, cursor = _decode_varint(data, cursor, label="context header")
+        symbol = delta if index == 0 else previous_symbol + delta
+        end = cursor + payload_size
+        if end > len(data):
+            raise ValueError("truncated payload")
+        contexts[symbol] = (cursor, end)
+        cursor = end
+        previous_symbol = symbol
+
+    if cursor != len(data):
+        raise ValueError("trailing payload bytes")
+
+    decoded_contexts: dict[int, list[int]] = {}
+    for symbol, (start, end) in contexts.items():
+        decoded = decode_uint16_frequency_stream(data[start:end])
+        decoded_contexts[symbol] = decoded.astype(np.uint16).tolist()
+
+    restored = np.empty(token_count, dtype=np.uint16)
+    restored[0] = first_symbol
+    context_offsets = {symbol: 0 for symbol in decoded_contexts}
+    for index in range(1, token_count):
+        previous = int(restored[index - 1])
+        if previous not in decoded_contexts:
+            raise ValueError("missing context payload")
+        values = decoded_contexts[previous]
+        offset = context_offsets[previous]
+        if offset >= len(values):
+            raise ValueError("context payload exhausted early")
+        restored[index] = values[offset]
+        context_offsets[previous] = offset + 1
+
+    for symbol, values in decoded_contexts.items():
+        if context_offsets[symbol] != len(values):
+            raise ValueError("trailing payload bytes")
+    return restored
+
+
+def encode_uint16_prev_symbol_file(source_path: str | Path, encoded_path: str | Path) -> dict[str, object]:
+    from pathlib import Path
+
+    np = _require_numpy()
+    source = Path(source_path)
+    target = Path(encoded_path)
+    if source.stat().st_size % 2 != 0:
+        raise ValueError(f"token stream must contain an even number of bytes: {source}")
+    tokens = np.fromfile(source, dtype=np.uint16)
+    encoded = encode_uint16_prev_symbol_stream(tokens)
+    target.parent.mkdir(parents=True, exist_ok=True)
+    target.write_bytes(encoded.encoded_bytes)
+    return {
+        "command": "lossless_prev_symbol_encode",
+        "source_path": str(source),
+        "encoded_path": str(target),
+        "token_count": encoded.token_count,
+        "context_count": encoded.context_count,
+        "header_bytes": encoded.header_bytes,
+        "payload_bytes": encoded.payload_bytes,
+        "restored_dtype": "uint16",
+    }
+
+
+def decode_uint16_prev_symbol_file(encoded_path: str | Path, restored_path: str | Path) -> str:
+    from pathlib import Path
+
+    source = Path(encoded_path)
+    target = Path(restored_path)
+    tokens = decode_uint16_prev_symbol_stream(source.read_bytes())
+    target.parent.mkdir(parents=True, exist_ok=True)
+    tokens.tofile(target)
+    return str(target)
+
+
+def benchmark_prev_symbol_frequency_file(source_path: str | Path, *, max_tokens: int | None = None) -> dict[str, object]:
+    from pathlib import Path
+
+    np = _require_numpy()
+    source = Path(source_path)
+    if source.stat().st_size % 2 != 0:
+        raise ValueError(f"token stream must contain an even number of bytes: {source}")
+    tokens = np.fromfile(source, dtype=np.uint16)
+    if max_tokens is not None:
+        if max_tokens <= 0:
+            raise ValueError("max_tokens must be positive")
+        tokens = tokens[:max_tokens]
+    payload = benchmark_prev_symbol_frequency_stream(tokens)
+    payload["source_path"] = str(source)
+    if max_tokens is not None:
+        payload["max_tokens"] = int(max_tokens)
+    return payload
+
+
 __all__ = [
     "FrequencyEncodedStream",
     "STREAM_MAGIC",
@@ -490,6 +668,11 @@ __all__ = [
     "decode_uint16_frequency_stream",
     "benchmark_uint16_frequency_file",
     "benchmark_prev_symbol_frequency_stream",
+    "benchmark_prev_symbol_frequency_file",
+    "decode_uint16_prev_symbol_file",
+    "decode_uint16_prev_symbol_stream",
     "encode_uint16_frequency_file",
     "encode_uint16_frequency_stream",
+    "encode_uint16_prev_symbol_file",
+    "encode_uint16_prev_symbol_stream",
 ]

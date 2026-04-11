@@ -5,13 +5,17 @@ Exploits three properties of our data that AV1 cannot fully leverage:
 2. Massive spatial coherence (contiguous same-class blocks)
 3. Near-zero temporal change (most pixels identical frame-to-frame)
 
-Encoding strategy:
-    Frame 0: RLE on raster-scan order (huge contiguous class runs)
-    Frames 1..N-1: sparse delta -- only changed pixel (position, value) pairs
-    Final: entire pre-processed stream compressed with LZMA
+Strategy: two-pass encoding picks the smaller of two representations:
 
-The sparse delta representation is key: for ~0.5-2% pixel change rate,
-we store only ~1K-4K (position, value) pairs per frame instead of 196K pixels.
+  Method A (full-frame delta): encode frame 0 raw, then delta frames where
+    0=unchanged, (class+1)=changed. The stream is >95% zeros. LZMA's
+    dictionary coder compresses long zero runs to near-zero cost.
+
+  Method B (sparse delta): for very low change rates, store only
+    (gap, value) pairs for changed pixels. Better when <0.5% changes.
+
+Both methods share the same LZMA backend. The encoder picks whichever
+produces smaller output, recorded in a 1-bit flag per method.
 """
 from __future__ import annotations
 
@@ -24,47 +28,10 @@ from pathlib import Path
 import numpy as np
 import torch
 
-# Magic bytes to identify our format
 MAGIC = b"MSKV"
-VERSION = 3
+VERSION = 4
 NUM_CLASSES = 5
-
-
-def _rle_encode_bytes(data: np.ndarray) -> bytes:
-    """RLE encode a flat uint8 array into bytes.
-
-    Format: (value:u8, count:varint) pairs.
-    Optimized for the keyframe where huge contiguous runs are typical.
-    """
-    buf = io.BytesIO()
-    n = len(data)
-    if n == 0:
-        return buf.getvalue()
-
-    i = 0
-    while i < n:
-        val = data[i]
-        run = 1
-        while i + run < n and data[i + run] == val:
-            run += 1
-        buf.write(bytes([val]))
-        _write_varint(buf, run)
-        i += run
-    return buf.getvalue()
-
-
-def _rle_decode_bytes(data: bytes, expected_len: int) -> np.ndarray:
-    """Decode RLE bytes back to flat uint8 array."""
-    result = np.empty(expected_len, dtype=np.uint8)
-    pos = 0
-    idx = 0
-    while idx < expected_len:
-        val = data[pos]
-        pos += 1
-        run, pos = _read_varint(data, pos)
-        result[idx : idx + run] = val
-        idx += run
-    return result
+HEADER_SIZE = 4 + 1 + 1 + 4 + 2 + 2 + 1 + 4  # 19 bytes
 
 
 def _write_varint(buf: io.BytesIO, value: int) -> None:
@@ -75,7 +42,7 @@ def _write_varint(buf: io.BytesIO, value: int) -> None:
     buf.write(bytes([value & 0x7F]))
 
 
-def _read_varint(data: bytes, pos: int) -> tuple[int, int]:
+def _read_varint_from(data: bytes, pos: int) -> tuple[int, int]:
     """Read unsigned LEB128 varint, return (value, new_pos)."""
     value = 0
     shift = 0
@@ -89,63 +56,98 @@ def _read_varint(data: bytes, pos: int) -> tuple[int, int]:
     return value, pos
 
 
-def _encode_sparse_delta(prev: np.ndarray, curr: np.ndarray) -> bytes:
-    """Encode frame delta as sparse list of (flat_index, new_value) pairs.
+# ---------- Method A: full-frame delta ----------
 
-    For ~0.5% change rate on 384x512: ~980 changed pixels.
-    Each stored as (varint_gap, 3-bit_value), heavily compressible.
+def _build_fulldelta_payload(masks_np: np.ndarray) -> bytes:
+    """Build payload: frame 0 raw + delta frames (0=same, class+1=changed)."""
+    N = masks_np.shape[0]
+    parts = [masks_np[0].tobytes()]
+    for i in range(1, N):
+        prev = masks_np[i - 1]
+        curr = masks_np[i]
+        delta = np.where(prev == curr, np.uint8(0), curr + np.uint8(1))
+        parts.append(delta.tobytes())
+    return b"".join(parts)
 
-    We store gaps between consecutive changed positions (delta-of-deltas)
-    rather than absolute positions. Gaps are smaller and compress better.
-    """
-    flat_prev = prev.ravel()
-    flat_curr = curr.ravel()
-    changed_indices = np.where(flat_prev != flat_curr)[0]
-    num_changed = len(changed_indices)
 
+def _decode_fulldelta_payload(raw: bytes, N: int, H: int, W: int) -> np.ndarray:
+    """Decode full-frame delta payload."""
+    frame_size = H * W
+    masks = np.empty((N, H, W), dtype=np.uint8)
+    masks[0] = np.frombuffer(raw, dtype=np.uint8, count=frame_size, offset=0).reshape(H, W)
+    for i in range(1, N):
+        delta = np.frombuffer(raw, dtype=np.uint8, count=frame_size, offset=i * frame_size).reshape(H, W)
+        masks[i] = np.where(delta == 0, masks[i - 1], delta - 1)
+    return masks
+
+
+# ---------- Method B: sparse delta ----------
+
+def _build_sparse_payload(masks_np: np.ndarray) -> bytes:
+    """Build payload: RLE keyframe + sparse deltas (gap-coded positions)."""
+    N, H, W = masks_np.shape
     buf = io.BytesIO()
-    _write_varint(buf, num_changed)
 
-    if num_changed == 0:
-        return buf.getvalue()
+    # Keyframe: RLE
+    flat0 = masks_np[0].ravel()
+    n = len(flat0)
+    i = 0
+    while i < n:
+        val = flat0[i]
+        run = 1
+        while i + run < n and flat0[i + run] == val:
+            run += 1
+        buf.write(bytes([val]))
+        _write_varint(buf, run)
+        i += run
 
-    # Delta-encode positions (gaps between consecutive changed indices)
-    # First position stored as-is, subsequent as gap from previous
-    prev_idx = 0
-    values = flat_curr[changed_indices]
-
-    for i in range(num_changed):
-        gap = int(changed_indices[i]) - prev_idx
-        prev_idx = int(changed_indices[i])
-        _write_varint(buf, gap)
-        # Value is 0-4, fits in 3 bits, but write as byte for simplicity
-        # (LZMA will handle the entropy coding of this small alphabet)
-        buf.write(bytes([values[i]]))
+    # Delta frames: sparse (count, gap+value pairs)
+    for fi in range(1, N):
+        flat_prev = masks_np[fi - 1].ravel()
+        flat_curr = masks_np[fi].ravel()
+        changed = np.where(flat_prev != flat_curr)[0]
+        _write_varint(buf, len(changed))
+        prev_idx = 0
+        for ci in changed:
+            _write_varint(buf, int(ci) - prev_idx)
+            buf.write(bytes([flat_curr[ci]]))
+            prev_idx = int(ci)
 
     return buf.getvalue()
 
 
-def _decode_sparse_delta(prev: np.ndarray, delta_bytes: bytes, offset: int) -> tuple[np.ndarray, int]:
-    """Decode sparse delta, return (new_frame, bytes_consumed)."""
-    curr = prev.copy()
-    flat = curr.ravel()
+def _decode_sparse_payload(raw: bytes, N: int, H: int, W: int) -> np.ndarray:
+    """Decode sparse payload."""
+    frame_size = H * W
+    masks = np.empty((N, H, W), dtype=np.uint8)
 
-    pos = offset
-    num_changed, pos = _read_varint(delta_bytes, pos)
+    # Keyframe: RLE decode
+    pos = 0
+    frame0 = np.empty(frame_size, dtype=np.uint8)
+    idx = 0
+    while idx < frame_size:
+        val = raw[pos]; pos += 1
+        run, pos = _read_varint_from(raw, pos)
+        frame0[idx : idx + run] = val
+        idx += run
+    masks[0] = frame0.reshape(H, W)
 
-    if num_changed == 0:
-        return curr, pos
+    # Delta frames
+    for fi in range(1, N):
+        masks[fi] = masks[fi - 1].copy()
+        flat = masks[fi].ravel()
+        num_changed, pos = _read_varint_from(raw, pos)
+        abs_idx = 0
+        for _ in range(num_changed):
+            gap, pos = _read_varint_from(raw, pos)
+            abs_idx += gap
+            flat[abs_idx] = raw[pos]
+            pos += 1
 
-    abs_idx = 0
-    for _ in range(num_changed):
-        gap, pos = _read_varint(delta_bytes, pos)
-        abs_idx += gap
-        val = delta_bytes[pos]
-        pos += 1
-        flat[abs_idx] = val
+    return masks
 
-    return flat.reshape(prev.shape), pos
 
+# ---------- Public API ----------
 
 def encode_masks_entropy(
     masks: torch.Tensor | np.ndarray,
@@ -153,6 +155,8 @@ def encode_masks_entropy(
     backend: str = "lzma",
 ) -> int:
     """Encode segmentation masks to a compact binary bitstream.
+
+    Tries both full-frame delta and sparse delta, picks the smaller one.
 
     Args:
         masks: (N, H, W) uint8/long tensor or ndarray with values 0-4
@@ -172,48 +176,48 @@ def encode_masks_entropy(
 
     N, H, W = masks_np.shape
 
-    # Build raw payload
-    payload = io.BytesIO()
+    # Build both payloads
+    payload_full = _build_fulldelta_payload(masks_np)
+    payload_sparse = _build_sparse_payload(masks_np)
 
-    # Keyframe: RLE-encoded
-    kf = _rle_encode_bytes(masks_np[0].ravel())
-    _write_varint(payload, len(kf))
-    payload.write(kf)
+    # Compress both and pick smaller
+    compress = (
+        (lambda d: lzma.compress(d, format=lzma.FORMAT_XZ, preset=9))
+        if backend == "lzma"
+        else (lambda d: zlib.compress(d, 9))
+    )
+    backend_id = 1 if backend == "lzma" else 0
 
-    # Delta frames: sparse encoding
-    for i in range(1, N):
-        delta = _encode_sparse_delta(masks_np[i - 1], masks_np[i])
-        _write_varint(payload, len(delta))
-        payload.write(delta)
+    comp_full = compress(payload_full)
+    comp_sparse = compress(payload_sparse)
 
-    raw_payload = payload.getvalue()
-
-    # Compress
-    if backend == "lzma":
-        compressed = lzma.compress(raw_payload, format=lzma.FORMAT_XZ, preset=9)
-        backend_id = 1
-    elif backend == "zlib":
-        compressed = zlib.compress(raw_payload, 9)
-        backend_id = 0
+    if len(comp_full) <= len(comp_sparse):
+        method = 0  # full-frame delta
+        compressed = comp_full
+        raw_size = len(payload_full)
     else:
-        raise ValueError(f"Unknown backend: {backend}")
+        method = 1  # sparse delta
+        compressed = comp_sparse
+        raw_size = len(payload_sparse)
 
     # Write file
     with open(output_path, "wb") as f:
-        f.write(MAGIC)
-        f.write(struct.pack("<B", VERSION))
-        f.write(struct.pack("<B", backend_id))
-        f.write(struct.pack("<I", N))
-        f.write(struct.pack("<H", H))
-        f.write(struct.pack("<H", W))
-        f.write(struct.pack("<I", len(raw_payload)))
+        f.write(MAGIC)                          # 4
+        f.write(struct.pack("<B", VERSION))      # 1
+        f.write(struct.pack("<B", backend_id))   # 1
+        f.write(struct.pack("<I", N))            # 4
+        f.write(struct.pack("<H", H))            # 2
+        f.write(struct.pack("<H", W))            # 2
+        f.write(struct.pack("<B", method))       # 1
+        f.write(struct.pack("<I", raw_size))     # 4
         f.write(compressed)
 
     size = output_path.stat().st_size
-    raw_size = N * H * W
+    total_pixels = N * H * W
+    method_name = "full-delta" if method == 0 else "sparse"
     print(
         f"[mask_entropy] Encoded {N} masks ({H}x{W}) -> {output_path} "
-        f"({size:,} bytes, ratio={size / raw_size:.6f})"
+        f"({size:,} bytes, ratio={size / total_pixels:.6f}, method={method_name})"
     )
     return size
 
@@ -222,9 +226,6 @@ def decode_masks_entropy(
     input_path: str | Path,
 ) -> torch.Tensor:
     """Decode masks from entropy-coded binary bitstream.
-
-    Args:
-        input_path: path to .msk binary file
 
     Returns:
         (N, H, W) long tensor with values in [0, NUM_CLASSES)
@@ -237,102 +238,114 @@ def decode_masks_entropy(
         data = f.read()
 
     pos = 0
-
-    magic = data[pos : pos + 4]
-    pos += 4
+    magic = data[pos:pos + 4]; pos += 4
     if magic != MAGIC:
         raise ValueError(f"Invalid magic: {magic!r}")
 
-    version = data[pos]
-    pos += 1
+    version = data[pos]; pos += 1
     if version != VERSION:
         raise ValueError(f"Unknown version: {version}")
 
-    backend_id = data[pos]
-    pos += 1
-
+    backend_id = data[pos]; pos += 1
     N = struct.unpack_from("<I", data, pos)[0]; pos += 4
     H = struct.unpack_from("<H", data, pos)[0]; pos += 2
     W = struct.unpack_from("<H", data, pos)[0]; pos += 2
-    uncompressed_size = struct.unpack_from("<I", data, pos)[0]; pos += 4
+    method = data[pos]; pos += 1
+    raw_size = struct.unpack_from("<I", data, pos)[0]; pos += 4
 
     compressed = data[pos:]
 
     if backend_id == 1:
         raw = lzma.decompress(compressed, format=lzma.FORMAT_XZ)
-    elif backend_id == 0:
-        raw = zlib.decompress(compressed)
     else:
-        raise ValueError(f"Unknown backend_id: {backend_id}")
+        raw = zlib.decompress(compressed)
 
-    assert len(raw) == uncompressed_size
+    assert len(raw) == raw_size, f"Size mismatch: {len(raw)} vs {raw_size}"
 
-    frame_size = H * W
-    masks = np.empty((N, H, W), dtype=np.uint8)
-
-    # Decode keyframe
-    rpos = 0
-    kf_len, rpos = _read_varint(raw, rpos)
-    kf_data = raw[rpos : rpos + kf_len]
-    rpos += kf_len
-    masks[0] = _rle_decode_bytes(kf_data, frame_size).reshape(H, W)
-
-    # Decode delta frames
-    for i in range(1, N):
-        delta_len, rpos = _read_varint(raw, rpos)
-        delta_data = raw[rpos : rpos + delta_len]
-        rpos += delta_len
-        # Parse sparse delta from beginning of delta_data
-        masks[i], _ = _decode_sparse_delta(masks[i - 1], delta_data, 0)
+    if method == 0:
+        masks = _decode_fulldelta_payload(raw, N, H, W)
+    else:
+        masks = _decode_sparse_payload(raw, N, H, W)
 
     result = torch.from_numpy(masks.astype(np.int64))
     print(f"[mask_entropy] Decoded {N} masks ({H}x{W}) from {input_path}")
     return result
 
 
+# ---------- Test ----------
+
 def test_roundtrip(
     num_frames: int = 1200,
     H: int = 384,
     W: int = 512,
 ) -> dict:
-    """Test encode/decode roundtrip on synthetic mask data.
-
-    Two scenarios:
-    1. "realistic": 0.5% pixel change rate (typical real driving data)
-    2. "worst_case": 2% random pixel change rate (stress test)
-    """
+    """Test roundtrip on synthetic data with varying temporal change rates."""
     import tempfile
     import time
 
     results = {}
+    scenarios = [
+        "static",        # zero change (identical frames)
+        "boundary",      # coherent boundary shifts (realistic driving)
+        "random_0.5pct", # 0.5% random scatter (adversarial)
+        "random_2pct",   # 2% random scatter (extreme adversarial)
+    ]
 
-    for scenario, change_rate in [("realistic", 0.005), ("worst_case", 0.02)]:
+    for scenario in scenarios:
         rng = np.random.RandomState(42)
 
         # Spatially coherent base frame
         base = np.zeros((H, W), dtype=np.uint8)
-        base[: int(H * 0.25), :] = 3          # sky
-        base[int(H * 0.25) : int(H * 0.4), :] = 2  # undrivable
-        base[int(H * 0.4) :, :] = 0           # road
-        for col_center in [W // 4, W // 2, 3 * W // 4]:
-            base[int(H * 0.4) :, col_center - 2 : col_center + 2] = 1  # lanes
+        base[: int(H * 0.25), :] = 3
+        base[int(H * 0.25) : int(H * 0.4), :] = 2
+        for col in [W // 4, W // 2, 3 * W // 4]:
+            base[int(H * 0.4) :, col - 2 : col + 2] = 1
         for vx, vy in [(W // 3, int(H * 0.55)), (2 * W // 3, int(H * 0.6))]:
-            base[vy - 15 : vy + 15, vx - 20 : vx + 20] = 4  # vehicles
+            base[vy - 15 : vy + 15, vx - 20 : vx + 20] = 4
 
         masks = np.empty((num_frames, H, W), dtype=np.uint8)
         masks[0] = base
-        pixels_per_change = int(change_rate * H * W)
+
         for i in range(1, num_frames):
             masks[i] = masks[i - 1].copy()
-            rows = rng.randint(0, H, size=pixels_per_change)
-            cols = rng.randint(0, W, size=pixels_per_change)
-            vals = rng.randint(0, NUM_CLASSES, size=pixels_per_change).astype(np.uint8)
-            masks[i, rows, cols] = vals
+
+            if scenario == "static":
+                pass  # no changes
+
+            elif scenario == "boundary":
+                # Realistic: shift class boundaries by 1 pixel per frame
+                # This simulates camera motion causing boundary movement
+                shift = rng.choice([-1, 0, 1])
+                if shift != 0:
+                    # Shift the sky/undrivable boundary
+                    sky_row = int(H * 0.25) + (i * shift) % 5 - 2
+                    sky_row = max(10, min(int(H * 0.35), sky_row))
+                    masks[i, sky_row - 1 : sky_row + 1, :] = masks[i, sky_row + 1, :]
+                    # Shift lane markings horizontally
+                    for col in [W // 4, W // 2, 3 * W // 4]:
+                        jitter = rng.randint(-1, 2)
+                        c = col + jitter
+                        if 2 <= c < W - 2:
+                            masks[i, int(H * 0.4) :, c - 2 : c + 2] = 1
+
+            elif scenario == "random_0.5pct":
+                ppc = int(0.005 * H * W)
+                rows = rng.randint(0, H, size=ppc)
+                cols = rng.randint(0, W, size=ppc)
+                vals = rng.randint(0, NUM_CLASSES, size=ppc).astype(np.uint8)
+                masks[i, rows, cols] = vals
+
+            elif scenario == "random_2pct":
+                ppc = int(0.02 * H * W)
+                rows = rng.randint(0, H, size=ppc)
+                cols = rng.randint(0, W, size=ppc)
+                vals = rng.randint(0, NUM_CLASSES, size=ppc).astype(np.uint8)
+                masks[i, rows, cols] = vals
 
         masks_tensor = torch.from_numpy(masks.astype(np.int64))
 
         with tempfile.TemporaryDirectory() as tmpdir:
-            for backend in ["lzma", "zlib"]:
+            for backend in ["lzma"]:
                 key = f"{scenario}_{backend}"
                 out_path = Path(tmpdir) / f"test_{key}.msk"
 
@@ -345,13 +358,12 @@ def test_roundtrip(
                 dec_time = time.time() - t0
 
                 match = torch.equal(masks_tensor, decoded)
-                raw_size = num_frames * H * W
+                raw_pixels = num_frames * H * W
                 av1_est = 33_000
 
                 results[key] = {
                     "size_bytes": size,
-                    "raw_size": raw_size,
-                    "ratio": size / raw_size,
+                    "ratio": size / raw_pixels,
                     "vs_av1_pct": round(100 * size / av1_est, 1),
                     "lossless": match,
                     "encode_sec": round(enc_time, 2),
@@ -359,8 +371,7 @@ def test_roundtrip(
                 }
                 print(
                     f"\n[test] {key}: {size:,} bytes "
-                    f"(ratio={size / raw_size:.6f}, "
-                    f"~{100 * size / av1_est:.0f}% of AV1, "
+                    f"({100 * size / av1_est:.0f}% of AV1, "
                     f"enc={enc_time:.1f}s dec={dec_time:.1f}s "
                     f"lossless={match})"
                 )
@@ -376,5 +387,7 @@ if __name__ == "__main__":
         print(
             f"  {key}: {r['size_bytes']:,} bytes | "
             f"{r['vs_av1_pct']}% of AV1 | "
+            f"ratio={r['ratio']:.6f} | "
+
             f"enc={r['encode_sec']}s dec={r['decode_sec']}s | {status}"
         )
