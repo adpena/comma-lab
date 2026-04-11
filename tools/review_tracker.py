@@ -38,6 +38,7 @@ TAC_ROOT = REPO_ROOT / "src" / "tac"
 TRACKER_JSON = REPO_ROOT / ".omx" / "state" / "review_tracker.json"
 TRACKER_DB = REPO_ROOT / ".omx" / "state" / "review_tracker.duckdb"
 EXPERIMENTS_ROOT = REPO_ROOT / "experiments"
+POLICY_PATH = REPO_ROOT / ".omx" / "state" / "review_policy.json"
 
 # Valid review statuses
 VALID_STATUSES = {"unreviewed", "reviewed", "stale", "needs_fix"}
@@ -350,6 +351,217 @@ def _export_json(con) -> None:
         "review_count": len(reviews),
         "entities": entities,
     }, indent=2, default=str) + "\n")
+
+
+# ---------------------------------------------------------------------------
+# Policy engine
+# ---------------------------------------------------------------------------
+
+def load_policy() -> dict:
+    """Load the review policy config. Returns empty dict on missing/corrupt."""
+    if not POLICY_PATH.exists():
+        return {}
+    try:
+        return json.loads(POLICY_PATH.read_text())
+    except (json.JSONDecodeError, OSError):
+        return {}
+
+
+def _match_file_policy(file_path: str, policy: dict) -> dict:
+    """Find the first matching file_policy entry for a file path.
+
+    Matches are tested in order — first match wins (most specific first).
+    Supports fnmatch-style glob patterns.
+    """
+    import fnmatch
+    for fp in policy.get("file_policies", []):
+        pattern = fp.get("pattern", "")
+        if fnmatch.fnmatch(file_path, pattern):
+            return fp
+    return {"rigor": "relaxed", "reason": "no matching policy"}
+
+
+def get_rigor_for_file(file_path: str, policy: dict | None = None) -> dict:
+    """Get the rigor requirements for a specific file."""
+    if policy is None:
+        policy = load_policy()
+    fp = _match_file_policy(file_path, policy)
+    rigor_name = fp.get("rigor", "relaxed")
+    rigor = policy.get("rigor", {}).get(rigor_name, {})
+    rigor["_name"] = rigor_name
+    rigor["_reason"] = fp.get("reason", "")
+    return rigor
+
+
+def get_principal(reviewer_id: str, policy: dict | None = None) -> dict:
+    """Look up a reviewer principal by ID. Returns empty dict if not found."""
+    if policy is None:
+        policy = load_policy()
+    return policy.get("principals", {}).get(reviewer_id, {})
+
+
+def count_consecutive_clean_passes(con, qualified_name: str) -> int:
+    """Count consecutive clean review passes for an entity.
+
+    Walks the review audit log backwards from newest. A 'marked_reviewed'
+    increments the counter. An 'auto_stale_diff' or 'marked_needs_fix'
+    resets to 0 and stops counting.
+    """
+    try:
+        rows = con.execute("""
+            SELECT action, reviewer FROM reviews
+            WHERE entity = ?
+            ORDER BY timestamp DESC
+        """, [qualified_name]).fetchall()
+    except Exception:
+        return 0
+
+    count = 0
+    for action, reviewer in rows:
+        if action == "marked_reviewed":
+            count += 1
+        elif action in ("auto_stale_diff", "marked_needs_fix", "marked_stale", "marked_unreviewed"):
+            break  # reset — stop counting
+        # Other actions (comments, flags) don't affect the count
+    return count
+
+
+def get_distinct_approvers(con, qualified_name: str, policy: dict | None = None) -> list[str]:
+    """Get distinct reviewers who approved since last staleness reset."""
+    if policy is None:
+        policy = load_policy()
+
+    try:
+        rows = con.execute("""
+            SELECT action, reviewer FROM reviews
+            WHERE entity = ?
+            ORDER BY timestamp DESC
+        """, [qualified_name]).fetchall()
+    except Exception:
+        return []
+
+    approvers: list[str] = []
+    for action, reviewer in rows:
+        if action == "marked_reviewed":
+            principal = get_principal(reviewer, policy)
+            level = principal.get("level", 1)
+            if level >= 3 and reviewer not in approvers:  # L3+ = approver
+                approvers.append(reviewer)
+        elif action in ("auto_stale_diff", "marked_needs_fix", "marked_stale"):
+            break  # staleness resets approver list
+    return approvers
+
+
+def check_entity_policy(con, qualified_name: str, file_path: str,
+                        policy: dict | None = None) -> dict:
+    """Check if an entity meets its review policy requirements.
+
+    Returns a dict with:
+        met: bool — all requirements satisfied
+        rigor: str — rigor level name
+        issues: list[str] — human-readable policy violations
+        passes: int — consecutive clean passes
+        required_passes: int
+        approvers: list[str] — distinct approvers
+        required_approvers: int
+    """
+    if policy is None:
+        policy = load_policy()
+
+    rigor = get_rigor_for_file(file_path, policy)
+    rigor_name = rigor.get("_name", "relaxed")
+
+    passes = count_consecutive_clean_passes(con, qualified_name)
+    approvers = get_distinct_approvers(con, qualified_name, policy)
+
+    req_passes = rigor.get("min_consecutive_clean_passes", 1)
+    req_approvers = rigor.get("min_distinct_approvers", 1)
+    req_level = rigor.get("min_approver_level", 1)
+    req_human = rigor.get("require_human_approver", False)
+
+    issues: list[str] = []
+
+    if passes < req_passes:
+        issues.append(f"needs {req_passes - passes} more clean pass(es) ({passes}/{req_passes})")
+
+    if len(approvers) < req_approvers:
+        issues.append(f"needs {req_approvers - len(approvers)} more approver(s) (have: {approvers or 'none'})")
+
+    # Check approver levels
+    for a in approvers:
+        principal = get_principal(a, policy)
+        if principal.get("level", 1) < req_level:
+            issues.append(f"approver '{a}' is L{principal.get('level', 1)}, needs L{req_level}+")
+
+    if req_human and not any(get_principal(a, policy).get("human", False) for a in approvers):
+        issues.append(f"requires at least one human approver")
+
+    return {
+        "met": len(issues) == 0,
+        "rigor": rigor_name,
+        "reason": rigor.get("_reason", ""),
+        "issues": issues,
+        "passes": passes,
+        "required_passes": req_passes,
+        "approvers": approvers,
+        "required_approvers": req_approvers,
+    }
+
+
+def cmd_policy_check(file_path: str | None = None) -> None:
+    """Check policy compliance for a file or all tracked entities."""
+    con = _init_db()
+    policy = load_policy()
+
+    if not policy:
+        print("No review policy found at .omx/state/review_policy.json")
+        con.close()
+        return
+
+    G = "\033[32m"; Y = "\033[33m"; R = "\033[31m"; C = "\033[36m"
+    RST = "\033[0m"; B = "\033[1m"
+
+    if file_path:
+        rows = con.execute(
+            "SELECT qualified_name, file_path, name, review_status FROM entities WHERE file_path LIKE ?",
+            [f"%{file_path}%"]
+        ).fetchall()
+    else:
+        # Check critical + standard files only
+        rows = con.execute("""
+            SELECT qualified_name, file_path, name, review_status FROM entities
+            WHERE review_status != 'reviewed'
+            ORDER BY file_path, start_line
+        """).fetchall()
+
+    print(f"\n{B}  Policy Compliance Check{RST}")
+    print(f"  {'=' * 60}\n")
+
+    violations = 0
+    met_count = 0
+    current_file = ""
+
+    for qn, fp, name, status in rows:
+        result = check_entity_policy(con, qn, fp, policy)
+
+        if fp != current_file:
+            current_file = fp
+            rigor = get_rigor_for_file(fp, policy)
+            level_color = R if rigor["_name"] == "critical" else (Y if rigor["_name"] == "standard" else RST)
+            print(f"  {level_color}[{rigor['_name'].upper()}]{RST} {fp}")
+
+        if result["met"]:
+            met_count += 1
+        else:
+            violations += 1
+            for issue in result["issues"]:
+                print(f"    {R}!{RST} {name}: {issue}")
+
+    print(f"\n  {B}Summary:{RST} {met_count} entities compliant, {R}{violations} violations{RST}")
+    if violations == 0:
+        print(f"  {G}All checked entities meet their review policy.{RST}")
+    print()
+    con.close()
 
 
 # ---------------------------------------------------------------------------
@@ -1062,6 +1274,14 @@ def main() -> None:
         cmd_query(positional[2])
     elif cmd == "selftest":
         cmd_selftest()
+    elif cmd == "policy-check":
+        cmd_policy_check(positional[2] if len(positional) >= 3 else None)
+    elif cmd == "policy-show":
+        policy = load_policy()
+        if not policy:
+            print("No policy found")
+        else:
+            print(json.dumps(policy, indent=2))
     else:
         print(__doc__)
 

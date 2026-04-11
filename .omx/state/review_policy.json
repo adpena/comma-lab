@@ -1,0 +1,130 @@
+{
+  "version": 2,
+  "description": "Review policy — capability-based approval requirements per file pattern",
+
+  "_design_notes": {
+    "philosophy": "LLVM/Chromium OWNERS model: capability levels, not org structure",
+    "levels": "L1 < L2 < L3 < L4 — each inherits the previous",
+    "enforcement": "Pre-commit hook checks policy; blocks or warns based on config"
+  },
+
+  "principals": {
+    "adpena": {
+      "github": "adpena",
+      "url": "https://github.com/adpena",
+      "level": 4,
+      "level_name": "owner",
+      "scope": ["*"],
+      "human": true
+    },
+    "council": {
+      "github": null,
+      "url": null,
+      "level": 3,
+      "level_name": "approver",
+      "scope": ["*"],
+      "human": false
+    },
+    "council_greenup": {
+      "github": null,
+      "url": null,
+      "level": 3,
+      "level_name": "approver",
+      "scope": ["*"],
+      "human": false
+    },
+    "council_5369_review": {
+      "github": null,
+      "url": null,
+      "level": 2,
+      "level_name": "reviewer",
+      "scope": ["src/tac/*", "experiments/*"],
+      "human": false
+    },
+    "diff_scanner": {
+      "github": null,
+      "url": null,
+      "level": 1,
+      "level_name": "contributor",
+      "scope": ["*"],
+      "human": false
+    }
+  },
+
+  "levels": {
+    "1": {"name": "contributor", "can": ["comment", "flag"]},
+    "2": {"name": "reviewer",    "can": ["comment", "flag", "review"]},
+    "3": {"name": "approver",    "can": ["comment", "flag", "review", "approve"]},
+    "4": {"name": "owner",       "can": ["comment", "flag", "review", "approve", "override"]}
+  },
+
+  "rigor": {
+    "critical": {
+      "description": "Production-critical code — bugs cost GPU hours or corrupt submissions",
+      "min_consecutive_clean_passes": 3,
+      "min_approver_level": 3,
+      "min_distinct_approvers": 2,
+      "require_human_approver": false,
+      "require_all_issues_resolved": true,
+      "stale_resets_passes": true,
+      "max_staleness_days": 7
+    },
+    "standard": {
+      "description": "Core library code — foundational but not in the hot path",
+      "min_consecutive_clean_passes": 2,
+      "min_approver_level": 2,
+      "min_distinct_approvers": 1,
+      "require_human_approver": false,
+      "require_all_issues_resolved": true,
+      "stale_resets_passes": true,
+      "max_staleness_days": 14
+    },
+    "normal": {
+      "description": "Experiment scripts, utilities, tooling",
+      "min_consecutive_clean_passes": 1,
+      "min_approver_level": 1,
+      "min_distinct_approvers": 1,
+      "require_human_approver": false,
+      "require_all_issues_resolved": true,
+      "stale_resets_passes": false,
+      "max_staleness_days": 30
+    },
+    "relaxed": {
+      "description": "Config, data, non-executable files",
+      "min_consecutive_clean_passes": 1,
+      "min_approver_level": 1,
+      "min_distinct_approvers": 1,
+      "require_human_approver": false,
+      "require_all_issues_resolved": false,
+      "stale_resets_passes": false,
+      "max_staleness_days": 90
+    }
+  },
+
+  "file_policies": [
+    {"pattern": "src/tac/training.py",                    "rigor": "critical", "reason": "Core training loop — bugs cost GPU hours"},
+    {"pattern": "src/tac/losses.py",                      "rigor": "critical", "reason": "Loss functions directly determine model quality"},
+    {"pattern": "src/tac/renderer.py",                    "rigor": "critical", "reason": "GPU lane renderer — complex architecture"},
+    {"pattern": "src/tac/quantization.py",                "rigor": "critical", "reason": "Quantization affects deployed model quality"},
+    {"pattern": "src/tac/diffusion_renderer.py",          "rigor": "critical", "reason": "Complex diffusion math — easy to break"},
+    {"pattern": "submissions/robust_current/compress.sh",  "rigor": "critical", "reason": "Submission pipeline — must be correct"},
+    {"pattern": "submissions/robust_current/inflate*.py",  "rigor": "critical", "reason": "Inflate pipeline — runs on scorer"},
+    {"pattern": "src/tac/*.py",                           "rigor": "standard", "reason": "Core tac library modules"},
+    {"pattern": "src/tac/lossless/*.py",                  "rigor": "standard", "reason": "Lossless codec modules"},
+    {"pattern": "experiments/train_*.py",                 "rigor": "standard", "reason": "Training scripts — need correctness"},
+    {"pattern": "experiments/*.py",                       "rigor": "normal",   "reason": "Experiment scripts"},
+    {"pattern": "tools/*.py",                             "rigor": "normal",   "reason": "Developer tooling"},
+    {"pattern": "*",                                      "rigor": "relaxed",  "reason": "Default fallback"}
+  ],
+
+  "enforcement": {
+    "pre_commit_enabled": true,
+    "warn_only": true,
+    "block_on_needs_fix": true,
+    "block_on_insufficient_passes": true,
+    "block_on_insufficient_approver_level": true,
+    "block_on_stale_approval": true,
+    "override_env_var": "REVIEW_GATE_OVERRIDE",
+    "disable_env_var": "REVIEW_GATE_ENABLED"
+  }
+}
