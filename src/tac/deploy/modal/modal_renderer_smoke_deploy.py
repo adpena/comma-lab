@@ -41,7 +41,17 @@ image = (
         "einops",
         "segmentation-models-pytorch",
     )
-    .env({"PYTHONPATH": "/root/src", "PYTHONUNBUFFERED": "1"})
+    # Clone upstream scorer repo (PoseNet/SegNet model definitions)
+    .run_commands(
+        "git clone --depth 1 https://github.com/commaai/comma_video_compression_challenge.git /root/upstream",
+        "cd /root/upstream && git lfs pull",
+    )
+    .env({
+        "PYTHONPATH": "/root/src:/root/upstream",
+        "PYTHONUNBUFFERED": "1",
+        "TAC_UPSTREAM_DIR": "/root/upstream",
+        "TAC_MODELS_DIR": "/root/upstream/models",
+    })
     # add_local_dir must be LAST — Modal mounts these at startup, not during build
     .add_local_dir(str(REPO_ROOT / "src" / "tac"), "/root/src/tac")
 )
