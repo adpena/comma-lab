@@ -134,12 +134,18 @@ A candidate may be promoted only after:
 
 ## Critical lessons — DO NOT repeat these mistakes
 
-- **KL distill is DEAD.** Two authoritative evals confirmed PoseNet collapse: 1.85 and 2.05. NEVER use KL distill loss_mode.
+- **KL distill is DEAD.** Two authoritative evals confirmed PoseNet collapse: proxy 1.25 scored 1.85 auth (sw=100, with cap), proxy 1.43 scored 2.05 auth (sw=30, no cap). The second eval proved the failure is structural, not just a cap artifact. NEVER use KL distill loss_mode.
+- **Adaptive weights are DEAD.** The Hinton T² correction was already inside the KL loss, so dividing by T² in the weight formula double-corrected. The compound invariant w_s*T² was trivially constant by construction. The formula produced w_s=0.80 when the empirical winner used w_s=100 (125x mismatch). Do NOT use adaptive_rebalance=True.
 - **Neural artifacts must be inside archive.zip** per contest rules (affects rate calculation).
 - **Do NOT use PoseNet gradient caps/clamps.** Caused 26x PoseNet regression.
-- **Do NOT use KL distill loss_mode.** Two authoritative evals confirmed PoseNet collapse (1.85 and 2.05).
-- **Do NOT use adaptive_rebalance=True.** The formula was vacuous (T² cancels).
 - **Do NOT use segnet_loss_weight > 100 with any loss mode.** Overwhelms PoseNet signal.
+- **Standard loss is the ONLY proven technique.** All other loss modes (KL distill, SegNet attack) failed authoritative eval.
+
+## Current frontier experiments
+
+- **PSD architecture** (PixelShuffle-Downscale): promising for SegNet but untested with standard loss on authoritative scorer
+- **5 adaptive frontier items**: boundary dispatch for standard loss, sin² ramp, replay gate, 3-phase eval, plateau LR scheduler
+- These are implemented but unvalidated. Do not promote without authoritative eval.
 
 ## Ralph-style execution model
 
