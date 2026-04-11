@@ -343,11 +343,11 @@ class Trainer:
 
         if config.scheduler == "cosine":
             self.scheduler = torch.optim.lr_scheduler.CosineAnnealingLR(
-                self.optimizer, T_max=config.epochs - config.warmup_epochs, eta_min=1e-5
+                self.optimizer, T_max=config.epochs - config.warmup_epochs, eta_min=1e-4
             )
         else:
             self.scheduler = torch.optim.lr_scheduler.CosineAnnealingWarmRestarts(
-                self.optimizer, T_0=config.restart_t0, T_mult=config.restart_tmult, eta_min=1e-5
+                self.optimizer, T_0=config.restart_t0, T_mult=config.restart_tmult, eta_min=1e-4
             )
 
         # Resume from checkpoint if specified (must come after optimizer/scheduler init)

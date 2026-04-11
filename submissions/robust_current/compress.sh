@@ -144,6 +144,7 @@ encode_video() {
       -colorspace "$SOURCE_COLOR_MATRIX" \
       -color_primaries "$SOURCE_COLOR_PRIMARIES" \
       -color_trc "$SOURCE_COLOR_TRC" \
+      -map_metadata -1 \
       "$out_path"
   else
     "$FFMPEG_BIN" -y -i "$in_path" \
