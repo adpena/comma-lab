@@ -188,6 +188,29 @@ class DilatedPostFilter(nn.Module):
         return (x + residual).clamp(0, 255)
 
 
+class GatedDilatedPostFilter(nn.Module):
+    """DilatedPostFilter with a spatial sigmoid gate (Collier's proposal)."""
+    def __init__(self, hidden=16, kernel=3):
+        super().__init__()
+        pad = kernel // 2
+        self.conv1 = nn.Conv2d(3, hidden, kernel, padding=pad, bias=True)
+        self.conv2 = nn.Conv2d(hidden, hidden, kernel, padding=pad * 2, dilation=2, bias=True)
+        self.conv3 = nn.Conv2d(hidden, 3, kernel, padding=pad, bias=True)
+        self.gate = nn.Sequential(nn.Conv2d(hidden, 1, 1, bias=True), nn.Sigmoid())
+        self.act = nn.ReLU(inplace=True)
+        nn.init.zeros_(self.conv3.weight)
+        nn.init.zeros_(self.conv3.bias)
+        nn.init.zeros_(self.gate[0].weight)
+        nn.init.zeros_(self.gate[0].bias)
+
+    def forward(self, x):
+        features = self.act(self.conv1(x))
+        features = self.act(self.conv2(features))
+        gate = self.gate(features)
+        residual = self.conv3(features)
+        return (x + gate * residual).clamp(0, 255)
+
+
 class FiLMPostFilter(nn.Module):
     def __init__(self, hidden=16, kernel=3):
         super().__init__()
@@ -255,6 +278,8 @@ def build_postfilter(meta: object | None = None) -> PostFilter:
         return PixelShuffleDilatedPostFilter(hidden=hidden, kernel=kernel)
     if variant == "dilated":
         return DilatedPostFilter(hidden=hidden, kernel=kernel)
+    if variant == "gated_dilated":
+        return GatedDilatedPostFilter(hidden=hidden, kernel=kernel)
     if variant == "film_conditioned":
         return FiLMPostFilter(hidden=hidden, kernel=kernel)
     if variant == "psd":

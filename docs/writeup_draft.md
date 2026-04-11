@@ -427,18 +427,18 @@ The full campaign spanned 8 days and 25+ experiments. The table below shows the 
 
 The trajectory splits into four phases. Codec tuning (4.06 to 2.08) contributed 1.98 points, mostly from switching to AV1 and matching the scorer's colorspace. Post-filter introduction and scaling (2.08 to 1.73) contributed 0.35 points from a growing CNN. Hardening (1.73 to 1.51) contributed 0.22 points purely from fixing measurement bugs. Architecture (1.51 to 1.33) contributed 0.18 points from dilated convolutions.
 
-### 7.2 Score decomposition: 117% of gains from PoseNet
+### 7.2 Score decomposition: where the gains come from
 
-The score improvement from no-filter baseline (2.08) to final (1.33) is 0.75 points. Decomposing by component:
+Measuring from the unfiltered baseline (CRF 34 video, no post-filter, score 1.506) to the final submission (score 1.333), the total improvement is 0.173 points:
 
-| Component | Baseline | Final | Delta | % of total gain |
-|-----------|----------|-------|-------|-----------------|
-| 100 * seg | 0.577 | 0.610 | +0.033 (worse) | -4.4% |
-| sqrt(10 * pose) | 0.932 | 0.148 | -0.784 | +104.5% |
+| Component | Baseline (no filter) | Final | Delta | % of total gain |
+|-----------|---------------------|-------|-------|-----------------|
+| 100 * seg | 0.580 | 0.610 | +0.030 (worse) | -17.3% |
+| sqrt(10 * pose) | 0.351 | 0.148 | -0.203 | +117.3% |
 | 25 * rate | 0.575 | 0.575 | 0.000 | 0% |
-| **Total** | **2.08** | **1.33** | **-0.75** | **100%** |
+| **Total** | **1.506** | **1.333** | **-0.173** | **100%** |
 
-PoseNet accounts for 104.5% of the score improvement (more than 100% because SegNet regressed). The post-filter reduced PoseNet distortion from 0.08695 to 0.00218 -- a 39.9x improvement in the raw metric, contributing 0.784 points of score reduction. SegNet worsened from 0.00577 to 0.00610 (5.7% regression), costing 0.033 points. The rate term is unchanged because the filter does not modify the bitstream.
+PoseNet accounts for 117% of the score improvement (more than 100% because SegNet regressed, costing 17% of the gain). The post-filter reduced PoseNet distortion from 0.01229 to 0.00218 — a 5.6x improvement — while SegNet worsened from 0.00580 to 0.00610 (5.2% regression). The rate term is unchanged because the filter does not modify the bitstream; it adds only 46KB to a 903KB archive.
 
 > **Figure 1** (placeholder): Score component stacked bar chart. Three stacked bars (seg/pose/rate) at each milestone from the trajectory table. The PoseNet bar shrinks dramatically from Apr 7 onward while the SegNet bar remains roughly constant, visualizing the axis-exploitation phenomenon.
 
