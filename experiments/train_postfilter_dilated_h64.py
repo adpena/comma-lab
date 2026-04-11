@@ -1,4 +1,9 @@
 #!/usr/bin/env python
+# ============================================================================
+# LEGACY — This script predates the tac library and is superseded by:
+#   python experiments/train_tac.py --profile proven_baseline
+# Unique logic has been migrated to src/tac/. Kept for git history reference.
+# ============================================================================
 """Self-contained Kaggle/Colab trainer for the deploy-correct dilated h64 lane.
 
 This script vendors the full training path so it can run without importing any

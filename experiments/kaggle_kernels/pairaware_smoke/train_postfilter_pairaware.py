@@ -1,4 +1,9 @@
 #!/usr/bin/env python
+# ============================================================================
+# LEGACY — This script predates the tac library and is superseded by:
+#   python experiments/train_tac.py --profile proven_baseline --arch pair_aware
+# Unique logic has been migrated to src/tac/. Kept for git history reference.
+# ============================================================================
 """Pair-aware 6-channel post-filter scaffold.
 
 This is a minimal experiment lane for a post-filter that reads both frames

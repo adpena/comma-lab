@@ -1,4 +1,9 @@
 #!/usr/bin/env python
+# ============================================================================
+# LEGACY — This script predates the tac library and is superseded by:
+#   python experiments/train_tac.py --profile segnet_attack
+# Unique logic has been migrated to src/tac/. Kept for git history reference.
+# ============================================================================
 """Self-contained Kaggle/Colab trainer for the fixed h32 SegNet attack lane.
 
 This is a standalone variant of the cloud trainer pattern:

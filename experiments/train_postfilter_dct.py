@@ -1,4 +1,9 @@
 #!/usr/bin/env python
+# ============================================================================
+# LEGACY — This script predates the tac library and is superseded by:
+#   python experiments/train_tac.py --profile dct_midband_smoke
+# Unique logic has been migrated to src/tac/. Kept for git history reference.
+# ============================================================================
 """Train a tiny mid-frequency DCT-basis post-filter.
 
 This is a research lane inspired by the residual-analysis finding that the

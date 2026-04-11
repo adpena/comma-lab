@@ -1,4 +1,9 @@
 #!/usr/bin/env python
+# ============================================================================
+# LEGACY — This script predates the tac library and is superseded by:
+#   python experiments/train_tac.py --profile proven_baseline
+# Unique logic has been migrated to src/tac/. Kept for git history reference.
+# ============================================================================
 """Train post-filter v2: scorer-faithful loss + QAT + EMA.
 
 Key improvements over train_postfilter_saliency.py:

@@ -1,4 +1,9 @@
 #!/usr/bin/env python
+# ============================================================================
+# LEGACY — This script predates the tac library and is superseded by:
+#   python experiments/train_tac.py --profile proven_baseline --hidden 24
+# Unique logic has been migrated to src/tac/. Kept for git history reference.
+# ============================================================================
 """
 Experiment 1: Post-filter with hidden=24.
 Based on train_postfilter_canonical.py, only change is hidden=24.

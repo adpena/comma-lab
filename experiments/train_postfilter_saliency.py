@@ -1,4 +1,9 @@
 #!/usr/bin/env python
+# ============================================================================
+# LEGACY — This script predates the tac library and is superseded by:
+#   python experiments/train_tac.py --profile proven_baseline
+# Unique logic has been migrated to src/tac/. Kept for git history reference.
+# ============================================================================
 """
 Train a saliency-weighted post-filter for the comma video compression challenge.
 

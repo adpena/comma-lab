@@ -1,4 +1,9 @@
 #!/usr/bin/env python
+# ============================================================================
+# LEGACY — This script predates the tac library and is superseded by:
+#   python experiments/train_tac.py --profile counterpoint_smoke
+# Unique logic has been migrated to src/tac/. Kept for git history reference.
+# ============================================================================
 """Jacob Collier's two-voice counterpoint post-filter.
 
 Train two h=16 filters A, B JOINTLY with three losses:

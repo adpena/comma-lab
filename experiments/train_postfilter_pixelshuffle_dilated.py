@@ -1,4 +1,9 @@
 #!/usr/bin/env python
+# ============================================================================
+# LEGACY — This script predates the tac library and is superseded by:
+#   python experiments/train_tac.py --profile pixelshuffle_dilated_smoke
+# Unique logic has been migrated to src/tac/. Kept for git history reference.
+# ============================================================================
 """Train a hybrid PixelShuffle + dilated post-filter on top of QAT+EMA.
 
 This wrapper keeps the current saliency-weighted QAT+EMA recipe, but swaps

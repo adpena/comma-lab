@@ -1,4 +1,9 @@
 #!/usr/bin/env python
+# ============================================================================
+# LEGACY — This script predates the tac library and is superseded by:
+#   python experiments/train_tac.py --profile proven_baseline --use-uint8-ste
+# Unique logic has been migrated to src/tac/. Kept for git history reference.
+# ============================================================================
 """Train a post-filter with uint8 activation STE (audit YELLOW fix).
 
 Closes the remaining train/eval drift identified in the rigorous 1:1

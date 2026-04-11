@@ -1,4 +1,9 @@
 #!/usr/bin/env python
+# ============================================================================
+# LEGACY — This script predates the tac library and is superseded by:
+#   python experiments/train_tac.py --profile proven_baseline
+# Unique logic has been migrated to src/tac/. Kept for git history reference.
+# ============================================================================
 """
 Experiment 3: Post-filter with dilated conv2 (hidden=16, dilation=2).
 Based on train_postfilter_canonical.py.

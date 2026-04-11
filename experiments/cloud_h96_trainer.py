@@ -1,4 +1,9 @@
 #!/usr/bin/env python
+# ============================================================================
+# LEGACY — This script predates the tac library and is superseded by:
+#   python experiments/train_tac.py --profile h96_council
+# Unique logic has been migrated to src/tac/. Kept for git history reference.
+# ============================================================================
 """
 Fully self-contained Kaggle/Colab training script for PostFilter h=96.
 

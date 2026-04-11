@@ -1,4 +1,9 @@
 #!/usr/bin/env python
+# ============================================================================
+# LEGACY — This script predates the tac library and is superseded by:
+#   python experiments/train_tac.py --profile proven_baseline --loss-mode feature_match
+# Unique logic has been migrated to src/tac/. Kept for git history reference.
+# ============================================================================
 """Train a post-filter with PoseNet feature-matching loss + EMA + QAT.
 
 The baseline saliency trainer minimizes only the *scalar* PoseNet

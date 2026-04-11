@@ -1,3 +1,8 @@
+# ============================================================================
+# LEGACY — This script predates the tac library and is superseded by:
+#   python experiments/train_tac.py --profile proven_baseline
+# Unique logic has been migrated to src/tac/. Kept for git history reference.
+# ============================================================================
 def tac_has_required_entrypoints(module: object) -> bool:
     required = {'build_postfilter_meta', 'make_dilated_default_tag', 'resolve_cloud_asset_bundle', 'resolve_cloud_output_dir', 'save_best_checkpoint', 'save_final_artifacts', 'normalize_archive_source_path'}
     return all(hasattr(module, name) for name in required)
