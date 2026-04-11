@@ -1343,6 +1343,36 @@ class Trainer:
                         segnet,
                         segnet_weight=cfg.segnet_loss_weight,
                     )
+                elif cfg.loss_mode == "segnet_kl":
+                    # SegNet KL-divergence: direct semantic preservation
+                    # Standard loss + KL term on SegNet logits
+                    if gt_pose is not None:
+                        loss, pd, sd = scorer_loss_cached(
+                            filtered, gt_pair, posenet, segnet,
+                            segnet_weight=sw, gt_pose=gt_pose, gt_seg=gt_seg,
+                        )
+                    else:
+                        loss, pd, sd = scorer_loss(
+                            filtered, gt_pair, posenet, segnet, segnet_weight=sw,
+                        )
+                    kl_term = segnet_kl_divergence_loss(gt_pair, filtered, segnet)
+                    loss = loss + sw * kl_term
+                elif cfg.loss_mode == "posenet_embedding":
+                    # PoseNet embedding: perceptual loss on internal features
+                    if gt_pose is not None:
+                        loss, pd, sd = scorer_loss_cached(
+                            filtered, gt_pair, posenet, segnet,
+                            segnet_weight=sw, gt_pose=gt_pose, gt_seg=gt_seg,
+                        )
+                    else:
+                        loss, pd, sd = scorer_loss(
+                            filtered, gt_pair, posenet, segnet, segnet_weight=sw,
+                        )
+                    emb_term = posenet_embedding_loss(
+                        gt_pair, filtered, posenet,
+                        layer=cfg.posenet_embedding_layer,
+                    )
+                    loss = loss + cfg.posenet_embedding_weight * emb_term
                 else:
                     if cfg.boundary_weight > 1.0 and self._boundary_masks is not None:
                         bm = self._boundary_masks.get(start)
