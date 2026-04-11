@@ -169,6 +169,7 @@ def build_parser() -> argparse.ArgumentParser:
     sp.add_argument("--context-tokens", type=int, default=None)
     sp.add_argument("--device", default="mps", choices=["cpu", "cuda", "mps"])
     sp.add_argument("--dtype", default="auto", choices=["auto", "float32", "float16", "bfloat16"])
+    sp.add_argument("--verify-decode", action="store_true")
     sp.add_argument("--cache-dir", default=None)
     sp.add_argument("--model-url", default=None)
     sp.add_argument("--gpt-module-path", default=None)
@@ -308,6 +309,23 @@ def build_parser() -> argparse.ArgumentParser:
 
     # tac benchmark-codecs
     sp = subparsers.add_parser("benchmark-codecs", help="Benchmark mask encoding strategies.")
+
+    # ── Visualization subcommands ──────────────────────────────────────────
+
+    # tac viz-comma-video
+    sp = subparsers.add_parser("viz-comma-video", help="Generate 6-panel comma-format comparison video + GIF.")
+
+    # tac viz-comma-gif
+    sp = subparsers.add_parser("viz-comma-gif", help="Generate 512x384 comma-style animated GIF (baseline/ours/comparison).")
+
+    # tac viz-comparison
+    sp = subparsers.add_parser("viz-comparison", help="Generate side-by-side SegNet overlay comparison video + GIF.")
+
+    # tac viz-segnet
+    sp = subparsers.add_parser("viz-segnet", help="Generate SegNet visualization JSON data for the web page.")
+
+    # tac viz-yuv-gif
+    sp = subparsers.add_parser("viz-yuv-gif", help="Generate 3-panel YUV Y00 channel comparison GIF.")
 
     return parser
 
@@ -500,6 +518,7 @@ def _run_lossless(args: argparse.Namespace) -> dict[str, Any]:
             context_tokens=args.context_tokens,
             device=args.device,
             dtype=args.dtype,
+            verify_decode=args.verify_decode,
             cache_dir=args.cache_dir,
             model_url=args.model_url,
             gpt_module_path=args.gpt_module_path,
@@ -755,6 +774,21 @@ def main(argv: list[str] | None = None) -> Any:
         return _run_rd_floor(args)
     if args.command == "benchmark-codecs":
         return _run_benchmark_codecs(args)
+    if args.command == "viz-comma-video":
+        from tac.visualization.comma_format_video import main as _viz_main
+        return _viz_main()
+    if args.command == "viz-comma-gif":
+        from tac.visualization.comma_gif import main as _viz_main
+        return _viz_main()
+    if args.command == "viz-comparison":
+        from tac.visualization.comparison_video import main as _viz_main
+        return _viz_main()
+    if args.command == "viz-segnet":
+        from tac.visualization.segnet_viz import main as _viz_main
+        return _viz_main()
+    if args.command == "viz-yuv-gif":
+        from tac.visualization.yuv_gif import main as _viz_main
+        return _viz_main()
     raise SystemExit(f"Unknown command: {args.command}")
 
 

@@ -24,7 +24,7 @@ Three modes:
   --mode comparison Dual traces on PoseNet chart; top panels show baseline vs ours.
 
 Usage:
-    python tools/generate_comma_gif.py \\
+    tac viz-comma-gif \\
         --upstream workspace/upstream/comma_video_compression_challenge \\
         --archive submissions/robust_current/archive.zip \\
         --checkpoint submissions/robust_current/postfilter_int8.pt \\
@@ -92,7 +92,7 @@ def parse_args() -> argparse.Namespace:
 
 
 # ---------------------------------------------------------------------------
-# Model helpers (same API as generate_comma_format_video.py)
+# Model helpers (same API as comma_format_video.py)
 # ---------------------------------------------------------------------------
 
 def get_segnet_classes(frame_chw: torch.Tensor, segnet) -> np.ndarray:
@@ -203,7 +203,7 @@ def _upscale_segnet_diff(
 
     Returns (PANEL_H, PANEL_W, 3) uint8 with:
       Red:   error in baseline only (we FIXED it)
-      Green: error in ours only (we INTRODUCED it — regression)
+      Green: error in ours only (we INTRODUCED it -- regression)
       White: error in both (shared, irreducible)
       Black: no error in either
     """
@@ -338,7 +338,7 @@ def _composite_frame(
     # Resize video frames to panel size
     tl = _resize_frame_to_panel(top_left_img)
     tr = _resize_frame_to_panel(top_right_img)
-    bl = segnet_panel  # already (PANEL_H, PANEL_W, 3) — either mono or color-coded diff
+    bl = segnet_panel  # already (PANEL_H, PANEL_W, 3) -- either mono or color-coded diff
     br = chart_rgb  # already at panel size
 
     # Assemble 2x2 grid
@@ -371,12 +371,6 @@ def _composite_frame(
 
 def main() -> None:
     args = parse_args()
-
-    # Path setup for tac imports
-    project_root = Path(__file__).resolve().parent.parent
-    src_dir = str(project_root / "src")
-    if src_dir not in sys.path:
-        sys.path.insert(0, src_dir)
 
     upstream_dir = Path(args.upstream)
     upstream_str = str(upstream_dir)

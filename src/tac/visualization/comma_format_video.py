@@ -25,7 +25,7 @@ Panel details:
 Output: MP4 (4x speed) and animated GIF.
 
 Usage:
-    python tools/generate_comma_format_video.py \\
+    tac viz-comma-video \\
         --upstream workspace/upstream/comma_video_compression_challenge \\
         --archive submissions/robust_current/archive.zip \\
         --checkpoint submissions/robust_current/postfilter_int8.pt \\
@@ -307,12 +307,6 @@ def get_posenet_mse(
 
 def main() -> None:
     args = parse_args()
-
-    # Add src/ to path for tac imports
-    project_root = Path(__file__).resolve().parent.parent
-    src_dir = str(project_root / "src")
-    if src_dir not in sys.path:
-        sys.path.insert(0, src_dir)
 
     upstream_dir = Path(args.upstream)
     upstream_str = str(upstream_dir)

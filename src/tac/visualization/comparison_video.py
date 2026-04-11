@@ -13,11 +13,11 @@ Output: MP4 at 4x speed (120 fps playback of 30 fps content), animated GIF,
 and optionally individual frame PNGs.
 
 Usage:
-    python tools/generate_comparison_video.py \
-        --upstream workspace/upstream/comma_video_compression_challenge \
-        --archive submissions/robust_current/archive.zip \
-        --checkpoint submissions/robust_current/postfilter_int8.pt \
-        --output-dir reports/graphs/site/comparison \
+    tac viz-comparison \\
+        --upstream workspace/upstream/comma_video_compression_challenge \\
+        --archive submissions/robust_current/archive.zip \\
+        --checkpoint submissions/robust_current/postfilter_int8.pt \\
+        --output-dir reports/graphs/site/comparison \\
         --variant standard --hidden 64
 
 Requires: torch, av (PyAV), PIL/Pillow, numpy, tac library.
@@ -189,12 +189,6 @@ def get_segnet_classes(frame_chw: torch.Tensor, segnet) -> torch.Tensor:
 
 def main() -> None:
     args = parse_args()
-
-    # Add src/ to path for tac imports
-    project_root = Path(__file__).resolve().parent.parent
-    src_dir = str(project_root / "src")
-    if src_dir not in sys.path:
-        sys.path.insert(0, src_dir)
 
     upstream_dir = Path(args.upstream)
     upstream_str = str(upstream_dir)

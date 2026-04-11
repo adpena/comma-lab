@@ -7,13 +7,13 @@ Produces a JSON file with per-frame SegNet class predictions for:
   - Ground truth
 
 Usage:
-    python tools/generate_segnet_viz_data.py \
-        --checkpoint weights/best_int8.pt \
-        --archive submissions/robust_current/archive.zip \
-        --upstream /path/to/upstream \
-        --output reports/graphs/site/segnet-viz-data.json \
-        --stride 50 \
-        --variant standard \
+    tac viz-segnet \\
+        --checkpoint weights/best_int8.pt \\
+        --archive submissions/robust_current/archive.zip \\
+        --upstream /path/to/upstream \\
+        --output reports/graphs/site/segnet-viz-data.json \\
+        --stride 50 \\
+        --variant standard \\
         --hidden 64
 
 Output JSON schema:

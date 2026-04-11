@@ -14,7 +14,7 @@ Three panels side by side:
 Specs: 512x384 total, dark_background, monospace labels, 150 frames @ 100ms.
 
 Usage:
-    python tools/generate_yuv_gif.py \\
+    tac viz-yuv-gif \\
         --upstream workspace/upstream/comma_video_compression_challenge \\
         --archive submissions/robust_current/archive.zip \\
         --checkpoint submissions/robust_current/postfilter_int8.pt \\
@@ -129,12 +129,6 @@ def _render_frame(
 
 def main() -> None:
     args = parse_args()
-
-    # Path setup for tac imports
-    project_root = Path(__file__).resolve().parent.parent
-    src_dir = str(project_root / "src")
-    if src_dir not in sys.path:
-        sys.path.insert(0, src_dir)
 
     upstream_dir = Path(args.upstream)
     upstream_str = str(upstream_dir)
