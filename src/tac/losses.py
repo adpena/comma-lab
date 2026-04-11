@@ -63,6 +63,40 @@ def scorer_loss(
     return loss, pose_dist.item(), seg_dist.item()
 
 
+def scorer_loss_cached(
+    filtered_pair_hwc: torch.Tensor,
+    gt_pose_6: torch.Tensor,
+    gt_seg_soft: torch.Tensor,
+    posenet,
+    segnet,
+) -> tuple[torch.Tensor, float, float]:
+    """Standard scorer loss using pre-cached GT scorer outputs.
+
+    Avoids running frozen scorers on GT frames every iteration (P0 optimization).
+    GT frames and scorers are frozen, so their outputs are constant.
+
+    Args:
+        filtered_pair_hwc: (B, T, H, W, C) filtered pair
+        gt_pose_6: cached PoseNet output[:, :6] for GT pair (on device)
+        gt_seg_soft: cached softmax(SegNet output) for GT pair (on device)
+        posenet: frozen PoseNet model
+        segnet: frozen SegNet model
+
+    Returns: (loss, pose_distortion, seg_distortion)
+    """
+    fx = _hwc_to_chw(filtered_pair_hwc)
+
+    fp_out, fs_out = scorer_forward_pair(fx, posenet, segnet)
+
+    pose_dist = (fp_out["pose"][..., :6] - gt_pose_6).pow(2).mean()
+
+    pred_soft = F.softmax(fs_out, dim=1)
+    seg_dist = 1.0 - (pred_soft * gt_seg_soft).sum(dim=1).mean()
+
+    loss = 100.0 * seg_dist + torch.sqrt(10.0 * pose_dist + 1e-8)
+    return loss, pose_dist.item(), seg_dist.item()
+
+
 def scorer_loss_pcgrad(
     filtered_pair_hwc: torch.Tensor,
     gt_pair_hwc: torch.Tensor,
@@ -139,6 +173,58 @@ def scorer_loss_pcgrad(
             if abs(dot) > 1e-12:
                 # Scale that makes combined gradient non-opposing to pose
                 # (90% of the perpendicular scale, as a safety margin)
+                max_scale = -pose_norm_sq / dot
+                scale = min(1.0, max(0.01, 0.9 * max_scale))
+            else:
+                scale = 1.0
+            seg_loss = seg_loss * scale
+
+    loss = pose_loss + seg_loss
+    return loss, pose_dist.item(), seg_dist.item(), conflict
+
+
+def scorer_loss_pcgrad_cached(
+    filtered_pair_hwc: torch.Tensor,
+    gt_pose_6: torch.Tensor,
+    gt_seg_soft: torch.Tensor,
+    posenet,
+    segnet,
+    segnet_weight: float = 100.0,
+    do_projection: bool = True,
+) -> tuple[torch.Tensor, float, float, bool]:
+    """Non-opposing gradient loss using pre-cached GT scorer outputs (P0 optimization).
+
+    Same as scorer_loss_pcgrad but avoids recomputing GT scorer forward pass.
+
+    Returns: (loss, pose_distortion, seg_distortion, conflict_detected)
+    """
+    fx = _hwc_to_chw(filtered_pair_hwc)
+
+    if not fx.requires_grad and filtered_pair_hwc.requires_grad:
+        fx.requires_grad_(True)
+
+    fp_out, fs_out = scorer_forward_pair(fx, posenet, segnet)
+
+    pose_dist = (fp_out["pose"][..., :6] - gt_pose_6).pow(2).mean()
+    pose_loss = torch.sqrt(10.0 * pose_dist + 1e-8)
+
+    pred_soft = F.softmax(fs_out, dim=1)
+    seg_dist = 1.0 - (pred_soft * gt_seg_soft).sum(dim=1).mean()
+    seg_loss = segnet_weight * seg_dist
+
+    conflict = False
+
+    if do_projection and fx.requires_grad and segnet_weight > 0:
+        g_pose = torch.autograd.grad(pose_loss, fx, retain_graph=True, create_graph=False)[0]
+        g_seg = torch.autograd.grad(seg_loss, fx, retain_graph=True, create_graph=False)[0]
+
+        cos_sim = (g_pose * g_seg).sum() / (g_pose.norm() * g_seg.norm() + 1e-8)
+
+        if cos_sim.item() < 0:
+            conflict = True
+            dot = (g_seg * g_pose).sum().item()
+            pose_norm_sq = (g_pose.norm() ** 2).item()
+            if abs(dot) > 1e-12:
                 max_scale = -pose_norm_sq / dot
                 scale = min(1.0, max(0.01, 0.9 * max_scale))
             else:

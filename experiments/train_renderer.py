@@ -41,7 +41,7 @@ from tac.fp4_quantize import (  # noqa: E402
     quantize_fp4,
     save_fp4,
 )
-from tac.losses import eval_scorer_loss, scorer_loss  # noqa: E402
+from tac.losses import eval_scorer_loss, scorer_forward_pair, scorer_loss, scorer_loss_cached  # noqa: E402
 from tac.mask_codec import extract_masks, mask_pair_from_index  # noqa: E402
 from tac.profiles import PROFILES  # noqa: E402
 from tac.renderer import build_renderer  # noqa: E402
@@ -269,6 +269,28 @@ def train(args: argparse.Namespace):
     out_dir = Path(args.output_dir)
     out_dir.mkdir(parents=True, exist_ok=True)
 
+    # P0: Precompute GT scorer outputs (constant — frames and scorers are frozen)
+    import torch.nn.functional as _F
+    from tac.losses import _hwc_to_chw  # noqa: E402
+    print("[train] P0: Precomputing GT scorer cache...")
+    gt_scorer_cache = {}
+    with torch.no_grad():
+        for start in all_pair_starts:
+            gt_pair = pair_from_frames(gt_frames, start).to(device)
+            gx = _hwc_to_chw(gt_pair)
+            gp_out, gs_out = scorer_forward_pair(gx, posenet, segnet)
+            gt_scorer_cache[start] = {
+                "pose_6": gp_out["pose"][..., :6].cpu(),
+                "seg_soft": _F.softmax(gs_out, dim=1).cpu(),
+            }
+            del gt_pair, gx, gp_out, gs_out
+    cache_bytes = sum(
+        v["pose_6"].numel() * v["pose_6"].element_size()
+        + v["seg_soft"].numel() * v["seg_soft"].element_size()
+        for v in gt_scorer_cache.values()
+    )
+    print(f"[train] P0: Cached {len(gt_scorer_cache)} GT scorer outputs ({cache_bytes / 1e6:.1f}MB)")
+
     best_scorer = float("inf")
     best_epoch = -1
 
@@ -300,8 +322,17 @@ def train(args: argparse.Namespace):
             # Forward: render pair from masks
             rendered_pair = model(mask_t, mask_t1)  # (1, 2, H, W, 3)
 
-            # Scorer loss
-            loss, pd, sd = scorer_loss(rendered_pair, gt_pair, posenet, segnet)
+            # Scorer loss (P0: use cached GT scorer outputs when available)
+            _cached_gt = gt_scorer_cache.get(start)
+            if _cached_gt is not None:
+                _gt_pose_6 = _cached_gt["pose_6"].to(device)
+                _gt_seg_soft = _cached_gt["seg_soft"].to(device)
+                loss, pd, sd = scorer_loss_cached(
+                    rendered_pair, _gt_pose_6, _gt_seg_soft, posenet, segnet,
+                )
+                del _gt_pose_6, _gt_seg_soft
+            else:
+                loss, pd, sd = scorer_loss(rendered_pair, gt_pair, posenet, segnet)
             scaled_loss = loss / accum
 
             try:

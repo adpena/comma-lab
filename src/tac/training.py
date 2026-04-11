@@ -39,8 +39,11 @@ from .losses import (
     focal_segnet_ste_loss,
     kl_distill_scorer_loss,
     saliency_reconstruction_loss,
+    scorer_forward_pair,
     scorer_loss,
+    scorer_loss_cached,
     scorer_loss_pcgrad,
+    scorer_loss_pcgrad_cached,
     segnet_ste_loss,
     temperature_scorer_loss,
 )
@@ -281,6 +284,9 @@ class Trainer:
         device: str | torch.device = "cpu",
     ):
         self.model = model.to(device)
+        # P2: channels_last memory format for faster conv2d on MPS
+        if str(device) == "mps":
+            self.model = self.model.to(memory_format=torch.channels_last)
         self.config = config
         self.device = device
         self.ema = EMA(model, decay=config.ema_decay)
@@ -568,8 +574,13 @@ class Trainer:
         self.model.eval()
 
         total_p, total_s, count = 0.0, 0.0, 0
-        use_autocast = str(self.device).startswith("cuda") and torch.cuda.is_available()
-        autocast_ctx = torch.amp.autocast("cuda", enabled=use_autocast)
+        # P1: autocast for CUDA and MPS (fp16 on scorers)
+        use_autocast = (
+            (str(self.device).startswith("cuda") and torch.cuda.is_available())
+            or str(self.device) == "mps"
+        )
+        autocast_device = "cuda" if str(self.device).startswith("cuda") else "mps"
+        autocast_ctx = torch.amp.autocast(autocast_device, enabled=use_autocast)
         with torch.no_grad(), autocast_ctx:
             for idx in range(0, len(comp_pairs), subsample):
                 filtered = self._apply_filter_to_pair(comp_pairs[idx])
@@ -579,7 +590,7 @@ class Trainer:
                 total_p += pd
                 total_s += sd
                 count += 1
-                if use_autocast:
+                if torch.cuda.is_available():
                     torch.cuda.empty_cache()
 
         scorer = 100.0 * (total_s / count) + math.sqrt(10.0 * (total_p / count))
@@ -847,6 +858,11 @@ class Trainer:
             self._patch_scorers_for_training(posenet, segnet)
             self._patched_scorers = True
 
+        # P2: channels_last for scorers on MPS (faster conv2d)
+        if str(self.device) == "mps":
+            posenet = posenet.to(memory_format=torch.channels_last)
+            segnet = segnet.to(memory_format=torch.channels_last)
+
         cfg = self.config
         all_pair_starts = pair_start_indices(len(comp_frames))
         n_total = len(all_pair_starts)
@@ -873,6 +889,42 @@ class Trainer:
             print(f"[trainer-lazy] Loss mode: {cfg.loss_mode}")
         if cfg.sal_lambda == 0:
             print("[trainer-lazy] Saliency reconstruction DISABLED (sal_lambda=0)")
+
+        # P3: Pre-stage frames on MPS (unified memory — no actual copy, just marks as MPS tensors)
+        if str(self.device) == "mps":
+            if isinstance(gt_frames, list):
+                gt_frames = [f.to(self.device) for f in gt_frames]
+            else:
+                gt_frames = gt_frames.to(self.device)
+            if comp_frames is not None:
+                if isinstance(comp_frames, list):
+                    comp_frames = [f.to(self.device) for f in comp_frames]
+                else:
+                    comp_frames = comp_frames.to(self.device)
+            print("[trainer-lazy] P3: Frames pre-staged on MPS (unified memory)")
+
+        # P0: Precompute GT scorer outputs (constant — frames and scorers are frozen)
+        # This eliminates ~50% of scorer forward passes in the training loop.
+        import torch.nn.functional as _F
+        from .losses import _hwc_to_chw
+        print("[trainer-lazy] P0: Precomputing GT scorer cache...")
+        gt_scorer_cache = {}
+        with torch.no_grad():
+            for start in train_pair_starts:
+                gt_pair = pair_from_frames(gt_frames, start).to(self.device)
+                gx = _hwc_to_chw(gt_pair)
+                gp_out, gs_out = scorer_forward_pair(gx, posenet, segnet)
+                gt_scorer_cache[start] = {
+                    "pose_6": gp_out["pose"][..., :6].cpu(),
+                    "seg_soft": _F.softmax(gs_out, dim=1).cpu(),
+                }
+                del gt_pair, gx, gp_out, gs_out
+        cache_bytes = sum(
+            v["pose_6"].numel() * v["pose_6"].element_size()
+            + v["seg_soft"].numel() * v["seg_soft"].element_size()
+            for v in gt_scorer_cache.values()
+        )
+        print(f"[trainer-lazy] P0: Cached {len(gt_scorer_cache)} GT scorer outputs ({cache_bytes / 1e6:.1f}MB)")
 
         # Precompute boundary masks if needed (dual saliency OR kl_distill with boundary weighting)
         self._boundary_masks = None
@@ -1038,6 +1090,15 @@ class Trainer:
                     self.optimizer.zero_grad(set_to_none=True)
                     continue
 
+                # P0: Load cached GT scorer outputs (avoids redundant GT forward pass)
+                _cached_gt = gt_scorer_cache.get(start)
+                if _cached_gt is not None:
+                    _gt_pose_6 = _cached_gt["pose_6"].to(self.device)
+                    _gt_seg_soft = _cached_gt["seg_soft"].to(self.device)
+                else:
+                    _gt_pose_6 = None
+                    _gt_seg_soft = None
+
                 # Scorer loss (configurable mode)
                 if cfg.loss_mode == "temperature":
                     # Anneal temperature from start to end over training
@@ -1081,16 +1142,21 @@ class Trainer:
                     )
                 elif cfg.loss_mode == "pcgrad":
                     # Non-opposing gradient: decouple PoseNet and SegNet
-                    # BUG 3/6 fix: only run projection on first microbatch of each
-                    # accumulation window. Later microbatches use the cached scale
-                    # to avoid stale conflict detection across the window.
                     sw = getattr(self, '_cached_sw', cfg.segnet_loss_weight)
                     is_first_microbatch = (step % accum == 0)
-                    loss, pd, sd, _conflict = scorer_loss_pcgrad(
-                        filtered, gt_pair, posenet, segnet,
-                        segnet_weight=sw,
-                        do_projection=is_first_microbatch,
-                    )
+                    if _gt_pose_6 is not None:
+                        # P0: use cached GT scorer outputs
+                        loss, pd, sd, _conflict = scorer_loss_pcgrad_cached(
+                            filtered, _gt_pose_6, _gt_seg_soft, posenet, segnet,
+                            segnet_weight=sw,
+                            do_projection=is_first_microbatch,
+                        )
+                    else:
+                        loss, pd, sd, _conflict = scorer_loss_pcgrad(
+                            filtered, gt_pair, posenet, segnet,
+                            segnet_weight=sw,
+                            do_projection=is_first_microbatch,
+                        )
                     # Council requirement: log conflict frequency per epoch
                     if is_first_microbatch:
                         self._epoch_pcgrad_total = getattr(self, '_epoch_pcgrad_total', 0) + 1
@@ -1103,6 +1169,11 @@ class Trainer:
                             filtered, gt_pair, posenet, segnet,
                             boundary_mask=bm,
                             boundary_weight=cfg.boundary_weight,
+                        )
+                    elif _gt_pose_6 is not None:
+                        # P0: use cached GT scorer outputs (standard loss)
+                        loss, pd, sd = scorer_loss_cached(
+                            filtered, _gt_pose_6, _gt_seg_soft, posenet, segnet,
                         )
                     else:
                         loss, pd, sd = scorer_loss(filtered, gt_pair, posenet, segnet)
@@ -1151,7 +1222,7 @@ class Trainer:
                     self.optimizer.zero_grad(set_to_none=True)
 
                 # Free pair memory immediately
-                del comp_pair, gt_pair, filtered, filtered_bchw, comp_bchw, sal_w
+                del comp_pair, gt_pair, filtered, filtered_bchw, comp_bchw, sal_w, _gt_pose_6, _gt_seg_soft, _cached_gt
 
             if _oom_count > 0 and (epoch == 0 or epoch % 50 == 0):
                 print(f"[trainer-lazy] OOM events this epoch: {_oom_count}")
@@ -1324,9 +1395,13 @@ class Trainer:
 
         total_p, total_s, count = 0.0, 0.0, 0
 
-        # autocast reduces VRAM from ~6GB to ~0.2GB for scorer forward pass
-        use_autocast = str(self.device).startswith("cuda") and torch.cuda.is_available()
-        autocast = torch.amp.autocast("cuda", enabled=use_autocast)
+        # P1: autocast for CUDA and MPS (fp16 on scorers)
+        use_autocast = (
+            (str(self.device).startswith("cuda") and torch.cuda.is_available())
+            or str(self.device) == "mps"
+        )
+        autocast_device = "cuda" if str(self.device).startswith("cuda") else "mps"
+        autocast = torch.amp.autocast(autocast_device, enabled=use_autocast)
         with torch.no_grad(), autocast:
             for start in eval_pair_starts:
                 comp_pair = pair_from_frames(comp_frames, start).to(self.device)
