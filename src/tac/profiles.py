@@ -586,6 +586,75 @@ VQVAE_COMPACT = {
     "perceptual_weight": 0.5,
 }
 
+# ── Cross-Cultural Research Techniques ─────────────────────────────────
+
+# Technique 7: Depthwise cascade renderer (Samsung)
+# Depthwise separable convolutions with dilation cascade.
+# 3-4x fewer params, better INT8 behavior, large receptive field.
+DEPTHWISE_RENDERER_SMOKE = {
+    "variant": "depthwise_renderer",
+    "hidden": 36,                            # base_ch for depthwise cascade
+    "embed_dim": 6,
+    "motion_hidden": 32,
+    "epochs": 200,
+    "lr": 1e-3,
+    "ema_decay": 0.997,
+    "alpha": 0.0,
+    "sal_lambda": 0.0,
+    "loss_mode": "standard",
+    "segnet_loss_weight": 100.0,
+    "boundary_weight": 1.0,
+    "hard_frame_ratio": 0.0,
+    "eval_every": 10,
+    "accum_steps": 2,
+    "quantize_mode": "fp4",
+    "pretrain_epochs": 100,
+}
+
+# Technique 8: Channel-recurrent renderer (Sony)
+# Sequential Y -> U|Y -> V|Y,U generation. 40-60% fewer params.
+CHANNEL_RECURRENT_SMOKE = {
+    "variant": "channel_recurrent",
+    "hidden": 24,                            # per-subnet hidden width
+    "embed_dim": 6,
+    "motion_hidden": 32,
+    "epochs": 200,
+    "lr": 1e-3,
+    "ema_decay": 0.997,
+    "alpha": 0.0,
+    "sal_lambda": 0.0,
+    "loss_mode": "standard",
+    "segnet_loss_weight": 100.0,
+    "boundary_weight": 1.0,
+    "hard_frame_ratio": 0.0,
+    "eval_every": 10,
+    "accum_steps": 2,
+    "quantize_mode": "fp4",
+    "pretrain_epochs": 100,
+}
+
+# Technique 9: Coordinate-based renderer (INRIA COOL)
+# Per-pixel MLP with positional encoding. Smallest possible renderer (~50K params).
+COORD_RENDERER_SMOKE = {
+    "variant": "coord_renderer",
+    "hidden": 64,                            # MLP hidden width
+    "embed_dim": 8,                          # class embedding dim
+    "motion_hidden": 32,
+    "epochs": 200,
+    "lr": 1e-3,
+    "ema_decay": 0.997,
+    "alpha": 0.0,
+    "sal_lambda": 0.0,
+    "loss_mode": "standard",
+    "segnet_loss_weight": 100.0,
+    "boundary_weight": 1.0,
+    "hard_frame_ratio": 0.0,
+    "eval_every": 10,
+    "accum_steps": 2,
+    "quantize_mode": "fp4",
+    "pretrain_epochs": 100,
+}
+
 PROFILES = {
     "council_v1": COUNCIL_V1,
     "council_v2_adaptive": COUNCIL_V2_ADAPTIVE,
@@ -618,4 +687,8 @@ PROFILES = {
     "vqvae_smoke": VQVAE_SMOKE,
     "vqvae_full": VQVAE_FULL,
     "vqvae_compact": VQVAE_COMPACT,
+    # Cross-cultural research techniques
+    "depthwise_renderer_smoke": DEPTHWISE_RENDERER_SMOKE,
+    "channel_recurrent_smoke": CHANNEL_RECURRENT_SMOKE,
+    "coord_renderer_smoke": COORD_RENDERER_SMOKE,
 }
