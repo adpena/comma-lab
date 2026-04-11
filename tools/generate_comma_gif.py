@@ -250,10 +250,10 @@ def _render_posenet_chart(
         fig.patch.set_facecolor("black")
         ax.set_facecolor("black")
 
-        # Always show baseline as faint reference when available
+        # Always show baseline as faint solid reference when available
         if secondary is not None and len(secondary) > 0:
-            ax.plot(xs[:len(secondary)], secondary, color="#666666",
-                    linestyle="--", linewidth=0.7, label="baseline", alpha=0.6)
+            ax.plot(xs[:len(secondary)], secondary, color="#888888",
+                    linestyle="-", linewidth=0.7, label="baseline", alpha=0.5)
 
         if len(xs) > 0 and len(primary) > 0:
             line_color = "#00ff88" if mode in ("ours", "comparison") else "#ffffff"
@@ -524,8 +524,10 @@ def main() -> None:
                     posenet_primary_mses.append(mse)
                 elif args.mode == "ours":
                     next_filtered_chw = model(next_baseline_chw).round().clamp(0, 255)
-                    mse = get_posenet_mse(filtered_chw, next_filtered_chw, gt_chw, next_gt_chw, posenet)
-                    posenet_primary_mses.append(mse)
+                    ours_mse = get_posenet_mse(filtered_chw, next_filtered_chw, gt_chw, next_gt_chw, posenet)
+                    bl_mse = get_posenet_mse(baseline_chw, next_baseline_chw, gt_chw, next_gt_chw, posenet)
+                    posenet_primary_mses.append(ours_mse)
+                    posenet_secondary_mses.append(bl_mse)
                 else:  # comparison
                     next_filtered_chw = model(next_baseline_chw).round().clamp(0, 255)
                     ours_mse = get_posenet_mse(filtered_chw, next_filtered_chw, gt_chw, next_gt_chw, posenet)
