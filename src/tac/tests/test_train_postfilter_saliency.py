@@ -43,7 +43,7 @@ class TrainPostfilterSaliencyTests(unittest.TestCase):
         with tempfile.TemporaryDirectory() as tmpdir:
             path = Path(tmpdir) / "candidate.pt"
             mod.save_model_int8(model, path, meta={"variant": "residual"}, per_channel=True)
-            state = torch.load(path, map_location="cpu")
+            state = torch.load(path, map_location="cpu", weights_only=True)
 
         self.assertEqual(tuple(state["conv1.weight.s"].shape), (4,))
         self.assertEqual(tuple(state["conv2.weight.s"].shape), (4,))

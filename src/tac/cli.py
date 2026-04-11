@@ -86,7 +86,8 @@ def _add_lossy_arguments(parser: argparse.ArgumentParser) -> None:
     parser.add_argument(
         "--loss-mode",
         default="standard",
-        choices=["standard", "temperature", "focal_ste", "kl_distill", "pcgrad"],
+        choices=["standard", "temperature", "focal_ste", "kl_distill", "pcgrad",
+                 "feature_match", "segnet_kl", "posenet_embedding"],
     )
     parser.add_argument("--temperature-start", type=float, default=1.0)
     parser.add_argument("--temperature-end", type=float, default=0.05)

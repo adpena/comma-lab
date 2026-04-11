@@ -115,7 +115,7 @@ def main(argv: list[str] | None = None) -> dict[str, object]:
     model = load_postfilter_int8(str(args.weights), device=DEVICE)
     model.eval()
     base_state = {name: tensor.detach().clone() for name, tensor in model.state_dict().items()}
-    meta = normalize_postfilter_meta(torch.load(args.weights, map_location="cpu").get("__meta__"))
+    meta = normalize_postfilter_meta(torch.load(args.weights, map_location="cpu", weights_only=True).get("__meta__"))
     meta["search_strategy"] = "mc_layer_scale"
 
     posenet, segnet = load_scorers(DEVICE)
