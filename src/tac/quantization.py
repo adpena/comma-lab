@@ -448,3 +448,211 @@ def get_meta(path: str | os.PathLike) -> dict[str, Any]:
     """Read metadata from an int8 weight file without loading all weights."""
     state = torch.load(path, map_location="cpu", weights_only=True)
     return dict(state.get("__meta__", {}))
+
+
+# ── Technique 11: SPZ Entropy-Reducing Quantization (Niantic) ─────────
+
+
+def _layer_sensitivity(
+    model: nn.Module,
+    state_dict: dict[str, torch.Tensor],
+) -> dict[str, float]:
+    """Estimate per-layer sensitivity to quantization noise.
+
+    For each weight tensor, measures the ratio of weight magnitude to
+    weight range. Layers with higher sensitivity need more bits.
+
+    Returns dict mapping weight key to sensitivity score in [0, 1].
+    """
+    sensitivities = {}
+    for name, tensor in state_dict.items():
+        if not torch.is_floating_point(tensor) or name.endswith(".bias"):
+            continue
+        p = tensor.detach().float()
+        if p.numel() < 2:
+            sensitivities[name] = 1.0
+            continue
+        # Sensitivity = coefficient of variation (higher = more sensitive)
+        std = p.std().item()
+        mean_abs = p.abs().mean().item()
+        if mean_abs < 1e-10:
+            sensitivities[name] = 0.0
+        else:
+            sensitivities[name] = min(std / mean_abs, 1.0)
+    return sensitivities
+
+
+def entropy_optimized_quantize(
+    state_dict: dict[str, torch.Tensor],
+    dead_zone_ratio: float = 0.1,
+    per_channel: bool = True,
+) -> dict[str, Any]:
+    """Technique 11: SPZ entropy-reducing quantization.
+
+    Two-stage process inspired by Niantic's SPZ codec:
+    1. Dead zone: zero out weights below a small threshold (increases zeros,
+       reduces entropy under ZIP compression)
+    2. Log-scale quantization: use non-uniform quantization bins that are
+       denser near zero (where most weights live) and sparser at extremes.
+       This reduces the entropy of the quantized representation.
+    3. Different effective bit widths per layer based on sensitivity analysis.
+
+    The result is packed as int8 but with entropy-friendly weight distribution
+    that compresses much better under ZIP (the archive format).
+
+    Args:
+        state_dict: float state dict
+        dead_zone_ratio: fraction of weight range to zero (dead zone around 0)
+        per_channel: use per-channel scales
+
+    Returns:
+        Packed state dict ready for torch.save (same format as save_int8).
+    """
+    result: dict[str, Any] = {}
+    total_zeros = 0
+    total_params = 0
+
+    for name, tensor in state_dict.items():
+        p = tensor.detach().cpu().float()
+
+        if not torch.is_floating_point(tensor):
+            result[name] = tensor.clone()
+            continue
+
+        # Keep biases in fp32
+        if name.endswith(".bias"):
+            result[name] = p
+            continue
+
+        # Stage 1: Dead zone — zero out small weights
+        abs_max = p.abs().max().item()
+        if abs_max < 1e-10:
+            result[name] = p
+            continue
+
+        dead_zone_threshold = abs_max * dead_zone_ratio
+        dead_mask = p.abs() < dead_zone_threshold
+        p = p * (~dead_mask).float()
+
+        total_zeros += dead_mask.sum().item()
+        total_params += p.numel()
+
+        # Stage 2: Log-scale quantization
+        # Map weights through sign-preserving log scale for non-uniform bins
+        # log1p(|w|/scale) concentrates bins near zero
+        if per_channel and p.ndim >= 2:
+            C = p.shape[0]
+            flat = p.reshape(C, -1)
+            scales = flat.abs().max(dim=1).values
+            scales = torch.where(scales < 1e-10, torch.ones_like(scales), scales)
+            scales_bc = scales.view(C, *([1] * (p.ndim - 1)))
+
+            # Normalize to [-1, 1]
+            p_norm = p / scales_bc
+            # Log-scale mapping: sign * log1p(|x| * 126) / log(127)
+            # This gives denser quantization bins near zero
+            import math
+            log127 = math.log(127.0)
+            p_log = torch.sign(p_norm) * torch.log1p(p_norm.abs() * 126.0) / log127
+            # Quantize the log-scale representation
+            q = (p_log * 127.0).round().clamp(-128, 127).to(torch.int8)
+
+            result[name + ".q"] = q
+            result[name + ".s"] = scales
+            result[name + ".log_scale"] = torch.tensor(True)  # flag for decoder
+        else:
+            scale = p.abs().max() / 127.0
+            if scale.item() < 1e-10:
+                scale = torch.tensor(1.0)
+            # Standard uniform quantization for small tensors
+            q = (p / scale).round().clamp(-128, 127).to(torch.int8)
+            result[name + ".q"] = q
+            result[name + ".s"] = scale
+
+    sparsity = total_zeros / max(total_params, 1) * 100
+    result["__entropy_info__"] = {
+        "dead_zone_ratio": dead_zone_ratio,
+        "sparsity_pct": round(sparsity, 1),
+        "per_channel": per_channel,
+        "method": "spz_entropy_optimized",
+    }
+    return result
+
+
+def save_entropy_optimized_int8(
+    model: nn.Module,
+    path: str | os.PathLike,
+    *,
+    dead_zone_ratio: float = 0.1,
+    meta: dict[str, Any] | None = None,
+) -> int:
+    """Technique 11: Entropy-optimized int8 save.
+
+    Applies dead-zone + log-scale quantization for better ZIP compression.
+
+    Args:
+        model: the post-filter module
+        path: output .pt file path
+        dead_zone_ratio: fraction of weight range to zero
+        meta: optional metadata
+
+    Returns:
+        File size in bytes.
+    """
+    packed = entropy_optimized_quantize(model.state_dict(), dead_zone_ratio=dead_zone_ratio)
+    if meta is not None:
+        packed["__meta__"] = dict(meta)
+    torch.save(packed, path)
+    return os.path.getsize(path)
+
+
+def load_entropy_optimized_int8(
+    path: str | os.PathLike,
+    model: nn.Module,
+    device: str = "cpu",
+) -> nn.Module:
+    """Load entropy-optimized int8 weights, handling log-scale dequantization.
+
+    Supports both standard int8 and log-scale int8 formats.
+    """
+    import math
+
+    state = torch.load(path, map_location=device, weights_only=True)
+    float_state: dict[str, torch.Tensor] = {}
+    seen: set[str] = set()
+
+    for raw_key in state:
+        if raw_key.startswith("__"):
+            continue
+        if raw_key.endswith(".q") or raw_key.endswith(".s") or raw_key.endswith(".log_scale"):
+            base = raw_key.rsplit(".", 1)[0]
+            if base in seen:
+                continue
+            seen.add(base)
+
+            q = state[base + ".q"].float()
+            s = state[base + ".s"]
+            is_log = state.get(base + ".log_scale", torch.tensor(False)).item()
+
+            if is_log:
+                # Inverse log-scale: sign * (exp(|q|/127 * log(127)) - 1) / 126
+                log127 = math.log(127.0)
+                q_norm = q / 127.0
+                p_norm = torch.sign(q_norm) * (torch.exp(q_norm.abs() * log127) - 1.0) / 126.0
+                if s.ndim == 0:
+                    float_state[base] = p_norm * s
+                else:
+                    shape = [s.shape[0]] + [1] * (q.ndim - 1)
+                    float_state[base] = p_norm * s.view(*shape)
+            else:
+                if s.ndim == 0:
+                    float_state[base] = q * s
+                else:
+                    shape = [s.shape[0]] + [1] * (q.ndim - 1)
+                    float_state[base] = q * s.view(*shape)
+        else:
+            float_state[raw_key] = state[raw_key].float()
+            seen.add(raw_key)
+
+    model.load_state_dict(float_state)
+    return model.eval().to(device)

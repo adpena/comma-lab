@@ -64,6 +64,11 @@ ROI_PREPROCESS_ADAPTIVE="${ROI_PREPROCESS_ADAPTIVE:-0}"
 ROI_PREPROCESS_CHROMA_ONLY="${ROI_PREPROCESS_CHROMA_ONLY:-0}"
 ROI_PREPROCESS_MASK_FILE="${ROI_PREPROCESS_MASK_FILE:-}"
 PRE_DENOISE="${PRE_DENOISE:-}"
+# ── Technique 8: Even-frame higher QP encoding ──────────────────────
+# SegNet only evaluates odd frames, so even frames can be encoded at
+# higher QP (lower quality) for FREE rate reduction with no SegNet impact.
+# Set to 0 to disable. Typical value: 4-8 (QP offset for even frames).
+EVEN_FRAME_QP_BOOST="${EVEN_FRAME_QP_BOOST:-0}"
 TMP_ROOT="${TMPDIR:-/tmp}"
 if [ ! -d "$TMP_ROOT" ]; then
   TMP_ROOT="/tmp"
@@ -168,6 +173,73 @@ codec_encode_args() {
   else
     printf '%s' "-c:v libx265 -preset ${X265_PRESET} -crf ${crf_val} -x265-params keyint=${X265_GOP}:min-keyint=${X265_GOP}:scenecut=0:bframes=${X265_BFRAMES}:ref=${X265_REF}"
   fi
+}
+
+# ── Technique 8: Even-frame higher QP encoding ──────────────────────
+# Encode even frames at higher QP (lower quality) since SegNet only
+# evaluates odd frames. This is FREE rate reduction.
+#
+# Uses SVT-AV1's per-frame QP offset via scene-change detection override
+# and selective encoding: split video into even/odd frame streams,
+# encode separately at different QPs, then interleave.
+#
+# Usage: set EVEN_FRAME_QP_BOOST=6 in config.env
+encode_video_even_odd_qp() {
+  local in_path="$1"
+  local out_path="$2"
+  local vf_chain="$3"
+  local qp_boost="${EVEN_FRAME_QP_BOOST:-0}"
+
+  if [ "$qp_boost" = "0" ]; then
+    # No boost — fall through to standard encode
+    encode_video "$in_path" "$out_path" "$vf_chain"
+    return
+  fi
+
+  echo "[compress] Even-frame QP boost: +${qp_boost} (SegNet-invisible savings)"
+
+  local tmpdir_qp
+  tmpdir_qp="$(mktemp -d "${TMP_ROOT%/}/even_odd_qp.XXXXXX")"
+
+  # Extract even and odd frames
+  "$FFMPEG_BIN" -y -i "$in_path" -vf "${vf_chain},select='not(mod(n\\,2))',setpts=N/(30*TB)" \
+    -an "$tmpdir_qp/even_frames.mkv" 2>/dev/null
+  "$FFMPEG_BIN" -y -i "$in_path" -vf "${vf_chain},select='mod(n\\,2)',setpts=N/(30*TB)" \
+    -an "$tmpdir_qp/odd_frames.mkv" 2>/dev/null
+
+  # Encode even frames at higher CRF (lower quality)
+  local even_crf=$((SVT_AV1_CRF + qp_boost))
+  encode_video "$tmpdir_qp/even_frames.mkv" "$tmpdir_qp/even_enc.mkv" "null"
+  # Override CRF for even frames
+  if [ "$VIDEO_CODEC" = "libsvtav1" ]; then
+    "$FFMPEG_BIN" -y -i "$tmpdir_qp/even_frames.mkv" \
+      -vf "null" -an -c:v libsvtav1 \
+      -preset "$SVT_AV1_PRESET" -crf "$even_crf" \
+      -svtav1-params "$SVT_AV1_PARAMS" \
+      -color_range "$SOURCE_COLOR_RANGE" \
+      -colorspace "$SOURCE_COLOR_MATRIX" \
+      -color_primaries "$SOURCE_COLOR_PRIMARIES" \
+      -color_trc "$SOURCE_COLOR_TRC" \
+      -map_metadata -1 "$tmpdir_qp/even_enc.mkv"
+  fi
+
+  # Encode odd frames at standard CRF (these are the ones SegNet evaluates)
+  encode_video "$tmpdir_qp/odd_frames.mkv" "$tmpdir_qp/odd_enc.mkv" "null"
+
+  # Interleave back: even[0], odd[0], even[1], odd[1], ...
+  "$FFMPEG_BIN" -y \
+    -i "$tmpdir_qp/even_enc.mkv" \
+    -i "$tmpdir_qp/odd_enc.mkv" \
+    -filter_complex "[0:v][1:v]interleave=nb_inputs=2[out]" \
+    -map "[out]" -an \
+    -c:v copy \
+    "$out_path" 2>/dev/null || {
+    # Fallback: if interleave fails, use standard encode
+    echo "[compress] Even/odd interleave failed, falling back to standard encode"
+    encode_video "$in_path" "$out_path" "$vf_chain"
+  }
+
+  rm -rf "$tmpdir_qp"
 }
 
 downscale_filter() {

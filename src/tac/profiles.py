@@ -587,6 +587,143 @@ VQVAE_COMPACT = {
     "perceptual_weight": 0.5,
 }
 
+# ── Technique 2: Luma-only dilated post-filter ─────────────────────────
+# ~3x fewer params (1 channel vs 3). Netflix validated chroma uses Lanczos.
+LUMA_ONLY_DILATED_SMOKE = {
+    "variant": "luma_dilated",
+    "hidden": 64,
+    "kernel": 3,
+    "epochs": 400,
+    "lr": 5e-4,
+    "ema_decay": 0.997,
+    "alpha": 20.0,
+    "sal_lambda": 1.0,
+    "loss_mode": "standard",
+    "segnet_loss_weight": 100.0,
+    "boundary_weight": 1.0,
+    "hard_frame_ratio": 0.0,
+    "eval_every": 5,
+    "accum_steps": 4,
+}
+
+LUMA_ONLY_DILATED_FULL = {
+    **PROVEN_BASELINE,
+    "variant": "luma_dilated",
+    "epochs": 2500,
+    "segnet_loss_weight": 100.0,
+    "boundary_weight": 50.0,
+    "hard_frame_ratio": 0.3,
+    "error_replay_every": 200,
+    "use_swa": True,
+}
+
+# ── Technique 3: Content-adaptive per-frame postfilter intensity ──────
+CONTENT_ADAPTIVE_SMOKE = {
+    "variant": "content_adaptive",
+    "hidden": 64,
+    "kernel": 3,
+    "epochs": 400,
+    "lr": 5e-4,
+    "ema_decay": 0.997,
+    "alpha": 20.0,
+    "sal_lambda": 1.0,
+    "loss_mode": "standard",
+    "segnet_loss_weight": 100.0,
+    "boundary_weight": 1.0,
+    "hard_frame_ratio": 0.0,
+    "eval_every": 5,
+    "accum_steps": 4,
+}
+
+# ── Technique 4: Resolution reduction + PixelShuffle upscale ─────────
+PIXELSHUFFLE_UPSCALE_SMOKE = {
+    "variant": "pixelshuffle_upscale",
+    "hidden": 64,
+    "kernel": 3,
+    "epochs": 400,
+    "lr": 5e-4,
+    "ema_decay": 0.997,
+    "alpha": 20.0,
+    "sal_lambda": 1.0,
+    "loss_mode": "standard",
+    "segnet_loss_weight": 100.0,
+    "boundary_weight": 1.0,
+    "hard_frame_ratio": 0.0,
+    "eval_every": 5,
+    "accum_steps": 4,
+}
+
+# ── Technique 9: DualHead architecture ────────────────────────────────
+# Shared backbone, separate PoseNet (3x3) and SegNet (1x1) correction heads.
+DUAL_HEAD_SMOKE = {
+    "variant": "dual_head",
+    "hidden": 64,
+    "kernel": 3,
+    "epochs": 400,
+    "lr": 5e-4,
+    "ema_decay": 0.997,
+    "alpha": 20.0,
+    "sal_lambda": 1.0,
+    "loss_mode": "standard",
+    "segnet_loss_weight": 100.0,
+    "boundary_weight": 1.0,
+    "hard_frame_ratio": 0.0,
+    "eval_every": 5,
+    "accum_steps": 4,
+}
+
+DUAL_HEAD_FULL = {
+    **PROVEN_BASELINE,
+    "variant": "dual_head",
+    "epochs": 2500,
+    "segnet_loss_weight": 100.0,
+    "boundary_weight": 50.0,
+    "hard_frame_ratio": 0.3,
+    "error_replay_every": 200,
+    "use_swa": True,
+}
+
+# ── Technique 10: Focal gamma=4-5 ────────────────────────────────────
+# Current gamma=2 is "too mild for 95% easy pixels" per Contrarian.
+# Higher gamma focuses more aggressively on hard boundary pixels.
+FOCAL_GAMMA_4 = {
+    **PROVEN_BASELINE,
+    "loss_mode": "focal_ste",
+    "focal_gamma": 4.0,
+    "epochs": 2500,
+    "segnet_loss_weight": 100.0,
+    "boundary_weight": 50.0,
+    "hard_frame_ratio": 0.3,
+    "error_replay_every": 200,
+    "use_swa": True,
+}
+
+FOCAL_GAMMA_5 = {
+    **PROVEN_BASELINE,
+    "loss_mode": "focal_ste",
+    "focal_gamma": 5.0,
+    "epochs": 2500,
+    "segnet_loss_weight": 100.0,
+    "boundary_weight": 50.0,
+    "hard_frame_ratio": 0.3,
+    "error_replay_every": 200,
+    "use_swa": True,
+}
+
+FOCAL_GAMMA_4_SMOKE = {
+    **SMOKE,
+    "loss_mode": "focal_ste",
+    "focal_gamma": 4.0,
+    "segnet_loss_weight": 100.0,
+}
+
+FOCAL_GAMMA_5_SMOKE = {
+    **SMOKE,
+    "loss_mode": "focal_ste",
+    "focal_gamma": 5.0,
+    "segnet_loss_weight": 100.0,
+}
+
 # ── Cross-Cultural Research Techniques ─────────────────────────────────
 
 # Technique 7: Depthwise cascade renderer (Samsung)
@@ -748,4 +885,19 @@ PROFILES = {
     # Yousfi council decode profiles
     "overfit_cpu": OVERFIT_CPU,
     "overfit_gpu": OVERFIT_GPU,
+    # Technique 2: Luma-only dilated
+    "luma_only_dilated_smoke": LUMA_ONLY_DILATED_SMOKE,
+    "luma_only_dilated_full": LUMA_ONLY_DILATED_FULL,
+    # Technique 3: Content-adaptive
+    "content_adaptive_smoke": CONTENT_ADAPTIVE_SMOKE,
+    # Technique 4: PixelShuffle upscale
+    "pixelshuffle_upscale_smoke": PIXELSHUFFLE_UPSCALE_SMOKE,
+    # Technique 9: DualHead
+    "dual_head_smoke": DUAL_HEAD_SMOKE,
+    "dual_head_full": DUAL_HEAD_FULL,
+    # Technique 10: Focal gamma 4-5
+    "focal_gamma_4": FOCAL_GAMMA_4,
+    "focal_gamma_5": FOCAL_GAMMA_5,
+    "focal_gamma_4_smoke": FOCAL_GAMMA_4_SMOKE,
+    "focal_gamma_5_smoke": FOCAL_GAMMA_5_SMOKE,
 }

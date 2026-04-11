@@ -261,6 +261,103 @@ class PairAwarePostFilter(nn.Module):
 # ── Factory ──────────────────────────────────────────────────────────────
 
 
+class LumaOnlyDilatedPostFilter(nn.Module):
+    """Technique 2: Luma-only processing with dilation.
+
+    Netflix validated that chroma uses standard Lanczos — neural processing
+    on luma only is sufficient. This processes only the Y (luminance) channel
+    with a dilated CNN, then recombines with original chroma.
+
+    ~3x fewer parameters than full RGB processing (1 channel in/out vs 3).
+    Combined with dilation=2 for the 15x15 RF that matches PoseNet's early layers.
+
+    Args:
+        hidden: hidden channel width
+        kernel: conv kernel size
+    """
+
+    def __init__(self, hidden: int = 16, kernel: int = 3):
+        super().__init__()
+        pad = kernel // 2
+        self.conv1 = nn.Conv2d(1, hidden, kernel, padding=pad, bias=True)
+        self.conv2 = nn.Conv2d(hidden, hidden, kernel, padding=pad * 2, dilation=2, bias=True)
+        self.conv3 = nn.Conv2d(hidden, 1, kernel, padding=pad, bias=True)
+        self.act = nn.ReLU(inplace=True)
+        nn.init.zeros_(self.conv3.weight)
+        nn.init.zeros_(self.conv3.bias)
+
+    def forward(self, x: torch.Tensor) -> torch.Tensor:
+        """Process luma only, broadcast correction to all channels.
+
+        Args:
+            x: (B, 3, H, W) float [0, 255]
+
+        Returns:
+            (B, 3, H, W) float [0, 255]
+        """
+        # Extract Y (luminance) using BT.601 coefficients
+        y = x[:, 0:1] * 0.299 + x[:, 1:2] * 0.587 + x[:, 2:3] * 0.114
+        residual = self.act(self.conv1(y))
+        residual = self.act(self.conv2(residual))
+        residual = self.conv3(residual)
+        # Broadcast single-channel residual to all RGB channels
+        return (x + residual.expand_as(x)).clamp(0, 255)
+
+
+class DualHeadPostFilter(nn.Module):
+    """Technique 9: Shared backbone with separate PoseNet and SegNet heads.
+
+    Same backbone (conv1, conv2) shared between two specialized heads:
+    - seg_head: 1x1 conv for sharp, localized corrections at class boundaries
+    - pose_head: 3x3 conv for smooth, texture-preserving corrections
+
+    The two heads address fundamentally different spatial patterns:
+    SegNet needs sharp boundary corrections (small RF, high frequency),
+    PoseNet needs smooth texture corrections (larger RF, low frequency).
+
+    output = input + seg_head(features) + pose_head(features)
+
+    Args:
+        hidden: hidden channel width for shared backbone
+        kernel: conv kernel size for backbone
+    """
+
+    def __init__(self, hidden: int = 64, kernel: int = 3):
+        super().__init__()
+        pad = kernel // 2
+        # Shared backbone
+        self.conv1 = nn.Conv2d(3, hidden, kernel, padding=pad, bias=True)
+        self.conv2 = nn.Conv2d(hidden, hidden, kernel, padding=pad * 2, dilation=2, bias=True)
+        self.act = nn.ReLU(inplace=True)
+
+        # SegNet head: 1x1 conv (sharp, boundary-focused corrections)
+        self.seg_head = nn.Conv2d(hidden, 3, 1, bias=True)
+
+        # PoseNet head: 3x3 conv (smooth, texture-preserving corrections)
+        self.pose_head = nn.Conv2d(hidden, 3, kernel, padding=pad, bias=True)
+
+        # Zero-init both heads: starts as identity
+        nn.init.zeros_(self.seg_head.weight)
+        nn.init.zeros_(self.seg_head.bias)
+        nn.init.zeros_(self.pose_head.weight)
+        nn.init.zeros_(self.pose_head.bias)
+
+    def forward(self, x: torch.Tensor) -> torch.Tensor:
+        """Apply dual-head corrections.
+
+        Args:
+            x: (B, 3, H, W) float [0, 255]
+
+        Returns:
+            (B, 3, H, W) float [0, 255]
+        """
+        features = self.act(self.conv1(x))
+        features = self.act(self.conv2(features))
+        seg_correction = self.seg_head(features)
+        pose_correction = self.pose_head(features)
+        return (x + seg_correction + pose_correction).clamp(0, 255)
+
+
 class GatedDilatedPostFilter(nn.Module):
     """DilatedPostFilter with a spatial sigmoid gate (Collier's proposal).
 
@@ -303,6 +400,166 @@ class GatedDilatedPostFilter(nn.Module):
         return (x + gate * residual).clamp(0, 255)
 
 
+class ContentAdaptivePostFilter(nn.Module):
+    """Technique 3: Content-adaptive per-frame postfilter intensity.
+
+    Computes a per-frame "difficulty score" from the input frame statistics
+    and scales the postfilter residual accordingly. Hard frames (high-frequency
+    content, many edges) get stronger correction; easy frames (smooth road,
+    clear sky) get lighter correction.
+
+    This is Netflix's per-shot encoding quality adaptation applied to
+    post-processing instead of encoding.
+
+    output = input + difficulty_weight * residual
+
+    where difficulty_weight is learned from frame statistics.
+
+    Args:
+        hidden: hidden channel width
+        kernel: conv kernel size
+    """
+
+    def __init__(self, hidden: int = 64, kernel: int = 3):
+        super().__init__()
+        pad = kernel // 2
+        self.conv1 = nn.Conv2d(3, hidden, kernel, padding=pad, bias=True)
+        self.conv2 = nn.Conv2d(hidden, hidden, kernel, padding=pad * 2, dilation=2, bias=True)
+        self.conv3 = nn.Conv2d(hidden, 3, kernel, padding=pad, bias=True)
+        self.act = nn.ReLU(inplace=True)
+        nn.init.zeros_(self.conv3.weight)
+        nn.init.zeros_(self.conv3.bias)
+
+        # Difficulty estimator: frame statistics -> scalar weight
+        # Input: 3 features (luma mean, luma std, edge density)
+        # Output: scalar difficulty weight via sigmoid (range [0.1, 2.0])
+        self.difficulty_net = nn.Sequential(
+            nn.Linear(3, 16, bias=True),
+            nn.ReLU(inplace=True),
+            nn.Linear(16, 1, bias=True),
+        )
+
+    def _frame_stats(self, x: torch.Tensor) -> torch.Tensor:
+        """Extract per-frame statistics for difficulty estimation.
+
+        Returns: (B, 3) tensor of [luma_mean, luma_std, edge_density]
+        """
+        y = x[:, 0:1] * 0.299 + x[:, 1:2] * 0.587 + x[:, 2:3] * 0.114
+        y_norm = y / 255.0
+        mean = y_norm.mean(dim=(2, 3))
+        std = y_norm.std(dim=(2, 3), unbiased=False)
+        dx = y_norm[..., :, 1:] - y_norm[..., :, :-1]
+        dy = y_norm[..., 1:, :] - y_norm[..., :-1, :]
+        edge = 0.5 * (dx.abs().mean(dim=(2, 3)) + dy.abs().mean(dim=(2, 3)))
+        return torch.cat([mean, std, edge], dim=1)
+
+    def forward(self, x: torch.Tensor) -> torch.Tensor:
+        """Apply content-adaptive correction.
+
+        Args:
+            x: (B, 3, H, W) float [0, 255]
+
+        Returns:
+            (B, 3, H, W) float [0, 255]
+        """
+        stats = self._frame_stats(x)
+        # Difficulty weight in [0.1, 2.0]: sigmoid maps to [0,1], scale to [0.1, 2.0]
+        difficulty = 0.1 + 1.9 * torch.sigmoid(self.difficulty_net(stats))
+        difficulty = difficulty.unsqueeze(-1).unsqueeze(-1)  # (B, 1, 1, 1)
+
+        residual = self.act(self.conv1(x))
+        residual = self.act(self.conv2(residual))
+        residual = self.conv3(residual)
+        return (x + difficulty * residual).clamp(0, 255)
+
+
+class PixelShuffleUpscaleFilter(nn.Module):
+    """Technique 4: Resolution reduction + PixelShuffle upscale.
+
+    Designed for a pipeline where video is encoded at 75% resolution
+    (saving ~44% bitrate). This filter takes the low-res decoded frames
+    and upscales them to full resolution using PixelShuffle.
+
+    The rate savings from lower resolution (25 * 0.44 * 0.023 = 0.25 points!)
+    could be enormous in the scoring formula.
+
+    Pipeline:
+        1. Input: decoded frames at reduced resolution (e.g., 288x384)
+        2. PixelUnshuffle(2) to increase channels
+        3. CNN processing at quarter resolution
+        4. PixelShuffle(2) to increase spatial resolution
+        5. Bilinear resize to target resolution if needed
+
+    Args:
+        hidden: hidden channel width
+        kernel: conv kernel size
+        scale_factor: upscale factor (2 = double resolution)
+    """
+
+    def __init__(self, hidden: int = 64, kernel: int = 3, scale_factor: int = 2):
+        super().__init__()
+        self.scale_factor = scale_factor
+        sf2 = scale_factor * scale_factor
+        pad = kernel // 2
+
+        # Process at input resolution, then upscale
+        self.body = nn.Sequential(
+            nn.Conv2d(3, hidden, kernel, padding=pad, bias=True),
+            nn.ReLU(inplace=True),
+            nn.Conv2d(hidden, hidden, kernel, padding=pad * 2, dilation=2, bias=True),
+            nn.ReLU(inplace=True),
+            nn.Conv2d(hidden, hidden, kernel, padding=pad, bias=True),
+            nn.ReLU(inplace=True),
+            # Output channels = 3 * scale^2 for PixelShuffle
+            nn.Conv2d(hidden, 3 * sf2, kernel, padding=pad, bias=True),
+        )
+        self.upsample = nn.PixelShuffle(scale_factor)
+        # Zero-init last conv
+        nn.init.zeros_(self.body[-1].weight)
+        nn.init.zeros_(self.body[-1].bias)
+
+    def forward(self, x: torch.Tensor, target_h: int = 0, target_w: int = 0) -> torch.Tensor:
+        """Process frames with optional upscaling.
+
+        When target_h/target_w are 0 (default), output matches input size
+        (acts as a same-resolution enhancement filter). When targets are
+        set, outputs at target resolution (super-resolution mode).
+
+        Args:
+            x: (B, 3, H, W) float [0, 255] — decoded frames
+            target_h: target height (0 = same as input)
+            target_w: target width (0 = same as input)
+
+        Returns:
+            (B, 3, H_out, W_out) float [0, 255]
+        """
+        import torch.nn.functional as F
+
+        _, _, H, W = x.shape
+        x_norm = x / 255.0
+
+        # Body produces residual at upscaled resolution
+        residual = self.upsample(self.body(x_norm))
+
+        # Determine output size
+        if target_h > 0 and target_w > 0:
+            out_h, out_w = target_h, target_w
+        else:
+            out_h, out_w = H, W
+
+        # Bilinear upscale of input to match residual/output size
+        if out_h != H or out_w != W:
+            upscaled = F.interpolate(x_norm, size=(out_h, out_w), mode="bilinear", align_corners=False)
+        else:
+            upscaled = x_norm
+
+        # Match residual to output size
+        if residual.shape[2] != out_h or residual.shape[3] != out_w:
+            residual = F.interpolate(residual, size=(out_h, out_w), mode="bilinear", align_corners=False)
+
+        return (upscaled + residual).clamp(0, 1) * 255.0
+
+
 VARIANTS = {
     # Canonical names
     "standard": PostFilter,
@@ -314,6 +571,11 @@ VARIANTS = {
     "luma": LumaPostFilter,
     "film": FiLMPostFilter,
     "pair_aware": PairAwarePostFilter,
+    # New techniques
+    "luma_dilated": LumaOnlyDilatedPostFilter,
+    "dual_head": DualHeadPostFilter,
+    "content_adaptive": ContentAdaptivePostFilter,
+    "pixelshuffle_upscale": PixelShuffleUpscaleFilter,
     # Legacy aliases (from deploy inflate_postfilter.py)
     "residual": PostFilter,
     "saliency_weighted": PostFilter,

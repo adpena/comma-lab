@@ -504,6 +504,171 @@ class PairGenerator(nn.Module):
         return sum(p.numel() for p in self.parameters() if p.requires_grad)
 
 
+# ── Technique 6: DoubleTake Hint Mechanism (Niantic) ─────────────────
+
+
+class HintMLP(nn.Module):
+    """Small MLP that processes a previous frame's rendered output as a "hint".
+
+    Niantic's DoubleTake paper showed that feeding previous frame's output
+    back into the current frame's renderer improves temporal consistency
+    at minimal parameter cost.
+
+    The hint is processed via a lightweight MLP and added to features.
+
+    Args:
+        in_ch: input channels (3 for RGB hint)
+        hidden: MLP hidden width
+        out_ch: output channels (matches feature map channels)
+    """
+
+    def __init__(self, in_ch: int = 3, hidden: int = 16, out_ch: int = 36):
+        super().__init__()
+        self.net = nn.Sequential(
+            nn.Conv2d(in_ch, hidden, 1, bias=True),
+            nn.ReLU(inplace=True),
+            nn.Conv2d(hidden, out_ch, 1, bias=True),
+        )
+        # Zero-init: hint starts as no-op
+        nn.init.zeros_(self.net[-1].weight)
+        nn.init.zeros_(self.net[-1].bias)
+
+    def forward(self, hint: torch.Tensor) -> torch.Tensor:
+        """Process hint RGB and return feature-space modulation.
+
+        Args:
+            hint: (B, 3, H, W) previous frame's rendered output
+
+        Returns:
+            (B, out_ch, H, W) feature modulation to add to current features
+        """
+        return self.net(hint / 255.0)
+
+
+class HintedMaskRenderer(nn.Module):
+    """MaskRenderer with DoubleTake hint mechanism.
+
+    Wraps MaskRenderer and adds a HintMLP that processes the previous
+    frame's rendered output and adds it to the stem features. This
+    provides temporal consistency without explicit motion modeling.
+
+    Usage: call forward with both the mask and the previous frame's output.
+    For the first frame, pass None as hint (uses zero hint).
+
+    Args:
+        renderer: MaskRenderer instance
+        hint_hidden: HintMLP hidden width (16-32 recommended)
+    """
+
+    def __init__(self, renderer: MaskRenderer, hint_hidden: int = 16):
+        super().__init__()
+        self.renderer = renderer
+        base_ch = renderer.stem_conv.out_channels
+        self.hint_mlp = HintMLP(in_ch=3, hidden=hint_hidden, out_ch=base_ch)
+
+    def forward(self, masks: torch.Tensor, hint: torch.Tensor | None = None) -> torch.Tensor:
+        """Render RGB with temporal hint from previous frame.
+
+        Args:
+            masks: (B, H, W) long tensor with class labels
+            hint: (B, 3, H, W) previous frame's rendered RGB, or None
+
+        Returns:
+            (B, 3, H, W) float tensor in [0, 255]
+        """
+        # Standard embedding + stem
+        x = self.renderer.embedding(masks).permute(0, 3, 1, 2).contiguous()
+        stem = self.renderer.stem_conv(x)
+        stem = self.renderer.stem_res(stem, masks)
+
+        # Add hint modulation if available
+        if hint is not None:
+            hint_feat = self.hint_mlp(hint)
+            if hint_feat.shape[2:] != stem.shape[2:]:
+                hint_feat = F.interpolate(
+                    hint_feat, size=stem.shape[2:], mode="bilinear", align_corners=False
+                )
+            stem = stem + hint_feat
+
+        # Continue standard MaskRenderer forward from down1 onward
+        down1 = self.renderer.down_conv(stem)
+        down1 = self.renderer.down_res(down1, masks)
+
+        if self.renderer.depth >= 2:
+            down2 = self.renderer.down2_conv(down1)
+            down2 = self.renderer.down2_res(down2, masks)
+            mid = self.renderer.bottleneck(down2, masks)
+            up2 = self.renderer.up2_conv(mid)
+            if up2.shape[2:] != down1.shape[2:]:
+                up2 = F.interpolate(up2, size=down1.shape[2:], mode="bilinear", align_corners=False)
+            up2 = self.renderer.up2_res(up2, masks)
+            fused2 = torch.cat([down1, up2], dim=1)
+            half_res = self.renderer.fuse2_conv(fused2)
+        else:
+            half_res = self.renderer.bottleneck(down1, masks)
+
+        up = self.renderer.up_conv(half_res)
+        if up.shape[2:] != stem.shape[2:]:
+            up = F.interpolate(up, size=stem.shape[2:], mode="bilinear", align_corners=False)
+        up = self.renderer.up_res(up, masks)
+
+        fused = torch.cat([stem, up], dim=1)
+        fused = self.renderer.fuse_conv(fused)
+        rgb = 255.0 * torch.sigmoid(self.renderer.head(fused) / 50.0)
+        return rgb
+
+    def param_count(self) -> int:
+        return sum(p.numel() for p in self.parameters() if p.requires_grad)
+
+
+class HintedPairGenerator(nn.Module):
+    """PairGenerator with DoubleTake hint mechanism.
+
+    For a pair (t, t+1):
+    1. Render frame_t from mask_t (no hint for first frame)
+    2. Render frame_t+1 from mask_t+1 with frame_t as hint
+    3. Predict flow and blend as usual
+
+    Args:
+        hinted_renderer: HintedMaskRenderer instance
+        motion: MotionPredictor instance
+    """
+
+    def __init__(self, hinted_renderer: HintedMaskRenderer, motion: MotionPredictor):
+        super().__init__()
+        self.hinted_renderer = hinted_renderer
+        self.motion = motion
+        self.blend_logit = nn.Parameter(torch.tensor(0.0))
+
+    def forward(self, mask_t: torch.Tensor, mask_t1: torch.Tensor) -> torch.Tensor:
+        """Generate pair with temporal hint.
+
+        Args:
+            mask_t: (B, H, W) long — mask at time t
+            mask_t1: (B, H, W) long — mask at time t+1
+
+        Returns:
+            (B, 2, H, W, 3) float tensor in [0, 255] — HWC pair format
+        """
+        # Render frame_t without hint (first frame)
+        frame_t = self.hinted_renderer(mask_t, hint=None)
+        # Render frame_t+1 with frame_t as hint (temporal consistency)
+        frame_t1 = self.hinted_renderer(mask_t1, hint=frame_t.detach())
+
+        flow = self.motion(mask_t, mask_t1)
+        frame_t1_warped = warp_with_flow(frame_t, flow)
+
+        alpha = torch.sigmoid(self.blend_logit)
+        frame_t1_blended = (alpha * frame_t1_warped + (1.0 - alpha) * frame_t1).clamp(0.0, 255.0)
+
+        f_t_hwc = frame_t.permute(0, 2, 3, 1)
+        f_t1_hwc = frame_t1_blended.permute(0, 2, 3, 1)
+        return torch.stack([f_t_hwc, f_t1_hwc], dim=1)
+
+    def param_count(self) -> int:
+        return sum(p.numel() for p in self.parameters() if p.requires_grad)
+
+
 # ── Factory ─────────────────────────────────────────────────────────────
 
 
