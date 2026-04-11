@@ -789,3 +789,196 @@ def build_dp_sims_discriminator(
         f"({num_scales} scales, {n_layers} layers, base_ch={base_ch})"
     )
     return disc
+
+
+# ── Trick 19: Weighted SPADE parameter budget allocation ─────────────
+
+
+class WeightedSPADE(nn.Module):
+    """SPADE with per-class hidden dimension overrides (Trick 19).
+
+    Allocates more hidden channels to scorer-sensitive classes (road)
+    and fewer to insensitive classes (sky).  Each class gets its own
+    conditioning conv path with a different hidden width, then outputs
+    are blended by the mask.
+
+    The scoring formula weights SegNet at 100x, so road pixels (class 0)
+    drive most of the score.  Giving road 2x the hidden channels captures
+    lane markings, road texture, and perspective cues that dominate both
+    PoseNet and SegNet distortion.
+
+    Args:
+        norm_channels: number of channels in the feature tensor to normalize.
+        mask_channels: number of mask classes (5 for comma SegNet).
+        base_hidden: base hidden width (multiplied by per-class ratios).
+        class_param_ratios: per-class multiplier for hidden channels.
+            Default: {0: 2.0, 1: 1.0, 2: 1.0, 3: 0.5, 4: 0.5}.
+    """
+
+    def __init__(
+        self,
+        norm_channels: int,
+        mask_channels: int = 5,
+        base_hidden: int = 64,
+        class_param_ratios: dict[int, float] | None = None,
+    ):
+        super().__init__()
+        self.norm = nn.InstanceNorm2d(norm_channels, affine=False)
+        self.mask_channels = mask_channels
+
+        if class_param_ratios is None:
+            class_param_ratios = {0: 2.0, 1: 1.0, 2: 1.0, 3: 0.5, 4: 0.5}
+
+        # Per-class conditioning paths with different hidden dims
+        self.class_paths = nn.ModuleList()
+        for cls_idx in range(mask_channels):
+            ratio = class_param_ratios.get(cls_idx, 1.0)
+            hidden = max(8, int(base_hidden * ratio))
+            path = nn.ModuleDict(
+                {
+                    "shared": nn.Sequential(
+                        nn.Conv2d(1, hidden, 3, padding=1),
+                        nn.ReLU(inplace=True),
+                    ),
+                    "gamma": nn.Conv2d(hidden, norm_channels, 3, padding=1),
+                    "beta": nn.Conv2d(hidden, norm_channels, 3, padding=1),
+                }
+            )
+            # Zero-init for identity at start
+            nn.init.zeros_(path["gamma"].weight)
+            nn.init.zeros_(path["gamma"].bias)
+            nn.init.zeros_(path["beta"].weight)
+            nn.init.zeros_(path["beta"].bias)
+            self.class_paths.append(path)
+
+    def forward(self, x: torch.Tensor, mask: torch.Tensor) -> torch.Tensor:
+        """Apply per-class weighted SPADE normalization.
+
+        Args:
+            x: (B, C, H, W) feature tensor.
+            mask: (B, H_orig, W_orig) long tensor with class indices in [0, K).
+
+        Returns:
+            (B, C, H, W) normalized and modulated feature tensor.
+        """
+        normalized = self.norm(x)
+        B, C, fH, fW = x.shape
+
+        # Resize mask to feature resolution
+        if mask.shape[1] != fH or mask.shape[2] != fW:
+            mask_resized = (
+                F.interpolate(mask.unsqueeze(1).float(), size=(fH, fW), mode="nearest")
+                .squeeze(1)
+                .long()
+            )
+        else:
+            mask_resized = mask
+
+        # Accumulate per-class gamma/beta weighted by mask
+        gamma_total = torch.zeros_like(x)
+        beta_total = torch.zeros_like(x)
+
+        for cls_idx, path in enumerate(self.class_paths):
+            # Binary mask for this class: (B, 1, H, W)
+            cls_mask = (mask_resized == cls_idx).unsqueeze(1).float()
+            if cls_mask.sum() == 0:
+                continue
+
+            # Per-class conditioning (input is just the binary mask)
+            shared = path["shared"](cls_mask)
+            gamma = path["gamma"](shared)
+            beta = path["beta"](shared)
+
+            # Accumulate weighted by class mask
+            gamma_total = gamma_total + gamma * cls_mask
+            beta_total = beta_total + beta * cls_mask
+
+        return normalized * (1.0 + gamma_total) + beta_total
+
+
+def build_dp_sims_renderer_weighted(
+    class_param_ratios: dict[int, float] | None = None,
+    num_classes: int = 5,
+    channels: tuple[int, ...] = (256, 128, 64, 32),
+    init_h: int = 24,
+    init_w: int = 32,
+    base_hidden: int = 64,
+    noise_dim: int = 16,
+    use_noise: bool = True,
+    motion_hidden: int = 32,
+    motion_embed_dim: int = 6,
+) -> DPSIMSPairGenerator:
+    """Build DP-SIMS renderer with weighted SPADE parameter budget (Trick 19).
+
+    Allocates more SPADE hidden channels to road (class 0), fewer to sky
+    (class 3).  This is a drop-in replacement for build_dp_sims_renderer
+    that uses WeightedSPADE instead of standard SPADE.
+
+    The approach post-hoc replaces SPADE modules in an already-built
+    DPSIMSRenderer with WeightedSPADE instances, preserving the rest
+    of the architecture.
+
+    Args:
+        class_param_ratios: per-class hidden channel multiplier.
+            Default: {0: 2.0, 1: 1.0, 2: 1.0, 3: 0.5, 4: 0.5}.
+        num_classes: segmentation classes (5 for comma).
+        channels: channel widths at each progressive stage.
+        init_h: initial constant height.
+        init_w: initial constant width.
+        base_hidden: base hidden width for SPADE conditioning convs.
+        noise_dim: noise dimension for cross-attention injection.
+        use_noise: enable cross-attention noise injection.
+        motion_hidden: MotionPredictor hidden channels.
+        motion_embed_dim: MotionPredictor embedding dimension.
+
+    Returns:
+        DPSIMSPairGenerator with WeightedSPADE normalization.
+    """
+    if class_param_ratios is None:
+        class_param_ratios = {0: 2.0, 1: 1.0, 2: 1.0, 3: 0.5, 4: 0.5}
+
+    from tac.renderer import MotionPredictor
+
+    # Build standard renderer first
+    renderer = DPSIMSRenderer(
+        num_classes=num_classes,
+        channels=channels,
+        init_h=init_h,
+        init_w=init_w,
+        spade_hidden=base_hidden,
+        noise_dim=noise_dim,
+        use_noise=use_noise,
+    )
+
+    # Replace SPADE modules with WeightedSPADE
+    replaced = 0
+    for block in renderer.spade_blocks:
+        if isinstance(block, SPADEResBlock):
+            for attr_name in ["spade1", "spade2"]:
+                old_spade = getattr(block, attr_name)
+                if isinstance(old_spade, SPADE):
+                    new_spade = WeightedSPADE(
+                        norm_channels=old_spade.norm.num_features,
+                        mask_channels=num_classes,
+                        base_hidden=base_hidden,
+                        class_param_ratios=class_param_ratios,
+                    )
+                    setattr(block, attr_name, new_spade)
+                    replaced += 1
+
+    motion = MotionPredictor(
+        num_classes=num_classes,
+        embed_dim=motion_embed_dim,
+        hidden=motion_hidden,
+    )
+
+    pair_gen = DPSIMSPairGenerator(renderer, motion)
+
+    total = pair_gen.param_count()
+    ratios_str = ", ".join(f"cls{k}={v:.1f}x" for k, v in sorted(class_param_ratios.items()))
+    print(
+        f"[dp_sims] Built WeightedSPADE DPSIMSPairGenerator: {total:,} params "
+        f"(replaced {replaced} SPADE modules, ratios: {ratios_str})"
+    )
+
+    return pair_gen
