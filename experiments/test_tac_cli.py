@@ -99,13 +99,52 @@ class TacCliTests(unittest.TestCase):
                     "--split",
                     "0",
                     "1",
+                    "--layout",
+                    "position_major",
                 ]
             )
 
         self.assertEqual(result["command"], "lossless_plan")
         self.assertEqual(result["plan"]["profile"], "gpt_arithmetic_small")
         self.assertEqual(result["plan"]["method"], "gpt_arithmetic")
+        self.assertEqual(result["plan"]["layout"], "position_major")
         self.assertEqual(result["plan"]["split"], ["0", "1"])
+
+    def test_lossless_estimate_subcommand_defaults_split_to_challenge_alias(self) -> None:
+        mod = load_module()
+        estimate_payload = {
+            "profile": "gpt_arithmetic_small",
+            "method": "gpt_arithmetic",
+            "model": "small",
+            "context_tokens": 256,
+            "dataset_name": "commaai/commavq",
+            "layout": "frame_major",
+            "split": ["challenge"],
+            "work_dir": None,
+            "status": "estimated",
+            "measured": False,
+            "example_count": 5000,
+            "frames_per_example": 1200,
+            "tokens_per_frame": 129,
+            "flat_tokens_per_example": 154801,
+            "total_flat_tokens": 774005000,
+        }
+        with mock.patch.object(
+            mod,
+            "estimate_gpt_arithmetic_workload",
+            return_value=mod.GPTArithmeticEstimate(**estimate_payload),
+        ) as mocked:
+            result = mod.main(
+                [
+                    "lossless",
+                    "estimate",
+                    "--profile",
+                    "gpt_arithmetic_small",
+                ]
+            )
+
+        mocked.assert_called_once_with("gpt_arithmetic_small", split=None, work_dir=None, layout="frame_major")
+        self.assertEqual(result["estimate"]["split"], ["challenge"])
 
     def test_lossless_estimate_subcommand_reports_gpt_workload(self) -> None:
         mod = load_module()
@@ -115,6 +154,7 @@ class TacCliTests(unittest.TestCase):
             "model": "small",
             "context_tokens": 256,
             "dataset_name": "commaai/commavq",
+            "layout": "position_major",
             "split": ["0", "1"],
             "work_dir": "/tmp/example",
             "status": "estimated",
@@ -139,11 +179,14 @@ class TacCliTests(unittest.TestCase):
                     "--split",
                     "0",
                     "1",
+                    "--layout",
+                    "position_major",
                 ]
             )
 
-        mocked.assert_called_once_with("gpt_arithmetic_small", split=["0", "1"], work_dir=None)
+        mocked.assert_called_once_with("gpt_arithmetic_small", split=["0", "1"], work_dir=None, layout="position_major")
         self.assertEqual(result["command"], "lossless_estimate")
+        self.assertEqual(result["estimate"]["layout"], "position_major")
         self.assertEqual(result["estimate"]["total_flat_tokens"], 774005000)
 
     def test_lossless_prepare_subcommand_materializes_gpt_token_stream(self) -> None:
@@ -157,6 +200,7 @@ class TacCliTests(unittest.TestCase):
                 return_value={
                     "command": "lossless_prepare",
                     "profile": "gpt_arithmetic_small",
+                    "layout": "position_major",
                     "output_path": str(output),
                     "example_count": 5000,
                     "token_count": 774005000,
@@ -168,17 +212,114 @@ class TacCliTests(unittest.TestCase):
                         "prepare",
                         "--profile",
                         "gpt_arithmetic_small",
-                        "--split",
-                        "0",
-                        "1",
+                    "--split",
+                    "0",
+                    "1",
+                    "--layout",
+                    "position_major",
+                    "--output",
+                    str(output),
+                ]
+            )
+
+        mocked.assert_called_once_with("gpt_arithmetic_small", split=["0", "1"], output_path=output, layout="position_major")
+        self.assertEqual(result["command"], "lossless_prepare")
+        self.assertEqual(result["layout"], "position_major")
+        self.assertEqual(result["token_count"], 774005000)
+
+    def test_lossless_frequency_subcommand_writes_symbol_report(self) -> None:
+        mod = load_module()
+        with tempfile.TemporaryDirectory() as tmpdir:
+            root = Path(tmpdir)
+            token_path = root / "train.bin"
+            report_path = root / "freq.json"
+            with mock.patch.object(
+                mod,
+                "write_symbol_frequency_report",
+                return_value={
+                    "command": "lossless_frequency_report",
+                    "token_path": str(token_path),
+                    "token_count": 10,
+                    "unique_symbols": 3,
+                    "empirical_bits_per_token": 1.2,
+                },
+            ) as mocked:
+                result = mod.main(
+                    [
+                        "lossless",
+                        "frequency-report",
+                        "--tokens",
+                        str(token_path),
                         "--output",
-                        str(output),
+                        str(report_path),
                     ]
                 )
 
-        mocked.assert_called_once_with("gpt_arithmetic_small", split=["0", "1"], output_path=output)
-        self.assertEqual(result["command"], "lossless_prepare")
-        self.assertEqual(result["token_count"], 774005000)
+        mocked.assert_called_once_with(token_path=token_path, output_path=report_path)
+        self.assertEqual(result["command"], "lossless_frequency_report")
+        self.assertEqual(result["empirical_bits_per_token"], 1.2)
+
+    def test_lossless_frequency_encode_subcommand_writes_coded_stream(self) -> None:
+        mod = load_module()
+        with tempfile.TemporaryDirectory() as tmpdir:
+            root = Path(tmpdir)
+            token_path = root / "train.bin"
+            encoded_path = root / "train.tfc"
+            with mock.patch.object(
+                mod,
+                "encode_uint16_frequency_file",
+                return_value={
+                    "command": "lossless_frequency_encode",
+                    "source_path": str(token_path),
+                    "encoded_path": str(encoded_path),
+                    "token_count": 10,
+                    "unique_symbols": 3,
+                },
+            ) as mocked:
+                result = mod.main(
+                    [
+                        "lossless",
+                        "frequency-encode",
+                        "--tokens",
+                        str(token_path),
+                        "--output",
+                        str(encoded_path),
+                    ]
+                )
+
+        mocked.assert_called_once_with(token_path, encoded_path)
+        self.assertEqual(result["command"], "lossless_frequency_encode")
+        self.assertEqual(result["token_count"], 10)
+
+    def test_lossless_prev_symbol_benchmark_subcommand_reports_conditional_ratio(self) -> None:
+        mod = load_module()
+        with tempfile.TemporaryDirectory() as tmpdir:
+            root = Path(tmpdir)
+            token_path = root / "train.bin"
+            token_path.write_bytes(b"\x00\x00")
+            with mock.patch.object(
+                mod,
+                "benchmark_prev_symbol_frequency_stream",
+                return_value={
+                    "command": "lossless_prev_symbol_frequency_benchmark",
+                    "token_count": 10,
+                    "context_count": 4,
+                    "encoded_bytes": 20,
+                    "compression_ratio": 1.0,
+                },
+            ) as mocked:
+                result = mod.main(
+                    [
+                        "lossless",
+                        "prev-symbol-benchmark",
+                        "--tokens",
+                        str(token_path),
+                    ]
+                )
+
+        mocked.assert_called_once()
+        self.assertEqual(result["command"], "lossless_prev_symbol_frequency_benchmark")
+        self.assertEqual(result["context_count"], 4)
 
     def test_lossless_package_subcommand_builds_submission_zip(self) -> None:
         mod = load_module()

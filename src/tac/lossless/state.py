@@ -131,6 +131,11 @@ def promote_lossless_result(*, repo_root: str | Path, result_path: str | Path) -
     archive_path = Path(result.archive_path)
     if not archive_path.exists():
         raise FileNotFoundError(f"Lossless archive not found: {archive_path}")
+    actual_archive_bytes = archive_path.stat().st_size
+    if actual_archive_bytes != result.archive_bytes:
+        raise ValueError(
+            f"archive_bytes mismatch for {archive_path}: record={result.archive_bytes} actual={actual_archive_bytes}"
+        )
 
     results_row = _results_row(result)
     timeline_row = _timeline_row(result)
@@ -141,8 +146,11 @@ def promote_lossless_result(*, repo_root: str | Path, result_path: str | Path) -
     focus_path = root / ".omx" / "state" / "lossless_focus.md"
     next_experiments_path = root / ".omx" / "state" / "lossless_next_experiments.md"
     findings_path = root / ".omx" / "research" / "lossless_findings.md"
+    canonical_record_path = root / ".omx" / "state" / "lossless_promoted_result.json"
 
     changed_paths: list[str] = []
+    if _atomic_write_text(canonical_record_path, json.dumps(asdict(result), indent=2) + "\n"):
+        changed_paths.append(".omx/state/lossless_promoted_result.json")
     if _write_jsonl(reports_path, _dedupe_rows(_read_jsonl(reports_path), results_row)):
         changed_paths.append("reports/lossless_results.jsonl")
     if _write_jsonl(timeline_path, _dedupe_rows(_read_jsonl(timeline_path), timeline_row)):

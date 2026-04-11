@@ -365,17 +365,58 @@ def yuv420_to_rgb(frame) -> torch.Tensor:
 
 BATCH_SIZE = 8  # batched inference: 3-5x speedup on CPU
 MULTI_PASS = int(os.environ.get("INFLATE_MULTI_PASS", "1"))  # run CNN N times (2=double pass)
+TTO_STEPS = int(os.environ.get("INFLATE_TTO_STEPS", "0"))  # test-time optimization steps
+TTO_LR = float(os.environ.get("INFLATE_TTO_LR", "1e-4"))
+TTO_LOSS = os.environ.get("INFLATE_TTO_LOSS", "temporal_consistency")
+TTO_BUDGET = float(os.environ.get("INFLATE_TTO_BUDGET", "60.0"))
+
+
+def _decode_frames_for_tto(
+    video_path: str, target_w: int, target_h: int,
+    max_frames: int = 64, stride: int = 1,
+) -> torch.Tensor:
+    """Decode a subset of frames from a video for TTO pre-pass.
+
+    Returns (N, 3, H, W) float tensor. Uses strided sampling to get
+    temporal coverage without decoding the entire video.
+    """
+    container = av.open(video_path)
+    stream = container.streams.video[0]
+    frames = []
+    i = 0
+    for frame in container.decode(stream):
+        if i % stride == 0:
+            t = yuv420_to_rgb(frame)
+            H, W, _ = t.shape
+            x = t.permute(2, 0, 1).unsqueeze(0).float()
+            if H != target_h or W != target_w:
+                x = F.interpolate(x, size=(target_h, target_w), mode='bicubic', align_corners=False)
+                x = x.clamp(0, 255)
+            frames.append(x)
+            if len(frames) >= max_frames:
+                break
+        i += 1
+    container.close()
+    if frames:
+        return torch.cat(frames, dim=0)
+    return torch.empty(0, 3, target_h, target_w)
 
 
 def inflate_with_postfilter(
     video_path: str, dst: str, model: nn.Module,
-    target_w: int = 1164, target_h: int = 874, device: str = "cpu"
+    target_w: int = 1164, target_h: int = 874, device: str = "cpu",
+    tto_steps: int = 0, tto_lr: float = 1e-4,
+    tto_loss: str = "temporal_consistency", tto_budget: float = 60.0,
 ) -> int:
     """Decode, upscale, apply learned post-filter, write raw RGB.
 
     Uses batched inference for throughput. Model is passed in (loaded once).
     NOTE: Only supports single-frame architectures (standard, dilated, etc.).
     PairAwarePostFilter requires 6-channel input and is not yet supported here.
+
+    If tto_steps > 0, runs test-time optimization on a subset of frames
+    BEFORE the main inflate loop. This adapts the model to the specific
+    video content using self-supervised losses (no scorer needed).
     """
     import time
     t0 = time.monotonic()
@@ -386,6 +427,37 @@ def inflate_with_postfilter(
             "PairAwarePostFilter requires 6-channel (frame-pair) input. "
             "inflate_with_postfilter only supports single-frame architectures."
         )
+
+    # Test-time optimization pre-pass
+    if tto_steps > 0:
+        try:
+            from tac.tto import test_time_optimize
+        except ImportError:
+            print("WARNING: tac.tto not available, skipping TTO", file=sys.stderr)
+            tto_steps = 0
+
+        if tto_steps > 0:
+            print(f"  TTO: decoding frames for adaptation ...", file=sys.stderr)
+            tto_frames = _decode_frames_for_tto(
+                video_path, target_w, target_h,
+                max_frames=64, stride=4,  # every 4th frame, up to 64
+            )
+            if tto_frames.shape[0] >= 2:
+                print(
+                    f"  TTO: adapting model ({tto_steps} steps, "
+                    f"loss={tto_loss}, lr={tto_lr}) on {tto_frames.shape[0]} frames ...",
+                    file=sys.stderr,
+                )
+                model = test_time_optimize(
+                    model, tto_frames, n_steps=tto_steps, lr=tto_lr,
+                    loss_type=tto_loss, time_budget_seconds=tto_budget,
+                    verbose=True,
+                )
+                del tto_frames
+            else:
+                print("  TTO: not enough frames, skipping", file=sys.stderr)
+            tto_elapsed = time.monotonic() - t0
+            print(f"  TTO pre-pass: {tto_elapsed:.1f}s", file=sys.stderr)
 
     container = av.open(video_path)
     stream = container.streams.video[0]
@@ -479,7 +551,11 @@ if __name__ == "__main__":
         out_path = inflated_dir / f"{stem}.raw"
         out_path.parent.mkdir(parents=True, exist_ok=True)
         print(f"Inflating {mkv_path} -> {out_path} (post-filter)", file=sys.stderr)
-        inflate_with_postfilter(str(mkv_path), str(out_path), model)
+        inflate_with_postfilter(
+            str(mkv_path), str(out_path), model,
+            tto_steps=TTO_STEPS, tto_lr=TTO_LR,
+            tto_loss=TTO_LOSS, tto_budget=TTO_BUDGET,
+        )
 
     t_total = time.monotonic() - t_start
     print(f"  Total inflate time: {t_total:.1f}s", file=sys.stderr)

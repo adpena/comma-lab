@@ -19,7 +19,10 @@ from .lossless.arithmetic import (
     build_gpt_arithmetic_plan,
     estimate_gpt_arithmetic_workload,
     materialize_gpt_arithmetic_stream,
+    write_symbol_frequency_report,
 )
+from .lossless.frequency_coder import encode_uint16_frequency_file
+from .lossless.frequency_coder import benchmark_prev_symbol_frequency_stream
 from .lossless.codecs import (
     compress_lossless_file,
     decompress_lossless_file,
@@ -104,20 +107,37 @@ def build_parser() -> argparse.ArgumentParser:
     sp = lossless_sub.add_parser("plan", help="Build a non-measured lossless experiment plan")
     sp.add_argument("--profile", required=True, choices=sorted(LOSSLESS_PROFILES))
     sp.add_argument("--work-dir", default=None)
-    sp.add_argument("--split", nargs="*", default=["challenge"])
+    sp.add_argument("--split", nargs="*", default=None)
+    sp.add_argument("--layout", default="frame_major", choices=["frame_major", "position_major"])
     sp.set_defaults(lossless_handler="plan")
 
     sp = lossless_sub.add_parser("estimate", help="Estimate a non-measured lossless arithmetic workload")
     sp.add_argument("--profile", required=True, choices=sorted(LOSSLESS_PROFILES))
     sp.add_argument("--work-dir", default=None)
-    sp.add_argument("--split", nargs="*", default=["challenge"])
+    sp.add_argument("--split", nargs="*", default=None)
+    sp.add_argument("--layout", default="frame_major", choices=["frame_major", "position_major"])
     sp.set_defaults(lossless_handler="estimate")
 
     sp = lossless_sub.add_parser("prepare", help="Materialize a GPT/arithmetic token stream")
     sp.add_argument("--profile", required=True, choices=sorted(LOSSLESS_PROFILES))
     sp.add_argument("--output", required=True)
-    sp.add_argument("--split", nargs="*", default=["challenge"])
+    sp.add_argument("--split", nargs="*", default=None)
+    sp.add_argument("--layout", default="frame_major", choices=["frame_major", "position_major"])
     sp.set_defaults(lossless_handler="prepare")
+
+    sp = lossless_sub.add_parser("frequency-report", help="Analyze a prepared token stream")
+    sp.add_argument("--tokens", required=True)
+    sp.add_argument("--output", required=True)
+    sp.set_defaults(lossless_handler="frequency_report")
+
+    sp = lossless_sub.add_parser("frequency-encode", help="Encode a prepared token stream with the static frequency coder")
+    sp.add_argument("--tokens", required=True)
+    sp.add_argument("--output", required=True)
+    sp.set_defaults(lossless_handler="frequency_encode")
+
+    sp = lossless_sub.add_parser("prev-symbol-benchmark", help="Benchmark a previous-symbol conditional static coder over a prepared stream")
+    sp.add_argument("--tokens", required=True)
+    sp.set_defaults(lossless_handler="prev_symbol_benchmark")
 
     sp = lossless_sub.add_parser("baseline", help="Build a real dataset-backed lossless baseline submission")
     sp.add_argument("--profile", required=True, choices=sorted(LOSSLESS_PROFILES))
@@ -262,6 +282,7 @@ def _run_lossless(args: argparse.Namespace) -> dict[str, Any]:
             args.profile,
             split=args.split,
             work_dir=Path(args.work_dir) if args.work_dir else None,
+            layout=args.layout,
         )
         plan_payload = asdict(plan)
         plan_payload["split"] = list(plan_payload["split"])
@@ -277,6 +298,7 @@ def _run_lossless(args: argparse.Namespace) -> dict[str, Any]:
             args.profile,
             split=args.split,
             work_dir=Path(args.work_dir) if args.work_dir else None,
+            layout=args.layout,
         )
         estimate_payload = asdict(estimate)
         estimate_payload["split"] = list(estimate_payload["split"])
@@ -292,7 +314,32 @@ def _run_lossless(args: argparse.Namespace) -> dict[str, Any]:
             args.profile,
             split=args.split,
             output_path=Path(args.output),
+            layout=args.layout,
         )
+        print(json.dumps(payload, indent=2))
+        return payload
+
+    if args.lossless_handler == "frequency_report":
+        payload = write_symbol_frequency_report(
+            token_path=Path(args.tokens),
+            output_path=Path(args.output),
+        )
+        print(json.dumps(payload, indent=2))
+        return payload
+
+    if args.lossless_handler == "frequency_encode":
+        payload = encode_uint16_frequency_file(
+            Path(args.tokens),
+            Path(args.output),
+        )
+        print(json.dumps(payload, indent=2))
+        return payload
+
+    if args.lossless_handler == "prev_symbol_benchmark":
+        import numpy as np
+
+        tokens = np.fromfile(Path(args.tokens), dtype=np.uint16)
+        payload = benchmark_prev_symbol_frequency_stream(tokens)
         print(json.dumps(payload, indent=2))
         return payload
 

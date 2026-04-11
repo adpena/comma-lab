@@ -2,6 +2,6 @@
 
 ## promoted baseline: `lzma_baseline` at `1.5947`
 
-1. Finish and record the exact local `zpaq_baseline` result from `reports/raw/2026-04-11-commavq-zpaq-baseline/`.
-2. Keep `zpaq` classified as local-only unless a bundled self-contained runtime is proven.
-3. Build the first exact GPT-probability coding lane on top of the prepared arithmetic stream artifacts.
+1. Preserve the first measured lossless baseline and decompressor contract.
+2. Beat the promoted rate with another measured exact round-trip.
+3. Keep lossless promotion state separate from lossy promotion state.

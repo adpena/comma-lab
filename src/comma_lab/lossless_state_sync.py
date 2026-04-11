@@ -8,17 +8,17 @@ from typing import TYPE_CHECKING
 from .state_models import DoctorReport, DriftFinding, SyncResult
 
 if TYPE_CHECKING:
-    from src.tac.lossless.contracts import LosslessCompressionResult
+    from tac.lossless.contracts import LosslessCompressionResult
 
 
 def _lossless_result_type():
-    from src.tac.lossless.contracts import LosslessCompressionResult
+    from tac.lossless.contracts import LosslessCompressionResult
 
     return LosslessCompressionResult
 
 
 def _render_lossless_latest(result) -> str:
-    from src.tac.lossless.state import render_lossless_latest
+    from tac.lossless.state import render_lossless_latest
 
     return render_lossless_latest(result)
 
@@ -88,7 +88,7 @@ def _dedupe_rows(rows: list[dict[str, object]], canonical_row: dict[str, object]
 def _render_lossless_focus(result: "LosslessCompressionResult") -> str:
     return (
         "# Lossless Focus\n\n"
-        "## promoted floor\n"
+        "## current promoted baseline\n"
         f"- Profile: `{result.profile}`\n"
         f"- Method: `{result.method}`\n"
         f"- Compression rate: `{result.compression_rate:.4f}`\n"
@@ -100,6 +100,7 @@ def _render_lossless_findings(result: "LosslessCompressionResult") -> str:
     return (
         "# Lossless Findings\n\n"
         "## current promoted result\n\n"
+        f"- The first measured lossless baseline is now **`{result.compression_rate:.4f}`**.\n"
         f"- Current promoted rate: `{result.compression_rate:.4f}`.\n"
         f"- Profile: `{result.profile}`.\n"
         f"- Method: `{result.method}`.\n"
@@ -150,6 +151,11 @@ def promote_record(repo_root: str | Path, *, record_path: str | Path | None = No
     archive_path = Path(result.archive_path)
     if not archive_path.exists():
         raise FileNotFoundError(f"Lossless archive not found: {archive_path}")
+    actual_archive_bytes = archive_path.stat().st_size
+    if actual_archive_bytes != result.archive_bytes:
+        raise ValueError(
+            f"archive_bytes mismatch for {archive_path}: record={result.archive_bytes} actual={actual_archive_bytes}"
+        )
 
     if source_path.resolve() != canonical_path.resolve():
         _atomic_write_json(canonical_path, result.__dict__)

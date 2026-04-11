@@ -30,6 +30,7 @@ from .evaluate import (
     evaluate_lossless_archive,
     verify_exact_tokens,
 )
+from .frequency_coder import FrequencyEncodedStream, decode_uint16_frequency_stream, encode_uint16_frequency_stream
 from .profiles import PROFILES
 from .state import load_lossless_result, promote_lossless_result, render_lossless_latest
 from .submission import build_submission_zip, validate_submission_inputs
@@ -42,6 +43,7 @@ __all__ = [
     "GPTArithmeticEstimate",
     "GPTArithmeticPlan",
     "GPTArithmeticProfileConfig",
+    "FrequencyEncodedStream",
     "PROFILES",
     "build_lzma_baseline_submission",
     "build_zpaq_baseline_submission",
@@ -54,6 +56,8 @@ __all__ = [
     "evaluate_zpaq_baseline_submission",
     "evaluate_commavq_dataset_archive",
     "evaluate_lossless_archive",
+    "decode_uint16_frequency_stream",
+    "encode_uint16_frequency_stream",
     "flatten_tokens_for_gpt_arithmetic",
     "materialize_gpt_arithmetic_stream",
     "build_submission_zip",

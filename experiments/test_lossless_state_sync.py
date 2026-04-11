@@ -210,6 +210,28 @@ class LosslessStateSyncTests(unittest.TestCase):
         with self.assertRaises(FileNotFoundError):
             lossless_state_sync.promote_record(self.repo_root, record_path=record)
 
+    def test_lossless_state_promote_requires_archive_bytes_to_match_file(self) -> None:
+        from src.comma_lab import lossless_state_sync
+
+        archive = self.repo_root / "reports" / "lossless" / "submission-v3.zip"
+        archive.parent.mkdir(parents=True, exist_ok=True)
+        archive.write_bytes(b"zip-bytes")
+        record = self.repo_root / "incoming_lossless_result.json"
+        write_json(
+            record,
+            {
+                "profile": "lzma_baseline",
+                "archive_path": str(archive),
+                "archive_bytes": archive.stat().st_size + 2,
+                "original_bytes": 500,
+                "compression_rate": 5.0,
+                "method": "lzma",
+            },
+        )
+
+        with self.assertRaisesRegex(ValueError, "archive_bytes"):
+            lossless_state_sync.promote_record(self.repo_root, record_path=record)
+
 
 if __name__ == "__main__":
     unittest.main()

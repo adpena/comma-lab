@@ -1,6 +1,8 @@
 from __future__ import annotations
 
 from dataclasses import dataclass
+import json
+from functools import partial
 from pathlib import Path
 from collections.abc import Mapping, Sequence
 from typing import Optional
@@ -10,6 +12,7 @@ from .profiles import PROFILES
 
 FRAME_BOS_TOKEN = 1024
 SEGMENT_EOT_TOKEN = 1025
+LAYOUTS = {"frame_major", "position_major"}
 
 
 @dataclass(frozen=True)
@@ -36,6 +39,7 @@ class GPTArithmeticPlan:
     model: str
     context_tokens: int
     dataset_name: str
+    layout: str
     split: tuple[str, ...]
     work_dir: str | None
     status: str = "planned"
@@ -46,6 +50,8 @@ class GPTArithmeticPlan:
             raise ValueError(f"unsupported arithmetic method: {self.method}")
         if not self.profile.strip():
             raise ValueError("profile must be a non-empty string")
+        if self.layout not in LAYOUTS:
+            raise ValueError(f"unsupported arithmetic layout: {self.layout}")
         if not self.split:
             raise ValueError("split must contain at least one entry")
         if self.status != "planned":
@@ -61,6 +67,7 @@ class GPTArithmeticEstimate:
     model: str
     context_tokens: int
     dataset_name: str
+    layout: str
     split: tuple[str, ...]
     work_dir: str | None
     example_count: int
@@ -76,6 +83,8 @@ class GPTArithmeticEstimate:
             raise ValueError(f"unsupported arithmetic method: {self.method}")
         if self.example_count <= 0:
             raise ValueError("example_count must be positive")
+        if self.layout not in LAYOUTS:
+            raise ValueError(f"unsupported arithmetic layout: {self.layout}")
         if self.frames_per_example <= 0:
             raise ValueError("frames_per_example must be positive")
         if self.tokens_per_frame <= 0:
@@ -122,17 +131,33 @@ def load_gpt_arithmetic_profile(profile: str) -> GPTArithmeticProfileConfig:
     )
 
 
-def flatten_tokens_for_gpt_arithmetic(tokens, *, bos_token: int = FRAME_BOS_TOKEN, eot_token: int = SEGMENT_EOT_TOKEN):
+def flatten_tokens_for_gpt_arithmetic(
+    tokens,
+    *,
+    layout: str = "frame_major",
+    bos_token: int = FRAME_BOS_TOKEN,
+    eot_token: int = SEGMENT_EOT_TOKEN,
+):
     import numpy as np
 
     array = np.asarray(tokens).astype(np.int16)
     if array.ndim < 2:
         raise ValueError("tokens must have at least frame and feature dimensions")
+    if layout not in LAYOUTS:
+        raise ValueError(f"unsupported arithmetic layout: {layout}")
     frames = array.shape[0]
-    flat_per_frame = array.reshape(frames, -1)
-    bos = np.full((frames, 1), bos_token, dtype=np.int16)
-    with_bos = np.concatenate([bos, flat_per_frame], axis=1)
-    flattened = with_bos.reshape(-1)
+    flat_per_frame = array.reshape(frames, -1).astype(np.int16)
+    if layout == "frame_major":
+        bos = np.full((frames, 1), bos_token, dtype=np.int16)
+        with_bos = np.concatenate([bos, flat_per_frame], axis=1)
+        flattened = with_bos.reshape(-1)
+    else:
+        positions = flat_per_frame.shape[1]
+        streams = []
+        for position in range(positions):
+            streams.append(np.array([bos_token], dtype=np.int16))
+            streams.append(flat_per_frame[:, position])
+        flattened = np.concatenate(streams, axis=0) if streams else np.array([], dtype=np.int16)
     return np.concatenate([flattened, np.array([eot_token], dtype=np.int16)], axis=0)
 
 
@@ -167,7 +192,13 @@ def _first_example(train_split):
 def _encode_example_to_ids(example: Mapping[str, object]) -> dict[str, object]:
     if not isinstance(example, Mapping) or "token.npy" not in example:
         raise ValueError("dataset example must provide token.npy")
-    ids = flatten_tokens_for_gpt_arithmetic(example["token.npy"]).astype("uint16")
+    raise RuntimeError("_encode_example_to_ids requires bound layout; use a partial wrapper")
+
+
+def _encode_example_to_ids_for_layout(example: Mapping[str, object], *, layout: str) -> dict[str, object]:
+    if not isinstance(example, Mapping) or "token.npy" not in example:
+        raise ValueError("dataset example must provide token.npy")
+    ids = flatten_tokens_for_gpt_arithmetic(example["token.npy"], layout=layout).astype("uint16")
     return {
         "ids": ids,
         "len": int(ids.size),
@@ -189,6 +220,7 @@ def estimate_gpt_arithmetic_workload(
     work_dir: str | Path | None = None,
     dataset_loader=None,
     num_proc: Optional[int] = None,
+    layout: str = "frame_major",
 ) -> GPTArithmeticEstimate:
     import numpy as np
 
@@ -209,8 +241,14 @@ def estimate_gpt_arithmetic_workload(
         raise ValueError("token.npy must have at least frame and feature dimensions")
     frames_per_example = int(token_array.shape[0])
     raw_tokens_per_frame = int(np.prod(token_array.shape[1:]))
-    tokens_per_frame = raw_tokens_per_frame + 1
-    flat_tokens_per_example = frames_per_example * tokens_per_frame + 1
+    if layout == "frame_major":
+        tokens_per_frame = raw_tokens_per_frame + 1
+        flat_tokens_per_example = frames_per_example * tokens_per_frame + 1
+    elif layout == "position_major":
+        tokens_per_frame = raw_tokens_per_frame + 1
+        flat_tokens_per_example = raw_tokens_per_frame * (frames_per_example + 1) + 1
+    else:
+        raise ValueError(f"unsupported arithmetic layout: {layout}")
     total_flat_tokens = example_count * flat_tokens_per_example
     return GPTArithmeticEstimate(
         profile=config.profile,
@@ -218,6 +256,7 @@ def estimate_gpt_arithmetic_workload(
         model=config.model,
         context_tokens=config.context_tokens,
         dataset_name=config.dataset_name,
+        layout=layout,
         split=_normalize_split(split),
         work_dir=str(work_dir) if work_dir is not None else None,
         example_count=example_count,
@@ -235,6 +274,7 @@ def materialize_gpt_arithmetic_stream(
     output_path: str | Path,
     dataset_loader=None,
     num_proc: Optional[int] = None,
+    layout: str = "frame_major",
 ) -> dict[str, object]:
     import numpy as np
 
@@ -244,6 +284,7 @@ def materialize_gpt_arithmetic_stream(
         work_dir=None,
         dataset_loader=dataset_loader,
         num_proc=num_proc,
+        layout=layout,
     )
     config = load_gpt_arithmetic_profile(profile)
     dataset = load_commavq_dataset(
@@ -257,8 +298,9 @@ def materialize_gpt_arithmetic_stream(
     target.parent.mkdir(parents=True, exist_ok=True)
 
     if hasattr(train_split, "map"):
+        encoder = partial(_encode_example_to_ids_for_layout, layout=layout)
         mapped = train_split.map(
-            _encode_example_to_ids,
+            encoder,
             desc="prepare_gpt_arithmetic",
             num_proc=num_proc,
             load_from_cache_file=False,
@@ -271,7 +313,7 @@ def materialize_gpt_arithmetic_stream(
             idx = 0
             for batch_idx in range(total_batches):
                 batch = mapped.shard(num_shards=total_batches, index=batch_idx, contiguous=True).with_format("numpy")
-                ids = batch.get("ids", [])
+                ids = batch["ids"]
                 if not ids:
                     continue
                 arr_batch = np.concatenate([np.asarray(item, dtype=np.uint16) for item in ids], axis=0)
@@ -295,7 +337,7 @@ def materialize_gpt_arithmetic_stream(
     else:
         pieces = []
         for example in train_split:
-            encoded = _encode_example_to_ids(example)
+            encoded = _encode_example_to_ids_for_layout(example, layout=layout)
             pieces.append(np.asarray(encoded["ids"], dtype=np.uint16))
 
     if pieces:
@@ -307,6 +349,7 @@ def materialize_gpt_arithmetic_stream(
         "command": "lossless_prepare",
         "profile": estimate.profile,
         "method": estimate.method,
+        "layout": estimate.layout,
         "output_path": str(target),
         "example_count": estimate.example_count,
         "token_count": int(stream.size),
@@ -316,11 +359,50 @@ def materialize_gpt_arithmetic_stream(
     }
 
 
+def estimate_empirical_entropy_bits(tokens) -> float:
+    import numpy as np
+
+    arr = np.asarray(tokens)
+    if arr.size == 0:
+        raise ValueError("tokens must be non-empty")
+    _, counts = np.unique(arr, return_counts=True)
+    probs = counts / counts.sum()
+    return float(-(probs * np.log2(probs)).sum())
+
+
+def write_symbol_frequency_report(*, token_path: str | Path, output_path: str | Path) -> dict[str, object]:
+    import numpy as np
+
+    source = Path(token_path)
+    target = Path(output_path)
+    if source.stat().st_size % 2 != 0:
+        raise ValueError(f"token stream must contain an even number of bytes: {source}")
+    tokens = np.fromfile(source, dtype=np.uint16)
+    if tokens.size == 0:
+        raise ValueError(f"token stream is empty: {source}")
+    unique, counts = np.unique(tokens, return_counts=True)
+    payload = {
+        "command": "lossless_frequency_report",
+        "token_path": str(source),
+        "token_count": int(tokens.size),
+        "unique_symbols": int(unique.size),
+        "empirical_bits_per_token": estimate_empirical_entropy_bits(tokens),
+        "top_symbols": [
+            {"symbol": int(symbol), "count": int(count)}
+            for symbol, count in sorted(zip(unique.tolist(), counts.tolist()), key=lambda item: item[1], reverse=True)[:16]
+        ],
+    }
+    target.parent.mkdir(parents=True, exist_ok=True)
+    target.write_text(json.dumps(payload, indent=2) + "\n")
+    return payload
+
+
 def build_gpt_arithmetic_plan(
     profile: str,
     *,
     split: str | Sequence[str] | None = "challenge",
     work_dir: str | Path | None = None,
+    layout: str = "frame_major",
 ) -> GPTArithmeticPlan:
     config = load_gpt_arithmetic_profile(profile)
     return GPTArithmeticPlan(
@@ -329,6 +411,7 @@ def build_gpt_arithmetic_plan(
         model=config.model,
         context_tokens=config.context_tokens,
         dataset_name=config.dataset_name,
+        layout=layout,
         split=_normalize_split(split),
         work_dir=str(work_dir) if work_dir is not None else None,
     )

@@ -29,6 +29,23 @@ class TacLosslessArithmeticTests(unittest.TestCase):
 
         self.assertEqual(flat.tolist(), [1024, 1, 2, 3, 4, 1024, 5, 6, 7, 8, 1025])
 
+    def test_flatten_tokens_for_gpt_arithmetic_supports_position_major_layout(self) -> None:
+        import numpy as np
+
+        from tac.lossless.arithmetic import flatten_tokens_for_gpt_arithmetic
+
+        tokens = np.array(
+            [
+                [[1, 2], [3, 4]],
+                [[5, 6], [7, 8]],
+            ],
+            dtype=np.int16,
+        )
+
+        flat = flatten_tokens_for_gpt_arithmetic(tokens, layout="position_major", bos_token=1024, eot_token=1025)
+
+        self.assertEqual(flat.tolist(), [1024, 1, 5, 1024, 2, 6, 1024, 3, 7, 1024, 4, 8, 1025])
+
     def test_build_gpt_arithmetic_plan_returns_typed_small_plan(self) -> None:
         from tac.lossless.arithmetic import build_gpt_arithmetic_plan
 
@@ -36,12 +53,14 @@ class TacLosslessArithmeticTests(unittest.TestCase):
             "gpt_arithmetic_small",
             split=["0", "1"],
             work_dir="/tmp/tac-lossless-arithmetic",
+            layout="position_major",
         )
 
         self.assertEqual(plan.profile, "gpt_arithmetic_small")
         self.assertEqual(plan.method, "gpt_arithmetic")
         self.assertEqual(plan.model, "small")
         self.assertEqual(plan.context_tokens, 256)
+        self.assertEqual(plan.layout, "position_major")
         self.assertEqual(plan.status, "planned")
         self.assertFalse(plan.measured)
         self.assertEqual(plan.split, ("0", "1"))
@@ -95,6 +114,7 @@ class TacLosslessArithmeticTests(unittest.TestCase):
             split=["0", "1"],
             dataset_loader=fake_loader,
             num_proc=2,
+            layout="position_major",
         )
 
         self.assertEqual(calls[0]["dataset_name"], "commaai/commavq")
@@ -102,9 +122,10 @@ class TacLosslessArithmeticTests(unittest.TestCase):
         self.assertEqual(estimate.profile, "gpt_arithmetic_small")
         self.assertEqual(estimate.example_count, 2)
         self.assertEqual(estimate.frames_per_example, 2)
+        self.assertEqual(estimate.layout, "position_major")
         self.assertEqual(estimate.tokens_per_frame, 9)
-        self.assertEqual(estimate.flat_tokens_per_example, 19)
-        self.assertEqual(estimate.total_flat_tokens, 38)
+        self.assertEqual(estimate.flat_tokens_per_example, 25)
+        self.assertEqual(estimate.total_flat_tokens, 50)
         self.assertFalse(estimate.measured)
 
     def test_materialize_gpt_arithmetic_stream_writes_uint16_token_stream(self) -> None:
@@ -130,16 +151,18 @@ class TacLosslessArithmeticTests(unittest.TestCase):
                 output_path=root / "train.bin",
                 dataset_loader=fake_loader,
                 num_proc=1,
+                layout="position_major",
             )
             tokens = np.fromfile(root / "train.bin", dtype=np.uint16)
 
         self.assertEqual(result["command"], "lossless_prepare")
         self.assertEqual(result["profile"], "gpt_arithmetic_small")
+        self.assertEqual(result["layout"], "position_major")
         self.assertEqual(result["example_count"], 2)
-        self.assertEqual(result["token_count"], 12)
+        self.assertEqual(result["token_count"], 18)
         self.assertEqual(
             tokens.tolist(),
-            [1024, 1, 2, 3, 4, 1025, 1024, 5, 6, 7, 8, 1025],
+            [1024, 1, 1024, 2, 1024, 3, 1024, 4, 1025, 1024, 5, 1024, 6, 1024, 7, 1024, 8, 1025],
         )
 
     def test_materialize_gpt_arithmetic_stream_prefers_dataset_map_when_available(self) -> None:
@@ -273,6 +296,124 @@ class TacLosslessArithmeticTests(unittest.TestCase):
 
         self.assertEqual(result["token_count"], 12)
         self.assertEqual(tokens.tolist(), [1024, 1, 2, 3, 4, 1025, 1024, 5, 6, 7, 8, 1025])
+
+    def test_materialize_gpt_arithmetic_stream_reads_dataset_style_shard_columns(self) -> None:
+        import numpy as np
+        import tempfile
+        from pathlib import Path
+
+        from tac.lossless.arithmetic import materialize_gpt_arithmetic_stream
+
+        class FakeDatasetShard:
+            def __init__(self, ids):
+                self._ids = ids
+
+            def with_format(self, fmt):
+                if fmt != "numpy":
+                    raise AssertionError(fmt)
+                return self
+
+            def __getitem__(self, key):
+                if key != "ids":
+                    raise KeyError(key)
+                return list(self._ids)
+
+        class FakeMapped:
+            def __init__(self, ids, lens):
+                self._ids = ids
+                self._len = lens
+
+            def __getitem__(self, key):
+                if key == "len":
+                    return list(self._len)
+                raise KeyError(key)
+
+            def shard(self, *, num_shards, index, contiguous):
+                if not contiguous:
+                    raise AssertionError("expected contiguous shards")
+                start = index * ((len(self._ids) + num_shards - 1) // num_shards)
+                end = min(len(self._ids), start + ((len(self._ids) + num_shards - 1) // num_shards))
+                return FakeDatasetShard(self._ids[start:end])
+
+        class FakeTrainSplit:
+            def __init__(self):
+                self.examples = [
+                    {"json": {"file_name": "clip_a"}, "token.npy": np.array([[[1, 2], [3, 4]]], dtype=np.int16)},
+                    {"json": {"file_name": "clip_b"}, "token.npy": np.array([[[5, 6], [7, 8]]], dtype=np.int16)},
+                ]
+                self.num_rows = len(self.examples)
+
+            def __getitem__(self, index):
+                return self.examples[index]
+
+            def map(self, fn, *, desc=None, num_proc=None, load_from_cache_file=None):
+                outputs = [fn(example) for example in self.examples]
+                return FakeMapped([item["ids"] for item in outputs], [item["len"] for item in outputs])
+
+        def fake_loader(dataset_name: str, *, num_proc=None, data_files=None):
+            return {"train": FakeTrainSplit()}
+
+        with tempfile.TemporaryDirectory() as tmpdir:
+            root = Path(tmpdir)
+            result = materialize_gpt_arithmetic_stream(
+                "gpt_arithmetic_small",
+                split=["0", "1"],
+                output_path=root / "train.bin",
+                dataset_loader=fake_loader,
+                num_proc=1,
+            )
+            tokens = np.fromfile(root / "train.bin", dtype=np.uint16)
+
+        self.assertEqual(result["token_count"], 12)
+        self.assertEqual(tokens.tolist(), [1024, 1, 2, 3, 4, 1025, 1024, 5, 6, 7, 8, 1025])
+
+    def test_estimate_empirical_entropy_returns_reasonable_bits_per_token(self) -> None:
+        import numpy as np
+
+        from tac.lossless.arithmetic import estimate_empirical_entropy_bits
+
+        tokens = np.array([0, 0, 0, 1], dtype=np.uint16)
+        bits = estimate_empirical_entropy_bits(tokens)
+
+        self.assertGreater(bits, 0.0)
+        self.assertLess(bits, 2.0)
+
+    def test_write_symbol_frequency_report_emits_json_summary(self) -> None:
+        import json
+        import numpy as np
+        import tempfile
+        from pathlib import Path
+
+        from tac.lossless.arithmetic import write_symbol_frequency_report
+
+        with tempfile.TemporaryDirectory() as tmpdir:
+            root = Path(tmpdir)
+            token_path = root / "train.bin"
+            np.array([0, 0, 1, 2, 2, 2], dtype=np.uint16).tofile(token_path)
+            report_path = root / "freq.json"
+
+            result = write_symbol_frequency_report(token_path=token_path, output_path=report_path)
+            payload = json.loads(report_path.read_text())
+
+        self.assertEqual(result["command"], "lossless_frequency_report")
+        self.assertEqual(payload["token_count"], 6)
+        self.assertEqual(payload["unique_symbols"], 3)
+        self.assertIn("empirical_bits_per_token", payload)
+
+    def test_write_symbol_frequency_report_rejects_odd_byte_stream(self) -> None:
+        import tempfile
+        from pathlib import Path
+
+        from tac.lossless.arithmetic import write_symbol_frequency_report
+
+        with tempfile.TemporaryDirectory() as tmpdir:
+            root = Path(tmpdir)
+            token_path = root / "broken.bin"
+            token_path.write_bytes(b"\x01\x02\x03")
+            report_path = root / "freq.json"
+
+            with self.assertRaisesRegex(ValueError, "even number of bytes"):
+                write_symbol_frequency_report(token_path=token_path, output_path=report_path)
 
 
 if __name__ == "__main__":
