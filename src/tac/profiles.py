@@ -350,6 +350,52 @@ MASK_RENDERER_DEEP = {
     "pretrain_epochs": 500,
 }
 
+# ── Wavelet Lane: Wavelet-domain renderer profiles ─────────────────────
+# Predict wavelet coefficients from masks, reconstruct via parameter-free iDWT.
+# Smaller than pixel-domain U-Net (~100-200K params vs 312K).
+
+WAVELET_RENDERER_SMOKE = {
+    "variant": "wavelet_renderer",
+    "hidden": 48,                            # base hidden width for coeff predictors
+    "embed_dim": 8,                          # per-class embedding dimension
+    "motion_hidden": 32,                     # MotionPredictor hidden channels
+    "epochs": 200,
+    "lr": 1e-3,
+    "ema_decay": 0.997,
+    "alpha": 0.0,                            # no saliency recon (rendering from scratch)
+    "sal_lambda": 0.0,
+    "loss_mode": "standard",
+    "segnet_loss_weight": 100.0,
+    "boundary_weight": 1.0,
+    "hard_frame_ratio": 0.0,
+    "eval_every": 10,
+    "accum_steps": 2,
+    "quantize_mode": "fp4",
+    "pretrain_epochs": 50,                   # Phase 1: L1+edge loss (no scorer)
+}
+
+WAVELET_RENDERER_FULL = {
+    "variant": "wavelet_renderer",
+    "hidden": 48,
+    "embed_dim": 8,
+    "motion_hidden": 32,
+    "epochs": 2500,
+    "lr": 5e-4,
+    "ema_decay": 0.997,
+    "alpha": 0.0,
+    "sal_lambda": 0.0,
+    "loss_mode": "standard",
+    "segnet_loss_weight": 100.0,
+    "boundary_weight": 50.0,
+    "hard_frame_ratio": 0.3,
+    "error_replay_every": 200,
+    "eval_every": 5,
+    "accum_steps": 4,
+    "use_swa": True,
+    "quantize_mode": "fp4",
+    "pretrain_epochs": 200,                  # Phase 1: longer warm-up for wavelet basis
+}
+
 PROFILES = {
     "council_v1": COUNCIL_V1,
     "council_v2_adaptive": COUNCIL_V2_ADAPTIVE,
@@ -371,4 +417,6 @@ PROFILES = {
     "mask_renderer_full": MASK_RENDERER_FULL,
     "mask_renderer_wide": MASK_RENDERER_WIDE,
     "mask_renderer_deep": MASK_RENDERER_DEEP,
+    "wavelet_renderer_smoke": WAVELET_RENDERER_SMOKE,
+    "wavelet_renderer_full": WAVELET_RENDERER_FULL,
 }

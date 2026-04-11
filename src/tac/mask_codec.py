@@ -7,10 +7,16 @@ Segmentation masks are ideal for AV1: discrete values (0-4), enormous spatial
 coherence, near-zero temporal change within road segments. Typical AV1 encoding
 of 1200 frames of masks at 512x384 fits in ~200KB at CRF 20.
 
+Codec options (pass codec= to encode/decode functions):
+    - "av1": AV1 via ffmpeg (default, lossy, ~33KB at CRF 20)
+    - "entropy": custom delta+RLE+LZMA coder (lossless, ~8-15KB)
+
 Functions:
     - extract_masks: run frozen SegNet on frames, take argmax
     - encode_masks: write masks as AV1 video via ffmpeg
     - decode_masks: read AV1 video back to mask tensors
+    - encode_masks_auto: encode with chosen codec
+    - decode_masks_auto: decode with chosen codec
     - masks_to_pairs: build consecutive mask pairs for PairGenerator
 """
 from __future__ import annotations
@@ -268,6 +274,56 @@ def mask_pair_from_index(
         (mask_t, mask_t+1) each (1, H, W) long
     """
     return masks[start_idx].unsqueeze(0), masks[start_idx + 1].unsqueeze(0)
+
+
+def encode_masks_auto(
+    masks: torch.Tensor,
+    output_path: str | Path,
+    codec: str = "av1",
+    **kwargs,
+) -> int:
+    """Encode masks using the chosen codec.
+
+    Args:
+        masks: (N, H, W) long tensor with values in [0, NUM_CLASSES)
+        output_path: output file path (.mp4 for av1, .msk for entropy)
+        codec: "av1" or "entropy"
+        **kwargs: passed to underlying encoder (crf/fps for av1, backend for entropy)
+
+    Returns:
+        File size in bytes
+    """
+    if codec == "av1":
+        return encode_masks(masks, output_path, **kwargs)
+    elif codec == "entropy":
+        from .mask_entropy_coder import encode_masks_entropy
+        return encode_masks_entropy(masks, output_path, **kwargs)
+    else:
+        raise ValueError(f"Unknown mask codec: {codec!r} (use 'av1' or 'entropy')")
+
+
+def decode_masks_auto(
+    mask_path: str | Path,
+    codec: str = "av1",
+    **kwargs,
+) -> torch.Tensor:
+    """Decode masks using the chosen codec.
+
+    Args:
+        mask_path: path to encoded mask file
+        codec: "av1" or "entropy"
+        **kwargs: passed to underlying decoder
+
+    Returns:
+        (N, H, W) long tensor with values in [0, NUM_CLASSES)
+    """
+    if codec == "av1":
+        return decode_masks(mask_path, **kwargs)
+    elif codec == "entropy":
+        from .mask_entropy_coder import decode_masks_entropy
+        return decode_masks_entropy(mask_path, **kwargs)
+    else:
+        raise ValueError(f"Unknown mask codec: {codec!r} (use 'av1' or 'entropy')")
 
 
 def measure_mask_rate(

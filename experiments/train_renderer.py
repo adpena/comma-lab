@@ -48,6 +48,7 @@ from tac.losses import eval_scorer_loss, scorer_forward_pair, scorer_loss, score
 from tac.mask_codec import extract_masks, mask_pair_from_index  # noqa: E402
 from tac.profiles import PROFILES  # noqa: E402
 from tac.renderer import build_renderer  # noqa: E402
+from tac.wavelet_renderer import build_wavelet_renderer  # noqa: E402
 from tac.scorer import detect_device, load_scorers  # noqa: E402
 from tac.training import EMA  # noqa: E402
 from tac.utils import setup_signal_handlers, write_telemetry  # noqa: E402
@@ -60,9 +61,11 @@ def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
     p = argparse.ArgumentParser(description="Train mask-conditioned renderer (GPU lane)")
 
     # Profile
-    renderer_profiles = [k for k in PROFILES if k.startswith("mask_renderer")]
+    renderer_profiles = [k for k in PROFILES if k.startswith(("mask_renderer", "wavelet_renderer"))]
     p.add_argument("--profile", type=str, default=None, choices=list(PROFILES.keys()),
                    help=f"Named profile. Renderer profiles: {renderer_profiles}")
+    p.add_argument("--variant", type=str, default=None, choices=["mask_renderer", "wavelet_renderer"],
+                   help="Renderer variant (auto-detected from profile if not set)")
 
     # Architecture
     p.add_argument("--base-ch", type=int, default=None, help="MaskRenderer base channels")
@@ -122,6 +125,9 @@ def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
         if cli_val is not None:
             return cli_val
         return profile_vals.get(profile_key, default)
+
+    # Resolve variant from CLI, profile, or default
+    args.variant = _resolve(args.variant, "variant", "mask_renderer")
 
     args.base_ch = _resolve(args.base_ch, "hidden", 36)
     args.mid_ch = _resolve(args.mid_ch, "mid_ch", 60)
@@ -287,15 +293,23 @@ def train(args: argparse.Namespace):
     # Keep masks on CPU, move per-pair to device during training
     all_masks = all_masks.cpu()
 
-    # Build model
-    model = build_renderer(
-        num_classes=5,
-        embed_dim=args.embed_dim,
-        base_ch=args.base_ch,
-        mid_ch=args.mid_ch,
-        motion_hidden=args.motion_hidden,
-        depth=args.depth,
-    )
+    # Build model (dispatch by variant)
+    if args.variant == "wavelet_renderer":
+        model = build_wavelet_renderer(
+            num_classes=5,
+            embed_dim=args.embed_dim,
+            hidden=args.base_ch,
+            motion_hidden=args.motion_hidden,
+        )
+    else:
+        model = build_renderer(
+            num_classes=5,
+            embed_dim=args.embed_dim,
+            base_ch=args.base_ch,
+            mid_ch=args.mid_ch,
+            motion_hidden=args.motion_hidden,
+            depth=args.depth,
+        )
     model = model.to(device)
 
     # Wrap with FP4 QAT if enabled
@@ -605,7 +619,7 @@ def train(args: argparse.Namespace):
                 "lr": round(lr, 8),
                 "phase": phase,
                 "tag": args.tag,
-                "variant": "mask_renderer",
+                "variant": args.variant,
                 "epoch_sec": round(epoch_sec, 2),
                 "eval_pose": round(eval_pose, 8),
                 "eval_seg": round(eval_seg, 8),
