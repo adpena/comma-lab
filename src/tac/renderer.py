@@ -166,15 +166,21 @@ class MaskRenderer(nn.Module):
 # ── MotionPredictor ─────────────────────────────────────────────────────
 
 
+_coord_grid_cache: dict[tuple[int, int, torch.device], torch.Tensor] = {}
+
+
 def make_coord_grid(h: int, w: int, device: torch.device) -> torch.Tensor:
-    """Create normalized coordinate grid for grid_sample.
+    """Create normalized coordinate grid for grid_sample (cached).
 
     Returns: (1, H, W, 2) tensor with values in [-1, 1].
     """
-    yy = torch.linspace(-1.0, 1.0, h, device=device)
-    xx = torch.linspace(-1.0, 1.0, w, device=device)
-    grid_y, grid_x = torch.meshgrid(yy, xx, indexing="ij")
-    return torch.stack([grid_x, grid_y], dim=-1).unsqueeze(0)
+    key = (h, w, device)
+    if key not in _coord_grid_cache:
+        yy = torch.linspace(-1.0, 1.0, h, device=device)
+        xx = torch.linspace(-1.0, 1.0, w, device=device)
+        grid_y, grid_x = torch.meshgrid(yy, xx, indexing="ij")
+        _coord_grid_cache[key] = torch.stack([grid_x, grid_y], dim=-1).unsqueeze(0)
+    return _coord_grid_cache[key]
 
 
 def warp_with_flow(
