@@ -426,6 +426,10 @@ The comma four runs openpilot on a Qualcomm Snapdragon SA8295P with dedicated vi
 
 The deployment target is the cloud decode pipeline, not the device. Compressed video arrives at comma's servers, gets decoded, and feeds into training data preparation. The filter runs once per frame at decode time, before the data enters the training pipeline. This avoids all on-device thermal, power, and safety certification concerns while capturing the primary value: better training data from the same compressed video.
 
+Critically, the filter and the encoder CRF setting are a paired artifact. The CRF distribution shift finding (Section 4) showed that a filter trained at CRF 34 degrades quality when applied to CRF 36 output, and vice versa. The filter is not a generic enhancement — it is a CRF-specific codec enhancement module that must be deployed alongside the exact encoder configuration it was trained against. Changing CRF requires retraining the filter (hours on a single GPU, but not free).
+
+This coupling actually strengthens the deployment case for comma's fleet. comma controls the encoder settings fleet-wide: every device runs the same openpilot build with the same video encoding parameters. They can pair a specific CRF with a specific filter checkpoint and update both together via OTA. There is no coordination problem because there is only one encoder configuration in the fleet at any given time. The paired artifact becomes a single versioned unit — (CRF setting, filter checkpoint) — deployed atomically.
+
 For on-device replay (local model evaluation), the filter could run on the Hexagon DSP. At h=16 (3,203 parameters, ~3KB), a single forward pass costs under 1ms per frame on the Hexagon 698 at int8 precision. Even h=64 stays under 5ms. The thermal cost is negligible against the 5W sustained envelope.
 
 ### Fleet-scale numbers
@@ -465,6 +469,8 @@ A natural extension is saliency-guided QP allocation within the codec itself. Th
 Deployment requires validation on diverse driving conditions beyond the competition's test set. The filter was trained on a specific distribution of road types, lighting, and weather. On out-of-distribution content (night driving, rain, snow, camera degradation), the zero-initialized residual architecture provides a safety margin — the filter starts as identity and learns small corrections, so truly novel content should receive minimal modification. But "should" is not "will." A minimum viable validation set of 1000+ hours covering night, weather, and geographic variation is needed before fleet deployment.
 
 The filter should be retrained whenever the downstream task model is updated. Training takes hours on a single GPU, and the filter retraining should be part of the model update CI/CD pipeline. The maintenance burden is proportional to the model update cadence, not to fleet size.
+
+Any change to the encoder parameters — CRF value, resolution, pixel format, codec version — requires filter revalidation on the authoritative scorer before fleet deployment. The filter's corrections are tuned to the specific artifact patterns produced by a given encoder configuration. A CRF change alters the distribution of quantization artifacts, and a filter trained on the old distribution may amplify rather than correct the new artifacts. The validation gate is: run the candidate (encoder config, filter checkpoint) pair through the full evaluation pipeline and confirm that both SegNet and PoseNet distortion remain below the no-filter baseline.
 
 ## Related work
 

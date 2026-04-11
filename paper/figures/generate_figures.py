@@ -100,11 +100,14 @@ def fig1():
 
 # ── Figure 2: Pareto frontier ────────────────────────────────────────────────
 def fig2():
+    PURPLE = "#9467bd"
+
     # Points of interest
     points = {
         "Baseline\n(no filter)":   (get(1)[1], get(1)[0], "o", GRAY),
         "Std h64\n2500":           (get(47)[1], get(47)[0], "s", BLUE),
         "Dilated h64\n(ours)":     (get(48)[1], get(48)[0], "*", RED),
+        "PSD h64\n(balanced)":     (0.01108, 0.00532, "D", PURPLE),
         "KL distill\n#1 (sw=100)": (0.048, 0.0058, "x", ORANGE),  # approximate from notes
         "KL distill\n#2 (sw=30)":  (get(49)[1], get(49)[0], "x", ORANGE),
     }
