@@ -123,7 +123,7 @@ def ensemble_and_save(
     print("[ensemble] Averaging state dicts...")
     avg_sd = average_state_dicts(state_dicts)
 
-    # Save as int8
+    # Save as int8 (use save_int8 with per_channel for better fidelity)
     meta = {
         "variant": variant,
         "hidden": hidden,
@@ -131,9 +131,12 @@ def ensemble_and_save(
         "ensemble_size": len(checkpoint_paths),
         "source_checkpoints": checkpoint_paths,
         "method": "weight_space_averaging",
+        "per_channel": per_channel,
     }
 
-    size = save_int8_from_state_dict(avg_sd, output_path, meta=meta)
+    model = build_postfilter(variant, hidden=hidden, kernel=kernel)
+    model.load_state_dict(avg_sd)
+    size = save_int8(model, output_path, meta=meta, per_channel=per_channel)
     print(f"[ensemble] Saved averaged int8 checkpoint: {output_path} ({size:,} bytes)")
 
     return {

@@ -156,8 +156,10 @@ def encode_masks(
         # discrete class boundaries. Disabling them preserves sharp mask edges at zero cost.
         "-svtav1-params",
         "enable-restoration=0:enable-cdef=0",
+        # Use gray (not yuv420p) for discrete mask data: chroma subsampling
+        # creates phantom values at class boundaries for 5-class data.
         "-pix_fmt",
-        "yuv420p",
+        "gray",
         "-an",
         str(output_path),
     ]
@@ -466,7 +468,8 @@ def sharpen_mask_boundaries(
 
     for frame_idx in range(N):
         frame = masks_np[frame_idx]
-        opened_frame = np.zeros_like(frame)
+        # Initialize to -1 so class 0 doesn't falsely claim unclaimed pixels
+        opened_frame = np.full_like(frame, fill_value=-1, dtype=np.int64)
 
         for cls in range(NUM_CLASSES):
             binary = (frame == cls).astype(np.uint8)
@@ -493,14 +496,9 @@ def sharpen_mask_boundaries(
 
             opened_frame[opened.astype(bool)] = cls
 
-        # Handle unclaimed pixels: assign to nearest class via majority vote
-        unclaimed = np.ones((H, W), dtype=bool)
-        for cls in range(NUM_CLASSES):
-            unclaimed &= (opened_frame != cls) | (opened_frame == 0)
-
-        # Simple fix: use original labels for unclaimed pixels
+        # Handle unclaimed pixels: fill from original frame
         # (morphological artifacts are typically at boundaries)
-        unclaimed_mask = (opened_frame == 0) & (frame != 0)
+        unclaimed_mask = opened_frame == -1
         if unclaimed_mask.any():
             opened_frame[unclaimed_mask] = frame[unclaimed_mask]
 

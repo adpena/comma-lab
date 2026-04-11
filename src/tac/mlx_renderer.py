@@ -528,8 +528,9 @@ class PairGenerator(nn.Module):
         # Share embedding: point motion's embedding to renderer's
         self.motion.embedding = self.renderer.embedding
 
-        # Learned blend weight
-        self.blend_logit = mx.array(0.0)
+        # Learned blend weight — stored as 1-element array so MLX's parameter
+        # system tracks it (scalar mx.array may not appear in self.parameters()).
+        self.blend_logit = mx.array([0.0])
 
     def __call__(self, mask_t: mx.array, mask_t1: mx.array) -> mx.array:
         """Generate a frame pair from two consecutive masks.
@@ -547,7 +548,7 @@ class PairGenerator(nn.Module):
         flow = self.motion(mask_t, mask_t1)  # (B, H, W, 2)
         frame_t1_warped = _warp_with_flow(frame_t, flow)
 
-        alpha = mx.sigmoid(self.blend_logit)
+        alpha = mx.sigmoid(self.blend_logit[0])
         frame_t1_blended = mx.clip(
             alpha * frame_t1_warped + (1.0 - alpha) * frame_t1,
             0.0,

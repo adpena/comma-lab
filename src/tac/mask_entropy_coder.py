@@ -294,6 +294,7 @@ def test_roundtrip(
     num_frames: int = 1200,
     H: int = 384,
     W: int = 512,
+    av1_est: int = 33_000,
 ) -> dict:
     """Test roundtrip on synthetic data with varying temporal change rates."""
     import tempfile
@@ -375,7 +376,6 @@ def test_roundtrip(
 
                 match = torch.equal(masks_tensor, decoded)
                 raw_pixels = num_frames * H * W
-                av1_est = 33_000
 
                 results[key] = {
                     "size_bytes": size,

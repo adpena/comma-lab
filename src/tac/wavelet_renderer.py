@@ -61,7 +61,7 @@ def haar_dwt2d(x: torch.Tensor) -> tuple[torch.Tensor, torch.Tensor, torch.Tenso
     ll = x00 + x01 + x10 + x11
     lh = x00 + x01 - x10 - x11
     hl = x00 - x01 + x10 - x11
-    hh = x00 - x01 - x10 + x11  # note: +x11 (separable product of two sign flips)
+    hh = x00 - x01 - x10 + x11  # +x11: (-1)*(-1)=+1 from separable row/col sign flips
     return ll, lh, hl, hh
 
 
@@ -300,6 +300,9 @@ class WaveletRenderer(nn.Module):
             (B, 3, H, W) float RGB in [0, 255]
         """
         B, H, W = masks.shape
+        assert H % 4 == 0 and W % 4 == 0, (
+            f"H and W must be divisible by 4 for 2-level Haar DWT, got {H}x{W}"
+        )
 
         # Embed mask at full resolution: (B, H, W) -> (B, embed_dim, H, W)
         emb = self.embedding(masks).permute(0, 3, 1, 2).contiguous()
@@ -383,6 +386,9 @@ class SparseWaveletRenderer(nn.Module):
             (B, 3, H, W) float RGB in [0, 255]
         """
         B, H, W = masks.shape
+        assert H % 4 == 0 and W % 4 == 0, (
+            f"H and W must be divisible by 4 for 2-level Haar DWT, got {H}x{W}"
+        )
         emb = self.embedding(masks).permute(0, 3, 1, 2).contiguous()
 
         H2, W2 = H // 2, W // 2

@@ -203,6 +203,7 @@ class FiLMPostFilter(nn.Module):
         nn.init.zeros_(self.conv3.bias)
 
     def _descriptor(self, x: torch.Tensor) -> torch.Tensor:
+        B = x.shape[0]
         y = x[:, 0:1] * 0.299 + x[:, 1:2] * 0.587 + x[:, 2:3] * 0.114
         y_norm = y / 255.0
         mean = y_norm.mean(dim=(2, 3))
@@ -210,7 +211,8 @@ class FiLMPostFilter(nn.Module):
         dx = y_norm[..., :, 1:] - y_norm[..., :, :-1]
         dy = y_norm[..., 1:, :] - y_norm[..., :-1, :]
         edge = 0.5 * (dx.abs().mean(dim=(2, 3)) + dy.abs().mean(dim=(2, 3)))
-        return torch.cat([mean, std, edge], dim=1)
+        # Explicit (B, 3) shape — mean/std/edge each reduce to (B, 1)
+        return torch.cat([mean, std, edge], dim=1).view(B, 3)
 
     def forward(self, x: torch.Tensor) -> torch.Tensor:
         film = self.film(self._descriptor(x))

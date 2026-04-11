@@ -428,7 +428,10 @@ class VQVAEPairGenerator(nn.Module):
     def __init__(self, vqvae: VQVAE):
         super().__init__()
         self.vqvae = vqvae
-        # Exposed after each forward() call for training code to consume
+        # Exposed after each forward() call for training code to consume.
+        # WARNING: mutable instance state — not thread-safe. If used from
+        # multiple threads, read these values immediately after forward()
+        # or switch to returning a dict from forward().
         self.last_vq_loss: torch.Tensor | None = None
         self.last_indices: tuple[torch.Tensor, torch.Tensor] | None = None
 
