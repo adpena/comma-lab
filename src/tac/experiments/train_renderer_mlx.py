@@ -34,6 +34,7 @@ import numpy as np
 import mlx.core as mx
 import mlx.nn as nn
 import mlx.optimizers as optim
+import mlx.utils
 
 # ── Path setup ──────────────────────────────────────────────────────────
 
@@ -369,13 +370,13 @@ def train(args: argparse.Namespace):
 
             # Manual gradient clipping (replaces broken optim.clip_grad_norm)
             if max_grad_norm > 0:
-                grads_flat, _ = mx.utils.tree_flatten(grads)
+                grads_flat, _ = mlx.utils.tree_flatten(grads)
                 total_norm = mx.sqrt(
                     sum(g.square().sum() for g in grads_flat if isinstance(g, mx.array))
                 )
                 clip_coef = min(1.0, max_grad_norm / (total_norm.item() + 1e-6))
                 if clip_coef < 1.0:
-                    grads = mx.utils.tree_map(lambda g: g * clip_coef, grads)
+                    grads = mlx.utils.tree_map(lambda g: g * clip_coef, grads)
 
             optimizer.update(model, grads)
             # Sync to avoid memory buildup
