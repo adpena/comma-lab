@@ -291,11 +291,16 @@ class TacLosslessArithmeticTests(unittest.TestCase):
                 output_path=root / "train.bin",
                 dataset_loader=fake_loader,
                 num_proc=1,
+                layout="position_major",
             )
             tokens = np.fromfile(root / "train.bin", dtype=np.uint16)
 
-        self.assertEqual(result["token_count"], 12)
-        self.assertEqual(tokens.tolist(), [1024, 1, 2, 3, 4, 1025, 1024, 5, 6, 7, 8, 1025])
+        self.assertEqual(result["token_count"], 18)
+        self.assertEqual(result["layout"], "position_major")
+        self.assertEqual(
+            tokens.tolist(),
+            [1024, 1, 1024, 2, 1024, 3, 1024, 4, 1025, 1024, 5, 1024, 6, 1024, 7, 1024, 8, 1025],
+        )
 
     def test_materialize_gpt_arithmetic_stream_reads_dataset_style_shard_columns(self) -> None:
         import numpy as np
@@ -317,6 +322,76 @@ class TacLosslessArithmeticTests(unittest.TestCase):
                 if key != "ids":
                     raise KeyError(key)
                 return list(self._ids)
+
+        class FakeMapped:
+            def __init__(self, ids, lens):
+                self._ids = ids
+                self._len = lens
+
+            def __getitem__(self, key):
+                if key == "len":
+                    return list(self._len)
+                raise KeyError(key)
+
+            def shard(self, *, num_shards, index, contiguous):
+                if not contiguous:
+                    raise AssertionError("expected contiguous shards")
+                start = index * ((len(self._ids) + num_shards - 1) // num_shards)
+                end = min(len(self._ids), start + ((len(self._ids) + num_shards - 1) // num_shards))
+                return FakeDatasetShard(self._ids[start:end])
+
+        class FakeTrainSplit:
+            def __init__(self):
+                self.examples = [
+                    {"json": {"file_name": "clip_a"}, "token.npy": np.array([[[1, 2], [3, 4]]], dtype=np.int16)},
+                    {"json": {"file_name": "clip_b"}, "token.npy": np.array([[[5, 6], [7, 8]]], dtype=np.int16)},
+                ]
+                self.num_rows = len(self.examples)
+
+            def __getitem__(self, index):
+                return self.examples[index]
+
+            def map(self, fn, *, desc=None, num_proc=None, load_from_cache_file=None):
+                outputs = [fn(example) for example in self.examples]
+                return FakeMapped([item["ids"] for item in outputs], [item["len"] for item in outputs])
+
+        def fake_loader(dataset_name: str, *, num_proc=None, data_files=None):
+            return {"train": FakeTrainSplit()}
+
+        with tempfile.TemporaryDirectory() as tmpdir:
+            root = Path(tmpdir)
+            result = materialize_gpt_arithmetic_stream(
+                "gpt_arithmetic_small",
+                split=["0", "1"],
+                output_path=root / "train.bin",
+                dataset_loader=fake_loader,
+                num_proc=1,
+            )
+            tokens = np.fromfile(root / "train.bin", dtype=np.uint16)
+
+        self.assertEqual(result["token_count"], 12)
+        self.assertEqual(tokens.tolist(), [1024, 1, 2, 3, 4, 1025, 1024, 5, 6, 7, 8, 1025])
+
+    def test_materialize_gpt_arithmetic_stream_handles_numpy_backed_shard_arrays(self) -> None:
+        import numpy as np
+        import tempfile
+        from pathlib import Path
+
+        from tac.lossless.arithmetic import materialize_gpt_arithmetic_stream
+
+        class FakeDatasetShard:
+            def __init__(self, ids):
+                self._ids = ids
+
+            def with_format(self, fmt):
+                if fmt != "numpy":
+                    raise AssertionError(fmt)
+                return self
+
+            def __getitem__(self, key):
+                if key != "ids":
+                    raise KeyError(key)
+                return np.asarray(self._ids, dtype=np.uint16)
 
         class FakeMapped:
             def __init__(self, ids, lens):

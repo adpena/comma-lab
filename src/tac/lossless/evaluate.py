@@ -175,6 +175,8 @@ def evaluate_lossless_archive(
         original_bytes=resolved_original_bytes,
         compression_rate=compression_rate(resolved_archive_bytes, resolved_original_bytes),
         method=method,
+        record_count=verification.checked_items,
+        checked_items=verification.checked_items,
     )
     return result, verification
 
@@ -227,6 +229,8 @@ def evaluate_commavq_dataset_archive(
             original_bytes=resolved_original_bytes,
             compression_rate=compression_rate(resolved_archive_bytes, resolved_original_bytes),
             method=method,
+            record_count=verification.checked_items,
+            checked_items=verification.checked_items,
         )
         return result, verification
 
@@ -299,7 +303,20 @@ def evaluate_local_submission_contract(
             dataset_name=dataset_name,
             num_proc=num_proc,
         )
-        return compression, verification, decompressed_root
+        promoted_result = LosslessCompressionResult(
+            profile=compression.profile,
+            archive_path=compression.archive_path,
+            archive_bytes=compression.archive_bytes,
+            original_bytes=compression.original_bytes,
+            compression_rate=compression.compression_rate,
+            method=compression.method,
+            payload_bytes=compression.payload_bytes,
+            record_count=compression.record_count,
+            checked_items=compression.checked_items,
+            split=list(split) if isinstance(split, (list, tuple)) else [str(split)],
+            evidence_root=str(root),
+        )
+        return promoted_result, verification, decompressed_root
     finally:
         if tmpdir is not None:
             tmpdir.cleanup()

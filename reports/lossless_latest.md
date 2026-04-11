@@ -4,7 +4,7 @@ Current promoted lossless baseline is **`1.5947`** via `lzma_baseline` using `lz
 
 ## promoted result
 
-- Status: exact round-trip confirmed
+- Status: exact round-trip confirmed over `5000` items
 - Profile: `lzma_baseline`
 - Method: `lzma`
 - Compression rate: **`1.5947`**

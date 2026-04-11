@@ -325,6 +325,7 @@ def materialize_gpt_arithmetic_stream(
                 "command": "lossless_prepare",
                 "profile": estimate.profile,
                 "method": estimate.method,
+                "layout": estimate.layout,
                 "output_path": str(target),
                 "example_count": estimate.example_count,
                 "token_count": token_count,

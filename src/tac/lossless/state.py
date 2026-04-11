@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import json
+import math
 import tempfile
 from dataclasses import asdict
 from pathlib import Path
@@ -13,12 +14,40 @@ def load_lossless_result(path: str | Path) -> LosslessCompressionResult:
     return LosslessCompressionResult(**payload)
 
 
+def validate_lossless_result_artifact(result: LosslessCompressionResult) -> None:
+    archive_path = Path(result.archive_path)
+    if not archive_path.exists():
+        raise FileNotFoundError(f"Lossless archive not found: {archive_path}")
+    actual_archive_bytes = archive_path.stat().st_size
+    if actual_archive_bytes != result.archive_bytes:
+        raise ValueError(
+            f"archive_bytes mismatch for {archive_path}: record={result.archive_bytes} actual={actual_archive_bytes}"
+        )
+    expected_rate = result.original_bytes / result.archive_bytes
+    if not math.isclose(result.compression_rate, expected_rate, rel_tol=1e-12, abs_tol=1e-12):
+        raise ValueError(
+            "compression_rate mismatch for "
+            f"{archive_path}: record={result.compression_rate} expected={expected_rate}"
+        )
+    if result.checked_items is None:
+        raise ValueError("checked_items is required for exact verification evidence")
+    if result.record_count is None:
+        raise ValueError("record_count is required for exact verification evidence")
+    if result.checked_items <= 0 or result.record_count <= 0:
+        raise ValueError("checked_items and record_count must be positive for exact verification evidence")
+    if result.checked_items != result.record_count:
+        raise ValueError(
+            "checked_items must equal record_count for exact verification evidence: "
+            f"checked_items={result.checked_items} record_count={result.record_count}"
+        )
+
+
 def render_lossless_latest(result: LosslessCompressionResult) -> str:
     return (
         "# Lossless Latest\n\n"
         f"Current promoted lossless baseline is **`{result.compression_rate:.4f}`** via `{result.profile}` using `{result.method}`.\n\n"
         "## promoted result\n\n"
-        "- Status: exact round-trip confirmed\n"
+        f"- Status: exact round-trip confirmed over `{result.checked_items}` items\n"
         f"- Profile: `{result.profile}`\n"
         f"- Method: `{result.method}`\n"
         f"- Compression rate: **`{result.compression_rate:.4f}`**\n"
@@ -109,6 +138,8 @@ def _results_row(result: LosslessCompressionResult) -> dict[str, object]:
         "archive_bytes": result.archive_bytes,
         "original_bytes": result.original_bytes,
         "compression_rate": result.compression_rate,
+        "record_count": result.record_count,
+        "checked_items": result.checked_items,
         "event": "promotion",
     }
 
@@ -122,20 +153,15 @@ def _timeline_row(result: LosslessCompressionResult) -> dict[str, object]:
         "archive_bytes": result.archive_bytes,
         "original_bytes": result.original_bytes,
         "archive_path": result.archive_path,
+        "record_count": result.record_count,
+        "checked_items": result.checked_items,
     }
 
 
 def promote_lossless_result(*, repo_root: str | Path, result_path: str | Path) -> dict[str, object]:
     root = Path(repo_root)
     result = load_lossless_result(result_path)
-    archive_path = Path(result.archive_path)
-    if not archive_path.exists():
-        raise FileNotFoundError(f"Lossless archive not found: {archive_path}")
-    actual_archive_bytes = archive_path.stat().st_size
-    if actual_archive_bytes != result.archive_bytes:
-        raise ValueError(
-            f"archive_bytes mismatch for {archive_path}: record={result.archive_bytes} actual={actual_archive_bytes}"
-        )
+    validate_lossless_result_artifact(result)
 
     results_row = _results_row(result)
     timeline_row = _timeline_row(result)
