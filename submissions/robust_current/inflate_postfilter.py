@@ -374,7 +374,9 @@ def inflate_with_postfilter(
         with torch.inference_mode():
             out = model(x)
             # Multi-pass: run the CNN again on its own output (deeper effective network)
+            # Round to uint8 between passes to match the training distribution
             for _ in range(MULTI_PASS - 1):
+                out = out.round().clamp(0, 255)
                 out = model(out)
         for i in range(out.shape[0]):
             t = out[i].permute(1, 2, 0).round().clamp(0, 255).to(torch.uint8).cpu()

@@ -1140,17 +1140,23 @@ class Trainer:
             self._baseline_seg = round(avg_s, 8)
             print(f"[eval] Baseline watermark: pose={avg_p:.6f}, seg={avg_s:.6f}")
 
-        # Proxy confidence: flag when PoseNet is suspiciously low
-        # confidence = min(1, pose / baseline_pose). Below 0.3 = suspicious.
+        # Proxy confidence: high when pose is in a credible range relative to baseline.
+        # Drops when pose regresses (ratio > 2) OR improves implausibly (ratio < 0.05).
+        # Normal training drives pose from baseline toward ~0.3x baseline over hundreds of epochs.
         proxy_confidence = 1.0
         if hasattr(self, '_baseline_pose') and self._baseline_pose and self._baseline_pose > 0:
             pose_ratio = avg_p / self._baseline_pose
-            proxy_confidence = min(1.0, avg_p / self._baseline_pose)
 
-            if proxy_confidence < 0.3:
-                print(f"  !! PROXY CONFIDENCE LOW: {proxy_confidence:.2f} "
-                      f"(pose={avg_p:.6f} vs baseline={self._baseline_pose:.6f}) "
-                      f"— authoritative eval recommended before promotion !!")
+            if pose_ratio > 2.0:
+                # PoseNet regressing — proxy may be masking damage
+                proxy_confidence = max(0.1, 1.0 / pose_ratio)
+                print(f"  !! PROXY CONFIDENCE LOW (regression): pose={avg_p:.6f} is "
+                      f"{pose_ratio:.1f}x baseline — authoritative eval recommended !!")
+            elif pose_ratio < 0.05:
+                # PoseNet suspiciously good — may be noise floor or measurement artifact
+                proxy_confidence = 0.5
+                print(f"  !! PROXY CONFIDENCE MODERATE: pose={avg_p:.6f} is "
+                      f"{pose_ratio:.2f}x baseline (suspiciously low) !!")
 
             # Regression alarm: warn if PoseNet regresses 3x from baseline
             if pose_ratio > 3.0:
