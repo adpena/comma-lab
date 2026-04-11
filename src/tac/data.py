@@ -126,8 +126,14 @@ def saliency_for_pair(
 
 
 def load_raw_saliency(saliency_path: str | Path) -> torch.Tensor:
-    """Load raw saliency map (N, H, W) without applying alpha weighting."""
-    return torch.from_numpy(np.load(str(saliency_path))).float()
+    """Load raw saliency map (N, H, W) without applying alpha weighting.
+
+    Supports both .npy (numpy) and .pt (torch) formats.
+    """
+    path = Path(saliency_path)
+    if path.suffix == ".pt":
+        return torch.load(str(path), map_location="cpu", weights_only=True).float()
+    return torch.from_numpy(np.load(str(path))).float()
 
 
 def load_saliency_weights(

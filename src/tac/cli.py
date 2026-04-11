@@ -48,13 +48,20 @@ from .lossless.submission import build_submission_zip
 from .profiles import PROFILES as LOSSY_PROFILES
 
 PROJECT_ROOT = Path(__file__).resolve().parents[2]
-UPSTREAM_ROOT = PROJECT_ROOT / "workspace" / "upstream" / "comma_video_compression_challenge"
+
+# All paths are configurable via environment variables — no hardcoded assumptions
+# about directory structure. Fallbacks use PROJECT_ROOT-relative paths.
+_UPSTREAM = os.environ.get(
+    "TAC_UPSTREAM_DIR",
+    str(PROJECT_ROOT / "workspace" / "upstream" / "comma_video_compression_challenge"),
+)
+UPSTREAM_ROOT = Path(_UPSTREAM)
 
 DEFAULTS = {
-    "archive": str(PROJECT_ROOT / "submissions" / "robust_current" / "archive.zip"),
-    "gt_video": str(UPSTREAM_ROOT / "videos" / "0.mkv"),
-    "saliency": str(PROJECT_ROOT / "experiments" / "masks" / "posenet_saliency.npy"),
-    "models_dir": str(UPSTREAM_ROOT / "models"),
+    "archive": os.environ.get("TAC_ARCHIVE", str(PROJECT_ROOT / "submissions" / "robust_current" / "archive.zip")),
+    "gt_video": os.environ.get("TAC_GT_VIDEO", str(UPSTREAM_ROOT / "videos" / "0.mkv")),
+    "saliency": os.environ.get("TAC_SALIENCY", ""),  # empty = skip saliency
+    "models_dir": os.environ.get("TAC_MODELS_DIR", str(UPSTREAM_ROOT / "models")),
     "upstream_dir": str(UPSTREAM_ROOT),
 }
 
@@ -455,8 +462,16 @@ def _run_lossy(args: argparse.Namespace) -> dict[str, Any]:
     )
     print(f"[tac] {len(comp_frames)} compressed + {len(gt_frames)} GT frames")
 
-    raw_saliency = load_raw_saliency(args.saliency)
-    print(f"[tac] Saliency shape: {tuple(raw_saliency.shape)}")
+    # Saliency is optional — gracefully handle missing/empty path
+    if args.saliency and Path(args.saliency).exists():
+        raw_saliency = load_raw_saliency(args.saliency)
+        print(f"[tac] Saliency shape: {tuple(raw_saliency.shape)}")
+    else:
+        # Generate uniform saliency (equal weight everywhere)
+        raw_saliency = torch.ones(len(comp_frames), comp_frames.shape[2], comp_frames.shape[3])
+        if args.saliency:
+            print(f"[tac] WARNING: Saliency file not found: {args.saliency}")
+        print(f"[tac] Using uniform saliency (no weighting)")
 
     models_dir = Path(args.models_dir)
     posenet, segnet = load_scorers(
