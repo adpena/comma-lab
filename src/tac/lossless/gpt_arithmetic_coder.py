@@ -5,7 +5,7 @@ from collections.abc import Callable
 
 import numpy as np
 
-from .range_coder import decode_static_symbols, encode_static_symbols, normalize_probabilities
+from .range_coder import RangeDecoder, RangeEncoder, cumulative_frequencies, normalize_probabilities
 
 
 def _normalize_tokens(tokens) -> np.ndarray:
@@ -41,7 +41,7 @@ def encode_tokens_with_logits_fn(
     if vocab_size <= 1:
         raise ValueError("vocab_size must be greater than 1")
 
-    encoded_chunks: list[bytes] = []
+    encoder = RangeEncoder()
     total_nll_nats = 0.0
     for index in range(1, arr.size):
         start = max(0, index - context_tokens)
@@ -51,11 +51,11 @@ def encode_tokens_with_logits_fn(
             raise ValueError("token is outside vocab_size")
         logits = logits_fn(context)
         frequencies = _frequencies_from_logits(logits, vocab_size=vocab_size, total=total_frequency)
-        encoded = encode_static_symbols([target], frequencies=frequencies)
-        encoded_chunks.append(len(encoded).to_bytes(2, "big") + encoded)
+        cumulative, total = cumulative_frequencies(frequencies)
+        encoder.encode(symbol=target, cumulative=cumulative, total=total)
         total_nll_nats += -math.log(frequencies[target] / total_frequency)
 
-    encoded_bytes = b"".join(encoded_chunks)
+    encoded_bytes = encoder.finish()
     scored_tokens = int(arr.size - 1)
     return {
         "encoded_bytes": encoded_bytes,
@@ -77,14 +77,14 @@ def decode_tokens_with_logits_fn(
     if token_count <= 0:
         raise ValueError("token_count must be positive")
     restored = [int(first_token)]
-    cursor = 0
+    decoder = RangeDecoder(encoded)
     for _ in range(1, token_count):
         start = max(0, len(restored) - context_tokens)
         context = np.asarray(restored[start:], dtype=np.int64)
         frequencies = _frequencies_from_logits(logits_fn(context), vocab_size=vocab_size, total=total_frequency)
-        chunk_len = int.from_bytes(encoded[cursor : cursor + 2], "big")
-        cursor += 2
-        symbol = decode_static_symbols(encoded[cursor : cursor + chunk_len], count=1, frequencies=frequencies)[0]
+        cumulative, total = cumulative_frequencies(frequencies)
+        target = decoder.target(total)
+        symbol = max(index for index in range(len(frequencies)) if cumulative[index] <= target)
+        decoder.update(low_count=cumulative[symbol], high_count=cumulative[symbol + 1], total=total)
         restored.append(symbol)
-        cursor += chunk_len
     return restored
