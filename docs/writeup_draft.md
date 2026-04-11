@@ -472,7 +472,58 @@ The filter should be retrained whenever the downstream task model is updated. Tr
 
 Any change to the encoder parameters — CRF value, resolution, pixel format, codec version — requires filter revalidation on the authoritative scorer before fleet deployment. The filter's corrections are tuned to the specific artifact patterns produced by a given encoder configuration. A CRF change alters the distribution of quantization artifacts, and a filter trained on the old distribution may amplify rather than correct the new artifacts. The validation gate is: run the candidate (encoder config, filter checkpoint) pair through the full evaluation pipeline and confirm that both SegNet and PoseNet distortion remain below the no-filter baseline.
 
-## Related work
+## CPU vs GPU: two deployment regimes, one scoring formula
+
+The contest scores CPU and GPU submissions identically: `score = 100 * seg + sqrt(10 * pose) + 25 * rate`. But CPU and GPU submissions represent fundamentally different deployment constraints and real-world utility profiles.
+
+Our CPU postfilter (46KB int8 checkpoint, <30s on any CPU) operates within the strictest deployment envelope. It requires no GPU at inflate time, no driver dependencies, and runs on commodity hardware. The entire pipeline is a standard AV1 decode followed by a lightweight CNN forward pass. This is the approach that maps directly to comma's fleet decode pipeline.
+
+A GPU-side approach -- for example, a mask-conditioned neural renderer that takes compressed semantic masks and synthesizes photorealistic frames -- operates in a different regime entirely. The archive contains compressed masks plus a neural network (potentially 200KB+), and inflate-time requires CUDA or MPS for the rendering pass. The theoretical score floor is dramatically lower (sub-0.10 vs ~1.10 for CPU postfilter) because the renderer can synthesize pixel-perfect scorer inputs from a compact mask representation.
+
+The scoring formula treats these identically. A 0.50 from a GPU renderer and a 0.50 from a CPU postfilter receive the same ranking, despite the GPU submission requiring specialized hardware at decode time. This is either a deliberate design choice to encourage diverse solution architectures, or a limitation of the evaluation framework. From a deployment perspective, the CPU solution has clear advantages in fleet-scale scenarios where decode happens on heterogeneous cloud instances and commodity edge devices.
+
+We pursue both lanes: the CPU postfilter (current 1.33) for its deployability, and a GPU mask renderer (early development) for its theoretical score ceiling.
+
+## Competitive analysis: mask2mask (PR#53)
+
+PR#53 by Quantizr demonstrates a mask-conditioned rendering approach scoring 0.60 -- a paradigm shift from our postfilter strategy. We reverse-engineered the architecture from the submission artifacts:
+
+**Pipeline:** Original frames are segmented into semantic masks, masks are compressed (achieving extreme rate reduction since masks have low entropy), and a neural renderer reconstructs scorer-compatible frames from the compressed masks at inflate time.
+
+**Architecture:** The renderer is a `TinyFrame2Renderer` -- a lightweight U-Net with channel progression 36->60->36, skip connections, and a `TinyMotionFromMasks` module that estimates optical flow from consecutive mask pairs for temporal coherence. The motion module uses flow warping to maintain frame-to-frame consistency, which is critical for PoseNet's ego-motion estimation.
+
+**Quantization:** FP4 with an 8-value codebook (not standard int4 or int8). This extreme quantization compresses the renderer to fit within the archive size budget while preserving enough precision for the synthesis task. Total archive size: 386KB.
+
+**Score decomposition (estimated):** At 0.60, the approach likely achieves near-perfect SegNet (masks are the ground truth representation) and competitive PoseNet through the flow-warping motion module. The rate term is minimal due to mask compression efficiency.
+
+This validates our task-aware compression thesis from a different angle: instead of correcting codec artifacts to preserve task-relevant features (our postfilter approach), mask2mask discards the original pixels entirely and synthesizes only what the scorer needs. Both approaches exploit the same insight -- the scorer evaluates a specific set of learned features, not generic visual quality -- but arrive at different implementations with different deployment tradeoffs (CPU vs GPU, 46KB vs 386KB, correction vs synthesis).
+
+## Two submission families
+
+Our strategy bifurcates into two submission families, each targeting different regions of the score-deployment tradeoff space:
+
+**CPU lane (postfilter family):**
+- Architecture: 3-layer dilated CNN, h=64, 40K params, 46KB int8
+- Score range: 1.27-1.33 (current best: 1.33)
+- Deployment: CPU-only, <30s inflate, no dependencies beyond PyTorch
+- Variants under development: CRF 35 retrain (CRF-specific), CRF 36 retrain (rate reduction)
+- Ceiling: ~1.10 (bounded by receptive field and capacity at 45KB)
+
+**GPU lane (mask renderer family):**
+- Architecture: U-Net renderer conditioned on compressed semantic masks
+- Score target: sub-0.50 (theoretical floor: sub-0.10)
+- Deployment: requires CUDA or MPS at inflate time
+- Variants planned: extreme-PoseNet (motion-focused), extreme-SegNet (mask-faithful), balanced
+- Current status: early training (epoch 0, score ~90)
+
+Each family admits three optimization profiles:
+1. **Extreme PoseNet**: maximize ego-motion accuracy (postfilter's current 1.33 is this profile)
+2. **Extreme SegNet**: maximize segmentation fidelity (KL distill was a failed attempt at this)
+3. **Balanced**: navigate the Pareto frontier's interior (PSD architecture demonstrated feasibility)
+
+The GPU lane's theoretical advantage is architectural: synthesizing frames from masks bypasses the codec's quantization artifacts entirely. The CPU lane's advantage is practical: it works everywhere, ships in 46KB, and improves an existing pipeline without replacing it.
+
+
 
 This work is a specific instance of task-aware video compression, an area gaining traction in both academia and standards bodies:
 
