@@ -134,4 +134,12 @@
   - delta: `+4086409` archive bytes for recursive order
   - exact match: `true` for both
   - this closes out the naive hierarchical frame-reordering idea in its simple exact form
+- A first data-aware clip-ordering pass is slightly positive on the same 64-record sample:
+  - metadata: `reports/raw/2026-04-11-commavq-clip-similarity-order-sample/summary.json`
+  - feature: `first+middle+last+mean_l1_medoid_greedy`
+  - archive bytes: `6472808`
+  - compression ratio: `1.8984032895769503`
+  - exact match: `true`
+  - delta vs canonical global stream: `-939` archive bytes even after counting permutation side bytes
+  - this suggests the ordering lane is not dead, but generic schedules are much weaker than data-derived similarity orders
 - The next exact implementation cut should build on this `position_major` file-level conditional coder signal, not on more source-order experiments.
