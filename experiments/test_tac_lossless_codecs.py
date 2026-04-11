@@ -135,6 +135,45 @@ class TacLosslessCodecsTests(unittest.TestCase):
         self.assertEqual(backend.samples, [b"abcd", b"efgh", b"ijkl"])
         self.assertEqual(backend.dict_size, 4)
 
+    def test_zstd_dict_roundtrip_caps_blocked_training_samples_deterministically(self) -> None:
+        from tac.lossless.codecs import zstd_dict_roundtrip_file
+
+        with tempfile.TemporaryDirectory() as tmpdir:
+            root = Path(tmpdir)
+            source = root / "tokens.bin"
+            compressed = root / "tokens.zst"
+            restored = root / "restored.bin"
+            payload = b"abcdefghijkl"
+            source.write_bytes(payload)
+
+            class FakeBackend:
+                def train_dictionary(self, samples, *, dict_size):
+                    self.samples = list(samples)
+                    self.dict_size = dict_size
+                    return b"dict-bytes"
+
+                def compress(self, data, *, dictionary):
+                    return b"zstd-archive:" + data
+
+                def decompress(self, data, *, dictionary):
+                    return data[len(b"zstd-archive:") :]
+
+            backend = FakeBackend()
+
+            with mock.patch("tac.lossless.codecs._require_zstd_backend", return_value=backend):
+                zstd_dict_roundtrip_file(
+                    source_path=source,
+                    compressed_path=compressed,
+                    restored_path=restored,
+                    dict_size=3,
+                    sample_payloads=[payload],
+                    sample_block_bytes=1,
+                    max_training_samples=4,
+                )
+
+        self.assertEqual(backend.samples, [b"a", b"d", b"h", b"l"])
+        self.assertEqual(backend.dict_size, 3)
+
     def test_benchmark_zstd_dict_file_reports_ratio(self) -> None:
         from tac.lossless.codecs import benchmark_zstd_dict_file
 
@@ -167,6 +206,7 @@ class TacLosslessCodecsTests(unittest.TestCase):
                     sample_paths=[source, source],
                     dict_size=1024,
                     sample_block_bytes=4096,
+                    max_training_samples=256,
                 )
 
         mocked.assert_called_once_with(
@@ -176,6 +216,7 @@ class TacLosslessCodecsTests(unittest.TestCase):
             dict_size=1024,
             sample_payloads=[payload, payload],
             sample_block_bytes=4096,
+            max_training_samples=256,
         )
         self.assertEqual(result["command"], "lossless_zstd_dict_benchmark")
         self.assertEqual(result["sample_count"], 2)
@@ -214,7 +255,16 @@ class TacLosslessCodecsTests(unittest.TestCase):
                 },
             }
 
-            def fake_roundtrip(*, source_path, compressed_path, restored_path, dict_size, sample_payloads, sample_block_bytes=None):
+            def fake_roundtrip(
+                *,
+                source_path,
+                compressed_path,
+                restored_path,
+                dict_size,
+                sample_payloads,
+                sample_block_bytes=None,
+                max_training_samples=None,
+            ):
                 source_path = Path(source_path)
                 compressed_path = Path(compressed_path)
                 restored_path = Path(restored_path)
@@ -241,6 +291,8 @@ class TacLosslessCodecsTests(unittest.TestCase):
                     restored_root=restored_root,
                     sample_paths=[sample_a, sample_b],
                     dict_size=4096,
+                    sample_block_bytes=2048,
+                    max_training_samples=256,
                 )
 
         self.assertEqual(mocked.call_count, 2)
@@ -267,7 +319,16 @@ class TacLosslessCodecsTests(unittest.TestCase):
             sample_a.write_bytes(b"sample-a")
             sample_b.write_bytes(b"sample-b")
 
-            def fake_directory(*, source_root, compressed_root, restored_root, sample_paths, dict_size, sample_block_bytes=None):
+            def fake_directory(
+                *,
+                source_root,
+                compressed_root,
+                restored_root,
+                sample_paths,
+                dict_size,
+                sample_block_bytes=None,
+                max_training_samples=None,
+            ):
                 source_root = Path(source_root)
                 restored_root = Path(restored_root)
                 chunks = sorted(path for path in source_root.iterdir() if path.is_file())
@@ -300,6 +361,7 @@ class TacLosslessCodecsTests(unittest.TestCase):
                     sample_paths=[sample_a, sample_b],
                     dict_size=4096,
                     sample_block_bytes=2048,
+                    max_training_samples=256,
                 )
 
         mocked.assert_called_once()

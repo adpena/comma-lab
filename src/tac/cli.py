@@ -178,6 +178,7 @@ def build_parser() -> argparse.ArgumentParser:
     sp.add_argument("--sample", action="append", default=[])
     sp.add_argument("--dict-size", type=int, default=8192)
     sp.add_argument("--sample-block-bytes", type=int, default=None)
+    sp.add_argument("--max-training-samples", type=int, default=None)
     sp.set_defaults(lossless_handler="zstd_dict_benchmark")
 
     sp = lossless_sub.add_parser("zstd-dict-dir-benchmark", help="Benchmark a local-only zstd dictionary experiment over a directory")
@@ -187,6 +188,7 @@ def build_parser() -> argparse.ArgumentParser:
     sp.add_argument("--sample", action="append", default=[])
     sp.add_argument("--dict-size", type=int, default=8192)
     sp.add_argument("--sample-block-bytes", type=int, default=None)
+    sp.add_argument("--max-training-samples", type=int, default=None)
     sp.set_defaults(lossless_handler="zstd_dict_dir_benchmark")
 
     sp = lossless_sub.add_parser("zstd-dict-chunk-benchmark", help="Benchmark a local-only zstd dictionary experiment over chunks of one file")
@@ -197,6 +199,7 @@ def build_parser() -> argparse.ArgumentParser:
     sp.add_argument("--sample", action="append", default=[])
     sp.add_argument("--dict-size", type=int, default=8192)
     sp.add_argument("--sample-block-bytes", type=int, default=None)
+    sp.add_argument("--max-training-samples", type=int, default=None)
     sp.set_defaults(lossless_handler="zstd_dict_chunk_benchmark")
 
     sp = lossless_sub.add_parser("baseline", help="Build a real dataset-backed lossless baseline submission")
@@ -444,6 +447,7 @@ def _run_lossless(args: argparse.Namespace) -> dict[str, Any]:
             sample_paths=[Path(path) for path in args.sample],
             dict_size=args.dict_size,
             sample_block_bytes=args.sample_block_bytes,
+            max_training_samples=args.max_training_samples,
         )
         print(json.dumps(payload, indent=2))
         return payload
@@ -456,6 +460,7 @@ def _run_lossless(args: argparse.Namespace) -> dict[str, Any]:
             sample_paths=[Path(path) for path in args.sample],
             dict_size=args.dict_size,
             sample_block_bytes=args.sample_block_bytes,
+            max_training_samples=args.max_training_samples,
         )
         print(json.dumps(payload, indent=2))
         return payload
@@ -469,6 +474,7 @@ def _run_lossless(args: argparse.Namespace) -> dict[str, Any]:
             sample_paths=[Path(path) for path in args.sample],
             dict_size=args.dict_size,
             sample_block_bytes=args.sample_block_bytes,
+            max_training_samples=args.max_training_samples,
         )
         print(json.dumps(payload, indent=2))
         return payload

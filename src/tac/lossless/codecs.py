@@ -24,6 +24,7 @@ _ZPAQ_PRESET_TO_METHOD = {
     "max": "5",
 }
 _LOCAL_ONLY_ZPAQ_REASON = "zpaq is local-only unless a self-contained runtime is bundled in the submission payload"
+_DEFAULT_ZSTD_MAX_TRAINING_SAMPLES = 1024
 
 
 def _require_zstd_backend():
@@ -106,6 +107,17 @@ def _require_zstd_backend():
                 return output_path.read_bytes()
 
     return _CliBackend()
+
+
+def _cap_samples(samples: list[bytes], *, max_samples: int | None) -> list[bytes]:
+    if max_samples is None or len(samples) <= max_samples:
+        return samples
+    if max_samples <= 0:
+        raise ValueError("max_training_samples must be positive")
+    if max_samples == 1:
+        return [samples[0]]
+    last_index = len(samples) - 1
+    return [samples[(index * last_index) // (max_samples - 1)] for index in range(max_samples)]
 
 
 def _profile_config(profile: str) -> dict[str, object]:
@@ -262,6 +274,7 @@ def zstd_dict_roundtrip_file(
     dict_size: int = 8192,
     sample_payloads: list[bytes] | None = None,
     sample_block_bytes: int | None = None,
+    max_training_samples: int | None = _DEFAULT_ZSTD_MAX_TRAINING_SAMPLES,
 ) -> dict[str, object]:
     backend = _require_zstd_backend()
     source = Path(source_path)
@@ -277,6 +290,7 @@ def zstd_dict_roundtrip_file(
         for sample in samples:
             blocked_samples.extend(sample[offset : offset + sample_block_bytes] for offset in range(0, len(sample), sample_block_bytes))
         samples = [sample for sample in blocked_samples if sample]
+    samples = _cap_samples(samples, max_samples=max_training_samples)
     total_sample_bytes = sum(len(sample) for sample in samples)
     if len(samples) < 2 or total_sample_bytes <= dict_size:
         raise ValueError(
@@ -313,6 +327,7 @@ def benchmark_zstd_dict_file(
     sample_paths: list[str | Path] | None = None,
     dict_size: int = 8192,
     sample_block_bytes: int | None = None,
+    max_training_samples: int | None = _DEFAULT_ZSTD_MAX_TRAINING_SAMPLES,
 ) -> dict[str, object]:
     source = Path(source_path)
     samples = [Path(path).read_bytes() for path in sample_paths] if sample_paths else None
@@ -323,6 +338,7 @@ def benchmark_zstd_dict_file(
         dict_size=dict_size,
         sample_payloads=samples,
         sample_block_bytes=sample_block_bytes,
+        max_training_samples=max_training_samples,
     )
     payload["command"] = "lossless_zstd_dict_benchmark"
     return payload
@@ -336,6 +352,7 @@ def benchmark_zstd_dict_directory(
     sample_paths: list[str | Path] | None = None,
     dict_size: int = 8192,
     sample_block_bytes: int | None = None,
+    max_training_samples: int | None = _DEFAULT_ZSTD_MAX_TRAINING_SAMPLES,
 ) -> dict[str, object]:
     source_dir = Path(source_root)
     compressed_dir = Path(compressed_root)
@@ -355,6 +372,7 @@ def benchmark_zstd_dict_directory(
             dict_size=dict_size,
             sample_payloads=[Path(path).read_bytes() for path in sample_paths] if sample_paths else None,
             sample_block_bytes=sample_block_bytes,
+            max_training_samples=max_training_samples,
         )
         archive_bytes += int(result["archive_bytes"])
         original_bytes += int(result["original_bytes"])
@@ -384,6 +402,7 @@ def benchmark_zstd_dict_chunked_file(
     sample_paths: list[str | Path] | None = None,
     dict_size: int = 8192,
     sample_block_bytes: int | None = None,
+    max_training_samples: int | None = _DEFAULT_ZSTD_MAX_TRAINING_SAMPLES,
 ) -> dict[str, object]:
     source = Path(source_path)
     if block_bytes <= 0:
@@ -403,6 +422,7 @@ def benchmark_zstd_dict_chunked_file(
             sample_paths=sample_paths,
             dict_size=dict_size,
             sample_block_bytes=sample_block_bytes,
+            max_training_samples=max_training_samples,
         )
         restored_bytes = bytearray()
         for chunk in sorted(path for path in Path(restored_root).rglob("*") if path.is_file()):
