@@ -12,12 +12,11 @@ Tests all optimization targets on the ACTUAL renderer pipeline:
 8. Per-operation profiling
 
 Usage:
-    .venv/bin/python experiments/mlx_optimization_benchmark.py
+    .venv/bin/python -m tac.experiments.benchmark_mlx
 """
 from __future__ import annotations
 
 import gc
-import sys
 import time
 from pathlib import Path
 
@@ -26,9 +25,6 @@ import numpy as np
 import mlx.core as mx
 import mlx.nn as nn
 import mlx.optimizers as optim
-
-_repo = Path(__file__).resolve().parent.parent
-sys.path.insert(0, str(_repo / "src"))
 
 from tac.mlx_renderer import (
     MaskRenderer,

@@ -5,9 +5,9 @@ Reads telemetry_*.jsonl files from experiment output directories and
 displays a live-updating table of all running experiments.
 
 Usage:
-    .venv/bin/python experiments/monitor.py
-    .venv/bin/python experiments/monitor.py --dir /path/to/weights
-    .venv/bin/python experiments/monitor.py --logs  # read from /tmp/exp_*.log files too
+    .venv/bin/python -m tac.experiments.monitor
+    .venv/bin/python -m tac.experiments.monitor --dir /path/to/weights
+    .venv/bin/python -m tac.experiments.monitor --logs
 """
 from __future__ import annotations
 

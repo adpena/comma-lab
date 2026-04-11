@@ -6,9 +6,9 @@ Pipeline:
     Training loop: mask pairs -> PairGenerator -> scorer_loss -> backprop
 
 Usage:
-    .venv/bin/python experiments/train_renderer.py --profile mask_renderer_smoke --tag test
-    .venv/bin/python experiments/train_renderer.py --profile mask_renderer_full --tag v1
-    .venv/bin/python experiments/train_renderer.py --epochs 100 --lr 1e-3 --tag quick
+    .venv/bin/python -m tac.experiments.train_renderer --profile mask_renderer_smoke --tag test
+    .venv/bin/python -m tac.experiments.train_renderer --profile mask_renderer_full --tag v1
+    .venv/bin/python -m tac.experiments.train_renderer --epochs 100 --lr 1e-3 --tag quick
 """
 from __future__ import annotations
 
@@ -28,7 +28,7 @@ import torch.nn.functional as F
 # ── Path setup ──────────────────────────────────────────────────────────
 
 _script_dir = Path(__file__).resolve().parent
-_repo = _script_dir.parent
+_repo = _script_dir.parent.parent.parent  # src/tac/experiments -> repo root
 sys.path.insert(0, str(_repo / "src"))
 
 _upstream = _repo / "workspace" / "upstream" / "comma_video_compression_challenge"
@@ -253,7 +253,7 @@ def evaluate_fp4(
 def pretrain_loss(rendered_pair: torch.Tensor, gt_pair: torch.Tensor) -> torch.Tensor:
     """L1 + edge-aware loss for renderer pre-training (Phase 1).
 
-    No scorer in the loop — just pixel reconstruction + edge matching.
+    No scorer in the loop -- just pixel reconstruction + edge matching.
     This teaches basic texture synthesis from masks before scorer fine-tuning.
 
     Args:
@@ -265,10 +265,10 @@ def pretrain_loss(rendered_pair: torch.Tensor, gt_pair: torch.Tensor) -> torch.T
     """
     r = rendered_pair / 255.0
     g = gt_pair.float() / 255.0
-    # Renderer output is at mask resolution (384×512), GT may be at full resolution (874×1164)
+    # Renderer output is at mask resolution (384x512), GT may be at full resolution (874x1164)
     # Downscale GT to match renderer output if sizes differ
     if r.shape[2:4] != g.shape[2:4]:
-        # (B, 2, H, W, 3) → (B*2, 3, H, W) for interpolation, then back
+        # (B, 2, H, W, 3) -> (B*2, 3, H, W) for interpolation, then back
         g_bchw_tmp = g.reshape(-1, *g.shape[2:]).permute(0, 3, 1, 2)
         g_bchw_tmp = F.interpolate(g_bchw_tmp, size=r.shape[2:4], mode="bilinear", align_corners=False)
         g = g_bchw_tmp.permute(0, 2, 3, 1).reshape(r.shape)
@@ -371,7 +371,7 @@ def train(args: argparse.Namespace):
     out_dir = Path(args.output_dir)
     out_dir.mkdir(parents=True, exist_ok=True)
 
-    # P0: Precompute GT scorer outputs (constant — frames and scorers are frozen)
+    # P0: Precompute GT scorer outputs (constant -- frames and scorers are frozen)
     print("[train] P0: Precomputing GT scorer cache...")
     gt_scorer_cache = {}
     with torch.no_grad():
@@ -490,7 +490,7 @@ def train(args: argparse.Namespace):
             rendered_pair = model(mask_t, mask_t1)  # (1, 2, H, W, 3)
 
             if in_pretrain:
-                # Phase 1: L1 + edge loss only — no scorer, much faster
+                # Phase 1: L1 + edge loss only -- no scorer, much faster
                 loss = pretrain_loss(rendered_pair, gt_pair)
                 pd, sd = 0.0, 0.0
             else:
@@ -560,7 +560,7 @@ def train(args: argparse.Namespace):
         # Determine current phase label
         phase = "pretrain" if in_pretrain else "scorer"
 
-        # FP4 evaluation (skip during Phase 1 — scorer scores are meaningless)
+        # FP4 evaluation (skip during Phase 1 -- scorer scores are meaningless)
         is_eval_epoch = (not in_pretrain and
                          ((epoch + 1) % args.eval_every == 0
                           or epoch == args.epochs - 1
@@ -587,7 +587,7 @@ def train(args: argparse.Namespace):
                 print(f"  WARNING: PoseNet {pose_ratio:.1f}x regression! "
                       f"pose={eval_pose:.6f} vs baseline {baseline_pose:.6f}")
             if pose_ratio > 5.0:
-                print(f"  CRITICAL: PoseNet {pose_ratio:.0f}x baseline — checkpoint NOT saved!")
+                print(f"  CRITICAL: PoseNet {pose_ratio:.0f}x baseline -- checkpoint NOT saved!")
                 scorer_val = float("inf")
 
         # Log and save best

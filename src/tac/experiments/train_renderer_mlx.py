@@ -9,11 +9,11 @@ a checkpoint that train_renderer.py can resume from for Phase 2 (scorer
 fine-tuning).
 
 Usage:
-    .venv/bin/python experiments/train_renderer_mlx.py --tag mlx_pretrain --epochs 100
-    .venv/bin/python experiments/train_renderer_mlx.py --tag mlx_pretrain --epochs 100 --lr 2e-3
+    .venv/bin/python -m tac.experiments.train_renderer_mlx --tag mlx_pretrain --epochs 100
+    .venv/bin/python -m tac.experiments.train_renderer_mlx --tag mlx_pretrain --epochs 100 --lr 2e-3
 
     # Then continue Phase 2 in PyTorch:
-    .venv/bin/python experiments/train_renderer.py --resume-from experiments/postfilter_weights/mlx_pretrained_mlx_pretrain.pt --tag v1
+    .venv/bin/python -m tac.experiments.train_renderer --resume-from experiments/postfilter_weights/mlx_pretrained_mlx_pretrain.pt --tag v1
 
 Benchmark target:
     Phase 1 epoch: ~20-25 seconds (vs ~100 seconds in PyTorch MPS)
@@ -38,7 +38,7 @@ import mlx.optimizers as optim
 # ── Path setup ──────────────────────────────────────────────────────────
 
 _script_dir = Path(__file__).resolve().parent
-_repo = _script_dir.parent
+_repo = _script_dir.parent.parent.parent  # src/tac/experiments -> repo root
 sys.path.insert(0, str(_repo / "src"))
 
 _upstream = _repo / "workspace" / "upstream" / "comma_video_compression_challenge"
@@ -453,7 +453,7 @@ def train(args: argparse.Namespace):
     pt_tmp.rename(pt_path)
     print(f"[mlx_train] Saved PyTorch checkpoint: {pt_path}")
     print(f"[mlx_train] Resume Phase 2 with:")
-    print(f"  .venv/bin/python experiments/train_renderer.py "
+    print(f"  .venv/bin/python -m tac.experiments.train_renderer "
           f"--resume-from {pt_path} --tag <phase2_tag>")
 
     # Save metadata

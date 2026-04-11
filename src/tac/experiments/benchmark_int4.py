@@ -10,22 +10,17 @@ This script:
 4. Compares parameter distributions, output quality, and file sizes
 
 Usage:
-    python experiments/benchmark_int4.py [--checkpoint PATH]
+    python -m tac.experiments.benchmark_int4 [--checkpoint PATH]
 """
 from __future__ import annotations
 
 import argparse
-import sys
 import tempfile
 from pathlib import Path
 
 import torch
 import torch.nn as nn
 import numpy as np
-
-# Add project root to path
-PROJECT_ROOT = Path(__file__).resolve().parent.parent
-sys.path.insert(0, str(PROJECT_ROOT / "src"))
 
 from tac.architectures import build_postfilter
 
