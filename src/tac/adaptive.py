@@ -368,6 +368,33 @@ class AdaptiveWeights:
         return result
 
 
+def geometric_mean_score(
+    seg: float,
+    pose: float,
+    rate: float,
+    seg_baseline: float = 0.00580,
+    pose_baseline: float = 0.01229,
+    rate_baseline: float = 0.02500,
+    w_seg: float = 0.40,
+    w_pose: float = 0.35,
+    w_rate: float = 0.25,
+) -> float:
+    """Compute the Arrow+Pareto proposed geometric mean score.
+
+    SCORE = (seg/seg_0)^w_s * (pose/pose_0)^w_p * (rate/rate_0)^w_r
+
+    Properties: scale-invariant, non-substitutable, Pareto-complete,
+    proportional MRS, incentive-compatible. See writeup Section 6.
+
+    Baseline = 1.0 by construction. Lower is better.
+    """
+    return (
+        (seg / seg_baseline) ** w_seg
+        * (pose / pose_baseline) ** w_pose
+        * (rate / rate_baseline) ** w_rate
+    )
+
+
 def print_operating_table() -> None:
     """Print a table of optimal values across operating points and temperatures."""
     aw = AdaptiveWeights(boundary_fraction=0.05)
