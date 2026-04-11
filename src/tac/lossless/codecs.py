@@ -261,6 +261,7 @@ def zstd_dict_roundtrip_file(
     restored_path: str | Path,
     dict_size: int = 8192,
     sample_payloads: list[bytes] | None = None,
+    sample_block_bytes: int | None = None,
 ) -> dict[str, object]:
     backend = _require_zstd_backend()
     source = Path(source_path)
@@ -269,6 +270,13 @@ def zstd_dict_roundtrip_file(
 
     payload = source.read_bytes()
     samples = list(sample_payloads) if sample_payloads is not None else [payload]
+    if sample_block_bytes is not None:
+        if sample_block_bytes <= 0:
+            raise ValueError("sample_block_bytes must be positive")
+        blocked_samples: list[bytes] = []
+        for sample in samples:
+            blocked_samples.extend(sample[offset : offset + sample_block_bytes] for offset in range(0, len(sample), sample_block_bytes))
+        samples = [sample for sample in blocked_samples if sample]
     total_sample_bytes = sum(len(sample) for sample in samples)
     if len(samples) < 2 or total_sample_bytes <= dict_size:
         raise ValueError(
@@ -304,6 +312,7 @@ def benchmark_zstd_dict_file(
     restored_path: str | Path,
     sample_paths: list[str | Path] | None = None,
     dict_size: int = 8192,
+    sample_block_bytes: int | None = None,
 ) -> dict[str, object]:
     source = Path(source_path)
     samples = [Path(path).read_bytes() for path in sample_paths] if sample_paths else None
@@ -313,6 +322,7 @@ def benchmark_zstd_dict_file(
         restored_path=restored_path,
         dict_size=dict_size,
         sample_payloads=samples,
+        sample_block_bytes=sample_block_bytes,
     )
     payload["command"] = "lossless_zstd_dict_benchmark"
     return payload
@@ -325,6 +335,7 @@ def benchmark_zstd_dict_directory(
     restored_root: str | Path,
     sample_paths: list[str | Path] | None = None,
     dict_size: int = 8192,
+    sample_block_bytes: int | None = None,
 ) -> dict[str, object]:
     source_dir = Path(source_root)
     compressed_dir = Path(compressed_root)
@@ -343,6 +354,7 @@ def benchmark_zstd_dict_directory(
             restored_path=restored_dir / relative,
             dict_size=dict_size,
             sample_payloads=[Path(path).read_bytes() for path in sample_paths] if sample_paths else None,
+            sample_block_bytes=sample_block_bytes,
         )
         archive_bytes += int(result["archive_bytes"])
         original_bytes += int(result["original_bytes"])

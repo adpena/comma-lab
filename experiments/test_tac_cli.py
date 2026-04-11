@@ -508,6 +508,8 @@ class TacCliTests(unittest.TestCase):
                         str(sample_b),
                         "--dict-size",
                         "4096",
+                        "--sample-block-bytes",
+                        "2048",
                     ]
                 )
 
@@ -517,6 +519,7 @@ class TacCliTests(unittest.TestCase):
             restored_path=restored,
             sample_paths=[sample_a, sample_b],
             dict_size=4096,
+            sample_block_bytes=2048,
         )
         self.assertEqual(result["command"], "lossless_zstd_dict_benchmark")
         self.assertEqual(result["sample_count"], 2)
@@ -564,6 +567,8 @@ class TacCliTests(unittest.TestCase):
                         str(sample_b),
                         "--dict-size",
                         "4096",
+                        "--sample-block-bytes",
+                        "2048",
                     ]
                 )
 
@@ -573,6 +578,7 @@ class TacCliTests(unittest.TestCase):
             restored_root=restored_root,
             sample_paths=[sample_a, sample_b],
             dict_size=4096,
+            sample_block_bytes=2048,
         )
         self.assertEqual(result["command"], "lossless_zstd_dict_directory_benchmark")
         self.assertEqual(result["file_count"], 2)
