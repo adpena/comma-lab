@@ -162,4 +162,16 @@
     - compression ratio: `1.9870249919976481`
   - exact match: `true` for all
   - the ordering lane survives scale, but the gain is currently only `1` byte over canonical; the infrastructure is ahead of the ranker quality
+- The same pattern held at 512 records:
+  - canonical: `reports/raw/2026-04-11-commavq-ordered-record-sample/canonical_512_tool.json`
+    - archive bytes: `48871579`
+    - compression ratio: `2.011475831382489`
+  - clip similarity order: `reports/raw/2026-04-11-commavq-ordered-record-sample/clip_greedy_nn_512_tool.json`
+    - archive bytes: `48871578`
+    - compression ratio: `2.0114758725408866`
+  - cheap token-derived semantic grouping: `reports/raw/2026-04-11-commavq-ordered-record-sample/label_grouped_clip_greedy_nn_512_tool.json`
+    - archive bytes: `48871578`
+    - compression ratio: `2.0114758725408866`
+  - exact match: `true` for all
+  - this is still only a `1` byte edge, but it is now repeatable across 256 and 512 records, so the ranking/order lane remains alive
 - The next exact implementation cut should build on this `position_major` file-level conditional coder signal, not on more source-order experiments.
