@@ -16,9 +16,9 @@
 ## current status
 
 - tracker path: `.omx/state/lossless_review_tracker.json`
-- projected entities: `253`
-- reviewed: `36`
-- unreviewed: `217`
+- projected entities: `263`
+- reviewed: `166`
+- unreviewed: `97`
 - stale: `0`
 - needs_fix: `0`
 - last global scan: `2026-04-11T17:55:32.229534+00:00`

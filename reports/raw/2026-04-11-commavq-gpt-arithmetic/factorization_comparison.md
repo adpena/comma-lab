@@ -78,4 +78,11 @@
   - `64` tokens scored at the official `2580` context
   - CPU and MPS match on bits/token (`9.263728540522601`)
   - MPS is faster on this probe (`2.355s` vs `4.006s`)
+- The exact local-only `zpaq` rerun is now complete:
+  - metadata: `reports/raw/2026-04-11-commavq-zpaq-baseline-rerun/zpaq_baseline_result.json`
+  - archive bytes: `538876316`
+  - original bytes: `960000000`
+  - exact match: `5000/5000`
+  - compression ratio: `1.7814848630311673`
+  - this beats the promoted `lzma` floor locally, but remains `local_only`
 - The next exact implementation cut should build on this `position_major` file-level conditional coder signal, not on more source-order experiments.
