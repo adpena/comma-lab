@@ -4,7 +4,7 @@
   Section 1: Introduction (task-aware compression for autonomous driving)
   Section 2: Background (scoring formula, PoseNet, SegNet, openpilot context)
   Section 3: Method (post-filter architecture, training, quantization)
-  Section 4: Negative Results (4 subsections: KL distill, adaptive weights, PoseNet spatial sensitivity, Pareto trap)
+  Section 4: Negative Results (5 subsections: KL distill, adaptive weights, PoseNet spatial sensitivity, Pareto trap, CRF distribution shift)
   Section 5: Multi-Objective Analysis (Pareto frontier, gradient methods)
   Section 6: Recommendations (scoring formula, deployment)
   Section 7: Results and Ablations
@@ -12,7 +12,7 @@
 
 ## Abstract
 
-Autonomous driving systems compress video for fleet learning, but standard codecs optimize for human perception rather than downstream task accuracy. We address this with a 45KB CNN post-filter trained by backpropagating through frozen copies of the scorer networks (PoseNet and SegNet) from comma.ai's video compression challenge. The filter corrects decoded AV1 frames at the pixel level without modifying the codec or bitstream. This approach scores 1.33, placing first with a 0.53-point margin. Score decomposition reveals that 117% of the improvement comes from PoseNet (ego-motion estimation) while SegNet (scene segmentation) regresses 5.2% -- the filter is a PoseNet optimizer that pays a small SegNet tax, because the scoring formula's gradient landscape makes PoseNet the path of least resistance. We analyze this axis-exploitation phenomenon through the Pareto frontier in (seg, pose) space, report 25+ failed experiments including a knowledge distillation approach that showed 2x faster proxy convergence but collapsed on authoritative evaluation, and propose a multiplicative scoring formula that enforces complementarity between task metrics. The filter ships as an int8-quantized checkpoint and runs on CPU in under 30 seconds.
+Autonomous driving systems compress video for fleet learning, but standard codecs optimize for human perception rather than downstream task accuracy. We address this with a 45KB CNN post-filter trained by backpropagating through frozen copies of the scorer networks (PoseNet and SegNet) from comma.ai's video compression challenge. The filter corrects decoded AV1 frames at the pixel level without modifying the codec or bitstream. This approach scores 1.33, placing first with a 0.53-point margin. Score decomposition reveals that 117% of the improvement comes from PoseNet (ego-motion estimation) while SegNet (scene segmentation) regresses 5.2% -- the filter is a PoseNet optimizer that pays a small SegNet tax, because the scoring formula's gradient landscape makes PoseNet the path of least resistance. We analyze this axis-exploitation phenomenon through the Pareto frontier in (seg, pose) space, show that an alternative architecture (PSD) can improve both metrics simultaneously, demonstrate that the filter is CRF-specific (mismatched CRF regresses PoseNet 7.3x), report 25+ failed experiments including a knowledge distillation approach that showed 2x faster proxy convergence but collapsed on authoritative evaluation, and propose a multiplicative scoring formula that enforces complementarity between task metrics. The filter ships as an int8-quantized checkpoint and runs on CPU in under 30 seconds.
 
 **Score: 1.33** | seg=0.00610, pose=0.00218, rate=0.0230
 
@@ -210,7 +210,7 @@ The trajectory splits into four phases. Codec tuning (4.06 to 2.08) found the ri
 <!-- Section 4: Negative Results -->
 ## Negative results
 
-Negative results are as informative as positive ones. We ran 25+ experiments over 8 days; most failed. We organize the most instructive failures into four themes.
+Negative results are as informative as positive ones. We ran 25+ experiments over 8 days; most failed. We organize the most instructive failures into five themes.
 
 ### 4.1 Proxy-authoritative transfer gap in knowledge distillation
 
@@ -277,12 +277,36 @@ The formula incentivizes axis-specific exploitation rather than balanced improve
 
 This suggests the scoring formula itself shapes the solution space in ways that may not align with the goal of balanced task-aware compression. We discuss alternative formulations in the Recommendations section.
 
+### 4.5 CRF-specific artifact learning: distribution shift in encoder parameters
+
+The post-filter is not a generic denoiser. It learns correction patterns specific to the CRF setting used during training.
+
+We tested our dilated h=64 post-filter (trained on CRF 34 video) against CRF 35 video. SegNet was unaffected (0.00581 vs 0.00580 baseline), but PoseNet regressed 7.3x (0.0898 vs baseline 0.0123). The composite score went from 1.33 to 2.08 -- worse than having no filter at all.
+
+| CRF | SegNet | PoseNet | Score | Filter status |
+|-----|--------|---------|-------|--------------|
+| 34 (matched) | 0.00610 | 0.00218 | 1.33 | Trained on CRF 34 |
+| 35 (mismatched) | 0.00581 | 0.08980 | 2.08 | Same filter, wrong CRF |
+| 34 (no filter) | 0.00580 | 0.01229 | 1.51 | Baseline |
+
+The asymmetry is informative. SegNet operates on hard class labels -- semantic boundaries are largely preserved across adjacent CRF values. PoseNet operates on continuous spatial frequency statistics that change measurably between CRF settings. The filter learned corrections calibrated to CRF 34's specific quantization error patterns. Applied to CRF 35 video, those corrections introduce the wrong spatial frequencies, and PoseNet's pose regression degrades.
+
+This has three implications:
+
+1. **The filter is a CRF-tuned inverse quantization approximation.** It corrects the specific artifact signature of a given CRF, not compression artifacts in general. This confirms the mechanism is task-aware artifact correction rather than generic deblurring or denoising.
+
+2. **Any encoder parameter change requires retraining.** CRF, preset, resolution, film-grain level -- each produces a distinct quantization pattern. A filter trained on one configuration will not transfer to another. This is the same distribution matching principle as training on the actual submission archive (Section on training data), extended to the encoder parameter space.
+
+3. **Deployment coupling.** In production, the filter checkpoint must be paired with a specific encoder configuration. If comma changes CRF from 34 to 35 to save bandwidth, the existing filter becomes actively harmful. The filter and the encoder are a jointly optimized system, not independent components.
+
+This connects to Bellard's observation that CRF is the single most important encoder parameter for task-quality tradeoffs. The post-filter amplifies that importance: CRF now controls not only the codec's rate-distortion operating point but also whether the post-filter's learned corrections align with the actual artifact distribution.
+
 ### Additional failed experiments
 
-Beyond the four themes above, we tested and rejected:
+Beyond the five themes above, we tested and rejected:
 
 **Architecture:**
-- **PixelShuffle / PSD upsampling:** Proxy rejected at 1.99. Sub-pixel shuffle helps SegNet but hurts PoseNet -- PoseNet is sensitive to any spatial rearrangement of information.
+- **PixelShuffle / PSD upsampling (early h=32):** Early proxy rejected at 1.99. Later authoritative eval of PSD at h=64 scored 1.49 with clean proxy-auth transfer (see Section 7.6). The architecture improves both SegNet and PoseNet vs baseline but does not match dilated convolutions on PoseNet.
 - **DCT-domain filter:** Did not learn. The gain initialization placed the model in a region where gradients vanished.
 - **Dilated convolutions at h=32:** Improved locally but did not transfer to deployed int8. The wider receptive field creates weight patterns that are less quantization-friendly at small widths. At h=64 with 905 epochs, the same architecture produced a 0.18-point gain, confirming that architecture changes need sufficient capacity and training time to overcome quantization sensitivity.
 
@@ -474,6 +498,9 @@ The full campaign spanned 8 days and 25+ experiments. The table below shows the 
 | Apr 9 | h=64 | 1.73 | 0.00576 | 0.03317 | 0.02302 | Scaling |
 | Apr 10 | Hardening (4 audit rounds) | 1.51 | 0.00580 | 0.01229 | 0.02302 | Hardening |
 | Apr 10 | Dilated CNN, 905 epochs | **1.33** | 0.00610 | 0.00218 | 0.02302 | Architecture |
+| Apr 10 | PSD h=64, ep809 | 1.49 | 0.00532 | 0.01108 | 0.02522 | Architecture |
+
+The PSD (PixelShuffle-Downscale) result is notable: proxy-authoritative transfer is clean (<0.01 gap on distortion components), and it is the first architecture to improve SegNet below the unfiltered baseline (8.3% better than no filter). But PoseNet is still 5x worse than dilated at similar epoch count, keeping the composite score higher. PSD demonstrates that architectures exist which can improve both metrics simultaneously -- the question is whether further training or capacity scaling closes the PoseNet gap.
 
 The trajectory splits into four phases. Codec tuning (4.06 to 2.08) contributed 1.98 points, mostly from switching to AV1 and matching the scorer's colorspace. Post-filter introduction and scaling (2.08 to 1.73) contributed 0.35 points from a growing CNN. Hardening (1.73 to 1.51) contributed 0.22 points purely from fixing measurement bugs. Architecture (1.51 to 1.33) contributed 0.18 points from dilated convolutions.
 
@@ -540,14 +567,19 @@ Our campaign inadvertently mapped the tradeoff frontier between SegNet and PoseN
 
 | Configuration | SegNet | PoseNet | Score | Strategy |
 |--------------|--------|---------|-------|----------|
-| No filter (baseline) | 0.00577 | 0.08695 | 2.08 | None |
+| No filter (baseline) | 0.00580 | 0.01229 | 1.51 | None |
+| PSD h=64 (auth) | 0.00532 | 0.01108 | 1.49 | Balanced |
 | Standard loss, dilated h=64 | 0.00610 | 0.00218 | 1.33 | PoseNet-dominant |
 | KL distill, sw=100 | 0.00493 | 0.05725 | 1.85 | SegNet-dominant |
 | KL distill, sw=30 | 0.00546 | 0.08095 | 2.05 | SegNet-dominant |
 
-The standard-loss result (1.33) and the KL distill result (1.85) represent two different points on the Pareto frontier. Standard loss finds the PoseNet-dominant extreme; KL distill finds the SegNet-dominant extreme. The scoring formula's iso-score lines are tangent to the frontier at our operating point, confirming that standard loss is near-optimal given the formula's coefficients.
+The five points map distinct regions of the frontier. The dilated result (1.33) sits at the PoseNet-dominant extreme. The KL distill results sit at the SegNet-dominant extreme, where PoseNet destruction makes them non-competitive under the current formula.
 
-> **Figure 2** (placeholder): Pareto frontier in (seg, pose) space. X-axis: SegNet distortion, Y-axis: PoseNet distortion (log scale). Four points: baseline (upper left), standard-loss result (lower right), two KL-distill results (left, high). Iso-score lines (contours of `100*seg + sqrt(10*pose)`) drawn as curves. The standard-loss point sits near the tangent of the iso-score 1.33 contour with the empirical frontier.
+The PSD result is the most interesting new data point. It is the first configuration to improve *both* SegNet and PoseNet relative to the unfiltered baseline: SegNet drops from 0.00580 to 0.00532 (8.3% better) and PoseNet drops from 0.01229 to 0.01108 (9.8% better). This proves that a better Pareto frontier exists -- one where both metrics improve simultaneously rather than trading off. PSD sits between baseline and dilated on this frontier, demonstrating that architectural choices (PixelShuffle-Downscale vs dilated convolutions) navigate different regions of the tradeoff surface. The dilated architecture pushes hard toward PoseNet at SegNet's expense; PSD moves both metrics in the right direction but with less total score improvement because the scoring formula rewards PoseNet improvement disproportionately at this operating point.
+
+The scoring formula's iso-score lines are tangent to the frontier at the dilated operating point, confirming that standard loss with dilated convolutions is near-optimal given the formula's coefficients. Under a more balanced formula (Section on Recommendations), PSD's balanced improvement profile would score comparatively better.
+
+> **Figure 2** (placeholder): Pareto frontier in (seg, pose) space. X-axis: SegNet distortion, Y-axis: PoseNet distortion (log scale). Five points: baseline (upper center), PSD h=64 (just below baseline, both metrics improved), dilated h=64 (lower right, PoseNet-extreme), two KL-distill results (left, high PoseNet). Iso-score lines (contours of `100*seg + sqrt(10*pose)`) drawn as curves. The dilated point sits near the tangent of the iso-score 1.33 contour. The PSD point demonstrates that a Pareto-improving region exists where both metrics can improve simultaneously.
 
 > **Figure 5** (placeholder): PoseNet error trace over 1200 frames. Two lines: baseline (orange, high variance, mean ~0.087) and our filter (blue, low variance, mean ~0.002). The baseline shows large spikes at scene transitions and turns; the filtered output is nearly flat, confirming that the CNN corrects the spatial correlations PoseNet is sensitive to across all frame types.
 
@@ -587,11 +619,11 @@ No paid compute was used. All results are reproducible on consumer hardware.
 
 5. **Scaling laws hold for tiny models.** The log-linear width relationship held from 800 to 40,000 parameters and predicted returns on additional compute.
 
-6. **Distribution matching.** Training on frames from a different source than the scorer evaluates on caused a 0.3-point gap. Training on the actual submission archive closed it.
+6. **Distribution matching extends to encoder parameters.** Training on frames from a different source than the scorer evaluates on caused a 0.3-point gap. Training on the actual submission archive closed it. The same principle applies to encoder configuration: a filter trained on CRF 34 video regressed PoseNet 7.3x when applied to CRF 35 video, producing a score worse than no filter at all. The filter and encoder are a jointly optimized system.
 
 7. **The scoring formula has structure.** The marginal sensitivities of each term at different operating points are not obvious from the formula but drive resource allocation.
 
-8. **The PoseNet-SegNet Pareto frontier.** Our campaign inadvertently mapped the tradeoff boundary. Standard loss with dilated convolutions optimizes PoseNet to near-exhaustion (5.6x improvement) while making SegNet 5.2% worse. KL distillation does the opposite: 10% SegNet improvement but 26-37x PoseNet destruction. The score minimum lies on the frontier between these extremes -- a multi-objective optimization problem where the scoring formula's coefficients (100, sqrt(10), 25) define the optimal tangent line.
+8. **The PoseNet-SegNet Pareto frontier is improvable.** Standard loss with dilated convolutions optimizes PoseNet to near-exhaustion (5.6x improvement) while making SegNet 5.2% worse. KL distillation does the opposite: 10% SegNet improvement but 26-37x PoseNet destruction. But PSD (PixelShuffle-Downscale) proved that both metrics can improve simultaneously -- 8.3% better SegNet and 9.8% better PoseNet vs baseline. The current best score sits at the PoseNet extreme of the frontier; the next improvement likely requires an architecture that navigates the balanced region PSD occupies, but with stronger PoseNet gains.
 
 9. **Proxy metrics can mislead.** KL distillation appeared to achieve in 200 epochs what standard training could not in 905 -- but the proxy improvement was phantom. Two authoritative evaluations (1.85, 2.05) confirmed the gains did not transfer. Always validate against the real scorer before claiming progress.
 
