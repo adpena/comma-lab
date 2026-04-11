@@ -210,6 +210,68 @@ class TacLosslessGptArithmeticCoderTests(unittest.TestCase):
         self.assertEqual(seen_calls, [{"tokens": [1024, 0, 1, 0], "context_tokens": 3}])
         self.assertEqual(result["encoded_path"], str(output_path))
 
+    def test_encode_commavq_gpt_global_sample_roundtrips_bounded_raw_stream_prefix(self) -> None:
+        import tac.lossless.gpt_arithmetic_coder as module
+
+        encode_commavq_gpt_global_sample = getattr(module, "encode_commavq_gpt_global_sample", None)
+        if encode_commavq_gpt_global_sample is None:
+            self.fail("encode_commavq_gpt_global_sample is missing")
+
+        with tempfile.TemporaryDirectory() as tmpdir:
+            root = Path(tmpdir)
+            token_path = root / "tokens.bin"
+            output_path = root / "sample.gta"
+            np.array([3, 4, 5, 6, 7, 8, 9], dtype=np.uint16).tofile(token_path)
+
+            class FakeModel:
+                def next_token_logits(self, context):
+                    logits = np.full((16,), -10.0, dtype=np.float64)
+                    logits[(int(context[-1]) + 1) % 16] = 10.0
+                    return logits
+
+            result = encode_commavq_gpt_global_sample(
+                token_path=token_path,
+                encoded_path=output_path,
+                profile="gpt_arithmetic_small",
+                max_tokens=5,
+                context_tokens=3,
+                vocab_size=16,
+                device="cpu",
+                dtype="float32",
+                verify_decode=True,
+                model_loader=lambda **_: FakeModel(),
+            )
+
+            self.assertTrue(output_path.exists())
+
+        self.assertEqual(result["command"], "lossless_gpt_arithmetic_global_sample")
+        self.assertEqual(result["token_count"], 5)
+        self.assertEqual(result["raw_token_count"], 7)
+        self.assertTrue(result["exact_match"])
+
+    def test_encode_commavq_gpt_global_sample_rejects_prefix_shorter_than_two_tokens(self) -> None:
+        import tac.lossless.gpt_arithmetic_coder as module
+
+        encode_commavq_gpt_global_sample = getattr(module, "encode_commavq_gpt_global_sample", None)
+        if encode_commavq_gpt_global_sample is None:
+            self.fail("encode_commavq_gpt_global_sample is missing")
+
+        with tempfile.TemporaryDirectory() as tmpdir:
+            root = Path(tmpdir)
+            token_path = root / "tokens.bin"
+            output_path = root / "sample.gta"
+            np.array([9], dtype=np.uint16).tofile(token_path)
+
+            with self.assertRaisesRegex(ValueError, "at least two tokens"):
+                encode_commavq_gpt_global_sample(
+                    token_path=token_path,
+                    encoded_path=output_path,
+                    profile="gpt_arithmetic_small",
+                    max_tokens=1,
+                    device="cpu",
+                    model_loader=lambda **_: object(),
+                )
+
     def test_probe_commavq_gpt_arithmetic_devices_reports_fastest_backend(self) -> None:
         from tac.lossless.gpt_arithmetic_coder import probe_commavq_gpt_arithmetic_devices
 

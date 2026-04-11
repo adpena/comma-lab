@@ -142,4 +142,12 @@
   - exact match: `true`
   - delta vs canonical global stream: `-939` archive bytes even after counting permutation side bytes
   - this suggests the ordering lane is not dead, but generic schedules are much weaker than data-derived similarity orders
+- The new lossless ordering tool now measures and replays ranked orders directly:
+  - `tac lossless global-prev-symbol-order-sample`
+  - `transition_recursive_pca` tool result: `1.8981185486869416x`
+  - cheap token-derived `label_grouped_clip_greedy_nn` result: `1.8981185486869416x`
+  - both are exact and slightly worse than canonical on the 64-record sample
+  - saved replay artifact: `reports/raw/2026-04-11-commavq-ordered-record-sample/transition_recursive_pca_order_64.json`
+  - replayed explicit-order result matches exactly: `1.8981185486869416x`
+  - this closes the infrastructure gap for future scaled ordering tests even though the current ranker is still weak
 - The next exact implementation cut should build on this `position_major` file-level conditional coder signal, not on more source-order experiments.

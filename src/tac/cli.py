@@ -38,7 +38,8 @@ from .lossless.frequency_coder import (
     encode_uint16_frequency_file,
     encode_uint16_prev_symbol_file,
 )
-from .lossless.gpt_arithmetic_coder import encode_commavq_gpt_sample
+from .lossless.gpt_arithmetic_coder import encode_commavq_gpt_global_sample, encode_commavq_gpt_sample
+from .lossless.global_prev_symbol import benchmark_global_prev_symbol_record_order_sample
 from .lossless.next_frame_coder import encode_commavq_next_frame_sample
 from .lossless.gpt_score import probe_commavq_gpt_devices, score_commavq_gpt_sample
 from .lossless.profiles import PROFILES as LOSSLESS_PROFILES
@@ -177,6 +178,23 @@ def build_parser() -> argparse.ArgumentParser:
     sp.add_argument("--gpt-module-path", default=None)
     sp.set_defaults(lossless_handler="gpt_arithmetic_sample")
 
+    sp = lossless_sub.add_parser(
+        "gpt-arithmetic-global-sample",
+        help="Encode a local-only GPT arithmetic sample from a raw uint16 global token stream",
+    )
+    sp.add_argument("--profile", required=True, choices=sorted(LOSSLESS_PROFILES))
+    sp.add_argument("--tokens", required=True)
+    sp.add_argument("--output", required=True)
+    sp.add_argument("--max-tokens", type=int, default=256)
+    sp.add_argument("--context-tokens", type=int, default=None)
+    sp.add_argument("--device", default="mps", choices=["cpu", "cuda", "mps"])
+    sp.add_argument("--dtype", default="auto", choices=["auto", "float32", "float16", "bfloat16"])
+    sp.add_argument("--verify-decode", action="store_true")
+    sp.add_argument("--cache-dir", default=None)
+    sp.add_argument("--model-url", default=None)
+    sp.add_argument("--gpt-module-path", default=None)
+    sp.set_defaults(lossless_handler="gpt_arithmetic_global_sample")
+
     sp = lossless_sub.add_parser("next-frame-sample", help="Encode a local-only grouped next-frame sample from a prepared frame-major stream")
     sp.add_argument("--profile", required=True, choices=sorted(LOSSLESS_PROFILES))
     sp.add_argument("--tokens", required=True)
@@ -190,6 +208,30 @@ def build_parser() -> argparse.ArgumentParser:
     sp.add_argument("--model-url", default=None)
     sp.add_argument("--gpt-module-path", default=None)
     sp.set_defaults(lossless_handler="next_frame_sample")
+
+    sp = lossless_sub.add_parser(
+        "global-prev-symbol-order-sample",
+        help="Benchmark exact global prev-symbol record-order strategies on a bounded commavq slice",
+    )
+    sp.add_argument("--output", required=True)
+    sp.add_argument("--split", nargs="*", default=None)
+    sp.add_argument("--max-records", type=int, default=64)
+    sp.add_argument(
+        "--strategy",
+        default="canonical",
+        choices=[
+            "canonical",
+            "explicit",
+            "clip_greedy_nn",
+            "clip_recursive_pca",
+            "transition_recursive_pca",
+            "label_grouped_clip_greedy_nn",
+        ],
+    )
+    sp.add_argument("--labels", default=None)
+    sp.add_argument("--order-file", default=None)
+    sp.add_argument("--frame-order", default="canonical", choices=["canonical", "recursive_bisect"])
+    sp.set_defaults(lossless_handler="global_prev_symbol_order_sample")
 
     sp = lossless_sub.add_parser("frequency-report", help="Analyze a prepared token stream")
     sp.add_argument("--tokens", required=True)
@@ -542,6 +584,23 @@ def _run_lossless(args: argparse.Namespace) -> dict[str, Any]:
         print(json.dumps(payload, indent=2))
         return payload
 
+    if args.lossless_handler == "gpt_arithmetic_global_sample":
+        payload = encode_commavq_gpt_global_sample(
+            token_path=Path(args.tokens),
+            encoded_path=Path(args.output),
+            profile=args.profile,
+            max_tokens=args.max_tokens,
+            context_tokens=args.context_tokens,
+            device=args.device,
+            dtype=args.dtype,
+            verify_decode=args.verify_decode,
+            cache_dir=args.cache_dir,
+            model_url=args.model_url,
+            gpt_module_path=args.gpt_module_path,
+        )
+        print(json.dumps(payload, indent=2))
+        return payload
+
     if args.lossless_handler == "next_frame_sample":
         payload = encode_commavq_next_frame_sample(
             token_path=Path(args.tokens),
@@ -555,6 +614,19 @@ def _run_lossless(args: argparse.Namespace) -> dict[str, Any]:
             cache_dir=args.cache_dir,
             model_url=args.model_url,
             gpt_module_path=args.gpt_module_path,
+        )
+        print(json.dumps(payload, indent=2))
+        return payload
+
+    if args.lossless_handler == "global_prev_symbol_order_sample":
+        payload = benchmark_global_prev_symbol_record_order_sample(
+            output_path=Path(args.output),
+            split=args.split,
+            max_records=args.max_records,
+            strategy=args.strategy,
+            frame_order=args.frame_order,
+            labels_path=Path(args.labels) if args.labels else None,
+            order_path=Path(args.order_file) if args.order_file else None,
         )
         print(json.dumps(payload, indent=2))
         return payload

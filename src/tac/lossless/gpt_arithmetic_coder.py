@@ -32,6 +32,26 @@ def _frequencies_from_logits(logits, *, vocab_size: int, total: int) -> list[int
     return normalize_probabilities(probs.tolist(), total=total)
 
 
+def _read_bounded_uint16_token_prefix(
+    token_path: str | Path,
+    *,
+    max_tokens: int,
+) -> tuple[int, np.ndarray]:
+    if max_tokens <= 0:
+        raise ValueError("max_tokens must be positive")
+    source = Path(token_path)
+    size_bytes = source.stat().st_size
+    if size_bytes % 2 != 0:
+        raise ValueError(f"token stream must contain an even number of bytes: {source}")
+    raw_token_count = size_bytes // 2
+    if raw_token_count <= 0:
+        raise ValueError(f"token stream is empty: {source}")
+    sample = np.fromfile(source, dtype=np.uint16, count=max_tokens)
+    if sample.size < 2:
+        raise ValueError("sample must contain at least two tokens")
+    return raw_token_count, np.asarray(sample, dtype=np.uint16)
+
+
 def _encode_tokens_from_logits_rows(
     tokens: np.ndarray,
     *,
@@ -263,6 +283,73 @@ def encode_commavq_gpt_sample(
         exact_match = restored == sample.tolist()
     return {
         "command": "lossless_gpt_arithmetic_sample",
+        "token_path": str(Path(token_path)),
+        "encoded_path": str(target),
+        "profile": profile,
+        "device": device,
+        "dtype": dtype if dtype != "auto" else "float32",
+        "context_tokens": effective_context,
+        "token_count": int(sample.size),
+        "raw_token_count": int(raw_token_count),
+        "encoded_bytes": encoded_bytes,
+        "original_bytes": original_bytes,
+        "compression_ratio": original_bytes / encoded_bytes if encoded_bytes else 0.0,
+        "bits_per_token": encoded["bits_per_token"],
+        "exact_match": exact_match,
+        "local_only": True,
+        "measured": False,
+    }
+
+
+def encode_commavq_gpt_global_sample(
+    *,
+    token_path: str | Path,
+    encoded_path: str | Path,
+    profile: str = "gpt_arithmetic_small",
+    max_tokens: int = 256,
+    context_tokens: int | None = None,
+    vocab_size: int = 1025,
+    device: str = "mps",
+    dtype: str = "auto",
+    verify_decode: bool = False,
+    cache_dir: str | Path | None = None,
+    model_url: str | None = None,
+    gpt_module_path: str | Path | None = None,
+    model_loader: Callable[..., object] | None = None,
+) -> dict[str, object]:
+    raw_token_count, sample = _read_bounded_uint16_token_prefix(token_path, max_tokens=max_tokens)
+
+    loader = model_loader or load_official_commavq_gpt_model
+    model = loader(
+        device=device,
+        dtype=dtype,
+        cache_dir=cache_dir,
+        model_url=model_url,
+        gpt_module_path=gpt_module_path,
+    )
+    effective_context = 2580 if context_tokens is None else context_tokens
+    encoded = encode_token_stream_with_logits_fn(
+        sample,
+        logits_fn=model.next_token_logits,
+        context_tokens=effective_context,
+        vocab_size=vocab_size,
+    )
+    target = Path(encoded_path)
+    target.parent.mkdir(parents=True, exist_ok=True)
+    target.write_bytes(encoded["encoded_bytes"])
+    encoded_bytes = target.stat().st_size
+    original_bytes = int(sample.size) * 2
+    exact_match = None
+    if verify_decode:
+        restored = decode_token_stream_with_logits_fn(
+            encoded["encoded_bytes"],
+            logits_fn=model.next_token_logits,
+            context_tokens=effective_context,
+            vocab_size=vocab_size,
+        )
+        exact_match = restored == sample.tolist()
+    return {
+        "command": "lossless_gpt_arithmetic_global_sample",
         "token_path": str(Path(token_path)),
         "encoded_path": str(target),
         "profile": profile,

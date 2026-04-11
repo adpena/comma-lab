@@ -42,6 +42,39 @@ class TacLosslessGlobalPrevSymbolTests(unittest.TestCase):
             self.assertTrue(np.array_equal(np.load(root / "decoded" / "clip_b"), records[0].tokens))
             self.assertEqual(decoded["record_count"], 2)
 
+    def test_encode_corpus_can_preserve_input_record_order(self) -> None:
+        from tac.lossless.data import TokenRecord
+        from tac.lossless.global_prev_symbol import (
+            decode_corpus_global_prev_symbol_position_major,
+            encode_corpus_global_prev_symbol_position_major,
+        )
+
+        records = [
+            TokenRecord("clip_c", np.full((1, 8, 16), 3, dtype=np.int16)),
+            TokenRecord("clip_a", np.full((1, 8, 16), 1, dtype=np.int16)),
+            TokenRecord("clip_b", np.full((1, 8, 16), 2, dtype=np.int16)),
+        ]
+
+        with tempfile.TemporaryDirectory() as tmpdir:
+            root = Path(tmpdir)
+            encoded = encode_corpus_global_prev_symbol_position_major(
+                records=records,
+                output_dir=root / "encoded",
+                preserve_input_order=True,
+            )
+            decoded = decode_corpus_global_prev_symbol_position_major(
+                encoded_dir=root / "encoded",
+                output_dir=root / "decoded",
+            )
+
+            manifest = (root / "encoded" / "manifest.json").read_text()
+            self.assertIn('"preserve_input_order": true', manifest)
+            self.assertEqual(encoded["record_order"], "input")
+            self.assertEqual(decoded["record_count"], 3)
+            self.assertTrue(np.array_equal(np.load(root / "decoded" / "clip_a"), records[1].tokens))
+            self.assertTrue(np.array_equal(np.load(root / "decoded" / "clip_b"), records[2].tokens))
+            self.assertTrue(np.array_equal(np.load(root / "decoded" / "clip_c"), records[0].tokens))
+
     def test_encode_corpus_supports_multiple_chunks(self) -> None:
         from tac.lossless.data import TokenRecord
         from tac.lossless.global_prev_symbol import encode_corpus_global_prev_symbol_position_major
@@ -119,6 +152,86 @@ class TacLosslessGlobalPrevSymbolTests(unittest.TestCase):
                     output_dir=Path(tmpdir) / "encoded",
                     chunk_count=0,
                 )
+
+    def test_order_token_records_rejects_unknown_strategy(self) -> None:
+        from tac.lossless.data import TokenRecord
+        from tac.lossless.global_prev_symbol import order_token_records
+
+        records = [TokenRecord("clip", np.arange(128, dtype=np.int16).reshape(1, 8, 16))]
+
+        with self.assertRaisesRegex(ValueError, "strategy"):
+            order_token_records(records, strategy="unknown")
+
+    def test_order_token_records_similarity_strategy_preserves_set_and_returns_noncanonical_order(self) -> None:
+        from tac.lossless.data import TokenRecord
+        from tac.lossless.global_prev_symbol import order_token_records
+
+        records = [
+            TokenRecord("clip_a", np.zeros((2, 8, 16), dtype=np.int16)),
+            TokenRecord("clip_b", np.full((2, 8, 16), 100, dtype=np.int16)),
+            TokenRecord("clip_c", np.full((2, 8, 16), 1, dtype=np.int16)),
+        ]
+
+        ordered = order_token_records(records, strategy="clip_greedy_nn")
+
+        self.assertEqual({record.file_name for record in ordered}, {"clip_a", "clip_b", "clip_c"})
+        self.assertEqual(ordered[0].file_name, "clip_c")
+
+    def test_order_token_records_label_grouped_strategy_requires_label_map(self) -> None:
+        from tac.lossless.data import TokenRecord
+        from tac.lossless.global_prev_symbol import order_token_records
+
+        records = [TokenRecord("clip", np.arange(128, dtype=np.int16).reshape(1, 8, 16))]
+
+        with self.assertRaisesRegex(ValueError, "label_map"):
+            order_token_records(records, strategy="label_grouped_clip_greedy_nn")
+
+    def test_order_token_records_label_grouped_strategy_honors_label_groups(self) -> None:
+        from tac.lossless.data import TokenRecord
+        from tac.lossless.global_prev_symbol import order_token_records
+
+        records = [
+            TokenRecord("clip_b", np.full((2, 8, 16), 100, dtype=np.int16)),
+            TokenRecord("clip_a", np.zeros((2, 8, 16), dtype=np.int16)),
+            TokenRecord("clip_d", np.full((2, 8, 16), 200, dtype=np.int16)),
+            TokenRecord("clip_c", np.full((2, 8, 16), 1, dtype=np.int16)),
+        ]
+
+        ordered = order_token_records(
+            records,
+            strategy="label_grouped_clip_greedy_nn",
+            label_map={
+                "clip_a": "urban",
+                "clip_c": "urban",
+                "clip_b": "highway",
+                "clip_d": "highway",
+            },
+        )
+
+        first_group = {record.file_name for record in ordered[:2]}
+        second_group = {record.file_name for record in ordered[2:]}
+
+        self.assertIn(first_group, ({"clip_a", "clip_c"}, {"clip_b", "clip_d"}))
+        self.assertIn(second_group, ({"clip_a", "clip_c"}, {"clip_b", "clip_d"}))
+        self.assertNotEqual(first_group, second_group)
+
+    def test_order_token_records_explicit_strategy_replays_saved_order(self) -> None:
+        from tac.lossless.data import TokenRecord
+        from tac.lossless.global_prev_symbol import order_token_records
+
+        records = [
+            TokenRecord("clip_a", np.zeros((1, 8, 16), dtype=np.int16)),
+            TokenRecord("clip_b", np.ones((1, 8, 16), dtype=np.int16)),
+            TokenRecord("clip_c", np.full((1, 8, 16), 2, dtype=np.int16)),
+        ]
+
+        ordered = order_token_records(
+            records,
+            strategy="explicit",
+            explicit_order=["clip_c", "clip_a", "clip_b"],
+        )
+
+        self.assertEqual([record.file_name for record in ordered], ["clip_c", "clip_a", "clip_b"])
 
 
 if __name__ == "__main__":
