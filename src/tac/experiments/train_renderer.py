@@ -31,7 +31,12 @@ _script_dir = Path(__file__).resolve().parent
 _repo = _script_dir.parent.parent.parent  # src/tac/experiments -> repo root
 sys.path.insert(0, str(_repo / "src"))
 
-_upstream = _repo / "workspace" / "upstream" / "comma_video_compression_challenge"
+import os as _os
+
+_upstream = Path(_os.environ.get(
+    "TAC_UPSTREAM_DIR",
+    str(_repo / "workspace" / "upstream" / "comma_video_compression_challenge"),
+))
 if _upstream.exists() and str(_upstream) not in sys.path:
     sys.path.insert(0, str(_upstream))
 
@@ -291,9 +296,10 @@ def train(args: argparse.Namespace):
     device = torch.device(args.device) if args.device else detect_device()
     print(f"[train] Device: {device}")
 
-    # Load scorer models
-    posenet_path = _upstream / "models" / "posenet.safetensors"
-    segnet_path = _upstream / "models" / "segnet.safetensors"
+    # Load scorer models (respect TAC_MODELS_DIR env var for Modal/remote deploys)
+    _models_dir = Path(_os.environ.get("TAC_MODELS_DIR", str(_upstream / "models")))
+    posenet_path = _models_dir / "posenet.safetensors"
+    segnet_path = _models_dir / "segnet.safetensors"
     print(f"[train] Loading scorers from {posenet_path.parent}")
     posenet, segnet = load_scorers(
         posenet_path, segnet_path, device=device, upstream_dir=str(_upstream),

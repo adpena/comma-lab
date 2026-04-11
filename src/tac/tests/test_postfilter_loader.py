@@ -10,8 +10,7 @@ import torch
 
 ROOT = Path(__file__).resolve().parents[3]
 MODULE_PATH = ROOT / "submissions" / "robust_current" / "inflate_postfilter.py"
-TAC_ROOT = Path(__file__).resolve().parents[1]
-PIXELSHUFFLE_MODULE_PATH = TAC_ROOT / "architectures.py"
+PIXELSHUFFLE_MODULE_PATH = MODULE_PATH  # inflate_postfilter.py contains PixelShuffleDilatedPostFilter
 
 
 def load_module():

@@ -278,9 +278,11 @@ def train(args: argparse.Namespace):
     )
     optimizer = optim.AdamW(learning_rate=lr_schedule, weight_decay=args.weight_decay)
 
-    # Grad clipping
-    if args.grad_clip > 0:
-        optimizer = optim.clip_grad_norm(optimizer, max_norm=args.grad_clip)
+    # Grad clipping — applied manually in the training loop (see below).
+    # NOTE: optim.clip_grad_norm(optimizer, ...) crashes with
+    # "AttributeError: 'AdamW' object has no attribute 'square'" because
+    # the MLX wrapper tries to call .square() on optimizer state, not grads.
+    max_grad_norm = args.grad_clip if args.grad_clip > 0 else 0.0
 
     # Pair indices
     n_frames = gt_frames.shape[0]
@@ -364,6 +366,17 @@ def train(args: argparse.Namespace):
                 loss, grads = compiled_lag(mask_t, mask_t1, gt_pair)
             else:
                 loss, grads = loss_and_grad_fn(model, mask_t, mask_t1, gt_pair)
+
+            # Manual gradient clipping (replaces broken optim.clip_grad_norm)
+            if max_grad_norm > 0:
+                grads_flat, _ = mx.utils.tree_flatten(grads)
+                total_norm = mx.sqrt(
+                    sum(g.square().sum() for g in grads_flat if isinstance(g, mx.array))
+                )
+                clip_coef = min(1.0, max_grad_norm / (total_norm.item() + 1e-6))
+                if clip_coef < 1.0:
+                    grads = mx.utils.tree_map(lambda g: g * clip_coef, grads)
+
             optimizer.update(model, grads)
             # Sync to avoid memory buildup
             mx.eval(model.parameters(), optimizer.state, loss)

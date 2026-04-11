@@ -96,7 +96,7 @@ def train_renderer(profile: str, tag: str, extra_args: list[str] | None = None):
         cmd.extend(extra_args)
 
     print(f"  Command: {' '.join(cmd)}")
-    result = subprocess.run(cmd, env={**os.environ, "PYTHONPATH": "/root/src"})
+    result = subprocess.run(cmd, env={**os.environ, "PYTHONPATH": "/root/src:/root/upstream"})
 
     results_vol.commit()
     return {"profile": profile, "tag": tag, "exit_code": result.returncode}
@@ -137,7 +137,7 @@ def train_postfilter(profile: str, tag: str, extra_args: list[str] | None = None
         cmd.extend(extra_args)
 
     print(f"  Command: {' '.join(cmd)}")
-    result = subprocess.run(cmd, env={**os.environ, "PYTHONPATH": "/root/src"})
+    result = subprocess.run(cmd, env={**os.environ, "PYTHONPATH": "/root/src:/root/upstream"})
 
     results_vol.commit()
     return {"profile": profile, "tag": tag, "exit_code": result.returncode}
