@@ -2,12 +2,16 @@ from __future__ import annotations
 
 import io
 import json
+import subprocess
+import sys
 import tempfile
 import unittest
 from contextlib import redirect_stderr, redirect_stdout
 from pathlib import Path
 
 from src.comma_lab import cli
+
+ROOT = Path(__file__).resolve().parents[1]
 
 
 def write_json(path: Path, payload: object) -> None:
@@ -97,6 +101,18 @@ class StateCliTests(unittest.TestCase):
         self.assertGreaterEqual(payload["changed_count"], 1)
         latest = (self.repo_root / "reports" / "latest.md").read_text()
         self.assertIn("1.33", latest)
+
+    def test_module_invocation_status_still_works_without_pythonpath_hacks(self) -> None:
+        result = subprocess.run(
+            [sys.executable, "-m", "src.comma_lab.cli", "status"],
+            cwd=ROOT,
+            check=False,
+            capture_output=True,
+            text=True,
+        )
+
+        self.assertEqual(result.returncode, 0, result.stderr)
+        self.assertIn("Repo root:", result.stdout)
 
 
 if __name__ == "__main__":

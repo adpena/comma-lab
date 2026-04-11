@@ -1,0 +1,4 @@
+# file: /Users/adpena/Projects/pact/src/comma_lab/install.py
+# hypothesis_version: 6.151.12
+
+['*', 'analyze_roi.py', 'archive.zip', 'config.env', 'exact_current', 'inflate.py', 'inflate.sh', 'postfilter_int8.pt', 'robust_current', 'submissions']

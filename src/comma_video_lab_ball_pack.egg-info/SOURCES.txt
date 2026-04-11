@@ -34,6 +34,8 @@ src/comma_video_lab_ball_pack.egg-info/top_level.txt
 src/tac/__init__.py
 src/tac/adaptive.py
 src/tac/architectures.py
+src/tac/bootstrap_codegen.py
+src/tac/cli.py
 src/tac/data.py
 src/tac/entrypoints.py
 src/tac/evaluate.py
@@ -43,6 +45,14 @@ src/tac/profiles.py
 src/tac/quantization.py
 src/tac/scorer.py
 src/tac/training.py
+src/tac/lossless/__init__.py
+src/tac/lossless/codecs.py
+src/tac/lossless/contracts.py
+src/tac/lossless/data.py
+src/tac/lossless/evaluate.py
+src/tac/lossless/profiles.py
+src/tac/lossless/state.py
+src/tac/lossless/submission.py
 tests/test_compliance.py
 tests/test_config_validation.py
 tests/test_quantization.py

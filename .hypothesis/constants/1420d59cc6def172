@@ -1,0 +1,4 @@
+# file: /Users/adpena/Projects/pact/src/comma_lab/scheduler/repository.py
+# hypothesis_version: 6.151.12
+
+['_ledger.jsonl', 'archive_bytes', 'artifacts', 'device', 'finished_at_utc', 'manifest', 'manifest.json', 'measured', 'packaging_view', 'reports', 'results', 'results.jsonl', 'rule_faithful_score', 'run_id', 'score', 'slug', 'started_at_utc', 'status', 'status.json', 'track', 'ts_utc', 'unknown']

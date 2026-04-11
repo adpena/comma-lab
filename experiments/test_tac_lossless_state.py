@@ -31,13 +31,20 @@ class TacLosslessStateTests(unittest.TestCase):
             original_bytes=456,
             compression_rate=0.26973684210526316,
             method="arithmetic_gpt",
+            payload_bytes=111,
+            record_count=3,
+            checked_items=3,
+            split=["0", "1"],
+            evidence_root="reports/raw/example",
         )
 
         self.assertEqual(
             render_lossless_latest(result),
             (
                 "# Lossless Latest\n\n"
+                "Current promoted lossless baseline is **`0.2697`** via `gpt_arithmetic_small` using `arithmetic_gpt`.\n\n"
                 "## promoted result\n\n"
+                "- Status: exact round-trip confirmed\n"
                 "- Profile: `gpt_arithmetic_small`\n"
                 "- Method: `arithmetic_gpt`\n"
                 "- Compression rate: **`0.2697`**\n"
@@ -54,11 +61,14 @@ class TacLosslessStateTests(unittest.TestCase):
         with tempfile.TemporaryDirectory() as tmpdir:
             root = Path(tmpdir)
             result_path = root / "lossless_result.json"
+            archive_path = root / "submission" / "lossless.zip"
+            archive_path.parent.mkdir(parents=True, exist_ok=True)
+            archive_path.write_bytes(b"zip-bytes")
             result_path.write_text(
                 json.dumps(
                     {
                         "profile": "lzma_baseline",
-                        "archive_path": "submission/lossless.zip",
+                        "archive_path": str(archive_path),
                         "archive_bytes": 200,
                         "original_bytes": 800,
                         "compression_rate": 0.25,
@@ -86,15 +96,15 @@ class TacLosslessStateTests(unittest.TestCase):
 
             self.assertEqual(outcome["command"], "lossless_promote")
             self.assertEqual(
-                set(outcome["changed_paths"]),
-                {
-                    ".omx/research/lossless_findings.md",
-                    ".omx/state/lossless_focus.md",
-                    ".omx/state/lossless_next_experiments.md",
-                    "reports/lossless_latest.md",
+                outcome["changed_paths"],
+                [
                     "reports/lossless_results.jsonl",
                     "reports/lossless_timeline.jsonl",
-                },
+                    "reports/lossless_latest.md",
+                    ".omx/state/lossless_focus.md",
+                    ".omx/state/lossless_next_experiments.md",
+                    ".omx/research/lossless_findings.md",
+                ],
             )
             self.assertEqual(lossy_latest.read_text(), "lossy latest\n")
             self.assertEqual(lossy_results.read_text(), '{"score": 1.33}\n')
@@ -104,10 +114,38 @@ class TacLosslessStateTests(unittest.TestCase):
 
             latest = (root / "reports" / "lossless_latest.md").read_text()
             focus = (root / ".omx" / "state" / "lossless_focus.md").read_text()
+            next_experiments = (root / ".omx" / "state" / "lossless_next_experiments.md").read_text()
             findings = (root / ".omx" / "research" / "lossless_findings.md").read_text()
             self.assertIn("0.2500", latest)
+            self.assertIn("Current promoted lossless baseline is", latest)
+            self.assertIn("exact round-trip confirmed", latest)
             self.assertIn("lzma_baseline", focus)
+            self.assertIn("current promoted baseline", focus)
+            self.assertIn("Preserve the first measured lossless baseline", next_experiments)
+            self.assertIn("first measured lossless baseline", findings)
             self.assertIn("lossless promotion flow is separate", findings)
+
+    def test_promote_lossless_result_requires_archive_to_exist(self) -> None:
+        from tac.lossless.state import promote_lossless_result
+
+        with tempfile.TemporaryDirectory() as tmpdir:
+            root = Path(tmpdir)
+            result_path = root / "lossless_result.json"
+            result_path.write_text(
+                json.dumps(
+                    {
+                        "profile": "lzma_baseline",
+                        "archive_path": str(root / "missing.zip"),
+                        "archive_bytes": 200,
+                        "original_bytes": 800,
+                        "compression_rate": 0.25,
+                        "method": "lzma",
+                    }
+                )
+            )
+
+            with self.assertRaises(FileNotFoundError):
+                promote_lossless_result(repo_root=root, result_path=result_path)
 
     def test_promote_lossless_result_is_idempotent_and_deduplicates_ledgers(self) -> None:
         from tac.lossless.state import promote_lossless_result
@@ -115,9 +153,12 @@ class TacLosslessStateTests(unittest.TestCase):
         with tempfile.TemporaryDirectory() as tmpdir:
             root = Path(tmpdir)
             result_path = root / "lossless_result.json"
+            archive_path = root / "submission" / "floor.zip"
+            archive_path.parent.mkdir(parents=True, exist_ok=True)
+            archive_path.write_bytes(b"zip-bytes")
             result_payload = {
                 "profile": "zpaq_baseline",
-                "archive_path": "submission/floor.zip",
+                "archive_path": str(archive_path),
                 "archive_bytes": 300,
                 "original_bytes": 1200,
                 "compression_rate": 0.25,
@@ -130,7 +171,7 @@ class TacLosslessStateTests(unittest.TestCase):
             canonical_results_row = {
                 "profile": "zpaq_baseline",
                 "method": "zpaq",
-                "archive_path": "submission/floor.zip",
+                "archive_path": str(archive_path),
                 "archive_bytes": 300,
                 "original_bytes": 1200,
                 "compression_rate": 0.25,
@@ -143,7 +184,7 @@ class TacLosslessStateTests(unittest.TestCase):
                 "compression_rate": 0.25,
                 "archive_bytes": 300,
                 "original_bytes": 1200,
-                "archive_path": "submission/floor.zip",
+                "archive_path": str(archive_path),
             }
             (reports / "lossless_results.jsonl").write_text(
                 "\n".join(
@@ -183,6 +224,58 @@ class TacLosslessStateTests(unittest.TestCase):
             self.assertEqual(second["changed_paths"], [])
             self.assertEqual((reports / "lossless_results.jsonl").read_text(), first_results_text)
             self.assertEqual((reports / "lossless_timeline.jsonl").read_text(), first_timeline_text)
+
+    def test_promote_lossless_result_replaces_stale_archive_path_for_same_promoted_result(self) -> None:
+        from tac.lossless.state import promote_lossless_result
+
+        with tempfile.TemporaryDirectory() as tmpdir:
+            root = Path(tmpdir)
+            result_path = root / "lossless_result.json"
+            archive_path = root / "reports" / "raw" / "stable.zip"
+            archive_path.parent.mkdir(parents=True, exist_ok=True)
+            archive_path.write_bytes(b"zip-bytes")
+            result_payload = {
+                "profile": "lzma_baseline",
+                "archive_path": str(archive_path),
+                "archive_bytes": 200,
+                "original_bytes": 800,
+                "compression_rate": 1.5,
+                "method": "lzma",
+            }
+            result_path.write_text(json.dumps(result_payload))
+
+            reports = root / "reports"
+            reports.mkdir(parents=True, exist_ok=True)
+            stale_row = {
+                "profile": "lzma_baseline",
+                "method": "lzma",
+                "archive_path": "/tmp/old.zip",
+                "archive_bytes": 200,
+                "original_bytes": 800,
+                "compression_rate": 1.5,
+                "event": "promotion",
+            }
+            stale_timeline = {
+                "event": "promotion",
+                "profile": "lzma_baseline",
+                "method": "lzma",
+                "compression_rate": 1.5,
+                "archive_bytes": 200,
+                "original_bytes": 800,
+                "archive_path": "/tmp/old.zip",
+            }
+            (reports / "lossless_results.jsonl").write_text(json.dumps(stale_row) + "\n")
+            (reports / "lossless_timeline.jsonl").write_text(json.dumps(stale_timeline) + "\n")
+
+            promote_lossless_result(repo_root=root, result_path=result_path)
+
+            results_rows = jsonl_rows(reports / "lossless_results.jsonl")
+            timeline_rows = jsonl_rows(reports / "lossless_timeline.jsonl")
+
+            self.assertEqual(len(results_rows), 1)
+            self.assertEqual(results_rows[0]["archive_path"], str(archive_path))
+            self.assertEqual(len(timeline_rows), 1)
+            self.assertEqual(timeline_rows[0]["archive_path"], str(archive_path))
 
 
 if __name__ == "__main__":

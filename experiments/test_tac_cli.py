@@ -84,6 +84,68 @@ class TacCliTests(unittest.TestCase):
         self.assertEqual(args.command, "lossless")
         self.assertEqual(args.lossless_command, "profiles")
 
+    def test_lossless_plan_subcommand_builds_gpt_arithmetic_plan(self) -> None:
+        mod = load_module()
+        with tempfile.TemporaryDirectory() as tmpdir:
+            root = Path(tmpdir)
+            result = mod.main(
+                [
+                    "lossless",
+                    "plan",
+                    "--profile",
+                    "gpt_arithmetic_small",
+                    "--work-dir",
+                    str(root),
+                    "--split",
+                    "0",
+                    "1",
+                ]
+            )
+
+        self.assertEqual(result["command"], "lossless_plan")
+        self.assertEqual(result["plan"]["profile"], "gpt_arithmetic_small")
+        self.assertEqual(result["plan"]["method"], "gpt_arithmetic")
+        self.assertEqual(result["plan"]["split"], ["0", "1"])
+
+    def test_lossless_estimate_subcommand_reports_gpt_workload(self) -> None:
+        mod = load_module()
+        estimate_payload = {
+            "profile": "gpt_arithmetic_small",
+            "method": "gpt_arithmetic",
+            "model": "small",
+            "context_tokens": 256,
+            "dataset_name": "commaai/commavq",
+            "split": ["0", "1"],
+            "work_dir": "/tmp/example",
+            "status": "estimated",
+            "measured": False,
+            "example_count": 5000,
+            "frames_per_example": 1200,
+            "tokens_per_frame": 129,
+            "flat_tokens_per_example": 154801,
+            "total_flat_tokens": 774005000,
+        }
+        with mock.patch.object(
+            mod,
+            "estimate_gpt_arithmetic_workload",
+            return_value=mod.GPTArithmeticEstimate(**estimate_payload),
+        ) as mocked:
+            result = mod.main(
+                [
+                    "lossless",
+                    "estimate",
+                    "--profile",
+                    "gpt_arithmetic_small",
+                    "--split",
+                    "0",
+                    "1",
+                ]
+            )
+
+        mocked.assert_called_once_with("gpt_arithmetic_small", split=["0", "1"], work_dir=None)
+        self.assertEqual(result["command"], "lossless_estimate")
+        self.assertEqual(result["estimate"]["total_flat_tokens"], 774005000)
+
     def test_lossless_package_subcommand_builds_submission_zip(self) -> None:
         mod = load_module()
         with tempfile.TemporaryDirectory() as tmpdir:
@@ -118,7 +180,7 @@ class TacCliTests(unittest.TestCase):
             root = Path(tmpdir)
             with mock.patch.object(
                 mod,
-                "evaluate_lzma_baseline_submission",
+                "evaluate_lossless_baseline_submission",
                 return_value={
                     "command": "lossless_baseline_evaluate",
                     "compression": {"compression_rate": 3.4, "method": "lzma"},
@@ -139,9 +201,40 @@ class TacCliTests(unittest.TestCase):
                     ]
                 )
 
-        mocked.assert_called_once_with(split=["0", "1"], work_dir=root)
+        mocked.assert_called_once_with(profile="lzma_baseline", split=["0", "1"], work_dir=root)
         self.assertEqual(result["command"], "lossless_baseline_evaluate")
         self.assertEqual(result["compression"]["compression_rate"], 3.4)
+
+    def test_lossless_baseline_subcommand_routes_non_lzma_profiles_correctly(self) -> None:
+        mod = load_module()
+        with tempfile.TemporaryDirectory() as tmpdir:
+            root = Path(tmpdir)
+            with mock.patch.object(
+                mod,
+                "evaluate_lossless_baseline_submission",
+                return_value={
+                    "command": "lossless_baseline_evaluate",
+                    "baseline": {"method": "zpaq"},
+                    "compression": {"compression_rate": 2.3, "method": "zpaq"},
+                    "verification": {"exact_match": True},
+                },
+            ) as mocked:
+                result = mod.main(
+                    [
+                        "lossless",
+                        "baseline",
+                        "--profile",
+                        "zpaq_baseline",
+                        "--work-dir",
+                        str(root),
+                        "--split",
+                        "0",
+                        "1",
+                    ]
+                )
+
+        mocked.assert_called_once_with(profile="zpaq_baseline", split=["0", "1"], work_dir=root)
+        self.assertEqual(result["compression"]["method"], "zpaq")
 
     def test_lossless_compress_subcommand_runs_real_lzma_roundtrip(self) -> None:
         mod = load_module()
@@ -174,6 +267,84 @@ class TacCliTests(unittest.TestCase):
         self.assertEqual(result["command"], "lossless_compress")
         self.assertEqual(result["compression"]["profile"], "lzma_baseline")
         self.assertEqual(result["compression"]["method"], "lzma")
+        self.assertTrue(result["verification"]["exact_match"])
+
+    def test_lossless_compress_subcommand_routes_zpaq_profile_to_codec_layer(self) -> None:
+        mod = load_module()
+        from tac.lossless.contracts import LosslessCompressionResult, LosslessVerificationResult
+
+        with tempfile.TemporaryDirectory() as tmpdir:
+            root = Path(tmpdir)
+            original = root / "original.bin"
+            archive = root / "compressed.zpaq"
+            decompressed = root / "roundtrip.bin"
+            original.write_bytes(b"zpaq route test")
+
+            def fake_compress_lossless_file(*, profile, input_path, output_path):
+                Path(output_path).write_bytes(b"zpaq-arc")
+                return LosslessCompressionResult(
+                    profile="zpaq_baseline",
+                    archive_path=str(output_path),
+                    archive_bytes=8,
+                    original_bytes=len(original.read_bytes()),
+                    compression_rate=2.0,
+                    method="zpaq",
+                )
+
+            def fake_decompress_lossless_file(*, profile, archive_path, output_path):
+                Path(output_path).write_bytes(original.read_bytes())
+                return Path(output_path)
+
+            with (
+                mock.patch.object(
+                    mod,
+                    "compress_lossless_file",
+                    side_effect=fake_compress_lossless_file,
+                ) as mocked_compress,
+                mock.patch.object(
+                    mod,
+                    "decompress_lossless_file",
+                    side_effect=fake_decompress_lossless_file,
+                ) as mocked_decompress,
+                mock.patch.object(
+                    mod,
+                    "evaluate_lossless_archive",
+                    return_value=(
+                        LosslessCompressionResult(
+                            profile="zpaq_baseline",
+                            archive_path=str(archive),
+                            archive_bytes=8,
+                            original_bytes=len(original.read_bytes()),
+                            compression_rate=2.0,
+                            method="zpaq",
+                        ),
+                        LosslessVerificationResult(
+                            exact_match=True,
+                            checked_items=len(original.read_bytes()),
+                            mismatch_count=0,
+                        ),
+                    ),
+                ) as mocked_eval,
+            ):
+                result = mod.main(
+                    [
+                        "lossless",
+                        "compress",
+                        "--profile",
+                        "zpaq_baseline",
+                        "--input",
+                        str(original),
+                        "--output",
+                        str(archive),
+                        "--decompressed-output",
+                        str(decompressed),
+                    ]
+                )
+
+        mocked_compress.assert_called_once()
+        mocked_decompress.assert_called_once()
+        mocked_eval.assert_called_once()
+        self.assertEqual(result["compression"]["method"], "zpaq")
         self.assertTrue(result["verification"]["exact_match"])
 
     def test_lossless_evaluate_subcommand_reports_inverse_archive_ratio(self) -> None:
@@ -218,6 +389,8 @@ class TacCliTests(unittest.TestCase):
             reports.mkdir(parents=True)
             omx_state.mkdir(parents=True)
             omx_research.mkdir(parents=True)
+            archive_path = root / "submission.zip"
+            archive_path.write_bytes(b"zip")
             (reports / "lossless_results.jsonl").write_text("")
             (reports / "lossless_timeline.jsonl").write_text("")
             (reports / "lossless_latest.md").write_text("stale\n")
@@ -228,7 +401,7 @@ class TacCliTests(unittest.TestCase):
                 json.dumps(
                     {
                         "profile": "lzma_baseline",
-                        "archive_path": "submission.zip",
+                        "archive_path": str(archive_path),
                         "archive_bytes": 2,
                         "original_bytes": 4,
                         "compression_rate": 0.5,

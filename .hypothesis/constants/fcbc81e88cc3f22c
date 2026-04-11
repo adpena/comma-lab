@@ -1,0 +1,4 @@
+# file: /Users/adpena/Projects/pact/src/comma_lab/bootstrap.py
+# hypothesis_version: 6.151.12
+
+['--depth=1', '--ff-only', '.git', 'checkout', 'clone', 'fetch', 'git', 'git-lfs', 'install', 'lfs', 'master', 'origin', 'pull']

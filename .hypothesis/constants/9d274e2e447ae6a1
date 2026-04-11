@@ -1,0 +1,4 @@
+# file: /Users/adpena/Projects/pact/experiments/build_kaggle_kernels.py
+# hypothesis_version: 6.151.12
+
+['*', '--only', '--output-root', '.kaggle', '__main__', 'bootstrap_codegen.py', 'dilated_h64_long1000', 'experiments', 'kaggle.json', 'kaggle_kernels', 'pairaware_smoke', 'save_best_checkpoint', 'save_final_artifacts', 'src', 'tac', 'username']

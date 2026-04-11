@@ -16,6 +16,7 @@ class KaggleKernelBuilderTests(unittest.TestCase):
             title="comma-lab test",
             code_file="run_kernel.py",
             dataset_sources=("alice/private-assets",),
+            launch_policy={"bounded": True, "checkpoint_priority": "early"},
         )
 
         self.assertEqual(metadata["id"], "alice/comma-lab-test")
@@ -25,6 +26,10 @@ class KaggleKernelBuilderTests(unittest.TestCase):
         self.assertTrue(metadata["enable_gpu"])
         self.assertTrue(metadata["enable_internet"])
         self.assertEqual(metadata["dataset_sources"], ["alice/private-assets"])
+        self.assertEqual(
+            metadata["launch_policy"],
+            {"bounded": True, "checkpoint_priority": "early"},
+        )
 
     def test_write_bundle_copies_files_and_launcher(self) -> None:
         with tempfile.TemporaryDirectory() as tmpdir:
@@ -40,6 +45,7 @@ class KaggleKernelBuilderTests(unittest.TestCase):
                 module_name="pkg.helper",
                 args=["--epochs", "10"],
                 include_paths=(source / "pkg" / "helper.py",),
+                launch_policy={"bounded": True, "checkpoint_priority": "early"},
             )
 
             mod.write_bundle(bundle_dir=bundle, username="alice", spec=spec, repo_root=source)
@@ -56,6 +62,7 @@ class KaggleKernelBuilderTests(unittest.TestCase):
         self.assertIn("/kaggle/working", launcher)
         self.assertIn("git-lfs", launcher)
         self.assertEqual(copied, "VALUE = 1\n")
+        self.assertEqual(metadata["launch_policy"], {"bounded": True, "checkpoint_priority": "early"})
 
     def test_write_bundle_supports_direct_code_file_mode(self) -> None:
         with tempfile.TemporaryDirectory() as tmpdir:
@@ -89,7 +96,13 @@ class KaggleKernelBuilderTests(unittest.TestCase):
         with tempfile.TemporaryDirectory() as tmpdir:
             root = Path(tmpdir)
             source = root / "script.py"
-            source.write_text("from tac.entrypoints import build_postfilter_meta\nprint('hi')\n")
+            source.write_text(
+                "#!/usr/bin/env python3\n"
+                "\"\"\"demo\"\"\"\n"
+                "from __future__ import annotations\n"
+                "from tac.entrypoints import build_postfilter_meta\n"
+                "print('hi')\n"
+            )
 
             bundle = root / "bundle"
             spec = mod.KaggleKernelSpec(
@@ -104,8 +117,10 @@ class KaggleKernelBuilderTests(unittest.TestCase):
 
             copied_script = (bundle / "script.py").read_text()
 
+        self.assertIn("from __future__ import annotations", copied_script)
         self.assertIn("def ensure_tac_importable()", copied_script)
         self.assertIn("from tac.entrypoints import build_postfilter_meta", copied_script)
+        compile(copied_script, "script.py", "exec")
 
     def test_write_bundle_clears_stale_files_before_rebuild(self) -> None:
         with tempfile.TemporaryDirectory() as tmpdir:

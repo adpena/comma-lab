@@ -1,0 +1,4 @@
+# file: /Users/adpena/Projects/pact/src/comma_lab/task_codec/quantization.py
+# hypothesis_version: 6.151.12
+
+['.json', '.pt', 'QuantizationMetadata', '_best_int8.pt', '_best_meta.json', '_int8.pt', 'alpha', 'epoch', 'fp32_path', 'hidden', 'int8_path', 'int8_size', 'iteration', 'kernel', 'meta', 'score', 'scorer', 'variant']

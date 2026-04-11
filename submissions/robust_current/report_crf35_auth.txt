@@ -1,0 +1,17 @@
+=== Evaluation config ===
+  batch_size: 16
+  device: None
+  num_threads: 2
+  prefetch_queue_depth: 4
+  report: ../../../submissions/robust_current/report_crf35_auth.txt
+  seed: 1234
+  submission_dir: ../../../submissions/robust_current
+  uncompressed_dir: videos
+  video_names_file: public_test_video_names.txt
+=== Evaluation results over 600 samples ===
+  Average PoseNet Distortion: 0.01107683
+  Average SegNet Distortion: 0.00531566
+  Submission file size: 946,737 bytes
+  Original uncompressed size: 37,545,489 bytes
+  Compression Rate: 0.02521573
+  Final score: 100*segnet_dist + √(10*posenet_dist) + 25*rate = 1.49

@@ -1,0 +1,4 @@
+# file: /Users/adpena/Projects/pact/experiments/kaggle_watchdog.py
+# hypothesis_version: 6.151.12
+
+[300, '+00:00', '--interval-seconds', '--iterations', '--log-dir', '--manifests-dir', '--max-active', '0 means run forever', 'Z', '__main__', 'a', 'history.jsonl', 'kaggle-*.json', 'latest.json', 'queue', 'synced', 'ts_utc']
