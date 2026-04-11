@@ -318,6 +318,51 @@ def benchmark_zstd_dict_file(
     return payload
 
 
+def benchmark_zstd_dict_directory(
+    *,
+    source_root: str | Path,
+    compressed_root: str | Path,
+    restored_root: str | Path,
+    sample_paths: list[str | Path] | None = None,
+    dict_size: int = 8192,
+) -> dict[str, object]:
+    source_dir = Path(source_root)
+    compressed_dir = Path(compressed_root)
+    restored_dir = Path(restored_root)
+    files = sorted(path for path in source_dir.rglob("*") if path.is_file())
+    sample_paths = list(sample_paths or [])
+
+    archive_bytes = 0
+    original_bytes = 0
+    dictionary_bytes = 0
+    for source_path in files:
+        relative = source_path.relative_to(source_dir)
+        result = zstd_dict_roundtrip_file(
+            source_path=source_path,
+            compressed_path=compressed_dir / f"{relative.as_posix()}.zst",
+            restored_path=restored_dir / relative,
+            dict_size=dict_size,
+            sample_payloads=[Path(path).read_bytes() for path in sample_paths] if sample_paths else None,
+        )
+        archive_bytes += int(result["archive_bytes"])
+        original_bytes += int(result["original_bytes"])
+        dictionary_bytes = max(dictionary_bytes, int(result["dictionary_bytes"]))
+
+    return {
+        "command": "lossless_zstd_dict_directory_benchmark",
+        "method": "zstd_dict",
+        "source_root": str(source_dir),
+        "compressed_root": str(compressed_dir),
+        "restored_root": str(restored_dir),
+        "dictionary_bytes": dictionary_bytes,
+        "sample_count": len(sample_paths),
+        "file_count": len(files),
+        "archive_bytes": archive_bytes,
+        "original_bytes": original_bytes,
+        "compression_rate": compression_rate(archive_bytes, original_bytes) if original_bytes else 0.0,
+    }
+
+
 def compress_lossless_file(
     *, profile: str, input_path: str | Path, output_path: str | Path
 ) -> LosslessCompressionResult:

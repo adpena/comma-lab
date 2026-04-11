@@ -142,6 +142,76 @@ class TacLosslessCodecsTests(unittest.TestCase):
         self.assertEqual(result["dictionary_bytes"], 123)
         self.assertEqual(result["archive_bytes"], 50)
 
+    def test_benchmark_zstd_dict_directory_reports_aggregate_ratio(self) -> None:
+        from tac.lossless.codecs import benchmark_zstd_dict_directory
+
+        with tempfile.TemporaryDirectory() as tmpdir:
+            root = Path(tmpdir)
+            source_root = root / "source"
+            compressed_root = root / "compressed"
+            restored_root = root / "restored"
+            sample_a = root / "sample_a.bin"
+            sample_b = root / "sample_b.bin"
+            source_root.mkdir(parents=True, exist_ok=True)
+            sample_a.write_bytes(b"sample-a")
+            sample_b.write_bytes(b"sample-b")
+            first = source_root / "a.bin"
+            second = source_root / "nested" / "b.bin"
+            second.parent.mkdir(parents=True, exist_ok=True)
+            first.write_bytes(b"aaa")
+            second.write_bytes(b"bbbb")
+
+            payloads = {
+                first: {
+                    "archive_bytes": 5,
+                    "dictionary_bytes": 123,
+                    "sample_count": 2,
+                },
+                second: {
+                    "archive_bytes": 7,
+                    "dictionary_bytes": 123,
+                    "sample_count": 2,
+                },
+            }
+
+            def fake_roundtrip(*, source_path, compressed_path, restored_path, dict_size, sample_payloads):
+                source_path = Path(source_path)
+                compressed_path = Path(compressed_path)
+                restored_path = Path(restored_path)
+                compressed_path.parent.mkdir(parents=True, exist_ok=True)
+                restored_path.parent.mkdir(parents=True, exist_ok=True)
+                compressed_path.write_bytes(b"x" * payloads[source_path]["archive_bytes"])
+                restored_path.write_bytes(source_path.read_bytes())
+                return {
+                    "method": "zstd_dict",
+                    "source_path": str(source_path),
+                    "compressed_path": str(compressed_path),
+                    "restored_path": str(restored_path),
+                    "dictionary_bytes": payloads[source_path]["dictionary_bytes"],
+                    "sample_count": payloads[source_path]["sample_count"],
+                    "archive_bytes": payloads[source_path]["archive_bytes"],
+                    "original_bytes": source_path.stat().st_size,
+                    "compression_rate": source_path.stat().st_size / payloads[source_path]["archive_bytes"],
+                }
+
+            with mock.patch("tac.lossless.codecs.zstd_dict_roundtrip_file", side_effect=fake_roundtrip) as mocked:
+                result = benchmark_zstd_dict_directory(
+                    source_root=source_root,
+                    compressed_root=compressed_root,
+                    restored_root=restored_root,
+                    sample_paths=[sample_a, sample_b],
+                    dict_size=4096,
+                )
+
+        self.assertEqual(mocked.call_count, 2)
+        self.assertEqual(result["command"], "lossless_zstd_dict_directory_benchmark")
+        self.assertEqual(result["file_count"], 2)
+        self.assertEqual(result["sample_count"], 2)
+        self.assertEqual(result["dictionary_bytes"], 123)
+        self.assertEqual(result["archive_bytes"], 12)
+        self.assertEqual(result["original_bytes"], 7)
+        self.assertAlmostEqual(result["compression_rate"], 7 / 12)
+
     def test_zstd_dict_roundtrip_rejects_insufficient_sample_corpus(self) -> None:
         from tac.lossless.codecs import zstd_dict_roundtrip_file
 

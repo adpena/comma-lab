@@ -522,6 +522,62 @@ class TacCliTests(unittest.TestCase):
         self.assertEqual(result["sample_count"], 2)
         self.assertEqual(result["compression_rate"], 1.92)
 
+    def test_lossless_zstd_dict_dir_benchmark_subcommand_reports_ratio(self) -> None:
+        mod = load_module()
+        with tempfile.TemporaryDirectory() as tmpdir:
+            root = Path(tmpdir)
+            source_root = root / "source"
+            compressed_root = root / "compressed"
+            restored_root = root / "restored"
+            sample_a = root / "sample_a.bin"
+            sample_b = root / "sample_b.bin"
+            with mock.patch.object(
+                mod,
+                "benchmark_zstd_dict_directory",
+                return_value={
+                    "command": "lossless_zstd_dict_directory_benchmark",
+                    "method": "zstd_dict",
+                    "source_root": str(source_root),
+                    "compressed_root": str(compressed_root),
+                    "restored_root": str(restored_root),
+                    "dictionary_bytes": 123,
+                    "sample_count": 2,
+                    "file_count": 2,
+                    "archive_bytes": 12,
+                    "original_bytes": 7,
+                    "compression_rate": 7 / 12,
+                },
+            ) as mocked:
+                result = mod.main(
+                    [
+                        "lossless",
+                        "zstd-dict-dir-benchmark",
+                        "--source-root",
+                        str(source_root),
+                        "--compressed-root",
+                        str(compressed_root),
+                        "--restored-root",
+                        str(restored_root),
+                        "--sample",
+                        str(sample_a),
+                        "--sample",
+                        str(sample_b),
+                        "--dict-size",
+                        "4096",
+                    ]
+                )
+
+        mocked.assert_called_once_with(
+            source_root=source_root,
+            compressed_root=compressed_root,
+            restored_root=restored_root,
+            sample_paths=[sample_a, sample_b],
+            dict_size=4096,
+        )
+        self.assertEqual(result["command"], "lossless_zstd_dict_directory_benchmark")
+        self.assertEqual(result["file_count"], 2)
+        self.assertAlmostEqual(result["compression_rate"], 7 / 12)
+
     def test_lossless_prev_symbol_benchmark_subcommand_rejects_odd_byte_stream(self) -> None:
         mod = load_module()
         with tempfile.TemporaryDirectory() as tmpdir:
