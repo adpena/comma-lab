@@ -170,27 +170,41 @@ class EMA:
 
 
 class SWA:
-    """Stochastic Weight Averaging — averages EMA snapshots over time.
+    """Stochastic Weight Averaging — averages EMA shadow snapshots over time.
 
-    Takes periodic snapshots of the EMA shadow and averages them.
-    Used on top of EMA for smoother final weights.
+    Takes periodic snapshots of the EMA shadow dict and computes a running
+    average. Applied on top of EMA for wider minima (better int8 quantization).
+
+    Usage: call update(ema_obj) each epoch in the final 20% of training.
+    Call apply(ema_obj) at the end of training to replace EMA weights with
+    the SWA average before final checkpoint save.
     """
 
     def __init__(self):
         self.avg: dict[str, torch.Tensor] | None = None
         self.count = 0
 
-    def update(self, state_dict: dict[str, torch.Tensor]):
+    def update(self, ema):
+        """Snapshot the EMA shadow weights into the running average."""
+        shadow = ema.shadow if hasattr(ema, 'shadow') else ema
         if self.avg is None:
-            self.avg = {k: v.clone() for k, v in state_dict.items()}
+            self.avg = {k: v.clone() for k, v in shadow.items()}
             self.count = 1
         else:
             self.count += 1
             for k in self.avg:
-                self.avg[k] += (state_dict[k] - self.avg[k]) / self.count
+                if k in shadow:
+                    self.avg[k] += (shadow[k] - self.avg[k]) / self.count
 
-    def state_dict(self) -> dict[str, torch.Tensor]:
-        return {k: v.clone() for k, v in self.avg.items()} if self.avg else {}
+    def apply(self, ema):
+        """Replace the EMA shadow with the SWA average. Call before final save."""
+        if self.avg is None:
+            return
+        shadow = ema.shadow if hasattr(ema, 'shadow') else ema
+        for k in self.avg:
+            if k in shadow:
+                shadow[k].copy_(self.avg[k])
+        print(f"[SWA] Applied average of {self.count} snapshots to EMA shadow")
 
 
 class KalmanWeightFilter:
@@ -1004,16 +1018,11 @@ class Trainer:
                         segnet_weight=sw,
                         do_projection=is_first_microbatch,
                     )
-                    # Council requirement: log conflict frequency for experimental analysis
-                    if is_first_microbatch and _conflict:
-                        if not hasattr(self, '_pcgrad_conflicts'):
-                            self._pcgrad_conflicts = 0
-                            self._pcgrad_total = 0
-                        self._pcgrad_conflicts += 1
+                    # Council requirement: log conflict frequency per epoch
                     if is_first_microbatch:
-                        if not hasattr(self, '_pcgrad_total'):
-                            self._pcgrad_total = 0
-                        self._pcgrad_total += 1
+                        self._epoch_pcgrad_total = getattr(self, '_epoch_pcgrad_total', 0) + 1
+                        if _conflict:
+                            self._epoch_pcgrad_conflicts = getattr(self, '_epoch_pcgrad_conflicts', 0) + 1
                 else:
                     if cfg.boundary_weight > 1.0 and self._boundary_masks is not None:
                         bm = self._boundary_masks.get(start)
@@ -1070,7 +1079,8 @@ class Trainer:
                 if not hasattr(self, '_swa'):
                     self._swa = SWA()
                     print(f"[trainer-lazy] SWA started at epoch {epoch}")
-                self._swa.update(self.model)
+                # Bug #1 fix: pass EMA state_dict, not the raw model
+                self._swa.update(self.ema)
 
             # Empty CUDA cache once per epoch (not per step — avoids sync stalls)
             if torch.cuda.is_available():
@@ -1106,11 +1116,16 @@ class Trainer:
 
             lr = self.optimizer.param_groups[0]["lr"]
             eval_tag = "*" if is_eval_epoch else " "
-            # PCGrad conflict telemetry (council requirement)
+            # PCGrad conflict telemetry (council requirement — per-epoch, resets each epoch)
             conflict_str = ""
-            if cfg.loss_mode == "pcgrad" and hasattr(self, '_pcgrad_total') and self._pcgrad_total > 0:
-                conflict_rate = getattr(self, '_pcgrad_conflicts', 0) / self._pcgrad_total
-                conflict_str = f" conflict={conflict_rate:.1%}"
+            if cfg.loss_mode == "pcgrad":
+                ep_total = getattr(self, '_epoch_pcgrad_total', 0)
+                ep_conflicts = getattr(self, '_epoch_pcgrad_conflicts', 0)
+                if ep_total > 0:
+                    conflict_str = f" conflict={ep_conflicts}/{ep_total}={ep_conflicts/ep_total:.0%}"
+                # Reset for next epoch
+                self._epoch_pcgrad_total = 0
+                self._epoch_pcgrad_conflicts = 0
             print(f"[ep {epoch:4d}]{eval_tag} loss={avg_loss:.4f} pose={avg_pose:.6f} "
                   f"seg={avg_seg:.6f} scorer={scorer_val:.4f} best={self.best_scorer:.4f} lr={lr:.6f}{conflict_str}")
 
@@ -1170,6 +1185,21 @@ class Trainer:
             # Save training state every 50 epochs for crash recovery
             if epoch % 50 == 0 and epoch > 0:
                 self.save_training_state()
+
+        # Apply SWA if it was active — average replaces EMA, then re-evaluate
+        if cfg.use_swa and hasattr(self, '_swa') and self._swa.count > 0:
+            self._swa.apply(self.ema)
+            # Re-evaluate with SWA-averaged weights to see if it's better
+            if eval_pair_starts is not None:
+                swa_scorer = self._evaluate_int8_lazy(
+                    comp_frames, gt_frames, posenet, segnet, eval_pair_starts)
+                if swa_scorer < self.best_scorer:
+                    print(f"  ** SWA IMPROVED: {self.best_scorer:.4f} -> {swa_scorer:.4f} **")
+                    self.best_scorer = swa_scorer
+                    self.best_epoch = cfg.epochs
+                    self._save_checkpoint(cfg.epochs, swa_scorer)
+                else:
+                    print(f"[SWA] No improvement ({swa_scorer:.4f} vs best {self.best_scorer:.4f})")
 
         # Final save
         self.save_training_state()

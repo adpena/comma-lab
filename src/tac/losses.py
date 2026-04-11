@@ -120,11 +120,9 @@ def scorer_loss_pcgrad(
     # Gradient conflict detection and non-opposing projection
     # Operates on intermediate activations (fx) as a proxy for parameter gradients
     #
-    # BUG 3/6/MEMORY: Only run projection when do_projection=True (first microbatch
-    # in accumulation window). Subsequent microbatches skip the expensive autograd
-    # calls, avoiding retain_graph memory pressure and stale-scale issues. The scale
-    # from the first microbatch is a reasonable proxy for the full window.
-    if do_projection and fx.requires_grad:
+    # Only run projection when do_projection=True (first microbatch in accumulation
+    # window) AND segnet_weight > 0 (skip when seg is disabled, avoids wasted autograd).
+    if do_projection and fx.requires_grad and segnet_weight > 0:
         g_pose = torch.autograd.grad(pose_loss, fx, retain_graph=True, create_graph=False)[0]
         g_seg = torch.autograd.grad(seg_loss, fx, retain_graph=True, create_graph=False)[0]
 
@@ -139,9 +137,9 @@ def scorer_loss_pcgrad(
             dot = (g_seg * g_pose).sum().item()
             pose_norm_sq = (g_pose.norm() ** 2).item()
             if abs(dot) > 1e-12:
-                # Scale that makes combined gradient exactly perpendicular to pose
+                # Scale that makes combined gradient non-opposing to pose
+                # (90% of the perpendicular scale, as a safety margin)
                 max_scale = -pose_norm_sq / dot
-                # Use 90% of max to stay safely non-opposing
                 scale = min(1.0, max(0.01, 0.9 * max_scale))
             else:
                 scale = 1.0

@@ -121,13 +121,17 @@ class AdaptiveWeights:
         At the score-optimal point on the Pareto frontier, the marginal rate of
         substitution must equal the ratio of score sensitivities:
 
-            dS/dt = 0  =>  100 * dseg/dt + (1/(2*sqrt(10*pose))) * dpose/dt = 0
+            dS/dt = 0  =>  100 * dseg/dt + (5/sqrt(10*pose)) * dpose/dt = 0
 
         The optimal training weight balances the SegNet and PoseNet gradient
         contributions at this ratio:
 
-            w_seg = dS/d(seg) / dS/d(pose) = 100 / (1/(2*sqrt(10*pose)))
-                  = 200 * sqrt(10 * pose)
+            w_seg = dS/d(seg) / dS/d(pose) = 100 / (5/sqrt(10*pose))
+                  = 20 * sqrt(10 * pose)
+
+        Note: dS/d(pose) = d(sqrt(10*pose))/d(pose) = 10/(2*sqrt(10*pose))
+              = 5/sqrt(10*pose), NOT 1/(2*sqrt(10*pose)) — the chain rule
+              factor of 10 from the inner derivative matters.
 
         As PoseNet improves (pose shrinks), PoseNet becomes more valuable per the
         sqrt, so w_seg decreases — giving PoseNet more gradient share. This is the
@@ -135,9 +139,9 @@ class AdaptiveWeights:
         hyperparameter.
 
         At our observed operating points:
-            pose=0.01229 (baseline): w_seg = 70.1
-            pose=0.00500 (middle):   w_seg = 44.7
-            pose=0.00218 (current):  w_seg = 29.5
+            pose=0.01229 (baseline): w_seg = 7.01
+            pose=0.00500 (middle):   w_seg = 4.47
+            pose=0.00218 (current):  w_seg = 2.95
 
         Args:
             pose: Current PoseNet distortion from int8 eval.
@@ -148,10 +152,12 @@ class AdaptiveWeights:
         if pose < 0:
             raise ValueError(f"Pose distortion must be non-negative, got {pose}")
         pose = max(pose, 1e-6)
-        # Clamp to [10, 150] per Pareto council recommendation:
-        # prevents instability at extremes (pose→0 or pose→large)
-        raw = 200.0 * math.sqrt(10.0 * pose)
-        return max(10.0, min(150.0, raw))
+        # Correct formula: 20 * sqrt(10 * pose)
+        # NOT 200 — the previous version had a 10x error from missing
+        # the chain rule factor (d(sqrt(10p))/dp = 5/sqrt(10p), not 1/(2*sqrt(10p)))
+        # Clamp to [1, 50] per corrected scale
+        raw = 20.0 * math.sqrt(10.0 * pose)
+        return max(1.0, min(50.0, raw))
 
     def optimal_boundary_weight(self, target_amplification: float = 0.95) -> float:
         """Compute boundary weight achieving target fraction of theoretical ceiling.
