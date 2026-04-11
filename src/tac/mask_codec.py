@@ -128,6 +128,10 @@ def encode_masks(
         "-c:v", "libsvtav1",
         "-crf", str(crf),
         "-preset", "6",
+        # Disable loop filter + CDEF for categorical mask data (Fraunhofer/NTT/Habr convergence)
+        # AV1's restoration filters are designed for natural images and actively harm
+        # discrete class boundaries. Disabling them preserves sharp mask edges at zero cost.
+        "-svtav1-params", "enable-restoration=0:enable-cdef=0",
         "-pix_fmt", "yuv420p",
         "-an",
         str(output_path),
