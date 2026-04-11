@@ -252,6 +252,63 @@ class TacLosslessCodecsTests(unittest.TestCase):
         self.assertEqual(result["original_bytes"], 7)
         self.assertAlmostEqual(result["compression_rate"], 7 / 12)
 
+    def test_benchmark_zstd_dict_chunked_file_splits_source_and_verifies_roundtrip(self) -> None:
+        from tac.lossless.codecs import benchmark_zstd_dict_chunked_file
+
+        with tempfile.TemporaryDirectory() as tmpdir:
+            root = Path(tmpdir)
+            source = root / "stream.bin"
+            compressed_root = root / "compressed"
+            restored_root = root / "restored"
+            sample_a = root / "sample_a.bin"
+            sample_b = root / "sample_b.bin"
+            payload = b"abcdefghij"
+            source.write_bytes(payload)
+            sample_a.write_bytes(b"sample-a")
+            sample_b.write_bytes(b"sample-b")
+
+            def fake_directory(*, source_root, compressed_root, restored_root, sample_paths, dict_size, sample_block_bytes=None):
+                source_root = Path(source_root)
+                restored_root = Path(restored_root)
+                chunks = sorted(path for path in source_root.iterdir() if path.is_file())
+                self.assertEqual([chunk.name for chunk in chunks], ["000000.bin", "000001.bin", "000002.bin"])
+                self.assertEqual([chunk.read_bytes() for chunk in chunks], [b"abcd", b"efgh", b"ij"])
+                for chunk in chunks:
+                    target = restored_root / chunk.name
+                    target.parent.mkdir(parents=True, exist_ok=True)
+                    target.write_bytes(chunk.read_bytes())
+                return {
+                    "command": "lossless_zstd_dict_directory_benchmark",
+                    "method": "zstd_dict",
+                    "source_root": str(source_root),
+                    "compressed_root": str(compressed_root),
+                    "restored_root": str(restored_root),
+                    "dictionary_bytes": 123,
+                    "sample_count": len(sample_paths),
+                    "file_count": len(chunks),
+                    "archive_bytes": 12,
+                    "original_bytes": 10,
+                    "compression_rate": 10 / 12,
+                }
+
+            with mock.patch("tac.lossless.codecs.benchmark_zstd_dict_directory", side_effect=fake_directory) as mocked:
+                result = benchmark_zstd_dict_chunked_file(
+                    source_path=source,
+                    compressed_root=compressed_root,
+                    restored_root=restored_root,
+                    block_bytes=4,
+                    sample_paths=[sample_a, sample_b],
+                    dict_size=4096,
+                    sample_block_bytes=2048,
+                )
+
+        mocked.assert_called_once()
+        self.assertEqual(result["command"], "lossless_zstd_dict_chunked_benchmark")
+        self.assertEqual(result["file_count"], 3)
+        self.assertEqual(result["block_bytes"], 4)
+        self.assertTrue(result["exact_match"])
+        self.assertAlmostEqual(result["compression_rate"], 10 / 12)
+
     def test_zstd_dict_roundtrip_rejects_insufficient_sample_corpus(self) -> None:
         from tac.lossless.codecs import zstd_dict_roundtrip_file
 

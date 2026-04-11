@@ -25,6 +25,7 @@ from .lossless.arithmetic import (
 from .lossless.codecs import (
     benchmark_zstd_dict_file,
     benchmark_zstd_dict_directory,
+    benchmark_zstd_dict_chunked_file,
     compress_lossless_file,
     decompress_lossless_file,
     evaluate_lossless_baseline_submission,
@@ -187,6 +188,16 @@ def build_parser() -> argparse.ArgumentParser:
     sp.add_argument("--dict-size", type=int, default=8192)
     sp.add_argument("--sample-block-bytes", type=int, default=None)
     sp.set_defaults(lossless_handler="zstd_dict_dir_benchmark")
+
+    sp = lossless_sub.add_parser("zstd-dict-chunk-benchmark", help="Benchmark a local-only zstd dictionary experiment over chunks of one file")
+    sp.add_argument("--source", required=True)
+    sp.add_argument("--compressed-root", required=True)
+    sp.add_argument("--restored-root", required=True)
+    sp.add_argument("--block-bytes", type=int, required=True)
+    sp.add_argument("--sample", action="append", default=[])
+    sp.add_argument("--dict-size", type=int, default=8192)
+    sp.add_argument("--sample-block-bytes", type=int, default=None)
+    sp.set_defaults(lossless_handler="zstd_dict_chunk_benchmark")
 
     sp = lossless_sub.add_parser("baseline", help="Build a real dataset-backed lossless baseline submission")
     sp.add_argument("--profile", required=True, choices=sorted(LOSSLESS_PROFILES))
@@ -442,6 +453,19 @@ def _run_lossless(args: argparse.Namespace) -> dict[str, Any]:
             source_root=Path(args.source_root),
             compressed_root=Path(args.compressed_root),
             restored_root=Path(args.restored_root),
+            sample_paths=[Path(path) for path in args.sample],
+            dict_size=args.dict_size,
+            sample_block_bytes=args.sample_block_bytes,
+        )
+        print(json.dumps(payload, indent=2))
+        return payload
+
+    if args.lossless_handler == "zstd_dict_chunk_benchmark":
+        payload = benchmark_zstd_dict_chunked_file(
+            source_path=Path(args.source),
+            compressed_root=Path(args.compressed_root),
+            restored_root=Path(args.restored_root),
+            block_bytes=args.block_bytes,
             sample_paths=[Path(path) for path in args.sample],
             dict_size=args.dict_size,
             sample_block_bytes=args.sample_block_bytes,

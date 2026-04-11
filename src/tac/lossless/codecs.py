@@ -375,6 +375,56 @@ def benchmark_zstd_dict_directory(
     }
 
 
+def benchmark_zstd_dict_chunked_file(
+    *,
+    source_path: str | Path,
+    compressed_root: str | Path,
+    restored_root: str | Path,
+    block_bytes: int,
+    sample_paths: list[str | Path] | None = None,
+    dict_size: int = 8192,
+    sample_block_bytes: int | None = None,
+) -> dict[str, object]:
+    source = Path(source_path)
+    if block_bytes <= 0:
+        raise ValueError("block_bytes must be positive")
+
+    with tempfile.TemporaryDirectory() as tmpdir:
+        chunk_root = Path(tmpdir) / "chunks"
+        chunk_root.mkdir(parents=True, exist_ok=True)
+        payload = source.read_bytes()
+        for index, offset in enumerate(range(0, len(payload), block_bytes)):
+            (chunk_root / f"{index:06d}.bin").write_bytes(payload[offset : offset + block_bytes])
+
+        result = benchmark_zstd_dict_directory(
+            source_root=chunk_root,
+            compressed_root=compressed_root,
+            restored_root=restored_root,
+            sample_paths=sample_paths,
+            dict_size=dict_size,
+            sample_block_bytes=sample_block_bytes,
+        )
+        restored_bytes = bytearray()
+        for chunk in sorted(path for path in Path(restored_root).rglob("*") if path.is_file()):
+            restored_bytes.extend(chunk.read_bytes())
+
+    return {
+        "command": "lossless_zstd_dict_chunked_benchmark",
+        "method": "zstd_dict",
+        "source_path": str(source),
+        "compressed_root": str(Path(compressed_root)),
+        "restored_root": str(Path(restored_root)),
+        "dictionary_bytes": result["dictionary_bytes"],
+        "sample_count": result["sample_count"],
+        "file_count": result["file_count"],
+        "block_bytes": block_bytes,
+        "archive_bytes": result["archive_bytes"],
+        "original_bytes": result["original_bytes"],
+        "compression_rate": result["compression_rate"],
+        "exact_match": bytes(restored_bytes) == payload,
+    }
+
+
 def compress_lossless_file(
     *, profile: str, input_path: str | Path, output_path: str | Path
 ) -> LosslessCompressionResult:
