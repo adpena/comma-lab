@@ -26,28 +26,79 @@ import torch.nn.functional as F
 # ── Building blocks ─────────────────────────────────────────────────────
 
 
-class ResBlock(nn.Module):
-    """Pre-activation residual block: GroupNorm → ReLU → Conv → GroupNorm → ReLU → Conv.
+class CLADENorm(nn.Module):
+    """GroupNorm with per-class affine modulation (CLADE, arxiv 2012.04644).
 
-    Uses GroupNorm (groups=1 = LayerNorm-like) instead of BatchNorm for
-    stability with batch_size=1 during per-pair training.
+    After GroupNorm normalizes features, per-class gamma/beta are looked up
+    from the segmentation mask and applied as spatially-varying affine
+    modulation.  With 5 classes this adds only 2 * channels parameters.
+
+    The mask is nearest-neighbor downsampled to match feature resolution.
     """
 
-    def __init__(self, channels: int, kernel: int = 3):
+    def __init__(self, channels: int, num_classes: int = 5):
+        super().__init__()
+        self.gn = nn.GroupNorm(1, channels)
+        self.class_gamma = nn.Embedding(num_classes, channels)
+        self.class_beta = nn.Embedding(num_classes, channels)
+        # Init: gamma=1, beta=0 → identity modulation at start
+        nn.init.ones_(self.class_gamma.weight)
+        nn.init.zeros_(self.class_beta.weight)
+
+    def forward(self, x: torch.Tensor, mask: torch.Tensor) -> torch.Tensor:
+        """Apply class-conditioned normalization.
+
+        Args:
+            x: (B, C, H, W) feature tensor
+            mask: (B, H_orig, W_orig) long tensor with class indices
+        """
+        h = self.gn(x)
+        # Downsample mask to feature resolution via nearest neighbor
+        _, _, fH, fW = x.shape
+        if mask.shape[1] != fH or mask.shape[2] != fW:
+            mask_ds = F.interpolate(
+                mask.unsqueeze(1).float(), size=(fH, fW), mode="nearest"
+            ).squeeze(1).long()
+        else:
+            mask_ds = mask
+        # Look up per-class affine: (B, H, W) → (B, H, W, C) → (B, C, H, W)
+        gamma = self.class_gamma(mask_ds).permute(0, 3, 1, 2)
+        beta = self.class_beta(mask_ds).permute(0, 3, 1, 2)
+        return gamma * h + beta
+
+
+class ResBlock(nn.Module):
+    """Pre-activation residual block with optional CLADE per-class conditioning.
+
+    When num_classes > 0, uses CLADENorm (class-adaptive normalization).
+    When num_classes == 0, uses plain GroupNorm (backward-compatible).
+    """
+
+    def __init__(self, channels: int, kernel: int = 3, num_classes: int = 5):
         super().__init__()
         pad = kernel // 2
-        self.norm1 = nn.GroupNorm(1, channels)
+        self.use_clade = num_classes > 0
+        if self.use_clade:
+            self.norm1 = CLADENorm(channels, num_classes)
+            self.norm2 = CLADENorm(channels, num_classes)
+        else:
+            self.norm1 = nn.GroupNorm(1, channels)
+            self.norm2 = nn.GroupNorm(1, channels)
         self.conv1 = nn.Conv2d(channels, channels, kernel, padding=pad, bias=False)
-        self.norm2 = nn.GroupNorm(1, channels)
         self.conv2 = nn.Conv2d(channels, channels, kernel, padding=pad, bias=False)
         self.act = nn.ReLU(inplace=True)
         # Zero-init second conv so residual starts as identity
         nn.init.zeros_(self.conv2.weight)
 
-    def forward(self, x: torch.Tensor) -> torch.Tensor:
-        h = self.act(self.norm1(x))
-        h = self.conv1(h)
-        h = self.act(self.norm2(h))
+    def forward(self, x: torch.Tensor, mask: torch.Tensor | None = None) -> torch.Tensor:
+        if self.use_clade and mask is not None:
+            h = self.act(self.norm1(x, mask))
+            h = self.conv1(h)
+            h = self.act(self.norm2(h, mask))
+        else:
+            h = self.act(self.norm1(x) if not self.use_clade else self.norm1.gn(x))
+            h = self.conv1(h)
+            h = self.act(self.norm2(h) if not self.use_clade else self.norm2.gn(h))
         h = self.conv2(h)
         return x + h
 
