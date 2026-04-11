@@ -82,7 +82,7 @@ class DecorrelatedBatchSampler:
             if not available:
                 available = set(range(n))
 
-            idx = random.choice(list(available))
+            idx = random.choice(tuple(available))
             indices.append(idx)
 
             # Remove nearby indices to enforce decorrelation — O(min_dist)

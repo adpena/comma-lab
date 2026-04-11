@@ -418,6 +418,10 @@ class VQVAEPairGenerator(nn.Module):
     attributes after each forward() call, keeping the return interface
     consistent with other PairGenerator variants (single tensor output).
 
+    Note: last_vq_loss and last_indices are overwritten on each forward()
+    call. In DataParallel or gradient accumulation, only the last
+    mini-batch's values are retained.
+
     For training: GT frames -> encoder -> VQ -> decoder -> pairs -> scorer
     For inference: stored indices -> VQ -> decoder -> pairs
 
@@ -546,11 +550,11 @@ class TemporalDeltaCoder:
 
             if num_changed > 0:
                 # Batch-encode (row, col, new_value) triples via numpy
-                rows = changed_positions[:, 0].numpy().astype(np.uint8)
-                cols = changed_positions[:, 1].numpy().astype(np.uint8)
+                rows = changed_positions[:, 0].numpy().astype(np.uint16)
+                cols = changed_positions[:, 1].numpy().astype(np.uint16)
                 vals = curr[changed_positions[:, 0], changed_positions[:, 1]].numpy().astype(np.uint16)
                 # Interleave into struct-compatible layout: (r, c, val_lo, val_hi) per entry
-                packed = np.empty(num_changed, dtype=[("r", "u1"), ("c", "u1"), ("v", "<u2")])
+                packed = np.empty(num_changed, dtype=[("r", "<u2"), ("c", "<u2"), ("v", "<u2")])
                 packed["r"] = rows
                 packed["c"] = cols
                 packed["v"] = vals
@@ -593,8 +597,8 @@ class TemporalDeltaCoder:
 
             if num_changed > 0:
                 # Batch-decode all changed positions at once via numpy
-                chunk = buf.read(num_changed * 4)
-                delta = np.frombuffer(chunk, dtype=[("r", "u1"), ("c", "u1"), ("v", "<u2")])
+                chunk = buf.read(num_changed * 6)
+                delta = np.frombuffer(chunk, dtype=[("r", "<u2"), ("c", "<u2"), ("v", "<u2")])
                 rows = torch.from_numpy(delta["r"].astype(np.int64))
                 cols = torch.from_numpy(delta["c"].astype(np.int64))
                 vals = torch.from_numpy(delta["v"].astype(np.int64))

@@ -471,6 +471,11 @@ def sharpen_mask_boundaries(
         # Initialize to -1 so class 0 doesn't falsely claim unclaimed pixels
         opened_frame = np.full_like(frame, fill_value=-1, dtype=np.int64)
 
+        # Process classes in ascending order (0=road, 1=lane, 2=undrivable,
+        # 3=movable, 4=vehicle).  Later classes overwrite earlier ones in
+        # overlapping regions.  This is intentional: road (class 0) should
+        # yield to more specific classes like lane lines and vehicles, so
+        # processing in ascending order gives correct priority.
         for cls in range(NUM_CLASSES):
             binary = (frame == cls).astype(np.uint8)
 

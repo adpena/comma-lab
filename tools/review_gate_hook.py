@@ -67,11 +67,14 @@ def check_staged_files(staged_files: list[str]) -> tuple[list[str], list[str], d
     con = duckdb.connect(str(TRACKER_DB), read_only=True)
 
     # Import policy functions from review_tracker
+    _old_path = sys.path[:]
     sys.path.insert(0, str(REPO_ROOT / "tools"))
-    from review_tracker import (
-        check_entity_policy, get_rigor_for_file,
-        count_consecutive_clean_passes, get_distinct_approvers,
-    )
+    try:
+        import review_tracker as _rt
+        check_entity_policy = _rt.check_entity_policy
+        get_rigor_for_file = _rt.get_rigor_for_file
+    finally:
+        sys.path[:] = _old_path
 
     blocking: list[str] = []
     warnings: list[str] = []
@@ -153,8 +156,8 @@ def main() -> int:
         return 0
 
     # ANSI colors
-    R = "\033[31m"; Y = "\033[33m"; G = "\033[32m"; C = "\033[36m"
-    B = "\033[1m"; RST = "\033[0m"
+    RED = "\033[31m"; YELLOW = "\033[33m"; GREEN = "\033[32m"; CYAN = "\033[36m"
+    BOLD = "\033[1m"; RST = "\033[0m"
 
     total = stats.get("total", 0)
     compliant = stats.get("compliant", 0)
@@ -163,25 +166,25 @@ def main() -> int:
 
     has_blocking = bool(blocking) and not warn_only
     action = "BLOCKED" if has_blocking else "WARNING"
-    color = R if has_blocking else Y
+    color = RED if has_blocking else YELLOW
 
-    print(f"\n{color}{B}[review-gate] {action}{RST}")
-    print(f"  Entities: {total} checked, {G}{compliant} compliant{RST}, "
-          f"{R}{violations} violations{RST}, {Y}{needs_fix} needs_fix{RST}")
+    print(f"\n{color}{BOLD}[review-gate] {action}{RST}")
+    print(f"  Entities: {total} checked, {GREEN}{compliant} compliant{RST}, "
+          f"{RED}{violations} violations{RST}, {YELLOW}{needs_fix} needs_fix{RST}")
     print()
 
     if blocking:
         for line in blocking:
-            print(f"{R}{line}{RST}" if not line.startswith("    ") else line)
+            print(f"{RED}{line}{RST}" if not line.startswith("    ") else line)
         print()
 
     if warnings:
         for line in warnings:
-            print(f"{Y}{line}{RST}" if not line.startswith("    ") else line)
+            print(f"{YELLOW}{line}{RST}" if not line.startswith("    ") else line)
         print()
 
     if has_blocking:
-        print(f"{R}{B}Commit blocked by review policy.{RST}")
+        print(f"{RED}{BOLD}Commit blocked by review policy.{RST}")
         print(f"  Fix issues:    python tools/review_tracker.py mark-file <file> --status reviewed")
         print(f"  Check policy:  python tools/review_tracker.py policy-check <file>")
         print(f"  Override:      REVIEW_GATE_OVERRIDE=1 git commit ...")
@@ -190,7 +193,7 @@ def main() -> int:
         return 1
 
     if warn_only and (blocking or warnings):
-        print(f"{Y}To enforce: REVIEW_GATE_WARN_ONLY=0{RST}")
+        print(f"{YELLOW}To enforce: REVIEW_GATE_WARN_ONLY=0{RST}")
         print()
 
     return 0

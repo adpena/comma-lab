@@ -156,6 +156,8 @@ def main():
     parser.add_argument("--variant", default="dilated", help="Architecture variant")
     parser.add_argument("--hidden", type=int, default=64, help="Hidden channel width")
     parser.add_argument("--kernel", type=int, default=3, help="Kernel size")
+    parser.add_argument("--no-per-channel", dest="per_channel", action="store_false",
+                        help="Disable per-channel quantization (use per-tensor instead)")
     args = parser.parse_args()
 
     if args.checkpoints:
@@ -175,6 +177,7 @@ def main():
         variant=args.variant,
         hidden=args.hidden,
         kernel=args.kernel,
+        per_channel=args.per_channel,
     )
     print(f"\nEnsemble complete: {result['num_checkpoints']} checkpoints -> {result['output_path']}")
 

@@ -44,12 +44,19 @@ def _write_varint(buf: io.BytesIO, value: int) -> None:
 
 
 def _read_varint_from(data: bytes, pos: int) -> tuple[int, int]:
-    """Read unsigned LEB128 varint, return (value, new_pos)."""
+    """Read unsigned LEB128 varint, return (value, new_pos).
+
+    Guards against malformed input: at most 8 continuation bytes (56 bits
+    of payload) are accepted before raising ValueError.
+    """
     value = 0
     shift = 0
+    max_shift = 56  # 8 bytes * 7 bits = 56 bits max
     while True:
         if pos >= len(data):
             raise ValueError(f"Truncated varint at position {pos}")
+        if shift > max_shift:
+            raise ValueError(f"Varint too large (exceeded {max_shift} bits at position {pos})")
         b = data[pos]
         pos += 1
         value |= (b & 0x7F) << shift

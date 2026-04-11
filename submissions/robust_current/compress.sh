@@ -29,6 +29,11 @@ VIDEO_CODEC="${VIDEO_CODEC:-libx265}"
 SVT_AV1_PRESET="${SVT_AV1_PRESET:-0}"
 SVT_AV1_CRF="${SVT_AV1_CRF:-33}"
 SVT_AV1_PARAMS="${SVT_AV1_PARAMS:-film-grain=22:keyint=180}"
+X265_PRESET="${X265_PRESET:-medium}"
+X265_CRF="${X265_CRF:-28}"
+X265_GOP="${X265_GOP:-180}"
+X265_BFRAMES="${X265_BFRAMES:-4}"
+X265_REF="${X265_REF:-3}"
 SOURCE_COLOR_RANGE="${SOURCE_COLOR_RANGE:-tv}"
 SOURCE_COLOR_MATRIX="${SOURCE_COLOR_MATRIX:-bt709}"
 SOURCE_COLOR_PRIMARIES="${SOURCE_COLOR_PRIMARIES:-bt709}"
@@ -243,7 +248,11 @@ encode_video_even_odd_qp() {
     -i "$tmpdir_qp/odd_enc.mkv" \
     -filter_complex "[0:v][1:v]interleave=nb_inputs=2[out]" \
     -map "[out]" -an \
-    -c:v copy \
+    $(if [ "$VIDEO_CODEC" = "libsvtav1" ]; then codec_encode_args "${SVT_AV1_CRF}"; else codec_encode_args "${X265_CRF}"; fi) \
+    -color_range "$SOURCE_COLOR_RANGE" \
+    -colorspace "$SOURCE_COLOR_MATRIX" \
+    -color_primaries "$SOURCE_COLOR_PRIMARIES" \
+    -color_trc "$SOURCE_COLOR_TRC" \
     "$out_path" 2>/dev/null || {
     # Fallback: if interleave fails, use standard encode
     echo "[compress] Even/odd interleave failed, falling back to standard encode"

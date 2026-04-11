@@ -680,47 +680,10 @@ def load_entropy_optimized_int8(
     model: nn.Module,
     device: str = "cpu",
 ) -> nn.Module:
-    """Load entropy-optimized int8 weights, handling log-scale dequantization.
+    """Load entropy-optimized int8 weights (with log-scale support).
 
-    Supports both standard int8 and log-scale int8 formats.
+    Thin wrapper around load_int8, which already handles the `.log_scale`
+    flag stored by `entropy_optimized_quantize`. Kept for backward
+    compatibility and API clarity.
     """
-
-    state = torch.load(path, map_location=device, weights_only=True)
-    float_state: dict[str, torch.Tensor] = {}
-    seen: set[str] = set()
-
-    for raw_key in state:
-        if raw_key.startswith("__"):
-            continue
-        if raw_key.endswith(".q") or raw_key.endswith(".s") or raw_key.endswith(".log_scale"):
-            base = raw_key.rsplit(".", 1)[0]
-            if base in seen:
-                continue
-            seen.add(base)
-
-            q = state[base + ".q"].float()
-            s = state[base + ".s"]
-            is_log = state.get(base + ".log_scale", torch.tensor(False)).item()
-
-            if is_log:
-                # Inverse log-scale: sign * (exp(|q|/127 * log(127)) - 1) / 126
-                log127 = math.log(127.0)
-                q_norm = q / 127.0
-                p_norm = torch.sign(q_norm) * (torch.exp(q_norm.abs() * log127) - 1.0) / 126.0
-                if s.ndim == 0:
-                    float_state[base] = p_norm * s
-                else:
-                    shape = [s.shape[0]] + [1] * (q.ndim - 1)
-                    float_state[base] = p_norm * s.view(*shape)
-            else:
-                if s.ndim == 0:
-                    float_state[base] = q * s
-                else:
-                    shape = [s.shape[0]] + [1] * (q.ndim - 1)
-                    float_state[base] = q * s.view(*shape)
-        else:
-            float_state[raw_key] = state[raw_key].float()
-            seen.add(raw_key)
-
-    model.load_state_dict(float_state)
-    return model.eval().to(device)
+    return load_int8(path, model, device=device)

@@ -528,8 +528,9 @@ class PairGenerator(nn.Module):
         # Share embedding: point motion's embedding to renderer's
         self.motion.embedding = self.renderer.embedding
 
-        # Learned blend weight — stored as 1-element array so MLX's parameter
-        # system tracks it (scalar mx.array may not appear in self.parameters()).
+        # 1-element array so MLX's nn.Module.parameters() discovers it as a
+        # leaf parameter (a bare scalar mx.array may be invisible to the
+        # parameter traversal).
         self.blend_logit = mx.array([0.0])
 
     def __call__(self, mask_t: mx.array, mask_t1: mx.array) -> mx.array:

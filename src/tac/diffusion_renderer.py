@@ -496,7 +496,6 @@ class DiffusionRenderer(nn.Module):
         # Convert [0, 1] → [0, 255]
         return x.clamp(0.0, 1.0) * 255.0
 
-    @torch.no_grad()
     def ddim_sample(
         self,
         masks: torch.Tensor,
@@ -520,33 +519,7 @@ class DiffusionRenderer(nn.Module):
         device = masks.device
         cond = self._masks_to_onehot(masks)
 
-        # Subsample timestep sequence
-        step_indices = torch.linspace(self.num_timesteps - 1, 0, num_steps + 1, device=device).long()
-
-        x = torch.randn(B, 3, H, W, device=device)
-
-        for i in range(num_steps):
-            t = step_indices[i].item()
-            t_prev = step_indices[i + 1].item()
-
-            t_batch = torch.full((B,), t, device=device, dtype=torch.long)
-            eps_pred = self.denoiser(x, t_batch, cond)
-
-            # Predicted x_0
-            alpha_t = self.alphas_cumprod[t]
-            alpha_prev = self.alphas_cumprod[t_prev] if t_prev >= 0 else torch.tensor(1.0, device=x.device)
-            x0_pred = (x - torch.sqrt(1 - alpha_t) * eps_pred) / torch.sqrt(alpha_t)
-            x0_pred = x0_pred.clamp(-1.0, 2.0)
-
-            # DDIM update
-            sigma = eta * torch.sqrt((1 - alpha_prev) / (1 - alpha_t) * (1 - alpha_t / alpha_prev))
-            dir_xt = torch.sqrt(1 - alpha_prev - sigma**2) * eps_pred
-            x = torch.sqrt(alpha_prev) * x0_pred + dir_xt
-
-            if sigma > 0 and t_prev > 0:
-                x = x + sigma * torch.randn_like(x)
-
-        return x.clamp(0.0, 1.0) * 255.0
+        return self._ddim_sample_impl(masks, num_steps, eta, enable_grad=False)
 
     def ddim_sample_train(
         self,
@@ -554,9 +527,9 @@ class DiffusionRenderer(nn.Module):
         num_steps: int = 50,
         eta: float = 0.0,
     ) -> torch.Tensor:
-        """DDIM sampling WITH gradient flow — for progressive distillation.
+        """DDIM sampling WITH gradient flow -- for progressive distillation.
 
-        Same algorithm as ddim_sample but without @torch.no_grad(), so
+        Same algorithm as ddim_sample but without torch.no_grad(), so
         loss.backward() can propagate through the student's denoising steps.
 
         Args:
@@ -567,35 +540,62 @@ class DiffusionRenderer(nn.Module):
         Returns:
             (B, 3, H, W) generated frames in [0, 255]
         """
+        return self._ddim_sample_impl(masks, num_steps, eta, enable_grad=True)
+
+    def _ddim_sample_impl(
+        self,
+        masks: torch.Tensor,
+        num_steps: int,
+        eta: float,
+        enable_grad: bool,
+    ) -> torch.Tensor:
+        """Shared DDIM sampling implementation.
+
+        Args:
+            masks: (B, H, W) integer segmentation masks
+            num_steps: number of denoising steps
+            eta: stochasticity parameter (0 = deterministic DDIM, 1 = DDPM)
+            enable_grad: if False, runs under torch.no_grad()
+
+        Returns:
+            (B, 3, H, W) generated frames in [0, 255]
+        """
         B, H, W = masks.shape
         device = masks.device
         cond = self._masks_to_onehot(masks)
 
         # Subsample timestep sequence
         step_indices = torch.linspace(self.num_timesteps - 1, 0, num_steps + 1, device=device).long()
+        # Deduplicate timesteps that collapse to the same int after rounding,
+        # which happens when num_steps >= num_timesteps.  Without this, two
+        # consecutive loop iterations would use the same (t, t_prev) pair and
+        # produce a no-op denoising step.
+        step_indices = step_indices.unique(sorted=True, return_inverse=False).flip(0)
 
         x = torch.randn(B, 3, H, W, device=device)
 
-        for i in range(num_steps):
-            t = step_indices[i].item()
-            t_prev = step_indices[i + 1].item()
+        ctx = torch.enable_grad() if enable_grad else torch.no_grad()
+        with ctx:
+            for i in range(len(step_indices) - 1):
+                t = step_indices[i].item()
+                t_prev = step_indices[i + 1].item()
 
-            t_batch = torch.full((B,), t, device=device, dtype=torch.long)
-            eps_pred = self.denoiser(x, t_batch, cond)
+                t_batch = torch.full((B,), t, device=device, dtype=torch.long)
+                eps_pred = self.denoiser(x, t_batch, cond)
 
-            # Predicted x_0
-            alpha_t = self.alphas_cumprod[t]
-            alpha_prev = self.alphas_cumprod[t_prev] if t_prev >= 0 else torch.tensor(1.0, device=x.device)
-            x0_pred = (x - torch.sqrt(1 - alpha_t) * eps_pred) / torch.sqrt(alpha_t)
-            x0_pred = x0_pred.clamp(-1.0, 2.0)
+                # Predicted x_0
+                alpha_t = self.alphas_cumprod[t]
+                alpha_prev = self.alphas_cumprod[t_prev] if t_prev >= 0 else torch.tensor(1.0, device=x.device)
+                x0_pred = (x - torch.sqrt(1 - alpha_t) * eps_pred) / torch.sqrt(alpha_t)
+                x0_pred = x0_pred.clamp(-1.0, 2.0)
 
-            # DDIM update
-            sigma = eta * torch.sqrt((1 - alpha_prev) / (1 - alpha_t) * (1 - alpha_t / alpha_prev))
-            dir_xt = torch.sqrt(1 - alpha_prev - sigma**2) * eps_pred
-            x = torch.sqrt(alpha_prev) * x0_pred + dir_xt
+                # DDIM update
+                sigma = eta * torch.sqrt((1 - alpha_prev) / (1 - alpha_t) * (1 - alpha_t / alpha_prev))
+                dir_xt = torch.sqrt(1 - alpha_prev - sigma**2) * eps_pred
+                x = torch.sqrt(alpha_prev) * x0_pred + dir_xt
 
-            if sigma > 0 and t_prev > 0:
-                x = x + sigma * torch.randn_like(x)
+                if sigma > 0 and t_prev > 0:
+                    x = x + sigma * torch.randn_like(x)
 
         return x.clamp(0.0, 1.0) * 255.0
 
