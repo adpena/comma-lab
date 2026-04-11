@@ -396,6 +396,196 @@ WAVELET_RENDERER_FULL = {
     "pretrain_epochs": 200,                  # Phase 1: longer warm-up for wavelet basis
 }
 
+# ── Diffusion Teacher + Distillation profiles ─────────────────────────
+# Diffusion teacher trains a DDPM conditioned on segmentation masks.
+# Slow to sample (~50 denoising steps) but produces high-quality targets
+# for distilling into our fast CNN student (MaskRenderer/PostFilter).
+
+DIFFUSION_TEACHER_SMOKE = {
+    "variant": "diffusion_teacher",
+    "hidden": 32,                            # base U-Net channels (32→64→128)
+    "num_timesteps": 50,                     # shorter schedule for smoke test
+    "time_dim": 64,                          # timestep embedding dim
+    "epochs": 100,
+    "lr": 1e-4,
+    "ema_decay": 0.999,
+    "eval_every": 20,
+    "accum_steps": 2,
+    "loss_mode": "standard",
+}
+
+DIFFUSION_TEACHER_FULL = {
+    "variant": "diffusion_teacher",
+    "hidden": 64,                            # base channels (64→128→256)
+    "num_timesteps": 100,                    # full noise schedule
+    "time_dim": 128,                         # timestep embedding dim
+    "epochs": 1000,
+    "lr": 1e-4,
+    "ema_decay": 0.999,
+    "eval_every": 10,
+    "accum_steps": 4,
+    "loss_mode": "standard",
+}
+
+DISTILLATION_SMOKE = {
+    "variant": "distillation",
+    "hidden": 64,                            # student architecture width
+    "teacher_steps": 25,                     # teacher sampling steps
+    "use_ddim": True,                        # deterministic teacher sampling
+    "task_loss_weight": 0.0,                 # pure distillation, no scorer
+    "epochs": 200,
+    "lr": 1e-4,
+    "eval_every": 20,
+    "accum_steps": 2,
+    "loss_mode": "standard",
+}
+
+DISTILLATION_FULL = {
+    "variant": "distillation",
+    "hidden": 64,
+    "teacher_steps": 50,
+    "use_ddim": True,
+    "task_loss_weight": 0.1,                 # hybrid: 90% distillation + 10% scorer
+    "epochs": 1000,
+    "lr": 1e-4,
+    "eval_every": 10,
+    "accum_steps": 4,
+    "loss_mode": "standard",
+}
+
+# ── DP-SIMS Lane: SPADE-based semantic image synthesis ──────────────────
+# DP-SIMS (CVPR 2024) inspired progressive SPADE generator.
+# Full spatially-adaptive normalization (not just per-class CLADE).
+# Cross-attention noise injection for texture diversity.
+# Target: 500K-2M params, FP4 makes 2M = ~1MB.
+
+DP_SIMS_SMOKE = {
+    "variant": "dp_sims",
+    "channels": (128, 64, 32, 16),               # lightweight: ~500K params
+    "init_h": 24,                                  # 1/16 of 384
+    "init_w": 32,                                  # 1/16 of 512
+    "spade_hidden": 32,                            # smaller SPADE conditioning nets
+    "noise_dim": 16,                               # cross-attention noise dimension
+    "use_noise": True,                             # enable noise injection
+    "motion_hidden": 32,                           # MotionPredictor hidden channels
+    "motion_embed_dim": 6,                         # MotionPredictor embedding dim
+    "epochs": 200,
+    "lr": 1e-3,
+    "ema_decay": 0.997,
+    "alpha": 0.0,                                  # no saliency recon (rendering from scratch)
+    "sal_lambda": 0.0,
+    "loss_mode": "standard",
+    "segnet_loss_weight": 100.0,
+    "boundary_weight": 1.0,
+    "hard_frame_ratio": 0.0,
+    "eval_every": 10,
+    "accum_steps": 2,
+    "quantize_mode": "fp4",
+    "pretrain_epochs": 100,                        # Phase 1: L1+edge loss (no scorer)
+}
+
+DP_SIMS_FULL = {
+    "variant": "dp_sims",
+    "channels": (256, 128, 64, 32),               # full capacity: ~1.5M params
+    "init_h": 24,
+    "init_w": 32,
+    "spade_hidden": 64,
+    "noise_dim": 16,
+    "use_noise": True,
+    "motion_hidden": 32,
+    "motion_embed_dim": 6,
+    "epochs": 2500,
+    "lr": 5e-4,
+    "ema_decay": 0.997,
+    "alpha": 0.0,
+    "sal_lambda": 0.0,
+    "loss_mode": "standard",
+    "segnet_loss_weight": 100.0,
+    "boundary_weight": 50.0,
+    "hard_frame_ratio": 0.3,
+    "error_replay_every": 200,
+    "eval_every": 5,
+    "accum_steps": 4,
+    "use_swa": True,
+    "quantize_mode": "fp4",
+    "pretrain_epochs": 500,                        # Phase 1: L1+edge loss (no scorer)
+}
+
+# ── VQ-VAE Lane: Learned discrete latent codec ────────────────────────
+# GT -> VQ Encoder -> discrete codes -> entropy coding -> VQ Decoder -> RGB
+# Replaces fixed 5-class segmentation with learned K=512 codebook.
+
+VQVAE_SMOKE = {
+    "variant": "vqvae",
+    "hidden": 64,                            # base_ch for encoder/decoder
+    "num_embeddings": 512,                   # codebook size K
+    "embedding_dim": 64,                     # codebook vector dim D
+    "commitment_cost": 0.25,                 # VQ commitment loss weight
+    "epochs": 200,
+    "lr": 1e-3,
+    "ema_decay": 0.997,
+    "alpha": 0.0,                            # no saliency recon initially
+    "sal_lambda": 0.0,
+    "loss_mode": "standard",
+    "segnet_loss_weight": 100.0,
+    "boundary_weight": 1.0,
+    "hard_frame_ratio": 0.0,
+    "eval_every": 10,
+    "accum_steps": 2,
+    "pretrain_epochs": 100,                  # Phase 1: reconstruction only (no scorer)
+    "vq_weight": 1.0,                       # VQ loss weight
+    "perceptual_weight": 0.5,               # multi-scale perceptual loss weight
+}
+
+VQVAE_FULL = {
+    "variant": "vqvae",
+    "hidden": 64,
+    "num_embeddings": 512,
+    "embedding_dim": 64,
+    "commitment_cost": 0.25,
+    "epochs": 2500,
+    "lr": 5e-4,
+    "ema_decay": 0.997,
+    "alpha": 0.0,
+    "sal_lambda": 0.0,
+    "loss_mode": "standard",
+    "segnet_loss_weight": 100.0,
+    "boundary_weight": 50.0,
+    "hard_frame_ratio": 0.3,
+    "error_replay_every": 200,
+    "eval_every": 5,
+    "accum_steps": 4,
+    "use_swa": True,
+    "pretrain_epochs": 500,                  # Phase 1: longer reconstruction warm-up
+    "vq_weight": 1.0,
+    "perceptual_weight": 0.5,
+}
+
+# Compact VQ-VAE: smaller codebook for tighter bitrate budget
+VQVAE_COMPACT = {
+    "variant": "vqvae",
+    "hidden": 32,                            # smaller encoder/decoder
+    "num_embeddings": 256,                   # K=256 (8-bit indices)
+    "embedding_dim": 32,                     # smaller embeddings
+    "commitment_cost": 0.25,
+    "epochs": 2500,
+    "lr": 5e-4,
+    "ema_decay": 0.997,
+    "alpha": 0.0,
+    "sal_lambda": 0.0,
+    "loss_mode": "standard",
+    "segnet_loss_weight": 100.0,
+    "boundary_weight": 50.0,
+    "hard_frame_ratio": 0.3,
+    "error_replay_every": 200,
+    "eval_every": 5,
+    "accum_steps": 4,
+    "use_swa": True,
+    "pretrain_epochs": 500,
+    "vq_weight": 1.0,
+    "perceptual_weight": 0.5,
+}
+
 PROFILES = {
     "council_v1": COUNCIL_V1,
     "council_v2_adaptive": COUNCIL_V2_ADAPTIVE,
@@ -419,4 +609,13 @@ PROFILES = {
     "mask_renderer_deep": MASK_RENDERER_DEEP,
     "wavelet_renderer_smoke": WAVELET_RENDERER_SMOKE,
     "wavelet_renderer_full": WAVELET_RENDERER_FULL,
+    "diffusion_teacher_smoke": DIFFUSION_TEACHER_SMOKE,
+    "diffusion_teacher_full": DIFFUSION_TEACHER_FULL,
+    "distillation_smoke": DISTILLATION_SMOKE,
+    "distillation_full": DISTILLATION_FULL,
+    "dp_sims_smoke": DP_SIMS_SMOKE,
+    "dp_sims_full": DP_SIMS_FULL,
+    "vqvae_smoke": VQVAE_SMOKE,
+    "vqvae_full": VQVAE_FULL,
+    "vqvae_compact": VQVAE_COMPACT,
 }
