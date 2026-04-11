@@ -264,10 +264,55 @@ class PairAwarePostFilter(nn.Module):
 # ── Factory ──────────────────────────────────────────────────────────────
 
 
+class GatedDilatedPostFilter(nn.Module):
+    """DilatedPostFilter with a spatial sigmoid gate (Collier's proposal).
+
+    After conv2 features are computed, a 1x1 conv produces a per-pixel
+    gate value in [0, 1] that modulates the residual correction. The gate
+    learns to attenuate corrections near SegNet class boundaries where
+    the residual harms segmentation, while preserving corrections in
+    texture regions where PoseNet benefits.
+
+    Adds only `hidden + 1` parameters (65 at h=64). Rate impact: negligible.
+
+    Approved by unanimous council vote (first unanimous in council history).
+    Rationale: addresses spatial allocation of correction capacity, orthogonal
+    to loss-level gradient methods (PCGrad, CAGrad).
+    """
+
+    def __init__(self, hidden: int = 16, kernel: int = 3):
+        super().__init__()
+        pad = kernel // 2
+        self.conv1 = nn.Conv2d(3, hidden, kernel, padding=pad, bias=True)
+        self.conv2 = nn.Conv2d(
+            hidden, hidden, kernel, padding=pad * 2, dilation=2, bias=True
+        )
+        self.conv3 = nn.Conv2d(hidden, 3, kernel, padding=pad, bias=True)
+        # Spatial gate: learns where to apply corrections (boundary-aware)
+        self.gate = nn.Sequential(
+            nn.Conv2d(hidden, 1, 1, bias=True),
+            nn.Sigmoid(),
+        )
+        self.act = nn.ReLU(inplace=True)
+        nn.init.zeros_(self.conv3.weight)
+        nn.init.zeros_(self.conv3.bias)
+        # Initialize gate bias to 0 → sigmoid(0) = 0.5 → starts as half-strength
+        nn.init.zeros_(self.gate[0].weight)
+        nn.init.zeros_(self.gate[0].bias)
+
+    def forward(self, x: torch.Tensor) -> torch.Tensor:
+        features = self.act(self.conv1(x))
+        features = self.act(self.conv2(features))
+        gate = self.gate(features)  # (B, 1, H, W) in [0, 1]
+        residual = self.conv3(features)
+        return (x + gate * residual).clamp(0, 255)
+
+
 VARIANTS = {
     # Canonical names
     "standard": PostFilter,
     "dilated": DilatedPostFilter,
+    "gated_dilated": GatedDilatedPostFilter,
     "pixelshuffle": PixelShufflePostFilter,
     "psd": PSDPostFilter,
     "depthwise": DepthwisePostFilter,

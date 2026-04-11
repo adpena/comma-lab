@@ -1004,6 +1004,16 @@ class Trainer:
                         segnet_weight=sw,
                         do_projection=is_first_microbatch,
                     )
+                    # Council requirement: log conflict frequency for experimental analysis
+                    if is_first_microbatch and _conflict:
+                        if not hasattr(self, '_pcgrad_conflicts'):
+                            self._pcgrad_conflicts = 0
+                            self._pcgrad_total = 0
+                        self._pcgrad_conflicts += 1
+                    if is_first_microbatch:
+                        if not hasattr(self, '_pcgrad_total'):
+                            self._pcgrad_total = 0
+                        self._pcgrad_total += 1
                 else:
                     if cfg.boundary_weight > 1.0 and self._boundary_masks is not None:
                         bm = self._boundary_masks.get(start)
@@ -1096,11 +1106,16 @@ class Trainer:
 
             lr = self.optimizer.param_groups[0]["lr"]
             eval_tag = "*" if is_eval_epoch else " "
+            # PCGrad conflict telemetry (council requirement)
+            conflict_str = ""
+            if cfg.loss_mode == "pcgrad" and hasattr(self, '_pcgrad_total') and self._pcgrad_total > 0:
+                conflict_rate = getattr(self, '_pcgrad_conflicts', 0) / self._pcgrad_total
+                conflict_str = f" conflict={conflict_rate:.1%}"
             print(f"[ep {epoch:4d}]{eval_tag} loss={avg_loss:.4f} pose={avg_pose:.6f} "
-                  f"seg={avg_seg:.6f} scorer={scorer_val:.4f} best={self.best_scorer:.4f} lr={lr:.6f}")
+                  f"seg={avg_seg:.6f} scorer={scorer_val:.4f} best={self.best_scorer:.4f} lr={lr:.6f}{conflict_str}")
 
             # LR plateau detection for standard loss
-            if is_eval_epoch and cfg.loss_mode == "standard":
+            if is_eval_epoch and cfg.loss_mode in ("standard", "pcgrad"):
                 self._plateau_window.append(scorer_val)
                 if len(self._plateau_window) > 20:
                     self._plateau_window.pop(0)

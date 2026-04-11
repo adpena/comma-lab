@@ -2,45 +2,54 @@
 
 ## promoted floor: 1.33 (dilated_h64, standard loss)
 
-## Pareto frontier exploration (3 regimes)
+## Pre-Registered Three-Arm Experiment (Council Approved 2026-04-10)
 
-The score formula defines a specific trade-off between PoseNet and SegNet.
-Our current submission (1.33) is at the PoseNet-optimal extreme. The true
-minimum lies on the unexplored frontier between PoseNet-optimal and SegNet-optimal.
+### Gate Criterion (pre-registered, not to be moved)
+At epoch 300-400: **seg < 0.00590 AND pose < 0.00250**
+Early termination if trajectory clearly failing at epoch 300.
 
-### Regime 1: MRS-Optimal (the real minimum) — PRIMARY EFFORT
+### Arm A: PCGrad gradient surgery
 - **Profile**: `pareto_pcgrad`
-- **What**: PCGrad + MRS-adaptive weights (w_seg = 200*sqrt(10*pose))
-- **Expected**: score 1.20-1.30 if SegNet regains baseline without PoseNet regression
-- **Deploy**: Modal A10G (needs CUDA for autograd on scorer networks)
-- **Priority**: HIGHEST — this is the path to the theoretical minimum
+- **Hypothesis**: Non-opposing gradient projection decouples PoseNet/SegNet
+- **Platform**: Modal A10G
+- **Counterfactual**: Arm B (same architecture, different loss)
 
-### Regime 2: Extreme PoseNet — WRITEUP ARTIFACT
-- **Profile**: `extreme_posenet`
-- **What**: seg_weight=0, alpha=30, sal_lambda=1.5 — pure PoseNet optimization
-- **Expected**: PoseNet < 0.001, SegNet > 0.007, score ~1.35-1.40
-- **Deploy**: Kaggle P100 (short run, just need the artifact for visualization)
-- **Purpose**: Show Pareto frontier endpoint in writeup GIF comparison
+### Arm B: Simple reweighting (control)
+- **Profile**: `reweight_ablation` (seg_weight=200, standard loss)
+- **Hypothesis**: SegNet regression is loss-driven, not architectural
+- **Platform**: Kaggle P100
+- **Purpose**: If B beats A, gradient surgery is unnecessary
 
-### Regime 3: Extreme SegNet — WRITEUP ARTIFACT
-- **Profile**: `extreme_segnet`
-- **What**: focal_ste, seg_weight=200, alpha=5 — pure SegNet optimization
-- **Expected**: SegNet < 0.005, PoseNet > 0.05, score ~1.5-2.0
-- **Deploy**: Kaggle P100 (short run, just need the artifact)
-- **Purpose**: Show Pareto frontier endpoint, compare with KL distill approach
+### Arm C: Spatial gate architecture (Collier's proposal)
+- **Profile**: `gated_dilated_smoke` (400 epochs)
+- **Hypothesis**: Spatial allocation of correction capacity is the root cause
+- **Platform**: Kaggle P100
+- **Purpose**: If C beats A and B, problem is architectural
 
-### Rate optimization (orthogonal, can run in parallel)
-- CRF 35 and 36 re-encode with current best postfilter
-- Test if postfilter compensates for quality loss at higher CRF
-- Expected: 0.03-0.08 points from rate reduction alone
+### Predictions (recorded for posterity)
+- **Contrarian** (50%): PCGrad fails gate. B beats A. C beats B.
+- **Collier**: Agrees with Contrarian's ordering.
+- **Euler**: Worst case (all fail), rate-only gives 1.25-1.30, still #1.
 
-## Queue
+### If ALL three fail the gate:
+Pivot to rate-only optimization:
+- CRF 35 + current postfilter (confirmed 6.6% file reduction = 0.038 pts)
+- CRF 36 + current postfilter (estimated ~0.08 pts)
+- Projected score: 1.25-1.30
 
-| Priority | Experiment | Profile | Platform | Status |
-|----------|-----------|---------|----------|--------|
-| 1 | PCGrad Pareto | pareto_pcgrad | Modal A10G | QUEUED |
-| 2 | CRF 35 re-encode | (encoder change) | Local | QUEUED |
-| 3 | CRF 36 re-encode | (encoder change) | Local | QUEUED |
-| 4 | Extreme PoseNet | extreme_posenet | Kaggle | QUEUED |
-| 5 | Extreme SegNet | extreme_segnet | Kaggle | QUEUED |
-| 6 | Two-phase fine-tune | (conv3-only, focal_ste) | Lightning | QUEUED |
+## Parallel: Rate Optimization (orthogonal, runs on local M5 Max)
+| Priority | Experiment | Platform | Status |
+|----------|-----------|----------|--------|
+| 1 | CRF 35 re-encode | Local | CRF 35 done: 791KB (6.6% savings) |
+| 2 | CRF 36 re-encode | Local | Encoding (slow, SVT-AV1 preset 0) |
+
+## Parallel: Writeup Artifacts
+| Priority | Experiment | Platform | Status |
+|----------|-----------|----------|--------|
+| 3 | extreme_posenet | Kaggle | QUEUED |
+| 3 | extreme_segnet | Kaggle | QUEUED |
+
+## Decision Point: April 21
+Lock top-2 candidates. No new experiments after this date.
+Phase 4 (Apr 21-25): Authoritative eval of candidates.
+Phase 5 (Apr 25-May 3): Packaging + paper.

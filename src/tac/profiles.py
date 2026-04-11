@@ -173,6 +173,44 @@ EXTREME_SEGNET = {
     "accum_steps": 4,
 }
 
+# Three-arm experiment (council-approved, pre-registered gate: seg<0.00590, pose<0.00250)
+# Arm A: PCGrad gradient surgery (pareto_pcgrad profile, already defined above)
+# Arm B: Simple reweighting control (seg_weight=200, no gradient surgery)
+REWEIGHT_ABLATION = {
+    "variant": "dilated",
+    "hidden": 64,
+    "kernel": 3,
+    "epochs": 2500,
+    "lr": 5e-4,
+    "ema_decay": 0.997,
+    "alpha": 20.0,
+    "sal_lambda": 1.0,
+    "loss_mode": "standard",
+    "segnet_loss_weight": 200.0,        # 2x proven_baseline, tests if reweighting alone helps
+    "boundary_weight": 1.0,
+    "hard_frame_ratio": 0.0,
+    "eval_every": 5,
+    "accum_steps": 4,
+}
+
+# Arm C: Spatial gate architecture (Collier's proposal, unanimous council approval)
+GATED_DILATED_SMOKE = {
+    "variant": "gated_dilated",
+    "hidden": 64,
+    "kernel": 3,
+    "epochs": 400,                       # smoke test — 400 epochs per council
+    "lr": 5e-4,
+    "ema_decay": 0.997,
+    "alpha": 20.0,
+    "sal_lambda": 1.0,
+    "loss_mode": "standard",
+    "segnet_loss_weight": 100.0,
+    "boundary_weight": 1.0,
+    "hard_frame_ratio": 0.0,
+    "eval_every": 5,
+    "accum_steps": 4,
+}
+
 PROFILES = {
     "council_v1": COUNCIL_V1,
     "council_v2_adaptive": COUNCIL_V2_ADAPTIVE,
@@ -184,4 +222,6 @@ PROFILES = {
     "pareto_pcgrad": PARETO_PCGRAD,
     "extreme_posenet": EXTREME_POSENET,
     "extreme_segnet": EXTREME_SEGNET,
+    "reweight_ablation": REWEIGHT_ABLATION,
+    "gated_dilated_smoke": GATED_DILATED_SMOKE,
 }
