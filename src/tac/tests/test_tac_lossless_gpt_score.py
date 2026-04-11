@@ -5,6 +5,7 @@ import sys
 import tempfile
 import unittest
 from pathlib import Path
+from types import SimpleNamespace
 from unittest import mock
 
 import numpy as np
@@ -17,6 +18,81 @@ if str(SRC_ROOT) not in sys.path:
 
 
 class TacLosslessGptScoreTests(unittest.TestCase):
+    def test_resolve_onnx_execution_providers_prefers_coreml_then_cpu(self) -> None:
+        from tac.lossless.gpt_score import resolve_onnx_execution_providers
+
+        providers = resolve_onnx_execution_providers(
+            ["AzureExecutionProvider", "CPUExecutionProvider", "CoreMLExecutionProvider"]
+        )
+
+        self.assertEqual(providers, ["CoreMLExecutionProvider", "CPUExecutionProvider"])
+
+    def test_load_official_commavq_gpt_onnx_model_prefers_coreml_then_cpu(self) -> None:
+        from tac.lossless import gpt_score as module
+
+        fake_session = mock.Mock()
+        fake_session.get_inputs.return_value = [SimpleNamespace(name="tokens")]
+        fake_session.run.return_value = [np.arange(12, dtype=np.float32).reshape(1, 3, 4)]
+        fake_ort = SimpleNamespace(
+            get_available_providers=lambda: [
+                "AzureExecutionProvider",
+                "CPUExecutionProvider",
+                "CoreMLExecutionProvider",
+            ],
+            InferenceSession=mock.Mock(return_value=fake_session),
+        )
+
+        with mock.patch.object(module, "_require_onnxruntime", return_value=fake_ort):
+            with mock.patch.object(
+                module,
+                "ensure_official_gpt_onnx_path",
+                return_value=Path("/tmp/gpt2m.onnx"),
+            ):
+                model = module.load_official_commavq_gpt_onnx_model()
+
+        logits = model.next_token_logits(np.array([11, 12, 13], dtype=np.int64))
+
+        fake_ort.InferenceSession.assert_called_once_with(
+            "/tmp/gpt2m.onnx",
+            providers=["CoreMLExecutionProvider", "CPUExecutionProvider"],
+        )
+        self.assertEqual(
+            fake_session.run.call_args.args[1]["tokens"].tolist(),
+            [[11, 12, 13]],
+        )
+        np.testing.assert_allclose(logits, np.array([8.0, 9.0, 10.0, 11.0], dtype=np.float32))
+        self.assertEqual(model._tac_model_backend, "onnx")
+        self.assertEqual(model._tac_execution_provider, "CoreMLExecutionProvider")
+        self.assertEqual(model._tac_execution_providers, ["CoreMLExecutionProvider", "CPUExecutionProvider"])
+        self.assertEqual(model._tac_model_artifact_url, module.OFFICIAL_COMMAVQ_GPT_ONNX_URL)
+
+    def test_load_official_commavq_gpt_model_falls_back_to_torch_when_onnx_unavailable(self) -> None:
+        from tac.lossless import gpt_score as module
+
+        expected_model = SimpleNamespace(_tac_model_backend="torch")
+
+        with mock.patch.object(
+            module,
+            "load_official_commavq_gpt_onnx_model",
+            side_effect=ImportError("onnxruntime missing"),
+        ):
+            with mock.patch.object(
+                module,
+                "load_official_commavq_gpt_torch_model",
+                return_value=expected_model,
+            ) as mocked_torch:
+                model = module.load_official_commavq_gpt_model(device="cpu", dtype="float32")
+
+        mocked_torch.assert_called_once_with(
+            device="cpu",
+            dtype="float32",
+            cache_dir=None,
+            model_url=module.OFFICIAL_COMMAVQ_GPT_URL,
+            gpt_module_path=None,
+        )
+        self.assertIs(model, expected_model)
+        self.assertIn("onnxruntime missing", model._tac_bridge_fallback_reason)
+
     def test_score_tokens_with_logits_fn_reports_bits_for_teacher_forced_sample(self) -> None:
         from tac.lossless.gpt_score import score_tokens_with_logits_fn
 
@@ -99,6 +175,44 @@ class TacLosslessGptScoreTests(unittest.TestCase):
         self.assertEqual(result["token_path"], str(token_path))
         self.assertEqual(result["scored_tokens"], 5)
         self.assertLess(result["bits_per_token"], 0.01)
+
+    def test_score_commavq_gpt_sample_reports_runtime_metadata_from_loaded_model(self) -> None:
+        from tac.lossless.gpt_score import score_commavq_gpt_sample
+
+        with tempfile.TemporaryDirectory() as tmpdir:
+            root = Path(tmpdir)
+            token_path = root / "tokens.bin"
+            np.array([0, 1, 0, 1, 0, 1], dtype=np.uint16).tofile(token_path)
+
+            class FakeModel:
+                _tac_model_backend = "onnx"
+                _tac_execution_provider = "CPUExecutionProvider"
+                _tac_execution_providers = ["CPUExecutionProvider"]
+                _tac_model_artifact_url = "https://huggingface.co/commaai/commavq-gpt2m/resolve/main/gpt2m.onnx"
+
+                def score_tokens(self, tokens, *, context_tokens, max_scored_tokens=None):
+                    return {
+                        "scored_tokens": int(tokens.size - 1 if max_scored_tokens is None else max_scored_tokens),
+                        "avg_nll_nats": 0.0,
+                    }
+
+            result = score_commavq_gpt_sample(
+                token_path,
+                max_scored_tokens=5,
+                context_tokens=3,
+                vocab_size=2,
+                device="cpu",
+                dtype="float32",
+                model_loader=lambda **_: FakeModel(),
+            )
+
+        self.assertEqual(result["model_backend"], "onnx")
+        self.assertEqual(result["execution_provider"], "CPUExecutionProvider")
+        self.assertEqual(result["execution_providers"], ["CPUExecutionProvider"])
+        self.assertEqual(
+            result["model_url"],
+            "https://huggingface.co/commaai/commavq-gpt2m/resolve/main/gpt2m.onnx",
+        )
 
     def test_score_commavq_gpt_sample_strips_segment_eot_and_scores_segments_independently(self) -> None:
         from tac.lossless.arithmetic import FRAME_BOS_TOKEN, SEGMENT_EOT_TOKEN

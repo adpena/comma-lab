@@ -7,7 +7,7 @@ import time
 
 import numpy as np
 
-from .gpt_score import load_official_commavq_gpt_model
+from .gpt_score import gpt_model_runtime_metadata, load_official_commavq_gpt_model
 from .range_coder import RangeDecoder, RangeEncoder, cumulative_frequencies, normalize_probabilities
 
 STREAM_MAGIC = b"GTA1"
@@ -275,6 +275,7 @@ def encode_commavq_gpt_sample(
         model_url=model_url,
         gpt_module_path=gpt_module_path,
     )
+    runtime_metadata = gpt_model_runtime_metadata(model)
     effective_context = 2580 if context_tokens is None else context_tokens
     encoded = _encode_token_stream_with_model(
         sample,
@@ -296,7 +297,7 @@ def encode_commavq_gpt_sample(
             vocab_size=vocab_size,
         )
         exact_match = restored == sample.tolist()
-    return {
+    result = {
         "command": "lossless_gpt_arithmetic_sample",
         "token_path": str(Path(token_path)),
         "encoded_path": str(target),
@@ -304,6 +305,7 @@ def encode_commavq_gpt_sample(
         "device": device,
         "dtype": dtype if dtype != "auto" else "float32",
         "context_tokens": effective_context,
+        "model_url": runtime_metadata.get("model_url", model_url),
         "token_count": int(sample.size),
         "raw_token_count": int(raw_token_count),
         "encoded_bytes": encoded_bytes,
@@ -314,6 +316,8 @@ def encode_commavq_gpt_sample(
         "local_only": True,
         "measured": False,
     }
+    result.update({k: v for k, v in runtime_metadata.items() if k != "model_url"})
+    return result
 
 
 def encode_commavq_gpt_global_sample(
@@ -342,6 +346,7 @@ def encode_commavq_gpt_global_sample(
         model_url=model_url,
         gpt_module_path=gpt_module_path,
     )
+    runtime_metadata = gpt_model_runtime_metadata(model)
     effective_context = 2580 if context_tokens is None else context_tokens
     encoded = _encode_token_stream_with_model(
         sample,
@@ -363,7 +368,7 @@ def encode_commavq_gpt_global_sample(
             vocab_size=vocab_size,
         )
         exact_match = restored == sample.tolist()
-    return {
+    result = {
         "command": "lossless_gpt_arithmetic_global_sample",
         "token_path": str(Path(token_path)),
         "encoded_path": str(target),
@@ -371,6 +376,7 @@ def encode_commavq_gpt_global_sample(
         "device": device,
         "dtype": dtype if dtype != "auto" else "float32",
         "context_tokens": effective_context,
+        "model_url": runtime_metadata.get("model_url", model_url),
         "token_count": int(sample.size),
         "raw_token_count": int(raw_token_count),
         "encoded_bytes": encoded_bytes,
@@ -381,6 +387,8 @@ def encode_commavq_gpt_global_sample(
         "local_only": True,
         "measured": False,
     }
+    result.update({k: v for k, v in runtime_metadata.items() if k != "model_url"})
+    return result
 
 
 def probe_commavq_gpt_arithmetic_devices(

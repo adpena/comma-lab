@@ -4,7 +4,10 @@ import importlib.util
 import json
 import math
 import os
+import shutil
 import time
+import urllib.request
+from collections.abc import Sequence
 from pathlib import Path
 from typing import Callable, Protocol
 
@@ -13,12 +16,29 @@ import numpy as np
 from .arithmetic import FRAME_BOS_TOKEN, SEGMENT_EOT_TOKEN, load_gpt_arithmetic_profile
 
 OFFICIAL_COMMAVQ_GPT_URL = "https://huggingface.co/commaai/commavq-gpt2m/resolve/main/pytorch_model.bin"
+OFFICIAL_COMMAVQ_GPT_ONNX_URL = "https://huggingface.co/commaai/commavq-gpt2m/resolve/main/gpt2m.onnx"
 OFFICIAL_COMMAVQ_GPT_BLOCK_SIZE = 20 * 129
 OFFICIAL_COMMAVQ_GPT_TOKENS_PER_FRAME = 129
 
 
 class NextTokenLogitsModel(Protocol):
     def next_token_logits(self, context: np.ndarray) -> np.ndarray: ...
+
+
+def _require_torch():
+    try:
+        import torch
+    except ImportError as exc:
+        raise ImportError("torch is required for the official commavq GPT bridge") from exc
+    return torch
+
+
+def _require_onnxruntime():
+    try:
+        import onnxruntime
+    except ImportError as exc:
+        raise ImportError("onnxruntime is required for the official ONNX commavq GPT bridge") from exc
+    return onnxruntime
 
 
 def _resolve_device(device: str) -> str:
@@ -28,7 +48,10 @@ def _resolve_device(device: str) -> str:
     if normalized != "auto":
         raise ValueError(f"unsupported device: {device}")
 
-    import torch
+    try:
+        torch = _require_torch()
+    except ImportError:
+        return "cpu"
 
     if torch.cuda.is_available():
         return "cuda"
@@ -65,6 +88,53 @@ def _candidate_gpt_module_paths() -> tuple[Path, ...]:
     return tuple(candidates)
 
 
+def resolve_onnx_execution_providers(available_providers: Sequence[str]) -> list[str]:
+    preferred = [
+        provider
+        for provider in ("CoreMLExecutionProvider", "CPUExecutionProvider")
+        if provider in set(available_providers)
+    ]
+    if not preferred:
+        raise RuntimeError("official ONNX commavq GPT requires CoreMLExecutionProvider or CPUExecutionProvider")
+    return preferred
+
+
+def _default_gpt_onnx_path(cache_dir: str | Path | None = None) -> Path:
+    if cache_dir is not None:
+        base = Path(cache_dir)
+        return base if base.suffix == ".onnx" else base / "gpt2m.onnx"
+    cache_home = Path(os.environ.get("XDG_CACHE_HOME", str(Path.home() / ".cache")))
+    return cache_home / "tac" / "commavq-gpt2m" / "gpt2m.onnx"
+
+
+def ensure_official_gpt_onnx_path(
+    *,
+    model_url: str = OFFICIAL_COMMAVQ_GPT_ONNX_URL,
+    cache_dir: str | Path | None = None,
+) -> Path:
+    env_path = os.environ.get("TAC_COMMAVQ_GPT_ONNX")
+    if env_path:
+        candidate = Path(env_path).expanduser()
+        if not candidate.is_file():
+            raise FileNotFoundError(f"TAC_COMMAVQ_GPT_ONNX does not point to a file: {candidate}")
+        return candidate
+
+    target = _default_gpt_onnx_path(cache_dir)
+    if target.is_file():
+        return target
+
+    target.parent.mkdir(parents=True, exist_ok=True)
+    tmp_target = target.with_suffix(".tmp")
+    try:
+        with urllib.request.urlopen(model_url) as response, tmp_target.open("wb") as handle:
+            shutil.copyfileobj(response, handle)
+        tmp_target.replace(target)
+    finally:
+        if tmp_target.exists():
+            tmp_target.unlink()
+    return target
+
+
 def _resolve_gpt_module_path(gpt_module_path: str | Path | None) -> Path:
     if gpt_module_path is not None:
         path = Path(gpt_module_path)
@@ -85,6 +155,79 @@ def _load_official_gpt_module(gpt_module_path: str | Path | None):
     module = importlib.util.module_from_spec(spec)
     spec.loader.exec_module(module)
     return module
+
+
+class _OnnxNextTokenLogitsModel:
+    def __init__(
+        self,
+        session,
+        *,
+        block_size: int,
+        providers: list[str],
+        model_url: str,
+        model_path: Path,
+    ) -> None:
+        inputs = session.get_inputs()
+        if not inputs:
+            raise RuntimeError("official ONNX commavq GPT session has no inputs")
+        self._session = session
+        self._input_name = inputs[0].name
+        self._block_size = int(block_size)
+        self._tac_model_backend = "onnx"
+        self._tac_execution_provider = providers[0]
+        self._tac_execution_providers = list(providers)
+        self._tac_model_artifact_url = model_url
+        self._tac_model_artifact_path = str(model_path)
+
+    def _run_logits_rows(self, idx: np.ndarray) -> np.ndarray:
+        arr = np.asarray(idx, dtype=np.int64).reshape(1, -1)
+        outputs = self._session.run(None, {self._input_name: arr})
+        if not outputs:
+            raise RuntimeError("official ONNX commavq GPT session returned no outputs")
+        logits = np.asarray(outputs[0], dtype=np.float32)
+        if logits.ndim == 3:
+            return logits[0]
+        if logits.ndim == 2:
+            return logits
+        raise RuntimeError(f"official ONNX commavq GPT returned unsupported logits rank {logits.ndim}")
+
+    def next_token_logits(self, context: np.ndarray) -> np.ndarray:
+        return self._run_logits_rows(context)[-1]
+
+    def token_logits(self, tokens: np.ndarray, *, context_tokens: int) -> np.ndarray:
+        arr = np.asarray(tokens, dtype=np.int64)
+        if arr.ndim != 1 or arr.size < 2:
+            raise ValueError("tokens must be a 1D array with at least two items")
+        usable_context_tokens = min(max(int(context_tokens), 1), self._block_size - 1)
+        rows: list[np.ndarray] = []
+        for chunk_start, chunk_end, local_target_start, predictions_to_take in _iter_score_chunks(
+            token_count=arr.size,
+            score_count=int(arr.size - 1),
+            context_tokens=usable_context_tokens,
+            block_size=self._block_size,
+        ):
+            chunk = arr[chunk_start:chunk_end]
+            logits = self._run_logits_rows(chunk[:-1])
+            rows.append(logits[local_target_start : local_target_start + predictions_to_take])
+        if rows:
+            return np.concatenate(rows, axis=0)
+        return np.zeros((0, 0), dtype=np.float32)
+
+    def score_tokens(
+        self,
+        tokens: np.ndarray,
+        *,
+        context_tokens: int,
+        max_scored_tokens: int | None = None,
+    ) -> dict[str, object]:
+        arr = np.asarray(tokens, dtype=np.int64)
+        if arr.ndim != 1 or arr.size < 2:
+            raise ValueError("tokens must be a 1D array with at least two items")
+        score_count = int(arr.size - 1) if max_scored_tokens is None else min(int(max_scored_tokens), int(arr.size - 1))
+        if score_count <= 0:
+            raise ValueError("max_scored_tokens must allow at least one scored token")
+        logits_rows = self.token_logits(arr[: score_count + 1], context_tokens=context_tokens)
+        return _score_tokens_from_logits_rows(arr, logits_rows=logits_rows, score_count=score_count)
 
 
 class _TorchNextTokenLogitsModel:
@@ -170,7 +313,7 @@ class _TorchNextTokenLogitsModel:
         }
 
 
-def load_official_commavq_gpt_model(
+def load_official_commavq_gpt_torch_model(
     *,
     device: str = "auto",
     dtype: str = "auto",
@@ -178,10 +321,9 @@ def load_official_commavq_gpt_model(
     model_url: str | None = None,
     gpt_module_path: str | Path | None = None,
 ) -> NextTokenLogitsModel:
-    import torch
-
     resolved_device = _resolve_device(device)
     resolved_dtype = _resolve_dtype(dtype, device=resolved_device)
+    torch = _require_torch()
     module = _load_official_gpt_module(gpt_module_path)
     config = module.GPTConfig()
     model = module.GPT(config)
@@ -201,12 +343,120 @@ def load_official_commavq_gpt_model(
         torch.set_float32_matmul_precision("high")
     model.eval()
     model.to(device=resolved_device, dtype=torch_dtype)
-    return _TorchNextTokenLogitsModel(model, device=resolved_device)
+    wrapper = _TorchNextTokenLogitsModel(model, device=resolved_device)
+    wrapper._tac_model_backend = "torch"
+    wrapper._tac_model_artifact_url = model_url or OFFICIAL_COMMAVQ_GPT_URL
+    return wrapper
+
+
+def load_official_commavq_gpt_onnx_model(
+    *,
+    cache_dir: str | Path | None = None,
+    model_url: str = OFFICIAL_COMMAVQ_GPT_ONNX_URL,
+) -> NextTokenLogitsModel:
+    onnxruntime = _require_onnxruntime()
+    model_path = ensure_official_gpt_onnx_path(model_url=model_url, cache_dir=cache_dir)
+    providers = resolve_onnx_execution_providers(onnxruntime.get_available_providers())
+    session = onnxruntime.InferenceSession(str(model_path), providers=providers)
+    return _OnnxNextTokenLogitsModel(
+        session,
+        block_size=OFFICIAL_COMMAVQ_GPT_BLOCK_SIZE,
+        providers=providers,
+        model_url=model_url,
+        model_path=model_path,
+    )
+
+
+def _resolve_gpt_artifact_urls(model_url: str | None) -> tuple[str, str]:
+    if model_url and model_url.endswith(".onnx"):
+        return model_url, OFFICIAL_COMMAVQ_GPT_URL
+    return OFFICIAL_COMMAVQ_GPT_ONNX_URL, model_url or OFFICIAL_COMMAVQ_GPT_URL
+
+
+def _attach_model_runtime_attr(model: object, name: str, value: object) -> None:
+    try:
+        setattr(model, name, value)
+    except (AttributeError, TypeError):
+        pass
+
+
+def load_official_commavq_gpt_model(
+    *,
+    device: str = "auto",
+    dtype: str = "auto",
+    cache_dir: str | Path | None = None,
+    model_url: str | None = None,
+    gpt_module_path: str | Path | None = None,
+) -> NextTokenLogitsModel:
+    onnx_model_url, torch_model_url = _resolve_gpt_artifact_urls(model_url)
+    try:
+        return load_official_commavq_gpt_onnx_model(
+            cache_dir=cache_dir,
+            model_url=onnx_model_url,
+        )
+    except Exception as exc:
+        model = load_official_commavq_gpt_torch_model(
+            device=device,
+            dtype=dtype,
+            cache_dir=cache_dir,
+            model_url=torch_model_url,
+            gpt_module_path=gpt_module_path,
+        )
+        _attach_model_runtime_attr(model, "_tac_bridge_fallback_reason", str(exc))
+        return model
 
 
 def _logsumexp(logits: np.ndarray) -> float:
     max_logit = float(np.max(logits))
     return max_logit + float(np.log(np.exp(logits - max_logit).sum()))
+
+
+def _score_tokens_from_logits_rows(
+    tokens: np.ndarray,
+    *,
+    logits_rows,
+    score_count: int | None = None,
+) -> dict[str, object]:
+    arr = np.asarray(tokens, dtype=np.int64)
+    if arr.ndim != 1 or arr.size < 2:
+        raise ValueError("tokens must be a 1D array with at least two items")
+    available = int(arr.size - 1)
+    effective_score_count = available if score_count is None else min(int(score_count), available)
+    if effective_score_count <= 0:
+        raise ValueError("score_count must allow at least one scored token")
+    rows = np.asarray(logits_rows, dtype=np.float64)
+    if rows.ndim != 2:
+        raise ValueError("logits_rows must be a 2D array")
+    if rows.shape[0] < effective_score_count:
+        raise ValueError("logits_rows must contain one row per scored token")
+
+    total_nll_nats = 0.0
+    for row_index in range(effective_score_count):
+        target = int(arr[row_index + 1])
+        row = rows[row_index]
+        if target < 0 or target >= row.size:
+            raise ValueError(f"token {target} is outside vocab size {row.size}")
+        total_nll_nats += _logsumexp(row) - float(row[target])
+    return {
+        "scored_tokens": effective_score_count,
+        "avg_nll_nats": total_nll_nats / effective_score_count,
+    }
+
+
+def gpt_model_runtime_metadata(model: object) -> dict[str, object]:
+    mapping = {
+        "_tac_model_backend": "model_backend",
+        "_tac_execution_provider": "execution_provider",
+        "_tac_execution_providers": "execution_providers",
+        "_tac_model_artifact_url": "model_url",
+        "_tac_model_artifact_path": "model_path",
+        "_tac_bridge_fallback_reason": "bridge_fallback_reason",
+    }
+    payload: dict[str, object] = {}
+    for attr_name, field_name in mapping.items():
+        if hasattr(model, attr_name):
+            payload[field_name] = getattr(model, attr_name)
+    return payload
 
 
 def score_tokens_with_logits_fn(
@@ -400,6 +650,7 @@ def score_commavq_gpt_sample(
     if model_loader is None:
         load_kwargs["gpt_module_path"] = gpt_module_path
     model = loader(**load_kwargs)
+    runtime_metadata = gpt_model_runtime_metadata(model)
     raw_token_count, segments = _load_frame_major_segments_from_path(
         token_path,
         max_scored_tokens=max_scored_tokens,
@@ -456,7 +707,7 @@ def score_commavq_gpt_sample(
         "vocab_size": int(vocab_size),
         "device": resolved_device,
         "dtype": resolved_dtype,
-        "model_url": model_url or OFFICIAL_COMMAVQ_GPT_URL,
+        "model_url": runtime_metadata.get("model_url", model_url or OFFICIAL_COMMAVQ_GPT_URL),
         "model_block_size": OFFICIAL_COMMAVQ_GPT_BLOCK_SIZE,
         "avg_nll_nats": avg_nll_nats,
         "bits_per_token": avg_nll_nats / math.log(2.0),
@@ -464,6 +715,7 @@ def score_commavq_gpt_sample(
         "local_only": True,
         "measured": False,
     }
+    payload.update({k: v for k, v in runtime_metadata.items() if k != "model_url"})
     if output_path is not None:
         target = Path(output_path)
         target.parent.mkdir(parents=True, exist_ok=True)

@@ -135,6 +135,51 @@ class TacLosslessGptArithmeticCoderTests(unittest.TestCase):
         self.assertEqual(result["token_count"], 4)
         self.assertTrue(result["exact_match"])
 
+    def test_encode_commavq_gpt_sample_reports_runtime_metadata_from_loaded_model(self) -> None:
+        from tac.lossless.gpt_arithmetic_coder import encode_commavq_gpt_sample
+
+        with tempfile.TemporaryDirectory() as tmpdir:
+            root = Path(tmpdir)
+            token_path = root / "tokens.bin"
+            output_path = root / "sample.gta"
+            np.array([1024, 0, 1, 0, 1025], dtype=np.uint16).tofile(token_path)
+
+            class FakeModel:
+                _tac_model_backend = "onnx"
+                _tac_execution_provider = "CPUExecutionProvider"
+                _tac_execution_providers = ["CPUExecutionProvider"]
+                _tac_model_artifact_url = "https://huggingface.co/commaai/commavq-gpt2m/resolve/main/gpt2m.onnx"
+
+                def token_logits(self, tokens, *, context_tokens):
+                    logits = np.full((len(tokens) - 1, 2), -10.0, dtype=np.float64)
+                    for row, target in enumerate([0, 1, 0]):
+                        logits[row, target] = 10.0
+                    return logits
+
+                def next_token_logits(self, context):
+                    raise AssertionError("verify_decode=False should avoid next_token_logits")
+
+            result = encode_commavq_gpt_sample(
+                token_path=token_path,
+                encoded_path=output_path,
+                profile="gpt_arithmetic_small",
+                max_tokens=4,
+                context_tokens=3,
+                vocab_size=2,
+                device="cpu",
+                dtype="float32",
+                verify_decode=False,
+                model_loader=lambda **_: FakeModel(),
+            )
+
+        self.assertEqual(result["model_backend"], "onnx")
+        self.assertEqual(result["execution_provider"], "CPUExecutionProvider")
+        self.assertEqual(result["execution_providers"], ["CPUExecutionProvider"])
+        self.assertEqual(
+            result["model_url"],
+            "https://huggingface.co/commaai/commavq-gpt2m/resolve/main/gpt2m.onnx",
+        )
+
     def test_encode_commavq_gpt_sample_can_skip_decode_verification(self) -> None:
         from tac.lossless.gpt_arithmetic_coder import encode_commavq_gpt_sample
 
