@@ -270,6 +270,76 @@ KAGGLE_P100_LONG = {
     "wall_clock_timeout": 39600,          # 11h safety margin
 }
 
+# ── GPU Lane: Mask Renderer profiles ────────────────────────────────────
+# Segment → Compress Masks → Neural Render pipeline.
+# Instead of postfilter on compressed video, render frames from masks.
+# Score formula is the same: 100*seg + sqrt(10*pose).
+
+MASK_RENDERER_SMOKE = {
+    "variant": "mask_renderer",
+    "hidden": 40,                            # base_ch for MaskRenderer U-Net
+    "mid_ch": 64,                            # bottleneck channels
+    "embed_dim": 6,                          # per-class embedding dimension
+    "motion_hidden": 32,                     # MotionPredictor hidden channels
+    "epochs": 200,
+    "lr": 1e-3,
+    "ema_decay": 0.997,
+    "alpha": 0.0,                            # no saliency recon (rendering from scratch)
+    "sal_lambda": 0.0,
+    "loss_mode": "standard",
+    "segnet_loss_weight": 100.0,
+    "boundary_weight": 1.0,
+    "hard_frame_ratio": 0.0,
+    "eval_every": 10,
+    "accum_steps": 2,
+    "quantize_mode": "fp4",                  # use FP4 instead of int8
+}
+
+MASK_RENDERER_FULL = {
+    "variant": "mask_renderer",
+    "hidden": 40,
+    "mid_ch": 64,
+    "embed_dim": 6,
+    "motion_hidden": 32,
+    "epochs": 2500,
+    "lr": 5e-4,
+    "ema_decay": 0.997,
+    "alpha": 0.0,
+    "sal_lambda": 0.0,
+    "loss_mode": "standard",
+    "segnet_loss_weight": 100.0,
+    "boundary_weight": 50.0,
+    "hard_frame_ratio": 0.3,
+    "error_replay_every": 200,
+    "eval_every": 5,
+    "accum_steps": 4,
+    "use_swa": True,
+    "quantize_mode": "fp4",
+}
+
+# Extended capacity variant: 48→80→48 (~500K params)
+MASK_RENDERER_WIDE = {
+    "variant": "mask_renderer",
+    "hidden": 48,
+    "mid_ch": 80,
+    "embed_dim": 8,
+    "motion_hidden": 48,
+    "epochs": 2500,
+    "lr": 5e-4,
+    "ema_decay": 0.997,
+    "alpha": 0.0,
+    "sal_lambda": 0.0,
+    "loss_mode": "standard",
+    "segnet_loss_weight": 100.0,
+    "boundary_weight": 50.0,
+    "hard_frame_ratio": 0.3,
+    "error_replay_every": 200,
+    "eval_every": 5,
+    "accum_steps": 4,
+    "use_swa": True,
+    "quantize_mode": "fp4",
+}
+
 PROFILES = {
     "council_v1": COUNCIL_V1,
     "council_v2_adaptive": COUNCIL_V2_ADAPTIVE,
@@ -287,4 +357,7 @@ PROFILES = {
     "dilated_h16_smoke": DILATED_H16_SMOKE,
     "kaggle_p100_dilated": KAGGLE_P100_DILATED,
     "kaggle_p100_long": KAGGLE_P100_LONG,
+    "mask_renderer_smoke": MASK_RENDERER_SMOKE,
+    "mask_renderer_full": MASK_RENDERER_FULL,
+    "mask_renderer_wide": MASK_RENDERER_WIDE,
 }
