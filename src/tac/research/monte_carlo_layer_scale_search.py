@@ -16,32 +16,51 @@ from __future__ import annotations
 import argparse
 import json
 import math
-import sys
 from pathlib import Path
 
 import numpy as np
 import torch
 
 
-HERE = Path(__file__).resolve().parent
-PROJECT = HERE.parent
-sys.path.insert(0, str(HERE))
-sys.path.insert(0, str(PROJECT / "submissions" / "robust_current"))
+import torch.nn.functional as F
 
-from train_postfilter_saliency import (  # type: ignore
-    ARCHIVE_ZIP,
-    DEVICE,
-    OUTPUT_DIR,
-    VIDEOS_DIR,
-    apply_filter_to_pair,
-    build_pairs,
-    compute_pair_loss,
-    decode_archive,
-    decode_video,
-    load_scorers,
-    save_model_int8,
-)
-from inflate_postfilter import load_postfilter_int8, normalize_postfilter_meta  # type: ignore
+from tac.data import build_pairs, decode_archive, decode_video
+from tac.losses import scorer_forward_pair
+from tac.scorer import detect_device, load_scorers
+from tac.proxy_eval import _default_paths
+from tac.quantization import load_postfilter_int8, normalize_postfilter_meta, save_int8 as save_model_int8
+from tac.entrypoints import resolve_cloud_output_dir
+
+HERE = Path(__file__).resolve().parent
+PROJECT = HERE.parent.parent.parent  # src/tac/research -> project root
+
+_PROJECT, _UPSTREAM, VIDEOS_DIR, _LIVE_ARCHIVE, ARCHIVE_ZIP = _default_paths()
+OUTPUT_DIR = resolve_cloud_output_dir(PROJECT)
+DEVICE = detect_device()
+
+
+def apply_filter_to_pair(model, comp_pair, device):
+    """Apply post-filter to a frame pair. Input: (1,2,H,W,3) uint8. Output: (1,2,H,W,3) float."""
+    B, T, H, W, C = comp_pair.shape
+    x = comp_pair.float().reshape(B * T, H, W, C).permute(0, 3, 1, 2).contiguous().to(device)
+    with torch.no_grad():
+        y = model(x)
+    return y.permute(0, 2, 3, 1).reshape(B, T, H, W, C).clamp(0, 255)
+
+
+def compute_pair_loss(filtered_pair, gt_pair, posenet, segnet):
+    """Compute scorer loss for a filtered pair. Returns (loss, pose_dist, seg_dist)."""
+    fx = filtered_pair.float().permute(0, 1, 4, 2, 3).contiguous()
+    gx = gt_pair.float().permute(0, 1, 4, 2, 3).contiguous()
+    fp_out, fs_out = scorer_forward_pair(fx, posenet, segnet)
+    with torch.no_grad():
+        gp_out, gs_out = scorer_forward_pair(gx, posenet, segnet)
+    pose_dist = (fp_out["pose"][..., :6] - gp_out["pose"][..., :6]).pow(2).mean().item()
+    pred_soft = F.softmax(fs_out, dim=1)
+    gt_soft = F.softmax(gs_out, dim=1)
+    seg_dist = (1.0 - (pred_soft * gt_soft).sum(dim=1).mean()).item()
+    loss = 100.0 * seg_dist + math.sqrt(10.0 * pose_dist)
+    return loss, pose_dist, seg_dist
 
 
 LAYER_KEYS = [

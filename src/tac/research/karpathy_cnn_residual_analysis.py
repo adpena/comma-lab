@@ -34,7 +34,6 @@ from __future__ import annotations
 import gc
 import json
 import math
-import sys
 from pathlib import Path
 
 import numpy as np
@@ -42,23 +41,17 @@ import torch
 import torch.nn as nn
 import torch.nn.functional as F
 
-HERE = Path(__file__).resolve().parent
-sys.path.insert(0, str(HERE))
-PROJECT = HERE.parent
-sys.path.insert(0, str(PROJECT / "submissions" / "robust_current"))
+from tac.data import build_pairs, decode_archive, decode_video
+from tac.scorer import detect_device, load_scorers
+from tac.proxy_eval import _default_paths
+from tac.quantization import load_postfilter_int8
+from tac.research.jacobian_optimal import compute_jacobian, optimal_correction
 
-from train_postfilter_saliency import (  # type: ignore
-    ARCHIVE_ZIP,
-    DEVICE,
-    VIDEOS_DIR,
-    build_pairs,
-    decode_archive,
-    decode_video,
-    load_scorers,
-)
-from jacobian_optimal import compute_jacobian, optimal_correction  # type: ignore
-from inflate_postfilter import load_postfilter_int8  # type: ignore
-from frame_utils import seq_len  # noqa: E402
+HERE = Path(__file__).resolve().parent
+PROJECT = HERE.parent.parent.parent  # src/tac/research -> project root
+
+_PROJECT, _UPSTREAM, VIDEOS_DIR, _LIVE_ARCHIVE, ARCHIVE_ZIP = _default_paths()
+DEVICE = detect_device()
 
 
 def dct2_power_spectrum(x: torch.Tensor) -> torch.Tensor:

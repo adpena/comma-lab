@@ -31,7 +31,6 @@ from __future__ import annotations
 import gc
 import json
 import math
-import sys
 from pathlib import Path
 
 import numpy as np
@@ -39,17 +38,13 @@ import torch
 import torch.nn as nn
 import torch.nn.functional as F
 
-HERE = Path(__file__).resolve().parent
-sys.path.insert(0, str(HERE))
+from tac.data import build_pairs, decode_video
+from tac.scorer import detect_device, load_scorers
+from tac.proxy_eval import _default_paths
 
-from train_postfilter_saliency import (  # type: ignore
-    DEVICE,
-    VIDEOS_DIR,
-    build_pairs,
-    decode_video,
-    load_scorers,
-)
-from frame_utils import seq_len, segnet_model_input_size  # noqa: E402
+_PROJECT, _UPSTREAM, VIDEOS_DIR, _LIVE_ARCHIVE, _LEGACY_ARCHIVE = _default_paths()
+DEVICE = detect_device()
+segnet_model_input_size = (512, 384)  # (W, H)
 
 
 def compute_boundary_band_fraction(labels: torch.Tensor, kernel_size: int = 3) -> float:

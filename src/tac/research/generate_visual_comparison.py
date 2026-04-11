@@ -22,25 +22,22 @@ Usage::
 from __future__ import annotations
 
 import os
-import sys
 from pathlib import Path
 
 import numpy as np
 import torch
 import torch.nn.functional as F
 
-HERE = Path(__file__).resolve().parent
-PROJECT = HERE.parent
-sys.path.insert(0, str(HERE))
-sys.path.insert(0, str(PROJECT / "submissions" / "robust_current"))
-UPSTREAM = PROJECT / "workspace" / "upstream" / "comma_video_compression_challenge"
-sys.path.insert(0, str(UPSTREAM))
+from tac.data import decode_archive, decode_video
+from tac.scorer import detect_device, load_scorers
+from tac.proxy_eval import _default_paths
+from tac.quantization import load_postfilter_int8
 
-from train_postfilter_saliency import (
-    ARCHIVE_ZIP, DEVICE, VIDEOS_DIR,
-    decode_archive, decode_video, load_scorers,
-)
-from inflate_postfilter import load_postfilter_int8
+HERE = Path(__file__).resolve().parent
+PROJECT = HERE.parent.parent.parent  # src/tac/research -> project root
+
+_PROJECT, _UPSTREAM, VIDEOS_DIR, _LIVE_ARCHIVE, ARCHIVE_ZIP = _default_paths()
+DEVICE = detect_device()
 
 OUTPUT_DIR = PROJECT / "reports" / "graphs" / "media"
 
