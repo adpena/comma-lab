@@ -263,6 +263,38 @@ def build_parser() -> argparse.ArgumentParser:
     sp.add_argument("--repo-root", required=True)
     sp.set_defaults(lossless_handler="promote")
 
+    # ── Experiment utility subcommands ──────────────────────────────────────
+
+    # tac crf-search
+    sp = subparsers.add_parser("crf-search", help="Per-video CRF optimization sweep.")
+    sp.add_argument("--crf-min", type=float, default=32, help="Minimum CRF to test")
+    sp.add_argument("--crf-max", type=float, default=36, help="Maximum CRF to test")
+    sp.add_argument("--crf-step", type=float, default=1, help="CRF step size")
+    sp.add_argument("--full-eval-top", type=int, default=0, help="Run full scorer on top N proxy results")
+    sp.add_argument("--device", default="cpu", choices=["cpu", "cuda", "mps"])
+
+    # tac ensemble
+    sp = subparsers.add_parser("ensemble", help="Checkpoint ensemble via weight-space averaging.")
+    sp.add_argument("--checkpoints", nargs="+", help="Explicit checkpoint paths")
+    sp.add_argument("--checkpoint-dir", help="Directory to discover checkpoints from")
+    sp.add_argument("--top-k", type=int, default=5, help="Number of top checkpoints to average")
+    sp.add_argument("--output", required=True, help="Output int8 checkpoint path")
+    sp.add_argument("--variant", default="dilated", help="Architecture variant")
+    sp.add_argument("--hidden", type=int, default=64, help="Hidden channel width")
+    sp.add_argument("--kernel", type=int, default=3, help="Kernel size")
+    sp.add_argument("--no-per-channel", dest="per_channel", action="store_false",
+                    help="Disable per-channel quantization (use per-tensor instead)")
+
+    # tac rd-floor
+    sp = subparsers.add_parser("rd-floor", help="Empirical rate/distortion Pareto frontier analysis.")
+    sp.add_argument("--root", type=Path, default=None, help="Root directory for summary JSONs")
+    sp.add_argument("--target", action="append", type=float, default=None,
+                    help="Target scores for counterfactual analysis (repeatable)")
+    sp.add_argument("--json", action="store_true", help="Print machine-readable JSON only.")
+
+    # tac benchmark-codecs
+    sp = subparsers.add_parser("benchmark-codecs", help="Benchmark mask encoding strategies.")
+
     return parser
 
 
@@ -621,12 +653,78 @@ def _run_lossless(args: argparse.Namespace) -> dict[str, Any]:
     raise SystemExit(f"Unknown lossless subcommand: {args.lossless_handler}")
 
 
+def _run_crf_search(args: argparse.Namespace) -> Any:
+    from .experiments.crf_search import sweep
+
+    return sweep(
+        crf_min=args.crf_min,
+        crf_max=args.crf_max,
+        crf_step=args.crf_step,
+        full_eval_top=args.full_eval_top,
+        device=args.device,
+    )
+
+
+def _run_ensemble(args: argparse.Namespace) -> Any:
+    from .experiments.ensemble import discover_checkpoints, ensemble_and_save
+
+    if args.checkpoints:
+        paths = args.checkpoints
+    elif args.checkpoint_dir:
+        paths = discover_checkpoints(args.checkpoint_dir, top_k=args.top_k)
+    else:
+        raise SystemExit("Must specify --checkpoints or --checkpoint-dir")
+
+    if not paths:
+        raise SystemExit("No checkpoints found!")
+
+    result = ensemble_and_save(
+        checkpoint_paths=paths,
+        output_path=args.output,
+        variant=args.variant,
+        hidden=args.hidden,
+        kernel=args.kernel,
+        per_channel=args.per_channel,
+    )
+    print(f"\nEnsemble complete: {result['num_checkpoints']} checkpoints -> {result['output_path']}")
+    return result
+
+
+def _run_rd_floor(args: argparse.Namespace) -> Any:
+    from .experiments.rd_floor import build_report, load_summary_points, print_human_report, RAW_ROOT
+
+    root = args.root if args.root else RAW_ROOT
+    targets = sorted(set(args.target or [1.80, 1.75]), reverse=True)
+    report = build_report(load_summary_points(root), targets)
+    if args.json:
+        print(json.dumps(report, indent=2))
+    else:
+        print_human_report(report)
+        print("\nJSON:")
+        print(json.dumps(report, indent=2))
+    return report
+
+
+def _run_benchmark_codecs(args: argparse.Namespace) -> Any:
+    from .experiments.benchmark_codecs import main as _codecs_main
+
+    return _codecs_main()
+
+
 def main(argv: list[str] | None = None) -> Any:
     args = build_parser().parse_args(argv)
     if args.command == "lossy":
         return _run_lossy(args)
     if args.command == "lossless":
         return _run_lossless(args)
+    if args.command == "crf-search":
+        return _run_crf_search(args)
+    if args.command == "ensemble":
+        return _run_ensemble(args)
+    if args.command == "rd-floor":
+        return _run_rd_floor(args)
+    if args.command == "benchmark-codecs":
+        return _run_benchmark_codecs(args)
     raise SystemExit(f"Unknown command: {args.command}")
 
 
