@@ -290,6 +290,10 @@ def evaluate_local_submission_contract(
         tmpdir = None
         root = Path(work_dir).resolve()
         if root.exists():
+            # Trust boundary: work_dir is caller-supplied. shutil.rmtree will
+            # recursively delete whatever path is given. Callers must ensure
+            # work_dir points to a disposable scratch directory, not a
+            # sensitive location.
             shutil.rmtree(root)
         root.mkdir(parents=True, exist_ok=True)
 
@@ -298,6 +302,11 @@ def evaluate_local_submission_contract(
         decompressed_root = root / "decompressed"
         unpacked_root.mkdir(parents=True, exist_ok=True)
         with zipfile.ZipFile(archive, "r") as zf:
+            # Mitigate zip-slip (path traversal) for Python < 3.12 which does
+            # not enforce this by default in extractall.
+            for member in zf.namelist():
+                if ".." in member or member.startswith("/"):
+                    raise ValueError(f"Suspicious zip member rejected (path traversal): {member}")
             zf.extractall(unpacked_root)
 
         decompress_script = unpacked_root / "decompress.py"

@@ -280,8 +280,11 @@ def _compress_with_zpaq(*, source_name: str, payload: bytes, output_path: Path, 
         stage_root = Path(tmpdir)
         staged_source = stage_root / source_name
         _write_deterministic_stage_file(staged_source, payload)
+        # Prepend "./" to prevent argument injection from filenames starting
+        # with "-", which zpaq would interpret as option flags.
+        safe_name = "./" + source_name
         _run_external(
-            [binary, "add", str(output_path), source_name, "-method", _zpaq_method_arg(config)],
+            [binary, "add", str(output_path), safe_name, "-method", _zpaq_method_arg(config)],
             cwd=stage_root,
         )
     return output_path.stat().st_size

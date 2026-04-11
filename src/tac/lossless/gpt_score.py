@@ -49,15 +49,18 @@ def _resolve_dtype(dtype: str, *, device: str) -> str:
 
 
 def _candidate_gpt_module_paths() -> tuple[Path, ...]:
+    # Trust boundary: we only auto-resolve GPT module paths that are either
+    # (a) explicitly set by the operator via COMMAVQ_GPT_MODULE, or
+    # (b) inside the repo workspace (known safe location).
+    # We deliberately exclude world-writable locations like /tmp because any
+    # local user can plant a malicious gpt.py there and get code execution
+    # when this module auto-discovers it via importlib.
     candidates: list[Path] = []
     env_path = os.environ.get("COMMAVQ_GPT_MODULE")
     if env_path:
         candidates.append(Path(env_path))
-    candidates.extend(
-        [
-            Path("/tmp/commavq-read/utils/gpt.py"),
-            Path.cwd() / "workspace" / "upstream" / "commavq" / "utils" / "gpt.py",
-        ]
+    candidates.append(
+        Path.cwd() / "workspace" / "upstream" / "commavq" / "utils" / "gpt.py",
     )
     return tuple(candidates)
 
@@ -164,6 +167,10 @@ def load_official_commavq_gpt_model(
     load_kwargs = {}
     if cache_dir is not None:
         load_kwargs["model_dir"] = str(cache_dir)
+    # NOTE: load_state_dict_from_url delegates to upstream's loader which may
+    # use torch.load (pickle) internally. We cannot control upstream's
+    # deserialization strategy, but callers should only point model_url at
+    # trusted origins (the default HuggingFace URL is the official checkpoint).
     model.load_state_dict_from_url(url=model_url or OFFICIAL_COMMAVQ_GPT_URL, **load_kwargs)
     torch_dtype = getattr(torch, resolved_dtype)
     if resolved_device == "cuda":

@@ -603,3 +603,81 @@ def main() -> int:
 
 if __name__ == "__main__":
     raise SystemExit(main())
+
+
+# ---------------------------------------------------------------------------
+# ROI map generation (migrated from submissions/robust_current/generate_roi_map.py)
+# ---------------------------------------------------------------------------
+
+def masks_to_roi_map(
+    masks: "np.ndarray",
+    encode_w: int,
+    encode_h: int,
+    total_frames: int,
+    road_qp_delta: int = -10,
+    sky_qp_delta: int = 10,
+    neutral_qp_delta: int = 0,
+    threshold_high: float = 0.6,
+    threshold_low: float = 0.3,
+) -> list[str]:
+    """Convert importance masks to SVT-AV1 ROI map lines.
+
+    Args:
+        masks: (N, H, W) float32 importance masks (1=important, 0=unimportant)
+        encode_w: encode resolution width (e.g., 524)
+        encode_h: encode resolution height (e.g., 394)
+        total_frames: total video frames
+        road_qp_delta: QP offset for important regions (negative = more bits)
+        sky_qp_delta: QP offset for unimportant regions (positive = fewer bits)
+        neutral_qp_delta: QP offset for neutral regions
+        threshold_high: mask value above which region is "important"
+        threshold_low: mask value below which region is "unimportant"
+
+    Returns:
+        List of ROI map lines in SVT-AV1 format.
+    """
+    import math
+    import numpy as np
+
+    cols = math.ceil(encode_w / 64)
+    rows = math.ceil(encode_h / 64)
+
+    mask_h, mask_w = masks.shape[1], masks.shape[2]
+    scale_y = mask_h / encode_h
+    scale_x = mask_w / encode_w
+
+    lines: list[str] = []
+    prev_offsets: list[int] | None = None
+
+    for frame_idx in range(total_frames):
+        if masks.shape[0] >= total_frames:
+            mask = masks[frame_idx]
+        else:
+            ratio = frame_idx / max(total_frames - 1, 1)
+            ml_idx = ratio * (masks.shape[0] - 1)
+            lo = int(ml_idx)
+            hi = min(lo + 1, masks.shape[0] - 1)
+            t = ml_idx - lo
+            mask = masks[lo] * (1.0 - t) + masks[hi] * t
+
+        offsets: list[int] = []
+        for by in range(rows):
+            for bx in range(cols):
+                y0 = int(by * 64 * scale_y)
+                y1 = int(min((by + 1) * 64, encode_h) * scale_y)
+                x0 = int(bx * 64 * scale_x)
+                x1 = int(min((bx + 1) * 64, encode_w) * scale_x)
+                block_mean = float(mask[y0:y1, x0:x1].mean())
+                if block_mean >= threshold_high:
+                    offsets.append(road_qp_delta)
+                elif block_mean <= threshold_low:
+                    offsets.append(sky_qp_delta)
+                else:
+                    offsets.append(neutral_qp_delta)
+
+        if offsets != prev_offsets:
+            offset_str = " ".join(str(o) for o in offsets)
+            lines.append(f"{frame_idx} {offset_str}")
+            prev_offsets = offsets
+
+    return lines

@@ -76,6 +76,8 @@ def decode_tokens_with_logits_fn(
 ) -> list[int]:
     if token_count <= 0:
         raise ValueError("token_count must be positive")
+    if token_count > 1 and len(encoded) < 2:
+        raise ValueError("truncated stream: need at least 2 bytes to decode multiple tokens")
     restored = [int(first_token)]
     decoder = RangeDecoder(encoded)
     for _ in range(1, token_count):
