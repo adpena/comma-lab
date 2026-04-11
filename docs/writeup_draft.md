@@ -207,9 +207,19 @@ The only safe place to modify frames is after decoding, with a learned filter. P
 - **Film-grain sweep at CRF 34:** No rate savings. At this CRF, film-grain is already at its efficient frontier.
 - **Jacobian pseudoinverse:** 3x worse (discussed above).
 
+### Hyperparameter and system experiments
+
+- **PoseNet gradient cap (clamp min=0.001):** Intended to redirect capacity to SegNet once PoseNet was good. Instead, it killed PoseNet gradients entirely, letting PoseNet regress 26x while the proxy didn't catch it. The clamp was removed.
+- **boundary_weight=150:** Derived from the boundary pixel fraction (~5%, so 1/0.05 = 20x amplification ceiling). With KL distill, this overwhelmed the PoseNet gradient signal. Reduced to 5, then to 50 for standard loss.
+- **alpha_seg=5000 for dual saliency:** A council guess based on the 590x marginal leverage ratio. The formula-derived optimal was ~200 (from the code's own comment). The 5000 value was never tested authoritatively.
+- **Test-time optimization:** 5 Adam steps per frame at inflate time against the frozen scorer. Council killed it: no ground truth available at inflate time (the loss function requires GT frames), SegNet loading would exceed the 30-minute time budget by 10+ minutes, and the CNN already learns optimal boundary corrections during training.
+- **Checkpoint ensemble at inflate:** Load multiple checkpoints and pixel-average their outputs. Council killed it: adding two extra 45KB checkpoints to the archive costs +0.075 on the rate term, and there was no evidence that errors from different training runs are complementary rather than correlated.
+- **512x384 encoding:** Encode at SegNet's native resolution to eliminate double interpolation. File size was 6% smaller but the scorer requires 1164x874 frames (asserted at evaluation time), and retraining would discard all accumulated training signal. Council ruled: distortion is the binding constraint, not rate.
+- **Encoder sweep (6 variants):** Infinite GOP, 10-bit YUV420, film-grain=30, denoise=0, larger resolution. All within 2% of current archive size. The encoder is already near its efficient frontier.
+
 ### The lesson
 
-Of 18 alternative approaches tested, 17 failed and one (dilated convolutions) initially appeared to fail but later succeeded at larger scale. The winning recipe is highly constrained by the mathematical structure of the problem (rank-1 Jacobian, sub-pixel trust radius, quantization sensitivity), but architecture changes can work when given sufficient capacity and training time.
+Of 25+ alternative approaches tested, most failed. The winning recipe is highly constrained by the mathematical structure of the problem (rank-1 Jacobian, sub-pixel trust radius, quantization sensitivity). The most expensive failures were approaches that improved SegNet at the expense of PoseNet — the scoring formula's sqrt makes PoseNet regressions catastrophically expensive.
 
 ## What else failed: KL distillation and adaptive weights
 
