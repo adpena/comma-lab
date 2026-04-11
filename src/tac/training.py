@@ -1045,6 +1045,13 @@ class Trainer:
                         entry["adaptive_sw"] = round(self._cached_sw, 4)
                     if hasattr(self, '_cached_bw'):
                         entry["adaptive_bw"] = round(self._cached_bw, 2)
+                    # Proxy hardening diagnostics
+                    if hasattr(self, '_proxy_confidence'):
+                        entry["proxy_confidence"] = self._proxy_confidence
+                    if hasattr(self, '_corrected_scorer'):
+                        entry["corrected_scorer"] = self._corrected_scorer
+                    if hasattr(self, '_baseline_pose') and self._baseline_pose:
+                        entry["baseline_pose"] = self._baseline_pose
                     tf.write(json.dumps(entry) + "\n")
 
             # Save training state every 50 epochs for crash recovery
@@ -1112,9 +1119,19 @@ class Trainer:
             self._baseline_seg = round(avg_s, 8)
             print(f"[eval] Baseline watermark: pose={avg_p:.6f}, seg={avg_s:.6f}")
 
-        # Regression alarm: warn if PoseNet regresses 3x from baseline
+        # Proxy confidence: flag when PoseNet is suspiciously low
+        # confidence = min(1, pose / baseline_pose). Below 0.3 = suspicious.
+        proxy_confidence = 1.0
         if hasattr(self, '_baseline_pose') and self._baseline_pose and self._baseline_pose > 0:
             pose_ratio = avg_p / self._baseline_pose
+            proxy_confidence = min(1.0, avg_p / self._baseline_pose)
+
+            if proxy_confidence < 0.3:
+                print(f"  !! PROXY CONFIDENCE LOW: {proxy_confidence:.2f} "
+                      f"(pose={avg_p:.6f} vs baseline={self._baseline_pose:.6f}) "
+                      f"— authoritative eval recommended before promotion !!")
+
+            # Regression alarm: warn if PoseNet regresses 3x from baseline
             if pose_ratio > 3.0:
                 print(f"  !! POSENET REGRESSION ALARM: {avg_p:.6f} is {pose_ratio:.1f}x baseline {self._baseline_pose:.6f} !!")
             if pose_ratio > 5.0:
@@ -1122,6 +1139,19 @@ class Trainer:
                 self.model.load_state_dict(orig_state)
                 self.model.train()
                 return float('inf')  # prevent promotion of regressed checkpoint
+
+        # Store proxy confidence for telemetry
+        self._proxy_confidence = round(proxy_confidence, 4)
+
+        # Corrected score estimate using proxy correction factors (α_p, α_s)
+        # These are calibrated from authoritative eval runs. Default 1.0 = no correction.
+        alpha_p = getattr(self, '_proxy_alpha_p', 1.0)
+        alpha_s = getattr(self, '_proxy_alpha_s', 1.0)
+        corrected_scorer = 100.0 * (alpha_s * avg_s) + math.sqrt(10.0 * (alpha_p * avg_p))
+        self._corrected_scorer = round(corrected_scorer, 6)
+        if abs(corrected_scorer - scorer) > 0.01:
+            print(f"  [proxy-correction] raw={scorer:.4f} corrected={corrected_scorer:.4f} "
+                  f"(α_p={alpha_p:.2f}, α_s={alpha_s:.2f})")
 
         self.model.load_state_dict(orig_state)
         self.model.train()
