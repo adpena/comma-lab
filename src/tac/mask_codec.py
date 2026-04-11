@@ -10,17 +10,21 @@ of 1200 frames of masks at 512x384 fits in ~200KB at CRF 20.
 Codec options (pass codec= to encode/decode functions):
     - "av1": AV1 via ffmpeg (default, lossy, ~33KB at CRF 20)
     - "entropy": custom delta+RLE+LZMA coder (lossless, ~8-15KB)
+    - "vvc": VVC/H.266 via vvencapp (lossy, ~30-50% smaller than AV1)
 
 Functions:
     - extract_masks: run frozen SegNet on frames, take argmax
     - encode_masks: write masks as AV1 video via ffmpeg
+    - encode_masks_vvc: write masks as VVC/H.266 bitstream
     - decode_masks: read AV1 video back to mask tensors
+    - decode_masks_vvc: read VVC bitstream back to mask tensors
     - encode_masks_auto: encode with chosen codec
     - decode_masks_auto: decode with chosen codec
     - masks_to_pairs: build consecutive mask pairs for PairGenerator
 """
 from __future__ import annotations
 
+import shutil
 import subprocess
 import tempfile
 from pathlib import Path
@@ -236,6 +240,170 @@ def decode_masks(
     return result
 
 
+def _check_vvc_available() -> bool:
+    """Check if vvencapp and vvdecapp are available on PATH."""
+    return shutil.which("vvencapp") is not None and shutil.which("vvdecapp") is not None
+
+
+def encode_masks_vvc(
+    masks: torch.Tensor,
+    output_path: str | Path,
+    qp: int = 27,
+    fps: int = 20,
+    preset: str = "faster",
+) -> int:
+    """Encode segmentation masks as VVC/H.266 bitstream using vvencapp.
+
+    VVC (Versatile Video Coding / H.266) is 30-50% more efficient than AV1
+    for the same quality. Uses YUV400 (grayscale) mode which is native to VVC
+    and avoids wasting bits on chroma planes.
+
+    Requires vvencapp (brew install vvenc).
+
+    Note: vvencapp uses 10-bit internal processing. Input 8-bit values are
+    left-shifted by 2 during encoding and must be right-shifted during decode.
+
+    Args:
+        masks: (N, H, W) long tensor with values in [0, NUM_CLASSES)
+        output_path: path for output .266 file
+        qp: quantization parameter (0-63, lower = better quality)
+        fps: frame rate
+        preset: vvenc speed preset (faster/fast/medium/slow/slower)
+
+    Returns:
+        File size in bytes
+    """
+    if not _check_vvc_available():
+        raise RuntimeError(
+            "vvencapp not found. Install with: brew install vvenc vvdec"
+        )
+
+    output_path = Path(output_path)
+    output_path.parent.mkdir(parents=True, exist_ok=True)
+
+    N, H, W = masks.shape
+
+    # Scale class labels to byte range: 0→0, 1→63, 2→127, 3→191, 4→255
+    scale_factor = 255 // (NUM_CLASSES - 1)
+    pixels = (masks * scale_factor).clamp(0, 255).to(torch.uint8).numpy()
+
+    with tempfile.TemporaryDirectory() as tmpdir:
+        yuv_path = Path(tmpdir) / "masks.yuv"
+        vvc_path = Path(tmpdir) / "masks.266"
+
+        # Write raw grayscale as YUV400
+        with open(yuv_path, "wb") as f:
+            f.write(pixels.tobytes())
+
+        cmd = [
+            "vvencapp",
+            "-i", str(yuv_path),
+            "-s", f"{W}x{H}",
+            "-c", "yuv400",
+            "-r", str(fps),
+            "-f", str(N),
+            "--preset", preset,
+            "-q", str(qp),
+            "--qpa", "0",  # disable perceptual QP adaptation for categorical data
+            "-o", str(vvc_path),
+        ]
+
+        proc = subprocess.run(cmd, capture_output=True, timeout=600)
+
+        if proc.returncode != 0:
+            raise RuntimeError(
+                f"vvencapp encoding failed (rc={proc.returncode}):\n"
+                f"{proc.stderr.decode('utf-8', errors='replace')}"
+            )
+
+        # Copy to final output path
+        import shutil as _shutil
+        _shutil.copy2(vvc_path, output_path)
+
+    size = output_path.stat().st_size
+    print(f"[mask_codec] VVC encoded {N} masks ({H}x{W}) → {output_path} ({size:,} bytes, QP={qp})")
+    return size
+
+
+def decode_masks_vvc(
+    vvc_path: str | Path,
+    expected_frames: int | None = None,
+) -> torch.Tensor:
+    """Decode VVC/H.266 mask bitstream back to class label tensors.
+
+    Handles vvdecapp's 10-bit output (16-bit LE samples) by right-shifting
+    by 2 bits to recover 8-bit values, then inverting the class scaling.
+
+    Requires vvdecapp (brew install vvdec).
+
+    Args:
+        vvc_path: path to .266 bitstream
+        expected_frames: if set, verify frame count
+
+    Returns:
+        (N, H, W) long tensor with values in [0, NUM_CLASSES)
+    """
+    if not _check_vvc_available():
+        raise RuntimeError(
+            "vvdecapp not found. Install with: brew install vvenc vvdec"
+        )
+
+    vvc_path = Path(vvc_path)
+    if not vvc_path.exists():
+        raise FileNotFoundError(f"VVC bitstream not found: {vvc_path}")
+
+    with tempfile.TemporaryDirectory() as tmpdir:
+        dec_yuv_path = Path(tmpdir) / "decoded.yuv"
+
+        cmd = [
+            "vvdecapp",
+            "-b", str(vvc_path),
+            "-o", str(dec_yuv_path),
+        ]
+
+        proc = subprocess.run(cmd, capture_output=True, timeout=300)
+
+        if proc.returncode != 0:
+            raise RuntimeError(
+                f"vvdecapp decoding failed (rc={proc.returncode}):\n"
+                f"{proc.stderr.decode('utf-8', errors='replace')}"
+            )
+
+        # vvdecapp outputs 10-bit YUV400 as 16-bit LE samples
+        decoded_raw = np.fromfile(dec_yuv_path, dtype=np.uint16)
+
+    # We need to figure out H, W from the data. For our pipeline, assume
+    # SEGNET_H x SEGNET_W unless data tells us otherwise.
+    # Total samples = N * H * W
+    total_samples = decoded_raw.size
+    frame_size = SEGNET_H * SEGNET_W
+    N = total_samples // frame_size
+
+    if total_samples % frame_size != 0:
+        raise ValueError(
+            f"Decoded VVC data ({total_samples} samples) not divisible by "
+            f"frame size {SEGNET_H}x{SEGNET_W}={frame_size}"
+        )
+
+    decoded_10bit = decoded_raw[:N * frame_size].reshape(N, SEGNET_H, SEGNET_W)
+
+    # Convert 10-bit back to 8-bit (VVC shifts 8-bit input left by 2)
+    decoded_pixels = (decoded_10bit >> 2).astype(np.uint8)
+
+    # Invert scaling: pixel → class label
+    scale_factor = 255 // (NUM_CLASSES - 1)
+    masks = np.round(decoded_pixels.astype(np.float32) / scale_factor).astype(np.int64)
+    masks = np.clip(masks, 0, NUM_CLASSES - 1)
+
+    result = torch.from_numpy(masks)
+
+    if expected_frames is not None and N != expected_frames:
+        print(f"[mask_codec] WARNING: expected {expected_frames} frames, got {N}")
+
+    print(f"[mask_codec] VVC decoded {N} masks ({SEGNET_H}x{SEGNET_W}) from {vvc_path}")
+    return result
+
+
 def masks_to_pairs(
     masks: torch.Tensor,
 ) -> list[tuple[torch.Tensor, torch.Tensor]]:
@@ -286,20 +454,23 @@ def encode_masks_auto(
 
     Args:
         masks: (N, H, W) long tensor with values in [0, NUM_CLASSES)
-        output_path: output file path (.mp4 for av1, .msk for entropy)
-        codec: "av1" or "entropy"
-        **kwargs: passed to underlying encoder (crf/fps for av1, backend for entropy)
+        output_path: output file path (.mp4 for av1, .266 for vvc, .msk for entropy)
+        codec: "av1", "vvc", or "entropy"
+        **kwargs: passed to underlying encoder (crf/fps for av1, qp/fps for vvc,
+                  backend for entropy)
 
     Returns:
         File size in bytes
     """
     if codec == "av1":
         return encode_masks(masks, output_path, **kwargs)
+    elif codec == "vvc":
+        return encode_masks_vvc(masks, output_path, **kwargs)
     elif codec == "entropy":
         from .mask_entropy_coder import encode_masks_entropy
         return encode_masks_entropy(masks, output_path, **kwargs)
     else:
-        raise ValueError(f"Unknown mask codec: {codec!r} (use 'av1' or 'entropy')")
+        raise ValueError(f"Unknown mask codec: {codec!r} (use 'av1', 'vvc', or 'entropy')")
 
 
 def decode_masks_auto(
@@ -311,7 +482,7 @@ def decode_masks_auto(
 
     Args:
         mask_path: path to encoded mask file
-        codec: "av1" or "entropy"
+        codec: "av1", "vvc", or "entropy"
         **kwargs: passed to underlying decoder
 
     Returns:
@@ -319,11 +490,13 @@ def decode_masks_auto(
     """
     if codec == "av1":
         return decode_masks(mask_path, **kwargs)
+    elif codec == "vvc":
+        return decode_masks_vvc(mask_path, **kwargs)
     elif codec == "entropy":
         from .mask_entropy_coder import decode_masks_entropy
         return decode_masks_entropy(mask_path, **kwargs)
     else:
-        raise ValueError(f"Unknown mask codec: {codec!r} (use 'av1' or 'entropy')")
+        raise ValueError(f"Unknown mask codec: {codec!r} (use 'av1', 'vvc', or 'entropy')")
 
 
 def measure_mask_rate(

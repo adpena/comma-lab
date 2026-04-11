@@ -26,7 +26,7 @@ from pathlib import Path
 import numpy as np
 
 # ── Constants matching our pipeline ──────────────────────────────────────────
-NUM_FRAMES = 300  # Use 300 for fast benchmarking, scale results to estimate 1200
+NUM_FRAMES = 120  # Benchmark subset (120 frames); scale x10 to estimate 1200-frame
 H, W = 384, 512
 NUM_CLASSES = 5
 SCALE_FACTOR = 255 // (NUM_CLASSES - 1)  # 63
@@ -180,7 +180,7 @@ def bench_vvc(masks: np.ndarray, qp: int) -> None:
             "-c", "yuv400",
             "-r", str(FPS),
             "-f", str(n),
-            "--preset", "medium",
+            "--preset", "faster",
             "-q", str(qp),
             "--qpa", "0",  # disable perceptual QP adaptation (we want uniform)
             "-o", vvc_path,
@@ -211,13 +211,15 @@ def bench_vvc(masks: np.ndarray, qp: int) -> None:
             print(f"  VVC QP={qp} decode FAILED: {stderr[-500:]}")
             return
 
-        # Read decoded YUV400
-        decoded_raw = np.fromfile(dec_yuv_path, dtype=np.uint8)
-        expected_size = n * h * w
-        if decoded_raw.size < expected_size:
-            print(f"  VVC QP={qp} decoded size mismatch: {decoded_raw.size} vs {expected_size}")
+        # Read decoded YUV400 — vvdecapp outputs 10-bit (16-bit LE per sample)
+        decoded_raw = np.fromfile(dec_yuv_path, dtype=np.uint16)
+        expected_samples = n * h * w
+        if decoded_raw.size < expected_samples:
+            print(f"  VVC QP={qp} decoded size mismatch: {decoded_raw.size} vs {expected_samples}")
             return
-        decoded_pixels = decoded_raw[:expected_size].reshape(n, h, w)
+        decoded_10bit = decoded_raw[:expected_samples].reshape(n, h, w)
+        # Convert 10-bit back to 8-bit (VVC shifts 8-bit input left by 2)
+        decoded_pixels = (decoded_10bit >> 2).astype(np.uint8)
         decoded_classes = gray_to_classes(decoded_pixels)
         acc = measure_accuracy(masks, decoded_classes)
 
@@ -253,7 +255,7 @@ def bench_vvc_yuv420(masks: np.ndarray, qp: int) -> None:
             "-c", "yuv420",
             "-r", str(FPS),
             "-f", str(n),
-            "--preset", "medium",
+            "--preset", "faster",
             "-q", str(qp),
             "--qpa", "0",
             "-o", vvc_path,
@@ -284,13 +286,15 @@ def bench_vvc_yuv420(masks: np.ndarray, qp: int) -> None:
             print(f"  VVC YUV420 QP={qp} decode FAILED: {stderr[-500:]}")
             return
 
-        # Read decoded YUV420 — only Y plane matters
-        decoded_raw = np.fromfile(dec_yuv_path, dtype=np.uint8)
-        frame_size_420 = h * w + 2 * (h // 2) * (w // 2)  # Y + U + V
+        # Read decoded YUV420 — 10-bit output (16-bit LE), only Y plane matters
+        decoded_raw = np.fromfile(dec_yuv_path, dtype=np.uint16)
+        # 10-bit YUV420: Y=h*w samples, U=h/2*w/2, V=h/2*w/2 (all 16-bit)
+        frame_samples_420 = h * w + 2 * (h // 2) * (w // 2)
         decoded_pixels = np.zeros((n, h, w), dtype=np.uint8)
         for i in range(n):
-            offset = i * frame_size_420
-            decoded_pixels[i] = decoded_raw[offset:offset + h * w].reshape(h, w)
+            offset = i * frame_samples_420
+            y_10bit = decoded_raw[offset:offset + h * w].reshape(h, w)
+            decoded_pixels[i] = (y_10bit >> 2).astype(np.uint8)
 
         decoded_classes = gray_to_classes(decoded_pixels)
         acc = measure_accuracy(masks, decoded_classes)
@@ -532,6 +536,35 @@ def bench_apng(masks: np.ndarray) -> None:
         os.unlink(out_path)
 
 
+def bench_entropy_coder(masks: np.ndarray) -> None:
+    """Benchmark our custom entropy coder (delta+RLE+LZMA)."""
+    try:
+        from src.tac.mask_entropy_coder import encode_masks_entropy, decode_masks_entropy
+    except ImportError:
+        print("  Entropy coder not available (src.tac not importable)")
+        return
+
+    import torch
+    masks_tensor = torch.from_numpy(masks)
+
+    with tempfile.NamedTemporaryFile(suffix=".msk", delete=False) as f:
+        out_path = f.name
+
+    try:
+        t0 = time.time()
+        size = encode_masks_entropy(masks_tensor, out_path, backend="lzma")
+        enc_time = time.time() - t0
+
+        t0 = time.time()
+        decoded = decode_masks_entropy(out_path)
+        dec_time = time.time() - t0
+
+        acc = measure_accuracy(masks, decoded.numpy())
+        record("Entropy (delta+LZMA)", size, acc, enc_time, dec_time)
+    finally:
+        os.unlink(out_path)
+
+
 def bench_h265(masks: np.ndarray, crf: int) -> None:
     """Benchmark H.265/HEVC for comparison."""
     pixels = scale_to_gray(masks)
@@ -614,6 +647,10 @@ def main():
     print("\n── VVC/H.266 YUV420 (vvencapp) ──")
     bench_vvc_yuv420(masks, qp=27)
     bench_vvc_yuv420(masks, qp=22)
+
+    # ── Custom entropy coder (existing) ──────────────────────────────────
+    print("\n── Custom entropy coder ──")
+    bench_entropy_coder(masks)
 
     # ── Lossless alternatives ──────────────────────────────────────────────
     print("\n── Lossless / custom codecs ──")
