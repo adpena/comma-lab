@@ -39,6 +39,7 @@ from .lossless.frequency_coder import (
     encode_uint16_prev_symbol_file,
 )
 from .lossless.gpt_arithmetic_coder import encode_commavq_gpt_sample
+from .lossless.next_frame_coder import encode_commavq_next_frame_sample
 from .lossless.gpt_score import probe_commavq_gpt_devices, score_commavq_gpt_sample
 from .lossless.profiles import PROFILES as LOSSLESS_PROFILES
 from .lossless.state import promote_lossless_result
@@ -175,6 +176,20 @@ def build_parser() -> argparse.ArgumentParser:
     sp.add_argument("--model-url", default=None)
     sp.add_argument("--gpt-module-path", default=None)
     sp.set_defaults(lossless_handler="gpt_arithmetic_sample")
+
+    sp = lossless_sub.add_parser("next-frame-sample", help="Encode a local-only grouped next-frame sample from a prepared frame-major stream")
+    sp.add_argument("--profile", required=True, choices=sorted(LOSSLESS_PROFILES))
+    sp.add_argument("--tokens", required=True)
+    sp.add_argument("--output", required=True)
+    sp.add_argument("--max-frames", type=int, default=32)
+    sp.add_argument("--context-frames", type=int, default=None)
+    sp.add_argument("--device", default="mps", choices=["cpu", "cuda", "mps"])
+    sp.add_argument("--dtype", default="auto", choices=["auto", "float32", "float16", "bfloat16"])
+    sp.add_argument("--verify-decode", action="store_true")
+    sp.add_argument("--cache-dir", default=None)
+    sp.add_argument("--model-url", default=None)
+    sp.add_argument("--gpt-module-path", default=None)
+    sp.set_defaults(lossless_handler="next_frame_sample")
 
     sp = lossless_sub.add_parser("frequency-report", help="Analyze a prepared token stream")
     sp.add_argument("--tokens", required=True)
@@ -517,6 +532,23 @@ def _run_lossless(args: argparse.Namespace) -> dict[str, Any]:
             profile=args.profile,
             max_tokens=args.max_tokens,
             context_tokens=args.context_tokens,
+            device=args.device,
+            dtype=args.dtype,
+            verify_decode=args.verify_decode,
+            cache_dir=args.cache_dir,
+            model_url=args.model_url,
+            gpt_module_path=args.gpt_module_path,
+        )
+        print(json.dumps(payload, indent=2))
+        return payload
+
+    if args.lossless_handler == "next_frame_sample":
+        payload = encode_commavq_next_frame_sample(
+            token_path=Path(args.tokens),
+            encoded_path=Path(args.output),
+            profile=args.profile,
+            max_frames=args.max_frames,
+            context_frames=args.context_frames,
             device=args.device,
             dtype=args.dtype,
             verify_decode=args.verify_decode,
