@@ -24,9 +24,11 @@ This formula has non-obvious properties at different operating points. At our fi
 | sqrt(10 * pose) | sqrt(10 * 0.00218) | 0.148 |
 | 25 * rate | 25 * 0.0230 | 0.575 |
 
-PoseNet distortion dropped from 0.0332 to 0.00218 with the dilated architecture. The remaining score is dominated by SegNet and rate.
+PoseNet distortion dropped from 0.01229 (no filter) to 0.00218 with the dilated architecture — a 5.6x improvement that accounts for **117% of our total score gain**. SegNet actually regressed 5.2% (0.00580 to 0.00610). The post-filter is a PoseNet optimization machine; it earns its score improvement entirely through pose preservation and pays a small SegNet tax for it.
 
-At this operating point, SegNet has ~11.5x more marginal impact than PoseNet (100 vs ~8.68 per unit distortion), but PoseNet has a smoother loss landscape that responds better to gradient descent. This tension shaped most of the architectural decisions.
+The remaining score is dominated by SegNet (46%) and rate (43%), with PoseNet contributing only 11%.
+
+At this operating point, SegNet has ~29.6x more marginal impact than PoseNet per unit distortion (d(score)/d(seg) = 100 vs d(score)/d(pose) = 3.4), but PoseNet has a smoother loss landscape that responds better to gradient descent. This is the fundamental tension: the metric that matters most is the one least amenable to optimization. The GIF visualizations made this concrete — the color-coded SegNet diff showed roughly balanced red (we fixed) and green (we introduced), confirming the post-filter redistributes classification errors rather than reducing them.
 
 ## The pipeline
 
@@ -229,6 +231,38 @@ Two additional approaches that initially showed promise but were ultimately reje
 
 **Adaptive weight system (DEAD).** We derived a formula `w_s*(p, T) = 20·sqrt(p/0.1)/T²` to dynamically rebalance SegNet vs PoseNet weights during training. The Hinton T² correction was already inside the KL loss function, so dividing by T² in the weight formula double-corrected, making the weight temperature-independent. The formula produced w_s=0.80 when the empirical winner used w_s=100 — a 125x mismatch. The compound invariant `w_s·T²` was trivially constant by construction (T² cancels), not by any physical property. The adaptive system was formally verified in Lean 4, but the proofs were correct about a vacuous identity, not about optimality. We retain the score sensitivity analysis (`d(score)/d(seg) = 100`, `d(score)/d(pose) = 5/sqrt(10p)`) as a useful diagnostic but no longer use it for runtime weight setting.
 
+## The Pareto frontier and gradient surgery
+
+Our score decomposition revealed an uncomfortable truth: 117% of our score improvement comes from PoseNet. SegNet actually regressed 5.2%. The post-filter is a PoseNet optimization machine — it earns its gains by preserving ego-motion-relevant textures, but pays a tax at SegNet class boundaries.
+
+This is a fundamental multi-objective optimization problem. The score formula defines a specific trade-off:
+
+```
+dS/dt = 0  =>  100 · dseg/dt + (1/(2·sqrt(10·pose))) · dpose/dt = 0
+```
+
+At the score-optimal point on the Pareto frontier, the marginal rate of substitution (MRS) must equal the ratio of score sensitivities:
+
+```
+MRS = dseg/dpose = -1 / (200 · sqrt(10 · pose))
+```
+
+At our operating point (pose=0.00218), this means each unit of SegNet improvement is worth 30 units of PoseNet regression. The score formula values SegNet 30x more per unit — but PoseNet has 40x more room to improve. Our standard loss does not directly implement this trade-off; it uses a fixed weight that ignores the diminishing returns from sqrt.
+
+We implemented two mechanisms to explore this frontier:
+
+**MRS-adaptive weights.** The training weight tracks the first-order optimality condition dynamically:
+
+```
+w_seg(t) = 200 · sqrt(10 · pose(t))
+```
+
+As PoseNet improves and the sqrt flattens, w_seg decreases automatically — shifting gradient budget from PoseNet (diminishing returns) to SegNet (still linear). This is not an arbitrary schedule; it implements the exact condition where the score's iso-score tangent line touches the Pareto frontier at the current operating point.
+
+**PCGrad (gradient surgery).** PoseNet and SegNet gradients are often antagonistic — improving one worsens the other. PCGrad (Yu et al., 2020) projects the SegNet gradient onto the plane perpendicular to PoseNet, guaranteeing that SegNet optimization never increases PoseNet loss. This breaks the zero-sum coupling that made KL distillation destructive.
+
+The three regimes on the frontier — extreme PoseNet (our current 1.33), extreme SegNet (KL distill at 2.05), and the MRS-optimal middle — each produce different visual artifacts visible in the GIF comparisons. The frontier itself is a concrete object: a curve in (seg, pose) space that can be mapped by training with different weight schedules.
+
 ## Hard-frame curriculum with error replay
 
 SegNet disagreement can only change at class boundary pixels — roughly 5% of each frame. Training uniformly wastes 95% of gradient signal on pixels where the argmax cannot flip.
@@ -295,7 +329,9 @@ No paid compute was used. All results are reproducible on consumer hardware.
 
 7. **The scoring formula has structure.** The marginal sensitivities of each term at different operating points are not obvious from the formula but drive resource allocation.
 
-8. **Proxy metrics lie.** KL distillation appeared to achieve in 200 epochs what standard training could not in 905 -- but the proxy improvement was phantom. Two authoritative evaluations (1.85, 2.05) confirmed the gains did not transfer. Always validate against the real scorer before claiming progress.
+8. **The PoseNet-SegNet Pareto frontier.** Our campaign inadvertently discovered the tradeoff boundary. Standard loss with dilated convolutions optimizes PoseNet to near-exhaustion (5.6x improvement) while making SegNet 5.2% worse. KL distillation does the opposite: 10% SegNet improvement but 26-37x PoseNet destruction. The true score minimum lies on the frontier between these extremes — a multi-objective optimization problem where the scoring formula's coefficients (100, sqrt(10), 25) define the optimal tangent line. Finding this point requires techniques that decouple the two objectives: two-phase training, gradient projection, or boundary-aware architectural constraints.
+
+9. **Proxy metrics lie.** KL distillation appeared to achieve in 200 epochs what standard training could not in 905 -- but the proxy improvement was phantom. Two authoritative evaluations (1.85, 2.05) confirmed the gains did not transfer. Always validate against the real scorer before claiming progress.
 
 ---
 

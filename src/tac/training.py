@@ -39,6 +39,7 @@ from .losses import (
     kl_distill_scorer_loss,
     saliency_reconstruction_loss,
     scorer_loss,
+    scorer_loss_pcgrad,
     segnet_ste_loss,
     temperature_scorer_loss,
 )
@@ -873,20 +874,30 @@ class Trainer:
             # Adaptive weight rebalance (once per rebalance_every epochs, not per step)
             if (self._adaptive and self._last_eval_pose is not None
                     and epoch % getattr(cfg, 'rebalance_every', 50) == 0):
-                progress = epoch / max(cfg.epochs - 1, 1)
-                if cfg.temp_schedule == "exponential" and cfg.temperature_start > cfg.temperature_end:
-                    _T = cfg.temperature_start * (cfg.temperature_end / cfg.temperature_start) ** progress
+                if cfg.loss_mode in ("standard", "pcgrad"):
+                    # Pareto MRS condition: w_seg = 200 * sqrt(10 * pose)
+                    # No temperature — standard/pcgrad loss has no temperature parameter.
+                    result = self._adaptive.rebalance_standard(
+                        eval_pose=self._last_eval_pose,
+                        eval_seg=self._last_eval_seg or 0.01,
+                    )
                 else:
-                    _T = cfg.temperature_start + progress * (cfg.temperature_end - cfg.temperature_start)
-                result = self._adaptive.rebalance(
-                    eval_pose=self._last_eval_pose,
-                    eval_seg=self._last_eval_seg or 0.01,
-                    temperature=_T,
-                )
+                    # KL distill mode (DEPRECATED — formula is vacuous, see adaptive.py)
+                    progress = epoch / max(cfg.epochs - 1, 1)
+                    if cfg.temp_schedule == "exponential" and cfg.temperature_start > cfg.temperature_end:
+                        _T = cfg.temperature_start * (cfg.temperature_end / cfg.temperature_start) ** progress
+                    else:
+                        _T = cfg.temperature_start + progress * (cfg.temperature_end - cfg.temperature_start)
+                    result = self._adaptive.rebalance(
+                        eval_pose=self._last_eval_pose,
+                        eval_seg=self._last_eval_seg or 0.01,
+                        temperature=_T,
+                    )
                 self._cached_sw = result["segnet_weight"]
                 self._cached_bw = result["boundary_weight"]
                 if epoch % (getattr(cfg, 'rebalance_every', 50) * 5) == 0:
-                    print(f"[adaptive] ep={epoch} T={_T:.2f} sw={self._cached_sw:.3f} bw={self._cached_bw:.1f}")
+                    summary = result.get("diagnostics", {}).get("summary", "")
+                    print(f"[adaptive] ep={epoch} sw={self._cached_sw:.1f} bw={self._cached_bw:.1f} {summary}")
 
             # Adaptive hard_frame_ratio ramp: 0.1 → target over first 50% of training
             # (DeepSeek recommendation: uniform exploration early, aggressive exploitation late)
@@ -971,6 +982,13 @@ class Trainer:
                         temperature=temp,
                         boundary_mask=bm,
                         boundary_weight=bw,
+                        segnet_weight=sw,
+                    )
+                elif cfg.loss_mode == "pcgrad":
+                    # PCGrad: gradient surgery to decouple PoseNet and SegNet
+                    sw = getattr(self, '_cached_sw', cfg.segnet_loss_weight)
+                    loss, pd, sd = scorer_loss_pcgrad(
+                        filtered, gt_pair, posenet, segnet,
                         segnet_weight=sw,
                     )
                 else:

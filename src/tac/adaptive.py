@@ -92,13 +92,14 @@ class AdaptiveWeights:
     _history: list[dict[str, Any]] = field(default_factory=list, repr=False)
 
     def optimal_segnet_weight(self, pose: float, temperature: float) -> float:
-        """Compute optimal segnet loss weight for current state.
+        """Compute optimal segnet loss weight for current state (KL distill mode).
+
+        DEPRECATED: This formula is vacuous for KL distill because T^2 cancels
+        with the T^2 already inside the KL loss. See optimal_segnet_weight_standard()
+        for the correct formula for standard loss.
 
         Equation:
             w_s*(p, T) = 20 * sqrt(p / p_ref) / T^2
-
-        This maintains the score-sensitivity ratio between segnet and posenet
-        gradients as temperature decays during KL distillation.
 
         Args:
             pose: Current PoseNet distortion (e.g. 0.10).
@@ -111,10 +112,43 @@ class AdaptiveWeights:
             raise ValueError(f"Temperature must be positive, got {temperature}")
         if pose < 0:
             raise ValueError(f"Pose distortion must be non-negative, got {pose}")
-        # Guard: pose=0 gives w_s=0 which kills SegNet gradient. Clamp to minimum.
         pose = max(pose, 1e-6)
-        # w_s* = 20 * sqrt(p / 0.1) / T^2
         return 20.0 * math.sqrt(pose / self.reference_pose) / (temperature ** 2)
+
+    def optimal_segnet_weight_standard(self, pose: float) -> float:
+        """Compute optimal segnet weight for standard loss from the Pareto MRS condition.
+
+        At the score-optimal point on the Pareto frontier, the marginal rate of
+        substitution must equal the ratio of score sensitivities:
+
+            dS/dt = 0  =>  100 * dseg/dt + (1/(2*sqrt(10*pose))) * dpose/dt = 0
+
+        The optimal training weight balances the SegNet and PoseNet gradient
+        contributions at this ratio:
+
+            w_seg = dS/d(seg) / dS/d(pose) = 100 / (1/(2*sqrt(10*pose)))
+                  = 200 * sqrt(10 * pose)
+
+        As PoseNet improves (pose shrinks), PoseNet becomes more valuable per the
+        sqrt, so w_seg decreases — giving PoseNet more gradient share. This is the
+        first-order optimality condition on the Pareto frontier, not an arbitrary
+        hyperparameter.
+
+        At our observed operating points:
+            pose=0.01229 (baseline): w_seg = 70.1
+            pose=0.00500 (middle):   w_seg = 44.7
+            pose=0.00218 (current):  w_seg = 29.5
+
+        Args:
+            pose: Current PoseNet distortion from int8 eval.
+
+        Returns:
+            Optimal segnet_loss_weight for standard loss training.
+        """
+        if pose < 0:
+            raise ValueError(f"Pose distortion must be non-negative, got {pose}")
+        pose = max(pose, 1e-6)
+        return 200.0 * math.sqrt(10.0 * pose)
 
     def optimal_boundary_weight(self, target_amplification: float = 0.95) -> float:
         """Compute boundary weight achieving target fraction of theoretical ceiling.
@@ -203,6 +237,59 @@ class AdaptiveWeights:
             w_s * T^2 (should be ~3.0 for optimal training).
         """
         return segnet_weight * (temperature ** 2)
+
+    def rebalance_standard(
+        self,
+        eval_pose: float,
+        eval_seg: float,
+    ) -> dict[str, Any]:
+        """Compute optimal weights for standard loss using the Pareto MRS condition.
+
+        Unlike rebalance() (which uses the vacuous KL formula), this derives
+        the segnet weight from the score formula's first-order optimality condition:
+
+            w_seg = 200 * sqrt(10 * pose)
+
+        No temperature parameter — standard loss has no temperature.
+
+        Args:
+            eval_pose: Current PoseNet distortion from int8 evaluation.
+            eval_seg: Current SegNet distortion from int8 evaluation.
+
+        Returns:
+            Dict with segnet_weight, boundary_weight, sensitivity, diagnostics.
+        """
+        seg_w = self.optimal_segnet_weight_standard(eval_pose)
+        bnd_w = self.optimal_boundary_weight(target_amplification=0.95)
+        sensitivity = self.score_sensitivity(eval_pose)
+        amplification = self.effective_amplification(bnd_w)
+        ceiling = 1.0 / self.boundary_fraction
+
+        score_est = 100.0 * eval_seg + math.sqrt(10.0 * eval_pose)
+
+        result = {
+            "segnet_weight": seg_w,
+            "boundary_weight": bnd_w,
+            "sensitivity": sensitivity,
+            "amplification": amplification,
+            "diagnostics": {
+                "score_estimate_no_rate": score_est,
+                "amplification_pct_of_ceiling": amplification / ceiling * 100,
+                "summary": (
+                    f"MRS-optimal: seg_w={seg_w:.1f}, bnd_w={bnd_w:.0f} "
+                    f"(pose={eval_pose:.5f}, seg={eval_seg:.5f})"
+                ),
+            },
+        }
+
+        self._history.append({
+            "eval_pose": eval_pose,
+            "eval_seg": eval_seg,
+            "mode": "standard",
+            **result,
+        })
+
+        return result
 
     def rebalance(
         self,

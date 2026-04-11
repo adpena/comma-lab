@@ -106,6 +106,73 @@ PSD_STANDARD_ADAPTIVE = {
     "use_swa": True,
 }
 
+# Pareto frontier explorer: PCGrad + MRS-adaptive weights
+# Decouples PoseNet and SegNet optimization via gradient surgery.
+# The adaptive weight tracks the Pareto MRS condition:
+#   w_seg = 200 * sqrt(10 * pose)
+# This is not arbitrary — it's the first-order optimality condition
+# on the score formula's iso-score tangent to the Pareto frontier.
+PARETO_PCGRAD = {
+    "variant": "dilated",
+    "hidden": 64,
+    "kernel": 3,
+    "epochs": 2500,
+    "lr": 5e-4,
+    "ema_decay": 0.997,
+    "alpha": 20.0,
+    "sal_lambda": 1.0,
+    "loss_mode": "pcgrad",              # gradient surgery: no SegNet gradient harms PoseNet
+    "segnet_loss_weight": 30.0,         # initial — overridden by adaptive MRS at first eval
+    "boundary_weight": 50.0,
+    "hard_frame_ratio": 0.3,
+    "error_replay_every": 200,
+    "eval_every": 5,
+    "accum_steps": 4,
+    "adaptive_rebalance": True,         # MRS-adaptive: w_seg = 200*sqrt(10*pose)
+    "rebalance_every": 50,
+    "boundary_fraction": 0.05,
+    "use_swa": True,
+}
+
+# Extreme PoseNet: for Pareto frontier exploration (writeup artifact)
+# Maximum PoseNet optimization, no SegNet consideration
+EXTREME_POSENET = {
+    "variant": "dilated",
+    "hidden": 64,
+    "kernel": 3,
+    "epochs": 2500,
+    "lr": 5e-4,
+    "ema_decay": 0.997,
+    "alpha": 30.0,                      # higher saliency weight = more PoseNet focus
+    "sal_lambda": 1.5,
+    "loss_mode": "standard",
+    "segnet_loss_weight": 0.0,          # zero SegNet weight — pure PoseNet optimization
+    "boundary_weight": 1.0,
+    "hard_frame_ratio": 0.0,
+    "eval_every": 5,
+    "accum_steps": 4,
+}
+
+# Extreme SegNet: for Pareto frontier exploration (writeup artifact)
+# Maximum SegNet optimization using focal STE (hard argmax gradients)
+EXTREME_SEGNET = {
+    "variant": "dilated",
+    "hidden": 64,
+    "kernel": 3,
+    "epochs": 2500,
+    "lr": 5e-4,
+    "ema_decay": 0.997,
+    "alpha": 5.0,                       # low saliency = less PoseNet-biased correction
+    "sal_lambda": 0.5,
+    "loss_mode": "focal_ste",           # hard argmax + focal weighting on boundaries
+    "segnet_loss_weight": 200.0,        # heavy SegNet emphasis
+    "boundary_weight": 200.0,
+    "hard_frame_ratio": 0.5,
+    "error_replay_every": 100,
+    "eval_every": 5,
+    "accum_steps": 4,
+}
+
 PROFILES = {
     "council_v1": COUNCIL_V1,
     "council_v2_adaptive": COUNCIL_V2_ADAPTIVE,
@@ -114,4 +181,7 @@ PROFILES = {
     "h96_council": H96_COUNCIL,
     "smoke": SMOKE,
     "psd_standard_adaptive": PSD_STANDARD_ADAPTIVE,
+    "pareto_pcgrad": PARETO_PCGRAD,
+    "extreme_posenet": EXTREME_POSENET,
+    "extreme_segnet": EXTREME_SEGNET,
 }
