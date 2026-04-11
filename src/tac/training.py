@@ -45,7 +45,7 @@ from .losses import (
     output_decorrelation_loss,
     posenet_embedding_loss,
     saliency_reconstruction_loss,
-    saliency_reconstruction_loss_alpha,
+
     scorer_forward_pair,
     scorer_loss,
     scorer_loss_cached,
@@ -1356,8 +1356,15 @@ class Trainer:
                         loss, pd, sd = scorer_loss(
                             filtered, gt_pair, posenet, segnet,
                         )
-                    kl_term = segnet_kl_divergence_loss(gt_pair, filtered, segnet)
-                    loss = loss + sw * kl_term
+                    # Compute GT SegNet log-probs for KL loss
+                    with torch.no_grad():
+                        _gt_seg_input = segnet.preprocess_input(gt_pair)
+                        _gt_seg_logits = segnet(_gt_seg_input)
+                        _gt_log_probs = torch.nn.functional.log_softmax(_gt_seg_logits, dim=1)
+                    kl_loss, _kl_val, _kl_disagree = segnet_kl_divergence_loss(
+                        _gt_log_probs, filtered, segnet,
+                    )
+                    loss = loss + sw * kl_loss
                 elif cfg.loss_mode == "posenet_embedding":
                     # PoseNet embedding: perceptual loss on internal features
                     if _gt_pose_6 is not None:
