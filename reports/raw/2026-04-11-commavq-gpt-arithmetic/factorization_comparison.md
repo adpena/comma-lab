@@ -174,4 +174,18 @@
     - compression ratio: `2.0114758725408866`
   - exact match: `true` for all
   - this is still only a `1` byte edge, but it is now repeatable across 256 and 512 records, so the ranking/order lane remains alive
+- The first canonical pose-derived semantic grouping is also now on disk:
+  - `reports/raw/2026-04-11-commavq-ordered-record-sample/pose_labels_256.json`
+  - `reports/raw/2026-04-11-commavq-ordered-record-sample/pose_label_grouped_256_tool.json`
+  - result: `1.9870249919976481x`
+  - exact match: `true`
+  - so the first pose-based grouping is tied with the existing weak similarity/token-label rankers on 256 records
+- The raw global-stream GPT artifact is now durable even without decode verification:
+  - `reports/raw/2026-04-11-commavq-gpt-arithmetic/position_major/train_split0_gpt_global_sample_4096_mps_v2.gta`
+  - metadata: `reports/raw/2026-04-11-commavq-gpt-arithmetic/position_major/train_split0_gpt_global_sample_4096_mps_v2.json`
+  - token count: `4096`
+  - encoded bytes: `3222`
+  - compression ratio: `2.54252017380509`
+  - bits/token: `6.29296875`
+  - this is much weaker than the earlier frame-major GPT arithmetic sample lane, so simply switching to the raw global stream does not improve the GPT lane yet
 - The next exact implementation cut should build on this `position_major` file-level conditional coder signal, not on more source-order experiments.

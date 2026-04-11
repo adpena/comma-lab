@@ -43,6 +43,7 @@ from .lossless.global_prev_symbol import benchmark_global_prev_symbol_record_ord
 from .lossless.next_frame_coder import encode_commavq_next_frame_sample
 from .lossless.gpt_score import probe_commavq_gpt_devices, score_commavq_gpt_sample
 from .lossless.token_rgb_bridge import OFFICIAL_DECODER_URL, decode_commavq_token_file_to_rgb
+from .lossless.semantic_labels import build_pose_label_map_sample
 from .lossless.profiles import PROFILES as LOSSLESS_PROFILES
 from .lossless.state import promote_lossless_result
 from .lossless.submission import build_submission_zip
@@ -230,6 +231,15 @@ def build_parser() -> argparse.ArgumentParser:
     sp.add_argument("--commavq-root", default=None)
     sp.add_argument("--decoder-url", default=OFFICIAL_DECODER_URL)
     sp.set_defaults(lossless_handler="token_rgb_sample")
+
+    sp = lossless_sub.add_parser(
+        "pose-labels-sample",
+        help="Build a NaN-robust pose-derived label map keyed by canonical commavq file_name",
+    )
+    sp.add_argument("--output", required=True)
+    sp.add_argument("--split", nargs="*", default=None)
+    sp.add_argument("--max-records", type=int, default=64)
+    sp.set_defaults(lossless_handler="pose_labels_sample")
 
     sp = lossless_sub.add_parser(
         "global-prev-symbol-order-sample",
@@ -661,6 +671,15 @@ def _run_lossless(args: argparse.Namespace) -> dict[str, Any]:
             dtype=args.dtype,
             commavq_root=Path(args.commavq_root) if args.commavq_root else None,
             decoder_url=args.decoder_url,
+        )
+        print(json.dumps(payload, indent=2))
+        return payload
+
+    if args.lossless_handler == "pose_labels_sample":
+        payload = build_pose_label_map_sample(
+            output_path=Path(args.output),
+            split=args.split,
+            max_records=args.max_records,
         )
         print(json.dumps(payload, indent=2))
         return payload

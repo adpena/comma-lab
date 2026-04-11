@@ -581,6 +581,43 @@ class TacCliTests(unittest.TestCase):
         self.assertEqual(result["command"], "lossless_token_rgb_sample")
         self.assertEqual(result["frame_count"], 16)
 
+    def test_lossless_pose_labels_sample_subcommand_reports_label_map(self) -> None:
+        mod = load_module()
+        with tempfile.TemporaryDirectory() as tmpdir:
+            root = Path(tmpdir)
+            output_path = root / "pose_labels.json"
+            with mock.patch.object(
+                mod,
+                "build_pose_label_map_sample",
+                return_value={
+                    "command": "lossless_pose_labels_sample",
+                    "output_path": str(output_path),
+                    "record_count": 128,
+                    "split": ["0", "1"],
+                },
+            ) as mocked:
+                result = mod.main(
+                    [
+                        "lossless",
+                        "pose-labels-sample",
+                        "--output",
+                        str(output_path),
+                        "--max-records",
+                        "128",
+                        "--split",
+                        "0",
+                        "1",
+                    ]
+                )
+
+        mocked.assert_called_once_with(
+            output_path=output_path,
+            split=["0", "1"],
+            max_records=128,
+        )
+        self.assertEqual(result["command"], "lossless_pose_labels_sample")
+        self.assertEqual(result["record_count"], 128)
+
     def test_lossless_next_frame_sample_subcommand_reports_encoded_bytes(self) -> None:
         mod = load_module()
         with tempfile.TemporaryDirectory() as tmpdir:
