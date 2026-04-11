@@ -150,4 +150,16 @@
   - saved replay artifact: `reports/raw/2026-04-11-commavq-ordered-record-sample/transition_recursive_pca_order_64.json`
   - replayed explicit-order result matches exactly: `1.8981185486869416x`
   - this closes the infrastructure gap for future scaled ordering tests even though the current ranker is still weak
+- The first scaled 256-record ordering comparison is now on disk:
+  - canonical: `reports/raw/2026-04-11-commavq-ordered-record-sample/canonical_256_tool.json`
+    - archive bytes: `24736479`
+    - compression ratio: `1.9870249116699268`
+  - clip similarity order: `reports/raw/2026-04-11-commavq-ordered-record-sample/clip_greedy_nn_256_tool.json`
+    - archive bytes: `24736478`
+    - compression ratio: `1.9870249919976481`
+  - cheap token-derived semantic grouping: `reports/raw/2026-04-11-commavq-ordered-record-sample/label_grouped_clip_greedy_nn_256_tool.json`
+    - archive bytes: `24736478`
+    - compression ratio: `1.9870249919976481`
+  - exact match: `true` for all
+  - the ordering lane survives scale, but the gain is currently only `1` byte over canonical; the infrastructure is ahead of the ranker quality
 - The next exact implementation cut should build on this `position_major` file-level conditional coder signal, not on more source-order experiments.

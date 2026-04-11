@@ -210,6 +210,60 @@ class TacLosslessGptArithmeticCoderTests(unittest.TestCase):
         self.assertEqual(seen_calls, [{"tokens": [1024, 0, 1, 0], "context_tokens": 3}])
         self.assertEqual(result["encoded_path"], str(output_path))
 
+    def test_encode_commavq_gpt_global_sample_prefers_batched_model_logits_when_available(self) -> None:
+        import tac.lossless.gpt_arithmetic_coder as module
+
+        encode_commavq_gpt_global_sample = getattr(module, "encode_commavq_gpt_global_sample", None)
+        if encode_commavq_gpt_global_sample is None:
+            self.fail("encode_commavq_gpt_global_sample is missing")
+
+        with tempfile.TemporaryDirectory() as tmpdir:
+            root = Path(tmpdir)
+            token_path = root / "tokens.bin"
+            output_path = root / "sample.gta"
+            np.array([3, 4, 5, 6, 7], dtype=np.uint16).tofile(token_path)
+
+            token_logits_calls = []
+            next_token_logits_calls = []
+
+            class FakeModel:
+                def token_logits(self, tokens, *, context_tokens):
+                    token_logits_calls.append(
+                        {
+                            "tokens": [int(item) for item in tokens.tolist()],
+                            "context_tokens": context_tokens,
+                        }
+                    )
+                    logits = np.full((len(tokens) - 1, 16), -10.0, dtype=np.float64)
+                    for row, target in enumerate([4, 5, 6, 7]):
+                        logits[row, target] = 10.0
+                    return logits
+
+                def next_token_logits(self, context):
+                    next_token_logits_calls.append([int(item) for item in context.tolist()])
+                    logits = np.full((16,), -10.0, dtype=np.float64)
+                    logits[(int(context[-1]) + 1) % 16] = 10.0
+                    return logits
+
+            result = encode_commavq_gpt_global_sample(
+                token_path=token_path,
+                encoded_path=output_path,
+                profile="gpt_arithmetic_small",
+                max_tokens=5,
+                context_tokens=3,
+                vocab_size=16,
+                device="cpu",
+                dtype="float32",
+                verify_decode=True,
+                model_loader=lambda **_: FakeModel(),
+            )
+
+            self.assertTrue(output_path.exists())
+
+        self.assertEqual(token_logits_calls, [{"tokens": [3, 4, 5, 6, 7], "context_tokens": 3}])
+        self.assertEqual(next_token_logits_calls, [[3], [3, 4], [3, 4, 5], [4, 5, 6]])
+        self.assertTrue(result["exact_match"])
+
     def test_encode_commavq_gpt_global_sample_roundtrips_bounded_raw_stream_prefix(self) -> None:
         import tac.lossless.gpt_arithmetic_coder as module
 

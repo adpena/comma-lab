@@ -82,6 +82,40 @@ def _encode_tokens_from_logits_rows(
     }
 
 
+def _encode_token_stream_with_model(
+    tokens: np.ndarray,
+    *,
+    model: object,
+    context_tokens: int,
+    vocab_size: int,
+) -> dict[str, object]:
+    arr = _normalize_tokens(tokens)
+    if hasattr(model, "token_logits"):
+        logits_rows = model.token_logits(arr, context_tokens=context_tokens)
+        encoded = _encode_tokens_from_logits_rows(
+            arr,
+            logits_rows=logits_rows,
+            vocab_size=vocab_size,
+            total_frequency=1 << 15,
+        )
+        header = bytearray(STREAM_MAGIC)
+        header.extend(len(arr).to_bytes(4, "big"))
+        header.extend(int(arr[0]).to_bytes(2, "big"))
+        return {
+            "encoded_bytes": bytes(header) + encoded["encoded_bytes"],
+            "token_count": int(arr.size),
+            "first_token": int(arr[0]),
+            "scored_tokens": encoded["scored_tokens"],
+            "bits_per_token": encoded["bits_per_token"],
+        }
+    return encode_token_stream_with_logits_fn(
+        arr,
+        logits_fn=model.next_token_logits,
+        context_tokens=context_tokens,
+        vocab_size=vocab_size,
+    )
+
+
 def encode_tokens_with_logits_fn(
     tokens,
     *,
@@ -242,31 +276,12 @@ def encode_commavq_gpt_sample(
         gpt_module_path=gpt_module_path,
     )
     effective_context = 2580 if context_tokens is None else context_tokens
-    if hasattr(model, "token_logits"):
-        logits_rows = model.token_logits(sample, context_tokens=effective_context)
-        encoded = _encode_tokens_from_logits_rows(
-            sample,
-            logits_rows=logits_rows,
-            vocab_size=vocab_size,
-            total_frequency=1 << 15,
-        )
-        header = bytearray(STREAM_MAGIC)
-        header.extend(len(sample).to_bytes(4, "big"))
-        header.extend(int(sample[0]).to_bytes(2, "big"))
-        encoded = {
-            "encoded_bytes": bytes(header) + encoded["encoded_bytes"],
-            "token_count": int(sample.size),
-            "first_token": int(sample[0]),
-            "scored_tokens": encoded["scored_tokens"],
-            "bits_per_token": encoded["bits_per_token"],
-        }
-    else:
-        encoded = encode_token_stream_with_logits_fn(
-            sample,
-            logits_fn=model.next_token_logits,
-            context_tokens=effective_context,
-            vocab_size=vocab_size,
-        )
+    encoded = _encode_token_stream_with_model(
+        sample,
+        model=model,
+        context_tokens=effective_context,
+        vocab_size=vocab_size,
+    )
     target = Path(encoded_path)
     target.parent.mkdir(parents=True, exist_ok=True)
     target.write_bytes(encoded["encoded_bytes"])
@@ -328,9 +343,9 @@ def encode_commavq_gpt_global_sample(
         gpt_module_path=gpt_module_path,
     )
     effective_context = 2580 if context_tokens is None else context_tokens
-    encoded = encode_token_stream_with_logits_fn(
+    encoded = _encode_token_stream_with_model(
         sample,
-        logits_fn=model.next_token_logits,
+        model=model,
         context_tokens=effective_context,
         vocab_size=vocab_size,
     )
