@@ -1,0 +1,94 @@
+# tac -- Task-Aware Codec
+
+Neural video compression optimized for downstream perception models.
+
+tac trains tiny CNN post-filters that correct decoded video frames by backpropagating through frozen perception networks. The filter learns corrections that minimize the scorer's distortion metric, not generic pixel quality.
+
+## Installation
+
+```bash
+pip install tac
+```
+
+Optional extras:
+
+```bash
+pip install tac[mlx]        # Apple Silicon acceleration
+pip install tac[viz]         # Plotly visualization
+pip install tac[notebooks]   # Marimo notebook support
+```
+
+## Quick start
+
+```python
+from tac import Trainer, TrainConfig, build_postfilter
+
+# Build a 3-layer residual CNN post-filter
+model = build_postfilter("standard", hidden=64)
+
+# Configure training with QAT, EMA, and best-checkpoint selection
+config = TrainConfig(hidden=64, epochs=1000, alpha=20, tag="my_run")
+
+# Train against frozen PoseNet + SegNet scorers
+trainer = Trainer(model, config, device="mps")
+trainer.fit(comp_pairs, gt_pairs, posenet, segnet, sal_weights)
+```
+
+## What it does
+
+Video compression codecs (H.264, AV1) optimize for human perception -- PSNR, SSIM, perceptual quality. But many downstream consumers are neural networks, not humans. A self-driving car's perception stack does not care about perceptual quality; it cares about whether PoseNet and SegNet produce correct outputs from the decoded frames.
+
+tac bridges this gap:
+
+1. **Compress** video with a standard codec (H.265, AV1)
+2. **Post-filter** decoded frames through a tiny learned CNN
+3. **Score** using the actual downstream perception models
+4. **Backpropagate** through the frozen scorers to train the filter
+
+The post-filter learns artifact corrections that specifically help the downstream models, even if those corrections look invisible (or worse) to human eyes.
+
+## Architecture
+
+tac provides two processing lanes:
+
+- **CPU lane**: Standard codec + learned post-filter. The post-filter is a 3-layer residual CNN (~390KB int8) that runs in real-time on CPU.
+- **GPU lane**: Mask extraction + neural rendering. SegNet masks are compressed at extreme ratios, then a neural renderer reconstructs RGB frames from masks alone.
+
+### Key modules
+
+| Module | Purpose |
+|---|---|
+| `tac.architectures` | 8 post-filter architectures (Standard, Dilated, PixelShuffle, PSD, ...) |
+| `tac.training` | Trainer with QAT, EMA, SWA, best-checkpoint selection |
+| `tac.losses` | Scorer-aware losses (standard, feature matching, STE) |
+| `tac.quantization` | Int8 quantization (per-channel, FakeQuant STE, LSQ) |
+| `tac.fp4_quantize` | Extreme 4-bit quantization with codebook |
+| `tac.mask_codec` | Mask extraction, AV1/VVC encoding, entropy coding |
+| `tac.renderer` | Neural mask-to-RGB renderer (GPU lane) |
+| `tac.tto` | Test-time optimization at inflation |
+| `tac.scorer` | Scoring formula, sensitivity analysis |
+| `tac.evaluate` | Proxy evaluation, checkpoint averaging |
+| `tac.profiles` | Named training profiles (proven_baseline, smoke, ...) |
+
+## CLI
+
+```bash
+# Train a post-filter
+tac lossy train --profile proven_baseline --precomputed data/precomputed
+
+# Evaluate a checkpoint
+tac lossy eval --checkpoint best_int8.pt --archive test.zip
+
+# Lossless compression tools
+tac lossless compress input.bin -o output.tac
+tac lossless decompress output.tac -o recovered.bin
+```
+
+## Links
+
+- [Repository](https://github.com/adpena/pact)
+- [comma.ai video compression challenge](https://github.com/commaai/comma-video-compression-challenge)
+
+## License
+
+MIT

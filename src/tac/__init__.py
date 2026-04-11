@@ -18,16 +18,59 @@ Modules:
 
 Quick start::
 
-    from tac.architectures import build_postfilter
-    from tac.training import Trainer, TrainConfig
-    from tac.data import decode_archive, decode_video, build_pairs
-
+    from tac import Trainer, TrainConfig, build_postfilter
     model = build_postfilter("standard", hidden=64)
     config = TrainConfig(hidden=64, epochs=1000, alpha=20, tag="my_run")
     trainer = Trainer(model, config, device="mps")
     trainer.fit(comp_pairs, gt_pairs, posenet, segnet, sal_weights)
 """
 
+from __future__ import annotations
+
 __version__ = "1.0.0"
 
-__all__ = ["__version__"]
+# ── Lazy public API ──────────────────────────────────────────────────────
+# Heavy imports (torch, pydantic) are deferred so that `import tac` stays
+# fast for CLI tooling and introspection.
+
+
+def __getattr__(name: str):
+    """Lazy-load public API symbols on first access."""
+    _API_MAP = {
+        # tac.training
+        "Trainer": (".training", "Trainer"),
+        "TrainConfig": (".training", "TrainConfig"),
+        # tac.architectures
+        "build_postfilter": (".architectures", "build_postfilter"),
+        # tac.renderer
+        "build_renderer": (".renderer", "build_renderer"),
+        # tac.models
+        "ScoreResult": (".models", "ScoreResult"),
+        "CheckpointMeta": (".models", "CheckpointMeta"),
+        "AveragedCheckpoint": (".models", "AveragedCheckpoint"),
+        "SensitivityResult": (".models", "SensitivityResult"),
+    }
+    if name in _API_MAP:
+        module_path, attr = _API_MAP[name]
+        import importlib
+
+        mod = importlib.import_module(module_path, __name__)
+        return getattr(mod, attr)
+    raise AttributeError(f"module {__name__!r} has no attribute {name!r}")
+
+
+__all__ = [
+    "__version__",
+    # Training
+    "Trainer",
+    "TrainConfig",
+    # Architectures
+    "build_postfilter",
+    # Renderer
+    "build_renderer",
+    # Data models
+    "ScoreResult",
+    "CheckpointMeta",
+    "AveragedCheckpoint",
+    "SensitivityResult",
+]

@@ -3,17 +3,37 @@ requires = ["setuptools>=69"]
 build-backend = "setuptools.build_meta"
 
 [project]
-name = "comma-video-lab-ball-pack"
-version = "0.8.0"
-description = "One-command dual-track starter pack for the comma video compression challenge"
-readme = "README.md"
+name = "tac"
+version = "1.0.0"
+description = "Task-Aware Codec: Neural video compression optimized for downstream perception models"
+readme = "src/tac/README.md"
 requires-python = ">=3.11"
+license = "MIT"
+authors = [
+    { name = "Alejandro Pena", email = "adpena@users.noreply.github.com" },
+]
+classifiers = [
+    "Development Status :: 5 - Production/Stable",
+    "Intended Audience :: Developers",
+    "Intended Audience :: Science/Research",
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3.11",
+    "Programming Language :: Python :: 3.12",
+    "Programming Language :: Python :: 3.13",
+    "Topic :: Multimedia :: Video",
+    "Topic :: Scientific/Engineering :: Artificial Intelligence",
+    "Typing :: Typed",
+]
 dependencies = [
     "torch>=2.0",
     "pydantic>=2.0",
+    "numpy>=1.24",
 ]
 
 [project.optional-dependencies]
+mlx = ["mlx>=0.5"]
+viz = ["plotly>=5.0"]
+notebooks = ["marimo>=0.3"]
 dev = [
     "pytest>=8.0",
     "pytest-timeout>=2.0",
@@ -22,10 +42,19 @@ dev = [
 ]
 
 [project.scripts]
-comma-lab = "comma_lab.cli:main"
+tac = "tac.cli:main"
+
+[project.urls]
+Homepage = "https://github.com/adpena/pact"
+Documentation = "https://github.com/adpena/pact#readme"
+Repository = "https://github.com/adpena/pact"
+Issues = "https://github.com/adpena/pact/issues"
 
 [tool.setuptools.packages.find]
 where = ["src"]
+
+[tool.setuptools.package-data]
+tac = ["py.typed"]
 
 [tool.ruff]
 target-version = "py311"
