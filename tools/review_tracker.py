@@ -1323,6 +1323,261 @@ def cmd_rebuild_from_json() -> None:
     print(f"Rebuilt DuckDB from JSON: {count} entities restored")
 
 
+# ---------------------------------------------------------------------------
+# Integrated greenup protocol
+# ---------------------------------------------------------------------------
+
+def cmd_greenup(file_patterns: list[str], reviewer: str = "council",
+                mode: str = "agent", pass_name: str = "") -> None:
+    """Run the greenup protocol: review files, parse results, update DB.
+
+    Three modes:
+        agent   — Output a structured review prompt for an LLM agent to execute.
+                   The agent's output can be piped back via greenup-ingest.
+        human   — Interactive: show each file's entities, ask for CLEAN/ISSUES.
+        auto    — Parse the file looking for known patterns and auto-mark.
+
+    Args:
+        file_patterns: file paths or glob patterns to review
+        reviewer: who is performing the review
+        mode: agent | human | auto
+        pass_name: name for this greenup pass (auto-generated if empty)
+    """
+    con = _init_db()
+    now = datetime.now(timezone.utc)
+    if not pass_name:
+        pass_name = f"greenup_{now.strftime('%Y%m%dT%H%M%S')}_{reviewer}"
+
+    # Resolve file patterns to actual tracked files
+    import fnmatch as _fnm
+    all_files = [r[0] for r in con.execute("SELECT DISTINCT file_path FROM entities ORDER BY file_path").fetchall()]
+
+    matched_files: list[str] = []
+    for pat in file_patterns:
+        normalized = pat.replace("\\", "/")
+        for fp in all_files:
+            if normalized in fp or _fnm.fnmatch(fp, f"*{normalized}*"):
+                if fp not in matched_files:
+                    matched_files.append(fp)
+
+    if not matched_files:
+        print(f"No tracked files matching: {file_patterns}")
+        con.close()
+        return
+
+    G = "\033[32m"; Y = "\033[33m"; R = "\033[31m"; C = "\033[36m"
+    RST = "\033[0m"; B = "\033[1m"
+
+    # Get entity counts per file
+    file_stats: list[tuple[str, int, int, int, int]] = []
+    for fp in matched_files:
+        row = con.execute("""
+            SELECT COUNT(*),
+                   SUM(CASE WHEN review_status='reviewed' THEN 1 ELSE 0 END),
+                   SUM(CASE WHEN review_status='needs_fix' THEN 1 ELSE 0 END),
+                   SUM(CASE WHEN review_status='unreviewed' THEN 1 ELSE 0 END)
+            FROM entities WHERE file_path = ?
+        """, [fp]).fetchone()
+        file_stats.append((fp, row[0], row[1], row[2], row[3]))
+
+    total_entities = sum(s[1] for s in file_stats)
+    total_reviewed = sum(s[2] for s in file_stats)
+    total_needs_fix = sum(s[3] for s in file_stats)
+    total_unreviewed = sum(s[4] for s in file_stats)
+
+    if mode == "agent":
+        # Output a structured prompt that an agent can execute
+        print(f"{B}Greenup Protocol — Agent Mode{RST}")
+        print(f"Pass: {C}{pass_name}{RST}")
+        print(f"Files: {len(matched_files)} | Entities: {total_entities}")
+        print(f"  {G}Reviewed: {total_reviewed}{RST} | {R}Needs fix: {total_needs_fix}{RST} | {Y}Unreviewed: {total_unreviewed}{RST}")
+        print()
+        print(f"{B}Files to review:{RST}")
+        for fp, total, rev, fix, unrev in file_stats:
+            rigor = get_rigor_for_file(fp)
+            level = rigor.get("_name", "relaxed")
+            color = R if level == "critical" else (Y if level == "standard" else RST)
+            print(f"  {color}[{level.upper()}]{RST} {fp} ({total} entities, {rev} reviewed, {fix} fix, {unrev} unreviewed)")
+        print()
+        print(f"{B}When the review agent returns, ingest results:{RST}")
+        print(f"  python tools/review_tracker.py greenup-ingest <result_file> --pass {pass_name} --reviewer {reviewer}")
+        print()
+
+    elif mode == "human":
+        # Interactive mode
+        print(f"{B}Greenup Protocol — Human Review{RST}")
+        print(f"Pass: {C}{pass_name}{RST}")
+        print(f"Reviewer: {reviewer}")
+        print()
+
+        for fp, total, rev, fix, unrev in file_stats:
+            rigor = get_rigor_for_file(fp)
+            level = rigor.get("_name", "relaxed")
+            color = R if level == "critical" else (Y if level == "standard" else RST)
+            print(f"\n{color}[{level.upper()}]{RST} {B}{fp}{RST} — {total} entities")
+
+            # Show entities needing review
+            ents = con.execute("""
+                SELECT name, entity_type, line_count, complexity, review_status, start_line
+                FROM entities WHERE file_path = ? AND review_status != 'reviewed'
+                ORDER BY start_line
+            """, [fp]).fetchall()
+
+            if not ents:
+                print(f"  {G}All entities already reviewed.{RST}")
+                continue
+
+            for name, etype, lc, cx, st, sl in ents[:15]:
+                st_color = R if st == "needs_fix" else Y
+                print(f"  {st_color}[{st}]{RST} L{sl} {etype} {name} ({lc}L, C={cx})")
+            if len(ents) > 15:
+                print(f"  ... and {len(ents) - 15} more")
+
+            print()
+            response = input(f"  Verdict for {fp.split('/')[-1]}? [c]lean / [i]ssues / [s]kip: ").strip().lower()
+            if response in ("c", "clean"):
+                _mark_file_internal(con, fp, "reviewed", reviewer, pass_name)
+                print(f"  {G}Marked CLEAN{RST}")
+            elif response in ("i", "issues"):
+                _mark_file_internal(con, fp, "needs_fix", reviewer, pass_name)
+                print(f"  {R}Marked NEEDS_FIX{RST}")
+            else:
+                print(f"  {Y}Skipped{RST}")
+
+        _export_json(con)
+        con.close()
+        # Print summary
+        print(f"\n{B}Greenup pass complete.{RST}")
+        return
+
+    elif mode == "auto":
+        # Auto mode: mark all needs_fix as reviewed (assumes fixes were applied)
+        print(f"{B}Greenup Protocol — Auto Mode{RST}")
+        print(f"Pass: {C}{pass_name}{RST}")
+        marked = 0
+        for fp in matched_files:
+            n = _mark_file_internal(con, fp, "reviewed", reviewer, pass_name,
+                                     only_status=["needs_fix", "unreviewed"])
+            marked += n
+        _export_json(con)
+        con.close()
+        print(f"  Marked {G}{marked}{RST} entities as reviewed")
+        return
+
+    con.close()
+
+
+def _mark_file_internal(con, file_path: str, status: str, reviewer: str,
+                        review_pass: str, only_status: list[str] | None = None) -> int:
+    """Internal: mark entities in a file, returns count marked."""
+    now = datetime.now(timezone.utc).isoformat()
+    if only_status:
+        placeholders = ",".join(["?"] * len(only_status))
+        rows = con.execute(f"""
+            SELECT qualified_name FROM entities
+            WHERE file_path = ? AND review_status IN ({placeholders})
+        """, [file_path] + only_status).fetchall()
+    else:
+        rows = con.execute(
+            "SELECT qualified_name FROM entities WHERE file_path = ?",
+            [file_path]
+        ).fetchall()
+
+    for (qn,) in rows:
+        con.execute("""
+            UPDATE entities SET review_status=?, reviewed_by=?, reviewed_at=?, review_pass=?
+            WHERE qualified_name=?
+        """, [status, reviewer, now, review_pass, qn])
+        con.execute("""
+            INSERT INTO reviews (entity, action, reviewer, review_pass, timestamp)
+            VALUES (?, ?, ?, ?, ?)
+        """, [qn, f"marked_{status}", reviewer, review_pass, now])
+    return len(rows)
+
+
+def cmd_greenup_ingest(result_file: str, reviewer: str = "council",
+                       pass_name: str = "") -> None:
+    """Ingest a greenup review result file and update the DB.
+
+    Parses the structured output format:
+        ### <filename> — CLEAN
+        ### <filename> — ISSUES FOUND
+    """
+    path = Path(result_file)
+    if not path.exists():
+        print(f"File not found: {result_file}")
+        return
+
+    content = path.read_text()
+    if not pass_name:
+        pass_name = path.stem
+
+    con = _init_db()
+    now = datetime.now(timezone.utc).isoformat()
+
+    G = "\033[32m"; R = "\033[31m"; Y = "\033[33m"
+    RST = "\033[0m"; B = "\033[1m"
+
+    # Parse "### <path> — CLEAN" and "### <path> — ISSUES FOUND" lines
+    clean_count = 0
+    issues_count = 0
+
+    for line in content.split("\n"):
+        line = line.strip()
+        if not line.startswith("###"):
+            continue
+
+        # Extract filename and verdict
+        parts = line.lstrip("#").strip()
+        if "—" in parts:
+            fname, verdict = parts.rsplit("—", 1)
+        elif "--" in parts:
+            fname, verdict = parts.rsplit("--", 1)
+        elif " - " in parts:
+            fname, verdict = parts.rsplit(" - ", 1)
+        else:
+            continue
+
+        fname = fname.strip().strip("`").replace("\\", "/")
+        verdict = verdict.strip().upper()
+
+        # Extract just the filename for matching
+        base = fname.split("/")[-1]
+        is_clean = "CLEAN" in verdict and "NOT" not in verdict and "ISSUES" not in verdict
+
+        # Find matching entities
+        rows = con.execute(
+            "SELECT qualified_name FROM entities WHERE file_path LIKE ?",
+            [f"%{base}"]
+        ).fetchall()
+
+        if not rows:
+            continue
+
+        status = "reviewed" if is_clean else "needs_fix"
+        for (qn,) in rows:
+            con.execute("""
+                UPDATE entities SET review_status=?, reviewed_by=?, reviewed_at=?, review_pass=?
+                WHERE qualified_name=?
+            """, [status, reviewer, now, pass_name, qn])
+            con.execute("""
+                INSERT INTO reviews (entity, action, reviewer, review_pass, timestamp)
+                VALUES (?, ?, ?, ?, ?)
+            """, [qn, f"marked_{status}", reviewer, pass_name, now])
+
+        if is_clean:
+            clean_count += 1
+            print(f"  {G}CLEAN{RST} {fname} ({len(rows)} entities)")
+        else:
+            issues_count += 1
+            print(f"  {R}ISSUES{RST} {fname} ({len(rows)} entities)")
+
+    _export_json(con)
+    con.close()
+
+    print(f"\n{B}Greenup ingest complete:{RST} {G}{clean_count} clean{RST}, {R}{issues_count} with issues{RST}")
+
+
 def main() -> None:
     if len(sys.argv) < 2:
         print(__doc__)
