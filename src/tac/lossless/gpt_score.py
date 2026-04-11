@@ -12,6 +12,8 @@ import numpy as np
 from .arithmetic import FRAME_BOS_TOKEN, SEGMENT_EOT_TOKEN, load_gpt_arithmetic_profile
 
 OFFICIAL_COMMAVQ_GPT_URL = "https://huggingface.co/commaai/commavq-gpt2m/resolve/main/pytorch_model.bin"
+OFFICIAL_COMMAVQ_GPT_BLOCK_SIZE = 20 * 129
+OFFICIAL_COMMAVQ_GPT_TOKENS_PER_FRAME = 129
 
 
 class NextTokenLogitsModel(Protocol):
@@ -111,25 +113,31 @@ class _TorchNextTokenLogitsModel:
         score_count = available if max_scored_tokens is None else min(max_scored_tokens, available)
         if score_count <= 0:
             raise ValueError("max_scored_tokens must allow at least one scored token")
-        chunk_size = min(max(int(context_tokens) + 1, 2), self._block_size)
+        usable_context_tokens = min(max(int(context_tokens), 1), self._block_size - 1)
 
         total_nll_nats = 0.0
         total_scored_tokens = 0
-        offset = 0
-        while total_scored_tokens < score_count:
-            remaining_predictions = score_count - total_scored_tokens
-            chunk_tokens = min(arr.size - offset, remaining_predictions + 1, chunk_size)
-            chunk = arr[offset : offset + chunk_tokens]
+        for chunk_start, chunk_end, local_target_start, predictions_to_take in _iter_score_chunks(
+            token_count=arr.size,
+            score_count=score_count,
+            context_tokens=usable_context_tokens,
+            block_size=self._block_size,
+        ):
+            chunk = arr[chunk_start:chunk_end]
             idx = torch.as_tensor(chunk[:-1], dtype=torch.long, device=self._device).view(1, -1)
             targets = torch.as_tensor(chunk[1:], dtype=torch.long, device=self._device)
             with torch.inference_mode():
                 logits = self._model(idx)
                 log_probs = torch.log_softmax(logits[0], dim=-1)
-            step_nll = -log_probs[torch.arange(targets.shape[0], device=self._device), targets].sum()
+            target_slice = targets[local_target_start : local_target_start + predictions_to_take]
+            row_indices = torch.arange(
+                local_target_start,
+                local_target_start + predictions_to_take,
+                device=self._device,
+            )
+            step_nll = -log_probs[row_indices, target_slice].sum()
             total_nll_nats += float(step_nll.detach().float().cpu().item())
-            predictions = int(targets.shape[0])
-            total_scored_tokens += predictions
-            offset += predictions
+            total_scored_tokens += predictions_to_take
 
         return {
             "scored_tokens": total_scored_tokens,
@@ -236,20 +244,97 @@ def _read_uint16_tokens(token_path: str | Path) -> np.ndarray:
     return tokens
 
 
+def _load_frame_major_segments_from_path(
+    token_path: str | Path,
+    *,
+    max_scored_tokens: int | None = None,
+) -> tuple[int, list[np.ndarray]]:
+    source = Path(token_path)
+    raw_token_count = source.stat().st_size // 2
+    tokens = np.memmap(source, dtype=np.uint16, mode="r")
+    segments: list[np.ndarray] = []
+    current: list[int] = []
+    remaining = max_scored_tokens
+    for raw_token in tokens:
+        token = int(raw_token)
+        if token == SEGMENT_EOT_TOKEN:
+            if current:
+                segment = np.asarray(current, dtype=np.uint16)
+                _validate_frame_major_segment(segment)
+                segments.append(segment)
+                current = []
+                if remaining is not None:
+                    remaining -= max(0, min(int(segment.size) - 1, remaining))
+                    if remaining <= 0:
+                        break
+            continue
+        if token > FRAME_BOS_TOKEN:
+            raise ValueError(f"token {token} exceeds official GPT vocab upper bound {FRAME_BOS_TOKEN}")
+        current.append(token)
+    if current and (remaining is None or remaining > 0):
+        segment = np.asarray(current, dtype=np.uint16)
+        _validate_frame_major_segment(segment)
+        segments.append(segment)
+    if not segments:
+        raise ValueError("prepared token stream did not contain any GPT-scoreable segments")
+    return raw_token_count, segments
+
+
+def _iter_score_chunks(*, token_count: int, score_count: int, context_tokens: int, block_size: int):
+    if token_count < 2:
+        raise ValueError("token_count must be at least two")
+    if score_count <= 0:
+        raise ValueError("score_count must be positive")
+    if context_tokens <= 0:
+        raise ValueError("context_tokens must be positive")
+    if block_size <= 1:
+        raise ValueError("block_size must be greater than one")
+
+    usable_context_tokens = min(context_tokens, block_size - 1)
+    scored = 0
+    while scored < score_count:
+        next_target_index = scored + 1
+        chunk_start = max(0, next_target_index - usable_context_tokens)
+        chunk_end = min(token_count, chunk_start + block_size, next_target_index + (score_count - scored))
+        local_target_start = scored - chunk_start
+        available_predictions = (chunk_end - chunk_start - 1) - local_target_start
+        predictions_to_take = min(score_count - scored, available_predictions)
+        if predictions_to_take <= 0:
+            raise ValueError("invalid chunk plan produced zero predictions")
+        yield chunk_start, chunk_end, local_target_start, predictions_to_take
+        scored += predictions_to_take
+
+
+def _validate_frame_major_segment(segment: np.ndarray) -> None:
+    if segment.size < OFFICIAL_COMMAVQ_GPT_TOKENS_PER_FRAME:
+        return
+    if segment.size % OFFICIAL_COMMAVQ_GPT_TOKENS_PER_FRAME != 0:
+        raise ValueError("prepared token stream is not frame-major: segment length is not divisible by 129")
+    frames = segment.reshape(-1, OFFICIAL_COMMAVQ_GPT_TOKENS_PER_FRAME)
+    if not np.all(frames[:, 0] == FRAME_BOS_TOKEN):
+        raise ValueError("prepared token stream is not frame-major: missing BOS cadence at frame boundaries")
+    if np.any(frames[:, 1:] == FRAME_BOS_TOKEN):
+        raise ValueError("prepared token stream is not frame-major: BOS token appears inside frame payload")
+
+
 def _split_frame_major_segments_for_official_gpt(tokens: np.ndarray) -> list[np.ndarray]:
     segments: list[np.ndarray] = []
     current: list[int] = []
     for token in tokens.tolist():
         if token == SEGMENT_EOT_TOKEN:
             if current:
-                segments.append(np.asarray(current, dtype=np.uint16))
+                segment = np.asarray(current, dtype=np.uint16)
+                _validate_frame_major_segment(segment)
+                segments.append(segment)
                 current = []
             continue
         if token > FRAME_BOS_TOKEN:
             raise ValueError(f"token {token} exceeds official GPT vocab upper bound {FRAME_BOS_TOKEN}")
         current.append(token)
     if current:
-        segments.append(np.asarray(current, dtype=np.uint16))
+        segment = np.asarray(current, dtype=np.uint16)
+        _validate_frame_major_segment(segment)
+        segments.append(segment)
     if not segments:
         raise ValueError("prepared token stream did not contain any GPT-scoreable segments")
     return segments
@@ -270,8 +355,10 @@ def score_commavq_gpt_sample(
     gpt_module_path: str | Path | None = None,
     model_loader: Callable[..., NextTokenLogitsModel] | None = None,
 ) -> dict[str, object]:
-    config = load_gpt_arithmetic_profile(profile)
-    effective_context_tokens = context_tokens if context_tokens is not None else min(config.context_tokens, 20 * 129)
+    _ = load_gpt_arithmetic_profile(profile)
+    effective_context_tokens = context_tokens if context_tokens is not None else OFFICIAL_COMMAVQ_GPT_BLOCK_SIZE
+    if effective_context_tokens <= 0:
+        raise ValueError("context_tokens must be positive")
     resolved_device = _resolve_device(device)
     resolved_dtype = _resolve_dtype(dtype, device=resolved_device)
     loader = model_loader or load_official_commavq_gpt_model
@@ -284,8 +371,10 @@ def score_commavq_gpt_sample(
     if model_loader is None:
         load_kwargs["gpt_module_path"] = gpt_module_path
     model = loader(**load_kwargs)
-    raw_tokens = _read_uint16_tokens(token_path)
-    segments = _split_frame_major_segments_for_official_gpt(raw_tokens)
+    raw_token_count, segments = _load_frame_major_segments_from_path(
+        token_path,
+        max_scored_tokens=max_scored_tokens,
+    )
 
     remaining = max_scored_tokens
     total_scored_tokens = 0
@@ -315,7 +404,7 @@ def score_commavq_gpt_sample(
         total_scored_tokens += int(segment_result["scored_tokens"])
         total_nll_nats += float(segment_result["avg_nll_nats"]) * int(segment_result["scored_tokens"])
         scoreable_segments += 1
-        segment_token_count += int(segment.size)
+        segment_token_count += min(int(segment.size), int(segment_result["scored_tokens"]) + 1)
         if remaining is not None:
             remaining -= int(segment_result["scored_tokens"])
 
@@ -332,13 +421,14 @@ def score_commavq_gpt_sample(
         "segment_count": len(segments),
         "scored_segment_count": scoreable_segments,
         "segment_token_count": segment_token_count,
-        "raw_token_count": int(raw_tokens.size),
+        "raw_token_count": int(raw_token_count),
         "scored_tokens": total_scored_tokens,
         "context_tokens": int(effective_context_tokens),
         "vocab_size": int(vocab_size),
         "device": resolved_device,
         "dtype": resolved_dtype,
         "model_url": model_url or OFFICIAL_COMMAVQ_GPT_URL,
+        "model_block_size": OFFICIAL_COMMAVQ_GPT_BLOCK_SIZE,
         "avg_nll_nats": avg_nll_nats,
         "bits_per_token": avg_nll_nats / math.log(2.0),
         "perplexity": math.exp(avg_nll_nats),

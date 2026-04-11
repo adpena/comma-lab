@@ -55,13 +55,11 @@
   - compression ratio: `1.7523933820245443`
   - dictionary bytes: `131072`
   - sample count after block splitting: `11812`
-- The first official commavq GPT local-only score sample is now on disk:
-  - metadata: `reports/raw/2026-04-11-commavq-gpt-arithmetic/small/train_split0_gpt_score_8192.json`
-  - layout: `frame_major`
-  - device: `mps`
-  - scored tokens: `8192`
-  - bits/token: `5.151404091261912`
-  - perplexity: `35.54079607138914`
+- The first official commavq GPT local-only score sample had to be invalidated after scorer fixes:
+  - the earlier sample used the wrong default context (`256` instead of the official `2580`)
+  - the fast scorer dropped sliding context across chunk boundaries
+  - sampled-run accounting overstated consumed segment tokens
+  - a corrected rerun is in progress and should repopulate `reports/raw/2026-04-11-commavq-gpt-arithmetic/small/train_split0_gpt_score_8192.json`
 - Reordering alone is not enough, but reordering plus simple conditional coding is already materially better than the static coder on the same sample.
 
 ## next implication
@@ -74,5 +72,5 @@
 - Classical shared-dictionary compression is a viable local comparator but still well behind the strongest conditional token coder:
   - `position_major + zstd_dict` is better than `frame_major + zstd_dict`
   - but both are much worse than `position_major + prev-symbol`
-- The official GPT sample is now real and local, but it is only a log-prob measurement surface so far.
+- The official GPT lane is now real and local, but the last published sample was invalidated and is being rerun under the corrected scorer.
 - The next exact implementation cut should build on this `position_major` file-level conditional coder signal, not on more source-order experiments.

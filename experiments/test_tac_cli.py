@@ -300,6 +300,7 @@ class TacCliTests(unittest.TestCase):
             output_path=output_path,
             profile="gpt_arithmetic_small",
             max_scored_tokens=None,
+            context_tokens=None,
             device="mps",
             dtype="auto",
             cache_dir=None,
@@ -309,6 +310,57 @@ class TacCliTests(unittest.TestCase):
         self.assertEqual(result["command"], "lossless_gpt_score_sample")
         self.assertEqual(result["device"], "mps")
         self.assertEqual(result["bits_per_token"], 1.25)
+
+    def test_lossless_gpt_score_subcommand_supports_context_override(self) -> None:
+        mod = load_module()
+        with tempfile.TemporaryDirectory() as tmpdir:
+            root = Path(tmpdir)
+            token_path = root / "train.bin"
+            output_path = root / "gpt_score.json"
+            with mock.patch.object(
+                mod,
+                "score_commavq_gpt_sample",
+                return_value={
+                    "command": "lossless_gpt_score_sample",
+                    "token_path": str(token_path),
+                    "output_path": str(output_path),
+                    "profile": "gpt_arithmetic_small",
+                    "layout": "frame_major",
+                    "device": "cpu",
+                    "dtype": "float32",
+                    "context_tokens": 2580,
+                    "scored_tokens": 64,
+                    "bits_per_token": 2.0,
+                },
+            ) as mocked:
+                result = mod.main(
+                    [
+                        "lossless",
+                        "gpt-score",
+                        "--profile",
+                        "gpt_arithmetic_small",
+                        "--tokens",
+                        str(token_path),
+                        "--output",
+                        str(output_path),
+                        "--context-tokens",
+                        "2580",
+                    ]
+                )
+
+        mocked.assert_called_once_with(
+            token_path=token_path,
+            output_path=output_path,
+            profile="gpt_arithmetic_small",
+            max_scored_tokens=None,
+            context_tokens=2580,
+            device="auto",
+            dtype="auto",
+            cache_dir=None,
+            model_url=None,
+            gpt_module_path=None,
+        )
+        self.assertEqual(result["context_tokens"], 2580)
 
     def test_lossless_frequency_encode_subcommand_writes_coded_stream(self) -> None:
         mod = load_module()

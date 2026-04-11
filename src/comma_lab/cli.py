@@ -12,6 +12,12 @@ from .bootstrap import bootstrap_upstream
 from .evaluate import evaluate_submission
 from .install import install_submission
 from .lock import submission_lock
+from .lossless_review_tracker import (
+    doctor_repo as lossless_review_doctor_repo,
+    scan_repo as lossless_review_scan_repo,
+    status_payload as lossless_review_status_payload,
+    sync_repo as lossless_review_sync_repo,
+)
 from .lossless_state_sync import (
     doctor_repo as lossless_doctor_repo,
     promote_record as lossless_promote_record,
@@ -316,6 +322,66 @@ def cmd_lossless_state_promote(args: argparse.Namespace) -> int:
     return 0
 
 
+def cmd_lossless_review_doctor(args: argparse.Namespace) -> int:
+    root = Path(args.repo_root) if args.repo_root else repo_root()
+    report = lossless_review_doctor_repo(root)
+    if args.json:
+        _print_json(report.to_dict())
+        return 0
+
+    if not report.findings:
+        print("lossless-review doctor: no drift found")
+        return 0
+    print(f"lossless-review doctor: {len(report.findings)} finding(s)")
+    for finding in report.findings:
+        print(f"  [{finding.severity}] {finding.code} {finding.path}: {finding.message}")
+    return 0
+
+
+def cmd_lossless_review_sync(args: argparse.Namespace) -> int:
+    root = Path(args.repo_root) if args.repo_root else repo_root()
+    result = lossless_review_sync_repo(root)
+    if args.json:
+        _print_json(result.to_dict())
+        return 0
+
+    print(f"lossless-review sync: changed {len(result.changed_paths)} path(s)")
+    for path in result.changed_paths:
+        print(f"  {path}")
+    return 0
+
+
+def cmd_lossless_review_scan(args: argparse.Namespace) -> int:
+    root = Path(args.repo_root) if args.repo_root else repo_root()
+    result = lossless_review_scan_repo(root)
+    if args.json:
+        _print_json(result.to_dict())
+        return 0
+
+    print(f"lossless-review scan: changed {len(result.changed_paths)} path(s)")
+    for path in result.changed_paths:
+        print(f"  {path}")
+    return 0
+
+
+def cmd_lossless_review_status(args: argparse.Namespace) -> int:
+    root = Path(args.repo_root) if args.repo_root else repo_root()
+    payload = lossless_review_status_payload(root)
+    if args.json:
+        _print_json(payload)
+        return 0
+
+    counts = payload["counts"]
+    print(f"lossless-review status: {payload['tracker_path']}")
+    print(f"  last_scan={payload['last_scan']}")
+    print(
+        "  "
+        f"total={counts['total']} reviewed={counts['reviewed']} "
+        f"unreviewed={counts['unreviewed']} stale={counts['stale']} needs_fix={counts['needs_fix']}"
+    )
+    return 0
+
+
 def build_parser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(description="comma video lab helper CLI")
     sub = parser.add_subparsers(dest="cmd", required=True)
@@ -428,6 +494,29 @@ def build_parser() -> argparse.ArgumentParser:
     )
     sp.add_argument("--json", action="store_true", help="emit machine-readable JSON")
     sp.set_defaults(func=cmd_lossless_state_promote)
+
+    p = sub.add_parser("lossless-review", help="project the hardened review tracker onto the lossless slice")
+    lossless_review_sub = p.add_subparsers(dest="lossless_review_cmd", required=True)
+
+    sp = lossless_review_sub.add_parser("doctor", help="audit lossless review tracker drift")
+    sp.add_argument("--repo-root", default=None, help="override the repo root to inspect")
+    sp.add_argument("--json", action="store_true", help="emit machine-readable JSON")
+    sp.set_defaults(func=cmd_lossless_review_doctor)
+
+    sp = lossless_review_sub.add_parser("sync", help="refresh the lossless review tracker projection from the global tracker")
+    sp.add_argument("--repo-root", default=None, help="override the repo root to repair")
+    sp.add_argument("--json", action="store_true", help="emit machine-readable JSON")
+    sp.set_defaults(func=cmd_lossless_review_sync)
+
+    sp = lossless_review_sub.add_parser("scan", help="rescan the global review tracker, then refresh the lossless projection")
+    sp.add_argument("--repo-root", default=None, help="override the repo root to repair")
+    sp.add_argument("--json", action="store_true", help="emit machine-readable JSON")
+    sp.set_defaults(func=cmd_lossless_review_scan)
+
+    sp = lossless_review_sub.add_parser("status", help="summarize the lossless review tracker projection")
+    sp.add_argument("--repo-root", default=None, help="override the repo root to inspect")
+    sp.add_argument("--json", action="store_true", help="emit machine-readable JSON")
+    sp.set_defaults(func=cmd_lossless_review_status)
 
     return parser
 

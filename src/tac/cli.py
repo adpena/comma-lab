@@ -139,6 +139,7 @@ def build_parser() -> argparse.ArgumentParser:
     sp.add_argument("--tokens", required=True)
     sp.add_argument("--output", required=True)
     sp.add_argument("--max-scored-tokens", type=int, default=None)
+    sp.add_argument("--context-tokens", type=int, default=None)
     sp.add_argument("--device", default="auto", choices=["auto", "cpu", "cuda", "mps"])
     sp.add_argument("--dtype", default="auto", choices=["auto", "float32", "float16", "bfloat16"])
     sp.add_argument("--cache-dir", default=None)
@@ -405,6 +406,7 @@ def _run_lossless(args: argparse.Namespace) -> dict[str, Any]:
             output_path=Path(args.output),
             profile=args.profile,
             max_scored_tokens=args.max_scored_tokens,
+            context_tokens=args.context_tokens,
             device=args.device,
             dtype=args.dtype,
             cache_dir=args.cache_dir,
