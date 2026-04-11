@@ -441,23 +441,39 @@ class TimelineHandler(BaseHTTPRequestHandler):
             files = get_md_files_at_commit(self.repo_dir, head)
             self._respond_json({"commits": commits, "files": sorted(files)})
         elif path == "/api/file_history":
-            filepath = params.get("file", [""])[0]
+            filepath = self._sanitize_path(params.get("file", [""])[0])
             history = get_file_history(self.repo_dir, filepath)
             self._respond_json({"commits": history})
         elif path == "/api/file_content":
-            filepath = params.get("file", [""])[0]
-            commit_hash = params.get("hash", ["HEAD"])[0]
+            filepath = self._sanitize_path(params.get("file", [""])[0])
+            commit_hash = self._sanitize_hash(params.get("hash", ["HEAD"])[0])
             content = get_file_at_commit(self.repo_dir, commit_hash, filepath)
             self._respond_json({"content": content or ""})
         elif path == "/api/diff":
-            filepath = params.get("file", [""])[0]
-            hash_a = params.get("hash_a", [""])[0]
-            hash_b = params.get("hash_b", [""])[0]
+            filepath = self._sanitize_path(params.get("file", [""])[0])
+            hash_a = self._sanitize_hash(params.get("hash_a", [""])[0])
+            hash_b = self._sanitize_hash(params.get("hash_b", [""])[0])
             raw = get_word_diff(self.repo_dir, hash_a, hash_b, filepath)
             diff_html = word_diff_to_html(raw)
             self._respond_json({"html": diff_html})
         else:
             self.send_error(404)
+
+    @staticmethod
+    def _sanitize_hash(h: str) -> str:
+        """Reject git args that don't look like commit hashes or refs."""
+        import re as _re
+        if not h or not _re.match(r'^[a-zA-Z0-9_.~^/@{}\-]+$', h):
+            return "HEAD"
+        return h
+
+    @staticmethod
+    def _sanitize_path(p: str) -> str:
+        """Reject paths with suspicious characters."""
+        import re as _re
+        if not p or not _re.match(r'^[a-zA-Z0-9_./ \-]+$', p):
+            return ""
+        return p
 
     def _respond_json(self, data):
         body = json.dumps(data).encode()

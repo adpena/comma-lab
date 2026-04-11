@@ -723,3 +723,125 @@ def load_entropy_optimized_int8(
     compatibility and API clarity.
     """
     return load_int8(path, model, device=device)
+
+
+# ── Production PostFilter Loader ───────────────────────────────────────
+
+
+DEFAULT_POSTFILTER_META: dict[str, int | str] = {
+    "variant": "residual",
+    "hidden": 16,
+    "kernel": 3,
+}
+
+
+def normalize_postfilter_meta(meta: object | None) -> dict[str, int | str]:
+    """Normalize checkpoint metadata to canonical form.
+
+    Handles missing or partial metadata from legacy checkpoints.
+    Returns a dict with at least 'variant', 'hidden', 'kernel'.
+    """
+    normalized = dict(DEFAULT_POSTFILTER_META)
+    if isinstance(meta, dict):
+        if "variant" in meta:
+            normalized["variant"] = str(meta["variant"])
+        if "hidden" in meta:
+            normalized["hidden"] = int(meta["hidden"])
+        if "kernel" in meta:
+            normalized["kernel"] = int(meta["kernel"])
+    return normalized
+
+
+def load_postfilter_int8(
+    path: str | os.PathLike,
+    device: str = "cpu",
+) -> nn.Module:
+    """Load int8-quantized post-filter weights with auto-detected architecture.
+
+    This is the production loader used by inflate_postfilter.py. Unlike
+    load_int8() which requires a pre-built model, this function reads the
+    checkpoint metadata (``__meta__``) to determine the architecture variant,
+    builds the model, and loads weights.
+
+    Supports three on-disk formats (backward compatible):
+      * ``key.q`` int8 + scalar ``key.s`` -> legacy per-tensor symmetric
+      * ``key.q`` int8 + vector ``key.s`` (shape [C]) -> per-channel symmetric
+        broadcasted across the first weight dimension
+      * ``key`` float tensor (no .q/.s suffix) -> uncompressed fp32 fallback,
+        used when biases are stored in full precision to keep a tiny tensor
+        from losing fidelity for the sake of a few bytes.
+
+    Auto-detection heuristic: if metadata claims a simple variant
+    (standard/residual) but the checkpoint actually has 4 conv layers with
+    12-channel input (PixelUnshuffle), override to pixelshuffle_dilated.
+    This handles legacy checkpoints saved before __meta__ was updated to
+    reflect architecture changes. Limitation: cannot distinguish pixelshuffle
+    from pixelshuffle_dilated without checking dilation.
+
+    Args:
+        path: path to the int8 checkpoint (.pt file)
+        device: target device ("cpu", "cuda", "mps")
+
+    Returns:
+        The post-filter model in eval mode on the requested device.
+
+    Raises:
+        ValueError: if weight keys don't match the detected architecture.
+    """
+    from .architectures import build_postfilter
+
+    state = torch.load(path, map_location=device, weights_only=True)
+    float_state: dict[str, torch.Tensor] = {}
+    seen: set[str] = set()
+    for raw_key in state.keys():
+        if raw_key == "__meta__":
+            continue
+        if raw_key.endswith(".q") or raw_key.endswith(".s"):
+            base = raw_key[:-2]
+            if base in seen:
+                continue
+            seen.add(base)
+            q = state[base + ".q"].float()
+            s = state[base + ".s"]
+            if s.ndim == 0:
+                float_state[base] = q * s
+            else:
+                # per-channel: reshape s to (C, 1, 1, ...) matching q's rank
+                shape = [s.shape[0]] + [1] * (q.ndim - 1)
+                float_state[base] = q * s.view(*shape)
+        else:
+            # uncompressed fp32 tensor (e.g., bias stored in full precision)
+            float_state[raw_key] = state[raw_key].float()
+            seen.add(raw_key)
+    meta = normalize_postfilter_meta(state.get("__meta__"))
+    # Auto-detection heuristic: if metadata claims a simple variant (standard/residual)
+    # but the checkpoint actually has 4 conv layers with 12-channel input (PixelUnshuffle),
+    # override to pixelshuffle_dilated. This handles legacy checkpoints saved before
+    # __meta__ was updated to reflect architecture changes. Limitation: cannot
+    # distinguish pixelshuffle from pixelshuffle_dilated without checking dilation.
+    if (
+        meta.get("variant") in {"standard", "residual", "saliency_weighted", "segaware"}
+        and "conv4.weight" in float_state
+        and "conv1.weight" in float_state
+        and float_state["conv1.weight"].ndim == 4
+        and int(float_state["conv1.weight"].shape[1]) == 12
+    ):
+        meta["variant"] = "pixelshuffle_dilated"
+    model = build_postfilter(
+        variant=str(meta["variant"]),
+        hidden=int(meta["hidden"]),
+        kernel=int(meta["kernel"]),
+    )
+    # Cross-check: weight keys must match exactly. A mismatch here means the
+    # architecture in tac.architectures has diverged from what the checkpoint expects.
+    model_keys = set(model.state_dict().keys())
+    ckpt_keys = set(float_state.keys())
+    if model_keys != ckpt_keys:
+        raise ValueError(
+            f"Weight key mismatch between model and checkpoint. "
+            f"Missing in ckpt: {model_keys - ckpt_keys}, "
+            f"Extra in ckpt: {ckpt_keys - model_keys}. "
+            f"Meta: {meta}"
+        )
+    model.load_state_dict(float_state)
+    return model.eval().to(device)

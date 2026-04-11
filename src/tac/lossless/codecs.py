@@ -668,6 +668,8 @@ def decompress_token_records(*, profile: str, compressed_dir: str | Path, output
 
         relative_name = compressed.relative_to(source_root).as_posix()
         decoded_name = _decode_target_name(relative_name)
+        target = target_root / decoded_name
+        target.parent.mkdir(parents=True, exist_ok=True)
         with tempfile.TemporaryDirectory() as tmpdir:
             extracted_dir = Path(tmpdir) / "extract"
             extracted_dir.mkdir(parents=True, exist_ok=True)
@@ -676,16 +678,15 @@ def decompress_token_records(*, profile: str, compressed_dir: str | Path, output
                 cwd=extracted_dir,
             )
             extracted = _extract_single_file_from_dir(extracted_dir, preferred_name=Path(decoded_name).name)
-        target = target_root / decoded_name
-        target.parent.mkdir(parents=True, exist_ok=True)
-        try:
-            np.load(extracted, allow_pickle=False)
-        except Exception:
-            tokens = _decode_commavq_tokens(extracted.read_bytes())
-            with target.open("wb") as handle:
-                np.save(handle, tokens)
-        else:
-            target.write_bytes(extracted.read_bytes())
+            # Read inside the with block — temp dir is deleted on exit
+            try:
+                np.load(extracted, allow_pickle=False)
+            except Exception:
+                tokens = _decode_commavq_tokens(extracted.read_bytes())
+                with target.open("wb") as handle:
+                    np.save(handle, tokens)
+            else:
+                target.write_bytes(extracted.read_bytes())
 
 
 def render_lzma_decompress_script() -> str:

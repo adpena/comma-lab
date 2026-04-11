@@ -5,11 +5,10 @@ The post-filter is a tiny CNN (3,203 params, 7.5KB int8) trained directly
 against the scorer's loss function via backprop. It learns to correct the
 decoded video to maximize PoseNet+SegNet scores.
 
-WARNING: Architecture classes below are duplicated from src/tac/architectures.py.
-This is intentional — the inflate script must be self-contained for contest
-submission (no dependency on tac package). If you change an architecture in
-src/tac/architectures.py, you MUST mirror the change here or weight loading
-will silently produce garbage. See C2/I1 in the greenup review.
+Architecture classes and the INT8 loader live in the tac package
+(src/tac/architectures.py, src/tac/quantization.py). This script imports
+from tac when available, with a self-contained fallback for contest
+submission environments where tac is not installed.
 """
 import os
 import sys
@@ -21,342 +20,319 @@ import torch.nn as nn
 import torch.nn.functional as F
 import av
 
-
-DEFAULT_POSTFILTER_META = {
-    "variant": "residual",
-    "hidden": 16,
-    "kernel": 3,
-}
-
-
 # ============================================================
-# Post-filter model (matches training architecture)
+# Import from tac when available; inline fallback for standalone
 # ============================================================
-class PostFilter(nn.Module):
-    def __init__(self, hidden=16, kernel=3):
-        super().__init__()
-        pad = kernel // 2
-        self.conv1 = nn.Conv2d(3, hidden, kernel, padding=pad, bias=True)
-        self.conv2 = nn.Conv2d(hidden, hidden, kernel, padding=pad, bias=True)
-        self.conv3 = nn.Conv2d(hidden, 3, kernel, padding=pad, bias=True)
-        self.act = nn.ReLU(inplace=True)
+try:
+    from tac.architectures import (
+        PostFilter,
+        PairAwarePostFilter,
+        DepthwisePostFilter,
+        LumaPostFilter,
+        PixelShufflePostFilter,
+        PixelShuffleDilatedPostFilter,
+        DilatedPostFilter,
+        GatedDilatedPostFilter,
+        FiLMPostFilter,
+        build_postfilter as _tac_build_postfilter,
+    )
+    from tac.quantization import (
+        DEFAULT_POSTFILTER_META,
+        normalize_postfilter_meta,
+        load_postfilter_int8,
+    )
+    _TAC_AVAILABLE = True
+except ImportError:
+    _TAC_AVAILABLE = False
 
-    def forward(self, x):
-        residual = self.act(self.conv1(x))
-        residual = self.act(self.conv2(residual))
-        residual = self.conv3(residual)
-        return (x + residual).clamp(0, 255)
+    # ── Inline fallback (self-contained for scorer machine) ──────────
 
+    DEFAULT_POSTFILTER_META = {
+        "variant": "residual",
+        "hidden": 16,
+        "kernel": 3,
+    }
 
-class PairAwarePostFilter(nn.Module):
-    """6-channel pair-aware post-filter (target + context frames)."""
-    def __init__(self, hidden=64, kernel=3):
-        super().__init__()
-        pad = kernel // 2
-        self.conv1 = nn.Conv2d(6, hidden, kernel, padding=pad, bias=True)
-        self.conv2 = nn.Conv2d(hidden, hidden, kernel, padding=pad, bias=True)
-        self.conv3 = nn.Conv2d(hidden, 3, kernel, padding=pad, bias=True)
-        self.act = nn.ReLU(inplace=True)
-        nn.init.zeros_(self.conv3.weight)
-        nn.init.zeros_(self.conv3.bias)
+    class PostFilter(nn.Module):
+        def __init__(self, hidden=16, kernel=3):
+            super().__init__()
+            pad = kernel // 2
+            self.conv1 = nn.Conv2d(3, hidden, kernel, padding=pad, bias=True)
+            self.conv2 = nn.Conv2d(hidden, hidden, kernel, padding=pad, bias=True)
+            self.conv3 = nn.Conv2d(hidden, 3, kernel, padding=pad, bias=True)
+            self.act = nn.ReLU(inplace=True)
 
-    def forward(self, x):
-        target = x[:, :3]
-        residual = self.act(self.conv1(x))
-        residual = self.act(self.conv2(residual))
-        residual = self.conv3(residual)
-        return (target + residual).clamp(0, 255)
+        def forward(self, x):
+            residual = self.act(self.conv1(x))
+            residual = self.act(self.conv2(residual))
+            residual = self.conv3(residual)
+            return (x + residual).clamp(0, 255)
 
+    class PairAwarePostFilter(nn.Module):
+        """6-channel pair-aware post-filter (target + context frames)."""
+        def __init__(self, hidden=64, kernel=3):
+            super().__init__()
+            pad = kernel // 2
+            self.conv1 = nn.Conv2d(6, hidden, kernel, padding=pad, bias=True)
+            self.conv2 = nn.Conv2d(hidden, hidden, kernel, padding=pad, bias=True)
+            self.conv3 = nn.Conv2d(hidden, 3, kernel, padding=pad, bias=True)
+            self.act = nn.ReLU(inplace=True)
+            nn.init.zeros_(self.conv3.weight)
+            nn.init.zeros_(self.conv3.bias)
 
-class DepthwisePostFilter(nn.Module):
-    def __init__(self, hidden=16, kernel=3):
-        super().__init__()
-        pad = kernel // 2
-        self.pw_in = nn.Conv2d(3, hidden, 1, bias=True)
-        self.dw = nn.Conv2d(hidden, hidden, kernel, padding=pad, groups=hidden, bias=True)
-        self.pw_out = nn.Conv2d(hidden, 3, 1, bias=True)
-        self.act = nn.ReLU(inplace=True)
+        def forward(self, x):
+            target = x[:, :3]
+            residual = self.act(self.conv1(x))
+            residual = self.act(self.conv2(residual))
+            residual = self.conv3(residual)
+            return (target + residual).clamp(0, 255)
 
-        nn.init.zeros_(self.pw_out.weight)
-        nn.init.zeros_(self.pw_out.bias)
+    class DepthwisePostFilter(nn.Module):
+        def __init__(self, hidden=16, kernel=3):
+            super().__init__()
+            pad = kernel // 2
+            self.pw_in = nn.Conv2d(3, hidden, 1, bias=True)
+            self.dw = nn.Conv2d(hidden, hidden, kernel, padding=pad, groups=hidden, bias=True)
+            self.pw_out = nn.Conv2d(hidden, 3, 1, bias=True)
+            self.act = nn.ReLU(inplace=True)
+            nn.init.zeros_(self.pw_out.weight)
+            nn.init.zeros_(self.pw_out.bias)
 
-    def forward(self, x):
-        residual = self.act(self.pw_in(x))
-        residual = self.act(self.dw(residual))
-        residual = self.pw_out(residual)
-        return (x + residual).clamp(0, 255)
+        def forward(self, x):
+            residual = self.act(self.pw_in(x))
+            residual = self.act(self.dw(residual))
+            residual = self.pw_out(residual)
+            return (x + residual).clamp(0, 255)
 
+    class LumaPostFilter(nn.Module):
+        def __init__(self, hidden=16, kernel=3):
+            super().__init__()
+            pad = kernel // 2
+            self.conv1 = nn.Conv2d(1, hidden, kernel, padding=pad, bias=True)
+            self.conv2 = nn.Conv2d(hidden, hidden, kernel, padding=pad, bias=True)
+            self.conv3 = nn.Conv2d(hidden, 1, kernel, padding=pad, bias=True)
+            self.act = nn.ReLU(inplace=True)
+            nn.init.zeros_(self.conv3.weight)
+            nn.init.zeros_(self.conv3.bias)
 
-class LumaPostFilter(nn.Module):
-    def __init__(self, hidden=16, kernel=3):
-        super().__init__()
-        pad = kernel // 2
-        self.conv1 = nn.Conv2d(1, hidden, kernel, padding=pad, bias=True)
-        self.conv2 = nn.Conv2d(hidden, hidden, kernel, padding=pad, bias=True)
-        self.conv3 = nn.Conv2d(hidden, 1, kernel, padding=pad, bias=True)
-        self.act = nn.ReLU(inplace=True)
+        def forward(self, x):
+            y = x[:, 0:1] * 0.299 + x[:, 1:2] * 0.587 + x[:, 2:3] * 0.114
+            residual = self.act(self.conv1(y))
+            residual = self.act(self.conv2(residual))
+            residual = self.conv3(residual)
+            return (x + residual.repeat(1, 3, 1, 1)).clamp(0, 255)
 
-        nn.init.zeros_(self.conv3.weight)
-        nn.init.zeros_(self.conv3.bias)
+    class PixelShufflePostFilter(nn.Module):
+        def __init__(self, hidden=64, kernel=3):
+            super().__init__()
+            self.down = nn.PixelUnshuffle(2)
+            pad = kernel // 2
+            self.body = nn.Sequential(
+                nn.Conv2d(12, hidden, kernel, padding=pad, bias=True),
+                nn.ReLU(inplace=True),
+                nn.Conv2d(hidden, hidden, kernel, padding=pad, bias=True),
+                nn.ReLU(inplace=True),
+                nn.Conv2d(hidden, hidden, kernel, padding=pad, bias=True),
+                nn.ReLU(inplace=True),
+                nn.Conv2d(hidden, 12, kernel, padding=pad, bias=True),
+            )
+            self.up = nn.PixelShuffle(2)
+            nn.init.zeros_(self.body[-1].weight)
+            nn.init.zeros_(self.body[-1].bias)
 
-    def forward(self, x):
-        y = x[:, 0:1] * 0.299 + x[:, 1:2] * 0.587 + x[:, 2:3] * 0.114
-        residual = self.act(self.conv1(y))
-        residual = self.act(self.conv2(residual))
-        residual = self.conv3(residual)
-        return (x + residual.repeat(1, 3, 1, 1)).clamp(0, 255)
+        def forward(self, x):
+            x_norm = x / 255.0
+            residual = self.up(self.body(self.down(x_norm)))
+            return (x_norm + residual).clamp(0, 1) * 255.0
 
+    class PixelShuffleDilatedPostFilter(nn.Module):
+        def __init__(self, hidden=64, kernel=3):
+            super().__init__()
+            pad = kernel // 2
+            self.down = nn.PixelUnshuffle(2)
+            self.conv1 = nn.Conv2d(12, hidden, kernel, padding=pad, bias=True)
+            self.conv2 = nn.Conv2d(hidden, hidden, kernel, padding=pad * 2, dilation=2, bias=True)
+            self.conv3 = nn.Conv2d(hidden, hidden, kernel, padding=pad, bias=True)
+            self.conv4 = nn.Conv2d(hidden, 12, kernel, padding=pad, bias=True)
+            self.up = nn.PixelShuffle(2)
+            self.act = nn.ReLU(inplace=True)
+            nn.init.zeros_(self.conv4.weight)
+            nn.init.zeros_(self.conv4.bias)
 
-class PixelShufflePostFilter(nn.Module):
-    """REN-style post-filter using PixelUnshuffle/Shuffle.
+        def forward(self, x):
+            x_norm = x / 255.0
+            residual = self.down(x_norm)
+            residual = self.act(self.conv1(residual))
+            residual = self.act(self.conv2(residual))
+            residual = self.act(self.conv3(residual))
+            residual = self.up(self.conv4(residual))
+            return (x_norm + residual).clamp(0, 1) * 255.0
 
-    REN-style post-filter using PixelUnshuffle/Shuffle for half-resolution
-    processing. PixelUnshuffle(2) converts 3-channel full-res to 12-channel
-    half-res; 4 conv layers process; PixelShuffle(2) reconstructs full-res.
+    class DilatedPostFilter(nn.Module):
+        def __init__(self, hidden=16, kernel=3):
+            super().__init__()
+            pad = kernel // 2
+            self.conv1 = nn.Conv2d(3, hidden, kernel, padding=pad, bias=True)
+            self.conv2 = nn.Conv2d(hidden, hidden, kernel, padding=pad * 2, dilation=2, bias=True)
+            self.conv3 = nn.Conv2d(hidden, 3, kernel, padding=pad, bias=True)
+            self.act = nn.ReLU(inplace=True)
+            nn.init.zeros_(self.conv3.weight)
+            nn.init.zeros_(self.conv3.bias)
 
-    Key advantage: corrections are naturally aligned with what both PoseNet
-    and SegNet see after their bilinear downsample to 512x384. Each 3x3
-    conv at half-res covers 6x6 at full-res, matching the scorer's RF.
-    """
-    def __init__(self, hidden=64, kernel=3):
-        super().__init__()
-        self.down = nn.PixelUnshuffle(2)
-        pad = kernel // 2
-        self.body = nn.Sequential(
-            nn.Conv2d(12, hidden, kernel, padding=pad, bias=True),
-            nn.ReLU(inplace=True),
-            nn.Conv2d(hidden, hidden, kernel, padding=pad, bias=True),
-            nn.ReLU(inplace=True),
-            nn.Conv2d(hidden, hidden, kernel, padding=pad, bias=True),
-            nn.ReLU(inplace=True),
-            nn.Conv2d(hidden, 12, kernel, padding=pad, bias=True),
-        )
-        self.up = nn.PixelShuffle(2)
-        nn.init.zeros_(self.body[-1].weight)
-        nn.init.zeros_(self.body[-1].bias)
+        def forward(self, x):
+            residual = self.act(self.conv1(x))
+            residual = self.act(self.conv2(residual))
+            residual = self.conv3(residual)
+            return (x + residual).clamp(0, 255)
 
-    def forward(self, x):
-        x_norm = x / 255.0
-        residual = self.up(self.body(self.down(x_norm)))
-        return (x_norm + residual).clamp(0, 1) * 255.0
+    class GatedDilatedPostFilter(nn.Module):
+        def __init__(self, hidden=16, kernel=3):
+            super().__init__()
+            pad = kernel // 2
+            self.conv1 = nn.Conv2d(3, hidden, kernel, padding=pad, bias=True)
+            self.conv2 = nn.Conv2d(hidden, hidden, kernel, padding=pad * 2, dilation=2, bias=True)
+            self.conv3 = nn.Conv2d(hidden, 3, kernel, padding=pad, bias=True)
+            self.gate = nn.Sequential(nn.Conv2d(hidden, 1, 1, bias=True), nn.Sigmoid())
+            self.act = nn.ReLU(inplace=True)
+            nn.init.zeros_(self.conv3.weight)
+            nn.init.zeros_(self.conv3.bias)
+            nn.init.zeros_(self.gate[0].weight)
+            nn.init.zeros_(self.gate[0].bias)
 
+        def forward(self, x):
+            features = self.act(self.conv1(x))
+            features = self.act(self.conv2(features))
+            gate = self.gate(features)
+            residual = self.conv3(features)
+            return (x + gate * residual).clamp(0, 255)
 
-class PixelShuffleDilatedPostFilter(nn.Module):
-    """Half-resolution PixelShuffle path with an explicit dilated middle layer."""
+    class FiLMPostFilter(nn.Module):
+        def __init__(self, hidden=16, kernel=3):
+            super().__init__()
+            pad = kernel // 2
+            self.conv1 = nn.Conv2d(3, hidden, kernel, padding=pad, bias=True)
+            self.conv2 = nn.Conv2d(hidden, hidden, kernel, padding=pad, bias=True)
+            self.conv3 = nn.Conv2d(hidden, 3, kernel, padding=pad, bias=True)
+            self.film = nn.Linear(3, hidden * 2, bias=True)
+            self.act = nn.ReLU(inplace=True)
 
-    def __init__(self, hidden=64, kernel=3):
-        super().__init__()
-        pad = kernel // 2
-        self.down = nn.PixelUnshuffle(2)
-        self.conv1 = nn.Conv2d(12, hidden, kernel, padding=pad, bias=True)
-        self.conv2 = nn.Conv2d(hidden, hidden, kernel, padding=pad * 2, dilation=2, bias=True)
-        self.conv3 = nn.Conv2d(hidden, hidden, kernel, padding=pad, bias=True)
-        self.conv4 = nn.Conv2d(hidden, 12, kernel, padding=pad, bias=True)
-        self.up = nn.PixelShuffle(2)
-        self.act = nn.ReLU(inplace=True)
+        def _descriptor(self, x: torch.Tensor) -> torch.Tensor:
+            y = x[:, 0:1] * 0.299 + x[:, 1:2] * 0.587 + x[:, 2:3] * 0.114
+            y_norm = y / 255.0
+            mean = y_norm.mean(dim=(2, 3))
+            std = y_norm.std(dim=(2, 3), unbiased=False)
+            dx = y_norm[..., :, 1:] - y_norm[..., :, :-1]
+            dy = y_norm[..., 1:, :] - y_norm[..., :-1, :]
+            edge = 0.5 * (dx.abs().mean(dim=(2, 3)) + dy.abs().mean(dim=(2, 3)))
+            return torch.cat([mean, std, edge], dim=1)
 
-        nn.init.zeros_(self.conv4.weight)
-        nn.init.zeros_(self.conv4.bias)
+        def _film_params(self, x: torch.Tensor) -> tuple[torch.Tensor, torch.Tensor]:
+            film = self.film(self._descriptor(x))
+            gamma, beta = film.chunk(2, dim=1)
+            gamma = 1.0 + 0.25 * torch.tanh(gamma).unsqueeze(-1).unsqueeze(-1)
+            beta = 8.0 * torch.tanh(beta).unsqueeze(-1).unsqueeze(-1)
+            return gamma, beta
 
-    def forward(self, x):
-        x_norm = x / 255.0
-        residual = self.down(x_norm)
-        residual = self.act(self.conv1(residual))
-        residual = self.act(self.conv2(residual))
-        residual = self.act(self.conv3(residual))
-        residual = self.up(self.conv4(residual))
-        return (x_norm + residual).clamp(0, 1) * 255.0
+        def forward(self, x):
+            gamma, beta = self._film_params(x)
+            residual = self.act(self.conv1(x))
+            residual = residual * gamma + beta
+            residual = self.act(self.conv2(residual))
+            residual = residual * gamma + beta
+            residual = self.conv3(residual)
+            return (x + residual).clamp(0, 255)
 
+    def normalize_postfilter_meta(meta: object | None) -> dict[str, int | str]:
+        normalized = dict(DEFAULT_POSTFILTER_META)
+        if isinstance(meta, dict):
+            if "variant" in meta:
+                normalized["variant"] = str(meta["variant"])
+            if "hidden" in meta:
+                normalized["hidden"] = int(meta["hidden"])
+            if "kernel" in meta:
+                normalized["kernel"] = int(meta["kernel"])
+        return normalized
 
-class DilatedPostFilter(nn.Module):
-    """PostFilter with dilation=2 on the middle conv layer.
+    def _fallback_build_postfilter(meta: object | None = None) -> nn.Module:
+        normalized = normalize_postfilter_meta(meta)
+        variant = normalized["variant"]
+        hidden = int(normalized["hidden"])
+        kernel = int(normalized["kernel"])
+        if variant in {"standard", "residual", "saliency_weighted", "segaware"}:
+            return PostFilter(hidden=hidden, kernel=kernel)
+        if variant == "depthwise":
+            return DepthwisePostFilter(hidden=hidden, kernel=kernel)
+        if variant == "luma":
+            return LumaPostFilter(hidden=hidden, kernel=kernel)
+        if variant == "pixelshuffle":
+            return PixelShufflePostFilter(hidden=hidden, kernel=kernel)
+        if variant == "pixelshuffle_dilated":
+            return PixelShuffleDilatedPostFilter(hidden=hidden, kernel=kernel)
+        if variant == "dilated":
+            return DilatedPostFilter(hidden=hidden, kernel=kernel)
+        if variant == "gated_dilated":
+            return GatedDilatedPostFilter(hidden=hidden, kernel=kernel)
+        if variant in ("film", "film_conditioned"):
+            return FiLMPostFilter(hidden=hidden, kernel=kernel)
+        if variant == "psd":
+            return PixelShuffleDilatedPostFilter(hidden=hidden, kernel=kernel)
+        if variant == "pair_aware":
+            return PairAwarePostFilter(hidden=hidden, kernel=kernel)
+        raise ValueError(f"Unsupported post-filter variant: {variant}")
 
-    Expands receptive field from 7x7 to 15x15 at zero param cost.
-    LeCun + Karpathy consensus: this matches fastvit_t12's early-layer
-    receptive field and resolves the mid-frequency bottleneck.
-    """
-    def __init__(self, hidden=16, kernel=3):
-        super().__init__()
-        pad = kernel // 2
-        self.conv1 = nn.Conv2d(3, hidden, kernel, padding=pad, bias=True)
-        # Dilation=2 on middle layer: effective kernel is 5x5, RF grows to 15x15
-        self.conv2 = nn.Conv2d(hidden, hidden, kernel, padding=pad * 2, dilation=2, bias=True)
-        self.conv3 = nn.Conv2d(hidden, 3, kernel, padding=pad, bias=True)
-        self.act = nn.ReLU(inplace=True)
+    def load_postfilter_int8(path: str, device: str = "cpu") -> nn.Module:
+        """Load int8-quantized post-filter weights (standalone fallback).
 
-        nn.init.zeros_(self.conv3.weight)
-        nn.init.zeros_(self.conv3.bias)
-
-    def forward(self, x):
-        residual = self.act(self.conv1(x))
-        residual = self.act(self.conv2(residual))
-        residual = self.conv3(residual)
-        return (x + residual).clamp(0, 255)
-
-
-class GatedDilatedPostFilter(nn.Module):
-    """DilatedPostFilter with a spatial sigmoid gate (Collier's proposal)."""
-    def __init__(self, hidden=16, kernel=3):
-        super().__init__()
-        pad = kernel // 2
-        self.conv1 = nn.Conv2d(3, hidden, kernel, padding=pad, bias=True)
-        self.conv2 = nn.Conv2d(hidden, hidden, kernel, padding=pad * 2, dilation=2, bias=True)
-        self.conv3 = nn.Conv2d(hidden, 3, kernel, padding=pad, bias=True)
-        self.gate = nn.Sequential(nn.Conv2d(hidden, 1, 1, bias=True), nn.Sigmoid())
-        self.act = nn.ReLU(inplace=True)
-        nn.init.zeros_(self.conv3.weight)
-        nn.init.zeros_(self.conv3.bias)
-        nn.init.zeros_(self.gate[0].weight)
-        nn.init.zeros_(self.gate[0].bias)
-
-    def forward(self, x):
-        features = self.act(self.conv1(x))
-        features = self.act(self.conv2(features))
-        gate = self.gate(features)
-        residual = self.conv3(features)
-        return (x + gate * residual).clamp(0, 255)
-
-
-class FiLMPostFilter(nn.Module):
-    def __init__(self, hidden=16, kernel=3):
-        super().__init__()
-        pad = kernel // 2
-        self.conv1 = nn.Conv2d(3, hidden, kernel, padding=pad, bias=True)
-        self.conv2 = nn.Conv2d(hidden, hidden, kernel, padding=pad, bias=True)
-        self.conv3 = nn.Conv2d(hidden, 3, kernel, padding=pad, bias=True)
-        self.film = nn.Linear(3, hidden * 2, bias=True)
-        self.act = nn.ReLU(inplace=True)
-
-    def _descriptor(self, x: torch.Tensor) -> torch.Tensor:
-        # Stateless per-frame descriptor: luma mean, luma std, edge density.
-        y = x[:, 0:1] * 0.299 + x[:, 1:2] * 0.587 + x[:, 2:3] * 0.114
-        y_norm = y / 255.0
-        mean = y_norm.mean(dim=(2, 3))
-        std = y_norm.std(dim=(2, 3), unbiased=False)
-        dx = y_norm[..., :, 1:] - y_norm[..., :, :-1]
-        dy = y_norm[..., 1:, :] - y_norm[..., :-1, :]
-        edge = 0.5 * (dx.abs().mean(dim=(2, 3)) + dy.abs().mean(dim=(2, 3)))
-        return torch.cat([mean, std, edge], dim=1)
-
-    def _film_params(self, x: torch.Tensor) -> tuple[torch.Tensor, torch.Tensor]:
-        film = self.film(self._descriptor(x))
-        gamma, beta = film.chunk(2, dim=1)
-        gamma = 1.0 + 0.25 * torch.tanh(gamma).unsqueeze(-1).unsqueeze(-1)
-        beta = 8.0 * torch.tanh(beta).unsqueeze(-1).unsqueeze(-1)
-        return gamma, beta
-
-    def forward(self, x):
-        gamma, beta = self._film_params(x)
-        residual = self.act(self.conv1(x))
-        residual = residual * gamma + beta
-        residual = self.act(self.conv2(residual))
-        residual = residual * gamma + beta
-        residual = self.conv3(residual)
-        return (x + residual).clamp(0, 255)
-
-
-def normalize_postfilter_meta(meta: object | None) -> dict[str, int | str]:
-    normalized = dict(DEFAULT_POSTFILTER_META)
-    if isinstance(meta, dict):
-        if "variant" in meta:
-            normalized["variant"] = str(meta["variant"])
-        if "hidden" in meta:
-            normalized["hidden"] = int(meta["hidden"])
-        if "kernel" in meta:
-            normalized["kernel"] = int(meta["kernel"])
-    return normalized
-
-
-def build_postfilter(meta: object | None = None) -> nn.Module:
-    normalized = normalize_postfilter_meta(meta)
-    variant = normalized["variant"]
-    hidden = int(normalized["hidden"])
-    kernel = int(normalized["kernel"])
-    if variant in {"standard", "residual", "saliency_weighted", "segaware"}:
-        return PostFilter(hidden=hidden, kernel=kernel)
-    if variant == "depthwise":
-        return DepthwisePostFilter(hidden=hidden, kernel=kernel)
-    if variant == "luma":
-        return LumaPostFilter(hidden=hidden, kernel=kernel)
-    if variant == "pixelshuffle":
-        return PixelShufflePostFilter(hidden=hidden, kernel=kernel)
-    if variant == "pixelshuffle_dilated":
-        return PixelShuffleDilatedPostFilter(hidden=hidden, kernel=kernel)
-    if variant == "dilated":
-        return DilatedPostFilter(hidden=hidden, kernel=kernel)
-    if variant == "gated_dilated":
-        return GatedDilatedPostFilter(hidden=hidden, kernel=kernel)
-    if variant in ("film", "film_conditioned"):
-        return FiLMPostFilter(hidden=hidden, kernel=kernel)
-    if variant == "psd":
-        return PixelShuffleDilatedPostFilter(hidden=hidden, kernel=kernel)
-    if variant == "pair_aware":
-        return PairAwarePostFilter(hidden=hidden, kernel=kernel)
-    raise ValueError(f"Unsupported post-filter variant: {variant}")
-
-
-def load_postfilter_int8(path: str, device: str = "cpu") -> PostFilter:
-    """Load int8-quantized post-filter weights.
-
-    Supports three on-disk formats (backward compatible):
-      * ``key.q`` int8 + scalar ``key.s`` -> legacy per-tensor symmetric
-      * ``key.q`` int8 + vector ``key.s`` (shape [C]) -> per-channel symmetric
-        broadcasted across the first weight dimension
-      * ``key`` float tensor (no .q/.s suffix) -> uncompressed fp32 fallback,
-        used when biases are stored in full precision to keep a tiny tensor
-        from losing fidelity for the sake of a few bytes.
-    """
-    state = torch.load(path, map_location=device, weights_only=True)
-    float_state: dict[str, torch.Tensor] = {}
-    seen = set()
-    for raw_key in state.keys():
-        if raw_key == "__meta__":
-            continue
-        if raw_key.endswith(".q") or raw_key.endswith(".s"):
-            base = raw_key[:-2]
-            if base in seen:
+        Supports three on-disk formats (backward compatible):
+          * ``key.q`` int8 + scalar ``key.s`` -> legacy per-tensor symmetric
+          * ``key.q`` int8 + vector ``key.s`` (shape [C]) -> per-channel symmetric
+            broadcasted across the first weight dimension
+          * ``key`` float tensor (no .q/.s suffix) -> uncompressed fp32 fallback,
+            used when biases are stored in full precision to keep a tiny tensor
+            from losing fidelity for the sake of a few bytes.
+        """
+        state = torch.load(path, map_location=device, weights_only=True)
+        float_state: dict[str, torch.Tensor] = {}
+        seen = set()
+        for raw_key in state.keys():
+            if raw_key == "__meta__":
                 continue
-            seen.add(base)
-            q = state[base + ".q"].float()
-            s = state[base + ".s"]
-            if s.ndim == 0:
-                float_state[base] = q * s
+            if raw_key.endswith(".q") or raw_key.endswith(".s"):
+                base = raw_key[:-2]
+                if base in seen:
+                    continue
+                seen.add(base)
+                q = state[base + ".q"].float()
+                s = state[base + ".s"]
+                if s.ndim == 0:
+                    float_state[base] = q * s
+                else:
+                    shape = [s.shape[0]] + [1] * (q.ndim - 1)
+                    float_state[base] = q * s.view(*shape)
             else:
-                # per-channel: reshape s to (C, 1, 1, ...) matching q's rank
-                shape = [s.shape[0]] + [1] * (q.ndim - 1)
-                float_state[base] = q * s.view(*shape)
-        else:
-            # uncompressed fp32 tensor (e.g., bias stored in full precision)
-            float_state[raw_key] = state[raw_key].float()
-            seen.add(raw_key)
-    meta = normalize_postfilter_meta(state.get("__meta__"))
-    # Auto-detection heuristic: if metadata claims a simple variant (standard/residual)
-    # but the checkpoint actually has 4 conv layers with 12-channel input (PixelUnshuffle),
-    # override to pixelshuffle_dilated. This handles legacy checkpoints saved before
-    # __meta__ was updated to reflect architecture changes. Limitation: cannot
-    # distinguish pixelshuffle from pixelshuffle_dilated without checking dilation.
-    if (
-        meta.get("variant") in {"standard", "residual", "saliency_weighted", "segaware"}
-        and "conv4.weight" in float_state
-        and "conv1.weight" in float_state
-        and float_state["conv1.weight"].ndim == 4
-        and int(float_state["conv1.weight"].shape[1]) == 12
-    ):
-        meta["variant"] = "pixelshuffle_dilated"
-    model = build_postfilter(meta)
-    # Cross-check: weight keys must match exactly. A mismatch here means the
-    # architecture in this file has diverged from src/tac/architectures.py.
-    model_keys = set(model.state_dict().keys())
-    ckpt_keys = set(float_state.keys())
-    if model_keys != ckpt_keys:
-        raise ValueError(
-            f"Weight key mismatch between inflate model and checkpoint. "
-            f"Missing in ckpt: {model_keys - ckpt_keys}, "
-            f"Extra in ckpt: {ckpt_keys - model_keys}. "
-            f"Did you update src/tac/architectures.py without mirroring here?"
-        )
-    model.load_state_dict(float_state)
-    return model.eval().to(device)
+                float_state[raw_key] = state[raw_key].float()
+                seen.add(raw_key)
+        meta = normalize_postfilter_meta(state.get("__meta__"))
+        if (
+            meta.get("variant") in {"standard", "residual", "saliency_weighted", "segaware"}
+            and "conv4.weight" in float_state
+            and "conv1.weight" in float_state
+            and float_state["conv1.weight"].ndim == 4
+            and int(float_state["conv1.weight"].shape[1]) == 12
+        ):
+            meta["variant"] = "pixelshuffle_dilated"
+        model = _fallback_build_postfilter(meta)
+        model_keys = set(model.state_dict().keys())
+        ckpt_keys = set(float_state.keys())
+        if model_keys != ckpt_keys:
+            raise ValueError(
+                f"Weight key mismatch between inflate model and checkpoint. "
+                f"Missing in ckpt: {model_keys - ckpt_keys}, "
+                f"Extra in ckpt: {ckpt_keys - model_keys}. "
+                f"Did you update src/tac/architectures.py without mirroring here?"
+            )
+        model.load_state_dict(float_state)
+        return model.eval().to(device)
 
 
 # ============================================================

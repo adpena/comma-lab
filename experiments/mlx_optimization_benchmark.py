@@ -468,24 +468,24 @@ def bench_cpu_lane():
 
     t_gpu = time_fn(gpu_step, warmup=3, repeats=10, label="GPU train step (Metal)")
 
-    # CPU
+    # CPU — use try/finally to guarantee device restoration
     mx.set_default_device(mx.cpu)
-    model_cpu = build_mlx_renderer()
-    loss_and_grad_fn_cpu = nn.value_and_grad(model_cpu, pretrain_loss_fn)
-    # Convert data to CPU
-    mask_t_cpu = mx.array(np.array(mask_t))
-    mask_t1_cpu = mx.array(np.array(mask_t1))
-    gt_pair_cpu = mx.array(np.array(gt_pair))
-    mx.eval(mask_t_cpu, mask_t1_cpu, gt_pair_cpu)
+    try:
+        model_cpu = build_mlx_renderer()
+        loss_and_grad_fn_cpu = nn.value_and_grad(model_cpu, pretrain_loss_fn)
+        # Convert data to CPU
+        mask_t_cpu = mx.array(np.array(mask_t))
+        mask_t1_cpu = mx.array(np.array(mask_t1))
+        gt_pair_cpu = mx.array(np.array(gt_pair))
+        mx.eval(mask_t_cpu, mask_t1_cpu, gt_pair_cpu)
 
-    def cpu_step():
-        loss, grads = loss_and_grad_fn_cpu(model_cpu, mask_t_cpu, mask_t1_cpu, gt_pair_cpu)
-        mx.eval(loss, grads)
+        def cpu_step():
+            loss, grads = loss_and_grad_fn_cpu(model_cpu, mask_t_cpu, mask_t1_cpu, gt_pair_cpu)
+            mx.eval(loss, grads)
 
-    t_cpu = time_fn(cpu_step, warmup=1, repeats=3, label="CPU train step")
-
-    # Reset to GPU
-    mx.set_default_device(mx.gpu)
+        t_cpu = time_fn(cpu_step, warmup=1, repeats=3, label="CPU train step")
+    finally:
+        mx.set_default_device(mx.gpu)
 
     print(f"\n  GPU/CPU ratio: {t_cpu / t_gpu:.1f}x (GPU faster)")
     print(f"  Verdict: {'GPU always wins' if t_gpu < t_cpu else 'CPU competitive'}")

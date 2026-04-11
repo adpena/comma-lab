@@ -1,8 +1,0 @@
-torch
-av
-safetensors
-timm
-einops
-segmentation-models-pytorch
-numpy
-pydantic
