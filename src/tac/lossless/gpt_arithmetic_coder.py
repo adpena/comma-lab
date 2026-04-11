@@ -158,6 +158,7 @@ def encode_commavq_gpt_sample(
     vocab_size: int = 1025,
     device: str = "mps",
     dtype: str = "auto",
+    verify_decode: bool = False,
     cache_dir: str | Path | None = None,
     model_url: str | None = None,
     gpt_module_path: str | Path | None = None,
@@ -196,17 +197,20 @@ def encode_commavq_gpt_sample(
         context_tokens=effective_context,
         vocab_size=vocab_size,
     )
-    restored = decode_token_stream_with_logits_fn(
-        encoded["encoded_bytes"],
-        logits_fn=model.next_token_logits,
-        context_tokens=effective_context,
-        vocab_size=vocab_size,
-    )
     target = Path(encoded_path)
     target.parent.mkdir(parents=True, exist_ok=True)
     target.write_bytes(encoded["encoded_bytes"])
     encoded_bytes = target.stat().st_size
     original_bytes = int(sample.size) * 2
+    exact_match = None
+    if verify_decode:
+        restored = decode_token_stream_with_logits_fn(
+            encoded["encoded_bytes"],
+            logits_fn=model.next_token_logits,
+            context_tokens=effective_context,
+            vocab_size=vocab_size,
+        )
+        exact_match = restored == sample.tolist()
     return {
         "command": "lossless_gpt_arithmetic_sample",
         "token_path": str(Path(token_path)),
@@ -221,7 +225,7 @@ def encode_commavq_gpt_sample(
         "original_bytes": original_bytes,
         "compression_ratio": original_bytes / encoded_bytes if encoded_bytes else 0.0,
         "bits_per_token": encoded["bits_per_token"],
-        "exact_match": restored == sample.tolist(),
+        "exact_match": exact_match,
         "local_only": True,
         "measured": False,
     }

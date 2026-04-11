@@ -1,5 +1,0 @@
-variant,bframes,ref,status,current_workflow_score,archive_bytes,rule_faithful_score
-reference,4,4,reused,3.54,1901606,3.546277389901901
-bframes3-ref4,3,4,done,3.57,2021782,3.568904302033391
-bframes5-ref4,5,4,done,3.71,1897819,3.715850178661784
-bframes4-ref5,4,5,done,3.55,1894366,3.5520846472034564

@@ -1,0 +1,4 @@
+# file: /Users/adpena/Projects/pact/src/tac/scorer_targets.py
+# hypothesis_version: 6.151.12
+
+[b'PNTG', '--device', '--gt-video', '--output', '--posenet', '--upstream', '<H', '<I', '__main__', 'cpu', 'n_frames', 'n_pairs', 'pose', 'segnet.safetensors', 'targets']

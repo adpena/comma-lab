@@ -35,3 +35,11 @@ reports/graphs/site/comparison/*.gif
 reports/graphs/site/comparison/frames/
 reports/graphs/site/comma_format/*.mp4
 reports/graphs/site/comma_format/*.gif
+
+# Data directories (large, machine-generated)
+precomputed_local/
+precomputed/
+data/runs/*/*.csv
+data/runs/*/*.npy
+data/runs/*/*.pt
+data/runs/*/__pycache__/

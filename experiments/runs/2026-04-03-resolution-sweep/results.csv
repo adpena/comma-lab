@@ -1,4 +1,0 @@
-variant,scale_w,scale_h,status,current_workflow_score,archive_bytes,rule_faithful_score
-512x384-reference,512,384,reused,3.62,2819374,3.6183889310448754
-448x336,448,336,done,3.56,1978141,3.562551302986074
-576x432,576,432,done,4.26,3868552,4.263703892867531

@@ -1,4 +1,0 @@
-variant,downscale,upscale,status,current_workflow_score,archive_bytes,rule_faithful_score
-lanczos-bicubic-reference,lanczos,bicubic,reused,3.56,1901606,3.5617568220853544
-bicubic-bicubic,bicubic,bicubic,done,3.67,1829217,3.6692647636539166
-lanczos-lanczos,lanczos,lanczos,done,3.54,1901606,3.546277389901901

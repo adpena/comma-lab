@@ -1,0 +1,4 @@
+# file: /Users/adpena/Projects/pact/src/tac/architectures.py
+# hypothesis_version: 6.151.12
+
+[0.0, 0.05, 0.1, 0.114, 0.18, 0.25, 0.299, 0.5, 0.587, 0.72, 1.0, 1.9, 2.0, 8.0, 255.0, 255, 'bilinear', 'content_adaptive', 'conv1', 'conv2', 'conv3', 'counterpoint', 'dct', 'dct_midband', 'depthwise', 'dilated', 'dual_head', 'film', 'film_conditioned', 'film_qat', 'gated_dilated', 'ij', 'luma', 'luma_dilated', 'mid_mask', 'pair_aware', 'pixelshuffle', 'pixelshuffle_dilated', 'pixelshuffle_upscale', 'psd', 'reflect', 'residual', 'saliency_weighted', 'segaware', 'standard']

@@ -1,0 +1,4 @@
+# file: /Users/adpena/Projects/pact/src/tac/quantization.py
+# hypothesis_version: 6.151.12
+
+[-128.0, 0.0, 1e-10, 1e-08, 0.1, 0.3, 0.5, 1.0, 126.0, 127.0, 127.5, -128, 100, 127, '.', '.bias', '.log_scale', '.q', '.s', '__', '__entropy_info__', '__meta__', '__prune_info__', '_weight_float', 'cpu', 'dead_zone_ratio', 'method', 'per_channel', 'prune_ratio', 'sparsity_pct', 'threshold']
