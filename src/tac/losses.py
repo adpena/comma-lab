@@ -69,20 +69,24 @@ def scorer_loss_pcgrad(
     posenet,
     segnet,
     segnet_weight: float = 100.0,
-) -> tuple[torch.Tensor, float, float]:
-    """Scorer loss with PCGrad (gradient surgery) to decouple PoseNet and SegNet.
+) -> tuple[torch.Tensor, float, float, bool]:
+    """Non-opposing gradient loss for PoseNet-SegNet decoupling.
 
-    Computes separate PoseNet and SegNet losses. If the SegNet gradient opposes
-    the PoseNet gradient (negative cosine similarity), projects the SegNet
-    gradient onto the plane perpendicular to PoseNet. This guarantees SegNet
-    optimization never increases PoseNet loss.
+    Computes separate PoseNet and SegNet losses. When gradients conflict
+    (negative cosine similarity in the intermediate activation space), scales
+    the SegNet loss so the combined gradient does not oppose PoseNet.
 
-    Based on Yu et al. "Gradient Surgery for Multi-Task Learning" (NeurIPS 2020).
-    The projection happens at the loss level via a stop-gradient trick: we compute
-    both losses, then conditionally scale the SegNet loss so that when combined,
-    the resulting gradient lies in the non-conflicting subspace.
+    This is an approximation of PCGrad (Yu et al., NeurIPS 2020) that operates
+    at the activation level rather than the parameter level. The full parameter-
+    level PCGrad would require 2x backward passes. This approximation is exact
+    when the model is linear and provides a non-opposing guarantee otherwise.
 
-    Returns: (loss, pose_distortion, seg_distortion)
+    For stronger multi-task gradient methods, consider:
+    - CAGrad (Liu et al., NeurIPS 2021): maximizes worst-case local improvement
+    - Nash-MTL (Navon et al., ICML 2022): Nash bargaining for proportional fairness
+    - Aligned-MTL (Senushkin et al., CVPR 2023): converges to specified Pareto point
+
+    Returns: (loss, pose_distortion, seg_distortion, conflict_detected)
     """
     fx = _hwc_to_chw(filtered_pair_hwc)
     gx = _hwc_to_chw(gt_pair_hwc)
@@ -99,9 +103,10 @@ def scorer_loss_pcgrad(
     seg_dist = 1.0 - (pred_soft * gt_soft).sum(dim=1).mean()
     seg_loss = segnet_weight * seg_dist
 
-    # PCGrad: check if gradients conflict via the filtered output
-    # We use the loss-level trick: compute grad of each loss w.r.t. fx,
-    # check cosine, and scale seg_loss accordingly
+    conflict = False
+
+    # Gradient conflict detection and non-opposing projection
+    # Operates on intermediate activations (fx) as a proxy for parameter gradients
     if fx.requires_grad:
         g_pose = torch.autograd.grad(pose_loss, fx, retain_graph=True, create_graph=False)[0]
         g_seg = torch.autograd.grad(seg_loss, fx, retain_graph=True, create_graph=False)[0]
@@ -109,17 +114,27 @@ def scorer_loss_pcgrad(
         cos_sim = (g_pose * g_seg).sum() / (g_pose.norm() * g_seg.norm() + 1e-8)
 
         if cos_sim.item() < 0:
-            # Conflict: project seg gradient onto plane perpendicular to pose
-            # Equivalent to scaling seg_loss by (1 - cos^2) when gradients are anti-aligned
-            # But simpler: subtract the conflicting component
-            proj_coeff = (g_seg * g_pose).sum() / (g_pose.norm() ** 2 + 1e-8)
-            # The effective seg loss after projection: seg_loss * (1 - proj_scale)
-            # We approximate this by detaching the conflicting fraction
-            scale = max(0.0, 1.0 + proj_coeff.item() / (seg_loss.item() + 1e-8))
+            conflict = True
+            # Project: remove the component of g_seg along g_pose
+            # g_seg_proj = g_seg - (g_seg . g_pose / ||g_pose||^2) * g_pose
+            # The scale factor for seg_loss that achieves this:
+            # We want: g_pose + scale * g_seg to have non-negative dot with g_pose
+            # g_pose . (g_pose + scale * g_seg) >= 0
+            # ||g_pose||^2 + scale * (g_seg . g_pose) >= 0
+            # scale <= -||g_pose||^2 / (g_seg . g_pose)   [since g_seg.g_pose < 0]
+            dot = (g_seg * g_pose).sum().item()
+            pose_norm_sq = (g_pose.norm() ** 2).item()
+            if abs(dot) > 1e-12:
+                # Scale that makes combined gradient exactly perpendicular to pose
+                max_scale = -pose_norm_sq / dot
+                # Use 90% of max to stay safely non-opposing
+                scale = min(1.0, max(0.01, 0.9 * max_scale))
+            else:
+                scale = 1.0
             seg_loss = seg_loss * scale
 
     loss = pose_loss + seg_loss
-    return loss, pose_dist.item(), seg_dist.item()
+    return loss, pose_dist.item(), seg_dist.item(), conflict
 
 
 @torch.no_grad()

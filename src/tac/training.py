@@ -78,7 +78,7 @@ class TrainConfig(BaseModel):
     use_ste_segnet: bool = False
 
     # SegNet headroom unlocking
-    loss_mode: Literal["standard", "temperature", "focal_ste", "kl_distill"] = "standard"
+    loss_mode: Literal["standard", "temperature", "focal_ste", "kl_distill", "pcgrad"] = "standard"
     temperature_start: float = Field(1.0, gt=0.0)
     temperature_end: float = Field(0.05, gt=0.0)
     temp_schedule: str = Field("exponential", pattern=r"^(linear|exponential)$",
@@ -985,9 +985,9 @@ class Trainer:
                         segnet_weight=sw,
                     )
                 elif cfg.loss_mode == "pcgrad":
-                    # PCGrad: gradient surgery to decouple PoseNet and SegNet
+                    # Non-opposing gradient: decouple PoseNet and SegNet
                     sw = getattr(self, '_cached_sw', cfg.segnet_loss_weight)
-                    loss, pd, sd = scorer_loss_pcgrad(
+                    loss, pd, sd, _conflict = scorer_loss_pcgrad(
                         filtered, gt_pair, posenet, segnet,
                         segnet_weight=sw,
                     )

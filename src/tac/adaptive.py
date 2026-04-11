@@ -148,7 +148,10 @@ class AdaptiveWeights:
         if pose < 0:
             raise ValueError(f"Pose distortion must be non-negative, got {pose}")
         pose = max(pose, 1e-6)
-        return 200.0 * math.sqrt(10.0 * pose)
+        # Clamp to [10, 150] per Pareto council recommendation:
+        # prevents instability at extremes (pose→0 or pose→large)
+        raw = 200.0 * math.sqrt(10.0 * pose)
+        return max(10.0, min(150.0, raw))
 
     def optimal_boundary_weight(self, target_amplification: float = 0.95) -> float:
         """Compute boundary weight achieving target fraction of theoretical ceiling.
