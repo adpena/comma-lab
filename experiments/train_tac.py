@@ -149,12 +149,7 @@ def main():
         upstream_dir=args.upstream_dir,
     )
 
-    # Build model
-    model = build_postfilter(args.variant, hidden=args.hidden, kernel=args.kernel)
-    print(f"[train_tac] Model: {args.variant} h={args.hidden} "
-          f"({sum(p.numel() for p in model.parameters())} params)")
-
-    # Build config — profile provides defaults, CLI args override
+    # Load profile FIRST — so architecture params are correct for model building
     profile_defaults = {}
     if args.profile:
         from tac.profiles import PROFILES
@@ -171,10 +166,20 @@ def main():
             return cli_val
         return profile_defaults.get(profile_key, cli_val)
 
+    # Resolve architecture params from profile + CLI (profile wins unless CLI explicitly set)
+    effective_variant = _val("variant", "variant", "standard")
+    effective_hidden = int(_val("hidden", "hidden", 64))
+    effective_kernel = int(_val("kernel", "kernel", 3))
+
+    # Build model with resolved params
+    model = build_postfilter(effective_variant, hidden=effective_hidden, kernel=effective_kernel)
+    print(f"[train_tac] Model: {effective_variant} h={effective_hidden} "
+          f"({sum(p.numel() for p in model.parameters())} params)")
+
     config = TrainConfig(
-        hidden=_val("hidden", "hidden", 64),
-        kernel=_val("kernel", "kernel", 3),
-        variant=_val("variant", "variant", "standard"),
+        hidden=effective_hidden,
+        kernel=effective_kernel,
+        variant=effective_variant,
         epochs=_val("epochs", "epochs", 2500),
         alpha=_val("alpha", "alpha", 20.0),
         sal_lambda=_val("sal-lambda", "sal_lambda", 1.0),
