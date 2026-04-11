@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import builtins
 import sys
 import tempfile
 import unittest
@@ -32,6 +33,121 @@ class TacLosslessCodecsTests(unittest.TestCase):
             self.assertTrue(restored.exists())
             self.assertEqual(result["archive_bytes"], compressed.stat().st_size)
             self.assertTrue(np.array_equal(np.load(restored), np.load(source)))
+
+    def test_zstd_dict_roundtrip_fails_cleanly_when_backend_missing(self) -> None:
+        from tac.lossless.codecs import zstd_dict_roundtrip_file
+
+        with tempfile.TemporaryDirectory() as tmpdir:
+            root = Path(tmpdir)
+            source = root / "tokens.bin"
+            compressed = root / "tokens.zst"
+            restored = root / "restored.bin"
+            source.write_bytes(b"payload")
+
+            with mock.patch("tac.lossless.codecs._require_zstd_backend", side_effect=RuntimeError("zstd")):
+                with self.assertRaisesRegex(RuntimeError, "zstd"):
+                    zstd_dict_roundtrip_file(
+                        source_path=source,
+                        compressed_path=compressed,
+                        restored_path=restored,
+                    )
+
+    def test_zstd_dict_roundtrip_uses_backend_and_restores_file(self) -> None:
+        from tac.lossless.codecs import zstd_dict_roundtrip_file
+
+        with tempfile.TemporaryDirectory() as tmpdir:
+            root = Path(tmpdir)
+            source = root / "tokens.bin"
+            compressed = root / "tokens.zst"
+            restored = root / "restored.bin"
+            payload = b"zstd payload" * 8
+            source.write_bytes(payload)
+
+            class FakeBackend:
+                def train_dictionary(self, samples, *, dict_size):
+                    self.samples = list(samples)
+                    self.dict_size = dict_size
+                    return b"dict-bytes"
+
+                def compress(self, data, *, dictionary):
+                    assert dictionary == b"dict-bytes"
+                    return b"zstd-archive:" + data
+
+                def decompress(self, data, *, dictionary):
+                    assert dictionary == b"dict-bytes"
+                    assert data.startswith(b"zstd-archive:")
+                    return data[len(b"zstd-archive:") :]
+
+            backend = FakeBackend()
+
+            with mock.patch("tac.lossless.codecs._require_zstd_backend", return_value=backend):
+                result = zstd_dict_roundtrip_file(
+                    source_path=source,
+                    compressed_path=compressed,
+                    restored_path=restored,
+                    dict_size=1024,
+                )
+
+                self.assertEqual(result["archive_bytes"], compressed.stat().st_size)
+                self.assertEqual(restored.read_bytes(), payload)
+
+        self.assertEqual(backend.samples, [payload])
+        self.assertEqual(backend.dict_size, 1024)
+        self.assertEqual(result["method"], "zstd_dict")
+        self.assertEqual(result["dictionary_bytes"], len(b"dict-bytes"))
+
+    def test_zstd_dict_roundtrip_falls_back_to_cli_binary_when_python_backend_is_missing(self) -> None:
+        from tac.lossless.codecs import zstd_dict_roundtrip_file
+
+        with tempfile.TemporaryDirectory() as tmpdir:
+            root = Path(tmpdir)
+            source = root / "tokens.bin"
+            compressed = root / "tokens.zst"
+            restored = root / "restored.bin"
+            payload = b"zstd payload" * 8
+            source.write_bytes(payload)
+
+            original_import = builtins.__import__
+
+            def fake_import(name, globals=None, locals=None, fromlist=(), level=0):
+                if name == "zstandard":
+                    raise ImportError("no module named zstandard")
+                return original_import(name, globals, locals, fromlist, level)
+
+            def fake_run(cmd, *, cwd=None, check=None, stdout=None, stderr=None):
+                self.assertFalse(isinstance(cmd, str))
+                if "--train" in cmd:
+                    dict_path = Path(cmd[cmd.index("-o") + 1])
+                    dict_path.write_bytes(b"dict-bytes")
+                    return
+                if "-d" in cmd:
+                    output_path = Path(cmd[cmd.index("-o") + 1])
+                    source_path = Path(cmd[cmd.index("-d") + 1])
+                    archive = source_path.read_bytes()
+                    self.assertTrue(archive.startswith(b"zstd-archive:"))
+                    output_path.write_bytes(archive[len(b"zstd-archive:") :])
+                    return
+                output_path = Path(cmd[cmd.index("-o") + 1])
+                source_path = Path(cmd[cmd.index("-o") - 1])
+                output_path.write_bytes(b"zstd-archive:" + source_path.read_bytes())
+
+            with (
+                mock.patch("builtins.__import__", side_effect=fake_import),
+                mock.patch("tac.lossless.codecs.shutil.which", return_value="/usr/bin/zstd"),
+                mock.patch("tac.lossless.codecs.subprocess.run", side_effect=fake_run),
+            ):
+                result = zstd_dict_roundtrip_file(
+                    source_path=source,
+                    compressed_path=compressed,
+                    restored_path=restored,
+                    dict_size=1024,
+                )
+
+                self.assertEqual(result["archive_bytes"], compressed.stat().st_size)
+                self.assertEqual(restored.read_bytes(), payload)
+
+        self.assertEqual(result["method"], "zstd_dict")
+        self.assertEqual(result["dictionary_bytes"], len(b"dict-bytes"))
 
     def test_zpaq_roundtrip_fails_cleanly_when_binary_missing(self) -> None:
         from tac.lossless.codecs import compress_lossless_file
