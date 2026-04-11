@@ -94,6 +94,20 @@
   - exact round-trip: `true`
   - observed bits/token: `5.285045238888939`
   - this is much worse than the scorer-only `2048`-token estimate, so the arithmetic lane still has a large implementation gap
+- After switching the arithmetic encoder to batched teacher-forced logits, the larger sample improved sharply:
+  - artifact: `reports/raw/2026-04-11-commavq-gpt-arithmetic/small/train_split0_gpt_arithmetic_sample_2048_mps_v3.gta`
+  - device: `mps`
+  - token count: `2048`
+  - encoded bytes: `486`
+  - compression ratio: `8.427983539094651`
+  - observed bits/token: `1.8573022704066722`
+  - exact decode skipped on this run for speed
+  - this is now close enough to the scorer signal to keep GPT arithmetic as the highest-EV lane
+- The arithmetic backend probe confirms `mps` is the right current backend for byte-level GPT coding too:
+  - metadata: `reports/raw/2026-04-11-commavq-gpt-arithmetic/small/train_split0_gpt_arithmetic_probe_256.json`
+  - `256` token sample
+  - CPU and MPS match on ratio (`2.8603351955307263`)
+  - MPS is faster (`2.023s` vs `2.899s`)
 - The exact local-only `zpaq` rerun is now complete:
   - metadata: `reports/raw/2026-04-11-commavq-zpaq-baseline-rerun/zpaq_baseline_result.json`
   - archive bytes: `538876316`

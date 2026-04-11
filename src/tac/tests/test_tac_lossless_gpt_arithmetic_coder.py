@@ -165,6 +165,88 @@ class TacLosslessGptArithmeticCoderTests(unittest.TestCase):
 
         self.assertIsNone(result["exact_match"])
 
+    def test_encode_commavq_gpt_sample_prefers_batched_model_logits_when_available(self) -> None:
+        from tac.lossless.gpt_arithmetic_coder import encode_commavq_gpt_sample
+
+        with tempfile.TemporaryDirectory() as tmpdir:
+            root = Path(tmpdir)
+            token_path = root / "tokens.bin"
+            output_path = root / "sample.gta"
+            np.array([1024, 0, 1, 0, 1025], dtype=np.uint16).tofile(token_path)
+
+            seen_calls = []
+
+            class FakeModel:
+                def token_logits(self, tokens, *, context_tokens):
+                    seen_calls.append(
+                        {
+                            "tokens": [int(item) for item in tokens.tolist()],
+                            "context_tokens": context_tokens,
+                        }
+                    )
+                    logits = np.full((len(tokens) - 1, 2), -10.0, dtype=np.float64)
+                    for row, target in enumerate([0, 1, 0]):
+                        logits[row, target] = 10.0
+                    return logits
+
+                def next_token_logits(self, context):
+                    raise AssertionError("encode_commavq_gpt_sample should prefer model.token_logits when available")
+
+            result = encode_commavq_gpt_sample(
+                token_path=token_path,
+                encoded_path=output_path,
+                profile="gpt_arithmetic_small",
+                max_tokens=4,
+                context_tokens=3,
+                vocab_size=2,
+                device="cpu",
+                dtype="float32",
+                verify_decode=False,
+                model_loader=lambda **_: FakeModel(),
+            )
+
+            self.assertTrue(output_path.exists())
+
+        self.assertEqual(seen_calls, [{"tokens": [1024, 0, 1, 0], "context_tokens": 3}])
+        self.assertEqual(result["encoded_path"], str(output_path))
+
+    def test_probe_commavq_gpt_arithmetic_devices_reports_fastest_backend(self) -> None:
+        from tac.lossless.gpt_arithmetic_coder import probe_commavq_gpt_arithmetic_devices
+
+        calls = []
+
+        def fake_encode(*, token_path, encoded_path, profile, max_tokens, context_tokens, device, dtype, verify_decode, cache_dir, model_url, gpt_module_path):
+            calls.append((device, max_tokens))
+            return {
+                "command": "lossless_gpt_arithmetic_sample",
+                "encoded_path": str(encoded_path),
+                "device": device,
+                "token_count": max_tokens,
+                "encoded_bytes": 100 if device == "mps" else 120,
+                "compression_ratio": 5.0 if device == "mps" else 4.0,
+                "bits_per_token": 2.0 if device == "mps" else 2.2,
+                "exact_match": None,
+            }
+
+        with tempfile.TemporaryDirectory() as tmpdir:
+            root = Path(tmpdir)
+            token_path = root / "tokens.bin"
+            output_path = root / "probe.json"
+            np.array([1024, 0, 1, 0, 1025], dtype=np.uint16).tofile(token_path)
+            with mock.patch("tac.lossless.gpt_arithmetic_coder.time.perf_counter", side_effect=[0.0, 2.0, 2.0, 3.0]):
+                result = probe_commavq_gpt_arithmetic_devices(
+                    token_path=token_path,
+                    output_path=output_path,
+                    profile="gpt_arithmetic_small",
+                    max_tokens=256,
+                    devices=("cpu", "mps"),
+                    encode_fn=fake_encode,
+                )
+
+        self.assertEqual(result["fastest_device"], "mps")
+        self.assertEqual(result["best_ratio_device"], "mps")
+        self.assertEqual(calls, [("cpu", 256), ("mps", 256)])
+
     def test_encode_commavq_gpt_sample_rejects_empty_segments(self) -> None:
         from tac.lossless.gpt_arithmetic_coder import encode_commavq_gpt_sample
 

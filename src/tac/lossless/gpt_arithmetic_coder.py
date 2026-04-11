@@ -3,6 +3,7 @@ from __future__ import annotations
 import math
 from collections.abc import Callable
 from pathlib import Path
+import time
 
 import numpy as np
 
@@ -29,6 +30,36 @@ def _frequencies_from_logits(logits, *, vocab_size: int, total: int) -> list[int
     shifted = clipped - np.max(clipped)
     probs = np.exp(shifted)
     return normalize_probabilities(probs.tolist(), total=total)
+
+
+def _encode_tokens_from_logits_rows(
+    tokens: np.ndarray,
+    *,
+    logits_rows,
+    vocab_size: int,
+    total_frequency: int,
+) -> dict[str, object]:
+    arr = _normalize_tokens(tokens)
+    rows = np.asarray(logits_rows, dtype=np.float64)
+    if rows.shape[0] < arr.size - 1:
+        raise ValueError("logits_rows must contain one row per predicted token")
+    encoder = RangeEncoder()
+    total_nll_nats = 0.0
+    for index in range(1, arr.size):
+        target = int(arr[index])
+        if target >= vocab_size:
+            raise ValueError("token is outside vocab_size")
+        frequencies = _frequencies_from_logits(rows[index - 1], vocab_size=vocab_size, total=total_frequency)
+        cumulative, total = cumulative_frequencies(frequencies)
+        encoder.encode(symbol=target, cumulative=cumulative, total=total)
+        total_nll_nats += -math.log(frequencies[target] / total_frequency)
+    encoded_bytes = encoder.finish()
+    scored_tokens = int(arr.size - 1)
+    return {
+        "encoded_bytes": encoded_bytes,
+        "scored_tokens": scored_tokens,
+        "bits_per_token": (total_nll_nats / scored_tokens) / math.log(2.0) if scored_tokens else 0.0,
+    }
 
 
 def encode_tokens_with_logits_fn(
@@ -191,12 +222,31 @@ def encode_commavq_gpt_sample(
         gpt_module_path=gpt_module_path,
     )
     effective_context = 2580 if context_tokens is None else context_tokens
-    encoded = encode_token_stream_with_logits_fn(
-        sample,
-        logits_fn=model.next_token_logits,
-        context_tokens=effective_context,
-        vocab_size=vocab_size,
-    )
+    if hasattr(model, "token_logits"):
+        logits_rows = model.token_logits(sample, context_tokens=effective_context)
+        encoded = _encode_tokens_from_logits_rows(
+            sample,
+            logits_rows=logits_rows,
+            vocab_size=vocab_size,
+            total_frequency=1 << 15,
+        )
+        header = bytearray(STREAM_MAGIC)
+        header.extend(len(sample).to_bytes(4, "big"))
+        header.extend(int(sample[0]).to_bytes(2, "big"))
+        encoded = {
+            "encoded_bytes": bytes(header) + encoded["encoded_bytes"],
+            "token_count": int(sample.size),
+            "first_token": int(sample[0]),
+            "scored_tokens": encoded["scored_tokens"],
+            "bits_per_token": encoded["bits_per_token"],
+        }
+    else:
+        encoded = encode_token_stream_with_logits_fn(
+            sample,
+            logits_fn=model.next_token_logits,
+            context_tokens=effective_context,
+            vocab_size=vocab_size,
+        )
     target = Path(encoded_path)
     target.parent.mkdir(parents=True, exist_ok=True)
     target.write_bytes(encoded["encoded_bytes"])
@@ -229,3 +279,71 @@ def encode_commavq_gpt_sample(
         "local_only": True,
         "measured": False,
     }
+
+
+def probe_commavq_gpt_arithmetic_devices(
+    *,
+    token_path: str | Path,
+    output_path: str | Path | None = None,
+    profile: str = "gpt_arithmetic_small",
+    max_tokens: int = 256,
+    context_tokens: int | None = None,
+    devices: tuple[str, ...] = ("cpu", "mps"),
+    dtype: str = "auto",
+    verify_decode: bool = False,
+    cache_dir: str | Path | None = None,
+    model_url: str | None = None,
+    gpt_module_path: str | Path | None = None,
+    encode_fn: Callable[..., dict[str, object]] = encode_commavq_gpt_sample,
+) -> dict[str, object]:
+    if not devices:
+        raise ValueError("devices must contain at least one backend")
+
+    results: list[dict[str, object]] = []
+    for device in devices:
+        encoded_path = None if output_path is None else f"{output_path}.{device}"
+        started = time.perf_counter()
+        result = encode_fn(
+            token_path=token_path,
+            encoded_path=encoded_path,
+            profile=profile,
+            max_tokens=max_tokens,
+            context_tokens=context_tokens,
+            device=device,
+            dtype=dtype,
+            verify_decode=verify_decode,
+            cache_dir=cache_dir,
+            model_url=model_url,
+            gpt_module_path=gpt_module_path,
+        )
+        elapsed = time.perf_counter() - started
+        results.append(
+            {
+                "device": device,
+                "seconds": elapsed,
+                "encoded_bytes": int(result["encoded_bytes"]),
+                "compression_ratio": float(result["compression_ratio"]),
+                "bits_per_token": float(result["bits_per_token"]),
+            }
+        )
+
+    fastest = max(results, key=lambda item: (1.0 / item["seconds"]) if item["seconds"] > 0 else float("inf"))
+    best_ratio = max(results, key=lambda item: item["compression_ratio"])
+    payload = {
+        "command": "lossless_gpt_arithmetic_probe",
+        "token_path": str(Path(token_path)),
+        "output_path": str(Path(output_path)) if output_path is not None else None,
+        "profile": profile,
+        "max_tokens": max_tokens,
+        "context_tokens": 2580 if context_tokens is None else context_tokens,
+        "fastest_device": fastest["device"],
+        "best_ratio_device": best_ratio["device"],
+        "results": results,
+        "local_only": True,
+        "measured": False,
+    }
+    if output_path is not None:
+        target = Path(output_path)
+        target.parent.mkdir(parents=True, exist_ok=True)
+        target.write_text(__import__("json").dumps(payload, indent=2) + "\n")
+    return payload

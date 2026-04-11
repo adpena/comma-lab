@@ -30,3 +30,17 @@
 - immediate backend guidance for the official-GPT scorer is now:
   - prefer `mps` on this machine for local scoring
   - keep CPU as the parity/reference backend
+
+## arithmetic coder probe
+
+- artifact: `reports/raw/2026-04-11-commavq-gpt-arithmetic/small/train_split0_gpt_arithmetic_probe_256.json`
+- `256` token GPT arithmetic sample, same model and token prefix
+- CPU:
+  - `2.899s`
+  - ratio `2.8603351955307263`
+- MPS:
+  - `2.023s`
+  - ratio `2.8603351955307263`
+
+Conclusion:
+- `mps` is also the better backend for the arithmetic sample path on the current implementation.

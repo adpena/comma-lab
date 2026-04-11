@@ -101,6 +101,27 @@ class _TorchNextTokenLogitsModel:
             logits = self._model(idx)
         return logits[0, -1].detach().float().cpu().numpy()
 
+    def token_logits(self, tokens: np.ndarray, *, context_tokens: int) -> np.ndarray:
+        import torch
+
+        arr = np.asarray(tokens, dtype=np.int64)
+        if arr.ndim != 1 or arr.size < 2:
+            raise ValueError("tokens must be a 1D array with at least two items")
+        usable_context_tokens = min(max(int(context_tokens), 1), self._block_size - 1)
+        rows: list[np.ndarray] = []
+        for chunk_start, chunk_end, local_target_start, predictions_to_take in _iter_score_chunks(
+            token_count=arr.size,
+            score_count=int(arr.size - 1),
+            context_tokens=usable_context_tokens,
+            block_size=self._block_size,
+        ):
+            chunk = arr[chunk_start:chunk_end]
+            idx = torch.as_tensor(chunk[:-1], dtype=torch.long, device=self._device).view(1, -1)
+            with torch.inference_mode():
+                logits = self._model(idx)[0].detach().float().cpu().numpy()
+            rows.append(logits[local_target_start : local_target_start + predictions_to_take])
+        return np.concatenate(rows, axis=0) if rows else np.zeros((0, self._model.config.vocab_size), dtype=np.float32)
+
     def score_tokens(
         self,
         tokens: np.ndarray,

@@ -283,6 +283,37 @@ class TacLosslessGptScoreTests(unittest.TestCase):
         reference = score_tokens_with_logits_fn(tokens, logits_fn=logits_fn, context_tokens=3, vocab_size=3)
         self.assertAlmostEqual(fast["avg_nll_nats"], reference["avg_nll_nats"], places=6)
 
+    def test_torch_token_logits_matches_reference_across_chunk_boundary(self) -> None:
+        import importlib
+
+        if importlib.util.find_spec("torch") is None:
+            self.skipTest("torch not installed")
+        import torch
+
+        from tac.lossless.gpt_score import _TorchNextTokenLogitsModel
+
+        class FakeTorchModel:
+            class config:
+                block_size = 4
+
+            def __call__(self, idx):
+                batch, seq_len = idx.shape
+                logits = torch.full((batch, seq_len, 3), -10.0, dtype=torch.float32, device=idx.device)
+                first_tokens = idx[:, 0]
+                for pos in range(seq_len):
+                    logits[:, pos, :] = -10.0
+                    logits[:, pos, first_tokens] = 10.0
+                return logits
+
+        tokens = np.array([0, 0, 0, 1, 0], dtype=np.uint16)
+        model = _TorchNextTokenLogitsModel(FakeTorchModel(), device="cpu")
+        rows = model.token_logits(tokens, context_tokens=3)
+
+        self.assertEqual(rows.shape, (4, 3))
+        expected = np.full((4, 3), -10.0, dtype=np.float32)
+        expected[:, 0] = 10.0
+        np.testing.assert_allclose(rows, expected)
+
     def test_score_commavq_gpt_sample_rejects_large_segment_with_invalid_frame_major_shape(self) -> None:
         from tac.lossless.arithmetic import FRAME_BOS_TOKEN, SEGMENT_EOT_TOKEN
         from tac.lossless.gpt_score import score_commavq_gpt_sample
