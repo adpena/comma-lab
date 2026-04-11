@@ -4,6 +4,7 @@ import json
 import shutil
 from dataclasses import dataclass
 from pathlib import Path
+import ast
 
 
 @dataclass(frozen=True)
@@ -17,6 +18,7 @@ class KaggleKernelSpec:
     include_paths: tuple[Path, ...] = ()
     dataset_sources: tuple[str, ...] = ()
     bootstrap_preamble: str | None = None
+    launch_policy: dict[str, object] | None = None
 
 
 def build_kernel_metadata(
@@ -26,8 +28,9 @@ def build_kernel_metadata(
     title: str,
     code_file: str,
     dataset_sources: tuple[str, ...] = (),
+    launch_policy: dict[str, object] | None = None,
 ) -> dict[str, object]:
-    return {
+    metadata = {
         "id": f"{username}/{slug}",
         "title": title,
         "code_file": code_file,
@@ -42,6 +45,9 @@ def build_kernel_metadata(
         "kernel_sources": [],
         "model_sources": [],
     }
+    if launch_policy is not None:
+        metadata["launch_policy"] = dict(launch_policy)
+    return metadata
 
 
 def _launcher_source(spec: KaggleKernelSpec) -> str:
@@ -150,6 +156,7 @@ def write_bundle(
         title=spec.title,
         code_file=spec.code_file,
         dataset_sources=spec.dataset_sources,
+        launch_policy=spec.launch_policy,
     )
     (bundle_dir / "kernel-metadata.json").write_text(json.dumps(metadata, indent=2))
     if spec.code_source is not None:
@@ -158,7 +165,7 @@ def write_bundle(
         code_destination.parent.mkdir(parents=True, exist_ok=True)
         if spec.bootstrap_preamble:
             code_text = code_source.read_text()
-            code_destination.write_text(spec.bootstrap_preamble + "\n\n" + code_text)
+            code_destination.write_text(_inject_bootstrap_preamble(code_text, spec.bootstrap_preamble))
         else:
             shutil.copy2(code_source, code_destination)
     else:
@@ -180,3 +187,28 @@ def write_bundle(
             destination = bundle_dir / source_path.name
         destination.parent.mkdir(parents=True, exist_ok=True)
         shutil.copy2(source_path, destination)
+
+
+def _inject_bootstrap_preamble(code_text: str, preamble: str) -> str:
+    lines = code_text.splitlines(keepends=True)
+    insert_at = 0
+
+    if lines and lines[0].startswith("#!"):
+        insert_at = 1
+
+    body_text = "".join(lines[insert_at:])
+    try:
+        module = ast.parse(body_text)
+    except SyntaxError:
+        return "".join(lines[:insert_at]) + preamble + "\n\n" + "".join(lines[insert_at:])
+
+    cursor = insert_at
+    if module.body:
+        first = module.body[0]
+        if isinstance(first, ast.Expr) and isinstance(getattr(first, "value", None), ast.Constant) and isinstance(first.value.value, str):
+            cursor = insert_at + first.end_lineno
+        future_nodes = [node for node in module.body if isinstance(node, ast.ImportFrom) and node.module == "__future__"]
+        if future_nodes:
+            cursor = insert_at + future_nodes[-1].end_lineno
+
+    return "".join(lines[:cursor]) + ("" if cursor == 0 else "") + preamble + "\n\n" + "".join(lines[cursor:])

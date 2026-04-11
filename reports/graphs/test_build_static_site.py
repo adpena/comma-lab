@@ -11,6 +11,7 @@ SITE = ROOT / "reports" / "graphs" / "site"
 INDEX = SITE / "index.html"
 REPORT_HISTORY_HTML = SITE / "report_history.html"
 REPORT_HISTORY_JSON = SITE / "report_history.json"
+LOSSLESS_LATEST = SITE / "lossless_latest.md"
 
 
 class BuildStaticSiteParityTests(unittest.TestCase):
@@ -28,6 +29,7 @@ class BuildStaticSiteParityTests(unittest.TestCase):
 
         self.assertTrue(REPORT_HISTORY_HTML.exists())
         self.assertTrue(REPORT_HISTORY_JSON.exists())
+        self.assertTrue(LOSSLESS_LATEST.exists())
 
     def test_check_passes_after_rebuild(self) -> None:
         subprocess.run(

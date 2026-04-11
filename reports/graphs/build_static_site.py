@@ -19,6 +19,7 @@ FILES = [
     ('index.html', 'index.html'),
     ('report_history.html', 'report_history.html'),
     ('report_history.json', 'report_history.json'),
+    ('../lossless_latest.md', 'lossless_latest.md'),
     ('dashboard_data.json', 'dashboard_data.json'),
     ('score_timeline.json', 'score_timeline.json'),
     ('score_timeline.mmd', 'score_timeline.mmd'),

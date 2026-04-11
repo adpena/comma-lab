@@ -12,6 +12,11 @@ from .bootstrap import bootstrap_upstream
 from .evaluate import evaluate_submission
 from .install import install_submission
 from .lock import submission_lock
+from .lossless_state_sync import (
+    doctor_repo as lossless_doctor_repo,
+    promote_record as lossless_promote_record,
+    sync_repo as lossless_sync_repo,
+)
 from .paths import default_upstream_root, repo_root, upstream_snapshot_path
 from .scheduler.registry import load_platform_registry
 from .scheduler.reporting import build_budget_report, build_status_report, select_result_records
@@ -269,6 +274,48 @@ def cmd_state_promote(args: argparse.Namespace) -> int:
     return 0
 
 
+def cmd_lossless_state_doctor(args: argparse.Namespace) -> int:
+    root = Path(args.repo_root) if args.repo_root else repo_root()
+    report = lossless_doctor_repo(root)
+    if args.json:
+        _print_json(report.to_dict())
+        return 0
+
+    if not report.findings:
+        print("lossless-state doctor: no drift found")
+        return 0
+    print(f"lossless-state doctor: {len(report.findings)} finding(s)")
+    for finding in report.findings:
+        print(f"  [{finding.severity}] {finding.code} {finding.path}: {finding.message}")
+    return 0
+
+
+def cmd_lossless_state_sync(args: argparse.Namespace) -> int:
+    root = Path(args.repo_root) if args.repo_root else repo_root()
+    result = lossless_sync_repo(root)
+    if args.json:
+        _print_json(result.to_dict())
+        return 0
+
+    print(f"lossless-state sync: changed {len(result.changed_paths)} path(s)")
+    for path in result.changed_paths:
+        print(f"  {path}")
+    return 0
+
+
+def cmd_lossless_state_promote(args: argparse.Namespace) -> int:
+    root = Path(args.repo_root) if args.repo_root else repo_root()
+    result = lossless_promote_record(root, record_path=args.record)
+    if args.json:
+        _print_json(result.to_dict())
+        return 0
+
+    print(f"lossless-state promote: changed {len(result.changed_paths)} path(s)")
+    for path in result.changed_paths:
+        print(f"  {path}")
+    return 0
+
+
 def build_parser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(description="comma video lab helper CLI")
     sub = parser.add_subparsers(dest="cmd", required=True)
@@ -355,6 +402,32 @@ def build_parser() -> argparse.ArgumentParser:
     sp.add_argument("--record", default=None, help="path to a promoted-result JSON record; defaults to .omx/state/promoted_result.json")
     sp.add_argument("--json", action="store_true", help="emit machine-readable JSON")
     sp.set_defaults(func=cmd_state_promote)
+
+    p = sub.add_parser("lossless-state", help="inspect and repair canonical lossless promoted state")
+    lossless_state_sub = p.add_subparsers(dest="lossless_state_cmd", required=True)
+
+    sp = lossless_state_sub.add_parser("doctor", help="audit lossless promoted-state drift")
+    sp.add_argument("--repo-root", default=None, help="override the repo root to inspect")
+    sp.add_argument("--json", action="store_true", help="emit machine-readable JSON")
+    sp.set_defaults(func=cmd_lossless_state_doctor)
+
+    sp = lossless_state_sub.add_parser("sync", help="reproject canonical lossless promoted truth into ledgers and docs")
+    sp.add_argument("--repo-root", default=None, help="override the repo root to repair")
+    sp.add_argument("--json", action="store_true", help="emit machine-readable JSON")
+    sp.set_defaults(func=cmd_lossless_state_sync)
+
+    sp = lossless_state_sub.add_parser(
+        "promote",
+        help="validate a lossless promoted-result record, install it as canonical state, and sync mirrors",
+    )
+    sp.add_argument("--repo-root", default=None, help="override the repo root to repair")
+    sp.add_argument(
+        "--record",
+        default=None,
+        help="path to a lossless promoted-result JSON record; defaults to .omx/state/lossless_promoted_result.json",
+    )
+    sp.add_argument("--json", action="store_true", help="emit machine-readable JSON")
+    sp.set_defaults(func=cmd_lossless_state_promote)
 
     return parser
 

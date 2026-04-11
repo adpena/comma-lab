@@ -18,6 +18,7 @@ DEFAULT_GLOBS = [
     ".omx/research/*.md",
     ".ralph/*.md",
     "reports/latest.md",
+    "reports/lossless_latest.md",
 ]
 
 

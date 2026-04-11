@@ -1,6 +1,7 @@
 # Lossless Next Experiments
 
-1. Run the first real measured `lzma_baseline` against the commavq contract and record it in the lossless ledgers.
-2. Wire `tac lossless evaluate` to the actual commavq dataset/evaluator path, not just file fixtures.
-3. Add a stronger lossless doctor/sync flow analogous to the lossy promoted-state tooling.
-4. Start the first model-based lossless baseline after the measured `lzma` floor is on disk.
+## promoted baseline: `lzma_baseline` at `1.5947`
+
+1. Preserve the first measured lossless baseline and decompressor contract.
+2. Beat the promoted rate with another measured exact round-trip.
+3. Keep lossless promotion state separate from lossy promotion state.

@@ -40,6 +40,10 @@ def kaggle_username() -> str:
 
 def kernel_specs() -> dict[str, KaggleKernelSpec]:
     render_bootstrap = load_tac_bootstrap_renderer()
+    bounded_policy = {
+        "bounded": True,
+        "checkpoint_priority": "early",
+    }
     return {
         "dilated_h64_long1000": KaggleKernelSpec(
             slug="comma-lab-dilated-h64-long1000",
@@ -47,6 +51,11 @@ def kernel_specs() -> dict[str, KaggleKernelSpec]:
             code_source=REPO_ROOT / "experiments" / "train_postfilter_dilated_h64.py",
             code_file="train_postfilter_dilated_h64.py",
             dataset_sources=(ASSET_DATASET_REF,),
+            launch_policy={
+                **bounded_policy,
+                "expected_first_checkpoint_epoch": 1,
+                "max_epochs": 2500,
+            },
             bootstrap_preamble=render_bootstrap(
                 required_symbols=(
                     "build_postfilter_meta",
@@ -66,6 +75,11 @@ def kernel_specs() -> dict[str, KaggleKernelSpec]:
             code_source=REPO_ROOT / "experiments" / "cloud_segnet_attack_h32_trainer.py",
             code_file="cloud_segnet_attack_h32_trainer.py",
             dataset_sources=(ASSET_DATASET_REF,),
+            launch_policy={
+                **bounded_policy,
+                "expected_first_checkpoint_epoch": 1,
+                "max_epochs": 1000,
+            },
             bootstrap_preamble=render_bootstrap(
                 required_symbols=(
                     "build_postfilter_meta",
