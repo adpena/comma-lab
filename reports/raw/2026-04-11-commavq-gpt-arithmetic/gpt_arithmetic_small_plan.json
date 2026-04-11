@@ -1,0 +1,17 @@
+{
+  "command": "lossless_plan",
+  "plan": {
+    "profile": "gpt_arithmetic_small",
+    "method": "gpt_arithmetic",
+    "model": "small",
+    "context_tokens": 256,
+    "dataset_name": "commaai/commavq",
+    "split": [
+      "0",
+      "1"
+    ],
+    "work_dir": "/Users/adpena/Projects/pact/reports/raw/2026-04-11-commavq-gpt-arithmetic/small",
+    "status": "planned",
+    "measured": false
+  }
+}

@@ -1,0 +1,35 @@
+[{"stream_name":"stderr","time":7.866167435,"data":"/usr/local/lib/python3.12/dist-packages/torch/cuda/__init__.py:435: UserWarning: \n"}
+,{"stream_name":"stderr","time":7.866235524,"data":"    Found GPU0 Tesla P100-PCIE-16GB which is of cuda capability 6.0.\n"}
+,{"stream_name":"stderr","time":7.866239405,"data":"    Minimum and Maximum cuda capability supported by this version of PyTorch is\n"}
+,{"stream_name":"stderr","time":7.86624196,"data":"    (7.0) - (12.0)\n"}
+,{"stream_name":"stderr","time":7.866244276,"data":"    \n"}
+,{"stream_name":"stderr","time":7.866246805,"data":"  queued_call()\n"}
+,{"stream_name":"stderr","time":7.866249089,"data":"/usr/local/lib/python3.12/dist-packages/torch/cuda/__init__.py:435: UserWarning: \n"}
+,{"stream_name":"stderr","time":7.866251478,"data":"    Please install PyTorch with a following CUDA\n"}
+,{"stream_name":"stderr","time":7.86625369,"data":"    configurations:  12.6 following instructions at\n"}
+,{"stream_name":"stderr","time":7.866255918,"data":"    https://pytorch.org/get-started/locally/\n"}
+,{"stream_name":"stderr","time":7.866258155,"data":"    \n"}
+,{"stream_name":"stderr","time":7.866260379,"data":"  queued_call()\n"}
+,{"stream_name":"stderr","time":7.866548619,"data":"/usr/local/lib/python3.12/dist-packages/torch/cuda/__init__.py:435: UserWarning: \n"}
+,{"stream_name":"stderr","time":7.866556619,"data":"Tesla P100-PCIE-16GB with CUDA capability sm_60 is not compatible with the current PyTorch installation.\n"}
+,{"stream_name":"stderr","time":7.866560766,"data":"The current PyTorch install supports CUDA capabilities sm_70 sm_75 sm_80 sm_86 sm_90 sm_100 sm_120.\n"}
+,{"stream_name":"stderr","time":7.866564911,"data":"If you want to use the Tesla P100-PCIE-16GB GPU with PyTorch, please check the instructions at https://pytorch.org/get-started/locally/\n"}
+,{"stream_name":"stderr","time":7.8665685960000005,"data":"\n"}
+,{"stream_name":"stderr","time":7.866571815,"data":"  queued_call()\n"}
+,{"stream_name":"stdout","time":7.878742848,"data":"[setup] Cloning upstream repo...\n"}
+,{"stream_name":"stderr","time":7.897270054,"data":"Cloning into '/kaggle/working/comma_video_compression_challenge'...\n"}
+,{"stream_name":"stderr","time":17.128116304,"data":"Filtering content:  80% (4/5), 37.65 MiB | 8.23 MiB/s\rFiltering content: 100% (5/5), 37.65 MiB | 8.23 MiB/s\rFiltering content: 100% (5/5), 126.70 MiB | 17.36 MiB/s, done.\n"}
+,{"stream_name":"stdout","time":17.162515631,"data":"[setup] Installing av...\n"}
+,{"stream_name":"stdout","time":18.814148589,"data":"   ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ 36.4/36.4 MB 59.2 MB/s eta 0:00:00\n"}
+,{"stream_name":"stdout","time":31.179286732,"data":"[setup] Installing segmentation-models-pytorch...\n"}
+,{"stream_name":"stdout","time":32.657247643,"data":"   ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ 154.8/154.8 kB 5.2 MB/s eta 0:00:00\n"}
+,{"stream_name":"stdout","time":34.934859001,"data":"[dilated-h64] device=cpu alpha=20.0 hidden=64 ema=0.997 tag=dilated_qat_ema_h64_a20\n"}
+,{"stream_name":"stdout","time":114.569458445,"data":"[dilated-h64] evaluating baseline on 150/600 pairs\n"}
+,{"stream_name":"stdout","time":213.250832806,"data":"[dilated-h64] training epochs=2500 train_size=150 eval=150\n"}
+,{"stream_name":"stdout","time":213.251035221,"data":"epoch      total     scorer         pose          seg  sal_recon         lr\n"}
+,{"stream_name":"stdout","time":213.251063569,"data":"---------------------------------------------------------------------------\n"}
+,{"stream_name":"stdout","time":1449.718912126,"data":"    1     4.3300     4.3274     0.076796     0.036656     0.0259   0.000200\n"}
+,{"stream_name":"stdout","time":12691.691576963,"data":"   10     4.1828     4.1626     0.060521     0.035310     0.2011   0.000500\n"}
+,{"stream_name":"stdout","time":25313.285807296,"data":"   20     4.1412     4.1177     0.074759     0.034361     0.2356   0.000500\n"}
+,{"stream_name":"stdout","time":37769.240981297,"data":"   30     3.9952     3.9616     0.067819     0.033087     0.3366   0.000500\n"}
+]

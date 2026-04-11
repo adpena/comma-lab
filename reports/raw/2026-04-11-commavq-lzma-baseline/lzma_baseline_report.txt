@@ -1,0 +1,15 @@
+Lossless exact baseline
+
+Profile: lzma_baseline
+Method: lzma
+Split: 0,1
+Checked items: 5000
+Exact match: true
+
+Archive bytes: 602005914
+Payload bytes: 601083368
+Original bytes: 960000000
+Compression rate: 1.5946687194837093
+
+Command:
+PYTHONPATH=/Users/adpena/Projects/pact/src uv run --with datasets --with numpy python -m tac.cli lossless baseline --profile lzma_baseline --work-dir /tmp/commavq_lzma_baseline_run_v6 --split 0 1

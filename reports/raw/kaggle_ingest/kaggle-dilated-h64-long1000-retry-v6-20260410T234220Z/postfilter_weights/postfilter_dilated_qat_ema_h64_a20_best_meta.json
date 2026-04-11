@@ -1,0 +1,17 @@
+{
+  "schema_version": 1,
+  "tag": "dilated_qat_ema_h64_a20",
+  "epoch": 30,
+  "scorer": 3.9615863275527956,
+  "fp32_path": "/kaggle/working/postfilter_weights/postfilter_dilated_qat_ema_h64_a20_best_fp32.pt",
+  "int8_path": "/kaggle/working/postfilter_weights/postfilter_dilated_qat_ema_h64_a20_best_int8.pt",
+  "int8_size": 45785,
+  "meta_path": "/kaggle/working/postfilter_weights/postfilter_dilated_qat_ema_h64_a20_best_meta.json",
+  "meta": {
+    "schema_version": 1,
+    "variant": "dilated",
+    "hidden": 64,
+    "kernel": 3,
+    "alpha": 20.0
+  }
+}
