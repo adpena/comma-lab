@@ -23,6 +23,11 @@ def scorer_forward_pair(pair_btchw, posenet, segnet):
     Returns:
         (posenet_output, segnet_output) dicts/tensors
     """
+    # Ensure contiguous standard-stride layout before entering scorer models.
+    # The upstream scorers (PoseNet/SegNet) use .view() internally which requires
+    # contiguous tensors. Non-contiguous tensors from permute/channels_last cause
+    # RuntimeError in backward pass. This is the canonical fix — not a monkey-patch.
+    pair_btchw = pair_btchw.contiguous()
     posenet_in = posenet.preprocess_input(pair_btchw)
     posenet_out = posenet(posenet_in)
     segnet_in = segnet.preprocess_input(pair_btchw)

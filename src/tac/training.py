@@ -655,7 +655,7 @@ class Trainer:
             # Standard: process each frame independently
             frames_bchw = comp_pair.float().reshape(B * T, H, W, C).permute(0, 3, 1, 2).contiguous()
             filtered_bchw = self.model(frames_bchw)
-            return filtered_bchw.permute(0, 2, 3, 1).reshape(B, T, H, W, C)
+            return filtered_bchw.permute(0, 2, 3, 1).contiguous().reshape(B, T, H, W, C)
 
     def _evaluate_int8(
         self,
@@ -1002,10 +1002,10 @@ class Trainer:
             self._patch_scorers_for_training(posenet, segnet)
             self._patched_scorers = True
 
-        # P2: channels_last for scorers on MPS (faster conv2d)
-        if str(self.device) == "mps":
-            posenet = posenet.to(memory_format=torch.channels_last)
-            segnet = segnet.to(memory_format=torch.channels_last)
+        # NOTE: channels_last on scorers is DISABLED. The upstream PoseNet/SegNet
+        # use AllNorm with batch_norm, whose backward pass calls .view() which is
+        # incompatible with channels_last strides on MPS. The model (postfilter)
+        # still uses channels_last for speed; scorers stay in standard layout.
 
         cfg = self.config
         all_pair_starts = pair_start_indices(len(comp_frames))
