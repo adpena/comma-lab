@@ -4,7 +4,7 @@
 Extracts every 20th frame (60 keyframes from 1200 frames), runs Falcon Perception
 with driving-relevant prompts, and combines masks into importance maps.
 
-Output: experiments/masks/falcon_keyframes.npy  shape (60, 874, 1164) float32
+Output: reports/masks/falcon_keyframes.npy  shape (60, 874, 1164) float32
 """
 
 import subprocess
@@ -18,7 +18,7 @@ from PIL import Image
 # ── Paths ────────────────────────────────────────────────────────────────────
 ROOT = Path(__file__).resolve().parent.parent.parent
 VIDEO = ROOT / "workspace/upstream/comma_video_compression_challenge/videos/0.mkv"
-OUT_DIR = ROOT / "experiments/masks"
+OUT_DIR = ROOT / "reports/masks"
 FRAMES_DIR = OUT_DIR / "frames"
 FRAMES_DIR.mkdir(parents=True, exist_ok=True)
 

@@ -5,7 +5,7 @@ import tempfile
 import unittest
 from pathlib import Path
 
-from experiments import build_kaggle_assets_dataset as mod
+from tac.deploy.kaggle import build_kaggle_assets_dataset as mod
 
 
 class BuildKaggleAssetsDatasetTests(unittest.TestCase):

@@ -1,0 +1,4 @@
+# file: /Users/adpena/Projects/pact/src/tac/deploy/kaggle/kaggle_queue_tick.py
+# hypothesis_version: 6.151.12
+
+['+00:00', '--manifests-dir', '--max-active', 'Kernel push error:', 'Z', '__main__', 'action', 'error', 'kaggle-*.json', 'kernel_cancelled', 'kernel_error', 'kernel_queued', 'manifest', 'noop', 'paused', 'phase', 'queued', 'quota_blocked', 'reason', 'remote_command', 'repush', 'repush_failed', 'repush_submitted', 'returncode', 'running', 'status', 'status_path', 'stderr', 'stdout', 'written_at']

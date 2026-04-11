@@ -1,88 +1,95 @@
-"""Deploy h=96 training to Modal A10G GPU with persistent results.
+"""Deploy h=96 training to Modal A10G GPU.
+
+Installs tac as a package, uses precomputed data volume, runs training
+via the canonical CLI (same as local).
 
 Usage:
-    .venv/bin/python -m modal run deploy/modal/modal_h96_deploy.py
-
-Results are saved to Modal Volume 'comma-lab-weights' and can be
-downloaded after training completes.
+    .venv/bin/modal run src/tac/deploy/modal/modal_h96_deploy.py
 """
-import modal
+from __future__ import annotations
+
 from pathlib import Path
 
-app = modal.App("comma-lab-h96")
+import modal
+
+APP_NAME = "comma-lab-h96"
+REPO_ROOT = Path(__file__).resolve().parents[4]  # src/tac/deploy/modal -> repo root
+PRECOMPUTED_VOL = "tac-precomputed"
+RESULTS_VOL = "comma-lab-weights"
+
+app = modal.App(APP_NAME)
 
 image = (
-    modal.Image.debian_slim(python_version="3.11")
+    modal.Image.debian_slim(python_version="3.12")
+    .apt_install("git", "git-lfs", "ffmpeg")
     .pip_install(
-        "torch", "av", "safetensors", "timm", "einops",
-        "segmentation-models-pytorch", "numpy",
+        "torch==2.6.*",
+        "torchvision",
+        "av",
+        "numpy",
+        "pydantic>=2.0",
+        "safetensors",
+        "timm",
+        "einops",
+        "segmentation-models-pytorch",
     )
-    .run_commands("apt-get update && apt-get install -y git git-lfs")
-    .add_local_file("experiments/cloud_h96_trainer.py", "/root/cloud_h96_trainer.py")
+    .add_local_dir(str(REPO_ROOT / "src"), "/root/src")
+    .env({"PYTHONPATH": "/root/src"})
 )
 
-vol = modal.Volume.from_name("comma-lab-weights", create_if_missing=True)
+precomputed_vol = modal.Volume.from_name(PRECOMPUTED_VOL, create_if_missing=True)
+results_vol = modal.Volume.from_name(RESULTS_VOL, create_if_missing=True)
 
 
 @app.function(
     image=image,
     gpu="A10G",
-    timeout=3600 * 6,  # 6 hours
-    volumes={"/results": vol},
+    timeout=3600 * 6,
+    volumes={"/data": precomputed_vol, "/results": results_vol},
+    memory=32768,
 )
-def train_h96():
-    import subprocess
+def train_h96(tag: str = "h96_council_modal"):
+    """Run h=96 training via the canonical tac CLI."""
     import os
-    import shutil
-    import glob
+    import subprocess
+    import sys
 
-    print("Starting h=96 training on Modal A10G...")
-    gpu = os.popen('nvidia-smi --query-gpu=name,memory.total --format=csv,noheader').read().strip()
-    print(f"GPU: {gpu}")
+    os.makedirs(f"/results/{tag}", exist_ok=True)
 
-    os.makedirs("/results/weights", exist_ok=True)
+    precomputed = "/data/precomputed"
+    has_precomputed = os.path.exists(f"{precomputed}/comp_frames.pt")
 
-    # Symlink the output dir so checkpoints save directly to the volume
-    # This means EVERY checkpoint is persisted immediately — no signal loss
-    os.environ["POSTFILTER_OUTPUT_DIR"] = "/results/weights"
+    print(f"=== tac lossy training: h96_council | tag: {tag} ===")
+    print(f"  GPU: CUDA ({os.environ.get('CUDA_VISIBLE_DEVICES', 'auto')})")
+    print(f"  Precomputed: {'YES' if has_precomputed else 'NO (will decode video)'}")
 
-    # Extract compressed video from archive.zip on the volume
-    archive_path = "/results/archive.zip"
-    if not os.path.exists(archive_path):
-        print("ERROR: archive.zip not found on volume!")
-        print("Upload with: .venv/bin/modal volume put comma-lab-weights submissions/robust_current/archive.zip archive.zip")
-        return 1
+    cmd = [
+        sys.executable, "-m", "tac", "lossy",
+        "--profile", "h96_council",
+        "--tag", tag,
+        "--output-dir", f"/results/{tag}",
+        "--hidden", "96",
+        "--epochs", "2500",
+        "--alpha", "20",
+    ]
+    if has_precomputed:
+        cmd.extend(["--precomputed", precomputed])
 
-    os.makedirs("/tmp/archive", exist_ok=True)
-    subprocess.run(["unzip", "-o", archive_path, "-d", "/tmp/archive"], check=True)
-    compressed_mkv = "/tmp/archive/0.mkv"
-    print(f"Compressed video: {compressed_mkv} ({os.path.getsize(compressed_mkv)} bytes)")
+    print(f"  Command: {' '.join(cmd)}")
+    print()
 
-    result = subprocess.run(
-        ["python", "/root/cloud_h96_trainer.py",
-         "--hidden", "96", "--epochs", "2500", "--alpha", "20",
-         "--compressed-video", compressed_mkv],
-        cwd="/tmp",
-    )
+    result = subprocess.run(cmd, env={**os.environ, "PYTHONPATH": "/root/src"})
 
-    # Also copy any files the trainer put elsewhere
-    for pattern in ["/tmp/**/*.pt", "/tmp/**/*.json"]:
-        for f in glob.glob(pattern, recursive=True):
-            dest = f"/results/weights/{os.path.basename(f)}"
-            if not os.path.exists(dest):
-                shutil.copy2(f, dest)
+    results_vol.commit()
 
-    # Commit volume to persist everything
-    vol.commit()
-    print(f"Training exit code: {result.returncode}")
-    print("Results committed to Modal Volume 'comma-lab-weights'")
-    return result.returncode
+    print(f"\n=== h96 complete (exit {result.returncode}) ===")
+    return {"tag": tag, "exit_code": result.returncode}
 
 
 @app.local_entrypoint()
 def main():
     print("Deploying h=96 training to Modal A10G...")
     result = train_h96.remote()
-    print(f"Training completed with exit code: {result}")
+    print(f"Training completed: {result}")
     print("Download results with:")
-    print("  modal volume get comma-lab-weights /results/weights/ ./modal_weights/")
+    print("  modal volume get comma-lab-weights /results/ ./modal_weights/")

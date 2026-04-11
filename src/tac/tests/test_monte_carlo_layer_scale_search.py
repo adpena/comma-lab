@@ -11,7 +11,7 @@ import torch
 
 
 ROOT = Path(__file__).resolve().parents[1]
-MODULE_PATH = ROOT / "experiments" / "monte_carlo_layer_scale_search.py"
+MODULE_PATH = ROOT / "research" / "monte_carlo_layer_scale_search.py"
 
 
 def load_module():

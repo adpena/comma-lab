@@ -1,0 +1,4 @@
+# file: /Users/adpena/Projects/pact/src/tac/scorer.py
+# hypothesis_version: 6.151.12
+
+[2.0, 10.0, 25.0, 100.0, 'cpu', 'cuda', 'd_score_d_pose', 'd_score_d_rate', 'd_score_d_seg', 'inf', 'mps', 'seg_pose_leverage']

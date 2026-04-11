@@ -5,7 +5,7 @@ import tempfile
 import unittest
 from pathlib import Path
 
-from experiments import kaggle_watchdog as mod
+from tac.deploy.kaggle import kaggle_watchdog as mod
 
 
 def write_json(path: Path, payload: object) -> None:

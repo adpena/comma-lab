@@ -2,7 +2,7 @@ from __future__ import annotations
 
 import unittest
 
-from experiments import build_kaggle_kernels as mod
+from tac.deploy.kaggle import build_kaggle_kernels as mod
 
 
 class BuildKaggleKernelsTests(unittest.TestCase):

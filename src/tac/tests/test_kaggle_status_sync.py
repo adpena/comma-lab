@@ -8,7 +8,7 @@ from pathlib import Path
 
 
 ROOT = Path(__file__).resolve().parents[1]
-MODULE_PATH = ROOT / "experiments" / "kaggle_status_sync.py"
+MODULE_PATH = ROOT / "deploy" / "kaggle" / "kaggle_status_sync.py"
 
 
 def load_module():

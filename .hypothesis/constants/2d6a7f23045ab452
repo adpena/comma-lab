@@ -1,0 +1,4 @@
+# file: /Users/adpena/Projects/pact/src/tac/deploy/kaggle/build_kaggle_assets_dataset.py
+# hypothesis_version: 6.151.12
+
+['--archive', '--dataset-dir', '--message', '--metadata', '--no-deps', '--push', '--saliency', '--with', '-m', '-p', '-r', '-w', 'README.md', '__main__', 'archive_name', 'comma_lab_wheel_', 'dataset_dir', 'datasets', 'experiments', 'kaggle', 'kaggle_datasets', 'masks', 'pip', 'posenet_saliency.npy', 'raw', 'reports', 'run', 'saliency_name', 'store_true', 'uv', 'version', 'wheel', 'wheel_name', 'zip']

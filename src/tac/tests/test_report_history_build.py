@@ -10,7 +10,7 @@ import unittest
 from pathlib import Path
 
 
-ROOT = Path(__file__).resolve().parents[1]
+ROOT = Path(__file__).resolve().parents[3]
 MODULE_PATH = ROOT / "reports" / "graphs" / "build_report_history.py"
 
 

@@ -27,3 +27,15 @@ smoke profile uses subsample=4 (75 pairs/epoch). Old scripts used subsample=8 (9
 ## 2026-04-11 [discovery] Modal deploy needs debugging — image build likely failing
 
 Two Modal apps launched (mask_renderer_smoke + smoke). Both completed quickly with no results in tac-renderer-results volume. Likely failure: image build cant find tac source (add_local_dir path resolution from deploy script location). Need to test image build locally or check modal app logs. Precomputed data IS on the volume.
+
+## 2026-04-11 [discovery] Modal deploy iterative debug: 4 fixes to get training launching
+
+Fix 1: remove condition kwarg (Modal 1.4.1 incompatible). Fix 2: add_local_dir must be last. Fix 3: guard REPO_ROOT for container path depth. Fix 4: clone upstream scorer repo for PoseNet/SegNet modules. Training reached scorer loading on A10G — next attempt should start actual training.
+
+## 2026-04-11 [discovery] MLX Phase 1 crash: gradient clipping passes optimizer instead of grads
+
+train_renderer_mlx.py gradient clipping code calls .square() on AdamW optimizer object instead of gradient tensors. Fix: check the grad_clip implementation in the MLX training loop.
+
+## 2026-04-11 [discovery] Modal A10G training still failing: results dirs created but empty
+
+Modal v4 (with upstream clone) created mask_v3 and mask_v4 dirs in results volume but they are empty. Training likely crashed during scorer loading or first forward pass. Need to check Modal logs for exact error.

@@ -15,7 +15,7 @@ if str(HERE) not in sys.path:
 from kaggle_kernel_builder import KaggleKernelSpec, write_bundle
 
 
-REPO_ROOT = Path(__file__).resolve().parents[2]
+REPO_ROOT = Path(__file__).resolve().parents[4]
 KAGGLE_ROOT = REPO_ROOT / "experiments" / "kaggle_kernels"
 KAGGLE_CREDS = Path.home() / ".kaggle" / "kaggle.json"
 ASSET_DATASET_REF = "adpena/comma-lab-private-assets"

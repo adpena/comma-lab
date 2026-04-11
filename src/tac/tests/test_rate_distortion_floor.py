@@ -8,7 +8,7 @@ from pathlib import Path
 
 
 ROOT = Path(__file__).resolve().parents[1]
-MODULE_PATH = ROOT / "experiments" / "rate_distortion_floor.py"
+MODULE_PATH = ROOT / "experiments" / "rd_floor.py"
 
 
 def load_module():

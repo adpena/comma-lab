@@ -5,7 +5,7 @@ import tempfile
 import unittest
 from pathlib import Path
 
-from experiments import kaggle_output_ingest as mod
+from tac.deploy.kaggle import kaggle_output_ingest as mod
 
 
 class KaggleOutputIngestTests(unittest.TestCase):

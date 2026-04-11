@@ -6,7 +6,7 @@ Strategies:
   - seg_focused : prompts targeted at SegNet semantic classes
   - combined    : union of pose_focused and seg_focused
 
-Uses already-extracted keyframes in experiments/masks/frames/.
+Uses already-extracted keyframes in reports/masks/frames/.
 Saves importance arrays of shape (60, 874, 1164) float32 in [0,1].
 """
 
@@ -19,7 +19,7 @@ import numpy as np
 from PIL import Image
 
 ROOT = Path(__file__).resolve().parent.parent.parent
-OUT_DIR = ROOT / "experiments/masks"
+OUT_DIR = ROOT / "reports/masks"
 FRAMES_DIR = OUT_DIR / "frames"
 
 N_KEYFRAMES = 60

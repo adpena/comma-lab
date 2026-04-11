@@ -9,7 +9,7 @@ from pathlib import Path
 
 
 ROOT = Path(__file__).resolve().parents[1]
-MODULE_PATH = ROOT / "experiments" / "proxy_gate_triage.py"
+MODULE_PATH = ROOT / "experiments" / "triage.py"
 
 
 def load_module():

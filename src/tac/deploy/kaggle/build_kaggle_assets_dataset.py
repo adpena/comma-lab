@@ -9,10 +9,10 @@ import tempfile
 from pathlib import Path
 
 
-REPO_ROOT = Path(__file__).resolve().parents[2]
+REPO_ROOT = Path(__file__).resolve().parents[4]
 DATASET_DIR = REPO_ROOT / "experiments" / "kaggle_datasets" / "comma_lab_private_assets"
 ARCHIVE_PATH = REPO_ROOT / "reports" / "raw" / "2026-04-06-av1-roi-experiments" / "decode_base_archive.zip"
-SALIENCY_PATH = REPO_ROOT / "experiments" / "masks" / "posenet_saliency.npy"
+SALIENCY_PATH = REPO_ROOT / "reports" / "masks" / "posenet_saliency.npy"
 README_PATH = DATASET_DIR / "README.md"
 METADATA_PATH = DATASET_DIR / "dataset-metadata.json"
 

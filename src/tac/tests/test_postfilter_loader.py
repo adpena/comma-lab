@@ -8,9 +8,10 @@ from pathlib import Path
 import torch
 
 
-ROOT = Path(__file__).resolve().parents[1]
+ROOT = Path(__file__).resolve().parents[3]
 MODULE_PATH = ROOT / "submissions" / "robust_current" / "inflate_postfilter.py"
-PIXELSHUFFLE_MODULE_PATH = ROOT / "experiments" / "train_postfilter_pixelshuffle_dilated.py"
+TAC_ROOT = Path(__file__).resolve().parents[1]
+PIXELSHUFFLE_MODULE_PATH = TAC_ROOT / "architectures.py"
 
 
 def load_module():
