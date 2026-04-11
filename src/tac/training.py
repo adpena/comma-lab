@@ -1347,9 +1347,15 @@ class Trainer:
                 # (starts at 0,2,4...) frame_t1 is always odd, so the old check
                 # `(start + 1) % 2 == 0` never fired. Fixed: use pair_idx.
                 if cfg.even_frame_skip_seg and pair_idx % 2 == 0:
-                    # Approximate: scale loss to remove ~SegNet contribution
-                    # loss ≈ sw*seg + sqrt(10*pose), remove sw*seg ≈ reduce by ratio
-                    # Conservative: scale loss by 0.5 (keep PoseNet, halve SegNet)
+                    # Even-frame degeneracy (YassineYousfi trick #3):
+                    # SegNet only evaluates odd-indexed frames (last frame of pair).
+                    # For even-indexed pairs, halve the total loss to reduce SegNet
+                    # pressure. NOTE: this halves the ENTIRE loss (PoseNet + SegNet),
+                    # not just SegNet, because the loss components are entangled in
+                    # the scorer_loss return value. A more precise implementation
+                    # would compute SegNet and PoseNet losses separately and zero
+                    # only the SegNet component. TODO: refactor when loss functions
+                    # return per-component values.
                     loss = loss * 0.5
 
                 # Trick 2: Frequency-domain wavelet loss (additive)

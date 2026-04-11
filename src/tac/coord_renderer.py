@@ -148,6 +148,9 @@ class CoordRenderer(nn.Module):
         """
         key = (H, W, device)
         if key not in self._coord_cache:
+            # Bounded cache (maxsize=4) matching renderer.py _coord_grid_cache convention
+            if len(self._coord_cache) >= 4:
+                self._coord_cache.pop(next(iter(self._coord_cache)))
             yy = torch.linspace(-1.0, 1.0, H, device=device)
             xx = torch.linspace(-1.0, 1.0, W, device=device)
             grid_y, grid_x = torch.meshgrid(yy, xx, indexing="ij")

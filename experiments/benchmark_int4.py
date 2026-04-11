@@ -216,7 +216,7 @@ def main():
     model_int4 = build_postfilter(args.variant, hidden=args.hidden)
 
     if checkpoint_path and checkpoint_path.exists():
-        state = torch.load(checkpoint_path, map_location="cpu", weights_only=False)
+        state = torch.load(checkpoint_path, map_location="cpu", weights_only=True)
         # INT8 checkpoint: dequantize
         # Supports two formats:
         #   1. key_scale / key (legacy)
