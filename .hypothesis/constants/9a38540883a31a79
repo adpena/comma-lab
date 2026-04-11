@@ -1,0 +1,4 @@
+# file: /Users/adpena/Projects/pact/src/tac/lossless/arithmetic.py
+# hypothesis_version: 6.151.12
+
+[1024, 1025, '__getitem__', 'challenge', 'command', 'context_tokens', 'count', 'dtype', 'estimated', 'example_count', 'frame_major', 'gpt_arithmetic', 'ids', 'large', 'layout', 'len', 'lossless_prepare', 'map', 'measured', 'method', 'model', 'num_rows', 'numpy', 'output_path', 'planned', 'position_major', 'profile', 'shard', 'small', 'split', 'symbol', 'token.npy', 'token_count', 'token_path', 'top_symbols', 'train', 'train split is empty', 'uint16', 'unique_symbols', 'w+']

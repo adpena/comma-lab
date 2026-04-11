@@ -1,0 +1,4 @@
+# file: /Users/adpena/Projects/pact/src/tac/mask_codec.py
+# hypothesis_version: 6.151.12
+
+[0.0, 0.1, 0.2, 0.5, 1.0, 255, 300, 384, 512, 600, 874, 1164, ',', '--preset', '--qpa', '-an', '-b', '-c', '-c:v', '-crf', '-f', '-i', '-o', '-of', '-pix_fmt', '-preset', '-q', '-r', '-s', '-select_streams', '-show_entries', '-svtav1-params', '-v', '-vcodec', '-y', '.mkv', '.mp4', '0', '6', 'av1', 'bilinear', 'cpu', 'csv=p=0', 'decoded.yuv', 'entropy', 'error', 'faster', 'ffmpeg', 'ffprobe', 'gray', 'libsvtav1', 'masks.266', 'masks.yuv', 'pipe:0', 'pipe:1', 'rawvideo', 'v:0', 'vvc', 'vvdecapp', 'vvencapp', 'wb', 'yuv400']

@@ -1,0 +1,23 @@
+{
+  "record_count": 16,
+  "results": [
+    {
+      "chunk_count": 1,
+      "archive_bytes": 1732145,
+      "original_bytes": 4915200,
+      "compression_ratio": 2.8376377266337403
+    },
+    {
+      "chunk_count": 4,
+      "archive_bytes": 2039361,
+      "original_bytes": 4915200,
+      "compression_ratio": 2.41016671398541
+    },
+    {
+      "chunk_count": 8,
+      "archive_bytes": 2304631,
+      "original_bytes": 4915200,
+      "compression_ratio": 2.1327492340422394
+    }
+  ]
+}

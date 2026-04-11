@@ -1,0 +1,17 @@
+{
+  "segment_count": 32,
+  "frame_count": 1200,
+  "original_bytes": 9830400,
+  "canonical_archive_bytes": 7990531,
+  "canonical_ratio": 1.2302561619496877,
+  "bucketed_archive_bytes": 7990531,
+  "bucketed_ratio": 1.2302561619496877,
+  "delta_bytes": 0,
+  "bucket_count": 41,
+  "key_fields": [
+    "token_count",
+    "first_token",
+    "last_token",
+    "unique_token_count"
+  ]
+}

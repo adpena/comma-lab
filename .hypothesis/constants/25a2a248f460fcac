@@ -1,0 +1,4 @@
+# file: /Users/adpena/Projects/pact/src/tac/lossless/profiles.py
+# hypothesis_version: 6.151.12
+
+[256, 1024, 'chunk_count', 'context_frames', 'context_tokens', 'epochs', 'gpt_arithmetic', 'gpt_arithmetic_large', 'gpt_arithmetic_small', 'gpt_next_frame', 'gpt_next_frame_small', 'large', 'level', 'lzma', 'lzma_baseline', 'max', 'method', 'model', 'neural_codec_smoke', 'preset', 'self_compressing_nn', 'small', 'smoke', 'zpaq', 'zpaq_baseline']

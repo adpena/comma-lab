@@ -1,0 +1,19 @@
+{
+  "source_path": "/Users/adpena/Projects/pact/reports/raw/2026-04-11-commavq-gpt-arithmetic/position_major/train_split0.bin",
+  "token_count": 2000000,
+  "base_prev_symbol": {
+    "command": "lossless_prev_symbol_frequency_benchmark",
+    "token_count": 2000000,
+    "context_count": 1027,
+    "encoded_bytes": 1414089,
+    "compression_ratio": 2.8286762714369464
+  },
+  "frequency_remap_prev_symbol": {
+    "command": "lossless_prev_symbol_frequency_benchmark",
+    "token_count": 2000000,
+    "context_count": 1027,
+    "encoded_bytes": 1414118,
+    "compression_ratio": 2.828618262408088
+  },
+  "distinct_symbols": 1026
+}

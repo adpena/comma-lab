@@ -1,0 +1,4 @@
+# file: /Users/adpena/Projects/pact/src/tac/lossless/__init__.py
+# hypothesis_version: 6.151.12
+
+['FRAME_BOS_TOKEN', 'GPTArithmeticPlan', 'PROFILES', 'SEGMENT_EOT_TOKEN', 'build_submission_zip', 'compression_rate', 'load_lossless_result', 'lzma_roundtrip_file', 'token_byte_length', 'token_bytes', 'verify_exact_tokens', 'zpaq_roundtrip_file']

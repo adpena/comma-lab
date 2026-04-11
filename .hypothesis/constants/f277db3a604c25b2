@@ -1,0 +1,4 @@
+# file: /Users/adpena/Projects/pact/src/tac/experiments/benchmark_int4.py
+# hypothesis_version: 6.151.12
+
+[0.0, 1e-10, 0.5, 7.0, 127.0, 255.0, -128, 127, 192, 256, 874, 1024, 1164, 1200, '\n--- Assessment ---', '**/*int8*.pt', '--checkpoint', '--hidden', '--num-frames', '--variant', '.q', '.s', '=', 'Architecture variant', 'Benchmark complete.', 'Hidden channels', '_', '__', '__main__', '_scale', '_summary', 'avg_mse', 'cpu', 'dilated', 'inf', 'max_abs_diff', 'max_error', 'mean_abs_diff', 'model_int4.pt', 'model_int8.pt', 'mse', 'params', 'psnr_db', 'scale_range', 'shape', 'total_params']

@@ -1,0 +1,14 @@
+{
+  "record_count": 64,
+  "original_bytes": 19660800,
+  "canonical_archive_bytes": 6472014,
+  "canonical_ratio": 3.0378179033605304,
+  "holdrate_bucketed_archive_bytes": 6472014,
+  "holdrate_bucketed_ratio": 3.0378179033605304,
+  "delta_bytes": 0,
+  "holdrate_quantiles": [
+    0.32758744266055045,
+    0.3952382193494579,
+    0.4745197821100917
+  ]
+}

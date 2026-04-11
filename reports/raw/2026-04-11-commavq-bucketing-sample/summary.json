@@ -1,0 +1,16 @@
+{
+  "record_count": 64,
+  "original_bytes": 19660800,
+  "canonical_archive_bytes": 6472014,
+  "canonical_ratio": 3.0378179033605304,
+  "bucketed_archive_bytes": 6472014,
+  "bucketed_ratio": 3.0378179033605304,
+  "delta_bytes": 0,
+  "bucket_count": 7,
+  "key_fields": [
+    "token_count",
+    "first_token",
+    "last_token",
+    "unique_token_count"
+  ]
+}
