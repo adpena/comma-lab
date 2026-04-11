@@ -267,7 +267,7 @@ def normalize_postfilter_meta(meta: object | None) -> dict[str, int | str]:
     return normalized
 
 
-def build_postfilter(meta: object | None = None) -> PostFilter:
+def build_postfilter(meta: object | None = None) -> nn.Module:
     normalized = normalize_postfilter_meta(meta)
     variant = normalized["variant"]
     hidden = int(normalized["hidden"])
@@ -330,6 +330,11 @@ def load_postfilter_int8(path: str, device: str = "cpu") -> PostFilter:
             float_state[raw_key] = state[raw_key].float()
             seen.add(raw_key)
     meta = normalize_postfilter_meta(state.get("__meta__"))
+    # Auto-detection heuristic: if metadata claims a simple variant (standard/residual)
+    # but the checkpoint actually has 4 conv layers with 12-channel input (PixelUnshuffle),
+    # override to pixelshuffle_dilated. This handles legacy checkpoints saved before
+    # __meta__ was updated to reflect architecture changes. Limitation: cannot
+    # distinguish pixelshuffle from pixelshuffle_dilated without checking dilation.
     if (
         meta.get("variant") in {"standard", "residual", "saliency_weighted", "segaware"}
         and "conv4.weight" in float_state
@@ -343,18 +348,22 @@ def load_postfilter_int8(path: str, device: str = "cpu") -> PostFilter:
     # architecture in this file has diverged from src/tac/architectures.py.
     model_keys = set(model.state_dict().keys())
     ckpt_keys = set(float_state.keys())
-    assert model_keys == ckpt_keys, (
-        f"Weight key mismatch between inflate model and checkpoint. "
-        f"Missing in ckpt: {model_keys - ckpt_keys}, "
-        f"Extra in ckpt: {ckpt_keys - model_keys}. "
-        f"Did you update src/tac/architectures.py without mirroring here?"
-    )
+    if model_keys != ckpt_keys:
+        raise ValueError(
+            f"Weight key mismatch between inflate model and checkpoint. "
+            f"Missing in ckpt: {model_keys - ckpt_keys}, "
+            f"Extra in ckpt: {ckpt_keys - model_keys}. "
+            f"Did you update src/tac/architectures.py without mirroring here?"
+        )
     model.load_state_dict(float_state)
     return model.eval().to(device)
 
 
 # ============================================================
 # Canonical YUV→RGB (BT.601 limited range, matches frame_utils.py)
+# BT.601 is intentional here: the upstream scorer's frame_utils.py uses
+# BT.601 coefficients regardless of container colorspace metadata.
+# Matching this exactly is critical for score fidelity.
 # ============================================================
 def yuv420_to_rgb(frame) -> torch.Tensor:
     H, W = frame.height, frame.width
@@ -379,6 +388,9 @@ def yuv420_to_rgb(frame) -> torch.Tensor:
     return torch.stack([r, g, b], dim=-1).round().to(torch.uint8)
 
 
+# NOTE: All env vars below are read at module import time (not per-call).
+# This means changing them after import has no effect. This is intentional
+# for the contest submission use case (single process, single config).
 BATCH_SIZE = 8  # batched inference: 3-5x speedup on CPU
 MULTI_PASS = int(os.environ.get("INFLATE_MULTI_PASS", "1"))  # run CNN N times (2=double pass)
 TTO_STEPS = int(os.environ.get("INFLATE_TTO_STEPS", "0"))  # test-time optimization steps

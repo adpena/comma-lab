@@ -43,7 +43,11 @@ if [ ! -f "$UPSTREAM/evaluate.py" ]; then
     exit 1
 fi
 
-CHECKPOINT_SIZE=$(stat -f%z "$CHECKPOINT" 2>/dev/null || stat -c%s "$CHECKPOINT")
+CHECKPOINT_SIZE=$(stat -f%z "$CHECKPOINT" 2>/dev/null || stat -c%s "$CHECKPOINT" 2>/dev/null)
+if [ -z "$CHECKPOINT_SIZE" ]; then
+    echo "ERROR: Cannot determine size of $CHECKPOINT (stat failed)" >&2
+    exit 1
+fi
 CHECKPOINT_NAME=$(basename "$CHECKPOINT")
 echo "=== AUTH EVAL: $TAG ==="
 echo "  Checkpoint: $CHECKPOINT ($CHECKPOINT_SIZE bytes)"
@@ -51,7 +55,7 @@ echo "  CRF: ${CRF:-default from config.env}"
 
 # Create isolated workspace — no stale state possible
 WORK="$(mktemp -d "${TMPDIR:-/tmp}/auth_eval.XXXXXX")"
-trap "rm -rf '$WORK'" EXIT
+trap "rm -rf \"$WORK\"" EXIT
 echo "  Workspace: $WORK"
 
 ARCHIVE_DIR="$WORK/archive"
@@ -117,6 +121,13 @@ fi
 
 # Step 5: Swap into submission dir for evaluate.py
 # (evaluate.py reads submission_dir/inflated/ and submission_dir/archive.zip)
+LOCKFILE="$SUBMISSION/.auth_eval.lock"
+if [ -f "$LOCKFILE" ]; then
+    echo "ERROR: Another auth_eval is modifying $SUBMISSION (lockfile exists)" >&2
+    exit 1
+fi
+trap "rm -f \"$LOCKFILE\"; rm -rf \"$WORK\"" EXIT
+touch "$LOCKFILE"
 rm -rf "$SUBMISSION/inflated"
 mv "$INFLATED_DIR" "$SUBMISSION/inflated"
 cp "$WORK/archive.zip" "$SUBMISSION/archive.zip"
@@ -125,6 +136,10 @@ cp "$WORK/archive.zip" "$SUBMISSION/archive.zip"
 echo "  Scoring..."
 SCORE_START=$(date +%s)
 cd "$UPSTREAM"
+if [ ! -x ".venv/bin/python" ]; then
+    echo "ERROR: Upstream venv not found at $UPSTREAM/.venv/bin/python" >&2
+    exit 1
+fi
 .venv/bin/python evaluate.py \
     --submission-dir "$SUBMISSION" \
     --uncompressed-dir videos \
@@ -146,4 +161,4 @@ REPORTS_DIR="$REPO_ROOT/reports/raw/auth_eval"
 mkdir -p "$REPORTS_DIR"
 cp "$REPORT" "$REPORTS_DIR/${TAG}_report.txt" 2>/dev/null
 echo "Report saved: reports/raw/auth_eval/${TAG}_report.txt"
-echo "Total time: $((SCORE_END - INFLATE_START + INFLATE_SEC))s"
+echo "Total time: $((INFLATE_SEC + SCORE_SEC))s"

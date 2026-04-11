@@ -18,6 +18,7 @@
       "human": true
     },
     "council": {
+      "_description": "LLM agent review during interactive sessions (manual mark commands)",
       "github": null,
       "url": null,
       "level": 3,
@@ -26,6 +27,7 @@
       "human": false
     },
     "council_greenup": {
+      "_description": "LLM agent review via greenup protocol (batch file-by-file passes)",
       "github": null,
       "url": null,
       "level": 3,
@@ -101,6 +103,8 @@
     }
   },
 
+  "_file_policies_note": "ORDER MATTERS: first match wins. fnmatch '*' matches '/', so patterns for subdirectories (e.g. src/tac/lossless/) must appear BEFORE their parent catch-all. Exact-file patterns go first, then subdirectory patterns, then single-level globs.",
+
   "file_policies": [
     {"pattern": "src/tac/training.py",                    "rigor": "critical", "reason": "Core training loop — bugs cost GPU hours"},
     {"pattern": "src/tac/losses.py",                      "rigor": "critical", "reason": "Loss functions directly determine model quality"},
@@ -109,8 +113,8 @@
     {"pattern": "src/tac/diffusion_renderer.py",          "rigor": "critical", "reason": "Complex diffusion math — easy to break"},
     {"pattern": "submissions/robust_current/compress.sh",  "rigor": "critical", "reason": "Submission pipeline — must be correct"},
     {"pattern": "submissions/robust_current/inflate*.py",  "rigor": "critical", "reason": "Inflate pipeline — runs on scorer"},
-    {"pattern": "src/tac/*.py",                           "rigor": "standard", "reason": "Core tac library modules"},
     {"pattern": "src/tac/lossless/*.py",                  "rigor": "standard", "reason": "Lossless codec modules"},
+    {"pattern": "src/tac/*.py",                            "rigor": "standard", "reason": "Core tac library modules (NOTE: fnmatch * matches /, so this also catches subdirs — place subdirectory overrides above)"},
     {"pattern": "experiments/train_*.py",                 "rigor": "standard", "reason": "Training scripts — need correctness"},
     {"pattern": "experiments/*.py",                       "rigor": "normal",   "reason": "Experiment scripts"},
     {"pattern": "tools/*.py",                             "rigor": "normal",   "reason": "Developer tooling"},
@@ -118,6 +122,7 @@
   ],
 
   "enforcement": {
+    "_note": "When warn_only is true, ALL block_on_* settings are advisory only (warnings, not blocking). Set warn_only to false for block_on_* to actually prevent commits.",
     "pre_commit_enabled": true,
     "warn_only": true,
     "block_on_needs_fix": true,

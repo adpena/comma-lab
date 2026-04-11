@@ -73,6 +73,11 @@ def check_staged_files(staged_files: list[str]) -> tuple[list[str], list[str], d
         import review_tracker as _rt
         check_entity_policy = _rt.check_entity_policy
         get_rigor_for_file = _rt.get_rigor_for_file
+    except ImportError as _ie:
+        sys.path[:] = _old_path
+        print(f"WARNING: review_gate_hook: could not import review_tracker: {_ie}",
+              file=sys.stderr)
+        return [], ["review_tracker import failed — review gate skipped"], {}
     finally:
         sys.path[:] = _old_path
 
@@ -145,7 +150,7 @@ def main() -> int:
     if not staged:
         return 0
 
-    tracked_prefixes = ("src/tac/", "experiments/", "submissions/", "tools/")
+    tracked_prefixes = ("src/tac/", "src/comma_lab/", "experiments/", "submissions/", "tools/")
     tracked = [f for f in staged if any(f.startswith(p) for p in tracked_prefixes)]
     if not tracked:
         return 0

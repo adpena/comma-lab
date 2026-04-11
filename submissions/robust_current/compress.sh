@@ -69,6 +69,12 @@ ROI_PREPROCESS_ADAPTIVE="${ROI_PREPROCESS_ADAPTIVE:-0}"
 ROI_PREPROCESS_CHROMA_ONLY="${ROI_PREPROCESS_CHROMA_ONLY:-0}"
 ROI_PREPROCESS_MASK_FILE="${ROI_PREPROCESS_MASK_FILE:-}"
 PRE_DENOISE="${PRE_DENOISE:-}"
+# Downscale dimensions and flags — must be set in config.env or environment.
+# SCALE_W: target width (e.g. 582), SCALE_H: target height (e.g. 437)
+# DOWNSCALE_FLAGS: ffmpeg scale flags (e.g. "lanczos+accurate_rnd"), empty = ffmpeg default
+SCALE_W="${SCALE_W:-}"
+SCALE_H="${SCALE_H:-}"
+DOWNSCALE_FLAGS="${DOWNSCALE_FLAGS:-}"
 # ── Technique 8: Even-frame higher QP encoding ──────────────────────
 # Assumption: SegNet only evaluates odd frames, so even frames can be
 # encoded at higher QP (lower quality) for rate reduction with no SegNet impact.
@@ -215,6 +221,8 @@ encode_video_even_odd_qp() {
     -an "$tmpdir_qp/odd_frames.mkv" 2>/dev/null
 
   # Encode even frames at higher CRF (lower quality) for ALL codecs
+  # even_crf is computed from SVT_AV1_CRF but only used in the svtav1 branch;
+  # the x265 branch computes its own even_x265_crf from X265_CRF.
   local even_crf=$((SVT_AV1_CRF + qp_boost))
   if [ "$VIDEO_CODEC" = "libsvtav1" ]; then
     "$FFMPEG_BIN" -y -i "$tmpdir_qp/even_frames.mkv" \
@@ -243,6 +251,12 @@ encode_video_even_odd_qp() {
   encode_video "$tmpdir_qp/odd_frames.mkv" "$tmpdir_qp/odd_enc.mkv" "null"
 
   # Interleave back: even[0], odd[0], even[1], odd[1], ...
+  # NOTE: The interleave filter re-encodes the already-encoded streams (double
+  # compression). This is a known limitation — the separate even/odd encoding
+  # already achieved the desired QP differentiation, and the final re-encode at
+  # standard CRF is a minor quality hit. The fallback path (standard encode) is
+  # used if interleave fails. A stream-copy approach is not feasible because
+  # the interleave filter requires pixel-domain processing.
   "$FFMPEG_BIN" -y \
     -i "$tmpdir_qp/even_enc.mkv" \
     -i "$tmpdir_qp/odd_enc.mkv" \
@@ -281,7 +295,7 @@ downscale_filter() {
 }
 
 calc_even_dim() {
-  python3 - "$@" <<'PY'
+  "${PYTHON:-python3}" - "$@" <<'PY'
 import sys
 value = int(float(sys.argv[1]) * float(sys.argv[2]))
 if value < 2:
@@ -293,7 +307,7 @@ PY
 }
 
 calc_even_origin() {
-  python3 - "$@" <<'PY'
+  "${PYTHON:-python3}" - "$@" <<'PY'
 import sys
 scale = int(sys.argv[1])
 frac = float(sys.argv[2])
@@ -331,7 +345,7 @@ while IFS= read -r rel; do
       --outside-blend "$ROI_PREPROCESS_BLEND" \
       $([ "$ROI_PREPROCESS_ADAPTIVE" = "1" ] && echo "--adaptive-mask") \
       $([ "$ROI_PREPROCESS_CHROMA_ONLY" = "1" ] && echo "--chroma-only") \
-      $([ -n "$ROI_PREPROCESS_MASK_FILE" ] && echo "--mask-file $ROI_PREPROCESS_MASK_FILE")
+      $([ -n "$ROI_PREPROCESS_MASK_FILE" ] && echo "--mask-file \"$ROI_PREPROCESS_MASK_FILE\"")
     in_path="$preprocessed_path"
   fi
 

@@ -222,6 +222,42 @@ def _git_diff_lines(since: str, file_path: str) -> set[int]:
 
 
 
+_SCHEMA_DDL = [
+    "CREATE SEQUENCE IF NOT EXISTS review_seq START 1",
+    """CREATE TABLE IF NOT EXISTS entities (
+        qualified_name VARCHAR PRIMARY KEY,
+        module VARCHAR NOT NULL,
+        file_path VARCHAR NOT NULL,
+        entity_type VARCHAR NOT NULL,
+        name VARCHAR NOT NULL,
+        start_line INTEGER NOT NULL,
+        end_line INTEGER NOT NULL,
+        line_count INTEGER NOT NULL,
+        complexity INTEGER NOT NULL DEFAULT 1,
+        last_modified_commit VARCHAR DEFAULT '',
+        last_modified_date VARCHAR DEFAULT '',
+        review_status VARCHAR DEFAULT 'unreviewed',
+        reviewed_by VARCHAR DEFAULT '',
+        reviewed_at VARCHAR DEFAULT '',
+        review_pass VARCHAR DEFAULT '',
+        notes VARCHAR DEFAULT ''
+    )""",
+    """CREATE TABLE IF NOT EXISTS reviews (
+        id INTEGER DEFAULT nextval('review_seq'),
+        entity VARCHAR NOT NULL,
+        action VARCHAR NOT NULL,
+        reviewer VARCHAR DEFAULT '',
+        review_pass VARCHAR DEFAULT '',
+        detail VARCHAR DEFAULT '',
+        timestamp VARCHAR NOT NULL
+    )""",
+    """CREATE TABLE IF NOT EXISTS scan_meta (
+        key VARCHAR PRIMARY KEY,
+        value VARCHAR
+    )""",
+]
+
+
 def _init_db():
     """Initialize DB with sequence first, then tables."""
     import duckdb
@@ -232,44 +268,8 @@ def _init_db():
         print(f"DuckDB corrupted: {e}", file=sys.stderr)
         print("Run: python tools/review_tracker.py rebuild-from-json", file=sys.stderr)
         sys.exit(1)
-    con.execute("CREATE SEQUENCE IF NOT EXISTS review_seq START 1")
-    con.execute("""
-        CREATE TABLE IF NOT EXISTS entities (
-            qualified_name VARCHAR PRIMARY KEY,
-            module VARCHAR NOT NULL,
-            file_path VARCHAR NOT NULL,
-            entity_type VARCHAR NOT NULL,
-            name VARCHAR NOT NULL,
-            start_line INTEGER NOT NULL,
-            end_line INTEGER NOT NULL,
-            line_count INTEGER NOT NULL,
-            complexity INTEGER NOT NULL DEFAULT 1,
-            last_modified_commit VARCHAR DEFAULT '',
-            last_modified_date VARCHAR DEFAULT '',
-            review_status VARCHAR DEFAULT 'unreviewed',
-            reviewed_by VARCHAR DEFAULT '',
-            reviewed_at VARCHAR DEFAULT '',
-            review_pass VARCHAR DEFAULT '',
-            notes VARCHAR DEFAULT ''
-        )
-    """)
-    con.execute("""
-        CREATE TABLE IF NOT EXISTS reviews (
-            id INTEGER DEFAULT nextval('review_seq'),
-            entity VARCHAR NOT NULL,
-            action VARCHAR NOT NULL,
-            reviewer VARCHAR DEFAULT '',
-            review_pass VARCHAR DEFAULT '',
-            detail VARCHAR DEFAULT '',
-            timestamp VARCHAR NOT NULL
-        )
-    """)
-    con.execute("""
-        CREATE TABLE IF NOT EXISTS scan_meta (
-            key VARCHAR PRIMARY KEY,
-            value VARCHAR
-        )
-    """)
+    for ddl in _SCHEMA_DDL:
+        con.execute(ddl)
     return con
 
 
@@ -383,10 +383,20 @@ def count_consecutive_clean_passes(con, qualified_name: str) -> int:
     return count
 
 
-def get_distinct_approvers(con, qualified_name: str, policy: dict | None = None) -> list[str]:
-    """Get distinct reviewers who approved since last staleness reset."""
+def get_distinct_approvers(con, qualified_name: str, file_path: str = "",
+                           policy: dict | None = None) -> list[str]:
+    """Get distinct reviewers who approved since last staleness reset.
+
+    Uses the file's rigor level to determine the minimum approver level,
+    rather than hardcoding L3+. This ensures normal/relaxed files can be
+    approved by L1/L2 reviewers as the policy intends.
+    """
     if policy is None:
         policy = load_policy()
+
+    # Determine minimum level from file's rigor policy
+    rigor = get_rigor_for_file(file_path, policy) if file_path else {}
+    min_level = rigor.get("min_approver_level", 1)
 
     try:
         rows = con.execute("""
@@ -402,7 +412,7 @@ def get_distinct_approvers(con, qualified_name: str, policy: dict | None = None)
         if action == "marked_reviewed":
             principal = get_principal(reviewer, policy)
             level = principal.get("level", 1)
-            if level >= 3 and reviewer not in approvers:  # L3+ = approver
+            if level >= min_level and reviewer not in approvers:
                 approvers.append(reviewer)
         elif action in ("auto_stale_diff", "marked_needs_fix", "marked_stale"):
             break  # staleness resets approver list
@@ -429,7 +439,7 @@ def check_entity_policy(con, qualified_name: str, file_path: str,
     rigor_name = rigor.get("_name", "relaxed")
 
     passes = count_consecutive_clean_passes(con, qualified_name)
-    approvers = get_distinct_approvers(con, qualified_name, policy)
+    approvers = get_distinct_approvers(con, qualified_name, file_path, policy)
 
     req_passes = rigor.get("min_consecutive_clean_passes", 1)
     req_approvers = rigor.get("min_distinct_approvers", 1)
@@ -586,7 +596,7 @@ def cmd_scan() -> None:
         if old_key not in current_keys:
             con.execute("DELETE FROM entities WHERE qualified_name=?", [old_key])
 
-    removed = len(existing) - len(current_keys & set(existing.keys()))
+    removed = len(set(existing) - current_keys)
     con.execute("""
         INSERT OR REPLACE INTO scan_meta VALUES ('last_scan', ?)
     """, [now])
@@ -960,13 +970,21 @@ def cmd_greenup_import(pass_file: str) -> None:
     matched = 0
 
     for cf in clean_files:
-        # Match on the longest suffix of the clean file path to avoid
-        # collisions between files with the same basename in different dirs.
+        # Match on exact file_path or a path ending with the cleaned suffix.
+        # Use = first for exact match; fall back to suffix match only if needed.
+        # Avoid LIKE with unescaped wildcards to prevent false positives on
+        # paths containing SQL wildcard characters (%, _).
         clean = cf.replace("\\", "/").lstrip("./")
         rows = con.execute(
-            "SELECT qualified_name FROM entities WHERE file_path LIKE ?",
-            [f"%{clean}"]
+            "SELECT qualified_name FROM entities WHERE file_path = ? OR file_path = ?",
+            [clean, f"src/{clean}" if not clean.startswith("src/") else clean]
         ).fetchall()
+        if not rows:
+            # Fallback: suffix match for paths not exactly matching
+            rows = con.execute(
+                "SELECT qualified_name FROM entities WHERE file_path LIKE ?",
+                [f"%/{clean}" if "/" not in clean else f"%{clean}"]
+            ).fetchall()
         for (qn,) in rows:
             con.execute("""
                 UPDATE entities SET review_status='reviewed', reviewed_by='council_greenup',
@@ -1252,44 +1270,8 @@ def cmd_rebuild_from_json() -> None:
 
     import duckdb
     con = duckdb.connect(str(TRACKER_DB))
-    con.execute("CREATE SEQUENCE IF NOT EXISTS review_seq START 1")
-    con.execute("""
-        CREATE TABLE IF NOT EXISTS entities (
-            qualified_name VARCHAR PRIMARY KEY,
-            module VARCHAR NOT NULL,
-            file_path VARCHAR NOT NULL,
-            entity_type VARCHAR NOT NULL,
-            name VARCHAR NOT NULL,
-            start_line INTEGER NOT NULL,
-            end_line INTEGER NOT NULL,
-            line_count INTEGER NOT NULL,
-            complexity INTEGER NOT NULL DEFAULT 1,
-            last_modified_commit VARCHAR DEFAULT '',
-            last_modified_date VARCHAR DEFAULT '',
-            review_status VARCHAR DEFAULT 'unreviewed',
-            reviewed_by VARCHAR DEFAULT '',
-            reviewed_at VARCHAR DEFAULT '',
-            review_pass VARCHAR DEFAULT '',
-            notes VARCHAR DEFAULT ''
-        )
-    """)
-    con.execute("""
-        CREATE TABLE IF NOT EXISTS reviews (
-            id INTEGER DEFAULT nextval('review_seq'),
-            entity VARCHAR NOT NULL,
-            action VARCHAR NOT NULL,
-            reviewer VARCHAR DEFAULT '',
-            review_pass VARCHAR DEFAULT '',
-            detail VARCHAR DEFAULT '',
-            timestamp VARCHAR NOT NULL
-        )
-    """)
-    con.execute("""
-        CREATE TABLE IF NOT EXISTS scan_meta (
-            key VARCHAR PRIMARY KEY,
-            value VARCHAR
-        )
-    """)
+    for ddl in _SCHEMA_DDL:
+        con.execute(ddl)
 
     count = 0
     for qn, ent in entities.items():
@@ -1451,9 +1433,28 @@ def cmd_greenup(file_patterns: list[str], reviewer: str = "council",
         return
 
     elif mode == "auto":
-        # Auto mode: mark all needs_fix as reviewed (assumes fixes were applied)
+        # Auto mode: mark needs_fix/unreviewed as reviewed.
+        # WARNING: this assumes fixes were actually applied and verified.
+        # Requires explicit confirmation to prevent accidental bypass.
         print(f"{B}Greenup Protocol — Auto Mode{RST}")
         print(f"Pass: {C}{pass_name}{RST}")
+        print(f"  {Y}WARNING: Auto mode marks entities as reviewed without verification.{RST}")
+        print(f"  {Y}Only use after a greenup review agent has confirmed files are CLEAN.{RST}")
+        count_to_mark = sum(
+            con.execute("""
+                SELECT COUNT(*) FROM entities
+                WHERE file_path = ? AND review_status IN ('needs_fix', 'unreviewed')
+            """, [fp]).fetchone()[0] for fp in matched_files
+        )
+        print(f"  Would mark {count_to_mark} entities as reviewed across {len(matched_files)} files.")
+        try:
+            confirm = input(f"  Proceed? [y/N]: ").strip().lower()
+        except EOFError:
+            confirm = "y"  # non-interactive (piped input) — allow
+        if confirm not in ("y", "yes"):
+            print(f"  {Y}Aborted.{RST}")
+            con.close()
+            return
         marked = 0
         for fp in matched_files:
             n = _mark_file_internal(con, fp, "reviewed", reviewer, pass_name,
@@ -1541,15 +1542,26 @@ def cmd_greenup_ingest(result_file: str, reviewer: str = "council",
         fname = fname.strip().strip("`").replace("\\", "/")
         verdict = verdict.strip().upper()
 
-        # Extract just the filename for matching
-        base = fname.split("/")[-1]
         is_clean = "CLEAN" in verdict and "NOT" not in verdict and "ISSUES" not in verdict
 
-        # Find matching entities
+        # Match on full path first, fallback to suffix — with ambiguity guard
         rows = con.execute(
-            "SELECT qualified_name FROM entities WHERE file_path LIKE ?",
-            [f"%{base}"]
+            "SELECT qualified_name FROM entities WHERE file_path = ?",
+            [fname]
         ).fetchall()
+        if not rows:
+            suffix = fname.split("/")[-1]
+            candidates = con.execute(
+                "SELECT DISTINCT file_path FROM entities WHERE file_path LIKE ?",
+                [f"%/{suffix}"]
+            ).fetchall()
+            if len(candidates) > 1:
+                print(f"  {Y}WARN: '{fname}' matches {len(candidates)} files — skipping to avoid false positive{RST}")
+                continue
+            rows = con.execute(
+                "SELECT qualified_name FROM entities WHERE file_path LIKE ?",
+                [f"%/{suffix}"]
+            ).fetchall()
 
         if not rows:
             continue
@@ -1657,6 +1669,14 @@ def main() -> None:
             print(json.dumps(policy, indent=2))
     elif cmd == "rebuild-from-json":
         cmd_rebuild_from_json()
+    elif cmd == "greenup":
+        mode = kwargs.get("mode", "agent")
+        cmd_greenup(positional[2:], reviewer=reviewer, mode=mode, pass_name=review_pass)
+    elif cmd == "greenup-ingest":
+        if len(positional) < 3:
+            print("ERROR: 'greenup-ingest' requires a result file argument.", file=sys.stderr)
+            sys.exit(1)
+        cmd_greenup_ingest(positional[2], reviewer=reviewer, pass_name=review_pass)
     else:
         print(f"Unknown command: {cmd}", file=sys.stderr)
         print(__doc__, file=sys.stderr)

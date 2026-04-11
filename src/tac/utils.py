@@ -227,7 +227,7 @@ def record_run(variant: str, platform: str, epoch: int,
     # Append to run_log.md
     run_log = REPO_ROOT / ".ralph" / "run_log.md"
     run_log.parent.mkdir(parents=True, exist_ok=True)
-    score_str = f"auth={auth_score}" if auth_score else f"proxy={proxy_score}"
+    score_str = f"auth={auth_score}" if auth_score is not None else f"proxy={proxy_score}"
     with open(run_log, "a") as f:
         f.write(f"\n## {now[:19]} — {variant} on {platform} ep{epoch}\n\n")
         f.write(f"- {score_str}\n")
