@@ -145,7 +145,7 @@ def score_sensitivity(pose_dist: float) -> dict[str, float]:
     """
     d_seg = 100.0
     d_pose = math.sqrt(10.0) / (2.0 * math.sqrt(pose_dist)) if pose_dist > 0 else float("inf")
-    d_rate = 25.0  # actually 1.0 since rate = 25*raw_rate in the formula
+    d_rate = 25.0  # d(score)/d(rate) = 25 from the formula: score = ... + 25 * rate
     return {
         "d_score_d_seg": d_seg,
         "d_score_d_pose": d_pose,

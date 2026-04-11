@@ -28,7 +28,8 @@ COUNCIL_V1 = {
     # "temperature_end": 0.5,
     # "temp_schedule": "exponential",
     "boundary_weight": 5.0,
-    "boundary_anneal": True,  # couple bw to temperature schedule
+    # boundary_anneal removed: it couples to temperature schedule which standard
+    # loss_mode does not use (no temperature). Was dead code.
     "hard_frame_ratio": 0.3,  # power-law curriculum, 0.3 = moderate emphasis
     "error_replay_every": 200,  # recompute hard frames using model output
     "eval_every": 5,  # skip eval on 4/5 epochs (ramps to 1 in final 10%)

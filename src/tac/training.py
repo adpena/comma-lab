@@ -131,6 +131,10 @@ class TrainConfig(BaseModel):
     )
     rebalance_every: int = Field(50, ge=1, description="Epochs between adaptive weight updates")
     boundary_fraction: float = Field(0.05, gt=0.0, lt=1.0, description="Measured boundary pixel fraction (beta)")
+    # Intentionally 0.0 for the competition: we have exactly one video, so
+    # holding out pairs would waste signal. The int8 eval loop already provides
+    # checkpoint selection without a held-out split. Set to 0.25 for proper
+    # generalization estimates on multi-video datasets.
     eval_holdout: float = Field(
         0.0,
         ge=0.0,
@@ -479,6 +483,9 @@ class Trainer:
 
     def load_training_state(self, path: str | Path):
         """Resume training from a saved state."""
+        # weights_only=False required: checkpoint contains optimizer state dicts
+        # (torch.optim internals use non-tensor Python objects). Only load from
+        # trusted local checkpoints produced by save_training_state().
         state = torch.load(str(path), map_location=self.device, weights_only=False)
         self.model.load_state_dict(state["model"])
         self.ema.shadow = {k: v.to(self.device) for k, v in state["ema_shadow"].items()}
@@ -657,7 +664,12 @@ class Trainer:
         return scorer
 
     def _save_checkpoint(self, epoch: int, scorer: float):
-        """Save best int8 checkpoint with atomic writes."""
+        """Save best int8 checkpoint with atomic writes.
+
+        TODO: The per-channel int8 quantization logic below duplicates
+        quantize_state_dict() in quantization.py. Refactor to call that
+        function instead of reimplementing the same loop here.
+        """
         out_dir = Path(self.config.output_dir)
         out_dir.mkdir(parents=True, exist_ok=True)
         tag = self.config.tag
@@ -867,14 +879,26 @@ class Trainer:
             avg_pose = total_pose / n
             avg_seg = total_seg / n
 
-            # Best-checkpoint int8 evaluation
-            scorer_val = self._evaluate_int8(comp_pairs, gt_pairs, posenet, segnet)
+            # Best-checkpoint int8 evaluation — gated by eval_every (matches fit_lazy)
+            epoch_frac = epoch / max(cfg.epochs - 1, 1)
+            if epoch_frac >= 0.8:
+                eval_freq = 1
+            elif epoch_frac >= 0.2:
+                eval_freq = max(2, cfg.eval_every // 2)
+            else:
+                eval_freq = cfg.eval_every
+            is_eval_epoch = (epoch + 1) % eval_freq == 0 or epoch == cfg.epochs - 1 or epoch == 0
 
-            if scorer_val < self.best_scorer:
-                self.best_scorer = scorer_val
-                self.best_epoch = epoch
-                self._save_checkpoint(epoch, scorer_val)
-                print(f"  ** NEW BEST: ep {epoch}, scorer {scorer_val:.4f} **")
+            if is_eval_epoch:
+                scorer_val = self._evaluate_int8(comp_pairs, gt_pairs, posenet, segnet)
+
+                if scorer_val < self.best_scorer:
+                    self.best_scorer = scorer_val
+                    self.best_epoch = epoch
+                    self._save_checkpoint(epoch, scorer_val)
+                    print(f"  ** NEW BEST: ep {epoch}, scorer {scorer_val:.4f} **")
+            else:
+                scorer_val = self.best_scorer  # carry forward for logging
 
             lr = self.optimizer.param_groups[0]["lr"]
             print(
@@ -1318,13 +1342,11 @@ class Trainer:
                 else:
                     sal_recon = saliency_reconstruction_loss(filtered_bchw, comp_bchw, sal_w[1:2])
 
-                # Trick 3: Even-frame SegNet skip — when the evaluated frame
-                # (frame_t1 = start + 1) is even, SegNet is less critical.
-                # With standard pair layout (starts at 0,2,4...) frame_t1 is always
-                # odd, so this triggers when using overlapping pairs or alternate
-                # pair layouts. The segnet component is already inside `loss`.
-                # We re-weight if applicable.
-                if cfg.even_frame_skip_seg and (start + 1) % 2 == 0:
+                # Trick 3: Even-indexed pair SegNet skip — for even-indexed pairs,
+                # SegNet contribution is halved. With standard pair layout
+                # (starts at 0,2,4...) frame_t1 is always odd, so the old check
+                # `(start + 1) % 2 == 0` never fired. Fixed: use pair_idx.
+                if cfg.even_frame_skip_seg and pair_idx % 2 == 0:
                     # Approximate: scale loss to remove ~SegNet contribution
                     # loss ≈ sw*seg + sqrt(10*pose), remove sw*seg ≈ reduce by ratio
                     # Conservative: scale loss by 0.5 (keep PoseNet, halve SegNet)

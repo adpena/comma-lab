@@ -256,15 +256,21 @@ class MaskRenderer(nn.Module):
 
 
 _coord_grid_cache: dict[tuple[int, int, torch.device], torch.Tensor] = {}
+_COORD_GRID_MAXSIZE = 4  # Bound cache to avoid memory leak with many resolutions
 
 
 def make_coord_grid(h: int, w: int, device: torch.device) -> torch.Tensor:
     """Create normalized coordinate grid for grid_sample (cached).
 
     Returns: (1, H, W, 2) tensor with values in [-1, 1].
+    Cache is bounded to _COORD_GRID_MAXSIZE entries (FIFO eviction).
     """
     key = (h, w, device)
     if key not in _coord_grid_cache:
+        # Evict oldest entry if at capacity
+        if len(_coord_grid_cache) >= _COORD_GRID_MAXSIZE:
+            oldest_key = next(iter(_coord_grid_cache))
+            del _coord_grid_cache[oldest_key]
         yy = torch.linspace(-1.0, 1.0, h, device=device)
         xx = torch.linspace(-1.0, 1.0, w, device=device)
         grid_y, grid_x = torch.meshgrid(yy, xx, indexing="ij")

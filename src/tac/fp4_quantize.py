@@ -488,7 +488,7 @@ def load_fp4(
     Returns:
         Model with loaded weights, in eval mode
     """
-    packed = torch.load(path, map_location="cpu", weights_only=False)
+    packed = torch.load(path, map_location="cpu", weights_only=True)
     state_dict = dequantize_fp4(packed)
     model.load_state_dict(state_dict)
     return model.eval().to(device)
@@ -496,5 +496,5 @@ def load_fp4(
 
 def get_fp4_meta(path: str | os.PathLike) -> dict[str, Any]:
     """Read metadata from an FP4 weight file without loading all weights."""
-    packed = torch.load(path, map_location="cpu", weights_only=False)
+    packed = torch.load(path, map_location="cpu", weights_only=True)
     return dict(packed.get("__meta__", {}))

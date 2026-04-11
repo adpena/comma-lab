@@ -151,19 +151,22 @@ class QATPostFilter(nn.Module):
         self.base = base_model
 
     def forward(self, x: torch.Tensor) -> torch.Tensor:
-        # Temporarily replace conv weights with fake-quantized versions
+        # Temporarily replace conv weights with fake-quantized versions.
+        # Wrapped in try/finally to restore weights on exception — without this,
+        # the model is left in a corrupt state if the forward pass throws.
         originals = {}
         for name, module in self.base.named_modules():
             if isinstance(module, nn.Conv2d):
                 originals[name] = module.weight
                 module.weight = nn.Parameter(fake_quant(module.weight))
 
-        out = self.base(x)
-
-        # Restore originals (so optimizer sees real weights)
-        for name, module in self.base.named_modules():
-            if isinstance(module, nn.Conv2d) and name in originals:
-                module.weight = originals[name]
+        try:
+            out = self.base(x)
+        finally:
+            # Restore originals (so optimizer sees real weights)
+            for name, module in self.base.named_modules():
+                if isinstance(module, nn.Conv2d) and name in originals:
+                    module.weight = originals[name]
 
         return out
 

@@ -4,6 +4,12 @@
 The post-filter is a tiny CNN (3,203 params, 7.5KB int8) trained directly
 against the scorer's loss function via backprop. It learns to correct the
 decoded video to maximize PoseNet+SegNet scores.
+
+WARNING: Architecture classes below are duplicated from src/tac/architectures.py.
+This is intentional — the inflate script must be self-contained for contest
+submission (no dependency on tac package). If you change an architecture in
+src/tac/architectures.py, you MUST mirror the change here or weight loading
+will silently produce garbage. See C2/I1 in the greenup review.
 """
 import os
 import sys
@@ -333,6 +339,16 @@ def load_postfilter_int8(path: str, device: str = "cpu") -> PostFilter:
     ):
         meta["variant"] = "pixelshuffle_dilated"
     model = build_postfilter(meta)
+    # Cross-check: weight keys must match exactly. A mismatch here means the
+    # architecture in this file has diverged from src/tac/architectures.py.
+    model_keys = set(model.state_dict().keys())
+    ckpt_keys = set(float_state.keys())
+    assert model_keys == ckpt_keys, (
+        f"Weight key mismatch between inflate model and checkpoint. "
+        f"Missing in ckpt: {model_keys - ckpt_keys}, "
+        f"Extra in ckpt: {ckpt_keys - model_keys}. "
+        f"Did you update src/tac/architectures.py without mirroring here?"
+    )
     model.load_state_dict(float_state)
     return model.eval().to(device)
 
