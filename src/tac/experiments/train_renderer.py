@@ -342,6 +342,9 @@ def train(args: argparse.Namespace):
             depth=args.depth,
         )
     model = model.to(device)
+    # channels_last memory format: 10-30% speedup for conv2d on CUDA
+    if device.type == "cuda":
+        model = model.to(memory_format=torch.channels_last)
 
     # Wrap with FP4 QAT if enabled
     qat_wrapper = None
