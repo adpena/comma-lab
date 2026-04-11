@@ -391,7 +391,7 @@ class MotionPredictor(nn.Module):
         in_ch = embed_dim * 2
 
         self.conv1 = nn.Conv2d(in_ch, hidden, 3, padding=1, bias=True)
-        self.res = ResBlock(hidden, num_classes=0)  # plain GroupNorm
+        self.res = ResBlock(hidden, num_classes=5)  # match PyTorch (CLADE, unused at inference)
         self.conv2 = nn.Conv2d(hidden, hidden, 3, padding=1, bias=True)
         self.conv3 = nn.Conv2d(hidden, 2, 3, padding=1, bias=True)
         # Zero-init flow output
@@ -650,9 +650,9 @@ def pytorch_to_mlx(pt_state_dict: dict) -> dict:
         if is_conv_weight and not is_transposed_conv:
             arr = arr.transpose(0, 2, 3, 1)
         elif is_conv_weight and is_transposed_conv:
-            # ConvTranspose2d (I, O, kH, kW) -- skip, cannot map to Conv2d
-            # These weights are re-initialized in the MLX model anyway
-            arr = arr.transpose(0, 2, 3, 1)  # store as (I, kH, kW, O) for reference
+            # ConvTranspose2d (I, O, kH, kW) cannot map to MLX Conv2d (O, kH, kW, I)
+            # Skip these -- MLX model uses bilinear upsample + Conv2d instead
+            continue
 
         mlx_params[new_key] = mx.array(arr)
 
@@ -724,9 +724,15 @@ def mlx_to_pytorch(mlx_params: dict) -> dict:
 
         # Transpose 4D weights BEFORE key remapping (while we know it's a conv)
         # All 4D weights in MLX are conv weights in (O, kH, kW, I) layout
+        # Skip transposed conv weights (architecture differs: ConvTranspose2d vs Conv2d)
         is_weight_4d = "weight" in key and np_arr.ndim == 4
-        if is_weight_4d:
+        is_up_weight = "up_conv" in key or "up2_conv" in key
+        if is_weight_4d and not is_up_weight:
             np_arr = np_arr.transpose(0, 3, 1, 2)  # (O, kH, kW, I) -> (O, I, kH, kW)
+        elif is_weight_4d and is_up_weight:
+            # MLX Conv2d (O, kH=3, kW=3, I) cannot map to PyTorch ConvTranspose2d (I, O, 4, 4)
+            # Skip -- PyTorch model will use its default init for these layers
+            continue
 
         # Remap MLX motion keys back to PyTorch sequential
         pt_key = _remap_motion_key_reverse(key)
