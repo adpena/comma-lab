@@ -468,7 +468,10 @@ def _run_lossy(args: argparse.Namespace) -> dict[str, Any]:
         print(f"[tac] Saliency shape: {tuple(raw_saliency.shape)}")
     else:
         # Generate uniform saliency (equal weight everywhere)
-        raw_saliency = torch.ones(len(comp_frames), comp_frames.shape[2], comp_frames.shape[3])
+        import torch
+        # comp_frames is a list of tensors (B, H, W, C) — get dims from first frame
+        h, w = comp_frames[0].shape[0], comp_frames[0].shape[1]
+        raw_saliency = torch.ones(len(comp_frames), h, w)
         if args.saliency:
             print(f"[tac] WARNING: Saliency file not found: {args.saliency}")
         print(f"[tac] Using uniform saliency (no weighting)")
