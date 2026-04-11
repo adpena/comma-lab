@@ -370,7 +370,7 @@ def train(args: argparse.Namespace):
 
             # Manual gradient clipping (replaces broken optim.clip_grad_norm)
             if max_grad_norm > 0:
-                grads_flat, _ = mlx.utils.tree_flatten(grads)
+                grads_flat = mlx.utils.tree_flatten(grads)
                 total_norm = mx.sqrt(
                     sum(g.square().sum() for g in grads_flat if isinstance(g, mx.array))
                 )

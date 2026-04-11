@@ -144,7 +144,9 @@ def main() -> int:
     if os.environ.get("REVIEW_GATE_OVERRIDE", "0") == "1":
         return 0
 
-    warn_only = os.environ.get("REVIEW_GATE_WARN_ONLY", "1") == "1"
+    # Enforcement enabled by default — blocks commits on critical/standard files
+    # with unreviewed code. Override: REVIEW_GATE_WARN_ONLY=1 git commit ...
+    warn_only = os.environ.get("REVIEW_GATE_WARN_ONLY", "0") == "1"
 
     staged = get_staged_py_files()
     if not staged:
