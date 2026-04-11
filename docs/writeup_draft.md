@@ -137,7 +137,7 @@ The approach scales along three axes: model capacity, training time, and trainin
 |-----------|-----------|----------------|
 | Standard loss, h=64 | 1.51 | ~500 |
 | Standard loss, dilated h=64 | 1.33 | 905 |
-| KL distill + hard-frame, dilated h=64 | 1.25 (proxy) | 200 |
+| KL distill + hard-frame, dilated h=64 | 1.25 proxy (auth: 2.05 — DEAD) | 200 |
 
 Each technique generation achieves the previous best in fewer epochs, then continues past it. The KL distill + hard-frame combination reached in 200 epochs what standard loss could not reach in 905. This suggests the bottleneck at this scale is gradient signal quality, not raw compute.
 
@@ -221,7 +221,7 @@ The only safe place to modify frames is after decoding, with a learned filter. P
 
 Of 25+ alternative approaches tested, most failed. The winning recipe is highly constrained by the mathematical structure of the problem (rank-1 Jacobian, sub-pixel trust radius, quantization sensitivity). The most expensive failures were approaches that improved SegNet at the expense of PoseNet — the scoring formula's sqrt makes PoseNet regressions catastrophically expensive.
 
-## What else failed: KL distillation and adaptive weights
+## What else failed: KL distillation and 25+ experiments
 
 Two additional approaches that initially showed promise but were ultimately rejected:
 
@@ -241,7 +241,7 @@ A KL distillation checkpoint with proxy score 1.25 scored 1.85 on the authoritat
 
 Root cause: the training loss used a hard clamp on PoseNet distortion (`min=0.001`) that killed PoseNet gradients once PoseNet was briefly good. The clamp allowed the filter to freely rearrange pixels for SegNet benefit while PoseNet degraded unchecked. The proxy's uint8 round-trip did not fully replicate the inflate pipeline's amplification of PoseNet-sensitive texture degradation.
 
-The fix was structural: remove the clamp, derive adaptive weights from the scoring formula, and add a PoseNet regression alarm (blocks checkpoint promotion if PoseNet exceeds 3x baseline). The adaptive system makes this class of error structurally impossible by continuously rebalancing based on measured distortions.
+The fix was structural: remove the clamp, derive 25+ experiments from the scoring formula, and add a PoseNet regression alarm (blocks checkpoint promotion if PoseNet exceeds 3x baseline). The adaptive system makes this class of error structurally impossible by continuously rebalancing based on measured distortions.
 
 ## Formal verification
 
@@ -305,4 +305,4 @@ No paid compute was used. All results are reproducible on consumer hardware.
 
 ---
 
-*Score: 1.33 | 45KB int8 CNN | 40K params | SVT-AV1 CRF 34 | 903KB archive | CPU inference < 30s | tac v1.0.0 | 70 tests | Lean 4 verified | adaptive weights*
+*Score: 1.33 | 45KB int8 CNN | 40K params | SVT-AV1 CRF 34 | 903KB archive | CPU inference < 30s | tac v1.0.0 | 70 tests | Lean 4 verified | 25+ experiments*

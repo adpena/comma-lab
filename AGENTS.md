@@ -16,7 +16,7 @@
 2. **Neural network artifacts MUST be inside archive.zip** per contest rules (affects rate calculation).
 
 3. **The adaptive weight system** (`src/tac/adaptive.py`) derives optimal hyperparameters from the
-   scoring formula instead of guessing. Use `--profile council_v2_adaptive` to enable.
+   scoring formula instead of guessing. Use `--profile proven_baseline` to enable.
 
 4. **Lean 4 proofs** (`proofs/AdaptiveWeights.lean`) formally verify the key equations.
    Zero sorry obligations.
@@ -35,7 +35,7 @@
 ```bash
 # RECOMMENDED: adaptive weights (self-correcting, derived from scoring formula)
 .venv/bin/python experiments/train_tac.py \
-    --profile council_v2_adaptive \
+    --profile proven_baseline \
     --tag my_experiment \
     --precomputed experiments/precomputed_local
 
