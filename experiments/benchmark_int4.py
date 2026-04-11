@@ -15,7 +15,6 @@ Usage:
 from __future__ import annotations
 
 import argparse
-import os
 import sys
 import tempfile
 from pathlib import Path
@@ -171,6 +170,7 @@ def compute_output_difference(
     diff = (out_a - out_b).float()
     mse = diff.pow(2).mean().item()
     max_diff = diff.abs().max().item()
+    # PSNR assumes pixel values in [0, 255] range (MAX_I = 255)
     psnr = 10 * np.log10(255.0 ** 2 / max(mse, 1e-10)) if mse > 0 else float("inf")
 
     return {
@@ -265,7 +265,11 @@ def main():
                 else:
                     fp32_state[key] = val.float()
 
-        model_int8.load_state_dict(fp32_state, strict=False)
+        info = model_int8.load_state_dict(fp32_state, strict=False)
+        if info.missing_keys:
+            print(f"  Warning: {len(info.missing_keys)} missing keys: {info.missing_keys[:5]}")
+        if info.unexpected_keys:
+            print(f"  Warning: {len(info.unexpected_keys)} unexpected keys: {info.unexpected_keys[:5]}")
         model_int4.load_state_dict(fp32_state, strict=False)
         print(f"\nLoaded checkpoint: {checkpoint_path}")
     else:
@@ -349,9 +353,15 @@ def main():
     else:
         print("POOR: INT4 quality loss is severe (<20dB PSNR)")
 
-    rate_saving = int4_theoretical / 1024  # KB saved at contest rate calculation
-    print(f"\nRate impact: INT4 saves ~{(int8_theoretical - int4_theoretical)/1024:.1f} KB in archive")
-    print(f"At 25*rate scoring: saving ~{25 * (int8_theoretical - int4_theoretical) / (1200*1164*874*3):.6f} score points")
+    rate_saving_kb = (int8_theoretical - int4_theoretical) / 1024
+    rate_weight = 25  # contest formula multiplier for rate term
+    n_frames = 1200  # video frame count in contest evaluation
+    frame_h = 874  # frame height (pixels)
+    frame_w = 1164  # frame width (pixels)
+    n_channels = 3  # RGB channels
+    total_pixels = n_frames * frame_w * frame_h * n_channels
+    print(f"\nRate impact: INT4 saves ~{rate_saving_kb:.1f} KB in archive")
+    print(f"At {rate_weight}*rate scoring: saving ~{rate_weight * (int8_theoretical - int4_theoretical) / total_pixels:.6f} score points")
 
     print("\n" + "=" * 70)
     print("Benchmark complete.")

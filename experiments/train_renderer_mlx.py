@@ -49,6 +49,7 @@ from tac.mlx_renderer import (  # noqa: E402
     mlx_to_pytorch,
     pretrain_loss_fn,
 )
+from tac.utils import setup_signal_handlers  # noqa: E402
 
 
 # ── Argument parsing ────────────────────────────────────────────────────
@@ -185,7 +186,8 @@ def _extract_and_save_masks(frames_pt, precomputed_dir: Path) -> mx.array:
 def pair_start_indices(n_frames: int) -> list[int]:
     """Valid pair start indices (consecutive frames, 20-frame groups).
 
-    Matches tac.data.pair_start_indices logic.
+    NOTE: This duplicates tac.data.pair_start_indices to avoid importing
+    PyTorch (tac.data depends on torch) in the MLX-only training path.
     """
     indices = []
     for i in range(n_frames - 1):
@@ -304,6 +306,14 @@ def train(args: argparse.Namespace):
     out_dir = Path(args.output_dir)
     out_dir.mkdir(parents=True, exist_ok=True)
 
+    # Emergency save on SIGTERM/SIGINT
+    def _emergency_save():
+        mlx_path = out_dir / f"mlx_renderer_{args.tag}_emergency.safetensors"
+        model.save_weights(str(mlx_path))
+        print(f"[mlx_train] Emergency save: {mlx_path}")
+
+    setup_signal_handlers(_emergency_save)
+
     best_loss = float("inf")
     best_epoch = -1
     total_start = time.monotonic()
@@ -363,7 +373,10 @@ def train(args: argparse.Namespace):
 
         avg_loss = epoch_loss / max(n_steps, 1)
         epoch_sec = time.monotonic() - epoch_start
-        lr = optimizer.learning_rate.item() if hasattr(optimizer.learning_rate, 'item') else args.lr
+        try:
+            lr = optimizer.learning_rate.item() if hasattr(optimizer.learning_rate, 'item') else args.lr
+        except Exception:
+            lr = args.lr
 
         # Track best
         if avg_loss < best_loss:
@@ -398,10 +411,32 @@ def train(args: argparse.Namespace):
     _flatten_for_conversion(model.parameters(), "", flat_params)
     pt_state = mlx_to_pytorch(flat_params)
 
+    # Sanity check: compare keys against a fresh PyTorch model
+    from tac.renderer import build_renderer as _build_pt_renderer
+    _ref_model = _build_pt_renderer(
+        num_classes=5, embed_dim=args.embed_dim, base_ch=args.base_ch,
+        mid_ch=args.mid_ch, motion_hidden=args.motion_hidden, depth=args.depth,
+    )
+    _ref_keys = set(_ref_model.state_dict().keys())
+    _got_keys = set(pt_state.keys())
+    _missing = _ref_keys - _got_keys
+    _unexpected = _got_keys - _ref_keys
+    if _missing:
+        print(f"[mlx_train] WARNING: {len(_missing)} keys missing from converted state dict: "
+              f"{sorted(_missing)[:5]}{'...' if len(_missing) > 5 else ''}")
+    if _unexpected:
+        print(f"[mlx_train] WARNING: {len(_unexpected)} unexpected keys in converted state dict: "
+              f"{sorted(_unexpected)[:5]}{'...' if len(_unexpected) > 5 else ''}")
+    del _ref_model
+
     # Save as PyTorch checkpoint compatible with train_renderer.py --resume-from
     import torch
 
-    # Build a full training state checkpoint
+    # Build a full training state checkpoint.
+    # Intentionally omits "optimizer" and "scheduler" keys: Phase 2
+    # (train_renderer.py) will detect the missing keys and create fresh
+    # optimizer/scheduler appropriate for scorer fine-tuning. This avoids
+    # carrying over MLX optimizer state that has no PyTorch equivalent.
     pt_checkpoint = {
         "epoch": -1,  # signals "pretrained, start from epoch 0 in Phase 2"
         "model": pt_state,
@@ -410,7 +445,6 @@ def train(args: argparse.Namespace):
         "best_epoch": -1,
         "baseline_pose": None,
         "baseline_seg": None,
-        # Note: optimizer and scheduler are NOT included -- Phase 2 creates fresh ones
     }
 
     pt_path = out_dir / f"mlx_pretrained_{args.tag}.pt"

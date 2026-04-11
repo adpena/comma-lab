@@ -44,7 +44,14 @@ from tac.fp4_quantize import (  # noqa: E402
     quantize_fp4,
     save_fp4,
 )
-from tac.losses import eval_scorer_loss, scorer_forward_pair, scorer_loss, scorer_loss_cached  # noqa: E402
+from tac.losses import (  # noqa: E402
+    _hwc_to_chw,
+    eval_scorer_loss,
+    frequency_aware_loss,
+    scorer_forward_pair,
+    scorer_loss,
+    scorer_loss_cached,
+)
 from tac.mask_codec import extract_masks, mask_pair_from_index  # noqa: E402
 from tac.profiles import PROFILES  # noqa: E402
 from tac.renderer import build_renderer  # noqa: E402
@@ -345,8 +352,11 @@ def train(args: argparse.Namespace):
     # Training infrastructure
     ema = EMA(model, decay=args.ema_decay)
     optimizer = torch.optim.AdamW(model.parameters(), lr=args.lr, weight_decay=1e-4)
+    # T_max accounts for both warmup and pretrain phases so the cosine
+    # schedule covers only the scorer fine-tuning (Phase 2) epochs.
+    _tmax = max(1, args.epochs - args.warmup_epochs - args.pretrain_epochs)
     scheduler = torch.optim.lr_scheduler.CosineAnnealingLR(
-        optimizer, T_max=max(1, args.epochs - args.warmup_epochs), eta_min=1e-5,
+        optimizer, T_max=_tmax, eta_min=1e-5,
     )
 
     # Pair indices
@@ -362,8 +372,6 @@ def train(args: argparse.Namespace):
     out_dir.mkdir(parents=True, exist_ok=True)
 
     # P0: Precompute GT scorer outputs (constant — frames and scorers are frozen)
-    import torch.nn.functional as _F
-    from tac.losses import _hwc_to_chw  # noqa: E402
     print("[train] P0: Precomputing GT scorer cache...")
     gt_scorer_cache = {}
     with torch.no_grad():
@@ -373,7 +381,7 @@ def train(args: argparse.Namespace):
             gp_out, gs_out = scorer_forward_pair(gx, posenet, segnet)
             gt_scorer_cache[start] = {
                 "pose_6": gp_out["pose"][..., :6].cpu(),
-                "seg_soft": _F.softmax(gs_out, dim=1).cpu(),
+                "seg_soft": F.softmax(gs_out, dim=1).cpu(),
             }
             del gt_pair, gx, gp_out, gs_out
     cache_bytes = sum(
@@ -417,8 +425,14 @@ def train(args: argparse.Namespace):
         state = torch.load(args.resume_from, map_location=device, weights_only=False)
         model.load_state_dict(state["model"])
         ema.shadow = {k: v.to(device) for k, v in state["ema_shadow"].items()}
-        optimizer.load_state_dict(state["optimizer"])
-        scheduler.load_state_dict(state["scheduler"])
+        if "optimizer" in state:
+            optimizer.load_state_dict(state["optimizer"])
+        else:
+            print("[train] Note: checkpoint has no optimizer state, using fresh optimizer")
+        if "scheduler" in state:
+            scheduler.load_state_dict(state["scheduler"])
+        else:
+            print("[train] Note: checkpoint has no scheduler state, using fresh scheduler")
         start_epoch = state.get("epoch", 0) + 1
         best_scorer = state.get("best_scorer", float("inf"))
         best_epoch = state.get("best_epoch", -1)
@@ -465,9 +479,12 @@ def train(args: argparse.Namespace):
 
             # Horizontal flip augmentation (50% probability)
             if random.random() < 0.5:
-                mask_t = mask_t.flip(-1)      # flip W dimension of (B, H, W)
+                # mask shape is (B, H, W) so W is dim -1;
+                # gt_pair shape is (B, 2, H, W, 3) so W is dim -2
+                # (trailing channel dim shifts the index by one)
+                mask_t = mask_t.flip(-1)
                 mask_t1 = mask_t1.flip(-1)
-                gt_pair = gt_pair.flip(-2)    # flip W in (B, 2, H, W, 3)
+                gt_pair = gt_pair.flip(-2)
 
             # Forward: render pair from masks
             rendered_pair = model(mask_t, mask_t1)  # (1, 2, H, W, 3)
@@ -497,7 +514,6 @@ def train(args: argparse.Namespace):
 
             # Trick 2: Frequency-domain wavelet loss
             if not in_pretrain and args.frequency_loss_weight > 0:
-                from tac.losses import frequency_aware_loss
                 freq_loss = frequency_aware_loss(rendered_pair, gt_pair)
                 loss = loss + args.frequency_loss_weight * freq_loss
 
@@ -556,6 +572,7 @@ def train(args: argparse.Namespace):
                 all_pair_starts, posenet, segnet, device,
             )
         else:
+            # scorer_val is stale (carried from last eval) on non-eval epochs
             scorer_val = best_scorer
 
         # Baseline watermark + regression alarm (Feature 4)

@@ -23,7 +23,11 @@ from __future__ import annotations
 
 import argparse
 import os
+import sys
 from pathlib import Path
+
+# Ensure src/ is importable regardless of working directory
+sys.path.insert(0, str(Path(__file__).resolve().parent.parent / "src"))
 
 import torch
 
@@ -40,8 +44,9 @@ def load_checkpoint_state_dict(path: str, variant: str, hidden: int, kernel: int
     try:
         model = load_int8(path, model, device="cpu")
         return model.state_dict()
-    except Exception:
-        # Try loading as float checkpoint
+    except Exception as e:
+        # INT8 load failed, try loading as float checkpoint
+        print(f"  Note: INT8 load failed ({e}), trying float format")
         state = torch.load(path, map_location="cpu", weights_only=True)
         if "__meta__" in state:
             del state["__meta__"]
@@ -86,16 +91,27 @@ def discover_checkpoints(
     directory: str,
     pattern: str = "*.pt",
     top_k: int = 5,
+    sort_by: str = "mtime",
 ) -> list[str]:
-    """Discover checkpoint files in a directory, sorted by modification time.
+    """Discover checkpoint files in a directory.
 
-    Returns the most recent top_k checkpoints.
+    Args:
+        directory: Path to search
+        pattern: Glob pattern for checkpoint files
+        top_k: Number of checkpoints to return
+        sort_by: Sort order — "mtime" (most recent first) or "name" (alphabetical,
+                 useful for quality-sorted names like "best", "v1", "v2")
+
+    Returns the top_k checkpoints.
     """
     d = Path(directory)
     if not d.exists():
         raise FileNotFoundError(f"Directory not found: {directory}")
 
-    candidates = sorted(d.glob(pattern), key=os.path.getmtime, reverse=True)
+    if sort_by == "name":
+        candidates = sorted(d.glob(pattern), key=lambda p: p.name, reverse=True)
+    else:
+        candidates = sorted(d.glob(pattern), key=os.path.getmtime, reverse=True)
     # Filter out training state files
     candidates = [c for c in candidates if "training_state" not in c.name]
     return [str(c) for c in candidates[:top_k]]
@@ -119,6 +135,18 @@ def ensemble_and_save(
         print(f"  [{i+1}/{len(checkpoint_paths)}] {path}")
         sd = load_checkpoint_state_dict(path, variant, hidden, kernel)
         state_dicts.append(sd)
+
+    # Architecture compatibility check: all state dicts must have matching keys
+    ref_keys = set(state_dicts[0].keys())
+    for i, sd in enumerate(state_dicts[1:], 2):
+        sd_keys = set(sd.keys())
+        if sd_keys != ref_keys:
+            missing = ref_keys - sd_keys
+            extra = sd_keys - ref_keys
+            raise ValueError(
+                f"Checkpoint {i} has incompatible architecture: "
+                f"missing={sorted(missing)[:5]}, extra={sorted(extra)[:5]}"
+            )
 
     print("[ensemble] Averaging state dicts...")
     avg_sd = average_state_dicts(state_dicts)
