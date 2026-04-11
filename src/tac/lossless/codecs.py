@@ -291,6 +291,27 @@ def zstd_dict_roundtrip_file(
     }
 
 
+def benchmark_zstd_dict_file(
+    *,
+    source_path: str | Path,
+    compressed_path: str | Path,
+    restored_path: str | Path,
+    sample_paths: list[str | Path] | None = None,
+    dict_size: int = 8192,
+) -> dict[str, object]:
+    source = Path(source_path)
+    samples = [Path(path).read_bytes() for path in sample_paths] if sample_paths else None
+    payload = zstd_dict_roundtrip_file(
+        source_path=source,
+        compressed_path=compressed_path,
+        restored_path=restored_path,
+        dict_size=dict_size,
+        sample_payloads=samples,
+    )
+    payload["command"] = "lossless_zstd_dict_benchmark"
+    return payload
+
+
 def compress_lossless_file(
     *, profile: str, input_path: str | Path, output_path: str | Path
 ) -> LosslessCompressionResult:

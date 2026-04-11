@@ -96,6 +96,51 @@ class TacLosslessCodecsTests(unittest.TestCase):
         self.assertEqual(result["method"], "zstd_dict")
         self.assertEqual(result["dictionary_bytes"], len(b"dict-bytes"))
 
+    def test_benchmark_zstd_dict_file_reports_ratio(self) -> None:
+        from tac.lossless.codecs import benchmark_zstd_dict_file
+
+        with tempfile.TemporaryDirectory() as tmpdir:
+            root = Path(tmpdir)
+            source = root / "tokens.bin"
+            compressed = root / "tokens.zst"
+            restored = root / "restored.bin"
+            payload = b"zstd payload" * 8
+            source.write_bytes(payload)
+
+            with mock.patch(
+                "tac.lossless.codecs.zstd_dict_roundtrip_file",
+                return_value={
+                    "method": "zstd_dict",
+                    "source_path": str(source),
+                    "compressed_path": str(compressed),
+                    "restored_path": str(restored),
+                    "dictionary_bytes": 123,
+                    "sample_count": 2,
+                    "archive_bytes": 50,
+                    "original_bytes": len(payload),
+                    "compression_rate": len(payload) / 50,
+                },
+            ) as mocked:
+                result = benchmark_zstd_dict_file(
+                    source_path=source,
+                    compressed_path=compressed,
+                    restored_path=restored,
+                    sample_paths=[source, source],
+                    dict_size=1024,
+                )
+
+        mocked.assert_called_once_with(
+            source_path=source,
+            compressed_path=compressed,
+            restored_path=restored,
+            dict_size=1024,
+            sample_payloads=[payload, payload],
+        )
+        self.assertEqual(result["command"], "lossless_zstd_dict_benchmark")
+        self.assertEqual(result["sample_count"], 2)
+        self.assertEqual(result["dictionary_bytes"], 123)
+        self.assertEqual(result["archive_bytes"], 50)
+
     def test_zstd_dict_roundtrip_falls_back_to_cli_binary_when_python_backend_is_missing(self) -> None:
         from tac.lossless.codecs import zstd_dict_roundtrip_file
 
