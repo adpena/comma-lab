@@ -11,6 +11,10 @@ Available variants:
   - DilatedPostFilter: dilation=2 on middle layer (15x15 RF)
   - PixelShufflePostFilter: half-res 4-layer REN
   - PSDPostFilter: PixelShuffle + Dilated hybrid (council consensus)
+  - BlockDCTMidbandFilter: spectral prior, mid-frequency band gains
+  - FiLMQATPostFilter: FiLM conditioning on frame statistics (QAT)
+  - CounterpointPostFilter: two-voice ensemble with band orthogonality
+  - PixelShuffleDilatedPostFilter: PS + dilated hybrid (legacy provenance)
 """
 
 from __future__ import annotations
@@ -475,6 +479,229 @@ class ContentAdaptivePostFilter(nn.Module):
         return (x + difficulty * residual).clamp(0, 255)
 
 
+# ── Migrated Architectures ──────────────────────────────────────────────
+
+
+class BlockDCTMidbandFilter(nn.Module):
+    """Block DCT mid-frequency band filter with learnable per-band gains.
+
+    Migrated from experiments/train_postfilter_dct.py.
+    Note: Research exploration of spectral priors. Not effective for comma video
+    compression — DCT mid-bands did not improve PoseNet or SegNet scores.
+
+    Architecture:
+      1. Splits frames into fixed-size blocks (default 8x8)
+      2. Transforms each block with a fixed orthonormal DCT
+      3. Applies learnable per-band gains only in the mid-frequency region
+      4. Reconstructs a pixel-space residual with the inverse DCT
+      5. Mixes via a learned scalar (starts at 0 = identity)
+    """
+
+    def __init__(self, hidden: int = 8, kernel: int = 3, block: int = 8,
+                 channels: int = 3, low: float = 0.18, high: float = 0.72):
+        super().__init__()
+        # hidden/kernel args accepted for API compatibility but unused
+        self.block = block
+        self.channels = channels
+        self.register_buffer("dct", self._orthonormal_dct_matrix(block))
+        self.register_buffer("mid_mask", self._build_mid_frequency_mask(block, low=low, high=high))
+        self.gain = nn.Parameter(torch.zeros(channels, block, block))
+        self.bias = nn.Parameter(torch.zeros(channels, block, block))
+        self.mix = nn.Parameter(torch.zeros(()))
+
+    @staticmethod
+    def _orthonormal_dct_matrix(size: int) -> torch.Tensor:
+        import math as _math
+        n = torch.arange(size, dtype=torch.float32)
+        k = n.unsqueeze(1)
+        matrix = torch.cos(_math.pi / size * (n + 0.5) * k)
+        matrix[0] *= 1.0 / _math.sqrt(2.0)
+        matrix *= _math.sqrt(2.0 / size)
+        return matrix
+
+    @staticmethod
+    def _build_mid_frequency_mask(size: int, *, low: float = 0.18, high: float = 0.72) -> torch.Tensor:
+        yy, xx = torch.meshgrid(torch.arange(size), torch.arange(size), indexing="ij")
+        radius = torch.sqrt(yy.float().pow(2) + xx.float().pow(2))
+        radius /= radius.max().clamp(min=1.0)
+        mask = ((radius >= low) & (radius <= high)).float()
+        mask[0, 0] = 0.0
+        return mask
+
+    def _blockify(self, x: torch.Tensor) -> tuple[torch.Tensor, int, int]:
+        import torch.nn.functional as F
+        b, c, h, w = x.shape
+        pad_h = (self.block - h % self.block) % self.block
+        pad_w = (self.block - w % self.block) % self.block
+        if pad_h or pad_w:
+            x = F.pad(x, (0, pad_w, 0, pad_h), mode="reflect")
+        hp, wp = x.shape[-2:]
+        blocks = x.reshape(b, c, hp // self.block, self.block, wp // self.block, self.block)
+        blocks = blocks.permute(0, 1, 2, 4, 3, 5).contiguous()
+        return blocks, pad_h, pad_w
+
+    def _deblockify(self, blocks: torch.Tensor, *, pad_h: int, pad_w: int,
+                    orig_h: int, orig_w: int) -> torch.Tensor:
+        b, c, nh, nw, _, _ = blocks.shape
+        x = blocks.permute(0, 1, 2, 4, 3, 5).reshape(b, c, nh * self.block, nw * self.block)
+        if pad_h or pad_w:
+            x = x[..., :orig_h, :orig_w]
+        return x
+
+    def forward(self, x: torch.Tensor) -> torch.Tensor:
+        orig_h, orig_w = x.shape[-2:]
+        blocks, pad_h, pad_w = self._blockify(x)
+        flat = blocks.reshape(-1, self.block, self.block)
+        coeff = torch.matmul(self.dct, flat)
+        coeff = torch.matmul(coeff, self.dct.t())
+        coeff = coeff.reshape(*blocks.shape)
+
+        mask = self.mid_mask.view(1, 1, 1, 1, self.block, self.block)
+        gain = torch.tanh(self.gain).view(1, self.channels, 1, 1, self.block, self.block)
+        bias = (0.05 * torch.tanh(self.bias)).view(1, self.channels, 1, 1, self.block, self.block)
+        delta_coeff = mask * (coeff * gain + bias)
+
+        delta_flat = delta_coeff.reshape(-1, self.block, self.block)
+        delta_blocks = torch.matmul(self.dct.t(), delta_flat)
+        delta_blocks = torch.matmul(delta_blocks, self.dct)
+        delta_blocks = delta_blocks.reshape_as(blocks)
+        delta = self._deblockify(delta_blocks, pad_h=pad_h, pad_w=pad_w,
+                                 orig_h=orig_h, orig_w=orig_w)
+        return (x + torch.tanh(self.mix) * delta).clamp(0.0, 255.0)
+
+
+class FiLMQATPostFilter(nn.Module):
+    """Feature-wise Linear Modulation post-filter with QAT-aware convolutions.
+
+    Migrated from experiments/train_postfilter_film_conditioned.py.
+    Note: Frame-adaptive soft gating via gamma/beta parameters. Not adopted for
+    comma — standard dilated outperformed. May be effective for variable-quality
+    input streams.
+
+    Computes a descriptor (luma mean, std, edge density) and uses it to
+    modulate intermediate features via gamma/beta FiLM conditioning. Includes
+    fake-quantized weight convolutions for QAT training compatibility.
+    """
+
+    def __init__(self, hidden: int = 16, kernel: int = 3):
+        super().__init__()
+        pad = kernel // 2
+        self.conv1 = nn.Conv2d(3, hidden, kernel, padding=pad, bias=True)
+        self.conv2 = nn.Conv2d(hidden, hidden, kernel, padding=pad, bias=True)
+        self.conv3 = nn.Conv2d(hidden, 3, kernel, padding=pad, bias=True)
+        self.film = nn.Linear(3, hidden * 2, bias=True)
+        self.act = nn.ReLU(inplace=False)
+        nn.init.zeros_(self.conv3.weight)
+        nn.init.zeros_(self.conv3.bias)
+
+    def _descriptor(self, x: torch.Tensor) -> torch.Tensor:
+        B = x.shape[0]
+        y = x[:, 0:1] * 0.299 + x[:, 1:2] * 0.587 + x[:, 2:3] * 0.114
+        y_norm = y / 255.0
+        mean = y_norm.mean(dim=(2, 3))
+        std = y_norm.std(dim=(2, 3), unbiased=False)
+        dx = y_norm[..., :, 1:] - y_norm[..., :, :-1]
+        dy = y_norm[..., 1:, :] - y_norm[..., :-1, :]
+        edge = 0.5 * (dx.abs().mean(dim=(2, 3)) + dy.abs().mean(dim=(2, 3)))
+        return torch.cat([mean, std, edge], dim=1).view(B, 3)
+
+    def forward(self, x: torch.Tensor) -> torch.Tensor:
+        film = self.film(self._descriptor(x))
+        gamma, beta = film.chunk(2, dim=1)
+        gamma = 1.0 + 0.25 * torch.tanh(gamma).unsqueeze(-1).unsqueeze(-1)
+        beta = 8.0 * torch.tanh(beta).unsqueeze(-1).unsqueeze(-1)
+        residual = self.act(self.conv1(x))
+        residual = residual * gamma + beta
+        residual = self.act(self.conv2(residual))
+        residual = residual * gamma + beta
+        residual = self.conv3(residual)
+        return (x + residual).clamp(0, 255)
+
+
+class CounterpointPostFilter(nn.Module):
+    """Two-voice counterpoint ensemble post-filter.
+
+    Migrated from experiments/train_postfilter_counterpoint.py.
+    Note: Harmonic ensemble hypothesis inspired by Jacob Collier review.
+    Experimental — not validated on authoritative scorer.
+
+    Two independent h=16 "voices" (3-layer CNNs) whose raw residuals are
+    summed: out = clamp(x + residual_a + residual_b, 0, 255). Designed to
+    be trained with band-orthogonality + output-decorrelation losses to
+    ensure the two voices occupy disjoint frequency bands.
+    """
+
+    def __init__(self, hidden: int = 16, kernel: int = 3):
+        super().__init__()
+        self.voice_a = self._make_voice(hidden, kernel)
+        self.voice_b = self._make_voice(hidden, kernel)
+
+    @staticmethod
+    def _make_voice(hidden: int, kernel: int) -> nn.Module:
+        pad = kernel // 2
+        voice = nn.ModuleDict({
+            "conv1": nn.Conv2d(3, hidden, kernel, padding=pad, bias=True),
+            "conv2": nn.Conv2d(hidden, hidden, kernel, padding=pad, bias=True),
+            "conv3": nn.Conv2d(hidden, 3, kernel, padding=pad, bias=True),
+        })
+        nn.init.zeros_(voice["conv3"].weight)
+        nn.init.zeros_(voice["conv3"].bias)
+        return voice
+
+    def _voice_residual(self, voice: nn.Module, x: torch.Tensor) -> torch.Tensor:
+        act = torch.relu
+        h = act(voice["conv1"](x))
+        h = act(voice["conv2"](h))
+        return voice["conv3"](h)
+
+    def forward(self, x: torch.Tensor) -> torch.Tensor:
+        resid_a = self._voice_residual(self.voice_a, x)
+        resid_b = self._voice_residual(self.voice_b, x)
+        return (x + resid_a + resid_b).clamp(0, 255)
+
+    def residual_a(self, x: torch.Tensor) -> torch.Tensor:
+        return self._voice_residual(self.voice_a, x)
+
+    def residual_b(self, x: torch.Tensor) -> torch.Tensor:
+        return self._voice_residual(self.voice_b, x)
+
+
+class PixelShuffleDilatedPostFilter(nn.Module):
+    """Half-resolution 4-layer residual post-filter with dilated middle layer.
+
+    Migrated from experiments/train_postfilter_pixelshuffle_dilated.py.
+    Note: Hybrid of PixelShuffle base + dilated center. Promising architecture
+    — council #1 pick but not yet auth-evaluated.
+
+    Identical topology to PSDPostFilter but kept as a distinct class for
+    provenance tracking from the legacy experiment script. Uses
+    PixelUnshuffle(2) -> conv1 -> conv2(dilation=2) -> conv3 -> conv4 ->
+    PixelShuffle(2) with residual connection in normalized [0,1] space.
+    """
+
+    def __init__(self, hidden: int = 64, kernel: int = 3):
+        super().__init__()
+        pad = kernel // 2
+        self.down = nn.PixelUnshuffle(2)
+        self.conv1 = nn.Conv2d(12, hidden, kernel, padding=pad, bias=True)
+        self.conv2 = nn.Conv2d(hidden, hidden, kernel, padding=pad * 2, dilation=2, bias=True)
+        self.conv3 = nn.Conv2d(hidden, hidden, kernel, padding=pad, bias=True)
+        self.conv4 = nn.Conv2d(hidden, 12, kernel, padding=pad, bias=True)
+        self.up = nn.PixelShuffle(2)
+        self.act = nn.ReLU(inplace=False)
+        nn.init.zeros_(self.conv4.weight)
+        nn.init.zeros_(self.conv4.bias)
+
+    def forward(self, x: torch.Tensor) -> torch.Tensor:
+        x_norm = x / 255.0
+        residual = self.down(x_norm)
+        residual = self.act(self.conv1(residual))
+        residual = self.act(self.conv2(residual))
+        residual = self.act(self.conv3(residual))
+        residual = self.up(self.conv4(residual))
+        return (x_norm + residual).clamp(0, 1) * 255.0
+
+
 class PixelShuffleUpscaleFilter(nn.Module):
     """Technique 4: Resolution reduction + PixelShuffle upscale.
 
@@ -578,6 +805,11 @@ VARIANTS = {
     "dual_head": DualHeadPostFilter,
     "content_adaptive": ContentAdaptivePostFilter,
     "pixelshuffle_upscale": PixelShuffleUpscaleFilter,
+    # Migrated architectures
+    "dct_midband": BlockDCTMidbandFilter,
+    "film_qat": FiLMQATPostFilter,
+    "counterpoint": CounterpointPostFilter,
+    "pixelshuffle_dilated_v2": PixelShuffleDilatedPostFilter,
     # Legacy aliases (from deploy inflate_postfilter.py)
     "residual": PostFilter,
     "saliency_weighted": PostFilter,

@@ -846,6 +846,143 @@ OVERFIT_GPU = {
     "frequency_loss_weight": 0.1,
 }
 
+# ── Migrated Architecture Smoke Profiles ─────────────────────────────
+
+# DCT mid-band filter smoke test
+DCT_MIDBAND_SMOKE = {
+    "variant": "dct_midband",
+    "hidden": 8,  # block size (hidden arg maps to block for this arch)
+    "kernel": 3,
+    "epochs": 50,
+    "lr": 3e-4,
+    "eval_every": 10,
+    "accum_steps": 4,
+    "loss_mode": "standard",
+    "alpha": 20.0,
+    "sal_lambda": 0.1,
+}
+
+# FiLM QAT conditioned filter smoke test
+FILM_CONDITIONED_SMOKE = {
+    "variant": "film_qat",
+    "hidden": 16,
+    "kernel": 3,
+    "epochs": 50,
+    "lr": 5e-4,
+    "ema_decay": 0.997,
+    "eval_every": 10,
+    "accum_steps": 4,
+    "loss_mode": "standard",
+    "alpha": 20.0,
+    "sal_lambda": 0.1,
+}
+
+# Counterpoint two-voice ensemble smoke test
+COUNTERPOINT_SMOKE = {
+    "variant": "counterpoint",
+    "hidden": 16,
+    "kernel": 3,
+    "epochs": 50,
+    "lr": 5e-4,
+    "ema_decay": 0.997,
+    "eval_every": 10,
+    "accum_steps": 4,
+    "loss_mode": "standard",
+    "alpha": 20.0,
+    "sal_lambda": 0.1,
+}
+
+# PixelShuffle+Dilated hybrid smoke test
+PIXELSHUFFLE_DILATED_SMOKE = {
+    "variant": "pixelshuffle_dilated_v2",
+    "hidden": 64,
+    "kernel": 3,
+    "epochs": 50,
+    "lr": 5e-4,
+    "ema_decay": 0.997,
+    "eval_every": 10,
+    "accum_steps": 4,
+    "loss_mode": "standard",
+    "alpha": 20.0,
+    "sal_lambda": 1.0,
+}
+
+# Uint8 STE training smoke test (uses dilated arch with uint8 STE wrapper)
+UINT8_STE_SMOKE = {
+    "variant": "dilated",
+    "hidden": 32,
+    "kernel": 3,
+    "epochs": 50,
+    "lr": 5e-4,
+    "ema_decay": 0.997,
+    "eval_every": 10,
+    "accum_steps": 4,
+    "loss_mode": "standard",
+    "alpha": 20.0,
+    "sal_lambda": 0.1,
+    "use_uint8_ste": True,  # flag for Trainer to apply Uint8STE after model forward
+}
+
+# ── Migrated Legacy Loss Technique Profiles ─────────────────────────────
+
+# SegNet KL divergence loss (migrated from train_postfilter_segaware.py)
+# Direct KL(GT || filtered) on SegNet logits instead of soft cosine proxy.
+# NOTE: Not validated on authoritative scorer. Use for experimentation.
+SEGNET_KL_SMOKE = {
+    **SMOKE,
+    "loss_mode": "segnet_kl",
+    "segnet_loss_weight": 50.0,
+}
+
+SEGNET_KL_FULL = {
+    **PROVEN_BASELINE,
+    "loss_mode": "segnet_kl",
+    "segnet_loss_weight": 50.0,
+    "epochs": 2500,
+    "boundary_weight": 50.0,
+    "hard_frame_ratio": 0.3,
+    "error_replay_every": 200,
+    "use_swa": True,
+}
+
+# PoseNet embedding loss (migrated from train_postfilter_featmatch.py)
+# 512-d feature matching on PoseNet summarizer instead of 6-d pose MSE.
+# NOTE: Not adopted for comma -- standard loss performed better in practice.
+POSENET_EMBEDDING_SMOKE = {
+    **SMOKE,
+    "loss_mode": "posenet_embedding",
+    "posenet_embedding_layer": "summary",
+    "posenet_embedding_weight": 0.5,
+}
+
+POSENET_EMBEDDING_FULL = {
+    **PROVEN_BASELINE,
+    "loss_mode": "posenet_embedding",
+    "posenet_embedding_layer": "summary",
+    "posenet_embedding_weight": 0.5,
+    "epochs": 2500,
+    "use_swa": True,
+}
+
+# Counterpoint ensemble with band-orthogonality (migrated from train_postfilter_counterpoint.py)
+# Uses band_lambda and decor_lambda on the existing counterpoint architecture smoke.
+COUNTERPOINT_LOSSES_SMOKE = {
+    **COUNTERPOINT_SMOKE,
+    "band_lambda": 1.0,
+    "decor_lambda": 0.5,
+}
+
+# Kalman weight filter (migrated from train_postfilter_kalman.py)
+# Inverse-variance weighted averaging as alternative to EMA.
+# EMA performed comparably in practice, but Kalman is more principled.
+KALMAN_BASELINE = {
+    **PROVEN_BASELINE,
+    "use_kalman": True,
+    "kalman_process_noise": 1e-6,
+    "kalman_obs_noise_base": 1e-4,
+    "kalman_obs_noise_scale": 10.0,
+}
+
 PROFILES = {
     "council_v1": COUNCIL_V1,
     "council_v2_adaptive": COUNCIL_V2_ADAPTIVE,
@@ -900,4 +1037,10 @@ PROFILES = {
     "focal_gamma_5": FOCAL_GAMMA_5,
     "focal_gamma_4_smoke": FOCAL_GAMMA_4_SMOKE,
     "focal_gamma_5_smoke": FOCAL_GAMMA_5_SMOKE,
+    # Migrated architecture smoke profiles
+    "dct_midband_smoke": DCT_MIDBAND_SMOKE,
+    "film_conditioned_smoke": FILM_CONDITIONED_SMOKE,
+    "counterpoint_smoke": COUNTERPOINT_SMOKE,
+    "pixelshuffle_dilated_smoke": PIXELSHUFFLE_DILATED_SMOKE,
+    "uint8_ste_smoke": UINT8_STE_SMOKE,
 }

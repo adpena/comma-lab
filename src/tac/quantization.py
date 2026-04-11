@@ -63,6 +63,42 @@ def fake_quant(t: torch.Tensor) -> torch.Tensor:
     return FakeQuantSTE.apply(t)
 
 
+# ── Uint8 Activation STE ───────────────────────────────────────────────
+
+
+class Uint8STE(torch.autograd.Function):
+    """Straight-through estimator for exact uint8 round-trip with saturation-aware
+    gradient blocking.
+
+    Migrated from experiments/train_postfilter_uint8ste.py.
+    Note: Addresses compliance audit gap — ensures training matches exact
+    deployment uint8 round-trip behavior.
+
+    Forward: x -> clamp(round(x), 0, 255) — exactly what inflate writes to raw frames
+    Backward: identity inside [0, 255], zero outside (saturation-aware gradient blocking)
+
+    Usage:
+        y = model(x)
+        y_uint8 = Uint8STE.apply(y)  # scorer now sees deployment-exact tensor
+    """
+
+    @staticmethod
+    def forward(ctx, x: torch.Tensor) -> torch.Tensor:
+        saturated = (x < 0.0) | (x > 255.0)
+        ctx.save_for_backward(saturated)
+        return x.detach().clamp(0.0, 255.0).round()
+
+    @staticmethod
+    def backward(ctx, grad_out: torch.Tensor):
+        (saturated,) = ctx.saved_tensors
+        return grad_out * (~saturated).to(grad_out.dtype)
+
+
+def uint8_ste(x: torch.Tensor) -> torch.Tensor:
+    """Apply uint8 round-trip STE. Convenience wrapper around Uint8STE.apply."""
+    return Uint8STE.apply(x)
+
+
 # ── LSQ (Learned Step Size Quantization) ────────────────────────────
 
 
