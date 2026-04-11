@@ -1,0 +1,37 @@
+{
+  "record_count": 64,
+  "original_bytes": 12288000,
+  "results": [
+    {
+      "frame_order": "canonical",
+      "archive_bytes": 6473747,
+      "original_bytes": 12288000,
+      "compression_ratio": 1.8981279311656758,
+      "exact_match": true,
+      "chunk_count": 1,
+      "record_count": 64,
+      "encode_result": {
+        "output_dir": "/Users/adpena/Projects/pact/reports/raw/2026-04-11-commavq-global-prev-symbol-recursive-sample/canonical",
+        "record_count": 64,
+        "chunk_count": 1,
+        "frame_order": "canonical"
+      }
+    },
+    {
+      "frame_order": "recursive_bisect",
+      "archive_bytes": 10560156,
+      "original_bytes": 12288000,
+      "compression_ratio": 1.1636191738076596,
+      "exact_match": true,
+      "chunk_count": 1,
+      "record_count": 64,
+      "encode_result": {
+        "output_dir": "/Users/adpena/Projects/pact/reports/raw/2026-04-11-commavq-global-prev-symbol-recursive-sample/recursive_bisect",
+        "record_count": 64,
+        "chunk_count": 1,
+        "frame_order": "recursive_bisect"
+      }
+    }
+  ],
+  "delta_bytes": 4086409
+}

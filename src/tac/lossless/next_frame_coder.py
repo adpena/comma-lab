@@ -21,6 +21,67 @@ class PositionTransitionModel:
         return self._logits_table[np.arange(128), last_frame]
 
 
+class PositionPairTransitionModel:
+    def __init__(
+        self,
+        *,
+        pair_rows: dict[tuple[int, int, int], np.ndarray],
+        fallback_rows: dict[tuple[int, int], np.ndarray],
+        global_pair_rows: dict[tuple[int, int], np.ndarray],
+        global_fallback_rows: dict[int, np.ndarray],
+        vocab_size: int,
+    ) -> None:
+        self._pair_rows = {key: np.asarray(row, dtype=np.float64) for key, row in pair_rows.items()}
+        self._fallback_rows = {key: np.asarray(row, dtype=np.float64) for key, row in fallback_rows.items()}
+        self._global_pair_rows = {
+            key: np.asarray(row, dtype=np.float64) for key, row in global_pair_rows.items()
+        }
+        self._global_fallback_rows = {
+            key: np.asarray(row, dtype=np.float64) for key, row in global_fallback_rows.items()
+        }
+        self._uniform_row = np.ones((int(vocab_size),), dtype=np.float64)
+
+    def _lookup(self, table: dict[object, np.ndarray], key: object) -> np.ndarray:
+        return table.get(key, self._uniform_row)
+
+    def _mix_rows(self, *components: tuple[float, np.ndarray]) -> np.ndarray:
+        mixed = np.zeros_like(self._uniform_row)
+        total_weight = 0.0
+        for weight, row in components:
+            if weight <= 0.0:
+                continue
+            mixed += weight * (row / row.sum())
+            total_weight += weight
+        if total_weight <= 0.0:
+            return np.log(self._uniform_row / self._uniform_row.sum())
+        return np.log(mixed / total_weight)
+
+    def next_frame_logits(self, prefix_frames: np.ndarray, *, context_frames: int) -> np.ndarray:
+        prefix = np.asarray(prefix_frames, dtype=np.uint16)
+        prev1 = prefix[-1].reshape(-1)
+        rows: list[np.ndarray] = []
+        if prefix.shape[0] < 2:
+            for position, previous in enumerate(prev1.tolist()):
+                rows.append(
+                    self._mix_rows(
+                        (1.0, self._lookup(self._fallback_rows, (position, previous))),
+                        (0.5, self._lookup(self._global_fallback_rows, previous)),
+                    )
+                )
+            return np.asarray(rows, dtype=np.float64)
+        prev2 = prefix[-2].reshape(-1)
+        for position, (older, previous) in enumerate(zip(prev2.tolist(), prev1.tolist())):
+            rows.append(
+                self._mix_rows(
+                    (1.0, self._lookup(self._pair_rows, (position, older, previous))),
+                    (0.5, self._lookup(self._fallback_rows, (position, previous))),
+                    (1.0, self._lookup(self._global_pair_rows, (older, previous))),
+                    (0.5, self._lookup(self._global_fallback_rows, previous)),
+                )
+            )
+        return np.asarray(rows, dtype=np.float64)
+
+
 def _normalize_frames(frames) -> np.ndarray:
     arr = np.asarray(frames, dtype=np.uint16)
     if arr.ndim != 3 or arr.shape[1:] != (8, 16):
@@ -54,6 +115,45 @@ def build_position_transition_model(frames, *, vocab_size: int = 1024) -> Positi
                 counts[position, p, c] += 1.0
     logits = np.log(counts)
     return PositionTransitionModel(logits)
+
+
+def build_position_pair_transition_model(frames, *, vocab_size: int = 1024) -> PositionPairTransitionModel:
+    arr = _normalize_frames(frames)
+    pair_rows: dict[tuple[int, int, int], np.ndarray] = {}
+    fallback_rows: dict[tuple[int, int], np.ndarray] = {}
+    global_pair_rows: dict[tuple[int, int], np.ndarray] = {}
+    global_fallback_rows: dict[int, np.ndarray] = {}
+
+    def row_for(table: dict[object, np.ndarray], key: object) -> np.ndarray:
+        row = table.get(key)
+        if row is None:
+            row = np.ones((vocab_size,), dtype=np.float64)
+            table[key] = row
+        return row
+
+    for previous, current in zip(arr[:-1], arr[1:]):
+        prev_flat = previous.reshape(-1)
+        curr_flat = current.reshape(-1)
+        for position, (b, c) in enumerate(zip(prev_flat.tolist(), curr_flat.tolist())):
+            if b < vocab_size and c < vocab_size:
+                row_for(fallback_rows, (position, b))[c] += 1.0
+                row_for(global_fallback_rows, b)[c] += 1.0
+
+    for prev2, prev1, current in zip(arr[:-2], arr[1:-1], arr[2:]):
+        prev2_flat = prev2.reshape(-1)
+        prev1_flat = prev1.reshape(-1)
+        curr_flat = current.reshape(-1)
+        for position, (a, b, c) in enumerate(zip(prev2_flat.tolist(), prev1_flat.tolist(), curr_flat.tolist())):
+            if a < vocab_size and b < vocab_size and c < vocab_size:
+                row_for(pair_rows, (position, a, b))[c] += 1.0
+                row_for(global_pair_rows, (a, b))[c] += 1.0
+    return PositionPairTransitionModel(
+        pair_rows=pair_rows,
+        fallback_rows=fallback_rows,
+        global_pair_rows=global_pair_rows,
+        global_fallback_rows=global_fallback_rows,
+        vocab_size=vocab_size,
+    )
 
 
 def encode_next_frame_stream_with_logits_fn(

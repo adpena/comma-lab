@@ -8,6 +8,7 @@ import numpy as np
 from .arithmetic import flatten_tokens_for_gpt_arithmetic
 from .data import TokenRecord
 from .frequency_coder import decode_uint16_prev_symbol_stream, encode_uint16_prev_symbol_stream
+from .transforms import apply_frame_order, invert_frame_order, recursive_bisect_frame_order
 
 
 def _chunk_slices(count: int, chunk_count: int) -> list[slice]:
@@ -24,8 +25,20 @@ def _chunk_slices(count: int, chunk_count: int) -> list[slice]:
     return offsets
 
 
-def _record_payload(record: TokenRecord) -> np.ndarray:
-    return flatten_tokens_for_gpt_arithmetic(record.tokens, layout="position_major").astype(np.uint16)
+def _resolve_frame_order(frame_order: str, frame_count: int) -> np.ndarray | None:
+    if frame_order == "canonical":
+        return None
+    if frame_order == "recursive_bisect":
+        return recursive_bisect_frame_order(frame_count)
+    raise ValueError(f"unsupported frame_order: {frame_order}")
+
+
+def _record_payload(record: TokenRecord, *, frame_order: str = "canonical") -> np.ndarray:
+    tokens = np.asarray(record.tokens)
+    permutation = _resolve_frame_order(frame_order, int(tokens.shape[0]))
+    if permutation is not None:
+        tokens = apply_frame_order(tokens, permutation)
+    return flatten_tokens_for_gpt_arithmetic(tokens, layout="position_major").astype(np.uint16)
 
 
 def encode_corpus_global_prev_symbol_position_major(
@@ -33,6 +46,7 @@ def encode_corpus_global_prev_symbol_position_major(
     records: list[TokenRecord],
     output_dir: str | Path,
     chunk_count: int = 1,
+    frame_order: str = "canonical",
 ) -> dict[str, object]:
     if chunk_count <= 0:
         raise ValueError("chunk_count must be positive")
@@ -40,7 +54,7 @@ def encode_corpus_global_prev_symbol_position_major(
     root.mkdir(parents=True, exist_ok=True)
 
     ordered = sorted(records, key=lambda item: item.file_name)
-    payloads = [_record_payload(record) for record in ordered]
+    payloads = [_record_payload(record, frame_order=frame_order) for record in ordered]
     slices = _chunk_slices(len(payloads), chunk_count)
     manifest_records: list[dict[str, object]] = []
 
@@ -60,6 +74,7 @@ def encode_corpus_global_prev_symbol_position_major(
 
     manifest = {
         "chunk_count": len(slices),
+        "frame_order": frame_order,
         "records": manifest_records,
     }
     (root / "manifest.json").write_text(json.dumps(manifest, indent=2) + "\n")
@@ -67,6 +82,7 @@ def encode_corpus_global_prev_symbol_position_major(
         "output_dir": str(root),
         "record_count": len(ordered),
         "chunk_count": len(slices),
+        "frame_order": frame_order,
     }
 
 
@@ -75,6 +91,7 @@ def decode_corpus_global_prev_symbol_position_major(*, encoded_dir: str | Path, 
     target = Path(output_dir)
     target.mkdir(parents=True, exist_ok=True)
     manifest = json.loads((root / "manifest.json").read_text())
+    frame_order = str(manifest.get("frame_order", "canonical"))
     decoded_chunks: dict[int, np.ndarray] = {}
     chunk_offsets: dict[int, int] = {}
 
@@ -91,10 +108,14 @@ def decode_corpus_global_prev_symbol_position_major(*, encoded_dir: str | Path, 
         body = payload[:-1]
         streams = body.reshape(128, -1)
         frames = streams[:, 1:].T.reshape(-1, 8, 16).astype(np.int16)
+        permutation = _resolve_frame_order(frame_order, int(frames.shape[0]))
+        if permutation is not None:
+            frames = invert_frame_order(frames, permutation).astype(np.int16, copy=False)
         with (target / str(record["file_name"])).open("wb") as handle:
             np.save(handle, frames)
 
     return {
         "output_dir": str(target),
         "record_count": len(manifest["records"]),
+        "frame_order": frame_order,
     }

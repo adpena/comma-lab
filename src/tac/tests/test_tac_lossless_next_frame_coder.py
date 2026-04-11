@@ -33,6 +33,57 @@ class TacLosslessNextFrameCoderTests(unittest.TestCase):
         self.assertEqual(logits.shape, (128, 16))
         self.assertEqual(int(np.argmax(logits[0])), 4)
 
+    def test_build_position_pair_transition_model_predicts_next_frame_logits(self) -> None:
+        from tac.lossless.next_frame_coder import build_position_pair_transition_model
+
+        frames = np.array(
+            [
+                np.full((8, 16), 3, dtype=np.uint16),
+                np.full((8, 16), 4, dtype=np.uint16),
+                np.full((8, 16), 6, dtype=np.uint16),
+                np.full((8, 16), 7, dtype=np.uint16),
+            ]
+        )
+
+        model = build_position_pair_transition_model(frames, vocab_size=16)
+        logits = model.next_frame_logits(frames[:2], context_frames=2)
+
+        self.assertEqual(logits.shape, (128, 16))
+        self.assertEqual(int(np.argmax(logits[0])), 6)
+
+    def test_build_position_pair_transition_model_uses_single_frame_backoff(self) -> None:
+        from tac.lossless.next_frame_coder import build_position_pair_transition_model
+
+        frames = np.array(
+            [
+                np.full((8, 16), 2, dtype=np.uint16),
+                np.full((8, 16), 5, dtype=np.uint16),
+                np.full((8, 16), 2, dtype=np.uint16),
+            ]
+        )
+
+        model = build_position_pair_transition_model(frames, vocab_size=8)
+        logits = model.next_frame_logits(frames[:1], context_frames=2)
+
+        self.assertEqual(logits.shape, (128, 8))
+        self.assertEqual(int(np.argmax(logits[0])), 5)
+
+    def test_build_position_pair_transition_model_uses_global_backoff_for_sparse_position_context(self) -> None:
+        from tac.lossless.next_frame_coder import build_position_pair_transition_model
+
+        prev2 = np.full((8, 16), 1, dtype=np.uint16)
+        prev1 = np.full((8, 16), 2, dtype=np.uint16)
+        current = np.full((8, 16), 9, dtype=np.uint16)
+        current[0, 0] = 3
+        frames = np.array([prev2, prev1, current])
+
+        model = build_position_pair_transition_model(frames, vocab_size=16)
+        logits = model.next_frame_logits(frames[:2], context_frames=2)
+
+        self.assertEqual(logits.shape, (128, 16))
+        self.assertEqual(int(np.argmax(logits[0])), 9)
+        self.assertEqual(int(np.argmax(logits[1])), 9)
+
     def test_encode_decode_next_frame_stream_roundtrips_sample(self) -> None:
         from tac.lossless.next_frame_coder import (
             decode_next_frame_stream_with_logits_fn,

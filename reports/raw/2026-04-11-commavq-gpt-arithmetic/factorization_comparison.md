@@ -115,4 +115,23 @@
   - exact match: `5000/5000`
   - compression ratio: `1.7814848630311673`
   - this beats the promoted `lzma` floor locally, but remains `local_only`
+- On the stronger 64-record corpus-global sample, frequency remap still loses once mapping bytes are counted:
+  - plain global prev-symbol: `3.041766468940296x`
+  - global prev-symbol + frequency remap: `3.036067015522624x`
+  - mapping bytes: `12144`
+- The stronger sparse pair-backoff grouped next-frame model improved over the earlier weak grouped baselines, but it is still far behind GPT arithmetic:
+  - metadata: `reports/raw/2026-04-11-commavq-gpt-arithmetic/small/train_split0_next_frame_pair_backoff_129.json`
+  - frame count: `129`
+  - archive bytes: `14352`
+  - original bytes: `33024`
+  - compression ratio: `2.301003344481605`
+  - exact match: `true`
+  - this beats the earlier adaptive grouped-next-frame sample (`1.8616607475054963x`) but is still not competitive with GPT arithmetic
+- Recursive frame-ordering is strongly negative on a real 64-record corpus-global sample:
+  - metadata: `reports/raw/2026-04-11-commavq-global-prev-symbol-recursive-sample/summary.json`
+  - canonical global stream: `1.8981279311656758x`
+  - recursive-bisect frame order: `1.1636191738076596x`
+  - delta: `+4086409` archive bytes for recursive order
+  - exact match: `true` for both
+  - this closes out the naive hierarchical frame-reordering idea in its simple exact form
 - The next exact implementation cut should build on this `position_major` file-level conditional coder signal, not on more source-order experiments.

@@ -63,6 +63,49 @@ class TacLosslessGlobalPrevSymbolTests(unittest.TestCase):
             self.assertTrue((root / "encoded" / "chunk_000.tpc").exists())
             self.assertTrue((root / "encoded" / "chunk_001.tpc").exists())
 
+    def test_encode_decode_corpus_supports_recursive_bisect_frame_order(self) -> None:
+        from tac.lossless.data import TokenRecord
+        from tac.lossless.global_prev_symbol import (
+            decode_corpus_global_prev_symbol_position_major,
+            encode_corpus_global_prev_symbol_position_major,
+        )
+
+        records = [
+            TokenRecord("clip_a", np.arange(8 * 8 * 16, dtype=np.int16).reshape(8, 8, 16)),
+            TokenRecord("clip_b", (np.arange(8 * 8 * 16, dtype=np.int16) + 1000).reshape(8, 8, 16)),
+        ]
+
+        with tempfile.TemporaryDirectory() as tmpdir:
+            root = Path(tmpdir)
+            encoded = encode_corpus_global_prev_symbol_position_major(
+                records=records,
+                output_dir=root / "encoded",
+                frame_order="recursive_bisect",
+            )
+            decoded = decode_corpus_global_prev_symbol_position_major(
+                encoded_dir=root / "encoded",
+                output_dir=root / "decoded",
+            )
+
+            self.assertEqual(encoded["frame_order"], "recursive_bisect")
+            self.assertTrue(np.array_equal(np.load(root / "decoded" / "clip_a"), records[0].tokens))
+            self.assertTrue(np.array_equal(np.load(root / "decoded" / "clip_b"), records[1].tokens))
+            self.assertEqual(decoded["frame_order"], "recursive_bisect")
+
+    def test_encode_corpus_rejects_unknown_frame_order(self) -> None:
+        from tac.lossless.data import TokenRecord
+        from tac.lossless.global_prev_symbol import encode_corpus_global_prev_symbol_position_major
+
+        records = [TokenRecord("clip", np.arange(128, dtype=np.int16).reshape(1, 8, 16))]
+
+        with tempfile.TemporaryDirectory() as tmpdir:
+            with self.assertRaisesRegex(ValueError, "frame_order"):
+                encode_corpus_global_prev_symbol_position_major(
+                    records=records,
+                    output_dir=Path(tmpdir) / "encoded",
+                    frame_order="unknown",
+                )
+
     def test_encode_corpus_rejects_non_positive_chunk_count(self) -> None:
         from tac.lossless.data import TokenRecord
         from tac.lossless.global_prev_symbol import encode_corpus_global_prev_symbol_position_major

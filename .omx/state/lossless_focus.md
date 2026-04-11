@@ -1,7 +1,7 @@
 # Lossless Focus
 
 ## current promoted baseline
-- Profile: `lzma_baseline`
-- Method: `lzma`
-- Compression rate: `1.5947`
-- Archive bytes: `602005914`
+- Profile: `global_prev_symbol_position_major`
+- Method: `global_prev_symbol_position_major`
+- Compression rate: `2.0913`
+- Archive bytes: `459047172`
