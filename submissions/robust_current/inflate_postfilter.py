@@ -369,6 +369,11 @@ TTO_STEPS = int(os.environ.get("INFLATE_TTO_STEPS", "0"))  # test-time optimizat
 TTO_LR = float(os.environ.get("INFLATE_TTO_LR", "1e-4"))
 TTO_LOSS = os.environ.get("INFLATE_TTO_LOSS", "temporal_consistency")
 TTO_BUDGET = float(os.environ.get("INFLATE_TTO_BUDGET", "60.0"))
+# Supervised TTO with pre-computed PoseNet targets
+SUPERVISED_TTO_STEPS = int(os.environ.get("INFLATE_SUPERVISED_TTO_STEPS", "0"))
+SUPERVISED_TTO_LR = float(os.environ.get("INFLATE_SUPERVISED_TTO_LR", "1e-4"))
+SUPERVISED_TTO_BUDGET = float(os.environ.get("INFLATE_SUPERVISED_TTO_BUDGET", "120.0"))
+SUPERVISED_TTO_PARAM_MODE = os.environ.get("INFLATE_SUPERVISED_TTO_PARAM_MODE", "all")
 
 
 def _decode_frames_for_tto(
@@ -407,6 +412,11 @@ def inflate_with_postfilter(
     target_w: int = 1164, target_h: int = 874, device: str = "cpu",
     tto_steps: int = 0, tto_lr: float = 1e-4,
     tto_loss: str = "temporal_consistency", tto_budget: float = 60.0,
+    supervised_tto_steps: int = 0, supervised_tto_lr: float = 1e-4,
+    supervised_tto_budget: float = 120.0, supervised_tto_param_mode: str = "all",
+    posenet_targets_path: str | None = None,
+    posenet=None, upstream_dir: str | None = None,
+    posenet_path: str | None = None, segnet_path: str | None = None,
 ) -> int:
     """Decode, upscale, apply learned post-filter, write raw RGB.
 
@@ -417,6 +427,11 @@ def inflate_with_postfilter(
     If tto_steps > 0, runs test-time optimization on a subset of frames
     BEFORE the main inflate loop. This adapts the model to the specific
     video content using self-supervised losses (no scorer needed).
+
+    If supervised_tto_steps > 0 and posenet_targets_path exists, runs
+    SUPERVISED TTO: optimizes model to minimize MSE against pre-computed
+    PoseNet ground truth targets. This is far more effective than
+    self-supervised TTO because we optimize the exact scorer metric.
     """
     import time
     t0 = time.monotonic()
@@ -458,6 +473,72 @@ def inflate_with_postfilter(
                 print("  TTO: not enough frames, skipping", file=sys.stderr)
             tto_elapsed = time.monotonic() - t0
             print(f"  TTO pre-pass: {tto_elapsed:.1f}s", file=sys.stderr)
+
+    # Supervised TTO: optimize against pre-computed PoseNet targets
+    if supervised_tto_steps > 0 and posenet_targets_path:
+        try:
+            from tac.scorer_targets import load_posenet_targets
+            from tac.tto import supervised_tto
+        except ImportError:
+            print("WARNING: tac.scorer_targets or tac.tto not available, "
+                  "skipping supervised TTO", file=sys.stderr)
+            supervised_tto_steps = 0
+
+        if supervised_tto_steps > 0:
+            targets_dict = load_posenet_targets(posenet_targets_path, device=device)
+            if targets_dict is not None:
+                # Load PoseNet if not already provided
+                _posenet = posenet
+                if _posenet is None:
+                    print("  Supervised TTO: loading PoseNet scorer ...",
+                          file=sys.stderr)
+                    try:
+                        from tac.scorer import load_scorers
+                        if posenet_path and segnet_path:
+                            _posenet, _ = load_scorers(
+                                posenet_path, segnet_path,
+                                device=device, upstream_dir=upstream_dir,
+                            )
+                        else:
+                            print("  WARNING: posenet_path/segnet_path not provided, "
+                                  "cannot run supervised TTO", file=sys.stderr)
+                    except Exception as e:
+                        print(f"  WARNING: failed to load PoseNet: {e}",
+                              file=sys.stderr)
+
+                if _posenet is not None:
+                    print(f"  Supervised TTO: decoding frames for adaptation ...",
+                          file=sys.stderr)
+                    stto_frames = _decode_frames_for_tto(
+                        video_path, target_w, target_h,
+                        max_frames=128, stride=2,  # more coverage for supervised
+                    )
+                    if stto_frames.shape[0] >= 2:
+                        print(f"  Supervised TTO: adapting model "
+                              f"({supervised_tto_steps} steps, "
+                              f"lr={supervised_tto_lr}) on "
+                              f"{stto_frames.shape[0]} frames against "
+                              f"{targets_dict['n_pairs']} PoseNet targets ...",
+                              file=sys.stderr)
+                        model = supervised_tto(
+                            model, stto_frames, _posenet,
+                            targets_dict["targets"],
+                            n_steps=supervised_tto_steps,
+                            lr=supervised_tto_lr,
+                            param_mode=supervised_tto_param_mode,
+                            time_budget_seconds=supervised_tto_budget,
+                            verbose=True,
+                        )
+                        del stto_frames
+                    else:
+                        print("  Supervised TTO: not enough frames, skipping",
+                              file=sys.stderr)
+                    stto_elapsed = time.monotonic() - t0
+                    print(f"  Supervised TTO pre-pass: {stto_elapsed:.1f}s",
+                          file=sys.stderr)
+            else:
+                print("  Supervised TTO: targets file not found or invalid, "
+                      "skipping", file=sys.stderr)
 
     container = av.open(video_path)
     stream = container.streams.video[0]
@@ -535,6 +616,31 @@ if __name__ == "__main__":
             print("ERROR: postfilter_int8.pt not found", file=sys.stderr)
             sys.exit(1)
 
+    # Look for PoseNet targets in archive dir (bundled in archive.zip)
+    posenet_targets_path = None
+    if SUPERVISED_TTO_STEPS > 0:
+        for candidate in [
+            Path(archive_dir) / "posenet_targets.bin",
+            script_dir / "posenet_targets.bin",
+        ]:
+            if candidate.exists():
+                posenet_targets_path = str(candidate)
+                break
+        if posenet_targets_path:
+            print(f"  Found PoseNet targets: {posenet_targets_path}",
+                  file=sys.stderr)
+        else:
+            print("  WARNING: SUPERVISED_TTO_STEPS > 0 but posenet_targets.bin "
+                  "not found. Supervised TTO will be skipped.", file=sys.stderr)
+
+    # Discover upstream dir for loading PoseNet (needed for supervised TTO)
+    upstream_dir = os.environ.get("COMMA_CHALLENGE_ROOT")
+    posenet_path_env = os.environ.get("POSENET_PATH")
+    segnet_path_env = os.environ.get("SEGNET_PATH")
+    if upstream_dir and not posenet_path_env:
+        posenet_path_env = str(Path(upstream_dir) / "models" / "posenet.safetensors")
+        segnet_path_env = str(Path(upstream_dir) / "models" / "segnet.safetensors")
+
     # Load model ONCE (not per-video)
     print(f"  Loading post-filter from {postfilter_path}", file=sys.stderr)
     model = load_postfilter_int8(postfilter_path, device="cpu")
@@ -555,6 +661,14 @@ if __name__ == "__main__":
             str(mkv_path), str(out_path), model,
             tto_steps=TTO_STEPS, tto_lr=TTO_LR,
             tto_loss=TTO_LOSS, tto_budget=TTO_BUDGET,
+            supervised_tto_steps=SUPERVISED_TTO_STEPS,
+            supervised_tto_lr=SUPERVISED_TTO_LR,
+            supervised_tto_budget=SUPERVISED_TTO_BUDGET,
+            supervised_tto_param_mode=SUPERVISED_TTO_PARAM_MODE,
+            posenet_targets_path=posenet_targets_path,
+            upstream_dir=upstream_dir,
+            posenet_path=posenet_path_env,
+            segnet_path=segnet_path_env,
         )
 
     t_total = time.monotonic() - t_start

@@ -355,6 +355,35 @@ if [ -f "$SELF_DIR/postfilter_int8.pt" ]; then
   echo "Bundled postfilter_int8.pt ($(stat -f%z "$SELF_DIR/postfilter_int8.pt" 2>/dev/null || stat -c%s "$SELF_DIR/postfilter_int8.pt") bytes) into archive"
 fi
 
+# Extract and bundle PoseNet targets for supervised TTO at inflate time
+# This pre-computes PoseNet(original) outputs so inflate can optimize against them
+POSENET_TARGETS_ENABLE="${POSENET_TARGETS_ENABLE:-0}"
+if [ "$POSENET_TARGETS_ENABLE" = "1" ]; then
+  POSENET_TARGETS_OUT="$ARCHIVE_DIR/posenet_targets.bin"
+  GT_VIDEO_PATH="${UPSTREAM_ROOT}/videos/0.mkv"
+  POSENET_PATH="${UPSTREAM_ROOT}/models/posenet.safetensors"
+  if [ -f "$GT_VIDEO_PATH" ] && [ -f "$POSENET_PATH" ]; then
+    echo "Extracting PoseNet targets for supervised TTO ..."
+    "$UV_BIN" run python -m tac.scorer_targets \
+      --gt-video "$GT_VIDEO_PATH" \
+      --posenet "$POSENET_PATH" \
+      --upstream "$UPSTREAM_ROOT" \
+      --output "$POSENET_TARGETS_OUT" \
+      --device "${POSENET_TARGETS_DEVICE:-cpu}"
+    if [ -f "$POSENET_TARGETS_OUT" ]; then
+      echo "Bundled posenet_targets.bin ($(stat -f%z "$POSENET_TARGETS_OUT" 2>/dev/null || stat -c%s "$POSENET_TARGETS_OUT") bytes) into archive"
+    else
+      echo "WARNING: PoseNet target extraction failed" >&2
+    fi
+  else
+    echo "WARNING: Cannot extract PoseNet targets - GT video or PoseNet model not found" >&2
+  fi
+elif [ -f "$SELF_DIR/posenet_targets.bin" ]; then
+  # If pre-computed targets exist alongside the submission, bundle them
+  cp "$SELF_DIR/posenet_targets.bin" "$ARCHIVE_DIR/posenet_targets.bin"
+  echo "Bundled pre-computed posenet_targets.bin ($(stat -f%z "$SELF_DIR/posenet_targets.bin" 2>/dev/null || stat -c%s "$SELF_DIR/posenet_targets.bin") bytes) into archive"
+fi
+
 (
   cd "$ARCHIVE_DIR"
   zip -9 -r "$ARCHIVE_ZIP_TMP" .
