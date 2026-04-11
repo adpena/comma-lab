@@ -109,6 +109,7 @@ class TrainConfig(BaseModel):
                                 description="Fraction of pairs held out for eval. "
                                 "0.0 = contest mode (train+eval on all pairs). "
                                 "0.25 = production mode (25% held-out eval split).")
+    use_lsq: bool = Field(False, description="Enable Learned Step Size Quantization")
 
     # Resumption
     resume_from: str | None = None
@@ -272,6 +273,22 @@ class Trainer:
         self.optimizer = torch.optim.AdamW(
             model.parameters(), lr=config.lr, weight_decay=1e-4
         )
+
+        # LSQ: Learned Step Size Quantization
+        self._lsq_scales: dict[str, nn.Module] | None = None
+        if config.use_lsq:
+            from .quantization import apply_lsq
+            self._lsq_scales = apply_lsq(self.model)
+            if self._lsq_scales:
+                lsq_params = []
+                for lsq_mod in self._lsq_scales.values():
+                    lsq_params.extend(lsq_mod.parameters())
+                self.optimizer.add_param_group({
+                    "params": lsq_params,
+                    "lr": config.lr * 5,
+                    "weight_decay": 0.0,
+                })
+                print(f"[trainer] LSQ enabled: {len(self._lsq_scales)} learned scales, lr={config.lr * 5:.6f}")
 
         if config.scheduler == "cosine":
             self.scheduler = torch.optim.lr_scheduler.CosineAnnealingLR(
@@ -885,6 +902,7 @@ class Trainer:
 
             accum = cfg.accum_steps
             self.optimizer.zero_grad(set_to_none=True)
+            epoch_grad_norms: list[float] = []
 
             for step, pair_idx in enumerate(perm):
                 start = train_pair_starts[pair_idx.item()]
@@ -968,7 +986,8 @@ class Trainer:
 
                 # Gradient accumulation: step every accum_steps
                 if (step + 1) % accum == 0 or (step + 1) == len(perm):
-                    torch.nn.utils.clip_grad_norm_(self.model.parameters(), cfg.grad_clip)
+                    grad_norm = torch.nn.utils.clip_grad_norm_(self.model.parameters(), cfg.grad_clip)
+                    epoch_grad_norms.append(grad_norm.item())
                     self.optimizer.step()
                     self.ema.update(self.model)
                     self.optimizer.zero_grad(set_to_none=True)
@@ -1025,6 +1044,7 @@ class Trainer:
                 telemetry_path.parent.mkdir(parents=True, exist_ok=True)
                 import time as _time
                 with open(telemetry_path, "a") as tf:
+                    avg_grad_norm = sum(epoch_grad_norms) / max(len(epoch_grad_norms), 1)
                     entry = {
                         "epoch": epoch,
                         "scorer": round(scorer_val, 6),
@@ -1033,6 +1053,7 @@ class Trainer:
                         "train_pose": round(avg_pose, 8),
                         "train_seg": round(avg_seg, 8),
                         "train_loss": round(avg_loss, 6),
+                        "avg_grad_norm": round(avg_grad_norm, 6),
                         "lr": round(lr, 8),
                         "best_scorer": round(self.best_scorer, 6),
                         "best_epoch": self.best_epoch,
