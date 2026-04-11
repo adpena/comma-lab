@@ -259,6 +259,57 @@ class TacCliTests(unittest.TestCase):
         self.assertEqual(result["command"], "lossless_frequency_report")
         self.assertEqual(result["empirical_bits_per_token"], 1.2)
 
+    def test_lossless_gpt_score_subcommand_reports_metrics(self) -> None:
+        mod = load_module()
+        with tempfile.TemporaryDirectory() as tmpdir:
+            root = Path(tmpdir)
+            token_path = root / "train.bin"
+            output_path = root / "gpt_score.json"
+            with mock.patch.object(
+                mod,
+                "score_commavq_gpt_sample",
+                return_value={
+                    "command": "lossless_gpt_score_sample",
+                    "token_path": str(token_path),
+                    "output_path": str(output_path),
+                    "profile": "gpt_arithmetic_small",
+                    "layout": "frame_major",
+                    "device": "mps",
+                    "dtype": "float32",
+                    "scored_tokens": 32,
+                    "bits_per_token": 1.25,
+                },
+            ) as mocked:
+                result = mod.main(
+                    [
+                        "lossless",
+                        "gpt-score",
+                        "--profile",
+                        "gpt_arithmetic_small",
+                        "--tokens",
+                        str(token_path),
+                        "--output",
+                        str(output_path),
+                        "--device",
+                        "mps",
+                    ]
+                )
+
+        mocked.assert_called_once_with(
+            token_path=token_path,
+            output_path=output_path,
+            profile="gpt_arithmetic_small",
+            max_scored_tokens=None,
+            device="mps",
+            dtype="auto",
+            cache_dir=None,
+            model_url=None,
+            gpt_module_path=None,
+        )
+        self.assertEqual(result["command"], "lossless_gpt_score_sample")
+        self.assertEqual(result["device"], "mps")
+        self.assertEqual(result["bits_per_token"], 1.25)
+
     def test_lossless_frequency_encode_subcommand_writes_coded_stream(self) -> None:
         mod = load_module()
         with tempfile.TemporaryDirectory() as tmpdir:
