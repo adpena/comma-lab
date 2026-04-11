@@ -127,6 +127,14 @@ class TrainConfig(BaseModel):
             raise ValueError(f"warmup_epochs ({self.warmup_epochs}) must be < epochs ({self.epochs})")
         if self.temperature_end > self.temperature_start:
             raise ValueError("temperature_end must be <= temperature_start")
+        if self.loss_mode == "pcgrad" and self.accum_steps > 1:
+            import warnings
+            warnings.warn(
+                f"pcgrad with accum_steps={self.accum_steps}: gradient conflict detection "
+                f"only runs on first microbatch of each window. Consider accum_steps=1 "
+                f"for full-strength non-opposing guarantee.",
+                stacklevel=2,
+            )
         if self.loss_mode == "kl_distill":
             if self.temperature_start < 2.0:
                 raise ValueError(
@@ -986,10 +994,15 @@ class Trainer:
                     )
                 elif cfg.loss_mode == "pcgrad":
                     # Non-opposing gradient: decouple PoseNet and SegNet
+                    # BUG 3/6 fix: only run projection on first microbatch of each
+                    # accumulation window. Later microbatches use the cached scale
+                    # to avoid stale conflict detection across the window.
                     sw = getattr(self, '_cached_sw', cfg.segnet_loss_weight)
+                    is_first_microbatch = (step % accum == 0)
                     loss, pd, sd, _conflict = scorer_loss_pcgrad(
                         filtered, gt_pair, posenet, segnet,
                         segnet_weight=sw,
+                        do_projection=is_first_microbatch,
                     )
                 else:
                     if cfg.boundary_weight > 1.0 and self._boundary_masks is not None:

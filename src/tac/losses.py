@@ -69,6 +69,7 @@ def scorer_loss_pcgrad(
     posenet,
     segnet,
     segnet_weight: float = 100.0,
+    do_projection: bool = True,
 ) -> tuple[torch.Tensor, float, float, bool]:
     """Non-opposing gradient loss for PoseNet-SegNet decoupling.
 
@@ -86,10 +87,21 @@ def scorer_loss_pcgrad(
     - Nash-MTL (Navon et al., ICML 2022): Nash bargaining for proportional fairness
     - Aligned-MTL (Senushkin et al., CVPR 2023): converges to specified Pareto point
 
+    Args:
+        do_projection: If False, skip the gradient conflict check and just return
+            the weighted sum. Used to avoid retain_graph memory pressure on
+            microbatch steps 2+ during gradient accumulation (BUG 3/6/MEMORY fix).
+
     Returns: (loss, pose_distortion, seg_distortion, conflict_detected)
     """
     fx = _hwc_to_chw(filtered_pair_hwc)
     gx = _hwc_to_chw(gt_pair_hwc)
+
+    # BUG 4 fix: ensure fx has requires_grad even after permute/contiguous
+    # The _hwc_to_chw does .float().permute().contiguous() which may not
+    # propagate requires_grad from the input if it was detached upstream.
+    if not fx.requires_grad and filtered_pair_hwc.requires_grad:
+        fx.requires_grad_(True)
 
     fp_out, fs_out = scorer_forward_pair(fx, posenet, segnet)
     with torch.no_grad():
@@ -107,7 +119,12 @@ def scorer_loss_pcgrad(
 
     # Gradient conflict detection and non-opposing projection
     # Operates on intermediate activations (fx) as a proxy for parameter gradients
-    if fx.requires_grad:
+    #
+    # BUG 3/6/MEMORY: Only run projection when do_projection=True (first microbatch
+    # in accumulation window). Subsequent microbatches skip the expensive autograd
+    # calls, avoiding retain_graph memory pressure and stale-scale issues. The scale
+    # from the first microbatch is a reasonable proxy for the full window.
+    if do_projection and fx.requires_grad:
         g_pose = torch.autograd.grad(pose_loss, fx, retain_graph=True, create_graph=False)[0]
         g_seg = torch.autograd.grad(seg_loss, fx, retain_graph=True, create_graph=False)[0]
 
@@ -116,10 +133,7 @@ def scorer_loss_pcgrad(
         if cos_sim.item() < 0:
             conflict = True
             # Project: remove the component of g_seg along g_pose
-            # g_seg_proj = g_seg - (g_seg . g_pose / ||g_pose||^2) * g_pose
-            # The scale factor for seg_loss that achieves this:
             # We want: g_pose + scale * g_seg to have non-negative dot with g_pose
-            # g_pose . (g_pose + scale * g_seg) >= 0
             # ||g_pose||^2 + scale * (g_seg . g_pose) >= 0
             # scale <= -||g_pose||^2 / (g_seg . g_pose)   [since g_seg.g_pose < 0]
             dot = (g_seg * g_pose).sum().item()
