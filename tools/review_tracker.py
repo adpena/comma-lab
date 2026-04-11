@@ -542,6 +542,57 @@ def cmd_policy_check(file_path: str | None = None) -> None:
 # Commands
 # ---------------------------------------------------------------------------
 
+def _batch_file_last_commits(file_paths: list[str]) -> dict[str, tuple[str, str]]:
+    """Get last commit hash + date for many files in one batched git call.
+
+    Instead of spawning one ``git log`` per file (O(N) subprocesses), this
+    collects all unique paths, runs a single ``git log`` that walks the full
+    history once, and builds a {path: (short_hash, iso_date)} lookup.
+
+    The command ``git log --format='%H %aI' --diff-filter=ACMR --name-only``
+    emits blocks like::
+
+        <hash> <date>
+                          ← blank line
+        path/a.py
+        path/b.py
+                          ← blank line
+
+    We iterate those blocks and record the *first* (most recent) hit per file.
+    """
+    unique = sorted(set(file_paths))
+    if not unique:
+        return {}
+
+    out = _run_git(
+        "log", "--format=%H %aI", "--diff-filter=ACMR", "--name-only",
+        "--", *unique,
+        timeout=30,
+    )
+    if not out:
+        return {}
+
+    result: dict[str, tuple[str, str]] = {}
+    current_hash = ""
+    current_date = ""
+
+    for line in out.split("\n"):
+        line = line.strip()
+        if not line:
+            continue
+        # Lines with a space and 40-char hex prefix are commit headers
+        parts = line.split(maxsplit=1)
+        if len(parts) == 2 and len(parts[0]) == 40 and all(c in "0123456789abcdef" for c in parts[0]):
+            current_hash = parts[0][:12]
+            current_date = parts[1]
+        else:
+            # It's a filename — record first (most recent) occurrence only
+            if line not in result:
+                result[line] = (current_hash, current_date)
+
+    return result
+
+
 def cmd_scan() -> None:
     """Scan the codebase and update the tracker."""
     con = _init_db()
@@ -557,9 +608,15 @@ def cmd_scan() -> None:
     for row in con.execute("SELECT qualified_name, last_modified_commit, review_status FROM entities").fetchall():
         existing[row[0]] = {"commit": row[1], "status": row[2]}
 
+    # Batch-fetch last commit info for all files in one git call
+    _commit_cache = _batch_file_last_commits([e.file_path for e in entities])
+
+    # Wrap all DB mutations in a single transaction for speed
+    con.execute("BEGIN TRANSACTION")
+
     for ent in entities:
         key = ent.qualified_name
-        commit, date = get_file_last_commit(ent.file_path)
+        commit, date = _commit_cache.get(ent.file_path, ("", ""))
         ent.last_modified_commit = commit
         ent.last_modified_date = date
 
@@ -595,6 +652,8 @@ def cmd_scan() -> None:
     for old_key in existing:
         if old_key not in current_keys:
             con.execute("DELETE FROM entities WHERE qualified_name=?", [old_key])
+
+    con.execute("COMMIT")
 
     removed = len(set(existing) - current_keys)
     con.execute("""
