@@ -39,3 +39,7 @@ train_renderer_mlx.py gradient clipping code calls .square() on AdamW optimizer 
 ## 2026-04-11 [discovery] Modal A10G training still failing: results dirs created but empty
 
 Modal v4 (with upstream clone) created mask_v3 and mask_v4 dirs in results volume but they are empty. Training likely crashed during scorer loading or first forward pass. Need to check Modal logs for exact error.
+
+## 2026-04-11 [decision] GPU budget unlimited — big GPUs authorized
+
+A100/H100 authorized if A10G is insufficient. DP-SIMS, MaskRenderer, Wavelet, Diffusion, VQ-VAE all get fair smoke tests. No architecture eliminated without scored evidence.

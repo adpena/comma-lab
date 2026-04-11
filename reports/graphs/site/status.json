@@ -3,9 +3,9 @@
   "rank": 1,
   "lead": 0.163,
   "days_left": 22.5,
-  "best_training_scorer": 1.1673,
-  "best_training_epoch": 691,
+  "best_training_scorer": 1.1668,
+  "best_training_epoch": 695,
   "gap_to_proxy": -2.383,
   "trainers_alive": 0,
-  "updated": "2026-04-11 18:06 CT"
+  "updated": "2026-04-11 18:16 CT"
 }
