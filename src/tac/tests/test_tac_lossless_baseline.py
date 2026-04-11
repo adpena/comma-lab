@@ -17,6 +17,100 @@ if str(SRC_ROOT) not in sys.path:
 
 
 class TacLosslessBaselineTests(unittest.TestCase):
+    def test_build_global_prev_symbol_position_major_submission_uses_dataset_loader_and_packages_zip(self) -> None:
+        from tac.lossless.codecs import _build_baseline_submission
+
+        calls = []
+
+        def fake_loader(dataset_name: str, *, num_proc=None, data_files=None):
+            calls.append({"dataset_name": dataset_name, "data_files": data_files})
+            return {
+                "train": [
+                    {"json": {"file_name": "clip_b"}, "token.npy": (np.arange(128, dtype=np.int16) + 128).reshape(1, 8, 16)},
+                    {"json": {"file_name": "clip_a"}, "token.npy": np.arange(128, dtype=np.int16).reshape(1, 8, 16)},
+                ]
+            }
+
+        with tempfile.TemporaryDirectory() as tmpdir:
+            root = Path(tmpdir)
+            result = _build_baseline_submission(
+                profile="global_prev_symbol_position_major",
+                split=[0, 1],
+                work_dir=root,
+                dataset_loader=fake_loader,
+            )
+
+            self.assertTrue(Path(result["archive_path"]).exists())
+            self.assertTrue((root / "payload" / "chunk_000.tpc").exists())
+            self.assertTrue((root / "payload" / "manifest.json").exists())
+            self.assertTrue((root / "payload" / "_lossless_global_prev_symbol_runtime.py").exists())
+            self.assertTrue(result["challenge_valid"])
+            self.assertFalse(result["local_only"])
+
+        self.assertEqual(calls[0]["dataset_name"], "commaai/commavq")
+        self.assertEqual(calls[0]["data_files"], {"train": ["data-0000.tar.gz", "data-0001.tar.gz"]})
+
+    def test_render_global_prev_symbol_decompress_script_roundtrips_extensionless_names(self) -> None:
+        from tac.lossless.codecs import (
+            render_global_prev_symbol_position_major_decompress_script,
+            render_global_prev_symbol_position_major_runtime_module,
+        )
+        from tac.lossless.data import TokenRecord
+        from tac.lossless.global_prev_symbol import encode_corpus_global_prev_symbol_position_major
+
+        with tempfile.TemporaryDirectory() as tmpdir:
+            root = Path(tmpdir)
+            payload_dir = root / "payload"
+            output_dir = root / "decoded"
+            output_dir.mkdir()
+            records = [
+                TokenRecord("clip_b", (np.arange(128, dtype=np.int16) + 128).reshape(1, 8, 16)),
+                TokenRecord("clip_a", np.arange(128, dtype=np.int16).reshape(1, 8, 16)),
+            ]
+            encode_corpus_global_prev_symbol_position_major(records=records, output_dir=payload_dir, chunk_count=1)
+            (payload_dir / "_lossless_global_prev_symbol_runtime.py").write_text(
+                render_global_prev_symbol_position_major_runtime_module()
+            )
+            decompress_path = root / "decompress.py"
+            decompress_path.write_text(render_global_prev_symbol_position_major_decompress_script())
+
+            subprocess.run(
+                [sys.executable, str(decompress_path)],
+                cwd=payload_dir,
+                check=True,
+                env={**dict(), "OUTPUT_DIR": str(output_dir)},
+            )
+
+            self.assertTrue(np.array_equal(np.load(output_dir / "clip_a"), records[1].tokens))
+            self.assertTrue(np.array_equal(np.load(output_dir / "clip_b"), records[0].tokens))
+
+    def test_evaluate_global_prev_symbol_position_major_submission_returns_measured_result(self) -> None:
+        from tac.lossless.codecs import evaluate_lossless_baseline_submission
+
+        def fake_loader(dataset_name: str, *, num_proc=None, data_files=None):
+            return {
+                "train": [
+                    {"json": {"file_name": "clip_a"}, "token.npy": np.arange(128, dtype=np.int16).reshape(1, 8, 16)},
+                    {"json": {"file_name": "clip_b"}, "token.npy": (np.arange(128, dtype=np.int16) + 128).reshape(1, 8, 16)},
+                ]
+            }
+
+        with tempfile.TemporaryDirectory() as tmpdir:
+            root = Path(tmpdir)
+            result = evaluate_lossless_baseline_submission(
+                profile="global_prev_symbol_position_major",
+                split=[0, 1],
+                work_dir=root,
+                dataset_loader=fake_loader,
+            )
+
+        self.assertEqual(result["command"], "lossless_baseline_evaluate")
+        self.assertEqual(result["baseline"]["method"], "global_prev_symbol_position_major")
+        self.assertTrue(result["challenge_valid"])
+        self.assertFalse(result["local_only"])
+        self.assertTrue(result["verification"]["exact_match"])
+        self.assertGreater(result["compression"]["compression_rate"], 1.0)
+
     def test_build_prev_symbol_position_major_submission_uses_dataset_loader_and_packages_zip(self) -> None:
         from tac.lossless.codecs import _build_baseline_submission
 

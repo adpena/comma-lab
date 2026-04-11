@@ -11,7 +11,7 @@ from unittest import mock
 import subprocess
 
 
-ROOT = Path(__file__).resolve().parents[1]
+ROOT = Path(__file__).resolve().parents[3]
 SRC_ROOT = ROOT / "src"
 if str(SRC_ROOT) not in sys.path:
     sys.path.insert(0, str(SRC_ROOT))
@@ -468,6 +468,121 @@ class TacCliTests(unittest.TestCase):
         )
         self.assertEqual(result["command"], "lossless_gpt_arithmetic_sample")
         self.assertEqual(result["compression_ratio"], 8.0)
+
+    def test_lossless_next_frame_sample_subcommand_reports_encoded_bytes(self) -> None:
+        mod = load_module()
+        with tempfile.TemporaryDirectory() as tmpdir:
+            root = Path(tmpdir)
+            token_path = root / "train.bin"
+            output_path = root / "sample.nfg"
+            with mock.patch.object(
+                mod,
+                "encode_commavq_next_frame_sample",
+                return_value={
+                    "command": "lossless_next_frame_sample",
+                    "token_path": str(token_path),
+                    "encoded_path": str(output_path),
+                    "device": "mps",
+                    "frame_count": 32,
+                    "encoded_bytes": 128,
+                    "compression_ratio": 4.0,
+                    "exact_match": True,
+                },
+            ) as mocked:
+                result = mod.main(
+                    [
+                        "lossless",
+                        "next-frame-sample",
+                        "--profile",
+                        "gpt_next_frame_small",
+                        "--tokens",
+                        str(token_path),
+                        "--output",
+                        str(output_path),
+                        "--device",
+                        "mps",
+                        "--max-frames",
+                        "32",
+                    ]
+                )
+
+        mocked.assert_called_once_with(
+            token_path=token_path,
+            encoded_path=output_path,
+            profile="gpt_next_frame_small",
+            max_frames=32,
+            context_frames=None,
+            device="mps",
+            dtype="auto",
+            verify_decode=False,
+            cache_dir=None,
+            model_url=None,
+            gpt_module_path=None,
+        )
+        self.assertEqual(result["command"], "lossless_next_frame_sample")
+        self.assertEqual(result["compression_ratio"], 4.0)
+
+    def test_lossless_next_frame_sample_subcommand_supports_context_override_and_verify_decode(self) -> None:
+        mod = load_module()
+        with tempfile.TemporaryDirectory() as tmpdir:
+            root = Path(tmpdir)
+            token_path = root / "train.bin"
+            output_path = root / "sample.nfg"
+            gpt_module_path = root / "gpt.py"
+            with mock.patch.object(
+                mod,
+                "encode_commavq_next_frame_sample",
+                return_value={
+                    "command": "lossless_next_frame_sample",
+                    "token_path": str(token_path),
+                    "encoded_path": str(output_path),
+                    "device": "cpu",
+                    "frame_count": 8,
+                    "encoded_bytes": 64,
+                    "compression_ratio": 2.0,
+                    "exact_match": True,
+                    "local_only": True,
+                    "measured": False,
+                },
+            ) as mocked:
+                result = mod.main(
+                    [
+                        "lossless",
+                        "next-frame-sample",
+                        "--profile",
+                        "gpt_next_frame_small",
+                        "--tokens",
+                        str(token_path),
+                        "--output",
+                        str(output_path),
+                        "--context-frames",
+                        "2",
+                        "--device",
+                        "cpu",
+                        "--dtype",
+                        "float32",
+                        "--verify-decode",
+                        "--gpt-module-path",
+                        str(gpt_module_path),
+                    ]
+                )
+
+        mocked.assert_called_once_with(
+            token_path=token_path,
+            encoded_path=output_path,
+            profile="gpt_next_frame_small",
+            max_frames=32,
+            context_frames=2,
+            device="cpu",
+            dtype="float32",
+            verify_decode=True,
+            cache_dir=None,
+            model_url=None,
+            gpt_module_path=str(gpt_module_path),
+        )
+        self.assertTrue(result["local_only"])
+        self.assertFalse(result["measured"])
+        self.assertTrue(result["exact_match"])
 
     def test_lossless_frequency_encode_subcommand_writes_coded_stream(self) -> None:
         mod = load_module()

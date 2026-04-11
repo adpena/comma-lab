@@ -12,6 +12,15 @@ from .range_coder import RangeDecoder, RangeEncoder, cumulative_frequencies, nor
 STREAM_MAGIC = b"NFG1"
 
 
+class PositionTransitionModel:
+    def __init__(self, logits_table: np.ndarray) -> None:
+        self._logits_table = np.asarray(logits_table, dtype=np.float64)
+
+    def next_frame_logits(self, prefix_frames: np.ndarray, *, context_frames: int) -> np.ndarray:
+        last_frame = np.asarray(prefix_frames[-1], dtype=np.uint16).reshape(-1)
+        return self._logits_table[np.arange(128), last_frame]
+
+
 def _normalize_frames(frames) -> np.ndarray:
     arr = np.asarray(frames, dtype=np.uint16)
     if arr.ndim != 3 or arr.shape[1:] != (8, 16):
@@ -32,6 +41,19 @@ def _freqs_from_frame_logits(logits, *, vocab_size: int, total: int) -> list[lis
         probs = np.exp(shifted)
         freqs.append(normalize_probabilities(probs.tolist(), total=total))
     return freqs
+
+
+def build_position_transition_model(frames, *, vocab_size: int = 1024) -> PositionTransitionModel:
+    arr = _normalize_frames(frames)
+    counts = np.ones((128, vocab_size, vocab_size), dtype=np.float64)
+    for previous, current in zip(arr[:-1], arr[1:]):
+        prev_flat = previous.reshape(-1)
+        curr_flat = current.reshape(-1)
+        for position, (p, c) in enumerate(zip(prev_flat.tolist(), curr_flat.tolist())):
+            if p < vocab_size and c < vocab_size:
+                counts[position, p, c] += 1.0
+    logits = np.log(counts)
+    return PositionTransitionModel(logits)
 
 
 def encode_next_frame_stream_with_logits_fn(

@@ -1,0 +1,156 @@
+from __future__ import annotations
+
+import sys
+import tempfile
+import unittest
+from pathlib import Path
+
+import numpy as np
+
+
+ROOT = Path(__file__).resolve().parents[3]
+SRC_ROOT = ROOT / "src"
+if str(SRC_ROOT) not in sys.path:
+    sys.path.insert(0, str(SRC_ROOT))
+
+
+class TacLosslessNextFrameCoderTests(unittest.TestCase):
+    def test_build_position_transition_model_predicts_next_frame_logits(self) -> None:
+        from tac.lossless.next_frame_coder import build_position_transition_model
+
+        frames = np.array(
+            [
+                np.full((8, 16), 3, dtype=np.uint16),
+                np.full((8, 16), 4, dtype=np.uint16),
+                np.full((8, 16), 5, dtype=np.uint16),
+                np.full((8, 16), 6, dtype=np.uint16),
+            ]
+        )
+
+        model = build_position_transition_model(frames, vocab_size=16)
+        logits = model.next_frame_logits(frames[:1], context_frames=1)
+
+        self.assertEqual(logits.shape, (128, 16))
+        self.assertEqual(int(np.argmax(logits[0])), 4)
+
+    def test_encode_decode_next_frame_stream_roundtrips_sample(self) -> None:
+        from tac.lossless.next_frame_coder import (
+            decode_next_frame_stream_with_logits_fn,
+            encode_next_frame_stream_with_logits_fn,
+        )
+
+        frames = np.array(
+            [
+                np.full((8, 16), 3, dtype=np.uint16),
+                np.full((8, 16), 4, dtype=np.uint16),
+                np.full((8, 16), 5, dtype=np.uint16),
+            ]
+        )
+
+        def next_frame_logits(prefix_frames):
+            logits = np.full((128, 8), -10.0, dtype=np.float64)
+            next_value = int(prefix_frames[-1].reshape(-1)[0]) + 1
+            logits[:, next_value] = 10.0
+            return logits
+
+        encoded = encode_next_frame_stream_with_logits_fn(
+            frames,
+            logits_fn=next_frame_logits,
+            vocab_size=8,
+        )
+        restored = decode_next_frame_stream_with_logits_fn(
+            encoded["encoded_bytes"],
+            logits_fn=next_frame_logits,
+            vocab_size=8,
+        )
+
+        self.assertTrue(np.array_equal(restored, frames))
+        self.assertTrue(encoded["encoded_bytes"].startswith(b"NFG1"))
+
+    def test_encode_commavq_next_frame_sample_uses_injected_model_loader(self) -> None:
+        from tac.lossless.next_frame_coder import encode_commavq_next_frame_sample
+
+        with tempfile.TemporaryDirectory() as tmpdir:
+            root = Path(tmpdir)
+            token_path = root / "tokens.bin"
+            output_path = root / "sample.nfg"
+            frame0 = np.full((8, 16), 3, dtype=np.uint16)
+            frame1 = np.full((8, 16), 4, dtype=np.uint16)
+            frame2 = np.full((8, 16), 5, dtype=np.uint16)
+            flat = np.concatenate(
+                [
+                    np.array([1024], dtype=np.uint16), frame0.reshape(-1),
+                    np.array([1024], dtype=np.uint16), frame1.reshape(-1),
+                    np.array([1024], dtype=np.uint16), frame2.reshape(-1),
+                    np.array([1025], dtype=np.uint16),
+                ]
+            )
+            flat.tofile(token_path)
+
+            calls = []
+            loader_kwargs = {}
+
+            class FakeModel:
+                def next_frame_logits(self, prefix_frames, *, context_frames):
+                    calls.append((prefix_frames.shape[0], context_frames))
+                    logits = np.full((128, 8), -10.0, dtype=np.float64)
+                    logits[:, int(prefix_frames[-1].reshape(-1)[0]) + 1] = 10.0
+                    return logits
+
+            result = encode_commavq_next_frame_sample(
+                token_path=token_path,
+                encoded_path=output_path,
+                profile="gpt_next_frame_small",
+                max_frames=3,
+                context_frames=1,
+                vocab_size=8,
+                verify_decode=True,
+                device="cpu",
+                dtype="float32",
+                cache_dir=root / "cache",
+                model_url="https://example.invalid/model.bin",
+                gpt_module_path=root / "gpt.py",
+                model_loader=lambda **kwargs: loader_kwargs.update(kwargs) or FakeModel(),
+            )
+
+        self.assertEqual(calls, [(1, 1), (1, 1), (1, 1), (1, 1)])
+        self.assertEqual(result["frame_count"], 3)
+        self.assertTrue(result["exact_match"])
+        self.assertTrue(result["local_only"])
+        self.assertFalse(result["measured"])
+        self.assertEqual(result["dtype"], "float32")
+        self.assertEqual(loader_kwargs["device"], "cpu")
+        self.assertEqual(loader_kwargs["dtype"], "float32")
+        self.assertEqual(loader_kwargs["model_url"], "https://example.invalid/model.bin")
+        self.assertEqual(loader_kwargs["cache_dir"], root / "cache")
+        self.assertEqual(loader_kwargs["gpt_module_path"], root / "gpt.py")
+
+    def test_encode_commavq_next_frame_sample_rejects_nonpositive_context_frames(self) -> None:
+        from tac.lossless.next_frame_coder import encode_commavq_next_frame_sample
+
+        with tempfile.TemporaryDirectory() as tmpdir:
+            root = Path(tmpdir)
+            token_path = root / "tokens.bin"
+            output_path = root / "sample.nfg"
+            frame0 = np.full((8, 16), 3, dtype=np.uint16)
+            frame1 = np.full((8, 16), 4, dtype=np.uint16)
+            flat = np.concatenate(
+                [
+                    np.array([1024], dtype=np.uint16), frame0.reshape(-1),
+                    np.array([1024], dtype=np.uint16), frame1.reshape(-1),
+                    np.array([1025], dtype=np.uint16),
+                ]
+            )
+            flat.tofile(token_path)
+
+            with self.assertRaisesRegex(ValueError, "context_frames must be positive"):
+                encode_commavq_next_frame_sample(
+                    token_path=token_path,
+                    encoded_path=output_path,
+                    context_frames=0,
+                    model_loader=lambda **_: object(),
+                )
+
+
+if __name__ == "__main__":
+    unittest.main()
