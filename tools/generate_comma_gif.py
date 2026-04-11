@@ -1,15 +1,22 @@
 #!/usr/bin/env python3
 """Generate a 512x384 animated GIF replicating the comma.ai challenge README format.
 
-Produces a pixel-perfect 2x2 matplotlib grid matching the original comma
-challenge GIF specs:
+Produces a pixel-perfect 2x2 grid matching the original comma challenge
+GIF specs:
 
-  512x384 px, 150 frames, 100ms/frame (10fps), dark_background style.
+  512x384 px, 150 frames, 100ms/frame (10fps), black background.
 
   Top-left:     video frame (original or baseline)
   Top-right:    video frame (compressed or ours)
-  Bottom-left:  segnet errors (binary white-on-black)
-  Bottom-right: posenet errors (progressive line chart)
+  Bottom-left:  segnet errors (binary white-on-black, upscaled nearest)
+  Bottom-right: posenet errors (progressive line chart, minimal axes)
+
+Each panel has a small white monospace label overlaid at the top-left corner
+(not matplotlib titles -- raw PIL text on the composited image).
+
+The comma README GIF uses edge-to-edge panels with no matplotlib chrome:
+no tick marks, no axis labels, no spines on image panels, and only minimal
+spines/ticks on the PoseNet chart.
 
 Three modes:
   --mode baseline   Replicate the original comma GIF (original vs compressed).
@@ -110,95 +117,215 @@ def get_posenet_mse(
 
 
 # ---------------------------------------------------------------------------
+# Font helper
+# ---------------------------------------------------------------------------
+
+_MONO_FONT_CACHE: dict[int, object] = {}
+
+
+def _get_mono_font(size: int = 11):
+    """Load a monospace font for PIL text drawing, with caching."""
+    if size in _MONO_FONT_CACHE:
+        return _MONO_FONT_CACHE[size]
+
+    from PIL import ImageFont
+
+    candidates = [
+        "/System/Library/Fonts/SFNSMono.ttf",
+        "/System/Library/Fonts/Menlo.ttc",
+        "/System/Library/Fonts/Monaco.ttf",
+        "/usr/share/fonts/truetype/dejavu/DejaVuSansMono.ttf",
+        "/usr/share/fonts/truetype/liberation/LiberationMono-Regular.ttf",
+    ]
+    font = None
+    for path in candidates:
+        if os.path.exists(path):
+            try:
+                font = ImageFont.truetype(path, size)
+                break
+            except Exception:
+                continue
+    if font is None:
+        font = ImageFont.load_default()
+
+    _MONO_FONT_CACHE[size] = font
+    return font
+
+
+# ---------------------------------------------------------------------------
 # Rendering helpers
 # ---------------------------------------------------------------------------
 
-# Exact figure dimensions: 5.12 x 3.84 inches at 100 dpi = 512 x 384 px.
-FIG_W_IN = 5.12
-FIG_H_IN = 3.84
-DPI = 100
+# Output canvas: 512 x 384 pixels. Each quadrant is 256 x 192.
+CANVAS_W = 512
+CANVAS_H = 384
+PANEL_W = CANVAS_W // 2   # 256
+PANEL_H = CANVAS_H // 2   # 192
+
+# PoseNet chart: rendered via matplotlib at exact panel pixel size.
+CHART_DPI = 100
+CHART_W_IN = PANEL_W / CHART_DPI   # 2.56 inches
+CHART_H_IN = PANEL_H / CHART_DPI   # 1.92 inches
+
+# Label styling
+LABEL_FONT_SIZE = 10
+LABEL_COLOR = (200, 200, 200)
+LABEL_SHADOW_COLOR = (0, 0, 0)
+LABEL_PAD_X = 4
+LABEL_PAD_Y = 3
 
 
-def _render_frame_matplotlib(
+def _resize_frame_to_panel(img: np.ndarray) -> np.ndarray:
+    """Resize an (H, W, 3) uint8 image to (PANEL_H, PANEL_W, 3) using Lanczos."""
+    from PIL import Image
+    pil = Image.fromarray(img).resize((PANEL_W, PANEL_H), Image.LANCZOS)
+    return np.array(pil)
+
+
+def _upscale_segnet_mask(mask: np.ndarray) -> np.ndarray:
+    """Upscale a (Hs, Ws) binary mask to (PANEL_H, PANEL_W, 3) with nearest neighbor.
+
+    White pixels where argmax differs; black background. Nearest-neighbor
+    preserves the hard binary look of the comma GIF.
+    """
+    from PIL import Image
+    # mask is (Hs, Ws) with values 0 or 255
+    pil = Image.fromarray(mask, mode="L").resize((PANEL_W, PANEL_H), Image.NEAREST)
+    mono = np.array(pil)
+    return np.stack([mono, mono, mono], axis=-1)
+
+
+def _render_posenet_chart(
+    *,
+    xs: list[int],
+    primary: list[float],
+    secondary: list[float] | None,
+    mode: str,
+    total_frames: int,
+) -> np.ndarray:
+    """Render PoseNet error chart as (PANEL_H, PANEL_W, 3) uint8 array.
+
+    Matches comma style: black background, minimal decoration, thin line,
+    no axis labels, tiny tick labels, dark gray spines.
+    """
+    with plt.style.context("dark_background"):
+        fig, ax = plt.subplots(
+            figsize=(CHART_W_IN, CHART_H_IN), dpi=CHART_DPI,
+        )
+        fig.patch.set_facecolor("black")
+        ax.set_facecolor("black")
+
+        if mode == "comparison" and secondary is not None and len(secondary) > 0:
+            ax.plot(xs[:len(secondary)], secondary, color="#666666",
+                    linestyle="--", linewidth=0.7, label="baseline", alpha=0.8)
+            ax.plot(xs[:len(primary)], primary, color="#00ff88",
+                    linestyle="-", linewidth=0.9, label="ours")
+            ax.legend(
+                loc="upper right", fontsize=5, frameon=True,
+                facecolor="black", edgecolor="#333333", labelcolor="white",
+                handlelength=1.2, borderpad=0.3, labelspacing=0.2,
+            )
+        else:
+            line_color = "#00ff88" if mode == "ours" else "#ffffff"
+            if len(xs) > 0 and len(primary) > 0:
+                ax.plot(xs[:len(primary)], primary, color=line_color,
+                        linewidth=0.9)
+
+        # X axis: full video range
+        ax.set_xlim(0, total_frames)
+
+        # Y axis: auto-scale with headroom, floor at a small positive value
+        all_vals = list(primary)
+        if secondary:
+            all_vals.extend(secondary)
+        if all_vals:
+            ymax = max(all_vals) * 1.4
+            ymax = max(ymax, 0.01)
+        else:
+            ymax = 1.0
+        ax.set_ylim(0, ymax)
+
+        # Minimal tick styling -- tiny white labels, no axis labels
+        ax.tick_params(
+            axis="both", which="both",
+            colors="#888888", labelsize=5,
+            length=2, width=0.5, pad=1,
+        )
+        # Only a few y-ticks
+        ax.yaxis.set_major_locator(plt.MaxNLocator(nbins=3, min_n_ticks=2))
+        ax.xaxis.set_major_locator(plt.MaxNLocator(nbins=4, min_n_ticks=2))
+
+        # Dark gray spines, thin
+        for spine in ax.spines.values():
+            spine.set_color("#333333")
+            spine.set_linewidth(0.5)
+
+        # No axis labels (the panel label says "posenet errors")
+        ax.set_xlabel("")
+        ax.set_ylabel("")
+
+        # Tight layout to minimize wasted space
+        fig.subplots_adjust(left=0.12, right=0.96, top=0.95, bottom=0.12)
+
+        # Render to exact pixel buffer
+        buf = io.BytesIO()
+        fig.savefig(buf, format="raw", dpi=CHART_DPI, facecolor="black")
+        plt.close(fig)
+        buf.seek(0)
+
+        w = int(fig.get_size_inches()[0] * CHART_DPI)
+        h = int(fig.get_size_inches()[1] * CHART_DPI)
+        raw = np.frombuffer(buf.getvalue(), dtype=np.uint8).reshape(h, w, 4)
+        return raw[:PANEL_H, :PANEL_W, :3]
+
+
+def _composite_frame(
     *,
     top_left_img: np.ndarray,
     top_right_img: np.ndarray,
     segnet_mask: np.ndarray,
-    posenet_xs: list[int],
-    posenet_primary: list[float],
-    posenet_secondary: list[float] | None,
+    chart_rgb: np.ndarray,
     top_left_label: str,
     top_right_label: str,
-    mode: str,
-    total_video_frames: int,
 ) -> np.ndarray:
-    """Render one 512x384 frame using matplotlib dark_background style.
+    """Compose the 4 panels into a single 512x384 canvas with text labels.
 
-    Returns (384, 512, 3) uint8 numpy array.
+    All panels are already (PANEL_H, PANEL_W, 3) uint8.
+    Text labels are drawn directly onto the image using PIL (not matplotlib
+    titles) for a cleaner, comma-style look.
+
+    Returns (CANVAS_H, CANVAS_W, 3) uint8 array.
     """
-    with plt.style.context("dark_background"):
-        fig, axes = plt.subplots(2, 2, figsize=(FIG_W_IN, FIG_H_IN), dpi=DPI)
+    from PIL import Image, ImageDraw
 
-        # --- Top-left: first video panel ---
-        ax_tl = axes[0, 0]
-        ax_tl.imshow(top_left_img)
-        ax_tl.set_title(top_left_label, fontsize=7, fontfamily="monospace",
-                        color="#cccccc", pad=2)
-        ax_tl.axis("off")
+    # Resize video frames to panel size
+    tl = _resize_frame_to_panel(top_left_img)
+    tr = _resize_frame_to_panel(top_right_img)
+    bl = _upscale_segnet_mask(segnet_mask)
+    br = chart_rgb  # already at panel size
 
-        # --- Top-right: second video panel ---
-        ax_tr = axes[0, 1]
-        ax_tr.imshow(top_right_img)
-        ax_tr.set_title(top_right_label, fontsize=7, fontfamily="monospace",
-                        color="#cccccc", pad=2)
-        ax_tr.axis("off")
+    # Assemble 2x2 grid
+    top_row = np.concatenate([tl, tr], axis=1)   # (PANEL_H, CANVAS_W, 3)
+    bot_row = np.concatenate([bl, br], axis=1)
+    canvas = np.concatenate([top_row, bot_row], axis=0)  # (CANVAS_H, CANVAS_W, 3)
 
-        # --- Bottom-left: segnet errors ---
-        ax_bl = axes[1, 0]
-        ax_bl.imshow(segnet_mask, cmap="gray", vmin=0, vmax=255)
-        ax_bl.set_title("segnet errors", fontsize=7, fontfamily="monospace",
-                        color="#cccccc", pad=2)
-        ax_bl.axis("off")
+    # Draw text labels with PIL
+    pil_img = Image.fromarray(canvas)
+    draw = ImageDraw.Draw(pil_img)
+    font = _get_mono_font(LABEL_FONT_SIZE)
 
-        # --- Bottom-right: posenet errors (progressive line chart) ---
-        ax_br = axes[1, 1]
-        ax_br.set_title("posenet errors", fontsize=7, fontfamily="monospace",
-                        color="#cccccc", pad=2)
+    labels = [
+        (LABEL_PAD_X, LABEL_PAD_Y, top_left_label),
+        (PANEL_W + LABEL_PAD_X, LABEL_PAD_Y, top_right_label),
+        (LABEL_PAD_X, PANEL_H + LABEL_PAD_Y, "segnet errors"),
+        (PANEL_W + LABEL_PAD_X, PANEL_H + LABEL_PAD_Y, "posenet errors"),
+    ]
+    for x, y, text in labels:
+        # Shadow for readability on bright frames
+        draw.text((x + 1, y + 1), text, fill=LABEL_SHADOW_COLOR, font=font)
+        draw.text((x, y), text, fill=LABEL_COLOR, font=font)
 
-        if mode == "comparison" and posenet_secondary is not None:
-            # Dual trace: baseline gray dashed, ours green solid
-            ax_br.plot(posenet_xs, posenet_secondary, color="gray",
-                       linestyle="--", linewidth=0.8, label="baseline")
-            ax_br.plot(posenet_xs, posenet_primary, color="#00ff88",
-                       linestyle="-", linewidth=1.0, label="ours")
-            ax_br.legend(loc="upper right", fontsize=5, facecolor="black",
-                         edgecolor="#333333", labelcolor="white")
-        else:
-            line_color = "#00ff88" if mode == "ours" else "#ffffff"
-            ax_br.plot(posenet_xs, posenet_primary, color=line_color,
-                       linewidth=1.0)
-
-        ax_br.set_xlim(0, total_video_frames)
-        ax_br.set_ylim(0, 2.0)
-        ax_br.tick_params(colors="white", labelsize=5)
-        ax_br.set_ylabel("MSE", color="white", fontsize=6)
-        ax_br.set_xlabel("frame", color="white", fontsize=6)
-        for spine in ax_br.spines.values():
-            spine.set_color("#333333")
-
-        fig.tight_layout(pad=0.4)
-
-        # Render to numpy array
-        buf = io.BytesIO()
-        fig.savefig(buf, format="raw", dpi=DPI, facecolor=fig.get_facecolor())
-        plt.close(fig)
-        buf.seek(0)
-
-        # raw format: RGBA, width x height from get_size_inches * dpi
-        w = int(fig.get_size_inches()[0] * DPI)
-        h = int(fig.get_size_inches()[1] * DPI)
-        raw = np.frombuffer(buf.getvalue(), dtype=np.uint8).reshape(h, w, 4)
-        return raw[:, :, :3]  # drop alpha -> (384, 512, 3)
+    return np.array(pil_img)
 
 
 # ---------------------------------------------------------------------------
@@ -282,16 +409,16 @@ def main() -> None:
     archive_mb = archive_path.stat().st_size / (1024 * 1024)
     gt_mb = gt_video_path.stat().st_size / (1024 * 1024)
 
-    # Labels per mode
+    # Labels per mode -- short, comma-style
     if args.mode == "baseline":
-        top_left_label = f"speed 4x \u2014 original \u2014 {gt_mb:.1f}MB"
-        top_right_label = f"speed 4x \u2014 compressed \u2014 {archive_mb:.1f}MB"
+        top_left_label = f"original  {gt_mb:.1f}MB"
+        top_right_label = f"compressed  {archive_mb:.1f}MB"
     elif args.mode == "ours":
-        top_left_label = f"speed 4x \u2014 original \u2014 {gt_mb:.1f}MB"
-        top_right_label = f"speed 4x \u2014 ours (post-filter) \u2014 {archive_mb:.1f}MB"
+        top_left_label = f"original  {gt_mb:.1f}MB"
+        top_right_label = f"ours  {archive_mb:.1f}MB"
     else:  # comparison
-        top_left_label = f"speed 4x \u2014 compressed \u2014 {archive_mb:.1f}MB"
-        top_right_label = f"speed 4x \u2014 ours (post-filter) \u2014 {archive_mb:.1f}MB"
+        top_left_label = f"compressed  {archive_mb:.1f}MB"
+        top_right_label = f"ours  {archive_mb:.1f}MB"
 
     # ------------------------------------------------------------------
     # Generate frames
@@ -335,12 +462,12 @@ def main() -> None:
                 top_right_img = filtered_chw[0].permute(1, 2, 0).to(torch.uint8).cpu().numpy()
                 seg_test_chw = filtered_chw
 
-            # SegNet error mask
+            # SegNet error mask: binary white-on-black at SegNet resolution
             gt_cls = get_segnet_classes(gt_chw, segnet)
             test_cls = get_segnet_classes(seg_test_chw, segnet)
             seg_diff = ((test_cls != gt_cls).astype(np.uint8) * 255)  # (Hs, Ws)
 
-            # PoseNet: need consecutive pair
+            # PoseNet: compute on consecutive frame pairs
             if idx + stride < total_frames:
                 next_idx = min(idx + 1, total_frames - 1)
                 next_comp = comp_frames[next_idx].to(device)
@@ -364,18 +491,23 @@ def main() -> None:
 
                 posenet_xs.append(idx)
 
-            # Render matplotlib frame
-            frame_rgb = _render_frame_matplotlib(
+            # Render PoseNet chart panel (matplotlib, exact panel size)
+            chart_rgb = _render_posenet_chart(
+                xs=posenet_xs,
+                primary=posenet_primary_mses,
+                secondary=posenet_secondary_mses if args.mode == "comparison" else None,
+                mode=args.mode,
+                total_frames=args.total_video_frames,
+            )
+
+            # Composite all 4 panels + text labels into 512x384
+            frame_rgb = _composite_frame(
                 top_left_img=top_left_img,
                 top_right_img=top_right_img,
                 segnet_mask=seg_diff,
-                posenet_xs=posenet_xs,
-                posenet_primary=posenet_primary_mses,
-                posenet_secondary=posenet_secondary_mses if args.mode == "comparison" else None,
+                chart_rgb=chart_rgb,
                 top_left_label=top_left_label,
                 top_right_label=top_right_label,
-                mode=args.mode,
-                total_video_frames=args.total_video_frames,
             )
 
             gif_images.append(Image.fromarray(frame_rgb))
