@@ -1,8 +1,0 @@
-Loading Falcon Perception (MLX)...
-Loading MLX model from Hugging Face Hub ...
-Fetching 16 files:   0%|          | 0/16 [00:00<?, ?it/s]Fetching 16 files: 100%|██████████| 16/16 [00:00<00:00, 2006.06it/s]
-  Variant: perception (perception_heads=True, do_segmentation=True)
-  MLX model ready (dtype=float16).
-
-  loaded in 0.7s
-  [ 0/60] pose fg/bg=23.6/99.8 seg fg/bg=2.7/35.0 comb fg/bg=25.2/35.0 (34.0s)
