@@ -834,21 +834,19 @@ class Trainer:
                     pair_difficulties.append(seg_d)
             self.model.train()
             difficulties = torch.tensor(pair_difficulties)
-            # Power-law continuous weighting (DeepSeek recommendation):
-            # ratio=0 → uniform, ratio=1 → linear rank, ratio=2 → quadratic emphasis
-            # Avoids the cliff-edge of a step function at the 80th percentile
+            # Store raw ranks for adaptive ratio ramping
             ranks = torch.argsort(torch.argsort(difficulties)).float()
             normalized_ranks = ranks / max(ranks.max().item(), 1.0)
-            # Add small epsilon so easiest frame still has nonzero weight
-            weights = (normalized_ranks + 0.01) ** max(cfg.hard_frame_ratio, 0.01)
+            self._hard_frame_ranks = normalized_ranks + 0.01  # epsilon for nonzero
+            self._hard_frame_avg_diff = difficulties.mean().item()
+            # Compute initial weights at current ratio
+            return _apply_hard_frame_ratio(cfg.hard_frame_ratio)
+
+        def _apply_hard_frame_ratio(ratio: float) -> torch.Tensor:
+            """Apply power-law weighting to cached ranks with given ratio."""
+            ranks = self._hard_frame_ranks
+            weights = ranks ** max(ratio, 0.01)
             weights = weights / weights.sum()
-            # Log the effective weight ratio
-            hardest_w = weights.max().item()
-            median_w = weights.median().item()
-            ratio_str = f"{hardest_w/median_w:.1f}x" if median_w > 0 else "inf"
-            print(f"[trainer-lazy] Hard frames: power-law ratio={cfg.hard_frame_ratio:.1f}, "
-                  f"hardest/median weight={ratio_str}, "
-                  f"avg difficulty={difficulties.mean():.6f}")
             return weights
 
         if cfg.hard_frame_ratio > 0:
@@ -885,6 +883,14 @@ class Trainer:
                 if epoch % (getattr(cfg, 'rebalance_every', 50) * 5) == 0:
                     print(f"[adaptive] ep={epoch} T={_T:.2f} sw={self._cached_sw:.3f} bw={self._cached_bw:.1f}")
 
+            # Adaptive hard_frame_ratio ramp: 0.1 → target over first 50% of training
+            # (DeepSeek recommendation: uniform exploration early, aggressive exploitation late)
+            if cfg.hard_frame_ratio > 0:
+                ramp_progress = min(1.0, epoch / max(cfg.epochs * 0.5, 1))
+                effective_hfr = 0.1 + ramp_progress * (cfg.hard_frame_ratio - 0.1)
+            else:
+                effective_hfr = 0.0
+
             # Error replay: recompute hard-frame weights using current model output
             if (hard_frame_weights is not None
                     and cfg.error_replay_every > 0
@@ -894,8 +900,9 @@ class Trainer:
                     use_model=True, label=f"error-replay-ep{epoch}")
 
             # Weighted or uniform sampling of training pairs
-            if hard_frame_weights is not None and cfg.hard_frame_ratio > 0:
-                # replacement=False preserves batch diversity within each epoch
+            if hard_frame_weights is not None and effective_hfr > 0:
+                # Recompute weights with ramped ratio (cheap: just re-exponentiate cached ranks)
+                hard_frame_weights = _apply_hard_frame_ratio(effective_hfr)
                 perm = torch.multinomial(hard_frame_weights, min(train_size, n_train), replacement=False)
             else:
                 perm = torch.randperm(n_train)[:train_size]

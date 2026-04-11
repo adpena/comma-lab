@@ -110,17 +110,21 @@ def apply_lsq(model: nn.Module) -> dict[str, LSQScale]:
             lsq = LSQScale.from_tensor(module.weight)
             scales[name] = lsq
 
-            # Closure captures the specific lsq and module
-            def _make_hook(lsq_mod, conv_mod):
-                def hook(module, inputs):
-                    # Replace weight with LSQ-quantized version for this forward
-                    conv_mod.weight.data = lsq_mod(conv_mod.weight)
-                return hook
+            # Pre-hook: save float weights, replace with LSQ-quantized
+            def _pre_hook(mod, inputs, *, _lsq=lsq):
+                mod._weight_float = mod.weight.data.clone()
+                mod.weight.data = _lsq(mod.weight).data
 
-            h = module.register_forward_pre_hook(_make_hook(lsq, module))
-            hooks.append(h)
+            # Post-hook: restore float weights so optimizer sees originals
+            def _post_hook(mod, inputs, output):
+                if hasattr(mod, '_weight_float'):
+                    mod.weight.data.copy_(mod._weight_float)
+                    del mod._weight_float
+                return output
 
-    # Store hooks on model so they persist and can be removed
+            hooks.append(module.register_forward_pre_hook(_pre_hook))
+            hooks.append(module.register_forward_hook(_post_hook))
+
     model._lsq_hooks = hooks
     return scales
 
