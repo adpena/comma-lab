@@ -250,6 +250,26 @@ DILATED_H16_SMOKE = {
     "accum_steps": 2,
 }
 
+# Kaggle P100 profile: 12h kernel limit, 11h safety margin.
+# P100 on CUDA does ~2.5 min/epoch for dilated h64 with subsample=4.
+# 11h / 2.5 min = ~264 epochs max. Set 250 to be safe.
+# If stuck on CPU (P100 compat issue), ~20 min/epoch = ~33 epochs only.
+KAGGLE_P100_DILATED = {
+    **PROVEN_BASELINE,
+    "epochs": 1000,                       # target: ~250-400 epochs complete in 11h on GPU
+    "eval_every": 10,                     # less frequent eval to save time
+    "wall_clock_timeout": 39600,          # 11h in seconds (12h Kaggle limit - 1h safety)
+}
+
+# Kaggle P100 long run: aggressive 2500 epochs, relies on timeout to stop cleanly.
+# Use when you want maximum training time and the timeout handles the rest.
+KAGGLE_P100_LONG = {
+    **PROVEN_BASELINE,
+    "epochs": 2500,
+    "eval_every": 10,
+    "wall_clock_timeout": 39600,          # 11h safety margin
+}
+
 PROFILES = {
     "council_v1": COUNCIL_V1,
     "council_v2_adaptive": COUNCIL_V2_ADAPTIVE,
@@ -265,4 +285,6 @@ PROFILES = {
     "gated_dilated_smoke": GATED_DILATED_SMOKE,
     "dilated_h32_smoke": DILATED_H32_SMOKE,
     "dilated_h16_smoke": DILATED_H16_SMOKE,
+    "kaggle_p100_dilated": KAGGLE_P100_DILATED,
+    "kaggle_p100_long": KAGGLE_P100_LONG,
 }

@@ -19,6 +19,7 @@ import os
 import subprocess
 import sys
 import tempfile
+import time as _time_module
 import zipfile
 from contextlib import nullcontext
 from pathlib import Path
@@ -54,13 +55,51 @@ DEFAULT_SEGNET_INPUT_SIZE = (512, 384)
 DEFAULT_CAMERA_SIZE = (1164, 874)
 
 
+def _ensure_p100_pytorch_compat():
+    """On Kaggle P100 (sm_60), the default PyTorch may not support it.
+
+    If CUDA is visible but the default PyTorch rejects it (capability < 7.0),
+    install a PyTorch version that supports sm_60. This is the #1 cause of
+    Kaggle kernels running on CPU and timing out.
+    """
+    if not Path("/kaggle").exists():
+        return  # only needed on Kaggle
+    try:
+        if not torch.cuda.is_available():
+            return
+        cap = torch.cuda.get_device_capability(0)
+        if cap[0] >= 7:
+            return  # already compatible
+        # P100 detected but PyTorch doesn't support it — reinstall
+        print(f"[setup] P100 detected (sm_{cap[0]}{cap[1]}) but PyTorch requires sm_70+")
+        print("[setup] Installing PyTorch with CUDA 11.8 for P100 compatibility...")
+        subprocess.check_call([
+            sys.executable, "-m", "pip", "install", "-q",
+            "torch", "--index-url", "https://download.pytorch.org/whl/cu118",
+        ])
+        print("[setup] PyTorch reinstalled. Please restart the kernel.")
+    except Exception as e:
+        print(f"[setup] P100 compat check failed: {e}")
+
+
+def _torch_supports_capability(capability: tuple[int, int] | None) -> bool:
+    if capability is None:
+        return True
+    try:
+        arch_list = getattr(torch.cuda, "get_arch_list", lambda: [])()
+    except Exception:
+        arch_list = []
+    normalized = {entry.lower() for entry in arch_list}
+    return f"sm_{capability[0]}{capability[1]}".lower() in normalized or capability[0] >= 7
+
+
 def detect_device() -> torch.device:
     if torch.cuda.is_available():
         try:
             capability = torch.cuda.get_device_capability(0)
         except Exception:
             capability = None
-        if capability is None or capability[0] >= 7:
+        if _torch_supports_capability(capability):
             return torch.device("cuda")
     if getattr(torch.backends, "mps", None) is not None and torch.backends.mps.is_available():
         return torch.device("mps")
@@ -92,6 +131,8 @@ SALIENCY_PATH = ASSET_BUNDLE["saliency_path"]
 
 def setup_environment() -> Path:
     """Clone upstream and install runtime dependencies when needed."""
+    _ensure_p100_pytorch_compat()
+
     base_dir: Path
     if Path("/kaggle").exists():
         base_dir = Path("/kaggle/working")
@@ -533,11 +574,19 @@ def build_arg_parser() -> argparse.ArgumentParser:
     parser.add_argument("--video", type=str, default=None)
     parser.add_argument("--compressed-video", type=str, default=None)
     parser.add_argument("--tag", type=str, default=None)
+    parser.add_argument("--wall-clock-timeout", type=int, default=0,
+                        help="Max training wall-clock seconds (0=unlimited, 39600=11h for Kaggle)")
     return parser
 
 
 def main(argv: list[str] | None = None):
     args = build_arg_parser().parse_args(argv)
+
+    # Auto-detect Kaggle and set wall-clock timeout if not explicitly provided
+    if args.wall_clock_timeout == 0 and Path("/kaggle").exists():
+        args.wall_clock_timeout = 39600  # 11h safety margin for 12h Kaggle limit
+        print(f"[dilated-h64] Kaggle detected, auto-setting wall-clock timeout to 11h")
+
     alpha = args.alpha
     tag = args.tag or make_default_tag(args.hidden, alpha)
     meta = normalize_postfilter_meta(args.hidden, args.kernel, alpha)
@@ -619,7 +668,12 @@ def main(argv: list[str] | None = None):
     best_scorer = float("inf")
     best_shadow_state: dict[str, torch.Tensor] | None = None
 
+    _train_start = _time_module.monotonic()
+    _wall_timeout = args.wall_clock_timeout
+
     print(f"[dilated-h64] training epochs={args.epochs} train_size={train_size} eval={n_eval}")
+    if _wall_timeout > 0:
+        print(f"[dilated-h64] wall-clock timeout: {_wall_timeout/3600:.1f}h")
     print(f"{'epoch':>5} {'total':>10} {'scorer':>10} {'pose':>12} {'seg':>12} {'sal_recon':>10} {'lr':>10}")
     print("-" * 75)
 
@@ -696,6 +750,15 @@ def main(argv: list[str] | None = None):
                 f"{ep_pose / len(indices):>12.6f} {ep_seg / len(indices):>12.6f} "
                 f"{ep_sal / len(indices):>10.4f} {lr:>10.6f}"
             )
+
+        # Wall-clock timeout: save and exit cleanly before platform kills us
+        if _wall_timeout > 0:
+            elapsed = _time_module.monotonic() - _train_start
+            if elapsed >= _wall_timeout:
+                print(f"\n[dilated-h64] WALL-CLOCK TIMEOUT at epoch {epoch+1} "
+                      f"(elapsed {elapsed/3600:.1f}h, limit {_wall_timeout/3600:.1f}h)")
+                print(f"[dilated-h64] Best scorer: {best_scorer:.4f}")
+                break
 
     if best_shadow_state is not None:
         eval_model.load_state_dict(best_shadow_state)

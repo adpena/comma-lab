@@ -105,6 +105,10 @@ def main():
     # Resume
     parser.add_argument("--resume-from", type=str, default=None)
 
+    # Wall-clock timeout
+    parser.add_argument("--wall-clock-timeout", type=int, default=0,
+                        help="Max training wall-clock seconds (0=unlimited, 39600=11h for Kaggle)")
+
     # Output
     parser.add_argument("--tag", required=True)
     parser.add_argument("--output-dir", default="experiments/postfilter_weights")
@@ -195,6 +199,7 @@ def main():
         boundary_weight=_val("boundary-weight", "boundary_weight", 1.0),
         boundary_anneal=profile_defaults.get("boundary_anneal", False),
         resume_from=args.resume_from,
+        wall_clock_timeout=_val("wall-clock-timeout", "wall_clock_timeout", 0),
         output_dir=args.output_dir,
         tag=args.tag,
     )

@@ -123,6 +123,81 @@ class KaggleOutputIngestTests(unittest.TestCase):
         self.assertEqual(report["latest_failure"]["error_type"], "ImportError")
         self.assertIn("tac is not importable", report["latest_failure"]["message"])
 
+    def test_ingest_summary_surfaces_checkpoint_meta_files(self) -> None:
+        with tempfile.TemporaryDirectory() as tmpdir:
+            root = Path(tmpdir)
+            manifest_path = root / "kaggle-run.json"
+            manifest_path.write_text(
+                json.dumps(
+                    {
+                        "slug": "kaggle-demo",
+                        "run_id": "kaggle-demo-v1",
+                        "kernel_ref": "adpena/comma-lab-demo",
+                    }
+                )
+            )
+            downloaded = root / "downloaded"
+            downloaded.mkdir()
+            meta_path = downloaded / "postfilter_demo_best_meta.json"
+            meta_path.write_text(
+                json.dumps(
+                    {
+                        "epoch": 30,
+                        "scorer": 3.96,
+                        "int8_size": 45785,
+                        "meta": {"variant": "dilated", "hidden": 64},
+                    }
+                )
+            )
+            out_root = root / "reports"
+
+            report = mod.ingest_downloaded_outputs(
+                manifest_path=manifest_path,
+                download_dir=downloaded,
+                output_root=out_root,
+            )
+
+        self.assertEqual(report["latest_checkpoint"]["epoch"], 30)
+        self.assertEqual(report["latest_checkpoint"]["scorer"], 3.96)
+        self.assertEqual(report["latest_checkpoint"]["variant"], "dilated")
+
+    def test_ingest_summary_finds_checkpoint_meta_in_nested_output_dirs(self) -> None:
+        with tempfile.TemporaryDirectory() as tmpdir:
+            root = Path(tmpdir)
+            manifest_path = root / "kaggle-run.json"
+            manifest_path.write_text(
+                json.dumps(
+                    {
+                        "slug": "kaggle-demo",
+                        "run_id": "kaggle-demo-v1",
+                        "kernel_ref": "adpena/comma-lab-demo",
+                    }
+                )
+            )
+            downloaded = root / "downloaded"
+            nested = downloaded / "postfilter_weights"
+            nested.mkdir(parents=True)
+            meta_path = nested / "postfilter_demo_best_meta.json"
+            meta_path.write_text(
+                json.dumps(
+                    {
+                        "epoch": 42,
+                        "scorer": 3.5,
+                        "int8_size": 123,
+                        "meta": {"variant": "dilated", "hidden": 64},
+                    }
+                )
+            )
+            out_root = root / "reports"
+
+            report = mod.ingest_downloaded_outputs(
+                manifest_path=manifest_path,
+                download_dir=downloaded,
+                output_root=out_root,
+            )
+
+        self.assertEqual(report["latest_checkpoint"]["epoch"], 42)
+
 
 if __name__ == "__main__":
     unittest.main()

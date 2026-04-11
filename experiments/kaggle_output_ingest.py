@@ -104,9 +104,12 @@ def ingest_downloaded_outputs(
 
     logs: list[dict[str, object]] = []
     latest_failure: dict[str, object] | None = None
-    for path in sorted(download_dir.iterdir()):
+    latest_checkpoint: dict[str, object] | None = None
+    for path in sorted(download_dir.rglob("*")):
         if path.is_file():
-            dest = evidence_dir / path.name
+            rel = path.relative_to(download_dir)
+            dest = evidence_dir / rel
+            dest.parent.mkdir(parents=True, exist_ok=True)
             shutil.copy2(path, dest)
             if path.suffix == ".log":
                 signals = extract_training_signals(dest)
@@ -114,9 +117,20 @@ def ingest_downloaded_outputs(
                 if isinstance(failure, dict):
                     latest_failure = failure
                 logs.append({
-                    "file": path.name,
+                    "file": rel.as_posix(),
                     "signals": signals,
                 })
+            if path.name.endswith("_best_meta.json"):
+                payload = _read_manifest(dest)
+                meta = payload.get("meta", {})
+                latest_checkpoint = {
+                    "epoch": payload.get("epoch"),
+                    "scorer": payload.get("scorer"),
+                    "int8_size": payload.get("int8_size"),
+                    "variant": meta.get("variant"),
+                    "hidden": meta.get("hidden"),
+                    "meta_path": str(dest),
+                }
 
     summary = {
         "run_id": run_id,
@@ -125,6 +139,7 @@ def ingest_downloaded_outputs(
         "evidence_dir": str(evidence_dir),
         "logs": logs,
         "latest_failure": latest_failure,
+        "latest_checkpoint": latest_checkpoint,
     }
     (evidence_dir / "ingest_summary.json").write_text(json.dumps(summary, indent=2))
     return summary

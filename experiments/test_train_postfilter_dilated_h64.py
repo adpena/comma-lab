@@ -23,21 +23,26 @@ def load_module():
 
 
 class TrainPostfilterDilatedH64Tests(unittest.TestCase):
-    def test_detect_device_falls_back_to_cpu_for_unsupported_cuda_capability(self) -> None:
+    def test_detect_device_accepts_p100_when_torch_build_supports_sm60(self) -> None:
         original_is_available = torch.cuda.is_available
         original_get_capability = torch.cuda.get_device_capability
+        original_get_arch_list = getattr(torch.cuda, "get_arch_list", None)
         original_mps = getattr(torch.backends, "mps", None)
         original_mps_is_available = getattr(original_mps, "is_available", None)
         try:
             torch.cuda.is_available = lambda: True
             torch.cuda.get_device_capability = lambda *_args, **_kwargs: (6, 0)
+            if original_get_arch_list is not None:
+                torch.cuda.get_arch_list = lambda: ["sm_60"]
             if original_mps is not None:
                 original_mps.is_available = lambda: False
             mod = load_module()
-            self.assertEqual(str(mod.detect_device()), "cpu")
+            self.assertEqual(str(mod.detect_device()), "cuda")
         finally:
             torch.cuda.is_available = original_is_available
             torch.cuda.get_device_capability = original_get_capability
+            if original_get_arch_list is not None:
+                torch.cuda.get_arch_list = original_get_arch_list
             if original_mps is not None and original_mps_is_available is not None:
                 original_mps.is_available = original_mps_is_available
 

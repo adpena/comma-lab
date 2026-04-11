@@ -118,6 +118,7 @@ class ReportHistoryBuildTests(unittest.TestCase):
             (repo / ".omx" / "research" / "findings.md").write_text("findings\n")
             (repo / ".ralph" / "run_log.md").write_text("log\n")
             (repo / "reports" / "latest.md").write_text("latest\n")
+            (repo / "reports" / "lossless_latest.md").write_text("lossless latest\n")
 
             paths = mod.resolve_default_surface_paths(repo)
 
@@ -129,6 +130,7 @@ class ReportHistoryBuildTests(unittest.TestCase):
                     ".ralph/run_log.md",
                     "reports/graphs/lab_notebook.md",
                     "reports/latest.md",
+                    "reports/lossless_latest.md",
                 ],
             )
 

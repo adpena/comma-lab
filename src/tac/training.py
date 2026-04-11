@@ -23,6 +23,7 @@ import atexit
 import json
 import math
 import signal
+import time as _time_module
 from collections.abc import Callable
 from pathlib import Path
 from typing import Literal
@@ -114,6 +115,13 @@ class TrainConfig(BaseModel):
 
     # Resumption
     resume_from: str | None = None
+
+    # Wall-clock timeout (seconds). When training has been running for this long,
+    # save a checkpoint and exit cleanly. Set to 0 to disable.
+    # Kaggle P100 kernels have a 12h limit — use 39600 (11h) for safety margin.
+    wall_clock_timeout: int = Field(0, ge=0,
+                                     description="Max wall-clock seconds before emergency save + clean exit. "
+                                     "0 = no limit. 39600 = 11h (for 12h Kaggle kernels).")
 
     # Output
     output_dir: str = "experiments/postfilter_weights"
@@ -279,6 +287,17 @@ class Trainer:
         self.best_scorer = float("inf")
         self.best_epoch = -1
         self._patched_scorers = False
+        self._start_wall_time = _time_module.monotonic()
+
+        # Kaggle safety: warn if on Kaggle with no timeout set
+        if config.wall_clock_timeout <= 0 and Path("/kaggle").exists():
+            import warnings
+            warnings.warn(
+                "Running on Kaggle without wall_clock_timeout! "
+                "Set wall_clock_timeout=39600 (11h) to avoid losing training state "
+                "when the 12h kernel limit hits. Use --profile kaggle_p100_dilated.",
+                stacklevel=2,
+            )
         self._current_epoch = 0
         self._last_eval_pose = None
         self._last_eval_seg = None
@@ -332,6 +351,26 @@ class Trainer:
         # Emergency save on signals and exit — never lose training state
         self._emergency_registered = False
         self._register_emergency_save()
+
+    def _wall_clock_exceeded(self) -> bool:
+        """Check if wall-clock timeout has been exceeded.
+
+        Returns True if the timeout is set and the elapsed training time
+        exceeds the configured limit. This triggers a clean save-and-exit.
+        """
+        timeout = self.config.wall_clock_timeout
+        if timeout <= 0:
+            return False
+        elapsed = _time_module.monotonic() - self._start_wall_time
+        return elapsed >= timeout
+
+    def _wall_clock_remaining(self) -> float:
+        """Seconds remaining before wall-clock timeout. inf if no timeout set."""
+        timeout = self.config.wall_clock_timeout
+        if timeout <= 0:
+            return float("inf")
+        elapsed = _time_module.monotonic() - self._start_wall_time
+        return max(0.0, timeout - elapsed)
 
     def _register_emergency_save(self):
         """Register signal handlers and atexit for crash-proof state saving."""
@@ -760,6 +799,16 @@ class Trainer:
             if epoch % 50 == 0 and epoch > 0:
                 self.save_training_state()
 
+            # Wall-clock timeout: save and exit cleanly before platform kills us
+            if self._wall_clock_exceeded():
+                remaining = self._wall_clock_remaining()
+                elapsed = _time_module.monotonic() - self._start_wall_time
+                print(f"\n[trainer] WALL-CLOCK TIMEOUT at epoch {epoch} "
+                      f"(elapsed {elapsed/3600:.1f}h, limit {self.config.wall_clock_timeout/3600:.1f}h)")
+                self.save_training_state()
+                print(f"[trainer] Timeout exit. Best: {self.best_scorer:.4f} at epoch {self.best_epoch}")
+                return self.best_scorer
+
         self.save_training_state()
         print(f"[trainer] Complete. Best: {self.best_scorer:.4f} at epoch {self.best_epoch}")
         return self.best_scorer
@@ -955,15 +1004,32 @@ class Trainer:
             self.optimizer.zero_grad(set_to_none=True)
             epoch_grad_norms: list[float] = []
 
+            _oom_count = 0
             for step, pair_idx in enumerate(perm):
                 start = train_pair_starts[pair_idx.item()]
 
                 # Build pair on-the-fly (CPU → device)
-                comp_pair = pair_from_frames(comp_frames, start).to(self.device)
-                gt_pair = pair_from_frames(gt_frames, start).to(self.device)
+                try:
+                    comp_pair = pair_from_frames(comp_frames, start).to(self.device)
+                    gt_pair = pair_from_frames(gt_frames, start).to(self.device)
+                except torch.cuda.OutOfMemoryError:
+                    _oom_count += 1
+                    if _oom_count <= 3:
+                        print(f"[trainer-lazy] CUDA OOM loading pair (step {step}), skipping")
+                    torch.cuda.empty_cache()
+                    continue
 
                 # Apply filter
-                filtered = self._apply_filter_to_pair(comp_pair)
+                try:
+                    filtered = self._apply_filter_to_pair(comp_pair)
+                except torch.cuda.OutOfMemoryError:
+                    _oom_count += 1
+                    if _oom_count <= 3:
+                        print(f"[trainer-lazy] CUDA OOM in forward (step {step}), skipping")
+                    del comp_pair, gt_pair
+                    torch.cuda.empty_cache()
+                    self.optimizer.zero_grad(set_to_none=True)
+                    continue
 
                 # Scorer loss (configurable mode)
                 if cfg.loss_mode == "temperature":
@@ -1054,7 +1120,16 @@ class Trainer:
                     )
 
                 total = (loss + cfg.sal_lambda * sal_recon) / accum
-                total.backward()
+                try:
+                    total.backward()
+                except torch.cuda.OutOfMemoryError:
+                    _oom_count += 1
+                    if _oom_count <= 3:
+                        print(f"[trainer-lazy] CUDA OOM in backward (step {step}), skipping")
+                    del comp_pair, gt_pair, filtered, filtered_bchw, comp_bchw, sal_w
+                    torch.cuda.empty_cache()
+                    self.optimizer.zero_grad(set_to_none=True)
+                    continue
 
                 total_loss += loss.item()
                 total_pose += pd
@@ -1070,6 +1145,9 @@ class Trainer:
 
                 # Free pair memory immediately
                 del comp_pair, gt_pair, filtered, filtered_bchw, comp_bchw, sal_w
+
+            if _oom_count > 0 and (epoch == 0 or epoch % 50 == 0):
+                print(f"[trainer-lazy] OOM events this epoch: {_oom_count}")
 
             if epoch >= cfg.warmup_epochs:
                 self.scheduler.step()
@@ -1185,6 +1263,15 @@ class Trainer:
             # Save training state every 50 epochs for crash recovery
             if epoch % 50 == 0 and epoch > 0:
                 self.save_training_state()
+
+            # Wall-clock timeout: save and exit cleanly before platform kills us
+            if self._wall_clock_exceeded():
+                elapsed = _time_module.monotonic() - self._start_wall_time
+                print(f"\n[trainer-lazy] WALL-CLOCK TIMEOUT at epoch {epoch} "
+                      f"(elapsed {elapsed/3600:.1f}h, limit {self.config.wall_clock_timeout/3600:.1f}h)")
+                self.save_training_state()
+                print(f"[trainer-lazy] Timeout exit. Best: {self.best_scorer:.4f} at epoch {self.best_epoch}")
+                return self.best_scorer
 
         # Apply SWA if it was active — average replaces EMA, then re-evaluate
         if cfg.use_swa and hasattr(self, '_swa') and self._swa.count > 0:

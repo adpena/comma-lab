@@ -365,3 +365,33 @@ class TestHardFrameCurriculum:
         # Hard frame should get more weight at higher ratio
         hard_idx = (difficulties >= threshold).nonzero().squeeze()
         assert weights_full[hard_idx].sum() > weights_half[hard_idx].sum()
+
+
+class TestWallClockTimeout:
+    def test_timeout_config_validation(self):
+        config = TrainConfig(tag="test-wc", wall_clock_timeout=39600)
+        assert config.wall_clock_timeout == 39600
+
+    def test_timeout_zero_means_no_limit(self):
+        config = TrainConfig(tag="test-wc-zero", wall_clock_timeout=0)
+        model = build_postfilter("standard", hidden=8)
+        trainer = Trainer(model, config, device="cpu")
+        assert not trainer._wall_clock_exceeded()
+        assert trainer._wall_clock_remaining() == float("inf")
+
+    def test_timeout_exceeded(self):
+        import time
+        config = TrainConfig(tag="test-wc-exceed", wall_clock_timeout=1, hidden=8, epochs=100)
+        model = build_postfilter("standard", hidden=8)
+        trainer = Trainer(model, config, device="cpu")
+        # Should not be exceeded immediately
+        assert not trainer._wall_clock_exceeded()
+        # Fast-forward the start time
+        trainer._start_wall_time -= 2  # pretend 2 extra seconds elapsed
+        assert trainer._wall_clock_exceeded()
+        assert trainer._wall_clock_remaining() == 0.0
+
+    def test_kaggle_profiles_have_timeout(self):
+        from tac.profiles import PROFILES
+        assert PROFILES["kaggle_p100_dilated"]["wall_clock_timeout"] == 39600
+        assert PROFILES["kaggle_p100_long"]["wall_clock_timeout"] == 39600
