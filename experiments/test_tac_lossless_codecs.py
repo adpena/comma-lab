@@ -85,14 +85,15 @@ class TacLosslessCodecsTests(unittest.TestCase):
                     source_path=source,
                     compressed_path=compressed,
                     restored_path=restored,
-                    dict_size=1024,
+                    dict_size=64,
+                    sample_payloads=[payload, payload],
                 )
 
                 self.assertEqual(result["archive_bytes"], compressed.stat().st_size)
                 self.assertEqual(restored.read_bytes(), payload)
 
-        self.assertEqual(backend.samples, [payload])
-        self.assertEqual(backend.dict_size, 1024)
+        self.assertEqual(backend.samples, [payload, payload])
+        self.assertEqual(backend.dict_size, 64)
         self.assertEqual(result["method"], "zstd_dict")
         self.assertEqual(result["dictionary_bytes"], len(b"dict-bytes"))
 
@@ -141,6 +142,26 @@ class TacLosslessCodecsTests(unittest.TestCase):
         self.assertEqual(result["dictionary_bytes"], 123)
         self.assertEqual(result["archive_bytes"], 50)
 
+    def test_zstd_dict_roundtrip_rejects_insufficient_sample_corpus(self) -> None:
+        from tac.lossless.codecs import zstd_dict_roundtrip_file
+
+        with tempfile.TemporaryDirectory() as tmpdir:
+            root = Path(tmpdir)
+            source = root / "tokens.bin"
+            compressed = root / "tokens.zst"
+            restored = root / "restored.bin"
+            payload = b"zstd payload"
+            source.write_bytes(payload)
+
+            with self.assertRaisesRegex(ValueError, "sample corpus"):
+                zstd_dict_roundtrip_file(
+                    source_path=source,
+                    compressed_path=compressed,
+                    restored_path=restored,
+                    dict_size=1024,
+                    sample_payloads=[payload],
+                )
+
     def test_zstd_dict_roundtrip_falls_back_to_cli_binary_when_python_backend_is_missing(self) -> None:
         from tac.lossless.codecs import zstd_dict_roundtrip_file
 
@@ -185,7 +206,8 @@ class TacLosslessCodecsTests(unittest.TestCase):
                     source_path=source,
                     compressed_path=compressed,
                     restored_path=restored,
-                    dict_size=1024,
+                    dict_size=64,
+                    sample_payloads=[payload, payload],
                 )
 
                 self.assertEqual(result["archive_bytes"], compressed.stat().st_size)

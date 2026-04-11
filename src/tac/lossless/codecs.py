@@ -269,6 +269,12 @@ def zstd_dict_roundtrip_file(
 
     payload = source.read_bytes()
     samples = list(sample_payloads) if sample_payloads is not None else [payload]
+    total_sample_bytes = sum(len(sample) for sample in samples)
+    if len(samples) < 2 or total_sample_bytes <= dict_size:
+        raise ValueError(
+            "sample corpus is too small for zstd dictionary training: "
+            f"samples={len(samples)} total_sample_bytes={total_sample_bytes} dict_size={dict_size}"
+        )
     dict_bytes = backend.train_dictionary(samples, dict_size=dict_size)
     compressed_bytes = backend.compress(payload, dictionary=dict_bytes)
     restored_bytes = backend.decompress(compressed_bytes, dictionary=dict_bytes)
