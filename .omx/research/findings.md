@@ -43,3 +43,15 @@ Modal v4 (with upstream clone) created mask_v3 and mask_v4 dirs in results volum
 ## 2026-04-11 [decision] GPU budget unlimited — big GPUs authorized
 
 A100/H100 authorized if A10G is insufficient. DP-SIMS, MaskRenderer, Wavelet, Diffusion, VQ-VAE all get fair smoke tests. No architecture eliminated without scored evidence.
+
+## 2026-04-11 [technique] Yousfi tricks 13-21: next-level architectural optimizations
+
+Tricks 13-21: PoseNet blind spots (7x7 RF, AllNorm invariance), SegNet skip-connection exploitation, temporal delta compression, 30-min inflate budget exploitation (multi-pass refinement), encoder-decoder asymmetry (neural decoder IS the codec), adaptive quantization per semantic region, SPADE parameter budget allocation, cross-frame attention, scorer distillation into decoder heads. All implementable in tac.
+
+## 2026-04-11 [discovery] All 3 zero-cost inflate tricks verified working — ready to deploy
+
+TTO (trick 6): env var controlled, 3 self-supervised losses, wall-clock budget, rollback on quality regression. Multi-pass (trick 16): loops model forward pass N times with uint8 round between passes. PoseNet targets (trick 17): 5KB binary, supervised TTO at inflate time. All code paths traced end-to-end, no bugs. Activate: INFLATE_TTO_STEPS=10 INFLATE_MULTI_PASS=2 POSENET_TARGETS_ENABLE=1
+
+## 2026-04-11 [discovery] Tricks 13-21 implemented, tricks 22-31 in progress
+
+5 new tac modules: scorer_exploits, temporal_delta, semantic_quantization, cross_frame_attention, scorer_distill. WeightedSPADE added to dp_sims_renderer. Yousfi implementing tricks 22-31. Auth eval with TTO+multi-pass running.

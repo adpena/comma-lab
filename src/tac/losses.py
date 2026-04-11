@@ -1031,3 +1031,274 @@ def compute_boundary_mask(
     min_pool = -F.max_pool2d(-labels, kernel_size=kernel_size, stride=1, padding=pad)
     boundary = (max_pool != min_pool).float().squeeze()
     return boundary.cpu()
+
+
+# ── Trick 24: Boundary-aware loss with morphological dilation ──────────
+
+
+def boundary_aware_loss(
+    filtered_pair_hwc: torch.Tensor,
+    gt_pair_hwc: torch.Tensor,
+    posenet,
+    segnet,
+    boundary_weight: float = 5.0,
+    dilation_kernel: int = 5,
+    segnet_weight: float = 100.0,
+) -> tuple[torch.Tensor, float, float]:
+    """SegNet loss with boundary pixels upweighted via morphological dilation.
+
+    SegNet's failure mode is at class boundaries where the receptive field
+    straddles two classes and the softmax is near-uniform. These boundary
+    pixels contribute disproportionately to mIoU because they are the ONLY
+    pixels that can change class under small perturbations.
+
+    This loss identifies boundary pixels (via dilate XOR erode on GT labels),
+    then applies boundary_weight multiplier to the per-pixel cross-entropy
+    at those locations. Interior pixels (where argmax is confident) get
+    weight 1.0.
+
+    A 1-pixel-wide correction band around every class boundary can dominate
+    the SegNet score delta with negligible rate cost.
+
+    Args:
+        filtered_pair_hwc: (B, T, H, W, C) filtered frame pair.
+        gt_pair_hwc: (B, T, H, W, C) ground truth frame pair.
+        posenet: frozen PoseNet model.
+        segnet: frozen SegNet model.
+        boundary_weight: multiplier for boundary pixels (default 5.0).
+        dilation_kernel: kernel size for morphological ops (default 5).
+        segnet_weight: weight for SegNet term (default 100).
+
+    Returns: (loss, pose_distortion, seg_hard_disagree)
+    """
+    fx = _hwc_to_chw(filtered_pair_hwc)
+    gx = _hwc_to_chw(gt_pair_hwc)
+
+    fp_out, fs_out = scorer_forward_pair(fx, posenet, segnet)
+    with torch.no_grad():
+        gp_out, gs_out = scorer_forward_pair(gx, posenet, segnet)
+
+    # PoseNet: standard MSE
+    pose_dist = (fp_out["pose"][..., :6] - gp_out["pose"][..., :6]).pow(2).mean()
+
+    # SegNet: boundary-weighted cross-entropy with STE
+    with torch.no_grad():
+        gt_labels = gs_out.argmax(dim=1)  # (B, H_seg, W_seg)
+        pred_labels = fs_out.argmax(dim=1)
+        hard_disagree = (pred_labels != gt_labels).float().mean()
+
+        # Morphological boundary detection on GT labels
+        # Dilate: max_pool; Erode: -max_pool(-x); Boundary = dilate != erode
+        labels_float = gt_labels.float().unsqueeze(1)  # (B, 1, H, W)
+        pad = dilation_kernel // 2
+        dilated = F.max_pool2d(labels_float, dilation_kernel, stride=1, padding=pad)
+        eroded = -F.max_pool2d(-labels_float, dilation_kernel, stride=1, padding=pad)
+        boundary = (dilated != eroded).float().squeeze(1)  # (B, H_seg, W_seg)
+
+        # Build per-pixel weight map
+        pixel_weights = torch.where(boundary > 0.5, boundary_weight, 1.0)
+        pixel_weights = pixel_weights / pixel_weights.mean()  # normalize
+
+    B, C, H_seg, W_seg = fs_out.shape
+    flat_labels = gt_labels.reshape(-1)
+    flat_logits = fs_out.permute(0, 2, 3, 1).reshape(-1, C)
+    flat_weights = pixel_weights.reshape(-1)
+
+    per_pixel_ce = F.cross_entropy(flat_logits, flat_labels, reduction="none")
+    soft_ce = (per_pixel_ce * flat_weights).mean()
+
+    # STE: forward = hard argmax disagree, backward = weighted cross-entropy
+    seg_dist = soft_ce + (hard_disagree - soft_ce).detach()
+
+    loss = segnet_weight * seg_dist + torch.sqrt(10.0 * pose_dist + 1e-8)
+    return loss, pose_dist.item(), hard_disagree.item()
+
+
+def boundary_aware_loss_cached(
+    filtered_pair_hwc: torch.Tensor,
+    gt_pose_6: torch.Tensor,
+    gt_seg_soft: torch.Tensor,
+    gt_labels: torch.Tensor,
+    boundary_mask: torch.Tensor,
+    posenet,
+    segnet,
+    boundary_weight: float = 5.0,
+    segnet_weight: float = 100.0,
+) -> tuple[torch.Tensor, float, float]:
+    """Boundary-aware loss with pre-cached GT outputs (P0 optimization).
+
+    Pre-compute gt_labels and boundary_mask once per GT pair and reuse
+    across all training iterations.
+
+    Args:
+        gt_pose_6: cached PoseNet[:, :6] for GT pair.
+        gt_seg_soft: cached softmax(SegNet(GT)).
+        gt_labels: cached argmax of GT SegNet logits, (B, H_seg, W_seg) long.
+        boundary_mask: cached boundary pixel mask, (B, H_seg, W_seg) float.
+        boundary_weight: multiplier for boundary pixels.
+        segnet_weight: weight for SegNet term.
+
+    Returns: (loss, pose_distortion, seg_hard_disagree)
+    """
+    fx = _hwc_to_chw(filtered_pair_hwc)
+
+    fp_out, fs_out = scorer_forward_pair(fx, posenet, segnet)
+
+    pose_dist = (fp_out["pose"][..., :6] - gt_pose_6).pow(2).mean()
+
+    with torch.no_grad():
+        pred_labels = fs_out.argmax(dim=1)
+        hard_disagree = (pred_labels != gt_labels).float().mean()
+
+        pixel_weights = torch.where(boundary_mask > 0.5, boundary_weight, 1.0)
+        pixel_weights = pixel_weights / pixel_weights.mean()
+
+    B, C, H_seg, W_seg = fs_out.shape
+    flat_labels = gt_labels.reshape(-1)
+    flat_logits = fs_out.permute(0, 2, 3, 1).reshape(-1, C)
+    flat_weights = pixel_weights.reshape(-1)
+
+    per_pixel_ce = F.cross_entropy(flat_logits, flat_labels, reduction="none")
+    soft_ce = (per_pixel_ce * flat_weights).mean()
+
+    seg_dist = soft_ce + (hard_disagree - soft_ce).detach()
+
+    loss = segnet_weight * seg_dist + torch.sqrt(10.0 * pose_dist + 1e-8)
+    return loss, pose_dist.item(), hard_disagree.item()
+
+
+# ── Trick 29: GAN Discriminator as Scorer Proxy ──────────────────────────
+
+
+class ScorerProxyDiscriminator(torch.nn.Module):
+    """Lightweight PatchGAN discriminator trained to predict scorer loss.
+
+    Unlike a standard GAN discriminator that classifies real/fake, this one
+    is trained to REGRESS the actual scorer loss from input frames. This
+    makes it a fast, differentiable proxy for the full scorer pipeline.
+
+    Architecture: 4-layer PatchGAN with spectral normalization.
+    Input: (B, 3, H, W) float [0, 255] frames.
+    Output: (B, 1, H', W') per-patch scorer loss predictions.
+
+    Use cases:
+        (a) Faster TTO: replace full scorer with proxy in inner loop.
+        (b) Frame-level difficulty estimation: which frames need more bits.
+        (c) Architecture search: evaluate candidate postfilters cheaply.
+
+    Args:
+        input_channels: number of input channels (default 3 for RGB).
+        base_channels: channel width of first conv (default 32).
+    """
+
+    def __init__(self, input_channels: int = 3, base_channels: int = 32):
+        super().__init__()
+        ch = base_channels
+
+        def _disc_block(in_c, out_c, stride=2, norm=True):
+            layers = [torch.nn.utils.spectral_norm(
+                torch.nn.Conv2d(in_c, out_c, 4, stride=stride, padding=1, bias=not norm)
+            )]
+            if norm:
+                layers.append(torch.nn.InstanceNorm2d(out_c))
+            layers.append(torch.nn.LeakyReLU(0.2, inplace=True))
+            return torch.nn.Sequential(*layers)
+
+        self.layers = torch.nn.Sequential(
+            _disc_block(input_channels, ch, norm=False),     # /2
+            _disc_block(ch, ch * 2),                          # /4
+            _disc_block(ch * 2, ch * 4),                      # /8
+            _disc_block(ch * 4, ch * 4, stride=1),            # /8 (same)
+            torch.nn.Conv2d(ch * 4, 1, 4, padding=1),        # regression head
+        )
+
+    def forward(self, x: torch.Tensor) -> torch.Tensor:
+        """Predict per-patch scorer loss.
+
+        Args:
+            x: (B, 3, H, W) float tensor in [0, 255].
+
+        Returns:
+            (B, 1, H', W') predicted scorer loss per patch.
+        """
+        return self.layers(x / 255.0)  # normalize to [0, 1] for stability
+
+    def predict_frame_difficulty(self, x: torch.Tensor) -> torch.Tensor:
+        """Return scalar predicted scorer loss per frame.
+
+        Args:
+            x: (B, 3, H, W) float tensor in [0, 255].
+
+        Returns:
+            (B,) predicted scorer loss per frame (mean over patches).
+        """
+        patch_scores = self.forward(x)
+        return patch_scores.mean(dim=(1, 2, 3))
+
+
+def train_scorer_proxy(
+    discriminator: ScorerProxyDiscriminator,
+    frames_bchw: torch.Tensor,
+    scorer_losses: torch.Tensor,
+    epochs: int = 50,
+    lr: float = 1e-4,
+) -> list[float]:
+    """Train the scorer proxy discriminator on (frame, scorer_loss) pairs.
+
+    Collects training pairs by running the full scorer on frames, then
+    trains the discriminator to regress the scorer loss from frames alone.
+
+    This function expects pre-computed scorer losses (from the real scorer)
+    paired with their corresponding frames.
+
+    Args:
+        discriminator: ScorerProxyDiscriminator to train.
+        frames_bchw: (N, 3, H, W) float tensor of frames.
+        scorer_losses: (N,) float tensor of real scorer losses for each frame.
+        epochs: number of training epochs (default 50).
+        lr: learning rate (default 1e-4).
+
+    Returns:
+        List of per-epoch mean L1 losses (training curve).
+    """
+    optimizer = torch.optim.Adam(discriminator.parameters(), lr=lr, betas=(0.5, 0.999))
+    N = frames_bchw.shape[0]
+    device = frames_bchw.device
+    discriminator = discriminator.to(device)
+    discriminator.train()
+
+    # Normalize target to [0, 1] for stable regression
+    target_min = scorer_losses.min()
+    target_range = scorer_losses.max() - target_min + 1e-8
+    targets_norm = (scorer_losses - target_min) / target_range
+
+    losses_history: list[float] = []
+    batch_size = min(8, N)
+
+    for epoch in range(epochs):
+        perm = torch.randperm(N, device=device)
+        epoch_loss = 0.0
+        n_batches = 0
+
+        for start in range(0, N, batch_size):
+            end = min(start + batch_size, N)
+            idx = perm[start:end]
+            batch_frames = frames_bchw[idx]
+            batch_targets = targets_norm[idx]
+
+            pred_patches = discriminator(batch_frames)  # (B, 1, H', W')
+            pred_mean = pred_patches.mean(dim=(1, 2, 3))  # (B,)
+
+            loss = F.l1_loss(pred_mean, batch_targets)
+
+            optimizer.zero_grad()
+            loss.backward()
+            optimizer.step()
+
+            epoch_loss += loss.item()
+            n_batches += 1
+
+        losses_history.append(epoch_loss / max(n_batches, 1))
+
+    discriminator.eval()
+    return losses_history

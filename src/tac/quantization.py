@@ -752,6 +752,156 @@ def normalize_postfilter_meta(meta: object | None) -> dict[str, int | str]:
     return normalized
 
 
+# ── Trick 23: Scorer-Aware uint8 Quantization Noise Shaping ─────────────
+
+
+def noise_shaped_round(
+    x: torch.Tensor,
+    scorer_gradient: torch.Tensor,
+    diffuse_error: bool = True,
+) -> torch.Tensor:
+    """Round float pixels to uint8 biased by scorer gradient direction.
+
+    Instead of uniform rounding (round-to-nearest), evaluates both floor
+    and ceil for each sub-pixel and picks whichever moves the scorer loss
+    downward. The scorer gradient tells us d(loss)/d(pixel): if negative,
+    increasing the pixel reduces loss (choose ceil); if positive,
+    decreasing the pixel reduces loss (choose floor).
+
+    This is 1-bit optimization per pixel per channel — zero model cost,
+    pure numerical precision gain. The steganalysis analogy: LSB embedding
+    with a distortion function defined by the scorer, not by HVS.
+
+    Optional Floyd-Steinberg error diffusion propagates the rounding error
+    to neighboring pixels, shaping quantization noise into the scorer's
+    insensitive directions.
+
+    Args:
+        x: (B, C, H, W) or (B, H, W, C) float tensor in [0, 255].
+            The pre-rounded frame pixels (postfilter output).
+        scorer_gradient: same shape as x. Per-element d(loss)/d(pixel).
+            Obtained by backpropagating scorer loss through the frame.
+            Sign is what matters: negative = increasing pixel helps.
+        diffuse_error: if True, apply Floyd-Steinberg error diffusion
+            to spread quantization noise spatially. Slower but reduces
+            structured artifacts.
+
+    Returns:
+        uint8-valued float tensor (same shape as x), clamped to [0, 255].
+        Values are exact integers suitable for direct uint8 cast.
+    """
+    # Ensure inputs match
+    assert x.shape == scorer_gradient.shape, (
+        f"Shape mismatch: x={x.shape}, gradient={scorer_gradient.shape}"
+    )
+
+    x_clamped = x.detach().clamp(0.0, 255.0)
+
+    # Gradient-directed rounding: negative gradient means "increase pixel helps"
+    # so we ceil; positive gradient means "decrease pixel helps" so we floor.
+    x_floor = x_clamped.floor()
+    x_ceil = (x_clamped + 1.0).floor().clamp(max=255.0)  # safe ceil
+
+    # Where gradient is negative, ceil is better (reduces loss by increasing pixel)
+    # Where gradient is positive, floor is better (reduces loss by decreasing pixel)
+    # Where gradient is zero, use standard round-to-nearest
+    use_ceil = scorer_gradient < 0
+    use_floor = scorer_gradient > 0
+    # Default to nearest for zero gradient
+    nearest = x_clamped.round().clamp(0.0, 255.0)
+
+    result = torch.where(use_ceil, x_ceil, torch.where(use_floor, x_floor, nearest))
+
+    if not diffuse_error:
+        return result.clamp(0.0, 255.0)
+
+    # Floyd-Steinberg error diffusion variant
+    # Process each image in the batch sequentially (diffusion is spatial)
+    output = result.clone()
+    quant_error = x_clamped - output  # signed rounding error
+
+    # FS kernel: right=7/16, below-left=3/16, below=5/16, below-right=1/16
+    # We diffuse the error to neighbors, then re-quantize with gradient bias
+    is_hwc = x.ndim == 4 and x.shape[-1] <= 4 and x.shape[1] > 4
+    if is_hwc:
+        # (B, H, W, C) layout
+        B, H, W, C = x.shape
+        for b in range(B):
+            err = quant_error[b]  # (H, W, C)
+            out = output[b]
+            grad = scorer_gradient[b]
+            for i in range(H):
+                for j in range(W):
+                    if j + 1 < W:
+                        correction = err[i, j] * (7.0 / 16.0)
+                        pixel = out[i, j + 1] + correction
+                        g = grad[i, j + 1]
+                        out[i, j + 1] = torch.where(g < 0, pixel.ceil(), torch.where(g > 0, pixel.floor(), pixel.round())).clamp(0, 255)
+                        err[i, j + 1] = pixel - out[i, j + 1]
+                    if i + 1 < H:
+                        if j > 0:
+                            out[i + 1, j - 1] = (out[i + 1, j - 1] + err[i, j] * (3.0 / 16.0)).clamp(0, 255)
+                        out[i + 1, j] = (out[i + 1, j] + err[i, j] * (5.0 / 16.0)).clamp(0, 255)
+                        if j + 1 < W:
+                            out[i + 1, j + 1] = (out[i + 1, j + 1] + err[i, j] * (1.0 / 16.0)).clamp(0, 255)
+            output[b] = out.round().clamp(0, 255)
+    else:
+        # (B, C, H, W) layout — process per channel
+        B, C, H, W = x.shape
+        for b in range(B):
+            for c in range(C):
+                err = quant_error[b, c]  # (H, W)
+                out = output[b, c]
+                grad = scorer_gradient[b, c]
+                for i in range(H):
+                    for j in range(W):
+                        if j + 1 < W:
+                            correction = err[i, j] * (7.0 / 16.0)
+                            pixel = out[i, j + 1] + correction
+                            g = grad[i, j + 1]
+                            out[i, j + 1] = torch.where(g < 0, pixel.ceil(), torch.where(g > 0, pixel.floor(), pixel.round())).clamp(0, 255)
+                            err[i, j + 1] = pixel - out[i, j + 1]
+                        if i + 1 < H:
+                            if j > 0:
+                                out[i + 1, j - 1] = (out[i + 1, j - 1] + err[i, j] * (3.0 / 16.0)).clamp(0, 255)
+                            out[i + 1, j] = (out[i + 1, j] + err[i, j] * (5.0 / 16.0)).clamp(0, 255)
+                            if j + 1 < W:
+                                out[i + 1, j + 1] = (out[i + 1, j + 1] + err[i, j] * (1.0 / 16.0)).clamp(0, 255)
+                output[b, c] = out.round().clamp(0, 255)
+
+    return output
+
+
+def noise_shaped_round_fast(
+    x: torch.Tensor,
+    scorer_gradient: torch.Tensor,
+) -> torch.Tensor:
+    """Fast gradient-directed rounding without error diffusion.
+
+    Vectorized version of noise_shaped_round with diffuse_error=False.
+    Use this in the inner training loop where speed matters. The full
+    Floyd-Steinberg variant is for final frame export only.
+
+    Args:
+        x: (B, C, H, W) float tensor in [0, 255].
+        scorer_gradient: same shape as x, d(loss)/d(pixel).
+
+    Returns:
+        uint8-valued float tensor, clamped to [0, 255].
+    """
+    x_clamped = x.detach().clamp(0.0, 255.0)
+    # Gradient sign determines rounding direction
+    # negative gradient -> ceil (increase pixel helps)
+    # positive gradient -> floor (decrease pixel helps)
+    # zero gradient -> nearest
+    directed = torch.where(
+        scorer_gradient < 0,
+        x_clamped.ceil(),
+        torch.where(scorer_gradient > 0, x_clamped.floor(), x_clamped.round()),
+    )
+    return directed.clamp(0.0, 255.0)
+
+
 def load_postfilter_int8(
     path: str | os.PathLike,
     device: str = "cpu",

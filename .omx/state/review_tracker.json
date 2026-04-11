@@ -2,7 +2,7 @@
   "version": 3,
   "last_scan": "2026-04-11T19:19:44.379400+00:00",
   "entity_count": 1581,
-  "review_count": 1648,
+  "review_count": 1673,
   "entities": {
     "experiments.benchmark_int4::compute_output_difference": {
       "module": "experiments.benchmark_int4",
@@ -17373,9 +17373,9 @@
       "last_modified_commit": "5472dc230f4b",
       "last_modified_date": "2026-04-11T14:16:11-05:00",
       "review_status": "reviewed",
-      "reviewed_by": "nsa_final",
-      "reviewed_at": "2026-04-11T19:19:51.217434+00:00",
-      "review_pass": "nsa_final_20260411",
+      "reviewed_by": "council",
+      "reviewed_at": "2026-04-11T23:30:18.832129+00:00",
+      "review_pass": "",
       "notes": ""
     },
     "tac.lossless.gpt_arithmetic_coder::_normalize_tokens": {
@@ -17390,9 +17390,9 @@
       "last_modified_commit": "5472dc230f4b",
       "last_modified_date": "2026-04-11T14:16:11-05:00",
       "review_status": "reviewed",
-      "reviewed_by": "nsa_final",
-      "reviewed_at": "2026-04-11T19:19:51.217434+00:00",
-      "review_pass": "nsa_final_20260411",
+      "reviewed_by": "council",
+      "reviewed_at": "2026-04-11T23:30:18.832129+00:00",
+      "review_pass": "",
       "notes": ""
     },
     "tac.lossless.gpt_arithmetic_coder::decode_tokens_with_logits_fn": {
@@ -17407,9 +17407,9 @@
       "last_modified_commit": "5472dc230f4b",
       "last_modified_date": "2026-04-11T14:16:11-05:00",
       "review_status": "reviewed",
-      "reviewed_by": "nsa_final",
-      "reviewed_at": "2026-04-11T19:19:51.217434+00:00",
-      "review_pass": "nsa_final_20260411",
+      "reviewed_by": "council",
+      "reviewed_at": "2026-04-11T23:30:18.832129+00:00",
+      "review_pass": "",
       "notes": ""
     },
     "tac.lossless.gpt_arithmetic_coder::encode_tokens_with_logits_fn": {
@@ -17424,9 +17424,9 @@
       "last_modified_commit": "5472dc230f4b",
       "last_modified_date": "2026-04-11T14:16:11-05:00",
       "review_status": "reviewed",
-      "reviewed_by": "nsa_final",
-      "reviewed_at": "2026-04-11T19:19:51.217434+00:00",
-      "review_pass": "nsa_final_20260411",
+      "reviewed_by": "council",
+      "reviewed_at": "2026-04-11T23:30:18.832129+00:00",
+      "review_pass": "",
       "notes": ""
     },
     "tac.lossless.gpt_score::NextTokenLogitsModel": {
@@ -17441,9 +17441,9 @@
       "last_modified_commit": "5472dc230f4b",
       "last_modified_date": "2026-04-11T14:16:11-05:00",
       "review_status": "reviewed",
-      "reviewed_by": "nsa_final",
-      "reviewed_at": "2026-04-11T19:19:51.217434+00:00",
-      "review_pass": "nsa_final_20260411",
+      "reviewed_by": "council",
+      "reviewed_at": "2026-04-11T23:30:32.579834+00:00",
+      "review_pass": "",
       "notes": ""
     },
     "tac.lossless.gpt_score::NextTokenLogitsModel.next_token_logits": {
@@ -17458,9 +17458,9 @@
       "last_modified_commit": "5472dc230f4b",
       "last_modified_date": "2026-04-11T14:16:11-05:00",
       "review_status": "reviewed",
-      "reviewed_by": "nsa_final",
-      "reviewed_at": "2026-04-11T19:19:51.217434+00:00",
-      "review_pass": "nsa_final_20260411",
+      "reviewed_by": "council",
+      "reviewed_at": "2026-04-11T23:30:32.579834+00:00",
+      "review_pass": "",
       "notes": ""
     },
     "tac.lossless.gpt_score::_TorchNextTokenLogitsModel": {
@@ -17475,9 +17475,9 @@
       "last_modified_commit": "5472dc230f4b",
       "last_modified_date": "2026-04-11T14:16:11-05:00",
       "review_status": "reviewed",
-      "reviewed_by": "nsa_final",
-      "reviewed_at": "2026-04-11T19:19:51.217434+00:00",
-      "review_pass": "nsa_final_20260411",
+      "reviewed_by": "council",
+      "reviewed_at": "2026-04-11T23:30:32.579834+00:00",
+      "review_pass": "",
       "notes": ""
     },
     "tac.lossless.gpt_score::_TorchNextTokenLogitsModel.__init__": {
@@ -17492,9 +17492,9 @@
       "last_modified_commit": "5472dc230f4b",
       "last_modified_date": "2026-04-11T14:16:11-05:00",
       "review_status": "reviewed",
-      "reviewed_by": "nsa_final",
-      "reviewed_at": "2026-04-11T19:19:51.217434+00:00",
-      "review_pass": "nsa_final_20260411",
+      "reviewed_by": "council",
+      "reviewed_at": "2026-04-11T23:30:32.579834+00:00",
+      "review_pass": "",
       "notes": ""
     },
     "tac.lossless.gpt_score::_TorchNextTokenLogitsModel.next_token_logits": {
@@ -17509,9 +17509,9 @@
       "last_modified_commit": "5472dc230f4b",
       "last_modified_date": "2026-04-11T14:16:11-05:00",
       "review_status": "reviewed",
-      "reviewed_by": "nsa_final",
-      "reviewed_at": "2026-04-11T19:19:51.217434+00:00",
-      "review_pass": "nsa_final_20260411",
+      "reviewed_by": "council",
+      "reviewed_at": "2026-04-11T23:30:32.579834+00:00",
+      "review_pass": "",
       "notes": ""
     },
     "tac.lossless.gpt_score::_TorchNextTokenLogitsModel.score_tokens": {
@@ -17526,9 +17526,9 @@
       "last_modified_commit": "5472dc230f4b",
       "last_modified_date": "2026-04-11T14:16:11-05:00",
       "review_status": "reviewed",
-      "reviewed_by": "nsa_final",
-      "reviewed_at": "2026-04-11T19:19:51.217434+00:00",
-      "review_pass": "nsa_final_20260411",
+      "reviewed_by": "council",
+      "reviewed_at": "2026-04-11T23:30:32.579834+00:00",
+      "review_pass": "",
       "notes": ""
     },
     "tac.lossless.gpt_score::_candidate_gpt_module_paths": {
@@ -17543,9 +17543,9 @@
       "last_modified_commit": "5472dc230f4b",
       "last_modified_date": "2026-04-11T14:16:11-05:00",
       "review_status": "reviewed",
-      "reviewed_by": "nsa_final",
-      "reviewed_at": "2026-04-11T19:19:51.217434+00:00",
-      "review_pass": "nsa_final_20260411",
+      "reviewed_by": "council",
+      "reviewed_at": "2026-04-11T23:30:32.579834+00:00",
+      "review_pass": "",
       "notes": ""
     },
     "tac.lossless.gpt_score::_iter_score_chunks": {
@@ -17560,9 +17560,9 @@
       "last_modified_commit": "5472dc230f4b",
       "last_modified_date": "2026-04-11T14:16:11-05:00",
       "review_status": "reviewed",
-      "reviewed_by": "nsa_final",
-      "reviewed_at": "2026-04-11T19:19:51.217434+00:00",
-      "review_pass": "nsa_final_20260411",
+      "reviewed_by": "council",
+      "reviewed_at": "2026-04-11T23:30:32.579834+00:00",
+      "review_pass": "",
       "notes": ""
     },
     "tac.lossless.gpt_score::_load_frame_major_segments_from_path": {
@@ -17577,9 +17577,9 @@
       "last_modified_commit": "5472dc230f4b",
       "last_modified_date": "2026-04-11T14:16:11-05:00",
       "review_status": "reviewed",
-      "reviewed_by": "nsa_final",
-      "reviewed_at": "2026-04-11T19:19:51.217434+00:00",
-      "review_pass": "nsa_final_20260411",
+      "reviewed_by": "council",
+      "reviewed_at": "2026-04-11T23:30:32.579834+00:00",
+      "review_pass": "",
       "notes": ""
     },
     "tac.lossless.gpt_score::_load_official_gpt_module": {
@@ -17594,9 +17594,9 @@
       "last_modified_commit": "5472dc230f4b",
       "last_modified_date": "2026-04-11T14:16:11-05:00",
       "review_status": "reviewed",
-      "reviewed_by": "nsa_final",
-      "reviewed_at": "2026-04-11T19:19:51.217434+00:00",
-      "review_pass": "nsa_final_20260411",
+      "reviewed_by": "council",
+      "reviewed_at": "2026-04-11T23:30:32.579834+00:00",
+      "review_pass": "",
       "notes": ""
     },
     "tac.lossless.gpt_score::_logsumexp": {
@@ -17611,9 +17611,9 @@
       "last_modified_commit": "5472dc230f4b",
       "last_modified_date": "2026-04-11T14:16:11-05:00",
       "review_status": "reviewed",
-      "reviewed_by": "nsa_final",
-      "reviewed_at": "2026-04-11T19:19:51.217434+00:00",
-      "review_pass": "nsa_final_20260411",
+      "reviewed_by": "council",
+      "reviewed_at": "2026-04-11T23:30:32.579834+00:00",
+      "review_pass": "",
       "notes": ""
     },
     "tac.lossless.gpt_score::_read_uint16_tokens": {
@@ -17628,9 +17628,9 @@
       "last_modified_commit": "5472dc230f4b",
       "last_modified_date": "2026-04-11T14:16:11-05:00",
       "review_status": "reviewed",
-      "reviewed_by": "nsa_final",
-      "reviewed_at": "2026-04-11T19:19:51.217434+00:00",
-      "review_pass": "nsa_final_20260411",
+      "reviewed_by": "council",
+      "reviewed_at": "2026-04-11T23:30:32.579834+00:00",
+      "review_pass": "",
       "notes": ""
     },
     "tac.lossless.gpt_score::_resolve_device": {
@@ -17645,9 +17645,9 @@
       "last_modified_commit": "5472dc230f4b",
       "last_modified_date": "2026-04-11T14:16:11-05:00",
       "review_status": "reviewed",
-      "reviewed_by": "nsa_final",
-      "reviewed_at": "2026-04-11T19:19:51.217434+00:00",
-      "review_pass": "nsa_final_20260411",
+      "reviewed_by": "council",
+      "reviewed_at": "2026-04-11T23:30:32.579834+00:00",
+      "review_pass": "",
       "notes": ""
     },
     "tac.lossless.gpt_score::_resolve_dtype": {
@@ -17662,9 +17662,9 @@
       "last_modified_commit": "5472dc230f4b",
       "last_modified_date": "2026-04-11T14:16:11-05:00",
       "review_status": "reviewed",
-      "reviewed_by": "nsa_final",
-      "reviewed_at": "2026-04-11T19:19:51.217434+00:00",
-      "review_pass": "nsa_final_20260411",
+      "reviewed_by": "council",
+      "reviewed_at": "2026-04-11T23:30:32.579834+00:00",
+      "review_pass": "",
       "notes": ""
     },
     "tac.lossless.gpt_score::_resolve_gpt_module_path": {
@@ -17679,9 +17679,9 @@
       "last_modified_commit": "5472dc230f4b",
       "last_modified_date": "2026-04-11T14:16:11-05:00",
       "review_status": "reviewed",
-      "reviewed_by": "nsa_final",
-      "reviewed_at": "2026-04-11T19:19:51.217434+00:00",
-      "review_pass": "nsa_final_20260411",
+      "reviewed_by": "council",
+      "reviewed_at": "2026-04-11T23:30:32.579834+00:00",
+      "review_pass": "",
       "notes": ""
     },
     "tac.lossless.gpt_score::_split_frame_major_segments_for_official_gpt": {
@@ -17696,9 +17696,9 @@
       "last_modified_commit": "5472dc230f4b",
       "last_modified_date": "2026-04-11T14:16:11-05:00",
       "review_status": "reviewed",
-      "reviewed_by": "nsa_final",
-      "reviewed_at": "2026-04-11T19:19:51.217434+00:00",
-      "review_pass": "nsa_final_20260411",
+      "reviewed_by": "council",
+      "reviewed_at": "2026-04-11T23:30:32.579834+00:00",
+      "review_pass": "",
       "notes": ""
     },
     "tac.lossless.gpt_score::_validate_frame_major_segment": {
@@ -17713,9 +17713,9 @@
       "last_modified_commit": "5472dc230f4b",
       "last_modified_date": "2026-04-11T14:16:11-05:00",
       "review_status": "reviewed",
-      "reviewed_by": "nsa_final",
-      "reviewed_at": "2026-04-11T19:19:51.217434+00:00",
-      "review_pass": "nsa_final_20260411",
+      "reviewed_by": "council",
+      "reviewed_at": "2026-04-11T23:30:32.579834+00:00",
+      "review_pass": "",
       "notes": ""
     },
     "tac.lossless.gpt_score::load_official_commavq_gpt_model": {
@@ -17730,9 +17730,9 @@
       "last_modified_commit": "5472dc230f4b",
       "last_modified_date": "2026-04-11T14:16:11-05:00",
       "review_status": "reviewed",
-      "reviewed_by": "nsa_final",
-      "reviewed_at": "2026-04-11T19:19:51.217434+00:00",
-      "review_pass": "nsa_final_20260411",
+      "reviewed_by": "council",
+      "reviewed_at": "2026-04-11T23:30:32.579834+00:00",
+      "review_pass": "",
       "notes": ""
     },
     "tac.lossless.gpt_score::probe_commavq_gpt_devices": {
@@ -17747,9 +17747,9 @@
       "last_modified_commit": "5472dc230f4b",
       "last_modified_date": "2026-04-11T14:16:11-05:00",
       "review_status": "reviewed",
-      "reviewed_by": "nsa_final",
-      "reviewed_at": "2026-04-11T19:19:51.217434+00:00",
-      "review_pass": "nsa_final_20260411",
+      "reviewed_by": "council",
+      "reviewed_at": "2026-04-11T23:30:32.579834+00:00",
+      "review_pass": "",
       "notes": ""
     },
     "tac.lossless.gpt_score::score_commavq_gpt_sample": {
@@ -17764,9 +17764,9 @@
       "last_modified_commit": "5472dc230f4b",
       "last_modified_date": "2026-04-11T14:16:11-05:00",
       "review_status": "reviewed",
-      "reviewed_by": "nsa_final",
-      "reviewed_at": "2026-04-11T19:19:51.217434+00:00",
-      "review_pass": "nsa_final_20260411",
+      "reviewed_by": "council",
+      "reviewed_at": "2026-04-11T23:30:32.579834+00:00",
+      "review_pass": "",
       "notes": ""
     },
     "tac.lossless.gpt_score::score_tokens_with_logits_fn": {
@@ -17781,9 +17781,9 @@
       "last_modified_commit": "5472dc230f4b",
       "last_modified_date": "2026-04-11T14:16:11-05:00",
       "review_status": "reviewed",
-      "reviewed_by": "nsa_final",
-      "reviewed_at": "2026-04-11T19:19:51.217434+00:00",
-      "review_pass": "nsa_final_20260411",
+      "reviewed_by": "council",
+      "reviewed_at": "2026-04-11T23:30:32.579834+00:00",
+      "review_pass": "",
       "notes": ""
     },
     "tac.lossless.range_coder::RangeDecoder": {
