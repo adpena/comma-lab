@@ -35,12 +35,9 @@ image = (
         "einops",
         "segmentation-models-pytorch",
     )
-    .add_local_dir(
-        str(REPO_ROOT / "src" / "tac"),
-        "/root/src/tac",
-        condition=lambda p: "__pycache__" not in p and ".egg-info" not in p,
-    )
     .env({"PYTHONPATH": "/root/src", "PYTHONUNBUFFERED": "1"})
+    # add_local_dir must be LAST — Modal mounts these at startup, not during build
+    .add_local_dir(str(REPO_ROOT / "src" / "tac"), "/root/src/tac")
 )
 
 precomputed_vol = modal.Volume.from_name(PRECOMPUTED_VOL, create_if_missing=True)
