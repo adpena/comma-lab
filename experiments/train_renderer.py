@@ -50,7 +50,7 @@ from tac.profiles import PROFILES  # noqa: E402
 from tac.renderer import build_renderer  # noqa: E402
 from tac.scorer import detect_device, load_scorers  # noqa: E402
 from tac.training import EMA  # noqa: E402
-from tac.utils import setup_signal_handlers, write_telemetry, log_epoch  # noqa: E402
+from tac.utils import setup_signal_handlers, write_telemetry  # noqa: E402
 
 
 # ── Argument parsing ────────────────────────────────────────────────────
@@ -346,7 +346,9 @@ def train(args: argparse.Namespace):
     start_wall_time = time.monotonic()
 
     # ── Training state save/resume (Feature 6) ────────────────────────
-    def save_training_state(path: str | Path | None = None):
+    current_epoch = 0  # updated each epoch for signal handler visibility
+
+    def save_training_state(path=None):
         if path is None:
             path = out_dir / f"training_state_{args.tag}.pt"
         path = Path(path)
@@ -365,8 +367,6 @@ def train(args: argparse.Namespace):
         }, tmp_path)
         tmp_path.rename(path)  # atomic on POSIX
 
-    current_epoch = 0  # updated each epoch for signal handler visibility
-
     # Resume from checkpoint if specified
     if args.resume_from and Path(args.resume_from).exists():
         state = torch.load(args.resume_from, map_location=device, weights_only=False)
@@ -384,13 +384,13 @@ def train(args: argparse.Namespace):
     # ── Emergency save signal handlers (Feature 2) ────────────────────
     setup_signal_handlers(save_training_state)
 
-    is_pretrain = args.pretrain_epochs > 0
+    has_pretrain = args.pretrain_epochs > 0
 
     for epoch in range(start_epoch, args.epochs):
         current_epoch = epoch
         epoch_start = time.monotonic()
         model.train()
-        in_pretrain = is_pretrain and epoch < args.pretrain_epochs
+        in_pretrain = has_pretrain and epoch < args.pretrain_epochs
 
         # Warmup LR
         if epoch < args.warmup_epochs:
@@ -399,7 +399,7 @@ def train(args: argparse.Namespace):
                 pg["lr"] = lr
 
         # Log phase transition
-        if is_pretrain and epoch == args.pretrain_epochs:
+        if has_pretrain and epoch == args.pretrain_epochs:
             print(f"[train] === Phase 2 start (epoch {epoch}) === switching to scorer loss")
 
         # Sample pairs for this epoch
@@ -458,7 +458,7 @@ def train(args: argparse.Namespace):
             total_pose += pd
             total_seg += sd
 
-            # Gradient accumulation step
+            # Gradient accumulation step (Feature 5: grad clipping already present)
             if (step + 1) % accum == 0 or (step + 1) == len(perm):
                 nn.utils.clip_grad_norm_(model.parameters(), args.grad_clip)
                 optimizer.step()
@@ -480,11 +480,18 @@ def train(args: argparse.Namespace):
         avg_seg = total_seg / max(n_steps, 1)
         lr = optimizer.param_groups[0]["lr"]
 
+        # Per-epoch timing (Feature 7)
+        epoch_sec = time.monotonic() - epoch_start
+
+        # Determine current phase label
+        phase = "pretrain" if in_pretrain else "scorer"
+
         # FP4 evaluation (skip during Phase 1 — scorer scores are meaningless)
         is_eval_epoch = (not in_pretrain and
                          ((epoch + 1) % args.eval_every == 0
                           or epoch == args.epochs - 1
-                          or epoch == args.pretrain_epochs))
+                          or epoch == max(start_epoch, args.pretrain_epochs)))
+        eval_pose, eval_seg = 0.0, 0.0
         if is_eval_epoch:
             scorer_val, eval_pose, eval_seg = evaluate_fp4(
                 model, ema, all_masks, gt_frames,
@@ -493,15 +500,29 @@ def train(args: argparse.Namespace):
         else:
             scorer_val = best_scorer
 
-        # Log
+        # Baseline watermark + regression alarm (Feature 4)
+        if is_eval_epoch and baseline_pose is None:
+            baseline_pose = eval_pose
+            baseline_seg = eval_seg
+            print(f"[eval] Baseline watermark: pose={baseline_pose:.6f}, seg={baseline_seg:.6f}")
+
+        if is_eval_epoch and baseline_pose is not None and baseline_pose > 0:
+            pose_ratio = eval_pose / baseline_pose
+            if pose_ratio > 3.0:
+                print(f"  WARNING: PoseNet {pose_ratio:.1f}x regression! "
+                      f"pose={eval_pose:.6f} vs baseline {baseline_pose:.6f}")
+            if pose_ratio > 5.0:
+                print(f"  CRITICAL: PoseNet {pose_ratio:.0f}x baseline — checkpoint NOT saved!")
+                scorer_val = float("inf")
+
+        # Log and save best
         marker = ""
         if scorer_val < best_scorer:
             best_scorer = scorer_val
             best_epoch = epoch
             marker = " *BEST*"
 
-            # Save FP4 checkpoint from EMA weights (without disturbing training model)
-            # Use a temporary model to avoid replacing optimizer's parameter references
+            # Save FP4 checkpoint from EMA weights
             save_state = ema.state_dict()
             fp4_path = out_dir / f"renderer_{args.tag}_best_fp4.pt"
             fp4_packed = quantize_fp4(save_state)
@@ -552,16 +573,57 @@ def train(args: argparse.Namespace):
                 },
             }, indent=2))
 
+        # Epoch log with timing (Feature 7)
+        eta_hours = epoch_sec * (args.epochs - epoch - 1) / 3600
         phase_tag = "P1" if in_pretrain else "P2"
         if is_eval_epoch:
             print(f"[ep {epoch:4d}/{args.epochs} {phase_tag}] loss={avg_loss:.4f} "
                   f"pose={avg_pose:.6f} seg={avg_seg:.6f} "
                   f"fp4_scorer={scorer_val:.4f} best={best_scorer:.4f} "
-                  f"lr={lr:.6f}{marker}")
+                  f"lr={lr:.6f} {epoch_sec:.1f}s/ep ETA={eta_hours:.1f}h{marker}")
         elif epoch % 10 == 0:
             print(f"[ep {epoch:4d}/{args.epochs} {phase_tag}] loss={avg_loss:.4f} "
-                  f"pose={avg_pose:.6f} seg={avg_seg:.6f} lr={lr:.6f}")
+                  f"pose={avg_pose:.6f} seg={avg_seg:.6f} lr={lr:.6f} "
+                  f"{epoch_sec:.1f}s/ep ETA={eta_hours:.1f}h")
 
+        # JSONL telemetry (Feature 1)
+        if is_eval_epoch:
+            telemetry = {
+                "epoch": epoch,
+                "loss": round(avg_loss, 6),
+                "pose": round(avg_pose, 8),
+                "seg": round(avg_seg, 8),
+                "fp4_scorer": round(scorer_val, 6) if scorer_val != float("inf") else None,
+                "best": round(best_scorer, 6) if best_scorer != float("inf") else None,
+                "lr": round(lr, 8),
+                "phase": phase,
+                "tag": args.tag,
+                "variant": "mask_renderer",
+                "epoch_sec": round(epoch_sec, 2),
+                "eval_pose": round(eval_pose, 8),
+                "eval_seg": round(eval_seg, 8),
+                "best_epoch": best_epoch,
+                "timestamp": datetime.now(timezone.utc).isoformat(),
+            }
+            write_telemetry(out_dir / f"{args.tag}_telemetry.jsonl", telemetry)
+
+        # Save training state every 50 epochs for crash recovery (Feature 6)
+        if epoch % 50 == 0 and epoch > 0:
+            save_training_state()
+
+        # Wall-clock timeout (Feature 3)
+        if args.wall_clock_timeout > 0:
+            elapsed = time.monotonic() - start_wall_time
+            if elapsed >= args.wall_clock_timeout:
+                print(f"\n[train] WALL-CLOCK TIMEOUT at epoch {epoch} "
+                      f"(elapsed {elapsed/3600:.1f}h, "
+                      f"limit {args.wall_clock_timeout/3600:.1f}h)")
+                save_training_state()
+                print(f"[train] Timeout exit. Best: {best_scorer:.4f} at epoch {best_epoch}")
+                break
+
+    # Final save
+    save_training_state()
     print(f"\n[train] Complete. Best FP4 scorer: {best_scorer:.4f} at epoch {best_epoch}")
     print(f"[train] Saved to: {out_dir}/renderer_{args.tag}_best_fp4.pt")
 
