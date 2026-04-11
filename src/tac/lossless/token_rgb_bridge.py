@@ -239,21 +239,25 @@ def decode_commavq_tokens_to_rgb_frames(
     if batch_size <= 0:
         raise ValueError("batch_size must be positive")
     arr = _normalize_token_cube(tokens)
-    flattened = arr.reshape(arr.shape[0], -1)
 
     if getattr(decoder, "_tac_input_kind", "torch") == "numpy":
         torch = None
+        numpy_input_kind = "cube"
     else:
+        numpy_input_kind = "flat"
         try:
             torch = _require_torch()
         except ImportError:
             torch = None
 
     outputs: list[np.ndarray] = []
-    for start in range(0, flattened.shape[0], batch_size):
-        batch = flattened[start : start + batch_size]
+    for start in range(0, arr.shape[0], batch_size):
+        cube_batch = arr[start : start + batch_size]
         if torch is not None:
-            batch_input = torch.from_numpy(np.array(batch, copy=True)).to(device=device, dtype=torch.long)
+            batch_input = torch.from_numpy(np.array(cube_batch.reshape(cube_batch.shape[0], -1), copy=True)).to(
+                device=device,
+                dtype=torch.long,
+            )
             with torch.inference_mode():
                 decoded = decoder(batch_input)
             if hasattr(decoded, "detach"):
@@ -261,7 +265,10 @@ def decode_commavq_tokens_to_rgb_frames(
             else:
                 decoded_np = np.asarray(decoded)
         else:
-            decoded_np = np.asarray(decoder(batch))
+            if numpy_input_kind == "cube":
+                decoded_np = np.asarray(decoder(np.array(cube_batch, copy=False)))
+            else:
+                decoded_np = np.asarray(decoder(np.array(cube_batch.reshape(cube_batch.shape[0], -1), copy=True)))
         outputs.append(decoded_np)
     stacked = np.concatenate(outputs, axis=0)
     return np.asarray(transpose_and_clip_fn(stacked), dtype=np.uint8)

@@ -176,6 +176,30 @@ class TacLosslessTokenRgbBridgeTests(unittest.TestCase):
         self.assertEqual(frames.shape, (3, 2, 2, 3))
         self.assertEqual(frames.dtype, np.uint8)
 
+    def test_decode_commavq_tokens_to_rgb_frames_preserves_cube_shape_for_numpy_bridge(self) -> None:
+        from tac.lossless.token_rgb_bridge import decode_commavq_tokens_to_rgb_frames
+
+        seen_shapes: list[tuple[int, ...]] = []
+
+        class FakeOnnxDecoder:
+            _tac_input_kind = "numpy"
+
+            def __call__(self, batch):
+                arr = np.asarray(batch)
+                seen_shapes.append(arr.shape)
+                return np.zeros((arr.shape[0], 3, 2, 2), dtype=np.float32)
+
+        frames = decode_commavq_tokens_to_rgb_frames(
+            np.arange(3 * 8 * 16, dtype=np.int16).reshape(3, 8, 16),
+            decoder=FakeOnnxDecoder(),
+            transpose_and_clip_fn=lambda arr: np.transpose(np.asarray(arr), (0, 2, 3, 1)).astype(np.uint8),
+            batch_size=2,
+            device="cpu",
+        )
+
+        self.assertEqual(seen_shapes, [(2, 8, 16), (1, 8, 16)])
+        self.assertEqual(frames.shape, (3, 2, 2, 3))
+
     def test_decode_commavq_tokens_to_rgb_frames_keeps_numpy_batches_for_onnx_bridge(self) -> None:
         from tac.lossless.token_rgb_bridge import decode_commavq_tokens_to_rgb_frames
 
