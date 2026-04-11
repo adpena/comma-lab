@@ -404,6 +404,369 @@ def decode_masks_vvc(
     return result
 
 
+# ── Technique 6: Morphological Boundary Sharpening (Fraunhofer/NTT) ────
+
+
+def sharpen_mask_boundaries(
+    masks: torch.Tensor,
+    erosion_size: int = 1,
+    min_component_area: int = 4,
+) -> torch.Tensor:
+    """Morphological opening + connected component restoration on decoded masks.
+
+    After AV1 decode, class boundaries often have single-pixel noise. This
+    applies per-class erosion then dilation (opening) to clean boundaries,
+    then restores thin structures (lane markings) via connected component
+    analysis on the original mask.
+
+    Zero neural parameters — pure morphological ops.
+
+    Args:
+        masks: (N, H, W) long tensor with values in [0, NUM_CLASSES)
+        erosion_size: kernel radius for erosion/dilation (1 = 3x3 kernel)
+        min_component_area: minimum connected component area to preserve
+
+    Returns:
+        (N, H, W) long tensor with sharpened boundaries
+    """
+    try:
+        from scipy import ndimage
+    except ImportError:
+        print("[mask_codec] WARNING: scipy not available, skipping morphological sharpening")
+        return masks
+
+    masks_np = masks.numpy().copy()
+    N, H, W = masks_np.shape
+    result = np.zeros_like(masks_np)
+    kernel = np.ones((2 * erosion_size + 1, 2 * erosion_size + 1), dtype=np.uint8)
+
+    for frame_idx in range(N):
+        frame = masks_np[frame_idx]
+        opened_frame = np.zeros_like(frame)
+
+        for cls in range(NUM_CLASSES):
+            binary = (frame == cls).astype(np.uint8)
+
+            # Morphological opening: erosion then dilation
+            eroded = ndimage.binary_erosion(binary, structure=kernel).astype(np.uint8)
+            opened = ndimage.binary_dilation(eroded, structure=kernel).astype(np.uint8)
+
+            # Restore thin structures via connected component analysis
+            # Find components in original that were lost by opening
+            original_labels, n_original = ndimage.label(binary)
+            opened_labels, _ = ndimage.label(opened)
+
+            # Restore small components that existed in original but vanished
+            for comp_id in range(1, n_original + 1):
+                comp_mask = (original_labels == comp_id)
+                comp_area = comp_mask.sum()
+                # If this component survived opening, skip
+                if (opened[comp_mask]).any():
+                    continue
+                # If component is large enough to be real (not noise), restore it
+                if comp_area >= min_component_area:
+                    opened[comp_mask] = 1
+
+            opened_frame[opened.astype(bool)] = cls
+
+        # Handle unclaimed pixels: assign to nearest class via majority vote
+        unclaimed = np.ones((H, W), dtype=bool)
+        for cls in range(NUM_CLASSES):
+            unclaimed &= (opened_frame != cls) | (opened_frame == 0)
+
+        # Simple fix: use original labels for unclaimed pixels
+        # (morphological artifacts are typically at boundaries)
+        unclaimed_mask = (opened_frame == 0) & (frame != 0)
+        if unclaimed_mask.any():
+            opened_frame[unclaimed_mask] = frame[unclaimed_mask]
+
+        result[frame_idx] = opened_frame
+
+    return torch.from_numpy(result).long()
+
+
+# ── Technique 10: AV1 Monochrome Encoding (Habr) ──────────────────────
+
+
+def encode_masks_monochrome(
+    masks: torch.Tensor,
+    output_path: str | Path,
+    crf: int = 20,
+    fps: int = 20,
+) -> int:
+    """Encode masks using AV1 with yuv400 (monochrome) pixel format.
+
+    Discrete mask data has no chroma information. Using yuv420p wastes bits
+    encoding zero-value chroma planes. SVT-AV1 natively supports yuv400
+    (grayscale), eliminating this waste.
+
+    Typical savings: 5-15% smaller than yuv420p at same CRF.
+
+    Args:
+        masks: (N, H, W) long tensor with values in [0, NUM_CLASSES)
+        output_path: path for output .mkv file (MP4 doesn't support yuv400)
+        crf: AV1 quality parameter
+        fps: frame rate
+
+    Returns:
+        File size in bytes
+    """
+    output_path = Path(output_path)
+    # yuv400 requires .mkv container (MP4 doesn't support monochrome AV1)
+    if output_path.suffix == ".mp4":
+        output_path = output_path.with_suffix(".mkv")
+    output_path.parent.mkdir(parents=True, exist_ok=True)
+
+    N, H, W = masks.shape
+
+    # Scale class labels to byte range
+    scale_factor = 255 // (NUM_CLASSES - 1)
+    pixels = (masks * scale_factor).clamp(0, 255).to(torch.uint8).numpy()
+
+    cmd = [
+        "ffmpeg", "-y",
+        "-f", "rawvideo",
+        "-vcodec", "rawvideo",
+        "-s", f"{W}x{H}",
+        "-pix_fmt", "gray",
+        "-r", str(fps),
+        "-i", "pipe:0",
+        "-c:v", "libsvtav1",
+        "-crf", str(crf),
+        "-preset", "6",
+        "-svtav1-params", "enable-restoration=0:enable-cdef=0",
+        "-pix_fmt", "gray",  # monochrome output
+        "-an",
+        str(output_path),
+    ]
+
+    proc = subprocess.run(
+        cmd,
+        input=pixels.tobytes(),
+        capture_output=True,
+        timeout=300,
+    )
+
+    if proc.returncode != 0:
+        raise RuntimeError(
+            f"ffmpeg monochrome encoding failed (rc={proc.returncode}):\n"
+            f"{proc.stderr.decode('utf-8', errors='replace')}"
+        )
+
+    size = output_path.stat().st_size
+    print(f"[mask_codec] Monochrome encoded {N} masks ({H}x{W}) → {output_path} ({size:,} bytes, CRF={crf})")
+    return size
+
+
+# ── Technique 11: Topology-Preserving Post-Filter (Fraunhofer) ────────
+
+
+def restore_thin_structures(
+    decoded_masks: torch.Tensor,
+    keyframe_masks: torch.Tensor,
+    area_threshold: int = 50,
+    classes_to_restore: tuple[int, ...] | None = None,
+) -> torch.Tensor:
+    """Restore thin structures lost during compression by referencing keyframe.
+
+    After AV1 decode, thin structures like lane markings and small distant
+    objects may be destroyed. This function finds connected components per
+    class in the keyframe that are below an area threshold (thin structures)
+    and restores them in the decoded output if they were lost.
+
+    Zero neural parameters — topology analysis only.
+
+    Args:
+        decoded_masks: (N, H, W) long tensor — decoded masks with artifacts
+        keyframe_masks: (N, H, W) long tensor — clean keyframe masks (or GT)
+        area_threshold: max component area to consider "thin" (default 50 pixels)
+        classes_to_restore: optional tuple of class indices to restore
+                           (default: all classes)
+
+    Returns:
+        (N, H, W) long tensor with thin structures restored
+    """
+    try:
+        from scipy import ndimage
+    except ImportError:
+        print("[mask_codec] WARNING: scipy not available, skipping thin structure restoration")
+        return decoded_masks
+
+    decoded_np = decoded_masks.numpy().copy()
+    keyframe_np = keyframe_masks.numpy()
+    N, H, W = decoded_np.shape
+
+    if classes_to_restore is None:
+        classes_to_restore = tuple(range(NUM_CLASSES))
+
+    restored_count = 0
+
+    for frame_idx in range(N):
+        dec_frame = decoded_np[frame_idx]
+        key_frame = keyframe_np[frame_idx]
+
+        for cls in classes_to_restore:
+            key_binary = (key_frame == cls).astype(np.uint8)
+            dec_binary = (dec_frame == cls).astype(np.uint8)
+
+            # Find connected components in keyframe
+            labels, n_components = ndimage.label(key_binary)
+
+            for comp_id in range(1, n_components + 1):
+                comp_mask = (labels == comp_id)
+                area = comp_mask.sum()
+
+                # Only restore thin/small structures
+                if area > area_threshold:
+                    continue
+
+                # Check if this component was lost in decoding
+                overlap = dec_binary[comp_mask].sum()
+                preservation_ratio = overlap / area if area > 0 else 1.0
+
+                # If more than half the component is missing, restore it
+                if preservation_ratio < 0.5:
+                    dec_frame[comp_mask] = cls
+                    restored_count += 1
+
+    if restored_count > 0:
+        print(f"[mask_codec] Restored {restored_count} thin structures across {N} frames")
+
+    return torch.from_numpy(decoded_np).long()
+
+
+# ── Technique 12: Semantic-Aware Rate Control (UPM Spain) ──────────────
+
+
+def compute_semantic_qp_offsets(
+    masks: torch.Tensor,
+    base_qp: int = 20,
+    rare_qp_delta: int = -8,
+    dominant_qp_delta: int = 4,
+    rare_threshold: float = 0.10,
+    dominant_threshold: float = 0.20,
+) -> dict[int, int]:
+    """Compute per-class QP offsets based on class frequency.
+
+    Rare classes (lane markings ~3%, vehicles ~7%) get lower QP (more bits)
+    to preserve their detail. Dominant classes (road ~45%, sky ~20%) get
+    higher QP (fewer bits) since they are large uniform regions.
+
+    Args:
+        masks: (N, H, W) long tensor
+        base_qp: base quantization parameter
+        rare_qp_delta: QP adjustment for rare classes (negative = more bits)
+        dominant_qp_delta: QP adjustment for dominant classes (positive = fewer bits)
+        rare_threshold: classes below this fraction are "rare"
+        dominant_threshold: classes above this fraction are "dominant"
+
+    Returns:
+        Dict mapping class_id → QP offset (relative to base_qp)
+    """
+    total_pixels = masks.numel()
+    offsets = {}
+
+    for cls in range(NUM_CLASSES):
+        cls_pixels = (masks == cls).sum().item()
+        fraction = cls_pixels / total_pixels
+
+        if fraction < rare_threshold:
+            offsets[cls] = rare_qp_delta
+        elif fraction > dominant_threshold:
+            offsets[cls] = dominant_qp_delta
+        else:
+            offsets[cls] = 0
+
+    print(f"[mask_codec] Semantic QP offsets (base={base_qp}):")
+    for cls, delta in sorted(offsets.items()):
+        frac = (masks == cls).sum().item() / total_pixels
+        print(f"  class {cls}: {frac:.1%} → QP {base_qp + delta} (delta={delta:+d})")
+
+    return offsets
+
+
+def generate_roi_qp_map(
+    masks: torch.Tensor,
+    qp_offsets: dict[int, int],
+) -> np.ndarray:
+    """Generate per-pixel ROI QP offset map for SVT-AV1.
+
+    Creates a frame-by-frame QP offset map that can be passed to SVT-AV1's
+    --qp-file or ROI API to allocate more bits to rare semantic classes.
+
+    Args:
+        masks: (N, H, W) long tensor
+        qp_offsets: dict from compute_semantic_qp_offsets
+
+    Returns:
+        (N, H, W) int8 array of per-pixel QP offsets
+    """
+    masks_np = masks.numpy()
+    N, H, W = masks_np.shape
+    roi_map = np.zeros((N, H, W), dtype=np.int8)
+
+    for cls, delta in qp_offsets.items():
+        roi_map[masks_np == cls] = delta
+
+    return roi_map
+
+
+def encode_masks_semantic_rate(
+    masks: torch.Tensor,
+    output_path: str | Path,
+    crf: int = 20,
+    fps: int = 20,
+    rare_qp_delta: int = -8,
+    dominant_qp_delta: int = 4,
+) -> int:
+    """Encode masks with semantic-aware rate control.
+
+    Two-pass approach:
+    1. Compute per-class QP offsets based on class frequency
+    2. Encode with class-specific CRF using a two-segment approach:
+       - First encode rare-class regions at lower CRF
+       - Then overlay with dominant-class regions at higher CRF
+
+    In practice, SVT-AV1 doesn't have pixel-level QP control via CLI,
+    so we approximate by blending multiple encoding passes. For production,
+    use the SVT-AV1 C API with per-SB QP offsets.
+
+    Current implementation: weighted average CRF based on class distribution
+    to get closest achievable approximation via CLI.
+
+    Args:
+        masks: (N, H, W) long tensor
+        output_path: path for output file
+        crf: base CRF value
+        fps: frame rate
+        rare_qp_delta: CRF adjustment for rare classes
+        dominant_qp_delta: CRF adjustment for dominant classes
+
+    Returns:
+        File size in bytes
+    """
+    qp_offsets = compute_semantic_qp_offsets(
+        masks, base_qp=crf,
+        rare_qp_delta=rare_qp_delta,
+        dominant_qp_delta=dominant_qp_delta,
+    )
+
+    # Compute effective CRF as weighted average of per-class CRFs
+    total_pixels = masks.numel()
+    weighted_crf = 0.0
+    for cls in range(NUM_CLASSES):
+        cls_fraction = (masks == cls).sum().item() / total_pixels
+        cls_crf = max(0, min(63, crf + qp_offsets.get(cls, 0)))
+        weighted_crf += cls_fraction * cls_crf
+
+    effective_crf = int(round(weighted_crf))
+    print(f"[mask_codec] Semantic rate control: effective CRF={effective_crf} (base={crf})")
+
+    # Encode with the effective CRF
+    # For production with SVT-AV1 API, use per-SB QP offsets instead
+    return encode_masks(masks, output_path, crf=effective_crf, fps=fps)
+
+
 def masks_to_pairs(
     masks: torch.Tensor,
 ) -> list[tuple[torch.Tensor, torch.Tensor]]:

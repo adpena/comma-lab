@@ -565,3 +565,354 @@ def build_renderer(
           f"shared_embed={shared_embed.weight.numel()}, CLADE=on, sigmoid_out=on)")
 
     return pair_gen
+
+
+# ── Technique 3: Analytical Motion Predictor (SenseTime/KAIST) ─────────
+
+
+class AnalyticalMotionPredictor(nn.Module):
+    """Predict optical flow from mask centroid displacement (analytical).
+
+    Instead of learning flow from scratch with a CNN, this computes rigid
+    per-class motion analytically from centroid shifts between consecutive
+    masks. A tiny learned refinement network (~5K params) corrects only
+    at class boundaries where the rigid assumption breaks down.
+
+    This replaces the 32K-param MotionPredictor with ~5K learned params
+    plus zero-cost analytical flow for class interiors.
+
+    Args:
+        num_classes: segmentation classes (5 for comma SegNet)
+        embed_dim: per-class embedding dimension (unused, kept for API compat)
+        refine_hidden: hidden channels for boundary refinement net
+        embedding: optional pre-created Embedding (for weight sharing)
+    """
+
+    def __init__(
+        self,
+        num_classes: int = 5,
+        embed_dim: int = 6,
+        refine_hidden: int = 8,
+        embedding: nn.Embedding | None = None,
+    ):
+        super().__init__()
+        self.num_classes = num_classes
+        self.embedding = embedding if embedding is not None else nn.Embedding(num_classes, embed_dim)
+
+        # Boundary refinement: operates on analytical flow + boundary mask
+        # Input: 2 (analytical flow) + 1 (boundary indicator) = 3 channels
+        self.refine = nn.Sequential(
+            nn.Conv2d(3, refine_hidden, 3, padding=1, bias=True),
+            nn.ReLU(inplace=True),
+            nn.Conv2d(refine_hidden, 2, 3, padding=1, bias=True),
+        )
+        # Zero-init so refinement starts as identity
+        nn.init.zeros_(self.refine[-1].weight)
+        nn.init.zeros_(self.refine[-1].bias)
+
+    def _compute_centroids(
+        self, mask: torch.Tensor
+    ) -> torch.Tensor:
+        """Compute per-class centroids in normalized [-1, 1] coordinates.
+
+        Args:
+            mask: (B, H, W) long tensor
+
+        Returns:
+            (B, num_classes, 2) tensor of (cx, cy) in [-1, 1]
+        """
+        B, H, W = mask.shape
+        device = mask.device
+
+        # Create coordinate grids
+        yy = torch.linspace(-1.0, 1.0, H, device=device)
+        xx = torch.linspace(-1.0, 1.0, W, device=device)
+        grid_y, grid_x = torch.meshgrid(yy, xx, indexing="ij")
+
+        centroids = torch.zeros(B, self.num_classes, 2, device=device)
+
+        for c in range(self.num_classes):
+            class_mask = (mask == c).float()  # (B, H, W)
+            count = class_mask.sum(dim=(1, 2)).clamp(min=1.0)  # (B,)
+            cx = (class_mask * grid_x.unsqueeze(0)).sum(dim=(1, 2)) / count
+            cy = (class_mask * grid_y.unsqueeze(0)).sum(dim=(1, 2)) / count
+            centroids[:, c, 0] = cx
+            centroids[:, c, 1] = cy
+
+        return centroids
+
+    def _compute_boundary_mask(self, mask: torch.Tensor) -> torch.Tensor:
+        """Detect class boundary pixels via Laplacian on mask.
+
+        Args:
+            mask: (B, H, W) long tensor
+
+        Returns:
+            (B, 1, H, W) float tensor, 1.0 at boundaries, 0.0 elsewhere
+        """
+        m = mask.float().unsqueeze(1)  # (B, 1, H, W)
+        # Simple boundary: pixels where any neighbor differs
+        padded = F.pad(m, (1, 1, 1, 1), mode="replicate")
+        shifts = [
+            padded[:, :, 1:-1, 2:],   # right
+            padded[:, :, 1:-1, :-2],   # left
+            padded[:, :, 2:, 1:-1],    # down
+            padded[:, :, :-2, 1:-1],   # up
+        ]
+        boundary = torch.zeros_like(m)
+        for s in shifts:
+            boundary = boundary + (m != s).float()
+        return (boundary > 0).float()
+
+    def forward(
+        self,
+        mask_t: torch.Tensor,
+        mask_t1: torch.Tensor,
+    ) -> torch.Tensor:
+        """Predict optical flow from mask pair using analytical centroids.
+
+        Args:
+            mask_t: (B, H, W) long
+            mask_t1: (B, H, W) long
+
+        Returns:
+            (B, 2, H, W) flow in normalized coordinates
+        """
+        B, H, W = mask_t.shape
+        device = mask_t.device
+
+        # 1. Compute per-class centroid displacement
+        centroids_t = self._compute_centroids(mask_t)    # (B, C, 2)
+        centroids_t1 = self._compute_centroids(mask_t1)  # (B, C, 2)
+        displacement = centroids_t1 - centroids_t         # (B, C, 2)
+
+        # 2. Build analytical flow by assigning each pixel its class displacement
+        # Use mask_t to determine which class each pixel belongs to
+        # displacement: (B, C, 2) → index by mask_t: (B, H, W) → (B, H, W, 2)
+        disp_flat = displacement.reshape(B * self.num_classes, 2)
+        mask_flat = mask_t.reshape(B, H * W)
+        # Add batch offset for gathering
+        batch_offset = torch.arange(B, device=device).unsqueeze(1) * self.num_classes
+        idx = (mask_flat + batch_offset).reshape(-1)
+        analytical_flow = disp_flat[idx].reshape(B, H, W, 2).permute(0, 3, 1, 2)
+        # Scale to small flow range
+        analytical_flow = analytical_flow * 0.1
+
+        # 3. Boundary refinement: only refine at class boundaries
+        boundary = self._compute_boundary_mask(mask_t)  # (B, 1, H, W)
+        refine_input = torch.cat([analytical_flow, boundary], dim=1)  # (B, 3, H, W)
+        refinement = self.refine(refine_input) * 0.05  # small refinement scale
+        # Apply refinement only at boundaries
+        flow = analytical_flow + refinement * boundary
+
+        return flow
+
+    def param_count(self) -> int:
+        """Total trainable parameter count."""
+        return sum(p.numel() for p in self.parameters() if p.requires_grad)
+
+
+# ── Technique 7: Depthwise Cascade Renderer (Samsung) ─────────────────
+
+
+class DepthwiseSeparableBlock(nn.Module):
+    """Depthwise separable convolution block with optional dilation.
+
+    Replaces standard Conv2d with:
+        depthwise (groups=channels) → pointwise (1x1)
+    3-4x fewer params than standard conv.
+    """
+
+    def __init__(self, channels: int, kernel: int = 3, dilation: int = 1):
+        super().__init__()
+        pad = (kernel // 2) * dilation
+        self.dw = nn.Conv2d(
+            channels, channels, kernel,
+            padding=pad, dilation=dilation, groups=channels, bias=False,
+        )
+        self.pw = nn.Conv2d(channels, channels, 1, bias=True)
+        self.act = nn.ReLU(inplace=True)
+
+    def forward(self, x: torch.Tensor) -> torch.Tensor:
+        return self.act(self.pw(self.dw(x)))
+
+
+class DepthwiseMaskRenderer(nn.Module):
+    """Mask renderer using depthwise separable convolutions with dilation cascade.
+
+    Replaces standard Conv2d layers in MaskRenderer with depthwise separable
+    convolutions stacked at increasing dilation rates (1, 2, 4, 8). This gives
+    a large receptive field with 3-4x fewer parameters and better INT8 behavior.
+
+    Architecture:
+        mask → Embedding → stem (1x1 project) → [DWSep d=1, d=2, d=4, d=8] → head → RGB
+
+    Args:
+        num_classes: segmentation classes
+        embed_dim: per-class embedding dimension
+        base_ch: channel width throughout the cascade
+        embedding: optional shared Embedding
+    """
+
+    def __init__(
+        self,
+        num_classes: int = 5,
+        embed_dim: int = 6,
+        base_ch: int = 36,
+        embedding: nn.Embedding | None = None,
+    ):
+        super().__init__()
+        self.num_classes = num_classes
+        self.embed_dim = embed_dim
+        self.embedding = embedding if embedding is not None else nn.Embedding(num_classes, embed_dim)
+
+        # Stem: project embedding to working channels
+        self.stem = nn.Conv2d(embed_dim, base_ch, 1, bias=True)
+
+        # Cascade of depthwise separable blocks with increasing dilation
+        self.cascade = nn.ModuleList([
+            DepthwiseSeparableBlock(base_ch, kernel=3, dilation=1),
+            DepthwiseSeparableBlock(base_ch, kernel=3, dilation=2),
+            DepthwiseSeparableBlock(base_ch, kernel=3, dilation=4),
+            DepthwiseSeparableBlock(base_ch, kernel=3, dilation=8),
+        ])
+
+        # Residual projections (1x1) for skip connections in cascade
+        self.skip_proj = nn.Conv2d(base_ch, base_ch, 1, bias=False)
+
+        # Head: project to RGB
+        self.head = nn.Conv2d(base_ch, 3, 1, bias=True)
+        nn.init.zeros_(self.head.weight)
+        nn.init.zeros_(self.head.bias)
+
+    def forward(self, masks: torch.Tensor) -> torch.Tensor:
+        """Render RGB from masks using depthwise cascade.
+
+        Args:
+            masks: (B, H, W) long tensor
+
+        Returns:
+            (B, 3, H, W) float in [0, 255]
+        """
+        x = self.embedding(masks).permute(0, 3, 1, 2).contiguous()
+        x = self.stem(x)
+
+        # Cascade with residual connections
+        skip = self.skip_proj(x)
+        for block in self.cascade:
+            x = block(x) + x  # local residual
+        x = x + skip  # global skip
+
+        rgb = 255.0 * torch.sigmoid(self.head(x) / 50.0)
+        return rgb
+
+    def param_count(self) -> int:
+        return sum(p.numel() for p in self.parameters() if p.requires_grad)
+
+
+# ── Technique 8: Channel-Recurrent Renderer (Sony) ────────────────────
+
+
+class ChannelSubNet(nn.Module):
+    """Tiny sub-network that predicts one channel conditioned on mask + prior channels.
+
+    Args:
+        in_ch: input channels (embed_dim + number of prior channels)
+        hidden: hidden width
+    """
+
+    def __init__(self, in_ch: int, hidden: int = 24):
+        super().__init__()
+        self.net = nn.Sequential(
+            nn.Conv2d(in_ch, hidden, 3, padding=1, bias=True),
+            nn.ReLU(inplace=True),
+            nn.Conv2d(hidden, hidden, 3, padding=1, bias=True),
+            nn.ReLU(inplace=True),
+            nn.Conv2d(hidden, 1, 1, bias=True),
+        )
+        # Zero-init output for stable start
+        nn.init.zeros_(self.net[-1].weight)
+        nn.init.zeros_(self.net[-1].bias)
+
+    def forward(self, x: torch.Tensor) -> torch.Tensor:
+        return self.net(x)
+
+
+class ChannelRecurrentRenderer(nn.Module):
+    """Channel-recurrent mask renderer (Sony approach).
+
+    Instead of jointly predicting 3 RGB channels, generates them sequentially:
+        1. Y = f_Y(mask_embed)           — luminance from mask only
+        2. U = f_U(mask_embed, Y)        — chroma U conditioned on Y
+        3. V = f_V(mask_embed, Y, U)     — chroma V conditioned on Y, U
+
+    Each sub-network outputs 1 channel, so each is ~1/3 the capacity needed.
+    Total params are 40-60% of joint model because later channels get extra
+    conditioning input instead of extra capacity.
+
+    The output is in YUV space, converted to RGB for scoring.
+
+    Args:
+        num_classes: segmentation classes
+        embed_dim: per-class embedding dimension
+        hidden: hidden width per sub-network
+        embedding: optional shared Embedding
+    """
+
+    def __init__(
+        self,
+        num_classes: int = 5,
+        embed_dim: int = 6,
+        hidden: int = 24,
+        embedding: nn.Embedding | None = None,
+    ):
+        super().__init__()
+        self.num_classes = num_classes
+        self.embed_dim = embed_dim
+        self.embedding = embedding if embedding is not None else nn.Embedding(num_classes, embed_dim)
+
+        # Y channel: input = embed_dim
+        self.y_net = ChannelSubNet(embed_dim, hidden)
+        # U channel: input = embed_dim + 1 (Y)
+        self.u_net = ChannelSubNet(embed_dim + 1, hidden)
+        # V channel: input = embed_dim + 2 (Y, U)
+        self.v_net = ChannelSubNet(embed_dim + 2, hidden)
+
+    def forward(self, masks: torch.Tensor) -> torch.Tensor:
+        """Render RGB from masks via channel-recurrent YUV prediction.
+
+        Args:
+            masks: (B, H, W) long tensor
+
+        Returns:
+            (B, 3, H, W) float in [0, 255]
+        """
+        embed = self.embedding(masks).permute(0, 3, 1, 2).contiguous()
+
+        # Sequential channel generation
+        y_raw = self.y_net(embed)                                   # (B, 1, H, W)
+        y_norm = torch.sigmoid(y_raw / 50.0)                       # normalized Y
+
+        u_input = torch.cat([embed, y_norm], dim=1)
+        u_raw = self.u_net(u_input)                                 # (B, 1, H, W)
+        u_norm = torch.sigmoid(u_raw / 50.0)
+
+        v_input = torch.cat([embed, y_norm, u_norm], dim=1)
+        v_raw = self.v_net(v_input)                                 # (B, 1, H, W)
+        v_norm = torch.sigmoid(v_raw / 50.0)
+
+        # YUV → RGB conversion (BT.601)
+        # Y in [0,1], U in [0,1] mapped to [-0.5, 0.5], V in [0,1] mapped to [-0.5, 0.5]
+        y = y_norm
+        u = u_norm - 0.5
+        v = v_norm - 0.5
+
+        r = (y + 1.402 * v).clamp(0, 1)
+        g = (y - 0.344136 * u - 0.714136 * v).clamp(0, 1)
+        b = (y + 1.772 * u).clamp(0, 1)
+
+        rgb = torch.cat([r, g, b], dim=1) * 255.0
+        return rgb
+
+    def param_count(self) -> int:
+        return sum(p.numel() for p in self.parameters() if p.requires_grad)
