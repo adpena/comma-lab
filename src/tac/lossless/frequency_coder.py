@@ -505,6 +505,38 @@ def benchmark_prev_symbol_frequency_stream(tokens) -> dict[str, object]:
     }
 
 
+def benchmark_prev_pair_frequency_stream(tokens) -> dict[str, object]:
+    normalized = _normalize_uint16_tokens(tokens)
+    if normalized.size == 0:
+        return {
+            "command": "lossless_prev_pair_frequency_benchmark",
+            "token_count": 0,
+            "context_count": 0,
+            "encoded_bytes": 0,
+            "compression_ratio": 0.0,
+        }
+
+    contexts: dict[tuple[int | None, int], list[int]] = {}
+    if normalized.size >= 2:
+        contexts[(None, int(normalized[0]))] = [int(normalized[1])]
+        for prev_prev, prev, current in zip(normalized[:-2], normalized[1:-1], normalized[2:]):
+            contexts.setdefault((int(prev_prev), int(prev)), []).append(int(current))
+
+    encoded_bytes = 0
+    for stream in contexts.values():
+        encoded = encode_uint16_frequency_stream(stream)
+        encoded_bytes += len(encoded.encoded_bytes)
+
+    original_bytes = int(normalized.size) * 2
+    return {
+        "command": "lossless_prev_pair_frequency_benchmark",
+        "token_count": int(normalized.size),
+        "context_count": len(contexts),
+        "encoded_bytes": encoded_bytes,
+        "compression_ratio": original_bytes / encoded_bytes if encoded_bytes else 0.0,
+    }
+
+
 def encode_uint16_prev_symbol_stream(tokens) -> PrevSymbolEncodedStream:
     normalized = _normalize_uint16_tokens(tokens)
     if normalized.size == 0:
@@ -672,9 +704,30 @@ def benchmark_prev_symbol_frequency_file(source_path: str | Path, *, max_tokens:
     return payload
 
 
+def benchmark_prev_pair_frequency_file(source_path: str | Path, *, max_tokens: int | None = None) -> dict[str, object]:
+    from pathlib import Path
+
+    np = _require_numpy()
+    source = Path(source_path)
+    if source.stat().st_size % 2 != 0:
+        raise ValueError(f"token stream must contain an even number of bytes: {source}")
+    tokens = np.fromfile(source, dtype=np.uint16)
+    if max_tokens is not None:
+        if max_tokens <= 0:
+            raise ValueError("max_tokens must be positive")
+        tokens = tokens[:max_tokens]
+    payload = benchmark_prev_pair_frequency_stream(tokens)
+    payload["source_path"] = str(source)
+    if max_tokens is not None:
+        payload["max_tokens"] = int(max_tokens)
+    return payload
+
+
 __all__ = [
     "FrequencyEncodedStream",
     "STREAM_MAGIC",
+    "benchmark_prev_pair_frequency_file",
+    "benchmark_prev_pair_frequency_stream",
     "decode_uint16_frequency_file",
     "decode_uint16_frequency_stream",
     "benchmark_uint16_frequency_file",

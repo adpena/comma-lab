@@ -408,6 +408,65 @@ class TacCliTests(unittest.TestCase):
         mocked.assert_called_once_with(token_path, max_tokens=1)
         self.assertEqual(result["token_count"], 1)
 
+    def test_lossless_prev_pair_benchmark_subcommand_reports_conditional_ratio(self) -> None:
+        mod = load_module()
+        with tempfile.TemporaryDirectory() as tmpdir:
+            root = Path(tmpdir)
+            token_path = root / "train.bin"
+            with mock.patch.object(
+                mod,
+                "benchmark_prev_pair_frequency_file",
+                return_value={
+                    "command": "lossless_prev_pair_frequency_benchmark",
+                    "token_count": 10,
+                    "context_count": 5,
+                    "encoded_bytes": 18,
+                    "compression_ratio": 1.1,
+                },
+            ) as mocked:
+                result = mod.main(
+                    [
+                        "lossless",
+                        "prev-pair-benchmark",
+                        "--tokens",
+                        str(token_path),
+                    ]
+                )
+
+        mocked.assert_called_once_with(token_path, max_tokens=None)
+        self.assertEqual(result["command"], "lossless_prev_pair_frequency_benchmark")
+        self.assertEqual(result["context_count"], 5)
+
+    def test_lossless_prev_pair_benchmark_subcommand_supports_max_tokens(self) -> None:
+        mod = load_module()
+        with tempfile.TemporaryDirectory() as tmpdir:
+            root = Path(tmpdir)
+            token_path = root / "train.bin"
+            with mock.patch.object(
+                mod,
+                "benchmark_prev_pair_frequency_file",
+                return_value={
+                    "command": "lossless_prev_pair_frequency_benchmark",
+                    "token_count": 2,
+                    "context_count": 1,
+                    "encoded_bytes": 6,
+                    "compression_ratio": 0.66,
+                },
+            ) as mocked:
+                result = mod.main(
+                    [
+                        "lossless",
+                        "prev-pair-benchmark",
+                        "--tokens",
+                        str(token_path),
+                        "--max-tokens",
+                        "2",
+                    ]
+                )
+
+        mocked.assert_called_once_with(token_path, max_tokens=2)
+        self.assertEqual(result["token_count"], 2)
+
     def test_lossless_prev_symbol_benchmark_subcommand_rejects_odd_byte_stream(self) -> None:
         mod = load_module()
         with tempfile.TemporaryDirectory() as tmpdir:

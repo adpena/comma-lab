@@ -27,10 +27,18 @@
   - compression ratio: `3.3106559926730506`
   - contexts: `1026`
   - outer header bytes: `4115`
+- A full exact previous-symbol encode over the finished `frame_major` split-0 stream is now also on disk:
+  - encoded artifact: `reports/raw/2026-04-11-commavq-gpt-arithmetic/small/train_split0.tpc`
+  - metadata: `reports/raw/2026-04-11-commavq-gpt-arithmetic/small/train_split0_prev_symbol_encode.json`
+  - original bytes: `774005000`
+  - encoded bytes: `473320648`
+  - compression ratio: `1.635265656105499`
+  - contexts: `1026`
+  - outer header bytes: `4116`
 - Reordering alone is not enough, but reordering plus simple conditional coding is already materially better than the static coder on the same sample.
 
 ## next implication
 
 - `position_major + previous-symbol conditioning` is now the strongest empirical direction in the lossless arithmetic lane.
-- The next exact implementation cut should build on this real file-level conditional coder signal, not on more source-order experiments.
-- The most useful comparison still missing is a full exact `frame_major` previous-symbol encode on the same split-0 stream.
+- The full exact file-level comparison now matches the earlier sample signal: `position_major` is dramatically better than `frame_major` under the same previous-symbol conditional coder.
+- The next exact implementation cut should build on this `position_major` file-level conditional coder signal, not on more source-order experiments.

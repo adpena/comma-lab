@@ -81,6 +81,19 @@ class TacLosslessFrequencyCoderTests(unittest.TestCase):
         self.assertIn("compression_ratio", result)
         self.assertIn("context_count", result)
 
+    def test_benchmark_prev_pair_frequency_stream_reports_ratio(self) -> None:
+        from tac.lossless.frequency_coder import benchmark_prev_pair_frequency_stream
+
+        tokens = np.array([9, 9, 3, 3, 3, 7, 7, 0, 65535, 65535, 12, 12, 12, 12], dtype=np.uint16)
+
+        result = benchmark_prev_pair_frequency_stream(tokens)
+
+        self.assertEqual(result["command"], "lossless_prev_pair_frequency_benchmark")
+        self.assertEqual(result["token_count"], int(tokens.size))
+        self.assertGreater(result["context_count"], 0)
+        self.assertGreater(result["encoded_bytes"], 0)
+        self.assertIn("compression_ratio", result)
+
     def test_benchmark_prev_symbol_frequency_file_reports_ratio(self) -> None:
         import tempfile
 
@@ -95,6 +108,25 @@ class TacLosslessFrequencyCoderTests(unittest.TestCase):
             result = benchmark_prev_symbol_frequency_file(source)
 
         self.assertEqual(result["command"], "lossless_prev_symbol_frequency_benchmark")
+        self.assertEqual(result["token_count"], int(tokens.size))
+        self.assertGreater(result["encoded_bytes"], 0)
+        self.assertIn("compression_ratio", result)
+        self.assertIn("context_count", result)
+
+    def test_benchmark_prev_pair_frequency_file_reports_ratio(self) -> None:
+        import tempfile
+
+        from tac.lossless.frequency_coder import benchmark_prev_pair_frequency_file
+
+        with tempfile.TemporaryDirectory() as tmpdir:
+            root = Path(tmpdir)
+            source = root / "tokens.bin"
+            tokens = np.array([9, 9, 3, 3, 3, 7, 7, 0, 65535, 65535, 12, 12, 12, 12], dtype=np.uint16)
+            tokens.tofile(source)
+
+            result = benchmark_prev_pair_frequency_file(source)
+
+        self.assertEqual(result["command"], "lossless_prev_pair_frequency_benchmark")
         self.assertEqual(result["token_count"], int(tokens.size))
         self.assertGreater(result["encoded_bytes"], 0)
         self.assertIn("compression_ratio", result)

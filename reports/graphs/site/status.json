@@ -1,5 +1,5 @@
 {
-  "score": 1.33,
+  "score": 1.727,
   "rank": 1,
   "lead": 0.163,
   "days_left": 22.8,
@@ -7,12 +7,5 @@
   "best_training_epoch": 859,
   "gap_to_proxy": -2.703,
   "trainers_alive": 0,
-  "updated": "2026-04-11 10:54 CT",
-  "variant": "dilated_h64",
-  "epoch": 905,
-  "last_updated": "2026-04-11T18:00:00Z",
-  "crf35_proxy": 1.493,
-  "crf35_epoch": 189,
-  "gpu_lane": "Phase 1 pretrain ep19, mask renderer 312K params",
-  "competitor_mask2mask": "0.60 (unverified)"
+  "updated": "2026-04-11 11:04 CT"
 }

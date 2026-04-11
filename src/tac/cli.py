@@ -22,6 +22,7 @@ from .lossless.arithmetic import (
     write_symbol_frequency_report,
 )
 from .lossless.frequency_coder import benchmark_prev_symbol_frequency_file
+from .lossless.frequency_coder import benchmark_prev_pair_frequency_file
 from .lossless.frequency_coder import decode_uint16_prev_symbol_file
 from .lossless.frequency_coder import encode_uint16_frequency_file
 from .lossless.frequency_coder import encode_uint16_prev_symbol_file
@@ -151,6 +152,11 @@ def build_parser() -> argparse.ArgumentParser:
     sp.add_argument("--tokens", required=True)
     sp.add_argument("--max-tokens", type=int, default=None)
     sp.set_defaults(lossless_handler="prev_symbol_benchmark")
+
+    sp = lossless_sub.add_parser("prev-pair-benchmark", help="Benchmark a previous-pair conditional static coder over a prepared stream")
+    sp.add_argument("--tokens", required=True)
+    sp.add_argument("--max-tokens", type=int, default=None)
+    sp.set_defaults(lossless_handler="prev_pair_benchmark")
 
     sp = lossless_sub.add_parser("baseline", help="Build a real dataset-backed lossless baseline submission")
     sp.add_argument("--profile", required=True, choices=sorted(LOSSLESS_PROFILES))
@@ -371,6 +377,14 @@ def _run_lossless(args: argparse.Namespace) -> dict[str, Any]:
 
     if args.lossless_handler == "prev_symbol_benchmark":
         payload = benchmark_prev_symbol_frequency_file(
+            Path(args.tokens),
+            max_tokens=args.max_tokens,
+        )
+        print(json.dumps(payload, indent=2))
+        return payload
+
+    if args.lossless_handler == "prev_pair_benchmark":
+        payload = benchmark_prev_pair_frequency_file(
             Path(args.tokens),
             max_tokens=args.max_tokens,
         )

@@ -1,0 +1,9 @@
+{
+  "command": "lossless_prev_symbol_frequency_benchmark",
+  "token_count": 2000000,
+  "context_count": 1027,
+  "encoded_bytes": 3449158,
+  "compression_ratio": 1.1597033246954764,
+  "source_path": "reports/raw/2026-04-11-commavq-gpt-arithmetic/small/train_split0.bin",
+  "max_tokens": 2000000
+}
