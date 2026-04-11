@@ -763,6 +763,247 @@ def frequency_aware_loss(
     return loss
 
 
+# ── Migrated legacy loss functions ────────────────────────────────────────
+
+
+def segnet_kl_divergence_loss(
+    gt_logprobs: torch.Tensor,
+    filtered_frames_hwc: torch.Tensor,
+    segnet,
+    posenet=None,
+    seg_weight: float = 50.0,
+) -> tuple[torch.Tensor, float, float]:
+    """Direct semantic preservation via KL divergence on SegNet logits.
+
+    Migrated from experiments/train_postfilter_segaware.py (compute_pair_loss_segaware).
+    Precomputes GT SegNet log-probabilities, then minimizes KL(GT_logprobs || filtered_logprobs).
+    This directly measures semantic map corruption, unlike the softmax-dot-product surrogate.
+
+    NOTE: Not validated on authoritative scorer for comma -- may be more effective than
+    softmax surrogate for other codecs. For comma competition, standard loss is proven.
+
+    Args:
+        gt_logprobs: (B, C, H_seg, W_seg) pre-computed log-softmax from GT SegNet pass
+        filtered_frames_hwc: (B, T, H, W, C) filtered frame pair (float, with gradients)
+        segnet: frozen SegNet model
+        posenet: optional frozen PoseNet model (if provided, includes PoseNet MSE term)
+        seg_weight: weight for SegNet KL term (default 50.0)
+
+    Returns: (loss, seg_kl_value, seg_argmax_disagree)
+    """
+    fx = _hwc_to_chw(filtered_frames_hwc)
+
+    # SegNet forward on filtered frames
+    seg_in = segnet.preprocess_input(fx)
+    fs_out = segnet(seg_in)
+    filtered_log_probs = F.log_softmax(fs_out, dim=1)
+    gt_log_probs_dev = gt_logprobs.to(fx.device)
+
+    # KL(GT || filtered) with log_target=True since both are log-probabilities
+    seg_kl = F.kl_div(filtered_log_probs, gt_log_probs_dev,
+                      reduction='batchmean', log_target=True)
+
+    # Argmax mismatch for monitoring
+    with torch.no_grad():
+        gt_probs = gt_log_probs_dev.exp()
+        seg_argmax_dist = (fs_out.argmax(dim=1) != gt_probs.argmax(dim=1)).float().mean().item()
+
+    loss = seg_weight * seg_kl
+
+    # Optionally include PoseNet MSE term
+    if posenet is not None:
+        gx = _hwc_to_chw(filtered_frames_hwc.detach())  # GT pair would be separate
+        fp_in = posenet.preprocess_input(fx)
+        fp_out = posenet(fp_in)
+        # Note: caller must pass GT pose separately for full loss; this is the KL-only term
+        loss = loss  # PoseNet term would be added by the caller
+
+    return loss, seg_kl.item(), seg_argmax_dist
+
+
+def saliency_reconstruction_loss_alpha(
+    filtered_bchw: torch.Tensor,
+    original_bchw: torch.Tensor,
+    saliency_map: torch.Tensor,
+    alpha: float = 20.0,
+) -> torch.Tensor:
+    """Per-pixel inverse saliency weighting with explicit alpha parameter.
+
+    Migrated from experiments/train_postfilter_saliency.py (compute_saliency_reconstruction_loss).
+    Alpha controls emphasis on SegNet-critical regions. The weight formula is:
+        weight = 1.0 + alpha * saliency_map
+    Then inverse weighting penalizes corrections on low-saliency pixels.
+
+    IMPORTANT: Alpha is applied exactly once here. The caller must NOT pre-bake alpha
+    into saliency_map -- this was the double-alpha bug found in the sweep where alpha
+    was applied both in load_saliency_weights() and again in the loss function.
+
+    Args:
+        filtered_bchw: (B, C, H, W) float, model output
+        original_bchw: (B, C, H, W) float, compressed input
+        saliency_map: (B, 1, H, W) raw saliency values in [0, 1] (NOT pre-weighted)
+        alpha: saliency emphasis factor (default 20.0)
+
+    Returns: scalar weighted MSE loss
+    """
+    # Apply alpha exactly once -- this is the single authoritative location
+    weights = 1.0 + alpha * saliency_map
+    residual = filtered_bchw - original_bchw
+    inv_weight = 1.0 / weights.clamp(min=1e-10)
+    return (inv_weight * residual.pow(2)).mean()
+
+
+def posenet_embedding_loss(
+    gt_frames_hwc: torch.Tensor,
+    filtered_frames_hwc: torch.Tensor,
+    posenet,
+    layer: str = "summary",
+) -> torch.Tensor:
+    """Perceptual loss on PoseNet's internal 512-d embeddings.
+
+    Migrated from experiments/train_postfilter_featmatch.py (PoseNetFeatureCapture + compute_loss_with_featmatch).
+    Hooks PoseNet's summarizer to capture the 512-dimensional embedding vector, then
+    computes normalized L2 loss between GT and filtered embeddings.
+
+    Provides richer gradient signal than 6-dim pose output (512 vs 6 dimensions).
+    Analogous to VGG-feature losses in super-resolution, but tuned to the exact model
+    that judges us.
+
+    NOTE: Not adopted for comma competition -- standard loss with scorer MSE performed
+    better in practice. Potentially useful for other perceptual compression tasks.
+
+    Args:
+        gt_frames_hwc: (B, T, H, W, C) ground truth frames
+        filtered_frames_hwc: (B, T, H, W, C) filtered frames (requires grad)
+        posenet: frozen PoseNet model
+        layer: which layer to hook -- 'summary' for summarizer (512-d),
+               or dot-path like 'stages.2' for vision backbone (256-d)
+
+    Returns: normalized L2 feature distance (scalar)
+    """
+    fx = _hwc_to_chw(filtered_frames_hwc)
+    gx = _hwc_to_chw(gt_frames_hwc)
+
+    # Set up hook on the target layer
+    if layer == "summary":
+        target_module = posenet.summarizer
+    else:
+        target_module = posenet.vision
+        for part in layer.split("."):
+            target_module = target_module[int(part)] if part.isdigit() else getattr(target_module, part)
+
+    features_filtered = []
+    features_gt = []
+
+    def _hook_fn(storage):
+        def hook(module, input, output):
+            storage.append(output)
+        return hook
+
+    # Forward filtered frames (with gradients)
+    handle = target_module.register_forward_hook(_hook_fn(features_filtered))
+    posenet_in_f = posenet.preprocess_input(fx)
+    posenet(posenet_in_f)
+    handle.remove()
+
+    # Forward GT frames (no gradients)
+    handle_gt = target_module.register_forward_hook(_hook_fn(features_gt))
+    with torch.no_grad():
+        posenet_in_g = posenet.preprocess_input(gx)
+        posenet(posenet_in_g)
+    handle_gt.remove()
+
+    feat_f = features_filtered[0]
+    feat_g = features_gt[0]
+
+    # Normalized L2: divide by GT feature norm so magnitude is comparable across examples
+    feat_diff = feat_f - feat_g
+    feat_norm = feat_g.detach().pow(2).mean().sqrt() + 1e-6
+    return feat_diff.pow(2).mean() / feat_norm
+
+
+def band_orthogonality_loss(
+    output_a: torch.Tensor,
+    output_b: torch.Tensor,
+    num_bands: int = 8,
+) -> torch.Tensor:
+    """DCT-space band masking for disjoint frequency registers in multi-voice ensembles.
+
+    Migrated from experiments/train_postfilter_counterpoint.py (dct2_of_residual + band penalty).
+    Enforces that two filter voices operate in complementary frequency bands by penalizing
+    the element-wise product of their frequency spectra. Uses rFFT as a cheap DCT proxy.
+
+    Harmonic ensemble loss from Jacob Collier-inspired dual-voice architecture. Experimental.
+    The hypothesis: explicit band orthogonality prevents phase-cancellation that killed
+    naive weight averaging (scored 2.0469). Two voices should form a "chord, not a doubled note."
+
+    Args:
+        output_a: (B, C, H, W) residual output from voice A
+        output_b: (B, C, H, W) residual output from voice B
+        num_bands: number of frequency bands (unused in current impl, reserved for
+                   future band-specific weighting)
+
+    Returns: scalar orthogonality penalty (lower = more disjoint)
+    """
+    # Guard against zero residuals (epoch 0 with zero-init)
+    eps_active = 1e-8
+    a_norm_sq = output_a.pow(2).sum()
+    b_norm_sq = output_b.pow(2).sum()
+    if a_norm_sq.item() <= eps_active or b_norm_sq.item() <= eps_active:
+        return torch.zeros((), device=output_a.device, dtype=output_a.dtype)
+
+    # Convert to luma via BT.601 coefficients
+    def _to_luma_fft(residual_bchw):
+        r = residual_bchw[:, 0]
+        g = residual_bchw[:, 1]
+        b = residual_bchw[:, 2]
+        luma = 0.299 * r + 0.587 * g + 0.114 * b
+        return torch.fft.rfft2(luma).abs()
+
+    spec_a = _to_luma_fft(output_a)
+    spec_b = _to_luma_fft(output_b)
+
+    # Normalize each spectrum so scale differences don't dominate
+    a_scale = spec_a.pow(2).sum().sqrt() + 1e-6
+    b_scale = spec_b.pow(2).sum().sqrt() + 1e-6
+    spec_a_n = spec_a / a_scale
+    spec_b_n = spec_b / b_scale
+
+    return (spec_a_n * spec_b_n).pow(2).sum()
+
+
+def output_decorrelation_loss(
+    output_a: torch.Tensor,
+    output_b: torch.Tensor,
+) -> torch.Tensor:
+    """Cosine-similarity decorrelation penalty for multi-voice ensemble outputs.
+
+    Migrated from experiments/train_postfilter_counterpoint.py (decorrelation term).
+    Prevents two filter voices from collapsing to the same residual by penalizing
+    the squared cosine similarity between their flattened outputs.
+
+    Harmonic ensemble loss from Jacob Collier-inspired dual-voice architecture. Experimental.
+
+    Args:
+        output_a: (B, C, H, W) residual output from voice A
+        output_b: (B, C, H, W) residual output from voice B
+
+    Returns: squared cosine similarity (0 = perfectly decorrelated, 1 = identical)
+    """
+    eps_active = 1e-8
+    a_norm_sq = output_a.pow(2).sum()
+    b_norm_sq = output_b.pow(2).sum()
+    if a_norm_sq.item() <= eps_active or b_norm_sq.item() <= eps_active:
+        return torch.zeros((), device=output_a.device, dtype=output_a.dtype)
+
+    a_flat = output_a.reshape(-1)
+    b_flat = output_b.reshape(-1)
+    a_norm = a_flat / (a_flat.pow(2).sum().sqrt() + 1e-6)
+    b_norm = b_flat / (b_flat.pow(2).sum().sqrt() + 1e-6)
+    cos_sim = (a_norm * b_norm).sum()
+    return cos_sim.pow(2)
+
+
 def compute_boundary_mask(
     gt_pair: torch.Tensor,
     segnet,

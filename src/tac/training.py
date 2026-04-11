@@ -35,18 +35,23 @@ from pydantic import BaseModel, Field, model_validator
 
 from .data import pair_from_frames, pair_start_indices, saliency_for_pair
 from .losses import (
+    band_orthogonality_loss,
     dual_saliency_reconstruction_loss,
     eval_scorer_loss,
     feature_matching_loss,
     focal_segnet_ste_loss,
     frequency_aware_loss,
     kl_distill_scorer_loss,
+    output_decorrelation_loss,
+    posenet_embedding_loss,
     saliency_reconstruction_loss,
+    saliency_reconstruction_loss_alpha,
     scorer_forward_pair,
     scorer_loss,
     scorer_loss_cached,
     scorer_loss_pcgrad,
     scorer_loss_pcgrad_cached,
+    segnet_kl_divergence_loss,
     segnet_ste_loss,
     temperature_scorer_loss,
 )
@@ -85,7 +90,10 @@ class TrainConfig(BaseModel):
     use_ste_segnet: bool = False
 
     # SegNet headroom unlocking
-    loss_mode: Literal["standard", "temperature", "focal_ste", "kl_distill", "pcgrad", "feature_match"] = "standard"
+    loss_mode: Literal[
+        "standard", "temperature", "focal_ste", "kl_distill", "pcgrad",
+        "feature_match", "segnet_kl", "posenet_embedding",
+    ] = "standard"
     temperature_start: float = Field(1.0, gt=0.0)
     temperature_end: float = Field(0.05, gt=0.0)
     temp_schedule: str = Field(
@@ -159,6 +167,27 @@ class TrainConfig(BaseModel):
         "matching PoseNet's texture sensitivity profile.",
     )
     frequency_loss_weight: float = Field(0.1, ge=0.0, le=10.0, description="Weight for frequency-domain loss (Trick 2)")
+
+    # Migrated legacy techniques
+    use_kalman: bool = Field(
+        False,
+        description="Use Kalman weight filter instead of EMA. "
+        "Inverse-variance weighted: filters out oscillation noise. "
+        "Migrated from experiments/train_postfilter_kalman.py.",
+    )
+    kalman_process_noise: float = Field(1e-6, gt=0.0, description="Kalman filter process noise")
+    kalman_obs_noise_base: float = Field(1e-4, gt=0.0, description="Kalman filter observation noise baseline")
+    kalman_obs_noise_scale: float = Field(10.0, ge=0.0, description="Kalman filter observation noise scale factor")
+    band_lambda: float = Field(0.0, ge=0.0, description="Band-orthogonality loss weight for counterpoint ensemble")
+    decor_lambda: float = Field(0.0, ge=0.0, description="Output decorrelation loss weight for counterpoint ensemble")
+    posenet_embedding_layer: str = Field(
+        "summary",
+        description="PoseNet layer for embedding loss: 'summary' (512-d) or 'stages.2' (256-d)",
+    )
+    posenet_embedding_weight: float = Field(
+        0.5, ge=0.0,
+        description="Weight for PoseNet embedding loss when loss_mode='posenet_embedding'",
+    )
 
     # Resumption
     resume_from: str | None = None
@@ -269,9 +298,18 @@ class SWA:
 class KalmanWeightFilter:
     """Per-parameter scalar Kalman filter as an alternative to EMA.
 
-    Uses inverse-variance weighting: parameters with low observation noise
+    Migrated from experiments/train_postfilter_kalman.py (KalmanWeightFilter).
+    Inverse-variance weighted averaging: parameters with low observation noise
     (stable across epochs) get more weight. Parameters with high observation
-    noise (noisy across epochs) get less weight.
+    noise (noisy/oscillating across epochs) get less weight.
+
+    Uses per-tensor scalar sigma^2 (uncertainty) rather than per-element tensors
+    for efficiency. Observation noise is estimated from the L2 norm of the weight
+    delta since last update -- large deltas suggest oscillation / high obs noise.
+
+    This is strictly more information-theoretic than EMA: EMA is the special case
+    where obs_noise is constant and equal to (1 - decay) * process_noise.
+    In practice, EMA performed comparably for the comma competition.
     """
 
     def __init__(
@@ -285,32 +323,36 @@ class KalmanWeightFilter:
         self.obs_noise_base = obs_noise_base
         self.obs_noise_scale = obs_noise_scale
 
-        # Initialize state estimate = model weights, variance = 1.0
-        self.state = {k: v.clone().detach() for k, v in model.state_dict().items()}
-        self.variance = {k: torch.ones_like(v) for k, v in model.state_dict().items()}
+        # Shadow state (the filtered estimate)
+        self.state = {k: v.detach().clone() for k, v in model.state_dict().items()}
+        # Per-tensor scalar sigma^2 (cheaper than per-element, empirically sufficient)
+        self.sigma2: dict[str, float] = {k: 1.0 for k in self.state.keys()}
 
+    @torch.no_grad()
     def update(self, model: nn.Module):
-        with torch.no_grad():
-            for k, obs in model.state_dict().items():
-                if not torch.is_floating_point(obs):
-                    self.state[k] = obs.clone()
-                    continue
-
-                # Predict step: variance grows by process noise
-                pred_var = self.variance[k] + self.process_noise
-
-                # Observation noise: adaptive based on parameter magnitude
-                obs_noise = self.obs_noise_base + self.obs_noise_scale * obs.detach().abs()
-
-                # Kalman gain
-                gain = pred_var / (pred_var + obs_noise)
-
-                # Update
-                self.state[k] = self.state[k] + gain * (obs.detach() - self.state[k])
-                self.variance[k] = (1 - gain) * pred_var
+        for k, v in model.state_dict().items():
+            if not v.dtype.is_floating_point:
+                self.state[k].copy_(v)
+                continue
+            z = v.detach()
+            # Prediction step: sigma^2 grows by process noise
+            sigma2 = self.sigma2[k] + self.process_noise
+            # Observation noise: proportional to weight delta magnitude
+            # (high delta = oscillating / noisy update = high obs noise)
+            delta = (z - self.state[k]).pow(2).mean().item()
+            obs_noise = self.obs_noise_base + self.obs_noise_scale * delta
+            # Kalman gain
+            K = sigma2 / (sigma2 + obs_noise)
+            # Update state and uncertainty
+            self.state[k].mul_(1 - K).add_(z, alpha=K)
+            self.sigma2[k] = (1 - K) * sigma2
 
     def apply(self, model: nn.Module):
         model.load_state_dict(self.state)
+
+    def copy_to(self, model: nn.Module):
+        """Alias for apply() -- matches legacy experiment interface."""
+        self.apply(model)
 
     def state_dict(self) -> dict[str, torch.Tensor]:
         return {k: v.clone() for k, v in self.state.items()}

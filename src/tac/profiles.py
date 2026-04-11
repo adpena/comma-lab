@@ -1043,4 +1043,11 @@ PROFILES = {
     "counterpoint_smoke": COUNTERPOINT_SMOKE,
     "pixelshuffle_dilated_smoke": PIXELSHUFFLE_DILATED_SMOKE,
     "uint8_ste_smoke": UINT8_STE_SMOKE,
+    # Migrated legacy loss technique profiles
+    "segnet_kl_smoke": SEGNET_KL_SMOKE,
+    "segnet_kl_full": SEGNET_KL_FULL,
+    "posenet_embedding_smoke": POSENET_EMBEDDING_SMOKE,
+    "posenet_embedding_full": POSENET_EMBEDDING_FULL,
+    "counterpoint_losses_smoke": COUNTERPOINT_LOSSES_SMOKE,
+    "kalman_baseline": KALMAN_BASELINE,
 }
