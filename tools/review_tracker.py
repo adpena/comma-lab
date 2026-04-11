@@ -20,6 +20,7 @@ Usage:
     python tools/review_tracker.py report                        # Markdown report
     python tools/review_tracker.py query <sql>                   # Raw DuckDB SQL
     python tools/review_tracker.py selftest                      # Run self-tests
+    python tools/review_tracker.py rebuild-from-json             # Rebuild DB from JSON
 """
 
 from __future__ import annotations
@@ -31,6 +32,7 @@ import subprocess
 import sys
 from dataclasses import asdict, dataclass, field
 from datetime import datetime, timezone
+import textwrap
 from pathlib import Path
 
 REPO_ROOT = Path(__file__).resolve().parent.parent
@@ -224,7 +226,12 @@ def _init_db():
     """Initialize DB with sequence first, then tables."""
     import duckdb
     TRACKER_DB.parent.mkdir(parents=True, exist_ok=True)
-    con = duckdb.connect(str(TRACKER_DB))
+    try:
+        con = duckdb.connect(str(TRACKER_DB))
+    except duckdb.Error as e:
+        print(f"DuckDB corrupted: {e}", file=sys.stderr)
+        print("Run: python tools/review_tracker.py rebuild-from-json", file=sys.stderr)
+        sys.exit(1)
     con.execute("CREATE SEQUENCE IF NOT EXISTS review_seq START 1")
     con.execute("""
         CREATE TABLE IF NOT EXISTS entities (
@@ -282,8 +289,8 @@ def _export_json(con) -> None:
         cols = [d[0] for d in con.description]
         for row in rows:
             reviews.append(dict(zip(cols, row)))
-    except Exception:
-        pass
+    except Exception as e:
+        print(f"WARN: failed to export reviews: {e}", file=sys.stderr)
 
     last_scan = ""
     try:
@@ -461,6 +468,13 @@ def check_entity_policy(con, qualified_name: str, file_path: str,
 def cmd_policy_check(file_path: str | None = None) -> None:
     """Check policy compliance for a file or all tracked entities."""
     con = _init_db()
+
+    total = con.execute("SELECT COUNT(*) FROM entities").fetchone()[0]
+    if total == 0:
+        print("No entities tracked. Run 'scan' first.")
+        con.close()
+        return
+
     policy = load_policy()
 
     if not policy:
@@ -596,7 +610,8 @@ def cmd_scan() -> None:
 
 
 def cmd_mark(pattern: str, status: str = "reviewed",
-             reviewer: str = "council", review_pass: str = "") -> None:
+             reviewer: str = "council", review_pass: str = "",
+             dry_run: bool = False) -> None:
     """Mark entities matching a pattern."""
     if status not in VALID_STATUSES:
         print(f"ERROR: invalid status '{status}'. Must be one of: {VALID_STATUSES}")
@@ -612,6 +627,13 @@ def cmd_mark(pattern: str, status: str = "reviewed",
 
     if not rows:
         print(f"No entities matching '{pattern}'")
+        con.close()
+        return
+
+    if dry_run:
+        print(f"DRY RUN: would mark {len(rows)} entities as '{status}'")
+        for (qn,) in rows:
+            print(f"  {qn}")
         con.close()
         return
 
@@ -631,7 +653,8 @@ def cmd_mark(pattern: str, status: str = "reviewed",
 
 
 def cmd_mark_file(file_path: str, status: str = "reviewed",
-                  reviewer: str = "council", review_pass: str = "") -> None:
+                  reviewer: str = "council", review_pass: str = "",
+                  dry_run: bool = False) -> None:
     """Mark all entities in a file."""
     if status not in VALID_STATUSES:
         print(f"ERROR: invalid status '{status}'. Must be one of: {VALID_STATUSES}")
@@ -655,6 +678,13 @@ def cmd_mark_file(file_path: str, status: str = "reviewed",
 
     if not rows:
         print(f"No entities in file matching '{file_path}'")
+        con.close()
+        return
+
+    if dry_run:
+        print(f"DRY RUN: would mark {len(rows)} entities in '{file_path}' as '{status}'")
+        for (qn,) in rows:
+            print(f"  {qn}")
         con.close()
         return
 
@@ -792,10 +822,28 @@ def cmd_dashboard() -> None:
     con.close()
 
 
-def cmd_diff_scan(since: str = "HEAD~10") -> None:
-    """Precise staleness: only entities whose lines actually changed go stale."""
+def cmd_diff_scan(since: str = "") -> None:
+    """Precise staleness: only entities whose lines actually changed go stale.
+
+    --since REF    Git ref to diff against (e.g. HEAD~5, abc1234).
+                   Default: if a previous scan timestamp exists in scan_meta,
+                   uses the commit closest to that timestamp; otherwise HEAD~10.
+    """
     con = _init_db()
     now = datetime.now(timezone.utc).isoformat()
+
+    if not since:
+        # Try to use last_scan timestamp for a smarter default
+        try:
+            row = con.execute("SELECT value FROM scan_meta WHERE key='last_scan'").fetchone()
+            if row and row[0]:
+                commit = _run_git("log", "-1", "--format=%H", f"--before={row[0]}")
+                if commit:
+                    since = commit[:12]
+        except Exception:
+            pass
+        if not since:
+            since = "HEAD~10"
 
     out = _run_git("diff", "--name-only", since)
     if out is None:
@@ -912,10 +960,12 @@ def cmd_greenup_import(pass_file: str) -> None:
     matched = 0
 
     for cf in clean_files:
-        base = cf.split("/")[-1]
+        # Match on the longest suffix of the clean file path to avoid
+        # collisions between files with the same basename in different dirs.
+        clean = cf.replace("\\", "/").lstrip("./")
         rows = con.execute(
             "SELECT qualified_name FROM entities WHERE file_path LIKE ?",
-            [f"%{base}"]
+            [f"%{clean}"]
         ).fetchall()
         for (qn,) in rows:
             con.execute("""
@@ -1181,8 +1231,97 @@ def cmd_selftest() -> None:
 # Main
 # ---------------------------------------------------------------------------
 
-# Need textwrap for selftest
-import textwrap
+def cmd_rebuild_from_json() -> None:
+    """Rebuild the DuckDB database from the JSON fallback file."""
+    if not TRACKER_JSON.exists():
+        print(f"No JSON fallback found at {TRACKER_JSON}", file=sys.stderr)
+        sys.exit(1)
+
+    data = json.loads(TRACKER_JSON.read_text())
+    entities = data.get("entities", {})
+    if not entities:
+        print("JSON fallback contains no entities.", file=sys.stderr)
+        sys.exit(1)
+
+    # Remove corrupted DB
+    TRACKER_DB.unlink(missing_ok=True)
+    # Also remove WAL/tmp files DuckDB may leave behind
+    for suffix in [".wal", ".tmp"]:
+        p = TRACKER_DB.with_suffix(TRACKER_DB.suffix + suffix)
+        p.unlink(missing_ok=True)
+
+    import duckdb
+    con = duckdb.connect(str(TRACKER_DB))
+    con.execute("CREATE SEQUENCE IF NOT EXISTS review_seq START 1")
+    con.execute("""
+        CREATE TABLE IF NOT EXISTS entities (
+            qualified_name VARCHAR PRIMARY KEY,
+            module VARCHAR NOT NULL,
+            file_path VARCHAR NOT NULL,
+            entity_type VARCHAR NOT NULL,
+            name VARCHAR NOT NULL,
+            start_line INTEGER NOT NULL,
+            end_line INTEGER NOT NULL,
+            line_count INTEGER NOT NULL,
+            complexity INTEGER NOT NULL DEFAULT 1,
+            last_modified_commit VARCHAR DEFAULT '',
+            last_modified_date VARCHAR DEFAULT '',
+            review_status VARCHAR DEFAULT 'unreviewed',
+            reviewed_by VARCHAR DEFAULT '',
+            reviewed_at VARCHAR DEFAULT '',
+            review_pass VARCHAR DEFAULT '',
+            notes VARCHAR DEFAULT ''
+        )
+    """)
+    con.execute("""
+        CREATE TABLE IF NOT EXISTS reviews (
+            id INTEGER DEFAULT nextval('review_seq'),
+            entity VARCHAR NOT NULL,
+            action VARCHAR NOT NULL,
+            reviewer VARCHAR DEFAULT '',
+            review_pass VARCHAR DEFAULT '',
+            detail VARCHAR DEFAULT '',
+            timestamp VARCHAR NOT NULL
+        )
+    """)
+    con.execute("""
+        CREATE TABLE IF NOT EXISTS scan_meta (
+            key VARCHAR PRIMARY KEY,
+            value VARCHAR
+        )
+    """)
+
+    count = 0
+    for qn, ent in entities.items():
+        con.execute("""
+            INSERT INTO entities VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+        """, [
+            qn,
+            ent.get("module", ""),
+            ent.get("file_path", ""),
+            ent.get("entity_type", ""),
+            ent.get("name", ""),
+            ent.get("start_line", 0),
+            ent.get("end_line", 0),
+            ent.get("line_count", 0),
+            ent.get("complexity", 1),
+            ent.get("last_modified_commit", ""),
+            ent.get("last_modified_date", ""),
+            ent.get("review_status", "unreviewed"),
+            ent.get("reviewed_by", ""),
+            ent.get("reviewed_at", ""),
+            ent.get("review_pass", ""),
+            ent.get("notes", ""),
+        ])
+        count += 1
+
+    last_scan = data.get("last_scan", "")
+    if last_scan:
+        con.execute("INSERT OR REPLACE INTO scan_meta VALUES ('last_scan', ?)", [last_scan])
+
+    con.close()
+    print(f"Rebuilt DuckDB from JSON: {count} entities restored")
+
 
 def main() -> None:
     if len(sys.argv) < 2:
@@ -1192,40 +1331,64 @@ def main() -> None:
     cmd = sys.argv[1]
 
     # Parse keyword args from anywhere in argv
+    # Supports --key value pairs and --flag (boolean flags like --dry-run)
+    BOOL_FLAGS = {"dry-run", "dry_run"}
     kwargs: dict[str, str] = {}
     positional: list[str] = [sys.argv[0], cmd]
     i = 2
     while i < len(sys.argv):
-        if sys.argv[i].startswith("--") and i + 1 < len(sys.argv):
-            kwargs[sys.argv[i].lstrip("-")] = sys.argv[i + 1]
+        arg = sys.argv[i]
+        key = arg.lstrip("-")
+        if arg.startswith("--") and key in BOOL_FLAGS:
+            kwargs[key] = "1"
+            i += 1
+        elif arg.startswith("--") and i + 1 < len(sys.argv):
+            kwargs[key] = sys.argv[i + 1]
             i += 2
         else:
-            positional.append(sys.argv[i])
+            positional.append(arg)
             i += 1
 
     reviewer = kwargs.get("reviewer", "council")
     review_pass = kwargs.get("pass", "")
     status = kwargs.get("status", "reviewed")
+    dry_run = "dry-run" in kwargs or "dry_run" in kwargs
 
     if cmd == "scan":
         cmd_scan()
     elif cmd == "status":
         cmd_status()
-    elif cmd == "mark" and len(positional) >= 3:
-        cmd_mark(positional[2], status=status, reviewer=reviewer, review_pass=review_pass)
-    elif cmd == "mark-file" and len(positional) >= 3:
-        cmd_mark_file(positional[2], status=status, reviewer=reviewer, review_pass=review_pass)
+    elif cmd == "mark":
+        if len(positional) < 3:
+            print("ERROR: 'mark' requires a pattern argument.", file=sys.stderr)
+            print("Usage: python tools/review_tracker.py mark <pattern> [--status S]", file=sys.stderr)
+            sys.exit(1)
+        cmd_mark(positional[2], status=status, reviewer=reviewer, review_pass=review_pass, dry_run=dry_run)
+    elif cmd == "mark-file":
+        if len(positional) < 3:
+            print("ERROR: 'mark-file' requires a file path argument.", file=sys.stderr)
+            print("Usage: python tools/review_tracker.py mark-file <path> [--status S]", file=sys.stderr)
+            sys.exit(1)
+        cmd_mark_file(positional[2], status=status, reviewer=reviewer, review_pass=review_pass, dry_run=dry_run)
     elif cmd == "report":
         cmd_report()
     elif cmd == "dashboard":
         cmd_dashboard()
-    elif cmd == "greenup-import" and len(positional) >= 3:
+    elif cmd == "greenup-import":
+        if len(positional) < 3:
+            print("ERROR: 'greenup-import' requires a file argument.", file=sys.stderr)
+            print("Usage: python tools/review_tracker.py greenup-import <file>", file=sys.stderr)
+            sys.exit(1)
         cmd_greenup_import(positional[2])
     elif cmd == "diff-scan":
-        cmd_diff_scan(kwargs.get("since", "HEAD~10"))
+        cmd_diff_scan(kwargs.get("since", ""))
     elif cmd == "dag":
         cmd_dag()
-    elif cmd == "query" and len(positional) >= 3:
+    elif cmd == "query":
+        if len(positional) < 3:
+            print("ERROR: 'query' requires a SQL argument.", file=sys.stderr)
+            print("Usage: python tools/review_tracker.py query <sql>", file=sys.stderr)
+            sys.exit(1)
         cmd_query(positional[2])
     elif cmd == "selftest":
         cmd_selftest()
@@ -1237,8 +1400,12 @@ def main() -> None:
             print("No policy found")
         else:
             print(json.dumps(policy, indent=2))
+    elif cmd == "rebuild-from-json":
+        cmd_rebuild_from_json()
     else:
-        print(__doc__)
+        print(f"Unknown command: {cmd}", file=sys.stderr)
+        print(__doc__, file=sys.stderr)
+        sys.exit(1)
 
 
 if __name__ == "__main__":
