@@ -23,3 +23,7 @@ The P2 optimization (channels_last on scorers) was incompatible with PyTorch MPS
 ## 2026-04-11 [discovery] Training performance regression: 6+ min per epoch on smoke profile
 
 smoke profile uses subsample=4 (75 pairs/epoch). Old scripts used subsample=8 (9 pairs). Full 874x1164 scorer forward+backward on MPS is ~5s/pair. 75*5s = 375s = 6 min/epoch. Need subsample=8 or higher for smoke. Not a code bug — configuration issue. Training runs but too slow for interactive testing.
+
+## 2026-04-11 [discovery] Modal deploy needs debugging — image build likely failing
+
+Two Modal apps launched (mask_renderer_smoke + smoke). Both completed quickly with no results in tac-renderer-results volume. Likely failure: image build cant find tac source (add_local_dir path resolution from deploy script location). Need to test image build locally or check modal app logs. Precomputed data IS on the volume.
