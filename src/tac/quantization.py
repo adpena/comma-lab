@@ -94,15 +94,34 @@ class LSQScale(nn.Module):
 
 
 def apply_lsq(model: nn.Module) -> dict[str, LSQScale]:
-    """Attach LSQ scales to all weight parameters in a model.
+    """Attach LSQ scales to all Conv2d layers via forward pre-hooks.
 
-    Returns a dict of LSQScale modules keyed by parameter name.
-    Add these to an optimizer group with a higher learning rate (e.g., 10x).
+    Each Conv2d gets an LSQScale that quantizes its weights before every
+    forward pass. The scale is a trainable parameter (add to optimizer
+    with higher lr). Hooks ensure LSQ is applied during training.
+
+    Returns a dict of LSQScale modules keyed by module name.
     """
     scales = {}
-    for name, param in model.named_parameters():
-        if param.ndim >= 2:  # conv/linear weights, not biases
-            scales[name] = LSQScale.from_tensor(param)
+    hooks = []
+
+    for name, module in model.named_modules():
+        if isinstance(module, nn.Conv2d):
+            lsq = LSQScale.from_tensor(module.weight)
+            scales[name] = lsq
+
+            # Closure captures the specific lsq and module
+            def _make_hook(lsq_mod, conv_mod):
+                def hook(module, inputs):
+                    # Replace weight with LSQ-quantized version for this forward
+                    conv_mod.weight.data = lsq_mod(conv_mod.weight)
+                return hook
+
+            h = module.register_forward_pre_hook(_make_hook(lsq, module))
+            hooks.append(h)
+
+    # Store hooks on model so they persist and can be removed
+    model._lsq_hooks = hooks
     return scales
 
 

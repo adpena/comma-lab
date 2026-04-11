@@ -88,7 +88,7 @@ COUNCIL_V2_ADAPTIVE = {
     "adaptive_rebalance": True,       # flag for Trainer to invoke AdaptiveWeights.rebalance()
     "rebalance_every": 50,            # epochs between adaptive weight updates
     "boundary_fraction": 0.05,        # measured beta for AdaptiveWeights init
-    "use_lsq": False,                 # DISABLED: LSQ forward pass not wired yet (scales are dead code)
+    "use_lsq": True,                  # LSQ: learned step sizes via forward pre-hooks on Conv2d
 }
 
 PROFILES = {
