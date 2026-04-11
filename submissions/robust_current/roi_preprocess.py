@@ -149,6 +149,8 @@ def _gaussian_blur_2d(arr: np.ndarray, sigma: float) -> np.ndarray:
         pass
     # Pure numpy fallback — cap kernel to avoid extreme slowness
     effective_sigma = min(sigma, 12.0)
+    if effective_sigma < sigma:
+        print(f"  [warn] _gaussian_blur_2d: sigma capped from {sigma} to {effective_sigma} (numpy fallback)", file=sys.stderr)
     kernel = _gaussian_kernel_1d(effective_sigma)
     tmp = _convolve_1d_axis(arr, kernel, axis=1)
     return _convolve_1d_axis(tmp, kernel, axis=0)
@@ -436,6 +438,8 @@ def preprocess(
             if len(raw) < frame_bytes:
                 break
 
+            # .copy() is required because np.frombuffer returns a read-only view;
+            # downstream processing (blur, blend) needs a writable array.
             frame = np.frombuffer(raw, dtype=np.uint8).reshape((height, width, 3)).copy()
 
             # Pick the mask for this frame
@@ -483,7 +487,9 @@ def preprocess(
                 print(f"  Processed {frame_idx} frames ...", file=sys.stderr, flush=True)
 
     finally:
-        # Clean shutdown
+        # Clean shutdown -- close both pipe ends before waiting
+        if reader_proc.stdout:
+            reader_proc.stdout.close()
         if writer_proc.stdin:
             writer_proc.stdin.close()
         writer_proc.wait()

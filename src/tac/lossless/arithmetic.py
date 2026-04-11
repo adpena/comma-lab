@@ -139,25 +139,25 @@ def flatten_tokens_for_gpt_arithmetic(
 ):
     import numpy as np
 
-    array = np.asarray(tokens).astype(np.int16)
+    array = np.asarray(tokens).astype(np.uint16)
     if array.ndim < 2:
         raise ValueError("tokens must have at least frame and feature dimensions")
     if layout not in LAYOUTS:
         raise ValueError(f"unsupported arithmetic layout: {layout}")
     frames = array.shape[0]
-    flat_per_frame = array.reshape(frames, -1).astype(np.int16)
+    flat_per_frame = array.reshape(frames, -1)
     if layout == "frame_major":
-        bos = np.full((frames, 1), bos_token, dtype=np.int16)
+        bos = np.full((frames, 1), bos_token, dtype=np.uint16)
         with_bos = np.concatenate([bos, flat_per_frame], axis=1)
         flattened = with_bos.reshape(-1)
     else:
         positions = flat_per_frame.shape[1]
         streams = []
         for position in range(positions):
-            streams.append(np.array([bos_token], dtype=np.int16))
+            streams.append(np.array([bos_token], dtype=np.uint16))
             streams.append(flat_per_frame[:, position])
-        flattened = np.concatenate(streams, axis=0) if streams else np.array([], dtype=np.int16)
-    return np.concatenate([flattened, np.array([eot_token], dtype=np.int16)], axis=0)
+        flattened = np.concatenate(streams, axis=0) if streams else np.array([], dtype=np.uint16)
+    return np.concatenate([flattened, np.array([eot_token], dtype=np.uint16)], axis=0)
 
 
 def _train_split(dataset):
@@ -186,12 +186,6 @@ def _first_example(train_split):
         return next(iterator)
     except StopIteration as exc:
         raise ValueError("train split is empty") from exc
-
-
-def _encode_example_to_ids(example: Mapping[str, object]) -> dict[str, object]:
-    if not isinstance(example, Mapping) or "token.npy" not in example:
-        raise ValueError("dataset example must provide token.npy")
-    raise RuntimeError("_encode_example_to_ids requires bound layout; use a partial wrapper")
 
 
 def _encode_example_to_ids_for_layout(example: Mapping[str, object], *, layout: str) -> dict[str, object]:
@@ -277,14 +271,6 @@ def materialize_gpt_arithmetic_stream(
 ) -> dict[str, object]:
     import numpy as np
 
-    estimate = estimate_gpt_arithmetic_workload(
-        profile,
-        split=split,
-        work_dir=None,
-        dataset_loader=dataset_loader,
-        num_proc=num_proc,
-        layout=layout,
-    )
     config = load_gpt_arithmetic_profile(profile)
     dataset = load_commavq_dataset(
         split=split,
@@ -293,6 +279,15 @@ def materialize_gpt_arithmetic_stream(
         num_proc=num_proc,
     )
     train_split = _train_split(dataset)
+
+    estimate = estimate_gpt_arithmetic_workload(
+        profile,
+        split=split,
+        work_dir=None,
+        dataset_loader=lambda *a, **kw: dataset,  # reuse already-loaded dataset
+        num_proc=num_proc,
+        layout=layout,
+    )
     target = Path(output_path)
     target.parent.mkdir(parents=True, exist_ok=True)
 

@@ -98,6 +98,12 @@ def commavq_original_bytes(
     tokens_per_example: int = COMMAVQ_TOKENS_PER_EXAMPLE,
     bits_per_token: int = COMMAVQ_TOKEN_BITS,
 ) -> int:
+    """Compute the uncompressed byte size of *example_count* commavq examples.
+
+    This is the *theoretical* original size used as denominator for
+    compression-rate calculations, not a filesystem size.  Each example
+    contains ``tokens_per_example`` tokens of ``bits_per_token`` bits.
+    """
     if example_count < 0:
         raise ValueError("example_count must be non-negative")
     if tokens_per_example <= 0:
@@ -113,8 +119,14 @@ def normalize_token_array(tokens: object):
 
 
 def load_token_file(path):
+    """Load a token .npy file and validate it contains a numeric array."""
     np = _require_numpy()
-    return np.load(path, allow_pickle=False)
+    arr = np.load(path, allow_pickle=False)
+    if not hasattr(arr, "dtype") or arr.dtype.kind not in {"i", "u", "f"}:
+        raise ValueError(f"token file {path} does not contain a numeric array")
+    if arr.ndim == 0:
+        raise ValueError(f"token file {path} contains a scalar, expected an array")
+    return arr
 
 
 def build_token_records(examples: Iterable[Mapping[str, object]]) -> list[TokenRecord]:

@@ -120,7 +120,7 @@ def get_posenet_mse(
 # Font helper
 # ---------------------------------------------------------------------------
 
-_MONO_FONT_CACHE: dict[int, object] = {}
+_MONO_FONT_CACHE: dict[int, "ImageFont.FreeTypeFont | ImageFont.ImageFont"] = {}
 
 
 def _get_mono_font(size: int = 11):
@@ -303,7 +303,8 @@ def _render_posenet_chart(
         # Tight layout to minimize wasted space
         fig.subplots_adjust(left=0.12, right=0.96, top=0.95, bottom=0.12)
 
-        # Render to exact pixel buffer
+        # Render to exact pixel buffer using raw RGBA format (no PNG encode/decode
+        # overhead) -- gives us a flat numpy-friendly byte array at exact DPI.
         buf = io.BytesIO()
         fig.savefig(buf, format="raw", dpi=CHART_DPI, facecolor="black")
         plt.close(fig)
@@ -401,7 +402,8 @@ def main() -> None:
         from tac.quantization import load_int8
 
         checkpoint_path = Path(args.checkpoint)
-        assert checkpoint_path.exists(), f"Checkpoint not found: {checkpoint_path}"
+        if not checkpoint_path.exists():
+            raise FileNotFoundError(f"Checkpoint not found: {checkpoint_path}")
         print(f"Loading post-filter: {args.variant} h={args.hidden} k={args.kernel}")
         model = build_postfilter(args.variant, hidden=args.hidden, kernel=args.kernel)
         load_int8(str(checkpoint_path), model, device=device)
@@ -419,18 +421,19 @@ def main() -> None:
     # Decode frames
     # ------------------------------------------------------------------
     archive_path = Path(args.archive)
-    assert archive_path.exists(), f"Archive not found: {archive_path}"
+    if not archive_path.exists():
+        raise FileNotFoundError(f"Archive not found: {archive_path}")
     gt_video_path = upstream_dir / "videos" / "0.mkv"
-    assert gt_video_path.exists(), f"GT video not found: {gt_video_path}"
+    if not gt_video_path.exists():
+        raise FileNotFoundError(f"GT video not found: {gt_video_path}")
 
     print(f"Decoding archive: {archive_path}")
     comp_frames = decode_archive(str(archive_path))
     print(f"Decoding GT video: {gt_video_path}")
     gt_frames = decode_video(str(gt_video_path))
 
-    assert len(comp_frames) == len(gt_frames), (
-        f"Frame count mismatch: {len(comp_frames)} vs {len(gt_frames)}"
-    )
+    if len(comp_frames) != len(gt_frames):
+        raise ValueError(f"Frame count mismatch: {len(comp_frames)} vs {len(gt_frames)}")
     total_frames = len(comp_frames)
     print(f"Total video frames: {total_frames}")
 
@@ -464,6 +467,12 @@ def main() -> None:
     posenet_secondary_mses: list[float] = []
     posenet_xs: list[int] = []
 
+    # Cache to avoid double post-filter inference on the same frame
+    _gif_cached_idx: int = -1
+    _gif_cached_filtered: torch.Tensor | None = None
+    _gif_cached_baseline: torch.Tensor | None = None
+    _gif_cached_gt: torch.Tensor | None = None
+
     print("Generating GIF frames...")
     with torch.no_grad():
         for fi, idx in enumerate(sample_indices):
@@ -471,14 +480,17 @@ def main() -> None:
             gt = gt_frames[idx].to(device)
 
             # CHW float for models
-            baseline_chw = comp.float().permute(2, 0, 1).unsqueeze(0).contiguous()
-            gt_chw = gt.float().permute(2, 0, 1).unsqueeze(0).contiguous()
-
-            # Post-filter if needed
-            if need_postfilter:
-                filtered_chw = model(baseline_chw).round().clamp(0, 255)
+            if idx == _gif_cached_idx and _gif_cached_baseline is not None:
+                baseline_chw = _gif_cached_baseline
+                gt_chw = _gif_cached_gt
+                filtered_chw = _gif_cached_filtered
             else:
-                filtered_chw = None
+                baseline_chw = comp.float().permute(2, 0, 1).unsqueeze(0).contiguous()
+                gt_chw = gt.float().permute(2, 0, 1).unsqueeze(0).contiguous()
+                if need_postfilter:
+                    filtered_chw = model(baseline_chw).round().clamp(0, 255)
+                else:
+                    filtered_chw = None
 
             # ----- Determine panels per mode -----
             gt_np = gt.cpu().numpy()
@@ -528,12 +540,22 @@ def main() -> None:
                     bl_mse = get_posenet_mse(baseline_chw, next_baseline_chw, gt_chw, next_gt_chw, posenet)
                     posenet_primary_mses.append(ours_mse)
                     posenet_secondary_mses.append(bl_mse)
+                    # Cache the next frame's filtered output for reuse
+                    _gif_cached_idx = next_idx
+                    _gif_cached_baseline = next_baseline_chw
+                    _gif_cached_gt = next_gt_chw
+                    _gif_cached_filtered = next_filtered_chw
                 else:  # comparison
                     next_filtered_chw = model(next_baseline_chw).round().clamp(0, 255)
                     ours_mse = get_posenet_mse(filtered_chw, next_filtered_chw, gt_chw, next_gt_chw, posenet)
                     bl_mse = get_posenet_mse(baseline_chw, next_baseline_chw, gt_chw, next_gt_chw, posenet)
                     posenet_primary_mses.append(ours_mse)
                     posenet_secondary_mses.append(bl_mse)
+                    # Cache the next frame's filtered output for reuse
+                    _gif_cached_idx = next_idx
+                    _gif_cached_baseline = next_baseline_chw
+                    _gif_cached_gt = next_gt_chw
+                    _gif_cached_filtered = next_filtered_chw
 
                 posenet_xs.append(idx)
 

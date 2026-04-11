@@ -31,10 +31,20 @@ from .evaluate import (
     verify_exact_tokens,
 )
 from .frequency_coder import FrequencyEncodedStream, decode_uint16_frequency_stream, encode_uint16_frequency_stream
-from .gpt_score import score_commavq_gpt_sample, score_tokens_with_logits_fn
 from .profiles import PROFILES
 from .state import load_lossless_result, promote_lossless_result, render_lossless_latest
 from .submission import build_submission_zip, validate_submission_inputs
+
+
+def __getattr__(name: str):
+    """Lazy import for heavy gpt_score module to avoid importing torch at package load time."""
+    if name == "score_commavq_gpt_sample":
+        from .gpt_score import score_commavq_gpt_sample
+        return score_commavq_gpt_sample
+    if name == "score_tokens_with_logits_fn":
+        from .gpt_score import score_tokens_with_logits_fn
+        return score_tokens_with_logits_fn
+    raise AttributeError(f"module {__name__!r} has no attribute {name!r}")
 
 __all__ = [
     "FRAME_BOS_TOKEN",

@@ -37,7 +37,6 @@ import subprocess
 import sys
 import time
 from pathlib import Path
-from typing import Optional
 
 import numpy as np
 
@@ -139,6 +138,9 @@ def extract_frames(
     proc.wait()
     if proc.returncode != 0:
         print(f"WARNING: ffmpeg exited with code {proc.returncode}", file=sys.stderr)
+    trailing = idx - (slot - 1) * sample_step if slot > 0 else 0
+    if trailing > 0 and idx % sample_step != 0:
+        print(f"  WARNING: {trailing} trailing frames after last sampled frame were dropped", file=sys.stderr)
     print(f"  Extracted {slot} frames (step={sample_step})", file=sys.stderr)
     return sampled[:slot]
 
@@ -206,7 +208,7 @@ def _sobel_gradient_magnitude(gray: np.ndarray) -> np.ndarray:
 
 def fallback_adaptive_mask(
     frame: np.ndarray,
-    prev_frame: Optional[np.ndarray],
+    prev_frame: np.ndarray | None,
     feather_radius: float,
 ) -> np.ndarray:
     """Gradient + temporal difference mask (no ML required).
@@ -271,7 +273,7 @@ def _try_import_falcon():
         return None, False
 
 
-def falcon_segment_frame(
+def falcon_segment_frame(  # noqa: PLR0913 -- mirrors Falcon Perception's inference API
     model,
     tokenizer,
     model_args,
@@ -382,6 +384,8 @@ def run_falcon_on_frames(
 # SAM 3 / SAM 2 backend (conditioned on available toolchain)
 # ---------------------------------------------------------------------------
 
+# Module-level cache for SAM import results.  Intentionally never cleared:
+# the import availability does not change within a single process lifetime.
 _sam_import_cache: dict = {}
 
 
@@ -484,7 +488,7 @@ def run_sam2_propagation(
     h, w = meta["height"], meta["width"]
 
     # SAM 2 video predictor expects a directory of JPEG frames
-    import tempfile, shutil
+    import tempfile
     tmpdir_obj = tempfile.TemporaryDirectory(prefix="sam2_frames_")
     tmpdir = tmpdir_obj.name
     print(f"  Extracting frames to {tmpdir} for SAM 2 ...", file=sys.stderr)

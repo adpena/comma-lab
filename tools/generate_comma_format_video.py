@@ -180,76 +180,72 @@ def make_segnet_error_mask(
     return np.stack([diff_np, diff_np, diff_np], axis=-1)  # (H, W, 3)
 
 
-def render_posenet_chart(
-    baseline_mses: list[float],
-    ours_mses: list[float],
-    chart_w: int,
-    chart_h: int,
-    window: int = 120,
-) -> np.ndarray:
-    """Render a running PoseNet MSE line chart as an RGB numpy array.
+class _PoseNetChartRenderer:
+    """Reusable matplotlib figure for PoseNet MSE charts.
 
-    Uses matplotlib with Agg backend so no display is needed.
-
-    Args:
-        baseline_mses: all baseline per-pair MSE values so far.
-        ours_mses: all ours per-pair MSE values so far.
-        chart_w, chart_h: output pixel dimensions.
-        window: number of recent pairs to display.
-
-    Returns:
-        (chart_h, chart_w, 3) uint8 RGB array.
+    Creating a new figure per frame is expensive (~30ms each).  This class
+    keeps a single figure/axes pair and clears + redraws on each call,
+    cutting chart rendering time roughly in half.
     """
-    import io
 
-    import matplotlib
+    def __init__(self, chart_w: int, chart_h: int, dpi: int = 100) -> None:
+        import matplotlib
+        matplotlib.use("Agg")
+        import matplotlib.pyplot as plt
 
-    matplotlib.use("Agg")
-    import matplotlib.pyplot as plt
+        self._plt = plt
+        self._dpi = dpi
+        self._chart_w = chart_w
+        self._chart_h = chart_h
+        fig_w = chart_w / dpi
+        fig_h = chart_h / dpi
+        self._fig, self._ax = plt.subplots(figsize=(fig_w, fig_h), dpi=dpi)
+        self._fig.patch.set_facecolor("black")
 
-    dpi = 100
-    fig_w = chart_w / dpi
-    fig_h = chart_h / dpi
-    fig, ax = plt.subplots(figsize=(fig_w, fig_h), dpi=dpi)
+    def render(
+        self,
+        baseline_mses: list[float],
+        ours_mses: list[float],
+        window: int = 120,
+    ) -> np.ndarray:
+        import io
+        from PIL import Image
 
-    fig.patch.set_facecolor("black")
-    ax.set_facecolor("black")
+        ax = self._ax
+        ax.clear()
+        ax.set_facecolor("black")
 
-    # Slice to window
-    n = len(baseline_mses)
-    start = max(0, n - window)
-    xs = list(range(start, n))
-    bl_slice = baseline_mses[start:]
-    ours_slice = ours_mses[start:]
+        n = len(baseline_mses)
+        start = max(0, n - window)
+        xs = list(range(start, n))
+        bl_slice = baseline_mses[start:]
+        ours_slice = ours_mses[start:]
 
-    ax.plot(xs, bl_slice, color="gray", linestyle="--", linewidth=1.0, label="baseline")
-    ax.plot(xs, ours_slice, color="#00ff88", linestyle="-", linewidth=1.5, label="ours")
+        ax.plot(xs, bl_slice, color="gray", linestyle="--", linewidth=1.0, label="baseline")
+        ax.plot(xs, ours_slice, color="#00ff88", linestyle="-", linewidth=1.5, label="ours")
 
-    # Style
-    ax.tick_params(colors="white", labelsize=7)
-    for spine in ax.spines.values():
-        spine.set_color("#333333")
-    ax.set_ylabel("PoseNet MSE", color="white", fontsize=8)
-    ax.legend(loc="upper right", fontsize=7, facecolor="black", edgecolor="#333333", labelcolor="white")
+        ax.tick_params(colors="white", labelsize=7)
+        for spine in ax.spines.values():
+            spine.set_color("#333333")
+        ax.set_ylabel("PoseNet MSE", color="white", fontsize=8)
+        ax.legend(loc="upper right", fontsize=7, facecolor="black", edgecolor="#333333", labelcolor="white")
 
-    # Y limits: auto with some padding
-    all_vals = bl_slice + ours_slice
-    if all_vals:
-        ymax = max(all_vals) * 1.3
-        ax.set_ylim(0, max(ymax, 1e-6))
+        all_vals = bl_slice + ours_slice
+        if all_vals:
+            ymax = max(all_vals) * 1.3
+            ax.set_ylim(0, max(ymax, 1e-6))
 
-    fig.tight_layout(pad=0.3)
+        self._fig.tight_layout(pad=0.3)
 
-    # Render to numpy
-    buf = io.BytesIO()
-    fig.savefig(buf, format="png", facecolor=fig.get_facecolor(), dpi=dpi)
-    plt.close(fig)
-    buf.seek(0)
+        buf = io.BytesIO()
+        self._fig.savefig(buf, format="png", facecolor=self._fig.get_facecolor(), dpi=self._dpi)
+        buf.seek(0)
 
-    from PIL import Image
+        chart_img = Image.open(buf).convert("RGB").resize((self._chart_w, self._chart_h), Image.LANCZOS)
+        return np.array(chart_img)
 
-    chart_img = Image.open(buf).convert("RGB").resize((chart_w, chart_h), Image.LANCZOS)
-    return np.array(chart_img)
+    def close(self) -> None:
+        self._plt.close(self._fig)
 
 
 def get_segnet_classes(frame_chw: torch.Tensor, segnet) -> np.ndarray:
@@ -339,7 +335,8 @@ def main() -> None:
     # Load models
     # ------------------------------------------------------------------
     checkpoint_path = Path(args.checkpoint)
-    assert checkpoint_path.exists(), f"Checkpoint not found: {checkpoint_path}"
+    if not checkpoint_path.exists():
+        raise FileNotFoundError(f"Checkpoint not found: {checkpoint_path}")
     print(f"Loading post-filter: {args.variant} h={args.hidden} k={args.kernel}")
     model = build_postfilter(args.variant, hidden=args.hidden, kernel=args.kernel)
     load_int8(str(checkpoint_path), model, device=device)
@@ -357,18 +354,22 @@ def main() -> None:
     # Decode frames
     # ------------------------------------------------------------------
     archive_path = Path(args.archive)
-    assert archive_path.exists(), f"Archive not found: {archive_path}"
+    if not archive_path.exists():
+        raise FileNotFoundError(f"Archive not found: {archive_path}")
     gt_video_path = upstream_dir / "videos" / "0.mkv"
-    assert gt_video_path.exists(), f"GT video not found: {gt_video_path}"
+    if not gt_video_path.exists():
+        raise FileNotFoundError(f"GT video not found: {gt_video_path}")
 
+    # Memory note: decoding both the compressed archive and GT video into
+    # tensors requires approximately 7 GB of RAM for a 1200-frame 1164x874
+    # video.  Ensure sufficient memory is available.
     print(f"Decoding archive: {archive_path}")
     comp_frames = decode_archive(str(archive_path))
     print(f"Decoding GT video: {gt_video_path}")
     gt_frames = decode_video(str(gt_video_path))
 
-    assert len(comp_frames) == len(gt_frames), (
-        f"Frame count mismatch: {len(comp_frames)} vs {len(gt_frames)}"
-    )
+    if len(comp_frames) != len(gt_frames):
+        raise ValueError(f"Frame count mismatch: {len(comp_frames)} vs {len(gt_frames)}")
     num_frames = len(comp_frames)
     if args.max_frames > 0:
         num_frames = min(num_frames, args.max_frames)
@@ -432,18 +433,30 @@ def main() -> None:
         fg=(180, 180, 180),
     )
 
+    # Reuse a single matplotlib figure across all frames (issue #29)
+    chart_renderer = _PoseNetChartRenderer(panel_w, panel_h)
+
+    # Cache: avoid running the post-filter twice on the same frame
+    # (once as "next" in pair N, once as "current" in pair N+1).
+    _cached_filtered_chw: torch.Tensor | None = None
+    _cached_baseline_chw: torch.Tensor | None = None
+    _cached_gt_chw: torch.Tensor | None = None
+    _cached_idx: int = -1
+
     print("Generating comma-format frames...")
     with torch.no_grad():
         for idx in range(num_frames):
-            comp = comp_frames[idx].to(device)  # (H, W, 3) uint8
-            gt = gt_frames[idx].to(device)
-
-            # CHW float tensors for model input
-            baseline_chw = comp.float().permute(2, 0, 1).unsqueeze(0).contiguous()
-            gt_chw = gt.float().permute(2, 0, 1).unsqueeze(0).contiguous()
-
-            # Post-filter output
-            filtered_chw = model(baseline_chw).round().clamp(0, 255)
+            # Reuse cached tensors if this frame was already computed as "next" in the previous iteration
+            if idx == _cached_idx and _cached_filtered_chw is not None:
+                baseline_chw = _cached_baseline_chw
+                gt_chw = _cached_gt_chw
+                filtered_chw = _cached_filtered_chw
+            else:
+                comp = comp_frames[idx].to(device)  # (H, W, 3) uint8
+                gt = gt_frames[idx].to(device)
+                baseline_chw = comp.float().permute(2, 0, 1).unsqueeze(0).contiguous()
+                gt_chw = gt.float().permute(2, 0, 1).unsqueeze(0).contiguous()
+                filtered_chw = model(baseline_chw).round().clamp(0, 255)
 
             # SegNet class maps (all at SegNet resolution)
             gt_cls = get_segnet_classes(gt_chw, segnet)
@@ -467,11 +480,17 @@ def main() -> None:
                 baseline_pose_mses.append(bl_mse)
                 ours_pose_mses.append(ours_mse)
 
+                # Cache next frame's tensors so they are not recomputed in the next iteration
+                _cached_idx = idx + 1
+                _cached_baseline_chw = next_baseline_chw
+                _cached_gt_chw = next_gt_chw
+                _cached_filtered_chw = next_filtered_chw
+
             # ----------------------------------------------------------
             # Numpy frames for compositing
             # ----------------------------------------------------------
-            gt_np = gt.cpu().numpy()  # (H, W, 3) uint8
-            baseline_np = comp.cpu().numpy()
+            gt_np = gt_frames[idx].cpu().numpy()  # (H, W, 3) uint8
+            baseline_np = comp_frames[idx].cpu().numpy()
             filtered_np = (
                 filtered_chw[0].permute(1, 2, 0).to(torch.uint8).cpu().numpy()
             )
@@ -482,11 +501,9 @@ def main() -> None:
             # Bottom row panels
             # Panel 1: PoseNet chart
             if baseline_pose_mses:
-                chart_panel = render_posenet_chart(
+                chart_panel = chart_renderer.render(
                     baseline_pose_mses,
                     ours_pose_mses,
-                    chart_w=panel_w,
-                    chart_h=panel_h,
                     window=args.chart_window,
                 )
             else:
@@ -525,6 +542,8 @@ def main() -> None:
                     f"seg_err baseline={bl_seg_err:,} ours={ours_seg_err:,} | "
                     f"pose_mse baseline={bl_pose:.6f} ours={our_pose:.6f}"
                 )
+
+    chart_renderer.close()
 
     # Flush MP4
     for packet in stream.encode():

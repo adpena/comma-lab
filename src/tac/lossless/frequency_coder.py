@@ -219,7 +219,7 @@ def _build_canonical_codebook(lengths: dict[int, int]) -> _CanonicalCodebook:
         first_index_by_length=first_index_by_length,
         count_by_length=count_by_length,
         ordered_symbols=tuple(ordered_symbols),
-        max_code_bits=max(count_by_length),
+        max_code_bits=max(count_by_length) if count_by_length else 0,
     )
 
 
@@ -725,8 +725,10 @@ def benchmark_prev_pair_frequency_file(source_path: str | Path, *, max_tokens: i
 
 
 __all__ = [
+    "PREV_SYMBOL_STREAM_MAGIC",
     "STREAM_MAGIC",
     "FrequencyEncodedStream",
+    "PrevSymbolEncodedStream",
     "benchmark_prev_pair_frequency_file",
     "benchmark_prev_pair_frequency_stream",
     "benchmark_prev_symbol_frequency_file",

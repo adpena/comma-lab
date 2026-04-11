@@ -4,6 +4,7 @@ from __future__ import annotations
 import argparse
 import json
 import math
+import shutil
 import subprocess
 from dataclasses import asdict, dataclass
 from fractions import Fraction
@@ -11,6 +12,8 @@ from pathlib import Path
 
 
 def _run(cmd: list[str], *, capture: bool = False) -> subprocess.CompletedProcess[str] | subprocess.CompletedProcess[bytes]:
+    """Run *cmd* via subprocess.  When *capture* is True, stdout/stderr are captured
+    as bytes (text=False); otherwise they pass through as text (text=True)."""
     return subprocess.run(
         cmd,
         check=True,
@@ -74,6 +77,9 @@ def _extract_sampled_gray(
     source_color_primaries: str,
     source_color_trc: str,
 ) -> tuple[list[bytes], list[int]]:
+    # The backslash-escaped comma in the select expression is required by ffmpeg's
+    # filter_complex parser.  Since we use subprocess (no shell), no further quoting
+    # is needed.
     vf = (
         f"select='not(mod(n\\,{sample_step}))',"
         f"scale={scale_w}:{scale_h}:flags=bilinear:"
@@ -186,39 +192,40 @@ def _tile_metrics(
     window_start: int,
     window_end: int,
 ) -> tuple[list[list[float]], list[list[float]]]:
+    import numpy as _np
+
     idxs = _window_sample_indices(frame_indices, window_start, window_end)
     if not idxs:
         raise ValueError("No sampled frames available for window")
     pairs = list(zip(idxs, idxs[1:]))
     diff_scores = [[0.0 for _ in range(cols)] for _ in range(rows)]
     edge_scores = [[0.0 for _ in range(cols)] for _ in range(rows)]
-    ref = memoryview(frames[idxs[-1]])
+
+    # Convert frames to numpy arrays for vectorized operations
+    np_frames = {i: _np.frombuffer(frames[i], dtype=_np.uint8).reshape(scale_h, scale_w) for i in set(sum(pairs, (idxs[-1],)))}
+    ref_arr = np_frames[idxs[-1]]
 
     for ty in range(rows):
         for tx in range(cols):
             x0, y0, x1, y1 = _tile_bounds(scale_w, scale_h, cols, rows, tx, ty)
             pixels = (x1 - x0) * (y1 - y0)
-            diff_total = 0
+
+            # Vectorized temporal difference
+            diff_total = 0.0
             for left_idx, right_idx in pairs:
-                left = memoryview(frames[left_idx])
-                right = memoryview(frames[right_idx])
-                for y in range(y0, y1):
-                    base = y * scale_w
-                    for x in range(x0, x1):
-                        diff_total += abs(right[base + x] - left[base + x])
+                left_tile = np_frames[left_idx][y0:y1, x0:x1].astype(_np.int16)
+                right_tile = np_frames[right_idx][y0:y1, x0:x1].astype(_np.int16)
+                diff_total += float(_np.abs(right_tile - left_tile).sum())
             pair_count = max(1, len(pairs))
             diff_scores[ty][tx] = diff_total / (pixels * pair_count)
 
-            edge_total = 0
-            edge_count = 0
-            for y in range(y0 + 1, y1, 2):
-                base = y * scale_w
-                prev = (y - 1) * scale_w
-                for x in range(x0 + 1, x1, 2):
-                    edge_total += abs(ref[base + x] - ref[base + x - 1])
-                    edge_total += abs(ref[base + x] - ref[prev + x])
-                    edge_count += 2
-            edge_scores[ty][tx] = edge_total / max(1, edge_count)
+            # Vectorized edge detection (subsampled 2x)
+            tile = ref_arr[y0:y1, x0:x1].astype(_np.int16)
+            if tile.shape[0] > 1 and tile.shape[1] > 1:
+                horiz = _np.abs(tile[1::2, 1::2] - tile[1::2, 0:-1:2])
+                vert = _np.abs(tile[1::2, 1::2] - tile[0:-1:2, 1::2])
+                edge_count = horiz.size + vert.size
+                edge_scores[ty][tx] = float(horiz.sum() + vert.sum()) / max(1, edge_count)
     return diff_scores, edge_scores
 
 
@@ -495,9 +502,15 @@ def _upscale_rgb_filter(
 def _codec_encode_args(args: argparse.Namespace, crf: int) -> list:
     """Return ffmpeg codec args for the given CRF, branching on args.codec."""
     if args.codec == 'libsvtav1':
-        return ['-c:v', 'libsvtav1', '-preset', str(args.svtav1_preset), '-crf', str(crf), '-svtav1-params', args.svtav1_params]
+        result = ['-c:v', 'libsvtav1', '-preset', str(args.svtav1_preset), '-crf', str(crf)]
+        if args.svtav1_params:
+            result += ['-svtav1-params', args.svtav1_params]
+        return result
     # default: libx265
-    return ['-c:v', 'libx265', '-preset', args.preset, '-crf', str(crf), '-x265-params', args.x265_params]
+    result = ['-c:v', 'libx265', '-preset', args.preset, '-crf', str(crf)]
+    if args.x265_params:
+        result += ['-x265-params', args.x265_params]
+    return result
 
 
 def encode_metadata(args: argparse.Namespace) -> int:
@@ -615,7 +628,7 @@ def inflate_metadata(args: argparse.Namespace) -> int:
             with part_path.open('rb') as part_f:
                 out_f.write(part_f.read())
             part_path.unlink(missing_ok=True)
-    tmp_dir.rmdir()
+    shutil.rmtree(tmp_dir, ignore_errors=True)
     return 0
 
 

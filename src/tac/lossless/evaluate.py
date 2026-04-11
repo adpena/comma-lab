@@ -23,10 +23,19 @@ from .data import (
 
 
 def verify_exact_tokens(original_tokens: TokenSource, decompressed_tokens: TokenSource) -> LosslessVerificationResult:
+    import numpy as np
+
     original = token_bytes(original_tokens)
     decoded = token_bytes(decompressed_tokens)
 
-    mismatch_count = sum(1 for left, right in zip(original, decoded) if left != right)
+    # Fast path via numpy for large byte sequences
+    min_len = min(len(original), len(decoded))
+    if min_len > 0:
+        orig_arr = np.frombuffer(original[:min_len], dtype=np.uint8)
+        dec_arr = np.frombuffer(decoded[:min_len], dtype=np.uint8)
+        mismatch_count = int(np.count_nonzero(orig_arr != dec_arr))
+    else:
+        mismatch_count = 0
     mismatch_count += abs(len(original) - len(decoded))
     return LosslessVerificationResult(
         exact_match=mismatch_count == 0,
@@ -261,7 +270,16 @@ def evaluate_local_submission_contract(
     dataset_name: str = "commaai/commavq",
     num_proc: int | None = None,
     python_executable: str | None = None,
-) -> tuple[LosslessCompressionResult, LosslessVerificationResult, Path]:
+) -> tuple[LosslessCompressionResult, LosslessVerificationResult, Path, "typing.Callable[[], None] | None"]:
+    """Evaluate a submission archive against the commavq dataset.
+
+    Returns (result, verification, decompressed_root, cleanup_fn).
+    When *work_dir* is ``None`` the caller **must** invoke *cleanup_fn()*
+    after it is done with *decompressed_root* to remove the temporary
+    directory.  When *work_dir* is provided, *cleanup_fn* is ``None``.
+    """
+    import typing
+
     archive = Path(archive_path).resolve()
     interpreter = python_executable or sys.executable
 
@@ -317,10 +335,12 @@ def evaluate_local_submission_contract(
             payload_bytes=compression.payload_bytes,
             record_count=compression.record_count,
             checked_items=compression.checked_items,
-            split=list(split) if isinstance(split, (list, tuple)) else [str(split)],
+            split=tuple(split) if isinstance(split, (list, tuple)) else (str(split),),
             evidence_root=str(root),
         )
-        return promoted_result, verification, decompressed_root
-    finally:
+        cleanup_fn = tmpdir.cleanup if tmpdir is not None else None
+        return promoted_result, verification, decompressed_root, cleanup_fn
+    except BaseException:
         if tmpdir is not None:
             tmpdir.cleanup()
+        raise

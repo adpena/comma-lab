@@ -14,7 +14,7 @@ class LosslessCompressionResult:
     payload_bytes: int | None = None
     record_count: int | None = None
     checked_items: int | None = None
-    split: list[str] | None = None
+    split: tuple[str, ...] | None = None
     evidence_root: str | None = None
 
     def __post_init__(self) -> None:
@@ -30,8 +30,8 @@ class LosslessCompressionResult:
             raise ValueError("record_count must be non-negative")
         if self.checked_items is not None and self.checked_items < 0:
             raise ValueError("checked_items must be non-negative")
-        if self.split is not None and not isinstance(self.split, list):
-            raise ValueError("split must be a list of strings when provided")
+        if self.split is not None and not isinstance(self.split, tuple):
+            raise ValueError("split must be a tuple of strings when provided")
 
 
 @dataclass(frozen=True)
