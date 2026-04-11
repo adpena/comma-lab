@@ -143,12 +143,10 @@ class JointPrePostFilter(nn.Module):
             rounded = rounded + (rounded.round() - rounded).detach()
             return rounded.clamp(0, 255)
         else:
-            # Eval mode: add small quantization noise to approximate AV1 codec
-            # artifacts. Plain round+clamp creates a train/eval distribution gap
-            # because training uses noise-based STE but eval sees clean rounding.
-            # This narrow Gaussian (std=0.5) better matches the lossy codec.
-            noise = torch.randn_like(x) * 0.5
-            return (x + noise).round().clamp(0, 255)
+            # Eval mode: deterministic rounding. While this creates a slight
+            # train/eval distribution gap (training uses noise-based STE),
+            # eval must be deterministic for reproducible scores.
+            return x.round().clamp(0, 255)
 
     def forward(self, x: torch.Tensor) -> torch.Tensor:
         """End-to-end: preprocess -> codec proxy -> postfilter.

@@ -130,10 +130,10 @@ def _nearest_downsample_2d(x: mx.array, target_h: int, target_w: int) -> mx.arra
     return x[:, row_idx][:, :, col_idx]
 
 
-# ── Bilinear upsampling (for transposed conv replacement) ─────────────
+# ── Nearest-neighbor upsampling (for transposed conv replacement) ─────
 
 
-def _bilinear_upsample_2x(x: mx.array) -> mx.array:
+def _nearest_upsample_2x(x: mx.array) -> mx.array:
     """2x nearest-neighbor upsample for NHWC tensor via reshape interleaving.
 
     Uses reshape + broadcast instead of mx.repeat (benchmarked faster on Metal).
@@ -338,7 +338,7 @@ class MaskRenderer(nn.Module):
             mid = self.bottleneck(down2, masks)
 
             # Up 2: bilinear 2x + conv
-            up2 = _bilinear_upsample_2x(mid)
+            up2 = _nearest_upsample_2x(mid)
             if up2.shape[1:3] != down1.shape[1:3]:
                 up2 = _nearest_downsample_2d(up2, down1.shape[1], down1.shape[2])
             up2 = self.up2_conv(up2)
@@ -349,7 +349,7 @@ class MaskRenderer(nn.Module):
             half_res = self.bottleneck(down1, masks)
 
         # Up 1: bilinear 2x + conv
-        up = _bilinear_upsample_2x(half_res)
+        up = _nearest_upsample_2x(half_res)
         if up.shape[1:3] != stem.shape[1:3]:
             up = _nearest_downsample_2d(up, stem.shape[1], stem.shape[2])
         up = self.up_conv(up)

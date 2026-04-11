@@ -150,16 +150,20 @@ def extract_entities(file_path: Path) -> list[EntityRecord]:
 
 
 def scan_all_modules() -> list[EntityRecord]:
-    """Scan all tracked Python files."""
+    """Scan all tracked Python files in src/tac/, experiments/, tools/, submissions/."""
     all_entities: list[EntityRecord] = []
 
     for py_file in sorted(TAC_ROOT.rglob("*.py")):
         all_entities.extend(extract_entities(py_file))
 
-    for py_file in sorted(EXPERIMENTS_ROOT.glob("*.py")):
-        if py_file.name.startswith("__"):
+    # Experiment scripts, tools, submissions — top-level .py only
+    for scan_dir in [EXPERIMENTS_ROOT, REPO_ROOT / "tools", REPO_ROOT / "submissions"]:
+        if not scan_dir.exists():
             continue
-        all_entities.extend(extract_entities(py_file))
+        for py_file in sorted(scan_dir.rglob("*.py")):
+            if py_file.name.startswith("__"):
+                continue
+            all_entities.extend(extract_entities(py_file))
 
     return all_entities
 
@@ -214,60 +218,6 @@ def _git_diff_lines(since: str, file_path: str) -> set[int]:
 # DuckDB backend
 # ---------------------------------------------------------------------------
 
-def _get_db():
-    """Get or create the DuckDB connection with schema."""
-    import duckdb
-    TRACKER_DB.parent.mkdir(parents=True, exist_ok=True)
-    con = duckdb.connect(str(TRACKER_DB))
-    con.execute("""
-        CREATE TABLE IF NOT EXISTS entities (
-            qualified_name VARCHAR PRIMARY KEY,
-            module VARCHAR NOT NULL,
-            file_path VARCHAR NOT NULL,
-            entity_type VARCHAR NOT NULL,
-            name VARCHAR NOT NULL,
-            start_line INTEGER NOT NULL,
-            end_line INTEGER NOT NULL,
-            line_count INTEGER NOT NULL,
-            complexity INTEGER NOT NULL DEFAULT 1,
-            last_modified_commit VARCHAR DEFAULT '',
-            last_modified_date VARCHAR DEFAULT '',
-            review_status VARCHAR DEFAULT 'unreviewed',
-            reviewed_by VARCHAR DEFAULT '',
-            reviewed_at VARCHAR DEFAULT '',
-            review_pass VARCHAR DEFAULT '',
-            notes VARCHAR DEFAULT ''
-        )
-    """)
-    con.execute("""
-        CREATE TABLE IF NOT EXISTS reviews (
-            id INTEGER PRIMARY KEY DEFAULT nextval('review_seq'),
-            entity VARCHAR NOT NULL,
-            action VARCHAR NOT NULL,
-            reviewer VARCHAR DEFAULT '',
-            review_pass VARCHAR DEFAULT '',
-            detail VARCHAR DEFAULT '',
-            timestamp VARCHAR NOT NULL
-        )
-    """)
-    con.execute("""
-        CREATE TABLE IF NOT EXISTS scan_meta (
-            key VARCHAR PRIMARY KEY,
-            value VARCHAR
-        )
-    """)
-    return con
-
-
-def _ensure_sequence():
-    """Ensure the review_seq sequence exists."""
-    import duckdb
-    con = duckdb.connect(str(TRACKER_DB))
-    try:
-        con.execute("CREATE SEQUENCE IF NOT EXISTS review_seq START 1")
-    except Exception:
-        pass
-    con.close()
 
 
 def _init_db():
@@ -592,7 +542,7 @@ def cmd_scan() -> None:
         prev = existing.get(key)
         if prev is None:
             con.execute("""
-                INSERT INTO entities VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                INSERT OR REPLACE INTO entities VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
             """, [key, ent.module, ent.file_path, ent.entity_type, ent.name,
                   ent.start_line, ent.end_line, ent.line_count, ent.complexity,
                   commit, date, "unreviewed", "", "", "", ""])
@@ -805,7 +755,7 @@ def cmd_dashboard() -> None:
 
     # Top unreviewed by complexity
     unrev = con.execute("""
-        SELECT name, entity_type, line_count, complexity, review_status
+        SELECT name, entity_type, line_count, complexity, review_status, file_path
         FROM entities
         WHERE review_status IN ('unreviewed', 'needs_fix', 'stale')
         ORDER BY complexity DESC
@@ -814,10 +764,11 @@ def cmd_dashboard() -> None:
 
     if unrev:
         print(f"  {B}Top unreviewed (by complexity):{RST}")
-        for name, etype, lc, cx, st in unrev:
+        for name, etype, lc, cx, st, fp in unrev:
             color = R if cx > 15 else (Y if cx > 8 else RST)
             st_tag = f" [{st}]" if st != "unreviewed" else ""
-            print(f"    {color}C={cx:>3}{RST}  {lc:>4}L  {name}{st_tag}")
+            short_fp = fp.split("/")[-1].replace(".py", "")
+            print(f"    {color}C={cx:>3}{RST}  {lc:>4}L  {short_fp}:{name}{st_tag}")
 
     # Per-module coverage
     print(f"\n  {B}Module coverage:{RST}")
@@ -983,8 +934,12 @@ def cmd_greenup_import(pass_file: str) -> None:
 
 
 def cmd_query(sql: str) -> None:
-    """Run a raw SQL query against the DuckDB tracker."""
-    con = _init_db()
+    """Run a read-only SQL query against the DuckDB tracker."""
+    import duckdb
+    if not TRACKER_DB.exists():
+        print("No tracker DB. Run 'scan' first.")
+        return
+    con = duckdb.connect(str(TRACKER_DB), read_only=True)
     try:
         rows = con.execute(sql).fetchall()
         if con.description:
