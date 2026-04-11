@@ -42,6 +42,7 @@ from .lossless.gpt_arithmetic_coder import encode_commavq_gpt_global_sample, enc
 from .lossless.global_prev_symbol import benchmark_global_prev_symbol_record_order_sample
 from .lossless.next_frame_coder import encode_commavq_next_frame_sample
 from .lossless.gpt_score import probe_commavq_gpt_devices, score_commavq_gpt_sample
+from .lossless.token_rgb_bridge import OFFICIAL_DECODER_URL, decode_commavq_token_file_to_rgb
 from .lossless.profiles import PROFILES as LOSSLESS_PROFILES
 from .lossless.state import promote_lossless_result
 from .lossless.submission import build_submission_zip
@@ -215,6 +216,20 @@ def build_parser() -> argparse.ArgumentParser:
     sp.add_argument("--model-url", default=None)
     sp.add_argument("--gpt-module-path", default=None)
     sp.set_defaults(lossless_handler="next_frame_sample")
+
+    sp = lossless_sub.add_parser(
+        "token-rgb-sample",
+        help="Decode a commavq token cube to RGB frames using the canonical off-the-shelf decoder",
+    )
+    sp.add_argument("--tokens", required=True)
+    sp.add_argument("--output", required=True)
+    sp.add_argument("--max-frames", type=int, default=None)
+    sp.add_argument("--batch-size", type=int, default=64)
+    sp.add_argument("--device", default="auto", choices=["auto", "cpu", "cuda", "mps"])
+    sp.add_argument("--dtype", default="auto", choices=["auto", "float32", "float16", "bfloat16"])
+    sp.add_argument("--commavq-root", default=None)
+    sp.add_argument("--decoder-url", default=OFFICIAL_DECODER_URL)
+    sp.set_defaults(lossless_handler="token_rgb_sample")
 
     sp = lossless_sub.add_parser(
         "global-prev-symbol-order-sample",
@@ -632,6 +647,20 @@ def _run_lossless(args: argparse.Namespace) -> dict[str, Any]:
             cache_dir=args.cache_dir,
             model_url=args.model_url,
             gpt_module_path=args.gpt_module_path,
+        )
+        print(json.dumps(payload, indent=2))
+        return payload
+
+    if args.lossless_handler == "token_rgb_sample":
+        payload = decode_commavq_token_file_to_rgb(
+            token_path=Path(args.tokens),
+            output_path=Path(args.output),
+            max_frames=args.max_frames,
+            batch_size=args.batch_size,
+            device=args.device,
+            dtype=args.dtype,
+            commavq_root=Path(args.commavq_root) if args.commavq_root else None,
+            decoder_url=args.decoder_url,
         )
         print(json.dumps(payload, indent=2))
         return payload

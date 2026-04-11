@@ -523,6 +523,64 @@ class TacCliTests(unittest.TestCase):
         self.assertEqual(result["command"], "lossless_gpt_arithmetic_global_sample")
         self.assertTrue(result["exact_match"])
 
+    def test_lossless_token_rgb_sample_subcommand_reports_rgb_cache(self) -> None:
+        mod = load_module()
+        with tempfile.TemporaryDirectory() as tmpdir:
+            root = Path(tmpdir)
+            token_path = root / "tokens.npy"
+            output_path = root / "frames.npy"
+            commavq_root = root / "commavq"
+            with mock.patch.object(
+                mod,
+                "decode_commavq_token_file_to_rgb",
+                return_value={
+                    "command": "lossless_token_rgb_sample",
+                    "token_path": str(token_path),
+                    "output_path": str(output_path),
+                    "frame_count": 16,
+                    "frame_shape": [128, 256, 3],
+                    "batch_size": 8,
+                    "device": "mps",
+                    "dtype": "float16",
+                    "commavq_root": str(commavq_root),
+                    "measured": False,
+                    "local_only": True,
+                },
+            ) as mocked:
+                result = mod.main(
+                    [
+                        "lossless",
+                        "token-rgb-sample",
+                        "--tokens",
+                        str(token_path),
+                        "--output",
+                        str(output_path),
+                        "--max-frames",
+                        "16",
+                        "--batch-size",
+                        "8",
+                        "--device",
+                        "mps",
+                        "--dtype",
+                        "float16",
+                        "--commavq-root",
+                        str(commavq_root),
+                    ]
+                )
+
+        mocked.assert_called_once_with(
+            token_path=token_path,
+            output_path=output_path,
+            max_frames=16,
+            batch_size=8,
+            device="mps",
+            dtype="float16",
+            commavq_root=commavq_root,
+            decoder_url=mod.OFFICIAL_DECODER_URL,
+        )
+        self.assertEqual(result["command"], "lossless_token_rgb_sample")
+        self.assertEqual(result["frame_count"], 16)
+
     def test_lossless_next_frame_sample_subcommand_reports_encoded_bytes(self) -> None:
         mod = load_module()
         with tempfile.TemporaryDirectory() as tmpdir:
