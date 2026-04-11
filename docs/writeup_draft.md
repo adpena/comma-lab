@@ -211,28 +211,13 @@ The only safe place to modify frames is after decoding, with a learned filter. P
 
 Of 18 alternative approaches tested, 17 failed and one (dilated convolutions) initially appeared to fail but later succeeded at larger scale. The winning recipe is highly constrained by the mathematical structure of the problem (rank-1 Jacobian, sub-pixel trust radius, quantization sensitivity), but architecture changes can work when given sufficient capacity and training time.
 
-## Deriving optimal hyperparameters from the scoring formula
+## What else failed: KL distillation and adaptive weights
 
-Rather than tuning hyperparameters by trial and error, we derived them analytically from the scoring formula's structure.
+Two additional approaches that initially showed promise but were ultimately rejected:
 
-The score sensitivities at any operating point (p, s) are:
+**KL distillation (DEAD).** Temperature-annealed soft SegNet targets via Hinton-style knowledge distillation. Two independent authoritative evaluations confirmed that KL distillation fundamentally over-weights SegNet at the expense of PoseNet. The first (sw=100, with PoseNet gradient cap) scored 1.85 authoritative vs 1.25 proxy. After removing the cap and reducing sw to 30, a second checkpoint scored 2.05 authoritative vs 1.43 proxy. In both cases, SegNet improved ~10% (0.00610 → 0.00546) but PoseNet collapsed 26-37x (0.00218 → 0.057-0.081). The sqrt in the scoring formula makes PoseNet regression very expensive — going from 0.002 to 0.08 costs 0.75 points. KL distillation is structurally unable to maintain PoseNet while improving SegNet because the KL gradient signal dominates the PoseNet MSE gradient at any segnet_weight above ~5.
 
-```
-d(score)/d(seg)  = 100                    (constant)
-d(score)/d(pose) = 5 / sqrt(10 * pose)   (decreasing as pose improves)
-```
-
-At our operating point (pose=0.00218): `d(score)/d(pose) = 33.9`. SegNet is 2.95x more valuable per unit improvement. This ratio changes during training — as PoseNet improves, SegNet becomes increasingly more valuable.
-
-For KL distillation with temperature T, Hinton's T² correction means the effective gradient magnitude scales quadratically. The compound invariant that must be maintained:
-
-```
-w_s * T² ≈ 20 * sqrt(pose / 0.1)
-```
-
-This single equation replaces static hyperparameter guessing. At T=5 (training start), the optimal segnet_weight is 0.12. At T=0.5 (training end), it rises to 11.8. A static weight of 30 (our first attempt) gave w_s·T² = 750 at T=5 — 254x above optimal. This caused a catastrophic PoseNet regression that the proxy scorer failed to catch (proxy showed 1.25, authoritative showed 1.85).
-
-The adaptive weight system (`src/tac/adaptive.py`) recomputes optimal weights from measured (pose, seg) at each evaluation epoch. The training loop self-corrects: if PoseNet regresses, the formula automatically reduces SegNet pressure. These relationships are formally verified in Lean 4 (proofs/AdaptiveWeights.lean).
+**Adaptive weight system (DEAD).** We derived a formula `w_s*(p, T) = 20·sqrt(p/0.1)/T²` to dynamically rebalance SegNet vs PoseNet weights during training. The Hinton T² correction was already inside the KL loss function, so dividing by T² in the weight formula double-corrected, making the weight temperature-independent. The formula produced w_s=0.80 when the empirical winner used w_s=100 — a 125x mismatch. The compound invariant `w_s·T²` was trivially constant by construction (T² cancels), not by any physical property. The adaptive system was formally verified in Lean 4, but the proofs were correct about a vacuous identity, not about optimality. We retain the score sensitivity analysis (`d(score)/d(seg) = 100`, `d(score)/d(pose) = 5/sqrt(10p)`) as a useful diagnostic but no longer use it for runtime weight setting.
 
 ## Hard-frame curriculum with error replay
 
