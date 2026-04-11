@@ -78,6 +78,13 @@
   - `64` tokens scored at the official `2580` context
   - CPU and MPS match on bits/token (`9.263728540522601`)
   - MPS is faster on this probe (`2.355s` vs `4.006s`)
+- The stronger official GPT scorer sample is now also on disk:
+  - metadata: `reports/raw/2026-04-11-commavq-gpt-arithmetic/small/train_split0_gpt_score_2048_mps.json`
+  - device: `mps`
+  - scored tokens: `2048`
+  - bits/token: `1.7371709589676005`
+  - perplexity: `3.333807860550116`
+  - this is the strongest measured official-GPT signal in the repo so far
 - The exact local-only `zpaq` rerun is now complete:
   - metadata: `reports/raw/2026-04-11-commavq-zpaq-baseline-rerun/zpaq_baseline_result.json`
   - archive bytes: `538876316`

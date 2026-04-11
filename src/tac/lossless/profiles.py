@@ -22,6 +22,10 @@ GPT_ARITHMETIC_LARGE = {
     "context_tokens": 1024,
 }
 
+PREV_SYMBOL_POSITION_MAJOR = {
+    "method": "prev_symbol_position_major",
+}
+
 NEURAL_CODEC_SMOKE = {
     "method": "self_compressing_nn",
     "epochs": 1,
@@ -31,6 +35,7 @@ NEURAL_CODEC_SMOKE = {
 PROFILES = {
     "lzma_baseline": LZMA_BASELINE,
     "zpaq_baseline": ZPAQ_BASELINE,
+    "prev_symbol_position_major": PREV_SYMBOL_POSITION_MAJOR,
     "gpt_arithmetic_small": GPT_ARITHMETIC_SMALL,
     "gpt_arithmetic_large": GPT_ARITHMETIC_LARGE,
     "neural_codec_smoke": NEURAL_CODEC_SMOKE,

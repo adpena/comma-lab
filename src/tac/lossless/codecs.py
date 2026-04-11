@@ -9,14 +9,17 @@ import tempfile
 from collections.abc import Iterable, Mapping
 from pathlib import Path
 
+from .arithmetic import FRAME_BOS_TOKEN, SEGMENT_EOT_TOKEN, flatten_tokens_for_gpt_arithmetic
 from .contracts import LosslessCompressionResult
 from .data import TokenRecord, load_commavq_dataset
 from .evaluate import compression_rate, evaluate_local_submission_contract
+from .frequency_coder import decode_uint16_prev_symbol_stream, encode_uint16_prev_symbol_stream
 from .profiles import PROFILES
 from .submission import build_submission_zip
 
 _FIXED_ZPAQ_MTIME = 1704067200  # 2024-01-01T00:00:00Z
 _ZPAQ_SUFFIX = ".zpaq"
+_PREV_SYMBOL_SUFFIX = ".tpc"
 _ZPAQ_PRESET_TO_METHOD = {
     "fast": "1",
     "normal": "3",
@@ -126,7 +129,7 @@ def _profile_config(profile: str) -> dict[str, object]:
     except KeyError as exc:
         raise ValueError(f"unknown lossless profile: {profile}") from exc
     method = str(config.get("method", ""))
-    if method not in {"lzma", "zpaq"}:
+    if method not in {"lzma", "zpaq", "prev_symbol_position_major"}:
         raise ValueError(f"unsupported lossless method for real codec path: {method}")
     return config
 
@@ -170,9 +173,42 @@ def _zpaq_output_path(root: Path, file_name: str) -> Path:
 
 
 def _decode_target_name(archive_name: str) -> str:
+    if archive_name.endswith(_PREV_SYMBOL_SUFFIX):
+        return archive_name[: -len(_PREV_SYMBOL_SUFFIX)]
     if archive_name.endswith(_ZPAQ_SUFFIX):
         return archive_name[: -len(_ZPAQ_SUFFIX)]
     return archive_name
+
+
+def _prev_symbol_output_path(root: Path, file_name: str) -> Path:
+    return root / f"{file_name}{_PREV_SYMBOL_SUFFIX}"
+
+
+def _flatten_prev_symbol_position_major(tokens) -> bytes:
+    import numpy as np
+
+    flattened = flatten_tokens_for_gpt_arithmetic(tokens, layout="position_major").astype(np.uint16)
+    return flattened.tobytes()
+
+
+def _inflate_prev_symbol_position_major(payload: bytes):
+    import numpy as np
+
+    flat = np.frombuffer(payload, dtype=np.uint16)
+    if flat.size == 0 or int(flat[-1]) != SEGMENT_EOT_TOKEN:
+        raise ValueError("position-major payload must end with segment EOT")
+    body = flat[:-1]
+    positions = 128
+    if body.size % positions != 0:
+        raise ValueError("position-major payload body must be divisible by 128")
+    stream_len = body.size // positions
+    if stream_len <= 1:
+        raise ValueError("position-major payload must contain at least one frame")
+    streams = body.reshape(positions, stream_len)
+    if not np.all(streams[:, 0] == FRAME_BOS_TOKEN):
+        raise ValueError("position-major payload is missing BOS headers")
+    frames = streams[:, 1:].T
+    return frames.reshape(frames.shape[0], 8, 16).astype(np.int16, copy=False)
 
 
 def _runtime_metadata(*, method: str, runtime_bundle_path: str | Path | None = None) -> dict[str, object]:
@@ -448,6 +484,8 @@ def benchmark_zstd_dict_chunked_file(
 def compress_lossless_file(
     *, profile: str, input_path: str | Path, output_path: str | Path
 ) -> LosslessCompressionResult:
+    import numpy as np
+
     config = _profile_config(profile)
     method = str(config["method"])
     source = Path(input_path)
@@ -458,8 +496,15 @@ def compress_lossless_file(
         compressed = lzma.compress(payload, preset=int(config.get("level", 6)))
         target.parent.mkdir(parents=True, exist_ok=True)
         target.write_bytes(compressed)
-    else:
+    elif method == "zpaq":
         _compress_with_zpaq(source_name=source.name, payload=payload, output_path=target, config=config)
+    else:
+        if len(payload) % 2 != 0:
+            raise ValueError("prev_symbol_position_major requires an even-byte uint16 token stream")
+        tokens = np.frombuffer(payload, dtype=np.uint16)
+        encoded = encode_uint16_prev_symbol_stream(tokens)
+        target.parent.mkdir(parents=True, exist_ok=True)
+        target.write_bytes(encoded.encoded_bytes)
 
     archive_bytes = target.stat().st_size
     return LosslessCompressionResult(
@@ -473,6 +518,8 @@ def compress_lossless_file(
 
 
 def decompress_lossless_file(*, profile: str, archive_path: str | Path, output_path: str | Path) -> Path:
+    import numpy as np
+
     config = _profile_config(profile)
     method = str(config["method"])
     source = Path(archive_path)
@@ -484,7 +531,13 @@ def decompress_lossless_file(*, profile: str, archive_path: str | Path, output_p
         target.write_bytes(payload)
         return target
 
-    return _decompress_with_zpaq(archive_path=source, output_path=target)
+    if method == "zpaq":
+        return _decompress_with_zpaq(archive_path=source, output_path=target)
+
+    tokens = decode_uint16_prev_symbol_stream(source.read_bytes())
+    target.parent.mkdir(parents=True, exist_ok=True)
+    np.asarray(tokens, dtype=np.uint16).tofile(target)
+    return target
 
 
 def _encode_commavq_tokens(tokens) -> bytes:
@@ -515,6 +568,8 @@ def _dataset_train_split(dataset) -> object:
 
 
 def _compress_record_to_payload(example: Mapping[str, object], *, profile: str, payload_dir: str) -> dict[str, object]:
+    import numpy as np
+
     meta = example.get("json")
     if not isinstance(meta, Mapping):
         raise ValueError("dataset example is missing json metadata")
@@ -524,18 +579,19 @@ def _compress_record_to_payload(example: Mapping[str, object], *, profile: str, 
     if "token.npy" not in example:
         raise ValueError(f"dataset example {file_name!r} is missing token.npy")
 
-    payload = _encode_commavq_tokens(example["token.npy"])
     output_root = Path(payload_dir)
     method = _profile_method(profile)
     config = _profile_config(profile)
 
     if method == "lzma":
+        payload = _encode_commavq_tokens(example["token.npy"])
         compressed = lzma.compress(payload, preset=int(config.get("level", 6)))
         target = output_root / file_name
         target.parent.mkdir(parents=True, exist_ok=True)
         target.write_bytes(compressed)
         archive_bytes = target.stat().st_size
-    else:
+    elif method == "zpaq":
+        payload = _encode_commavq_tokens(example["token.npy"])
         target = _zpaq_output_path(output_root, file_name)
         archive_bytes = _compress_with_zpaq(
             source_name=file_name,
@@ -543,6 +599,13 @@ def _compress_record_to_payload(example: Mapping[str, object], *, profile: str, 
             output_path=target,
             config=config,
         )
+    else:
+        payload = _flatten_prev_symbol_position_major(example["token.npy"])
+        encoded = encode_uint16_prev_symbol_stream(np.frombuffer(payload, dtype=np.uint16))
+        target = _prev_symbol_output_path(output_root, file_name)
+        target.parent.mkdir(parents=True, exist_ok=True)
+        target.write_bytes(encoded.encoded_bytes)
+        archive_bytes = target.stat().st_size
     return {
         "archive_bytes": archive_bytes,
         "file_name": file_name,
@@ -758,6 +821,257 @@ if __name__ == "__main__":
 """
 
 
+def render_prev_symbol_position_major_runtime_module() -> str:
+    return """from __future__ import annotations
+
+import heapq
+
+PREV_SYMBOL_STREAM_MAGIC = b"TPC1"
+STREAM_MAGIC = b"TFC1"
+UINT16_MAX = 0xFFFF
+FRAME_BOS_TOKEN = 1024
+SEGMENT_EOT_TOKEN = 1025
+POSITIONS = 128
+
+
+def _decode_varint(data: bytes, offset: int, *, label: str):
+    value = 0
+    shift = 0
+    cursor = offset
+    while True:
+        if cursor >= len(data):
+            raise ValueError(f"truncated {label}")
+        byte = data[cursor]
+        cursor += 1
+        value |= (byte & 0x7F) << shift
+        if byte < 0x80:
+            return value, cursor
+        shift += 7
+        if shift > 63:
+            raise ValueError(f"{label} exceeds supported bounds")
+
+
+def _build_code_lengths(frequencies: dict[int, int]):
+    if not frequencies:
+        return {}
+    if len(frequencies) == 1:
+        symbol = next(iter(frequencies))
+        return {symbol: 0}
+    nodes = {}
+    heap = []
+    next_node_id = 0
+    for symbol, count in sorted(frequencies.items()):
+        nodes[next_node_id] = (None, None, symbol)
+        heapq.heappush(heap, (count, symbol, next_node_id))
+        next_node_id += 1
+    while len(heap) > 1:
+        left_count, left_min_symbol, left_id = heapq.heappop(heap)
+        right_count, right_min_symbol, right_id = heapq.heappop(heap)
+        parent_id = next_node_id
+        next_node_id += 1
+        nodes[parent_id] = (left_id, right_id, None)
+        heapq.heappush(heap, (left_count + right_count, min(left_min_symbol, right_min_symbol), parent_id))
+    lengths = {}
+    stack = [(heap[0][2], 0)]
+    while stack:
+        node_id, depth = stack.pop()
+        left_id, right_id, symbol = nodes[node_id]
+        if symbol is not None:
+            lengths[symbol] = depth
+            continue
+        stack.append((right_id, depth + 1))
+        stack.append((left_id, depth + 1))
+    return lengths
+
+
+def _build_canonical_codebook(lengths: dict[int, int]):
+    encode_table = {}
+    positive_lengths = sorted((length, symbol) for symbol, length in lengths.items() if length > 0)
+    if not positive_lengths:
+        return encode_table, {}, {}, {}, (), 0
+    code = 0
+    previous_length = 0
+    ordered_symbols = []
+    first_code_by_length = {}
+    first_index_by_length = {}
+    count_by_length = {}
+    for index, (length, symbol) in enumerate(positive_lengths):
+        code <<= length - previous_length
+        if length not in first_code_by_length:
+            first_code_by_length[length] = code
+            first_index_by_length[length] = index
+        count_by_length[length] = count_by_length.get(length, 0) + 1
+        encode_table[symbol] = (code, length)
+        ordered_symbols.append(symbol)
+        code += 1
+        previous_length = length
+    return encode_table, first_code_by_length, first_index_by_length, count_by_length, tuple(ordered_symbols), max(count_by_length)
+
+
+def _validate_padding(payload: bytes, *, bits_consumed: int):
+    if bits_consumed == len(payload) * 8:
+        return
+    byte_index = bits_consumed // 8
+    bit_offset = bits_consumed % 8
+    if bit_offset:
+        trailing_mask = (1 << (8 - bit_offset)) - 1
+        if payload[byte_index] & trailing_mask:
+            raise ValueError("non-zero trailing padding bits")
+        byte_index += 1
+    if byte_index != len(payload):
+        raise ValueError("trailing payload bytes")
+
+
+def _decode_payload(payload: bytes, *, token_count: int, first_code_by_length, first_index_by_length, count_by_length, ordered_symbols, max_code_bits):
+    restored = [0] * token_count
+    produced = 0
+    code = 0
+    width = 0
+    bits_consumed = 0
+    for byte in payload:
+        for shift in range(7, -1, -1):
+            code = (code << 1) | ((byte >> shift) & 1)
+            width += 1
+            bits_consumed += 1
+            first_code = first_code_by_length.get(width)
+            if first_code is None:
+                if width > max_code_bits:
+                    raise ValueError("payload contains an invalid prefix code")
+                continue
+            code_offset = code - first_code
+            count = count_by_length[width]
+            if 0 <= code_offset < count:
+                symbol_index = first_index_by_length[width] + code_offset
+                restored[produced] = ordered_symbols[symbol_index]
+                produced += 1
+                code = 0
+                width = 0
+                if produced == token_count:
+                    _validate_padding(payload, bits_consumed=bits_consumed)
+                    return restored
+    raise ValueError("truncated payload")
+
+
+def decode_uint16_frequency_stream(encoded: bytes):
+    if not encoded.startswith(STREAM_MAGIC):
+        raise ValueError("invalid frequency stream header")
+    cursor = len(STREAM_MAGIC)
+    token_count, cursor = _decode_varint(encoded, cursor, label="token count")
+    unique_symbols, cursor = _decode_varint(encoded, cursor, label="unique symbol count")
+    payload_size, cursor = _decode_varint(encoded, cursor, label="payload size")
+    frequencies = {}
+    total = 0
+    previous_symbol = 0
+    for index in range(unique_symbols):
+        delta, cursor = _decode_varint(encoded, cursor, label="frequency header")
+        count, cursor = _decode_varint(encoded, cursor, label="frequency header")
+        symbol = delta if index == 0 else previous_symbol + delta
+        frequencies[symbol] = count
+        total += count
+        previous_symbol = symbol
+    if total != token_count:
+        raise ValueError("frequency table does not sum to token count")
+    payload = encoded[cursor : cursor + payload_size]
+    lengths = _build_code_lengths(frequencies)
+    if len(frequencies) == 1:
+        only_symbol = next(iter(frequencies))
+        return [only_symbol] * token_count
+    _, first_code_by_length, first_index_by_length, count_by_length, ordered_symbols, max_code_bits = _build_canonical_codebook(lengths)
+    return _decode_payload(
+        payload,
+        token_count=token_count,
+        first_code_by_length=first_code_by_length,
+        first_index_by_length=first_index_by_length,
+        count_by_length=count_by_length,
+        ordered_symbols=ordered_symbols,
+        max_code_bits=max_code_bits,
+    )
+
+
+def decode_uint16_prev_symbol_stream(encoded: bytes):
+    if not encoded.startswith(PREV_SYMBOL_STREAM_MAGIC):
+        raise ValueError("invalid prev-symbol stream header")
+    cursor = len(PREV_SYMBOL_STREAM_MAGIC)
+    token_count, cursor = _decode_varint(encoded, cursor, label="token count")
+    if token_count == 0:
+        context_count, cursor = _decode_varint(encoded, cursor, label="context count")
+        if context_count != 0 or cursor != len(encoded):
+            raise ValueError("invalid empty prev-symbol stream")
+        return []
+    first_symbol, cursor = _decode_varint(encoded, cursor, label="first symbol")
+    context_count, cursor = _decode_varint(encoded, cursor, label="context count")
+    context_sizes = {}
+    previous_symbol = 0
+    for index in range(context_count):
+        delta, cursor = _decode_varint(encoded, cursor, label="context header")
+        payload_size, cursor = _decode_varint(encoded, cursor, label="context header")
+        symbol = delta if index == 0 else previous_symbol + delta
+        context_sizes[symbol] = payload_size
+        previous_symbol = symbol
+    payload_cursor = cursor
+    decoded_contexts = {}
+    for symbol, payload_size in context_sizes.items():
+        end = payload_cursor + payload_size
+        decoded_contexts[symbol] = decode_uint16_frequency_stream(encoded[payload_cursor:end])
+        payload_cursor = end
+    restored = [first_symbol]
+    context_offsets = {symbol: 0 for symbol in decoded_contexts}
+    for _ in range(1, token_count):
+        previous = restored[-1]
+        values = decoded_contexts[previous]
+        offset = context_offsets[previous]
+        restored.append(values[offset])
+        context_offsets[previous] = offset + 1
+    return restored
+
+
+def inflate_prev_symbol_position_major(encoded: bytes):
+    import numpy as np
+
+    flat = np.asarray(decode_uint16_prev_symbol_stream(encoded), dtype=np.uint16)
+    if flat.size == 0 or int(flat[-1]) != SEGMENT_EOT_TOKEN:
+        raise ValueError("position-major payload must end with segment EOT")
+    body = flat[:-1]
+    if body.size % POSITIONS != 0:
+        raise ValueError("position-major payload body must be divisible by 128")
+    stream_len = body.size // POSITIONS
+    if stream_len <= 1:
+        raise ValueError("position-major payload must contain at least one frame")
+    streams = body.reshape(POSITIONS, stream_len)
+    if not np.all(streams[:, 0] == FRAME_BOS_TOKEN):
+        raise ValueError("position-major payload is missing BOS headers")
+    frames = streams[:, 1:].T
+    return frames.reshape(frames.shape[0], 8, 16).astype(np.int16, copy=False)
+"""
+
+
+def render_prev_symbol_position_major_decompress_script() -> str:
+    return """#!/usr/bin/env python3
+import os
+from pathlib import Path
+
+import numpy as np
+
+from _lossless_prev_symbol_runtime import inflate_prev_symbol_position_major
+
+HERE = Path(__file__).resolve().parent
+output_dir = Path(os.environ.get("OUTPUT_DIR", HERE / "compression_challenge_submission_decompressed"))
+
+def main():
+    output_dir.mkdir(parents=True, exist_ok=True)
+    for payload in sorted(path for path in HERE.rglob("*") if path.is_file() and path.name.endswith(".tpc")):
+        tokens = inflate_prev_symbol_position_major(payload.read_bytes())
+        rel = payload.relative_to(HERE).as_posix()[:-4]
+        target = output_dir / rel
+        target.parent.mkdir(parents=True, exist_ok=True)
+        with target.open("wb") as handle:
+            np.save(handle, tokens)
+
+if __name__ == "__main__":
+    main()
+"""
+
+
 def _build_baseline_submission(
     *,
     profile: str,
@@ -786,13 +1100,19 @@ def _build_baseline_submission(
         runtime_metadata=runtime_metadata,
         runtime_bundle_path=runtime_bundle_path,
     )
-    decompress_path.write_text(
-        render_lzma_decompress_script()
-        if method == "lzma"
-        else render_zpaq_decompress_script(
-            runtime_bundle_relpath=runtime_metadata.get("runtime_bundle_relpath"),
+    if method == "lzma":
+        decompress_path.write_text(render_lzma_decompress_script())
+    elif method == "zpaq":
+        decompress_path.write_text(
+            render_zpaq_decompress_script(
+                runtime_bundle_relpath=runtime_metadata.get("runtime_bundle_relpath"),
+            )
         )
-    )
+    else:
+        (payload_dir / "_lossless_prev_symbol_runtime.py").write_text(
+            render_prev_symbol_position_major_runtime_module()
+        )
+        decompress_path.write_text(render_prev_symbol_position_major_decompress_script())
     archive_path = root / f"{profile}_submission.zip"
     build_submission_zip(payload_dir=payload_dir, decompress_path=decompress_path, output_path=archive_path)
     archive_bytes = archive_path.stat().st_size
@@ -882,7 +1202,7 @@ def _evaluate_baseline_submission(
         num_proc=num_proc,
         runtime_bundle_path=runtime_bundle_path,
     )
-    compression, verification, decompressed_dir = evaluate_local_submission_contract(
+    compression, verification, decompressed_dir, _cleanup_fn = evaluate_local_submission_contract(
         profile=profile,
         archive_path=baseline["archive_path"],
         method=str(baseline["method"]),

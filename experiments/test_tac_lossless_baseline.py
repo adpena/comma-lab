@@ -17,6 +17,110 @@ if str(SRC_ROOT) not in sys.path:
 
 
 class TacLosslessBaselineTests(unittest.TestCase):
+    def test_build_prev_symbol_position_major_submission_uses_dataset_loader_and_packages_zip(self) -> None:
+        from tac.lossless.codecs import _build_baseline_submission
+
+        calls = []
+
+        def fake_loader(dataset_name: str, *, num_proc=None, data_files=None):
+            calls.append(
+                {
+                    "dataset_name": dataset_name,
+                    "num_proc": num_proc,
+                    "data_files": data_files,
+                }
+            )
+            return {
+                "train": [
+                    {"json": {"file_name": "clip_a"}, "token.npy": np.arange(128, dtype=np.int16).reshape(1, 8, 16)},
+                    {"json": {"file_name": "clip_b"}, "token.npy": (np.arange(128, dtype=np.int16) + 128).reshape(1, 8, 16)},
+                ]
+            }
+
+        with tempfile.TemporaryDirectory() as tmpdir:
+            root = Path(tmpdir)
+            result = _build_baseline_submission(
+                profile="prev_symbol_position_major",
+                split=[0, 1],
+                work_dir=root,
+                dataset_loader=fake_loader,
+            )
+
+            self.assertTrue(Path(result["archive_path"]).exists())
+            self.assertTrue((root / "decompress.py").exists())
+            self.assertTrue((root / "payload" / "clip_a.tpc").exists())
+            self.assertTrue((root / "payload" / "clip_b.tpc").exists())
+            self.assertFalse(result["local_only"])
+            self.assertTrue(result["challenge_valid"])
+
+        self.assertEqual(calls[0]["dataset_name"], "commaai/commavq")
+        self.assertEqual(calls[0]["data_files"], {"train": ["data-0000.tar.gz", "data-0001.tar.gz"]})
+
+    def test_render_prev_symbol_position_major_decompress_script_roundtrips_extensionless_names(self) -> None:
+        from tac.lossless.arithmetic import flatten_tokens_for_gpt_arithmetic
+        from tac.lossless.codecs import (
+            render_prev_symbol_position_major_decompress_script,
+            render_prev_symbol_position_major_runtime_module,
+        )
+        from tac.lossless.frequency_coder import encode_uint16_prev_symbol_stream
+
+        with tempfile.TemporaryDirectory() as tmpdir:
+            root = Path(tmpdir)
+            output_dir = root / "decoded"
+            output_dir.mkdir()
+
+            records = {
+                "clip_a": np.arange(128, dtype=np.int16).reshape(1, 8, 16),
+                "clip_b": (np.arange(128, dtype=np.int16) + 128).reshape(1, 8, 16),
+            }
+            for file_name, tokens in records.items():
+                flat = flatten_tokens_for_gpt_arithmetic(tokens, layout="position_major").astype(np.uint16)
+                encoded = encode_uint16_prev_symbol_stream(flat)
+                (root / f"{file_name}.tpc").write_bytes(encoded.encoded_bytes)
+
+            (root / "_lossless_prev_symbol_runtime.py").write_text(
+                render_prev_symbol_position_major_runtime_module()
+            )
+            decompress_path = root / "decompress.py"
+            decompress_path.write_text(render_prev_symbol_position_major_decompress_script())
+
+            subprocess.run(
+                [sys.executable, str(decompress_path)],
+                cwd=root,
+                check=True,
+                env={**dict(), "OUTPUT_DIR": str(output_dir)},
+            )
+
+            self.assertTrue(np.array_equal(np.load(output_dir / "clip_a"), records["clip_a"]))
+            self.assertTrue(np.array_equal(np.load(output_dir / "clip_b"), records["clip_b"]))
+
+    def test_evaluate_prev_symbol_position_major_submission_returns_measured_result(self) -> None:
+        from tac.lossless.codecs import evaluate_lossless_baseline_submission
+
+        def fake_loader(dataset_name: str, *, num_proc=None, data_files=None):
+            return {
+                "train": [
+                    {"json": {"file_name": "clip_a"}, "token.npy": np.arange(128, dtype=np.int16).reshape(1, 8, 16)},
+                    {"json": {"file_name": "clip_b"}, "token.npy": (np.arange(128, dtype=np.int16) + 128).reshape(1, 8, 16)},
+                ]
+            }
+
+        with tempfile.TemporaryDirectory() as tmpdir:
+            root = Path(tmpdir)
+            result = evaluate_lossless_baseline_submission(
+                profile="prev_symbol_position_major",
+                split=[0, 1],
+                work_dir=root,
+                dataset_loader=fake_loader,
+            )
+
+        self.assertEqual(result["command"], "lossless_baseline_evaluate")
+        self.assertEqual(result["baseline"]["method"], "prev_symbol_position_major")
+        self.assertTrue(result["challenge_valid"])
+        self.assertFalse(result["local_only"])
+        self.assertTrue(result["verification"]["exact_match"])
+        self.assertGreater(result["compression"]["compression_rate"], 1.0)
+
     def test_build_lzma_baseline_submission_prefers_dataset_map_for_real_workloads(self) -> None:
         from tac.lossless.codecs import build_lzma_baseline_submission
 
