@@ -48,6 +48,8 @@ def _read_varint_from(data: bytes, pos: int) -> tuple[int, int]:
     value = 0
     shift = 0
     while True:
+        if pos >= len(data):
+            raise ValueError(f"Truncated varint at position {pos}")
         b = data[pos]
         pos += 1
         value |= (b & 0x7F) << shift

@@ -311,6 +311,7 @@ class DiffusionRenderer(nn.Module):
         super().__init__()
         self.num_classes = num_classes
         self.num_timesteps = num_timesteps
+        self.channels = channels
 
         # U-Net denoiser with mask conditioning
         self.denoiser = ConditionalUNet(
@@ -480,11 +481,14 @@ class DiffusionRenderer(nn.Module):
         # Start from pure noise
         x = torch.randn(B, 3, H, W, device=device)
 
-        # If using fewer steps, subsample the timestep sequence
+        # DDPM posterior formula assumes consecutive timesteps. When
+        # num_steps < num_timesteps the gaps between steps are large and
+        # the DDPM update is mathematically wrong (incorrect beta/alpha).
+        # DDIM handles arbitrary step sizes correctly, so delegate to it.
         if num_steps < self.num_timesteps:
-            step_indices = torch.linspace(self.num_timesteps - 1, 0, num_steps, device=device).long()
-        else:
-            step_indices = torch.arange(self.num_timesteps - 1, -1, -1, device=device)
+            return self.ddim_sample(masks, num_steps=num_steps, eta=0.0)
+
+        step_indices = torch.arange(self.num_timesteps - 1, -1, -1, device=device)
 
         for t in step_indices:
             x = self.p_sample(x, t.item(), cond)
@@ -530,7 +534,7 @@ class DiffusionRenderer(nn.Module):
 
             # Predicted x_0
             alpha_t = self.alphas_cumprod[t]
-            alpha_prev = self.alphas_cumprod[t_prev] if t_prev >= 0 else torch.tensor(1.0)
+            alpha_prev = self.alphas_cumprod[t_prev] if t_prev >= 0 else torch.tensor(1.0, device=x.device)
             x0_pred = (x - torch.sqrt(1 - alpha_t) * eps_pred) / torch.sqrt(alpha_t)
             x0_pred = x0_pred.clamp(-1.0, 2.0)
 
@@ -581,7 +585,7 @@ class DiffusionRenderer(nn.Module):
 
             # Predicted x_0
             alpha_t = self.alphas_cumprod[t]
-            alpha_prev = self.alphas_cumprod[t_prev] if t_prev >= 0 else torch.tensor(1.0)
+            alpha_prev = self.alphas_cumprod[t_prev] if t_prev >= 0 else torch.tensor(1.0, device=x.device)
             x0_pred = (x - torch.sqrt(1 - alpha_t) * eps_pred) / torch.sqrt(alpha_t)
             x0_pred = x0_pred.clamp(-1.0, 2.0)
 
@@ -729,7 +733,7 @@ class ProgressiveDistiller:
         """Create a student with identical architecture but fresh output layer."""
         student = DiffusionRenderer(
             num_classes=teacher.num_classes,
-            channels=teacher.denoiser.stem.out_channels,
+            channels=teacher.channels,
             num_timesteps=teacher.num_timesteps,
             time_dim=teacher.denoiser.time_dim,
         )
@@ -880,6 +884,7 @@ class ConsistencyModel(nn.Module):
         super().__init__()
         self.num_classes = num_classes
         self.num_timesteps = num_timesteps
+        self.channels = channels
 
         self.net = ConditionalUNet(
             in_channels=3,
@@ -1025,7 +1030,7 @@ class ConsistencyDistiller:
         # EMA copy of student (target network)
         self.target = ConsistencyModel(
             num_classes=student.num_classes,
-            channels=student.net.stem.out_channels,
+            channels=student.channels,
             num_timesteps=student.num_timesteps,
             time_dim=student.net.time_dim,
         )

@@ -431,6 +431,12 @@ class DPSIMSRenderer(nn.Module):
         if cur_h != target_h or cur_w != target_w:
             x = self.final_upsample(x)
 
+        # Safety net: ensure spatial dims match target after ConvTranspose2d
+        # (ConvTranspose2d unconditionally doubles dims, which only matches
+        # 384x512 inputs; for arbitrary resolutions we need an explicit resize)
+        if x.shape[2] != target_h or x.shape[3] != target_w:
+            x = F.interpolate(x, size=(target_h, target_w), mode="bilinear", align_corners=False)
+
         # Head: soft sigmoid output — gradients always flow, no dead zones
         # sigmoid(0/50) = 0.5 -> 127.5 at init (mid-gray)
         rgb = 255.0 * torch.sigmoid(self.head(x) / 50.0)

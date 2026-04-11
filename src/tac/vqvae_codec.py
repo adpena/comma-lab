@@ -40,6 +40,7 @@ import io
 import struct
 from pathlib import Path
 
+import numpy as np
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
@@ -541,12 +542,16 @@ class TemporalDeltaCoder:
             buf.write(struct.pack("<I", num_changed))
 
             if num_changed > 0:
-                # Pack as (row, col, new_value) triples
-                for pos in changed_positions:
-                    r, c = pos[0].item(), pos[1].item()
-                    val = curr[r, c].item()
-                    # row: 5 bits (max 24), col: 5 bits (max 32), val: 16 bits
-                    buf.write(struct.pack("<BBH", r, c, val))
+                # Batch-encode (row, col, new_value) triples via numpy
+                rows = changed_positions[:, 0].numpy().astype(np.uint8)
+                cols = changed_positions[:, 1].numpy().astype(np.uint8)
+                vals = curr[changed_positions[:, 0], changed_positions[:, 1]].numpy().astype(np.uint16)
+                # Interleave into struct-compatible layout: (r, c, val_lo, val_hi) per entry
+                packed = np.empty(num_changed, dtype=[("r", "u1"), ("c", "u1"), ("v", "<u2")])
+                packed["r"] = rows
+                packed["c"] = cols
+                packed["v"] = vals
+                buf.write(packed.tobytes())
 
             prev = curr
 
@@ -572,8 +577,6 @@ class TemporalDeltaCoder:
         H, W, num_frames = struct.unpack("<HHI", buf.read(8))
 
         # First frame
-        import numpy as np
-
         first_data = buf.read(H * W * 2)
         first = torch.from_numpy(np.frombuffer(first_data, dtype=np.uint16).reshape(H, W).copy()).long().to(device)
 
@@ -585,9 +588,14 @@ class TemporalDeltaCoder:
             num_changed = struct.unpack("<I", buf.read(4))[0]
             curr = prev.clone()
 
-            for _ in range(num_changed):
-                r, c, val = struct.unpack("<BBH", buf.read(4))
-                curr[r, c] = val
+            if num_changed > 0:
+                # Batch-decode all changed positions at once via numpy
+                chunk = buf.read(num_changed * 4)
+                delta = np.frombuffer(chunk, dtype=[("r", "u1"), ("c", "u1"), ("v", "<u2")])
+                rows = torch.from_numpy(delta["r"].astype(np.int64))
+                cols = torch.from_numpy(delta["c"].astype(np.int64))
+                vals = torch.from_numpy(delta["v"].astype(np.int64))
+                curr[rows, cols] = vals
 
             frames.append(curr)
             prev = curr.clone()

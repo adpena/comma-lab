@@ -65,8 +65,10 @@ ROI_PREPROCESS_CHROMA_ONLY="${ROI_PREPROCESS_CHROMA_ONLY:-0}"
 ROI_PREPROCESS_MASK_FILE="${ROI_PREPROCESS_MASK_FILE:-}"
 PRE_DENOISE="${PRE_DENOISE:-}"
 # ── Technique 8: Even-frame higher QP encoding ──────────────────────
-# SegNet only evaluates odd frames, so even frames can be encoded at
-# higher QP (lower quality) for FREE rate reduction with no SegNet impact.
+# Assumption: SegNet only evaluates odd frames, so even frames can be
+# encoded at higher QP (lower quality) for rate reduction with no SegNet impact.
+# NOTE: verify this against the actual scorer behavior — the frame selection
+# logic may differ between scorer versions or evaluation modes.
 # Set to 0 to disable. Typical value: 4-8 (QP offset for even frames).
 EVEN_FRAME_QP_BOOST="${EVEN_FRAME_QP_BOOST:-0}"
 TMP_ROOT="${TMPDIR:-/tmp}"
@@ -207,10 +209,8 @@ encode_video_even_odd_qp() {
   "$FFMPEG_BIN" -y -i "$in_path" -vf "${vf_chain},select='mod(n\\,2)',setpts=N/(30*TB)" \
     -an "$tmpdir_qp/odd_frames.mkv" 2>/dev/null
 
-  # Encode even frames at higher CRF (lower quality)
+  # Encode even frames at higher CRF (lower quality) for ALL codecs
   local even_crf=$((SVT_AV1_CRF + qp_boost))
-  encode_video "$tmpdir_qp/even_frames.mkv" "$tmpdir_qp/even_enc.mkv" "null"
-  # Override CRF for even frames
   if [ "$VIDEO_CODEC" = "libsvtav1" ]; then
     "$FFMPEG_BIN" -y -i "$tmpdir_qp/even_frames.mkv" \
       -vf "null" -an -c:v libsvtav1 \
@@ -221,6 +221,17 @@ encode_video_even_odd_qp() {
       -color_primaries "$SOURCE_COLOR_PRIMARIES" \
       -color_trc "$SOURCE_COLOR_TRC" \
       -map_metadata -1 "$tmpdir_qp/even_enc.mkv"
+  else
+    local even_x265_crf=$((X265_CRF + qp_boost))
+    "$FFMPEG_BIN" -y -i "$tmpdir_qp/even_frames.mkv" \
+      -vf "null" -an -c:v libx265 \
+      -preset "$X265_PRESET" -crf "$even_x265_crf" \
+      -x265-params "keyint=${X265_GOP}:min-keyint=${X265_GOP}:scenecut=0:bframes=${X265_BFRAMES}:ref=${X265_REF}" \
+      -color_range "$SOURCE_COLOR_RANGE" \
+      -colorspace "$SOURCE_COLOR_MATRIX" \
+      -color_primaries "$SOURCE_COLOR_PRIMARIES" \
+      -color_trc "$SOURCE_COLOR_TRC" \
+      "$tmpdir_qp/even_enc.mkv"
   fi
 
   # Encode odd frames at standard CRF (these are the ones SegNet evaluates)

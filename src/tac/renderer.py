@@ -795,15 +795,13 @@ class AnalyticalMotionPredictor(nn.Module):
         xx = torch.linspace(-1.0, 1.0, W, device=device)
         grid_y, grid_x = torch.meshgrid(yy, xx, indexing="ij")
 
-        centroids = torch.zeros(B, self.num_classes, 2, device=device)
-
-        for c in range(self.num_classes):
-            class_mask = (mask == c).float()  # (B, H, W)
-            count = class_mask.sum(dim=(1, 2)).clamp(min=1.0)  # (B,)
-            cx = (class_mask * grid_x.unsqueeze(0)).sum(dim=(1, 2)) / count
-            cy = (class_mask * grid_y.unsqueeze(0)).sum(dim=(1, 2)) / count
-            centroids[:, c, 0] = cx
-            centroids[:, c, 1] = cy
+        # Vectorised centroid computation using one_hot (replaces per-class loop)
+        one_hot = F.one_hot(mask, self.num_classes).float()  # (B, H, W, C)
+        count = one_hot.sum(dim=(1, 2)).clamp(min=1.0)  # (B, C)
+        # Weighted mean over spatial dims: grid (H, W) broadcast with one_hot (B, H, W, C)
+        cx = (grid_x.unsqueeze(0).unsqueeze(-1) * one_hot).sum(dim=(1, 2)) / count  # (B, C)
+        cy = (grid_y.unsqueeze(0).unsqueeze(-1) * one_hot).sum(dim=(1, 2)) / count  # (B, C)
+        centroids = torch.stack([cx, cy], dim=-1)  # (B, C, 2)
 
         return centroids
 

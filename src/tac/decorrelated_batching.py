@@ -69,22 +69,24 @@ class DecorrelatedBatchSampler:
             )
 
     def _sample_decorrelated_indices(self) -> list[int]:
-        """Sample frame indices that are far apart in time."""
+        """Sample frame indices that are far apart in time.
+
+        Uses a set for O(min_dist) removal instead of O(n) list filtering.
+        """
+        n = self.num_pairs
+        min_dist = self.min_frame_distance
         indices = []
-        available = list(range(self.num_pairs))
+        available = set(range(n))
 
         for _ in range(self.crops_per_batch):
             if not available:
-                available = list(range(self.num_pairs))
+                available = set(range(n))
 
-            idx = random.choice(available)
+            idx = random.choice(list(available))
             indices.append(idx)
 
-            # Remove nearby indices to enforce decorrelation
-            available = [
-                i for i in available
-                if abs(i - idx) >= self.min_frame_distance
-            ]
+            # Remove nearby indices to enforce decorrelation — O(min_dist)
+            available -= set(range(max(0, idx - min_dist), min(n, idx + min_dist + 1)))
 
         return indices
 
@@ -138,7 +140,10 @@ def crop_and_batch(
     for idx, (y, x) in zip(indices, crop_params):
         frame = frames[idx]
         if frame.ndim == 3:
-            if frame.shape[0] in (1, 3, 6, 12):  # CHW format
+            # CHW heuristic: first dim is small (channels) AND last dim is
+            # large (width). The old check `shape[0] in (1,3,6,12)` broke
+            # when H happened to be 1, 3, 6, or 12.
+            if frame.shape[0] <= 12 and frame.shape[2] > 12:  # CHW format
                 crop = frame[:, y:y + crop_h, x:x + crop_w]
             else:  # HWC format
                 crop = frame[y:y + crop_h, x:x + crop_w, :].permute(2, 0, 1)

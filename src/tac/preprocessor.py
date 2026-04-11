@@ -40,6 +40,7 @@ class LearnedPreProcessor(nn.Module):
         strength: max correction magnitude as fraction of 255 (default 0.02 = ~5 pixel values)
     """
 
+    # hidden=16: small RF (7x7), less capacity needed
     def __init__(self, hidden: int = 16, kernel: int = 3, strength: float = 0.02):
         super().__init__()
         pad = kernel // 2
@@ -81,6 +82,8 @@ class DilatedPreProcessor(nn.Module):
         strength: max correction magnitude as fraction of 255
     """
 
+    # hidden=32: dilated middle layer gives 15x15 RF, needs more capacity
+    # to leverage the larger receptive field effectively
     def __init__(self, hidden: int = 32, kernel: int = 3, strength: float = 0.02):
         super().__init__()
         pad = kernel // 2
@@ -140,7 +143,12 @@ class JointPrePostFilter(nn.Module):
             rounded = rounded + (rounded.round() - rounded).detach()
             return rounded.clamp(0, 255)
         else:
-            return x.round().clamp(0, 255)
+            # Eval mode: add small quantization noise to approximate AV1 codec
+            # artifacts. Plain round+clamp creates a train/eval distribution gap
+            # because training uses noise-based STE but eval sees clean rounding.
+            # This narrow Gaussian (std=0.5) better matches the lossy codec.
+            noise = torch.randn_like(x) * 0.5
+            return (x + noise).round().clamp(0, 255)
 
     def forward(self, x: torch.Tensor) -> torch.Tensor:
         """End-to-end: preprocess -> codec proxy -> postfilter.
