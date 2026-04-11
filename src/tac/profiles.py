@@ -211,6 +211,45 @@ GATED_DILATED_SMOKE = {
     "accum_steps": 4,
 }
 
+# Dilated h=32 smoke test: does the dilated architecture scale down?
+# If yes, h=32 + CRF 36 saves ~0.083 pts combined (rate optimization).
+# Also the production-optimal candidate for comma four deployment.
+DILATED_H32_SMOKE = {
+    "variant": "dilated",
+    "hidden": 32,
+    "kernel": 3,
+    "epochs": 400,
+    "lr": 5e-4,
+    "ema_decay": 0.997,
+    "alpha": 20.0,
+    "sal_lambda": 1.0,
+    "loss_mode": "standard",
+    "segnet_loss_weight": 100.0,
+    "boundary_weight": 1.0,
+    "hard_frame_ratio": 0.0,
+    "eval_every": 5,
+    "accum_steps": 2,
+}
+
+# Dilated h=16: production-extreme, ~1.6KB at INT4
+# Would run at ~1ms/frame on Snapdragon Hexagon NPU
+DILATED_H16_SMOKE = {
+    "variant": "dilated",
+    "hidden": 16,
+    "kernel": 3,
+    "epochs": 400,
+    "lr": 1e-3,
+    "ema_decay": 0.997,
+    "alpha": 20.0,
+    "sal_lambda": 1.0,
+    "loss_mode": "standard",
+    "segnet_loss_weight": 100.0,
+    "boundary_weight": 1.0,
+    "hard_frame_ratio": 0.0,
+    "eval_every": 5,
+    "accum_steps": 2,
+}
+
 PROFILES = {
     "council_v1": COUNCIL_V1,
     "council_v2_adaptive": COUNCIL_V2_ADAPTIVE,
@@ -224,4 +263,6 @@ PROFILES = {
     "extreme_segnet": EXTREME_SEGNET,
     "reweight_ablation": REWEIGHT_ABLATION,
     "gated_dilated_smoke": GATED_DILATED_SMOKE,
+    "dilated_h32_smoke": DILATED_H32_SMOKE,
+    "dilated_h16_smoke": DILATED_H16_SMOKE,
 }
