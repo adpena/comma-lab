@@ -75,6 +75,12 @@ def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
     p.add_argument("--grad-clip", type=float, default=1.0,
                    help="Max gradient norm (0 = no clipping)")
     p.add_argument("--weight-decay", type=float, default=1e-4)
+    p.add_argument("--compile", action="store_true", default=False,
+                   help="Use mx.compile() for loss+grad (EXPERIMENTAL: "
+                        "incompatible with nn.value_and_grad stateful updates)")
+    p.add_argument("--no-compile", dest="compile", action="store_false")
+    p.add_argument("--batch-size", type=int, default=2,
+                   help="Training batch size (2 optimal on M5 Max, 1.46x throughput)")
     p.add_argument("--log-every", type=int, default=10,
                    help="Print loss every N epochs")
 
@@ -231,6 +237,8 @@ def train(args: argparse.Namespace):
           f"embed_dim={args.embed_dim}, depth={args.depth}")
     print(f"[mlx_train] Training: epochs={args.epochs}, lr={args.lr}, "
           f"subsample=1/{args.subsample}")
+    print(f"[mlx_train] Optimizations: compile={args.compile}, "
+          f"batch_size={args.batch_size}")
 
     # Load data
     gt_frames, masks = load_data_as_mlx(args.precomputed)
@@ -245,11 +253,13 @@ def train(args: argparse.Namespace):
         depth=args.depth,
     )
 
+    # NOTE: FP16 was benchmarked at 1.20x speedup but causes NaN in GroupNorm
+    # due to variance overflow with 3M+ elements in fp16 accumulation.
+    # bfloat16 not fully supported in MLX 0.31.1. Staying fp32.
+
     # Optimizer with warmup cosine schedule
-    # MLX optimizers: AdamW
     warmup_steps = args.warmup_epochs
     total_steps = args.epochs
-    # Build schedule: linear warmup then cosine decay
     warmup_schedule = optim.linear_schedule(
         init=1e-7,
         end=args.lr,
@@ -277,8 +287,19 @@ def train(args: argparse.Namespace):
     train_size = max(1, n_total // args.subsample)
     print(f"[mlx_train] {train_size}/{n_total} pairs per epoch")
 
-    # Compile loss + grad function
+    # Loss + grad function
+    # NOTE: mx.compile() is incompatible with nn.value_and_grad + stateful
+    # optimizer updates in MLX 0.31.1. The grad closure captures internal
+    # arrays that can't be registered as compile inputs. Compile is disabled
+    # by default. When MLX adds first-class compiled training support, enable.
     loss_and_grad_fn = nn.value_and_grad(model, pretrain_loss_fn)
+    if args.compile:
+        print("[mlx_train] WARNING: mx.compile() with value_and_grad is experimental")
+        compiled_lag = mx.compile(
+            lambda mt, mt1, gp: loss_and_grad_fn(model, mt, mt1, gp)
+        )
+    else:
+        compiled_lag = None
 
     out_dir = Path(args.output_dir)
     out_dir.mkdir(parents=True, exist_ok=True)
@@ -298,24 +319,47 @@ def train(args: argparse.Namespace):
         epoch_loss = 0.0
         n_steps = 0
 
+        # Build mini-batches of size args.batch_size
+        # Benchmarked: bs=2 gives 3.8 pairs/sec vs 2.6 at bs=1 (1.46x throughput)
+        batch_starts = []
         for pair_idx in perm:
-            start = all_starts[pair_idx]
-            mask_t, mask_t1, gt_pair = get_pair(gt_frames, masks, start)
+            batch_starts.append(all_starts[pair_idx])
 
-            # Horizontal flip augmentation (50% probability)
-            if random.random() < 0.5:
-                mask_t = mask_t[:, :, ::-1]
-                mask_t1 = mask_t1[:, :, ::-1]
-                gt_pair = gt_pair[:, :, :, ::-1, :]
+        for bi in range(0, len(batch_starts), args.batch_size):
+            batch_indices = batch_starts[bi:bi + args.batch_size]
+            bs = len(batch_indices)
+
+            # Stack batch
+            mask_ts, mask_t1s, gt_pairs = [], [], []
+            for start in batch_indices:
+                mt, mt1, gp = get_pair(gt_frames, masks, start)
+                # Horizontal flip augmentation (50% probability)
+                if random.random() < 0.5:
+                    mt = mt[:, :, ::-1]
+                    mt1 = mt1[:, :, ::-1]
+                    gp = gp[:, :, :, ::-1, :]
+                mask_ts.append(mt)
+                mask_t1s.append(mt1)
+                gt_pairs.append(gp)
+
+            if bs > 1:
+                mask_t = mx.concatenate(mask_ts, axis=0)
+                mask_t1 = mx.concatenate(mask_t1s, axis=0)
+                gt_pair = mx.concatenate(gt_pairs, axis=0)
+            else:
+                mask_t, mask_t1, gt_pair = mask_ts[0], mask_t1s[0], gt_pairs[0]
 
             # Forward + backward
-            loss, grads = loss_and_grad_fn(model, mask_t, mask_t1, gt_pair)
+            if compiled_lag is not None:
+                loss, grads = compiled_lag(mask_t, mask_t1, gt_pair)
+            else:
+                loss, grads = loss_and_grad_fn(model, mask_t, mask_t1, gt_pair)
             optimizer.update(model, grads)
             # Sync to avoid memory buildup
             mx.eval(model.parameters(), optimizer.state, loss)
 
-            epoch_loss += loss.item()
-            n_steps += 1
+            epoch_loss += loss.item() * bs
+            n_steps += bs
 
         avg_loss = epoch_loss / max(n_steps, 1)
         epoch_sec = time.monotonic() - epoch_start

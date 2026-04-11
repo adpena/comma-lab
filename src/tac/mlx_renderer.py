@@ -134,10 +134,10 @@ def _nearest_downsample_2d(x: mx.array, target_h: int, target_w: int) -> mx.arra
 
 
 def _bilinear_upsample_2x(x: mx.array) -> mx.array:
-    """2x bilinear upsample for NHWC tensor.
+    """2x nearest-neighbor upsample for NHWC tensor via reshape interleaving.
 
-    Simple pixel-duplication with neighbor averaging for speed.
-    Used as the upsample path (replacing ConvTranspose2d from PyTorch).
+    Uses reshape + broadcast instead of mx.repeat (benchmarked faster on Metal).
+    Replaces ConvTranspose2d from PyTorch in the upsample path.
 
     Args:
         x: (B, H, W, C)
@@ -146,11 +146,10 @@ def _bilinear_upsample_2x(x: mx.array) -> mx.array:
         (B, 2H, 2W, C)
     """
     B, H, W, C = x.shape
-    # Repeat each pixel 2x2 then apply 3x3 averaging via neighbor blend
-    # Fast approach: repeat-interleave via reshape
-    x_h = mx.repeat(x, repeats=2, axis=1)     # (B, 2H, W, C)
-    x_hw = mx.repeat(x_h, repeats=2, axis=2)  # (B, 2H, 2W, C)
-    return x_hw
+    # Expand via reshape: (B, H, 1, W, 1, C) -> broadcast -> (B, H, 2, W, 2, C) -> reshape
+    x = mx.expand_dims(x, axis=(2, 4))          # (B, H, 1, W, 1, C)
+    x = mx.broadcast_to(x, (B, H, 2, W, 2, C))  # (B, H, 2, W, 2, C)
+    return x.reshape(B, H * 2, W * 2, C)
 
 
 # ── Building blocks ───────────────────────────────────────────────────
@@ -839,33 +838,37 @@ def verify_round_trip(
 def l1_loss(pred: mx.array, target: mx.array) -> mx.array:
     """Mean absolute error (L1 loss).
 
+    Casts to float32 for reduction to avoid fp16 accumulation overflow.
+
     Args:
         pred: (B, 2, H, W, 3) rendered pair in [0, 255]
         target: (B, 2, H, W, 3) GT pair in [0, 255]
 
     Returns:
-        Scalar loss
+        Scalar loss (float32)
     """
-    return mx.mean(mx.abs(pred / 255.0 - target / 255.0))
+    diff = mx.abs(pred / 255.0 - target / 255.0)
+    return mx.mean(diff.astype(mx.float32))
 
 
 def edge_loss(pred: mx.array, target: mx.array) -> mx.array:
     """Horizontal gradient edge loss.
 
     Encourages the renderer to match edge structure, not just pixel values.
+    Casts to float32 for reduction to avoid fp16 accumulation overflow.
 
     Args:
         pred: (B, 2, H, W, 3) in [0, 255]
         target: (B, 2, H, W, 3) in [0, 255]
 
     Returns:
-        Scalar loss
+        Scalar loss (float32)
     """
     p = pred / 255.0
     t = target / 255.0
     # Horizontal gradient: diff along W axis
-    edge_p = mx.mean(mx.abs(p[:, :, :, 1:, :] - p[:, :, :, :-1, :]))
-    edge_t = mx.mean(mx.abs(t[:, :, :, 1:, :] - t[:, :, :, :-1, :]))
+    edge_p = mx.mean(mx.abs(p[:, :, :, 1:, :] - p[:, :, :, :-1, :]).astype(mx.float32))
+    edge_t = mx.mean(mx.abs(t[:, :, :, 1:, :] - t[:, :, :, :-1, :]).astype(mx.float32))
     return mx.abs(edge_p - edge_t)
 
 

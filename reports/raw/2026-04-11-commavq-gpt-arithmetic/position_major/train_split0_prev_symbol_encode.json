@@ -1,0 +1,13 @@
+{
+  "command": "lossless_prev_symbol_encode",
+  "source_path": "/Users/adpena/Projects/pact/reports/raw/2026-04-11-commavq-gpt-arithmetic/position_major/train_split0.bin",
+  "encoded_path": "/Users/adpena/Projects/pact/reports/raw/2026-04-11-commavq-gpt-arithmetic/position_major/train_split0.tpc",
+  "token_count": 384322500,
+  "context_count": 1026,
+  "header_bytes": 4115,
+  "payload_bytes": 232168905,
+  "restored_dtype": "uint16",
+  "original_bytes": 768645000,
+  "encoded_bytes": 232173020,
+  "compression_ratio": 3.3106559926730506
+}

@@ -21,8 +21,10 @@ from .lossless.arithmetic import (
     materialize_gpt_arithmetic_stream,
     write_symbol_frequency_report,
 )
+from .lossless.frequency_coder import benchmark_prev_symbol_frequency_file
+from .lossless.frequency_coder import decode_uint16_prev_symbol_file
 from .lossless.frequency_coder import encode_uint16_frequency_file
-from .lossless.frequency_coder import benchmark_prev_symbol_frequency_stream
+from .lossless.frequency_coder import encode_uint16_prev_symbol_file
 from .lossless.codecs import (
     compress_lossless_file,
     decompress_lossless_file,
@@ -134,6 +136,16 @@ def build_parser() -> argparse.ArgumentParser:
     sp.add_argument("--tokens", required=True)
     sp.add_argument("--output", required=True)
     sp.set_defaults(lossless_handler="frequency_encode")
+
+    sp = lossless_sub.add_parser("prev-symbol-encode", help="Encode a prepared token stream with the previous-symbol conditional coder")
+    sp.add_argument("--tokens", required=True)
+    sp.add_argument("--output", required=True)
+    sp.set_defaults(lossless_handler="prev_symbol_encode")
+
+    sp = lossless_sub.add_parser("prev-symbol-decode", help="Restore a previous-symbol encoded token stream")
+    sp.add_argument("--encoded", required=True)
+    sp.add_argument("--output", required=True)
+    sp.set_defaults(lossless_handler="prev_symbol_decode")
 
     sp = lossless_sub.add_parser("prev-symbol-benchmark", help="Benchmark a previous-symbol conditional static coder over a prepared stream")
     sp.add_argument("--tokens", required=True)
@@ -336,18 +348,32 @@ def _run_lossless(args: argparse.Namespace) -> dict[str, Any]:
         print(json.dumps(payload, indent=2))
         return payload
 
-    if args.lossless_handler == "prev_symbol_benchmark":
-        import numpy as np
+    if args.lossless_handler == "prev_symbol_encode":
+        payload = encode_uint16_prev_symbol_file(
+            Path(args.tokens),
+            Path(args.output),
+        )
+        print(json.dumps(payload, indent=2))
+        return payload
 
-        token_path = Path(args.tokens)
-        if token_path.stat().st_size % 2 != 0:
-            raise ValueError(f"token stream must contain an even number of bytes: {token_path}")
-        tokens = np.fromfile(token_path, dtype=np.uint16)
-        if args.max_tokens is not None:
-            if args.max_tokens <= 0:
-                raise ValueError("--max-tokens must be positive")
-            tokens = tokens[: args.max_tokens]
-        payload = benchmark_prev_symbol_frequency_stream(tokens)
+    if args.lossless_handler == "prev_symbol_decode":
+        restored_path = decode_uint16_prev_symbol_file(
+            Path(args.encoded),
+            Path(args.output),
+        )
+        payload = {
+            "command": "lossless_prev_symbol_decode",
+            "encoded_path": str(Path(args.encoded)),
+            "restored_path": restored_path,
+        }
+        print(json.dumps(payload, indent=2))
+        return payload
+
+    if args.lossless_handler == "prev_symbol_benchmark":
+        payload = benchmark_prev_symbol_frequency_file(
+            Path(args.tokens),
+            max_tokens=args.max_tokens,
+        )
         print(json.dumps(payload, indent=2))
         return payload
 

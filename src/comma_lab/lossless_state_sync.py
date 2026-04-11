@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import importlib
 import json
 import tempfile
 from pathlib import Path
@@ -12,13 +13,22 @@ if TYPE_CHECKING:
 
 
 def _lossless_result_type():
-    from tac.lossless.contracts import LosslessCompressionResult
-
+    LosslessCompressionResult = _lossless_symbol("contracts", "LosslessCompressionResult")
     return LosslessCompressionResult
 
 
+def _lossless_symbol(module_name: str, symbol_name: str):
+    try:
+        module = importlib.import_module(f"tac.lossless.{module_name}")
+    except ModuleNotFoundError as exc:
+        if exc.name != "tac":
+            raise
+        module = importlib.import_module(f"src.tac.lossless.{module_name}")
+    return getattr(module, symbol_name)
+
+
 def _render_lossless_latest(result) -> str:
-    from tac.lossless.state import render_lossless_latest
+    render_lossless_latest = _lossless_symbol("state", "render_lossless_latest")
 
     return render_lossless_latest(result)
 
@@ -127,6 +137,8 @@ def _results_row(result: "LosslessCompressionResult") -> dict[str, object]:
         "archive_bytes": result.archive_bytes,
         "original_bytes": result.original_bytes,
         "compression_rate": result.compression_rate,
+        "record_count": result.record_count,
+        "checked_items": result.checked_items,
         "event": "promotion",
     }
 
@@ -140,6 +152,8 @@ def _timeline_row(result: "LosslessCompressionResult") -> dict[str, object]:
         "archive_bytes": result.archive_bytes,
         "original_bytes": result.original_bytes,
         "archive_path": result.archive_path,
+        "record_count": result.record_count,
+        "checked_items": result.checked_items,
     }
 
 
@@ -148,14 +162,9 @@ def promote_record(repo_root: str | Path, *, record_path: str | Path | None = No
     canonical_path = canonical_record_path(root)
     source_path = Path(record_path) if record_path is not None else canonical_path
     result = _lossless_result_type()(**_load_json(source_path))
-    archive_path = Path(result.archive_path)
-    if not archive_path.exists():
-        raise FileNotFoundError(f"Lossless archive not found: {archive_path}")
-    actual_archive_bytes = archive_path.stat().st_size
-    if actual_archive_bytes != result.archive_bytes:
-        raise ValueError(
-            f"archive_bytes mismatch for {archive_path}: record={result.archive_bytes} actual={actual_archive_bytes}"
-        )
+    validate_lossless_result_artifact = _lossless_symbol("state", "validate_lossless_result_artifact")
+
+    validate_lossless_result_artifact(result)
 
     if source_path.resolve() != canonical_path.resolve():
         _atomic_write_json(canonical_path, result.__dict__)
@@ -166,6 +175,19 @@ def doctor_repo(repo_root: str | Path) -> DoctorReport:
     root = Path(repo_root)
     result = load_promoted_result(root)
     findings: list[DriftFinding] = []
+    validate_lossless_result_artifact = _lossless_symbol("state", "validate_lossless_result_artifact")
+
+    try:
+        validate_lossless_result_artifact(result)
+    except (FileNotFoundError, ValueError) as exc:
+        findings.append(
+            DriftFinding(
+                code="lossless_promoted_record_invalid",
+                severity="error",
+                path=".omx/state/lossless_promoted_result.json",
+                message=str(exc),
+            )
+        )
 
     surface_expectations = {
         "reports/lossless_latest.md": ("lossless_latest_stale", _render_lossless_latest(result)),
@@ -222,6 +244,8 @@ def doctor_repo(repo_root: str | Path) -> DoctorReport:
 def sync_repo(repo_root: str | Path) -> SyncResult:
     root = Path(repo_root)
     result = load_promoted_result(root)
+    validate_lossless_result_artifact = _lossless_symbol("state", "validate_lossless_result_artifact")
+    validate_lossless_result_artifact(result)
     findings = doctor_repo(root).findings
     changed_paths: list[str] = []
 

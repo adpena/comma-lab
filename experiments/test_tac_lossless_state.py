@@ -44,7 +44,7 @@ class TacLosslessStateTests(unittest.TestCase):
                 "# Lossless Latest\n\n"
                 "Current promoted lossless baseline is **`0.2697`** via `gpt_arithmetic_small` using `arithmetic_gpt`.\n\n"
                 "## promoted result\n\n"
-                "- Status: exact round-trip confirmed\n"
+                "- Status: exact round-trip confirmed over `3` items\n"
                 "- Profile: `gpt_arithmetic_small`\n"
                 "- Method: `arithmetic_gpt`\n"
                 "- Compression rate: **`0.2697`**\n"
@@ -69,10 +69,12 @@ class TacLosslessStateTests(unittest.TestCase):
                     {
                         "profile": "lzma_baseline",
                         "archive_path": str(archive_path),
-                        "archive_bytes": 200,
+                        "archive_bytes": archive_path.stat().st_size,
                         "original_bytes": 800,
-                        "compression_rate": 0.25,
+                        "compression_rate": 800 / archive_path.stat().st_size,
                         "method": "lzma",
+                        "record_count": 3,
+                        "checked_items": 3,
                     }
                 )
             )
@@ -117,9 +119,9 @@ class TacLosslessStateTests(unittest.TestCase):
             focus = (root / ".omx" / "state" / "lossless_focus.md").read_text()
             next_experiments = (root / ".omx" / "state" / "lossless_next_experiments.md").read_text()
             findings = (root / ".omx" / "research" / "lossless_findings.md").read_text()
-            self.assertIn("0.2500", latest)
+            self.assertIn("88.8889", latest)
             self.assertIn("Current promoted lossless baseline is", latest)
-            self.assertIn("exact round-trip confirmed", latest)
+            self.assertIn("exact round-trip confirmed over `3` items", latest)
             self.assertIn("lzma_baseline", focus)
             self.assertIn("current promoted baseline", focus)
             self.assertIn("Preserve the first measured lossless baseline", next_experiments)
@@ -135,6 +137,7 @@ class TacLosslessStateTests(unittest.TestCase):
         with tempfile.TemporaryDirectory() as tmpdir:
             root = Path(tmpdir)
             result_path = root / "lossless_result.json"
+            compression_rate = 800 / 200
             result_path.write_text(
                 json.dumps(
                     {
@@ -142,7 +145,7 @@ class TacLosslessStateTests(unittest.TestCase):
                         "archive_path": str(root / "missing.zip"),
                         "archive_bytes": 200,
                         "original_bytes": 800,
-                        "compression_rate": 0.25,
+                        "compression_rate": compression_rate,
                         "method": "lzma",
                     }
                 )
@@ -160,6 +163,7 @@ class TacLosslessStateTests(unittest.TestCase):
             archive_path.parent.mkdir(parents=True, exist_ok=True)
             archive_path.write_bytes(b"zip-bytes")
             result_path = root / "lossless_result.json"
+            compression_rate = 800 / (archive_path.stat().st_size + 1)
             result_path.write_text(
                 json.dumps(
                     {
@@ -167,13 +171,63 @@ class TacLosslessStateTests(unittest.TestCase):
                         "archive_path": str(archive_path),
                         "archive_bytes": archive_path.stat().st_size + 1,
                         "original_bytes": 800,
-                        "compression_rate": 0.25,
+                        "compression_rate": compression_rate,
                         "method": "lzma",
                     }
                 )
             )
 
             with self.assertRaisesRegex(ValueError, "archive_bytes"):
+                promote_lossless_result(repo_root=root, result_path=result_path)
+
+    def test_promote_lossless_result_requires_compression_rate_to_match_archive_bytes(self) -> None:
+        from tac.lossless.state import promote_lossless_result
+
+        with tempfile.TemporaryDirectory() as tmpdir:
+            root = Path(tmpdir)
+            archive_path = root / "submission" / "lossless.zip"
+            archive_path.parent.mkdir(parents=True, exist_ok=True)
+            archive_path.write_bytes(b"zip-bytes")
+            result_path = root / "lossless_result.json"
+            result_path.write_text(
+                json.dumps(
+                    {
+                        "profile": "lzma_baseline",
+                        "archive_path": str(archive_path),
+                        "archive_bytes": archive_path.stat().st_size,
+                        "original_bytes": 800,
+                        "compression_rate": 123.0,
+                        "method": "lzma",
+                    }
+                )
+            )
+
+            with self.assertRaisesRegex(ValueError, "compression_rate"):
+                promote_lossless_result(repo_root=root, result_path=result_path)
+
+    def test_promote_lossless_result_requires_exact_verification_evidence(self) -> None:
+        from tac.lossless.state import promote_lossless_result
+
+        with tempfile.TemporaryDirectory() as tmpdir:
+            root = Path(tmpdir)
+            archive_path = root / "submission" / "lossless.zip"
+            archive_path.parent.mkdir(parents=True, exist_ok=True)
+            archive_path.write_bytes(b"zip-bytes")
+            result_path = root / "lossless_result.json"
+            result_path.write_text(
+                json.dumps(
+                    {
+                        "profile": "lzma_baseline",
+                        "archive_path": str(archive_path),
+                        "archive_bytes": archive_path.stat().st_size,
+                        "original_bytes": 800,
+                        "compression_rate": 800 / archive_path.stat().st_size,
+                        "method": "lzma",
+                    }
+                )
+            )
+
+            with self.assertRaisesRegex(ValueError, "checked_items"):
                 promote_lossless_result(repo_root=root, result_path=result_path)
 
     def test_promote_lossless_result_is_idempotent_and_deduplicates_ledgers(self) -> None:
@@ -188,10 +242,12 @@ class TacLosslessStateTests(unittest.TestCase):
             result_payload = {
                 "profile": "zpaq_baseline",
                 "archive_path": str(archive_path),
-                "archive_bytes": 300,
+                "archive_bytes": archive_path.stat().st_size,
                 "original_bytes": 1200,
-                "compression_rate": 0.25,
+                "compression_rate": 1200 / archive_path.stat().st_size,
                 "method": "zpaq",
+                "record_count": 4,
+                "checked_items": 4,
             }
             result_path.write_text(json.dumps(result_payload))
 
@@ -201,19 +257,23 @@ class TacLosslessStateTests(unittest.TestCase):
                 "profile": "zpaq_baseline",
                 "method": "zpaq",
                 "archive_path": str(archive_path),
-                "archive_bytes": 300,
+                "archive_bytes": archive_path.stat().st_size,
                 "original_bytes": 1200,
-                "compression_rate": 0.25,
+                "compression_rate": 1200 / archive_path.stat().st_size,
                 "event": "promotion",
+                "record_count": 4,
+                "checked_items": 4,
             }
             canonical_timeline_row = {
                 "event": "promotion",
                 "profile": "zpaq_baseline",
                 "method": "zpaq",
-                "compression_rate": 0.25,
-                "archive_bytes": 300,
+                "compression_rate": 1200 / archive_path.stat().st_size,
+                "archive_bytes": archive_path.stat().st_size,
                 "original_bytes": 1200,
                 "archive_path": str(archive_path),
+                "record_count": 4,
+                "checked_items": 4,
             }
             (reports / "lossless_results.jsonl").write_text(
                 "\n".join(
@@ -266,10 +326,12 @@ class TacLosslessStateTests(unittest.TestCase):
             result_payload = {
                 "profile": "lzma_baseline",
                 "archive_path": str(archive_path),
-                "archive_bytes": 200,
+                "archive_bytes": archive_path.stat().st_size,
                 "original_bytes": 800,
-                "compression_rate": 1.5,
+                "compression_rate": 800 / archive_path.stat().st_size,
                 "method": "lzma",
+                "record_count": 2,
+                "checked_items": 2,
             }
             result_path.write_text(json.dumps(result_payload))
 
@@ -281,17 +343,21 @@ class TacLosslessStateTests(unittest.TestCase):
                 "archive_path": "/tmp/old.zip",
                 "archive_bytes": 200,
                 "original_bytes": 800,
-                "compression_rate": 1.5,
+                "compression_rate": 800 / archive_path.stat().st_size,
                 "event": "promotion",
+                "record_count": 2,
+                "checked_items": 2,
             }
             stale_timeline = {
                 "event": "promotion",
                 "profile": "lzma_baseline",
                 "method": "lzma",
-                "compression_rate": 1.5,
+                "compression_rate": 800 / archive_path.stat().st_size,
                 "archive_bytes": 200,
                 "original_bytes": 800,
                 "archive_path": "/tmp/old.zip",
+                "record_count": 2,
+                "checked_items": 2,
             }
             (reports / "lossless_results.jsonl").write_text(json.dumps(stale_row) + "\n")
             (reports / "lossless_timeline.jsonl").write_text(json.dumps(stale_timeline) + "\n")
@@ -321,10 +387,12 @@ class TacLosslessStateTests(unittest.TestCase):
                     {
                         "profile": "lzma_baseline",
                         "archive_path": str(archive_path),
-                        "archive_bytes": 200,
+                        "archive_bytes": archive_path.stat().st_size,
                         "original_bytes": 800,
-                        "compression_rate": 1.5,
+                        "compression_rate": 800 / archive_path.stat().st_size,
                         "method": "lzma",
+                        "record_count": 2,
+                        "checked_items": 2,
                     }
                 )
             )

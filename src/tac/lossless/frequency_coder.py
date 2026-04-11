@@ -566,20 +566,31 @@ def decode_uint16_prev_symbol_stream(encoded: bytes | bytearray | memoryview):
 
     first_symbol, cursor = _decode_varint(data, cursor, label="first symbol")
     context_count, cursor = _decode_varint(data, cursor, label="context count")
-    contexts: dict[int, tuple[int, int]] = {}
+    if first_symbol > UINT16_MAX:
+        raise ValueError("first symbol exceeds uint16 range")
+    context_sizes: dict[int, int] = {}
     previous_symbol = 0
     for index in range(context_count):
         delta, cursor = _decode_varint(data, cursor, label="context header")
         payload_size, cursor = _decode_varint(data, cursor, label="context header")
         symbol = delta if index == 0 else previous_symbol + delta
-        end = cursor + payload_size
-        if end > len(data):
-            raise ValueError("truncated payload")
-        contexts[symbol] = (cursor, end)
-        cursor = end
+        if symbol > UINT16_MAX:
+            raise ValueError("context symbol exceeds uint16 range")
+        if index > 0 and symbol <= previous_symbol:
+            raise ValueError("context symbols must be strictly increasing")
+        context_sizes[symbol] = payload_size
         previous_symbol = symbol
 
-    if cursor != len(data):
+    payload_cursor = cursor
+    contexts: dict[int, tuple[int, int]] = {}
+    for symbol, payload_size in context_sizes.items():
+        end = payload_cursor + payload_size
+        if end > len(data):
+            raise ValueError("truncated payload")
+        contexts[symbol] = (payload_cursor, end)
+        payload_cursor = end
+
+    if payload_cursor != len(data):
         raise ValueError("trailing payload bytes")
 
     decoded_contexts: dict[int, list[int]] = {}

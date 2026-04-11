@@ -14,12 +14,85 @@ if str(SRC_ROOT) not in sys.path:
 
 
 class TacLosslessFrequencyCoderTests(unittest.TestCase):
+    def test_encode_decode_prev_symbol_stream_roundtrip_restores_uint16_tokens(self) -> None:
+        from tac.lossless.frequency_coder import (
+            decode_uint16_prev_symbol_stream,
+            encode_uint16_prev_symbol_stream,
+        )
+
+        tokens = np.array([9, 9, 3, 3, 3, 7, 7, 0, 65535, 65535, 12, 12, 12, 12], dtype=np.uint16)
+
+        encoded = encode_uint16_prev_symbol_stream(tokens)
+        restored = decode_uint16_prev_symbol_stream(encoded.encoded_bytes)
+
+        self.assertTrue(np.array_equal(restored, tokens))
+        self.assertEqual(encoded.token_count, int(tokens.size))
+        self.assertGreater(encoded.context_count, 0)
+        self.assertEqual(encoded.header_bytes + encoded.payload_bytes, len(encoded.encoded_bytes))
+
+    def test_encode_decode_prev_symbol_stream_supports_empty_stream(self) -> None:
+        from tac.lossless.frequency_coder import (
+            decode_uint16_prev_symbol_stream,
+            encode_uint16_prev_symbol_stream,
+        )
+
+        tokens = np.array([], dtype=np.uint16)
+
+        encoded = encode_uint16_prev_symbol_stream(tokens)
+        restored = decode_uint16_prev_symbol_stream(encoded.encoded_bytes)
+
+        self.assertEqual(encoded.token_count, 0)
+        self.assertEqual(encoded.context_count, 0)
+        self.assertEqual(restored.tolist(), [])
+
+    def test_encode_decode_prev_symbol_file_roundtrip_restores_uint16_stream(self) -> None:
+        import tempfile
+
+        from tac.lossless.frequency_coder import (
+            decode_uint16_prev_symbol_file,
+            encode_uint16_prev_symbol_file,
+        )
+
+        with tempfile.TemporaryDirectory() as tmpdir:
+            root = Path(tmpdir)
+            source = root / "tokens.bin"
+            encoded_path = root / "tokens.tpc"
+            restored_path = root / "restored.bin"
+            tokens = np.array([9, 9, 3, 3, 3, 7, 7, 0, 65535, 65535, 12, 12, 12, 12], dtype=np.uint16)
+            tokens.tofile(source)
+
+            encoded = encode_uint16_prev_symbol_file(source, encoded_path)
+            restored = decode_uint16_prev_symbol_file(encoded_path, restored_path)
+
+            self.assertTrue(np.array_equal(np.fromfile(restored, dtype=np.uint16), tokens))
+            self.assertEqual(encoded["token_count"], int(tokens.size))
+            self.assertEqual(encoded["encoded_path"], str(encoded_path))
+
     def test_benchmark_prev_symbol_frequency_stream_reports_ratio(self) -> None:
         from tac.lossless.frequency_coder import benchmark_prev_symbol_frequency_stream
 
         tokens = np.array([9, 9, 3, 3, 3, 7, 7, 0, 65535, 65535, 12, 12, 12, 12], dtype=np.uint16)
 
         result = benchmark_prev_symbol_frequency_stream(tokens)
+
+        self.assertEqual(result["command"], "lossless_prev_symbol_frequency_benchmark")
+        self.assertEqual(result["token_count"], int(tokens.size))
+        self.assertGreater(result["encoded_bytes"], 0)
+        self.assertIn("compression_ratio", result)
+        self.assertIn("context_count", result)
+
+    def test_benchmark_prev_symbol_frequency_file_reports_ratio(self) -> None:
+        import tempfile
+
+        from tac.lossless.frequency_coder import benchmark_prev_symbol_frequency_file
+
+        with tempfile.TemporaryDirectory() as tmpdir:
+            root = Path(tmpdir)
+            source = root / "tokens.bin"
+            tokens = np.array([9, 9, 3, 3, 3, 7, 7, 0, 65535, 65535, 12, 12, 12, 12], dtype=np.uint16)
+            tokens.tofile(source)
+
+            result = benchmark_prev_symbol_frequency_file(source)
 
         self.assertEqual(result["command"], "lossless_prev_symbol_frequency_benchmark")
         self.assertEqual(result["token_count"], int(tokens.size))

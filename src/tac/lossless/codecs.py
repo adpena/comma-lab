@@ -154,7 +154,7 @@ def _compress_with_zpaq(*, source_name: str, payload: bytes, output_path: Path, 
         staged_source = stage_root / source_name
         _write_deterministic_stage_file(staged_source, payload)
         _run_external(
-            [binary, "add", str(output_path), staged_source.as_posix(), "-method", _zpaq_method_arg(config)],
+            [binary, "add", str(output_path), source_name, "-method", _zpaq_method_arg(config)],
             cwd=stage_root,
         )
     return output_path.stat().st_size

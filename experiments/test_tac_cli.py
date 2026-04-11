@@ -291,15 +291,72 @@ class TacCliTests(unittest.TestCase):
         self.assertEqual(result["command"], "lossless_frequency_encode")
         self.assertEqual(result["token_count"], 10)
 
+    def test_lossless_prev_symbol_encode_subcommand_writes_coded_stream(self) -> None:
+        mod = load_module()
+        with tempfile.TemporaryDirectory() as tmpdir:
+            root = Path(tmpdir)
+            token_path = root / "train.bin"
+            encoded_path = root / "train.tpc"
+            with mock.patch.object(
+                mod,
+                "encode_uint16_prev_symbol_file",
+                return_value={
+                    "command": "lossless_prev_symbol_encode",
+                    "source_path": str(token_path),
+                    "encoded_path": str(encoded_path),
+                    "token_count": 10,
+                    "context_count": 4,
+                },
+            ) as mocked:
+                result = mod.main(
+                    [
+                        "lossless",
+                        "prev-symbol-encode",
+                        "--tokens",
+                        str(token_path),
+                        "--output",
+                        str(encoded_path),
+                    ]
+                )
+
+        mocked.assert_called_once_with(token_path, encoded_path)
+        self.assertEqual(result["command"], "lossless_prev_symbol_encode")
+        self.assertEqual(result["context_count"], 4)
+
+    def test_lossless_prev_symbol_decode_subcommand_restores_coded_stream(self) -> None:
+        mod = load_module()
+        with tempfile.TemporaryDirectory() as tmpdir:
+            root = Path(tmpdir)
+            encoded_path = root / "train.tpc"
+            restored_path = root / "restored.bin"
+            with mock.patch.object(
+                mod,
+                "decode_uint16_prev_symbol_file",
+                return_value=str(restored_path),
+            ) as mocked:
+                result = mod.main(
+                    [
+                        "lossless",
+                        "prev-symbol-decode",
+                        "--encoded",
+                        str(encoded_path),
+                        "--output",
+                        str(restored_path),
+                    ]
+                )
+
+        mocked.assert_called_once_with(encoded_path, restored_path)
+        self.assertEqual(result["command"], "lossless_prev_symbol_decode")
+        self.assertEqual(result["restored_path"], str(restored_path))
+
     def test_lossless_prev_symbol_benchmark_subcommand_reports_conditional_ratio(self) -> None:
         mod = load_module()
         with tempfile.TemporaryDirectory() as tmpdir:
             root = Path(tmpdir)
             token_path = root / "train.bin"
-            token_path.write_bytes(b"\x00\x00")
             with mock.patch.object(
                 mod,
-                "benchmark_prev_symbol_frequency_stream",
+                "benchmark_prev_symbol_frequency_file",
                 return_value={
                     "command": "lossless_prev_symbol_frequency_benchmark",
                     "token_count": 10,
@@ -317,9 +374,56 @@ class TacCliTests(unittest.TestCase):
                     ]
                 )
 
-        mocked.assert_called_once()
+        mocked.assert_called_once_with(token_path, max_tokens=None)
         self.assertEqual(result["command"], "lossless_prev_symbol_frequency_benchmark")
         self.assertEqual(result["context_count"], 4)
+
+    def test_lossless_prev_symbol_benchmark_subcommand_supports_max_tokens(self) -> None:
+        mod = load_module()
+        with tempfile.TemporaryDirectory() as tmpdir:
+            root = Path(tmpdir)
+            token_path = root / "train.bin"
+            with mock.patch.object(
+                mod,
+                "benchmark_prev_symbol_frequency_file",
+                return_value={
+                    "command": "lossless_prev_symbol_frequency_benchmark",
+                    "token_count": 1,
+                    "context_count": 1,
+                    "encoded_bytes": 4,
+                    "compression_ratio": 0.5,
+                },
+            ) as mocked:
+                result = mod.main(
+                    [
+                        "lossless",
+                        "prev-symbol-benchmark",
+                        "--tokens",
+                        str(token_path),
+                        "--max-tokens",
+                        "1",
+                    ]
+                )
+
+        mocked.assert_called_once_with(token_path, max_tokens=1)
+        self.assertEqual(result["token_count"], 1)
+
+    def test_lossless_prev_symbol_benchmark_subcommand_rejects_odd_byte_stream(self) -> None:
+        mod = load_module()
+        with tempfile.TemporaryDirectory() as tmpdir:
+            root = Path(tmpdir)
+            token_path = root / "broken.bin"
+            token_path.write_bytes(b"\x01\x02\x03")
+
+            with self.assertRaisesRegex(ValueError, "even number of bytes"):
+                mod.main(
+                    [
+                        "lossless",
+                        "prev-symbol-benchmark",
+                        "--tokens",
+                        str(token_path),
+                    ]
+                )
 
     def test_lossless_package_subcommand_builds_submission_zip(self) -> None:
         mod = load_module()
@@ -577,10 +681,12 @@ class TacCliTests(unittest.TestCase):
                     {
                         "profile": "lzma_baseline",
                         "archive_path": str(archive_path),
-                        "archive_bytes": 2,
+                        "archive_bytes": archive_path.stat().st_size,
                         "original_bytes": 4,
-                        "compression_rate": 0.5,
+                        "compression_rate": 4 / archive_path.stat().st_size,
                         "method": "lzma",
+                        "record_count": 4,
+                        "checked_items": 4,
                     }
                 )
             )
@@ -600,8 +706,8 @@ class TacCliTests(unittest.TestCase):
             ledger = (reports / "lossless_results.jsonl").read_text()
 
         self.assertEqual(result["command"], "lossless_promote")
-        self.assertIn("0.5000", latest)
-        self.assertIn("\"compression_rate\": 0.5", ledger)
+        self.assertIn("1.3333", latest)
+        self.assertIn("\"compression_rate\": 1.3333333333333333", ledger)
 
 
 if __name__ == "__main__":

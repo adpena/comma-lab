@@ -4,6 +4,8 @@ import contextlib
 import importlib.util
 import io
 import json
+import os
+import subprocess
 import sys
 import tempfile
 import unittest
@@ -43,10 +45,12 @@ class LosslessStateSyncTests(unittest.TestCase):
             {
                 "profile": "lzma_baseline",
                 "archive_path": str(self.repo_root / "reports" / "lossless" / "submission.zip"),
-                "archive_bytes": 120,
+                "archive_bytes": 9,
                 "original_bytes": 480,
-                "compression_rate": 4.0,
+                "compression_rate": 480 / 9,
                 "method": "lzma",
+                "record_count": 5,
+                "checked_items": 5,
             },
         )
         archive = self.repo_root / "reports" / "lossless" / "submission.zip"
@@ -118,13 +122,13 @@ class LosslessStateSyncTests(unittest.TestCase):
             if line.strip()
         ]
 
-        self.assertIn("4.0000", latest)
+        self.assertIn("53.3333", latest)
         self.assertIn("lzma_baseline", focus)
         self.assertIn("promoted baseline", next_experiments)
         self.assertIn("separate from the lossy promotion flow", findings)
-        self.assertEqual(results_rows[-1]["compression_rate"], 4.0)
+        self.assertEqual(results_rows[-1]["compression_rate"], 480 / 9)
         self.assertEqual(results_rows[-1]["profile"], "lzma_baseline")
-        self.assertEqual(timeline_rows[-1]["compression_rate"], 4.0)
+        self.assertEqual(timeline_rows[-1]["compression_rate"], 480 / 9)
         self.assertEqual(timeline_rows[-1]["event"], "promotion")
 
         self.assertEqual((self.repo_root / "reports" / "latest.md").read_text(), "lossy latest\n")
@@ -132,6 +136,35 @@ class LosslessStateSyncTests(unittest.TestCase):
         self.assertEqual((self.repo_root / "reports" / "timeline.jsonl").read_text(), '{"score": 1.33}\n')
         self.assertEqual((self.repo_root / ".omx" / "state" / "current_focus.md").read_text(), "lossy focus\n")
         self.assertEqual((self.repo_root / ".omx" / "research" / "findings.md").read_text(), "lossy findings\n")
+
+    def test_doctor_flags_invalid_promoted_archive(self) -> None:
+        from src.comma_lab import lossless_state_sync
+
+        archive = self.repo_root / "reports" / "lossless" / "submission.zip"
+        archive.unlink()
+
+        report = lossless_state_sync.doctor_repo(self.repo_root)
+
+        self.assertIn("lossless_promoted_record_invalid", {finding.code for finding in report.findings})
+
+    def test_doctor_flags_invalid_promoted_compression_rate(self) -> None:
+        from src.comma_lab import lossless_state_sync
+
+        write_json(
+            self.repo_root / ".omx" / "state" / "lossless_promoted_result.json",
+            {
+                "profile": "lzma_baseline",
+                "archive_path": str(self.repo_root / "reports" / "lossless" / "submission.zip"),
+                "archive_bytes": 9,
+                "original_bytes": 480,
+                "compression_rate": 999.0,
+                "method": "lzma",
+            },
+        )
+
+        report = lossless_state_sync.doctor_repo(self.repo_root)
+
+        self.assertIn("lossless_promoted_record_invalid", {finding.code for finding in report.findings})
 
     def test_sync_repo_is_idempotent_after_repair(self) -> None:
         from src.comma_lab import lossless_state_sync
@@ -151,7 +184,59 @@ class LosslessStateSyncTests(unittest.TestCase):
 
         self.assertEqual(rc, 0)
         self.assertIn("lossless-state sync: changed 6 path(s)", stdout.getvalue())
-        self.assertIn("4.0000", (self.repo_root / "reports" / "lossless_latest.md").read_text())
+        self.assertIn("53.3333", (self.repo_root / "reports" / "lossless_latest.md").read_text())
+
+    def test_module_invocation_supports_lossless_state_doctor_without_py_path(self) -> None:
+        result = subprocess.run(
+            [
+                sys.executable,
+                "-m",
+                "src.comma_lab.cli",
+                "lossless-state",
+                "doctor",
+                "--repo-root",
+                str(self.repo_root),
+                "--json",
+            ],
+            check=False,
+            capture_output=True,
+            text=True,
+            cwd=str(ROOT),
+            env={key: value for key, value in os.environ.items() if key != "PYTHONPATH"},
+        )
+
+        self.assertEqual(result.returncode, 0, result.stderr)
+        self.assertIn("\"findings\"", result.stdout)
+
+    def test_module_invocation_supports_lossless_state_sync_without_py_path(self) -> None:
+        result = subprocess.run(
+            [
+                sys.executable,
+                "-m",
+                "src.comma_lab.cli",
+                "lossless-state",
+                "sync",
+                "--repo-root",
+                str(self.repo_root),
+            ],
+            check=False,
+            capture_output=True,
+            text=True,
+            cwd=str(ROOT),
+            env={key: value for key, value in os.environ.items() if key != "PYTHONPATH"},
+        )
+
+        self.assertEqual(result.returncode, 0, result.stderr)
+        self.assertIn("lossless-state sync:", result.stdout)
+
+    def test_sync_repo_refuses_invalid_promoted_record(self) -> None:
+        from src.comma_lab import lossless_state_sync
+
+        archive = self.repo_root / "reports" / "lossless" / "submission.zip"
+        archive.unlink()
+
+        with self.assertRaises(FileNotFoundError):
+            lossless_state_sync.sync_repo(self.repo_root)
 
     def test_cli_exposes_lossless_state_promote_surface(self) -> None:
         cli = load_cli_module()
@@ -164,10 +249,12 @@ class LosslessStateSyncTests(unittest.TestCase):
             {
                 "profile": "lzma_baseline",
                 "archive_path": str(promoted_archive),
-                "archive_bytes": 100,
+                "archive_bytes": promoted_archive.stat().st_size,
                 "original_bytes": 500,
-                "compression_rate": 5.0,
+                "compression_rate": 500 / promoted_archive.stat().st_size,
                 "method": "lzma",
+                "record_count": 5,
+                "checked_items": 5,
             },
         )
         (self.repo_root / ".omx" / "state" / "lossless_promoted_result.json").unlink()
@@ -188,8 +275,8 @@ class LosslessStateSyncTests(unittest.TestCase):
         self.assertEqual(rc, 0)
         self.assertIn("lossless-state promote: changed", stdout.getvalue())
         canonical = json.loads((self.repo_root / ".omx" / "state" / "lossless_promoted_result.json").read_text())
-        self.assertEqual(canonical["compression_rate"], 5.0)
-        self.assertIn("5.0000", (self.repo_root / "reports" / "lossless_latest.md").read_text())
+        self.assertEqual(canonical["compression_rate"], 500 / promoted_archive.stat().st_size)
+        self.assertIn("55.5556", (self.repo_root / "reports" / "lossless_latest.md").read_text())
 
     def test_lossless_state_promote_requires_archive_to_exist(self) -> None:
         from src.comma_lab import lossless_state_sync
@@ -202,7 +289,7 @@ class LosslessStateSyncTests(unittest.TestCase):
                 "archive_path": str(self.repo_root / "missing.zip"),
                 "archive_bytes": 100,
                 "original_bytes": 500,
-                "compression_rate": 5.0,
+                "compression_rate": 500 / 100,
                 "method": "lzma",
             },
         )
@@ -224,12 +311,56 @@ class LosslessStateSyncTests(unittest.TestCase):
                 "archive_path": str(archive),
                 "archive_bytes": archive.stat().st_size + 2,
                 "original_bytes": 500,
-                "compression_rate": 5.0,
+                "compression_rate": 500 / (archive.stat().st_size + 2),
                 "method": "lzma",
             },
         )
 
         with self.assertRaisesRegex(ValueError, "archive_bytes"):
+            lossless_state_sync.promote_record(self.repo_root, record_path=record)
+
+    def test_lossless_state_promote_requires_compression_rate_to_match_archive_bytes(self) -> None:
+        from src.comma_lab import lossless_state_sync
+
+        archive = self.repo_root / "reports" / "lossless" / "submission-v4.zip"
+        archive.parent.mkdir(parents=True, exist_ok=True)
+        archive.write_bytes(b"zip-bytes")
+        record = self.repo_root / "incoming_lossless_result.json"
+        write_json(
+            record,
+            {
+                "profile": "lzma_baseline",
+                "archive_path": str(archive),
+                "archive_bytes": archive.stat().st_size,
+                "original_bytes": 500,
+                "compression_rate": 999.0,
+                "method": "lzma",
+            },
+        )
+
+        with self.assertRaisesRegex(ValueError, "compression_rate"):
+            lossless_state_sync.promote_record(self.repo_root, record_path=record)
+
+    def test_lossless_state_promote_requires_exact_verification_evidence(self) -> None:
+        from src.comma_lab import lossless_state_sync
+
+        archive = self.repo_root / "reports" / "lossless" / "submission-v5.zip"
+        archive.parent.mkdir(parents=True, exist_ok=True)
+        archive.write_bytes(b"zip-bytes")
+        record = self.repo_root / "incoming_lossless_result.json"
+        write_json(
+            record,
+            {
+                "profile": "lzma_baseline",
+                "archive_path": str(archive),
+                "archive_bytes": archive.stat().st_size,
+                "original_bytes": 500,
+                "compression_rate": 500 / archive.stat().st_size,
+                "method": "lzma",
+            },
+        )
+
+        with self.assertRaisesRegex(ValueError, "checked_items"):
             lossless_state_sync.promote_record(self.repo_root, record_path=record)
 
 
