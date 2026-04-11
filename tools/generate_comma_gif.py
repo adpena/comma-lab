@@ -195,6 +195,41 @@ def _upscale_segnet_mask(mask: np.ndarray) -> np.ndarray:
     return np.stack([mono, mono, mono], axis=-1)
 
 
+def _upscale_segnet_diff(
+    ours_mask: np.ndarray,
+    baseline_mask: np.ndarray,
+) -> np.ndarray:
+    """Color-coded SegNet error diff between ours and baseline.
+
+    Returns (PANEL_H, PANEL_W, 3) uint8 with:
+      Red:   error in baseline only (we FIXED it)
+      Green: error in ours only (we INTRODUCED it — regression)
+      White: error in both (shared, irreducible)
+      Black: no error in either
+    """
+    from PIL import Image
+    ours_up = np.array(Image.fromarray(ours_mask, mode="L").resize(
+        (PANEL_W, PANEL_H), Image.NEAREST)) > 127
+    base_up = np.array(Image.fromarray(baseline_mask, mode="L").resize(
+        (PANEL_W, PANEL_H), Image.NEAREST)) > 127
+
+    canvas = np.zeros((PANEL_H, PANEL_W, 3), dtype=np.uint8)
+
+    # White: both have error (shared)
+    both = ours_up & base_up
+    canvas[both] = [255, 255, 255]
+
+    # Red: baseline only (we fixed)
+    fixed = base_up & ~ours_up
+    canvas[fixed] = [255, 60, 60]
+
+    # Green: ours only (regression)
+    regressed = ours_up & ~base_up
+    canvas[regressed] = [60, 255, 60]
+
+    return canvas
+
+
 def _render_posenet_chart(
     *,
     xs: list[int],
@@ -215,21 +250,22 @@ def _render_posenet_chart(
         fig.patch.set_facecolor("black")
         ax.set_facecolor("black")
 
-        if mode == "comparison" and secondary is not None and len(secondary) > 0:
+        # Always show baseline as faint reference when available
+        if secondary is not None and len(secondary) > 0:
             ax.plot(xs[:len(secondary)], secondary, color="#666666",
-                    linestyle="--", linewidth=0.7, label="baseline", alpha=0.8)
-            ax.plot(xs[:len(primary)], primary, color="#00ff88",
-                    linestyle="-", linewidth=0.9, label="ours")
+                    linestyle="--", linewidth=0.7, label="baseline", alpha=0.6)
+
+        if len(xs) > 0 and len(primary) > 0:
+            line_color = "#00ff88" if mode in ("ours", "comparison") else "#ffffff"
+            ax.plot(xs[:len(primary)], primary, color=line_color,
+                    linewidth=0.9, label="ours" if mode != "baseline" else "compressed")
+
+        if secondary is not None and len(secondary) > 0:
             ax.legend(
                 loc="upper right", fontsize=5, frameon=True,
                 facecolor="black", edgecolor="#333333", labelcolor="white",
                 handlelength=1.2, borderpad=0.3, labelspacing=0.2,
             )
-        else:
-            line_color = "#00ff88" if mode == "ours" else "#ffffff"
-            if len(xs) > 0 and len(primary) > 0:
-                ax.plot(xs[:len(primary)], primary, color=line_color,
-                        linewidth=0.9)
 
         # X axis: full video range
         ax.set_xlim(0, total_frames)
@@ -283,7 +319,7 @@ def _composite_frame(
     *,
     top_left_img: np.ndarray,
     top_right_img: np.ndarray,
-    segnet_mask: np.ndarray,
+    segnet_panel: np.ndarray,
     chart_rgb: np.ndarray,
     top_left_label: str,
     top_right_label: str,
@@ -301,7 +337,7 @@ def _composite_frame(
     # Resize video frames to panel size
     tl = _resize_frame_to_panel(top_left_img)
     tr = _resize_frame_to_panel(top_right_img)
-    bl = _upscale_segnet_mask(segnet_mask)
+    bl = segnet_panel  # already (PANEL_H, PANEL_W, 3) — either mono or color-coded diff
     br = chart_rgb  # already at panel size
 
     # Assemble 2x2 grid
@@ -462,10 +498,18 @@ def main() -> None:
                 top_right_img = filtered_chw[0].permute(1, 2, 0).to(torch.uint8).cpu().numpy()
                 seg_test_chw = filtered_chw
 
-            # SegNet error mask: binary white-on-black at SegNet resolution
+            # SegNet error mask
             gt_cls = get_segnet_classes(gt_chw, segnet)
             test_cls = get_segnet_classes(seg_test_chw, segnet)
-            seg_diff = ((test_cls != gt_cls).astype(np.uint8) * 255)  # (Hs, Ws)
+            ours_seg_diff = ((test_cls != gt_cls).astype(np.uint8) * 255)  # (Hs, Ws)
+
+            # Color-coded diff in ours/comparison mode (red=fixed, green=regression, white=both)
+            if args.mode in ("ours", "comparison") and need_postfilter:
+                baseline_cls = get_segnet_classes(baseline_chw, segnet)
+                baseline_seg_diff = ((baseline_cls != gt_cls).astype(np.uint8) * 255)
+                seg_panel = _upscale_segnet_diff(ours_seg_diff, baseline_seg_diff)
+            else:
+                seg_panel = _upscale_segnet_mask(ours_seg_diff)
 
             # PoseNet: compute on consecutive frame pairs
             if idx + stride < total_frames:
@@ -495,7 +539,7 @@ def main() -> None:
             chart_rgb = _render_posenet_chart(
                 xs=posenet_xs,
                 primary=posenet_primary_mses,
-                secondary=posenet_secondary_mses if args.mode == "comparison" else None,
+                secondary=posenet_secondary_mses if args.mode in ("comparison", "ours") else None,
                 mode=args.mode,
                 total_frames=args.total_video_frames,
             )
@@ -504,7 +548,7 @@ def main() -> None:
             frame_rgb = _composite_frame(
                 top_left_img=top_left_img,
                 top_right_img=top_right_img,
-                segnet_mask=seg_diff,
+                segnet_panel=seg_panel,
                 chart_rgb=chart_rgb,
                 top_left_label=top_left_label,
                 top_right_label=top_right_label,
