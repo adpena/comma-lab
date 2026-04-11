@@ -35,14 +35,12 @@ from pydantic import BaseModel, Field, model_validator
 
 from .data import pair_from_frames, pair_start_indices, saliency_for_pair
 from .losses import (
-    band_orthogonality_loss,
     dual_saliency_reconstruction_loss,
     eval_scorer_loss,
     feature_matching_loss,
     focal_segnet_ste_loss,
     frequency_aware_loss,
     kl_distill_scorer_loss,
-    output_decorrelation_loss,
     posenet_embedding_loss,
     saliency_reconstruction_loss,
 
@@ -1357,8 +1355,9 @@ class Trainer:
                             filtered, gt_pair, posenet, segnet,
                         )
                     # Compute GT SegNet log-probs for KL loss
+                    # gt_pair is (B,T,H,W,C) but segnet.preprocess_input expects (B,T,C,H,W)
                     with torch.no_grad():
-                        _gt_seg_input = segnet.preprocess_input(gt_pair)
+                        _gt_seg_input = segnet.preprocess_input(_hwc_to_chw(gt_pair))
                         _gt_seg_logits = segnet(_gt_seg_input)
                         _gt_log_probs = torch.nn.functional.log_softmax(_gt_seg_logits, dim=1)
                     kl_loss, _kl_val, _kl_disagree = segnet_kl_divergence_loss(
