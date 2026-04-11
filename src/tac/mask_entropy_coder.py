@@ -17,6 +17,7 @@ Strategy: two-pass encoding picks the smaller of two representations:
 Both methods share the same LZMA backend. The encoder picks whichever
 produces smaller output, recorded in a 1-bit flag per method.
 """
+
 from __future__ import annotations
 
 import io
@@ -58,6 +59,7 @@ def _read_varint_from(data: bytes, pos: int) -> tuple[int, int]:
 
 # ---------- Method A: full-frame delta ----------
 
+
 def _build_fulldelta_payload(masks_np: np.ndarray) -> bytes:
     """Build payload: frame 0 raw + delta frames (0=same, class+1=changed)."""
     N = masks_np.shape[0]
@@ -82,6 +84,7 @@ def _decode_fulldelta_payload(raw: bytes, N: int, H: int, W: int) -> np.ndarray:
 
 
 # ---------- Method B: sparse delta ----------
+
 
 def _build_sparse_payload(masks_np: np.ndarray) -> bytes:
     """Build payload: RLE keyframe + sparse deltas (gap-coded positions)."""
@@ -126,7 +129,8 @@ def _decode_sparse_payload(raw: bytes, N: int, H: int, W: int) -> np.ndarray:
     frame0 = np.empty(frame_size, dtype=np.uint8)
     idx = 0
     while idx < frame_size:
-        val = raw[pos]; pos += 1
+        val = raw[pos]
+        pos += 1
         run, pos = _read_varint_from(raw, pos)
         frame0[idx : idx + run] = val
         idx += run
@@ -148,6 +152,7 @@ def _decode_sparse_payload(raw: bytes, N: int, H: int, W: int) -> np.ndarray:
 
 
 # ---------- Public API ----------
+
 
 def encode_masks_entropy(
     masks: torch.Tensor | np.ndarray,
@@ -202,14 +207,14 @@ def encode_masks_entropy(
 
     # Write file
     with open(output_path, "wb") as f:
-        f.write(MAGIC)                          # 4
-        f.write(struct.pack("<B", VERSION))      # 1
-        f.write(struct.pack("<B", backend_id))   # 1
-        f.write(struct.pack("<I", N))            # 4
-        f.write(struct.pack("<H", H))            # 2
-        f.write(struct.pack("<H", W))            # 2
-        f.write(struct.pack("<B", method))       # 1
-        f.write(struct.pack("<I", raw_size))     # 4
+        f.write(MAGIC)  # 4
+        f.write(struct.pack("<B", VERSION))  # 1
+        f.write(struct.pack("<B", backend_id))  # 1
+        f.write(struct.pack("<I", N))  # 4
+        f.write(struct.pack("<H", H))  # 2
+        f.write(struct.pack("<H", W))  # 2
+        f.write(struct.pack("<B", method))  # 1
+        f.write(struct.pack("<I", raw_size))  # 4
         f.write(compressed)
 
     size = output_path.stat().st_size
@@ -238,20 +243,28 @@ def decode_masks_entropy(
         data = f.read()
 
     pos = 0
-    magic = data[pos:pos + 4]; pos += 4
+    magic = data[pos : pos + 4]
+    pos += 4
     if magic != MAGIC:
         raise ValueError(f"Invalid magic: {magic!r}")
 
-    version = data[pos]; pos += 1
+    version = data[pos]
+    pos += 1
     if version != VERSION:
         raise ValueError(f"Unknown version: {version}")
 
-    backend_id = data[pos]; pos += 1
-    N = struct.unpack_from("<I", data, pos)[0]; pos += 4
-    H = struct.unpack_from("<H", data, pos)[0]; pos += 2
-    W = struct.unpack_from("<H", data, pos)[0]; pos += 2
-    method = data[pos]; pos += 1
-    raw_size = struct.unpack_from("<I", data, pos)[0]; pos += 4
+    backend_id = data[pos]
+    pos += 1
+    N = struct.unpack_from("<I", data, pos)[0]
+    pos += 4
+    H = struct.unpack_from("<H", data, pos)[0]
+    pos += 2
+    W = struct.unpack_from("<H", data, pos)[0]
+    pos += 2
+    method = data[pos]
+    pos += 1
+    raw_size = struct.unpack_from("<I", data, pos)[0]
+    pos += 4
 
     compressed = data[pos:]
 
@@ -274,6 +287,7 @@ def decode_masks_entropy(
 
 # ---------- Test ----------
 
+
 def test_roundtrip(
     num_frames: int = 1200,
     H: int = 384,
@@ -285,10 +299,10 @@ def test_roundtrip(
 
     results = {}
     scenarios = [
-        "static",        # zero change (identical frames)
-        "boundary",      # coherent boundary shifts (realistic driving)
-        "random_0.5pct", # 0.5% random scatter (adversarial)
-        "random_2pct",   # 2% random scatter (extreme adversarial)
+        "static",  # zero change (identical frames)
+        "boundary",  # coherent boundary shifts (realistic driving)
+        "random_0.5pct",  # 0.5% random scatter (adversarial)
+        "random_2pct",  # 2% random scatter (extreme adversarial)
     ]
 
     for scenario in scenarios:
@@ -388,6 +402,5 @@ if __name__ == "__main__":
             f"  {key}: {r['size_bytes']:,} bytes | "
             f"{r['vs_av1_pct']}% of AV1 | "
             f"ratio={r['ratio']:.6f} | "
-
             f"enc={r['encode_sec']}s dec={r['decode_sec']}s | {status}"
         )

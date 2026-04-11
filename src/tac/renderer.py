@@ -16,12 +16,12 @@ Key classes:
 Design target: ~300K parameters (matching competitor's proven size).
 Channel widths: 36→60→36 (compact) or 48→80→48 (extended capacity).
 """
+
 from __future__ import annotations
 
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
-
 
 # ── Building blocks ─────────────────────────────────────────────────────
 
@@ -56,9 +56,7 @@ class CLADENorm(nn.Module):
         # Downsample mask to feature resolution via nearest neighbor
         _, _, fH, fW = x.shape
         if mask.shape[1] != fH or mask.shape[2] != fW:
-            mask_ds = F.interpolate(
-                mask.unsqueeze(1).float(), size=(fH, fW), mode="nearest"
-            ).squeeze(1).long()
+            mask_ds = F.interpolate(mask.unsqueeze(1).float(), size=(fH, fW), mode="nearest").squeeze(1).long()
         else:
             mask_ds = mask
         # Look up per-class affine: (B, H, W) → (B, H, W, C) → (B, C, H, W)
@@ -329,10 +327,7 @@ def _manual_grid_sample(image: torch.Tensor, grid: torch.Tensor) -> torch.Tensor
     # Bilinear interpolation
     wx = wx.unsqueeze(1)  # (B, 1, H_out, W_out)
     wy = wy.unsqueeze(1)
-    return (v00 * (1 - wx) * (1 - wy) +
-            v01 * wx * (1 - wy) +
-            v10 * (1 - wx) * wy +
-            v11 * wx * wy)
+    return v00 * (1 - wx) * (1 - wy) + v01 * wx * (1 - wy) + v10 * (1 - wx) * wy + v11 * wx * wy
 
 
 def warp_with_flow(
@@ -481,11 +476,11 @@ class PairGenerator(nn.Module):
             (B, 2, H, W, 3) float tensor in [0, 255] — HWC pair format
         """
         # Render both frames directly
-        frame_t = self.renderer(mask_t)        # (B, 3, H, W)
-        frame_t1 = self.renderer(mask_t1)      # (B, 3, H, W)
+        frame_t = self.renderer(mask_t)  # (B, 3, H, W)
+        frame_t1 = self.renderer(mask_t1)  # (B, 3, H, W)
 
         # Predict flow and warp frame_t → frame_t1_warped
-        flow = self.motion(mask_t, mask_t1)    # (B, 2, H, W)
+        flow = self.motion(mask_t, mask_t1)  # (B, 2, H, W)
         frame_t1_warped = warp_with_flow(frame_t, flow)
 
         # Blend warped and directly-rendered frame_t+1
@@ -560,9 +555,11 @@ def build_renderer(
     total = pair_gen.param_count()
     r_count = renderer.param_count()
     m_count = motion.param_count()
-    print(f"[renderer] Built PairGenerator: {total:,} params "
-          f"(renderer={r_count:,}, motion={m_count:,}, blend=1, "
-          f"shared_embed={shared_embed.weight.numel()}, CLADE=on, sigmoid_out=on)")
+    print(
+        f"[renderer] Built PairGenerator: {total:,} params "
+        f"(renderer={r_count:,}, motion={m_count:,}, blend=1, "
+        f"shared_embed={shared_embed.weight.numel()}, CLADE=on, sigmoid_out=on)"
+    )
 
     return pair_gen
 
@@ -610,9 +607,7 @@ class AnalyticalMotionPredictor(nn.Module):
         nn.init.zeros_(self.refine[-1].weight)
         nn.init.zeros_(self.refine[-1].bias)
 
-    def _compute_centroids(
-        self, mask: torch.Tensor
-    ) -> torch.Tensor:
+    def _compute_centroids(self, mask: torch.Tensor) -> torch.Tensor:
         """Compute per-class centroids in normalized [-1, 1] coordinates.
 
         Args:
@@ -654,10 +649,10 @@ class AnalyticalMotionPredictor(nn.Module):
         # Simple boundary: pixels where any neighbor differs
         padded = F.pad(m, (1, 1, 1, 1), mode="replicate")
         shifts = [
-            padded[:, :, 1:-1, 2:],   # right
-            padded[:, :, 1:-1, :-2],   # left
-            padded[:, :, 2:, 1:-1],    # down
-            padded[:, :, :-2, 1:-1],   # up
+            padded[:, :, 1:-1, 2:],  # right
+            padded[:, :, 1:-1, :-2],  # left
+            padded[:, :, 2:, 1:-1],  # down
+            padded[:, :, :-2, 1:-1],  # up
         ]
         boundary = torch.zeros_like(m)
         for s in shifts:
@@ -682,9 +677,9 @@ class AnalyticalMotionPredictor(nn.Module):
         device = mask_t.device
 
         # 1. Compute per-class centroid displacement
-        centroids_t = self._compute_centroids(mask_t)    # (B, C, 2)
+        centroids_t = self._compute_centroids(mask_t)  # (B, C, 2)
         centroids_t1 = self._compute_centroids(mask_t1)  # (B, C, 2)
-        displacement = centroids_t1 - centroids_t         # (B, C, 2)
+        displacement = centroids_t1 - centroids_t  # (B, C, 2)
 
         # 2. Build analytical flow by assigning each pixel its class displacement
         # Use mask_t to determine which class each pixel belongs to
@@ -727,8 +722,13 @@ class DepthwiseSeparableBlock(nn.Module):
         super().__init__()
         pad = (kernel // 2) * dilation
         self.dw = nn.Conv2d(
-            channels, channels, kernel,
-            padding=pad, dilation=dilation, groups=channels, bias=False,
+            channels,
+            channels,
+            kernel,
+            padding=pad,
+            dilation=dilation,
+            groups=channels,
+            bias=False,
         )
         self.pw = nn.Conv2d(channels, channels, 1, bias=True)
         self.act = nn.ReLU(inplace=True)
@@ -770,12 +770,14 @@ class DepthwiseMaskRenderer(nn.Module):
         self.stem = nn.Conv2d(embed_dim, base_ch, 1, bias=True)
 
         # Cascade of depthwise separable blocks with increasing dilation
-        self.cascade = nn.ModuleList([
-            DepthwiseSeparableBlock(base_ch, kernel=3, dilation=1),
-            DepthwiseSeparableBlock(base_ch, kernel=3, dilation=2),
-            DepthwiseSeparableBlock(base_ch, kernel=3, dilation=4),
-            DepthwiseSeparableBlock(base_ch, kernel=3, dilation=8),
-        ])
+        self.cascade = nn.ModuleList(
+            [
+                DepthwiseSeparableBlock(base_ch, kernel=3, dilation=1),
+                DepthwiseSeparableBlock(base_ch, kernel=3, dilation=2),
+                DepthwiseSeparableBlock(base_ch, kernel=3, dilation=4),
+                DepthwiseSeparableBlock(base_ch, kernel=3, dilation=8),
+            ]
+        )
 
         # Residual projections (1x1) for skip connections in cascade
         self.skip_proj = nn.Conv2d(base_ch, base_ch, 1, bias=False)
@@ -890,15 +892,15 @@ class ChannelRecurrentRenderer(nn.Module):
         embed = self.embedding(masks).permute(0, 3, 1, 2).contiguous()
 
         # Sequential channel generation
-        y_raw = self.y_net(embed)                                   # (B, 1, H, W)
-        y_norm = torch.sigmoid(y_raw / 50.0)                       # normalized Y
+        y_raw = self.y_net(embed)  # (B, 1, H, W)
+        y_norm = torch.sigmoid(y_raw / 50.0)  # normalized Y
 
         u_input = torch.cat([embed, y_norm], dim=1)
-        u_raw = self.u_net(u_input)                                 # (B, 1, H, W)
+        u_raw = self.u_net(u_input)  # (B, 1, H, W)
         u_norm = torch.sigmoid(u_raw / 50.0)
 
         v_input = torch.cat([embed, y_norm, u_norm], dim=1)
-        v_raw = self.v_net(v_input)                                 # (B, 1, H, W)
+        v_raw = self.v_net(v_input)  # (B, 1, H, W)
         v_norm = torch.sigmoid(v_raw / 50.0)
 
         # YUV → RGB conversion (BT.601)

@@ -12,6 +12,7 @@ Available variants:
   - PixelShufflePostFilter: half-res 4-layer REN
   - PSDPostFilter: PixelShuffle + Dilated hybrid (council consensus)
 """
+
 from __future__ import annotations
 
 import torch
@@ -53,9 +54,7 @@ class DilatedPostFilter(nn.Module):
         super().__init__()
         pad = kernel // 2
         self.conv1 = nn.Conv2d(3, hidden, kernel, padding=pad, bias=True)
-        self.conv2 = nn.Conv2d(
-            hidden, hidden, kernel, padding=pad * 2, dilation=2, bias=True
-        )
+        self.conv2 = nn.Conv2d(hidden, hidden, kernel, padding=pad * 2, dilation=2, bias=True)
         self.conv3 = nn.Conv2d(hidden, 3, kernel, padding=pad, bias=True)
         self.act = nn.ReLU(inplace=True)
         nn.init.zeros_(self.conv3.weight)
@@ -117,9 +116,7 @@ class PSDPostFilter(nn.Module):
         self.down = nn.PixelUnshuffle(2)
         pad = kernel // 2
         self.conv1 = nn.Conv2d(12, hidden, kernel, padding=pad, bias=True)
-        self.conv2 = nn.Conv2d(
-            hidden, hidden, kernel, padding=pad * 2, dilation=2, bias=True
-        )
+        self.conv2 = nn.Conv2d(hidden, hidden, kernel, padding=pad * 2, dilation=2, bias=True)
         self.conv3 = nn.Conv2d(hidden, hidden, kernel, padding=pad, bias=True)
         self.conv4 = nn.Conv2d(hidden, 12, kernel, padding=pad, bias=True)
         self.act = nn.ReLU(inplace=True)
@@ -284,9 +281,7 @@ class GatedDilatedPostFilter(nn.Module):
         super().__init__()
         pad = kernel // 2
         self.conv1 = nn.Conv2d(3, hidden, kernel, padding=pad, bias=True)
-        self.conv2 = nn.Conv2d(
-            hidden, hidden, kernel, padding=pad * 2, dilation=2, bias=True
-        )
+        self.conv2 = nn.Conv2d(hidden, hidden, kernel, padding=pad * 2, dilation=2, bias=True)
         self.conv3 = nn.Conv2d(hidden, 3, kernel, padding=pad, bias=True)
         # Spatial gate: learns where to apply corrections (boundary-aware)
         self.gate = nn.Sequential(
@@ -347,7 +342,5 @@ def build_postfilter(
     """
     cls = VARIANTS.get(variant)
     if cls is None:
-        raise ValueError(
-            f"Unknown variant '{variant}'. Available: {list(VARIANTS.keys())}"
-        )
+        raise ValueError(f"Unknown variant '{variant}'. Available: {list(VARIANTS.keys())}")
     return cls(hidden=hidden, kernel=kernel)

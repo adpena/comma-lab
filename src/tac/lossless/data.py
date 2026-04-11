@@ -3,7 +3,6 @@ from __future__ import annotations
 from collections.abc import Iterable, Mapping, Sequence
 from dataclasses import dataclass
 
-
 BytesLike = bytes | bytearray | memoryview
 TokenSource = BytesLike | Iterable[int]
 

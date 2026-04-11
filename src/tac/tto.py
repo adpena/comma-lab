@@ -26,6 +26,7 @@ Usage::
     model = test_time_optimize(model, frames, n_steps=10)
     # model is now adapted to this specific content
 """
+
 from __future__ import annotations
 
 import copy
@@ -37,7 +38,6 @@ import torch
 import torch.nn as nn
 import torch.nn.functional as F
 
-
 # ---- Loss functions (self-supervised, no scorer needed) ---- #
 
 
@@ -47,16 +47,24 @@ def _sobel_edges(x: torch.Tensor) -> torch.Tensor:
     Returns (B, C, H-2, W-2) edge magnitudes.
     """
     # Sobel kernels
-    kx = torch.tensor(
-        [[-1, 0, 1], [-2, 0, 2], [-1, 0, 1]],
-        dtype=x.dtype,
-        device=x.device,
-    ).unsqueeze(0).unsqueeze(0)
-    ky = torch.tensor(
-        [[-1, -2, -1], [0, 0, 0], [1, 2, 1]],
-        dtype=x.dtype,
-        device=x.device,
-    ).unsqueeze(0).unsqueeze(0)
+    kx = (
+        torch.tensor(
+            [[-1, 0, 1], [-2, 0, 2], [-1, 0, 1]],
+            dtype=x.dtype,
+            device=x.device,
+        )
+        .unsqueeze(0)
+        .unsqueeze(0)
+    )
+    ky = (
+        torch.tensor(
+            [[-1, -2, -1], [0, 0, 0], [1, 2, 1]],
+            dtype=x.dtype,
+            device=x.device,
+        )
+        .unsqueeze(0)
+        .unsqueeze(0)
+    )
 
     B, C, H, W = x.shape
     # Process each channel independently
@@ -247,8 +255,8 @@ def posenet_target_loss(
         if target_idx >= targets.shape[0]:
             break
 
-        f0 = filtered[i * 2].unsqueeze(0)       # (1, 3, H, W)
-        f1 = filtered[i * 2 + 1].unsqueeze(0)   # (1, 3, H, W)
+        f0 = filtered[i * 2].unsqueeze(0)  # (1, 3, H, W)
+        f1 = filtered[i * 2 + 1].unsqueeze(0)  # (1, 3, H, W)
 
         # Build scorer input: (1, 2, C, H, W)
         pair = torch.stack([f0, f1], dim=1)  # (1, 2, 3, H, W)
@@ -285,9 +293,7 @@ def test_time_optimize(
     frames: torch.Tensor,
     n_steps: int = 10,
     lr: float = 1e-4,
-    loss_type: Literal[
-        "temporal_consistency", "reconstruction", "edge_preservation"
-    ] = "temporal_consistency",
+    loss_type: Literal["temporal_consistency", "reconstruction", "edge_preservation"] = "temporal_consistency",
     param_mode: Literal["last_layer", "bn_only", "all"] = "last_layer",
     grad_clip: float = 0.5,
     time_budget_seconds: float = 60.0,
@@ -327,9 +333,7 @@ def test_time_optimize(
     elif frames.ndim == 4 and frames.shape[1] == 3:
         frames = frames.float()
     else:
-        raise ValueError(
-            f"Expected frames shape (N, H, W, 3) or (N, 3, H, W), got {frames.shape}"
-        )
+        raise ValueError(f"Expected frames shape (N, H, W, 3) or (N, 3, H, W), got {frames.shape}")
 
     frames = frames.clamp(0, 255)
     device = next(model.parameters()).device
@@ -359,8 +363,7 @@ def test_time_optimize(
         if elapsed >= time_budget_seconds:
             if verbose:
                 print(
-                    f"TTO: time budget exhausted at step {step}/{n_steps} "
-                    f"({elapsed:.1f}s)",
+                    f"TTO: time budget exhausted at step {step}/{n_steps} ({elapsed:.1f}s)",
                     file=sys.stderr,
                 )
             break
@@ -372,7 +375,7 @@ def test_time_optimize(
             end = min(start + batch_size, N)
             batch = frames[start:end]
             if batch.shape[0] < 2:
-                batch = frames[:min(batch_size, N)]
+                batch = frames[: min(batch_size, N)]
         else:
             # Random sample for other losses
             indices = torch.randperm(N, device="cpu")[:batch_size]
@@ -390,8 +393,7 @@ def test_time_optimize(
 
         if verbose and (step + 1) % max(1, n_steps // 5) == 0:
             print(
-                f"TTO step {step + 1}/{n_steps}: loss={loss.item():.6f} "
-                f"({time.monotonic() - t0:.1f}s)",
+                f"TTO step {step + 1}/{n_steps}: loss={loss.item():.6f} ({time.monotonic() - t0:.1f}s)",
                 file=sys.stderr,
             )
 
@@ -403,8 +405,7 @@ def test_time_optimize(
         if losses[-1] > losses[0] * 1.5:
             if verbose:
                 print(
-                    f"TTO: quality check FAILED (loss {losses[0]:.6f} -> "
-                    f"{losses[-1]:.6f}), restoring original weights",
+                    f"TTO: quality check FAILED (loss {losses[0]:.6f} -> {losses[-1]:.6f}), restoring original weights",
                     file=sys.stderr,
                 )
             model.load_state_dict(original_state)
@@ -413,8 +414,7 @@ def test_time_optimize(
     if verbose:
         loss_str = f"{losses[0]:.6f} -> {losses[-1]:.6f}" if losses else "N/A"
         print(
-            f"TTO complete: {len(losses)} steps, loss {loss_str}, "
-            f"{elapsed:.1f}s elapsed",
+            f"TTO complete: {len(losses)} steps, loss {loss_str}, {elapsed:.1f}s elapsed",
             file=sys.stderr,
         )
 
@@ -471,9 +471,7 @@ def supervised_tto(
     elif frames.ndim == 4 and frames.shape[1] == 3:
         frames = frames.float()
     else:
-        raise ValueError(
-            f"Expected frames shape (N, H, W, 3) or (N, 3, H, W), got {frames.shape}"
-        )
+        raise ValueError(f"Expected frames shape (N, H, W, 3) or (N, 3, H, W), got {frames.shape}")
 
     frames = frames.clamp(0, 255)
     device = next(model.parameters()).device
@@ -495,8 +493,7 @@ def supervised_tto(
     params = _select_params(model, param_mode)
     if not params:
         if verbose:
-            print("Supervised TTO: no trainable parameters found, skipping",
-                  file=sys.stderr)
+            print("Supervised TTO: no trainable parameters found, skipping", file=sys.stderr)
         model.eval()
         return model
 
@@ -504,16 +501,19 @@ def supervised_tto(
     losses = []
 
     if verbose:
-        print(f"Supervised TTO: {n_steps} steps, {n_total_pairs} pairs, "
-              f"lr={lr}, param_mode={param_mode}, budget={time_budget_seconds}s",
-              file=sys.stderr)
+        print(
+            f"Supervised TTO: {n_steps} steps, {n_total_pairs} pairs, "
+            f"lr={lr}, param_mode={param_mode}, budget={time_budget_seconds}s",
+            file=sys.stderr,
+        )
 
     for step in range(n_steps):
         elapsed = time.monotonic() - t0
         if elapsed >= time_budget_seconds:
             if verbose:
-                print(f"Supervised TTO: time budget exhausted at step "
-                      f"{step}/{n_steps} ({elapsed:.1f}s)", file=sys.stderr)
+                print(
+                    f"Supervised TTO: time budget exhausted at step {step}/{n_steps} ({elapsed:.1f}s)", file=sys.stderr
+                )
             break
 
         # Sliding window over pairs
@@ -536,7 +536,11 @@ def supervised_tto(
 
         optimizer.zero_grad()
         loss = posenet_target_loss(
-            model, batch, posenet, targets, pair_start=pair_start,
+            model,
+            batch,
+            posenet,
+            targets,
+            pair_start=pair_start,
         )
         loss.backward()
 
@@ -545,9 +549,10 @@ def supervised_tto(
         losses.append(loss.item())
 
         if verbose and (step + 1) % max(1, n_steps // 5) == 0:
-            print(f"  Supervised TTO step {step + 1}/{n_steps}: "
-                  f"loss={loss.item():.8f} ({time.monotonic() - t0:.1f}s)",
-                  file=sys.stderr)
+            print(
+                f"  Supervised TTO step {step + 1}/{n_steps}: loss={loss.item():.8f} ({time.monotonic() - t0:.1f}s)",
+                file=sys.stderr,
+            )
 
     model.eval()
 
@@ -555,17 +560,18 @@ def supervised_tto(
     if quality_check and len(losses) >= 2:
         if losses[-1] > losses[0] * 1.5:
             if verbose:
-                print(f"Supervised TTO: quality check FAILED "
-                      f"(loss {losses[0]:.8f} -> {losses[-1]:.8f}), "
-                      f"restoring original weights", file=sys.stderr)
+                print(
+                    f"Supervised TTO: quality check FAILED "
+                    f"(loss {losses[0]:.8f} -> {losses[-1]:.8f}), "
+                    f"restoring original weights",
+                    file=sys.stderr,
+                )
             model.load_state_dict(original_state)
 
     elapsed = time.monotonic() - t0
     if verbose:
-        loss_str = (f"{losses[0]:.8f} -> {losses[-1]:.8f}"
-                    if losses else "N/A")
-        print(f"Supervised TTO complete: {len(losses)} steps, "
-              f"loss {loss_str}, {elapsed:.1f}s elapsed", file=sys.stderr)
+        loss_str = f"{losses[0]:.8f} -> {losses[-1]:.8f}" if losses else "N/A"
+        print(f"Supervised TTO complete: {len(losses)} steps, loss {loss_str}, {elapsed:.1f}s elapsed", file=sys.stderr)
 
     return model
 

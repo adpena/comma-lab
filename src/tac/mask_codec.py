@@ -22,6 +22,7 @@ Functions:
     - decode_masks_auto: decode with chosen codec
     - masks_to_pairs: build consecutive mask pairs for PairGenerator
 """
+
 from __future__ import annotations
 
 import shutil
@@ -71,8 +72,10 @@ def extract_masks(
                 # Resize to SegNet native resolution if needed
                 if t.shape[2] != SEGNET_H or t.shape[3] != SEGNET_W:
                     t = F.interpolate(
-                        t, size=(SEGNET_H, SEGNET_W),
-                        mode="bilinear", align_corners=False,
+                        t,
+                        size=(SEGNET_H, SEGNET_W),
+                        mode="bilinear",
+                        align_corners=False,
                     )
                 batch.append(t)
 
@@ -128,21 +131,33 @@ def encode_masks(
 
     # Write raw frames to ffmpeg stdin, encode as AV1
     cmd = [
-        "ffmpeg", "-y",
-        "-f", "rawvideo",
-        "-vcodec", "rawvideo",
-        "-s", f"{W}x{H}",
-        "-pix_fmt", "gray",
-        "-r", str(fps),
-        "-i", "pipe:0",
-        "-c:v", "libsvtav1",
-        "-crf", str(crf),
-        "-preset", "6",
+        "ffmpeg",
+        "-y",
+        "-f",
+        "rawvideo",
+        "-vcodec",
+        "rawvideo",
+        "-s",
+        f"{W}x{H}",
+        "-pix_fmt",
+        "gray",
+        "-r",
+        str(fps),
+        "-i",
+        "pipe:0",
+        "-c:v",
+        "libsvtav1",
+        "-crf",
+        str(crf),
+        "-preset",
+        "6",
         # Disable loop filter + CDEF for categorical mask data (Fraunhofer/NTT/Habr convergence)
         # AV1's restoration filters are designed for natural images and actively harm
         # discrete class boundaries. Disabling them preserves sharp mask edges at zero cost.
-        "-svtav1-params", "enable-restoration=0:enable-cdef=0",
-        "-pix_fmt", "yuv420p",
+        "-svtav1-params",
+        "enable-restoration=0:enable-cdef=0",
+        "-pix_fmt",
+        "yuv420p",
         "-an",
         str(output_path),
     ]
@@ -156,8 +171,7 @@ def encode_masks(
 
     if proc.returncode != 0:
         raise RuntimeError(
-            f"ffmpeg mask encoding failed (rc={proc.returncode}):\n"
-            f"{proc.stderr.decode('utf-8', errors='replace')}"
+            f"ffmpeg mask encoding failed (rc={proc.returncode}):\n{proc.stderr.decode('utf-8', errors='replace')}"
         )
 
     size = output_path.stat().st_size
@@ -187,10 +201,15 @@ def decode_masks(
 
     # Probe video dimensions
     probe_cmd = [
-        "ffprobe", "-v", "error",
-        "-select_streams", "v:0",
-        "-show_entries", "stream=width,height,nb_frames",
-        "-of", "csv=p=0",
+        "ffprobe",
+        "-v",
+        "error",
+        "-select_streams",
+        "v:0",
+        "-show_entries",
+        "stream=width,height,nb_frames",
+        "-of",
+        "csv=p=0",
         str(mask_video_path),
     ]
     probe = subprocess.run(probe_cmd, capture_output=True, text=True, timeout=30)
@@ -203,25 +222,25 @@ def decode_masks(
     # Decode to raw gray frames
     cmd = [
         "ffmpeg",
-        "-i", str(mask_video_path),
-        "-f", "rawvideo",
-        "-pix_fmt", "gray",
-        "-v", "error",
+        "-i",
+        str(mask_video_path),
+        "-f",
+        "rawvideo",
+        "-pix_fmt",
+        "gray",
+        "-v",
+        "error",
         "pipe:1",
     ]
     proc = subprocess.run(cmd, capture_output=True, timeout=300)
     if proc.returncode != 0:
-        raise RuntimeError(
-            f"ffmpeg mask decoding failed:\n{proc.stderr.decode('utf-8', errors='replace')}"
-        )
+        raise RuntimeError(f"ffmpeg mask decoding failed:\n{proc.stderr.decode('utf-8', errors='replace')}")
 
     raw = np.frombuffer(proc.stdout, dtype=np.uint8)
     frame_size = H * W
     N = len(raw) // frame_size
     if len(raw) % frame_size != 0:
-        raise ValueError(
-            f"Decoded data size {len(raw)} not divisible by frame size {H}x{W}={frame_size}"
-        )
+        raise ValueError(f"Decoded data size {len(raw)} not divisible by frame size {H}x{W}={frame_size}")
 
     pixels = raw.reshape(N, H, W)
 
@@ -233,7 +252,7 @@ def decode_masks(
 
     result = torch.from_numpy(masks)
 
-    if expected_frames is not None and N != expected_frames:
+    if expected_frames is not None and expected_frames != N:
         print(f"[mask_codec] WARNING: expected {expected_frames} frames, got {N}")
 
     print(f"[mask_codec] Decoded {N} masks ({H}x{W}) from {mask_video_path}")
@@ -274,9 +293,7 @@ def encode_masks_vvc(
         File size in bytes
     """
     if not _check_vvc_available():
-        raise RuntimeError(
-            "vvencapp not found. Install with: brew install vvenc vvdec"
-        )
+        raise RuntimeError("vvencapp not found. Install with: brew install vvenc vvdec")
 
     output_path = Path(output_path)
     output_path.parent.mkdir(parents=True, exist_ok=True)
@@ -297,27 +314,36 @@ def encode_masks_vvc(
 
         cmd = [
             "vvencapp",
-            "-i", str(yuv_path),
-            "-s", f"{W}x{H}",
-            "-c", "yuv400",
-            "-r", str(fps),
-            "-f", str(N),
-            "--preset", preset,
-            "-q", str(qp),
-            "--qpa", "0",  # disable perceptual QP adaptation for categorical data
-            "-o", str(vvc_path),
+            "-i",
+            str(yuv_path),
+            "-s",
+            f"{W}x{H}",
+            "-c",
+            "yuv400",
+            "-r",
+            str(fps),
+            "-f",
+            str(N),
+            "--preset",
+            preset,
+            "-q",
+            str(qp),
+            "--qpa",
+            "0",  # disable perceptual QP adaptation for categorical data
+            "-o",
+            str(vvc_path),
         ]
 
         proc = subprocess.run(cmd, capture_output=True, timeout=600)
 
         if proc.returncode != 0:
             raise RuntimeError(
-                f"vvencapp encoding failed (rc={proc.returncode}):\n"
-                f"{proc.stderr.decode('utf-8', errors='replace')}"
+                f"vvencapp encoding failed (rc={proc.returncode}):\n{proc.stderr.decode('utf-8', errors='replace')}"
             )
 
         # Copy to final output path
         import shutil as _shutil
+
         _shutil.copy2(vvc_path, output_path)
 
     size = output_path.stat().st_size
@@ -344,9 +370,7 @@ def decode_masks_vvc(
         (N, H, W) long tensor with values in [0, NUM_CLASSES)
     """
     if not _check_vvc_available():
-        raise RuntimeError(
-            "vvdecapp not found. Install with: brew install vvenc vvdec"
-        )
+        raise RuntimeError("vvdecapp not found. Install with: brew install vvenc vvdec")
 
     vvc_path = Path(vvc_path)
     if not vvc_path.exists():
@@ -357,16 +381,17 @@ def decode_masks_vvc(
 
         cmd = [
             "vvdecapp",
-            "-b", str(vvc_path),
-            "-o", str(dec_yuv_path),
+            "-b",
+            str(vvc_path),
+            "-o",
+            str(dec_yuv_path),
         ]
 
         proc = subprocess.run(cmd, capture_output=True, timeout=300)
 
         if proc.returncode != 0:
             raise RuntimeError(
-                f"vvdecapp decoding failed (rc={proc.returncode}):\n"
-                f"{proc.stderr.decode('utf-8', errors='replace')}"
+                f"vvdecapp decoding failed (rc={proc.returncode}):\n{proc.stderr.decode('utf-8', errors='replace')}"
             )
 
         # vvdecapp outputs 10-bit YUV400 as 16-bit LE samples
@@ -381,11 +406,10 @@ def decode_masks_vvc(
 
     if total_samples % frame_size != 0:
         raise ValueError(
-            f"Decoded VVC data ({total_samples} samples) not divisible by "
-            f"frame size {SEGNET_H}x{SEGNET_W}={frame_size}"
+            f"Decoded VVC data ({total_samples} samples) not divisible by frame size {SEGNET_H}x{SEGNET_W}={frame_size}"
         )
 
-    decoded_10bit = decoded_raw[:N * frame_size].reshape(N, SEGNET_H, SEGNET_W)
+    decoded_10bit = decoded_raw[: N * frame_size].reshape(N, SEGNET_H, SEGNET_W)
 
     # Convert 10-bit back to 8-bit (VVC shifts 8-bit input left by 2)
     decoded_pixels = (decoded_10bit >> 2).astype(np.uint8)
@@ -397,7 +421,7 @@ def decode_masks_vvc(
 
     result = torch.from_numpy(masks)
 
-    if expected_frames is not None and N != expected_frames:
+    if expected_frames is not None and expected_frames != N:
         print(f"[mask_codec] WARNING: expected {expected_frames} frames, got {N}")
 
     print(f"[mask_codec] VVC decoded {N} masks ({SEGNET_H}x{SEGNET_W}) from {vvc_path}")
@@ -458,7 +482,7 @@ def sharpen_mask_boundaries(
 
             # Restore small components that existed in original but vanished
             for comp_id in range(1, n_original + 1):
-                comp_mask = (original_labels == comp_id)
+                comp_mask = original_labels == comp_id
                 comp_area = comp_mask.sum()
                 # If this component survived opening, skip
                 if (opened[comp_mask]).any():
@@ -524,18 +548,30 @@ def encode_masks_monochrome(
     pixels = (masks * scale_factor).clamp(0, 255).to(torch.uint8).numpy()
 
     cmd = [
-        "ffmpeg", "-y",
-        "-f", "rawvideo",
-        "-vcodec", "rawvideo",
-        "-s", f"{W}x{H}",
-        "-pix_fmt", "gray",
-        "-r", str(fps),
-        "-i", "pipe:0",
-        "-c:v", "libsvtav1",
-        "-crf", str(crf),
-        "-preset", "6",
-        "-svtav1-params", "enable-restoration=0:enable-cdef=0",
-        "-pix_fmt", "gray",  # monochrome output
+        "ffmpeg",
+        "-y",
+        "-f",
+        "rawvideo",
+        "-vcodec",
+        "rawvideo",
+        "-s",
+        f"{W}x{H}",
+        "-pix_fmt",
+        "gray",
+        "-r",
+        str(fps),
+        "-i",
+        "pipe:0",
+        "-c:v",
+        "libsvtav1",
+        "-crf",
+        str(crf),
+        "-preset",
+        "6",
+        "-svtav1-params",
+        "enable-restoration=0:enable-cdef=0",
+        "-pix_fmt",
+        "gray",  # monochrome output
         "-an",
         str(output_path),
     ]
@@ -613,7 +649,7 @@ def restore_thin_structures(
             labels, n_components = ndimage.label(key_binary)
 
             for comp_id in range(1, n_components + 1):
-                comp_mask = (labels == comp_id)
+                comp_mask = labels == comp_id
                 area = comp_mask.sum()
 
                 # Only restore thin/small structures
@@ -746,7 +782,8 @@ def encode_masks_semantic_rate(
         File size in bytes
     """
     qp_offsets = compute_semantic_qp_offsets(
-        masks, base_qp=crf,
+        masks,
+        base_qp=crf,
         rare_qp_delta=rare_qp_delta,
         dominant_qp_delta=dominant_qp_delta,
     )
@@ -785,7 +822,7 @@ def masks_to_pairs(
     for i in range(0, len(masks) - 1, 2):
         if i + 1 >= len(masks):
             break
-        m_t = masks[i].unsqueeze(0)    # (1, H, W)
+        m_t = masks[i].unsqueeze(0)  # (1, H, W)
         m_t1 = masks[i + 1].unsqueeze(0)  # (1, H, W)
         pairs.append((m_t, m_t1))
     return pairs
@@ -831,6 +868,7 @@ def encode_masks_auto(
         return encode_masks_vvc(masks, output_path, **kwargs)
     elif codec == "entropy":
         from .mask_entropy_coder import encode_masks_entropy
+
         return encode_masks_entropy(masks, output_path, **kwargs)
     else:
         raise ValueError(f"Unknown mask codec: {codec!r} (use 'av1', 'vvc', or 'entropy')")
@@ -857,6 +895,7 @@ def decode_masks_auto(
         return decode_masks_vvc(mask_path, **kwargs)
     elif codec == "entropy":
         from .mask_entropy_coder import decode_masks_entropy
+
         return decode_masks_entropy(mask_path, **kwargs)
     else:
         raise ValueError(f"Unknown mask codec: {codec!r} (use 'av1', 'vvc', or 'entropy')")

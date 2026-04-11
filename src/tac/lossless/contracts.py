@@ -1,7 +1,6 @@
 from __future__ import annotations
 
 from dataclasses import dataclass
-from typing import Optional
 
 
 @dataclass(frozen=True)
@@ -12,11 +11,11 @@ class LosslessCompressionResult:
     original_bytes: int
     compression_rate: float
     method: str
-    payload_bytes: Optional[int] = None
-    record_count: Optional[int] = None
-    checked_items: Optional[int] = None
-    split: Optional[list[str]] = None
-    evidence_root: Optional[str] = None
+    payload_bytes: int | None = None
+    record_count: int | None = None
+    checked_items: int | None = None
+    split: list[str] | None = None
+    evidence_root: str | None = None
 
     def __post_init__(self) -> None:
         if self.archive_bytes < 0:

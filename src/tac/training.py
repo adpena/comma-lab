@@ -17,6 +17,7 @@ Usage::
     trainer = Trainer(model, config)
     trainer.fit(comp_pairs, gt_pairs, posenet, segnet, sal_weights)
 """
+
 from __future__ import annotations
 
 import atexit
@@ -87,8 +88,11 @@ class TrainConfig(BaseModel):
     loss_mode: Literal["standard", "temperature", "focal_ste", "kl_distill", "pcgrad", "feature_match"] = "standard"
     temperature_start: float = Field(1.0, gt=0.0)
     temperature_end: float = Field(0.05, gt=0.0)
-    temp_schedule: str = Field("exponential", pattern=r"^(linear|exponential)$",
-                                description="Temperature decay: 'linear' or 'exponential' (recommended)")
+    temp_schedule: str = Field(
+        "exponential",
+        pattern=r"^(linear|exponential)$",
+        description="Temperature decay: 'linear' or 'exponential' (recommended)",
+    )
     focal_gamma: float = Field(2.0, ge=0.0)
     segnet_loss_weight: float = Field(100.0, ge=0.0)
     use_dual_saliency: bool = False
@@ -97,36 +101,60 @@ class TrainConfig(BaseModel):
     # Training dynamics
     accum_steps: int = Field(4, ge=1, le=64)
     eval_every: int = Field(5, ge=1, description="Evaluate int8 checkpoint every N epochs")
-    hard_frame_ratio: float = Field(0.0, ge=0.0, le=1.0,
-                                     description="Fraction of training pairs to oversample from hardest SegNet frames. "
-                                     "0.0 = uniform sampling, 0.5 = half hard / half uniform.")
-    error_replay_every: int = Field(0, ge=0,
-                                     description="Recompute hard-frame weights using current model output every N epochs. "
-                                     "0 = static (compute once at start). 200 = adaptive every 200 epochs.")
-    boundary_anneal: bool = Field(False, description="Couple boundary_weight to temperature: "
-                                  "increases boundary attention as T decreases (maintains gradient pressure)")
-    use_swa: bool = Field(False, description="Stochastic Weight Averaging over final 20% of training. "
-                          "Wider minima → better int8 robustness.")
-    adaptive_rebalance: bool = Field(False, description="Enable adaptive weight rebalancing from "
-                                     "src/tac/adaptive.py. Derives segnet_weight and boundary_weight "
-                                     "from current (pose, seg) at each eval epoch.")
+    hard_frame_ratio: float = Field(
+        0.0,
+        ge=0.0,
+        le=1.0,
+        description="Fraction of training pairs to oversample from hardest SegNet frames. "
+        "0.0 = uniform sampling, 0.5 = half hard / half uniform.",
+    )
+    error_replay_every: int = Field(
+        0,
+        ge=0,
+        description="Recompute hard-frame weights using current model output every N epochs. "
+        "0 = static (compute once at start). 200 = adaptive every 200 epochs.",
+    )
+    boundary_anneal: bool = Field(
+        False,
+        description="Couple boundary_weight to temperature: "
+        "increases boundary attention as T decreases (maintains gradient pressure)",
+    )
+    use_swa: bool = Field(
+        False,
+        description="Stochastic Weight Averaging over final 20% of training. Wider minima → better int8 robustness.",
+    )
+    adaptive_rebalance: bool = Field(
+        False,
+        description="Enable adaptive weight rebalancing from "
+        "src/tac/adaptive.py. Derives segnet_weight and boundary_weight "
+        "from current (pose, seg) at each eval epoch.",
+    )
     rebalance_every: int = Field(50, ge=1, description="Epochs between adaptive weight updates")
     boundary_fraction: float = Field(0.05, gt=0.0, lt=1.0, description="Measured boundary pixel fraction (beta)")
-    eval_holdout: float = Field(0.0, ge=0.0, le=0.5,
-                                description="Fraction of pairs held out for eval. "
-                                "0.0 = contest mode (train+eval on all pairs). "
-                                "0.25 = production mode (25% held-out eval split).")
+    eval_holdout: float = Field(
+        0.0,
+        ge=0.0,
+        le=0.5,
+        description="Fraction of pairs held out for eval. "
+        "0.0 = contest mode (train+eval on all pairs). "
+        "0.25 = production mode (25% held-out eval split).",
+    )
     use_lsq: bool = Field(False, description="Enable Learned Step Size Quantization")
 
     # Yousfi council tricks
-    even_frame_skip_seg: bool = Field(False, description="Trick 3: skip SegNet loss on even frames. "
-                                      "SegNet only evaluates odd frames, so even frames only need "
-                                      "PoseNet pair fidelity. Reduces multi-task conflict surface.")
-    use_frequency_loss: bool = Field(False, description="Trick 2: add wavelet frequency-domain shaping loss. "
-                                     "Penalizes mid-frequency deviation more than low/high frequency, "
-                                     "matching PoseNet's texture sensitivity profile.")
-    frequency_loss_weight: float = Field(0.1, ge=0.0, le=10.0,
-                                         description="Weight for frequency-domain loss (Trick 2)")
+    even_frame_skip_seg: bool = Field(
+        False,
+        description="Trick 3: skip SegNet loss on even frames. "
+        "SegNet only evaluates odd frames, so even frames only need "
+        "PoseNet pair fidelity. Reduces multi-task conflict surface.",
+    )
+    use_frequency_loss: bool = Field(
+        False,
+        description="Trick 2: add wavelet frequency-domain shaping loss. "
+        "Penalizes mid-frequency deviation more than low/high frequency, "
+        "matching PoseNet's texture sensitivity profile.",
+    )
+    frequency_loss_weight: float = Field(0.1, ge=0.0, le=10.0, description="Weight for frequency-domain loss (Trick 2)")
 
     # Resumption
     resume_from: str | None = None
@@ -134,9 +162,12 @@ class TrainConfig(BaseModel):
     # Wall-clock timeout (seconds). When training has been running for this long,
     # save a checkpoint and exit cleanly. Set to 0 to disable.
     # Kaggle P100 kernels have a 12h limit — use 39600 (11h) for safety margin.
-    wall_clock_timeout: int = Field(0, ge=0,
-                                     description="Max wall-clock seconds before emergency save + clean exit. "
-                                     "0 = no limit. 39600 = 11h (for 12h Kaggle kernels).")
+    wall_clock_timeout: int = Field(
+        0,
+        ge=0,
+        description="Max wall-clock seconds before emergency save + clean exit. "
+        "0 = no limit. 39600 = 11h (for 12h Kaggle kernels).",
+    )
 
     # Output
     output_dir: str = "experiments/postfilter_weights"
@@ -152,6 +183,7 @@ class TrainConfig(BaseModel):
             raise ValueError("temperature_end must be <= temperature_start")
         if self.loss_mode == "pcgrad" and self.accum_steps > 1:
             import warnings
+
             warnings.warn(
                 f"pcgrad with accum_steps={self.accum_steps}: gradient conflict detection "
                 f"only runs on first microbatch of each window. Consider accum_steps=1 "
@@ -209,7 +241,7 @@ class SWA:
 
     def update(self, ema):
         """Snapshot the EMA shadow weights into the running average."""
-        shadow = ema.shadow if hasattr(ema, 'shadow') else ema
+        shadow = ema.shadow if hasattr(ema, "shadow") else ema
         if self.avg is None:
             self.avg = {k: v.clone() for k, v in shadow.items()}
             self.count = 1
@@ -223,7 +255,7 @@ class SWA:
         """Replace the EMA shadow with the SWA average. Call before final save."""
         if self.avg is None:
             return
-        shadow = ema.shadow if hasattr(ema, 'shadow') else ema
+        shadow = ema.shadow if hasattr(ema, "shadow") else ema
         for k in self.avg:
             if k in shadow:
                 shadow[k].copy_(self.avg[k])
@@ -310,6 +342,7 @@ class Trainer:
         # Kaggle safety: warn if on Kaggle with no timeout set
         if config.wall_clock_timeout <= 0 and Path("/kaggle").exists():
             import warnings
+
             warnings.warn(
                 "Running on Kaggle without wall_clock_timeout! "
                 "Set wall_clock_timeout=39600 (11h) to avoid losing training state "
@@ -327,30 +360,32 @@ class Trainer:
 
         # Adaptive weights (council_v2_adaptive profile)
         self._adaptive = None
-        if getattr(config, 'adaptive_rebalance', False):
+        if getattr(config, "adaptive_rebalance", False):
             from .adaptive import AdaptiveWeights
-            beta = getattr(config, 'boundary_fraction', 0.05)
+
+            beta = getattr(config, "boundary_fraction", 0.05)
             self._adaptive = AdaptiveWeights(boundary_fraction=beta)
             print(f"[trainer] Adaptive weights enabled (beta={beta})")
 
-        self.optimizer = torch.optim.AdamW(
-            model.parameters(), lr=config.lr, weight_decay=1e-4
-        )
+        self.optimizer = torch.optim.AdamW(model.parameters(), lr=config.lr, weight_decay=1e-4)
 
         # LSQ: Learned Step Size Quantization
         self._lsq_scales: dict[str, nn.Module] | None = None
         if config.use_lsq:
             from .quantization import apply_lsq
+
             self._lsq_scales = apply_lsq(self.model)
             if self._lsq_scales:
                 lsq_params = []
                 for lsq_mod in self._lsq_scales.values():
                     lsq_params.extend(lsq_mod.parameters())
-                self.optimizer.add_param_group({
-                    "params": lsq_params,
-                    "lr": config.lr * 5,
-                    "weight_decay": 0.0,
-                })
+                self.optimizer.add_param_group(
+                    {
+                        "params": lsq_params,
+                        "lr": config.lr * 5,
+                        "weight_decay": 0.0,
+                    }
+                )
                 print(f"[trainer] LSQ enabled: {len(self._lsq_scales)} learned scales, lr={config.lr * 5:.6f}")
 
         if config.scheduler == "cosine":
@@ -427,16 +462,19 @@ class Trainer:
         path = Path(path)
         path.parent.mkdir(parents=True, exist_ok=True)
         tmp_path = path.with_suffix(".pt.tmp")
-        torch.save({
-            "model": self.model.state_dict(),
-            "ema_shadow": self.ema.shadow,
-            "optimizer": self.optimizer.state_dict(),
-            "scheduler": self.scheduler.state_dict(),
-            "epoch": self._current_epoch,
-            "best_scorer": self.best_scorer,
-            "best_epoch": self.best_epoch,
-            "plateau_reduced": self._plateau_reduced,
-        }, tmp_path)
+        torch.save(
+            {
+                "model": self.model.state_dict(),
+                "ema_shadow": self.ema.shadow,
+                "optimizer": self.optimizer.state_dict(),
+                "scheduler": self.scheduler.state_dict(),
+                "epoch": self._current_epoch,
+                "best_scorer": self.best_scorer,
+                "best_epoch": self.best_epoch,
+                "plateau_reduced": self._plateau_reduced,
+            },
+            tmp_path,
+        )
         tmp_path.rename(path)  # atomic on POSIX
 
     def load_training_state(self, path: str | Path):
@@ -474,8 +512,10 @@ class Trainer:
         # Patch AllNorm to not break gradients
         for module in list(posenet.modules()) + list(segnet.modules()):
             if type(module).__name__ == "AllNorm":
+
                 def _patched_forward(self, x):
                     return self.bn(x.reshape(-1, 1)).reshape(x.shape)
+
                 module.forward = types.MethodType(_patched_forward, module)
 
         # Differentiable rgb_to_yuv6: full-range BT.601 with 4:2:0 subsampling
@@ -483,17 +523,15 @@ class Trainer:
         def _rgb_to_yuv6_diff(rgb_chw: torch.Tensor) -> torch.Tensor:
             H, W = rgb_chw.shape[-2], rgb_chw.shape[-1]
             H2, W2 = H // 2, W // 2
-            rgb = rgb_chw[..., :, :2 * H2, :2 * W2]
+            rgb = rgb_chw[..., :, : 2 * H2, : 2 * W2]
             R = rgb[..., 0, :, :]
             G = rgb[..., 1, :, :]
             B = rgb[..., 2, :, :]
             Y = (R * 0.299 + G * 0.587 + B * 0.114).clamp(0.0, 255.0)
             U = ((B - Y) / 1.772 + 128.0).clamp(0.0, 255.0)
             V = ((R - Y) / 1.402 + 128.0).clamp(0.0, 255.0)
-            U_sub = (U[..., 0::2, 0::2] + U[..., 1::2, 0::2] +
-                     U[..., 0::2, 1::2] + U[..., 1::2, 1::2]) * 0.25
-            V_sub = (V[..., 0::2, 0::2] + V[..., 1::2, 0::2] +
-                     V[..., 0::2, 1::2] + V[..., 1::2, 1::2]) * 0.25
+            U_sub = (U[..., 0::2, 0::2] + U[..., 1::2, 0::2] + U[..., 0::2, 1::2] + U[..., 1::2, 1::2]) * 0.25
+            V_sub = (V[..., 0::2, 0::2] + V[..., 1::2, 0::2] + V[..., 0::2, 1::2] + V[..., 1::2, 1::2]) * 0.25
             y00 = Y[..., 0::2, 0::2]
             y10 = Y[..., 1::2, 0::2]
             y01 = Y[..., 0::2, 1::2]
@@ -509,17 +547,17 @@ class Trainer:
 
         def _diff_preprocess(self, x):
             batch_size, seq_len_local = x.shape[0], x.shape[1]
-            x = einops.rearrange(x, 'b t c h w -> (b t) c h w',
-                                 b=batch_size, t=seq_len_local, c=3)
+            x = einops.rearrange(x, "b t c h w -> (b t) c h w", b=batch_size, t=seq_len_local, c=3)
             # Resize to scorer input size (bilinear, matching upstream)
             x = nn.functional.interpolate(
-                x, size=(segnet_model_input_size[1], segnet_model_input_size[0]),
-                mode='bilinear', align_corners=False,
+                x,
+                size=(segnet_model_input_size[1], segnet_model_input_size[0]),
+                mode="bilinear",
+                align_corners=False,
             )
             # Differentiable YUV conversion with 4:2:0 subsampling
             yuv = _rgb_to_yuv6_diff(x)
-            return einops.rearrange(yuv, '(b t) c h w -> b (t c) h w',
-                                    b=batch_size, t=seq_len_local, c=6).contiguous()
+            return einops.rearrange(yuv, "(b t) c h w -> b (t c) h w", b=batch_size, t=seq_len_local, c=6).contiguous()
 
         posenet.preprocess_input = types.MethodType(_diff_preprocess, posenet)
 
@@ -527,6 +565,7 @@ class Trainer:
     def _is_pair_aware(self) -> bool:
         """Check if the model expects 6-channel pair input."""
         from .architectures import PairAwarePostFilter
+
         return isinstance(self.model, PairAwarePostFilter)
 
     def _apply_filter_to_pair(self, comp_pair: torch.Tensor) -> torch.Tensor:
@@ -552,10 +591,13 @@ class Trainer:
             inp1 = torch.cat([f1, f0], dim=1)  # (B, 6, H, W)
             out1 = self.model(inp1)  # (B, 3, H, W)
             # Reassemble pair
-            result = torch.stack([
-                out0.permute(0, 2, 3, 1),  # (B, H, W, 3)
-                out1.permute(0, 2, 3, 1),
-            ], dim=1)  # (B, 2, H, W, 3)
+            result = torch.stack(
+                [
+                    out0.permute(0, 2, 3, 1),  # (B, H, W, 3)
+                    out1.permute(0, 2, 3, 1),
+                ],
+                dim=1,
+            )  # (B, 2, H, W, 3)
             return result
         else:
             # Standard: process each frame independently
@@ -564,7 +606,12 @@ class Trainer:
             return filtered_bchw.permute(0, 2, 3, 1).reshape(B, T, H, W, C)
 
     def _evaluate_int8(
-        self, comp_pairs, gt_pairs, posenet, segnet, subsample: int = 2,
+        self,
+        comp_pairs,
+        gt_pairs,
+        posenet,
+        segnet,
+        subsample: int = 2,
     ) -> float:
         """Evaluate EMA model after int8 quantization.
 
@@ -587,10 +634,7 @@ class Trainer:
 
         total_p, total_s, count = 0.0, 0.0, 0
         # P1: autocast for CUDA and MPS (fp16 on scorers)
-        use_autocast = (
-            (str(self.device).startswith("cuda") and torch.cuda.is_available())
-            or str(self.device) == "mps"
-        )
+        use_autocast = (str(self.device).startswith("cuda") and torch.cuda.is_available()) or str(self.device) == "mps"
         autocast_device = "cuda" if str(self.device).startswith("cuda") else "mps"
         autocast_ctx = torch.amp.autocast(autocast_device, enabled=use_autocast)
         with torch.no_grad(), autocast_ctx:
@@ -657,35 +701,41 @@ class Trainer:
         int8_tmp.rename(int8_path)
 
         meta_tmp = meta_path.with_suffix(".json.tmp")
-        meta_tmp.write_text(json.dumps({
-            "epoch": epoch,
-            "scorer": scorer,
-            "pose": getattr(self, '_last_eval_pose', None),
-            "seg": getattr(self, '_last_eval_seg', None),
-            "fp32_path": str(fp32_path),
-            "int8_path": str(int8_path),
-            "int8_size": int8_path.stat().st_size,
-            "meta": int8_state["__meta__"],
-            "config": {
-                "variant": self.config.variant,
-                "hidden": self.config.hidden,
-                "loss_mode": self.config.loss_mode,
-                "boundary_weight": self.config.boundary_weight,
-                "segnet_loss_weight": self.config.segnet_loss_weight,
-                "hard_frame_ratio": self.config.hard_frame_ratio,
-                "temperature_start": self.config.temperature_start,
-                "temperature_end": self.config.temperature_end,
-                "temp_schedule": self.config.temp_schedule,
-                "alpha": self.config.alpha,
-            },
-            "baseline_pose": getattr(self, '_baseline_pose', None),
-            "baseline_seg": getattr(self, '_baseline_seg', None),
-        }, indent=2))
+        meta_tmp.write_text(
+            json.dumps(
+                {
+                    "epoch": epoch,
+                    "scorer": scorer,
+                    "pose": getattr(self, "_last_eval_pose", None),
+                    "seg": getattr(self, "_last_eval_seg", None),
+                    "fp32_path": str(fp32_path),
+                    "int8_path": str(int8_path),
+                    "int8_size": int8_path.stat().st_size,
+                    "meta": int8_state["__meta__"],
+                    "config": {
+                        "variant": self.config.variant,
+                        "hidden": self.config.hidden,
+                        "loss_mode": self.config.loss_mode,
+                        "boundary_weight": self.config.boundary_weight,
+                        "segnet_loss_weight": self.config.segnet_loss_weight,
+                        "hard_frame_ratio": self.config.hard_frame_ratio,
+                        "temperature_start": self.config.temperature_start,
+                        "temperature_end": self.config.temperature_end,
+                        "temp_schedule": self.config.temp_schedule,
+                        "alpha": self.config.alpha,
+                    },
+                    "baseline_pose": getattr(self, "_baseline_pose", None),
+                    "baseline_seg": getattr(self, "_baseline_seg", None),
+                },
+                indent=2,
+            )
+        )
         meta_tmp.rename(meta_path)
 
         # Durable backup — survives MPS SIGKILL which can't be caught
         # Use output_dir-relative path so it works on cloud platforms too
         import shutil
+
         backup_dir = out_dir / ".backups"
         backup_dir.mkdir(parents=True, exist_ok=True)
         backup_tmp = backup_dir / f"postfilter_{tag}_best_int8.pt.tmp"
@@ -721,12 +771,13 @@ class Trainer:
                 f"loss_mode='{cfg.loss_mode}' requires fit_lazy(). "
                 "fit() only supports 'standard' and boundary-weighted (use_ste_segnet) modes."
             )
-        if getattr(cfg, 'adaptive_rebalance', False):
+        if getattr(cfg, "adaptive_rebalance", False):
             raise NotImplementedError(
                 "adaptive_rebalance requires fit_lazy(). fit() does not support adaptive weights."
             )
         if cfg.use_swa:
             import warnings
+
             warnings.warn(
                 "use_swa=True has no effect in fit(). SWA is only implemented in fit_lazy(). "
                 "Either switch to fit_lazy() or set use_swa=False.",
@@ -744,8 +795,10 @@ class Trainer:
         pairs_per_epoch = cfg.pairs_per_epoch or n_pairs
         use_boundary = cfg.use_ste_segnet and boundary_masks is not None
 
-        print(f"[trainer] {cfg.epochs} epochs, {pairs_per_epoch} pairs/ep, "
-              f"h={cfg.hidden}, alpha={cfg.alpha}, device={self.device}")
+        print(
+            f"[trainer] {cfg.epochs} epochs, {pairs_per_epoch} pairs/ep, "
+            f"h={cfg.hidden}, alpha={cfg.alpha}, device={self.device}"
+        )
         if use_boundary:
             print(f"[trainer] SegNet STE + boundary weighting ({cfg.boundary_weight}x)")
         if self._current_epoch > 0:
@@ -772,12 +825,19 @@ class Trainer:
                 if use_boundary:
                     bm = boundary_masks[idx] if boundary_masks else None
                     loss, pd, sd = segnet_ste_loss(
-                        filtered, gt_pairs[idx], posenet, segnet,
-                        boundary_mask=bm, boundary_weight=cfg.boundary_weight,
+                        filtered,
+                        gt_pairs[idx],
+                        posenet,
+                        segnet,
+                        boundary_mask=bm,
+                        boundary_weight=cfg.boundary_weight,
                     )
                 else:
                     loss, pd, sd = scorer_loss(
-                        filtered, gt_pairs[idx], posenet, segnet,
+                        filtered,
+                        gt_pairs[idx],
+                        posenet,
+                        segnet,
                     )
 
                 # Saliency reconstruction
@@ -785,9 +845,7 @@ class Trainer:
                 filtered_bchw = filtered[:, 1].permute(0, 3, 1, 2)
                 comp_bchw = comp_pairs[idx][:, 1].float().permute(0, 3, 1, 2)
                 sal_idx = min(idx * 2 + 1, sal_weights.shape[0] - 1)
-                sal_recon = saliency_reconstruction_loss(
-                    filtered_bchw, comp_bchw, sal_weights[sal_idx : sal_idx + 1]
-                )
+                sal_recon = saliency_reconstruction_loss(filtered_bchw, comp_bchw, sal_weights[sal_idx : sal_idx + 1])
 
                 total = loss + cfg.sal_lambda * sal_recon
 
@@ -819,8 +877,10 @@ class Trainer:
                 print(f"  ** NEW BEST: ep {epoch}, scorer {scorer_val:.4f} **")
 
             lr = self.optimizer.param_groups[0]["lr"]
-            print(f"[ep {epoch:4d}] loss={avg_loss:.4f} pose={avg_pose:.6f} "
-                  f"seg={avg_seg:.6f} scorer={scorer_val:.4f} best={self.best_scorer:.4f} lr={lr:.6f}")
+            print(
+                f"[ep {epoch:4d}] loss={avg_loss:.4f} pose={avg_pose:.6f} "
+                f"seg={avg_seg:.6f} scorer={scorer_val:.4f} best={self.best_scorer:.4f} lr={lr:.6f}"
+            )
 
             if callback:
                 callback(epoch, avg_loss, avg_pose, avg_seg, scorer_val)
@@ -833,8 +893,10 @@ class Trainer:
             if self._wall_clock_exceeded():
                 remaining = self._wall_clock_remaining()
                 elapsed = _time_module.monotonic() - self._start_wall_time
-                print(f"\n[trainer] WALL-CLOCK TIMEOUT at epoch {epoch} "
-                      f"(elapsed {elapsed/3600:.1f}h, limit {self.config.wall_clock_timeout/3600:.1f}h)")
+                print(
+                    f"\n[trainer] WALL-CLOCK TIMEOUT at epoch {epoch} "
+                    f"(elapsed {elapsed / 3600:.1f}h, limit {self.config.wall_clock_timeout / 3600:.1f}h)"
+                )
                 self.save_training_state()
                 print(f"[trainer] Timeout exit. Best: {self.best_scorer:.4f} at epoch {self.best_epoch}")
                 return self.best_scorer
@@ -894,8 +956,10 @@ class Trainer:
         n_train = len(train_pair_starts)
         train_size = max(1, n_train // subsample)
 
-        print(f"[trainer-lazy] {cfg.epochs} epochs, {train_size}/{n_train} pairs/ep, "
-              f"{split_label}, h={cfg.hidden}, alpha={cfg.alpha}, device={self.device}")
+        print(
+            f"[trainer-lazy] {cfg.epochs} epochs, {train_size}/{n_train} pairs/ep, "
+            f"{split_label}, h={cfg.hidden}, alpha={cfg.alpha}, device={self.device}"
+        )
         print("[trainer-lazy] Frames on CPU, pairs built on-the-fly (MPS-safe)")
         if cfg.loss_mode != "standard":
             print(f"[trainer-lazy] Loss mode: {cfg.loss_mode}")
@@ -922,7 +986,9 @@ class Trainer:
         # P0: Precompute GT scorer outputs (constant — frames and scorers are frozen)
         # This eliminates ~50% of scorer forward passes in the training loop.
         import torch.nn.functional as _F
+
         from .losses import _hwc_to_chw
+
         print("[trainer-lazy] P0: Precomputing GT scorer cache...")
         gt_scorer_cache = {}
         with torch.no_grad():
@@ -936,8 +1002,7 @@ class Trainer:
                 }
                 del gt_pair, gx, gp_out, gs_out
         cache_bytes = sum(
-            v["pose_6"].numel() * v["pose_6"].element_size()
-            + v["seg_soft"].numel() * v["seg_soft"].element_size()
+            v["pose_6"].numel() * v["pose_6"].element_size() + v["seg_soft"].numel() * v["seg_soft"].element_size()
             for v in gt_scorer_cache.values()
         )
         print(f"[trainer-lazy] P0: Cached {len(gt_scorer_cache)} GT scorer outputs ({cache_bytes / 1e6:.1f}MB)")
@@ -947,6 +1012,7 @@ class Trainer:
         needs_boundary = cfg.use_dual_saliency or cfg.boundary_weight > 1.0
         if needs_boundary:
             from .losses import compute_boundary_mask
+
             print("[trainer-lazy] Computing SegNet boundary masks for dual saliency...")
             self._boundary_masks = {}
             for start in train_pair_starts:
@@ -954,7 +1020,9 @@ class Trainer:
                 mask = compute_boundary_mask(gt_pair, segnet, device=self.device)
                 self._boundary_masks[start] = mask
             avg_frac = sum(m.mean().item() for m in self._boundary_masks.values()) / len(self._boundary_masks)
-            print(f"[trainer-lazy] Boundary masks: {len(self._boundary_masks)} pairs, avg {avg_frac:.4f} ({avg_frac*100:.2f}%)")
+            print(
+                f"[trainer-lazy] Boundary masks: {len(self._boundary_masks)} pairs, avg {avg_frac:.4f} ({avg_frac * 100:.2f}%)"
+            )
 
         # Hard-frame curriculum: precompute per-pair SegNet disagreement for weighted sampling
         hard_frame_weights = None
@@ -968,8 +1036,11 @@ class Trainer:
                 label: log label for this recomputation.
             """
             from .losses import eval_scorer_loss
-            print(f"[trainer-lazy] Computing hard-frame weights ({label}, "
-                  f"{'model output' if use_model else 'raw compressed'})...")
+
+            print(
+                f"[trainer-lazy] Computing hard-frame weights ({label}, "
+                f"{'model output' if use_model else 'raw compressed'})..."
+            )
             pair_difficulties = []
             self.model.eval()
             with torch.no_grad():
@@ -1018,8 +1089,7 @@ class Trainer:
                     pg["lr"] = lr
 
             # Adaptive weight rebalance (once per rebalance_every epochs, not per step)
-            if (self._adaptive and self._last_eval_pose is not None
-                    and epoch % getattr(cfg, 'rebalance_every', 50) == 0):
+            if self._adaptive and self._last_eval_pose is not None and epoch % getattr(cfg, "rebalance_every", 50) == 0:
                 if cfg.loss_mode in ("standard", "pcgrad", "feature_match"):
                     # Pareto MRS condition: w_seg = 200 * sqrt(10 * pose)
                     # No temperature — standard/pcgrad loss has no temperature parameter.
@@ -1041,7 +1111,7 @@ class Trainer:
                     )
                 self._cached_sw = result["segnet_weight"]
                 self._cached_bw = result["boundary_weight"]
-                if epoch % (getattr(cfg, 'rebalance_every', 50) * 5) == 0:
+                if epoch % (getattr(cfg, "rebalance_every", 50) * 5) == 0:
                     summary = result.get("diagnostics", {}).get("summary", "")
                     print(f"[adaptive] ep={epoch} sw={self._cached_sw:.1f} bw={self._cached_bw:.1f} {summary}")
 
@@ -1055,17 +1125,20 @@ class Trainer:
                 effective_hfr = 0.0
 
             # Error replay: recompute hard-frame weights using current model output
-            if (hard_frame_weights is not None
-                    and cfg.error_replay_every > 0
-                    and epoch > 0
-                    and epoch % cfg.error_replay_every == 0):
+            if (
+                hard_frame_weights is not None
+                and cfg.error_replay_every > 0
+                and epoch > 0
+                and epoch % cfg.error_replay_every == 0
+            ):
                 improvement = self._last_replay_scorer - self.best_scorer
                 if improvement > 0.002 or self._last_replay_scorer == float("inf"):
-                    hard_frame_weights = _compute_hard_frame_weights(
-                        use_model=True, label=f"error-replay-ep{epoch}")
+                    hard_frame_weights = _compute_hard_frame_weights(use_model=True, label=f"error-replay-ep{epoch}")
                     self._last_replay_scorer = self.best_scorer
                 else:
-                    print(f"[trainer-lazy] Skipping error replay ep={epoch} (improvement={improvement:.4f} < threshold)")
+                    print(
+                        f"[trainer-lazy] Skipping error replay ep={epoch} (improvement={improvement:.4f} < threshold)"
+                    )
 
             # Weighted or uniform sampling of training pairs
             if hard_frame_weights is not None and effective_hfr > 0:
@@ -1124,11 +1197,18 @@ class Trainer:
                     else:
                         temp = cfg.temperature_start + progress * (cfg.temperature_end - cfg.temperature_start)
                     loss, pd, sd = temperature_scorer_loss(
-                        filtered, gt_pair, posenet, segnet, temperature=temp,
+                        filtered,
+                        gt_pair,
+                        posenet,
+                        segnet,
+                        temperature=temp,
                     )
                 elif cfg.loss_mode == "focal_ste":
                     loss, pd, sd = focal_segnet_ste_loss(
-                        filtered, gt_pair, posenet, segnet,
+                        filtered,
+                        gt_pair,
+                        posenet,
+                        segnet,
                         gamma=cfg.focal_gamma,
                     )
                 elif cfg.loss_mode == "kl_distill":
@@ -1142,15 +1222,18 @@ class Trainer:
 
                     # Adaptive or static weights
                     # Use cached adaptive weights (computed once per epoch, not per step)
-                    sw = getattr(self, '_cached_sw', cfg.segnet_loss_weight)
-                    bw = getattr(self, '_cached_bw', cfg.boundary_weight)
+                    sw = getattr(self, "_cached_sw", cfg.segnet_loss_weight)
+                    bw = getattr(self, "_cached_bw", cfg.boundary_weight)
                     if not self._adaptive:
                         # Static boundary anneal for non-adaptive mode
                         if cfg.boundary_anneal and temp > 0:
                             bw = cfg.boundary_weight * min(3.0, cfg.temperature_start / max(temp, cfg.temperature_end))
 
                     loss, pd, sd = kl_distill_scorer_loss(
-                        filtered, gt_pair, posenet, segnet,
+                        filtered,
+                        gt_pair,
+                        posenet,
+                        segnet,
                         temperature=temp,
                         boundary_mask=bm,
                         boundary_weight=bw,
@@ -1158,44 +1241,61 @@ class Trainer:
                     )
                 elif cfg.loss_mode == "pcgrad":
                     # Non-opposing gradient: decouple PoseNet and SegNet
-                    sw = getattr(self, '_cached_sw', cfg.segnet_loss_weight)
-                    is_first_microbatch = (step % accum == 0)
+                    sw = getattr(self, "_cached_sw", cfg.segnet_loss_weight)
+                    is_first_microbatch = step % accum == 0
                     if _gt_pose_6 is not None:
                         # P0: use cached GT scorer outputs
                         loss, pd, sd, _conflict = scorer_loss_pcgrad_cached(
-                            filtered, _gt_pose_6, _gt_seg_soft, posenet, segnet,
+                            filtered,
+                            _gt_pose_6,
+                            _gt_seg_soft,
+                            posenet,
+                            segnet,
                             segnet_weight=sw,
                             do_projection=is_first_microbatch,
                         )
                     else:
                         loss, pd, sd, _conflict = scorer_loss_pcgrad(
-                            filtered, gt_pair, posenet, segnet,
+                            filtered,
+                            gt_pair,
+                            posenet,
+                            segnet,
                             segnet_weight=sw,
                             do_projection=is_first_microbatch,
                         )
                     # Council requirement: log conflict frequency per epoch
                     if is_first_microbatch:
-                        self._epoch_pcgrad_total = getattr(self, '_epoch_pcgrad_total', 0) + 1
+                        self._epoch_pcgrad_total = getattr(self, "_epoch_pcgrad_total", 0) + 1
                         if _conflict:
-                            self._epoch_pcgrad_conflicts = getattr(self, '_epoch_pcgrad_conflicts', 0) + 1
+                            self._epoch_pcgrad_conflicts = getattr(self, "_epoch_pcgrad_conflicts", 0) + 1
                 elif cfg.loss_mode == "feature_match":
                     # Trick 1: intermediate PoseNet feature matching
                     loss, pd, sd = feature_matching_loss(
-                        filtered, gt_pair, posenet, segnet,
+                        filtered,
+                        gt_pair,
+                        posenet,
+                        segnet,
                         segnet_weight=cfg.segnet_loss_weight,
                     )
                 else:
                     if cfg.boundary_weight > 1.0 and self._boundary_masks is not None:
                         bm = self._boundary_masks.get(start)
                         loss, pd, sd = segnet_ste_loss(
-                            filtered, gt_pair, posenet, segnet,
+                            filtered,
+                            gt_pair,
+                            posenet,
+                            segnet,
                             boundary_mask=bm,
                             boundary_weight=cfg.boundary_weight,
                         )
                     elif _gt_pose_6 is not None:
                         # P0: use cached GT scorer outputs (standard loss)
                         loss, pd, sd = scorer_loss_cached(
-                            filtered, _gt_pose_6, _gt_seg_soft, posenet, segnet,
+                            filtered,
+                            _gt_pose_6,
+                            _gt_seg_soft,
+                            posenet,
+                            segnet,
                         )
                     else:
                         loss, pd, sd = scorer_loss(filtered, gt_pair, posenet, segnet)
@@ -1205,19 +1305,18 @@ class Trainer:
                 filtered_bchw = filtered[:, 1].permute(0, 3, 1, 2)
                 comp_bchw = comp_pair[:, 1].float().permute(0, 3, 1, 2)
 
-                if cfg.use_dual_saliency and hasattr(self, '_boundary_masks') and self._boundary_masks is not None:
+                if cfg.use_dual_saliency and hasattr(self, "_boundary_masks") and self._boundary_masks is not None:
                     bm = self._boundary_masks.get(start)
                     sal_recon = dual_saliency_reconstruction_loss(
-                        filtered_bchw, comp_bchw,
+                        filtered_bchw,
+                        comp_bchw,
                         posenet_sal=sal_w[1:2],
                         segnet_boundary=bm,
                         alpha_pose=cfg.alpha,
                         alpha_seg=cfg.alpha_seg,
                     )
                 else:
-                    sal_recon = saliency_reconstruction_loss(
-                        filtered_bchw, comp_bchw, sal_w[1:2]
-                    )
+                    sal_recon = saliency_reconstruction_loss(filtered_bchw, comp_bchw, sal_w[1:2])
 
                 # Trick 3: Even-frame SegNet skip — when the evaluated frame
                 # (frame_t1 = start + 1) is even, SegNet is less critical.
@@ -1271,7 +1370,7 @@ class Trainer:
 
             # SWA: snapshot weights in final 20% of training for wider minima
             if cfg.use_swa and epoch >= int(cfg.epochs * 0.8):
-                if not hasattr(self, '_swa'):
+                if not hasattr(self, "_swa"):
                     self._swa = SWA()
                     print(f"[trainer-lazy] SWA started at epoch {epoch}")
                 # Bug #1 fix: pass EMA state_dict, not the raw model
@@ -1297,7 +1396,10 @@ class Trainer:
             is_eval_epoch = (epoch + 1) % eval_freq == 0 or epoch == cfg.epochs - 1 or epoch == 0
             if is_eval_epoch:
                 scorer_val = self._evaluate_int8_lazy(
-                    comp_frames, gt_frames, posenet, segnet,
+                    comp_frames,
+                    gt_frames,
+                    posenet,
+                    segnet,
                     eval_pair_starts=eval_pair_starts,
                 )
             else:
@@ -1314,37 +1416,40 @@ class Trainer:
             # PCGrad conflict telemetry (council requirement — per-epoch, resets each epoch)
             conflict_str = ""
             if cfg.loss_mode == "pcgrad":
-                ep_total = getattr(self, '_epoch_pcgrad_total', 0)
-                ep_conflicts = getattr(self, '_epoch_pcgrad_conflicts', 0)
+                ep_total = getattr(self, "_epoch_pcgrad_total", 0)
+                ep_conflicts = getattr(self, "_epoch_pcgrad_conflicts", 0)
                 if ep_total > 0:
-                    conflict_str = f" conflict={ep_conflicts}/{ep_total}={ep_conflicts/ep_total:.0%}"
+                    conflict_str = f" conflict={ep_conflicts}/{ep_total}={ep_conflicts / ep_total:.0%}"
                 # Reset for next epoch
                 self._epoch_pcgrad_total = 0
                 self._epoch_pcgrad_conflicts = 0
-            print(f"[ep {epoch:4d}]{eval_tag} loss={avg_loss:.4f} pose={avg_pose:.6f} "
-                  f"seg={avg_seg:.6f} scorer={scorer_val:.4f} best={self.best_scorer:.4f} lr={lr:.6f}{conflict_str}")
+            print(
+                f"[ep {epoch:4d}]{eval_tag} loss={avg_loss:.4f} pose={avg_pose:.6f} "
+                f"seg={avg_seg:.6f} scorer={scorer_val:.4f} best={self.best_scorer:.4f} lr={lr:.6f}{conflict_str}"
+            )
 
             # LR plateau detection for standard loss
             if is_eval_epoch and cfg.loss_mode in ("standard", "pcgrad"):
                 self._plateau_window.append(scorer_val)
                 if len(self._plateau_window) > 20:
                     self._plateau_window.pop(0)
-                if (len(self._plateau_window) >= 20
-                        and not self._plateau_reduced
-                        and epoch > cfg.epochs * 0.3):
+                if len(self._plateau_window) >= 20 and not self._plateau_reduced and epoch > cfg.epochs * 0.3:
                     recent_best = min(self._plateau_window)
                     window_start_best = min(self._plateau_window[:10])
                     if recent_best >= window_start_best - 0.005:
                         for pg in self.optimizer.param_groups:
                             pg["lr"] *= 0.5
                         self._plateau_reduced = True
-                        print(f"[trainer-lazy] LR plateau detected ep={epoch}, halving LR to {self.optimizer.param_groups[0]['lr']:.6f}")
+                        print(
+                            f"[trainer-lazy] LR plateau detected ep={epoch}, halving LR to {self.optimizer.param_groups[0]['lr']:.6f}"
+                        )
 
             # JSONL telemetry log — structured data for council analysis
             if is_eval_epoch:
                 telemetry_path = Path(cfg.output_dir) / f"telemetry_{cfg.tag}.jsonl"
                 telemetry_path.parent.mkdir(parents=True, exist_ok=True)
                 import time as _time
+
                 with open(telemetry_path, "a") as tf:
                     avg_grad_norm = sum(epoch_grad_norms) / max(len(epoch_grad_norms), 1)
                     entry = {
@@ -1364,16 +1469,16 @@ class Trainer:
                         "variant": cfg.variant,
                     }
                     # Adaptive weight diagnostics
-                    if hasattr(self, '_cached_sw'):
+                    if hasattr(self, "_cached_sw"):
                         entry["adaptive_sw"] = round(self._cached_sw, 4)
-                    if hasattr(self, '_cached_bw'):
+                    if hasattr(self, "_cached_bw"):
                         entry["adaptive_bw"] = round(self._cached_bw, 2)
                     # Proxy hardening diagnostics
-                    if hasattr(self, '_proxy_confidence'):
+                    if hasattr(self, "_proxy_confidence"):
                         entry["proxy_confidence"] = self._proxy_confidence
-                    if hasattr(self, '_corrected_scorer'):
+                    if hasattr(self, "_corrected_scorer"):
                         entry["corrected_scorer"] = self._corrected_scorer
-                    if hasattr(self, '_baseline_pose') and self._baseline_pose:
+                    if hasattr(self, "_baseline_pose") and self._baseline_pose:
                         entry["baseline_pose"] = self._baseline_pose
                     tf.write(json.dumps(entry) + "\n")
 
@@ -1384,19 +1489,20 @@ class Trainer:
             # Wall-clock timeout: save and exit cleanly before platform kills us
             if self._wall_clock_exceeded():
                 elapsed = _time_module.monotonic() - self._start_wall_time
-                print(f"\n[trainer-lazy] WALL-CLOCK TIMEOUT at epoch {epoch} "
-                      f"(elapsed {elapsed/3600:.1f}h, limit {self.config.wall_clock_timeout/3600:.1f}h)")
+                print(
+                    f"\n[trainer-lazy] WALL-CLOCK TIMEOUT at epoch {epoch} "
+                    f"(elapsed {elapsed / 3600:.1f}h, limit {self.config.wall_clock_timeout / 3600:.1f}h)"
+                )
                 self.save_training_state()
                 print(f"[trainer-lazy] Timeout exit. Best: {self.best_scorer:.4f} at epoch {self.best_epoch}")
                 return self.best_scorer
 
         # Apply SWA if it was active — average replaces EMA, then re-evaluate
-        if cfg.use_swa and hasattr(self, '_swa') and self._swa.count > 0:
+        if cfg.use_swa and hasattr(self, "_swa") and self._swa.count > 0:
             self._swa.apply(self.ema)
             # Re-evaluate with SWA-averaged weights to see if it's better
             if eval_pair_starts is not None:
-                swa_scorer = self._evaluate_int8_lazy(
-                    comp_frames, gt_frames, posenet, segnet, eval_pair_starts)
+                swa_scorer = self._evaluate_int8_lazy(comp_frames, gt_frames, posenet, segnet, eval_pair_starts)
                 if swa_scorer < self.best_scorer:
                     print(f"  ** SWA IMPROVED: {self.best_scorer:.4f} -> {swa_scorer:.4f} **")
                     self.best_scorer = swa_scorer
@@ -1411,7 +1517,11 @@ class Trainer:
         return self.best_scorer
 
     def _evaluate_int8_lazy(
-        self, comp_frames, gt_frames, posenet, segnet,
+        self,
+        comp_frames,
+        gt_frames,
+        posenet,
+        segnet,
         eval_pair_starts: list[int] | None = None,
     ) -> float:
         """Evaluate EMA model after int8 quantization on HELD-OUT pairs only.
@@ -1435,10 +1545,7 @@ class Trainer:
         total_p, total_s, count = 0.0, 0.0, 0
 
         # P1: autocast for CUDA and MPS (fp16 on scorers)
-        use_autocast = (
-            (str(self.device).startswith("cuda") and torch.cuda.is_available())
-            or str(self.device) == "mps"
-        )
+        use_autocast = (str(self.device).startswith("cuda") and torch.cuda.is_available()) or str(self.device) == "mps"
         autocast_device = "cuda" if str(self.device).startswith("cuda") else "mps"
         autocast = torch.amp.autocast(autocast_device, enabled=use_autocast)
         with torch.no_grad(), autocast:
@@ -1465,7 +1572,7 @@ class Trainer:
         self._last_eval_seg = round(avg_s, 8)
 
         # Baseline watermark: record raw compressed distortion at first eval
-        if not hasattr(self, '_baseline_pose') or self._baseline_pose is None:
+        if not hasattr(self, "_baseline_pose") or self._baseline_pose is None:
             self._baseline_pose = round(avg_p, 8)
             self._baseline_seg = round(avg_s, 8)
             print(f"[eval] Baseline watermark: pose={avg_p:.6f}, seg={avg_s:.6f}")
@@ -1474,41 +1581,49 @@ class Trainer:
         # Drops when pose regresses (ratio > 2) OR improves implausibly (ratio < 0.05).
         # Normal training drives pose from baseline toward ~0.3x baseline over hundreds of epochs.
         proxy_confidence = 1.0
-        if hasattr(self, '_baseline_pose') and self._baseline_pose and self._baseline_pose > 0:
+        if hasattr(self, "_baseline_pose") and self._baseline_pose and self._baseline_pose > 0:
             pose_ratio = avg_p / self._baseline_pose
 
             if pose_ratio > 2.0:
                 # PoseNet regressing — proxy may be masking damage
                 proxy_confidence = max(0.1, 1.0 / pose_ratio)
-                print(f"  !! PROXY CONFIDENCE LOW (regression): pose={avg_p:.6f} is "
-                      f"{pose_ratio:.1f}x baseline — authoritative eval recommended !!")
+                print(
+                    f"  !! PROXY CONFIDENCE LOW (regression): pose={avg_p:.6f} is "
+                    f"{pose_ratio:.1f}x baseline — authoritative eval recommended !!"
+                )
             elif pose_ratio < 0.05:
                 # PoseNet suspiciously good — may be noise floor or measurement artifact
                 proxy_confidence = 0.5
-                print(f"  !! PROXY CONFIDENCE MODERATE: pose={avg_p:.6f} is "
-                      f"{pose_ratio:.2f}x baseline (suspiciously low) !!")
+                print(
+                    f"  !! PROXY CONFIDENCE MODERATE: pose={avg_p:.6f} is "
+                    f"{pose_ratio:.2f}x baseline (suspiciously low) !!"
+                )
 
             # Regression alarm: warn if PoseNet regresses 3x from baseline
             if pose_ratio > 3.0:
-                print(f"  !! POSENET REGRESSION ALARM: {avg_p:.6f} is {pose_ratio:.1f}x baseline {self._baseline_pose:.6f} !!")
+                print(
+                    f"  !! POSENET REGRESSION ALARM: {avg_p:.6f} is {pose_ratio:.1f}x baseline {self._baseline_pose:.6f} !!"
+                )
             if pose_ratio > 5.0:
                 print(f"  !! CRITICAL: PoseNet {pose_ratio:.0f}x baseline — checkpoint NOT saved !!")
                 self.model.load_state_dict(orig_state)
                 self.model.train()
-                return float('inf')  # prevent promotion of regressed checkpoint
+                return float("inf")  # prevent promotion of regressed checkpoint
 
         # Store proxy confidence for telemetry
         self._proxy_confidence = round(proxy_confidence, 4)
 
         # Corrected score estimate using proxy correction factors (α_p, α_s)
         # These are calibrated from authoritative eval runs. Default 1.0 = no correction.
-        alpha_p = getattr(self, '_proxy_alpha_p', 1.0)
-        alpha_s = getattr(self, '_proxy_alpha_s', 1.0)
+        alpha_p = getattr(self, "_proxy_alpha_p", 1.0)
+        alpha_s = getattr(self, "_proxy_alpha_s", 1.0)
         corrected_scorer = 100.0 * (alpha_s * avg_s) + math.sqrt(10.0 * (alpha_p * avg_p))
         self._corrected_scorer = round(corrected_scorer, 6)
         if abs(corrected_scorer - scorer) > 0.01:
-            print(f"  [proxy-correction] raw={scorer:.4f} corrected={corrected_scorer:.4f} "
-                  f"(α_p={alpha_p:.2f}, α_s={alpha_s:.2f})")
+            print(
+                f"  [proxy-correction] raw={scorer:.4f} corrected={corrected_scorer:.4f} "
+                f"(α_p={alpha_p:.2f}, α_s={alpha_s:.2f})"
+            )
 
         self.model.load_state_dict(orig_state)
         self.model.train()

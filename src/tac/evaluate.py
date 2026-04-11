@@ -16,6 +16,7 @@ Usage as library:
 Usage as CLI:
     python -m tac.evaluate --checkpoint weights/best.pt --upstream /path/to/upstream
 """
+
 from __future__ import annotations
 
 import json
@@ -71,9 +72,7 @@ def canonical_score(
     # Load data
     comp_frames = decode_archive(str(archive_path))
     gt_frames = decode_video(str(gt_video_path))
-    assert len(comp_frames) == len(gt_frames), (
-        f"Frame count mismatch: {len(comp_frames)} comp vs {len(gt_frames)} GT"
-    )
+    assert len(comp_frames) == len(gt_frames), f"Frame count mismatch: {len(comp_frames)} comp vs {len(gt_frames)} GT"
     t_data = time.monotonic()
 
     # Load scorers
@@ -108,9 +107,7 @@ def canonical_score(
                 f1 = cp[:, 1].float().permute(0, 3, 1, 2).contiguous()
                 out0 = model(torch.cat([f0, f1], dim=1))
                 out1 = model(torch.cat([f1, f0], dim=1))
-                filtered_pair = torch.stack([
-                    out0.permute(0, 2, 3, 1), out1.permute(0, 2, 3, 1)
-                ], dim=1)
+                filtered_pair = torch.stack([out0.permute(0, 2, 3, 1), out1.permute(0, 2, 3, 1)], dim=1)
             else:
                 frames = cp.float().reshape(B * T, H, W, C).permute(0, 3, 1, 2).contiguous()
                 filtered = model(frames)
@@ -159,9 +156,11 @@ def canonical_score(
         "scoring_s": round(t_score - t_data, 2),
         "total_s": round(t_total, 2),
     }
-    print(f"[eval] timing: model={timing['model_load_s']}s, "
-          f"data={timing['data_load_s']}s, scoring={timing['scoring_s']}s, "
-          f"total={timing['total_s']}s")
+    print(
+        f"[eval] timing: model={timing['model_load_s']}s, "
+        f"data={timing['data_load_s']}s, scoring={timing['scoring_s']}s, "
+        f"total={timing['total_s']}s"
+    )
 
     from .models import ScoreResult
 
@@ -246,7 +245,11 @@ if __name__ == "__main__":
     parser = argparse.ArgumentParser(description="Canonical tac evaluation")
     parser.add_argument("--checkpoint", required=True, help="Path to int8 checkpoint")
     parser.add_argument("--upstream", required=True, help="Path to upstream repo")
-    parser.add_argument("--archive", default=None, help="Path to archive.zip (default: upstream/../submissions/robust_current/archive.zip)")
+    parser.add_argument(
+        "--archive",
+        default=None,
+        help="Path to archive.zip (default: upstream/../submissions/robust_current/archive.zip)",
+    )
     parser.add_argument("--hidden", type=int, default=64)
     parser.add_argument("--variant", default="standard")
     parser.add_argument("--device", default=None)

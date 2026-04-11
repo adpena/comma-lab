@@ -7,6 +7,7 @@ Supports:
   - LSQ (Learned Step Size) quantization
   - Save/load with metadata and variant tags
 """
+
 from __future__ import annotations
 
 import os
@@ -117,7 +118,7 @@ def apply_lsq(model: nn.Module) -> dict[str, LSQScale]:
 
             # Post-hook: restore float weights so optimizer sees originals
             def _post_hook(mod, inputs, output):
-                if hasattr(mod, '_weight_float'):
+                if hasattr(mod, "_weight_float"):
                     mod.weight.data.copy_(mod._weight_float)
                     del mod._weight_float
                 return output

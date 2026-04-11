@@ -18,6 +18,7 @@ Example::
     score = scorer.score(pose_dist, seg_dist, rate)
     saliency = scorer.posenet_saliency(gt_frames)
 """
+
 from __future__ import annotations
 
 import math

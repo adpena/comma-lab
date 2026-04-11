@@ -3,6 +3,7 @@
 All losses operate on frame pairs in (1, 2, H, W, 3) HWC format and
 handle the BTCHW conversion internally before passing to the scorers.
 """
+
 from __future__ import annotations
 
 import math
@@ -260,8 +261,8 @@ def eval_scorer_loss(
     gp_out, gs_out = scorer_forward_pair(gx, posenet, segnet)
 
     # PoseNet: per-sample MSE (matches upstream compute_distortion)
-    pose_per_sample = (fp_out["pose"][..., :6] - gp_out["pose"][..., :6]).pow(2).mean(
-        dim=tuple(range(1, fp_out["pose"].ndim))
+    pose_per_sample = (
+        (fp_out["pose"][..., :6] - gp_out["pose"][..., :6]).pow(2).mean(dim=tuple(range(1, fp_out["pose"].ndim)))
     )
 
     # SegNet: hard argmax disagreement (matches upstream compute_distortion)
@@ -599,11 +600,15 @@ def kl_distill_scorer_loss(
     if boundary_mask is not None:
         bm = boundary_mask.to(kl_per_pixel.device)
         if bm.shape != kl_per_pixel.shape[-2:]:
-            bm = F.interpolate(
-                bm.unsqueeze(0).unsqueeze(0).float(),
-                size=kl_per_pixel.shape[-2:],
-                mode="nearest",
-            ).squeeze(0).squeeze(0)
+            bm = (
+                F.interpolate(
+                    bm.unsqueeze(0).unsqueeze(0).float(),
+                    size=kl_per_pixel.shape[-2:],
+                    mode="nearest",
+                )
+                .squeeze(0)
+                .squeeze(0)
+            )
         weight = 1.0 + boundary_weight * bm
         weight = weight / weight.mean()  # normalize to preserve loss scale
         kl_per_pixel = kl_per_pixel * weight
@@ -662,6 +667,7 @@ def feature_matching_loss(
     def _hook_fn(storage):
         def hook(module, input, output):
             storage.append(output)
+
         return hook
 
     handle = target_module.register_forward_hook(_hook_fn(features_filtered))

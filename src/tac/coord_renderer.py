@@ -21,13 +21,13 @@ Classes:
     - CoordRenderer: the coordinate-based renderer MLP
     - CoordPairGenerator: wraps CoordRenderer + MotionPredictor for pair output
 """
+
 from __future__ import annotations
 
 import math
 
 import torch
 import torch.nn as nn
-import torch.nn.functional as F
 
 from .renderer import MotionPredictor, warp_with_flow
 
@@ -75,13 +75,17 @@ class PositionalEncoding(nn.Module):
         x_scaled = x * self.freqs  # (..., num_bands)
         y_scaled = y * self.freqs  # (..., num_bands)
 
-        encoded = torch.cat([
-            x, y,                    # raw coordinates (2)
-            torch.sin(x_scaled),     # sin(f * x) for each freq (num_bands)
-            torch.cos(x_scaled),     # cos(f * x) for each freq (num_bands)
-            torch.sin(y_scaled),     # sin(f * y) for each freq (num_bands)
-            torch.cos(y_scaled),     # cos(f * y) for each freq (num_bands)
-        ], dim=-1)
+        encoded = torch.cat(
+            [
+                x,
+                y,  # raw coordinates (2)
+                torch.sin(x_scaled),  # sin(f * x) for each freq (num_bands)
+                torch.cos(x_scaled),  # cos(f * x) for each freq (num_bands)
+                torch.sin(y_scaled),  # sin(f * y) for each freq (num_bands)
+                torch.cos(y_scaled),  # cos(f * y) for each freq (num_bands)
+            ],
+            dim=-1,
+        )
 
         return encoded
 
@@ -280,7 +284,9 @@ def build_coord_renderer(
     total = pair_gen.param_count()
     r_count = renderer.param_count()
     m_count = motion.param_count()
-    print(f"[coord_renderer] Built CoordPairGenerator: {total:,} params "
-          f"(renderer={r_count:,}, motion={m_count:,}, blend=1)")
+    print(
+        f"[coord_renderer] Built CoordPairGenerator: {total:,} params "
+        f"(renderer={r_count:,}, motion={m_count:,}, blend=1)"
+    )
 
     return pair_gen

@@ -17,6 +17,7 @@ Includes three distillation strategies:
 
 All components are modular and compatible with the tac training infrastructure.
 """
+
 from __future__ import annotations
 
 import math
@@ -24,7 +25,6 @@ import math
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
-
 
 # ── Timestep embedding ──────────────────────────────────────────────────
 
@@ -43,9 +43,7 @@ def sinusoidal_embedding(t: torch.Tensor, dim: int) -> torch.Tensor:
     """
     assert dim % 2 == 0, f"Embedding dim must be even, got {dim}"
     half = dim // 2
-    freqs = torch.exp(
-        -math.log(10000.0) * torch.arange(half, device=t.device, dtype=torch.float32) / half
-    )
+    freqs = torch.exp(-math.log(10000.0) * torch.arange(half, device=t.device, dtype=torch.float32) / half)
     args = t.float().unsqueeze(1) * freqs.unsqueeze(0)
     return torch.cat([torch.sin(args), torch.cos(args)], dim=1)
 
@@ -128,9 +126,7 @@ class DiffusionResBlock(nn.Module):
         nn.init.zeros_(self.conv2.weight)
         nn.init.zeros_(self.conv2.bias)
 
-    def forward(
-        self, x: torch.Tensor, t_emb: torch.Tensor, cond: torch.Tensor
-    ) -> torch.Tensor:
+    def forward(self, x: torch.Tensor, t_emb: torch.Tensor, cond: torch.Tensor) -> torch.Tensor:
         """Forward pass.
 
         Args:
@@ -451,10 +447,7 @@ class DiffusionRenderer(nn.Module):
         x0_pred = x0_pred.clamp(-1.0, 2.0)  # loose clamp for stability
 
         # Posterior mean
-        mean = (
-            self.posterior_mean_coef1[t] * x0_pred
-            + self.posterior_mean_coef2[t] * x
-        )
+        mean = self.posterior_mean_coef1[t] * x0_pred + self.posterior_mean_coef2[t] * x
 
         if t > 0:
             noise = torch.randn_like(x)
@@ -489,9 +482,7 @@ class DiffusionRenderer(nn.Module):
 
         # If using fewer steps, subsample the timestep sequence
         if num_steps < self.num_timesteps:
-            step_indices = torch.linspace(
-                self.num_timesteps - 1, 0, num_steps, device=device
-            ).long()
+            step_indices = torch.linspace(self.num_timesteps - 1, 0, num_steps, device=device).long()
         else:
             step_indices = torch.arange(self.num_timesteps - 1, -1, -1, device=device)
 
@@ -499,7 +490,7 @@ class DiffusionRenderer(nn.Module):
             x = self.p_sample(x, t.item(), cond)
 
         # Convert [0, 1] → [0, 255]
-        return (x.clamp(0.0, 1.0) * 255.0)
+        return x.clamp(0.0, 1.0) * 255.0
 
     @torch.no_grad()
     def ddim_sample(
@@ -526,9 +517,7 @@ class DiffusionRenderer(nn.Module):
         cond = self._masks_to_onehot(masks)
 
         # Subsample timestep sequence
-        step_indices = torch.linspace(
-            self.num_timesteps - 1, 0, num_steps + 1, device=device
-        ).long()
+        step_indices = torch.linspace(self.num_timesteps - 1, 0, num_steps + 1, device=device).long()
 
         x = torch.randn(B, 3, H, W, device=device)
 
@@ -546,16 +535,14 @@ class DiffusionRenderer(nn.Module):
             x0_pred = x0_pred.clamp(-1.0, 2.0)
 
             # DDIM update
-            sigma = eta * torch.sqrt(
-                (1 - alpha_prev) / (1 - alpha_t) * (1 - alpha_t / alpha_prev)
-            )
-            dir_xt = torch.sqrt(1 - alpha_prev - sigma ** 2) * eps_pred
+            sigma = eta * torch.sqrt((1 - alpha_prev) / (1 - alpha_t) * (1 - alpha_t / alpha_prev))
+            dir_xt = torch.sqrt(1 - alpha_prev - sigma**2) * eps_pred
             x = torch.sqrt(alpha_prev) * x0_pred + dir_xt
 
             if sigma > 0 and t_prev > 0:
                 x = x + sigma * torch.randn_like(x)
 
-        return (x.clamp(0.0, 1.0) * 255.0)
+        return x.clamp(0.0, 1.0) * 255.0
 
     def ddim_sample_train(
         self,
@@ -581,9 +568,7 @@ class DiffusionRenderer(nn.Module):
         cond = self._masks_to_onehot(masks)
 
         # Subsample timestep sequence
-        step_indices = torch.linspace(
-            self.num_timesteps - 1, 0, num_steps + 1, device=device
-        ).long()
+        step_indices = torch.linspace(self.num_timesteps - 1, 0, num_steps + 1, device=device).long()
 
         x = torch.randn(B, 3, H, W, device=device)
 
@@ -601,16 +586,14 @@ class DiffusionRenderer(nn.Module):
             x0_pred = x0_pred.clamp(-1.0, 2.0)
 
             # DDIM update
-            sigma = eta * torch.sqrt(
-                (1 - alpha_prev) / (1 - alpha_t) * (1 - alpha_t / alpha_prev)
-            )
-            dir_xt = torch.sqrt(1 - alpha_prev - sigma ** 2) * eps_pred
+            sigma = eta * torch.sqrt((1 - alpha_prev) / (1 - alpha_t) * (1 - alpha_t / alpha_prev))
+            dir_xt = torch.sqrt(1 - alpha_prev - sigma**2) * eps_pred
             x = torch.sqrt(alpha_prev) * x0_pred + dir_xt
 
             if sigma > 0 and t_prev > 0:
                 x = x + sigma * torch.randn_like(x)
 
-        return (x.clamp(0.0, 1.0) * 255.0)
+        return x.clamp(0.0, 1.0) * 255.0
 
     def param_count(self) -> int:
         """Total trainable parameter count."""
@@ -661,13 +644,9 @@ class DistillationTrainer:
             p.requires_grad_(False)
 
         # Student optimizer
-        self.optimizer = torch.optim.AdamW(
-            self.student.parameters(), lr=lr, weight_decay=1e-4
-        )
+        self.optimizer = torch.optim.AdamW(self.student.parameters(), lr=lr, weight_decay=1e-4)
 
-    def generate_teacher_targets(
-        self, masks: torch.Tensor
-    ) -> torch.Tensor:
+    def generate_teacher_targets(self, masks: torch.Tensor) -> torch.Tensor:
         """Generate high-quality frames from teacher (slow).
 
         Args:
@@ -792,9 +771,7 @@ class ProgressiveDistiller:
         for p in teacher.parameters():
             p.requires_grad_(False)
 
-        optimizer = torch.optim.AdamW(
-            student.denoiser.parameters(), lr=self.lr, weight_decay=1e-4
-        )
+        optimizer = torch.optim.AdamW(student.denoiser.parameters(), lr=self.lr, weight_decay=1e-4)
 
         student.train()
         for i, masks in enumerate(masks_loader):
@@ -819,8 +796,10 @@ class ProgressiveDistiller:
             optimizer.step()
 
             if (i + 1) % 100 == 0:
-                print(f"  [prog_distill] stage {teacher_steps}→{student_steps} "
-                      f"iter {i+1}/{num_iters} loss={loss.item():.6f}")
+                print(
+                    f"  [prog_distill] stage {teacher_steps}→{student_steps} "
+                    f"iter {i + 1}/{num_iters} loss={loss.item():.6f}"
+                )
 
         return student
 
@@ -855,11 +834,13 @@ class ProgressiveDistiller:
         for i in range(len(schedule) - 1):
             teacher_steps = schedule[i]
             student_steps = schedule[i + 1]
-            print(f"[prog_distill] Stage {i+1}/{len(schedule)-1}: "
-                  f"{teacher_steps}→{student_steps} steps")
+            print(f"[prog_distill] Stage {i + 1}/{len(schedule) - 1}: {teacher_steps}→{student_steps} steps")
             teacher = self.distill_stage(
-                teacher, teacher_steps, student_steps,
-                masks_loader, num_iters=iters_per_stage,
+                teacher,
+                teacher_steps,
+                student_steps,
+                masks_loader,
+                num_iters=iters_per_stage,
             )
 
         return teacher
@@ -944,8 +925,8 @@ class ConsistencyModel(nn.Module):
         # Skip connection coefficients that enforce boundary condition
         # c_skip(t) approaches 1 as t→0, c_out(t) approaches 0 as t→0
         sigma = self.sqrt_one_minus_alphas_cumprod[t].view(-1, 1, 1, 1)
-        c_skip = 1.0 / (1.0 + sigma ** 2)
-        c_out = sigma / (1.0 + sigma ** 2).sqrt()
+        c_skip = 1.0 / (1.0 + sigma**2)
+        c_out = sigma / (1.0 + sigma**2).sqrt()
 
         # Network prediction
         F_pred = self.net(x_t, t, cond)
@@ -982,9 +963,7 @@ class ConsistencyModel(nn.Module):
             x = self.forward(x, t, cond)
         else:
             # Multi-step: iteratively apply consistency function
-            step_indices = torch.linspace(
-                self.num_timesteps - 1, 0, num_steps + 1, device=device
-            ).long()
+            step_indices = torch.linspace(self.num_timesteps - 1, 0, num_steps + 1, device=device).long()
 
             for i in range(num_steps):
                 t_now = step_indices[i]
@@ -1003,7 +982,7 @@ class ConsistencyModel(nn.Module):
                 else:
                     x = x0_pred
 
-        return (x.clamp(0.0, 1.0) * 255.0)
+        return x.clamp(0.0, 1.0) * 255.0
 
     def param_count(self) -> int:
         return sum(p.numel() for p in self.parameters() if p.requires_grad)
@@ -1055,16 +1034,12 @@ class ConsistencyDistiller:
         for p in self.target.parameters():
             p.requires_grad_(False)
 
-        self.optimizer = torch.optim.AdamW(
-            self.student.parameters(), lr=lr, weight_decay=1e-4
-        )
+        self.optimizer = torch.optim.AdamW(self.student.parameters(), lr=lr, weight_decay=1e-4)
 
     @torch.no_grad()
     def _update_ema(self):
         """Update target network with EMA of student weights."""
-        for p_target, p_student in zip(
-            self.target.parameters(), self.student.parameters()
-        ):
+        for p_target, p_student in zip(self.target.parameters(), self.student.parameters()):
             p_target.data.lerp_(p_student.data, 1.0 - self.ema_decay)
 
     def distill_step(
@@ -1155,8 +1130,10 @@ def build_diffusion_teacher(
         time_dim=time_dim,
     )
     total = model.param_count()
-    print(f"[diffusion] Built DiffusionRenderer: {total:,} params "
-          f"(channels={channels}, T={num_timesteps}, time_dim={time_dim})")
+    print(
+        f"[diffusion] Built DiffusionRenderer: {total:,} params "
+        f"(channels={channels}, T={num_timesteps}, time_dim={time_dim})"
+    )
     return model
 
 
@@ -1187,6 +1164,5 @@ def build_consistency_model(
         time_dim=time_dim,
     )
     total = model.param_count()
-    print(f"[consistency] Built ConsistencyModel: {total:,} params "
-          f"(channels={channels}, T={num_timesteps})")
+    print(f"[consistency] Built ConsistencyModel: {total:,} params (channels={channels}, T={num_timesteps})")
     return model

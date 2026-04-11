@@ -113,7 +113,7 @@ class AdaptiveWeights:
         if pose < 0:
             raise ValueError(f"Pose distortion must be non-negative, got {pose}")
         pose = max(pose, 1e-6)
-        return 20.0 * math.sqrt(pose / self.reference_pose) / (temperature ** 2)
+        return 20.0 * math.sqrt(pose / self.reference_pose) / (temperature**2)
 
     def optimal_segnet_weight_standard(self, pose: float) -> float:
         """Compute optimal segnet weight for standard loss from the Pareto MRS condition.
@@ -183,9 +183,7 @@ class AdaptiveWeights:
             Optimal boundary_weight (float).
         """
         if not 0 < target_amplification < 1:
-            raise ValueError(
-                f"target_amplification must be in (0, 1), got {target_amplification}"
-            )
+            raise ValueError(f"target_amplification must be in (0, 1), got {target_amplification}")
         beta = self.boundary_fraction
         # bw = target * (1 - beta) / (beta * (1 - target))
         bw = target_amplification * (1 - beta) / (beta * (1 - target_amplification))
@@ -245,7 +243,7 @@ class AdaptiveWeights:
         Returns:
             w_s * T^2 (should be ~3.0 for optimal training).
         """
-        return segnet_weight * (temperature ** 2)
+        return segnet_weight * (temperature**2)
 
     def rebalance_standard(
         self,
@@ -285,18 +283,19 @@ class AdaptiveWeights:
                 "score_estimate_no_rate": score_est,
                 "amplification_pct_of_ceiling": amplification / ceiling * 100,
                 "summary": (
-                    f"MRS-optimal: seg_w={seg_w:.1f}, bnd_w={bnd_w:.0f} "
-                    f"(pose={eval_pose:.5f}, seg={eval_seg:.5f})"
+                    f"MRS-optimal: seg_w={seg_w:.1f}, bnd_w={bnd_w:.0f} (pose={eval_pose:.5f}, seg={eval_seg:.5f})"
                 ),
             },
         }
 
-        self._history.append({
-            "eval_pose": eval_pose,
-            "eval_seg": eval_seg,
-            "mode": "standard",
-            **result,
-        })
+        self._history.append(
+            {
+                "eval_pose": eval_pose,
+                "eval_seg": eval_seg,
+                "mode": "standard",
+                **result,
+            }
+        )
 
         return result
 
@@ -358,12 +357,14 @@ class AdaptiveWeights:
         }
 
         # Record history for analysis
-        self._history.append({
-            "temperature": temperature,
-            "eval_pose": eval_pose,
-            "eval_seg": eval_seg,
-            **result,
-        })
+        self._history.append(
+            {
+                "temperature": temperature,
+                "eval_pose": eval_pose,
+                "eval_seg": eval_seg,
+                **result,
+            }
+        )
 
         return result
 
@@ -388,11 +389,7 @@ def geometric_mean_score(
 
     Baseline = 1.0 by construction. Lower is better.
     """
-    return (
-        (seg / seg_baseline) ** w_seg
-        * (pose / pose_baseline) ** w_pose
-        * (rate / rate_baseline) ** w_rate
-    )
+    return (seg / seg_baseline) ** w_seg * (pose / pose_baseline) ** w_pose * (rate / rate_baseline) ** w_rate
 
 
 def print_operating_table() -> None:
@@ -442,10 +439,7 @@ def print_operating_table() -> None:
     print("-" * 40)
     for p in poses:
         s = aw.score_sensitivity(p)
-        print(
-            f"{p:>8.3f}  {s['d_score_d_seg']:>9.1f}  "
-            f"{s['d_score_d_pose']:>10.2f}  {s['sensitivity_ratio']:>7.1f}x"
-        )
+        print(f"{p:>8.3f}  {s['d_score_d_seg']:>9.1f}  {s['d_score_d_pose']:>10.2f}  {s['sensitivity_ratio']:>7.1f}x")
 
     # Table 4: Rebalance example across a training run
     print("\n--- Simulated training run (pose=0.10, seg=0.015) ---")

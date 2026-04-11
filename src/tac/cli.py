@@ -5,38 +5,39 @@ The lossy path is the standard training route; the lossless path is a minimal
 profile-based skeleton that keeps the namespace canonical without duplicating
 training logic.
 """
+
 from __future__ import annotations
 
 import argparse
-from dataclasses import asdict
 import json
 import os
+from dataclasses import asdict
 from pathlib import Path
 from typing import Any
 
 from .lossless.arithmetic import (
-    GPTArithmeticEstimate,
     build_gpt_arithmetic_plan,
     estimate_gpt_arithmetic_workload,
     materialize_gpt_arithmetic_stream,
     write_symbol_frequency_report,
 )
-from .lossless.frequency_coder import benchmark_prev_symbol_frequency_file
-from .lossless.frequency_coder import benchmark_prev_pair_frequency_file
-from .lossless.frequency_coder import decode_uint16_prev_symbol_file
-from .lossless.frequency_coder import encode_uint16_frequency_file
-from .lossless.frequency_coder import encode_uint16_prev_symbol_file
 from .lossless.codecs import (
     compress_lossless_file,
     decompress_lossless_file,
     evaluate_lossless_baseline_submission,
 )
 from .lossless.evaluate import evaluate_lossless_archive
+from .lossless.frequency_coder import (
+    benchmark_prev_pair_frequency_file,
+    benchmark_prev_symbol_frequency_file,
+    decode_uint16_prev_symbol_file,
+    encode_uint16_frequency_file,
+    encode_uint16_prev_symbol_file,
+)
 from .lossless.profiles import PROFILES as LOSSLESS_PROFILES
 from .lossless.state import promote_lossless_result
 from .lossless.submission import build_submission_zip
 from .profiles import PROFILES as LOSSY_PROFILES
-
 
 PROJECT_ROOT = Path(__file__).resolve().parents[2]
 UPSTREAM_ROOT = PROJECT_ROOT / "workspace" / "upstream" / "comma_video_compression_challenge"
@@ -133,12 +134,16 @@ def build_parser() -> argparse.ArgumentParser:
     sp.add_argument("--output", required=True)
     sp.set_defaults(lossless_handler="frequency_report")
 
-    sp = lossless_sub.add_parser("frequency-encode", help="Encode a prepared token stream with the static frequency coder")
+    sp = lossless_sub.add_parser(
+        "frequency-encode", help="Encode a prepared token stream with the static frequency coder"
+    )
     sp.add_argument("--tokens", required=True)
     sp.add_argument("--output", required=True)
     sp.set_defaults(lossless_handler="frequency_encode")
 
-    sp = lossless_sub.add_parser("prev-symbol-encode", help="Encode a prepared token stream with the previous-symbol conditional coder")
+    sp = lossless_sub.add_parser(
+        "prev-symbol-encode", help="Encode a prepared token stream with the previous-symbol conditional coder"
+    )
     sp.add_argument("--tokens", required=True)
     sp.add_argument("--output", required=True)
     sp.set_defaults(lossless_handler="prev_symbol_encode")
@@ -148,12 +153,16 @@ def build_parser() -> argparse.ArgumentParser:
     sp.add_argument("--output", required=True)
     sp.set_defaults(lossless_handler="prev_symbol_decode")
 
-    sp = lossless_sub.add_parser("prev-symbol-benchmark", help="Benchmark a previous-symbol conditional static coder over a prepared stream")
+    sp = lossless_sub.add_parser(
+        "prev-symbol-benchmark", help="Benchmark a previous-symbol conditional static coder over a prepared stream"
+    )
     sp.add_argument("--tokens", required=True)
     sp.add_argument("--max-tokens", type=int, default=None)
     sp.set_defaults(lossless_handler="prev_symbol_benchmark")
 
-    sp = lossless_sub.add_parser("prev-pair-benchmark", help="Benchmark a previous-pair conditional static coder over a prepared stream")
+    sp = lossless_sub.add_parser(
+        "prev-pair-benchmark", help="Benchmark a previous-pair conditional static coder over a prepared stream"
+    )
     sp.add_argument("--tokens", required=True)
     sp.add_argument("--max-tokens", type=int, default=None)
     sp.set_defaults(lossless_handler="prev_pair_benchmark")
@@ -185,7 +194,9 @@ def build_parser() -> argparse.ArgumentParser:
     sp.add_argument("--archive", required=True)
     sp.set_defaults(lossless_handler="evaluate")
 
-    sp = lossless_sub.add_parser("promote", help="Promote a measured lossless result into separate lossless state surfaces")
+    sp = lossless_sub.add_parser(
+        "promote", help="Promote a measured lossless result into separate lossless state surfaces"
+    )
     sp.add_argument("--result-json", required=True)
     sp.add_argument("--repo-root", required=True)
     sp.set_defaults(lossless_handler="promote")
@@ -272,7 +283,9 @@ def _run_lossy(args: argparse.Namespace) -> dict[str, Any]:
     )
 
     model = build_postfilter(effective_variant, hidden=effective_hidden, kernel=effective_kernel)
-    print(f"[tac] Model: {effective_variant} h={effective_hidden} ({sum(p.numel() for p in model.parameters())} params)")
+    print(
+        f"[tac] Model: {effective_variant} h={effective_hidden} ({sum(p.numel() for p in model.parameters())} params)"
+    )
 
     trainer = Trainer(model, config, device=device)
     best = trainer.fit_lazy(comp_frames, gt_frames, posenet, segnet, raw_saliency, subsample=args.subsample)

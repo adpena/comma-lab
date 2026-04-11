@@ -21,6 +21,7 @@ storage is:
     - 1-bit sign
     = 4 bits total per weight
 """
+
 from __future__ import annotations
 
 import os
@@ -146,8 +147,7 @@ def _unpack_indices_signs(
 
     indices = (nibbles & 0x07).to(torch.uint8)
     sign_bits = (nibbles >> 3) & 0x01
-    signs = torch.where(sign_bits == 0, torch.tensor(1, dtype=torch.int8),
-                        torch.tensor(-1, dtype=torch.int8))
+    signs = torch.where(sign_bits == 0, torch.tensor(1, dtype=torch.int8), torch.tensor(-1, dtype=torch.int8))
     return indices, signs
 
 
@@ -276,7 +276,10 @@ def dequantize_fp4(
         for i, start in enumerate(range(0, padded_numel, block_size)):
             end = start + block_size
             block_values = _dequantize_block(
-                indices[start:end], signs[start:end], scales[i], codebook,
+                indices[start:end],
+                signs[start:end],
+                scales[i],
+                codebook,
             )
             all_values.append(block_values)
 
@@ -416,9 +419,10 @@ class QATRendererFP4(nn.Module):
         """Attach FP4 STE parametrizations to all quantizable layers."""
         for module in self.base.modules():
             if isinstance(module, (nn.Conv2d, nn.ConvTranspose2d, nn.Embedding)):
-                if hasattr(module, 'weight') and module.weight.ndim >= 2:
+                if hasattr(module, "weight") and module.weight.ndim >= 2:
                     nn.utils.parametrize.register_parametrization(
-                        module, 'weight',
+                        module,
+                        "weight",
                         FP4Parametrize(self.codebook.clone(), self.block_size),
                     )
                     self._parametrized_modules.append(module)
@@ -426,8 +430,8 @@ class QATRendererFP4(nn.Module):
     def remove_hooks(self):
         """Remove all FP4 parametrizations (for eval/export)."""
         for module in self._parametrized_modules:
-            if nn.utils.parametrize.is_parametrized(module, 'weight'):
-                nn.utils.parametrize.remove_parametrizations(module, 'weight')
+            if nn.utils.parametrize.is_parametrized(module, "weight"):
+                nn.utils.parametrize.remove_parametrizations(module, "weight")
         self._parametrized_modules.clear()
 
     def forward(self, *args, **kwargs):
@@ -465,8 +469,7 @@ def save_fp4(
     torch.save(packed, path)
     size = os.path.getsize(path)
     param_count = sum(p.numel() for p in model.parameters())
-    print(f"[fp4] Saved {param_count:,} params to {path} ({size:,} bytes, "
-          f"{size / param_count * 8:.2f} bits/param)")
+    print(f"[fp4] Saved {param_count:,} params to {path} ({size:,} bytes, {size / param_count * 8:.2f} bits/param)")
     return size
 
 

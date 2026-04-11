@@ -3,13 +3,13 @@
 Provides signal handling, JSONL telemetry, and formatted epoch logging
 so both training.py and train_renderer.py stay DRY.
 """
+
 from __future__ import annotations
 
 import atexit
 import json
 import signal
 import sys
-import time
 from collections.abc import Callable
 from pathlib import Path
 
@@ -20,6 +20,7 @@ def setup_signal_handlers(save_fn: Callable[[], None]) -> None:
     Args:
         save_fn: Zero-arg callable that persists the current training state.
     """
+
     def _signal_handler(signum, frame):
         try:
             print(f"\n[train] EMERGENCY SAVE (signal {signum})")

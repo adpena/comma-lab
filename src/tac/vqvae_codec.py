@@ -33,6 +33,7 @@ Modules:
     - VQVAEPairGenerator: produces scorer-compatible frame pairs
     - TemporalDeltaCoder: compresses code indices via temporal differencing
 """
+
 from __future__ import annotations
 
 import io
@@ -42,7 +43,6 @@ from pathlib import Path
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
-
 
 # ── Vector Quantization Layer ──────────────────────────────────────────
 
@@ -86,9 +86,7 @@ class VectorQuantizer(nn.Module):
             self.register_buffer("_ema_cluster_size", torch.zeros(num_embeddings))
             self.register_buffer("_ema_w", self.embedding.weight.data.clone())
 
-    def forward(
-        self, z: torch.Tensor
-    ) -> tuple[torch.Tensor, torch.Tensor, torch.Tensor]:
+    def forward(self, z: torch.Tensor) -> tuple[torch.Tensor, torch.Tensor, torch.Tensor]:
         """Quantize continuous latent to nearest codebook entries.
 
         Args:
@@ -124,19 +122,13 @@ class VectorQuantizer(nn.Module):
                 # One-hot encodings for cluster assignment
                 encodings = F.one_hot(indices, self.K).float()  # (B*H*W, K)
                 # Update cluster sizes
-                self._ema_cluster_size.mul_(self.ema_decay).add_(
-                    encodings.sum(0), alpha=1 - self.ema_decay
-                )
+                self._ema_cluster_size.mul_(self.ema_decay).add_(encodings.sum(0), alpha=1 - self.ema_decay)
                 # Update cluster centroids
                 dw = encodings.t() @ z_flat  # (K, D)
                 self._ema_w.mul_(self.ema_decay).add_(dw, alpha=1 - self.ema_decay)
                 # Laplace smoothing to avoid empty clusters
                 n = self._ema_cluster_size.sum()
-                cluster_size = (
-                    (self._ema_cluster_size + 1e-5)
-                    / (n + self.K * 1e-5)
-                    * n
-                )
+                cluster_size = (self._ema_cluster_size + 1e-5) / (n + self.K * 1e-5) * n
                 self.embedding.weight.data.copy_(self._ema_w / cluster_size.unsqueeze(1))
 
         # Reshape back: (B*H*W, D) -> (B, H, W, D) -> (B, D, H, W)
@@ -352,9 +344,7 @@ class VQVAE(nn.Module):
             base_ch=base_ch,
         )
 
-    def forward(
-        self, x: torch.Tensor
-    ) -> tuple[torch.Tensor, torch.Tensor, torch.Tensor]:
+    def forward(self, x: torch.Tensor) -> tuple[torch.Tensor, torch.Tensor, torch.Tensor]:
         """Full encode-quantize-decode pass.
 
         Args:
@@ -585,9 +575,7 @@ class TemporalDeltaCoder:
         import numpy as np
 
         first_data = buf.read(H * W * 2)
-        first = torch.from_numpy(
-            np.frombuffer(first_data, dtype=np.uint16).reshape(H, W).copy()
-        ).long().to(device)
+        first = torch.from_numpy(np.frombuffer(first_data, dtype=np.uint16).reshape(H, W).copy()).long().to(device)
 
         frames = [first]
         prev = first.clone()
@@ -790,9 +778,7 @@ def load_decoder_and_codebook(
 
     # Load decoder
     decoder = VQDecoder(embedding_dim=embedding_dim, base_ch=base_ch)
-    decoder_state = torch.load(
-        inp / f"{prefix}_decoder.pt", map_location=device, weights_only=True
-    )
+    decoder_state = torch.load(inp / f"{prefix}_decoder.pt", map_location=device, weights_only=True)
     decoder.load_state_dict(decoder_state)
     decoder.to(device).eval()
 
@@ -802,9 +788,7 @@ def load_decoder_and_codebook(
         embedding_dim=embedding_dim,
         ema_decay=0,  # No EMA needed for inference
     )
-    codebook_weights = torch.load(
-        inp / f"{prefix}_codebook.pt", map_location=device, weights_only=True
-    )
+    codebook_weights = torch.load(inp / f"{prefix}_codebook.pt", map_location=device, weights_only=True)
     quantizer.embedding.weight.data.copy_(codebook_weights)
     quantizer.to(device).eval()
 

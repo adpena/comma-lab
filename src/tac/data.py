@@ -3,6 +3,7 @@
 Handles video decoding, frame pair construction, and saliency weight loading
 with BT.601 limited-range YUV420->RGB matching the scorer's frame_utils.py.
 """
+
 from __future__ import annotations
 
 import tempfile
@@ -25,8 +26,8 @@ def yuv420_to_rgb(frame) -> torch.Tensor:
     """
     H, W = frame.height, frame.width
     y = np.frombuffer(frame.planes[0], dtype=np.uint8).reshape(H, frame.planes[0].line_size)[:, :W]
-    u = np.frombuffer(frame.planes[1], dtype=np.uint8).reshape(H // 2, frame.planes[1].line_size)[:, :W // 2]
-    v = np.frombuffer(frame.planes[2], dtype=np.uint8).reshape(H // 2, frame.planes[2].line_size)[:, :W // 2]
+    u = np.frombuffer(frame.planes[1], dtype=np.uint8).reshape(H // 2, frame.planes[1].line_size)[:, : W // 2]
+    v = np.frombuffer(frame.planes[2], dtype=np.uint8).reshape(H // 2, frame.planes[2].line_size)[:, : W // 2]
 
     y_t = torch.from_numpy(y.copy()).float()
     u_t = torch.from_numpy(u.copy()).float().unsqueeze(0).unsqueeze(0)

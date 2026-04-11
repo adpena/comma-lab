@@ -25,6 +25,7 @@ Usage::
     from tac.scorer_targets import load_posenet_targets
     targets = load_posenet_targets('posenet_targets.bin')
 """
+
 from __future__ import annotations
 
 import io
@@ -34,7 +35,6 @@ import zlib
 from pathlib import Path
 
 import torch
-
 
 # Magic bytes for file format identification
 _MAGIC = b"PNTG"  # PoseNet TarGets
@@ -73,8 +73,7 @@ def extract_posenet_targets(
     n_pairs = n_frames // 2
 
     if verbose:
-        print(f"[scorer_targets] Extracting PoseNet targets: "
-              f"{n_frames} frames -> {n_pairs} pairs", file=sys.stderr)
+        print(f"[scorer_targets] Extracting PoseNet targets: {n_frames} frames -> {n_pairs} pairs", file=sys.stderr)
 
     all_targets = []
 
@@ -86,7 +85,7 @@ def extract_posenet_targets(
 
             for pair_idx in range(batch_start, batch_end):
                 frame_idx = pair_idx * 2
-                f0 = gt_frames[frame_idx]   # (H, W, 3) uint8
+                f0 = gt_frames[frame_idx]  # (H, W, 3) uint8
                 f1 = gt_frames[frame_idx + 1]
                 # Stack as (1, 2, H, W, 3) to match scorer input format
                 pair = torch.stack([f0, f1]).unsqueeze(0)
@@ -112,9 +111,10 @@ def extract_posenet_targets(
     assert targets.shape == (n_pairs, 6), f"Expected ({n_pairs}, 6), got {targets.shape}"
 
     if verbose:
-        print(f"[scorer_targets] Extracted {n_pairs} targets, "
-              f"range [{targets.min():.4f}, {targets.max():.4f}]",
-              file=sys.stderr)
+        print(
+            f"[scorer_targets] Extracted {n_pairs} targets, range [{targets.min():.4f}, {targets.max():.4f}]",
+            file=sys.stderr,
+        )
 
     return {
         "targets": targets,
@@ -164,9 +164,12 @@ def save_posenet_targets(targets_dict: dict, path: str | Path) -> int:
     data = buf.getvalue()
     path.write_bytes(data)
 
-    print(f"[scorer_targets] Saved {n_pairs} targets to {path}: "
-          f"{len(data)} bytes (raw {len(raw_bytes)}, "
-          f"compressed {len(compressed)})", file=sys.stderr)
+    print(
+        f"[scorer_targets] Saved {n_pairs} targets to {path}: "
+        f"{len(data)} bytes (raw {len(raw_bytes)}, "
+        f"compressed {len(compressed)})",
+        file=sys.stderr,
+    )
 
     return len(data)
 
@@ -194,14 +197,12 @@ def load_posenet_targets(
 
     magic = buf.read(4)
     if magic != _MAGIC:
-        print(f"[scorer_targets] WARNING: invalid magic in {path}, skipping",
-              file=sys.stderr)
+        print(f"[scorer_targets] WARNING: invalid magic in {path}, skipping", file=sys.stderr)
         return None
 
     version = struct.unpack("<H", buf.read(2))[0]
     if version != _VERSION:
-        print(f"[scorer_targets] WARNING: unsupported version {version} in {path}",
-              file=sys.stderr)
+        print(f"[scorer_targets] WARNING: unsupported version {version} in {path}", file=sys.stderr)
         return None
 
     n_pairs = struct.unpack("<I", buf.read(4))[0]
@@ -211,11 +212,11 @@ def load_posenet_targets(
 
     raw_bytes = zlib.decompress(compressed)
     import numpy as np
+
     targets_f16 = np.frombuffer(raw_bytes, dtype=np.float16).reshape(n_pairs, 6)
     targets = torch.from_numpy(targets_f16.copy()).float().to(device)
 
-    print(f"[scorer_targets] Loaded {n_pairs} PoseNet targets from {path} "
-          f"({len(data)} bytes)", file=sys.stderr)
+    print(f"[scorer_targets] Loaded {n_pairs} PoseNet targets from {path} ({len(data)} bytes)", file=sys.stderr)
 
     return {
         "targets": targets,
@@ -256,7 +257,8 @@ def extract_and_save(
     # Load PoseNet (we don't need SegNet)
     segnet_path = Path(posenet_path).parent / "segnet.safetensors"
     posenet, _ = load_scorers(
-        posenet_path, segnet_path,
+        posenet_path,
+        segnet_path,
         device=device,
         upstream_dir=upstream_dir,
     )

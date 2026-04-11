@@ -1,11 +1,10 @@
 from __future__ import annotations
 
-from dataclasses import dataclass
 import json
+from collections.abc import Mapping, Sequence
+from dataclasses import dataclass
 from functools import partial
 from pathlib import Path
-from collections.abc import Mapping, Sequence
-from typing import Optional
 
 from .data import COMMAVQ_DATASET_NAME, load_commavq_dataset
 from .profiles import PROFILES
@@ -219,7 +218,7 @@ def estimate_gpt_arithmetic_workload(
     split: str | Sequence[str] | None = "challenge",
     work_dir: str | Path | None = None,
     dataset_loader=None,
-    num_proc: Optional[int] = None,
+    num_proc: int | None = None,
     layout: str = "frame_major",
 ) -> GPTArithmeticEstimate:
     import numpy as np
@@ -273,7 +272,7 @@ def materialize_gpt_arithmetic_stream(
     split: str | Sequence[str] | None = "challenge",
     output_path: str | Path,
     dataset_loader=None,
-    num_proc: Optional[int] = None,
+    num_proc: int | None = None,
     layout: str = "frame_major",
 ) -> dict[str, object]:
     import numpy as np
@@ -390,7 +389,9 @@ def write_symbol_frequency_report(*, token_path: str | Path, output_path: str | 
         "empirical_bits_per_token": estimate_empirical_entropy_bits(tokens),
         "top_symbols": [
             {"symbol": int(symbol), "count": int(count)}
-            for symbol, count in sorted(zip(unique.tolist(), counts.tolist()), key=lambda item: item[1], reverse=True)[:16]
+            for symbol, count in sorted(zip(unique.tolist(), counts.tolist()), key=lambda item: item[1], reverse=True)[
+                :16
+            ]
         ],
     }
     target.parent.mkdir(parents=True, exist_ok=True)

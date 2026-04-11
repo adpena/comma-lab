@@ -1,8 +1,7 @@
 from __future__ import annotations
 
-from pathlib import Path
 import zipfile
-
+from pathlib import Path
 
 _FIXED_ZIP_TIMESTAMP = (2024, 1, 1, 0, 0, 0)
 

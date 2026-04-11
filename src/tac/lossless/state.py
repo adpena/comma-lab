@@ -26,8 +26,7 @@ def validate_lossless_result_artifact(result: LosslessCompressionResult) -> None
     expected_rate = result.original_bytes / result.archive_bytes
     if not math.isclose(result.compression_rate, expected_rate, rel_tol=1e-12, abs_tol=1e-12):
         raise ValueError(
-            "compression_rate mismatch for "
-            f"{archive_path}: record={result.compression_rate} expected={expected_rate}"
+            f"compression_rate mismatch for {archive_path}: record={result.compression_rate} expected={expected_rate}"
         )
     if result.checked_items is None:
         raise ValueError("checked_items is required for exact verification evidence")

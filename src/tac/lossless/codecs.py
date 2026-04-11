@@ -1,20 +1,19 @@
 from __future__ import annotations
 
 import lzma
+import multiprocessing
 import os
-from pathlib import Path
 import shutil
 import subprocess
 import tempfile
-import multiprocessing
 from collections.abc import Iterable, Mapping
+from pathlib import Path
 
 from .contracts import LosslessCompressionResult
-from .data import TokenRecord, load_commavq_dataset, load_commavq_reference_records
+from .data import TokenRecord, load_commavq_dataset
 from .evaluate import compression_rate, evaluate_local_submission_contract
 from .profiles import PROFILES
 from .submission import build_submission_zip
-
 
 _FIXED_ZPAQ_MTIME = 1704067200  # 2024-01-01T00:00:00Z
 _ZPAQ_SUFFIX = ".zpaq"
@@ -24,9 +23,89 @@ _ZPAQ_PRESET_TO_METHOD = {
     "better": "4",
     "max": "5",
 }
-_LOCAL_ONLY_ZPAQ_REASON = (
-    "zpaq is local-only unless a self-contained runtime is bundled in the submission payload"
-)
+_LOCAL_ONLY_ZPAQ_REASON = "zpaq is local-only unless a self-contained runtime is bundled in the submission payload"
+
+
+def _require_zstd_backend():
+    try:
+        import zstandard as zstd
+
+        class _Backend:
+            @staticmethod
+            def train_dictionary(samples, *, dict_size: int) -> bytes:
+                dictionary = zstd.train_dictionary(dict_size, list(samples))
+                return dictionary.as_bytes()
+
+            @staticmethod
+            def compress(data: bytes, *, dictionary: bytes) -> bytes:
+                dict_data = zstd.ZstdCompressionDict(dictionary)
+                return zstd.ZstdCompressor(dict_data=dict_data).compress(data)
+
+            @staticmethod
+            def decompress(data: bytes, *, dictionary: bytes) -> bytes:
+                dict_data = zstd.ZstdCompressionDict(dictionary)
+                return zstd.ZstdDecompressor(dict_data=dict_data).decompress(data)
+
+        return _Backend()
+    except ImportError:
+        binary = shutil.which("zstd")
+        if binary is None:
+            raise RuntimeError("zstandard backend is unavailable; install zstandard to use zstd_dict experiments")
+
+    class _CliBackend:
+        @staticmethod
+        def train_dictionary(samples, *, dict_size: int) -> bytes:
+            with tempfile.TemporaryDirectory() as tmpdir:
+                root = Path(tmpdir)
+                dict_path = root / "dict.zstd"
+                sample_paths: list[str] = []
+                for index, sample in enumerate(samples):
+                    sample_path = root / f"sample_{index}.bin"
+                    sample_path.write_bytes(sample)
+                    sample_paths.append(str(sample_path))
+                subprocess.run(
+                    [binary, "--train", *sample_paths, "--maxdict", str(dict_size), "-o", str(dict_path)],
+                    check=True,
+                    stdout=subprocess.DEVNULL,
+                    stderr=subprocess.DEVNULL,
+                )
+                return dict_path.read_bytes()
+
+        @staticmethod
+        def compress(data: bytes, *, dictionary: bytes) -> bytes:
+            with tempfile.TemporaryDirectory() as tmpdir:
+                root = Path(tmpdir)
+                dict_path = root / "dict.zstd"
+                source_path = root / "input.bin"
+                output_path = root / "output.zst"
+                dict_path.write_bytes(dictionary)
+                source_path.write_bytes(data)
+                subprocess.run(
+                    [binary, "-q", "-f", "-D", str(dict_path), str(source_path), "-o", str(output_path)],
+                    check=True,
+                    stdout=subprocess.DEVNULL,
+                    stderr=subprocess.DEVNULL,
+                )
+                return output_path.read_bytes()
+
+        @staticmethod
+        def decompress(data: bytes, *, dictionary: bytes) -> bytes:
+            with tempfile.TemporaryDirectory() as tmpdir:
+                root = Path(tmpdir)
+                dict_path = root / "dict.zstd"
+                source_path = root / "input.zst"
+                output_path = root / "output.bin"
+                dict_path.write_bytes(dictionary)
+                source_path.write_bytes(data)
+                subprocess.run(
+                    [binary, "-q", "-f", "-d", str(source_path), "-D", str(dict_path), "-o", str(output_path)],
+                    check=True,
+                    stdout=subprocess.DEVNULL,
+                    stderr=subprocess.DEVNULL,
+                )
+                return output_path.read_bytes()
+
+    return _CliBackend()
 
 
 def _profile_config(profile: str) -> dict[str, object]:
@@ -175,7 +254,46 @@ def _decompress_with_zpaq(*, archive_path: Path, output_path: Path) -> Path:
     return output_path
 
 
-def compress_lossless_file(*, profile: str, input_path: str | Path, output_path: str | Path) -> LosslessCompressionResult:
+def zstd_dict_roundtrip_file(
+    *,
+    source_path: str | Path,
+    compressed_path: str | Path,
+    restored_path: str | Path,
+    dict_size: int = 8192,
+    sample_payloads: list[bytes] | None = None,
+) -> dict[str, object]:
+    backend = _require_zstd_backend()
+    source = Path(source_path)
+    compressed = Path(compressed_path)
+    restored = Path(restored_path)
+
+    payload = source.read_bytes()
+    samples = list(sample_payloads) if sample_payloads is not None else [payload]
+    dict_bytes = backend.train_dictionary(samples, dict_size=dict_size)
+    compressed_bytes = backend.compress(payload, dictionary=dict_bytes)
+    restored_bytes = backend.decompress(compressed_bytes, dictionary=dict_bytes)
+
+    compressed.parent.mkdir(parents=True, exist_ok=True)
+    compressed.write_bytes(compressed_bytes)
+    restored.parent.mkdir(parents=True, exist_ok=True)
+    restored.write_bytes(restored_bytes)
+
+    return {
+        "method": "zstd_dict",
+        "source_path": str(source),
+        "compressed_path": str(compressed),
+        "restored_path": str(restored),
+        "dictionary_bytes": len(dict_bytes),
+        "sample_count": len(samples),
+        "archive_bytes": compressed.stat().st_size,
+        "original_bytes": len(payload),
+        "compression_rate": compression_rate(compressed.stat().st_size, len(payload)),
+    }
+
+
+def compress_lossless_file(
+    *, profile: str, input_path: str | Path, output_path: str | Path
+) -> LosslessCompressionResult:
     config = _profile_config(profile)
     method = str(config["method"])
     source = Path(input_path)
@@ -382,7 +500,9 @@ def decompress_token_records(*, profile: str, compressed_dir: str | Path, output
     target_root = Path(output_dir)
     target_root.mkdir(parents=True, exist_ok=True)
 
-    for compressed in sorted(path for path in source_root.rglob("*") if path.is_file() and path.name != "decompress.py"):
+    for compressed in sorted(
+        path for path in source_root.rglob("*") if path.is_file() and path.name != "decompress.py"
+    ):
         if method == "lzma":
             relative_name = compressed.relative_to(source_root).as_posix()
             tokens = _decode_commavq_tokens(lzma.decompress(compressed.read_bytes()))
@@ -664,7 +784,9 @@ def evaluate_zpaq_baseline_submission(
     )
 
 
-def lzma_roundtrip_file(*, source_path: str | Path, compressed_path: str | Path, restored_path: str | Path) -> dict[str, object]:
+def lzma_roundtrip_file(
+    *, source_path: str | Path, compressed_path: str | Path, restored_path: str | Path
+) -> dict[str, object]:
     compression = compress_lossless_file(
         profile="lzma_baseline",
         input_path=source_path,
@@ -685,7 +807,9 @@ def lzma_roundtrip_file(*, source_path: str | Path, compressed_path: str | Path,
     }
 
 
-def zpaq_roundtrip_file(*, source_path: str | Path, compressed_path: str | Path, restored_path: str | Path) -> dict[str, object]:
+def zpaq_roundtrip_file(
+    *, source_path: str | Path, compressed_path: str | Path, restored_path: str | Path
+) -> dict[str, object]:
     compression = compress_lossless_file(
         profile="zpaq_baseline",
         input_path=source_path,

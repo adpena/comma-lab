@@ -1,14 +1,14 @@
 from __future__ import annotations
 
-import os
-from pathlib import Path
 import multiprocessing
+import os
 import shutil
 import subprocess
 import sys
 import tempfile
 import zipfile
 from collections.abc import Iterable, Mapping
+from pathlib import Path
 
 from .contracts import LosslessCompressionResult, LosslessVerificationResult
 from .data import (
@@ -155,7 +155,9 @@ def evaluate_lossless_archive(
         if reference_records is None or decompressed_root is None:
             raise ValueError("reference_records and decompressed_root must be provided together")
         verification = verify_exact_token_files(reference_records, decompressed_root)
-        resolved_original_bytes = original_bytes if original_bytes is not None else commavq_original_bytes(len(reference_records))
+        resolved_original_bytes = (
+            original_bytes if original_bytes is not None else commavq_original_bytes(len(reference_records))
+        )
     else:
         if original_tokens is None or decompressed_tokens is None:
             raise ValueError("either token inputs or file-based reference inputs must be provided")
@@ -221,7 +223,9 @@ def evaluate_commavq_dataset_archive(
                 f"Lossless evaluation requires an exact round-trip; found {verification.mismatch_count} mismatched items"
             )
         resolved_archive_bytes = _resolve_archive_bytes(archive_path, archive_bytes)
-        resolved_original_bytes = original_bytes if original_bytes is not None else commavq_original_bytes(checked_items)
+        resolved_original_bytes = (
+            original_bytes if original_bytes is not None else commavq_original_bytes(checked_items)
+        )
         result = LosslessCompressionResult(
             profile=profile,
             archive_path=str(archive_path),

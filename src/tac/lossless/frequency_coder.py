@@ -1,8 +1,7 @@
 from __future__ import annotations
 
-from dataclasses import dataclass
 import heapq
-
+from dataclasses import dataclass
 
 STREAM_MAGIC = b"TFC1"
 PREV_SYMBOL_STREAM_MAGIC = b"TPC1"
@@ -632,7 +631,7 @@ def decode_uint16_prev_symbol_stream(encoded: bytes | bytearray | memoryview):
 
     restored = np.empty(token_count, dtype=np.uint16)
     restored[0] = first_symbol
-    context_offsets = {symbol: 0 for symbol in decoded_contexts}
+    context_offsets = dict.fromkeys(decoded_contexts, 0)
     for index in range(1, token_count):
         previous = int(restored[index - 1])
         if previous not in decoded_contexts:
@@ -685,7 +684,9 @@ def decode_uint16_prev_symbol_file(encoded_path: str | Path, restored_path: str 
     return str(target)
 
 
-def benchmark_prev_symbol_frequency_file(source_path: str | Path, *, max_tokens: int | None = None) -> dict[str, object]:
+def benchmark_prev_symbol_frequency_file(
+    source_path: str | Path, *, max_tokens: int | None = None
+) -> dict[str, object]:
     from pathlib import Path
 
     np = _require_numpy()
@@ -724,15 +725,15 @@ def benchmark_prev_pair_frequency_file(source_path: str | Path, *, max_tokens: i
 
 
 __all__ = [
-    "FrequencyEncodedStream",
     "STREAM_MAGIC",
+    "FrequencyEncodedStream",
     "benchmark_prev_pair_frequency_file",
     "benchmark_prev_pair_frequency_stream",
+    "benchmark_prev_symbol_frequency_file",
+    "benchmark_prev_symbol_frequency_stream",
+    "benchmark_uint16_frequency_file",
     "decode_uint16_frequency_file",
     "decode_uint16_frequency_stream",
-    "benchmark_uint16_frequency_file",
-    "benchmark_prev_symbol_frequency_stream",
-    "benchmark_prev_symbol_frequency_file",
     "decode_uint16_prev_symbol_file",
     "decode_uint16_prev_symbol_stream",
     "encode_uint16_frequency_file",

@@ -27,6 +27,7 @@ Architecture:
     -> SPADEResBlock(32) + Upsample(2x) -> 384x512
     -> Conv 3x3 -> 3ch RGB, soft sigmoid output
 """
+
 from __future__ import annotations
 
 import math
@@ -34,7 +35,6 @@ import math
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
-
 
 # ── SPADE Normalization ─────────────────────────────────────────────────
 
@@ -100,9 +100,7 @@ class SPADE(nn.Module):
 
         return normalized * (1.0 + gamma) + beta
 
-    def _encode_mask(
-        self, mask: torch.Tensor, target_h: int, target_w: int, device: torch.device
-    ) -> torch.Tensor:
+    def _encode_mask(self, mask: torch.Tensor, target_h: int, target_w: int, device: torch.device) -> torch.Tensor:
         """One-hot encode and resize mask to target resolution.
 
         Args:
@@ -116,18 +114,26 @@ class SPADE(nn.Module):
         B = mask.shape[0]
         # Resize mask via nearest-neighbor first (preserves class boundaries)
         if mask.shape[1] != target_h or mask.shape[2] != target_w:
-            mask_resized = F.interpolate(
-                mask.unsqueeze(1).float(),
-                size=(target_h, target_w),
-                mode="nearest",
-            ).squeeze(1).long()
+            mask_resized = (
+                F.interpolate(
+                    mask.unsqueeze(1).float(),
+                    size=(target_h, target_w),
+                    mode="nearest",
+                )
+                .squeeze(1)
+                .long()
+            )
         else:
             mask_resized = mask
 
         # One-hot encode: (B, H, W) -> (B, K, H, W)
         onehot = torch.zeros(
-            B, self.mask_channels, target_h, target_w,
-            device=device, dtype=torch.float32,
+            B,
+            self.mask_channels,
+            target_h,
+            target_w,
+            device=device,
+            dtype=torch.float32,
         )
         onehot.scatter_(1, mask_resized.unsqueeze(1), 1.0)
         return onehot
@@ -251,7 +257,10 @@ class CrossAttentionNoiseInjector(nn.Module):
         nn.init.zeros_(self.out_proj.bias)
 
     def forward(
-        self, x: torch.Tensor, mask: torch.Tensor, noise: torch.Tensor | None = None,
+        self,
+        x: torch.Tensor,
+        mask: torch.Tensor,
+        noise: torch.Tensor | None = None,
     ) -> torch.Tensor:
         """Inject noise via cross-attention.
 
@@ -271,9 +280,7 @@ class CrossAttentionNoiseInjector(nn.Module):
 
         # One-hot encode mask at feature resolution
         if mask.shape[1] != H or mask.shape[2] != W:
-            mask_resized = F.interpolate(
-                mask.unsqueeze(1).float(), size=(H, W), mode="nearest"
-            ).squeeze(1).long()
+            mask_resized = F.interpolate(mask.unsqueeze(1).float(), size=(H, W), mode="nearest").squeeze(1).long()
         else:
             mask_resized = mask
         mask_onehot = torch.zeros(B, self.mask_channels, H, W, device=x.device, dtype=x.dtype)
@@ -284,7 +291,7 @@ class CrossAttentionNoiseInjector(nn.Module):
         noise_features = self.noise_proj(noise_mask)
 
         # Compute Q, K, V
-        q = self.to_q(x)       # (B, C, H, W)
+        q = self.to_q(x)  # (B, C, H, W)
         k = self.to_k(noise_features)  # (B, C, H, W)
         v = self.to_v(noise_features)  # (B, C, H, W)
 
@@ -363,19 +370,20 @@ class DPSIMSRenderer(nn.Module):
         for i, out_ch in enumerate(channels):
             # Scale spade_hidden proportionally to feature channels
             sh = max(32, min(spade_hidden, out_ch))
-            self.spade_blocks.append(
-                SPADEResBlock(in_ch, out_ch, num_classes, spade_hidden=sh)
-            )
+            self.spade_blocks.append(SPADEResBlock(in_ch, out_ch, num_classes, spade_hidden=sh))
             if use_noise:
-                self.noise_injectors.append(
-                    CrossAttentionNoiseInjector(out_ch, num_classes, noise_dim)
-                )
+                self.noise_injectors.append(CrossAttentionNoiseInjector(out_ch, num_classes, noise_dim))
             in_ch = out_ch
 
         # Learned final upsample (replaces non-learned bilinear for the last 2x)
         # ConvTranspose2d with stride 2 performs learned upsampling
         self.final_upsample = nn.ConvTranspose2d(
-            channels[-1], channels[-1], 4, stride=2, padding=1, bias=False,
+            channels[-1],
+            channels[-1],
+            4,
+            stride=2,
+            padding=1,
+            bias=False,
         )
 
         # Output head: final channels -> 3 RGB
@@ -466,14 +474,14 @@ class PatchDiscriminator(nn.Module):
         # Intermediate layers: InstanceNorm + LeakyReLU
         for i in range(1, n_layers):
             prev_ch = ch
-            ch = min(base_ch * (2 ** i), 512)
+            ch = min(base_ch * (2**i), 512)
             layers.append(nn.Conv2d(prev_ch, ch, 4, stride=2, padding=1, bias=False))
             layers.append(nn.InstanceNorm2d(ch))
             layers.append(nn.LeakyReLU(0.2, inplace=True))
 
         # Final layer: stride 1, single-channel output
         prev_ch = ch
-        ch = min(base_ch * (2 ** n_layers), 512)
+        ch = min(base_ch * (2**n_layers), 512)
         layers.append(nn.Conv2d(prev_ch, ch, 4, stride=1, padding=1, bias=False))
         layers.append(nn.InstanceNorm2d(ch))
         layers.append(nn.LeakyReLU(0.2, inplace=True))
@@ -523,13 +531,12 @@ class MultiScalePatchGAN(nn.Module):
         self.num_scales = num_scales
 
         in_ch = 3 + num_classes  # RGB + one-hot mask
-        self.discriminators = nn.ModuleList([
-            PatchDiscriminator(in_ch, base_ch, n_layers)
-            for _ in range(num_scales)
-        ])
+        self.discriminators = nn.ModuleList([PatchDiscriminator(in_ch, base_ch, n_layers) for _ in range(num_scales)])
 
     def forward(
-        self, image: torch.Tensor, mask: torch.Tensor,
+        self,
+        image: torch.Tensor,
+        mask: torch.Tensor,
     ) -> list[torch.Tensor]:
         """Multi-scale discrimination.
 
@@ -651,18 +658,16 @@ class DPSIMSPairGenerator(nn.Module):
         from tac.renderer import warp_with_flow
 
         # Render both frames directly via SPADE synthesis
-        frame_t = self.renderer(mask_t, noise=noise)        # (B, 3, H, W)
-        frame_t1 = self.renderer(mask_t1, noise=noise)      # (B, 3, H, W)
+        frame_t = self.renderer(mask_t, noise=noise)  # (B, 3, H, W)
+        frame_t1 = self.renderer(mask_t1, noise=noise)  # (B, 3, H, W)
 
         # Predict flow and warp frame_t -> frame_t1_warped
-        flow = self.motion(mask_t, mask_t1)    # (B, 2, H, W)
+        flow = self.motion(mask_t, mask_t1)  # (B, 2, H, W)
         frame_t1_warped = warp_with_flow(frame_t, flow)
 
         # Blend warped and directly-rendered frame_t+1
         alpha = torch.sigmoid(self.blend_logit)
-        frame_t1_blended = (
-            alpha * frame_t1_warped + (1.0 - alpha) * frame_t1
-        ).clamp(0.0, 255.0)
+        frame_t1_blended = (alpha * frame_t1_warped + (1.0 - alpha) * frame_t1).clamp(0.0, 255.0)
 
         # Pack to HWC pair format: (B, 2, H, W, 3)
         f_t_hwc = frame_t.permute(0, 2, 3, 1)
@@ -773,6 +778,8 @@ def build_dp_sims_discriminator(
         base_ch=base_ch,
         n_layers=n_layers,
     )
-    print(f"[dp_sims] Built MultiScalePatchGAN: {disc.param_count():,} params "
-          f"({num_scales} scales, {n_layers} layers, base_ch={base_ch})")
+    print(
+        f"[dp_sims] Built MultiScalePatchGAN: {disc.param_count():,} params "
+        f"({num_scales} scales, {n_layers} layers, base_ch={base_ch})"
+    )
     return disc

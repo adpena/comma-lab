@@ -25,12 +25,12 @@ Advantages over pixel-domain:
       from fine detail naturally
     - Significantly smaller parameter count (~100-200K vs 312K)
 """
+
 from __future__ import annotations
 
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
-
 
 # ── Haar wavelet transforms (parameter-free) ─────────────────────────
 
@@ -145,7 +145,7 @@ class _DetailPredictor(nn.Module):
         """Returns (LH, HL, HH) each with out_ch channels."""
         out = self.net(x)
         c = self.out_ch
-        return out[:, 0:c], out[:, c:2*c], out[:, 2*c:3*c]
+        return out[:, 0:c], out[:, c : 2 * c], out[:, 2 * c : 3 * c]
 
 
 # ── WaveletRenderer ──────────────────────────────────────────────────
@@ -187,10 +187,7 @@ class WaveletRenderer(nn.Module):
         self.embed_dim = embed_dim
 
         # Class embedding: each of 5 classes -> learned embed_dim-dimensional vector
-        self.embedding = (
-            embedding if embedding is not None
-            else nn.Embedding(num_classes, embed_dim)
-        )
+        self.embedding = embedding if embedding is not None else nn.Embedding(num_classes, embed_dim)
 
         # Coarse predictor: quarter-res embedding -> LL2 (96x128, 3ch RGB)
         # This is the main capacity — predicts coarse RGB appearance
@@ -290,19 +287,18 @@ class WaveletPairGenerator(nn.Module):
             (B, 2, H, W, 3) float tensor in [0, 255] — HWC pair format
         """
         # Render both frames directly via wavelet synthesis
-        frame_t = self.renderer(mask_t)        # (B, 3, H, W)
-        frame_t1 = self.renderer(mask_t1)      # (B, 3, H, W)
+        frame_t = self.renderer(mask_t)  # (B, 3, H, W)
+        frame_t1 = self.renderer(mask_t1)  # (B, 3, H, W)
 
         # Predict flow and warp frame_t -> frame_t1_warped
         from tac.renderer import warp_with_flow
-        flow = self.motion(mask_t, mask_t1)    # (B, 2, H, W)
+
+        flow = self.motion(mask_t, mask_t1)  # (B, 2, H, W)
         frame_t1_warped = warp_with_flow(frame_t, flow)
 
         # Blend warped and directly-rendered frame_t+1
         alpha = torch.sigmoid(self.blend_logit)
-        frame_t1_blended = (
-            alpha * frame_t1_warped + (1.0 - alpha) * frame_t1
-        ).clamp(0.0, 255.0)
+        frame_t1_blended = (alpha * frame_t1_warped + (1.0 - alpha) * frame_t1).clamp(0.0, 255.0)
 
         # Pack to HWC pair format: (B, 2, H, W, 3)
         f_t_hwc = frame_t.permute(0, 2, 3, 1)
@@ -369,8 +365,10 @@ def build_wavelet_renderer(
     total = pair_gen.param_count()
     r_count = renderer.param_count()
     m_count = motion.param_count()
-    print(f"[wavelet_renderer] Built WaveletPairGenerator: {total:,} params "
-          f"(renderer={r_count:,}, motion={m_count:,}, blend=1, "
-          f"shared_embed={shared_embed.weight.numel()}, wavelet=Haar 2-level)")
+    print(
+        f"[wavelet_renderer] Built WaveletPairGenerator: {total:,} params "
+        f"(renderer={r_count:,}, motion={m_count:,}, blend=1, "
+        f"shared_embed={shared_embed.weight.numel()}, wavelet=Haar 2-level)"
+    )
 
     return pair_gen

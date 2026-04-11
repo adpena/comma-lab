@@ -21,13 +21,13 @@ Key MLX differences from PyTorch:
     - Use mx.eval() for synchronization
     - Weight tensors: Conv2d stores (O, H, W, I) not (O, I, H, W)
 """
+
 from __future__ import annotations
 
 from typing import Any
 
 import mlx.core as mx
 import mlx.nn as nn
-
 
 # ── Haar wavelet transforms (pure MLX ops) ────────────────────────────
 
@@ -80,8 +80,8 @@ def haar_idwt2d(
 
     # Interleave into full resolution using reshape + transpose
     # Stack even/odd rows: (B, H, 2, W, C) then reshape to (B, 2H, W_pairs, C)
-    rows_even = mx.stack([p00, p01], axis=3)   # (B, H, W, 2, C)
-    rows_odd = mx.stack([p10, p11], axis=3)    # (B, H, W, 2, C)
+    rows_even = mx.stack([p00, p01], axis=3)  # (B, H, W, 2, C)
+    rows_odd = mx.stack([p10, p11], axis=3)  # (B, H, W, 2, C)
     rows_even = rows_even.reshape(B, H, W * 2, C)
     rows_odd = rows_odd.reshape(B, H, W * 2, C)
     # Interleave rows: (B, H, 2, W*2, C) -> (B, 2H, W*2, C)
@@ -104,7 +104,7 @@ def _nearest_downsample_mask(mask: mx.array, target_h: int, target_w: int) -> mx
         (B, target_h, target_w) downsampled mask
     """
     _, H, W = mask.shape
-    if H == target_h and W == target_w:
+    if target_h == H and target_w == W:
         return mask
     # Compute stride (nearest neighbor = floor-based index)
     row_idx = mx.arange(target_h) * H // target_h
@@ -123,7 +123,7 @@ def _nearest_downsample_2d(x: mx.array, target_h: int, target_w: int) -> mx.arra
         (B, target_h, target_w, C) downsampled features
     """
     _, H, W, _ = x.shape
-    if H == target_h and W == target_w:
+    if target_h == H and target_w == W:
         return x
     row_idx = mx.arange(target_h) * H // target_h
     col_idx = mx.arange(target_w) * W // target_w
@@ -147,7 +147,7 @@ def _bilinear_upsample_2x(x: mx.array) -> mx.array:
     """
     B, H, W, C = x.shape
     # Expand via reshape: (B, H, 1, W, 1, C) -> broadcast -> (B, H, 2, W, 2, C) -> reshape
-    x = mx.expand_dims(x, axis=(2, 4))          # (B, H, 1, W, 1, C)
+    x = mx.expand_dims(x, axis=(2, 4))  # (B, H, 1, W, 1, C)
     x = mx.broadcast_to(x, (B, H, 2, W, 2, C))  # (B, H, 2, W, 2, C)
     return x.reshape(B, H * 2, W * 2, C)
 
@@ -407,7 +407,7 @@ class MotionPredictor(nn.Module):
         Returns:
             (B, H, W, 2) flow in normalized coordinates (NHWC)
         """
-        e_t = self.embedding(mask_t)    # (B, H, W, embed_dim)
+        e_t = self.embedding(mask_t)  # (B, H, W, embed_dim)
         e_t1 = self.embedding(mask_t1)
         x = mx.concatenate([e_t, e_t1], axis=-1)  # (B, H, W, 2*embed_dim)
         x = nn.relu(self.conv1(x))
@@ -480,10 +480,7 @@ def _warp_with_flow(image: mx.array, flow: mx.array) -> mx.array:
     wx = mx.expand_dims(wx, axis=-1)  # (B, H, W, 1)
     wy = mx.expand_dims(wy, axis=-1)
 
-    return (v00 * (1 - wx) * (1 - wy) +
-            v01 * wx * (1 - wy) +
-            v10 * (1 - wx) * wy +
-            v11 * wx * wy)
+    return v00 * (1 - wx) * (1 - wy) + v01 * wx * (1 - wy) + v10 * (1 - wx) * wy + v11 * wx * wy
 
 
 # ── PairGenerator ─────────────────────────────────────────────────────
@@ -544,8 +541,8 @@ class PairGenerator(nn.Module):
         Returns:
             (B, 2, H, W, 3) float in [0, 255]
         """
-        frame_t = self.renderer(mask_t)      # (B, H, W, 3)
-        frame_t1 = self.renderer(mask_t1)    # (B, H, W, 3)
+        frame_t = self.renderer(mask_t)  # (B, H, W, 3)
+        frame_t1 = self.renderer(mask_t1)  # (B, H, W, 3)
 
         flow = self.motion(mask_t, mask_t1)  # (B, H, W, 2)
         frame_t1_warped = _warp_with_flow(frame_t, flow)
@@ -553,7 +550,8 @@ class PairGenerator(nn.Module):
         alpha = mx.sigmoid(self.blend_logit)
         frame_t1_blended = mx.clip(
             alpha * frame_t1_warped + (1.0 - alpha) * frame_t1,
-            0.0, 255.0,
+            0.0,
+            255.0,
         )
 
         # Stack to (B, 2, H, W, 3)
@@ -607,9 +605,11 @@ def build_mlx_renderer(
         depth=depth,
     )
     mx.eval(model.parameters())
-    print(f"[mlx_renderer] Built MLX PairGenerator: "
-          f"base_ch={base_ch}, mid_ch={mid_ch}, embed_dim={embed_dim}, "
-          f"depth={depth}, motion_hidden={motion_hidden}")
+    print(
+        f"[mlx_renderer] Built MLX PairGenerator: "
+        f"base_ch={base_ch}, mid_ch={mid_ch}, embed_dim={embed_dim}, "
+        f"depth={depth}, motion_hidden={motion_hidden}"
+    )
     return model
 
 
@@ -671,7 +671,7 @@ def _remap_motion_key(key: str) -> str:
     """
     if not key.startswith("motion.net."):
         return key
-    rest = key[len("motion.net."):]
+    rest = key[len("motion.net.") :]
     # Parse the index
     parts = rest.split(".", 1)
     idx = int(parts[0])
@@ -751,7 +751,7 @@ def _remap_motion_key_reverse(key: str) -> str:
     }
     for mlx_prefix, pt_prefix in mapping.items():
         if key.startswith(mlx_prefix):
-            suffix = key[len(mlx_prefix):]
+            suffix = key[len(mlx_prefix) :]
             return f"{pt_prefix}{suffix}"
     return key
 
@@ -805,7 +805,6 @@ def verify_round_trip(
         True if round-trip is lossless within tolerance
     """
     import numpy as np
-    import torch
 
     mlx_params = pytorch_to_mlx(pt_state_dict)
     pt_roundtrip = mlx_to_pytorch(mlx_params)

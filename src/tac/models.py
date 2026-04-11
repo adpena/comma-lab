@@ -4,6 +4,7 @@ Every function that returns structured data should return one of these
 models, not a raw dict. This ensures type safety, validation, and
 self-documenting return types.
 """
+
 from __future__ import annotations
 
 from pydantic import BaseModel, Field
