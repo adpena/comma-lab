@@ -5,6 +5,7 @@ import sys
 import tempfile
 import unittest
 from pathlib import Path
+from unittest import mock
 
 import numpy as np
 
@@ -341,6 +342,81 @@ class TacLosslessGptScoreTests(unittest.TestCase):
                 (1, 5, 2, 1),
             ],
         )
+
+    def test_probe_commavq_gpt_devices_reports_fastest_device(self) -> None:
+        from tac.lossless.gpt_score import probe_commavq_gpt_devices
+
+        calls: list[dict[str, object]] = []
+
+        def fake_score_fn(token_path, *, output_path=None, profile, max_scored_tokens, context_tokens, device, dtype, cache_dir, model_url, gpt_module_path):
+            calls.append(
+                {
+                    "token_path": str(token_path),
+                    "profile": profile,
+                    "max_scored_tokens": max_scored_tokens,
+                    "context_tokens": context_tokens,
+                    "device": device,
+                    "dtype": dtype,
+                }
+            )
+            return {
+                "command": "lossless_gpt_score_sample",
+                "device": device,
+                "dtype": dtype,
+                "bits_per_token": 9.0 if device == "cpu" else 9.1,
+                "scored_tokens": 64,
+            }
+
+        with tempfile.TemporaryDirectory() as tmpdir:
+            token_path = Path(tmpdir) / "tokens.bin"
+            np.array([1024, 0, 1, 1025], dtype=np.uint16).tofile(token_path)
+            with mock.patch("tac.lossless.gpt_score.time.perf_counter", side_effect=[0.0, 1.0, 1.0, 3.5]):
+                result = probe_commavq_gpt_devices(
+                    token_path,
+                    profile="gpt_arithmetic_small",
+                    max_scored_tokens=64,
+                    devices=("cpu", "mps"),
+                    score_fn=fake_score_fn,
+                )
+
+        self.assertEqual(result["command"], "lossless_gpt_score_probe")
+        self.assertEqual(result["fastest_device"], "cpu")
+        self.assertEqual(result["best_bits_device"], "cpu")
+        self.assertEqual(result["context_tokens"], 2580)
+        self.assertEqual(len(result["results"]), 2)
+        self.assertEqual(calls[0]["device"], "cpu")
+        self.assertEqual(calls[1]["device"], "mps")
+
+    def test_probe_commavq_gpt_devices_supports_explicit_context_override(self) -> None:
+        from tac.lossless.gpt_score import probe_commavq_gpt_devices
+
+        seen = []
+
+        def fake_score_fn(token_path, *, output_path=None, profile, max_scored_tokens, context_tokens, device, dtype, cache_dir, model_url, gpt_module_path):
+            seen.append((device, context_tokens))
+            return {
+                "command": "lossless_gpt_score_sample",
+                "device": device,
+                "dtype": dtype,
+                "bits_per_token": 1.0,
+                "scored_tokens": 32,
+            }
+
+        with tempfile.TemporaryDirectory() as tmpdir:
+            token_path = Path(tmpdir) / "tokens.bin"
+            np.array([1024, 0, 1, 1025], dtype=np.uint16).tofile(token_path)
+            with mock.patch("tac.lossless.gpt_score.time.perf_counter", side_effect=[0.0, 1.0]):
+                result = probe_commavq_gpt_devices(
+                    token_path,
+                    profile="gpt_arithmetic_small",
+                    max_scored_tokens=32,
+                    context_tokens=1290,
+                    devices=("cpu",),
+                    score_fn=fake_score_fn,
+                )
+
+        self.assertEqual(result["context_tokens"], 1290)
+        self.assertEqual(seen, [("cpu", 1290)])
 
 
 if __name__ == "__main__":

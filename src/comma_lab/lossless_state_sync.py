@@ -44,9 +44,17 @@ def _load_json(path: Path) -> dict[str, object]:
     return payload
 
 
+def _normalize_lossless_result_payload(payload: dict[str, object]) -> dict[str, object]:
+    normalized = dict(payload)
+    split = normalized.get("split")
+    if isinstance(split, list):
+        normalized["split"] = tuple(str(item) for item in split)
+    return normalized
+
+
 def load_promoted_result(repo_root: str | Path) -> "LosslessCompressionResult":
     root = Path(repo_root)
-    return _lossless_result_type()(**_load_json(canonical_record_path(root)))
+    return _lossless_result_type()(**_normalize_lossless_result_payload(_load_json(canonical_record_path(root))))
 
 
 def _read_text(path: Path) -> str:

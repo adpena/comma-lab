@@ -1,0 +1,28 @@
+{
+  "command": "lossless_gpt_score_probe",
+  "token_path": "/Users/adpena/Projects/pact/reports/raw/2026-04-11-commavq-gpt-arithmetic/small/train_split0.bin",
+  "output_path": "/Users/adpena/Projects/pact/reports/raw/2026-04-11-commavq-gpt-arithmetic/small/train_split0_gpt_score_probe_64.json",
+  "profile": "gpt_arithmetic_small",
+  "context_tokens": 2580,
+  "max_scored_tokens": 64,
+  "fastest_device": "mps",
+  "best_bits_device": "cpu",
+  "results": [
+    {
+      "device": "cpu",
+      "seconds": 4.006473999936134,
+      "bits_per_token": 9.263728540522601,
+      "scored_tokens": 64,
+      "dtype": "float32"
+    },
+    {
+      "device": "mps",
+      "seconds": 2.3550468330504373,
+      "bits_per_token": 9.263728540522601,
+      "scored_tokens": 64,
+      "dtype": "float32"
+    }
+  ],
+  "local_only": true,
+  "measured": false
+}

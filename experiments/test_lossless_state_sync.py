@@ -166,6 +166,28 @@ class LosslessStateSyncTests(unittest.TestCase):
 
         self.assertIn("lossless_promoted_record_invalid", {finding.code for finding in report.findings})
 
+    def test_doctor_accepts_json_split_lists_from_canonical_record(self) -> None:
+        from src.comma_lab import lossless_state_sync
+
+        write_json(
+            self.repo_root / ".omx" / "state" / "lossless_promoted_result.json",
+            {
+                "profile": "lzma_baseline",
+                "archive_path": str(self.repo_root / "reports" / "lossless" / "submission.zip"),
+                "archive_bytes": 9,
+                "original_bytes": 480,
+                "compression_rate": 480 / 9,
+                "method": "lzma",
+                "record_count": 5,
+                "checked_items": 5,
+                "split": ["0", "1"],
+            },
+        )
+
+        report = lossless_state_sync.doctor_repo(self.repo_root)
+
+        self.assertNotIn("lossless_promoted_record_invalid", {finding.code for finding in report.findings})
+
     def test_sync_repo_is_idempotent_after_repair(self) -> None:
         from src.comma_lab import lossless_state_sync
 

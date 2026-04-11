@@ -38,7 +38,7 @@ from .lossless.frequency_coder import (
     encode_uint16_frequency_file,
     encode_uint16_prev_symbol_file,
 )
-from .lossless.gpt_score import score_commavq_gpt_sample
+from .lossless.gpt_score import probe_commavq_gpt_devices, score_commavq_gpt_sample
 from .lossless.profiles import PROFILES as LOSSLESS_PROFILES
 from .lossless.state import promote_lossless_result
 from .lossless.submission import build_submission_zip
@@ -146,6 +146,19 @@ def build_parser() -> argparse.ArgumentParser:
     sp.add_argument("--model-url", default=None)
     sp.add_argument("--gpt-module-path", default=None)
     sp.set_defaults(lossless_handler="gpt_score")
+
+    sp = lossless_sub.add_parser("gpt-score-probe", help="Benchmark local GPT scoring backends on a prepared frame-major stream")
+    sp.add_argument("--profile", required=True, choices=sorted(LOSSLESS_PROFILES))
+    sp.add_argument("--tokens", required=True)
+    sp.add_argument("--output", required=True)
+    sp.add_argument("--max-scored-tokens", type=int, default=64)
+    sp.add_argument("--context-tokens", type=int, default=None)
+    sp.add_argument("--device", dest="devices", action="append", required=True, choices=["cpu", "cuda", "mps"])
+    sp.add_argument("--dtype", default="auto", choices=["auto", "float32", "float16", "bfloat16"])
+    sp.add_argument("--cache-dir", default=None)
+    sp.add_argument("--model-url", default=None)
+    sp.add_argument("--gpt-module-path", default=None)
+    sp.set_defaults(lossless_handler="gpt_score_probe")
 
     sp = lossless_sub.add_parser("frequency-report", help="Analyze a prepared token stream")
     sp.add_argument("--tokens", required=True)
@@ -408,6 +421,22 @@ def _run_lossless(args: argparse.Namespace) -> dict[str, Any]:
             max_scored_tokens=args.max_scored_tokens,
             context_tokens=args.context_tokens,
             device=args.device,
+            dtype=args.dtype,
+            cache_dir=args.cache_dir,
+            model_url=args.model_url,
+            gpt_module_path=args.gpt_module_path,
+        )
+        print(json.dumps(payload, indent=2))
+        return payload
+
+    if args.lossless_handler == "gpt_score_probe":
+        payload = probe_commavq_gpt_devices(
+            token_path=Path(args.tokens),
+            output_path=Path(args.output),
+            profile=args.profile,
+            max_scored_tokens=args.max_scored_tokens,
+            context_tokens=args.context_tokens,
+            devices=tuple(args.devices),
             dtype=args.dtype,
             cache_dir=args.cache_dir,
             model_url=args.model_url,

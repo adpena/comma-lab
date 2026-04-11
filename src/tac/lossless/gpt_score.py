@@ -4,6 +4,7 @@ import importlib.util
 import json
 import math
 import os
+import time
 from pathlib import Path
 from typing import Callable, Protocol
 
@@ -432,6 +433,72 @@ def score_commavq_gpt_sample(
         "avg_nll_nats": avg_nll_nats,
         "bits_per_token": avg_nll_nats / math.log(2.0),
         "perplexity": math.exp(avg_nll_nats),
+        "local_only": True,
+        "measured": False,
+    }
+    if output_path is not None:
+        target = Path(output_path)
+        target.parent.mkdir(parents=True, exist_ok=True)
+        target.write_text(json.dumps(payload, indent=2) + "\n")
+    return payload
+
+
+def probe_commavq_gpt_devices(
+    token_path: str | Path,
+    *,
+    output_path: str | Path | None = None,
+    profile: str = "gpt_arithmetic_small",
+    max_scored_tokens: int = 64,
+    context_tokens: int | None = None,
+    devices: tuple[str, ...] = ("cpu", "mps"),
+    dtype: str = "auto",
+    cache_dir: str | Path | None = None,
+    model_url: str | None = None,
+    gpt_module_path: str | Path | None = None,
+    score_fn: Callable[..., dict[str, object]] = score_commavq_gpt_sample,
+) -> dict[str, object]:
+    if not devices:
+        raise ValueError("devices must contain at least one backend")
+
+    effective_context_tokens = context_tokens if context_tokens is not None else OFFICIAL_COMMAVQ_GPT_BLOCK_SIZE
+    results: list[dict[str, object]] = []
+    for device in devices:
+        started = time.perf_counter()
+        score = score_fn(
+            token_path,
+            output_path=None,
+            profile=profile,
+            max_scored_tokens=max_scored_tokens,
+            context_tokens=effective_context_tokens,
+            device=device,
+            dtype=dtype,
+            cache_dir=cache_dir,
+            model_url=model_url,
+            gpt_module_path=gpt_module_path,
+        )
+        elapsed = time.perf_counter() - started
+        results.append(
+            {
+                "device": device,
+                "seconds": elapsed,
+                "bits_per_token": float(score["bits_per_token"]),
+                "scored_tokens": int(score["scored_tokens"]),
+                "dtype": score["dtype"],
+            }
+        )
+
+    fastest = min(results, key=lambda item: (float(item["seconds"]), str(item["device"])))
+    best_bits = min(results, key=lambda item: (float(item["bits_per_token"]), str(item["device"])))
+    payload = {
+        "command": "lossless_gpt_score_probe",
+        "token_path": str(Path(token_path)),
+        "output_path": str(Path(output_path)) if output_path is not None else None,
+        "profile": profile,
+        "context_tokens": int(effective_context_tokens),
+        "max_scored_tokens": int(max_scored_tokens),
+        "fastest_device": fastest["device"],
+        "best_bits_device": best_bits["device"],
+        "results": results,
         "local_only": True,
         "measured": False,
     }

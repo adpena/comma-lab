@@ -362,6 +362,60 @@ class TacCliTests(unittest.TestCase):
         )
         self.assertEqual(result["context_tokens"], 2580)
 
+    def test_lossless_gpt_score_probe_subcommand_reports_fastest_backend(self) -> None:
+        mod = load_module()
+        with tempfile.TemporaryDirectory() as tmpdir:
+            root = Path(tmpdir)
+            token_path = root / "train.bin"
+            output_path = root / "probe.json"
+            with mock.patch.object(
+                mod,
+                "probe_commavq_gpt_devices",
+                return_value={
+                    "command": "lossless_gpt_score_probe",
+                    "token_path": str(token_path),
+                    "output_path": str(output_path),
+                    "fastest_device": "cpu",
+                    "best_bits_device": "cpu",
+                    "context_tokens": 2580,
+                    "results": [
+                        {"device": "cpu", "seconds": 1.0, "bits_per_token": 9.2},
+                        {"device": "mps", "seconds": 3.5, "bits_per_token": 9.2},
+                    ],
+                },
+            ) as mocked:
+                result = mod.main(
+                    [
+                        "lossless",
+                        "gpt-score-probe",
+                        "--profile",
+                        "gpt_arithmetic_small",
+                        "--tokens",
+                        str(token_path),
+                        "--output",
+                        str(output_path),
+                        "--device",
+                        "cpu",
+                        "--device",
+                        "mps",
+                    ]
+                )
+
+        mocked.assert_called_once_with(
+            token_path=token_path,
+            output_path=output_path,
+            profile="gpt_arithmetic_small",
+            max_scored_tokens=64,
+            context_tokens=None,
+            devices=("cpu", "mps"),
+            dtype="auto",
+            cache_dir=None,
+            model_url=None,
+            gpt_module_path=None,
+        )
+        self.assertEqual(result["command"], "lossless_gpt_score_probe")
+        self.assertEqual(result["fastest_device"], "cpu")
+
     def test_lossless_frequency_encode_subcommand_writes_coded_stream(self) -> None:
         mod = load_module()
         with tempfile.TemporaryDirectory() as tmpdir:
