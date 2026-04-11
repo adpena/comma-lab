@@ -56,11 +56,12 @@ def haar_dwt2d(x: torch.Tensor) -> tuple[torch.Tensor, torch.Tensor, torch.Tenso
     x10 = x[:, :, 1::2, 0::2]  # odd row, even col
     x11 = x[:, :, 1::2, 1::2]  # odd row, odd col
 
+    # Separable 2D Haar: row transform then column transform
     # No normalization in forward — inverse applies 1/4
     ll = x00 + x01 + x10 + x11
     lh = x00 + x01 - x10 - x11
     hl = x00 - x01 + x10 - x11
-    hh = x00 - x01 - x10 - x11
+    hh = x00 - x01 - x10 + x11  # note: +x11 (separable product of two sign flips)
     return ll, lh, hl, hh
 
 

@@ -356,7 +356,7 @@ MASK_RENDERER_DEEP = {
 
 WAVELET_RENDERER_SMOKE = {
     "variant": "wavelet_renderer",
-    "hidden": 48,                            # base hidden width for coeff predictors
+    "hidden": 96,                            # base hidden width for coeff predictors (~137K total)
     "embed_dim": 8,                          # per-class embedding dimension
     "motion_hidden": 32,                     # MotionPredictor hidden channels
     "epochs": 200,
@@ -376,7 +376,7 @@ WAVELET_RENDERER_SMOKE = {
 
 WAVELET_RENDERER_FULL = {
     "variant": "wavelet_renderer",
-    "hidden": 48,
+    "hidden": 96,
     "embed_dim": 8,
     "motion_hidden": 32,
     "epochs": 2500,
