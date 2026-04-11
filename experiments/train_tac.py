@@ -88,7 +88,7 @@ def main():
                         help="Recompute hard-frame weights using model output every N epochs (0=static)")
 
     # Loss mode
-    parser.add_argument("--loss-mode", default="standard", choices=["standard", "temperature", "focal_ste", "kl_distill"])
+    parser.add_argument("--loss-mode", default="standard", choices=["standard", "temperature", "focal_ste", "kl_distill", "pcgrad"])
     parser.add_argument("--temperature-start", type=float, default=1.0)
     parser.add_argument("--temperature-end", type=float, default=0.05)
     parser.add_argument("--focal-gamma", type=float, default=2.0)
