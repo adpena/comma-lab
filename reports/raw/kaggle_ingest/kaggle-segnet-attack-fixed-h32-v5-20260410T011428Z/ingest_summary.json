@@ -3,5 +3,16 @@
   "slug": "kaggle-segnet-attack-fixed-h32",
   "kernel_ref": "adpena/comma-lab-segnet-attack-fixed-h32",
   "evidence_dir": "reports/raw/kaggle_ingest/kaggle-segnet-attack-fixed-h32-v5-20260410T011428Z",
-  "logs": []
+  "logs": [
+    {
+      "file": "comma-lab-segnet-attack-fixed-h32.log",
+      "signals": {
+        "best_checkpoint": {
+          "epoch": 1,
+          "score": 0.0003,
+          "int8_bytes": 16545
+        }
+      }
+    }
+  ]
 }

@@ -33,6 +33,20 @@ if SCRIPT_PATH.parent.name == "experiments":
     PROJECT_ROOT = SCRIPT_PATH.parents[1]
 else:
     PROJECT_ROOT = SCRIPT_PATH.parent
+SRC_ROOT = PROJECT_ROOT / "src"
+if str(SRC_ROOT) not in sys.path:
+    sys.path.insert(0, str(SRC_ROOT))
+
+from tac.entrypoints import (
+    build_postfilter_meta,
+    make_dilated_default_tag,
+    normalize_archive_source_path,
+    resolve_cloud_asset_bundle,
+    resolve_cloud_output_dir,
+    save_best_checkpoint as save_best_checkpoint_shared,
+    save_final_artifacts as save_final_artifacts_shared,
+)
+
 DEFAULT_HIDDEN = 64
 DEFAULT_KERNEL = 3
 SEQ_LEN = 2
@@ -62,38 +76,18 @@ SEGNET_INPUT_SIZE = DEFAULT_SEGNET_INPUT_SIZE
 
 
 def resolve_output_dir() -> Path:
-    if os.environ.get("POSTFILTER_OUTPUT_DIR"):
-        return Path(os.environ["POSTFILTER_OUTPUT_DIR"])
-    if Path("/kaggle/working").exists():
-        return Path("/kaggle/working") / "postfilter_weights"
-    if Path("/content/drive/MyDrive").exists():
-        return Path("/content/drive/MyDrive/postfilter_weights")
-    if Path("/content").exists():
-        return Path("/content/postfilter_weights")
-    return PROJECT_ROOT / "experiments" / "postfilter_weights"
+    return resolve_cloud_output_dir(PROJECT_ROOT)
 
 
 OUTPUT_DIR = resolve_output_dir()
-
-
-def resolve_asset(relative_path: str) -> Path:
-    basename = Path(relative_path).name
-    candidates = [
-        PROJECT_ROOT / relative_path,
-        SCRIPT_PATH.parent / relative_path,
-        SCRIPT_PATH.parent / "experiments" / Path(relative_path).name,
-        SCRIPT_PATH.parent / basename,
-        PROJECT_ROOT / basename,
-        Path("/kaggle/input/comma-lab-private-assets") / basename,
-    ]
-    for candidate in candidates:
-        if candidate.exists():
-            return candidate
-    return PROJECT_ROOT / relative_path
-
-
-ARCHIVE_ZIP = resolve_asset("reports/raw/2026-04-06-av1-roi-experiments/decode_base_archive.zip")
-SALIENCY_PATH = resolve_asset("experiments/masks/posenet_saliency.npy")
+ASSET_BUNDLE = resolve_cloud_asset_bundle(
+    PROJECT_ROOT,
+    SCRIPT_PATH,
+    archive_relative_path="reports/raw/2026-04-06-av1-roi-experiments/decode_base_archive.zip",
+    saliency_relative_path="experiments/masks/posenet_saliency.npy",
+)
+ARCHIVE_ZIP = ASSET_BUNDLE["archive_path"]
+SALIENCY_PATH = ASSET_BUNDLE["saliency_path"]
 
 
 def setup_environment() -> Path:
@@ -310,8 +304,11 @@ def decode_video(path: str, target_h: int = DEFAULT_CAMERA_SIZE[1], target_w: in
 
 
 def decode_archive(archive_path: str) -> list[torch.Tensor]:
+    source = normalize_archive_source_path(archive_path)
+    if source.suffix.lower() == ".mkv":
+        return decode_video(str(source))
     with tempfile.TemporaryDirectory() as tmpdir:
-        with zipfile.ZipFile(archive_path) as zf:
+        with zipfile.ZipFile(source) as zf:
             zf.extractall(tmpdir)
         mkv_files = sorted(Path(tmpdir).glob("*.mkv"))
         if not mkv_files:
@@ -457,43 +454,11 @@ def count_params(model):
 
 
 def normalize_postfilter_meta(hidden: int, kernel: int, alpha: float) -> dict:
-    return {
-        "variant": "dilated",
-        "hidden": int(hidden),
-        "kernel": int(kernel),
-        "alpha": float(alpha),
-    }
+    return build_postfilter_meta(variant="dilated", hidden=hidden, kernel=kernel, alpha=alpha)
 
 
 def make_default_tag(hidden: int, alpha: float) -> str:
-    return f"dilated_qat_ema_h{int(hidden)}_a{int(alpha)}"
-
-
-def save_model_int8(model, path, *, meta=None, per_channel: bool = False):
-    state = {}
-    for name, param in model.state_dict().items():
-        p = param.detach().cpu().float()
-        if per_channel and p.ndim >= 2 and not name.endswith("bias"):
-            flattened = p.reshape(p.shape[0], -1)
-            scale = flattened.abs().max(dim=1).values / 127.0
-            scale[scale == 0] = 1.0
-            shape = [p.shape[0]] + [1] * (p.ndim - 1)
-            quantized = (p / scale.view(*shape)).round().clamp(-128, 127).to(torch.int8)
-            state[name + ".q"] = quantized
-            state[name + ".s"] = scale
-        elif per_channel and name.endswith("bias"):
-            state[name] = p
-        else:
-            scale = p.abs().max() / 127.0
-            if float(scale) == 0.0:
-                scale = torch.tensor(1.0)
-            quantized = (p / scale).round().clamp(-128, 127).to(torch.int8)
-            state[name + ".q"] = quantized
-            state[name + ".s"] = scale
-    if meta is not None:
-        state["__meta__"] = dict(meta)
-    torch.save(state, path)
-    return os.path.getsize(path)
+    return make_dilated_default_tag(hidden, alpha)
 
 
 def quantize_state_dict_like_saved_int8(state_dict: dict[str, torch.Tensor], *, per_channel: bool = False) -> dict[str, torch.Tensor]:
@@ -534,31 +499,17 @@ def save_best_checkpoint(
     shadow_state: dict[str, torch.Tensor] | None = None,
     per_channel_int8: bool = False,
 ) -> dict[str, object]:
-    output_dir.mkdir(parents=True, exist_ok=True)
-    fp32_path = output_dir / f"postfilter_{tag}_best_fp32.pt"
-    int8_path = output_dir / f"postfilter_{tag}_best_int8.pt"
-    meta_path = output_dir / f"postfilter_{tag}_best_meta.json"
-
     source_shadow = shadow_state if shadow_state is not None else ema.shadow
-    shadow = {name: tensor.detach().cpu().clone() for name, tensor in source_shadow.items()}
-    torch.save(shadow, fp32_path)
-
-    original_state = {name: tensor.detach().clone() for name, tensor in model.state_dict().items()}
-    model.load_state_dict(shadow)
-    int8_size = save_model_int8(model, int8_path, meta=meta, per_channel=per_channel_int8)
-    model.load_state_dict(original_state)
-
-    payload = {
-        "tag": tag,
-        "epoch": int(epoch),
-        "scorer": float(scorer),
-        "fp32_path": str(fp32_path),
-        "int8_path": str(int8_path),
-        "int8_size": int(int8_size),
-        "meta": meta,
-    }
-    meta_path.write_text(json.dumps(payload, indent=2))
-    return payload
+    return save_best_checkpoint_shared(
+        model=model,
+        shadow_state=source_shadow,
+        output_dir=output_dir,
+        tag=tag,
+        meta=meta,
+        epoch=epoch,
+        scorer=scorer,
+        per_channel_int8=per_channel_int8,
+    )
 
 
 def build_arg_parser() -> argparse.ArgumentParser:
@@ -769,18 +720,28 @@ def main(argv: list[str] | None = None):
     final_loss = 100.0 * final_seg + math.sqrt(10.0 * final_pose)
     delta = final_loss - baseline_loss
 
-    OUTPUT_DIR.mkdir(parents=True, exist_ok=True)
-    final_fp32 = OUTPUT_DIR / f"postfilter_{tag}_final_fp32.pt"
-    final_int8 = OUTPUT_DIR / f"postfilter_{tag}_final_int8.pt"
-    torch.save(eval_model.state_dict(), final_fp32)
-    final_int8_size = save_model_int8(eval_model, final_int8, meta=meta, per_channel=args.per_channel_int8)
+    final_payload = save_final_artifacts_shared(
+        model=eval_model,
+        output_dir=OUTPUT_DIR,
+        tag=f"{tag}_final",
+        meta=meta,
+        final_metrics={
+            "baseline_loss": baseline_loss,
+            "final_loss": final_loss,
+            "delta": delta,
+            "final_pose": final_pose,
+            "final_seg": final_seg,
+        },
+        best_eval_payload=best_payload if "best_payload" in locals() else None,
+        per_channel_int8=args.per_channel_int8,
+    )
 
     print(f"RESULTS: {tag}")
     print(f"Baseline: loss={baseline_loss:.4f} pose={baseline_pose:.6f} seg={baseline_seg:.6f}")
     print(f"Filtered: loss={final_loss:.4f} pose={final_pose:.6f} seg={final_seg:.6f}")
     print(f"Delta:    {delta:+.4f}")
-    print(f"Saved final fp32: {final_fp32}")
-    print(f"Saved final int8: {final_int8} ({final_int8_size} bytes)")
+    print(f"Saved final fp32: {final_payload['fp32_path']}")
+    print(f"Saved final int8: {final_payload['int8_path']} ({final_payload['int8_size']} bytes)")
 
     return {
         "tag": tag,
@@ -788,6 +749,7 @@ def main(argv: list[str] | None = None):
         "final_loss": final_loss,
         "delta": delta,
         "best_scorer": best_scorer,
+        "final_artifacts": final_payload,
         "best_checkpoint": best_payload if "best_payload" in locals() else None,
     }
 

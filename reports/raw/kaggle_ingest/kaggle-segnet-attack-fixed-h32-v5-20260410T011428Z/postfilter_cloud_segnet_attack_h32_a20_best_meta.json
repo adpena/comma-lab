@@ -1,0 +1,13 @@
+{
+  "epoch": 1,
+  "scorer": 0.0002511434365894857,
+  "fp32_path": "/kaggle/working/postfilter_cloud_segnet_attack_h32_a20_best_fp32.pt",
+  "int8_path": "/kaggle/working/postfilter_cloud_segnet_attack_h32_a20_best_int8.pt",
+  "int8_size": 16545,
+  "meta": {
+    "variant": "cloud_segnet_attack_h32",
+    "hidden": 32,
+    "kernel": 3,
+    "alpha": 20.0
+  }
+}

@@ -16,6 +16,7 @@ class KaggleKernelSpec:
     args: tuple[str, ...] = ()
     include_paths: tuple[Path, ...] = ()
     dataset_sources: tuple[str, ...] = ()
+    bootstrap_preamble: str | None = None
 
 
 def build_kernel_metadata(
@@ -140,6 +141,8 @@ def write_bundle(
     spec: KaggleKernelSpec,
     repo_root: Path | None = None,
 ) -> None:
+    if bundle_dir.exists():
+        shutil.rmtree(bundle_dir)
     bundle_dir.mkdir(parents=True, exist_ok=True)
     metadata = build_kernel_metadata(
         username=username,
@@ -153,7 +156,11 @@ def write_bundle(
         code_source = Path(spec.code_source)
         code_destination = bundle_dir / spec.code_file
         code_destination.parent.mkdir(parents=True, exist_ok=True)
-        shutil.copy2(code_source, code_destination)
+        if spec.bootstrap_preamble:
+            code_text = code_source.read_text()
+            code_destination.write_text(spec.bootstrap_preamble + "\n\n" + code_text)
+        else:
+            shutil.copy2(code_source, code_destination)
     else:
         (bundle_dir / spec.code_file).write_text(_launcher_source(spec))
     root = repo_root.resolve() if repo_root is not None else None

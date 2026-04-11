@@ -91,6 +91,16 @@ COUNCIL_V2_ADAPTIVE = {
     "use_lsq": True,                  # LSQ: learned step sizes via forward pre-hooks on Conv2d
 }
 
+PSD_STANDARD_ADAPTIVE = {
+    **PROVEN_BASELINE,
+    "variant": "psd",
+    "boundary_weight": 50.0,
+    "hard_frame_ratio": 0.3,
+    "error_replay_every": 200,
+    "eval_every": 5,
+    "use_swa": True,
+}
+
 PROFILES = {
     "council_v1": COUNCIL_V1,
     "council_v2_adaptive": COUNCIL_V2_ADAPTIVE,
@@ -98,4 +108,5 @@ PROFILES = {
     "proven_baseline": PROVEN_BASELINE,
     "h96_council": H96_COUNCIL,
     "smoke": SMOKE,
+    "psd_standard_adaptive": PSD_STANDARD_ADAPTIVE,
 }

@@ -17,7 +17,7 @@
     "tag": "h64_no_sal_recon",
     "cmd": "experiments/train_tac.py --hidden 64 --epochs 2500 --sal-lambda 0 --tag h64_no_sal_recon",
     "platform": "mps",
-    "status": "running",
+    "status": "completed",
     "priority": 2,
     "notes": "BOUNDED SIDE LANE: sal_lambda=0 is high-variance. Run after h64 proxy confirms."
   },
@@ -25,7 +25,7 @@
     "tag": "h64_temp_anneal",
     "cmd": "experiments/train_tac.py --hidden 64 --epochs 2500 --loss-mode temperature --tag h64_temp_anneal",
     "platform": "mps",
-    "status": "queued",
+    "status": "completed",
     "priority": 2,
     "depends_on": "h64_no_sal_recon",
     "notes": "Council #2: temperature-annealed softmax"
@@ -34,7 +34,7 @@
     "tag": "h64_focal_ste",
     "cmd": "experiments/train_tac.py --hidden 64 --epochs 2500 --loss-mode focal_ste --use-ste --tag h64_focal_ste",
     "platform": "mps",
-    "status": "queued",
+    "status": "completed",
     "priority": 2,
     "depends_on": "h64_temp_anneal",
     "notes": "Council #3: focal cross-entropy STE"
@@ -43,7 +43,7 @@
     "tag": "h64_dual_saliency",
     "cmd": "experiments/train_tac.py --hidden 64 --epochs 2500 --use-dual-saliency --alpha-seg 200 --tag h64_dual_saliency",
     "platform": "mps",
-    "status": "queued",
+    "status": "completed",
     "priority": 2,
     "depends_on": "h64_focal_ste",
     "notes": "Council #1: PoseNet + SegNet boundary saliency"
@@ -52,7 +52,7 @@
     "tag": "h64_segnet_overweight",
     "cmd": "experiments/train_tac.py --hidden 64 --epochs 2500 --segnet-loss-weight 200 --tag h64_segnet_overweight",
     "platform": "mps",
-    "status": "queued",
+    "status": "completed",
     "priority": 3,
     "depends_on": "h64_dual_saliency",
     "notes": "Council #5: over-weight SegNet 200x"

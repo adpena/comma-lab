@@ -1,0 +1,13 @@
+{
+  "epoch": 718,
+  "scorer": 3.2223393662770587,
+  "fp32_path": "/results/weights/postfilter_cloud_qat_h96_a20_best_fp32.pt",
+  "int8_path": "/results/weights/postfilter_cloud_qat_h96_a20_best_int8.pt",
+  "int8_size": 93421,
+  "meta": {
+    "variant": "cloud_qat_ema_saliency",
+    "hidden": 96,
+    "kernel": 3,
+    "alpha": 20.0
+  }
+}

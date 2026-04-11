@@ -1,0 +1,11 @@
+{
+  "slug": "local-modal-dilated-h64-proxy",
+  "host": "local-cpu",
+  "status": "stale",
+  "session_id": 10923,
+  "command": "env PYTHONUNBUFFERED=1 uv run --with torch --with av --with safetensors --with timm --with einops --with segmentation-models-pytorch --with numpy python experiments/proxy_score_faithful.py /Users/adpena/Projects/pact/reports/raw/modal_artifacts/postfilter_dilated_h64_long1000_modal_best_int8.pt | tee /tmp/pact-modal-dilated-h64-proxy.log",
+  "weights_path": "/Users/adpena/Projects/pact/reports/raw/modal_artifacts/postfilter_dilated_h64_long1000_modal_best_int8.pt",
+  "log_path": "/tmp/pact-modal-dilated-h64-proxy.log",
+  "notes": "Modal-produced deploy-correct dilated h64 artifact. Best metadata from volume shows epoch 905, scorer 3.0755587879816693, int8 size 45857. This is now under faithful local proxy to determine whether the Modal fallback beats the new 1.51 floor.\nManaged process/session not found during state sync (session_id=10923).",
+  "written_at": "2026-04-10T17:37:00Z"
+}

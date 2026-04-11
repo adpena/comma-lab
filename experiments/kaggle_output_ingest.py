@@ -16,6 +16,7 @@ PROXY_POSE_RE = re.compile(r"PoseNet distortion:\s*([0-9.]+)")
 PROXY_SEG_RE = re.compile(r"SegNet distortion:\s*([0-9.]+)")
 PROXY_RATE_RE = re.compile(r"Compression rate:\s*([0-9.]+)")
 PROXY_SCORE_RE = re.compile(r"Final score:\s*([0-9.]+)")
+FAILURE_RE = re.compile(r"(?P<error_type>[A-Za-z]+Error): (?P<message>[^\n]+)")
 
 
 def _read_manifest(path: Path) -> dict[str, object]:
@@ -80,6 +81,13 @@ def extract_training_signals(log_path: Path) -> dict[str, object]:
             "current_workflow_score": float(score.group(1)),
         }
 
+    failure = FAILURE_RE.search(text)
+    if failure:
+        signals["failure"] = {
+            "error_type": failure.group("error_type"),
+            "message": failure.group("message"),
+        }
+
     return signals
 
 
@@ -95,14 +103,19 @@ def ingest_downloaded_outputs(
     evidence_dir.mkdir(parents=True, exist_ok=True)
 
     logs: list[dict[str, object]] = []
+    latest_failure: dict[str, object] | None = None
     for path in sorted(download_dir.iterdir()):
         if path.is_file():
             dest = evidence_dir / path.name
             shutil.copy2(path, dest)
             if path.suffix == ".log":
+                signals = extract_training_signals(dest)
+                failure = signals.get("failure")
+                if isinstance(failure, dict):
+                    latest_failure = failure
                 logs.append({
                     "file": path.name,
-                    "signals": extract_training_signals(dest),
+                    "signals": signals,
                 })
 
     summary = {
@@ -111,6 +124,7 @@ def ingest_downloaded_outputs(
         "kernel_ref": manifest.get("kernel_ref"),
         "evidence_dir": str(evidence_dir),
         "logs": logs,
+        "latest_failure": latest_failure,
     }
     (evidence_dir / "ingest_summary.json").write_text(json.dumps(summary, indent=2))
     return summary

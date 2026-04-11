@@ -47,6 +47,21 @@ class KaggleOutputIngestTests(unittest.TestCase):
         self.assertEqual(signals["proxy_result"]["current_workflow_score"], 1.84)
         self.assertEqual(signals["proxy_result"]["pose_distortion"], 0.05168364)
 
+    def test_extract_failure_signature_from_json_stream_log(self) -> None:
+        with tempfile.TemporaryDirectory() as tmpdir:
+            log_path = Path(tmpdir) / "kernel.log"
+            rows = [
+                {"stream_name": "stderr", "data": "Traceback (most recent call last):\n"},
+                {"stream_name": "stderr", "data": "  File \"/kaggle/src/script.py\", line 1, in <module>\n"},
+                {"stream_name": "stderr", "data": "ImportError: tac is not importable and no bundled wheel was found\n"},
+            ]
+            log_path.write_text(json.dumps(rows))
+
+            signals = mod.extract_training_signals(log_path)
+
+        self.assertEqual(signals["failure"]["error_type"], "ImportError")
+        self.assertIn("no bundled wheel", signals["failure"]["message"])
+
     def test_ingest_existing_log_copies_into_run_evidence_dir(self) -> None:
         with tempfile.TemporaryDirectory() as tmpdir:
             root = Path(tmpdir)
@@ -75,6 +90,38 @@ class KaggleOutputIngestTests(unittest.TestCase):
             evidence_dir = out_root / "kaggle-demo-v1"
             self.assertEqual(report["run_id"], "kaggle-demo-v1")
             self.assertTrue((evidence_dir / "demo.log").exists())
+
+    def test_ingest_summary_surfaces_latest_failure(self) -> None:
+        with tempfile.TemporaryDirectory() as tmpdir:
+            root = Path(tmpdir)
+            manifest_path = root / "kaggle-run.json"
+            manifest_path.write_text(
+                json.dumps(
+                    {
+                        "slug": "kaggle-demo",
+                        "run_id": "kaggle-demo-v1",
+                        "kernel_ref": "adpena/comma-lab-demo",
+                    }
+                )
+            )
+            downloaded = root / "downloaded"
+            downloaded.mkdir()
+            log_path = downloaded / "demo.log"
+            rows = [
+                {"stream_name": "stderr", "data": "Traceback (most recent call last):\n"},
+                {"stream_name": "stderr", "data": "ImportError: tac is not importable\n"},
+            ]
+            log_path.write_text(json.dumps(rows))
+            out_root = root / "reports"
+
+            report = mod.ingest_downloaded_outputs(
+                manifest_path=manifest_path,
+                download_dir=downloaded,
+                output_root=out_root,
+            )
+
+        self.assertEqual(report["latest_failure"]["error_type"], "ImportError")
+        self.assertIn("tac is not importable", report["latest_failure"]["message"])
 
 
 if __name__ == "__main__":

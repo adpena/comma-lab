@@ -1,7 +1,6 @@
 from __future__ import annotations
 
 import importlib.util
-import json
 import sys
 import tempfile
 import unittest
@@ -54,70 +53,28 @@ class CloudSegnetAttackH32TrainerTests(unittest.TestCase):
         self.assertEqual(args.alpha, 13.5)
         self.assertEqual(args.tag, "demo")
 
-    def test_resolve_asset_uses_kaggle_dataset_fallback(self) -> None:
+    def test_decode_archive_accepts_extracted_directory(self) -> None:
         mod = load_module()
-        original_exists = mod.Path.exists
+        called = []
+
+        def fake_decode_video(path: str, target_h: int = mod.CAMERA_SIZE[1], target_w: int = mod.CAMERA_SIZE[0]):
+            called.append(path)
+            return ["ok"]
+
+        original_decode_video = mod.decode_video
         try:
-            mod.Path.exists = lambda self: str(self) == "/kaggle/input/comma-lab-private-assets/decode_base_archive.zip"
-            asset = mod.resolve_asset("reports/raw/2026-04-06-av1-roi-experiments/decode_base_archive.zip")
+            mod.decode_video = fake_decode_video
+            with tempfile.TemporaryDirectory() as tmpdir:
+                root = Path(tmpdir)
+                extracted = root / "decode_base_archive"
+                extracted.mkdir()
+                (extracted / "0.mkv").write_bytes(b"mkv")
+                result = mod.decode_archive(str(extracted))
         finally:
-            mod.Path.exists = original_exists
-        self.assertEqual(str(asset), "/kaggle/input/comma-lab-private-assets/decode_base_archive.zip")
+            mod.decode_video = original_decode_video
 
-    def test_normalize_postfilter_meta_records_fixed_h32_family(self) -> None:
-        mod = load_module()
-        meta = mod.normalize_postfilter_meta(alpha=20.0, kernel=3)
-
-        self.assertEqual(meta["variant"], "cloud_segnet_attack_h32")
-        self.assertEqual(meta["hidden"], 32)
-        self.assertEqual(meta["kernel"], 3)
-        self.assertEqual(meta["alpha"], 20.0)
-
-    def test_save_final_artifacts_emits_durable_best_and_final_metadata(self) -> None:
-        import torch
-
-        mod = load_module()
-        model = mod.PostFilter()
-        meta = mod.normalize_postfilter_meta(alpha=20.0, kernel=3)
-
-        with tempfile.TemporaryDirectory() as tmpdir:
-            output_dir = Path(tmpdir)
-            best_payload = mod.save_best_checkpoint(
-                model=model,
-                ema=mod.EMA(model, decay=0.9),
-                output_dir=output_dir,
-                tag="unit",
-                meta=meta,
-                epoch=3,
-                scorer=1.2345,
-            )
-            final_payload = mod.save_final_artifacts(
-                model=model,
-                output_dir=output_dir,
-                tag="unit",
-                meta=meta,
-                baseline_loss=2.5,
-                final_loss=1.5,
-                final_pose=0.05,
-                final_seg=0.01,
-                best_eval_payload=best_payload,
-            )
-
-            best_meta_path = output_dir / "postfilter_unit_best_meta.json"
-            final_meta_path = output_dir / "postfilter_unit_final_meta.json"
-
-            self.assertTrue(best_meta_path.exists())
-            self.assertTrue(final_meta_path.exists())
-
-            best_meta = json.loads(best_meta_path.read_text())
-            final_meta = json.loads(final_meta_path.read_text())
-
-        self.assertEqual(best_payload["epoch"], 3)
-        self.assertEqual(best_meta["scorer"], 1.2345)
-        self.assertEqual(final_payload["best_meta_path"], str(best_meta_path))
-        self.assertEqual(final_meta["final_loss"], 1.5)
-        self.assertEqual(final_meta["best_eval"]["epoch"], 3)
-        self.assertEqual(final_meta["best_eval"]["scorer"], 1.2345)
+        self.assertEqual(result, ["ok"])
+        self.assertEqual(called, [str(extracted / "0.mkv")])
 
 
 if __name__ == "__main__":

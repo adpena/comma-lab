@@ -1,0 +1,62 @@
+[{"stream_name":"stderr","time":6.67334817,"data":"/usr/local/lib/python3.12/dist-packages/torch/cuda/__init__.py:435: UserWarning: \n"}
+,{"stream_name":"stderr","time":6.673425018,"data":"    Found GPU0 Tesla P100-PCIE-16GB which is of cuda capability 6.0.\n"}
+,{"stream_name":"stderr","time":6.673430628,"data":"    Minimum and Maximum cuda capability supported by this version of PyTorch is\n"}
+,{"stream_name":"stderr","time":6.6734335179999995,"data":"    (7.0) - (12.0)\n"}
+,{"stream_name":"stderr","time":6.673436044,"data":"    \n"}
+,{"stream_name":"stderr","time":6.6734385,"data":"  queued_call()\n"}
+,{"stream_name":"stderr","time":6.673440976,"data":"/usr/local/lib/python3.12/dist-packages/torch/cuda/__init__.py:435: UserWarning: \n"}
+,{"stream_name":"stderr","time":6.6734435439999995,"data":"    Please install PyTorch with a following CUDA\n"}
+,{"stream_name":"stderr","time":6.673446008,"data":"    configurations:  12.6 following instructions at\n"}
+,{"stream_name":"stderr","time":6.673448535,"data":"    https://pytorch.org/get-started/locally/\n"}
+,{"stream_name":"stderr","time":6.673450991,"data":"    \n"}
+,{"stream_name":"stderr","time":6.673453422,"data":"  queued_call()\n"}
+,{"stream_name":"stderr","time":6.673606364,"data":"/usr/local/lib/python3.12/dist-packages/torch/cuda/__init__.py:435: UserWarning: \n"}
+,{"stream_name":"stderr","time":6.673623807,"data":"Tesla P100-PCIE-16GB with CUDA capability sm_60 is not compatible with the current PyTorch installation.\n"}
+,{"stream_name":"stderr","time":6.673628814,"data":"The current PyTorch install supports CUDA capabilities sm_70 sm_75 sm_80 sm_86 sm_90 sm_100 sm_120.\n"}
+,{"stream_name":"stderr","time":6.673633011,"data":"If you want to use the Tesla P100-PCIE-16GB GPU with PyTorch, please check the instructions at https://pytorch.org/get-started/locally/\n"}
+,{"stream_name":"stderr","time":6.673637139,"data":"\n"}
+,{"stream_name":"stderr","time":6.6736412739999995,"data":"  queued_call()\n"}
+,{"stream_name":"stdout","time":6.683492692,"data":"[setup] Cloning upstream repo...\n"}
+,{"stream_name":"stderr","time":6.718891702,"data":"Cloning into '/kaggle/working/comma_video_compression_challenge'...\n"}
+,{"stream_name":"stderr","time":14.712846067,"data":"Filtering content:  80% (4/5), 36.73 MiB | 12.41 MiB/s\rFiltering content: 100% (5/5), 36.73 MiB | 12.41 MiB/s\rFiltering content: 100% (5/5), 126.70 MiB | 22.76 MiB/s\rFiltering content: 100% (5/5), 126.70 MiB | 20.73 MiB/s, done.\n"}
+,{"stream_name":"stdout","time":14.750215618,"data":"[setup] Cloned to /kaggle/working/comma_video_compression_challenge\n"}
+,{"stream_name":"stdout","time":14.750271309,"data":"[setup] Installing av...\n"}
+,{"stream_name":"stdout","time":17.689762758,"data":"   ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ 36.4/36.4 MB 42.8 MB/s eta 0:00:00\n"}
+,{"stream_name":"stdout","time":21.006109681,"data":"[setup] Installing segmentation-models-pytorch...\n"}
+,{"stream_name":"stdout","time":22.701418005,"data":"   ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ 154.8/154.8 kB 3.8 MB/s eta 0:00:00\n"}
+,{"stream_name":"stdout","time":36.116721977,"data":"[cloud-segnet-h32] device: cpu\n"}
+,{"stream_name":"stdout","time":36.116767448,"data":"[cloud-segnet-h32] hidden=32 kernel=3 alpha=20.0\n"}
+,{"stream_name":"stdout","time":36.116868339,"data":"[cloud-segnet-h32] epochs=1000 ema=0.997 lr=0.0005\n"}
+,{"stream_name":"stdout","time":36.11694194,"data":"[cloud-segnet-h32] tag=cloud_segnet_attack_h32_a20\n"}
+,{"stream_name":"stdout","time":36.116993145,"data":"[cloud-segnet-h32] output_dir=/kaggle/working\n"}
+,{"stream_name":"stdout","time":37.03495793,"data":"[cloud-segnet-h32] Decoding archive + GT...\n"}
+,{"stream_name":"stdout","time":72.706515971,"data":"[cloud-segnet-h32] No --archive provided; using GT as the compressed baseline.\n"}
+,{"stream_name":"stdout","time":72.706854616,"data":"[cloud-segnet-h32] frames=1200\n"}
+,{"stream_name":"stdout","time":212.123840563,"data":"[cloud-segnet-h32] model params=11011\n"}
+,{"stream_name":"stdout","time":212.12390622,"data":"[cloud-segnet-h32] evaluating baseline on 150/600 pairs...\n"}
+,{"stream_name":"stdout","time":331.350163015,"data":"[cloud-segnet-h32] baseline loss=0.0000 pose=0.000000 seg=0.000000\n"}
+,{"stream_name":"stdout","time":331.350650548,"data":"[cloud-segnet-h32] training for 1000 epochs, 75 pairs/epoch\n"}
+,{"stream_name":"stdout","time":688.16954624,"data":"[cloud-segnet-h32] epoch    1 total=    0.0060 scorer=    0.0060 pose=    0.000002 seg=    0.000028 sal=    0.0002 lr=  0.000200\n"}
+,{"stream_name":"stdout","time":1003.507465679,"data":"[cloud-segnet-h32] eval score=    0.0003 pose=    0.000000 seg=    0.000001\n"}
+,{"stream_name":"stdout","time":1003.521063668,"data":"[cloud-segnet-h32] best checkpoint -\u003e epoch 1 score=0.0003 int8=16545 bytes\n"}
+,{"stream_name":"stdout","time":4232.250838081,"data":"[cloud-segnet-h32] epoch   10 total=    0.1054 scorer=    0.1023 pose=    0.000264 seg=    0.000647 sal=    0.0313 lr=  0.000500\n"}
+,{"stream_name":"stdout","time":4574.470726828,"data":"[cloud-segnet-h32] eval score=    0.0172 pose=    0.000007 seg=    0.000091\n"}
+,{"stream_name":"stdout","time":8399.834045149,"data":"[cloud-segnet-h32] epoch   20 total=    0.1649 scorer=    0.1573 pose=    0.000432 seg=    0.001074 sal=    0.0762 lr=  0.000500\n"}
+,{"stream_name":"stdout","time":8733.212049754,"data":"[cloud-segnet-h32] eval score=    0.0653 pose=    0.000085 seg=    0.000361\n"}
+,{"stream_name":"stdout","time":12150.157348338,"data":"[cloud-segnet-h32] epoch   30 total=    0.2189 scorer=    0.2077 pose=    0.000758 seg=    0.001376 sal=    0.1112 lr=  0.000499\n"}
+,{"stream_name":"stdout","time":12468.555809816,"data":"[cloud-segnet-h32] eval score=    0.1115 pose=    0.000214 seg=    0.000652\n"}
+,{"stream_name":"stdout","time":16195.752448464,"data":"[cloud-segnet-h32] epoch   40 total=    0.2166 scorer=    0.2047 pose=    0.000480 seg=    0.001516 sal=    0.1184 lr=  0.000499\n"}
+,{"stream_name":"stdout","time":16540.069662833,"data":"[cloud-segnet-h32] eval score=    0.1505 pose=    0.000348 seg=    0.000915\n"}
+,{"stream_name":"stdout","time":20204.393529867,"data":"[cloud-segnet-h32] epoch   50 total=    0.2489 scorer=    0.2341 pose=    0.000771 seg=    0.001687 sal=    0.1483 lr=  0.000498\n"}
+,{"stream_name":"stdout","time":20532.787347436,"data":"[cloud-segnet-h32] eval score=    0.1829 pose=    0.000441 seg=    0.001165\n"}
+,{"stream_name":"stdout","time":24266.641744207,"data":"[cloud-segnet-h32] epoch   60 total=    0.2477 scorer=    0.2311 pose=    0.000775 seg=    0.001622 sal=    0.1662 lr=  0.000496\n"}
+,{"stream_name":"stdout","time":24601.991052893,"data":"[cloud-segnet-h32] eval score=    0.2018 pose=    0.000474 seg=    0.001330\n"}
+,{"stream_name":"stdout","time":28435.86137942,"data":"[cloud-segnet-h32] epoch   70 total=    0.2601 scorer=    0.2423 pose=    0.001023 seg=    0.001640 sal=    0.1785 lr=  0.000495\n"}
+,{"stream_name":"stdout","time":28788.35959772,"data":"[cloud-segnet-h32] eval score=    0.2166 pose=    0.000500 seg=    0.001459\n"}
+,{"stream_name":"stdout","time":32385.60976133,"data":"[cloud-segnet-h32] epoch   80 total=    0.2630 scorer=    0.2441 pose=    0.000887 seg=    0.001673 sal=    0.1890 lr=  0.000493\n"}
+,{"stream_name":"stdout","time":32686.851175248,"data":"[cloud-segnet-h32] eval score=    0.2318 pose=    0.000575 seg=    0.001560\n"}
+,{"stream_name":"stdout","time":36024.029411015,"data":"[cloud-segnet-h32] epoch   90 total=    0.2522 scorer=    0.2323 pose=    0.000610 seg=    0.001730 sal=    0.1994 lr=  0.000491\n"}
+,{"stream_name":"stdout","time":36315.350829026,"data":"[cloud-segnet-h32] eval score=    0.2481 pose=    0.000674 seg=    0.001660\n"}
+,{"stream_name":"stdout","time":40412.838301546,"data":"[cloud-segnet-h32] epoch  100 total=    0.2847 scorer=    0.2615 pose=    0.001034 seg=    0.001800 sal=    0.2325 lr=  0.000489\n"}
+,{"stream_name":"stdout","time":40720.787486177,"data":"[cloud-segnet-h32] eval score=    0.2548 pose=    0.000678 seg=    0.001725\n"}
+]

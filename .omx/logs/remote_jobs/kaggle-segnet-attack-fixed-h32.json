@@ -3,7 +3,7 @@
   "run_id": "kaggle-segnet-attack-fixed-h32-v5-20260410T011428Z",
   "host": "kaggle",
   "platform": "kaggle",
-  "status": "running",
+  "status": "completed_no_promotion",
   "remote_root": "/kaggle/working",
   "remote_log": "kaggle://adpena/comma-lab-segnet-attack-fixed-h32",
   "remote_command": "uv run --with kaggle kaggle kernels push -p /Users/adpena/Projects/pact/experiments/kaggle_kernels/segnet_attack_fixed_h32 --accelerator gpu",
@@ -14,6 +14,6 @@
   "bundle_dir": "experiments/kaggle_kernels/segnet_attack_fixed_h32",
   "best_checkpoint": null,
   "latest_printed_checkpoint": null,
-  "notes": "Kaggle kernel version 5 is now running on the direct-code-file path. The self-contained SegNet trainer now falls back to CPU on unsupported P100 CUDA and can resolve the archive by basename from the bundle root.",
-  "written_at": "2026-04-10T01:14:28Z"
+  "notes": "Kaggle kernel version 5 reached timeout and was cancelled, but left behind downloadable best-checkpoint artifacts in reports/raw/kaggle_ingest/kaggle-segnet-attack-fixed-h32-v5-20260410T011428Z/. The recovered best_meta is epoch 1 with scorer 0.0002511434365894857; treat that as a training-side artifact, not a scorer-backed result.",
+  "written_at": "2026-04-10T15:50:32-05:00"
 }

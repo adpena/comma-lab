@@ -10,6 +10,8 @@ src/comma_lab/lock.py
 src/comma_lab/paths.py
 src/comma_lab/smoke.py
 src/comma_lab/snapshot.py
+src/comma_lab/state_models.py
+src/comma_lab/state_sync.py
 src/comma_lab/scheduler/__init__.py
 src/comma_lab/scheduler/models.py
 src/comma_lab/scheduler/registry.py
@@ -30,13 +32,18 @@ src/comma_video_lab_ball_pack.egg-info/entry_points.txt
 src/comma_video_lab_ball_pack.egg-info/requires.txt
 src/comma_video_lab_ball_pack.egg-info/top_level.txt
 src/tac/__init__.py
+src/tac/adaptive.py
 src/tac/architectures.py
 src/tac/data.py
+src/tac/entrypoints.py
 src/tac/evaluate.py
 src/tac/losses.py
+src/tac/models.py
+src/tac/profiles.py
 src/tac/quantization.py
 src/tac/scorer.py
 src/tac/training.py
 tests/test_compliance.py
 tests/test_config_validation.py
 tests/test_quantization.py
+tests/test_training.py

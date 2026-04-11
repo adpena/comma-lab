@@ -1,0 +1,12 @@
+{
+  "track": "robust_current",
+  "device": "cpu",
+  "report_path": "/tmp/robust_current_standard_h64_long2500_eval/report.txt",
+  "copied_report_path": "reports/raw/2026-04-10-standard-h64-long2500-authoritative/robust_current-standard-h64-long2500-current_workflow-cpu-report.txt",
+  "current_workflow_archive_bytes": 864167,
+  "pose_distortion": 0.01229283,
+  "seg_distortion": 0.00579903,
+  "original_uncompressed_bytes": 37545489,
+  "current_workflow_rate": 0.02301653,
+  "current_workflow_score": 1.51
+}

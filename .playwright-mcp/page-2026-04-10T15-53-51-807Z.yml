@@ -1,0 +1,276 @@
+- generic [ref=e1]:
+  - generic:
+    - generic:
+      - link:
+        - /url: "#notebook-main"
+    - generic:
+      - banner:
+        - generic:
+          - generic:
+            - generic:
+              - generic:
+                - link:
+                  - /url: https://drive.google.com/drive/search?q=owner%3Ame%20(type%3Aapplication%2Fvnd.google.colaboratory%20%7C%7C%20type%3Aapplication%2Fvnd.google.colab)&authuser=0
+                  - generic:
+                    - img
+            - generic:
+              - generic:
+                - generic:
+                  - img
+                - textbox: Untitled1.ipynb
+                - generic: Untitled1.ipynb_
+                - generic:
+                  - button
+                - generic:
+                  - generic:
+                    - button
+              - generic:
+                - generic:
+                  - menubar:
+                    - button:
+                      - generic:
+                        - generic:
+                          - generic: File
+                    - button:
+                      - generic:
+                        - generic:
+                          - generic: Edit
+                    - button:
+                      - generic:
+                        - generic:
+                          - generic: View
+                    - button:
+                      - generic:
+                        - generic:
+                          - generic: Insert
+                    - button:
+                      - generic:
+                        - generic:
+                          - generic: Runtime
+                    - button:
+                      - generic:
+                        - generic:
+                          - generic: Tools
+                    - button:
+                      - generic:
+                        - generic:
+                          - generic: Help
+            - generic:
+              - generic:
+                - button
+              - generic:
+                - button
+              - generic:
+                - button
+              - generic:
+                - generic:
+                  - generic:
+                    - generic:
+                      - generic:
+                        - generic:
+                          - generic:
+                            - button:
+                              - generic:
+                                - img
+                              - generic:
+                                - img
+    - generic:
+      - generic:
+        - generic:
+          - button:
+            - generic:
+              - generic: Show command palette ⌘/Ctrl+Shift+P
+      - generic:
+        - generic:
+          - generic:
+            - button:
+              - generic:
+                - generic: Insert code cell below ⌘/Ctrl+M B
+        - generic:
+          - button
+      - generic:
+        - generic:
+          - button:
+            - generic:
+              - generic: Add text cell
+      - generic:
+        - generic:
+          - generic:
+            - button:
+              - generic:
+                - generic: Run all cells in notebook
+        - generic:
+          - button
+      - generic:
+        - generic:
+          - generic:
+            - button:
+              - generic:
+                - generic: Connect to a new runtime
+        - generic:
+          - button
+      - generic:
+        - button
+    - generic:
+      - complementary:
+        - toolbar:
+          - generic:
+            - generic:
+              - generic:
+                - button
+            - generic:
+              - generic:
+                - button
+            - generic:
+              - generic:
+                - button
+            - generic:
+              - generic:
+                - button
+            - generic:
+              - generic:
+                - button
+            - generic:
+              - generic:
+                - button
+            - generic:
+              - generic:
+                - button
+      - generic:
+        - generic:
+          - generic:
+            - generic:
+              - generic:
+                - generic:
+                  - generic:
+                    - generic:
+                      - generic:
+                        - main:
+                          - generic:
+                            - generic:
+                              - generic:
+                                - generic:
+                                  - generic:
+                                    - region:
+                                      - generic:
+                                        - generic:
+                                          - button [disabled]
+                                        - generic:
+                                          - button [disabled]
+                                        - generic:
+                                          - button
+                                        - generic:
+                                          - button
+                                        - generic:
+                                          - button
+                                      - generic:
+                                        - generic:
+                                          - generic:
+                                            - generic:
+                                              - generic:
+                                                - generic:
+                                                  - generic:
+                                                    - generic:
+                                                      - button:
+                                                        - generic:
+                                                          - img
+                                                      - generic:
+                                                        - generic: "[ ]"
+                                              - generic:
+                                                - generic:
+                                                  - code:
+                                                    - generic:
+                                                      - generic:
+                                                        - generic:
+                                                          - generic:
+                                                            - text: Start coding or
+                                                            - button [ref=e340] [cursor=pointer]: generate
+                                                            - text: with AI.
+                                                      - textbox
+                            - generic:
+                              - link:
+                                - /url: /signup?utm_source=footer&utm_medium=link&utm_campaign=footer_links
+                                - text: Colab paid products
+                              - text: "-"
+                              - link:
+                                - /url: /cancel-subscription
+                                - text: Cancel contracts here
+    - generic:
+      - button
+    - region:
+      - generic:
+        - generic:
+          - button
+        - generic:
+          - button
+  - alertdialog "Change runtime type" [ref=e341]:
+    - generic [ref=e342]:
+      - heading "Change runtime type" [level=2] [ref=e343]
+      - generic [ref=e347]:
+        - generic [ref=e348]: Runtime type
+        - combobox "Runtime type" [ref=e352]:
+          - generic [ref=e355]:
+            - generic [ref=e358]: Python 3
+            - img [ref=e362]
+        - generic [ref=e365]:
+          - text: Hardware accelerator
+          - generic "More info" [ref=e366]:
+            - link "More info Link will open in a new tab" [ref=e370] [cursor=pointer]:
+              - /url: https://research.google.com/colaboratory/faq.html#gpu-availability
+        - generic [ref=e372]:
+          - generic [ref=e374]:
+            - radio "CPU" [checked] [ref=e377] [cursor=pointer]
+            - generic [ref=e381]: CPU
+          - generic [ref=e383]:
+            - radio "T4 GPU" [ref=e386] [cursor=pointer]
+            - generic [ref=e389]: T4 GPU
+          - generic [ref=e391]:
+            - generic [ref=e392]:
+              - generic:
+                - radio "H100 GPU" [disabled]
+            - generic [ref=e393]: H100 GPU
+          - generic [ref=e395]:
+            - generic [ref=e396]:
+              - generic:
+                - radio "G4 GPU" [disabled]
+            - generic [ref=e397]: G4 GPU
+          - generic [ref=e399]:
+            - generic [ref=e400]:
+              - generic:
+                - radio "A100 GPU" [disabled]
+            - generic [ref=e401]: A100 GPU
+          - generic [ref=e403]:
+            - generic [ref=e404]:
+              - generic:
+                - radio "L4 GPU" [disabled]
+            - generic [ref=e405]: L4 GPU
+          - generic [ref=e407]:
+            - radio "v5e-1 TPU" [ref=e410] [cursor=pointer]
+            - generic [ref=e413]: v5e-1 TPU
+          - generic [ref=e415]:
+            - generic [ref=e416]:
+              - generic:
+                - radio "v6e-1 TPU" [disabled]
+            - generic [ref=e417]: v6e-1 TPU
+        - note "Purchase additional compute units" [ref=e420]:
+          - generic [ref=e422]:
+            - text: Want access to premium GPUs?
+            - link "Purchase additional compute units Link will open in a new tab" [ref=e423] [cursor=pointer]:
+              - /url: /signup?utm_source=notebook_settings&utm_medium=link&utm_campaign=premium_gpu_selector
+              - text: Purchase additional compute units
+        - generic [ref=e424]:
+          - text: Runtime version
+          - generic "More info" [ref=e425]:
+            - link "More info Link will open in a new tab" [ref=e429] [cursor=pointer]:
+              - /url: https://research.google.com/colaboratory/runtime-version-faq.html#
+        - combobox "Runtime version" [ref=e434]:
+          - generic [ref=e437]:
+            - generic [ref=e440]: Latest (recommended)
+            - img [ref=e444]
+      - contentinfo [ref=e447]:
+        - button "Cancel" [ref=e451] [cursor=pointer]:
+          - generic [ref=e453]:
+            - generic: Cancel
+        - button "Save" [ref=e457] [cursor=pointer]:
+          - generic [ref=e459]:
+            - generic: Save

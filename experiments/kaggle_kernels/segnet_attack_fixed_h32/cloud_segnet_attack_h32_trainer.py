@@ -1,3 +1,36 @@
+def tac_has_required_entrypoints(module: object) -> bool:
+    required = {'build_postfilter_meta', 'make_fixed_h32_segnet_tag', 'resolve_cloud_asset_bundle', 'resolve_cloud_base_dir', 'resolve_cloud_output_dir', 'save_best_checkpoint', 'save_final_artifacts', 'normalize_archive_source_path'}
+    return all(hasattr(module, name) for name in required)
+
+
+def find_tac_wheel_candidates(*, input_root: Path = Path("/kaggle/input"), script_dir: Path = SCRIPT_PATH.parent) -> list[Path]:
+    candidates = [*sorted(script_dir.glob("comma_video_lab_ball_pack-*.whl"))]
+    exact_root = input_root / "comma-lab-private-assets"
+    candidates.extend(sorted(exact_root.glob("comma_video_lab_ball_pack-*.whl")))
+    if input_root.exists():
+        candidates.extend(sorted(input_root.rglob("comma_video_lab_ball_pack-*.whl")))
+    return candidates
+
+
+def ensure_tac_importable() -> None:
+    try:
+        import tac  # noqa: F401
+        from tac import entrypoints as tac_entrypoints  # type: ignore
+        if tac_has_required_entrypoints(tac_entrypoints):
+            return
+    except ImportError:
+        pass
+
+    wheel_candidates = find_tac_wheel_candidates()
+    if not wheel_candidates:
+        input_root = Path("/kaggle/input")
+        visible = sorted(str(path) for path in input_root.glob("*")) if input_root.exists() else []
+        raise ImportError(
+            f"tac is not importable and no bundled wheel was found for Kaggle bootstrap; "
+            f"visible input roots={visible}"
+        )
+    subprocess.check_call([sys.executable, "-m", "pip", "install", "-q", "--no-deps", str(wheel_candidates[0])])
+
 #!/usr/bin/env python
 """Self-contained Kaggle/Colab trainer for the fixed h32 SegNet attack lane.
 
@@ -36,6 +69,21 @@ if SCRIPT_PATH.parent.name == "experiments":
     PROJECT_ROOT = SCRIPT_PATH.parents[1]
 else:
     PROJECT_ROOT = SCRIPT_PATH.parent
+SRC_ROOT = PROJECT_ROOT / "src"
+if str(SRC_ROOT) not in sys.path:
+    sys.path.insert(0, str(SRC_ROOT))
+
+from tac.entrypoints import (
+    build_postfilter_meta,
+    make_fixed_h32_segnet_tag,
+    normalize_archive_source_path,
+    resolve_cloud_asset_bundle,
+    resolve_cloud_base_dir,
+    resolve_cloud_output_dir,
+    save_best_checkpoint as save_best_checkpoint_shared,
+    save_final_artifacts as save_final_artifacts_shared,
+)
+
 FIXED_HIDDEN = 32
 DEFAULT_KERNEL = 3
 DEFAULT_ALPHA = 20.0
@@ -44,6 +92,13 @@ CAMERA_SIZE = (1164, 874)
 SEGNET_INPUT_SIZE = (512, 384)
 UPSTREAM_REPO_URL = "https://github.com/commaai/comma_video_compression_challenge.git"
 DEFAULT_ARCHIVE = PROJECT_ROOT / "reports" / "raw" / "2026-04-06-av1-roi-experiments" / "decode_base_archive.zip"
+ASSET_BUNDLE = resolve_cloud_asset_bundle(
+    PROJECT_ROOT,
+    SCRIPT_PATH,
+    archive_relative_path="reports/raw/2026-04-06-av1-roi-experiments/decode_base_archive.zip",
+    saliency_relative_path="experiments/masks/posenet_saliency.npy",
+)
+DEFAULT_ARCHIVE = ASSET_BUNDLE["archive_path"]
 
 
 def select_device() -> torch.device:
@@ -63,41 +118,14 @@ DEVICE = select_device()
 
 
 def resolve_output_dir() -> Path:
-    if os.environ.get("POSTFILTER_OUTPUT_DIR"):
-        return Path(os.environ["POSTFILTER_OUTPUT_DIR"])
-    if os.path.exists("/kaggle/working"):
-        return Path("/kaggle/working")
-    if os.path.exists("/content/drive/MyDrive"):
-        return Path("/content/drive/MyDrive/postfilter_weights")
-    if os.path.exists("/content"):
-        return Path("/content/postfilter_weights")
-    return Path("./postfilter_weights")
+    return resolve_cloud_output_dir(PROJECT_ROOT)
 
 
 def resolve_base_dir() -> Path:
-    if os.path.exists("/kaggle"):
-        return Path("/kaggle/working")
-    if os.path.exists("/content"):
-        return Path("/content")
-    return Path(tempfile.mkdtemp(prefix="postfilter_"))
-
-
-def resolve_asset(relative_path: str) -> Path:
-    basename = Path(relative_path).name
-    candidates = [
-        PROJECT_ROOT / relative_path,
-        SCRIPT_PATH.parent / relative_path,
-        SCRIPT_PATH.parent / "reports" / "raw" / Path(relative_path).name,
-        SCRIPT_PATH.parent / basename,
-        PROJECT_ROOT / basename,
-        Path("/kaggle/input/comma-lab-private-assets") / basename,
-    ]
-    for candidate in candidates:
-        if candidate.exists():
-            return candidate
-    return PROJECT_ROOT / relative_path
-
-
+    base = resolve_cloud_base_dir()
+    if base == Path.cwd():
+        return Path(tempfile.mkdtemp(prefix="postfilter_"))
+    return base
 def setup_environment() -> Path:
     """Clone upstream and install runtime deps when necessary."""
     base_dir = resolve_base_dir()
@@ -333,8 +361,11 @@ def decode_video(path: str, target_h: int = CAMERA_SIZE[1], target_w: int = CAME
 def decode_archive(archive_path: str) -> list[torch.Tensor]:
     import zipfile
 
+    source = normalize_archive_source_path(archive_path)
+    if source.suffix.lower() == ".mkv":
+        return decode_video(str(source))
     with tempfile.TemporaryDirectory() as tmpdir:
-        with zipfile.ZipFile(archive_path) as zf:
+        with zipfile.ZipFile(source) as zf:
             zf.extractall(tmpdir)
         mkv = list(Path(tmpdir).glob("*.mkv"))[0]
         return decode_video(str(mkv))
@@ -487,33 +518,6 @@ def count_params(model):
     return sum(p.numel() for p in model.parameters())
 
 
-def save_model_int8(model, path, *, meta=None, per_channel=False):
-    state = {}
-    for name, param in model.state_dict().items():
-        p = param.detach().cpu().float()
-        if per_channel and p.ndim >= 2 and not name.endswith("bias"):
-            flattened = p.reshape(p.shape[0], -1)
-            scale = flattened.abs().max(dim=1).values / 127.0
-            scale[scale == 0] = 1.0
-            shape = [p.shape[0]] + [1] * (p.ndim - 1)
-            quantized = (p / scale.view(*shape)).round().clamp(-128, 127).to(torch.int8)
-            state[name + ".q"] = quantized
-            state[name + ".s"] = scale
-        elif per_channel and name.endswith("bias"):
-            state[name] = p
-        else:
-            scale = p.abs().max() / 127.0
-            if scale == 0:
-                scale = torch.tensor(1.0)
-            quantized = (p / scale).round().clamp(-128, 127).to(torch.int8)
-            state[name + ".q"] = quantized
-            state[name + ".s"] = scale
-    if meta is not None:
-        state["__meta__"] = dict(meta)
-    torch.save(state, path)
-    return os.path.getsize(path)
-
-
 def quantize_state_dict_like_saved_int8(state_dict: dict[str, torch.Tensor], *, per_channel: bool = False):
     quantized_state: dict[str, torch.Tensor] = {}
     for name, tensor in state_dict.items():
@@ -541,12 +545,12 @@ def quantize_state_dict_like_saved_int8(state_dict: dict[str, torch.Tensor], *, 
 
 
 def normalize_postfilter_meta(alpha: float, kernel: int = DEFAULT_KERNEL) -> dict[str, int | float | str]:
-    return {
-        "variant": "cloud_segnet_attack_h32",
-        "hidden": FIXED_HIDDEN,
-        "kernel": int(kernel),
-        "alpha": float(alpha),
-    }
+    return build_postfilter_meta(
+        variant="cloud_segnet_attack_h32",
+        hidden=FIXED_HIDDEN,
+        kernel=kernel,
+        alpha=alpha,
+    )
 
 
 def build_pair_start_indices(frame_count: int, pair_len: int = SEQ_LEN) -> list[int]:
@@ -559,7 +563,7 @@ def build_pair_start_indices(frame_count: int, pair_len: int = SEQ_LEN) -> list[
 
 
 def derive_default_tag(alpha: float) -> str:
-    return f"cloud_segnet_attack_h32_a{int(alpha)}"
+    return make_fixed_h32_segnet_tag(alpha)
 
 
 def save_best_checkpoint(
@@ -574,30 +578,17 @@ def save_best_checkpoint(
     shadow_state: dict[str, torch.Tensor] | None = None,
     per_channel_int8: bool = False,
 ) -> dict[str, object]:
-    output_dir.mkdir(parents=True, exist_ok=True)
-    fp32_path = output_dir / f"postfilter_{tag}_best_fp32.pt"
-    int8_path = output_dir / f"postfilter_{tag}_best_int8.pt"
-    meta_path = output_dir / f"postfilter_{tag}_best_meta.json"
-
     source_shadow = shadow_state if shadow_state is not None else ema.shadow
-    shadow = {name: tensor.detach().clone() for name, tensor in source_shadow.items()}
-    torch.save(shadow, fp32_path)
-
-    original_state = {name: tensor.detach().clone() for name, tensor in model.state_dict().items()}
-    model.load_state_dict(shadow)
-    int8_size = save_model_int8(model, int8_path, meta=meta, per_channel=per_channel_int8)
-    model.load_state_dict(original_state)
-
-    payload = {
-        "epoch": epoch,
-        "scorer": scorer,
-        "fp32_path": str(fp32_path),
-        "int8_path": str(int8_path),
-        "int8_size": int(int8_size),
-        "meta": meta,
-    }
-    meta_path.write_text(json.dumps(payload, indent=2))
-    return payload
+    return save_best_checkpoint_shared(
+        model=model,
+        shadow_state=source_shadow,
+        output_dir=output_dir,
+        tag=tag,
+        meta=meta,
+        epoch=epoch,
+        scorer=scorer,
+        per_channel_int8=per_channel_int8,
+    )
 
 
 def save_final_artifacts(
@@ -612,34 +603,19 @@ def save_final_artifacts(
     final_seg: float,
     best_eval_payload: dict[str, object] | None = None,
 ) -> dict[str, object]:
-    output_dir.mkdir(parents=True, exist_ok=True)
-    fp32_path = output_dir / f"postfilter_{tag}_fp32.pt"
-    int8_path = output_dir / f"postfilter_{tag}_int8.pt"
-    final_meta_path = output_dir / f"postfilter_{tag}_final_meta.json"
-    best_meta_path = output_dir / f"postfilter_{tag}_best_meta.json"
-
-    torch.save(model.state_dict(), fp32_path)
-    int8_size = save_model_int8(model, int8_path, meta=meta)
-
-    if best_eval_payload is not None and not best_meta_path.exists():
-        best_meta_path.write_text(json.dumps(best_eval_payload, indent=2))
-
-    payload = {
-        "tag": tag,
-        "fp32_path": str(fp32_path),
-        "int8_path": str(int8_path),
-        "int8_size": int(int8_size),
-        "baseline_loss": baseline_loss,
-        "final_loss": final_loss,
-        "final_pose": final_pose,
-        "final_seg": final_seg,
-        "meta": meta,
-        "best_eval": best_eval_payload,
-        "best_meta_path": str(best_meta_path) if best_eval_payload is not None else None,
-        "final_meta_path": str(final_meta_path),
-    }
-    final_meta_path.write_text(json.dumps(payload, indent=2))
-    return payload
+    return save_final_artifacts_shared(
+        model=model,
+        output_dir=output_dir,
+        tag=tag,
+        meta=meta,
+        final_metrics={
+            "baseline_loss": baseline_loss,
+            "final_loss": final_loss,
+            "final_pose": final_pose,
+            "final_seg": final_seg,
+        },
+        best_eval_payload=best_eval_payload,
+    )
 
 
 def evaluate_ema_model(
@@ -727,7 +703,7 @@ def main(argv: list[str] | None = None) -> dict[str, object]:
 
     print("[cloud-segnet-h32] Decoding archive + GT...")
     gt_frames = decode_video(gt_video_path)
-    default_archive = resolve_asset("reports/raw/2026-04-06-av1-roi-experiments/decode_base_archive.zip")
+    default_archive = DEFAULT_ARCHIVE
     if args.archive:
         archive_path = Path(args.archive)
         if archive_path.suffix.lower() == ".zip":

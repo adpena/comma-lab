@@ -2,6 +2,7 @@
 from __future__ import annotations
 
 import argparse
+import importlib.util
 import json
 import sys
 from pathlib import Path
@@ -20,6 +21,15 @@ KAGGLE_CREDS = Path.home() / ".kaggle" / "kaggle.json"
 ASSET_DATASET_REF = "adpena/comma-lab-private-assets"
 
 
+def load_tac_bootstrap_renderer():
+    module_path = REPO_ROOT / "src" / "tac" / "bootstrap_codegen.py"
+    spec = importlib.util.spec_from_file_location("tac_bootstrap_codegen", module_path)
+    module = importlib.util.module_from_spec(spec)
+    assert spec.loader is not None
+    spec.loader.exec_module(module)
+    return module.render_bootstrap
+
+
 def kaggle_username() -> str:
     payload = json.loads(KAGGLE_CREDS.read_text())
     username = payload.get("username")
@@ -29,6 +39,7 @@ def kaggle_username() -> str:
 
 
 def kernel_specs() -> dict[str, KaggleKernelSpec]:
+    render_bootstrap = load_tac_bootstrap_renderer()
     return {
         "dilated_h64_long1000": KaggleKernelSpec(
             slug="comma-lab-dilated-h64-long1000",
@@ -36,9 +47,17 @@ def kernel_specs() -> dict[str, KaggleKernelSpec]:
             code_source=REPO_ROOT / "experiments" / "train_postfilter_dilated_h64.py",
             code_file="train_postfilter_dilated_h64.py",
             dataset_sources=(ASSET_DATASET_REF,),
-            include_paths=(
-                REPO_ROOT / "experiments" / "masks" / "posenet_saliency.npy",
-                REPO_ROOT / "reports" / "raw" / "2026-04-06-av1-roi-experiments" / "decode_base_archive.zip",
+            bootstrap_preamble=render_bootstrap(
+                required_symbols=(
+                    "build_postfilter_meta",
+                    "make_dilated_default_tag",
+                    "resolve_cloud_asset_bundle",
+                    "resolve_cloud_output_dir",
+                    "save_best_checkpoint",
+                    "save_final_artifacts",
+                    "normalize_archive_source_path",
+                ),
+                dataset_hint="comma-lab-private-assets",
             ),
         ),
         "segnet_attack_fixed_h32": KaggleKernelSpec(
@@ -47,8 +66,18 @@ def kernel_specs() -> dict[str, KaggleKernelSpec]:
             code_source=REPO_ROOT / "experiments" / "cloud_segnet_attack_h32_trainer.py",
             code_file="cloud_segnet_attack_h32_trainer.py",
             dataset_sources=(ASSET_DATASET_REF,),
-            include_paths=(
-                REPO_ROOT / "reports" / "raw" / "2026-04-06-av1-roi-experiments" / "decode_base_archive.zip",
+            bootstrap_preamble=render_bootstrap(
+                required_symbols=(
+                    "build_postfilter_meta",
+                    "make_fixed_h32_segnet_tag",
+                    "resolve_cloud_asset_bundle",
+                    "resolve_cloud_base_dir",
+                    "resolve_cloud_output_dir",
+                    "save_best_checkpoint",
+                    "save_final_artifacts",
+                    "normalize_archive_source_path",
+                ),
+                dataset_hint="comma-lab-private-assets",
             ),
         ),
         "pairaware_smoke": KaggleKernelSpec(
@@ -56,9 +85,7 @@ def kernel_specs() -> dict[str, KaggleKernelSpec]:
             title="comma-lab pairaware smoke",
             code_source=REPO_ROOT / "experiments" / "train_postfilter_pairaware.py",
             code_file="train_postfilter_pairaware.py",
-            include_paths=(
-                REPO_ROOT / "experiments" / "train_postfilter_pairaware.py",
-            ),
+            dataset_sources=(ASSET_DATASET_REF,),
         ),
     }
 

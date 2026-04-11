@@ -63,6 +63,28 @@ class BuildStaticSiteParityTests(unittest.TestCase):
         finally:
             INDEX.write_text(original)
 
+    def test_check_fails_when_promoted_state_drifts(self) -> None:
+        subprocess.run(
+            ["python3", "reports/graphs/build_static_site.py"],
+            cwd=ROOT,
+            check=True,
+        )
+        latest = ROOT / "reports" / "latest.md"
+        original = latest.read_text()
+        try:
+            latest.write_text("# latest report\n\nstale 1.51\n")
+            result = subprocess.run(
+                ["python3", "reports/graphs/build_static_site.py", "--check"],
+                cwd=ROOT,
+                check=False,
+                capture_output=True,
+                text=True,
+            )
+            self.assertNotEqual(result.returncode, 0)
+            self.assertIn("Promoted state drift detected", result.stderr)
+        finally:
+            latest.write_text(original)
+
 
 if __name__ == "__main__":
     unittest.main()

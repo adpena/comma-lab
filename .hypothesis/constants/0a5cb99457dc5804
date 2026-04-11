@@ -1,0 +1,4 @@
+# file: /Users/adpena/Projects/pact/src/tac/entrypoints.py
+# hypothesis_version: 6.151.12
+
+['/content', '/kaggle', '/kaggle/input', '/kaggle/working', 'alpha', 'best_eval', 'best_meta_path', 'epoch', 'experiments', 'final_meta_path', 'fp32_path', 'hidden', 'int8_path', 'int8_size', 'kernel', 'meta', 'meta_path', 'postfilter_weights', 'schema_version', 'scorer', 'tag', 'variant']

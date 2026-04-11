@@ -1,0 +1,13 @@
+{
+  "epoch": 759,
+  "scorer": 0.937931729782585,
+  "fp32_path": "/vol/weights/postfilter_h96_modal_v2_best_fp32.pt",
+  "int8_path": "/vol/weights/postfilter_h96_modal_v2_best_int8.pt",
+  "int8_size": 93385,
+  "meta": {
+    "variant": "standard",
+    "hidden": 96,
+    "kernel": 3,
+    "alpha": 20.0
+  }
+}

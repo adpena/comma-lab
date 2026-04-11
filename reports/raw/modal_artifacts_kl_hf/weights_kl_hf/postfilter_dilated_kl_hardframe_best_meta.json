@@ -1,0 +1,13 @@
+{
+  "epoch": 194,
+  "scorer": 1.2474988615787423,
+  "fp32_path": "/vol/weights_kl_hf/postfilter_dilated_kl_hardframe_best_fp32.pt",
+  "int8_path": "/vol/weights_kl_hf/postfilter_dilated_kl_hardframe_best_int8.pt",
+  "int8_size": 46297,
+  "meta": {
+    "variant": "dilated",
+    "hidden": 64,
+    "kernel": 3,
+    "alpha": 20.0
+  }
+}

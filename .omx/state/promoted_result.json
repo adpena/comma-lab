@@ -1,0 +1,17 @@
+{
+  "run_id": "robust_current-dilated-h64-modal-cpu-2026-04-10",
+  "track": "robust_current",
+  "score": 1.33,
+  "pose_distortion": 0.00218374,
+  "seg_distortion": 0.00609921,
+  "rate": 0.02301653,
+  "archive_bytes": 864167,
+  "authoritative_report_path": "reports/raw/2026-04-10-dilated-h64-authoritative/robust_current-dilated-h64-authoritative-cpu-report.txt",
+  "authoritative_report_copy_path": "reports/raw/robust_current-current_workflow-cpu-report.txt",
+  "summary_path": "reports/raw/robust_current-current_workflow-cpu-summary.json",
+  "artifact_path": "submissions/robust_current/postfilter_int8.pt",
+  "variant": "dilated_h64",
+  "platform": "modal_a10g",
+  "epoch": 905,
+  "promoted_at": "2026-04-10T21:30:00-05:00"
+}

@@ -1,0 +1,179 @@
+- generic [ref=e1]:
+  - generic [ref=e2]:
+    - link "Skip to main content" [ref=e5] [cursor=pointer]:
+      - /url: "#notebook-main"
+      - generic [ref=e7]:
+        - generic: Skip to main content
+    - banner [ref=e9]:
+      - generic [ref=e12]:
+        - link "View in Google Drive" [ref=e15] [cursor=pointer]:
+          - /url: https://drive.google.com/drive/search?q=owner%3Ame%20(type%3Aapplication%2Fvnd.google.colaboratory%20%7C%7C%20type%3Aapplication%2Fvnd.google.colab)&authuser=0
+          - img [ref=e17]
+        - generic [ref=e24]:
+          - generic [ref=e25]:
+            - img [ref=e27]
+            - textbox "Notebook name" [ref=e34]: tac_training.ipynb
+            - generic [ref=e35]: tac_training.ipynb_
+            - button "Star" [ref=e37] [cursor=pointer]
+            - button "All changes saved" [ref=e615] [cursor=pointer]
+          - menubar [ref=e43]:
+            - button "File" [ref=e44] [cursor=pointer]:
+              - generic [ref=e47]: File
+            - button "Edit" [ref=e48] [cursor=pointer]:
+              - generic [ref=e51]: Edit
+            - button "View" [ref=e52] [cursor=pointer]:
+              - generic [ref=e55]: View
+            - button "Insert" [ref=e56] [cursor=pointer]:
+              - generic [ref=e59]: Insert
+            - button "Runtime" [ref=e60] [cursor=pointer]:
+              - generic [ref=e63]: Runtime
+            - button "Tools" [ref=e64] [cursor=pointer]:
+              - generic [ref=e67]: Tools
+            - button "Help" [ref=e68] [cursor=pointer]:
+              - generic [ref=e71]: Help
+        - generic [ref=e72]:
+          - button "Open comments pane" [ref=e74] [cursor=pointer]
+          - button "Open settings" [ref=e79] [cursor=pointer]
+          - button "Share notebook" [ref=e85] [cursor=pointer]:
+            - generic [ref=e88]:
+              - generic: Share
+          - 'button "Google Account: Alejandro Pena (adpena@gmail.com)" [ref=e96] [cursor=pointer]':
+            - img [ref=e98]
+            - img [ref=e104]
+    - generic [ref=e105]:
+      - button "Commands Show command palette ⌘/Ctrl+Shift+P" [ref=e109] [cursor=pointer]:
+        - generic [ref=e112]:
+          - generic:
+            - generic [ref=e113]:
+              - generic: Commands
+            - generic [ref=e114]: Show command palette ⌘/Ctrl+Shift+P
+      - generic [ref=e115]:
+        - button "Code Insert code cell below ⌘/Ctrl+M B" [ref=e119] [cursor=pointer]:
+          - generic [ref=e122]:
+            - generic:
+              - generic [ref=e123]:
+                - generic: Code
+              - generic [ref=e124]: Insert code cell below ⌘/Ctrl+M B
+        - button "Insert code cell options" [ref=e126] [cursor=pointer]
+      - button "Text Add text cell" [ref=e132] [cursor=pointer]:
+        - generic [ref=e135]:
+          - generic:
+            - generic [ref=e136]:
+              - generic: Text
+            - generic [ref=e137]: Add text cell
+      - generic [ref=e139]:
+        - button "Run all Run all cells in notebook" [ref=e143] [cursor=pointer]:
+          - generic [ref=e146]:
+            - generic:
+              - generic [ref=e147]:
+                - generic: Run all
+              - generic [ref=e148]: Run all cells in notebook
+        - button "More actions" [ref=e150] [cursor=pointer]
+      - generic [ref=e153]:
+        - button "Focus the last run cell" [ref=e620] [cursor=pointer]
+        - 'button "RAM Disk Waiting to finish the current execution. Python 3 Google Compute Engine backend (GPU) RAM: 1.19 GB/12.67 GB Disk: 43.04 GB/112.64 GB" [ref=e624] [cursor=pointer]':
+          - generic [ref=e159]:
+            - generic:
+              - generic [ref=e625]:
+                - generic [ref=e627]: RAM
+                - generic [ref=e630]: Disk
+              - generic [ref=e161]: "Waiting to finish the current execution. Python 3 Google Compute Engine backend (GPU) RAM: 1.19 GB/12.67 GB Disk: 43.04 GB/112.64 GB"
+        - button "Additional connection options" [ref=e163] [cursor=pointer]
+      - button "Toggle header visibility" [ref=e167] [cursor=pointer]
+    - generic [ref=e170]:
+      - complementary "left pane" [ref=e171]:
+        - toolbar [ref=e172]:
+          - generic [ref=e173]:
+            - generic "Table of contents" [ref=e175]:
+              - button "Table of contents" [ref=e176] [cursor=pointer]
+            - generic "Find and replace" [ref=e181]:
+              - button "Find and replace" [ref=e182] [cursor=pointer]
+            - generic "Code snippets" [ref=e187]:
+              - button "Code snippets" [ref=e188] [cursor=pointer]
+            - generic "Data inspector" [ref=e193]:
+              - button "Data inspector" [ref=e194] [cursor=pointer]
+            - generic "Secrets" [ref=e199]:
+              - button "Secrets" [ref=e200] [cursor=pointer]
+            - generic "Files" [ref=e205]:
+              - button "Files" [ref=e206] [cursor=pointer]
+            - generic "Data explorer" [ref=e211]:
+              - button "Data explorer" [ref=e212] [cursor=pointer]
+      - main "Notebook" [ref=e225]:
+        - generic [ref=e226]:
+          - 'region "Cell 0: Code cell:" [ref=e232]':
+            - generic [ref=e233]:
+              - generic:
+                - button "Move cell up ⌘/Ctrl+M K" [disabled]
+              - generic:
+                - button "Move cell down ⌘/Ctrl+M J" [disabled]
+              - button "Available AI features" [ref=e235] [cursor=pointer]
+              - button "Delete cell ⌘/Ctrl+M D" [ref=e239] [cursor=pointer]
+              - button "More cell actions" [ref=e243] [cursor=pointer]
+            - generic [ref=e248]:
+              - generic [ref=e249]:
+                - generic [ref=e253]:
+                  - button "Run cell" [ref=e254] [cursor=pointer]:
+                    - generic [ref=e255]:
+                      - progressbar [ref=e633]
+                      - img [ref=e639]
+                  - generic [ref=e259]: "[1]"
+                - code [ref=e262]:
+                  - generic [ref=e263]:
+                    - generic [ref=e271]:
+                      - generic [ref=e540]: "# tac v0.8.0 — Self-contained Colab Training"
+                      - generic [ref=e542]: "# Mounts Google Drive, auto-resumes on disconnect"
+                      - generic [ref=e544]: from google.colab import drive
+                      - generic [ref=e546]: drive.mount('/content/drive')
+                      - generic [ref=e548]: import os, sys, glob
+                      - generic [ref=e550]: WORK = '/content/drive/MyDrive/tac_training'
+                      - generic [ref=e552]: os.makedirs(WORK, exist_ok=True)
+                      - generic [ref=e554]: os.chdir(WORK)
+                      - generic [ref=e556]: "!nvidia-smi --query-gpu=name,memory.total --format=csv,noheader"
+                      - generic [ref=e558]: "!pip install -q torch torchvision av safetensors timm einops segmentation-models-pytorch numpy pydantic"
+                      - generic [ref=e560]: "if not os.path.exists('upstream/videos/0.mkv'):"
+                      - generic [ref=e562]: "!git clone --depth 1 https://github.com/commaai/comma_video_compression_challenge.git upstream"
+                      - generic [ref=e564]: "!cd upstream && git lfs pull"
+                      - generic [ref=e566]: "if not os.path.exists('src/tac/__init__.py'):"
+                      - generic [ref=e568]: from google.colab import files
+                      - generic [ref=e570]: print('Upload tac_complete.zip from Desktop:')
+                      - generic [ref=e572]: uploaded = files.upload()
+                      - generic [ref=e574]: "!unzip -qo tac_complete.zip"
+                      - generic [ref=e576]: import numpy as np
+                      - generic [ref=e578]: np.save('saliency.npy', np.ones((30, 874, 1164), dtype=np.float32))
+                      - generic [ref=e580]: sys.path.insert(0, 'src'); sys.path.insert(0, 'upstream')
+                      - generic [ref=e582]: "import tac; print(f'tac v{tac.__version__}')"
+                      - generic [ref=e584]: resume = ''
+                      - generic [ref=e586]: states = sorted(glob.glob('weights/training_state_*.pt'))
+                      - generic [ref=e588]: "if states: resume = f'--resume-from {states[-1]}'; print(f'Resuming: {states[-1]}')"
+                      - generic [ref=e590]: "!PYTHONPATH=src:upstream PYTHONUNBUFFERED=1 python train_tac.py --tag colab_h64_standard --hidden 64 --epochs 2500 --alpha 20 --sal-lambda 1.0 --subsample 4 --output-dir ./weights --archive ./archive.zip --gt-video ./upstream/videos/0.mkv --saliency ./saliency.npy --models-dir ./upstream/models --upstream-dir ./upstream $resume"
+                    - textbox "Editor content;Press Alt+F1 for Accessibility Options." [active] [ref=e275]: "c.__version__}') resume = '' states = sorted(glob.glob('weights/training_state_*.pt')) if states: resume = f'--resume-from {states[-1]}'; print(f'Resuming: {states[-1]}') !PYTHONPATH=src:upstream PYTHONUNBUFFERED=1 python train_tac.py --tag colab_h64_standard --hidden 64 --epochs 2500 --alpha 20 --sal-lambda 1.0 --subsample 4 --output-dir ./weights --archive ./archive.zip --gt-video ./upstream/videos/0.mkv --saliency ./saliency.npy --models-dir ./upstream/models --upstream-dir ./upstream $resume"
+              - region "Cell 0 output"
+          - generic [ref=e277]:
+            - link "Colab paid products" [ref=e278] [cursor=pointer]:
+              - /url: /signup?utm_source=footer&utm_medium=link&utm_campaign=footer_links
+            - text: "-"
+            - link "Cancel contracts here" [ref=e279] [cursor=pointer]:
+              - /url: /cancel-subscription
+    - button "Toggle Gemini" [ref=e281] [cursor=pointer]
+    - region "Runtime status bar" [ref=e285]:
+      - generic [ref=e286]:
+        - generic:
+          - button "Variables" [ref=e289] [cursor=pointer]:
+            - generic [ref=e292]:
+              - generic: Variables
+          - button "Terminal" [ref=e295] [cursor=pointer]:
+            - generic [ref=e298]:
+              - generic: Terminal
+      - generic [ref=e643]:
+        - button "Executing (39s)" [ref=e647] [cursor=pointer]:
+          - progressbar [ref=e650]
+          - generic [ref=e656]:
+            - generic: Executing (39s)
+        - button "T4 (Python 3)" [ref=e660] [cursor=pointer]:
+          - generic [ref=e663]:
+            - generic: T4 (Python 3)
+  - generic [ref=e299]:
+    - alert
+    - alert
+    - complementary
+    - complementary

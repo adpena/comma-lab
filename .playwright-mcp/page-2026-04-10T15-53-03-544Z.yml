@@ -1,0 +1,13 @@
+- generic [ref=e1]:
+  - generic [ref=e2]:
+    - status [ref=e3]: Loading...
+    - button [ref=e6] [cursor=pointer]
+  - alertdialog "Google sign-in required" [ref=e10]:
+    - generic [ref=e11]:
+      - heading "Google sign-in required" [level=2] [ref=e12]
+      - generic [ref=e13]:
+        - generic: You must be logged in with a Google Account to continue.
+      - contentinfo [ref=e14]:
+        - button "Sign in" [ref=e18] [cursor=pointer]:
+          - generic [ref=e20]:
+            - generic: Sign in

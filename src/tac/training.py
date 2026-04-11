@@ -261,6 +261,9 @@ class Trainer:
         self._last_eval_seg = None
         self._baseline_pose = None
         self._baseline_seg = None
+        self._last_replay_scorer = float("inf")
+        self._plateau_window: list[float] = []
+        self._plateau_reduced = False
 
         # Adaptive weights (council_v2_adaptive profile)
         self._adaptive = None
@@ -792,7 +795,7 @@ class Trainer:
 
         # Precompute boundary masks if needed (dual saliency OR kl_distill with boundary weighting)
         self._boundary_masks = None
-        needs_boundary = cfg.use_dual_saliency or (cfg.loss_mode == "kl_distill" and cfg.boundary_weight > 1.0)
+        needs_boundary = cfg.use_dual_saliency or cfg.boundary_weight > 1.0
         if needs_boundary:
             from .losses import compute_boundary_mask
             print("[trainer-lazy] Computing SegNet boundary masks for dual saliency...")
@@ -887,7 +890,8 @@ class Trainer:
             # (DeepSeek recommendation: uniform exploration early, aggressive exploitation late)
             if cfg.hard_frame_ratio > 0:
                 ramp_progress = min(1.0, epoch / max(cfg.epochs * 0.5, 1))
-                effective_hfr = 0.1 + ramp_progress * (cfg.hard_frame_ratio - 0.1)
+                sin2_progress = math.sin(math.pi / 2 * ramp_progress) ** 2
+                effective_hfr = 0.1 + sin2_progress * (cfg.hard_frame_ratio - 0.1)
             else:
                 effective_hfr = 0.0
 
@@ -896,8 +900,13 @@ class Trainer:
                     and cfg.error_replay_every > 0
                     and epoch > 0
                     and epoch % cfg.error_replay_every == 0):
-                hard_frame_weights = _compute_hard_frame_weights(
-                    use_model=True, label=f"error-replay-ep{epoch}")
+                improvement = self._last_replay_scorer - self.best_scorer
+                if improvement > 0.002 or self._last_replay_scorer == float("inf"):
+                    hard_frame_weights = _compute_hard_frame_weights(
+                        use_model=True, label=f"error-replay-ep{epoch}")
+                    self._last_replay_scorer = self.best_scorer
+                else:
+                    print(f"[trainer-lazy] Skipping error replay ep={epoch} (improvement={improvement:.4f} < threshold)")
 
             # Weighted or uniform sampling of training pairs
             if hard_frame_weights is not None and effective_hfr > 0:
@@ -963,7 +972,15 @@ class Trainer:
                         segnet_weight=sw,
                     )
                 else:
-                    loss, pd, sd = scorer_loss(filtered, gt_pair, posenet, segnet)
+                    if cfg.boundary_weight > 1.0 and self._boundary_masks is not None:
+                        bm = self._boundary_masks.get(start)
+                        loss, pd, sd = segnet_ste_loss(
+                            filtered, gt_pair, posenet, segnet,
+                            boundary_mask=bm,
+                            boundary_weight=cfg.boundary_weight,
+                        )
+                    else:
+                        loss, pd, sd = scorer_loss(filtered, gt_pair, posenet, segnet)
 
                 # Saliency reconstruction (frame 1 only)
                 sal_w = saliency_for_pair(raw_saliency, start, cfg.alpha, self.device)
@@ -1021,10 +1038,14 @@ class Trainer:
             avg_pose = total_pose / n
             avg_seg = total_seg / n
 
-            # Best-checkpoint int8 evaluation — skip expensive eval on most epochs
-            # Eval every epoch for the final 10% of training to catch ephemeral best weights
-            final_phase = epoch >= cfg.epochs - max(cfg.epochs // 10, 50)
-            eval_freq = 1 if final_phase else cfg.eval_every
+            # Best-checkpoint int8 evaluation — three-phase frequency
+            epoch_frac = epoch / max(cfg.epochs - 1, 1)
+            if epoch_frac >= 0.8:
+                eval_freq = 1
+            elif epoch_frac >= 0.2:
+                eval_freq = max(2, cfg.eval_every // 2)
+            else:
+                eval_freq = cfg.eval_every
             is_eval_epoch = (epoch + 1) % eval_freq == 0 or epoch == cfg.epochs - 1 or epoch == 0
             if is_eval_epoch:
                 scorer_val = self._evaluate_int8_lazy(
@@ -1044,6 +1065,22 @@ class Trainer:
             eval_tag = "*" if is_eval_epoch else " "
             print(f"[ep {epoch:4d}]{eval_tag} loss={avg_loss:.4f} pose={avg_pose:.6f} "
                   f"seg={avg_seg:.6f} scorer={scorer_val:.4f} best={self.best_scorer:.4f} lr={lr:.6f}")
+
+            # LR plateau detection for standard loss
+            if is_eval_epoch and cfg.loss_mode == "standard":
+                self._plateau_window.append(scorer_val)
+                if len(self._plateau_window) > 20:
+                    self._plateau_window.pop(0)
+                if (len(self._plateau_window) >= 20
+                        and not self._plateau_reduced
+                        and epoch > cfg.epochs * 0.3):
+                    recent_best = min(self._plateau_window)
+                    window_start_best = min(self._plateau_window[:10])
+                    if recent_best >= window_start_best - 0.005:
+                        for pg in self.optimizer.param_groups:
+                            pg["lr"] *= 0.5
+                        self._plateau_reduced = True
+                        print(f"[trainer-lazy] LR plateau detected ep={epoch}, halving LR to {self.optimizer.param_groups[0]['lr']:.6f}")
 
             # JSONL telemetry log — structured data for council analysis
             if is_eval_epoch:

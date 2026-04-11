@@ -1,0 +1,150 @@
+- generic [ref=e1]:
+  - generic [ref=e2]:
+    - link "Skip to main content" [ref=e5] [cursor=pointer]:
+      - /url: "#notebook-main"
+      - generic [ref=e7]:
+        - generic: Skip to main content
+    - banner [ref=e9]:
+      - generic [ref=e12]:
+        - link "View in Google Drive" [ref=e15] [cursor=pointer]:
+          - /url: https://drive.google.com/drive/search?q=owner%3Ame%20(type%3Aapplication%2Fvnd.google.colaboratory%20%7C%7C%20type%3Aapplication%2Fvnd.google.colab)&authuser=0
+          - img [ref=e17]
+        - generic [ref=e24]:
+          - generic [ref=e25]:
+            - img [ref=e27]
+            - textbox "Notebook name" [ref=e34]: Untitled1.ipynb
+            - generic [ref=e35]: Untitled1.ipynb_
+            - button "Star" [ref=e37] [cursor=pointer]
+            - button "Unsaved changes since 10:53 AM" [ref=e465] [cursor=pointer]:
+              - generic [ref=e468]:
+                - generic: Unsaved changes since 10:53 AM
+          - menubar [active] [ref=e43]:
+            - button "File" [ref=e44] [cursor=pointer]:
+              - generic [ref=e47]: File
+            - button "Edit" [ref=e48] [cursor=pointer]:
+              - generic [ref=e51]: Edit
+            - button "View" [ref=e52] [cursor=pointer]:
+              - generic [ref=e55]: View
+            - button "Insert" [ref=e56] [cursor=pointer]:
+              - generic [ref=e59]: Insert
+            - button "Runtime" [ref=e60] [cursor=pointer]:
+              - generic [ref=e63]: Runtime
+            - button "Tools" [ref=e64] [cursor=pointer]:
+              - generic [ref=e67]: Tools
+            - button "Help" [ref=e68] [cursor=pointer]:
+              - generic [ref=e71]: Help
+        - generic [ref=e72]:
+          - button "Open comments pane" [ref=e74] [cursor=pointer]
+          - button "Open settings" [ref=e79] [cursor=pointer]
+          - button "Share notebook" [ref=e85] [cursor=pointer]:
+            - generic [ref=e88]:
+              - generic: Share
+          - 'button "Google Account: Alejandro Pena (adpena@gmail.com)" [ref=e96] [cursor=pointer]':
+            - img [ref=e98]
+            - img [ref=e104]
+    - generic [ref=e105]:
+      - button "Commands Show command palette ⌘/Ctrl+Shift+P" [ref=e109] [cursor=pointer]:
+        - generic [ref=e112]:
+          - generic:
+            - generic [ref=e113]:
+              - generic: Commands
+            - generic [ref=e114]: Show command palette ⌘/Ctrl+Shift+P
+      - generic [ref=e115]:
+        - button "Code Insert code cell below ⌘/Ctrl+M B" [ref=e119] [cursor=pointer]:
+          - generic [ref=e122]:
+            - generic:
+              - generic [ref=e123]:
+                - generic: Code
+              - generic [ref=e124]: Insert code cell below ⌘/Ctrl+M B
+        - button "Insert code cell options" [ref=e126] [cursor=pointer]
+      - button "Text Add text cell" [ref=e132] [cursor=pointer]:
+        - generic [ref=e135]:
+          - generic:
+            - generic [ref=e136]:
+              - generic: Text
+            - generic [ref=e137]: Add text cell
+      - generic [ref=e139]:
+        - button "Run all Run all cells in notebook" [ref=e143] [cursor=pointer]:
+          - generic [ref=e146]:
+            - generic:
+              - generic [ref=e147]:
+                - generic: Run all
+              - generic [ref=e148]: Run all cells in notebook
+        - button "More actions" [ref=e150] [cursor=pointer]
+      - generic [ref=e153]:
+        - button "Connect T4 Connect to a new runtime" [ref=e469] [cursor=pointer]:
+          - generic [ref=e159]:
+            - generic:
+              - generic [ref=e470]:
+                - generic [ref=e471]: Connect
+                - generic [ref=e473]: T4
+              - generic [ref=e161]: Connect to a new runtime
+        - button "Additional connection options" [ref=e163] [cursor=pointer]
+      - button "Toggle header visibility" [ref=e167] [cursor=pointer]
+    - generic [ref=e170]:
+      - complementary "left pane" [ref=e171]:
+        - toolbar [ref=e172]:
+          - generic [ref=e173]:
+            - generic "Table of contents" [ref=e175]:
+              - button "Table of contents" [ref=e176] [cursor=pointer]
+            - generic "Find and replace" [ref=e181]:
+              - button "Find and replace" [ref=e182] [cursor=pointer]
+            - generic "Code snippets" [ref=e187]:
+              - button "Code snippets" [ref=e188] [cursor=pointer]
+            - generic "Data inspector" [ref=e193]:
+              - button "Data inspector" [ref=e194] [cursor=pointer]
+            - generic "Secrets" [ref=e199]:
+              - button "Secrets" [ref=e200] [cursor=pointer]
+            - generic "Files" [ref=e205]:
+              - button "Files" [ref=e206] [cursor=pointer]
+            - generic "Data explorer" [ref=e211]:
+              - button "Data explorer" [ref=e212] [cursor=pointer]
+      - main "Notebook" [ref=e225]:
+        - generic [ref=e226]:
+          - 'region "Cell 0: Code cell:" [ref=e232]':
+            - generic [ref=e233]:
+              - generic:
+                - button "Move cell up ⌘/Ctrl+M K" [disabled]
+              - generic:
+                - button "Move cell down ⌘/Ctrl+M J" [disabled]
+              - button "Available AI features" [ref=e235] [cursor=pointer]
+              - button "Delete cell ⌘/Ctrl+M D" [ref=e239] [cursor=pointer]
+              - button "More cell actions" [ref=e243] [cursor=pointer]
+            - generic [ref=e248]:
+              - generic [ref=e249]:
+                - generic [ref=e253]:
+                  - button "Run cell" [ref=e254] [cursor=pointer]:
+                    - img [ref=e256]
+                  - generic [ref=e259]: "[ ]"
+                - code [ref=e262]:
+                  - generic [ref=e263]:
+                    - generic [ref=e268]:
+                      - generic:
+                        - generic:
+                          - generic:
+                            - text: Start coding or
+                            - button "generate" [ref=e474] [cursor=pointer]
+                            - text: with AI.
+                    - textbox "Editor content;Press Alt+F1 for Accessibility Options." [ref=e275]
+              - region "Cell 0 output"
+          - generic [ref=e277]:
+            - link "Colab paid products" [ref=e278] [cursor=pointer]:
+              - /url: /signup?utm_source=footer&utm_medium=link&utm_campaign=footer_links
+            - text: "-"
+            - link "Cancel contracts here" [ref=e279] [cursor=pointer]:
+              - /url: /cancel-subscription
+    - button "Toggle Gemini" [ref=e281] [cursor=pointer]
+    - region "Runtime status bar" [ref=e285]:
+      - generic [ref=e286]:
+        - generic:
+          - button "Variables" [ref=e289] [cursor=pointer]:
+            - generic [ref=e292]:
+              - generic: Variables
+          - button "Terminal" [ref=e295] [cursor=pointer]:
+            - generic [ref=e298]:
+              - generic: Terminal
+  - generic [ref=e299]:
+    - alert
+    - alert
+    - complementary
+    - complementary

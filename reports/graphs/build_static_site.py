@@ -10,6 +10,11 @@ import sys
 ROOT = Path(__file__).resolve().parent
 SITE = ROOT / 'site'
 MEDIA = ROOT / 'media'
+REPO_ROOT = ROOT.parents[1]
+if str(REPO_ROOT) not in sys.path:
+    sys.path.insert(0, str(REPO_ROOT))
+
+from src.comma_lab.state_sync import doctor_repo
 FILES = [
     ('index.html', 'index.html'),
     ('report_history.html', 'report_history.html'),
@@ -116,10 +121,24 @@ def check_site_parity() -> int:
     return 0
 
 
+def check_promoted_state() -> int:
+    report = doctor_repo(REPO_ROOT)
+    if not report.findings:
+        return 0
+    print("Promoted state drift detected:", file=sys.stderr)
+    for finding in report.findings:
+        print(f"- [{finding.severity}] {finding.code}: {finding.path} -> {finding.message}", file=sys.stderr)
+    return 1
+
+
 def main() -> int:
     parser = argparse.ArgumentParser()
     parser.add_argument('--check', action='store_true', help='verify that site copies match source artifacts')
     args = parser.parse_args()
+
+    drift_rc = check_promoted_state()
+    if drift_rc != 0:
+        return drift_rc
 
     if args.check:
         return check_site_parity()

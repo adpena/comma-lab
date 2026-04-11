@@ -1,7 +1,6 @@
 from __future__ import annotations
 
 import importlib.util
-import json
 import sys
 import tempfile
 import unittest
@@ -48,60 +47,34 @@ class TrainPostfilterDilatedH64Tests(unittest.TestCase):
         self.assertTrue(args.checkpoint_select_int8)
         self.assertTrue(args.per_channel_int8)
 
-    def test_default_tag_and_metadata_surface_are_dilated(self) -> None:
+    def test_decode_archive_accepts_extracted_directory(self) -> None:
         mod = load_module()
-        self.assertEqual(mod.make_default_tag(64, 20.0), "dilated_qat_ema_h64_a20")
-        meta = mod.normalize_postfilter_meta(64, 3, 20.0)
-        self.assertEqual(meta["variant"], "dilated")
-        self.assertEqual(meta["hidden"], 64)
-        self.assertEqual(meta["kernel"], 3)
+        called = []
 
-    def test_resolve_asset_uses_kaggle_dataset_fallback(self) -> None:
-        mod = load_module()
-        original_exists = mod.Path.exists
+        def fake_decode_video(path: str, target_h: int = mod.DEFAULT_CAMERA_SIZE[1], target_w: int = mod.DEFAULT_CAMERA_SIZE[0]):
+            called.append(path)
+            return ["ok"]
+
+        original_decode_video = mod.decode_video
         try:
-            mod.Path.exists = lambda self: str(self) == "/kaggle/input/comma-lab-private-assets/decode_base_archive.zip"
-            asset = mod.resolve_asset("reports/raw/2026-04-06-av1-roi-experiments/decode_base_archive.zip")
+            mod.decode_video = fake_decode_video
+            with tempfile.TemporaryDirectory() as tmpdir:
+                root = Path(tmpdir)
+                extracted = root / "decode_base_archive"
+                extracted.mkdir()
+                (extracted / "0.mkv").write_bytes(b"mkv")
+                result = mod.decode_archive(str(extracted))
         finally:
-            mod.Path.exists = original_exists
-        self.assertEqual(str(asset), "/kaggle/input/comma-lab-private-assets/decode_base_archive.zip")
+            mod.decode_video = original_decode_video
+
+        self.assertEqual(result, ["ok"])
+        self.assertEqual(called, [str(extracted / "0.mkv")])
 
     def test_qat_dilated_postfilter_uses_dilation_two(self) -> None:
         mod = load_module()
         model = mod.QATDilatedPostFilter(hidden=8, kernel=3)
         self.assertEqual(model.conv2.dilation, (2, 2))
         self.assertEqual(model.conv2.padding, (2, 2))
-
-    def test_save_best_checkpoint_writes_durable_metadata(self) -> None:
-        mod = load_module()
-        model = mod.QATDilatedPostFilter(hidden=4, kernel=3)
-        ema = mod.EMA(model, decay=0.9)
-
-        with tempfile.TemporaryDirectory() as tmpdir:
-            out_dir = Path(tmpdir)
-            payload = mod.save_best_checkpoint(
-                model=model,
-                ema=ema,
-                output_dir=out_dir,
-                tag="unit_dilated",
-                meta={"variant": "dilated", "hidden": 4, "kernel": 3, "alpha": 20.0},
-                epoch=7,
-                scorer=1.234,
-                per_channel_int8=True,
-            )
-
-            meta_path = out_dir / "postfilter_unit_dilated_best_meta.json"
-            self.assertTrue((out_dir / "postfilter_unit_dilated_best_fp32.pt").exists())
-            self.assertTrue((out_dir / "postfilter_unit_dilated_best_int8.pt").exists())
-            self.assertTrue(meta_path.exists())
-
-            on_disk = json.loads(meta_path.read_text())
-            self.assertEqual(on_disk["tag"], "unit_dilated")
-            self.assertEqual(on_disk["epoch"], 7)
-            self.assertAlmostEqual(on_disk["scorer"], 1.234)
-            self.assertEqual(on_disk["meta"]["variant"], "dilated")
-            self.assertEqual(payload["int8_size"], on_disk["int8_size"])
-            self.assertEqual(tuple(torch.load(out_dir / "postfilter_unit_dilated_best_int8.pt", weights_only=True)["conv1.weight.s"].shape), (4,))
 
 
 if __name__ == "__main__":

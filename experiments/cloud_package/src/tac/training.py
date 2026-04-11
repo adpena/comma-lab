@@ -80,6 +80,8 @@ class TrainConfig(BaseModel):
     loss_mode: Literal["standard", "temperature", "focal_ste", "kl_distill"] = "standard"
     temperature_start: float = Field(1.0, gt=0.0)
     temperature_end: float = Field(0.05, gt=0.0)
+    temp_schedule: str = Field("exponential", pattern=r"^(linear|exponential)$",
+                                description="Temperature decay: 'linear' or 'exponential' (recommended)")
     focal_gamma: float = Field(2.0, ge=0.0)
     segnet_loss_weight: float = Field(100.0, ge=0.0)
     use_dual_saliency: bool = False
@@ -96,6 +98,13 @@ class TrainConfig(BaseModel):
                                      "0 = static (compute once at start). 200 = adaptive every 200 epochs.")
     boundary_anneal: bool = Field(False, description="Couple boundary_weight to temperature: "
                                   "increases boundary attention as T decreases (maintains gradient pressure)")
+    use_swa: bool = Field(False, description="Stochastic Weight Averaging over final 20% of training. "
+                          "Wider minima → better int8 robustness.")
+    adaptive_rebalance: bool = Field(False, description="Enable adaptive weight rebalancing from "
+                                     "src/tac/adaptive.py. Derives segnet_weight and boundary_weight "
+                                     "from current (pose, seg) at each eval epoch.")
+    rebalance_every: int = Field(50, ge=1, description="Epochs between adaptive weight updates")
+    boundary_fraction: float = Field(0.05, gt=0.0, lt=1.0, description="Measured boundary pixel fraction (beta)")
     eval_holdout: float = Field(0.0, ge=0.0, le=0.5,
                                 description="Fraction of pairs held out for eval. "
                                 "0.0 = contest mode (train+eval on all pairs). "
@@ -247,6 +256,18 @@ class Trainer:
         self.best_epoch = -1
         self._patched_scorers = False
         self._current_epoch = 0
+        self._last_eval_pose = None
+        self._last_eval_seg = None
+        self._baseline_pose = None
+        self._baseline_seg = None
+
+        # Adaptive weights (council_v2_adaptive profile)
+        self._adaptive = None
+        if getattr(config, 'adaptive_rebalance', False):
+            from .adaptive import AdaptiveWeights
+            beta = getattr(config, 'boundary_fraction', 0.05)
+            self._adaptive = AdaptiveWeights(boundary_fraction=beta)
+            print(f"[trainer] Adaptive weights enabled (beta={beta})")
 
         self.optimizer = torch.optim.AdamW(
             model.parameters(), lr=config.lr, weight_decay=1e-4
@@ -532,10 +553,26 @@ class Trainer:
         meta_tmp.write_text(json.dumps({
             "epoch": epoch,
             "scorer": scorer,
+            "pose": getattr(self, '_last_eval_pose', None),
+            "seg": getattr(self, '_last_eval_seg', None),
             "fp32_path": str(fp32_path),
             "int8_path": str(int8_path),
             "int8_size": int8_path.stat().st_size,
             "meta": int8_state["__meta__"],
+            "config": {
+                "variant": self.config.variant,
+                "hidden": self.config.hidden,
+                "loss_mode": self.config.loss_mode,
+                "boundary_weight": self.config.boundary_weight,
+                "segnet_loss_weight": self.config.segnet_loss_weight,
+                "hard_frame_ratio": self.config.hard_frame_ratio,
+                "temperature_start": self.config.temperature_start,
+                "temperature_end": self.config.temperature_end,
+                "temp_schedule": self.config.temp_schedule,
+                "alpha": self.config.alpha,
+            },
+            "baseline_pose": getattr(self, '_baseline_pose', None),
+            "baseline_seg": getattr(self, '_baseline_seg', None),
         }, indent=2))
         meta_tmp.rename(meta_path)
 
@@ -809,6 +846,24 @@ class Trainer:
                 for pg in self.optimizer.param_groups:
                     pg["lr"] = lr
 
+            # Adaptive weight rebalance (once per rebalance_every epochs, not per step)
+            if (self._adaptive and self._last_eval_pose is not None
+                    and epoch % getattr(cfg, 'rebalance_every', 50) == 0):
+                progress = epoch / max(cfg.epochs - 1, 1)
+                if cfg.temp_schedule == "exponential" and cfg.temperature_start > cfg.temperature_end:
+                    _T = cfg.temperature_start * (cfg.temperature_end / cfg.temperature_start) ** progress
+                else:
+                    _T = cfg.temperature_start + progress * (cfg.temperature_end - cfg.temperature_start)
+                result = self._adaptive.rebalance(
+                    eval_pose=self._last_eval_pose,
+                    eval_seg=self._last_eval_seg or 0.01,
+                    temperature=_T,
+                )
+                self._cached_sw = result["segnet_weight"]
+                self._cached_bw = result["boundary_weight"]
+                if epoch % (getattr(cfg, 'rebalance_every', 50) * 5) == 0:
+                    print(f"[adaptive] ep={epoch} T={_T:.2f} sw={self._cached_sw:.3f} bw={self._cached_bw:.1f}")
+
             # Error replay: recompute hard-frame weights using current model output
             if (hard_frame_weights is not None
                     and cfg.error_replay_every > 0
@@ -841,7 +896,10 @@ class Trainer:
                 if cfg.loss_mode == "temperature":
                     # Anneal temperature from start to end over training
                     progress = epoch / max(cfg.epochs - 1, 1)
-                    temp = cfg.temperature_start + progress * (cfg.temperature_end - cfg.temperature_start)
+                    if cfg.temp_schedule == "exponential" and cfg.temperature_start > cfg.temperature_end:
+                        temp = cfg.temperature_start * (cfg.temperature_end / cfg.temperature_start) ** progress
+                    else:
+                        temp = cfg.temperature_start + progress * (cfg.temperature_end - cfg.temperature_start)
                     loss, pd, sd = temperature_scorer_loss(
                         filtered, gt_pair, posenet, segnet, temperature=temp,
                     )
@@ -851,20 +909,29 @@ class Trainer:
                         gamma=cfg.focal_gamma,
                     )
                 elif cfg.loss_mode == "kl_distill":
-                    # Hinton-style KL distillation: T anneals from 5.0 → 1.0
+                    # Hinton-style KL distillation: T anneals from 5.0 → 0.5
                     progress = epoch / max(cfg.epochs - 1, 1)
-                    temp = cfg.temperature_start + progress * (cfg.temperature_end - cfg.temperature_start)
+                    if cfg.temp_schedule == "exponential" and cfg.temperature_start > cfg.temperature_end:
+                        temp = cfg.temperature_start * (cfg.temperature_end / cfg.temperature_start) ** progress
+                    else:
+                        temp = cfg.temperature_start + progress * (cfg.temperature_end - cfg.temperature_start)
                     bm = self._boundary_masks.get(start) if self._boundary_masks else None
-                    # Coupled boundary annealing: increase boundary attention as T decreases
-                    bw = cfg.boundary_weight
-                    if cfg.boundary_anneal and temp > 0:
-                        bw = cfg.boundary_weight * min(3.0, cfg.temperature_start / max(temp, cfg.temperature_end))
+
+                    # Adaptive or static weights
+                    # Use cached adaptive weights (computed once per epoch, not per step)
+                    sw = getattr(self, '_cached_sw', cfg.segnet_loss_weight)
+                    bw = getattr(self, '_cached_bw', cfg.boundary_weight)
+                    if not self._adaptive:
+                        # Static boundary anneal for non-adaptive mode
+                        if cfg.boundary_anneal and temp > 0:
+                            bw = cfg.boundary_weight * min(3.0, cfg.temperature_start / max(temp, cfg.temperature_end))
+
                     loss, pd, sd = kl_distill_scorer_loss(
                         filtered, gt_pair, posenet, segnet,
                         temperature=temp,
                         boundary_mask=bm,
                         boundary_weight=bw,
-                        segnet_weight=cfg.segnet_loss_weight,
+                        segnet_weight=sw,
                     )
                 else:
                     loss, pd, sd = scorer_loss(filtered, gt_pair, posenet, segnet)
@@ -908,6 +975,13 @@ class Trainer:
             if epoch >= cfg.warmup_epochs:
                 self.scheduler.step()
 
+            # SWA: snapshot weights in final 20% of training for wider minima
+            if cfg.use_swa and epoch >= int(cfg.epochs * 0.8):
+                if not hasattr(self, '_swa'):
+                    self._swa = SWA()
+                    print(f"[trainer-lazy] SWA started at epoch {epoch}")
+                self._swa.update(self.model)
+
             # Empty CUDA cache once per epoch (not per step — avoids sync stalls)
             if torch.cuda.is_available():
                 torch.cuda.empty_cache()
@@ -940,6 +1014,26 @@ class Trainer:
             eval_tag = "*" if is_eval_epoch else " "
             print(f"[ep {epoch:4d}]{eval_tag} loss={avg_loss:.4f} pose={avg_pose:.6f} "
                   f"seg={avg_seg:.6f} scorer={scorer_val:.4f} best={self.best_scorer:.4f} lr={lr:.6f}")
+
+            # JSONL telemetry log — structured data for council analysis
+            if is_eval_epoch:
+                telemetry_path = Path(cfg.output_dir) / f"telemetry_{cfg.tag}.jsonl"
+                telemetry_path.parent.mkdir(parents=True, exist_ok=True)
+                import time as _time
+                with open(telemetry_path, "a") as tf:
+                    tf.write(json.dumps({
+                        "epoch": epoch,
+                        "scorer": round(scorer_val, 6),
+                        "eval_pose": self._last_eval_pose,
+                        "eval_seg": self._last_eval_seg,
+                        "train_pose": round(avg_pose, 8),
+                        "train_seg": round(avg_seg, 8),
+                        "train_loss": round(avg_loss, 6),
+                        "lr": round(lr, 8),
+                        "best_scorer": round(self.best_scorer, 6),
+                        "best_epoch": self.best_epoch,
+                        "ts": _time.time(),
+                    }) + "\n")
 
             # Save training state every 50 epochs for crash recovery
             if epoch % 50 == 0 and epoch > 0:
@@ -992,7 +1086,30 @@ class Trainer:
                 if torch.cuda.is_available():
                     torch.cuda.empty_cache()
 
-        scorer = 100.0 * (total_s / count) + math.sqrt(10.0 * (total_p / count))
+        avg_p = total_p / count
+        avg_s = total_s / count
+        scorer = 100.0 * avg_s + math.sqrt(10.0 * avg_p)
+
+        # Store per-component for telemetry (meta.json, regression alarm)
+        self._last_eval_pose = round(avg_p, 8)
+        self._last_eval_seg = round(avg_s, 8)
+
+        # Baseline watermark: record raw compressed distortion at first eval
+        if not hasattr(self, '_baseline_pose') or self._baseline_pose is None:
+            self._baseline_pose = round(avg_p, 8)
+            self._baseline_seg = round(avg_s, 8)
+            print(f"[eval] Baseline watermark: pose={avg_p:.6f}, seg={avg_s:.6f}")
+
+        # Regression alarm: warn if PoseNet regresses 3x from baseline
+        if hasattr(self, '_baseline_pose') and self._baseline_pose and self._baseline_pose > 0:
+            pose_ratio = avg_p / self._baseline_pose
+            if pose_ratio > 3.0:
+                print(f"  !! POSENET REGRESSION ALARM: {avg_p:.6f} is {pose_ratio:.1f}x baseline {self._baseline_pose:.6f} !!")
+            if pose_ratio > 5.0:
+                print(f"  !! CRITICAL: PoseNet {pose_ratio:.0f}x baseline — checkpoint NOT saved !!")
+                self.model.load_state_dict(orig_state)
+                self.model.train()
+                return float('inf')  # prevent promotion of regressed checkpoint
 
         self.model.load_state_dict(orig_state)
         self.model.train()

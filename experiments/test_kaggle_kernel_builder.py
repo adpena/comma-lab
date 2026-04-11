@@ -85,6 +85,49 @@ class KaggleKernelBuilderTests(unittest.TestCase):
         self.assertEqual(copied_script, "print('hi')\n")
         self.assertEqual(copied_asset, b"zip")
 
+    def test_write_bundle_injects_bootstrap_preamble_into_direct_code_file(self) -> None:
+        with tempfile.TemporaryDirectory() as tmpdir:
+            root = Path(tmpdir)
+            source = root / "script.py"
+            source.write_text("from tac.entrypoints import build_postfilter_meta\nprint('hi')\n")
+
+            bundle = root / "bundle"
+            spec = mod.KaggleKernelSpec(
+                slug="comma-lab-direct",
+                title="comma-lab direct",
+                code_source=source,
+                code_file="script.py",
+                bootstrap_preamble="def ensure_tac_importable():\n    pass\n\nensure_tac_importable()\n",
+            )
+
+            mod.write_bundle(bundle_dir=bundle, username="alice", spec=spec, repo_root=root)
+
+            copied_script = (bundle / "script.py").read_text()
+
+        self.assertIn("def ensure_tac_importable()", copied_script)
+        self.assertIn("from tac.entrypoints import build_postfilter_meta", copied_script)
+
+    def test_write_bundle_clears_stale_files_before_rebuild(self) -> None:
+        with tempfile.TemporaryDirectory() as tmpdir:
+            root = Path(tmpdir)
+            source = root / "script.py"
+            source.write_text("print('hi')\n")
+            bundle = root / "bundle"
+            bundle.mkdir(parents=True)
+            stale = bundle / "posenet_saliency.npy"
+            stale.write_bytes(b"stale")
+
+            spec = mod.KaggleKernelSpec(
+                slug="comma-lab-direct",
+                title="comma-lab direct",
+                code_source=source,
+                code_file="script.py",
+                include_paths=(),
+            )
+
+            mod.write_bundle(bundle_dir=bundle, username="alice", spec=spec, repo_root=root)
+            self.assertFalse(stale.exists())
+
 
 if __name__ == "__main__":
     unittest.main()

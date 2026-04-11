@@ -1,0 +1,364 @@
+- generic [ref=e1]:
+  - generic:
+    - generic:
+      - link:
+        - /url: "#notebook-main"
+    - generic:
+      - banner:
+        - generic:
+          - generic:
+            - generic:
+              - generic:
+                - link:
+                  - /url: https://drive.google.com/drive/search?q=owner%3Ame%20(type%3Aapplication%2Fvnd.google.colaboratory%20%7C%7C%20type%3Aapplication%2Fvnd.google.colab)&authuser=0
+                  - generic:
+                    - img
+            - generic:
+              - generic:
+                - generic:
+                  - img
+                - textbox: tac_training.ipynb
+                - generic: tac_training.ipynb_
+                - generic:
+                  - button
+                - generic:
+                  - generic:
+                    - button
+              - generic:
+                - generic:
+                  - menubar:
+                    - button:
+                      - generic:
+                        - generic:
+                          - generic: File
+                    - button:
+                      - generic:
+                        - generic:
+                          - generic: Edit
+                    - button:
+                      - generic:
+                        - generic:
+                          - generic: View
+                    - button:
+                      - generic:
+                        - generic:
+                          - generic: Insert
+                    - button:
+                      - generic:
+                        - generic:
+                          - generic: Runtime
+                    - button:
+                      - generic:
+                        - generic:
+                          - generic: Tools
+                    - button:
+                      - generic:
+                        - generic:
+                          - generic: Help
+            - generic:
+              - generic:
+                - button
+              - generic:
+                - button
+              - generic:
+                - button
+              - generic:
+                - generic:
+                  - generic:
+                    - generic:
+                      - generic:
+                        - generic:
+                          - generic:
+                            - button:
+                              - generic:
+                                - img
+                              - generic:
+                                - img
+    - generic:
+      - generic:
+        - generic:
+          - button:
+            - generic:
+              - generic: Show command palette ⌘/Ctrl+Shift+P
+      - generic:
+        - generic:
+          - generic:
+            - button:
+              - generic:
+                - generic: Insert code cell below ⌘/Ctrl+M B
+        - generic:
+          - button
+      - generic:
+        - generic:
+          - button:
+            - generic:
+              - generic: Add text cell
+      - generic:
+        - generic:
+          - generic:
+            - button:
+              - generic:
+                - generic: Run all cells in notebook
+        - generic:
+          - button
+      - generic:
+        - generic:
+          - button
+        - generic:
+          - generic:
+            - button:
+              - generic:
+                - generic:
+                  - generic:
+                    - generic:
+                      - generic: RAM
+                    - generic:
+                      - generic: Disk
+                - generic: "Connected to Python 3 Google Compute Engine backend (GPU) RAM: 1.24 GB/12.67 GB Disk: 43.47 GB/112.64 GB"
+        - generic:
+          - button
+      - generic:
+        - button
+    - generic:
+      - complementary:
+        - toolbar:
+          - generic:
+            - generic:
+              - generic:
+                - button
+            - generic:
+              - generic:
+                - button
+            - generic:
+              - generic:
+                - button
+            - generic:
+              - generic:
+                - button
+            - generic:
+              - generic:
+                - button
+            - generic:
+              - generic:
+                - button [pressed]
+            - generic:
+              - generic:
+                - button
+        - generic:
+          - generic:
+            - generic:
+              - heading [level=3]: Files
+              - generic:
+                - button
+              - generic:
+                - button
+            - generic:
+              - generic:
+                - generic:
+                  - generic:
+                    - generic:
+                      - generic:
+                        - button
+                    - generic:
+                      - button
+                    - generic:
+                      - button:
+                        - generic:
+                          - generic:
+                            - img
+                    - generic:
+                      - button
+                  - generic:
+                    - generic:
+                      - generic: ..
+                  - generic:
+                    - generic:
+                      - generic:
+                        - generic:
+                          - generic:
+                            - generic: drive
+                        - generic:
+                          - generic:
+                            - generic: sample_data
+                        - generic:
+                          - generic:
+                            - generic: tac_complete.zip
+                  - generic:
+                    - generic: Drop files to upload them to session storage.
+                  - generic:
+                    - generic:
+                      - generic:
+                        - generic: Disk
+                        - generic: 69.16 GB available
+                      - generic:
+                        - generic:
+                          - progressbar
+      - generic:
+        - generic:
+          - generic:
+            - generic:
+              - generic:
+                - generic:
+                  - generic:
+                    - generic:
+                      - generic:
+                        - main:
+                          - generic:
+                            - generic:
+                              - generic:
+                                - generic:
+                                  - generic:
+                                    - region:
+                                      - generic:
+                                        - generic:
+                                          - button [disabled]
+                                        - generic:
+                                          - button [disabled]
+                                        - generic:
+                                          - button
+                                        - generic:
+                                          - button
+                                        - generic:
+                                          - button
+                                      - generic:
+                                        - generic:
+                                          - generic:
+                                            - generic:
+                                              - generic:
+                                                - generic:
+                                                  - generic:
+                                                    - generic:
+                                                      - button:
+                                                        - generic:
+                                                          - img
+                                                      - generic:
+                                                        - generic: "[4]"
+                                                        - generic:
+                                                          - generic: 45s
+                                              - generic:
+                                                - generic:
+                                                  - code:
+                                                    - generic:
+                                                      - generic:
+                                                        - generic:
+                                                          - generic:
+                                                            - generic: "# tac v0.8.0 — Colab Training (Drive already mounted)"
+                                                          - generic:
+                                                            - generic: import os, sys, glob
+                                                          - generic:
+                                                            - generic: WORK = '/content/drive/MyDrive/tac_training'
+                                                          - generic:
+                                                            - generic: os.makedirs(WORK, exist_ok=True)
+                                                          - generic:
+                                                            - generic: os.chdir(WORK)
+                                                          - generic:
+                                                            - generic: "print(f'Dir: {os.getcwd()}, Contents: {os.listdir(\".\")}')"
+                                                          - generic:
+                                                            - generic: "!nvidia-smi --query-gpu=name,memory.total --format=csv,noheader"
+                                                          - generic:
+                                                            - generic: "!pip install -q torch torchvision av safetensors timm einops segmentation-models-pytorch numpy pydantic"
+                                                          - generic:
+                                                            - generic: "if not os.path.exists('upstream/videos/0.mkv'):"
+                                                          - generic:
+                                                            - generic: "!git clone --depth 1 https://github.com/commaai/comma_video_compression_challenge.git upstream"
+                                                          - generic:
+                                                            - generic: "!cd upstream && git lfs pull"
+                                                          - generic:
+                                                            - generic: "else:"
+                                                          - generic:
+                                                            - generic: print('Upstream ready')
+                                                          - generic:
+                                                            - generic: "if not os.path.exists('src/tac/__init__.py'):"
+                                                          - generic:
+                                                            - generic: print('Waiting for /content/tac_complete.zip — drag it into Files panel on left')
+                                                          - generic:
+                                                            - generic: import time
+                                                          - generic:
+                                                            - generic: "for i in range(300):"
+                                                          - generic:
+                                                            - generic: "if os.path.exists('/content/tac_complete.zip'): break"
+                                                          - generic:
+                                                            - generic: time.sleep(1)
+                                                          - generic:
+                                                            - generic: "if i % 30 == 0 and i > 0: print(f' Waiting... ({i}s)')"
+                                                          - generic:
+                                                            - generic: "if os.path.exists('/content/tac_complete.zip'):"
+                                                          - generic:
+                                                            - generic: "!unzip -qo /content/tac_complete.zip"
+                                                          - generic:
+                                                            - generic: "!cp /content/tac_complete.zip /content/drive/MyDrive/"
+                                                          - generic:
+                                                            - generic: import numpy as np; np.save('saliency.npy', np.ones((30, 874, 1164), dtype=np.float32))
+                                                          - generic:
+                                                            - generic: print('Done!')
+                                                          - generic:
+                                                            - generic: "else:"
+                                                          - generic:
+                                                            - generic: raise RuntimeError('Timeout — drag tac_complete.zip into Files')
+                                                          - generic:
+                                                            - generic: "else:"
+                                                          - generic:
+                                                            - generic: print('tac ready')
+                                                          - generic:
+                                                            - generic: sys.path.insert(0, 'src'); sys.path.insert(0, 'upstream')
+                                                          - generic:
+                                                            - generic: "import tac; print(f'tac v{tac.__version__}')"
+                                                          - generic:
+                                                            - generic: resume = ''
+                                                          - generic:
+                                                            - generic: states = sorted(glob.glob('weights/training_state_*.pt'))
+                                                          - generic:
+                                                            - generic: "if states: resume = f'--resume-from {states[-1]}'; print(f'Resuming: {states[-1]}')"
+                                                          - generic:
+                                                            - generic: "!PYTHONPATH=src:upstream PYTHONUNBUFFERED=1 python train_tac.py --tag colab_h64_standard --hidden 64 --epochs 2500 --alpha 20 --sal-lambda 1.0 --subsample 4 --output-dir ./weights --archive ./archive.zip --gt-video ./upstream/videos/0.mkv --saliency ./saliency.npy --models-dir ./upstream/models --upstream-dir ./upstream $resume"
+                                                      - textbox: "c.__version__}') resume = '' states = sorted(glob.glob('weights/training_state_*.pt')) if states: resume = f'--resume-from {states[-1]}'; print(f'Resuming: {states[-1]}') !PYTHONPATH=src:upstream PYTHONUNBUFFERED=1 python train_tac.py --tag colab_h64_standard --hidden 64 --epochs 2500 --alpha 20 --sal-lambda 1.0 --subsample 4 --output-dir ./weights --archive ./archive.zip --gt-video ./upstream/videos/0.mkv --saliency ./saliency.npy --models-dir ./upstream/models --upstream-dir ./upstream $resume"
+                                            - region:
+                                              - generic:
+                                                - generic:
+                                                  - generic:
+                                                    - generic:
+                                                      - button
+                                                    - generic:
+                                                      - button
+                                                - generic:
+                                                  - generic:
+                                                    - generic:
+                                                      - generic:
+                                                        - group:
+                                                          - generic:
+                                                            - generic: "Dir: /content/drive/MyDrive/tac_training, Contents: ['upstream'] Tesla T4, 15360 MiB fatal: destination path 'upstream' already exists and is not an empty directory. Not in a git repository. Waiting for /content/tac_complete.zip — drag it into Files panel on left Waiting... (30s) Done! tac v0.8.0 [train_tac] ERROR: gt-video not found: ./upstream/videos/0.mkv"
+                            - generic:
+                              - link:
+                                - /url: /signup?utm_source=footer&utm_medium=link&utm_campaign=footer_links
+                                - text: Colab paid products
+                              - text: "-"
+                              - link:
+                                - /url: /cancel-subscription
+                                - text: Cancel contracts here
+    - generic:
+      - button
+    - region:
+      - generic:
+        - generic:
+          - button
+        - generic:
+          - button
+      - generic:
+        - generic:
+          - generic:
+            - button
+        - generic:
+          - generic:
+            - button
+  - alertdialog "Warning" [ref=e1498]:
+    - generic [ref=e1499]:
+      - heading "Warning" [level=2] [ref=e1500]
+      - generic [ref=e1501]:
+        - generic:
+          - text: Ensure that your files are saved elsewhere. This runtime's files will be deleted when this runtime is terminated.
+          - link "More info" [ref=e1502] [cursor=pointer]:
+            - /url: https://research.google.com/colaboratory/faq.html
+      - contentinfo [ref=e1503]:
+        - button "OK" [ref=e1507] [cursor=pointer]:
+          - generic [ref=e1509]:
+            - generic: OK
