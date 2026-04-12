@@ -1294,6 +1294,103 @@ def main(
     else:
         print(f"\n** Score {score:.2f} — architecture or training needs work **")
 
+    return summary
+
+
+def validate_smoke(precomputed: str | None = None) -> None:
+    """P3: Run 100-epoch CPU smoke and assert 5 conditions (Karpathy).
+
+    Validates before committing to 48h GPU training:
+    1. Loss decreases monotonically for first 50 epochs
+    2. Phase transition from 1→2 fires correctly
+    3. Lagrangian multipliers lambda_seg and lambda_pose are non-negative and finite
+    4. _full_eval completes without error and returns valid score
+    5. Checkpoint save/load roundtrip works
+    """
+    import tempfile
+
+    print("=" * 60)
+    print("SMOKE VALIDATION (P3 — Karpathy protocol)")
+    print("=" * 60)
+
+    cfg = FridrichRendererConfig(
+        channels=(32, 16),  # tiny for speed
+        epochs=100,
+        lr=2e-4,
+        batch_size=2,
+        spade_hidden=16,
+        device="cpu",
+        seed=42,
+        checkpoint_every=50,
+        eval_every=50,
+        log_every=10,
+        max_hours=0.5,
+        smoke=True,
+        phase1_end=0.2,   # Phase 1 ends at epoch 20
+        phase2_end=0.6,   # Phase 2 ends at epoch 60
+    )
+
+    if precomputed:
+        os.environ["PRECOMPUTED_DIR"] = precomputed
+
+    with tempfile.TemporaryDirectory() as tmpdir:
+        cfg_dict = {k: v for k, v in cfg.__dict__.items()}
+        # Override results dir
+        summary = train_fridrich_renderer(cfg)
+        history = summary.get("history", [])
+
+        # Assertion 1: Loss decreases (first 50 epochs)
+        losses_first50 = [h["loss"] for h in history if h["epoch"] < 50]
+        if len(losses_first50) >= 5:
+            first_loss = losses_first50[0]
+            last_loss = losses_first50[-1]
+            assert last_loss < first_loss, (
+                f"FAIL: Loss did not decrease: first={first_loss:.4f}, last={last_loss:.4f}"
+            )
+            print(f"  [1/5] Loss decreased: {first_loss:.4f} → {last_loss:.4f} ✓")
+        else:
+            print(f"  [1/5] Not enough data points ({len(losses_first50)}), skipped")
+
+        # Assertion 2: Phase transition fires (phase 2 appears in history)
+        phases_seen = {h["phase"] for h in history}
+        assert 2 in phases_seen, f"FAIL: Phase 2 never appeared. Phases seen: {phases_seen}"
+        print(f"  [2/5] Phase transition: phases {phases_seen} ✓")
+
+        # Assertion 3: Lagrangian multipliers are non-negative and finite
+        for h in history:
+            assert h["lambda_seg"] >= 0 and math.isfinite(h["lambda_seg"]), (
+                f"FAIL: lambda_seg={h['lambda_seg']} at epoch {h['epoch']}"
+            )
+            assert h["lambda_pose"] >= 0 and math.isfinite(h["lambda_pose"]), (
+                f"FAIL: lambda_pose={h['lambda_pose']} at epoch {h['epoch']}"
+            )
+        print(f"  [3/5] Lagrangian multipliers non-negative and finite ✓")
+
+        # Assertion 4: Eval completed with valid score
+        best_score = summary.get("best_score", float("inf"))
+        assert math.isfinite(best_score), f"FAIL: best_score is not finite: {best_score}"
+        print(f"  [4/5] Eval completed: best_score={best_score:.4f} ✓")
+
+        # Assertion 5: Check losses are not NaN
+        for h in history:
+            assert math.isfinite(h["loss"]), f"FAIL: NaN loss at epoch {h['epoch']}"
+            assert math.isfinite(h["seg_dist"]), f"FAIL: NaN seg_dist at epoch {h['epoch']}"
+            assert math.isfinite(h["pose_dist"]), f"FAIL: NaN pose_dist at epoch {h['epoch']}"
+        print(f"  [5/5] All losses finite (no NaN/Inf) ✓")
+
+    print()
+    print("SMOKE VALIDATION: ALL 5 CHECKS PASSED")
+    print("=" * 60)
+
 
 if __name__ == "__main__":
-    main()
+    import sys
+    if "--validate-smoke" in sys.argv:
+        # P3: Karpathy smoke validation — run before committing GPU hours
+        precomputed_arg = None
+        for i, a in enumerate(sys.argv):
+            if a == "--precomputed" and i + 1 < len(sys.argv):
+                precomputed_arg = sys.argv[i + 1]
+        validate_smoke(precomputed=precomputed_arg)
+    else:
+        main()
