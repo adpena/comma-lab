@@ -461,6 +461,49 @@ if [ -f "$SELF_DIR/postfilter_int8.pt" ]; then
   echo "Bundled postfilter_int8.pt ($(stat -f%z "$SELF_DIR/postfilter_int8.pt" 2>/dev/null || stat -c%s "$SELF_DIR/postfilter_int8.pt") bytes) into archive"
 fi
 
+# ── Pre-compute corrections for CPU inflate pipeline (Eureka 1+2) ──
+# Generates scorer gradients, null-space basis, fragility maps, brightness
+# shifts, PoseNet targets, and hard-frame corrections in one pass.
+# Output: corrections.bin (~50-100KB) bundled into archive.
+PRECOMPUTE_CORRECTIONS="${PRECOMPUTE_CORRECTIONS:-0}"
+if [ "$PRECOMPUTE_CORRECTIONS" = "1" ]; then
+  CORRECTIONS_OUT="$ARCHIVE_DIR/corrections.bin"
+  GT_VIDEO_PATH="${UPSTREAM_ROOT}/videos/0.mkv"
+  POSENET_PATH="${UPSTREAM_ROOT}/models/posenet.safetensors"
+  if [ -f "$GT_VIDEO_PATH" ] && [ -f "$POSENET_PATH" ]; then
+    echo "Pre-computing corrections for CPU inflate pipeline ..."
+    "$UV_BIN" run python -m tac.precompute_corrections \
+      --gt-video "$GT_VIDEO_PATH" \
+      --posenet "$POSENET_PATH" \
+      --upstream "$UPSTREAM_ROOT" \
+      --output "$CORRECTIONS_OUT" \
+      --device "${PRECOMPUTE_DEVICE:-cpu}" \
+      --batch-size "${PRECOMPUTE_BATCH_SIZE:-4}" \
+      --null-space-k "${PRECOMPUTE_NULL_K:-32}" \
+      --hard-frames "${PRECOMPUTE_HARD_FRAMES:-50}" \
+      --hard-pixels "${PRECOMPUTE_HARD_PIXELS:-1000}"
+    if [ -f "$CORRECTIONS_OUT" ]; then
+      echo "Bundled corrections.bin ($(stat -f%z "$CORRECTIONS_OUT" 2>/dev/null || stat -c%s "$CORRECTIONS_OUT") bytes) into archive"
+    else
+      echo "WARNING: Corrections pre-computation failed" >&2
+    fi
+  else
+    echo "WARNING: Cannot pre-compute corrections - GT video or PoseNet model not found" >&2
+  fi
+elif [ -f "$SELF_DIR/corrections.bin" ]; then
+  cp "$SELF_DIR/corrections.bin" "$ARCHIVE_DIR/corrections.bin"
+  echo "Bundled pre-computed corrections.bin ($(stat -f%z "$SELF_DIR/corrections.bin" 2>/dev/null || stat -c%s "$SELF_DIR/corrections.bin") bytes) into archive"
+fi
+
+# ── Mask codec selection (Eureka 3): av1 (default) or vvc ──
+# VVC/H.266 can be 30-50% smaller than AV1 for segmentation masks.
+# Set MASK_CODEC=vvc to use VVC if vvencapp is available.
+MASK_CODEC="${MASK_CODEC:-av1}"
+if [ "$MASK_CODEC" = "vvc" ] && ! command -v vvencapp >/dev/null 2>&1; then
+  echo "WARNING: MASK_CODEC=vvc but vvencapp not found, falling back to av1" >&2
+  MASK_CODEC="av1"
+fi
+
 # Extract and bundle PoseNet targets for supervised TTO at inflate time
 # This pre-computes PoseNet(original) outputs so inflate can optimize against them
 POSENET_TARGETS_ENABLE="${POSENET_TARGETS_ENABLE:-0}"

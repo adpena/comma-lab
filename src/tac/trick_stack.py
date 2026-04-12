@@ -1048,3 +1048,405 @@ def stacked_inflate_from_config(
     kwargs = {f.name: getattr(config, f.name) for f in config.__dataclass_fields__.values()}
     kwargs.pop("total_time_budget", None)  # not a kwarg of stacked_inflate
     return stacked_inflate(archive_dir=archive_dir, output_dir=output_dir, **kwargs)
+
+
+# ---------------------------------------------------------------------------
+# Eureka 6: Full 10-point CPU inflate pipeline
+# ---------------------------------------------------------------------------
+
+# Profile: all toggles enabled for maximum quality
+CPU_STACKED_INFLATE_FULL_PROFILE: dict[str, Any] = {
+    # Parallel decode
+    "use_parallel_decode": True,
+    "parallel_workers": 4,
+    # Pre-computed corrections
+    "use_precomputed_corrections": True,
+    "use_precomputed_brightness": True,
+    "use_precomputed_null_space": True,
+    "use_precomputed_gradients": True,
+    # Multi-model
+    "use_multi_model": True,
+    # TTO
+    "use_tto": True,
+    "tto_steps": 10,
+    "tto_lr": 1e-4,
+    "tto_budget": 30.0,
+    # Supervised TTO
+    "use_supervised_tto": True,
+    "supervised_tto_steps": 10,
+    "supervised_tto_lr": 1e-4,
+    "supervised_tto_budget": 30.0,
+    # Multi-pass
+    "use_multi_pass": 3,
+    # Post-processing
+    "use_brightness_shift": True,
+    "brightness_shift_auto": True,
+    "use_noise_shaping": True,
+    "noise_shaping_fast": True,
+    "use_null_space_projection": True,
+    # Disable scorer-heavy tricks for CPU budget
+    "use_fragility_weighting": False,
+    "use_chroma_exploit": False,
+    "use_backward_delta_smoothing": False,
+    "use_scorer_equivalent_search": False,
+    # Runtime
+    "device": "cpu",
+    "batch_size": 8,
+    "verbose": True,
+}
+
+
+def cpu_stacked_inflate(
+    archive_dir: Path,
+    output_dir: Path,
+    config: TrickStackConfig | None = None,
+    verbose: bool = True,
+) -> dict[str, Any]:
+    """Full 10-point CPU inflate pipeline (Eureka 6).
+
+    Executes all inflation tricks in optimal order for maximum quality
+    on CPU within the contest time budget. Every stage is independently
+    toggleable and timed.
+
+    Pipeline stages:
+      1. Parallel decode (multiprocessing, 4 chunks)
+      2. Load pre-computed corrections from archive
+      3. Postfilter Model A (parallel, all frames)
+      4. Postfilter Model B (hard frames only, if available)
+      5. Self-supervised TTO (30s, temporal consistency)
+      6. Supervised TTO with pre-computed PoseNet targets (30s)
+      7. Multi-pass 2nd postfilter (parallel)
+      8. Apply pre-computed brightness shifts (instant)
+      9. Apply pre-computed null-space corrections (instant)
+     10. Noise-shaped round using pre-computed gradients (instant)
+
+    Args:
+        archive_dir: directory containing .mkv, postfilter_int8.pt, and
+            optionally corrections.bin, postfilter_hard.pt, hard_frames.json,
+            posenet_targets.bin.
+        output_dir: directory for output .raw files.
+        config: pipeline configuration. If None, uses the full profile.
+        verbose: print progress.
+
+    Returns:
+        dict with timings, stages_run, n_frames, total_elapsed.
+    """
+    import av
+    from tac.quantization import load_postfilter_int8
+
+    if config is None:
+        config = TrickStackConfig.from_profile(CPU_STACKED_INFLATE_FULL_PROFILE)
+
+    t0 = time.monotonic()
+    timings: dict[str, float] = {}
+    stages_run: list[str] = []
+
+    archive_dir = Path(archive_dir)
+    output_dir = Path(output_dir)
+    output_dir.mkdir(parents=True, exist_ok=True)
+
+    # ── Stage 1: Parallel decode ────────────────────────────────────────
+    _log("Stage 1: Decode video files", verbose)
+    t_stage = time.monotonic()
+
+    mkv_files = sorted(archive_dir.glob("**/*.mkv"))
+    if not mkv_files:
+        _log(f"no .mkv files found in {archive_dir}", verbose)
+        return {"timings": timings, "stages_run": stages_run, "n_frames": 0}
+
+    timings["find_videos"] = time.monotonic() - t_stage
+    stages_run.append("find_videos")
+
+    # ── Stage 2: Load pre-computed corrections ──────────────────────────
+    corrections = None
+    if config.use_precomputed_corrections:
+        _log("Stage 2: Loading pre-computed corrections", verbose)
+        t_stage = time.monotonic()
+
+        from tac.precompute_corrections import load_corrections
+
+        corrections_path = config.corrections_path
+        if corrections_path is None:
+            # Check standard locations
+            for candidate in [
+                archive_dir / "corrections.bin",
+                archive_dir / "precomputed_corrections.bin",
+            ]:
+                if candidate.exists():
+                    corrections_path = str(candidate)
+                    break
+
+        if corrections_path:
+            corrections = load_corrections(corrections_path, verbose=verbose)
+            if corrections:
+                _log(f"Loaded {len(corrections)} correction fields", verbose)
+
+        timings["load_corrections"] = time.monotonic() - t_stage
+        stages_run.append("load_corrections")
+
+    # ── Load Model A ────────────────────────────────────────────────────
+    _log("Loading postfilter Model A", verbose)
+    t_stage = time.monotonic()
+
+    postfilter_path = archive_dir / "postfilter_int8.pt"
+    if not postfilter_path.exists():
+        postfilter_path = Path(__file__).resolve().parent.parent.parent / "submissions" / "robust_current" / "postfilter_int8.pt"
+    if not postfilter_path.exists():
+        raise FileNotFoundError(f"postfilter_int8.pt not found in {archive_dir}")
+
+    model_a = load_postfilter_int8(str(postfilter_path), device=config.device)
+    timings["load_model_a"] = time.monotonic() - t_stage
+    stages_run.append("load_model_a")
+
+    # ── Load Model B (optional) ─────────────────────────────────────────
+    multi_inflater = None
+    if config.use_multi_model:
+        _log("Stage 4 prep: Loading multi-model inflater", verbose)
+        t_stage = time.monotonic()
+
+        from tac.multi_model_inflate import MultiModelInflater
+
+        try:
+            multi_inflater = MultiModelInflater.from_archive(
+                archive_dir, device=config.device, verbose=verbose,
+            )
+        except FileNotFoundError:
+            _log("Model B not found, using single model", verbose)
+
+        timings["load_model_b"] = time.monotonic() - t_stage
+        stages_run.append("load_model_b")
+
+    # ── Load scorers if needed ──────────────────────────────────────────
+    needs_scorers = (
+        config.use_noise_shaping
+        or config.use_null_space_projection
+        or config.use_supervised_tto
+    )
+    posenet, segnet = None, None
+    if needs_scorers and not (config.use_precomputed_gradients and corrections):
+        _log("Loading scorer models", verbose)
+        posenet, segnet = _load_scorers(config)
+
+    # ── Stage 5: Self-supervised TTO ────────────────────────────────────
+    if config.use_tto and config.tto_steps > 0:
+        _log("Stage 5: Self-supervised TTO", verbose)
+        t_stage = time.monotonic()
+        tto_frames = _decode_frames(
+            str(mkv_files[0]), config.target_w, config.target_h,
+            max_frames=config.tto_max_frames, stride=config.tto_frame_stride,
+        )
+        if tto_frames.shape[0] >= 2:
+            model_a = _stage_self_supervised_tto(model_a, tto_frames, config)
+            del tto_frames
+        timings["tto_self"] = time.monotonic() - t_stage
+        stages_run.append("tto_self")
+
+    # ── Stage 6: Supervised TTO with pre-computed PoseNet targets ───────
+    if config.use_supervised_tto and config.supervised_tto_steps > 0:
+        _log("Stage 6: Supervised TTO", verbose)
+        t_stage = time.monotonic()
+
+        posenet_targets_path = config.posenet_targets_path
+        if posenet_targets_path is None:
+            candidate = archive_dir / "posenet_targets.bin"
+            if candidate.exists():
+                posenet_targets_path = str(candidate)
+
+        if posenet_targets_path and posenet is not None:
+            # Temporarily set the path on config for _stage_supervised_tto
+            config_copy = TrickStackConfig.from_profile(
+                {f.name: getattr(config, f.name) for f in config.__dataclass_fields__.values()},
+                posenet_targets_path=posenet_targets_path,
+            )
+            stto_frames = _decode_frames(
+                str(mkv_files[0]), config.target_w, config.target_h,
+                max_frames=config.supervised_tto_max_frames,
+                stride=config.supervised_tto_frame_stride,
+            )
+            if stto_frames.shape[0] >= 2:
+                model_a = _stage_supervised_tto(model_a, stto_frames, posenet, config_copy)
+                del stto_frames
+
+        timings["tto_supervised"] = time.monotonic() - t_stage
+        stages_run.append("tto_supervised")
+
+    # ── Stages 3, 4, 7-10: Process each video ──────────────────────────
+    total_frames = 0
+
+    for mkv_path in mkv_files:
+        stem = mkv_path.stem
+        out_path = output_dir / f"{stem}.raw"
+        out_path.parent.mkdir(parents=True, exist_ok=True)
+
+        _log(f"Processing {mkv_path.name}", verbose)
+        t_video = time.monotonic()
+
+        container = av.open(str(mkv_path))
+        stream = container.streams.video[0]
+
+        all_frames_hwc: list[torch.Tensor] = []
+        batch_buf: list[torch.Tensor] = []
+        n_video = 0
+        global_frame_offset = total_frames
+
+        def _process_cpu_batch(
+            batch_tensors: list[torch.Tensor],
+            frame_offset: int,
+        ) -> None:
+            """Process a batch through the full CPU pipeline."""
+            nonlocal total_frames, n_video
+
+            if not batch_tensors:
+                return
+
+            x = torch.cat(batch_tensors, dim=0).to(config.device)
+            B = x.shape[0]
+
+            # ── Stage 3: Postfilter Model A (parallel if enabled) ───────
+            if config.use_parallel_decode and config.parallel_workers > 1:
+                from tac.parallel_inflate import parallel_inflate
+                out = parallel_inflate(
+                    x, model_a,
+                    num_workers=config.parallel_workers,
+                    multi_pass=1,
+                    verbose=False,
+                )
+            else:
+                with torch.inference_mode():
+                    out = model_a(x)
+
+            # ── Stage 4: Model B on hard frames ─────────────────────────
+            if multi_inflater is not None and multi_inflater.model_b is not None:
+                out = multi_inflater.inflate_batch(x, frame_offset=frame_offset)
+
+            # ── Stage 7: Multi-pass 2nd postfilter ──────────────────────
+            if config.use_multi_pass > 1:
+                out = _stage_multi_pass(out, model_a, config.use_multi_pass - 1)
+
+            # ── Stage 8: Apply pre-computed brightness shifts (instant) ─
+            if config.use_precomputed_brightness and corrections is not None:
+                shifts = corrections.get("brightness_shifts")
+                if shifts is not None:
+                    for i in range(B):
+                        gidx = frame_offset + i
+                        if gidx < len(shifts):
+                            shift_val = float(shifts[gidx])
+                            out[i] = (out[i] + shift_val).clamp(0, 255)
+            elif config.use_brightness_shift:
+                out = _stage_brightness_shift(out, config)
+
+            # ── Stage 9: Apply pre-computed null-space corrections ──────
+            if config.use_precomputed_null_space and corrections is not None:
+                null_basis = corrections.get("null_space_basis")
+                if null_basis is not None and null_basis.size > 0:
+                    null_basis_t = torch.from_numpy(null_basis.astype(np.float32))
+                    for i in range(B):
+                        gidx = frame_offset + i
+                        frame = out[i]  # (3, H, W)
+                        residual = (frame - x[i]).reshape(-1).float()
+                        D = residual.shape[0]
+                        if null_basis_t.shape[1] == D:
+                            coeffs = null_basis_t @ residual
+                            projected = (coeffs.unsqueeze(1) * null_basis_t).sum(dim=0)
+                            out[i] = (x[i] + projected.reshape(3, frame.shape[1], frame.shape[2])).clamp(0, 255)
+            elif config.use_null_space_projection and posenet is not None and segnet is not None:
+                out = _stage_null_space_projection(out, x, posenet, segnet, config)
+
+            # ── Stage 10: Noise-shaped round (pre-computed or live) ─────
+            if config.use_precomputed_gradients and corrections is not None:
+                grads = corrections.get("scorer_gradients")
+                if grads is not None:
+                    for i in range(B):
+                        gidx = frame_offset + i
+                        if gidx < grads.shape[0]:
+                            grad_hwc = torch.from_numpy(grads[gidx].astype(np.float32))
+                            grad_chw = grad_hwc.permute(2, 0, 1)
+                            frame = out[i]
+                            floor = frame.floor()
+                            ceil = frame.ceil()
+                            frac = frame - floor
+                            # Round in gradient direction: if gradient is negative,
+                            # prefer ceil (higher value reduces loss); else floor
+                            use_ceil = (grad_chw < 0) & (frac > 0)
+                            use_floor = (grad_chw >= 0) | (frac == 0)
+                            rounded = torch.where(use_ceil, ceil, floor)
+                            out[i] = rounded.clamp(0, 255)
+                else:
+                    out = out.round().clamp(0, 255)
+            elif config.use_noise_shaping and posenet is not None and segnet is not None:
+                out = _stage_noise_shaped_round(out, posenet, segnet, config)
+            else:
+                out = out.round().clamp(0, 255)
+
+            # Collect output frames
+            for i in range(B):
+                frame_uint8 = out[i].permute(1, 2, 0).round().clamp(0, 255).to(torch.uint8).cpu()
+                all_frames_hwc.append(frame_uint8)
+                n_video += 1
+                total_frames += 1
+
+        # Decode and process frames
+        for frame in container.decode(stream):
+            H, W = frame.height, frame.width
+            y = np.frombuffer(frame.planes[0], dtype=np.uint8).reshape(
+                H, frame.planes[0].line_size
+            )[:, :W]
+            u = np.frombuffer(frame.planes[1], dtype=np.uint8).reshape(
+                H // 2, frame.planes[1].line_size
+            )[:, : W // 2]
+            v = np.frombuffer(frame.planes[2], dtype=np.uint8).reshape(
+                H // 2, frame.planes[2].line_size
+            )[:, : W // 2]
+
+            y_t = torch.from_numpy(y.copy()).float()
+            u_t = torch.from_numpy(u.copy()).float().unsqueeze(0).unsqueeze(0)
+            v_t = torch.from_numpy(v.copy()).float().unsqueeze(0).unsqueeze(0)
+
+            u_up = F.interpolate(u_t, size=(H, W), mode="bilinear", align_corners=False).squeeze()
+            v_up = F.interpolate(v_t, size=(H, W), mode="bilinear", align_corners=False).squeeze()
+
+            yf = (y_t - 16.0) * (255.0 / 219.0)
+            uf = (u_up - 128.0) * (255.0 / 224.0)
+            vf = (v_up - 128.0) * (255.0 / 224.0)
+
+            r = (yf + 1.402 * vf).clamp(0, 255)
+            g = (yf - 0.344136 * uf - 0.714136 * vf).clamp(0, 255)
+            b = (yf + 1.772 * uf).clamp(0, 255)
+            rgb = torch.stack([r, g, b], dim=0).unsqueeze(0)
+
+            if H != config.target_h or W != config.target_w:
+                rgb = F.interpolate(rgb, size=(config.target_h, config.target_w), mode="bicubic", align_corners=False)
+                rgb = rgb.clamp(0, 255)
+
+            batch_buf.append(rgb)
+
+            if len(batch_buf) >= config.batch_size:
+                _process_cpu_batch(batch_buf, global_frame_offset + n_video)
+                batch_buf.clear()
+
+            if n_video > 0 and n_video % 300 == 0:
+                _log(f"  {n_video} frames ...", verbose)
+
+        # Flush remaining batch
+        _process_cpu_batch(batch_buf, global_frame_offset + n_video)
+        batch_buf.clear()
+        container.close()
+
+        # Write output frames
+        with open(str(out_path), "wb") as f:
+            for frame_tensor in all_frames_hwc:
+                f.write(frame_tensor.contiguous().numpy().tobytes())
+
+        timings[f"video_{stem}"] = time.monotonic() - t_video
+        _log(f"  {mkv_path.name}: {n_video} frames in {timings[f'video_{stem}']:.1f}s", verbose)
+
+    total_elapsed = time.monotonic() - t0
+    _log(f"CPU stacked inflate complete: {total_frames} frames in {total_elapsed:.1f}s", verbose)
+    _log(f"Stages run: {stages_run}", verbose)
+
+    return {
+        "timings": timings,
+        "stages_run": stages_run,
+        "n_frames": total_frames,
+        "total_elapsed": total_elapsed,
+    }
