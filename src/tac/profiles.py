@@ -14,6 +14,7 @@ Or from CLI:
 # NOTE: kl_distill loss_mode DEPRECATED — two authoritative evals (1.85, 2.05)
 # confirmed it destroys PoseNet. Reverted to "standard" loss_mode.
 COUNCIL_V1 = {
+    "experiment_type": "training",
     "variant": "dilated",
     "hidden": 64,
     "kernel": 3,
@@ -49,6 +50,7 @@ SEGNET_ATTACK = {
 
 # Conservative baseline (validated settings from dilated 1.33 run)
 PROVEN_BASELINE = {
+    "experiment_type": "training",
     "variant": "dilated",
     "hidden": 64,
     "kernel": 3,
@@ -113,6 +115,7 @@ H96_COUNCIL = {
 
 # Fast iteration (for quick smoke tests)
 SMOKE = {
+    "experiment_type": "smoke_test",
     "variant": "dilated",
     "hidden": 16,
     "kernel": 3,
@@ -157,6 +160,7 @@ PSD_STANDARD_ADAPTIVE = {
 # This is not arbitrary — it's the first-order optimality condition
 # on the score formula's iso-score tangent to the Pareto frontier.
 PARETO_PCGRAD = {
+    "experiment_type": "training",
     "variant": "dilated",
     "hidden": 64,
     "kernel": 3,
@@ -181,6 +185,7 @@ PARETO_PCGRAD = {
 # Extreme PoseNet: for Pareto frontier exploration (writeup artifact)
 # Maximum PoseNet optimization, no SegNet consideration
 EXTREME_POSENET = {
+    "experiment_type": "training",
     "variant": "dilated",
     "hidden": 64,
     "kernel": 3,
@@ -200,6 +205,7 @@ EXTREME_POSENET = {
 # Extreme SegNet: for Pareto frontier exploration (writeup artifact)
 # Maximum SegNet optimization using focal STE (hard argmax gradients)
 EXTREME_SEGNET = {
+    "experiment_type": "training",
     "variant": "dilated",
     "hidden": 64,
     "kernel": 3,
@@ -221,6 +227,7 @@ EXTREME_SEGNET = {
 # Arm A: PCGrad gradient surgery (pareto_pcgrad profile, already defined above)
 # Arm B: Simple reweighting control (seg_weight=200, no gradient surgery)
 REWEIGHT_ABLATION = {
+    "experiment_type": "training",
     "variant": "dilated",
     "hidden": 64,
     "kernel": 3,
@@ -239,6 +246,7 @@ REWEIGHT_ABLATION = {
 
 # Arm C: Spatial gate architecture (Collier's proposal, unanimous council approval)
 GATED_DILATED_SMOKE = {
+    "experiment_type": "smoke_test",
     "variant": "gated_dilated",
     "hidden": 64,
     "kernel": 3,
@@ -259,6 +267,7 @@ GATED_DILATED_SMOKE = {
 # If yes, h=32 + CRF 36 saves ~0.083 pts combined (rate optimization).
 # Also the production-optimal candidate for comma four deployment.
 DILATED_H32_SMOKE = {
+    "experiment_type": "smoke_test",
     "variant": "dilated",
     "hidden": 32,
     "kernel": 3,
@@ -278,6 +287,7 @@ DILATED_H32_SMOKE = {
 # Dilated h=16: production-extreme, ~1.6KB at INT4
 # Would run at ~1ms/frame on Snapdragon Hexagon NPU
 DILATED_H16_SMOKE = {
+    "experiment_type": "smoke_test",
     "variant": "dilated",
     "hidden": 16,
     "kernel": 3,
@@ -300,6 +310,7 @@ DILATED_H16_SMOKE = {
 # If stuck on CPU (P100 compat issue), ~20 min/epoch = ~33 epochs only.
 KAGGLE_P100_DILATED = {
     **PROVEN_BASELINE,
+    "experiment_type": "training",
     "epochs": 1000,  # target: ~250-400 epochs complete in 11h on GPU
     "eval_every": 10,  # less frequent eval to save time
     "wall_clock_timeout": 39600,  # 11h in seconds (12h Kaggle limit - 1h safety)
@@ -309,6 +320,7 @@ KAGGLE_P100_DILATED = {
 # Use when you want maximum training time and the timeout handles the rest.
 KAGGLE_P100_LONG = {
     **PROVEN_BASELINE,
+    "experiment_type": "training",
     "epochs": 2500,
     "eval_every": 10,
     "wall_clock_timeout": 39600,  # 11h safety margin
@@ -320,6 +332,7 @@ KAGGLE_P100_LONG = {
 # Score formula is the same: 100*seg + sqrt(10*pose).
 
 MASK_RENDERER_SMOKE = {
+    "experiment_type": "smoke_test",
     "variant": "mask_renderer",
     "hidden": 40,  # base_ch for MaskRenderer U-Net
     "mid_ch": 64,  # bottleneck channels
@@ -344,6 +357,7 @@ MASK_RENDERER_SMOKE = {
 }
 
 MASK_RENDERER_FULL = {
+    "experiment_type": "training",
     "variant": "mask_renderer",
     "hidden": 40,
     "mid_ch": 64,
@@ -371,6 +385,7 @@ MASK_RENDERER_FULL = {
 
 # Extended capacity variant: 48→80→48 (~500K params)
 MASK_RENDERER_WIDE = {
+    "experiment_type": "training",
     "variant": "mask_renderer",
     "hidden": 48,
     "mid_ch": 80,
@@ -408,6 +423,7 @@ MASK_RENDERER_DEEP = {
 # Smaller than pixel-domain U-Net (~100-200K params vs 312K).
 
 WAVELET_RENDERER_SMOKE = {
+    "experiment_type": "smoke_test",
     "variant": "wavelet_renderer",
     "hidden": 96,  # base hidden width for coeff predictors (~137K total)
     "embed_dim": 8,  # per-class embedding dimension
@@ -431,6 +447,7 @@ WAVELET_RENDERER_SMOKE = {
 }
 
 WAVELET_RENDERER_FULL = {
+    "experiment_type": "training",
     "variant": "wavelet_renderer",
     "hidden": 96,
     "embed_dim": 8,
@@ -461,6 +478,7 @@ WAVELET_RENDERER_FULL = {
 # for distilling into our fast CNN student (MaskRenderer/PostFilter).
 
 DIFFUSION_TEACHER_SMOKE = {
+    "experiment_type": "smoke_test",
     "variant": "diffusion_teacher",
     "hidden": 32,  # base U-Net channels (32→64→128)
     "num_timesteps": 50,  # shorter schedule for smoke test
@@ -476,6 +494,7 @@ DIFFUSION_TEACHER_SMOKE = {
 }
 
 DIFFUSION_TEACHER_FULL = {
+    "experiment_type": "training",
     "variant": "diffusion_teacher",
     "hidden": 64,  # base channels (64→128→256)
     "num_timesteps": 100,  # full noise schedule
@@ -491,6 +510,7 @@ DIFFUSION_TEACHER_FULL = {
 }
 
 DISTILLATION_SMOKE = {
+    "experiment_type": "smoke_test",
     "variant": "distillation",
     "hidden": 64,  # student architecture width
     "teacher_steps": 25,  # teacher sampling steps
@@ -504,6 +524,7 @@ DISTILLATION_SMOKE = {
 }
 
 DISTILLATION_FULL = {
+    "experiment_type": "training",
     "variant": "distillation",
     "hidden": 64,
     "teacher_steps": 50,
@@ -523,6 +544,7 @@ DISTILLATION_FULL = {
 # Target: 500K-2M params, FP4 makes 2M = ~1MB.
 
 DP_SIMS_SMOKE = {
+    "experiment_type": "smoke_test",
     "variant": "dp_sims",
     "channels": (128, 64, 32, 16),  # lightweight: ~500K params
     "init_h": 24,  # 1/16 of 384
@@ -548,6 +570,7 @@ DP_SIMS_SMOKE = {
 }
 
 DP_SIMS_FULL = {
+    "experiment_type": "training",
     "variant": "dp_sims",
     "channels": (256, 128, 64, 32),  # full capacity: ~1.5M params
     "init_h": 24,
@@ -583,6 +606,7 @@ DP_SIMS_FULL = {
 # at this channel width.
 
 DP_SIMS_SMALL_SMOKE = {
+    "experiment_type": "smoke_test",
     "variant": "dp_sims",
     "channels": (128, 64, 32, 16),  # halved from full (256,128,64,32)
     "init_h": 24,
@@ -608,6 +632,7 @@ DP_SIMS_SMALL_SMOKE = {
 }
 
 DP_SIMS_SMALL_FULL = {
+    "experiment_type": "training",
     "variant": "dp_sims",
     "channels": (128, 64, 32, 16),  # halved from full (256,128,64,32)
     "init_h": 24,
@@ -639,6 +664,7 @@ DP_SIMS_SMALL_FULL = {
 # Replaces fixed 5-class segmentation with learned K=512 codebook.
 
 VQVAE_SMOKE = {
+    "experiment_type": "smoke_test",
     "variant": "vqvae",
     "hidden": 64,  # base_ch for encoder/decoder
     "num_embeddings": 512,  # codebook size K
@@ -661,6 +687,7 @@ VQVAE_SMOKE = {
 }
 
 VQVAE_FULL = {
+    "experiment_type": "training",
     "variant": "vqvae",
     "hidden": 64,
     "num_embeddings": 512,
@@ -686,6 +713,7 @@ VQVAE_FULL = {
 
 # Compact VQ-VAE: smaller codebook for tighter bitrate budget
 VQVAE_COMPACT = {
+    "experiment_type": "training",
     "variant": "vqvae",
     "hidden": 32,  # smaller encoder/decoder
     "num_embeddings": 256,  # K=256 (8-bit indices)
@@ -712,6 +740,7 @@ VQVAE_COMPACT = {
 # ── Technique 2: Luma-only dilated post-filter ─────────────────────────
 # ~3x fewer params (1 channel vs 3). Netflix validated chroma uses Lanczos.
 LUMA_ONLY_DILATED_SMOKE = {
+    "experiment_type": "smoke_test",
     "variant": "luma_dilated",
     "hidden": 64,
     "kernel": 3,
@@ -741,6 +770,7 @@ LUMA_ONLY_DILATED_FULL = {
 
 # ── Technique 3: Content-adaptive per-frame postfilter intensity ──────
 CONTENT_ADAPTIVE_SMOKE = {
+    "experiment_type": "smoke_test",
     "variant": "content_adaptive",
     "hidden": 64,
     "kernel": 3,
@@ -759,6 +789,7 @@ CONTENT_ADAPTIVE_SMOKE = {
 
 # ── Technique 4: Resolution reduction + PixelShuffle upscale ─────────
 PIXELSHUFFLE_UPSCALE_SMOKE = {
+    "experiment_type": "smoke_test",
     "variant": "pixelshuffle_upscale",
     "hidden": 64,
     "kernel": 3,
@@ -778,6 +809,7 @@ PIXELSHUFFLE_UPSCALE_SMOKE = {
 # ── Technique 9: DualHead architecture ────────────────────────────────
 # Shared backbone, separate PoseNet (3x3) and SegNet (1x1) correction heads.
 DUAL_HEAD_SMOKE = {
+    "experiment_type": "smoke_test",
     "variant": "dual_head",
     "hidden": 64,
     "kernel": 3,
@@ -852,6 +884,7 @@ FOCAL_GAMMA_5_SMOKE = {
 # Depthwise separable convolutions with dilation cascade.
 # 3-4x fewer params, better INT8 behavior, large receptive field.
 DEPTHWISE_RENDERER_SMOKE = {
+    "experiment_type": "smoke_test",
     "variant": "depthwise_renderer",
     "hidden": 36,  # base_ch for depthwise cascade
     "embed_dim": 6,
@@ -874,6 +907,7 @@ DEPTHWISE_RENDERER_SMOKE = {
 # Technique 8: Channel-recurrent renderer (Sony)
 # Sequential Y -> U|Y -> V|Y,U generation. 40-60% fewer params.
 CHANNEL_RECURRENT_SMOKE = {
+    "experiment_type": "smoke_test",
     "variant": "channel_recurrent",
     "hidden": 24,  # per-subnet hidden width
     "embed_dim": 6,
@@ -896,6 +930,7 @@ CHANNEL_RECURRENT_SMOKE = {
 # Technique 9: Coordinate-based renderer (INRIA COOL)
 # Per-pixel MLP with positional encoding. Smallest possible renderer (~50K params).
 COORD_RENDERER_SMOKE = {
+    "experiment_type": "smoke_test",
     "variant": "coord_renderer",
     "hidden": 64,  # MLP hidden width
     "embed_dim": 8,  # class embedding dim
@@ -918,6 +953,7 @@ COORD_RENDERER_SMOKE = {
 # ── Yousfi Council Decode: Aggressive Overfitting ────────────────────
 # CPU lane: overfit postfilter to 0.mkv with all tricks (10K epochs)
 OVERFIT_CPU = {
+    "experiment_type": "training",
     "variant": "dilated",
     "hidden": 64,
     "kernel": 3,
@@ -944,6 +980,7 @@ OVERFIT_CPU = {
 # Combines the best training-time tricks: feature matching loss (Trick 8),
 # boundary awareness (Trick 7), and SWA for better int8 quantization.
 OVERFIT_CPU_V2 = {
+    "experiment_type": "training",
     "variant": "dilated",
     "hidden": 64,
     "kernel": 3,
@@ -964,6 +1001,7 @@ OVERFIT_CPU_V2 = {
 
 # GPU lane: overfit renderer to 0.mkv with all tricks (10K epochs)
 OVERFIT_GPU = {
+    "experiment_type": "training",
     "variant": "mask_renderer",
     "hidden": 48,
     "mid_ch": 80,
@@ -994,6 +1032,7 @@ OVERFIT_GPU = {
 
 # DCT mid-band filter smoke test
 DCT_MIDBAND_SMOKE = {
+    "experiment_type": "smoke_test",
     "variant": "dct_midband",
     "hidden": 8,  # block size (hidden arg maps to block for this arch)
     "kernel": 3,
@@ -1008,6 +1047,7 @@ DCT_MIDBAND_SMOKE = {
 
 # FiLM QAT conditioned filter smoke test
 FILM_CONDITIONED_SMOKE = {
+    "experiment_type": "smoke_test",
     "variant": "film_qat",
     "hidden": 16,
     "kernel": 3,
@@ -1023,6 +1063,7 @@ FILM_CONDITIONED_SMOKE = {
 
 # Counterpoint two-voice ensemble smoke test
 COUNTERPOINT_SMOKE = {
+    "experiment_type": "smoke_test",
     "variant": "counterpoint",
     "hidden": 16,
     "kernel": 3,
@@ -1038,6 +1079,7 @@ COUNTERPOINT_SMOKE = {
 
 # PixelShuffle+Dilated hybrid smoke test
 PIXELSHUFFLE_DILATED_SMOKE = {
+    "experiment_type": "smoke_test",
     "variant": "pixelshuffle_dilated_v2",
     "hidden": 64,
     "kernel": 3,
@@ -1053,6 +1095,7 @@ PIXELSHUFFLE_DILATED_SMOKE = {
 
 # Uint8 STE training smoke test (uses dilated arch with uint8 STE wrapper)
 UINT8_STE_SMOKE = {
+    "experiment_type": "smoke_test",
     "variant": "dilated",
     "hidden": 32,
     "kernel": 3,
@@ -1134,6 +1177,7 @@ KALMAN_BASELINE = {
 # disables noise injection during pair generation for frame consistency.
 
 DP_SIMS_V2_SMOKE = {
+    "experiment_type": "smoke_test",
     "variant": "dp_sims_v2",
     "channels": (128, 64, 32, 16),  # lightweight: ~500K params
     "init_h": 24,
@@ -1157,6 +1201,7 @@ DP_SIMS_V2_SMOKE = {
 }
 
 DP_SIMS_V2_FULL = {
+    "experiment_type": "training",
     "variant": "dp_sims_v2",
     "channels": (256, 128, 64, 32),  # full capacity: ~1.5M params
     "init_h": 24,
@@ -1189,6 +1234,7 @@ DP_SIMS_V2_FULL = {
 
 # Full stacking: all tricks enabled, maximum quality
 STACKED_INFLATE_FULL = {
+    "experiment_type": "eval",
     "use_tto": True,
     "tto_steps": 15,
     "tto_lr": 1e-4,
@@ -1216,6 +1262,7 @@ STACKED_INFLATE_FULL = {
 
 # Safe stacking: proven tricks only, no scorer-dependent stages
 STACKED_INFLATE_SAFE = {
+    "experiment_type": "eval",
     "use_tto": True,
     "tto_steps": 10,
     "tto_lr": 1e-4,
@@ -1235,6 +1282,7 @@ STACKED_INFLATE_SAFE = {
 
 # Fast stacking: minimal overhead, just multi-pass + fast noise shaping
 STACKED_INFLATE_FAST = {
+    "experiment_type": "eval",
     "use_tto": False,
     "use_supervised_tto": False,
     "use_multi_pass": 2,
@@ -1252,6 +1300,7 @@ STACKED_INFLATE_FAST = {
 # No neural renderer — optimize pixels via gradient descent against scorer constraints.
 # Archive: ~8KB (masks + pose targets + seed). Inflate: ~50s on T4.
 CONSTRAINED_GEN_SMOKE = {
+    "experiment_type": "gpu_lane",
     "variant": "constrained_gen",
     "num_steps": 100,
     "lr": 0.1,
@@ -1268,6 +1317,7 @@ CONSTRAINED_GEN_SMOKE = {
 # See src/tac/finance_optimizers.py for implementations.
 
 FINANCE_SMOKE = {
+    "experiment_type": "gpu_lane",
     "variant": "constrained_gen",
     "num_steps": 100,
     "lr": 0.5,
@@ -1282,6 +1332,7 @@ FINANCE_SMOKE = {
 }
 
 FINANCE_ENSEMBLE = {
+    "experiment_type": "gpu_lane",
     "variant": "constrained_gen",
     "num_steps": 1000,
     "lr": 1.0,
@@ -1303,6 +1354,7 @@ FINANCE_ENSEMBLE = {
 }
 
 FINANCE_HFT = {
+    "experiment_type": "gpu_lane",
     "variant": "constrained_gen",
     "num_steps": 500,
     "lr": 0.5,
@@ -1324,6 +1376,7 @@ FINANCE_HFT = {
 }
 
 CONSTRAINED_GEN_FULL = {
+    "experiment_type": "gpu_lane",
     "variant": "constrained_gen",
     "num_steps": 1000,
     "lr": 0.1,
@@ -1339,6 +1392,7 @@ CONSTRAINED_GEN_FULL = {
 # Solve the calculus of variations problem for scorer-optimal frames.
 # J[f] = D(f) + lambda_smooth * E_smooth(f) + lambda_rate * TV(f)
 VARIATIONAL_SMOKE = {
+    "experiment_type": "gpu_lane",
     "variant": "variational_gen",
     "variational_steps": 50,
     "variational_lr": 0.5,
@@ -1355,6 +1409,7 @@ VARIATIONAL_SMOKE = {
 # Primal-dual method: min D(f) s.t. R(f) <= budget
 # Lambda is LEARNED via dual ascent (KKT optimality).
 LAGRANGIAN_DUAL_SMOKE = {
+    "experiment_type": "gpu_lane",
     "variant": "lagrangian_dual",
     "dual_steps": 100,
     "dual_primal_lr": 0.5,
@@ -1370,6 +1425,7 @@ LAGRANGIAN_DUAL_SMOKE = {
 # Sweep rate budget to trace the full (seg, pose, rate) Pareto frontier.
 # Each point is a Lagrangian dual solution with different rate constraint.
 PARETO_TRACE = {
+    "experiment_type": "gpu_lane",
     "variant": "pareto_trace",
     "num_pareto_points": 10,
     "rate_range_min": 0.001,
@@ -1389,6 +1445,7 @@ PARETO_TRACE = {
 # Phase 3: Hamiltonian dynamics (100 steps, escapes local minima)
 # Phase 4: Gradient-directed Floyd-Steinberg dithering
 CONSTRAINED_GEN_FULL_PIPELINE = {
+    "experiment_type": "gpu_lane",
     "variant": "constrained_gen_pipeline",
     "phase1_steps": 200,
     "phase2_steps": 200,
@@ -1415,6 +1472,7 @@ CONSTRAINED_GEN_FULL_PIPELINE = {
 # generation problem. See src/tac/cross_disciplinary_optimizers.py.
 
 CROSS_DISC_SMOKE = {
+    "experiment_type": "gpu_lane",
     "variant": "cross_disciplinary",
     "optimizer_names": [
         "simulated_annealing", "hmc", "langevin", "replica_exchange",
@@ -1446,6 +1504,7 @@ CROSS_DISC_SMOKE = {
 }
 
 CROSS_DISC_ENSEMBLE = {
+    "experiment_type": "gpu_lane",
     "variant": "cross_disciplinary",
     "optimizer_names": [
         "simulated_annealing", "basin_hopping", "cma_es",
@@ -1465,6 +1524,7 @@ CROSS_DISC_ENSEMBLE = {
 }
 
 CROSS_DISC_ANNEALING = {
+    "experiment_type": "gpu_lane",
     "variant": "cross_disciplinary",
     "optimizer_names": ["simulated_annealing", "basin_hopping"],
     "num_steps": 1000,
@@ -1483,6 +1543,7 @@ CROSS_DISC_ANNEALING = {
 }
 
 CROSS_DISC_EVOLUTIONARY = {
+    "experiment_type": "gpu_lane",
     "variant": "cross_disciplinary",
     "optimizer_names": ["cma_es", "differential_evolution"],
     "num_steps": 500,
@@ -1498,6 +1559,7 @@ CROSS_DISC_EVOLUTIONARY = {
 }
 
 CROSS_DISC_PHYSICS = {
+    "experiment_type": "gpu_lane",
     "variant": "cross_disciplinary",
     "optimizer_names": ["hmc", "langevin", "replica_exchange"],
     "num_steps": 500,
@@ -1518,6 +1580,7 @@ CROSS_DISC_PHYSICS = {
 }
 
 CROSS_DISC_GEOPHYSICS = {
+    "experiment_type": "gpu_lane",
     "variant": "cross_disciplinary",
     "optimizer_names": ["fwi", "seismic_multigrid", "4dvar"],
     "num_steps": 500,
@@ -1541,6 +1604,7 @@ CROSS_DISC_GEOPHYSICS = {
 
 # Quick test: all 10 solvers with minimal steps
 DOMAIN_SMOKE = {
+    "experiment_type": "gpu_lane",
     "variant": "domain_solver",
     "solver_names": [
         "ego_motion_flow", "road_plane_homography", "vanishing_point",
@@ -1561,6 +1625,7 @@ DOMAIN_SMOKE = {
 
 # Self-driving domain solvers only (ego-motion + road plane + vanishing point)
 DOMAIN_DRIVING = {
+    "experiment_type": "gpu_lane",
     "variant": "domain_solver",
     "solver_names": ["ego_motion_flow", "road_plane_homography", "vanishing_point"],
     "ego_motion_config": {
@@ -1583,6 +1648,7 @@ DOMAIN_DRIVING = {
 
 # Signal processing solvers (matched filter + compressed sensing + OFDM)
 DOMAIN_SIGNAL = {
+    "experiment_type": "gpu_lane",
     "variant": "domain_solver",
     "solver_names": ["matched_filter", "compressed_sensing", "ofdm"],
     "matched_filter_config": {
@@ -1604,6 +1670,7 @@ DOMAIN_SIGNAL = {
 
 # Full ensemble: all 10 solvers with production settings
 DOMAIN_FULL = {
+    "experiment_type": "gpu_lane",
     "variant": "domain_solver",
     "solver_names": [
         "ego_motion_flow", "road_plane_homography", "vanishing_point",
@@ -1625,6 +1692,7 @@ DOMAIN_FULL = {
 # ── Eureka Constrained Optimization smoke profiles ────────────────────────
 
 COUPLED_TRAJECTORY_SMOKE = {
+    "experiment_type": "gpu_lane",
     "variant": "constrained_gen",
     "optimizer": "coupled_trajectory",
     "hidden": 0,  # no neural weights
@@ -1639,6 +1707,7 @@ COUPLED_TRAJECTORY_SMOKE = {
 }
 
 ALTERNATING_PROJECTIONS_SMOKE = {
+    "experiment_type": "gpu_lane",
     "variant": "constrained_gen",
     "optimizer": "alternating_projections",
     "hidden": 0,
@@ -1654,6 +1723,7 @@ ALTERNATING_PROJECTIONS_SMOKE = {
 }
 
 NEWTON_STEP_SMOKE = {
+    "experiment_type": "gpu_lane",
     "variant": "constrained_gen",
     "optimizer": "newton_step",
     "hidden": 0,
@@ -1670,6 +1740,7 @@ NEWTON_STEP_SMOKE = {
 }
 
 SHANNON_COMPRESSOR_SMOKE = {
+    "experiment_type": "gpu_lane",
     "variant": "constrained_gen",
     "optimizer": "scorer_as_compressor",
     "hidden": 0,
@@ -1685,6 +1756,7 @@ SHANNON_COMPRESSOR_SMOKE = {
 # projection, and trust-region clipping. See tac.research.geometry_deliberation.
 
 NEWTON_QUADRATIC_SMOKE = {
+    "experiment_type": "smoke_test",
     "variant": "dilated",
     "hidden": 64,
     "kernel": 3,
@@ -1706,6 +1778,7 @@ NEWTON_QUADRATIC_SMOKE = {
 }
 
 NEWTON_QUADRATIC_FULL = {
+    "experiment_type": "training",
     "variant": "dilated",
     "hidden": 64,
     "kernel": 3,
@@ -1735,6 +1808,7 @@ NEWTON_QUADRATIC_FULL = {
 # Cost map precomputed at compress time, zero-cost at inflate time.
 
 FRIDRICH_SMOKE = {
+    "experiment_type": "smoke_test",
     "variant": "dilated",
     "hidden": 64,
     "kernel": 3,
@@ -1755,6 +1829,7 @@ FRIDRICH_SMOKE = {
 }
 
 FRIDRICH_FULL = {
+    "experiment_type": "training",
     "variant": "dilated",
     "hidden": 64,
     "kernel": 3,
@@ -1782,6 +1857,7 @@ FRIDRICH_FULL = {
 }
 
 FRIDRICH_CPU_POSTFILTER = {
+    "experiment_type": "training",
     "variant": "dilated",
     "hidden": 64,
     "kernel": 3,
@@ -1812,6 +1888,7 @@ FRIDRICH_CPU_POSTFILTER = {
 # These profiles drive gpu_lane_full_pipeline() in constrained_gen.py.
 
 GPU_LANE_SMOKE = {
+    "experiment_type": "gpu_lane",
     "variant": "constrained_gen",
     "optimizer": "gpu_lane_full_pipeline",
     "hidden": 0,  # no neural weights
@@ -1834,6 +1911,7 @@ GPU_LANE_SMOKE = {
 }
 
 GPU_LANE_FULL = {
+    "experiment_type": "gpu_lane",
     "variant": "constrained_gen",
     "optimizer": "gpu_lane_full_pipeline",
     "hidden": 0,

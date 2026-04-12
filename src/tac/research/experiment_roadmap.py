@@ -37,6 +37,23 @@ class Experiment:
     eval_command: str = ""  # How to evaluate results
     output_artifact: str = ""  # What the experiment produces
 
+    # --- Platform requirements ---
+    # min_vram_gb: 0 means CPU-only, 16 for P100/T4, 24 for A10G, 80 for A100/H100
+    # needs_cuda: True if CUDA required (not just MPS-compatible)
+    # needs_dali: True if NVIDIA DALI pipeline required
+    platform_requirements: dict = field(default_factory=lambda: {
+        "min_vram_gb": 0,
+        "needs_cuda": False,
+        "needs_dali": False,
+    })
+
+    # --- Smoke test config ---
+    # Non-None if this experiment has a reduced-scale smoke variant.
+    # frames: number of frames used in smoke (vs 1200 full).
+    # steps: optimization steps in smoke (vs full).
+    # purpose: what the smoke test validates.
+    smoke_test_config: dict | None = None
+
 
 def ready_experiments() -> list[Experiment]:
     """Return experiments with status 'ready', sorted by priority."""
@@ -201,6 +218,8 @@ ROADMAP: list[Experiment] = [
         estimated_runtime="~45 min on P100 (1000 steps, 50ms/step, 1200 frames)",
         eureka_source="eureka: coupled trajectory optimization (4D-Var)",
         status="ready",
+        platform_requirements={"min_vram_gb": 16, "needs_cuda": True, "needs_dali": False},
+        smoke_test_config={"frames": 8, "steps": 100, "purpose": "viability on P100 hardware"},
         command=(
             "python -c \"\n"
             "from tac.constrained_gen import coupled_trajectory_optimize\n"
@@ -249,6 +268,8 @@ ROADMAP: list[Experiment] = [
         estimated_runtime="~15 min on P100 (3 Newton steps x 20 evaluations each)",
         eureka_source="eureka: Newton/L-BFGS second-order optimization",
         status="ready",
+        platform_requirements={"min_vram_gb": 16, "needs_cuda": True, "needs_dali": False},
+        smoke_test_config={"frames": 8, "steps": 5, "purpose": "L-BFGS convergence check"},
         command=(
             "python -c \"\n"
             "from tac.constrained_gen import newton_step_optimize\n"
@@ -331,6 +352,7 @@ ROADMAP: list[Experiment] = [
         estimated_runtime="~20 min on P100",
         eureka_source="eureka: scorer as compressor",
         status="ready",
+        platform_requirements={"min_vram_gb": 16, "needs_cuda": True, "needs_dali": False},
         command=(
             "python -c \"\n"
             "from tac.constrained_gen import scorer_as_compressor\n"
@@ -362,6 +384,8 @@ ROADMAP: list[Experiment] = [
         estimated_runtime="~60 min on P100 (100 outer x 10 inner steps)",
         eureka_source="eureka: Dykstra alternating projections",
         status="pending_yousfi_review",
+        platform_requirements={"min_vram_gb": 16, "needs_cuda": True, "needs_dali": False},
+        smoke_test_config={"frames": 8, "steps": 10, "purpose": "ADMM convergence check"},
         command=(
             "python -c \"\n"
             "from tac.constrained_gen import alternating_projections_optimize\n"
@@ -395,6 +419,7 @@ ROADMAP: list[Experiment] = [
         estimated_runtime="~30 min on P100 (500 leapfrog steps)",
         eureka_source="eureka: Hamiltonian dynamics pixel optimizer",
         status="pending_yousfi_review",
+        platform_requirements={"min_vram_gb": 16, "needs_cuda": True, "needs_dali": False},
         command=(
             "python -c \"\n"
             "from tac.hamiltonian_dynamics import HamiltonianPixelOptimizer\n"
@@ -428,6 +453,7 @@ ROADMAP: list[Experiment] = [
         estimated_runtime="~30 min on P100",
         eureka_source="eureka: Euler-Lagrange variational methods",
         status="pending_yousfi_review",
+        platform_requirements={"min_vram_gb": 16, "needs_cuda": True, "needs_dali": False},
         command=(
             "python -c \"\n"
             "from tac.variational_gen import VariationalFrameGenerator\n"
@@ -453,6 +479,7 @@ ROADMAP: list[Experiment] = [
         estimated_runtime="~45 min on P100",
         eureka_source="eureka: Lagrangian dual optimization",
         status="pending_yousfi_review",
+        platform_requirements={"min_vram_gb": 16, "needs_cuda": True, "needs_dali": False},
         command=(
             "python -c \"\n"
             "from tac.variational_gen import LagrangianDualOptimizer\n"
@@ -481,6 +508,7 @@ ROADMAP: list[Experiment] = [
         estimated_runtime="~30 min on P100",
         eureka_source="eureka: scorer manifold differential geometry",
         status="pending_yousfi_review",
+        platform_requirements={"min_vram_gb": 16, "needs_cuda": True, "needs_dali": False},
         command=(
             "python -c \"\n"
             "from tac.scorer_manifold import ScorerManifold\n"
@@ -583,6 +611,8 @@ ROADMAP: list[Experiment] = [
         estimated_runtime="~60 min on P100",
         eureka_source="eureka: cross-disciplinary optimization portfolio",
         status="pending_yousfi_review",
+        platform_requirements={"min_vram_gb": 16, "needs_cuda": True, "needs_dali": False},
+        smoke_test_config={"frames": 8, "steps": 10, "purpose": "verify all optimizers run"},
         blocking_issues=["17 optimizer variants, need to select top 3-5 for ensemble"],
         command=(
             "python -c \"\n"
@@ -612,6 +642,7 @@ ROADMAP: list[Experiment] = [
         estimated_runtime="~30 min on P100",
         eureka_source="eureka: finance/HFT-inspired optimization",
         status="pending_yousfi_review",
+        platform_requirements={"min_vram_gb": 16, "needs_cuda": True, "needs_dali": False},
         blocking_issues=["need to identify which finance analogies actually apply"],
         command=(
             "python -c \"\n"
