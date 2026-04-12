@@ -731,6 +731,94 @@ class HintedMaskRenderer(nn.Module):
         return sum(p.numel() for p in self.parameters() if p.requires_grad)
 
 
+class AsymmetricPairGenerator(nn.Module):
+    """Quantizr-inspired warp-based pair generation (council decision 2026-04-12).
+
+    The key insight: frame2 is rendered directly from mask2 (anchor frame).
+    Frame1 is derived by warping frame2 with learned optical flow + gated
+    residual correction. This makes temporal coherence ARCHITECTURAL, not
+    learned through loss signals — PoseNet sees a geometric warp between
+    frames, which is exactly what real ego-motion produces.
+
+    Architecture:
+        frame2 = renderer(mask2)                        # Direct render
+        flow, gate, residual = motion(mask1, mask2)     # Motion from BOTH masks
+        frame1 = warp(frame2, flow) + gate * residual   # Geometric + correction
+
+    Args:
+        num_classes: segmentation classes (5 for comma)
+        embed_dim: class embedding dimension (6)
+        base_ch: renderer base channel width (36)
+        mid_ch: renderer bottleneck width (60)
+        motion_hidden: motion predictor hidden channels (32)
+        depth: U-Net depth for renderer (1 or 2)
+    """
+
+    def __init__(
+        self,
+        num_classes: int = 5,
+        embed_dim: int = 6,
+        base_ch: int = 36,
+        mid_ch: int = 60,
+        motion_hidden: int = 32,
+        depth: int = 1,
+    ):
+        super().__init__()
+        # Shared embedding between renderer and motion predictor
+        shared_emb = nn.Embedding(num_classes, embed_dim)
+        self.renderer = MaskRenderer(
+            num_classes=num_classes,
+            embed_dim=embed_dim,
+            base_ch=base_ch,
+            mid_ch=mid_ch,
+            embedding=shared_emb,
+            depth=depth,
+        )
+        self.motion = MotionPredictor(
+            num_classes=num_classes,
+            embed_dim=embed_dim,
+            hidden=motion_hidden,
+            embedding=shared_emb,
+            output_channels=6,  # flow(2) + gate(1) + residual(3)
+            use_coord_grid=True,
+            use_diff_features=True,
+        )
+
+    def forward(
+        self,
+        mask_t: torch.Tensor,
+        mask_t1: torch.Tensor,
+    ) -> torch.Tensor:
+        """Generate a frame pair using warp-based asymmetric generation.
+
+        Args:
+            mask_t: (B, H, W) long — mask at time t
+            mask_t1: (B, H, W) long — mask at time t+1
+
+        Returns:
+            (B, 2, H, W, 3) float HWC pair in [0, 255]
+        """
+        # Render anchor frame (frame_t1) directly from mask
+        frame_t1 = self.renderer(mask_t1)  # (B, 3, H, W) float [0, 255]
+
+        # Predict motion from both masks
+        motion_out = self.motion(mask_t, mask_t1)  # (B, 6, H, W)
+        flow = motion_out[:, :2]       # (B, 2, H, W) normalized flow
+        gate = motion_out[:, 2:3]      # (B, 1, H, W) [0, 1]
+        residual = motion_out[:, 3:6]  # (B, 3, H, W) [-20, 20]
+
+        # Warp anchor backward to produce frame_t
+        warped_t1 = warp_with_flow(frame_t1, flow)
+        frame_t = (warped_t1 + gate * residual).clamp(0.0, 255.0)
+
+        # Pack to HWC: (B, 2, H, W, 3)
+        pair = torch.stack([frame_t, frame_t1], dim=1)  # (B, 2, 3, H, W)
+        return pair.permute(0, 1, 3, 4, 2).contiguous()  # (B, 2, H, W, 3)
+
+    def param_count(self) -> int:
+        return sum(p.numel() for p in self.parameters() if p.requires_grad)
+
+
 class HintedPairGenerator(nn.Module):
     """PairGenerator with DoubleTake hint mechanism.
 
