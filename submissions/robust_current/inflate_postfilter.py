@@ -914,130 +914,226 @@ TRICK_STACK_ENABLED = os.environ.get("INFLATE_TRICK_STACK", "0") == "1"
 TRICK_STACK_PROFILE = os.environ.get("INFLATE_TRICK_STACK_PROFILE", "stacked_inflate_full")
 
 
-if __name__ == "__main__":
-    import time
-    t_start = time.monotonic()
+def _cli():
+    """Click CLI entry point for inflate_postfilter."""
+    try:
+        import click
+    except ImportError:
+        print("ERROR: click is required. Install with: uv pip install click", file=sys.stderr)
+        sys.exit(1)
 
-    archive_dir = sys.argv[1]
-    inflated_dir = sys.argv[2]
-    video_names_file = sys.argv[3]
-    # Look for weights in archive dir first (bundled in archive.zip), then submission dir
-    script_dir = Path(__file__).resolve().parent
-    default_paths = [
-        Path(sys.argv[1]) / "postfilter_int8.pt",  # inside archive dir (bundled in zip)
-        script_dir / "postfilter_int8.pt",           # alongside inflate script
-    ]
-    postfilter_path = sys.argv[4] if len(sys.argv) > 4 else None
-    if postfilter_path is None:
-        for p in default_paths:
-            if p.exists():
-                postfilter_path = str(p)
-                break
-        else:
-            print("ERROR: postfilter_int8.pt not found", file=sys.stderr)
-            sys.exit(1)
+    @click.command()
+    @click.argument("archive_dir", type=click.Path(exists=True))
+    @click.argument("output_dir", type=click.Path())
+    @click.argument("video_names_file", type=click.Path(exists=True))
+    @click.argument("postfilter_path", type=click.Path(exists=True), required=False, default=None)
+    @click.option("--brightness-shift/--no-brightness-shift", envvar="INFLATE_BRIGHTNESS_SHIFT",
+                  default=False, help="Shift luminance toward midpoint (PoseNet-invariant).")
+    @click.option("--chroma-smooth/--no-chroma-smooth", envvar="INFLATE_CHROMA_SMOOTH",
+                  default=False, help="Smooth chroma channels (invisible to scorer).")
+    @click.option("--deblock/--no-deblock", envvar="INFLATE_DEBLOCK",
+                  default=False, help="Apply NLM deblocking filter.")
+    @click.option("--deblock-h", type=int, envvar="INFLATE_DEBLOCK_H",
+                  default=10, help="NLM filter strength.")
+    @click.option("--deblock-template-window", type=int, envvar="INFLATE_DEBLOCK_TEMPLATE_WINDOW",
+                  default=7, help="NLM template window size.")
+    @click.option("--deblock-search-window", type=int, envvar="INFLATE_DEBLOCK_SEARCH_WINDOW",
+                  default=21, help="NLM search window size.")
+    @click.option("--multi-pass", type=int, envvar="INFLATE_MULTI_PASS",
+                  default=1, help="Run CNN N times (2=double pass).")
+    @click.option("--tto-steps", type=int, envvar="INFLATE_TTO_STEPS",
+                  default=0, help="Test-time optimization steps (0=disabled).")
+    @click.option("--tto-lr", type=float, envvar="INFLATE_TTO_LR",
+                  default=1e-4, help="TTO learning rate.")
+    @click.option("--tto-loss", type=str, envvar="INFLATE_TTO_LOSS",
+                  default="temporal_consistency", help="TTO loss function.")
+    @click.option("--tto-budget", type=float, envvar="INFLATE_TTO_BUDGET",
+                  default=30.0, help="TTO time budget in seconds.")
+    @click.option("--supervised-tto-steps", type=int, envvar="INFLATE_SUPERVISED_TTO_STEPS",
+                  default=0, help="Supervised TTO steps (requires posenet_targets.bin).")
+    @click.option("--supervised-tto-lr", type=float, envvar="INFLATE_SUPERVISED_TTO_LR",
+                  default=1e-4, help="Supervised TTO learning rate.")
+    @click.option("--supervised-tto-budget", type=float, envvar="INFLATE_SUPERVISED_TTO_BUDGET",
+                  default=120.0, help="Supervised TTO time budget in seconds.")
+    @click.option("--supervised-tto-param-mode", type=str, envvar="INFLATE_SUPERVISED_TTO_PARAM_MODE",
+                  default="all", help="Which params to optimize in supervised TTO.")
+    @click.option("--trick-stack/--no-trick-stack", envvar="INFLATE_TRICK_STACK",
+                  default=False, help="Use unified trick-stacking pipeline.")
+    @click.option("--trick-stack-profile", type=str, envvar="INFLATE_TRICK_STACK_PROFILE",
+                  default="stacked_inflate_full", help="Trick stack profile name.")
+    @click.option("--upstream-dir", type=click.Path(exists=True), envvar="COMMA_CHALLENGE_ROOT",
+                  default=None, help="Upstream challenge root (for PoseNet/SegNet models).")
+    @click.option("--posenet-path", type=click.Path(exists=True), envvar="POSENET_PATH",
+                  default=None, help="Direct path to posenet.safetensors.")
+    @click.option("--segnet-path", type=click.Path(exists=True), envvar="SEGNET_PATH",
+                  default=None, help="Direct path to segnet.safetensors.")
+    @click.option("--device", default="cpu", help="Inference device: cpu, cuda, or mps.")
+    @click.option("--verbose/--quiet", default=True, help="Print progress to stderr.")
+    def inflate(archive_dir, output_dir, video_names_file, postfilter_path,
+                brightness_shift, chroma_smooth,
+                deblock, deblock_h, deblock_template_window, deblock_search_window,
+                multi_pass, tto_steps, tto_lr, tto_loss, tto_budget,
+                supervised_tto_steps, supervised_tto_lr, supervised_tto_budget,
+                supervised_tto_param_mode,
+                trick_stack, trick_stack_profile,
+                upstream_dir, posenet_path, segnet_path, device, verbose):
+        """Inflate compressed video with learned post-filter.
 
-    # Look for PoseNet targets in archive dir (bundled in archive.zip)
-    posenet_targets_path = None
-    if SUPERVISED_TTO_STEPS > 0:
-        for candidate in [
-            Path(archive_dir) / "posenet_targets.bin",
-            script_dir / "posenet_targets.bin",
-        ]:
-            if candidate.exists():
-                posenet_targets_path = str(candidate)
-                break
-        if posenet_targets_path:
-            print(f"  Found PoseNet targets: {posenet_targets_path}",
-                  file=sys.stderr)
-        else:
-            print("  WARNING: SUPERVISED_TTO_STEPS > 0 but posenet_targets.bin "
-                  "not found. Supervised TTO will be skipped.", file=sys.stderr)
+        \b
+        Positional arguments (backward-compatible with inflate.sh):
+          ARCHIVE_DIR       Directory containing compressed .mkv files
+          OUTPUT_DIR        Directory for inflated .raw output files
+          VIDEO_NAMES_FILE  Text file listing video names (one per line)
+          POSTFILTER_PATH   (optional) Path to postfilter_int8.pt weights
 
-    # Discover upstream dir for loading PoseNet (needed for supervised TTO)
-    upstream_dir = os.environ.get("COMMA_CHALLENGE_ROOT")
-    posenet_path_env = os.environ.get("POSENET_PATH")
-    segnet_path_env = os.environ.get("SEGNET_PATH")
-    if upstream_dir and not posenet_path_env:
-        posenet_path_env = str(Path(upstream_dir) / "models" / "posenet.safetensors")
-        segnet_path_env = str(Path(upstream_dir) / "models" / "segnet.safetensors")
+        \b
+        Examples:
+          # Minimal (auto-discovers weights):
+          python inflate_postfilter.py archive/ inflated/ video_names.txt
 
-    # ---- Trick stack dispatch ----
-    if TRICK_STACK_ENABLED:
-        print(f"  TRICK STACK enabled (profile={TRICK_STACK_PROFILE})", file=sys.stderr)
-        try:
-            from tac.trick_stack import stacked_inflate
-            from tac.profiles import PROFILES
-        except ImportError as e:
-            print(f"  ERROR: trick_stack requires tac package: {e}", file=sys.stderr)
-            sys.exit(1)
+          # Explicit weights + options:
+          python inflate_postfilter.py archive/ inflated/ video_names.txt weights.pt \\
+              --brightness-shift --chroma-smooth --multi-pass 2
 
-        # Load profile and apply env var overrides
-        profile = PROFILES.get(TRICK_STACK_PROFILE, {})
-        stack_kwargs = dict(profile)
-        stack_kwargs.update({
-            "posenet_targets_path": posenet_targets_path,
-            "upstream_dir": upstream_dir,
-            "posenet_path": posenet_path_env,
-            "segnet_path": segnet_path_env,
-        })
-        # Allow env var overrides for individual trick toggles
-        for key in [
-            "use_tto", "use_supervised_tto", "use_noise_shaping",
-            "use_null_space_projection", "use_brightness_shift",
-            "use_chroma_exploit", "use_fragility_weighting",
-            "use_backward_delta_smoothing",
-        ]:
-            env_val = os.environ.get(f"INFLATE_{key.upper()}")
-            if env_val is not None:
-                stack_kwargs[key] = env_val == "1"
-        for key in ["tto_steps", "supervised_tto_steps", "use_multi_pass"]:
-            env_val = os.environ.get(f"INFLATE_{key.upper()}")
-            if env_val is not None:
-                stack_kwargs[key] = int(env_val)
+          # Via env vars (same effect):
+          INFLATE_BRIGHTNESS_SHIFT=1 INFLATE_CHROMA_SMOOTH=1 INFLATE_MULTI_PASS=2 \\
+              python inflate_postfilter.py archive/ inflated/ video_names.txt
+        """
+        import time
+        t_start = time.monotonic()
 
-        result = stacked_inflate(
-            archive_dir=Path(archive_dir),
-            output_dir=Path(inflated_dir),
-            **stack_kwargs,
-        )
+        # Apply CLI values to module-level globals so existing functions pick them up
+        global INFLATE_DEBLOCK, DEBLOCK_H, DEBLOCK_TEMPLATE_WINDOW, DEBLOCK_SEARCH_WINDOW
+        global MULTI_PASS, INFLATE_BRIGHTNESS_SHIFT, INFLATE_CHROMA_SMOOTH
+        INFLATE_DEBLOCK = deblock
+        DEBLOCK_H = deblock_h
+        DEBLOCK_TEMPLATE_WINDOW = deblock_template_window
+        DEBLOCK_SEARCH_WINDOW = deblock_search_window
+        MULTI_PASS = multi_pass
+        INFLATE_BRIGHTNESS_SHIFT = brightness_shift
+        INFLATE_CHROMA_SMOOTH = chroma_smooth
+
+        # Resolve postfilter weights
+        script_dir = Path(__file__).resolve().parent
+        if postfilter_path is None:
+            default_paths = [
+                Path(archive_dir) / "postfilter_int8.pt",
+                script_dir / "postfilter_int8.pt",
+            ]
+            for p in default_paths:
+                if p.exists():
+                    postfilter_path = str(p)
+                    break
+            else:
+                raise click.ClickException(
+                    "postfilter_int8.pt not found. Pass it as the 4th argument or "
+                    "place it in the archive dir or alongside this script."
+                )
+
+        # Resolve PoseNet targets
+        posenet_targets_path = None
+        if supervised_tto_steps > 0:
+            for candidate in [
+                Path(archive_dir) / "posenet_targets.bin",
+                script_dir / "posenet_targets.bin",
+            ]:
+                if candidate.exists():
+                    posenet_targets_path = str(candidate)
+                    break
+            if posenet_targets_path and verbose:
+                click.echo(f"  Found PoseNet targets: {posenet_targets_path}", err=True)
+            elif verbose:
+                click.echo("  WARNING: supervised-tto-steps > 0 but posenet_targets.bin "
+                           "not found. Supervised TTO will be skipped.", err=True)
+
+        # Resolve upstream model paths
+        if upstream_dir and not posenet_path:
+            posenet_path = str(Path(upstream_dir) / "models" / "posenet.safetensors")
+            segnet_path = str(Path(upstream_dir) / "models" / "segnet.safetensors")
+
+        # ---- Trick stack dispatch ----
+        if trick_stack:
+            if verbose:
+                click.echo(f"  TRICK STACK enabled (profile={trick_stack_profile})", err=True)
+            try:
+                from tac.trick_stack import stacked_inflate
+                from tac.profiles import PROFILES
+            except ImportError as e:
+                raise click.ClickException(f"trick_stack requires tac package: {e}")
+
+            profile = PROFILES.get(trick_stack_profile, {})
+            stack_kwargs = dict(profile)
+            stack_kwargs.update({
+                "posenet_targets_path": posenet_targets_path,
+                "upstream_dir": upstream_dir,
+                "posenet_path": posenet_path,
+                "segnet_path": segnet_path,
+            })
+            # Allow env var overrides for individual trick toggles
+            for key in [
+                "use_tto", "use_supervised_tto", "use_noise_shaping",
+                "use_null_space_projection", "use_brightness_shift",
+                "use_chroma_exploit", "use_fragility_weighting",
+                "use_backward_delta_smoothing",
+            ]:
+                env_val = os.environ.get(f"INFLATE_{key.upper()}")
+                if env_val is not None:
+                    stack_kwargs[key] = env_val == "1"
+            for key in ["tto_steps", "supervised_tto_steps", "use_multi_pass"]:
+                env_val = os.environ.get(f"INFLATE_{key.upper()}")
+                if env_val is not None:
+                    stack_kwargs[key] = int(env_val)
+
+            result = stacked_inflate(
+                archive_dir=Path(archive_dir),
+                output_dir=Path(output_dir),
+                **stack_kwargs,
+            )
+            t_total = time.monotonic() - t_start
+            if verbose:
+                click.echo(f"  Trick stack complete: {result.get('n_frames', 0)} frames, "
+                           f"{t_total:.1f}s total", err=True)
+                click.echo(f"  Stages: {result.get('stages_run', [])}", err=True)
+            return
+
+        # ---- Standard (non-stacked) inflate path ----
+        if verbose:
+            click.echo(f"  Loading post-filter from {postfilter_path}", err=True)
+        model = load_postfilter_int8(postfilter_path, device=device)
+
+        output_path = Path(output_dir)
+        output_path.mkdir(parents=True, exist_ok=True)
+
+        for line in Path(video_names_file).read_text().splitlines():
+            rel = line.strip()
+            if not rel:
+                continue
+            stem = rel.rsplit(".", 1)[0]
+            mkv_path = Path(archive_dir) / f"{stem}.mkv"
+            out_path = output_path / f"{stem}.raw"
+            out_path.parent.mkdir(parents=True, exist_ok=True)
+            if verbose:
+                click.echo(f"Inflating {mkv_path} -> {out_path} (post-filter)", err=True)
+            inflate_with_postfilter(
+                str(mkv_path), str(out_path), model,
+                tto_steps=tto_steps, tto_lr=tto_lr,
+                tto_loss=tto_loss, tto_budget=tto_budget,
+                supervised_tto_steps=supervised_tto_steps,
+                supervised_tto_lr=supervised_tto_lr,
+                supervised_tto_budget=supervised_tto_budget,
+                supervised_tto_param_mode=supervised_tto_param_mode,
+                posenet_targets_path=posenet_targets_path,
+                upstream_dir=upstream_dir,
+                posenet_path=posenet_path,
+                segnet_path=segnet_path,
+            )
+
         t_total = time.monotonic() - t_start
-        print(f"  Trick stack complete: {result.get('n_frames', 0)} frames, "
-              f"{t_total:.1f}s total", file=sys.stderr)
-        print(f"  Stages: {result.get('stages_run', [])}", file=sys.stderr)
-        sys.exit(0)
+        if verbose:
+            click.echo(f"  Total inflate time: {t_total:.1f}s", err=True)
 
-    # ---- Standard (non-stacked) inflate path ----
+    inflate()
 
-    # Load model ONCE (not per-video)
-    print(f"  Loading post-filter from {postfilter_path}", file=sys.stderr)
-    model = load_postfilter_int8(postfilter_path, device="cpu")
 
-    inflated_dir = Path(inflated_dir)
-    inflated_dir.mkdir(parents=True, exist_ok=True)
-
-    for line in Path(video_names_file).read_text().splitlines():
-        rel = line.strip()
-        if not rel:
-            continue
-        stem = rel.rsplit(".", 1)[0]
-        mkv_path = Path(archive_dir) / f"{stem}.mkv"
-        out_path = inflated_dir / f"{stem}.raw"
-        out_path.parent.mkdir(parents=True, exist_ok=True)
-        print(f"Inflating {mkv_path} -> {out_path} (post-filter)", file=sys.stderr)
-        inflate_with_postfilter(
-            str(mkv_path), str(out_path), model,
-            tto_steps=TTO_STEPS, tto_lr=TTO_LR,
-            tto_loss=TTO_LOSS, tto_budget=TTO_BUDGET,
-            supervised_tto_steps=SUPERVISED_TTO_STEPS,
-            supervised_tto_lr=SUPERVISED_TTO_LR,
-            supervised_tto_budget=SUPERVISED_TTO_BUDGET,
-            supervised_tto_param_mode=SUPERVISED_TTO_PARAM_MODE,
-            posenet_targets_path=posenet_targets_path,
-            upstream_dir=upstream_dir,
-            posenet_path=posenet_path_env,
-            segnet_path=segnet_path_env,
-        )
-
-    t_total = time.monotonic() - t_start
-    print(f"  Total inflate time: {t_total:.1f}s", file=sys.stderr)
+if __name__ == "__main__":
+    _cli()

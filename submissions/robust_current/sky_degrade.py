@@ -19,17 +19,15 @@ Typical savings: 12-16% of total rate on highway scenes (sky is ~40% of
 frame area, and blur + bit-reduce saves 30-40% of sky bits).
 
 Usage:
-    python sky_degrade.py --input 0.mkv --output 0_sky.mkv \\
-        --blur-sigma 2.0 --bit-reduce 4 --feather 8
+    python sky_degrade.py --input 0.mkv --output 0_sky.mkv --blur-sigma 2.0 --bit-reduce 4 --feather 8
 """
 from __future__ import annotations
 
-import argparse
 import subprocess
 import sys
-import tempfile
 from pathlib import Path
 
+import click
 import cv2
 import numpy as np
 
@@ -142,33 +140,56 @@ def get_video_info(ffprobe_bin: str, video_path: str) -> tuple[int, int, float]:
     return w, h, fps
 
 
-def main():
-    parser = argparse.ArgumentParser(description="Sky region degradation for rate savings")
-    parser.add_argument("--input", required=True, help="Input video path")
-    parser.add_argument("--output", required=True, help="Output video path")
-    parser.add_argument("--ffmpeg-bin", default="ffmpeg")
-    parser.add_argument("--ffprobe-bin", default="ffprobe")
-    parser.add_argument("--blur-sigma", type=float, default=2.0)
-    parser.add_argument("--bit-reduce", type=int, default=4)
-    parser.add_argument("--feather", type=int, default=8)
-    parser.add_argument("--upstream", default=None, help="Upstream challenge root (for SegNet)")
-    parser.add_argument("--scale-w", type=int, default=None)
-    parser.add_argument("--scale-h", type=int, default=None)
-    parser.add_argument("--saturation-threshold", type=float, default=60.0)
-    parser.add_argument("--brightness-threshold", type=float, default=140.0)
-    parser.add_argument("--top-fraction", type=float, default=0.55)
-    args = parser.parse_args()
+@click.command()
+@click.option("--input", "input_path", type=click.Path(exists=True), required=True,
+              help="Input video path.")
+@click.option("--output", "output_path", type=click.Path(), required=True,
+              help="Output video path.")
+@click.option("--ffmpeg-bin", envvar="FFMPEG_BIN", default="ffmpeg",
+              help="Path to ffmpeg binary.")
+@click.option("--ffprobe-bin", envvar="FFPROBE_BIN", default="ffprobe",
+              help="Path to ffprobe binary.")
+@click.option("--blur-sigma", type=float, default=2.0,
+              help="Gaussian blur sigma for sky regions.")
+@click.option("--bit-reduce", type=int, default=4,
+              help="Bit-depth reduction factor (e.g. 4 = 6-bit effective).")
+@click.option("--feather", type=int, default=8,
+              help="Feather radius for mask boundary blending.")
+@click.option("--upstream", type=click.Path(exists=True), envvar="COMMA_CHALLENGE_ROOT",
+              default=None, help="Upstream challenge root (for SegNet, unused currently).")
+@click.option("--scale-w", type=int, default=None,
+              help="Override output width.")
+@click.option("--scale-h", type=int, default=None,
+              help="Override output height.")
+@click.option("--saturation-threshold", type=float, default=60.0,
+              help="Max HSV saturation for sky detection.")
+@click.option("--brightness-threshold", type=float, default=140.0,
+              help="Min HSV brightness for sky detection.")
+@click.option("--top-fraction", type=float, default=0.55,
+              help="Only detect sky in top fraction of frame.")
+def sky_degrade(input_path, output_path, ffmpeg_bin, ffprobe_bin,
+                blur_sigma, bit_reduce, feather, upstream,
+                scale_w, scale_h, saturation_threshold, brightness_threshold,
+                top_fraction):
+    """Apply sky region degradation to reduce bitrate.
 
-    input_path = args.input
-    output_path = args.output
+    \b
+    Detects sky regions using color heuristics, then applies Gaussian blur
+    and bit-depth reduction. Sky has zero driving semantics -- the scorer
+    does not care about sky pixel fidelity.
 
+    \b
+    Examples:
+      python sky_degrade.py --input 0.mkv --output 0_sky.mkv
+      python sky_degrade.py --input 0.mkv --output 0_sky.mkv --blur-sigma 3.0
+    """
     # Get video info
-    w, h, fps = get_video_info(args.ffprobe_bin, input_path)
-    print(f"[sky_degrade] Input: {w}x{h} @ {fps:.1f}fps", file=sys.stderr)
+    w, h, fps = get_video_info(ffprobe_bin, input_path)
+    click.echo(f"[sky_degrade] Input: {w}x{h} @ {fps:.1f}fps", err=True)
 
     # Decode all frames
     cmd_decode = [
-        args.ffmpeg_bin, "-y", "-i", input_path,
+        ffmpeg_bin, "-y", "-i", input_path,
         "-f", "rawvideo", "-pix_fmt", "bgr24",
         "-v", "error", "pipe:1",
     ]
@@ -180,7 +201,7 @@ def main():
     # Stream processing: pipe decode -> process -> encode without buffering
     # all frames in memory. Keeps peak RAM at ~2 frames instead of 1200.
     cmd_encode = [
-        args.ffmpeg_bin, "-y",
+        ffmpeg_bin, "-y",
         "-f", "rawvideo",
         "-pix_fmt", "bgr24",
         "-s", f"{w}x{h}",
@@ -205,20 +226,20 @@ def main():
         # Detect sky
         sky_mask = detect_sky_mask_heuristic(
             frame,
-            saturation_threshold=args.saturation_threshold,
-            brightness_threshold=args.brightness_threshold,
-            top_fraction=args.top_fraction,
+            saturation_threshold=saturation_threshold,
+            brightness_threshold=brightness_threshold,
+            top_fraction=top_fraction,
         )
 
         # Apply degradation
         degraded = apply_sky_degradation(
             frame, sky_mask,
-            blur_sigma=args.blur_sigma,
-            bit_reduce=args.bit_reduce,
-            feather_radius=args.feather,
+            blur_sigma=blur_sigma,
+            bit_reduce=bit_reduce,
+            feather_radius=feather,
         )
 
-        # Stream directly to encoder — no buffering
+        # Stream directly to encoder -- no buffering
         proc_encode.stdin.write(degraded.tobytes())
         frames_processed += 1
 
@@ -226,18 +247,16 @@ def main():
     proc_encode.stdin.close()
     proc_encode.wait()
 
-    print(f"[sky_degrade] Processed {frames_processed} frames", file=sys.stderr)
+    click.echo(f"[sky_degrade] Processed {frames_processed} frames", err=True)
 
     if frames_processed == 0:
-        print("[sky_degrade] ERROR: no frames decoded", file=sys.stderr)
-        sys.exit(1)
+        raise click.ClickException("No frames decoded")
 
     if proc_encode.returncode != 0:
-        print("[sky_degrade] ERROR: ffmpeg encode failed", file=sys.stderr)
-        sys.exit(1)
+        raise click.ClickException("ffmpeg encode failed")
 
-    print(f"[sky_degrade] Output: {output_path}", file=sys.stderr)
+    click.echo(f"[sky_degrade] Output: {output_path}", err=True)
 
 
 if __name__ == "__main__":
-    main()
+    sky_degrade()
