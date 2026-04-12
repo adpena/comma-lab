@@ -100,7 +100,7 @@ Every experiment MUST follow this process before touching any GPU:
 6. **Replicability record**: all params saved before running, full results after
 7. **No premature kills**: a negative result on an underspecified test means the test was wrong, not the technique
 
-Yousfi and Fridrich have final say as domain experts on experiment design and kill decisions.
+Yousfi, Fridrich, and the Contrarian are the **tripartite pact** — the three voices that must reach consensus before any major decision. Yousfi and Fridrich have domain expertise as the world's foremost steganalysis experts and contest designers. The Contrarian has veto power on any experiment that lacks rigor, wastes resources, or is built on unvalidated assumptions. All three must sign off on experiment design and kill/promote decisions.
 
 ## Required durable state
 
