@@ -35,11 +35,10 @@ def _coerce_rgb_frames(frames) -> np.ndarray:
         raise ValueError("frames must have shape (frames, height, width, 3) or (height, width, 3)")
     if arr.shape[0] == 0:
         raise ValueError("frames must contain at least one frame")
-    return np.clip(
-        np.nan_to_num(arr.astype(np.float32, copy=False), nan=0.0, posinf=255.0, neginf=0.0),
-        0.0,
-        255.0,
-    )
+    normalized = np.nan_to_num(arr.astype(np.float32, copy=False), nan=0.0, posinf=255.0, neginf=0.0)
+    if float(np.max(normalized)) <= 1.5:
+        normalized = normalized * 255.0
+    return np.clip(normalized, 0.0, 255.0)
 
 
 def _coerce_nchw_frames(frames) -> np.ndarray:
@@ -50,11 +49,10 @@ def _coerce_nchw_frames(frames) -> np.ndarray:
         raise ValueError("frames must have shape (frames, 3, height, width) or (3, height, width)")
     if arr.shape[0] == 0:
         raise ValueError("frames must contain at least one frame")
-    return np.clip(
-        np.nan_to_num(arr.astype(np.float32, copy=False), nan=0.0, posinf=255.0, neginf=0.0),
-        0.0,
-        255.0,
-    )
+    normalized = np.nan_to_num(arr.astype(np.float32, copy=False), nan=0.0, posinf=255.0, neginf=0.0)
+    if float(np.max(normalized)) <= 1.5:
+        normalized = normalized * 255.0
+    return np.clip(normalized, 0.0, 255.0)
 
 
 def _select_keyframe_indices(frame_count: int, *, max_keyframes: int) -> np.ndarray:

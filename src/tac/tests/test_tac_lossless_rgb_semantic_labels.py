@@ -67,6 +67,15 @@ class TacLosslessRgbSemanticLabelsTests(unittest.TestCase):
         self.assertEqual(label_uint8[4], 0)  # no sky proxy
         self.assertEqual(label_uint8[5], 0)  # no road proxy
 
+    def test_rgb_semantic_label_tuple_treats_unit_scaled_float_frames_like_uint8_frames(self) -> None:
+        from tac.lossless.rgb_semantic_labels import rgb_semantic_label_tuple
+
+        frames = _outdoor_frames(frame_count=4)
+        label_uint8 = rgb_semantic_label_tuple(frames)
+        label_unit_float = rgb_semantic_label_tuple(frames.astype(np.float32) / 255.0)
+
+        self.assertEqual(label_uint8, label_unit_float)
+
     def test_extract_rgb_semantic_label_from_tokens_matches_direct_frame_labels(self) -> None:
         from tac.lossless.rgb_semantic_labels import (
             extract_rgb_semantic_label_from_tokens,
