@@ -577,15 +577,15 @@ def stage_package(
     pf_in_archive = mgr.archive_unzip_dir / "postfilter_int8.pt"
     if not pf_in_archive.exists():
         click.echo(
-            "  WARNING: postfilter_int8.pt not in archive.zip. "
-            "Neural artifacts must be bundled per contest rules.",
+            "postfilter_int8.pt not found in archive.zip. "
+            "Contest rules require neural artifacts inside the archive. "
+            "Fix compress.sh to bundle the postfilter.",
             err=True,
         )
-        # Try to copy from submission_src as fallback
-        pf_src = submission_src / "postfilter_int8.pt"
-        if pf_src.exists():
-            shutil.copy2(str(pf_src), str(pf_in_archive))
-            click.echo(f"  Copied postfilter from {pf_src}", err=True)
+        raise click.ClickException(
+            "Archive missing postfilter_int8.pt — cannot proceed. "
+            "This is a compress.sh packaging bug, not a fallback situation."
+        )
 
     size = mgr.archive_zip.stat().st_size
     n_files = len(list(mgr.archive_unzip_dir.rglob("*")))

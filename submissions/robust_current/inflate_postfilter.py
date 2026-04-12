@@ -978,21 +978,19 @@ def _cli():
         import time
         t_start = time.monotonic()
 
-        # Resolve postfilter weights
+        # Resolve postfilter weights — ONLY from archive dir.
+        # Contest rules require neural artifacts inside archive.zip.
+        # No fallback to script_dir — that hides packaging bugs.
         script_dir = Path(__file__).resolve().parent
         if postfilter_path is None:
-            default_paths = [
-                Path(archive_dir) / "postfilter_int8.pt",
-                script_dir / "postfilter_int8.pt",
-            ]
-            for p in default_paths:
-                if p.exists():
-                    postfilter_path = str(p)
-                    break
+            canonical_path = Path(archive_dir) / "postfilter_int8.pt"
+            if canonical_path.exists():
+                postfilter_path = str(canonical_path)
             else:
                 raise click.ClickException(
-                    "postfilter_int8.pt not found. Pass it as the 4th argument or "
-                    "place it in the archive dir or alongside this script."
+                    f"postfilter_int8.pt not found in archive dir: {archive_dir}\n"
+                    "Contest rules require neural artifacts inside archive.zip.\n"
+                    "Ensure compress.sh bundles postfilter_int8.pt into the archive."
                 )
 
         # Resolve PoseNet targets
