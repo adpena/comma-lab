@@ -103,6 +103,9 @@ SMOKE = {
 }
 
 # Council V2: Adaptive weights (Einstein/Tao derivation, 2026-04-10)
+# DEPRECATED: adaptive_rebalance is dead (see CLAUDE.md). The Hinton T² correction
+# was already inside the KL loss, so dividing by T² double-corrected. The compound
+# invariant w_s*T² was trivially constant by construction. Kept for historical reference.
 # Static placeholders below are overridden by AdaptiveWeights.rebalance() at runtime.
 # See src/tac/adaptive.py for the full mathematical derivation.
 COUNCIL_V2_ADAPTIVE = {
@@ -1236,6 +1239,66 @@ CONSTRAINED_GEN_SMOKE = {
     "log_every": 25,
 }
 
+# ── Finance & HFT optimizer profiles ─────────────────────────────────
+# Cross-disciplinary algorithms from quantitative finance.
+# See src/tac/finance_optimizers.py for implementations.
+
+FINANCE_SMOKE = {
+    "variant": "constrained_gen",
+    "num_steps": 100,
+    "lr": 0.5,
+    "seg_weight": 100.0,
+    "pose_weight": 10.0,
+    "compress_weight": 1.0,
+    "noise_seed": 42,
+    "scorer_space": False,
+    "log_every": 25,
+    "finance_optimizer": "risk_parity",
+    "finance_config": {"base_lr": 0.5, "ema_decay": 0.95},
+}
+
+FINANCE_ENSEMBLE = {
+    "variant": "constrained_gen",
+    "num_steps": 1000,
+    "lr": 1.0,
+    "seg_weight": 100.0,
+    "pose_weight": 10.0,
+    "compress_weight": 1.0,
+    "noise_seed": 42,
+    "scorer_space": False,
+    "log_every": 100,
+    "finance_optimizer": "ensemble",
+    "finance_config": {
+        "optimizers": [
+            {"name": "risk_parity", "weight": 2.0, "config": {"base_lr": 1.0}},
+            {"name": "order_book", "weight": 1.5, "config": {"base_lr": 1.0, "top_fraction": 0.3}},
+            {"name": "implied_vol", "weight": 1.0, "config": {"base_lr": 1.0, "power": 0.5}},
+        ],
+        "blend_mode": "weighted_average",
+    },
+}
+
+FINANCE_HFT = {
+    "variant": "constrained_gen",
+    "num_steps": 500,
+    "lr": 0.5,
+    "seg_weight": 100.0,
+    "pose_weight": 10.0,
+    "compress_weight": 1.0,
+    "noise_seed": 42,
+    "scorer_space": False,
+    "log_every": 50,
+    "finance_optimizer": "ensemble",
+    "finance_config": {
+        "optimizers": [
+            {"name": "order_book", "weight": 2.0, "config": {"base_lr": 0.5, "top_fraction": 0.4}},
+            {"name": "almgren_chriss", "weight": 1.0, "config": {"total_steps": 500, "base_lr": 0.5}},
+            {"name": "momentum_reversion", "weight": 1.0, "config": {"base_lr": 0.5}},
+        ],
+        "blend_mode": "round_robin",
+    },
+}
+
 CONSTRAINED_GEN_FULL = {
     "variant": "constrained_gen",
     "num_steps": 1000,
@@ -1319,6 +1382,134 @@ CONSTRAINED_GEN_FULL_PIPELINE = {
     "smooth_weight": 0.01,
     "max_jacobian_outputs": 16,
     "rank_threshold": 1e-3,
+    "noise_seed": 42,
+}
+
+# ── Cross-disciplinary optimizer profiles ──────────────────────────────
+# Run optimizers from physics, biology, chemistry, geophysics, climate
+# science, astrophysics, and quantum computing on the constrained frame
+# generation problem. See src/tac/cross_disciplinary_optimizers.py.
+
+CROSS_DISC_SMOKE = {
+    "variant": "cross_disciplinary",
+    "optimizer_names": [
+        "simulated_annealing", "hmc", "langevin", "replica_exchange",
+        "cma_es", "differential_evolution", "pso",
+        "metadynamics", "basin_hopping",
+        "fwi", "seismic_multigrid",
+        "enkf", "4dvar",
+        "nested_sampling", "multigrid_relaxation",
+        "quantum_annealing",
+    ],
+    "num_steps": 10,
+    "pop_size": 4,
+    "num_particles": 4,
+    "num_live": 4,
+    "num_replicas": 2,
+    "ensemble_size": 4,
+    "n_components": 4,
+    "n_paths": 2,
+    "steps_per_scale": 3,
+    "scales": [0.5, 1.0],
+    "levels": [(96, 128), (192, 256)],
+    "smooth_steps": 3,
+    "local_steps": 3,
+    "prediction_steps": 2,
+    "seg_weight": 100.0,
+    "pose_weight": 10.0,
+    "compress_weight": 1.0,
+    "noise_seed": 42,
+}
+
+CROSS_DISC_ENSEMBLE = {
+    "variant": "cross_disciplinary",
+    "optimizer_names": [
+        "simulated_annealing", "basin_hopping", "cma_es",
+        "langevin", "4dvar", "fwi",
+    ],
+    "num_steps": 500,
+    "pop_size": 16,
+    "num_particles": 16,
+    "num_live": 16,
+    "num_replicas": 4,
+    "ensemble_size": 16,
+    "n_components": 32,
+    "seg_weight": 100.0,
+    "pose_weight": 10.0,
+    "compress_weight": 1.0,
+    "noise_seed": 42,
+}
+
+CROSS_DISC_ANNEALING = {
+    "variant": "cross_disciplinary",
+    "optimizer_names": ["simulated_annealing", "basin_hopping"],
+    "num_steps": 1000,
+    "T0": 100.0,
+    "alpha": 0.997,
+    "cooling_schedule": "exponential",
+    "perturbation_scale": 5.0,
+    "num_hops": 50,
+    "local_steps": 30,
+    "local_lr": 0.1,
+    "temperature": 10.0,
+    "seg_weight": 100.0,
+    "pose_weight": 10.0,
+    "compress_weight": 1.0,
+    "noise_seed": 42,
+}
+
+CROSS_DISC_EVOLUTIONARY = {
+    "variant": "cross_disciplinary",
+    "optimizer_names": ["cma_es", "differential_evolution"],
+    "num_steps": 500,
+    "pop_size": 24,
+    "n_components": 48,
+    "sigma0": 10.0,
+    "F": 0.8,
+    "CR": 0.9,
+    "seg_weight": 100.0,
+    "pose_weight": 10.0,
+    "compress_weight": 1.0,
+    "noise_seed": 42,
+}
+
+CROSS_DISC_PHYSICS = {
+    "variant": "cross_disciplinary",
+    "optimizer_names": ["hmc", "langevin", "replica_exchange"],
+    "num_steps": 500,
+    "step_size": 0.01,
+    "num_leapfrog_steps": 15,
+    "mass_matrix_type": "learned",
+    "lr": 0.1,
+    "beta_start": 0.1,
+    "beta_end": 100.0,
+    "num_replicas": 6,
+    "T_min": 0.1,
+    "T_max": 100.0,
+    "swap_every": 5,
+    "seg_weight": 100.0,
+    "pose_weight": 10.0,
+    "compress_weight": 1.0,
+    "noise_seed": 42,
+}
+
+CROSS_DISC_GEOPHYSICS = {
+    "variant": "cross_disciplinary",
+    "optimizer_names": ["fwi", "seismic_multigrid", "4dvar"],
+    "num_steps": 500,
+    "scales": [0.25, 0.5, 1.0],
+    "steps_per_scale": 150,
+    "lr": 0.1,
+    "tikhonov_weight": 0.01,
+    "tv_weight": 0.1,
+    "levels": [(96, 128), (192, 256), (384, 512)],
+    "smooth_steps": 20,
+    "num_cycles": 5,
+    "temporal_weight": 10.0,
+    "temporal_order": 2,
+    "seg_weight": 100.0,
+    "pose_weight": 10.0,
+    "compress_weight": 1.0,
     "noise_seed": 42,
 }
 
@@ -1409,4 +1600,15 @@ PROFILES = {
     "lagrangian_dual_smoke": LAGRANGIAN_DUAL_SMOKE,
     "pareto_trace": PARETO_TRACE,
     "constrained_gen_full_pipeline": CONSTRAINED_GEN_FULL_PIPELINE,
+    # Cross-disciplinary optimizer profiles
+    "cross_disc_smoke": CROSS_DISC_SMOKE,
+    "cross_disc_ensemble": CROSS_DISC_ENSEMBLE,
+    "cross_disc_annealing": CROSS_DISC_ANNEALING,
+    "cross_disc_evolutionary": CROSS_DISC_EVOLUTIONARY,
+    "cross_disc_physics": CROSS_DISC_PHYSICS,
+    "cross_disc_geophysics": CROSS_DISC_GEOPHYSICS,
+    # Finance & HFT optimizer profiles
+    "finance_smoke": FINANCE_SMOKE,
+    "finance_ensemble": FINANCE_ENSEMBLE,
+    "finance_hft": FINANCE_HFT,
 }
