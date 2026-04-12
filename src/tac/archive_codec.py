@@ -36,6 +36,13 @@ import torch
 import torch.nn as nn
 import torch.nn.functional as F
 
+__all__ = [
+    "TextureAtomCodebook",
+    "MotionFieldCodec",
+    "ScorerCorrectionTargets",
+    "build_minimal_archive",
+]
+
 
 class TextureAtomCodebook(nn.Module):
     """Learnable set of texture patches that tile to create frame regions.

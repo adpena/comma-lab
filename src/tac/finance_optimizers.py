@@ -29,11 +29,29 @@ Algorithms:
 from __future__ import annotations
 
 import math
-from dataclasses import dataclass, field
 from typing import Any
 
 import torch
 import torch.nn.functional as F
+
+__all__ = [
+    "FinanceOptimizer",
+    "AlmgrenChrissOptimizer",
+    "KellyCriterionOptimizer",
+    "ImpliedVolatilityOptimizer",
+    "MarkowitzOptimizer",
+    "PairsTradingOptimizer",
+    "GARCHVolatilityOptimizer",
+    "OrderBookOptimizer",
+    "AvellanedaStoikovOptimizer",
+    "MomentumMeanReversionOptimizer",
+    "RiskParityOptimizer",
+    "FinanceEnsembleOptimizer",
+    "smoke_test_all",
+    "yousfi_contrarian_picks",
+    "OPTIMIZER_REGISTRY",
+    "get_optimizer",
+]
 
 
 # ── Base class ──────────────────────────────────────────────────────────

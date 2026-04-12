@@ -31,12 +31,16 @@ import multiprocessing as mp
 import os
 import sys
 import time
-from pathlib import Path
-from typing import Any
 
 import numpy as np
 import torch
 import torch.nn as nn
+
+__all__ = [
+    "parallel_inflate",
+    "parallel_inflate_chunked",
+    "estimate_parallel_speedup",
+]
 
 
 def _log(msg: str, verbose: bool = True) -> None:

@@ -30,13 +30,21 @@ from __future__ import annotations
 import json
 import struct
 from pathlib import Path
-from typing import Any, Callable, Optional
+from typing import Any, Callable
 
 import numpy as np
 import torch
 import torch.nn.functional as F
 
-from tac.mask_codec import NUM_CLASSES, SEGNET_H, SEGNET_W
+from tac.camera import (
+    CAMERA_H,
+    CAMERA_W,
+    CLASS_MEAN_COLORS,
+    NUM_CLASSES,
+    SEGNET_INPUT_H,
+    SEGNET_INPUT_W,
+)
+from tac.mask_codec import SEGNET_H, SEGNET_W  # noqa: F401 — used by downstream
 
 __all__ = [
     "CAMERA_W",
@@ -65,28 +73,9 @@ __all__ = [
     "ConstrainedFrameGenerator",
 ]
 
-# ---- Constants ----
-
-# Camera native resolution (comma challenge spec)
-CAMERA_W = 1164
-CAMERA_H = 874
-
-# SegNet input resolution (from frame_utils.py upstream)
-SEGNET_INPUT_W = 512
-SEGNET_INPUT_H = 384
-
-# Semantic class mean colors (BGR order observed in driving scenes).
-# road=gray, lane=lighter gray, undrivable=brown, movable=blue-gray, sky=light blue
-CLASS_MEAN_COLORS = torch.tensor(
-    [
-        [128.0, 128.0, 128.0],  # class 0: road (gray)
-        [170.0, 170.0, 170.0],  # class 1: lane markings (light gray)
-        [100.0, 80.0, 60.0],    # class 2: undrivable (brown)
-        [120.0, 140.0, 160.0],  # class 3: movable objects (blue-gray)
-        [180.0, 200.0, 230.0],  # class 4: sky (light blue)
-    ],
-    dtype=torch.float32,
-)  # (NUM_CLASSES, 3)
+# Constants are now imported from tac.camera (canonical source of truth).
+# The module-level names CAMERA_W, CAMERA_H, SEGNET_INPUT_W, SEGNET_INPUT_H,
+# CLASS_MEAN_COLORS, NUM_CLASSES remain available for backward compatibility.
 
 
 # ---- YUV420 conversion utilities ----
@@ -1522,11 +1511,19 @@ def alternating_projections_optimize(
     inc_pose = torch.zeros_like(frames)
     inc_rate = torch.zeros_like(frames)
 
+    # Create persistent parameter buffers and optimizers ONCE.
+    # Reusing optimizers preserves Adam momentum/variance across outer iters.
+    y_seg = torch.zeros_like(frames, requires_grad=True)
+    opt_seg = torch.optim.Adam([y_seg], lr=lr)
+    y_pose = torch.zeros_like(frames, requires_grad=True)
+    opt_pose = torch.optim.Adam([y_pose], lr=lr)
+    y_rate = torch.zeros_like(frames, requires_grad=True)
+    opt_rate = torch.optim.Adam([y_rate], lr=lr)
+
     for outer in range(num_outer_iterations):
         # ---- Projection 1: SegNet constraint ----
-        y_seg = frames + inc_seg
-        y_seg = y_seg.detach().requires_grad_(True)
-        opt_seg = torch.optim.Adam([y_seg], lr=lr)
+        with torch.no_grad():
+            y_seg.data.copy_(frames + inc_seg)
         for _ in range(num_inner_steps):
             opt_seg.zero_grad()
             loss = seg_weight * compute_segnet_constraint_loss(y_seg, masks, segnet)
@@ -1535,15 +1532,14 @@ def alternating_projections_optimize(
             with torch.no_grad():
                 y_seg.data.clamp_(0.0, 255.0)
         with torch.no_grad():
-            p_seg = y_seg.detach()
+            p_seg = y_seg.data.clone()
             inc_seg = frames + inc_seg - p_seg
             frames = p_seg
 
         # ---- Projection 2: PoseNet constraint ----
         if P > 0 and expected_pose.shape[0] > 0:
-            y_pose = frames + inc_pose
-            y_pose = y_pose.detach().requires_grad_(True)
-            opt_pose = torch.optim.Adam([y_pose], lr=lr)
+            with torch.no_grad():
+                y_pose.data.copy_(frames + inc_pose)
             for _ in range(num_inner_steps):
                 opt_pose.zero_grad()
                 loss = pose_weight * compute_posenet_constraint_loss(
@@ -1554,14 +1550,13 @@ def alternating_projections_optimize(
                 with torch.no_grad():
                     y_pose.data.clamp_(0.0, 255.0)
             with torch.no_grad():
-                p_pose = y_pose.detach()
+                p_pose = y_pose.data.clone()
                 inc_pose = frames + inc_pose - p_pose
                 frames = p_pose
 
         # ---- Projection 3: Rate minimization (TV denoising) ----
-        y_rate = frames + inc_rate
-        y_rate = y_rate.detach().requires_grad_(True)
-        opt_rate = torch.optim.Adam([y_rate], lr=lr)
+        with torch.no_grad():
+            y_rate.data.copy_(frames + inc_rate)
         for _ in range(num_inner_steps):
             opt_rate.zero_grad()
             loss = tv_weight * compute_compressibility_loss(y_rate)
@@ -1570,7 +1565,7 @@ def alternating_projections_optimize(
             with torch.no_grad():
                 y_rate.data.clamp_(0.0, 255.0)
         with torch.no_grad():
-            p_rate = y_rate.detach()
+            p_rate = y_rate.data.clone()
             inc_rate = frames + inc_rate - p_rate
             frames = p_rate
 

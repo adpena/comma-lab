@@ -34,7 +34,6 @@ try:
         DilatedPostFilter,
         GatedDilatedPostFilter,
         FiLMPostFilter,
-        build_postfilter as _tac_build_postfilter,
     )
     from tac.quantization import (
         DEFAULT_POSTFILTER_META,
@@ -858,7 +857,7 @@ if __name__ == "__main__":
     if TRICK_STACK_ENABLED:
         print(f"  TRICK STACK enabled (profile={TRICK_STACK_PROFILE})", file=sys.stderr)
         try:
-            from tac.trick_stack import stacked_inflate, TrickStackConfig
+            from tac.trick_stack import stacked_inflate
             from tac.profiles import PROFILES
         except ImportError as e:
             print(f"  ERROR: trick_stack requires tac package: {e}", file=sys.stderr)

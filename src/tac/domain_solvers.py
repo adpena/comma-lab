@@ -53,6 +53,14 @@ import torch
 import torch.nn as nn
 import torch.nn.functional as F
 
+from tac.camera import (
+    CLASS_MEAN_COLORS,
+    COMMA_EXTRINSICS,
+    COMMA_INTRINSICS,
+    DEPTH_PRIORS_METERS,
+    NUM_CLASSES,
+)
+
 __all__ = [
     "EgoMotionFlowSolver",
     "RoadPlaneHomography",
@@ -67,29 +75,13 @@ __all__ = [
     "yousfi_domain_ranking",
 ]
 
-# ── Constants ────────────────────────────────────────────────────────────
+# ── Constants (re-exported from tac.camera for backward compatibility) ──
 
-FRAME_H: int = 384
-FRAME_W: int = 512
-FRAME_C: int = 3
-NUM_CLASSES: int = 5
-
-# Default per-class depth priors (meters) for comma self-driving video.
-# road=far ground plane, lane=same as road, vehicle=medium,
-# sky=infinity (large value), background=medium-far.
-DEFAULT_DEPTH_PRIORS: dict[int, float] = {
-    0: 30.0,    # road — ground plane, far
-    1: 30.0,    # lane markings — same plane as road
-    2: 15.0,    # undrivable / vehicle — medium distance
-    3: 1000.0,  # sky — effectively infinity
-    4: 20.0,    # background — medium-far
-}
-
-# Typical comma dashcam intrinsics (from eon/tici sensor specs).
-DEFAULT_FOCAL_LENGTH: float = 910.0  # pixels
-DEFAULT_PRINCIPAL_POINT: tuple[float, float] = (256.0, 192.0)  # image center
-DEFAULT_CAMERA_HEIGHT: float = 1.2  # meters above road plane
-DEFAULT_CAMERA_PITCH: float = 0.02  # radians, slight downward tilt
+DEFAULT_DEPTH_PRIORS = DEPTH_PRIORS_METERS
+DEFAULT_FOCAL_LENGTH: float = COMMA_INTRINSICS.fx
+DEFAULT_PRINCIPAL_POINT: tuple[float, float] = (COMMA_INTRINSICS.cx, COMMA_INTRINSICS.cy)
+DEFAULT_CAMERA_HEIGHT: float = COMMA_EXTRINSICS.height
+DEFAULT_CAMERA_PITCH: float = abs(COMMA_EXTRINSICS.pitch)  # stored positive here for legacy compat
 
 
 # ════════════════════════════════════════════════════════════════════════
@@ -227,6 +219,9 @@ class EgoMotionFlowSolver:
         Uses class centroid displacement and area change to estimate
         camera rotation and translation between consecutive frames.
 
+        Vectorized: computes all frame centroids in one batched pass,
+        then derives per-pair rotations/translations without a Python loop.
+
         Args:
             masks: (T, H, W) long tensor.
 
@@ -236,42 +231,34 @@ class EgoMotionFlowSolver:
         T, H, W = masks.shape
         device = masks.device
 
-        # Coordinate grids
+        # Coordinate grids broadcast over T
         v_coords = torch.arange(H, device=device, dtype=torch.float32)
         u_coords = torch.arange(W, device=device, dtype=torch.float32)
         v_grid, u_grid = torch.meshgrid(v_coords, u_coords, indexing="ij")
+        # (H, W) -> broadcast with (T, H, W)
 
-        rotations = []
-        translations = []
+        # Road mask for all frames: (T, H, W)
+        road_mask = (masks == 0).float()
 
-        for t in range(T - 1):
-            # Compute road class centroid displacement as proxy for ego-motion
-            road_mask_t = (masks[t] == 0).float()
-            road_mask_t1 = (masks[t + 1] == 0).float()
+        # Per-frame road pixel counts: (T,)
+        counts = road_mask.sum(dim=(1, 2)).clamp(min=1.0)
 
-            count_t = road_mask_t.sum().clamp(min=1.0)
-            count_t1 = road_mask_t1.sum().clamp(min=1.0)
+        # Per-frame centroids: (T,) each
+        cu = (u_grid.unsqueeze(0) * road_mask).sum(dim=(1, 2)) / counts
+        cv = (v_grid.unsqueeze(0) * road_mask).sum(dim=(1, 2)) / counts
 
-            cu_t = (u_grid * road_mask_t).sum() / count_t
-            cv_t = (v_grid * road_mask_t).sum() / count_t
-            cu_t1 = (u_grid * road_mask_t1).sum() / count_t1
-            cv_t1 = (v_grid * road_mask_t1).sum() / count_t1
+        # Consecutive-frame differences -> ego-motion estimates
+        du = (cu[1:] - cu[:-1]) / self.config.focal_length  # (T-1,)
+        dv = (cv[1:] - cv[:-1]) / self.config.focal_length  # (T-1,)
+        area_ratio = counts[1:] / counts[:-1]                # (T-1,)
+        tz_est = (area_ratio - 1.0) * 10.0                   # (T-1,)
 
-            # Centroid displacement -> approximate rotation
-            du = (cu_t1 - cu_t) / self.config.focal_length
-            dv = (cv_t1 - cv_t) / self.config.focal_length
+        # Build (T-1, 3) rotation and translation tensors
+        zeros = torch.zeros(T - 1, device=device)
+        rotations = torch.stack([dv * 0.1, -du * 0.1, zeros], dim=1)
+        translations = torch.stack([du * 5.0, dv * 5.0, tz_est], dim=1)
 
-            # Area change -> approximate forward translation
-            area_ratio = count_t1 / count_t
-            tz_est = (area_ratio - 1.0) * 10.0  # scale factor
-
-            rot = torch.tensor([dv * 0.1, -du * 0.1, 0.0], device=device)
-            trans = torch.tensor([du * 5.0, dv * 5.0, tz_est], device=device)
-
-            rotations.append(rot)
-            translations.append(trans)
-
-        return torch.stack(rotations), torch.stack(translations)
+        return rotations, translations
 
     def warp_frame(
         self,
@@ -331,28 +318,24 @@ class EgoMotionFlowSolver:
 
         # Initialize frame 0 from class mean colors if not provided
         if initial_frame is None:
-            class_colors = torch.tensor([
-                [128.0, 128.0, 128.0],  # road
-                [170.0, 170.0, 170.0],  # lane
-                [100.0, 80.0, 60.0],    # undrivable
-                [80.0, 100.0, 120.0],   # movable
-                [180.0, 200.0, 220.0],  # sky
-            ], device=device)
+            colors = CLASS_MEAN_COLORS.to(device)  # (NUM_CLASSES, 3)
             # (H, W) -> (H, W, 3) -> (3, H, W)
-            initial_frame = class_colors[masks[0]].permute(2, 0, 1)
+            initial_frame = colors[masks[0]].permute(2, 0, 1)
 
         # Estimate ego-motion from mask geometry
         rotations, translations = self.estimate_egomotion_from_masks(masks)
         depth_maps = self.compute_depth_map(masks)
 
-        frames = [initial_frame.clone()]
+        # Precompute all flows (independent across frames) — vectorized
+        flows = [
+            self.compute_flow_from_egomotion(depth_maps[t], rotations[t], translations[t])
+            for t in range(T - 1)
+        ]
 
+        # Sequential warp chain (frame t depends on frame t-1)
+        frames = [initial_frame.clone()]
         for t in range(T - 1):
-            flow = self.compute_flow_from_egomotion(
-                depth_maps[t], rotations[t], translations[t],
-            )
-            # Hard constraint: warp previous frame by ego-motion flow
-            warped = self.warp_frame(frames[t], flow)
+            warped = self.warp_frame(frames[t], flows[t])
             frames.append(warped.clamp(0.0, 255.0))
 
         return torch.stack(frames, dim=0)  # (T, C, H, W)
@@ -545,14 +528,8 @@ class RoadPlaneHomography:
         device = masks.device
 
         if initial_frame is None:
-            class_colors = torch.tensor([
-                [128.0, 128.0, 128.0],
-                [170.0, 170.0, 170.0],
-                [100.0, 80.0, 60.0],
-                [80.0, 100.0, 120.0],
-                [180.0, 200.0, 220.0],
-            ], device=device)
-            initial_frame = class_colors[masks[0]].permute(2, 0, 1)
+            colors = CLASS_MEAN_COLORS.to(device)  # (NUM_CLASSES, 3)
+            initial_frame = colors[masks[0]].permute(2, 0, 1)
 
         # Default ego-motion: small forward translation
         if ego_rotation is None:
@@ -561,11 +538,16 @@ class RoadPlaneHomography:
             ego_translation = torch.zeros(T - 1, 3, device=device)
             ego_translation[:, 2] = 0.5  # small forward motion
 
-        frames = [initial_frame.clone()]
+        # Precompute all homographies (independent across frames)
+        homographies = [
+            self.compute_road_homography(ego_rotation[t], ego_translation[t])
+            for t in range(T - 1)
+        ]
 
+        # Sequential warp chain (frame t depends on frame t-1)
+        frames = [initial_frame.clone()]
         for t in range(T - 1):
-            H_mat = self.compute_road_homography(ego_rotation[t], ego_translation[t])
-            warped = self.warp_road_pixels(frames[t], masks[t], H_mat)
+            warped = self.warp_road_pixels(frames[t], masks[t], homographies[t])
             frames.append(warped.clamp(0.0, 255.0))
 
         return torch.stack(frames, dim=0)
@@ -1088,9 +1070,10 @@ class KalmanFrameSmoother:
 
         K = self._pca_basis.shape[0]  # PCA dimensions
 
-        # Project initial frames to PCA space
+        # Project initial frames to PCA space (batched matmul, no per-frame loop)
         flat = frames.reshape(T, D).float()
-        x_init = torch.stack([self.project_to_pca(flat[t]) for t in range(T)])  # (T, K)
+        centered = flat - self._pca_mean.unsqueeze(0)  # (T, D)
+        x_init = (self._pca_basis @ centered.T).T  # (T, K)
 
         # Process model: x_{t+1} = x_t + process_noise
         F_mat = torch.eye(K, device=device)
@@ -1146,10 +1129,8 @@ class KalmanFrameSmoother:
             # Update initial estimates for next re-linearization
             x_init = x_smooth.clone()
 
-        # Reconstruct frames from smoothed PCA coefficients
-        smoothed_flat = torch.stack(
-            [self.reconstruct_from_pca(x_smooth[t]) for t in range(T)],
-        )
+        # Reconstruct frames from smoothed PCA coefficients (batched matmul)
+        smoothed_flat = self._pca_mean.unsqueeze(0) + x_smooth @ self._pca_basis  # (T, D)
         return smoothed_flat.reshape(T, C, H, W).clamp(0.0, 255.0)
 
 

@@ -40,6 +40,14 @@ import torch
 import torch.nn as nn
 import torch.nn.functional as F
 
+__all__ = [
+    "kinetic_energy",
+    "hamiltonian",
+    "LeapfrogIntegrator",
+    "HamiltonianPixelOptimizer",
+    "NoseHooverThermostat",
+]
+
 
 def kinetic_energy(momentum: torch.Tensor, mass: float = 1.0) -> torch.Tensor:
     """Compute kinetic energy T(p) = ||p||^2 / (2m).
@@ -263,6 +271,10 @@ class HamiltonianPixelOptimizer:
         potential_history: list[float] = []
         kinetic_history: list[float] = []
 
+        # Create integrator once and reuse (damping=0 because damping is
+        # applied manually after each leapfrog step to avoid double-damping).
+        integrator = LeapfrogIntegrator(dt=dt_val, mass=mass, damping=0.0)
+
         for step in range(max_steps):
             # Compute damping (anneal from low to high)
             if anneal_damping:
@@ -270,10 +282,6 @@ class HamiltonianPixelOptimizer:
                 current_damping = anneal_start + (anneal_end - anneal_start) * t_frac
             else:
                 current_damping = damping_base
-
-            # Create integrator WITHOUT damping — damping is applied ONCE
-            # after the complete leapfrog step to avoid double-damping.
-            integrator = LeapfrogIntegrator(dt=dt_val, mass=mass, damping=0.0)
 
             # Compute gradient of potential (force)
             q_grad = q.detach().clone().requires_grad_(True)

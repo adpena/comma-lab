@@ -32,7 +32,7 @@ from __future__ import annotations
 
 import sys
 import time
-from dataclasses import dataclass, field
+from dataclasses import dataclass
 from pathlib import Path
 from typing import Any
 
@@ -40,6 +40,14 @@ import numpy as np
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
+
+__all__ = [
+    "TrickStackConfig",
+    "yuv420_to_rgb_frame",
+    "stacked_inflate",
+    "stacked_inflate_from_config",
+    "cpu_stacked_inflate",
+]
 
 # ---------------------------------------------------------------------------
 # Configuration dataclass — every parameter in one place

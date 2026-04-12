@@ -214,6 +214,30 @@ class TrainConfig(BaseModel):
     weight_decay: float = Field(1e-4, ge=0.0, description="AdamW weight decay")
     eta_min: float = Field(1e-4, ge=0.0, description="CosineAnnealingLR minimum learning rate")
 
+    # Camera / geometry priors (for DepthAwareMotionPredictor and domain solvers)
+    # These are passed through to modules that need them. Values follow
+    # tac.camera conventions: depth in meters, focal in pixels, etc.
+    depth_priors: dict[int, float] | None = Field(
+        None,
+        description="Per-class depth priors in meters. Keys are class indices (0-4). "
+        "None = use defaults from tac.camera.DEPTH_PRIORS_METERS.",
+    )
+    focal_length: tuple[float, float] | None = Field(
+        None,
+        description="Camera focal length (fx, fy) in pixels. "
+        "None = use defaults from tac.camera.COMMA_INTRINSICS.",
+    )
+    principal_point: tuple[float, float] | None = Field(
+        None,
+        description="Camera principal point (cx, cy) in pixels from top-left. "
+        "None = use defaults from tac.camera.COMMA_INTRINSICS.",
+    )
+    camera_height: float | None = Field(
+        None,
+        description="Camera height above road in meters. "
+        "None = use default from tac.camera.COMMA_EXTRINSICS.",
+    )
+
     # Resumption
     resume_from: str | None = None
 

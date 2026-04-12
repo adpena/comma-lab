@@ -53,6 +53,16 @@ import torch
 import torch.nn as nn
 import torch.nn.functional as F
 
+__all__ = [
+    "precompute_all_corrections",
+    "compute_hard_frame_corrections",
+    "apply_frame_corrections",
+    "save_corrections",
+    "load_corrections",
+    "compute_quantization_directions",
+    "apply_quantization_directions",
+]
+
 # Binary format constants
 _MAGIC = b"PCOR"
 _VERSION = 1

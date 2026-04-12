@@ -1096,6 +1096,10 @@ def build_dp_sims_renderer_v2(
     spade_hidden: int = 64,
     noise_dim: int = 16,
     use_noise: bool = True,
+    depth_priors: dict[int, float] | None = None,
+    focal_length: tuple[float, float] | None = None,
+    principal_point: tuple[float, float] | None = None,
+    camera_height: float | None = None,
 ) -> DPSIMSPairGenerator:
     """Build DP-SIMS v2: DepthAwareMotionPredictor + spatial blend + deterministic noise.
 
@@ -1133,7 +1137,13 @@ def build_dp_sims_renderer_v2(
         use_noise=use_noise,
     )
 
-    motion = DepthAwareMotionPredictor(num_classes=num_classes)
+    motion = DepthAwareMotionPredictor(
+        num_classes=num_classes,
+        depth_priors=depth_priors,
+        focal_length=focal_length,
+        principal_point=principal_point,
+        camera_height=camera_height,
+    )
 
     pair_gen = DPSIMSPairGenerator(
         renderer,

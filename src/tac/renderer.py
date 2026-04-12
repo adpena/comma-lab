@@ -745,6 +745,10 @@ def build_renderer(
     blend_mode: str = "scalar",
     noise_mode: str = "deterministic",
     motion_type: str = "learned_cnn",
+    depth_priors: dict[int, float] | None = None,
+    focal_length: tuple[float, float] | None = None,
+    principal_point: tuple[float, float] | None = None,
+    camera_height: float | None = None,
 ) -> PairGenerator:
     """Build the full mask-to-pair rendering pipeline.
 
@@ -801,6 +805,10 @@ def build_renderer(
         from .depth_motion import DepthAwareMotionPredictor
         motion = DepthAwareMotionPredictor(
             num_classes=num_classes,
+            depth_priors=depth_priors,
+            focal_length=focal_length,
+            principal_point=principal_point,
+            camera_height=camera_height,
         )
     elif motion_type == "none":
         # Stub: zero-flow motion predictor (direct rendering only)
