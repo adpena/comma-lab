@@ -92,6 +92,30 @@ CPU lane using only 15 of 30 min inflate budget. Stack: CRF sweep (rate), archiv
 
 Eureka: scorer gradient, null-space, fragility maps, brightness shifts, PoseNet targets can ALL be pre-computed at compress time (unlimited budget) and stored in archive (+92KB, rate cost 0.06). At inflate time, applying pre-computed corrections is INSTANT. Also: parallel chunking (4x speedup), frame-specific models, VVC for masks. Revised inflate estimate: 4 minutes total with all tricks.
 
+## 2026-04-11 [diagnosis] PoseNet 29x local/auth divergence: DALI GPU decode vs PyAV CPU decode
+
+Same archive (md5 463b6fdb, 864167 bytes) scores PoseNet 0.00218 auth vs 0.06256 local (29x).
+SegNet matches (0.00610 auth vs 0.00565 local, 1.08x). Rate identical (0.02302).
+
+Diagnostic: ran diagnose_scorer.py with BOTH torch 2.10.0 (upstream) and 2.11.0 (our venv).
+Result: IDENTICAL per-pair outputs. Every single number matches to 8 decimal places.
+Therefore: torch/timm version is NOT the cause.
+
+Root cause: Auth scorer runs on CUDA, uses DaliVideoDataset with NVDEC hardware video decode.
+Local scorer runs on CPU, uses AVVideoDataset with PyAV software decode. NVDEC and PyAV produce
+different pixel values for the same video (different YUV-to-RGB conversion rounding). Ground truth
+frames differ => PoseNet outputs differ => MSE is 29x higher locally. SegNet uses argmax which
+is robust to sub-pixel differences. Rate is file-size-based, no model involved.
+
+Mitigations implemented:
+1. calibrate_score() in runner.py: POSE_CALIBRATION_FACTOR=0.0349 (provisional, 1 data point)
+2. runner.py stage_score now prefers upstream venv Python for scoring
+3. diagnose_scorer.py: Click CLI for per-pair diagnostic across venvs
+
+Contrarian note: Per-pair PoseNet values vary by 1000x (CV=1.15). A single linear factor corrects
+the MEAN correctly but could be wrong for checkpoints that shift the content-type distribution.
+The definitive fix is to run CUDA+DALI scoring (requires GPU), or to submit.
+
 ## 2026-04-12 [breakthrough] Yousfi GPU eureka: no renderer needed — constrained optimization from noise
 
 GPU Eureka 1-4: (1) Generate in scorer-input space, invert preprocessing. (2) Pre-compute expected PoseNet output from ego-motion trajectory. (3) Frame generation as constrained optimization: minimize rate subject to PoseNet=expected + SegNet argmax=masks. (4) No neural renderer needed — start from noise seed, run 1000 gradient descent steps against constraints. Archive: masks 239B + targets 7KB + seed 64B = 8KB total. Score projection: 0.135. Fits in 50 seconds on T4.
