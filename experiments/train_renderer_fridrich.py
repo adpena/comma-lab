@@ -1124,6 +1124,8 @@ def train_fridrich_renderer(cfg: FridrichRendererConfig) -> dict[str, Any]:
                 "seg_hard": seg_hard,  # hard argmax disagreement (eval metric)
                 "pose_dist": pose_dist.item(),
                 "pair_mode": cfg.pair_mode,
+                **({"gate_mean": getattr(pair_gen, "_last_gate_mean", None)}
+                   if cfg.pair_mode == "asymmetric" else {}),
                 "tv": tv.item(),
                 "flow_reg": flow_reg.item(),
                 "lambda_seg": lambda_seg,
