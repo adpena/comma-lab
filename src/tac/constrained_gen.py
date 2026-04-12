@@ -68,6 +68,7 @@ __all__ = [
     "generate_in_scorer_space",
     "scorer_as_compressor",
     "coupled_trajectory_optimize",
+    "gpu_lane_full_pipeline",
     "alternating_projections_optimize",
     "newton_step_optimize",
     "ConstrainedFrameGenerator",
@@ -1451,6 +1452,200 @@ def coupled_trajectory_optimize(
     with torch.no_grad():
         result = frames.detach().round().clamp(0.0, 255.0)
     return result
+
+
+def gpu_lane_full_pipeline(
+    masks: torch.Tensor,
+    posenet: torch.nn.Module,
+    segnet: torch.nn.Module,
+    device: str = "cuda",
+    **cfg,
+) -> dict:
+    """Complete GPU lane pipeline with Fridrich integration.
+
+    Orchestrates all stages of the GPU lane in a single call:
+
+    1. Generate initial frames from masks (class-mean colors + noise)
+    2. Estimate expected pose from mask dynamics (if not provided)
+    3. Run coupled trajectory optimization (4D-Var joint optimization)
+    4. Estimate detection boundary (Fridrich: find scorer's blind spot)
+    5. Compute pixel cost map (Fridrich hybrid: scorer Jacobian + S-UNIWARD)
+    6. Run Fridrich constrained refinement (minimize rate s.t. boundary)
+    7. Apply STC quantization (Fridrich: cost-weighted optimal rounding)
+    8. Build archive
+
+    Args:
+        masks: (N, H, W) long tensor with target class indices.
+        posenet: frozen PoseNet model.
+        segnet: frozen SegNet model.
+        device: computation device.
+        **cfg: configuration overrides:
+            - expected_pose (Tensor): (P, 6) pose targets. If None, estimated from masks.
+            - num_steps (int): coupled trajectory steps (default 1000).
+            - fridrich_steps (int): Fridrich refinement steps (default 500).
+            - lr (float): learning rate (default 0.01).
+            - seg_weight (float): SegNet constraint weight (default 100.0).
+            - pose_weight (float): PoseNet constraint weight (default 10.0).
+            - compress_weight (float): compressibility weight (default 1.0).
+            - noise_seed (int): deterministic seed (default 42).
+            - batch_size (int): frames per scorer forward pass (default 8).
+            - log_every (int): print progress every N steps (default 100).
+            - skip_fridrich (bool): skip Fridrich refinement (default False).
+            - skip_stc (bool): skip STC quantization (default False).
+            - cost_method (str): pixel cost method (default "hybrid").
+            - num_probes (int): boundary probing count (default 20).
+            - rate_reduction (float): STC target rate reduction (default 0.1).
+
+    Returns:
+        Dict with:
+            'optimized_frames': (N, H, W, 3) float tensor in [0, 255]
+            'masks': (N, H, W) long tensor
+            'expected_pose': (P, 6) float tensor
+            'boundary': dict from estimate_detection_boundary (or None)
+            'cost_map': (N, H, W) pixel cost map (or None)
+            'diagnostics': dict with per-stage timing and metrics
+    """
+    from tac.fridrich import (
+        estimate_detection_boundary,
+        compute_pixel_cost_map,
+        fridrich_constrained_optimize,
+        optimal_quantization_stc,
+    )
+
+    num_steps = cfg.get("num_steps", 1000)
+    fridrich_steps = cfg.get("fridrich_steps", 500)
+    lr = cfg.get("lr", 0.01)
+    seg_weight = cfg.get("seg_weight", 100.0)
+    pose_weight = cfg.get("pose_weight", 10.0)
+    compress_weight = cfg.get("compress_weight", 1.0)
+    noise_seed = cfg.get("noise_seed", 42)
+    batch_size = cfg.get("batch_size", 8)
+    log_every = cfg.get("log_every", 100)
+    skip_fridrich = cfg.get("skip_fridrich", False)
+    skip_stc = cfg.get("skip_stc", False)
+    cost_method = cfg.get("cost_method", "hybrid")
+    num_probes = cfg.get("num_probes", 20)
+    rate_reduction = cfg.get("rate_reduction", 0.1)
+
+    import time
+    diagnostics: dict[str, Any] = {}
+
+    # --- Stage 1: Pose targets ---
+    expected_pose = cfg.get("expected_pose", None)
+    if expected_pose is None:
+        t0 = time.time()
+        print("[gpu_lane_pipeline] Stage 1: Estimating expected pose from masks...")
+        expected_pose = estimate_expected_pose(masks, device=device)
+        diagnostics["pose_estimation_seconds"] = time.time() - t0
+        print(f"  Pose targets shape: {expected_pose.shape}")
+    else:
+        diagnostics["pose_estimation_seconds"] = 0.0
+        print(f"[gpu_lane_pipeline] Stage 1: Using provided pose targets ({expected_pose.shape})")
+
+    # --- Stage 2: Coupled trajectory optimization (4D-Var) ---
+    t0 = time.time()
+    print(f"[gpu_lane_pipeline] Stage 2: Coupled trajectory ({num_steps} steps)...")
+    frames = coupled_trajectory_optimize(
+        masks=masks,
+        expected_pose=expected_pose,
+        posenet=posenet,
+        segnet=segnet,
+        num_steps=num_steps,
+        lr=lr,
+        seg_weight=seg_weight,
+        pose_weight=pose_weight,
+        compress_weight=compress_weight,
+        noise_seed=noise_seed,
+        device=device,
+        log_every=log_every,
+    )
+    diagnostics["coupled_trajectory_seconds"] = time.time() - t0
+    print(f"  Coupled trajectory done in {diagnostics['coupled_trajectory_seconds']:.1f}s")
+
+    boundary = None
+    cost_map = None
+
+    if not skip_fridrich:
+        # --- Stage 3: Detection boundary estimation ---
+        t0 = time.time()
+        print("[gpu_lane_pipeline] Stage 3: Estimating detection boundary...")
+        frames_bchw = frames.permute(0, 3, 1, 2).contiguous()
+        boundary = estimate_detection_boundary(
+            frames_bchw, posenet, segnet,
+            num_probes=num_probes,
+            max_magnitude=30.0,
+            device=device,
+            subsample_frames=4,
+        )
+        seg_boundary = boundary["seg_boundary"]
+        pose_boundary = boundary["pose_boundary"]
+        diagnostics["boundary_estimation_seconds"] = time.time() - t0
+        print(
+            f"  Boundary: seg={seg_boundary:.6f}, pose={pose_boundary:.6f} "
+            f"in {diagnostics['boundary_estimation_seconds']:.1f}s"
+        )
+
+        # --- Stage 4: Pixel cost map ---
+        t0 = time.time()
+        print("[gpu_lane_pipeline] Stage 4: Computing pixel cost map...")
+        cost_map = compute_pixel_cost_map(
+            frames_bchw, posenet, segnet,
+            method=cost_method,
+            device=device,
+            subsample_frames=1,
+        )
+        diagnostics["cost_map_seconds"] = time.time() - t0
+        print(
+            f"  Cost map: [{cost_map.min():.4f}, {cost_map.max():.4f}] "
+            f"in {diagnostics['cost_map_seconds']:.1f}s"
+        )
+
+        # --- Stage 5: Fridrich constrained refinement ---
+        t0 = time.time()
+        print(f"[gpu_lane_pipeline] Stage 5: Fridrich constrained refinement ({fridrich_steps} steps)...")
+        refined_bchw = fridrich_constrained_optimize(
+            frames,
+            posenet, segnet,
+            pixel_costs=cost_map,
+            seg_boundary=seg_boundary,
+            pose_boundary=pose_boundary,
+            num_steps=fridrich_steps,
+            lr=lr,
+            device=device,
+            batch_size=batch_size,
+        )
+        diagnostics["fridrich_seconds"] = time.time() - t0
+        print(f"  Fridrich refinement done in {diagnostics['fridrich_seconds']:.1f}s")
+
+        # --- Stage 6: STC quantization ---
+        if not skip_stc:
+            t0 = time.time()
+            print("[gpu_lane_pipeline] Stage 6: STC quantization...")
+            quantized_bchw = optimal_quantization_stc(
+                refined_bchw.float(),
+                cost_map,
+                target_rate_reduction=rate_reduction,
+            )
+            frames = quantized_bchw.permute(0, 2, 3, 1).contiguous().float()
+            diagnostics["stc_seconds"] = time.time() - t0
+            print(f"  STC quantization done in {diagnostics['stc_seconds']:.1f}s")
+        else:
+            frames = refined_bchw.permute(0, 2, 3, 1).contiguous().float()
+            diagnostics["stc_seconds"] = 0.0
+    else:
+        diagnostics["boundary_estimation_seconds"] = 0.0
+        diagnostics["cost_map_seconds"] = 0.0
+        diagnostics["fridrich_seconds"] = 0.0
+        diagnostics["stc_seconds"] = 0.0
+
+    return {
+        "optimized_frames": frames,
+        "masks": masks,
+        "expected_pose": expected_pose,
+        "boundary": boundary,
+        "cost_map": cost_map,
+        "diagnostics": diagnostics,
+    }
 
 
 def alternating_projections_optimize(

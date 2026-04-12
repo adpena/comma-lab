@@ -1786,6 +1786,54 @@ FRIDRICH_CPU_POSTFILTER = {
     "fridrich_skip_stc": False,
 }
 
+# ── GPU Lane: Full Pipeline profiles ─���────────────────────────────────
+# Coupled trajectory (4D-Var) + Fridrich constrained refinement + STC.
+# These profiles drive gpu_lane_full_pipeline() in constrained_gen.py.
+
+GPU_LANE_SMOKE = {
+    "variant": "constrained_gen",
+    "optimizer": "gpu_lane_full_pipeline",
+    "hidden": 0,  # no neural weights
+    "epochs": 1,  # single "epoch" = the optimization loop
+    "num_steps": 100,  # coupled trajectory steps (smoke test)
+    "fridrich_steps": 50,  # Fridrich refinement steps
+    "lr": 0.01,
+    "seg_weight": 100.0,
+    "pose_weight": 10.0,
+    "compress_weight": 1.0,
+    "noise_seed": 42,
+    "batch_size": 8,  # P100 16GB -> 8 frames max
+    "log_every": 25,
+    "loss_mode": "standard",
+    "skip_fridrich": False,
+    "skip_stc": False,
+    "cost_method": "hybrid",
+    "num_probes": 10,  # fewer probes for smoke
+    "rate_reduction": 0.1,
+}
+
+GPU_LANE_FULL = {
+    "variant": "constrained_gen",
+    "optimizer": "gpu_lane_full_pipeline",
+    "hidden": 0,
+    "epochs": 1,
+    "num_steps": 1000,  # full coupled trajectory optimization
+    "fridrich_steps": 500,  # full Fridrich refinement
+    "lr": 0.01,
+    "seg_weight": 100.0,
+    "pose_weight": 10.0,
+    "compress_weight": 1.0,
+    "noise_seed": 42,
+    "batch_size": 8,
+    "log_every": 100,
+    "loss_mode": "standard",
+    "skip_fridrich": False,
+    "skip_stc": False,
+    "cost_method": "hybrid",
+    "num_probes": 20,
+    "rate_reduction": 0.1,
+}
+
 PROFILES = {
     "council_v1": COUNCIL_V1,
     "council_v2_adaptive": COUNCIL_V2_ADAPTIVE,
@@ -1901,6 +1949,9 @@ PROFILES = {
     "fridrich_smoke": FRIDRICH_SMOKE,
     "fridrich_full": FRIDRICH_FULL,
     "fridrich_cpu_postfilter": FRIDRICH_CPU_POSTFILTER,
+    # GPU Lane: Full pipeline (coupled trajectory + Fridrich)
+    "gpu_lane_smoke": GPU_LANE_SMOKE,
+    "gpu_lane_full": GPU_LANE_FULL,
 }
 
 # Deprecated profile names that should emit runtime warnings
