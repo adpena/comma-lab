@@ -1043,6 +1043,60 @@ KALMAN_BASELINE = {
     "kalman_obs_noise_scale": 10.0,
 }
 
+# ── DP-SIMS V2: Depth-aware motion + spatial blend + deterministic pairs ──
+# V2 replaces the learned MotionPredictor CNN with a geometric
+# DepthAwareMotionPredictor (~200 params, parallax flow from per-class depth
+# + 6-DOF camera motion). Also uses spatially-varying blend weights and
+# disables noise injection during pair generation for frame consistency.
+
+DP_SIMS_V2_SMOKE = {
+    "variant": "dp_sims_v2",
+    "channels": (128, 64, 32, 16),  # lightweight: ~500K params
+    "init_h": 24,
+    "init_w": 32,
+    "spade_hidden": 32,
+    "noise_dim": 16,
+    "use_noise": True,  # enabled for training, disabled during pair gen
+    "epochs": 200,
+    "lr": 1e-3,
+    "ema_decay": 0.997,
+    "alpha": 0.0,
+    "sal_lambda": 0.0,
+    "loss_mode": "standard",
+    "segnet_loss_weight": 100.0,
+    "boundary_weight": 1.0,
+    "hard_frame_ratio": 0.0,
+    "eval_every": 10,
+    "accum_steps": 2,
+    "quantize_mode": "fp4",
+    "pretrain_epochs": 100,
+}
+
+DP_SIMS_V2_FULL = {
+    "variant": "dp_sims_v2",
+    "channels": (256, 128, 64, 32),  # full capacity: ~1.5M params
+    "init_h": 24,
+    "init_w": 32,
+    "spade_hidden": 64,
+    "noise_dim": 16,
+    "use_noise": True,
+    "epochs": 2500,
+    "lr": 5e-4,
+    "ema_decay": 0.997,
+    "alpha": 0.0,
+    "sal_lambda": 0.0,
+    "loss_mode": "standard",
+    "segnet_loss_weight": 100.0,
+    "boundary_weight": 50.0,
+    "hard_frame_ratio": 0.3,
+    "error_replay_every": 200,
+    "eval_every": 5,
+    "accum_steps": 4,
+    "use_swa": True,
+    "quantize_mode": "fp4",
+    "pretrain_epochs": 500,
+}
+
 PROFILES = {
     "council_v1": COUNCIL_V1,
     "council_v2_adaptive": COUNCIL_V2_ADAPTIVE,
@@ -1074,6 +1128,8 @@ PROFILES = {
     "dp_sims_full": DP_SIMS_FULL,
     "dp_sims_small_smoke": DP_SIMS_SMALL_SMOKE,
     "dp_sims_small_full": DP_SIMS_SMALL_FULL,
+    "dp_sims_v2_smoke": DP_SIMS_V2_SMOKE,
+    "dp_sims_v2_full": DP_SIMS_V2_FULL,
     "vqvae_smoke": VQVAE_SMOKE,
     "vqvae_full": VQVAE_FULL,
     "vqvae_compact": VQVAE_COMPACT,

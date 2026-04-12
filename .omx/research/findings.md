@@ -79,3 +79,7 @@ Trick 32: backward delta generation (ONE perfect last frame + 1199 tiny deltas).
 FP4-quantized DP-SIMS achieves SegNet 0.003 — identical to Quantizr (0.60 score). Entire remaining gap is PoseNet (0.482 vs 0.001 = 480x) and rate (2.2MB vs 386KB = 5.7x). Path to sub-0.60: (1) train 1000+ P2 epochs for PoseNet, (2) shrink model to 500KB, (3) add cross-frame attention. Architecture validated.
 - Score: 2.5
 - Variant: dp_sims
+
+## 2026-04-12 [decision] Noise strategy must be configurable via toggles
+
+DPSIMSPairGenerator needs 3 noise modes, configurable per-run: (1) deterministic=same fixed seed for both frames in pair, (2) shared=same random noise for both frames, (3) independent=current behavior (different noise per frame). Default should be deterministic for PoseNet safety. Toggled via constructor arg or profile config.

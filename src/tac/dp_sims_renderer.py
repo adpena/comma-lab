@@ -36,6 +36,8 @@ import torch
 import torch.nn as nn
 import torch.nn.functional as F
 
+from tac.renderer import warp_with_flow
+
 # ── SPADE Normalization ─────────────────────────────────────────────────
 
 
@@ -632,18 +634,75 @@ class DPSIMSPairGenerator(nn.Module):
 
     Same interface as PairGenerator / WaveletPairGenerator -- drop-in replacement.
 
+    Features:
+        - Spatially-varying blend weights via a small conv net that predicts
+          per-pixel alpha from the concatenated mask pair (zero-init for safe start).
+        - Deterministic pair generation: when deterministic_pairs=True, noise
+          injection is disabled during pair generation to ensure consistent
+          frame pairs (avoids noise inconsistency between frame_t and frame_t1).
+
     Args:
-        renderer: DPSIMSRenderer instance
-        motion: MotionPredictor instance (from renderer.py)
+        renderer: DPSIMSRenderer instance.
+        motion: MotionPredictor instance (from renderer.py).
+        deterministic_pairs: if True, disable noise during pair generation
+            to ensure frame consistency (default True).
+        spatial_blend: if True, use a small conv net for per-pixel blend
+            weights instead of a single scalar (default True).
     """
 
-    def __init__(self, renderer: DPSIMSRenderer, motion: nn.Module):
+    def __init__(
+        self,
+        renderer: DPSIMSRenderer,
+        motion: nn.Module,
+        deterministic_pairs: bool = True,
+        spatial_blend: bool = True,
+    ):
         super().__init__()
         self.renderer = renderer
         self.motion = motion
-        # Learned blend weight: sigmoid(raw) gives alpha in [0, 1]
-        # Initialize to 0 -> sigmoid(0) = 0.5 -> equal blend
-        self.blend_logit = nn.Parameter(torch.tensor(0.0))
+        self.deterministic_pairs = deterministic_pairs
+        self.spatial_blend = spatial_blend
+
+        if spatial_blend:
+            num_classes = renderer.num_classes
+            # Per-pixel blend weights from concatenated mask pair (2 * num_classes one-hot)
+            self.blend_net = nn.Sequential(
+                nn.Conv2d(num_classes * 2, 16, 3, padding=1),
+                nn.ReLU(inplace=True),
+                nn.Conv2d(16, 1, 1),
+            )
+            # Zero-init output for safe start (sigmoid(0) = 0.5 everywhere)
+            nn.init.zeros_(self.blend_net[-1].weight)
+            nn.init.zeros_(self.blend_net[-1].bias)
+        else:
+            # Fallback: single scalar blend logit
+            self.blend_logit = nn.Parameter(torch.tensor(0.0))
+
+    def _encode_mask_pair(
+        self,
+        mask_t: torch.Tensor,
+        mask_t1: torch.Tensor,
+    ) -> torch.Tensor:
+        """One-hot encode and concatenate mask pair.
+
+        Args:
+            mask_t: (B, H, W) long.
+            mask_t1: (B, H, W) long.
+
+        Returns:
+            (B, 2*num_classes, H, W) float tensor.
+        """
+        num_classes = self.renderer.num_classes
+        B, H, W = mask_t.shape
+        device = mask_t.device
+
+        oh_t = torch.zeros(B, num_classes, H, W, device=device, dtype=torch.float32)
+        oh_t.scatter_(1, mask_t.unsqueeze(1), 1.0)
+
+        oh_t1 = torch.zeros(B, num_classes, H, W, device=device, dtype=torch.float32)
+        oh_t1.scatter_(1, mask_t1.unsqueeze(1), 1.0)
+
+        return torch.cat([oh_t, oh_t1], dim=1)
 
     def forward(
         self,
@@ -653,26 +712,46 @@ class DPSIMSPairGenerator(nn.Module):
     ) -> torch.Tensor:
         """Generate a scored frame pair from two consecutive masks.
 
+        When deterministic_pairs is True, noise injection is disabled during
+        rendering to ensure consistent frame pairs. This prevents the noise
+        inconsistency bug where different noise samples for frame_t and
+        frame_t1 introduce spurious temporal differences.
+
         Args:
-            mask_t: (B, H, W) long -- mask at time t
-            mask_t1: (B, H, W) long -- mask at time t+1
-            noise: optional noise for deterministic generation
+            mask_t: (B, H, W) long -- mask at time t.
+            mask_t1: (B, H, W) long -- mask at time t+1.
+            noise: optional noise for deterministic generation (ignored when
+                deterministic_pairs=True).
 
         Returns:
-            (B, 2, H, W, 3) float tensor in [0, 255] -- HWC pair format
+            (B, 2, H, W, 3) float tensor in [0, 255] -- HWC pair format.
         """
-        from tac.renderer import warp_with_flow
-
-        # Render both frames directly via SPADE synthesis
-        frame_t = self.renderer(mask_t, noise=noise)  # (B, 3, H, W)
-        frame_t1 = self.renderer(mask_t1, noise=noise)  # (B, 3, H, W)
+        # Determine whether to suppress noise for pair consistency
+        if self.deterministic_pairs:
+            render_noise: torch.Tensor | None = None
+            # Temporarily disable noise in renderer
+            orig_use_noise = self.renderer.use_noise
+            self.renderer.use_noise = False
+            try:
+                frame_t = self.renderer(mask_t, noise=render_noise)   # (B, 3, H, W)
+                frame_t1 = self.renderer(mask_t1, noise=render_noise)  # (B, 3, H, W)
+            finally:
+                self.renderer.use_noise = orig_use_noise
+        else:
+            frame_t = self.renderer(mask_t, noise=noise)   # (B, 3, H, W)
+            frame_t1 = self.renderer(mask_t1, noise=noise)  # (B, 3, H, W)
 
         # Predict flow and warp frame_t -> frame_t1_warped
         flow = self.motion(mask_t, mask_t1)  # (B, 2, H, W)
         frame_t1_warped = warp_with_flow(frame_t, flow)
 
-        # Blend warped and directly-rendered frame_t+1
-        alpha = torch.sigmoid(self.blend_logit)
+        # Compute blend weights
+        if self.spatial_blend:
+            mask_pair_oh = self._encode_mask_pair(mask_t, mask_t1)
+            alpha = torch.sigmoid(self.blend_net(mask_pair_oh))  # (B, 1, H, W)
+        else:
+            alpha = torch.sigmoid(self.blend_logit)  # scalar
+
         frame_t1_blended = (alpha * frame_t1_warped + (1.0 - alpha) * frame_t1).clamp(0.0, 255.0)
 
         # Pack to HWC pair format: (B, 2, H, W, 3)
@@ -698,6 +777,8 @@ def build_dp_sims_renderer(
     use_noise: bool = True,
     motion_hidden: int = 32,
     motion_embed_dim: int = 6,
+    deterministic_pairs: bool = True,
+    spatial_blend: bool = True,
 ) -> DPSIMSPairGenerator:
     """Build the full DP-SIMS mask-to-pair rendering pipeline.
 
@@ -710,6 +791,8 @@ def build_dp_sims_renderer(
         - Cross-attention noise injection for texture diversity
         - MotionPredictor for PoseNet-compatible frame pairs
         - Soft sigmoid output for always-flowing gradients
+        - Deterministic pair generation (noise disabled during pairs)
+        - Spatially-varying blend weights via conv net
 
     Args:
         num_classes: segmentation classes (5 for comma)
@@ -721,6 +804,8 @@ def build_dp_sims_renderer(
         use_noise: enable cross-attention noise injection
         motion_hidden: MotionPredictor hidden channels
         motion_embed_dim: MotionPredictor embedding dimension
+        deterministic_pairs: disable noise during pair generation
+        spatial_blend: use per-pixel blend weights from mask pair
 
     Returns:
         DPSIMSPairGenerator wrapping DPSIMSRenderer + MotionPredictor
@@ -743,7 +828,12 @@ def build_dp_sims_renderer(
         hidden=motion_hidden,
     )
 
-    pair_gen = DPSIMSPairGenerator(renderer, motion)
+    pair_gen = DPSIMSPairGenerator(
+        renderer,
+        motion,
+        deterministic_pairs=deterministic_pairs,
+        spatial_blend=spatial_blend,
+    )
 
     total = pair_gen.param_count()
     r_count = renderer.param_count()
@@ -751,8 +841,9 @@ def build_dp_sims_renderer(
     ch_str = "->".join(str(c) for c in channels)
     print(
         f"[dp_sims] Built DPSIMSPairGenerator: {total:,} params "
-        f"(renderer={r_count:,}, motion={m_count:,}, blend=1, "
-        f"channels={ch_str}, SPADE=on, noise={'on' if use_noise else 'off'})"
+        f"(renderer={r_count:,}, motion={m_count:,}, "
+        f"channels={ch_str}, SPADE=on, noise={'on' if use_noise else 'off'}, "
+        f"deterministic_pairs={deterministic_pairs}, spatial_blend={spatial_blend})"
     )
 
     return pair_gen
@@ -972,13 +1063,86 @@ def build_dp_sims_renderer_weighted(
         hidden=motion_hidden,
     )
 
-    pair_gen = DPSIMSPairGenerator(renderer, motion)
+    pair_gen = DPSIMSPairGenerator(
+        renderer,
+        motion,
+        deterministic_pairs=True,
+        spatial_blend=True,
+    )
 
     total = pair_gen.param_count()
     ratios_str = ", ".join(f"cls{k}={v:.1f}x" for k, v in sorted(class_param_ratios.items()))
     print(
         f"[dp_sims] Built WeightedSPADE DPSIMSPairGenerator: {total:,} params "
         f"(replaced {replaced} SPADE modules, ratios: {ratios_str})"
+    )
+
+    return pair_gen
+
+
+def build_dp_sims_renderer_v2(
+    num_classes: int = 5,
+    channels: tuple[int, ...] = (256, 128, 64, 32),
+    init_h: int = 24,
+    init_w: int = 32,
+    spade_hidden: int = 64,
+    noise_dim: int = 16,
+    use_noise: bool = True,
+) -> DPSIMSPairGenerator:
+    """Build DP-SIMS v2: DepthAwareMotionPredictor + spatial blend + deterministic noise.
+
+    V2 improvements over v1:
+        1. DepthAwareMotionPredictor: geometric parallax flow from per-class
+           depth priors and 6-DOF camera motion (~200 params, geometrically
+           principled instead of CNN-guessed flow).
+        2. Spatially-varying blend: per-pixel alpha from mask pair via conv net
+           (replaces single scalar blend weight).
+        3. Deterministic pairs: noise injection disabled during pair generation
+           to prevent noise inconsistency between frame_t and frame_t1.
+
+    Args:
+        num_classes: segmentation classes (5 for comma).
+        channels: channel widths at each progressive stage.
+        init_h: initial constant height.
+        init_w: initial constant width.
+        spade_hidden: hidden width for SPADE conditioning convs.
+        noise_dim: noise dimension for cross-attention injection.
+        use_noise: enable cross-attention noise injection (disabled during pairs).
+
+    Returns:
+        DPSIMSPairGenerator with DepthAwareMotionPredictor, spatial blend,
+        and deterministic pair generation.
+    """
+    from tac.depth_motion import DepthAwareMotionPredictor
+
+    renderer = DPSIMSRenderer(
+        num_classes=num_classes,
+        channels=channels,
+        init_h=init_h,
+        init_w=init_w,
+        spade_hidden=spade_hidden,
+        noise_dim=noise_dim,
+        use_noise=use_noise,
+    )
+
+    motion = DepthAwareMotionPredictor(num_classes=num_classes)
+
+    pair_gen = DPSIMSPairGenerator(
+        renderer,
+        motion,
+        deterministic_pairs=True,
+        spatial_blend=True,
+    )
+
+    total = pair_gen.param_count()
+    r_count = renderer.param_count()
+    m_count = motion.param_count()
+    ch_str = "->".join(str(c) for c in channels)
+    print(
+        f"[dp_sims_v2] Built DPSIMSPairGenerator v2: {total:,} params "
+        f"(renderer={r_count:,}, depth_motion={m_count:,}, "
+        f"channels={ch_str}, SPADE=on, noise={'on' if use_noise else 'off'}, "
+        f"deterministic_pairs=True, spatial_blend=True)"
     )
 
     return pair_gen

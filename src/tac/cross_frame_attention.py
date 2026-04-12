@@ -1,8 +1,9 @@
 """Cross-frame attention for temporal coherence in neural renderers (Trick 20).
 
-Lightweight cross-attention module that attends from current-frame features
-to previous-frame features.  This gives the renderer an explicit mechanism
-to copy or adapt previous-frame information, improving:
+Patch-based cross-attention module that attends from current-frame features
+to previous-frame features with real spatial key-value lookup.  This gives
+the renderer an explicit mechanism to discover spatial displacement and
+copy or adapt previous-frame information, improving:
 
     1. Temporal consistency (reduces flicker between consecutive frames).
     2. PoseNet score (PoseNet compares *pairs* — consistent features help).
@@ -18,9 +19,15 @@ Architecture::
     K = W_k(previous_features)   shape: (B, C, H, W)
     V = W_v(previous_features)   shape: (B, C, H, W)
 
-    # Spatial attention: per-pixel, channel-reduced dot product
-    attn = softmax(Q @ K^T / sqrt(d_head))  over channel dim per pixel
-    out = attn * V
+    # Downsample to 8x8 patches -> N patch tokens (e.g. 48x64 = 3072)
+    Q_patches, K_patches, V_patches = patchify(Q, K, V)
+
+    # Full cross-attention over patch tokens
+    attn = softmax(Q_patches @ K_patches^T / sqrt(d_head))
+    out_patches = attn @ V_patches
+
+    # Upsample back to full resolution
+    out = upsample(out_patches)
     output = current_features + gate * W_o(out)
 
 The gate starts at 0, so training is stable even when prepended to an
@@ -45,30 +52,32 @@ import torch.nn.functional as F
 
 
 class CrossFrameAttention(nn.Module):
-    """Lightweight cross-attention: current features attend to previous features.
+    """Patch-based cross-attention: current frame patches attend to previous frame patches.
 
-    Multi-head attention with per-pixel spatial operation (no quadratic
-    attention over spatial locations — efficient for high-resolution features).
+    Real spatial cross-attention that can discover spatial displacement between
+    frames. Features are reshaped into 8x8 patches, then multi-head attention
+    is computed over patch tokens (Q from current, K/V from previous).
 
-    Each head computes:
-        score = sum(q * k, dim=channel) / sqrt(d_head)
-        attn_weight = sigmoid(score)      # per-pixel, per-head
-        attended = attn_weight * v
+    For 384x512 input this produces 48x64 = 3072 patch tokens, which is
+    manageable for full attention. Attended features are upsampled back to
+    the original resolution.
 
-    This is O(B * num_heads * H * W * d_head), much cheaper than
-    full spatial self-attention which is O(B * C * (H*W)^2).
+    Complexity: O(B * num_heads * N_patches^2 * d_head) where N_patches = (H/8)*(W/8).
+    For 384x512: N=3072, d_head=16, num_heads=4 => ~600M FLOPs per call.
 
     Args:
         dim: feature channel dimension (must be divisible by num_heads).
         num_heads: number of attention heads (default 4).
+        patch_size: spatial patch size for tokenization (default 8).
     """
 
-    def __init__(self, dim: int, num_heads: int = 4):
+    def __init__(self, dim: int, num_heads: int = 4, patch_size: int = 8):
         super().__init__()
         assert dim % num_heads == 0, f"dim={dim} must be divisible by num_heads={num_heads}"
         self.dim = dim
         self.num_heads = num_heads
         self.d_head = dim // num_heads
+        self.patch_size = patch_size
 
         # Q from current, K/V from previous
         self.to_q = nn.Conv2d(dim, dim, 1, bias=False)
@@ -85,12 +94,25 @@ class CrossFrameAttention(nn.Module):
         nn.init.zeros_(self.out_proj.weight)
         nn.init.zeros_(self.out_proj.bias)
 
+    def _patchify(self, x: torch.Tensor) -> tuple[torch.Tensor, int, int]:
+        """Reshape (B, C, H, W) into patch tokens (B, C, N_patches) via adaptive avg pool.
+
+        Returns the pooled tensor and original patch grid dimensions (pH, pW).
+        """
+        B, C, H, W = x.shape
+        ps = self.patch_size
+        pH = max(1, H // ps)
+        pW = max(1, W // ps)
+        # Adaptive avg pool collapses each patch_size x patch_size region to 1 token
+        pooled = F.adaptive_avg_pool2d(x, (pH, pW))  # (B, C, pH, pW)
+        return pooled.reshape(B, C, pH * pW), pH, pW
+
     def forward(
         self,
         current_features: torch.Tensor,
         previous_features: torch.Tensor,
     ) -> torch.Tensor:
-        """Cross-attend from current to previous features.
+        """Cross-attend from current to previous features via patch tokens.
 
         Args:
             current_features: (B, C, H, W) current frame's features.
@@ -102,27 +124,44 @@ class CrossFrameAttention(nn.Module):
         """
         B, C, H, W = current_features.shape
 
-        # Project to Q, K, V
-        q = self.to_q(current_features)   # (B, C, H, W)
-        k = self.to_k(previous_features)  # (B, C, H, W)
-        v = self.to_v(previous_features)  # (B, C, H, W)
+        # Project to Q, K, V at full resolution
+        q_full = self.to_q(current_features)    # (B, C, H, W)
+        k_full = self.to_k(previous_features)   # (B, C, H, W)
+        v_full = self.to_v(previous_features)   # (B, C, H, W)
 
-        # Reshape into multi-head: (B, num_heads, d_head, H, W)
-        q = q.reshape(B, self.num_heads, self.d_head, H, W)
-        k = k.reshape(B, self.num_heads, self.d_head, H, W)
-        v = v.reshape(B, self.num_heads, self.d_head, H, W)
+        # Patchify: pool to (B, C, N) patch tokens
+        q_patches, pH, pW = self._patchify(q_full)  # (B, C, N)
+        k_patches, _, _ = self._patchify(k_full)     # (B, C, N)
+        v_patches, _, _ = self._patchify(v_full)     # (B, C, N)
 
-        # Per-pixel, per-head attention score
+        N = pH * pW  # number of patches
+
+        # Reshape to multi-head: (B, num_heads, d_head, N)
+        q_mh = q_patches.reshape(B, self.num_heads, self.d_head, N)
+        k_mh = k_patches.reshape(B, self.num_heads, self.d_head, N)
+        v_mh = v_patches.reshape(B, self.num_heads, self.d_head, N)
+
+        # Full attention over patch tokens: (B, num_heads, N, N)
         scale = math.sqrt(self.d_head)
-        # (B, num_heads, d_head, H, W) * (B, num_heads, d_head, H, W) -> sum over d_head
-        score = (q * k).sum(dim=2, keepdim=True) / scale  # (B, num_heads, 1, H, W)
-        attn = torch.sigmoid(score)  # (B, num_heads, 1, H, W)
+        # q_mh: (B, H, d, N) -> (B, H, N, d) for matmul
+        attn_logits = torch.matmul(
+            q_mh.permute(0, 1, 3, 2),  # (B, num_heads, N, d_head)
+            k_mh,                        # (B, num_heads, d_head, N)
+        ) / scale  # (B, num_heads, N, N)
 
-        # Attend: element-wise multiply attention weights with values
-        attended = attn * v  # (B, num_heads, d_head, H, W)
+        attn_weights = F.softmax(attn_logits, dim=-1)  # (B, num_heads, N, N)
 
-        # Reshape back: (B, C, H, W)
-        attended = attended.reshape(B, C, H, W)
+        # Attend: (B, num_heads, N, N) @ (B, num_heads, N, d_head) -> (B, num_heads, N, d_head)
+        v_mh_t = v_mh.permute(0, 1, 3, 2)  # (B, num_heads, N, d_head)
+        attended = torch.matmul(attn_weights, v_mh_t)  # (B, num_heads, N, d_head)
+
+        # Reshape back to spatial: (B, C, pH, pW)
+        attended = attended.permute(0, 1, 3, 2)  # (B, num_heads, d_head, N)
+        attended = attended.reshape(B, C, pH, pW)
+
+        # Upsample attended features back to full resolution
+        if pH != H or pW != W:
+            attended = F.interpolate(attended, size=(H, W), mode="bilinear", align_corners=False)
 
         # Gated output projection
         out = self.out_proj(attended)
