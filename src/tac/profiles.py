@@ -1612,3 +1612,34 @@ PROFILES = {
     "finance_ensemble": FINANCE_ENSEMBLE,
     "finance_hft": FINANCE_HFT,
 }
+
+# Deprecated profile names that should emit runtime warnings
+_DEPRECATED_PROFILES = {
+    "council_v2_adaptive": (
+        "council_v2_adaptive is DEPRECATED: adaptive_rebalance is dead. "
+        "The Hinton T² correction double-corrected (see CLAUDE.md). "
+        "Use 'proven_baseline' or 'council_v1' instead."
+    ),
+}
+
+
+def get_profile(name: str) -> dict:
+    """Look up a named profile, emitting warnings for deprecated profiles.
+
+    Args:
+        name: profile name (key in PROFILES dict).
+
+    Returns:
+        Profile dict of TrainConfig overrides.
+
+    Raises:
+        KeyError: if profile name is not found.
+    """
+    if name not in PROFILES:
+        raise KeyError(
+            f"Unknown profile '{name}'. Available: {sorted(PROFILES.keys())}"
+        )
+    if name in _DEPRECATED_PROFILES:
+        import warnings
+        warnings.warn(_DEPRECATED_PROFILES[name], DeprecationWarning, stacklevel=2)
+    return PROFILES[name]
