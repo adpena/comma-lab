@@ -1597,6 +1597,9 @@ def train_fridrich_renderer(cfg: FridrichRendererConfig) -> dict[str, Any]:
 @click.option("--use-null-space", is_flag=True, help="Opt #6: null-space gradient projection")
 @click.option("--share-stem", is_flag=True, help="Opt #12: shared stem (deferred, gated)")
 @click.option("--flow-only", is_flag=True, help="Opt #15: flow only, no gate/residual (deferred, gated)")
+@click.option("--gate-reg-weight", type=float, default=0.1, help="Gate regularization weight (Quantizr: enforce warp usage)")
+@click.option("--gate-reg-threshold", type=float, default=0.5, help="Gate regularization threshold")
+@click.option("--even-pairs-only", is_flag=True, default=False, help="Train only even-index pairs (match scorer eval)")
 def main(
     precomputed, epochs, batch_size, lr, channels, spade_hidden,
     seg_boundary, pose_boundary, rho_init, rho_growth,
@@ -1611,6 +1614,7 @@ def main(
     max_flow_px, max_residual, seg_temperature_start, seg_temperature_end,
     use_margin_segnet, segnet_margin_threshold, use_null_space,
     share_stem, flow_only,
+    gate_reg_weight, gate_reg_threshold, even_pairs_only,
 ):
     """Train DP-SIMS renderer with Fridrich constrained optimization."""
 
@@ -1672,6 +1676,9 @@ def main(
         use_null_space=use_null_space,
         share_stem=share_stem,
         flow_only=flow_only,
+        gate_reg_weight=gate_reg_weight,
+        gate_reg_threshold=gate_reg_threshold,
+        even_pairs_only=even_pairs_only,
     )
 
     # Set precomputed dir env var for the training function
@@ -1694,7 +1701,7 @@ def main(
     return summary
 
 
-def validate_smoke(precomputed: str | None = None) -> None:
+def validate_smoke(precomputed: str | None = None, pair_mode: str = "dp_sims") -> None:
     """P3: Run 100-epoch CPU smoke and assert 5 conditions (Karpathy).
 
     Validates before committing to 48h GPU training:
@@ -1711,7 +1718,11 @@ def validate_smoke(precomputed: str | None = None) -> None:
     print("=" * 60)
 
     cfg = FridrichRendererConfig(
-        channels=(32, 16),  # tiny for speed
+        pair_mode=pair_mode,  # test the ACTUAL mode that will be deployed
+        channels=(32, 16),  # tiny for speed (dp_sims only)
+        base_ch=8 if pair_mode == "asymmetric" else 36,  # tiny for speed
+        mid_ch=16 if pair_mode == "asymmetric" else 60,
+        motion_hidden=8 if pair_mode == "asymmetric" else 32,
         epochs=100,
         lr=2e-4,
         batch_size=2,
@@ -1782,9 +1793,12 @@ if __name__ == "__main__":
     if "--validate-smoke" in sys.argv:
         # P3: Karpathy smoke validation — run before committing GPU hours
         precomputed_arg = None
+        pair_mode_arg = "dp_sims"
         for i, a in enumerate(sys.argv):
             if a == "--precomputed" and i + 1 < len(sys.argv):
                 precomputed_arg = sys.argv[i + 1]
-        validate_smoke(precomputed=precomputed_arg)
+            if a == "--pair-mode" and i + 1 < len(sys.argv):
+                pair_mode_arg = sys.argv[i + 1]
+        validate_smoke(precomputed=precomputed_arg, pair_mode=pair_mode_arg)
     else:
         main()
