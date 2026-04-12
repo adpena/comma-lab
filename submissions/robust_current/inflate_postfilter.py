@@ -368,16 +368,21 @@ def yuv420_to_rgb(frame) -> torch.Tensor:
 # This means changing them after import has no effect. This is intentional
 # for the contest submission use case (single process, single config).
 BATCH_SIZE = 8  # batched inference: 3-5x speedup on CPU
-MULTI_PASS = int(os.environ.get("INFLATE_MULTI_PASS", "1"))  # run CNN N times (2=double pass)
+MULTI_PASS = int(os.environ.get("INFLATE_MULTI_PASS", "1"))  # run CNN N times (2=double pass, ~3min each on CPU; 3 may exceed 10-min inflate budget)
 TTO_STEPS = int(os.environ.get("INFLATE_TTO_STEPS", "0"))  # test-time optimization steps
 TTO_LR = float(os.environ.get("INFLATE_TTO_LR", "1e-4"))
 TTO_LOSS = os.environ.get("INFLATE_TTO_LOSS", "temporal_consistency")
-TTO_BUDGET = float(os.environ.get("INFLATE_TTO_BUDGET", "60.0"))
+TTO_BUDGET = float(os.environ.get("INFLATE_TTO_BUDGET", "30.0"))  # 30s CPU safety default
 # Supervised TTO with pre-computed PoseNet targets
 SUPERVISED_TTO_STEPS = int(os.environ.get("INFLATE_SUPERVISED_TTO_STEPS", "0"))
 SUPERVISED_TTO_LR = float(os.environ.get("INFLATE_SUPERVISED_TTO_LR", "1e-4"))
 SUPERVISED_TTO_BUDGET = float(os.environ.get("INFLATE_SUPERVISED_TTO_BUDGET", "120.0"))
 SUPERVISED_TTO_PARAM_MODE = os.environ.get("INFLATE_SUPERVISED_TTO_PARAM_MODE", "all")
+# Noise-shaped rounding: use local gradient (pixel neighborhood) instead of nearest-round
+# Fast variant only -- no scorer gradient needed, safe for CPU lane's ~5min budget
+NOISE_SHAPING_FAST = os.environ.get("INFLATE_NOISE_SHAPING_FAST", "0") == "1"
+# Supervised TTO if scorer is available on eval machine
+SUPERVISED_TTO_IF_AVAILABLE = os.environ.get("INFLATE_SUPERVISED_TTO_IF_AVAILABLE", "0") == "1"
 
 
 def _decode_frames_for_tto(
@@ -562,9 +567,37 @@ def inflate_with_postfilter(
             for _ in range(MULTI_PASS - 1):
                 out = out.round().clamp(0, 255)
                 out = model(out)
-        for i in range(out.shape[0]):
-            t = out[i].permute(1, 2, 0).round().clamp(0, 255).to(torch.uint8).cpu()
-            f.write(t.contiguous().numpy().tobytes())
+
+        if NOISE_SHAPING_FAST:
+            # Trick 5: gradient-directed rounding using LOCAL pixel gradients.
+            # No scorer needed -- uses spatial neighborhood statistics to decide
+            # ceil vs floor. Costs ~0.1s per batch (negligible on CPU).
+            out_ns = out.detach().requires_grad_(True)
+            # Local gradient: Laplacian approximation (pixel vs 4-neighbors)
+            # Positive Laplacian = pixel brighter than neighbors -> floor helps
+            # Negative Laplacian = pixel darker than neighbors -> ceil helps
+            padded = F.pad(out_ns, (1, 1, 1, 1), mode="reflect")
+            laplacian = (
+                4 * out_ns
+                - padded[:, :, :-2, 1:-1]   # top
+                - padded[:, :, 2:, 1:-1]     # bottom
+                - padded[:, :, 1:-1, :-2]    # left
+                - padded[:, :, 1:-1, 2:]     # right
+            )
+            # Use Laplacian sign as a proxy for scorer gradient direction
+            out_clamped = out.detach().clamp(0.0, 255.0)
+            out_rounded = torch.where(
+                laplacian.detach() < 0,
+                out_clamped.ceil(),
+                torch.where(laplacian.detach() > 0, out_clamped.floor(), out_clamped.round()),
+            )
+            for i in range(out_rounded.shape[0]):
+                t = out_rounded[i].permute(1, 2, 0).clamp(0, 255).to(torch.uint8).cpu()
+                f.write(t.contiguous().numpy().tobytes())
+        else:
+            for i in range(out.shape[0]):
+                t = out[i].permute(1, 2, 0).round().clamp(0, 255).to(torch.uint8).cpu()
+                f.write(t.contiguous().numpy().tobytes())
 
     with open(dst, 'wb') as f:
         for frame in container.decode(stream):

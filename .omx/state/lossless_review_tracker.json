@@ -1988,9 +1988,9 @@
       "last_modified_commit": "a20e971873bc",
       "last_modified_date": "2026-04-11T13:55:03-05:00",
       "review_status": "reviewed",
-      "reviewed_by": "nsa_final",
-      "reviewed_at": "2026-04-11T19:19:51.217434+00:00",
-      "review_pass": "nsa_final_20260411",
+      "reviewed_by": "council_greenup",
+      "reviewed_at": "2026-04-12T01:47:47.006113+00:00",
+      "review_pass": "lossless_cli_greenup",
       "notes": ""
     },
     "tac.cli::build_parser": {
@@ -2005,9 +2005,9 @@
       "last_modified_commit": "a20e971873bc",
       "last_modified_date": "2026-04-11T13:55:03-05:00",
       "review_status": "reviewed",
-      "reviewed_by": "nsa_final",
-      "reviewed_at": "2026-04-11T19:19:51.217434+00:00",
-      "review_pass": "nsa_final_20260411",
+      "reviewed_by": "council_greenup",
+      "reviewed_at": "2026-04-12T01:47:47.006113+00:00",
+      "review_pass": "lossless_cli_greenup",
       "notes": ""
     },
     "tac.cli::main": {
@@ -2022,9 +2022,9 @@
       "last_modified_commit": "a20e971873bc",
       "last_modified_date": "2026-04-11T13:55:03-05:00",
       "review_status": "reviewed",
-      "reviewed_by": "nsa_final",
-      "reviewed_at": "2026-04-11T19:19:51.217434+00:00",
-      "review_pass": "nsa_final_20260411",
+      "reviewed_by": "council_greenup",
+      "reviewed_at": "2026-04-12T01:47:47.006113+00:00",
+      "review_pass": "lossless_cli_greenup",
       "notes": ""
     },
     "tac.lossless.__init__::__getattr__": {

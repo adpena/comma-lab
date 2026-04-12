@@ -337,7 +337,11 @@ def train(args: argparse.Namespace):
         model = build_vqvae_pair_generator()
     elif args.variant == "diffusion_teacher":
         from tac.diffusion_renderer import build_diffusion_teacher  # noqa: E402
-        model = build_diffusion_teacher(num_classes=5)
+        model = build_diffusion_teacher(
+            num_classes=5,
+            beta_start=getattr(args, "beta_start", 1e-4),
+            beta_end=getattr(args, "beta_end", 0.02),
+        )
     else:
         model = build_renderer(
             num_classes=5,
@@ -346,6 +350,9 @@ def train(args: argparse.Namespace):
             mid_ch=args.mid_ch,
             motion_hidden=args.motion_hidden,
             depth=args.depth,
+            blend_mode=getattr(args, "blend_mode", "scalar"),
+            noise_mode=getattr(args, "noise_mode", "deterministic"),
+            motion_type=getattr(args, "motion_type", "learned_cnn"),
         )
     model = model.to(device)
     # channels_last memory format: 10-30% speedup for conv2d on CUDA

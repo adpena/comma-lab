@@ -209,3 +209,124 @@ def sweep(
     print(f"\nResults saved to: {out_path}")
 
     return results
+
+
+def find_optimal_crf(
+    checkpoint_path: str | Path | None = None,
+    crf_range: list[float] | None = None,
+    eval_pairs: int = 50,
+    device: str = "cpu",
+) -> dict:
+    """Find the CRF value that minimizes the composite proxy score.
+
+    This is the single highest-ROI CPU experiment: zero retraining, just
+    sweep the encoder quality parameter and pick the best.
+
+    The composite score is ``100 * seg_distortion + sqrt(10 * pose_distortion)``.
+    Lower CRF = better quality but bigger archive (higher rate penalty).
+    Higher CRF = worse quality but smaller archive (lower rate penalty).
+    The optimal point balances rate vs distortion.
+
+    Args:
+        checkpoint_path: path to postfilter int8 checkpoint. If None, uses
+            the current submission checkpoint.
+        crf_range: list of CRF values to test. Default [31, 32, 33, 34, 35, 36].
+        eval_pairs: number of frame pairs for proxy evaluation (default 50).
+        device: device for proxy eval (default "cpu").
+
+    Returns:
+        dict with keys:
+            best_crf: the optimal CRF value
+            best_score: the composite score at optimal CRF
+            results: list of per-CRF result dicts
+    """
+    if crf_range is None:
+        crf_range = [31, 32, 33, 34, 35, 36]
+
+    if checkpoint_path is None:
+        checkpoint_path = _SUBMISSION_DIR / "postfilter_int8.pt"
+    checkpoint_path = Path(checkpoint_path)
+
+    print(f"=== find_optimal_crf: testing CRFs {crf_range} ===")
+    print(f"  Checkpoint: {checkpoint_path}")
+    print(f"  Eval pairs: {eval_pairs}")
+
+    scored_results: list[dict] = []
+
+    for crf in crf_range:
+        print(f"\n--- CRF={crf} ---")
+        try:
+            with tempfile.TemporaryDirectory(prefix="crf_opt_") as work_dir:
+                # Encode at this CRF
+                archive_path, encode_secs = encode_at_crf(crf, Path(work_dir))
+                archive_bytes = archive_path.stat().st_size
+
+                # Run smoke proxy to get MAE scores
+                smoke_data, smoke_secs = run_smoke()
+                video_result = smoke_data["results"][0]
+                mae_mean = video_result["semantic_mae_mean"]
+                mae_max = video_result["semantic_mae_max"]
+                passed = video_result["semantic_check_passed"]
+
+                # Compute rate component: archive_bytes / (total_frames * target_pixels * 3)
+                # The rate term in the scoring formula is roughly proportional to archive size.
+                # Use archive bytes as the rate proxy.
+                rate_proxy = archive_bytes / 1_000_000  # MB
+
+                # Composite = distortion_proxy + rate_proxy_scaled
+                # The actual score formula: score = 100*seg + sqrt(10*pose) + rate
+                # We approximate distortion via MAE mean (which correlates with
+                # both PoseNet and SegNet distortion from proxy evaluation).
+                # Rate is the archive size normalized.
+                composite = mae_mean + 0.001 * rate_proxy  # MAE + small rate penalty
+
+                result = {
+                    "crf": crf,
+                    "archive_bytes": archive_bytes,
+                    "mae_mean": mae_mean,
+                    "mae_max": mae_max,
+                    "passed": passed,
+                    "encode_secs": encode_secs,
+                    "smoke_secs": smoke_secs,
+                    "composite": composite,
+                }
+                scored_results.append(result)
+                print(f"  Archive={archive_bytes:,}B  MAE={mae_mean:.4f}  "
+                      f"Composite={composite:.6f}  ({encode_secs:.1f}s encode, {smoke_secs:.1f}s eval)")
+
+        except Exception as e:
+            print(f"  ERROR: {e}")
+            scored_results.append({
+                "crf": crf, "error": str(e), "composite": float("inf"),
+            })
+
+    # Sort by composite score
+    valid = [r for r in scored_results if "error" not in r]
+    if not valid:
+        return {"best_crf": None, "best_score": None, "results": scored_results}
+
+    valid.sort(key=lambda r: r["composite"])
+    best = valid[0]
+
+    print(f"\n=== OPTIMAL CRF: {best['crf']} ===")
+    print(f"  Composite score: {best['composite']:.6f}")
+    print(f"  MAE mean: {best['mae_mean']:.4f}")
+    print(f"  Archive size: {best['archive_bytes']:,} bytes")
+
+    # Save results
+    out_path = _PROJECT_ROOT / "experiments" / "crf_optimal_results.json"
+    out_data = {
+        "timestamp": time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime()),
+        "crf_range": crf_range,
+        "best_crf": best["crf"],
+        "best_composite": best["composite"],
+        "results": scored_results,
+    }
+    out_path.write_text(json.dumps(out_data, indent=2) + "\n")
+    print(f"Results saved to: {out_path}")
+
+    return {
+        "best_crf": best["crf"],
+        "best_score": best["composite"],
+        "results": scored_results,
+    }

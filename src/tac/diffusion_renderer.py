@@ -307,6 +307,8 @@ class DiffusionRenderer(nn.Module):
         channels: int = 64,
         num_timesteps: int = 100,
         time_dim: int = 128,
+        beta_start: float = 1e-4,
+        beta_end: float = 0.02,
     ):
         super().__init__()
         self.num_classes = num_classes
@@ -323,7 +325,7 @@ class DiffusionRenderer(nn.Module):
         )
 
         # Linear noise schedule (Ho et al. 2020)
-        betas = torch.linspace(1e-4, 0.02, num_timesteps)
+        betas = torch.linspace(beta_start, beta_end, num_timesteps)
         alphas = 1.0 - betas
         alphas_cumprod = torch.cumprod(alphas, dim=0)
         alphas_cumprod_prev = F.pad(alphas_cumprod[:-1], (1, 0), value=1.0)
@@ -880,6 +882,8 @@ class ConsistencyModel(nn.Module):
         channels: int = 64,
         num_timesteps: int = 100,
         time_dim: int = 128,
+        beta_start: float = 1e-4,
+        beta_end: float = 0.02,
     ):
         super().__init__()
         self.num_classes = num_classes
@@ -895,7 +899,7 @@ class ConsistencyModel(nn.Module):
         )
 
         # Noise schedule (shared with teacher)
-        betas = torch.linspace(1e-4, 0.02, num_timesteps)
+        betas = torch.linspace(beta_start, beta_end, num_timesteps)
         alphas = 1.0 - betas
         alphas_cumprod = torch.cumprod(alphas, dim=0)
         self.register_buffer("alphas_cumprod", alphas_cumprod)
@@ -1114,6 +1118,8 @@ def build_diffusion_teacher(
     channels: int = 64,
     num_timesteps: int = 100,
     time_dim: int = 128,
+    beta_start: float = 1e-4,
+    beta_end: float = 0.02,
 ) -> DiffusionRenderer:
     """Build a diffusion teacher model.
 
@@ -1124,6 +1130,8 @@ def build_diffusion_teacher(
         channels: base channel width
         num_timesteps: noise schedule length
         time_dim: timestep embedding dimension
+        beta_start: noise schedule start (lower bound)
+        beta_end: noise schedule end (upper bound)
 
     Returns:
         DiffusionRenderer ready for training
@@ -1133,6 +1141,8 @@ def build_diffusion_teacher(
         channels=channels,
         num_timesteps=num_timesteps,
         time_dim=time_dim,
+        beta_start=beta_start,
+        beta_end=beta_end,
     )
     total = model.param_count()
     print(
@@ -1147,6 +1157,8 @@ def build_consistency_model(
     channels: int = 64,
     num_timesteps: int = 100,
     time_dim: int = 128,
+    beta_start: float = 1e-4,
+    beta_end: float = 0.02,
 ) -> ConsistencyModel:
     """Build a consistency model for single-step generation.
 
@@ -1158,6 +1170,8 @@ def build_consistency_model(
         channels: base channel width
         num_timesteps: discretization steps
         time_dim: timestep embedding dimension
+        beta_start: noise schedule start (lower bound)
+        beta_end: noise schedule end (upper bound)
 
     Returns:
         ConsistencyModel ready for distillation or training
@@ -1167,6 +1181,8 @@ def build_consistency_model(
         channels=channels,
         num_timesteps=num_timesteps,
         time_dim=time_dim,
+        beta_start=beta_start,
+        beta_end=beta_end,
     )
     total = model.param_count()
     print(f"[consistency] Built ConsistencyModel: {total:,} params (channels={channels}, T={num_timesteps})")

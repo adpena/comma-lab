@@ -108,6 +108,14 @@ def _add_lossy_arguments(parser: argparse.ArgumentParser) -> None:
     parser.add_argument("--alpha-seg", type=float, default=200.0)
     parser.add_argument("--use-ste", action="store_true")
     parser.add_argument("--boundary-weight", type=float, default=1.0)
+    parser.add_argument("--learn-loss-weights", action="store_true",
+                        help="Learn segnet/posenet loss weights via log-space nn.Parameters")
+    parser.add_argument("--adaptive-boundary", action="store_true",
+                        help="Adjust boundary_weight per-epoch based on SegNet feedback")
+    parser.add_argument("--weight-decay", type=float, default=1e-4,
+                        help="AdamW weight decay (default: 1e-4)")
+    parser.add_argument("--eta-min", type=float, default=1e-4,
+                        help="CosineAnnealingLR minimum learning rate (default: 1e-4)")
     parser.add_argument("--resume-from", type=str, default=None)
     parser.add_argument("--tag", required=True)
     parser.add_argument("--output-dir", default="experiments/postfilter_weights")
@@ -471,6 +479,10 @@ def _run_lossy(args: argparse.Namespace) -> dict[str, Any]:
         use_ste_segnet=bool(args.use_ste or profile_defaults.get("use_ste_segnet", False)),
         boundary_weight=float(_select(profile_defaults, args, "boundary-weight", 1.0)),
         boundary_anneal=bool(profile_defaults.get("boundary_anneal", False)),
+        learn_loss_weights=bool(args.learn_loss_weights or profile_defaults.get("learn_loss_weights", False)),
+        adaptive_boundary=bool(args.adaptive_boundary or profile_defaults.get("adaptive_boundary", False)),
+        weight_decay=float(_select(profile_defaults, args, "weight-decay", 1e-4)),
+        eta_min=float(_select(profile_defaults, args, "eta-min", 1e-4)),
         resume_from=args.resume_from,
         output_dir=args.output_dir,
         tag=args.tag,

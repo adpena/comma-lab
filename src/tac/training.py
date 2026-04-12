@@ -187,6 +187,33 @@ class TrainConfig(BaseModel):
         description="Weight for PoseNet embedding loss when loss_mode='posenet_embedding'",
     )
 
+    # Learnable loss weights (Yousfi architectural pass)
+    learn_loss_weights: bool = Field(
+        False,
+        description="Learn segnet/posenet loss weights via log-space nn.Parameters. "
+        "When enabled, w_seg = exp(log_w_seg) and w_pose = exp(log_w_pose) are "
+        "optimized with a separate LR group (10x base LR, no weight decay).",
+    )
+    init_log_w_seg: float = Field(
+        math.log(100.0),
+        description="Initial log(w_seg) for learnable loss weights.",
+    )
+    init_log_w_pose: float = Field(
+        math.log(10.0),
+        description="Initial log(w_pose) for learnable loss weights.",
+    )
+
+    # Adaptive boundary weight (per-epoch, scorer-feedback-driven)
+    adaptive_boundary: bool = Field(
+        False,
+        description="Adjust boundary_weight each eval epoch based on SegNet distortion. "
+        "If seg is improving, reduce boundary weight; if stagnating, increase it.",
+    )
+
+    # Optimizer (previously hardcoded)
+    weight_decay: float = Field(1e-4, ge=0.0, description="AdamW weight decay")
+    eta_min: float = Field(1e-4, ge=0.0, description="CosineAnnealingLR minimum learning rate")
+
     # Resumption
     resume_from: str | None = None
 
@@ -411,7 +438,7 @@ class Trainer:
             self._adaptive = AdaptiveWeights(boundary_fraction=beta)
             print(f"[trainer] Adaptive weights enabled (beta={beta})")
 
-        self.optimizer = torch.optim.AdamW(model.parameters(), lr=config.lr, weight_decay=1e-4)
+        self.optimizer = torch.optim.AdamW(model.parameters(), lr=config.lr, weight_decay=config.weight_decay)
 
         # LSQ: Learned Step Size Quantization
         self._lsq_scales: dict[str, nn.Module] | None = None
@@ -432,13 +459,37 @@ class Trainer:
                 )
                 print(f"[trainer] LSQ enabled: {len(self._lsq_scales)} learned scales, lr={config.lr * 5:.6f}")
 
+        # Learnable loss weights (log-space for unconstrained optimization)
+        self._log_w_seg: nn.Parameter | None = None
+        self._log_w_pose: nn.Parameter | None = None
+        if config.learn_loss_weights:
+            self._log_w_seg = nn.Parameter(torch.tensor(config.init_log_w_seg))
+            self._log_w_pose = nn.Parameter(torch.tensor(config.init_log_w_pose))
+            self.optimizer.add_param_group(
+                {
+                    "params": [self._log_w_seg, self._log_w_pose],
+                    "lr": config.lr * 10,
+                    "weight_decay": 0.0,
+                }
+            )
+            print(
+                f"[trainer] Learnable loss weights enabled: "
+                f"w_seg={math.exp(config.init_log_w_seg):.1f}, "
+                f"w_pose={math.exp(config.init_log_w_pose):.1f}, "
+                f"lr={config.lr * 10:.6f}"
+            )
+
+        # Adaptive boundary state
+        self._adaptive_boundary_weight = config.boundary_weight
+        self._prev_seg_distortion: float | None = None
+
         if config.scheduler == "cosine":
             self.scheduler = torch.optim.lr_scheduler.CosineAnnealingLR(
-                self.optimizer, T_max=config.epochs - config.warmup_epochs, eta_min=1e-4
+                self.optimizer, T_max=config.epochs - config.warmup_epochs, eta_min=config.eta_min
             )
         else:
             self.scheduler = torch.optim.lr_scheduler.CosineAnnealingWarmRestarts(
-                self.optimizer, T_0=config.restart_t0, T_mult=config.restart_tmult, eta_min=1e-4
+                self.optimizer, T_0=config.restart_t0, T_mult=config.restart_tmult, eta_min=config.eta_min
             )
 
         # Resume from checkpoint if specified (must come after optimizer/scheduler init)
@@ -612,6 +663,13 @@ class Trainer:
             return einops.rearrange(yuv, "(b t) c h w -> b (t c) h w", b=batch_size, t=seq_len_local, c=6).contiguous()
 
         posenet.preprocess_input = types.MethodType(_diff_preprocess, posenet)
+
+    @property
+    def _effective_boundary_weight(self) -> float:
+        """Return the boundary_weight, accounting for adaptive boundary if enabled."""
+        if self.config.adaptive_boundary:
+            return self._adaptive_boundary_weight
+        return self.config.boundary_weight
 
     @property
     def _is_pair_aware(self) -> bool:
@@ -858,7 +916,7 @@ class Trainer:
             f"h={cfg.hidden}, alpha={cfg.alpha}, device={self.device}"
         )
         if use_boundary:
-            print(f"[trainer] SegNet STE + boundary weighting ({cfg.boundary_weight}x)")
+            print(f"[trainer] SegNet STE + boundary weighting ({self._effective_boundary_weight}x)")
         if self._current_epoch > 0:
             print(f"[trainer] Resuming from epoch {self._current_epoch}")
 
@@ -888,7 +946,7 @@ class Trainer:
                         posenet,
                         segnet,
                         boundary_mask=bm,
-                        boundary_weight=cfg.boundary_weight,
+                        boundary_weight=self._effective_boundary_weight,
                     )
                 else:
                     loss, pd, sd = scorer_loss(
@@ -1080,7 +1138,7 @@ class Trainer:
 
         # Precompute boundary masks if needed (dual saliency OR kl_distill with boundary weighting)
         self._boundary_masks = None
-        needs_boundary = cfg.use_dual_saliency or cfg.boundary_weight > 1.0
+        needs_boundary = cfg.use_dual_saliency or cfg.boundary_weight > 1.0 or cfg.adaptive_boundary
         if needs_boundary:
             from .losses import compute_boundary_mask
 
@@ -1294,11 +1352,11 @@ class Trainer:
                     # Adaptive or static weights
                     # Use cached adaptive weights (computed once per epoch, not per step)
                     sw = getattr(self, "_cached_sw", cfg.segnet_loss_weight)
-                    bw = getattr(self, "_cached_bw", cfg.boundary_weight)
+                    bw = getattr(self, "_cached_bw", self._effective_boundary_weight)
                     if not self._adaptive:
                         # Static boundary anneal for non-adaptive mode
                         if cfg.boundary_anneal and temp > 0:
-                            bw = cfg.boundary_weight * min(3.0, cfg.temperature_start / max(temp, cfg.temperature_end))
+                            bw = self._effective_boundary_weight * min(3.0, cfg.temperature_start / max(temp, cfg.temperature_end))
 
                     loss, pd, sd = kl_distill_scorer_loss(
                         filtered,
@@ -1388,7 +1446,8 @@ class Trainer:
                     )
                     loss = loss + cfg.posenet_embedding_weight * emb_term
                 else:
-                    if cfg.boundary_weight > 1.0 and self._boundary_masks is not None:
+                    _eff_bw = self._effective_boundary_weight
+                    if _eff_bw > 1.0 and self._boundary_masks is not None:
                         bm = self._boundary_masks.get(start)
                         loss, pd, sd = segnet_ste_loss(
                             filtered,
@@ -1396,7 +1455,7 @@ class Trainer:
                             posenet,
                             segnet,
                             boundary_mask=bm,
-                            boundary_weight=cfg.boundary_weight,
+                            boundary_weight=_eff_bw,
                         )
                     elif _gt_pose_6 is not None:
                         # P0: use cached GT scorer outputs (standard loss)
@@ -1448,6 +1507,17 @@ class Trainer:
                 if cfg.use_frequency_loss and cfg.frequency_loss_weight > 0:
                     freq_loss = frequency_aware_loss(filtered, gt_pair)
                     loss = loss + cfg.frequency_loss_weight * freq_loss
+
+                # Apply learnable loss weights if enabled
+                if self._log_w_seg is not None and self._log_w_pose is not None:
+                    w_seg = torch.exp(self._log_w_seg)
+                    w_pose = torch.exp(self._log_w_pose)
+                    # Reweight: scorer loss already combines pose+seg; we scale
+                    # the scorer loss by w_pose (dominant PoseNet signal) and add
+                    # a w_seg multiplier on the saliency reconstruction which
+                    # correlates with SegNet boundary fidelity.
+                    loss = w_pose * loss
+                    sal_recon = w_seg * sal_recon
 
                 total = (loss + cfg.sal_lambda * sal_recon) / accum
                 try:
@@ -1519,6 +1589,21 @@ class Trainer:
             else:
                 scorer_val = self.best_scorer  # reuse last known
 
+            # Adaptive boundary: adjust boundary_weight based on SegNet feedback
+            if cfg.adaptive_boundary and is_eval_epoch and self._last_eval_seg is not None:
+                cur_seg = self._last_eval_seg
+                if self._prev_seg_distortion is not None:
+                    seg_delta = cur_seg - self._prev_seg_distortion
+                    if seg_delta < -1e-6:
+                        # SegNet improving: reduce boundary pressure (diminishing returns)
+                        self._adaptive_boundary_weight *= 0.9
+                    elif seg_delta > 1e-6:
+                        # SegNet stagnating/regressing: increase boundary pressure
+                        self._adaptive_boundary_weight *= 1.1
+                    # Clamp to reasonable range
+                    self._adaptive_boundary_weight = max(0.1, min(500.0, self._adaptive_boundary_weight))
+                self._prev_seg_distortion = cur_seg
+
             if scorer_val < self.best_scorer:
                 self.best_scorer = scorer_val
                 self.best_epoch = epoch
@@ -1587,6 +1672,13 @@ class Trainer:
                         entry["adaptive_sw"] = round(self._cached_sw, 4)
                     if hasattr(self, "_cached_bw"):
                         entry["adaptive_bw"] = round(self._cached_bw, 2)
+                    # Learnable loss weight diagnostics
+                    if self._log_w_seg is not None:
+                        entry["learned_w_seg"] = round(math.exp(self._log_w_seg.item()), 4)
+                        entry["learned_w_pose"] = round(math.exp(self._log_w_pose.item()), 4)
+                    # Adaptive boundary diagnostics
+                    if cfg.adaptive_boundary:
+                        entry["adaptive_boundary_weight"] = round(self._adaptive_boundary_weight, 4)
                     # Proxy hardening diagnostics
                     if hasattr(self, "_proxy_confidence"):
                         entry["proxy_confidence"] = self._proxy_confidence

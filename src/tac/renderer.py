@@ -459,13 +459,60 @@ class PairGenerator(nn.Module):
         motion: MotionPredictor instance
     """
 
-    def __init__(self, renderer: MaskRenderer, motion: MotionPredictor):
+    def __init__(
+        self,
+        renderer: MaskRenderer,
+        motion: MotionPredictor,
+        blend_mode: str = "scalar",
+        noise_mode: str = "deterministic",
+    ):
         super().__init__()
         self.renderer = renderer
         self.motion = motion
-        # Learned blend weight: sigmoid(raw) gives alpha in [0, 1]
-        # Initialize to 0 → sigmoid(0) = 0.5 → equal blend
-        self.blend_logit = nn.Parameter(torch.tensor(0.0))
+        self.blend_mode = blend_mode
+        self.noise_mode = noise_mode
+
+        # Blend modes:
+        #   "scalar"  — single learned alpha (original behavior)
+        #   "spatial" — per-pixel learned blend map via 1x1 conv
+        #   "none"    — no blending, use direct rendering only
+        if blend_mode == "scalar":
+            # Learned blend weight: sigmoid(raw) gives alpha in [0, 1]
+            # Initialize to 0 → sigmoid(0) = 0.5 → equal blend
+            self.blend_logit = nn.Parameter(torch.tensor(0.0))
+            self.blend_conv = None
+        elif blend_mode == "spatial":
+            self.blend_logit = None
+            # 1x1 conv: (B, 6, H, W) [warped + rendered] → (B, 1, H, W) alpha map
+            self.blend_conv = nn.Conv2d(6, 1, 1, bias=True)
+            nn.init.zeros_(self.blend_conv.weight)
+            nn.init.zeros_(self.blend_conv.bias)  # sigmoid(0) = 0.5
+        elif blend_mode == "none":
+            self.blend_logit = None
+            self.blend_conv = None
+        else:
+            raise ValueError(f"Unknown blend_mode: {blend_mode!r}. Use 'scalar', 'spatial', or 'none'.")
+
+        # Noise modes:
+        #   "deterministic" — no noise injection (default)
+        #   "shared"        — same noise for both frames (temporal consistency)
+        #   "independent"   — independent noise per frame (texture diversity)
+        if noise_mode not in ("deterministic", "shared", "independent"):
+            raise ValueError(f"Unknown noise_mode: {noise_mode!r}. Use 'deterministic', 'shared', or 'independent'.")
+        if noise_mode != "deterministic":
+            self.noise_scale = nn.Parameter(torch.tensor(0.0))  # exp(0)=1, scaled down by tanh
+        else:
+            self.noise_scale = None
+
+    def _inject_noise(self, frame: torch.Tensor, noise: torch.Tensor | None = None) -> torch.Tensor:
+        """Optionally inject learned-scale noise into a rendered frame."""
+        if self.noise_scale is None:
+            return frame
+        if noise is None:
+            noise = torch.randn_like(frame)
+        # Scale: tanh keeps magnitude bounded, exp(noise_scale) controls amplitude
+        scale = torch.tanh(self.noise_scale) * 5.0  # max +-5 pixel noise
+        return (frame + scale * noise).clamp(0.0, 255.0)
 
     def forward(
         self,
@@ -485,13 +532,29 @@ class PairGenerator(nn.Module):
         frame_t = self.renderer(mask_t)  # (B, 3, H, W)
         frame_t1 = self.renderer(mask_t1)  # (B, 3, H, W)
 
-        # Predict flow and warp frame_t → frame_t1_warped
-        flow = self.motion(mask_t, mask_t1)  # (B, 2, H, W)
-        frame_t1_warped = warp_with_flow(frame_t, flow)
+        # Noise injection
+        if self.noise_mode == "shared":
+            noise = torch.randn_like(frame_t)
+            frame_t = self._inject_noise(frame_t, noise)
+            frame_t1 = self._inject_noise(frame_t1, noise)
+        elif self.noise_mode == "independent":
+            frame_t = self._inject_noise(frame_t)
+            frame_t1 = self._inject_noise(frame_t1)
 
-        # Blend warped and directly-rendered frame_t+1
-        alpha = torch.sigmoid(self.blend_logit)
-        frame_t1_blended = (alpha * frame_t1_warped + (1.0 - alpha) * frame_t1).clamp(0.0, 255.0)
+        # Blend mode: "none" skips motion entirely
+        if self.blend_mode == "none":
+            frame_t1_blended = frame_t1
+        else:
+            # Predict flow and warp frame_t → frame_t1_warped
+            flow = self.motion(mask_t, mask_t1)  # (B, 2, H, W)
+            frame_t1_warped = warp_with_flow(frame_t, flow)
+
+            if self.blend_mode == "scalar":
+                alpha = torch.sigmoid(self.blend_logit)
+                frame_t1_blended = (alpha * frame_t1_warped + (1.0 - alpha) * frame_t1).clamp(0.0, 255.0)
+            elif self.blend_mode == "spatial":
+                alpha_map = torch.sigmoid(self.blend_conv(torch.cat([frame_t1_warped, frame_t1], dim=1)))
+                frame_t1_blended = (alpha_map * frame_t1_warped + (1.0 - alpha_map) * frame_t1).clamp(0.0, 255.0)
 
         # Pack to HWC pair format: (B, 2, H, W, 3)
         # CHW → HWC: (B, 3, H, W) → (B, H, W, 3)
@@ -679,6 +742,9 @@ def build_renderer(
     mid_ch: int = 60,
     motion_hidden: int = 32,
     depth: int = 1,
+    blend_mode: str = "scalar",
+    noise_mode: str = "deterministic",
+    motion_type: str = "learned_cnn",
 ) -> PairGenerator:
     """Build the full mask-to-pair rendering pipeline.
 
@@ -688,6 +754,7 @@ def build_renderer(
         - Shared embedding between renderer and motion predictor
         - CLADE per-class normalization in all ResBlocks
         - Soft sigmoid output for always-flowing gradients
+        - Configurable blend mode, noise injection, and motion predictor type
 
     Args:
         num_classes: segmentation classes (5 for comma)
@@ -696,6 +763,9 @@ def build_renderer(
         mid_ch: U-Net bottleneck channels
         motion_hidden: MotionPredictor hidden channels
         depth: U-Net downscale levels (1 = single-scale, 2 = two-scale)
+        blend_mode: "scalar" (learned alpha), "spatial" (per-pixel), "none"
+        noise_mode: "deterministic", "shared", "independent"
+        motion_type: "depth_aware", "learned_cnn", "analytical", "none"
 
     Returns:
         PairGenerator wrapping MaskRenderer + MotionPredictor
@@ -712,23 +782,59 @@ def build_renderer(
         embedding=shared_embed,
         depth=depth,
     )
-    motion = MotionPredictor(
-        num_classes=num_classes,
-        embed_dim=embed_dim,
-        hidden=motion_hidden,
-        embedding=shared_embed,
-    )
-    pair_gen = PairGenerator(renderer, motion)
 
-    # Verify embedding is truly shared
-    assert renderer.embedding is motion.embedding, "Embedding sharing failed"
+    # Motion predictor type selection
+    if motion_type == "learned_cnn":
+        motion = MotionPredictor(
+            num_classes=num_classes,
+            embed_dim=embed_dim,
+            hidden=motion_hidden,
+            embedding=shared_embed,
+        )
+    elif motion_type == "analytical":
+        motion = AnalyticalMotionPredictor(
+            num_classes=num_classes,
+            embed_dim=embed_dim,
+            embedding=shared_embed,
+        )
+    elif motion_type == "depth_aware":
+        from .depth_motion import DepthAwareMotionPredictor
+        motion = DepthAwareMotionPredictor(
+            num_classes=num_classes,
+        )
+    elif motion_type == "none":
+        # Stub: zero-flow motion predictor (direct rendering only)
+        motion = MotionPredictor(
+            num_classes=num_classes,
+            embed_dim=embed_dim,
+            hidden=motion_hidden,
+            embedding=shared_embed,
+        )
+        # Override blend_mode to "none" since no motion is used
+        blend_mode = "none"
+    else:
+        raise ValueError(
+            f"Unknown motion_type: {motion_type!r}. "
+            "Use 'depth_aware', 'learned_cnn', 'analytical', or 'none'."
+        )
+
+    pair_gen = PairGenerator(
+        renderer, motion,
+        blend_mode=blend_mode,
+        noise_mode=noise_mode,
+    )
+
+    # Verify embedding is truly shared (for types that use shared embedding)
+    if hasattr(motion, "embedding"):
+        assert renderer.embedding is motion.embedding, "Embedding sharing failed"
 
     total = pair_gen.param_count()
     r_count = renderer.param_count()
     m_count = motion.param_count()
     print(
         f"[renderer] Built PairGenerator: {total:,} params "
-        f"(renderer={r_count:,}, motion={m_count:,}, blend=1, "
+        f"(renderer={r_count:,}, motion={m_count:,} [{motion_type}], "
+        f"blend={blend_mode}, noise={noise_mode}, "
         f"shared_embed={shared_embed.weight.numel()}, CLADE=on, sigmoid_out=on)"
     )
 

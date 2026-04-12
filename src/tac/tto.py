@@ -296,7 +296,7 @@ def test_time_optimize(
     loss_type: Literal["temporal_consistency", "reconstruction", "edge_preservation"] = "temporal_consistency",
     param_mode: Literal["last_layer", "bn_only", "all"] = "last_layer",
     grad_clip: float = 0.5,
-    time_budget_seconds: float = 60.0,
+    time_budget_seconds: float = 30.0,
     batch_size: int = 16,
     quality_check: bool = True,
     verbose: bool = True,
