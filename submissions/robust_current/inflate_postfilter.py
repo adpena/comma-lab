@@ -366,10 +366,6 @@ def yuv420_to_rgb(frame) -> torch.Tensor:
 # ============================================================
 # CPU Eureka #8: Non-local Means Deblocking (zero params, zero archive cost)
 # ============================================================
-INFLATE_DEBLOCK = os.environ.get("INFLATE_DEBLOCK", "0") == "1"
-DEBLOCK_H = int(os.environ.get("INFLATE_DEBLOCK_H", "10"))
-DEBLOCK_TEMPLATE_WINDOW = int(os.environ.get("INFLATE_DEBLOCK_TEMPLATE_WINDOW", "7"))
-DEBLOCK_SEARCH_WINDOW = int(os.environ.get("INFLATE_DEBLOCK_SEARCH_WINDOW", "21"))
 
 
 def deblock_frames(
@@ -466,89 +462,13 @@ def deblock_tensor(
     return deblocked.to(frames.device)
 
 
-# NOTE: All env vars below are read at module import time (not per-call).
-# This means changing them after import has no effect. This is intentional
-# for the contest submission use case (single process, single config).
 # ── Distribution shift guard (2026-04-11) ────────────────────────────
-def verify_config_consistency(archive_dir: Path, checkpoint_path: Path):
-    """Verify the encode config matches what the postfilter was trained on.
-
-    Checks for a config_fingerprint in the checkpoint. If present,
-    compares against the current config.env. Warns on mismatch, because
-    distribution shift between training and inference kills scores.
-
-    This guard was added after the 1.33 -> 2.15 regression caused by
-    changing encode-time parameters (BT.601 color matrix) without retraining
-    the postfilter, which had been trained on BT.709 CRF-34 output.
-    """
-    import json
-    try:
-        ckpt = torch.load(str(checkpoint_path), map_location="cpu", weights_only=False)
-        if isinstance(ckpt, dict) and "config_fingerprint" in ckpt:
-            fp = ckpt["config_fingerprint"]
-            # Compare against current config.env
-            config_env = archive_dir / "config.env"
-            if config_env.exists():
-                env_vals = {}
-                for line in config_env.read_text().splitlines():
-                    if "=" in line and not line.startswith("#"):
-                        k, v = line.split("=", 1)
-                        env_vals[k.strip()] = v.strip()
-                mismatches = []
-                key_map = {
-                    "crf": "SVT_AV1_CRF",
-                    "codec": "VIDEO_CODEC",
-                    "scale_w": "SCALE_W",
-                    "scale_h": "SCALE_H",
-                }
-                for fp_key, env_key in key_map.items():
-                    fp_val = str(fp.get(fp_key, ""))
-                    env_val = env_vals.get(env_key, "")
-                    if fp_val and env_val and fp_val != env_val:
-                        mismatches.append(f"  {fp_key}: checkpoint={fp_val}, config.env={env_val}")
-                if mismatches:
-                    print(
-                        "WARNING: Config mismatch between postfilter checkpoint and "
-                        "current config.env. This may cause distribution shift and "
-                        "score regression:\n" + "\n".join(mismatches),
-                        file=sys.stderr,
-                    )
-    except Exception:
-        pass  # Non-fatal: guard is advisory only
+# verify_config_consistency was here but deleted — it was dead code (never called)
+# and used weights_only=False (security risk). Config verification is now in
+# runner.py's preflight_config_match() which uses weights_only=True.
 
 
 BATCH_SIZE = 8  # batched inference: 3-5x speedup on CPU
-MULTI_PASS = int(os.environ.get("INFLATE_MULTI_PASS", "1"))  # run CNN N times (2=double pass, ~3min each on CPU; 3 may exceed 10-min inflate budget)
-TTO_STEPS = int(os.environ.get("INFLATE_TTO_STEPS", "0"))  # test-time optimization steps
-TTO_LR = float(os.environ.get("INFLATE_TTO_LR", "1e-4"))
-TTO_LOSS = os.environ.get("INFLATE_TTO_LOSS", "temporal_consistency")
-TTO_BUDGET = float(os.environ.get("INFLATE_TTO_BUDGET", "30.0"))  # 30s CPU safety default
-# Supervised TTO with pre-computed PoseNet targets
-SUPERVISED_TTO_STEPS = int(os.environ.get("INFLATE_SUPERVISED_TTO_STEPS", "0"))
-SUPERVISED_TTO_LR = float(os.environ.get("INFLATE_SUPERVISED_TTO_LR", "1e-4"))
-SUPERVISED_TTO_BUDGET = float(os.environ.get("INFLATE_SUPERVISED_TTO_BUDGET", "120.0"))
-SUPERVISED_TTO_PARAM_MODE = os.environ.get("INFLATE_SUPERVISED_TTO_PARAM_MODE", "all")
-# Noise-shaped rounding: use local gradient (pixel neighborhood) instead of nearest-round
-# Fast variant only -- no scorer gradient needed, safe for CPU lane's ~5min budget
-NOISE_SHAPING_FAST = os.environ.get("INFLATE_NOISE_SHAPING_FAST", "0") == "1"
-# Supervised TTO if scorer is available on eval machine
-SUPERVISED_TTO_IF_AVAILABLE = os.environ.get("INFLATE_SUPERVISED_TTO_IF_AVAILABLE", "0") == "1"
-
-# ── Exploit #2: AllNorm brightness shift (Trick 13) ──────────────────
-# DISPROVEN (2026-04-11): AllNorm is BatchNorm1d(1) on flattened post-backbone
-# features, NOT pixel-level normalization. PoseNet IS sensitive to brightness.
-# This exploit caused the 1.33 -> 2.15 regression. Disabled by default.
-# Only enable if the postfilter was specifically trained with brightness augmentation.
-INFLATE_BRIGHTNESS_SHIFT = os.environ.get("INFLATE_BRIGHTNESS_SHIFT", "0") == "1"
-BRIGHTNESS_TARGET = float(os.environ.get("INFLATE_BRIGHTNESS_TARGET", "128.0"))
-BRIGHTNESS_MAX_SHIFT = float(os.environ.get("INFLATE_BRIGHTNESS_MAX_SHIFT", "30.0"))
-
-# ── Exploit #3: Chroma channel smoothing (Trick 8 — YUV420 blind spot) ─
-# The scorer downsamples chroma 2x in both dimensions. Odd-position U/V
-# pixels are averaged away. Smoothing them pre-output is invisible to the
-# scorer but produces frames that compress better (lower rate term).
-INFLATE_CHROMA_SMOOTH = os.environ.get("INFLATE_CHROMA_SMOOTH", "0") == "1"
-CHROMA_SMOOTH_KERNEL = int(os.environ.get("INFLATE_CHROMA_SMOOTH_KERNEL", "3"))
 
 
 def apply_brightness_shift_batch(
@@ -687,7 +607,14 @@ def inflate_with_postfilter(
     posenet_targets_path: str | None = None,
     posenet=None, upstream_dir: str | None = None,
     posenet_path: str | None = None, segnet_path: str | None = None,
-    multi_pass: int = int(os.environ.get("INFLATE_MULTI_PASS", "1")),
+    multi_pass: int = 1,
+    deblock: bool = False, deblock_h: int = 10,
+    deblock_template_window: int = 7, deblock_search_window: int = 21,
+    brightness_shift: bool = False, brightness_target: float = 128.0,
+    brightness_max_shift: float = 30.0,
+    chroma_smooth: bool = False, chroma_smooth_kernel: int = 3,
+    noise_shaping_fast: bool = False,
+    supervised_tto_if_available: bool = False,
 ) -> int:
     """Decode, upscale, apply learned post-filter, write raw RGB.
 
@@ -814,7 +741,7 @@ def inflate_with_postfilter(
     # Trick 6: Opportunistic supervised TTO if scorer models are on the eval machine
     # The scorer IS on the eval machine (it runs scoring). If PoseNet is accessible,
     # run 5 quick gradient steps (~30s) to directly optimize the scorer metric.
-    if SUPERVISED_TTO_IF_AVAILABLE and supervised_tto_steps == 0:
+    if supervised_tto_if_available and supervised_tto_steps == 0:
         try:
             from tac.scorer import load_scorers
             from tac.tto import supervised_tto as _stto_fn
@@ -875,59 +802,36 @@ def inflate_with_postfilter(
         if not batch_tensors:
             return
         x = torch.cat(batch_tensors, dim=0).to(device)
-        # CPU Eureka #8: Non-local means deblocking BEFORE postfilter
-        if INFLATE_DEBLOCK:
+        if deblock:
             x = deblock_tensor(
-                x, h=DEBLOCK_H,
-                template_window=DEBLOCK_TEMPLATE_WINDOW,
-                search_window=DEBLOCK_SEARCH_WINDOW,
+                x, h=deblock_h,
+                template_window=deblock_template_window,
+                search_window=deblock_search_window,
             )
         with torch.inference_mode():
             out = model(x)
-            # Multi-pass: run the CNN again on its own output (deeper effective network)
-            # Round to uint8 between passes to match the training distribution
             for _ in range(multi_pass - 1):
                 out = out.round().clamp(0, 255)
                 out = model(out)
 
-            # Exploit #2: AllNorm brightness shift — DISPROVEN, use with caution
-            if INFLATE_BRIGHTNESS_SHIFT:
-                print(
-                    "WARNING: Brightness shift is EXPERIMENTAL. AllNorm invariance "
-                    "claim was disproven — PoseNet IS sensitive to brightness changes. "
-                    "Only use if the postfilter was specifically trained with "
-                    "brightness augmentation.",
-                    file=sys.stderr,
+            if brightness_shift:
+                out = apply_brightness_shift_batch(
+                    out, target=brightness_target, max_shift=brightness_max_shift,
                 )
-                out = apply_brightness_shift_batch(out, target=BRIGHTNESS_TARGET, max_shift=BRIGHTNESS_MAX_SHIFT)
 
-            # Exploit #3: Chroma smoothing — theoretically zero scorer cost, UNTESTED in isolation
-            if INFLATE_CHROMA_SMOOTH:
-                print(
-                    "WARNING: Chroma smoothing is UNTESTED in isolation. While YUV420 "
-                    "discards odd-position chroma, the interaction with the full pipeline "
-                    "has not been validated with an individual A/B test.",
-                    file=sys.stderr,
-                )
-                out = apply_chroma_smooth_batch(out, kernel_size=CHROMA_SMOOTH_KERNEL)
+            if chroma_smooth:
+                out = apply_chroma_smooth_batch(out, kernel_size=chroma_smooth_kernel)
 
-        if NOISE_SHAPING_FAST:
-            # Trick 5: gradient-directed rounding using LOCAL pixel gradients.
-            # No scorer needed -- uses spatial neighborhood statistics to decide
-            # ceil vs floor. Costs ~0.1s per batch (negligible on CPU).
+        if noise_shaping_fast:
             out_ns = out.detach()
-            # Local gradient: Laplacian approximation (pixel vs 4-neighbors)
-            # Positive Laplacian = pixel brighter than neighbors -> floor helps
-            # Negative Laplacian = pixel darker than neighbors -> ceil helps
             padded = F.pad(out_ns, (1, 1, 1, 1), mode="reflect")
             laplacian = (
                 4 * out_ns
-                - padded[:, :, :-2, 1:-1]   # top
-                - padded[:, :, 2:, 1:-1]     # bottom
-                - padded[:, :, 1:-1, :-2]    # left
-                - padded[:, :, 1:-1, 2:]     # right
+                - padded[:, :, :-2, 1:-1]
+                - padded[:, :, 2:, 1:-1]
+                - padded[:, :, 1:-1, :-2]
+                - padded[:, :, 1:-1, 2:]
             )
-            # Use Laplacian sign as a proxy for scorer gradient direction
             out_clamped = out.detach().clamp(0.0, 255.0)
             out_rounded = torch.where(
                 laplacian.detach() < 0,
@@ -973,14 +877,6 @@ def inflate_with_postfilter(
     print(f"Inflated {n} frames with post-filter -> {dst} ({elapsed:.1f}s)",
           file=sys.stderr)
     return n
-
-
-# ============================================================
-# Trick stack env var: INFLATE_TRICK_STACK=1 activates the unified
-# stacking pipeline instead of the simple inflate loop.
-# ============================================================
-TRICK_STACK_ENABLED = os.environ.get("INFLATE_TRICK_STACK", "0") == "1"
-TRICK_STACK_PROFILE = os.environ.get("INFLATE_TRICK_STACK_PROFILE", "stacked_inflate_full")
 
 
 def _cli():
@@ -1036,6 +932,15 @@ def _cli():
                   default=None, help="Direct path to posenet.safetensors.")
     @click.option("--segnet-path", type=click.Path(exists=True), envvar="SEGNET_PATH",
                   default=None, help="Direct path to segnet.safetensors.")
+    @click.option("--noise-shaping-fast/--no-noise-shaping-fast", envvar="INFLATE_NOISE_SHAPING_FAST",
+                  default=False, help="Fast noise-shaped rounding (Laplacian proxy).")
+    @click.option("--supervised-tto-if-available/--no-supervised-tto-if-available",
+                  envvar="INFLATE_SUPERVISED_TTO_IF_AVAILABLE",
+                  default=False, help="Opportunistic supervised TTO if scorer models found.")
+    @click.option("--target-w", type=int, envvar="SOURCE_W",
+                  default=1164, help="Output frame width (must match original video).")
+    @click.option("--target-h", type=int, envvar="SOURCE_H",
+                  default=874, help="Output frame height (must match original video).")
     @click.option("--device", default="cpu", help="Inference device: cpu, cuda, or mps.")
     @click.option("--verbose/--quiet", default=True, help="Print progress to stderr.")
     def inflate(archive_dir, output_dir, video_names_file, postfilter_path,
@@ -1044,6 +949,8 @@ def _cli():
                 multi_pass, tto_steps, tto_lr, tto_loss, tto_budget,
                 supervised_tto_steps, supervised_tto_lr, supervised_tto_budget,
                 supervised_tto_param_mode,
+                noise_shaping_fast, supervised_tto_if_available,
+                target_w, target_h,
                 trick_stack, trick_stack_profile,
                 upstream_dir, posenet_path, segnet_path, device, verbose):
         """Inflate compressed video with learned post-filter.
@@ -1070,17 +977,6 @@ def _cli():
         """
         import time
         t_start = time.monotonic()
-
-        # Apply CLI values to module-level globals so existing functions pick them up
-        global INFLATE_DEBLOCK, DEBLOCK_H, DEBLOCK_TEMPLATE_WINDOW, DEBLOCK_SEARCH_WINDOW
-        global MULTI_PASS, INFLATE_BRIGHTNESS_SHIFT, INFLATE_CHROMA_SMOOTH
-        INFLATE_DEBLOCK = deblock
-        DEBLOCK_H = deblock_h
-        DEBLOCK_TEMPLATE_WINDOW = deblock_template_window
-        DEBLOCK_SEARCH_WINDOW = deblock_search_window
-        MULTI_PASS = multi_pass
-        INFLATE_BRIGHTNESS_SHIFT = brightness_shift
-        INFLATE_CHROMA_SMOOTH = chroma_smooth
 
         # Resolve postfilter weights
         script_dir = Path(__file__).resolve().parent
@@ -1185,6 +1081,11 @@ def _cli():
                 click.echo(f"Inflating {mkv_path} -> {out_path} (post-filter)", err=True)
             inflate_with_postfilter(
                 str(mkv_path), str(out_path), model,
+                target_w=target_w, target_h=target_h,
+                device=device,
+                multi_pass=multi_pass,
+                noise_shaping_fast=noise_shaping_fast,
+                supervised_tto_if_available=supervised_tto_if_available,
                 tto_steps=tto_steps, tto_lr=tto_lr,
                 tto_loss=tto_loss, tto_budget=tto_budget,
                 supervised_tto_steps=supervised_tto_steps,
@@ -1195,6 +1096,11 @@ def _cli():
                 upstream_dir=upstream_dir,
                 posenet_path=posenet_path,
                 segnet_path=segnet_path,
+                deblock=deblock, deblock_h=deblock_h,
+                deblock_template_window=deblock_template_window,
+                deblock_search_window=deblock_search_window,
+                brightness_shift=brightness_shift,
+                chroma_smooth=chroma_smooth,
             )
 
         t_total = time.monotonic() - t_start
