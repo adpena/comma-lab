@@ -654,6 +654,7 @@ def stage_inflate(
         )
 
     # Validate frame count / size using SOURCE_W x SOURCE_H from config.env
+    config = _parse_config_env(submission_src / "config.env")
     source_w = int(config.get("SOURCE_W", "1164"))
     source_h = int(config.get("SOURCE_H", "874"))
     for name in names:
