@@ -135,6 +135,50 @@ class TacLosslessGptArithmeticCoderTests(unittest.TestCase):
         self.assertEqual(result["token_count"], 4)
         self.assertTrue(result["exact_match"])
 
+    def test_encode_commavq_gpt_sample_writes_json_sidecar(self) -> None:
+        import json
+
+        from tac.lossless.gpt_arithmetic_coder import encode_commavq_gpt_sample
+
+        with tempfile.TemporaryDirectory() as tmpdir:
+            root = Path(tmpdir)
+            token_path = root / "tokens.bin"
+            output_path = root / "sample.gta"
+            sidecar_path = root / "sample.json"
+            np.array([1024, 0, 1, 0, 1025], dtype=np.uint16).tofile(token_path)
+
+            class FakeModel:
+                def token_logits(self, tokens, *, context_tokens):
+                    logits = np.full((len(tokens) - 1, 2), -10.0, dtype=np.float64)
+                    for row, target in enumerate([0, 1, 0]):
+                        logits[row, target] = 10.0
+                    return logits
+
+                def next_token_logits(self, context):
+                    logits = np.array([0.0, 0.0], dtype=np.float64)
+                    logits[1 - int(context[-1]) if int(context[-1]) < 2 else 0] = 10.0
+                    return logits
+
+            result = encode_commavq_gpt_sample(
+                token_path=token_path,
+                encoded_path=output_path,
+                profile="gpt_arithmetic_small",
+                max_tokens=4,
+                context_tokens=3,
+                vocab_size=2,
+                device="cpu",
+                dtype="float32",
+                verify_decode=False,
+                model_loader=lambda **_: FakeModel(),
+            )
+
+            self.assertTrue(sidecar_path.exists())
+            sidecar = json.loads(sidecar_path.read_text(encoding="utf-8"))
+
+        self.assertEqual(sidecar["encoded_path"], str(output_path))
+        self.assertEqual(sidecar["token_count"], 4)
+        self.assertEqual(sidecar["encoded_bytes"], result["encoded_bytes"])
+
     def test_encode_commavq_gpt_sample_reports_runtime_metadata_from_loaded_model(self) -> None:
         from tac.lossless.gpt_arithmetic_coder import encode_commavq_gpt_sample
 
@@ -308,6 +352,54 @@ class TacLosslessGptArithmeticCoderTests(unittest.TestCase):
         self.assertEqual(token_logits_calls, [{"tokens": [3, 4, 5, 6, 7], "context_tokens": 3}])
         self.assertEqual(next_token_logits_calls, [[3], [3, 4], [3, 4, 5], [4, 5, 6]])
         self.assertTrue(result["exact_match"])
+
+    def test_encode_commavq_gpt_global_sample_writes_json_sidecar(self) -> None:
+        import json
+
+        import tac.lossless.gpt_arithmetic_coder as module
+
+        encode_commavq_gpt_global_sample = getattr(module, "encode_commavq_gpt_global_sample", None)
+        if encode_commavq_gpt_global_sample is None:
+            self.fail("encode_commavq_gpt_global_sample is missing")
+
+        with tempfile.TemporaryDirectory() as tmpdir:
+            root = Path(tmpdir)
+            token_path = root / "tokens.bin"
+            output_path = root / "sample.gta"
+            sidecar_path = root / "sample.json"
+            np.array([3, 4, 5, 6, 7], dtype=np.uint16).tofile(token_path)
+
+            class FakeModel:
+                def token_logits(self, tokens, *, context_tokens):
+                    logits = np.full((len(tokens) - 1, 16), -10.0, dtype=np.float64)
+                    for row, target in enumerate([4, 5, 6, 7]):
+                        logits[row, target] = 10.0
+                    return logits
+
+                def next_token_logits(self, context):
+                    logits = np.full((16,), -10.0, dtype=np.float64)
+                    logits[(int(context[-1]) + 1) % 16] = 10.0
+                    return logits
+
+            result = encode_commavq_gpt_global_sample(
+                token_path=token_path,
+                encoded_path=output_path,
+                profile="gpt_arithmetic_small",
+                max_tokens=5,
+                context_tokens=3,
+                vocab_size=16,
+                device="cpu",
+                dtype="float32",
+                verify_decode=False,
+                model_loader=lambda **_: FakeModel(),
+            )
+
+            self.assertTrue(sidecar_path.exists())
+            sidecar = json.loads(sidecar_path.read_text(encoding="utf-8"))
+
+        self.assertEqual(sidecar["encoded_path"], str(output_path))
+        self.assertEqual(sidecar["token_count"], 5)
+        self.assertEqual(sidecar["encoded_bytes"], result["encoded_bytes"])
 
     def test_encode_commavq_gpt_global_sample_roundtrips_bounded_raw_stream_prefix(self) -> None:
         import tac.lossless.gpt_arithmetic_coder as module

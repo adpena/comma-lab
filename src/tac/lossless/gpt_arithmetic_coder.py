@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import math
 from collections.abc import Callable
+import json
 from pathlib import Path
 import time
 
@@ -18,6 +19,11 @@ from .range_coder import (
 )
 
 STREAM_MAGIC = b"GTA1"
+
+
+def _write_result_sidecar(encoded_path: Path, payload: dict[str, object]) -> None:
+    sidecar_path = encoded_path.with_suffix(".json")
+    sidecar_path.write_text(json.dumps(payload, indent=2), encoding="utf-8")
 
 
 def _normalize_tokens(tokens) -> np.ndarray:
@@ -338,6 +344,7 @@ def encode_commavq_gpt_sample(
         "measured": False,
     }
     result.update({k: v for k, v in runtime_metadata.items() if k != "model_url"})
+    _write_result_sidecar(target, result)
     return result
 
 
@@ -409,6 +416,7 @@ def encode_commavq_gpt_global_sample(
         "measured": False,
     }
     result.update({k: v for k, v in runtime_metadata.items() if k != "model_url"})
+    _write_result_sidecar(target, result)
     return result
 
 
