@@ -469,6 +469,54 @@ def deblock_tensor(
 # NOTE: All env vars below are read at module import time (not per-call).
 # This means changing them after import has no effect. This is intentional
 # for the contest submission use case (single process, single config).
+# ── Distribution shift guard (2026-04-11) ────────────────────────────
+def verify_config_consistency(archive_dir: Path, checkpoint_path: Path):
+    """Verify the encode config matches what the postfilter was trained on.
+
+    Checks for a config_fingerprint in the checkpoint. If present,
+    compares against the current config.env. Warns on mismatch, because
+    distribution shift between training and inference kills scores.
+
+    This guard was added after the 1.33 -> 2.15 regression caused by
+    changing encode-time parameters (BT.601 color matrix) without retraining
+    the postfilter, which had been trained on BT.709 CRF-34 output.
+    """
+    import json
+    try:
+        ckpt = torch.load(str(checkpoint_path), map_location="cpu", weights_only=False)
+        if isinstance(ckpt, dict) and "config_fingerprint" in ckpt:
+            fp = ckpt["config_fingerprint"]
+            # Compare against current config.env
+            config_env = archive_dir / "config.env"
+            if config_env.exists():
+                env_vals = {}
+                for line in config_env.read_text().splitlines():
+                    if "=" in line and not line.startswith("#"):
+                        k, v = line.split("=", 1)
+                        env_vals[k.strip()] = v.strip()
+                mismatches = []
+                key_map = {
+                    "crf": "SVT_AV1_CRF",
+                    "codec": "VIDEO_CODEC",
+                    "scale_w": "SCALE_W",
+                    "scale_h": "SCALE_H",
+                }
+                for fp_key, env_key in key_map.items():
+                    fp_val = str(fp.get(fp_key, ""))
+                    env_val = env_vals.get(env_key, "")
+                    if fp_val and env_val and fp_val != env_val:
+                        mismatches.append(f"  {fp_key}: checkpoint={fp_val}, config.env={env_val}")
+                if mismatches:
+                    print(
+                        "WARNING: Config mismatch between postfilter checkpoint and "
+                        "current config.env. This may cause distribution shift and "
+                        "score regression:\n" + "\n".join(mismatches),
+                        file=sys.stderr,
+                    )
+    except Exception:
+        pass  # Non-fatal: guard is advisory only
+
+
 BATCH_SIZE = 8  # batched inference: 3-5x speedup on CPU
 MULTI_PASS = int(os.environ.get("INFLATE_MULTI_PASS", "1"))  # run CNN N times (2=double pass, ~3min each on CPU; 3 may exceed 10-min inflate budget)
 TTO_STEPS = int(os.environ.get("INFLATE_TTO_STEPS", "0"))  # test-time optimization steps
@@ -487,9 +535,10 @@ NOISE_SHAPING_FAST = os.environ.get("INFLATE_NOISE_SHAPING_FAST", "0") == "1"
 SUPERVISED_TTO_IF_AVAILABLE = os.environ.get("INFLATE_SUPERVISED_TTO_IF_AVAILABLE", "0") == "1"
 
 # ── Exploit #2: AllNorm brightness shift (Trick 13) ──────────────────
-# PoseNet's BatchNorm subtracts the mean, making it invariant to global
-# brightness offsets. We shift each frame's luminance toward 128 (midpoint)
-# for better uint8 quantization symmetry. Zero PoseNet cost.
+# DISPROVEN (2026-04-11): AllNorm is BatchNorm1d(1) on flattened post-backbone
+# features, NOT pixel-level normalization. PoseNet IS sensitive to brightness.
+# This exploit caused the 1.33 -> 2.15 regression. Disabled by default.
+# Only enable if the postfilter was specifically trained with brightness augmentation.
 INFLATE_BRIGHTNESS_SHIFT = os.environ.get("INFLATE_BRIGHTNESS_SHIFT", "0") == "1"
 BRIGHTNESS_TARGET = float(os.environ.get("INFLATE_BRIGHTNESS_TARGET", "128.0"))
 BRIGHTNESS_MAX_SHIFT = float(os.environ.get("INFLATE_BRIGHTNESS_MAX_SHIFT", "30.0"))
@@ -507,12 +556,15 @@ def apply_brightness_shift_batch(
     target: float = 128.0,
     max_shift: float = 30.0,
 ) -> torch.Tensor:
-    """Shift each frame's global brightness toward target. Zero PoseNet cost.
+    """Shift each frame's global brightness toward target.
 
-    PoseNet uses AllNorm (BatchNorm variant) that subtracts the channel mean,
-    making it completely invariant to additive brightness offsets. This lets
-    us freely adjust brightness to improve uint8 quantization symmetry and
-    codec efficiency without any scorer penalty.
+    WARNING (2026-04-11): The AllNorm invariance claim was DISPROVEN. AllNorm
+    is BatchNorm1d(1) on flattened post-backbone features, NOT pixel-level
+    normalization. PoseNet IS sensitive to brightness changes (~1% shift is
+    detectable). This exploit caused the 1.33 -> 2.15 regression.
+
+    Only use if the postfilter was specifically trained with brightness
+    augmentation to compensate for the shift.
 
     Args:
         frames_bchw: (B, 3, H, W) float tensor in [0, 255].
@@ -546,7 +598,11 @@ def apply_chroma_smooth_batch(
     chroma blocks. Odd-position U/V samples are discarded. By smoothing
     chroma at those positions before output, we make the chroma consistent
     with what the scorer will see after its own subsampling. This reduces
-    high-frequency chroma content, saving rate at zero scorer cost.
+    high-frequency chroma content, theoretically saving rate at zero scorer cost.
+
+    UNTESTED (2026-04-11): This has not been validated with an individual A/B
+    test. The theoretical argument is sound but the interaction with the full
+    inflate pipeline and the postfilter may produce unexpected effects.
 
     Args:
         frames_bchw: (B, 3, H, W) float tensor in [0, 255] (RGB).
@@ -834,12 +890,25 @@ def inflate_with_postfilter(
                 out = out.round().clamp(0, 255)
                 out = model(out)
 
-            # Exploit #2: AllNorm brightness shift — zero PoseNet cost
+            # Exploit #2: AllNorm brightness shift — DISPROVEN, use with caution
             if INFLATE_BRIGHTNESS_SHIFT:
+                print(
+                    "WARNING: Brightness shift is EXPERIMENTAL. AllNorm invariance "
+                    "claim was disproven — PoseNet IS sensitive to brightness changes. "
+                    "Only use if the postfilter was specifically trained with "
+                    "brightness augmentation.",
+                    file=sys.stderr,
+                )
                 out = apply_brightness_shift_batch(out, target=BRIGHTNESS_TARGET, max_shift=BRIGHTNESS_MAX_SHIFT)
 
-            # Exploit #3: Chroma smoothing — zero scorer cost, lower rate
+            # Exploit #3: Chroma smoothing — theoretically zero scorer cost, UNTESTED in isolation
             if INFLATE_CHROMA_SMOOTH:
+                print(
+                    "WARNING: Chroma smoothing is UNTESTED in isolation. While YUV420 "
+                    "discards odd-position chroma, the interaction with the full pipeline "
+                    "has not been validated with an individual A/B test.",
+                    file=sys.stderr,
+                )
                 out = apply_chroma_smooth_batch(out, kernel_size=CHROMA_SMOOTH_KERNEL)
 
         if NOISE_SHAPING_FAST:

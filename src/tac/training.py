@@ -675,7 +675,9 @@ class Trainer:
         to scorer input size, and proper einops rearrange.
 
         AllNorm.forward uses .view() which we replace with .reshape() for
-        robustness with non-contiguous tensors.
+        robustness with non-contiguous tensors. Note: AllNorm is BatchNorm1d(1)
+        on flattened post-backbone features — it does NOT provide pixel-level
+        brightness invariance (this was disproven 2026-04-11).
 
         This is REQUIRED for training — without it, PoseNet gradients are zero.
         """
@@ -882,6 +884,15 @@ class Trainer:
             "hidden": self.config.hidden,
             "kernel": self.config.kernel,
             "alpha": self.config.alpha,
+        }
+        # Distribution shift guard: save encode config fingerprint so inflate
+        # can warn if config.env changed after training (2026-04-11).
+        int8_state["config_fingerprint"] = {
+            "crf": getattr(self.config, "crf", 34),
+            "color_matrix": getattr(self.config, "color_matrix", "bt709"),
+            "codec": getattr(self.config, "codec", "libsvtav1"),
+            "scale_w": getattr(self.config, "scale_w", 524),
+            "scale_h": getattr(self.config, "scale_h", 394),
         }
         int8_tmp = int8_path.with_suffix(".pt.tmp")
         torch.save(int8_state, int8_tmp)
@@ -1144,8 +1155,8 @@ class Trainer:
             self._patched_scorers = True
 
         # NOTE: channels_last on scorers is DISABLED. The upstream PoseNet/SegNet
-        # use AllNorm with batch_norm, whose backward pass calls .view() which is
-        # incompatible with channels_last strides on MPS. The model (postfilter)
+        # use AllNorm (BatchNorm1d(1) on flattened features) whose backward pass
+        # calls .view() which is incompatible with channels_last strides on MPS. The model (postfilter)
         # still uses channels_last for speed; scorers stay in standard layout.
 
         cfg = self.config

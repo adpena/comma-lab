@@ -124,7 +124,7 @@ class QuadraticConfig:
     pose_weight_sqrt10: float = 10.0  # inside the sqrt
 
     # Noether symmetry projection
-    project_brightness: bool = True  # remove AllNorm invariant direction
+    project_brightness: bool = True  # remove brightness direction (note: AllNorm invariance DISPROVEN 2026-04-11)
 
     # Convergence
     grad_norm_tol: float = 1e-7
@@ -263,14 +263,17 @@ class QuadraticNewtonOptimizer:
         if not self.cfg.project_brightness:
             return gradient
 
-        # Project out global brightness direction (AllNorm invariance)
-        # The brightness direction is the all-ones vector (uniform shift)
+        # Project out global brightness direction.
+        # NOTE (2026-04-11): AllNorm invariance was DISPROVEN — PoseNet IS
+        # sensitive to brightness. However, projecting out the brightness
+        # direction is still useful for CG convergence (removes a nearly-flat
+        # direction that wastes CG iterations), just not because it's a true
+        # null-space direction.
         mean_brightness = gradient.mean()
         gradient = gradient - mean_brightness
 
-        # Project out per-channel brightness (more precise)
-        # SegNet and PoseNet normalize per-channel, so per-channel mean
-        # changes are approximately in the null space
+        # Project out per-channel brightness (heuristic for CG convergence,
+        # NOT a true null-space projection despite the original claim)
         for c in range(3):
             channel_mean = gradient[..., c].mean()
             gradient[..., c] = gradient[..., c] - channel_mean

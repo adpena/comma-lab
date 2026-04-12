@@ -290,8 +290,11 @@ def _compute_brightness_shifts(
 ) -> np.ndarray:
     """Compute optimal per-frame brightness offset.
 
-    PoseNet is invariant to global brightness shifts (AllNorm). We shift each
-    frame's luminance toward 128 for better uint8 quantization symmetry.
+    WARNING (2026-04-11): The AllNorm brightness invariance claim was DISPROVEN.
+    AllNorm is BatchNorm1d(1) on flattened post-backbone features, NOT pixel-level
+    normalization. PoseNet IS sensitive to brightness. This function is retained
+    for cases where the postfilter is retrained with brightness augmentation.
+    Do NOT use without retraining.
 
     Args:
         frames: list of (H, W, 3) uint8 tensors.

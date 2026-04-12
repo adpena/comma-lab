@@ -198,6 +198,16 @@ def estimate_detection_boundary(
     negligible scorer response. Below this threshold, modifications are
     FREE — they cost zero distortion but can reduce rate.
 
+    IMPORTANT (2026-04-11): The boundary for pixel-level modifications is
+    MUCH LOWER than initially estimated. PoseNet is sensitive to ~1%
+    brightness change (not 10% as originally assumed). The AllNorm invariance
+    claim was disproven — AllNorm is BatchNorm1d(1) on post-backbone features,
+    not pixel normalization. For the CPU lane, the safe modification budget
+    is in the CODEC domain (CRF, quantization parameters), not the pixel
+    domain. The GPU lane's constrained generation is different — it generates
+    frames from scratch, so the Fridrich boundary applies correctly there
+    (no distribution shift problem).
+
     Method: apply Gaussian perturbations at increasing magnitudes
     epsilon = {1, 2, 4, 8, ...} and measure scorer response. The boundary
     is where response transitions from noise floor to monotonic increase
@@ -803,6 +813,13 @@ def apply_cost_weighted_postfilter(
 
     This ensures the postfilter never pushes past the detection boundary
     on sensitive pixels, while maximizing correction on insensitive ones.
+
+    WARNING (2026-04-11): Pixel-level cost weighting must be validated
+    carefully. The detection boundary for pixel modifications is MUCH
+    smaller than initially estimated (PoseNet detects ~1% brightness
+    change). Verify that the cost map correctly identifies scorer-sensitive
+    pixels before using this in production. The boundary_fraction default
+    of 0.8 may be too aggressive for pixel-level modifications.
 
     Args:
         frames_float: (B, 3, H, W) postfilter output (the "corrected" frames).

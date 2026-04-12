@@ -9,8 +9,8 @@ Stacking order (each step refines the previous output):
   2. Self-supervised TTO (temporal consistency, no scorer needed)
   3. Supervised TTO with PoseNet targets (if available)
   4. Multi-pass inference (run model N times, uint8 round between)
-  5. Frame-specific brightness shift (AllNorm invariance, free PoseNet bits)
-  6. Chroma channel exploitation (perturbations invisible after YUV420)
+  5. Frame-specific brightness shift (DISPROVEN — AllNorm invariance is wrong)
+  6. Chroma channel exploitation (perturbations invisible after YUV420, UNTESTED)
   7. Per-frame scorer fragility weighting (spend more refinement on fragile frames)
   8. Noise-shaped uint8 rounding (gradient-directed, not nearest)
   9. Backward delta smoothing (smooth temporal transitions in reverse order)
@@ -88,6 +88,8 @@ class TrickStackConfig:
     use_multi_pass: int = 3  # number of forward passes (1 = single pass)
 
     # -- Stage 5: Frame-specific brightness shift (Trick 13 — AllNorm) --
+    # DISPROVEN (2026-04-11): AllNorm invariance is wrong. PoseNet IS sensitive
+    # to brightness. DO NOT enable without retraining with brightness augmentation.
     use_brightness_shift: bool = False
     brightness_shift_value: float = 0.0  # additive offset, auto-tuned if 0
     brightness_shift_auto: bool = True  # auto-tune per frame to center at 128
@@ -404,11 +406,13 @@ def _stage_brightness_shift(
     frames_bchw: torch.Tensor,
     cfg: TrickStackConfig,
 ) -> torch.Tensor:
-    """Stage 5: Frame-specific brightness shift (Trick 13 — AllNorm invariance).
+    """Stage 5: Frame-specific brightness shift (Trick 13 — DISPROVEN).
 
-    PoseNet uses normalization layers (BatchNorm/InstanceNorm) that subtract
-    the mean, making it invariant to global brightness shifts. We exploit this
-    to shift brightness toward values that quantize more favorably.
+    WARNING (2026-04-11): The AllNorm invariance claim was DISPROVEN. AllNorm
+    is BatchNorm1d(1) on flattened post-backbone features, NOT pixel-level
+    normalization. PoseNet IS sensitive to brightness changes. This exploit
+    caused the 1.33 -> 2.15 regression. Only use if the postfilter was
+    specifically retrained with brightness augmentation.
 
     Args:
         frames_bchw: (B, 3, H, W) float tensor in [0, 255].
@@ -795,8 +799,8 @@ def stacked_inflate(
       2. Self-supervised TTO (temporal consistency, no scorer needed)
       3. Supervised TTO with PoseNet targets (if available)
       4. Multi-pass inference (run model N times, uint8 round between)
-      5. Frame-specific brightness shift (AllNorm invariance, free PoseNet bits)
-      6. Chroma channel exploitation (perturbations invisible after YUV420)
+      5. Frame-specific brightness shift (DISPROVEN — AllNorm invariance is wrong)
+      6. Chroma channel exploitation (perturbations invisible after YUV420, UNTESTED)
       7. Per-frame scorer fragility weighting (spend more on fragile frames)
       8. Noise-shaped uint8 rounding (gradient-directed, not nearest)
       9. Backward delta smoothing (smooth temporal transitions in reverse)
