@@ -3,7 +3,7 @@
 
 Trains a mask-conditioned SPADE renderer with:
 1. Hard SegNet constraint (augmented Lagrangian, boundary 0.005)
-2. Hard PoseNet constraint (augmented Lagrangian, boundary 0.01)
+2. Hard PoseNet constraint (augmented Lagrangian, boundary 0.05)
 3. Coupled trajectory loss (consecutive pairs, temporal coherence)
 4. Ego-motion flow regularization (geometric prior)
 5. Self-compression penalty (minimize model size for rate)
@@ -122,16 +122,19 @@ class FridrichRendererConfig:
 
     # Phase 2+3: Fridrich Lagrangian constraints
     seg_boundary: float = 0.005    # target: seg_dist < 0.005
-    pose_boundary: float = 0.01    # target: pose_dist < 0.01
+    pose_boundary: float = 0.05    # target: pose_dist < 0.05 (relaxed; 0.01 never achieved)
     rho_init: float = 10.0         # initial quadratic penalty coefficient
     rho_growth: float = 1.05       # rho multiplier per outer step
     rho_max: float = 1e4           # cap rho to prevent numerical explosion
+
+    # Lagrangian multiplier cap (prevent numerical explosion)
+    lambda_cap: float = 1e6
 
     # TV smoothness
     tv_weight: float = 0.1
 
     # Ego-motion flow regularization
-    flow_weight: float = 0.5
+    flow_weight: float = 0.0  # disabled by default: motion predictor unvalidated
 
     # Phase 3: self-compression
     rate_weight: float = 0.01       # rate penalty weight
@@ -145,6 +148,15 @@ class FridrichRendererConfig:
 
     # Logging
     log_every: int = 50
+
+    # Wall-clock budget (hours, 0 = no limit)
+    max_hours: float = 48.0
+
+    # Resume from checkpoint
+    resume: str | None = None
+
+    # Phase 2 MSE anchor weight (keep reconstruction signal alive)
+    phase2_mse_weight: float = 0.1
 
     # Smoke test overrides
     smoke: bool = False
@@ -281,14 +293,19 @@ def _tv_loss(frames: torch.Tensor) -> torch.Tensor:
 def _compute_model_bits(model: nn.Module) -> torch.Tensor:
     """Compute total model size in bits (differentiable via LearnableBitDepth).
 
-    Looks for LearnableBitDepth modules attached to conv layers.
-    Falls back to counting parameters * 8 (FP4 = 4 bits, but we use 8 as conservative).
+    For each Conv2d with LearnableBitDepth: bits = sum(bits_per_channel * fan_in)
+    where fan_in = C_in * kH * kW. This correctly accounts for the actual
+    number of weights per channel, not just the number of channels.
     """
     total = torch.tensor(0.0, device=next(model.parameters()).device)
     has_learnable_bits = False
     for m in model.modules():
-        if hasattr(m, "total_bits") and callable(m.total_bits):
-            total = total + m.total_bits()
+        if isinstance(m, nn.Conv2d) and hasattr(m, "bit_depth"):
+            bits_per_ch = m.bit_depth.bits.clamp(0.0, 8.0)
+            fan_in = m.weight.shape[1] * m.weight.shape[2] * m.weight.shape[3]
+            total = total + (bits_per_ch * fan_in).sum()
+            if m.bias is not None:
+                total = total + bits_per_ch.sum()  # 1 bias value per channel
             has_learnable_bits = True
     if not has_learnable_bits:
         # Fallback: count params * 4 bits (FP4 quantization estimate)
@@ -493,9 +510,11 @@ def _full_eval(
                 gt_btchw = gt_f.unsqueeze(1).contiguous()
                 seg_in_g = segnet.preprocess_input(gen_btchw)
                 seg_in_gt = segnet.preprocess_input(gt_btchw)
-                p_soft = F.softmax(segnet(seg_in_g), dim=1)
-                g_soft = F.softmax(segnet(seg_in_gt), dim=1)
-                seg_dists.append((1.0 - (p_soft * g_soft).sum(dim=1).mean()).item())
+                seg_logits_gen = segnet(seg_in_g)
+                seg_logits_gt = segnet(seg_in_gt)
+                # Hard disagreement rate (official metric)
+                hard_seg = (seg_logits_gen.argmax(dim=1) != seg_logits_gt.argmax(dim=1)).float().mean().item()
+                seg_dists.append(hard_seg)
 
             # PoseNet on consecutive pair
             gen_pair = torch.stack([gen_t, gen_t1], dim=1).contiguous()
@@ -530,10 +549,10 @@ def _full_eval(
                 total_bits += m.bit_depth.total_bits().item()
         model_bytes = total_bits / 8.0
 
-    # Rate = archive size / uncompressed size
-    # Uncompressed: 1200 frames * 874 * 1164 * 3 bytes = ~3.65GB
-    uncompressed_bytes = 1200 * 874 * 1164 * 3
-    rate = model_bytes / uncompressed_bytes
+    # Rate = archive size / original uncompressed video file size
+    # From upstream evaluate.py: sum of file sizes in videos/ dir
+    ORIGINAL_UNCOMPRESSED_SIZE = 37_545_489  # bytes (0.mkv on disk)
+    rate = model_bytes / ORIGINAL_UNCOMPRESSED_SIZE
 
     from tac.scorer import comma_score
     score = comma_score(avg_pose, avg_seg, rate)
@@ -669,19 +688,42 @@ def train_fridrich_renderer(cfg: FridrichRendererConfig) -> dict[str, Any]:
     lambda_pose = 1.0
     rho = cfg.rho_init
 
+    # ---- Resume from checkpoint ----
+    start_epoch = 0
+    if cfg.resume:
+        ckpt_path = Path(cfg.resume)
+        if not ckpt_path.exists():
+            raise FileNotFoundError(f"Resume checkpoint not found: {ckpt_path}")
+        print(f"  Resuming from {ckpt_path}...")
+        ckpt = torch.load(ckpt_path, map_location=device, weights_only=False)
+        pair_gen.load_state_dict(ckpt["model_state_dict"])
+        optimizer.load_state_dict(ckpt["optimizer_state_dict"])
+        if "scheduler_state_dict" in ckpt:
+            scheduler.load_state_dict(ckpt["scheduler_state_dict"])
+        lambda_seg = ckpt.get("lambda_seg", lambda_seg)
+        lambda_pose = ckpt.get("lambda_pose", lambda_pose)
+        rho = ckpt.get("rho", rho)
+        start_epoch = ckpt.get("epoch", 0) + 1
+        best_score_ckpt = ckpt.get("best_score", float("inf"))
+        self_compress_active = ckpt.get("self_compress_active", False)
+        print(f"  Resumed at epoch {start_epoch}, lambda_seg={lambda_seg:.1f}, "
+              f"lambda_pose={lambda_pose:.1f}, rho={rho:.1f}")
+        del ckpt
+        torch.cuda.empty_cache() if torch.cuda.is_available() else None
+
     # ---- Training loop ----
     print("[5/5] Training...")
     print()
 
     history: list[dict[str, Any]] = []
-    best_score = float("inf")
+    best_score = best_score_ckpt if cfg.resume else float("inf")
     best_epoch = -1
     constraints_satisfied_count = 0
     self_compress_active = False
     bit_modules: list[nn.Module] = []
     start_time = time.time()
 
-    for epoch in range(cfg.epochs):
+    for epoch in range(start_epoch, cfg.epochs):
         progress = epoch / max(cfg.epochs - 1, 1)
 
         # Determine phase
@@ -696,12 +738,25 @@ def train_fridrich_renderer(cfg: FridrichRendererConfig) -> dict[str, Any]:
         if phase == 3 and not self_compress_active:
             print(f"\n[epoch {epoch}] Phase 3: activating self-compression...")
             bit_modules = _wrap_with_learnable_bits(pair_gen.renderer, init_bits=cfg.init_bits)
-            # Add bit_depth params to optimizer
+            # Create fresh optimizer + scheduler so new params get full LR
+            # and existing params aren't stuck at decayed cosine LR
             if bit_modules:
                 bit_params = []
                 for bm in bit_modules:
                     bit_params.extend(list(bm.parameters()))
-                optimizer.add_param_group({"params": bit_params, "lr": cfg.lr * 0.1})
+                remaining_epochs = cfg.epochs - epoch
+                optimizer = torch.optim.AdamW(
+                    [
+                        {"params": list(pair_gen.renderer.parameters()), "lr": cfg.lr * 0.5},
+                        {"params": bit_params, "lr": cfg.lr * 0.1},
+                    ],
+                    weight_decay=1e-4,
+                )
+                scheduler = torch.optim.lr_scheduler.CosineAnnealingLR(
+                    optimizer,
+                    T_max=remaining_epochs,
+                    eta_min=cfg.lr * cfg.lr_min_ratio,
+                )
             self_compress_active = True
             print(f"  Wrapped {len(bit_modules)} conv layers with LearnableBitDepth")
 
@@ -764,11 +819,13 @@ def train_fridrich_renderer(cfg: FridrichRendererConfig) -> dict[str, Any]:
             )
         else:
             # Phase 2+3: Fridrich augmented Lagrangian
+            # Keep MSE as reconstruction anchor (Bug 8: prevents hallucination)
             seg_violation = F.relu(seg_dist - cfg.seg_boundary)
             pose_violation = F.relu(pose_dist - cfg.pose_boundary)
 
             total_loss = (
-                cfg.tv_weight * tv
+                cfg.phase2_mse_weight * mse_loss  # scaled-down MSE anchor
+                + cfg.tv_weight * tv
                 + cfg.flow_weight * flow_reg
                 + lambda_seg * seg_violation
                 + lambda_pose * pose_violation
@@ -783,14 +840,29 @@ def train_fridrich_renderer(cfg: FridrichRendererConfig) -> dict[str, Any]:
                 rate_excess = F.relu(model_bits - target_bits) / target_bits
                 total_loss = total_loss + cfg.rate_weight * rate_excess
 
-            # Update Lagrangian multipliers (outer loop)
+            # Update Lagrangian multipliers (outer loop), capped at lambda_cap
             with torch.no_grad():
-                lambda_seg = max(0.0, lambda_seg + rho * seg_violation.item())
-                lambda_pose = max(0.0, lambda_pose + rho * pose_violation.item())
+                lambda_seg = min(cfg.lambda_cap, max(0.0, lambda_seg + rho * seg_violation.item()))
+                lambda_pose = min(cfg.lambda_cap, max(0.0, lambda_pose + rho * pose_violation.item()))
                 rho = min(rho * cfg.rho_growth, cfg.rho_max)
 
             # Track constraint satisfaction
-            if seg_violation.item() < 1e-6 and pose_violation.item() < 1e-6:
+            both_satisfied = seg_violation.item() < 1e-6 and pose_violation.item() < 1e-6
+            if both_satisfied:
+                # Save checkpoint at first constraint satisfaction boundary
+                if constraints_satisfied_count == 0:
+                    boundary_path = results_dir / f"renderer_epoch{epoch:05d}_constraints_met.pt"
+                    torch.save({
+                        "epoch": epoch,
+                        "model_state_dict": pair_gen.state_dict(),
+                        "optimizer_state_dict": optimizer.state_dict(),
+                        "lambda_seg": lambda_seg,
+                        "lambda_pose": lambda_pose,
+                        "rho": rho,
+                        "best_score": best_score,
+                        "config": asdict(cfg),
+                    }, boundary_path)
+                    print(f"  -> Constraints met checkpoint: {boundary_path}")
                 constraints_satisfied_count += 1
             else:
                 constraints_satisfied_count = 0
@@ -860,10 +932,12 @@ def train_fridrich_renderer(cfg: FridrichRendererConfig) -> dict[str, Any]:
                 "epoch": epoch,
                 "model_state_dict": pair_gen.state_dict(),
                 "optimizer_state_dict": optimizer.state_dict(),
+                "scheduler_state_dict": scheduler.state_dict(),
                 "lambda_seg": lambda_seg,
                 "lambda_pose": lambda_pose,
                 "rho": rho,
                 "best_score": best_score,
+                "self_compress_active": self_compress_active,
                 "config": asdict(cfg),
             }, ckpt_path)
             print(f"  -> Checkpoint: {ckpt_path}")
@@ -906,6 +980,26 @@ def train_fridrich_renderer(cfg: FridrichRendererConfig) -> dict[str, Any]:
         if constraints_satisfied_count >= cfg.early_stop_patience:
             print(f"\nEarly stopping: both constraints satisfied for {cfg.early_stop_patience} epochs")
             break
+
+        # ---- Wall-clock budget safeguard ----
+        if cfg.max_hours > 0:
+            elapsed_hours = (time.time() - start_time) / 3600.0
+            if elapsed_hours >= cfg.max_hours:
+                print(f"\nWall-clock budget exhausted: {elapsed_hours:.1f}h >= {cfg.max_hours}h")
+                # Save final checkpoint before stopping
+                ckpt_path = results_dir / f"renderer_epoch{epoch:05d}_timeout.pt"
+                torch.save({
+                    "epoch": epoch,
+                    "model_state_dict": pair_gen.state_dict(),
+                    "optimizer_state_dict": optimizer.state_dict(),
+                    "lambda_seg": lambda_seg,
+                    "lambda_pose": lambda_pose,
+                    "rho": rho,
+                    "best_score": best_score,
+                    "config": asdict(cfg),
+                }, ckpt_path)
+                print(f"  -> Timeout checkpoint: {ckpt_path}")
+                break
 
     # ---- Final summary ----
     elapsed = time.time() - start_time
@@ -951,11 +1045,11 @@ def train_fridrich_renderer(cfg: FridrichRendererConfig) -> dict[str, Any]:
 @click.option("--channels", type=str, default="128,64,32,16", help="Channel widths (comma-separated)")
 @click.option("--spade-hidden", type=int, default=32, help="SPADE conditioning hidden dim")
 @click.option("--seg-boundary", type=float, default=0.005, help="SegNet constraint boundary")
-@click.option("--pose-boundary", type=float, default=0.01, help="PoseNet constraint boundary")
+@click.option("--pose-boundary", type=float, default=0.05, help="PoseNet constraint boundary (relaxed default)")
 @click.option("--rho-init", type=float, default=10.0, help="Initial Lagrangian penalty coefficient")
 @click.option("--rho-growth", type=float, default=1.05, help="Rho growth rate per outer step")
 @click.option("--tv-weight", type=float, default=0.1, help="TV smoothness weight")
-@click.option("--flow-weight", type=float, default=0.5, help="Ego-motion flow regularization weight")
+@click.option("--flow-weight", type=float, default=0.0, help="Ego-motion flow regularization weight (disabled: unvalidated)")
 @click.option("--rate-weight", type=float, default=0.01, help="Self-compression rate penalty weight")
 @click.option("--target-bytes", type=int, default=250 * 1024, help="Target model size in bytes")
 @click.option("--device", type=str, default="cuda", help="Device (cuda/mps/cpu)")
@@ -965,12 +1059,14 @@ def train_fridrich_renderer(cfg: FridrichRendererConfig) -> dict[str, Any]:
 @click.option("--log-every", type=int, default=50, help="Log interval")
 @click.option("--smoke", is_flag=True, help="Smoke test: 20 frames, 5 epochs")
 @click.option("--resume", type=str, default=None, help="Resume from checkpoint path")
+@click.option("--max-hours", type=float, default=48.0, help="Wall-clock budget in hours (0=unlimited)")
+@click.option("--phase2-mse-weight", type=float, default=0.1, help="MSE anchor weight in Phase 2+3")
 def main(
     precomputed, epochs, batch_size, lr, channels, spade_hidden,
     seg_boundary, pose_boundary, rho_init, rho_growth,
     tv_weight, flow_weight, rate_weight, target_bytes,
     device, seed, checkpoint_every, eval_every, log_every,
-    smoke, resume,
+    smoke, resume, max_hours, phase2_mse_weight,
 ):
     """Train DP-SIMS renderer with Fridrich constrained optimization."""
 
@@ -996,6 +1092,9 @@ def main(
         checkpoint_every=checkpoint_every,
         eval_every=1 if smoke else eval_every,
         log_every=1 if smoke else log_every,
+        max_hours=max_hours,
+        resume=resume,
+        phase2_mse_weight=phase2_mse_weight,
         smoke=smoke,
     )
 
