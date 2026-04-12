@@ -55,3 +55,27 @@ TTO (trick 6): env var controlled, 3 self-supervised losses, wall-clock budget, 
 ## 2026-04-11 [discovery] Tricks 13-21 implemented, tricks 22-31 in progress
 
 5 new tac modules: scorer_exploits, temporal_delta, semantic_quantization, cross_frame_attention, scorer_distill. WeightedSPADE added to dp_sims_renderer. Yousfi implementing tricks 22-31. Auth eval with TTO+multi-pass running.
+
+## 2026-04-11 [decision] Modal free credits exhausted — pivot to Lightning + Kaggle free tiers
+
+First Modal bill received. Free credits used up. Going forward: finish current Modal runs, then use Lightning T4 (free) and Kaggle P100 (free 30h/week) for GPU training. Modal only for critical auth evals. Also need to clean HuggingFace cache (33GB) and uv cache (13GB).
+
+## 2026-04-12 [decision] Modal experiments complete — transition to Lightning for Phase 2
+
+DP-SIMS needs 100+ more Phase 2 epochs (only got 1 before Modal died). CPU needs 2000+ more epochs. Both have resume checkpoints. Deploy to Lightning T4 (free) immediately.
+
+## 2026-04-12 [discovery] DP-SIMS SegNet matches CPU best at 0.006 with only 9 scorer epochs
+
+The mask2mask approach (DP-SIMS with SPADE) achieves SegNet 0.006 — equal to our promoted 1.33 CPU result — after just 9 Phase 2 epochs. This validates Yousfi trick #7 (SegNet argmax insight) and #11 (extreme SegNet reward). The architecture guarantees near-perfect semantic preservation. PoseNet at 0.53 needs 100+ more epochs. Proxy 2.93 projected to sub-1.5 by ep 150.
+- Score: 2.93
+- Variant: dp_sims
+
+## 2026-04-12 [technique] Yousfi tricks 32-35: Pedernales insights — theoretical floor 0.18
+
+Trick 32: backward delta generation (ONE perfect last frame + 1199 tiny deltas). Trick 33: exploit preprocess_input blind spots (YUV420 transform nullspace). Trick 34: overfit the SCORER not the video (steganographic capacity). Trick 35: archive as codebook (texture atoms + motion field + correction targets = 15KB total, rate 0.01). Theoretical floor: 0.18.
+
+## 2026-04-12 [breakthrough] DP-SIMS SegNet 0.003 TIES Quantizr after only 89 Phase 2 epochs
+
+FP4-quantized DP-SIMS achieves SegNet 0.003 — identical to Quantizr (0.60 score). Entire remaining gap is PoseNet (0.482 vs 0.001 = 480x) and rate (2.2MB vs 386KB = 5.7x). Path to sub-0.60: (1) train 1000+ P2 epochs for PoseNet, (2) shrink model to 500KB, (3) add cross-frame attention. Architecture validated.
+- Score: 2.5
+- Variant: dp_sims

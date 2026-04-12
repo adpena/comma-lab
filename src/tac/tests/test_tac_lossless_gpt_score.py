@@ -93,6 +93,27 @@ class TacLosslessGptScoreTests(unittest.TestCase):
         self.assertIs(model, expected_model)
         self.assertIn("onnxruntime missing", model._tac_bridge_fallback_reason)
 
+    def test_load_official_commavq_gpt_model_falls_back_to_torch_when_onnx_signature_is_unsupported(self) -> None:
+        from tac.lossless import gpt_score as module
+
+        expected_model = SimpleNamespace(_tac_model_backend="torch")
+
+        with mock.patch.object(
+            module,
+            "load_official_commavq_gpt_onnx_model",
+            side_effect=RuntimeError("unsupported ONNX GPT signature"),
+        ):
+            with mock.patch.object(
+                module,
+                "load_official_commavq_gpt_torch_model",
+                return_value=expected_model,
+            ) as mocked_torch:
+                model = module.load_official_commavq_gpt_model(device="cpu", dtype="float32")
+
+        mocked_torch.assert_called_once()
+        self.assertIs(model, expected_model)
+        self.assertIn("unsupported ONNX GPT signature", model._tac_bridge_fallback_reason)
+
     def test_score_tokens_with_logits_fn_reports_bits_for_teacher_forced_sample(self) -> None:
         from tac.lossless.gpt_score import score_tokens_with_logits_fn
 

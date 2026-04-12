@@ -230,6 +230,14 @@ class _OnnxNextTokenLogitsModel:
         return _score_tokens_from_logits_rows(arr, logits_rows=logits_rows, score_count=score_count)
 
 
+def _validate_gpt_onnx_session_signature(session) -> str:
+    inputs = session.get_inputs()
+    if len(inputs) != 1:
+        names = [item.name for item in inputs]
+        raise RuntimeError(f"unsupported ONNX GPT signature: expected 1 input, got {names}")
+    return inputs[0].name
+
+
 class _TorchNextTokenLogitsModel:
     def __init__(self, model, *, device: str) -> None:
         self._model = model
@@ -358,13 +366,16 @@ def load_official_commavq_gpt_onnx_model(
     model_path = ensure_official_gpt_onnx_path(model_url=model_url, cache_dir=cache_dir)
     providers = resolve_onnx_execution_providers(onnxruntime.get_available_providers())
     session = onnxruntime.InferenceSession(str(model_path), providers=providers)
-    return _OnnxNextTokenLogitsModel(
+    input_name = _validate_gpt_onnx_session_signature(session)
+    model = _OnnxNextTokenLogitsModel(
         session,
         block_size=OFFICIAL_COMMAVQ_GPT_BLOCK_SIZE,
         providers=providers,
         model_url=model_url,
         model_path=model_path,
     )
+    model._input_name = input_name
+    return model
 
 
 def _resolve_gpt_artifact_urls(model_url: str | None) -> tuple[str, str]:

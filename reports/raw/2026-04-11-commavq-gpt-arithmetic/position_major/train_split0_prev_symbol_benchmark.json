@@ -1,7 +1,0 @@
-{
-  "command": "lossless_prev_symbol_frequency_benchmark",
-  "token_count": 384322500,
-  "context_count": 1027,
-  "encoded_bytes": 232168915,
-  "compression_ratio": 3.3107145286870123
-}

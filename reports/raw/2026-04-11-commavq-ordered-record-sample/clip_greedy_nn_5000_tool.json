@@ -1,0 +1,14 @@
+{
+  "command": "lossless_global_prev_symbol_order_sample",
+  "output_path": "/Users/adpena/Projects/pact/reports/raw/2026-04-11-commavq-ordered-record-sample/clip_greedy_nn_5000_tool.json",
+  "encoded_dir": "/Users/adpena/Projects/pact/reports/raw/2026-04-11-commavq-ordered-record-sample/clip_greedy_nn_5000_tool",
+  "strategy": "clip_greedy_nn",
+  "frame_order": "canonical",
+  "labels_path": null,
+  "order_path": null,
+  "max_records": 5000,
+  "archive_bytes": 462023462,
+  "original_bytes": 960000000,
+  "compression_ratio": 2.0778165590214117,
+  "exact_match": true
+}

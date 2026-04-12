@@ -1,0 +1,18 @@
+{
+  "command": "lossless_gpt_arithmetic_global_sample",
+  "token_path": "/Users/adpena/Projects/pact/reports/raw/2026-04-11-commavq-gpt-arithmetic/position_major/train_split0_rebuilt.bin",
+  "encoded_path": "/Users/adpena/Projects/pact/reports/raw/2026-04-11-commavq-gpt-arithmetic/position_major/train_split0_gpt_global_sample_8192_mps_v2.gta",
+  "profile": "gpt_arithmetic_small",
+  "device": "mps",
+  "requested_dtype": "auto",
+  "context_tokens": 2580,
+  "token_count": 8192,
+  "raw_token_count": 768645000,
+  "encoded_bytes": 6484,
+  "original_bytes": 16384,
+  "compression_ratio": 2.526835286859963,
+  "bits_per_token": 6.33203125,
+  "exact_match": null,
+  "local_only": true,
+  "measured": false
+}

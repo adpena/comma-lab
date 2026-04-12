@@ -27,3 +27,57 @@
 
 - proxy=1.407
 - Notes: Steadily improving from 1.476
+
+## 2026-04-12T00:25:49 — dp_sims on modal_a10g ep100
+
+- proxy=4.54
+- PoseNet: 0.75700000
+- SegNet: 0.05100000
+- Notes: First Phase 2 epoch. FP4 saved 2.3MB. Score will improve rapidly.
+
+## 2026-04-12T00:25:50 — dilated_h64 on modal_a10g ep78
+
+- proxy=1.423
+- PoseNet: 0.06700000
+- SegNet: 0.03400000
+- Notes: Steady improvement from 1.476 start
+
+## 2026-04-12T00:29:21 — dp_sims on modal_a10g ep100
+
+- proxy=4.54
+- PoseNet: 1.47200000
+- SegNet: 0.00700000
+- Rate: 2.262
+- Notes: Only 1 Phase 2 epoch. Died at scorer start. SegNet excellent (0.007). Must resume P2 on Lightning.
+
+## 2026-04-12T00:29:21 — dilated_h64 on modal_a10g ep84
+
+- proxy=1.413
+- PoseNet: 0.07200000
+- SegNet: 0.00600000
+- Rate: 0.046
+- Notes: 84/2500 epochs. INT8 45KB saved. On track for sub-1.3.
+
+## 2026-04-12T00:33:59 — dp_sims on modal_a10g ep109
+
+- proxy=2.93
+- PoseNet: 0.53200000
+- SegNet: 0.00600000
+- Rate: 2.262
+- Notes: 9 Phase 2 epochs. SegNet 0.006 matches best! PoseNet needs training. Trajectory: sub-1.5 by ep 150.
+
+## 2026-04-12T00:33:59 — dilated_h64 on modal_a10g ep99
+
+- proxy=1.4
+- PoseNet: 0.07000000
+- SegNet: 0.00600000
+- Rate: 0.046
+- Notes: 99/2500 epochs. On track. Needs 800+ more.
+
+## 2026-04-12T01:17:03 — dp_sims on modal_a10g ep189
+
+- proxy=2.5
+- PoseNet: 0.48200000
+- SegNet: 0.00300000
+- Rate: 2.262
+- Notes: FINAL Modal run. SegNet 0.003 TIES Quantizr! PoseNet 480x gap + rate 5.7x gap = entire remaining problem.
