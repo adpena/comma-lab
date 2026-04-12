@@ -16,6 +16,12 @@ def _bucket(value: float, *, thresholds: tuple[float, ...]) -> int:
     return len(thresholds)
 
 
+def _quantize_nonnegative(value: float, *, step: float) -> int:
+    if step <= 0.0:
+        raise ValueError("step must be positive")
+    return max(0, int(round(max(0.0, float(value)) / step)))
+
+
 def _coerce_rgb_frames(frames) -> np.ndarray:
     arr = np.asarray(frames)
     if arr.ndim == 3 and arr.shape[-1] == 3:
@@ -154,13 +160,13 @@ def _rgb_semantic_label_tuple_from_sampled_frames(sampled: np.ndarray) -> tuple[
         temporal_delta = float(np.mean(np.abs(np.diff(frame_luma_means))))
 
     return (
-        _bucket(float(luma.mean(dtype=np.float64)), thresholds=(70.0, 110.0, 160.0)),
-        _bucket(float(luma.std(dtype=np.float64)), thresholds=(12.0, 24.0, 48.0)),
-        _bucket(float(chroma_span.mean(dtype=np.float64)), thresholds=(16.0, 32.0, 64.0)),
+        _quantize_nonnegative(float(luma.mean(dtype=np.float64)), step=8.0),
+        _quantize_nonnegative(float(luma.std(dtype=np.float64)), step=4.0),
+        _quantize_nonnegative(float(chroma_span.mean(dtype=np.float64)), step=4.0),
         _bucket(float((sampled[..., 0] - sampled[..., 2]).mean(dtype=np.float64)), thresholds=(-24.0, -8.0, 8.0, 24.0)),
         _bucket(sky_ratio, thresholds=(0.02, 0.12, 0.30)),
         _bucket(road_ratio, thresholds=(0.05, 0.20, 0.45)),
-        _bucket(_mean_abs_gradient(luma), thresholds=(4.0, 12.0, 24.0)),
+        _quantize_nonnegative(_mean_abs_gradient(luma), step=2.0),
         _bucket(temporal_delta, thresholds=(2.0, 8.0, 20.0)),
     )
 

@@ -31,6 +31,18 @@ def _warm_indoor_frames(*, frame_count: int) -> np.ndarray:
 
 
 class TacLosslessRgbSemanticLabelsTests(unittest.TestCase):
+    def test_rgb_semantic_label_tuple_separates_same_regime_but_different_brightness(self) -> None:
+        from tac.lossless.rgb_semantic_labels import rgb_semantic_label_tuple
+
+        dim_scene = np.full((4, 6, 6, 3), 90, dtype=np.uint8)
+        bright_scene = np.full((4, 6, 6, 3), 105, dtype=np.uint8)
+
+        dim_label = rgb_semantic_label_tuple(dim_scene)
+        bright_label = rgb_semantic_label_tuple(bright_scene)
+
+        self.assertNotEqual(dim_label, bright_label)
+        self.assertNotEqual(dim_label[0], bright_label[0])
+
     def test_rgb_semantic_label_tuple_detects_sky_and_road_scene_proxies(self) -> None:
         from tac.lossless.rgb_semantic_labels import rgb_semantic_label_tuple
 
