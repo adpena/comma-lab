@@ -51,10 +51,13 @@ class MultiModelInflater:
     and overwrites Model A's output for those frames. This gives hard frames
     extra correction without penalizing easy frames.
 
+    Supports N models: one global (Model A) and any number of frame-specific
+    override models. Override models are applied in priority order (last
+    model in the list wins for overlapping frames).
+
     Attributes:
         model_a: primary postfilter (runs on all frames).
-        model_b: hard-frame postfilter (runs on hard frames only, may be None).
-        hard_frames: set of frame indices where Model B applies.
+        override_models: list of (model, frame_set) pairs applied in order.
         device: computation device.
     """
 
@@ -70,27 +73,30 @@ class MultiModelInflater:
             models: list of (model, frame_indices) tuples. frame_indices=None
                 means "all frames". The first model with frame_indices=None is
                 the global model. Models with specific indices override the
-                global model for those frames.
+                global model for those frames. Multiple override models are
+                supported — later entries take priority for overlapping frames.
             device: computation device.
             verbose: print progress.
         """
         self.device = torch.device(device) if isinstance(device, str) else device
         self.verbose = verbose
         self.model_a: nn.Module | None = None
-        self.model_b: nn.Module | None = None
-        self.hard_frames: set[int] = set()
+        self.override_models: list[tuple[nn.Module, set[int]]] = []
 
         for model, indices in models:
             model = model.to(self.device).eval()
             if indices is None:
                 self.model_a = model
             else:
-                self.model_b = model
-                self.hard_frames = set(indices)
+                self.override_models.append((model, set(indices)))
 
         if self.model_a is None and len(models) > 0:
             # First model is implicitly global if no None-index model specified
             self.model_a = models[0][0].to(self.device).eval()
+
+        # Backward compat: expose model_b and hard_frames for 2-model case
+        self.model_b = self.override_models[0][0] if self.override_models else None
+        self.hard_frames = self.override_models[0][1] if self.override_models else set()
 
     @classmethod
     def from_archive(
@@ -179,23 +185,23 @@ class MultiModelInflater:
             else:
                 out = x.clone()
 
-        # Model B: hard frames only
-        if self.model_b is not None and self.hard_frames:
-            hard_local = []
+        # Override models: apply in order (later entries win for overlapping frames)
+        for model_idx, (override_model, frame_set) in enumerate(self.override_models):
+            override_local = []
             for i in range(B):
                 global_idx = frame_offset + i
-                if global_idx in self.hard_frames:
-                    hard_local.append(i)
+                if global_idx in frame_set:
+                    override_local.append(i)
 
-            if hard_local:
-                hard_indices = torch.tensor(hard_local, dtype=torch.long)
-                hard_input = x[hard_indices]
+            if override_local:
+                override_indices = torch.tensor(override_local, dtype=torch.long)
+                override_input = x[override_indices]
                 with torch.inference_mode():
-                    hard_output = self.model_b(hard_input)
-                out[hard_indices] = hard_output
+                    override_output = override_model(override_input)
+                out[override_indices] = override_output
 
                 if self.verbose:
-                    _log(f"Model B applied to {len(hard_local)} frames in batch")
+                    _log(f"Override model {model_idx} applied to {len(override_local)} frames")
 
         return out
 

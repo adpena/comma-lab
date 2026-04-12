@@ -224,6 +224,10 @@ class CrossAttentionNoiseInjector(nn.Module):
     lightweight cross-attention mechanism. The query comes from features,
     the key/value come from noise projected through the mask embedding.
 
+    Note: this is per-pixel gated injection via sigmoid(q*k), not spatial
+    token-based attention. Named for its cross-input (noise x features)
+    structure rather than the standard transformer attention pattern.
+
     This prevents the generator from collapsing to a single deterministic
     output per mask, encouraging diverse textures and realistic variation.
 
@@ -378,7 +382,11 @@ class DPSIMSRenderer(nn.Module):
             in_ch = out_ch
 
         # Learned final upsample (replaces non-learned bilinear for the last 2x)
-        # ConvTranspose2d with stride 2 performs learned upsampling
+        # ConvTranspose2d with stride 2 performs learned upsampling.
+        # NOTE: ConvTranspose2d unconditionally doubles spatial dims, so training
+        # resolution must match deployment resolution for correct output size.
+        # The bilinear fallback in forward() handles resolution mismatches only
+        # (e.g., when masks have unexpected spatial dimensions).
         self.final_upsample = nn.ConvTranspose2d(
             channels[-1],
             channels[-1],

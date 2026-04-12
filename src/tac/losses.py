@@ -37,6 +37,10 @@ def scorer_forward_pair(pair_btchw, posenet, segnet):
 
 def _hwc_to_chw(pair_hwc: torch.Tensor) -> torch.Tensor:
     """Convert (B, T, H, W, C) to (B, T, C, H, W) float."""
+    # Fast path: skip redundant .float() if already float32
+    if pair_hwc.dtype == torch.float32:
+        out = pair_hwc.permute(0, 1, 4, 2, 3)
+        return out if out.is_contiguous() else out.contiguous()
     return pair_hwc.float().permute(0, 1, 4, 2, 3).contiguous()
 
 

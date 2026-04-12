@@ -428,6 +428,7 @@ def inflate_with_postfilter(
     posenet_targets_path: str | None = None,
     posenet=None, upstream_dir: str | None = None,
     posenet_path: str | None = None, segnet_path: str | None = None,
+    multi_pass: int = int(os.environ.get("INFLATE_MULTI_PASS", "1")),
 ) -> int:
     """Decode, upscale, apply learned post-filter, write raw RGB.
 
@@ -619,7 +620,7 @@ def inflate_with_postfilter(
             out = model(x)
             # Multi-pass: run the CNN again on its own output (deeper effective network)
             # Round to uint8 between passes to match the training distribution
-            for _ in range(MULTI_PASS - 1):
+            for _ in range(multi_pass - 1):
                 out = out.round().clamp(0, 255)
                 out = model(out)
 
@@ -627,7 +628,7 @@ def inflate_with_postfilter(
             # Trick 5: gradient-directed rounding using LOCAL pixel gradients.
             # No scorer needed -- uses spatial neighborhood statistics to decide
             # ceil vs floor. Costs ~0.1s per batch (negligible on CPU).
-            out_ns = out.detach().requires_grad_(True)
+            out_ns = out.detach()
             # Local gradient: Laplacian approximation (pixel vs 4-neighbors)
             # Positive Laplacian = pixel brighter than neighbors -> floor helps
             # Negative Laplacian = pixel darker than neighbors -> ceil helps

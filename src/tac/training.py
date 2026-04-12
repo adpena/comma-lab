@@ -259,6 +259,16 @@ class TrainConfig(BaseModel):
                     f"kl_distill requires temperature_end >= 0.1 (below 0.1 is numerically unstable). "
                     f"Got {self.temperature_end}. Use --temperature-end 0.2 for aggressive argmax pressure"
                 )
+        if self.learn_loss_weights and self.adaptive_boundary:
+            import warnings
+
+            warnings.warn(
+                "learn_loss_weights and adaptive_boundary are both enabled. "
+                "Both mechanisms adjust loss weighting, which can cause conflicting "
+                "updates. Consider using only one: learn_loss_weights (gradient-based) "
+                "or adaptive_boundary (heuristic feedback-driven).",
+                stacklevel=2,
+            )
         return self
 
 
