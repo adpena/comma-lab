@@ -88,6 +88,20 @@ This is critical for the doc evolution viewer and the competition writeup. Our g
 - **For non-code files** (`.md`, `.json`, `.env`, `.sh`, config, docs, reports): `REVIEW_GATE_OVERRIDE=1` is acceptable since the review tracker is designed for code review.
 - If the gate blocks a `.py` commit, that means the code needs review first. That is the gate **working**, not the gate being broken.
 
+## Experiment design — non-negotiable
+
+Every experiment MUST follow this process before touching any GPU:
+
+1. **Pre-registered hypothesis** with success/kill/concern criteria
+2. **Council design review**: Yousfi + Fridrich sign off on config, resolution, step count, conditioning
+3. **Faithful to the actual design**: no toy configs, representative resolution, enough steps for signal
+4. **No janky smoke tests**: a test at 1/4 resolution for 500 steps cannot kill a technique. Bias toward keeping lanes open.
+5. **Resource estimate**: GPU hours, VRAM, expected runtime
+6. **Replicability record**: all params saved before running, full results after
+7. **No premature kills**: a negative result on an underspecified test means the test was wrong, not the technique
+
+Yousfi and Fridrich have final say as domain experts on experiment design and kill decisions.
+
 ## Required durable state
 
 After each serious cycle, update and **commit** at least:
