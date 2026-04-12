@@ -512,6 +512,66 @@ DP_SIMS_FULL = {
     "pretrain_epochs": 500,  # Phase 1: L1+edge loss (no scorer)
 }
 
+# ── DP-SIMS Small: halved SPADE for ~500KB FP4 ──────────────────────────
+# The full DP-SIMS model (256,128,64,32) is 2.2MB FP4 — too heavy for rate.
+# Halving channels to (128,64,32,16) targets ~500KB FP4.
+# PoseNet fix: add motion_hidden=48 (wider MotionPredictor) to compensate
+# for reduced generative capacity with better temporal coherence.
+# SegNet: keep segnet_loss_weight=100 (proven); spade_hidden=32 suffices
+# at this channel width.
+
+DP_SIMS_SMALL_SMOKE = {
+    "variant": "dp_sims",
+    "channels": (128, 64, 32, 16),  # halved from full (256,128,64,32)
+    "init_h": 24,
+    "init_w": 32,
+    "spade_hidden": 32,  # matches channel width
+    "noise_dim": 8,  # halved: less texture diversity, tighter compression
+    "use_noise": True,
+    "motion_hidden": 48,  # WIDER than full (32): compensate for smaller gen
+    "motion_embed_dim": 8,  # richer embeddings for PoseNet fidelity
+    "epochs": 200,
+    "lr": 1e-3,
+    "ema_decay": 0.997,
+    "alpha": 0.0,
+    "sal_lambda": 0.0,
+    "loss_mode": "standard",
+    "segnet_loss_weight": 100.0,
+    "boundary_weight": 5.0,  # mild boundary focus
+    "hard_frame_ratio": 0.0,
+    "eval_every": 10,
+    "accum_steps": 2,
+    "quantize_mode": "fp4",
+    "pretrain_epochs": 100,
+}
+
+DP_SIMS_SMALL_FULL = {
+    "variant": "dp_sims",
+    "channels": (128, 64, 32, 16),  # halved from full (256,128,64,32)
+    "init_h": 24,
+    "init_w": 32,
+    "spade_hidden": 32,
+    "noise_dim": 8,
+    "use_noise": True,
+    "motion_hidden": 48,  # wider MotionPredictor for PoseNet
+    "motion_embed_dim": 8,
+    "epochs": 2500,
+    "lr": 5e-4,
+    "ema_decay": 0.997,
+    "alpha": 0.0,
+    "sal_lambda": 0.0,
+    "loss_mode": "standard",
+    "segnet_loss_weight": 100.0,
+    "boundary_weight": 50.0,
+    "hard_frame_ratio": 0.3,
+    "error_replay_every": 200,
+    "eval_every": 5,
+    "accum_steps": 4,
+    "use_swa": True,
+    "quantize_mode": "fp4",
+    "pretrain_epochs": 500,  # Phase 2: 500 epochs scorer-guided
+}
+
 # ── VQ-VAE Lane: Learned discrete latent codec ────────────────────────
 # GT -> VQ Encoder -> discrete codes -> entropy coding -> VQ Decoder -> RGB
 # Replaces fixed 5-class segmentation with learned K=512 codebook.
@@ -1012,6 +1072,8 @@ PROFILES = {
     "distillation_full": DISTILLATION_FULL,
     "dp_sims_smoke": DP_SIMS_SMOKE,
     "dp_sims_full": DP_SIMS_FULL,
+    "dp_sims_small_smoke": DP_SIMS_SMALL_SMOKE,
+    "dp_sims_small_full": DP_SIMS_SMALL_FULL,
     "vqvae_smoke": VQVAE_SMOKE,
     "vqvae_full": VQVAE_FULL,
     "vqvae_compact": VQVAE_COMPACT,
