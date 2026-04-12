@@ -73,6 +73,27 @@ PROVEN_BASELINE_BOUNDARY = {
     "boundary_weight": 5.0,
 }
 
+# VP saliency variant — weight loss by vanishing point proximity + horizon band.
+# Pixels near VP (where PoseNet is most sensitive) get more gradient.
+# Training-time only, no inflate changes. Safe.
+PROVEN_BASELINE_VP_SALIENCY = {
+    **PROVEN_BASELINE,
+    "use_vp_saliency": True,
+    "vp_saliency_sigma": 40.0,
+    "vp_saliency_min_weight": 0.3,
+    "vp_saliency_horizon_boost": 2.0,
+}
+
+# Combined: boundary + VP saliency (the full CPU lane improvement stack)
+PROVEN_BASELINE_FULL = {
+    **PROVEN_BASELINE,
+    "boundary_weight": 5.0,
+    "use_vp_saliency": True,
+    "vp_saliency_sigma": 40.0,
+    "vp_saliency_min_weight": 0.3,
+    "vp_saliency_horizon_boost": 2.0,
+}
+
 # Feature matching variant of proven_baseline (Trick 8: PoseNet layer 3 embeddings)
 # Uses PoseNet intermediate features (stages.2, 256-ch) as the training target
 # instead of the 6-value pose output. Strictly more informative because the
@@ -1876,6 +1897,8 @@ PROFILES = {
     "coord_renderer_smoke": COORD_RENDERER_SMOKE,
     # Yousfi CPU lane profiles
     "proven_baseline_boundary": PROVEN_BASELINE_BOUNDARY,
+    "proven_baseline_vp_saliency": PROVEN_BASELINE_VP_SALIENCY,
+    "proven_baseline_full": PROVEN_BASELINE_FULL,
     "proven_baseline_featmatch": PROVEN_BASELINE_FEATMATCH,
     # Yousfi council decode profiles
     "overfit_cpu": OVERFIT_CPU,
