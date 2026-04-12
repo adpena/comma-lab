@@ -404,7 +404,7 @@ class MotionPredictor(nn.Module):
         output_channels: int = 2,
         use_coord_grid: bool = True,
         use_diff_features: bool = True,
-        max_flow_px: float = 12.0,
+        max_flow_px: float = 20.0,
         max_residual: float = 20.0,
         flow_only: bool = False,
     ):
@@ -426,18 +426,30 @@ class MotionPredictor(nn.Module):
         if use_coord_grid:
             in_ch += 2  # normalized xy coords
 
-        self.net = nn.Sequential(
+        # U-Net-like structure for global receptive field (Quantizr TinyMotionFromMasks)
+        # Stem: full resolution
+        self.stem = nn.Sequential(
             nn.Conv2d(in_ch, hidden, 3, padding=1, bias=True),
             nn.SiLU(inplace=True),
-            ResBlock(hidden, num_classes=0),  # plain GroupNorm — no mask in Sequential
-            nn.Conv2d(hidden, hidden, 3, padding=1, bias=True),
-            nn.SiLU(inplace=True),
-            nn.Conv2d(hidden, output_channels, 3, padding=1, bias=True),
         )
+        # Down: stride-2 → half resolution
+        self.down = nn.Sequential(
+            nn.Conv2d(hidden, hidden, 3, stride=2, padding=1, bias=True),
+            nn.SiLU(inplace=True),
+        )
+        # Bottleneck at half resolution
+        self.bottleneck = ResBlock(hidden, num_classes=0)
+        # Up: upsample back to full resolution
+        self.up_conv = nn.Conv2d(hidden, hidden, 3, padding=1, bias=True)
+        self.up_act = nn.SiLU(inplace=True)
+        # Skip fusion: concat skip + upsampled → hidden
+        self.fuse = nn.Conv2d(hidden * 2, hidden, 1, bias=True)
+        # Head: predict output channels
+        self.head = nn.Conv2d(hidden, output_channels, 3, padding=1, bias=True)
 
         # Zero-init output — start with zero motion (identity warp)
-        nn.init.zeros_(self.net[-1].weight)
-        nn.init.zeros_(self.net[-1].bias)
+        nn.init.zeros_(self.head.weight)
+        nn.init.zeros_(self.head.bias)
 
     def forward(
         self,
@@ -470,7 +482,15 @@ class MotionPredictor(nn.Module):
             parts.append(coords)
 
         x = torch.cat(parts, dim=1)
-        raw = self.net(x)
+
+        # U-Net forward: stem → down → bottleneck → up → skip fusion → head
+        stem_feat = self.stem(x)                          # (B, hidden, H, W)
+        down_feat = self.down(stem_feat)                  # (B, hidden, H/2, W/2)
+        bot_feat = self.bottleneck(down_feat)             # (B, hidden, H/2, W/2)
+        up_feat = F.interpolate(bot_feat, size=stem_feat.shape[2:], mode="bilinear", align_corners=False)
+        up_feat = self.up_act(self.up_conv(up_feat))      # (B, hidden, H, W)
+        fused = self.fuse(torch.cat([stem_feat, up_feat], dim=1))  # (B, hidden, H, W)
+        raw = self.head(fused)                            # (B, output_channels, H, W)
 
         if self.output_channels == 2:
             # Legacy: flow only, scaled to small range
@@ -780,7 +800,7 @@ class AsymmetricPairGenerator(nn.Module):
         mid_ch: int = 60,
         motion_hidden: int = 32,
         depth: int = 1,
-        max_flow_px: float = 12.0,
+        max_flow_px: float = 20.0,
         max_residual: float = 20.0,
         flow_only: bool = False,
     ):

@@ -168,7 +168,7 @@ class FridrichRendererConfig:
     phase2_mse_weight: float = 0.1
 
     # Configurable constants (previously hardcoded in MotionPredictor)
-    max_flow_px: float = 12.0       # max flow in pixels for asymmetric mode
+    max_flow_px: float = 20.0       # max flow in pixels for asymmetric mode (20px for fast ego-motion at 20fps)
     max_residual: float = 20.0      # max residual magnitude for asymmetric mode
     seg_temperature_start: float = 1.0   # Phase 2 curriculum start temperature
     seg_temperature_end: float = 0.1     # Phase 2 curriculum end temperature
@@ -182,13 +182,17 @@ class FridrichRendererConfig:
 
     # Gate regularization (penalize gate_mean above threshold — Quantizr adversarial)
     gate_reg_threshold: float = 0.5
-    gate_reg_weight: float = 0.01
+    gate_reg_weight: float = 0.1
 
     # Auto-kill on divergence
     kill_loss_threshold: float = 100.0
     kill_seg_threshold: float = 0.5
     kill_pose_threshold: float = 1.0
     kill_patience: int = 50
+
+    # Even-pairs-only: scorer evaluates (0,1),(2,3),(4,5)... not (1,2),(3,4)
+    # Training on even-index pair starts only saves ~50% compute
+    even_pairs_only: bool = True
 
     # Smoke test overrides
     smoke: bool = False
@@ -1088,7 +1092,15 @@ def train_fridrich_renderer(cfg: FridrichRendererConfig) -> dict[str, Any]:
         max_start = n_frames - 2  # need at least 2 consecutive frames
         if max_start < 1:
             raise ValueError(f"Need >= 3 frames, got {n_frames}")
-        batch_starts = torch.randint(0, max_start, (cfg.batch_size,))
+        if cfg.even_pairs_only and cfg.pair_mode == "asymmetric":
+            # Scorer evaluates non-overlapping pairs (0,1),(2,3),(4,5)...
+            # Only sample even-index starts to match scorer distribution
+            max_even = max_start // 2  # number of valid even starts
+            if max_even < 1:
+                raise ValueError(f"Need >= 4 frames for even_pairs_only, got {n_frames}")
+            batch_starts = torch.randint(0, max_even, (cfg.batch_size,)) * 2
+        else:
+            batch_starts = torch.randint(0, max_start, (cfg.batch_size,))
 
         # Gather mask pairs and GT pairs
         mask_t_list = []

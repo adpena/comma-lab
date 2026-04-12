@@ -376,7 +376,7 @@ if not _HAS_TAC_RENDERER:
     class MotionPredictor(nn.Module):
         def __init__(self, num_classes=5, embed_dim=6, hidden=32, embedding=None,
                      output_channels=2, use_coord_grid=True, use_diff_features=True,
-                     max_flow_px=12.0, max_residual=20.0, flow_only=False):
+                     max_flow_px=20.0, max_residual=20.0, flow_only=False):
             super().__init__()
             self.num_classes = num_classes
             self.output_channels = output_channels
@@ -391,16 +391,22 @@ if not _HAS_TAC_RENDERER:
                 in_ch += embed_dim
             if use_coord_grid:
                 in_ch += 2
-            self.net = nn.Sequential(
+            # U-Net-like structure for global receptive field (Quantizr TinyMotionFromMasks)
+            self.stem = nn.Sequential(
                 nn.Conv2d(in_ch, hidden, 3, padding=1, bias=True),
                 nn.SiLU(inplace=True),
-                ResBlock(hidden, num_classes=0),  # plain GroupNorm — no mask in Sequential
-                nn.Conv2d(hidden, hidden, 3, padding=1, bias=True),
-                nn.SiLU(inplace=True),
-                nn.Conv2d(hidden, output_channels, 3, padding=1, bias=True),
             )
-            nn.init.zeros_(self.net[-1].weight)
-            nn.init.zeros_(self.net[-1].bias)
+            self.down = nn.Sequential(
+                nn.Conv2d(hidden, hidden, 3, stride=2, padding=1, bias=True),
+                nn.SiLU(inplace=True),
+            )
+            self.bottleneck = ResBlock(hidden, num_classes=0)
+            self.up_conv = nn.Conv2d(hidden, hidden, 3, padding=1, bias=True)
+            self.up_act = nn.SiLU(inplace=True)
+            self.fuse = nn.Conv2d(hidden * 2, hidden, 1, bias=True)
+            self.head = nn.Conv2d(hidden, output_channels, 3, padding=1, bias=True)
+            nn.init.zeros_(self.head.weight)
+            nn.init.zeros_(self.head.bias)
 
         def forward(self, mask_t: torch.Tensor, mask_t1: torch.Tensor) -> torch.Tensor:
             e_t = self.embedding(mask_t).permute(0, 3, 1, 2)
@@ -416,7 +422,14 @@ if not _HAS_TAC_RENDERER:
                 coords = torch.stack([grid_x, grid_y], dim=0).unsqueeze(0).expand(B, -1, -1, -1)
                 parts.append(coords)
             x = torch.cat(parts, dim=1)
-            raw = self.net(x)
+            # U-Net forward
+            stem_feat = self.stem(x)
+            down_feat = self.down(stem_feat)
+            bot_feat = self.bottleneck(down_feat)
+            up_feat = F.interpolate(bot_feat, size=stem_feat.shape[2:], mode="bilinear", align_corners=False)
+            up_feat = self.up_act(self.up_conv(up_feat))
+            fused = self.fuse(torch.cat([stem_feat, up_feat], dim=1))
+            raw = self.head(fused)
             if self.output_channels == 2:
                 return raw * 0.1
             else:
@@ -431,7 +444,7 @@ if not _HAS_TAC_RENDERER:
 
     class AsymmetricPairGenerator(nn.Module):
         def __init__(self, num_classes=5, embed_dim=6, base_ch=36, mid_ch=60,
-                     motion_hidden=32, depth=1, max_flow_px=12.0,
+                     motion_hidden=32, depth=1, max_flow_px=20.0,
                      max_residual=20.0, flow_only=False):
             super().__init__()
             shared_emb = nn.Embedding(num_classes, embed_dim)
@@ -613,6 +626,181 @@ def _extract_masks(
 
 
 # ============================================================
+# Inline .bin deserializer (Contrarian: standalone on scorer machines)
+# ============================================================
+def _inline_unpack_values(data, offset, count, bits):
+    """Unpack `count` values at `bits` per value from data starting at offset."""
+    if bits == 8:
+        values = [data[offset + i] for i in range(count)]
+        return values, offset + count
+    total_bits = count * bits
+    total_bytes = (total_bits + 7) // 8
+    if count > 10_000_000:
+        raise ValueError(f"Implausible value count={count:,} — possible malformed .bin")
+    raw = data[offset:offset + total_bytes]
+    bit_buffer = int.from_bytes(bytes(raw), byteorder="little")
+    mask = (1 << bits) - 1
+    values = []
+    for _ in range(count):
+        values.append(bit_buffer & mask)
+        bit_buffer >>= bits
+    return values, offset + total_bytes
+
+
+def _inline_dequantize_values(values, bits, scale):
+    """Dequantize unsigned integer values back to float tensor."""
+    bits = max(bits, 2)
+    n_levels = 2 ** bits
+    half = n_levels // 2
+    return torch.tensor(
+        [(v - half) / max(half - 1, 1) * scale for v in values],
+        dtype=torch.float32,
+    )
+
+
+def _inline_load_asym(raw_bytes: bytes, device: str = "cpu") -> nn.Module:
+    """Inline ASYM .bin deserializer — no tac dependency required.
+
+    Reads ASYM header → parses JSON config → reconstructs AsymmetricPairGenerator
+    → loads quantized weights from blobs.
+    """
+    import struct
+
+    offset = 0
+
+    # Verify magic
+    if raw_bytes[offset:offset + 4] != b"ASYM":
+        raise ValueError(f"Not an ASYM binary (got {raw_bytes[:4]!r})")
+    offset += 4
+
+    # Read header
+    header_len = struct.unpack("<I", raw_bytes[offset:offset + 4])[0]
+    offset += 4
+    header = json.loads(raw_bytes[offset:offset + header_len].decode("utf-8"))
+    offset += header_len
+
+    version = header.get("version", 0)
+    if version != 2:
+        raise ValueError(f"Unsupported ASYM export version {version} (expected 2)")
+
+    # Build fresh AsymmetricPairGenerator from header config
+    model = AsymmetricPairGenerator(
+        num_classes=header.get("num_classes", 5),
+        embed_dim=header.get("embed_dim", 6),
+        base_ch=header.get("base_ch", 36),
+        mid_ch=header.get("mid_ch", 60),
+        motion_hidden=header.get("motion_hidden", 32),
+        depth=header.get("depth", 1),
+        max_flow_px=header.get("max_flow_px", 20.0),
+        max_residual=header.get("max_residual", 20.0),
+        flow_only=header.get("flow_only", False),
+    )
+
+    # Build name → module lookups
+    embedding_lookup = {}
+    conv_lookup = {}
+    for name, module in model.named_modules():
+        if isinstance(module, nn.Embedding):
+            embedding_lookup[name] = module
+        elif isinstance(module, (nn.Conv2d, nn.ConvTranspose2d)):
+            conv_lookup[name] = module
+
+    # Iterate layers in header order and restore weights
+    for layer_meta in header["layers"]:
+        name = layer_meta["name"]
+        is_embedding = layer_meta.get("is_embedding", False)
+
+        # Read weight blob
+        blob_len = struct.unpack("<I", raw_bytes[offset:offset + 4])[0]
+        offset += 4
+        weight_data = raw_bytes[offset:offset + blob_len]
+        offset += blob_len
+
+        if is_embedding:
+            shape = layer_meta["shape"]
+            bits = layer_meta["bits"]
+            count = 1
+            for s in shape:
+                count *= s
+            w_offset = 0
+            scale = struct.unpack("<e", weight_data[w_offset:w_offset + 2])[0]
+            w_offset += 2
+            values, w_offset = _inline_unpack_values(weight_data, w_offset, count, bits)
+            emb_tensor = _inline_dequantize_values(values, bits, scale).reshape(shape)
+            with torch.no_grad():
+                embedding_lookup[name].weight.copy_(emb_tensor)
+            continue
+
+        # Read bias blob
+        has_bias = layer_meta["has_bias"]
+        bias_blob_len = struct.unpack("<I", raw_bytes[offset:offset + 4])[0]
+        offset += 4
+        bias_data = raw_bytes[offset:offset + bias_blob_len]
+        offset += bias_blob_len
+
+        module = conv_lookup[name]
+        shape = layer_meta["shape"]
+        transposed = layer_meta.get("transposed", False)
+        bits = layer_meta["bits"]
+
+        if transposed:
+            C_out = shape[1]
+            fan_in = shape[0] * shape[2] * shape[3]
+            ch_shape = [shape[0]] + shape[2:]
+        else:
+            C_out = shape[0]
+            fan_in = 1
+            for s in shape[1:]:
+                fan_in *= s
+            ch_shape = shape[1:]
+
+        with torch.no_grad():
+            module.weight.zero_()
+            if module.bias is not None:
+                module.bias.zero_()
+
+            w_offset = 0
+            for ch_idx in range(C_out):
+                scale = struct.unpack("<e", weight_data[w_offset:w_offset + 2])[0]
+                w_offset += 2
+                values, w_offset = _inline_unpack_values(weight_data, w_offset, fan_in, bits)
+                dequant = _inline_dequantize_values(values, bits, scale)
+                if transposed:
+                    module.weight[:, ch_idx] = dequant.reshape(ch_shape)
+                else:
+                    module.weight[ch_idx] = dequant.reshape(ch_shape)
+
+            if has_bias and bias_data:
+                b_offset = 0
+                for ch_idx in range(C_out):
+                    scale_b = struct.unpack("<e", bias_data[b_offset:b_offset + 2])[0]
+                    b_offset += 2
+                    u_val = struct.unpack("<H", bias_data[b_offset:b_offset + 2])[0]
+                    b_offset += 2
+                    n_levels = 2 ** bits
+                    half = n_levels // 2
+                    q = u_val - half
+                    module.bias[ch_idx] = q / max(half - 1, 1) * scale_b
+
+    # Restore scalar parameters
+    scalar_params = header.get("scalar_params", {})
+    if scalar_params:
+        param_dict = dict(model.named_parameters())
+        with torch.no_grad():
+            for pname, pval in scalar_params.items():
+                if pname in param_dict:
+                    param_dict[pname].fill_(pval)
+
+    # Verify all data consumed
+    if offset != len(raw_bytes):
+        raise ValueError(f"Trailing data: {len(raw_bytes) - offset} bytes unread (expected 0)")
+
+    model = model.to(device)
+    model.eval()
+    return model
+
+
+# ============================================================
 # Renderer loading
 # ============================================================
 def _load_renderer(renderer_path: str, device: str) -> nn.Module:
@@ -635,16 +823,9 @@ def _load_renderer(renderer_path: str, device: str) -> nn.Module:
     if magic == b"ASYM":
         try:
             from tac.renderer_export import load_asymmetric_checkpoint
+            model = load_asymmetric_checkpoint(raw_bytes, device=device)
         except ImportError:
-            import struct as _struct
-            header_len = _struct.unpack("<I", raw_bytes[4:8])[0]
-            header = json.loads(raw_bytes[8:8 + header_len].decode("utf-8"))
-            raise RuntimeError(
-                f"ASYM .bin format detected (version={header.get('version')}), "
-                f"but tac.renderer_export is not available. Install the tac package "
-                f"or use a .pt checkpoint instead."
-            )
-        model = load_asymmetric_checkpoint(raw_bytes, device=device)
+            model = _inline_load_asym(raw_bytes, device=device)
         elapsed = time.monotonic() - t0
         print(f"  Loaded AsymmetricPairGenerator from .bin ({len(raw_bytes):,} bytes, {elapsed:.1f}s)",
               file=sys.stderr)
