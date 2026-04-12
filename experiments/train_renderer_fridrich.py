@@ -983,22 +983,22 @@ def train_fridrich_renderer(cfg: FridrichRendererConfig) -> dict[str, Any]:
         # MSE reconstruction (warm signal, always on but weighted down later)
         mse_loss = F.mse_loss(gen_t, gt_t) + F.mse_loss(gen_t1, gt_t1)
 
-        # SegNet distortion — Fridrich curriculum (council P1):
+        # SegNet distortion — ONLY on frame_t1 (council #5: SegNet uses x[:, -1, ...]
+        # which selects the LAST frame. frame_t is invisible to SegNet at eval time.
+        # Free frame_t for pure PoseNet optimization. Also saves ~50% SegNet compute.)
+        #
+        # Fridrich curriculum (council P1):
         # Phase 1: soft Bhattacharyya (broad gradients for initial learning)
         # Phase 2: temperature-annealed Bhattacharyya (sharpen toward argmax)
         # Phase 3: STE (forward=hard argmax, backward=cross-entropy)
         if phase == 1:
-            seg_dist_t = _compute_seg_distortion(gen_t, gt_t, segnet)
-            seg_dist_t1 = _compute_seg_distortion(gen_t1, gt_t1, segnet)
+            seg_dist = _compute_seg_distortion(gen_t1, gt_t1, segnet)
         elif phase == 2:
             phase2_progress = (progress - cfg.phase1_end) / max(cfg.phase2_end - cfg.phase1_end, 1e-6)
             temperature = 1.0 - 0.9 * phase2_progress  # 1.0 → 0.1
-            seg_dist_t = _compute_seg_distortion_tempered(gen_t, gt_t, segnet, temperature)
-            seg_dist_t1 = _compute_seg_distortion_tempered(gen_t1, gt_t1, segnet, temperature)
+            seg_dist = _compute_seg_distortion_tempered(gen_t1, gt_t1, segnet, temperature)
         else:  # phase 3
-            seg_dist_t = _compute_seg_distortion_ste(gen_t, gt_t, segnet)
-            seg_dist_t1 = _compute_seg_distortion_ste(gen_t1, gt_t1, segnet)
-        seg_dist = (seg_dist_t + seg_dist_t1) / 2.0
+            seg_dist = _compute_seg_distortion_ste(gen_t1, gt_t1, segnet)
 
         # PoseNet distortion (coupled trajectory — gradient through BOTH frames)
         pose_dist = _compute_pose_distortion_coupled(gen_t, gen_t1, gt_t, gt_t1, posenet)
