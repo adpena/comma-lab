@@ -81,6 +81,13 @@ We need a fine-grained history of every file touched. Git is our lab notebook's 
 
 This is critical for the doc evolution viewer and the competition writeup. Our git history IS our research timeline. Every uncommitted change is invisible history.
 
+## Review gate — non-negotiable
+
+- **NEVER use `REVIEW_GATE_OVERRIDE=1` when committing `.py` files.** The review tracker exists to catch bugs before they ship. Bypassing it on code files is how bugs ship. Work with the review gate, not around it.
+- **For `.py` files:** run `python tools/review_tracker.py mark-file <file> --status reviewed` after each review pass, then commit normally. Let the gate pass naturally.
+- **For non-code files** (`.md`, `.json`, `.env`, `.sh`, config, docs, reports): `REVIEW_GATE_OVERRIDE=1` is acceptable since the review tracker is designed for code review.
+- If the gate blocks a `.py` commit, that means the code needs review first. That is the gate **working**, not the gate being broken.
+
 ## Required durable state
 
 After each serious cycle, update and **commit** at least:
