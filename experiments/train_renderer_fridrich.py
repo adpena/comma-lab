@@ -37,6 +37,8 @@ import gc
 import json
 import math
 import os
+import platform
+import subprocess
 import sys
 import time
 import types
@@ -164,6 +166,19 @@ class FridrichRendererConfig:
 
     # Phase 2 MSE anchor weight (keep reconstruction signal alive)
     phase2_mse_weight: float = 0.1
+
+    # Configurable constants (previously hardcoded in MotionPredictor)
+    max_flow_px: float = 12.0       # max flow in pixels for asymmetric mode
+    max_residual: float = 20.0      # max residual magnitude for asymmetric mode
+    seg_temperature_start: float = 1.0   # Phase 2 curriculum start temperature
+    seg_temperature_end: float = 0.1     # Phase 2 curriculum end temperature
+
+    # Gated optimization flags (deferred items, default off)
+    use_margin_segnet: bool = False       # optimization #13: margin-based SegNet loss
+    segnet_margin_threshold: float = 0.1  # margin threshold for margin-based SegNet
+    use_null_space: bool = False          # optimization #6: null-space projection
+    share_stem: bool = False              # optimization #12: shared stem (deferred, gated)
+    flow_only: bool = False               # optimization #15: no gate/residual (deferred, gated)
 
     # Smoke test overrides
     smoke: bool = False
@@ -489,6 +504,46 @@ def _compute_seg_distortion_ste(
 
     # STE: forward value = hard, gradient = soft
     return soft_ce + (hard_disagree - soft_ce).detach()
+
+
+def _compute_seg_distortion_margin(
+    gen_frames: torch.Tensor,
+    gt_frames: torch.Tensor,
+    segnet: nn.Module,
+    margin: float = 0.1,
+) -> torch.Tensor:
+    """Margin-based SegNet loss (optimization #13).
+
+    Only penalizes when soft disagreement exceeds the margin threshold.
+    This avoids wasting gradient signal on already-good pixels and focuses
+    optimization on the hard boundary cases that actually affect the score.
+
+    Args:
+        gen_frames: (B, 3, H, W) float [0, 255] generated frames.
+        gt_frames: (B, 3, H, W) float [0, 255] GT frames.
+        segnet: frozen SegNet with preprocess_input.
+        margin: disagreement threshold below which loss is zero.
+
+    Returns:
+        Scalar margin-based SegNet distortion.
+    """
+    gen_btchw = gen_frames.unsqueeze(1).contiguous()
+    gt_btchw = gt_frames.unsqueeze(1).contiguous()
+
+    seg_in_gen = segnet.preprocess_input(gen_btchw)
+    seg_logits_gen = segnet(seg_in_gen)
+
+    with torch.no_grad():
+        seg_in_gt = segnet.preprocess_input(gt_btchw)
+        seg_logits_gt = segnet(seg_in_gt)
+
+    pred_soft = F.softmax(seg_logits_gen, dim=1)
+    gt_soft = F.softmax(seg_logits_gt, dim=1)
+    # Per-pixel disagreement: 1 - dot product
+    per_pixel = 1.0 - (pred_soft * gt_soft).sum(dim=1)  # (B, H, W)
+    # Only penalize pixels above margin
+    margin_loss = F.relu(per_pixel - margin).mean()
+    return margin_loss
 
 
 def _compute_pose_distortion_coupled(
@@ -991,11 +1046,13 @@ def train_fridrich_renderer(cfg: FridrichRendererConfig) -> dict[str, Any]:
         # Phase 1: soft Bhattacharyya (broad gradients for initial learning)
         # Phase 2: temperature-annealed Bhattacharyya (sharpen toward argmax)
         # Phase 3: STE (forward=hard argmax, backward=cross-entropy)
-        if phase == 1:
+        if cfg.use_margin_segnet:
+            seg_dist = _compute_seg_distortion_margin(gen_t1, gt_t1, segnet, margin=cfg.segnet_margin_threshold)
+        elif phase == 1:
             seg_dist = _compute_seg_distortion(gen_t1, gt_t1, segnet)
         elif phase == 2:
             phase2_progress = (progress - cfg.phase1_end) / max(cfg.phase2_end - cfg.phase1_end, 1e-6)
-            temperature = 1.0 - 0.9 * phase2_progress  # 1.0 → 0.1
+            temperature = cfg.seg_temperature_start - (cfg.seg_temperature_start - cfg.seg_temperature_end) * phase2_progress
             seg_dist = _compute_seg_distortion_tempered(gen_t1, gt_t1, segnet, temperature)
         else:  # phase 3
             seg_dist = _compute_seg_distortion_ste(gen_t1, gt_t1, segnet)
@@ -1097,6 +1154,23 @@ def train_fridrich_renderer(cfg: FridrichRendererConfig) -> dict[str, Any]:
                 gc.collect()
                 continue
             raise
+
+        # Null-space gradient projection (optimization #6, gated)
+        # Projects gradients to remove components that increase the satisfied
+        # constraint's violation. Only active when one constraint is met and
+        # the other is not — prevents regression on the satisfied scorer.
+        if cfg.use_null_space and phase >= 2:
+            with torch.no_grad():
+                seg_ok = seg_dist.item() < cfg.seg_boundary
+                pose_ok = pose_dist.item() < cfg.pose_boundary
+                if seg_ok and not pose_ok:
+                    # Project out the seg gradient direction to protect SegNet
+                    # Recompute seg grad direction (already in .grad from backward)
+                    pass  # Gradient already contains both; no-op placeholder
+                    # Full null-space projection requires separate backward passes
+                    # which doubles compute. Deferred: flag exists, logic is gated.
+                elif pose_ok and not seg_ok:
+                    pass  # Same — deferred null-space for PoseNet protection
 
         # Gradient clipping
         torch.nn.utils.clip_grad_norm_(pair_gen.parameters(), cfg.grad_clip)
@@ -1254,7 +1328,31 @@ def train_fridrich_renderer(cfg: FridrichRendererConfig) -> dict[str, Any]:
         "final_lambda_seg": lambda_seg,
         "final_lambda_pose": lambda_pose,
         "final_rho": rho,
+        "history": history,
     }
+
+    # Git provenance
+    try:
+        import subprocess
+        git_hash = subprocess.check_output(
+            ["git", "rev-parse", "HEAD"], stderr=subprocess.DEVNULL
+        ).decode().strip()
+        summary["git_commit"] = git_hash
+        git_dirty = bool(subprocess.check_output(
+            ["git", "status", "--porcelain"], stderr=subprocess.DEVNULL
+        ).decode().strip())
+        summary["git_dirty"] = git_dirty
+    except Exception:
+        pass
+
+    # Environment provenance
+    summary["torch_version"] = torch.__version__
+    summary["cuda_available"] = torch.cuda.is_available()
+    if torch.cuda.is_available():
+        summary["gpu_name"] = torch.cuda.get_device_name(0)
+    import platform
+    summary["python_version"] = platform.python_version()
+    summary["hostname"] = platform.node()
 
     summary_path = results_dir / "summary.json"
     with open(summary_path, "w") as f:
@@ -1302,12 +1400,19 @@ def train_fridrich_renderer(cfg: FridrichRendererConfig) -> dict[str, Any]:
 @click.option("--resume", type=str, default=None, help="Resume from checkpoint path")
 @click.option("--max-hours", type=float, default=48.0, help="Wall-clock budget in hours (0=unlimited)")
 @click.option("--phase2-mse-weight", type=float, default=0.1, help="MSE anchor weight in Phase 2+3")
+@click.option("--pair-mode", type=click.Choice(["dp_sims", "asymmetric"]), default="dp_sims", help="Renderer paradigm")
+@click.option("--embed-dim", type=int, default=6, help="Asymmetric warp: mask embedding dim")
+@click.option("--base-ch", type=int, default=36, help="Asymmetric warp: base channel width")
+@click.option("--mid-ch", type=int, default=60, help="Asymmetric warp: mid channel width")
+@click.option("--motion-hidden", type=int, default=32, help="Asymmetric warp: motion predictor hidden dim")
+@click.option("--renderer-depth", type=int, default=1, help="Asymmetric warp: renderer depth")
 def main(
     precomputed, epochs, batch_size, lr, channels, spade_hidden,
     seg_boundary, pose_boundary, rho_init, rho_growth,
     tv_weight, flow_weight, rate_weight, target_bytes,
     device, seed, checkpoint_every, eval_every, log_every,
     smoke, resume, max_hours, phase2_mse_weight,
+    pair_mode, embed_dim, base_ch, mid_ch, motion_hidden, renderer_depth,
 ):
     """Train DP-SIMS renderer with Fridrich constrained optimization."""
 
@@ -1315,6 +1420,7 @@ def main(
     ch_tuple = tuple(int(x.strip()) for x in channels.split(","))
 
     cfg = FridrichRendererConfig(
+        pair_mode=pair_mode,
         channels=ch_tuple,
         epochs=5 if smoke else epochs,
         lr=lr,
@@ -1337,6 +1443,11 @@ def main(
         resume=resume,
         phase2_mse_weight=phase2_mse_weight,
         smoke=smoke,
+        embed_dim=embed_dim,
+        base_ch=base_ch,
+        mid_ch=mid_ch,
+        motion_hidden=motion_hidden,
+        renderer_depth=renderer_depth,
     )
 
     # Set precomputed dir env var for the training function
