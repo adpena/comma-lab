@@ -87,11 +87,12 @@ class CameraExtrinsics:
 # Native resolution intrinsics (1164x874):
 COMMA_INTRINSICS_NATIVE = CameraIntrinsics(fx=910.0, fy=910.0, cx=582.0, cy=437.0)
 
-# Scorer resolution intrinsics (512x384) — scaled from native:
-# fx_scorer = 910 * (512/1164) ≈ 400.3, but scorers resize internally
-# via preprocess_input, so geometric computations on scorer-resolution
-# frames use the scaled principal point: (582/1164*512, 437/874*384) ≈ (256, 192)
-COMMA_INTRINSICS = CameraIntrinsics(fx=910.0, fy=910.0, cx=256.0, cy=192.0)
+# Scorer resolution intrinsics (512x384) — ALL values scaled from native:
+# fx_scorer = 910 * (512/1164) ≈ 400.3, fy_scorer = 910 * (384/874) ≈ 399.5
+# cx_scorer = 582 * (512/1164) ≈ 256.0, cy_scorer = 437 * (384/874) ≈ 192.0
+# Using fx=fy=910 at 512px wide would inflate flow magnitudes by ~2.3x,
+# causing depth/focal entanglement in DepthAwareMotionPredictor.
+COMMA_INTRINSICS = CameraIntrinsics(fx=400.3, fy=399.5, cx=256.0, cy=192.0)
 
 COMMA_EXTRINSICS = CameraExtrinsics(height=1.2, pitch=-0.02)
 

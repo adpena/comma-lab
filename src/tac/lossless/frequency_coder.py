@@ -375,6 +375,25 @@ def _decode_payload(
 def encode_uint16_frequency_stream(tokens) -> FrequencyEncodedStream:
     normalized = _normalize_uint16_tokens(tokens)
     frequencies = _build_frequencies(normalized)
+
+    # Single-symbol short-circuit: no payload needed, decoder reconstructs from
+    # header alone. Without this, _build_canonical_codebook produces an empty
+    # encode_table and _encode_payload raises KeyError.
+    if len(frequencies) == 1:
+        header = _serialize_header(
+            token_count=int(normalized.size),
+            frequencies=frequencies,
+            payload_size=0,
+        )
+        return FrequencyEncodedStream(
+            encoded_bytes=header,
+            token_count=int(normalized.size),
+            unique_symbols=1,
+            header_bytes=len(header),
+            payload_bytes=0,
+            max_code_bits=0,
+        )
+
     lengths = _build_code_lengths(frequencies)
     canonical = _build_canonical_codebook(lengths)
     payload = _encode_payload(normalized, encode_table=canonical.encode_table)

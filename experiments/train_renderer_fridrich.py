@@ -533,7 +533,17 @@ def _full_eval(
             has_sc = True
             break
     if has_sc:
-        model_bytes = _compute_model_bits(renderer).item() / 8.0
+        # Self-compressed layers (renderer with LearnableBitDepth)
+        sc_bytes = _compute_model_bits(renderer).item() / 8.0
+        # Non-self-compressed parameters (motion predictor, biases, etc.)
+        # counted at FP4 (4 bits) as the deployment quantization
+        non_sc_params = 0
+        for m in renderer.modules():
+            if isinstance(m, nn.Conv2d) and not hasattr(m, "bit_depth"):
+                non_sc_params += m.weight.numel()
+                if m.bias is not None:
+                    non_sc_params += m.bias.numel()
+        model_bytes = sc_bytes + non_sc_params * 4 / 8  # FP4 for non-SC layers
 
     # Rate = archive size / original uncompressed video file size
     # From upstream evaluate.py: sum of file sizes in videos/ dir
@@ -676,6 +686,7 @@ def train_fridrich_renderer(cfg: FridrichRendererConfig) -> dict[str, Any]:
 
     # ---- Resume from checkpoint ----
     start_epoch = 0
+    best_score_ckpt = float("inf")
     if cfg.resume:
         ckpt_path = Path(cfg.resume)
         if not ckpt_path.exists():
@@ -836,7 +847,12 @@ def train_fridrich_renderer(cfg: FridrichRendererConfig) -> dict[str, Any]:
             with torch.no_grad():
                 lambda_seg = min(cfg.lambda_cap, max(0.0, lambda_seg + rho * seg_violation.item()))
                 lambda_pose = min(cfg.lambda_cap, max(0.0, lambda_pose + rho * pose_violation.item()))
-                rho = min(rho * cfg.rho_growth, cfg.rho_max)
+                # Only grow rho when at least one constraint is actively violated.
+                # Without this guard, rho hits rho_max (~1e4) by epoch ~187 and
+                # then any tiny violation explodes the loss (penalty = 5000 * eps^2),
+                # overwhelming the MSE anchor and all other terms.
+                if seg_violation.item() > 0 or pose_violation.item() > 0:
+                    rho = min(rho * cfg.rho_growth, cfg.rho_max)
 
             # Track constraint satisfaction
             both_satisfied = seg_violation.item() < 1e-6 and pose_violation.item() < 1e-6
@@ -848,6 +864,7 @@ def train_fridrich_renderer(cfg: FridrichRendererConfig) -> dict[str, Any]:
                         "epoch": epoch,
                         "model_state_dict": pair_gen.state_dict(),
                         "optimizer_state_dict": optimizer.state_dict(),
+                        "scheduler_state_dict": scheduler.state_dict(),
                         "lambda_seg": lambda_seg,
                         "lambda_pose": lambda_pose,
                         "rho": rho,
@@ -984,10 +1001,12 @@ def train_fridrich_renderer(cfg: FridrichRendererConfig) -> dict[str, Any]:
                     "epoch": epoch,
                     "model_state_dict": pair_gen.state_dict(),
                     "optimizer_state_dict": optimizer.state_dict(),
+                    "scheduler_state_dict": scheduler.state_dict(),
                     "lambda_seg": lambda_seg,
                     "lambda_pose": lambda_pose,
                     "rho": rho,
                     "best_score": best_score,
+                    "self_compress_active": self_compress_active,
                     "config": asdict(cfg),
                 }, ckpt_path)
                 print(f"  -> Timeout checkpoint: {ckpt_path}")

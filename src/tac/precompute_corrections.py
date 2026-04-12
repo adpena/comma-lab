@@ -130,9 +130,17 @@ def _compute_scorer_gradients(
         x = torch.cat(batch_frames, dim=0).to(device)  # (B, 3, H, W)
         x.requires_grad_(True)
 
-        # Build self-pairs for scorer
+        # Build consecutive pairs for scorer (frame_i, frame_i+1).
+        # Self-pairs (frame_i, frame_i) produce near-zero PoseNet output,
+        # giving no PoseNet gradient signal — only SegNet would contribute.
         B = x.shape[0]
-        pair = x.unsqueeze(1).expand(B, 2, 3, H, W).contiguous()
+        if B >= 2:
+            pair_t = x[:-1].unsqueeze(1)   # (B-1, 1, 3, H, W)
+            pair_t1 = x[1:].unsqueeze(1)   # (B-1, 1, 3, H, W)
+            pair = torch.cat([pair_t, pair_t1], dim=1).contiguous()  # (B-1, 2, 3, H, W)
+        else:
+            # Single frame: fall back to self-pair (PoseNet gradient ~zero)
+            pair = x.unsqueeze(1).expand(B, 2, 3, H, W).contiguous()
 
         # PoseNet loss
         pose_in = posenet.preprocess_input(pair)

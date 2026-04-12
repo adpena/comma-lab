@@ -101,7 +101,8 @@ def extract_posenet_targets(
             output = posenet(preprocessed)
 
             # Extract first 6 pose outputs (the distortion-relevant ones)
-            pose_targets = output["pose"][..., :6].cpu()  # (B, 6)
+            pose_tensor = output["pose"] if isinstance(output, dict) else output
+            pose_targets = pose_tensor[..., :6].cpu()  # (B, 6)
             all_targets.append(pose_targets)
 
             if verbose and (batch_end % (batch_size * 10) == 0 or batch_end == n_pairs):

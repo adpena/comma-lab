@@ -546,6 +546,12 @@ def export_compressed_checkpoint(model: SelfCompressingPostFilter) -> bytes:
             ch_weight = weight[ch_idx]  # (C_in, kH, kW)
 
             # Quantize to ch_bits levels (n_levels = 2^bits values: 0..n_levels-1)
+            # Guard: promote 1-bit channels to 2-bit. At 1-bit, half=1, half-1=0,
+            # making the quantization formula divide by zero. The STE trains 1-bit
+            # channels with half_levels=0.5 (clamped), but export cannot represent
+            # this — so promote to 2-bit which gives 4 levels and is the minimum
+            # exportable precision.
+            ch_bits = max(ch_bits, 2)
             flat = ch_weight.reshape(-1)
             abs_max = flat.abs().max().clamp(min=1e-10).item()
             n_levels = 2 ** ch_bits

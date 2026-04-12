@@ -388,10 +388,10 @@ def decode_corpus_global_prev_symbol_position_major(*, encoded_dir: str | Path, 
         chunk_offsets[chunk_index] = offset + token_count
         body = payload[:-1]
         streams = body.reshape(128, -1)
-        frames = streams[:, 1:].T.reshape(-1, 8, 16).astype(np.int16)
+        frames = streams[:, 1:].T.reshape(-1, 8, 16).astype(np.uint16)
         permutation = _resolve_frame_order(frame_order, int(frames.shape[0]))
         if permutation is not None:
-            frames = invert_frame_order(frames, permutation).astype(np.int16, copy=False)
+            frames = invert_frame_order(frames, permutation).astype(np.uint16, copy=False)
         with (target / str(record["file_name"])).open("wb") as handle:
             np.save(handle, frames)
 

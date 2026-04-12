@@ -643,7 +643,7 @@ def build_entropy_archive(
             if isinstance(masks, bytes):
                 zf.writestr("masks.bin", masks)
             else:
-                zf.writestr("masks.bin", masks.cpu().byte().numpy().tobytes())
+                zf.writestr("masks.bin", masks.cpu().to(torch.uint8).numpy().tobytes())
 
         # 4. Pose targets
         if pose_targets is not None:

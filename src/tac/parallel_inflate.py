@@ -252,6 +252,11 @@ def _parallel_inflate_impl(
     for _ in range(actual_workers):
         worker_id, result = result_queue.get(timeout=300)  # 5 min timeout
         if isinstance(result, Exception):
+            # Terminate and join all worker processes before re-raising
+            for p in processes:
+                p.terminate()
+            for p in processes:
+                p.join(timeout=5)
             raise result
         results[worker_id] = result
 

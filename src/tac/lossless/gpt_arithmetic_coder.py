@@ -99,7 +99,7 @@ def _encode_tokens_from_logits_rows(
     target_frequencies = frequency_rows[np.arange(targets.size), targets]
     total_nll_nats = float(np.sum(np.log(total_frequency / target_frequencies.astype(np.float64))))
     for index, target in enumerate(targets.tolist()):
-        encoder.encode(symbol=target, cumulative=cumulative_rows[index], total=total_frequency)
+        encoder.encode(symbol=target, cumulative=cumulative_rows[index].tolist(), total=total_frequency)
     encoded_bytes = encoder.finish()
     scored_tokens = int(arr.size - 1)
     return {
