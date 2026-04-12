@@ -163,7 +163,6 @@ class TacLosslessRgbSemanticLabelsTests(unittest.TestCase):
         ]
         bridge_calls: list[dict[str, object]] = []
         decoder_batches: list[tuple[int, ...]] = []
-
         def fake_dataset_loader(_dataset_name: str, *, num_proc=None, data_files=None):
             return {"train": examples}
 
@@ -186,7 +185,7 @@ class TacLosslessRgbSemanticLabelsTests(unittest.TestCase):
             bridge_calls.append(dict(kwargs))
             return (
                 FakeDecoder(),
-                lambda arr: np.transpose(np.asarray(arr), (0, 2, 3, 1)).astype(np.uint8),
+                lambda arr: (_ for _ in ()).throw(AssertionError("build_rgb_label_map_sample should not transpose RGB frames")),
                 {"bridge_backend": "fake"},
             )
 
