@@ -1989,8 +1989,8 @@
       "last_modified_date": "2026-04-11T13:55:03-05:00",
       "review_status": "reviewed",
       "reviewed_by": "council_greenup",
-      "reviewed_at": "2026-04-12T01:47:47.006113+00:00",
-      "review_pass": "lossless_cli_greenup",
+      "reviewed_at": "2026-04-12T02:26:01.449866+00:00",
+      "review_pass": "lossless_rgb_greenup",
       "notes": ""
     },
     "tac.cli::build_parser": {
@@ -2006,8 +2006,8 @@
       "last_modified_date": "2026-04-11T13:55:03-05:00",
       "review_status": "reviewed",
       "reviewed_by": "council_greenup",
-      "reviewed_at": "2026-04-12T01:47:47.006113+00:00",
-      "review_pass": "lossless_cli_greenup",
+      "reviewed_at": "2026-04-12T02:26:01.449866+00:00",
+      "review_pass": "lossless_rgb_greenup",
       "notes": ""
     },
     "tac.cli::main": {
@@ -2023,8 +2023,8 @@
       "last_modified_date": "2026-04-11T13:55:03-05:00",
       "review_status": "reviewed",
       "reviewed_by": "council_greenup",
-      "reviewed_at": "2026-04-12T01:47:47.006113+00:00",
-      "review_pass": "lossless_cli_greenup",
+      "reviewed_at": "2026-04-12T02:26:01.449866+00:00",
+      "review_pass": "lossless_rgb_greenup",
       "notes": ""
     },
     "tac.lossless.__init__::__getattr__": {

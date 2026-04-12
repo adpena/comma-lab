@@ -1933,6 +1933,86 @@ GPU_LANE_FULL = {
     "rate_reduction": 0.1,
 }
 
+# ── Self-Compressing Postfilter profiles (Technique 1: Szabolcs) ─────────
+# Learnable per-channel bit-depth. Channels that don't matter get 0 bits.
+# Expected: 46KB -> 5-10KB postfilter, saving ~0.024 score points on rate.
+
+SELF_COMPRESS_SMOKE = {
+    "experiment_type": "self_compress",
+    "variant": "dilated",
+    "hidden": 16,
+    "kernel": 3,
+    "epochs": 100,
+    "lr": 5e-4,
+    "lr_bits": 1e-2,
+    "loss_mode": "standard",
+    "target_bits": 2000,
+    "lambda_rate_start": 0.0,
+    "lambda_rate_end": 0.5,
+    "ramp_start_frac": 0.3,
+    "scorer_weight": 20.0,
+    "init_bits": 8.0,
+}
+
+# ── Entropy Archive profiles (Technique 2: Shannon) ─────────────────────
+# Arithmetic coding with learned probability models.
+# Target: 30-50% smaller than deflate on non-video components.
+
+ENTROPY_ARCHIVE_SMOKE = {
+    "experiment_type": "entropy_archive",
+    "variant": "dilated",
+    "hidden": 64,
+    "kernel": 3,
+    "epochs": 200,
+    "lr": 1e-3,
+    "loss_mode": "standard",
+    "num_symbols": 256,
+    "entropy_context_size": 4,
+    "entropy_hidden": 16,
+    "entropy_epochs": 200,
+}
+
+# ── Network Codec profiles (Technique 3: Network IS the Codec) ──────────
+# SIREN memorization: network weights ARE the compressed video.
+# GPU lane: 50-100KB for entire video reconstruction.
+
+NETWORK_CODEC_SMOKE = {
+    "experiment_type": "network_codec",
+    "variant": "siren",
+    "hidden": 16,
+    "kernel": 3,  # unused but required by TrainConfig
+    "layers": 2,
+    "omega_0": 15.0,
+    "epochs": 50,
+    "lr": 1e-4,
+    "loss_mode": "standard",
+    "batch_pixels": 1024,
+    "lambda_smooth": 0.1,
+    "pos_encoding_freqs": 4,
+    "use_self_compress_codec": False,
+    "target_size_kb": 10,
+}
+
+NETWORK_CODEC_FULL = {
+    "experiment_type": "network_codec",
+    "variant": "siren",
+    "hidden": 64,
+    "kernel": 3,
+    "layers": 4,
+    "omega_0": 30.0,
+    "epochs": 5000,
+    "lr": 1e-4,
+    "loss_mode": "standard",
+    "batch_pixels": 16384,
+    "lambda_smooth": 0.1,
+    "lambda_rate": 0.0,
+    "lambda_rate_end": 1.0,
+    "ramp_start_frac": 0.5,
+    "pos_encoding_freqs": 6,
+    "use_self_compress_codec": True,
+    "target_size_kb": 50,
+}
+
 PROFILES = {
     "council_v1": COUNCIL_V1,
     "council_v2_adaptive": COUNCIL_V2_ADAPTIVE,
@@ -2053,6 +2133,13 @@ PROFILES = {
     # GPU Lane: Full pipeline (coupled trajectory + Fridrich)
     "gpu_lane_smoke": GPU_LANE_SMOKE,
     "gpu_lane_full": GPU_LANE_FULL,
+    # Technique 1: Self-compressing postfilter (Szabolcs)
+    "self_compress_smoke": SELF_COMPRESS_SMOKE,
+    # Technique 2: Entropy-coded archive (Shannon)
+    "entropy_archive_smoke": ENTROPY_ARCHIVE_SMOKE,
+    # Technique 3: Network-as-codec (SIREN video memorization)
+    "network_codec_smoke": NETWORK_CODEC_SMOKE,
+    "network_codec_full": NETWORK_CODEC_FULL,
 }
 
 # Deprecated profile names that should emit runtime warnings
