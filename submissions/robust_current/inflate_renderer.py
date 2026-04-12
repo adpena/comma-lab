@@ -395,9 +395,37 @@ def _load_renderer(renderer_path: str, device: str) -> nn.Module:
     checkpoint's 'config' key if present, otherwise defaults are used.
     """
     t0 = time.monotonic()
-    # weights_only=False because config dict contains Python tuples/dicts
-    # that the restricted unpickler rejects. This is a trusted checkpoint
-    # from our own archive.zip.
+    renderer_path = Path(renderer_path)
+    raw_bytes = renderer_path.read_bytes()
+
+    # Format detection: renderer_export.py writes [uint32 header_len][JSON header][blobs]
+    # PyTorch pickle starts with \x80 (pickle protocol) or PK (zip)
+    is_custom_bin = (
+        len(raw_bytes) >= 8
+        and raw_bytes[0:1] not in (b"\x80", b"P")  # not pickle, not zip
+    )
+
+    if is_custom_bin:
+        # Compact .bin format from renderer_export.py
+        try:
+            from tac.renderer_export import load_renderer_checkpoint
+        except ImportError:
+            # Inline minimal loader for scorer machine
+            import struct as _struct
+            header_len = _struct.unpack("<I", raw_bytes[0:4])[0]
+            header = json.loads(raw_bytes[4:4 + header_len].decode("utf-8"))
+            raise RuntimeError(
+                f"Custom .bin format detected (version={header.get('version')}), "
+                f"but tac.renderer_export is not available. Install the tac package "
+                f"or use a .pt checkpoint instead."
+            )
+        renderer = load_renderer_checkpoint(raw_bytes, device=device)
+        elapsed = time.monotonic() - t0
+        print(f"  Loaded renderer from .bin format ({len(raw_bytes):,} bytes, {elapsed:.1f}s)",
+              file=sys.stderr)
+        return renderer
+
+    # PyTorch pickle format (.pt checkpoint from training)
     ckpt = torch.load(renderer_path, map_location=device, weights_only=False)
 
     # Extract config for architecture reconstruction
@@ -493,6 +521,9 @@ def _generate_and_write(
     N = masks.shape[0]
     n_written = 0
 
+    # Deterministic seed for reproducible output (noise injectors use torch.randn)
+    torch.manual_seed(42)
+
     with open(output_path, 'wb') as f:
         with torch.inference_mode():
             for i in range(0, N, batch_size):
@@ -515,7 +546,7 @@ def _generate_and_write(
                 frames_uint8 = frames_up.round().clamp(0, 255).to(torch.uint8)
                 frames_hwc = frames_uint8.permute(0, 2, 3, 1).contiguous().cpu().numpy()
                 f.write(frames_hwc.tobytes())
-                n_written += B
+                n_written += batch_masks.shape[0]
 
                 if end % (batch_size * 10) == 0 or end == N:
                     print(f"    Generated: {end}/{N} frames", file=sys.stderr, flush=True)
@@ -648,8 +679,10 @@ def inflate_renderer(
         actual_size = os.path.getsize(str(raw_out))
         expected_size = out_w * out_h * 3 * n_written
         if actual_size != expected_size:
-            print(f"  ERROR: output size {actual_size:,} != expected {expected_size:,}",
-                  file=sys.stderr)
+            raise RuntimeError(
+                f"Output size mismatch: {actual_size:,} != expected {expected_size:,} "
+                f"({n_written} frames x {out_h}x{out_w}x3). Corrupt output."
+            )
 
         t_video_elapsed = time.monotonic() - t_video_start
         print(f"  Video complete: {n_written} frames in {t_video_elapsed:.1f}s "

@@ -369,6 +369,15 @@ def export_renderer_checkpoint(
         **config,
         "layers": layers_meta,
     }
+    # Collect scalar parameters (e.g. noise gate) not inside Conv2d layers
+    scalar_params: dict[str, float] = {}
+    for pname, param in renderer.named_parameters():
+        if param.numel() == 1 and not any(pname.startswith(cl["name"]) for cl in conv_layers):
+            # Skip const (already handled) and conv weights/biases
+            if "const" not in pname:
+                scalar_params[pname] = param.item()
+    header["scalar_params"] = scalar_params
+
     header_json = json.dumps(header, separators=(",", ":")).encode("utf-8")
 
     # Pack: [header_len (4B)] [header JSON] [blob_len (4B)] [blob] ...
@@ -498,11 +507,20 @@ def load_renderer_checkpoint(
 
         module = module_lookup[name]
         shape = layer_meta["shape"]
-        C_out = shape[0]
-        fan_in = 1
-        for s in shape[1:]:
-            fan_in *= s
-        ch_shape = shape[1:]  # shape of one channel's weights
+        transposed = layer_meta.get("transposed", False)
+
+        # ConvTranspose2d: weight is (C_in, C_out, kH, kW), per-channel dim = 1
+        # Conv2d: weight is (C_out, C_in, kH, kW), per-channel dim = 0
+        if transposed:
+            C_out = shape[1]
+            fan_in = shape[0] * shape[2] * shape[3]  # C_in * kH * kW
+            ch_shape = [shape[0]] + shape[2:]  # (C_in, kH, kW)
+        else:
+            C_out = shape[0]
+            fan_in = 1
+            for s in shape[1:]:
+                fan_in *= s
+            ch_shape = shape[1:]
 
         bits_mode = layer_meta["bits"]
 
@@ -523,7 +541,10 @@ def load_renderer_checkpoint(
                     w_offset += 2
                     values, w_offset = _unpack_values(weight_data, w_offset, fan_in, ch_bits)
                     dequant = _dequantize_values(values, ch_bits, scale)
-                    module.weight[ch_idx] = dequant.reshape(ch_shape)
+                    if transposed:
+                        module.weight[:, ch_idx] = dequant.reshape(ch_shape)
+                    else:
+                        module.weight[ch_idx] = dequant.reshape(ch_shape)
 
                 # Restore bias
                 if has_bias and bias_data:
@@ -547,7 +568,10 @@ def load_renderer_checkpoint(
                     w_offset += 2
                     values, w_offset = _unpack_values(weight_data, w_offset, fan_in, bits)
                     dequant = _dequantize_values(values, bits, scale)
-                    module.weight[ch_idx] = dequant.reshape(ch_shape)
+                    if transposed:
+                        module.weight[:, ch_idx] = dequant.reshape(ch_shape)
+                    else:
+                        module.weight[ch_idx] = dequant.reshape(ch_shape)
 
                 # Restore bias
                 if has_bias and bias_data:
@@ -561,6 +585,19 @@ def load_renderer_checkpoint(
                         half = n_levels // 2
                         q = u_val - half
                         module.bias[ch_idx] = q / max(half - 1, 1) * scale_b
+
+    # Restore scalar parameters (e.g. noise gate) stored in header
+    scalar_params = header.get("scalar_params", {})
+    if scalar_params:
+        param_dict = dict(renderer.named_parameters())
+        with torch.no_grad():
+            for pname, pval in scalar_params.items():
+                if pname in param_dict:
+                    param_dict[pname].fill_(pval)
+
+    # Verify all data consumed (no trailing garbage)
+    if offset != len(data):
+        raise ValueError(f"Trailing data: {len(data) - offset} bytes unread (expected 0)")
 
     renderer = renderer.to(device)
     renderer.eval()

@@ -500,17 +500,17 @@ def _full_eval(
             gen_t = renderer_module(mask_t)   # (1, 3, H, W)
             gen_t1 = renderer_module(mask_t1)  # (1, 3, H, W)
 
-            # SegNet on individual frames
-            for gen_f, gt_f in [(gen_t, gt_t), (gen_t1, gt_t1)]:
-                gen_btchw = gen_f.unsqueeze(1).contiguous()
-                gt_btchw = gt_f.unsqueeze(1).contiguous()
-                seg_in_g = segnet.preprocess_input(gen_btchw)
-                seg_in_gt = segnet.preprocess_input(gt_btchw)
-                seg_logits_gen = segnet(seg_in_g)
-                seg_logits_gt = segnet(seg_in_gt)
-                # Hard disagreement rate (official metric)
-                hard_seg = (seg_logits_gen.argmax(dim=1) != seg_logits_gt.argmax(dim=1)).float().mean().item()
-                seg_dists.append(hard_seg)
+            # SegNet on LAST frame only (upstream uses x[:, -1, ...] which
+            # selects the last frame of each pair for SegNet evaluation)
+            gen_btchw = gen_t1.unsqueeze(1).contiguous()
+            gt_btchw = gt_t1.unsqueeze(1).contiguous()
+            seg_in_g = segnet.preprocess_input(gen_btchw)
+            seg_in_gt = segnet.preprocess_input(gt_btchw)
+            seg_logits_gen = segnet(seg_in_g)
+            seg_logits_gt = segnet(seg_in_gt)
+            # Hard disagreement rate (official metric)
+            hard_seg = (seg_logits_gen.argmax(dim=1) != seg_logits_gt.argmax(dim=1)).float().mean().item()
+            seg_dists.append(hard_seg)
 
             # PoseNet on consecutive pair
             gen_pair = torch.stack([gen_t, gen_t1], dim=1).contiguous()

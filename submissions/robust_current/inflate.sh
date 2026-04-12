@@ -174,7 +174,12 @@ while IFS= read -r rel; do
   else
     in_rel="${stem}.mkv"
     in_path="$ARCHIVE_DIR/$in_rel"
-    if [ "$PYTHON_INFLATE" = "postfilter" ]; then
+    if [ "$PYTHON_INFLATE" = "renderer" ]; then
+      echo "Inflating (neural renderer: mask→frame) $ARCHIVE_DIR -> $INFLATED_DIR"
+      "$UV_BIN" run python "$SELF_DIR/inflate_renderer.py" \
+        "$ARCHIVE_DIR" "$INFLATED_DIR" "$VIDEO_NAMES_FILE"
+      break
+    elif [ "$PYTHON_INFLATE" = "postfilter" ]; then
       echo "Inflating (canonical + learned post-filter) $ARCHIVE_DIR -> $INFLATED_DIR"
       # POSTFILTER_PATH must resolve from ARCHIVE_DIR (contest rules: neural
       # artifacts inside archive.zip). NEVER fall back to SELF_DIR — that hides
