@@ -60,6 +60,41 @@ precomputed_vol = modal.Volume.from_name(PRECOMPUTED_VOL, create_if_missing=True
 results_vol = modal.Volume.from_name(RESULTS_VOL, create_if_missing=True)
 
 
+def _run_with_periodic_commits(cmd: list[str], env: dict, commit_interval: int = 300):
+    """Run a subprocess with periodic Modal volume commits.
+
+    Commits results_vol every commit_interval seconds during training,
+    so partial results survive if the local CLI is killed or times out.
+    """
+    import subprocess
+    import threading
+    import time
+
+    training_done = threading.Event()
+
+    def _periodic_commit():
+        while not training_done.is_set():
+            training_done.wait(timeout=commit_interval)
+            if not training_done.is_set():
+                try:
+                    results_vol.commit()
+                    print(f"  [volume] Periodic commit at {time.strftime('%H:%M:%S')}")
+                except Exception as e:
+                    print(f"  [volume] Commit failed: {e}")
+
+    commit_thread = threading.Thread(target=_periodic_commit, daemon=True)
+    commit_thread.start()
+
+    try:
+        result = subprocess.run(cmd, env=env)
+    finally:
+        training_done.set()
+        results_vol.commit()
+        print(f"  [volume] Final commit done")
+
+    return result
+
+
 @app.function(
     image=image,
     gpu="A10G",
@@ -96,9 +131,7 @@ def train_renderer(profile: str, tag: str, extra_args: list[str] | None = None):
         cmd.extend(extra_args)
 
     print(f"  Command: {' '.join(cmd)}")
-    result = subprocess.run(cmd, env={**os.environ, "PYTHONPATH": "/root/src:/root/upstream"})
-
-    results_vol.commit()
+    result = _run_with_periodic_commits(cmd, env={**os.environ, "PYTHONPATH": "/root/src:/root/upstream"})
     return {"profile": profile, "tag": tag, "exit_code": result.returncode}
 
 
@@ -112,7 +145,6 @@ def train_renderer(profile: str, tag: str, extra_args: list[str] | None = None):
 def train_postfilter(profile: str, tag: str, extra_args: list[str] | None = None):
     """Run CPU-lane postfilter training on A10G (faster than MPS)."""
     import os
-    import subprocess
     import sys
 
     os.makedirs(f"/results/{tag}", exist_ok=True)
@@ -137,9 +169,7 @@ def train_postfilter(profile: str, tag: str, extra_args: list[str] | None = None
         cmd.extend(extra_args)
 
     print(f"  Command: {' '.join(cmd)}")
-    result = subprocess.run(cmd, env={**os.environ, "PYTHONPATH": "/root/src:/root/upstream"})
-
-    results_vol.commit()
+    result = _run_with_periodic_commits(cmd, env={**os.environ, "PYTHONPATH": "/root/src:/root/upstream"})
     return {"profile": profile, "tag": tag, "exit_code": result.returncode}
 
 
