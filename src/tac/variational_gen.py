@@ -334,7 +334,7 @@ class VariationalFrameGenerator:
                         f_tmp = f_trial.detach().requires_grad_(False)
                         trial_seg = self._segnet_loss(f_tmp, masks, segnet).item() if segnet is not None else 0.0
                         trial_pose = self._posenet_loss(f_tmp, posenet, gt_pose_ref).item() if posenet is not None else 0.0
-                        trial_dist = lambda_seg * trial_seg + lambda_pose * trial_pose
+                        trial_dist = 100.0 * trial_seg + (10.0 * trial_pose + 1e-8) ** 0.5
                         trial_val = trial_dist + trial_reg
                         if trial_val <= current_val + armijo_c * alpha * slope:
                             best_trial = f_trial
@@ -635,13 +635,12 @@ class LagrangianDualOptimizer:
         masks: torch.Tensor,
         segnet: nn.Module,
     ) -> torch.Tensor:
-        """Cross-entropy SegNet loss (see VariationalFrameGenerator._segnet_loss)."""
+        """Cross-entropy SegNet loss using preprocess_input path."""
         N, C, H, W = frames.shape
         device = frames.device
-        frames_resized = F.interpolate(
-            frames, size=(384, 512), mode="bilinear", align_corners=False,
-        )
-        logits = segnet(frames_resized)
+        frames_btchw = frames.unsqueeze(1).contiguous()  # (N, 1, C, H, W)
+        seg_input = segnet.preprocess_input(frames_btchw)
+        logits = segnet(seg_input)
         H_out, W_out = logits.shape[2], logits.shape[3]
         masks_resized = F.interpolate(
             masks.float().unsqueeze(1).to(device),

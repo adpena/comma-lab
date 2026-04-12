@@ -381,9 +381,10 @@ class HamiltonianPixelOptimizer:
             N, C, H, W = q.shape
             device = q.device
 
-            # SegNet loss
-            q_resized = F.interpolate(q, size=(384, 512), mode="bilinear", align_corners=False)
-            logits = segnet(q_resized)
+            # SegNet loss — use preprocess_input path
+            q_btchw = q.unsqueeze(1).contiguous()  # (N, 1, C, H, W)
+            seg_input = segnet.preprocess_input(q_btchw)
+            logits = segnet(seg_input)
             H_out, W_out = logits.shape[2], logits.shape[3]
             masks_resized = F.interpolate(
                 masks.float().unsqueeze(1).to(device),

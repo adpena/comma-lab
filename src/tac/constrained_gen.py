@@ -324,17 +324,9 @@ def compute_segnet_constraint_loss(
     # We construct (N, 1, C, H, W) so T=1 and the last frame is our frame.
     frames_btchw = frames.permute(0, 3, 1, 2).unsqueeze(1).contiguous()  # (N, 1, C, H, W)
 
-    # Resize to SegNet input resolution
-    frames_chw = frames_btchw[:, -1, ...]  # (N, C, H, W)
-    frames_resized = F.interpolate(
-        frames_chw,
-        size=(SEGNET_INPUT_H, SEGNET_INPUT_W),
-        mode="bilinear",
-        align_corners=False,
-    )  # (N, C, SEGNET_INPUT_H, SEGNET_INPUT_W)
-
-    # Forward through SegNet (expects preprocessed input)
-    logits = segnet(frames_resized)  # (N, NUM_CLASSES, H_out, W_out)
+    # Use preprocess_input to match eval-time scorer behavior.
+    seg_input = segnet.preprocess_input(frames_btchw)
+    logits = segnet(seg_input)  # (N, NUM_CLASSES, H_out, W_out)
 
     # Resize masks to match logit spatial dims
     H_out, W_out = logits.shape[2], logits.shape[3]
