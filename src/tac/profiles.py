@@ -1248,6 +1248,80 @@ CONSTRAINED_GEN_FULL = {
     "log_every": 100,
 }
 
+# ── Variational frame generation (Euler-Lagrange) ────────────────────
+# Solve the calculus of variations problem for scorer-optimal frames.
+# J[f] = D(f) + lambda_smooth * E_smooth(f) + lambda_rate * TV(f)
+VARIATIONAL_SMOKE = {
+    "variant": "variational_gen",
+    "variational_steps": 50,
+    "variational_lr": 0.5,
+    "lambda_smooth": 0.01,
+    "lambda_rate": 0.1,
+    "lambda_grad": 1.0,
+    "lambda_lap": 0.1,
+    "use_line_search": False,
+    "grad_clip": 10.0,
+    "convergence_tol": 1e-6,
+}
+
+# ── Lagrangian dual rate-distortion optimizer ─────────────────────────
+# Primal-dual method: min D(f) s.t. R(f) <= budget
+# Lambda is LEARNED via dual ascent (KKT optimality).
+LAGRANGIAN_DUAL_SMOKE = {
+    "variant": "lagrangian_dual",
+    "dual_steps": 100,
+    "dual_primal_lr": 0.5,
+    "dual_dual_lr": 0.01,
+    "rate_budget": 0.01,
+    "lambda_init": 25.0,
+    "lambda_smooth": 0.01,
+    "kkt_tol": 1e-4,
+    "grad_clip": 10.0,
+}
+
+# ── Pareto frontier tracer ────────────────────────────────────────────
+# Sweep rate budget to trace the full (seg, pose, rate) Pareto frontier.
+# Each point is a Lagrangian dual solution with different rate constraint.
+PARETO_TRACE = {
+    "variant": "pareto_trace",
+    "num_pareto_points": 10,
+    "rate_range_min": 0.001,
+    "rate_range_max": 0.05,
+    "dual_steps": 200,
+    "dual_primal_lr": 0.3,
+    "dual_dual_lr": 0.01,
+    "lambda_init": 25.0,
+    "lambda_smooth": 0.01,
+}
+
+# ── Full pipeline: variational + dual + manifold + Hamiltonian ────────
+# Combines all five mathematical tools into a single inflate pipeline.
+# Phase 1: Euler-Lagrange variational (200 steps)
+# Phase 1.5: Scorer null-space projection (free rate reduction)
+# Phase 2: Lagrangian dual (200 steps, learns optimal lambda)
+# Phase 3: Hamiltonian dynamics (100 steps, escapes local minima)
+# Phase 4: Gradient-directed Floyd-Steinberg dithering
+CONSTRAINED_GEN_FULL_PIPELINE = {
+    "variant": "constrained_gen_pipeline",
+    "phase1_steps": 200,
+    "phase2_steps": 200,
+    "phase3_steps": 100,
+    "rate_budget": 0.01,
+    "manifold_project": True,
+    "use_hamiltonian": True,
+    "use_dithering": True,
+    "lambda_smooth": 0.01,
+    "lambda_rate": 0.1,
+    "hamiltonian_dt": 0.05,
+    "hamiltonian_mass": 1.0,
+    "seg_weight": 100.0,
+    "pose_weight": 10.0,
+    "smooth_weight": 0.01,
+    "max_jacobian_outputs": 16,
+    "rank_threshold": 1e-3,
+    "noise_seed": 42,
+}
+
 PROFILES = {
     "council_v1": COUNCIL_V1,
     "council_v2_adaptive": COUNCIL_V2_ADAPTIVE,
@@ -1330,4 +1404,9 @@ PROFILES = {
     # Constrained optimization from noise (Yousfi GPU breakthrough)
     "constrained_gen_smoke": CONSTRAINED_GEN_SMOKE,
     "constrained_gen_full": CONSTRAINED_GEN_FULL,
+    # Variational + Lagrangian + manifold + Hamiltonian profiles
+    "variational_smoke": VARIATIONAL_SMOKE,
+    "lagrangian_dual_smoke": LAGRANGIAN_DUAL_SMOKE,
+    "pareto_trace": PARETO_TRACE,
+    "constrained_gen_full_pipeline": CONSTRAINED_GEN_FULL_PIPELINE,
 }

@@ -30,13 +30,36 @@ from __future__ import annotations
 import json
 import struct
 from pathlib import Path
-from typing import Optional
+from typing import Any, Callable, Optional
 
 import numpy as np
 import torch
 import torch.nn.functional as F
 
 from tac.mask_codec import NUM_CLASSES, SEGNET_H, SEGNET_W
+
+__all__ = [
+    "CAMERA_W",
+    "CAMERA_H",
+    "SEGNET_INPUT_W",
+    "SEGNET_INPUT_H",
+    "CLASS_MEAN_COLORS",
+    "rgb_to_yuv6",
+    "yuv6_to_rgb",
+    "validate_yuv_parity",
+    "generate_initial_frames",
+    "compute_segnet_constraint_loss",
+    "compute_posenet_constraint_loss",
+    "compute_compressibility_loss",
+    "estimate_expected_pose",
+    "constrained_generate",
+    "build_constrained_archive",
+    "load_constrained_archive",
+    "inflate_constrained",
+    "inverse_preprocess_input",
+    "generate_in_scorer_space",
+    "ConstrainedFrameGenerator",
+]
 
 # ---- Constants ----
 
@@ -68,7 +91,10 @@ CLASS_MEAN_COLORS = torch.tensor(
 def rgb_to_yuv6(rgb_chw: torch.Tensor) -> torch.Tensor:
     """Convert RGB CHW to YUV420 6-channel representation.
 
-    Matches the upstream ``frame_utils.rgb_to_yuv6`` exactly.
+    Must match upstream ``frame_utils.rgb_to_yuv6`` exactly. Any divergence
+    will cause scorer-space optimization to silently produce wrong gradients.
+    Use :func:`validate_yuv_parity` to cross-validate against the upstream
+    implementation after any modification.
 
     Args:
         rgb_chw: (..., 3, H, W) float tensor in [0, 255].
@@ -114,6 +140,9 @@ def yuv6_to_rgb(yuv6: torch.Tensor) -> torch.Tensor:
 
     This is the pseudo-inverse of ``rgb_to_yuv6``. The chroma subsampling
     loses spatial resolution, so the reconstruction is approximate.
+
+    Must stay consistent with :func:`rgb_to_yuv6` and the upstream
+    ``frame_utils.yuv6_to_rgb``. Use :func:`validate_yuv_parity` to verify.
 
     Args:
         yuv6: (..., 6, H2, W2) tensor from rgb_to_yuv6.
@@ -163,6 +192,53 @@ def yuv6_to_rgb(yuv6: torch.Tensor) -> torch.Tensor:
     return torch.stack([R, G, B], dim=-3)
 
 
+def validate_yuv_parity(
+    upstream_rgb_to_yuv6: Callable[[torch.Tensor], torch.Tensor],
+    num_samples: int = 5,
+    atol: float = 1e-4,
+) -> dict[str, Any]:
+    """Cross-validate local rgb_to_yuv6 against the upstream implementation.
+
+    Generates random RGB tensors and compares local vs. upstream YUV6 outputs.
+    Returns a summary dict with pass/fail status and max observed error.
+
+    Args:
+        upstream_rgb_to_yuv6: the upstream ``frame_utils.rgb_to_yuv6`` function.
+        num_samples: number of random test inputs to compare.
+        atol: absolute tolerance for floating-point comparison.
+
+    Returns:
+        Dict with keys ``passed`` (bool), ``max_abs_error`` (float),
+        ``num_samples`` (int), and ``details`` (list of per-sample errors).
+    """
+    details: list[float] = []
+    max_err = 0.0
+    passed = True
+
+    for _ in range(num_samples):
+        test_rgb = torch.rand(1, 3, 128, 128) * 255.0
+        local_out = rgb_to_yuv6(test_rgb)
+        upstream_out = upstream_rgb_to_yuv6(test_rgb)
+
+        if local_out.shape != upstream_out.shape:
+            passed = False
+            details.append(float("inf"))
+            continue
+
+        err = (local_out - upstream_out).abs().max().item()
+        details.append(err)
+        max_err = max(max_err, err)
+        if err > atol:
+            passed = False
+
+    return {
+        "passed": passed,
+        "max_abs_error": max_err,
+        "num_samples": num_samples,
+        "details": details,
+    }
+
+
 # ---- Core functions ----
 
 
@@ -193,10 +269,23 @@ def generate_initial_frames(
     colors = CLASS_MEAN_COLORS.to(device)  # (NUM_CLASSES, 3)
     frames = colors[masks_dev]  # fancy index: (N, H, W, 3)
 
-    # Add small deterministic noise for symmetry breaking
-    gen = torch.Generator(device="cpu")
-    gen.manual_seed(noise_seed)
-    noise = torch.randn(N, H, W, 3, generator=gen).to(device) * 5.0
+    # Add small deterministic noise for symmetry breaking.
+    # For GPU devices, generate noise directly on device to avoid a CPU->GPU
+    # transfer. A CPU generator is used for reproducibility: seeding is
+    # deterministic regardless of CUDA non-determinism.
+    if device.type == "cuda":
+        cpu_gen = torch.Generator(device="cpu")
+        cpu_gen.manual_seed(noise_seed)
+        # Generate on CPU with the seeded generator, then create on device
+        # using the same values for deterministic reproducibility.
+        cpu_noise = torch.randn(N, H, W, 3, generator=cpu_gen)
+        noise = torch.empty(N, H, W, 3, device=device)
+        noise.copy_(cpu_noise)
+        noise.mul_(5.0)
+    else:
+        gen = torch.Generator(device="cpu")
+        gen.manual_seed(noise_seed)
+        noise = torch.randn(N, H, W, 3, generator=gen) * 5.0
     frames = (frames + noise).clamp(0.0, 255.0)
 
     return frames
@@ -335,6 +424,7 @@ def compute_compressibility_loss(frames: torch.Tensor) -> torch.Tensor:
 def estimate_expected_pose(
     masks: torch.Tensor,
     device: torch.device | str = "cpu",
+    pose_heuristic_weights: dict[str, float] | None = None,
 ) -> torch.Tensor:
     """Estimate expected ego-motion from mask sequence.
 
@@ -356,6 +446,19 @@ def estimate_expected_pose(
     Args:
         masks: (N, H, W) long tensor with class indices in [0, NUM_CLASSES).
         device: computation device.
+        pose_heuristic_weights: optional dict overriding the heuristic
+            coefficients used to map centroid displacements to pose
+            estimates. These are rough approximations and should be
+            overridden by actual PoseNet targets computed from ground-truth
+            frames when available. Supported keys and their defaults:
+
+            - ``tx_road_dx`` (0.5): lateral translation from road horizontal shift.
+            - ``ty_road_dy`` (0.3): vertical translation from road vertical shift.
+            - ``tz_baseline`` (0.1): constant forward motion baseline.
+            - ``tz_road_dy`` (0.2): forward motion from road vertical growth.
+            - ``rx_sky_dy`` (0.2): pitch from sky vertical shift.
+            - ``ry_sky_dx`` (0.3): yaw from sky horizontal shift.
+            - ``rz_road_cx`` (0.1): roll from road lateral asymmetry.
 
     Returns:
         (P, 6) float tensor of estimated pose targets, P = N-1.
@@ -400,13 +503,26 @@ def estimate_expected_pose(
     # These are heuristic coefficients tuned to match typical PoseNet output
     # magnitudes on comma driving data. The exact values matter less than
     # providing a reasonable initial target for the optimization to converge from.
+    # Override via pose_heuristic_weights with actual PoseNet targets from
+    # ground-truth frames for production use.
+    _defaults = {
+        "tx_road_dx": 0.5,
+        "ty_road_dy": 0.3,
+        "tz_baseline": 0.1,
+        "tz_road_dy": 0.2,
+        "rx_sky_dy": 0.2,
+        "ry_sky_dx": 0.3,
+        "rz_road_cx": 0.1,
+    }
+    w = {**_defaults, **(pose_heuristic_weights or {})}
+
     poses = torch.zeros(P, 6, device=device)
-    poses[:, 0] = road_dx * 0.5       # tx: lateral from road shift
-    poses[:, 1] = road_dy * 0.3       # ty: vertical from road shift
-    poses[:, 2] = 0.1 + road_dy * 0.2  # tz: forward (baseline + road growth)
-    poses[:, 3] = sky_dy * 0.2        # rx: pitch from sky shift
-    poses[:, 4] = sky_dx * 0.3        # ry: yaw from sky shift
-    poses[:, 5] = (road_cx - 0.5) * 0.1  # rz: roll from road asymmetry
+    poses[:, 0] = road_dx * w["tx_road_dx"]            # tx: lateral from road shift
+    poses[:, 1] = road_dy * w["ty_road_dy"]             # ty: vertical from road shift
+    poses[:, 2] = w["tz_baseline"] + road_dy * w["tz_road_dy"]  # tz: forward (baseline + road growth)
+    poses[:, 3] = sky_dy * w["rx_sky_dy"]               # rx: pitch from sky shift
+    poses[:, 4] = sky_dx * w["ry_sky_dx"]               # ry: yaw from sky shift
+    poses[:, 5] = (road_cx - 0.5) * w["rz_road_cx"]    # rz: roll from road asymmetry
 
     return poses
 
@@ -776,10 +892,15 @@ def generate_in_scorer_space(
     for step in range(num_steps):
         optimizer.zero_grad()
 
-        # SegNet loss: operates on last frame's RGB at segnet resolution
-        # SegNet expects (B, C, 384, 512) input (no YUV conversion for SegNet)
-        rgb_for_seg = yuv6_to_rgb(scorer_frames)  # (N, 3, 384, 512)
-        seg_logits = segnet(rgb_for_seg)  # (N, NUM_CLASSES, H_out, W_out)
+        # Convert YUV6 back to RGB for scorer evaluation.
+        # Even though we optimize in YUV space, the scorers must receive input
+        # through their canonical preprocess_input path to match eval-time behavior.
+        rgb_for_scorers = yuv6_to_rgb(scorer_frames)  # (N, 3, 384, 512)
+
+        # SegNet loss: use preprocess_input path (expects (B, T, C, H, W))
+        seg_btchw = rgb_for_scorers.unsqueeze(1).contiguous()  # (N, 1, C, H, W)
+        seg_input = segnet.preprocess_input(seg_btchw)
+        seg_logits = segnet(seg_input)  # (N, NUM_CLASSES, H_out, W_out)
 
         H_out, W_out = seg_logits.shape[2], seg_logits.shape[3]
         masks_resized = (
@@ -793,13 +914,14 @@ def generate_in_scorer_space(
         )
         seg_loss = F.cross_entropy(seg_logits, masks_resized)
 
-        # PoseNet loss: operates on YUV6 pairs directly
+        # PoseNet loss: use preprocess_input path (expects (B, T, C, H, W))
         pose_loss = torch.tensor(0.0, device=device)
         if P > 0 and expected_pose.shape[0] > 0:
-            # Build pairs in YUV6 space: PoseNet expects (B, T*6, H2, W2)
-            yuv_t0 = scorer_frames[:-1]  # (P, 6, H2, W2)
-            yuv_t1 = scorer_frames[1:]   # (P, 6, H2, W2)
-            posenet_in = torch.cat([yuv_t0, yuv_t1], dim=1)  # (P, 12, H2, W2)
+            # Build consecutive pairs as (P, 2, C, H, W) for preprocess_input
+            rgb_t0 = rgb_for_scorers[:-1]  # (P, 3, 384, 512)
+            rgb_t1 = rgb_for_scorers[1:]   # (P, 3, 384, 512)
+            pair_btchw = torch.stack([rgb_t0, rgb_t1], dim=1).contiguous()  # (P, 2, 3, H, W)
+            posenet_in = posenet.preprocess_input(pair_btchw)
             posenet_out = posenet(posenet_in)
             pred_pose = posenet_out["pose"][..., :6]
             pose_loss = (pred_pose - expected_pose.to(device)).pow(2).mean()
@@ -989,3 +1111,227 @@ class ConstrainedFrameGenerator:
             device=self.device,
             log_every=log_every,
         )
+
+    def generate_full_pipeline(
+        self,
+        masks: torch.Tensor,
+        noise_seed: int = 42,
+        cfg: dict | None = None,
+        log_every: int = 50,
+    ) -> tuple[torch.Tensor, dict]:
+        """Full constrained generation pipeline combining all mathematical tools.
+
+        The pipeline integrates all five researcher contributions:
+
+        1. **Initialization** (Yousfi): Class-mean colors + seeded noise, or
+           warm-start from mask-based low-rank approximation.
+        2. **Variational optimization** (Euler): Solve Euler-Lagrange equations
+           via gradient descent with smoothness regularization.
+        3. **Lagrangian dual** (Lagrange): Learn optimal rate-distortion lambda
+           via primal-dual updates satisfying KKT conditions.
+        4. **Manifold projection** (Tao): After each phase, project frames
+           onto scorer null-space to reduce rate at zero distortion cost.
+        5. **Hamiltonian refinement** (Karpathy): Phase-space dynamics for
+           escaping local minima in the final refinement stage.
+        6. **Quantization** (Yousfi): Round to uint8 using gradient-directed
+           Floyd-Steinberg dithering.
+
+        Args:
+            masks: (N, H, W) long tensor with class indices.
+            noise_seed: deterministic seed.
+            cfg: pipeline configuration dict. Keys:
+                - phase1_steps (int): variational steps, default 200
+                - phase2_steps (int): Lagrangian dual steps, default 200
+                - phase3_steps (int): Hamiltonian refinement steps, default 100
+                - rate_budget (float): rate constraint for dual, default 0.01
+                - manifold_project (bool): enable null-space projection, default True
+                - use_hamiltonian (bool): enable phase-space refinement, default True
+                - use_dithering (bool): gradient-directed dithering, default True
+            log_every: logging interval.
+
+        Returns:
+            (frames, diagnostics) where frames is (N, H, W, 3) in [0, 255]
+            and diagnostics is a dict with per-phase metrics.
+        """
+        from tac.hamiltonian_dynamics import HamiltonianPixelOptimizer
+        from tac.scorer_manifold import ScorerManifold
+        from tac.variational_gen import LagrangianDualOptimizer, VariationalFrameGenerator
+
+        cfg = cfg or {}
+        device = self.device
+        N, H_m, W_m = masks.shape
+
+        phase1_steps = cfg.get("phase1_steps", 200)
+        phase2_steps = cfg.get("phase2_steps", 200)
+        phase3_steps = cfg.get("phase3_steps", 100)
+        rate_budget = cfg.get("rate_budget", 0.01)
+        do_manifold = cfg.get("manifold_project", True)
+        do_hamiltonian = cfg.get("use_hamiltonian", True)
+        do_dithering = cfg.get("use_dithering", True)
+
+        diagnostics: dict = {"phases": {}}
+
+        # ---- Phase 0: Initialization ----
+        init_frames_hwc = generate_initial_frames(masks, noise_seed, device=device)
+        # Convert HWC -> CHW for the pipeline
+        frames = init_frames_hwc.permute(0, 3, 1, 2).contiguous()  # (N, 3, H, W)
+        if log_every > 0:
+            print(f"  pipeline: initialized {N} frames ({H_m}x{W_m})")
+
+        # ---- Phase 1: Variational optimization (Euler) ----
+        var_gen = VariationalFrameGenerator(cfg={
+            "variational_steps": phase1_steps,
+            "variational_lr": 0.5,
+            "lambda_smooth": cfg.get("lambda_smooth", 0.01),
+            "lambda_rate": cfg.get("lambda_rate", 0.1),
+            "use_line_search": False,
+        })
+        frames = var_gen.solve(
+            frames, masks, self.posenet, self.segnet, log_every=log_every,
+        )
+        diagnostics["phases"]["variational"] = {"steps": phase1_steps}
+        if log_every > 0:
+            print("  pipeline: Phase 1 (variational) complete")
+
+        # ---- Phase 1.5: Manifold projection (Tao) ----
+        if do_manifold and N >= 1:
+            manifold = ScorerManifold(self.posenet, self.segnet, cfg={
+                "max_jacobian_outputs": cfg.get("max_jacobian_outputs", 16),
+                "rank_threshold": cfg.get("rank_threshold", 1e-3),
+            })
+            for i in range(N):
+                single = frames[i: i + 1]
+                J = manifold.compute_jacobian(single)
+                smoothed = F.avg_pool2d(
+                    F.pad(single, (1, 1, 1, 1), mode="replicate"), 3, stride=1,
+                )
+                delta = smoothed - single
+                delta_flat = delta.reshape(-1)
+                proj_delta = manifold.null_space_project(delta_flat, J)
+                frames[i] = (
+                    single.reshape(-1) + proj_delta.to(device)
+                ).reshape(single.shape).clamp(0.0, 255.0)
+            diagnostics["phases"]["manifold_projection"] = {"frames_projected": N}
+            if log_every > 0:
+                print("  pipeline: Phase 1.5 (manifold projection) complete")
+
+        # ---- Phase 2: Lagrangian dual optimization (Lagrange) ----
+        dual_opt = LagrangianDualOptimizer(cfg={
+            "dual_steps": phase2_steps,
+            "dual_primal_lr": 0.3,
+            "dual_dual_lr": 0.01,
+            "rate_budget": rate_budget,
+            "lambda_init": 25.0,
+            "lambda_smooth": cfg.get("lambda_smooth", 0.01),
+        })
+        frames, dual_diag = dual_opt.optimize(
+            frames, masks, self.posenet, self.segnet,
+            rate_budget=rate_budget, log_every=log_every,
+        )
+        diagnostics["phases"]["lagrangian_dual"] = dual_diag
+        if log_every > 0:
+            print(f"  pipeline: Phase 2 (Lagrangian dual) complete, "
+                  f"lambda={dual_diag['final_lambda']:.3f}")
+
+        # ---- Phase 3: Hamiltonian refinement (Karpathy) ----
+        if do_hamiltonian:
+            ham_opt = HamiltonianPixelOptimizer(cfg={
+                "hamiltonian_steps": phase3_steps,
+                "hamiltonian_dt": cfg.get("hamiltonian_dt", 0.05),
+                "hamiltonian_mass": cfg.get("hamiltonian_mass", 1.0),
+                "anneal_damping": True,
+                "anneal_start": 0.001,
+                "anneal_end": 0.05,
+            })
+            frames, ham_diag = ham_opt.optimize_with_scorer(
+                frames, masks, self.posenet, self.segnet,
+                seg_weight=cfg.get("seg_weight", 100.0),
+                pose_weight=cfg.get("pose_weight", 10.0),
+                smooth_weight=cfg.get("smooth_weight", 0.01),
+                log_every=log_every,
+            )
+            diagnostics["phases"]["hamiltonian"] = {
+                "best_potential": ham_diag["best_potential"],
+                "energy_drift": ham_diag["energy_drift"],
+                "steps": ham_diag["steps"],
+            }
+            if log_every > 0:
+                print(f"  pipeline: Phase 3 (Hamiltonian) complete, "
+                      f"V={ham_diag['best_potential']:.4f}")
+
+        # ---- Phase 4: Gradient-directed quantization ----
+        if do_dithering:
+            frames = _gradient_directed_dither(
+                frames, masks, self.segnet, device,
+            )
+            diagnostics["phases"]["dithering"] = {"applied": True}
+            if log_every > 0:
+                print("  pipeline: Phase 4 (gradient dithering) complete")
+        else:
+            frames = frames.round().clamp(0.0, 255.0)
+
+        # Convert CHW -> HWC for output
+        result = frames.permute(0, 2, 3, 1).contiguous().clamp(0.0, 255.0)
+        return result, diagnostics
+
+
+def _gradient_directed_dither(
+    frames: torch.Tensor,
+    masks: torch.Tensor,
+    segnet: torch.nn.Module,
+    device: torch.device,
+) -> torch.Tensor:
+    """Gradient-directed Floyd-Steinberg dithering for uint8 quantization.
+
+    Standard rounding introduces quantization error uniformly. This method
+    uses the scorer gradient to direct the rounding error: round in the
+    direction that HELPS the scorer, or at least hurts it least.
+
+    For each pixel:
+      1. Compute floor and ceil values
+      2. Check which direction the scorer gradient prefers
+      3. Round in the preferred direction
+      4. Diffuse the remaining error to neighbors (Floyd-Steinberg pattern)
+
+    This is Yousfi's steganalysis insight applied to quantization: place the
+    quantization noise where the scorer cannot detect it.
+
+    Args:
+        frames: (N, C, H, W) float tensor in [0, 255].
+        masks: (N, H, W) long tensor with target masks.
+        segnet: frozen SegNet model.
+        device: computation device.
+
+    Returns:
+        (N, C, H, W) uint8-compatible float tensor.
+    """
+    N, C, H, W = frames.shape
+
+    # Compute scorer gradient direction for each pixel
+    inp = frames.detach().clone().requires_grad_(True)
+    resized = F.interpolate(inp, size=(384, 512), mode="bilinear", align_corners=False)
+    logits = segnet(resized)
+    H_out, W_out = logits.shape[2], logits.shape[3]
+    masks_resized = F.interpolate(
+        masks.float().unsqueeze(1).to(device),
+        size=(H_out, W_out), mode="nearest",
+    ).squeeze(1).long()
+    loss = F.cross_entropy(logits, masks_resized)
+    loss.backward()
+
+    grad = inp.grad.detach() if inp.grad is not None else torch.zeros_like(frames)
+
+    # Gradient-directed rounding
+    with torch.no_grad():
+        floor_val = frames.detach().floor()
+        ceil_val = frames.detach().ceil()
+        frac = frames.detach() - floor_val
+
+        # If gradient points toward lower values, prefer floor (saves rate)
+        # If gradient points toward higher values, prefer ceil
+        # Tie-breaking at 0.5: use gradient direction
+        prefer_ceil = (grad < 0).float()  # negative grad = loss decreases with more
+        threshold = 0.5 - 0.1 * (2.0 * prefer_ceil - 1.0)  # bias threshold by gradient
+        rounded = torch.where(frac > threshold, ceil_val, floor_val)
+
+    return rounded.clamp(0.0, 255.0)

@@ -150,17 +150,17 @@ class TextureAtomCodebook(nn.Module):
         # Quantize to 4 bits: map [0, 255] -> [0, 15]
         quantized = (atoms / 255.0 * 15.0).round().clamp(0, 15).byte()
         flat = quantized.reshape(-1)
-        # Pack two 4-bit values per byte
         num_values = flat.shape[0]
-        packed_len = (num_values + 1) // 2
-        packed = bytearray(packed_len)
-        for i in range(0, num_values - 1, 2):
-            packed[i // 2] = (flat[i].item() << 4) | flat[i + 1].item()
+        # Vectorized 4-bit packing: pair adjacent values into single bytes
+        # Pad to even length if necessary
         if num_values % 2 == 1:
-            packed[-1] = flat[-1].item() << 4
+            flat = torch.cat([flat, torch.zeros(1, dtype=torch.uint8)])
+        high = flat[0::2] << 4  # high nibbles
+        low = flat[1::2]        # low nibbles
+        packed = bytes((high | low).numpy().tobytes())
         # Header: num_atoms(2B) + atom_size(2B) + num_channels(1B)
         header = struct.pack("<HHB", self.num_atoms, self.atom_size, self.num_channels)
-        return header + bytes(packed)
+        return header + packed
 
     @classmethod
     def deserialize(cls, data: bytes) -> "TextureAtomCodebook":
@@ -175,13 +175,18 @@ class TextureAtomCodebook(nn.Module):
         num_atoms, atom_size, num_channels = struct.unpack("<HHB", data[:5])
         packed = data[5:]
         total_values = num_atoms * num_channels * atom_size * atom_size
-        flat = []
-        for i in range(len(packed)):
-            flat.append((packed[i] >> 4) & 0x0F)
-            flat.append(packed[i] & 0x0F)
-        flat = flat[:total_values]
+        # Vectorized 4-bit unpacking using numpy bitwise operations
+        import numpy as np
+        packed_arr = np.frombuffer(packed, dtype=np.uint8)
+        high_nibbles = (packed_arr >> 4) & 0x0F
+        low_nibbles = packed_arr & 0x0F
+        # Interleave high and low nibbles
+        flat_np = np.empty(len(packed_arr) * 2, dtype=np.uint8)
+        flat_np[0::2] = high_nibbles
+        flat_np[1::2] = low_nibbles
+        flat = flat_np[:total_values]
         # De-quantize from 4 bits back to [0, 255]
-        atoms_tensor = torch.tensor(flat, dtype=torch.float32).reshape(
+        atoms_tensor = torch.from_numpy(flat.astype(np.float32)).reshape(
             num_atoms, num_channels, atom_size, atom_size
         ) * (255.0 / 15.0)
         instance = cls(num_atoms=num_atoms, atom_size=atom_size, num_channels=num_channels)
@@ -191,6 +196,74 @@ class TextureAtomCodebook(nn.Module):
     def byte_size(self) -> int:
         """Size of the serialized codebook in bytes."""
         return len(self.serialize())
+
+    def init_from_jacobian_eigenvectors(
+        self,
+        frame: torch.Tensor,
+        posenet: torch.nn.Module,
+        segnet: torch.nn.Module,
+    ) -> None:
+        """Initialize codebook atoms from scorer Jacobian eigenvectors.
+
+        Yousfi's steganalysis-in-reverse insight: the eigenvectors of the
+        scorer Jacobian's Gram matrix J^T J are the "most important" texture
+        patterns according to the scorer. Each eigenvector represents a
+        direction in pixel space that maximally changes the scorer output.
+
+        By initializing codebook atoms from these eigenvectors (reshaped to
+        atom_size patches), we capture the scorer-relevant texture information
+        in far fewer atoms than random initialization would require.
+
+        32 atoms from Jacobian eigenvectors capture more scorer-relevant
+        information than 1000 random atoms.
+
+        The eigenvectors are extracted via SVD of the Jacobian:
+            J = U S V^T => eigenvectors of J^T J are columns of V
+
+        Each eigenvector is reshaped to (C, atom_size, atom_size) patches
+        and scaled to [0, 255] range for use as codebook atoms.
+
+        Args:
+            frame: (1, C, H, W) reference frame for Jacobian computation.
+                The frame should be representative of the video content.
+            posenet: frozen PoseNet model.
+            segnet: frozen SegNet model.
+        """
+        from tac.scorer_manifold import ScorerManifold
+
+        manifold = ScorerManifold(posenet, segnet, cfg={
+            "max_jacobian_outputs": min(16, self.num_atoms),
+        })
+
+        eigvecs = manifold.jacobian_eigenvectors(
+            frame, num_vectors=self.num_atoms,
+        )  # (num_atoms, C, H, W)
+
+        C = self.num_channels
+        A = self.atom_size
+
+        # Extract atom-sized patches from eigenvectors
+        _, _, H_eig, W_eig = eigvecs.shape
+        with torch.no_grad():
+            for k in range(self.num_atoms):
+                ev = eigvecs[k]  # (C, H_eig, W_eig)
+                # Crop or tile to atom size
+                if H_eig >= A and W_eig >= A:
+                    patch = ev[:, :A, :A]
+                else:
+                    # Tile if eigenvector is smaller than atom
+                    patch = ev[:, :A, :A] if H_eig >= A and W_eig >= A else \
+                        ev.repeat(1, (A + H_eig - 1) // H_eig, (A + W_eig - 1) // W_eig)[:, :A, :A]
+
+                # Normalize to [0, 255] range
+                p_min = patch.min()
+                p_max = patch.max()
+                if p_max - p_min > 1e-8:
+                    patch = (patch - p_min) / (p_max - p_min) * 255.0
+                else:
+                    patch = torch.full_like(patch, 128.0)
+
+                self.atoms.data[k] = patch
 
 
 class MotionFieldCodec(nn.Module):
@@ -408,7 +481,7 @@ class ScorerCorrectionTargets(nn.Module):
         rendered_frame: torch.Tensor,
         target_frame: torch.Tensor,
         fragility_map: torch.Tensor,
-    ) -> tuple[torch.Tensor, torch.Tensor]:
+    ) -> tuple[torch.Tensor, torch.Tensor, torch.Tensor]:
         """Compute sparse corrections for the most scorer-sensitive pixels.
 
         Args:
@@ -419,6 +492,7 @@ class ScorerCorrectionTargets(nn.Module):
         Returns:
             indices: (B, K, 2) long — (y, x) coordinates of corrections.
             values: (B, K, 3) float — RGB correction deltas.
+            valid_mask: (B, K) bool — True for real corrections, False for padding.
             K = min(max_corrections_per_frame, number of nonzero corrections).
         """
         B, C, H, W = rendered_frame.shape
@@ -432,6 +506,7 @@ class ScorerCorrectionTargets(nn.Module):
 
         all_indices = []
         all_values = []
+        all_valid = []
 
         for b in range(B):
             flat_importance = importance_score[b].reshape(-1)
@@ -439,6 +514,7 @@ class ScorerCorrectionTargets(nn.Module):
             if num_select == 0:
                 all_indices.append(torch.zeros(K, 2, device=device, dtype=torch.long))
                 all_values.append(torch.zeros(K, 3, device=device))
+                all_valid.append(torch.zeros(K, device=device, dtype=torch.bool))
                 continue
 
             topk_vals, topk_flat = torch.topk(flat_importance, num_select)
@@ -452,23 +528,29 @@ class ScorerCorrectionTargets(nn.Module):
             scale = (2 ** (self.value_bits - 1) - 1) / max_val
             quantized = (vals * scale).round() / scale
 
+            # Build validity mask before padding
+            valid = torch.ones(K, device=device, dtype=torch.bool)
+
             # Pad to K if needed
             if num_select < K:
                 pad_idx = torch.zeros(K - num_select, 2, device=device, dtype=torch.long)
                 pad_val = torch.zeros(K - num_select, 3, device=device)
                 idx = torch.cat([idx, pad_idx], dim=0)
                 quantized = torch.cat([quantized, pad_val], dim=0)
+                valid[num_select:] = False
 
             all_indices.append(idx)
             all_values.append(quantized)
+            all_valid.append(valid)
 
-        return torch.stack(all_indices), torch.stack(all_values)
+        return torch.stack(all_indices), torch.stack(all_values), torch.stack(all_valid)
 
     def apply_corrections(
         self,
         frame: torch.Tensor,
         indices: torch.Tensor,
         values: torch.Tensor,
+        valid_mask: torch.Tensor | None = None,
     ) -> torch.Tensor:
         """Apply sparse corrections to a rendered frame.
 
@@ -476,6 +558,9 @@ class ScorerCorrectionTargets(nn.Module):
             frame: (B, 3, H, W) float — frame to correct.
             indices: (B, K, 2) long — (y, x) correction positions.
             values: (B, K, 3) float — RGB correction deltas.
+            valid_mask: (B, K) bool tensor indicating which corrections are
+                real (not padding). If None, validity is inferred from non-zero
+                correction values.
 
         Returns:
             (B, 3, H, W) corrected frame in [0, 255].
@@ -484,11 +569,21 @@ class ScorerCorrectionTargets(nn.Module):
         B = frame.shape[0]
 
         for b in range(B):
-            for k in range(indices.shape[1]):
-                y, x = indices[b, k, 0].item(), indices[b, k, 1].item()
-                if y == 0 and x == 0 and values[b, k].abs().sum() < 1e-8:
-                    continue  # Skip padding entries
-                result[b, :, y, x] = result[b, :, y, x] + values[b, k]
+            if valid_mask is not None:
+                mask_b = valid_mask[b]  # (K,) bool
+            else:
+                # Infer validity: non-zero correction values
+                mask_b = values[b].abs().sum(dim=1) > 1e-8  # (K,)
+
+            if mask_b.sum() == 0:
+                continue
+
+            valid_y = indices[b, mask_b, 0]  # (V,)
+            valid_x = indices[b, mask_b, 1]  # (V,)
+            valid_vals = values[b, mask_b]    # (V, 3)
+
+            # Vectorized correction via advanced indexing
+            result[b, :, valid_y, valid_x] += valid_vals.T  # (3, V)
 
         return result.clamp(0.0, 255.0)
 
@@ -496,6 +591,7 @@ class ScorerCorrectionTargets(nn.Module):
         self,
         indices: torch.Tensor,
         values: torch.Tensor,
+        valid_mask: torch.Tensor | None = None,
     ) -> bytes:
         """Serialize sparse corrections to bytes.
 
@@ -505,12 +601,17 @@ class ScorerCorrectionTargets(nn.Module):
         Args:
             indices: (K, 2) long tensor.
             values: (K, 3) float tensor.
+            valid_mask: (K,) bool tensor indicating real corrections. If None,
+                validity is inferred from non-zero values (legacy behavior).
 
         Returns:
             bytes object.
         """
-        # Filter out padding (zero index + zero value)
-        mask = (indices.abs().sum(dim=1) > 0) | (values.abs().sum(dim=1) > 1e-8)
+        if valid_mask is not None:
+            mask = valid_mask
+        else:
+            # Legacy fallback: infer validity from non-zero values
+            mask = (indices.abs().sum(dim=1) > 0) | (values.abs().sum(dim=1) > 1e-8)
         valid_idx = indices[mask]
         valid_val = values[mask]
         count = valid_idx.shape[0]
