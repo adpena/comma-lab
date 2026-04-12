@@ -2,7 +2,7 @@
   "version": 3,
   "last_scan": "2026-04-12T16:31:01.190507+00:00",
   "entity_count": 2658,
-  "review_count": 3631,
+  "review_count": 3727,
   "entities": {
     "experiments.kaggle_gpu_lane::batched_scorer_eval": {
       "module": "experiments.kaggle_gpu_lane",
@@ -17612,8 +17612,8 @@
       "last_modified_date": "2026-04-11T16:38:02-05:00",
       "review_status": "reviewed",
       "reviewed_by": "council",
-      "reviewed_at": "2026-04-12T16:33:58.556836+00:00",
-      "review_pass": "tiny_arch_next_2",
+      "reviewed_at": "2026-04-12T17:47:41.776187+00:00",
+      "review_pass": "tiny_runtime",
       "notes": ""
     },
     "tac.lossless.next_frame_coder::PositionPairTransitionModel.__init__": {
@@ -17629,8 +17629,8 @@
       "last_modified_date": "2026-04-11T16:38:02-05:00",
       "review_status": "reviewed",
       "reviewed_by": "council",
-      "reviewed_at": "2026-04-12T16:33:58.556836+00:00",
-      "review_pass": "tiny_arch_next_2",
+      "reviewed_at": "2026-04-12T17:47:41.776187+00:00",
+      "review_pass": "tiny_runtime",
       "notes": ""
     },
     "tac.lossless.next_frame_coder::PositionPairTransitionModel._lookup": {
@@ -17646,8 +17646,8 @@
       "last_modified_date": "2026-04-11T16:38:02-05:00",
       "review_status": "reviewed",
       "reviewed_by": "council",
-      "reviewed_at": "2026-04-12T16:33:58.556836+00:00",
-      "review_pass": "tiny_arch_next_2",
+      "reviewed_at": "2026-04-12T17:47:41.776187+00:00",
+      "review_pass": "tiny_runtime",
       "notes": ""
     },
     "tac.lossless.next_frame_coder::PositionPairTransitionModel._mix_rows": {
@@ -17663,8 +17663,8 @@
       "last_modified_date": "2026-04-11T16:38:02-05:00",
       "review_status": "reviewed",
       "reviewed_by": "council",
-      "reviewed_at": "2026-04-12T16:33:58.556836+00:00",
-      "review_pass": "tiny_arch_next_2",
+      "reviewed_at": "2026-04-12T17:47:41.776187+00:00",
+      "review_pass": "tiny_runtime",
       "notes": ""
     },
     "tac.lossless.next_frame_coder::PositionPairTransitionModel.next_frame_logits": {
@@ -17680,8 +17680,8 @@
       "last_modified_date": "2026-04-11T16:38:02-05:00",
       "review_status": "reviewed",
       "reviewed_by": "council",
-      "reviewed_at": "2026-04-12T16:33:58.556836+00:00",
-      "review_pass": "tiny_arch_next_2",
+      "reviewed_at": "2026-04-12T17:47:41.776187+00:00",
+      "review_pass": "tiny_runtime",
       "notes": ""
     },
     "tac.lossless.next_frame_coder::PositionTransitionModel": {
@@ -17697,8 +17697,8 @@
       "last_modified_date": "2026-04-11T16:38:02-05:00",
       "review_status": "reviewed",
       "reviewed_by": "council",
-      "reviewed_at": "2026-04-12T16:33:58.556836+00:00",
-      "review_pass": "tiny_arch_next_2",
+      "reviewed_at": "2026-04-12T17:47:41.776187+00:00",
+      "review_pass": "tiny_runtime",
       "notes": ""
     },
     "tac.lossless.next_frame_coder::PositionTransitionModel.__init__": {
@@ -17714,8 +17714,8 @@
       "last_modified_date": "2026-04-11T16:38:02-05:00",
       "review_status": "reviewed",
       "reviewed_by": "council",
-      "reviewed_at": "2026-04-12T16:33:58.556836+00:00",
-      "review_pass": "tiny_arch_next_2",
+      "reviewed_at": "2026-04-12T17:47:41.776187+00:00",
+      "review_pass": "tiny_runtime",
       "notes": ""
     },
     "tac.lossless.next_frame_coder::PositionTransitionModel.next_frame_logits": {
@@ -17731,8 +17731,8 @@
       "last_modified_date": "2026-04-11T16:38:02-05:00",
       "review_status": "reviewed",
       "reviewed_by": "council",
-      "reviewed_at": "2026-04-12T16:33:58.556836+00:00",
-      "review_pass": "tiny_arch_next_2",
+      "reviewed_at": "2026-04-12T17:47:41.776187+00:00",
+      "review_pass": "tiny_runtime",
       "notes": ""
     },
     "tac.lossless.next_frame_coder::_freqs_from_frame_logits": {
@@ -17748,8 +17748,8 @@
       "last_modified_date": "2026-04-11T16:38:02-05:00",
       "review_status": "reviewed",
       "reviewed_by": "council",
-      "reviewed_at": "2026-04-12T16:33:58.556836+00:00",
-      "review_pass": "tiny_arch_next_2",
+      "reviewed_at": "2026-04-12T17:47:41.776187+00:00",
+      "review_pass": "tiny_runtime",
       "notes": ""
     },
     "tac.lossless.next_frame_coder::_normalize_frames": {
@@ -17765,8 +17765,8 @@
       "last_modified_date": "2026-04-11T16:38:02-05:00",
       "review_status": "reviewed",
       "reviewed_by": "council",
-      "reviewed_at": "2026-04-12T16:33:58.556836+00:00",
-      "review_pass": "tiny_arch_next_2",
+      "reviewed_at": "2026-04-12T17:47:41.776187+00:00",
+      "review_pass": "tiny_runtime",
       "notes": ""
     },
     "tac.lossless.next_frame_coder::build_position_pair_transition_model": {
@@ -17782,8 +17782,8 @@
       "last_modified_date": "2026-04-11T16:38:02-05:00",
       "review_status": "reviewed",
       "reviewed_by": "council",
-      "reviewed_at": "2026-04-12T16:33:58.556836+00:00",
-      "review_pass": "tiny_arch_next_2",
+      "reviewed_at": "2026-04-12T17:47:41.776187+00:00",
+      "review_pass": "tiny_runtime",
       "notes": ""
     },
     "tac.lossless.next_frame_coder::build_position_transition_model": {
@@ -17799,8 +17799,8 @@
       "last_modified_date": "2026-04-11T16:38:02-05:00",
       "review_status": "reviewed",
       "reviewed_by": "council",
-      "reviewed_at": "2026-04-12T16:33:58.556836+00:00",
-      "review_pass": "tiny_arch_next_2",
+      "reviewed_at": "2026-04-12T17:47:41.776187+00:00",
+      "review_pass": "tiny_runtime",
       "notes": ""
     },
     "tac.lossless.next_frame_coder::decode_next_frame_stream_with_logits_fn": {
@@ -17816,8 +17816,8 @@
       "last_modified_date": "2026-04-11T16:38:02-05:00",
       "review_status": "reviewed",
       "reviewed_by": "council",
-      "reviewed_at": "2026-04-12T16:33:58.556836+00:00",
-      "review_pass": "tiny_arch_next_2",
+      "reviewed_at": "2026-04-12T17:47:41.776187+00:00",
+      "review_pass": "tiny_runtime",
       "notes": ""
     },
     "tac.lossless.next_frame_coder::encode_commavq_next_frame_sample": {
@@ -17833,8 +17833,8 @@
       "last_modified_date": "2026-04-11T16:38:02-05:00",
       "review_status": "reviewed",
       "reviewed_by": "council",
-      "reviewed_at": "2026-04-12T16:33:58.556836+00:00",
-      "review_pass": "tiny_arch_next_2",
+      "reviewed_at": "2026-04-12T17:47:41.776187+00:00",
+      "review_pass": "tiny_runtime",
       "notes": ""
     },
     "tac.lossless.next_frame_coder::encode_next_frame_stream_with_logits_fn": {
@@ -17850,8 +17850,8 @@
       "last_modified_date": "2026-04-11T16:38:02-05:00",
       "review_status": "reviewed",
       "reviewed_by": "council",
-      "reviewed_at": "2026-04-12T16:33:58.556836+00:00",
-      "review_pass": "tiny_arch_next_2",
+      "reviewed_at": "2026-04-12T17:47:41.776187+00:00",
+      "review_pass": "tiny_runtime",
       "notes": ""
     },
     "tac.lossless.profiles::GPTNextFrameProfileConfig": {
@@ -19174,10 +19174,10 @@
       "complexity": 1,
       "last_modified_commit": "",
       "last_modified_date": "",
-      "review_status": "unreviewed",
-      "reviewed_by": "",
-      "reviewed_at": "",
-      "review_pass": "",
+      "review_status": "reviewed",
+      "reviewed_by": "council",
+      "reviewed_at": "2026-04-12T17:47:49.731860+00:00",
+      "review_pass": "tiny_runtime_2",
       "notes": ""
     },
     "tac.lossless.tiny_frame_predictor::TinyFramePredictorConfig": {
@@ -19191,10 +19191,10 @@
       "complexity": 7,
       "last_modified_commit": "",
       "last_modified_date": "",
-      "review_status": "unreviewed",
-      "reviewed_by": "",
-      "reviewed_at": "",
-      "review_pass": "",
+      "review_status": "reviewed",
+      "reviewed_by": "council",
+      "reviewed_at": "2026-04-12T17:47:49.731860+00:00",
+      "review_pass": "tiny_runtime_2",
       "notes": ""
     },
     "tac.lossless.tiny_frame_predictor::TinyFramePredictorConfig.__post_init__": {
@@ -19208,10 +19208,10 @@
       "complexity": 7,
       "last_modified_commit": "",
       "last_modified_date": "",
-      "review_status": "unreviewed",
-      "reviewed_by": "",
-      "reviewed_at": "",
-      "review_pass": "",
+      "review_status": "reviewed",
+      "reviewed_by": "council",
+      "reviewed_at": "2026-04-12T17:47:49.731860+00:00",
+      "review_pass": "tiny_runtime_2",
       "notes": ""
     },
     "tac.lossless.tiny_frame_predictor::_require_torch": {
@@ -19225,10 +19225,10 @@
       "complexity": 2,
       "last_modified_commit": "",
       "last_modified_date": "",
-      "review_status": "unreviewed",
-      "reviewed_by": "",
-      "reviewed_at": "",
-      "review_pass": "",
+      "review_status": "reviewed",
+      "reviewed_by": "council",
+      "reviewed_at": "2026-04-12T17:47:49.731860+00:00",
+      "review_pass": "tiny_runtime_2",
       "notes": ""
     },
     "tac.lossless.tiny_frame_predictor::build_tiny_frame_predictor": {
@@ -19242,10 +19242,10 @@
       "complexity": 6,
       "last_modified_commit": "",
       "last_modified_date": "",
-      "review_status": "unreviewed",
-      "reviewed_by": "",
-      "reviewed_at": "",
-      "review_pass": "",
+      "review_status": "reviewed",
+      "reviewed_by": "council",
+      "reviewed_at": "2026-04-12T17:47:49.731860+00:00",
+      "review_pass": "tiny_runtime_2",
       "notes": ""
     },
     "tac.lossless.tiny_frame_predictor::summarize_tiny_frame_predictor": {
@@ -19259,10 +19259,10 @@
       "complexity": 4,
       "last_modified_commit": "",
       "last_modified_date": "",
-      "review_status": "unreviewed",
-      "reviewed_by": "",
-      "reviewed_at": "",
-      "review_pass": "",
+      "review_status": "reviewed",
+      "reviewed_by": "council",
+      "reviewed_at": "2026-04-12T17:47:49.731860+00:00",
+      "review_pass": "tiny_runtime_2",
       "notes": ""
     },
     "tac.lossless.token_rgb_bridge::_OnnxDecoderBridge": {
@@ -21794,7 +21794,7 @@
       "last_modified_date": "2026-04-12T11:21:44-05:00",
       "review_status": "reviewed",
       "reviewed_by": "council",
-      "reviewed_at": "2026-04-12T17:15:04.180890+00:00",
+      "reviewed_at": "2026-04-12T17:15:24.810575+00:00",
       "review_pass": "",
       "notes": ""
     },
@@ -21811,7 +21811,7 @@
       "last_modified_date": "2026-04-12T11:21:44-05:00",
       "review_status": "reviewed",
       "reviewed_by": "council",
-      "reviewed_at": "2026-04-12T17:15:04.180890+00:00",
+      "reviewed_at": "2026-04-12T17:15:24.810575+00:00",
       "review_pass": "",
       "notes": ""
     },
@@ -21828,7 +21828,7 @@
       "last_modified_date": "2026-04-12T11:21:44-05:00",
       "review_status": "reviewed",
       "reviewed_by": "council",
-      "reviewed_at": "2026-04-12T17:15:04.180890+00:00",
+      "reviewed_at": "2026-04-12T17:15:24.810575+00:00",
       "review_pass": "",
       "notes": ""
     },
@@ -21845,7 +21845,7 @@
       "last_modified_date": "2026-04-12T11:21:44-05:00",
       "review_status": "reviewed",
       "reviewed_by": "council",
-      "reviewed_at": "2026-04-12T17:15:04.180890+00:00",
+      "reviewed_at": "2026-04-12T17:15:24.810575+00:00",
       "review_pass": "",
       "notes": ""
     },
@@ -21862,7 +21862,7 @@
       "last_modified_date": "2026-04-12T11:21:44-05:00",
       "review_status": "reviewed",
       "reviewed_by": "council",
-      "reviewed_at": "2026-04-12T17:15:04.180890+00:00",
+      "reviewed_at": "2026-04-12T17:15:24.810575+00:00",
       "review_pass": "",
       "notes": ""
     },
@@ -21879,7 +21879,7 @@
       "last_modified_date": "2026-04-12T11:21:44-05:00",
       "review_status": "reviewed",
       "reviewed_by": "council",
-      "reviewed_at": "2026-04-12T17:15:04.180890+00:00",
+      "reviewed_at": "2026-04-12T17:15:24.810575+00:00",
       "review_pass": "",
       "notes": ""
     },
@@ -21896,7 +21896,7 @@
       "last_modified_date": "2026-04-12T11:21:44-05:00",
       "review_status": "reviewed",
       "reviewed_by": "council",
-      "reviewed_at": "2026-04-12T17:15:04.180890+00:00",
+      "reviewed_at": "2026-04-12T17:15:24.810575+00:00",
       "review_pass": "",
       "notes": ""
     },
@@ -21913,7 +21913,7 @@
       "last_modified_date": "2026-04-12T11:21:44-05:00",
       "review_status": "reviewed",
       "reviewed_by": "council",
-      "reviewed_at": "2026-04-12T17:15:04.180890+00:00",
+      "reviewed_at": "2026-04-12T17:15:24.810575+00:00",
       "review_pass": "",
       "notes": ""
     },
@@ -21930,7 +21930,7 @@
       "last_modified_date": "2026-04-12T11:21:44-05:00",
       "review_status": "reviewed",
       "reviewed_by": "council",
-      "reviewed_at": "2026-04-12T17:15:04.180890+00:00",
+      "reviewed_at": "2026-04-12T17:15:24.810575+00:00",
       "review_pass": "",
       "notes": ""
     },
@@ -21947,7 +21947,7 @@
       "last_modified_date": "2026-04-12T11:21:44-05:00",
       "review_status": "reviewed",
       "reviewed_by": "council",
-      "reviewed_at": "2026-04-12T17:15:04.180890+00:00",
+      "reviewed_at": "2026-04-12T17:15:24.810575+00:00",
       "review_pass": "",
       "notes": ""
     },
@@ -21964,7 +21964,7 @@
       "last_modified_date": "2026-04-12T11:21:44-05:00",
       "review_status": "reviewed",
       "reviewed_by": "council",
-      "reviewed_at": "2026-04-12T17:15:04.180890+00:00",
+      "reviewed_at": "2026-04-12T17:15:24.810575+00:00",
       "review_pass": "",
       "notes": ""
     },
@@ -21981,7 +21981,7 @@
       "last_modified_date": "2026-04-12T11:21:44-05:00",
       "review_status": "reviewed",
       "reviewed_by": "council",
-      "reviewed_at": "2026-04-12T17:15:04.180890+00:00",
+      "reviewed_at": "2026-04-12T17:15:24.810575+00:00",
       "review_pass": "",
       "notes": ""
     },
@@ -21998,7 +21998,7 @@
       "last_modified_date": "2026-04-12T11:21:44-05:00",
       "review_status": "reviewed",
       "reviewed_by": "council",
-      "reviewed_at": "2026-04-12T17:15:04.180890+00:00",
+      "reviewed_at": "2026-04-12T17:15:24.810575+00:00",
       "review_pass": "",
       "notes": ""
     },
@@ -22015,7 +22015,7 @@
       "last_modified_date": "2026-04-12T11:21:44-05:00",
       "review_status": "reviewed",
       "reviewed_by": "council",
-      "reviewed_at": "2026-04-12T17:15:04.180890+00:00",
+      "reviewed_at": "2026-04-12T17:15:24.810575+00:00",
       "review_pass": "",
       "notes": ""
     },
@@ -22032,7 +22032,7 @@
       "last_modified_date": "2026-04-12T11:21:44-05:00",
       "review_status": "reviewed",
       "reviewed_by": "council",
-      "reviewed_at": "2026-04-12T17:15:04.180890+00:00",
+      "reviewed_at": "2026-04-12T17:15:24.810575+00:00",
       "review_pass": "",
       "notes": ""
     },
@@ -22049,7 +22049,7 @@
       "last_modified_date": "2026-04-12T11:21:44-05:00",
       "review_status": "reviewed",
       "reviewed_by": "council",
-      "reviewed_at": "2026-04-12T17:15:04.180890+00:00",
+      "reviewed_at": "2026-04-12T17:15:24.810575+00:00",
       "review_pass": "",
       "notes": ""
     },
@@ -22066,7 +22066,7 @@
       "last_modified_date": "2026-04-12T11:21:44-05:00",
       "review_status": "reviewed",
       "reviewed_by": "council",
-      "reviewed_at": "2026-04-12T17:15:04.180890+00:00",
+      "reviewed_at": "2026-04-12T17:15:24.810575+00:00",
       "review_pass": "",
       "notes": ""
     },
@@ -22083,7 +22083,7 @@
       "last_modified_date": "2026-04-12T11:21:44-05:00",
       "review_status": "reviewed",
       "reviewed_by": "council",
-      "reviewed_at": "2026-04-12T17:15:04.180890+00:00",
+      "reviewed_at": "2026-04-12T17:15:24.810575+00:00",
       "review_pass": "",
       "notes": ""
     },
@@ -22100,7 +22100,7 @@
       "last_modified_date": "2026-04-12T11:21:44-05:00",
       "review_status": "reviewed",
       "reviewed_by": "council",
-      "reviewed_at": "2026-04-12T17:15:04.180890+00:00",
+      "reviewed_at": "2026-04-12T17:15:24.810575+00:00",
       "review_pass": "",
       "notes": ""
     },
@@ -22117,7 +22117,7 @@
       "last_modified_date": "2026-04-12T11:21:44-05:00",
       "review_status": "reviewed",
       "reviewed_by": "council",
-      "reviewed_at": "2026-04-12T17:15:04.180890+00:00",
+      "reviewed_at": "2026-04-12T17:15:24.810575+00:00",
       "review_pass": "",
       "notes": ""
     },
@@ -22134,7 +22134,7 @@
       "last_modified_date": "2026-04-12T11:21:44-05:00",
       "review_status": "reviewed",
       "reviewed_by": "council",
-      "reviewed_at": "2026-04-12T17:15:04.180890+00:00",
+      "reviewed_at": "2026-04-12T17:15:24.810575+00:00",
       "review_pass": "",
       "notes": ""
     },
@@ -22151,7 +22151,7 @@
       "last_modified_date": "2026-04-12T11:21:44-05:00",
       "review_status": "reviewed",
       "reviewed_by": "council",
-      "reviewed_at": "2026-04-12T17:15:04.180890+00:00",
+      "reviewed_at": "2026-04-12T17:15:24.810575+00:00",
       "review_pass": "",
       "notes": ""
     },
@@ -22168,7 +22168,7 @@
       "last_modified_date": "2026-04-12T11:21:44-05:00",
       "review_status": "reviewed",
       "reviewed_by": "council",
-      "reviewed_at": "2026-04-12T17:15:04.180890+00:00",
+      "reviewed_at": "2026-04-12T17:15:24.810575+00:00",
       "review_pass": "",
       "notes": ""
     },
@@ -22185,7 +22185,7 @@
       "last_modified_date": "2026-04-12T11:21:44-05:00",
       "review_status": "reviewed",
       "reviewed_by": "council",
-      "reviewed_at": "2026-04-12T17:15:04.180890+00:00",
+      "reviewed_at": "2026-04-12T17:15:24.810575+00:00",
       "review_pass": "",
       "notes": ""
     },
@@ -22202,7 +22202,7 @@
       "last_modified_date": "2026-04-12T11:21:44-05:00",
       "review_status": "reviewed",
       "reviewed_by": "council",
-      "reviewed_at": "2026-04-12T17:15:04.180890+00:00",
+      "reviewed_at": "2026-04-12T17:15:24.810575+00:00",
       "review_pass": "",
       "notes": ""
     },
@@ -22219,7 +22219,7 @@
       "last_modified_date": "2026-04-12T11:21:44-05:00",
       "review_status": "reviewed",
       "reviewed_by": "council",
-      "reviewed_at": "2026-04-12T17:15:04.180890+00:00",
+      "reviewed_at": "2026-04-12T17:15:24.810575+00:00",
       "review_pass": "",
       "notes": ""
     },
@@ -27863,7 +27863,7 @@
       "last_modified_date": "2026-04-12T11:21:44-05:00",
       "review_status": "reviewed",
       "reviewed_by": "council",
-      "reviewed_at": "2026-04-12T16:31:02.976906+00:00",
+      "reviewed_at": "2026-04-12T18:23:40.646436+00:00",
       "review_pass": "",
       "notes": ""
     },
@@ -27880,7 +27880,7 @@
       "last_modified_date": "2026-04-12T11:21:44-05:00",
       "review_status": "reviewed",
       "reviewed_by": "council",
-      "reviewed_at": "2026-04-12T16:31:02.976906+00:00",
+      "reviewed_at": "2026-04-12T18:23:40.646436+00:00",
       "review_pass": "",
       "notes": ""
     },
@@ -27897,7 +27897,7 @@
       "last_modified_date": "2026-04-12T11:21:44-05:00",
       "review_status": "reviewed",
       "reviewed_by": "council",
-      "reviewed_at": "2026-04-12T16:31:02.976906+00:00",
+      "reviewed_at": "2026-04-12T18:23:40.646436+00:00",
       "review_pass": "",
       "notes": ""
     },
@@ -27914,7 +27914,7 @@
       "last_modified_date": "2026-04-12T11:21:44-05:00",
       "review_status": "reviewed",
       "reviewed_by": "council",
-      "reviewed_at": "2026-04-12T16:31:02.976906+00:00",
+      "reviewed_at": "2026-04-12T18:23:40.646436+00:00",
       "review_pass": "",
       "notes": ""
     },
@@ -27931,7 +27931,7 @@
       "last_modified_date": "2026-04-12T11:21:44-05:00",
       "review_status": "reviewed",
       "reviewed_by": "council",
-      "reviewed_at": "2026-04-12T16:31:02.976906+00:00",
+      "reviewed_at": "2026-04-12T18:23:40.646436+00:00",
       "review_pass": "",
       "notes": ""
     },
@@ -27948,7 +27948,7 @@
       "last_modified_date": "2026-04-12T11:21:44-05:00",
       "review_status": "reviewed",
       "reviewed_by": "council",
-      "reviewed_at": "2026-04-12T16:31:02.976906+00:00",
+      "reviewed_at": "2026-04-12T18:23:40.646436+00:00",
       "review_pass": "",
       "notes": ""
     },
@@ -27965,7 +27965,7 @@
       "last_modified_date": "2026-04-12T11:21:44-05:00",
       "review_status": "reviewed",
       "reviewed_by": "council",
-      "reviewed_at": "2026-04-12T16:31:02.976906+00:00",
+      "reviewed_at": "2026-04-12T18:23:40.646436+00:00",
       "review_pass": "",
       "notes": ""
     },
@@ -27982,7 +27982,7 @@
       "last_modified_date": "2026-04-12T11:21:44-05:00",
       "review_status": "reviewed",
       "reviewed_by": "council",
-      "reviewed_at": "2026-04-12T16:31:02.976906+00:00",
+      "reviewed_at": "2026-04-12T18:23:40.646436+00:00",
       "review_pass": "",
       "notes": ""
     },
@@ -27999,7 +27999,7 @@
       "last_modified_date": "2026-04-12T11:21:44-05:00",
       "review_status": "reviewed",
       "reviewed_by": "council",
-      "reviewed_at": "2026-04-12T16:31:02.976906+00:00",
+      "reviewed_at": "2026-04-12T18:23:40.646436+00:00",
       "review_pass": "",
       "notes": ""
     },
@@ -28016,7 +28016,7 @@
       "last_modified_date": "2026-04-12T11:21:44-05:00",
       "review_status": "reviewed",
       "reviewed_by": "council",
-      "reviewed_at": "2026-04-12T16:31:02.976906+00:00",
+      "reviewed_at": "2026-04-12T18:23:40.646436+00:00",
       "review_pass": "",
       "notes": ""
     },
@@ -28033,7 +28033,7 @@
       "last_modified_date": "2026-04-12T11:21:44-05:00",
       "review_status": "reviewed",
       "reviewed_by": "council",
-      "reviewed_at": "2026-04-12T16:31:02.976906+00:00",
+      "reviewed_at": "2026-04-12T18:23:40.646436+00:00",
       "review_pass": "",
       "notes": ""
     },
@@ -28050,7 +28050,7 @@
       "last_modified_date": "2026-04-12T11:21:44-05:00",
       "review_status": "reviewed",
       "reviewed_by": "council",
-      "reviewed_at": "2026-04-12T16:31:02.976906+00:00",
+      "reviewed_at": "2026-04-12T18:23:40.646436+00:00",
       "review_pass": "",
       "notes": ""
     },
@@ -28067,7 +28067,7 @@
       "last_modified_date": "2026-04-12T11:21:44-05:00",
       "review_status": "reviewed",
       "reviewed_by": "council",
-      "reviewed_at": "2026-04-12T16:31:02.976906+00:00",
+      "reviewed_at": "2026-04-12T18:23:40.646436+00:00",
       "review_pass": "",
       "notes": ""
     },
@@ -28084,7 +28084,7 @@
       "last_modified_date": "2026-04-12T11:21:44-05:00",
       "review_status": "reviewed",
       "reviewed_by": "council",
-      "reviewed_at": "2026-04-12T16:31:02.976906+00:00",
+      "reviewed_at": "2026-04-12T18:23:40.646436+00:00",
       "review_pass": "",
       "notes": ""
     },
@@ -28101,7 +28101,7 @@
       "last_modified_date": "2026-04-12T11:21:44-05:00",
       "review_status": "reviewed",
       "reviewed_by": "council",
-      "reviewed_at": "2026-04-12T16:31:02.976906+00:00",
+      "reviewed_at": "2026-04-12T18:23:40.646436+00:00",
       "review_pass": "",
       "notes": ""
     },
@@ -28118,7 +28118,7 @@
       "last_modified_date": "2026-04-12T11:21:44-05:00",
       "review_status": "reviewed",
       "reviewed_by": "council",
-      "reviewed_at": "2026-04-12T16:31:02.976906+00:00",
+      "reviewed_at": "2026-04-12T18:23:40.646436+00:00",
       "review_pass": "",
       "notes": ""
     },
@@ -28135,7 +28135,7 @@
       "last_modified_date": "2026-04-12T11:21:44-05:00",
       "review_status": "reviewed",
       "reviewed_by": "council",
-      "reviewed_at": "2026-04-12T16:31:02.976906+00:00",
+      "reviewed_at": "2026-04-12T18:23:40.646436+00:00",
       "review_pass": "",
       "notes": ""
     },
@@ -28152,7 +28152,7 @@
       "last_modified_date": "2026-04-12T11:21:44-05:00",
       "review_status": "reviewed",
       "reviewed_by": "council",
-      "reviewed_at": "2026-04-12T16:31:02.976906+00:00",
+      "reviewed_at": "2026-04-12T18:23:40.646436+00:00",
       "review_pass": "",
       "notes": ""
     },
@@ -28169,7 +28169,7 @@
       "last_modified_date": "2026-04-12T11:21:44-05:00",
       "review_status": "reviewed",
       "reviewed_by": "council",
-      "reviewed_at": "2026-04-12T16:31:02.976906+00:00",
+      "reviewed_at": "2026-04-12T18:23:40.646436+00:00",
       "review_pass": "",
       "notes": ""
     },
@@ -28186,7 +28186,7 @@
       "last_modified_date": "2026-04-12T11:21:44-05:00",
       "review_status": "reviewed",
       "reviewed_by": "council",
-      "reviewed_at": "2026-04-12T16:31:02.976906+00:00",
+      "reviewed_at": "2026-04-12T18:23:40.646436+00:00",
       "review_pass": "",
       "notes": ""
     },
@@ -28203,7 +28203,7 @@
       "last_modified_date": "2026-04-12T11:21:44-05:00",
       "review_status": "reviewed",
       "reviewed_by": "council",
-      "reviewed_at": "2026-04-12T16:31:02.976906+00:00",
+      "reviewed_at": "2026-04-12T18:23:40.646436+00:00",
       "review_pass": "",
       "notes": ""
     },
@@ -28220,7 +28220,7 @@
       "last_modified_date": "2026-04-12T11:21:44-05:00",
       "review_status": "reviewed",
       "reviewed_by": "council",
-      "reviewed_at": "2026-04-12T16:31:02.976906+00:00",
+      "reviewed_at": "2026-04-12T18:23:40.646436+00:00",
       "review_pass": "",
       "notes": ""
     },
@@ -28237,7 +28237,7 @@
       "last_modified_date": "2026-04-12T11:21:44-05:00",
       "review_status": "reviewed",
       "reviewed_by": "council",
-      "reviewed_at": "2026-04-12T16:31:02.976906+00:00",
+      "reviewed_at": "2026-04-12T18:23:40.646436+00:00",
       "review_pass": "",
       "notes": ""
     },
@@ -28254,7 +28254,7 @@
       "last_modified_date": "2026-04-12T11:21:44-05:00",
       "review_status": "reviewed",
       "reviewed_by": "council",
-      "reviewed_at": "2026-04-12T16:31:02.976906+00:00",
+      "reviewed_at": "2026-04-12T18:23:40.646436+00:00",
       "review_pass": "",
       "notes": ""
     },
@@ -28271,7 +28271,7 @@
       "last_modified_date": "2026-04-12T11:21:44-05:00",
       "review_status": "reviewed",
       "reviewed_by": "council",
-      "reviewed_at": "2026-04-12T16:31:02.976906+00:00",
+      "reviewed_at": "2026-04-12T18:23:40.646436+00:00",
       "review_pass": "",
       "notes": ""
     },
@@ -28288,7 +28288,7 @@
       "last_modified_date": "2026-04-12T11:21:44-05:00",
       "review_status": "reviewed",
       "reviewed_by": "council",
-      "reviewed_at": "2026-04-12T16:31:02.976906+00:00",
+      "reviewed_at": "2026-04-12T18:23:40.646436+00:00",
       "review_pass": "",
       "notes": ""
     },
@@ -28305,7 +28305,7 @@
       "last_modified_date": "2026-04-12T11:21:44-05:00",
       "review_status": "reviewed",
       "reviewed_by": "council",
-      "reviewed_at": "2026-04-12T16:31:02.976906+00:00",
+      "reviewed_at": "2026-04-12T18:23:40.646436+00:00",
       "review_pass": "",
       "notes": ""
     },
@@ -37553,8 +37553,8 @@
       "last_modified_date": "2026-04-11T16:38:02-05:00",
       "review_status": "reviewed",
       "reviewed_by": "council",
-      "reviewed_at": "2026-04-12T16:33:58.873535+00:00",
-      "review_pass": "tiny_arch_next_2",
+      "reviewed_at": "2026-04-12T17:47:42.669319+00:00",
+      "review_pass": "tiny_runtime",
       "notes": ""
     },
     "tac.tests.test_tac_lossless_next_frame_coder::TacLosslessNextFrameCoderTests.test_build_position_pair_transition_model_predicts_next_frame_logits": {
@@ -37570,8 +37570,8 @@
       "last_modified_date": "2026-04-11T16:38:02-05:00",
       "review_status": "reviewed",
       "reviewed_by": "council",
-      "reviewed_at": "2026-04-12T16:33:58.873535+00:00",
-      "review_pass": "tiny_arch_next_2",
+      "reviewed_at": "2026-04-12T17:47:42.669319+00:00",
+      "review_pass": "tiny_runtime",
       "notes": ""
     },
     "tac.tests.test_tac_lossless_next_frame_coder::TacLosslessNextFrameCoderTests.test_build_position_pair_transition_model_uses_global_backoff_for_sparse_position_context": {
@@ -37587,8 +37587,8 @@
       "last_modified_date": "2026-04-11T16:38:02-05:00",
       "review_status": "reviewed",
       "reviewed_by": "council",
-      "reviewed_at": "2026-04-12T16:33:58.873535+00:00",
-      "review_pass": "tiny_arch_next_2",
+      "reviewed_at": "2026-04-12T17:47:42.669319+00:00",
+      "review_pass": "tiny_runtime",
       "notes": ""
     },
     "tac.tests.test_tac_lossless_next_frame_coder::TacLosslessNextFrameCoderTests.test_build_position_pair_transition_model_uses_single_frame_backoff": {
@@ -37604,8 +37604,8 @@
       "last_modified_date": "2026-04-11T16:38:02-05:00",
       "review_status": "reviewed",
       "reviewed_by": "council",
-      "reviewed_at": "2026-04-12T16:33:58.873535+00:00",
-      "review_pass": "tiny_arch_next_2",
+      "reviewed_at": "2026-04-12T17:47:42.669319+00:00",
+      "review_pass": "tiny_runtime",
       "notes": ""
     },
     "tac.tests.test_tac_lossless_next_frame_coder::TacLosslessNextFrameCoderTests.test_build_position_transition_model_predicts_next_frame_logits": {
@@ -37621,8 +37621,8 @@
       "last_modified_date": "2026-04-11T16:38:02-05:00",
       "review_status": "reviewed",
       "reviewed_by": "council",
-      "reviewed_at": "2026-04-12T16:33:58.873535+00:00",
-      "review_pass": "tiny_arch_next_2",
+      "reviewed_at": "2026-04-12T17:47:42.669319+00:00",
+      "review_pass": "tiny_runtime",
       "notes": ""
     },
     "tac.tests.test_tac_lossless_next_frame_coder::TacLosslessNextFrameCoderTests.test_encode_commavq_next_frame_sample_rejects_nonpositive_context_frames": {
@@ -37638,8 +37638,8 @@
       "last_modified_date": "2026-04-11T16:38:02-05:00",
       "review_status": "reviewed",
       "reviewed_by": "council",
-      "reviewed_at": "2026-04-12T16:33:58.873535+00:00",
-      "review_pass": "tiny_arch_next_2",
+      "reviewed_at": "2026-04-12T17:47:42.669319+00:00",
+      "review_pass": "tiny_runtime",
       "notes": ""
     },
     "tac.tests.test_tac_lossless_next_frame_coder::TacLosslessNextFrameCoderTests.test_encode_commavq_next_frame_sample_uses_injected_model_loader": {
@@ -37655,8 +37655,8 @@
       "last_modified_date": "2026-04-11T16:38:02-05:00",
       "review_status": "reviewed",
       "reviewed_by": "council",
-      "reviewed_at": "2026-04-12T16:33:58.873535+00:00",
-      "review_pass": "tiny_arch_next_2",
+      "reviewed_at": "2026-04-12T17:47:42.669319+00:00",
+      "review_pass": "tiny_runtime",
       "notes": ""
     },
     "tac.tests.test_tac_lossless_next_frame_coder::TacLosslessNextFrameCoderTests.test_encode_decode_next_frame_stream_roundtrips_sample": {
@@ -37672,8 +37672,8 @@
       "last_modified_date": "2026-04-11T16:38:02-05:00",
       "review_status": "reviewed",
       "reviewed_by": "council",
-      "reviewed_at": "2026-04-12T16:33:58.873535+00:00",
-      "review_pass": "tiny_arch_next_2",
+      "reviewed_at": "2026-04-12T17:47:42.669319+00:00",
+      "review_pass": "tiny_runtime",
       "notes": ""
     },
     "tac.tests.test_tac_lossless_range_coder::TacLosslessRangeCoderTests": {
@@ -38435,10 +38435,10 @@
       "complexity": 1,
       "last_modified_commit": "",
       "last_modified_date": "",
-      "review_status": "unreviewed",
-      "reviewed_by": "",
-      "reviewed_at": "",
-      "review_pass": "",
+      "review_status": "reviewed",
+      "reviewed_by": "council",
+      "reviewed_at": "2026-04-12T17:47:50.087043+00:00",
+      "review_pass": "tiny_runtime_2",
       "notes": ""
     },
     "tac.tests.test_tac_lossless_tiny_frame_predictor::TacLosslessTinyFramePredictorTests.test_tiny_frame_predictor_default_profile_stays_small": {
@@ -38452,10 +38452,10 @@
       "complexity": 1,
       "last_modified_commit": "",
       "last_modified_date": "",
-      "review_status": "unreviewed",
-      "reviewed_by": "",
-      "reviewed_at": "",
-      "review_pass": "",
+      "review_status": "reviewed",
+      "reviewed_by": "council",
+      "reviewed_at": "2026-04-12T17:47:50.087043+00:00",
+      "review_pass": "tiny_runtime_2",
       "notes": ""
     },
     "tac.tests.test_tac_lossless_tiny_frame_predictor::TacLosslessTinyFramePredictorTests.test_tiny_frame_predictor_emits_next_frame_logits": {
@@ -38469,10 +38469,10 @@
       "complexity": 1,
       "last_modified_commit": "",
       "last_modified_date": "",
-      "review_status": "unreviewed",
-      "reviewed_by": "",
-      "reviewed_at": "",
-      "review_pass": "",
+      "review_status": "reviewed",
+      "reviewed_by": "council",
+      "reviewed_at": "2026-04-12T17:47:50.087043+00:00",
+      "review_pass": "tiny_runtime_2",
       "notes": ""
     },
     "tac.tests.test_tac_lossless_tiny_frame_predictor::TacLosslessTinyFramePredictorTests.test_tiny_frame_predictor_rejects_wrong_context_length": {
@@ -38486,10 +38486,10 @@
       "complexity": 1,
       "last_modified_commit": "",
       "last_modified_date": "",
-      "review_status": "unreviewed",
-      "reviewed_by": "",
-      "reviewed_at": "",
-      "review_pass": "",
+      "review_status": "reviewed",
+      "reviewed_by": "council",
+      "reviewed_at": "2026-04-12T17:47:50.087043+00:00",
+      "review_pass": "tiny_runtime_2",
       "notes": ""
     },
     "tac.tests.test_tac_lossless_token_rgb_bridge::TacLosslessTokenRgbBridgeTests": {

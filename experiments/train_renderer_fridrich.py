@@ -349,19 +349,9 @@ def _wrap_with_learnable_bits(model: nn.Module, init_bits: float = 8.0) -> list[
     return bit_modules
 
 
-def _compute_self_compress_bits(model: nn.Module) -> torch.Tensor:
-    """Sum total_bits() across all LearnableBitDepth modules attached to conv layers."""
-    total = torch.tensor(0.0, device=next(model.parameters()).device)
-    found = False
-    for m in model.modules():
-        if isinstance(m, nn.Conv2d) and hasattr(m, "bit_depth"):
-            total = total + m.bit_depth.total_bits()
-            found = True
-    if not found:
-        # Fallback to param count * 4 bits
-        n_params = sum(p.numel() for p in model.parameters())
-        return torch.tensor(float(n_params * 4), device=next(model.parameters()).device)
-    return total
+# _compute_self_compress_bits was removed — it called total_bits() which only
+# summed per-channel bit-depths without multiplying by fan_in (off by ~576x).
+# Use _compute_model_bits everywhere instead (correctly accounts for fan_in).
 
 
 # ---------------------------------------------------------------------------
@@ -543,11 +533,7 @@ def _full_eval(
             has_sc = True
             break
     if has_sc:
-        total_bits = 0.0
-        for m in renderer.modules():
-            if isinstance(m, nn.Conv2d) and hasattr(m, "bit_depth"):
-                total_bits += m.bit_depth.total_bits().item()
-        model_bytes = total_bits / 8.0
+        model_bytes = _compute_model_bits(renderer).item() / 8.0
 
     # Rate = archive size / original uncompressed video file size
     # From upstream evaluate.py: sum of file sizes in videos/ dir
@@ -719,7 +705,10 @@ def train_fridrich_renderer(cfg: FridrichRendererConfig) -> dict[str, Any]:
     best_score = best_score_ckpt if cfg.resume else float("inf")
     best_epoch = -1
     constraints_satisfied_count = 0
-    self_compress_active = False
+    # self_compress_active is set in resume block above; only default to False
+    # if NOT resuming (avoids overwriting checkpoint state for Phase 3 resumes)
+    if not cfg.resume:
+        self_compress_active = False
     bit_modules: list[nn.Module] = []
     start_time = time.time()
 
@@ -803,10 +792,13 @@ def train_fridrich_renderer(cfg: FridrichRendererConfig) -> dict[str, Any]:
         # TV smoothness
         tv = _tv_loss(gen_t) + _tv_loss(gen_t1)
 
-        # Ego-motion flow regularization
-        flow_reg = _compute_flow_regularization(
-            gen_t, gen_t1, pair_gen.motion, mask_t, mask_t1,
-        )
+        # Ego-motion flow regularization (skip if weight is zero)
+        if cfg.flow_weight > 0:
+            flow_reg = _compute_flow_regularization(
+                gen_t, gen_t1, pair_gen.motion, mask_t, mask_t1,
+            )
+        else:
+            flow_reg = torch.tensor(0.0, device=device)
 
         # ---- Assemble total loss based on phase ----
         if phase == 1:
@@ -835,7 +827,7 @@ def train_fridrich_renderer(cfg: FridrichRendererConfig) -> dict[str, Any]:
 
             if phase == 3 and self_compress_active:
                 # Add self-compression rate penalty
-                model_bits = _compute_self_compress_bits(pair_gen)
+                model_bits = _compute_model_bits(pair_gen)
                 target_bits = cfg.target_bytes * 8.0
                 rate_excess = F.relu(model_bits - target_bits) / target_bits
                 total_loss = total_loss + cfg.rate_weight * rate_excess
@@ -907,7 +899,7 @@ def train_fridrich_renderer(cfg: FridrichRendererConfig) -> dict[str, Any]:
                 "vram_mb": _vram_mb(),
             }
             if self_compress_active:
-                log_entry["model_bits"] = _compute_self_compress_bits(pair_gen).item()
+                log_entry["model_bits"] = _compute_model_bits(pair_gen).item()
             history.append(log_entry)
 
             print(

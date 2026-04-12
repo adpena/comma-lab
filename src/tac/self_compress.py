@@ -162,8 +162,16 @@ class LearnableBitDepth(nn.Module):
         )
         return _ste_quantize(weight, self.bits, self.training)
 
-    def total_bits(self) -> torch.Tensor:
-        """Total bits across all channels (differentiable)."""
+    def sum_channel_bitwidths(self) -> torch.Tensor:
+        """Sum of per-channel bit-widths (NOT total model bits).
+
+        Returns sum of clamped bit-depth values across channels. For a 128-channel
+        layer at 4 bits each, this returns 512 — the sum of bit-widths, NOT the
+        total number of bits in the layer (which would be 512 * fan_in).
+
+        To get actual total bits for rate calculation, use
+        SelfCompressingConv2d.weight_bits() which multiplies by fan_in.
+        """
         return self.bits.clamp(0.0, 8.0).sum()
 
     def active_channels(self) -> int:
