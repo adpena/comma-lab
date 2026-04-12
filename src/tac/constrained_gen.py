@@ -1139,9 +1139,9 @@ class ConstrainedFrameGenerator:
             (frames, diagnostics) where frames is (N, H, W, 3) in [0, 255]
             and diagnostics is a dict with per-phase metrics.
         """
-        from tac.hamiltonian_dynamics import HamiltonianPixelOptimizer
-        from tac.scorer_manifold import ScorerManifold
-        from tac.variational_gen import LagrangianDualOptimizer, VariationalFrameGenerator
+        from tac.contrib.hamiltonian_dynamics import HamiltonianPixelOptimizer
+        from tac.contrib.scorer_manifold import ScorerManifold
+        from tac.contrib.variational_gen import LagrangianDualOptimizer, VariationalFrameGenerator
 
         cfg = cfg or {}
         device = self.device

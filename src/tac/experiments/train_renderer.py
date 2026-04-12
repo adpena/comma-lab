@@ -60,7 +60,7 @@ from tac.losses import (  # noqa: E402
 from tac.mask_codec import extract_masks, mask_pair_from_index  # noqa: E402
 from tac.profiles import PROFILES  # noqa: E402
 from tac.renderer import build_renderer  # noqa: E402
-from tac.wavelet_renderer import build_wavelet_renderer  # noqa: E402
+from tac.contrib.wavelet_renderer import build_wavelet_renderer  # noqa: E402
 from tac.scorer import detect_device, load_scorers  # noqa: E402
 from tac.training import EMA  # noqa: E402
 from tac.utils import setup_signal_handlers, write_telemetry  # noqa: E402
@@ -333,10 +333,10 @@ def train(args: argparse.Namespace):
             motion_hidden=args.motion_hidden,
         )
     elif args.variant == "vqvae":
-        from tac.vqvae_codec import build_vqvae_pair_generator  # noqa: E402
+        from tac.contrib.vqvae_codec import build_vqvae_pair_generator  # noqa: E402
         model = build_vqvae_pair_generator()
     elif args.variant == "diffusion_teacher":
-        from tac.diffusion_renderer import build_diffusion_teacher  # noqa: E402
+        from tac.contrib.diffusion_renderer import build_diffusion_teacher  # noqa: E402
         model = build_diffusion_teacher(
             num_classes=5,
             beta_start=getattr(args, "beta_start", 1e-4),

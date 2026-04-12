@@ -26,7 +26,7 @@ Additional capabilities:
 
 Example::
 
-    from tac.scorer_manifold import ScorerManifold
+    from tac.contrib.scorer_manifold import ScorerManifold
     manifold = ScorerManifold(posenet, segnet, cfg={})
     J = manifold.compute_jacobian(frame)
     projected = manifold.null_space_project(perturbation, J)

@@ -236,7 +236,7 @@ class TextureAtomCodebook(nn.Module):
             posenet: frozen PoseNet model.
             segnet: frozen SegNet model.
         """
-        from tac.scorer_manifold import ScorerManifold
+        from tac.contrib.scorer_manifold import ScorerManifold
 
         manifold = ScorerManifold(posenet, segnet, cfg={
             "max_jacobian_outputs": min(16, self.num_atoms),

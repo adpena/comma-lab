@@ -5,7 +5,7 @@ import warnings
 import pytest
 import torch
 
-from tac.adaptive import AdaptiveWeights, geometric_mean_score
+from tac.archive.adaptive import AdaptiveWeights, geometric_mean_score
 from tac.architectures import VARIANTS, build_postfilter
 from tac.profiles import PROFILES
 from tac.training import TrainConfig, Trainer

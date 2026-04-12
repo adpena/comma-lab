@@ -33,7 +33,7 @@ KKT conditions:
 
 Example::
 
-    from tac.variational_gen import VariationalFrameGenerator, LagrangianDualOptimizer
+    from tac.contrib.variational_gen import VariationalFrameGenerator, LagrangianDualOptimizer
     gen = VariationalFrameGenerator(cfg={})
     frames = gen.solve(init_frames, masks, posenet, segnet)
 

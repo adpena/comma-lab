@@ -289,7 +289,7 @@ class TestCoordRenderer:
     """Test coordinate-based neural field renderer (INRIA COOL)."""
 
     def test_positional_encoding(self):
-        from tac.coord_renderer import PositionalEncoding
+        from tac.contrib.coord_renderer import PositionalEncoding
         pe = PositionalEncoding(num_bands=10)
         assert pe.output_dim == 42  # 2 + 4*10
         coords = torch.randn(4, 16, 16, 2)
@@ -297,12 +297,12 @@ class TestCoordRenderer:
         assert encoded.shape == (4, 16, 16, 42)
 
     def test_coord_renderer_construction(self):
-        from tac.coord_renderer import CoordRenderer
+        from tac.contrib.coord_renderer import CoordRenderer
         model = CoordRenderer(num_classes=5, hidden_dim=64, num_bands=10)
         assert isinstance(model, nn.Module)
 
     def test_coord_renderer_forward(self):
-        from tac.coord_renderer import CoordRenderer
+        from tac.contrib.coord_renderer import CoordRenderer
         model = CoordRenderer(num_classes=5, hidden_dim=32, num_bands=5)
         masks = torch.randint(0, 5, (2, 16, 24))
         with torch.no_grad():
@@ -310,7 +310,7 @@ class TestCoordRenderer:
         assert rgb.shape == (2, 3, 16, 24)
 
     def test_output_range(self):
-        from tac.coord_renderer import CoordRenderer
+        from tac.contrib.coord_renderer import CoordRenderer
         model = CoordRenderer(num_classes=5, hidden_dim=32, num_bands=5)
         masks = torch.randint(0, 5, (1, 16, 24))
         with torch.no_grad():
@@ -320,14 +320,14 @@ class TestCoordRenderer:
 
     def test_param_count_small(self):
         """Coord renderer should be very small (~50K)."""
-        from tac.coord_renderer import CoordRenderer
+        from tac.contrib.coord_renderer import CoordRenderer
         model = CoordRenderer(num_classes=5, hidden_dim=64, num_bands=10)
         params = model.param_count()
         assert params < 100_000, f"Coord renderer too large: {params:,} params (target <100K)"
         assert params > 10_000, f"Coord renderer too small: {params:,} params"
 
     def test_pair_generator(self):
-        from tac.coord_renderer import build_coord_renderer
+        from tac.contrib.coord_renderer import build_coord_renderer
         pair_gen = build_coord_renderer(
             num_classes=5, hidden_dim=32, num_bands=5, motion_hidden=16,
         )
@@ -338,7 +338,7 @@ class TestCoordRenderer:
         assert pairs.shape == (1, 2, 16, 24, 3), f"Expected (1, 2, 16, 24, 3), got {pairs.shape}"
 
     def test_gradients_flow(self):
-        from tac.coord_renderer import CoordRenderer
+        from tac.contrib.coord_renderer import CoordRenderer
         model = CoordRenderer(num_classes=5, hidden_dim=16, num_bands=3)
         masks = torch.randint(0, 5, (1, 8, 12))
         rgb = model(masks)

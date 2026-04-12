@@ -422,7 +422,7 @@ ROADMAP: list[Experiment] = [
         platform_requirements={"min_vram_gb": 16, "needs_cuda": True, "needs_dali": False},
         command=(
             "python -c \"\n"
-            "from tac.hamiltonian_dynamics import HamiltonianPixelOptimizer\n"
+            "from tac.contrib.hamiltonian_dynamics import HamiltonianPixelOptimizer\n"
             "opt = HamiltonianPixelOptimizer(cfg={'hamiltonian_steps': 500})\n"
             "frames, diag = opt.optimize_with_scorer(\n"
             "    init_frames, masks, posenet, segnet,\n"
@@ -456,7 +456,7 @@ ROADMAP: list[Experiment] = [
         platform_requirements={"min_vram_gb": 16, "needs_cuda": True, "needs_dali": False},
         command=(
             "python -c \"\n"
-            "from tac.variational_gen import VariationalFrameGenerator\n"
+            "from tac.contrib.variational_gen import VariationalFrameGenerator\n"
             "gen = VariationalFrameGenerator()\n"
             "frames = gen.generate(masks, posenet, segnet, num_steps=500)\n"
             "\""
@@ -482,7 +482,7 @@ ROADMAP: list[Experiment] = [
         platform_requirements={"min_vram_gb": 16, "needs_cuda": True, "needs_dali": False},
         command=(
             "python -c \"\n"
-            "from tac.variational_gen import LagrangianDualOptimizer\n"
+            "from tac.contrib.variational_gen import LagrangianDualOptimizer\n"
             "opt = LagrangianDualOptimizer()\n"
             "frames = opt.optimize(masks, posenet, segnet, num_steps=500)\n"
             "\""
@@ -511,7 +511,7 @@ ROADMAP: list[Experiment] = [
         platform_requirements={"min_vram_gb": 16, "needs_cuda": True, "needs_dali": False},
         command=(
             "python -c \"\n"
-            "from tac.scorer_manifold import ScorerManifold\n"
+            "from tac.contrib.scorer_manifold import ScorerManifold\n"
             "manifold = ScorerManifold(posenet, segnet)\n"
             "# Project frames to iso-score manifold, then optimize rate\n"
             "\""
@@ -616,7 +616,7 @@ ROADMAP: list[Experiment] = [
         blocking_issues=["17 optimizer variants, need to select top 3-5 for ensemble"],
         command=(
             "python -c \"\n"
-            "from tac.cross_disciplinary_optimizers import ensemble_optimize\n"
+            "from tac.contrib.cross_disciplinary_optimizers import ensemble_optimize\n"
             "frames = ensemble_optimize(init_frames, posenet, segnet, masks, device='cuda')\n"
             "\""
         ),
@@ -646,7 +646,7 @@ ROADMAP: list[Experiment] = [
         blocking_issues=["need to identify which finance analogies actually apply"],
         command=(
             "python -c \"\n"
-            "from tac.finance_optimizers import yousfi_contrarian_picks\n"
+            "from tac.contrib.finance_optimizers import yousfi_contrarian_picks\n"
             "picks = yousfi_contrarian_picks(device='cpu')\n"
             "# Run the recommended subset\n"
             "\""
@@ -675,7 +675,7 @@ ROADMAP: list[Experiment] = [
         status="ready",
         command=(
             "python -c \"\n"
-            "from tac.domain_solvers import EgoMotionFlowSolver, RoadPlaneHomography\n"
+            "from tac.contrib.domain_solvers import EgoMotionFlowSolver, RoadPlaneHomography\n"
             "solver = EgoMotionFlowSolver()\n"
             "frames = solver.generate(masks)\n"
             "# Use as initialization for coupled_trajectory_optimize\n"
@@ -701,7 +701,7 @@ ROADMAP: list[Experiment] = [
         status="pending_yousfi_review",
         command=(
             "python -c \"\n"
-            "from tac.domain_solvers import KalmanFrameSmoother\n"
+            "from tac.contrib.domain_solvers import KalmanFrameSmoother\n"
             "smoother = KalmanFrameSmoother()\n"
             "smoothed = smoother.smooth(frames)\n"
             "\""

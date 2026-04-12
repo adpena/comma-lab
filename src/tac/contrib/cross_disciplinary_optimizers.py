@@ -14,7 +14,7 @@ models, and config, and returns optimized frames. All hyperparameters are config
 
 Usage::
 
-    from tac.cross_disciplinary_optimizers import optimizer_factory, ensemble_optimize
+    from tac.contrib.cross_disciplinary_optimizers import optimizer_factory, ensemble_optimize
 
     opt = optimizer_factory("simulated_annealing", {"T0": 100.0, "alpha": 0.99})
     optimized = opt.optimize(frames, posenet, segnet, masks, expected_pose)

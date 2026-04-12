@@ -26,7 +26,7 @@ strictly better than naive gradient descent for non-convex landscapes.
 
 Example::
 
-    from tac.hamiltonian_dynamics import HamiltonianPixelOptimizer
+    from tac.contrib.hamiltonian_dynamics import HamiltonianPixelOptimizer
     opt = HamiltonianPixelOptimizer(cfg={})
     frames = opt.optimize(init_frames, scorer_potential, dt=0.01, num_steps=1000)
 """

@@ -21,14 +21,14 @@ Architecture:
 
 Usage::
 
-    from tac.scorer_distill import PoseNetHead, SegNetHead, DistilledScorerWrapper
+    from tac.archive.scorer_distill import PoseNetHead, SegNetHead, DistilledScorerWrapper
 
     pose_head = PoseNetHead(input_dim=64)
     seg_head = SegNetHead(input_dim=64, num_classes=5)
     wrapper = DistilledScorerWrapper(renderer, pose_head, seg_head)
 
     # Train heads to mimic frozen scorers
-    from tac.scorer_distill import distill_scorer_heads
+    from tac.archive.scorer_distill import distill_scorer_heads
     distill_scorer_heads(renderer, posenet, segnet, train_data, epochs=50)
 """
 

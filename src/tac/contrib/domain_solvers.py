@@ -28,7 +28,7 @@ References:
 
 Usage::
 
-    from tac.domain_solvers import (
+    from tac.contrib.domain_solvers import (
         EgoMotionFlowSolver,
         RoadPlaneHomography,
         VanishingPointConstraint,
