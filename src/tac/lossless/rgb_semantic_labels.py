@@ -289,6 +289,31 @@ def _write_label_map_json(path: Path, label_map: dict[str, list[int]]) -> None:
     path.write_text(json.dumps(label_map, indent=2, sort_keys=True) + "\n", encoding="utf-8")
 
 
+def _chunk_example_samples(
+    file_names: list[str],
+    sampled_tokens_per_example: list[np.ndarray],
+    *,
+    max_frames_per_chunk: int,
+):
+    if max_frames_per_chunk <= 0:
+        raise ValueError("max_frames_per_chunk must be positive")
+    chunk_file_names: list[str] = []
+    chunk_tokens: list[np.ndarray] = []
+    chunk_frames = 0
+    for file_name, sampled_tokens in zip(file_names, sampled_tokens_per_example):
+        frame_count = int(sampled_tokens.shape[0])
+        if chunk_tokens and chunk_frames + frame_count > max_frames_per_chunk:
+            yield chunk_file_names, chunk_tokens
+            chunk_file_names = []
+            chunk_tokens = []
+            chunk_frames = 0
+        chunk_file_names.append(file_name)
+        chunk_tokens.append(sampled_tokens)
+        chunk_frames += frame_count
+    if chunk_tokens:
+        yield chunk_file_names, chunk_tokens
+
+
 def rgb_semantic_label_tuple(frames, *, max_keyframes: int = 6) -> tuple[int, ...]:
     arr = _coerce_rgb_frames(frames)
     sampled = arr[_select_keyframe_indices(arr.shape[0], max_keyframes=max_keyframes)]
@@ -390,19 +415,24 @@ def build_rgb_label_map_sample(
         sampled_tokens_per_example.append(_sample_token_keyframes(example["token.npy"], max_keyframes=max_keyframes))
 
     if sampled_tokens_per_example:
-        merged_tokens = np.concatenate(sampled_tokens_per_example, axis=0)
-        merged_frames = _decode_sampled_tokens_to_nchw_frames(
-            merged_tokens,
-            decoder=decoder,
-            batch_size=batch_size,
-            device=decode_device,
-        )
-        start = 0
-        for file_name, sampled_tokens in zip(file_names, sampled_tokens_per_example):
-            count = int(sampled_tokens.shape[0])
-            label_map[file_name] = list(_rgb_semantic_label_tuple_from_sampled_nchw(merged_frames[start:start + count]))
-            _write_label_map_json(target, label_map)
-            start += count
+        for chunk_file_names, chunk_tokens in _chunk_example_samples(
+            file_names,
+            sampled_tokens_per_example,
+            max_frames_per_chunk=batch_size,
+        ):
+            merged_tokens = np.concatenate(chunk_tokens, axis=0)
+            merged_frames = _decode_sampled_tokens_to_nchw_frames(
+                merged_tokens,
+                decoder=decoder,
+                batch_size=batch_size,
+                device=decode_device,
+            )
+            start = 0
+            for file_name, sampled_tokens in zip(chunk_file_names, chunk_tokens):
+                count = int(sampled_tokens.shape[0])
+                label_map[file_name] = list(_rgb_semantic_label_tuple_from_sampled_nchw(merged_frames[start:start + count]))
+                _write_label_map_json(target, label_map)
+                start += count
 
     _write_label_map_json(target, label_map)
     return {
