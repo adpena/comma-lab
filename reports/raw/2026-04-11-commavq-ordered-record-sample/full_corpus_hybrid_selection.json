@@ -1,0 +1,43 @@
+{
+  "command": "lossless_hybrid_select",
+  "exact_key": "exact_match",
+  "inputs": [
+    "/Users/adpena/projects/pact/reports/raw/2026-04-11-commavq-ordered-record-sample/canonical_5000_tool.json",
+    "/Users/adpena/projects/pact/reports/raw/2026-04-11-commavq-ordered-record-sample/clip_greedy_nn_5000_tool.json",
+    "/Users/adpena/projects/pact/reports/raw/2026-04-11-commavq-ordered-record-sample/pose_label_grouped_5000_v2_tool.json",
+    "/Users/adpena/projects/pact/reports/raw/2026-04-11-commavq-ordered-record-sample/label_lexicographic_clip_rank_5000_tool.json",
+    "/Users/adpena/projects/pact/reports/raw/2026-04-11-commavq-ordered-record-sample/hybrid_thresh8_parent046_label_greedy_5000_tool.json"
+  ],
+  "metrics": [
+    {
+      "direction": "min",
+      "key": "archive_bytes"
+    },
+    {
+      "direction": "max",
+      "key": "compression_ratio"
+    }
+  ],
+  "ranked_inputs": [
+    "/Users/adpena/projects/pact/reports/raw/2026-04-11-commavq-ordered-record-sample/clip_greedy_nn_5000_tool.json",
+    "/Users/adpena/projects/pact/reports/raw/2026-04-11-commavq-ordered-record-sample/hybrid_thresh8_parent046_label_greedy_5000_tool.json",
+    "/Users/adpena/projects/pact/reports/raw/2026-04-11-commavq-ordered-record-sample/label_lexicographic_clip_rank_5000_tool.json",
+    "/Users/adpena/projects/pact/reports/raw/2026-04-11-commavq-ordered-record-sample/pose_label_grouped_5000_v2_tool.json",
+    "/Users/adpena/projects/pact/reports/raw/2026-04-11-commavq-ordered-record-sample/canonical_5000_tool.json"
+  ],
+  "selected_input": "/Users/adpena/projects/pact/reports/raw/2026-04-11-commavq-ordered-record-sample/clip_greedy_nn_5000_tool.json",
+  "selected_summary": {
+    "archive_bytes": 462023462,
+    "command": "lossless_global_prev_symbol_order_sample",
+    "compression_ratio": 2.0778165590214117,
+    "encoded_dir": "/Users/adpena/Projects/pact/reports/raw/2026-04-11-commavq-ordered-record-sample/clip_greedy_nn_5000_tool",
+    "exact_match": true,
+    "frame_order": "canonical",
+    "labels_path": null,
+    "max_records": 5000,
+    "order_path": null,
+    "original_bytes": 960000000,
+    "output_path": "/Users/adpena/Projects/pact/reports/raw/2026-04-11-commavq-ordered-record-sample/clip_greedy_nn_5000_tool.json",
+    "strategy": "clip_greedy_nn"
+  }
+}

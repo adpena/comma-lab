@@ -40,6 +40,7 @@ from .lossless.frequency_coder import (
 )
 from .lossless.gpt_arithmetic_coder import encode_commavq_gpt_global_sample, encode_commavq_gpt_sample
 from .lossless.global_prev_symbol import benchmark_global_prev_symbol_record_order_sample
+from .lossless.hybrid_selector import SelectionMetric, rank_exact_candidates
 from .lossless.next_frame_coder import encode_commavq_next_frame_sample
 from .lossless.gpt_score import probe_commavq_gpt_devices, score_commavq_gpt_sample
 from .lossless.token_rgb_bridge import (
@@ -295,6 +296,21 @@ def build_parser() -> argparse.ArgumentParser:
     sp.add_argument("--frame-order", default="canonical", choices=["canonical", "recursive_bisect"])
     sp.set_defaults(lossless_handler="global_prev_symbol_order_sample")
 
+    sp = lossless_sub.add_parser(
+        "hybrid-select",
+        help="Rank exact lossless candidate JSON summaries by ordered metrics and persist the deterministic winner",
+    )
+    sp.add_argument("--input", action="append", required=True)
+    sp.add_argument("--output", required=True)
+    sp.add_argument(
+        "--metric",
+        action="append",
+        required=True,
+        help="Metric ordering in the form key:min or key:max",
+    )
+    sp.add_argument("--exact-key", default="exact_match")
+    sp.set_defaults(lossless_handler="hybrid_select")
+
     sp = lossless_sub.add_parser("frequency-report", help="Analyze a prepared token stream")
     sp.add_argument("--tokens", required=True)
     sp.add_argument("--output", required=True)
@@ -455,6 +471,16 @@ def _select(profile_defaults: dict[str, Any], args: argparse.Namespace, name: st
     if value != default:
         return value
     return profile_defaults.get(name.replace("-", "_"), value)
+
+
+def _parse_selection_metrics(raw_metrics: list[str]) -> tuple[SelectionMetric, ...]:
+    metrics: list[SelectionMetric] = []
+    for raw_metric in raw_metrics:
+        key, separator, direction = raw_metric.partition(":")
+        if separator != ":":
+            raise SystemExit(f"ERROR: invalid metric specification {raw_metric!r}; expected key:min or key:max")
+        metrics.append(SelectionMetric(key.strip(), direction.strip()))
+    return tuple(metrics)
 
 
 def _run_lossy(args: argparse.Namespace) -> dict[str, Any]:
@@ -744,6 +770,38 @@ def _run_lossless(args: argparse.Namespace) -> dict[str, Any]:
             labels_path=Path(args.labels) if args.labels else None,
             order_path=Path(args.order_file) if args.order_file else None,
         )
+        print(json.dumps(payload, indent=2))
+        return payload
+
+    if args.lossless_handler == "hybrid_select":
+        input_paths = tuple(Path(item) for item in args.input)
+        metrics = _parse_selection_metrics(args.metric)
+        candidates: list[dict[str, Any]] = []
+        candidates_by_path: dict[Path, dict[str, Any]] = {}
+        path_by_summary_id: dict[int, str] = {}
+        for input_path in input_paths:
+            summary = json.loads(input_path.read_text(encoding="utf-8"))
+            if not isinstance(summary, dict):
+                raise SystemExit(f"ERROR: {input_path} must contain a top-level JSON object")
+            candidates.append(summary)
+            candidates_by_path[input_path] = summary
+            path_by_summary_id[id(summary)] = str(input_path)
+
+        ranked = rank_exact_candidates(candidates, metrics=metrics, exact_key=args.exact_key)
+        ranked_inputs = [path_by_summary_id[id(summary)] for summary in ranked]
+        selected_summary = ranked[0]
+        payload = {
+            "command": "lossless_hybrid_select",
+            "inputs": [str(path) for path in input_paths],
+            "metrics": [{"key": metric.key, "direction": metric.direction} for metric in metrics],
+            "exact_key": args.exact_key,
+            "selected_input": ranked_inputs[0],
+            "ranked_inputs": ranked_inputs,
+            "selected_summary": selected_summary,
+        }
+        output_path = Path(args.output)
+        output_path.parent.mkdir(parents=True, exist_ok=True)
+        output_path.write_text(json.dumps(payload, indent=2, sort_keys=True), encoding="utf-8")
         print(json.dumps(payload, indent=2))
         return payload
 

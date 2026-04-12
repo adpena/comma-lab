@@ -84,6 +84,90 @@ class TacCliTests(unittest.TestCase):
         self.assertEqual(args.command, "lossless")
         self.assertEqual(args.lossless_command, "profiles")
 
+    def test_lossless_hybrid_select_subcommand_parses_inputs_and_metrics(self) -> None:
+        mod = load_module()
+        args = mod.build_parser().parse_args(
+            [
+                "lossless",
+                "hybrid-select",
+                "--input",
+                "/tmp/candidate_a.json",
+                "--input",
+                "/tmp/candidate_b.json",
+                "--output",
+                "/tmp/selected.json",
+                "--metric",
+                "archive_bytes:min",
+                "--metric",
+                "encode_seconds:min",
+            ]
+        )
+
+        self.assertEqual(args.command, "lossless")
+        self.assertEqual(args.lossless_command, "hybrid-select")
+        self.assertEqual(
+            args.input,
+            ["/tmp/candidate_a.json", "/tmp/candidate_b.json"],
+        )
+        self.assertEqual(args.metric, ["archive_bytes:min", "encode_seconds:min"])
+        self.assertEqual(args.output, "/tmp/selected.json")
+
+    def test_lossless_hybrid_select_subcommand_ranks_exact_candidate_json(self) -> None:
+        mod = load_module()
+        with tempfile.TemporaryDirectory() as tmpdir:
+            root = Path(tmpdir)
+            candidate_a = root / "candidate_a.json"
+            candidate_b = root / "candidate_b.json"
+            output = root / "selected.json"
+            candidate_a.write_text(
+                json.dumps(
+                    {
+                        "strategy": "baseline",
+                        "exact_match": True,
+                        "archive_bytes": 620,
+                        "encode_seconds": 4.0,
+                    }
+                ),
+                encoding="utf-8",
+            )
+            candidate_b.write_text(
+                json.dumps(
+                    {
+                        "strategy": "frontier",
+                        "exact_match": True,
+                        "archive_bytes": 600,
+                        "encode_seconds": 5.0,
+                    }
+                ),
+                encoding="utf-8",
+            )
+
+            result = mod.main(
+                [
+                    "lossless",
+                    "hybrid-select",
+                    "--input",
+                    str(candidate_a),
+                    "--input",
+                    str(candidate_b),
+                    "--output",
+                    str(output),
+                    "--metric",
+                    "archive_bytes:min",
+                    "--metric",
+                    "encode_seconds:min",
+                ]
+            )
+
+            written = json.loads(output.read_text(encoding="utf-8"))
+
+        self.assertEqual(result["command"], "lossless_hybrid_select")
+        self.assertEqual(result["selected_input"], str(candidate_b))
+        self.assertEqual(result["ranked_inputs"], [str(candidate_b), str(candidate_a)])
+        self.assertEqual(result["selected_summary"]["strategy"], "frontier")
+        self.assertEqual(written["selected_input"], str(candidate_b))
+        self.assertEqual(written["ranked_inputs"], [str(candidate_b), str(candidate_a)])
+
     def test_lossless_plan_subcommand_builds_gpt_arithmetic_plan(self) -> None:
         mod = load_module()
         with tempfile.TemporaryDirectory() as tmpdir:
