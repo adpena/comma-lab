@@ -68,6 +68,12 @@ def yuv420_to_rgb(frame) -> torch.Tensor:
 # Self-contained fallback for scorer machines without tac.
 # ============================================================
 try:
+    from tac.renderer import AsymmetricPairGenerator, MaskRenderer, MotionPredictor, ResBlock, CLADENorm, warp_with_flow, make_coord_grid
+    _HAS_TAC_RENDERER = True
+except ImportError:
+    _HAS_TAC_RENDERER = False
+
+try:
     from tac.dp_sims_renderer import SPADE, SPADEResBlock, CrossAttentionNoiseInjector, DPSIMSRenderer
 except ImportError:
 
@@ -230,6 +236,220 @@ except ImportError:
 
 
 # ============================================================
+# Inline AsymmetricPairGenerator (forward-only, no training code)
+# Self-contained fallback for scorer machines without tac.
+# ============================================================
+if not _HAS_TAC_RENDERER:
+    _coord_grid_cache: dict = {}
+
+    def make_coord_grid(h: int, w: int, device: torch.device) -> torch.Tensor:
+        key = (h, w, device)
+        if key not in _coord_grid_cache:
+            gy = torch.linspace(-1, 1, h, device=device)
+            gx = torch.linspace(-1, 1, w, device=device)
+            grid_y, grid_x = torch.meshgrid(gy, gx, indexing="ij")
+            _coord_grid_cache[key] = torch.stack([grid_x, grid_y], dim=-1)
+            if len(_coord_grid_cache) > 4:
+                oldest = next(iter(_coord_grid_cache))
+                del _coord_grid_cache[oldest]
+        return _coord_grid_cache[key]
+
+    def warp_with_flow(image: torch.Tensor, flow: torch.Tensor) -> torch.Tensor:
+        B, _, H, W = image.shape
+        grid = make_coord_grid(H, W, image.device).expand(B, -1, -1, -1)
+        flow_hw = flow.permute(0, 2, 3, 1)
+        sample_grid = grid + flow_hw
+        return F.grid_sample(image, sample_grid, mode="bilinear",
+                             padding_mode="border", align_corners=True)
+
+    class CLADENorm(nn.Module):
+        def __init__(self, channels: int, num_classes: int = 5):
+            super().__init__()
+            self.gn = nn.GroupNorm(1, channels)
+            self.class_gamma = nn.Embedding(num_classes, channels)
+            self.class_beta = nn.Embedding(num_classes, channels)
+            nn.init.ones_(self.class_gamma.weight)
+            nn.init.zeros_(self.class_beta.weight)
+
+        def forward(self, x: torch.Tensor, mask: torch.Tensor) -> torch.Tensor:
+            h = self.gn(x)
+            _, _, fH, fW = x.shape
+            if mask.shape[1] != fH or mask.shape[2] != fW:
+                mask_ds = F.interpolate(mask.unsqueeze(1).float(),
+                                        size=(fH, fW), mode="nearest").squeeze(1).long()
+            else:
+                mask_ds = mask
+            gamma = self.class_gamma(mask_ds).permute(0, 3, 1, 2)
+            beta = self.class_beta(mask_ds).permute(0, 3, 1, 2)
+            return gamma * h + beta
+
+    class ResBlock(nn.Module):
+        def __init__(self, channels: int, kernel: int = 3, num_classes: int = 5):
+            super().__init__()
+            pad = kernel // 2
+            self.use_clade = num_classes > 0
+            if self.use_clade:
+                self.norm1 = CLADENorm(channels, num_classes)
+                self.norm2 = CLADENorm(channels, num_classes)
+            else:
+                self.norm1 = nn.GroupNorm(1, channels)
+                self.norm2 = nn.GroupNorm(1, channels)
+            self.conv1 = nn.Conv2d(channels, channels, kernel, padding=pad, bias=False)
+            self.conv2 = nn.Conv2d(channels, channels, kernel, padding=pad, bias=False)
+            self.act = nn.ReLU(inplace=True)
+            nn.init.zeros_(self.conv2.weight)
+
+        def forward(self, x: torch.Tensor, mask: torch.Tensor | None = None) -> torch.Tensor:
+            if self.use_clade and mask is not None:
+                h = self.act(self.norm1(x, mask))
+                h = self.conv1(h)
+                h = self.act(self.norm2(h, mask))
+            else:
+                h = self.act(self.norm1(x) if not self.use_clade else self.norm1.gn(x))
+                h = self.conv1(h)
+                h = self.act(self.norm2(h) if not self.use_clade else self.norm2.gn(h))
+            h = self.conv2(h)
+            return x + h
+
+    class MaskRenderer(nn.Module):
+        def __init__(self, num_classes=5, embed_dim=6, base_ch=36, mid_ch=60,
+                     embedding=None, depth=1):
+            super().__init__()
+            self.num_classes = num_classes
+            self.embed_dim = embed_dim
+            self.depth = depth
+            self.embedding = embedding if embedding is not None else nn.Embedding(num_classes, embed_dim)
+            self.use_coord_grid = True
+            coord_channels = 2
+            self.stem_conv = nn.Conv2d(embed_dim + coord_channels, base_ch, 3, padding=1, bias=True)
+            self.stem_res = ResBlock(base_ch, num_classes=num_classes)
+            self.down_conv = nn.Conv2d(base_ch, mid_ch, 3, stride=2, padding=1, bias=True)
+            self.down_res = ResBlock(mid_ch, num_classes=num_classes)
+            if depth >= 2:
+                self.down2_conv = nn.Conv2d(mid_ch, mid_ch, 3, stride=2, padding=1, bias=True)
+                self.down2_res = ResBlock(mid_ch, num_classes=num_classes)
+            self.bottleneck = ResBlock(mid_ch, num_classes=num_classes)
+            if depth >= 2:
+                self.up2_conv = nn.ConvTranspose2d(mid_ch, mid_ch, 4, stride=2, padding=1, bias=True)
+                self.up2_res = ResBlock(mid_ch, num_classes=num_classes)
+                self.fuse2_conv = nn.Conv2d(mid_ch * 2, mid_ch, 1, bias=True)
+            self.up_conv = nn.ConvTranspose2d(mid_ch, base_ch, 4, stride=2, padding=1, bias=True)
+            self.up_res = ResBlock(base_ch, num_classes=num_classes)
+            self.fuse_conv = nn.Conv2d(base_ch * 2, base_ch, 1, bias=True)
+            self.head = nn.Conv2d(base_ch, 3, 1, bias=True)
+            nn.init.zeros_(self.head.weight)
+            nn.init.zeros_(self.head.bias)
+
+        def forward(self, masks: torch.Tensor) -> torch.Tensor:
+            x = self.embedding(masks).permute(0, 3, 1, 2).contiguous()
+            B, _, H, W = x.shape
+            gy = torch.linspace(-1, 1, H, device=x.device, dtype=x.dtype)
+            gx = torch.linspace(-1, 1, W, device=x.device, dtype=x.dtype)
+            grid_y, grid_x = torch.meshgrid(gy, gx, indexing="ij")
+            coords = torch.stack([grid_x, grid_y], dim=0).unsqueeze(0).expand(B, -1, -1, -1)
+            x = torch.cat([x, coords], dim=1)
+            stem = self.stem_conv(x)
+            stem = self.stem_res(stem, masks)
+            down1 = self.down_conv(stem)
+            down1 = self.down_res(down1, masks)
+            if self.depth >= 2:
+                down2 = self.down2_conv(down1)
+                down2 = self.down2_res(down2, masks)
+                mid = self.bottleneck(down2, masks)
+                up2 = self.up2_conv(mid)
+                if up2.shape[2:] != down1.shape[2:]:
+                    up2 = F.interpolate(up2, size=down1.shape[2:], mode="bilinear", align_corners=False)
+                up2 = self.up2_res(up2, masks)
+                fused2 = torch.cat([down1, up2], dim=1)
+                half_res = self.fuse2_conv(fused2)
+            else:
+                half_res = self.bottleneck(down1, masks)
+            up = self.up_conv(half_res)
+            if up.shape[2:] != stem.shape[2:]:
+                up = F.interpolate(up, size=stem.shape[2:], mode="bilinear", align_corners=False)
+            up = self.up_res(up, masks)
+            fused = torch.cat([stem, up], dim=1)
+            fused = self.fuse_conv(fused)
+            rgb = 255.0 * torch.sigmoid(self.head(fused) / 50.0)
+            return rgb
+
+    class MotionPredictor(nn.Module):
+        def __init__(self, num_classes=5, embed_dim=6, hidden=32, embedding=None,
+                     output_channels=2, use_coord_grid=True, use_diff_features=True):
+            super().__init__()
+            self.num_classes = num_classes
+            self.output_channels = output_channels
+            self.use_coord_grid = use_coord_grid
+            self.use_diff_features = use_diff_features
+            self.embedding = embedding if embedding is not None else nn.Embedding(num_classes, embed_dim)
+            in_ch = embed_dim * 2
+            if use_diff_features:
+                in_ch += embed_dim
+            if use_coord_grid:
+                in_ch += 2
+            self.net = nn.Sequential(
+                nn.Conv2d(in_ch, hidden, 3, padding=1, bias=True),
+                nn.SiLU(inplace=True),
+                ResBlock(hidden),
+                nn.Conv2d(hidden, hidden, 3, padding=1, bias=True),
+                nn.SiLU(inplace=True),
+                nn.Conv2d(hidden, output_channels, 3, padding=1, bias=True),
+            )
+            nn.init.zeros_(self.net[-1].weight)
+            nn.init.zeros_(self.net[-1].bias)
+
+        def forward(self, mask_t: torch.Tensor, mask_t1: torch.Tensor) -> torch.Tensor:
+            e_t = self.embedding(mask_t).permute(0, 3, 1, 2)
+            e_t1 = self.embedding(mask_t1).permute(0, 3, 1, 2)
+            parts = [e_t, e_t1]
+            if self.use_diff_features:
+                parts.append((e_t1 - e_t).abs())
+            if self.use_coord_grid:
+                B, _, H, W = e_t.shape
+                gy = torch.linspace(-1, 1, H, device=e_t.device, dtype=e_t.dtype)
+                gx = torch.linspace(-1, 1, W, device=e_t.device, dtype=e_t.dtype)
+                grid_y, grid_x = torch.meshgrid(gy, gx, indexing="ij")
+                coords = torch.stack([grid_x, grid_y], dim=0).unsqueeze(0).expand(B, -1, -1, -1)
+                parts.append(coords)
+            x = torch.cat(parts, dim=1)
+            raw = self.net(x)
+            if self.output_channels == 2:
+                return raw * 0.1
+            else:
+                flow = raw[:, :2].tanh() * (12.0 / max(mask_t.shape[-2], mask_t.shape[-1]) * 2)
+                gate = raw[:, 2:3].sigmoid()
+                residual = raw[:, 3:6].tanh() * 20.0
+                return torch.cat([flow, gate, residual], dim=1)
+
+    class AsymmetricPairGenerator(nn.Module):
+        def __init__(self, num_classes=5, embed_dim=6, base_ch=36, mid_ch=60,
+                     motion_hidden=32, depth=1):
+            super().__init__()
+            shared_emb = nn.Embedding(num_classes, embed_dim)
+            self.renderer = MaskRenderer(
+                num_classes=num_classes, embed_dim=embed_dim,
+                base_ch=base_ch, mid_ch=mid_ch,
+                embedding=shared_emb, depth=depth,
+            )
+            self.motion = MotionPredictor(
+                num_classes=num_classes, embed_dim=embed_dim,
+                hidden=motion_hidden, embedding=shared_emb,
+                output_channels=6, use_coord_grid=True, use_diff_features=True,
+            )
+
+        def forward(self, mask_t: torch.Tensor, mask_t1: torch.Tensor) -> torch.Tensor:
+            frame_t1 = self.renderer(mask_t1)
+            motion_out = self.motion(mask_t, mask_t1)
+            flow = motion_out[:, :2]
+            gate = motion_out[:, 2:3]
+            residual = motion_out[:, 3:6]
+            warped_t1 = warp_with_flow(frame_t1, flow)
+            frame_t = (warped_t1 + gate * residual).clamp(0.0, 255.0)
+            pair = torch.stack([frame_t, frame_t1], dim=1)
+            return pair.permute(0, 1, 3, 4, 2).contiguous()
+
+
+# ============================================================
 # Upstream discovery
 # ============================================================
 def _find_upstream_root(archive_dir: str) -> Path:
@@ -385,35 +605,50 @@ def _extract_masks(
 # Renderer loading
 # ============================================================
 def _load_renderer(renderer_path: str, device: str) -> nn.Module:
-    """Load DPSIMSRenderer from a .bin checkpoint.
+    """Load renderer from a .bin or .pt checkpoint.
 
-    Supports two checkpoint formats:
-        1. Standalone renderer state_dict (keys start with spade_blocks, head, etc.)
-        2. PairGenerator checkpoint with model_state_dict containing renderer.* prefixed keys
+    Supports three checkpoint formats:
+        1. DPSM binary: DPSIMSRenderer (magic b"DPSM")
+        2. ASYM binary: AsymmetricPairGenerator (magic b"ASYM")
+        3. PyTorch pickle: state_dict or PairGenerator checkpoint
 
-    Config metadata (channels, init_h, init_w, etc.) is read from the
-    checkpoint's 'config' key if present, otherwise defaults are used.
+    Config metadata is read from the checkpoint's header/config key.
     """
     t0 = time.monotonic()
     renderer_path = Path(renderer_path)
     raw_bytes = renderer_path.read_bytes()
 
-    # Format detection: renderer_export.py writes [DPSM magic][uint32 header_len][JSON][blobs]
-    _DPSM_MAGIC = b"DPSM"
-    is_custom_bin = raw_bytes[:4] == _DPSM_MAGIC
+    magic = raw_bytes[:4]
 
-    if is_custom_bin:
-        # Compact .bin format from renderer_export.py
+    # ── ASYM format: AsymmetricPairGenerator ──
+    if magic == b"ASYM":
         try:
-            from tac.renderer_export import load_renderer_checkpoint
+            from tac.renderer_export import load_asymmetric_checkpoint
         except ImportError:
-            # Inline minimal loader for scorer machine
-            # Format: [4B magic "DPSM"] [4B header_len] [JSON header] [blobs...]
             import struct as _struct
             header_len = _struct.unpack("<I", raw_bytes[4:8])[0]
             header = json.loads(raw_bytes[8:8 + header_len].decode("utf-8"))
             raise RuntimeError(
-                f"Custom .bin format detected (version={header.get('version')}), "
+                f"ASYM .bin format detected (version={header.get('version')}), "
+                f"but tac.renderer_export is not available. Install the tac package "
+                f"or use a .pt checkpoint instead."
+            )
+        model = load_asymmetric_checkpoint(raw_bytes, device=device)
+        elapsed = time.monotonic() - t0
+        print(f"  Loaded AsymmetricPairGenerator from .bin ({len(raw_bytes):,} bytes, {elapsed:.1f}s)",
+              file=sys.stderr)
+        return model
+
+    # ── DPSM format: DPSIMSRenderer ──
+    if magic == b"DPSM":
+        try:
+            from tac.renderer_export import load_renderer_checkpoint
+        except ImportError:
+            import struct as _struct
+            header_len = _struct.unpack("<I", raw_bytes[4:8])[0]
+            header = json.loads(raw_bytes[8:8 + header_len].decode("utf-8"))
+            raise RuntimeError(
+                f"DPSM .bin format detected (version={header.get('version')}), "
                 f"but tac.renderer_export is not available. Install the tac package "
                 f"or use a .pt checkpoint instead."
             )
@@ -492,6 +727,16 @@ def _load_renderer(renderer_path: str, device: str) -> nn.Module:
 # ============================================================
 # Frame generation + write
 # ============================================================
+def _is_asymmetric_model(model: nn.Module) -> bool:
+    """Detect whether a loaded model is an AsymmetricPairGenerator."""
+    return (
+        type(model).__name__ == "AsymmetricPairGenerator"
+        or (hasattr(model, "renderer") and hasattr(model, "motion")
+            and hasattr(model.motion, "output_channels")
+            and getattr(model.motion, "output_channels", 2) == 6)
+    )
+
+
 def _generate_and_write(
     masks: torch.Tensor,
     renderer: nn.Module,
@@ -503,9 +748,19 @@ def _generate_and_write(
 ) -> int:
     """Generate frames from masks via renderer, upscale, and write raw RGB.
 
+    Supports two model types:
+        1. DPSIMSRenderer: independent frame generation (renderer(masks) -> (B,3,H,W))
+        2. AsymmetricPairGenerator: pair generation from consecutive mask pairs
+           model(mask_t, mask_t1) -> (B, 2, H, W, 3) HWC pair
+
+    For asymmetric mode, masks are processed in consecutive pairs:
+        (mask[0], mask[1]) -> (frame[0], frame[1])
+        (mask[2], mask[3]) -> (frame[2], frame[3])
+        ...
+
     Args:
         masks: (N, 384, 512) long tensor
-        renderer: DPSIMSRenderer
+        renderer: DPSIMSRenderer or AsymmetricPairGenerator
         output_path: path to output .raw file
         device: torch device string
         batch_size: inference batch size
@@ -518,36 +773,103 @@ def _generate_and_write(
     t0 = time.monotonic()
     N = masks.shape[0]
     n_written = 0
+    is_asymmetric = _is_asymmetric_model(renderer)
 
     # Deterministic seed for reproducible output (noise injectors use torch.randn)
     torch.manual_seed(42)
 
-    with open(output_path, 'wb') as f:
-        with torch.inference_mode():
-            for i in range(0, N, batch_size):
-                end = min(i + batch_size, N)
-                batch_masks = masks[i:end].to(device=device, dtype=torch.long)
+    if is_asymmetric:
+        print(f"  Mode: asymmetric pair generation ({N} masks -> {N} frames "
+              f"via {N // 2} pairs)", file=sys.stderr)
+        if N % 2 != 0:
+            print(f"  WARNING: odd number of masks ({N}), last mask will be "
+                  f"rendered independently via renderer sub-module", file=sys.stderr)
 
-                # Generate frames at SegNet resolution (384x512)
-                # Note: noise kwarg is dead code in DPSIMSRenderer.forward —
-                # noise injectors are called without it. Use manual seed for
-                # reproducibility if use_noise=True (training default is False).
-                frames = renderer(batch_masks)  # (B, 3, 384, 512)
+        with open(output_path, 'wb') as f:
+            with torch.inference_mode():
+                # Process masks in consecutive pairs
+                pair_idx = 0
+                while pair_idx < N - 1:
+                    # Build a batch of pairs
+                    batch_pairs_t = []
+                    batch_pairs_t1 = []
+                    batch_end = min(pair_idx + batch_size * 2, N - 1)
+                    for j in range(pair_idx, batch_end, 2):
+                        if j + 1 < N:
+                            batch_pairs_t.append(masks[j])
+                            batch_pairs_t1.append(masks[j + 1])
 
-                # Upscale to output resolution
-                frames_up = F.interpolate(
-                    frames, size=(out_h, out_w),
-                    mode="bilinear", align_corners=False,
-                )  # (B, 3, out_h, out_w)
+                    if not batch_pairs_t:
+                        break
 
-                # Quantize and write as HWC uint8
-                frames_uint8 = frames_up.round().clamp(0, 255).to(torch.uint8)
-                frames_hwc = frames_uint8.permute(0, 2, 3, 1).contiguous().cpu().numpy()
-                f.write(frames_hwc.tobytes())
-                n_written += batch_masks.shape[0]
+                    masks_t = torch.stack(batch_pairs_t).to(device=device, dtype=torch.long)
+                    masks_t1 = torch.stack(batch_pairs_t1).to(device=device, dtype=torch.long)
 
-                if end % (batch_size * 10) == 0 or end == N:
-                    print(f"    Generated: {end}/{N} frames", file=sys.stderr, flush=True)
+                    # Generate pairs: (B, 2, H, W, 3) HWC in [0, 255]
+                    pairs = renderer(masks_t, masks_t1)  # (B, 2, H, W, 3)
+
+                    # Upscale each frame in each pair
+                    B_pairs = pairs.shape[0]
+                    for p in range(B_pairs):
+                        for frame_idx in range(2):  # frame_t then frame_t1
+                            frame_hwc = pairs[p, frame_idx]  # (H, W, 3)
+                            # Convert HWC -> CHW for interpolation
+                            frame_chw = frame_hwc.permute(2, 0, 1).unsqueeze(0)  # (1, 3, H, W)
+                            frame_up = F.interpolate(
+                                frame_chw, size=(out_h, out_w),
+                                mode="bilinear", align_corners=False,
+                            )  # (1, 3, out_h, out_w)
+                            frame_uint8 = frame_up.round().clamp(0, 255).to(torch.uint8)
+                            frame_out = frame_uint8.squeeze(0).permute(1, 2, 0).contiguous().cpu().numpy()
+                            f.write(frame_out.tobytes())
+                            n_written += 1
+
+                    pair_idx += len(batch_pairs_t) * 2
+
+                    if n_written % (batch_size * 10) == 0 or pair_idx >= N - 1:
+                        print(f"    Generated: {n_written}/{N} frames",
+                              file=sys.stderr, flush=True)
+
+                # Handle odd trailing mask: render independently via the sub-renderer
+                if N % 2 != 0:
+                    last_mask = masks[N - 1:N].to(device=device, dtype=torch.long)
+                    frame = renderer.renderer(last_mask)  # (1, 3, H, W)
+                    frame_up = F.interpolate(
+                        frame, size=(out_h, out_w),
+                        mode="bilinear", align_corners=False,
+                    )
+                    frame_uint8 = frame_up.round().clamp(0, 255).to(torch.uint8)
+                    frame_out = frame_uint8.squeeze(0).permute(1, 2, 0).contiguous().cpu().numpy()
+                    f.write(frame_out.tobytes())
+                    n_written += 1
+                    print(f"    Generated trailing frame: {n_written}/{N}",
+                          file=sys.stderr, flush=True)
+    else:
+        # Standard independent frame generation (DPSIMSRenderer path)
+        with open(output_path, 'wb') as f:
+            with torch.inference_mode():
+                for i in range(0, N, batch_size):
+                    end = min(i + batch_size, N)
+                    batch_masks = masks[i:end].to(device=device, dtype=torch.long)
+
+                    # Generate frames at SegNet resolution (384x512)
+                    frames = renderer(batch_masks)  # (B, 3, 384, 512)
+
+                    # Upscale to output resolution
+                    frames_up = F.interpolate(
+                        frames, size=(out_h, out_w),
+                        mode="bilinear", align_corners=False,
+                    )  # (B, 3, out_h, out_w)
+
+                    # Quantize and write as HWC uint8
+                    frames_uint8 = frames_up.round().clamp(0, 255).to(torch.uint8)
+                    frames_hwc = frames_uint8.permute(0, 2, 3, 1).contiguous().cpu().numpy()
+                    f.write(frames_hwc.tobytes())
+                    n_written += batch_masks.shape[0]
+
+                    if end % (batch_size * 10) == 0 or end == N:
+                        print(f"    Generated: {end}/{N} frames",
+                              file=sys.stderr, flush=True)
 
     elapsed = time.monotonic() - t0
     raw_size = os.path.getsize(output_path)

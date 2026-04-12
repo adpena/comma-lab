@@ -90,12 +90,19 @@ class FridrichRendererConfig:
     """All hyperparameters for the Fridrich constrained renderer training."""
 
     # Architecture
-    channels: tuple[int, ...] = (128, 64, 32, 16)
-    init_h: int = 24
-    init_w: int = 32
-    spade_hidden: int = 32
+    pair_mode: str = "dp_sims"  # "dp_sims" (proven, independent) or "asymmetric" (warp paradigm, experimental)
+    channels: tuple[int, ...] = (128, 64, 32, 16)  # dp_sims only
+    init_h: int = 24   # dp_sims only
+    init_w: int = 32   # dp_sims only
+    spade_hidden: int = 32  # dp_sims only
     num_classes: int = 5
-    use_noise: bool = False  # deterministic pairs => noise off
+    use_noise: bool = False  # dp_sims only
+    # Asymmetric warp params (used when pair_mode="asymmetric")
+    embed_dim: int = 6
+    base_ch: int = 36
+    mid_ch: int = 60
+    motion_hidden: int = 32
+    renderer_depth: int = 1
 
     # Training
     epochs: int = 10000
@@ -577,23 +584,36 @@ def _full_eval(
     seg_dists = []
     pose_dists = []
 
-    with torch.no_grad():
-        # Pre-generate ALL frames in batches (renderer is deterministic per mask)
-        all_gen = []
-        for i in range(0, n, batch_size):
-            end = min(i + batch_size, n)
-            batch_masks = masks[i:end].to(device=device, dtype=torch.long)
-            gen_batch = renderer_module(batch_masks)  # (B, 3, H, W)
-            all_gen.append(gen_batch)
-        all_gen = torch.cat(all_gen, dim=0)  # (N, 3, H, W) on device
+    is_asymmetric = (hasattr(renderer, "motion")
+                     and hasattr(renderer.motion, "output_channels")
+                     and renderer.motion.output_channels == 6)
 
-        # Evaluate pairs in batches
+    with torch.no_grad():
+        if not is_asymmetric:
+            # DP-SIMS: pre-generate ALL frames independently (batched)
+            all_gen = []
+            for i in range(0, n, batch_size):
+                end = min(i + batch_size, n)
+                batch_masks = masks[i:end].to(device=device, dtype=torch.long)
+                gen_batch = renderer_module(batch_masks)  # (B, 3, H, W)
+                all_gen.append(gen_batch)
+            all_gen = torch.cat(all_gen, dim=0)  # (N, 3, H, W) on device
+
+        # Evaluate pairs
         for i in range(0, n - 1, batch_size):
             end = min(i + batch_size, n - 1)
             B = end - i
 
-            gen_t = all_gen[i:end]              # (B, 3, H, W)
-            gen_t1 = all_gen[i + 1:end + 1]     # (B, 3, H, W)
+            if is_asymmetric:
+                # Asymmetric: generate pairs via warp (council: eval must match training)
+                m_t = masks[i:end].to(device=device, dtype=torch.long)
+                m_t1 = masks[i + 1:end + 1].to(device=device, dtype=torch.long)
+                pair_hwc = renderer(m_t, m_t1)  # (B, 2, H, W, 3)
+                gen_t = pair_hwc[:, 0].permute(0, 3, 1, 2).contiguous()
+                gen_t1 = pair_hwc[:, 1].permute(0, 3, 1, 2).contiguous()
+            else:
+                gen_t = all_gen[i:end]
+                gen_t1 = all_gen[i + 1:end + 1]
             gt_t = gt_chw[i:end].to(device)
             gt_t1 = gt_chw[i + 1:end + 1].to(device)
 
@@ -624,16 +644,23 @@ def _full_eval(
             for b in range(B):
                 pose_dists.append(pose_mse[b].mean().item())
 
-        del all_gen  # free VRAM
+        if not is_asymmetric:
+            del all_gen  # free VRAM
 
     renderer.train()
 
     avg_seg = sum(seg_dists) / max(len(seg_dists), 1)
     avg_pose = sum(pose_dists) / max(len(pose_dists), 1)
 
-    # Model size estimate — only the renderer ships in archive, not motion predictor
-    # (renderer_module already extracted at top of function)
-    n_params = sum(p.numel() for p in renderer_module.parameters())
+    # Model size estimate — for asymmetric mode, BOTH renderer and motion ship
+    # (council decision: ship full AsymmetricPairGenerator for warp at deploy time)
+    # For dp_sims mode, only renderer ships.
+    if hasattr(renderer, "motion") and hasattr(renderer.motion, "output_channels") and renderer.motion.output_channels == 6:
+        # Asymmetric: full model ships
+        n_params = sum(p.numel() for p in renderer.parameters())
+    else:
+        # DP-SIMS: only renderer ships
+        n_params = sum(p.numel() for p in renderer_module.parameters())
     model_bytes = n_params * 4 / 8  # FP4 estimate
 
     # Check for self-compression
@@ -757,17 +784,30 @@ def train_fridrich_renderer(cfg: FridrichRendererConfig) -> dict[str, Any]:
     print(f"  VRAM after mask extraction: {_vram_mb():.0f} MB")
 
     # ---- Build renderer ----
-    print("[4/5] Building DP-SIMS v2 renderer...")
-    from tac.dp_sims_renderer import build_dp_sims_renderer_v2
+    if cfg.pair_mode == "asymmetric":
+        print("[4/5] Building AsymmetricPairGenerator (warp paradigm)...")
+        from tac.renderer import AsymmetricPairGenerator
 
-    pair_gen = build_dp_sims_renderer_v2(
-        num_classes=cfg.num_classes,
-        channels=cfg.channels,
-        init_h=cfg.init_h,
-        init_w=cfg.init_w,
-        spade_hidden=cfg.spade_hidden,
-        use_noise=cfg.use_noise,
-    ).to(device)
+        pair_gen = AsymmetricPairGenerator(
+            num_classes=cfg.num_classes,
+            embed_dim=cfg.embed_dim,
+            base_ch=cfg.base_ch,
+            mid_ch=cfg.mid_ch,
+            motion_hidden=cfg.motion_hidden,
+            depth=cfg.renderer_depth,
+        ).to(device)
+    else:
+        print("[4/5] Building DP-SIMS v2 renderer...")
+        from tac.dp_sims_renderer import build_dp_sims_renderer_v2
+
+        pair_gen = build_dp_sims_renderer_v2(
+            num_classes=cfg.num_classes,
+            channels=cfg.channels,
+            init_h=cfg.init_h,
+            init_w=cfg.init_w,
+            spade_hidden=cfg.spade_hidden,
+            use_noise=cfg.use_noise,
+        ).to(device)
 
     n_params = pair_gen.param_count()
     print(f"  Params: {n_params:,}")
@@ -923,10 +963,15 @@ def train_fridrich_renderer(cfg: FridrichRendererConfig) -> dict[str, Any]:
         gt_t1 = torch.stack(gt_t1_list).to(device)
 
         # ---- Forward: generate frames ----
-        # Use renderer directly (not pair_gen.forward which packs to HWC)
-        # so we can control gradient flow through individual frames.
-        gen_t = pair_gen.renderer(mask_t)   # (B, 3, H, W) float [0, 255]
-        gen_t1 = pair_gen.renderer(mask_t1)  # (B, 3, H, W) float [0, 255]
+        if cfg.pair_mode == "asymmetric":
+            # Warp paradigm: single forward produces both frames jointly
+            pair_hwc = pair_gen(mask_t, mask_t1)  # (B, 2, H, W, 3)
+            gen_t = pair_hwc[:, 0].permute(0, 3, 1, 2).contiguous()   # (B, 3, H, W)
+            gen_t1 = pair_hwc[:, 1].permute(0, 3, 1, 2).contiguous()  # (B, 3, H, W)
+        else:
+            # DP-SIMS: independent per-frame generation
+            gen_t = pair_gen.renderer(mask_t)   # (B, 3, H, W) float [0, 255]
+            gen_t1 = pair_gen.renderer(mask_t1)  # (B, 3, H, W) float [0, 255]
 
         # ---- Compute losses ----
         # MSE reconstruction (warm signal, always on but weighted down later)
@@ -990,7 +1035,12 @@ def train_fridrich_renderer(cfg: FridrichRendererConfig) -> dict[str, Any]:
 
             if phase == 3 and self_compress_active:
                 # Add self-compression rate penalty
-                model_bits = _compute_model_bits(pair_gen.renderer)
+                # Asymmetric: full model ships (renderer + motion)
+                # DP-SIMS: only renderer ships
+                if cfg.pair_mode == "asymmetric":
+                    model_bits = _compute_model_bits(pair_gen)
+                else:
+                    model_bits = _compute_model_bits(pair_gen.renderer)
                 target_bits = cfg.target_bytes * 8.0
                 rate_excess = F.relu(model_bits - target_bits) / target_bits
                 total_loss = total_loss + cfg.rate_weight * rate_excess
@@ -1077,7 +1127,10 @@ def train_fridrich_renderer(cfg: FridrichRendererConfig) -> dict[str, Any]:
                 "vram_mb": _vram_mb(),
             }
             if self_compress_active:
-                log_entry["model_bits"] = _compute_model_bits(pair_gen.renderer).item()
+                if cfg.pair_mode == "asymmetric":
+                    log_entry["model_bits"] = _compute_model_bits(pair_gen).item()
+                else:
+                    log_entry["model_bits"] = _compute_model_bits(pair_gen.renderer).item()
             history.append(log_entry)
 
             print(
