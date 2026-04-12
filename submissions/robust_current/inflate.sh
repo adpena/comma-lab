@@ -176,9 +176,12 @@ while IFS= read -r rel; do
     in_path="$ARCHIVE_DIR/$in_rel"
     if [ "$PYTHON_INFLATE" = "postfilter" ]; then
       echo "Inflating (canonical + learned post-filter) $ARCHIVE_DIR -> $INFLATED_DIR"
+      # POSTFILTER_PATH must resolve from ARCHIVE_DIR (contest rules: neural
+      # artifacts inside archive.zip). NEVER fall back to SELF_DIR — that hides
+      # packaging bugs where compress.sh forgot to bundle the checkpoint.
       "$UV_BIN" run python "$SELF_DIR/inflate_postfilter.py" \
         "$ARCHIVE_DIR" "$INFLATED_DIR" "$VIDEO_NAMES_FILE" \
-        "${POSTFILTER_PATH:-$SELF_DIR/postfilter_int8.pt}"
+        "${POSTFILTER_PATH:-$ARCHIVE_DIR/postfilter_int8.pt}"
       break
     elif [ "$PYTHON_INFLATE" = "grain_mask" ]; then
       echo "Inflating (saliency-masked grain) $ARCHIVE_DIR -> $INFLATED_DIR"

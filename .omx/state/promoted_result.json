@@ -10,6 +10,7 @@
   "authoritative_report_copy_path": "reports/raw/robust_current-current_workflow-cpu-report.txt",
   "summary_path": "reports/raw/robust_current-current_workflow-cpu-summary.json",
   "artifact_path": "submissions/robust_current/postfilter_int8.pt",
+  "checkpoint_md5": "62e4b2dcd1d5c1c02b6f96e40bcc0f72",
   "variant": "dilated_h64",
   "platform": "modal_a10g",
   "epoch": 905,

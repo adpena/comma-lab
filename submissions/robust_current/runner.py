@@ -50,6 +50,12 @@ import click
 POSE_CALIBRATION_FACTOR = 0.00218 / 0.06256  # = 0.03484
 POSE_CALIBRATION_ARCHIVE_MD5 = "463b6fdb"
 POSE_CALIBRATION_N_POINTS = 1  # PROVISIONAL — single data point
+# WARNING (2026-04-12): This factor was calibrated with a SPECIFIC checkpoint
+# (postfilter_int8.pt md5 62e4b2dcd1d5c1c02b6f96e40bcc0f72). If the checkpoint
+# changes, the calibration factor is INVALID and must be re-derived from a new
+# auth eval. The root cause (DALI vs PyAV ground truth decode) is structural,
+# but the PoseNet distortion magnitude depends on the checkpoint's learned
+# corrections. Do NOT trust this calibration blindly after checkpoint changes.
 
 
 def calibrate_score(
@@ -77,7 +83,10 @@ def calibrate_score(
     MEAN correction is still the best 1-point estimator for the AGGREGATE
     score, which is what the leaderboard uses.
 
-    PROVISIONAL: Based on 1 calibration point. Submit for definitive score.
+    PROVISIONAL (2026-04-12): Based on 1 calibration point with checkpoint md5
+    62e4b2dcd1d5c1c02b6f96e40bcc0f72. The factor was computed with this specific
+    checkpoint. If the checkpoint changes, re-calibrate by submitting the new
+    archive and comparing local vs auth scores. Do NOT trust this blindly.
 
     Returns dict with calibrated components and estimated auth score.
     """
@@ -342,27 +351,45 @@ def preflight_checkpoint_identity(submission_src: Path) -> list[str]:
     if promoted_path.exists():
         try:
             promoted = json.loads(promoted_path.read_text())
-            promoted_artifact = promoted.get("artifact_path", "")
-            if promoted_artifact:
-                promoted_ckpt = submission_src.parent.parent / promoted_artifact
-                if promoted_ckpt.exists():
-                    h2 = hashlib.md5()
-                    with open(promoted_ckpt, "rb") as f:
-                        for chunk in iter(lambda: f.read(8192), b""):
-                            h2.update(chunk)
-                    promoted_md5 = h2.hexdigest()
-                    if ckpt_md5 != promoted_md5:
-                        warnings.append(
-                            f"CHECKPOINT MISMATCH: postfilter_int8.pt (md5 {ckpt_md5[:8]}...) "
-                            f"does not match promoted result artifact (md5 {promoted_md5[:8]}...). "
-                            f"Promoted: {promoted_artifact} (score {promoted.get('score')}). "
-                            f"This will produce WRONG scores. Restore the correct checkpoint."
-                        )
-                    else:
-                        click.echo(
-                            f"  Checkpoint verified: md5 {ckpt_md5[:12]}... matches promoted result",
-                            err=True,
-                        )
+
+            # Primary check: compare against stored checkpoint_md5 hash
+            promoted_md5 = promoted.get("checkpoint_md5", "")
+            if promoted_md5:
+                if ckpt_md5 != promoted_md5:
+                    warnings.append(
+                        f"CHECKPOINT MISMATCH: postfilter_int8.pt (md5 {ckpt_md5[:8]}...) "
+                        f"does not match promoted_result.json checkpoint_md5 ({promoted_md5[:8]}...). "
+                        f"Promoted score: {promoted.get('score')}. "
+                        f"This will produce WRONG scores. Restore the correct checkpoint."
+                    )
+                else:
+                    click.echo(
+                        f"  Checkpoint verified: md5 {ckpt_md5[:12]}... matches promoted result",
+                        err=True,
+                    )
+            else:
+                # Fallback: re-hash the artifact file (legacy promoted_result.json without checkpoint_md5)
+                promoted_artifact = promoted.get("artifact_path", "")
+                if promoted_artifact:
+                    promoted_ckpt = submission_src.parent.parent / promoted_artifact
+                    if promoted_ckpt.exists():
+                        h2 = hashlib.md5()
+                        with open(promoted_ckpt, "rb") as f:
+                            for chunk in iter(lambda: f.read(8192), b""):
+                                h2.update(chunk)
+                        fallback_md5 = h2.hexdigest()
+                        if ckpt_md5 != fallback_md5:
+                            warnings.append(
+                                f"CHECKPOINT MISMATCH: postfilter_int8.pt (md5 {ckpt_md5[:8]}...) "
+                                f"does not match promoted result artifact (md5 {fallback_md5[:8]}...). "
+                                f"Promoted: {promoted_artifact} (score {promoted.get('score')}). "
+                                f"This will produce WRONG scores. Restore the correct checkpoint."
+                            )
+                        else:
+                            click.echo(
+                                f"  Checkpoint verified: md5 {ckpt_md5[:12]}... matches promoted result",
+                                err=True,
+                            )
         except (json.JSONDecodeError, OSError):
             pass
 
@@ -604,42 +631,62 @@ def stage_inflate(
     mgr.set_stage(RunState.INFLATING)
 
     video_names_file = upstream_dir / "public_test_video_names.txt"
-
-    # ALWAYS call inflate.sh — this matches the exact contest evaluation path.
-    # inflate.sh sources config.env (getting ALL INFLATE_* vars), then
-    # delegates to inflate_postfilter.py or ffmpeg depending on PYTHON_INFLATE.
-    # This eliminates env var propagation bugs and ensures test == contest.
-    inflate_sh = submission_src / "inflate.sh"
-    if not inflate_sh.exists():
-        raise click.ClickException(f"inflate.sh not found: {inflate_sh}")
-
-    cmd = [
-        "bash", str(inflate_sh),
-        str(mgr.archive_unzip_dir),
-        str(mgr.inflated_dir),
-        str(video_names_file),
-    ]
-    inflate_env = {
-        **os.environ,
-        "PYTHONPATH": f"{submission_src.parent.parent / 'src'}:{upstream_dir}",
-        "COMMA_CHALLENGE_ROOT": str(upstream_dir),
-        "CONFIG_ENV_PATH": str(submission_src / "config.env"),
-    }
-
-    run_stage(
-        cmd,
-        mgr.log_dir / "inflate.log",
-        timeout=1800,  # 30 min — matches contest time limit
-        label="inflate (inflate.sh)",
-        env=inflate_env,
-    )
-
-    # Validate inflated output
     names = [
         ln.strip()
         for ln in video_names_file.read_text().splitlines()
         if ln.strip()
     ]
+
+    # ── Resume optimization: skip inflate if output already valid ──────
+    # On resume after inflate failure, the output .raw files may already
+    # exist and be correct (e.g., failure was in validation not inflate).
+    # Check all files before re-running the 16-minute inflate.sh.
+    config = _parse_config_env(submission_src / "config.env")
+    source_w = int(config.get("SOURCE_W", "1164"))
+    source_h = int(config.get("SOURCE_H", "874"))
+    expected_frame_bytes = source_w * source_h * 3
+
+    all_present = True
+    for name in names:
+        stem = name.rsplit(".", 1)[0]
+        raw = mgr.inflated_dir / f"{stem}.raw"
+        if not raw.exists() or raw.stat().st_size == 0 or raw.stat().st_size % expected_frame_bytes != 0:
+            all_present = False
+            break
+
+    if all_present and names:
+        click.echo("  Inflated files already present and valid -- skipping inflate", err=True)
+    else:
+        # ALWAYS call inflate.sh — this matches the exact contest evaluation path.
+        # inflate.sh sources config.env (getting ALL INFLATE_* vars), then
+        # delegates to inflate_postfilter.py or ffmpeg depending on PYTHON_INFLATE.
+        # This eliminates env var propagation bugs and ensures test == contest.
+        inflate_sh = submission_src / "inflate.sh"
+        if not inflate_sh.exists():
+            raise click.ClickException(f"inflate.sh not found: {inflate_sh}")
+
+        cmd = [
+            "bash", str(inflate_sh),
+            str(mgr.archive_unzip_dir),
+            str(mgr.inflated_dir),
+            str(video_names_file),
+        ]
+        inflate_env = {
+            **os.environ,
+            "PYTHONPATH": f"{submission_src.parent.parent / 'src'}:{upstream_dir}",
+            "COMMA_CHALLENGE_ROOT": str(upstream_dir),
+            "CONFIG_ENV_PATH": str(submission_src / "config.env"),
+        }
+
+        run_stage(
+            cmd,
+            mgr.log_dir / "inflate.log",
+            timeout=1800,  # 30 min — matches contest time limit
+            label="inflate (inflate.sh)",
+            env=inflate_env,
+        )
+
+    # Validate inflated output
     missing = []
     for name in names:
         stem = name.rsplit(".", 1)[0]
@@ -653,10 +700,7 @@ def stage_inflate(
             + "\n".join(f"  {m}" for m in missing)
         )
 
-    # Validate frame count / size using SOURCE_W x SOURCE_H from config.env
-    config = _parse_config_env(submission_src / "config.env")
-    source_w = int(config.get("SOURCE_W", "1164"))
-    source_h = int(config.get("SOURCE_H", "874"))
+    # Validate frame count / size
     for name in names:
         stem = name.rsplit(".", 1)[0]
         raw = mgr.inflated_dir / f"{stem}.raw"
