@@ -3,9 +3,9 @@
 #
 # Pre-requisites on Lightning:
 #   - DALI installed
-#   - Precomputed data at experiments/precomputed_local
-#   - Upstream scorer files at /home/zeus/content/upstream
+#   - Upstream scorer files at /home/zeus/content/upstream (includes videos/, models/)
 #   - SSH working
+#   NOTE: No precomputed frames needed — decode on target with DALI (council decision)
 #
 # Run from local machine:
 #   bash scripts/lightning_deploy_asymmetric.sh
@@ -27,7 +27,7 @@ RSYNC="rsync -avz -e 'ssh -i $SSH_KEY -o StrictHostKeyChecking=no'"
 
 REMOTE_ROOT="/home/zeus/content/pact"
 UPSTREAM="/home/zeus/content/upstream"
-PRECOMPUTED="experiments/precomputed_local"
+# NOTE: No PRECOMPUTED variable — decode on target with DALI (council decision)
 
 echo "============================================"
 echo "  Lightning T4: Asymmetric Warp Deploy"
@@ -105,7 +105,7 @@ export PYTHONPATH=src:$UPSTREAM
 
 python experiments/train_renderer_fridrich.py \
     --validate-smoke \
-    --precomputed $PRECOMPUTED
+    --pair-mode asymmetric
 " 2>&1 | tee /tmp/lightning_smoke_test.log
 
 if grep -q "ALL 5 CHECKS PASSED" /tmp/lightning_smoke_test.log; then
@@ -146,7 +146,6 @@ export PYTHONPATH=src:$UPSTREAM
 
 python experiments/train_renderer_fridrich.py \
     --pair-mode asymmetric \
-    --precomputed $PRECOMPUTED \
     --epochs 10000 \
     --batch-size 4 \
     --lr 2e-4 \
@@ -154,6 +153,8 @@ python experiments/train_renderer_fridrich.py \
     --base-ch 36 \
     --mid-ch 60 \
     --motion-hidden 32 \
+    --max-flow-px 20.0 \
+    --max-residual 20.0 \
     --seg-boundary 0.005 \
     --pose-boundary 0.02 \
     --rho-init 10.0 \
@@ -162,6 +163,8 @@ python experiments/train_renderer_fridrich.py \
     --flow-weight 0.0 \
     --rate-weight 0.01 \
     --target-bytes 200000 \
+    --gate-reg-weight 0.1 \
+    --even-pairs-only \
     --device cuda \
     --seed 42 \
     --checkpoint-every 500 \
