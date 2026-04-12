@@ -1513,6 +1513,91 @@ CROSS_DISC_GEOPHYSICS = {
     "noise_seed": 42,
 }
 
+# ── Domain-specific solver profiles (Yousfi cross-domain toolkit) ──────
+
+# Quick test: all 10 solvers with minimal steps
+DOMAIN_SMOKE = {
+    "variant": "domain_solver",
+    "solver_names": [
+        "ego_motion_flow", "road_plane_homography", "vanishing_point",
+        "matched_filter", "kalman_smoother", "compressed_sensing",
+        "trajectory", "adaptive_optics", "ofdm", "turbo_scorer",
+    ],
+    "ego_motion_config": {"num_steps": 5},
+    "road_plane_config": {"num_steps": 5},
+    "vanishing_point_config": {"vp_weight": 1.0},
+    "matched_filter_config": {"num_iterations": 5, "max_jacobian_outputs": 8},
+    "kalman_config": {"pca_components": 10, "num_iterations": 1},
+    "compressed_sensing_config": {"num_iterations": 5, "sparsity_lambda": 0.01},
+    "trajectory_config": {"num_shooting_iterations": 5},
+    "adaptive_optics_config": {"num_modes": 10, "num_iterations": 5},
+    "ofdm_config": {"num_frequencies": 32, "num_iterations": 5},
+    "turbo_config": {"num_turbo_iterations": 2, "pose_steps": 3, "seg_steps": 3},
+}
+
+# Self-driving domain solvers only (ego-motion + road plane + vanishing point)
+DOMAIN_DRIVING = {
+    "variant": "domain_solver",
+    "solver_names": ["ego_motion_flow", "road_plane_homography", "vanishing_point"],
+    "ego_motion_config": {
+        "focal_length": 910.0,
+        "principal_point": [256.0, 192.0],
+        "num_steps": 100,
+        "flow_weight": 10.0,
+    },
+    "road_plane_config": {
+        "camera_height": 1.2,
+        "camera_pitch": 0.02,
+        "num_steps": 50,
+    },
+    "vanishing_point_config": {
+        "vp_weight": 2.0,
+        "min_line_length": 20,
+        "angular_tolerance": 0.15,
+    },
+}
+
+# Signal processing solvers (matched filter + compressed sensing + OFDM)
+DOMAIN_SIGNAL = {
+    "variant": "domain_solver",
+    "solver_names": ["matched_filter", "compressed_sensing", "ofdm"],
+    "matched_filter_config": {
+        "regularization_lambda": 1e-3,
+        "step_size": 0.1,
+        "num_iterations": 20,
+    },
+    "compressed_sensing_config": {
+        "sparsity_lambda": 0.01,
+        "num_iterations": 50,
+        "wavelet_type": "haar",
+    },
+    "ofdm_config": {
+        "num_frequencies": 256,
+        "water_fill_power_budget": 1e6,
+        "sensitivity_threshold": 0.01,
+    },
+}
+
+# Full ensemble: all 10 solvers with production settings
+DOMAIN_FULL = {
+    "variant": "domain_solver",
+    "solver_names": [
+        "ego_motion_flow", "road_plane_homography", "vanishing_point",
+        "matched_filter", "kalman_smoother", "compressed_sensing",
+        "trajectory", "adaptive_optics", "ofdm", "turbo_scorer",
+    ],
+    "ego_motion_config": {"num_steps": 100, "focal_length": 910.0},
+    "road_plane_config": {"camera_height": 1.2, "num_steps": 50},
+    "vanishing_point_config": {"vp_weight": 2.0},
+    "matched_filter_config": {"num_iterations": 20, "step_size": 0.1},
+    "kalman_config": {"pca_components": 50, "num_iterations": 3},
+    "compressed_sensing_config": {"num_iterations": 50, "sparsity_lambda": 0.01},
+    "trajectory_config": {"num_shooting_iterations": 30, "control_penalty": 0.01},
+    "adaptive_optics_config": {"num_modes": 50, "num_iterations": 100},
+    "ofdm_config": {"num_frequencies": 256},
+    "turbo_config": {"num_turbo_iterations": 10, "damping_factor": 0.5},
+}
+
 PROFILES = {
     "council_v1": COUNCIL_V1,
     "council_v2_adaptive": COUNCIL_V2_ADAPTIVE,
@@ -1611,6 +1696,11 @@ PROFILES = {
     "finance_smoke": FINANCE_SMOKE,
     "finance_ensemble": FINANCE_ENSEMBLE,
     "finance_hft": FINANCE_HFT,
+    # Domain-specific solver profiles (Yousfi cross-domain toolkit)
+    "domain_smoke": DOMAIN_SMOKE,
+    "domain_driving": DOMAIN_DRIVING,
+    "domain_signal": DOMAIN_SIGNAL,
+    "domain_full": DOMAIN_FULL,
 }
 
 # Deprecated profile names that should emit runtime warnings

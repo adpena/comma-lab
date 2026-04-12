@@ -311,27 +311,37 @@ class VariationalFrameGenerator:
                 break
 
             if use_line_search:
-                # Armijo backtracking line search
+                # Armijo backtracking line search on the FULL functional J.
+                # Evaluates the complete objective (distortion + smooth + TV)
+                # at each trial point to ensure valid comparison.
                 with torch.no_grad():
                     direction = -f.grad.data
                     current_val = J.item()
                     slope = -(grad_norm.item() ** 2)
                     alpha = lr
+                    best_trial = f.data.clone()
+                    accepted = False
                     for _ in range(10):
                         f_trial = (f.data + alpha * direction).clamp(0.0, 255.0)
-                        f.data.copy_(f_trial)
-                        # Cheap forward for line search (skip scorer, use only smooth+TV)
-                        trial_smooth = smoothness_energy(f.data, lambda_grad, lambda_lap)
-                        trial_tv = total_variation(f.data)
-                        trial_val = (
+                        # Evaluate FULL functional at trial point
+                        trial_smooth = smoothness_energy(f_trial, lambda_grad, lambda_lap)
+                        trial_tv = total_variation(f_trial)
+                        trial_reg = (
                             lambda_smooth * trial_smooth.item()
                             + lambda_rate * trial_tv.item()
                         )
+                        # Distortion at trial point (requires scorer forward)
+                        f_tmp = f_trial.detach().requires_grad_(False)
+                        trial_seg = self._segnet_loss(f_tmp, masks, segnet).item() if segnet is not None else 0.0
+                        trial_pose = self._posenet_loss(f_tmp, posenet, gt_pose_ref).item() if posenet is not None else 0.0
+                        trial_dist = lambda_seg * trial_seg + lambda_pose * trial_pose
+                        trial_val = trial_dist + trial_reg
                         if trial_val <= current_val + armijo_c * alpha * slope:
+                            best_trial = f_trial
+                            accepted = True
                             break
                         alpha *= armijo_rho
-                        f.data.copy_(init_frames if step == 0 else best_f)
-                    f.data.copy_(f_trial)
+                    f.data.copy_(best_trial if accepted else f.data)
             else:
                 optimizer.step()
                 with torch.no_grad():
@@ -377,11 +387,11 @@ class VariationalFrameGenerator:
         N, C, H, W = frames.shape
         device = frames.device
 
-        # SegNet expects specific input size
-        frames_resized = F.interpolate(
-            frames, size=(384, 512), mode="bilinear", align_corners=False,
-        )
-        logits = segnet(frames_resized)
+        # Use preprocess_input to match eval-time scorer behavior.
+        # SegNet.preprocess_input expects (B, T, C, H, W).
+        frames_btchw = frames.unsqueeze(1).contiguous()  # (N, 1, C, H, W)
+        seg_input = segnet.preprocess_input(frames_btchw)
+        logits = segnet(seg_input)
         H_out, W_out = logits.shape[2], logits.shape[3]
 
         masks_resized = F.interpolate(

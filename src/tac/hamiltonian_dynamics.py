@@ -271,7 +271,9 @@ class HamiltonianPixelOptimizer:
             else:
                 current_damping = damping_base
 
-            integrator = LeapfrogIntegrator(dt=dt_val, mass=mass, damping=current_damping)
+            # Create integrator WITHOUT damping — damping is applied ONCE
+            # after the complete leapfrog step to avoid double-damping.
+            integrator = LeapfrogIntegrator(dt=dt_val, mass=mass, damping=0.0)
 
             # Compute gradient of potential (force)
             q_grad = q.detach().clone().requires_grad_(True)
@@ -284,8 +286,8 @@ class HamiltonianPixelOptimizer:
             if grad_norm > grad_clip:
                 grad_V = grad_V * (grad_clip / (grad_norm + 1e-12))
 
-            # Leapfrog step (single-evaluation variant)
-            q_new, p_new = integrator.step(q, p, grad_V)
+            # First half of leapfrog (p half-step + q full step)
+            q_new, p_half = integrator.step(q, p, grad_V)
 
             # Clamp to valid pixel range
             q_new = q_new.clamp(0.0, 255.0)
@@ -312,8 +314,10 @@ class HamiltonianPixelOptimizer:
             if grad_V_next.norm() > grad_clip:
                 grad_V_next = grad_V_next * (grad_clip / (grad_V_next.norm() + 1e-12))
 
-            # Complete the leapfrog step
-            p_new = p_new - (dt_val / 2.0) * grad_V_next
+            # Complete leapfrog: second momentum half-step
+            p_new = p_half - (dt_val / 2.0) * grad_V_next
+
+            # Apply damping ONCE after the complete step (Langevin extension)
             if current_damping > 0:
                 p_new = p_new * (1.0 - current_damping)
 

@@ -39,12 +39,12 @@ import torch.nn.functional as F
 # ── Base class ──────────────────────────────────────────────────────────
 
 
-class CrossDisciplinaryOptimizer:
-    """Base class for cross-disciplinary optimization algorithms.
+class FinanceOptimizer:
+    """Base class for finance/HFT-inspired optimization algorithms.
 
     Each optimizer wraps around a standard gradient-based loop and modifies
     the step direction, step size, or exploration strategy using insights
-    from its source discipline.
+    from quantitative finance and high-frequency trading.
 
     Subclasses must implement:
         - step(pixels, grad, iteration) -> pixels
@@ -86,7 +86,7 @@ class CrossDisciplinaryOptimizer:
 # ── 1. Almgren-Chriss Optimal Execution ────────────────────────────────
 
 
-class AlmgrenChrissOptimizer(CrossDisciplinaryOptimizer):
+class AlmgrenChrissOptimizer(FinanceOptimizer):
     """Optimal execution trajectory through loss space.
 
     In finance: minimize market impact when executing a large trade over T periods.
@@ -153,7 +153,7 @@ class AlmgrenChrissOptimizer(CrossDisciplinaryOptimizer):
 # ── 2. Kelly Criterion for Step Sizing ─────────────────────────────────
 
 
-class KellyCriterionOptimizer(CrossDisciplinaryOptimizer):
+class KellyCriterionOptimizer(FinanceOptimizer):
     """Optimal step sizing based on gradient reliability.
 
     Kelly (1956): optimal bet fraction f* = (p*b - q) / b
@@ -237,7 +237,7 @@ class KellyCriterionOptimizer(CrossDisciplinaryOptimizer):
 # ── 3. Black-Scholes Implied Volatility ────────────────────────────────
 
 
-class ImpliedVolatilityOptimizer(CrossDisciplinaryOptimizer):
+class ImpliedVolatilityOptimizer(FinanceOptimizer):
     """Per-pixel implied volatility for spatially-adaptive optimization.
 
     Black-Scholes option pricing uses implied volatility (IV) backed out from
@@ -322,7 +322,7 @@ class ImpliedVolatilityOptimizer(CrossDisciplinaryOptimizer):
 # ── 4. Markowitz Mean-Variance Portfolio ───────────────────────────────
 
 
-class MarkowitzOptimizer(CrossDisciplinaryOptimizer):
+class MarkowitzOptimizer(FinanceOptimizer):
     """Gradient budget allocation across pixel blocks via mean-variance optimization.
 
     Markowitz (1952): allocate capital across assets to maximize E[return]/Var[return].
@@ -457,7 +457,7 @@ class MarkowitzOptimizer(CrossDisciplinaryOptimizer):
 # ── 5. Pairs Trading / Statistical Arbitrage ──────────────────────────
 
 
-class PairsTradingOptimizer(CrossDisciplinaryOptimizer):
+class PairsTradingOptimizer(FinanceOptimizer):
     """Mean-reversion between correlated pixel block pairs.
 
     Pairs trading: find cointegrated asset pairs, trade mean reversion.
@@ -590,7 +590,7 @@ class PairsTradingOptimizer(CrossDisciplinaryOptimizer):
 # ── 6. GARCH Volatility for Adaptive Noise ────────────────────────────
 
 
-class GARCHVolatilityOptimizer(CrossDisciplinaryOptimizer):
+class GARCHVolatilityOptimizer(FinanceOptimizer):
     """GARCH(1,1) gradient volatility for Langevin dynamics.
 
     GARCH (Bollerslev 1986): sigma^2_t = omega + alpha * eps^2_{t-1} + beta * sigma^2_{t-1}
@@ -690,7 +690,7 @@ class GARCHVolatilityOptimizer(CrossDisciplinaryOptimizer):
 # ── 7. Order Book Dynamics / Level 2 Optimization ─────────────────────
 
 
-class OrderBookOptimizer(CrossDisciplinaryOptimizer):
+class OrderBookOptimizer(FinanceOptimizer):
     """Priority queue pixel optimization based on order book dynamics.
 
     Model each pixel's potential change as a "limit order":
@@ -774,7 +774,7 @@ class OrderBookOptimizer(CrossDisciplinaryOptimizer):
 # ── 8. Avellaneda-Stoikov Market Making ────────────────────────────────
 
 
-class AvellanedaStoikovOptimizer(CrossDisciplinaryOptimizer):
+class AvellanedaStoikovOptimizer(FinanceOptimizer):
     """Market-making inspired perturbation range control.
 
     Avellaneda & Stoikov (2008): set optimal bid/ask spread around fair value
@@ -861,7 +861,7 @@ class AvellanedaStoikovOptimizer(CrossDisciplinaryOptimizer):
 # ── 9. Momentum / Mean Reversion Hybrid ───────────────────────────────
 
 
-class MomentumMeanReversionOptimizer(CrossDisciplinaryOptimizer):
+class MomentumMeanReversionOptimizer(FinanceOptimizer):
     """Hybrid momentum + mean reversion with regime detection.
 
     In HFT: momentum strategies work in trending markets, mean-reversion
@@ -963,7 +963,7 @@ class MomentumMeanReversionOptimizer(CrossDisciplinaryOptimizer):
 # ── 10. Risk Parity ──────────────────────────────────────────────────
 
 
-class RiskParityOptimizer(CrossDisciplinaryOptimizer):
+class RiskParityOptimizer(FinanceOptimizer):
     """Equal risk contribution across score components.
 
     Risk Parity (Qian 2005): allocate so each asset contributes equal
@@ -1080,7 +1080,7 @@ class RiskParityOptimizer(CrossDisciplinaryOptimizer):
 # ── Ensemble / Pipeline ───────────────────────────────────────────────
 
 
-class FinanceEnsembleOptimizer(CrossDisciplinaryOptimizer):
+class FinanceEnsembleOptimizer(FinanceOptimizer):
     """Ensemble of finance optimizers with configurable mixing.
 
     Runs multiple finance optimizers and blends their proposed updates.
