@@ -88,6 +88,14 @@ This is critical for the doc evolution viewer and the competition writeup. Our g
 - **For non-code files** (`.md`, `.json`, `.env`, `.sh`, config, docs, reports): `REVIEW_GATE_OVERRIDE=1` is acceptable since the review tracker is designed for code review.
 - If the gate blocks a `.py` commit, that means the code needs review first. That is the gate **working**, not the gate being broken.
 
+## Design decisions — non-negotiable
+
+- **NEVER make design decisions unilaterally.** Always consult the skunkworks council (Yousfi + Fridrich + Contrarian) before implementing any change that affects training behavior, loss functions, architecture configuration, interpolation methods, boundary values, optimization strategy, or any other design tradeoff.
+- **Clear bugs** (crashes, wrong formulas, missing imports, dead code) can be fixed immediately without council approval.
+- **Design tradeoffs** (bicubic vs bilinear, loss function choice, constraint boundaries, rho growth strategy, what to include in archive, etc.) MUST be council-approved before implementation.
+- **If unsure** whether something is a bug fix or a design decision, it's a design decision. Ask the council.
+- Present the issue, list the options with pros/cons, and let the council make a binding decision.
+
 ## Experiment design — non-negotiable
 
 Every experiment MUST follow this process before touching any GPU:
