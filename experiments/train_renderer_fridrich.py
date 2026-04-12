@@ -699,6 +699,23 @@ def train_fridrich_renderer(cfg: FridrichRendererConfig) -> dict[str, Any]:
         # otherwise strict=True fails on the unexpected *.bit_depth.bits keys.
         if self_compress_active:
             bit_modules = _wrap_with_learnable_bits(pair_gen.renderer, init_bits=cfg.init_bits)
+            # Rebuild optimizer with 2 param groups (matching Phase 3 structure)
+            # BEFORE loading state_dict, because the saved optimizer has 2 groups.
+            bit_param_ids = set()
+            bit_params = []
+            for bm in bit_modules:
+                for p in bm.parameters():
+                    bit_params.append(p)
+                    bit_param_ids.add(id(p))
+            renderer_params = [p for p in pair_gen.renderer.parameters()
+                               if id(p) not in bit_param_ids]
+            optimizer = torch.optim.AdamW(
+                [
+                    {"params": renderer_params, "lr": cfg.lr * 0.5},
+                    {"params": bit_params, "lr": cfg.lr * 0.1},
+                ],
+                weight_decay=1e-4,
+            )
             print(f"  Re-wrapped {len(bit_modules)} conv layers for Phase 3 resume")
 
         pair_gen.load_state_dict(ckpt["model_state_dict"])
@@ -887,6 +904,7 @@ def train_fridrich_renderer(cfg: FridrichRendererConfig) -> dict[str, Any]:
                         "lambda_pose": lambda_pose,
                         "rho": rho,
                         "best_score": best_score,
+                        "self_compress_active": self_compress_active,
                         "config": asdict(cfg),
                     }, boundary_path)
                     print(f"  -> Constraints met checkpoint: {boundary_path}")

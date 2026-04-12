@@ -407,9 +407,10 @@ def _load_renderer(renderer_path: str, device: str) -> nn.Module:
             from tac.renderer_export import load_renderer_checkpoint
         except ImportError:
             # Inline minimal loader for scorer machine
+            # Format: [4B magic "DPSM"] [4B header_len] [JSON header] [blobs...]
             import struct as _struct
-            header_len = _struct.unpack("<I", raw_bytes[0:4])[0]
-            header = json.loads(raw_bytes[4:4 + header_len].decode("utf-8"))
+            header_len = _struct.unpack("<I", raw_bytes[4:8])[0]
+            header = json.loads(raw_bytes[8:8 + header_len].decode("utf-8"))
             raise RuntimeError(
                 f"Custom .bin format detected (version={header.get('version')}), "
                 f"but tac.renderer_export is not available. Install the tac package "
