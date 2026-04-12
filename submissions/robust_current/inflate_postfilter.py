@@ -599,6 +599,14 @@ def inflate_with_postfilter(
     return n
 
 
+# ============================================================
+# Trick stack env var: INFLATE_TRICK_STACK=1 activates the unified
+# stacking pipeline instead of the simple inflate loop.
+# ============================================================
+TRICK_STACK_ENABLED = os.environ.get("INFLATE_TRICK_STACK", "0") == "1"
+TRICK_STACK_PROFILE = os.environ.get("INFLATE_TRICK_STACK_PROFILE", "stacked_inflate_full")
+
+
 if __name__ == "__main__":
     import time
     t_start = time.monotonic()
@@ -646,6 +654,53 @@ if __name__ == "__main__":
     if upstream_dir and not posenet_path_env:
         posenet_path_env = str(Path(upstream_dir) / "models" / "posenet.safetensors")
         segnet_path_env = str(Path(upstream_dir) / "models" / "segnet.safetensors")
+
+    # ---- Trick stack dispatch ----
+    if TRICK_STACK_ENABLED:
+        print(f"  TRICK STACK enabled (profile={TRICK_STACK_PROFILE})", file=sys.stderr)
+        try:
+            from tac.trick_stack import stacked_inflate, TrickStackConfig
+            from tac.profiles import PROFILES
+        except ImportError as e:
+            print(f"  ERROR: trick_stack requires tac package: {e}", file=sys.stderr)
+            sys.exit(1)
+
+        # Load profile and apply env var overrides
+        profile = PROFILES.get(TRICK_STACK_PROFILE, {})
+        stack_kwargs = dict(profile)
+        stack_kwargs.update({
+            "posenet_targets_path": posenet_targets_path,
+            "upstream_dir": upstream_dir,
+            "posenet_path": posenet_path_env,
+            "segnet_path": segnet_path_env,
+        })
+        # Allow env var overrides for individual trick toggles
+        for key in [
+            "use_tto", "use_supervised_tto", "use_noise_shaping",
+            "use_null_space_projection", "use_brightness_shift",
+            "use_chroma_exploit", "use_fragility_weighting",
+            "use_backward_delta_smoothing",
+        ]:
+            env_val = os.environ.get(f"INFLATE_{key.upper()}")
+            if env_val is not None:
+                stack_kwargs[key] = env_val == "1"
+        for key in ["tto_steps", "supervised_tto_steps", "use_multi_pass"]:
+            env_val = os.environ.get(f"INFLATE_{key.upper()}")
+            if env_val is not None:
+                stack_kwargs[key] = int(env_val)
+
+        result = stacked_inflate(
+            archive_dir=Path(archive_dir),
+            output_dir=Path(inflated_dir),
+            **stack_kwargs,
+        )
+        t_total = time.monotonic() - t_start
+        print(f"  Trick stack complete: {result.get('n_frames', 0)} frames, "
+              f"{t_total:.1f}s total", file=sys.stderr)
+        print(f"  Stages: {result.get('stages_run', [])}", file=sys.stderr)
+        sys.exit(0)
+
+    # ---- Standard (non-stacked) inflate path ----
 
     # Load model ONCE (not per-video)
     print(f"  Loading post-filter from {postfilter_path}", file=sys.stderr)

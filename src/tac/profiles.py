@@ -282,6 +282,9 @@ MASK_RENDERER_SMOKE = {
     "mid_ch": 64,  # bottleneck channels
     "embed_dim": 6,  # per-class embedding dimension
     "motion_hidden": 32,  # MotionPredictor hidden channels
+    "noise_mode": "deterministic",  # "deterministic", "shared", "independent"
+    "blend_mode": "spatial",  # "scalar", "spatial", "none"
+    "motion_type": "depth_aware",  # "depth_aware", "learned_cnn", "analytical", "none"
     "epochs": 200,
     "lr": 1e-3,
     "ema_decay": 0.997,
@@ -303,6 +306,9 @@ MASK_RENDERER_FULL = {
     "mid_ch": 64,
     "embed_dim": 6,
     "motion_hidden": 32,
+    "noise_mode": "deterministic",
+    "blend_mode": "spatial",
+    "motion_type": "depth_aware",
     "epochs": 2500,
     "lr": 5e-4,
     "ema_decay": 0.997,
@@ -327,6 +333,9 @@ MASK_RENDERER_WIDE = {
     "mid_ch": 80,
     "embed_dim": 8,
     "motion_hidden": 48,
+    "noise_mode": "deterministic",
+    "blend_mode": "spatial",
+    "motion_type": "depth_aware",
     "epochs": 2500,
     "lr": 5e-4,
     "ema_decay": 0.997,
@@ -360,6 +369,9 @@ WAVELET_RENDERER_SMOKE = {
     "hidden": 96,  # base hidden width for coeff predictors (~137K total)
     "embed_dim": 8,  # per-class embedding dimension
     "motion_hidden": 32,  # MotionPredictor hidden channels
+    "noise_mode": "deterministic",
+    "blend_mode": "spatial",
+    "motion_type": "depth_aware",
     "epochs": 200,
     "lr": 1e-3,
     "ema_decay": 0.997,
@@ -380,6 +392,9 @@ WAVELET_RENDERER_FULL = {
     "hidden": 96,
     "embed_dim": 8,
     "motion_hidden": 32,
+    "noise_mode": "deterministic",
+    "blend_mode": "spatial",
+    "motion_type": "depth_aware",
     "epochs": 2500,
     "lr": 5e-4,
     "ema_decay": 0.997,
@@ -407,6 +422,8 @@ DIFFUSION_TEACHER_SMOKE = {
     "hidden": 32,  # base U-Net channels (32→64→128)
     "num_timesteps": 50,  # shorter schedule for smoke test
     "time_dim": 64,  # timestep embedding dim
+    "beta_start": 1e-4,  # noise schedule lower bound
+    "beta_end": 0.02,  # noise schedule upper bound
     "epochs": 100,
     "lr": 1e-4,
     "ema_decay": 0.999,
@@ -420,6 +437,8 @@ DIFFUSION_TEACHER_FULL = {
     "hidden": 64,  # base channels (64→128→256)
     "num_timesteps": 100,  # full noise schedule
     "time_dim": 128,  # timestep embedding dim
+    "beta_start": 1e-4,
+    "beta_end": 0.02,
     "epochs": 1000,
     "lr": 1e-4,
     "ema_decay": 0.999,
@@ -1097,6 +1116,70 @@ DP_SIMS_V2_FULL = {
     "pretrain_epochs": 500,
 }
 
+# ── Trick stacking inflate-time profiles ─────────────────────────────────
+# These profiles configure the unified trick stacking engine
+# (src/tac/trick_stack.py) for inflate-time optimizations.
+# They are NOT training profiles — they control how tricks are combined
+# during the inflate step.
+
+# Full stacking: all tricks enabled, maximum quality
+STACKED_INFLATE_FULL = {
+    "use_tto": True,
+    "tto_steps": 15,
+    "tto_lr": 1e-4,
+    "tto_loss": "temporal_consistency",
+    "tto_param_mode": "last_layer",
+    "use_supervised_tto": True,
+    "supervised_tto_steps": 20,
+    "supervised_tto_lr": 1e-4,
+    "supervised_tto_param_mode": "all",
+    "use_multi_pass": 3,
+    "use_brightness_shift": True,
+    "brightness_shift_auto": True,
+    "use_chroma_exploit": True,
+    "chroma_perturbation_magnitude": 0.8,
+    "use_fragility_weighting": True,
+    "fragility_refinement_steps": 5,
+    "use_noise_shaping": True,
+    "noise_shaping_diffuse_error": True,
+    "use_backward_delta_smoothing": True,
+    "backward_smooth_alpha": 0.3,
+    "backward_smooth_max_delta": 3.0,
+    "use_null_space_projection": True,
+    "null_space_rank_threshold": 1e-3,
+}
+
+# Safe stacking: proven tricks only, no scorer-dependent stages
+STACKED_INFLATE_SAFE = {
+    "use_tto": True,
+    "tto_steps": 10,
+    "tto_lr": 1e-4,
+    "tto_loss": "temporal_consistency",
+    "use_supervised_tto": False,
+    "use_multi_pass": 3,
+    "use_brightness_shift": False,
+    "use_chroma_exploit": False,
+    "use_fragility_weighting": False,
+    "use_noise_shaping": False,
+    "use_backward_delta_smoothing": False,
+    "use_null_space_projection": False,
+}
+
+# Fast stacking: minimal overhead, just multi-pass + fast noise shaping
+STACKED_INFLATE_FAST = {
+    "use_tto": False,
+    "use_supervised_tto": False,
+    "use_multi_pass": 2,
+    "use_brightness_shift": True,
+    "brightness_shift_auto": True,
+    "use_chroma_exploit": False,
+    "use_fragility_weighting": False,
+    "use_noise_shaping": True,
+    "noise_shaping_fast": True,
+    "use_backward_delta_smoothing": False,
+    "use_null_space_projection": False,
+}
+
 PROFILES = {
     "council_v1": COUNCIL_V1,
     "council_v2_adaptive": COUNCIL_V2_ADAPTIVE,
@@ -1168,4 +1251,8 @@ PROFILES = {
     "posenet_embedding_full": POSENET_EMBEDDING_FULL,
     "counterpoint_losses_smoke": COUNTERPOINT_LOSSES_SMOKE,
     "kalman_baseline": KALMAN_BASELINE,
+    # Trick stacking inflate-time profiles
+    "stacked_inflate_full": STACKED_INFLATE_FULL,
+    "stacked_inflate_safe": STACKED_INFLATE_SAFE,
+    "stacked_inflate_fast": STACKED_INFLATE_FAST,
 }
