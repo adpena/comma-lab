@@ -111,6 +111,9 @@ class TrickStackConfig:
     null_space_rank_threshold: float = 1e-3
     null_space_max_outputs: int = 16
 
+    # -- Memory management --
+    memory_cap_mb: float = 0.0  # 0 = unlimited; when > 0, log estimated usage
+
     # -- Stage 11 (optional): Scorer equivalent search (Trick 34) --
     use_scorer_equivalent_search: bool = False
     scorer_equiv_steps: int = 100
@@ -895,8 +898,16 @@ def stacked_inflate(
         container = av.open(str(mkv_path))
         stream = container.streams.video[0]
 
-        all_frames: list[torch.Tensor] = []  # collect for backward smoothing
-        all_originals: list[torch.Tensor] = []  # original decoded frames
+        # Only accumulate all frames in memory when a post-hoc pass needs
+        # them (backward smoothing or null-space projection). When both are
+        # disabled, write frames to disk immediately to save memory.
+        needs_all_frames = cfg.use_backward_delta_smoothing or (
+            cfg.use_null_space_projection and posenet is not None and segnet is not None
+        )
+        all_frames: list[torch.Tensor] = []
+        all_originals: list[torch.Tensor] = []
+        # Open file handle for streaming writes when we do not need all frames
+        _stream_fh = None if needs_all_frames else open(str(out_path), "wb")
         batch_buf: list[torch.Tensor] = []
         orig_buf: list[torch.Tensor] = []
         n_video = 0
@@ -934,14 +945,19 @@ def stacked_inflate(
             else:
                 out = out.round().clamp(0, 255)
 
-            # Stage 10: Null-space projection
-            if cfg.use_null_space_projection and posenet is not None and segnet is not None:
-                out = _stage_null_space_projection(out, x_orig, posenet, segnet, cfg)
-
-            # Collect frames for backward smoothing (stage 9)
+            # Stage ordering contract: backward smoothing MUST run before
+            # null-space projection, because smoothing modifies pixel values
+            # and would destroy the null-space guarantee. Null-space projection
+            # is applied after all temporal smoothing is complete.
             for i in range(out.shape[0]):
                 frame_uint8 = out[i].permute(1, 2, 0).round().clamp(0, 255).to(torch.uint8).cpu()
-                all_frames.append(frame_uint8)
+                if needs_all_frames:
+                    all_frames.append(frame_uint8)
+                    orig_uint8 = x_orig[i].permute(1, 2, 0).round().clamp(0, 255).to(torch.uint8).cpu()
+                    all_originals.append(orig_uint8)
+                else:
+                    # Stream directly to disk — no memory accumulation needed
+                    _stream_fh.write(frame_uint8.contiguous().numpy().tobytes())
                 n_video += 1
                 total_frames += 1
 
@@ -1004,6 +1020,20 @@ def stacked_inflate(
             all_frames = [f.permute(1, 2, 0).to(torch.uint8) for f in smoothed]
             timings["backward_smoothing"] = time.monotonic() - t_smooth
             stages_run.append("backward_smoothing")
+
+        # Stage 10: Null-space projection (AFTER backward smoothing).
+        # This must be the last frame-modifying stage so that the null-space
+        # guarantee is not destroyed by subsequent pixel modifications.
+        if cfg.use_null_space_projection and posenet is not None and segnet is not None:
+            _log(f"Stage 10: Null-space projection ({len(all_frames)} frames)", verbose)
+            t_null = time.monotonic()
+            for i in range(len(all_frames)):
+                frame_chw = all_frames[i].float().permute(2, 0, 1).unsqueeze(0).to(device)
+                orig_chw = all_originals[i].float().permute(2, 0, 1).unsqueeze(0).to(device)
+                projected = _stage_null_space_projection(frame_chw, orig_chw, posenet, segnet, cfg)
+                all_frames[i] = projected[0].permute(1, 2, 0).round().clamp(0, 255).to(torch.uint8).cpu()
+            timings["null_space_projection"] = time.monotonic() - t_null
+            stages_run.append("null_space_projection")
 
         # Write output frames
         with open(str(out_path), "wb") as f:
@@ -1119,6 +1149,12 @@ def cpu_stacked_inflate(
       8. Apply pre-computed brightness shifts (instant)
       9. Apply pre-computed null-space corrections (instant)
      10. Noise-shaped round using pre-computed gradients (instant)
+
+    Note: backward delta smoothing (stage 9 of stacked_inflate) is
+    intentionally omitted from the CPU pipeline. It requires holding all
+    frames in memory simultaneously, which exceeds the CPU budget constraint.
+    The pre-computed null-space corrections (stage 9 here) serve a similar
+    temporal consistency role without the memory overhead.
 
     Args:
         archive_dir: directory containing .mkv, postfilter_int8.pt, and

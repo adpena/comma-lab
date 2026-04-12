@@ -5,9 +5,9 @@ a small camera motion estimator.  This is geometrically principled:
 objects closer to the camera have larger flow (parallax), and the flow
 direction depends on the 6-DOF camera motion (3 rotation + 3 translation).
 
-~200 learnable parameters total:
+~120 learnable parameters total:
     - 5 per-class depth values (nn.Parameter)
-    - 18 features -> 6 camera params (linear layer: 18*6 + 6 = 114)
+    - 15 features -> 6 camera params (linear layer: 15*6 + 6 = 96)
     - learnable focal length (2 params)
 
 Output: (B, 2, H, W) flow field, same interface as MotionPredictor.
@@ -28,7 +28,7 @@ import torch.nn.functional as F
 class DepthAwareMotionPredictor(nn.Module):
     """Geometric motion from per-class depth + 6-DOF camera motion.
 
-    ~200 parameters. Produces geometrically correct parallax flow.
+    ~120 parameters. Produces geometrically correct parallax flow.
 
     The model learns:
         1. Per-class depth (5 values, initialized from driving priors).
@@ -134,10 +134,6 @@ class DepthAwareMotionPredictor(nn.Module):
         device = mask_t.device
         eps = 1e-6
 
-        # Force FP32 for depth computations — inv_depth gradients scale as 1/d^2
-        # which can overflow in FP16 for small depth values
-        orig_dtype = self.class_depth.dtype
-
         # 1. Extract class features and estimate camera motion
         class_feats = self._extract_class_features(mask_t, mask_t1)  # (B, 3*C)
         cam_params = self.cam_linear(class_feats)  # (B, 6)
@@ -222,7 +218,7 @@ def _smoke_test() -> None:
     assert model.focal.grad is not None, "focal should have gradient"
 
     n_params = model.param_count()
-    assert n_params < 500, f"Expected ~200 params, got {n_params}"
+    assert n_params < 500, f"Expected ~120 params, got {n_params}"
 
     print(f"depth_motion: all smoke tests passed ({n_params} params)")
 
