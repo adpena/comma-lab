@@ -52,6 +52,11 @@ def _select_keyframe_indices(frame_count: int, *, max_keyframes: int) -> np.ndar
     )
 
 
+def _sample_token_keyframes(tokens, *, max_keyframes: int) -> np.ndarray:
+    token_arr = np.asarray(tokens)
+    return token_arr[_select_keyframe_indices(token_arr.shape[0], max_keyframes=max_keyframes)]
+
+
 def _luma(frames: np.ndarray) -> np.ndarray:
     weights = np.array([0.299, 0.587, 0.114], dtype=np.float32)
     return np.tensordot(frames, weights, axes=([-1], [0]))
@@ -114,8 +119,7 @@ def _extract_rgb_semantic_label_from_loaded_bridge(
     max_keyframes: int,
     device: str,
 ) -> tuple[int, ...]:
-    token_arr = np.asarray(tokens)
-    sampled_tokens = token_arr[_select_keyframe_indices(token_arr.shape[0], max_keyframes=max_keyframes)]
+    sampled_tokens = _sample_token_keyframes(tokens, max_keyframes=max_keyframes)
     frames = decode_commavq_tokens_to_rgb_frames(
         sampled_tokens,
         decoder=decoder,
@@ -244,18 +248,28 @@ def build_rgb_label_map_sample(
         commavq_root=commavq_root,
         decoder_url=decoder_url,
     )
+    sampled_tokens_per_example: list[np.ndarray] = []
+    file_names: list[str] = []
     for example in examples:
-        file_name = str(example["json"]["file_name"])
-        label_map[file_name] = list(
-            _extract_rgb_semantic_label_from_loaded_bridge(
-                example["token.npy"],
+        file_names.append(str(example["json"]["file_name"]))
+        sampled_tokens_per_example.append(_sample_token_keyframes(example["token.npy"], max_keyframes=max_keyframes))
+
+    if sampled_tokens_per_example:
+        merged_tokens = np.concatenate(sampled_tokens_per_example, axis=0)
+        merged_frames = _coerce_rgb_frames(
+            decode_commavq_tokens_to_rgb_frames(
+                merged_tokens,
                 decoder=decoder,
                 transpose_and_clip_fn=transpose_and_clip_fn,
                 batch_size=batch_size,
-                max_keyframes=max_keyframes,
                 device=decode_device,
             )
         )
+        start = 0
+        for file_name, sampled_tokens in zip(file_names, sampled_tokens_per_example):
+            count = int(sampled_tokens.shape[0])
+            label_map[file_name] = list(_rgb_semantic_label_tuple_from_sampled_frames(merged_frames[start:start + count]))
+            start += count
 
     target = Path(output_path)
     target.parent.mkdir(parents=True, exist_ok=True)

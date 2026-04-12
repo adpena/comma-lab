@@ -162,6 +162,7 @@ class TacLosslessRgbSemanticLabelsTests(unittest.TestCase):
             },
         ]
         bridge_calls: list[dict[str, object]] = []
+        decoder_batches: list[tuple[int, ...]] = []
 
         def fake_dataset_loader(_dataset_name: str, *, num_proc=None, data_files=None):
             return {"train": examples}
@@ -171,6 +172,7 @@ class TacLosslessRgbSemanticLabelsTests(unittest.TestCase):
 
             def __call__(self, batch):
                 arr = np.asarray(batch)
+                decoder_batches.append(arr.shape)
                 out = np.zeros((arr.shape[0], 3, 6, 6), dtype=np.float32)
                 for index in range(arr.shape[0]):
                     if int(arr[index].sum()) == 0:
@@ -196,13 +198,14 @@ class TacLosslessRgbSemanticLabelsTests(unittest.TestCase):
                 max_records=2,
                 dataset_loader=fake_dataset_loader,
                 bridge_loader=fake_bridge_loader,
-                batch_size=1,
+                batch_size=8,
                 device="cpu",
             )
 
             payload = json.loads(output_path.read_text())
 
         self.assertEqual(len(bridge_calls), 1)
+        self.assertEqual(decoder_batches, [(2, 8, 16)])
         self.assertEqual(result["command"], "lossless_rgb_labels_sample")
         self.assertEqual(result["record_count"], 2)
         self.assertTrue(result["local_only"])
