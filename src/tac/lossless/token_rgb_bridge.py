@@ -142,6 +142,16 @@ class _OnnxDecoderBridge:
         return np.asarray(outputs[0])
 
 
+def _onnx_decoder_output_is_degenerate(decoder) -> bool:
+    probe_tokens = np.arange(8 * 16, dtype=np.int64).reshape(1, 8, 16)
+    decoded = np.asarray(decoder(probe_tokens), dtype=np.float32)
+    if decoded.size == 0:
+        return True
+    if not np.isfinite(decoded).all():
+        return True
+    return float(np.max(np.abs(decoded))) <= 1e-6
+
+
 def load_official_commavq_onnx_bridge(*, decoder_url: str = OFFICIAL_ONNX_DECODER_URL):
     onnxruntime = _require_onnxruntime()
     decoder_path = ensure_official_decoder_onnx_path(decoder_url=decoder_url)
@@ -206,7 +216,10 @@ def load_official_commavq_bridge(
 ):
     onnx_decoder_url, torch_decoder_url = _resolve_bridge_decoder_urls(decoder_url)
     try:
-        return load_official_commavq_onnx_bridge(decoder_url=onnx_decoder_url)
+        decoder, transpose_and_clip_fn, metadata = load_official_commavq_onnx_bridge(decoder_url=onnx_decoder_url)
+        if _onnx_decoder_output_is_degenerate(decoder):
+            raise RuntimeError("official ONNX commavq decoder produced degenerate all-zero output on probe tokens")
+        return decoder, transpose_and_clip_fn, metadata
     except Exception as exc:
         decoder, transpose_and_clip_fn, metadata = load_official_commavq_torch_bridge(
             device=device,

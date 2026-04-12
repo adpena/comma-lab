@@ -98,6 +98,45 @@ class TacLosslessTokenRgbBridgeTests(unittest.TestCase):
         self.assertEqual(metadata["bridge_backend"], "torch")
         self.assertIn("onnxruntime missing", metadata["bridge_fallback_reason"])
 
+    def test_load_official_commavq_bridge_falls_back_to_torch_when_onnx_decoder_is_degenerate(self) -> None:
+        from tac.lossless import token_rgb_bridge as bridge
+
+        class DegenerateOnnxDecoder:
+            _tac_input_kind = "numpy"
+
+            def __call__(self, batch):
+                arr = np.asarray(batch)
+                return np.zeros((arr.shape[0], 3, 2, 2), dtype=np.float32)
+
+        expected_decoder = object()
+        expected_metadata = {
+            "bridge_backend": "torch",
+            "decoder_artifact_url": bridge.OFFICIAL_TORCH_DECODER_URL,
+        }
+
+        with mock.patch.object(
+            bridge,
+            "load_official_commavq_onnx_bridge",
+            return_value=(DegenerateOnnxDecoder(), bridge.canonical_transpose_and_clip, {"bridge_backend": "onnx"}),
+        ):
+            with mock.patch.object(
+                bridge,
+                "load_official_commavq_torch_bridge",
+                return_value=(expected_decoder, bridge.canonical_transpose_and_clip, expected_metadata),
+            ) as mocked_torch:
+                decoder, transpose_and_clip_fn, metadata = bridge.load_official_commavq_bridge(device="cpu")
+
+        mocked_torch.assert_called_once_with(
+            device="cpu",
+            dtype="auto",
+            commavq_root=None,
+            decoder_url=bridge.OFFICIAL_TORCH_DECODER_URL,
+        )
+        self.assertIs(decoder, expected_decoder)
+        self.assertIs(transpose_and_clip_fn, bridge.canonical_transpose_and_clip)
+        self.assertEqual(metadata["bridge_backend"], "torch")
+        self.assertIn("degenerate", metadata["bridge_fallback_reason"])
+
     def test_resolve_bridge_dtype_name_prefers_float32_for_official_decoder(self) -> None:
         from tac.lossless.token_rgb_bridge import resolve_bridge_dtype_name
 
