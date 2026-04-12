@@ -364,6 +364,109 @@ def yuv420_to_rgb(frame) -> torch.Tensor:
     return torch.stack([r, g, b], dim=-1).round().to(torch.uint8)
 
 
+# ============================================================
+# CPU Eureka #8: Non-local Means Deblocking (zero params, zero archive cost)
+# ============================================================
+INFLATE_DEBLOCK = os.environ.get("INFLATE_DEBLOCK", "0") == "1"
+DEBLOCK_H = int(os.environ.get("INFLATE_DEBLOCK_H", "10"))
+DEBLOCK_TEMPLATE_WINDOW = int(os.environ.get("INFLATE_DEBLOCK_TEMPLATE_WINDOW", "7"))
+DEBLOCK_SEARCH_WINDOW = int(os.environ.get("INFLATE_DEBLOCK_SEARCH_WINDOW", "21"))
+
+
+def deblock_frames(
+    frames_uint8: np.ndarray,
+    h: int = 10,
+    template_window: int = 7,
+    search_window: int = 21,
+) -> np.ndarray:
+    """Apply non-local means denoising to remove H.265 compression artifacts.
+
+    Zero parameters, zero archive cost.  Runs BEFORE the learned postfilter.
+    The postfilter gets cleaner input, needs less capacity, trains faster.
+
+    Non-local means (Buades et al., 2005) averages similar patches across
+    the image, which is ideal for removing block artifacts from H.265/HEVC
+    compression.  The algorithm preserves edges (which SegNet needs) while
+    smoothing block boundaries (which hurt PoseNet).
+
+    Args:
+        frames_uint8: (N, H, W, 3) uint8 numpy array or single (H, W, 3) frame.
+        h: filter strength (higher = more denoising). 10 is good for CRF-34.
+        template_window: size of template patch (must be odd).
+        search_window: size of search area (must be odd).
+
+    Returns:
+        Denoised uint8 numpy array, same shape as input.
+    """
+    try:
+        import cv2
+    except ImportError:
+        # If OpenCV not available, return unchanged (graceful degradation)
+        print("WARNING: cv2 not available, skipping deblock", file=sys.stderr)
+        return frames_uint8
+
+    single_frame = frames_uint8.ndim == 3
+    if single_frame:
+        frames_uint8 = frames_uint8[np.newaxis, ...]
+
+    N = frames_uint8.shape[0]
+    result = np.empty_like(frames_uint8)
+
+    for i in range(N):
+        frame = frames_uint8[i]
+        # cv2.fastNlMeansDenoisingColored works on BGR, so convert
+        # Our frames are RGB, convert to BGR for OpenCV
+        bgr = frame[:, :, ::-1].copy()
+        denoised_bgr = cv2.fastNlMeansDenoisingColored(
+            bgr,
+            None,
+            h,
+            h,  # hForColorComponents (same as h for uniform denoising)
+            template_window,
+            search_window,
+        )
+        # Convert back to RGB
+        result[i] = denoised_bgr[:, :, ::-1].copy()
+
+    if single_frame:
+        return result[0]
+    return result
+
+
+def deblock_tensor(
+    frames: torch.Tensor,
+    h: int = 10,
+    template_window: int = 7,
+    search_window: int = 21,
+) -> torch.Tensor:
+    """Apply non-local means deblocking to a torch tensor.
+
+    Convenience wrapper that converts torch tensor to numpy, applies deblocking,
+    and converts back.
+
+    Args:
+        frames: (B, 3, H, W) float tensor in [0, 255], BCHW format.
+        h: filter strength.
+        template_window: size of template patch.
+        search_window: size of search area.
+
+    Returns:
+        Deblocked (B, 3, H, W) float tensor.
+    """
+    # Convert BCHW float -> BHWC uint8
+    frames_hwc = frames.permute(0, 2, 3, 1).round().clamp(0, 255).to(torch.uint8)
+    frames_np = frames_hwc.cpu().numpy()
+
+    # Apply deblocking
+    deblocked_np = deblock_frames(frames_np, h=h,
+                                   template_window=template_window,
+                                   search_window=search_window)
+
+    # Convert back to BCHW float
+    deblocked = torch.from_numpy(deblocked_np).float().permute(0, 3, 1, 2)
+    return deblocked.to(frames.device)
+
+
 # NOTE: All env vars below are read at module import time (not per-call).
 # This means changing them after import has no effect. This is intentional
 # for the contest submission use case (single process, single config).
@@ -616,6 +719,13 @@ def inflate_with_postfilter(
         if not batch_tensors:
             return
         x = torch.cat(batch_tensors, dim=0).to(device)
+        # CPU Eureka #8: Non-local means deblocking BEFORE postfilter
+        if INFLATE_DEBLOCK:
+            x = deblock_tensor(
+                x, h=DEBLOCK_H,
+                template_window=DEBLOCK_TEMPLATE_WINDOW,
+                search_window=DEBLOCK_SEARCH_WINDOW,
+            )
         with torch.inference_mode():
             out = model(x)
             # Multi-pass: run the CNN again on its own output (deeper effective network)

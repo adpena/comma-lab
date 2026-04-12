@@ -1598,6 +1598,114 @@ DOMAIN_FULL = {
     "turbo_config": {"num_turbo_iterations": 10, "damping_factor": 0.5},
 }
 
+# ── Eureka Constrained Optimization smoke profiles ────────────────────────
+
+COUPLED_TRAJECTORY_SMOKE = {
+    "variant": "constrained_gen",
+    "optimizer": "coupled_trajectory",
+    "hidden": 0,  # no neural weights
+    "epochs": 1,  # single "epoch" = the optimization loop
+    "num_steps": 50,
+    "lr": 0.01,
+    "seg_weight": 100.0,
+    "pose_weight": 10.0,
+    "compress_weight": 1.0,
+    "noise_seed": 42,
+    "loss_mode": "standard",
+}
+
+ALTERNATING_PROJECTIONS_SMOKE = {
+    "variant": "constrained_gen",
+    "optimizer": "alternating_projections",
+    "hidden": 0,
+    "epochs": 1,
+    "num_outer_iterations": 10,
+    "num_inner_steps": 5,
+    "lr": 0.05,
+    "seg_weight": 100.0,
+    "pose_weight": 10.0,
+    "tv_weight": 1.0,
+    "noise_seed": 42,
+    "loss_mode": "standard",
+}
+
+NEWTON_STEP_SMOKE = {
+    "variant": "constrained_gen",
+    "optimizer": "newton_step",
+    "hidden": 0,
+    "epochs": 1,
+    "num_newton_steps": 2,
+    "max_iter_per_step": 5,
+    "lr": 1.0,
+    "history_size": 5,
+    "seg_weight": 100.0,
+    "pose_weight": 10.0,
+    "compress_weight": 1.0,
+    "noise_seed": 42,
+    "loss_mode": "standard",
+}
+
+SHANNON_COMPRESSOR_SMOKE = {
+    "variant": "constrained_gen",
+    "optimizer": "scorer_as_compressor",
+    "hidden": 0,
+    "epochs": 1,
+    "topk": 2,
+    "batch_size": 4,
+    "loss_mode": "standard",
+}
+
+# ── Newton-CG Quadratic Optimizer profiles ──────────────────────────────
+# Geometry deliberation: Newton-CG on the scorer iso-score surface.
+# Uses Pearlmutter's trick for Hessian-vector products, Noether symmetry
+# projection, and trust-region clipping. See tac.research.geometry_deliberation.
+
+NEWTON_QUADRATIC_SMOKE = {
+    "variant": "dilated",
+    "hidden": 64,
+    "kernel": 3,
+    "epochs": 50,
+    "lr": 5e-4,
+    "ema_decay": 0.997,
+    "alpha": 20.0,
+    "sal_lambda": 1.0,
+    "loss_mode": "standard",
+    "eval_every": 10,
+    "accum_steps": 2,
+    # Newton-CG refinement at inflate time
+    "newton_refine": True,
+    "newton_max_steps": 5,
+    "newton_cg_iters": 3,
+    "newton_trust_radius": 0.05,
+    "newton_max_step_norm": 0.5,
+    "newton_top_k_pairs": 10,  # only refine hardest 10 pairs
+}
+
+NEWTON_QUADRATIC_FULL = {
+    "variant": "dilated",
+    "hidden": 64,
+    "kernel": 3,
+    "epochs": 2500,
+    "lr": 5e-4,
+    "ema_decay": 0.997,
+    "alpha": 20.0,
+    "sal_lambda": 1.0,
+    "loss_mode": "standard",
+    "boundary_weight": 5.0,
+    "hard_frame_ratio": 0.3,
+    "error_replay_every": 200,
+    "eval_every": 5,
+    "accum_steps": 4,
+    "use_swa": True,
+    # Newton-CG refinement at inflate time
+    "newton_refine": True,
+    "newton_max_steps": 10,
+    "newton_cg_iters": 5,
+    "newton_trust_radius": 0.05,
+    "newton_max_step_norm": 0.5,
+    "newton_top_k_pairs": 60,  # refine top 10% of 600 pairs
+}
+
 PROFILES = {
     "council_v1": COUNCIL_V1,
     "council_v2_adaptive": COUNCIL_V2_ADAPTIVE,
@@ -1701,6 +1809,14 @@ PROFILES = {
     "domain_driving": DOMAIN_DRIVING,
     "domain_signal": DOMAIN_SIGNAL,
     "domain_full": DOMAIN_FULL,
+    # Eureka constrained optimization profiles
+    "coupled_trajectory_smoke": COUPLED_TRAJECTORY_SMOKE,
+    "alternating_projections_smoke": ALTERNATING_PROJECTIONS_SMOKE,
+    "newton_step_smoke": NEWTON_STEP_SMOKE,
+    "shannon_compressor_smoke": SHANNON_COMPRESSOR_SMOKE,
+    # Newton-CG quadratic optimizer (geometry deliberation)
+    "newton_quadratic_smoke": NEWTON_QUADRATIC_SMOKE,
+    "newton_quadratic_full": NEWTON_QUADRATIC_FULL,
 }
 
 # Deprecated profile names that should emit runtime warnings

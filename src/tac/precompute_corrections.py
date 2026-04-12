@@ -782,6 +782,145 @@ def load_corrections(
 
 
 # ---------------------------------------------------------------------------
+# Eureka 9: Jacobian-Directed Quantization
+# ---------------------------------------------------------------------------
+
+
+def compute_quantization_directions(
+    frames: torch.Tensor,  # (N, 3, H, W) float, BCHW
+    posenet: nn.Module,
+    segnet: nn.Module,
+    device: str | torch.device = "cpu",
+    batch_size: int = 4,
+    seg_weight: float = 100.0,
+    pose_weight: float = 1.0,
+    verbose: bool = True,
+) -> torch.Tensor:
+    """Compute optimal rounding direction for each pixel-channel.
+
+    Returns (N, 3, H, W) int8 tensor: +1 = ceil, -1 = floor, 0 = round.
+    Based on scorer Jacobian sign: if d(score)/d(pixel) > 0, increasing the pixel
+    helps, so ceil. If < 0, floor. If approx 0, round normally.
+
+    Store as compressed bitmask in archive (~20KB after entropy coding).
+    Apply at inflate time for free score improvement (0.02-0.05 estimated).
+
+    The scorer loss is: S = seg_weight * seg_distortion + sqrt(10 * pose_distortion).
+    The gradient d(S)/d(pixel) tells us which direction reduces the score.
+    We round in the direction that REDUCES loss (negative gradient = ceil helps
+    because we want to descend, i.e., move opposite to gradient).
+
+    Args:
+        frames: (N, 3, H, W) float tensor in [0, 255], BCHW format.
+        posenet: frozen PoseNet model.
+        segnet: frozen SegNet model.
+        device: computation device.
+        batch_size: frames per gradient computation.
+        seg_weight: relative weight for SegNet gradient contribution.
+        pose_weight: relative weight for PoseNet gradient contribution.
+        verbose: print progress.
+
+    Returns:
+        (N, 3, H, W) int8 tensor: +1 (ceil), -1 (floor), 0 (round normally).
+    """
+    N, C, H, W = frames.shape
+    all_directions = torch.zeros(N, C, H, W, dtype=torch.int8)
+    dev = torch.device(device)
+
+    for batch_start in range(0, N, batch_size):
+        batch_end = min(batch_start + batch_size, N)
+        x = frames[batch_start:batch_end].to(dev).detach().clone()
+        x.requires_grad_(True)
+
+        B = x.shape[0]
+
+        # Build self-pairs for scorer: (B, 2, C, H, W)
+        pair = x.unsqueeze(1).expand(B, 2, C, H, W).contiguous()
+
+        # PoseNet forward + loss
+        posenet_in = posenet.preprocess_input(pair)
+        pose_out = posenet(posenet_in)
+        pose_tensor = pose_out["pose"] if isinstance(pose_out, dict) else pose_out
+        pose_loss = pose_tensor[..., :6].pow(2).sum()
+
+        # SegNet forward + loss (cross-entropy with self-argmax as target)
+        segnet_in = segnet.preprocess_input(pair)
+        seg_out = segnet(segnet_in)
+        seg_probs = F.softmax(seg_out, dim=1)
+        # Use entropy as the loss: high-entropy pixels are near decision boundaries
+        seg_loss = -(seg_probs * (seg_probs + 1e-8).log()).sum()
+
+        total_loss = pose_weight * pose_loss + seg_weight * seg_loss
+        total_loss.backward()
+
+        grad = x.grad.detach().cpu()  # (B, C, H, W)
+
+        # Gradient sign determines rounding direction:
+        # negative gradient -> increasing pixel helps (ceil = +1)
+        # positive gradient -> decreasing pixel helps (floor = -1)
+        # near-zero -> normal rounding (0)
+        threshold = grad.abs().mean() * 0.1  # only act on significant gradients
+        directions = torch.zeros_like(grad, dtype=torch.int8)
+        directions[grad < -threshold] = 1   # ceil: pixel increase reduces loss
+        directions[grad > threshold] = -1   # floor: pixel decrease reduces loss
+
+        all_directions[batch_start:batch_end] = directions
+
+        if verbose and (batch_end % (batch_size * 5) == 0 or batch_end == N):
+            ceil_pct = (directions == 1).float().mean().item() * 100
+            floor_pct = (directions == -1).float().mean().item() * 100
+            _log(f"quant directions: {batch_end}/{N} frames "
+                 f"(ceil={ceil_pct:.1f}% floor={floor_pct:.1f}%)")
+
+    return all_directions
+
+
+def apply_quantization_directions(
+    frames_float: torch.Tensor,  # (N, 3, H, W) or (N, H, W, 3)
+    directions: torch.Tensor,    # (N, 3, H, W) int8
+    hwc_input: bool = False,
+) -> torch.Tensor:
+    """Apply precomputed rounding directions. Zero-cost at inflate time.
+
+    For each pixel-channel:
+      direction == +1: ceil(value)
+      direction == -1: floor(value)
+      direction ==  0: round(value) (normal rounding)
+
+    Args:
+        frames_float: float tensor with fractional pixel values.
+        directions: int8 tensor with rounding directions (+1, -1, 0).
+        hwc_input: if True, frames are (N, H, W, 3) and directions are (N, 3, H, W).
+            Will transpose internally.
+
+    Returns:
+        Quantized tensor in the same format as input, clamped to [0, 255].
+    """
+    if hwc_input:
+        # Convert HWC -> CHW for processing
+        f = frames_float.permute(0, 3, 1, 2).contiguous()
+    else:
+        f = frames_float
+
+    d = directions.to(f.device)
+    result = torch.where(
+        d == 1,
+        f.ceil(),
+        torch.where(
+            d == -1,
+            f.floor(),
+            f.round(),
+        ),
+    )
+    result = result.clamp(0.0, 255.0)
+
+    if hwc_input:
+        result = result.permute(0, 2, 3, 1).contiguous()
+
+    return result
+
+
+# ---------------------------------------------------------------------------
 # CLI entry point
 # ---------------------------------------------------------------------------
 

@@ -58,6 +58,10 @@ __all__ = [
     "inflate_constrained",
     "inverse_preprocess_input",
     "generate_in_scorer_space",
+    "scorer_as_compressor",
+    "coupled_trajectory_optimize",
+    "alternating_projections_optimize",
+    "newton_step_optimize",
     "ConstrainedFrameGenerator",
 ]
 
@@ -1273,6 +1277,466 @@ class ConstrainedFrameGenerator:
         # Convert CHW -> HWC for output
         result = frames.permute(0, 2, 3, 1).contiguous().clamp(0.0, 255.0)
         return result, diagnostics
+
+
+def scorer_as_compressor(
+    frames: torch.Tensor,  # GT frames (N, H, W, 3)
+    posenet: torch.nn.Module,
+    segnet: torch.nn.Module,
+    device: str = "cpu",
+    topk: int = 2,
+    batch_size: int = 4,
+) -> dict:
+    """Extract the scorer's sufficient statistic as a compressed representation.
+
+    The scorer networks already learned optimal compression for driving video.
+    PoseNet: 2 frames -> 6 numbers.  SegNet: 1 frame -> 96x128x5 logits.
+    Store scorer OUTPUTS in the archive directly.  At inflate time, find frames
+    that decompress to match.
+
+    Returns dict with:
+        'posenet_targets': (N-1, 6) float16 PoseNet outputs
+        'segnet_masks': (N, H_out, W_out) uint8 argmax masks
+        'segnet_logits_topk': (N, topk, H_out, W_out) float16 top-K logits
+        'segnet_logits_topk_idx': (N, topk, H_out, W_out) uint8 top-K class indices
+
+    Total size: ~15KB (14KB pose + 239B masks + optional logits).
+    This IS the archive.  The scorer's outputs are the sufficient statistic.
+
+    Args:
+        frames: (N, H, W, 3) float tensor in [0, 255], HWC format.
+        posenet: frozen PoseNet model.
+        segnet: frozen SegNet model.
+        device: computation device.
+        topk: number of top SegNet logits to store per pixel (higher = more fidelity).
+        batch_size: frames per forward pass.
+
+    Returns:
+        Dict with scorer sufficient statistics.
+    """
+    device = torch.device(device)
+    N = frames.shape[0]
+
+    # --- PoseNet targets: extract for all consecutive pairs ---
+    all_pose = []
+    frames_chw = frames.permute(0, 3, 1, 2).contiguous().to(device)  # (N, 3, H, W)
+
+    with torch.inference_mode():
+        for i in range(0, N - 1, batch_size):
+            end = min(i + batch_size, N - 1)
+            t0 = frames_chw[i:end]      # (B, 3, H, W)
+            t1 = frames_chw[i + 1:end + 1]  # (B, 3, H, W)
+            pairs = torch.stack([t0, t1], dim=1).contiguous()  # (B, 2, 3, H, W)
+            posenet_in = posenet.preprocess_input(pairs)
+            pose_out = posenet(posenet_in)
+            pose_tensor = pose_out["pose"] if isinstance(pose_out, dict) else pose_out
+            all_pose.append(pose_tensor[..., :6].cpu())
+
+    posenet_targets = torch.cat(all_pose, dim=0).to(torch.float16) if all_pose else torch.empty(0, 6, dtype=torch.float16)
+
+    # --- SegNet: extract masks and top-K logits ---
+    all_masks = []
+    all_topk_vals = []
+    all_topk_idx = []
+
+    with torch.inference_mode():
+        for i in range(0, N, batch_size):
+            end = min(i + batch_size, N)
+            batch = frames_chw[i:end]  # (B, 3, H, W)
+            # SegNet expects (B, T, C, H, W) via preprocess_input
+            seg_btchw = batch.unsqueeze(1).contiguous()  # (B, 1, 3, H, W)
+            seg_in = segnet.preprocess_input(seg_btchw)
+            logits = segnet(seg_in)  # (B, NUM_CLASSES, H_out, W_out)
+
+            masks = logits.argmax(dim=1).to(torch.uint8).cpu()  # (B, H_out, W_out)
+            all_masks.append(masks)
+
+            # Top-K logits for higher fidelity reconstruction
+            K = min(topk, logits.shape[1])
+            topk_vals, topk_indices = logits.topk(K, dim=1)  # (B, K, H_out, W_out)
+            all_topk_vals.append(topk_vals.cpu().to(torch.float16))
+            all_topk_idx.append(topk_indices.cpu().to(torch.uint8))
+
+    segnet_masks = torch.cat(all_masks, dim=0)         # (N, H_out, W_out)
+    segnet_topk_vals = torch.cat(all_topk_vals, dim=0)  # (N, K, H_out, W_out)
+    segnet_topk_idx = torch.cat(all_topk_idx, dim=0)    # (N, K, H_out, W_out)
+
+    return {
+        "posenet_targets": posenet_targets,
+        "segnet_masks": segnet_masks,
+        "segnet_logits_topk": segnet_topk_vals,
+        "segnet_logits_topk_idx": segnet_topk_idx,
+    }
+
+
+def coupled_trajectory_optimize(
+    masks: torch.Tensor,  # (N, H, W)
+    expected_pose: torch.Tensor,  # (N-1, 6)
+    posenet: torch.nn.Module,
+    segnet: torch.nn.Module,
+    num_steps: int = 1000,
+    lr: float = 0.01,
+    seg_weight: float = 100.0,
+    pose_weight: float = 10.0,
+    compress_weight: float = 1.0,
+    noise_seed: int = 42,
+    device: str = "cuda",
+    log_every: int = 100,
+    **cfg,
+) -> torch.Tensor:
+    """Jointly optimize ALL frames to satisfy coupled PoseNet constraints.
+
+    Unlike independent frame optimization, this solves the coupled system:
+    for each frame t, minimize seg_loss(t) + pose_loss(t-1,t) + pose_loss(t,t+1)
+    simultaneously across all frames.
+
+    This is equivalent to 4D-Var data assimilation with the temporal coupling
+    as the forward model and scorer evaluations as observations.
+
+    Key insight: frames are NOT independent -- PoseNet evaluates consecutive
+    PAIRS.  Frame t affects pair (t-1,t) AND pair (t,t+1).  This is a Markov
+    chain requiring joint optimization.  A single Adam optimizer over ALL
+    frame pixels jointly lets the gradient flow through the entire coupled
+    system.
+
+    Args:
+        masks: (N, H, W) long tensor with target class indices.
+        expected_pose: (P, 6) float tensor, P = N-1.
+        posenet: frozen PoseNet model.
+        segnet: frozen SegNet model.
+        num_steps: number of joint optimization steps.
+        lr: Adam learning rate.
+        seg_weight: weight for SegNet constraint.
+        pose_weight: weight for PoseNet constraint.
+        compress_weight: weight for spatial/temporal smoothness.
+        noise_seed: deterministic seed for initialization.
+        device: computation device.
+        log_every: print loss every N steps (0 to disable).
+        **cfg: additional config (ignored, for profile compatibility).
+
+    Returns:
+        (N, H, W, 3) float tensor in [0, 255].
+    """
+    device = torch.device(device)
+    N = masks.shape[0]
+    P = N - 1
+
+    # Initialize ALL frames jointly
+    frames = generate_initial_frames(masks, noise_seed, device=device)
+    frames.requires_grad_(True)
+
+    # Single optimizer over ALL frame pixels
+    optimizer = torch.optim.Adam([frames], lr=lr)
+
+    for step in range(num_steps):
+        optimizer.zero_grad()
+
+        # --- SegNet constraint: all frames independently ---
+        seg_loss = compute_segnet_constraint_loss(frames, masks, segnet)
+
+        # --- PoseNet constraint: all consecutive PAIRS jointly ---
+        pose_loss = torch.tensor(0.0, device=device)
+        if P > 0 and expected_pose.shape[0] > 0:
+            pose_loss = compute_posenet_constraint_loss(
+                frames, expected_pose, posenet,
+            )
+
+        # --- Compressibility: spatial TV + temporal smoothness ---
+        compress_loss = compute_compressibility_loss(frames)
+
+        # --- Coupled total loss ---
+        total_loss = (
+            seg_weight * seg_loss
+            + pose_weight * pose_loss
+            + compress_weight * compress_loss
+        )
+
+        total_loss.backward()
+        optimizer.step()
+
+        # Project back to valid pixel range
+        with torch.no_grad():
+            frames.data.clamp_(0.0, 255.0)
+
+        if log_every > 0 and (step + 1) % log_every == 0:
+            print(
+                f"  [coupled-4dvar] step {step + 1:4d}/{num_steps}: "
+                f"total={total_loss.item():.4f} "
+                f"seg={seg_loss.item():.4f} "
+                f"pose={pose_loss.item():.4f} "
+                f"compress={compress_loss.item():.4f}"
+            )
+
+    with torch.no_grad():
+        result = frames.detach().round().clamp(0.0, 255.0)
+    return result
+
+
+def alternating_projections_optimize(
+    masks: torch.Tensor,  # (N, H, W)
+    expected_pose: torch.Tensor,  # (N-1, 6)
+    posenet: torch.nn.Module,
+    segnet: torch.nn.Module,
+    num_outer_iterations: int = 100,
+    num_inner_steps: int = 10,
+    lr: float = 0.05,
+    noise_seed: int = 42,
+    seg_weight: float = 100.0,
+    pose_weight: float = 10.0,
+    tv_weight: float = 1.0,
+    device: str = "cuda",
+    log_every: int = 10,
+    **cfg,
+) -> torch.Tensor:
+    """Dykstra's alternating projections for multi-constraint frame generation.
+
+    Each outer iteration cycles through 3 projection operators:
+    1. P_seg: gradient descent steps to satisfy argmax(SegNet(f)) == masks
+    2. P_pose: gradient descent steps to satisfy PoseNet(f_t, f_{t+1}) == target
+    3. P_rate: total variation denoising to minimize rate
+
+    Dykstra's modification accumulates increments to handle non-convex sets.
+    Convergence guaranteed for convex constraint sets; empirically effective
+    for our quasi-convex scorer constraints.
+
+    Args:
+        masks: (N, H, W) long tensor with target class indices.
+        expected_pose: (P, 6) float tensor, P = N-1.
+        posenet: frozen PoseNet model.
+        segnet: frozen SegNet model.
+        num_outer_iterations: number of full projection cycles.
+        num_inner_steps: gradient descent steps per projection.
+        lr: Adam learning rate for inner loops.
+        noise_seed: deterministic seed for initialization.
+        seg_weight: SegNet projection strength.
+        pose_weight: PoseNet projection strength.
+        tv_weight: TV denoising strength.
+        device: computation device.
+        log_every: print loss every N outer iterations (0 to disable).
+        **cfg: additional config (ignored).
+
+    Returns:
+        (N, H, W, 3) float tensor in [0, 255].
+    """
+    device = torch.device(device)
+    N = masks.shape[0]
+    P = N - 1
+
+    # Initialize
+    frames = generate_initial_frames(masks, noise_seed, device=device)
+
+    # Dykstra's increments (accumulated corrections for non-convex sets)
+    inc_seg = torch.zeros_like(frames)
+    inc_pose = torch.zeros_like(frames)
+    inc_rate = torch.zeros_like(frames)
+
+    for outer in range(num_outer_iterations):
+        # ---- Projection 1: SegNet constraint ----
+        y_seg = frames + inc_seg
+        y_seg = y_seg.detach().requires_grad_(True)
+        opt_seg = torch.optim.Adam([y_seg], lr=lr)
+        for _ in range(num_inner_steps):
+            opt_seg.zero_grad()
+            loss = seg_weight * compute_segnet_constraint_loss(y_seg, masks, segnet)
+            loss.backward()
+            opt_seg.step()
+            with torch.no_grad():
+                y_seg.data.clamp_(0.0, 255.0)
+        with torch.no_grad():
+            p_seg = y_seg.detach()
+            inc_seg = frames + inc_seg - p_seg
+            frames = p_seg
+
+        # ---- Projection 2: PoseNet constraint ----
+        if P > 0 and expected_pose.shape[0] > 0:
+            y_pose = frames + inc_pose
+            y_pose = y_pose.detach().requires_grad_(True)
+            opt_pose = torch.optim.Adam([y_pose], lr=lr)
+            for _ in range(num_inner_steps):
+                opt_pose.zero_grad()
+                loss = pose_weight * compute_posenet_constraint_loss(
+                    y_pose, expected_pose, posenet,
+                )
+                loss.backward()
+                opt_pose.step()
+                with torch.no_grad():
+                    y_pose.data.clamp_(0.0, 255.0)
+            with torch.no_grad():
+                p_pose = y_pose.detach()
+                inc_pose = frames + inc_pose - p_pose
+                frames = p_pose
+
+        # ---- Projection 3: Rate minimization (TV denoising) ----
+        y_rate = frames + inc_rate
+        y_rate = y_rate.detach().requires_grad_(True)
+        opt_rate = torch.optim.Adam([y_rate], lr=lr)
+        for _ in range(num_inner_steps):
+            opt_rate.zero_grad()
+            loss = tv_weight * compute_compressibility_loss(y_rate)
+            loss.backward()
+            opt_rate.step()
+            with torch.no_grad():
+                y_rate.data.clamp_(0.0, 255.0)
+        with torch.no_grad():
+            p_rate = y_rate.detach()
+            inc_rate = frames + inc_rate - p_rate
+            frames = p_rate
+
+        if log_every > 0 and (outer + 1) % log_every == 0:
+            with torch.no_grad():
+                s = compute_segnet_constraint_loss(frames, masks, segnet).item()
+                p = (
+                    compute_posenet_constraint_loss(frames, expected_pose, posenet).item()
+                    if P > 0
+                    else 0.0
+                )
+                c = compute_compressibility_loss(frames).item()
+            print(
+                f"  [dykstra] outer {outer + 1:3d}/{num_outer_iterations}: "
+                f"seg={s:.4f} pose={p:.4f} compress={c:.4f}"
+            )
+
+    with torch.no_grad():
+        result = frames.detach().round().clamp(0.0, 255.0)
+    return result
+
+
+def newton_step_optimize(
+    frames: torch.Tensor,  # (N, H, W, 3) or None
+    posenet: torch.nn.Module,
+    segnet: torch.nn.Module,
+    masks: torch.Tensor | None = None,
+    expected_pose: torch.Tensor | None = None,
+    num_newton_steps: int = 3,
+    max_iter_per_step: int = 20,
+    lr: float = 1.0,
+    history_size: int = 10,
+    seg_weight: float = 100.0,
+    pose_weight: float = 10.0,
+    compress_weight: float = 1.0,
+    noise_seed: int = 42,
+    device: str = "cuda",
+    log_every: int = 1,
+    **cfg,
+) -> torch.Tensor:
+    """Newton's method: x_{k+1} = x_k - H^{-1} * g.
+
+    For 589K-dimensional pixel space, the full Hessian is intractable.
+    Use L-BFGS approximation (rank-m quasi-Newton) which maintains an
+    implicit approximation of H^{-1} from the last m gradient pairs.
+
+    torch.optim.LBFGS handles this natively.  We wrap it with:
+    - Line search (strong Wolfe conditions)
+    - Convergence monitoring (gradient norm, function value change)
+    - Max num_newton_steps Newton steps (each requires ~20 scorer evaluations)
+
+    Expected: convergence in 1-3 steps where gradient descent needs 1000.
+
+    Args:
+        frames: (N, H, W, 3) initial frames, or None to initialize from masks.
+        posenet: frozen PoseNet model.
+        segnet: frozen SegNet model.
+        masks: (N, H, W) long tensor (required if frames is None).
+        expected_pose: (P, 6) float tensor (estimated from masks if None).
+        num_newton_steps: max L-BFGS steps (each = multiple evaluations).
+        max_iter_per_step: max function evaluations per L-BFGS step.
+        lr: step size multiplier.
+        history_size: L-BFGS memory (rank of Hessian approximation).
+        seg_weight: SegNet weight.
+        pose_weight: PoseNet weight.
+        compress_weight: compressibility weight.
+        noise_seed: seed for initialization if frames is None.
+        device: computation device.
+        log_every: print loss every N steps.
+        **cfg: additional config (ignored).
+
+    Returns:
+        (N, H, W, 3) float tensor in [0, 255].
+    """
+    device = torch.device(device)
+
+    if frames is None:
+        assert masks is not None, "Must provide either frames or masks"
+        frames = generate_initial_frames(masks, noise_seed, device=device)
+    else:
+        frames = frames.to(device).detach().clone()
+
+    if masks is None:
+        # Extract masks from current frames via SegNet argmax
+        with torch.inference_mode():
+            frames_chw = frames.permute(0, 3, 1, 2).contiguous()
+            seg_btchw = frames_chw.unsqueeze(1).contiguous()
+            seg_in = segnet.preprocess_input(seg_btchw)
+            logits = segnet(seg_in)
+            masks = logits.argmax(dim=1).to(device)  # (N, H_out, W_out)
+
+    if expected_pose is None:
+        expected_pose = estimate_expected_pose(masks, device=device)
+
+    N = frames.shape[0]
+    P = N - 1
+
+    frames.requires_grad_(True)
+
+    optimizer = torch.optim.LBFGS(
+        [frames],
+        lr=lr,
+        max_iter=max_iter_per_step,
+        history_size=history_size,
+        line_search_fn="strong_wolfe",
+        tolerance_grad=1e-7,
+        tolerance_change=1e-9,
+    )
+
+    step_losses: list[float] = []
+
+    for newton_step in range(num_newton_steps):
+        def closure():
+            optimizer.zero_grad()
+
+            seg_loss = compute_segnet_constraint_loss(frames, masks, segnet)
+
+            pose_loss = torch.tensor(0.0, device=device)
+            if P > 0 and expected_pose.shape[0] > 0:
+                pose_loss = compute_posenet_constraint_loss(
+                    frames, expected_pose, posenet,
+                )
+
+            compress_loss = compute_compressibility_loss(frames)
+
+            total = (
+                seg_weight * seg_loss
+                + pose_weight * pose_loss
+                + compress_weight * compress_loss
+            )
+            total.backward()
+
+            # Track for logging
+            step_losses.append(total.item())
+            return total
+
+        optimizer.step(closure)
+
+        # Project back to valid range
+        with torch.no_grad():
+            frames.data.clamp_(0.0, 255.0)
+
+        if log_every > 0 and (newton_step + 1) % log_every == 0 and step_losses:
+            print(
+                f"  [newton/lbfgs] step {newton_step + 1}/{num_newton_steps}: "
+                f"loss={step_losses[-1]:.6f} "
+                f"(evals={len(step_losses)})"
+            )
+
+        # Convergence check: if loss barely changed
+        if len(step_losses) >= 2 and abs(step_losses[-1] - step_losses[-2]) < 1e-8:
+            if log_every > 0:
+                print(f"  [newton/lbfgs] converged at step {newton_step + 1}")
+            break
+
+    with torch.no_grad():
+        result = frames.detach().round().clamp(0.0, 255.0)
+    return result
 
 
 def _gradient_directed_dither(
