@@ -404,12 +404,18 @@ class MotionPredictor(nn.Module):
         output_channels: int = 2,
         use_coord_grid: bool = True,
         use_diff_features: bool = True,
+        max_flow_px: float = 12.0,
+        max_residual: float = 20.0,
+        flow_only: bool = False,
     ):
         super().__init__()
         self.num_classes = num_classes
         self.output_channels = output_channels
         self.use_coord_grid = use_coord_grid
         self.use_diff_features = use_diff_features
+        self.max_flow_px = max_flow_px
+        self.max_residual = max_residual
+        self.flow_only = flow_only
         # Accepts external embedding for weight sharing with MaskRenderer
         self.embedding = embedding if embedding is not None else nn.Embedding(num_classes, embed_dim)
 
@@ -471,9 +477,14 @@ class MotionPredictor(nn.Module):
             return raw * 0.1
         else:
             # Asymmetric mode: flow(2) + gate(1) + residual(3)
-            flow = raw[:, :2].tanh() * (12.0 / max(mask_t.shape[-2], mask_t.shape[-1]) * 2)
-            gate = raw[:, 2:3].sigmoid()
-            residual = raw[:, 3:6].tanh() * 20.0
+            flow = raw[:, :2].tanh() * (self.max_flow_px / max(mask_t.shape[-2], mask_t.shape[-1]) * 2)
+            if self.flow_only:
+                # Optimization #15: flow only, no gate/residual (deferred, gated)
+                gate = torch.zeros_like(raw[:, 2:3])
+                residual = torch.zeros_like(raw[:, 3:6])
+            else:
+                gate = raw[:, 2:3].sigmoid()
+                residual = raw[:, 3:6].tanh() * self.max_residual
             return torch.cat([flow, gate, residual], dim=1)
 
     def param_count(self) -> int:
@@ -762,6 +773,9 @@ class AsymmetricPairGenerator(nn.Module):
         mid_ch: int = 60,
         motion_hidden: int = 32,
         depth: int = 1,
+        max_flow_px: float = 12.0,
+        max_residual: float = 20.0,
+        flow_only: bool = False,
     ):
         super().__init__()
         # Shared embedding between renderer and motion predictor
@@ -782,6 +796,9 @@ class AsymmetricPairGenerator(nn.Module):
             output_channels=6,  # flow(2) + gate(1) + residual(3)
             use_coord_grid=True,
             use_diff_features=True,
+            max_flow_px=max_flow_px,
+            max_residual=max_residual,
+            flow_only=flow_only,
         )
 
     def forward(

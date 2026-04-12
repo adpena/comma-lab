@@ -737,6 +737,12 @@ def _full_eval(
     ORIGINAL_UNCOMPRESSED_SIZE = 37_545_489  # bytes (0.mkv on disk)
     rate = model_bytes / ORIGINAL_UNCOMPRESSED_SIZE
 
+    # Contest compliance: archive must be < 10MB
+    ARCHIVE_MAX_BYTES = 10 * 1024 * 1024  # 10MB
+    if model_bytes > ARCHIVE_MAX_BYTES:
+        print(f"  WARNING: model_bytes={model_bytes / 1024:.0f}KB exceeds "
+              f"contest limit of {ARCHIVE_MAX_BYTES / 1024 / 1024:.0f}MB")
+
     from tac.scorer import comma_score
     score = comma_score(avg_pose, avg_seg, rate)
 
@@ -1483,6 +1489,32 @@ def train_fridrich_renderer(cfg: FridrichRendererConfig) -> dict[str, Any]:
 @click.option("--mid-ch", type=int, default=60, help="Asymmetric warp: mid channel width")
 @click.option("--motion-hidden", type=int, default=32, help="Asymmetric warp: motion predictor hidden dim")
 @click.option("--renderer-depth", type=int, default=1, help="Asymmetric warp: renderer depth")
+@click.option("--init-bits", type=float, default=8.0, help="Initial bit depth for self-compression")
+@click.option("--phase1-end", type=float, default=0.20, help="Phase 1 end (fraction of epochs)")
+@click.option("--phase2-end", type=float, default=0.60, help="Phase 2 end (fraction of epochs)")
+@click.option("--early-stop-patience", type=int, default=500, help="Early stop if constraints met for N epochs")
+@click.option("--init-h", type=int, default=24, help="DP-SIMS initial height")
+@click.option("--init-w", type=int, default=32, help="DP-SIMS initial width")
+@click.option("--num-classes", type=int, default=5, help="Number of segmentation classes")
+@click.option("--use-noise", is_flag=True, help="DP-SIMS: add noise input")
+@click.option("--target-h", type=int, default=384, help="Scorer target height")
+@click.option("--target-w", type=int, default=512, help="Scorer target width")
+@click.option("--lr-min-ratio", type=float, default=0.01, help="Cosine LR min ratio")
+@click.option("--grad-clip", type=float, default=1.0, help="Gradient clipping max norm")
+@click.option("--p1-mse-weight", type=float, default=1.0, help="Phase 1 MSE weight")
+@click.option("--p1-seg-weight", type=float, default=10.0, help="Phase 1 SegNet weight")
+@click.option("--p1-pose-weight", type=float, default=1.0, help="Phase 1 PoseNet weight")
+@click.option("--rho-max", type=float, default=1e4, help="Maximum rho (penalty cap)")
+@click.option("--lambda-cap", type=float, default=1e6, help="Lagrangian multiplier cap")
+@click.option("--max-flow-px", type=float, default=12.0, help="Max optical flow in pixels (asymmetric mode)")
+@click.option("--max-residual", type=float, default=20.0, help="Max residual magnitude (asymmetric mode)")
+@click.option("--seg-temperature-start", type=float, default=1.0, help="Phase 2 SegNet temperature start")
+@click.option("--seg-temperature-end", type=float, default=0.1, help="Phase 2 SegNet temperature end")
+@click.option("--use-margin-segnet", is_flag=True, help="Opt #13: margin-based SegNet loss")
+@click.option("--segnet-margin-threshold", type=float, default=0.1, help="Margin threshold for margin-based SegNet")
+@click.option("--use-null-space", is_flag=True, help="Opt #6: null-space gradient projection")
+@click.option("--share-stem", is_flag=True, help="Opt #12: shared stem (deferred, gated)")
+@click.option("--flow-only", is_flag=True, help="Opt #15: flow only, no gate/residual (deferred, gated)")
 def main(
     precomputed, epochs, batch_size, lr, channels, spade_hidden,
     seg_boundary, pose_boundary, rho_init, rho_growth,
@@ -1490,6 +1522,13 @@ def main(
     device, seed, checkpoint_every, eval_every, log_every,
     smoke, resume, max_hours, phase2_mse_weight,
     pair_mode, embed_dim, base_ch, mid_ch, motion_hidden, renderer_depth,
+    init_bits, phase1_end, phase2_end, early_stop_patience,
+    init_h, init_w, num_classes, use_noise, target_h, target_w,
+    lr_min_ratio, grad_clip,
+    p1_mse_weight, p1_seg_weight, p1_pose_weight, rho_max, lambda_cap,
+    max_flow_px, max_residual, seg_temperature_start, seg_temperature_end,
+    use_margin_segnet, segnet_margin_threshold, use_null_space,
+    share_stem, flow_only,
 ):
     """Train DP-SIMS renderer with Fridrich constrained optimization."""
 
@@ -1525,6 +1564,32 @@ def main(
         mid_ch=mid_ch,
         motion_hidden=motion_hidden,
         renderer_depth=renderer_depth,
+        init_bits=init_bits,
+        phase1_end=phase1_end,
+        phase2_end=phase2_end,
+        early_stop_patience=early_stop_patience,
+        init_h=init_h,
+        init_w=init_w,
+        num_classes=num_classes,
+        use_noise=use_noise,
+        target_h=target_h,
+        target_w=target_w,
+        lr_min_ratio=lr_min_ratio,
+        grad_clip=grad_clip,
+        p1_mse_weight=p1_mse_weight,
+        p1_seg_weight=p1_seg_weight,
+        p1_pose_weight=p1_pose_weight,
+        rho_max=rho_max,
+        lambda_cap=lambda_cap,
+        max_flow_px=max_flow_px,
+        max_residual=max_residual,
+        seg_temperature_start=seg_temperature_start,
+        seg_temperature_end=seg_temperature_end,
+        use_margin_segnet=use_margin_segnet,
+        segnet_margin_threshold=segnet_margin_threshold,
+        use_null_space=use_null_space,
+        share_stem=share_stem,
+        flow_only=flow_only,
     )
 
     # Set precomputed dir env var for the training function
