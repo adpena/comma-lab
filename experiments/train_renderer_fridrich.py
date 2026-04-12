@@ -293,16 +293,22 @@ def _tv_loss(frames: torch.Tensor) -> torch.Tensor:
 def _compute_model_bits(model: nn.Module) -> torch.Tensor:
     """Compute total model size in bits (differentiable via LearnableBitDepth).
 
-    For each Conv2d with LearnableBitDepth: bits = sum(bits_per_channel * fan_in)
-    where fan_in = C_in * kH * kW. This correctly accounts for the actual
-    number of weights per channel, not just the number of channels.
+    Handles both Conv2d and ConvTranspose2d (council decision: include both).
+    Conv2d weight: (C_out, C_in, kH, kW), fan_in = C_in * kH * kW
+    ConvTranspose2d weight: (C_in, C_out, kH, kW), fan_in = C_in * kH * kW
+      (per output-channel, each slice is weight[:, ch_idx] with C_in*kH*kW elements)
     """
     total = torch.tensor(0.0, device=next(model.parameters()).device)
     has_learnable_bits = False
     for m in model.modules():
-        if isinstance(m, nn.Conv2d) and hasattr(m, "bit_depth"):
+        if isinstance(m, (nn.Conv2d, nn.ConvTranspose2d)) and hasattr(m, "bit_depth"):
             bits_per_ch = m.bit_depth.bits.clamp(0.0, 8.0)
-            fan_in = m.weight.shape[1] * m.weight.shape[2] * m.weight.shape[3]
+            if isinstance(m, nn.ConvTranspose2d):
+                # (C_in, C_out, kH, kW): per output-channel fan_in = C_in * kH * kW
+                fan_in = m.weight.shape[0] * m.weight.shape[2] * m.weight.shape[3]
+            else:
+                # (C_out, C_in, kH, kW): per output-channel fan_in = C_in * kH * kW
+                fan_in = m.weight.shape[1] * m.weight.shape[2] * m.weight.shape[3]
             total = total + (bits_per_ch * fan_in).sum()
             if m.bias is not None:
                 total = total + bits_per_ch.sum()  # 1 bias value per channel
@@ -315,34 +321,58 @@ def _compute_model_bits(model: nn.Module) -> torch.Tensor:
 
 
 def _wrap_with_learnable_bits(model: nn.Module, init_bits: float = 8.0) -> list[nn.Module]:
-    """Wrap Conv2d layers in the renderer with LearnableBitDepth for self-compression.
+    """Wrap Conv2d AND ConvTranspose2d layers with LearnableBitDepth for self-compression.
 
+    Council decision: include ConvTranspose2d (7-20% of params, material for rate).
     Returns list of LearnableBitDepth modules (for optimizing their bits params).
     """
     from tac.self_compress import LearnableBitDepth
 
     bit_modules = []
     for name, module in model.named_modules():
-        if isinstance(module, nn.Conv2d):
+        if isinstance(module, (nn.Conv2d, nn.ConvTranspose2d)):
+            # For ConvTranspose2d: weight is (C_in, C_out, kH, kW), per-channel
+            # dim is C_out (shape[1]). For Conv2d: per-channel dim is C_out (shape[0]).
+            if isinstance(module, nn.ConvTranspose2d):
+                num_ch = module.weight.shape[1]  # C_out for transposed
+            else:
+                num_ch = module.weight.shape[0]  # C_out for regular
+
             bit_depth = LearnableBitDepth(
-                num_channels=module.weight.shape[0],
+                num_channels=num_ch,
                 init_bits=init_bits,
             ).to(module.weight.device)
-            # Store the bit_depth module on the conv layer
             module.bit_depth = bit_depth
             bit_modules.append(bit_depth)
 
             # Monkey-patch forward to quantize weights through bit_depth
-            def _make_quantized_forward(conv, bd):
-                def _quantized_forward(x):
-                    q_weight = bd(conv.weight)
-                    return F.conv2d(
-                        x, q_weight, conv.bias,
-                        conv.stride, conv.padding, conv.dilation, conv.groups,
-                    )
-                return _quantized_forward
-
-            module.forward = _make_quantized_forward(module, bit_depth)
+            if isinstance(module, nn.ConvTranspose2d):
+                def _make_quantized_forward_t(conv, bd):
+                    def _quantized_forward(x, output_size=None):
+                        # ConvTranspose2d weight: (C_in, C_out, kH, kW)
+                        # LearnableBitDepth expects dim-0 = num_channels = C_out
+                        # Transpose dims 0,1 → quantize → transpose back
+                        w_t = conv.weight.permute(1, 0, 2, 3).contiguous()
+                        q_t = bd(w_t)
+                        q_weight = q_t.permute(1, 0, 2, 3).contiguous()
+                        return F.conv_transpose2d(
+                            x, q_weight, conv.bias,
+                            conv.stride, conv.padding,
+                            output_padding=conv.output_padding,
+                            groups=conv.groups, dilation=conv.dilation,
+                        )
+                    return _quantized_forward
+                module.forward = _make_quantized_forward_t(module, bit_depth)
+            else:
+                def _make_quantized_forward(conv, bd):
+                    def _quantized_forward(x):
+                        q_weight = bd(conv.weight)
+                        return F.conv2d(
+                            x, q_weight, conv.bias,
+                            conv.stride, conv.padding, conv.dilation, conv.groups,
+                        )
+                    return _quantized_forward
+                module.forward = _make_quantized_forward(module, bit_depth)
 
     return bit_modules
 
