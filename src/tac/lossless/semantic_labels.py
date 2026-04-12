@@ -15,20 +15,96 @@ def _bucket(value: float, *, thresholds: tuple[float, ...]) -> int:
     return len(thresholds)
 
 
+def _finite_1d(values) -> np.ndarray:
+    arr = np.asarray(values, dtype=np.float64).reshape(-1)
+    return arr[np.isfinite(arr)]
+
+
+def _mean_abs(values) -> float:
+    finite = _finite_1d(values)
+    if finite.size == 0:
+        return 0.0
+    return float(np.mean(np.abs(finite)))
+
+
+def _std_abs(values) -> float:
+    finite = _finite_1d(values)
+    if finite.size == 0:
+        return 0.0
+    return float(np.std(np.abs(finite)))
+
+
+def _mean_abs_delta(values) -> float:
+    finite = _finite_1d(values)
+    if finite.size < 2:
+        return 0.0
+    return float(np.mean(np.abs(np.diff(finite))))
+
+
+def _stop_go_bucket(forward_values) -> int:
+    finite = np.abs(_finite_1d(forward_values))
+    if finite.size == 0:
+        return 0
+    stop_fraction = float(np.mean(finite < 0.5))
+    go_fraction = float(np.mean(finite >= 8.0))
+    peak = float(np.max(finite, initial=0.0))
+    if peak < 2.0:
+        return 0
+    if stop_fraction >= 0.2 and go_fraction >= 0.2:
+        return 3
+    if go_fraction >= 0.5:
+        return 2
+    return 1
+
+
+def _turn_regime_bucket(yaw_values) -> int:
+    finite = _finite_1d(yaw_values)
+    if finite.size == 0:
+        return 0
+    signed_mean = float(np.mean(finite))
+    turn_strength = float(np.mean(np.abs(finite)))
+    if turn_strength < 0.05:
+        return 0
+    has_left = bool(np.any(finite <= -0.05))
+    has_right = bool(np.any(finite >= 0.05))
+    if has_left and has_right:
+        return 3
+    if signed_mean < 0.0:
+        return 1
+    return 2
+
+
+def _motion_variance_bucket(forward_values) -> int:
+    return _bucket(_std_abs(forward_values), thresholds=(0.25, 2.0, 8.0))
+
+
+def _jerk_bucket(forward_values, yaw_values) -> int:
+    forward_delta = _mean_abs_delta(forward_values)
+    yaw_delta = 20.0 * _mean_abs_delta(yaw_values)
+    jerk_score = max(forward_delta, yaw_delta)
+    return _bucket(jerk_score, thresholds=(0.5, 2.0, 6.0))
+
+
 def pose_label_vector(pose) -> list[int]:
     arr = np.asarray(pose, dtype=np.float64)
     if arr.ndim != 2 or arr.shape[1] != 6:
         raise ValueError("pose array must have shape (frames, 6)")
 
     finite = np.where(np.isfinite(arr), arr, np.nan)
-    means = np.nanmean(np.abs(finite), axis=0)
-    means = np.where(np.isfinite(means), means, 0.0)
+    forward = finite[:, 0]
+    lateral = finite[:, 1]
+    vertical = finite[:, 2]
+    yaw = finite[:, 5]
 
     return [
-        _bucket(float(means[0]), thresholds=(4.0, 8.0, 12.0)),
-        _bucket(float(means[1]), thresholds=(0.25, 0.75, 1.5)),
-        _bucket(float(means[2]), thresholds=(0.25, 0.75, 1.5)),
-        _bucket(float(np.nanmean(means[3:])), thresholds=(0.05, 0.15, 0.35)),
+        _bucket(_mean_abs(forward), thresholds=(2.0, 8.0, 16.0)),
+        _bucket(_mean_abs(lateral), thresholds=(0.10, 0.40, 0.80)),
+        _bucket(_mean_abs(vertical), thresholds=(0.02, 0.08, 0.16)),
+        _bucket(_mean_abs(yaw), thresholds=(0.04, 0.18, 0.35)),
+        _stop_go_bucket(forward),
+        _turn_regime_bucket(yaw),
+        _motion_variance_bucket(forward),
+        _jerk_bucket(forward, yaw),
     ]
 
 
@@ -59,7 +135,7 @@ def build_pose_label_map_sample(
 
     target = Path(output_path)
     target.parent.mkdir(parents=True, exist_ok=True)
-    target.write_text(json.dumps(label_map, indent=2) + "\n")
+    target.write_text(json.dumps(label_map, indent=2, sort_keys=True) + "\n")
     return {
         "command": "lossless_pose_labels_sample",
         "output_path": str(target),

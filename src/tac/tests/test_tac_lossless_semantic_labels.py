@@ -16,25 +16,75 @@ if str(SRC_ROOT) not in sys.path:
 
 
 class TacLosslessSemanticLabelsTests(unittest.TestCase):
-    def test_pose_label_vector_quantizes_nan_robust_motion_summary(self) -> None:
+    def test_pose_label_vector_quantizes_richer_nan_robust_motion_summary(self) -> None:
         from tac.lossless.semantic_labels import pose_label_vector
 
         pose = np.array(
             [
-                [10.0, 0.10, 0.02, 0.001, 0.002, 0.03],
+                [0.0, 0.02, 0.00, 0.000, 0.000, 0.00],
                 [np.nan, np.nan, np.nan, np.nan, np.nan, np.nan],
-                [14.0, 0.20, 0.04, 0.003, 0.004, 0.05],
+                [8.0, 0.30, 0.05, 0.010, 0.000, 0.20],
+                [16.0, 0.60, 0.10, 0.020, 0.000, 0.40],
             ],
             dtype=np.float64,
         )
 
         label = pose_label_vector(pose)
 
-        self.assertEqual(len(label), 4)
-        self.assertEqual(label[0], 3)  # forward speed bucket
-        self.assertEqual(label[1], 0)  # lateral bucket
-        self.assertEqual(label[2], 0)  # vertical bucket
-        self.assertEqual(label[3], 0)  # angular bucket
+        self.assertEqual(len(label), 8)
+        self.assertEqual(label[0], 2)  # forward motion bucket
+        self.assertEqual(label[1], 1)  # lateral motion bucket
+        self.assertEqual(label[2], 1)  # vertical motion bucket
+        self.assertEqual(label[3], 2)  # turn magnitude bucket
+        self.assertEqual(label[4], 3)  # stop/go regime: mixed stop and strong go
+        self.assertEqual(label[5], 2)  # turning regime: strong right turn
+        self.assertEqual(label[6], 2)  # motion variance bucket
+        self.assertEqual(label[7], 3)  # jerk bucket
+
+    def test_pose_label_vector_handles_stationary_all_nan_tail_without_noise(self) -> None:
+        from tac.lossless.semantic_labels import pose_label_vector
+
+        pose = np.array(
+            [
+                [0.0, 0.0, 0.0, 0.0, 0.0, 0.0],
+                [0.02, 0.01, 0.0, 0.0, 0.0, 0.01],
+                [np.nan, np.nan, np.nan, np.nan, np.nan, np.nan],
+                [np.nan, np.nan, np.nan, np.nan, np.nan, np.nan],
+            ],
+            dtype=np.float64,
+        )
+
+        label = pose_label_vector(pose)
+
+        self.assertEqual(label, [0, 0, 0, 0, 0, 0, 0, 0])
+
+    def test_pose_label_vector_separates_turn_direction_regimes(self) -> None:
+        from tac.lossless.semantic_labels import pose_label_vector
+
+        left_turn = np.array(
+            [
+                [6.0, 0.2, 0.0, 0.0, 0.0, -0.30],
+                [6.2, 0.2, 0.0, 0.0, 0.0, -0.35],
+                [6.4, 0.2, 0.0, 0.0, 0.0, -0.40],
+            ],
+            dtype=np.float64,
+        )
+        right_turn = np.array(
+            [
+                [6.0, 0.2, 0.0, 0.0, 0.0, 0.30],
+                [6.2, 0.2, 0.0, 0.0, 0.0, 0.35],
+                [6.4, 0.2, 0.0, 0.0, 0.0, 0.40],
+            ],
+            dtype=np.float64,
+        )
+
+        left_label = pose_label_vector(left_turn)
+        right_label = pose_label_vector(right_turn)
+
+        self.assertEqual(left_label[5], 1)
+        self.assertEqual(right_label[5], 2)
+        self.assertEqual(left_label[:5], right_label[:5])
+        self.assertEqual(left_label[6:], right_label[6:])
 
     def test_build_pose_label_map_sample_writes_real_name_json(self) -> None:
         from tac.lossless.semantic_labels import build_pose_label_map_sample
@@ -67,8 +117,9 @@ class TacLosslessSemanticLabelsTests(unittest.TestCase):
         self.assertEqual(result["command"], "lossless_pose_labels_sample")
         self.assertEqual(result["record_count"], 2)
         self.assertEqual(sorted(payload), ["clip_a", "clip_b"])
-        self.assertEqual(payload["clip_a"][0], 0)
+        self.assertEqual(payload["clip_a"], [0, 0, 0, 0, 0, 0, 0, 0])
         self.assertGreater(payload["clip_b"][0], payload["clip_a"][0])
+        self.assertEqual(len(payload["clip_b"]), 8)
 
 
 if __name__ == "__main__":
