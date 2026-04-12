@@ -1488,7 +1488,6 @@ def train_fridrich_renderer(cfg: FridrichRendererConfig) -> dict[str, Any]:
 
     # Git provenance
     try:
-        import subprocess
         git_hash = subprocess.check_output(
             ["git", "rev-parse", "HEAD"], stderr=subprocess.DEVNULL
         ).decode().strip()
@@ -1505,7 +1504,6 @@ def train_fridrich_renderer(cfg: FridrichRendererConfig) -> dict[str, Any]:
     summary["cuda_available"] = torch.cuda.is_available()
     if torch.cuda.is_available():
         summary["gpu_name"] = torch.cuda.get_device_name(0)
-    import platform
     summary["python_version"] = platform.python_version()
     summary["hostname"] = platform.node()
 
@@ -1720,50 +1718,47 @@ def validate_smoke(precomputed: str | None = None) -> None:
     if precomputed:
         os.environ["PRECOMPUTED_DIR"] = precomputed
 
-    with tempfile.TemporaryDirectory() as tmpdir:
-        cfg_dict = {k: v for k, v in cfg.__dict__.items()}
-        # Override results dir
-        summary = train_fridrich_renderer(cfg)
-        history = summary.get("history", [])
+    summary = train_fridrich_renderer(cfg)
+    history = summary.get("history", [])
 
-        # Assertion 1: Loss decreases (first 50 epochs)
-        losses_first50 = [h["loss"] for h in history if h["epoch"] < 50]
-        if len(losses_first50) >= 5:
-            first_loss = losses_first50[0]
-            last_loss = losses_first50[-1]
-            assert last_loss < first_loss, (
-                f"FAIL: Loss did not decrease: first={first_loss:.4f}, last={last_loss:.4f}"
-            )
-            print(f"  [1/5] Loss decreased: {first_loss:.4f} → {last_loss:.4f} ✓")
-        else:
-            print(f"  [1/5] Not enough data points ({len(losses_first50)}), skipped")
+    # Assertion 1: Loss decreases (first 50 epochs)
+    losses_first50 = [h["loss"] for h in history if h["epoch"] < 50]
+    if len(losses_first50) >= 5:
+        first_loss = losses_first50[0]
+        last_loss = losses_first50[-1]
+        assert last_loss < first_loss, (
+            f"FAIL: Loss did not decrease: first={first_loss:.4f}, last={last_loss:.4f}"
+        )
+        print(f"  [1/5] Loss decreased: {first_loss:.4f} → {last_loss:.4f} ✓")
+    else:
+        print(f"  [1/5] Not enough data points ({len(losses_first50)}), skipped")
 
-        # Assertion 2: Phase transition fires (phase 2 appears in history)
-        phases_seen = {h["phase"] for h in history}
-        assert 2 in phases_seen, f"FAIL: Phase 2 never appeared. Phases seen: {phases_seen}"
-        print(f"  [2/5] Phase transition: phases {phases_seen} ✓")
+    # Assertion 2: Phase transition fires (phase 2 appears in history)
+    phases_seen = {h["phase"] for h in history}
+    assert 2 in phases_seen, f"FAIL: Phase 2 never appeared. Phases seen: {phases_seen}"
+    print(f"  [2/5] Phase transition: phases {phases_seen} ✓")
 
-        # Assertion 3: Lagrangian multipliers are non-negative and finite
-        for h in history:
-            assert h["lambda_seg"] >= 0 and math.isfinite(h["lambda_seg"]), (
-                f"FAIL: lambda_seg={h['lambda_seg']} at epoch {h['epoch']}"
-            )
-            assert h["lambda_pose"] >= 0 and math.isfinite(h["lambda_pose"]), (
-                f"FAIL: lambda_pose={h['lambda_pose']} at epoch {h['epoch']}"
-            )
-        print(f"  [3/5] Lagrangian multipliers non-negative and finite ✓")
+    # Assertion 3: Lagrangian multipliers are non-negative and finite
+    for h in history:
+        assert h["lambda_seg"] >= 0 and math.isfinite(h["lambda_seg"]), (
+            f"FAIL: lambda_seg={h['lambda_seg']} at epoch {h['epoch']}"
+        )
+        assert h["lambda_pose"] >= 0 and math.isfinite(h["lambda_pose"]), (
+            f"FAIL: lambda_pose={h['lambda_pose']} at epoch {h['epoch']}"
+        )
+    print(f"  [3/5] Lagrangian multipliers non-negative and finite ✓")
 
-        # Assertion 4: Eval completed with valid score
-        best_score = summary.get("best_score", float("inf"))
-        assert math.isfinite(best_score), f"FAIL: best_score is not finite: {best_score}"
-        print(f"  [4/5] Eval completed: best_score={best_score:.4f} ✓")
+    # Assertion 4: Eval completed with valid score
+    best_score = summary.get("best_score", float("inf"))
+    assert math.isfinite(best_score), f"FAIL: best_score is not finite: {best_score}"
+    print(f"  [4/5] Eval completed: best_score={best_score:.4f} ✓")
 
-        # Assertion 5: Check losses are not NaN
-        for h in history:
-            assert math.isfinite(h["loss"]), f"FAIL: NaN loss at epoch {h['epoch']}"
-            assert math.isfinite(h["seg_dist"]), f"FAIL: NaN seg_dist at epoch {h['epoch']}"
-            assert math.isfinite(h["pose_dist"]), f"FAIL: NaN pose_dist at epoch {h['epoch']}"
-        print(f"  [5/5] All losses finite (no NaN/Inf) ✓")
+    # Assertion 5: Check losses are not NaN
+    for h in history:
+        assert math.isfinite(h["loss"]), f"FAIL: NaN loss at epoch {h['epoch']}"
+        assert math.isfinite(h["seg_dist"]), f"FAIL: NaN seg_dist at epoch {h['epoch']}"
+        assert math.isfinite(h["pose_dist"]), f"FAIL: NaN pose_dist at epoch {h['epoch']}"
+    print(f"  [5/5] All losses finite (no NaN/Inf) ✓")
 
     print()
     print("SMOKE VALIDATION: ALL 5 CHECKS PASSED")
