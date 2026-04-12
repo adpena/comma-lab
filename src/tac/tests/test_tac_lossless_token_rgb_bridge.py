@@ -3,6 +3,7 @@ from __future__ import annotations
 import sys
 import tempfile
 import unittest
+from contextlib import nullcontext
 from pathlib import Path
 from types import SimpleNamespace
 from unittest import mock
@@ -97,6 +98,55 @@ class TacLosslessTokenRgbBridgeTests(unittest.TestCase):
         self.assertIs(transpose_and_clip_fn, bridge.canonical_transpose_and_clip)
         self.assertEqual(metadata["bridge_backend"], "torch")
         self.assertIn("onnxruntime missing", metadata["bridge_fallback_reason"])
+
+    def test_load_official_commavq_torch_bridge_prefers_cached_decoder_artifact(self) -> None:
+        from tac.lossless import token_rgb_bridge as bridge
+
+        load_calls: list[tuple[str, str]] = []
+
+        class FakeDecoder:
+            def __init__(self, _config):
+                self.loaded = None
+                self.to_calls = []
+
+            def load_state_dict(self, state_dict, *args, **kwargs):
+                self.loaded = (state_dict, args, kwargs)
+
+            def eval(self):
+                return self
+
+            def to(self, *, device, dtype):
+                self.to_calls.append((device, dtype))
+                return self
+
+        fake_torch = SimpleNamespace(
+            float32="float32",
+            device=lambda *_args, **_kwargs: nullcontext(),
+            load=lambda path, *, map_location, weights_only: load_calls.append((str(path), map_location)) or {"weights": 1},
+        )
+        fake_vqvae = SimpleNamespace(
+            CompressorConfig=lambda: object(),
+            Decoder=FakeDecoder,
+        )
+
+        with mock.patch.object(bridge, "resolve_commavq_official_root", return_value=Path("/tmp/commavq")):
+            with mock.patch.object(bridge, "_load_module", return_value=fake_vqvae):
+                with mock.patch.object(bridge, "_require_torch", return_value=fake_torch):
+                    with mock.patch.object(
+                        bridge,
+                        "ensure_official_decoder_torch_path",
+                        return_value=Path("/tmp/decoder_pytorch_model.bin"),
+                    ):
+                        decoder, transpose_and_clip_fn, metadata = bridge.load_official_commavq_torch_bridge(
+                            device="cpu",
+                            dtype="float32",
+                        )
+
+        self.assertEqual(load_calls, [("/tmp/decoder_pytorch_model.bin", "cpu")])
+        self.assertIs(transpose_and_clip_fn, bridge.canonical_transpose_and_clip)
+        self.assertEqual(metadata["bridge_backend"], "torch")
+        self.assertEqual(metadata["decoder_artifact_path"], "/tmp/decoder_pytorch_model.bin")
+        self.assertEqual(decoder.loaded[0], {"weights": 1})
 
     def test_load_official_commavq_bridge_falls_back_to_torch_when_onnx_decoder_is_degenerate(self) -> None:
         from tac.lossless import token_rgb_bridge as bridge

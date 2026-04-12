@@ -67,6 +67,11 @@ def _default_decoder_onnx_path() -> Path:
     return cache_home / "tac" / "commavq-gpt2m" / "decoder.onnx"
 
 
+def _default_decoder_torch_path() -> Path:
+    cache_home = Path(os.environ.get("XDG_CACHE_HOME", str(Path.home() / ".cache")))
+    return cache_home / "tac" / "commavq-gpt2m" / "decoder_pytorch_model.bin"
+
+
 def ensure_official_decoder_onnx_path(*, decoder_url: str = OFFICIAL_ONNX_DECODER_URL) -> Path:
     env_path = os.environ.get("TAC_COMMAVQ_DECODER_ONNX")
     if env_path:
@@ -76,6 +81,30 @@ def ensure_official_decoder_onnx_path(*, decoder_url: str = OFFICIAL_ONNX_DECODE
         return candidate
 
     target = _default_decoder_onnx_path()
+    if target.is_file():
+        return target
+
+    target.parent.mkdir(parents=True, exist_ok=True)
+    tmp_target = target.with_suffix(".tmp")
+    try:
+        with urllib.request.urlopen(decoder_url) as response, tmp_target.open("wb") as handle:
+            shutil.copyfileobj(response, handle)
+        tmp_target.replace(target)
+    finally:
+        if tmp_target.exists():
+            tmp_target.unlink()
+    return target
+
+
+def ensure_official_decoder_torch_path(*, decoder_url: str = OFFICIAL_TORCH_DECODER_URL) -> Path:
+    env_path = os.environ.get("TAC_COMMAVQ_DECODER_TORCH")
+    if env_path:
+        candidate = Path(env_path).expanduser()
+        if not candidate.is_file():
+            raise FileNotFoundError(f"TAC_COMMAVQ_DECODER_TORCH does not point to a file: {candidate}")
+        return candidate
+
+    target = _default_decoder_torch_path()
     if target.is_file():
         return target
 
@@ -188,15 +217,18 @@ def load_official_commavq_torch_bridge(
 
     resolved_dtype_name = resolve_bridge_dtype_name(device=resolved_device, dtype=dtype)
     resolved_dtype = getattr(torch, resolved_dtype_name)
+    decoder_path = ensure_official_decoder_torch_path(decoder_url=decoder_url)
 
     config = vqvae.CompressorConfig()
     with torch.device("meta"):
         decoder = vqvae.Decoder(config)
-    decoder.load_state_dict_from_url(decoder_url, assign=True)
+    state_dict = torch.load(str(decoder_path), map_location="cpu", weights_only=True)
+    decoder.load_state_dict(state_dict, assign=True)
     decoder = decoder.eval().to(device=resolved_device, dtype=resolved_dtype)
     return decoder, canonical_transpose_and_clip, {
         "bridge_backend": "torch",
         "decoder_artifact_url": decoder_url,
+        "decoder_artifact_path": str(decoder_path),
         "commavq_root": str(root),
     }
 
