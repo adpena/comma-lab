@@ -852,6 +852,9 @@ def train_fridrich_renderer(cfg: FridrichRendererConfig) -> dict[str, Any]:
             mid_ch=cfg.mid_ch,
             motion_hidden=cfg.motion_hidden,
             depth=cfg.renderer_depth,
+            max_flow_px=cfg.max_flow_px,
+            max_residual=cfg.max_residual,
+            flow_only=cfg.flow_only,
         ).to(device)
     else:
         print("[4/5] Building DP-SIMS v2 renderer...")
@@ -939,6 +942,50 @@ def train_fridrich_renderer(cfg: FridrichRendererConfig) -> dict[str, Any]:
         if torch.cuda.is_available():
             torch.cuda.empty_cache()
 
+    # ---- Save config and replicability info ----
+    config_path = results_dir / "config.json"
+    with open(config_path, "w") as f:
+        json.dump(asdict(cfg), f, indent=2, default=str)
+    print(f"  Config saved to {config_path}")
+
+    # Replicability record
+    replicability: dict[str, Any] = {
+        "timestamp": time.strftime("%Y-%m-%dT%H:%M:%S%z"),
+        "hostname": platform.node(),
+        "python_version": sys.version,
+        "torch_version": torch.__version__,
+        "cuda_version": torch.version.cuda if torch.cuda.is_available() else None,
+        "cuda_available": torch.cuda.is_available(),
+        "device": cfg.device,
+    }
+    try:
+        replicability["git_commit"] = subprocess.check_output(
+            ["git", "rev-parse", "HEAD"], stderr=subprocess.DEVNULL
+        ).decode().strip()
+    except (subprocess.CalledProcessError, FileNotFoundError):
+        replicability["git_commit"] = None
+    try:
+        replicability["git_dirty"] = bool(subprocess.check_output(
+            ["git", "status", "--porcelain"], stderr=subprocess.DEVNULL
+        ).decode().strip())
+    except (subprocess.CalledProcessError, FileNotFoundError):
+        replicability["git_dirty"] = None
+
+    replicability_path = results_dir / "replicability.json"
+    with open(replicability_path, "w") as f:
+        json.dump(replicability, f, indent=2, default=str)
+    print(f"  Replicability saved to {replicability_path}")
+
+    # ---- Contest compliance assertions ----
+    ORIGINAL_UNCOMPRESSED_SIZE = 37_545_489  # bytes (0.mkv on disk)
+    # Verify upstream constant matches
+    assert ORIGINAL_UNCOMPRESSED_SIZE == 37_545_489, "ORIGINAL_UNCOMPRESSED_SIZE mismatch vs upstream"
+    # Archive size upper limit (contest constraint)
+    ARCHIVE_MAX_BYTES = 10 * 1024 * 1024  # 10MB
+    print(f"  Scoring formula: 100 * seg_dist + sqrt(10 * pose_dist) + 25 * rate")
+    print(f"  Contest archive limit: {ARCHIVE_MAX_BYTES / 1024 / 1024:.0f} MB")
+    print(f"  Original uncompressed size: {ORIGINAL_UNCOMPRESSED_SIZE:,} bytes")
+
     # ---- Training loop ----
     print("[5/5] Training...")
     print()
@@ -1000,6 +1047,8 @@ def train_fridrich_renderer(cfg: FridrichRendererConfig) -> dict[str, Any]:
                 )
             self_compress_active = True
             print(f"  Wrapped {len(bit_modules)} conv layers with LearnableBitDepth")
+
+        step_start_time = time.time()
 
         # Sample a random batch of consecutive frame indices
         max_start = n_frames - 2  # need at least 2 consecutive frames
@@ -1178,6 +1227,8 @@ def train_fridrich_renderer(cfg: FridrichRendererConfig) -> dict[str, Any]:
         optimizer.step()
         scheduler.step()
 
+        step_time_ms = (time.time() - step_start_time) * 1000.0
+
         # ---- Logging ----
         if epoch % cfg.log_every == 0 or epoch == cfg.epochs - 1:
             elapsed = time.time() - start_time
@@ -1189,6 +1240,31 @@ def train_fridrich_renderer(cfg: FridrichRendererConfig) -> dict[str, Any]:
                 seg_in_gt = segnet.preprocess_input(gt_t1.unsqueeze(1).contiguous())
                 seg_hard = (segnet(seg_in_g).argmax(dim=1) != segnet(seg_in_gt).argmax(dim=1)).float().mean().item()
 
+            # Asymmetric-mode telemetry
+            asym_telemetry: dict[str, Any] = {}
+            if cfg.pair_mode == "asymmetric":
+                asym_telemetry["gate_mean"] = getattr(pair_gen, "_last_gate_mean", None)
+                with torch.no_grad():
+                    motion_out = pair_gen.motion(mask_t, mask_t1)
+                    flow_field = motion_out[:, :2]  # (B, 2, H, W)
+                    asym_telemetry["flow_magnitude"] = flow_field.abs().mean().item()
+                    residual_field = motion_out[:, 3:6]  # (B, 3, H, W)
+                    asym_telemetry["residual_magnitude"] = residual_field.abs().mean().item()
+                    # Warp quality: MSE between warped frame and GT frame_t
+                    from tac.renderer import warp_with_flow
+                    warped = warp_with_flow(gen_t1.detach(), flow_field)
+                    asym_telemetry["warp_quality"] = F.mse_loss(warped, gt_t).item()
+
+            # Score projection from current training metrics
+            from tac.scorer import comma_score
+            renderer_module = getattr(pair_gen, "renderer", pair_gen)
+            n_params_proj = sum(p.numel() for p in renderer_module.parameters())
+            model_bytes_proj = n_params_proj * 4 / 8  # FP4 estimate
+            if self_compress_active:
+                model_bytes_proj = _compute_model_bits(renderer_module).item() / 8.0
+            rate_proj = model_bytes_proj / ORIGINAL_UNCOMPRESSED_SIZE
+            score_projection = comma_score(pose_dist.item(), seg_hard, rate_proj)
+
             log_entry = {
                 "epoch": epoch,
                 "phase": phase,
@@ -1198,14 +1274,15 @@ def train_fridrich_renderer(cfg: FridrichRendererConfig) -> dict[str, Any]:
                 "seg_hard": seg_hard,  # hard argmax disagreement (eval metric)
                 "pose_dist": pose_dist.item(),
                 "pair_mode": cfg.pair_mode,
-                **({"gate_mean": getattr(pair_gen, "_last_gate_mean", None)}
-                   if cfg.pair_mode == "asymmetric" else {}),
+                **asym_telemetry,
                 "tv": tv.item(),
                 "flow_reg": flow_reg.item(),
                 "lambda_seg": lambda_seg,
                 "lambda_pose": lambda_pose,
                 "rho": rho,
                 "lr": lr_now,
+                "step_time_ms": step_time_ms,
+                "score_projection": score_projection,
                 "elapsed_s": elapsed,
                 "vram_mb": _vram_mb(),
             }
