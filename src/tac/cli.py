@@ -43,6 +43,7 @@ from .lossless.global_prev_symbol import benchmark_global_prev_symbol_record_ord
 from .lossless.hybrid_selector import SelectionMetric, rank_exact_candidates
 from .lossless.next_frame_coder import encode_commavq_next_frame_sample
 from .lossless.gpt_score import probe_commavq_gpt_devices, score_commavq_gpt_sample
+from .lossless.tiny_frame_predictor import summarize_tiny_frame_predictor
 from .lossless.token_rgb_bridge import (
     OFFICIAL_DECODER_URL,
     decode_commavq_token_file_to_rgb,
@@ -139,6 +140,13 @@ def build_parser() -> argparse.ArgumentParser:
 
     sp = lossless_sub.add_parser("profiles", help="List available lossless profiles")
     sp.set_defaults(lossless_handler="profiles")
+
+    sp = lossless_sub.add_parser(
+        "tiny-frame-predictor-summary",
+        help="Summarize a compact whole-frame predictor architecture for exact entropy coding experiments",
+    )
+    sp.add_argument("--profile", required=True, choices=sorted(LOSSLESS_PROFILES))
+    sp.set_defaults(lossless_handler="tiny_frame_predictor_summary")
 
     sp = lossless_sub.add_parser("plan", help="Build a non-measured lossless experiment plan")
     sp.add_argument("--profile", required=True, choices=sorted(LOSSLESS_PROFILES))
@@ -593,6 +601,11 @@ def _run_lossless(args: argparse.Namespace) -> dict[str, Any]:
             "command": "lossless_profiles",
             "profiles": sorted(LOSSLESS_PROFILES),
         }
+        print(json.dumps(payload, indent=2))
+        return payload
+
+    if args.lossless_handler == "tiny_frame_predictor_summary":
+        payload = summarize_tiny_frame_predictor(args.profile)
         print(json.dumps(payload, indent=2))
         return payload
 

@@ -84,6 +84,32 @@ class TacCliTests(unittest.TestCase):
         self.assertEqual(args.command, "lossless")
         self.assertEqual(args.lossless_command, "profiles")
 
+    def test_lossless_tiny_frame_predictor_summary_subcommand_reports_architecture_budget(self) -> None:
+        mod = load_module()
+        with mock.patch.object(
+            mod,
+            "summarize_tiny_frame_predictor",
+            return_value={
+                "command": "lossless_tiny_frame_predictor_summary",
+                "profile": "tiny_frame_predictor_small",
+                "parameter_count": 123456,
+                "context_frames": 8,
+                "positions": 128,
+            },
+        ) as mocked:
+            result = mod.main(
+                [
+                    "lossless",
+                    "tiny-frame-predictor-summary",
+                    "--profile",
+                    "tiny_frame_predictor_small",
+                ]
+            )
+
+        mocked.assert_called_once()
+        self.assertEqual(result["command"], "lossless_tiny_frame_predictor_summary")
+        self.assertEqual(result["parameter_count"], 123456)
+
     def test_lossless_hybrid_select_subcommand_parses_inputs_and_metrics(self) -> None:
         mod = load_module()
         args = mod.build_parser().parse_args(

@@ -371,19 +371,6 @@ class SelfCompressingVideoCodec(SIRENVideoCodec):
         n_out = self.output.weight.shape[0]
         self.output_bits = nn.Parameter(torch.full((n_out,), init_bits))
 
-    def _quantize_weights(self) -> None:
-        """Apply quantization to weights during forward pass (in-place STE)."""
-        # Import STE from self_compress
-        from .self_compress import _ste_quantize
-
-        for layer, bits in zip(self.net, self.layer_bits):
-            layer.linear.weight.data = _ste_quantize(
-                layer.linear.weight, bits, self.training,
-            )
-        self.output.weight.data = _ste_quantize(
-            self.output.weight, self.output_bits, self.training,
-        )
-
     def forward(self, coords: torch.Tensor) -> torch.Tensor:
         """Forward with self-compressed weights."""
         from .self_compress import _ste_quantize
@@ -406,15 +393,22 @@ class SelfCompressingVideoCodec(SIRENVideoCodec):
         return rgb
 
     def total_bits(self) -> torch.Tensor:
-        """Total bits across all layers (differentiable for rate penalty)."""
+        """Total bits across all layers including bias (differentiable for rate penalty)."""
         total = torch.tensor(0.0, device=next(self.parameters()).device)
         for layer, bits in zip(self.net, self.layer_bits):
             fan_in = layer.linear.weight.shape[1]
             per_channel = bits.clamp(0.0, 8.0)
+            # Weight bits: fan_in weights per channel at learned bit-depth
             total = total + (per_channel * fan_in).sum()
+            # Bias bits: 1 bias per channel at learned bit-depth
+            if layer.linear.bias is not None:
+                total = total + per_channel.sum()
         # Output layer
         fan_in = self.output.weight.shape[1]
-        total = total + (self.output_bits.clamp(0.0, 8.0) * fan_in).sum()
+        out_bits = self.output_bits.clamp(0.0, 8.0)
+        total = total + (out_bits * fan_in).sum()
+        if self.output.bias is not None:
+            total = total + out_bits.sum()
         return total
 
     def total_bytes(self) -> float:
@@ -495,6 +489,19 @@ def train_network_codec(
             hidden=hidden, layers=layers, omega_0=omega_0,
             num_frames=T, frame_h=H, frame_w=W,
             pos_encoding_freqs=pos_encoding_freqs,
+        )
+
+    if scorer_weight > 0 and (posenet is None or segnet is None):
+        raise ValueError(
+            "scorer_weight > 0 requires both posenet and segnet models. "
+            "Scorer loss in train_network_codec is not yet implemented; "
+            "set scorer_weight=0 for pixel-only training."
+        )
+    if scorer_weight > 0:
+        raise NotImplementedError(
+            "Scorer loss integration in train_network_codec is not yet implemented. "
+            "Use scorer_weight=0 for pixel-only training, then fine-tune with "
+            "train_self_compressing for scorer-aware optimization."
         )
 
     model = model.to(device)
@@ -671,8 +678,8 @@ def inflate_network_codec(
     For each frame index 0..num_frames-1:
         frame = codec(frame_idx)
 
-    On CPU: ~10 seconds for 1200 frames with a 64-hidden SIREN
-    On GPU: ~1 second
+    On CPU: ~5-10 minutes for 1200 frames at 384x512 with 64-hidden SIREN
+    On GPU: ~10-30 seconds (depends on batch_pixels in generate_all_frames)
 
     Args:
         archive: bytes from export_network_archive.
@@ -718,7 +725,7 @@ def inflate_network_codec(
             pos_encoding_freqs=meta["pos_encoding_freqs"],
         )
 
-    codec.load_state_dict(state, strict=False)
+    codec.load_state_dict(state, strict=True)
     codec = codec.to(device).eval()
 
     # Generate all frames
@@ -773,7 +780,7 @@ def load_network_codec(
             pos_encoding_freqs=meta["pos_encoding_freqs"],
         )
 
-    codec.load_state_dict(state, strict=False)
+    codec.load_state_dict(state, strict=True)
     return codec.to(device)
 
 

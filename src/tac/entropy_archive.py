@@ -177,8 +177,11 @@ class ArithmeticDecoder:
         rng = self.high - self.low + 1
         scaled = ((self.value - self.low + 1) * self.freq_total - 1) // rng
 
-        # Find symbol
-        sym = 0
+        # Clamp scaled to valid range [0, freq_total-1]
+        scaled = max(0, min(scaled, self.freq_total - 1))
+
+        # Find symbol via linear scan of CDF
+        sym = len(cum_freqs) - 1  # default to last symbol
         for i in range(len(cum_freqs)):
             if cum_freqs[i] + freqs[i] > scaled >= cum_freqs[i]:
                 sym = i
@@ -286,14 +289,29 @@ class NeuralEntropyModel(nn.Module):
             # Convert to integer frequencies
             # Ensure each symbol gets at least 1 count (avoid zero-probability)
             raw_freqs = (probs * (freq_total - self.num_symbols)).long() + 1
-            # Adjust to exactly sum to freq_total
+            # Adjust to exactly sum to freq_total: distribute residual
+            # across the most probable symbols without breaking min=1
             diff = freq_total - raw_freqs.sum().item()
             if diff != 0:
-                # Add/subtract from most probable symbol
-                top_idx = raw_freqs.argmax().item()
-                raw_freqs[top_idx] += diff
-                # Clamp to ensure valid
-                raw_freqs = raw_freqs.clamp(min=1)
+                # Sort by probability descending; distribute residual
+                sorted_indices = probs.argsort(descending=True)
+                remaining = diff
+                for idx in sorted_indices:
+                    idx_int = idx.item()
+                    if remaining == 0:
+                        break
+                    if remaining > 0:
+                        raw_freqs[idx_int] += 1
+                        remaining -= 1
+                    else:  # remaining < 0
+                        if raw_freqs[idx_int] > 1:
+                            raw_freqs[idx_int] -= 1
+                            remaining += 1
+
+            assert raw_freqs.sum().item() == freq_total, (
+                f"Frequency sum {raw_freqs.sum().item()} != {freq_total}"
+            )
+            assert (raw_freqs >= 1).all(), "Zero-frequency symbol detected"
 
             freqs = raw_freqs.tolist()
             cum_freqs = [0]
@@ -438,7 +456,8 @@ def decode_with_entropy_model(
         ctx = torch.zeros(1, entropy_model.context_size)
         ctx[0, 0] = i / max(count - 1, 1)
         for j in range(1, min(entropy_model.context_size, i + 1)):
-            ctx[0, j] = values[-j] / entropy_model.num_symbols
+            # Use float() to match encoding context construction exactly
+            ctx[0, j] = float(values[-j]) / entropy_model.num_symbols
 
         cum_freqs, freqs = entropy_model.predict_freqs(ctx, freq_total=freq_total)
         sym = decoder.decode_symbol(cum_freqs, freqs)

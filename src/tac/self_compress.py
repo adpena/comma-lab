@@ -82,9 +82,12 @@ class _STEQuantize(torch.autograd.Function):
         abs_max = flat.abs().amax(dim=1).clamp(min=1e-10)  # (C_out,)
         abs_max = abs_max.reshape(view_shape)
 
-        # Quantize: map to [-1, 1], discretize, map back
+        # Quantize: map to [-1, 1], discretize to n_levels values, map back.
+        # For n_levels = 2^bits, we use signed range [-(n_levels/2 - 1), n_levels/2 - 1]
+        # which gives exactly n_levels - 1 representable values (symmetric around 0).
+        # This matches the export bit-packing which stores unsigned [0, n_levels-1].
         levels_f = levels.float().reshape(view_shape)
-        half_levels = (levels_f / 2.0).clamp(min=0.5)  # avoid /0
+        half_levels = (levels_f / 2.0 - 1.0).clamp(min=0.5)  # avoid /0
 
         normalized = weight / abs_max  # [-1, 1]
         # Discretize to levels
@@ -110,7 +113,8 @@ class _STEQuantize(torch.autograd.Function):
         # STE: pass gradient through, zero where saturated or pruned
         mask = (~saturated) & (~pruned)
         grad_weight = grad_out * mask.float()
-        # Gradient for bits parameter: computed via chain rule in the module
+        # No gradient for bits: bit-depth is optimized via the explicit
+        # rate penalty (Lagrangian), not through reconstruction loss.
         return grad_weight, None, None
 
 
@@ -221,19 +225,13 @@ class SelfCompressingConv2d(nn.Module):
         """Forward with self-compressed weights."""
         q_weight = self.bit_depth(self.conv.weight)
         if self.conv.bias is not None:
-            # Bias is 1D (C_out,) -- quantize directly (per-channel via same bits)
-            # Use simple round-to-nearest per-channel quantization for bias
-            bits_clamped = self.bit_depth.bits.detach().clamp(0.0, 8.0)
-            prune_mask = bits_clamped < 0.5
-            abs_max = self.conv.bias.detach().abs().clamp(min=1e-10)
-            levels = (2.0 ** bits_clamped.round()).clamp(min=1).long()
-            half = (levels.float() / 2.0).clamp(min=0.5)
-            normalized = self.conv.bias / abs_max
-            scaled = normalized * half
-            # STE: use detach trick
-            q_bias = (scaled.round() - scaled).detach() + scaled
-            q_bias = q_bias / half * abs_max
-            q_bias = q_bias.masked_fill(prune_mask, 0.0)
+            # Bias is 1D (C_out,) -- quantize using same STE path as weights.
+            # Reshape to (C_out, 1) so _ste_quantize treats dim-0 as channels.
+            q_bias = _ste_quantize(
+                self.conv.bias.unsqueeze(1),
+                self.bit_depth.bits,
+                self.training,
+            ).squeeze(1)
         else:
             q_bias = None
         return F.conv2d(
@@ -329,10 +327,12 @@ class SelfCompressingPostFilter(nn.Module):
             })
         stats["total_bits"] = sum(l["weight_bits"] + l["bias_bits"] for l in stats["layers"])
         stats["total_bytes"] = stats["total_bits"] / 8
+        # int8 baseline: each weight is 1 byte
+        layer_modules = [self.conv1, self.conv2, self.conv3]
         int8_bytes = sum(
-            l["channels"] * self.conv1.in_channels * self.kernel ** 2
-            for l in stats["layers"]
-        )  # rough estimate
+            m.out_channels * m.in_channels * m.kernel_size ** 2
+            for m in layer_modules
+        )
         stats["compression_ratio"] = int8_bytes / max(stats["total_bytes"], 1)
         return stats
 
@@ -533,16 +533,16 @@ def export_compressed_checkpoint(model: SelfCompressingPostFilter) -> bytes:
             ch_bits = channel_bits[i]
             ch_weight = weight[ch_idx]  # (C_in, kH, kW)
 
-            # Quantize to ch_bits levels
+            # Quantize to ch_bits levels (n_levels = 2^bits values: 0..n_levels-1)
             flat = ch_weight.reshape(-1)
             abs_max = flat.abs().max().clamp(min=1e-10).item()
             n_levels = 2 ** ch_bits
             half = n_levels // 2
 
-            # Map to integer levels
-            quantized = (flat / abs_max * half).round().clamp(-half, half).long()
-            # Shift to unsigned: [0, n_levels]
-            unsigned = (quantized + half).clamp(0, n_levels).tolist()
+            # Map to integer levels: [-half, half-1] -> unsigned [0, n_levels-1]
+            quantized = (flat / abs_max * (half - 1)).round().clamp(-(half - 1), half - 1).long()
+            # Shift to unsigned: [0, n_levels-1]
+            unsigned = (quantized + half).clamp(0, n_levels - 1).tolist()
 
             # Store scale as float16
             packed.extend(struct.pack("<e", abs_max))
@@ -559,8 +559,8 @@ def export_compressed_checkpoint(model: SelfCompressingPostFilter) -> bytes:
                 abs_max_b = max(abs(b_val), 1e-10)
                 n_levels = 2 ** ch_bits
                 half = n_levels // 2
-                q = int(round(b_val / abs_max_b * half))
-                q = max(-half, min(half, q))
+                q = int(round(b_val / abs_max_b * (half - 1)))
+                q = max(-(half - 1), min(half - 1, q))
                 u = q + half
                 bias_packed.extend(struct.pack("<e", abs_max_b))
                 bias_packed.extend(struct.pack("<H", u))
@@ -721,9 +721,9 @@ def load_compressed_checkpoint(
                 # Unpack values
                 values, w_offset = _unpack_values(weight_data, w_offset, fan_in, ch_bits)
 
-                # Dequantize
+                # Dequantize: unsigned [0, n_levels-1] -> signed [-(half-1), half-1] -> float
                 dequant = torch.tensor(
-                    [(v - half) / half * scale for v in values],
+                    [(v - half) / max(half - 1, 1) * scale for v in values],
                     dtype=torch.float32,
                 )
                 shape = module.conv.weight.shape[1:]  # (C_in, kH, kW)
@@ -742,7 +742,7 @@ def load_compressed_checkpoint(
                     n_levels = 2 ** ch_bits
                     half = n_levels // 2
                     q = u_val - half
-                    module.conv.bias[ch_idx] = q / half * scale_b
+                    module.conv.bias[ch_idx] = q / max(half - 1, 1) * scale_b
 
     return model
 
