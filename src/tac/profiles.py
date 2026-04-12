@@ -1221,6 +1221,33 @@ STACKED_INFLATE_FAST = {
     "use_null_space_projection": False,
 }
 
+# Constrained optimization from noise (Yousfi GPU breakthrough)
+# No neural renderer — optimize pixels via gradient descent against scorer constraints.
+# Archive: ~8KB (masks + pose targets + seed). Inflate: ~50s on T4.
+CONSTRAINED_GEN_SMOKE = {
+    "variant": "constrained_gen",
+    "num_steps": 100,
+    "lr": 0.1,
+    "seg_weight": 100.0,
+    "pose_weight": 10.0,
+    "compress_weight": 1.0,
+    "noise_seed": 42,
+    "scorer_space": False,
+    "log_every": 25,
+}
+
+CONSTRAINED_GEN_FULL = {
+    "variant": "constrained_gen",
+    "num_steps": 1000,
+    "lr": 0.1,
+    "seg_weight": 100.0,
+    "pose_weight": 10.0,
+    "compress_weight": 1.0,
+    "noise_seed": 42,
+    "scorer_space": False,
+    "log_every": 100,
+}
+
 PROFILES = {
     "council_v1": COUNCIL_V1,
     "council_v2_adaptive": COUNCIL_V2_ADAPTIVE,
@@ -1300,4 +1327,7 @@ PROFILES = {
     "stacked_inflate_full": STACKED_INFLATE_FULL,
     "stacked_inflate_safe": STACKED_INFLATE_SAFE,
     "stacked_inflate_fast": STACKED_INFLATE_FAST,
+    # Constrained optimization from noise (Yousfi GPU breakthrough)
+    "constrained_gen_smoke": CONSTRAINED_GEN_SMOKE,
+    "constrained_gen_full": CONSTRAINED_GEN_FULL,
 }
