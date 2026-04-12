@@ -284,6 +284,11 @@ def _decode_sampled_tokens_to_nchw_frames(
     return _coerce_nchw_frames(np.concatenate(outputs, axis=0))
 
 
+def _write_label_map_json(path: Path, label_map: dict[str, list[int]]) -> None:
+    path.parent.mkdir(parents=True, exist_ok=True)
+    path.write_text(json.dumps(label_map, indent=2, sort_keys=True) + "\n", encoding="utf-8")
+
+
 def rgb_semantic_label_tuple(frames, *, max_keyframes: int = 6) -> tuple[int, ...]:
     arr = _coerce_rgb_frames(frames)
     sampled = arr[_select_keyframe_indices(arr.shape[0], max_keyframes=max_keyframes)]
@@ -396,10 +401,10 @@ def build_rgb_label_map_sample(
         for file_name, sampled_tokens in zip(file_names, sampled_tokens_per_example):
             count = int(sampled_tokens.shape[0])
             label_map[file_name] = list(_rgb_semantic_label_tuple_from_sampled_nchw(merged_frames[start:start + count]))
+            _write_label_map_json(target, label_map)
             start += count
 
-    target.parent.mkdir(parents=True, exist_ok=True)
-    target.write_text(json.dumps(label_map, indent=2, sort_keys=True) + "\n")
+    _write_label_map_json(target, label_map)
     return {
         "command": "lossless_rgb_labels_sample",
         "output_path": str(target),
