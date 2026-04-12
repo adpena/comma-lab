@@ -12,6 +12,27 @@ import torch
 import torch.nn.functional as F
 
 
+def bhattacharyya_distance(p: torch.Tensor, q: torch.Tensor, dim: int = 1) -> torch.Tensor:
+    """True Bhattacharyya distance: -log(sum(sqrt(p*q))).
+
+    Bhat advisory recommendation. Unlike the dot-product form (1 - sum(p*q)),
+    the true distance uses sqrt(p*q) which is concave and has stronger
+    gradients near agreement. The -log transform makes the distance infinite
+    when distributions have disjoint support (strong repulsion from disagreement)
+    and zero at perfect agreement.
+
+    Args:
+        p: probability distribution (e.g., softmax output)
+        q: probability distribution (same shape as p)
+        dim: dimension over which to sum classes (default 1 for BCHW)
+
+    Returns:
+        Scalar mean Bhattacharyya distance over all spatial positions and batch.
+    """
+    bc = (torch.sqrt(p * q + 1e-8)).sum(dim=dim)  # Bhattacharyya coefficient per pixel
+    return -torch.log(bc.mean() + 1e-8)
+
+
 def scorer_forward_pair(pair_btchw, posenet, segnet):
     """Forward pass through both scorer networks.
 

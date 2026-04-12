@@ -143,7 +143,7 @@ class FridrichRendererConfig:
 
     # Checkpointing
     checkpoint_every: int = 500
-    eval_every: int = 1000
+    eval_every: int = 200  # council: 50 eval points > 10 for better checkpoint selection
     early_stop_patience: int = 500  # stop if both constraints satisfied for N epochs
 
     # Logging
@@ -423,6 +423,65 @@ def _compute_seg_distortion(
     gt_soft = F.softmax(seg_logits_gt, dim=1)
     seg_dist = 1.0 - (pred_soft * gt_soft).sum(dim=1).mean()
     return seg_dist
+
+
+def _compute_seg_distortion_tempered(
+    gen_frames: torch.Tensor,
+    gt_frames: torch.Tensor,
+    segnet: nn.Module,
+    temperature: float = 1.0,
+) -> torch.Tensor:
+    """SegNet distortion with temperature-annealed softmax.
+
+    Lower temperature → sharper distributions → closer to hard argmax.
+    At T=0.1, softmax is nearly one-hot, providing strong gradient signal
+    toward the correct class while remaining differentiable.
+    """
+    gen_btchw = gen_frames.unsqueeze(1).contiguous()
+    gt_btchw = gt_frames.unsqueeze(1).contiguous()
+
+    seg_in_gen = segnet.preprocess_input(gen_btchw)
+    seg_logits_gen = segnet(seg_in_gen)
+
+    with torch.no_grad():
+        seg_in_gt = segnet.preprocess_input(gt_btchw)
+        seg_logits_gt = segnet(seg_in_gt)
+
+    pred_soft = F.softmax(seg_logits_gen / max(temperature, 0.01), dim=1)
+    gt_soft = F.softmax(seg_logits_gt / max(temperature, 0.01), dim=1)
+    return 1.0 - (pred_soft * gt_soft).sum(dim=1).mean()
+
+
+def _compute_seg_distortion_ste(
+    gen_frames: torch.Tensor,
+    gt_frames: torch.Tensor,
+    segnet: nn.Module,
+) -> torch.Tensor:
+    """SegNet distortion with STE: forward=hard argmax, backward=cross-entropy.
+
+    Directly optimizes the eval metric (hard disagreement) while maintaining
+    gradient flow through cross-entropy backward. This is the tightest possible
+    proxy for the scorer's actual measurement.
+    """
+    gen_btchw = gen_frames.unsqueeze(1).contiguous()
+    gt_btchw = gt_frames.unsqueeze(1).contiguous()
+
+    seg_in_gen = segnet.preprocess_input(gen_btchw)
+    seg_logits_gen = segnet(seg_in_gen)
+
+    with torch.no_grad():
+        seg_in_gt = segnet.preprocess_input(gt_btchw)
+        seg_logits_gt = segnet(seg_in_gt)
+
+    # Hard forward: argmax disagreement (matches eval exactly)
+    hard_disagree = (seg_logits_gen.argmax(dim=1) != seg_logits_gt.argmax(dim=1)).float().mean()
+
+    # Soft backward: cross-entropy against GT argmax labels
+    gt_labels = seg_logits_gt.argmax(dim=1)  # (B, H, W)
+    soft_ce = F.cross_entropy(seg_logits_gen, gt_labels)
+
+    # STE: forward value = hard, gradient = soft
+    return soft_ce + (hard_disagree - soft_ce).detach()
 
 
 def _compute_pose_distortion_coupled(
@@ -873,9 +932,21 @@ def train_fridrich_renderer(cfg: FridrichRendererConfig) -> dict[str, Any]:
         # MSE reconstruction (warm signal, always on but weighted down later)
         mse_loss = F.mse_loss(gen_t, gt_t) + F.mse_loss(gen_t1, gt_t1)
 
-        # SegNet distortion (differentiable, through both frames)
-        seg_dist_t = _compute_seg_distortion(gen_t, gt_t, segnet)
-        seg_dist_t1 = _compute_seg_distortion(gen_t1, gt_t1, segnet)
+        # SegNet distortion — Fridrich curriculum (council P1):
+        # Phase 1: soft Bhattacharyya (broad gradients for initial learning)
+        # Phase 2: temperature-annealed Bhattacharyya (sharpen toward argmax)
+        # Phase 3: STE (forward=hard argmax, backward=cross-entropy)
+        if phase == 1:
+            seg_dist_t = _compute_seg_distortion(gen_t, gt_t, segnet)
+            seg_dist_t1 = _compute_seg_distortion(gen_t1, gt_t1, segnet)
+        elif phase == 2:
+            phase2_progress = (progress - cfg.phase1_end) / max(cfg.phase2_end - cfg.phase1_end, 1e-6)
+            temperature = 1.0 - 0.9 * phase2_progress  # 1.0 → 0.1
+            seg_dist_t = _compute_seg_distortion_tempered(gen_t, gt_t, segnet, temperature)
+            seg_dist_t1 = _compute_seg_distortion_tempered(gen_t1, gt_t1, segnet, temperature)
+        else:  # phase 3
+            seg_dist_t = _compute_seg_distortion_ste(gen_t, gt_t, segnet)
+            seg_dist_t1 = _compute_seg_distortion_ste(gen_t1, gt_t1, segnet)
         seg_dist = (seg_dist_t + seg_dist_t1) / 2.0
 
         # PoseNet distortion (coupled trajectory — gradient through BOTH frames)
@@ -981,12 +1052,20 @@ def train_fridrich_renderer(cfg: FridrichRendererConfig) -> dict[str, Any]:
         if epoch % cfg.log_every == 0 or epoch == cfg.epochs - 1:
             elapsed = time.time() - start_time
             lr_now = optimizer.param_groups[0]["lr"]
+            # P0: Compute hard disagreement alongside soft Bhattacharyya
+            # for live calibration of the soft/hard gap (council recommendation)
+            with torch.no_grad():
+                seg_in_g = segnet.preprocess_input(gen_t1.unsqueeze(1).contiguous())
+                seg_in_gt = segnet.preprocess_input(gt_t1.unsqueeze(1).contiguous())
+                seg_hard = (segnet(seg_in_g).argmax(dim=1) != segnet(seg_in_gt).argmax(dim=1)).float().mean().item()
+
             log_entry = {
                 "epoch": epoch,
                 "phase": phase,
                 "loss": total_loss.item(),
                 "mse": mse_loss.item(),
                 "seg_dist": seg_dist.item(),
+                "seg_hard": seg_hard,  # hard argmax disagreement (eval metric)
                 "pose_dist": pose_dist.item(),
                 "tv": tv.item(),
                 "flow_reg": flow_reg.item(),
@@ -1005,7 +1084,7 @@ def train_fridrich_renderer(cfg: FridrichRendererConfig) -> dict[str, Any]:
                 f"[{epoch:5d}/{cfg.epochs}] P{phase} "
                 f"loss={total_loss.item():.4f} "
                 f"mse={mse_loss.item():.2f} "
-                f"seg={seg_dist.item():.5f} "
+                f"seg={seg_dist.item():.5f}(h={seg_hard:.5f}) "
                 f"pose={pose_dist.item():.5f} "
                 f"tv={tv.item():.3f} "
                 f"flow={flow_reg.item():.3f} "
