@@ -332,15 +332,30 @@ def build_rgb_label_map_sample(
     if bridge_loader is None:
         raise ValueError("bridge_loader is required for local-only RGB semantic labeling")
 
+    target = Path(output_path)
+    existing_label_map: dict[str, list[int]] = {}
+    if target.exists():
+        existing_payload = json.loads(target.read_text(encoding="utf-8"))
+        if not isinstance(existing_payload, dict):
+            raise ValueError("existing RGB label output must contain a top-level JSON object")
+        existing_label_map = {
+            str(key): [int(item) for item in value]
+            for key, value in existing_payload.items()
+            if isinstance(value, list)
+        }
+
     dataset = load_commavq_dataset(split=split, dataset_loader=dataset_loader, streaming=True)
     train = dataset["train"]
     examples = []
     for example in train:
+        file_name = str(example["json"]["file_name"])
+        if file_name in existing_label_map:
+            continue
         examples.append(example)
         if len(examples) >= max_records:
             break
 
-    label_map: dict[str, list[int]] = {}
+    label_map: dict[str, list[int]] = dict(existing_label_map)
     decoder, transpose_and_clip_fn, decode_device = _load_rgb_bridge(
         bridge_loader=bridge_loader,
         device=device,
@@ -368,7 +383,6 @@ def build_rgb_label_map_sample(
             label_map[file_name] = list(_rgb_semantic_label_tuple_from_sampled_nchw(merged_frames[start:start + count]))
             start += count
 
-    target = Path(output_path)
     target.parent.mkdir(parents=True, exist_ok=True)
     target.write_text(json.dumps(label_map, indent=2, sort_keys=True) + "\n")
     return {

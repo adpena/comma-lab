@@ -332,6 +332,62 @@ class TacLosslessRgbSemanticLabelsTests(unittest.TestCase):
         self.assertEqual(len(calls), 1)
         self.assertTrue(calls[0]["streaming"])
 
+    def test_build_rgb_label_map_sample_reuses_existing_output_entries(self) -> None:
+        from tac.lossless.rgb_semantic_labels import build_rgb_label_map_sample
+
+        examples = [
+            {
+                "json": {"file_name": "clip_a.npy"},
+                "token.npy": np.zeros((1, 8, 16), dtype=np.int16),
+            },
+            {
+                "json": {"file_name": "clip_b.npy"},
+                "token.npy": np.ones((1, 8, 16), dtype=np.int16),
+            },
+        ]
+        decoder_batches: list[tuple[int, ...]] = []
+
+        def fake_dataset_loader(_dataset_name: str, *, num_proc=None, data_files=None, streaming=None):
+            return {"train": examples}
+
+        class FakeDecoder:
+            _tac_input_kind = "numpy"
+
+            def __call__(self, batch):
+                arr = np.asarray(batch)
+                decoder_batches.append(arr.shape)
+                out = np.zeros((arr.shape[0], 3, 6, 6), dtype=np.float32)
+                out[0] = np.transpose(_warm_indoor_frames(frame_count=1)[0].astype(np.float32), (2, 0, 1))
+                return out
+
+        def fake_bridge_loader(**_kwargs):
+            return (
+                FakeDecoder(),
+                lambda arr: np.transpose(np.asarray(arr), (0, 2, 3, 1)).astype(np.uint8),
+                {"bridge_backend": "fake"},
+            )
+
+        with tempfile.TemporaryDirectory() as tmpdir:
+            output_path = Path(tmpdir) / "rgb_labels.json"
+            output_path.write_text(json.dumps({"clip_a.npy": [10, 0, 0, 2, 0, 3, 0, 0]}), encoding="utf-8")
+
+            result = build_rgb_label_map_sample(
+                output_path=output_path,
+                split=[0, 1],
+                max_records=2,
+                dataset_loader=fake_dataset_loader,
+                bridge_loader=fake_bridge_loader,
+                batch_size=8,
+                device="cpu",
+            )
+
+            payload = json.loads(output_path.read_text())
+
+        self.assertEqual(result["record_count"], 2)
+        self.assertEqual(decoder_batches, [(1, 8, 16)])
+        self.assertIn("clip_a.npy", payload)
+        self.assertIn("clip_b.npy", payload)
+
 
 if __name__ == "__main__":
     unittest.main()
