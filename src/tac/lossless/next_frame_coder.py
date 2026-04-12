@@ -5,9 +5,14 @@ from pathlib import Path
 
 import numpy as np
 
-from .gpt_score import _load_frame_major_segments_from_path, load_official_commavq_gpt_model
+from .gpt_score import (
+    _load_frame_major_segments_from_path,
+    gpt_model_runtime_metadata,
+    load_official_commavq_gpt_model,
+)
 from .profiles import load_next_frame_predictor_profile
 from .range_coder import RangeDecoder, RangeEncoder, cumulative_frequencies, normalize_probabilities
+from .tiny_frame_predictor import load_tiny_frame_predictor_runtime
 
 STREAM_MAGIC = b"NFG1"
 
@@ -211,6 +216,51 @@ def decode_next_frame_stream_with_logits_fn(
     return np.asarray(restored, dtype=np.uint16)
 
 
+def _load_next_frame_runtime(
+    *,
+    profile: str,
+    method: str,
+    context_frames: int,
+    vocab_size: int,
+    device: str,
+    dtype: str,
+    cache_dir: str | Path | None,
+    model_url: str | None,
+    gpt_module_path: str | Path | None,
+    model_loader: Callable[..., object] | None,
+) -> object:
+    if model_loader is not None:
+        return model_loader(
+            device=device,
+            dtype=dtype,
+            cache_dir=cache_dir,
+            model_url=model_url,
+            gpt_module_path=gpt_module_path,
+        )
+    if method == "tiny_frame_predictor":
+        return load_tiny_frame_predictor_runtime(
+            profile,
+            context_frames=context_frames,
+            vocab_size=vocab_size,
+            device=device,
+            dtype=dtype,
+        )
+    return load_official_commavq_gpt_model(
+        device=device,
+        dtype=dtype,
+        cache_dir=cache_dir,
+        model_url=model_url,
+        gpt_module_path=gpt_module_path,
+    )
+
+
+def _next_frame_runtime_metadata(model: object) -> dict[str, object]:
+    payload = gpt_model_runtime_metadata(model)
+    if hasattr(model, "_tac_model_profile"):
+        payload["model_profile"] = getattr(model, "_tac_model_profile")
+    return payload
+
+
 def encode_commavq_next_frame_sample(
     *,
     token_path: str | Path,
@@ -244,14 +294,19 @@ def encode_commavq_next_frame_sample(
     if frames.shape[0] < 2:
         raise ValueError("sample must contain at least two frames")
 
-    loader = model_loader or load_official_commavq_gpt_model
-    model = loader(
+    model = _load_next_frame_runtime(
+        profile=profile,
+        method=config.method,
+        context_frames=effective_context_frames,
+        vocab_size=vocab_size,
         device=device,
         dtype=dtype,
         cache_dir=cache_dir,
         model_url=model_url,
         gpt_module_path=gpt_module_path,
+        model_loader=model_loader,
     )
+    runtime_metadata = _next_frame_runtime_metadata(model)
     encoded = encode_next_frame_stream_with_logits_fn(
         frames,
         logits_fn=lambda prefix: model.next_frame_logits(prefix, context_frames=effective_context_frames),
@@ -271,7 +326,7 @@ def encode_commavq_next_frame_sample(
         )
         exact_match = np.array_equal(restored, frames)
     original_bytes = int(frames.size) * 2
-    return {
+    result = {
         "command": "lossless_next_frame_sample",
         "token_path": str(Path(token_path)),
         "encoded_path": str(target),
@@ -288,3 +343,7 @@ def encode_commavq_next_frame_sample(
         "local_only": True,
         "measured": False,
     }
+    result.update({key: value for key, value in runtime_metadata.items() if key != "model_url"})
+    if "model_url" in runtime_metadata:
+        result["model_url"] = runtime_metadata["model_url"]
+    return result

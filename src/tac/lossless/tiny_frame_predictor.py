@@ -2,6 +2,8 @@ from __future__ import annotations
 
 from dataclasses import asdict, dataclass
 
+import numpy as np
+
 from .profiles import TinyFramePredictorProfileConfig, load_tiny_frame_predictor_profile
 
 
@@ -37,7 +39,55 @@ class TinyFramePredictorConfig:
 
 
 class TinyFramePredictor:
-    pass
+    def __init__(
+        self,
+        model,
+        *,
+        config: TinyFramePredictorConfig,
+        profile: str,
+        torch,
+        device: str,
+        dtype: str,
+        fallback_reason: str | None = None,
+    ) -> None:
+        self._model = model
+        self._config = config
+        self._torch = torch
+        self._device = device
+        self._dtype = dtype
+        self._tac_model_backend = "tiny_frame_predictor"
+        self._tac_model_profile = profile
+        self._tac_execution_provider = device
+        self._tac_execution_providers = [device]
+        if fallback_reason:
+            self._tac_bridge_fallback_reason = fallback_reason
+
+    def _prepare_tokens(self, prefix_frames: np.ndarray, *, context_frames: int) -> np.ndarray:
+        if int(context_frames) != self._config.context_frames:
+            raise ValueError("context_frames does not match tiny frame predictor runtime")
+        arr = np.asarray(prefix_frames, dtype=np.uint16)
+        if arr.ndim != 3 or arr.shape[1:] != (8, 16):
+            raise ValueError("prefix_frames must have shape (N, 8, 16)")
+        if arr.shape[0] < 1:
+            raise ValueError("prefix_frames must contain at least one frame")
+        flat = arr.reshape(arr.shape[0], -1)
+        if flat.shape[1] != self._config.positions:
+            raise ValueError("prefix_frames positions do not match runtime config")
+        if int(flat.max()) >= self._config.vocab_size:
+            raise ValueError("prefix_frames contain token ids outside the runtime vocab")
+
+        padded = np.zeros((self._config.context_frames, self._config.positions), dtype=np.int64)
+        usable = flat[-self._config.context_frames :]
+        padded[-usable.shape[0] :] = usable.astype(np.int64, copy=False)
+        return padded
+
+    def next_frame_logits(self, prefix_frames: np.ndarray, *, context_frames: int) -> np.ndarray:
+        torch = self._torch
+        tokens = self._prepare_tokens(prefix_frames, context_frames=context_frames)
+        with torch.no_grad():
+            token_tensor = torch.as_tensor(tokens, dtype=torch.long, device=self._device).unsqueeze(0)
+            logits = self._model(token_tensor)
+        return logits[0].detach().to("cpu", dtype=torch.float32).numpy().astype(np.float64, copy=False)
 
 
 def build_tiny_frame_predictor(config: TinyFramePredictorConfig):
@@ -92,31 +142,128 @@ def build_tiny_frame_predictor(config: TinyFramePredictorConfig):
     return _TinyFramePredictor(config)
 
 
-def summarize_tiny_frame_predictor(config_or_profile: TinyFramePredictorConfig | TinyFramePredictorProfileConfig | str):
+def _config_from_profile(
+    config_or_profile: TinyFramePredictorConfig | TinyFramePredictorProfileConfig | str,
+    *,
+    context_frames: int | None = None,
+    vocab_size: int | None = None,
+) -> tuple[str | None, TinyFramePredictorConfig]:
     if isinstance(config_or_profile, str):
         profile_config = load_tiny_frame_predictor_profile(config_or_profile)
         config = TinyFramePredictorConfig(
-            context_frames=profile_config.context_frames,
+            context_frames=profile_config.context_frames if context_frames is None else int(context_frames),
             positions=profile_config.positions,
-            vocab_size=profile_config.vocab_size,
+            vocab_size=profile_config.vocab_size if vocab_size is None else int(vocab_size),
             embed_dim=profile_config.embed_dim,
             hidden_dim=profile_config.hidden_dim,
             mixer_layers=profile_config.mixer_layers,
         )
-        profile_name = profile_config.profile
-    elif isinstance(config_or_profile, TinyFramePredictorProfileConfig):
+        return profile_config.profile, config
+    if isinstance(config_or_profile, TinyFramePredictorProfileConfig):
         config = TinyFramePredictorConfig(
-            context_frames=config_or_profile.context_frames,
+            context_frames=config_or_profile.context_frames if context_frames is None else int(context_frames),
             positions=config_or_profile.positions,
-            vocab_size=config_or_profile.vocab_size,
+            vocab_size=config_or_profile.vocab_size if vocab_size is None else int(vocab_size),
             embed_dim=config_or_profile.embed_dim,
             hidden_dim=config_or_profile.hidden_dim,
             mixer_layers=config_or_profile.mixer_layers,
         )
-        profile_name = config_or_profile.profile
-    else:
-        config = config_or_profile
-        profile_name = None
+        return config_or_profile.profile, config
+    config = TinyFramePredictorConfig(
+        context_frames=config_or_profile.context_frames if context_frames is None else int(context_frames),
+        positions=config_or_profile.positions,
+        vocab_size=config_or_profile.vocab_size if vocab_size is None else int(vocab_size),
+        embed_dim=config_or_profile.embed_dim,
+        hidden_dim=config_or_profile.hidden_dim,
+        mixer_layers=config_or_profile.mixer_layers,
+    )
+    return None, config
+
+
+def _resolve_runtime_device(torch, device: str) -> tuple[str, str | None]:
+    normalized = device.strip().lower()
+    if normalized not in {"auto", "cpu", "cuda", "mps"}:
+        raise ValueError(f"unsupported device: {device}")
+    if normalized == "auto":
+        if torch.cuda.is_available():
+            return "cuda", None
+        if hasattr(torch.backends, "mps") and torch.backends.mps.is_available():
+            return "mps", None
+        return "cpu", None
+    if normalized == "cuda" and torch.cuda.is_available():
+        return "cuda", None
+    if normalized == "mps" and hasattr(torch.backends, "mps") and torch.backends.mps.is_available():
+        return "mps", None
+    if normalized == "cpu":
+        return "cpu", None
+    return "cpu", f"requested {normalized} runtime is unavailable; using cpu"
+
+
+def _resolve_runtime_dtype(torch, dtype: str, *, device: str) -> tuple[object, str, str | None]:
+    normalized = dtype.strip().lower()
+    if normalized not in {"auto", "float32", "float16", "bfloat16"}:
+        raise ValueError(f"unsupported dtype: {dtype}")
+    if normalized == "auto":
+        return torch.float32, "float32", None
+    if normalized == "float32":
+        return torch.float32, "float32", None
+    if device == "cuda":
+        if normalized == "float16":
+            return torch.float16, "float16", None
+        return torch.bfloat16, "bfloat16", None
+    if device == "mps" and normalized == "float16":
+        return torch.float16, "float16", None
+    return torch.float32, "float32", f"requested {normalized} dtype is unsupported on {device}; using float32"
+
+
+def _initialize_deterministic_tiny_frame_predictor(model, *, torch) -> None:
+    phase = 0.0
+    with torch.no_grad():
+        for name, param in model.named_parameters():
+            if param.ndim == 1:
+                if name.endswith("norm.weight"):
+                    param.fill_(1.0)
+                else:
+                    param.zero_()
+                continue
+            values = torch.arange(param.numel(), dtype=torch.float32, device=param.device).reshape(param.shape)
+            scale = 0.02 / max(float(param.shape[-1]), 1.0)
+            param.copy_((torch.sin(values + phase) * scale).to(dtype=param.dtype))
+            phase += float(param.numel())
+
+
+def load_tiny_frame_predictor_runtime(
+    profile: str | TinyFramePredictorProfileConfig | TinyFramePredictorConfig,
+    *,
+    context_frames: int | None = None,
+    vocab_size: int | None = None,
+    device: str = "auto",
+    dtype: str = "auto",
+) -> TinyFramePredictor:
+    torch, _ = _require_torch()
+    profile_name, config = _config_from_profile(profile, context_frames=context_frames, vocab_size=vocab_size)
+    resolved_device, device_fallback = _resolve_runtime_device(torch, device)
+    torch_dtype, resolved_dtype, dtype_fallback = _resolve_runtime_dtype(torch, dtype, device=resolved_device)
+    fallback_parts = [part for part in (device_fallback, dtype_fallback) if part]
+
+    model = build_tiny_frame_predictor(config)
+    model = model.to(device=resolved_device, dtype=torch_dtype)
+    model.eval()
+    _initialize_deterministic_tiny_frame_predictor(model, torch=torch)
+
+    return TinyFramePredictor(
+        model,
+        config=config,
+        profile=profile_name or "custom",
+        torch=torch,
+        device=resolved_device,
+        dtype=resolved_dtype,
+        fallback_reason="; ".join(fallback_parts) if fallback_parts else None,
+    )
+
+
+def summarize_tiny_frame_predictor(config_or_profile: TinyFramePredictorConfig | TinyFramePredictorProfileConfig | str):
+    profile_name, config = _config_from_profile(config_or_profile)
 
     model = build_tiny_frame_predictor(config)
     parameter_count = sum(int(param.numel()) for param in model.parameters())
@@ -127,4 +274,3 @@ def summarize_tiny_frame_predictor(config_or_profile: TinyFramePredictorConfig |
     }
     payload.update(asdict(config))
     return payload
-

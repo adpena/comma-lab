@@ -245,6 +245,43 @@ class TacLosslessNextFrameCoderTests(unittest.TestCase):
         self.assertEqual(result["frame_count"], 3)
         self.assertTrue(result["exact_match"])
 
+    def test_encode_commavq_next_frame_sample_builds_default_tiny_frame_predictor_runtime(self) -> None:
+        from tac.lossless.next_frame_coder import encode_commavq_next_frame_sample
+
+        with tempfile.TemporaryDirectory() as tmpdir:
+            root = Path(tmpdir)
+            token_path = root / "tokens.bin"
+            output_path = root / "sample.nfg"
+            frame0 = np.full((8, 16), 3, dtype=np.uint16)
+            frame1 = np.full((8, 16), 4, dtype=np.uint16)
+            frame2 = np.full((8, 16), 5, dtype=np.uint16)
+            flat = np.concatenate(
+                [
+                    np.array([1024], dtype=np.uint16), frame0.reshape(-1),
+                    np.array([1024], dtype=np.uint16), frame1.reshape(-1),
+                    np.array([1024], dtype=np.uint16), frame2.reshape(-1),
+                    np.array([1025], dtype=np.uint16),
+                ]
+            )
+            flat.tofile(token_path)
+
+            result = encode_commavq_next_frame_sample(
+                token_path=token_path,
+                encoded_path=output_path,
+                profile="tiny_frame_predictor_small",
+                max_frames=3,
+                context_frames=2,
+                verify_decode=False,
+                device="cpu",
+            )
+
+            self.assertTrue(output_path.exists())
+
+        self.assertEqual(result["command"], "lossless_next_frame_sample")
+        self.assertEqual(result["frame_count"], 3)
+        self.assertEqual(result["model_backend"], "tiny_frame_predictor")
+        self.assertEqual(result["model_profile"], "tiny_frame_predictor_small")
+
 
 if __name__ == "__main__":
     unittest.main()
