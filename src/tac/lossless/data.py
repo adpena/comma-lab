@@ -1,7 +1,9 @@
 from __future__ import annotations
 
+import os
 from collections.abc import Iterable, Mapping, Sequence
 from dataclasses import dataclass
+from pathlib import Path
 
 BytesLike = bytes | bytearray | memoryview
 TokenSource = BytesLike | Iterable[int]
@@ -90,6 +92,26 @@ def resolve_commavq_data_files(
         return resolved
 
     return {"train": [_normalize_data_file_entry(value) for value in split]}
+
+
+def resolve_local_commavq_cached_data_files(data_files: Sequence[str]) -> list[str] | None:
+    cache_roots = []
+    hf_home = os.environ.get("HF_HOME")
+    if hf_home:
+        cache_roots.append(Path(hf_home) / "hub" / "datasets--commaai--commavq" / "snapshots")
+    cache_roots.append(Path.home() / ".cache" / "huggingface" / "hub" / "datasets--commaai--commavq" / "snapshots")
+
+    normalized = [str(item) for item in data_files]
+    for snapshots_root in cache_roots:
+        if not snapshots_root.exists():
+            continue
+        for snapshot_dir in sorted(snapshots_root.iterdir(), reverse=True):
+            if not snapshot_dir.is_dir():
+                continue
+            resolved = [snapshot_dir / name for name in normalized]
+            if all(path.is_file() for path in resolved):
+                return [str(path) for path in resolved]
+    return None
 
 
 def commavq_original_bytes(
@@ -182,8 +204,16 @@ def load_commavq_dataset(
 
         dataset_loader = load_dataset
 
+    resolved_data_files = resolve_commavq_data_files(split)
+    train_files = resolved_data_files.get("train")
+    if isinstance(train_files, list):
+        cached_train_files = resolve_local_commavq_cached_data_files(train_files)
+        if cached_train_files is not None:
+            resolved_data_files = dict(resolved_data_files)
+            resolved_data_files["train"] = cached_train_files
+
     kwargs = {
-        "data_files": resolve_commavq_data_files(split),
+        "data_files": resolved_data_files,
     }
     if num_proc is not None and not streaming:
         kwargs["num_proc"] = num_proc
