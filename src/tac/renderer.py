@@ -153,8 +153,12 @@ class MaskRenderer(nn.Module):
         # Accepts external embedding for weight sharing with MotionPredictor
         self.embedding = embedding if embedding is not None else nn.Embedding(num_classes, embed_dim)
 
-        # Stem: embed_dim → base_ch at full resolution
-        self.stem_conv = nn.Conv2d(embed_dim, base_ch, 3, padding=1, bias=True)
+        # Coordinate grid conditioning (council decision: +2 channels for spatial awareness)
+        self.use_coord_grid = True
+        coord_channels = 2 if self.use_coord_grid else 0
+
+        # Stem: (embed_dim + coord_channels) → base_ch at full resolution
+        self.stem_conv = nn.Conv2d(embed_dim + coord_channels, base_ch, 3, padding=1, bias=True)
         self.stem_res = ResBlock(base_ch, num_classes=num_classes)
 
         # Downsample 1: base_ch → mid_ch at half resolution
@@ -201,6 +205,15 @@ class MaskRenderer(nn.Module):
         # Embed: (B, H, W) → (B, H, W, embed_dim) → (B, embed_dim, H, W)
         x = self.embedding(masks)
         x = x.permute(0, 3, 1, 2).contiguous()
+
+        # Coordinate grid: normalized [-1, 1] spatial coords (Quantizr insight)
+        if self.use_coord_grid:
+            B, _, H, W = x.shape
+            gy = torch.linspace(-1, 1, H, device=x.device, dtype=x.dtype)
+            gx = torch.linspace(-1, 1, W, device=x.device, dtype=x.dtype)
+            grid_y, grid_x = torch.meshgrid(gy, gx, indexing="ij")
+            coords = torch.stack([grid_x, grid_y], dim=0).unsqueeze(0).expand(B, -1, -1, -1)
+            x = torch.cat([x, coords], dim=1)  # (B, embed_dim+2, H, W)
 
         # Stem (full res) — pass mask for CLADE conditioning
         stem = self.stem_conv(x)
