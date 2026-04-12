@@ -180,6 +180,16 @@ class FridrichRendererConfig:
     share_stem: bool = False              # optimization #12: shared stem (deferred, gated)
     flow_only: bool = False               # optimization #15: no gate/residual (deferred, gated)
 
+    # Gate regularization (penalize gate_mean above threshold — Quantizr adversarial)
+    gate_reg_threshold: float = 0.5
+    gate_reg_weight: float = 0.01
+
+    # Auto-kill on divergence
+    kill_loss_threshold: float = 100.0
+    kill_seg_threshold: float = 0.5
+    kill_pose_threshold: float = 1.0
+    kill_patience: int = 50
+
     # Smoke test overrides
     smoke: bool = False
 
@@ -923,11 +933,19 @@ def train_fridrich_renderer(cfg: FridrichRendererConfig) -> dict[str, Any]:
                     bit_param_ids.add(id(p))
             renderer_params = [p for p in pair_gen.renderer.parameters()
                                if id(p) not in bit_param_ids]
+            # Collect motion params separately (asymmetric: motion ships too)
+            renderer_param_ids = {id(p) for p in pair_gen.renderer.parameters()}
+            motion_params = [p for p in pair_gen.parameters()
+                             if id(p) not in renderer_param_ids
+                             and id(p) not in bit_param_ids]
+            param_groups = [
+                {"params": renderer_params, "lr": cfg.lr * 0.5},
+                {"params": bit_params, "lr": cfg.lr * 0.1},
+            ]
+            if motion_params:
+                param_groups.append({"params": motion_params, "lr": cfg.lr * 0.3})
             optimizer = torch.optim.AdamW(
-                [
-                    {"params": renderer_params, "lr": cfg.lr * 0.5},
-                    {"params": bit_params, "lr": cfg.lr * 0.1},
-                ],
+                param_groups,
                 weight_decay=1e-4,
             )
             print(f"  Re-wrapped {len(bit_modules)} conv layers for Phase 3 resume")
@@ -962,6 +980,7 @@ def train_fridrich_renderer(cfg: FridrichRendererConfig) -> dict[str, Any]:
         "torch_version": torch.__version__,
         "cuda_version": torch.version.cuda if torch.cuda.is_available() else None,
         "cuda_available": torch.cuda.is_available(),
+        "gpu_name": torch.cuda.get_device_name(0) if torch.cuda.is_available() else None,
         "device": cfg.device,
     }
     try:
@@ -1005,6 +1024,7 @@ def train_fridrich_renderer(cfg: FridrichRendererConfig) -> dict[str, Any]:
     if not cfg.resume:
         self_compress_active = False
     # bit_modules already initialized before resume block
+    divergence_counter = 0  # Bug #7: auto-kill on divergence
     start_time = time.time()
 
     for epoch in range(start_epoch, cfg.epochs):
@@ -1038,12 +1058,20 @@ def train_fridrich_renderer(cfg: FridrichRendererConfig) -> dict[str, Any]:
                 # so pair_gen.renderer.parameters() includes their bits params.
                 renderer_params = [p for p in pair_gen.renderer.parameters()
                                    if id(p) not in bit_param_ids]
+                # Collect motion params separately (asymmetric: motion ships too)
+                renderer_param_ids = {id(p) for p in pair_gen.renderer.parameters()}
+                motion_params = [p for p in pair_gen.parameters()
+                                 if id(p) not in renderer_param_ids
+                                 and id(p) not in bit_param_ids]
                 remaining_epochs = cfg.epochs - epoch
+                param_groups = [
+                    {"params": renderer_params, "lr": cfg.lr * 0.5},
+                    {"params": bit_params, "lr": cfg.lr * 0.1},
+                ]
+                if motion_params:
+                    param_groups.append({"params": motion_params, "lr": cfg.lr * 0.3})
                 optimizer = torch.optim.AdamW(
-                    [
-                        {"params": renderer_params, "lr": cfg.lr * 0.5},
-                        {"params": bit_params, "lr": cfg.lr * 0.1},
-                    ],
+                    param_groups,
                     weight_decay=1e-4,
                 )
                 scheduler = torch.optim.lr_scheduler.CosineAnnealingLR(
@@ -1150,6 +1178,13 @@ def train_fridrich_renderer(cfg: FridrichRendererConfig) -> dict[str, Any]:
                 + (rho / 2.0) * seg_violation.pow(2)
                 + (rho / 2.0) * pose_violation.pow(2)
             )
+
+            # Gate regularization: penalize gate_mean above threshold (Bug #6)
+            if cfg.pair_mode == "asymmetric" and cfg.gate_reg_weight > 0:
+                gate_mean = getattr(pair_gen, "_last_gate_mean", 0.0)
+                if gate_mean > cfg.gate_reg_threshold:
+                    gate_penalty = cfg.gate_reg_weight * (gate_mean - cfg.gate_reg_threshold)
+                    total_loss = total_loss + gate_penalty
 
             if phase == 3 and self_compress_active:
                 # Add self-compression rate penalty
@@ -1376,6 +1411,22 @@ def train_fridrich_renderer(cfg: FridrichRendererConfig) -> dict[str, Any]:
         if constraints_satisfied_count >= cfg.early_stop_patience:
             print(f"\nEarly stopping: both constraints satisfied for {cfg.early_stop_patience} epochs")
             break
+
+        # ---- Auto-kill on divergence (Bug #7) ----
+        loss_val = total_loss.item()
+        seg_val = seg_dist.item()
+        pose_val = pose_dist.item()
+        if (loss_val > cfg.kill_loss_threshold
+                or seg_val > cfg.kill_seg_threshold
+                or pose_val > cfg.kill_pose_threshold
+                or not math.isfinite(loss_val)):
+            divergence_counter += 1
+            if divergence_counter >= cfg.kill_patience:
+                print(f"\nAuto-kill: divergence detected for {cfg.kill_patience} consecutive epochs "
+                      f"(loss={loss_val:.4f}, seg={seg_val:.5f}, pose={pose_val:.5f})")
+                break
+        else:
+            divergence_counter = 0
 
         # ---- Wall-clock budget safeguard ----
         if cfg.max_hours > 0:

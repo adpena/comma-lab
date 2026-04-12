@@ -643,6 +643,11 @@ def _infer_asymmetric_config(model: nn.Module) -> dict:
     use_coord_grid = getattr(motion, "use_coord_grid", True)
     use_diff_features = getattr(motion, "use_diff_features", True)
 
+    # Asymmetric-specific motion params (Bug #1: serialize for faithful restore)
+    max_flow_px = getattr(motion, "max_flow_px", 12.0)
+    max_residual = getattr(motion, "max_residual", 20.0)
+    flow_only = getattr(motion, "flow_only", False)
+
     return {
         "num_classes": num_classes,
         "embed_dim": embed_dim,
@@ -653,6 +658,9 @@ def _infer_asymmetric_config(model: nn.Module) -> dict:
         "output_channels": output_channels,
         "use_coord_grid": use_coord_grid,
         "use_diff_features": use_diff_features,
+        "max_flow_px": max_flow_px,
+        "max_residual": max_residual,
+        "flow_only": flow_only,
     }
 
 
@@ -863,6 +871,9 @@ def load_asymmetric_checkpoint(
         mid_ch=header.get("mid_ch", 60),
         motion_hidden=header.get("motion_hidden", 32),
         depth=header.get("depth", 1),
+        max_flow_px=header.get("max_flow_px", 12.0),
+        max_residual=header.get("max_residual", 20.0),
+        flow_only=header.get("flow_only", False),
     )
 
     # Build name -> module lookups

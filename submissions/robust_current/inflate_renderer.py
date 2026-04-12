@@ -375,12 +375,16 @@ if not _HAS_TAC_RENDERER:
 
     class MotionPredictor(nn.Module):
         def __init__(self, num_classes=5, embed_dim=6, hidden=32, embedding=None,
-                     output_channels=2, use_coord_grid=True, use_diff_features=True):
+                     output_channels=2, use_coord_grid=True, use_diff_features=True,
+                     max_flow_px=12.0, max_residual=20.0, flow_only=False):
             super().__init__()
             self.num_classes = num_classes
             self.output_channels = output_channels
             self.use_coord_grid = use_coord_grid
             self.use_diff_features = use_diff_features
+            self.max_flow_px = max_flow_px
+            self.max_residual = max_residual
+            self.flow_only = flow_only
             self.embedding = embedding if embedding is not None else nn.Embedding(num_classes, embed_dim)
             in_ch = embed_dim * 2
             if use_diff_features:
@@ -416,14 +420,19 @@ if not _HAS_TAC_RENDERER:
             if self.output_channels == 2:
                 return raw * 0.1
             else:
-                flow = raw[:, :2].tanh() * (12.0 / max(mask_t.shape[-2], mask_t.shape[-1]) * 2)
-                gate = raw[:, 2:3].sigmoid()
-                residual = raw[:, 3:6].tanh() * 20.0
+                flow = raw[:, :2].tanh() * (self.max_flow_px / max(mask_t.shape[-2], mask_t.shape[-1]) * 2)
+                if self.flow_only:
+                    gate = torch.zeros_like(raw[:, 2:3])
+                    residual = torch.zeros_like(raw[:, 3:6])
+                else:
+                    gate = raw[:, 2:3].sigmoid()
+                    residual = raw[:, 3:6].tanh() * self.max_residual
                 return torch.cat([flow, gate, residual], dim=1)
 
     class AsymmetricPairGenerator(nn.Module):
         def __init__(self, num_classes=5, embed_dim=6, base_ch=36, mid_ch=60,
-                     motion_hidden=32, depth=1):
+                     motion_hidden=32, depth=1, max_flow_px=12.0,
+                     max_residual=20.0, flow_only=False):
             super().__init__()
             shared_emb = nn.Embedding(num_classes, embed_dim)
             self.renderer = MaskRenderer(
@@ -435,6 +444,8 @@ if not _HAS_TAC_RENDERER:
                 num_classes=num_classes, embed_dim=embed_dim,
                 hidden=motion_hidden, embedding=shared_emb,
                 output_channels=6, use_coord_grid=True, use_diff_features=True,
+                max_flow_px=max_flow_px, max_residual=max_residual,
+                flow_only=flow_only,
             )
 
         def forward(self, mask_t: torch.Tensor, mask_t1: torch.Tensor) -> torch.Tensor:

@@ -697,8 +697,15 @@ class HintedMaskRenderer(nn.Module):
         Returns:
             (B, 3, H, W) float tensor in [0, 255]
         """
-        # Standard embedding + stem
+        # Standard embedding + coord grid (must match MaskRenderer.forward)
         x = self.renderer.embedding(masks).permute(0, 3, 1, 2).contiguous()
+        if self.renderer.use_coord_grid:
+            B, _, H, W = x.shape
+            gy = torch.linspace(-1, 1, H, device=x.device, dtype=x.dtype)
+            gx = torch.linspace(-1, 1, W, device=x.device, dtype=x.dtype)
+            grid_y, grid_x = torch.meshgrid(gy, gx, indexing="ij")
+            coords = torch.stack([grid_x, grid_y], dim=0).unsqueeze(0).expand(B, -1, -1, -1)
+            x = torch.cat([x, coords], dim=1)
         stem = self.renderer.stem_conv(x)
         stem = self.renderer.stem_res(stem, masks)
 
