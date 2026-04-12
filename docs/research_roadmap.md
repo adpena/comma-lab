@@ -1,5 +1,48 @@
 # Research Roadmap — Task-Aware Neural Video Compression
 
+## Council Eureka Moments (2026-04-12)
+
+1. **Scoring formula sqrt asymmetry** — PoseNet has diminishing returns below pose=0.0005. Knee of the curve. Stop PoseNet optimization there, focus on SegNet + rate.
+2. **Odd frames are SegNet-free** — 600 of 1200 frames invisible to SegNet. Optimize purely for PoseNet + compressibility. Make smooth/simple for better rate.
+3. **Scorer resolution = 384x512** — BOTH scorers downscale to 384x512. Store at scorer res → 5.2x rate reduction. Verify round-trip fidelity.
+4. **YUV420 chroma null space** — 294,912 free dimensions per frame (2x2 block perturbations summing to zero). Invisible to scorer. Use for H.265 compressibility.
+5. **SegNet argmax stability** — Only boundary pixels (~2-5%) need detail. Interiors can be flat color. Hard-quantize interiors, spend bits only on boundaries.
+6. **Unlimited compress time = minimal recipe** — Pre-compute everything. Store masks + PoseNet targets + seed + corrections. Total 10-60KB.
+7. **DALI bypass** — Generated frames use TensorVideoDataset (raw load), bypassing DALI entirely. Pre-compute targets with DALI at compress time → eliminates 29x calibration.
+
+## Sprint Plan
+
+### PHASE 1: NOW (while training runs, parallel)
+- CRF sweep 32-38 on existing 1.33 checkpoint (2-3h, local)
+- Precomputed corrections pipeline (3-4h, local)
+- Scorer resolution round-trip verification (3-4h, local)
+- Writeup + visualizations (ongoing)
+- Auth scorer on bat00 with DALI (1-2h)
+
+### PHASE 2: After first training results (hours 5-24)
+- Auth-eval new checkpoint
+- CRF sweep on new checkpoint
+- Stack tricks: CRF + corrections + TTO
+- Begin constrained gen smoke on Kaggle P100
+
+### PHASE 3: Week 2 (April 14-20, DECISIVE)
+- GPU lane: constrained generation (PRIMARY on Kaggle P100)
+- CPU lane: trick stacking (SECONDARY)
+- Auth eval pipeline (MUST HAVE)
+
+### PHASE 4: Week 3 (April 21-May 3, LOCK & POLISH)
+- April 21: LOCK final approach
+- Ablation studies for paper
+- Writeup/paper finalization
+- May 1-3: Final submission
+
+### PHASE 5: Post-competition
+- arXiv paper
+- 3DGS / 4D-GS experiments
+- Open-source tac library
+
+---
+
 ## Active Priority: Beat Quantizr (deadline May 3, 2026)
 
 ### NOW — Asymmetric Warp Training (deployed on Modal T4)
