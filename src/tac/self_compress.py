@@ -432,10 +432,12 @@ def train_self_compressing(
         # PoseNet loss
         with torch.no_grad():
             gt_pose_in = posenet.preprocess_input(gt_5d)
-            gt_pose = posenet(gt_pose_in)
+            gt_pose_out = posenet(gt_pose_in)
+            gt_pose = gt_pose_out["pose"] if isinstance(gt_pose_out, dict) else gt_pose_out
         filtered_pose_in = posenet.preprocess_input(filtered_5d)
-        pred_pose = posenet(filtered_pose_in)
-        pose_loss = F.mse_loss(pred_pose, gt_pose)
+        pred_pose_out = posenet(filtered_pose_in)
+        pred_pose = pred_pose_out["pose"] if isinstance(pred_pose_out, dict) else pred_pose_out
+        pose_loss = F.mse_loss(pred_pose[..., :6], gt_pose[..., :6])
 
         # SegNet loss
         with torch.no_grad():
