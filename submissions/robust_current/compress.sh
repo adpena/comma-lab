@@ -499,6 +499,12 @@ if [ -f "$SELF_DIR/postfilter_int8.pt" ]; then
   echo "Bundled postfilter_int8.pt ($(stat -f%z "$SELF_DIR/postfilter_int8.pt" 2>/dev/null || stat -c%s "$SELF_DIR/postfilter_int8.pt") bytes) into archive"
 fi
 
+# Bundle renderer binary for GPU/CPU renderer inflate path
+if [ -f "$SELF_DIR/renderer.bin" ]; then
+  cp "$SELF_DIR/renderer.bin" "$ARCHIVE_DIR/renderer.bin"
+  echo "Bundled renderer.bin ($(stat -f%z "$SELF_DIR/renderer.bin" 2>/dev/null || stat -c%s "$SELF_DIR/renderer.bin") bytes) into archive"
+fi
+
 # ── Pre-compute corrections for CPU inflate pipeline (Eureka 1+2) ──
 # Generates scorer gradients, null-space basis, fragility maps, brightness
 # shifts, PoseNet targets, and hard-frame corrections in one pass.

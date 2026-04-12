@@ -380,8 +380,10 @@ def export_renderer_checkpoint(
 
     header_json = json.dumps(header, separators=(",", ":")).encode("utf-8")
 
-    # Pack: [header_len (4B)] [header JSON] [blob_len (4B)] [blob] ...
+    # Pack: [magic (4B)] [header_len (4B)] [header JSON] [blob_len (4B)] [blob] ...
+    _MAGIC = b"DPSM"  # DP-SIMS renderer binary format
     buf = bytearray()
+    buf.extend(_MAGIC)
     buf.extend(struct.pack("<I", len(header_json)))
     buf.extend(header_json)
     for blob in weight_blobs:
@@ -418,6 +420,15 @@ def load_renderer_checkpoint(
         data = data_or_path
 
     offset = 0
+
+    # Read and verify magic
+    _MAGIC = b"DPSM"
+    if data[offset:offset + 4] != _MAGIC:
+        raise ValueError(
+            f"Not a DPSM renderer binary (expected magic {_MAGIC!r}, "
+            f"got {data[offset:offset+4]!r})"
+        )
+    offset += 4
 
     # Read header
     header_len = struct.unpack("<I", data[offset:offset + 4])[0]

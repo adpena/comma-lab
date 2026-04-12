@@ -14,6 +14,7 @@ Pipeline:
 Architecture classes (SPADE, SPADEResBlock, DPSIMSRenderer) are inlined
 for standalone operation on scorer machines without the tac package.
 """
+import json
 import os
 import sys
 import time
@@ -68,9 +69,7 @@ def yuv420_to_rgb(frame) -> torch.Tensor:
 # ============================================================
 try:
     from tac.dp_sims_renderer import SPADE, SPADEResBlock, CrossAttentionNoiseInjector, DPSIMSRenderer
-    _TAC_RENDERER_AVAILABLE = True
 except ImportError:
-    _TAC_RENDERER_AVAILABLE = False
 
     class SPADE(nn.Module):
         """Spatially-Adaptive Normalization (Park et al., CVPR 2019)."""
@@ -398,12 +397,9 @@ def _load_renderer(renderer_path: str, device: str) -> nn.Module:
     renderer_path = Path(renderer_path)
     raw_bytes = renderer_path.read_bytes()
 
-    # Format detection: renderer_export.py writes [uint32 header_len][JSON header][blobs]
-    # PyTorch pickle starts with \x80 (pickle protocol) or PK (zip)
-    is_custom_bin = (
-        len(raw_bytes) >= 8
-        and raw_bytes[0:1] not in (b"\x80", b"P")  # not pickle, not zip
-    )
+    # Format detection: renderer_export.py writes [DPSM magic][uint32 header_len][JSON][blobs]
+    _DPSM_MAGIC = b"DPSM"
+    is_custom_bin = raw_bytes[:4] == _DPSM_MAGIC
 
     if is_custom_bin:
         # Compact .bin format from renderer_export.py

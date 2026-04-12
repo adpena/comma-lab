@@ -333,9 +333,7 @@ def _wrap_with_learnable_bits(model: nn.Module, init_bits: float = 8.0) -> list[
             bit_modules.append(bit_depth)
 
             # Monkey-patch forward to quantize weights through bit_depth
-            original_forward = module.forward
-
-            def _make_quantized_forward(conv, bd, orig_fwd):
+            def _make_quantized_forward(conv, bd):
                 def _quantized_forward(x):
                     q_weight = bd(conv.weight)
                     return F.conv2d(
@@ -344,7 +342,7 @@ def _wrap_with_learnable_bits(model: nn.Module, init_bits: float = 8.0) -> list[
                     )
                 return _quantized_forward
 
-            module.forward = _make_quantized_forward(module, bit_depth, original_forward)
+            module.forward = _make_quantized_forward(module, bit_depth)
 
     return bit_modules
 
@@ -638,8 +636,8 @@ def train_fridrich_renderer(cfg: FridrichRendererConfig) -> dict[str, Any]:
         gt_chw = F.interpolate(
             gt_chw,
             size=(cfg.target_h, cfg.target_w),
-            mode="bicubic",
-            align_corners=False,
+            mode="bilinear",  # Must match SegNet.preprocess_input (bilinear)
+            align_corners=False,  # to avoid training/inflate mask mismatch
         ).clamp(0, 255)
     print(f"  GT shape: {gt_chw.shape}")
 
@@ -685,6 +683,7 @@ def train_fridrich_renderer(cfg: FridrichRendererConfig) -> dict[str, Any]:
     rho = cfg.rho_init
 
     # ---- Resume from checkpoint ----
+    bit_modules: list[nn.Module] = []
     start_epoch = 0
     best_score_ckpt = float("inf")
     if cfg.resume:
@@ -693,6 +692,15 @@ def train_fridrich_renderer(cfg: FridrichRendererConfig) -> dict[str, Any]:
             raise FileNotFoundError(f"Resume checkpoint not found: {ckpt_path}")
         print(f"  Resuming from {ckpt_path}...")
         ckpt = torch.load(ckpt_path, map_location=device, weights_only=False)
+        self_compress_active = ckpt.get("self_compress_active", False)
+
+        # If checkpoint was saved during Phase 3, it contains bit_depth.bits keys.
+        # We must re-wrap the model with LearnableBitDepth BEFORE loading state_dict,
+        # otherwise strict=True fails on the unexpected *.bit_depth.bits keys.
+        if self_compress_active:
+            bit_modules = _wrap_with_learnable_bits(pair_gen.renderer, init_bits=cfg.init_bits)
+            print(f"  Re-wrapped {len(bit_modules)} conv layers for Phase 3 resume")
+
         pair_gen.load_state_dict(ckpt["model_state_dict"])
         optimizer.load_state_dict(ckpt["optimizer_state_dict"])
         if "scheduler_state_dict" in ckpt:
@@ -702,11 +710,12 @@ def train_fridrich_renderer(cfg: FridrichRendererConfig) -> dict[str, Any]:
         rho = ckpt.get("rho", rho)
         start_epoch = ckpt.get("epoch", 0) + 1
         best_score_ckpt = ckpt.get("best_score", float("inf"))
-        self_compress_active = ckpt.get("self_compress_active", False)
         print(f"  Resumed at epoch {start_epoch}, lambda_seg={lambda_seg:.1f}, "
-              f"lambda_pose={lambda_pose:.1f}, rho={rho:.1f}")
+              f"lambda_pose={lambda_pose:.1f}, rho={rho:.1f}, "
+              f"self_compress={'ON' if self_compress_active else 'OFF'}")
         del ckpt
-        torch.cuda.empty_cache() if torch.cuda.is_available() else None
+        if torch.cuda.is_available():
+            torch.cuda.empty_cache()
 
     # ---- Training loop ----
     print("[5/5] Training...")
@@ -720,7 +729,7 @@ def train_fridrich_renderer(cfg: FridrichRendererConfig) -> dict[str, Any]:
     # if NOT resuming (avoids overwriting checkpoint state for Phase 3 resumes)
     if not cfg.resume:
         self_compress_active = False
-    bit_modules: list[nn.Module] = []
+    # bit_modules already initialized before resume block
     start_time = time.time()
 
     for epoch in range(start_epoch, cfg.epochs):
@@ -741,13 +750,22 @@ def train_fridrich_renderer(cfg: FridrichRendererConfig) -> dict[str, Any]:
             # Create fresh optimizer + scheduler so new params get full LR
             # and existing params aren't stuck at decayed cosine LR
             if bit_modules:
+                bit_param_ids = set()
                 bit_params = []
                 for bm in bit_modules:
-                    bit_params.extend(list(bm.parameters()))
+                    for p in bm.parameters():
+                        bit_params.append(p)
+                        bit_param_ids.add(id(p))
+                # Exclude bit_depth params from renderer group to avoid
+                # "some parameters appear in more than one parameter group" error.
+                # bit_depth modules are registered as submodules of Conv2d layers,
+                # so pair_gen.renderer.parameters() includes their bits params.
+                renderer_params = [p for p in pair_gen.renderer.parameters()
+                                   if id(p) not in bit_param_ids]
                 remaining_epochs = cfg.epochs - epoch
                 optimizer = torch.optim.AdamW(
                     [
-                        {"params": list(pair_gen.renderer.parameters()), "lr": cfg.lr * 0.5},
+                        {"params": renderer_params, "lr": cfg.lr * 0.5},
                         {"params": bit_params, "lr": cfg.lr * 0.1},
                     ],
                     weight_decay=1e-4,
