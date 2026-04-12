@@ -74,9 +74,8 @@ def _unpack_values(data: bytes | bytearray | memoryview, offset: int, count: int
     if count > 10_000_000:
         raise ValueError(f"Implausible value count={count:,} — possible malformed .bin")
     raw = data[offset:offset + total_bytes]
-    bit_buffer = 0
-    for i, b in enumerate(raw):
-        bit_buffer |= b << (i * 8)
+    # int.from_bytes is O(n) vs O(n²) for the bit-shift loop
+    bit_buffer = int.from_bytes(bytes(raw), byteorder="little")
     mask = (1 << bits) - 1
     values = []
     for _ in range(count):

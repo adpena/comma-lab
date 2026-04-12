@@ -272,7 +272,8 @@ def _extract_masks(
                     size=(gt_chw.shape[2], gt_chw.shape[3]),
                     mode="nearest",
                 ).squeeze(1).long()
-            masks_list.append(mask)
+            # Store as int8 — values are [0,4], saves ~7x RAM vs int64
+            masks_list.append(mask.to(torch.int8))
     return torch.cat(masks_list, dim=0)
 
 
@@ -518,15 +519,24 @@ def _full_eval(
     pose_dists = []
 
     with torch.no_grad():
-        for i in range(n - 1):
-            mask_t = masks[i:i + 1].to(device)
-            mask_t1 = masks[i + 1:i + 2].to(device)
-            gt_t = gt_chw[i:i + 1].to(device)
-            gt_t1 = gt_chw[i + 1:i + 2].to(device)
+        # Pre-generate ALL frames in batches (renderer is deterministic per mask)
+        all_gen = []
+        for i in range(0, n, batch_size):
+            end = min(i + batch_size, n)
+            batch_masks = masks[i:end].to(device=device, dtype=torch.long)
+            gen_batch = renderer_module(batch_masks)  # (B, 3, H, W)
+            all_gen.append(gen_batch)
+        all_gen = torch.cat(all_gen, dim=0)  # (N, 3, H, W) on device
 
-            # Generate frame pair via the renderer (individual frames)
-            gen_t = renderer_module(mask_t)   # (1, 3, H, W)
-            gen_t1 = renderer_module(mask_t1)  # (1, 3, H, W)
+        # Evaluate pairs in batches
+        for i in range(0, n - 1, batch_size):
+            end = min(i + batch_size, n - 1)
+            B = end - i
+
+            gen_t = all_gen[i:end]              # (B, 3, H, W)
+            gen_t1 = all_gen[i + 1:end + 1]     # (B, 3, H, W)
+            gt_t = gt_chw[i:end].to(device)
+            gt_t1 = gt_chw[i + 1:end + 1].to(device)
 
             # SegNet on LAST frame only (upstream uses x[:, -1, ...] which
             # selects the last frame of each pair for SegNet evaluation)
@@ -536,11 +546,12 @@ def _full_eval(
             seg_in_gt = segnet.preprocess_input(gt_btchw)
             seg_logits_gen = segnet(seg_in_g)
             seg_logits_gt = segnet(seg_in_gt)
-            # Hard disagreement rate (official metric)
-            hard_seg = (seg_logits_gen.argmax(dim=1) != seg_logits_gt.argmax(dim=1)).float().mean().item()
-            seg_dists.append(hard_seg)
+            # Hard disagreement rate (official metric) — per-sample
+            hard_seg_batch = (seg_logits_gen.argmax(dim=1) != seg_logits_gt.argmax(dim=1)).float()
+            for b in range(B):
+                seg_dists.append(hard_seg_batch[b].mean().item())
 
-            # PoseNet on consecutive pair
+            # PoseNet on consecutive pairs
             gen_pair = torch.stack([gen_t, gen_t1], dim=1).contiguous()
             gt_pair = torch.stack([gt_t, gt_t1], dim=1).contiguous()
             pose_in_g = posenet.preprocess_input(gen_pair)
@@ -549,7 +560,12 @@ def _full_eval(
             g_out = posenet(pose_in_gt)
             pm = p_out["pose"] if isinstance(p_out, dict) else p_out
             gm = g_out["pose"] if isinstance(g_out, dict) else g_out
-            pose_dists.append((pm[..., :6] - gm[..., :6]).pow(2).mean().item())
+            # Per-sample MSE on first 6 pose outputs
+            pose_mse = (pm[..., :6] - gm[..., :6]).pow(2).mean(dim=-1)  # (B,) or (B, 1)
+            for b in range(B):
+                pose_dists.append(pose_mse[b].mean().item())
+
+        del all_gen  # free VRAM
 
     renderer.train()
 
@@ -842,8 +858,8 @@ def train_fridrich_renderer(cfg: FridrichRendererConfig) -> dict[str, Any]:
             gt_t_list.append(gt_chw[idx])
             gt_t1_list.append(gt_chw[idx + 1])
 
-        mask_t = torch.stack(mask_t_list).to(device)
-        mask_t1 = torch.stack(mask_t1_list).to(device)
+        mask_t = torch.stack(mask_t_list).to(device=device, dtype=torch.long)
+        mask_t1 = torch.stack(mask_t1_list).to(device=device, dtype=torch.long)
         gt_t = torch.stack(gt_t_list).to(device)
         gt_t1 = torch.stack(gt_t1_list).to(device)
 

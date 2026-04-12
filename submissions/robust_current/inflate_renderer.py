@@ -358,7 +358,7 @@ def _extract_masks(
     N = len(frames)
     masks_list = []
 
-    with torch.no_grad():
+    with torch.inference_mode():
         for i in range(0, N, batch_size):
             end = min(i + batch_size, N)
             # Stack frames -> (B, H, W, 3) uint8 -> (B, 3, H, W) float
@@ -369,12 +369,13 @@ def _extract_masks(
             seg_in = segnet.preprocess_input(inp)  # (B, 3, 384, 512)
             logits = segnet(seg_in)  # (B, 5, 384, 512)
             mask = logits.argmax(dim=1)  # (B, 384, 512)
-            masks_list.append(mask.cpu())
+            # Store as int8 — values are [0,4], saves ~7x RAM vs int64
+            masks_list.append(mask.to(torch.int8).cpu())
 
             if (i + batch_size) % (batch_size * 10) == 0 or end == N:
                 print(f"    Masks: {end}/{N} frames", file=sys.stderr, flush=True)
 
-    masks = torch.cat(masks_list, dim=0)  # (N, 384, 512)
+    masks = torch.cat(masks_list, dim=0)  # (N, 384, 512) int8
     elapsed = time.monotonic() - t0
     print(f"  Extracted {masks.shape[0]} masks ({elapsed:.1f}s)", file=sys.stderr)
     return masks
@@ -525,7 +526,7 @@ def _generate_and_write(
         with torch.inference_mode():
             for i in range(0, N, batch_size):
                 end = min(i + batch_size, N)
-                batch_masks = masks[i:end].to(device)
+                batch_masks = masks[i:end].to(device=device, dtype=torch.long)
 
                 # Generate frames at SegNet resolution (384x512)
                 # Note: noise kwarg is dead code in DPSIMSRenderer.forward —
