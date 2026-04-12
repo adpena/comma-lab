@@ -175,14 +175,18 @@ def load_commavq_dataset(
     dataset_loader=None,
     dataset_name: str = COMMAVQ_DATASET_NAME,
     num_proc: int | None = None,
+    streaming: bool | None = None,
 ):
     if dataset_loader is None:
         from datasets import load_dataset
 
         dataset_loader = load_dataset
 
-    return dataset_loader(
-        dataset_name,
-        num_proc=num_proc,
-        data_files=resolve_commavq_data_files(split),
-    )
+    kwargs = {
+        "data_files": resolve_commavq_data_files(split),
+    }
+    if num_proc is not None and not streaming:
+        kwargs["num_proc"] = num_proc
+    if streaming is not None:
+        kwargs["streaming"] = streaming
+    return dataset_loader(dataset_name, **kwargs)

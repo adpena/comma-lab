@@ -332,7 +332,7 @@ def build_rgb_label_map_sample(
     if bridge_loader is None:
         raise ValueError("bridge_loader is required for local-only RGB semantic labeling")
 
-    dataset = load_commavq_dataset(split=split, dataset_loader=dataset_loader, num_proc=1)
+    dataset = load_commavq_dataset(split=split, dataset_loader=dataset_loader, streaming=True)
     train = dataset["train"]
     examples = []
     for example in train:

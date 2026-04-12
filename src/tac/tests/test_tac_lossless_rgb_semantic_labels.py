@@ -5,6 +5,7 @@ import sys
 import tempfile
 import unittest
 from pathlib import Path
+from unittest import mock
 
 import numpy as np
 
@@ -163,7 +164,7 @@ class TacLosslessRgbSemanticLabelsTests(unittest.TestCase):
         ]
         bridge_calls: list[dict[str, object]] = []
         decoder_batches: list[tuple[int, ...]] = []
-        def fake_dataset_loader(_dataset_name: str, *, num_proc=None, data_files=None):
+        def fake_dataset_loader(_dataset_name: str, *, num_proc=None, data_files=None, streaming=None):
             return {"train": examples}
 
         class FakeDecoder:
@@ -236,7 +237,7 @@ class TacLosslessRgbSemanticLabelsTests(unittest.TestCase):
             def __getitem__(self, index):
                 raise AssertionError("build_rgb_label_map_sample should not use indexed dataset access")
 
-        def fake_dataset_loader(_dataset_name: str, *, num_proc=None, data_files=None):
+        def fake_dataset_loader(_dataset_name: str, *, num_proc=None, data_files=None, streaming=None):
             return {"train": FakeTrain()}
 
         class FakeDecoder:
@@ -276,6 +277,60 @@ class TacLosslessRgbSemanticLabelsTests(unittest.TestCase):
 
         self.assertEqual(result["record_count"], 2)
         self.assertEqual(sorted(payload), ["clip_a.npy", "clip_b.npy"])
+
+    def test_build_rgb_label_map_sample_requests_streaming_dataset_load(self) -> None:
+        from tac.lossless import rgb_semantic_labels as module
+
+        calls: list[dict[str, object]] = []
+        examples = [
+            {
+                "json": {"file_name": "clip_a.npy"},
+                "token.npy": np.zeros((1, 8, 16), dtype=np.int16),
+            }
+        ]
+
+        class FakeDecoder:
+            _tac_input_kind = "numpy"
+
+            def __call__(self, batch):
+                arr = np.asarray(batch)
+                out = np.zeros((arr.shape[0], 3, 6, 6), dtype=np.float32)
+                out[0] = np.transpose(_outdoor_frames(frame_count=1)[0].astype(np.float32), (2, 0, 1))
+                return out
+
+        def fake_load_commavq_dataset(*, split, dataset_loader=None, dataset_name=None, num_proc=None, streaming=None):
+            calls.append(
+                {
+                    "split": split,
+                    "dataset_loader": dataset_loader,
+                    "dataset_name": dataset_name,
+                    "num_proc": num_proc,
+                    "streaming": streaming,
+                }
+            )
+            return {"train": examples}
+
+        def fake_bridge_loader(**_kwargs):
+            return (
+                FakeDecoder(),
+                lambda arr: np.transpose(np.asarray(arr), (0, 2, 3, 1)).astype(np.uint8),
+                {"bridge_backend": "fake"},
+            )
+
+        with tempfile.TemporaryDirectory() as tmpdir:
+            output_path = Path(tmpdir) / "rgb_labels.json"
+            with mock.patch.object(module, "load_commavq_dataset", side_effect=fake_load_commavq_dataset):
+                module.build_rgb_label_map_sample(
+                    output_path=output_path,
+                    split=[0, 1],
+                    max_records=1,
+                    bridge_loader=fake_bridge_loader,
+                    batch_size=8,
+                    device="cpu",
+                )
+
+        self.assertEqual(len(calls), 1)
+        self.assertTrue(calls[0]["streaming"])
 
 
 if __name__ == "__main__":
