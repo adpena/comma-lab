@@ -1298,11 +1298,18 @@ def train_fridrich_renderer(cfg: FridrichRendererConfig) -> dict[str, Any]:
 
             # Score projection from current training metrics
             from tac.scorer import comma_score
-            renderer_module = getattr(pair_gen, "renderer", pair_gen)
-            n_params_proj = sum(p.numel() for p in renderer_module.parameters())
-            model_bytes_proj = n_params_proj * 4 / 8  # FP4 estimate
-            if self_compress_active:
-                model_bytes_proj = _compute_model_bits(renderer_module).item() / 8.0
+            # Asymmetric: full model ships. DP-SIMS: renderer only.
+            if cfg.pair_mode == "asymmetric":
+                n_params_proj = sum(p.numel() for p in pair_gen.parameters())
+                model_bytes_proj = n_params_proj * 4 / 8
+                if self_compress_active:
+                    model_bytes_proj = _compute_model_bits(pair_gen).item() / 8.0
+            else:
+                renderer_module_proj = getattr(pair_gen, "renderer", pair_gen)
+                n_params_proj = sum(p.numel() for p in renderer_module_proj.parameters())
+                model_bytes_proj = n_params_proj * 4 / 8
+                if self_compress_active:
+                    model_bytes_proj = _compute_model_bits(renderer_module_proj).item() / 8.0
             rate_proj = model_bytes_proj / ORIGINAL_UNCOMPRESSED_SIZE
             score_projection = comma_score(pose_dist.item(), seg_hard, rate_proj)
 
@@ -1542,7 +1549,7 @@ def train_fridrich_renderer(cfg: FridrichRendererConfig) -> dict[str, Any]:
 @click.option("--device", type=str, default="cuda", help="Device (cuda/mps/cpu)")
 @click.option("--seed", type=int, default=42, help="Random seed")
 @click.option("--checkpoint-every", type=int, default=500, help="Checkpoint interval")
-@click.option("--eval-every", type=int, default=1000, help="Full evaluation interval")
+@click.option("--eval-every", type=int, default=200, help="Full evaluation interval (council: 50 eval points for 10K epochs)")
 @click.option("--log-every", type=int, default=50, help="Log interval")
 @click.option("--smoke", is_flag=True, help="Smoke test: 20 frames, 5 epochs")
 @click.option("--resume", type=str, default=None, help="Resume from checkpoint path")
