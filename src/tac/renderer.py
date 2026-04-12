@@ -401,23 +401,35 @@ class MotionPredictor(nn.Module):
         embed_dim: int = 6,
         hidden: int = 32,
         embedding: nn.Embedding | None = None,
+        output_channels: int = 2,
+        use_coord_grid: bool = True,
+        use_diff_features: bool = True,
     ):
         super().__init__()
         self.num_classes = num_classes
+        self.output_channels = output_channels
+        self.use_coord_grid = use_coord_grid
+        self.use_diff_features = use_diff_features
         # Accepts external embedding for weight sharing with MaskRenderer
         self.embedding = embedding if embedding is not None else nn.Embedding(num_classes, embed_dim)
-        in_ch = embed_dim * 2  # two masks concatenated
+
+        # Input: e_t + e_t1 + optional |e_t1 - e_t| + optional coords
+        in_ch = embed_dim * 2
+        if use_diff_features:
+            in_ch += embed_dim  # |e_t1 - e_t| (Quantizr insight)
+        if use_coord_grid:
+            in_ch += 2  # normalized xy coords
 
         self.net = nn.Sequential(
             nn.Conv2d(in_ch, hidden, 3, padding=1, bias=True),
-            nn.ReLU(inplace=True),
+            nn.SiLU(inplace=True),
             ResBlock(hidden),
             nn.Conv2d(hidden, hidden, 3, padding=1, bias=True),
-            nn.ReLU(inplace=True),
-            nn.Conv2d(hidden, 2, 3, padding=1, bias=True),
+            nn.SiLU(inplace=True),
+            nn.Conv2d(hidden, output_channels, 3, padding=1, bias=True),
         )
 
-        # Zero-init flow output — start with zero motion (identity warp)
+        # Zero-init output — start with zero motion (identity warp)
         nn.init.zeros_(self.net[-1].weight)
         nn.init.zeros_(self.net[-1].bias)
 
@@ -426,21 +438,43 @@ class MotionPredictor(nn.Module):
         mask_t: torch.Tensor,
         mask_t1: torch.Tensor,
     ) -> torch.Tensor:
-        """Predict optical flow from mask pair.
+        """Predict motion outputs from mask pair.
 
         Args:
             mask_t: (B, H, W) long — mask at time t
             mask_t1: (B, H, W) long — mask at time t+1
 
         Returns:
-            (B, 2, H, W) flow in normalized coordinates
+            (B, output_channels, H, W) — channels depend on mode:
+              output_channels=2: flow only (backward compat)
+              output_channels=6: flow(2) + gate(1) + residual(3)
         """
         e_t = self.embedding(mask_t).permute(0, 3, 1, 2)
         e_t1 = self.embedding(mask_t1).permute(0, 3, 1, 2)
-        x = torch.cat([e_t, e_t1], dim=1)
-        # Scale output to small flow range — typical ego-motion is <5% of frame
-        flow = self.net(x) * 0.1
-        return flow
+
+        parts = [e_t, e_t1]
+        if self.use_diff_features:
+            parts.append((e_t1 - e_t).abs())  # where change happened
+        if self.use_coord_grid:
+            B, _, H, W = e_t.shape
+            gy = torch.linspace(-1, 1, H, device=e_t.device, dtype=e_t.dtype)
+            gx = torch.linspace(-1, 1, W, device=e_t.device, dtype=e_t.dtype)
+            grid_y, grid_x = torch.meshgrid(gy, gx, indexing="ij")
+            coords = torch.stack([grid_x, grid_y], dim=0).unsqueeze(0).expand(B, -1, -1, -1)
+            parts.append(coords)
+
+        x = torch.cat(parts, dim=1)
+        raw = self.net(x)
+
+        if self.output_channels == 2:
+            # Legacy: flow only, scaled to small range
+            return raw * 0.1
+        else:
+            # Asymmetric mode: flow(2) + gate(1) + residual(3)
+            flow = raw[:, :2].tanh() * (12.0 / max(mask_t.shape[-2], mask_t.shape[-1]) * 2)
+            gate = raw[:, 2:3].sigmoid()
+            residual = raw[:, 3:6].tanh() * 20.0
+            return torch.cat([flow, gate, residual], dim=1)
 
     def param_count(self) -> int:
         """Total trainable parameter count."""
