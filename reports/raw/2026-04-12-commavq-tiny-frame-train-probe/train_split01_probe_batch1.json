@@ -1,0 +1,32 @@
+{
+  "command": "lossless_tiny_frame_train_probe",
+  "profile": "tiny_frame_predictor_small",
+  "train": {
+    "mode": "train",
+    "loss": 6.996376037597656,
+    "token_accuracy": 0.0,
+    "correct_tokens": 0,
+    "token_count": 256,
+    "batch_size": 2,
+    "context_frames": 8,
+    "positions": 128
+  },
+  "eval": {
+    "mode": "eval",
+    "loss": 6.661418914794922,
+    "token_accuracy": 0.0,
+    "correct_tokens": 0,
+    "token_count": 256,
+    "batch_size": 2,
+    "context_frames": 8,
+    "positions": 128
+  },
+  "file_names": [
+    "3b41c0fa8959aea6c118e5714f412a2e_13",
+    "3b41c0fa8959aea6c118e5714f412a2e_13"
+  ],
+  "target_frame_indices": [
+    1,
+    2
+  ]
+}
