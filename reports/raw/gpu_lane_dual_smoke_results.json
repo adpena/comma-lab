@@ -1,0 +1,180 @@
+{
+  "timestamp": "2026-04-12T17:22:53Z",
+  "device": "cuda",
+  "n_frames": 20,
+  "steps": 500,
+  "fridrich": {
+    "test": "fridrich_constrained_500",
+    "status": "ok",
+    "final_seg_dist": 0.03021196,
+    "final_pose_dist": 1.30502308,
+    "delta_mean_magnitude": 4.105,
+    "estimated_rate": 0.000339,
+    "total_score": 6.6422,
+    "score_components": {
+      "seg_term": 3.0212,
+      "pose_term": 3.6125,
+      "rate_term": 0.0085
+    },
+    "seg_satisfied": false,
+    "pose_satisfied": false,
+    "history": [
+      {
+        "outer": 0,
+        "seg_dist": 0.030808,
+        "pose_dist": 0.564808,
+        "seg_satisfied": false,
+        "pose_satisfied": false,
+        "lam_s": 1.01,
+        "lam_p": 5.65,
+        "rho": 15.0,
+        "tv": 1.2025
+      },
+      {
+        "outer": 1,
+        "seg_dist": 0.031097,
+        "pose_dist": 0.924386,
+        "seg_satisfied": false,
+        "pose_satisfied": false,
+        "lam_s": 1.02,
+        "lam_p": 18.01,
+        "rho": 22.5,
+        "tv": 1.1526
+      },
+      {
+        "outer": 2,
+        "seg_dist": 0.02878,
+        "pose_dist": 2.317584,
+        "seg_satisfied": true,
+        "pose_satisfied": false,
+        "lam_s": 1.02,
+        "lam_p": 67.91,
+        "rho": 33.75,
+        "tv": 1.0098
+      },
+      {
+        "outer": 3,
+        "seg_dist": 0.029351,
+        "pose_dist": 1.72401,
+        "seg_satisfied": true,
+        "pose_satisfied": false,
+        "lam_s": 1.02,
+        "lam_p": 122.72,
+        "rho": 50.62,
+        "tv": 1.0817
+      },
+      {
+        "outer": 4,
+        "seg_dist": 0.030745,
+        "pose_dist": 2.707241,
+        "seg_satisfied": false,
+        "pose_satisfied": false,
+        "lam_s": 1.06,
+        "lam_p": 254.71,
+        "rho": 75.94,
+        "tv": 0.922
+      }
+    ],
+    "elapsed_seconds": 132.5,
+    "vram_peak_mb": 1327.0,
+    "verdict": "POSENET_DIVERGED"
+  },
+  "dp_sims": {
+    "test": "tiny_dp_sims",
+    "status": "ok",
+    "final_seg_dist": 0.03960565,
+    "final_pose_dist": 150.63926135,
+    "model_params": 93783,
+    "model_fp4_bytes": 47403,
+    "model_fp4_kb": 46.3,
+    "rate": 0.008037,
+    "total_score": 42.9738,
+    "score_components": {
+      "seg_term": 3.9606,
+      "pose_term": 38.8123,
+      "rate_term": 0.2009
+    },
+    "history": [
+      {
+        "step": 0,
+        "seg_loss": 0.53337,
+        "pose_loss": 180.794113,
+        "total_loss": 1861.2781,
+        "lr": 0.00099999
+      },
+      {
+        "step": 50,
+        "seg_loss": 0.177938,
+        "pose_loss": 176.585175,
+        "total_loss": 1783.6456,
+        "lr": 0.0009748
+      },
+      {
+        "step": 100,
+        "seg_loss": 0.047755,
+        "pose_loss": 152.661011,
+        "total_loss": 1531.3856,
+        "lr": 0.00090363
+      },
+      {
+        "step": 150,
+        "seg_loss": 0.043246,
+        "pose_loss": 128.950439,
+        "total_loss": 1293.829,
+        "lr": 0.00079343
+      },
+      {
+        "step": 200,
+        "seg_loss": 0.041737,
+        "pose_loss": 140.975739,
+        "total_loss": 1413.931,
+        "lr": 0.000655
+      },
+      {
+        "step": 250,
+        "seg_loss": 0.03991,
+        "pose_loss": 135.569946,
+        "total_loss": 1359.6904,
+        "lr": 0.00050189
+      },
+      {
+        "step": 300,
+        "seg_loss": 0.039857,
+        "pose_loss": 148.268066,
+        "total_loss": 1486.6664,
+        "lr": 0.00034908
+      },
+      {
+        "step": 350,
+        "seg_loss": 0.039648,
+        "pose_loss": 147.716949,
+        "total_loss": 1481.1343,
+        "lr": 0.00021154
+      },
+      {
+        "step": 400,
+        "seg_loss": 0.038943,
+        "pose_loss": 143.371979,
+        "total_loss": 1437.614,
+        "lr": 0.00010272
+      },
+      {
+        "step": 450,
+        "seg_loss": 0.039841,
+        "pose_loss": 149.346405,
+        "total_loss": 1497.4482,
+        "lr": 3.328e-05
+      },
+      {
+        "step": 499,
+        "seg_loss": 0.039107,
+        "pose_loss": 155.588303,
+        "total_loss": 1559.7937,
+        "lr": 1e-05
+      }
+    ],
+    "elapsed_seconds": 270.9,
+    "vram_peak_mb": 2932.0,
+    "verdict": "NEEDS_WORK"
+  }
+}
