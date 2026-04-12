@@ -569,6 +569,7 @@ def stage_inflate(
 def stage_score(
     mgr: RunManager,
     upstream_dir: Path,
+    submission_src: Path,
     device: str = "cpu",
 ) -> None:
     """Score: run upstream evaluate.py against inflated output."""
@@ -599,11 +600,15 @@ def stage_score(
     )
 
     # Parse report.txt into structured JSON
-    _parse_and_save_report(report_txt, report_path, mgr)
+    _parse_and_save_report(report_txt, report_path, mgr, submission_src, device)
 
 
 def _parse_and_save_report(
-    report_txt: Path, report_json: Path, mgr: RunManager
+    report_txt: Path,
+    report_json: Path,
+    mgr: RunManager,
+    submission_src: Path,
+    device: str,
 ) -> None:
     """Parse the upstream report.txt into structured JSON and print summary."""
     text = report_txt.read_text()
@@ -825,7 +830,7 @@ def evaluate(
         for e in all_errors:
             click.echo(f"  - {e}")
         mgr.record_failure(RunState.PREFLIGHT_OK, "\n".join(all_errors))
-        raise SystemExit(1)
+        raise click.ClickException(f"Preflight failed with {len(all_errors)} error(s)")
 
     # Warnings (non-blocking)
     config_warnings = preflight_config_match(submission_src)
@@ -899,7 +904,7 @@ def _run_pipeline(
         # -- Score -------------------------------------------------
         if current in (RunState.INFLATED, RunState.SCORING):
             click.echo("\n--- Score ---")
-            stage_score(mgr, upstream, device)
+            stage_score(mgr, upstream, submission_src, device)
             current = mgr.get_stage()
 
         if current == RunState.SCORED:
@@ -959,7 +964,7 @@ def status(run_name: str, work_dir: str | None) -> None:
                 click.echo(f"No runs found in {work_dir_path}")
         else:
             click.echo(f"Work directory does not exist: {work_dir_path}")
-        raise SystemExit(1)
+        raise click.ClickException(f"Run '{run_name}' not found")
 
     mgr = RunManager(run_dir)
     data = mgr.load_state()
