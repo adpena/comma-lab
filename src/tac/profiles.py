@@ -1709,6 +1709,83 @@ NEWTON_QUADRATIC_FULL = {
     "newton_top_k_pairs": 60,  # refine top 10% of 600 pairs
 }
 
+# ── Fridrich steganalysis-inspired profiles ─────────────────────────────
+# Detection-boundary constrained optimization (inverse steganalysis).
+# Cost map precomputed at compress time, zero-cost at inflate time.
+
+FRIDRICH_SMOKE = {
+    "variant": "dilated",
+    "hidden": 64,
+    "kernel": 3,
+    "epochs": 50,
+    "lr": 1e-3,
+    "eval_every": 10,
+    "accum_steps": 2,
+    "loss_mode": "standard",
+    # Fridrich pipeline settings
+    "fridrich_cost_method": "uniward",  # fast, no Jacobian computation
+    "fridrich_num_probes": 5,
+    "fridrich_max_magnitude": 10.0,
+    "fridrich_opt_steps": 50,
+    "fridrich_opt_lr": 0.05,
+    "fridrich_rate_reduction": 0.1,
+    "fridrich_subsample_frames": 4,
+    "fridrich_jacobian_probes": 2,
+}
+
+FRIDRICH_FULL = {
+    "variant": "dilated",
+    "hidden": 64,
+    "kernel": 3,
+    "epochs": 2500,
+    "lr": 5e-4,
+    "ema_decay": 0.997,
+    "alpha": 20.0,
+    "sal_lambda": 1.0,
+    "loss_mode": "standard",
+    "boundary_weight": 5.0,
+    "hard_frame_ratio": 0.3,
+    "error_replay_every": 200,
+    "eval_every": 5,
+    "accum_steps": 4,
+    "use_swa": True,
+    # Fridrich pipeline settings
+    "fridrich_cost_method": "hybrid",
+    "fridrich_num_probes": 20,
+    "fridrich_max_magnitude": 30.0,
+    "fridrich_opt_steps": 500,
+    "fridrich_opt_lr": 0.01,
+    "fridrich_rate_reduction": 0.1,
+    "fridrich_subsample_frames": 1,
+    "fridrich_jacobian_probes": 8,
+}
+
+FRIDRICH_CPU_POSTFILTER = {
+    "variant": "dilated",
+    "hidden": 64,
+    "kernel": 3,
+    "epochs": 2500,
+    "lr": 5e-4,
+    "ema_decay": 0.997,
+    "alpha": 20.0,
+    "sal_lambda": 1.0,
+    "loss_mode": "standard",
+    "boundary_weight": 5.0,
+    "eval_every": 5,
+    "accum_steps": 4,
+    # CPU postfilter: precompute cost map, apply at inflate via lookup
+    "fridrich_cost_method": "hybrid",
+    "fridrich_num_probes": 20,
+    "fridrich_max_magnitude": 30.0,
+    "fridrich_boundary_fraction": 0.8,
+    "fridrich_rate_reduction": 0.1,
+    "fridrich_subsample_frames": 2,
+    "fridrich_jacobian_probes": 4,
+    # Skip heavy GPU optimization, rely on postfilter + cost weighting
+    "fridrich_skip_optimize": True,
+    "fridrich_skip_stc": False,
+}
+
 PROFILES = {
     "council_v1": COUNCIL_V1,
     "council_v2_adaptive": COUNCIL_V2_ADAPTIVE,
@@ -1820,6 +1897,10 @@ PROFILES = {
     # Newton-CG quadratic optimizer (geometry deliberation)
     "newton_quadratic_smoke": NEWTON_QUADRATIC_SMOKE,
     "newton_quadratic_full": NEWTON_QUADRATIC_FULL,
+    # Fridrich steganalysis-inspired profiles
+    "fridrich_smoke": FRIDRICH_SMOKE,
+    "fridrich_full": FRIDRICH_FULL,
+    "fridrich_cpu_postfilter": FRIDRICH_CPU_POSTFILTER,
 }
 
 # Deprecated profile names that should emit runtime warnings
