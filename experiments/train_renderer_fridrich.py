@@ -923,8 +923,8 @@ def train_fridrich_renderer(cfg: FridrichRendererConfig) -> dict[str, Any]:
             # DP-SIMS: wrap renderer only (motion is training-only)
             wrap_target = pair_gen if cfg.pair_mode == "asymmetric" else pair_gen.renderer
             bit_modules = _wrap_with_learnable_bits(wrap_target, init_bits=cfg.init_bits)
-            # Rebuild optimizer with 2 param groups (matching Phase 3 structure)
-            # BEFORE loading state_dict, because the saved optimizer has 2 groups.
+            # Rebuild optimizer with 2-3 param groups (matching Phase 3 structure)
+            # BEFORE loading state_dict. Groups: renderer + bits (+ motion if asymmetric).
             bit_param_ids = set()
             bit_params = []
             for bm in bit_modules:
@@ -1424,6 +1424,20 @@ def train_fridrich_renderer(cfg: FridrichRendererConfig) -> dict[str, Any]:
             if divergence_counter >= cfg.kill_patience:
                 print(f"\nAuto-kill: divergence detected for {cfg.kill_patience} consecutive epochs "
                       f"(loss={loss_val:.4f}, seg={seg_val:.5f}, pose={pose_val:.5f})")
+                kill_path = results_dir / f"renderer_epoch{epoch:05d}_killed.pt"
+                torch.save({
+                    "epoch": epoch,
+                    "model_state_dict": pair_gen.state_dict(),
+                    "optimizer_state_dict": optimizer.state_dict(),
+                    "scheduler_state_dict": scheduler.state_dict(),
+                    "self_compress_active": self_compress_active,
+                    "lambda_seg": lambda_seg,
+                    "lambda_pose": lambda_pose,
+                    "rho": rho,
+                    "kill_reason": "divergence",
+                    "config": asdict(cfg),
+                }, kill_path)
+                print(f"  -> Emergency checkpoint: {kill_path}")
                 break
         else:
             divergence_counter = 0

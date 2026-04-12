@@ -1154,6 +1154,47 @@ def _smoke_test() -> None:
 
     tmp_path.unlink()
 
+    # --- Test 3: AsymmetricPairGenerator round-trip ---
+    print("\n  --- asymmetric pair generator round-trip ---")
+    from tac.renderer import AsymmetricPairGenerator
+
+    asym = AsymmetricPairGenerator(
+        num_classes=5, embed_dim=4, base_ch=8, mid_ch=16,
+        motion_hidden=8, depth=1, max_flow_px=15.0, max_residual=25.0,
+    )
+    with torch.no_grad():
+        for p in asym.parameters():
+            p.normal_(0, 0.05)
+    asym.eval()
+
+    m1 = torch.randint(0, 5, (2, 24, 32))
+    m2 = torch.randint(0, 5, (2, 24, 32))
+    with torch.no_grad():
+        out_asym_orig = asym(m1, m2)
+
+    with tempfile.NamedTemporaryFile(suffix=".bin", delete=False) as f:
+        tmp_path = Path(f.name)
+    nbytes_asym = export_asymmetric_checkpoint(asym, tmp_path, default_bits=8)
+    restored_asym = load_asymmetric_checkpoint(tmp_path)
+    with torch.no_grad():
+        out_asym_restored = restored_asym(m1, m2)
+
+    max_diff_asym = (out_asym_orig - out_asym_restored).abs().max().item()
+    print(f"  asymmetric: {asym.param_count():,} params, {nbytes_asym:,} bytes, max diff: {max_diff_asym:.4f}")
+    assert max_diff_asym < 20.0, f"Asymmetric round-trip error: {max_diff_asym}"
+    print("  asymmetric round-trip: PASS")
+
+    # Verify config round-trip includes max_flow_px, max_residual, flow_only
+    config_asym = _infer_asymmetric_config(asym)
+    assert config_asym["max_flow_px"] == 15.0, f"max_flow_px mismatch: {config_asym['max_flow_px']}"
+    assert config_asym["max_residual"] == 25.0, f"max_residual mismatch: {config_asym['max_residual']}"
+    assert config_asym["flow_only"] is False, f"flow_only mismatch: {config_asym['flow_only']}"
+    assert restored_asym.motion.max_flow_px == 15.0, "Restored max_flow_px mismatch"
+    assert restored_asym.motion.max_residual == 25.0, "Restored max_residual mismatch"
+    print("  asymmetric config round-trip (max_flow_px, max_residual, flow_only): PASS")
+
+    tmp_path.unlink()
+
     print("\nrenderer_export: all smoke tests passed")
 
 
