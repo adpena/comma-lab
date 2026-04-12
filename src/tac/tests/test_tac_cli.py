@@ -110,6 +110,72 @@ class TacCliTests(unittest.TestCase):
         self.assertEqual(result["command"], "lossless_tiny_frame_predictor_summary")
         self.assertEqual(result["parameter_count"], 123456)
 
+    def test_lossless_tiny_frame_train_probe_subcommand_runs_bounded_probe(self) -> None:
+        mod = load_module()
+        with tempfile.TemporaryDirectory() as tmpdir:
+            root = Path(tmpdir)
+            shard_path = root / "data-0000.tar.gz"
+            output_path = root / "probe.json"
+            with mock.patch.object(
+                mod,
+                "probe_tiny_frame_training",
+                return_value={
+                    "command": "lossless_tiny_frame_train_probe",
+                    "profile": "tiny_frame_predictor_small",
+                    "output_path": str(output_path),
+                    "parameter_count": 123456,
+                    "state_dict_bytes": 654321,
+                    "observed_batch_count": 1,
+                    "train": {"mode": "train", "loss": 7.0},
+                    "eval": {"mode": "eval", "loss": 6.5},
+                    "file_names": ["clip_a.npy"],
+                    "target_frame_indices": [1],
+                },
+            ) as mocked:
+                result = mod.main(
+                    [
+                        "lossless",
+                        "tiny-frame-train-probe",
+                        "--profile",
+                        "tiny_frame_predictor_small",
+                        "--output",
+                        str(output_path),
+                        "--shard-path",
+                        str(shard_path),
+                        "--batch-size",
+                        "2",
+                        "--context-frames",
+                        "4",
+                        "--max-records",
+                        "3",
+                        "--sample-offset",
+                        "5",
+                        "--max-batches",
+                        "1",
+                        "--learning-rate",
+                        "0.05",
+                        "--device",
+                        "cpu",
+                    ]
+                )
+
+        mocked.assert_called_once_with(
+            profile="tiny_frame_predictor_small",
+            output_path=output_path,
+            shard_paths=[shard_path],
+            data_files=None,
+            batch_size=2,
+            context_frames=4,
+            max_records=3,
+            sample_offset=5,
+            max_batches=1,
+            learning_rate=0.05,
+            device="cpu",
+        )
+        self.assertEqual(result["command"], "lossless_tiny_frame_train_probe")
+        self.assertEqual(result["parameter_count"], 123456)
+        self.assertEqual(result["state_dict_bytes"], 654321)
+
     def test_lossless_hybrid_select_subcommand_parses_inputs_and_metrics(self) -> None:
         mod = load_module()
         args = mod.build_parser().parse_args(

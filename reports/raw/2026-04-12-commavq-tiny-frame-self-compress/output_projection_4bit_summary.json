@@ -1,0 +1,30 @@
+{
+  "command": "lossless_tiny_frame_self_compress_summary",
+  "format": "tiny_frame_linear_self_compress",
+  "version": 1,
+  "weight_bits": 4,
+  "target_layer_names": [
+    "output_projection"
+  ],
+  "layer_count": 1,
+  "header_bytes": 227,
+  "payload_bytes": 102500,
+  "total_bytes": 102727,
+  "layers": [
+    {
+      "name": "output_projection",
+      "rows": 1025,
+      "cols": 192,
+      "weight_bits": 4,
+      "weight_values": 196800,
+      "row_scale_bytes": 2050,
+      "packed_weight_bytes": 98400,
+      "weight_payload_bytes": 100450,
+      "bias_values": 1025,
+      "bias_payload_bytes": 2050,
+      "total_payload_bytes": 102500,
+      "baseline_bytes": 791300,
+      "compression_ratio": 7.72
+    }
+  ]
+}

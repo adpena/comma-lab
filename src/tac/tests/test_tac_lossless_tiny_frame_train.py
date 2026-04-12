@@ -155,6 +155,59 @@ class TacLosslessTinyFrameTrainTests(unittest.TestCase):
         self.assertGreater(eval_summary["loss"], 0.0)
         self.assertTrue(torch.equal(eval_before, model.output_projection.weight.detach()))
 
+    def test_probe_tiny_frame_training_writes_json_artifact_with_model_size_metadata(self) -> None:
+        import torch
+
+        from tac.lossless.tiny_frame_train import (
+            build_tiny_frame_training_model,
+            probe_tiny_frame_training,
+        )
+
+        with tempfile.TemporaryDirectory() as tmpdir:
+            root = Path(tmpdir)
+            shard_path = root / "data-0000.tar.gz"
+            output_path = root / "probe.json"
+            frames = np.stack([_frame(1), _frame(2), _frame(3)], axis=0)
+            with tarfile.open(shard_path, "w:gz") as tar:
+                _write_record(tar, stem="clip_probe", frames=frames)
+
+            torch.manual_seed(0)
+            expected_model = build_tiny_frame_training_model(
+                "tiny_frame_predictor_small",
+                context_frames=2,
+                device="cpu",
+            )
+            expected_parameter_count = sum(int(param.numel()) for param in expected_model.parameters())
+
+            torch.manual_seed(0)
+            result = probe_tiny_frame_training(
+                profile="tiny_frame_predictor_small",
+                output_path=output_path,
+                shard_paths=[shard_path],
+                batch_size=2,
+                context_frames=2,
+                max_records=1,
+                sample_offset=0,
+                max_batches=1,
+                learning_rate=0.05,
+                device="cpu",
+            )
+
+            written = json.loads(output_path.read_text(encoding="utf-8"))
+
+        self.assertEqual(result["command"], "lossless_tiny_frame_train_probe")
+        self.assertEqual(result["profile"], "tiny_frame_predictor_small")
+        self.assertEqual(result["output_path"], str(output_path))
+        self.assertEqual(result["parameter_count"], expected_parameter_count)
+        self.assertIsInstance(result["state_dict_bytes"], int)
+        self.assertGreater(result["state_dict_bytes"], 0)
+        self.assertEqual(result["observed_batch_count"], 1)
+        self.assertEqual(result["file_names"], ["clip_probe.npy", "clip_probe.npy"])
+        self.assertEqual(result["target_frame_indices"], [1, 2])
+        self.assertEqual(result["train"]["mode"], "train")
+        self.assertEqual(result["eval"]["mode"], "eval")
+        self.assertEqual(written, result)
+
 
 if __name__ == "__main__":
     unittest.main()

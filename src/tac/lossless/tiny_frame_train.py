@@ -1,5 +1,7 @@
 from __future__ import annotations
 
+import io
+import json
 from collections.abc import Iterator, Sequence
 from contextlib import nullcontext
 from dataclasses import dataclass
@@ -254,3 +256,93 @@ def run_tiny_frame_supervised_step(
         "context_frames": int(batch.context_frames.shape[1]),
         "positions": int(targets.shape[1]),
     }
+
+
+def _serialized_state_dict_byte_count(model) -> int:
+    try:
+        import torch
+    except ImportError as exc:
+        raise ImportError("torch is required for tiny frame training") from exc
+
+    buffer = io.BytesIO()
+    torch.save(model.state_dict(), buffer)
+    return int(buffer.tell())
+
+
+def probe_tiny_frame_training(
+    *,
+    profile: str = "tiny_frame_predictor_small",
+    output_path: str | Path | None = None,
+    shard_paths: Sequence[str | Path] | None = None,
+    data_files: Sequence[str] | None = None,
+    batch_size: int = 2,
+    context_frames: int | None = None,
+    max_records: int = 1,
+    sample_offset: int = 0,
+    max_batches: int = 1,
+    learning_rate: float = 0.05,
+    device: str = "cpu",
+) -> dict[str, object]:
+    if learning_rate <= 0.0:
+        raise ValueError("learning_rate must be positive")
+    if max_batches <= 0:
+        raise ValueError("max_batches must be positive")
+
+    try:
+        import torch
+    except ImportError as exc:
+        raise ImportError("torch is required for tiny frame training") from exc
+
+    config = _resolve_training_config(profile, context_frames=context_frames)
+    model = build_tiny_frame_training_model(config, device=device)
+    optimizer = torch.optim.SGD(model.parameters(), lr=float(learning_rate))
+
+    train_steps: list[dict[str, object]] = []
+    train_summary: dict[str, object] | None = None
+    last_batch: TinyFrameSupervisedBatch | None = None
+    for step_index, batch in enumerate(
+        iter_local_commavq_tiny_frame_batches(
+            shard_paths=shard_paths,
+            data_files=data_files,
+            batch_size=batch_size,
+            context_frames=config.context_frames,
+            max_records=max_records,
+            sample_offset=sample_offset,
+            max_batches=max_batches,
+        ),
+        start=1,
+    ):
+        train_summary = run_tiny_frame_supervised_step(model, batch, optimizer=optimizer, device=device)
+        train_steps.append({"step": step_index, **train_summary})
+        last_batch = batch
+
+    if train_summary is None or last_batch is None:
+        raise ValueError("tiny frame train probe did not observe any batches")
+
+    eval_summary = run_tiny_frame_supervised_step(model, last_batch, optimizer=None, device=device)
+    payload = {
+        "command": "lossless_tiny_frame_train_probe",
+        "profile": profile,
+        "output_path": str(Path(output_path)) if output_path is not None else None,
+        "device": device,
+        "batch_size": int(batch_size),
+        "context_frames": int(config.context_frames),
+        "max_records": int(max_records),
+        "sample_offset": int(sample_offset),
+        "max_batches": int(max_batches),
+        "learning_rate": float(learning_rate),
+        "parameter_count": int(sum(int(param.numel()) for param in model.parameters())),
+        "state_dict_bytes": _serialized_state_dict_byte_count(model),
+        "observed_batch_count": len(train_steps),
+        "train_steps": train_steps,
+        "train": train_summary,
+        "eval": eval_summary,
+        "file_names": list(last_batch.file_names),
+        "target_frame_indices": [int(index) for index in last_batch.target_frame_indices],
+    }
+
+    if output_path is not None:
+        target = Path(output_path)
+        target.parent.mkdir(parents=True, exist_ok=True)
+        target.write_text(json.dumps(payload, indent=2) + "\n", encoding="utf-8")
+    return payload

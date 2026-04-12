@@ -44,6 +44,7 @@ from .lossless.hybrid_selector import SelectionMetric, rank_exact_candidates
 from .lossless.next_frame_coder import encode_commavq_next_frame_sample
 from .lossless.gpt_score import probe_commavq_gpt_devices, score_commavq_gpt_sample
 from .lossless.tiny_frame_predictor import summarize_tiny_frame_predictor
+from .lossless.tiny_frame_train import probe_tiny_frame_training
 from .lossless.token_rgb_bridge import (
     OFFICIAL_DECODER_URL,
     decode_commavq_token_file_to_rgb,
@@ -73,6 +74,10 @@ DEFAULTS = {
     "models_dir": os.environ.get("TAC_MODELS_DIR", str(UPSTREAM_ROOT / "models")),
     "upstream_dir": str(UPSTREAM_ROOT),
 }
+
+TINY_FRAME_PREDICTOR_PROFILES = sorted(
+    profile for profile, config in LOSSLESS_PROFILES.items() if config.get("method") == "tiny_frame_predictor"
+)
 
 
 def _add_lossy_arguments(parser: argparse.ArgumentParser) -> None:
@@ -147,6 +152,23 @@ def build_parser() -> argparse.ArgumentParser:
     )
     sp.add_argument("--profile", required=True, choices=sorted(LOSSLESS_PROFILES))
     sp.set_defaults(lossless_handler="tiny_frame_predictor_summary")
+
+    sp = lossless_sub.add_parser(
+        "tiny-frame-train-probe",
+        help="Run a bounded local tiny-frame training probe and write a JSON artifact",
+    )
+    sp.add_argument("--profile", required=True, choices=TINY_FRAME_PREDICTOR_PROFILES)
+    sp.add_argument("--output", required=True)
+    sp.add_argument("--shard-path", action="append", default=None)
+    sp.add_argument("--data-file", action="append", default=None)
+    sp.add_argument("--batch-size", type=int, default=2)
+    sp.add_argument("--context-frames", type=int, default=None)
+    sp.add_argument("--max-records", type=int, default=1)
+    sp.add_argument("--sample-offset", type=int, default=0)
+    sp.add_argument("--max-batches", type=int, default=1)
+    sp.add_argument("--learning-rate", type=float, default=0.05)
+    sp.add_argument("--device", default="cpu", choices=["cpu", "cuda", "mps"])
+    sp.set_defaults(lossless_handler="tiny_frame_train_probe")
 
     sp = lossless_sub.add_parser("plan", help="Build a non-measured lossless experiment plan")
     sp.add_argument("--profile", required=True, choices=sorted(LOSSLESS_PROFILES))
@@ -606,6 +628,23 @@ def _run_lossless(args: argparse.Namespace) -> dict[str, Any]:
 
     if args.lossless_handler == "tiny_frame_predictor_summary":
         payload = summarize_tiny_frame_predictor(args.profile)
+        print(json.dumps(payload, indent=2))
+        return payload
+
+    if args.lossless_handler == "tiny_frame_train_probe":
+        payload = probe_tiny_frame_training(
+            profile=args.profile,
+            output_path=Path(args.output),
+            shard_paths=[Path(path) for path in args.shard_path] if args.shard_path else None,
+            data_files=args.data_file,
+            batch_size=args.batch_size,
+            context_frames=args.context_frames,
+            max_records=args.max_records,
+            sample_offset=args.sample_offset,
+            max_batches=args.max_batches,
+            learning_rate=args.learning_rate,
+            device=args.device,
+        )
         print(json.dumps(payload, indent=2))
         return payload
 
