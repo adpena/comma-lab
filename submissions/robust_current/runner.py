@@ -380,70 +380,42 @@ def stage_compress(
     upstream_dir: Path,
     submission_src: Path,
 ) -> None:
-    """Compress: downscale + encode video(s) per config.env."""
+    """Compress: call compress.sh as a subprocess.
+
+    NEVER reimplement compress.sh inline — it has ROI, even-frame QP,
+    sky degradation, pre-denoise, metadata stripping, and color params
+    that are too complex to duplicate correctly. Call the real script.
+    """
     mgr.set_stage(RunState.COMPRESSING)
 
-    config = _parse_config_env(submission_src / "config.env")
-    video_names_file = upstream_dir / "public_test_video_names.txt"
-    names = [
-        ln.strip()
-        for ln in video_names_file.read_text().splitlines()
-        if ln.strip()
+    compress_sh = submission_src / "compress.sh"
+    if not compress_sh.exists():
+        raise click.ClickException(f"compress.sh not found: {compress_sh}")
+
+    cmd = [
+        "bash", str(compress_sh),
     ]
+    env = {
+        **os.environ,
+        "COMMA_CHALLENGE_ROOT": str(upstream_dir),
+        "CONFIG_ENV_PATH": str(submission_src / "config.env"),
+    }
 
-    ffmpeg_bin = shutil.which("ffmpeg")
-    if ffmpeg_bin is None:
-        raise click.ClickException("ffmpeg not found in PATH")
+    run_stage(
+        cmd,
+        mgr.log_dir / "compress.log",
+        timeout=600,
+        label="compress (compress.sh)",
+        env=env,
+    )
 
-    for name in names:
-        stem = name.rsplit(".", 1)[0]
-        in_path = upstream_dir / "videos" / name
-        out_path = mgr.archive_unzip_dir / f"{stem}.mkv"
-        out_path.parent.mkdir(parents=True, exist_ok=True)
+    # compress.sh writes archive.zip to submission_src/archive.zip
+    # Copy it into our run directory
+    src_archive = submission_src / "archive.zip"
+    if src_archive.exists():
+        shutil.copy2(str(src_archive), str(mgr.run_dir / "submission" / "archive.zip"))
 
-        scale_w = config.get("SCALE_W", "524")
-        scale_h = config.get("SCALE_H", "394")
-        ds_flags = config.get("DOWNSCALE_FLAGS", "lanczos")
-        codec = config.get("VIDEO_CODEC", "libsvtav1")
-        crf = config.get("SVT_AV1_CRF", "34")
-        preset = config.get("SVT_AV1_PRESET", "0")
-        svt_params = config.get("SVT_AV1_PARAMS", "film-grain=22:keyint=180:sharpness=1")
-        color_range = config.get("SOURCE_COLOR_RANGE", "tv")
-        color_matrix = config.get("SOURCE_COLOR_MATRIX", "bt709")
-        color_primaries = config.get("SOURCE_COLOR_PRIMARIES", "bt709")
-        color_trc = config.get("SOURCE_COLOR_TRC", "bt709")
-
-        vf = (
-            f"scale={scale_w}:{scale_h}:flags={ds_flags}"
-            f":in_range={color_range}:out_range={color_range}"
-            f":in_color_matrix={color_matrix}:out_color_matrix={color_matrix}"
-            f",format=yuv420p"
-        )
-
-        cmd = [
-            ffmpeg_bin, "-y", "-i", str(in_path),
-            "-vf", vf,
-            "-an", "-c:v", codec,
-            "-preset", preset, "-crf", crf,
-        ]
-        if codec == "libsvtav1" and svt_params:
-            cmd += ["-svtav1-params", svt_params]
-        cmd += [
-            "-color_range", color_range,
-            "-colorspace", color_matrix,
-            "-color_primaries", color_primaries,
-            "-color_trc", color_trc,
-            str(out_path),
-        ]
-
-        run_stage(
-            cmd,
-            mgr.log_dir / f"compress_{stem}.log",
-            timeout=300,
-            label=f"compress {stem}",
-        )
-
-    mgr.set_stage(RunState.COMPRESSED, videos_compressed=len(names))
+    mgr.set_stage(RunState.COMPRESSED)
 
 
 def stage_package(
@@ -503,11 +475,23 @@ def stage_inflate(
             str(postfilter_path),
             "--device", device,
         ]
+        # Propagate config.env settings as env vars so inflate_postfilter.py
+        # picks them up via Click's envvar= bindings
+        inflate_env = {
+            **os.environ,
+            "PYTHONPATH": f"{submission_src.parent.parent / 'src'}:{upstream_dir}",
+            "COMMA_CHALLENGE_ROOT": str(upstream_dir),
+            "INFLATE_BRIGHTNESS_SHIFT": config.get("INFLATE_BRIGHTNESS_SHIFT", "0"),
+            "INFLATE_CHROMA_SMOOTH": config.get("INFLATE_CHROMA_SMOOTH", "0"),
+            "INFLATE_DEBLOCK": config.get("INFLATE_DEBLOCK", "0"),
+            "INFLATE_MULTI_PASS": config.get("INFLATE_MULTI_PASS", "1"),
+        }
         run_stage(
             cmd,
             mgr.log_dir / "inflate.log",
             timeout=900,
             label="inflate (postfilter)",
+            env=inflate_env,
         )
     else:
         # Use inflate.sh for ffmpeg-based inflation
@@ -686,7 +670,17 @@ def _save_experiment_record(
         archive_md5 = h.hexdigest()
 
     # Checkpoint hash
-    ckpt_path = mgr.run_dir / "submission" / "postfilter_int8.pt"
+    # Checkpoint is inside the unzipped archive (archive/ dir), not submission/ root
+    ckpt_path = mgr.run_dir / "submission" / "archive" / "postfilter_int8.pt"
+    if not ckpt_path.exists():
+        # Fallback: check submission root and submission_src
+        for fallback in [
+            mgr.run_dir / "submission" / "postfilter_int8.pt",
+            submission_src / "postfilter_int8.pt",
+        ]:
+            if fallback.exists():
+                ckpt_path = fallback
+                break
     ckpt_md5 = ""
     if ckpt_path.exists():
         h = hashlib.md5()
