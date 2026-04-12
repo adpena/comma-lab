@@ -43,6 +43,9 @@ __all__ = [
     "SEGNET_INPUT_W",
     "CAMERA_H",
     "CAMERA_W",
+    "VANISHING_POINT",
+    "HORIZON_BAND",
+    "vanishing_point_saliency",
 ]
 
 
@@ -138,3 +141,92 @@ SEGNET_INPUT_W: int = FRAME_W
 # Camera native resolution (comma challenge spec)
 CAMERA_H: int = 874
 CAMERA_W: int = 1164
+
+# ── Vanishing point and saliency prior ────────────────────────────────
+# The vanishing point (VP) is where all ego-motion converges. PoseNet's
+# tz estimate is maximally sensitive at the VP because forward translation
+# maps to radial optical flow centered on the VP. Pixels near the VP
+# contribute disproportionately to PoseNet loss.
+#
+# VP location in scorer coordinates (512x384):
+#   cx = 256 (from COMMA_INTRINSICS), cy ~174 (slightly above center —
+#   camera is tilted slightly downward, so the horizon and VP sit above
+#   the image midpoint). Empirical calibration from comma2k19 highway
+#   sequences places the VP at row ~174 in the 384-tall scorer frame.
+#
+# Horizon band: rows 155-195 in scorer coords (the sky/road boundary)
+# contain the sharpest semantic edges and highest SegNet gradient magnitude.
+
+VANISHING_POINT: tuple[int, int] = (256, 174)  # (x, y) in scorer coords (512x384)
+HORIZON_BAND: tuple[int, int] = (155, 195)  # (y_top, y_bottom) in scorer coords
+
+
+def vanishing_point_saliency(
+    H: int = 384,
+    W: int = 512,
+    sigma: float = 40.0,
+    min_weight: float = 0.3,
+    horizon_boost: float = 2.0,
+    horizon_band: tuple[int, int] = HORIZON_BAND,
+) -> torch.Tensor:
+    """Generate a VP-weighted saliency map for training loss weighting.
+
+    Pixels near the vanishing point get weight 1.0 (maximum PoseNet
+    sensitivity). Pixels far from the VP get ``min_weight``. The horizon
+    band (sky/road boundary) gets an additional multiplicative boost
+    because that is where the sharpest semantic edges live.
+
+    The map is a 2D Gaussian centered on the VP, normalized to
+    [min_weight, 1.0], with an additive horizon-band bump.
+
+    Args:
+        H: frame height in scorer coordinates (default 384).
+        W: frame width in scorer coordinates (default 512).
+        sigma: Gaussian spread in pixels (default 40.0).
+        min_weight: minimum weight for far-from-VP pixels (default 0.3).
+        horizon_boost: multiplicative weight for the horizon band (default 2.0).
+        horizon_band: (y_top, y_bottom) row range for horizon boost.
+
+    Returns:
+        (1, 1, H, W) float32 tensor of per-pixel weights.
+    """
+    vp_x, vp_y = VANISHING_POINT
+
+    # Create coordinate grids
+    ys = torch.arange(H, dtype=torch.float32)
+    xs = torch.arange(W, dtype=torch.float32)
+    yy, xx = torch.meshgrid(ys, xs, indexing="ij")
+
+    # Gaussian centered on VP
+    dist_sq = (xx - vp_x) ** 2 + (yy - vp_y) ** 2
+    gaussian = torch.exp(-dist_sq / (2.0 * sigma ** 2))
+
+    # Normalize to [min_weight, 1.0]
+    saliency = min_weight + (1.0 - min_weight) * gaussian
+
+    # Horizon band boost: rows in [y_top, y_bottom] get extra weight
+    y_top, y_bottom = horizon_band
+    horizon_mask = torch.zeros(H, W, dtype=torch.float32)
+    y_top_clamped = max(0, min(y_top, H))
+    y_bottom_clamped = max(0, min(y_bottom, H))
+    if y_bottom_clamped > y_top_clamped:
+        horizon_mask[y_top_clamped:y_bottom_clamped, :] = 1.0
+
+    # Smooth the horizon band edges with a small Gaussian taper
+    # to avoid hard boundaries in the loss landscape
+    if y_bottom_clamped > y_top_clamped:
+        band_center = (y_top_clamped + y_bottom_clamped) / 2.0
+        band_half = (y_bottom_clamped - y_top_clamped) / 2.0
+        band_sigma = band_half * 0.8  # taper within 80% of band width
+        band_dist = (yy - band_center).abs()
+        band_weight = torch.exp(-((band_dist - band_half).clamp(min=0.0) ** 2) / (2.0 * (band_sigma * 0.3) ** 2))
+        horizon_mask = band_weight * horizon_mask.clamp(0, 1) + (1.0 - horizon_mask.clamp(0, 1))
+        # Apply boost: multiply saliency by horizon factor where band is active
+        saliency = saliency * (1.0 + (horizon_boost - 1.0) * horizon_mask.clamp(0, 1))
+
+    # Re-normalize so max is 1.0 (the VP + horizon intersection)
+    saliency = saliency / saliency.max()
+    # Ensure minimum weight
+    saliency = saliency.clamp(min=min_weight)
+
+    return saliency.unsqueeze(0).unsqueeze(0)  # (1, 1, H, W)

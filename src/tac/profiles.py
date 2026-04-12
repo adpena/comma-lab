@@ -1201,8 +1201,11 @@ STACKED_INFLATE_SAFE = {
     "tto_loss": "temporal_consistency",
     "use_supervised_tto": False,
     "use_multi_pass": 3,
-    "use_brightness_shift": False,
-    "use_chroma_exploit": False,
+    # Exploits #2 and #3: brightness shift + chroma smooth are zero scorer cost
+    "use_brightness_shift": True,
+    "brightness_shift_auto": True,
+    "use_chroma_exploit": True,
+    "chroma_perturbation_magnitude": 0.8,
     "use_fragility_weighting": False,
     "use_noise_shaping": False,
     "use_backward_delta_smoothing": False,

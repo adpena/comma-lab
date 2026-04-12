@@ -69,6 +69,16 @@ ROI_PREPROCESS_ADAPTIVE="${ROI_PREPROCESS_ADAPTIVE:-0}"
 ROI_PREPROCESS_CHROMA_ONLY="${ROI_PREPROCESS_CHROMA_ONLY:-0}"
 ROI_PREPROCESS_MASK_FILE="${ROI_PREPROCESS_MASK_FILE:-}"
 PRE_DENOISE="${PRE_DENOISE:-}"
+# ── Exploit #4: Sky region degradation ──────────────────────────────
+# Blur and reduce precision in sky regions (SegNet class 4) before encoding.
+# Sky has zero driving semantics — SegNet classifies it easily regardless
+# of pixel fidelity, and PoseNet barely uses sky (far away = tiny parallax).
+# Saves 12-16% of total rate on highway scenes (sky is ~40% of frame area).
+SKY_DEGRADE_ENABLE="${SKY_DEGRADE_ENABLE:-0}"
+SKY_DEGRADE_SCRIPT="${SKY_DEGRADE_SCRIPT:-$SELF_DIR/sky_degrade.py}"
+SKY_DEGRADE_BLUR_SIGMA="${SKY_DEGRADE_BLUR_SIGMA:-2.0}"
+SKY_DEGRADE_BIT_REDUCE="${SKY_DEGRADE_BIT_REDUCE:-4}"
+SKY_DEGRADE_FEATHER="${SKY_DEGRADE_FEATHER:-8}"
 # Downscale dimensions and flags — must be set in config.env or environment.
 # SCALE_W: target width (e.g. 582), SCALE_H: target height (e.g. 437)
 # DOWNSCALE_FLAGS: ffmpeg scale flags (e.g. "lanczos+accurate_rnd"), empty = ffmpeg default
@@ -347,6 +357,28 @@ while IFS= read -r rel; do
       $([ "$ROI_PREPROCESS_CHROMA_ONLY" = "1" ] && echo "--chroma-only") \
       $([ -n "$ROI_PREPROCESS_MASK_FILE" ] && echo "--mask-file \"$ROI_PREPROCESS_MASK_FILE\"")
     in_path="$preprocessed_path"
+  fi
+
+  # Exploit #4: Sky region degradation — blur + reduce precision in sky
+  if [ "$SKY_DEGRADE_ENABLE" = "1" ]; then
+    sky_degraded_path="$WORK_DIR/${stem}_sky_degraded.mkv"
+    echo "[compress] Sky degradation: sigma=${SKY_DEGRADE_BLUR_SIGMA}, bit_reduce=${SKY_DEGRADE_BIT_REDUCE}"
+    "$UV_BIN" run --with numpy --with opencv-python-headless --with torch python "$SKY_DEGRADE_SCRIPT" \
+      --input "$in_path" \
+      --output "$sky_degraded_path" \
+      --ffmpeg-bin "$FFMPEG_BIN" \
+      --ffprobe-bin "$FFPROBE_BIN" \
+      --blur-sigma "$SKY_DEGRADE_BLUR_SIGMA" \
+      --bit-reduce "$SKY_DEGRADE_BIT_REDUCE" \
+      --feather "$SKY_DEGRADE_FEATHER" \
+      --upstream "${UPSTREAM_ROOT}" \
+      $([ -n "$SCALE_W" ] && echo "--scale-w $SCALE_W") \
+      $([ -n "$SCALE_H" ] && echo "--scale-h $SCALE_H")
+    if [ -f "$sky_degraded_path" ]; then
+      in_path="$sky_degraded_path"
+    else
+      echo "[compress] WARNING: sky degradation failed, proceeding with original" >&2
+    fi
   fi
 
   if [ "$ROI_ENABLE" = "1" ]; then

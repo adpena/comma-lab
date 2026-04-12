@@ -177,6 +177,26 @@ class TrainConfig(BaseModel):
     kalman_obs_noise_base: float = Field(1e-4, gt=0.0, description="Kalman filter observation noise baseline")
     kalman_obs_noise_scale: float = Field(10.0, ge=0.0, description="Kalman filter observation noise scale factor")
     band_lambda: float = Field(0.0, ge=0.0, description="Band-orthogonality loss weight for counterpoint ensemble")
+
+    # Vanishing-point saliency prior (Exploit #5)
+    use_vp_saliency: bool = Field(
+        False,
+        description="Weight per-pixel loss by vanishing-point Gaussian prior. "
+        "Pixels near the VP (where PoseNet tz is most sensitive) get higher "
+        "gradient weight. Pixels far from VP (sky corners) get lower weight.",
+    )
+    vp_saliency_sigma: float = Field(
+        40.0, gt=0.0,
+        description="Gaussian spread for VP saliency map in scorer-resolution pixels.",
+    )
+    vp_saliency_min_weight: float = Field(
+        0.3, ge=0.0, le=1.0,
+        description="Minimum weight for pixels far from the vanishing point.",
+    )
+    vp_saliency_horizon_boost: float = Field(
+        2.0, ge=1.0,
+        description="Multiplicative boost for the horizon band (sky/road boundary).",
+    )
     decor_lambda: float = Field(0.0, ge=0.0, description="Output decorrelation loss weight for counterpoint ensemble")
     posenet_embedding_layer: str = Field(
         "summary",
@@ -516,6 +536,23 @@ class Trainer:
         # Adaptive boundary state
         self._adaptive_boundary_weight = config.boundary_weight
         self._prev_seg_distortion: float | None = None
+
+        # VP saliency prior: pre-compute the spatial weight map once
+        self._vp_saliency_map: torch.Tensor | None = None
+        if config.use_vp_saliency:
+            from .camera import vanishing_point_saliency, FRAME_H, FRAME_W
+
+            self._vp_saliency_map = vanishing_point_saliency(
+                H=FRAME_H,
+                W=FRAME_W,
+                sigma=config.vp_saliency_sigma,
+                min_weight=config.vp_saliency_min_weight,
+                horizon_boost=config.vp_saliency_horizon_boost,
+            ).to(device)
+            print(
+                f"[trainer] VP saliency enabled: sigma={config.vp_saliency_sigma}, "
+                f"min={config.vp_saliency_min_weight}, horizon_boost={config.vp_saliency_horizon_boost}"
+            )
 
         if config.scheduler == "cosine":
             self.scheduler = torch.optim.lr_scheduler.CosineAnnealingLR(
@@ -995,7 +1032,19 @@ class Trainer:
                 filtered_bchw = filtered[:, 1].permute(0, 3, 1, 2)
                 comp_bchw = comp_pairs[idx][:, 1].float().permute(0, 3, 1, 2)
                 sal_idx = min(idx * 2 + 1, sal_weights.shape[0] - 1)
-                sal_recon = saliency_reconstruction_loss(filtered_bchw, comp_bchw, sal_weights[sal_idx : sal_idx + 1])
+                sal_w_pair = sal_weights[sal_idx : sal_idx + 1]
+                # Exploit #5: VP saliency prior — multiply per-pixel sal weights
+                # by the vanishing-point Gaussian map so VP-region pixels get
+                # stronger gradient signal in the reconstruction loss.
+                if self._vp_saliency_map is not None:
+                    vp_map = self._vp_saliency_map
+                    if vp_map.shape[-2:] != sal_w_pair.shape[-2:]:
+                        vp_map = nn.functional.interpolate(
+                            vp_map, size=sal_w_pair.shape[-2:],
+                            mode="bilinear", align_corners=False,
+                        )
+                    sal_w_pair = sal_w_pair * vp_map
+                sal_recon = saliency_reconstruction_loss(filtered_bchw, comp_bchw, sal_w_pair)
 
                 total = loss + cfg.sal_lambda * sal_recon
 
@@ -1508,18 +1557,29 @@ class Trainer:
                 filtered_bchw = filtered[:, 1].permute(0, 3, 1, 2)
                 comp_bchw = comp_pair[:, 1].float().permute(0, 3, 1, 2)
 
+                # Exploit #5: VP saliency prior — modulate per-pixel sal weights
+                sal_w_frame = sal_w[1:2]
+                if self._vp_saliency_map is not None:
+                    vp_map = self._vp_saliency_map
+                    if vp_map.shape[-2:] != sal_w_frame.shape[-2:]:
+                        vp_map = nn.functional.interpolate(
+                            vp_map, size=sal_w_frame.shape[-2:],
+                            mode="bilinear", align_corners=False,
+                        )
+                    sal_w_frame = sal_w_frame * vp_map
+
                 if cfg.use_dual_saliency and hasattr(self, "_boundary_masks") and self._boundary_masks is not None:
                     bm = self._boundary_masks.get(start)
                     sal_recon = dual_saliency_reconstruction_loss(
                         filtered_bchw,
                         comp_bchw,
-                        posenet_sal=sal_w[1:2],
+                        posenet_sal=sal_w_frame,
                         segnet_boundary=bm,
                         alpha_pose=cfg.alpha,
                         alpha_seg=cfg.alpha_seg,
                     )
                 else:
-                    sal_recon = saliency_reconstruction_loss(filtered_bchw, comp_bchw, sal_w[1:2])
+                    sal_recon = saliency_reconstruction_loss(filtered_bchw, comp_bchw, sal_w_frame)
 
                 # Trick 3: Even-indexed pair SegNet skip — for even-indexed pairs,
                 # SegNet contribution is halved. With standard pair layout

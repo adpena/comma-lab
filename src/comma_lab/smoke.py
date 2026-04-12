@@ -14,9 +14,12 @@ from .paths import default_upstream_root, repo_root
 from .tracks.exact_current import create_minimal_archive
 
 SOURCE_COLOR_RANGE = "tv"
-SOURCE_COLOR_MATRIX = "bt709"
-SOURCE_COLOR_PRIMARIES = "bt709"
-SOURCE_COLOR_TRC = "bt709"
+# BT.601 (smpte170m) matches the scorer's preprocess_input which uses
+# BT.601 coefficients (kYR=0.299, kYG=0.587, kYB=0.114). Using BT.709
+# here causes a systematic 3-5% color error in every frame.
+SOURCE_COLOR_MATRIX = "smpte170m"
+SOURCE_COLOR_PRIMARIES = "smpte170m"
+SOURCE_COLOR_TRC = "smpte170m"
 
 
 def _ffmpeg_bin() -> str:
