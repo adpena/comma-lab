@@ -51,8 +51,10 @@ class DepthAwareMotionPredictor(nn.Module):
         self.num_classes = num_classes
 
         # Per-class depth priors (driving scene defaults)
-        # road=0.3, lane=0.3, vehicle=0.5, sky=0.01, background=0.2
-        depth_init = torch.tensor([0.3, 0.3, 0.5, 0.01, 0.2])
+        # road=0.3 (medium-far), lane=0.3, vehicle=0.5 (medium),
+        # sky=10.0 (very far — large depth = small parallax),
+        # background=0.2 (medium-far)
+        depth_init = torch.tensor([0.3, 0.3, 0.5, 10.0, 0.2])
         if num_classes != 5:
             depth_init = torch.full((num_classes,), 0.3)
         self.class_depth = nn.Parameter(depth_init)
@@ -132,6 +134,10 @@ class DepthAwareMotionPredictor(nn.Module):
         device = mask_t.device
         eps = 1e-6
 
+        # Force FP32 for depth computations — inv_depth gradients scale as 1/d^2
+        # which can overflow in FP16 for small depth values
+        orig_dtype = self.class_depth.dtype
+
         # 1. Extract class features and estimate camera motion
         class_feats = self._extract_class_features(mask_t, mask_t1)  # (B, 3*C)
         cam_params = self.cam_linear(class_feats)  # (B, 6)
@@ -165,8 +171,11 @@ class DepthAwareMotionPredictor(nn.Module):
         ry_b = ry.reshape(B, 1, 1)
         rz_b = rz.reshape(B, 1, 1)
 
-        flow_x_trans = fx * (tz_b - tx_b * inv_d)
-        flow_y_trans = fy * (tz_b - ty_b * inv_d)
+        # Standard pinhole translation flow: (-tx + x_norm * tz) / d
+        # The x_norm * tz / d term is the focus-of-expansion effect —
+        # critical for forward-motion flow fields in driving video
+        flow_x_trans = fx * (-tx_b + x_norm * tz_b) * inv_d
+        flow_y_trans = fy * (-ty_b + y_norm * tz_b) * inv_d
 
         # Rotation-induced flow (depth-independent)
         flow_x_rot = fx * (ry_b - rz_b * y_norm)
