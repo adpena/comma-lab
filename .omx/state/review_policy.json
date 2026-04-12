@@ -50,6 +50,33 @@
       "level_name": "contributor",
       "scope": ["*"],
       "human": false
+    },
+    "yousfi": {
+      "_description": "Tripartite pact member — domain expert, contest designer perspective",
+      "github": null,
+      "url": null,
+      "level": 3,
+      "level_name": "approver",
+      "scope": ["*"],
+      "human": false
+    },
+    "fridrich": {
+      "_description": "Tripartite pact member — steganalysis founder, constrained optimization expert",
+      "github": null,
+      "url": null,
+      "level": 3,
+      "level_name": "approver",
+      "scope": ["*"],
+      "human": false
+    },
+    "contrarian": {
+      "_description": "Tripartite pact member — rigor enforcer, veto power on unvalidated assumptions",
+      "github": null,
+      "url": null,
+      "level": 3,
+      "level_name": "approver",
+      "scope": ["*"],
+      "human": false
     }
   },
 
