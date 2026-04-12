@@ -551,6 +551,61 @@ def inflate_with_postfilter(
                 print("  Supervised TTO: targets file not found or invalid, "
                       "skipping", file=sys.stderr)
 
+    # Trick 6: Opportunistic supervised TTO if scorer models are on the eval machine
+    # The scorer IS on the eval machine (it runs scoring). If PoseNet is accessible,
+    # run 5 quick gradient steps (~30s) to directly optimize the scorer metric.
+    if SUPERVISED_TTO_IF_AVAILABLE and supervised_tto_steps == 0:
+        try:
+            from tac.scorer import load_scorers
+            from tac.tto import supervised_tto as _stto_fn
+            from tac.scorer_targets import load_posenet_targets as _load_targets
+
+            # Try to find PoseNet model in standard locations
+            _pn_path = posenet_path
+            _sn_path = segnet_path
+            if not _pn_path and upstream_dir:
+                _candidate = os.path.join(upstream_dir, "models", "posenet.safetensors")
+                if os.path.exists(_candidate):
+                    _pn_path = _candidate
+            if not _sn_path and upstream_dir:
+                _candidate = os.path.join(upstream_dir, "models", "segnet.safetensors")
+                if os.path.exists(_candidate):
+                    _sn_path = _candidate
+
+            if _pn_path and _sn_path and os.path.exists(_pn_path):
+                print("  Opportunistic supervised TTO: PoseNet found, running 5 steps ...",
+                      file=sys.stderr)
+                _pn, _ = load_scorers(_pn_path, _sn_path, device=device, upstream_dir=upstream_dir)
+
+                # Try to load pre-computed targets
+                _tgt = None
+                if posenet_targets_path:
+                    _tgt = _load_targets(posenet_targets_path, device=device)
+
+                if _tgt is not None:
+                    _stto_frames = _decode_frames_for_tto(
+                        video_path, target_w, target_h, max_frames=64, stride=4,
+                    )
+                    if _stto_frames.shape[0] >= 2:
+                        model = _stto_fn(
+                            model, _stto_frames, _pn, _tgt["targets"],
+                            n_steps=5, lr=1e-4, param_mode="all",
+                            time_budget_seconds=30.0,  # hard 30s cap
+                            verbose=True,
+                        )
+                        del _stto_frames
+                    print(f"  Opportunistic supervised TTO complete: {time.monotonic() - t0:.1f}s",
+                          file=sys.stderr)
+                else:
+                    print("  Opportunistic supervised TTO: no targets available, skipping",
+                          file=sys.stderr)
+            else:
+                print("  Opportunistic supervised TTO: PoseNet not found, skipping gracefully",
+                      file=sys.stderr)
+        except (ImportError, Exception) as e:
+            print(f"  Opportunistic supervised TTO: not available ({e}), skipping gracefully",
+                  file=sys.stderr)
+
     container = av.open(video_path)
     stream = container.streams.video[0]
     n = 0

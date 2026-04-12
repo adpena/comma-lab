@@ -61,7 +61,7 @@ class TrickStackConfig:
     tto_lr: float = 1e-4
     tto_loss: str = "temporal_consistency"
     tto_param_mode: str = "last_layer"
-    tto_budget: float = 60.0
+    tto_budget: float = 30.0  # 30s CPU safety default (10-min inflate budget)
     tto_batch_size: int = 16
     tto_max_frames: int = 64
     tto_frame_stride: int = 4
@@ -117,6 +117,20 @@ class TrickStackConfig:
     scorer_equiv_lr: float = 0.5
     scorer_equiv_compressibility_weight: float = 0.1
     scorer_equiv_tolerance: float = 1e-4
+
+    # -- CPU stacked pipeline (Eureka 1-6) --
+    use_parallel_decode: bool = False
+    parallel_workers: int = 4
+
+    use_precomputed_corrections: bool = False
+    corrections_path: str | None = None
+
+    use_multi_model: bool = False
+    hard_model_path: str | None = None
+
+    use_precomputed_brightness: bool = False
+    use_precomputed_null_space: bool = False
+    use_precomputed_gradients: bool = False
 
     # -- Paths --
     posenet_targets_path: str | None = None

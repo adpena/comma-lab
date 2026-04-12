@@ -64,6 +64,25 @@ PROVEN_BASELINE = {
     "accum_steps": 4,
 }
 
+# Boundary-aware variant of proven_baseline (Trick 7: boundary retraining)
+# Same architecture and hyperparameters, but boundary pixels get 5x gradient.
+# This steers the model to allocate more correction capacity to class edges
+# where SegNet is most sensitive. Zero-cost at inference.
+PROVEN_BASELINE_BOUNDARY = {
+    **PROVEN_BASELINE,
+    "boundary_weight": 5.0,
+}
+
+# Feature matching variant of proven_baseline (Trick 8: PoseNet layer 3 embeddings)
+# Uses PoseNet intermediate features (stages.2, 256-ch) as the training target
+# instead of the 6-value pose output. Strictly more informative because the
+# mid-layer features capture texture statistics PoseNet actually uses.
+PROVEN_BASELINE_FEATMATCH = {
+    **PROVEN_BASELINE,
+    "loss_mode": "feature_match",
+    "segnet_loss_weight": 100.0,
+}
+
 # Width scaling (h=96 dilated with council settings)
 # Inherits loss_mode="standard" from COUNCIL_V1 (kl_distill deprecated)
 H96_COUNCIL = {
@@ -897,6 +916,28 @@ OVERFIT_CPU = {
     "frequency_loss_weight": 0.1,  # mild — complement to scorer loss
 }
 
+# CPU lane v2: overfit with boundary + feature match + SWA (Trick 9)
+# Combines the best training-time tricks: feature matching loss (Trick 8),
+# boundary awareness (Trick 7), and SWA for better int8 quantization.
+OVERFIT_CPU_V2 = {
+    "variant": "dilated",
+    "hidden": 64,
+    "kernel": 3,
+    "epochs": 10000,
+    "lr": 5e-4,
+    "ema_decay": 0.999,
+    "alpha": 20.0,
+    "sal_lambda": 1.0,
+    "loss_mode": "feature_match",
+    "boundary_weight": 5.0,
+    "segnet_loss_weight": 100.0,
+    "hard_frame_ratio": 0.5,
+    "error_replay_every": 100,
+    "eval_every": 50,
+    "accum_steps": 4,
+    "use_swa": True,
+}
+
 # GPU lane: overfit renderer to 0.mkv with all tricks (10K epochs)
 OVERFIT_GPU = {
     "variant": "mask_renderer",
@@ -1220,8 +1261,12 @@ PROFILES = {
     "depthwise_renderer_smoke": DEPTHWISE_RENDERER_SMOKE,
     "channel_recurrent_smoke": CHANNEL_RECURRENT_SMOKE,
     "coord_renderer_smoke": COORD_RENDERER_SMOKE,
+    # Yousfi CPU lane profiles
+    "proven_baseline_boundary": PROVEN_BASELINE_BOUNDARY,
+    "proven_baseline_featmatch": PROVEN_BASELINE_FEATMATCH,
     # Yousfi council decode profiles
     "overfit_cpu": OVERFIT_CPU,
+    "overfit_cpu_v2": OVERFIT_CPU_V2,
     "overfit_gpu": OVERFIT_GPU,
     # Technique 2: Luma-only dilated
     "luma_only_dilated_smoke": LUMA_ONLY_DILATED_SMOKE,
