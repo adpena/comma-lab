@@ -29,6 +29,81 @@ import click
 
 
 # ============================================================
+# PoseNet calibration — local scorer vs auth scorer
+# ============================================================
+# DIAGNOSIS (2026-04-11): Both torch 2.10.0 and 2.11.0 produce
+# IDENTICAL per-pair PoseNet outputs on CPU. The 29x PoseNet inflation
+# is NOT a torch/timm version issue. Root cause: auth scorer uses
+# CUDA + DALI for video decode, which produces different ground truth
+# pixel values than PyAV's CPU decode path. SegNet and Rate are
+# unaffected (SegNet uses argmax which is robust to small pixel diffs;
+# Rate is file-size-based with no model involvement).
+#
+# Calibration data (archive md5 463b6fdb, 864167 bytes):
+#   Auth:  pose=0.00218, seg=0.00610, rate=0.02302, score=1.33
+#   Local: pose=0.06256, seg=0.00565, rate=0.02302, score=1.93
+#
+# PoseNet ratio: 0.00218 / 0.06256 = 0.03484
+# SegNet ratio:  0.00610 / 0.00565 = 1.0796 (close to 1.0)
+# Rate ratio:    identical (no model)
+
+POSE_CALIBRATION_FACTOR = 0.00218 / 0.06256  # = 0.03484
+POSE_CALIBRATION_ARCHIVE_MD5 = "463b6fdb"
+POSE_CALIBRATION_N_POINTS = 1  # PROVISIONAL — single data point
+
+
+def calibrate_score(
+    local_pose: float, local_seg: float, local_rate: float
+) -> dict[str, float]:
+    """Translate local scorer output to estimated auth score.
+
+    Calibration points (same archive, different scorers):
+      Auth:  pose=0.00218, seg=0.00610, rate=0.02302, score=1.33
+      Local: pose=0.06256, seg=0.00565, rate=0.02302, score=1.93
+
+    Root cause: DALI GPU decode (auth) vs PyAV CPU decode (local)
+    produce different ground truth pixels. PoseNet MSE is sensitive
+    to these sub-pixel differences; SegNet argmax is robust.
+
+    SegNet: local is reliable (ratio ~1.08, nearly 1:1)
+    Rate: identical (no model involved)
+    PoseNet: local is 29x inflated (ratio = 0.00218/0.06256 = 0.0349)
+
+    CONTRARIAN NOTE: The calibration factor is a MEAN correction.
+    Per-pair PoseNet values vary by 1000x (CV=1.15). If the DALI-vs-PyAV
+    divergence is content-dependent (e.g., high-motion frames diverge more),
+    the linear correction would be wrong for different checkpoints that
+    shift the distortion distribution across content types. However, the
+    MEAN correction is still the best 1-point estimator for the AGGREGATE
+    score, which is what the leaderboard uses.
+
+    PROVISIONAL: Based on 1 calibration point. Submit for definitive score.
+
+    Returns dict with calibrated components and estimated auth score.
+    """
+    calibrated_pose = local_pose * POSE_CALIBRATION_FACTOR
+    # SegNet and Rate pass through unchanged
+    calibrated_seg = local_seg
+    calibrated_rate = local_rate
+
+    calibrated_score = (
+        100 * calibrated_seg
+        + math.sqrt(10 * calibrated_pose)
+        + 25 * calibrated_rate
+    )
+
+    return {
+        "calibrated_pose": calibrated_pose,
+        "calibrated_seg": calibrated_seg,
+        "calibrated_rate": calibrated_rate,
+        "calibrated_score": calibrated_score,
+        "pose_calibration_factor": POSE_CALIBRATION_FACTOR,
+        "calibration_n_points": POSE_CALIBRATION_N_POINTS,
+        "calibration_archive_md5": POSE_CALIBRATION_ARCHIVE_MD5,
+    }
+
+
+# ============================================================
 # File lock — prevents concurrent runner instances on same work-dir
 # ============================================================
 def _acquire_lock(lock_path: Path) -> None:
@@ -543,23 +618,58 @@ def stage_inflate(
     mgr.set_stage(RunState.INFLATED)
 
 
+def _find_scorer_python(upstream_dir: Path) -> str:
+    """Find the best Python to run the scorer with.
+
+    Preference order:
+    1. Upstream venv Python (matches auth environment exactly)
+    2. Current sys.executable (fallback)
+
+    Using the upstream venv eliminates ANY version discrepancies in
+    torch, timm, einops, etc. The upstream venv has torch 2.10.0 +
+    timm 1.0.22 which is what auth uses.
+    """
+    upstream_python = upstream_dir / ".venv" / "bin" / "python"
+    if upstream_python.exists():
+        # Verify it actually works
+        try:
+            result = subprocess.run(
+                [str(upstream_python), "-c", "import torch; print(torch.__version__)"],
+                capture_output=True, text=True, timeout=10,
+            )
+            if result.returncode == 0:
+                click.echo(f"  Using upstream venv Python: {upstream_python}")
+                click.echo(f"  Upstream torch: {result.stdout.strip()}")
+                return str(upstream_python)
+        except (subprocess.TimeoutExpired, OSError):
+            pass
+    click.echo(f"  Using current Python: {sys.executable}")
+    return sys.executable
+
+
 def stage_score(
     mgr: RunManager,
     upstream_dir: Path,
     submission_src: Path,
     device: str = "cpu",
 ) -> None:
-    """Score: run upstream evaluate.py against inflated output."""
+    """Score: run upstream evaluate.py against inflated output.
+
+    Prefers the upstream venv Python for scoring to minimize
+    divergence from the auth scorer environment.
+    """
     mgr.set_stage(RunState.SCORING)
 
     report_path = mgr.run_dir / "report.json"
     report_txt = mgr.run_dir / "report.txt"
 
+    scorer_python = _find_scorer_python(upstream_dir)
+
     # The scorer expects:
     #   --submission-dir pointing to a dir with archive.zip and inflated/
     #   --uncompressed-dir pointing to videos/
     cmd = [
-        sys.executable,
+        scorer_python,
         str(upstream_dir / "evaluate.py"),
         "--submission-dir", str(mgr.submission_dir),
         "--uncompressed-dir", str(upstream_dir / "videos"),
@@ -623,13 +733,31 @@ def _parse_and_save_report(
 
     click.echo("")
     click.echo("=" * 54)
-    click.echo(f"  SCORE: {score:.4f}")
+    click.echo(f"  LOCAL SCORE: {score:.4f}")
     click.echo(f"  SegNet:  {seg:.6f}  (100x  = {100 * seg:.4f})")
     click.echo(f"  PoseNet: {pose:.6f}  (sqrt(10x) = {math.sqrt(10 * pose):.4f})")
     click.echo(f"  Rate:    {rate:.6f}  (25x   = {25 * rate:.4f})")
     click.echo("=" * 54)
 
-    mgr.set_stage(RunState.SCORED, score=score, posenet=pose, segnet=seg, rate=rate)
+    # Calibrated auth estimate
+    cal = calibrate_score(pose, seg, rate)
+    click.echo(f"  CALIBRATED AUTH ESTIMATE: ~{cal['calibrated_score']:.2f}")
+    click.echo(f"  Calibrated PoseNet: {cal['calibrated_pose']:.8f}  "
+               f"(factor: {cal['pose_calibration_factor']:.4f}x)")
+    click.echo(f"  (Based on archive md5 {cal['calibration_archive_md5']}, "
+               f"n={cal['calibration_n_points']} calibration point(s))")
+    click.echo(f"  WARNING: Calibration is PROVISIONAL. Submit for definitive score.")
+    click.echo("=" * 54)
+
+    mgr.set_stage(
+        RunState.SCORED,
+        score=score,
+        calibrated_score=cal["calibrated_score"],
+        posenet=pose,
+        calibrated_posenet=cal["calibrated_pose"],
+        segnet=seg,
+        rate=rate,
+    )
 
     # ── Complete experiment record ──────────────────────────────
     # Capture EVERYTHING needed to reproduce this result.
