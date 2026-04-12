@@ -1,0 +1,1021 @@
+#!/usr/bin/env python
+"""Fridrich Constrained Renderer Training -- the path to sub-0.50.
+
+Trains a mask-conditioned SPADE renderer with:
+1. Hard SegNet constraint (augmented Lagrangian, boundary 0.005)
+2. Hard PoseNet constraint (augmented Lagrangian, boundary 0.01)
+3. Coupled trajectory loss (consecutive pairs, temporal coherence)
+4. Ego-motion flow regularization (geometric prior)
+5. Self-compression penalty (minimize model size for rate)
+6. TV smoothness (compressible output)
+
+The renderer generates frames from masks. PoseNet evaluates consecutive
+pairs. The Lagrangian ensures BOTH scorers are satisfied simultaneously
+without the weighted-sum imbalance that plagues standard training.
+
+Architecture: DP-SIMS v2 with SPADE normalization + DepthAwareMotionPredictor
+  - channels=(128,64,32,16): ~1M params, ~489KB FP4, rate 0.33
+  - With self-compression: target 200-300KB, rate 0.13-0.20
+
+Score projection: seg 0.003 + pose 0.002 + rate 0.13 = 0.57
+With ego-motion: seg 0.003 + pose 0.001 + rate 0.13 = 0.50
+
+Usage:
+    PYTHONPATH=src:/path/to/upstream python experiments/train_renderer_fridrich.py \\
+        --precomputed /path/to/precomputed \\
+        --epochs 10000 \\
+        --device cuda
+
+    # Smoke test (fast, CPU):
+    PYTHONPATH=src:/path/to/upstream python experiments/train_renderer_fridrich.py \\
+        --precomputed /path/to/precomputed \\
+        --epochs 5 --batch-size 2 --device cpu --smoke
+"""
+from __future__ import annotations
+
+import gc
+import json
+import math
+import os
+import sys
+import time
+import types
+import traceback
+from dataclasses import dataclass, field, asdict
+from pathlib import Path
+from typing import Any
+
+import click
+import numpy as np
+import torch
+import torch.nn as nn
+import torch.nn.functional as F
+
+
+# ---------------------------------------------------------------------------
+# Path setup — find upstream (scorer models), weights dir, GT video
+# ---------------------------------------------------------------------------
+_CANDIDATE_UPSTREAM = [
+    Path("/home/zeus/content/upstream"),
+    Path(__file__).resolve().parent.parent / "upstream",
+    Path(os.environ.get("UPSTREAM_ROOT", "")) if os.environ.get("UPSTREAM_ROOT") else None,
+]
+UPSTREAM_ROOT: Path | None = None
+for _p in _CANDIDATE_UPSTREAM:
+    if _p is not None and (_p / "modules.py").exists():
+        UPSTREAM_ROOT = _p
+        break
+if UPSTREAM_ROOT is not None and str(UPSTREAM_ROOT) not in sys.path:
+    sys.path.insert(0, str(UPSTREAM_ROOT))
+
+_CANDIDATE_WEIGHTS = [
+    Path("/home/zeus/content/upstream/models"),
+    Path("/home/zeus/content/pact/upstream/models"),
+    Path(__file__).resolve().parent.parent / "upstream" / "models",
+]
+WEIGHTS_DIR: Path | None = None
+for _p in _CANDIDATE_WEIGHTS:
+    if _p is not None and (_p / "posenet.safetensors").exists():
+        WEIGHTS_DIR = _p
+        break
+
+RESULTS_DIR = Path(__file__).resolve().parent / "results" / "fridrich_renderer"
+
+
+# ---------------------------------------------------------------------------
+# Experiment config
+# ---------------------------------------------------------------------------
+@dataclass
+class FridrichRendererConfig:
+    """All hyperparameters for the Fridrich constrained renderer training."""
+
+    # Architecture
+    channels: tuple[int, ...] = (128, 64, 32, 16)
+    init_h: int = 24
+    init_w: int = 32
+    spade_hidden: int = 32
+    num_classes: int = 5
+    use_noise: bool = False  # deterministic pairs => noise off
+
+    # Training
+    epochs: int = 10000
+    lr: float = 2e-4
+    lr_min_ratio: float = 0.01
+    batch_size: int = 4
+    grad_clip: float = 1.0
+    device: str = "cuda"
+    seed: int = 42
+
+    # Scorer resolution (384x512 matches scorer input pipeline)
+    target_h: int = 384
+    target_w: int = 512
+
+    # Phase boundaries (fraction of total epochs)
+    phase1_end: float = 0.20   # 0-20%: memorize (MSE + soft scorer)
+    phase2_end: float = 0.60   # 20-60%: constrain (Fridrich Lagrangian)
+    # 60-100%: compress (add self-compression penalty)
+
+    # Phase 1: soft weights (MSE-dominated warmup)
+    p1_mse_weight: float = 1.0
+    p1_seg_weight: float = 10.0
+    p1_pose_weight: float = 1.0
+
+    # Phase 2+3: Fridrich Lagrangian constraints
+    seg_boundary: float = 0.005    # target: seg_dist < 0.005
+    pose_boundary: float = 0.01    # target: pose_dist < 0.01
+    rho_init: float = 10.0         # initial quadratic penalty coefficient
+    rho_growth: float = 1.05       # rho multiplier per outer step
+    rho_max: float = 1e4           # cap rho to prevent numerical explosion
+
+    # TV smoothness
+    tv_weight: float = 0.1
+
+    # Ego-motion flow regularization
+    flow_weight: float = 0.5
+
+    # Phase 3: self-compression
+    rate_weight: float = 0.01       # rate penalty weight
+    target_bytes: int = 250 * 1024  # 250KB target model size
+    init_bits: float = 8.0          # start with full precision
+
+    # Checkpointing
+    checkpoint_every: int = 500
+    eval_every: int = 1000
+    early_stop_patience: int = 500  # stop if both constraints satisfied for N epochs
+
+    # Logging
+    log_every: int = 50
+
+    # Smoke test overrides
+    smoke: bool = False
+
+
+# ---------------------------------------------------------------------------
+# Helpers
+# ---------------------------------------------------------------------------
+
+def _vram_mb() -> float:
+    if torch.cuda.is_available():
+        return torch.cuda.memory_allocated() / 1024 / 1024
+    return 0.0
+
+
+def _load_scorers(device: str) -> tuple[nn.Module, nn.Module]:
+    """Load frozen PoseNet and SegNet, patch for differentiable training."""
+    if WEIGHTS_DIR is None:
+        raise FileNotFoundError(f"Scorer weights not found in {_CANDIDATE_WEIGHTS}")
+    from tac.scorer import load_scorers
+    posenet, segnet = load_scorers(
+        WEIGHTS_DIR / "posenet.safetensors",
+        WEIGHTS_DIR / "segnet.safetensors",
+        device=device,
+        upstream_dir=UPSTREAM_ROOT,
+    )
+    return posenet, segnet
+
+
+def _patch_scorers_for_training(posenet: nn.Module, segnet: nn.Module) -> None:
+    """Monkey-patch upstream scorers for differentiable training.
+
+    The upstream PoseNet.preprocess_input uses rgb_to_yuv6 decorated with
+    @torch.no_grad(), which kills gradients. We replace it with a
+    differentiable version that faithfully reproduces the upstream math.
+
+    Also patches AllNorm.forward to use .reshape() instead of .view()
+    for robustness with non-contiguous tensors.
+    """
+    import einops
+
+    # Patch AllNorm to not break gradients
+    for module in list(posenet.modules()) + list(segnet.modules()):
+        if type(module).__name__ == "AllNorm":
+            def _patched_forward(self, x):
+                return self.bn(x.reshape(-1, 1)).reshape(x.shape)
+            module.forward = types.MethodType(_patched_forward, module)
+
+    # Differentiable rgb_to_yuv6: full-range BT.601 with 4:2:0 subsampling
+    def _rgb_to_yuv6_diff(rgb_chw: torch.Tensor) -> torch.Tensor:
+        H, W = rgb_chw.shape[-2], rgb_chw.shape[-1]
+        H2, W2 = H // 2, W // 2
+        rgb = rgb_chw[..., :, :2 * H2, :2 * W2]
+        R = rgb[..., 0, :, :]
+        G = rgb[..., 1, :, :]
+        B = rgb[..., 2, :, :]
+        Y = (R * 0.299 + G * 0.587 + B * 0.114).clamp(0.0, 255.0)
+        U = ((B - Y) / 1.772 + 128.0).clamp(0.0, 255.0)
+        V = ((R - Y) / 1.402 + 128.0).clamp(0.0, 255.0)
+        U_sub = (U[..., 0::2, 0::2] + U[..., 1::2, 0::2] + U[..., 0::2, 1::2] + U[..., 1::2, 1::2]) * 0.25
+        V_sub = (V[..., 0::2, 0::2] + V[..., 1::2, 0::2] + V[..., 0::2, 1::2] + V[..., 1::2, 1::2]) * 0.25
+        y00 = Y[..., 0::2, 0::2]
+        y10 = Y[..., 1::2, 0::2]
+        y01 = Y[..., 0::2, 1::2]
+        y11 = Y[..., 1::2, 1::2]
+        return torch.stack([y00, y10, y01, y11, U_sub, V_sub], dim=-3)
+
+    # Get scorer input size from upstream module
+    try:
+        from modules import segnet_model_input_size
+    except ImportError:
+        segnet_model_input_size = (512, 384)  # (W, H) default
+
+    def _diff_preprocess(self, x):
+        batch_size, seq_len_local = x.shape[0], x.shape[1]
+        x = einops.rearrange(x, "b t c h w -> (b t) c h w", b=batch_size, t=seq_len_local, c=3)
+        x = F.interpolate(
+            x,
+            size=(segnet_model_input_size[1], segnet_model_input_size[0]),
+            mode="bilinear",
+            align_corners=False,
+        )
+        yuv = _rgb_to_yuv6_diff(x)
+        return einops.rearrange(
+            yuv, "(b t) c h w -> b (t c) h w",
+            b=batch_size, t=seq_len_local, c=6,
+        ).contiguous()
+
+    posenet.preprocess_input = types.MethodType(_diff_preprocess, posenet)
+
+
+def _extract_masks(
+    gt_chw: torch.Tensor,
+    segnet: nn.Module,
+    batch_size: int = 8,
+) -> torch.Tensor:
+    """Extract SegNet masks from GT frames (CHW float [0,255]).
+
+    Returns: (N, H, W) long tensor of class indices in [0, 4].
+    """
+    masks_list = []
+    with torch.no_grad():
+        for i in range(0, gt_chw.shape[0], batch_size):
+            batch = gt_chw[i:i + batch_size]
+            inp = batch.unsqueeze(1).contiguous()  # (B, 1, C, H, W)
+            seg_in = segnet.preprocess_input(inp)
+            logits = segnet(seg_in)
+            mask = logits.argmax(dim=1)  # (B, H', W')
+            # Resize mask back to target resolution if needed
+            if mask.shape[1] != gt_chw.shape[2] or mask.shape[2] != gt_chw.shape[3]:
+                mask = F.interpolate(
+                    mask.unsqueeze(1).float(),
+                    size=(gt_chw.shape[2], gt_chw.shape[3]),
+                    mode="nearest",
+                ).squeeze(1).long()
+            masks_list.append(mask)
+    return torch.cat(masks_list, dim=0)
+
+
+def _tv_loss(frames: torch.Tensor) -> torch.Tensor:
+    """Total variation loss for compressibility.
+
+    Args:
+        frames: (B, 3, H, W) float tensor.
+
+    Returns:
+        Scalar TV loss.
+    """
+    dx = (frames[:, :, :, 1:] - frames[:, :, :, :-1]).abs().mean()
+    dy = (frames[:, :, 1:, :] - frames[:, :, :-1, :]).abs().mean()
+    return dx + dy
+
+
+def _compute_model_bits(model: nn.Module) -> torch.Tensor:
+    """Compute total model size in bits (differentiable via LearnableBitDepth).
+
+    Looks for LearnableBitDepth modules attached to conv layers.
+    Falls back to counting parameters * 8 (FP4 = 4 bits, but we use 8 as conservative).
+    """
+    total = torch.tensor(0.0, device=next(model.parameters()).device)
+    has_learnable_bits = False
+    for m in model.modules():
+        if hasattr(m, "total_bits") and callable(m.total_bits):
+            total = total + m.total_bits()
+            has_learnable_bits = True
+    if not has_learnable_bits:
+        # Fallback: count params * 4 bits (FP4 quantization estimate)
+        n_params = sum(p.numel() for p in model.parameters())
+        total = torch.tensor(float(n_params * 4), device=next(model.parameters()).device)
+    return total
+
+
+def _wrap_with_learnable_bits(model: nn.Module, init_bits: float = 8.0) -> list[nn.Module]:
+    """Wrap Conv2d layers in the renderer with LearnableBitDepth for self-compression.
+
+    Returns list of LearnableBitDepth modules (for optimizing their bits params).
+    """
+    from tac.self_compress import LearnableBitDepth
+
+    bit_modules = []
+    for name, module in model.named_modules():
+        if isinstance(module, nn.Conv2d):
+            bit_depth = LearnableBitDepth(
+                num_channels=module.weight.shape[0],
+                init_bits=init_bits,
+            ).to(module.weight.device)
+            # Store the bit_depth module on the conv layer
+            module.bit_depth = bit_depth
+            bit_modules.append(bit_depth)
+
+            # Monkey-patch forward to quantize weights through bit_depth
+            original_forward = module.forward
+
+            def _make_quantized_forward(conv, bd, orig_fwd):
+                def _quantized_forward(x):
+                    q_weight = bd(conv.weight)
+                    return F.conv2d(
+                        x, q_weight, conv.bias,
+                        conv.stride, conv.padding, conv.dilation, conv.groups,
+                    )
+                return _quantized_forward
+
+            module.forward = _make_quantized_forward(module, bit_depth, original_forward)
+
+    return bit_modules
+
+
+def _compute_self_compress_bits(model: nn.Module) -> torch.Tensor:
+    """Sum total_bits() across all LearnableBitDepth modules attached to conv layers."""
+    total = torch.tensor(0.0, device=next(model.parameters()).device)
+    found = False
+    for m in model.modules():
+        if isinstance(m, nn.Conv2d) and hasattr(m, "bit_depth"):
+            total = total + m.bit_depth.total_bits()
+            found = True
+    if not found:
+        # Fallback to param count * 4 bits
+        n_params = sum(p.numel() for p in model.parameters())
+        return torch.tensor(float(n_params * 4), device=next(model.parameters()).device)
+    return total
+
+
+# ---------------------------------------------------------------------------
+# Scorer distortion computation — the core training signal
+# ---------------------------------------------------------------------------
+
+def _compute_seg_distortion(
+    gen_frames: torch.Tensor,
+    gt_frames: torch.Tensor,
+    segnet: nn.Module,
+) -> torch.Tensor:
+    """Compute SegNet distortion between generated and GT frames.
+
+    Uses preprocess_input on both. Returns differentiable soft cosine distance.
+
+    Args:
+        gen_frames: (B, 3, H, W) float [0, 255] generated frames.
+        gt_frames: (B, 3, H, W) float [0, 255] GT frames.
+        segnet: frozen SegNet with preprocess_input.
+
+    Returns:
+        Scalar SegNet distortion (1 - cosine similarity of class probs).
+    """
+    # SegNet expects (B, T, C, H, W) — use T=1 for single-frame seg
+    gen_btchw = gen_frames.unsqueeze(1).contiguous()
+    gt_btchw = gt_frames.unsqueeze(1).contiguous()
+
+    seg_in_gen = segnet.preprocess_input(gen_btchw)
+    seg_logits_gen = segnet(seg_in_gen)
+
+    with torch.no_grad():
+        seg_in_gt = segnet.preprocess_input(gt_btchw)
+        seg_logits_gt = segnet(seg_in_gt)
+
+    pred_soft = F.softmax(seg_logits_gen, dim=1)
+    gt_soft = F.softmax(seg_logits_gt, dim=1)
+    seg_dist = 1.0 - (pred_soft * gt_soft).sum(dim=1).mean()
+    return seg_dist
+
+
+def _compute_pose_distortion_coupled(
+    gen_frame_t: torch.Tensor,
+    gen_frame_t1: torch.Tensor,
+    gt_frame_t: torch.Tensor,
+    gt_frame_t1: torch.Tensor,
+    posenet: nn.Module,
+) -> torch.Tensor:
+    """Compute PoseNet distortion with COUPLED trajectory through both frames.
+
+    This is the key insight: PoseNet evaluates consecutive PAIRS.
+    Gradient flows through BOTH generated frames to the renderer.
+    This forces temporal coherence.
+
+    Args:
+        gen_frame_t: (B, 3, H, W) generated frame at time t.
+        gen_frame_t1: (B, 3, H, W) generated frame at time t+1.
+        gt_frame_t: (B, 3, H, W) GT frame at time t.
+        gt_frame_t1: (B, 3, H, W) GT frame at time t+1.
+        posenet: frozen PoseNet with preprocess_input.
+
+    Returns:
+        Scalar PoseNet distortion (MSE on first 6 pose outputs).
+    """
+    # Stack consecutive frames as pairs: (B, 2, C, H, W)
+    gen_pair = torch.stack([gen_frame_t, gen_frame_t1], dim=1).contiguous()
+    gt_pair = torch.stack([gt_frame_t, gt_frame_t1], dim=1).contiguous()
+
+    pose_in_gen = posenet.preprocess_input(gen_pair)
+    pose_out_gen = posenet(pose_in_gen)
+
+    with torch.no_grad():
+        pose_in_gt = posenet.preprocess_input(gt_pair)
+        pose_out_gt = posenet(pose_in_gt)
+
+    pred = pose_out_gen["pose"] if isinstance(pose_out_gen, dict) else pose_out_gen
+    target = pose_out_gt["pose"] if isinstance(pose_out_gt, dict) else pose_out_gt
+    pose_dist = (pred[..., :6] - target[..., :6]).pow(2).mean()
+    return pose_dist
+
+
+def _compute_flow_regularization(
+    gen_frame_t: torch.Tensor,
+    gen_frame_t1: torch.Tensor,
+    motion_predictor: nn.Module,
+    mask_t: torch.Tensor,
+    mask_t1: torch.Tensor,
+) -> torch.Tensor:
+    """Ego-motion flow regularization using DepthAwareMotionPredictor.
+
+    Penalizes frames that don't warp correctly under the expected geometric flow.
+
+    Args:
+        gen_frame_t: (B, 3, H, W) generated frame at time t.
+        gen_frame_t1: (B, 3, H, W) generated frame at time t+1.
+        motion_predictor: DepthAwareMotionPredictor from the PairGenerator.
+        mask_t: (B, H, W) masks at time t.
+        mask_t1: (B, H, W) masks at time t+1.
+
+    Returns:
+        Scalar flow consistency loss.
+    """
+    from tac.renderer import warp_with_flow
+
+    flow = motion_predictor(mask_t, mask_t1)  # (B, 2, H, W)
+    warped = warp_with_flow(gen_frame_t, flow)
+    flow_loss = (warped - gen_frame_t1).abs().mean()
+    return flow_loss
+
+
+# ---------------------------------------------------------------------------
+# Full evaluation (no gradients)
+# ---------------------------------------------------------------------------
+
+def _full_eval(
+    renderer: nn.Module,
+    masks: torch.Tensor,
+    gt_chw: torch.Tensor,
+    posenet: nn.Module,
+    segnet: nn.Module,
+    device: torch.device,
+    batch_size: int = 4,
+) -> dict[str, float]:
+    """Evaluate renderer on all frames with official scoring formula.
+
+    Returns dict with avg_seg, avg_pose, model_bytes, rate, score.
+    """
+    renderer.eval()
+    n = masks.shape[0]
+    seg_dists = []
+    pose_dists = []
+
+    with torch.no_grad():
+        for i in range(n - 1):
+            mask_t = masks[i:i + 1].to(device)
+            mask_t1 = masks[i + 1:i + 2].to(device)
+            gt_t = gt_chw[i:i + 1].to(device)
+            gt_t1 = gt_chw[i + 1:i + 2].to(device)
+
+            # Generate frame pair via the renderer (individual frames)
+            gen_t = renderer.renderer(mask_t)   # (1, 3, H, W)
+            gen_t1 = renderer.renderer(mask_t1)  # (1, 3, H, W)
+
+            # SegNet on individual frames
+            for gen_f, gt_f in [(gen_t, gt_t), (gen_t1, gt_t1)]:
+                gen_btchw = gen_f.unsqueeze(1).contiguous()
+                gt_btchw = gt_f.unsqueeze(1).contiguous()
+                seg_in_g = segnet.preprocess_input(gen_btchw)
+                seg_in_gt = segnet.preprocess_input(gt_btchw)
+                p_soft = F.softmax(segnet(seg_in_g), dim=1)
+                g_soft = F.softmax(segnet(seg_in_gt), dim=1)
+                seg_dists.append((1.0 - (p_soft * g_soft).sum(dim=1).mean()).item())
+
+            # PoseNet on consecutive pair
+            gen_pair = torch.stack([gen_t, gen_t1], dim=1).contiguous()
+            gt_pair = torch.stack([gt_t, gt_t1], dim=1).contiguous()
+            pose_in_g = posenet.preprocess_input(gen_pair)
+            pose_in_gt = posenet.preprocess_input(gt_pair)
+            p_out = posenet(pose_in_g)
+            g_out = posenet(pose_in_gt)
+            pm = p_out["pose"] if isinstance(p_out, dict) else p_out
+            gm = g_out["pose"] if isinstance(g_out, dict) else g_out
+            pose_dists.append((pm[..., :6] - gm[..., :6]).pow(2).mean().item())
+
+    renderer.train()
+
+    avg_seg = sum(seg_dists) / max(len(seg_dists), 1)
+    avg_pose = sum(pose_dists) / max(len(pose_dists), 1)
+
+    # Model size estimate
+    n_params = sum(p.numel() for p in renderer.parameters())
+    model_bytes = n_params * 4 / 8  # FP4 estimate
+
+    # Check for self-compression
+    has_sc = False
+    for m in renderer.modules():
+        if isinstance(m, nn.Conv2d) and hasattr(m, "bit_depth"):
+            has_sc = True
+            break
+    if has_sc:
+        total_bits = 0.0
+        for m in renderer.modules():
+            if isinstance(m, nn.Conv2d) and hasattr(m, "bit_depth"):
+                total_bits += m.bit_depth.total_bits().item()
+        model_bytes = total_bits / 8.0
+
+    # Rate = archive size / uncompressed size
+    # Uncompressed: 1200 frames * 874 * 1164 * 3 bytes = ~3.65GB
+    uncompressed_bytes = 1200 * 874 * 1164 * 3
+    rate = model_bytes / uncompressed_bytes
+
+    from tac.scorer import comma_score
+    score = comma_score(avg_pose, avg_seg, rate)
+
+    return {
+        "avg_seg": avg_seg,
+        "avg_pose": avg_pose,
+        "model_bytes": model_bytes,
+        "rate": rate,
+        "score": score,
+        "n_seg_samples": len(seg_dists),
+        "n_pose_samples": len(pose_dists),
+    }
+
+
+# ---------------------------------------------------------------------------
+# Main training loop
+# ---------------------------------------------------------------------------
+
+def train_fridrich_renderer(cfg: FridrichRendererConfig) -> dict[str, Any]:
+    """Train the DP-SIMS renderer with Fridrich constrained optimization."""
+
+    torch.manual_seed(cfg.seed)
+    np.random.seed(cfg.seed)
+
+    device = torch.device(cfg.device)
+    results_dir = RESULTS_DIR
+    results_dir.mkdir(parents=True, exist_ok=True)
+
+    print("=" * 70)
+    print("FRIDRICH CONSTRAINED RENDERER TRAINING")
+    print("=" * 70)
+    print(f"Device: {device}")
+    print(f"Channels: {cfg.channels}")
+    print(f"Epochs: {cfg.epochs}")
+    print(f"Batch size: {cfg.batch_size}")
+    print(f"Phase1 end: {cfg.phase1_end:.0%}, Phase2 end: {cfg.phase2_end:.0%}")
+    print(f"SegNet boundary: {cfg.seg_boundary}, PoseNet boundary: {cfg.pose_boundary}")
+    print()
+
+    # ---- Load scorers ----
+    print("[1/5] Loading scorers...")
+    posenet, segnet = _load_scorers(cfg.device)
+    _patch_scorers_for_training(posenet, segnet)
+    print(f"  Scorers loaded, VRAM: {_vram_mb():.0f} MB")
+
+    # ---- Load data ----
+    print("[2/5] Loading data...")
+    # For renderer training, we need GT frames and masks extracted from GT
+    # The renderer learns mask -> frame, not comp -> filtered
+    from tac.data import load_precomputed, decode_video
+
+    gt_frames_hwc: list[torch.Tensor] | None = None
+
+    # Try precomputed first
+    precomputed_dir = os.environ.get("PRECOMPUTED_DIR")
+    if precomputed_dir and Path(precomputed_dir).exists():
+        _, gt_list = load_precomputed(precomputed_dir)
+        gt_frames_hwc = gt_list
+        print(f"  Loaded {len(gt_frames_hwc)} GT frames from precomputed")
+    else:
+        # Try GT video directly
+        gt_candidates = [
+            Path("/home/zeus/content/upstream/videos/0.mkv"),
+            Path(__file__).resolve().parent.parent / "upstream" / "videos" / "0.mkv",
+        ]
+        for gp in gt_candidates:
+            if gp.exists():
+                gt_frames_hwc = decode_video(str(gp), target_h=cfg.target_h, target_w=cfg.target_w)
+                print(f"  Decoded {len(gt_frames_hwc)} frames from {gp}")
+                break
+
+    if gt_frames_hwc is None:
+        raise FileNotFoundError("No GT data found. Set PRECOMPUTED_DIR or place GT video in upstream/videos/")
+
+    if cfg.smoke:
+        gt_frames_hwc = gt_frames_hwc[:20]
+        print(f"  [SMOKE] Using only {len(gt_frames_hwc)} frames")
+
+    n_frames = len(gt_frames_hwc)
+    print(f"  Total frames: {n_frames}")
+
+    # Convert to CHW float for scorer calls
+    gt_chw = torch.stack([f.permute(2, 0, 1).float() for f in gt_frames_hwc])
+    # Resize to scorer resolution if needed
+    if gt_chw.shape[2] != cfg.target_h or gt_chw.shape[3] != cfg.target_w:
+        gt_chw = F.interpolate(
+            gt_chw,
+            size=(cfg.target_h, cfg.target_w),
+            mode="bicubic",
+            align_corners=False,
+        ).clamp(0, 255)
+    print(f"  GT shape: {gt_chw.shape}")
+
+    # ---- Extract masks from GT via SegNet ----
+    print("[3/5] Extracting masks from GT...")
+    gt_chw_dev = gt_chw.to(device)
+    masks = _extract_masks(gt_chw_dev, segnet, batch_size=8)
+    masks = masks.cpu()
+    gt_chw_dev = gt_chw_dev.cpu()  # free VRAM
+    torch.cuda.empty_cache() if torch.cuda.is_available() else None
+    print(f"  Masks shape: {masks.shape}, classes: {masks.unique().tolist()}")
+    print(f"  VRAM after mask extraction: {_vram_mb():.0f} MB")
+
+    # ---- Build renderer ----
+    print("[4/5] Building DP-SIMS v2 renderer...")
+    from tac.dp_sims_renderer import build_dp_sims_renderer_v2
+
+    pair_gen = build_dp_sims_renderer_v2(
+        num_classes=cfg.num_classes,
+        channels=cfg.channels,
+        init_h=cfg.init_h,
+        init_w=cfg.init_w,
+        spade_hidden=cfg.spade_hidden,
+        use_noise=cfg.use_noise,
+    ).to(device)
+
+    n_params = pair_gen.param_count()
+    print(f"  Params: {n_params:,}")
+    print(f"  FP4 estimate: {n_params * 4 / 8 / 1024:.0f} KB")
+    print(f"  VRAM: {_vram_mb():.0f} MB")
+
+    # ---- Optimizer ----
+    optimizer = torch.optim.AdamW(pair_gen.parameters(), lr=cfg.lr, weight_decay=1e-4)
+    scheduler = torch.optim.lr_scheduler.CosineAnnealingLR(
+        optimizer,
+        T_max=cfg.epochs,
+        eta_min=cfg.lr * cfg.lr_min_ratio,
+    )
+
+    # ---- Lagrangian state ----
+    lambda_seg = 1.0
+    lambda_pose = 1.0
+    rho = cfg.rho_init
+
+    # ---- Training loop ----
+    print("[5/5] Training...")
+    print()
+
+    history: list[dict[str, Any]] = []
+    best_score = float("inf")
+    best_epoch = -1
+    constraints_satisfied_count = 0
+    self_compress_active = False
+    bit_modules: list[nn.Module] = []
+    start_time = time.time()
+
+    for epoch in range(cfg.epochs):
+        progress = epoch / max(cfg.epochs - 1, 1)
+
+        # Determine phase
+        if progress < cfg.phase1_end:
+            phase = 1
+        elif progress < cfg.phase2_end:
+            phase = 2
+        else:
+            phase = 3
+
+        # Activate self-compression at phase 3 start (once)
+        if phase == 3 and not self_compress_active:
+            print(f"\n[epoch {epoch}] Phase 3: activating self-compression...")
+            bit_modules = _wrap_with_learnable_bits(pair_gen.renderer, init_bits=cfg.init_bits)
+            # Add bit_depth params to optimizer
+            if bit_modules:
+                bit_params = []
+                for bm in bit_modules:
+                    bit_params.extend(list(bm.parameters()))
+                optimizer.add_param_group({"params": bit_params, "lr": cfg.lr * 0.1})
+            self_compress_active = True
+            print(f"  Wrapped {len(bit_modules)} conv layers with LearnableBitDepth")
+
+        # Sample a random batch of consecutive frame indices
+        max_start = n_frames - 2  # need at least 2 consecutive frames
+        if max_start < 1:
+            raise ValueError(f"Need >= 3 frames, got {n_frames}")
+        batch_starts = torch.randint(0, max_start, (cfg.batch_size,))
+
+        # Gather mask pairs and GT pairs
+        mask_t_list = []
+        mask_t1_list = []
+        gt_t_list = []
+        gt_t1_list = []
+        for idx in batch_starts:
+            mask_t_list.append(masks[idx])
+            mask_t1_list.append(masks[idx + 1])
+            gt_t_list.append(gt_chw[idx])
+            gt_t1_list.append(gt_chw[idx + 1])
+
+        mask_t = torch.stack(mask_t_list).to(device)
+        mask_t1 = torch.stack(mask_t1_list).to(device)
+        gt_t = torch.stack(gt_t_list).to(device)
+        gt_t1 = torch.stack(gt_t1_list).to(device)
+
+        # ---- Forward: generate frames ----
+        # Use renderer directly (not pair_gen.forward which packs to HWC)
+        # so we can control gradient flow through individual frames.
+        gen_t = pair_gen.renderer(mask_t)   # (B, 3, H, W) float [0, 255]
+        gen_t1 = pair_gen.renderer(mask_t1)  # (B, 3, H, W) float [0, 255]
+
+        # ---- Compute losses ----
+        # MSE reconstruction (warm signal, always on but weighted down later)
+        mse_loss = F.mse_loss(gen_t, gt_t) + F.mse_loss(gen_t1, gt_t1)
+
+        # SegNet distortion (differentiable, through both frames)
+        seg_dist_t = _compute_seg_distortion(gen_t, gt_t, segnet)
+        seg_dist_t1 = _compute_seg_distortion(gen_t1, gt_t1, segnet)
+        seg_dist = (seg_dist_t + seg_dist_t1) / 2.0
+
+        # PoseNet distortion (coupled trajectory — gradient through BOTH frames)
+        pose_dist = _compute_pose_distortion_coupled(gen_t, gen_t1, gt_t, gt_t1, posenet)
+
+        # TV smoothness
+        tv = _tv_loss(gen_t) + _tv_loss(gen_t1)
+
+        # Ego-motion flow regularization
+        flow_reg = _compute_flow_regularization(
+            gen_t, gen_t1, pair_gen.motion, mask_t, mask_t1,
+        )
+
+        # ---- Assemble total loss based on phase ----
+        if phase == 1:
+            # Phase 1: MSE + soft scorer (standard weighted sum warmup)
+            total_loss = (
+                cfg.p1_mse_weight * mse_loss
+                + cfg.p1_seg_weight * seg_dist
+                + cfg.p1_pose_weight * pose_dist
+                + cfg.tv_weight * tv
+            )
+        else:
+            # Phase 2+3: Fridrich augmented Lagrangian
+            seg_violation = F.relu(seg_dist - cfg.seg_boundary)
+            pose_violation = F.relu(pose_dist - cfg.pose_boundary)
+
+            total_loss = (
+                cfg.tv_weight * tv
+                + cfg.flow_weight * flow_reg
+                + lambda_seg * seg_violation
+                + lambda_pose * pose_violation
+                + (rho / 2.0) * seg_violation.pow(2)
+                + (rho / 2.0) * pose_violation.pow(2)
+            )
+
+            if phase == 3 and self_compress_active:
+                # Add self-compression rate penalty
+                model_bits = _compute_self_compress_bits(pair_gen)
+                target_bits = cfg.target_bytes * 8.0
+                rate_excess = F.relu(model_bits - target_bits) / target_bits
+                total_loss = total_loss + cfg.rate_weight * rate_excess
+
+            # Update Lagrangian multipliers (outer loop)
+            with torch.no_grad():
+                lambda_seg = max(0.0, lambda_seg + rho * seg_violation.item())
+                lambda_pose = max(0.0, lambda_pose + rho * pose_violation.item())
+                rho = min(rho * cfg.rho_growth, cfg.rho_max)
+
+            # Track constraint satisfaction
+            if seg_violation.item() < 1e-6 and pose_violation.item() < 1e-6:
+                constraints_satisfied_count += 1
+            else:
+                constraints_satisfied_count = 0
+
+        # ---- Backward + step ----
+        optimizer.zero_grad()
+        try:
+            total_loss.backward()
+        except RuntimeError as e:
+            if "out of memory" in str(e).lower():
+                print(f"[epoch {epoch}] OOM during backward, skipping step")
+                optimizer.zero_grad()
+                torch.cuda.empty_cache() if torch.cuda.is_available() else None
+                gc.collect()
+                continue
+            raise
+
+        # Gradient clipping
+        torch.nn.utils.clip_grad_norm_(pair_gen.parameters(), cfg.grad_clip)
+
+        optimizer.step()
+        scheduler.step()
+
+        # ---- Logging ----
+        if epoch % cfg.log_every == 0 or epoch == cfg.epochs - 1:
+            elapsed = time.time() - start_time
+            lr_now = optimizer.param_groups[0]["lr"]
+            log_entry = {
+                "epoch": epoch,
+                "phase": phase,
+                "loss": total_loss.item(),
+                "mse": mse_loss.item(),
+                "seg_dist": seg_dist.item(),
+                "pose_dist": pose_dist.item(),
+                "tv": tv.item(),
+                "flow_reg": flow_reg.item(),
+                "lambda_seg": lambda_seg,
+                "lambda_pose": lambda_pose,
+                "rho": rho,
+                "lr": lr_now,
+                "elapsed_s": elapsed,
+                "vram_mb": _vram_mb(),
+            }
+            if self_compress_active:
+                log_entry["model_bits"] = _compute_self_compress_bits(pair_gen).item()
+            history.append(log_entry)
+
+            print(
+                f"[{epoch:5d}/{cfg.epochs}] P{phase} "
+                f"loss={total_loss.item():.4f} "
+                f"mse={mse_loss.item():.2f} "
+                f"seg={seg_dist.item():.5f} "
+                f"pose={pose_dist.item():.5f} "
+                f"tv={tv.item():.3f} "
+                f"flow={flow_reg.item():.3f} "
+                f"lam_s={lambda_seg:.1f} lam_p={lambda_pose:.1f} "
+                f"rho={rho:.0f} "
+                f"lr={lr_now:.2e} "
+                f"VRAM={_vram_mb():.0f}MB "
+                f"({elapsed:.0f}s)"
+            )
+
+        # ---- Checkpoint ----
+        if (epoch > 0 and epoch % cfg.checkpoint_every == 0) or epoch == cfg.epochs - 1:
+            ckpt_path = results_dir / f"renderer_epoch{epoch:05d}.pt"
+            torch.save({
+                "epoch": epoch,
+                "model_state_dict": pair_gen.state_dict(),
+                "optimizer_state_dict": optimizer.state_dict(),
+                "lambda_seg": lambda_seg,
+                "lambda_pose": lambda_pose,
+                "rho": rho,
+                "best_score": best_score,
+                "config": asdict(cfg),
+            }, ckpt_path)
+            print(f"  -> Checkpoint: {ckpt_path}")
+
+        # ---- Full evaluation ----
+        if (epoch > 0 and epoch % cfg.eval_every == 0) or epoch == cfg.epochs - 1:
+            print(f"\n--- Full evaluation at epoch {epoch} ---")
+            try:
+                eval_result = _full_eval(
+                    pair_gen, masks, gt_chw, posenet, segnet, device,
+                    batch_size=cfg.batch_size,
+                )
+                score = eval_result["score"]
+                print(
+                    f"  seg={eval_result['avg_seg']:.5f} "
+                    f"pose={eval_result['avg_pose']:.5f} "
+                    f"rate={eval_result['rate']:.6f} "
+                    f"model={eval_result['model_bytes'] / 1024:.0f}KB "
+                    f"SCORE={score:.4f}"
+                )
+                if score < best_score:
+                    best_score = score
+                    best_epoch = epoch
+                    best_path = results_dir / "renderer_best.pt"
+                    torch.save({
+                        "epoch": epoch,
+                        "model_state_dict": pair_gen.state_dict(),
+                        "score": score,
+                        "eval_result": eval_result,
+                        "config": asdict(cfg),
+                    }, best_path)
+                    print(f"  -> NEW BEST: {score:.4f} at epoch {epoch}")
+                print()
+            except Exception as e:
+                print(f"  Eval failed: {e}")
+                traceback.print_exc()
+                print()
+
+        # ---- Early stopping ----
+        if constraints_satisfied_count >= cfg.early_stop_patience:
+            print(f"\nEarly stopping: both constraints satisfied for {cfg.early_stop_patience} epochs")
+            break
+
+    # ---- Final summary ----
+    elapsed = time.time() - start_time
+    summary = {
+        "best_score": best_score,
+        "best_epoch": best_epoch,
+        "total_epochs": epoch + 1,
+        "elapsed_s": elapsed,
+        "n_params": n_params,
+        "config": asdict(cfg),
+        "final_lambda_seg": lambda_seg,
+        "final_lambda_pose": lambda_pose,
+        "final_rho": rho,
+    }
+
+    summary_path = results_dir / "summary.json"
+    with open(summary_path, "w") as f:
+        json.dump(summary, f, indent=2, default=str)
+    print(f"\nSummary saved to {summary_path}")
+
+    history_path = results_dir / "history.json"
+    with open(history_path, "w") as f:
+        json.dump(history, f, indent=2, default=str)
+    print(f"History saved to {history_path}")
+
+    print("\n" + "=" * 70)
+    print(f"BEST SCORE: {best_score:.4f} at epoch {best_epoch}")
+    print(f"Total time: {elapsed:.0f}s ({elapsed / 3600:.1f}h)")
+    print("=" * 70)
+
+    return summary
+
+
+# ---------------------------------------------------------------------------
+# Click CLI
+# ---------------------------------------------------------------------------
+
+@click.command()
+@click.option("--precomputed", type=str, default=None, help="Precomputed data dir (comp_frames.pt, gt_frames.pt)")
+@click.option("--epochs", type=int, default=10000, help="Training epochs")
+@click.option("--batch-size", type=int, default=4, help="Batch size (consecutive pairs)")
+@click.option("--lr", type=float, default=2e-4, help="Learning rate")
+@click.option("--channels", type=str, default="128,64,32,16", help="Channel widths (comma-separated)")
+@click.option("--spade-hidden", type=int, default=32, help="SPADE conditioning hidden dim")
+@click.option("--seg-boundary", type=float, default=0.005, help="SegNet constraint boundary")
+@click.option("--pose-boundary", type=float, default=0.01, help="PoseNet constraint boundary")
+@click.option("--rho-init", type=float, default=10.0, help="Initial Lagrangian penalty coefficient")
+@click.option("--rho-growth", type=float, default=1.05, help="Rho growth rate per outer step")
+@click.option("--tv-weight", type=float, default=0.1, help="TV smoothness weight")
+@click.option("--flow-weight", type=float, default=0.5, help="Ego-motion flow regularization weight")
+@click.option("--rate-weight", type=float, default=0.01, help="Self-compression rate penalty weight")
+@click.option("--target-bytes", type=int, default=250 * 1024, help="Target model size in bytes")
+@click.option("--device", type=str, default="cuda", help="Device (cuda/mps/cpu)")
+@click.option("--seed", type=int, default=42, help="Random seed")
+@click.option("--checkpoint-every", type=int, default=500, help="Checkpoint interval")
+@click.option("--eval-every", type=int, default=1000, help="Full evaluation interval")
+@click.option("--log-every", type=int, default=50, help="Log interval")
+@click.option("--smoke", is_flag=True, help="Smoke test: 20 frames, 5 epochs")
+@click.option("--resume", type=str, default=None, help="Resume from checkpoint path")
+def main(
+    precomputed, epochs, batch_size, lr, channels, spade_hidden,
+    seg_boundary, pose_boundary, rho_init, rho_growth,
+    tv_weight, flow_weight, rate_weight, target_bytes,
+    device, seed, checkpoint_every, eval_every, log_every,
+    smoke, resume,
+):
+    """Train DP-SIMS renderer with Fridrich constrained optimization."""
+
+    # Parse channels
+    ch_tuple = tuple(int(x.strip()) for x in channels.split(","))
+
+    cfg = FridrichRendererConfig(
+        channels=ch_tuple,
+        epochs=5 if smoke else epochs,
+        lr=lr,
+        batch_size=2 if smoke else batch_size,
+        spade_hidden=spade_hidden,
+        seg_boundary=seg_boundary,
+        pose_boundary=pose_boundary,
+        rho_init=rho_init,
+        rho_growth=rho_growth,
+        tv_weight=tv_weight,
+        flow_weight=flow_weight,
+        rate_weight=rate_weight,
+        target_bytes=target_bytes,
+        device=device,
+        seed=seed,
+        checkpoint_every=checkpoint_every,
+        eval_every=1 if smoke else eval_every,
+        log_every=1 if smoke else log_every,
+        smoke=smoke,
+    )
+
+    # Set precomputed dir env var for the training function
+    if precomputed:
+        os.environ["PRECOMPUTED_DIR"] = precomputed
+
+    summary = train_fridrich_renderer(cfg)
+
+    # Print final verdict
+    score = summary.get("best_score", float("inf"))
+    if score < 0.50:
+        print("\n** SUB-0.50 ACHIEVED **")
+    elif score < 0.60:
+        print("\n** COMPETITIVE with Quantizr (sub-0.60) **")
+    elif score < 1.0:
+        print("\n** PROMISING (sub-1.0), needs more training **")
+    else:
+        print(f"\n** Score {score:.2f} — architecture or training needs work **")
+
+
+if __name__ == "__main__":
+    main()
