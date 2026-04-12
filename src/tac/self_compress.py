@@ -101,8 +101,10 @@ class _STEQuantize(torch.autograd.Function):
         prune_mask = (bits_clamped < 0.5).reshape(view_shape)
         quantized = quantized.masked_fill(prune_mask, 0.0)
 
-        # Save for backward
-        saturated = (normalized.abs() > 1.0)
+        # Save for backward: detect saturation by checking if clamp changed the value.
+        # A weight is saturated if it was clamped by rounded.clamp(-half_levels, half_levels),
+        # meaning the quantized value hit the extreme representable bin.
+        saturated = (scaled.abs() > half_levels)
         ctx.save_for_backward(saturated, prune_mask.expand_as(weight))
 
         return quantized

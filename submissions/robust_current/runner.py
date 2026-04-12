@@ -562,7 +562,7 @@ def stage_compress(
     run_stage(
         cmd,
         mgr.log_dir / "compress.log",
-        timeout=600,
+        timeout=3600,  # SVT-AV1 preset=0 can take 5-20min depending on hardware
         label="compress (compress.sh)",
         env=env,
     )
@@ -715,6 +715,13 @@ def stage_inflate(
             )
         n_frames = raw_size // frame_bytes
         click.echo(f"  {raw.name}: {n_frames} frames, {raw_size:,} bytes")
+        expected_frames = int(os.environ.get("PACT_FRAME_COUNT", "1200"))
+        if n_frames != expected_frames:
+            raise click.ClickException(
+                f"Frame count mismatch: {raw.name} has {n_frames} frames, "
+                f"expected {expected_frames}. A truncated output would produce "
+                f"a falsely optimistic score. Set PACT_FRAME_COUNT to override."
+            )
 
     mgr.set_stage(RunState.INFLATED)
 

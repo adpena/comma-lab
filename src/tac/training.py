@@ -1657,16 +1657,19 @@ class Trainer:
                 # (starts at 0,2,4...) frame_t1 is always odd, so the old check
                 # `(start + 1) % 2 == 0` never fired. Fixed: use pair_idx.
                 if cfg.even_frame_skip_seg and pair_idx % 2 == 0:
-                    # Even-frame degeneracy (YassineYousfi trick #3):
-                    # SegNet only evaluates odd-indexed frames (last frame of pair).
-                    # For even-indexed pairs, halve the total loss to reduce SegNet
-                    # pressure. NOTE: this halves the ENTIRE loss (PoseNet + SegNet),
-                    # not just SegNet, because the loss components are entangled in
-                    # the scorer_loss return value. A more precise implementation
-                    # would compute SegNet and PoseNet losses separately and zero
-                    # only the SegNet component. TODO: refactor when loss functions
-                    # return per-component values.
-                    loss = loss * 0.5
+                    # BUG FIX: This used to halve the ENTIRE loss including PoseNet,
+                    # not just SegNet. PoseNet is extremely sensitive (29x regression
+                    # history) and should never have reduced gradients. Since the loss
+                    # components are entangled in scorer_loss, we cannot cleanly skip
+                    # only SegNet here. The safe action: skip this pair entirely for
+                    # SegNet purposes but keep PoseNet at full strength. Since we
+                    # cannot separate them, we disable this trick with a clear error.
+                    raise ValueError(
+                        "even_frame_skip_seg=True is broken: it halves PoseNet loss "
+                        "on 50% of training pairs. This was the root cause of PoseNet "
+                        "degradation. Disabled until loss functions return per-component "
+                        "values. Set even_frame_skip_seg=False."
+                    )
 
                 # Trick 2: Frequency-domain wavelet loss (additive)
                 if cfg.use_frequency_loss and cfg.frequency_loss_weight > 0:

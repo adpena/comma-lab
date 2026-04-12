@@ -996,13 +996,11 @@ def _cli():
         # Resolve PoseNet targets
         posenet_targets_path = None
         if supervised_tto_steps > 0:
-            for candidate in [
-                Path(archive_dir) / "posenet_targets.bin",
-                script_dir / "posenet_targets.bin",
-            ]:
-                if candidate.exists():
-                    posenet_targets_path = str(candidate)
-                    break
+            # Only load from archive dir — NEVER fall back to script_dir.
+            # Contest rules: all neural artifacts must be inside archive.zip.
+            candidate = Path(archive_dir) / "posenet_targets.bin"
+            if candidate.exists():
+                posenet_targets_path = str(candidate)
             if posenet_targets_path and verbose:
                 click.echo(f"  Found PoseNet targets: {posenet_targets_path}", err=True)
             elif verbose:
