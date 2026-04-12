@@ -5,7 +5,12 @@ from pathlib import Path
 
 import numpy as np
 
-from .data import load_commavq_dataset
+from .data import (
+    load_commavq_dataset,
+    load_local_commavq_record_sample,
+    resolve_commavq_data_files,
+    resolve_local_commavq_cached_data_files,
+)
 from .token_rgb_bridge import decode_commavq_tokens_to_rgb_frames
 
 
@@ -344,16 +349,26 @@ def build_rgb_label_map_sample(
             if isinstance(value, list)
         }
 
-    dataset = load_commavq_dataset(split=split, dataset_loader=dataset_loader, streaming=True)
-    train = dataset["train"]
-    examples = []
-    for example in train:
-        file_name = str(example["json"]["file_name"])
-        if file_name in existing_label_map:
-            continue
-        examples.append(example)
-        if len(examples) >= max_records:
-            break
+    resolved_data_files = resolve_commavq_data_files(split)
+    train_files = resolved_data_files.get("train", [])
+    cached_train_files = resolve_local_commavq_cached_data_files(train_files)
+    if cached_train_files is not None:
+        examples = [
+            example
+            for example in load_local_commavq_record_sample(cached_train_files, max_records=max_records + len(existing_label_map))
+            if str(example["json"]["file_name"]) not in existing_label_map
+        ][:max_records]
+    else:
+        dataset = load_commavq_dataset(split=split, dataset_loader=dataset_loader, streaming=True)
+        train = dataset["train"]
+        examples = []
+        for example in train:
+            file_name = str(example["json"]["file_name"])
+            if file_name in existing_label_map:
+                continue
+            examples.append(example)
+            if len(examples) >= max_records:
+                break
 
     label_map: dict[str, list[int]] = dict(existing_label_map)
     decoder, transpose_and_clip_fn, decode_device = _load_rgb_bridge(

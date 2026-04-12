@@ -1,6 +1,9 @@
 from __future__ import annotations
 
+import io
+import json
 import os
+import tarfile
 from collections.abc import Iterable, Mapping, Sequence
 from dataclasses import dataclass
 from pathlib import Path
@@ -112,6 +115,48 @@ def resolve_local_commavq_cached_data_files(data_files: Sequence[str]) -> list[s
             if all(path.is_file() for path in resolved):
                 return [str(path) for path in resolved]
     return None
+
+
+def load_local_commavq_record_sample(
+    shard_paths: Sequence[str | os.PathLike[str]],
+    *,
+    max_records: int,
+):
+    if max_records <= 0:
+        raise ValueError("max_records must be positive")
+    np = _require_numpy()
+    examples: list[dict[str, object]] = []
+    pending: dict[str, dict[str, object]] = {}
+
+    for shard_path in shard_paths:
+        with tarfile.open(shard_path, "r:gz") as tar:
+            for member in tar:
+                if not member.isfile():
+                    continue
+                name = Path(member.name).name
+                if name.endswith(".token.npy"):
+                    stem = name[: -len(".token.npy")]
+                    fileobj = tar.extractfile(member)
+                    if fileobj is None:
+                        continue
+                    payload = np.load(io.BytesIO(fileobj.read()), allow_pickle=False)
+                    pending.setdefault(stem, {})["token.npy"] = payload
+                elif name.endswith(".json"):
+                    stem = name[: -len(".json")]
+                    fileobj = tar.extractfile(member)
+                    if fileobj is None:
+                        continue
+                    payload = json.loads(fileobj.read().decode("utf-8"))
+                    pending.setdefault(stem, {})["json"] = payload
+
+                stem = name.split(".", 1)[0]
+                record = pending.get(stem)
+                if record and "json" in record and "token.npy" in record:
+                    examples.append({"json": record["json"], "token.npy": record["token.npy"]})
+                    del pending[stem]
+                    if len(examples) >= max_records:
+                        return examples
+    return examples
 
 
 def commavq_original_bytes(
