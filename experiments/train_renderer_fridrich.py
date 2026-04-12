@@ -663,17 +663,19 @@ def _full_eval(
         n_params = sum(p.numel() for p in renderer_module.parameters())
     model_bytes = n_params * 4 / 8  # FP4 estimate
 
-    # Check for self-compression
+    # Check for self-compression (could be on renderer, motion, or both)
     has_sc = False
-    for m in renderer_module.modules():
-        if isinstance(m, nn.Conv2d) and hasattr(m, "bit_depth"):
+    for m in renderer.modules():
+        if isinstance(m, (nn.Conv2d, nn.ConvTranspose2d)) and hasattr(m, "bit_depth"):
             has_sc = True
             break
     if has_sc:
-        # COUNCIL DECISION: Only the renderer goes in the archive at inflate time.
-        # The motion predictor is training-only — it provides ego-motion flow loss
-        # but is NOT deployed. renderer_module extracted at top of _full_eval.
-        model_bytes = _compute_model_bits(renderer_module).item() / 8.0
+        if is_asymmetric:
+            # Asymmetric: full model ships (renderer + motion)
+            model_bytes = _compute_model_bits(renderer).item() / 8.0
+        else:
+            # DP-SIMS: only renderer ships
+            model_bytes = _compute_model_bits(renderer_module).item() / 8.0
 
     # Rate = archive size / original uncompressed video file size
     # From upstream evaluate.py: sum of file sizes in videos/ dir
@@ -843,7 +845,10 @@ def train_fridrich_renderer(cfg: FridrichRendererConfig) -> dict[str, Any]:
         # We must re-wrap the model with LearnableBitDepth BEFORE loading state_dict,
         # otherwise strict=True fails on the unexpected *.bit_depth.bits keys.
         if self_compress_active:
-            bit_modules = _wrap_with_learnable_bits(pair_gen.renderer, init_bits=cfg.init_bits)
+            # Asymmetric: wrap full model (renderer+motion both ship in archive)
+            # DP-SIMS: wrap renderer only (motion is training-only)
+            wrap_target = pair_gen if cfg.pair_mode == "asymmetric" else pair_gen.renderer
+            bit_modules = _wrap_with_learnable_bits(wrap_target, init_bits=cfg.init_bits)
             # Rebuild optimizer with 2 param groups (matching Phase 3 structure)
             # BEFORE loading state_dict, because the saved optimizer has 2 groups.
             bit_param_ids = set()
@@ -908,7 +913,8 @@ def train_fridrich_renderer(cfg: FridrichRendererConfig) -> dict[str, Any]:
         # Activate self-compression at phase 3 start (once)
         if phase == 3 and not self_compress_active:
             print(f"\n[epoch {epoch}] Phase 3: activating self-compression...")
-            bit_modules = _wrap_with_learnable_bits(pair_gen.renderer, init_bits=cfg.init_bits)
+            wrap_target = pair_gen if cfg.pair_mode == "asymmetric" else pair_gen.renderer
+            bit_modules = _wrap_with_learnable_bits(wrap_target, init_bits=cfg.init_bits)
             # Create fresh optimizer + scheduler so new params get full LR
             # and existing params aren't stuck at decayed cosine LR
             if bit_modules:

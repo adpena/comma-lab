@@ -248,7 +248,7 @@ if not _HAS_TAC_RENDERER:
             gy = torch.linspace(-1, 1, h, device=device)
             gx = torch.linspace(-1, 1, w, device=device)
             grid_y, grid_x = torch.meshgrid(gy, gx, indexing="ij")
-            _coord_grid_cache[key] = torch.stack([grid_x, grid_y], dim=-1)
+            _coord_grid_cache[key] = torch.stack([grid_x, grid_y], dim=-1).unsqueeze(0)  # (1, H, W, 2)
             if len(_coord_grid_cache) > 4:
                 oldest = next(iter(_coord_grid_cache))
                 del _coord_grid_cache[oldest]
