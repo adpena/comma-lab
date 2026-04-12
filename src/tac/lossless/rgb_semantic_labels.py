@@ -74,6 +74,50 @@ def _unpack_bridge_loader_result(result):
     raise ValueError("bridge_loader must return (decoder, transpose_and_clip_fn[, metadata])")
 
 
+def _resolve_decode_device(device: str) -> str:
+    return "cpu" if device == "auto" else device
+
+
+def _load_rgb_bridge(
+    *,
+    bridge_loader,
+    device: str,
+    dtype: str,
+    commavq_root: str | Path | None,
+    decoder_url: str | None,
+):
+    if bridge_loader is None:
+        raise ValueError("bridge_loader is required for local-only RGB semantic labeling")
+    loader_kwargs = {
+        "device": device,
+        "dtype": dtype,
+        "commavq_root": commavq_root,
+    }
+    if decoder_url is not None:
+        loader_kwargs["decoder_url"] = decoder_url
+    decoder, transpose_and_clip_fn, _bridge_metadata = _unpack_bridge_loader_result(bridge_loader(**loader_kwargs))
+    return decoder, transpose_and_clip_fn, _resolve_decode_device(device)
+
+
+def _extract_rgb_semantic_label_from_loaded_bridge(
+    tokens,
+    *,
+    decoder,
+    transpose_and_clip_fn,
+    batch_size: int,
+    max_keyframes: int,
+    device: str,
+) -> tuple[int, ...]:
+    frames = decode_commavq_tokens_to_rgb_frames(
+        tokens,
+        decoder=decoder,
+        transpose_and_clip_fn=transpose_and_clip_fn,
+        batch_size=batch_size,
+        device=device,
+    )
+    return rgb_semantic_label_tuple(frames, max_keyframes=max_keyframes)
+
+
 def rgb_semantic_label_tuple(frames, *, max_keyframes: int = 6) -> tuple[int, ...]:
     arr = _coerce_rgb_frames(frames)
     sampled = arr[_select_keyframe_indices(arr.shape[0], max_keyframes=max_keyframes)]
@@ -133,24 +177,21 @@ def extract_rgb_semantic_label_from_tokens(
     commavq_root: str | Path | None = None,
     decoder_url: str | None = None,
 ) -> tuple[int, ...]:
-    if bridge_loader is None:
-        raise ValueError("bridge_loader is required for local-only RGB semantic labeling")
-    loader_kwargs = {
-        "device": device,
-        "dtype": dtype,
-        "commavq_root": commavq_root,
-    }
-    if decoder_url is not None:
-        loader_kwargs["decoder_url"] = decoder_url
-    decoder, transpose_and_clip_fn, _bridge_metadata = _unpack_bridge_loader_result(bridge_loader(**loader_kwargs))
-    frames = decode_commavq_tokens_to_rgb_frames(
+    decoder, transpose_and_clip_fn, decode_device = _load_rgb_bridge(
+        bridge_loader=bridge_loader,
+        device=device,
+        dtype=dtype,
+        commavq_root=commavq_root,
+        decoder_url=decoder_url,
+    )
+    return _extract_rgb_semantic_label_from_loaded_bridge(
         tokens,
         decoder=decoder,
         transpose_and_clip_fn=transpose_and_clip_fn,
         batch_size=batch_size,
-        device=("cpu" if device == "auto" else device),
+        max_keyframes=max_keyframes,
+        device=decode_device,
     )
-    return rgb_semantic_label_tuple(frames, max_keyframes=max_keyframes)
 
 
 def build_rgb_label_map_sample(
@@ -185,18 +226,23 @@ def build_rgb_label_map_sample(
                 break
 
     label_map: dict[str, list[int]] = {}
+    decoder, transpose_and_clip_fn, decode_device = _load_rgb_bridge(
+        bridge_loader=bridge_loader,
+        device=device,
+        dtype=dtype,
+        commavq_root=commavq_root,
+        decoder_url=decoder_url,
+    )
     for example in examples:
         file_name = str(example["json"]["file_name"])
         label_map[file_name] = list(
-            extract_rgb_semantic_label_from_tokens(
+            _extract_rgb_semantic_label_from_loaded_bridge(
                 example["token.npy"],
-                bridge_loader=bridge_loader,
+                decoder=decoder,
+                transpose_and_clip_fn=transpose_and_clip_fn,
                 batch_size=batch_size,
                 max_keyframes=max_keyframes,
-                device=device,
-                dtype=dtype,
-                commavq_root=commavq_root,
-                decoder_url=decoder_url,
+                device=decode_device,
             )
         )
 

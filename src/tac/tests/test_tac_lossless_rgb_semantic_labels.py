@@ -95,7 +95,7 @@ class TacLosslessRgbSemanticLabelsTests(unittest.TestCase):
         self.assertEqual(bridge_calls[0]["device"], "cpu")
         self.assertEqual(bridge_calls[0]["dtype"], "auto")
 
-    def test_build_rgb_label_map_sample_writes_sorted_json(self) -> None:
+    def test_build_rgb_label_map_sample_reuses_bridge_across_records(self) -> None:
         from tac.lossless.rgb_semantic_labels import build_rgb_label_map_sample
 
         examples = [
@@ -108,6 +108,7 @@ class TacLosslessRgbSemanticLabelsTests(unittest.TestCase):
                 "token.npy": np.zeros((1, 8, 16), dtype=np.int16),
             },
         ]
+        bridge_calls: list[dict[str, object]] = []
 
         def fake_dataset_loader(_dataset_name: str, *, num_proc=None, data_files=None):
             return {"train": examples}
@@ -127,6 +128,7 @@ class TacLosslessRgbSemanticLabelsTests(unittest.TestCase):
                 return out
 
         def fake_bridge_loader(**kwargs):
+            bridge_calls.append(dict(kwargs))
             return (
                 FakeDecoder(),
                 lambda arr: np.transpose(np.asarray(arr), (0, 2, 3, 1)).astype(np.uint8),
@@ -147,6 +149,7 @@ class TacLosslessRgbSemanticLabelsTests(unittest.TestCase):
 
             payload = json.loads(output_path.read_text())
 
+        self.assertEqual(len(bridge_calls), 1)
         self.assertEqual(result["command"], "lossless_rgb_labels_sample")
         self.assertEqual(result["record_count"], 2)
         self.assertTrue(result["local_only"])
