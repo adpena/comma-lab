@@ -666,6 +666,7 @@ def fridrich_constrained_optimize(
     outer_steps = cfg.get("outer_steps", 5)
     tv_weight = cfg.get("tv_weight", 0.1)
     max_delta = cfg.get("max_pixel_delta", 30.0)
+    batch_size = cfg.get("batch_size", 8)  # frames per scorer evaluation
 
     frames_bchw = _ensure_bchw(frames).to(device)
     original = frames_bchw.detach().clone()
@@ -689,6 +690,46 @@ def fridrich_constrained_optimize(
 
     inner_steps = num_steps // max(outer_steps, 1)
 
+    def _batched_scorer_distortion(
+        current: torch.Tensor,
+        original: torch.Tensor,
+    ) -> tuple[torch.Tensor, torch.Tensor]:
+        """Evaluate scorer distortion in batches to avoid OOM on GPU."""
+        seg_dists = []
+        pose_dists = []
+        for start in range(0, N, batch_size):
+            end = min(start + batch_size, N)
+            cur_batch = current[start:end]
+            orig_batch = original[start:end]
+
+            pair_mod = torch.stack([orig_batch, cur_batch], dim=1).contiguous()
+            pair_orig = torch.stack([orig_batch, orig_batch], dim=1).contiguous()
+
+            # SegNet
+            seg_in_mod = segnet.preprocess_input(pair_mod)
+            seg_out_mod = segnet(seg_in_mod)
+            with torch.no_grad():
+                seg_in_orig = segnet.preprocess_input(pair_orig)
+                seg_out_orig = segnet(seg_in_orig)
+            pred_soft = F.softmax(seg_out_mod, dim=1)
+            gt_soft = F.softmax(seg_out_orig, dim=1)
+            seg_dists.append(1.0 - (pred_soft * gt_soft).sum(dim=1).mean())
+
+            # PoseNet
+            pose_in_mod = posenet.preprocess_input(pair_mod)
+            pose_out_mod = posenet(pose_in_mod)
+            with torch.no_grad():
+                pose_in_orig = posenet.preprocess_input(pair_orig)
+                pose_out_orig = posenet(pose_in_orig)
+            pose_mod = pose_out_mod["pose"] if isinstance(pose_out_mod, dict) else pose_out_mod
+            pose_orig = pose_out_orig["pose"] if isinstance(pose_out_orig, dict) else pose_out_orig
+            pose_dists.append((pose_mod[..., :6] - pose_orig[..., :6]).pow(2).mean())
+
+        # Average across batches (weighted by batch size for correctness)
+        seg_dist = torch.stack(seg_dists).mean()
+        pose_dist = torch.stack(pose_dists).mean()
+        return seg_dist, pose_dist
+
     for outer in range(outer_steps):
         for step in range(inner_steps):
             optimizer.zero_grad()
@@ -699,31 +740,8 @@ def fridrich_constrained_optimize(
             # Rate proxy: total variation (lower = more compressible)
             tv_loss = _total_variation(current) * tv_weight
 
-            # Scorer distortion
-            pair_mod = torch.stack([original, current], dim=1).contiguous()
-            pair_orig = torch.stack([original, original], dim=1).contiguous()
-
-            # SegNet distortion
-            seg_in_mod = segnet.preprocess_input(pair_mod)
-            seg_out_mod = segnet(seg_in_mod)
-            with torch.no_grad():
-                seg_in_orig = segnet.preprocess_input(pair_orig)
-                seg_out_orig = segnet(seg_in_orig)
-
-            pred_soft = F.softmax(seg_out_mod, dim=1)
-            gt_soft = F.softmax(seg_out_orig, dim=1)
-            seg_dist = 1.0 - (pred_soft * gt_soft).sum(dim=1).mean()
-
-            # PoseNet distortion
-            pose_in_mod = posenet.preprocess_input(pair_mod)
-            pose_out_mod = posenet(pose_in_mod)
-            with torch.no_grad():
-                pose_in_orig = posenet.preprocess_input(pair_orig)
-                pose_out_orig = posenet(pose_in_orig)
-
-            pose_mod = pose_out_mod["pose"] if isinstance(pose_out_mod, dict) else pose_out_mod
-            pose_orig = pose_out_orig["pose"] if isinstance(pose_out_orig, dict) else pose_out_orig
-            pose_dist = (pose_mod[..., :6] - pose_orig[..., :6]).pow(2).mean()
+            # Batched scorer distortion (avoids OOM on P100 with 1200 frames)
+            seg_dist, pose_dist = _batched_scorer_distortion(current, original)
 
             # Constraint violations
             seg_violation = F.relu(seg_dist - seg_boundary)

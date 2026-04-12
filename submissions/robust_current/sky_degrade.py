@@ -176,7 +176,25 @@ def main():
 
     frame_size = w * h * 3
     frames_processed = 0
-    degraded_frames = []
+
+    # Stream processing: pipe decode -> process -> encode without buffering
+    # all frames in memory. Keeps peak RAM at ~2 frames instead of 1200.
+    cmd_encode = [
+        args.ffmpeg_bin, "-y",
+        "-f", "rawvideo",
+        "-pix_fmt", "bgr24",
+        "-s", f"{w}x{h}",
+        "-r", str(fps),
+        "-i", "pipe:0",
+        "-c:v", "ffv1",  # lossless intermediate
+        "-pix_fmt", "yuv420p",
+        "-colorspace", "smpte170m",
+        "-color_primaries", "smpte170m",
+        "-color_trc", "smpte170m",
+        "-v", "error",
+        output_path,
+    ]
+    proc_encode = subprocess.Popen(cmd_encode, stdin=subprocess.PIPE)
 
     while True:
         raw = proc_decode.stdout.read(frame_size)
@@ -199,36 +217,20 @@ def main():
             bit_reduce=args.bit_reduce,
             feather_radius=args.feather,
         )
-        degraded_frames.append(degraded)
+
+        # Stream directly to encoder — no buffering
+        proc_encode.stdin.write(degraded.tobytes())
         frames_processed += 1
 
     proc_decode.wait()
+    proc_encode.stdin.close()
+    proc_encode.wait()
+
     print(f"[sky_degrade] Processed {frames_processed} frames", file=sys.stderr)
 
     if frames_processed == 0:
         print("[sky_degrade] ERROR: no frames decoded", file=sys.stderr)
         sys.exit(1)
-
-    # Re-encode with ffmpeg (lossless intermediate to preserve preprocessing)
-    cmd_encode = [
-        args.ffmpeg_bin, "-y",
-        "-f", "rawvideo",
-        "-pix_fmt", "bgr24",
-        "-s", f"{w}x{h}",
-        "-r", str(fps),
-        "-i", "pipe:0",
-        "-c:v", "ffv1",  # lossless intermediate
-        "-pix_fmt", "yuv420p",
-        "-v", "error",
-        output_path,
-    ]
-    proc_encode = subprocess.Popen(cmd_encode, stdin=subprocess.PIPE)
-
-    for frame in degraded_frames:
-        proc_encode.stdin.write(frame.tobytes())
-
-    proc_encode.stdin.close()
-    proc_encode.wait()
 
     if proc_encode.returncode != 0:
         print("[sky_degrade] ERROR: ffmpeg encode failed", file=sys.stderr)
