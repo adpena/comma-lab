@@ -172,6 +172,7 @@ class _OnnxNextTokenLogitsModel:
             raise RuntimeError("official ONNX commavq GPT session has no inputs")
         self._session = session
         self._input_name = inputs[0].name
+        self._past_inputs = list(inputs[1:])
         self._block_size = int(block_size)
         self._tac_model_backend = "onnx"
         self._tac_execution_provider = providers[0]
@@ -180,8 +181,11 @@ class _OnnxNextTokenLogitsModel:
         self._tac_model_artifact_path = str(model_path)
 
     def _run_logits_rows(self, idx: np.ndarray) -> np.ndarray:
-        arr = np.asarray(idx, dtype=np.int64).reshape(1, -1)
-        outputs = self._session.run(None, {self._input_name: arr})
+        arr = np.asarray(idx, dtype=np.int32).reshape(1, -1)
+        feed = {self._input_name: arr}
+        for item in self._past_inputs:
+            feed[item.name] = _zero_onnx_cache_input(item)
+        outputs = self._session.run(None, feed)
         if not outputs:
             raise RuntimeError("official ONNX commavq GPT session returned no outputs")
         logits = np.asarray(outputs[0], dtype=np.float32)
@@ -230,12 +234,46 @@ class _OnnxNextTokenLogitsModel:
         return _score_tokens_from_logits_rows(arr, logits_rows=logits_rows, score_count=score_count)
 
 
+def _onnx_input_dtype(type_name: str) -> np.dtype:
+    normalized = type_name.strip().lower()
+    if normalized == "tensor(int32)":
+        return np.int32
+    if normalized == "tensor(int64)":
+        return np.int64
+    if normalized == "tensor(float16)":
+        return np.float16
+    if normalized == "tensor(float)":
+        return np.float32
+    if normalized == "tensor(float32)":
+        return np.float32
+    raise RuntimeError(f"unsupported ONNX GPT input dtype: {type_name}")
+
+
+def _zero_onnx_cache_input(input_meta) -> np.ndarray:
+    shape: list[int] = []
+    for axis, dim in enumerate(getattr(input_meta, "shape", ())):
+        if isinstance(dim, int):
+            shape.append(dim)
+        else:
+            shape.append(0 if axis >= 2 else 1)
+    return np.zeros(tuple(shape), dtype=_onnx_input_dtype(getattr(input_meta, "type", "tensor(float16)")))
+
+
 def _validate_gpt_onnx_session_signature(session) -> str:
     inputs = session.get_inputs()
-    if len(inputs) != 1:
+    if not inputs:
+        raise RuntimeError("official ONNX commavq GPT session has no inputs")
+    first_name = inputs[0].name
+    remaining = inputs[1:]
+    if not remaining:
+        return first_name
+    if first_name not in {"input_ids", "tokens"}:
         names = [item.name for item in inputs]
-        raise RuntimeError(f"unsupported ONNX GPT signature: expected 1 input, got {names}")
-    return inputs[0].name
+        raise RuntimeError(f"unsupported ONNX GPT signature: unexpected primary input {names}")
+    if any(not item.name.startswith("past_") for item in remaining):
+        names = [item.name for item in inputs]
+        raise RuntimeError(f"unsupported ONNX GPT signature: expected past_* cache inputs, got {names}")
+    return first_name
 
 
 class _TorchNextTokenLogitsModel:

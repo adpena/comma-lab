@@ -66,6 +66,47 @@ class TacLosslessGptScoreTests(unittest.TestCase):
         self.assertEqual(model._tac_execution_providers, ["CoreMLExecutionProvider", "CPUExecutionProvider"])
         self.assertEqual(model._tac_model_artifact_url, module.OFFICIAL_COMMAVQ_GPT_ONNX_URL)
 
+    def test_load_official_commavq_gpt_onnx_model_accepts_kv_cache_signature(self) -> None:
+        from tac.lossless import gpt_score as module
+
+        fake_session = mock.Mock()
+        fake_session.get_inputs.return_value = [
+            SimpleNamespace(name="input_ids", shape=[1, "seq"], type="tensor(int32)"),
+            SimpleNamespace(name="past_0", shape=[2, 1, "past_seq", 8, 64], type="tensor(float16)"),
+            SimpleNamespace(name="past_1", shape=[2, 1, "past_seq", 8, 64], type="tensor(float16)"),
+        ]
+        fake_session.run.return_value = [
+            np.arange(12, dtype=np.float32).reshape(1, 3, 4),
+            np.zeros((2, 1, 3, 8, 64), dtype=np.float16),
+            np.zeros((2, 1, 3, 8, 64), dtype=np.float16),
+        ]
+        fake_ort = SimpleNamespace(
+            get_available_providers=lambda: [
+                "AzureExecutionProvider",
+                "CPUExecutionProvider",
+                "CoreMLExecutionProvider",
+            ],
+            InferenceSession=mock.Mock(return_value=fake_session),
+        )
+
+        with mock.patch.object(module, "_require_onnxruntime", return_value=fake_ort):
+            with mock.patch.object(
+                module,
+                "ensure_official_gpt_onnx_path",
+                return_value=Path("/tmp/gpt2m.onnx"),
+            ):
+                model = module.load_official_commavq_gpt_onnx_model()
+
+        logits = model.next_token_logits(np.array([11, 12, 13], dtype=np.int64))
+        feed = fake_session.run.call_args.args[1]
+
+        self.assertEqual(feed["input_ids"].dtype, np.int32)
+        self.assertEqual(feed["input_ids"].tolist(), [[11, 12, 13]])
+        self.assertEqual(feed["past_0"].shape, (2, 1, 0, 8, 64))
+        self.assertEqual(feed["past_0"].dtype, np.float16)
+        self.assertEqual(feed["past_1"].shape, (2, 1, 0, 8, 64))
+        np.testing.assert_allclose(logits, np.array([8.0, 9.0, 10.0, 11.0], dtype=np.float32))
+
     def test_load_official_commavq_gpt_model_falls_back_to_torch_when_onnx_unavailable(self) -> None:
         from tac.lossless import gpt_score as module
 
