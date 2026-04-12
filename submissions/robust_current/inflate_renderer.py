@@ -394,7 +394,7 @@ if not _HAS_TAC_RENDERER:
             self.net = nn.Sequential(
                 nn.Conv2d(in_ch, hidden, 3, padding=1, bias=True),
                 nn.SiLU(inplace=True),
-                ResBlock(hidden),  # CLADE params unused in Sequential (mask=None)
+                ResBlock(hidden, num_classes=0),  # plain GroupNorm — no mask in Sequential
                 nn.Conv2d(hidden, hidden, 3, padding=1, bias=True),
                 nn.SiLU(inplace=True),
                 nn.Conv2d(hidden, output_channels, 3, padding=1, bias=True),

@@ -2,7 +2,7 @@
   "version": 3,
   "last_scan": "2026-04-12T19:14:11.425962+00:00",
   "entity_count": 2842,
-  "review_count": 4578,
+  "review_count": 5116,
   "entities": {
     "experiments.archive.exp1_fridrich_proper::FridrichConfig": {
       "module": "experiments.archive.exp1_fridrich_proper",
@@ -2345,8 +2345,8 @@
       "last_modified_commit": "",
       "last_modified_date": "",
       "review_status": "reviewed",
-      "reviewed_by": "fridrich",
-      "reviewed_at": "2026-04-12T19:14:26.417024+00:00",
+      "reviewed_by": "adpena",
+      "reviewed_at": "2026-04-12T22:01:08.121163+00:00",
       "review_pass": "",
       "notes": ""
     },
@@ -2362,8 +2362,8 @@
       "last_modified_commit": "",
       "last_modified_date": "",
       "review_status": "reviewed",
-      "reviewed_by": "fridrich",
-      "reviewed_at": "2026-04-12T19:14:26.417024+00:00",
+      "reviewed_by": "adpena",
+      "reviewed_at": "2026-04-12T22:01:08.121163+00:00",
       "review_pass": "",
       "notes": ""
     },
@@ -2379,8 +2379,8 @@
       "last_modified_commit": "",
       "last_modified_date": "",
       "review_status": "reviewed",
-      "reviewed_by": "fridrich",
-      "reviewed_at": "2026-04-12T19:14:26.417024+00:00",
+      "reviewed_by": "adpena",
+      "reviewed_at": "2026-04-12T22:01:08.121163+00:00",
       "review_pass": "",
       "notes": ""
     },
@@ -2396,8 +2396,8 @@
       "last_modified_commit": "",
       "last_modified_date": "",
       "review_status": "reviewed",
-      "reviewed_by": "fridrich",
-      "reviewed_at": "2026-04-12T19:14:26.417024+00:00",
+      "reviewed_by": "adpena",
+      "reviewed_at": "2026-04-12T22:01:08.121163+00:00",
       "review_pass": "",
       "notes": ""
     },
@@ -2413,8 +2413,8 @@
       "last_modified_commit": "",
       "last_modified_date": "",
       "review_status": "reviewed",
-      "reviewed_by": "fridrich",
-      "reviewed_at": "2026-04-12T19:14:26.417024+00:00",
+      "reviewed_by": "adpena",
+      "reviewed_at": "2026-04-12T22:01:08.121163+00:00",
       "review_pass": "",
       "notes": ""
     },
@@ -2430,8 +2430,8 @@
       "last_modified_commit": "",
       "last_modified_date": "",
       "review_status": "reviewed",
-      "reviewed_by": "fridrich",
-      "reviewed_at": "2026-04-12T19:14:26.417024+00:00",
+      "reviewed_by": "adpena",
+      "reviewed_at": "2026-04-12T22:01:08.121163+00:00",
       "review_pass": "",
       "notes": ""
     },
@@ -2447,8 +2447,8 @@
       "last_modified_commit": "",
       "last_modified_date": "",
       "review_status": "reviewed",
-      "reviewed_by": "fridrich",
-      "reviewed_at": "2026-04-12T19:14:26.417024+00:00",
+      "reviewed_by": "adpena",
+      "reviewed_at": "2026-04-12T22:01:08.121163+00:00",
       "review_pass": "",
       "notes": ""
     },
@@ -2464,8 +2464,8 @@
       "last_modified_commit": "",
       "last_modified_date": "",
       "review_status": "reviewed",
-      "reviewed_by": "fridrich",
-      "reviewed_at": "2026-04-12T19:14:26.417024+00:00",
+      "reviewed_by": "adpena",
+      "reviewed_at": "2026-04-12T22:01:08.121163+00:00",
       "review_pass": "",
       "notes": ""
     },
@@ -2481,8 +2481,8 @@
       "last_modified_commit": "",
       "last_modified_date": "",
       "review_status": "reviewed",
-      "reviewed_by": "fridrich",
-      "reviewed_at": "2026-04-12T19:14:26.417024+00:00",
+      "reviewed_by": "adpena",
+      "reviewed_at": "2026-04-12T22:01:08.121163+00:00",
       "review_pass": "",
       "notes": ""
     },
@@ -5523,10 +5523,10 @@
       "complexity": 1,
       "last_modified_commit": "9f4dabc0c604",
       "last_modified_date": "2026-04-12T11:31:17-05:00",
-      "review_status": "stale",
+      "review_status": "reviewed",
       "reviewed_by": "council",
-      "reviewed_at": "2026-04-12T16:33:42.806768+00:00",
-      "review_pass": "tiny_arch_next",
+      "reviewed_at": "2026-04-12T20:00:42.133650+00:00",
+      "review_pass": "tiny_train_export",
       "notes": ""
     },
     "tac.cli::_parse_selection_metrics": {
@@ -5540,10 +5540,10 @@
       "complexity": 3,
       "last_modified_commit": "9f4dabc0c604",
       "last_modified_date": "2026-04-12T11:31:17-05:00",
-      "review_status": "stale",
+      "review_status": "reviewed",
       "reviewed_by": "council",
-      "reviewed_at": "2026-04-12T16:33:42.806768+00:00",
-      "review_pass": "tiny_arch_next",
+      "reviewed_at": "2026-04-12T20:00:42.133650+00:00",
+      "review_pass": "tiny_train_export",
       "notes": ""
     },
     "tac.cli::_run_benchmark_codecs": {
@@ -5557,10 +5557,10 @@
       "complexity": 1,
       "last_modified_commit": "9f4dabc0c604",
       "last_modified_date": "2026-04-12T11:31:17-05:00",
-      "review_status": "stale",
+      "review_status": "reviewed",
       "reviewed_by": "council",
-      "reviewed_at": "2026-04-12T16:33:42.806768+00:00",
-      "review_pass": "tiny_arch_next",
+      "reviewed_at": "2026-04-12T20:00:42.133650+00:00",
+      "review_pass": "tiny_train_export",
       "notes": ""
     },
     "tac.cli::_run_crf_search": {
@@ -5574,10 +5574,10 @@
       "complexity": 1,
       "last_modified_commit": "9f4dabc0c604",
       "last_modified_date": "2026-04-12T11:31:17-05:00",
-      "review_status": "stale",
+      "review_status": "reviewed",
       "reviewed_by": "council",
-      "reviewed_at": "2026-04-12T16:33:42.806768+00:00",
-      "review_pass": "tiny_arch_next",
+      "reviewed_at": "2026-04-12T20:00:42.133650+00:00",
+      "review_pass": "tiny_train_export",
       "notes": ""
     },
     "tac.cli::_run_ensemble": {
@@ -5591,10 +5591,10 @@
       "complexity": 4,
       "last_modified_commit": "9f4dabc0c604",
       "last_modified_date": "2026-04-12T11:31:17-05:00",
-      "review_status": "stale",
+      "review_status": "reviewed",
       "reviewed_by": "council",
-      "reviewed_at": "2026-04-12T16:33:42.806768+00:00",
-      "review_pass": "tiny_arch_next",
+      "reviewed_at": "2026-04-12T20:00:42.133650+00:00",
+      "review_pass": "tiny_train_export",
       "notes": ""
     },
     "tac.cli::_run_lossless": {
@@ -5608,10 +5608,10 @@
       "complexity": 45,
       "last_modified_commit": "9f4dabc0c604",
       "last_modified_date": "2026-04-12T11:31:17-05:00",
-      "review_status": "stale",
+      "review_status": "reviewed",
       "reviewed_by": "council",
-      "reviewed_at": "2026-04-12T16:33:42.806768+00:00",
-      "review_pass": "tiny_arch_next",
+      "reviewed_at": "2026-04-12T20:00:42.133650+00:00",
+      "review_pass": "tiny_train_export",
       "notes": ""
     },
     "tac.cli::_run_lossy": {
@@ -5625,10 +5625,10 @@
       "complexity": 11,
       "last_modified_commit": "9f4dabc0c604",
       "last_modified_date": "2026-04-12T11:31:17-05:00",
-      "review_status": "stale",
+      "review_status": "reviewed",
       "reviewed_by": "council",
-      "reviewed_at": "2026-04-12T16:33:42.806768+00:00",
-      "review_pass": "tiny_arch_next",
+      "reviewed_at": "2026-04-12T20:00:42.133650+00:00",
+      "review_pass": "tiny_train_export",
       "notes": ""
     },
     "tac.cli::_run_rd_floor": {
@@ -5642,10 +5642,10 @@
       "complexity": 4,
       "last_modified_commit": "9f4dabc0c604",
       "last_modified_date": "2026-04-12T11:31:17-05:00",
-      "review_status": "stale",
+      "review_status": "reviewed",
       "reviewed_by": "council",
-      "reviewed_at": "2026-04-12T16:33:42.806768+00:00",
-      "review_pass": "tiny_arch_next",
+      "reviewed_at": "2026-04-12T20:00:42.133650+00:00",
+      "review_pass": "tiny_train_export",
       "notes": ""
     },
     "tac.cli::_select": {
@@ -5659,10 +5659,10 @@
       "complexity": 2,
       "last_modified_commit": "9f4dabc0c604",
       "last_modified_date": "2026-04-12T11:31:17-05:00",
-      "review_status": "stale",
+      "review_status": "reviewed",
       "reviewed_by": "council",
-      "reviewed_at": "2026-04-12T16:33:42.806768+00:00",
-      "review_pass": "tiny_arch_next",
+      "reviewed_at": "2026-04-12T20:00:42.133650+00:00",
+      "review_pass": "tiny_train_export",
       "notes": ""
     },
     "tac.cli::build_parser": {
@@ -5676,10 +5676,10 @@
       "complexity": 1,
       "last_modified_commit": "9f4dabc0c604",
       "last_modified_date": "2026-04-12T11:31:17-05:00",
-      "review_status": "stale",
+      "review_status": "reviewed",
       "reviewed_by": "council",
-      "reviewed_at": "2026-04-12T16:33:42.806768+00:00",
-      "review_pass": "tiny_arch_next",
+      "reviewed_at": "2026-04-12T20:00:42.133650+00:00",
+      "review_pass": "tiny_train_export",
       "notes": ""
     },
     "tac.cli::main": {
@@ -5693,10 +5693,10 @@
       "complexity": 12,
       "last_modified_commit": "9f4dabc0c604",
       "last_modified_date": "2026-04-12T11:31:17-05:00",
-      "review_status": "stale",
+      "review_status": "reviewed",
       "reviewed_by": "council",
-      "reviewed_at": "2026-04-12T16:33:42.806768+00:00",
-      "review_pass": "tiny_arch_next",
+      "reviewed_at": "2026-04-12T20:00:42.133650+00:00",
+      "review_pass": "tiny_train_export",
       "notes": ""
     },
     "tac.constrained_gen::ConstrainedFrameGenerator": {
@@ -23628,10 +23628,10 @@
       "complexity": 13,
       "last_modified_commit": "",
       "last_modified_date": "",
-      "review_status": "unreviewed",
-      "reviewed_by": "",
-      "reviewed_at": "",
-      "review_pass": "",
+      "review_status": "reviewed",
+      "reviewed_by": "council",
+      "reviewed_at": "2026-04-12T20:00:41.113928+00:00",
+      "review_pass": "tiny_train_export",
       "notes": ""
     },
     "tac.lossless.tiny_frame_train::TinyFrameSupervisedBatch.__post_init__": {
@@ -23645,10 +23645,10 @@
       "complexity": 13,
       "last_modified_commit": "",
       "last_modified_date": "",
-      "review_status": "unreviewed",
-      "reviewed_by": "",
-      "reviewed_at": "",
-      "review_pass": "",
+      "review_status": "reviewed",
+      "reviewed_by": "council",
+      "reviewed_at": "2026-04-12T20:00:41.113928+00:00",
+      "review_pass": "tiny_train_export",
       "notes": ""
     },
     "tac.lossless.tiny_frame_train::_iter_record_supervised_samples": {
@@ -23662,10 +23662,10 @@
       "complexity": 6,
       "last_modified_commit": "",
       "last_modified_date": "",
-      "review_status": "unreviewed",
-      "reviewed_by": "",
-      "reviewed_at": "",
-      "review_pass": "",
+      "review_status": "reviewed",
+      "reviewed_by": "council",
+      "reviewed_at": "2026-04-12T20:00:41.113928+00:00",
+      "review_pass": "tiny_train_export",
       "notes": ""
     },
     "tac.lossless.tiny_frame_train::_resolve_shard_paths": {
@@ -23679,10 +23679,10 @@
       "complexity": 9,
       "last_modified_commit": "",
       "last_modified_date": "",
-      "review_status": "unreviewed",
-      "reviewed_by": "",
-      "reviewed_at": "",
-      "review_pass": "",
+      "review_status": "reviewed",
+      "reviewed_by": "council",
+      "reviewed_at": "2026-04-12T20:00:41.113928+00:00",
+      "review_pass": "tiny_train_export",
       "notes": ""
     },
     "tac.lossless.tiny_frame_train::_resolve_training_config": {
@@ -23696,10 +23696,10 @@
       "complexity": 9,
       "last_modified_commit": "",
       "last_modified_date": "",
-      "review_status": "unreviewed",
-      "reviewed_by": "",
-      "reviewed_at": "",
-      "review_pass": "",
+      "review_status": "reviewed",
+      "reviewed_by": "council",
+      "reviewed_at": "2026-04-12T20:00:41.113928+00:00",
+      "review_pass": "tiny_train_export",
       "notes": ""
     },
     "tac.lossless.tiny_frame_train::build_tiny_frame_training_model": {
@@ -23713,10 +23713,10 @@
       "complexity": 2,
       "last_modified_commit": "",
       "last_modified_date": "",
-      "review_status": "unreviewed",
-      "reviewed_by": "",
-      "reviewed_at": "",
-      "review_pass": "",
+      "review_status": "reviewed",
+      "reviewed_by": "council",
+      "reviewed_at": "2026-04-12T20:00:41.113928+00:00",
+      "review_pass": "tiny_train_export",
       "notes": ""
     },
     "tac.lossless.tiny_frame_train::iter_local_commavq_tiny_frame_batches": {
@@ -23730,10 +23730,10 @@
       "complexity": 17,
       "last_modified_commit": "",
       "last_modified_date": "",
-      "review_status": "unreviewed",
-      "reviewed_by": "",
-      "reviewed_at": "",
-      "review_pass": "",
+      "review_status": "reviewed",
+      "reviewed_by": "council",
+      "reviewed_at": "2026-04-12T20:00:41.113928+00:00",
+      "review_pass": "tiny_train_export",
       "notes": ""
     },
     "tac.lossless.tiny_frame_train::run_tiny_frame_supervised_step": {
@@ -23747,10 +23747,10 @@
       "complexity": 10,
       "last_modified_commit": "",
       "last_modified_date": "",
-      "review_status": "unreviewed",
-      "reviewed_by": "",
-      "reviewed_at": "",
-      "review_pass": "",
+      "review_status": "reviewed",
+      "reviewed_by": "council",
+      "reviewed_at": "2026-04-12T20:00:41.113928+00:00",
+      "review_pass": "tiny_train_export",
       "notes": ""
     },
     "tac.lossless.token_rgb_bridge::_OnnxDecoderBridge": {
@@ -25363,9 +25363,9 @@
       "last_modified_commit": "be7a340f6f54",
       "last_modified_date": "2026-04-11T13:03:14-05:00",
       "review_status": "reviewed",
-      "reviewed_by": "nsa_final",
-      "reviewed_at": "2026-04-11T19:19:51.217434+00:00",
-      "review_pass": "nsa_final_20260411",
+      "reviewed_by": "adpena",
+      "reviewed_at": "2026-04-12T22:01:08.379488+00:00",
+      "review_pass": "",
       "notes": ""
     },
     "tac.mlx_renderer::CLADENorm.__call__": {
@@ -25380,9 +25380,9 @@
       "last_modified_commit": "be7a340f6f54",
       "last_modified_date": "2026-04-11T13:03:14-05:00",
       "review_status": "reviewed",
-      "reviewed_by": "nsa_final",
-      "reviewed_at": "2026-04-11T19:19:51.217434+00:00",
-      "review_pass": "nsa_final_20260411",
+      "reviewed_by": "adpena",
+      "reviewed_at": "2026-04-12T22:01:08.379488+00:00",
+      "review_pass": "",
       "notes": ""
     },
     "tac.mlx_renderer::CLADENorm.__init__": {
@@ -25397,9 +25397,9 @@
       "last_modified_commit": "be7a340f6f54",
       "last_modified_date": "2026-04-11T13:03:14-05:00",
       "review_status": "reviewed",
-      "reviewed_by": "nsa_final",
-      "reviewed_at": "2026-04-11T19:19:51.217434+00:00",
-      "review_pass": "nsa_final_20260411",
+      "reviewed_by": "adpena",
+      "reviewed_at": "2026-04-12T22:01:08.379488+00:00",
+      "review_pass": "",
       "notes": ""
     },
     "tac.mlx_renderer::MaskRenderer": {
@@ -25414,9 +25414,9 @@
       "last_modified_commit": "be7a340f6f54",
       "last_modified_date": "2026-04-11T13:03:14-05:00",
       "review_status": "reviewed",
-      "reviewed_by": "nsa_final",
-      "reviewed_at": "2026-04-11T19:19:51.217434+00:00",
-      "review_pass": "nsa_final_20260411",
+      "reviewed_by": "adpena",
+      "reviewed_at": "2026-04-12T22:01:08.379488+00:00",
+      "review_pass": "",
       "notes": ""
     },
     "tac.mlx_renderer::MaskRenderer.__call__": {
@@ -25431,9 +25431,9 @@
       "last_modified_commit": "be7a340f6f54",
       "last_modified_date": "2026-04-11T13:03:14-05:00",
       "review_status": "reviewed",
-      "reviewed_by": "nsa_final",
-      "reviewed_at": "2026-04-11T19:19:51.217434+00:00",
-      "review_pass": "nsa_final_20260411",
+      "reviewed_by": "adpena",
+      "reviewed_at": "2026-04-12T22:01:08.379488+00:00",
+      "review_pass": "",
       "notes": ""
     },
     "tac.mlx_renderer::MaskRenderer.__init__": {
@@ -25448,9 +25448,9 @@
       "last_modified_commit": "be7a340f6f54",
       "last_modified_date": "2026-04-11T13:03:14-05:00",
       "review_status": "reviewed",
-      "reviewed_by": "nsa_final",
-      "reviewed_at": "2026-04-11T19:19:51.217434+00:00",
-      "review_pass": "nsa_final_20260411",
+      "reviewed_by": "adpena",
+      "reviewed_at": "2026-04-12T22:01:08.379488+00:00",
+      "review_pass": "",
       "notes": ""
     },
     "tac.mlx_renderer::MotionPredictor": {
@@ -25465,9 +25465,9 @@
       "last_modified_commit": "be7a340f6f54",
       "last_modified_date": "2026-04-11T13:03:14-05:00",
       "review_status": "reviewed",
-      "reviewed_by": "nsa_final",
-      "reviewed_at": "2026-04-11T19:19:51.217434+00:00",
-      "review_pass": "nsa_final_20260411",
+      "reviewed_by": "adpena",
+      "reviewed_at": "2026-04-12T22:01:08.379488+00:00",
+      "review_pass": "",
       "notes": ""
     },
     "tac.mlx_renderer::MotionPredictor.__call__": {
@@ -25482,9 +25482,9 @@
       "last_modified_commit": "be7a340f6f54",
       "last_modified_date": "2026-04-11T13:03:14-05:00",
       "review_status": "reviewed",
-      "reviewed_by": "nsa_final",
-      "reviewed_at": "2026-04-11T19:19:51.217434+00:00",
-      "review_pass": "nsa_final_20260411",
+      "reviewed_by": "adpena",
+      "reviewed_at": "2026-04-12T22:01:08.379488+00:00",
+      "review_pass": "",
       "notes": ""
     },
     "tac.mlx_renderer::MotionPredictor.__init__": {
@@ -25499,9 +25499,9 @@
       "last_modified_commit": "be7a340f6f54",
       "last_modified_date": "2026-04-11T13:03:14-05:00",
       "review_status": "reviewed",
-      "reviewed_by": "nsa_final",
-      "reviewed_at": "2026-04-11T19:19:51.217434+00:00",
-      "review_pass": "nsa_final_20260411",
+      "reviewed_by": "adpena",
+      "reviewed_at": "2026-04-12T22:01:08.379488+00:00",
+      "review_pass": "",
       "notes": ""
     },
     "tac.mlx_renderer::PairGenerator": {
@@ -25516,9 +25516,9 @@
       "last_modified_commit": "be7a340f6f54",
       "last_modified_date": "2026-04-11T13:03:14-05:00",
       "review_status": "reviewed",
-      "reviewed_by": "nsa_final",
-      "reviewed_at": "2026-04-11T19:19:51.217434+00:00",
-      "review_pass": "nsa_final_20260411",
+      "reviewed_by": "adpena",
+      "reviewed_at": "2026-04-12T22:01:08.379488+00:00",
+      "review_pass": "",
       "notes": ""
     },
     "tac.mlx_renderer::PairGenerator.__call__": {
@@ -25533,9 +25533,9 @@
       "last_modified_commit": "be7a340f6f54",
       "last_modified_date": "2026-04-11T13:03:14-05:00",
       "review_status": "reviewed",
-      "reviewed_by": "nsa_final",
-      "reviewed_at": "2026-04-11T19:19:51.217434+00:00",
-      "review_pass": "nsa_final_20260411",
+      "reviewed_by": "adpena",
+      "reviewed_at": "2026-04-12T22:01:08.379488+00:00",
+      "review_pass": "",
       "notes": ""
     },
     "tac.mlx_renderer::PairGenerator.__init__": {
@@ -25550,9 +25550,9 @@
       "last_modified_commit": "be7a340f6f54",
       "last_modified_date": "2026-04-11T13:03:14-05:00",
       "review_status": "reviewed",
-      "reviewed_by": "nsa_final",
-      "reviewed_at": "2026-04-11T19:19:51.217434+00:00",
-      "review_pass": "nsa_final_20260411",
+      "reviewed_by": "adpena",
+      "reviewed_at": "2026-04-12T22:01:08.379488+00:00",
+      "review_pass": "",
       "notes": ""
     },
     "tac.mlx_renderer::PairGenerator.param_count": {
@@ -25567,9 +25567,9 @@
       "last_modified_commit": "be7a340f6f54",
       "last_modified_date": "2026-04-11T13:03:14-05:00",
       "review_status": "reviewed",
-      "reviewed_by": "nsa_final",
-      "reviewed_at": "2026-04-11T19:19:51.217434+00:00",
-      "review_pass": "nsa_final_20260411",
+      "reviewed_by": "adpena",
+      "reviewed_at": "2026-04-12T22:01:08.379488+00:00",
+      "review_pass": "",
       "notes": ""
     },
     "tac.mlx_renderer::ResBlock": {
@@ -25584,9 +25584,9 @@
       "last_modified_commit": "be7a340f6f54",
       "last_modified_date": "2026-04-11T13:03:14-05:00",
       "review_status": "reviewed",
-      "reviewed_by": "nsa_final",
-      "reviewed_at": "2026-04-11T19:19:51.217434+00:00",
-      "review_pass": "nsa_final_20260411",
+      "reviewed_by": "adpena",
+      "reviewed_at": "2026-04-12T22:01:08.379488+00:00",
+      "review_pass": "",
       "notes": ""
     },
     "tac.mlx_renderer::ResBlock.__call__": {
@@ -25601,9 +25601,9 @@
       "last_modified_commit": "be7a340f6f54",
       "last_modified_date": "2026-04-11T13:03:14-05:00",
       "review_status": "reviewed",
-      "reviewed_by": "nsa_final",
-      "reviewed_at": "2026-04-11T19:19:51.217434+00:00",
-      "review_pass": "nsa_final_20260411",
+      "reviewed_by": "adpena",
+      "reviewed_at": "2026-04-12T22:01:08.379488+00:00",
+      "review_pass": "",
       "notes": ""
     },
     "tac.mlx_renderer::ResBlock.__init__": {
@@ -25618,9 +25618,9 @@
       "last_modified_commit": "be7a340f6f54",
       "last_modified_date": "2026-04-11T13:03:14-05:00",
       "review_status": "reviewed",
-      "reviewed_by": "nsa_final",
-      "reviewed_at": "2026-04-11T19:19:51.217434+00:00",
-      "review_pass": "nsa_final_20260411",
+      "reviewed_by": "adpena",
+      "reviewed_at": "2026-04-12T22:01:08.379488+00:00",
+      "review_pass": "",
       "notes": ""
     },
     "tac.mlx_renderer::_flatten_mlx_params": {
@@ -25635,9 +25635,9 @@
       "last_modified_commit": "be7a340f6f54",
       "last_modified_date": "2026-04-11T13:03:14-05:00",
       "review_status": "reviewed",
-      "reviewed_by": "nsa_final",
-      "reviewed_at": "2026-04-11T19:19:51.217434+00:00",
-      "review_pass": "nsa_final_20260411",
+      "reviewed_by": "adpena",
+      "reviewed_at": "2026-04-12T22:01:08.379488+00:00",
+      "review_pass": "",
       "notes": ""
     },
     "tac.mlx_renderer::_nearest_downsample_2d": {
@@ -25652,9 +25652,9 @@
       "last_modified_commit": "be7a340f6f54",
       "last_modified_date": "2026-04-11T13:03:14-05:00",
       "review_status": "reviewed",
-      "reviewed_by": "nsa_final",
-      "reviewed_at": "2026-04-11T19:19:51.217434+00:00",
-      "review_pass": "nsa_final_20260411",
+      "reviewed_by": "adpena",
+      "reviewed_at": "2026-04-12T22:01:08.379488+00:00",
+      "review_pass": "",
       "notes": ""
     },
     "tac.mlx_renderer::_nearest_downsample_mask": {
@@ -25669,9 +25669,9 @@
       "last_modified_commit": "be7a340f6f54",
       "last_modified_date": "2026-04-11T13:03:14-05:00",
       "review_status": "reviewed",
-      "reviewed_by": "nsa_final",
-      "reviewed_at": "2026-04-11T19:19:51.217434+00:00",
-      "review_pass": "nsa_final_20260411",
+      "reviewed_by": "adpena",
+      "reviewed_at": "2026-04-12T22:01:08.379488+00:00",
+      "review_pass": "",
       "notes": ""
     },
     "tac.mlx_renderer::_nearest_upsample_2x": {
@@ -25686,9 +25686,9 @@
       "last_modified_commit": "be7a340f6f54",
       "last_modified_date": "2026-04-11T13:03:14-05:00",
       "review_status": "reviewed",
-      "reviewed_by": "nsa_final",
-      "reviewed_at": "2026-04-11T19:19:51.217434+00:00",
-      "review_pass": "nsa_final_20260411",
+      "reviewed_by": "adpena",
+      "reviewed_at": "2026-04-12T22:01:08.379488+00:00",
+      "review_pass": "",
       "notes": ""
     },
     "tac.mlx_renderer::_remap_motion_key": {
@@ -25703,9 +25703,9 @@
       "last_modified_commit": "be7a340f6f54",
       "last_modified_date": "2026-04-11T13:03:14-05:00",
       "review_status": "reviewed",
-      "reviewed_by": "nsa_final",
-      "reviewed_at": "2026-04-11T19:19:51.217434+00:00",
-      "review_pass": "nsa_final_20260411",
+      "reviewed_by": "adpena",
+      "reviewed_at": "2026-04-12T22:01:08.379488+00:00",
+      "review_pass": "",
       "notes": ""
     },
     "tac.mlx_renderer::_remap_motion_key_reverse": {
@@ -25720,9 +25720,9 @@
       "last_modified_commit": "be7a340f6f54",
       "last_modified_date": "2026-04-11T13:03:14-05:00",
       "review_status": "reviewed",
-      "reviewed_by": "nsa_final",
-      "reviewed_at": "2026-04-11T19:19:51.217434+00:00",
-      "review_pass": "nsa_final_20260411",
+      "reviewed_by": "adpena",
+      "reviewed_at": "2026-04-12T22:01:08.379488+00:00",
+      "review_pass": "",
       "notes": ""
     },
     "tac.mlx_renderer::_unflatten_to_nested": {
@@ -25737,9 +25737,9 @@
       "last_modified_commit": "be7a340f6f54",
       "last_modified_date": "2026-04-11T13:03:14-05:00",
       "review_status": "reviewed",
-      "reviewed_by": "nsa_final",
-      "reviewed_at": "2026-04-11T19:19:51.217434+00:00",
-      "review_pass": "nsa_final_20260411",
+      "reviewed_by": "adpena",
+      "reviewed_at": "2026-04-12T22:01:08.379488+00:00",
+      "review_pass": "",
       "notes": ""
     },
     "tac.mlx_renderer::_warp_with_flow": {
@@ -25754,9 +25754,9 @@
       "last_modified_commit": "be7a340f6f54",
       "last_modified_date": "2026-04-11T13:03:14-05:00",
       "review_status": "reviewed",
-      "reviewed_by": "nsa_final",
-      "reviewed_at": "2026-04-11T19:19:51.217434+00:00",
-      "review_pass": "nsa_final_20260411",
+      "reviewed_by": "adpena",
+      "reviewed_at": "2026-04-12T22:01:08.379488+00:00",
+      "review_pass": "",
       "notes": ""
     },
     "tac.mlx_renderer::build_mlx_renderer": {
@@ -25771,9 +25771,9 @@
       "last_modified_commit": "be7a340f6f54",
       "last_modified_date": "2026-04-11T13:03:14-05:00",
       "review_status": "reviewed",
-      "reviewed_by": "nsa_final",
-      "reviewed_at": "2026-04-11T19:19:51.217434+00:00",
-      "review_pass": "nsa_final_20260411",
+      "reviewed_by": "adpena",
+      "reviewed_at": "2026-04-12T22:01:08.379488+00:00",
+      "review_pass": "",
       "notes": ""
     },
     "tac.mlx_renderer::edge_loss": {
@@ -25788,9 +25788,9 @@
       "last_modified_commit": "be7a340f6f54",
       "last_modified_date": "2026-04-11T13:03:14-05:00",
       "review_status": "reviewed",
-      "reviewed_by": "nsa_final",
-      "reviewed_at": "2026-04-11T19:19:51.217434+00:00",
-      "review_pass": "nsa_final_20260411",
+      "reviewed_by": "adpena",
+      "reviewed_at": "2026-04-12T22:01:08.379488+00:00",
+      "review_pass": "",
       "notes": ""
     },
     "tac.mlx_renderer::haar_dwt2d": {
@@ -25805,9 +25805,9 @@
       "last_modified_commit": "be7a340f6f54",
       "last_modified_date": "2026-04-11T13:03:14-05:00",
       "review_status": "reviewed",
-      "reviewed_by": "nsa_final",
-      "reviewed_at": "2026-04-11T19:19:51.217434+00:00",
-      "review_pass": "nsa_final_20260411",
+      "reviewed_by": "adpena",
+      "reviewed_at": "2026-04-12T22:01:08.379488+00:00",
+      "review_pass": "",
       "notes": ""
     },
     "tac.mlx_renderer::haar_idwt2d": {
@@ -25822,9 +25822,9 @@
       "last_modified_commit": "be7a340f6f54",
       "last_modified_date": "2026-04-11T13:03:14-05:00",
       "review_status": "reviewed",
-      "reviewed_by": "nsa_final",
-      "reviewed_at": "2026-04-11T19:19:51.217434+00:00",
-      "review_pass": "nsa_final_20260411",
+      "reviewed_by": "adpena",
+      "reviewed_at": "2026-04-12T22:01:08.379488+00:00",
+      "review_pass": "",
       "notes": ""
     },
     "tac.mlx_renderer::l1_loss": {
@@ -25839,9 +25839,9 @@
       "last_modified_commit": "be7a340f6f54",
       "last_modified_date": "2026-04-11T13:03:14-05:00",
       "review_status": "reviewed",
-      "reviewed_by": "nsa_final",
-      "reviewed_at": "2026-04-11T19:19:51.217434+00:00",
-      "review_pass": "nsa_final_20260411",
+      "reviewed_by": "adpena",
+      "reviewed_at": "2026-04-12T22:01:08.379488+00:00",
+      "review_pass": "",
       "notes": ""
     },
     "tac.mlx_renderer::mlx_to_pytorch": {
@@ -25856,9 +25856,9 @@
       "last_modified_commit": "be7a340f6f54",
       "last_modified_date": "2026-04-11T13:03:14-05:00",
       "review_status": "reviewed",
-      "reviewed_by": "nsa_final",
-      "reviewed_at": "2026-04-11T19:19:51.217434+00:00",
-      "review_pass": "nsa_final_20260411",
+      "reviewed_by": "adpena",
+      "reviewed_at": "2026-04-12T22:01:08.379488+00:00",
+      "review_pass": "",
       "notes": ""
     },
     "tac.mlx_renderer::pretrain_loss_fn": {
@@ -25873,9 +25873,9 @@
       "last_modified_commit": "be7a340f6f54",
       "last_modified_date": "2026-04-11T13:03:14-05:00",
       "review_status": "reviewed",
-      "reviewed_by": "nsa_final",
-      "reviewed_at": "2026-04-11T19:19:51.217434+00:00",
-      "review_pass": "nsa_final_20260411",
+      "reviewed_by": "adpena",
+      "reviewed_at": "2026-04-12T22:01:08.379488+00:00",
+      "review_pass": "",
       "notes": ""
     },
     "tac.mlx_renderer::pytorch_to_mlx": {
@@ -25890,9 +25890,9 @@
       "last_modified_commit": "be7a340f6f54",
       "last_modified_date": "2026-04-11T13:03:14-05:00",
       "review_status": "reviewed",
-      "reviewed_by": "nsa_final",
-      "reviewed_at": "2026-04-11T19:19:51.217434+00:00",
-      "review_pass": "nsa_final_20260411",
+      "reviewed_by": "adpena",
+      "reviewed_at": "2026-04-12T22:01:08.379488+00:00",
+      "review_pass": "",
       "notes": ""
     },
     "tac.mlx_renderer::verify_round_trip": {
@@ -25907,9 +25907,9 @@
       "last_modified_commit": "be7a340f6f54",
       "last_modified_date": "2026-04-11T13:03:14-05:00",
       "review_status": "reviewed",
-      "reviewed_by": "nsa_final",
-      "reviewed_at": "2026-04-11T19:19:51.217434+00:00",
-      "review_pass": "nsa_final_20260411",
+      "reviewed_by": "adpena",
+      "reviewed_at": "2026-04-12T22:01:08.379488+00:00",
+      "review_pass": "",
       "notes": ""
     },
     "tac.models::AveragedCheckpoint": {
@@ -28252,10 +28252,10 @@
       "complexity": 4,
       "last_modified_commit": "0bd1f6d54278",
       "last_modified_date": "2026-04-11T22:03:13-05:00",
-      "review_status": "stale",
-      "reviewed_by": "nsa_final",
-      "reviewed_at": "2026-04-11T19:19:51.217434+00:00",
-      "review_pass": "nsa_final_20260411",
+      "review_status": "reviewed",
+      "reviewed_by": "adpena",
+      "reviewed_at": "2026-04-12T22:01:07.833775+00:00",
+      "review_pass": "",
       "notes": ""
     },
     "tac.renderer::AnalyticalMotionPredictor.__init__": {
@@ -28269,10 +28269,10 @@
       "complexity": 2,
       "last_modified_commit": "0bd1f6d54278",
       "last_modified_date": "2026-04-11T22:03:13-05:00",
-      "review_status": "stale",
-      "reviewed_by": "nsa_final",
-      "reviewed_at": "2026-04-11T19:19:51.217434+00:00",
-      "review_pass": "nsa_final_20260411",
+      "review_status": "reviewed",
+      "reviewed_by": "adpena",
+      "reviewed_at": "2026-04-12T22:01:07.833775+00:00",
+      "review_pass": "",
       "notes": ""
     },
     "tac.renderer::AnalyticalMotionPredictor._compute_boundary_mask": {
@@ -28286,10 +28286,10 @@
       "complexity": 2,
       "last_modified_commit": "0bd1f6d54278",
       "last_modified_date": "2026-04-11T22:03:13-05:00",
-      "review_status": "stale",
-      "reviewed_by": "nsa_final",
-      "reviewed_at": "2026-04-11T19:19:51.217434+00:00",
-      "review_pass": "nsa_final_20260411",
+      "review_status": "reviewed",
+      "reviewed_by": "adpena",
+      "reviewed_at": "2026-04-12T22:01:07.833775+00:00",
+      "review_pass": "",
       "notes": ""
     },
     "tac.renderer::AnalyticalMotionPredictor._compute_centroids": {
@@ -28303,10 +28303,10 @@
       "complexity": 1,
       "last_modified_commit": "0bd1f6d54278",
       "last_modified_date": "2026-04-11T22:03:13-05:00",
-      "review_status": "stale",
-      "reviewed_by": "nsa_final",
-      "reviewed_at": "2026-04-11T19:19:51.217434+00:00",
-      "review_pass": "nsa_final_20260411",
+      "review_status": "reviewed",
+      "reviewed_by": "adpena",
+      "reviewed_at": "2026-04-12T22:01:07.833775+00:00",
+      "review_pass": "",
       "notes": ""
     },
     "tac.renderer::AnalyticalMotionPredictor.forward": {
@@ -28320,10 +28320,10 @@
       "complexity": 1,
       "last_modified_commit": "0bd1f6d54278",
       "last_modified_date": "2026-04-11T22:03:13-05:00",
-      "review_status": "stale",
-      "reviewed_by": "nsa_final",
-      "reviewed_at": "2026-04-11T19:19:51.217434+00:00",
-      "review_pass": "nsa_final_20260411",
+      "review_status": "reviewed",
+      "reviewed_by": "adpena",
+      "reviewed_at": "2026-04-12T22:01:07.833775+00:00",
+      "review_pass": "",
       "notes": ""
     },
     "tac.renderer::AnalyticalMotionPredictor.param_count": {
@@ -28337,10 +28337,10 @@
       "complexity": 2,
       "last_modified_commit": "0bd1f6d54278",
       "last_modified_date": "2026-04-11T22:03:13-05:00",
-      "review_status": "stale",
-      "reviewed_by": "nsa_final",
-      "reviewed_at": "2026-04-11T19:19:51.217434+00:00",
-      "review_pass": "nsa_final_20260411",
+      "review_status": "reviewed",
+      "reviewed_by": "adpena",
+      "reviewed_at": "2026-04-12T22:01:07.833775+00:00",
+      "review_pass": "",
       "notes": ""
     },
     "tac.renderer::CLADENorm": {
@@ -28354,10 +28354,10 @@
       "complexity": 3,
       "last_modified_commit": "0bd1f6d54278",
       "last_modified_date": "2026-04-11T22:03:13-05:00",
-      "review_status": "stale",
-      "reviewed_by": "nsa_final",
-      "reviewed_at": "2026-04-11T19:19:51.217434+00:00",
-      "review_pass": "nsa_final_20260411",
+      "review_status": "reviewed",
+      "reviewed_by": "adpena",
+      "reviewed_at": "2026-04-12T22:01:07.833775+00:00",
+      "review_pass": "",
       "notes": ""
     },
     "tac.renderer::CLADENorm.__init__": {
@@ -28371,10 +28371,10 @@
       "complexity": 1,
       "last_modified_commit": "0bd1f6d54278",
       "last_modified_date": "2026-04-11T22:03:13-05:00",
-      "review_status": "stale",
-      "reviewed_by": "nsa_final",
-      "reviewed_at": "2026-04-11T19:19:51.217434+00:00",
-      "review_pass": "nsa_final_20260411",
+      "review_status": "reviewed",
+      "reviewed_by": "adpena",
+      "reviewed_at": "2026-04-12T22:01:07.833775+00:00",
+      "review_pass": "",
       "notes": ""
     },
     "tac.renderer::CLADENorm.forward": {
@@ -28388,10 +28388,10 @@
       "complexity": 3,
       "last_modified_commit": "0bd1f6d54278",
       "last_modified_date": "2026-04-11T22:03:13-05:00",
-      "review_status": "stale",
-      "reviewed_by": "nsa_final",
-      "reviewed_at": "2026-04-11T19:19:51.217434+00:00",
-      "review_pass": "nsa_final_20260411",
+      "review_status": "reviewed",
+      "reviewed_by": "adpena",
+      "reviewed_at": "2026-04-12T22:01:07.833775+00:00",
+      "review_pass": "",
       "notes": ""
     },
     "tac.renderer::ChannelRecurrentRenderer": {
@@ -28405,10 +28405,10 @@
       "complexity": 3,
       "last_modified_commit": "0bd1f6d54278",
       "last_modified_date": "2026-04-11T22:03:13-05:00",
-      "review_status": "stale",
-      "reviewed_by": "nsa_final",
-      "reviewed_at": "2026-04-11T19:19:51.217434+00:00",
-      "review_pass": "nsa_final_20260411",
+      "review_status": "reviewed",
+      "reviewed_by": "adpena",
+      "reviewed_at": "2026-04-12T22:01:07.833775+00:00",
+      "review_pass": "",
       "notes": ""
     },
     "tac.renderer::ChannelRecurrentRenderer.__init__": {
@@ -28422,10 +28422,10 @@
       "complexity": 2,
       "last_modified_commit": "0bd1f6d54278",
       "last_modified_date": "2026-04-11T22:03:13-05:00",
-      "review_status": "stale",
-      "reviewed_by": "nsa_final",
-      "reviewed_at": "2026-04-11T19:19:51.217434+00:00",
-      "review_pass": "nsa_final_20260411",
+      "review_status": "reviewed",
+      "reviewed_by": "adpena",
+      "reviewed_at": "2026-04-12T22:01:07.833775+00:00",
+      "review_pass": "",
       "notes": ""
     },
     "tac.renderer::ChannelRecurrentRenderer.forward": {
@@ -28439,10 +28439,10 @@
       "complexity": 1,
       "last_modified_commit": "0bd1f6d54278",
       "last_modified_date": "2026-04-11T22:03:13-05:00",
-      "review_status": "stale",
-      "reviewed_by": "nsa_final",
-      "reviewed_at": "2026-04-11T19:19:51.217434+00:00",
-      "review_pass": "nsa_final_20260411",
+      "review_status": "reviewed",
+      "reviewed_by": "adpena",
+      "reviewed_at": "2026-04-12T22:01:07.833775+00:00",
+      "review_pass": "",
       "notes": ""
     },
     "tac.renderer::ChannelRecurrentRenderer.param_count": {
@@ -28456,10 +28456,10 @@
       "complexity": 2,
       "last_modified_commit": "0bd1f6d54278",
       "last_modified_date": "2026-04-11T22:03:13-05:00",
-      "review_status": "stale",
-      "reviewed_by": "nsa_final",
-      "reviewed_at": "2026-04-11T19:19:51.217434+00:00",
-      "review_pass": "nsa_final_20260411",
+      "review_status": "reviewed",
+      "reviewed_by": "adpena",
+      "reviewed_at": "2026-04-12T22:01:07.833775+00:00",
+      "review_pass": "",
       "notes": ""
     },
     "tac.renderer::ChannelSubNet": {
@@ -28473,10 +28473,10 @@
       "complexity": 1,
       "last_modified_commit": "0bd1f6d54278",
       "last_modified_date": "2026-04-11T22:03:13-05:00",
-      "review_status": "stale",
-      "reviewed_by": "nsa_final",
-      "reviewed_at": "2026-04-11T19:19:51.217434+00:00",
-      "review_pass": "nsa_final_20260411",
+      "review_status": "reviewed",
+      "reviewed_by": "adpena",
+      "reviewed_at": "2026-04-12T22:01:07.833775+00:00",
+      "review_pass": "",
       "notes": ""
     },
     "tac.renderer::ChannelSubNet.__init__": {
@@ -28490,10 +28490,10 @@
       "complexity": 1,
       "last_modified_commit": "0bd1f6d54278",
       "last_modified_date": "2026-04-11T22:03:13-05:00",
-      "review_status": "stale",
-      "reviewed_by": "nsa_final",
-      "reviewed_at": "2026-04-11T19:19:51.217434+00:00",
-      "review_pass": "nsa_final_20260411",
+      "review_status": "reviewed",
+      "reviewed_by": "adpena",
+      "reviewed_at": "2026-04-12T22:01:07.833775+00:00",
+      "review_pass": "",
       "notes": ""
     },
     "tac.renderer::ChannelSubNet.forward": {
@@ -28507,10 +28507,10 @@
       "complexity": 1,
       "last_modified_commit": "0bd1f6d54278",
       "last_modified_date": "2026-04-11T22:03:13-05:00",
-      "review_status": "stale",
-      "reviewed_by": "nsa_final",
-      "reviewed_at": "2026-04-11T19:19:51.217434+00:00",
-      "review_pass": "nsa_final_20260411",
+      "review_status": "reviewed",
+      "reviewed_by": "adpena",
+      "reviewed_at": "2026-04-12T22:01:07.833775+00:00",
+      "review_pass": "",
       "notes": ""
     },
     "tac.renderer::DepthwiseMaskRenderer": {
@@ -28524,10 +28524,10 @@
       "complexity": 4,
       "last_modified_commit": "0bd1f6d54278",
       "last_modified_date": "2026-04-11T22:03:13-05:00",
-      "review_status": "stale",
-      "reviewed_by": "nsa_final",
-      "reviewed_at": "2026-04-11T19:19:51.217434+00:00",
-      "review_pass": "nsa_final_20260411",
+      "review_status": "reviewed",
+      "reviewed_by": "adpena",
+      "reviewed_at": "2026-04-12T22:01:07.833775+00:00",
+      "review_pass": "",
       "notes": ""
     },
     "tac.renderer::DepthwiseMaskRenderer.__init__": {
@@ -28541,10 +28541,10 @@
       "complexity": 2,
       "last_modified_commit": "0bd1f6d54278",
       "last_modified_date": "2026-04-11T22:03:13-05:00",
-      "review_status": "stale",
-      "reviewed_by": "nsa_final",
-      "reviewed_at": "2026-04-11T19:19:51.217434+00:00",
-      "review_pass": "nsa_final_20260411",
+      "review_status": "reviewed",
+      "reviewed_by": "adpena",
+      "reviewed_at": "2026-04-12T22:01:07.833775+00:00",
+      "review_pass": "",
       "notes": ""
     },
     "tac.renderer::DepthwiseMaskRenderer.forward": {
@@ -28558,10 +28558,10 @@
       "complexity": 2,
       "last_modified_commit": "0bd1f6d54278",
       "last_modified_date": "2026-04-11T22:03:13-05:00",
-      "review_status": "stale",
-      "reviewed_by": "nsa_final",
-      "reviewed_at": "2026-04-11T19:19:51.217434+00:00",
-      "review_pass": "nsa_final_20260411",
+      "review_status": "reviewed",
+      "reviewed_by": "adpena",
+      "reviewed_at": "2026-04-12T22:01:07.833775+00:00",
+      "review_pass": "",
       "notes": ""
     },
     "tac.renderer::DepthwiseMaskRenderer.param_count": {
@@ -28575,10 +28575,10 @@
       "complexity": 2,
       "last_modified_commit": "0bd1f6d54278",
       "last_modified_date": "2026-04-11T22:03:13-05:00",
-      "review_status": "stale",
-      "reviewed_by": "nsa_final",
-      "reviewed_at": "2026-04-11T19:19:51.217434+00:00",
-      "review_pass": "nsa_final_20260411",
+      "review_status": "reviewed",
+      "reviewed_by": "adpena",
+      "reviewed_at": "2026-04-12T22:01:07.833775+00:00",
+      "review_pass": "",
       "notes": ""
     },
     "tac.renderer::DepthwiseSeparableBlock": {
@@ -28592,10 +28592,10 @@
       "complexity": 1,
       "last_modified_commit": "0bd1f6d54278",
       "last_modified_date": "2026-04-11T22:03:13-05:00",
-      "review_status": "stale",
-      "reviewed_by": "nsa_final",
-      "reviewed_at": "2026-04-11T19:19:51.217434+00:00",
-      "review_pass": "nsa_final_20260411",
+      "review_status": "reviewed",
+      "reviewed_by": "adpena",
+      "reviewed_at": "2026-04-12T22:01:07.833775+00:00",
+      "review_pass": "",
       "notes": ""
     },
     "tac.renderer::DepthwiseSeparableBlock.__init__": {
@@ -28609,10 +28609,10 @@
       "complexity": 1,
       "last_modified_commit": "0bd1f6d54278",
       "last_modified_date": "2026-04-11T22:03:13-05:00",
-      "review_status": "stale",
-      "reviewed_by": "nsa_final",
-      "reviewed_at": "2026-04-11T19:19:51.217434+00:00",
-      "review_pass": "nsa_final_20260411",
+      "review_status": "reviewed",
+      "reviewed_by": "adpena",
+      "reviewed_at": "2026-04-12T22:01:07.833775+00:00",
+      "review_pass": "",
       "notes": ""
     },
     "tac.renderer::DepthwiseSeparableBlock.forward": {
@@ -28626,10 +28626,10 @@
       "complexity": 1,
       "last_modified_commit": "0bd1f6d54278",
       "last_modified_date": "2026-04-11T22:03:13-05:00",
-      "review_status": "stale",
-      "reviewed_by": "nsa_final",
-      "reviewed_at": "2026-04-11T19:19:51.217434+00:00",
-      "review_pass": "nsa_final_20260411",
+      "review_status": "reviewed",
+      "reviewed_by": "adpena",
+      "reviewed_at": "2026-04-12T22:01:07.833775+00:00",
+      "review_pass": "",
       "notes": ""
     },
     "tac.renderer::HintMLP": {
@@ -28643,10 +28643,10 @@
       "complexity": 1,
       "last_modified_commit": "0bd1f6d54278",
       "last_modified_date": "2026-04-11T22:03:13-05:00",
-      "review_status": "stale",
-      "reviewed_by": "nsa_final",
-      "reviewed_at": "2026-04-11T19:19:51.217434+00:00",
-      "review_pass": "nsa_final_20260411",
+      "review_status": "reviewed",
+      "reviewed_by": "adpena",
+      "reviewed_at": "2026-04-12T22:01:07.833775+00:00",
+      "review_pass": "",
       "notes": ""
     },
     "tac.renderer::HintMLP.__init__": {
@@ -28660,10 +28660,10 @@
       "complexity": 1,
       "last_modified_commit": "0bd1f6d54278",
       "last_modified_date": "2026-04-11T22:03:13-05:00",
-      "review_status": "stale",
-      "reviewed_by": "nsa_final",
-      "reviewed_at": "2026-04-11T19:19:51.217434+00:00",
-      "review_pass": "nsa_final_20260411",
+      "review_status": "reviewed",
+      "reviewed_by": "adpena",
+      "reviewed_at": "2026-04-12T22:01:07.833775+00:00",
+      "review_pass": "",
       "notes": ""
     },
     "tac.renderer::HintMLP.forward": {
@@ -28677,10 +28677,10 @@
       "complexity": 1,
       "last_modified_commit": "0bd1f6d54278",
       "last_modified_date": "2026-04-11T22:03:13-05:00",
-      "review_status": "stale",
-      "reviewed_by": "nsa_final",
-      "reviewed_at": "2026-04-11T19:19:51.217434+00:00",
-      "review_pass": "nsa_final_20260411",
+      "review_status": "reviewed",
+      "reviewed_by": "adpena",
+      "reviewed_at": "2026-04-12T22:01:07.833775+00:00",
+      "review_pass": "",
       "notes": ""
     },
     "tac.renderer::HintedMaskRenderer": {
@@ -28694,10 +28694,10 @@
       "complexity": 7,
       "last_modified_commit": "0bd1f6d54278",
       "last_modified_date": "2026-04-11T22:03:13-05:00",
-      "review_status": "stale",
-      "reviewed_by": "nsa_final",
-      "reviewed_at": "2026-04-11T19:19:51.217434+00:00",
-      "review_pass": "nsa_final_20260411",
+      "review_status": "reviewed",
+      "reviewed_by": "adpena",
+      "reviewed_at": "2026-04-12T22:01:07.833775+00:00",
+      "review_pass": "",
       "notes": ""
     },
     "tac.renderer::HintedMaskRenderer.__init__": {
@@ -28711,10 +28711,10 @@
       "complexity": 1,
       "last_modified_commit": "0bd1f6d54278",
       "last_modified_date": "2026-04-11T22:03:13-05:00",
-      "review_status": "stale",
-      "reviewed_by": "nsa_final",
-      "reviewed_at": "2026-04-11T19:19:51.217434+00:00",
-      "review_pass": "nsa_final_20260411",
+      "review_status": "reviewed",
+      "reviewed_by": "adpena",
+      "reviewed_at": "2026-04-12T22:01:07.833775+00:00",
+      "review_pass": "",
       "notes": ""
     },
     "tac.renderer::HintedMaskRenderer.forward": {
@@ -28728,10 +28728,10 @@
       "complexity": 6,
       "last_modified_commit": "0bd1f6d54278",
       "last_modified_date": "2026-04-11T22:03:13-05:00",
-      "review_status": "stale",
-      "reviewed_by": "nsa_final",
-      "reviewed_at": "2026-04-11T19:19:51.217434+00:00",
-      "review_pass": "nsa_final_20260411",
+      "review_status": "reviewed",
+      "reviewed_by": "adpena",
+      "reviewed_at": "2026-04-12T22:01:07.833775+00:00",
+      "review_pass": "",
       "notes": ""
     },
     "tac.renderer::HintedMaskRenderer.param_count": {
@@ -28745,10 +28745,10 @@
       "complexity": 2,
       "last_modified_commit": "0bd1f6d54278",
       "last_modified_date": "2026-04-11T22:03:13-05:00",
-      "review_status": "stale",
-      "reviewed_by": "nsa_final",
-      "reviewed_at": "2026-04-11T19:19:51.217434+00:00",
-      "review_pass": "nsa_final_20260411",
+      "review_status": "reviewed",
+      "reviewed_by": "adpena",
+      "reviewed_at": "2026-04-12T22:01:07.833775+00:00",
+      "review_pass": "",
       "notes": ""
     },
     "tac.renderer::HintedPairGenerator": {
@@ -28762,10 +28762,10 @@
       "complexity": 2,
       "last_modified_commit": "0bd1f6d54278",
       "last_modified_date": "2026-04-11T22:03:13-05:00",
-      "review_status": "stale",
-      "reviewed_by": "nsa_final",
-      "reviewed_at": "2026-04-11T19:19:51.217434+00:00",
-      "review_pass": "nsa_final_20260411",
+      "review_status": "reviewed",
+      "reviewed_by": "adpena",
+      "reviewed_at": "2026-04-12T22:01:07.833775+00:00",
+      "review_pass": "",
       "notes": ""
     },
     "tac.renderer::HintedPairGenerator.__init__": {
@@ -28779,10 +28779,10 @@
       "complexity": 1,
       "last_modified_commit": "0bd1f6d54278",
       "last_modified_date": "2026-04-11T22:03:13-05:00",
-      "review_status": "stale",
-      "reviewed_by": "nsa_final",
-      "reviewed_at": "2026-04-11T19:19:51.217434+00:00",
-      "review_pass": "nsa_final_20260411",
+      "review_status": "reviewed",
+      "reviewed_by": "adpena",
+      "reviewed_at": "2026-04-12T22:01:07.833775+00:00",
+      "review_pass": "",
       "notes": ""
     },
     "tac.renderer::HintedPairGenerator.forward": {
@@ -28796,10 +28796,10 @@
       "complexity": 1,
       "last_modified_commit": "0bd1f6d54278",
       "last_modified_date": "2026-04-11T22:03:13-05:00",
-      "review_status": "stale",
-      "reviewed_by": "nsa_final",
-      "reviewed_at": "2026-04-11T19:19:51.217434+00:00",
-      "review_pass": "nsa_final_20260411",
+      "review_status": "reviewed",
+      "reviewed_by": "adpena",
+      "reviewed_at": "2026-04-12T22:01:07.833775+00:00",
+      "review_pass": "",
       "notes": ""
     },
     "tac.renderer::HintedPairGenerator.param_count": {
@@ -28813,10 +28813,10 @@
       "complexity": 2,
       "last_modified_commit": "0bd1f6d54278",
       "last_modified_date": "2026-04-11T22:03:13-05:00",
-      "review_status": "stale",
-      "reviewed_by": "nsa_final",
-      "reviewed_at": "2026-04-11T19:19:51.217434+00:00",
-      "review_pass": "nsa_final_20260411",
+      "review_status": "reviewed",
+      "reviewed_by": "adpena",
+      "reviewed_at": "2026-04-12T22:01:07.833775+00:00",
+      "review_pass": "",
       "notes": ""
     },
     "tac.renderer::MaskRenderer": {
@@ -28830,10 +28830,10 @@
       "complexity": 8,
       "last_modified_commit": "0bd1f6d54278",
       "last_modified_date": "2026-04-11T22:03:13-05:00",
-      "review_status": "stale",
-      "reviewed_by": "nsa_final",
-      "reviewed_at": "2026-04-11T19:19:51.217434+00:00",
-      "review_pass": "nsa_final_20260411",
+      "review_status": "reviewed",
+      "reviewed_by": "adpena",
+      "reviewed_at": "2026-04-12T22:01:07.833775+00:00",
+      "review_pass": "",
       "notes": ""
     },
     "tac.renderer::MaskRenderer.__init__": {
@@ -28847,10 +28847,10 @@
       "complexity": 4,
       "last_modified_commit": "0bd1f6d54278",
       "last_modified_date": "2026-04-11T22:03:13-05:00",
-      "review_status": "stale",
-      "reviewed_by": "nsa_final",
-      "reviewed_at": "2026-04-11T19:19:51.217434+00:00",
-      "review_pass": "nsa_final_20260411",
+      "review_status": "reviewed",
+      "reviewed_by": "adpena",
+      "reviewed_at": "2026-04-12T22:01:07.833775+00:00",
+      "review_pass": "",
       "notes": ""
     },
     "tac.renderer::MaskRenderer.forward": {
@@ -28864,10 +28864,10 @@
       "complexity": 4,
       "last_modified_commit": "0bd1f6d54278",
       "last_modified_date": "2026-04-11T22:03:13-05:00",
-      "review_status": "stale",
-      "reviewed_by": "nsa_final",
-      "reviewed_at": "2026-04-11T19:19:51.217434+00:00",
-      "review_pass": "nsa_final_20260411",
+      "review_status": "reviewed",
+      "reviewed_by": "adpena",
+      "reviewed_at": "2026-04-12T22:01:07.833775+00:00",
+      "review_pass": "",
       "notes": ""
     },
     "tac.renderer::MaskRenderer.param_count": {
@@ -28881,10 +28881,10 @@
       "complexity": 2,
       "last_modified_commit": "0bd1f6d54278",
       "last_modified_date": "2026-04-11T22:03:13-05:00",
-      "review_status": "stale",
-      "reviewed_by": "nsa_final",
-      "reviewed_at": "2026-04-11T19:19:51.217434+00:00",
-      "review_pass": "nsa_final_20260411",
+      "review_status": "reviewed",
+      "reviewed_by": "adpena",
+      "reviewed_at": "2026-04-12T22:01:07.833775+00:00",
+      "review_pass": "",
       "notes": ""
     },
     "tac.renderer::MotionPredictor": {
@@ -28898,10 +28898,10 @@
       "complexity": 3,
       "last_modified_commit": "0bd1f6d54278",
       "last_modified_date": "2026-04-11T22:03:13-05:00",
-      "review_status": "stale",
-      "reviewed_by": "nsa_final",
-      "reviewed_at": "2026-04-11T19:19:51.217434+00:00",
-      "review_pass": "nsa_final_20260411",
+      "review_status": "reviewed",
+      "reviewed_by": "adpena",
+      "reviewed_at": "2026-04-12T22:01:07.833775+00:00",
+      "review_pass": "",
       "notes": ""
     },
     "tac.renderer::MotionPredictor.__init__": {
@@ -28915,10 +28915,10 @@
       "complexity": 2,
       "last_modified_commit": "0bd1f6d54278",
       "last_modified_date": "2026-04-11T22:03:13-05:00",
-      "review_status": "stale",
-      "reviewed_by": "nsa_final",
-      "reviewed_at": "2026-04-11T19:19:51.217434+00:00",
-      "review_pass": "nsa_final_20260411",
+      "review_status": "reviewed",
+      "reviewed_by": "adpena",
+      "reviewed_at": "2026-04-12T22:01:07.833775+00:00",
+      "review_pass": "",
       "notes": ""
     },
     "tac.renderer::MotionPredictor.forward": {
@@ -28932,10 +28932,10 @@
       "complexity": 1,
       "last_modified_commit": "0bd1f6d54278",
       "last_modified_date": "2026-04-11T22:03:13-05:00",
-      "review_status": "stale",
-      "reviewed_by": "nsa_final",
-      "reviewed_at": "2026-04-11T19:19:51.217434+00:00",
-      "review_pass": "nsa_final_20260411",
+      "review_status": "reviewed",
+      "reviewed_by": "adpena",
+      "reviewed_at": "2026-04-12T22:01:07.833775+00:00",
+      "review_pass": "",
       "notes": ""
     },
     "tac.renderer::MotionPredictor.param_count": {
@@ -28949,10 +28949,10 @@
       "complexity": 2,
       "last_modified_commit": "0bd1f6d54278",
       "last_modified_date": "2026-04-11T22:03:13-05:00",
-      "review_status": "stale",
-      "reviewed_by": "nsa_final",
-      "reviewed_at": "2026-04-11T19:19:51.217434+00:00",
-      "review_pass": "nsa_final_20260411",
+      "review_status": "reviewed",
+      "reviewed_by": "adpena",
+      "reviewed_at": "2026-04-12T22:01:07.833775+00:00",
+      "review_pass": "",
       "notes": ""
     },
     "tac.renderer::PairGenerator": {
@@ -28966,10 +28966,10 @@
       "complexity": 14,
       "last_modified_commit": "0bd1f6d54278",
       "last_modified_date": "2026-04-11T22:03:13-05:00",
-      "review_status": "stale",
-      "reviewed_by": "nsa_final",
-      "reviewed_at": "2026-04-11T19:19:51.217434+00:00",
-      "review_pass": "nsa_final_20260411",
+      "review_status": "reviewed",
+      "reviewed_by": "adpena",
+      "reviewed_at": "2026-04-12T22:01:07.833775+00:00",
+      "review_pass": "",
       "notes": ""
     },
     "tac.renderer::PairGenerator.__init__": {
@@ -28983,10 +28983,10 @@
       "complexity": 6,
       "last_modified_commit": "0bd1f6d54278",
       "last_modified_date": "2026-04-11T22:03:13-05:00",
-      "review_status": "stale",
-      "reviewed_by": "nsa_final",
-      "reviewed_at": "2026-04-11T19:19:51.217434+00:00",
-      "review_pass": "nsa_final_20260411",
+      "review_status": "reviewed",
+      "reviewed_by": "adpena",
+      "reviewed_at": "2026-04-12T22:01:07.833775+00:00",
+      "review_pass": "",
       "notes": ""
     },
     "tac.renderer::PairGenerator._inject_noise": {
@@ -29000,9 +29000,9 @@
       "complexity": 3,
       "last_modified_commit": "0bd1f6d54278",
       "last_modified_date": "2026-04-11T22:03:13-05:00",
-      "review_status": "unreviewed",
-      "reviewed_by": "",
-      "reviewed_at": "",
+      "review_status": "reviewed",
+      "reviewed_by": "adpena",
+      "reviewed_at": "2026-04-12T22:01:07.833775+00:00",
       "review_pass": "",
       "notes": ""
     },
@@ -29017,10 +29017,10 @@
       "complexity": 6,
       "last_modified_commit": "0bd1f6d54278",
       "last_modified_date": "2026-04-11T22:03:13-05:00",
-      "review_status": "stale",
-      "reviewed_by": "nsa_final",
-      "reviewed_at": "2026-04-11T19:19:51.217434+00:00",
-      "review_pass": "nsa_final_20260411",
+      "review_status": "reviewed",
+      "reviewed_by": "adpena",
+      "reviewed_at": "2026-04-12T22:01:07.833775+00:00",
+      "review_pass": "",
       "notes": ""
     },
     "tac.renderer::PairGenerator.param_count": {
@@ -29034,10 +29034,10 @@
       "complexity": 2,
       "last_modified_commit": "0bd1f6d54278",
       "last_modified_date": "2026-04-11T22:03:13-05:00",
-      "review_status": "stale",
-      "reviewed_by": "nsa_final",
-      "reviewed_at": "2026-04-11T19:19:51.217434+00:00",
-      "review_pass": "nsa_final_20260411",
+      "review_status": "reviewed",
+      "reviewed_by": "adpena",
+      "reviewed_at": "2026-04-12T22:01:07.833775+00:00",
+      "review_pass": "",
       "notes": ""
     },
     "tac.renderer::ResBlock": {
@@ -29051,10 +29051,10 @@
       "complexity": 6,
       "last_modified_commit": "0bd1f6d54278",
       "last_modified_date": "2026-04-11T22:03:13-05:00",
-      "review_status": "stale",
-      "reviewed_by": "nsa_final",
-      "reviewed_at": "2026-04-11T19:19:51.217434+00:00",
-      "review_pass": "nsa_final_20260411",
+      "review_status": "reviewed",
+      "reviewed_by": "adpena",
+      "reviewed_at": "2026-04-12T22:01:07.833775+00:00",
+      "review_pass": "",
       "notes": ""
     },
     "tac.renderer::ResBlock.__init__": {
@@ -29068,10 +29068,10 @@
       "complexity": 2,
       "last_modified_commit": "0bd1f6d54278",
       "last_modified_date": "2026-04-11T22:03:13-05:00",
-      "review_status": "stale",
-      "reviewed_by": "nsa_final",
-      "reviewed_at": "2026-04-11T19:19:51.217434+00:00",
-      "review_pass": "nsa_final_20260411",
+      "review_status": "reviewed",
+      "reviewed_by": "adpena",
+      "reviewed_at": "2026-04-12T22:01:07.833775+00:00",
+      "review_pass": "",
       "notes": ""
     },
     "tac.renderer::ResBlock.forward": {
@@ -29085,10 +29085,10 @@
       "complexity": 5,
       "last_modified_commit": "0bd1f6d54278",
       "last_modified_date": "2026-04-11T22:03:13-05:00",
-      "review_status": "stale",
-      "reviewed_by": "nsa_final",
-      "reviewed_at": "2026-04-11T19:19:51.217434+00:00",
-      "review_pass": "nsa_final_20260411",
+      "review_status": "reviewed",
+      "reviewed_by": "adpena",
+      "reviewed_at": "2026-04-12T22:01:07.833775+00:00",
+      "review_pass": "",
       "notes": ""
     },
     "tac.renderer::_manual_grid_sample": {
@@ -29102,10 +29102,10 @@
       "complexity": 1,
       "last_modified_commit": "0bd1f6d54278",
       "last_modified_date": "2026-04-11T22:03:13-05:00",
-      "review_status": "stale",
-      "reviewed_by": "nsa_final",
-      "reviewed_at": "2026-04-11T19:19:51.217434+00:00",
-      "review_pass": "nsa_final_20260411",
+      "review_status": "reviewed",
+      "reviewed_by": "adpena",
+      "reviewed_at": "2026-04-12T22:01:07.833775+00:00",
+      "review_pass": "",
       "notes": ""
     },
     "tac.renderer::build_renderer": {
@@ -29119,10 +29119,10 @@
       "complexity": 6,
       "last_modified_commit": "0bd1f6d54278",
       "last_modified_date": "2026-04-11T22:03:13-05:00",
-      "review_status": "stale",
-      "reviewed_by": "nsa_final",
-      "reviewed_at": "2026-04-11T19:19:51.217434+00:00",
-      "review_pass": "nsa_final_20260411",
+      "review_status": "reviewed",
+      "reviewed_by": "adpena",
+      "reviewed_at": "2026-04-12T22:01:07.833775+00:00",
+      "review_pass": "",
       "notes": ""
     },
     "tac.renderer::make_coord_grid": {
@@ -29136,10 +29136,10 @@
       "complexity": 3,
       "last_modified_commit": "0bd1f6d54278",
       "last_modified_date": "2026-04-11T22:03:13-05:00",
-      "review_status": "stale",
-      "reviewed_by": "nsa_final",
-      "reviewed_at": "2026-04-11T19:19:51.217434+00:00",
-      "review_pass": "nsa_final_20260411",
+      "review_status": "reviewed",
+      "reviewed_by": "adpena",
+      "reviewed_at": "2026-04-12T22:01:07.833775+00:00",
+      "review_pass": "",
       "notes": ""
     },
     "tac.renderer::warp_with_flow": {
@@ -29153,10 +29153,10 @@
       "complexity": 2,
       "last_modified_commit": "0bd1f6d54278",
       "last_modified_date": "2026-04-11T22:03:13-05:00",
-      "review_status": "stale",
-      "reviewed_by": "nsa_final",
-      "reviewed_at": "2026-04-11T19:19:51.217434+00:00",
-      "review_pass": "nsa_final_20260411",
+      "review_status": "reviewed",
+      "reviewed_by": "adpena",
+      "reviewed_at": "2026-04-12T22:01:07.833775+00:00",
+      "review_pass": "",
       "notes": ""
     },
     "tac.renderer_export::_collect_conv_layers": {
@@ -38503,10 +38503,10 @@
       "complexity": 1,
       "last_modified_commit": "9f4dabc0c604",
       "last_modified_date": "2026-04-12T11:31:17-05:00",
-      "review_status": "stale",
+      "review_status": "reviewed",
       "reviewed_by": "council",
-      "reviewed_at": "2026-04-12T16:33:43.166332+00:00",
-      "review_pass": "tiny_arch_next",
+      "reviewed_at": "2026-04-12T20:00:42.682689+00:00",
+      "review_pass": "tiny_train_export",
       "notes": ""
     },
     "tac.tests.test_tac_cli::TacCliTests.test_lossless_baseline_subcommand_routes_non_lzma_profiles_correctly": {
@@ -38520,10 +38520,10 @@
       "complexity": 1,
       "last_modified_commit": "9f4dabc0c604",
       "last_modified_date": "2026-04-12T11:31:17-05:00",
-      "review_status": "stale",
+      "review_status": "reviewed",
       "reviewed_by": "council",
-      "reviewed_at": "2026-04-12T16:33:43.166332+00:00",
-      "review_pass": "tiny_arch_next",
+      "reviewed_at": "2026-04-12T20:00:42.682689+00:00",
+      "review_pass": "tiny_train_export",
       "notes": ""
     },
     "tac.tests.test_tac_cli::TacCliTests.test_lossless_baseline_subcommand_routes_to_dataset_baseline_builder": {
@@ -38537,10 +38537,10 @@
       "complexity": 1,
       "last_modified_commit": "9f4dabc0c604",
       "last_modified_date": "2026-04-12T11:31:17-05:00",
-      "review_status": "stale",
+      "review_status": "reviewed",
       "reviewed_by": "council",
-      "reviewed_at": "2026-04-12T16:33:43.166332+00:00",
-      "review_pass": "tiny_arch_next",
+      "reviewed_at": "2026-04-12T20:00:42.682689+00:00",
+      "review_pass": "tiny_train_export",
       "notes": ""
     },
     "tac.tests.test_tac_cli::TacCliTests.test_lossless_compress_subcommand_routes_zpaq_profile_to_codec_layer": {
@@ -38554,10 +38554,10 @@
       "complexity": 1,
       "last_modified_commit": "9f4dabc0c604",
       "last_modified_date": "2026-04-12T11:31:17-05:00",
-      "review_status": "stale",
+      "review_status": "reviewed",
       "reviewed_by": "council",
-      "reviewed_at": "2026-04-12T16:33:43.166332+00:00",
-      "review_pass": "tiny_arch_next",
+      "reviewed_at": "2026-04-12T20:00:42.682689+00:00",
+      "review_pass": "tiny_train_export",
       "notes": ""
     },
     "tac.tests.test_tac_cli::TacCliTests.test_lossless_compress_subcommand_runs_real_lzma_roundtrip": {
@@ -38571,10 +38571,10 @@
       "complexity": 1,
       "last_modified_commit": "9f4dabc0c604",
       "last_modified_date": "2026-04-12T11:31:17-05:00",
-      "review_status": "stale",
+      "review_status": "reviewed",
       "reviewed_by": "council",
-      "reviewed_at": "2026-04-12T16:33:43.166332+00:00",
-      "review_pass": "tiny_arch_next",
+      "reviewed_at": "2026-04-12T20:00:42.682689+00:00",
+      "review_pass": "tiny_train_export",
       "notes": ""
     },
     "tac.tests.test_tac_cli::TacCliTests.test_lossless_estimate_subcommand_defaults_split_to_challenge_alias": {
@@ -38588,10 +38588,10 @@
       "complexity": 1,
       "last_modified_commit": "9f4dabc0c604",
       "last_modified_date": "2026-04-12T11:31:17-05:00",
-      "review_status": "stale",
+      "review_status": "reviewed",
       "reviewed_by": "council",
-      "reviewed_at": "2026-04-12T16:33:43.166332+00:00",
-      "review_pass": "tiny_arch_next",
+      "reviewed_at": "2026-04-12T20:00:42.682689+00:00",
+      "review_pass": "tiny_train_export",
       "notes": ""
     },
     "tac.tests.test_tac_cli::TacCliTests.test_lossless_estimate_subcommand_reports_gpt_workload": {
@@ -38605,10 +38605,10 @@
       "complexity": 1,
       "last_modified_commit": "9f4dabc0c604",
       "last_modified_date": "2026-04-12T11:31:17-05:00",
-      "review_status": "stale",
+      "review_status": "reviewed",
       "reviewed_by": "council",
-      "reviewed_at": "2026-04-12T16:33:43.166332+00:00",
-      "review_pass": "tiny_arch_next",
+      "reviewed_at": "2026-04-12T20:00:42.682689+00:00",
+      "review_pass": "tiny_train_export",
       "notes": ""
     },
     "tac.tests.test_tac_cli::TacCliTests.test_lossless_evaluate_subcommand_reports_inverse_archive_ratio": {
@@ -38622,10 +38622,10 @@
       "complexity": 1,
       "last_modified_commit": "9f4dabc0c604",
       "last_modified_date": "2026-04-12T11:31:17-05:00",
-      "review_status": "stale",
+      "review_status": "reviewed",
       "reviewed_by": "council",
-      "reviewed_at": "2026-04-12T16:33:43.166332+00:00",
-      "review_pass": "tiny_arch_next",
+      "reviewed_at": "2026-04-12T20:00:42.682689+00:00",
+      "review_pass": "tiny_train_export",
       "notes": ""
     },
     "tac.tests.test_tac_cli::TacCliTests.test_lossless_frequency_encode_subcommand_writes_coded_stream": {
@@ -38639,10 +38639,10 @@
       "complexity": 1,
       "last_modified_commit": "9f4dabc0c604",
       "last_modified_date": "2026-04-12T11:31:17-05:00",
-      "review_status": "stale",
+      "review_status": "reviewed",
       "reviewed_by": "council",
-      "reviewed_at": "2026-04-12T16:33:43.166332+00:00",
-      "review_pass": "tiny_arch_next",
+      "reviewed_at": "2026-04-12T20:00:42.682689+00:00",
+      "review_pass": "tiny_train_export",
       "notes": ""
     },
     "tac.tests.test_tac_cli::TacCliTests.test_lossless_frequency_subcommand_writes_symbol_report": {
@@ -38656,10 +38656,10 @@
       "complexity": 1,
       "last_modified_commit": "9f4dabc0c604",
       "last_modified_date": "2026-04-12T11:31:17-05:00",
-      "review_status": "stale",
+      "review_status": "reviewed",
       "reviewed_by": "council",
-      "reviewed_at": "2026-04-12T16:33:43.166332+00:00",
-      "review_pass": "tiny_arch_next",
+      "reviewed_at": "2026-04-12T20:00:42.682689+00:00",
+      "review_pass": "tiny_train_export",
       "notes": ""
     },
     "tac.tests.test_tac_cli::TacCliTests.test_lossless_global_prev_symbol_order_sample_subcommand_accepts_hybrid_thresh8_strategy": {
@@ -38673,10 +38673,10 @@
       "complexity": 1,
       "last_modified_commit": "9f4dabc0c604",
       "last_modified_date": "2026-04-12T11:31:17-05:00",
-      "review_status": "stale",
+      "review_status": "reviewed",
       "reviewed_by": "council",
-      "reviewed_at": "2026-04-12T16:33:43.166332+00:00",
-      "review_pass": "tiny_arch_next",
+      "reviewed_at": "2026-04-12T20:00:42.682689+00:00",
+      "review_pass": "tiny_train_export",
       "notes": ""
     },
     "tac.tests.test_tac_cli::TacCliTests.test_lossless_global_prev_symbol_order_sample_subcommand_accepts_label_file": {
@@ -38690,10 +38690,10 @@
       "complexity": 1,
       "last_modified_commit": "9f4dabc0c604",
       "last_modified_date": "2026-04-12T11:31:17-05:00",
-      "review_status": "stale",
+      "review_status": "reviewed",
       "reviewed_by": "council",
-      "reviewed_at": "2026-04-12T16:33:43.166332+00:00",
-      "review_pass": "tiny_arch_next",
+      "reviewed_at": "2026-04-12T20:00:42.682689+00:00",
+      "review_pass": "tiny_train_export",
       "notes": ""
     },
     "tac.tests.test_tac_cli::TacCliTests.test_lossless_global_prev_symbol_order_sample_subcommand_accepts_label_lexicographic_strategy": {
@@ -38707,10 +38707,10 @@
       "complexity": 1,
       "last_modified_commit": "9f4dabc0c604",
       "last_modified_date": "2026-04-12T11:31:17-05:00",
-      "review_status": "stale",
+      "review_status": "reviewed",
       "reviewed_by": "council",
-      "reviewed_at": "2026-04-12T16:33:43.166332+00:00",
-      "review_pass": "tiny_arch_next",
+      "reviewed_at": "2026-04-12T20:00:42.682689+00:00",
+      "review_pass": "tiny_train_export",
       "notes": ""
     },
     "tac.tests.test_tac_cli::TacCliTests.test_lossless_global_prev_symbol_order_sample_subcommand_accepts_order_file": {
@@ -38724,10 +38724,10 @@
       "complexity": 1,
       "last_modified_commit": "9f4dabc0c604",
       "last_modified_date": "2026-04-12T11:31:17-05:00",
-      "review_status": "stale",
+      "review_status": "reviewed",
       "reviewed_by": "council",
-      "reviewed_at": "2026-04-12T16:33:43.166332+00:00",
-      "review_pass": "tiny_arch_next",
+      "reviewed_at": "2026-04-12T20:00:42.682689+00:00",
+      "review_pass": "tiny_train_export",
       "notes": ""
     },
     "tac.tests.test_tac_cli::TacCliTests.test_lossless_global_prev_symbol_order_sample_subcommand_reports_exact_result": {
@@ -38741,10 +38741,10 @@
       "complexity": 1,
       "last_modified_commit": "9f4dabc0c604",
       "last_modified_date": "2026-04-12T11:31:17-05:00",
-      "review_status": "stale",
+      "review_status": "reviewed",
       "reviewed_by": "council",
-      "reviewed_at": "2026-04-12T16:33:43.166332+00:00",
-      "review_pass": "tiny_arch_next",
+      "reviewed_at": "2026-04-12T20:00:42.682689+00:00",
+      "review_pass": "tiny_train_export",
       "notes": ""
     },
     "tac.tests.test_tac_cli::TacCliTests.test_lossless_gpt_arithmetic_global_sample_subcommand_reports_encoded_bytes": {
@@ -38758,10 +38758,10 @@
       "complexity": 1,
       "last_modified_commit": "9f4dabc0c604",
       "last_modified_date": "2026-04-12T11:31:17-05:00",
-      "review_status": "stale",
+      "review_status": "reviewed",
       "reviewed_by": "council",
-      "reviewed_at": "2026-04-12T16:33:43.166332+00:00",
-      "review_pass": "tiny_arch_next",
+      "reviewed_at": "2026-04-12T20:00:42.682689+00:00",
+      "review_pass": "tiny_train_export",
       "notes": ""
     },
     "tac.tests.test_tac_cli::TacCliTests.test_lossless_gpt_arithmetic_sample_subcommand_reports_encoded_bytes": {
@@ -38775,10 +38775,10 @@
       "complexity": 1,
       "last_modified_commit": "9f4dabc0c604",
       "last_modified_date": "2026-04-12T11:31:17-05:00",
-      "review_status": "stale",
+      "review_status": "reviewed",
       "reviewed_by": "council",
-      "reviewed_at": "2026-04-12T16:33:43.166332+00:00",
-      "review_pass": "tiny_arch_next",
+      "reviewed_at": "2026-04-12T20:00:42.682689+00:00",
+      "review_pass": "tiny_train_export",
       "notes": ""
     },
     "tac.tests.test_tac_cli::TacCliTests.test_lossless_gpt_score_probe_subcommand_reports_fastest_backend": {
@@ -38792,10 +38792,10 @@
       "complexity": 1,
       "last_modified_commit": "9f4dabc0c604",
       "last_modified_date": "2026-04-12T11:31:17-05:00",
-      "review_status": "stale",
+      "review_status": "reviewed",
       "reviewed_by": "council",
-      "reviewed_at": "2026-04-12T16:33:43.166332+00:00",
-      "review_pass": "tiny_arch_next",
+      "reviewed_at": "2026-04-12T20:00:42.682689+00:00",
+      "review_pass": "tiny_train_export",
       "notes": ""
     },
     "tac.tests.test_tac_cli::TacCliTests.test_lossless_gpt_score_subcommand_reports_metrics": {
@@ -38809,10 +38809,10 @@
       "complexity": 1,
       "last_modified_commit": "9f4dabc0c604",
       "last_modified_date": "2026-04-12T11:31:17-05:00",
-      "review_status": "stale",
+      "review_status": "reviewed",
       "reviewed_by": "council",
-      "reviewed_at": "2026-04-12T16:33:43.166332+00:00",
-      "review_pass": "tiny_arch_next",
+      "reviewed_at": "2026-04-12T20:00:42.682689+00:00",
+      "review_pass": "tiny_train_export",
       "notes": ""
     },
     "tac.tests.test_tac_cli::TacCliTests.test_lossless_gpt_score_subcommand_supports_context_override": {
@@ -38826,10 +38826,10 @@
       "complexity": 1,
       "last_modified_commit": "9f4dabc0c604",
       "last_modified_date": "2026-04-12T11:31:17-05:00",
-      "review_status": "stale",
+      "review_status": "reviewed",
       "reviewed_by": "council",
-      "reviewed_at": "2026-04-12T16:33:43.166332+00:00",
-      "review_pass": "tiny_arch_next",
+      "reviewed_at": "2026-04-12T20:00:42.682689+00:00",
+      "review_pass": "tiny_train_export",
       "notes": ""
     },
     "tac.tests.test_tac_cli::TacCliTests.test_lossless_hybrid_select_subcommand_parses_inputs_and_metrics": {
@@ -38843,10 +38843,10 @@
       "complexity": 1,
       "last_modified_commit": "9f4dabc0c604",
       "last_modified_date": "2026-04-12T11:31:17-05:00",
-      "review_status": "stale",
+      "review_status": "reviewed",
       "reviewed_by": "council",
-      "reviewed_at": "2026-04-12T16:33:43.166332+00:00",
-      "review_pass": "tiny_arch_next",
+      "reviewed_at": "2026-04-12T20:00:42.682689+00:00",
+      "review_pass": "tiny_train_export",
       "notes": ""
     },
     "tac.tests.test_tac_cli::TacCliTests.test_lossless_hybrid_select_subcommand_ranks_exact_candidate_json": {
@@ -38860,10 +38860,10 @@
       "complexity": 1,
       "last_modified_commit": "9f4dabc0c604",
       "last_modified_date": "2026-04-12T11:31:17-05:00",
-      "review_status": "stale",
+      "review_status": "reviewed",
       "reviewed_by": "council",
-      "reviewed_at": "2026-04-12T16:33:43.166332+00:00",
-      "review_pass": "tiny_arch_next",
+      "reviewed_at": "2026-04-12T20:00:42.682689+00:00",
+      "review_pass": "tiny_train_export",
       "notes": ""
     },
     "tac.tests.test_tac_cli::TacCliTests.test_lossless_next_frame_sample_subcommand_reports_encoded_bytes": {
@@ -38877,10 +38877,10 @@
       "complexity": 1,
       "last_modified_commit": "9f4dabc0c604",
       "last_modified_date": "2026-04-12T11:31:17-05:00",
-      "review_status": "stale",
+      "review_status": "reviewed",
       "reviewed_by": "council",
-      "reviewed_at": "2026-04-12T16:33:43.166332+00:00",
-      "review_pass": "tiny_arch_next",
+      "reviewed_at": "2026-04-12T20:00:42.682689+00:00",
+      "review_pass": "tiny_train_export",
       "notes": ""
     },
     "tac.tests.test_tac_cli::TacCliTests.test_lossless_next_frame_sample_subcommand_supports_context_override_and_verify_decode": {
@@ -38894,10 +38894,10 @@
       "complexity": 1,
       "last_modified_commit": "9f4dabc0c604",
       "last_modified_date": "2026-04-12T11:31:17-05:00",
-      "review_status": "stale",
+      "review_status": "reviewed",
       "reviewed_by": "council",
-      "reviewed_at": "2026-04-12T16:33:43.166332+00:00",
-      "review_pass": "tiny_arch_next",
+      "reviewed_at": "2026-04-12T20:00:42.682689+00:00",
+      "review_pass": "tiny_train_export",
       "notes": ""
     },
     "tac.tests.test_tac_cli::TacCliTests.test_lossless_package_subcommand_builds_submission_zip": {
@@ -38911,10 +38911,10 @@
       "complexity": 1,
       "last_modified_commit": "9f4dabc0c604",
       "last_modified_date": "2026-04-12T11:31:17-05:00",
-      "review_status": "stale",
+      "review_status": "reviewed",
       "reviewed_by": "council",
-      "reviewed_at": "2026-04-12T16:33:43.166332+00:00",
-      "review_pass": "tiny_arch_next",
+      "reviewed_at": "2026-04-12T20:00:42.682689+00:00",
+      "review_pass": "tiny_train_export",
       "notes": ""
     },
     "tac.tests.test_tac_cli::TacCliTests.test_lossless_plan_subcommand_builds_gpt_arithmetic_plan": {
@@ -38928,10 +38928,10 @@
       "complexity": 1,
       "last_modified_commit": "9f4dabc0c604",
       "last_modified_date": "2026-04-12T11:31:17-05:00",
-      "review_status": "stale",
+      "review_status": "reviewed",
       "reviewed_by": "council",
-      "reviewed_at": "2026-04-12T16:33:43.166332+00:00",
-      "review_pass": "tiny_arch_next",
+      "reviewed_at": "2026-04-12T20:00:42.682689+00:00",
+      "review_pass": "tiny_train_export",
       "notes": ""
     },
     "tac.tests.test_tac_cli::TacCliTests.test_lossless_pose_labels_sample_subcommand_reports_label_map": {
@@ -38945,10 +38945,10 @@
       "complexity": 1,
       "last_modified_commit": "9f4dabc0c604",
       "last_modified_date": "2026-04-12T11:31:17-05:00",
-      "review_status": "stale",
+      "review_status": "reviewed",
       "reviewed_by": "council",
-      "reviewed_at": "2026-04-12T16:33:43.166332+00:00",
-      "review_pass": "tiny_arch_next",
+      "reviewed_at": "2026-04-12T20:00:42.682689+00:00",
+      "review_pass": "tiny_train_export",
       "notes": ""
     },
     "tac.tests.test_tac_cli::TacCliTests.test_lossless_prepare_subcommand_materializes_gpt_token_stream": {
@@ -38962,10 +38962,10 @@
       "complexity": 1,
       "last_modified_commit": "9f4dabc0c604",
       "last_modified_date": "2026-04-12T11:31:17-05:00",
-      "review_status": "stale",
+      "review_status": "reviewed",
       "reviewed_by": "council",
-      "reviewed_at": "2026-04-12T16:33:43.166332+00:00",
-      "review_pass": "tiny_arch_next",
+      "reviewed_at": "2026-04-12T20:00:42.682689+00:00",
+      "review_pass": "tiny_train_export",
       "notes": ""
     },
     "tac.tests.test_tac_cli::TacCliTests.test_lossless_prev_pair_benchmark_subcommand_reports_conditional_ratio": {
@@ -38979,10 +38979,10 @@
       "complexity": 1,
       "last_modified_commit": "9f4dabc0c604",
       "last_modified_date": "2026-04-12T11:31:17-05:00",
-      "review_status": "stale",
+      "review_status": "reviewed",
       "reviewed_by": "council",
-      "reviewed_at": "2026-04-12T16:33:43.166332+00:00",
-      "review_pass": "tiny_arch_next",
+      "reviewed_at": "2026-04-12T20:00:42.682689+00:00",
+      "review_pass": "tiny_train_export",
       "notes": ""
     },
     "tac.tests.test_tac_cli::TacCliTests.test_lossless_prev_pair_benchmark_subcommand_supports_max_tokens": {
@@ -38996,10 +38996,10 @@
       "complexity": 1,
       "last_modified_commit": "9f4dabc0c604",
       "last_modified_date": "2026-04-12T11:31:17-05:00",
-      "review_status": "stale",
+      "review_status": "reviewed",
       "reviewed_by": "council",
-      "reviewed_at": "2026-04-12T16:33:43.166332+00:00",
-      "review_pass": "tiny_arch_next",
+      "reviewed_at": "2026-04-12T20:00:42.682689+00:00",
+      "review_pass": "tiny_train_export",
       "notes": ""
     },
     "tac.tests.test_tac_cli::TacCliTests.test_lossless_prev_symbol_benchmark_subcommand_rejects_odd_byte_stream": {
@@ -39013,10 +39013,10 @@
       "complexity": 1,
       "last_modified_commit": "9f4dabc0c604",
       "last_modified_date": "2026-04-12T11:31:17-05:00",
-      "review_status": "stale",
+      "review_status": "reviewed",
       "reviewed_by": "council",
-      "reviewed_at": "2026-04-12T16:33:43.166332+00:00",
-      "review_pass": "tiny_arch_next",
+      "reviewed_at": "2026-04-12T20:00:42.682689+00:00",
+      "review_pass": "tiny_train_export",
       "notes": ""
     },
     "tac.tests.test_tac_cli::TacCliTests.test_lossless_prev_symbol_benchmark_subcommand_reports_conditional_ratio": {
@@ -39030,10 +39030,10 @@
       "complexity": 1,
       "last_modified_commit": "9f4dabc0c604",
       "last_modified_date": "2026-04-12T11:31:17-05:00",
-      "review_status": "stale",
+      "review_status": "reviewed",
       "reviewed_by": "council",
-      "reviewed_at": "2026-04-12T16:33:43.166332+00:00",
-      "review_pass": "tiny_arch_next",
+      "reviewed_at": "2026-04-12T20:00:42.682689+00:00",
+      "review_pass": "tiny_train_export",
       "notes": ""
     },
     "tac.tests.test_tac_cli::TacCliTests.test_lossless_prev_symbol_benchmark_subcommand_supports_max_tokens": {
@@ -39047,10 +39047,10 @@
       "complexity": 1,
       "last_modified_commit": "9f4dabc0c604",
       "last_modified_date": "2026-04-12T11:31:17-05:00",
-      "review_status": "stale",
+      "review_status": "reviewed",
       "reviewed_by": "council",
-      "reviewed_at": "2026-04-12T16:33:43.166332+00:00",
-      "review_pass": "tiny_arch_next",
+      "reviewed_at": "2026-04-12T20:00:42.682689+00:00",
+      "review_pass": "tiny_train_export",
       "notes": ""
     },
     "tac.tests.test_tac_cli::TacCliTests.test_lossless_prev_symbol_decode_subcommand_restores_coded_stream": {
@@ -39064,10 +39064,10 @@
       "complexity": 1,
       "last_modified_commit": "9f4dabc0c604",
       "last_modified_date": "2026-04-12T11:31:17-05:00",
-      "review_status": "stale",
+      "review_status": "reviewed",
       "reviewed_by": "council",
-      "reviewed_at": "2026-04-12T16:33:43.166332+00:00",
-      "review_pass": "tiny_arch_next",
+      "reviewed_at": "2026-04-12T20:00:42.682689+00:00",
+      "review_pass": "tiny_train_export",
       "notes": ""
     },
     "tac.tests.test_tac_cli::TacCliTests.test_lossless_prev_symbol_encode_subcommand_writes_coded_stream": {
@@ -39081,10 +39081,10 @@
       "complexity": 1,
       "last_modified_commit": "9f4dabc0c604",
       "last_modified_date": "2026-04-12T11:31:17-05:00",
-      "review_status": "stale",
+      "review_status": "reviewed",
       "reviewed_by": "council",
-      "reviewed_at": "2026-04-12T16:33:43.166332+00:00",
-      "review_pass": "tiny_arch_next",
+      "reviewed_at": "2026-04-12T20:00:42.682689+00:00",
+      "review_pass": "tiny_train_export",
       "notes": ""
     },
     "tac.tests.test_tac_cli::TacCliTests.test_lossless_promote_updates_separate_lossless_state": {
@@ -39098,10 +39098,10 @@
       "complexity": 1,
       "last_modified_commit": "9f4dabc0c604",
       "last_modified_date": "2026-04-12T11:31:17-05:00",
-      "review_status": "stale",
+      "review_status": "reviewed",
       "reviewed_by": "council",
-      "reviewed_at": "2026-04-12T16:33:43.166332+00:00",
-      "review_pass": "tiny_arch_next",
+      "reviewed_at": "2026-04-12T20:00:42.682689+00:00",
+      "review_pass": "tiny_train_export",
       "notes": ""
     },
     "tac.tests.test_tac_cli::TacCliTests.test_lossless_rgb_labels_sample_subcommand_reports_label_map": {
@@ -39115,10 +39115,10 @@
       "complexity": 1,
       "last_modified_commit": "9f4dabc0c604",
       "last_modified_date": "2026-04-12T11:31:17-05:00",
-      "review_status": "stale",
+      "review_status": "reviewed",
       "reviewed_by": "council",
-      "reviewed_at": "2026-04-12T16:33:43.166332+00:00",
-      "review_pass": "tiny_arch_next",
+      "reviewed_at": "2026-04-12T20:00:42.682689+00:00",
+      "review_pass": "tiny_train_export",
       "notes": ""
     },
     "tac.tests.test_tac_cli::TacCliTests.test_lossless_subcommand_exposes_named_profiles": {
@@ -39132,10 +39132,10 @@
       "complexity": 1,
       "last_modified_commit": "9f4dabc0c604",
       "last_modified_date": "2026-04-12T11:31:17-05:00",
-      "review_status": "stale",
+      "review_status": "reviewed",
       "reviewed_by": "council",
-      "reviewed_at": "2026-04-12T16:33:43.166332+00:00",
-      "review_pass": "tiny_arch_next",
+      "reviewed_at": "2026-04-12T20:00:42.682689+00:00",
+      "review_pass": "tiny_train_export",
       "notes": ""
     },
     "tac.tests.test_tac_cli::TacCliTests.test_lossless_tiny_frame_predictor_summary_subcommand_reports_architecture_budget": {
@@ -39149,10 +39149,10 @@
       "complexity": 1,
       "last_modified_commit": "9f4dabc0c604",
       "last_modified_date": "2026-04-12T11:31:17-05:00",
-      "review_status": "stale",
+      "review_status": "reviewed",
       "reviewed_by": "council",
-      "reviewed_at": "2026-04-12T16:33:43.166332+00:00",
-      "review_pass": "tiny_arch_next",
+      "reviewed_at": "2026-04-12T20:00:42.682689+00:00",
+      "review_pass": "tiny_train_export",
       "notes": ""
     },
     "tac.tests.test_tac_cli::TacCliTests.test_lossless_token_rgb_sample_subcommand_reports_rgb_cache": {
@@ -39166,10 +39166,10 @@
       "complexity": 1,
       "last_modified_commit": "9f4dabc0c604",
       "last_modified_date": "2026-04-12T11:31:17-05:00",
-      "review_status": "stale",
+      "review_status": "reviewed",
       "reviewed_by": "council",
-      "reviewed_at": "2026-04-12T16:33:43.166332+00:00",
-      "review_pass": "tiny_arch_next",
+      "reviewed_at": "2026-04-12T20:00:42.682689+00:00",
+      "review_pass": "tiny_train_export",
       "notes": ""
     },
     "tac.tests.test_tac_cli::TacCliTests.test_lossless_zstd_dict_benchmark_subcommand_reports_ratio": {
@@ -39183,10 +39183,10 @@
       "complexity": 1,
       "last_modified_commit": "9f4dabc0c604",
       "last_modified_date": "2026-04-12T11:31:17-05:00",
-      "review_status": "stale",
+      "review_status": "reviewed",
       "reviewed_by": "council",
-      "reviewed_at": "2026-04-12T16:33:43.166332+00:00",
-      "review_pass": "tiny_arch_next",
+      "reviewed_at": "2026-04-12T20:00:42.682689+00:00",
+      "review_pass": "tiny_train_export",
       "notes": ""
     },
     "tac.tests.test_tac_cli::TacCliTests.test_lossless_zstd_dict_chunk_benchmark_subcommand_reports_ratio": {
@@ -39200,10 +39200,10 @@
       "complexity": 1,
       "last_modified_commit": "9f4dabc0c604",
       "last_modified_date": "2026-04-12T11:31:17-05:00",
-      "review_status": "stale",
+      "review_status": "reviewed",
       "reviewed_by": "council",
-      "reviewed_at": "2026-04-12T16:33:43.166332+00:00",
-      "review_pass": "tiny_arch_next",
+      "reviewed_at": "2026-04-12T20:00:42.682689+00:00",
+      "review_pass": "tiny_train_export",
       "notes": ""
     },
     "tac.tests.test_tac_cli::TacCliTests.test_lossless_zstd_dict_dir_benchmark_subcommand_reports_ratio": {
@@ -39217,10 +39217,10 @@
       "complexity": 1,
       "last_modified_commit": "9f4dabc0c604",
       "last_modified_date": "2026-04-12T11:31:17-05:00",
-      "review_status": "stale",
+      "review_status": "reviewed",
       "reviewed_by": "council",
-      "reviewed_at": "2026-04-12T16:33:43.166332+00:00",
-      "review_pass": "tiny_arch_next",
+      "reviewed_at": "2026-04-12T20:00:42.682689+00:00",
+      "review_pass": "tiny_train_export",
       "notes": ""
     },
     "tac.tests.test_tac_cli::TacCliTests.test_lossy_subcommand_parses_training_surface": {
@@ -39234,10 +39234,10 @@
       "complexity": 1,
       "last_modified_commit": "9f4dabc0c604",
       "last_modified_date": "2026-04-12T11:31:17-05:00",
-      "review_status": "stale",
+      "review_status": "reviewed",
       "reviewed_by": "council",
-      "reviewed_at": "2026-04-12T16:33:43.166332+00:00",
-      "review_pass": "tiny_arch_next",
+      "reviewed_at": "2026-04-12T20:00:42.682689+00:00",
+      "review_pass": "tiny_train_export",
       "notes": ""
     },
     "tac.tests.test_tac_cli::TacCliTests.test_module_invocation_executes_main": {
@@ -39251,10 +39251,10 @@
       "complexity": 1,
       "last_modified_commit": "9f4dabc0c604",
       "last_modified_date": "2026-04-12T11:31:17-05:00",
-      "review_status": "stale",
+      "review_status": "reviewed",
       "reviewed_by": "council",
-      "reviewed_at": "2026-04-12T16:33:43.166332+00:00",
-      "review_pass": "tiny_arch_next",
+      "reviewed_at": "2026-04-12T20:00:42.682689+00:00",
+      "review_pass": "tiny_train_export",
       "notes": ""
     },
     "tac.tests.test_tac_cli::TacCliTests.test_parser_exposes_lossy_and_lossless_subcommands": {
@@ -39268,10 +39268,10 @@
       "complexity": 1,
       "last_modified_commit": "9f4dabc0c604",
       "last_modified_date": "2026-04-12T11:31:17-05:00",
-      "review_status": "stale",
+      "review_status": "reviewed",
       "reviewed_by": "council",
-      "reviewed_at": "2026-04-12T16:33:43.166332+00:00",
-      "review_pass": "tiny_arch_next",
+      "reviewed_at": "2026-04-12T20:00:42.682689+00:00",
+      "review_pass": "tiny_train_export",
       "notes": ""
     },
     "tac.tests.test_tac_cli::load_module": {
@@ -39285,10 +39285,10 @@
       "complexity": 1,
       "last_modified_commit": "9f4dabc0c604",
       "last_modified_date": "2026-04-12T11:31:17-05:00",
-      "review_status": "stale",
+      "review_status": "reviewed",
       "reviewed_by": "council",
-      "reviewed_at": "2026-04-12T16:33:43.166332+00:00",
-      "review_pass": "tiny_arch_next",
+      "reviewed_at": "2026-04-12T20:00:42.682689+00:00",
+      "review_pass": "tiny_train_export",
       "notes": ""
     },
     "tac.tests.test_tac_entrypoints::TacEntrypointsTests": {
@@ -42872,10 +42872,10 @@
       "complexity": 1,
       "last_modified_commit": "",
       "last_modified_date": "",
-      "review_status": "unreviewed",
-      "reviewed_by": "",
-      "reviewed_at": "",
-      "review_pass": "",
+      "review_status": "reviewed",
+      "reviewed_by": "council",
+      "reviewed_at": "2026-04-12T20:00:41.651282+00:00",
+      "review_pass": "tiny_train_export",
       "notes": ""
     },
     "tac.tests.test_tac_lossless_tiny_frame_train::TacLosslessTinyFrameTrainTests.test_iter_local_commavq_tiny_frame_batches_pads_context_frames": {
@@ -42889,10 +42889,10 @@
       "complexity": 1,
       "last_modified_commit": "",
       "last_modified_date": "",
-      "review_status": "unreviewed",
-      "reviewed_by": "",
-      "reviewed_at": "",
-      "review_pass": "",
+      "review_status": "reviewed",
+      "reviewed_by": "council",
+      "reviewed_at": "2026-04-12T20:00:41.651282+00:00",
+      "review_pass": "tiny_train_export",
       "notes": ""
     },
     "tac.tests.test_tac_lossless_tiny_frame_train::TacLosslessTinyFrameTrainTests.test_iter_local_commavq_tiny_frame_batches_resolves_cached_data_files": {
@@ -42906,10 +42906,10 @@
       "complexity": 1,
       "last_modified_commit": "",
       "last_modified_date": "",
-      "review_status": "unreviewed",
-      "reviewed_by": "",
-      "reviewed_at": "",
-      "review_pass": "",
+      "review_status": "reviewed",
+      "reviewed_by": "council",
+      "reviewed_at": "2026-04-12T20:00:41.651282+00:00",
+      "review_pass": "tiny_train_export",
       "notes": ""
     },
     "tac.tests.test_tac_lossless_tiny_frame_train::TacLosslessTinyFrameTrainTests.test_run_tiny_frame_supervised_step_reports_train_and_eval_summaries": {
@@ -42923,10 +42923,10 @@
       "complexity": 1,
       "last_modified_commit": "",
       "last_modified_date": "",
-      "review_status": "unreviewed",
-      "reviewed_by": "",
-      "reviewed_at": "",
-      "review_pass": "",
+      "review_status": "reviewed",
+      "reviewed_by": "council",
+      "reviewed_at": "2026-04-12T20:00:41.651282+00:00",
+      "review_pass": "tiny_train_export",
       "notes": ""
     },
     "tac.tests.test_tac_lossless_tiny_frame_train::_frame": {
@@ -42940,10 +42940,10 @@
       "complexity": 1,
       "last_modified_commit": "",
       "last_modified_date": "",
-      "review_status": "unreviewed",
-      "reviewed_by": "",
-      "reviewed_at": "",
-      "review_pass": "",
+      "review_status": "reviewed",
+      "reviewed_by": "council",
+      "reviewed_at": "2026-04-12T20:00:41.651282+00:00",
+      "review_pass": "tiny_train_export",
       "notes": ""
     },
     "tac.tests.test_tac_lossless_tiny_frame_train::_write_record": {
@@ -42957,10 +42957,10 @@
       "complexity": 1,
       "last_modified_commit": "",
       "last_modified_date": "",
-      "review_status": "unreviewed",
-      "reviewed_by": "",
-      "reviewed_at": "",
-      "review_pass": "",
+      "review_status": "reviewed",
+      "reviewed_by": "council",
+      "reviewed_at": "2026-04-12T20:00:41.651282+00:00",
+      "review_pass": "tiny_train_export",
       "notes": ""
     },
     "tac.tests.test_tac_lossless_token_rgb_bridge::TacLosslessTokenRgbBridgeTests": {

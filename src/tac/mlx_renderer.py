@@ -390,7 +390,7 @@ class MotionPredictor(nn.Module):
         in_ch = embed_dim * 2
 
         self.conv1 = nn.Conv2d(in_ch, hidden, 3, padding=1, bias=True)
-        self.res = ResBlock(hidden, num_classes=5)  # match PyTorch (CLADE, unused at inference)
+        self.res = ResBlock(hidden, num_classes=0)  # plain GroupNorm — no mask passed
         self.conv2 = nn.Conv2d(hidden, hidden, 3, padding=1, bias=True)
         self.conv3 = nn.Conv2d(hidden, 2, 3, padding=1, bias=True)
         # Zero-init flow output
