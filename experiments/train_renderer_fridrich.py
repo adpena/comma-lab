@@ -1123,6 +1123,7 @@ def train_fridrich_renderer(cfg: FridrichRendererConfig) -> dict[str, Any]:
                 "seg_dist": seg_dist.item(),
                 "seg_hard": seg_hard,  # hard argmax disagreement (eval metric)
                 "pose_dist": pose_dist.item(),
+                "pair_mode": cfg.pair_mode,
                 "tv": tv.item(),
                 "flow_reg": flow_reg.item(),
                 "lambda_seg": lambda_seg,
