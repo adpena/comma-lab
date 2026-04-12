@@ -108,20 +108,19 @@ def _extract_rgb_semantic_label_from_loaded_bridge(
     max_keyframes: int,
     device: str,
 ) -> tuple[int, ...]:
+    token_arr = np.asarray(tokens)
+    sampled_tokens = token_arr[_select_keyframe_indices(token_arr.shape[0], max_keyframes=max_keyframes)]
     frames = decode_commavq_tokens_to_rgb_frames(
-        tokens,
+        sampled_tokens,
         decoder=decoder,
         transpose_and_clip_fn=transpose_and_clip_fn,
         batch_size=batch_size,
         device=device,
     )
-    return rgb_semantic_label_tuple(frames, max_keyframes=max_keyframes)
+    return _rgb_semantic_label_tuple_from_sampled_frames(_coerce_rgb_frames(frames))
 
 
-def rgb_semantic_label_tuple(frames, *, max_keyframes: int = 6) -> tuple[int, ...]:
-    arr = _coerce_rgb_frames(frames)
-    sampled = arr[_select_keyframe_indices(arr.shape[0], max_keyframes=max_keyframes)]
-
+def _rgb_semantic_label_tuple_from_sampled_frames(sampled: np.ndarray) -> tuple[int, ...]:
     luma = _luma(sampled)
     chroma_span = sampled.max(axis=-1) - sampled.min(axis=-1)
     frame_luma_means = luma.mean(axis=(1, 2), dtype=np.float64)
@@ -164,6 +163,12 @@ def rgb_semantic_label_tuple(frames, *, max_keyframes: int = 6) -> tuple[int, ..
         _bucket(_mean_abs_gradient(luma), thresholds=(4.0, 12.0, 24.0)),
         _bucket(temporal_delta, thresholds=(2.0, 8.0, 20.0)),
     )
+
+
+def rgb_semantic_label_tuple(frames, *, max_keyframes: int = 6) -> tuple[int, ...]:
+    arr = _coerce_rgb_frames(frames)
+    sampled = arr[_select_keyframe_indices(arr.shape[0], max_keyframes=max_keyframes)]
+    return _rgb_semantic_label_tuple_from_sampled_frames(sampled)
 
 
 def extract_rgb_semantic_label_from_tokens(

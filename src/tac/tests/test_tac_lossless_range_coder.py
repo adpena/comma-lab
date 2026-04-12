@@ -20,6 +20,33 @@ class TacLosslessRangeCoderTests(unittest.TestCase):
         self.assertEqual(sum(freqs), 1024)
         self.assertTrue(all(item > 0 for item in freqs))
 
+    def test_normalize_probability_rows_matches_scalar_normalization(self) -> None:
+        from tac.lossless.range_coder import normalize_probabilities, normalize_probability_rows
+
+        rows = [
+            [0.7, 0.2, 0.1],
+            [0.05, 0.9, 0.05],
+            [3.0, 1.0, 2.0],
+        ]
+
+        expected = [normalize_probabilities(row, total=1024) for row in rows]
+        actual = normalize_probability_rows(rows, total=1024)
+
+        self.assertEqual(actual.tolist(), expected)
+
+    def test_cumulative_frequency_rows_matches_scalar_cumulative_tables(self) -> None:
+        from tac.lossless.range_coder import cumulative_frequencies, cumulative_frequency_rows
+
+        frequencies = [
+            [700, 200, 124],
+            [60, 900, 64],
+        ]
+
+        expected = [cumulative_frequencies(row)[0] for row in frequencies]
+        actual = cumulative_frequency_rows(frequencies)
+
+        self.assertEqual(actual.tolist(), expected)
+
     def test_range_coder_roundtrips_static_sequence(self) -> None:
         from tac.lossless.range_coder import decode_static_symbols, encode_static_symbols
 

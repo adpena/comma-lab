@@ -8,7 +8,14 @@ import time
 import numpy as np
 
 from .gpt_score import gpt_model_runtime_metadata, load_official_commavq_gpt_model
-from .range_coder import RangeDecoder, RangeEncoder, cumulative_frequencies, normalize_probabilities
+from .range_coder import (
+    RangeDecoder,
+    RangeEncoder,
+    cumulative_frequencies,
+    cumulative_frequency_rows,
+    normalize_probabilities,
+    normalize_probability_rows,
+)
 
 STREAM_MAGIC = b"GTA1"
 
@@ -30,6 +37,20 @@ def _frequencies_from_logits(logits, *, vocab_size: int, total: int) -> list[int
     shifted = clipped - np.max(clipped)
     probs = np.exp(shifted)
     return normalize_probabilities(probs.tolist(), total=total)
+
+
+def _frequency_rows_from_logits_rows(logits_rows, *, vocab_size: int, total: int) -> np.ndarray:
+    rows = np.asarray(logits_rows, dtype=np.float64)
+    if rows.ndim == 1:
+        rows = rows.reshape(1, -1)
+    if rows.ndim != 2:
+        raise ValueError("logits_rows must be a 1D or 2D array")
+    if rows.shape[1] < vocab_size:
+        raise ValueError("logits_rows must contain at least vocab_size logits per row")
+    clipped = rows[:, :vocab_size]
+    shifted = clipped - np.max(clipped, axis=1, keepdims=True)
+    probs = np.exp(shifted)
+    return np.asarray(normalize_probability_rows(probs, total=total), dtype=np.int64)
 
 
 def _read_bounded_uint16_token_prefix(
@@ -63,16 +84,16 @@ def _encode_tokens_from_logits_rows(
     rows = np.asarray(logits_rows, dtype=np.float64)
     if rows.shape[0] < arr.size - 1:
         raise ValueError("logits_rows must contain one row per predicted token")
+    targets = arr[1:].astype(np.int64, copy=False)
+    if np.any(targets >= vocab_size):
+        raise ValueError("token is outside vocab_size")
+    frequency_rows = _frequency_rows_from_logits_rows(rows, vocab_size=vocab_size, total=total_frequency)
+    cumulative_rows = np.asarray(cumulative_frequency_rows(frequency_rows), dtype=np.int64)
     encoder = RangeEncoder()
-    total_nll_nats = 0.0
-    for index in range(1, arr.size):
-        target = int(arr[index])
-        if target >= vocab_size:
-            raise ValueError("token is outside vocab_size")
-        frequencies = _frequencies_from_logits(rows[index - 1], vocab_size=vocab_size, total=total_frequency)
-        cumulative, total = cumulative_frequencies(frequencies)
-        encoder.encode(symbol=target, cumulative=cumulative, total=total)
-        total_nll_nats += -math.log(frequencies[target] / total_frequency)
+    target_frequencies = frequency_rows[np.arange(targets.size), targets]
+    total_nll_nats = float(np.sum(np.log(total_frequency / target_frequencies.astype(np.float64))))
+    for index, target in enumerate(targets.tolist()):
+        encoder.encode(symbol=target, cumulative=cumulative_rows[index], total=total_frequency)
     encoded_bytes = encoder.finish()
     scored_tokens = int(arr.size - 1)
     return {

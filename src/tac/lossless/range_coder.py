@@ -2,6 +2,8 @@ from __future__ import annotations
 
 from bisect import bisect_right
 
+import numpy as np
+
 
 STATE_BITS = 32
 FULL_RANGE = 1 << STATE_BITS
@@ -40,6 +42,68 @@ def normalize_probabilities(probabilities, *, total: int = 1 << 15) -> list[int]
     if sum(scaled) != total or any(item <= 0 for item in scaled):
         raise ValueError("failed to normalize probabilities into a positive frequency table")
     return scaled
+
+
+def normalize_probability_rows(probabilities, *, total: int = 1 << 15):
+    values = np.asarray(probabilities, dtype=np.float64)
+    squeeze = False
+    if values.ndim == 1:
+        values = values.reshape(1, -1)
+        squeeze = True
+    if values.ndim != 2:
+        raise ValueError("probabilities must be a 1D or 2D array")
+    if total <= 0:
+        raise ValueError("total must be positive")
+    if values.shape[1] == 0:
+        raise ValueError("probabilities must be non-empty")
+    if np.any(values < 0.0):
+        raise ValueError("probabilities must be non-negative")
+
+    total_prob = values.sum(axis=1)
+    if np.any(total_prob <= 0.0):
+        raise ValueError("probabilities must sum to a positive value")
+
+    scaled = np.rint(values / total_prob[:, None] * total).astype(np.int64)
+    scaled = np.maximum(scaled, 1)
+    deltas = total - scaled.sum(axis=1)
+    for row_index, delta in enumerate(deltas.tolist()):
+        if delta > 0:
+            order = np.argsort(-values[row_index], kind="stable")
+            scaled[row_index, order[:delta]] += 1
+        elif delta < 0:
+            order = np.argsort(values[row_index], kind="stable")
+            remaining = -delta
+            for column_index in order.tolist():
+                reducible = int(scaled[row_index, column_index] - 1)
+                if reducible <= 0:
+                    continue
+                take = min(reducible, remaining)
+                scaled[row_index, column_index] -= take
+                remaining -= take
+                if remaining == 0:
+                    break
+        if int(scaled[row_index].sum()) != total or np.any(scaled[row_index] <= 0):
+            raise ValueError("failed to normalize probabilities into a positive frequency table")
+    return scaled[0] if squeeze else scaled
+
+
+def cumulative_frequency_rows(frequencies):
+    values = np.asarray(frequencies, dtype=np.int64)
+    squeeze = False
+    if values.ndim == 1:
+        values = values.reshape(1, -1)
+        squeeze = True
+    if values.ndim != 2:
+        raise ValueError("frequencies must be a 1D or 2D array")
+    if values.shape[1] == 0:
+        raise ValueError("frequencies must be non-empty")
+    if np.any(values <= 0):
+        raise ValueError("frequencies must be positive")
+    cumulative = np.concatenate(
+        [np.zeros((values.shape[0], 1), dtype=np.int64), np.cumsum(values, axis=1, dtype=np.int64)],
+        axis=1,
+    )
+    return cumulative[0] if squeeze else cumulative
 
 
 class _BitWriter:

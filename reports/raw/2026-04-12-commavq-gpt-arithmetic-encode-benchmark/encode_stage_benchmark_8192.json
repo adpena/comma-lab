@@ -1,0 +1,13 @@
+{
+  "command": "lossless_gpt_arithmetic_encode_stage_benchmark",
+  "token_count": 8193,
+  "scored_tokens": 8192,
+  "vocab_size": 1025,
+  "scalar_seconds": 7.459877790999599,
+  "batched_seconds": 1.3695815419778228,
+  "speedup": 5.4468299713113355,
+  "scalar_encoded_bytes": 10999,
+  "batched_encoded_bytes": 10999,
+  "encoded_bytes_match": true,
+  "bits_per_token": 10.74073748354304
+}

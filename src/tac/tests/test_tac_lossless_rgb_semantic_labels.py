@@ -95,6 +95,47 @@ class TacLosslessRgbSemanticLabelsTests(unittest.TestCase):
         self.assertEqual(bridge_calls[0]["device"], "cpu")
         self.assertEqual(bridge_calls[0]["dtype"], "auto")
 
+    def test_extract_rgb_semantic_label_from_tokens_decodes_only_sampled_keyframes(self) -> None:
+        from tac.lossless.rgb_semantic_labels import (
+            extract_rgb_semantic_label_from_tokens,
+            rgb_semantic_label_tuple,
+        )
+
+        frames = _outdoor_frames(frame_count=9)
+        expected = rgb_semantic_label_tuple(frames, max_keyframes=3)
+        seen_batches: list[tuple[int, ...]] = []
+        seen_token_rows: list[list[int]] = []
+
+        class FakeDecoder:
+            _tac_input_kind = "numpy"
+
+            def __call__(self, batch):
+                arr = np.asarray(batch)
+                seen_batches.append(arr.shape)
+                seen_token_rows.extend(arr[:, 0, :].tolist())
+                selected_frames = frames[arr[:, 0, 0].astype(np.int64)]
+                return np.transpose(selected_frames.astype(np.float32), (0, 3, 1, 2))
+
+        def fake_bridge_loader(**_kwargs):
+            return (
+                FakeDecoder(),
+                lambda arr: np.transpose(np.asarray(arr), (0, 2, 3, 1)).astype(np.uint8),
+                {"bridge_backend": "fake"},
+            )
+
+        tokens = np.repeat(np.arange(9, dtype=np.int16)[:, np.newaxis, np.newaxis], 8 * 16, axis=1).reshape(9, 8, 16)
+        label = extract_rgb_semantic_label_from_tokens(
+            tokens,
+            bridge_loader=fake_bridge_loader,
+            batch_size=8,
+            max_keyframes=3,
+            device="cpu",
+        )
+
+        self.assertEqual(label, expected)
+        self.assertEqual(seen_batches, [(3, 8, 16)])
+        self.assertEqual([row[0] for row in seen_token_rows], [0, 4, 8])
+
     def test_build_rgb_label_map_sample_reuses_bridge_across_records(self) -> None:
         from tac.lossless.rgb_semantic_labels import build_rgb_label_map_sample
 
