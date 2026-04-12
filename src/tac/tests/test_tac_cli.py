@@ -618,6 +618,63 @@ class TacCliTests(unittest.TestCase):
         self.assertEqual(result["command"], "lossless_pose_labels_sample")
         self.assertEqual(result["record_count"], 128)
 
+    def test_lossless_rgb_labels_sample_subcommand_reports_label_map(self) -> None:
+        mod = load_module()
+        with tempfile.TemporaryDirectory() as tmpdir:
+            root = Path(tmpdir)
+            output_path = root / "rgb_labels.json"
+            commavq_root = root / "commavq"
+            with mock.patch.object(
+                mod,
+                "build_rgb_label_map_sample",
+                return_value={
+                    "command": "lossless_rgb_labels_sample",
+                    "output_path": str(output_path),
+                    "record_count": 64,
+                    "split": ["0", "1"],
+                    "max_keyframes": 6,
+                    "local_only": True,
+                },
+            ) as mocked:
+                result = mod.main(
+                    [
+                        "lossless",
+                        "rgb-labels-sample",
+                        "--output",
+                        str(output_path),
+                        "--max-records",
+                        "64",
+                        "--split",
+                        "0",
+                        "1",
+                        "--max-keyframes",
+                        "6",
+                        "--batch-size",
+                        "8",
+                        "--device",
+                        "mps",
+                        "--dtype",
+                        "float16",
+                        "--commavq-root",
+                        str(commavq_root),
+                    ]
+                )
+
+        mocked.assert_called_once_with(
+            output_path=output_path,
+            split=["0", "1"],
+            max_records=64,
+            bridge_loader=mod.load_official_commavq_bridge,
+            batch_size=8,
+            max_keyframes=6,
+            device="mps",
+            dtype="float16",
+            commavq_root=commavq_root,
+            decoder_url=mod.OFFICIAL_DECODER_URL,
+        )
+        self.assertEqual(result["command"], "lossless_rgb_labels_sample")
+        self.assertEqual(result["record_count"], 64)
+
     def test_lossless_next_frame_sample_subcommand_reports_encoded_bytes(self) -> None:
         mod = load_module()
         with tempfile.TemporaryDirectory() as tmpdir:
@@ -946,6 +1003,53 @@ class TacCliTests(unittest.TestCase):
             split=None,
             max_records=64,
             strategy="label_lexicographic_clip_rank",
+            frame_order="canonical",
+            labels_path=labels_path,
+            order_path=None,
+        )
+        self.assertEqual(result["command"], "lossless_global_prev_symbol_order_sample")
+        self.assertTrue(result["exact_match"])
+
+    def test_lossless_global_prev_symbol_order_sample_subcommand_accepts_hybrid_thresh8_strategy(self) -> None:
+        mod = load_module()
+        with tempfile.TemporaryDirectory() as tmpdir:
+            root = Path(tmpdir)
+            output_path = root / "order.json"
+            labels_path = root / "labels.json"
+            with mock.patch.object(
+                mod,
+                "benchmark_global_prev_symbol_record_order_sample",
+                return_value={
+                    "command": "lossless_global_prev_symbol_order_sample",
+                    "strategy": "hybrid_thresh8_parent046_label_greedy",
+                    "max_records": 64,
+                    "output_path": str(output_path),
+                    "archive_bytes": 123,
+                    "original_bytes": 456,
+                    "compression_ratio": 3.707317073170732,
+                    "exact_match": True,
+                },
+            ) as mocked:
+                result = mod.main(
+                    [
+                        "lossless",
+                        "global-prev-symbol-order-sample",
+                        "--output",
+                        str(output_path),
+                        "--max-records",
+                        "64",
+                        "--strategy",
+                        "hybrid_thresh8_parent046_label_greedy",
+                        "--labels",
+                        str(labels_path),
+                    ]
+                )
+
+        mocked.assert_called_once_with(
+            output_path=output_path,
+            split=None,
+            max_records=64,
+            strategy="hybrid_thresh8_parent046_label_greedy",
             frame_order="canonical",
             labels_path=labels_path,
             order_path=None,

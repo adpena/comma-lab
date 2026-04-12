@@ -106,6 +106,34 @@ def _exact_clip_rank_key(record: TokenRecord) -> tuple[int, ...]:
     return tuple(int(value) for value in summary.tolist())
 
 
+def _label_slot_key(label: tuple[object, ...], *, slots: tuple[int, ...]) -> tuple[object, ...]:
+    return tuple(label[index] if index < len(label) else None for index in slots)
+
+
+def _greedy_bucket_order(groups: dict[tuple[object, ...], list[TokenRecord]]) -> list[tuple[object, ...]]:
+    bucket_keys = list(groups)
+    if len(bucket_keys) <= 1:
+        return bucket_keys
+    features = np.stack(
+        [
+            np.stack([_clip_signature(record) for record in groups[bucket_key]], axis=0).mean(axis=0)
+            for bucket_key in bucket_keys
+        ],
+        axis=0,
+    )
+    distances = np.abs(features[:, None, :] - features[None, :, :]).sum(axis=2)
+    current = int(np.argmin(distances.sum(axis=1)))
+    remaining = set(range(len(bucket_keys)))
+    order: list[int] = []
+    while remaining:
+        order.append(current)
+        remaining.remove(current)
+        if not remaining:
+            break
+        current = min(remaining, key=lambda idx: (float(distances[current, idx]), repr(bucket_keys[idx])))
+    return [bucket_keys[idx] for idx in order]
+
+
 def order_token_records(
     records: list[TokenRecord],
     *,
@@ -153,6 +181,33 @@ def order_token_records(
             features = np.stack([_clip_signature(record) for record in group], axis=0)
             order = _greedy_nn_order(features, group)
             ordered.extend(group[idx] for idx in order)
+        return ordered
+    if strategy == "hybrid_thresh8_parent046_label_greedy":
+        if label_map is None:
+            raise ValueError("label_map is required for hybrid_thresh8_parent046_label_greedy")
+        labels_by_name = {
+            record.file_name: _normalize_label(label_map.get(record.file_name, ("unlabeled",)))
+            for record in items
+        }
+        full_label_counts: dict[tuple[object, ...], int] = {}
+        for label in labels_by_name.values():
+            full_label_counts[label] = full_label_counts.get(label, 0) + 1
+        groups: dict[tuple[object, ...], list[TokenRecord]] = {}
+        for record in items:
+            label = labels_by_name[record.file_name]
+            if full_label_counts[label] > 8:
+                bucket_key = ("full",) + label
+            else:
+                bucket_key = ("parent",) + _label_slot_key(label, slots=(0, 4, 6))
+            groups.setdefault(bucket_key, []).append(record)
+        ordered: list[TokenRecord] = []
+        for bucket_key in _greedy_bucket_order(groups):
+            ordered.extend(
+                sorted(
+                    groups[bucket_key],
+                    key=lambda record: (_exact_clip_rank_key(record), record.file_name),
+                )
+            )
         return ordered
     if strategy == "label_lexicographic_clip_rank":
         if label_map is None:

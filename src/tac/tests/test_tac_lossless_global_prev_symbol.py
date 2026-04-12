@@ -251,6 +251,92 @@ class TacLosslessGlobalPrevSymbolTests(unittest.TestCase):
             ["clip_a", "clip_b", "clip_c", "clip_d"],
         )
 
+    def test_order_token_records_hybrid_thresh8_parent046_label_greedy_uses_dense_labels_parent_fallback_and_greedy_bucket_order(
+        self,
+    ) -> None:
+        from tac.lossless.data import TokenRecord
+        from tac.lossless.global_prev_symbol import order_token_records
+
+        def make_record(file_name: str, value: int) -> TokenRecord:
+            return TokenRecord(file_name, np.full((2, 8, 16), value, dtype=np.int16))
+
+        dense_names = [f"dense_{index}" for index in range(9)]
+        dense_values = {name: 40 + index for index, name in enumerate(dense_names)}
+        same_parent_values = {
+            "same_parent_0": 50,
+            "same_parent_1": 51,
+        }
+        other_parent_values = {
+            "other_parent_0": 0,
+            "other_parent_1": 1,
+            "other_parent_2": 2,
+            "other_parent_3": 3,
+        }
+
+        records = [
+            make_record("same_parent_1", same_parent_values["same_parent_1"]),
+            make_record("dense_4", dense_values["dense_4"]),
+            make_record("other_parent_2", other_parent_values["other_parent_2"]),
+            make_record("dense_0", dense_values["dense_0"]),
+            make_record("same_parent_0", same_parent_values["same_parent_0"]),
+            make_record("dense_8", dense_values["dense_8"]),
+            make_record("other_parent_0", other_parent_values["other_parent_0"]),
+            make_record("dense_3", dense_values["dense_3"]),
+            make_record("dense_6", dense_values["dense_6"]),
+            make_record("other_parent_3", other_parent_values["other_parent_3"]),
+            make_record("dense_2", dense_values["dense_2"]),
+            make_record("other_parent_1", other_parent_values["other_parent_1"]),
+            make_record("dense_5", dense_values["dense_5"]),
+            make_record("dense_1", dense_values["dense_1"]),
+            make_record("dense_7", dense_values["dense_7"]),
+        ]
+
+        label_map = {
+            **{name: [1, 0, 0, 0, 1, 0, 1, 0] for name in dense_names},
+            "same_parent_0": [1, 2, 0, 0, 1, 0, 1, 0],
+            "same_parent_1": [1, 3, 0, 0, 1, 1, 1, 0],
+            "other_parent_0": [0, 0, 0, 0, 0, 0, 0, 0],
+            "other_parent_1": [0, 0, 0, 1, 0, 0, 0, 0],
+            "other_parent_2": [0, 1, 0, 0, 0, 1, 0, 0],
+            "other_parent_3": [0, 1, 0, 1, 0, 1, 0, 0],
+        }
+
+        ordered = order_token_records(
+            records,
+            strategy="hybrid_thresh8_parent046_label_greedy",
+            label_map=label_map,
+        )
+
+        self.assertEqual(
+            [record.file_name for record in ordered],
+            [
+                "dense_0",
+                "dense_1",
+                "dense_2",
+                "dense_3",
+                "dense_4",
+                "dense_5",
+                "dense_6",
+                "dense_7",
+                "dense_8",
+                "same_parent_0",
+                "same_parent_1",
+                "other_parent_0",
+                "other_parent_1",
+                "other_parent_2",
+                "other_parent_3",
+            ],
+        )
+
+    def test_order_token_records_hybrid_thresh8_parent046_label_greedy_requires_label_map(self) -> None:
+        from tac.lossless.data import TokenRecord
+        from tac.lossless.global_prev_symbol import order_token_records
+
+        records = [TokenRecord("clip", np.arange(128, dtype=np.int16).reshape(1, 8, 16))]
+
+        with self.assertRaisesRegex(ValueError, "label_map"):
+            order_token_records(records, strategy="hybrid_thresh8_parent046_label_greedy")
+
     def test_order_token_records_explicit_strategy_replays_saved_order(self) -> None:
         from tac.lossless.data import TokenRecord
         from tac.lossless.global_prev_symbol import order_token_records

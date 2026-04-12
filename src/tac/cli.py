@@ -42,8 +42,13 @@ from .lossless.gpt_arithmetic_coder import encode_commavq_gpt_global_sample, enc
 from .lossless.global_prev_symbol import benchmark_global_prev_symbol_record_order_sample
 from .lossless.next_frame_coder import encode_commavq_next_frame_sample
 from .lossless.gpt_score import probe_commavq_gpt_devices, score_commavq_gpt_sample
-from .lossless.token_rgb_bridge import OFFICIAL_DECODER_URL, decode_commavq_token_file_to_rgb
+from .lossless.token_rgb_bridge import (
+    OFFICIAL_DECODER_URL,
+    decode_commavq_token_file_to_rgb,
+    load_official_commavq_bridge,
+)
 from .lossless.semantic_labels import build_pose_label_map_sample
+from .lossless.rgb_semantic_labels import build_rgb_label_map_sample
 from .lossless.profiles import PROFILES as LOSSLESS_PROFILES
 from .lossless.state import promote_lossless_result
 from .lossless.submission import build_submission_zip
@@ -250,6 +255,21 @@ def build_parser() -> argparse.ArgumentParser:
     sp.set_defaults(lossless_handler="pose_labels_sample")
 
     sp = lossless_sub.add_parser(
+        "rgb-labels-sample",
+        help="Build a local-only RGB semantic label map keyed by canonical commavq file_name",
+    )
+    sp.add_argument("--output", required=True)
+    sp.add_argument("--split", nargs="*", default=None)
+    sp.add_argument("--max-records", type=int, default=64)
+    sp.add_argument("--max-keyframes", type=int, default=6)
+    sp.add_argument("--batch-size", type=int, default=64)
+    sp.add_argument("--device", default="cpu", choices=["auto", "cpu", "cuda", "mps"])
+    sp.add_argument("--dtype", default="auto", choices=["auto", "float32", "float16", "bfloat16"])
+    sp.add_argument("--commavq-root", default=None)
+    sp.add_argument("--decoder-url", default=OFFICIAL_DECODER_URL)
+    sp.set_defaults(lossless_handler="rgb_labels_sample")
+
+    sp = lossless_sub.add_parser(
         "global-prev-symbol-order-sample",
         help="Benchmark exact global prev-symbol record-order strategies on a bounded commavq slice",
     )
@@ -267,6 +287,7 @@ def build_parser() -> argparse.ArgumentParser:
             "transition_recursive_pca",
             "label_grouped_clip_greedy_nn",
             "label_lexicographic_clip_rank",
+            "hybrid_thresh8_parent046_label_greedy",
         ],
     )
     sp.add_argument("--labels", default=None)
@@ -693,6 +714,22 @@ def _run_lossless(args: argparse.Namespace) -> dict[str, Any]:
             output_path=Path(args.output),
             split=args.split,
             max_records=args.max_records,
+        )
+        print(json.dumps(payload, indent=2))
+        return payload
+
+    if args.lossless_handler == "rgb_labels_sample":
+        payload = build_rgb_label_map_sample(
+            output_path=Path(args.output),
+            split=args.split,
+            max_records=args.max_records,
+            bridge_loader=load_official_commavq_bridge,
+            batch_size=args.batch_size,
+            max_keyframes=args.max_keyframes,
+            device=args.device,
+            dtype=args.dtype,
+            commavq_root=Path(args.commavq_root) if args.commavq_root else None,
+            decoder_url=args.decoder_url,
         )
         print(json.dumps(payload, indent=2))
         return payload

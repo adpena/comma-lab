@@ -1,0 +1,213 @@
+from __future__ import annotations
+
+import json
+from pathlib import Path
+
+import numpy as np
+
+from .data import load_commavq_dataset
+from .token_rgb_bridge import decode_commavq_tokens_to_rgb_frames
+
+
+def _bucket(value: float, *, thresholds: tuple[float, ...]) -> int:
+    for index, threshold in enumerate(thresholds):
+        if value < threshold:
+            return index
+    return len(thresholds)
+
+
+def _coerce_rgb_frames(frames) -> np.ndarray:
+    arr = np.asarray(frames)
+    if arr.ndim == 3 and arr.shape[-1] == 3:
+        arr = arr[np.newaxis, ...]
+    if arr.ndim != 4 or arr.shape[-1] != 3:
+        raise ValueError("frames must have shape (frames, height, width, 3) or (height, width, 3)")
+    if arr.shape[0] == 0:
+        raise ValueError("frames must contain at least one frame")
+    return np.clip(
+        np.nan_to_num(arr.astype(np.float32, copy=False), nan=0.0, posinf=255.0, neginf=0.0),
+        0.0,
+        255.0,
+    )
+
+
+def _select_keyframe_indices(frame_count: int, *, max_keyframes: int) -> np.ndarray:
+    if frame_count <= 0:
+        raise ValueError("frame_count must be positive")
+    if max_keyframes <= 0:
+        raise ValueError("max_keyframes must be positive")
+    if frame_count <= max_keyframes:
+        return np.arange(frame_count, dtype=np.int64)
+    if max_keyframes == 1:
+        return np.array([frame_count // 2], dtype=np.int64)
+    return np.array(
+        [(index * (frame_count - 1)) // (max_keyframes - 1) for index in range(max_keyframes)],
+        dtype=np.int64,
+    )
+
+
+def _luma(frames: np.ndarray) -> np.ndarray:
+    weights = np.array([0.299, 0.587, 0.114], dtype=np.float32)
+    return np.tensordot(frames, weights, axes=([-1], [0]))
+
+
+def _mean_abs_gradient(values: np.ndarray) -> float:
+    parts: list[np.ndarray] = []
+    if values.shape[1] > 1:
+        parts.append(np.abs(np.diff(values, axis=1)))
+    if values.shape[2] > 1:
+        parts.append(np.abs(np.diff(values, axis=2)))
+    if not parts:
+        return 0.0
+    return float(np.mean([part.mean(dtype=np.float64) for part in parts]))
+
+
+def _unpack_bridge_loader_result(result):
+    if not isinstance(result, tuple):
+        raise TypeError("bridge_loader must return a tuple")
+    if len(result) == 2:
+        decoder, transpose_and_clip_fn = result
+        return decoder, transpose_and_clip_fn, {}
+    if len(result) == 3:
+        decoder, transpose_and_clip_fn, metadata = result
+        return decoder, transpose_and_clip_fn, dict(metadata or {})
+    raise ValueError("bridge_loader must return (decoder, transpose_and_clip_fn[, metadata])")
+
+
+def rgb_semantic_label_tuple(frames, *, max_keyframes: int = 6) -> tuple[int, ...]:
+    arr = _coerce_rgb_frames(frames)
+    sampled = arr[_select_keyframe_indices(arr.shape[0], max_keyframes=max_keyframes)]
+
+    luma = _luma(sampled)
+    chroma_span = sampled.max(axis=-1) - sampled.min(axis=-1)
+    frame_luma_means = luma.mean(axis=(1, 2), dtype=np.float64)
+
+    split = max(1, sampled.shape[1] // 2)
+    top = sampled[:, :split, :, :]
+    bottom = sampled[:, split:, :, :]
+    if bottom.shape[1] == 0:
+        bottom = sampled[:, -1:, :, :]
+
+    top_luma = _luma(top)
+    bottom_luma = _luma(bottom)
+    bottom_chroma = bottom.max(axis=-1) - bottom.min(axis=-1)
+
+    sky_ratio = float(
+        np.mean(
+            (top[..., 2] >= top[..., 1] + 12.0)
+            & (top[..., 2] >= top[..., 0] + 20.0)
+            & (top_luma >= 96.0)
+        )
+    )
+    road_ratio = float(
+        np.mean(
+            (bottom_luma >= 32.0)
+            & (bottom_luma <= 144.0)
+            & (bottom_chroma <= 36.0)
+        )
+    )
+    temporal_delta = 0.0
+    if frame_luma_means.size >= 2:
+        temporal_delta = float(np.mean(np.abs(np.diff(frame_luma_means))))
+
+    return (
+        _bucket(float(luma.mean(dtype=np.float64)), thresholds=(70.0, 110.0, 160.0)),
+        _bucket(float(luma.std(dtype=np.float64)), thresholds=(12.0, 24.0, 48.0)),
+        _bucket(float(chroma_span.mean(dtype=np.float64)), thresholds=(16.0, 32.0, 64.0)),
+        _bucket(float((sampled[..., 0] - sampled[..., 2]).mean(dtype=np.float64)), thresholds=(-24.0, -8.0, 8.0, 24.0)),
+        _bucket(sky_ratio, thresholds=(0.02, 0.12, 0.30)),
+        _bucket(road_ratio, thresholds=(0.05, 0.20, 0.45)),
+        _bucket(_mean_abs_gradient(luma), thresholds=(4.0, 12.0, 24.0)),
+        _bucket(temporal_delta, thresholds=(2.0, 8.0, 20.0)),
+    )
+
+
+def extract_rgb_semantic_label_from_tokens(
+    tokens,
+    *,
+    bridge_loader,
+    batch_size: int = 64,
+    max_keyframes: int = 6,
+    device: str = "cpu",
+    dtype: str = "auto",
+    commavq_root: str | Path | None = None,
+    decoder_url: str | None = None,
+) -> tuple[int, ...]:
+    if bridge_loader is None:
+        raise ValueError("bridge_loader is required for local-only RGB semantic labeling")
+    loader_kwargs = {
+        "device": device,
+        "dtype": dtype,
+        "commavq_root": commavq_root,
+    }
+    if decoder_url is not None:
+        loader_kwargs["decoder_url"] = decoder_url
+    decoder, transpose_and_clip_fn, _bridge_metadata = _unpack_bridge_loader_result(bridge_loader(**loader_kwargs))
+    frames = decode_commavq_tokens_to_rgb_frames(
+        tokens,
+        decoder=decoder,
+        transpose_and_clip_fn=transpose_and_clip_fn,
+        batch_size=batch_size,
+        device=("cpu" if device == "auto" else device),
+    )
+    return rgb_semantic_label_tuple(frames, max_keyframes=max_keyframes)
+
+
+def build_rgb_label_map_sample(
+    *,
+    output_path: str | Path,
+    split=None,
+    max_records: int = 64,
+    dataset_loader=None,
+    bridge_loader=None,
+    batch_size: int = 64,
+    max_keyframes: int = 6,
+    device: str = "cpu",
+    dtype: str = "auto",
+    commavq_root: str | Path | None = None,
+    decoder_url: str | None = None,
+) -> dict[str, object]:
+    if max_records <= 0:
+        raise ValueError("max_records must be positive")
+    if bridge_loader is None:
+        raise ValueError("bridge_loader is required for local-only RGB semantic labeling")
+
+    dataset = load_commavq_dataset(split=split, dataset_loader=dataset_loader, num_proc=1)
+    train = dataset["train"]
+    if hasattr(train, "__getitem__"):
+        count = min(max_records, len(train)) if hasattr(train, "__len__") else max_records
+        examples = [train[index] for index in range(count)]
+    else:
+        examples = []
+        for example in train:
+            examples.append(example)
+            if len(examples) >= max_records:
+                break
+
+    label_map: dict[str, list[int]] = {}
+    for example in examples:
+        file_name = str(example["json"]["file_name"])
+        label_map[file_name] = list(
+            extract_rgb_semantic_label_from_tokens(
+                example["token.npy"],
+                bridge_loader=bridge_loader,
+                batch_size=batch_size,
+                max_keyframes=max_keyframes,
+                device=device,
+                dtype=dtype,
+                commavq_root=commavq_root,
+                decoder_url=decoder_url,
+            )
+        )
+
+    target = Path(output_path)
+    target.parent.mkdir(parents=True, exist_ok=True)
+    target.write_text(json.dumps(label_map, indent=2, sort_keys=True) + "\n")
+    return {
+        "command": "lossless_rgb_labels_sample",
+        "output_path": str(target),
+        "record_count": len(label_map),
+        "split": list(split) if isinstance(split, (list, tuple)) else (["challenge"] if split is None else [str(split)]),
+        "max_keyframes": max_keyframes,
+        "local_only": True,
+    }
