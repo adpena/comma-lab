@@ -24,7 +24,13 @@ FFPROBE_BIN="${FFPROBE_BIN:-ffprobe}"
 UV_BIN="${UV_BIN:-uv}"
 ROI_SCRIPT_PY="${ROI_SCRIPT_PY:-$SELF_DIR/analyze_roi.py}"
 VIDEO_NAMES_FILE="${VIDEO_NAMES_FILE:-$UPSTREAM_ROOT/public_test_video_names.txt}"
+# Back up existing archive before overwriting (never lose a scoring artifact)
 ARCHIVE_ZIP="$SELF_DIR/archive.zip"
+if [ -f "$ARCHIVE_ZIP" ]; then
+  BACKUP_NAME="$SELF_DIR/archive_$(date +%Y%m%dT%H%M%S).zip"
+  cp "$ARCHIVE_ZIP" "$BACKUP_NAME"
+  echo "[compress] Backed up existing archive to $BACKUP_NAME" >&2
+fi
 VIDEO_CODEC="${VIDEO_CODEC:-libx265}"
 SVT_AV1_PRESET="${SVT_AV1_PRESET:-0}"
 SVT_AV1_CRF="${SVT_AV1_CRF:-33}"

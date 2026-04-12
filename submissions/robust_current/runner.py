@@ -29,6 +29,35 @@ import click
 
 
 # ============================================================
+# File lock — prevents concurrent runner instances on same work-dir
+# ============================================================
+def _acquire_lock(lock_path: Path) -> None:
+    """Write PID to lock file. Raise if another runner is alive."""
+    if lock_path.exists():
+        try:
+            old_pid = int(lock_path.read_text().strip())
+            os.kill(old_pid, 0)  # check if alive (signal 0 = no-op)
+            raise click.ClickException(
+                f"Another runner (PID {old_pid}) is already running.\n"
+                f"Lock file: {lock_path}\n"
+                f"If the process is dead, delete the lock file and retry."
+            )
+        except (ValueError, ProcessLookupError, PermissionError):
+            pass  # stale lock — previous process is dead
+    lock_path.write_text(str(os.getpid()))
+
+
+def _release_lock(lock_path: Path) -> None:
+    """Remove lock file if it belongs to this process."""
+    if lock_path.exists():
+        try:
+            if int(lock_path.read_text().strip()) == os.getpid():
+                lock_path.unlink()
+        except (ValueError, OSError):
+            pass
+
+
+# ============================================================
 # State machine
 # ============================================================
 class RunState(str, Enum):
@@ -231,10 +260,12 @@ def preflight_config_match(submission_src: Path) -> list[str]:
             )
             return warnings
 
-        fp = meta.get("config_fingerprint")
+        # config_fingerprint may be inside __meta__ or at top level (depends on
+        # which version of training.py saved the checkpoint). Check both.
+        fp = meta.get("config_fingerprint") or state.get("config_fingerprint")
         if fp is None:
             warnings.append(
-                "Checkpoint __meta__ has no config_fingerprint — cannot verify encode config match"
+                "Checkpoint has no config_fingerprint — cannot verify encode config match"
             )
             return warnings
 
@@ -361,7 +392,8 @@ def stage_compress(
     ]
 
     ffmpeg_bin = shutil.which("ffmpeg")
-    assert ffmpeg_bin is not None
+    if ffmpeg_bin is None:
+        raise click.ClickException("ffmpeg not found in PATH")
 
     for name in names:
         stem = name.rsplit(".", 1)[0]
@@ -457,8 +489,6 @@ def stage_inflate(
     python_inflate = config.get("PYTHON_INFLATE", "0")
 
     if python_inflate == "postfilter":
-        # Call inflate_postfilter.py directly via its function
-        # (avoids sys.argv gymnastics)
         postfilter_path = mgr.archive_unzip_dir / "postfilter_int8.pt"
         if not postfilter_path.exists():
             postfilter_path = submission_src / "postfilter_int8.pt"
@@ -471,6 +501,7 @@ def stage_inflate(
             str(mgr.inflated_dir),
             str(video_names_file),
             str(postfilter_path),
+            "--device", device,
         ]
         run_stage(
             cmd,
@@ -515,17 +546,18 @@ def stage_inflate(
             + "\n".join(f"  {m}" for m in missing)
         )
 
-    # Validate frame count / size
+    # Validate frame count / size using SOURCE_W x SOURCE_H from config.env
+    source_w = int(config.get("SOURCE_W", "1164"))
+    source_h = int(config.get("SOURCE_H", "874"))
     for name in names:
         stem = name.rsplit(".", 1)[0]
         raw = mgr.inflated_dir / f"{stem}.raw"
         raw_size = raw.stat().st_size
-        # 1164 * 874 * 3 bytes per frame = 3,051,888
-        frame_bytes = 1164 * 874 * 3
+        frame_bytes = source_w * source_h * 3
         if raw_size % frame_bytes != 0:
             raise click.ClickException(
                 f"Inflated file {raw} has size {raw_size:,} bytes, "
-                f"not a multiple of {frame_bytes:,} (1164x874x3). "
+                f"not a multiple of {frame_bytes:,} ({source_w}x{source_h}x3). "
                 f"Frame count would be {raw_size / frame_bytes:.2f}."
             )
         n_frames = raw_size // frame_bytes
@@ -616,6 +648,101 @@ def _parse_and_save_report(
     click.echo("=" * 54)
 
     mgr.set_stage(RunState.SCORED, score=score, posenet=pose, segnet=seg, rate=rate)
+
+    # ── Complete experiment record ──────────────────────────────
+    # Capture EVERYTHING needed to reproduce this result.
+    _save_experiment_record(mgr, submission_src, result, device)
+
+
+def _save_experiment_record(
+    mgr: RunManager,
+    submission_src: Path,
+    scorer_result: dict[str, Any],
+    device: str,
+) -> None:
+    """Save a complete, self-contained experiment record.
+
+    Captures all config, hashes, git state, and results so this exact
+    score can be reproduced and audited later. Writes to both
+    run_dir/experiment_record.json AND appends to reports/results.jsonl.
+    """
+    config = _parse_config_env(submission_src / "config.env")
+
+    # Archive hash
+    archive_path = mgr.run_dir / "submission" / "archive.zip"
+    archive_md5 = ""
+    archive_bytes = 0
+    if archive_path.exists():
+        archive_bytes = archive_path.stat().st_size
+        h = hashlib.md5()
+        with open(archive_path, "rb") as f:
+            for chunk in iter(lambda: f.read(8192), b""):
+                h.update(chunk)
+        archive_md5 = h.hexdigest()
+
+    # Checkpoint hash
+    ckpt_path = mgr.run_dir / "submission" / "postfilter_int8.pt"
+    ckpt_md5 = ""
+    if ckpt_path.exists():
+        h = hashlib.md5()
+        with open(ckpt_path, "rb") as f:
+            for chunk in iter(lambda: f.read(8192), b""):
+                h.update(chunk)
+        ckpt_md5 = h.hexdigest()
+
+    # Git commit
+    git_commit = ""
+    try:
+        git_commit = subprocess.check_output(
+            ["git", "rev-parse", "HEAD"],
+            cwd=str(submission_src),
+            stderr=subprocess.DEVNULL,
+            text=True,
+        ).strip()
+    except (subprocess.CalledProcessError, FileNotFoundError):
+        pass
+
+    # Machine identifier
+    import platform
+    machine_id = f"{platform.node()}_{platform.system()}_{platform.machine()}"
+
+    record = {
+        "run_id": mgr.run_dir.name,
+        "ts_utc": datetime.datetime.now(datetime.timezone.utc).isoformat(),
+        "score": scorer_result.get("score"),
+        "posenet_distortion": scorer_result.get("posenet_distortion"),
+        "segnet_distortion": scorer_result.get("segnet_distortion"),
+        "rate": scorer_result.get("rate"),
+        "archive_bytes": archive_bytes,
+        "archive_md5": archive_md5,
+        "checkpoint_md5": ckpt_md5,
+        "git_commit": git_commit,
+        "device": device,
+        "machine": machine_id,
+        "config_env": dict(config),
+        "inflate_flags": {
+            "brightness_shift": config.get("INFLATE_BRIGHTNESS_SHIFT", "0"),
+            "chroma_smooth": config.get("INFLATE_CHROMA_SMOOTH", "0"),
+            "deblock": config.get("INFLATE_DEBLOCK", "0"),
+            "multi_pass": config.get("INFLATE_MULTI_PASS", "1"),
+        },
+        "run_dir": str(mgr.run_dir),
+    }
+
+    # Save to run directory
+    record_path = mgr.run_dir / "experiment_record.json"
+    record_path.write_text(json.dumps(record, indent=2) + "\n")
+
+    # Append to results.jsonl (project-level)
+    results_jsonl = submission_src.parent.parent / "reports" / "results.jsonl"
+    if results_jsonl.parent.exists():
+        with open(results_jsonl, "a") as f:
+            f.write(json.dumps(record) + "\n")
+        click.echo(f"  Record saved: {record_path}", err=True)
+        click.echo(f"  Appended to: {results_jsonl}", err=True)
+    else:
+        click.echo(f"  Record saved: {record_path}", err=True)
+        click.echo(f"  WARNING: reports/ dir not found, results.jsonl not updated", err=True)
 
 
 # ============================================================
@@ -731,6 +858,8 @@ def _run_pipeline(
     skip_compress: bool,
 ) -> None:
     """Execute pipeline stages, skipping already-completed ones."""
+    lock_path = mgr.run_dir / ".lock"
+    _acquire_lock(lock_path)
     current = mgr.get_stage()
 
     try:
@@ -785,6 +914,8 @@ def _run_pipeline(
         raise click.ClickException(
             f"Unexpected error: {exc}\nRun dir: {mgr.run_dir}\nUse `runner.py resume {mgr.run_dir.name}` to retry."
         ) from exc
+    finally:
+        _release_lock(lock_path)
 
 
 def _unzip_archive(mgr: RunManager) -> None:
