@@ -526,13 +526,14 @@ def _full_eval(
     avg_seg = sum(seg_dists) / max(len(seg_dists), 1)
     avg_pose = sum(pose_dists) / max(len(pose_dists), 1)
 
-    # Model size estimate
-    n_params = sum(p.numel() for p in renderer.parameters())
+    # Model size estimate — only the renderer ships in archive, not motion predictor
+    renderer_module = getattr(renderer, "renderer", renderer)
+    n_params = sum(p.numel() for p in renderer_module.parameters())
     model_bytes = n_params * 4 / 8  # FP4 estimate
 
     # Check for self-compression
     has_sc = False
-    for m in renderer.modules():
+    for m in renderer_module.modules():
         if isinstance(m, nn.Conv2d) and hasattr(m, "bit_depth"):
             has_sc = True
             break
@@ -838,7 +839,7 @@ def train_fridrich_renderer(cfg: FridrichRendererConfig) -> dict[str, Any]:
 
             if phase == 3 and self_compress_active:
                 # Add self-compression rate penalty
-                model_bits = _compute_model_bits(pair_gen)
+                model_bits = _compute_model_bits(pair_gen.renderer)
                 target_bits = cfg.target_bytes * 8.0
                 rate_excess = F.relu(model_bits - target_bits) / target_bits
                 total_loss = total_loss + cfg.rate_weight * rate_excess
@@ -916,7 +917,7 @@ def train_fridrich_renderer(cfg: FridrichRendererConfig) -> dict[str, Any]:
                 "vram_mb": _vram_mb(),
             }
             if self_compress_active:
-                log_entry["model_bits"] = _compute_model_bits(pair_gen).item()
+                log_entry["model_bits"] = _compute_model_bits(pair_gen.renderer).item()
             history.append(log_entry)
 
             print(
