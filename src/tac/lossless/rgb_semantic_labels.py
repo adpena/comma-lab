@@ -334,15 +334,11 @@ def build_rgb_label_map_sample(
 
     dataset = load_commavq_dataset(split=split, dataset_loader=dataset_loader, num_proc=1)
     train = dataset["train"]
-    if hasattr(train, "__getitem__"):
-        count = min(max_records, len(train)) if hasattr(train, "__len__") else max_records
-        examples = [train[index] for index in range(count)]
-    else:
-        examples = []
-        for example in train:
-            examples.append(example)
-            if len(examples) >= max_records:
-                break
+    examples = []
+    for example in train:
+        examples.append(example)
+        if len(examples) >= max_records:
+            break
 
     label_map: dict[str, list[int]] = {}
     decoder, transpose_and_clip_fn, decode_device = _load_rgb_bridge(
