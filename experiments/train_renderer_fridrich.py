@@ -1040,6 +1040,13 @@ def train_fridrich_renderer(cfg: FridrichRendererConfig) -> dict[str, Any]:
                     torch.save({
                         "epoch": epoch,
                         "model_state_dict": pair_gen.state_dict(),
+                        "optimizer_state_dict": optimizer.state_dict(),
+                        "scheduler_state_dict": scheduler.state_dict(),
+                        "lambda_seg": lambda_seg,
+                        "lambda_pose": lambda_pose,
+                        "rho": rho,
+                        "best_score": best_score,
+                        "self_compress_active": self_compress_active,
                         "score": score,
                         "eval_result": eval_result,
                         "config": asdict(cfg),
