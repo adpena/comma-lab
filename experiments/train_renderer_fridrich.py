@@ -483,6 +483,8 @@ def _full_eval(
     Returns dict with avg_seg, avg_pose, model_bytes, rate, score.
     """
     renderer.eval()
+    # Extract the actual renderer (DPSIMSRenderer) from PairGenerator wrapper
+    renderer_module = getattr(renderer, "renderer", renderer)
     n = masks.shape[0]
     seg_dists = []
     pose_dists = []
@@ -495,8 +497,8 @@ def _full_eval(
             gt_t1 = gt_chw[i + 1:i + 2].to(device)
 
             # Generate frame pair via the renderer (individual frames)
-            gen_t = renderer.renderer(mask_t)   # (1, 3, H, W)
-            gen_t1 = renderer.renderer(mask_t1)  # (1, 3, H, W)
+            gen_t = renderer_module(mask_t)   # (1, 3, H, W)
+            gen_t1 = renderer_module(mask_t1)  # (1, 3, H, W)
 
             # SegNet on individual frames
             for gen_f, gt_f in [(gen_t, gt_t), (gen_t1, gt_t1)]:
@@ -527,7 +529,7 @@ def _full_eval(
     avg_pose = sum(pose_dists) / max(len(pose_dists), 1)
 
     # Model size estimate — only the renderer ships in archive, not motion predictor
-    renderer_module = getattr(renderer, "renderer", renderer)
+    # (renderer_module already extracted at top of function)
     n_params = sum(p.numel() for p in renderer_module.parameters())
     model_bytes = n_params * 4 / 8  # FP4 estimate
 
@@ -539,11 +541,8 @@ def _full_eval(
             break
     if has_sc:
         # COUNCIL DECISION: Only the renderer goes in the archive at inflate time.
-        # The motion predictor (DepthAwareMotionPredictor) is training-only infrastructure
-        # — it provides the ego-motion flow loss but is NOT deployed. Therefore we count
-        # ONLY pair_gen.renderer's self-compressed bits for rate estimation.
-        # If pair_gen is passed (the full PairGenerator), extract renderer explicitly.
-        renderer_module = getattr(renderer, "renderer", renderer)
+        # The motion predictor is training-only — it provides ego-motion flow loss
+        # but is NOT deployed. renderer_module extracted at top of _full_eval.
         model_bytes = _compute_model_bits(renderer_module).item() / 8.0
 
     # Rate = archive size / original uncompressed video file size
