@@ -422,26 +422,45 @@ def stage_package(
     mgr: RunManager,
     submission_src: Path,
 ) -> None:
-    """Package: bundle compressed video(s) + postfilter into archive.zip."""
+    """Package: verify compress.sh output and unzip into archive_unzip_dir.
+
+    compress.sh already bundles video + postfilter into archive.zip.
+    We do NOT rebuild the zip — that would risk losing compress.sh features
+    (ROI, metadata stripping, etc.). Instead we just unzip for inflate.
+    """
     mgr.set_stage(RunState.PACKAGING)
 
-    # Copy postfilter into archive dir
-    pf_src = submission_src / "postfilter_int8.pt"
-    pf_dst = mgr.archive_unzip_dir / "postfilter_int8.pt"
-    if pf_src.exists():
-        shutil.copy2(pf_src, pf_dst)
+    # compress.sh writes to submission_src/archive.zip. stage_compress
+    # copies it to mgr.submission_dir/archive.zip. Verify it's there.
+    if not mgr.archive_zip.exists():
+        raise click.ClickException(
+            f"archive.zip not found at {mgr.archive_zip}. "
+            "Did stage_compress complete successfully?"
+        )
 
-    # Create archive.zip
-    with zipfile.ZipFile(mgr.archive_zip, "w", zipfile.ZIP_DEFLATED, compresslevel=9) as zf:
-        for f in sorted(mgr.archive_unzip_dir.rglob("*")):
-            if f.is_file():
-                zf.write(f, f.relative_to(mgr.archive_unzip_dir))
+    # Unzip into archive_unzip_dir so inflate can find the files
+    mgr.archive_unzip_dir.mkdir(parents=True, exist_ok=True)
+    with zipfile.ZipFile(mgr.archive_zip, "r") as zf:
+        zf.extractall(mgr.archive_unzip_dir)
+
+    # Verify postfilter is present (contest rules: neural artifacts in archive)
+    pf_in_archive = mgr.archive_unzip_dir / "postfilter_int8.pt"
+    if not pf_in_archive.exists():
+        click.echo(
+            "  WARNING: postfilter_int8.pt not in archive.zip. "
+            "Neural artifacts must be bundled per contest rules.",
+            err=True,
+        )
+        # Try to copy from submission_src as fallback
+        pf_src = submission_src / "postfilter_int8.pt"
+        if pf_src.exists():
+            shutil.copy2(str(pf_src), str(pf_in_archive))
+            click.echo(f"  Copied postfilter from {pf_src}", err=True)
 
     size = mgr.archive_zip.stat().st_size
-    click.echo(f"  archive.zip: {size:,} bytes")
+    n_files = len(list(mgr.archive_unzip_dir.rglob("*")))
+    click.echo(f"  archive.zip: {size:,} bytes, {n_files} files")
 
-    # Also copy archive.zip to submission_dir root for scorer
-    # (scorer expects submission_dir/archive.zip)
     mgr.set_stage(RunState.PACKAGED, archive_bytes=size)
 
 
@@ -456,60 +475,34 @@ def stage_inflate(
 
     video_names_file = upstream_dir / "public_test_video_names.txt"
 
-    # Use the Python postfilter inflate path (matches config PYTHON_INFLATE=postfilter)
-    config = _parse_config_env(submission_src / "config.env")
-    python_inflate = config.get("PYTHON_INFLATE", "0")
+    # ALWAYS call inflate.sh — this matches the exact contest evaluation path.
+    # inflate.sh sources config.env (getting ALL INFLATE_* vars), then
+    # delegates to inflate_postfilter.py or ffmpeg depending on PYTHON_INFLATE.
+    # This eliminates env var propagation bugs and ensures test == contest.
+    inflate_sh = submission_src / "inflate.sh"
+    if not inflate_sh.exists():
+        raise click.ClickException(f"inflate.sh not found: {inflate_sh}")
 
-    if python_inflate == "postfilter":
-        postfilter_path = mgr.archive_unzip_dir / "postfilter_int8.pt"
-        if not postfilter_path.exists():
-            postfilter_path = submission_src / "postfilter_int8.pt"
+    cmd = [
+        "bash", str(inflate_sh),
+        str(mgr.archive_unzip_dir),
+        str(mgr.inflated_dir),
+        str(video_names_file),
+    ]
+    inflate_env = {
+        **os.environ,
+        "PYTHONPATH": f"{submission_src.parent.parent / 'src'}:{upstream_dir}",
+        "COMMA_CHALLENGE_ROOT": str(upstream_dir),
+        "CONFIG_ENV_PATH": str(submission_src / "config.env"),
+    }
 
-        inflate_script = submission_src / "inflate_postfilter.py"
-        cmd = [
-            sys.executable,
-            str(inflate_script),
-            str(mgr.archive_unzip_dir),
-            str(mgr.inflated_dir),
-            str(video_names_file),
-            str(postfilter_path),
-            "--device", device,
-        ]
-        # Propagate config.env settings as env vars so inflate_postfilter.py
-        # picks them up via Click's envvar= bindings
-        inflate_env = {
-            **os.environ,
-            "PYTHONPATH": f"{submission_src.parent.parent / 'src'}:{upstream_dir}",
-            "COMMA_CHALLENGE_ROOT": str(upstream_dir),
-            "INFLATE_BRIGHTNESS_SHIFT": config.get("INFLATE_BRIGHTNESS_SHIFT", "0"),
-            "INFLATE_CHROMA_SMOOTH": config.get("INFLATE_CHROMA_SMOOTH", "0"),
-            "INFLATE_DEBLOCK": config.get("INFLATE_DEBLOCK", "0"),
-            "INFLATE_MULTI_PASS": config.get("INFLATE_MULTI_PASS", "1"),
-        }
-        run_stage(
-            cmd,
-            mgr.log_dir / "inflate.log",
-            timeout=900,
-            label="inflate (postfilter)",
-            env=inflate_env,
-        )
-    else:
-        # Use inflate.sh for ffmpeg-based inflation
-        inflate_sh = submission_src / "inflate.sh"
-        cmd = [
-            "bash", str(inflate_sh),
-            str(mgr.archive_unzip_dir),
-            str(mgr.inflated_dir),
-            str(video_names_file),
-        ]
-        env = {"CONFIG_ENV_PATH": str(submission_src / "config.env")}
-        run_stage(
-            cmd,
-            mgr.log_dir / "inflate.log",
-            timeout=900,
-            label="inflate (ffmpeg)",
-            env=env,
-        )
+    run_stage(
+        cmd,
+        mgr.log_dir / "inflate.log",
+        timeout=1800,  # 30 min — matches contest time limit
+        label="inflate (inflate.sh)",
+        env=inflate_env,
+    )
 
     # Validate inflated output
     names = [
