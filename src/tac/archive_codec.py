@@ -744,15 +744,16 @@ def _smoke_test() -> None:
     # ScorerCorrectionTargets
     corrections = ScorerCorrectionTargets(max_corrections_per_frame=100)
     fragility = torch.rand(B, H, W)
-    indices, values = corrections.compute_corrections(rendered, target, fragility)
+    indices, values, valid_mask = corrections.compute_corrections(rendered, target, fragility)
     assert indices.shape[0] == B and indices.shape[2] == 2
     assert values.shape[0] == B and values.shape[2] == 3
+    assert valid_mask.shape == (B, 100)
 
-    corrected = corrections.apply_corrections(rendered, indices, values)
+    corrected = corrections.apply_corrections(rendered, indices, values, valid_mask=valid_mask)
     assert corrected.shape == (B, 3, H, W)
     assert corrected.min() >= 0.0 and corrected.max() <= 255.0
 
-    corr_bytes = corrections.serialize(indices[0], values[0])
+    corr_bytes = corrections.serialize(indices[0], values[0], valid_mask=valid_mask[0])
     assert len(corr_bytes) < 10_000
     print(f"  archive_codec: corrections verified ({len(corr_bytes)} bytes)")
 

@@ -91,7 +91,8 @@ def _worker_fn(
 
         result_queue.put((worker_id, out.numpy()))
     except Exception as e:
-        result_queue.put((worker_id, e))
+        # Convert to RuntimeError to ensure picklability across process boundary
+        result_queue.put((worker_id, RuntimeError(str(e))))
 
 
 def _get_model_info(model: nn.Module) -> tuple[str, int]:

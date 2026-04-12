@@ -171,6 +171,45 @@ def _log(msg: str, verbose: bool = True) -> None:
         print(f"  [trick_stack] {msg}", file=sys.stderr, flush=True)
 
 
+def yuv420_to_rgb_frame(
+    y_plane: np.ndarray,
+    u_plane: np.ndarray,
+    v_plane: np.ndarray,
+    H: int,
+    W: int,
+) -> torch.Tensor:
+    """Convert YUV420 planes to a single RGB frame tensor.
+
+    Performs BT.601 YUV-to-RGB conversion with studio-swing scaling,
+    bilinear chroma upsampling, and clamping to [0, 255].
+
+    Args:
+        y_plane: (H, >=W) uint8 luma plane (may include line padding).
+        u_plane: (H//2, >=W//2) uint8 Cb chroma plane.
+        v_plane: (H//2, >=W//2) uint8 Cr chroma plane.
+        H: frame height (luma).
+        W: frame width (luma).
+
+    Returns:
+        (1, 3, H, W) float32 RGB tensor in [0, 255].
+    """
+    y_t = torch.from_numpy(y_plane[:H, :W].copy()).float()
+    u_t = torch.from_numpy(u_plane[: H // 2, : W // 2].copy()).float().unsqueeze(0).unsqueeze(0)
+    v_t = torch.from_numpy(v_plane[: H // 2, : W // 2].copy()).float().unsqueeze(0).unsqueeze(0)
+
+    u_up = F.interpolate(u_t, size=(H, W), mode="bilinear", align_corners=False).squeeze()
+    v_up = F.interpolate(v_t, size=(H, W), mode="bilinear", align_corners=False).squeeze()
+
+    yf = (y_t - 16.0) * (255.0 / 219.0)
+    uf = (u_up - 128.0) * (255.0 / 224.0)
+    vf = (v_up - 128.0) * (255.0 / 224.0)
+
+    r = (yf + 1.402 * vf).clamp(0, 255)
+    g = (yf - 0.344136 * uf - 0.714136 * vf).clamp(0, 255)
+    b = (yf + 1.772 * uf).clamp(0, 255)
+    return torch.stack([r, g, b], dim=0).unsqueeze(0)  # (1, 3, H, W)
+
+
 def _decode_frames(
     video_path: str,
     target_w: int,
@@ -191,33 +230,17 @@ def _decode_frames(
         i = 0
         for frame in container.decode(stream):
             if i % stride == 0:
-                # YUV420 -> RGB via the inflate_postfilter path
                 H, W = frame.height, frame.width
                 y = np.frombuffer(frame.planes[0], dtype=np.uint8).reshape(
                     H, frame.planes[0].line_size
-                )[:, :W]
+                )
                 u = np.frombuffer(frame.planes[1], dtype=np.uint8).reshape(
                     H // 2, frame.planes[1].line_size
-                )[:, : W // 2]
+                )
                 v = np.frombuffer(frame.planes[2], dtype=np.uint8).reshape(
                     H // 2, frame.planes[2].line_size
-                )[:, : W // 2]
-
-                y_t = torch.from_numpy(y.copy()).float()
-                u_t = torch.from_numpy(u.copy()).float().unsqueeze(0).unsqueeze(0)
-                v_t = torch.from_numpy(v.copy()).float().unsqueeze(0).unsqueeze(0)
-
-                u_up = F.interpolate(u_t, size=(H, W), mode="bilinear", align_corners=False).squeeze()
-                v_up = F.interpolate(v_t, size=(H, W), mode="bilinear", align_corners=False).squeeze()
-
-                yf = (y_t - 16.0) * (255.0 / 219.0)
-                uf = (u_up - 128.0) * (255.0 / 224.0)
-                vf = (v_up - 128.0) * (255.0 / 224.0)
-
-                r = (yf + 1.402 * vf).clamp(0, 255)
-                g = (yf - 0.344136 * uf - 0.714136 * vf).clamp(0, 255)
-                b = (yf + 1.772 * uf).clamp(0, 255)
-                rgb = torch.stack([r, g, b], dim=0).unsqueeze(0)  # (1, 3, H, W)
+                )
+                rgb = yuv420_to_rgb_frame(y, u, v, H, W)
 
                 if H != target_h or W != target_w:
                     rgb = F.interpolate(rgb, size=(target_h, target_w), mode="bicubic", align_corners=False)
@@ -775,7 +798,19 @@ def stacked_inflate(
     Returns dict with timing and improvement estimates.
     """
     import av
+    import logging
     from tac.quantization import load_postfilter_int8
+
+    # Validate extra_kwargs: warn about unrecognized keys that may indicate typos
+    if extra_kwargs:
+        valid_fields = {f.name for f in TrickStackConfig.__dataclass_fields__.values()}
+        for key in extra_kwargs:
+            if key not in valid_fields:
+                logging.getLogger(__name__).warning(
+                    "stacked_inflate received unrecognized kwarg %r "
+                    "(not a TrickStackConfig field); it will be ignored",
+                    key,
+                )
 
     t0 = time.monotonic()
     timings: dict[str, float] = {}
@@ -965,29 +1000,14 @@ def stacked_inflate(
             H, W = frame.height, frame.width
             y = np.frombuffer(frame.planes[0], dtype=np.uint8).reshape(
                 H, frame.planes[0].line_size
-            )[:, :W]
+            )
             u = np.frombuffer(frame.planes[1], dtype=np.uint8).reshape(
                 H // 2, frame.planes[1].line_size
-            )[:, : W // 2]
+            )
             v = np.frombuffer(frame.planes[2], dtype=np.uint8).reshape(
                 H // 2, frame.planes[2].line_size
-            )[:, : W // 2]
-
-            y_t = torch.from_numpy(y.copy()).float()
-            u_t = torch.from_numpy(u.copy()).float().unsqueeze(0).unsqueeze(0)
-            v_t = torch.from_numpy(v.copy()).float().unsqueeze(0).unsqueeze(0)
-
-            u_up = F.interpolate(u_t, size=(H, W), mode="bilinear", align_corners=False).squeeze()
-            v_up = F.interpolate(v_t, size=(H, W), mode="bilinear", align_corners=False).squeeze()
-
-            yf = (y_t - 16.0) * (255.0 / 219.0)
-            uf = (u_up - 128.0) * (255.0 / 224.0)
-            vf = (v_up - 128.0) * (255.0 / 224.0)
-
-            r = (yf + 1.402 * vf).clamp(0, 255)
-            g = (yf - 0.344136 * uf - 0.714136 * vf).clamp(0, 255)
-            b = (yf + 1.772 * uf).clamp(0, 255)
-            rgb = torch.stack([r, g, b], dim=0).unsqueeze(0)  # (1, 3, H, W)
+            )
+            rgb = yuv420_to_rgb_frame(y, u, v, H, W)
 
             if H != target_h or W != target_w:
                 rgb = F.interpolate(rgb, size=(target_h, target_w), mode="bicubic", align_corners=False)
@@ -1010,35 +1030,47 @@ def stacked_inflate(
         orig_buf.clear()
         container.close()
 
-        # Stage 9: Backward delta smoothing (needs all frames in memory)
-        if cfg.use_backward_delta_smoothing and len(all_frames) >= 2:
-            _log(f"Stage 9: Backward delta smoothing ({len(all_frames)} frames)", verbose)
-            t_smooth = time.monotonic()
-            # Convert to float for smoothing
-            float_frames = [f.float().permute(2, 0, 1) for f in all_frames]
-            smoothed = _stage_backward_delta_smoothing(float_frames, cfg)
-            all_frames = [f.permute(1, 2, 0).to(torch.uint8) for f in smoothed]
-            timings["backward_smoothing"] = time.monotonic() - t_smooth
-            stages_run.append("backward_smoothing")
+        if needs_all_frames:
+            # Log estimated memory usage if memory_cap_mb is set
+            if cfg.memory_cap_mb > 0 and len(all_frames) > 0:
+                frame_bytes = all_frames[0].numel() * all_frames[0].element_size()
+                est_mb = len(all_frames) * frame_bytes / (1024 * 1024)
+                _log(f"Estimated frame buffer memory: {est_mb:.1f} MB (cap: {cfg.memory_cap_mb:.0f} MB)", verbose)
+                if est_mb > cfg.memory_cap_mb:
+                    _log(f"WARNING: frame buffer ({est_mb:.1f} MB) exceeds memory cap ({cfg.memory_cap_mb:.0f} MB)", verbose)
 
-        # Stage 10: Null-space projection (AFTER backward smoothing).
-        # This must be the last frame-modifying stage so that the null-space
-        # guarantee is not destroyed by subsequent pixel modifications.
-        if cfg.use_null_space_projection and posenet is not None and segnet is not None:
-            _log(f"Stage 10: Null-space projection ({len(all_frames)} frames)", verbose)
-            t_null = time.monotonic()
-            for i in range(len(all_frames)):
-                frame_chw = all_frames[i].float().permute(2, 0, 1).unsqueeze(0).to(device)
-                orig_chw = all_originals[i].float().permute(2, 0, 1).unsqueeze(0).to(device)
-                projected = _stage_null_space_projection(frame_chw, orig_chw, posenet, segnet, cfg)
-                all_frames[i] = projected[0].permute(1, 2, 0).round().clamp(0, 255).to(torch.uint8).cpu()
-            timings["null_space_projection"] = time.monotonic() - t_null
-            stages_run.append("null_space_projection")
+            # Stage 9: Backward delta smoothing (needs all frames in memory)
+            if cfg.use_backward_delta_smoothing and len(all_frames) >= 2:
+                _log(f"Stage 9: Backward delta smoothing ({len(all_frames)} frames)", verbose)
+                t_smooth = time.monotonic()
+                # Convert to float for smoothing
+                float_frames = [f.float().permute(2, 0, 1) for f in all_frames]
+                smoothed = _stage_backward_delta_smoothing(float_frames, cfg)
+                all_frames = [f.permute(1, 2, 0).to(torch.uint8) for f in smoothed]
+                timings["backward_smoothing"] = time.monotonic() - t_smooth
+                stages_run.append("backward_smoothing")
 
-        # Write output frames
-        with open(str(out_path), "wb") as f:
-            for frame_tensor in all_frames:
-                f.write(frame_tensor.contiguous().numpy().tobytes())
+            # Stage 10: Null-space projection (AFTER backward smoothing).
+            # This must be the last frame-modifying stage so that the null-space
+            # guarantee is not destroyed by subsequent pixel modifications.
+            if cfg.use_null_space_projection and posenet is not None and segnet is not None:
+                _log(f"Stage 10: Null-space projection ({len(all_frames)} frames)", verbose)
+                t_null = time.monotonic()
+                for i in range(len(all_frames)):
+                    frame_chw = all_frames[i].float().permute(2, 0, 1).unsqueeze(0).to(device)
+                    orig_chw = all_originals[i].float().permute(2, 0, 1).unsqueeze(0).to(device)
+                    projected = _stage_null_space_projection(frame_chw, orig_chw, posenet, segnet, cfg)
+                    all_frames[i] = projected[0].permute(1, 2, 0).round().clamp(0, 255).to(torch.uint8).cpu()
+                timings["null_space_projection"] = time.monotonic() - t_null
+                stages_run.append("null_space_projection")
+
+            # Write output frames
+            with open(str(out_path), "wb") as f:
+                for frame_tensor in all_frames:
+                    f.write(frame_tensor.contiguous().numpy().tobytes())
+        else:
+            # Streaming mode: file was already written frame-by-frame
+            _stream_fh.close()
 
         timings[f"video_{stem}"] = time.monotonic() - t_video
         _log(f"  {mkv_path.name}: {n_video} frames in {timings[f'video_{stem}']:.1f}s", verbose)
@@ -1426,29 +1458,14 @@ def cpu_stacked_inflate(
             H, W = frame.height, frame.width
             y = np.frombuffer(frame.planes[0], dtype=np.uint8).reshape(
                 H, frame.planes[0].line_size
-            )[:, :W]
+            )
             u = np.frombuffer(frame.planes[1], dtype=np.uint8).reshape(
                 H // 2, frame.planes[1].line_size
-            )[:, : W // 2]
+            )
             v = np.frombuffer(frame.planes[2], dtype=np.uint8).reshape(
                 H // 2, frame.planes[2].line_size
-            )[:, : W // 2]
-
-            y_t = torch.from_numpy(y.copy()).float()
-            u_t = torch.from_numpy(u.copy()).float().unsqueeze(0).unsqueeze(0)
-            v_t = torch.from_numpy(v.copy()).float().unsqueeze(0).unsqueeze(0)
-
-            u_up = F.interpolate(u_t, size=(H, W), mode="bilinear", align_corners=False).squeeze()
-            v_up = F.interpolate(v_t, size=(H, W), mode="bilinear", align_corners=False).squeeze()
-
-            yf = (y_t - 16.0) * (255.0 / 219.0)
-            uf = (u_up - 128.0) * (255.0 / 224.0)
-            vf = (v_up - 128.0) * (255.0 / 224.0)
-
-            r = (yf + 1.402 * vf).clamp(0, 255)
-            g = (yf - 0.344136 * uf - 0.714136 * vf).clamp(0, 255)
-            b = (yf + 1.772 * uf).clamp(0, 255)
-            rgb = torch.stack([r, g, b], dim=0).unsqueeze(0)
+            )
+            rgb = yuv420_to_rgb_frame(y, u, v, H, W)
 
             if H != config.target_h or W != config.target_w:
                 rgb = F.interpolate(rgb, size=(config.target_h, config.target_w), mode="bicubic", align_corners=False)

@@ -329,7 +329,14 @@ def _extract_posenet_targets(
     Returns:
         (N_pairs, 6) float16 numpy array of PoseNet outputs.
     """
-    from tac.scorer_targets import extract_posenet_targets
+    try:
+        from tac.scorer_targets import extract_posenet_targets
+    except ImportError as e:
+        raise ImportError(
+            "tac.scorer_targets is required for PoseNet target extraction. "
+            "Ensure the tac package is installed with scorer support: "
+            "uv pip install -e '.[scorer]'"
+        ) from e
 
     targets_dict = extract_posenet_targets(
         frames, posenet, device=device, batch_size=batch_size, verbose=verbose,
@@ -628,10 +635,9 @@ def apply_frame_corrections(
         pix_idx = pixel_indices[ki]  # (P,)
         deltas = pixel_deltas[ki]    # (P, 3)
 
-        # Apply deltas to flat pixel space
+        # Apply deltas to flat pixel space via vectorized advanced indexing
         frame_flat = frames_t[fi].reshape(3, -1)  # (3, H*W)
-        for c in range(3):
-            frame_flat[c, pix_idx] += deltas[:, c]
+        frame_flat[:, pix_idx] += deltas.T  # (3, P) broadcast over channels
 
         frames_t[fi] = frame_flat.reshape(3, H, W).clamp(0, 255)
         applied += 1
@@ -787,6 +793,7 @@ if __name__ == "__main__":
     parser = argparse.ArgumentParser(description="Pre-compute scorer corrections for inflate")
     parser.add_argument("--gt-video", required=True, help="Path to ground truth video")
     parser.add_argument("--posenet", required=True, help="Path to posenet.safetensors")
+    parser.add_argument("--segnet", default=None, help="Path to segnet.safetensors (default: derived from --posenet path)")
     parser.add_argument("--upstream", default=None, help="Upstream repo dir (for modules.py)")
     parser.add_argument("--output", required=True, help="Output path for corrections file")
     parser.add_argument("--device", default="cpu", help="Device (cpu/cuda/mps)")
@@ -803,7 +810,7 @@ if __name__ == "__main__":
     gt_frames = decode_video(args.gt_video)
     print(f"[precompute] Decoded {len(gt_frames)} GT frames", file=sys.stderr)
 
-    segnet_path = Path(args.posenet).parent / "segnet.safetensors"
+    segnet_path = Path(args.segnet) if args.segnet else Path(args.posenet).parent / "segnet.safetensors"
     upstream_dir = args.upstream or str(Path(args.posenet).parent.parent)
     posenet, segnet = load_scorers(
         args.posenet, segnet_path,
