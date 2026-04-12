@@ -316,6 +316,61 @@ def preflight_submission(submission_src: Path) -> list[str]:
     return errors
 
 
+def preflight_checkpoint_identity(submission_src: Path) -> list[str]:
+    """Verify the postfilter checkpoint matches promoted_result.json.
+
+    This catches the silent-overwrite bug: if postfilter_int8.pt was replaced
+    with a different checkpoint (different training run, different architecture),
+    the eval will silently produce wrong scores. We lost hours debugging this
+    exact scenario on 2026-04-12.
+    """
+    warnings = []
+    ckpt_path = submission_src / "postfilter_int8.pt"
+    promoted_path = submission_src.parent.parent / ".omx" / "state" / "promoted_result.json"
+
+    if not ckpt_path.exists():
+        return warnings
+
+    # Compute checkpoint hash
+    h = hashlib.md5()
+    with open(ckpt_path, "rb") as f:
+        for chunk in iter(lambda: f.read(8192), b""):
+            h.update(chunk)
+    ckpt_md5 = h.hexdigest()
+
+    # Compare with promoted result if available
+    if promoted_path.exists():
+        try:
+            promoted = json.loads(promoted_path.read_text())
+            promoted_artifact = promoted.get("artifact_path", "")
+            if promoted_artifact:
+                promoted_ckpt = submission_src.parent.parent / promoted_artifact
+                if promoted_ckpt.exists():
+                    h2 = hashlib.md5()
+                    with open(promoted_ckpt, "rb") as f:
+                        for chunk in iter(lambda: f.read(8192), b""):
+                            h2.update(chunk)
+                    promoted_md5 = h2.hexdigest()
+                    if ckpt_md5 != promoted_md5:
+                        warnings.append(
+                            f"CHECKPOINT MISMATCH: postfilter_int8.pt (md5 {ckpt_md5[:8]}...) "
+                            f"does not match promoted result artifact (md5 {promoted_md5[:8]}...). "
+                            f"Promoted: {promoted_artifact} (score {promoted.get('score')}). "
+                            f"This will produce WRONG scores. Restore the correct checkpoint."
+                        )
+                    else:
+                        click.echo(
+                            f"  Checkpoint verified: md5 {ckpt_md5[:12]}... matches promoted result",
+                            err=True,
+                        )
+        except (json.JSONDecodeError, OSError):
+            pass
+
+    # Always log the hash for experiment records
+    click.echo(f"  Checkpoint: {ckpt_path.name} (md5 {ckpt_md5})", err=True)
+    return warnings
+
+
 def preflight_config_match(submission_src: Path) -> list[str]:
     """Check if postfilter checkpoint was trained with matching encode config."""
     warnings = []
@@ -947,11 +1002,13 @@ def evaluate(
         mgr.record_failure(RunState.PREFLIGHT_OK, "\n".join(all_errors))
         raise click.ClickException(f"Preflight failed with {len(all_errors)} error(s)")
 
-    # Warnings (non-blocking)
+    # Checkpoint identity verification (CRITICAL — catches wrong-checkpoint bugs)
+    ckpt_warnings = preflight_checkpoint_identity(submission_src)
     config_warnings = preflight_config_match(submission_src)
-    if config_warnings:
+    all_warnings = ckpt_warnings + config_warnings
+    if all_warnings:
         click.echo(click.style("WARNINGS:", fg="yellow", bold=True))
-        for w in config_warnings:
+        for w in all_warnings:
             click.echo(f"  - {w}")
 
     click.echo(click.style("All pre-flight checks passed.", fg="green"))
