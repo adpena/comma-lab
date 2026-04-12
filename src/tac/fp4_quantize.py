@@ -410,7 +410,7 @@ class QATRendererFP4(nn.Module):
     ):
         super().__init__()
         self.base = base_model
-        self.codebook = codebook if codebook is not None else DEFAULT_CODEBOOK.clone()
+        self.register_buffer("codebook", codebook if codebook is not None else DEFAULT_CODEBOOK.clone())
         self.block_size = block_size
         self._parametrized_modules: list[nn.Module] = []
         self._register_parametrizations()

@@ -373,7 +373,11 @@ def _compute_seg_distortion(
         segnet: frozen SegNet with preprocess_input.
 
     Returns:
-        Scalar SegNet distortion (1 - cosine similarity of class probs).
+        Scalar SegNet distortion (1 - dot product of softmax class probs).
+        This is the Bhattacharyya coefficient, NOT cosine similarity (which
+        would normalize by ||p|| * ||q||). Since softmax sums to 1, the dot
+        product is bounded [0, 1]. It is a valid differentiable relaxation
+        of hard argmax disagreement but with weaker gradients near convergence.
     """
     # SegNet expects (B, T, C, H, W) — use T=1 for single-frame seg
     gen_btchw = gen_frames.unsqueeze(1).contiguous()
@@ -533,17 +537,13 @@ def _full_eval(
             has_sc = True
             break
     if has_sc:
-        # Self-compressed layers (renderer with LearnableBitDepth)
-        sc_bytes = _compute_model_bits(renderer).item() / 8.0
-        # Non-self-compressed parameters (motion predictor, biases, etc.)
-        # counted at FP4 (4 bits) as the deployment quantization
-        non_sc_params = 0
-        for m in renderer.modules():
-            if isinstance(m, nn.Conv2d) and not hasattr(m, "bit_depth"):
-                non_sc_params += m.weight.numel()
-                if m.bias is not None:
-                    non_sc_params += m.bias.numel()
-        model_bytes = sc_bytes + non_sc_params * 4 / 8  # FP4 for non-SC layers
+        # COUNCIL DECISION: Only the renderer goes in the archive at inflate time.
+        # The motion predictor (DepthAwareMotionPredictor) is training-only infrastructure
+        # — it provides the ego-motion flow loss but is NOT deployed. Therefore we count
+        # ONLY pair_gen.renderer's self-compressed bits for rate estimation.
+        # If pair_gen is passed (the full PairGenerator), extract renderer explicitly.
+        renderer_module = getattr(renderer, "renderer", renderer)
+        model_bytes = _compute_model_bits(renderer_module).item() / 8.0
 
     # Rate = archive size / original uncompressed video file size
     # From upstream evaluate.py: sum of file sizes in videos/ dir

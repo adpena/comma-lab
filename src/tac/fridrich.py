@@ -409,11 +409,12 @@ def _haar_wavelet_filters(device: str = "cpu") -> tuple[torch.Tensor, torch.Tens
         dtype=torch.float32, device=device,
     ).reshape(1, 1, 3, 3) / 4.0
 
-    # Diagonal: detects diagonal texture
+    # Diagonal (HH-band): detects diagonal texture via checkerboard pattern.
+    # Standard S-UNIWARD uses the 2D HH sub-band of a Haar DWT.
     d_filter = torch.tensor(
-        [[-1, 2, -1],
-         [2, -4,  2],
-         [-1, 2, -1]],
+        [[1, -1,  1],
+         [-1, 1, -1],
+         [1, -1,  1]],
         dtype=torch.float32, device=device,
     ).reshape(1, 1, 3, 3) / 4.0
 

@@ -250,7 +250,7 @@ def save_int8(
     path: str | os.PathLike,
     *,
     meta: dict[str, Any] | None = None,
-    per_channel: bool = False,
+    per_channel: bool = True,
     fp32_bias: bool = False,
 ) -> int:
     """Save model weights in int8 quantized format.
@@ -259,7 +259,8 @@ def save_int8(
         model: the post-filter module
         path: output .pt file path
         meta: optional metadata dict (variant, hidden, kernel, alpha, ...)
-        per_channel: use per-channel scales (better fidelity, ~same size)
+        per_channel: use per-channel scales (better fidelity, ~same size).
+            Default True to match FakeQuantSTE which always uses per-channel.
         fp32_bias: keep bias tensors in fp32 (avoids quantization on small tensors)
 
     Returns:
@@ -352,59 +353,6 @@ def load_int8(
     return model.eval().to(device)
 
 
-def load_entropy_optimized_int8(
-    path: str | os.PathLike,
-    model: nn.Module,
-    device: str = "cpu",
-) -> nn.Module:
-    """Load entropy-optimized int8 weights (with log-scale support).
-
-    Handles the `.log_scale` flag stored by `entropy_optimized_quantize`.
-    For log-scaled tensors: dequant = sign(q) * (exp(|q|/127 * log(127)) - 1) / 126 * scale
-    For standard tensors: dequant = q * scale (same as load_int8).
-    """
-
-    state = torch.load(path, map_location=device, weights_only=True)
-    float_state: dict[str, torch.Tensor] = {}
-    seen: set[str] = set()
-
-    for raw_key in state:
-        if raw_key == "__meta__" or raw_key == "__entropy_info__":
-            continue
-        if raw_key.endswith((".q", ".s", ".log_scale")):
-            base = raw_key.rsplit(".", 1)[0]
-            if base in seen:
-                continue
-            seen.add(base)
-            q = state[base + ".q"].float()
-            s = state[base + ".s"]
-            is_log = (base + ".log_scale") in state and state[base + ".log_scale"].item()
-
-            if is_log:
-                # Reverse the log-scale mapping:
-                #   encode: sign(w) * log1p(|w_norm| * 126) / log(127) * 127 -> int8
-                #   decode: sign(q) * (expm1(|q|/127 * log(127))) / 126 * scale
-                log127 = math.log(127.0)
-                q_norm = q / 127.0  # back to [-1, 1] log domain
-                q_abs = q_norm.abs() * log127
-                p_norm = torch.sign(q) * torch.expm1(q_abs) / 126.0
-                if s.ndim == 0:
-                    float_state[base] = p_norm * s
-                else:
-                    shape = [s.shape[0]] + [1] * (q.ndim - 1)
-                    float_state[base] = p_norm * s.view(*shape)
-            else:
-                if s.ndim == 0:
-                    float_state[base] = q * s
-                else:
-                    shape = [s.shape[0]] + [1] * (q.ndim - 1)
-                    float_state[base] = q * s.view(*shape)
-        else:
-            float_state[raw_key] = state[raw_key].float()
-            seen.add(raw_key)
-
-    model.load_state_dict(float_state)
-    return model.eval().to(device)
 
 
 def save_int8_from_state_dict(
