@@ -633,9 +633,14 @@ def _infer_asymmetric_config(model: nn.Module) -> dict:
     mid_ch = renderer.down_conv.out_channels if hasattr(renderer, "down_conv") else 60
     depth = getattr(renderer, "depth", 1)
 
-    # Motion predictor config
+    # Motion predictor config — U-Net architecture stores hidden in stem[0]
     motion_hidden = 32  # default
-    if hasattr(motion, "net") and len(motion.net) > 0:
+    if hasattr(motion, "stem") and isinstance(motion.stem, nn.Sequential) and len(motion.stem) > 0:
+        first_conv = motion.stem[0]
+        if isinstance(first_conv, nn.Conv2d):
+            motion_hidden = first_conv.out_channels
+    elif hasattr(motion, "net") and len(motion.net) > 0:
+        # Legacy flat-conv architecture fallback
         first_conv = motion.net[0]
         if isinstance(first_conv, nn.Conv2d):
             motion_hidden = first_conv.out_channels
@@ -644,7 +649,7 @@ def _infer_asymmetric_config(model: nn.Module) -> dict:
     use_diff_features = getattr(motion, "use_diff_features", True)
 
     # Asymmetric-specific motion params (Bug #1: serialize for faithful restore)
-    max_flow_px = getattr(motion, "max_flow_px", 12.0)
+    max_flow_px = getattr(motion, "max_flow_px", 20.0)
     max_residual = getattr(motion, "max_residual", 20.0)
     flow_only = getattr(motion, "flow_only", False)
 
@@ -871,7 +876,7 @@ def load_asymmetric_checkpoint(
         mid_ch=header.get("mid_ch", 60),
         motion_hidden=header.get("motion_hidden", 32),
         depth=header.get("depth", 1),
-        max_flow_px=header.get("max_flow_px", 12.0),
+        max_flow_px=header.get("max_flow_px", 20.0),
         max_residual=header.get("max_residual", 20.0),
         flow_only=header.get("flow_only", False),
     )

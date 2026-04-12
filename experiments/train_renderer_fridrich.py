@@ -1588,7 +1588,7 @@ def train_fridrich_renderer(cfg: FridrichRendererConfig) -> dict[str, Any]:
 @click.option("--p1-pose-weight", type=float, default=1.0, help="Phase 1 PoseNet weight")
 @click.option("--rho-max", type=float, default=1e4, help="Maximum rho (penalty cap)")
 @click.option("--lambda-cap", type=float, default=1e6, help="Lagrangian multiplier cap")
-@click.option("--max-flow-px", type=float, default=12.0, help="Max optical flow in pixels (asymmetric mode)")
+@click.option("--max-flow-px", type=float, default=20.0, help="Max optical flow in pixels (asymmetric mode)")
 @click.option("--max-residual", type=float, default=20.0, help="Max residual magnitude (asymmetric mode)")
 @click.option("--seg-temperature-start", type=float, default=1.0, help="Phase 2 SegNet temperature start")
 @click.option("--seg-temperature-end", type=float, default=0.1, help="Phase 2 SegNet temperature end")
