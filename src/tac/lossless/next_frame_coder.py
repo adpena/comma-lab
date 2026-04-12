@@ -6,7 +6,7 @@ from pathlib import Path
 import numpy as np
 
 from .gpt_score import _load_frame_major_segments_from_path, load_official_commavq_gpt_model
-from .profiles import load_gpt_next_frame_profile
+from .profiles import load_next_frame_predictor_profile
 from .range_coder import RangeDecoder, RangeEncoder, cumulative_frequencies, normalize_probabilities
 
 STREAM_MAGIC = b"NFG1"
@@ -227,7 +227,7 @@ def encode_commavq_next_frame_sample(
     gpt_module_path: str | Path | None = None,
     model_loader: Callable[..., object] | None = None,
 ) -> dict[str, object]:
-    config = load_gpt_next_frame_profile(profile)
+    config = load_next_frame_predictor_profile(profile)
     if max_frames <= 0:
         raise ValueError("max_frames must be positive")
     effective_context_frames = config.context_frames if context_frames is None else int(context_frames)

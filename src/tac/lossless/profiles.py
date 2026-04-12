@@ -101,6 +101,32 @@ def load_gpt_next_frame_profile(profile: str) -> GPTNextFrameProfileConfig:
 
 
 @dataclass(frozen=True)
+class NextFramePredictorProfileConfig:
+    profile: str
+    method: str
+    context_frames: int
+
+    def __post_init__(self) -> None:
+        if self.method not in {"gpt_next_frame", "tiny_frame_predictor"}:
+            raise ValueError(f"unsupported next-frame method: {self.method}")
+        if self.context_frames <= 0:
+            raise ValueError("context_frames must be positive")
+
+
+def load_next_frame_predictor_profile(profile: str) -> NextFramePredictorProfileConfig:
+    try:
+        config = PROFILES[profile]
+    except KeyError as exc:
+        raise ValueError(f"unknown next-frame profile: {profile}") from exc
+
+    return NextFramePredictorProfileConfig(
+        profile=profile,
+        method=str(config.get("method", "")),
+        context_frames=int(config.get("context_frames", 0)),
+    )
+
+
+@dataclass(frozen=True)
 class TinyFramePredictorProfileConfig:
     profile: str
     method: str
