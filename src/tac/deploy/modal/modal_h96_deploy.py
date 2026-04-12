@@ -88,6 +88,12 @@ def train_h96(tag: str = "h96_council_modal"):
 
 @app.local_entrypoint()
 def main():
+    # Pre-flight cost estimate
+    from tac.cost_tracker import print_cost_estimate
+    print("\n--- Cost Estimate ---")
+    print_cost_estimate(gpu="a10g", estimated_hours=6.0, platform="modal")
+    print()
+
     print("Deploying h=96 training to Modal A10G...")
     result = train_h96.remote()
     print(f"Training completed: {result}")

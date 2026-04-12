@@ -20,6 +20,7 @@ import os
 import shutil
 import subprocess
 import sys
+import time as _time_module
 import zipfile
 from enum import Enum
 from pathlib import Path
@@ -926,6 +927,79 @@ def _save_experiment_record(
     import platform
     machine_id = f"{platform.node()}_{platform.system()}_{platform.machine()}"
 
+    # Platform detection
+    platform_name = os.environ.get("PACT_PLATFORM", "local")
+    gpu_name = "cpu"
+    vram_gb = 0
+    if device == "cuda":
+        try:
+            import torch
+            gpu_name = torch.cuda.get_device_name(0).lower()
+            # Map common GPU names to short labels
+            gpu_label_map = {
+                "p100": "p100", "v100": "v100", "t4": "t4",
+                "a10": "a10g", "a100": "a100", "h100": "h100",
+            }
+            gpu_label = gpu_name
+            for key, label in gpu_label_map.items():
+                if key in gpu_name:
+                    gpu_label = label
+                    break
+            gpu_name = gpu_label
+            vram_gb = round(torch.cuda.get_device_properties(0).total_mem / (1024**3))
+        except Exception:
+            pass
+    elif device == "mps":
+        gpu_name = "mps"
+    is_smoke = config.get("PACT_SMOKE_TEST", "0") == "1"
+    frame_count_str = config.get("PACT_FRAME_COUNT", "1200")
+    try:
+        frame_count = int(frame_count_str)
+    except ValueError:
+        frame_count = 1200
+    opt_steps_str = config.get("PACT_OPTIMIZATION_STEPS", "")
+    optimization_steps = int(opt_steps_str) if opt_steps_str.isdigit() else None
+    platform_notes = config.get("PACT_PLATFORM_NOTES", "")
+
+    # Replicability metadata — everything needed to reproduce 1:1
+    try:
+        from tac.cost_tracker import collect_replicability_metadata, CostRecord
+        replicability = collect_replicability_metadata(device)
+    except ImportError:
+        replicability = {"error": "tac.cost_tracker not available"}
+
+    # Config env hash for quick identity check
+    config_env_path = submission_src / "config.env"
+    config_env_hash = ""
+    if config_env_path.exists():
+        config_env_hash = hashlib.md5(config_env_path.read_bytes()).hexdigest()
+    replicability["config_env_hash"] = config_env_hash
+
+    # Stage timings from state.json (populated by _run_pipeline)
+    state_data = mgr.load_state()
+    stage_timings = state_data.get("stage_timings", {})
+
+    # Compute total pipeline runtime for cost record
+    pipeline_total_seconds = stage_timings.get("pipeline_total", {}).get("duration_seconds", 0.0)
+
+    # Cost record
+    try:
+        from tac.cost_tracker import CostRecord as _CR
+        cost_record = _CR.from_run(
+            platform=platform_name,
+            gpu=gpu_name,
+            runtime_seconds=pipeline_total_seconds,
+        ).to_dict()
+    except ImportError:
+        cost_record = {
+            "platform": platform_name,
+            "gpu": gpu_name,
+            "rate_per_hour": 0.0,
+            "runtime_seconds": pipeline_total_seconds,
+            "total_cost": 0.0,
+            "is_free_tier": True,
+        }
+
     record = {
         "run_id": mgr.run_dir.name,
         "ts_utc": datetime.datetime.now(datetime.timezone.utc).isoformat(),
@@ -939,6 +1013,24 @@ def _save_experiment_record(
         "git_commit": git_commit,
         "device": device,
         "machine": machine_id,
+        "platform": {
+            "name": platform_name,
+            "gpu": gpu_name,
+            "vram_gb": vram_gb,
+            "is_smoke_test": is_smoke,
+            "frame_count": frame_count,
+            "optimization_steps": optimization_steps,
+            "notes": platform_notes,
+        },
+        "replicability": replicability,
+        "cost": cost_record,
+        "stage_timings": stage_timings,
+        "experiment_scope": {
+            "type": "eval",
+            "frame_count": frame_count,
+            "is_smoke_test": is_smoke,
+            "notes": platform_notes,
+        },
         "config_env": dict(config),
         "inflate_flags": {
             "brightness_shift": config.get("INFLATE_BRIGHTNESS_SHIFT", "0"),
@@ -1083,10 +1175,28 @@ def _run_pipeline(
     lock_path = mgr.run_dir / ".lock"
     _acquire_lock(lock_path)
     current = mgr.get_stage()
+    pipeline_start = _time_module.monotonic()
+    stage_timings: dict[str, dict[str, Any]] = {}
+
+    def _timed_stage(name: str):
+        """Context-manager-like helper: returns a dict to fill with timing."""
+        entry = {
+            "start": datetime.datetime.now(datetime.timezone.utc).isoformat(),
+            "end": "",
+            "duration_seconds": 0.0,
+        }
+        stage_timings[name] = entry
+        return entry
+
+    def _finish_stage(entry: dict[str, Any], t0: float):
+        entry["end"] = datetime.datetime.now(datetime.timezone.utc).isoformat()
+        entry["duration_seconds"] = round(_time_module.monotonic() - t0, 2)
 
     try:
         # -- Compress -----------------------------------------------
         if current in (RunState.PREFLIGHT_OK, RunState.COMPRESSING):
+            t0 = _time_module.monotonic()
+            timing = _timed_stage("compress")
             if skip_compress:
                 click.echo("\n--- Compress: SKIPPED (--skip-compress) ---")
                 # Copy existing archive.zip
@@ -1104,35 +1214,62 @@ def _run_pipeline(
                 stage_compress(mgr, upstream, submission_src)
                 click.echo("\n--- Package ---")
                 stage_package(mgr, submission_src)
+            _finish_stage(timing, t0)
             current = mgr.get_stage()
 
         # If we already compressed but not packaged
         if current == RunState.COMPRESSED:
+            t0 = _time_module.monotonic()
+            timing = _timed_stage("package")
             click.echo("\n--- Package ---")
             stage_package(mgr, submission_src)
+            _finish_stage(timing, t0)
             current = mgr.get_stage()
 
         # -- Inflate -----------------------------------------------
         if current in (RunState.PACKAGED, RunState.INFLATING):
+            t0 = _time_module.monotonic()
+            timing = _timed_stage("inflate")
             click.echo("\n--- Inflate ---")
             stage_inflate(mgr, submission_src, upstream, device)
+            _finish_stage(timing, t0)
             current = mgr.get_stage()
 
         # -- Score -------------------------------------------------
         if current in (RunState.INFLATED, RunState.SCORING):
+            t0 = _time_module.monotonic()
+            timing = _timed_stage("score")
             click.echo("\n--- Score ---")
             stage_score(mgr, upstream, submission_src, device)
+            _finish_stage(timing, t0)
             current = mgr.get_stage()
+
+        # Persist stage timings to state.json
+        total_seconds = round(_time_module.monotonic() - pipeline_start, 2)
+        stage_timings["pipeline_total"] = {
+            "duration_seconds": total_seconds,
+        }
+        data = mgr.load_state()
+        data["stage_timings"] = stage_timings
+        mgr.save_state(data)
 
         if current == RunState.SCORED:
             click.echo(click.style("\nPipeline complete.", fg="green", bold=True))
+            click.echo(f"  Total wall time: {total_seconds:.1f}s ({total_seconds / 60:.1f}m)")
 
     except (click.ClickException, click.Abort) as exc:
         msg = str(exc)
         mgr.record_failure(mgr.get_stage(), msg)
+        # Still persist partial timings on failure
+        data = mgr.load_state()
+        data["stage_timings"] = stage_timings
+        mgr.save_state(data)
         raise
     except Exception as exc:
         mgr.record_failure(mgr.get_stage(), str(exc))
+        data = mgr.load_state()
+        data["stage_timings"] = stage_timings
+        mgr.save_state(data)
         raise click.ClickException(
             f"Unexpected error: {exc}\nRun dir: {mgr.run_dir}\nUse `runner.py resume {mgr.run_dir.name}` to retry."
         ) from exc

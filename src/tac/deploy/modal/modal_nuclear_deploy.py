@@ -145,6 +145,12 @@ def main(
     if not tag:
         tag = f"nuclear_h{hidden}_{loss_mode}"
 
+    # Pre-flight cost estimate
+    from tac.cost_tracker import print_cost_estimate
+    print("\n--- Cost Estimate ---")
+    print_cost_estimate(gpu="h100", estimated_hours=12.0, platform="modal")
+    print()
+
     print(f"Deploying NUCLEAR run: h={hidden}, {loss_mode}, {epochs}ep on H100...")
     result = train_nuclear.remote(hidden=hidden, epochs=epochs, loss_mode=loss_mode, tag=tag)
     print(f"Completed: exit code {result}")

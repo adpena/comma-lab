@@ -467,6 +467,23 @@ def main(
     print(f"{'='*60}")
 
     # Save results summary
+    elapsed_total = time.time() - t0
+
+    # Cost tracking
+    cost_info = {}
+    try:
+        from tac.cost_tracker import CostRecord, collect_replicability_metadata
+        gpu_label = "p100" if "p100" in device.lower() or Path("/kaggle").exists() else device
+        cost_rec = CostRecord.from_run(
+            platform="kaggle" if Path("/kaggle").exists() else "local",
+            gpu=gpu_label,
+            runtime_seconds=elapsed_total,
+        )
+        cost_info = cost_rec.to_dict()
+        replicability = collect_replicability_metadata(device)
+    except ImportError:
+        replicability = {}
+
     results = {
         "proxy_score": proxy,
         "seg_dist": seg_dist,
@@ -477,7 +494,9 @@ def main(
         "num_steps": num_steps,
         "fridrich_steps": fridrich_steps if not skip_fridrich else 0,
         "device": device,
-        "elapsed_total": time.time() - t0,
+        "elapsed_total": elapsed_total,
+        "cost": cost_info,
+        "replicability": replicability,
     }
     results_path = out / "results.json"
     results_path.write_text(json.dumps(results, indent=2))

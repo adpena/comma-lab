@@ -141,6 +141,12 @@ def main():
         sp.run([".venv/bin/modal", "volume", "put", "comma-lab-weights",
                 str(saliency), "saliency.npy", "--force"])
 
+    # Pre-flight cost estimate
+    from tac.cost_tracker import print_cost_estimate
+    print("\n--- Cost Estimate ---")
+    print_cost_estimate(gpu="a10g", estimated_hours=8.0, platform="modal")
+    print()
+
     print("Deploying dilated h=96 + dual saliency to Modal A10G...")
     result = train.remote()
     print(f"Training completed: exit code {result}")

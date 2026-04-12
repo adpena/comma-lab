@@ -643,6 +643,65 @@ class Trainer:
         )
         tmp_path.rename(path)  # atomic on POSIX
 
+    def _save_training_cost(self, final_epoch: int) -> None:
+        """Save training cost and replicability metadata alongside the checkpoint.
+
+        Writes training_cost_{tag}.json to the output directory. This is
+        informational only — never blocks training.
+        """
+        try:
+            elapsed = _time_module.monotonic() - self._start_wall_time
+            device_str = str(self.device)
+
+            # Detect platform
+            if "cuda" in device_str:
+                platform_name = "cloud"
+                try:
+                    gpu_name = torch.cuda.get_device_name(0).lower()
+                except Exception:
+                    gpu_name = "cuda"
+            elif "mps" in device_str:
+                platform_name = "local"
+                gpu_name = "mps"
+            else:
+                platform_name = "local"
+                gpu_name = "cpu"
+
+            training_cost = {
+                "epochs_completed": final_epoch + 1,
+                "wall_clock_seconds": round(elapsed, 2),
+                "wall_clock_hours": round(elapsed / 3600, 4),
+                "device": device_str,
+                "platform": platform_name,
+                "gpu": gpu_name,
+                "best_scorer": self.best_scorer if self.best_scorer < float("inf") else None,
+                "best_epoch": self.best_epoch,
+                "tag": self.config.tag,
+                "hidden": self.config.hidden,
+                "architecture": getattr(self.config, "architecture", "unknown"),
+            }
+
+            # Try to add cost estimate from cost_tracker
+            try:
+                from .cost_tracker import CostRecord
+                cost = CostRecord.from_run(platform_name, gpu_name, elapsed)
+                training_cost["cost"] = cost.to_dict()
+            except ImportError:
+                training_cost["cost"] = {
+                    "rate_per_hour": 0.0,
+                    "total_cost": 0.0,
+                    "is_free_tier": True,
+                }
+
+            out_dir = Path(self.config.output_dir)
+            out_dir.mkdir(parents=True, exist_ok=True)
+            cost_path = out_dir / f"training_cost_{self.config.tag}.json"
+            cost_path.write_text(json.dumps(training_cost, indent=2) + "\n")
+            print(f"[trainer] Cost metadata saved: {cost_path}")
+        except Exception as exc:
+            # Cost tracking is informational — never block training
+            print(f"[trainer] WARNING: failed to save training cost: {exc}")
+
     def load_training_state(self, path: str | Path):
         """Resume training from a saved state."""
         try:
@@ -1124,6 +1183,7 @@ class Trainer:
                 return self.best_scorer
 
         self.save_training_state()
+        self._save_training_cost(epoch)
         print(f"[trainer] Complete. Best: {self.best_scorer:.4f} at epoch {self.best_epoch}")
         return self.best_scorer
 
@@ -1824,6 +1884,7 @@ class Trainer:
 
         # Final save
         self.save_training_state()
+        self._save_training_cost(cfg.epochs - 1)
         print(f"[trainer-lazy] Complete. Best: {self.best_scorer:.4f} at epoch {self.best_epoch}")
         return self.best_scorer
 

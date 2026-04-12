@@ -187,6 +187,12 @@ def main(
         lane: 'gpu' for renderer, 'cpu' for postfilter
     """
     if not profile:
+        # Pre-flight cost estimate
+        from tac.cost_tracker import print_cost_estimate
+        print("\n--- Cost Estimate (per test) ---")
+        print_cost_estimate(gpu="a10g", estimated_hours=2.0, platform="modal")
+        print(f"  x3 parallel = ~${3 * 2.0 * 1.04:.2f} total\n")
+
         # Default: all 3 GPU renderer smoke tests in parallel
         profiles = [
             ("mask_renderer_smoke", "mask_renderer_smoke_a10g"),

@@ -92,5 +92,11 @@ def train_dilated_h64(tag: str = "dilated_h64_long1000_modal"):
 
 @app.local_entrypoint()
 def main():
+    # Pre-flight cost estimate
+    from tac.cost_tracker import print_cost_estimate
+    print("\n--- Cost Estimate ---")
+    print_cost_estimate(gpu="a10g", estimated_hours=6.0, platform="modal")
+    print()
+
     result = train_dilated_h64.remote()
     print(f"Modal dilated h64 exit code: {result}")
