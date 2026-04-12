@@ -215,6 +215,42 @@ class TacLosslessGlobalPrevSymbolTests(unittest.TestCase):
         self.assertIn(second_group, ({"clip_a", "clip_c"}, {"clip_b", "clip_d"}))
         self.assertNotEqual(first_group, second_group)
 
+    def test_order_token_records_label_lexicographic_clip_rank_requires_label_map(self) -> None:
+        from tac.lossless.data import TokenRecord
+        from tac.lossless.global_prev_symbol import order_token_records
+
+        records = [TokenRecord("clip", np.arange(128, dtype=np.int16).reshape(1, 8, 16))]
+
+        with self.assertRaisesRegex(ValueError, "label_map"):
+            order_token_records(records, strategy="label_lexicographic_clip_rank")
+
+    def test_order_token_records_label_lexicographic_clip_rank_sorts_by_label_then_rank(self) -> None:
+        from tac.lossless.data import TokenRecord
+        from tac.lossless.global_prev_symbol import order_token_records
+
+        records = [
+            TokenRecord("clip_d", np.full((2, 8, 16), 7, dtype=np.int16)),
+            TokenRecord("clip_b", np.full((2, 8, 16), 3, dtype=np.int16)),
+            TokenRecord("clip_c", np.full((2, 8, 16), 7, dtype=np.int16)),
+            TokenRecord("clip_a", np.full((2, 8, 16), 1, dtype=np.int16)),
+        ]
+
+        ordered = order_token_records(
+            records,
+            strategy="label_lexicographic_clip_rank",
+            label_map={
+                "clip_a": [0, 1],
+                "clip_b": [0, 1],
+                "clip_c": [1, 0],
+                "clip_d": [1, 0],
+            },
+        )
+
+        self.assertEqual(
+            [record.file_name for record in ordered],
+            ["clip_a", "clip_b", "clip_c", "clip_d"],
+        )
+
     def test_order_token_records_explicit_strategy_replays_saved_order(self) -> None:
         from tac.lossless.data import TokenRecord
         from tac.lossless.global_prev_symbol import order_token_records

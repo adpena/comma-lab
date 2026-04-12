@@ -258,6 +258,7 @@ def build_parser() -> argparse.ArgumentParser:
             "clip_recursive_pca",
             "transition_recursive_pca",
             "label_grouped_clip_greedy_nn",
+            "label_lexicographic_clip_rank",
         ],
     )
     sp.add_argument("--labels", default=None)

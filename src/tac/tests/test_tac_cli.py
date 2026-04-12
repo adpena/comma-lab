@@ -906,6 +906,53 @@ class TacCliTests(unittest.TestCase):
         self.assertEqual(result["command"], "lossless_global_prev_symbol_order_sample")
         self.assertTrue(result["exact_match"])
 
+    def test_lossless_global_prev_symbol_order_sample_subcommand_accepts_label_lexicographic_strategy(self) -> None:
+        mod = load_module()
+        with tempfile.TemporaryDirectory() as tmpdir:
+            root = Path(tmpdir)
+            output_path = root / "order.json"
+            labels_path = root / "labels.json"
+            with mock.patch.object(
+                mod,
+                "benchmark_global_prev_symbol_record_order_sample",
+                return_value={
+                    "command": "lossless_global_prev_symbol_order_sample",
+                    "strategy": "label_lexicographic_clip_rank",
+                    "max_records": 64,
+                    "output_path": str(output_path),
+                    "archive_bytes": 123,
+                    "original_bytes": 456,
+                    "compression_ratio": 3.707317073170732,
+                    "exact_match": True,
+                },
+            ) as mocked:
+                result = mod.main(
+                    [
+                        "lossless",
+                        "global-prev-symbol-order-sample",
+                        "--output",
+                        str(output_path),
+                        "--max-records",
+                        "64",
+                        "--strategy",
+                        "label_lexicographic_clip_rank",
+                        "--labels",
+                        str(labels_path),
+                    ]
+                )
+
+        mocked.assert_called_once_with(
+            output_path=output_path,
+            split=None,
+            max_records=64,
+            strategy="label_lexicographic_clip_rank",
+            frame_order="canonical",
+            labels_path=labels_path,
+            order_path=None,
+        )
+        self.assertEqual(result["command"], "lossless_global_prev_symbol_order_sample")
+        self.assertTrue(result["exact_match"])
+
     def test_lossless_prev_symbol_encode_subcommand_writes_coded_stream(self) -> None:
         mod = load_module()
         with tempfile.TemporaryDirectory() as tmpdir:

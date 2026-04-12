@@ -91,6 +91,21 @@ def _normalize_label(value: object) -> tuple[object, ...]:
     return (value,)
 
 
+def _exact_clip_rank_key(record: TokenRecord) -> tuple[int, ...]:
+    arr = np.asarray(record.tokens, dtype=np.int64)
+    flat = arr.reshape(arr.shape[0], -1)
+    summary = np.concatenate(
+        [
+            flat[0],
+            flat[flat.shape[0] // 2],
+            flat[-1],
+            flat.sum(axis=0, dtype=np.int64),
+        ],
+        axis=0,
+    )
+    return tuple(int(value) for value in summary.tolist())
+
+
 def order_token_records(
     records: list[TokenRecord],
     *,
@@ -139,6 +154,17 @@ def order_token_records(
             order = _greedy_nn_order(features, group)
             ordered.extend(group[idx] for idx in order)
         return ordered
+    if strategy == "label_lexicographic_clip_rank":
+        if label_map is None:
+            raise ValueError("label_map is required for label_lexicographic_clip_rank")
+        return sorted(
+            items,
+            key=lambda record: (
+                _normalize_label(label_map.get(record.file_name, ("unlabeled",))),
+                _exact_clip_rank_key(record),
+                record.file_name,
+            ),
+        )
     raise ValueError(f"unsupported strategy: {strategy}")
 
 
