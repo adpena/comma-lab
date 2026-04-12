@@ -975,7 +975,10 @@ def load_postfilter_int8(
                     float_state[base] = q * s.view(*shape)
         else:
             # uncompressed fp32 tensor (e.g., bias stored in full precision)
-            float_state[raw_key] = state[raw_key].float()
+            # Skip non-tensor metadata (dicts like __meta__, config_fingerprint)
+            val = state[raw_key]
+            if isinstance(val, torch.Tensor):
+                float_state[raw_key] = val.float()
             seen.add(raw_key)
     meta = normalize_postfilter_meta(state.get("__meta__"))
     # Auto-detection heuristic: if metadata claims a simple variant (standard/residual)
