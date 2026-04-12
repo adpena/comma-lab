@@ -450,6 +450,12 @@ class MotionPredictor(nn.Module):
         # Zero-init output — start with zero motion (identity warp)
         nn.init.zeros_(self.head.weight)
         nn.init.zeros_(self.head.bias)
+        # Gate channel (index 2) init bias to -2.0 → sigmoid(-2)=0.12
+        # This makes the model trust the warp from the start, using residual
+        # only for correction. Without this, gate=0.5 → half the signal lost.
+        if output_channels >= 3:
+            with torch.no_grad():
+                self.head.bias[2] = -2.0
 
     def forward(
         self,

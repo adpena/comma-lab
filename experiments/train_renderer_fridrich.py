@@ -120,14 +120,15 @@ class FridrichRendererConfig:
     target_w: int = 512
 
     # Phase boundaries (fraction of total epochs)
-    phase1_end: float = 0.20   # 0-20%: memorize (MSE + soft scorer)
-    phase2_end: float = 0.60   # 20-60%: constrain (Fridrich Lagrangian)
-    # 60-100%: compress (add self-compression penalty)
+    # Asymmetric needs longer Phase 1 — renderer must learn basic colors before constraints
+    phase1_end: float = 0.40   # 0-40%: memorize (MSE + soft scorer)
+    phase2_end: float = 0.70   # 40-70%: constrain (Fridrich Lagrangian)
+    # 70-100%: compress (add self-compression penalty)
 
-    # Phase 1: soft weights (MSE-dominated warmup)
-    p1_mse_weight: float = 1.0
-    p1_seg_weight: float = 10.0
-    p1_pose_weight: float = 1.0
+    # Phase 1: MSE-dominated warmup (normalized to [0,1] range)
+    p1_mse_weight: float = 10.0   # MSE should dominate Phase 1 (learn colors first)
+    p1_seg_weight: float = 1.0    # soft SegNet signal
+    p1_pose_weight: float = 0.1   # PoseNet needs warp to work first
 
     # Phase 2+3: Fridrich Lagrangian constraints
     seg_boundary: float = 0.005    # target: seg_dist < 0.005
@@ -184,11 +185,11 @@ class FridrichRendererConfig:
     gate_reg_threshold: float = 0.5
     gate_reg_weight: float = 0.1
 
-    # Auto-kill on divergence
+    # Auto-kill on divergence (thresholds set for normalized MSE + asymmetric warmup)
     kill_loss_threshold: float = 100.0
-    kill_seg_threshold: float = 0.5
-    kill_pose_threshold: float = 1.0
-    kill_patience: int = 50
+    kill_seg_threshold: float = 0.8     # relaxed: SegNet starts near 0.5
+    kill_pose_threshold: float = 500.0  # relaxed: PoseNet starts >100 for asymmetric
+    kill_patience: int = 200            # give asymmetric warmup time to converge
 
     # Even-pairs-only: scorer evaluates (0,1),(2,3),(4,5)... not (1,2),(3,4)
     # Training on even-index pair starts only saves ~50% compute
@@ -1130,8 +1131,9 @@ def train_fridrich_renderer(cfg: FridrichRendererConfig) -> dict[str, Any]:
             gen_t1 = pair_gen.renderer(mask_t1)  # (B, 3, H, W) float [0, 255]
 
         # ---- Compute losses ----
-        # MSE reconstruction (warm signal, always on but weighted down later)
-        mse_loss = F.mse_loss(gen_t, gt_t) + F.mse_loss(gen_t1, gt_t1)
+        # MSE reconstruction normalized to [0,1] range (Bug fix: raw [0,255] MSE
+        # was ~21000, drowning seg (~5) and pose (~180) terms completely)
+        mse_loss = F.mse_loss(gen_t / 255.0, gt_t / 255.0) + F.mse_loss(gen_t1 / 255.0, gt_t1 / 255.0)
 
         # SegNet distortion — ONLY on frame_t1 (council #5: SegNet uses x[:, -1, ...]
         # which selects the LAST frame. frame_t is invisible to SegNet at eval time.
@@ -1720,9 +1722,9 @@ def validate_smoke(precomputed: str | None = None, pair_mode: str = "dp_sims") -
     cfg = FridrichRendererConfig(
         pair_mode=pair_mode,  # test the ACTUAL mode that will be deployed
         channels=(32, 16),  # tiny for speed (dp_sims only)
-        base_ch=8 if pair_mode == "asymmetric" else 36,  # tiny for speed
-        mid_ch=16 if pair_mode == "asymmetric" else 60,
-        motion_hidden=8 if pair_mode == "asymmetric" else 32,
+        base_ch=36,   # keep full capacity even for smoke (Bug fix: 8 was too small)
+        mid_ch=60,
+        motion_hidden=32,
         epochs=100,
         lr=2e-4,
         batch_size=2,
