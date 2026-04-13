@@ -1,5 +1,24 @@
 # run log
 
+## 2026-04-14T00:30:00Z — asym_v4_supervised best_proxy_constraints_met AUTH EVAL
+
+- **auth=2.8700** (CONFIRMED: supervised training collapses PoseNet)
+- seg=0.3002, pose=2.4707, rate=0.1004
+- checkpoint: renderer_epoch16800_constraints_met.pt (selected by best_proxy_constraints_met strategy)
+- proxy_score=0.7266 (score_projection, fallback — full_eval_score absent due to OOM)
+- platform: Modal T4
+- KEY FINDING: SegNet 0.003 = BEST EVER (equal to dilated h=64). PoseNet 2.47 = CATASTROPHIC (16× dilated).
+- KEY FINDING: score_projection is NOT a reliable proxy for auth score when PoseNet collapses —
+  it was tracking SegNet improvement (×33 better) while completely missing PoseNet collapse (×16 worse).
+  score_projection as training proxy = useless for PoseNet-dominated regime.
+- COMPARISON TABLE (asym_v4 supervised):
+  ep16800 (best proxy): seg=0.003, pose=2.47  → total=2.87 ← best_proxy_constraints_met selected this
+  ep19999 (periodic):   seg=0.566, pose=1.12  → total=1.79 ← randomly landed on more balanced epoch
+  dilated_h64 baseline: seg=0.006, pose=0.060 → total=1.33 ← current best
+- INVALIDATED: both supervised checkpoints are worse than dilated baseline; supervised approach FAILS
+- AWAITING: raft_only (Kaggle v6) for valid A/B comparison on same architecture
+- saved: /results/asym_v4_supervised/auth_eval_renderer_epoch16800_constraints_met.json
+
 ## 2026-04-13T23:00:00Z — Kaggle both kernels RUNNING (v6 datasets, canonical)
 
 - asym_warp_raft_only: kernel v6 RUNNING, dataset v6 (all assets confirmed present)
