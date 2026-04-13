@@ -381,23 +381,26 @@ def main(
         f"{upstream}:{existing_path}" if existing_path else str(upstream)
     )
 
-    # Locate test video.  Three search paths in priority order:
+    # Locate test video.  Four search paths in priority order:
     #   1. Explicit CONSTRAINED_VIDEO env var override
     #   2. Dataset mount: /kaggle/input/<slug>/<video_rel>
     #   3. Working dir fallback: /kaggle/working/<video_rel>
     #   4. Upstream clone: ensure_upstream() puts videos/ at upstream/videos/
-    #      This is the canonical path on Kaggle when the video is not in the dataset.
+    #   5. Dataset root flat: /kaggle/input/<slug>/<stem>.mkv (video uploaded without subdir)
     video_path = input_root / ASSET_DATASET_SLUG / video_rel
     if not video_path.exists():
         video_path = working_dir / video_rel
     if not video_path.exists():
         video_path = upstream / "videos" / Path(video_rel).name
     if not video_path.exists():
+        video_path = input_root / ASSET_DATASET_SLUG / Path(video_rel).name
+    if not video_path.exists():
         raise FileNotFoundError(
             f"Test video not found.\n"
             f"  Checked: {input_root / ASSET_DATASET_SLUG / video_rel}\n"
             f"  Checked: {working_dir / video_rel}\n"
             f"  Checked: {upstream / 'videos' / Path(video_rel).name}\n"
+            f"  Checked: {input_root / ASSET_DATASET_SLUG / Path(video_rel).name}\n"
             f"  Set CONSTRAINED_VIDEO env var to the correct relative path."
         )
     print(f"  Video: {video_path}")
