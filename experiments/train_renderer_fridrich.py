@@ -110,7 +110,7 @@ class FridrichRendererConfig:
     epochs: int = 10000
     lr: float = 2e-4
     lr_min_ratio: float = 0.01
-    batch_size: int = 4
+    batch_size: int = 16  # council B5: T4 used 224MB at bs=4, has 20x headroom
     grad_clip: float = 1.0
     device: str = "cuda"
     seed: int = 42
@@ -120,10 +120,10 @@ class FridrichRendererConfig:
     target_w: int = 512
 
     # Phase boundaries (fraction of total epochs)
-    # Asymmetric needs longer Phase 1 — renderer must learn basic colors before constraints
-    phase1_end: float = 0.40   # 0-40%: memorize (MSE + soft scorer)
-    phase2_end: float = 0.70   # 40-70%: constrain (Fridrich Lagrangian)
-    # 70-100%: compress (add self-compression penalty)
+    # Council revision: Phase 1 converged by ~25%. Phase 2 needs 60% for slow Lagrangian.
+    phase1_end: float = 0.25   # 0-25%: memorize (MSE + soft scorer)
+    phase2_end: float = 0.85   # 25-85%: constrain (Fridrich Lagrangian, slow rho)
+    # 85-100%: compress (add self-compression penalty)
 
     # Phase 1: MSE-dominated warmup (normalized to [0,1] range)
     p1_mse_weight: float = 10.0   # MSE should dominate Phase 1 (learn colors first)
@@ -134,11 +134,11 @@ class FridrichRendererConfig:
     seg_boundary: float = 0.005    # target: seg_dist < 0.005
     pose_boundary: float = 0.05    # target: pose_dist < 0.05 (relaxed; 0.01 never achieved)
     rho_init: float = 10.0         # initial quadratic penalty coefficient
-    rho_growth: float = 1.05       # rho multiplier per outer step
-    rho_max: float = 1e4           # cap rho to prevent numerical explosion
+    rho_growth: float = 1.005      # rho multiplier per outer step (council: 1.02 exploded in 400ep)
+    rho_max: float = 1e3           # cap rho (council: 1e4 caused Lagrangian explosion at ep4418)
 
-    # Lagrangian multiplier cap (prevent numerical explosion)
-    lambda_cap: float = 1e6
+    # Lagrangian multiplier cap (council: 1e6 allowed λ_p=185K, overwhelming task loss)
+    lambda_cap: float = 1e4
 
     # TV smoothness
     tv_weight: float = 0.1
@@ -180,6 +180,10 @@ class FridrichRendererConfig:
     use_null_space: bool = False          # optimization #6: null-space projection
     share_stem: bool = False              # optimization #12: shared stem (deferred, gated)
     flow_only: bool = False               # optimization #15: no gate/residual (deferred, gated)
+
+    # Flow warmup: zero out residual for first N epochs to force flow learning (council B1+B2)
+    flow_warmup_epochs: int = 500    # epochs with residual zeroed out
+    residual_ramp_epochs: int = 500  # epochs to ramp residual from 0→1 after warmup
 
     # Gate regularization (penalize gate_mean above threshold — Quantizr adversarial)
     gate_reg_threshold: float = 0.5
@@ -1122,8 +1126,17 @@ def train_fridrich_renderer(cfg: FridrichRendererConfig) -> dict[str, Any]:
 
         # ---- Forward: generate frames ----
         if cfg.pair_mode == "asymmetric":
+            # Flow warmup (council B1+B2): zero residual for first N epochs,
+            # then ramp from 0→1 to force flow learning before residual develops.
+            if epoch < cfg.flow_warmup_epochs:
+                residual_scale = 0.0
+            elif epoch < cfg.flow_warmup_epochs + cfg.residual_ramp_epochs:
+                ramp_progress = (epoch - cfg.flow_warmup_epochs) / max(cfg.residual_ramp_epochs, 1)
+                residual_scale = ramp_progress
+            else:
+                residual_scale = 1.0
             # Warp paradigm: single forward produces both frames jointly
-            pair_hwc = pair_gen(mask_t, mask_t1)  # (B, 2, H, W, 3)
+            pair_hwc = pair_gen(mask_t, mask_t1, residual_scale=residual_scale)  # (B, 2, H, W, 3)
             gen_t = pair_hwc[:, 0].permute(0, 3, 1, 2).contiguous()   # (B, 3, H, W)
             gen_t1 = pair_hwc[:, 1].permute(0, 3, 1, 2).contiguous()  # (B, 3, H, W)
         else:
@@ -1300,6 +1313,7 @@ def train_fridrich_renderer(cfg: FridrichRendererConfig) -> dict[str, Any]:
             asym_telemetry: dict[str, Any] = {}
             if cfg.pair_mode == "asymmetric":
                 asym_telemetry["gate_mean"] = getattr(pair_gen, "_last_gate_mean", None)
+                asym_telemetry["residual_scale"] = residual_scale
                 with torch.no_grad():
                     motion_out = pair_gen.motion(mask_t, mask_t1)
                     flow_field = motion_out[:, :2]  # (B, 2, H, W)
@@ -1547,14 +1561,14 @@ def train_fridrich_renderer(cfg: FridrichRendererConfig) -> dict[str, Any]:
 @click.command()
 @click.option("--precomputed", type=str, default=None, help="Precomputed data dir (comp_frames.pt, gt_frames.pt)")
 @click.option("--epochs", type=int, default=10000, help="Training epochs")
-@click.option("--batch-size", type=int, default=4, help="Batch size (consecutive pairs)")
+@click.option("--batch-size", type=int, default=16, help="Batch size (council B5: T4 has 20x VRAM headroom)")
 @click.option("--lr", type=float, default=2e-4, help="Learning rate")
 @click.option("--channels", type=str, default="128,64,32,16", help="Channel widths (comma-separated)")
 @click.option("--spade-hidden", type=int, default=32, help="SPADE conditioning hidden dim")
 @click.option("--seg-boundary", type=float, default=0.005, help="SegNet constraint boundary")
 @click.option("--pose-boundary", type=float, default=0.05, help="PoseNet constraint boundary (relaxed default)")
 @click.option("--rho-init", type=float, default=10.0, help="Initial Lagrangian penalty coefficient")
-@click.option("--rho-growth", type=float, default=1.05, help="Rho growth rate per outer step")
+@click.option("--rho-growth", type=float, default=1.005, help="Rho growth rate per outer step (council: 1.02 exploded)")
 @click.option("--tv-weight", type=float, default=0.1, help="TV smoothness weight")
 @click.option("--flow-weight", type=float, default=0.0, help="Ego-motion flow regularization weight (disabled: unvalidated)")
 @click.option("--rate-weight", type=float, default=0.01, help="Self-compression rate penalty weight")
@@ -1575,8 +1589,8 @@ def train_fridrich_renderer(cfg: FridrichRendererConfig) -> dict[str, Any]:
 @click.option("--motion-hidden", type=int, default=32, help="Asymmetric warp: motion predictor hidden dim")
 @click.option("--renderer-depth", type=int, default=1, help="Asymmetric warp: renderer depth")
 @click.option("--init-bits", type=float, default=8.0, help="Initial bit depth for self-compression")
-@click.option("--phase1-end", type=float, default=0.40, help="Phase 1 end (40%: renderer learns colors before Lagrangian)")
-@click.option("--phase2-end", type=float, default=0.70, help="Phase 2 end (70%: constraints before self-compression)")
+@click.option("--phase1-end", type=float, default=0.25, help="Phase 1 end (council: 25%, Phase 1 converged early)")
+@click.option("--phase2-end", type=float, default=0.85, help="Phase 2 end (council: 85%, slow Lagrangian needs time)")
 @click.option("--early-stop-patience", type=int, default=500, help="Early stop if constraints met for N epochs")
 @click.option("--init-h", type=int, default=24, help="DP-SIMS initial height")
 @click.option("--init-w", type=int, default=32, help="DP-SIMS initial width")
@@ -1589,8 +1603,8 @@ def train_fridrich_renderer(cfg: FridrichRendererConfig) -> dict[str, Any]:
 @click.option("--p1-mse-weight", type=float, default=10.0, help="Phase 1 MSE weight (normalized [0,1], should dominate warmup)")
 @click.option("--p1-seg-weight", type=float, default=1.0, help="Phase 1 SegNet weight")
 @click.option("--p1-pose-weight", type=float, default=0.01, help="Phase 1 PoseNet weight (very low: PoseNet starts at ~180)")
-@click.option("--rho-max", type=float, default=1e4, help="Maximum rho (penalty cap)")
-@click.option("--lambda-cap", type=float, default=1e6, help="Lagrangian multiplier cap")
+@click.option("--rho-max", type=float, default=1e3, help="Maximum rho (council: 1e4 caused explosion)")
+@click.option("--lambda-cap", type=float, default=1e4, help="Lagrangian multiplier cap (council: 1e6 overwhelmed task loss)")
 @click.option("--max-flow-px", type=float, default=20.0, help="Max optical flow in pixels (asymmetric mode)")
 @click.option("--max-residual", type=float, default=20.0, help="Max residual magnitude (asymmetric mode)")
 @click.option("--seg-temperature-start", type=float, default=1.0, help="Phase 2 SegNet temperature start")
@@ -1600,6 +1614,8 @@ def train_fridrich_renderer(cfg: FridrichRendererConfig) -> dict[str, Any]:
 @click.option("--use-null-space", is_flag=True, help="Opt #6: null-space gradient projection")
 @click.option("--share-stem", is_flag=True, help="Opt #12: shared stem (deferred, gated)")
 @click.option("--flow-only", is_flag=True, help="Opt #15: flow only, no gate/residual (deferred, gated)")
+@click.option("--flow-warmup-epochs", type=int, default=500, help="Epochs with residual zeroed to force flow learning (council B1)")
+@click.option("--residual-ramp-epochs", type=int, default=500, help="Epochs to ramp residual 0→1 after warmup (council B2)")
 @click.option("--gate-reg-weight", type=float, default=0.1, help="Gate regularization weight (Quantizr: enforce warp usage)")
 @click.option("--gate-reg-threshold", type=float, default=0.5, help="Gate regularization threshold")
 @click.option("--even-pairs-only/--no-even-pairs-only", default=True, help="Train only even-index pairs (match scorer eval, default ON)")
@@ -1617,6 +1633,7 @@ def main(
     max_flow_px, max_residual, seg_temperature_start, seg_temperature_end,
     use_margin_segnet, segnet_margin_threshold, use_null_space,
     share_stem, flow_only,
+    flow_warmup_epochs, residual_ramp_epochs,
     gate_reg_weight, gate_reg_threshold, even_pairs_only,
 ):
     """Train DP-SIMS renderer with Fridrich constrained optimization."""
@@ -1679,6 +1696,8 @@ def main(
         use_null_space=use_null_space,
         share_stem=share_stem,
         flow_only=flow_only,
+        flow_warmup_epochs=flow_warmup_epochs,
+        residual_ramp_epochs=residual_ramp_epochs,
         gate_reg_weight=gate_reg_weight,
         gate_reg_threshold=gate_reg_threshold,
         even_pairs_only=even_pairs_only,

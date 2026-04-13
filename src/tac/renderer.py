@@ -892,12 +892,20 @@ class HintedPairGenerator(nn.Module):
         self.motion = motion
         self.blend_logit = nn.Parameter(torch.tensor(0.0))
 
-    def forward(self, mask_t: torch.Tensor, mask_t1: torch.Tensor) -> torch.Tensor:
+    def forward(
+        self,
+        mask_t: torch.Tensor,
+        mask_t1: torch.Tensor,
+        residual_scale: float = 1.0,
+    ) -> torch.Tensor:
         """Generate pair with temporal hint.
 
         Args:
             mask_t: (B, H, W) long — mask at time t
             mask_t1: (B, H, W) long — mask at time t+1
+            residual_scale: Scale factor for the direct-render (non-warp) pathway.
+                0.0 = pure warp (flow warmup), 1.0 = normal blend.
+                Used by training to force flow learning before residual develops.
 
         Returns:
             (B, 2, H, W, 3) float tensor in [0, 255] — HWC pair format
@@ -911,7 +919,10 @@ class HintedPairGenerator(nn.Module):
         frame_t1_warped = warp_with_flow(frame_t, flow)
 
         alpha = torch.sigmoid(self.blend_logit)
-        frame_t1_blended = (alpha * frame_t1_warped + (1.0 - alpha) * frame_t1).clamp(0.0, 255.0)
+        # Flow warmup: residual_scale controls how much the direct renderer contributes.
+        # During warmup (residual_scale=0), frame_t1 = pure warp, forcing flow to develop.
+        effective_direct = (1.0 - alpha) * residual_scale
+        frame_t1_blended = (alpha * frame_t1_warped + effective_direct * frame_t1).clamp(0.0, 255.0)
 
         f_t_hwc = frame_t.permute(0, 2, 3, 1)
         f_t1_hwc = frame_t1_blended.permute(0, 2, 3, 1)
