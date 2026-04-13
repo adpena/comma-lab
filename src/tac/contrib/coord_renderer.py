@@ -29,7 +29,7 @@ import math
 import torch
 import torch.nn as nn
 
-from .renderer import MotionPredictor, warp_with_flow
+from tac.renderer import MotionPredictor, warp_with_flow
 
 
 class PositionalEncoding(nn.Module):

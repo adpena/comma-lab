@@ -223,6 +223,9 @@ class FridrichRendererConfig:
     raft_flow_path: str | None = None     # path to raft_flow.pt (dense RAFT flow)
     flow_supervision_weight: float = 0.0  # weight for MSE(motion_flow, raft_flow)
 
+    # EMA weight averaging (DX hardening — Karpathy/NVIDIA standard)
+    ema_decay: float = 0.9995  # 2000-epoch effective window; shadow tracks best smoothed weights
+
     # Smoke test overrides
     smoke: bool = False
 
@@ -979,6 +982,8 @@ def train_fridrich_renderer(cfg: FridrichRendererConfig) -> dict[str, Any]:
     bit_modules: list[nn.Module] = []
     start_epoch = 0
     best_score_ckpt = float("inf")
+    _resumed_ema_state: dict | None = None
+    _resumed_best_ema_score: float = float("inf")
     if cfg.resume:
         ckpt_path = Path(cfg.resume)
         if not ckpt_path.exists():
@@ -1059,6 +1064,8 @@ def train_fridrich_renderer(cfg: FridrichRendererConfig) -> dict[str, Any]:
         print(f"  Resumed at epoch {start_epoch}, lambda_seg={lambda_seg:.1f}, "
               f"lambda_pose={lambda_pose:.1f}, rho={rho:.1f}, "
               f"self_compress={'ON' if self_compress_active else 'OFF'}")
+        _resumed_ema_state = ckpt.get("ema_state_dict", None)
+        _resumed_best_ema_score = ckpt.get("best_ema_score", float("inf"))
         del ckpt
         if torch.cuda.is_available():
             torch.cuda.empty_cache()
@@ -1183,6 +1190,18 @@ def train_fridrich_renderer(cfg: FridrichRendererConfig) -> dict[str, Any]:
     best_score = best_score_ckpt if cfg.resume else float("inf")
     best_epoch = -1
     constraints_satisfied_count = 0
+
+    # EMA weight tracking (Karpathy/NVIDIA DX hardening)
+    from tac.training import EMA
+    import copy as _copy
+    ema = EMA(pair_gen, decay=cfg.ema_decay)
+    best_ema_score = _resumed_best_ema_score
+    if _resumed_ema_state is not None:
+        for k in list(ema.shadow.keys()):
+            if k in _resumed_ema_state:
+                ema.shadow[k].copy_(_resumed_ema_state[k])
+        del _resumed_ema_state
+        print(f"  [EMA] Restored shadow weights from checkpoint (best_ema_score={best_ema_score:.4f})")
     # self_compress_active is set in resume block above; only default to False
     # if NOT resuming (avoids overwriting checkpoint state for Phase 3 resumes)
     if not cfg.resume:
@@ -1610,6 +1629,9 @@ def train_fridrich_renderer(cfg: FridrichRendererConfig) -> dict[str, Any]:
                 f"({elapsed:.0f}s)"
             )
 
+        # ---- EMA update ----
+        ema.update(pair_gen)
+
         # ---- Checkpoint ----
         if (epoch > 0 and epoch % cfg.checkpoint_every == 0) or epoch == cfg.epochs - 1:
             ckpt_path = results_dir / f"renderer_epoch{epoch:05d}.pt"
@@ -1623,6 +1645,8 @@ def train_fridrich_renderer(cfg: FridrichRendererConfig) -> dict[str, Any]:
                 "rho": rho,
                 "best_score": best_score,
                 "self_compress_active": self_compress_active,
+                "ema_state_dict": ema.state_dict(),
+                "best_ema_score": best_ema_score,
                 "config": asdict(cfg),
             }, ckpt_path)
             print(f"  -> Checkpoint: {ckpt_path}")
@@ -1666,6 +1690,51 @@ def train_fridrich_renderer(cfg: FridrichRendererConfig) -> dict[str, Any]:
                         ckpt_data["ego_flow_state_dict"] = ego_flow_module.state_dict()
                     torch.save(ckpt_data, best_path)
                     print(f"  -> NEW BEST: {score:.4f} at epoch {epoch}")
+                # Annotate history entry with full eval scores (not batch estimates)
+                if history:
+                    history[-1]["full_eval_score"] = score
+                    history[-1]["full_eval_seg"] = eval_result["avg_seg"]
+                    history[-1]["full_eval_pose"] = eval_result["avg_pose"]
+                    history[-1]["full_eval_rate"] = eval_result["rate"]
+                # EMA evaluation (Karpathy/NVIDIA: smoothed weights often beat raw)
+                try:
+                    _ema_model = _copy.deepcopy(pair_gen)
+                    ema.apply(_ema_model)
+                    ema_eval = _full_eval(
+                        _ema_model, masks, gt_chw, posenet, segnet, device,
+                        batch_size=cfg.batch_size,
+                        raft_flow_all=raft_flow_all if cfg.raft_flow_path else None,
+                    )
+                    ema_score = ema_eval["score"]
+                    del _ema_model
+                    print(
+                        f"  [EMA] seg={ema_eval['avg_seg']:.5f} "
+                        f"pose={ema_eval['avg_pose']:.5f} "
+                        f"rate={ema_eval['rate']:.6f} "
+                        f"SCORE={ema_score:.4f}"
+                    )
+                    if ema_score < best_ema_score:
+                        best_ema_score = ema_score
+                        ema_best_path = results_dir / "renderer_best_ema.pt"
+                        torch.save({
+                            "epoch": epoch,
+                            "ema_state_dict": ema.state_dict(),
+                            "lambda_seg": lambda_seg,
+                            "lambda_pose": lambda_pose,
+                            "rho": rho,
+                            "best_ema_score": best_ema_score,
+                            "score": ema_score,
+                            "eval_result": ema_eval,
+                            "config": asdict(cfg),
+                        }, ema_best_path)
+                        print(f"  -> NEW BEST EMA: {ema_score:.4f} at epoch {epoch}")
+                    if history:
+                        history[-1]["full_eval_ema_score"] = ema_score
+                        history[-1]["full_eval_ema_seg"] = ema_eval["avg_seg"]
+                        history[-1]["full_eval_ema_pose"] = ema_eval["avg_pose"]
+                        history[-1]["full_eval_ema_rate"] = ema_eval["rate"]
+                except Exception as _ema_exc:
+                    print(f"  [EMA] Eval failed: {_ema_exc}")
                 print()
             except Exception as e:
                 print(f"  Eval failed: {e}")
@@ -1857,6 +1926,7 @@ def train_fridrich_renderer(cfg: FridrichRendererConfig) -> dict[str, Any]:
 @click.option("--p1-pose-sup-weight", type=float, default=0.1, help="Phase 1 PoseNet supervision scaling (separate from --p1-pose-weight; targets use different scale than distortion)")
 @click.option("--raft-flow-path", type=str, default=None, help="Path to raft_flow.pt for frozen warp (council Layer 2)")
 @click.option("--flow-supervision-weight", type=float, default=0.0, help="MotionPredictor flow supervision weight")
+@click.option("--ema-decay", type=float, default=0.9995, help="EMA shadow decay (0.9995=2000-epoch window, Karpathy/NVIDIA standard)")
 def main(
     precomputed, epochs, batch_size, lr, channels, spade_hidden,
     seg_boundary, pose_boundary, rho_init, rho_growth,
@@ -1876,6 +1946,7 @@ def main(
     use_ego_flow, ego_flow_max_px, ego_flow_lr,
     pose_supervision_weight, pose_targets_path, pose_embed_loss, p1_pose_sup_weight,
     raft_flow_path, flow_supervision_weight,
+    ema_decay,
 ):
     """Train DP-SIMS renderer with Fridrich constrained optimization."""
 
@@ -1951,6 +2022,7 @@ def main(
         p1_pose_sup_weight=p1_pose_sup_weight,
         raft_flow_path=raft_flow_path,
         flow_supervision_weight=flow_supervision_weight,
+        ema_decay=ema_decay,
     )
 
     # Set precomputed dir env var for the training function
