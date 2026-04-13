@@ -537,6 +537,8 @@ def export_compressed_checkpoint(model: SelfCompressingPostFilter) -> bytes:
         active_mask = bits >= 0.5
         active_indices = torch.where(active_mask)[0].tolist()
         channel_bits = bits[active_mask].round().clamp(1, 8).long().tolist()
+        # Promote 1-bit to 2-bit BEFORE storing in header (export packs at promoted bits)
+        channel_bits = [max(b, 2) for b in channel_bits]
 
         # Quantize active channels and pack
         packed = bytearray()
