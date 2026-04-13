@@ -1,8 +1,8 @@
-# Current Focus -- 2026-04-13T10:00:00-05:00
+# Current Focus -- 2026-04-13T18:30:00-05:00
 
 ## Scores
-- **Renderer auth (ep 12400)**: 1.0000 — seg=0.210, pose=0.692, rate=0.100
-  - proxy was 0.6019 (proxy→auth gap ~0.40, calibration artifact)
+- **Renderer baseline (ep 12400)**: auth=1.0000 — seg=0.210, pose=0.692, rate=0.100
+  - proxy at ep12400 was 0.6019 (proxy→auth gap ~0.40, calibration artifact)
   - pose is 69% of score — supervised variant is attacking this directly
 - **CPU postfilter best**: ~1.89 auth (dilated_h64)
 - **Target**: beat Quantizr at 0.60
@@ -10,41 +10,49 @@
 
 ## Active Experiments
 
-### GPU Lane — Asymmetric Warp Renderer (primary attack vector)
+### GPU Lane — Asymmetric Warp Renderer (A/B comparison)
 
-1. **asym_v3_longer_tight** (RUNNING, Modal T4)
-   - base variant, 20K epochs, batch=4
-   - At epoch ~11000/20000 as of 2026-04-13
-   - Resume: /results/asym_v3_longer_tight/renderer_best.pt
-
-2. **asym_v4_supervised** (RUNNING, Modal T4, started 2026-04-13 17:23 UTC)
+1. **asym_v4_supervised** (RUNNING, Modal T4, app ap-XHqEhtoAtagJL6Neg4gIdy)
    - Path A: PoseNet supervision (Layer 1) + RAFT flow (Layer 2)
-   - Resumed from asym_v3_longer_tight/renderer_best.pt
+   - Resumed from ep12400 (renderer_best_v3.pt, proxy=0.6019)
+   - Current: ep~15000, proxy=1.2055 (disruption phase — Contrarian-predicted, recovering)
+   - Trend: 1.4835 (ep14000) → 1.3809 (ep14400) → 1.2055 (ep14800)
+   - Volume: tac-asymmetric-results /asym_v4_supervised/
 
-3. **asym_v4_raft_only** (RUNNING, Modal T4, started 2026-04-13 17:25 UTC)
+2. **asym_v4_raft_only** (RUNNING, Kaggle T4, kernel comma-lab-asym-warp-raft-only)
    - Path B: RAFT flow only (isolates Layer 2 contribution)
-   - Resumed from asym_v3_longer_tight/renderer_best.pt
+   - Resumed from ep12400 (renderer_best_v3.pt — in Kaggle dataset v3)
+   - Volume: /kaggle/working/ checkpoints every 500 epochs + timeout save at 8.5h
+   - Dataset: adpena/comma-lab-private-assets v3
+
+### KILLED
+- asym_v3_longer_tight: PERMANENTLY KILLED (base variant, served as seed for v4 runs)
+- asym_v4_raft_only (Modal): stopped at ep13000 — replaced by Kaggle run
 
 ### Volume prerequisites (confirmed present)
-- posenet_targets.bin: ✓ on volume
-- raft_flow.pt: ✓ on volume
+- posenet_targets.bin: ✓ on tac-asymmetric-results volume
+- raft_flow.pt: ✓ on tac-asymmetric-results volume (600 pairs, 0 null frames, mean=10.89px)
+- renderer_best_v3.pt: ✓ in Kaggle dataset v3 (ep12400, confirmed)
 
 ## Code State
-- Round 19 complete: 4 council issues fixed (double PoseNet fwd, p1_pose_sup_weight, ego_flow reuse, logging cache)
-- Round 20 complete: MED-4 DCT device fix, MED-5 n_written assert, HIGH-5 W→(W-1) flow normalization (council 4-1)
-- Round 21 complete: 66 pre-existing test failures fixed → 672 passed, 0 failed
-- Round 22 complete: flow_compress CUDA, even_pairs guard, warp_quality telemetry
-- Round 23 complete: ego_flow.py W→(W-1) normalization
-- Round 24 complete: Lightning deploy crash fix — strip/reinject paths
-- Round 25 complete: .pt hardening (raft_flow/pose_targets fail-fast); Kaggle script path fix
-  - tac/deploy/{modal,kaggle,lightning}/__init__.py created — wheel now discovers subpackages
-  - 3 Kaggle kernel bundles committed (experiments/kaggle_kernels/asym_warp_*)
-  - GPU scorer proxy: ~0.8-0.9 (asym_v3_longer_tight at ep ~11K/20K)
+- Rounds 26-28 complete: Kaggle DX hardened
+  - kaggle_asym_warp_launcher.py: slimmed to 54-line bootstrap stub
+  - runner.py: RESUME_FROM support, LFS retry, double-script bug fixed, post-install verify
+  - build_kaggle_kernels.py: launch_policy stripped, RESUME_FROM preamble injected
+  - 34 tests, all passing
+- Dataset v3 uploaded: tac-1.0.0 wheel + raft_flow.pt + posenet_targets.bin + renderer_best_v3.pt
+- Kaggle kernel v1 pushed with RESUME_FROM=/kaggle/input/comma-lab-private-assets/renderer_best_v3.pt
+
+## Paranoia Audit (2026-04-13)
+- Fridrich ✓: renderer_best_v3.pt confirmed ep12400, eval_every=200 in config
+- Yousfi ✓: training script has graceful timeout save (renderer_epochN_timeout.pt)
+- Quantizr ✓: raft_flow.pt has 0 null frames, mean=10.89px, max peak=277px — real signal
 
 ## Kill/Promote
-- Kill: seg > 0.8 for 200 consecutive epochs in Phase 2
-- Promote: score < 0.70 proxy at any checkpoint
+- Kill supervised: proxy doesn't improve past 0.6019 by ep17000
+- Kill raft_only: same criteria
+- Promote: any checkpoint scores < 0.60 proxy
 - Target: score < 0.60 (beats Quantizr)
 
 ## Deadline
-- May 3, 2026 (20 days remaining as of 2026-04-13)
+- May 3, 2026 (~20 days remaining)
