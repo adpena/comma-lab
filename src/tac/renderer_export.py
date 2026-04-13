@@ -720,10 +720,15 @@ def export_asymmetric_checkpoint(
     weight_blobs: list[bytes] = []
 
     # Export all nn.Embedding layers (class embeddings, CLADE gamma/beta)
+    # Deduplicate by module id: shared embeddings (renderer + motion share one
+    # nn.Embedding) must be exported once, not twice with different quantization noise.
     embedding_layers: list[tuple[str, nn.Embedding]] = []
+    seen_emb_ids: set[int] = set()
     for name, module in model.named_modules():
         if isinstance(module, nn.Embedding):
-            embedding_layers.append((name, module))
+            if id(module) not in seen_emb_ids:
+                embedding_layers.append((name, module))
+                seen_emb_ids.add(id(module))
 
     for emb_name, emb_module in embedding_layers:
         weight = emb_module.weight.detach().cpu().float()

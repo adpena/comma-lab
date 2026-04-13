@@ -1239,11 +1239,13 @@ def train_fridrich_renderer(cfg: FridrichRendererConfig) -> dict[str, Any]:
                 + (rho / 2.0) * pose_violation.pow(2)
             )
 
-            # Gate regularization: penalize gate_mean above threshold (Bug #6)
+            # Gate regularization: penalize gate_mean above threshold
+            # Council sweep round 5: must use _last_gate_mean_tensor (live grad)
+            # not _last_gate_mean (.item() scalar, zero gradient — was completely inert)
             if cfg.pair_mode == "asymmetric" and cfg.gate_reg_weight > 0:
-                gate_mean = getattr(pair_gen, "_last_gate_mean", 0.0)
-                if gate_mean > cfg.gate_reg_threshold:
-                    gate_penalty = cfg.gate_reg_weight * (gate_mean - cfg.gate_reg_threshold)
+                gate_mean_t = getattr(pair_gen, "_last_gate_mean_tensor", None)
+                if gate_mean_t is not None:
+                    gate_penalty = cfg.gate_reg_weight * F.relu(gate_mean_t - cfg.gate_reg_threshold)
                     total_loss = total_loss + gate_penalty
 
             if phase == 3 and self_compress_active:
@@ -1259,15 +1261,16 @@ def train_fridrich_renderer(cfg: FridrichRendererConfig) -> dict[str, Any]:
                 total_loss = total_loss + cfg.rate_weight * rate_excess
 
             # Update Lagrangian multipliers (outer loop), capped at lambda_cap
+            # NaN guard: a single NaN violation would permanently corrupt both
+            # multipliers (NaN propagates through min/max). Skip update if NaN.
             with torch.no_grad():
-                lambda_seg = min(cfg.lambda_cap, max(0.0, lambda_seg + rho * seg_violation.item()))
-                lambda_pose = min(cfg.lambda_cap, max(0.0, lambda_pose + rho * pose_violation.item()))
-                # Only grow rho when at least one constraint is actively violated.
-                # Without this guard, rho hits rho_max (~1e4) by epoch ~187 and
-                # then any tiny violation explodes the loss (penalty = 5000 * eps^2),
-                # overwhelming the MSE anchor and all other terms.
-                if seg_violation.item() > 1e-6 or pose_violation.item() > 1e-6:
-                    rho = min(rho * cfg.rho_growth, cfg.rho_max)
+                sv = seg_violation.item()
+                pv = pose_violation.item()
+                if math.isfinite(sv) and math.isfinite(pv):
+                    lambda_seg = min(cfg.lambda_cap, max(0.0, lambda_seg + rho * sv))
+                    lambda_pose = min(cfg.lambda_cap, max(0.0, lambda_pose + rho * pv))
+                    if sv > 1e-6 or pv > 1e-6:
+                        rho = min(rho * cfg.rho_growth, cfg.rho_max)
 
             # Track constraint satisfaction
             both_satisfied = seg_violation.item() < 1e-6 and pose_violation.item() < 1e-6

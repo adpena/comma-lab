@@ -882,9 +882,10 @@ class AsymmetricPairGenerator(nn.Module):
         warped_t1 = warp_with_flow(frame_t1, flow)
         frame_t = (warped_t1 + residual_scale * gate * residual).clamp(0.0, 255.0)
 
-        # Diagnostic: gate statistics (council Option C — Quantizr adversarial recommendation)
-        # If mean gate > 0.7, flow is not contributing and architecture degrades to residual-only
+        # Gate statistics for monitoring and regularization
+        # _last_gate_mean: scalar for logging; _last_gate_mean_tensor: live for gradient flow
         self._last_gate_mean = gate.mean().item()
+        self._last_gate_mean_tensor = gate.mean()  # retains grad for gate regularizer
 
         # Pack to HWC: (B, 2, H, W, 3)
         pair = torch.stack([frame_t, frame_t1], dim=1)  # (B, 2, 3, H, W)
