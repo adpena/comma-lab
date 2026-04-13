@@ -55,20 +55,48 @@ _scp() {
 _build_gpu_cmd() {
     local variant="${1:-base}"
     local resume_from="${2:-}"
+    local extra_flags="${3:-}"   # Lightning-specific flags (shell-quoted string)
 
     # Pass values via env vars — never interpolate user-controlled strings into
-    # Python source code (prevents injection from paths containing quotes/newlines)
+    # Python source code (prevents injection from paths containing quotes/newlines).
+    # ASYM_EXTRA_FLAGS is shell-split by shlex.split() in Python, which handles
+    # paths with spaces correctly.
     ASYM_VARIANT="$variant" ASYM_RESUME="$resume_from" ASYM_SCRIPT="$REMOTE_SCRIPT" \
+    ASYM_EXTRA_FLAGS="$extra_flags" \
     REPO_SRC="$REPO_ROOT/src" "$REPO_ROOT/.venv/bin/python" - <<'PYEOF'
 import os, sys, shlex
 sys.path.insert(0, os.environ["REPO_SRC"])
 from tac.deploy.deploy_config import build_flags
+
+# Strip Modal-specific supervision asset paths and provider-specific overrides.
+# Lightning re-injects its own local paths via ASYM_EXTRA_FLAGS.
+# NOTE: only value-bearing flags here — boolean flags would skip the next token.
+_STRIP_FLAGS = {"--raft-flow-path", "--pose-targets-path", "--max-hours"}
+
+def _strip_flags(flags, to_strip):
+    clean, skip_next = [], False
+    for f in flags:
+        if skip_next:
+            skip_next = False
+            continue
+        if f in to_strip:
+            skip_next = True
+            continue
+        clean.append(f)
+    return clean
+
 resume = os.environ.get("ASYM_RESUME") or None
 cmd = build_flags(
     variant=os.environ["ASYM_VARIANT"],
     provider_script_path=os.environ["ASYM_SCRIPT"],
     resume_from=resume,
 )
+cmd = _strip_flags(cmd, _STRIP_FLAGS)
+
+extra = os.environ.get("ASYM_EXTRA_FLAGS", "").strip()
+if extra:
+    cmd += shlex.split(extra)
+
 print(shlex.join(cmd))
 PYEOF
 }
@@ -122,6 +150,21 @@ cmd_setup() {
         _scp "$REPO_ROOT/experiments/precomputed_local/"*.pt "$REMOTE:$REMOTE_BASE/precomputed/" 2>/dev/null
     }
 
+    echo "7. Uploading supervision assets (raft_flow.pt, posenet_targets.bin if present locally)..."
+    _ssh "$REMOTE" "mkdir -p $REMOTE_BASE" 2>/dev/null
+    for asset in raft_flow.pt posenet_targets.bin; do
+        local_path="$REPO_ROOT/experiments/precomputed_local/$asset"
+        if [ -f "$local_path" ]; then
+            _ssh "$REMOTE" "ls $REMOTE_BASE/$asset 2>/dev/null && echo '   $asset: already present'" 2>/dev/null || {
+                echo "   Uploading $asset (~may be large)..."
+                _scp "$local_path" "$REMOTE:$REMOTE_BASE/$asset" 2>/dev/null
+                echo "   $asset: uploaded"
+            }
+        else
+            echo "   $asset: not found locally at $local_path — upload manually if using supervised/raft_only variant"
+        fi
+    done
+
     echo ""
     echo "=== Setup complete ==="
 }
@@ -163,9 +206,19 @@ cmd_gpu() {
         resume_from="$REMOTE_BASE/checkpoints/resume_gpu.pt"
     fi
 
-    # Build the training command from deploy_config
+    # Build Lightning-specific extra flags (provider paths + overrides)
+    # These replace the Modal /results/ paths stripped inside _build_gpu_cmd().
+    local lightning_extras="--max-hours 9.5 --precomputed $REMOTE_BASE/precomputed"
+    if [ "$variant" = "supervised" ] || [ "$variant" = "raft_only" ]; then
+        lightning_extras="$lightning_extras --raft-flow-path $REMOTE_BASE/raft_flow.pt"
+    fi
+    if [ "$variant" = "supervised" ]; then
+        lightning_extras="$lightning_extras --pose-targets-path $REMOTE_BASE/posenet_targets.bin"
+    fi
+
+    # Build the training command from deploy_config (strips /results/ paths, re-injects above)
     local training_cmd
-    training_cmd="$(_build_gpu_cmd "$variant" "$resume_from")"
+    training_cmd="$(_build_gpu_cmd "$variant" "$resume_from" "$lightning_extras")"
 
     echo "  Command: $training_cmd"
 
