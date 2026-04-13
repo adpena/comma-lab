@@ -53,13 +53,22 @@
 ### NEXT — Highest-Leverage Stacking (post-validation)
 
 #### 1. Ego-Motion Pre-Computation (2 days, PoseNet -0.3 to -0.5)
-- **Tools:** TartanVO, DPVO, or VO from openpilot itself
-- **Concept:** Compute exact 6-DOF camera trajectory at compress time
-- **Store:** ~100 bytes per frame (6 floats * 4 bytes * 1200 frames = 28KB)
-- **Use:** Condition the warp on KNOWN ego-motion rather than predicted
-- **Effect:** PoseNet becomes nearly deterministic — the warp IS the ego-motion
+- **Tools:** Scorer's own PoseNet (no external VO needed — we extract the scorer's own targets)
+- **Concept:** Compute exact 6-DOF camera trajectory at compress time via PoseNet forward pass on GT
+- **Store:** 600 pairs x 6 floats x 2 bytes (float16) = 7,200 bytes raw, ~5KB compressed
+- **Use:** Supervised TTO at inflate time minimizes MSE against known PoseNet targets
+- **Effect:** PoseNet distortion driven toward 0 — we optimize the exact scorer metric
 - **Papers:** TartanVO (Wang et al., CoRL 2021), DPVO (Teed et al., NeurIPS 2023)
-- **Status:** NOT STARTED
+- **Status:** IMPLEMENTED — infrastructure complete, awaiting authoritative eval
+  - Extract: `src/tac/scorer_targets.py` (extract_posenet_targets, save/load)
+  - Bundle: `src/tac/precompute_corrections.py` (included in corrections bundle)
+  - Compress: `POSENET_TARGETS_ENABLE=1` in `submissions/robust_current/compress.sh`
+  - Inflate: `--supervised-tto-steps N` in `submissions/robust_current/inflate_postfilter.py`
+  - TTO: `src/tac/tto.py` (supervised_tto, posenet_target_loss)
+  - Training: `src/tac/training.py` (gt_scorer_cache pre-computes at training time)
+  - Tests: `src/tac/tests/test_scorer_targets.py` (6 tests, all passing)
+  - Experiment: `experiments/precompute_ego_motion.py` (extraction + analysis)
+  - Council verdict: Loss Target (Option A) over Conditioning (Option B)
 
 #### 2. Learned Entropy Coding on Weights (1 day, rate -0.1)
 - **Tools:** CompressAI entropy modules, arithmetic coding
