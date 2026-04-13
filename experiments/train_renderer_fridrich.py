@@ -1601,7 +1601,7 @@ def train_fridrich_renderer(cfg: FridrichRendererConfig) -> dict[str, Any]:
 @click.option("--flow-only", is_flag=True, help="Opt #15: flow only, no gate/residual (deferred, gated)")
 @click.option("--gate-reg-weight", type=float, default=0.1, help="Gate regularization weight (Quantizr: enforce warp usage)")
 @click.option("--gate-reg-threshold", type=float, default=0.5, help="Gate regularization threshold")
-@click.option("--even-pairs-only", is_flag=True, default=False, help="Train only even-index pairs (match scorer eval)")
+@click.option("--even-pairs-only/--no-even-pairs-only", default=True, help="Train only even-index pairs (match scorer eval, default ON)")
 def main(
     precomputed, epochs, batch_size, lr, channels, spade_hidden,
     seg_boundary, pose_boundary, rho_init, rho_growth,
