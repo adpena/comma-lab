@@ -666,8 +666,13 @@ def _full_eval(
     segnet: nn.Module,
     device: torch.device,
     batch_size: int = 4,
+    raft_flow_all: torch.Tensor | None = None,
 ) -> dict[str, float]:
     """Evaluate renderer on all frames with official scoring formula.
+
+    When raft_flow_all is provided and renderer is asymmetric, passes it as
+    ego_flow to match training conditions (council revised ruling: eval should
+    match training for optimal checkpoint selection).
 
     Returns dict with avg_seg, avg_pose, model_bytes, rate, score.
     """
@@ -711,10 +716,12 @@ def _full_eval(
                 # Asymmetric: generate pairs via warp
                 m_t = torch.stack([masks[j] for j in batch_indices]).to(device=device, dtype=torch.long)
                 m_t1 = torch.stack([masks[j + 1] for j in batch_indices]).to(device=device, dtype=torch.long)
-                # Eval WITHOUT ego_flow: measures the model as it will deploy (Option 3:
-                # MotionPredictor's own flow, not RAFT). RAFT is training-only scaffold.
-                # If deploying with DCT flow (Fridrich backup), add ego_flow here too.
-                pair_hwc = renderer(m_t, m_t1, residual_scale=1.0)  # (B, 2, H, W, 3)
+                # Eval WITH ego_flow when available (council revised: eval matches training)
+                eval_ego_flow = None
+                if raft_flow_all is not None:
+                    eval_pair_idx = torch.tensor(batch_indices, device=device) // 2
+                    eval_ego_flow = raft_flow_all[eval_pair_idx].float()
+                pair_hwc = renderer(m_t, m_t1, residual_scale=1.0, ego_flow=eval_ego_flow)  # (B, 2, H, W, 3)
                 gen_t = pair_hwc[:, 0].permute(0, 3, 1, 2).contiguous()
                 gen_t1 = pair_hwc[:, 1].permute(0, 3, 1, 2).contiguous()
             else:
@@ -1323,38 +1330,6 @@ def train_fridrich_renderer(cfg: FridrichRendererConfig) -> dict[str, Any]:
                     gate_penalty = cfg.gate_reg_weight * F.relu(gate_mean_t - cfg.gate_reg_threshold)
                     total_loss = total_loss + gate_penalty
 
-            # Flow supervision: teach MotionPredictor to reproduce RAFT flow (council Layer 2)
-            if cfg.flow_supervision_weight > 0 and raft_flow_all is not None and cfg.pair_mode == "asymmetric":
-                with torch.no_grad():
-                    target_flow = raft_flow_all[pair_indices].float()  # (B, 2, H, W)
-                # Use cached motion_out from forward pass (avoid double MotionPredictor fwd)
-                cached_motion = getattr(pair_gen, "_last_motion_out", None)
-                if cached_motion is not None:
-                    predicted_flow = cached_motion[:, :2]  # (B, 2, H, W)
-                    flow_sup_loss = F.mse_loss(predicted_flow, target_flow)
-                    total_loss = total_loss + cfg.flow_supervision_weight * flow_sup_loss
-
-            # PoseNet supervision: direct scorer-space optimization (council Layer 1+3)
-            if cfg.pose_supervision_weight > 0 and pose_targets is not None:
-                target_pose = pose_targets[pair_indices]  # (B, 6) — pair_indices from outer scope
-
-                if cfg.pose_embed_loss:
-                    # Layer 3: embedding-level loss (Quantizr's nightmare)
-                    from tac.losses import posenet_embedding_loss  # lazy import: only when enabled
-                    gen_pair = torch.stack([gen_t, gen_t1], dim=1)  # (B, 2, 3, H, W)
-                    gt_pair = torch.stack([gt_t, gt_t1], dim=1)
-                    pose_sup_loss = posenet_embedding_loss(gen_pair, gt_pair, posenet)
-                else:
-                    # Layer 1: output-level MSE against stored targets
-                    # preprocess_input expects (B, T, C, H, W) — CHW format
-                    gen_pair_btchw = torch.stack([gen_t, gen_t1], dim=1).contiguous()
-                    pose_in = posenet.preprocess_input(gen_pair_btchw)
-                    pose_out_raw = posenet(pose_in)  # dict {"pose": (B, 12)} or tensor
-                    pose_out = pose_out_raw["pose"] if isinstance(pose_out_raw, dict) else pose_out_raw
-                    pose_sup_loss = F.mse_loss(pose_out[:, :6], target_pose)
-
-                total_loss = total_loss + cfg.pose_supervision_weight * pose_sup_loss
-
             if phase == 3 and self_compress_active:
                 # Add self-compression rate penalty
                 # Asymmetric: full model ships (renderer + motion)
@@ -1405,6 +1380,41 @@ def train_fridrich_renderer(cfg: FridrichRendererConfig) -> dict[str, Any]:
                 constraints_satisfied_count += 1
             else:
                 constraints_satisfied_count = 0
+
+        # ---- Supervision losses (all phases — council revised ruling) ----
+        # Flow supervision: teach MotionPredictor to reproduce RAFT flow (Layer 2)
+        # Scale-safe in all phases (bounded at ~0.001). Full weight always.
+        if cfg.flow_supervision_weight > 0 and raft_flow_all is not None and cfg.pair_mode == "asymmetric":
+            with torch.no_grad():
+                target_flow = raft_flow_all[pair_indices].float()
+            cached_motion = getattr(pair_gen, "_last_motion_out", None)
+            if cached_motion is not None:
+                predicted_flow = cached_motion[:, :2]
+                flow_sup_loss = F.mse_loss(predicted_flow, target_flow)
+                total_loss = total_loss + cfg.flow_supervision_weight * flow_sup_loss
+
+        # PoseNet supervision: direct scorer-space optimization (Layer 1+3)
+        # Phase-adaptive: p1_pose_weight in Phase 1 (avoid dominating MSE warmup),
+        # full weight in Phase 2+ (complement Lagrangian constraints).
+        if cfg.pose_supervision_weight > 0 and pose_targets is not None and cfg.pair_mode == "asymmetric":
+            effective_pose_sup_weight = cfg.pose_supervision_weight * (
+                cfg.p1_pose_weight if phase == 1 else 1.0
+            )
+            target_pose = pose_targets[pair_indices]
+
+            if cfg.pose_embed_loss:
+                from tac.losses import posenet_embedding_loss
+                gen_pair = torch.stack([gen_t, gen_t1], dim=1)
+                gt_pair = torch.stack([gt_t, gt_t1], dim=1)
+                pose_sup_loss = posenet_embedding_loss(gen_pair, gt_pair, posenet)
+            else:
+                gen_pair_btchw = torch.stack([gen_t, gen_t1], dim=1).contiguous()
+                pose_in = posenet.preprocess_input(gen_pair_btchw)
+                pose_out_raw = posenet(pose_in)
+                pose_out = pose_out_raw["pose"] if isinstance(pose_out_raw, dict) else pose_out_raw
+                pose_sup_loss = F.mse_loss(pose_out[:, :6], target_pose)
+
+            total_loss = total_loss + effective_pose_sup_weight * pose_sup_loss
 
         # ---- Backward + step ----
         optimizer.zero_grad()
@@ -1559,6 +1569,7 @@ def train_fridrich_renderer(cfg: FridrichRendererConfig) -> dict[str, Any]:
                 eval_result = _full_eval(
                     pair_gen, masks, gt_chw, posenet, segnet, device,
                     batch_size=cfg.batch_size,
+                    raft_flow_all=raft_flow_all if cfg.raft_flow_path else None,
                 )
                 score = eval_result["score"]
                 print(
