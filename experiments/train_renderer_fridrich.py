@@ -1106,6 +1106,11 @@ def train_fridrich_renderer(cfg: FridrichRendererConfig) -> dict[str, Any]:
         targets_dict = load_posenet_targets(cfg.pose_targets_path)
         if targets_dict is not None:
             pose_targets = targets_dict["targets"].to(device)  # (n_pairs, 6)
+            n_expected_pose_pairs = len(list(range(0, n_frames - 1, 2)))
+            assert pose_targets.shape[0] >= n_expected_pose_pairs, (
+                f"pose_targets has {pose_targets.shape[0]} pairs but need "
+                f"{n_expected_pose_pairs} for {n_frames} frames"
+            )
             print(f"  PoseNet targets loaded: {pose_targets.shape} from {cfg.pose_targets_path}")
         else:
             print(f"  WARNING: could not load PoseNet targets from {cfg.pose_targets_path}")
@@ -1412,7 +1417,7 @@ def train_fridrich_renderer(cfg: FridrichRendererConfig) -> dict[str, Any]:
                 pose_in = posenet.preprocess_input(gen_pair_btchw)
                 pose_out_raw = posenet(pose_in)
                 pose_out = pose_out_raw["pose"] if isinstance(pose_out_raw, dict) else pose_out_raw
-                pose_sup_loss = F.mse_loss(pose_out[:, :6], target_pose)
+                pose_sup_loss = F.mse_loss(pose_out[..., :6], target_pose)
 
             total_loss = total_loss + effective_pose_sup_weight * pose_sup_loss
 
