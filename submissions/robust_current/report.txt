@@ -1,17 +1,20 @@
-=== Evaluation config ===
-  batch_size: 16
-  device: mps
-  num_threads: 2
-  prefetch_queue_depth: 4
-  report: /Users/adpena/Projects/pact/submissions/robust_current/report.txt
-  seed: 1234
-  submission_dir: /Users/adpena/Projects/pact/submissions/robust_current
-  uncompressed_dir: videos
-  video_names_file: public_test_video_names.txt
-=== Evaluation results over 600 samples ===
-  Average PoseNet Distortion: 0.01229285
-  Average SegNet Distortion: 0.00579905
-  Submission file size: 864,167 bytes
-  Original uncompressed size: 37,545,489 bytes
-  Compression Rate: 0.02301653
-  Final score: 100*segnet_dist + √(10*posenet_dist) + 25*rate = 1.51
+=== Authoritative Evaluation Results (upstream evaluate.py, DALI, 600 samples) ===
+  Checkpoint:             asym_v3_longer_tight/renderer_best.pt
+  Inflation mode:         inflate_renderer.py (PYTHON_INFLATE=renderer)
+  Eval timestamp:         2026-04-13T17:37:26Z
+  Platform:               Modal T4
+
+  Average PoseNet Distortion: 0.04791719
+  Average SegNet Distortion:  0.00210374
+  Submission file size:   150,715 bytes
+  Original uncompressed:  37,545,489 bytes
+  Compression Rate:       0.00401420
+
+  Score breakdown:
+    100*seg  = 0.2104
+    sqrt(10*pose) = 0.6922
+    25*rate  = 0.1004
+  FINAL SCORE: 1.0000
+
+  Previous best (dilated h64, postfilter): 1.33 (auth), 1.51 (local MPS)
+  Source JSON: tac-asymmetric-results / asym_v3_longer_tight / auth_eval_renderer_best.json
