@@ -213,6 +213,11 @@ class FridrichRendererConfig:
     pose_supervision_weight: float = 0.0  # weight for MSE(PoseNet(gen)[:6], target[:6])
     pose_targets_path: str | None = None  # path to precomputed posenet_targets.bin
     pose_embed_loss: bool = False         # Layer 3: use embedding-level loss instead of output
+    # Phase 1 supervision weight (separate from p1_pose_weight which scales the distortion term).
+    # p1_pose_weight=0.01 is tuned for the distortion term (pose_dist ~180 in Phase 1).
+    # p1_pose_sup_weight should be ~0.1: supervision targets are GT values (scale ~[-2, 2]),
+    # not raw distortion, so they need much less suppression in Phase 1.
+    p1_pose_sup_weight: float = 0.1      # Phase 1 supervision scaling (NOT for distortion)
 
     # RAFT flow: frozen dense warp + MotionPredictor supervision (council Layer 2)
     raft_flow_path: str | None = None     # path to raft_flow.pt (dense RAFT flow)
@@ -590,7 +595,7 @@ def _compute_pose_distortion_coupled(
     gt_frame_t: torch.Tensor,
     gt_frame_t1: torch.Tensor,
     posenet: nn.Module,
-) -> torch.Tensor:
+) -> tuple[torch.Tensor, torch.Tensor]:
     """Compute PoseNet distortion with COUPLED trajectory through both frames.
 
     This is the key insight: PoseNet evaluates consecutive PAIRS.
@@ -605,7 +610,11 @@ def _compute_pose_distortion_coupled(
         posenet: frozen PoseNet with preprocess_input.
 
     Returns:
-        Scalar PoseNet distortion (MSE on first 6 pose outputs).
+        Tuple of:
+          - Scalar PoseNet distortion (MSE on first 6 pose outputs)
+          - pred: (..., 12) generated pose output (retains gradient, for
+            supervision reuse — avoids a second PoseNet forward in the
+            supervision block when pose_supervision_weight > 0)
     """
     # Stack consecutive frames as pairs: (B, 2, C, H, W)
     gen_pair = torch.stack([gen_frame_t, gen_frame_t1], dim=1).contiguous()
@@ -621,7 +630,7 @@ def _compute_pose_distortion_coupled(
     pred = pose_out_gen["pose"] if isinstance(pose_out_gen, dict) else pose_out_gen
     target = pose_out_gt["pose"] if isinstance(pose_out_gt, dict) else pose_out_gt
     pose_dist = (pred[..., :6] - target[..., :6]).pow(2).mean()
-    return pose_dist
+    return pose_dist, pred
 
 
 def _compute_flow_regularization(
@@ -1287,8 +1296,10 @@ def train_fridrich_renderer(cfg: FridrichRendererConfig) -> dict[str, Any]:
         else:  # phase 3
             seg_dist = _compute_seg_distortion_ste(gen_t1, gt_t1, segnet)
 
-        # PoseNet distortion (coupled trajectory — gradient through BOTH frames)
-        pose_dist = _compute_pose_distortion_coupled(gen_t, gen_t1, gt_t, gt_t1, posenet)
+        # PoseNet distortion (coupled trajectory — gradient through BOTH frames).
+        # Returns (dist, pred) — pred is cached for supervision reuse (avoids
+        # a second PoseNet forward when pose_supervision_weight > 0).
+        pose_dist, _pose_pred_cached = _compute_pose_distortion_coupled(gen_t, gen_t1, gt_t, gt_t1, posenet)
 
         # TV smoothness
         tv = _tv_loss(gen_t) + _tv_loss(gen_t1)
@@ -1399,11 +1410,14 @@ def train_fridrich_renderer(cfg: FridrichRendererConfig) -> dict[str, Any]:
                 total_loss = total_loss + cfg.flow_supervision_weight * flow_sup_loss
 
         # PoseNet supervision: direct scorer-space optimization (Layer 1+3)
-        # Phase-adaptive: p1_pose_weight in Phase 1 (avoid dominating MSE warmup),
-        # full weight in Phase 2+ (complement Lagrangian constraints).
+        # Phase-adaptive: p1_pose_sup_weight in Phase 1 (separate from p1_pose_weight
+        # which scales the distortion term — targets have different scale than distortion).
+        # Full weight in Phase 2+ (complements Lagrangian constraints).
+        # NOTE: reuses _pose_pred_cached from _compute_pose_distortion_coupled to avoid
+        # a second PoseNet forward pass (saves ~30% per-step compute when supervision active).
         if cfg.pose_supervision_weight > 0 and pose_targets is not None and cfg.pair_mode == "asymmetric":
             effective_pose_sup_weight = cfg.pose_supervision_weight * (
-                cfg.p1_pose_weight if phase == 1 else 1.0
+                cfg.p1_pose_sup_weight if phase == 1 else 1.0
             )
             target_pose = pose_targets[pair_indices]
 
@@ -1413,11 +1427,9 @@ def train_fridrich_renderer(cfg: FridrichRendererConfig) -> dict[str, Any]:
                 gt_pair = torch.stack([gt_t, gt_t1], dim=1)
                 pose_sup_loss = posenet_embedding_loss(gen_pair, gt_pair, posenet)
             else:
-                gen_pair_btchw = torch.stack([gen_t, gen_t1], dim=1).contiguous()
-                pose_in = posenet.preprocess_input(gen_pair_btchw)
-                pose_out_raw = posenet(pose_in)
-                pose_out = pose_out_raw["pose"] if isinstance(pose_out_raw, dict) else pose_out_raw
-                pose_sup_loss = F.mse_loss(pose_out[..., :6], target_pose)
+                # Reuse cached PoseNet output from distortion computation (no second forward).
+                # _pose_pred_cached retains gradient through the renderer — correct.
+                pose_sup_loss = F.mse_loss(_pose_pred_cached[..., :6], target_pose)
 
             total_loss = total_loss + effective_pose_sup_weight * pose_sup_loss
 
