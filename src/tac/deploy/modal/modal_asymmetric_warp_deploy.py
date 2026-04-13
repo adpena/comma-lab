@@ -78,16 +78,19 @@ image = (
 
 results_vol = modal.Volume.from_name(RESULTS_VOL, create_if_missing=True)
 
-# --- Council v3 training flags (asymmetric warp, 2026-04-13) ---
+# --- Council v4 base training flags (asymmetric warp, round 19 fixes applied) ---
 # v2 fixes: Lagrangian stability, flow warmup, batch size, 43 bugs
-# v3 adds: Layer 1/2/3 (PoseNet supervision, RAFT flow, embedding loss)
-# Layer flags are OFF by default — enable via --extra-args for experiments
-# RAFT flow must be uploaded to volume first: modal volume put tac-asymmetric-results experiments/raft_flow.pt raft_flow.pt
-TRAINING_CMD_TEMPLATE: list[str] = [
+# v3 adds: 20K epochs, tighter pose_boundary
+# v4 (round 19): double PoseNet fwd fix, p1_pose_sup_weight split, all 4 council issues fixed
+# Supervision layers OFF by default in base template; override per experiment.
+# Volume prerequisites:
+#   posenet_targets.bin: modal volume ls tac-asymmetric-results -> must exist
+#   raft_flow.pt: modal volume ls tac-asymmetric-results -> must exist
+_BASE_CMD: list[str] = [
     "python", "/root/experiments/train_renderer_fridrich.py",
     "--pair-mode", "asymmetric",
-    "--epochs", "10000",
-    "--batch-size", "4",  # T4 OOMs at 16 (14.5GB VRAM with scorers+GT+masks loaded)
+    "--epochs", "20000",
+    "--batch-size", "4",   # T4 safe with scorers+GT+masks+RAFT flow all loaded
     "--lr", "2e-4",
     "--embed-dim", "6",
     "--base-ch", "36",
@@ -103,8 +106,8 @@ TRAINING_CMD_TEMPLATE: list[str] = [
     "--lambda-cap", "10000",
     "--phase1-end", "0.25",
     "--phase2-end", "0.85",
-    "--flow-warmup-epochs", "500",
-    "--residual-ramp-epochs", "500",
+    "--flow-warmup-epochs", "0",    # no warmup when resuming (model already has flow)
+    "--residual-ramp-epochs", "0",
     "--tv-weight", "0.1",
     "--flow-weight", "0.0",
     "--rate-weight", "0.01",
@@ -118,7 +121,29 @@ TRAINING_CMD_TEMPLATE: list[str] = [
     "--log-every", "25",
     "--max-hours", "5.5",
     "--phase2-mse-weight", "0.1",
+    "--p1-pose-sup-weight", "0.1",  # round 19: separate from p1-pose-weight=0.01
 ]
+
+# ---- Path A: PoseNet supervision + RAFT flow (Layers 1 + 2) ----
+# Tests whether geometric prior (RAFT) + direct pose supervision accelerates
+# convergence past what the Lagrangian alone achieves.
+TRAINING_CMD_SUPERVISED: list[str] = _BASE_CMD + [
+    "--pose-supervision-weight", "0.5",
+    "--pose-targets-path", "/results/posenet_targets.bin",
+    "--flow-supervision-weight", "0.1",
+    "--raft-flow-path", "/results/raft_flow.pt",
+]
+
+# ---- Path B: RAFT flow only, no PoseNet supervision ----
+# Isolates Layer 2 contribution. If Path A wins, we can determine
+# whether supervision or RAFT flow drove the improvement.
+TRAINING_CMD_RAFT_ONLY: list[str] = _BASE_CMD + [
+    "--flow-supervision-weight", "0.1",
+    "--raft-flow-path", "/results/raft_flow.pt",
+]
+
+# Default template (backward compat): base config, no layers active
+TRAINING_CMD_TEMPLATE: list[str] = _BASE_CMD
 
 
 def _run_with_periodic_commits(cmd: list[str], env: dict, commit_interval: int = 300):
@@ -214,10 +239,34 @@ def _setup_results_symlink(vol_dir: str) -> None:
     volumes={"/results": results_vol},
     memory=16384,
 )
-def train_asymmetric_warp(tag: str, extra_args: list[str] | None = None):
-    """Run asymmetric warp renderer training on T4."""
+def train_asymmetric_warp(
+    tag: str,
+    extra_args: list[str] | None = None,
+    variant: str = "base",
+    resume_from: str | None = None,
+):
+    """Run asymmetric warp renderer training on T4.
+
+    Args:
+        tag: Output directory name on the results volume.
+        extra_args: Additional CLI flags appended after the base command.
+        variant: Experiment variant to run:
+            "base"       — base Lagrangian training, no supervision layers (default)
+            "supervised" — Path A: PoseNet supervision (Layer 1) + RAFT flow (Layer 2)
+            "raft_only"  — Path B: RAFT flow supervision only (isolates Layer 2)
+        resume_from: If set, resume from this checkpoint path (overrides auto-detect).
+            Example: "/results/asym_v3_longer_tight/renderer_best.pt"
+    """
     import os
     import time
+
+    variant_cmds = {
+        "base": TRAINING_CMD_TEMPLATE,
+        "supervised": TRAINING_CMD_SUPERVISED,
+        "raft_only": TRAINING_CMD_RAFT_ONLY,
+    }
+    if variant not in variant_cmds:
+        raise ValueError(f"Unknown variant {variant!r}. Choose from: {list(variant_cmds)}")
 
     vol_dir = f"/results/{tag}"
     os.makedirs(vol_dir, exist_ok=True)
@@ -225,17 +274,20 @@ def train_asymmetric_warp(tag: str, extra_args: list[str] | None = None):
     # Symlink hardcoded RESULTS_DIR -> volume path
     _setup_results_symlink(vol_dir)
 
-    # Resume detection: check for existing checkpoint on volume
-    checkpoint = _find_latest_checkpoint(vol_dir)
+    # Resume detection: explicit override > auto-detect from volume
+    if resume_from:
+        checkpoint = resume_from
+    else:
+        checkpoint = _find_latest_checkpoint(vol_dir)
 
-    print(f"=== tac asymmetric warp training | tag: {tag} ===")
+    print(f"=== tac asymmetric warp training | tag: {tag} | variant: {variant} ===")
     print(f"  GPU: T4 (council decision: iteration budget over speed)")
     print(f"  Wall-clock budget: 5.5h training / 6h timeout")
     print(f"  Resume: {'YES -> ' + checkpoint if checkpoint else 'NO (fresh start)'}")
     print(f"  Output: {vol_dir}")
     print(f"  Start: {time.strftime('%Y-%m-%d %H:%M:%S')}")
 
-    cmd = list(TRAINING_CMD_TEMPLATE)
+    cmd = list(variant_cmds[variant])
 
     if checkpoint:
         cmd.extend(["--resume", checkpoint])
@@ -247,6 +299,29 @@ def train_asymmetric_warp(tag: str, extra_args: list[str] | None = None):
 
     print(f"  Command: {' '.join(cmd)}")
     print("  ---")
+
+    # --- Deployment manifest: record everything needed to reproduce this run ---
+    # Saved BEFORE training so it survives even if training crashes.
+    # Complies with "DX must record and archive all necessary to replicate variants."
+    import json
+    import socket
+
+    manifest = {
+        "tag": tag,
+        "variant": variant,
+        "resume_from": checkpoint,
+        "full_command": cmd,
+        "extra_args": extra_args,
+        "started_at": time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime()),
+        "hostname": socket.gethostname(),
+        "gpu": "T4",
+        "variant_base_cmd": variant_cmds[variant],
+    }
+    manifest_path = os.path.join(vol_dir, "deployment_manifest.json")
+    with open(manifest_path, "w") as f:
+        json.dump(manifest, f, indent=2)
+    results_vol.commit()
+    print(f"  Manifest saved: {manifest_path}")
 
     result = _run_with_periodic_commits(cmd, env=env)
 
@@ -736,26 +811,51 @@ def auth_eval_entry(
 def main(
     tag: str = "asymmetric_warp_t4",
     extra_args: str = "",
+    variant: str = "base",
+    resume_from: str = "",
 ):
     """Launch asymmetric warp training on Modal T4.
 
     Args:
         tag: experiment tag for output directory on results volume
         extra_args: space-separated extra CLI args (e.g., '--smoke')
+        variant: Experiment variant:
+            "base"       — base Lagrangian, no supervision (default)
+            "supervised" — Path A: PoseNet supervision + RAFT flow (Layers 1+2)
+            "raft_only"  — Path B: RAFT flow only (isolates Layer 2)
+        resume_from: checkpoint to resume from (e.g., '/results/asym_v3_longer_tight/renderer_best.pt')
+                     If empty, auto-detects from tag directory on volume.
+
+    Examples:
+        # Path A (PoseNet + RAFT, resume from v3 best):
+        .venv/bin/modal run ... --tag asym_v4_supervised --variant supervised \\
+            --resume-from /results/asym_v3_longer_tight/renderer_best.pt
+
+        # Path B (RAFT only, fresh start):
+        .venv/bin/modal run ... --tag asym_v4_raft_only --variant raft_only \\
+            --resume-from /results/asym_v3_longer_tight/renderer_best.pt
     """
     from tac.cost_tracker import print_cost_estimate
 
     print(f"\n=== Asymmetric Warp Renderer -> Modal T4 ===")
     print(f"  Tag: {tag}")
+    print(f"  Variant: {variant}")
+    print(f"  Resume from: {resume_from or '(auto-detect)'}")
     print(f"  Volume: {RESULTS_VOL}")
 
     print("\n--- Cost Estimate ---")
     print_cost_estimate(gpu="t4", estimated_hours=5.5, platform="modal")
 
     parsed_extra = extra_args.split() if extra_args.strip() else None
+    resume_arg = resume_from.strip() or None
 
     print("\nLaunching training...")
-    result = train_asymmetric_warp.remote(tag=tag, extra_args=parsed_extra)
+    result = train_asymmetric_warp.remote(
+        tag=tag,
+        extra_args=parsed_extra,
+        variant=variant,
+        resume_from=resume_arg,
+    )
 
     status = "OK" if result["exit_code"] == 0 else f"FAILED (exit {result['exit_code']})"
     print(f"\n  Result: {status}")

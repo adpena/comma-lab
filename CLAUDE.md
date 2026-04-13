@@ -115,6 +115,9 @@ Every experiment MUST follow this process before touching any GPU:
 5. **Resource estimate**: GPU hours, VRAM, expected runtime
 6. **Replicability record**: all params saved before running, full results after
 7. **No premature kills**: a negative result on an underspecified test means the test was wrong, not the technique
+8. **Multiple contenders → multiple paths**: When there are two or more plausible contenders for a design decision (e.g., "supervised" vs "RAFT-only", "architecture A" vs "architecture B"), do NOT pick one and discard the others. Run them in parallel. The score is the only valid arbiter. Never collapse multiple viable hypotheses into one without empirical evidence.
+
+This last rule is non-negotiable. Premature convergence on a single path is how labs fall behind. If you're uncertain which variant is better, the answer is always: run both.
 
 Yousfi, Fridrich, and the Contrarian are the **tripartite pact** — the three voices that must reach consensus before any major decision. Yousfi and Fridrich have domain expertise as the world's foremost steganalysis experts and contest designers. The Contrarian has veto power on any experiment that lacks rigor, wastes resources, or is built on unvalidated assumptions. All three must sign off on experiment design and kill/promote decisions.
 
