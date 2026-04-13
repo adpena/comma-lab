@@ -350,11 +350,13 @@ def main(
     if resume_from:
         resume_path = Path(resume_from)
         if not resume_path.exists():
-            raise FileNotFoundError(
-                f"RESUME_FROM checkpoint not found: {resume_path}\n"
-                f"  Ensure the .pt file is included in the dataset and the path is correct.\n"
-                f"  Expected inside: {input_root / ASSET_DATASET_SLUG}"
+            print(
+                f"  WARNING: RESUME_FROM checkpoint not found: {resume_path}\n"
+                f"  The launcher preamble sets RESUME_FROM unconditionally; if the\n"
+                f"  checkpoint was not uploaded to the dataset, training starts from scratch.\n"
+                f"  Upload {resume_path.name} to {input_root / ASSET_DATASET_SLUG} to resume."
             )
+            resume_from = None
 
     print(f"  Variant:     {variant}")
     print(f"  Script:      {script_path}")
