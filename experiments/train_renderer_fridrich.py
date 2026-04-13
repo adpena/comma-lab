@@ -683,7 +683,8 @@ def _full_eval(
         if len(pair_starts) == 0:
             print(f"  [_full_eval] WARNING: no pairs (n={n}), returning sentinel", file=sys.stderr)
             return {"avg_seg": float("inf"), "avg_pose": float("inf"),
-                    "score": float("inf"), "n_pairs": 0}
+                    "score": float("inf"), "n_pairs": 0,
+                    "rate": float("inf"), "model_bytes": 0.0}
         for batch_start in range(0, len(pair_starts), batch_size):
             batch_indices = pair_starts[batch_start:batch_start + batch_size]
             B = len(batch_indices)
