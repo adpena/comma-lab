@@ -40,7 +40,7 @@ def ensure_tac() -> None:
     except (ImportError, ModuleNotFoundError):
         pass
     input_root = Path("/kaggle/input")
-    candidates = sorted(input_root.rglob("comma_video_lab_ball_pack-*.whl"))
+    candidates = sorted(input_root.rglob("tac-*.whl")) or sorted(input_root.rglob("comma_video_lab_ball_pack-*.whl"))
     if not candidates:
         raise ImportError(
             f"tac wheel not found in {input_root}; upload comma_video_lab_ball_pack-*.whl "
