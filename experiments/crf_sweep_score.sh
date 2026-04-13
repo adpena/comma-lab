@@ -34,6 +34,8 @@ CRF_VALUES="${CRF_VALUES:-30 32 33 34 35 36 37 38 40}"
 
 FFMPEG_BIN="${FFMPEG_BIN:-ffmpeg}"
 PYTHON="${PYTHON:-$PROJECT/.venv/bin/python}"
+# Use MPS on Apple Silicon for 24x faster inflate (fallback to cpu)
+INFLATE_DEVICE="${INFLATE_DEVICE:-$($PYTHON -c "import torch; print('mps' if torch.backends.mps.is_available() else 'cpu')" 2>/dev/null || echo cpu)}"
 
 echo "============================================"
 echo "CRF Sweep Scoring Pipeline"
@@ -45,6 +47,7 @@ echo "Resolution:  ${SCALE_W}x${SCALE_H}"
 echo "Preset:      ${SVT_AV1_PRESET}"
 echo "Params:      ${SVT_AV1_PARAMS}"
 echo "CRF values:  $CRF_VALUES"
+echo "Inflate dev: $INFLATE_DEVICE"
 echo "Results dir: $RESULTS_DIR"
 echo "============================================"
 echo ""
@@ -145,10 +148,10 @@ sys.path.insert(0, '$ROBUST')
 sys.path.insert(0, '$PROJECT/src')
 from inflate_postfilter import inflate_with_postfilter, load_postfilter_int8
 
-model = load_postfilter_int8('$POSTFILTER', device='cpu')
+model = load_postfilter_int8('$POSTFILTER', device='$INFLATE_DEVICE')
 n = inflate_with_postfilter(
     '$MKV_PATH', '$RAW_PATH', model,
-    target_w=1164, target_h=874, device='cpu',
+    target_w=1164, target_h=874, device='$INFLATE_DEVICE',
 )
 print(f'Inflated {n} frames')
 "
