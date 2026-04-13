@@ -16,24 +16,9 @@ class BuildKaggleKernelsTests(unittest.TestCase):
         self.assertEqual(segnet.dataset_sources, (mod.ASSET_DATASET_REF,))
         self.assertEqual(dilated.include_paths, ())
         self.assertEqual(segnet.include_paths, ())
-        self.assertEqual(
-            dilated.launch_policy,
-            {
-                "bounded": True,
-                "checkpoint_priority": "early",
-                "expected_first_checkpoint_epoch": 1,
-                "max_epochs": 2500,
-            },
-        )
-        self.assertEqual(
-            segnet.launch_policy,
-            {
-                "bounded": True,
-                "checkpoint_priority": "early",
-                "expected_first_checkpoint_epoch": 1,
-                "max_epochs": 1000,
-            },
-        )
+        # launch_policy was stripped in round 28 (silently ignored by Kaggle server)
+        self.assertIsNone(dilated.launch_policy)
+        self.assertIsNone(segnet.launch_policy)
 
 
 if __name__ == "__main__":

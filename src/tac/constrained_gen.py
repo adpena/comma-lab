@@ -289,6 +289,7 @@ def compute_segnet_constraint_loss(
     frames: torch.Tensor,
     masks: torch.Tensor,
     segnet: torch.nn.Module,
+    batch_size: int = 32,
 ) -> torch.Tensor:
     """Cross-entropy loss forcing SegNet argmax to match target masks.
 
@@ -299,84 +300,111 @@ def compute_segnet_constraint_loss(
     The SegNet preprocessor expects (B, T, C, H, W) input. We feed single
     frames as T=1 sequences using the last-frame-only SegNet interface.
 
+    Mini-batches are used to avoid OOM on T4 with 1200 frames — gradients
+    accumulate across batches (caller must NOT zero_grad between calls).
+
     Args:
         frames: (N, H, W, 3) float tensor in [0, 255], requires_grad.
         masks: (N, H, W) long tensor with target class indices.
         segnet: frozen SegNet model.
+        batch_size: frames per mini-batch (reduce if OOM, default 32).
 
     Returns:
-        Scalar cross-entropy loss.
+        Scalar cross-entropy loss (mean over all frames).
     """
     N, H, W, C = frames.shape
     device = frames.device
 
-    # SegNet.preprocess_input expects (B, T, C, H, W) and uses only last frame.
-    # We construct (N, 1, C, H, W) so T=1 and the last frame is our frame.
-    frames_btchw = frames.permute(0, 3, 1, 2).unsqueeze(1).contiguous()  # (N, 1, C, H, W)
+    total_loss = torch.tensor(0.0, device=device)
+    n_batches = 0
 
-    # Use preprocess_input to match eval-time scorer behavior.
-    seg_input = segnet.preprocess_input(frames_btchw)
-    logits = segnet(seg_input)  # (N, NUM_CLASSES, H_out, W_out)
+    for start in range(0, N, batch_size):
+        end = min(start + batch_size, N)
+        batch_frames = frames[start:end]  # (B, H, W, 3)
+        batch_masks = masks[start:end]    # (B, H, W)
 
-    # Resize masks to match logit spatial dims
-    H_out, W_out = logits.shape[2], logits.shape[3]
-    masks_resized = (
-        F.interpolate(
-            masks.float().unsqueeze(1),
-            size=(H_out, W_out),
-            mode="nearest",
-        )
-        .squeeze(1)
-        .long()
-        .to(device)
-    )  # (N, H_out, W_out)
+        # SegNet.preprocess_input expects (B, T, C, H, W), T=1 (last frame only).
+        frames_btchw = batch_frames.permute(0, 3, 1, 2).unsqueeze(1).contiguous()
+        seg_input = segnet.preprocess_input(frames_btchw)
+        logits = segnet(seg_input)  # (B, NUM_CLASSES, H_out, W_out)
 
-    loss = F.cross_entropy(logits, masks_resized)
-    return loss
+        # Resize masks to match logit spatial dims
+        H_out, W_out = logits.shape[2], logits.shape[3]
+        masks_resized = (
+            F.interpolate(
+                batch_masks.float().unsqueeze(1),
+                size=(H_out, W_out),
+                mode="nearest",
+            )
+            .squeeze(1)
+            .long()
+            .to(device)
+        )  # (B, H_out, W_out)
+
+        total_loss = total_loss + F.cross_entropy(logits, masks_resized)
+        n_batches += 1
+
+    return total_loss / max(n_batches, 1)
 
 
 def compute_posenet_constraint_loss(
     frames: torch.Tensor,
     expected_pose: torch.Tensor,
     posenet: torch.nn.Module,
+    batch_size: int = 32,
 ) -> torch.Tensor:
     """L2 loss between PoseNet output and expected ego-motion targets.
 
-    PoseNet expects consecutive frame pairs as (B, T=2, C, H, W) input.
-    We construct pairs from consecutive frames in the sequence.
+    Uses NON-OVERLAPPING pairs (f_{2k}, f_{2k+1}) to match the upstream scorer
+    which processes video via DaliVideoDataset with seq_len=2. For N frames,
+    there are N//2 non-overlapping pairs.
+
+    PoseNet.preprocess_input expects (B, 2, C, H, W) input.
+
+    Mini-batches are used to avoid OOM on T4 — gradients accumulate across
+    batches (caller must NOT zero_grad between calls).
 
     Args:
         frames: (N, H, W, 3) float tensor in [0, 255], requires_grad.
         expected_pose: (P, 6) float tensor of expected pose outputs,
-            where P = N-1 (one pose per consecutive pair).
+            where P = N//2 (one pose per non-overlapping pair, seq_len=2).
         posenet: frozen PoseNet model.
+        batch_size: pairs per mini-batch (reduce if OOM, default 32).
 
     Returns:
         Scalar L2 loss averaged over all pairs and dimensions.
     """
     N = frames.shape[0]
-    P = N - 1
-    assert expected_pose.shape[0] == P, (
-        f"Expected {P} pose targets for {N} frames, got {expected_pose.shape[0]}"
+    num_pairs = expected_pose.shape[0]
+    assert num_pairs == N // 2, (
+        f"Expected {N // 2} non-overlapping pose targets for {N} frames (seq_len=2), "
+        f"got {num_pairs}. Use extract_masks_and_targets() to obtain scorer-matched targets."
     )
     device = frames.device
 
-    # Build consecutive pairs: (P, 2, H, W, 3) -> (P, 2, C, H, W)
-    frame1 = frames[:-1]  # (P, H, W, 3)
-    frame2 = frames[1:]   # (P, H, W, 3)
-    pairs_hwc = torch.stack([frame1, frame2], dim=1)  # (P, 2, H, W, 3)
-    pairs_chw = pairs_hwc.permute(0, 1, 4, 2, 3).contiguous()  # (P, 2, C, H, W)
+    total_loss = torch.tensor(0.0, device=device)
+    n_batches = 0
 
-    # PoseNet preprocessing: RGB -> YUV420 6-ch, resize, rearrange
-    posenet_in = posenet.preprocess_input(pairs_chw)
-    posenet_out = posenet(posenet_in)
+    for start in range(0, num_pairs, batch_size):
+        end = min(start + batch_size, num_pairs)
 
-    # PoseNet returns dict with "pose" key, shape (P, >=6)
-    pred_pose = posenet_out["pose"][..., :6]  # (P, 6)
-    target = expected_pose.to(device)
+        # Non-overlapping pair k = (frames[2k], frames[2k+1])
+        # Stride-2 slice selects every other frame from 2*start to 2*end.
+        f1 = frames[2 * start:2 * end:2]           # (B, H, W, 3) — even-indexed frames
+        f2 = frames[2 * start + 1:2 * end + 1:2]  # (B, H, W, 3) — odd-indexed frames
+        pairs_hwc = torch.stack([f1, f2], dim=1)            # (B, 2, H, W, 3)
+        pairs_chw = pairs_hwc.permute(0, 1, 4, 2, 3).contiguous()  # (B, 2, C, H, W)
 
-    loss = (pred_pose - target).pow(2).mean()
-    return loss
+        posenet_in = posenet.preprocess_input(pairs_chw)
+        posenet_out = posenet(posenet_in)
+
+        pred_pose = posenet_out["pose"][..., :6]  # (B, 6) — first 6 of 12 outputs
+        target = expected_pose[start:end].to(device)  # (B, 6)
+
+        total_loss = total_loss + (pred_pose - target).pow(2).mean()
+        n_batches += 1
+
+    return total_loss / max(n_batches, 1)
 
 
 def compute_compressibility_loss(frames: torch.Tensor) -> torch.Tensor:
@@ -447,11 +475,12 @@ def estimate_expected_pose(
             - ``rz_road_cx`` (0.1): roll from road lateral asymmetry.
 
     Returns:
-        (P, 6) float tensor of estimated pose targets, P = N-1.
+        (P, 6) float tensor of estimated pose targets, P = N//2.
+        Uses non-overlapping pairs (f_{2k}, f_{2k+1}) to match the upstream scorer.
     """
     device = torch.device(device)
     N, H, W = masks.shape
-    P = N - 1
+    P = N // 2
 
     if P == 0:
         return torch.zeros(0, 6, device=device)
@@ -471,8 +500,9 @@ def estimate_expected_pose(
         centroids[:, c, 0] = cy / H  # normalize to [0, 1]
         centroids[:, c, 1] = cx / W
 
-    # Centroid displacements between consecutive frames
-    centroid_deltas = centroids[1:] - centroids[:-1]  # (P, C, 2)
+    # Non-overlapping centroid deltas: pair k = (frames[2k], frames[2k+1])
+    # delta = centroid[odd frames] - centroid[even frames]
+    centroid_deltas = centroids[1::2] - centroids[0::2]  # (P=N//2, C, 2)
 
     # Road class (0) centroid displacement is the strongest ego-motion signal
     road_dy = centroid_deltas[:, 0, 0]  # (P,) vertical shift of road
@@ -482,8 +512,8 @@ def estimate_expected_pose(
     sky_dy = centroid_deltas[:, 4, 0]   # (P,)
     sky_dx = centroid_deltas[:, 4, 1]   # (P,)
 
-    # Vanishing point proxy: road centroid x position
-    road_cx = centroids[:-1, 0, 1]  # (P,) road center-x in first frame
+    # Vanishing point proxy: road centroid x position in the first frame of each pair
+    road_cx = centroids[0::2, 0, 1]  # (P,) road center-x in even-indexed (first) frames
 
     # Simple linear model for pose estimation:
     # These are heuristic coefficients tuned to match typical PoseNet output
@@ -521,11 +551,15 @@ def constrained_generate(
     noise_seed: int = 42,
     num_steps: int = 1000,
     lr: float = 0.1,
-    seg_weight: float = 100.0,
-    pose_weight: float = 10.0,
+    seg_weight: float = 50.0,
+    pose_weight: float = 50.0,
     compress_weight: float = 1.0,
     device: torch.device | str = "cpu",
     log_every: int = 100,
+    early_stop_patience: int = 50,
+    early_stop_delta: float = 1e-4,
+    segnet_batch_size: int = 32,
+    posenet_batch_size: int = 32,
 ) -> torch.Tensor:
     """Main constrained optimization loop: generate frames from masks.
 
@@ -535,19 +569,28 @@ def constrained_generate(
       2. PoseNet constraint: pose output matches expected targets
       3. Compressibility: total variation is minimized
 
+    Mini-batched internally to fit on T4 (16GB) for 1200 frames.
+    Early stopping when loss improvement < early_stop_delta for
+    early_stop_patience consecutive steps.
+
     Args:
         masks: (N, H, W) long tensor with class indices.
-        expected_pose: (P, 6) float tensor, P = N-1.
+        expected_pose: (P, 6) float tensor, P = N//2 (non-overlapping pairs, seq_len=2).
         posenet: frozen PoseNet model (on device).
         segnet: frozen SegNet model (on device).
         noise_seed: deterministic seed for initialization.
-        num_steps: number of Adam optimization steps.
+        num_steps: maximum Adam optimization steps.
         lr: learning rate for Adam optimizer.
         seg_weight: weight for SegNet cross-entropy constraint.
-        pose_weight: weight for PoseNet L2 constraint.
+        pose_weight: weight for PoseNet L2 constraint. Council binding:
+            both seg and pose at 50 — PoseNet is 69% of the current score gap.
         compress_weight: weight for total variation loss.
         device: computation device.
         log_every: print loss every N steps (0 to disable).
+        early_stop_patience: stop if no improvement for this many steps.
+        early_stop_delta: minimum loss improvement to reset patience counter.
+        segnet_batch_size: frames per SegNet mini-batch (reduce if OOM).
+        posenet_batch_size: pairs per PoseNet mini-batch (reduce if OOM).
 
     Returns:
         (N, H, W, 3) float tensor in [0, 255], rounded to uint8-compatible values.
@@ -560,17 +603,22 @@ def constrained_generate(
 
     optimizer = torch.optim.Adam([frames], lr=lr)
 
+    best_loss = float("inf")
+    no_improve_count = 0
+
     for step in range(num_steps):
         optimizer.zero_grad()
 
-        # Compute constraint losses
-        seg_loss = compute_segnet_constraint_loss(frames, masks, segnet)
+        # Mini-batched constraint losses — gradients accumulate on frames.grad
+        seg_loss = compute_segnet_constraint_loss(
+            frames, masks, segnet, batch_size=segnet_batch_size,
+        )
         compress_loss = compute_compressibility_loss(frames)
 
         # PoseNet loss only if we have pairs (N > 1)
         if frames.shape[0] > 1 and expected_pose.shape[0] > 0:
             pose_loss = compute_posenet_constraint_loss(
-                frames, expected_pose, posenet,
+                frames, expected_pose, posenet, batch_size=posenet_batch_size,
             )
         else:
             pose_loss = torch.tensor(0.0, device=device)
@@ -589,14 +637,31 @@ def constrained_generate(
         with torch.no_grad():
             frames.data.clamp_(0.0, 255.0)
 
+        loss_val = total_loss.item()
+
         if log_every > 0 and (step + 1) % log_every == 0:
             print(
                 f"  step {step + 1:4d}/{num_steps}: "
-                f"total={total_loss.item():.4f} "
+                f"total={loss_val:.4f} "
                 f"seg={seg_loss.item():.4f} "
                 f"pose={pose_loss.item():.4f} "
                 f"compress={compress_loss.item():.4f}"
             )
+
+        # Early stopping
+        if best_loss - loss_val > early_stop_delta:
+            best_loss = loss_val
+            no_improve_count = 0
+        else:
+            no_improve_count += 1
+            if no_improve_count >= early_stop_patience:
+                if log_every > 0:
+                    print(
+                        f"  Early stop at step {step + 1}: "
+                        f"no improvement for {early_stop_patience} steps "
+                        f"(best={best_loss:.4f})"
+                    )
+                break
 
     # Final quantization: round to nearest integer, clamp to uint8 range
     with torch.no_grad():
@@ -743,7 +808,8 @@ def inflate_constrained(
     masks = masks.to(device)
     expected_pose = expected_pose.to(device)
 
-    print(f"Inflating {masks.shape[0]} frames via constrained optimization...")
+    N = masks.shape[0]
+    print(f"Inflating {N} frames via constrained optimization...")
     print(f"  steps={num_steps}, lr={lr}, seed={noise_seed}")
 
     frames = constrained_generate(
@@ -758,12 +824,16 @@ def inflate_constrained(
         log_every=log_every,
     )
 
-    # Write frames as uint8 numpy arrays
+    # Write frames as raw RGB24 — the format the upstream scorer expects.
+    # Each frame is H×W×3 uint8, concatenated with no header/separator.
+    # Shape: (N, H, W, 3) -> flatten to bytes in frame-major order.
     out = Path(output_dir)
     out.mkdir(parents=True, exist_ok=True)
-    frames_np = frames.cpu().numpy().astype(np.uint8)
-    np.save(out / "frames.npy", frames_np)
-    print(f"Wrote {frames_np.shape[0]} frames to {out / 'frames.npy'}")
+    frames_np = frames.cpu().numpy().astype(np.uint8)  # (N, H, W, 3)
+    raw_path = out / "frames.raw"
+    frames_np.tofile(raw_path)
+    n_bytes = raw_path.stat().st_size
+    print(f"Wrote {N} frames ({n_bytes:,} bytes) to {raw_path}")
 
     return out
 

@@ -116,6 +116,8 @@ src/tac/deploy/kaggle/kaggle_output_ingest.py
 src/tac/deploy/kaggle/kaggle_queue_tick.py
 src/tac/deploy/kaggle/kaggle_status_sync.py
 src/tac/deploy/kaggle/kaggle_watchdog.py
+src/tac/deploy/kaggle/runner.py
+src/tac/deploy/kaggle/runner_constrained.py
 src/tac/deploy/lightning/__init__.py
 src/tac/deploy/modal/__init__.py
 src/tac/deploy/modal/modal_asymmetric_warp_deploy.py
@@ -216,6 +218,7 @@ src/tac/tests/test_scorer_targets.py
 src/tac/tests/test_state_cli.py
 src/tac/tests/test_state_sync.py
 src/tac/tests/test_tac_cli.py
+src/tac/tests/test_tac_deploy_kaggle_runner.py
 src/tac/tests/test_tac_entrypoints.py
 src/tac/tests/test_tac_lossless_arithmetic.py
 src/tac/tests/test_tac_lossless_baseline.py

@@ -146,6 +146,13 @@ def kernel_specs() -> dict[str, KaggleKernelSpec]:
             code_file="train_postfilter_pairaware.py",
             dataset_sources=(ASSET_DATASET_REF,),
         ),
+        "constrained_gen_smoke": KaggleKernelSpec(
+            slug="comma-lab-constrained-gen-smoke",
+            title="comma-lab constrained gen smoke",
+            code_source=REPO_ROOT / "experiments" / "kaggle_constrained_gen_launcher.py",
+            code_file="kaggle_constrained_gen_launcher.py",
+            dataset_sources=(ASSET_DATASET_REF,),
+        ),
     }
 
 
