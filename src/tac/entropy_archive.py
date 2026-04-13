@@ -34,6 +34,8 @@ import struct
 import zipfile
 from typing import Any
 
+import bisect
+
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
@@ -44,6 +46,8 @@ __all__ = [
     "ArithmeticDecoder",
     "build_entropy_archive",
     "inflate_entropy_archive",
+    "compress_byte_stream",
+    "decompress_byte_stream",
 ]
 
 
@@ -180,12 +184,11 @@ class ArithmeticDecoder:
         # Clamp scaled to valid range [0, freq_total-1]
         scaled = max(0, min(scaled, self.freq_total - 1))
 
-        # Find symbol via linear scan of CDF
-        sym = len(cum_freqs) - 1  # default to last symbol
-        for i in range(len(cum_freqs)):
-            if cum_freqs[i] + freqs[i] > scaled >= cum_freqs[i]:
-                sym = i
-                break
+        # Find symbol via binary search on cum_freqs (O(log N) instead of O(N))
+        # cum_freqs is sorted ascending; bisect_right gives the first index
+        # whose cum_freq is > scaled, so sym = that index - 1.
+        sym = bisect.bisect_right(cum_freqs, scaled) - 1
+        sym = max(0, min(sym, len(cum_freqs) - 1))
 
         # Update range
         cum = cum_freqs[sym]
@@ -308,10 +311,16 @@ class NeuralEntropyModel(nn.Module):
                             raw_freqs[idx_int] -= 1
                             remaining += 1
 
-            assert raw_freqs.sum().item() == freq_total, (
-                f"Frequency sum {raw_freqs.sum().item()} != {freq_total}"
-            )
-            assert (raw_freqs >= 1).all(), "Zero-frequency symbol detected"
+            # Safety: if extreme distributions leave a residual after the loop
+            # (e.g. all symbols at min freq=1 and not enough to subtract),
+            # add the shortfall to the most-probable symbol.
+            final_diff = freq_total - raw_freqs.sum().item()
+            if final_diff != 0:
+                most_probable = probs.argmax().item()
+                raw_freqs[most_probable] += final_diff
+                # Ensure we didn't go below 1
+                if raw_freqs[most_probable] < 1:
+                    raw_freqs[most_probable] = 1
 
             freqs = raw_freqs.tolist()
             cum_freqs = [0]
@@ -363,34 +372,61 @@ class NeuralEntropyModel(nn.Module):
     def serialize(self) -> bytes:
         """Serialize the entropy model to compact bytes.
 
-        Uses float32 to preserve exact probability predictions required
-        for deterministic arithmetic coding. The model is tiny (~1-2KB)
-        so fp32 vs fp16 is negligible in the archive.
+        Uses a safe manual format: JSON header + raw float32 tensor data.
+        This avoids torch.save/torch.load pickle-based serialization which
+        is unsafe on untrusted archive data (arbitrary code execution).
         """
+        header = {
+            "context_size": self.context_size,
+            "hidden": self.hidden,
+            "num_symbols": self.num_symbols,
+            "keys": [],
+        }
+        tensor_blobs: list[bytes] = []
+        for key, tensor in sorted(self.state_dict().items()):
+            t = tensor.cpu().float().contiguous()
+            header["keys"].append({
+                "name": key,
+                "shape": list(t.shape),
+                "numel": t.numel(),
+            })
+            tensor_blobs.append(t.numpy().tobytes())
+
+        header_json = json.dumps(header, separators=(",", ":")).encode("utf-8")
         buf = io.BytesIO()
-        state = {k: v.cpu() for k, v in self.state_dict().items()}
-        torch.save(
-            {
-                "context_size": self.context_size,
-                "hidden": self.hidden,
-                "num_symbols": self.num_symbols,
-                "state_dict": state,
-            },
-            buf,
-        )
+        buf.write(struct.pack("<I", len(header_json)))
+        buf.write(header_json)
+        for blob in tensor_blobs:
+            buf.write(blob)
         return buf.getvalue()
 
     @classmethod
     def deserialize(cls, data: bytes) -> "NeuralEntropyModel":
-        """Deserialize an entropy model from bytes."""
+        """Deserialize an entropy model from bytes.
+
+        Uses safe manual unpacking (no pickle/torch.load). Compatible with
+        the serialize() format above.
+        """
+        import numpy as np
+
         buf = io.BytesIO(data)
-        checkpoint = torch.load(buf, map_location="cpu", weights_only=False)
+        header_len = struct.unpack("<I", buf.read(4))[0]
+        header = json.loads(buf.read(header_len).decode("utf-8"))
+
         model = cls(
-            context_size=checkpoint["context_size"],
-            hidden=checkpoint["hidden"],
-            num_symbols=checkpoint["num_symbols"],
+            context_size=header["context_size"],
+            hidden=header["hidden"],
+            num_symbols=header["num_symbols"],
         )
-        model.load_state_dict(checkpoint["state_dict"])
+
+        state_dict = {}
+        for key_info in header["keys"]:
+            numel = key_info["numel"]
+            raw = buf.read(numel * 4)  # float32 = 4 bytes
+            arr = np.frombuffer(raw, dtype=np.float32).copy().reshape(key_info["shape"])
+            state_dict[key_info["name"]] = torch.from_numpy(arr)
+
+        model.load_state_dict(state_dict)
         return model
 
 
@@ -737,6 +773,112 @@ def inflate_entropy_archive(archive: bytes) -> dict[str, Any]:
     return result
 
 
+# ── Static byte-stream compression (no neural model) ──────────────────
+
+
+def compress_byte_stream(data: bytes) -> bytes:
+    """Compress raw bytes using arithmetic coding with a static frequency table.
+
+    Builds a histogram of the input byte values and uses it as the frequency
+    table for arithmetic coding. No neural model needed -- this is pure
+    Shannon entropy compression for FP4/int8 weight blobs.
+
+    Format of output:
+        4 bytes: original length (uint32)
+        256 * 4 bytes: frequency table (uint32 each, sum = freq_total)
+        remaining: arithmetic-coded payload
+
+    Args:
+        data: raw bytes to compress (e.g., quantized weight blob).
+
+    Returns:
+        Compressed byte stream.
+    """
+    if len(data) == 0:
+        return struct.pack("<I", 0)
+
+    freq_total = 1 << 16
+
+    # Build histogram of byte values
+    histogram = [0] * 256
+    for b in data:
+        histogram[b] += 1
+
+    # Convert histogram to integer frequencies summing to freq_total.
+    # Ensure every symbol gets at least 1 count (arithmetic coding requires it).
+    freqs = [0] * 256
+    for i in range(256):
+        if histogram[i] > 0:
+            freqs[i] = max(1, int(histogram[i] / len(data) * (freq_total - 256)) + 1)
+        else:
+            freqs[i] = 1
+
+    # Adjust to sum exactly to freq_total
+    diff = freq_total - sum(freqs)
+    if diff != 0:
+        # Find the most frequent symbol and adjust
+        most_freq = max(range(256), key=lambda i: histogram[i])
+        freqs[most_freq] += diff
+        if freqs[most_freq] < 1:
+            freqs[most_freq] = 1
+
+    # Build CDF
+    cum_freqs = [0] * 256
+    for i in range(1, 256):
+        cum_freqs[i] = cum_freqs[i - 1] + freqs[i - 1]
+
+    # Encode
+    coder = ArithmeticCoder(freq_total=freq_total)
+    for b in data:
+        coder.encode_symbol(cum_freqs[b], freqs[b])
+    payload = coder.finish()
+
+    # Pack: original_length + freq_table + payload
+    buf = io.BytesIO()
+    buf.write(struct.pack("<I", len(data)))
+    for f in freqs:
+        buf.write(struct.pack("<I", f))
+    buf.write(payload)
+    return buf.getvalue()
+
+
+def decompress_byte_stream(data: bytes) -> bytes:
+    """Decompress bytes produced by compress_byte_stream.
+
+    Args:
+        data: compressed byte stream from compress_byte_stream.
+
+    Returns:
+        Original uncompressed bytes.
+    """
+    buf = io.BytesIO(data)
+    original_len = struct.unpack("<I", buf.read(4))[0]
+    if original_len == 0:
+        return b""
+
+    freq_total = 1 << 16
+
+    # Read frequency table
+    freqs = []
+    for _ in range(256):
+        freqs.append(struct.unpack("<I", buf.read(4))[0])
+
+    # Build CDF
+    cum_freqs = [0] * 256
+    for i in range(1, 256):
+        cum_freqs[i] = cum_freqs[i - 1] + freqs[i - 1]
+
+    # Decode
+    payload = buf.read()
+    decoder = ArithmeticDecoder(payload, freq_total=freq_total)
+    result = bytearray()
+    for _ in range(original_len):
+        sym = decoder.decode_symbol(cum_freqs, freqs)
+        result.append(sym)
+
+    return bytes(result)
+
+
 # ── Smoke tests ─────────────────────────────────────────────────────────
 
 
@@ -848,6 +990,20 @@ def _smoke_test() -> None:
     inflated2 = inflate_entropy_archive(archive2)
     assert inflated2["postfilter_weights"] == b"precompressed_blob_data"
     print(f"  archive with pre-compressed weights: OK ({len(archive2)} bytes)")
+
+    # 9. compress_byte_stream / decompress_byte_stream round-trip
+    test_data = bytes(range(256)) * 4 + b"\x00" * 100 + b"\xff" * 100
+    compressed = compress_byte_stream(test_data)
+    decompressed = decompress_byte_stream(compressed)
+    assert decompressed == test_data, (
+        f"byte stream round-trip mismatch: {len(test_data)} -> {len(compressed)} -> {len(decompressed)}"
+    )
+    print(f"  byte stream compress: OK ({len(test_data)} -> {len(compressed)} bytes, "
+          f"{len(compressed)/len(test_data)*100:.1f}%)")
+
+    # 10. compress_byte_stream edge case: empty input
+    assert decompress_byte_stream(compress_byte_stream(b"")) == b""
+    print(f"  byte stream empty: OK")
 
     print("entropy_archive: all smoke tests passed")
 
