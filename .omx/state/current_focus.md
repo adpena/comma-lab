@@ -9,19 +9,18 @@
 
 ### GPU Lane — Asymmetric Warp Renderer (primary attack vector)
 
-1. **asym_v3_longer_tight** (RUNNING, detached Modal T4)
-   - 20K epochs, batch=8, pose_boundary=0.01, no supervision layers
-   - At epoch 11000/20000 as of 2026-04-13
+1. **asym_v3_longer_tight** (RUNNING, Modal T4)
+   - base variant, 20K epochs, batch=4
+   - At epoch ~11000/20000 as of 2026-04-13
    - Resume: /results/asym_v3_longer_tight/renderer_best.pt
 
-2. **asym_v4_supervised** (READY TO LAUNCH)
+2. **asym_v4_supervised** (RUNNING, Modal T4, started 2026-04-13 17:23 UTC)
    - Path A: PoseNet supervision (Layer 1) + RAFT flow (Layer 2)
-   - resume from asym_v3_longer_tight/renderer_best.pt
-   - Command: `modal run ... --tag asym_v4_supervised --variant supervised --resume-from /results/asym_v3_longer_tight/renderer_best.pt`
+   - Resumed from asym_v3_longer_tight/renderer_best.pt
 
-3. **asym_v4_raft_only** (READY TO LAUNCH)
+3. **asym_v4_raft_only** (RUNNING, Modal T4, started 2026-04-13 17:25 UTC)
    - Path B: RAFT flow only (isolates Layer 2 contribution)
-   - Command: `modal run ... --tag asym_v4_raft_only --variant raft_only --resume-from /results/asym_v3_longer_tight/renderer_best.pt`
+   - Resumed from asym_v3_longer_tight/renderer_best.pt
 
 ### Volume prerequisites (confirmed present)
 - posenet_targets.bin: ✓ on volume
