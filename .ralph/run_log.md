@@ -1,5 +1,19 @@
 # run log
 
+## 2026-04-14T01:00:00Z — PRE-SUPERVISION BASELINE CONFIRMED: asym_v3_longer_tight auth=1.0000
+
+- **auth=1.0000** — BEST RESULT TO DATE on asymmetric warp architecture
+- seg=0.002104, pose=0.047917, rate=0.100355
+- checkpoint: asym_v3_longer_tight/renderer_best.pt (pre-supervision, ~ep12400)
+- CONFIRMED: supervision 7600 epochs starting from 1.0 regressed to 1.79–2.87
+- Contrarian verdict UPHELD: supervision harmed the model
+- Council diagnostic closed: pre-supervision was at 1.0, NOT broken before supervision
+  → The 4 Lagrangian fixes are still valid but the failure is CONFIRMED supervision-caused
+- IMMEDIATE ACTION REQUIRED: promote asym_v3_longer_tight/renderer_best.pt as current best
+- NOTE: rate=0.100 vs dilated h64 rate=0.046, but total score 1.0 still beats 1.33
+  → asym warp trades rate efficiency for much better seg (0.002) and pose (0.048)
+- json: asym_v3_longer_tight/auth_eval_renderer_best.json (exists in volume, timestamp 2026-04-13T17:37:26Z)
+
 ## 2026-04-14T00:30:00Z — asym_v4_supervised best_proxy_constraints_met AUTH EVAL
 
 - **auth=2.8700** (CONFIRMED: supervised training collapses PoseNet)
