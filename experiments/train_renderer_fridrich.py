@@ -194,7 +194,7 @@ class FridrichRendererConfig:
     # Threshold must exceed max plausible Lagrangian loss to avoid false kills
     kill_loss_threshold: float = 1e5    # council sweep: 100 was 1000x too low for Phase 2
     kill_seg_threshold: float = 0.8     # relaxed: SegNet starts near 0.5
-    kill_pose_threshold: float = 0.5    # council R4: tightened — post-supervision baseline is 0.048
+    kill_pose_threshold: float = 50.0   # council R4: catches collapse, allows Phase 2 convergence
     kill_patience: int = 200            # give asymmetric warmup time to converge
 
     # Even-pairs-only: scorer evaluates (0,1),(2,3),(4,5)... not (1,2),(3,4)
@@ -1479,10 +1479,10 @@ def train_fridrich_renderer(cfg: FridrichRendererConfig) -> dict[str, Any]:
                 flow_sup_loss = F.mse_loss(predicted_flow, target_flow)
                 total_loss = total_loss + cfg.flow_supervision_weight * flow_sup_loss
 
-        # PoseNet supervision: direct scorer-space optimization (Layer 1+3)
+        # PoseNet supervision: direct scorer-space optimization (Layer 1 only)
         # Phase-adaptive: p1_pose_sup_weight in Phase 1 (separate from p1_pose_weight
         # which scales the distortion term — targets have different scale than distortion).
-        # Full weight in Phase 2+ (complements Lagrangian constraints).
+        # Phase 2+: supervision OFF (R3) — Lagrangian already guides PoseNet.
         # NOTE: reuses _pose_pred_cached from _compute_pose_distortion_coupled to avoid
         # a second PoseNet forward pass (saves ~30% per-step compute when supervision active).
         if cfg.pose_supervision_weight > 0 and pose_targets is not None and cfg.pair_mode == "asymmetric":
@@ -1492,19 +1492,21 @@ def train_fridrich_renderer(cfg: FridrichRendererConfig) -> dict[str, Any]:
             effective_pose_sup_weight = cfg.pose_supervision_weight * (
                 cfg.p1_pose_sup_weight if phase == 1 else 0.0
             )
-            target_pose = pose_targets[pair_indices]
+            # Skip loss computation entirely when weight is zero (saves ~22% total compute)
+            if effective_pose_sup_weight > 0:
+                target_pose = pose_targets[pair_indices]
 
-            if cfg.pose_embed_loss:
-                from tac.losses import posenet_embedding_loss
-                gen_pair = torch.stack([gen_t, gen_t1], dim=1)
-                gt_pair = torch.stack([gt_t, gt_t1], dim=1)
-                pose_sup_loss = posenet_embedding_loss(gen_pair, gt_pair, posenet)
-            else:
-                # Reuse cached PoseNet output from distortion computation (no second forward).
-                # _pose_pred_cached retains gradient through the renderer — correct.
-                pose_sup_loss = F.mse_loss(_pose_pred_cached[..., :6], target_pose)
+                if cfg.pose_embed_loss:
+                    from tac.losses import posenet_embedding_loss
+                    gen_pair = torch.stack([gen_t, gen_t1], dim=1)
+                    gt_pair = torch.stack([gt_t, gt_t1], dim=1)
+                    pose_sup_loss = posenet_embedding_loss(gen_pair, gt_pair, posenet)
+                else:
+                    # Reuse cached PoseNet output from distortion computation (no second forward).
+                    # _pose_pred_cached retains gradient through the renderer — correct.
+                    pose_sup_loss = F.mse_loss(_pose_pred_cached[..., :6], target_pose)
 
-            total_loss = total_loss + effective_pose_sup_weight * pose_sup_loss
+                total_loss = total_loss + effective_pose_sup_weight * pose_sup_loss
 
         # ---- Backward + step ----
         optimizer.zero_grad()
@@ -1771,9 +1773,14 @@ def train_fridrich_renderer(cfg: FridrichRendererConfig) -> dict[str, Any]:
         loss_val = total_loss.item()
         seg_val = seg_dist.item()
         pose_val = pose_dist.item()
+        # Phase-gate PoseNet kill: PoseNet starts at ~180 in Phase 1 and converges
+        # slowly. Checking kill_pose_threshold in Phase 1 would auto-kill every run
+        # at epoch 200 (kill_patience). Only apply pose kill in Phase 2+ when the
+        # Lagrangian is actively driving PoseNet toward the boundary.
+        pose_diverged = pose_val > cfg.kill_pose_threshold if phase >= 2 else False
         if (loss_val > cfg.kill_loss_threshold
                 or seg_val > cfg.kill_seg_threshold
-                or pose_val > cfg.kill_pose_threshold
+                or pose_diverged
                 or not math.isfinite(loss_val)):
             divergence_counter += 1
             if divergence_counter >= cfg.kill_patience:
