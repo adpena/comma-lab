@@ -78,15 +78,16 @@ image = (
 
 results_vol = modal.Volume.from_name(RESULTS_VOL, create_if_missing=True)
 
-# --- Council v2 training flags (asymmetric warp, 2026-04-13) ---
-# Key changes from v1: rho_growth 1.02→1.005, rho_max 1e4→1e3, lambda_cap 1e6→1e4,
-# phase1_end 0.40→0.25, phase2_end 0.70→0.85, batch_size 4→16,
-# flow_warmup_epochs=500, residual_ramp_epochs=500
+# --- Council v3 training flags (asymmetric warp, 2026-04-13) ---
+# v2 fixes: Lagrangian stability, flow warmup, batch size, 43 bugs
+# v3 adds: Layer 1/2/3 (PoseNet supervision, RAFT flow, embedding loss)
+# Layer flags are OFF by default — enable via --extra-args for experiments
+# RAFT flow must be uploaded to volume first: modal volume put tac-asymmetric-results experiments/raft_flow.pt raft_flow.pt
 TRAINING_CMD_TEMPLATE: list[str] = [
     "python", "/root/experiments/train_renderer_fridrich.py",
     "--pair-mode", "asymmetric",
     "--epochs", "10000",
-    "--batch-size", "16",
+    "--batch-size", "4",  # T4 OOMs at 16 (14.5GB VRAM with scorers+GT+masks loaded)
     "--lr", "2e-4",
     "--embed-dim", "6",
     "--base-ch", "36",
