@@ -367,7 +367,18 @@ def main(
     print(f"  kill_threshold={KILL_THRESHOLD} after {KILL_STEP} steps")
 
     import torch
-    device = "cuda" if torch.cuda.is_available() else "cpu"
+    if torch.cuda.is_available():
+        # PyTorch >= 2.5 dropped sm_60 (P100) support. Minimum is now sm_70 (V100+).
+        # Running CUDA kernels on incompatible GPUs raises RuntimeError at kernel launch.
+        _major, _minor = torch.cuda.get_device_capability(0)
+        _dev_name = torch.cuda.get_device_name(0)
+        if _major < 7:
+            print(f"  WARNING: {_dev_name} (sm_{_major}{_minor}) < sm_70 — not supported by installed PyTorch, falling back to CPU")
+            device = "cpu"
+        else:
+            device = "cuda"
+    else:
+        device = "cpu"
     print(f"  Device: {device}")
 
     # Install deps — uv preferred, pip fallback for envs where uv is unavailable

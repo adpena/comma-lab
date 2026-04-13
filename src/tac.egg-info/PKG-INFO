@@ -1,6 +1,6 @@
 Metadata-Version: 2.4
 Name: tac
-Version: 1.0.2
+Version: 1.0.3
 Summary: Task-Aware Codec: Neural video compression optimized for downstream perception models
 Author-email: Alejandro Pena <adpena@users.noreply.github.com>
 License-Expression: MIT
