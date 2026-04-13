@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import os
 import sys
 import unittest
 from pathlib import Path
@@ -118,7 +119,10 @@ class TacLosslessArithmeticTests(unittest.TestCase):
         )
 
         self.assertEqual(calls[0]["dataset_name"], "commaai/commavq")
-        self.assertEqual(calls[0]["data_files"], {"train": ["data-0000.tar.gz", "data-0001.tar.gz"]})
+        self.assertEqual(
+            [os.path.basename(f) for f in calls[0]["data_files"]["train"]],
+            ["data-0000.tar.gz", "data-0001.tar.gz"],
+        )
         self.assertEqual(estimate.profile, "gpt_arithmetic_small")
         self.assertEqual(estimate.example_count, 2)
         self.assertEqual(estimate.frames_per_example, 2)

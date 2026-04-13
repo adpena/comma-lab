@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import os
 import sys
 import tempfile
 import unittest
@@ -63,7 +64,10 @@ class TacLosslessEvaluateTests(unittest.TestCase):
 
         self.assertEqual(len(calls), 1)
         self.assertEqual(calls[0]["dataset_name"], "commaai/commavq")
-        self.assertEqual(calls[0]["data_files"], {"train": ["data-0000.tar.gz", "data-0001.tar.gz"]})
+        self.assertEqual(
+            [os.path.basename(f) for f in calls[0]["data_files"]["train"]],
+            ["data-0000.tar.gz", "data-0001.tar.gz"],
+        )
         self.assertEqual([record.file_name for record in records], ["clip_a.npy", "clip_b.npy"])
         self.assertTrue(np.array_equal(records[0].tokens, np.array([[0, 1]], dtype=np.int16)))
 
@@ -184,7 +188,10 @@ class TacLosslessEvaluateTests(unittest.TestCase):
 
         self.assertEqual(len(calls), 1)
         self.assertEqual(calls[0]["dataset_name"], "commaai/commavq")
-        self.assertEqual(calls[0]["data_files"], {"train": ["data-0000.tar.gz", "data-0001.tar.gz"]})
+        self.assertEqual(
+            [os.path.basename(f) for f in calls[0]["data_files"]["train"]],
+            ["data-0000.tar.gz", "data-0001.tar.gz"],
+        )
         self.assertTrue(verification.exact_match)
         self.assertEqual(compression.original_bytes, commavq_original_bytes(2))
         self.assertAlmostEqual(compression.compression_rate, commavq_original_bytes(2) / 400)

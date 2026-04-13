@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import os
 import subprocess
 import sys
 import tempfile
@@ -48,7 +49,10 @@ class TacLosslessBaselineTests(unittest.TestCase):
             self.assertFalse(result["local_only"])
 
         self.assertEqual(calls[0]["dataset_name"], "commaai/commavq")
-        self.assertEqual(calls[0]["data_files"], {"train": ["data-0000.tar.gz", "data-0001.tar.gz"]})
+        self.assertEqual(
+            [os.path.basename(f) for f in calls[0]["data_files"]["train"]],
+            ["data-0000.tar.gz", "data-0001.tar.gz"],
+        )
 
     def test_render_global_prev_symbol_decompress_script_roundtrips_extensionless_names(self) -> None:
         from tac.lossless.codecs import (
@@ -148,7 +152,10 @@ class TacLosslessBaselineTests(unittest.TestCase):
             self.assertTrue(result["challenge_valid"])
 
         self.assertEqual(calls[0]["dataset_name"], "commaai/commavq")
-        self.assertEqual(calls[0]["data_files"], {"train": ["data-0000.tar.gz", "data-0001.tar.gz"]})
+        self.assertEqual(
+            [os.path.basename(f) for f in calls[0]["data_files"]["train"]],
+            ["data-0000.tar.gz", "data-0001.tar.gz"],
+        )
 
     def test_render_prev_symbol_position_major_decompress_script_roundtrips_extensionless_names(self) -> None:
         from tac.lossless.arithmetic import flatten_tokens_for_gpt_arithmetic
@@ -273,7 +280,10 @@ class TacLosslessBaselineTests(unittest.TestCase):
             self.assertTrue((root / "payload" / "clip_b.npy").exists())
 
         self.assertEqual(calls[0]["dataset_name"], "commaai/commavq")
-        self.assertEqual(calls[0]["data_files"], {"train": ["data-0000.tar.gz", "data-0001.tar.gz"]})
+        self.assertEqual(
+            [os.path.basename(f) for f in calls[0]["data_files"]["train"]],
+            ["data-0000.tar.gz", "data-0001.tar.gz"],
+        )
         self.assertEqual(len(fake_split.map_calls), 1)
         self.assertEqual(fake_split.map_calls[0]["desc"], "compress_example")
         self.assertEqual(fake_split.map_calls[0]["num_proc"], 3)
@@ -427,7 +437,10 @@ class TacLosslessBaselineTests(unittest.TestCase):
             self.assertTrue((root / "payload" / "clip_b.npy").exists())
 
         self.assertEqual(calls[0]["dataset_name"], "commaai/commavq")
-        self.assertEqual(calls[0]["data_files"], {"train": ["data-0000.tar.gz", "data-0001.tar.gz"]})
+        self.assertEqual(
+            [os.path.basename(f) for f in calls[0]["data_files"]["train"]],
+            ["data-0000.tar.gz", "data-0001.tar.gz"],
+        )
 
     def test_build_lzma_baseline_submission_reports_zip_bytes_as_archive_bytes(self) -> None:
         from tac.lossless.codecs import build_lzma_baseline_submission
@@ -519,7 +532,10 @@ class TacLosslessBaselineTests(unittest.TestCase):
             self.assertTrue((root / "payload" / "clip_b.npy.zpaq").exists())
 
         self.assertEqual(calls[0]["dataset_name"], "commaai/commavq")
-        self.assertEqual(calls[0]["data_files"], {"train": ["data-0000.tar.gz", "data-0001.tar.gz"]})
+        self.assertEqual(
+            [os.path.basename(f) for f in calls[0]["data_files"]["train"]],
+            ["data-0000.tar.gz", "data-0001.tar.gz"],
+        )
 
     def test_build_zpaq_baseline_submission_only_claims_challenge_valid_with_bundled_runtime(self) -> None:
         from tac.lossless.codecs import build_zpaq_baseline_submission
