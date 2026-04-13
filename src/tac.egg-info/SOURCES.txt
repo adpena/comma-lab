@@ -106,7 +106,9 @@ src/tac/contrib/vqvae_codec.py
 src/tac/contrib/wavelet_renderer.py
 src/tac/deploy/__init__.py
 src/tac/deploy/build_bundle.py
+src/tac/deploy/cloud_bootstrap.py
 src/tac/deploy/cloud_deploy.py
+src/tac/deploy/cloud_paths.py
 src/tac/deploy/deploy_config.py
 src/tac/deploy/kaggle/__init__.py
 src/tac/deploy/kaggle/build_kaggle_assets_dataset.py
@@ -193,6 +195,7 @@ src/tac/research/trust_region_sweep.py
 src/tac/tests/__init__.py
 src/tac/tests/test_build_kaggle_assets_dataset.py
 src/tac/tests/test_build_kaggle_kernels.py
+src/tac/tests/test_cloud_bootstrap.py
 src/tac/tests/test_compliance.py
 src/tac/tests/test_config_validation.py
 src/tac/tests/test_cross_cultural.py
