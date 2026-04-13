@@ -29,6 +29,10 @@
 
 ## Code State
 - Round 19 complete: 4 council issues fixed (double PoseNet fwd, p1_pose_sup_weight, ego_flow reuse, logging cache)
+- Round 20 complete: MED-4 DCT device fix, MED-5 n_written assert, HIGH-5 W→(W-1) flow normalization (council 4-1)
+- Round 21 complete: 66 pre-existing test failures fixed → 672 passed, 0 failed
+  - test_hardening: 9 missing non-postfilter variants added to exclusion set, non-postfilter skip added
+  - test_tac_lossless_{arithmetic,baseline,evaluate}: 8 env-sensitive data_files assertions fixed via os.path.basename()
 - CLAUDE.md: "multiple contenders → multiple paths" + 5-member non-conservative council (Yousfi, Fridrich, Contrarian, Quantizr, Hotz)
 - Deploy infrastructure: deploy_config.py (provider-agnostic canonical flags)
   - Modal: imports from deploy_config, manifest saved before training
