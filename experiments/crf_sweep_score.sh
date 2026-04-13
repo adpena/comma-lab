@@ -77,7 +77,7 @@ for CRF in $CRF_VALUES; do
   # ── Step 1: Encode at target CRF ────────────────────────────────
   # Matches production: downscale to SCALE_WxSCALE_H, libsvtav1,
   # preset 0, film-grain=22, keyint=-1, color metadata.
-  if [ -f "$ARCHIVE_PATH" ]; then
+  if [ -f "$ARCHIVE_PATH" ] && [ -s "$ARCHIVE_PATH" ]; then
     echo "[step 1] Re-using cached archive: $ARCHIVE_PATH"
   else
     rm -rf "$WORK"
@@ -134,18 +134,20 @@ for CRF in $CRF_VALUES; do
   fi
 
   # ── Step 2: Inflate (decode + postfilter) ────────────────────────
-  if [ -f "$RAW_PATH" ]; then
+  if [ -f "$RAW_PATH" ] && [ -s "$RAW_PATH" ]; then
     echo "[step 2] Re-using cached inflate: $RAW_PATH"
   else
+    rm -f "$RAW_PATH"  # Remove stale zero-byte file if present
     echo "[step 2] Inflating (decode + postfilter)..."
     $PYTHON -c "
 import sys
 sys.path.insert(0, '$ROBUST')
 sys.path.insert(0, '$PROJECT/src')
-from inflate_postfilter import inflate_with_postfilter
+from inflate_postfilter import inflate_with_postfilter, load_postfilter_int8
 
+model = load_postfilter_int8('$POSTFILTER', device='cpu')
 n = inflate_with_postfilter(
-    '$MKV_PATH', '$RAW_PATH', '$POSTFILTER',
+    '$MKV_PATH', '$RAW_PATH', model,
     target_w=1164, target_h=874, device='cpu',
 )
 print(f'Inflated {n} frames')
