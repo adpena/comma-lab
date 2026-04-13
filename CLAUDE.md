@@ -144,6 +144,14 @@ A candidate may be promoted only after:
 - Add sparse residuals before adding heavier learned components.
 - Only promote a neural side-model if its bytes and runtime clearly justify themselves.
 
+## GPU budget — non-negotiable
+
+- **ONLY use T4 or less powerful GPUs** unless the human explicitly grants permission for a specific run on a more powerful GPU (A10G, A100, H100, etc.).
+- T4 is the default for ALL training, evaluation, and experimentation on Modal, Lightning, Kaggle, and any other cloud platform.
+- The rationale: T4 at $0.59/hr gives maximum iteration budget per dollar. Our model (287K params, ~800MB VRAM) does not need more powerful hardware. Iteration count matters more than per-run speed.
+- If a specific experiment genuinely requires more VRAM or throughput (e.g., batch_size=32, multi-model ensemble), request human approval BEFORE switching to a more expensive GPU.
+- Never default deploy scripts to A10G, A100, or H100 without explicit human approval in the current conversation.
+
 ## Tooling — non-negotiable
 
 - **Always use `uv`** for Python package management. Never use raw `pip`, `pip3`, or `pip install`.
