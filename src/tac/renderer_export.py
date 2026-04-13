@@ -13,7 +13,8 @@ Per-layer packing:
     - Layers with `.bit_depth` (LearnableBitDepth): pack at round(learned_bits)
       per channel using per-channel float16 scale + packed integer values.
     - Layers without `.bit_depth`: pack at `default_bits` (8 = int8).
-    - ConvTranspose2d: marked as transposed in header; per-channel dim is still 0.
+    - ConvTranspose2d: marked as transposed in header; per-channel dim is 1
+      (C_out at index 1 in the (C_in, C_out, kH, kW) PyTorch weight layout).
     - Bias: float16 scale + uint16 value per channel (same as self_compress.py).
 
 Usage::
@@ -985,6 +986,17 @@ def load_asymmetric_checkpoint(
     # Verify all data consumed
     if offset != len(data):
         raise ValueError(f"Trailing data: {len(data) - offset} bytes unread (expected 0)")
+
+    # Verify shared embedding invariant: export deduplicates by id(), so load
+    # relies on renderer.embedding and motion.embedding being the same object.
+    if hasattr(model, "renderer") and hasattr(model, "motion"):
+        r_emb = getattr(model.renderer, "embedding", None)
+        m_emb = getattr(model.motion, "embedding", None)
+        if r_emb is not None and m_emb is not None:
+            assert r_emb is m_emb, (
+                "Shared embedding invariant violated after load — "
+                "renderer.embedding and motion.embedding must be the same object"
+            )
 
     model = model.to(device)
     model.eval()
