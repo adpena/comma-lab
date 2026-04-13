@@ -1105,8 +1105,14 @@ def train_fridrich_renderer(cfg: FridrichRendererConfig) -> dict[str, Any]:
     raft_flow_all = None
     if cfg.raft_flow_path:
         raft_data = torch.load(cfg.raft_flow_path, map_location="cpu", weights_only=True)
-        raft_flow_all = raft_data["flow"].float().to(device)  # (N_pairs, 2, H, W)
-        print(f"  RAFT flow loaded: {raft_flow_all.shape} from {cfg.raft_flow_path}")
+        raft_flow_all = raft_data["flow"].to(device)  # (N_pairs, 2, H, W) stays float16 — 472MB not 944MB
+        n_raft_pairs = raft_flow_all.shape[0]
+        n_expected_pairs = len(list(range(0, n_frames - 1, 2)))
+        assert n_raft_pairs >= n_expected_pairs, (
+            f"RAFT flow has {n_raft_pairs} pairs but need {n_expected_pairs} "
+            f"for {n_frames} frames with even-pairs-only"
+        )
+        print(f"  RAFT flow loaded: {raft_flow_all.shape} ({raft_flow_all.dtype}) from {cfg.raft_flow_path}")
         print(f"  Flow magnitude: mean={raft_data['flow_px'].norm(dim=1).mean():.1f}px")
 
     # ---- Training loop ----
@@ -1229,7 +1235,8 @@ def train_fridrich_renderer(cfg: FridrichRendererConfig) -> dict[str, Any]:
             pair_indices = (batch_starts // 2).to(device)
             if raft_flow_all is not None:
                 # Layer 2: use precomputed dense RAFT flow as frozen warp
-                ego_flow = raft_flow_all[pair_indices]  # (B, 2, H, W) — no grad, frozen
+                # Stored as float16 to save VRAM (472MB vs 944MB); upcast per-batch
+                ego_flow = raft_flow_all[pair_indices].float()  # (B, 2, H, W) — no grad, frozen
             elif cfg.use_ego_flow and ego_flow_module is not None:
                 ego_flow = ego_flow_module(pair_indices, cfg.target_h, cfg.target_w)
 
@@ -1317,7 +1324,7 @@ def train_fridrich_renderer(cfg: FridrichRendererConfig) -> dict[str, Any]:
             # Flow supervision: teach MotionPredictor to reproduce RAFT flow (council Layer 2)
             if cfg.flow_supervision_weight > 0 and raft_flow_all is not None and cfg.pair_mode == "asymmetric":
                 with torch.no_grad():
-                    target_flow = raft_flow_all[pair_indices]  # (B, 2, H, W)
+                    target_flow = raft_flow_all[pair_indices].float()  # (B, 2, H, W)
                 # Use cached motion_out from forward pass (avoid double MotionPredictor fwd)
                 cached_motion = getattr(pair_gen, "_last_motion_out", None)
                 if cached_motion is not None:
@@ -1331,8 +1338,7 @@ def train_fridrich_renderer(cfg: FridrichRendererConfig) -> dict[str, Any]:
 
                 if cfg.pose_embed_loss:
                     # Layer 3: embedding-level loss (Quantizr's nightmare)
-                    # Extract PoseNet's intermediate features, not just 6D output
-                    from tac.losses import posenet_embedding_loss
+                    from tac.losses import posenet_embedding_loss  # lazy import: only when enabled
                     gen_pair = torch.stack([gen_t, gen_t1], dim=1)  # (B, 2, 3, H, W)
                     gt_pair = torch.stack([gt_t, gt_t1], dim=1)
                     pose_sup_loss = posenet_embedding_loss(gen_pair, gt_pair, posenet)

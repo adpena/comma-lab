@@ -102,18 +102,20 @@ def decompress_flow_dct(
     basis_indices = compressed["basis_indices"].long()  # (n_coeffs, 2)
     N = compressed["n_pairs"]
     n_coeffs = compressed["n_coeffs"]
+    # All tensors on same device as coefficients
+    dev = coeffs_x.device
 
     # Reconstruct DCT coefficient grid (sparse)
-    dct_x = torch.zeros(N, H, W)
-    dct_y = torch.zeros(N, H, W)
+    dct_x = torch.zeros(N, H, W, device=dev)
+    dct_y = torch.zeros(N, H, W, device=dev)
     for k in range(n_coeffs):
         hi, wi = basis_indices[k]
         dct_x[:, hi, wi] = coeffs_x[:, k]
         dct_y[:, hi, wi] = coeffs_y[:, k]
 
-    # Inverse DCT
-    idct_h = _dct_matrix(H).T  # transpose = inverse for orthonormal DCT
-    idct_w = _dct_matrix(W).T
+    # Inverse DCT (on same device as data)
+    idct_h = _dct_matrix(H).T.to(dev)
+    idct_w = _dct_matrix(W).T.to(dev)
 
     flow_x = idct_h @ dct_x @ idct_w.T
     flow_y = idct_h @ dct_y @ idct_w.T

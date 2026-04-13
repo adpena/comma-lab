@@ -895,7 +895,7 @@ class AsymmetricPairGenerator(nn.Module):
         # Cache for monitoring, regularization, and flow supervision
         self._last_gate_mean = gate.mean().item()
         self._last_gate_mean_tensor = gate.mean()  # retains grad for gate regularizer
-        self._last_motion_out = motion_out  # cached for flow supervision loss (avoid double fwd)
+        self._last_motion_out = motion_out  # cached for flow supervision (avoid double fwd; has grad)
 
         # Pack to HWC: (B, 2, H, W, 3)
         pair = torch.stack([frame_t, frame_t1], dim=1)  # (B, 2, 3, H, W)
