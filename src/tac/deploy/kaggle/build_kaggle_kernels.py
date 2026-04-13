@@ -44,23 +44,48 @@ def kaggle_username() -> str:
     return username
 
 
-def _asym_warp_variant_preamble(variant: str) -> str:
-    """Bootstrap preamble that sets ASYM_VARIANT before the launcher runs."""
-    return f'import os; os.environ.setdefault("ASYM_VARIANT", "{variant}")'
+def _asym_warp_variant_preamble(variant: str, resume_from: str | None = None) -> str:
+    """Bootstrap preamble that sets ASYM_VARIANT (and optionally RESUME_FROM).
+
+    Uses semicolons on a single line so write_bundle can safely prepend it to
+    any Python script regardless of its import structure.
+
+    Args:
+        variant: one of ALL_VARIANTS
+        resume_from: if set, path to a .pt checkpoint inside the Kaggle dataset
+                     mount, e.g. /kaggle/input/comma-lab-private-assets/renderer_best_v3.pt
+    """
+    parts = [
+        'import os',
+        f'os.environ.setdefault("ASYM_VARIANT", "{variant}")',
+    ]
+    if resume_from:
+        parts.append(f'os.environ.setdefault("RESUME_FROM", "{resume_from}")')
+    return "; ".join(parts)
+
+
+#: Checkpoint from asym_v3_longer_tight (ep ~12400) uploaded to the dataset.
+#: Both supervised and raft_only resume from the same starting point for a
+#: clean A/B comparison of the two supervision strategies.
+_V3_RESUME_PATH = (
+    "/kaggle/input/comma-lab-private-assets/renderer_best_v3.pt"
+)
+
+#: Variants that should resume from the v3 checkpoint rather than train from scratch.
+_RESUME_VARIANTS: frozenset[str] = frozenset({"supervised", "raft_only"})
 
 
 def kernel_specs() -> dict[str, KaggleKernelSpec]:
     render_bootstrap = load_tac_bootstrap_renderer()
-    bounded_policy = {
-        "bounded": True,
-        "checkpoint_priority": "early",
-    }
 
     # --- Asymmetric warp renderer variants (in strict parity with Modal + Lightning) ---
     # One kernel spec per variant. Variant is controlled by the ASYM_VARIANT env var
     # injected via bootstrap_preamble. Flags come from tac.deploy.deploy_config at runtime.
+    # NOTE: launch_policy fields (bounded, checkpoint_priority, etc.) are silently
+    # ignored by the Kaggle server — they are metadata-only documentation.
     asym_warp_specs = {}
     for variant in ALL_VARIANTS:
+        resume_from = _V3_RESUME_PATH if variant in _RESUME_VARIANTS else None
         asym_warp_specs[f"asym_warp_{variant}"] = KaggleKernelSpec(
             slug=f"comma-lab-asym-warp-{variant.replace('_', '-')}",
             title=f"comma-lab asym warp {variant}",
@@ -70,12 +95,7 @@ def kernel_specs() -> dict[str, KaggleKernelSpec]:
                 REPO_ROOT / "experiments" / "train_renderer_fridrich.py",
             ),
             dataset_sources=(ASSET_DATASET_REF,),
-            launch_policy={
-                **bounded_policy,
-                "expected_first_checkpoint_epoch": 500,
-                "max_epochs": 20000,
-            },
-            bootstrap_preamble=_asym_warp_variant_preamble(variant),
+            bootstrap_preamble=_asym_warp_variant_preamble(variant, resume_from=resume_from),
         )
 
     return {
@@ -86,11 +106,6 @@ def kernel_specs() -> dict[str, KaggleKernelSpec]:
             code_source=REPO_ROOT / "experiments" / "train_postfilter_dilated_h64.py",
             code_file="train_postfilter_dilated_h64.py",
             dataset_sources=(ASSET_DATASET_REF,),
-            launch_policy={
-                **bounded_policy,
-                "expected_first_checkpoint_epoch": 1,
-                "max_epochs": 2500,
-            },
             bootstrap_preamble=render_bootstrap(
                 required_symbols=(
                     "build_postfilter_meta",
@@ -110,11 +125,6 @@ def kernel_specs() -> dict[str, KaggleKernelSpec]:
             code_source=REPO_ROOT / "experiments" / "cloud_segnet_attack_h32_trainer.py",
             code_file="cloud_segnet_attack_h32_trainer.py",
             dataset_sources=(ASSET_DATASET_REF,),
-            launch_policy={
-                **bounded_policy,
-                "expected_first_checkpoint_epoch": 1,
-                "max_epochs": 1000,
-            },
             bootstrap_preamble=render_bootstrap(
                 required_symbols=(
                     "build_postfilter_meta",

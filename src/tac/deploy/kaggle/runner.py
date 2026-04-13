@@ -119,6 +119,9 @@ def ensure_tac(input_root: Path | None = None) -> None:
 def ensure_upstream(working_dir: Path | None = None) -> Path:
     """Clone the upstream scorer repo if not already present.
 
+    git lfs pull is retried up to 3 times — it intermittently times out or
+    rate-limits on Kaggle's network, which would otherwise fail the whole run.
+
     Returns:
         Path to the cloned upstream directory.
     """
@@ -129,7 +132,21 @@ def ensure_upstream(working_dir: Path | None = None) -> Path:
         subprocess.check_call([
             "git", "clone", "--depth", "1", UPSTREAM_REPO, str(upstream),
         ])
-        subprocess.check_call(["git", "lfs", "pull"], cwd=upstream)
+        # Retry git lfs pull up to 3 times — network failures are common on Kaggle
+        for attempt in range(1, 4):
+            try:
+                subprocess.check_call(["git", "lfs", "pull"], cwd=upstream)
+                break
+            except subprocess.CalledProcessError:
+                if attempt == 3:
+                    raise RuntimeError(
+                        "git lfs pull failed after 3 attempts.\n"
+                        "  Check upstream repo LFS quota and Kaggle network access.\n"
+                        f"  Upstream: {UPSTREAM_REPO}"
+                    )
+                print(f"  git lfs pull attempt {attempt} failed — retrying...")
+                import time as _time
+                _time.sleep(5 * attempt)
     return upstream
 
 
@@ -340,6 +357,11 @@ def main(
 ) -> int:
     """Full Kaggle asymmetric warp training launch sequence.
 
+    Reads configuration from environment variables:
+        ASYM_VARIANT   — variant to train ('base', 'supervised', 'raft_only')
+        RESUME_FROM    — optional path to a .pt checkpoint inside the dataset mount,
+                         e.g. /kaggle/input/comma-lab-private-assets/renderer_best_v3.pt
+
     Args:
         variant: override ASYM_VARIANT env var (default: reads from env, falls back to 'base')
         input_root: Kaggle dataset mount root (default: /kaggle/input)
@@ -366,11 +388,22 @@ def main(
     if variant is None:
         variant = os.environ.get("ASYM_VARIANT", "base").strip()
 
-    print(f"  Variant: {variant}")
-    print(f"  Script:  {script_path}")
-    print(f"  Assets:  {asset_root}")
+    resume_from: str | None = os.environ.get("RESUME_FROM") or None
+    if resume_from:
+        resume_path = Path(resume_from)
+        if not resume_path.exists():
+            raise FileNotFoundError(
+                f"RESUME_FROM checkpoint not found: {resume_path}\n"
+                f"  Ensure the .pt file is included in the dataset and the path is correct.\n"
+                f"  Expected inside: {input_root / ASSET_DATASET_SLUG}"
+            )
 
-    cmd = build_kaggle_command(variant, script_path, asset_root)
+    print(f"  Variant:     {variant}")
+    print(f"  Script:      {script_path}")
+    print(f"  Assets:      {asset_root}")
+    print(f"  Resume from: {resume_from or '(none — training from scratch)'}")
+
+    cmd = build_kaggle_command(variant, script_path, asset_root, resume_from=resume_from)
     set_training_env(upstream)
     manifest_path = save_manifest(variant, cmd, working_dir, script_path)
 
