@@ -854,6 +854,7 @@ class AsymmetricPairGenerator(nn.Module):
         mask_t: torch.Tensor,
         mask_t1: torch.Tensor,
         residual_scale: float = 1.0,
+        ego_flow: torch.Tensor | None = None,
     ) -> torch.Tensor:
         """Generate a frame pair using warp-based asymmetric generation.
 
@@ -863,6 +864,11 @@ class AsymmetricPairGenerator(nn.Module):
             residual_scale: Scale factor for gate*residual correction path.
                 0.0 = pure warp (flow warmup), 1.0 = normal gate+residual.
                 Used by training to force flow learning before residual develops.
+            ego_flow: (B, 2, H, W) precomputed ego-motion flow in grid_sample
+                normalized coordinates. When provided, replaces the motion
+                predictor's flow output. Gate + residual still come from the
+                motion predictor. This gives PoseNet the geometric warp signal
+                it needs while letting the network learn only corrections.
 
         Returns:
             (B, 2, H, W, 3) float HWC pair in [0, 255]
@@ -870,15 +876,18 @@ class AsymmetricPairGenerator(nn.Module):
         # Render anchor frame (frame_t1) directly from mask
         frame_t1 = self.renderer(mask_t1)  # (B, 3, H, W) float [0, 255]
 
-        # Predict motion from both masks
+        # Predict motion from both masks (gate + residual always from network)
         motion_out = self.motion(mask_t, mask_t1)  # (B, 6, H, W)
-        flow = motion_out[:, :2]       # (B, 2, H, W) normalized flow
         gate = motion_out[:, 2:3]      # (B, 1, H, W) [0, 1]
         residual = motion_out[:, 3:6]  # (B, 3, H, W) [-20, 20]
 
+        # Flow: use precomputed ego-flow if provided, else from motion predictor
+        if ego_flow is not None:
+            flow = ego_flow
+        else:
+            flow = motion_out[:, :2]   # (B, 2, H, W) normalized flow
+
         # Warp anchor backward to produce frame_t
-        # Flow warmup: residual_scale controls gate*residual contribution.
-        # At residual_scale=0, frame_t = pure warp, forcing flow to produce useful motion.
         warped_t1 = warp_with_flow(frame_t1, flow)
         frame_t = (warped_t1 + residual_scale * gate * residual).clamp(0.0, 255.0)
 

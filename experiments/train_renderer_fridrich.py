@@ -204,6 +204,16 @@ class FridrichRendererConfig:
     # Export: auto-export .bin alongside best checkpoint for accurate rate
     export_bits: int = 4  # FP4 for contest submission (matches Quantizr's codec)
 
+    # Ego-flow: learnable per-pair affine warp (council Experiment B Layer 2)
+    use_ego_flow: bool = False       # enable learnable affine ego-flow
+    ego_flow_max_px: float = 20.0    # max affine displacement in pixels
+    ego_flow_lr: float = 1e-3        # separate LR for affine params (faster than renderer)
+
+    # PoseNet supervision: direct scorer-space optimization (council Layer 1+3)
+    pose_supervision_weight: float = 0.0  # weight for MSE(PoseNet(gen)[:6], target[:6])
+    pose_targets_path: str | None = None  # path to precomputed posenet_targets.bin
+    pose_embed_loss: bool = False         # Layer 3: use embedding-level loss instead of output
+
     # Smoke test overrides
     smoke: bool = False
 
@@ -897,6 +907,18 @@ def train_fridrich_renderer(cfg: FridrichRendererConfig) -> dict[str, Any]:
             max_residual=cfg.max_residual,
             flow_only=cfg.flow_only,
         ).to(device)
+
+        # Ego-flow: learnable per-pair affine warp (council Experiment B)
+        ego_flow_module = None
+        if cfg.use_ego_flow:
+            from tac.ego_flow import LearnableAffineFlow
+            n_pairs = len(list(range(0, masks.shape[0] - 1, 2)))  # even-pair count
+            ego_flow_module = LearnableAffineFlow(
+                n_pairs=n_pairs,
+                max_flow_px=cfg.ego_flow_max_px,
+            ).to(device)
+            print(f"  Ego-flow: {ego_flow_module.param_count()} params, "
+                  f"~{ego_flow_module.archive_bytes_fp4()} bytes FP4")
     else:
         print("[4/5] Building DP-SIMS v2 renderer...")
         from tac.dp_sims_renderer import build_dp_sims_renderer_v2
@@ -916,7 +938,10 @@ def train_fridrich_renderer(cfg: FridrichRendererConfig) -> dict[str, Any]:
     print(f"  VRAM: {_vram_mb():.0f} MB")
 
     # ---- Optimizer ----
-    optimizer = torch.optim.AdamW(pair_gen.parameters(), lr=cfg.lr, weight_decay=1e-4)
+    param_groups = [{"params": pair_gen.parameters(), "lr": cfg.lr}]
+    if cfg.pair_mode == "asymmetric" and cfg.use_ego_flow and ego_flow_module is not None:
+        param_groups.append({"params": ego_flow_module.parameters(), "lr": cfg.ego_flow_lr})
+    optimizer = torch.optim.AdamW(param_groups, weight_decay=1e-4)
     scheduler = torch.optim.lr_scheduler.CosineAnnealingLR(
         optimizer,
         T_max=cfg.epochs,
@@ -1061,6 +1086,17 @@ def train_fridrich_renderer(cfg: FridrichRendererConfig) -> dict[str, Any]:
     print(f"  Contest archive limit: {ARCHIVE_MAX_BYTES / 1024 / 1024:.0f} MB")
     print(f"  Original uncompressed size: {ORIGINAL_UNCOMPRESSED_SIZE:,} bytes")
 
+    # ---- Load PoseNet targets for supervision (council Layer 1) ----
+    pose_targets = None
+    if cfg.pose_supervision_weight > 0 and cfg.pose_targets_path:
+        from tac.scorer_targets import load_posenet_targets
+        targets_dict = load_posenet_targets(cfg.pose_targets_path)
+        if targets_dict is not None:
+            pose_targets = targets_dict["targets"].to(device)  # (n_pairs, 6)
+            print(f"  PoseNet targets loaded: {pose_targets.shape} from {cfg.pose_targets_path}")
+        else:
+            print(f"  WARNING: could not load PoseNet targets from {cfg.pose_targets_path}")
+
     # ---- Training loop ----
     print("[5/5] Training...")
     print()
@@ -1176,8 +1212,14 @@ def train_fridrich_renderer(cfg: FridrichRendererConfig) -> dict[str, Any]:
                 residual_scale = ramp_progress
             else:
                 residual_scale = 1.0
+            # Compute ego-flow if enabled (council Experiment B)
+            ego_flow = None
+            if cfg.use_ego_flow and ego_flow_module is not None:
+                pair_indices = (batch_starts // 2).to(device)
+                ego_flow = ego_flow_module(pair_indices, cfg.target_h, cfg.target_w)
+
             # Warp paradigm: single forward produces both frames jointly
-            pair_hwc = pair_gen(mask_t, mask_t1, residual_scale=residual_scale)  # (B, 2, H, W, 3)
+            pair_hwc = pair_gen(mask_t, mask_t1, residual_scale=residual_scale, ego_flow=ego_flow)  # (B, 2, H, W, 3)
             gen_t = pair_hwc[:, 0].permute(0, 3, 1, 2).contiguous()   # (B, 3, H, W)
             gen_t1 = pair_hwc[:, 1].permute(0, 3, 1, 2).contiguous()  # (B, 3, H, W)
         else:
@@ -1256,6 +1298,28 @@ def train_fridrich_renderer(cfg: FridrichRendererConfig) -> dict[str, Any]:
                 if gate_mean_t is not None:
                     gate_penalty = cfg.gate_reg_weight * F.relu(gate_mean_t - cfg.gate_reg_threshold)
                     total_loss = total_loss + gate_penalty
+
+            # PoseNet supervision: direct scorer-space optimization (council Layer 1+3)
+            if cfg.pose_supervision_weight > 0 and pose_targets is not None:
+                pair_indices = (batch_starts // 2).to(device)
+                target_pose = pose_targets[pair_indices]  # (B, 6)
+
+                if cfg.pose_embed_loss:
+                    # Layer 3: embedding-level loss (Quantizr's nightmare)
+                    # Extract PoseNet's intermediate features, not just 6D output
+                    from tac.losses import posenet_embedding_loss
+                    gen_pair = torch.stack([gen_t, gen_t1], dim=1)  # (B, 2, 3, H, W)
+                    gt_pair = torch.stack([gt_t, gt_t1], dim=1)
+                    pose_sup_loss = posenet_embedding_loss(gen_pair, gt_pair, posenet)
+                else:
+                    # Layer 1: output-level MSE against stored targets
+                    gen_pair_btchw = torch.stack([gen_t, gen_t1], dim=1).contiguous()
+                    gen_pair_bhwc = gen_pair_btchw.permute(0, 1, 3, 4, 2).contiguous()
+                    pose_in = posenet.preprocess_input(gen_pair_bhwc)
+                    pose_out = posenet(pose_in)  # (B, >=6)
+                    pose_sup_loss = F.mse_loss(pose_out[:, :6], target_pose)
+
+                total_loss = total_loss + cfg.pose_supervision_weight * pose_sup_loss
 
             if phase == 3 and self_compress_active:
                 # Add self-compression rate penalty
@@ -1474,7 +1538,7 @@ def train_fridrich_renderer(cfg: FridrichRendererConfig) -> dict[str, Any]:
                     best_score = score
                     best_epoch = epoch
                     best_path = results_dir / "renderer_best.pt"
-                    torch.save({
+                    ckpt_data = {
                         "epoch": epoch,
                         "model_state_dict": pair_gen.state_dict(),
                         "optimizer_state_dict": optimizer.state_dict(),
@@ -1487,7 +1551,10 @@ def train_fridrich_renderer(cfg: FridrichRendererConfig) -> dict[str, Any]:
                         "score": score,
                         "eval_result": eval_result,
                         "config": asdict(cfg),
-                    }, best_path)
+                    }
+                    if cfg.use_ego_flow and ego_flow_module is not None:
+                        ckpt_data["ego_flow_state_dict"] = ego_flow_module.state_dict()
+                    torch.save(ckpt_data, best_path)
                     print(f"  -> NEW BEST: {score:.4f} at epoch {epoch}")
                 print()
             except Exception as e:
@@ -1671,6 +1738,12 @@ def train_fridrich_renderer(cfg: FridrichRendererConfig) -> dict[str, Any]:
 @click.option("--gate-reg-weight", type=float, default=0.1, help="Gate regularization weight (Quantizr: enforce warp usage)")
 @click.option("--gate-reg-threshold", type=float, default=0.5, help="Gate regularization threshold")
 @click.option("--even-pairs-only/--no-even-pairs-only", default=True, help="Train only even-index pairs (match scorer eval, default ON)")
+@click.option("--use-ego-flow", is_flag=True, help="Enable learnable per-pair affine ego-flow (council Experiment B)")
+@click.option("--ego-flow-max-px", type=float, default=20.0, help="Max affine flow displacement in pixels")
+@click.option("--ego-flow-lr", type=float, default=1e-3, help="Learning rate for ego-flow affine params")
+@click.option("--pose-supervision-weight", type=float, default=0.0, help="PoseNet supervision loss weight (council Layer 1)")
+@click.option("--pose-targets-path", type=str, default=None, help="Path to posenet_targets.bin")
+@click.option("--pose-embed-loss", is_flag=True, help="Use embedding-level PoseNet loss (council Layer 3)")
 def main(
     precomputed, epochs, batch_size, lr, channels, spade_hidden,
     seg_boundary, pose_boundary, rho_init, rho_growth,
@@ -1687,6 +1760,8 @@ def main(
     share_stem, flow_only,
     flow_warmup_epochs, residual_ramp_epochs,
     gate_reg_weight, gate_reg_threshold, even_pairs_only,
+    use_ego_flow, ego_flow_max_px, ego_flow_lr,
+    pose_supervision_weight, pose_targets_path, pose_embed_loss,
 ):
     """Train DP-SIMS renderer with Fridrich constrained optimization."""
 
@@ -1753,6 +1828,12 @@ def main(
         gate_reg_weight=gate_reg_weight,
         gate_reg_threshold=gate_reg_threshold,
         even_pairs_only=even_pairs_only,
+        use_ego_flow=use_ego_flow,
+        ego_flow_max_px=ego_flow_max_px,
+        ego_flow_lr=ego_flow_lr,
+        pose_supervision_weight=pose_supervision_weight,
+        pose_targets_path=pose_targets_path,
+        pose_embed_loss=pose_embed_loss,
     )
 
     # Set precomputed dir env var for the training function
