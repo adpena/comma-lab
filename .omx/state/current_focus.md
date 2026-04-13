@@ -1,38 +1,41 @@
-# Current Focus -- 2026-04-12T22:00:00-05:00
+# Current Focus -- 2026-04-13T10:00:00-05:00
 
-## Floor
-- **Official score**: 1.33 (exact_current, dilated_h64, Modal A10G)
-- **Auth score**: 1.97 (robust_current, Lightning ep851)
-- **Proxy score**: 0.9238 (robust_current, Lightning ep851)
+## Scores
+- **Official best**: 1.33 (dilated_h64)
+- **Target**: beat Quantizr at 0.60
+- **Projection**: 0.57 (seg=0.30 + pose=0.14 + rate=0.13)
 
-## Active Experiments (Tripartite Pact + Karpathy + Tao)
+## Active Experiments
 
-### GPU Lane
-1. **Fridrich Constrained Gen (PROPER)** -- exp1_fridrich_proper.py
-   - 100 frames, 2000 steps, relaxed boundaries (seg < 0.03, pose < 0.1)
-   - S-UNIWARD cost weighting + ego-motion flow constraint
-   - Success: PROMOTE to full 1200. Kill: pose diverges or seg > 0.10
+### GPU Lane — Asymmetric Warp Renderer (primary attack vector)
 
-2. **Tiny DP-SIMS (PROPER)** -- exp2_tiny_dp_sims_proper.py
-   - 100 frames, 5000 steps, channels=(32,16,8,4), 78KB FP4
-   - Success: score < 1.0 including rate. Kill: score > 3.0
+1. **asym_v3_longer_tight** (RUNNING, detached Modal T4)
+   - 20K epochs, batch=8, pose_boundary=0.01, no supervision layers
+   - At epoch 11000/20000 as of 2026-04-13
+   - Resume: /results/asym_v3_longer_tight/renderer_best.pt
 
-3. **L-BFGS Refinement** -- exp3_lbfgs_refinement.py
-   - 10 Newton steps on GPU output, ~1 minute
-   - Chains after exp1 or exp2
+2. **asym_v4_supervised** (READY TO LAUNCH)
+   - Path A: PoseNet supervision (Layer 1) + RAFT flow (Layer 2)
+   - resume from asym_v3_longer_tight/renderer_best.pt
+   - Command: `modal run ... --tag asym_v4_supervised --variant supervised --resume-from /results/asym_v3_longer_tight/renderer_best.pt`
 
-### CPU Lane
-4. **Trick Stacking** -- exp4_cpu_trick_stack.py
-   - CRF sweep (32-38) + TTO + multi-pass + deblock + quantization rounding
-   - Score each independently AND stacked
+3. **asym_v4_raft_only** (READY TO LAUNCH)
+   - Path B: RAFT flow only (isolates Layer 2 contribution)
+   - Command: `modal run ... --tag asym_v4_raft_only --variant raft_only --resume-from /results/asym_v3_longer_tight/renderer_best.pt`
 
-### Infrastructure
-5. **Auth Scorer Setup** -- exp5_auth_scorer_setup.py
-   - Verify Lightning T4 scoring pipeline end-to-end
-   - DALI vs PyAV parity check
+### Volume prerequisites (confirmed present)
+- posenet_targets.bin: ✓ on volume
+- raft_flow.pt: ✓ on volume
 
-## Decision Date
-- 2026-04-17: commit to best GPU path for full 1200 frames
+## Code State
+- Round 19 complete: 4 council issues fixed (double PoseNet fwd, p1_pose_sup_weight, ego_flow reuse, logging cache)
+- CLAUDE.md: "multiple contenders → multiple paths" added as non-negotiable rule
+- Deploy script: variant= param, deployment_manifest.json, Path A + B templates
 
-## Single Source of Truth
-- `src/tac/research/competition_state.py` -- all configs and decisions
+## Kill/Promote
+- Kill: seg > 0.8 for 200 consecutive epochs in Phase 2
+- Promote: score < 0.70 proxy at any checkpoint
+- Target: score < 0.60 (beats Quantizr)
+
+## Deadline
+- May 3, 2026 (20 days remaining as of 2026-04-13)
