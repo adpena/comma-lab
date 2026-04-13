@@ -43,3 +43,11 @@ data/runs/*/*.csv
 data/runs/*/*.npy
 data/runs/*/*.pt
 data/runs/*/__pycache__/
+
+# Kaggle kernel bundles — build artifacts, regenerate with:
+#   python src/tac/deploy/kaggle/build_kaggle_kernels.py
+# Then push with: kaggle kernels push -p experiments/kaggle_kernels/<name>
+experiments/kaggle_kernels/
+
+# Python wheel builds
+dist/
