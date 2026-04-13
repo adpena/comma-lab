@@ -25,12 +25,15 @@ Requires: torch, av (PyAV), PIL/Pillow, numpy, tac library.
 from __future__ import annotations
 
 import argparse
+import io
 import os
 import sys
 from pathlib import Path
 
 import numpy as np
 import torch
+
+from tac.versioned_output import versioned_write, versioned_copy
 
 # SegNet class colors (5 classes)
 SEGNET_COLORS = np.array(
@@ -257,9 +260,13 @@ def main() -> None:
     bar_h = args.bar_height
     total_h = label_h + H + bar_h
 
-    # Set up MP4 output
+    # Set up MP4 output -- write to a temp name, then version it
+    from datetime import datetime as _dt
+    _config_tag = f"{args.variant}_h{args.hidden}"
+    _ts = _dt.now().strftime("%Y%m%d_%H%M%S")
+    mp4_versioned = out_dir / f"comparison_{_ts}_{_config_tag}.mp4"
     mp4_path = out_dir / "comparison.mp4"
-    out_container = av.open(str(mp4_path), mode="w")
+    out_container = av.open(str(mp4_versioned), mode="w")
     stream = out_container.add_stream("libx264", rate=args.fps_playback)
     stream.width = total_w
     stream.height = total_h
@@ -370,7 +377,10 @@ def main() -> None:
     for packet in stream.encode():
         out_container.mux(packet)
     out_container.close()
-    print(f"Wrote MP4: {mp4_path} ({mp4_path.stat().st_size / (1024 * 1024):.1f} MB)")
+    # Create latest symlink for MP4
+    from tac.versioned_output import _update_latest_link
+    _update_latest_link(mp4_path, mp4_versioned)
+    print(f"Wrote MP4: {mp4_versioned} ({mp4_versioned.stat().st_size / (1024 * 1024):.1f} MB)")
 
     # Write GIF
     if gif_frames:
@@ -380,15 +390,18 @@ def main() -> None:
         gif_h = total_h // 2
         resized = [f.resize((gif_w, gif_h), Image.LANCZOS) for f in gif_frames]
         duration_ms = int(1000 / args.gif_fps)
+        gif_buf = io.BytesIO()
         resized[0].save(
-            str(gif_path),
+            gif_buf,
+            format="GIF",
             save_all=True,
             append_images=resized[1:],
             duration=duration_ms,
             loop=0,
             optimize=True,
         )
-        print(f"Wrote GIF: {gif_path} ({gif_path.stat().st_size / (1024 * 1024):.1f} MB)")
+        gif_versioned = versioned_write(gif_path, gif_buf.getvalue(), config_tag=_config_tag)
+        print(f"Wrote GIF: {gif_versioned} ({gif_versioned.stat().st_size / (1024 * 1024):.1f} MB)")
 
     # Summary
     if total_baseline_disagree > 0:

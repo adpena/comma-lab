@@ -5,9 +5,15 @@ import json
 import os
 import shutil
 import subprocess
+import sys
 import tempfile
 from datetime import datetime, timezone
 from pathlib import Path
+
+_GRAPHS_DIR = Path(__file__).resolve().parent
+if str(_GRAPHS_DIR) not in sys.path:
+    sys.path.insert(0, str(_GRAPHS_DIR))
+from _versioned_output import versioned_write
 
 ROOT = Path(__file__).resolve().parents[2]
 GRAPHS = ROOT / "reports" / "graphs"
@@ -363,7 +369,8 @@ def build() -> None:
                 cwd=ROOT,
             )
 
-    MEDIA_META.write_text(
+    versioned_write(
+        MEDIA_META,
         json.dumps(
             {
                 "source_video": str(SOURCE_VIDEO.relative_to(ROOT)),
@@ -394,7 +401,8 @@ def build() -> None:
             },
             indent=2,
         )
-        + "\n"
+        + "\n",
+        config_tag="robust_current",
     )
 
 

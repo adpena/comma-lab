@@ -13,6 +13,8 @@ import time
 from dataclasses import asdict, dataclass
 from pathlib import Path
 
+from tac.versioned_output import versioned_write
+
 _PROJECT_ROOT = Path(__file__).resolve().parents[3]
 _SUBMISSION_DIR = _PROJECT_ROOT / "submissions" / "robust_current"
 _CONFIG_TEMPLATE = _SUBMISSION_DIR / "config.env"
@@ -205,8 +207,9 @@ def sweep(
         "results": [asdict(r) for r in results],
         "best_proxy_crf": valid[0].crf if valid else None,
     }
-    out_path.write_text(json.dumps(out_data, indent=2) + "\n")
-    print(f"\nResults saved to: {out_path}")
+    crf_tag = f"crf{crf_min}-{crf_max}"
+    versioned_path = versioned_write(out_path, json.dumps(out_data, indent=2) + "\n", config_tag=crf_tag)
+    print(f"\nResults saved to: {versioned_path}")
 
     return results
 
@@ -322,8 +325,9 @@ def find_optimal_crf(
         "best_composite": best["composite"],
         "results": scored_results,
     }
-    out_path.write_text(json.dumps(out_data, indent=2) + "\n")
-    print(f"Results saved to: {out_path}")
+    optimal_tag = f"crf{best['crf']}"
+    versioned_path = versioned_write(out_path, json.dumps(out_data, indent=2) + "\n", config_tag=optimal_tag)
+    print(f"Results saved to: {versioned_path}")
 
     return {
         "best_crf": best["crf"],

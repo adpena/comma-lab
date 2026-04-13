@@ -42,6 +42,8 @@ from pathlib import Path
 import numpy as np
 import torch
 
+from tac.versioned_output import versioned_write
+
 import matplotlib
 matplotlib.use("Agg")
 import matplotlib.pyplot as plt
@@ -583,16 +585,20 @@ def main() -> None:
     out_path = Path(args.output)
     out_path.parent.mkdir(parents=True, exist_ok=True)
 
+    gif_buf = io.BytesIO()
     gif_images[0].save(
-        str(out_path),
+        gif_buf,
+        format="GIF",
         save_all=True,
         append_images=gif_images[1:],
         duration=args.frame_duration,
         loop=0,
         optimize=True,
     )
-    size_mb = out_path.stat().st_size / (1024 * 1024)
-    print(f"\nWrote GIF: {out_path} ({size_mb:.1f} MB)")
+    config_tag = f"{args.mode}_{args.variant}_h{args.hidden}"
+    versioned_path = versioned_write(out_path, gif_buf.getvalue(), config_tag=config_tag)
+    size_mb = versioned_path.stat().st_size / (1024 * 1024)
+    print(f"\nWrote GIF: {versioned_path} ({size_mb:.1f} MB)")
     print(f"  {len(gif_images)} frames, {args.frame_duration}ms/frame, 512x384 px")
 
     # Summary

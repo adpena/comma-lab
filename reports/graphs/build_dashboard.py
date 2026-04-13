@@ -3,10 +3,16 @@ from __future__ import annotations
 
 import json
 import math
+import sys
 from datetime import datetime, timezone
 from html import escape
 from pathlib import Path
 from zoneinfo import ZoneInfo
+
+_GRAPHS_DIR = Path(__file__).resolve().parent
+if str(_GRAPHS_DIR) not in sys.path:
+    sys.path.insert(0, str(_GRAPHS_DIR))
+from _versioned_output import versioned_write
 
 ROOT = Path(__file__).resolve().parents[2]
 RESULTS = ROOT / 'reports' / 'results.jsonl'
@@ -318,8 +324,8 @@ def main() -> int:
             'updated_at_local': format_local_datetime(build_time_utc),
         },
     }
-    OUT_JSON.write_text(json.dumps(data, indent=2))
-    OUT_TIMELINE.write_text(json.dumps([
+    versioned_write(OUT_JSON, json.dumps(data, indent=2), config_tag="robust_current")
+    versioned_write(OUT_TIMELINE, json.dumps([
         {
             'run_id': r['run_id'],
             'ts_utc': r['ts_utc'],
@@ -329,7 +335,7 @@ def main() -> int:
             'notes': r.get('notes', []),
         }
         for r in robust_runs
-    ], indent=2))
+    ], indent=2), config_tag="robust_current")
 
     param_nodes: dict[str, dict] = {}
     graph_nodes: list[dict] = []
@@ -357,10 +363,10 @@ def main() -> int:
             if node_id not in param_nodes:
                 param_nodes[node_id] = {'id': node_id, 'type': key}
             graph_edges.append({'source': node_id, 'target': r['run_id']})
-    OUT_GRAPH.write_text(json.dumps({
+    versioned_write(OUT_GRAPH, json.dumps({
         'nodes': list(param_nodes.values()) + graph_nodes,
         'edges': graph_edges,
-    }, indent=2))
+    }, indent=2), config_tag="robust_current")
 
     av1_bug = next((r for r in robust_runs if r.get('config', {}).get('video_codec') == 'libsvtav1' and r['current_workflow_score'] > 50), None)
     roi_fail = next((r for r in robust_runs if 'roi-two-pass' in r['run_id']), None)
@@ -1742,7 +1748,7 @@ def main() -> int:
 </body>
 </html>
 '''
-    OUT_HTML.write_text(html)
+    versioned_write(OUT_HTML, html, config_tag="robust_current")
     return 0
 
 

@@ -2,9 +2,15 @@
 from __future__ import annotations
 
 import json
+import sys
 from datetime import datetime, timezone
 from pathlib import Path
 from zoneinfo import ZoneInfo
+
+_GRAPHS_DIR = Path(__file__).resolve().parent
+if str(_GRAPHS_DIR) not in sys.path:
+    sys.path.insert(0, str(_GRAPHS_DIR))
+from _versioned_output import versioned_write
 
 ROOT = Path(__file__).resolve().parents[2]
 RESULTS = ROOT / "reports" / "results.jsonl"
@@ -65,7 +71,7 @@ def main() -> int:
             "evidence_index": "reports/graphs/evidence_index.md",
         },
     }
-    OUT.write_text(json.dumps(manifest, indent=2) + "\n")
+    versioned_write(OUT, json.dumps(manifest, indent=2) + "\n", config_tag="robust_current")
     return 0
 
 

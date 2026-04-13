@@ -47,6 +47,8 @@ from pathlib import Path
 
 import torch
 
+from tac.versioned_output import versioned_write
+
 
 def parse_args() -> argparse.Namespace:
     parser = argparse.ArgumentParser(
@@ -265,9 +267,12 @@ def main() -> None:
         "frames": results,
     }
 
-    output_path.parent.mkdir(parents=True, exist_ok=True)
-    with open(output_path, "w") as f:
-        json.dump(output, f, separators=(",", ":"))
+    config_tag = f"{args.variant}_h{args.hidden}"
+    versioned_write(
+        output_path,
+        json.dumps(output, separators=(",", ":")),
+        config_tag=config_tag,
+    )
 
     size_mb = output_path.stat().st_size / (1024 * 1024)
     print(f"\nWrote {output_path} ({size_mb:.1f} MB)")

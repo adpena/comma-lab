@@ -1,7 +1,13 @@
 #!/usr/bin/env python3
 from __future__ import annotations
 
+import sys
 from pathlib import Path
+
+_GRAPHS_DIR = Path(__file__).resolve().parent
+if str(_GRAPHS_DIR) not in sys.path:
+    sys.path.insert(0, str(_GRAPHS_DIR))
+from _versioned_output import versioned_write
 
 ROOT = Path(__file__).resolve().parents[2]
 OUT = ROOT / "reports" / "graphs" / "code_callouts.md"
@@ -52,7 +58,7 @@ def main() -> int:
                 "",
             ]
         )
-    OUT.write_text("\n".join(parts))
+    versioned_write(OUT, "\n".join(parts), config_tag="robust_current")
     return 0
 
 

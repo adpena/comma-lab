@@ -4,8 +4,14 @@ from __future__ import annotations
 import argparse
 import json
 import subprocess
+import sys
 from datetime import datetime, timezone
 from pathlib import Path
+
+_GRAPHS_DIR = Path(__file__).resolve().parent
+if str(_GRAPHS_DIR) not in sys.path:
+    sys.path.insert(0, str(_GRAPHS_DIR))
+from _versioned_output import versioned_write
 
 
 ROOT = Path(__file__).resolve().parents[2]
@@ -150,7 +156,7 @@ def write_history_json(
 ) -> dict[str, object]:
     payload = collect_history(repo_root, include_paths=include_paths)
     output_path.parent.mkdir(parents=True, exist_ok=True)
-    output_path.write_text(json.dumps(payload, indent=2) + "\n")
+    versioned_write(output_path, json.dumps(payload, indent=2) + "\n", config_tag="report_history")
     return payload
 
 
