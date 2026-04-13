@@ -120,6 +120,38 @@
 - Teacher-student with MSE on teacher outputs + scorer loss
 - Standard technique in model compression
 
+#### 11. Batch Size Scaling (1 day, requires council approval for larger GPU)
+- Current: batch_size=4 on T4 (800MB VRAM usage, 20x headroom)
+- Scaling to batch_size=16 or 32 reduces gradient noise, may speed convergence
+- T4 can handle batch_size=16 easily (~3.2GB VRAM)
+- Larger batches may need A10G (24GB) — requires human approval per GPU budget rule
+- Also: gradient accumulation as a free alternative to larger batches
+- **Status:** NOT STARTED — try batch_size=16 on T4 first
+
+#### 12. Multi-Model Ensemble (2-3 days)
+- Train multiple renderers with different seeds/architectures
+- Average outputs at inflate time (reduces variance, smooths artifacts)
+- Archive contains multiple models — rate cost vs quality gain tradeoff
+- Ensemble of 3 models at 140KB each = 420KB archive, rate = 0.011, term = 0.28
+- Only viable if quality gain from ensemble > 0.28 rate cost
+- **Status:** NOT STARTED — validate single model first
+
+#### 13. Architecture Scaling — Channel Width Sweep (2 days)
+- Current: base_ch=36, mid_ch=60 (Quantizr's values, 287K params)
+- Sweep: (24,40), (36,60), (48,80), (64,128) at fixed depth=1
+- Each config: 500 epoch training → eval → Pareto frontier
+- Identifies optimal capacity allocation per rate budget
+- Quantizr's "slightly different architecture gets 10% better" may be this
+- **Status:** NOT STARTED
+
+#### 14. CRF Sweep for Mask Encoding (1 day, CPU lane)
+- If we ever encode masks as video (Quantizr's approach: 209KB AV1):
+  - Sweep CRF 15-30 for mask video quality
+  - Verify mask round-trip (encode→decode→argmax matches original)
+  - Optimize mask video rate vs mask fidelity tradeoff
+- Currently N/A (we extract masks at inflate time, no mask video in archive)
+- **Status:** NOT STARTED — only relevant if we switch to Quantizr-style mask encoding
+
 ### LONG-TERM — Post-Competition Research Directions
 
 #### 11. 3D Gaussian Splatting as Video Codec
