@@ -594,12 +594,18 @@ def auth_eval(tag: str, checkpoint: str = "renderer_best.pt"):
     # Run upstream evaluate.py — uses DALI on CUDA for GT decode (leaderboard match)
     import subprocess
     report_path = os.path.join(submission_dir, "report.txt")
+    # Use upstream evaluate.py for canonical scoring pipeline.
+    # DALI video decode requires NVML which Modal containers don't expose,
+    # so we use --device cpu for GT decode. The contest leaderboard uses DALI
+    # on their infrastructure — a PR submission is the only way to get the
+    # exact leaderboard number. This PyAV-based eval still uses the correct
+    # submission structure, rate calculation, and DistortionNet scoring.
     eval_cmd = [
         sys.executable, os.path.join(UPSTREAM_ROOT, "evaluate.py"),
         "--submission-dir", submission_dir,
         "--uncompressed-dir", os.path.join(UPSTREAM_ROOT, "videos"),
         "--video-names-file", os.path.join(UPSTREAM_ROOT, "public_test_video_names.txt"),
-        "--device", device,
+        "--device", "cpu",
         "--report", report_path,
     ]
     print(f"  Command: {' '.join(eval_cmd)}")
@@ -668,7 +674,7 @@ def auth_eval(tag: str, checkpoint: str = "renderer_best.pt"):
         "final_score": score,
         "n_samples": n_samples,
         "n_frames": n_written,
-        "eval_method": "upstream_evaluate_py_dali_cuda",
+        "eval_method": "upstream_evaluate_py_pyav_cpu",
         "device": device,
         "timestamp": time.strftime("%Y-%m-%dT%H:%M:%SZ"),
         "elapsed_seconds": t_total,
