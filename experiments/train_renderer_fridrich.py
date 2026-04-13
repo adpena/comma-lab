@@ -711,7 +711,9 @@ def _full_eval(
                 # Asymmetric: generate pairs via warp
                 m_t = torch.stack([masks[j] for j in batch_indices]).to(device=device, dtype=torch.long)
                 m_t1 = torch.stack([masks[j + 1] for j in batch_indices]).to(device=device, dtype=torch.long)
-                # Always eval at residual_scale=1.0 (full model, not warmup-constrained)
+                # Eval WITHOUT ego_flow: measures the model as it will deploy (Option 3:
+                # MotionPredictor's own flow, not RAFT). RAFT is training-only scaffold.
+                # If deploying with DCT flow (Fridrich backup), add ego_flow here too.
                 pair_hwc = renderer(m_t, m_t1, residual_scale=1.0)  # (B, 2, H, W, 3)
                 gen_t = pair_hwc[:, 0].permute(0, 3, 1, 2).contiguous()
                 gen_t1 = pair_hwc[:, 1].permute(0, 3, 1, 2).contiguous()
@@ -1347,7 +1349,8 @@ def train_fridrich_renderer(cfg: FridrichRendererConfig) -> dict[str, Any]:
                     # preprocess_input expects (B, T, C, H, W) — CHW format
                     gen_pair_btchw = torch.stack([gen_t, gen_t1], dim=1).contiguous()
                     pose_in = posenet.preprocess_input(gen_pair_btchw)
-                    pose_out = posenet(pose_in)  # (B, >=6)
+                    pose_out_raw = posenet(pose_in)  # dict {"pose": (B, 12)} or tensor
+                    pose_out = pose_out_raw["pose"] if isinstance(pose_out_raw, dict) else pose_out_raw
                     pose_sup_loss = F.mse_loss(pose_out[:, :6], target_pose)
 
                 total_loss = total_loss + cfg.pose_supervision_weight * pose_sup_loss
