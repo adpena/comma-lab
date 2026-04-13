@@ -44,6 +44,8 @@ DEPS = [
     "segmentation-models-pytorch",
 ]
 
+# NOTE: Using pip directly here because uv is not available in the Kaggle base
+# image. This is an intentional exception to the uv-only rule in CLAUDE.md.
 for dep in DEPS:
     subprocess.check_call(
         [sys.executable, "-m", "pip", "install", "-q", dep],
@@ -939,19 +941,20 @@ if device == "cuda":
 
 # Paths
 upstream_root = Path(UPSTREAM_DIR)
-gt_video = upstream_root / "data" / "target_video.mp4"
+# Probe GT video path: videos/0.mkv first (matches all other scripts), then fallbacks
+gt_video = upstream_root / "videos" / "0.mkv"
 if not gt_video.exists():
     # Try alternate video paths
-    candidates = list((upstream_root / "data").glob("*.mkv")) + list((upstream_root / "data").glob("*.mp4"))
-    if candidates:
-        gt_video = candidates[0]
-    else:
-        # Check videos/ dir
-        videos_dir = upstream_root / "videos"
-        if videos_dir.exists():
-            candidates = list(videos_dir.glob("*.mkv"))
-            if candidates:
-                gt_video = candidates[0]
+    videos_dir = upstream_root / "videos"
+    if videos_dir.exists():
+        candidates = list(videos_dir.glob("*.mkv"))
+        if candidates:
+            gt_video = candidates[0]
+    if not gt_video.exists():
+        # Legacy path: data/ directory
+        candidates = list((upstream_root / "data").glob("*.mkv")) + list((upstream_root / "data").glob("*.mp4"))
+        if candidates:
+            gt_video = candidates[0]
 assert gt_video.exists(), f"GT video not found. Checked {gt_video}"
 print(f"GT video: {gt_video}")
 

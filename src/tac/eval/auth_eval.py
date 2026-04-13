@@ -604,6 +604,14 @@ class AuthEvaluator:
     ) -> AuthResult:
         """Compute the authoritative score.
 
+        **Canonical scoring path.** This method is the single source of truth
+        for pair construction, preprocessing, and distortion computation.
+        The Modal ``DistortionNet`` path in ``modal_asymmetric_warp_deploy.py``
+        uses ``DistortionNet.compute_distortion`` which builds pairs internally
+        via the upstream ``seq_len=2`` batching. That path is a convenience
+        wrapper; if the two ever disagree, THIS method governs because it
+        replicates upstream ``evaluate.py`` pair construction explicitly.
+
         Scoring pipeline matches upstream evaluate.py:
         - Pairs are consecutive frames: (frame[i], frame[i+1])
         - PoseNet: MSE on first 6 pose outputs over both frames in pair
@@ -619,6 +627,10 @@ class AuthEvaluator:
 
         Returns:
             AuthResult with full score breakdown
+
+        Raises:
+            AssertionError: if generated and GT frame counts differ, which
+                would cause the two scoring paths to diverge silently.
         """
         self.load_scorers()
         t0 = time.monotonic()

@@ -242,6 +242,12 @@ def train_asymmetric_warp(tag: str, extra_args: list[str] | None = None):
     print(f"  End: {time.strftime('%Y-%m-%d %H:%M:%S')}")
     print(f"  Exit code: {result.returncode}")
 
+    if result.returncode != 0:
+        raise RuntimeError(
+            f"Training subprocess failed with exit code {result.returncode}. "
+            f"Check logs above for details."
+        )
+
     # List artifacts saved
     artifacts = os.listdir(vol_dir)
     print(f"  Artifacts ({len(artifacts)}): {', '.join(sorted(artifacts)[:10])}")
@@ -384,8 +390,12 @@ def auth_eval(tag: str, checkpoint: str = "renderer_best.pt"):
                 archive_size = export_asymmetric_checkpoint(model, output_path=_ExportPath(bin_path), default_bits=4)
                 print(f"  Exported: {bin_path} ({archive_size:,} bytes)")
             except Exception as e:
-                print(f"  WARNING: export failed ({e}), using .pt file size as rate proxy")
-                archive_size = ckpt_size_bytes
+                raise RuntimeError(
+                    f"Cannot determine accurate archive size for rate calculation. "
+                    f"No companion .bin found and export failed: {e}. "
+                    f"Using .pt file size would give 5-10x wrong rate. "
+                    f"Export a .bin first or pass --archive-size-bytes explicitly."
+                )
     else:
         raise ValueError(
             f"Unsupported checkpoint format. Expected .pt training checkpoint "
@@ -447,7 +457,7 @@ def auth_eval(tag: str, checkpoint: str = "renderer_best.pt"):
             masks_list.append(mask.to(torch.int8).cpu())
     masks = torch.cat(masks_list, dim=0)  # (N, 384, 512) int8
     print(f"  Extracted {masks.shape[0]} masks ({time.monotonic() - t_mask:.1f}s)")
-    del segnet, masks_list  # free VRAM
+    del gt_frames, segnet, masks_list  # free VRAM
 
     # ── 5. Generate frames via renderer ──
     print("\nStage 5: Generating frames ...")

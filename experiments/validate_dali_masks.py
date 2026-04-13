@@ -149,23 +149,21 @@ def decode_dali(video_path: str, max_frames: int, device_id: int = 0) -> list[to
 def extract_masks(frames: list[torch.Tensor], segnet: torch.nn.Module, device: str) -> torch.Tensor:
     """Run SegNet on frames, return argmax masks (N, H_seg, W_seg) int64.
 
-    SegNet expects input: (B, C, H, W) float32, range [0, 255].
-    preprocess_input resizes to (384, 512).
-    Output: (B, 5, 384, 512) logits -> argmax -> (B, 384, 512).
+    Uses SegNet.preprocess_input to match the scorer preprocessing exactly:
+    preprocess_input expects (B, T, C, H, W) with T=1, resizes internally
+    to (384, 512). Output: (B, 5, 384, 512) logits -> argmax -> (B, 384, 512).
     """
-    from frame_utils import segnet_model_input_size
-    seg_h, seg_w = segnet_model_input_size[1], segnet_model_input_size[0]  # (384, 512)
-
     masks = []
     batch_size = 16
     for i in range(0, len(frames), batch_size):
         batch_frames = frames[i : i + batch_size]
         # Stack and convert: (B, H, W, 3) -> (B, 3, H, W) float32
         batch = torch.stack(batch_frames).float().permute(0, 3, 1, 2).to(device)
-        # Resize to SegNet input size
-        batch_resized = F.interpolate(batch, size=(seg_h, seg_w), mode="bilinear", align_corners=False)
+        # Use preprocess_input for scorer-consistent preprocessing
+        inp = batch.unsqueeze(1)  # (B, 1, C, H, W) — T=1 temporal dim
+        seg_in = segnet.preprocess_input(inp)
         with torch.no_grad():
-            logits = segnet(batch_resized)  # (B, 5, 384, 512)
+            logits = segnet(seg_in)  # (B, 5, 384, 512)
         mask = logits.argmax(dim=1).cpu()  # (B, 384, 512)
         masks.append(mask)
 

@@ -150,8 +150,8 @@ echo ""
 echo "[3/3] Downloading results..."
 
 # Find and download the results JSON
-RESULT_JSON="/tmp/auth_eval_renderer_${CKPT_BASENAME%.pt}.json"
-RESULT_JSON="${RESULT_JSON%.bin}.json"
+CKPT_STEM="${CKPT_BASENAME%.*}"
+RESULT_JSON="/tmp/auth_eval_renderer_${CKPT_STEM}.json"
 
 $SCP "$LIGHTNING_HOST:$EVAL_DIR/auth_eval_*.json" "$RESULT_JSON" 2>/dev/null || true
 

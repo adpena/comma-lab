@@ -78,16 +78,21 @@ python experiments/validate_dali_masks.py \
     --threshold 0.01
 " 2>&1 | tee /tmp/lightning_dali_validation.log
 
-# Check if validation passed
-if grep -q "^FAIL:" /tmp/lightning_dali_validation.log; then
+# Check for explicit PASS string (not absence-of-FAIL, which could mask silent errors)
+if grep -q "^PASS:" /tmp/lightning_dali_validation.log; then
+    echo ""
+    echo "  DALI validation passed."
+elif grep -q "^FAIL:" /tmp/lightning_dali_validation.log; then
     echo ""
     echo "ABORT: DALI mask validation failed. Do not proceed."
     echo "See /tmp/lightning_dali_validation.log for details."
     exit 1
+else
+    echo ""
+    echo "ABORT: DALI validation produced no PASS/FAIL verdict. Possible crash."
+    echo "See /tmp/lightning_dali_validation.log for details."
+    exit 1
 fi
-
-echo ""
-echo "  DALI validation passed."
 echo ""
 
 # ---------------------------------------------------------------

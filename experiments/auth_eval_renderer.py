@@ -202,7 +202,7 @@ def _load_renderer_checkpoint(ckpt_path: str, device: str) -> tuple[nn.Module, d
     bin_candidates = [
         ckpt_dir / "renderer.bin",
         ckpt_dir / "renderer_best.bin",
-        ckpt_dir / ckpt_path.stem.replace(".pt", "") + ".bin",
+        ckpt_dir / (ckpt_path.stem.replace(".pt", "") + ".bin"),
     ]
     archive_size = None
     for bc in bin_candidates:
@@ -219,8 +219,12 @@ def _load_renderer_checkpoint(ckpt_path: str, device: str) -> tuple[nn.Module, d
             print(f"  Exported for rate: {archive_size:,} bytes (4-bit quantized)")
             del export_bytes
         except Exception as e:
-            print(f"  WARNING: export failed ({e}), using .pt file size as rate proxy")
-            archive_size = file_size
+            raise RuntimeError(
+                f"Cannot determine accurate archive size for rate calculation. "
+                f"No companion .bin found and export failed: {e}. "
+                f"Using .pt file size would give 5-10x wrong rate. "
+                f"Export a .bin first or pass --archive-size-bytes explicitly."
+            )
 
     n_params = sum(p.numel() for p in model.parameters())
     print(f"  Model: {type(model).__name__}, {n_params:,} params")
