@@ -859,29 +859,7 @@ def _load_renderer(renderer_path: str, device: str) -> nn.Module:
 
     # Extract config for architecture reconstruction
     config = ckpt.get("config", {})
-    num_classes = config.get("num_classes", 5)
-    channels = config.get("channels", (256, 128, 64, 32))
-    if isinstance(channels, list):
-        channels = tuple(channels)
-    init_h = config.get("init_h", 24)
-    init_w = config.get("init_w", 32)
-    spade_hidden = config.get("spade_hidden", 64)
-    noise_dim = config.get("noise_dim", 16)
-    use_noise = config.get("use_noise", True)
-
-    print(f"  Renderer config: classes={num_classes}, channels={channels}, "
-          f"init={init_h}x{init_w}, spade_hidden={spade_hidden}, "
-          f"noise={use_noise}", file=sys.stderr)
-
-    renderer = DPSIMSRenderer(
-        num_classes=num_classes,
-        channels=channels,
-        init_h=init_h,
-        init_w=init_w,
-        spade_hidden=spade_hidden,
-        noise_dim=noise_dim,
-        use_noise=use_noise,
-    )
+    pair_mode = config.get("pair_mode", "dp_sims")
 
     # Determine which state_dict to use
     if "model_state_dict" in ckpt:
@@ -889,26 +867,61 @@ def _load_renderer(renderer_path: str, device: str) -> nn.Module:
     elif "state_dict" in ckpt:
         raw_sd = ckpt["state_dict"]
     else:
-        # Assume the checkpoint IS the state_dict
         raw_sd = ckpt
 
-    # Check if keys are prefixed with "renderer." (from DPSIMSPairGenerator)
-    renderer_prefix = "renderer."
-    has_prefix = any(k.startswith(renderer_prefix) for k in raw_sd.keys())
-
-    if has_prefix:
-        # Extract only renderer.* keys, strip prefix
-        sd = {}
-        for k, v in raw_sd.items():
-            if k.startswith(renderer_prefix):
-                sd[k[len(renderer_prefix):]] = v
-        print(f"  Extracted {len(sd)} renderer keys from PairGenerator checkpoint", file=sys.stderr)
+    if pair_mode == "asymmetric":
+        # Asymmetric warp checkpoint — build AsymmetricPairGenerator
+        print(f"  Detected pair_mode=asymmetric in .pt checkpoint", file=sys.stderr)
+        renderer = AsymmetricPairGenerator(
+            num_classes=config.get("num_classes", 5),
+            embed_dim=config.get("embed_dim", 6),
+            base_ch=config.get("base_ch", 36),
+            mid_ch=config.get("mid_ch", 60),
+            motion_hidden=config.get("motion_hidden", 32),
+            depth=config.get("renderer_depth", 1),
+            max_flow_px=config.get("max_flow_px", 20.0),
+            max_residual=config.get("max_residual", 20.0),
+            flow_only=config.get("flow_only", False),
+        )
+        renderer.load_state_dict(raw_sd, strict=True)
+        renderer.to(device).eval()
     else:
-        sd = raw_sd
+        # DP-SIMS checkpoint — build DPSIMSRenderer
+        num_classes = config.get("num_classes", 5)
+        channels = config.get("channels", (256, 128, 64, 32))
+        if isinstance(channels, list):
+            channels = tuple(channels)
+        init_h = config.get("init_h", 24)
+        init_w = config.get("init_w", 32)
+        spade_hidden = config.get("spade_hidden", 64)
+        noise_dim = config.get("noise_dim", 16)
+        use_noise = config.get("use_noise", True)
 
-    # Load weights
-    renderer.load_state_dict(sd, strict=True)
-    renderer.to(device).eval()
+        print(f"  Renderer config: classes={num_classes}, channels={channels}, "
+              f"init={init_h}x{init_w}, spade_hidden={spade_hidden}, "
+              f"noise={use_noise}", file=sys.stderr)
+
+        renderer = DPSIMSRenderer(
+            num_classes=num_classes,
+            channels=channels,
+            init_h=init_h,
+            init_w=init_w,
+            spade_hidden=spade_hidden,
+            noise_dim=noise_dim,
+            use_noise=use_noise,
+        )
+
+        # Check if keys are prefixed with "renderer." (from DPSIMSPairGenerator)
+        renderer_prefix = "renderer."
+        has_prefix = any(k.startswith(renderer_prefix) for k in raw_sd.keys())
+        if has_prefix:
+            sd = {k[len(renderer_prefix):]: v for k, v in raw_sd.items() if k.startswith(renderer_prefix)}
+            print(f"  Extracted {len(sd)} renderer keys from PairGenerator checkpoint", file=sys.stderr)
+        else:
+            sd = raw_sd
+
+        renderer.load_state_dict(sd, strict=True)
+        renderer.to(device).eval()
 
     # Freeze all parameters
     for p in renderer.parameters():

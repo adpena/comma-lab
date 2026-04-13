@@ -353,8 +353,22 @@ def auth_eval(tag: str, checkpoint: str = "renderer_best.pt"):
     ckpt_size_bytes = os.path.getsize(ckpt_path)
     print(f"  Checkpoint size: {ckpt_size_bytes:,} bytes")
 
-    # Determine if this is a .pt training checkpoint or a .bin export
-    if isinstance(ckpt_data, dict) and "model_state_dict" in ckpt_data:
+    # Determine checkpoint format: .bin export or .pt training checkpoint
+    # Check for ASYM/DPSM magic at start of file
+    is_bin = False
+    with open(ckpt_path, "rb") as bf:
+        magic = bf.read(4)
+        is_bin = magic in (b"ASYM", b"DPSM")
+
+    if is_bin:
+        # Binary export — load via tac.renderer_export
+        print(f"  Binary export detected (magic: {magic})")
+        from tac.renderer_export import load_asymmetric_checkpoint
+        model = load_asymmetric_checkpoint(ckpt_path, device=device)
+        model.eval()
+        archive_size = ckpt_size_bytes
+        print(f"  Rate from .bin: {archive_size:,} bytes")
+    elif isinstance(ckpt_data, dict) and "model_state_dict" in ckpt_data:
         # Training checkpoint — reconstruct model from config
         config = ckpt_data.get("config", {})
         print(f"  Training checkpoint, epoch={ckpt_data.get('epoch', '?')}")
@@ -377,7 +391,6 @@ def auth_eval(tag: str, checkpoint: str = "renderer_best.pt"):
         model.to(device).eval()
 
         # For rate calculation, use the export size (quantized .bin).
-        # If a .bin exists alongside, use its size. Otherwise estimate.
         bin_candidates = [
             os.path.join(vol_dir, "renderer.bin"),
             os.path.join(vol_dir, "renderer_best.bin"),
@@ -390,7 +403,6 @@ def auth_eval(tag: str, checkpoint: str = "renderer_best.pt"):
                 break
 
         if archive_size is None:
-            # Estimate: export the model to get actual size
             print("  No .bin export found — exporting for rate calculation ...")
             try:
                 from pathlib import Path as _ExportPath
@@ -401,14 +413,12 @@ def auth_eval(tag: str, checkpoint: str = "renderer_best.pt"):
             except Exception as e:
                 raise RuntimeError(
                     f"Cannot determine accurate archive size for rate calculation. "
-                    f"No companion .bin found and export failed: {e}. "
-                    f"Using .pt file size would give 5-10x wrong rate. "
-                    f"Export a .bin first or pass --archive-size-bytes explicitly."
+                    f"No companion .bin found and export failed: {e}."
                 )
     else:
         raise ValueError(
-            f"Unsupported checkpoint format. Expected .pt training checkpoint "
-            f"with 'model_state_dict' key. Got keys: "
+            f"Unsupported checkpoint format. Expected .pt with 'model_state_dict' "
+            f"or .bin with ASYM/DPSM magic. Got: "
             f"{list(ckpt_data.keys()) if isinstance(ckpt_data, dict) else type(ckpt_data)}"
         )
 

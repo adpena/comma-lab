@@ -268,7 +268,7 @@ class MaskRenderer(nn.Module):
 # ── MotionPredictor ─────────────────────────────────────────────────────
 
 
-_coord_grid_cache: dict[tuple[int, int, torch.device], torch.Tensor] = {}
+_coord_grid_cache: dict[tuple[int, int, str], torch.Tensor] = {}
 _COORD_GRID_MAXSIZE = 4  # Bound cache to avoid memory leak with many resolutions
 
 
@@ -278,7 +278,9 @@ def make_coord_grid(h: int, w: int, device: torch.device) -> torch.Tensor:
     Returns: (1, H, W, 2) tensor with values in [-1, 1].
     Cache is bounded to _COORD_GRID_MAXSIZE entries (FIFO eviction).
     """
-    key = (h, w, device)
+    # Normalize device to string for reliable cache hits
+    # (torch.device("cuda") vs torch.device("cuda:0") compare differently)
+    key = (h, w, str(device))
     if key not in _coord_grid_cache:
         # Evict oldest entry if at capacity
         if len(_coord_grid_cache) >= _COORD_GRID_MAXSIZE:
@@ -934,7 +936,8 @@ class HintedPairGenerator(nn.Module):
         # Render frame_t+1 with frame_t as hint (temporal consistency)
         frame_t1 = self.hinted_renderer(mask_t1, hint=frame_t.detach())
 
-        flow = self.motion(mask_t, mask_t1)
+        motion_out = self.motion(mask_t, mask_t1)
+        flow = motion_out[:, :2]  # first 2 channels are flow (safe for 2-ch or 6-ch motion)
         frame_t1_warped = warp_with_flow(frame_t, flow)
 
         alpha = torch.sigmoid(self.blend_logit)

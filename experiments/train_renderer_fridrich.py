@@ -988,6 +988,17 @@ def train_fridrich_renderer(cfg: FridrichRendererConfig) -> dict[str, Any]:
                   f"rho {rho_before:.0f}→{rho:.0f}, "
                   f"λ_s {ls_before:.0f}→{lambda_seg:.0f}, "
                   f"λ_p {lp_before:.0f}→{lambda_pose:.0f}")
+        # Fix scheduler T_max for Phase 3 resume: the saved scheduler had
+        # T_max=remaining_epochs but the one created at line 911 has T_max=cfg.epochs.
+        # Rebuild with correct T_max to match the saved LR schedule.
+        if self_compress_active:
+            remaining_epochs = cfg.epochs - start_epoch
+            scheduler = torch.optim.lr_scheduler.CosineAnnealingLR(
+                optimizer,
+                T_max=max(remaining_epochs, 1),
+                eta_min=cfg.lr * cfg.lr_min_ratio,
+            )
+            print(f"  [FIX] Rebuilt scheduler for Phase 3 resume: T_max={remaining_epochs}")
         print(f"  Resumed at epoch {start_epoch}, lambda_seg={lambda_seg:.1f}, "
               f"lambda_pose={lambda_pose:.1f}, rho={rho:.1f}, "
               f"self_compress={'ON' if self_compress_active else 'OFF'}")
