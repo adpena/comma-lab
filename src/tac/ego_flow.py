@@ -67,10 +67,11 @@ class LearnableAffineFlow(nn.Module):
         # Look up affine deltas for this batch
         deltas = self.affine_deltas[pair_indices]  # (B, 6)
 
-        # Scale deltas through tanh to bound the flow magnitude
-        # Per-axis normalization (council sweep fix: max(H,W) underscales y by 25%)
-        scale_x = self.max_flow_px / W * 2
-        scale_y = self.max_flow_px / H * 2
+        # Scale deltas through tanh to bound the flow magnitude.
+        # align_corners=True convention: 1 px = 2/(W-1) normalized units (not 2/W).
+        # Matches MotionPredictor.forward() fix (round 20) and warp_with_flow grid.
+        scale_x = self.max_flow_px / (W - 1) * 2
+        scale_y = self.max_flow_px / (H - 1) * 2
         deltas = deltas.tanh()
         # Apply per-axis scale: channels 0,1,2 use x-scale, channels 3,4,5 use y-scale
         deltas = torch.cat([deltas[:, :3] * scale_x, deltas[:, 3:] * scale_y], dim=1)
