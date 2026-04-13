@@ -29,8 +29,12 @@
 
 ## Code State
 - Round 19 complete: 4 council issues fixed (double PoseNet fwd, p1_pose_sup_weight, ego_flow reuse, logging cache)
-- CLAUDE.md: "multiple contenders → multiple paths" added as non-negotiable rule
-- Deploy script: variant= param, deployment_manifest.json, Path A + B templates
+- CLAUDE.md: "multiple contenders → multiple paths" + 5-member non-conservative council (Yousfi, Fridrich, Contrarian, Quantizr, Hotz)
+- Deploy infrastructure: deploy_config.py (provider-agnostic canonical flags)
+  - Modal: imports from deploy_config, manifest saved before training
+  - Lightning: variant-aware (base/supervised/raft_only), env-var injection (no shell injection)
+  - Kaggle: 3 kernel specs (asym_warp_base/supervised/raft_only), launcher reads ASYM_VARIANT
+  - All 8 critical/high adversarial review issues fixed (--output-dir crash, __init__.py, UPSTREAM_ROOT, PYTHONPATH, dead code, injection, uv mandate, flag dedup)
 
 ## Kill/Promote
 - Kill: seg > 0.8 for 200 consecutive epochs in Phase 2
