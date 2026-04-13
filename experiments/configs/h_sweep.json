@@ -1,0 +1,116 @@
+{
+  "sweep_name": "karpathy_channel_width",
+  "description": "Channel width sweep for AsymmetricPairGenerator (depth=1, motion_hidden=32, embed_dim=6). Tests whether Quantizr's base_ch=36/mid_ch=60 is optimal or if a different width dominates the rate-quality Pareto frontier.",
+  "hypothesis": "Quantizr's 36/60 is a local optimum chosen for their specific training setup. A wider (48/80) or narrower (24/40) architecture may dominate when rate is properly accounted for. The Pareto frontier should reveal whether quality saturates before rate becomes prohibitive.",
+  "success_criteria": "At least one config achieves proxy score < 1.30 (current best). Pareto frontier shows clear diminishing returns, identifying the optimal width.",
+  "kill_criteria": "All configs score worse than medium (36/60) by > 5% — channel width is not the bottleneck.",
+  "concern_criteria": "Tiny/small configs score within 2% of medium — we are overparameterized and should shrink.",
+  "configs": [
+    {
+      "name": "tiny",
+      "base_ch": 16,
+      "mid_ch": 24,
+      "total_params": 89951,
+      "renderer_params": 43289,
+      "motion_params": 46692,
+      "fp4_kb": 43.9,
+      "rate_term": 0.0003,
+      "notes": "Motion predictor dominates (52%). Tests if renderer can function with minimal capacity."
+    },
+    {
+      "name": "small",
+      "base_ch": 24,
+      "mid_ch": 40,
+      "total_params": 155167,
+      "renderer_params": 108505,
+      "motion_params": 46692,
+      "fp4_kb": 75.8,
+      "rate_term": 0.0005,
+      "notes": "Renderer now dominant. Sweet spot for rate-constrained deployment?"
+    },
+    {
+      "name": "medium",
+      "base_ch": 36,
+      "mid_ch": 60,
+      "total_params": 287019,
+      "renderer_params": 240357,
+      "motion_params": 46692,
+      "fp4_kb": 140.1,
+      "rate_term": 0.0009,
+      "notes": "Quantizr's exact config. Baseline for comparison."
+    },
+    {
+      "name": "large",
+      "base_ch": 48,
+      "mid_ch": 80,
+      "total_params": 470615,
+      "renderer_params": 423953,
+      "motion_params": 46692,
+      "fp4_kb": 229.8,
+      "rate_term": 0.0015,
+      "notes": "Extended capacity. Does quality improve enough to justify 64% more rate?"
+    },
+    {
+      "name": "xlarge",
+      "base_ch": 64,
+      "mid_ch": 128,
+      "total_params": 1011303,
+      "renderer_params": 964641,
+      "motion_params": 46692,
+      "fp4_kb": 493.8,
+      "rate_term": 0.0032,
+      "notes": "3.5x Quantizr's params. Tests if capacity is the limiting factor."
+    }
+  ],
+  "fixed_params": {
+    "num_classes": 5,
+    "embed_dim": 6,
+    "motion_hidden": 32,
+    "depth": 1,
+    "max_flow_px": 20.0,
+    "max_residual": 20.0,
+    "pair_mode": "asymmetric"
+  },
+  "training": {
+    "epochs": 5000,
+    "batch_size": 4,
+    "lr": 2e-4,
+    "seed": 42,
+    "seg_boundary": 0.005,
+    "pose_boundary": 0.02,
+    "rho_init": 10.0,
+    "rho_growth": 1.02,
+    "tv_weight": 0.05,
+    "flow_weight": 0.0,
+    "rate_weight": 0.01,
+    "target_bytes": 200000,
+    "gate_reg_weight": 0.1,
+    "even_pairs_only": true,
+    "eval_every": 200,
+    "checkpoint_every": 500,
+    "log_every": 25,
+    "max_hours": 5.5,
+    "phase2_mse_weight": 0.1,
+    "notes": "Identical to council-approved asymmetric warp config. Only base_ch/mid_ch vary."
+  },
+  "deployment": {
+    "platform": "modal",
+    "gpu": "T4",
+    "timeout_hours": 6,
+    "est_hours_per_config": 5.5,
+    "est_cost_per_config_usd": 0.50,
+    "est_total_cost_usd": 2.50,
+    "volume": "tac-h-sweep-results",
+    "parallelism": "sequential (1 T4 at a time to stay in free tier)"
+  },
+  "analysis": {
+    "primary_metric": "score = 100*seg + sqrt(10*pose) + 25*rate",
+    "pareto_axes": ["rate_term (x)", "100*seg + sqrt(10*pose) (y)"],
+    "expected_insights": [
+      "Quality saturation point — where more params stop helping",
+      "Rate crossover point — where rate penalty exceeds quality gain",
+      "Motion predictor sizing — should it scale with renderer?",
+      "Optimal width for competition deployment"
+    ]
+  }
+}
