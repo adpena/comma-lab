@@ -412,7 +412,7 @@ def auth_eval(tag: str, checkpoint: str = "renderer_best.pt"):
             max_residual=config.get("max_residual", 20.0),
             flow_only=config.get("flow_only", False),
         )
-        model.load_state_dict(ckpt_data["model_state_dict"])
+        model.load_state_dict(ckpt_data["model_state_dict"], strict=False)
         model.to(device).eval()
 
         # For rate calculation, use the export size (quantized .bin).
