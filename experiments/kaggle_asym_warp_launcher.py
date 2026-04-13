@@ -18,15 +18,38 @@ import subprocess
 import sys
 from pathlib import Path
 
-# --- Bootstrap: install tac wheel from Kaggle dataset --
 SCRIPT_PATH = Path(__file__).resolve()
+
+# Flags that the deploy_config VARIANT_FLAGS inject with /results/ paths,
+# which must be replaced with Kaggle-local asset paths.
+_SUPERVISION_ASSET_FLAGS = {"--raft-flow-path", "--pose-targets-path"}
+
+# Flags whose values we override per-provider; strip from BASE_FLAGS before
+# appending our Kaggle-specific values.
+_KAGGLE_OVERRIDE_FLAGS = {"--device", "--max-hours"}
+
+
+def _ensure_uv() -> str:
+    """Install uv if not present, return path to uv binary."""
+    import shutil
+    uv_path = shutil.which("uv")
+    if uv_path:
+        return uv_path
+    subprocess.check_call(
+        ["bash", "-lc", "curl -LsSf https://astral.sh/uv/install.sh | sh"],
+    )
+    uv_path = shutil.which("uv") or os.path.expanduser("~/.cargo/bin/uv")
+    if not os.path.exists(uv_path):
+        raise RuntimeError("uv installation failed")
+    return uv_path
 
 
 def ensure_tac() -> None:
     try:
         import tac  # noqa: F401
+        from tac.deploy import deploy_config  # noqa: F401 — need deploy subpackage
         return
-    except ImportError:
+    except (ImportError, ModuleNotFoundError):
         pass
     input_root = Path("/kaggle/input")
     candidates = sorted(input_root.rglob("comma_video_lab_ball_pack-*.whl"))
@@ -35,7 +58,8 @@ def ensure_tac() -> None:
             f"tac wheel not found in {input_root}; upload comma_video_lab_ball_pack-*.whl "
             f"to the comma-lab-private-assets dataset"
         )
-    subprocess.check_call([sys.executable, "-m", "pip", "install", "-q", "--no-deps", str(candidates[0])])
+    uv = _ensure_uv()
+    subprocess.check_call([uv, "pip", "install", "-q", "--no-deps", str(candidates[0])])
 
 
 def ensure_upstream() -> Path:
@@ -51,11 +75,31 @@ def ensure_upstream() -> Path:
 
 
 def ensure_deps() -> None:
-    for dep in ["av", "safetensors", "timm", "einops", "segmentation-models-pytorch", "pydantic", "click"]:
+    uv = _ensure_uv()
+    deps = ["av", "safetensors", "timm", "einops", "segmentation-models-pytorch", "pydantic", "click"]
+    missing = []
+    for dep in deps:
         try:
             __import__(dep.replace("-", "_"))
         except ImportError:
-            subprocess.check_call([sys.executable, "-m", "pip", "install", "-q", dep])
+            missing.append(dep)
+    if missing:
+        subprocess.check_call([uv, "pip", "install", "-q"] + missing)
+
+
+def _strip_flags(flags: list[str], to_strip: set[str]) -> list[str]:
+    """Remove flag+value pairs for all flags in to_strip."""
+    clean: list[str] = []
+    skip_next = False
+    for f in flags:
+        if skip_next:
+            skip_next = False
+            continue
+        if f in to_strip:
+            skip_next = True
+            continue
+        clean.append(f)
+    return clean
 
 
 # ---------------------------------------------------------------------------
@@ -71,17 +115,14 @@ def main() -> int:
     # Locate asset files from the Kaggle dataset mount
     input_root = Path("/kaggle/input")
     asset_root = input_root / "comma-lab-private-assets"
-    working = Path("/kaggle/working")
 
     # Locate training script — bundled alongside this launcher
     script_path = SCRIPT_PATH.parent / "train_renderer_fridrich.py"
     if not script_path.exists():
         raise FileNotFoundError(f"Training script not found: {script_path}")
 
-    # Variant from env var (set in kernel metadata or overridden at launch)
+    # Variant from env var (set via bootstrap_preamble in kernel metadata)
     variant = os.environ.get("ASYM_VARIANT", "base").strip()
-    output_dir = working / f"renderer_{variant}"
-    output_dir.mkdir(parents=True, exist_ok=True)
 
     # Import canonical flags from tac (installed via wheel above)
     from tac.deploy.deploy_config import ALL_VARIANTS, build_flags  # noqa: E402
@@ -89,50 +130,49 @@ def main() -> int:
         print(f"ERROR: Unknown ASYM_VARIANT={variant!r}. Valid: {ALL_VARIANTS}")
         return 1
 
-    # Resolve asset paths
+    # Resolve asset paths on Kaggle (dataset mounts at /kaggle/input/)
     posenet_targets = asset_root / "posenet_targets.bin"
     raft_flow = asset_root / "raft_flow.pt"
 
-    # Build command — use Kaggle-specific asset paths for supervision flags
-    extra_overrides: list[str] = []
+    # Validate supervision assets before building the command
     if variant in ("supervised", "raft_only"):
         if not raft_flow.exists():
             print(f"ERROR: raft_flow.pt not found at {raft_flow}")
             return 1
-        extra_overrides += ["--raft-flow-path", str(raft_flow)]
     if variant == "supervised":
         if not posenet_targets.exists():
             print(f"ERROR: posenet_targets.bin not found at {posenet_targets}")
             return 1
-        extra_overrides += ["--pose-targets-path", str(posenet_targets)]
 
-    # Build base flags from deploy_config (strips the /results/ asset paths,
-    # which we override above with the Kaggle-local paths)
-    flags = build_flags(variant=variant, extra=extra_overrides)
-    # Remove any /results/ paths that don't exist on Kaggle
-    clean_flags: list[str] = []
-    skip_next = False
-    for f in flags:
-        if skip_next:
-            skip_next = False
-            continue
-        if f in ("--raft-flow-path", "--pose-targets-path"):
-            skip_next = True  # skip the /results/... value; we've added overrides above
-            continue
-        clean_flags.append(f)
+    # Build flags from deploy_config, then strip provider-specific paths + overrides
+    base_flags = build_flags(variant=variant)
 
-    cmd = [sys.executable, str(script_path)] + clean_flags + [
-        "--output-dir", str(output_dir),
+    # Strip flags whose values must be replaced on Kaggle
+    clean_flags = _strip_flags(base_flags, _SUPERVISION_ASSET_FLAGS | _KAGGLE_OVERRIDE_FLAGS)
+
+    # Append Kaggle-specific overrides
+    kaggle_overrides: list[str] = [
         "--device", "cuda",
-        "--max-hours", "8.5",  # Kaggle T4 sessions: up to ~9h
+        "--max-hours", "8.5",   # Kaggle T4: up to ~9h sessions
     ]
+    if variant in ("supervised", "raft_only"):
+        kaggle_overrides += ["--raft-flow-path", str(raft_flow)]
+    if variant == "supervised":
+        kaggle_overrides += ["--pose-targets-path", str(posenet_targets)]
 
-    os.environ["PYTHONPATH"] = f"{SCRIPT_PATH.parent.parent / 'src'}:{upstream}"
-    os.environ["TAC_UPSTREAM_DIR"] = str(upstream)
+    cmd = [sys.executable, str(script_path)] + clean_flags + kaggle_overrides
+
+    # Set environment for the training subprocess
+    os.environ["UPSTREAM_ROOT"] = str(upstream)       # used by train_renderer_fridrich.py
     os.environ["TAC_MODELS_DIR"] = str(upstream / "models")
+    # PYTHONPATH: upstream for scorer imports; tac is already in site-packages
+    existing = os.environ.get("PYTHONPATH", "")
+    os.environ["PYTHONPATH"] = f"{upstream}:{existing}" if existing else str(upstream)
 
     # Save deployment manifest
-    import json, time, socket
+    import json
+    import socket
+    import time
     manifest = {
         "variant": variant,
         "full_command": cmd,
@@ -140,9 +180,9 @@ def main() -> int:
         "hostname": socket.gethostname(),
         "provider": "kaggle",
         "gpu": "T4",
-        "output_dir": str(output_dir),
+        "script": str(script_path),
     }
-    manifest_path = output_dir / "deployment_manifest.json"
+    manifest_path = Path("/kaggle/working") / f"deployment_manifest_{variant}.json"
     manifest_path.write_text(json.dumps(manifest, indent=2))
     print(f"  Manifest saved: {manifest_path}")
     print(f"  Variant: {variant}")

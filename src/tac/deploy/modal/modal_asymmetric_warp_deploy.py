@@ -262,7 +262,7 @@ def train_asymmetric_warp(
         "hostname": socket.gethostname(),
         "gpu": "T4",
         "provider": "modal",
-        "variant_flags": VARIANT_FLAGS[variant],
+        "variant_extra_flags": VARIANT_FLAGS[variant],  # extra flags on top of BASE_FLAGS
     }
     manifest_path = os.path.join(vol_dir, "deployment_manifest.json")
     with open(manifest_path, "w") as f:

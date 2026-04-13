@@ -127,11 +127,17 @@ def build_flags(
 
     flags = list(BASE_FLAGS) + list(VARIANT_FLAGS[variant])
 
-    if resume_from:
-        flags += ["--resume", resume_from]
-
     if extra:
         flags += list(extra)
+
+    if resume_from:
+        # Guard: raise if --resume already appears in flags (from extra) to prevent silent duplication
+        if "--resume" in flags:
+            raise ValueError(
+                f"build_flags: resume_from={resume_from!r} was provided but '--resume' already "
+                f"appears in extra flags. Pass resume via resume_from only, not both."
+            )
+        flags += ["--resume", resume_from]
 
     if provider_script_path:
         return ["python", provider_script_path] + flags

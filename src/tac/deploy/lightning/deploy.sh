@@ -49,28 +49,28 @@ _scp() {
 # ---------------------------------------------------------------------------
 # Import training flags from deploy_config (provider-agnostic source of truth)
 #
-# Emits the full command as a shell-safe string for eval, with the remote
-# script path prepended. resume_from is appended if provided.
+# Uses environment variables (not shell string interpolation) to pass values
+# into Python to avoid injection from user-controlled inputs.
 # ---------------------------------------------------------------------------
 _build_gpu_cmd() {
     local variant="${1:-base}"
     local resume_from="${2:-}"
-    local resume_flag=""
-    [ -n "$resume_from" ] && resume_flag="--resume-from $resume_from"
 
-    # Call deploy_config CLI to get canonical flags; prepend python + remote script path.
-    python3 -c "
-import sys
-sys.path.insert(0, '$REPO_ROOT/src')
+    # Pass values via env vars — never interpolate user-controlled strings into
+    # Python source code (prevents injection from paths containing quotes/newlines)
+    ASYM_VARIANT="$variant" ASYM_RESUME="$resume_from" ASYM_SCRIPT="$REMOTE_SCRIPT" \
+    REPO_SRC="$REPO_ROOT/src" python3 - <<'PYEOF'
+import os, sys, shlex
+sys.path.insert(0, os.environ["REPO_SRC"])
 from tac.deploy.deploy_config import build_flags
-import shlex
+resume = os.environ.get("ASYM_RESUME") or None
 cmd = build_flags(
-    variant='$variant',
-    provider_script_path='$REMOTE_SCRIPT',
-    resume_from='$resume_from' if '$resume_from' else None,
+    variant=os.environ["ASYM_VARIANT"],
+    provider_script_path=os.environ["ASYM_SCRIPT"],
+    resume_from=resume,
 )
 print(shlex.join(cmd))
-"
+PYEOF
 }
 
 # ---------------------------------------------------------------------------
@@ -106,11 +106,13 @@ cmd_setup() {
         fi
     " 2>/dev/null
 
-    echo "5. Installing dependencies..."
+    echo "5. Installing uv + dependencies..."
     _ssh "$REMOTE" "
         source /system/conda/miniconda3/etc/profile.d/conda.sh 2>/dev/null
         conda activate cloudspace 2>/dev/null
-        pip install -q safetensors timm einops segmentation-models-pytorch av pydantic click 2>/dev/null
+        command -v uv >/dev/null 2>&1 || curl -LsSf https://astral.sh/uv/install.sh | sh
+        export PATH=\"\$HOME/.cargo/bin:\$PATH\"
+        uv pip install -q safetensors timm einops segmentation-models-pytorch av pydantic click 2>/dev/null
         echo '   deps: installed'
     "
 
@@ -167,30 +169,35 @@ cmd_gpu() {
 
     echo "  Command: $training_cmd"
 
-    # Save deployment manifest locally
-    python3 -c "
-import sys, json, time, socket
-sys.path.insert(0, '$REPO_ROOT/src')
+    # Save deployment manifest locally — use env vars to avoid shell injection
+    ASYM_VARIANT="$variant" ASYM_RESUME="$resume_from" ASYM_TAG="$tag" \
+    ASYM_SCRIPT="$REMOTE_SCRIPT" REPO_SRC="$REPO_ROOT/src" \
+    MANIFEST_DIR="$REPO_ROOT/reports/deployment_manifests" \
+    python3 - <<'PYEOF'
+import os, sys, json, time, socket
+sys.path.insert(0, os.environ["REPO_SRC"])
 from tac.deploy.deploy_config import build_flags, VARIANT_FLAGS
-import shlex
-cmd = build_flags(variant='$variant', provider_script_path='$REMOTE_SCRIPT',
-                  resume_from='$resume_from' if '$resume_from' else None)
+variant = os.environ["ASYM_VARIANT"]
+resume = os.environ.get("ASYM_RESUME") or None
+cmd = build_flags(variant=variant, provider_script_path=os.environ["ASYM_SCRIPT"], resume_from=resume)
+tag = os.environ["ASYM_TAG"]
 manifest = {
-    'tag': '$tag',
-    'variant': '$variant',
-    'resume_from': '$resume_from' if '$resume_from' else None,
-    'full_command': cmd,
-    'started_at': time.strftime('%Y-%m-%dT%H:%M:%SZ', time.gmtime()),
-    'hostname': socket.gethostname(),
-    'provider': 'lightning',
-    'gpu': 'T4',
-    'variant_flags': VARIANT_FLAGS['$variant'],
+    "tag": tag,
+    "variant": variant,
+    "resume_from": resume,
+    "full_command": cmd,
+    "started_at": time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime()),
+    "hostname": socket.gethostname(),
+    "provider": "lightning",
+    "gpu": "T4",
+    "variant_extra_flags": VARIANT_FLAGS[variant],
 }
-path = '$REPO_ROOT/reports/deployment_manifests/${tag}_manifest.json'
-import os; os.makedirs(os.path.dirname(path), exist_ok=True)
-json.dump(manifest, open(path, 'w'), indent=2)
-print(f'  Manifest: {path}')
-"
+manifest_dir = os.environ["MANIFEST_DIR"]
+os.makedirs(manifest_dir, exist_ok=True)
+path = os.path.join(manifest_dir, f"{tag}_manifest.json")
+json.dump(manifest, open(path, "w"), indent=2)
+print(f"  Manifest: {path}")
+PYEOF
 
     _ssh "$REMOTE" "
         source /system/conda/miniconda3/etc/profile.d/conda.sh 2>/dev/null
@@ -198,13 +205,12 @@ print(f'  Manifest: {path}')
         cd $REMOTE_BASE
         export PYTHONPATH=$REMOTE_BASE/src:/home/zeus/content/upstream
         export PYTHONUNBUFFERED=1
+        export UPSTREAM_ROOT=/home/zeus/content/upstream
         export TAC_UPSTREAM_DIR=/home/zeus/content/upstream
         export TAC_MODELS_DIR=/home/zeus/content/upstream/models
         mkdir -p $REMOTE_RESULTS/$tag
 
-        nohup $training_cmd \
-            --output-dir $REMOTE_RESULTS/$tag \
-            > $REMOTE_BASE/training_gpu.log 2>&1 &
+        nohup $training_cmd > $REMOTE_BASE/training_gpu.log 2>&1 &
 
         echo \"PID: \$!\"
         sleep 3
