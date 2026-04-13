@@ -1813,6 +1813,7 @@ def train_fridrich_renderer(cfg: FridrichRendererConfig) -> dict[str, Any]:
 @click.option("--pose-supervision-weight", type=float, default=0.0, help="PoseNet supervision loss weight (council Layer 1)")
 @click.option("--pose-targets-path", type=str, default=None, help="Path to posenet_targets.bin")
 @click.option("--pose-embed-loss", is_flag=True, help="Use embedding-level PoseNet loss (council Layer 3)")
+@click.option("--p1-pose-sup-weight", type=float, default=0.1, help="Phase 1 PoseNet supervision scaling (separate from --p1-pose-weight; targets use different scale than distortion)")
 @click.option("--raft-flow-path", type=str, default=None, help="Path to raft_flow.pt for frozen warp (council Layer 2)")
 @click.option("--flow-supervision-weight", type=float, default=0.0, help="MotionPredictor flow supervision weight")
 def main(
@@ -1832,7 +1833,7 @@ def main(
     flow_warmup_epochs, residual_ramp_epochs,
     gate_reg_weight, gate_reg_threshold, even_pairs_only,
     use_ego_flow, ego_flow_max_px, ego_flow_lr,
-    pose_supervision_weight, pose_targets_path, pose_embed_loss,
+    pose_supervision_weight, pose_targets_path, pose_embed_loss, p1_pose_sup_weight,
     raft_flow_path, flow_supervision_weight,
 ):
     """Train DP-SIMS renderer with Fridrich constrained optimization."""
@@ -1906,6 +1907,7 @@ def main(
         pose_supervision_weight=pose_supervision_weight,
         pose_targets_path=pose_targets_path,
         pose_embed_loss=pose_embed_loss,
+        p1_pose_sup_weight=p1_pose_sup_weight,
         raft_flow_path=raft_flow_path,
         flow_supervision_weight=flow_supervision_weight,
     )
