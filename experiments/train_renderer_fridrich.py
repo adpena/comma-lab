@@ -1318,15 +1318,16 @@ def train_fridrich_renderer(cfg: FridrichRendererConfig) -> dict[str, Any]:
             if cfg.flow_supervision_weight > 0 and raft_flow_all is not None and cfg.pair_mode == "asymmetric":
                 with torch.no_grad():
                     target_flow = raft_flow_all[pair_indices]  # (B, 2, H, W)
-                motion_out_for_sup = pair_gen.motion(mask_t, mask_t1)
-                predicted_flow = motion_out_for_sup[:, :2]  # (B, 2, H, W)
-                flow_sup_loss = F.mse_loss(predicted_flow, target_flow)
-                total_loss = total_loss + cfg.flow_supervision_weight * flow_sup_loss
+                # Use cached motion_out from forward pass (avoid double MotionPredictor fwd)
+                cached_motion = getattr(pair_gen, "_last_motion_out", None)
+                if cached_motion is not None:
+                    predicted_flow = cached_motion[:, :2]  # (B, 2, H, W)
+                    flow_sup_loss = F.mse_loss(predicted_flow, target_flow)
+                    total_loss = total_loss + cfg.flow_supervision_weight * flow_sup_loss
 
             # PoseNet supervision: direct scorer-space optimization (council Layer 1+3)
             if cfg.pose_supervision_weight > 0 and pose_targets is not None:
-                pair_indices = (batch_starts // 2).to(device)
-                target_pose = pose_targets[pair_indices]  # (B, 6)
+                target_pose = pose_targets[pair_indices]  # (B, 6) — pair_indices from outer scope
 
                 if cfg.pose_embed_loss:
                     # Layer 3: embedding-level loss (Quantizr's nightmare)
@@ -1337,9 +1338,9 @@ def train_fridrich_renderer(cfg: FridrichRendererConfig) -> dict[str, Any]:
                     pose_sup_loss = posenet_embedding_loss(gen_pair, gt_pair, posenet)
                 else:
                     # Layer 1: output-level MSE against stored targets
+                    # preprocess_input expects (B, T, C, H, W) — CHW format
                     gen_pair_btchw = torch.stack([gen_t, gen_t1], dim=1).contiguous()
-                    gen_pair_bhwc = gen_pair_btchw.permute(0, 1, 3, 4, 2).contiguous()
-                    pose_in = posenet.preprocess_input(gen_pair_bhwc)
+                    pose_in = posenet.preprocess_input(gen_pair_btchw)
                     pose_out = posenet(pose_in)  # (B, >=6)
                     pose_sup_loss = F.mse_loss(pose_out[:, :6], target_pose)
 

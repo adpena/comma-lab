@@ -68,7 +68,12 @@ class LearnableAffineFlow(nn.Module):
         deltas = self.affine_deltas[pair_indices]  # (B, 6)
 
         # Scale deltas through tanh to bound the flow magnitude
-        deltas = deltas.tanh() * (self.max_flow_px / max(H, W) * 2)
+        # Per-axis normalization (council sweep fix: max(H,W) underscales y by 25%)
+        scale_x = self.max_flow_px / W * 2
+        scale_y = self.max_flow_px / H * 2
+        deltas = deltas.tanh()
+        # Apply per-axis scale: channels 0,1,2 use x-scale, channels 3,4,5 use y-scale
+        deltas = torch.cat([deltas[:, :3] * scale_x, deltas[:, 3:] * scale_y], dim=1)
 
         # Build 2×3 affine matrix: [[1+d0, d1, d2], [d3, 1+d4, d5]]
         # The identity part means zero deltas = zero flow

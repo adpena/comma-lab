@@ -645,7 +645,8 @@ class PairGenerator(nn.Module):
             frame_t1_blended = frame_t1
         else:
             # Predict flow and warp frame_t → frame_t1_warped
-            flow = self.motion(mask_t, mask_t1)  # (B, 2, H, W)
+            motion_out = self.motion(mask_t, mask_t1)
+            flow = motion_out[:, :2]  # safe for 2-ch or 6-ch MotionPredictor
             frame_t1_warped = warp_with_flow(frame_t, flow)
 
             if self.blend_mode == "scalar":
@@ -891,10 +892,10 @@ class AsymmetricPairGenerator(nn.Module):
         warped_t1 = warp_with_flow(frame_t1, flow)
         frame_t = (warped_t1 + residual_scale * gate * residual).clamp(0.0, 255.0)
 
-        # Gate statistics for monitoring and regularization
-        # _last_gate_mean: scalar for logging; _last_gate_mean_tensor: live for gradient flow
+        # Cache for monitoring, regularization, and flow supervision
         self._last_gate_mean = gate.mean().item()
         self._last_gate_mean_tensor = gate.mean()  # retains grad for gate regularizer
+        self._last_motion_out = motion_out  # cached for flow supervision loss (avoid double fwd)
 
         # Pack to HWC: (B, 2, H, W, 3)
         pair = torch.stack([frame_t, frame_t1], dim=1)  # (B, 2, 3, H, W)

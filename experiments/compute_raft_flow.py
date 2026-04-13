@@ -124,14 +124,17 @@ def fit_affine_from_flow(flow: torch.Tensor) -> torch.Tensor:
 
 
 def flow_to_grid_sample_coords(flow_px: torch.Tensor, H: int, W: int) -> torch.Tensor:
-    """Convert pixel-coordinate flow to grid_sample normalized coordinates.
+    """Convert pixel-coordinate flow DELTAS to grid_sample normalized DELTAS.
+
+    These are displacement vectors, not absolute sampling coordinates.
+    warp_with_flow adds them to the identity grid: sample_grid = grid + flow_delta.
 
     Args:
-        flow_px: (N, 2, H, W) flow in pixel coordinates
+        flow_px: (N, 2, H, W) flow displacement in pixel coordinates
         H, W: spatial dimensions
 
     Returns:
-        (N, 2, H, W) flow in grid_sample [-1, 1] normalized coordinates
+        (N, 2, H, W) flow displacement in grid_sample [-1, 1] normalized space
     """
     flow_norm = flow_px.clone()
     flow_norm[:, 0] = flow_px[:, 0] / (W - 1) * 2  # x
@@ -168,8 +171,8 @@ def main():
     flow_norm = flow_to_grid_sample_coords(flow_px, args.target_h, args.target_w)
 
     output = {
-        "flow": flow_norm.half(),  # (N_pairs, 2, H, W) float16
-        "flow_px": flow_px.half(),  # (N_pairs, 2, H, W) float16 pixel coords
+        "flow": flow_norm.half(),  # (N_pairs, 2, H, W) float16 DELTAS in normalized coords
+        "flow_px": flow_px.half(),  # (N_pairs, 2, H, W) float16 DELTAS in pixel coords
         "affine": affine,          # (N_pairs, 6) float32
         "n_pairs": flow_norm.shape[0],
         "resolution": (args.target_h, args.target_w),
