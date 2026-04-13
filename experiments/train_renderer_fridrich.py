@@ -624,7 +624,8 @@ def _compute_flow_regularization(
     """
     from tac.renderer import warp_with_flow
 
-    flow = motion_predictor(mask_t, mask_t1)  # (B, 2, H, W)
+    motion_out = motion_predictor(mask_t, mask_t1)  # (B, 2+, H, W)
+    flow = motion_out[:, :2]  # first 2 channels are flow (asymmetric has 6: flow+gate+residual)
     warped = warp_with_flow(gen_frame_t, flow)
     flow_loss = (warped - gen_frame_t1).abs().mean()
     return flow_loss
