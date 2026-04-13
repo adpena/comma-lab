@@ -1187,7 +1187,15 @@ def train_fridrich_renderer(cfg: FridrichRendererConfig) -> dict[str, Any]:
     print()
 
     history: list[dict[str, Any]] = []
-    best_score = best_score_ckpt if cfg.resume else float("inf")
+    # Always start best_score at inf so THIS run tracks its own improvement
+    # independently of the resume checkpoint's prior score.
+    # The resume floor bug (inheriting old best_score) caused renderer_best.pt
+    # to never update when training resumed from a strong baseline — even if the
+    # model improved, it could never beat its own starting point.
+    best_score = float("inf")
+    if cfg.resume and best_score_ckpt < float("inf"):
+        print(f"  [resume] Prior best_score={best_score_ckpt:.4f} noted but NOT used as floor. "
+              f"renderer_best.pt tracks improvement within THIS run only.")
     best_epoch = -1
     constraints_satisfied_count = 0
 

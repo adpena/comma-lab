@@ -160,6 +160,153 @@ def _find_latest_checkpoint(vol_dir: str) -> str | None:
     return max(candidates, key=os.path.getmtime)
 
 
+def _resolve_eval_candidate(vol_dir: str, strategy: str) -> tuple[str, dict]:
+    """Resolve which checkpoint to eval based on a selection strategy.
+
+    Strategies:
+      best_proxy             — epoch with lowest full_eval_score in history.json;
+                               if no exact .pt exists, falls back to nearest
+                               _constraints_met checkpoint within ±300 epochs.
+      best_proxy_constraints_met — best full_eval_score in history.json restricted
+                               to epochs that have a _constraints_met checkpoint.
+      earliest_constraints_met — lowest epoch number among *_constraints_met.pt files.
+      latest_constraints_met   — highest epoch number among *_constraints_met.pt files.
+
+    Returns:
+      (checkpoint_basename, metadata_dict)
+        metadata_dict keys: selected_epoch, selection_method, proxy_score,
+                            has_constraints_met, resume_floor_warning
+    """
+    import glob
+    import json
+    import os
+    import re
+
+    # ── Collect all constraints_met checkpoints ────────────────────────────────
+    cm_files = glob.glob(os.path.join(vol_dir, "renderer_epoch*_constraints_met.pt"))
+    cm_epochs: dict[int, str] = {}
+    for f in cm_files:
+        m = re.search(r"renderer_epoch(\d+)_constraints_met\.pt$", f)
+        if m:
+            ep = int(m.group(1))
+            cm_epochs[ep] = os.path.basename(f)
+
+    # ── Collect all periodic epoch checkpoints ────────────────────────────────
+    periodic_files = glob.glob(os.path.join(vol_dir, "renderer_epoch*.pt"))
+    periodic_epochs: dict[int, str] = {}
+    for f in periodic_files:
+        m = re.search(r"renderer_epoch(\d+)\.pt$", f)  # strict: no suffix after epoch
+        if m:
+            ep = int(m.group(1))
+            periodic_epochs[ep] = os.path.basename(f)
+
+    # ── Load history.json ─────────────────────────────────────────────────────
+    history_path = os.path.join(vol_dir, "history.json")
+    history: list[dict] = []
+    resume_floor_warning = False
+    if os.path.exists(history_path):
+        with open(history_path) as hf:
+            history = json.load(hf)
+        # Detect resume floor: if best_score in early entries != inf, the run resumed
+        if history and history[0].get("best_score") not in (None, float("inf")):
+            resume_floor_warning = True
+
+    # Filter history entries that have proxy scores
+    scored = [
+        h for h in history
+        if h.get("full_eval_score") is not None
+    ]
+
+    def _find_pt_near_epoch(target_ep: int, window: int = 300) -> str | None:
+        """Find nearest checkpoint (.pt) within window epochs of target_ep."""
+        # Prefer exact periodic checkpoint, then nearest constraints_met
+        if target_ep in periodic_epochs:
+            return periodic_epochs[target_ep]
+        candidates_near = {ep: name for ep, name in {**periodic_epochs, **cm_epochs}.items()
+                           if abs(ep - target_ep) <= window}
+        if not candidates_near:
+            return None
+        return candidates_near[min(candidates_near, key=lambda ep: abs(ep - target_ep))]
+
+    # ── Strategy dispatch ─────────────────────────────────────────────────────
+    if strategy == "best_proxy":
+        if not scored:
+            raise ValueError(f"No full_eval_score entries in history.json at {history_path}")
+        best_entry = min(scored, key=lambda h: h["full_eval_score"])
+        target_ep = best_entry["epoch"]
+        ckpt_name = _find_pt_near_epoch(target_ep)
+        if not ckpt_name:
+            raise FileNotFoundError(
+                f"best_proxy: best epoch={target_ep} proxy={best_entry['full_eval_score']:.4f} "
+                f"but no checkpoint within 300 epochs found in {vol_dir}"
+            )
+        return ckpt_name, {
+            "selected_epoch": target_ep,
+            "selection_method": "best_proxy",
+            "proxy_score": best_entry["full_eval_score"],
+            "has_constraints_met": target_ep in cm_epochs,
+            "resume_floor_warning": resume_floor_warning,
+        }
+
+    elif strategy == "best_proxy_constraints_met":
+        # Best proxy score among epochs that have a constraints_met checkpoint
+        cm_scored = [h for h in scored if h["epoch"] in cm_epochs]
+        if not cm_scored:
+            # Fallback: any scored epoch near a constraints_met checkpoint
+            cm_scored = [h for h in scored if any(abs(h["epoch"] - ep) <= 300 for ep in cm_epochs)]
+        if not cm_scored:
+            raise ValueError(
+                f"No scored history entries near any _constraints_met checkpoint in {vol_dir}. "
+                f"Fall back to 'best_proxy'."
+            )
+        best_entry = min(cm_scored, key=lambda h: h["full_eval_score"])
+        target_ep = best_entry["epoch"]
+        # Prefer exact constraints_met checkpoint nearest to target_ep
+        if cm_epochs:
+            nearest_cm_ep = min(cm_epochs, key=lambda ep: abs(ep - target_ep))
+            ckpt_name = cm_epochs[nearest_cm_ep]
+        else:
+            ckpt_name = _find_pt_near_epoch(target_ep)
+        if not ckpt_name:
+            raise FileNotFoundError(f"best_proxy_constraints_met: no checkpoint found near ep={target_ep}")
+        return ckpt_name, {
+            "selected_epoch": target_ep,
+            "selection_method": "best_proxy_constraints_met",
+            "proxy_score": best_entry["full_eval_score"],
+            "has_constraints_met": True,
+            "resume_floor_warning": resume_floor_warning,
+        }
+
+    elif strategy == "earliest_constraints_met":
+        if not cm_epochs:
+            raise FileNotFoundError(f"No _constraints_met checkpoints found in {vol_dir}")
+        ep = min(cm_epochs)
+        return cm_epochs[ep], {
+            "selected_epoch": ep,
+            "selection_method": "earliest_constraints_met",
+            "proxy_score": None,
+            "has_constraints_met": True,
+            "resume_floor_warning": resume_floor_warning,
+        }
+
+    elif strategy == "latest_constraints_met":
+        if not cm_epochs:
+            raise FileNotFoundError(f"No _constraints_met checkpoints found in {vol_dir}")
+        ep = max(cm_epochs)
+        return cm_epochs[ep], {
+            "selected_epoch": ep,
+            "selection_method": "latest_constraints_met",
+            "proxy_score": None,
+            "has_constraints_met": True,
+            "resume_floor_warning": resume_floor_warning,
+        }
+
+    else:
+        raise ValueError(f"Unknown strategy: {strategy!r}. "
+                         f"Valid: best_proxy, best_proxy_constraints_met, "
+                         f"earliest_constraints_met, latest_constraints_met")
+
+
 def _setup_results_symlink(vol_dir: str) -> None:
     """Symlink the script's hardcoded RESULTS_DIR to the volume.
 
@@ -298,19 +445,29 @@ def train_asymmetric_warp(
     volumes={"/results": results_vol},
     memory=16384,
 )
-def auth_eval(tag: str, checkpoint: str = "renderer_best.pt"):
+def auth_eval(tag: str, checkpoint: str = "renderer_best.pt", strategy: str = "single"):
     """Run authoritative evaluation of a checkpoint on the upstream scorer.
 
     Full pipeline:
-        1. Load checkpoint from /results/<tag>/<checkpoint>
-        2. Load upstream SegNet for mask extraction
-        3. Decode GT video (upstream/videos/0.mkv via PyAV)
-        4. Extract masks via SegNet
-        5. Generate frames via renderer (asymmetric pair or independent)
-        6. Upscale to 1164x874, write .raw
-        7. Score via upstream DistortionNet (PoseNet + SegNet)
-        8. Compute rate from checkpoint file size
-        9. Final score: 100*seg + sqrt(10*pose) + 25*rate
+        1. Resolve checkpoint (single explicit name, or via strategy)
+        2. Load checkpoint from /results/<tag>/<checkpoint>
+        3. Load upstream SegNet for mask extraction
+        4. Decode GT video (upstream/videos/0.mkv via PyAV)
+        5. Extract masks via SegNet
+        6. Generate frames via renderer (asymmetric pair or independent)
+        7. Upscale to 1164x874, write .raw
+        8. Score via upstream DistortionNet (PoseNet + SegNet)
+        9. Compute rate from checkpoint file size
+       10. Final score: 100*seg + sqrt(10*pose) + 25*rate
+
+    Args:
+        tag:        experiment tag (volume subdirectory)
+        checkpoint: explicit checkpoint filename (used when strategy="single")
+        strategy:   checkpoint selection strategy when no explicit checkpoint is given.
+                    Options: single, best_proxy, best_proxy_constraints_met,
+                             earliest_constraints_met, latest_constraints_met.
+                    When strategy != "single", checkpoint is resolved automatically
+                    from history.json and available .pt files.
 
     Results are saved to /results/<tag>/auth_eval_<checkpoint>.json
     """
@@ -327,15 +484,37 @@ def auth_eval(tag: str, checkpoint: str = "renderer_best.pt"):
     t_start = time.monotonic()
 
     vol_dir = f"/results/{tag}"
+
+    # ── Checkpoint resolution ─────────────────────────────────────────────────
+    # strategy != "single": resolve checkpoint from history.json + .pt inventory.
+    # strategy == "single": use the explicit checkpoint name; fall back to latest
+    #   if the file doesn't exist (original behaviour, preserved for compat).
+    _strategy_meta: dict = {}
+    if strategy != "single":
+        resolved, _strategy_meta = _resolve_eval_candidate(vol_dir, strategy)
+        checkpoint = resolved
+        print(f"  [strategy={strategy}] resolved checkpoint: {checkpoint}")
+        if _strategy_meta.get("resume_floor_warning"):
+            print(f"  WARNING: resume_floor_active — best_score inherited from prior run. "
+                  f"Selection via '{strategy}' is independent of that artifact.")
+        if _strategy_meta.get("proxy_score") is not None:
+            print(f"  Proxy score at selection epoch: {_strategy_meta['proxy_score']:.4f}")
+
     ckpt_path = os.path.join(vol_dir, checkpoint)
 
     print(f"=== Auth Eval | tag: {tag} | checkpoint: {checkpoint} ===")
     print(f"  GPU: T4")
+    print(f"  Strategy: {strategy}")
     print(f"  Checkpoint: {ckpt_path}")
     print(f"  Start: {time.strftime('%Y-%m-%d %H:%M:%S')}")
 
     if not os.path.exists(ckpt_path):
-        # Try finding best checkpoint if the specified one doesn't exist
+        if strategy != "single":
+            raise FileNotFoundError(
+                f"Resolved checkpoint not found: {ckpt_path}\n"
+                f"Strategy '{strategy}' returned '{checkpoint}' but file is missing."
+            )
+        # single fallback: use latest available checkpoint (original behaviour)
         alt = _find_latest_checkpoint(vol_dir)
         if alt:
             print(f"  WARNING: {ckpt_path} not found, using {alt}")
@@ -705,6 +884,8 @@ def auth_eval(tag: str, checkpoint: str = "renderer_best.pt"):
         "device": device,
         "timestamp": time.strftime("%Y-%m-%dT%H:%M:%SZ"),
         "elapsed_seconds": t_total,
+        "selection_strategy": strategy,
+        "selection_meta": _strategy_meta if _strategy_meta else None,
     }
 
     result_filename = f"auth_eval_{checkpoint.replace('.pt', '').replace('.bin', '')}.json"
@@ -727,28 +908,61 @@ def auth_eval(tag: str, checkpoint: str = "renderer_best.pt"):
 @app.local_entrypoint()
 def auth_eval_entry(
     tag: str = "asymmetric_warp_t4",
-    checkpoint: str = "renderer_best.pt",
+    checkpoint: str = "",
+    strategy: str = "best_proxy_constraints_met",
 ):
     """Launch authoritative evaluation on Modal T4.
 
     Args:
-        tag: experiment tag (directory name on results volume)
-        checkpoint: checkpoint filename within /results/<tag>/
+        tag:        experiment tag (directory name on results volume)
+        checkpoint: explicit checkpoint filename within /results/<tag>/.
+                    If empty, strategy is used to resolve the best checkpoint.
+        strategy:   checkpoint selection when checkpoint is not specified (default).
+                    Options:
+                      best_proxy_constraints_met  (DEFAULT) — best proxy score among
+                          epochs with a _constraints_met checkpoint; immune to the
+                          resume floor artifact where renderer_best.pt is frozen.
+                      best_proxy                  — best proxy score overall (any .pt)
+                      earliest_constraints_met    — first epoch that passed both constraints
+                      latest_constraints_met      — last epoch that passed both constraints
+                      single                      — use explicit checkpoint name only
+
+    Usage:
+        # Recommended — immune to resume floor:
+        .venv/bin/modal run ...:app.auth_eval_entry --tag asym_v4_supervised
+
+        # Explicit checkpoint (legacy):
+        .venv/bin/modal run ...:app.auth_eval_entry --tag my_run --checkpoint renderer_best.pt --strategy single
     """
     from tac.cost_tracker import print_cost_estimate
 
+    # If an explicit checkpoint is given with no strategy override, use "single"
+    if checkpoint and strategy == "best_proxy_constraints_met":
+        strategy = "single"
+
     print(f"\n=== Auth Eval -> Modal T4 ===")
-    print(f"  Tag: {tag}")
-    print(f"  Checkpoint: {checkpoint}")
+    print(f"  Tag:      {tag}")
+    print(f"  Strategy: {strategy}")
+    if checkpoint:
+        print(f"  Checkpoint (explicit): {checkpoint}")
     print(f"  Volume: {RESULTS_VOL}")
 
     print("\n--- Cost Estimate ---")
     print_cost_estimate(gpu="t4", estimated_hours=0.5, platform="modal")
 
     print("\nLaunching auth eval ...")
-    result = auth_eval.remote(tag=tag, checkpoint=checkpoint)
+    result = auth_eval.remote(tag=tag, checkpoint=checkpoint or "renderer_best.pt", strategy=strategy)
 
+    meta = result.get("selection_meta") or {}
     print(f"\n=== Auth Eval Complete ===")
+    print(f"  Checkpoint evaluated: {result['checkpoint']}")
+    if meta.get("selection_method"):
+        print(f"  Selection method:     {meta['selection_method']}")
+    if meta.get("proxy_score") is not None:
+        print(f"  Proxy score:          {meta['proxy_score']:.4f}")
+    if meta.get("resume_floor_warning"):
+        print(f"  NOTE: resume_floor_active — renderer_best.pt was frozen at prior run's best. "
+              f"This eval used strategy '{strategy}' which is immune to that artifact.")
     print(f"  Final Score: {result['final_score']:.4f}")
     print(f"    SegNet:  {result['score_seg']:.4f}")
     print(f"    PoseNet: {result['score_pose']:.4f}")
@@ -814,34 +1028,62 @@ def main(
     print(f"  Artifacts ({len(artifacts)}): {', '.join(artifacts[:10])}")
 
     # ── Auto auth-eval (council binding decision) ─────────────────────────────
-    # Evaluates up to 3 checkpoints unconditionally after a successful run:
-    #   1. renderer_best.pt     — best full-eval checkpoint (may be stale if resume
-    #                             floor prevented update — we eval it anyway)
-    #   2. renderer_best_ema.pt — EMA shadow best (independent of resume floor)
-    #   3. Latest renderer_epoch*.pt — always from THIS run, regardless of best tracking
-    #      This ensures no completed run is written off due to missed best checkpoint.
+    # Evaluates up to 4 checkpoints unconditionally after a successful run.
+    # Selection protocol (ordered, deduped):
+    #   1. best_proxy_constraints_met — best proxy score among epochs that satisfy
+    #      both Lagrangian constraints. Immune to the resume floor artifact where
+    #      renderer_best.pt is frozen at a prior run's score. This is the PRIMARY
+    #      eval candidate for comparison with raft_only and other runs.
+    #   2. renderer_best.pt     — if it exists (may be stale/frozen on resume runs)
+    #   3. renderer_best_ema.pt — EMA shadow best (independent of resume floor)
+    #   4. Latest renderer_epoch*.pt — final periodic snapshot (always included so
+    #      no run is silently dropped; explicitly labeled as a periodic checkpoint).
     # Each eval is non-destructive: failures are logged but never mask training result.
     epoch_ckpts = sorted(
         f for f in artifacts
         if f.startswith("renderer_epoch") and f.endswith(".pt")
+        and not f.endswith("_constraints_met.pt")
+        and not f.endswith("_timeout.pt")
     )
-    checkpoints_to_eval = []
+    # Use a list to preserve order; use a set to dedup without losing order
+    checkpoints_to_eval: list[tuple[str, str]] = []  # (checkpoint_name, strategy)
+    seen: set[str] = set()
+
+    def _add_candidate(name: str, strat: str) -> None:
+        if name not in seen:
+            checkpoints_to_eval.append((name, strat))
+            seen.add(name)
+
+    # Primary candidate: best proxy among constraints_met (resume-floor immune)
+    _add_candidate("__strategy__", "best_proxy_constraints_met")
+
+    # Named best checkpoints (may be frozen on resume runs — eval anyway for transparency)
     for name in ("renderer_best.pt", "renderer_best_ema.pt"):
         if name in artifacts:
-            checkpoints_to_eval.append(name)
+            _add_candidate(name, "single")
+
+    # Latest periodic epoch — unconditional safety net
     if epoch_ckpts:
-        checkpoints_to_eval.append(epoch_ckpts[-1])  # latest epoch — unconditional
+        _add_candidate(epoch_ckpts[-1], "single")
 
     if checkpoints_to_eval:
-        print(f"\n--- Auto auth-eval ({len(checkpoints_to_eval)} checkpoints) ---")
-        for ckpt_name in checkpoints_to_eval:
-            print(f"  Evaluating {ckpt_name}...")
+        print(f"\n--- Auto auth-eval ({len(checkpoints_to_eval)} candidates) ---")
+        for ckpt_name, strat in checkpoints_to_eval:
+            label = strat if ckpt_name == "__strategy__" else ckpt_name
+            print(f"  Evaluating [{strat}] {label}...")
             try:
-                eval_result = auth_eval.remote(tag=tag, checkpoint=ckpt_name)
-                score = eval_result.get("score", "?")
-                print(f"  {ckpt_name}: score={score}")
+                if ckpt_name == "__strategy__":
+                    eval_result = auth_eval.remote(tag=tag, checkpoint="", strategy=strat)
+                else:
+                    eval_result = auth_eval.remote(tag=tag, checkpoint=ckpt_name, strategy="single")
+                resolved = eval_result.get("checkpoint", label)
+                score = eval_result.get("final_score", "?")
+                meta = eval_result.get("selection_meta") or {}
+                proxy = meta.get("proxy_score")
+                proxy_str = f" (proxy={proxy:.4f})" if proxy else ""
+                print(f"  -> {resolved}{proxy_str}: auth={score}")
             except Exception as exc:
-                print(f"  {ckpt_name}: EVAL FAILED (non-fatal) — {exc}")
+                print(f"  [{strat}] {label}: EVAL FAILED (non-fatal) — {exc}")
     # ─────────────────────────────────────────────────────────────────────────
 
     print(f"\nResults: .venv/bin/modal volume ls {RESULTS_VOL}")
