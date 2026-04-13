@@ -244,18 +244,21 @@ def compute_proxy_score(
 ) -> dict:
     """Approximate proxy score: 100*seg_dist + sqrt(10*pose_dist) + 25*rate.
 
-    Both *generated_frames* and *gt_frames* must be at the SAME spatial resolution
-    (camera resolution: CAMERA_H × CAMERA_W = 874 × 1164).  PoseNet.preprocess_input
-    performs channel operations (RGB → YUV6) at H/2 × W/2 — if the two tensors have
-    different spatial sizes the YUV6 shapes will mismatch and distortion is wrong.
+    Both *generated_frames* and *gt_frames* must be at the SAME spatial resolution.
+    PoseNet.preprocess_input performs channel operations (RGB → YUV6) at H/2 × W/2 —
+    if the two tensors have different spatial sizes the YUV6 shapes will mismatch and
+    distortion will be wrong.
+
+    Input tensors may be on CPU; per-batch .to(device) is applied inside the function.
+    This avoids pre-allocating full camera-res tensors on GPU (14.65 GB each → OOM on T4).
 
     Accepts pre-loaded models to avoid redundant weight loading.
     SegNet and PoseNet distortions are computed with proper weighted averaging
     (matches upstream evaluate.py accumulation pattern).
 
     Args:
-        generated_frames:    (N, CAMERA_H, CAMERA_W, 3) float tensor — camera resolution
-        gt_frames:           (N, CAMERA_H, CAMERA_W, 3) float tensor — camera resolution
+        generated_frames:    (N, H, W, 3) float tensor — same H×W as gt_frames; may be CPU
+        gt_frames:           (N, H, W, 3) float tensor — same H×W as generated_frames; may be CPU
         segnet:              loaded SegNet model on device
         posenet:             loaded PoseNet model on device
         device:              target device string
@@ -273,8 +276,9 @@ def compute_proxy_score(
     import torch
 
     N = generated_frames.shape[0]
-    gen = generated_frames.to(device)
-    gt = gt_frames.to(device)
+    # Do NOT pre-load all frames on GPU — at camera resolution each tensor is
+    # N×874×1164×3 float32 = 14.65 GB; two pre-loads = 29.3 GB → OOM on T4 (16 GB).
+    # Load one batch at a time via per-slice .to(device) inside each loop.
 
     # ── SegNet distortion ─────────────────────────────────────────────────────
     # Weighted accumulation (matches evaluate.py: sum then divide by total count).
@@ -283,8 +287,8 @@ def compute_proxy_score(
     with torch.no_grad():
         for start in range(0, N, 16):
             end = min(start + 16, N)
-            gen_b = gen[start:end].permute(0, 3, 1, 2).unsqueeze(1)  # (B, 1, C, H, W)
-            gt_b = gt[start:end].permute(0, 3, 1, 2).unsqueeze(1)
+            gen_b = generated_frames[start:end].to(device).permute(0, 3, 1, 2).unsqueeze(1)  # (B, 1, C, H, W)
+            gt_b = gt_frames[start:end].to(device).permute(0, 3, 1, 2).unsqueeze(1)
             gen_mask = segnet(segnet.preprocess_input(gen_b)).argmax(dim=1)
             gt_mask = segnet(segnet.preprocess_input(gt_b)).argmax(dim=1)
             seg_total += (gen_mask != gt_mask).float().sum().item()
@@ -298,10 +302,10 @@ def compute_proxy_score(
     with torch.no_grad():
         for start in range(0, num_pairs, 16):
             end = min(start + 16, num_pairs)
-            gen_f1 = gen[2 * start:2 * end:2]
-            gen_f2 = gen[2 * start + 1:2 * end + 1:2]
-            gt_f1 = gt[2 * start:2 * end:2]
-            gt_f2 = gt[2 * start + 1:2 * end + 1:2]
+            gen_f1 = generated_frames[2 * start:2 * end:2].to(device)
+            gen_f2 = generated_frames[2 * start + 1:2 * end + 1:2].to(device)
+            gt_f1 = gt_frames[2 * start:2 * end:2].to(device)
+            gt_f2 = gt_frames[2 * start + 1:2 * end + 1:2].to(device)
 
             gen_pairs = torch.stack([gen_f1, gen_f2], dim=1).permute(0, 1, 4, 2, 3).contiguous()
             gt_pairs = torch.stack([gt_f1, gt_f2], dim=1).permute(0, 1, 4, 2, 3).contiguous()
@@ -431,14 +435,20 @@ def main(
 
     # Kill check: pre-registered hypothesis says kill if proxy > KILL_THRESHOLD
     # after KILL_STEP steps (experiment protocol per CLAUDE.md).
+    # Memory-safe: use SegNet resolution (384×512, ~884 MB) for both gen and gt.
+    # Camera-res upsample on GPU = 14.65 GB → OOM on T4 (16 GB VRAM).
+    # Downsample gt from camera res to SegNet res on CPU — only 884 MB output.
     import torch.nn.functional as _F
-    gen_bchw_kill = generated.permute(0, 3, 1, 2).float()
-    gen_cam_kill = _F.interpolate(gen_bchw_kill, size=(CAMERA_H, CAMERA_W), mode="bilinear", align_corners=False)
-    gen_cam_hwc_kill = gen_cam_kill.clamp(0.0, 255.0).permute(0, 2, 3, 1)
+    with torch.no_grad():
+        gt_small = _F.interpolate(
+            gt_frames.permute(0, 3, 1, 2).contiguous(),  # (N, 3, CAMERA_H, CAMERA_W) CPU
+            size=(SEGNET_H, SEGNET_W), mode="bilinear", align_corners=False,
+        ).permute(0, 2, 3, 1).contiguous()  # (N, SEGNET_H, SEGNET_W, 3) float CPU ~884 MB
     kill_scores = compute_proxy_score(
-        gen_cam_hwc_kill, gt_frames, segnet, posenet, device,
+        generated.cpu(), gt_small, segnet, posenet, device,
         archive_size_bytes=0,  # seed not written yet
     )
+    del gt_small  # free ~884 MB CPU before phase 2
     print(f"\n  === KILL CHECK (step {KILL_STEP}) ===")
     print(f"  proxy: {kill_scores['score']:.4f}  (kill if > {KILL_THRESHOLD})")
     if kill_scores["score"] > KILL_THRESHOLD:
@@ -479,13 +489,15 @@ def main(
     import torch.nn.functional as F  # noqa: PLC0415 — deferred to avoid top-level torch dep
     import numpy as np
 
-    generated_bchw = generated.permute(0, 3, 1, 2).float()  # (N, 3, 384, 512)
-    generated_camera = F.interpolate(
-        generated_bchw, size=(CAMERA_H, CAMERA_W), mode="bilinear", align_corners=False
-    )  # (N, 3, 874, 1164)
+    # Move to CPU before upsampling — camera-res GPU tensor = 14.65 GB → OOM on T4.
+    # CPU has ~26 GB RAM on Kaggle; 14.65 GB CPU-side allocation is safe.
+    generated_bchw_cpu = generated.cpu().permute(0, 3, 1, 2).float()  # (N, 3, 384, 512) CPU
+    generated_camera_cpu = F.interpolate(
+        generated_bchw_cpu, size=(CAMERA_H, CAMERA_W), mode="bilinear", align_corners=False
+    )  # (N, 3, 874, 1164) CPU
     # Clamp after bilinear interpolation — float rounding can push values
     # infinitesimally outside [0, 255], causing silent uint8 wrap on astype().
-    generated_camera_hwc = generated_camera.clamp(0.0, 255.0).permute(0, 2, 3, 1)  # (N, 874, 1164, 3)
+    generated_camera_hwc = generated_camera_cpu.clamp(0.0, 255.0).permute(0, 2, 3, 1)  # (N, 874, 1164, 3) CPU
 
     # Write inflated/0.raw — path expected by TensorVideoDataset + upstream evaluate.py
     # Filename stem comes from the video_rel: "decode_base_archive/0.mkv" → "0"
