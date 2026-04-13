@@ -921,8 +921,12 @@ class HintedPairGenerator(nn.Module):
         alpha = torch.sigmoid(self.blend_logit)
         # Flow warmup: residual_scale controls how much the direct renderer contributes.
         # During warmup (residual_scale=0), frame_t1 = pure warp, forcing flow to develop.
-        effective_direct = (1.0 - alpha) * residual_scale
-        frame_t1_blended = (alpha * frame_t1_warped + effective_direct * frame_t1).clamp(0.0, 255.0)
+        # Renormalize: redirect the direct renderer's weight to warp to preserve energy.
+        # At residual_scale=0: w_warp=1, w_direct=0 (pure warp regardless of alpha)
+        # At residual_scale=1: w_warp=alpha, w_direct=(1-alpha) (normal blend)
+        w_direct = (1.0 - alpha) * residual_scale
+        w_warp = 1.0 - w_direct  # complement ensures weights sum to 1
+        frame_t1_blended = (w_warp * frame_t1_warped + w_direct * frame_t1).clamp(0.0, 255.0)
 
         f_t_hwc = frame_t.permute(0, 2, 3, 1)
         f_t1_hwc = frame_t1_blended.permute(0, 2, 3, 1)

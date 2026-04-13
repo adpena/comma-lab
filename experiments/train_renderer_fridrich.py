@@ -969,6 +969,19 @@ def train_fridrich_renderer(cfg: FridrichRendererConfig) -> dict[str, Any]:
         rho = ckpt.get("rho", rho)
         start_epoch = ckpt.get("epoch", 0) + 1
         best_score_ckpt = ckpt.get("best_score", float("inf"))
+        # Clamp restored Lagrangian state to new (potentially tighter) caps.
+        # Critical for resume after explosion: ep4000 checkpoint had rho=10K,
+        # λ_s=42K, λ_p=185K which caused divergence. New caps prevent reloading
+        # the explosive state.
+        rho_before, ls_before, lp_before = rho, lambda_seg, lambda_pose
+        rho = min(rho, cfg.rho_max)
+        lambda_seg = min(lambda_seg, cfg.lambda_cap)
+        lambda_pose = min(lambda_pose, cfg.lambda_cap)
+        if rho != rho_before or lambda_seg != ls_before or lambda_pose != lp_before:
+            print(f"  [CLAMP] Lagrangian state clamped to new caps: "
+                  f"rho {rho_before:.0f}→{rho:.0f}, "
+                  f"λ_s {ls_before:.0f}→{lambda_seg:.0f}, "
+                  f"λ_p {lp_before:.0f}→{lambda_pose:.0f}")
         print(f"  Resumed at epoch {start_epoch}, lambda_seg={lambda_seg:.1f}, "
               f"lambda_pose={lambda_pose:.1f}, rho={rho:.1f}, "
               f"self_compress={'ON' if self_compress_active else 'OFF'}")
