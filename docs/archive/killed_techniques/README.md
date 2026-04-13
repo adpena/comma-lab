@@ -48,12 +48,15 @@ and where the technique might work in other contexts.
 
 ### 6. Scorer Resolution Exploit (Eureka 3)
 - **What:** Store frames at 384x512 (scorer resolution) and upscale at inflate time for 5.2x rate reduction
-- **Evidence:** Bilinear round-trip 384→874→384 is NOT identity. Mean pixel error 18.8 (7.4%), 96.6% of pixels differ. Scorer impact up to 1.0+ points.
-- **Why it failed:** Non-integer scale factors (874/384=2.276) cause grid misalignment. The composition of bilinear up + bilinear down is a low-pass filter, not identity.
-- **Where it might work:** If scale factors are exact integers (e.g., 2x up, 2x down), the round-trip IS much closer to identity. Also works if the scorer uses nearest-neighbor instead of bilinear. For any non-integer scale with bilinear, this is lossy.
-- **Nuance:** Our renderer already generates at 384x512 and upscales. The ERROR exists but is trained into the model — the model learns to compensate. The exploit was about removing the upscale entirely, which doesn't work.
+- **Initial evidence:** Bilinear round-trip 384→874→384 is NOT identity on random data. Mean pixel error 18.8 (7.4%).
+- **Council re-analysis:** The initial test was on RANDOM data (worst case). Real video is spatially smooth → 0.035% error. The round-trip D(U(x)) is a PROJECTION OPERATOR — applying it twice is idempotent. Training already goes through scorer preprocessing, making the renderer implicitly round-trip-aware.
+- **Three remaining paths:**
+  1. Test on real video with actual models (not just math-only mode)
+  2. Verify training loss goes through scorer preprocessing (it does)
+  3. Apply projection fixup at inflate: render→upscale→downscale→upscale→write (free, idempotent)
+- **Quantizr's approach:** Uses Lanczos + learned REN post-filter, NOT raw bilinear. His REN compensates for upscale artifacts scorer-specifically.
 - **Verification script:** `experiments/verify_scorer_resolution.py`
-- **Status:** KILLED — but the round-trip error analysis is valuable for understanding scorer behavior
+- **Status:** DEPRIORITIZED (lane kept open) — initial "KILLED" verdict overturned by council. Needs real-video testing before closing.
 
 ### 7. SIREN (Sinusoidal Representation Networks) for Video Memorization
 - **What:** Overfit a per-pixel MLP to memorize the video. Weights ARE the compressed representation.
