@@ -1068,6 +1068,12 @@ def train_fridrich_renderer(cfg: FridrichRendererConfig) -> dict[str, Any]:
         print(f"  Resumed at epoch {start_epoch}, lambda_seg={lambda_seg:.1f}, "
               f"lambda_pose={lambda_pose:.1f}, rho={rho:.1f}, "
               f"self_compress={'ON' if self_compress_active else 'OFF'}")
+        # Warn if supervision is enabled but resume skips Phase 1
+        resume_progress = start_epoch / max(cfg.epochs - 1, 1)
+        if cfg.pose_supervision_weight > 0 and resume_progress >= cfg.phase1_end:
+            print(f"  WARNING: PoseNet supervision is Phase 1 only (R3) but resume "
+                  f"starts at progress={resume_progress:.2f} (Phase {'2' if resume_progress < cfg.phase2_end else '3'}). "
+                  f"Supervision will be INACTIVE for this run.")
         _resumed_ema_state = ckpt.get("ema_state_dict", None)
         _resumed_best_ema_score = ckpt.get("best_ema_score", float("inf"))
         del ckpt
