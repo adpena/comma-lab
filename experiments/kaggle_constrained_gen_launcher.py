@@ -5,15 +5,74 @@ Pre-registered hypothesis: Constrained optimization from noise scores < 0.80 pro
 Kill: proxy > 1.50 after 500 steps.
 
 Bootstrap sequence:
-  1. Find + install tac wheel from dataset mount (stdlib only)
-  2. Delegate to tac.deploy.kaggle.runner_constrained.main()
+  1. Find tac wheel from dataset mount (stdlib only — tac not yet importable)
+  2. Install wheel via uv (preferred) or pip fallback
+  3. Delegate to tac.deploy.kaggle.runner_constrained.main()
 """
 from __future__ import annotations
 
+import os
+import shutil
 import subprocess
 import sys
 from pathlib import Path
 
+
+# ---------------------------------------------------------------------------
+# Self-contained uv/pip bootstrap (runs before tac is importable)
+# ---------------------------------------------------------------------------
+
+def _try_ensure_uv() -> str | None:
+    """Locate uv binary or bootstrap it. Returns path or None (never raises)."""
+    existing = shutil.which("uv")
+    if existing:
+        return existing
+
+    candidates = [
+        Path.home() / ".local" / "bin" / "uv",
+        Path.home() / ".cargo" / "bin" / "uv",
+        Path("/usr/local/bin/uv"),
+        Path("/opt/conda/bin/uv"),
+    ]
+    for c in candidates:
+        if c.exists():
+            return str(c)
+
+    if os.environ.get("CLOUD_SKIP_UV_INSTALL", "").lower() in ("1", "true", "yes"):
+        return None
+
+    print("  [launcher] uv not found — bootstrapping ...")
+    result = subprocess.run(
+        ["sh", "-c", "curl -LsSf https://astral.sh/uv/install.sh | sh"],
+        capture_output=True,
+        text=True,
+    )
+    if result.returncode != 0:
+        print("  [launcher] uv bootstrap failed — falling back to pip")
+        return None
+
+    for c in candidates:
+        if c.exists():
+            return str(c)
+    return shutil.which("uv")
+
+
+def _install_wheel(wheel: Path) -> None:
+    """Install wheel via uv (preferred) or pip fallback."""
+    uv = _try_ensure_uv()
+    if uv is not None:
+        subprocess.check_call(
+            [uv, "pip", "install", "--system", "-q", "--no-deps", str(wheel)]
+        )
+    else:
+        subprocess.check_call(
+            [sys.executable, "-m", "pip", "install", "-q", "--no-deps", str(wheel)]
+        )
+
+
+# ---------------------------------------------------------------------------
+# tac wheel discovery + install
+# ---------------------------------------------------------------------------
 
 def _find_wheel(input_root: Path) -> Path:
     """Locate the tac wheel using stdlib only (tac not yet importable)."""
@@ -37,9 +96,7 @@ def _bootstrap_tac(input_root: Path) -> None:
     except (ImportError, ModuleNotFoundError):
         pass
     wheel = _find_wheel(input_root)
-    subprocess.check_call(
-        [sys.executable, "-m", "pip", "install", "-q", "--no-deps", str(wheel)]
-    )
+    _install_wheel(wheel)
     try:
         from tac.constrained_gen import constrained_generate  # noqa: F401
     except (ImportError, ModuleNotFoundError) as exc:
@@ -51,7 +108,6 @@ def _bootstrap_tac(input_root: Path) -> None:
 
 
 if __name__ == "__main__":
-    import os
     os.environ.setdefault("PYTHONUNBUFFERED", "1")
     _input_root = Path("/kaggle/input")
     _bootstrap_tac(_input_root)
