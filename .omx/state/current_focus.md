@@ -21,11 +21,12 @@
    - auth ep19999: 1.7900 (seg=0.5664, pose=1.1188) — REGRESSION vs baseline
    - Volume: tac-asymmetric-results /asym_v4_supervised/
 
-2. **asym_v4_raft_only** (RUNNING, Kaggle T4, kernel comma-lab-asym-warp-raft-only)
+2. **asym_v4_raft_only** (RUNNING, Kaggle T4, kernel v4, comma-lab-asym-warp-raft-only)
    - Path B: RAFT flow only (isolates Layer 2 contribution)
-   - Resumed from ep12400 (renderer_best_v3.pt — in Kaggle dataset v3)
+   - Resumed from ep12400 (renderer_best_v3.pt — in Kaggle dataset v4)
    - Volume: /kaggle/working/ checkpoints every 500 epochs + timeout save at 8.5h
-   - Dataset: adpena/comma-lab-private-assets v3
+   - Dataset: adpena/comma-lab-private-assets v4 (tac-1.0.1 + raft_flow.pt + posenet_targets.bin + renderer_best_v3.pt)
+   - Preamble: bootstrap injects sys.argv via runner.build_kaggle_command() before Click runs
 
 ### KILLED
 - asym_v3_longer_tight: PERMANENTLY KILLED (base variant, served as seed for v4 runs)
@@ -42,8 +43,9 @@
   - runner.py: RESUME_FROM support, LFS retry, double-script bug fixed, post-install verify
   - build_kaggle_kernels.py: launch_policy stripped, RESUME_FROM preamble injected
   - 34 tests, all passing
-- Dataset v3 uploaded: tac-1.0.0 wheel + raft_flow.pt + posenet_targets.bin + renderer_best_v3.pt
-- Kaggle kernel v1 pushed with RESUME_FROM=/kaggle/input/comma-lab-private-assets/renderer_best_v3.pt
+- Dataset v4 uploaded (2026-04-13): tac-1.0.1 wheel + raft_flow.pt + posenet_targets.bin + renderer_best_v3.pt
+- Kaggle kernel v4 pushed (2026-04-13) with code_file=train_renderer_fridrich.py + full bootstrap preamble
+- constrained_gen_smoke kernel v3 pushed (2026-04-13) with video path fix in tac-1.0.1
 
 ## Paranoia Audit (2026-04-13)
 - Fridrich ✓: renderer_best_v3.pt confirmed ep12400, eval_every=200 in config

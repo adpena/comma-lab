@@ -1,5 +1,12 @@
 # run log
 
+## 2026-04-13T22:30:00Z — Kaggle kernel v4 + dataset v4 deployed
+
+- asym_warp_raft_only: kernel v4 running, dataset v4 (tac-1.0.1 + raft_flow.pt + posenet_targets.bin + renderer_best_v3.pt)
+- constrained_gen_smoke: kernel v3 running, video path fix in tac-1.0.1
+- code_file pattern: train_renderer_fridrich.py IS the code_file — bootstrap preamble injects sys.argv before Click
+- pyproject.toml bumped to v1.0.1 (commit 5c994bd1)
+
 ## 2026-04-13T21:25:00Z — asym_v4_supervised ep19999 AUTH EVAL
 
 - **auth=1.7900** (REGRESSION from baseline ~1.0 at ep12400)
