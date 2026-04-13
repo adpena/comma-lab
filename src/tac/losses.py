@@ -29,8 +29,8 @@ def bhattacharyya_distance(p: torch.Tensor, q: torch.Tensor, dim: int = 1) -> to
     Returns:
         Scalar mean Bhattacharyya distance over all spatial positions and batch.
     """
-    bc = (torch.sqrt(p * q + 1e-8)).sum(dim=dim)  # Bhattacharyya coefficient per pixel
-    return -torch.log(bc.mean() + 1e-8)
+    bc = torch.sqrt(p * q).sum(dim=dim).clamp(min=1e-8)  # BC per pixel, guard log(0)
+    return -torch.log(bc.mean().clamp(min=1e-8))
 
 
 def scorer_forward_pair(pair_btchw, posenet, segnet):

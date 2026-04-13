@@ -96,7 +96,7 @@ upscale_filter() {
 }
 
 calc_even_dim() {
-  python3 - "$@" <<'PY'
+  ${PYTHON:-python3} - "$@" <<'PY'
 import sys
 value = int(float(sys.argv[1]) * float(sys.argv[2]))
 if value < 2:
@@ -108,7 +108,7 @@ PY
 }
 
 calc_even_origin() {
-  python3 - "$@" <<'PY'
+  ${PYTHON:-python3} - "$@" <<'PY'
 import sys
 scale = int(sys.argv[1])
 frac = float(sys.argv[2])

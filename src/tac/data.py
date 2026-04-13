@@ -81,7 +81,11 @@ def decode_archive(archive_path: str | Path) -> list[torch.Tensor]:
 
 
 def build_pairs(frames: list[torch.Tensor]) -> list[torch.Tensor]:
-    """Build consecutive frame pairs as (1, 2, H, W, 3) uint8 tensors."""
+    """Build non-overlapping frame pairs as (1, 2, H, W, 3) uint8 tensors.
+
+    Uses stride SEQ_LEN=2: produces (0,1), (2,3), (4,5)... matching the
+    scorer's non-overlapping pair evaluation. 600 pairs from 1200 frames.
+    """
     pairs = []
     for i in range(0, len(frames) - 1, SEQ_LEN):
         if i + SEQ_LEN > len(frames):

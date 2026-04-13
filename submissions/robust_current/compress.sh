@@ -34,7 +34,7 @@ fi
 VIDEO_CODEC="${VIDEO_CODEC:-libx265}"
 SVT_AV1_PRESET="${SVT_AV1_PRESET:-0}"
 SVT_AV1_CRF="${SVT_AV1_CRF:-33}"
-SVT_AV1_PARAMS="${SVT_AV1_PARAMS:-film-grain=22:keyint=180}"
+SVT_AV1_PARAMS="${SVT_AV1_PARAMS:-film-grain=22:keyint=-1:sharpness=1}"
 X265_PRESET="${X265_PRESET:-medium}"
 X265_CRF="${X265_CRF:-28}"
 X265_GOP="${X265_GOP:-180}"
@@ -91,12 +91,9 @@ SKY_DEGRADE_FEATHER="${SKY_DEGRADE_FEATHER:-8}"
 SCALE_W="${SCALE_W:-}"
 SCALE_H="${SCALE_H:-}"
 DOWNSCALE_FLAGS="${DOWNSCALE_FLAGS:-}"
-# ── Technique 8: Even-frame higher QP encoding ──────────────────────
-# DISABLED (council sweep round 5): even-frame QP boost re-encodes both
-# streams at standard CRF in the interleave step, negating the quality
-# differential. Do NOT enable without fixing the double-encode pipeline.
-# Set to 0 (default) to use standard single-pass encoding.
-EVEN_FRAME_QP_BOOST="${EVEN_FRAME_QP_BOOST:-0}"
+# Even-frame QP boost REMOVED (council sweep round 7): the interleave step
+# re-encoded both streams at standard CRF, negating the quality differential.
+# Technique was fundamentally broken. Code moved to experiments/archive/.
 TMP_ROOT="${TMPDIR:-/tmp}"
 if [ ! -d "$TMP_ROOT" ]; then
   TMP_ROOT="/tmp"
@@ -213,7 +210,7 @@ codec_encode_args() {
 # encode separately at different QPs, then interleave.
 #
 # Usage: set EVEN_FRAME_QP_BOOST=6 in config.env
-encode_video_even_odd_qp() {
+_dead_encode_video_even_odd_qp() { echo "REMOVED: council sweep round 7 — double-encode bug" >&2; exit 1; }
   local in_path="$1"
   local out_path="$2"
   local vf_chain="$3"
@@ -361,7 +358,7 @@ while IFS= read -r rel; do
       --outside-blend "$ROI_PREPROCESS_BLEND" \
       $([ "$ROI_PREPROCESS_ADAPTIVE" = "1" ] && echo "--adaptive-mask") \
       $([ "$ROI_PREPROCESS_CHROMA_ONLY" = "1" ] && echo "--chroma-only") \
-      $([ -n "$ROI_PREPROCESS_MASK_FILE" ] && echo "--mask-file \"$ROI_PREPROCESS_MASK_FILE\"")
+      $([ -n "$ROI_PREPROCESS_MASK_FILE" ] && echo "--mask-file $ROI_PREPROCESS_MASK_FILE")
     in_path="$preprocessed_path"
   fi
 
@@ -579,7 +576,7 @@ fi
 
 (
   cd "$ARCHIVE_DIR"
-  zip -9 -r "$ARCHIVE_ZIP_TMP" .
+  zip -0 -r "$ARCHIVE_ZIP_TMP" .
 )
 
 mv "$ARCHIVE_ZIP_TMP" "$ARCHIVE_ZIP"

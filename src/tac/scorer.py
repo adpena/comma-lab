@@ -114,10 +114,14 @@ def load_scorers(
     from modules import PoseNet, SegNet
     from safetensors.torch import load_file
 
-    posenet = PoseNet().eval().to(device)
-    segnet = SegNet().eval().to(device)
-    posenet.load_state_dict(load_file(str(posenet_path), device=str(device)))
-    segnet.load_state_dict(load_file(str(segnet_path), device=str(device)))
+    # Load on CPU first, then move — avoids 2x peak VRAM from constructor
+    # allocating zero tensors on device then immediately replacing with loaded weights
+    posenet = PoseNet().eval()
+    segnet = SegNet().eval()
+    posenet.load_state_dict(load_file(str(posenet_path), device="cpu"))
+    segnet.load_state_dict(load_file(str(segnet_path), device="cpu"))
+    posenet = posenet.to(device)
+    segnet = segnet.to(device)
 
     for p in posenet.parameters():
         p.requires_grad = False
