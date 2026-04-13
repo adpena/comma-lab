@@ -55,12 +55,13 @@ def _asym_warp_variant_preamble(variant: str, resume_from: str | None = None) ->
         resume_from: if set, path to a .pt checkpoint inside the Kaggle dataset
                      mount, e.g. /kaggle/input/comma-lab-private-assets/renderer_best_v3.pt
     """
+    # Use __import__('os') to avoid duplicate 'import os' when prepended to a
+    # launcher file that already imports os at module level.
     parts = [
-        'import os',
-        f'os.environ.setdefault("ASYM_VARIANT", "{variant}")',
+        f'__import__("os").environ.setdefault("ASYM_VARIANT", "{variant}")',
     ]
     if resume_from:
-        parts.append(f'os.environ.setdefault("RESUME_FROM", "{resume_from}")')
+        parts.append(f'__import__("os").environ.setdefault("RESUME_FROM", "{resume_from}")')
     return "; ".join(parts)
 
 
