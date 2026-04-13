@@ -113,12 +113,11 @@ def _decode_frames(video_path: Path) -> "torch.Tensor":
     import torch
     from frame_utils import yuv420_to_rgb  # matches NVDEC output
 
-    container = av.open(str(video_path))
-    stream = container.streams.video[0]
-    frames_list: list["torch.Tensor"] = []
-    for frame in container.decode(stream):
-        frames_list.append(yuv420_to_rgb(frame))  # (H, W, 3) uint8
-    container.close()
+    with av.open(str(video_path)) as container:
+        stream = container.streams.video[0]
+        frames_list: list["torch.Tensor"] = []
+        for frame in container.decode(stream):
+            frames_list.append(yuv420_to_rgb(frame))  # (H, W, 3) uint8
     if not frames_list:
         raise RuntimeError(f"No frames decoded from {video_path}")
     return torch.stack(frames_list, dim=0)  # (N, H, W, 3) uint8
@@ -185,6 +184,7 @@ def extract_masks_and_targets(
         print(f"  Truncated {N_raw} → {N} frames (odd trailing frame discarded, matching DALI)")
     gt_frames_uint8 = gt_frames_uint8[:N]
     gt_frames = gt_frames_uint8.float()  # (N, H, W, 3) float in [0, 255]
+    del gt_frames_uint8  # free 3.66 GB uint8 before extraction loops
     N, H, W, C = gt_frames.shape
     print(f"  {N} frames at {H}×{W}×{C}")
 
@@ -521,7 +521,7 @@ def main(
                 .permute(0, 2, 3, 1)
                 .contiguous()  # permute() returns non-contiguous view; .numpy() requires contiguous
             )  # (B, 874, 1164, 3) float — 784 MB peak per chunk
-            _raw_f.write(_chunk_cam.numpy().astype(np.uint8).tobytes())
+            _raw_f.write(_chunk_cam.numpy().astype(np.uint8))  # numpy arrays satisfy buffer protocol; no .tobytes() copy needed
             n_written += _we - _ws
             del _chunk_cam
     del generated_bchw_cpu  # free 884 MB CPU before proxy score
