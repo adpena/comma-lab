@@ -27,11 +27,22 @@ from pathlib import Path
 
 import modal
 
+# Provider-agnostic training config — single source of truth for all platforms
+from tac.deploy.deploy_config import (
+    ALL_VARIANTS,
+    EXPERIMENT_SCRIPT,
+    VARIANT_FLAGS,
+    build_flags,
+)
+
 APP_NAME = "tac-asymmetric-warp"
 RESULTS_VOL = "tac-asymmetric-results"
 
 # Where the training script hardcodes its output
 SCRIPT_RESULTS_DIR = "/root/experiments/results/fridrich_renderer"
+
+# Provider-specific script path inside the Modal container
+_MODAL_SCRIPT_PATH = f"/root/{EXPERIMENT_SCRIPT}"
 
 # REPO_ROOT only needed locally for add_local_dir -- guard for container env
 _script = Path(__file__).resolve()
@@ -78,71 +89,11 @@ image = (
 
 results_vol = modal.Volume.from_name(RESULTS_VOL, create_if_missing=True)
 
-# --- Council v4 base training flags (asymmetric warp, round 19 fixes applied) ---
-# v2 fixes: Lagrangian stability, flow warmup, batch size, 43 bugs
-# v3 adds: 20K epochs, tighter pose_boundary
-# v4 (round 19): double PoseNet fwd fix, p1_pose_sup_weight split, all 4 council issues fixed
-# Supervision layers OFF by default in base template; override per experiment.
-# Volume prerequisites:
-#   posenet_targets.bin: modal volume ls tac-asymmetric-results -> must exist
-#   raft_flow.pt: modal volume ls tac-asymmetric-results -> must exist
-_BASE_CMD: list[str] = [
-    "python", "/root/experiments/train_renderer_fridrich.py",
-    "--pair-mode", "asymmetric",
-    "--epochs", "20000",
-    "--batch-size", "4",   # T4 safe with scorers+GT+masks+RAFT flow all loaded
-    "--lr", "2e-4",
-    "--embed-dim", "6",
-    "--base-ch", "36",
-    "--mid-ch", "60",
-    "--motion-hidden", "32",
-    "--max-flow-px", "20.0",
-    "--max-residual", "20.0",
-    "--seg-boundary", "0.005",
-    "--pose-boundary", "0.02",
-    "--rho-init", "10.0",
-    "--rho-growth", "1.005",
-    "--rho-max", "1000",
-    "--lambda-cap", "10000",
-    "--phase1-end", "0.25",
-    "--phase2-end", "0.85",
-    "--flow-warmup-epochs", "0",    # no warmup when resuming (model already has flow)
-    "--residual-ramp-epochs", "0",
-    "--tv-weight", "0.1",
-    "--flow-weight", "0.0",
-    "--rate-weight", "0.01",
-    "--target-bytes", "256000",
-    "--gate-reg-weight", "0.1",
-    "--even-pairs-only",
-    "--device", "cuda",
-    "--seed", "42",
-    "--checkpoint-every", "500",
-    "--eval-every", "200",
-    "--log-every", "25",
-    "--max-hours", "5.5",
-    "--phase2-mse-weight", "0.1",
-    "--p1-pose-sup-weight", "0.1",  # round 19: separate from p1-pose-weight=0.01
-]
-
-# ---- Path A: PoseNet supervision + RAFT flow (Layers 1 + 2) ----
-# Tests whether geometric prior (RAFT) + direct pose supervision accelerates
-# convergence past what the Lagrangian alone achieves.
-TRAINING_CMD_SUPERVISED: list[str] = _BASE_CMD + [
-    "--pose-supervision-weight", "0.5",
-    "--pose-targets-path", "/results/posenet_targets.bin",
-    "--flow-supervision-weight", "0.1",
-    "--raft-flow-path", "/results/raft_flow.pt",
-]
-
-# ---- Path B: RAFT flow only, no PoseNet supervision ----
-# Isolates Layer 2 contribution. If Path A wins, we can determine
-# whether supervision or RAFT flow drove the improvement.
-TRAINING_CMD_RAFT_ONLY: list[str] = _BASE_CMD + [
-    "--flow-supervision-weight", "0.1",
-    "--raft-flow-path", "/results/raft_flow.pt",
-]
-
-# Default template (backward compat): base config, no layers active
+# Backward-compat aliases (kept so any existing call sites importing these names still work)
+# These are derived from deploy_config — do NOT edit them here; edit deploy_config.py instead.
+_BASE_CMD: list[str] = build_flags(variant="base", provider_script_path=_MODAL_SCRIPT_PATH)
+TRAINING_CMD_SUPERVISED: list[str] = build_flags(variant="supervised", provider_script_path=_MODAL_SCRIPT_PATH)
+TRAINING_CMD_RAFT_ONLY: list[str] = build_flags(variant="raft_only", provider_script_path=_MODAL_SCRIPT_PATH)
 TRAINING_CMD_TEMPLATE: list[str] = _BASE_CMD
 
 
@@ -260,13 +211,8 @@ def train_asymmetric_warp(
     import os
     import time
 
-    variant_cmds = {
-        "base": TRAINING_CMD_TEMPLATE,
-        "supervised": TRAINING_CMD_SUPERVISED,
-        "raft_only": TRAINING_CMD_RAFT_ONLY,
-    }
-    if variant not in variant_cmds:
-        raise ValueError(f"Unknown variant {variant!r}. Choose from: {list(variant_cmds)}")
+    if variant not in ALL_VARIANTS:
+        raise ValueError(f"Unknown variant {variant!r}. Choose from: {ALL_VARIANTS}")
 
     vol_dir = f"/results/{tag}"
     os.makedirs(vol_dir, exist_ok=True)
@@ -287,13 +233,13 @@ def train_asymmetric_warp(
     print(f"  Output: {vol_dir}")
     print(f"  Start: {time.strftime('%Y-%m-%d %H:%M:%S')}")
 
-    cmd = list(variant_cmds[variant])
-
-    if checkpoint:
-        cmd.extend(["--resume", checkpoint])
-
-    if extra_args:
-        cmd.extend(extra_args)
+    # Build command from centralized deploy_config (provider-agnostic flags + Modal path)
+    cmd = build_flags(
+        variant=variant,
+        provider_script_path=_MODAL_SCRIPT_PATH,
+        resume_from=checkpoint,
+        extra=extra_args,
+    )
 
     env = {**os.environ, "PYTHONPATH": "/root/src:/root/upstream"}
 
@@ -315,7 +261,8 @@ def train_asymmetric_warp(
         "started_at": time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime()),
         "hostname": socket.gethostname(),
         "gpu": "T4",
-        "variant_base_cmd": variant_cmds[variant],
+        "provider": "modal",
+        "variant_flags": VARIANT_FLAGS[variant],
     }
     manifest_path = os.path.join(vol_dir, "deployment_manifest.json")
     with open(manifest_path, "w") as f:

@@ -12,6 +12,12 @@ HERE = Path(__file__).resolve().parent
 if str(HERE) not in sys.path:
     sys.path.insert(0, str(HERE))
 
+# Load tac deploy_config so kernel specs stay in parity with Modal + Lightning
+_REPO_ROOT_PROBE = Path(__file__).resolve().parents[4]
+if str(_REPO_ROOT_PROBE / "src") not in sys.path:
+    sys.path.insert(0, str(_REPO_ROOT_PROBE / "src"))
+from tac.deploy.deploy_config import ALL_VARIANTS  # noqa: E402
+
 from kaggle_kernel_builder import KaggleKernelSpec, write_bundle
 
 
@@ -38,13 +44,42 @@ def kaggle_username() -> str:
     return username
 
 
+def _asym_warp_variant_preamble(variant: str) -> str:
+    """Bootstrap preamble that sets ASYM_VARIANT before the launcher runs."""
+    return f'import os; os.environ.setdefault("ASYM_VARIANT", "{variant}")'
+
+
 def kernel_specs() -> dict[str, KaggleKernelSpec]:
     render_bootstrap = load_tac_bootstrap_renderer()
     bounded_policy = {
         "bounded": True,
         "checkpoint_priority": "early",
     }
+
+    # --- Asymmetric warp renderer variants (in strict parity with Modal + Lightning) ---
+    # One kernel spec per variant. Variant is controlled by the ASYM_VARIANT env var
+    # injected via bootstrap_preamble. Flags come from tac.deploy.deploy_config at runtime.
+    asym_warp_specs = {}
+    for variant in ALL_VARIANTS:
+        asym_warp_specs[f"asym_warp_{variant}"] = KaggleKernelSpec(
+            slug=f"comma-lab-asym-warp-{variant.replace('_', '-')}",
+            title=f"comma-lab asym warp {variant}",
+            code_source=REPO_ROOT / "experiments" / "kaggle_asym_warp_launcher.py",
+            code_file="kaggle_asym_warp_launcher.py",
+            include_paths=(
+                REPO_ROOT / "experiments" / "train_renderer_fridrich.py",
+            ),
+            dataset_sources=(ASSET_DATASET_REF,),
+            launch_policy={
+                **bounded_policy,
+                "expected_first_checkpoint_epoch": 500,
+                "max_epochs": 20000,
+            },
+            bootstrap_preamble=_asym_warp_variant_preamble(variant),
+        )
+
     return {
+        **asym_warp_specs,
         "dilated_h64_long1000": KaggleKernelSpec(
             slug="comma-lab-dilated-h64-long1000",
             title="comma-lab dilated h64 long1000",
