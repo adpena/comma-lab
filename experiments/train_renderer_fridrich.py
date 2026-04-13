@@ -1690,8 +1690,10 @@ def train_fridrich_renderer(cfg: FridrichRendererConfig) -> dict[str, Any]:
                         ckpt_data["ego_flow_state_dict"] = ego_flow_module.state_dict()
                     torch.save(ckpt_data, best_path)
                     print(f"  -> NEW BEST: {score:.4f} at epoch {epoch}")
-                # Annotate history entry with full eval scores (not batch estimates)
-                if history:
+                # Annotate history entry with full eval scores (not batch estimates).
+                # Guard: only annotate if the last entry is for THIS epoch — if eval_every
+                # is not a multiple of log_every, history[-1] could be a different epoch.
+                if history and history[-1].get("epoch") == epoch:
                     history[-1]["full_eval_score"] = score
                     history[-1]["full_eval_seg"] = eval_result["avg_seg"]
                     history[-1]["full_eval_pose"] = eval_result["avg_pose"]
@@ -1728,7 +1730,7 @@ def train_fridrich_renderer(cfg: FridrichRendererConfig) -> dict[str, Any]:
                             "config": asdict(cfg),
                         }, ema_best_path)
                         print(f"  -> NEW BEST EMA: {ema_score:.4f} at epoch {epoch}")
-                    if history:
+                    if history and history[-1].get("epoch") == epoch:
                         history[-1]["full_eval_ema_score"] = ema_score
                         history[-1]["full_eval_ema_seg"] = ema_eval["avg_seg"]
                         history[-1]["full_eval_ema_pose"] = ema_eval["avg_pose"]
