@@ -63,9 +63,9 @@ def compress_flow_dct(
     basis_w = top_indices % W
     basis_indices = torch.stack([basis_h, basis_w], dim=1)  # (n_coeffs, 2)
 
-    # Extract coefficients at selected positions
-    coeffs_x = torch.zeros(N, n_coeffs)
-    coeffs_y = torch.zeros(N, n_coeffs)
+    # Extract coefficients at selected positions (must be on same device as dct_x/dct_y)
+    coeffs_x = torch.zeros(N, n_coeffs, device=dev)
+    coeffs_y = torch.zeros(N, n_coeffs, device=dev)
     for k in range(n_coeffs):
         hi, wi = basis_indices[k]
         coeffs_x[:, k] = dct_x[:, hi, wi]

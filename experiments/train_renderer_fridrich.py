@@ -1138,6 +1138,17 @@ def train_fridrich_renderer(cfg: FridrichRendererConfig) -> dict[str, Any]:
         print(f"  RAFT flow loaded: {raft_flow_all.shape} ({raft_flow_all.dtype}) from {cfg.raft_flow_path}")
         print(f"  Flow magnitude: mean={raft_data['flow_px'].norm(dim=1).mean():.1f}px")
 
+    # Guard: RAFT flow and PoseNet targets are indexed as pair_indices = batch_starts // 2,
+    # which is only correct when batch_starts are always even (even_pairs_only=True).
+    # With odd starts, batch_start=3 → pair_index=1 maps RAFT flow for pair(2,3) onto
+    # training frames (3,4): silent data corruption every step.
+    if (raft_flow_all is not None or pose_targets is not None) and not cfg.even_pairs_only:
+        raise ValueError(
+            "raft_flow_path / pose_targets_path require --even-pairs-only "
+            "(pair_indices = batch_starts // 2 is only valid for even batch_starts). "
+            "Pass --even-pairs-only or remove the supervision assets."
+        )
+
     # ---- Training loop ----
     print("[5/5] Training...")
     print()
@@ -1500,9 +1511,13 @@ def train_fridrich_renderer(cfg: FridrichRendererConfig) -> dict[str, Any]:
                         asym_telemetry["flow_magnitude"] = flow_field.abs().mean().item()
                         residual_field = _cached_for_log[:, 3:6].detach()  # (B, 3, H, W)
                         asym_telemetry["residual_magnitude"] = residual_field.abs().mean().item()
-                        # Warp quality: MSE between warped frame and GT frame_t
+                        # Warp quality: MSE between warped frame and GT frame_t.
+                        # Use ego_flow (RAFT/affine) when active — it is the actual warp
+                        # used to produce gen_t. Predicted flow_field is only used when
+                        # no ego_flow is present (MotionPredictor-only mode).
                         from tac.renderer import warp_with_flow
-                        warped = warp_with_flow(gen_t1.detach(), flow_field)
+                        actual_warp = ego_flow.detach() if ego_flow is not None else flow_field
+                        warped = warp_with_flow(gen_t1.detach(), actual_warp)
                         asym_telemetry["warp_quality"] = F.mse_loss(warped, gt_t).item()
 
             # Score projection from current training metrics
