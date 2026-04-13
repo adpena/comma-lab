@@ -57,6 +57,7 @@ image = (
         "einops",
         "segmentation-models-pytorch",
         "click",
+        "nvidia-dali-cuda120",
     )
     # Clone upstream scorer repo (PoseNet/SegNet model definitions + GT video)
     .run_commands(
@@ -408,7 +409,7 @@ def auth_eval(tag: str, checkpoint: str = "renderer_best.pt"):
                 from pathlib import Path as _ExportPath
                 from tac.renderer_export import export_asymmetric_checkpoint
                 bin_path = os.path.join(vol_dir, f"renderer_{checkpoint.replace('.pt', '')}.bin")
-                archive_size = export_asymmetric_checkpoint(model, output_path=_ExportPath(bin_path), default_bits=8)
+                archive_size = export_asymmetric_checkpoint(model, output_path=_ExportPath(bin_path), default_bits=4)
                 print(f"  Exported: {bin_path} ({archive_size:,} bytes)")
             except Exception as e:
                 raise RuntimeError(
@@ -556,75 +557,82 @@ def auth_eval(tag: str, checkpoint: str = "renderer_best.pt"):
     print(f"  Generated {n_written} frames ({time.monotonic() - t_gen:.1f}s)")
     del model, masks  # free VRAM
 
-    # ── 6. Score via upstream DistortionNet ──
-    print("\nStage 6: Scoring via upstream DistortionNet ...")
+    # ── 6. Score via upstream evaluate.py (DALI + CUDA — leaderboard-grade) ──
+    # This is the ONLY correct scoring path. PyAV produces 29x PoseNet divergence.
+    print("\nStage 6: Scoring via upstream evaluate.py (DALI) ...")
     t_score = time.monotonic()
 
-    distortion_net = DistortionNet().eval().to(device)
-    distortion_net.load_state_dicts(posenet_sd_path, segnet_sd_path, device)
+    # Set up submission directory structure that evaluate.py expects
+    submission_dir = os.path.join(vol_dir, "submission")
+    os.makedirs(os.path.join(submission_dir, "inflated"), exist_ok=True)
 
-    # Load generated frames via TensorVideoDataset pattern
-    from frame_utils import TensorVideoDataset, AVVideoDataset, camera_size, seq_len
+    # Create archive.zip with just the .bin for rate calculation
+    import zipfile
+    archive_zip = os.path.join(submission_dir, "archive.zip")
+    bin_path_for_archive = None
+    for candidate in [os.path.join(vol_dir, "renderer_best.bin"),
+                      os.path.join(vol_dir, f"renderer_{checkpoint.replace('.pt', '')}.bin")]:
+        if os.path.exists(candidate):
+            bin_path_for_archive = candidate
+            break
+    if bin_path_for_archive is None:
+        raise FileNotFoundError("No .bin export found for archive — rate calculation impossible")
 
-    video_names = ["0.mkv"]
+    with zipfile.ZipFile(archive_zip, "w", zipfile.ZIP_STORED) as zf:
+        zf.write(bin_path_for_archive, "renderer.bin")
+    archive_size = os.path.getsize(archive_zip)
+    print(f"  Archive: {archive_zip} ({archive_size:,} bytes)")
 
-    from pathlib import Path as _Path
-
-    # GT dataset — use AVVideoDataset (PyAV decode).
-    # NOTE: The official scorer uses DALI on CUDA which produces slightly
-    # different pixel values than PyAV (BT.601 limited-range rounding).
-    # This gives us a consistent eval (PyAV for both GT and generated frames)
-    # but scores may differ from the official leaderboard by a small amount.
-    # To match exactly, install nvidia-dali and use DaliVideoDataset.
-    ds_gt = AVVideoDataset(
-        video_names,
-        data_dir=_Path(UPSTREAM_ROOT) / "videos",
-        batch_size=batch_size,
-        device=torch.device("cpu"),  # AVVideoDataset requires non-cuda
-    )
-    ds_gt.prepare_data()
-    dl_gt = torch.utils.data.DataLoader(ds_gt, batch_size=None, num_workers=0)
-
-    # Compressed dataset — use TensorVideoDataset (reads .raw)
-    ds_comp = TensorVideoDataset(
-        video_names,
-        data_dir=_Path(vol_dir),  # will look for 0.raw
-        batch_size=batch_size,
-        device=torch.device("cpu"),
-    )
-    # Rename our inflated file to match expected name
-    expected_raw = os.path.join(vol_dir, "0.raw")
+    # Move .raw to submission/inflated/0.raw
+    expected_raw = os.path.join(submission_dir, "inflated", "0.raw")
     if raw_path != expected_raw:
         if os.path.exists(expected_raw):
             os.remove(expected_raw)
         os.rename(raw_path, expected_raw)
         raw_path = expected_raw
-    ds_comp.prepare_data()
-    dl_comp = torch.utils.data.DataLoader(ds_comp, batch_size=None, num_workers=0)
 
-    posenet_dists = torch.zeros([], device=device)
-    segnet_dists = torch.zeros([], device=device)
-    batch_sizes = torch.zeros([], device=device)
+    # Run upstream evaluate.py — uses DALI on CUDA for GT decode (leaderboard match)
+    import subprocess
+    report_path = os.path.join(submission_dir, "report.txt")
+    eval_cmd = [
+        sys.executable, os.path.join(UPSTREAM_ROOT, "evaluate.py"),
+        "--submission-dir", submission_dir,
+        "--uncompressed-dir", os.path.join(UPSTREAM_ROOT, "videos"),
+        "--video-names-file", os.path.join(UPSTREAM_ROOT, "public_test_video_names.txt"),
+        "--device", device,
+        "--report", report_path,
+    ]
+    print(f"  Command: {' '.join(eval_cmd)}")
+    eval_result = subprocess.run(eval_cmd, capture_output=True, text=True, timeout=600)
+    if eval_result.returncode != 0:
+        print(f"  STDERR: {eval_result.stderr[-500:]}", file=sys.stderr)
+        raise RuntimeError(f"evaluate.py failed with exit code {eval_result.returncode}")
 
-    with torch.inference_mode():
-        for (_, _, batch_gt), (_, _, batch_comp) in zip(dl_gt, dl_comp):
-            batch_gt = batch_gt.to(device)
-            batch_comp = batch_comp.to(device)
-            posenet_dist, segnet_dist = distortion_net.compute_distortion(batch_gt, batch_comp)
-            posenet_dists += posenet_dist.sum()
-            segnet_dists += segnet_dist.sum()
-            batch_sizes += batch_gt.shape[0]
+    # Parse the report
+    import re
+    report_text = open(report_path).read()
+    print(f"  Report:\n{report_text}")
 
-    avg_posenet = (posenet_dists / batch_sizes).item()
-    avg_segnet = (segnet_dists / batch_sizes).item()
-    n_samples = int(batch_sizes.item())
+    def _parse(pattern, text):
+        m = re.search(pattern, text)
+        return float(m.group(1).replace(",", "")) if m else None
 
-    # ── 7. Compute rate ──
-    gt_size = os.path.getsize(gt_video_path)
-    rate = archive_size / gt_size
+    avg_posenet = _parse(r"Average PoseNet Distortion:\s*([0-9.]+)", report_text)
+    avg_segnet = _parse(r"Average SegNet Distortion:\s*([0-9.]+)", report_text)
+    rate = _parse(r"Compression Rate:\s*([0-9.]+)", report_text)
+    final_score_parsed = _parse(r"Final score:.*=\s*([0-9.]+)", report_text)
+    n_samples_raw = _parse(r"over (\d+) samples", report_text)
+    n_samples = int(n_samples_raw) if n_samples_raw else 600
+
+    gt_size = os.path.getsize(os.path.join(UPSTREAM_ROOT, "videos", "0.mkv"))
+    if rate is None:
+        rate = archive_size / gt_size
 
     # ── 8. Final score ──
-    score = 100 * avg_segnet + math.sqrt(10 * avg_posenet) + 25 * rate
+    # Prefer the score parsed directly from evaluate.py (most authoritative)
+    score = final_score_parsed if final_score_parsed else (
+        100 * avg_segnet + math.sqrt(10 * avg_posenet) + 25 * rate
+    )
 
     t_total = time.monotonic() - t_start
 
@@ -660,6 +668,7 @@ def auth_eval(tag: str, checkpoint: str = "renderer_best.pt"):
         "final_score": score,
         "n_samples": n_samples,
         "n_frames": n_written,
+        "eval_method": "upstream_evaluate_py_dali_cuda",
         "device": device,
         "timestamp": time.strftime("%Y-%m-%dT%H:%M:%SZ"),
         "elapsed_seconds": t_total,

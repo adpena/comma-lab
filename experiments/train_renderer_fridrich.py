@@ -201,6 +201,9 @@ class FridrichRendererConfig:
     # Training on even-index pair starts only saves ~50% compute
     even_pairs_only: bool = True
 
+    # Export: auto-export .bin alongside best checkpoint for accurate rate
+    export_bits: int = 4  # FP4 for contest submission (matches Quantizr's codec)
+
     # Smoke test overrides
     smoke: bool = False
 
