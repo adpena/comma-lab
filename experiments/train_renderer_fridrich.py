@@ -135,10 +135,10 @@ class FridrichRendererConfig:
     pose_boundary: float = 0.05    # target: pose_dist < 0.05 (relaxed; 0.01 never achieved)
     rho_init: float = 10.0         # initial quadratic penalty coefficient
     rho_growth: float = 1.005      # rho multiplier per outer step (council: 1.02 exploded in 400ep)
-    rho_max: float = 1e3           # cap rho (council: 1e4 caused Lagrangian explosion at ep4418)
+    rho_max: float = 100.0         # cap rho (council R2: 1e3 saturated at ep~920; 100 gives task loss room)
 
-    # Lagrangian multiplier cap (council: 1e6 allowed λ_p=185K, overwhelming task loss)
-    lambda_cap: float = 1e4
+    # Lagrangian multiplier cap (council R2: 1e4 → 1000 to prevent λ dominating supervision)
+    lambda_cap: float = 1000.0
 
     # TV smoothness
     tv_weight: float = 0.1
@@ -190,11 +190,11 @@ class FridrichRendererConfig:
     gate_reg_weight: float = 0.1
 
     # Auto-kill on divergence
-    # Phase 2 Lagrangian loss can legitimately reach lambda_cap * violation ~ 1e4 * 0.5 = 5000
+    # Phase 2 Lagrangian loss can legitimately reach lambda_cap * violation ~ 1000 * 0.5 = 500
     # Threshold must exceed max plausible Lagrangian loss to avoid false kills
     kill_loss_threshold: float = 1e5    # council sweep: 100 was 1000x too low for Phase 2
     kill_seg_threshold: float = 0.8     # relaxed: SegNet starts near 0.5
-    kill_pose_threshold: float = 500.0  # relaxed: PoseNet starts >100 for asymmetric
+    kill_pose_threshold: float = 0.5    # council R4: tightened — post-supervision baseline is 0.048
     kill_patience: int = 200            # give asymmetric warmup time to converge
 
     # Even-pairs-only: scorer evaluates (0,1),(2,3),(4,5)... not (1,2),(3,4)
@@ -677,7 +677,7 @@ def _full_eval(
     posenet: nn.Module,
     segnet: nn.Module,
     device: torch.device,
-    batch_size: int = 4,
+    batch_size: int = 1,
     raft_flow_all: torch.Tensor | None = None,
 ) -> dict[str, float]:
     """Evaluate renderer on all frames with official scoring formula.
@@ -768,6 +768,10 @@ def _full_eval(
             pose_mse = (pm[..., :6] - gm[..., :6]).pow(2).mean(dim=-1)  # (B,) or (B, 1)
             for b in range(B):
                 pose_dists.append(pose_mse[b].mean().item())
+
+            # R1: flush VRAM between pair batches to prevent OOM on T4 (batch_size=1 default)
+            if device.type == "cuda":
+                torch.cuda.empty_cache()
 
         if not is_asymmetric:
             del all_gen  # free VRAM
@@ -1482,8 +1486,11 @@ def train_fridrich_renderer(cfg: FridrichRendererConfig) -> dict[str, Any]:
         # NOTE: reuses _pose_pred_cached from _compute_pose_distortion_coupled to avoid
         # a second PoseNet forward pass (saves ~30% per-step compute when supervision active).
         if cfg.pose_supervision_weight > 0 and pose_targets is not None and cfg.pair_mode == "asymmetric":
+            # R3: supervision only in Phase 1 — Phase 2/3 Lagrangian already guides PoseNet.
+            # Full weight (1.0) in Phase 2+ caused λ * violation >> supervision at ep~920,
+            # collapsing PoseNet (auth 2.87 vs 1.00 baseline).
             effective_pose_sup_weight = cfg.pose_supervision_weight * (
-                cfg.p1_pose_sup_weight if phase == 1 else 1.0
+                cfg.p1_pose_sup_weight if phase == 1 else 0.0
             )
             target_pose = pose_targets[pair_indices]
 
