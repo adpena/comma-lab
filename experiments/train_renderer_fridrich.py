@@ -1680,7 +1680,6 @@ def train_fridrich_renderer(cfg: FridrichRendererConfig) -> dict[str, Any]:
             try:
                 eval_result = _full_eval(
                     pair_gen, masks, gt_chw, posenet, segnet, device,
-                    batch_size=cfg.batch_size,
                     raft_flow_all=raft_flow_all if cfg.raft_flow_path else None,
                 )
                 score = eval_result["score"]
@@ -1728,7 +1727,6 @@ def train_fridrich_renderer(cfg: FridrichRendererConfig) -> dict[str, Any]:
                     ema.apply(_ema_model)
                     ema_eval = _full_eval(
                         _ema_model, masks, gt_chw, posenet, segnet, device,
-                        batch_size=cfg.batch_size,
                         raft_flow_all=raft_flow_all if cfg.raft_flow_path else None,
                     )
                     ema_score = ema_eval["score"]
