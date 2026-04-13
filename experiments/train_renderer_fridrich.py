@@ -1401,8 +1401,10 @@ def train_fridrich_renderer(cfg: FridrichRendererConfig) -> dict[str, Any]:
         # Flow supervision: teach MotionPredictor to reproduce RAFT flow (Layer 2)
         # Scale-safe in all phases (bounded at ~0.001). Full weight always.
         if cfg.flow_supervision_weight > 0 and raft_flow_all is not None and cfg.pair_mode == "asymmetric":
-            with torch.no_grad():
-                target_flow = raft_flow_all[pair_indices].float()
+            # Reuse ego_flow as supervision target — it IS raft_flow_all[pair_indices].float().
+            # Re-indexing raft_flow_all here is redundant and obscures the invariant
+            # that target_flow ≡ ego_flow (same tensor). Council Issue 3 fix.
+            target_flow = ego_flow.detach() if ego_flow is not None else raft_flow_all[pair_indices].float()
             cached_motion = getattr(pair_gen, "_last_motion_out", None)
             if cached_motion is not None:
                 predicted_flow = cached_motion[:, :2]
@@ -1487,16 +1489,21 @@ def train_fridrich_renderer(cfg: FridrichRendererConfig) -> dict[str, Any]:
             if cfg.pair_mode == "asymmetric":
                 asym_telemetry["gate_mean"] = getattr(pair_gen, "_last_gate_mean", None)
                 asym_telemetry["residual_scale"] = residual_scale
+                # Use _last_motion_out cached from the training step — this is the
+                # authoritative motion output for this step, not a re-run forward.
+                # Re-running pair_gen.motion(mask_t, mask_t1) was a 3rd redundant forward.
+                # Council Issue 4 fix.
                 with torch.no_grad():
-                    motion_out = pair_gen.motion(mask_t, mask_t1)
-                    flow_field = motion_out[:, :2]  # (B, 2, H, W)
-                    asym_telemetry["flow_magnitude"] = flow_field.abs().mean().item()
-                    residual_field = motion_out[:, 3:6]  # (B, 3, H, W)
-                    asym_telemetry["residual_magnitude"] = residual_field.abs().mean().item()
-                    # Warp quality: MSE between warped frame and GT frame_t
-                    from tac.renderer import warp_with_flow
-                    warped = warp_with_flow(gen_t1.detach(), flow_field)
-                    asym_telemetry["warp_quality"] = F.mse_loss(warped, gt_t).item()
+                    _cached_for_log = getattr(pair_gen, "_last_motion_out", None)
+                    if _cached_for_log is not None:
+                        flow_field = _cached_for_log[:, :2].detach()  # (B, 2, H, W)
+                        asym_telemetry["flow_magnitude"] = flow_field.abs().mean().item()
+                        residual_field = _cached_for_log[:, 3:6].detach()  # (B, 3, H, W)
+                        asym_telemetry["residual_magnitude"] = residual_field.abs().mean().item()
+                        # Warp quality: MSE between warped frame and GT frame_t
+                        from tac.renderer import warp_with_flow
+                        warped = warp_with_flow(gen_t1.detach(), flow_field)
+                        asym_telemetry["warp_quality"] = F.mse_loss(warped, gt_t).item()
 
             # Score projection from current training metrics
             from tac.scorer import comma_score
