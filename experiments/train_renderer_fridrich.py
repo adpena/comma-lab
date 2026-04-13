@@ -1112,6 +1112,14 @@ def train_fridrich_renderer(cfg: FridrichRendererConfig) -> dict[str, Any]:
     pose_targets = None
     if cfg.pose_supervision_weight > 0 and cfg.pose_targets_path:
         from tac.scorer_targets import load_posenet_targets
+        _pose_path = Path(cfg.pose_targets_path)
+        if not _pose_path.exists():
+            raise FileNotFoundError(
+                f"PoseNet targets not found: {_pose_path}\n"
+                f"  Generate with: python -m tac.scorer_targets --gt-video <video> "
+                f"--posenet <model> --output {_pose_path}\n"
+                f"  Or remove --pose-targets-path to train without Layer 1 supervision."
+            )
         targets_dict = load_posenet_targets(cfg.pose_targets_path)
         if targets_dict is not None:
             pose_targets = targets_dict["targets"].to(device)  # (n_pairs, 6)
@@ -1122,12 +1130,29 @@ def train_fridrich_renderer(cfg: FridrichRendererConfig) -> dict[str, Any]:
             )
             print(f"  PoseNet targets loaded: {pose_targets.shape} from {cfg.pose_targets_path}")
         else:
-            print(f"  WARNING: could not load PoseNet targets from {cfg.pose_targets_path}")
+            raise RuntimeError(
+                f"Failed to parse PoseNet targets from {cfg.pose_targets_path} "
+                f"(file exists but has invalid format/magic bytes). "
+                f"Re-generate the file."
+            )
 
     # ---- Load RAFT flow for frozen warp + supervision (council Layer 2) ----
     raft_flow_all = None
     if cfg.raft_flow_path:
-        raft_data = torch.load(cfg.raft_flow_path, map_location="cpu", weights_only=True)
+        _raft_path = Path(cfg.raft_flow_path)
+        if not _raft_path.exists():
+            raise FileNotFoundError(
+                f"RAFT flow file not found: {_raft_path}\n"
+                f"  Generate with: python experiments/compute_raft_flow.py\n"
+                f"  Or remove --raft-flow-path to train without Layer 2 warp supervision."
+            )
+        raft_data = torch.load(_raft_path, map_location="cpu", weights_only=True)
+        if "flow" not in raft_data:
+            raise KeyError(
+                f"RAFT flow file {_raft_path} is missing the 'flow' key. "
+                f"Expected keys: 'flow' (N,2,H,W) and 'flow_px'. "
+                f"Re-generate with compute_raft_flow.py."
+            )
         raft_flow_all = raft_data["flow"].to(device)  # (N_pairs, 2, H, W) stays float16 — 472MB not 944MB
         n_raft_pairs = raft_flow_all.shape[0]
         n_expected_pairs = len(list(range(0, n_frames - 1, 2)))
@@ -1136,7 +1161,8 @@ def train_fridrich_renderer(cfg: FridrichRendererConfig) -> dict[str, Any]:
             f"for {n_frames} frames with even-pairs-only"
         )
         print(f"  RAFT flow loaded: {raft_flow_all.shape} ({raft_flow_all.dtype}) from {cfg.raft_flow_path}")
-        print(f"  Flow magnitude: mean={raft_data['flow_px'].norm(dim=1).mean():.1f}px")
+        if "flow_px" in raft_data:
+            print(f"  Flow magnitude: mean={raft_data['flow_px'].norm(dim=1).mean():.1f}px")
 
     # Guard: RAFT flow and PoseNet targets are indexed as pair_indices = batch_starts // 2,
     # which is only correct when batch_starts are always even (even_pairs_only=True).

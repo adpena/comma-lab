@@ -24,6 +24,7 @@ License-File: LICENSE
 Requires-Dist: torch>=2.0
 Requires-Dist: pydantic>=2.0
 Requires-Dist: numpy>=1.24
+Requires-Dist: click>=8.0
 Provides-Extra: mlx
 Requires-Dist: mlx>=0.5; extra == "mlx"
 Provides-Extra: viz

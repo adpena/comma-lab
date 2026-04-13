@@ -103,10 +103,19 @@ def main() -> int:
     input_root = Path("/kaggle/input")
     asset_root = input_root / "comma-lab-private-assets"
 
-    # Locate training script — bundled alongside this launcher
+    # Locate training script — bundled alongside this launcher.
+    # write_bundle preserves repo-relative paths, so train_renderer_fridrich.py
+    # lands at experiments/train_renderer_fridrich.py inside the bundle.
+    # We probe both the flat layout (legacy) and the repo-relative layout.
     script_path = SCRIPT_PATH.parent / "train_renderer_fridrich.py"
     if not script_path.exists():
-        raise FileNotFoundError(f"Training script not found: {script_path}")
+        script_path = SCRIPT_PATH.parent / "experiments" / "train_renderer_fridrich.py"
+    if not script_path.exists():
+        raise FileNotFoundError(
+            f"Training script not found. Tried:\n"
+            f"  {SCRIPT_PATH.parent / 'train_renderer_fridrich.py'}\n"
+            f"  {SCRIPT_PATH.parent / 'experiments' / 'train_renderer_fridrich.py'}"
+        )
 
     # Variant from env var (set via bootstrap_preamble in kernel metadata)
     variant = os.environ.get("ASYM_VARIANT", "base").strip()
