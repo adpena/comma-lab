@@ -680,6 +680,10 @@ def _full_eval(
         # (0,1), (2,3), (4,5)... NOT (0,1), (1,2), (2,3)...
         # Council sweep: stride-1 eval was selecting wrong best checkpoint.
         pair_starts = list(range(0, n - 1, 2))  # even-index starts only
+        if len(pair_starts) == 0:
+            print(f"  [_full_eval] WARNING: no pairs (n={n}), returning sentinel", file=sys.stderr)
+            return {"avg_seg": float("inf"), "avg_pose": float("inf"),
+                    "score": float("inf"), "n_pairs": 0}
         for batch_start in range(0, len(pair_starts), batch_size):
             batch_indices = pair_starts[batch_start:batch_start + batch_size]
             B = len(batch_indices)
@@ -1271,6 +1275,10 @@ def train_fridrich_renderer(cfg: FridrichRendererConfig) -> dict[str, Any]:
                     lambda_pose = min(cfg.lambda_cap, max(0.0, lambda_pose + rho * pv))
                     if sv > 1e-6 or pv > 1e-6:
                         rho = min(rho * cfg.rho_growth, cfg.rho_max)
+                else:
+                    print(f"  [epoch {epoch}] WARNING: NaN violation "
+                          f"(sv={sv}, pv={pv}), skipping lambda update",
+                          file=sys.stderr, flush=True)
 
             # Track constraint satisfaction
             both_satisfied = seg_violation.item() < 1e-6 and pose_violation.item() < 1e-6

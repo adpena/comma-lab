@@ -201,15 +201,6 @@ codec_encode_args() {
   fi
 }
 
-# ── Technique 8: Even-frame higher QP encoding ──────────────────────
-# Encode even frames at higher QP (lower quality) since SegNet only
-# evaluates odd frames. This is FREE rate reduction.
-#
-# Uses SVT-AV1's per-frame QP offset via scene-change detection override
-# and selective encoding: split video into even/odd frame streams,
-# encode separately at different QPs, then interleave.
-#
-# Usage: set EVEN_FRAME_QP_BOOST=6 in config.env
 downscale_filter() {
   local width="$1"
   local height="$2"
