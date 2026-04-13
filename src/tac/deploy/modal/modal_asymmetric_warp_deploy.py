@@ -164,10 +164,11 @@ def _resolve_eval_candidate(vol_dir: str, strategy: str) -> tuple[str, dict]:
     """Resolve which checkpoint to eval based on a selection strategy.
 
     Strategies:
-      best_proxy             — epoch with lowest full_eval_score in history.json;
+      best_proxy             — epoch with lowest proxy score in history.json
+                               (full_eval_score if present, else score_projection);
                                if no exact .pt exists, falls back to nearest
                                _constraints_met checkpoint within ±300 epochs.
-      best_proxy_constraints_met — best full_eval_score in history.json restricted
+      best_proxy_constraints_met — best proxy score in history.json restricted
                                to epochs that have a _constraints_met checkpoint.
       earliest_constraints_met — lowest epoch number among *_constraints_met.pt files.
       latest_constraints_met   — highest epoch number among *_constraints_met.pt files.
@@ -211,11 +212,23 @@ def _resolve_eval_candidate(vol_dir: str, strategy: str) -> tuple[str, dict]:
         if history and history[0].get("best_score") not in (None, float("inf")):
             resume_floor_warning = True
 
-    # Filter history entries that have proxy scores
-    scored = [
-        h for h in history
-        if h.get("full_eval_score") is not None
-    ]
+    # Filter history entries that have proxy scores.
+    # full_eval_score: from the full SegNet+PoseNet eval pass (eval_every cadence).
+    #   May be absent if the eval silently crashed (OOM loading all models simultaneously,
+    #   wrapped in try/except that swallows exceptions in train_renderer_fridrich.py).
+    # score_projection: batch-level proxy computed every log_every steps.
+    #   Always present — used as fallback when full_eval_score is unavailable.
+    def _proxy_score(h: dict) -> float | None:
+        if h.get("full_eval_score") is not None:
+            return float(h["full_eval_score"])
+        if h.get("score_projection") is not None:
+            return float(h["score_projection"])
+        return None
+
+    scored = [h for h in history if _proxy_score(h) is not None]
+    # Attach a unified proxy_score key for downstream min()
+    for h in scored:
+        h["_proxy"] = _proxy_score(h)
 
     def _find_pt_near_epoch(target_ep: int, window: int = 300) -> str | None:
         """Find nearest checkpoint (.pt) within window epochs of target_ep."""
@@ -231,35 +244,80 @@ def _resolve_eval_candidate(vol_dir: str, strategy: str) -> tuple[str, dict]:
     # ── Strategy dispatch ─────────────────────────────────────────────────────
     if strategy == "best_proxy":
         if not scored:
-            raise ValueError(f"No full_eval_score entries in history.json at {history_path}")
-        best_entry = min(scored, key=lambda h: h["full_eval_score"])
+            raise ValueError(f"No proxy-scored entries in history.json at {history_path}")
+        best_entry = min(scored, key=lambda h: h["_proxy"])
         target_ep = best_entry["epoch"]
         ckpt_name = _find_pt_near_epoch(target_ep)
         if not ckpt_name:
             raise FileNotFoundError(
-                f"best_proxy: best epoch={target_ep} proxy={best_entry['full_eval_score']:.4f} "
+                f"best_proxy: best epoch={target_ep} proxy={best_entry['_proxy']:.4f} "
                 f"but no checkpoint within 300 epochs found in {vol_dir}"
             )
         return ckpt_name, {
             "selected_epoch": target_ep,
             "selection_method": "best_proxy",
-            "proxy_score": best_entry["full_eval_score"],
+            "proxy_score": best_entry["_proxy"],
             "has_constraints_met": target_ep in cm_epochs,
             "resume_floor_warning": resume_floor_warning,
         }
 
     elif strategy == "best_proxy_constraints_met":
-        # Best proxy score among epochs that have a constraints_met checkpoint
+        # Best proxy score among epochs that have a constraints_met checkpoint.
+        # history.json eval cadence (eval_every) may not align with constraints_met
+        # epochs; use a 300-epoch proximity window as the primary join, then fall
+        # back to best_proxy over all scored entries if no match is found.
         cm_scored = [h for h in scored if h["epoch"] in cm_epochs]
+        if not cm_scored and cm_epochs:
+            # Proximity join: any scored epoch within 300 epochs of any cm checkpoint
+            cm_scored = [
+                h for h in scored
+                if any(abs(h["epoch"] - ep) <= 300 for ep in cm_epochs)
+            ]
         if not cm_scored:
-            # Fallback: any scored epoch near a constraints_met checkpoint
-            cm_scored = [h for h in scored if any(abs(h["epoch"] - ep) <= 300 for ep in cm_epochs)]
-        if not cm_scored:
-            raise ValueError(
-                f"No scored history entries near any _constraints_met checkpoint in {vol_dir}. "
-                f"Fall back to 'best_proxy'."
-            )
-        best_entry = min(cm_scored, key=lambda h: h["full_eval_score"])
+            # Hard fallback: no history entries near constraints_met at all
+            # (sparse eval_every, no constraints ever met in scored range, etc.)
+            # Use best_proxy over all scored entries and select the nearest
+            # constraints_met checkpoint if one exists.
+            print(f"  [strategy] best_proxy_constraints_met: no scored entries near _constraints_met "
+                  f"checkpoints; falling back to best_proxy")
+            if scored:
+                best_entry = min(scored, key=lambda h: h["_proxy"])
+                target_ep = best_entry["epoch"]
+                # Still prefer nearest cm checkpoint for the actual file
+                if cm_epochs:
+                    nearest_cm_ep = min(cm_epochs, key=lambda ep: abs(ep - target_ep))
+                    ckpt_name = cm_epochs[nearest_cm_ep]
+                else:
+                    ckpt_name = _find_pt_near_epoch(target_ep)
+                if not ckpt_name:
+                    raise FileNotFoundError(
+                        f"best_proxy fallback: best epoch={target_ep} but no checkpoint within 300 epochs"
+                    )
+                return ckpt_name, {
+                    "selected_epoch": target_ep,
+                    "selection_method": "best_proxy_fallback_from_bpcm",
+                    "proxy_score": best_entry["_proxy"],
+                    "has_constraints_met": bool(cm_epochs),
+                    "resume_floor_warning": resume_floor_warning,
+                }
+            elif cm_epochs:
+                # No history at all — use latest constraints_met as last resort
+                ep = max(cm_epochs)
+                print(f"  [strategy] No history.json scored entries at all; using latest_constraints_met ep={ep}")
+                return cm_epochs[ep], {
+                    "selected_epoch": ep,
+                    "selection_method": "latest_constraints_met_fallback",
+                    "proxy_score": None,
+                    "has_constraints_met": True,
+                    "resume_floor_warning": resume_floor_warning,
+                }
+            else:
+                raise FileNotFoundError(
+                    f"best_proxy_constraints_met: no history.json scored entries and no "
+                    f"_constraints_met checkpoints in {vol_dir}. "
+                    f"Run with --strategy single --checkpoint <explicit_name>."
+                )
+        best_entry = min(cm_scored, key=lambda h: h["_proxy"])
         target_ep = best_entry["epoch"]
         # Prefer exact constraints_met checkpoint nearest to target_ep
         if cm_epochs:
@@ -272,7 +330,7 @@ def _resolve_eval_candidate(vol_dir: str, strategy: str) -> tuple[str, dict]:
         return ckpt_name, {
             "selected_epoch": target_ep,
             "selection_method": "best_proxy_constraints_met",
-            "proxy_score": best_entry["full_eval_score"],
+            "proxy_score": best_entry["_proxy"],
             "has_constraints_met": True,
             "resume_floor_warning": resume_floor_warning,
         }
