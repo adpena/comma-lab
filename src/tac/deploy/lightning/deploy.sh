@@ -59,7 +59,7 @@ _build_gpu_cmd() {
     # Pass values via env vars — never interpolate user-controlled strings into
     # Python source code (prevents injection from paths containing quotes/newlines)
     ASYM_VARIANT="$variant" ASYM_RESUME="$resume_from" ASYM_SCRIPT="$REMOTE_SCRIPT" \
-    REPO_SRC="$REPO_ROOT/src" python3 - <<'PYEOF'
+    REPO_SRC="$REPO_ROOT/src" "$REPO_ROOT/.venv/bin/python" - <<'PYEOF'
 import os, sys, shlex
 sys.path.insert(0, os.environ["REPO_SRC"])
 from tac.deploy.deploy_config import build_flags
@@ -173,7 +173,7 @@ cmd_gpu() {
     ASYM_VARIANT="$variant" ASYM_RESUME="$resume_from" ASYM_TAG="$tag" \
     ASYM_SCRIPT="$REMOTE_SCRIPT" REPO_SRC="$REPO_ROOT/src" \
     MANIFEST_DIR="$REPO_ROOT/reports/deployment_manifests" \
-    python3 - <<'PYEOF'
+    "$REPO_ROOT/.venv/bin/python" - <<'PYEOF'
 import os, sys, json, time, socket
 sys.path.insert(0, os.environ["REPO_SRC"])
 from tac.deploy.deploy_config import build_flags, VARIANT_FLAGS

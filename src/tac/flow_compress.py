@@ -40,9 +40,10 @@ def compress_flow_dct(
     assert C == 2
 
     # Compute 2D DCT basis (using cosine transform via matmul)
-    # DCT-II basis for rows and columns
-    dct_h = _dct_matrix(H)  # (H, H)
-    dct_w = _dct_matrix(W)  # (W, W)
+    # DCT-II basis for rows and columns — moved to flow device to avoid CUDA crash
+    dev = flow.device
+    dct_h = _dct_matrix(H).to(dev)  # (H, H)
+    dct_w = _dct_matrix(W).to(dev)  # (W, W)
 
     # Find the n_coeffs with largest average energy across all pairs
     # First compute DCT of all flow fields

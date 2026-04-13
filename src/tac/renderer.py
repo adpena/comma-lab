@@ -516,8 +516,12 @@ class MotionPredictor(nn.Module):
             # Council sweep: max(H,W) caused 25% y-flow underscale for 874x1164.
             H, W = mask_t.shape[-2], mask_t.shape[-1]
             flow_raw = raw[:, :2].tanh()  # [-1, 1]
-            flow_x = flow_raw[:, 0:1] * (self.max_flow_px / W * 2)
-            flow_y = flow_raw[:, 1:2] * (self.max_flow_px / H * 2)
+            # Use (W-1) / (H-1) to match RAFT normalization convention:
+            # RAFT stores flow_px / (W-1) * 2  (align_corners=True grid_sample coords).
+            # warp_with_flow uses torch.linspace(-1,1,W) = same (W-1) spacing.
+            # Council ruling (round 20): fix W→W-1 for v4+ runs. 5-0 vote.
+            flow_x = flow_raw[:, 0:1] * (self.max_flow_px / (W - 1) * 2)
+            flow_y = flow_raw[:, 1:2] * (self.max_flow_px / (H - 1) * 2)
             flow = torch.cat([flow_x, flow_y], dim=1)
             if self.flow_only:
                 # Optimization #15: flow only, no gate/residual (deferred, gated)

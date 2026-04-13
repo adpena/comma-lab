@@ -578,6 +578,10 @@ def auth_eval(tag: str, checkpoint: str = "renderer_best.pt"):
     raw_size = os.path.getsize(raw_path)
     expected_size = OUT_W * OUT_H * 3 * n_written
     assert raw_size == expected_size, f"Raw size mismatch: {raw_size} vs {expected_size}"
+    assert n_written == NUM_FRAMES, (
+        f"Frame count mismatch: generated {n_written} but scorer expects {NUM_FRAMES}. "
+        f"Check mask extraction — decode failure may have produced fewer frames."
+    )
     print(f"  Generated {n_written} frames ({time.monotonic() - t_gen:.1f}s)")
     del model, masks  # free VRAM
 

@@ -26,25 +26,13 @@ _SUPERVISION_ASSET_FLAGS = {"--raft-flow-path", "--pose-targets-path"}
 
 # Flags whose values we override per-provider; strip from BASE_FLAGS before
 # appending our Kaggle-specific values.
+# NOTE: _strip_flags assumes all flags in these sets take a following value argument.
+# Never add boolean (valueless) flags here — they would incorrectly skip the next token.
 _KAGGLE_OVERRIDE_FLAGS = {"--device", "--max-hours"}
 
 
-def _ensure_uv() -> str:
-    """Install uv if not present, return path to uv binary."""
-    import shutil
-    uv_path = shutil.which("uv")
-    if uv_path:
-        return uv_path
-    subprocess.check_call(
-        ["bash", "-lc", "curl -LsSf https://astral.sh/uv/install.sh | sh"],
-    )
-    uv_path = shutil.which("uv") or os.path.expanduser("~/.cargo/bin/uv")
-    if not os.path.exists(uv_path):
-        raise RuntimeError("uv installation failed")
-    return uv_path
-
-
 def ensure_tac() -> None:
+    """Install tac wheel via pip (Kaggle standard — uv not pre-installed/supported)."""
     try:
         import tac  # noqa: F401
         from tac.deploy import deploy_config  # noqa: F401 — need deploy subpackage
@@ -58,8 +46,7 @@ def ensure_tac() -> None:
             f"tac wheel not found in {input_root}; upload comma_video_lab_ball_pack-*.whl "
             f"to the comma-lab-private-assets dataset"
         )
-    uv = _ensure_uv()
-    subprocess.check_call([uv, "pip", "install", "-q", "--no-deps", str(candidates[0])])
+    subprocess.check_call([sys.executable, "-m", "pip", "install", "-q", "--no-deps", str(candidates[0])])
 
 
 def ensure_upstream() -> Path:
@@ -75,7 +62,7 @@ def ensure_upstream() -> Path:
 
 
 def ensure_deps() -> None:
-    uv = _ensure_uv()
+    """Install missing deps via pip (Kaggle standard toolchain)."""
     deps = ["av", "safetensors", "timm", "einops", "segmentation-models-pytorch", "pydantic", "click"]
     missing = []
     for dep in deps:
@@ -84,7 +71,7 @@ def ensure_deps() -> None:
         except ImportError:
             missing.append(dep)
     if missing:
-        subprocess.check_call([uv, "pip", "install", "-q"] + missing)
+        subprocess.check_call([sys.executable, "-m", "pip", "install", "-q"] + missing)
 
 
 def _strip_flags(flags: list[str], to_strip: set[str]) -> list[str]:
