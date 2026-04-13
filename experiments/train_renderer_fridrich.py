@@ -1699,6 +1699,7 @@ def train_fridrich_renderer(cfg: FridrichRendererConfig) -> dict[str, Any]:
                     history[-1]["full_eval_pose"] = eval_result["avg_pose"]
                     history[-1]["full_eval_rate"] = eval_result["rate"]
                 # EMA evaluation (Karpathy/NVIDIA: smoothed weights often beat raw)
+                _ema_model = None
                 try:
                     _ema_model = _copy.deepcopy(pair_gen)
                     ema.apply(_ema_model)
@@ -1708,7 +1709,6 @@ def train_fridrich_renderer(cfg: FridrichRendererConfig) -> dict[str, Any]:
                         raft_flow_all=raft_flow_all if cfg.raft_flow_path else None,
                     )
                     ema_score = ema_eval["score"]
-                    del _ema_model
                     print(
                         f"  [EMA] seg={ema_eval['avg_seg']:.5f} "
                         f"pose={ema_eval['avg_pose']:.5f} "
@@ -1737,6 +1737,10 @@ def train_fridrich_renderer(cfg: FridrichRendererConfig) -> dict[str, Any]:
                         history[-1]["full_eval_ema_rate"] = ema_eval["rate"]
                 except Exception as _ema_exc:
                     print(f"  [EMA] Eval failed: {_ema_exc}")
+                finally:
+                    # Always release VRAM — prevents leak when _full_eval throws.
+                    if _ema_model is not None:
+                        del _ema_model
                 print()
             except Exception as e:
                 print(f"  Eval failed: {e}")

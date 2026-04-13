@@ -326,7 +326,12 @@ class EMA:
     def update(self, model: nn.Module):
         with torch.no_grad():
             for k, v in model.state_dict().items():
-                self.shadow[k].mul_(self.decay).add_(v, alpha=1 - self.decay)
+                if not v.is_floating_point():
+                    # Non-float buffers (e.g. BN num_batches_tracked, int masks):
+                    # EMA decay on integers produces garbage — copy directly instead.
+                    self.shadow[k].copy_(v)
+                else:
+                    self.shadow[k].mul_(self.decay).add_(v, alpha=1 - self.decay)
 
     def apply(self, model: nn.Module):
         """Load EMA weights into model."""

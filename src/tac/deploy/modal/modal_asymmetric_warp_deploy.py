@@ -283,12 +283,12 @@ def train_asymmetric_warp(
         )
 
     # List artifacts saved
-    artifacts = os.listdir(vol_dir)
-    print(f"  Artifacts ({len(artifacts)}): {', '.join(sorted(artifacts)[:10])}")
+    artifacts = sorted(os.listdir(vol_dir))
+    print(f"  Artifacts ({len(artifacts)}): {', '.join(artifacts[:10])}")
     if len(artifacts) > 10:
         print(f"    ... and {len(artifacts) - 10} more")
 
-    return {"tag": tag, "exit_code": result.returncode, "artifacts": len(artifacts)}
+    return {"tag": tag, "exit_code": result.returncode, "artifacts": artifacts}
 
 
 @app.function(
@@ -810,6 +810,39 @@ def main(
 
     status = "OK" if result["exit_code"] == 0 else f"FAILED (exit {result['exit_code']})"
     print(f"\n  Result: {status}")
-    print(f"  Artifacts: {result['artifacts']}")
+    artifacts = result["artifacts"]
+    print(f"  Artifacts ({len(artifacts)}): {', '.join(artifacts[:10])}")
+
+    # ── Auto auth-eval (council binding decision) ─────────────────────────────
+    # Evaluates up to 3 checkpoints unconditionally after a successful run:
+    #   1. renderer_best.pt     — best full-eval checkpoint (may be stale if resume
+    #                             floor prevented update — we eval it anyway)
+    #   2. renderer_best_ema.pt — EMA shadow best (independent of resume floor)
+    #   3. Latest renderer_epoch*.pt — always from THIS run, regardless of best tracking
+    #      This ensures no completed run is written off due to missed best checkpoint.
+    # Each eval is non-destructive: failures are logged but never mask training result.
+    epoch_ckpts = sorted(
+        f for f in artifacts
+        if f.startswith("renderer_epoch") and f.endswith(".pt")
+    )
+    checkpoints_to_eval = []
+    for name in ("renderer_best.pt", "renderer_best_ema.pt"):
+        if name in artifacts:
+            checkpoints_to_eval.append(name)
+    if epoch_ckpts:
+        checkpoints_to_eval.append(epoch_ckpts[-1])  # latest epoch — unconditional
+
+    if checkpoints_to_eval:
+        print(f"\n--- Auto auth-eval ({len(checkpoints_to_eval)} checkpoints) ---")
+        for ckpt_name in checkpoints_to_eval:
+            print(f"  Evaluating {ckpt_name}...")
+            try:
+                eval_result = auth_eval.remote(tag=tag, checkpoint=ckpt_name)
+                score = eval_result.get("score", "?")
+                print(f"  {ckpt_name}: score={score}")
+            except Exception as exc:
+                print(f"  {ckpt_name}: EVAL FAILED (non-fatal) — {exc}")
+    # ─────────────────────────────────────────────────────────────────────────
+
     print(f"\nResults: .venv/bin/modal volume ls {RESULTS_VOL}")
     print(f"Download: .venv/bin/modal volume get {RESULTS_VOL} {tag}/ ./results_{tag}/")
