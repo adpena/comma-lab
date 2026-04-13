@@ -76,12 +76,15 @@ image = (
 
 results_vol = modal.Volume.from_name(RESULTS_VOL, create_if_missing=True)
 
-# --- Council-approved training flags (asymmetric warp) ---
+# --- Council v2 training flags (asymmetric warp, 2026-04-13) ---
+# Key changes from v1: rho_growth 1.02→1.005, rho_max 1e4→1e3, lambda_cap 1e6→1e4,
+# phase1_end 0.40→0.25, phase2_end 0.70→0.85, batch_size 4→16,
+# flow_warmup_epochs=500, residual_ramp_epochs=500
 TRAINING_CMD_TEMPLATE: list[str] = [
     "python", "/root/experiments/train_renderer_fridrich.py",
     "--pair-mode", "asymmetric",
     "--epochs", "10000",
-    "--batch-size", "4",
+    "--batch-size", "16",
     "--lr", "2e-4",
     "--embed-dim", "6",
     "--base-ch", "36",
@@ -92,7 +95,13 @@ TRAINING_CMD_TEMPLATE: list[str] = [
     "--seg-boundary", "0.005",
     "--pose-boundary", "0.02",
     "--rho-init", "10.0",
-    "--rho-growth", "1.02",
+    "--rho-growth", "1.005",
+    "--rho-max", "1000",
+    "--lambda-cap", "10000",
+    "--phase1-end", "0.25",
+    "--phase2-end", "0.85",
+    "--flow-warmup-epochs", "500",
+    "--residual-ramp-epochs", "500",
     "--tv-weight", "0.05",
     "--flow-weight", "0.0",
     "--rate-weight", "0.01",
