@@ -1,5 +1,17 @@
 # run log
 
+## 2026-04-13T21:25:00Z — asym_v4_supervised ep19999 AUTH EVAL
+
+- **auth=1.7900** (REGRESSION from baseline ~1.0 at ep12400)
+- seg=0.5664, pose=1.1188, rate=0.1004
+- archive=150,715 bytes, 287,019 params
+- checkpoint: renderer_epoch19999.pt (periodic, NOT best — best_score=0.6019 never updated = resume floor never beaten)
+- platform: Modal T4
+- key finding: 7600 epochs of PoseNet+RAFT supervision hurt the model. Both seg and pose regressed vs ep12400.
+- hypothesis: supervision disruption phase extended past ep19999. Or supervision signal misaligned with scorer.
+- status: NEGATIVE RESULT for supervised path at this epoch. Awaiting raft_only (Kaggle) for A/B comparison.
+- saved: /results/asym_v4_supervised/auth_eval_renderer_epoch19999.json
+
 ## 2026-04-10T21:30:00-05:00 - promoted floor synchronized
 
 - authoritative promoted floor: **1.33**

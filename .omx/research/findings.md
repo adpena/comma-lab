@@ -1,5 +1,16 @@
 # Findings
 
+## 2026-04-13 [NEGATIVE RESULT] asym_v4_supervised: PoseNet+RAFT supervision regressed the model
+
+- **auth ep19999 = 1.7900** (seg=0.5664, pose=1.1188, rate=0.1004)
+- Baseline ep12400: auth≈1.0 (seg=0.210, pose=0.692, rate=0.100)
+- 7600 more epochs of combined PoseNet + RAFT flow supervision made BOTH seg and pose worse
+- Training proxy (0.6019) was never beaten → `renderer_best.pt` never updated → ep19999 is a degraded periodic checkpoint, not a converged best
+- Hypothesis A: supervision disrupted the warp geometry optimization that was working at ep12400
+- Hypothesis B: the proxy evaluation during training was measuring something different from what the auth scorer rewards
+- Hypothesis C: 8.5h Kaggle budget not long enough for the disruption phase to recover
+- Action: raft_only (RAFT supervision only, no PoseNet targets) running on Kaggle as isolating A/B
+
 ## 2026-04-10 promoted floor
 
 - Track B promoted floor is **1.33**.

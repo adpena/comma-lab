@@ -1,9 +1,12 @@
-# Current Focus -- 2026-04-13T18:30:00-05:00
+# Current Focus -- 2026-04-13T21:30:00Z
 
 ## Scores
 - **Renderer baseline (ep 12400)**: auth=1.0000 — seg=0.210, pose=0.692, rate=0.100
   - proxy at ep12400 was 0.6019 (proxy→auth gap ~0.40, calibration artifact)
-  - pose is 69% of score — supervised variant is attacking this directly
+- **asym_v4_supervised ep19999 [NEGATIVE RESULT]**: auth=1.7900 — seg=0.5664, pose=1.1188, rate=0.1004
+  - REGRESSION: 7600 more epochs of PoseNet+RAFT supervision made things worse
+  - best_score=0.6019 was never beaten → periodic checkpoint, not best
+  - both seg and pose regressed vs ep12400 baseline
 - **CPU postfilter best**: ~1.89 auth (dilated_h64)
 - **Target**: beat Quantizr at 0.60
 - **Path**: cut pose_dist from 0.0479 → 0.016 (3× reduction needed)
@@ -12,11 +15,10 @@
 
 ### GPU Lane — Asymmetric Warp Renderer (A/B comparison)
 
-1. **asym_v4_supervised** (RUNNING, Modal T4, app ap-XHqEhtoAtagJL6Neg4gIdy)
+1. **asym_v4_supervised** (COMPLETE — NEGATIVE RESULT)
    - Path A: PoseNet supervision (Layer 1) + RAFT flow (Layer 2)
    - Resumed from ep12400 (renderer_best_v3.pt, proxy=0.6019)
-   - Current: ep~15000, proxy=1.2055 (disruption phase — Contrarian-predicted, recovering)
-   - Trend: 1.4835 (ep14000) → 1.3809 (ep14400) → 1.2055 (ep14800)
+   - auth ep19999: 1.7900 (seg=0.5664, pose=1.1188) — REGRESSION vs baseline
    - Volume: tac-asymmetric-results /asym_v4_supervised/
 
 2. **asym_v4_raft_only** (RUNNING, Kaggle T4, kernel comma-lab-asym-warp-raft-only)
