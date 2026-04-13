@@ -369,14 +369,22 @@ def main(
     import torch
     if torch.cuda.is_available():
         # PyTorch >= 2.5 dropped sm_60 (P100) support. Minimum is now sm_70 (V100+).
-        # Running CUDA kernels on incompatible GPUs raises RuntimeError at kernel launch.
+        # Capability check alone is insufficient: Kaggle can reassign GPUs between the
+        # check and actual compute. Warmup with a real CUDA op to catch execution failure.
         _major, _minor = torch.cuda.get_device_capability(0)
         _dev_name = torch.cuda.get_device_name(0)
         if _major < 7:
-            print(f"  WARNING: {_dev_name} (sm_{_major}{_minor}) < sm_70 — not supported by installed PyTorch, falling back to CPU")
+            print(f"  WARNING: {_dev_name} (sm_{_major}{_minor}) < sm_70 — capability check failed, using CPU")
             device = "cpu"
         else:
-            device = "cuda"
+            # Warmup: force a real CUDA kernel to confirm the device is actually usable.
+            # This catches GPU reassignment races where capability() returns stale info.
+            try:
+                _ = torch.zeros(1, device="cuda") + 1
+                device = "cuda"
+            except Exception as _e:
+                print(f"  WARNING: {_dev_name} CUDA warmup failed ({_e}) — falling back to CPU")
+                device = "cpu"
     else:
         device = "cpu"
     print(f"  Device: {device}")

@@ -4,7 +4,9 @@ from __future__ import annotations
 import argparse
 import importlib.util
 import json
+import subprocess
 import sys
+import time
 from pathlib import Path
 
 
@@ -237,6 +239,127 @@ def kernel_specs() -> dict[str, KaggleKernelSpec]:
     }
 
 
+# Required assets and their expected byte sizes.
+# Used by wait_for_dataset_ready() to confirm all files are fully uploaded
+# before pushing kernels. Sizes are checked with 1% tolerance to handle
+# minor variations across dataset versions.
+REQUIRED_DATASET_ASSETS: dict[str, int] = {
+    "raft_flow.pt": 943_735_027,
+    "renderer_best_v3.pt": 3_527_290,
+    "posenet_targets.bin": 6_794,
+    "0.mkv": 37_545_489,
+}
+
+
+def _kaggle_bin() -> str:
+    """Return the kaggle CLI binary path, preferring the venv-local install."""
+    # Try venv .venv/bin/kaggle relative to repo root, then PATH
+    venv_kaggle = REPO_ROOT / ".venv" / "bin" / "kaggle"
+    if venv_kaggle.exists():
+        return str(venv_kaggle)
+    import shutil
+    found = shutil.which("kaggle")
+    if found:
+        return found
+    raise FileNotFoundError(
+        "kaggle CLI not found. Install with: uv pip install kaggle"
+    )
+
+
+def wait_for_dataset_ready(
+    dataset_ref: str = ASSET_DATASET_REF,
+    required: dict[str, int] | None = None,
+    poll_interval: int = 60,
+    max_attempts: int = 30,
+) -> None:
+    """Block until all required files are present in the Kaggle dataset at full size.
+
+    This is the atomicity guard for the dataset→kernel deployment pipeline.
+    Kaggle's `datasets version` command acknowledges the upload but files may
+    not be accessible inside kernel mounts for several minutes (observed: up to
+    10 min for 944MB files). Pushing a kernel before the dataset is ready causes
+    a FileNotFoundError deep inside the kernel bootstrap — hours into a run.
+
+    Args:
+        dataset_ref:   Kaggle dataset ref (owner/slug).
+        required:      Dict of filename→expected_size. Defaults to REQUIRED_DATASET_ASSETS.
+        poll_interval: Seconds between API polls (default 60).
+        max_attempts:  Max polls before giving up (default 30 = 30 min).
+    """
+    if required is None:
+        required = REQUIRED_DATASET_ASSETS
+    kaggle = _kaggle_bin()
+
+    print(f"\n=== Waiting for dataset {dataset_ref!r} to be fully ready ===")
+    print(f"  Required files: {list(required.keys())}")
+    print(f"  Poll interval: {poll_interval}s, max wait: {max_attempts * poll_interval}s\n")
+
+    for attempt in range(1, max_attempts + 1):
+        result = subprocess.run(
+            [kaggle, "datasets", "files", dataset_ref, "--csv"],
+            capture_output=True, text=True,
+        )
+        if result.returncode != 0:
+            print(f"  [attempt {attempt}] kaggle datasets files failed: {result.stderr.strip()}")
+        else:
+            # CSV format: name,size,creationDate
+            present: dict[str, int] = {}
+            for line in result.stdout.splitlines()[1:]:  # skip header
+                parts = line.split(",")
+                if len(parts) >= 2:
+                    fname = parts[0].strip()
+                    try:
+                        size = int(parts[1].strip())
+                    except ValueError:
+                        size = 0
+                    present[fname] = size
+
+            missing = []
+            wrong_size = []
+            for fname, expected_size in required.items():
+                if fname not in present:
+                    missing.append(fname)
+                elif abs(present[fname] - expected_size) > expected_size * 0.01:
+                    wrong_size.append(
+                        f"{fname}: got {present[fname]:,} expected ~{expected_size:,}"
+                    )
+
+            if not missing and not wrong_size:
+                print(f"  [attempt {attempt}] All {len(required)} required files present. Dataset ready.")
+                return
+
+            if missing:
+                print(f"  [attempt {attempt}] Missing: {missing}")
+            if wrong_size:
+                print(f"  [attempt {attempt}] Wrong size (still uploading?): {wrong_size}")
+
+        if attempt < max_attempts:
+            print(f"  Retrying in {poll_interval}s ...")
+            time.sleep(poll_interval)
+
+    raise TimeoutError(
+        f"Dataset {dataset_ref!r} not ready after {max_attempts * poll_interval}s. "
+        "Check the Kaggle dataset page for upload errors."
+    )
+
+
+def push_kernels(bundle_dirs: list[Path]) -> None:
+    """Push each kernel bundle to Kaggle, failing fast if any push fails."""
+    kaggle = _kaggle_bin()
+    for bundle_dir in bundle_dirs:
+        print(f"  Pushing kernel: {bundle_dir.name} ...")
+        result = subprocess.run(
+            [kaggle, "kernels", "push", "-p", str(bundle_dir)],
+            capture_output=True, text=True,
+        )
+        if result.returncode != 0:
+            raise RuntimeError(
+                f"kaggle kernels push failed for {bundle_dir.name}:\n{result.stderr}"
+            )
+        print(f"  {result.stdout.strip()}")
+    print(f"\n  {len(bundle_dirs)} kernel(s) pushed.")
+
+
 def build_arg_parser() -> argparse.ArgumentParser:
     p = argparse.ArgumentParser(description="Build Kaggle kernel bundles for the next experiment lanes.")
     p.add_argument(
@@ -251,6 +374,23 @@ def build_arg_parser() -> argparse.ArgumentParser:
         default=KAGGLE_ROOT,
         help="Directory where bundle folders will be written.",
     )
+    p.add_argument(
+        "--push",
+        action="store_true",
+        default=False,
+        help=(
+            "After building, wait for the Kaggle dataset to be fully available "
+            "(all required assets at expected size), then push the kernels. "
+            "This is the atomic deploy path — never push without this flag "
+            "after uploading a new dataset version."
+        ),
+    )
+    p.add_argument(
+        "--skip-dataset-wait",
+        action="store_true",
+        default=False,
+        help="With --push: skip the dataset readiness wait (use only if dataset was already verified).",
+    )
     return p
 
 
@@ -259,11 +399,19 @@ def main(argv: list[str] | None = None) -> int:
     username = kaggle_username()
     specs = kernel_specs()
     selected = args.only or list(specs.keys())
+    bundle_dirs = []
     for key in selected:
         spec = specs[key]
         bundle_dir = args.output_root / key
         write_bundle(bundle_dir=bundle_dir, username=username, spec=spec, repo_root=REPO_ROOT)
         print(f"built {key} -> {bundle_dir}")
+        bundle_dirs.append(bundle_dir)
+
+    if args.push:
+        if not args.skip_dataset_wait:
+            wait_for_dataset_ready()
+        push_kernels(bundle_dirs)
+
     return 0
 
 
