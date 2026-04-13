@@ -1,5 +1,13 @@
 # run log
 
+## 2026-04-13T23:00:00Z — Kaggle both kernels RUNNING (v6 datasets, canonical)
+
+- asym_warp_raft_only: kernel v6 RUNNING, dataset v6 (all assets confirmed present)
+- constrained_gen_smoke: kernel v5 RUNNING, tac-1.0.3 with P100 CPU fallback
+- Dataset v6 = tac-1.0.3 + raft_flow.pt(900MB) + renderer_best_v3.pt + posenet_targets.bin + 0.mkv
+- Root cause of prior failures: race condition — kernels ran while dataset was still processing
+- Fix: push kernel AFTER dataset listing confirms all files present
+
 ## 2026-04-13T22:30:00Z — Kaggle kernel v4 + dataset v4 deployed
 
 - asym_warp_raft_only: kernel v4 running, dataset v4 (tac-1.0.1 + raft_flow.pt + posenet_targets.bin + renderer_best_v3.pt)
