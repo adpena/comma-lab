@@ -189,8 +189,10 @@ class FridrichRendererConfig:
     gate_reg_threshold: float = 0.5
     gate_reg_weight: float = 0.1
 
-    # Auto-kill on divergence (thresholds set for normalized MSE + asymmetric warmup)
-    kill_loss_threshold: float = 100.0
+    # Auto-kill on divergence
+    # Phase 2 Lagrangian loss can legitimately reach lambda_cap * violation ~ 1e4 * 0.5 = 5000
+    # Threshold must exceed max plausible Lagrangian loss to avoid false kills
+    kill_loss_threshold: float = 1e5    # council sweep: 100 was 1000x too low for Phase 2
     kill_seg_threshold: float = 0.8     # relaxed: SegNet starts near 0.5
     kill_pose_threshold: float = 500.0  # relaxed: PoseNet starts >100 for asymmetric
     kill_patience: int = 200            # give asymmetric warmup time to converge
@@ -674,23 +676,27 @@ def _full_eval(
                 all_gen.append(gen_batch)
             all_gen = torch.cat(all_gen, dim=0)  # (N, 3, H, W) on device
 
-        # Evaluate pairs
-        for i in range(0, n - 1, batch_size):
-            end = min(i + batch_size, n - 1)
-            B = end - i
+        # Evaluate pairs — must match scorer's non-overlapping stride-2 pairs:
+        # (0,1), (2,3), (4,5)... NOT (0,1), (1,2), (2,3)...
+        # Council sweep: stride-1 eval was selecting wrong best checkpoint.
+        pair_starts = list(range(0, n - 1, 2))  # even-index starts only
+        for batch_start in range(0, len(pair_starts), batch_size):
+            batch_indices = pair_starts[batch_start:batch_start + batch_size]
+            B = len(batch_indices)
 
             if is_asymmetric:
-                # Asymmetric: generate pairs via warp (council: eval must match training)
-                m_t = masks[i:end].to(device=device, dtype=torch.long)
-                m_t1 = masks[i + 1:end + 1].to(device=device, dtype=torch.long)
-                pair_hwc = renderer(m_t, m_t1)  # (B, 2, H, W, 3)
+                # Asymmetric: generate pairs via warp
+                m_t = torch.stack([masks[j] for j in batch_indices]).to(device=device, dtype=torch.long)
+                m_t1 = torch.stack([masks[j + 1] for j in batch_indices]).to(device=device, dtype=torch.long)
+                # Always eval at residual_scale=1.0 (full model, not warmup-constrained)
+                pair_hwc = renderer(m_t, m_t1, residual_scale=1.0)  # (B, 2, H, W, 3)
                 gen_t = pair_hwc[:, 0].permute(0, 3, 1, 2).contiguous()
                 gen_t1 = pair_hwc[:, 1].permute(0, 3, 1, 2).contiguous()
             else:
-                gen_t = all_gen[i:end]
-                gen_t1 = all_gen[i + 1:end + 1]
-            gt_t = gt_chw[i:end].to(device)
-            gt_t1 = gt_chw[i + 1:end + 1].to(device)
+                gen_t = torch.stack([all_gen[j] for j in batch_indices])
+                gen_t1 = torch.stack([all_gen[j + 1] for j in batch_indices])
+            gt_t = torch.stack([gt_chw[j] for j in batch_indices]).to(device)
+            gt_t1 = torch.stack([gt_chw[j + 1] for j in batch_indices]).to(device)
 
             # SegNet on LAST frame only (upstream uses x[:, -1, ...] which
             # selects the last frame of each pair for SegNet evaluation)
@@ -1052,6 +1058,7 @@ def train_fridrich_renderer(cfg: FridrichRendererConfig) -> dict[str, Any]:
 
     for epoch in range(start_epoch, cfg.epochs):
         progress = epoch / max(cfg.epochs - 1, 1)
+        residual_scale = 1.0  # default; overridden by flow warmup for asymmetric
 
         # Determine phase
         if progress < cfg.phase1_end:
@@ -1247,7 +1254,7 @@ def train_fridrich_renderer(cfg: FridrichRendererConfig) -> dict[str, Any]:
                 # Without this guard, rho hits rho_max (~1e4) by epoch ~187 and
                 # then any tiny violation explodes the loss (penalty = 5000 * eps^2),
                 # overwhelming the MSE anchor and all other terms.
-                if seg_violation.item() > 0 or pose_violation.item() > 0:
+                if seg_violation.item() > 1e-6 or pose_violation.item() > 1e-6:
                     rho = min(rho * cfg.rho_growth, cfg.rho_max)
 
             # Track constraint satisfaction

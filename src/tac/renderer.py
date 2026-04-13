@@ -315,17 +315,23 @@ def _manual_grid_sample(image: torch.Tensor, grid: torch.Tensor) -> torch.Tensor
     ix = (grid[..., 0] + 1.0) * (W - 1) / 2.0
     iy = (grid[..., 1] + 1.0) * (H - 1) / 2.0
 
+    # Border clamp BEFORE computing fractional weights (council sweep:
+    # unclamped coordinates produced wx/wy outside [0,1], causing extrapolation
+    # instead of border replication — MPS/CUDA gradient divergence)
+    ix = ix.clamp(0.0, W - 1.0)
+    iy = iy.clamp(0.0, H - 1.0)
+
     # Corner indices (detached — floor has no meaningful gradient)
     ix0 = torch.floor(ix).detach().long()
     iy0 = torch.floor(iy).detach().long()
     ix1 = ix0 + 1
     iy1 = iy0 + 1
 
-    # Bilinear weights (these carry gradients back to the grid)
+    # Bilinear weights (carry gradients back to the grid, now guaranteed [0,1])
     wx = ix - ix0.float()
     wy = iy - iy0.float()
 
-    # Border clamp
+    # Clamp corner indices to valid range
     ix0 = ix0.clamp(0, W - 1)
     ix1 = ix1.clamp(0, W - 1)
     iy0 = iy0.clamp(0, H - 1)
@@ -503,7 +509,14 @@ class MotionPredictor(nn.Module):
             return raw * 0.1
         else:
             # Asymmetric mode: flow(2) + gate(1) + residual(3)
-            flow = raw[:, :2].tanh() * (self.max_flow_px / max(mask_t.shape[-2], mask_t.shape[-1]) * 2)
+            # Per-axis normalization: grid_sample uses [-1,1] coordinates.
+            # flow[:,0] drives x (width), flow[:,1] drives y (height).
+            # Council sweep: max(H,W) caused 25% y-flow underscale for 874x1164.
+            H, W = mask_t.shape[-2], mask_t.shape[-1]
+            flow_raw = raw[:, :2].tanh()  # [-1, 1]
+            flow_x = flow_raw[:, 0:1] * (self.max_flow_px / W * 2)
+            flow_y = flow_raw[:, 1:2] * (self.max_flow_px / H * 2)
+            flow = torch.cat([flow_x, flow_y], dim=1)
             if self.flow_only:
                 # Optimization #15: flow only, no gate/residual (deferred, gated)
                 gate = torch.zeros_like(raw[:, 2:3])
