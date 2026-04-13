@@ -1426,7 +1426,11 @@ def train_fridrich_renderer(cfg: FridrichRendererConfig) -> dict[str, Any]:
                 f"lam_s={lambda_seg:.1f} lam_p={lambda_pose:.1f} "
                 f"rho={rho:.0f} "
                 f"lr={lr_now:.2e} "
-                f"VRAM={_vram_mb():.0f}MB "
+                + (f"gm={asym_telemetry.get('gate_mean', 0):.3f} "
+                   f"fl={asym_telemetry.get('flow_magnitude', 0):.4f} "
+                   f"rs={asym_telemetry.get('residual_scale', 1):.2f} "
+                   if cfg.pair_mode == "asymmetric" else "")
+                + f"VRAM={_vram_mb():.0f}MB "
                 f"({elapsed:.0f}s)"
             )
 
