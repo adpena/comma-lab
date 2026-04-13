@@ -45,24 +45,103 @@ def kaggle_username() -> str:
 
 
 def _asym_warp_variant_preamble(variant: str, resume_from: str | None = None) -> str:
-    """Bootstrap preamble that sets ASYM_VARIANT (and optionally RESUME_FROM).
+    """Full Kaggle bootstrap preamble injected into train_renderer_fridrich.py.
 
-    Uses semicolons on a single line so write_bundle can safely prepend it to
-    any Python script regardless of its import structure.
+    Kaggle script kernels only upload the single code_file — no other bundle
+    files reach the kernel environment.  The solution: make train_renderer_fridrich.py
+    the code_file and inject a preamble that:
+
+      1. Installs the tac wheel from the Kaggle dataset (stdlib only at this point)
+      2. Verifies via cloud_bootstrap
+      3. Installs runtime deps + clones the upstream scorer repo
+      4. Resolves supervision assets from the dataset
+      5. Builds the correct CLI flags via runner.build_kaggle_command()
+      6. Injects the flags into sys.argv so Click reads them when main() runs
+
+    All logic is delegated to existing canonical runner.py infrastructure — no
+    duplication, no ad-hoc paths.
 
     Args:
-        variant: one of ALL_VARIANTS
-        resume_from: if set, path to a .pt checkpoint inside the Kaggle dataset
+        variant: one of ALL_VARIANTS ('base', 'supervised', 'raft_only')
+        resume_from: optional path to a .pt checkpoint inside the Kaggle dataset
                      mount, e.g. /kaggle/input/comma-lab-private-assets/renderer_best_v3.pt
     """
-    # Use __import__('os') to avoid duplicate 'import os' when prepended to a
-    # launcher file that already imports os at module level.
-    parts = [
-        f'__import__("os").environ.setdefault("ASYM_VARIANT", "{variant}")',
-    ]
-    if resume_from:
-        parts.append(f'__import__("os").environ.setdefault("RESUME_FROM", "{resume_from}")')
-    return "; ".join(parts)
+    resume_line = f"_RESUME_FROM = {repr(resume_from)}"
+    return f"""\
+# --- Kaggle bootstrap (injected by build_kaggle_kernels.py — do not edit) ---
+import os as _os, sys as _sys, shutil as _shutil, subprocess as _subprocess
+from pathlib import Path as _Path
+
+_ASYM_VARIANT = {repr(variant)}
+{resume_line}
+
+
+def _kaggle_setup() -> None:
+    \"\"\"Install tac, deps, upstream scorer; inject CLI argv before main() runs.\"\"\"
+    _os.environ.setdefault("ASYM_VARIANT", _ASYM_VARIANT)
+    if _RESUME_FROM:
+        _os.environ.setdefault("RESUME_FROM", _RESUME_FROM)
+    _os.environ.setdefault("PYTHONUNBUFFERED", "1")
+    _input_root = _Path(_os.environ.get("CLOUD_INPUT_ROOT", "/kaggle/input"))
+
+    # Stage 1: install tac wheel (stdlib only — tac not yet importable)
+    try:
+        import tac  # noqa: F401
+    except ImportError:
+        _hits = sorted(_input_root.rglob("tac-*.whl"))
+        if not _hits:
+            raise ImportError(f"tac wheel not found in {{_input_root}}")
+        _wheel = _hits[-1]
+        _uv = _shutil.which("uv") or next(
+            (str(_p) for _p in (
+                _Path.home() / ".local" / "bin" / "uv",
+                _Path.home() / ".cargo" / "bin" / "uv",
+            ) if _Path(_p).exists()),
+            None,
+        )
+        _cmd_base = (
+            [_uv, "pip", "install", "--system", "-q", "--no-deps"]
+            if _uv else [_sys.executable, "-m", "pip", "install", "-q", "--no-deps"]
+        )
+        _subprocess.check_call(_cmd_base + [str(_wheel)])
+
+    # Stage 2: full post-install verification via cloud_bootstrap
+    from tac.deploy.cloud_bootstrap import bootstrap as _cb
+    _cb(_input_root, verify_submodule="tac.deploy.kaggle.runner")
+
+    # Stage 3: install runtime deps + clone upstream scorer repo
+    from tac.deploy.kaggle.runner import (
+        ensure_deps as _ensure_deps,
+        ensure_upstream as _ensure_upstream,
+        set_training_env as _set_training_env,
+        build_kaggle_command as _build_cmd,
+    )
+    _ensure_deps()
+    _upstream = _ensure_upstream()
+    _set_training_env(_upstream)
+
+    # Stage 4: resolve assets and build CLI flags via canonical runner logic
+    _asset_root = _input_root / "comma-lab-private-assets"
+    _resume = _os.environ.get("RESUME_FROM") or None
+    if _resume and not _Path(_resume).exists():
+        print(f"  WARNING: RESUME_FROM not found: {{_resume}} — starting from scratch")
+        _resume = None
+
+    _cmd = _build_cmd(
+        variant=_ASYM_VARIANT,
+        script_path=_Path(__file__),
+        asset_root=_asset_root,
+        resume_from=_resume,
+    )
+    # _cmd = [sys.executable, script_path, flag1, value1, ...]
+    # Inject training flags into sys.argv; Click reads them when main() runs below.
+    _sys.argv = [_sys.argv[0]] + list(_cmd[2:])
+    print(f"  [Kaggle] variant={{_ASYM_VARIANT}} | argv={{_sys.argv[1:]}}")
+
+
+if __name__ == "__main__":
+    _kaggle_setup()
+# --- end Kaggle bootstrap ---"""
 
 
 #: Checkpoint from asym_v3_longer_tight (ep ~12400) uploaded to the dataset.
@@ -90,11 +169,12 @@ def kernel_specs() -> dict[str, KaggleKernelSpec]:
         asym_warp_specs[f"asym_warp_{variant}"] = KaggleKernelSpec(
             slug=f"comma-lab-asym-warp-{variant.replace('_', '-')}",
             title=f"comma-lab asym warp {variant}",
-            code_source=REPO_ROOT / "experiments" / "kaggle_asym_warp_launcher.py",
-            code_file="kaggle_asym_warp_launcher.py",
-            include_paths=(
-                REPO_ROOT / "experiments" / "train_renderer_fridrich.py",
-            ),
+            # The training script IS the code_file. Kaggle script kernels only
+            # upload code_file — include_paths are local-only build artifacts
+            # that never reach the Kaggle kernel environment.  The bootstrap
+            # preamble handles all setup inline before main() runs.
+            code_source=REPO_ROOT / "experiments" / "train_renderer_fridrich.py",
+            code_file="train_renderer_fridrich.py",
             dataset_sources=(ASSET_DATASET_REF,),
             bootstrap_preamble=_asym_warp_variant_preamble(variant, resume_from=resume_from),
         )
