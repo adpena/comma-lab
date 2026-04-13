@@ -925,7 +925,7 @@ def generate_in_scorer_space(
     """
     device = torch.device(device)
     N = masks.shape[0]
-    P = N - 1
+    P = N // 2  # non-overlapping pairs, matching upstream scorer seq_len=2
 
     # Initialize in scorer space: start from class-mean colors converted to YUV6
     init_frames = generate_initial_frames(masks, noise_seed, device=device)
@@ -973,9 +973,11 @@ def generate_in_scorer_space(
         # PoseNet loss: use preprocess_input path (expects (B, T, C, H, W))
         pose_loss = torch.tensor(0.0, device=device)
         if P > 0 and expected_pose.shape[0] > 0:
-            # Build consecutive pairs as (P, 2, C, H, W) for preprocess_input
-            rgb_t0 = rgb_for_scorers[:-1]  # (P, 3, 384, 512)
-            rgb_t1 = rgb_for_scorers[1:]   # (P, 3, 384, 512)
+            # Non-overlapping pairs: pair k = (frames[2k], frames[2k+1]).
+            # Matches upstream DaliVideoDataset(seq_len=2) semantics so that
+            # expected_pose (shape P = N//2) aligns with pred_pose.
+            rgb_t0 = rgb_for_scorers[0::2][:P]  # (P, 3, H, W) — even frames
+            rgb_t1 = rgb_for_scorers[1::2][:P]  # (P, 3, H, W) — odd frames
             pair_btchw = torch.stack([rgb_t0, rgb_t1], dim=1).contiguous()  # (P, 2, 3, H, W)
             posenet_in = posenet.preprocess_input(pair_btchw)
             posenet_out = posenet(posenet_in)
@@ -1453,7 +1455,8 @@ def coupled_trajectory_optimize(
 
     Args:
         masks: (N, H, W) long tensor with target class indices.
-        expected_pose: (P, 6) float tensor, P = N-1.
+        expected_pose: (P, 6) float tensor, P = N//2 (non-overlapping pairs,
+            seq_len=2, matching upstream scorer).
         posenet: frozen PoseNet model.
         segnet: frozen SegNet model.
         num_steps: number of joint optimization steps.
@@ -1471,7 +1474,7 @@ def coupled_trajectory_optimize(
     """
     device = torch.device(device)
     N = masks.shape[0]
-    P = N - 1
+    P = N // 2  # non-overlapping pairs, matching upstream scorer seq_len=2
 
     # Initialize ALL frames jointly
     frames = generate_initial_frames(masks, noise_seed, device=device)
@@ -1747,7 +1750,8 @@ def alternating_projections_optimize(
 
     Args:
         masks: (N, H, W) long tensor with target class indices.
-        expected_pose: (P, 6) float tensor, P = N-1.
+        expected_pose: (P, 6) float tensor, P = N//2 (non-overlapping pairs,
+            seq_len=2, matching upstream scorer).
         posenet: frozen PoseNet model.
         segnet: frozen SegNet model.
         num_outer_iterations: number of full projection cycles.
@@ -1766,7 +1770,7 @@ def alternating_projections_optimize(
     """
     device = torch.device(device)
     N = masks.shape[0]
-    P = N - 1
+    P = N // 2  # non-overlapping pairs, matching upstream scorer seq_len=2
 
     # Initialize
     frames = generate_initial_frames(masks, noise_seed, device=device)
@@ -2023,10 +2027,14 @@ def _gradient_directed_dither(
     """
     N, C, H, W = frames.shape
 
-    # Compute scorer gradient direction for each pixel
+    # Compute scorer gradient direction for each pixel.
+    # Must go through segnet.preprocess_input (expects (B, T, C, H, W)) —
+    # bypassing it skips required preprocessing and produces wrong gradients.
     inp = frames.detach().clone().requires_grad_(True)
     resized = F.interpolate(inp, size=(384, 512), mode="bilinear", align_corners=False)
-    logits = segnet(resized)
+    seg_btchw = resized.unsqueeze(1).contiguous()  # (N, 1, C, H, W) — T=1
+    seg_input = segnet.preprocess_input(seg_btchw)
+    logits = segnet(seg_input)
     H_out, W_out = logits.shape[2], logits.shape[3]
     masks_resized = F.interpolate(
         masks.float().unsqueeze(1).to(device),

@@ -26,6 +26,8 @@ from tac.deploy.kaggle.runner import (  # noqa: E402
     resolve_training_script,
     save_manifest,
 )
+# find_tac_wheel and WHEEL_GLOBS are re-exported from tac.deploy.cloud_bootstrap
+import tac.deploy.cloud_bootstrap as _cloud_bootstrap_mod
 
 
 # ---------------------------------------------------------------------------
@@ -94,27 +96,30 @@ class TestFindTacWheel(unittest.TestCase):
 
 class TestEnsureTac(unittest.TestCase):
     def test_skips_install_if_already_importable(self) -> None:
-        """If tac.deploy.kaggle.runner is already importable, no pip install runs."""
-        with mock.patch("subprocess.check_call") as mock_pip:
+        """If tac.deploy.kaggle.runner is already importable, no wheel install runs."""
+        with mock.patch("subprocess.check_call") as mock_sub:
             ensure_tac(Path("/nonexistent"))
-        mock_pip.assert_not_called()
+        mock_sub.assert_not_called()
 
     def test_raises_if_post_install_runner_missing(self) -> None:
-        """Old wheel installs tac but lacks runner — must raise with upload instructions."""
+        """Old wheel (pre-v1.0.0) installs tac but lacks runner subpackage.
+
+        Uses targeted mock on cloud_bootstrap._is_importable so we can simulate
+        "tac imports fine but tac.deploy.kaggle.runner does not" without blacking
+        out all imports globally.
+        """
         with tempfile.TemporaryDirectory() as tmp:
             root = Path(tmp)
             wheel = root / "tac-0.9.0-py3-none-any.whl"
             wheel.touch()
 
-            # Simulate: tac not importable → triggers install path
-            # After install: tac importable but runner still missing
-            import_call_count = [0]
-            def fake_import(name: str, *_a: object, **_kw: object) -> None:
-                import_call_count[0] += 1
-                raise ImportError(f"no module named {name}")
+            def fake_is_importable(module: str) -> bool:
+                # Simulate a pre-v1.0.0 wheel: tac core importable but runner missing
+                return module == "tac"
 
             with mock.patch("subprocess.check_call"), \
-                 mock.patch("builtins.__import__", side_effect=fake_import):
+                 mock.patch.object(_cloud_bootstrap_mod, "_is_importable",
+                                   side_effect=fake_is_importable):
                 with self.assertRaises(ImportError) as ctx:
                     ensure_tac(root)
             self.assertIn("pre-v1.0.0", str(ctx.exception))

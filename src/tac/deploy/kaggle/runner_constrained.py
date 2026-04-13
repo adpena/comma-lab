@@ -145,9 +145,15 @@ def extract_masks_and_targets(
     video_path: Path,
     upstream_root: Path,
     device: str,
+    segnet: "torch.nn.Module",
+    posenet: "torch.nn.Module",
     batch_size: int = EXTRACT_BATCH,
 ) -> tuple:
     """Extract SegNet masks + PoseNet targets from a GT video.
+
+    Models are accepted as parameters — load them once with :func:`_load_models`
+    and reuse across extraction, optimization, and proxy scoring to avoid
+    redundant weight I/O.
 
     Frame count is truncated to (N//2)*2 to match DALI/AVVideoDataset pair semantics
     (both discard an odd trailing frame).
@@ -163,10 +169,6 @@ def extract_masks_and_targets(
           (M = (N//2)*2, even frame count)
     """
     import torch
-
-    _add_upstream_to_path(upstream_root)
-    segnet, posenet = _load_models(upstream_root, device)
-    print(f"  Loaded SegNet + PoseNet from {upstream_root / 'models'}")
 
     print(f"  Decoding {video_path} ...")
     gt_frames_uint8 = _decode_frames(video_path)  # (N, H, W, 3) uint8 at camera resolution
@@ -233,20 +235,27 @@ def compute_proxy_score(
     segnet: "torch.nn.Module",
     posenet: "torch.nn.Module",
     device: str,
+    archive_size_bytes: int = 0,
 ) -> dict:
     """Approximate proxy score: 100*seg_dist + sqrt(10*pose_dist) + 25*rate.
+
+    Both *generated_frames* and *gt_frames* must be at the SAME spatial resolution
+    (camera resolution: CAMERA_H × CAMERA_W = 874 × 1164).  PoseNet.preprocess_input
+    performs channel operations (RGB → YUV6) at H/2 × W/2 — if the two tensors have
+    different spatial sizes the YUV6 shapes will mismatch and distortion is wrong.
 
     Accepts pre-loaded models to avoid redundant weight loading.
     SegNet and PoseNet distortions are computed with proper weighted averaging
     (matches upstream evaluate.py accumulation pattern).
-    Rate contribution is 0 (seed-only archive — negligible for 8KB zip).
 
     Args:
-        generated_frames: (N, H, W, 3) float tensor
-        gt_frames:        (N, H, W, 3) float tensor
-        segnet:           loaded SegNet model on device
-        posenet:          loaded PoseNet model on device
-        device:           target device string
+        generated_frames:    (N, CAMERA_H, CAMERA_W, 3) float tensor — camera resolution
+        gt_frames:           (N, CAMERA_H, CAMERA_W, 3) float tensor — camera resolution
+        segnet:              loaded SegNet model on device
+        posenet:             loaded PoseNet model on device
+        device:              target device string
+        archive_size_bytes:  size of archive.zip in bytes for rate computation.
+                             0 → rate = 0 (use when archive not yet written).
     """
     import math
     import torch
@@ -291,8 +300,11 @@ def compute_proxy_score(
             pose_count += gen_pose.numel()  # B * 6
     pose_dist = pose_total / max(pose_count, 1)
 
-    score = 100.0 * seg_dist + math.sqrt(10.0 * pose_dist)
-    return {"score": score, "seg_dist": seg_dist, "pose_dist": pose_dist, "rate": 0.0}
+    # Rate: archive_bytes / raw_video_bytes  (upstream evaluate.py formula)
+    n_raw_bytes = N * CAMERA_H * CAMERA_W * 3
+    rate = archive_size_bytes / max(n_raw_bytes, 1)
+    score = 100.0 * seg_dist + math.sqrt(10.0 * pose_dist) + 25.0 * rate
+    return {"score": score, "seg_dist": seg_dist, "pose_dist": pose_dist, "rate": rate}
 
 
 # ---------------------------------------------------------------------------
@@ -362,15 +374,17 @@ def main(
         )
     print(f"  Video: {video_path}")
 
+    # Load models ONCE — shared across extraction, optimization, and proxy scoring.
+    # Avoids redundant safetensors I/O (each load reads ~600 MB from disk).
+    segnet, posenet = _load_models(upstream, device)
+    print(f"  Loaded SegNet + PoseNet from {upstream / 'models'}")
+
     # Extract masks + pose targets from GT video
     t0 = time.time()
     masks, pose_targets, gt_frames = extract_masks_and_targets(
-        video_path, upstream, device, batch_size=EXTRACT_BATCH,
+        video_path, upstream, device, segnet, posenet, batch_size=EXTRACT_BATCH,
     )
     print(f"  Asset extraction: {time.time() - t0:.1f}s")
-
-    # Load models once — shared across optimization and scoring
-    segnet, posenet = _load_models(upstream, device)
 
     # Run constrained generation
     # Frames are generated at SegNet input resolution (384×512, ~884 MB on T4).
@@ -408,7 +422,9 @@ def main(
     generated_camera = F.interpolate(
         generated_bchw, size=(CAMERA_H, CAMERA_W), mode="bilinear", align_corners=False
     )  # (N, 3, 874, 1164)
-    generated_camera_hwc = generated_camera.permute(0, 2, 3, 1)  # (N, 874, 1164, 3)
+    # Clamp after bilinear interpolation — float rounding can push values
+    # infinitesimally outside [0, 255], causing silent uint8 wrap on astype().
+    generated_camera_hwc = generated_camera.clamp(0.0, 255.0).permute(0, 2, 3, 1)  # (N, 874, 1164, 3)
 
     # Write inflated/0.raw — path expected by TensorVideoDataset + upstream evaluate.py
     # Filename stem comes from the video_rel: "decode_base_archive/0.mkv" → "0"
@@ -426,11 +442,15 @@ def main(
         zf.writestr("seed.bin", struct.pack("<Q", NOISE_SEED))
     print(f"  Archive: {archive_path} ({archive_path.stat().st_size} bytes)")
 
-    # Compute proxy score (reuse already-loaded models — no extra weight loads)
+    # Compute proxy score (reuse already-loaded models — no extra weight loads).
+    # Use generated_camera_hwc (camera resolution) so PoseNet spatial dims match
+    # gt_frames — PoseNet.preprocess_input does NOT resize spatially, and comparing
+    # tensors at different sizes would produce wrong or mismatched YUV6 outputs.
     print("\n  Computing proxy score ...")
-    # Compare generated (at SegNet resolution) against gt_frames (camera resolution);
-    # both are resized internally by SegNet/PoseNet so the proxy is still valid.
-    scores = compute_proxy_score(generated, gt_frames, segnet, posenet, device)
+    scores = compute_proxy_score(
+        generated_camera_hwc, gt_frames, segnet, posenet, device,
+        archive_size_bytes=archive_path.stat().st_size,
+    )
     print(f"\n  === RESULT ===")
     print(f"  score:     {scores['score']:.4f}")
     print(f"  seg_dist:  {scores['seg_dist']:.6f}")

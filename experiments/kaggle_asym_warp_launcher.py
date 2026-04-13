@@ -1,63 +1,77 @@
 #!/usr/bin/env python3
 """Kaggle kernel bootstrap for asymmetric warp renderer training.
 
-This file is intentionally minimal — all Kaggle logic lives in
-tac.deploy.kaggle.runner (installed from the dataset wheel below).
+Intentionally minimal — all Kaggle logic lives in tac.deploy.kaggle.runner
+(installed from the dataset wheel below).
 
 Bootstrap sequence:
-  1. Find tac wheel in /kaggle/input (stdlib only — tac not yet importable)
-  2. pip install tac wheel
-  3. Delegate everything to tac.deploy.kaggle.runner.main()
+  1. Resolve input root (CLOUD_INPUT_ROOT env → /kaggle/input default)
+  2. Find + install tac wheel via uv (preferred) or pip (fallback)  [stdlib only]
+  3. Full post-install verification via tac.deploy.cloud_bootstrap
+  4. Delegate to tac.deploy.kaggle.runner.main()
 """
 from __future__ import annotations
 
 import os
+import shutil
 import subprocess
 import sys
 from pathlib import Path
 
 
-def _find_wheel(input_root: Path) -> Path:
-    """Locate the tac wheel using stdlib only (tac not yet importable)."""
-    for pattern in ("tac-*.whl", "comma_video_lab_ball_pack-*.whl"):
-        candidates = sorted(input_root.rglob(pattern))
-        if candidates:
-            return candidates[-1]
-    raise ImportError(
-        f"tac wheel not found in {input_root}.\n"
-        f"  Upload with: kaggle datasets version -p dist/ -m 'tac vX.Y.Z'\n"
-        f"  to the comma-lab-private-assets dataset."
-    )
+# ---------------------------------------------------------------------------
+# Pre-tac bootstrap stub (stdlib only — tac not yet importable at this point)
+# Mirrors tac.deploy.cloud_bootstrap.BOOTSTRAP_STUB; must stay in sync.
+# ---------------------------------------------------------------------------
 
-
-def _bootstrap_tac(input_root: Path) -> None:
-    """Install tac wheel if not already importable."""
+def _pre_install(input_root: Path) -> None:
+    """Stage 1: minimal stdlib-only wheel install. Idempotent."""
     try:
         import tac  # noqa: F401
-        from tac.deploy.kaggle import runner  # noqa: F401
-        return
-    except (ImportError, ModuleNotFoundError):
+        return  # already installed
+    except ImportError:
         pass
-    wheel = _find_wheel(input_root)
-    subprocess.check_call(
-        [sys.executable, "-m", "pip", "install", "-q", "--no-deps", str(wheel)]
-    )
-    # Verify the installed wheel has tac.deploy.kaggle.runner (added in v1.0.0).
-    # Pre-v1.0.0 wheels install tac but lack the deploy subpackages.
-    try:
-        from tac.deploy.kaggle import runner as _r  # noqa: F401
-    except (ImportError, ModuleNotFoundError) as exc:
+
+    wheel: Path | None = None
+    for pat in ("tac-*.whl", "comma_video_lab_ball_pack-*.whl"):
+        hits = sorted(input_root.rglob(pat))
+        if hits:
+            wheel = hits[-1]
+            break
+    if wheel is None:
         raise ImportError(
-            f"Installed {wheel.name} but tac.deploy.kaggle.runner is not importable.\n"
-            f"  This wheel is pre-v1.0.0 and lacks the deploy subpackages.\n"
-            f"  Upload tac-1.0.0+ to comma-lab-private-assets:\n"
-            f"    kaggle datasets version -p dist/ -m 'tac v1.0.0'"
-        ) from exc
+            f"tac wheel not found in {input_root}.\n"
+            f"  Upload with: kaggle datasets version -p dist/ -m 'tac vX.Y.Z'\n"
+            f"  to the comma-lab-private-assets dataset."
+        )
+
+    uv = shutil.which("uv") or next(
+        (str(c) for c in (
+            Path.home() / ".local" / "bin" / "uv",
+            Path.home() / ".cargo" / "bin" / "uv",
+            Path("/usr/local/bin/uv"),
+            Path("/opt/conda/bin/uv"),
+        ) if Path(c).exists()),
+        None,
+    )
+    if uv:
+        subprocess.check_call([uv, "pip", "install", "--system", "-q", "--no-deps", str(wheel)])
+    else:
+        subprocess.check_call([sys.executable, "-m", "pip", "install", "-q", "--no-deps", str(wheel)])
 
 
 if __name__ == "__main__":
     os.environ.setdefault("PYTHONUNBUFFERED", "1")
-    _input_root = Path("/kaggle/input")
-    _bootstrap_tac(_input_root)
+
+    # Provider-agnostic input root — CLOUD_INPUT_ROOT env override supported
+    _input_root = Path(os.environ.get("CLOUD_INPUT_ROOT", "/kaggle/input"))
+
+    # Stage 1: stdlib pre-install
+    _pre_install(_input_root)
+
+    # Stage 2: full verification via cloud_bootstrap (tac now importable)
+    from tac.deploy.cloud_bootstrap import bootstrap as _cb_bootstrap
+    _cb_bootstrap(_input_root, verify_submodule="tac.deploy.kaggle.runner")
+
     from tac.deploy.kaggle.runner import main  # noqa: E402
     raise SystemExit(main(launcher_path=Path(__file__)))

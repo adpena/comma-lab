@@ -1,39 +1,56 @@
 from __future__ import annotations
 
-import importlib.util
 import unittest
-from pathlib import Path
 
-
-ROOT = Path(__file__).resolve().parents[3]
-MODULE_PATH = ROOT / "src" / "tac" / "bootstrap_codegen.py"
-
-
-def load_module():
-    spec = importlib.util.spec_from_file_location("tac_bootstrap_codegen", MODULE_PATH)
-    module = importlib.util.module_from_spec(spec)
-    assert spec.loader is not None
-    spec.loader.exec_module(module)
-    return module
+from tac.bootstrap_codegen import render_bootstrap
 
 
 class KaggleBootstrapTemplateTests(unittest.TestCase):
-    def test_render_includes_required_entrypoint_names(self) -> None:
-        mod = load_module()
-        rendered = mod.render_bootstrap(
-            required_symbols=(
-                "build_postfilter_meta",
-                "resolve_cloud_archive_source",
-                "save_best_checkpoint",
-            ),
+    def _render(self, symbols=("build_postfilter_meta", "save_best_checkpoint")):
+        return render_bootstrap(
+            required_symbols=symbols,
             dataset_hint="comma-lab-private-assets",
         )
 
-        self.assertIn("def ensure_tac_importable()", rendered)
-        self.assertIn("def tac_has_required_entrypoints", rendered)
-        self.assertIn("def find_tac_wheel_candidates", rendered)
-        self.assertIn("resolve_cloud_archive_source", rendered)
+    def test_render_compiles(self) -> None:
+        """Generated preamble must be syntactically valid Python."""
+        rendered = self._render()
+        compile(rendered, "<preamble>", "exec")
+
+    def test_render_includes_bootstrap_stub(self) -> None:
+        """Preamble must embed the two-stage _tac_bootstrap function."""
+        rendered = self._render()
+        self.assertIn("def _tac_bootstrap(", rendered)
+        self.assertIn("_tac_bootstrap(", rendered)
+
+    def test_render_includes_dataset_hint(self) -> None:
+        rendered = self._render()
         self.assertIn("comma-lab-private-assets", rendered)
+
+    def test_render_includes_required_symbols(self) -> None:
+        rendered = self._render(("build_postfilter_meta", "resolve_cloud_archive_source"))
+        self.assertIn("resolve_cloud_archive_source", rendered)
+        self.assertIn("build_postfilter_meta", rendered)
+
+    def test_render_checks_missing_entrypoints(self) -> None:
+        """Must raise ImportError if required symbols absent from tac.entrypoints."""
+        rendered = self._render()
+        self.assertIn("_missing_ep", rendered)
+        # Uses 'from tac import entrypoints' form
+        self.assertIn("from tac import entrypoints", rendered)
+
+    def test_render_defines_script_path(self) -> None:
+        """SCRIPT_PATH must be defined so _tac_bootstrap can search the script dir."""
+        rendered = self._render()
+        self.assertIn("SCRIPT_PATH", rendered)
+        self.assertIn("Path(__file__).resolve()", rendered)
+
+    def test_render_uses_uv_or_pip(self) -> None:
+        """BOOTSTRAP_STUB must contain uv-preferred install with pip fallback."""
+        rendered = self._render()
+        # Install command uses list form: ["pip", "install", ...]
+        self.assertIn('"pip", "install"', rendered)
+        self.assertIn("shutil.which", rendered)
 
 
 if __name__ == "__main__":

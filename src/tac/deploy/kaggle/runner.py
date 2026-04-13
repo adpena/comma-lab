@@ -21,13 +21,17 @@ import sys
 import time
 from pathlib import Path
 
+# Re-export canonical bootstrap from cloud_bootstrap.
+# Import at module level so the bound references survive test mocks on __import__.
+from tac.deploy.cloud_bootstrap import (  # noqa: E402,F401
+    WHEEL_GLOBS as WHEEL_GLOBS,
+    find_wheel as find_tac_wheel,
+    bootstrap as _cb_bootstrap,
+)
+
 # ---------------------------------------------------------------------------
 # Constants
 # ---------------------------------------------------------------------------
-
-#: Glob patterns to search for the tac wheel, in priority order.
-#: The package was renamed from comma_video_lab_ball_pack → tac at v1.0.0.
-WHEEL_GLOBS: tuple[str, ...] = ("tac-*.whl", "comma_video_lab_ball_pack-*.whl")
 
 #: Kaggle dataset slug that hosts the tac wheel + supervision assets.
 ASSET_DATASET_SLUG: str = "comma-lab-private-assets"
@@ -66,54 +70,16 @@ KAGGLE_DEVICE: str = "cuda"
 # Environment setup
 # ---------------------------------------------------------------------------
 
-def find_tac_wheel(input_root: Path) -> Path:
-    """Locate the tac wheel in the Kaggle dataset mount.
-
-    Tries each pattern in WHEEL_GLOBS in order and returns the highest-sorted
-    (latest version) match.
-
-    Raises:
-        ImportError: with instructions if no wheel is found.
-    """
-    for pattern in WHEEL_GLOBS:
-        candidates = sorted(input_root.rglob(pattern))
-        if candidates:
-            return candidates[-1]
-    raise ImportError(
-        f"tac wheel not found in {input_root}.\n"
-        f"  Expected: {input_root}/{ASSET_DATASET_SLUG}/tac-*.whl\n"
-        f"  Upload with: kaggle datasets version -p dist/ -m 'tac vX.Y.Z'\n"
-        f"  Searched patterns: {WHEEL_GLOBS}"
-    )
-
-
 def ensure_tac(input_root: Path | None = None) -> None:
-    """Install tac from the dataset wheel if not already importable."""
-    try:
-        import tac  # noqa: F401
-        from tac.deploy.kaggle import runner  # noqa: F401
-        return
-    except (ImportError, ModuleNotFoundError):
-        pass
+    """Ensure tac is installed with the deploy subpackages (added in v1.0.0).
+
+    Delegates to :func:`tac.deploy.cloud_bootstrap.bootstrap` with
+    ``verify_submodule="tac.deploy.kaggle.runner"``.  Idempotent — safe to
+    call at the start of any Kaggle runner.
+    """
     if input_root is None:
-        input_root = Path("/kaggle/input")
-    wheel = find_tac_wheel(input_root)
-    subprocess.check_call(
-        [sys.executable, "-m", "pip", "install", "-q", "--no-deps", str(wheel)]
-    )
-    # Verify the installed wheel has the deploy subpackages (added in tac v1.0.0).
-    # Old wheels (comma_video_lab_ball_pack < v1.0.0) install tac but lack
-    # tac.deploy.kaggle.runner, producing a cryptic ImportError later.
-    try:
-        from tac.deploy.kaggle import runner as _r  # noqa: F401,F811
-    except (ImportError, ModuleNotFoundError):
-        raise ImportError(
-            f"Installed {wheel.name} but tac.deploy.kaggle.runner is not available.\n"
-            f"  This wheel is pre-v1.0.0 and lacks the deploy subpackages.\n"
-            f"  Upload tac-1.0.0+ to the comma-lab-private-assets dataset:\n"
-            f"    kaggle datasets version -p dist/ -m 'tac v1.0.0'\n"
-            f"  (Found wheel at: {wheel})"
-        )
+        input_root = Path(os.environ.get("CLOUD_INPUT_ROOT", "/kaggle/input"))
+    _cb_bootstrap(input_root, verify_submodule="tac.deploy.kaggle.runner")
 
 
 def ensure_upstream(working_dir: Path | None = None) -> Path:
@@ -151,17 +117,9 @@ def ensure_upstream(working_dir: Path | None = None) -> Path:
 
 
 def ensure_deps() -> None:
-    """Install missing Python dependencies via pip."""
-    missing = []
-    for dep in PIP_DEPS:
-        try:
-            __import__(dep.replace("-", "_"))
-        except ImportError:
-            missing.append(dep)
-    if missing:
-        subprocess.check_call(
-            [sys.executable, "-m", "pip", "install", "-q"] + missing
-        )
+    """Install missing Python dependencies — uv preferred, pip fallback."""
+    from tac.deploy.cloud_paths import try_ensure_uv, ensure_packages
+    ensure_packages(try_ensure_uv(), *PIP_DEPS)
 
 
 # ---------------------------------------------------------------------------

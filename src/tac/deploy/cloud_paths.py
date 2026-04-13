@@ -153,6 +153,11 @@ def try_ensure_uv() -> str | None:
         2. Check common install locations
         3. Bootstrap via astral.sh installer (if CLOUD_SKIP_UV_INSTALL is not set)
     """
+    # Honour explicit override first
+    uv_override = os.environ.get("CLOUD_UV_PATH", "").strip()
+    if uv_override and Path(uv_override).exists():
+        return uv_override
+
     existing = shutil.which("uv")
     if existing:
         return existing
