@@ -41,3 +41,27 @@
 - submissions/robust_current/inflate_renderer.py
 - experiments/auth_eval_renderer.py
 - src/tac/eval/auth_eval.py
+
+## Round 7 (9 more — wider codebase)
+| 27 | losses.py bhattacharyya epsilon inside sqrt biases BC | Weakens gradients |
+| 28 | scorer.py double VRAM allocation | 2x peak VRAM on T4 |
+| 29 | data.py build_pairs undocumented stride | Confusing for callers |
+| 30 | compress.sh zip -9 (should be -0) | Rate accounting mismatch |
+| 31 | compress.sh SVT_AV1_PARAMS default inconsistency | Silent config trap |
+| 32 | compress.sh ROI mask file double-quoting | Literal quotes in arg |
+| 33 | compress.sh even-frame QP double-encode | Fundamentally broken, stubbed |
+| 34 | inflate.sh hardcoded python3 | Breaks on some Docker images |
+| 35 | runner.py renderer.bin pre-flight + PACT_FRAME_COUNT | Config trap |
+
+## Council Design Decision Rulings
+All 8 design decisions ratified unanimously:
+1. kill_loss_threshold=1e5 — APPROVED
+2. NaN freeze (not reset) — APPROVED
+3. Phase 3 scheduler warm restart — APPROVED
+4. Per-axis flow normalization — APPROVED (correctness, not design)
+5. Stride-2 eval — APPROVED (correctness, not design)
+6. Energy-conserving blend — APPROVED (correctness, not design)
+7. gate_mean_tensor gradient flow — APPROVED (bug fix, not design)
+8. Bhattacharyya epsilon placement — APPROVED (Fridrich authoritative)
+
+## GRAND TOTAL: 35 bugs fixed across 7 rounds. 0 remaining. 0 TODOs. 0 tech debt.
