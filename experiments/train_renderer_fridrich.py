@@ -214,6 +214,10 @@ class FridrichRendererConfig:
     pose_targets_path: str | None = None  # path to precomputed posenet_targets.bin
     pose_embed_loss: bool = False         # Layer 3: use embedding-level loss instead of output
 
+    # RAFT flow: frozen dense warp + MotionPredictor supervision (council Layer 2)
+    raft_flow_path: str | None = None     # path to raft_flow.pt (dense RAFT flow)
+    flow_supervision_weight: float = 0.0  # weight for MSE(motion_flow, raft_flow)
+
     # Smoke test overrides
     smoke: bool = False
 
@@ -1097,6 +1101,14 @@ def train_fridrich_renderer(cfg: FridrichRendererConfig) -> dict[str, Any]:
         else:
             print(f"  WARNING: could not load PoseNet targets from {cfg.pose_targets_path}")
 
+    # ---- Load RAFT flow for frozen warp + supervision (council Layer 2) ----
+    raft_flow_all = None
+    if cfg.raft_flow_path:
+        raft_data = torch.load(cfg.raft_flow_path, map_location="cpu", weights_only=True)
+        raft_flow_all = raft_data["flow"].float().to(device)  # (N_pairs, 2, H, W)
+        print(f"  RAFT flow loaded: {raft_flow_all.shape} from {cfg.raft_flow_path}")
+        print(f"  Flow magnitude: mean={raft_data['flow_px'].norm(dim=1).mean():.1f}px")
+
     # ---- Training loop ----
     print("[5/5] Training...")
     print()
@@ -1212,10 +1224,13 @@ def train_fridrich_renderer(cfg: FridrichRendererConfig) -> dict[str, Any]:
                 residual_scale = ramp_progress
             else:
                 residual_scale = 1.0
-            # Compute ego-flow if enabled (council Experiment B)
+            # Compute ego-flow: RAFT frozen warp (council Layer 2) OR learnable affine
             ego_flow = None
-            if cfg.use_ego_flow and ego_flow_module is not None:
-                pair_indices = (batch_starts // 2).to(device)
+            pair_indices = (batch_starts // 2).to(device)
+            if raft_flow_all is not None:
+                # Layer 2: use precomputed dense RAFT flow as frozen warp
+                ego_flow = raft_flow_all[pair_indices]  # (B, 2, H, W) — no grad, frozen
+            elif cfg.use_ego_flow and ego_flow_module is not None:
                 ego_flow = ego_flow_module(pair_indices, cfg.target_h, cfg.target_w)
 
             # Warp paradigm: single forward produces both frames jointly
@@ -1298,6 +1313,15 @@ def train_fridrich_renderer(cfg: FridrichRendererConfig) -> dict[str, Any]:
                 if gate_mean_t is not None:
                     gate_penalty = cfg.gate_reg_weight * F.relu(gate_mean_t - cfg.gate_reg_threshold)
                     total_loss = total_loss + gate_penalty
+
+            # Flow supervision: teach MotionPredictor to reproduce RAFT flow (council Layer 2)
+            if cfg.flow_supervision_weight > 0 and raft_flow_all is not None and cfg.pair_mode == "asymmetric":
+                with torch.no_grad():
+                    target_flow = raft_flow_all[pair_indices]  # (B, 2, H, W)
+                motion_out_for_sup = pair_gen.motion(mask_t, mask_t1)
+                predicted_flow = motion_out_for_sup[:, :2]  # (B, 2, H, W)
+                flow_sup_loss = F.mse_loss(predicted_flow, target_flow)
+                total_loss = total_loss + cfg.flow_supervision_weight * flow_sup_loss
 
             # PoseNet supervision: direct scorer-space optimization (council Layer 1+3)
             if cfg.pose_supervision_weight > 0 and pose_targets is not None:
@@ -1744,6 +1768,8 @@ def train_fridrich_renderer(cfg: FridrichRendererConfig) -> dict[str, Any]:
 @click.option("--pose-supervision-weight", type=float, default=0.0, help="PoseNet supervision loss weight (council Layer 1)")
 @click.option("--pose-targets-path", type=str, default=None, help="Path to posenet_targets.bin")
 @click.option("--pose-embed-loss", is_flag=True, help="Use embedding-level PoseNet loss (council Layer 3)")
+@click.option("--raft-flow-path", type=str, default=None, help="Path to raft_flow.pt for frozen warp (council Layer 2)")
+@click.option("--flow-supervision-weight", type=float, default=0.0, help="MotionPredictor flow supervision weight")
 def main(
     precomputed, epochs, batch_size, lr, channels, spade_hidden,
     seg_boundary, pose_boundary, rho_init, rho_growth,
@@ -1762,6 +1788,7 @@ def main(
     gate_reg_weight, gate_reg_threshold, even_pairs_only,
     use_ego_flow, ego_flow_max_px, ego_flow_lr,
     pose_supervision_weight, pose_targets_path, pose_embed_loss,
+    raft_flow_path, flow_supervision_weight,
 ):
     """Train DP-SIMS renderer with Fridrich constrained optimization."""
 
@@ -1834,6 +1861,8 @@ def main(
         pose_supervision_weight=pose_supervision_weight,
         pose_targets_path=pose_targets_path,
         pose_embed_loss=pose_embed_loss,
+        raft_flow_path=raft_flow_path,
+        flow_supervision_weight=flow_supervision_weight,
     )
 
     # Set precomputed dir env var for the training function
