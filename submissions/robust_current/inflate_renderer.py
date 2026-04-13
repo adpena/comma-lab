@@ -407,6 +407,10 @@ if not _HAS_TAC_RENDERER:
             self.head = nn.Conv2d(hidden, output_channels, 3, padding=1, bias=True)
             nn.init.zeros_(self.head.weight)
             nn.init.zeros_(self.head.bias)
+            # Gate channel bias -2.0 → sigmoid(-2)=0.12 (trust warp, not residual)
+            if output_channels >= 3:
+                with torch.no_grad():
+                    self.head.bias[2] = -2.0
 
         def forward(self, mask_t: torch.Tensor, mask_t1: torch.Tensor) -> torch.Tensor:
             e_t = self.embedding(mask_t).permute(0, 3, 1, 2)

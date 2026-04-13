@@ -128,7 +128,7 @@ class FridrichRendererConfig:
     # Phase 1: MSE-dominated warmup (normalized to [0,1] range)
     p1_mse_weight: float = 10.0   # MSE should dominate Phase 1 (learn colors first)
     p1_seg_weight: float = 1.0    # soft SegNet signal
-    p1_pose_weight: float = 0.1   # PoseNet needs warp to work first
+    p1_pose_weight: float = 0.01  # very low: PoseNet starts at ~180, would dominate even at 0.1
 
     # Phase 2+3: Fridrich Lagrangian constraints
     seg_boundary: float = 0.005    # target: seg_dist < 0.005
@@ -1574,8 +1574,8 @@ def train_fridrich_renderer(cfg: FridrichRendererConfig) -> dict[str, Any]:
 @click.option("--motion-hidden", type=int, default=32, help="Asymmetric warp: motion predictor hidden dim")
 @click.option("--renderer-depth", type=int, default=1, help="Asymmetric warp: renderer depth")
 @click.option("--init-bits", type=float, default=8.0, help="Initial bit depth for self-compression")
-@click.option("--phase1-end", type=float, default=0.20, help="Phase 1 end (fraction of epochs)")
-@click.option("--phase2-end", type=float, default=0.60, help="Phase 2 end (fraction of epochs)")
+@click.option("--phase1-end", type=float, default=0.40, help="Phase 1 end (40%: renderer learns colors before Lagrangian)")
+@click.option("--phase2-end", type=float, default=0.70, help="Phase 2 end (70%: constraints before self-compression)")
 @click.option("--early-stop-patience", type=int, default=500, help="Early stop if constraints met for N epochs")
 @click.option("--init-h", type=int, default=24, help="DP-SIMS initial height")
 @click.option("--init-w", type=int, default=32, help="DP-SIMS initial width")
@@ -1585,9 +1585,9 @@ def train_fridrich_renderer(cfg: FridrichRendererConfig) -> dict[str, Any]:
 @click.option("--target-w", type=int, default=512, help="Scorer target width")
 @click.option("--lr-min-ratio", type=float, default=0.01, help="Cosine LR min ratio")
 @click.option("--grad-clip", type=float, default=1.0, help="Gradient clipping max norm")
-@click.option("--p1-mse-weight", type=float, default=1.0, help="Phase 1 MSE weight")
-@click.option("--p1-seg-weight", type=float, default=10.0, help="Phase 1 SegNet weight")
-@click.option("--p1-pose-weight", type=float, default=1.0, help="Phase 1 PoseNet weight")
+@click.option("--p1-mse-weight", type=float, default=10.0, help="Phase 1 MSE weight (normalized [0,1], should dominate warmup)")
+@click.option("--p1-seg-weight", type=float, default=1.0, help="Phase 1 SegNet weight")
+@click.option("--p1-pose-weight", type=float, default=0.01, help="Phase 1 PoseNet weight (very low: PoseNet starts at ~180)")
 @click.option("--rho-max", type=float, default=1e4, help="Maximum rho (penalty cap)")
 @click.option("--lambda-cap", type=float, default=1e6, help="Lagrangian multiplier cap")
 @click.option("--max-flow-px", type=float, default=20.0, help="Max optical flow in pixels (asymmetric mode)")
@@ -1736,8 +1736,8 @@ def validate_smoke(precomputed: str | None = None, pair_mode: str = "dp_sims") -
         log_every=10,
         max_hours=0.5,
         smoke=True,
-        phase1_end=0.2,   # Phase 1 ends at epoch 20
-        phase2_end=0.6,   # Phase 2 ends at epoch 60
+        phase1_end=0.4,   # Phase 1 ends at epoch 40 (match defaults)
+        phase2_end=0.7,   # Phase 2 ends at epoch 70 (match defaults)
     )
 
     if precomputed:
