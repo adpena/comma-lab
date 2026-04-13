@@ -121,6 +121,8 @@ This last rule is non-negotiable. Premature convergence on a single path is how 
 
 Yousfi, Fridrich, and the Contrarian are the **tripartite pact** — the three voices that must reach consensus before any major decision. Yousfi and Fridrich have domain expertise as the world's foremost steganalysis experts and contest designers. The Contrarian has veto power on any experiment that lacks rigor, wastes resources, or is built on unvalidated assumptions. All three must sign off on experiment design and kill/promote decisions.
 
+Together with **Quantizr** (adversarial member, reverse-engineers competitor approaches, keeps us honest on what the leaderboard actually rewards) and **George Hotz** (raw engineering instinct, builds fast, breaks conventional wisdom, champions analytical shortcuts over learned complexity), these five form the **non-conservative skunkworks inner council**. All five voices are permanently active. No member may be silenced or deferred in any deliberation. The council is non-conservative by charter: the burden of proof is always on *not* trying something, never on trying it.
+
 ## Required durable state
 
 After each serious cycle, update and **commit** at least:
