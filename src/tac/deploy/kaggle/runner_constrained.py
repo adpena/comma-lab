@@ -54,6 +54,11 @@ NOISE_SEED: int = 42
 LOG_EVERY: int = 100
 EXTRACT_BATCH: int = 16  # batch size for mask + pose extraction
 
+# Pre-registered kill criterion: proxy > KILL_THRESHOLD after KILL_STEP steps.
+# Per experiment protocol (CLAUDE.md): kill experiments showing no signal early.
+KILL_STEP: int = 500
+KILL_THRESHOLD: float = 1.50
+
 # Upstream scorer camera + segnet dimensions (from frame_utils.py)
 CAMERA_H: int = 874
 CAMERA_W: int = 1164
@@ -256,6 +261,13 @@ def compute_proxy_score(
         device:              target device string
         archive_size_bytes:  size of archive.zip in bytes for rate computation.
                              0 → rate = 0 (use when archive not yet written).
+
+    NOTE — Rate formula deviation from upstream evaluate.py:
+        Upstream uses:  rate = archive_bytes / sum_of_gt_video_file_sizes_on_disk
+        This proxy uses: rate = archive_bytes / (N * CAMERA_H * CAMERA_W * 3)
+        The denominators differ by ~20–70x (MKV vs raw). For seed-only archives
+        (< 100 bytes) this is negligible. For archives > 1 MB, the proxy rate
+        will be ~20–70x smaller than the true rate contribution.
     """
     import math
     import torch
@@ -341,10 +353,14 @@ def main(
     num_steps = int(os.environ.get("CONSTRAINED_NUM_STEPS", NUM_STEPS))
     lr = float(os.environ.get("CONSTRAINED_LR", LR))
     video_rel = os.environ.get("CONSTRAINED_VIDEO", "decode_base_archive/0.mkv")
+    # Disable early stopping for first run — loss landscape unknown, patience=50 too aggressive.
+    # Set CONSTRAINED_EARLY_STOP=1 to re-enable after we have empirical loss curves.
+    early_stop_patience = 0 if not int(os.environ.get("CONSTRAINED_EARLY_STOP", 0)) else 50
 
     print("=== Constrained generation experiment ===")
     print(f"  num_steps={num_steps}, lr={lr}, seed={NOISE_SEED}")
     print(f"  seg_weight={SEG_WEIGHT}, pose_weight={POSE_WEIGHT}")
+    print(f"  kill_threshold={KILL_THRESHOLD} after {KILL_STEP} steps")
 
     import torch
     device = "cuda" if torch.cuda.is_available() else "cpu"
@@ -394,28 +410,73 @@ def main(
 
     print(f"\n  Running constrained_generate ({num_steps} steps) ...")
     t1 = time.time()
+
+    # Phase 1: run first KILL_STEP steps, evaluate, enforce kill criterion.
     generated = constrained_generate(
         masks=masks.to(device),
         expected_pose=pose_targets.to(device),
         posenet=posenet,
         segnet=segnet,
         noise_seed=NOISE_SEED,
-        num_steps=num_steps,
+        num_steps=KILL_STEP,
         lr=lr,
         seg_weight=SEG_WEIGHT,
         pose_weight=POSE_WEIGHT,
         device=device,
         log_every=LOG_EVERY,
+        early_stop_patience=early_stop_patience,
         segnet_batch_size=EXTRACT_BATCH,
         posenet_batch_size=EXTRACT_BATCH,
     )
+
+    # Kill check: pre-registered hypothesis says kill if proxy > KILL_THRESHOLD
+    # after KILL_STEP steps (experiment protocol per CLAUDE.md).
+    import torch.nn.functional as _F
+    gen_bchw_kill = generated.permute(0, 3, 1, 2).float()
+    gen_cam_kill = _F.interpolate(gen_bchw_kill, size=(CAMERA_H, CAMERA_W), mode="bilinear", align_corners=False)
+    gen_cam_hwc_kill = gen_cam_kill.clamp(0.0, 255.0).permute(0, 2, 3, 1)
+    kill_scores = compute_proxy_score(
+        gen_cam_hwc_kill, gt_frames, segnet, posenet, device,
+        archive_size_bytes=0,  # seed not written yet
+    )
+    print(f"\n  === KILL CHECK (step {KILL_STEP}) ===")
+    print(f"  proxy: {kill_scores['score']:.4f}  (kill if > {KILL_THRESHOLD})")
+    if kill_scores["score"] > KILL_THRESHOLD:
+        print(f"  KILLED — proxy {kill_scores['score']:.4f} exceeds threshold {KILL_THRESHOLD}.")
+        print(f"  Hypothesis: constrained gen from noise does not converge fast enough.")
+        return 1
+
+    print(f"  Passed kill check — continuing to {num_steps} steps ...")
+
+    # Phase 2: continue remaining steps warm-started from phase-1 result.
+    remaining_steps = num_steps - KILL_STEP
+    if remaining_steps > 0:
+        generated = constrained_generate(
+            masks=masks.to(device),
+            expected_pose=pose_targets.to(device),
+            posenet=posenet,
+            segnet=segnet,
+            noise_seed=NOISE_SEED,
+            num_steps=remaining_steps,
+            lr=lr,
+            seg_weight=SEG_WEIGHT,
+            pose_weight=POSE_WEIGHT,
+            device=device,
+            log_every=LOG_EVERY,
+            early_stop_patience=early_stop_patience,
+            segnet_batch_size=EXTRACT_BATCH,
+            posenet_batch_size=EXTRACT_BATCH,
+            # Warm-start from kill-check result
+            init_frames=generated,
+        )
+
     gen_time = time.time() - t1
     print(f"  Generation time: {gen_time:.1f}s ({num_steps / gen_time:.1f} steps/s)")
 
     # Upsample from SegNet resolution (384×512) to camera resolution (874×1164)
     # for frames.raw compatibility with TensorVideoDataset.
     # Scorer resizes inputs anyway so argmax/pose are preserved through this upsample.
-    import torch.nn.functional as F
+    import torch.nn.functional as F  # noqa: PLC0415 — deferred to avoid top-level torch dep
     import numpy as np
 
     generated_bchw = generated.permute(0, 3, 1, 2).float()  # (N, 3, 384, 512)

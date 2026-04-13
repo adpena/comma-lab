@@ -560,25 +560,26 @@ def constrained_generate(
     early_stop_delta: float = 1e-4,
     segnet_batch_size: int = 32,
     posenet_batch_size: int = 32,
+    init_frames: torch.Tensor | None = None,
 ) -> torch.Tensor:
     """Main constrained optimization loop: generate frames from masks.
 
-    Starting from class-mean-colored noise, optimize pixel values via
-    gradient descent to simultaneously satisfy:
+    Starting from class-mean-colored noise (or *init_frames* if provided),
+    optimize pixel values via gradient descent to simultaneously satisfy:
       1. SegNet constraint: argmax matches target masks
       2. PoseNet constraint: pose output matches expected targets
       3. Compressibility: total variation is minimized
 
     Mini-batched internally to fit on T4 (16GB) for 1200 frames.
     Early stopping when loss improvement < early_stop_delta for
-    early_stop_patience consecutive steps.
+    early_stop_patience consecutive steps (set to 0 to disable).
 
     Args:
         masks: (N, H, W) long tensor with class indices.
         expected_pose: (P, 6) float tensor, P = N//2 (non-overlapping pairs, seq_len=2).
         posenet: frozen PoseNet model (on device).
         segnet: frozen SegNet model (on device).
-        noise_seed: deterministic seed for initialization.
+        noise_seed: deterministic seed for initialization (ignored if init_frames set).
         num_steps: maximum Adam optimization steps.
         lr: learning rate for Adam optimizer.
         seg_weight: weight for SegNet cross-entropy constraint.
@@ -587,18 +588,25 @@ def constrained_generate(
         compress_weight: weight for total variation loss.
         device: computation device.
         log_every: print loss every N steps (0 to disable).
-        early_stop_patience: stop if no improvement for this many steps.
+        early_stop_patience: stop if no improvement for this many steps (0 = disabled).
+            Default 50 may be too aggressive for first runs — disable until convergence
+            behavior is understood empirically.
         early_stop_delta: minimum loss improvement to reset patience counter.
         segnet_batch_size: frames per SegNet mini-batch (reduce if OOM).
         posenet_batch_size: pairs per PoseNet mini-batch (reduce if OOM).
+        init_frames: (N, H, W, 3) float tensor to warm-start from instead of noise.
+            Enables two-phase optimization: run N steps, evaluate, continue from result.
 
     Returns:
         (N, H, W, 3) float tensor in [0, 255], rounded to uint8-compatible values.
     """
     device = torch.device(device)
 
-    # Initialize frames from masks + seed
-    frames = generate_initial_frames(masks, noise_seed, device=device)
+    # Initialize frames — from provided warm-start or from masks + seed
+    if init_frames is not None:
+        frames = init_frames.to(device).detach().clone()
+    else:
+        frames = generate_initial_frames(masks, noise_seed, device=device)
     frames.requires_grad_(True)
 
     optimizer = torch.optim.Adam([frames], lr=lr)
@@ -648,20 +656,21 @@ def constrained_generate(
                 f"compress={compress_loss.item():.4f}"
             )
 
-        # Early stopping
-        if best_loss - loss_val > early_stop_delta:
-            best_loss = loss_val
-            no_improve_count = 0
-        else:
-            no_improve_count += 1
-            if no_improve_count >= early_stop_patience:
-                if log_every > 0:
-                    print(
-                        f"  Early stop at step {step + 1}: "
-                        f"no improvement for {early_stop_patience} steps "
-                        f"(best={best_loss:.4f})"
-                    )
-                break
+        # Early stopping (disabled when early_stop_patience == 0)
+        if early_stop_patience > 0:
+            if best_loss - loss_val > early_stop_delta:
+                best_loss = loss_val
+                no_improve_count = 0
+            else:
+                no_improve_count += 1
+                if no_improve_count >= early_stop_patience:
+                    if log_every > 0:
+                        print(
+                            f"  Early stop at step {step + 1}: "
+                            f"no improvement for {early_stop_patience} steps "
+                            f"(best={best_loss:.4f})"
+                        )
+                    break
 
     # Final quantization: round to nearest integer, clamp to uint8 range
     with torch.no_grad():
@@ -1349,7 +1358,7 @@ def scorer_as_compressor(
     that decompress to match.
 
     Returns dict with:
-        'posenet_targets': (N-1, 6) float16 PoseNet outputs
+        'posenet_targets': (N//2, 6) float16 PoseNet outputs — non-overlapping pairs
         'segnet_masks': (N, H_out, W_out) uint8 argmax masks
         'segnet_logits_topk': (N, topk, H_out, W_out) float16 top-K logits
         'segnet_logits_topk_idx': (N, topk, H_out, W_out) uint8 top-K class indices
@@ -1363,7 +1372,7 @@ def scorer_as_compressor(
         segnet: frozen SegNet model.
         device: computation device.
         topk: number of top SegNet logits to store per pixel (higher = more fidelity).
-        batch_size: frames per forward pass.
+        batch_size: pairs per forward pass.
 
     Returns:
         Dict with scorer sufficient statistics.
@@ -1371,15 +1380,18 @@ def scorer_as_compressor(
     device = torch.device(device)
     N = frames.shape[0]
 
-    # --- PoseNet targets: extract for all consecutive pairs ---
+    # --- PoseNet targets: extract for NON-OVERLAPPING pairs (seq_len=2) ---
+    # Upstream DaliVideoDataset uses non-overlapping pairs (f0,f1),(f2,f3),...
+    # N//2 pairs total — NOT N-1 consecutive pairs.
     all_pose = []
+    num_pairs = N // 2
     frames_chw = frames.permute(0, 3, 1, 2).contiguous().to(device)  # (N, 3, H, W)
 
     with torch.inference_mode():
-        for i in range(0, N - 1, batch_size):
-            end = min(i + batch_size, N - 1)
-            t0 = frames_chw[i:end]      # (B, 3, H, W)
-            t1 = frames_chw[i + 1:end + 1]  # (B, 3, H, W)
+        for start in range(0, num_pairs, batch_size):
+            end = min(start + batch_size, num_pairs)
+            t0 = frames_chw[2 * start:2 * end:2]       # (B, 3, H, W) — even frames
+            t1 = frames_chw[2 * start + 1:2 * end + 1:2]  # (B, 3, H, W) — odd frames
             pairs = torch.stack([t0, t1], dim=1).contiguous()  # (B, 2, 3, H, W)
             posenet_in = posenet.preprocess_input(pairs)
             pose_out = posenet(posenet_in)
@@ -1930,7 +1942,7 @@ def newton_step_optimize(
         expected_pose = estimate_expected_pose(masks, device=device)
 
     N = frames.shape[0]
-    P = N - 1
+    P = N // 2  # non-overlapping pairs, matching upstream scorer seq_len=2
 
     frames.requires_grad_(True)
 
@@ -2031,7 +2043,7 @@ def _gradient_directed_dither(
     # Must go through segnet.preprocess_input (expects (B, T, C, H, W)) —
     # bypassing it skips required preprocessing and produces wrong gradients.
     inp = frames.detach().clone().requires_grad_(True)
-    resized = F.interpolate(inp, size=(384, 512), mode="bilinear", align_corners=False)
+    resized = F.interpolate(inp, size=(SEGNET_INPUT_H, SEGNET_INPUT_W), mode="bilinear", align_corners=False)
     seg_btchw = resized.unsqueeze(1).contiguous()  # (N, 1, C, H, W) — T=1
     seg_input = segnet.preprocess_input(seg_btchw)
     logits = segnet(seg_input)
