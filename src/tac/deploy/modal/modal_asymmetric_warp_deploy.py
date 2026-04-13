@@ -382,7 +382,7 @@ def auth_eval(tag: str, checkpoint: str = "renderer_best.pt"):
             base_ch=config.get("base_ch", 36),
             mid_ch=config.get("mid_ch", 60),
             motion_hidden=config.get("motion_hidden", 32),
-            depth=config.get("depth", 1),
+            depth=config.get("renderer_depth", config.get("depth", 1)),
             max_flow_px=config.get("max_flow_px", 20.0),
             max_residual=config.get("max_residual", 20.0),
             flow_only=config.get("flow_only", False),
@@ -408,7 +408,7 @@ def auth_eval(tag: str, checkpoint: str = "renderer_best.pt"):
                 from pathlib import Path as _ExportPath
                 from tac.renderer_export import export_asymmetric_checkpoint
                 bin_path = os.path.join(vol_dir, f"renderer_{checkpoint.replace('.pt', '')}.bin")
-                archive_size = export_asymmetric_checkpoint(model, output_path=_ExportPath(bin_path), default_bits=4)
+                archive_size = export_asymmetric_checkpoint(model, output_path=_ExportPath(bin_path), default_bits=8)
                 print(f"  Exported: {bin_path} ({archive_size:,} bytes)")
             except Exception as e:
                 raise RuntimeError(

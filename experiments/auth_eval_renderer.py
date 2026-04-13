@@ -177,7 +177,7 @@ def _load_renderer_checkpoint(ckpt_path: str, device: str) -> tuple[nn.Module, d
             base_ch=config.get("base_ch", 36),
             mid_ch=config.get("mid_ch", 60),
             motion_hidden=config.get("motion_hidden", 32),
-            depth=config.get("depth", 1),
+            depth=config.get("renderer_depth", config.get("depth", 1)),
             max_flow_px=config.get("max_flow_px", 20.0),
             max_residual=config.get("max_residual", 20.0),
             flow_only=config.get("flow_only", False),
@@ -188,7 +188,7 @@ def _load_renderer_checkpoint(ckpt_path: str, device: str) -> tuple[nn.Module, d
             embed_dim=config.get("embed_dim", 6),
             base_ch=config.get("base_ch", 36),
             mid_ch=config.get("mid_ch", 60),
-            depth=config.get("depth", 1),
+            depth=config.get("renderer_depth", config.get("depth", 1)),
         )
 
     model.load_state_dict(ckpt["model_state_dict"])
