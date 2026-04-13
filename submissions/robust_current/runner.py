@@ -320,9 +320,22 @@ def preflight_submission(submission_src: Path) -> list[str]:
     for f in required:
         if not (submission_src / f).exists():
             errors.append(f"Missing submission file: {submission_src / f}")
-    # Postfilter weights
-    if not (submission_src / "postfilter_int8.pt").exists():
-        errors.append(f"Missing postfilter weights: {submission_src / 'postfilter_int8.pt'}")
+    # Check artifacts based on inflate mode
+    inflate_mode = "postfilter"
+    config_path = submission_src / "config.env"
+    if config_path.exists():
+        for line in config_path.read_text().splitlines():
+            if line.startswith("PYTHON_INFLATE="):
+                inflate_mode = line.split("=", 1)[1].strip()
+    if inflate_mode == "renderer":
+        if not (submission_src / "renderer.bin").exists():
+            errors.append(
+                f"PYTHON_INFLATE=renderer but renderer.bin missing from {submission_src}. "
+                f"Export a .bin checkpoint first or switch to PYTHON_INFLATE=postfilter."
+            )
+    else:
+        if not (submission_src / "postfilter_int8.pt").exists():
+            errors.append(f"Missing postfilter weights: {submission_src / 'postfilter_int8.pt'}")
     return errors
 
 
@@ -715,7 +728,7 @@ def stage_inflate(
             )
         n_frames = raw_size // frame_bytes
         click.echo(f"  {raw.name}: {n_frames} frames, {raw_size:,} bytes")
-        expected_frames = int(os.environ.get("PACT_FRAME_COUNT", "1200"))
+        expected_frames = int(config.get("PACT_FRAME_COUNT", os.environ.get("PACT_FRAME_COUNT", "1200")))
         if n_frames != expected_frames:
             raise click.ClickException(
                 f"Frame count mismatch: {raw.name} has {n_frames} frames, "

@@ -92,11 +92,10 @@ SCALE_W="${SCALE_W:-}"
 SCALE_H="${SCALE_H:-}"
 DOWNSCALE_FLAGS="${DOWNSCALE_FLAGS:-}"
 # ── Technique 8: Even-frame higher QP encoding ──────────────────────
-# Assumption: SegNet only evaluates odd frames, so even frames can be
-# encoded at higher QP (lower quality) for rate reduction with no SegNet impact.
-# NOTE: verify this against the actual scorer behavior — the frame selection
-# logic may differ between scorer versions or evaluation modes.
-# Set to 0 to disable. Typical value: 4-8 (QP offset for even frames).
+# DISABLED (council sweep round 5): even-frame QP boost re-encodes both
+# streams at standard CRF in the interleave step, negating the quality
+# differential. Do NOT enable without fixing the double-encode pipeline.
+# Set to 0 (default) to use standard single-pass encoding.
 EVEN_FRAME_QP_BOOST="${EVEN_FRAME_QP_BOOST:-0}"
 TMP_ROOT="${TMPDIR:-/tmp}"
 if [ ! -d "$TMP_ROOT" ]; then
@@ -191,6 +190,7 @@ encode_video() {
       -colorspace "$SOURCE_COLOR_MATRIX" \
       -color_primaries "$SOURCE_COLOR_PRIMARIES" \
       -color_trc "$SOURCE_COLOR_TRC" \
+      -map_metadata -1 \
       "$out_path"
   fi
 }
