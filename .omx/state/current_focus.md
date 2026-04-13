@@ -1,9 +1,12 @@
 # Current Focus -- 2026-04-13T10:00:00-05:00
 
 ## Scores
-- **Official best**: 1.33 (dilated_h64)
+- **Renderer auth (ep 12400)**: 1.0000 — seg=0.210, pose=0.692, rate=0.100
+  - proxy was 0.6019 (proxy→auth gap ~0.40, calibration artifact)
+  - pose is 69% of score — supervised variant is attacking this directly
+- **CPU postfilter best**: ~1.89 auth (dilated_h64)
 - **Target**: beat Quantizr at 0.60
-- **Projection**: 0.57 (seg=0.30 + pose=0.14 + rate=0.13)
+- **Path**: cut pose_dist from 0.0479 → 0.016 (3× reduction needed)
 
 ## Active Experiments
 

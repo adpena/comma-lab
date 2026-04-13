@@ -1,0 +1,20 @@
+{
+  "tag": "asym_v3_longer_tight",
+  "checkpoint": "renderer_best.pt",
+  "checkpoint_path": "/results/asym_v3_longer_tight/renderer_best.pt",
+  "avg_posenet_dist": 0.04791719,
+  "avg_segnet_dist": 0.00210374,
+  "archive_size_bytes": 150715,
+  "gt_size_bytes": 37545489,
+  "rate": 0.0040142,
+  "score_seg": 0.21037400000000003,
+  "score_pose": 0.6922224353486385,
+  "score_rate": 0.100355,
+  "final_score": 1.0,
+  "n_samples": 600,
+  "n_frames": 1200,
+  "eval_method": "upstream_evaluate_py_cuda",
+  "device": "cuda",
+  "timestamp": "2026-04-13T17:37:26Z",
+  "elapsed_seconds": 170.498595685
+}
