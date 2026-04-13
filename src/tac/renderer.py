@@ -838,12 +838,16 @@ class AsymmetricPairGenerator(nn.Module):
         self,
         mask_t: torch.Tensor,
         mask_t1: torch.Tensor,
+        residual_scale: float = 1.0,
     ) -> torch.Tensor:
         """Generate a frame pair using warp-based asymmetric generation.
 
         Args:
             mask_t: (B, H, W) long — mask at time t
             mask_t1: (B, H, W) long — mask at time t+1
+            residual_scale: Scale factor for gate*residual correction path.
+                0.0 = pure warp (flow warmup), 1.0 = normal gate+residual.
+                Used by training to force flow learning before residual develops.
 
         Returns:
             (B, 2, H, W, 3) float HWC pair in [0, 255]
@@ -858,8 +862,10 @@ class AsymmetricPairGenerator(nn.Module):
         residual = motion_out[:, 3:6]  # (B, 3, H, W) [-20, 20]
 
         # Warp anchor backward to produce frame_t
+        # Flow warmup: residual_scale controls gate*residual contribution.
+        # At residual_scale=0, frame_t = pure warp, forcing flow to produce useful motion.
         warped_t1 = warp_with_flow(frame_t1, flow)
-        frame_t = (warped_t1 + gate * residual).clamp(0.0, 255.0)
+        frame_t = (warped_t1 + residual_scale * gate * residual).clamp(0.0, 255.0)
 
         # Diagnostic: gate statistics (council Option C — Quantizr adversarial recommendation)
         # If mean gate > 0.7, flow is not contributing and architecture degrades to residual-only
