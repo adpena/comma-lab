@@ -31,14 +31,13 @@
 - Round 19 complete: 4 council issues fixed (double PoseNet fwd, p1_pose_sup_weight, ego_flow reuse, logging cache)
 - Round 20 complete: MED-4 DCT device fix, MED-5 n_written assert, HIGH-5 W→(W-1) flow normalization (council 4-1)
 - Round 21 complete: 66 pre-existing test failures fixed → 672 passed, 0 failed
-  - test_hardening: 9 missing non-postfilter variants added to exclusion set, non-postfilter skip added
-  - test_tac_lossless_{arithmetic,baseline,evaluate}: 8 env-sensitive data_files assertions fixed via os.path.basename()
-- CLAUDE.md: "multiple contenders → multiple paths" + 5-member non-conservative council (Yousfi, Fridrich, Contrarian, Quantizr, Hotz)
-- Deploy infrastructure: deploy_config.py (provider-agnostic canonical flags)
-  - Modal: imports from deploy_config, manifest saved before training
-  - Lightning: variant-aware (base/supervised/raft_only), env-var injection (no shell injection)
-  - Kaggle: 3 kernel specs (asym_warp_base/supervised/raft_only), launcher reads ASYM_VARIANT
-  - All 8 critical/high adversarial review issues fixed (--output-dir crash, __init__.py, UPSTREAM_ROOT, PYTHONPATH, dead code, injection, uv mandate, flag dedup)
+- Round 22 complete: flow_compress CUDA, even_pairs guard, warp_quality telemetry
+- Round 23 complete: ego_flow.py W→(W-1) normalization
+- Round 24 complete: Lightning deploy crash fix — strip/reinject paths
+- Round 25 complete: .pt hardening (raft_flow/pose_targets fail-fast); Kaggle script path fix
+  - tac/deploy/{modal,kaggle,lightning}/__init__.py created — wheel now discovers subpackages
+  - 3 Kaggle kernel bundles committed (experiments/kaggle_kernels/asym_warp_*)
+  - GPU scorer proxy: ~0.8-0.9 (asym_v3_longer_tight at ep ~11K/20K)
 
 ## Kill/Promote
 - Kill: seg > 0.8 for 200 consecutive epochs in Phase 2
