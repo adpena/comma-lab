@@ -33,6 +33,7 @@ EXPERIMENT_SCRIPT = "experiments/train_renderer_fridrich.py"
 #   v3: 20K epochs, tighter pose_boundary (asym_v3_longer_tight)
 #   v4: double PoseNet fwd fix, p1_pose_sup_weight split, ego_flow reuse,
 #       logging cache (all 4 Round-19 council issues resolved)
+#   v5: Lagrangian R2 caps (rho_max 1000→100, lambda_cap 10000→1000)
 # ---------------------------------------------------------------------------
 BASE_FLAGS: list[str] = [
     "--pair-mode", "asymmetric",
@@ -49,8 +50,8 @@ BASE_FLAGS: list[str] = [
     "--pose-boundary", "0.02",
     "--rho-init", "10.0",
     "--rho-growth", "1.005",
-    "--rho-max", "1000",
-    "--lambda-cap", "10000",
+    "--rho-max", "100",         # council R2: 1000 saturated at ep~920; 100 gives task loss room
+    "--lambda-cap", "1000",      # council R2: 10000 → 1000 to prevent λ dominating supervision
     "--phase1-end", "0.25",
     "--phase2-end", "0.85",
     "--flow-warmup-epochs", "0",      # no warmup when resuming
