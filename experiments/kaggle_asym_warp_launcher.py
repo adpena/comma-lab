@@ -42,6 +42,17 @@ def _bootstrap_tac(input_root: Path) -> None:
     subprocess.check_call(
         [sys.executable, "-m", "pip", "install", "-q", "--no-deps", str(wheel)]
     )
+    # Verify the installed wheel has tac.deploy.kaggle.runner (added in v1.0.0).
+    # Pre-v1.0.0 wheels install tac but lack the deploy subpackages.
+    try:
+        from tac.deploy.kaggle import runner as _r  # noqa: F401
+    except (ImportError, ModuleNotFoundError) as exc:
+        raise ImportError(
+            f"Installed {wheel.name} but tac.deploy.kaggle.runner is not importable.\n"
+            f"  This wheel is pre-v1.0.0 and lacks the deploy subpackages.\n"
+            f"  Upload tac-1.0.0+ to comma-lab-private-assets:\n"
+            f"    kaggle datasets version -p dist/ -m 'tac v1.0.0'"
+        ) from exc
 
 
 if __name__ == "__main__":

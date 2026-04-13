@@ -101,6 +101,19 @@ def ensure_tac(input_root: Path | None = None) -> None:
     subprocess.check_call(
         [sys.executable, "-m", "pip", "install", "-q", "--no-deps", str(wheel)]
     )
+    # Verify the installed wheel has the deploy subpackages (added in tac v1.0.0).
+    # Old wheels (comma_video_lab_ball_pack < v1.0.0) install tac but lack
+    # tac.deploy.kaggle.runner, producing a cryptic ImportError later.
+    try:
+        from tac.deploy.kaggle import runner as _r  # noqa: F401,F811
+    except (ImportError, ModuleNotFoundError):
+        raise ImportError(
+            f"Installed {wheel.name} but tac.deploy.kaggle.runner is not available.\n"
+            f"  This wheel is pre-v1.0.0 and lacks the deploy subpackages.\n"
+            f"  Upload tac-1.0.0+ to the comma-lab-private-assets dataset:\n"
+            f"    kaggle datasets version -p dist/ -m 'tac v1.0.0'\n"
+            f"  (Found wheel at: {wheel})"
+        )
 
 
 def ensure_upstream(working_dir: Path | None = None) -> Path:
@@ -180,7 +193,10 @@ def resolve_supervision_assets(
         if not raft_flow.exists():
             raise FileNotFoundError(
                 f"raft_flow.pt not found at {raft_flow}\n"
-                f"  Upload to dataset: kaggle datasets version -p <dir-with-raft_flow.pt>\n"
+                f"  Download from Modal volume:\n"
+                f"    modal volume get comma-lab-results /results/raft_flow.pt ./\n"
+                f"  Then add to the dataset:\n"
+                f"    kaggle datasets version -p <dir-with-raft_flow.pt> -m 'add raft_flow.pt'\n"
                 f"  Or use variant='base' to train without RAFT flow supervision."
             )
         assets["raft_flow"] = raft_flow
@@ -190,9 +206,11 @@ def resolve_supervision_assets(
         if not targets.exists():
             raise FileNotFoundError(
                 f"posenet_targets.bin not found at {targets}\n"
-                f"  Generate: python -m tac.scorer_targets --gt-video <video> "
-                f"--posenet <model> --output posenet_targets.bin\n"
-                f"  Then upload to dataset. Or use variant='raft_only' for RAFT-only supervision."
+                f"  Download from Modal volume:\n"
+                f"    modal volume get comma-lab-results /results/posenet_targets.bin ./\n"
+                f"  Then add to the dataset:\n"
+                f"    kaggle datasets version -p <dir> -m 'add posenet_targets.bin'\n"
+                f"  Or use variant='raft_only' for RAFT-only supervision."
             )
         assets["posenet_targets"] = targets
 
@@ -248,9 +266,11 @@ def build_kaggle_command(
             f"Unknown variant {variant!r}. Valid: {list(ALL_VARIANTS)}"
         )
 
+    # Do NOT pass provider_script_path — build_flags would prepend ["python", path]
+    # which we'd then have to strip out. Instead, get bare flags and build the
+    # full command ourselves so the argv is unambiguous.
     base_flags = build_flags(
         variant=variant,
-        provider_script_path=str(script_path),
         resume_from=resume_from,
     )
     clean_flags = _strip_flags(base_flags, _STRIP_FLAGS)
@@ -266,11 +286,6 @@ def build_kaggle_command(
         overrides += ["--raft-flow-path", str(assets["raft_flow"])]
     if "posenet_targets" in assets:
         overrides += ["--pose-targets-path", str(assets["posenet_targets"])]
-
-    # Strip the script path that build_flags prepended, then reassemble
-    # build_flags returns [script_path, ...flags...]; we need our own script_path
-    if clean_flags and clean_flags[0] == str(script_path):
-        clean_flags = clean_flags[1:]
 
     return [sys.executable, str(script_path)] + clean_flags + overrides
 

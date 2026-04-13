@@ -20,6 +20,7 @@ if str(SRC_ROOT) not in sys.path:
 from tac.deploy.kaggle.runner import (  # noqa: E402
     WHEEL_GLOBS,
     _strip_flags,
+    ensure_tac,
     find_tac_wheel,
     resolve_supervision_assets,
     resolve_training_script,
@@ -85,6 +86,40 @@ class TestFindTacWheel(unittest.TestCase):
         self.assertIn("comma_video_lab_ball_pack-*.whl", WHEEL_GLOBS)
         # tac must come first — it takes priority
         self.assertEqual(WHEEL_GLOBS[0], "tac-*.whl")
+
+
+# ---------------------------------------------------------------------------
+# ensure_tac — post-install verification
+# ---------------------------------------------------------------------------
+
+class TestEnsureTac(unittest.TestCase):
+    def test_skips_install_if_already_importable(self) -> None:
+        """If tac.deploy.kaggle.runner is already importable, no pip install runs."""
+        with mock.patch("subprocess.check_call") as mock_pip:
+            ensure_tac(Path("/nonexistent"))
+        mock_pip.assert_not_called()
+
+    def test_raises_if_post_install_runner_missing(self) -> None:
+        """Old wheel installs tac but lacks runner — must raise with upload instructions."""
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            wheel = root / "tac-0.9.0-py3-none-any.whl"
+            wheel.touch()
+
+            # Simulate: tac not importable → triggers install path
+            # After install: tac importable but runner still missing
+            import_call_count = [0]
+            def fake_import(name: str, *_a: object, **_kw: object) -> None:
+                import_call_count[0] += 1
+                raise ImportError(f"no module named {name}")
+
+            with mock.patch("subprocess.check_call"), \
+                 mock.patch("builtins.__import__", side_effect=fake_import):
+                with self.assertRaises(ImportError) as ctx:
+                    ensure_tac(root)
+            self.assertIn("pre-v1.0.0", str(ctx.exception))
+            self.assertIn("kaggle datasets version", str(ctx.exception))
+            self.assertIn("tac v1.0.0", str(ctx.exception))
 
 
 # ---------------------------------------------------------------------------
@@ -168,16 +203,22 @@ class TestResolveSupervisionAssets(unittest.TestCase):
         with tempfile.TemporaryDirectory() as tmp:
             with self.assertRaises(FileNotFoundError) as ctx:
                 resolve_supervision_assets("raft_only", Path(tmp))
-            self.assertIn("raft_flow.pt", str(ctx.exception))
-            self.assertIn("kaggle datasets version", str(ctx.exception))
+            msg = str(ctx.exception)
+            self.assertIn("raft_flow.pt", msg)
+            self.assertIn("modal volume get", msg)
+            self.assertIn("comma-lab-results", msg)
+            self.assertIn("kaggle datasets version", msg)
 
     def test_supervised_missing_targets_raises(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:
             root = self._make_asset_root(tmp, raft=True)  # raft present, targets absent
             with self.assertRaises(FileNotFoundError) as ctx:
                 resolve_supervision_assets("supervised", root)
-            self.assertIn("posenet_targets.bin", str(ctx.exception))
-            self.assertIn("tac.scorer_targets", str(ctx.exception))
+            msg = str(ctx.exception)
+            self.assertIn("posenet_targets.bin", msg)
+            self.assertIn("modal volume get", msg)
+            self.assertIn("comma-lab-results", msg)
+            self.assertIn("kaggle datasets version", msg)
 
 
 # ---------------------------------------------------------------------------
@@ -253,14 +294,18 @@ class TestBuildKaggleCommand(unittest.TestCase):
             (root / "posenet_targets.bin").touch()
         return root
 
-    def _mock_build_flags(self, variant: str = "base", provider_script_path: str = "", resume_from: object = None, **_kw: object) -> list[str]:
-        """Minimal stand-in for tac.deploy.deploy_config.build_flags."""
+    def _mock_build_flags(self, variant: str = "base", resume_from: object = None, **_kw: object) -> list[str]:
+        """Minimal stand-in for tac.deploy.deploy_config.build_flags.
+
+        Returns bare flags only — no script path prepended.
+        build_kaggle_command must NOT pass provider_script_path to build_flags;
+        this mock enforces that contract by not accepting or returning a script path.
+        """
         return [
-            provider_script_path,
-            "--device", "/results/device",
-            "--max-hours", "99",
-            "--raft-flow-path", "/results/flow.pt",
-            "--pose-targets-path", "/results/targets.bin",
+            "--device", "cuda",                          # BASE_FLAGS device (will be stripped)
+            "--max-hours", "5.5",                        # BASE_FLAGS max-hours (will be stripped)
+            "--raft-flow-path", "/results/flow.pt",      # VARIANT_FLAGS (will be stripped)
+            "--pose-targets-path", "/results/targets.bin",  # VARIANT_FLAGS (will be stripped)
             "--epochs", "20000",
         ]
 
@@ -270,7 +315,7 @@ class TestBuildKaggleCommand(unittest.TestCase):
         script.touch()
         asset_root = self._make_assets(tmp, variant)
         with mock.patch("tac.deploy.deploy_config.build_flags", side_effect=self._mock_build_flags), \
-             mock.patch("tac.deploy.deploy_config.ALL_VARIANTS", {"base", "supervised", "raft_only"}):
+             mock.patch("tac.deploy.deploy_config.ALL_VARIANTS", ["base", "supervised", "raft_only"]):
             return build_kaggle_command(variant, script, asset_root)
 
     def test_command_starts_with_python(self) -> None:
@@ -317,6 +362,40 @@ class TestBuildKaggleCommand(unittest.TestCase):
             with tempfile.TemporaryDirectory() as tmp:
                 build_kaggle_command("nonexistent", Path(tmp) / "t.py", Path(tmp))
         self.assertIn("nonexistent", str(ctx.exception))
+
+    def test_build_flags_never_receives_provider_script_path(self) -> None:
+        """build_flags must NOT be called with provider_script_path.
+
+        If it were, build_flags would return ["python", script, ...flags...] and
+        the command would double the script path: [sys.executable, script, "python", script, ...].
+        """
+        from tac.deploy.kaggle.runner import build_kaggle_command
+        with tempfile.TemporaryDirectory() as tmp:
+            script = Path(tmp) / "train.py"
+            script.touch()
+
+            call_kwargs: dict = {}
+
+            def capture_build_flags(**kwargs: object) -> list[str]:
+                call_kwargs.update(kwargs)
+                return ["--epochs", "20000"]
+
+            with mock.patch("tac.deploy.deploy_config.build_flags", side_effect=capture_build_flags), \
+                 mock.patch("tac.deploy.deploy_config.ALL_VARIANTS", ["base", "supervised", "raft_only"]):
+                build_kaggle_command("base", script, Path(tmp))
+
+            self.assertNotIn(
+                "provider_script_path", call_kwargs,
+                "build_flags was called with provider_script_path — this causes a double-script bug"
+            )
+
+    def test_command_has_no_double_script(self) -> None:
+        """Final command must contain the script exactly once (no double-script from build_flags)."""
+        with tempfile.TemporaryDirectory() as tmp:
+            cmd = self._run_build("base", tmp)
+            script = str(Path(tmp) / "train.py")
+            occurrences = cmd.count(script)
+            self.assertEqual(occurrences, 1, f"script appears {occurrences}x in command: {cmd}")
 
 
 if __name__ == "__main__":
