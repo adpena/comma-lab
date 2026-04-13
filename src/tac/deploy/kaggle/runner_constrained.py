@@ -436,14 +436,22 @@ def main(
     # Kill check: pre-registered hypothesis says kill if proxy > KILL_THRESHOLD
     # after KILL_STEP steps (experiment protocol per CLAUDE.md).
     # Memory-safe: use SegNet resolution (384×512, ~884 MB) for both gen and gt.
-    # Camera-res upsample on GPU = 14.65 GB → OOM on T4 (16 GB VRAM).
-    # Downsample gt from camera res to SegNet res on CPU — only 884 MB output.
+    # Camera-res GPU upsample = 14.65 GB → OOM on T4.
+    # CPU-side full-tensor .contiguous() on camera-res gt = ANOTHER 14.65 GB → peak 29.3 GB
+    # → also OOM on Kaggle (26–29 GB CPU RAM).
+    # Fix: batch downsample gt in 64-frame chunks; peak per chunk = 784 MB, total safe.
     import torch.nn.functional as _F
+    _DSAMP_BATCH = 64
+    _gt_small_chunks: list["torch.Tensor"] = []
     with torch.no_grad():
-        gt_small = _F.interpolate(
-            gt_frames.permute(0, 3, 1, 2).contiguous(),  # (N, 3, CAMERA_H, CAMERA_W) CPU
-            size=(SEGNET_H, SEGNET_W), mode="bilinear", align_corners=False,
-        ).permute(0, 2, 3, 1).contiguous()  # (N, SEGNET_H, SEGNET_W, 3) float CPU ~884 MB
+        for _ds in range(0, gt_frames.shape[0], _DSAMP_BATCH):
+            _de = min(_ds + _DSAMP_BATCH, gt_frames.shape[0])
+            _chunk = gt_frames[_ds:_de].permute(0, 3, 1, 2).contiguous()  # (B, 3, CAMERA_H, CAMERA_W)
+            _small = _F.interpolate(_chunk, size=(SEGNET_H, SEGNET_W), mode="bilinear", align_corners=False)
+            _gt_small_chunks.append(_small.permute(0, 2, 3, 1))  # (B, SEGNET_H, SEGNET_W, 3)
+            del _chunk, _small
+    gt_small = torch.cat(_gt_small_chunks, dim=0)  # (N, SEGNET_H, SEGNET_W, 3) ~884 MB
+    del _gt_small_chunks
     kill_scores = compute_proxy_score(
         generated.cpu(), gt_small, segnet, posenet, device,
         archive_size_bytes=0,  # seed not written yet
@@ -466,7 +474,7 @@ def main(
             expected_pose=pose_targets.to(device),
             posenet=posenet,
             segnet=segnet,
-            noise_seed=NOISE_SEED,
+            noise_seed=NOISE_SEED,  # ignored — init_frames overrides initialization
             num_steps=remaining_steps,
             lr=lr,
             seg_weight=SEG_WEIGHT,
@@ -476,8 +484,7 @@ def main(
             early_stop_patience=early_stop_patience,
             segnet_batch_size=EXTRACT_BATCH,
             posenet_batch_size=EXTRACT_BATCH,
-            # Warm-start from kill-check result
-            init_frames=generated,
+            init_frames=generated,  # warm-start from phase-1 result
         )
 
     gen_time = time.time() - t1
@@ -485,29 +492,40 @@ def main(
 
     # Upsample from SegNet resolution (384×512) to camera resolution (874×1164)
     # for frames.raw compatibility with TensorVideoDataset.
-    # Scorer resizes inputs anyway so argmax/pose are preserved through this upsample.
+    # Write in 64-frame chunks — avoids materializing a 14.65 GB camera-res float32
+    # tensor and a separate 3.66 GB uint8 numpy array simultaneously.
+    # (14.65 + 3.66 = 18.3 GB; adding gt_frames = 33 GB → OOM on Kaggle 26 GB CPU RAM)
+    # Chunk approach: peak per batch = 64×874×1164×3×4 = 784 MB. Total ≈ 16.5 GB.
     import torch.nn.functional as F  # noqa: PLC0415 — deferred to avoid top-level torch dep
     import numpy as np
 
-    # Move to CPU before upsampling — camera-res GPU tensor = 14.65 GB → OOM on T4.
-    # CPU has ~26 GB RAM on Kaggle; 14.65 GB CPU-side allocation is safe.
-    generated_bchw_cpu = generated.cpu().permute(0, 3, 1, 2).float()  # (N, 3, 384, 512) CPU
-    generated_camera_cpu = F.interpolate(
-        generated_bchw_cpu, size=(CAMERA_H, CAMERA_W), mode="bilinear", align_corners=False
-    )  # (N, 3, 874, 1164) CPU
-    # Clamp after bilinear interpolation — float rounding can push values
-    # infinitesimally outside [0, 255], causing silent uint8 wrap on astype().
-    generated_camera_hwc = generated_camera_cpu.clamp(0.0, 255.0).permute(0, 2, 3, 1)  # (N, 874, 1164, 3) CPU
-
-    # Write inflated/0.raw — path expected by TensorVideoDataset + upstream evaluate.py
-    # Filename stem comes from the video_rel: "decode_base_archive/0.mkv" → "0"
     video_name = Path(video_rel).stem  # e.g. "0"
     inflated_dir = working_dir / "inflated"
     inflated_dir.mkdir(parents=True, exist_ok=True)
     raw_path = inflated_dir / f"{video_name}.raw"
-    generated_np = generated_camera_hwc.cpu().numpy().astype(np.uint8)
-    generated_np.tofile(raw_path)
-    print(f"  Wrote {generated_np.shape[0]} frames to {raw_path}")
+
+    _WRITE_BATCH = 64
+    generated_bchw_cpu = generated.cpu().permute(0, 3, 1, 2).float()  # (N, 3, 384, 512) CPU ~884 MB
+    n_written = 0
+    with open(raw_path, "wb") as _raw_f:
+        for _ws in range(0, generated_bchw_cpu.shape[0], _WRITE_BATCH):
+            _we = min(_ws + _WRITE_BATCH, generated_bchw_cpu.shape[0])
+            _chunk_cam = (
+                F.interpolate(
+                    generated_bchw_cpu[_ws:_we],
+                    size=(CAMERA_H, CAMERA_W),
+                    mode="bilinear",
+                    align_corners=False,
+                )
+                .clamp(0.0, 255.0)
+                .permute(0, 2, 3, 1)
+                .contiguous()  # permute() returns non-contiguous view; .numpy() requires contiguous
+            )  # (B, 874, 1164, 3) float — 784 MB peak per chunk
+            _raw_f.write(_chunk_cam.numpy().astype(np.uint8).tobytes())
+            n_written += _we - _ws
+            del _chunk_cam
+    del generated_bchw_cpu  # free 884 MB CPU before proxy score
+    print(f"  Wrote {n_written} frames to {raw_path}")
 
     # Write minimal archive.zip (seed only) so upstream evaluate.py stat() succeeds
     archive_path = working_dir / "archive.zip"
@@ -515,15 +533,28 @@ def main(
         zf.writestr("seed.bin", struct.pack("<Q", NOISE_SEED))
     print(f"  Archive: {archive_path} ({archive_path.stat().st_size} bytes)")
 
-    # Compute proxy score (reuse already-loaded models — no extra weight loads).
-    # Use generated_camera_hwc (camera resolution) so PoseNet spatial dims match
-    # gt_frames — PoseNet.preprocess_input does NOT resize spatially, and comparing
-    # tensors at different sizes would produce wrong or mismatched YUV6 outputs.
-    print("\n  Computing proxy score ...")
+    # Compute proxy score at SegNet resolution — avoids materializing a second
+    # 14.65 GB camera-res tensor alongside gt_frames (would be 29.3 GB peak → OOM).
+    # Score at SegNet res (384×512) vs camera res produces slightly different absolute
+    # values but the same relative signal; clearly labeled in output.
+    # NOTE — rate denominator is hardcoded to CAMERA_H×CAMERA_W bytes (not input H×W).
+    # For a 64-byte seed archive the rate ≈ 0 regardless, so this is inconsequential.
+    print("\n  Computing proxy score (at SegNet resolution 384×512) ...")
+    _gt_small_proxy_chunks: list["torch.Tensor"] = []
+    with torch.no_grad():
+        for _ps in range(0, gt_frames.shape[0], _DSAMP_BATCH):
+            _pe = min(_ps + _DSAMP_BATCH, gt_frames.shape[0])
+            _pc = gt_frames[_ps:_pe].permute(0, 3, 1, 2).contiguous()
+            _sm = _F.interpolate(_pc, size=(SEGNET_H, SEGNET_W), mode="bilinear", align_corners=False)
+            _gt_small_proxy_chunks.append(_sm.permute(0, 2, 3, 1))
+            del _pc, _sm
+    gt_small_proxy = torch.cat(_gt_small_proxy_chunks, dim=0)
+    del _gt_small_proxy_chunks
     scores = compute_proxy_score(
-        generated_camera_hwc, gt_frames, segnet, posenet, device,
+        generated.cpu(), gt_small_proxy, segnet, posenet, device,
         archive_size_bytes=archive_path.stat().st_size,
     )
+    del gt_small_proxy
     print(f"\n  === RESULT ===")
     print(f"  score:     {scores['score']:.4f}")
     print(f"  seg_dist:  {scores['seg_dist']:.6f}")
@@ -540,7 +571,7 @@ def main(
         "pose_weight": POSE_WEIGHT,
         "noise_seed": NOISE_SEED,
         "video": str(video_path),
-        "n_frames": int(generated_np.shape[0]),
+        "n_frames": n_written,
         "n_pairs": int(masks.shape[0]) // 2,
         "gen_time_s": gen_time,
         "device": device,
