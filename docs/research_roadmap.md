@@ -194,6 +194,20 @@
 - **Paper:** MCNet (Villegas et al., ICML 2017)
 - Improves both rate (less to encode) and quality (each motion type optimized separately)
 
+#### 20. CompressAI Integration (post-competition)
+- **Framework:** CompressAI (InterDigital), `pip install compressai`
+- Production-grade hyperprior, autoregressive, channel-conditional entropy models
+- Replace our hand-rolled arithmetic coder for weight blob compression
+- GPU-accelerated, batched entropy coding, pre-trained models available
+- **Timeline:** Post-competition (2-3 days)
+
+#### 21. Neural Per-Symbol Entropy Model (post-competition research)
+- Autoregressive neural model predicting each weight's probability given context
+- Current `NeuralEntropyModel` in `entropy_archive.py` exists but O(N) forward passes = too slow
+- Needs: batch context, cached CDF tables, or offline-trained static model
+- Additional 5-10% beyond static coding (~7KB on 140KB). Low competition value, high research value.
+- **Papers:** COIN++ (Dupont et al., TMLR 2022), Balle et al. "Variational Image Compression"
+
 ## Key Principles
 
 1. **Unlimited compute at compress time, constrained at inflate time.** Pre-compute everything.
