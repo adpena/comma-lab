@@ -254,7 +254,7 @@ def kernel_specs() -> dict[str, KaggleKernelSpec]:
     for variant in ALL_VARIANTS:
         resume_from = _V3_RESUME_PATH if variant in _RESUME_VARIANTS else None
         asym_warp_specs[f"asym_warp_{variant}"] = KaggleKernelSpec(
-            slug=f"comma-lab-asym-warp-{variant.replace('_', '-')}",
+            slug=f"comma-lab-asym-warp-{variant.replace('_', '-')}" if variant != "supervised" else "comma-lab-supervised-train",
             title=f"comma-lab asym warp {variant}",
             # The training script IS the code_file. Kaggle script kernels only
             # upload code_file — include_paths are local-only build artifacts
