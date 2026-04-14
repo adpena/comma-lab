@@ -28,6 +28,7 @@ def main() -> int:
     parser.add_argument("--device", default="mps" if torch.backends.mps.is_available() else "cpu")
     parser.add_argument("--steps", type=int, default=10)
     parser.add_argument("--n-frames", type=int, default=20, help="Use first N frames (default 20 for speed)")
+    parser.add_argument("--coupled", action="store_true", help="Use coupled trajectory optimization (joint pairs)")
     parser.add_argument("--video", type=Path, default=UPSTREAM / "videos" / "0.mkv")
     args = parser.parse_args()
 
@@ -93,25 +94,43 @@ def main() -> int:
 
     # 3. Run constrained generation
     print(f"\n[3/4] Running constrained_generate ({args.steps} steps)...")
-    from tac.constrained_gen import constrained_generate
+    from tac.constrained_gen import constrained_generate, coupled_trajectory_optimize
 
     t0 = time.time()
-    generated = constrained_generate(
-        masks=masks.to(device),
-        expected_pose=pose_targets.to(device),
-        posenet=posenet,
-        segnet=segnet,
-        noise_seed=42,
-        num_steps=args.steps,
-        lr=0.1,
-        seg_weight=50.0,
-        pose_weight=50.0,
-        device=device,
-        log_every=max(1, args.steps // 5),
-        early_stop_patience=0,
-        segnet_batch_size=4,
-        posenet_batch_size=4,
-    )
+    if args.coupled:
+        print(f"  Mode: COUPLED trajectory (joint pair optimization)")
+        generated = coupled_trajectory_optimize(
+            masks=masks.to(device),
+            expected_pose=pose_targets.to(device),
+            posenet=posenet,
+            segnet=segnet,
+            noise_seed=42,
+            num_steps=args.steps,
+            lr=0.01,
+            seg_weight=100.0,
+            pose_weight=10.0,
+            compress_weight=1.0,
+            device=str(device),
+            log_every=max(1, args.steps // 5),
+        )
+    else:
+        print(f"  Mode: INDEPENDENT frame optimization")
+        generated = constrained_generate(
+            masks=masks.to(device),
+            expected_pose=pose_targets.to(device),
+            posenet=posenet,
+            segnet=segnet,
+            noise_seed=42,
+            num_steps=args.steps,
+            lr=0.1,
+            seg_weight=50.0,
+            pose_weight=50.0,
+            device=device,
+            log_every=max(1, args.steps // 5),
+            early_stop_patience=0,
+            segnet_batch_size=4,
+            posenet_batch_size=4,
+        )
     gen_time = time.time() - t0
     print(f"  Generated: {generated.shape} in {gen_time:.1f}s ({args.steps / gen_time:.1f} steps/s)")
 
