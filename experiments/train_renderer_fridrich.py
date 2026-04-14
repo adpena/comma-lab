@@ -58,9 +58,15 @@ import torch.nn.functional as F
 # Path setup — find upstream (scorer models), weights dir, GT video
 # ---------------------------------------------------------------------------
 _CANDIDATE_UPSTREAM = [
+    # Env var first (set by deploy runners — canonical)
+    Path(os.environ["TAC_UPSTREAM_DIR"]) if os.environ.get("TAC_UPSTREAM_DIR") else None,
+    Path(os.environ["UPSTREAM_ROOT"]) if os.environ.get("UPSTREAM_ROOT") else None,
+    # Kaggle working dir
+    Path("/kaggle/working/upstream"),
+    # Lightning paths
     Path("/home/zeus/content/upstream"),
+    # Local development
     Path(__file__).resolve().parent.parent / "upstream",
-    Path(os.environ.get("UPSTREAM_ROOT", "")) if os.environ.get("UPSTREAM_ROOT") else None,
 ]
 UPSTREAM_ROOT: Path | None = None
 for _p in _CANDIDATE_UPSTREAM:
@@ -71,13 +77,19 @@ if UPSTREAM_ROOT is not None and str(UPSTREAM_ROOT) not in sys.path:
     sys.path.insert(0, str(UPSTREAM_ROOT))
 
 _CANDIDATE_WEIGHTS = [
+    # TAC_MODELS_DIR env var (set by deploy runners — canonical)
+    Path(os.environ["TAC_MODELS_DIR"]) if os.environ.get("TAC_MODELS_DIR") else None,
+    # Kaggle working dir (clone lands here)
+    Path("/kaggle/working/upstream/models"),
+    # Lightning paths
     Path("/home/zeus/content/upstream/models"),
     Path("/home/zeus/content/pact/upstream/models"),
+    # Local development
     Path(__file__).resolve().parent.parent / "upstream" / "models",
 ]
 WEIGHTS_DIR: Path | None = None
 for _p in _CANDIDATE_WEIGHTS:
-    if _p is not None and (_p / "posenet.safetensors").exists():
+    if _p is not None and _p.exists() and (_p / "posenet.safetensors").exists():
         WEIGHTS_DIR = _p
         break
 
