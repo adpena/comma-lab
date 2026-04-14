@@ -6,7 +6,7 @@ Downloads the incremental stdout log and shows latest batch progress.
 Usage:
     python scripts/modal_check.py
     python scripts/modal_check.py --tag asym_v5_lagrangian_fixed
-    python scripts/modal_check.py --volume pact-results
+    python scripts/modal_check.py --volume tac-asymmetric-results
 """
 from __future__ import annotations
 
@@ -32,12 +32,12 @@ def parse_args() -> argparse.Namespace:
     )
     p.add_argument("--tag", type=str, default="asym_v5_lagrangian_fixed",
                    help="Experiment tag (subdirectory in the volume)")
-    p.add_argument("--volume", type=str, default="pact-results",
+    p.add_argument("--volume", type=str, default="tac-asymmetric-results",
                    help="Modal volume name")
-    p.add_argument("--stdout-log", type=str, default="tto_stdout.log",
-                   help="Name of stdout log file inside the tag dir")
-    p.add_argument("--run-log", type=str, default="tto_run.log",
-                   help="Name of run status log file inside the tag dir")
+    p.add_argument("--stdout-log", type=str, default="tto_results/tto_stdout.log",
+                   help="Path to stdout log relative to tag dir")
+    p.add_argument("--run-log", type=str, default="tto_results/tto_run.log",
+                   help="Path to run status log relative to tag dir")
     return p.parse_args()
 
 

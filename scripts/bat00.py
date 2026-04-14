@@ -162,8 +162,6 @@ def cmd_run_script(args: argparse.Namespace) -> int:
 
 
 
-
-
 def main() -> int:
     parser = argparse.ArgumentParser(
         description="Canonical bat00 interaction — handles PowerShell quoting correctly"
