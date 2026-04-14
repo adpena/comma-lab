@@ -6,7 +6,7 @@ produces (frame1, frame2). This is the paradigm Quantizr uses at 0.60 with
 386KB archive.
 
 Training signal comes directly from the frozen scorers:
-  - SegNet: cross-entropy on logits vs GT masks (both frames)
+  - SegNet: cross-entropy on logits vs GT masks (last frame only, matching scorer)
   - PoseNet: MSE on pose output[:6] between generated and GT pairs
   - TV: total variation for compressibility
   - Rate: FP4 model size penalty
@@ -22,13 +22,10 @@ Usage:
 """
 from __future__ import annotations
 
-import gc
 import json
-import math
 import os
 import sys
 import time
-import types
 from dataclasses import dataclass, asdict
 from pathlib import Path
 from typing import Any
@@ -77,6 +74,9 @@ RESULTS_DIR = (
     else Path(__file__).resolve().parent / "results" / "joint_pair"
 )
 
+# Original uncompressed video size in bytes (used for rate calculation)
+ORIGINAL_UNCOMPRESSED_SIZE = 37_545_489
+
 
 # ---------------------------------------------------------------------------
 # Config
@@ -115,11 +115,7 @@ class JointPairConfig:
     warmup_epochs: int = 200     # MSE-only warmup before scorer losses
     warmup_mse_weight: float = 10.0  # MSE weight during warmup
 
-    # SegNet loss mode
-    seg_loss_mode: str = "ce"    # "ce" (cross-entropy) or "ste" (STE-argmax)
-
     # Self-compression (Phase 3)
-    compress_start_frac: float = 0.85  # start self-compression at 85% of training
     fp4_qat: bool = True               # enable FP4 QAT from the start
 
     # Checkpointing
@@ -133,9 +129,6 @@ class JointPairConfig:
     # Auto-kill thresholds
     kill_loss_threshold: float = 1e5
     kill_patience: int = 200
-
-    # Even-pairs-only: scorer evaluates (0,1),(2,3)... not overlapping
-    even_pairs_only: bool = True
 
     # EMA
     ema_decay: float = 0.9995
@@ -179,17 +172,35 @@ def _patch_scorers_for_training(posenet: nn.Module, segnet: nn.Module) -> None:
     differentiable version.
     """
     import einops
+    import types
 
     # Patch AllNorm to not break gradients.
-    # MPS backward through BN1d uses .view() internally, which fails on
-    # non-contiguous tensors. The .contiguous() call ensures the reshape
-    # produces a contiguous tensor that BN1d's backward can .view() safely.
+    # The upstream AllNorm uses .view() which fails on non-contiguous tensors.
+    # On MPS, BN1d backward also uses .view() internally — we replace BN1d
+    # with manual mean/var + affine when on MPS to avoid this PyTorch bug.
+    is_mps = any(p.device.type == "mps" for p in posenet.parameters())
     for module in list(posenet.modules()) + list(segnet.modules()):
         if type(module).__name__ == "AllNorm":
-            def _patched_forward(self, x):
-                flat = x.reshape(-1, 1).contiguous()
-                return self.bn(flat).reshape(x.shape)
-            module.forward = types.MethodType(_patched_forward, module)
+            if is_mps:
+                def _patched_forward_mps(self, x):
+                    shape = x.shape
+                    flat = x.reshape(-1, 1).contiguous()
+                    if self.bn.training:
+                        mean = flat.mean(dim=0, keepdim=True)
+                        var = flat.var(dim=0, unbiased=False, keepdim=True)
+                    else:
+                        mean = self.bn.running_mean.unsqueeze(0)
+                        var = self.bn.running_var.unsqueeze(0)
+                    out = (flat - mean) / (var + self.bn.eps).sqrt()
+                    if self.bn.affine:
+                        out = out * self.bn.weight.unsqueeze(0) + self.bn.bias.unsqueeze(0)
+                    return out.reshape(shape)
+                module.forward = types.MethodType(_patched_forward_mps, module)
+            else:
+                def _patched_forward(self, x):
+                    flat = x.reshape(-1, 1).contiguous()
+                    return self.bn(flat).reshape(x.shape)
+                module.forward = types.MethodType(_patched_forward, module)
 
     # Differentiable rgb_to_yuv6: full-range BT.601 with 4:2:0 subsampling
     def _rgb_to_yuv6_diff(rgb_chw: torch.Tensor) -> torch.Tensor:
@@ -391,6 +402,10 @@ def _full_eval(
     seg_dists = []
     pose_dists = []
 
+    # Move data to device once at start (H4 fix — avoid per-batch CPU->GPU transfers)
+    masks_on_dev = masks.to(device=device)
+    gt_on_dev = gt_chw.to(device=device)
+
     with torch.no_grad():
         # Even-index pairs: (0,1), (2,3), ...
         pair_starts = list(range(0, n - 1, 2))
@@ -403,16 +418,16 @@ def _full_eval(
             batch_indices = pair_starts[batch_start:batch_start + batch_size]
             B = len(batch_indices)
 
-            m_t = torch.stack([masks[j] for j in batch_indices]).to(device=device, dtype=torch.long)
-            m_t1 = torch.stack([masks[j + 1] for j in batch_indices]).to(device=device, dtype=torch.long)
+            m_t = torch.stack([masks_on_dev[j] for j in batch_indices]).long()
+            m_t1 = torch.stack([masks_on_dev[j + 1] for j in batch_indices]).long()
 
             # Generate pair via model
             pair_hwc = model(m_t, m_t1)  # (B, 2, H, W, 3)
             gen_t = pair_hwc[:, 0].permute(0, 3, 1, 2).contiguous()   # (B, 3, H, W)
             gen_t1 = pair_hwc[:, 1].permute(0, 3, 1, 2).contiguous()
 
-            gt_t = torch.stack([gt_chw[j] for j in batch_indices]).to(device)
-            gt_t1 = torch.stack([gt_chw[j + 1] for j in batch_indices]).to(device)
+            gt_t = torch.stack([gt_on_dev[j] for j in batch_indices])
+            gt_t1 = torch.stack([gt_on_dev[j + 1] for j in batch_indices])
 
             # SegNet: last frame only (upstream uses x[:, -1, ...])
             gen_btchw = gen_t1.unsqueeze(1).contiguous()
@@ -438,8 +453,9 @@ def _full_eval(
             for b in range(B):
                 pose_dists.append(pose_mse[b].mean().item())
 
-            if device.type == "cuda":
-                torch.cuda.empty_cache()
+    # Single empty_cache after entire eval, not per-batch (M3 fix)
+    if device.type == "cuda":
+        torch.cuda.empty_cache()
 
     model.train()
 
@@ -449,7 +465,6 @@ def _full_eval(
     # Model size: FP4 estimate
     n_params = sum(p.numel() for p in model.parameters())
     model_bytes = n_params * 4 / 8  # 4 bits per param
-    ORIGINAL_UNCOMPRESSED_SIZE = 37_545_489  # bytes
     rate = model_bytes / ORIGINAL_UNCOMPRESSED_SIZE
 
     from tac.scorer import comma_score
@@ -648,19 +663,64 @@ def train_joint_pair(cfg: JointPairConfig) -> dict[str, Any]:
     best_score = float("inf")
     best_epoch = -1
     best_state = None
+    start_epoch = 0
     start_time = time.time()
     history: list[dict] = []
     diverge_count = 0
+
+    # ---- Resume from checkpoint (C2 fix) ----
+    if cfg.resume:
+        ckpt_path = Path(cfg.resume)
+        if not ckpt_path.exists():
+            raise FileNotFoundError(f"Resume checkpoint not found: {ckpt_path}")
+        print(f"  Resuming from {ckpt_path}...")
+        ckpt = torch.load(ckpt_path, map_location=device, weights_only=False)
+
+        # Load model weights
+        model.load_state_dict(ckpt["model_state_dict"])
+        # Load optimizer state
+        if "optimizer_state_dict" in ckpt:
+            optimizer.load_state_dict(ckpt["optimizer_state_dict"])
+        # Load scheduler state
+        if "scheduler_state_dict" in ckpt:
+            scheduler.load_state_dict(ckpt["scheduler_state_dict"])
+        # Restore epoch counter
+        start_epoch = ckpt.get("epoch", 0) + 1
+        # Restore best score
+        best_score = ckpt.get("best_score", ckpt.get("score", float("inf")))
+        # Restore EMA state
+        if "ema_state_dict" in ckpt:
+            ema.shadow = {k: v.to(device) for k, v in ckpt["ema_state_dict"].items()}
+            print(f"  EMA state restored")
+        # Re-wrap QAT if it was active (parametrizations must be re-registered
+        # after loading state_dict since load_state_dict replaces weight data)
+        if cfg.fp4_qat and qat_model is not None:
+            qat_model.remove_hooks()
+            from tac.fp4_quantize import QATRendererFP4 as _QAT
+            qat_model = _QAT(model)
+            print(f"  FP4 QAT re-registered after resume")
+        print(f"  Resumed at epoch {start_epoch}, best_score={best_score:.4f}")
 
     # Move all GT data to device for speed (fits in VRAM for 600 pairs at 384x512)
     gt_chw_dev = gt_chw.to(device)
     masks_dev = masks.to(device)
 
+    # Precompute param count (constant for fixed architecture) — H3 fix
+    n_model_params = sum(p.numel() for p in model.parameters())
+
+    # VRAM warning (M4 fix) — warn if estimated usage exceeds T4 safe limit
+    if device.type == "cuda":
+        vram_now = _vram_mb()
+        if vram_now > 14000:
+            print(f"  WARNING: Current VRAM usage ({vram_now:.0f} MB) exceeds T4 safe "
+                  f"limit (14 GB). Consider enabling gradient checkpointing or "
+                  f"reducing batch_size.")
+
     print()
     print("[5/5] Training...")
     print("=" * 70)
 
-    for epoch in range(cfg.epochs):
+    for epoch in range(start_epoch, cfg.epochs):
         model.train()
         t0 = time.time()
 
@@ -703,6 +763,10 @@ def train_joint_pair(cfg: JointPairConfig) -> dict[str, Any]:
             gen_t1 = pair_chw[:, 1].contiguous()  # (B, 3, H, W)
 
             # --- Phase logic ---
+            # Warmup phase overlap (M5): During warmup, MSE is the primary signal.
+            # After warmup_epochs//2, scorer losses (seg, pose) are blended in at
+            # reduced weight to avoid a sharp transition. After warmup_epochs, MSE
+            # is dropped entirely and scorer losses take over at full weight.
             is_warmup = epoch < cfg.warmup_epochs
 
             # Loss 1: MSE warmup (helps model learn basic colors/structure)
@@ -712,15 +776,12 @@ def train_joint_pair(cfg: JointPairConfig) -> dict[str, Any]:
                     F.mse_loss(gen_t, gt_t) + F.mse_loss(gen_t1, gt_t1)
                 ) / 2.0
 
-            # Loss 2: SegNet cross-entropy (both frames)
+            # Loss 2: SegNet cross-entropy (last frame only — matches official
+            # scorer's x[:, -1, ...] behavior)
             loss_seg = torch.tensor(0.0, device=device)
             if not is_warmup or epoch > cfg.warmup_epochs // 2:
-                # Masks at scorer resolution for CE targets
-                gt_masks_t = masks_dev[idx_t].long()
                 gt_masks_t1 = masks_dev[idx_t1].long()
-                seg_loss_t = _compute_seg_loss_ce(gen_t, gt_masks_t, segnet)
-                seg_loss_t1 = _compute_seg_loss_ce(gen_t1, gt_masks_t1, segnet)
-                loss_seg = (seg_loss_t + seg_loss_t1) / 2.0
+                loss_seg = _compute_seg_loss_ce(gen_t1, gt_masks_t1, segnet)
 
             # Loss 3: PoseNet coupled distortion
             loss_pose = torch.tensor(0.0, device=device)
@@ -754,9 +815,8 @@ def train_joint_pair(cfg: JointPairConfig) -> dict[str, Any]:
                 )
 
             # Rate penalty (always on, proportional to model size)
-            n_model_params = sum(p.numel() for p in model.parameters())
             model_bytes = n_model_params * 4 / 8  # FP4 estimate
-            rate = model_bytes / 37_545_489  # normalized
+            rate = model_bytes / ORIGINAL_UNCOMPRESSED_SIZE
             # Rate is constant for fixed architecture, but included for
             # self-compression awareness when LearnableBitDepth is added
             # (Phase 3). For now it's a constant — no gradient.
@@ -781,12 +841,12 @@ def train_joint_pair(cfg: JointPairConfig) -> dict[str, Any]:
 
         scheduler.step()
 
-        # --- Auto-kill check ---
+        # --- Auto-kill check (catches NaN and divergence) ---
         avg_total = epoch_total_loss / max(n_steps, 1)
-        if avg_total > cfg.kill_loss_threshold:
+        if math.isnan(avg_total) or avg_total > cfg.kill_loss_threshold:
             diverge_count += 1
             if diverge_count >= cfg.kill_patience:
-                print(f"\n  DIVERGENCE KILL at epoch {epoch}: loss={avg_total:.2f}")
+                print(f"\n  DIVERGENCE KILL at epoch {epoch}: loss={avg_total}")
                 break
         else:
             diverge_count = 0
@@ -844,10 +904,14 @@ def train_joint_pair(cfg: JointPairConfig) -> dict[str, Any]:
                 torch.save({
                     "epoch": epoch,
                     "model_state_dict": best_state,
+                    "ema_state_dict": best_state,  # best_state IS the EMA state
+                    "optimizer_state_dict": optimizer.state_dict(),
+                    "scheduler_state_dict": scheduler.state_dict(),
+                    "best_score": best_score,
                     "score": best_score,
                     "metrics": metrics,
                     "config": asdict(cfg),
-                }, ckpt_path)
+                }, ckpt_path, pickle_protocol=4)
                 print(f"  Saved checkpoint: {ckpt_path}")
 
         # --- Periodic checkpoint ---
@@ -858,8 +922,10 @@ def train_joint_pair(cfg: JointPairConfig) -> dict[str, Any]:
                 "model_state_dict": model.state_dict(),
                 "optimizer_state_dict": optimizer.state_dict(),
                 "scheduler_state_dict": scheduler.state_dict(),
+                "ema_state_dict": ema.state_dict(),
+                "best_score": best_score,
                 "config": asdict(cfg),
-            }, ckpt_path)
+            }, ckpt_path, pickle_protocol=4)
             print(f"  Checkpoint saved: {ckpt_path}")
 
     # ---------------------------------------------------------------------------
@@ -875,11 +941,32 @@ def train_joint_pair(cfg: JointPairConfig) -> dict[str, Any]:
 
     # Export best model in FP4
     if best_state is not None:
-        model.load_state_dict(best_state)
+        # QAT parametrizations change state_dict keys. Build a fresh model
+        # and map parametrized keys back to clean keys for export.
+        if qat_model is not None:
+            qat_model.remove_hooks()
+            qat_model = None
+
+        from tac.joint_pair_generator import JointPairGenerator as JPG_
+        export_model = JPG_(num_classes=cfg.num_classes, base_ch=cfg.base_ch).to(device)
+        try:
+            export_model.load_state_dict(best_state)
+        except RuntimeError:
+            # Parametrized keys — extract .original weights
+            clean_state = {}
+            for k, v in best_state.items():
+                if ".parametrizations.weight.original" in k:
+                    clean_state[k.replace(".parametrizations.weight.original", ".weight")] = v
+                elif ".parametrizations.weight.0.codebook" in k:
+                    continue
+                else:
+                    clean_state[k] = v
+            export_model.load_state_dict(clean_state)
+
         from tac.fp4_quantize import save_fp4
         fp4_path = results_dir / "joint_pair_best_fp4.pt"
         fp4_bytes = save_fp4(
-            model, fp4_path,
+            export_model, fp4_path,
             meta={
                 "architecture": "JointPairGenerator",
                 "base_ch": cfg.base_ch,
@@ -888,7 +975,7 @@ def train_joint_pair(cfg: JointPairConfig) -> dict[str, Any]:
                 "best_score": best_score,
             },
         )
-        rate = fp4_bytes / 37_545_489
+        rate = fp4_bytes / ORIGINAL_UNCOMPRESSED_SIZE
         print(f"  FP4 export: {fp4_bytes:,} bytes, rate={rate:.6f}")
         print(f"  Rate contribution to score: {25.0 * rate:.4f}")
 
@@ -919,7 +1006,7 @@ def train_joint_pair(cfg: JointPairConfig) -> dict[str, Any]:
 @click.option("--seg-weight", default=100.0, type=float, help="SegNet loss weight")
 @click.option("--pose-weight", default=1.0, type=float, help="PoseNet loss weight")
 @click.option("--tv-weight", default=0.1, type=float, help="TV loss weight")
-@click.option("--rate-weight", default=25.0, type=float, help="Rate penalty weight")
+@click.option("--rate-weight", default=25.0, type=float, help="Rate penalty weight (eval-only; no gradient for fixed architecture)")
 @click.option("--warmup-epochs", default=200, type=int, help="MSE warmup epochs")
 @click.option("--eval-every", default=200, type=int, help="Eval interval")
 @click.option("--checkpoint-every", default=500, type=int, help="Checkpoint interval")
@@ -978,7 +1065,11 @@ def main(
         smoke=smoke,
     )
 
-    # Smoke test overrides
+    # Smoke test overrides (L5)
+    # NOTE: Smoke test uses only 20 frames / 10 epochs / 3 warmup epochs.
+    # This is insufficient to validate training signal quality — it only
+    # verifies that the pipeline runs end-to-end without crashes. A negative
+    # result on a smoke test CANNOT kill a technique (see CLAUDE.md).
     if smoke:
         cfg.epochs = 10
         cfg.warmup_epochs = 3

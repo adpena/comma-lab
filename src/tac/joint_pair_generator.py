@@ -117,11 +117,16 @@ class JointPairGenerator(nn.Module):
         self.head_b = nn.Conv2d(ch, 3, 1)
 
     def _masks_to_input(self, mask1: torch.Tensor, mask2: torch.Tensor) -> torch.Tensor:
-        """Convert mask pair to one-hot concatenated input (B, 10, H, W)."""
+        """Convert mask pair to one-hot concatenated input (B, 10, H, W).
+
+        Note: .contiguous() after permute is required — one_hot produces a
+        non-contiguous tensor after permute, and MPS BatchNorm backward
+        crashes on non-contiguous inputs (PyTorch MPS .view() bug).
+        """
         B, H, W = mask1.shape
-        oh1 = F.one_hot(mask1.long(), self.num_classes).permute(0, 3, 1, 2).float()  # (B, C, H, W)
-        oh2 = F.one_hot(mask2.long(), self.num_classes).permute(0, 3, 1, 2).float()
-        return torch.cat([oh1, oh2], dim=1)  # (B, 2C, H, W)
+        oh1 = F.one_hot(mask1.long(), self.num_classes).permute(0, 3, 1, 2).contiguous().float()
+        oh2 = F.one_hot(mask2.long(), self.num_classes).permute(0, 3, 1, 2).contiguous().float()
+        return torch.cat([oh1, oh2], dim=1).contiguous()  # (B, 2C, H, W)
 
     def _decode_3(self, z: torch.Tensor, skips: list[torch.Tensor],
                   dec3, dec2, dec1, head) -> torch.Tensor:
