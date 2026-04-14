@@ -585,8 +585,10 @@ def auth_eval(tag: str, checkpoint: str = "renderer_best.pt", strategy: str = "s
             )
 
     device = "cuda" if torch.cuda.is_available() else "cpu"
-    batch_size = 16 if device == "cuda" else 4
-    print(f"  Device: {device}")
+    # Auth eval loads scorers sequentially (not simultaneously like _full_eval),
+    # so larger batches are safe. Keep conservative on CPU for memory.
+    batch_size = 8 if device == "cuda" else 2
+    print(f"  Device: {device}, eval batch_size: {batch_size}")
 
     # ── Constants ──
     OUT_W, OUT_H = 1164, 874
