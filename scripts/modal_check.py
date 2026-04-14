@@ -100,9 +100,10 @@ def parse_batch_progress(log_content: str) -> dict:
     done_pattern = re.compile(
         r"\[tto\] Batch (\d+)/(\d+) done in ([\d.]+)s"
     )
+    # Match the coupled-4dvar log format: "pose=0.1234" or "best_pose=0.1234"
+    # but NOT config lines like "pose_weight=10.0"
     pose_pattern = re.compile(
-        r"pose[_\s]*(?:mse|loss)?[=:\s]+([\d.]+(?:e[+-]?\d+)?)",
-        re.IGNORECASE,
+        r"\[coupled-4dvar\].*pose=([\d.]+(?:e[+-]?\d+)?)",
     )
     resumed_pattern = re.compile(
         r"\[tto\] Batch (\d+)/(\d+): RESUMED"
@@ -208,17 +209,18 @@ def main() -> int:
             print(f"    {line}")
         return 0
 
-    n_done = len(progress["completed"])
+    n_computed = len(progress["completed"])
     n_resumed = len(progress["resumed"])
+    n_done = n_computed + n_resumed  # both computed and resumed batches are done
     total = progress["total_batches"]
     pct = 100.0 * n_done / total if total > 0 else 0.0
 
     print(f"  {BOLD}Batch progress:{RESET} {n_done}/{total} completed ({pct:.0f}%)")
     if n_resumed:
-        print(f"  {BLUE}Resumed from checkpoint: {n_resumed} batches{RESET}")
+        print(f"  {BLUE}  ({n_computed} computed + {n_resumed} resumed from checkpoint){RESET}")
     print(f"  Latest batch: {progress['latest_batch']}/{total}")
 
-    # ETA calculation
+    # ETA calculation (only newly computed batches count for timing)
     if progress["batch_times"]:
         avg_time = sum(progress["batch_times"]) / len(progress["batch_times"])
         remaining = total - n_done

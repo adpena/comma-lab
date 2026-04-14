@@ -96,7 +96,10 @@ def get_kernel_log(kaggle: str, slug: str, download_dir: Path | None = None) -> 
             except (json.JSONDecodeError, TypeError):
                 pass
 
-            # Fallback: treat as plain text
+            # Fallback: treat as plain text.
+            # Inject the filename as a log line so marker files (e.g.
+            # P100_RETRY_NEEDED) are discoverable by name, not just content.
+            log_lines.append(f"[file: {log_file.name}]")
             log_lines.extend(content.splitlines())
 
         return log_lines
@@ -148,9 +151,16 @@ def main() -> int:
             short = slug.split("/")[-1]
             lines = get_kernel_log(kaggle, slug, download_dir=download_dir)
 
-            # Detect P100 retry marker in output files
-            is_p100 = any("P100_RETRY_NEEDED" in line or "is unsupported" in line
-                          for line in lines)
+            # Detect P100 retry marker in output files.
+            # The bootstrap writes a marker file to /kaggle/working/P100_RETRY_NEEDED
+            # whose content mentions compute capability. Also match the stdout
+            # message "is unsupported" from the bootstrap preamble.
+            is_p100 = any(
+                "P100_RETRY_NEEDED" in line
+                or "compute capability" in line.lower()
+                or ("is unsupported" in line and "sm_" in line)
+                for line in lines
+            )
             if is_p100:
                 print(f"  {YELLOW}--- {short} (P100 — retry needed) ---{RESET}")
                 print(f"    {YELLOW}Kernel got assigned a P100 (sm_60). Not a real error.{RESET}")

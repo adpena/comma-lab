@@ -425,6 +425,8 @@ def run_batched_tto(
 
     N = renderer_frames.shape[0]
     P = N // 2
+    if batch_pairs <= 0:
+        raise ValueError(f"batch_pairs must be > 0, got {batch_pairs}")
     n_batches = math.ceil(P / batch_pairs)
     refined_frames = torch.zeros_like(renderer_frames)
 
@@ -444,9 +446,14 @@ def run_batched_tto(
             ckpt_path = output_dir / f"tto_batch_{batch_idx:03d}.pt"
             if ckpt_path.exists():
                 batch_result = torch.load(ckpt_path, map_location="cpu", weights_only=True)
-                refined_frames[frame_start:frame_end] = batch_result
-                print(f"[tto] Batch {batch_idx + 1}/{n_batches}: RESUMED from checkpoint")
-                continue
+                expected_shape = refined_frames[frame_start:frame_end].shape
+                if batch_result.shape != expected_shape:
+                    print(f"[tto] Batch {batch_idx + 1}/{n_batches}: checkpoint shape "
+                          f"{batch_result.shape} != expected {expected_shape}, re-running")
+                else:
+                    refined_frames[frame_start:frame_end] = batch_result
+                    print(f"[tto] Batch {batch_idx + 1}/{n_batches}: RESUMED from checkpoint")
+                    continue
 
         print(f"\n[tto] Batch {batch_idx + 1}/{n_batches}: "
               f"pairs [{pair_start}:{pair_end}] = {n_pairs_this} pairs, "
