@@ -1148,3 +1148,140 @@ def main(
 
     print(f"\nResults: .venv/bin/modal volume ls {RESULTS_VOL}")
     print(f"Download: .venv/bin/modal volume get {RESULTS_VOL} {tag}/ ./results_{tag}/")
+
+
+# ── TTO eval ─────────────────────────────────────────────────────────────────
+
+
+@app.function(
+    image=image,
+    gpu="T4",
+    timeout=3600,  # 1h — renderer inference + TTO optimization
+    volumes={"/results": results_vol},
+    memory=16384,
+)
+def tto_eval(
+    tag: str,
+    checkpoint: str = "renderer_best.pt",
+    tto_steps: int = 500,
+    tto_lr: float = 0.005,
+    batch_pairs: int = 50,
+):
+    """Run renderer+TTO on Modal T4.
+
+    Executes experiments/renderer_tto.py as a subprocess (already mounted)
+    to avoid duplicating logic. Results saved to /results/<tag>/tto_results/.
+
+    Args:
+        tag:         experiment tag (volume subdirectory containing checkpoint)
+        checkpoint:  checkpoint filename within /results/<tag>/
+        tto_steps:   number of TTO optimization steps per batch
+        tto_lr:      TTO learning rate
+        batch_pairs: number of frame pairs per TTO batch
+    """
+    import os
+    import subprocess
+    import time
+
+    vol_dir = f"/results/{tag}"
+    ckpt_path = f"{vol_dir}/{checkpoint}"
+    output_dir = f"{vol_dir}/tto_results"
+    os.makedirs(output_dir, exist_ok=True)
+
+    print(f"=== Renderer + TTO | tag: {tag} ===")
+    print(f"  GPU: T4")
+    print(f"  Checkpoint: {ckpt_path}")
+    print(f"  TTO steps: {tto_steps}, lr: {tto_lr}, batch_pairs: {batch_pairs}")
+    print(f"  Output: {output_dir}")
+    print(f"  Start: {time.strftime('%Y-%m-%d %H:%M:%S')}")
+
+    if not os.path.exists(ckpt_path):
+        available = os.listdir(vol_dir) if os.path.isdir(vol_dir) else []
+        raise FileNotFoundError(
+            f"Checkpoint not found: {ckpt_path}\n"
+            f"Available: {[f for f in available if f.endswith('.pt')]}"
+        )
+
+    cmd = [
+        "python", "/root/experiments/renderer_tto.py",
+        "--checkpoint", ckpt_path,
+        "--device", "cuda",
+        "--n-frames", "1200",
+        "--tto-steps", str(tto_steps),
+        "--tto-lr", str(tto_lr),
+        "--batch-pairs", str(batch_pairs),
+        "--upstream", "/root/upstream",
+        "--output-dir", output_dir,
+        "--simulate-resize",
+    ]
+
+    env = {**os.environ, "PYTHONPATH": "/root/src:/root/upstream"}
+    print(f"  Command: {' '.join(cmd)}")
+    print("  ---")
+
+    result = subprocess.run(cmd, env=env, capture_output=False)
+
+    print("  ---")
+    print(f"  End: {time.strftime('%Y-%m-%d %H:%M:%S')}")
+    print(f"  Exit code: {result.returncode}")
+
+    # Save stdout log (subprocess prints to console, but record exit status)
+    log_path = os.path.join(output_dir, "tto_run.log")
+    with open(log_path, "w") as f:
+        f.write(f"exit_code: {result.returncode}\n")
+        f.write(f"tag: {tag}\n")
+        f.write(f"checkpoint: {checkpoint}\n")
+        f.write(f"tto_steps: {tto_steps}\n")
+        f.write(f"tto_lr: {tto_lr}\n")
+        f.write(f"batch_pairs: {batch_pairs}\n")
+        f.write(f"finished: {time.strftime('%Y-%m-%dT%H:%M:%SZ', time.gmtime())}\n")
+
+    # Commit volume so results survive
+    results_vol.commit()
+    print(f"  [volume] Final commit done")
+
+    # List output artifacts
+    if os.path.isdir(output_dir):
+        artifacts = sorted(os.listdir(output_dir))
+        print(f"  TTO artifacts ({len(artifacts)}): {', '.join(artifacts[:15])}")
+
+    return {"exit_code": result.returncode, "output_dir": output_dir}
+
+
+@app.local_entrypoint()
+def tto_entry(
+    tag: str = "asym_v5_lagrangian_fixed",
+    checkpoint: str = "renderer_best.pt",
+    tto_steps: int = 500,
+    tto_lr: float = 0.005,
+    batch_pairs: int = 50,
+):
+    """Launch renderer+TTO on Modal T4.
+
+    Usage:
+        .venv/bin/modal run src/tac/deploy/modal/modal_asymmetric_warp_deploy.py::app.tto_entry
+        .venv/bin/modal run src/tac/deploy/modal/modal_asymmetric_warp_deploy.py::app.tto_entry --tag my_run --tto-steps 1000
+    """
+    from tac.cost_tracker import print_cost_estimate
+
+    print(f"=== Renderer + TTO -> Modal T4 ===")
+    print(f"  Tag: {tag}")
+    print(f"  Checkpoint: {checkpoint}")
+    print(f"  TTO steps: {tto_steps}, lr: {tto_lr}, batch_pairs: {batch_pairs}")
+
+    print("\n--- Cost Estimate ---")
+    print_cost_estimate(gpu="t4", estimated_hours=1.0, platform="modal")
+
+    print("\nLaunching TTO eval...")
+    result = tto_eval.remote(
+        tag=tag,
+        checkpoint=checkpoint,
+        tto_steps=tto_steps,
+        tto_lr=tto_lr,
+        batch_pairs=batch_pairs,
+    )
+
+    status = "OK" if result["exit_code"] == 0 else f"FAILED (exit {result['exit_code']})"
+    print(f"\n  Result: {status}")
+    print(f"  Output: {result['output_dir']}")
+    print(f"\nDownload: .venv/bin/modal volume get {RESULTS_VOL} {tag}/tto_results/ ./tto_results_{tag}/")
