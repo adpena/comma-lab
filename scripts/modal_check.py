@@ -55,28 +55,42 @@ def modal_bin() -> str:
 
 
 def check_running_apps(modal: str) -> list[str]:
-    """List running Modal apps (ephemeral)."""
+    """List running/ephemeral Modal apps.
+
+    The ``modal app list`` table uses Unicode box-drawing characters and
+    multi-line rows.  Instead of fragile regex parsing we simply look for
+    lines containing ``ephemeral`` or ``running`` (the two states that
+    indicate a live app).
+    """
     result = subprocess.run(
         [modal, "app", "list"],
         capture_output=True, text=True,
     )
     if result.returncode != 0:
         return []
-    running = []
+    running: list[str] = []
     for line in result.stdout.splitlines():
-        if "running" in line.lower():
-            running.append(line.strip())
+        low = line.lower()
+        # Skip header/border rows — look for data rows with active states
+        if "ephemeral" in low or "running" in low:
+            # Strip box-drawing characters and extra whitespace for display
+            clean = line.replace("┃", "|").replace("│", "|").strip()
+            if clean and clean not in running:
+                running.append(clean)
     return running
 
 
 def download_log(modal: str, volume: str, remote_path: str) -> str | None:
-    """Download a file from a Modal volume and return its contents."""
+    """Download a file from a Modal volume and return its contents.
+
+    Uses ``--force`` so that pre-existing local files don't cause an error.
+    """
     import tempfile
     with tempfile.NamedTemporaryFile(suffix=".log", delete=False) as tmp:
         tmp_path = tmp.name
 
     result = subprocess.run(
-        [modal, "volume", "get", volume, remote_path, tmp_path],
+        [modal, "volume", "get", volume, remote_path, tmp_path, "--force"],
         capture_output=True, text=True,
     )
     if result.returncode != 0:
