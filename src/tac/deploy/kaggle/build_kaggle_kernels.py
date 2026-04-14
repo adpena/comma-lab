@@ -238,8 +238,9 @@ _V3_RESUME_PATH = (
 )
 
 #: Variants that should resume from the v3 checkpoint rather than train from scratch.
-#: raft_only removed — council decided from-scratch is higher signal than resume.
-_RESUME_VARIANTS: frozenset[str] = frozenset({"supervised"})
+#: ALL variants train from scratch now — resume skips Phase 1 which makes
+#: supervision inactive (R3 gates it to Phase 1 only). Council decision.
+_RESUME_VARIANTS: frozenset[str] = frozenset()
 
 
 def kernel_specs() -> dict[str, KaggleKernelSpec]:

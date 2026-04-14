@@ -111,6 +111,17 @@ All lab machines are on Tailscale. **Always use Tailscale IPs** for SSH, rsync, 
 - **Never waste time debugging LAN connectivity. Tailscale is always the answer.**
 - **Always use `scripts/bat00.py` for bat00 interaction — it handles quoting and port selection correctly.**
 
+## Kaggle API/CLI — non-negotiable
+
+- **`kaggle kernels push`** can only UPDATE existing kernels. To CREATE a new kernel, the slug must not already exist AND the slug must be short enough (long slugs like `comma-lab-asym-warp-supervised` fail with "Notebook not found").
+- **Working pattern for new kernels**: use a shorter slug (e.g., `comma-lab-supervised-train`), push once to create, then subsequent pushes update.
+- **`kaggle kernels status`** returns the LATEST version's status. After pushing a new version, the old version's error status persists until the new version starts running.
+- **GPU assignment is random** — Kaggle may assign P100 (sm_60, unsupported by PyTorch >= 2.5) instead of T4. Our P100 check exits with FATAL. Just re-push until T4 is assigned.
+- **2 concurrent GPU sessions max** on free tier. Push at most 2 kernels at a time.
+- **Dataset mount path**: `/kaggle/input/datasets/<owner>/<slug>/` (NOT `/kaggle/input/<slug>/`).
+- **`/kaggle/src/` is read-only** — results must go to `/kaggle/working/`.
+- **All kernel code is in the code_file** — Kaggle script kernels only upload the single file. The tac wheel provides runtime deps.
+
 ## Deployment version checklist — non-negotiable
 
 Before deploying ANY code to Modal, Kaggle, Lightning, or any remote platform:
