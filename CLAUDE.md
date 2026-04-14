@@ -96,7 +96,7 @@ All lab machines are on Tailscale. **Always use Tailscale IPs** for SSH, rsync, 
 |---------|-------------|-----|-----|-------|
 | primary (M5 Max) | 100.81.85.28 | macOS | MPS 128GB | This machine |
 | alejandros-mac-mini | 100.125.140.94 | macOS | Intel | Build server, Python 3.13 + uv |
-| bat00 | 100.120.99.124 | Windows + WSL2 Ubuntu 24.04 | RTX 2070S (→3090) | Port 22=PowerShell, port 2222=WSL2 |
+| bat00 | 100.120.99.124 | Windows + WSL2 Ubuntu 24.04 | RTX 2070S (→3090) | Port 22=PowerShell, port 2222=WSL2. Scripts: `C:\Users\adpena\Desktop\commalab\` |
 | molt | 100.114.131.54 | Linux | n/a | |
 | tertiary | 100.65.24.39 | macOS | MPS | M1 MacBook Pro |
 
