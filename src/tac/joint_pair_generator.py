@@ -101,16 +101,19 @@ class JointPairGenerator(nn.Module):
             ConvBlock(ch * 4, ch * 4),
         )
 
-        # Decoder head A (frame 1) — 3 levels matching encoder
-        self.dec_a3 = UpBlock(ch * 4, ch * 2, ch * 2)
-        self.dec_a2 = UpBlock(ch * 2, ch, ch)
-        self.dec_a1 = UpBlock(ch, num_classes * 2, ch)
+        # Decoder head A (frame 1) — 3 levels with correct skip channel counts
+        # dec3: input=bottleneck(ch*4), skip=s3(ch*4) → output ch*2
+        # dec2: input=ch*2, skip=s2(ch*2) → output ch
+        # dec1: input=ch, skip=s1(ch) → output ch
+        self.dec_a3 = UpBlock(ch * 4, ch * 4, ch * 2)
+        self.dec_a2 = UpBlock(ch * 2, ch * 2, ch)
+        self.dec_a1 = UpBlock(ch, ch, ch)
         self.head_a = nn.Conv2d(ch, 3, 1)
 
         # Decoder head B (frame 2)
-        self.dec_b3 = UpBlock(ch * 4, ch * 2, ch * 2)
-        self.dec_b2 = UpBlock(ch * 2, ch, ch)
-        self.dec_b1 = UpBlock(ch, num_classes * 2, ch)
+        self.dec_b3 = UpBlock(ch * 4, ch * 4, ch * 2)
+        self.dec_b2 = UpBlock(ch * 2, ch * 2, ch)
+        self.dec_b1 = UpBlock(ch, ch, ch)
         self.head_b = nn.Conv2d(ch, 3, 1)
 
     def _masks_to_input(self, mask1: torch.Tensor, mask2: torch.Tensor) -> torch.Tensor:
@@ -147,9 +150,10 @@ class JointPairGenerator(nn.Module):
         z = self.bottleneck(x)
 
         # Two decoder heads — each gets all skip connections
-        frame1_chw = self._decode_3(z, [inp, s1, s2],
+        # skips ordered deepest-first: s3 (1/4 res), s2 (1/2 res), s1 (full res), inp (full res)
+        frame1_chw = self._decode_3(z, [s1, s2, s3],
                                      self.dec_a3, self.dec_a2, self.dec_a1, self.head_a)
-        frame2_chw = self._decode_3(z, [inp, s1, s2],
+        frame2_chw = self._decode_3(z, [s1, s2, s3],
                                      self.dec_b3, self.dec_b2, self.dec_b1, self.head_b)
 
         # Stack and convert CHW → HWC
