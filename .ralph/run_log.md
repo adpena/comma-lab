@@ -1,5 +1,18 @@
 # run log
 
+## 2026-04-14T13:20:00Z — NEW BEST: asym_v5_lagrangian_fixed renderer_best auth=0.8700
+
+- **auth=0.8700** — 13% improvement over v3 baseline (1.00 -> 0.87)
+- Checkpoint: renderer_best.pt at ep12600 (only 200 epochs after resume from v3)
+- PoseNet: 0.031 (35% better than v3's 0.048) — the big mover
+- SegNet: 0.00217 (held flat vs v3's 0.00210)
+- Rate: 0.00401 (identical — same model size)
+- Key insight: R2 Lagrangian clamp (λ 10000→1000) on resume created a brief transient
+  where the over-constrained v3 model found a better PoseNet basin before drifting
+- Late checkpoint ep16999 REGRESSED to 1.37 — weaker constraints let model drift
+- Council implication: short-horizon fine-tuning with reduced Lagrangian > long training
+- v5 constraints_met ep16999: auth=1.37 (SegNet 0.004, PoseNet 0.075) — drift confirmed
+
 ## 2026-04-14T01:00:00Z — PRE-SUPERVISION BASELINE CONFIRMED: asym_v3_longer_tight auth=1.0000
 
 - **auth=1.0000** — BEST RESULT TO DATE on asymmetric warp architecture
