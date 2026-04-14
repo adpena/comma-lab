@@ -1,5 +1,13 @@
 # run log
 
+## 2026-04-14T16:00:00Z — λ-SWEEP COMPLETE: 0.87 is architectural ceiling
+
+λ_cap sweep from v5-best (auth=0.87): {500→0.90, 750→0.87, 1000→0.87, 1500→0.90, 2000→0.87}
+Score plateaus at 0.87 across 3 different λ_cap values. Ceiling is architectural, not optimization.
+Quantizr at 0.60 has 47x better PoseNet (0.00066 vs 0.031) — architecture gap, not tuning gap.
+Council decision: kill λ-sweep path, pivot to constrained generation (joint frame pair output).
+Kaggle still failing: dataset mount race condition persists even with 5-min retry. Need 30+ min wait.
+
 ## 2026-04-14T14:30:00Z — v5 CHECKPOINT LANDSCAPE SWEEP (9 auth evals)
 
 Full drift curve from ep12500 to ep16999:
