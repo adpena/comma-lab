@@ -14,7 +14,8 @@ hard constraints:
 
 While minimizing total variation (compressibility).
 
-~1000 steps, ~50ms/step on T4 = 50 seconds inflate.
+~500 steps with early stopping (~150 patience), ~100ms/step on T4.
+Typical: 200-500 steps per batch, 60 batches for 1200 frames = ~60-100 min.
 
 Example::
 

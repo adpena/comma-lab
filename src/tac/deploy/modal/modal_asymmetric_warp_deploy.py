@@ -1197,10 +1197,12 @@ def _run_tto_auth_eval(tag: str, tto_dir: str) -> dict | None:
     print("\nStage 1: Loading TTO frames ...")
     tto_frames = torch.load(frames_path, map_location="cpu", weights_only=True)
     print(f"  Shape: {tto_frames.shape}, dtype: {tto_frames.dtype}")
-    assert tto_frames.shape == (NUM_FRAMES, 384, 512, 3), (
-        f"Expected (1200, 384, 512, 3), got {tto_frames.shape}"
+    N = tto_frames.shape[0]
+    assert tto_frames.ndim == 4 and tto_frames.shape[1:] == (384, 512, 3), (
+        f"Expected (N, 384, 512, 3), got {tto_frames.shape}"
     )
     assert tto_frames.dtype == torch.uint8, f"Expected uint8, got {tto_frames.dtype}"
+    NUM_FRAMES = N  # use actual frame count, not hardcoded 1200
 
     # ── 2. Upsample to camera resolution and write raw file ──
     print(f"\nStage 2: Upsampling {NUM_FRAMES} frames to {OUT_H}x{OUT_W} and writing raw ...")
@@ -1308,9 +1310,13 @@ def _run_tto_auth_eval(tag: str, tto_dir: str) -> dict | None:
     if rate is None:
         rate = archive_size / gt_size
 
-    score = final_score_parsed if final_score_parsed else (
-        100 * avg_segnet + math.sqrt(10 * avg_posenet) + 25 * rate
-    )
+    if any(v is None for v in (avg_posenet, avg_segnet, rate)):
+        print("  WARNING: Could not parse all metrics from report. Partial results only.")
+        score = final_score_parsed or float("inf")
+    else:
+        score = final_score_parsed if final_score_parsed else (
+            100 * avg_segnet + math.sqrt(10 * avg_posenet) + 25 * rate
+        )
 
     t_total = time.monotonic() - t_start
 

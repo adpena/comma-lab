@@ -28,7 +28,6 @@ Usage:
 from __future__ import annotations
 
 import argparse
-import shlex
 import subprocess
 import sys
 from pathlib import Path
@@ -83,7 +82,7 @@ def cmd_upload(args: argparse.Namespace) -> int:
     """Upload a file to bat00 via scp."""
     src = Path(args.file)
     dest = args.dest or f"C:/Users/{BAT00_USER}/Desktop/{src.name}"
-    scp_cmd = ["scp", *SSH_OPTS, str(src), f"{ssh_target()}:{dest}"]
+    scp_cmd = ["scp", *_ssh_opts(WIN_PORT), str(src), f"{ssh_target()}:{dest}"]
     print(f"[bat00] scp {src} -> {dest}")
     return subprocess.run(scp_cmd).returncode
 
@@ -126,7 +125,7 @@ def cmd_sync(args: argparse.Namespace) -> int:
         "--exclude", "*.pyc", "--exclude", ".git",
         "--exclude", "upstream", "--exclude", "dist",
         "--exclude", "build", "--exclude", "*.egg-info",
-        "-e", f"ssh {' '.join(SSH_OPTS)}",
+        "-e", f"ssh {' '.join(_ssh_opts(WIN_PORT))}",
         f"{REPO_ROOT}/", dest,
     ]
     print(f"[bat00] rsync {REPO_ROOT}/ -> {dest}")
@@ -145,7 +144,7 @@ def cmd_run_script(args: argparse.Namespace) -> int:
     wsl_path = f"/mnt/c/Users/{BAT00_USER}/Desktop/{script.name}"
 
     print(f"[1/3] Uploading {script.name}...")
-    scp_cmd = ["scp", *SSH_OPTS, str(script), f"{ssh_target()}:{win_path}"]
+    scp_cmd = ["scp", *_ssh_opts(WIN_PORT), str(script), f"{ssh_target()}:{win_path}"]
     r = subprocess.run(scp_cmd)
     if r.returncode != 0:
         return r.returncode
