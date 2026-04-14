@@ -1429,6 +1429,10 @@ def coupled_trajectory_optimize(
     N = masks.shape[0]
     P = N // 2  # non-overlapping pairs, matching upstream scorer seq_len=2
 
+    # Move inputs to device once (avoids repeated transfers in inner loop)
+    masks = masks.to(device)
+    expected_pose = expected_pose.to(device)
+
     # Initialize ALL frames jointly — from renderer output (TTO) or noise
     if init_frames is not None:
         frames = init_frames.to(device).float().detach().clone()
@@ -1444,6 +1448,8 @@ def coupled_trajectory_optimize(
     # hits a PoseNet minimum around step 300-500 before compressibility diverges it).
     best_pose_loss = float("inf")
     best_frames_snapshot: torch.Tensor | None = None
+    steps_since_improvement = 0
+    EARLY_STOP_PATIENCE = 150  # stop if no PoseNet improvement in N steps
 
     for step in range(num_steps):
         optimizer.zero_grad()
@@ -1488,6 +1494,17 @@ def coupled_trajectory_optimize(
         if pose_val < best_pose_loss:
             best_pose_loss = pose_val
             best_frames_snapshot = frames.detach().clone()
+            steps_since_improvement = 0
+        else:
+            steps_since_improvement += 1
+
+        # Early stop: if PoseNet hasn't improved in EARLY_STOP_PATIENCE steps,
+        # the optimizer is past the transient and drifting. Stop and return snapshot.
+        if steps_since_improvement >= EARLY_STOP_PATIENCE and best_frames_snapshot is not None:
+            if log_every > 0:
+                print(f"  [coupled-4dvar] Early stop at step {step + 1}: "
+                      f"no PoseNet improvement in {EARLY_STOP_PATIENCE} steps")
+            break
 
         if log_every > 0 and (step + 1) % log_every == 0:
             print(
