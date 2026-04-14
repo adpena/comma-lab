@@ -57,7 +57,7 @@ def parse_args() -> argparse.Namespace:
     p.add_argument("--pose-weight", type=float, default=10.0, help="PoseNet loss weight")
     p.add_argument("--compress-weight", type=float, default=0.5, help="Compressibility weight")
     p.add_argument("--upstream", type=str, default="upstream/", help="Path to upstream repo")
-    p.add_argument("--output-dir", type=str, default="experiments/results/renderer_tto/", help="Output directory")
+    p.add_argument("--output-dir", type=str, default=None, help="Output directory (default: timestamped)")
     p.add_argument("--video", type=str, default=None, help="Path to GT video (default: upstream/videos/0.mkv)")
     p.add_argument("--smoke", action="store_true", help="Smoke test: 20 frames, 50 steps")
     return p.parse_args()
@@ -276,7 +276,7 @@ def compute_proxy_score(
 
     N = frames.shape[0]
     P = N // 2
-    total_pose, total_seg, n_samples = 0.0, 0.0, 0
+    total_pose, total_seg, n_pairs = 0.0, 0.0, 0
 
     for start in range(0, P, batch_size):
         end = min(start + batch_size, P)
@@ -309,7 +309,7 @@ def compute_proxy_score(
             cand_chw = cand_flat.reshape(B, T, C, SEGNET_INPUT_H, SEGNET_INPUT_W)
             gt_chw = gt_flat.reshape(B, T, C, SEGNET_INPUT_H, SEGNET_INPUT_W)
 
-        # uint8 round-trip to match official scorer
+        # uint8 round-trip to match official scorer (GT is already integer-valued from uint8 decode)
         cand_chw = cand_chw.round().clamp(0, 255)
 
         with torch.no_grad():
@@ -330,10 +330,10 @@ def compute_proxy_score(
             seg_disagree = diff.mean(dim=tuple(range(1, diff.ndim)))
             total_seg += seg_disagree.sum().item()
 
-            n_samples += B
+            n_pairs += B
 
-    avg_pose = total_pose / max(n_samples, 1)
-    avg_seg = total_seg / max(n_samples, 1)
+    avg_pose = total_pose / max(n_pairs, 1)
+    avg_seg = total_seg / max(n_pairs, 1)
     score = 100.0 * avg_seg + math.sqrt(10.0 * avg_pose) + 25.0 * rate
 
     return {
@@ -344,7 +344,7 @@ def compute_proxy_score(
         "pose_contribution": math.sqrt(10.0 * avg_pose),
         "seg_contribution": 100.0 * avg_seg,
         "rate_contribution": 25.0 * rate,
-        "n_samples": n_samples,
+        "n_pairs": n_pairs,
     }
 
 
@@ -436,6 +436,8 @@ def run_batched_tto(
         del batch_result
         if device.type == "cuda":
             torch.cuda.empty_cache()
+        elif device.type == "mps":
+            torch.mps.empty_cache()
 
     return refined_frames
 
@@ -449,12 +451,16 @@ def main():
         args.tto_steps = 50
         args.batch_pairs = 10
         print("[smoke] Smoke test mode: 20 frames, 50 steps, 10 pairs/batch")
+        print("[smoke] NOTE: 50 steps is insufficient for convergence. Use --tto-steps 500+ for meaningful results.")
 
     # Ensure even frame count (pairs)
     args.n_frames = args.n_frames - (args.n_frames % 2)
 
     device = torch.device(args.device)
     upstream = Path(args.upstream)
+    if args.output_dir is None:
+        ts = time.strftime("%Y%m%dT%H%M%S")
+        args.output_dir = f"experiments/results/renderer_tto_{ts}"
     output_dir = Path(args.output_dir)
     output_dir.mkdir(parents=True, exist_ok=True)
     video_path = args.video or str(upstream / "videos" / "0.mkv")
@@ -499,8 +505,12 @@ def main():
     # Decode at SegNet resolution directly — renderer operates at this resolution
     gt_frames_full = decode_video(video_path, target_h=SEGNET_INPUT_H, target_w=SEGNET_INPUT_W)
     gt_frames = gt_frames_full[: args.n_frames]
+    # Update n_frames to actual count (video may be shorter than requested)
+    args.n_frames = len(gt_frames) - (len(gt_frames) % 2)  # ensure even
+    gt_frames = gt_frames[: args.n_frames]
+    assert args.n_frames >= 2, f"Need at least 2 frames, got {len(gt_frames)}"
     t_decode = time.monotonic() - t0
-    print(f"[3/8] Decoded {len(gt_frames)} frames ({gt_frames[0].shape}) in {t_decode:.1f}s")
+    print(f"[3/8] Decoded {args.n_frames} frames ({gt_frames[0].shape}) in {t_decode:.1f}s")
 
     # ── Step 4: Extract masks via SegNet ─────────────────────────────────
     print("\n[4/8] Extracting SegNet masks from GT frames...")
@@ -587,8 +597,9 @@ def main():
     print("=" * 72)
 
     # ── Save results ─────────────────────────────────────────────────────
-    torch.save(tto_frames, output_dir / "tto_frames.pt")
-    print(f"\n[save] TTO frames saved to {output_dir / 'tto_frames.pt'}")
+    torch.save(tto_frames.to(torch.uint8), output_dir / "tto_frames.pt")
+    print(f"\n[save] TTO frames saved to {output_dir / 'tto_frames.pt'} "
+          f"({tto_frames.shape[0] * tto_frames.shape[1] * tto_frames.shape[2] * 3 / 1e6:.0f}MB uint8)")
 
     results = {
         "baseline": baseline,

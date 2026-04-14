@@ -1382,6 +1382,7 @@ def coupled_trajectory_optimize(
     device: str = "cuda",
     log_every: int = 100,
     init_frames: torch.Tensor | None = None,
+    early_stop_patience: int = 150,
     **cfg,
 ) -> torch.Tensor:
     """Jointly optimize ALL frames to satisfy coupled PoseNet constraints.
@@ -1449,7 +1450,6 @@ def coupled_trajectory_optimize(
     best_pose_loss = float("inf")
     best_frames_snapshot: torch.Tensor | None = None
     steps_since_improvement = 0
-    EARLY_STOP_PATIENCE = 150  # stop if no PoseNet improvement in N steps
 
     for step in range(num_steps):
         optimizer.zero_grad()
@@ -1500,10 +1500,10 @@ def coupled_trajectory_optimize(
 
         # Early stop: if PoseNet hasn't improved in EARLY_STOP_PATIENCE steps,
         # the optimizer is past the transient and drifting. Stop and return snapshot.
-        if steps_since_improvement >= EARLY_STOP_PATIENCE and best_frames_snapshot is not None:
+        if early_stop_patience > 0 and steps_since_improvement >= early_stop_patience and best_frames_snapshot is not None:
             if log_every > 0:
                 print(f"  [coupled-4dvar] Early stop at step {step + 1}: "
-                      f"no PoseNet improvement in {EARLY_STOP_PATIENCE} steps")
+                      f"no PoseNet improvement in {early_stop_patience} steps")
             break
 
         if log_every > 0 and (step + 1) % log_every == 0:
