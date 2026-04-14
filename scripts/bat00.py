@@ -161,9 +161,7 @@ def cmd_run_script(args: argparse.Namespace) -> int:
     return run_ssh(ps_cmd, timeout=30).returncode
 
 
-def _ps_escape(s: str) -> str:
-    """Escape a string for embedding in PowerShell double quotes."""
-    return s.replace('`', '``').replace('"', '`"').replace('$', '`$')
+
 
 
 def main() -> int:

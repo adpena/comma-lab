@@ -1310,7 +1310,8 @@ def _run_tto_auth_eval(tag: str, tto_dir: str) -> dict | None:
     if rate is None:
         rate = archive_size / gt_size
 
-    if any(v is None for v in (avg_posenet, avg_segnet, rate)):
+    metrics_valid = all(v is not None for v in (avg_posenet, avg_segnet, rate))
+    if not metrics_valid:
         print("  WARNING: Could not parse all metrics from report. Partial results only.")
         score = final_score_parsed or float("inf")
     else:
@@ -1323,20 +1324,24 @@ def _run_tto_auth_eval(tag: str, tto_dir: str) -> dict | None:
     print(f"\n{'=' * 60}")
     print(f"=== TTO Authoritative Evaluation Results ({n_samples} samples) ===")
     print(f"{'=' * 60}")
-    print(f"  Average PoseNet Distortion: {avg_posenet:.8f}")
-    print(f"  Average SegNet Distortion:  {avg_segnet:.8f}")
-    print(f"  Archive size:               {archive_size:,} bytes")
-    print(f"  GT size:                    {gt_size:,} bytes")
-    print(f"  Compression Rate:           {rate:.8f}")
-    print(f"  Score breakdown:")
-    print(f"    100*seg  = {100 * avg_segnet:.4f}")
-    print(f"    sqrt(10*pose) = {math.sqrt(10 * avg_posenet):.4f}")
-    print(f"    25*rate  = {25 * rate:.4f}")
+    if metrics_valid:
+        print(f"  Average PoseNet Distortion: {avg_posenet:.8f}")
+        print(f"  Average SegNet Distortion:  {avg_segnet:.8f}")
+        print(f"  Archive size:               {archive_size:,} bytes")
+        print(f"  GT size:                    {gt_size:,} bytes")
+        print(f"  Compression Rate:           {rate:.8f}")
+        print(f"  Score breakdown:")
+        print(f"    100*seg  = {100 * avg_segnet:.4f}")
+        print(f"    sqrt(10*pose) = {math.sqrt(10 * avg_posenet):.4f}")
+        print(f"    25*rate  = {25 * rate:.4f}")
     print(f"  FINAL SCORE: {score:.4f}")
     print(f"  Total time: {t_total:.1f}s")
     print(f"{'=' * 60}")
 
     # ── 6. Save results ──
+    score_seg = 100 * avg_segnet if avg_segnet is not None else None
+    score_pose = math.sqrt(10 * avg_posenet) if avg_posenet is not None else None
+    score_rate = 25 * rate if rate is not None else None
     result = {
         "tag": tag,
         "source": "tto_frames",
@@ -1345,9 +1350,9 @@ def _run_tto_auth_eval(tag: str, tto_dir: str) -> dict | None:
         "archive_size_bytes": archive_size,
         "gt_size_bytes": gt_size,
         "rate": rate,
-        "score_seg": 100 * avg_segnet,
-        "score_pose": math.sqrt(10 * avg_posenet),
-        "score_rate": 25 * rate,
+        "score_seg": score_seg,
+        "score_pose": score_pose,
+        "score_rate": score_rate,
         "final_score": score,
         "n_samples": n_samples,
         "n_frames": NUM_FRAMES,
