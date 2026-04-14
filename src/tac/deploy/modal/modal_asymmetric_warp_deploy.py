@@ -1381,7 +1381,7 @@ def _run_tto_auth_eval(tag: str, tto_dir: str) -> dict | None:
 @app.function(
     image=image,
     gpu="T4",
-    timeout=7200,  # 2h — 60 TTO batches × ~100s + overhead + auth eval
+    timeout=14400,  # 4h — 60 TTO batches can take 2-3min each + proxy scoring + auth eval
     volumes={"/results": results_vol},
     memory=16384,
 )
