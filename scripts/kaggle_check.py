@@ -146,14 +146,23 @@ def main() -> int:
         print(f"{RED}{BOLD}Error logs:{RESET}\n")
         for slug in error_slugs:
             short = slug.split("/")[-1]
-            print(f"  {RED}--- {short} ---{RESET}")
             lines = get_kernel_log(kaggle, slug, download_dir=download_dir)
-            # Show last 10 stderr lines
-            tail = lines[-10:] if len(lines) > 10 else lines
-            for line in tail:
-                print(f"    {line}")
-            if len(lines) > 10:
-                print(f"    {YELLOW}... ({len(lines) - 10} earlier lines omitted){RESET}")
+
+            # Detect P100 retry marker in output files
+            is_p100 = any("P100_RETRY_NEEDED" in line or "is unsupported" in line
+                          for line in lines)
+            if is_p100:
+                print(f"  {YELLOW}--- {short} (P100 — retry needed) ---{RESET}")
+                print(f"    {YELLOW}Kernel got assigned a P100 (sm_60). Not a real error.{RESET}")
+                print(f"    {YELLOW}Re-run the kernel to get a T4/V100 assignment.{RESET}")
+            else:
+                print(f"  {RED}--- {short} ---{RESET}")
+                # Show last 10 stderr lines
+                tail = lines[-10:] if len(lines) > 10 else lines
+                for line in tail:
+                    print(f"    {line}")
+                if len(lines) > 10:
+                    print(f"    {YELLOW}... ({len(lines) - 10} earlier lines omitted){RESET}")
             print()
 
     if args.download_logs:

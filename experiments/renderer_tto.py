@@ -363,6 +363,23 @@ def compute_proxy_score(
     }
 
 
+def estimate_vram_mb(batch_pairs: int) -> float:
+    """Estimate peak VRAM usage for a TTO batch.
+
+    Formula (empirically calibrated):
+    - Per frame: ~2.4MB (384*512*3*4 bytes float32 + grad)
+    - Adam buffers: 2x per frame (exp_avg + exp_avg_sq)
+    - Snapshot: 1x per frame
+    - Scorers: ~200MB fixed (SegNet ~100MB, PoseNet ~100MB)
+    - Autograd graph: ~3MB per frame per scorer forward
+    - Simplified: ~28MB per frame * batch_pairs * 2 + 200MB fixed
+    """
+    n_frames = batch_pairs * 2
+    per_frame_mb = 28.0  # float32 + grad + adam + snapshot + autograd
+    fixed_mb = 200.0     # scorers
+    return n_frames * per_frame_mb + fixed_mb
+
+
 def run_batched_tto(
     renderer_frames: torch.Tensor,
     masks: torch.Tensor,
@@ -376,11 +393,15 @@ def run_batched_tto(
     seg_weight: float = 100.0,
     pose_weight: float = 10.0,
     compress_weight: float = 0.5,
+    output_dir: Path | None = None,
 ) -> torch.Tensor:
     """Run TTO in batches of pairs to avoid OOM.
 
     PoseNet evaluates non-overlapping pairs (2k, 2k+1). Each pair is independent
     for scoring purposes, so we can batch-optimize groups of pairs independently.
+
+    Supports checkpoint resume: if output_dir is provided and contains
+    tto_batch_NNN.pt files, completed batches are loaded instead of re-run.
 
     Args:
         renderer_frames: (N, H, W, 3) float tensor from renderer.
@@ -395,6 +416,7 @@ def run_batched_tto(
         seg_weight: SegNet constraint weight.
         pose_weight: PoseNet constraint weight.
         compress_weight: compressibility weight.
+        output_dir: directory for batch checkpoints (enables resume).
 
     Returns:
         (N, H, W, 3) float tensor of TTO-refined frames in [0, 255].
@@ -416,6 +438,15 @@ def run_batched_tto(
         frame_end = 2 * pair_end
         n_pairs_this = pair_end - pair_start
         n_frames_this = frame_end - frame_start
+
+        # ── Checkpoint resume ────────────────────────────────────────────
+        if output_dir is not None:
+            ckpt_path = output_dir / f"tto_batch_{batch_idx:03d}.pt"
+            if ckpt_path.exists():
+                batch_result = torch.load(ckpt_path, map_location="cpu", weights_only=True)
+                refined_frames[frame_start:frame_end] = batch_result
+                print(f"[tto] Batch {batch_idx + 1}/{n_batches}: RESUMED from checkpoint")
+                continue
 
         print(f"\n[tto] Batch {batch_idx + 1}/{n_batches}: "
               f"pairs [{pair_start}:{pair_end}] = {n_pairs_this} pairs, "
@@ -446,6 +477,12 @@ def run_batched_tto(
         refined_frames[frame_start:frame_end] = batch_result.cpu()
         print(f"[tto] Batch {batch_idx + 1}/{n_batches} done in {dt:.1f}s "
               f"({dt / n_frames_this:.2f}s/frame)")
+
+        # ── Save batch checkpoint ────────────────────────────────────────
+        if output_dir is not None:
+            ckpt_path = output_dir / f"tto_batch_{batch_idx:03d}.pt"
+            torch.save(batch_result.cpu(), ckpt_path)
+            print(f"[tto] Checkpoint saved: {ckpt_path}")
 
         # Free GPU memory between batches
         del batch_result
@@ -562,6 +599,18 @@ def main():
           f"pose={baseline['pose']:.6f} ({baseline['pose_contribution']:.4f}) | "
           f"rate={baseline['rate']:.4f} ({baseline['rate_contribution']:.4f})")
 
+    # ── VRAM estimate ─────────────────────────────────────────────────────
+    vram_est = estimate_vram_mb(args.batch_pairs)
+    print(f"\n[vram] Estimated peak VRAM: {vram_est:.0f} MB "
+          f"({args.batch_pairs} pairs/batch = {args.batch_pairs * 2} frames)")
+    if vram_est > 22000:
+        print(f"[vram] FATAL: estimated {vram_est:.0f} MB exceeds A10G capacity (22 GB). "
+              "Reduce --batch-pairs or use a larger GPU.")
+        sys.exit(1)
+    elif vram_est > 14000:
+        print(f"[vram] WARNING: estimated {vram_est:.0f} MB exceeds T4 safe limit (14 GB). "
+              "May OOM on T4. Consider reducing --batch-pairs.")
+
     # ── Step 7: Run batched TTO ──────────────────────────────────────────
     print("\n[7/8] Running batched TTO...")
     t0 = time.monotonic()
@@ -578,6 +627,7 @@ def main():
         seg_weight=args.seg_weight,
         pose_weight=args.pose_weight,
         compress_weight=args.compress_weight,
+        output_dir=output_dir,
     )
     t_tto = time.monotonic() - t0
     print(f"\n[7/8] TTO completed in {t_tto:.1f}s ({t_tto / args.n_frames:.2f}s/frame)")

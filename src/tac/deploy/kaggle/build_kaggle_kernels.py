@@ -167,6 +167,13 @@ def _kaggle_setup() -> None:
             print(f"  FATAL: {{_dev_name}} (sm_{{_major}}{{_minor}}) is unsupported.")
             print(f"  PyTorch >= 2.5 requires sm_70+ (V100 or newer).")
             print(f"  Asymmetric warp training on CPU is impractical — exiting.")
+            # Write marker so kaggle_check.py can distinguish P100 assignment from real errors.
+            _marker = _Path("/kaggle/working/P100_RETRY_NEEDED")
+            _marker.write_text(
+                f"GPU: {{_dev_name}} (sm_{{_major}}{{_minor}})\\n"
+                f"Reason: compute capability < 7.0, unsupported by PyTorch >= 2.5\\n"
+            )
+            print(f"  Wrote P100 retry marker: {{_marker}}")
             _sys.exit(1)
         # Warmup: force a real CUDA kernel to confirm the device is actually usable.
         try:
