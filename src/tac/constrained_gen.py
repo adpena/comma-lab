@@ -1496,6 +1496,11 @@ def coupled_trajectory_optimize(
     # Single optimizer over ALL frame pixels
     optimizer = torch.optim.Adam([frames], lr=lr)
 
+    # Track best PoseNet snapshot (Lagrangian transient strategy: the optimizer
+    # hits a PoseNet minimum around step 300-500 before compressibility diverges it).
+    best_pose_loss = float("inf")
+    best_frames_snapshot: torch.Tensor | None = None
+
     for step in range(num_steps):
         optimizer.zero_grad()
 
@@ -1509,14 +1514,22 @@ def coupled_trajectory_optimize(
                 frames, expected_pose, posenet,
             )
 
-        # --- Compressibility: spatial TV + temporal smoothness ---
+        # --- Compressibility: anneal weight to prevent PoseNet divergence ---
+        # Full weight for first 40% of steps (let compressibility shape the image),
+        # then decay to 10% by end (let PoseNet/SegNet dominate the fine structure).
         compress_loss = compute_compressibility_loss(frames)
+        progress = step / max(num_steps - 1, 1)
+        if progress < 0.4:
+            effective_compress_weight = compress_weight
+        else:
+            decay = 1.0 - 0.9 * ((progress - 0.4) / 0.6)  # 1.0 → 0.1
+            effective_compress_weight = compress_weight * decay
 
         # --- Coupled total loss ---
         total_loss = (
             seg_weight * seg_loss
             + pose_weight * pose_loss
-            + compress_weight * compress_loss
+            + effective_compress_weight * compress_loss
         )
 
         total_loss.backward()
@@ -1526,17 +1539,30 @@ def coupled_trajectory_optimize(
         with torch.no_grad():
             frames.data.clamp_(0.0, 255.0)
 
+        # Snapshot best PoseNet state (transient capture)
+        pose_val = pose_loss.item()
+        if pose_val < best_pose_loss:
+            best_pose_loss = pose_val
+            best_frames_snapshot = frames.detach().clone()
+
         if log_every > 0 and (step + 1) % log_every == 0:
             print(
                 f"  [coupled-4dvar] step {step + 1:4d}/{num_steps}: "
                 f"total={total_loss.item():.4f} "
                 f"seg={seg_loss.item():.4f} "
                 f"pose={pose_loss.item():.4f} "
-                f"compress={compress_loss.item():.4f}"
+                f"compress={compress_loss.item():.4f} "
+                f"cw={effective_compress_weight:.3f} "
+                f"best_pose={best_pose_loss:.4f}"
             )
 
-    with torch.no_grad():
-        result = frames.detach().round().clamp(0.0, 255.0)
+    # Return the snapshot with best PoseNet (not the final state which may have drifted)
+    if best_frames_snapshot is not None:
+        print(f"  [coupled-4dvar] Returning best PoseNet snapshot (loss={best_pose_loss:.4f})")
+        result = best_frames_snapshot.round().clamp(0.0, 255.0)
+    else:
+        with torch.no_grad():
+            result = frames.detach().round().clamp(0.0, 255.0)
     return result
 
 
