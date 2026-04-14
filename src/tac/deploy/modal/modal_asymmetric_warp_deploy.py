@@ -1459,6 +1459,7 @@ def tto_eval(
 
     # Run TTO subprocess — pipe stdout to both console AND log file via tee
     stdout_log = os.path.join(output_dir, "tto_stdout.log")
+    batch_count = 0
     with open(stdout_log, "w") as log_f:
         proc = subprocess.Popen(
             cmd, env=env, stdout=subprocess.PIPE, stderr=subprocess.STDOUT,
@@ -1468,13 +1469,15 @@ def tto_eval(
             print(line, end="")  # console
             log_f.write(line)    # file
             log_f.flush()
+            # Periodic volume commit every 10 batches so log survives timeout
+            if "[tto] Batch" in line and "done in" in line:
+                batch_count += 1
+                if batch_count % 10 == 0:
+                    log_f.flush()
+                    results_vol.commit()
+                    print(f"  [volume] Checkpoint commit after batch {batch_count}")
         proc.wait()
         result_code = proc.returncode
-
-    # Wrap in a namespace-like object for compatibility
-    class _Result:
-        returncode = result_code
-    result = _Result()
 
     print("  ---")
     print(f"  End: {time.strftime('%Y-%m-%d %H:%M:%S')}")
