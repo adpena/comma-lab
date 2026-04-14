@@ -1381,6 +1381,7 @@ def coupled_trajectory_optimize(
     noise_seed: int = 42,
     device: str = "cuda",
     log_every: int = 100,
+    init_frames: torch.Tensor | None = None,
     **cfg,
 ) -> torch.Tensor:
     """Jointly optimize ALL frames to satisfy coupled PoseNet constraints.
@@ -1398,6 +1399,11 @@ def coupled_trajectory_optimize(
     frame pixels jointly lets the gradient flow through the entire coupled
     system.
 
+    When init_frames is provided (renderer+TTO mode), optimization starts from
+    the given frames instead of noise. This is the "test-time optimization"
+    path: the renderer produces PoseNet~0.031 frames, then TTO pushes PoseNet
+    toward 0.005 by gradient descent against the scorers.
+
     Args:
         masks: (N, H, W) long tensor with target class indices.
         expected_pose: (P, 6) float tensor, P = N//2 (non-overlapping pairs,
@@ -1409,9 +1415,11 @@ def coupled_trajectory_optimize(
         seg_weight: weight for SegNet constraint.
         pose_weight: weight for PoseNet constraint.
         compress_weight: weight for spatial/temporal smoothness.
-        noise_seed: deterministic seed for initialization.
+        noise_seed: deterministic seed for initialization (ignored if init_frames).
         device: computation device.
         log_every: print loss every N steps (0 to disable).
+        init_frames: (N, H, W, 3) float tensor to warm-start from (renderer+TTO).
+            If None, starts from class-mean-colored noise.
         **cfg: additional config (ignored, for profile compatibility).
 
     Returns:
@@ -1421,8 +1429,12 @@ def coupled_trajectory_optimize(
     N = masks.shape[0]
     P = N // 2  # non-overlapping pairs, matching upstream scorer seq_len=2
 
-    # Initialize ALL frames jointly
-    frames = generate_initial_frames(masks, noise_seed, device=device)
+    # Initialize ALL frames jointly — from renderer output (TTO) or noise
+    if init_frames is not None:
+        frames = init_frames.to(device).float().detach().clone()
+        print(f"  [coupled-4dvar] Warm-starting from init_frames (TTO mode)")
+    else:
+        frames = generate_initial_frames(masks, noise_seed, device=device)
     frames.requires_grad_(True)
 
     # Single optimizer over ALL frame pixels
