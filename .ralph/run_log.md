@@ -1,5 +1,16 @@
 # run log
 
+## 2026-04-14T14:30:00Z — v5 CHECKPOINT LANDSCAPE SWEEP (9 auth evals)
+
+Full drift curve from ep12500 to ep16999:
+- ep12500: 0.93 | ep12600: **0.87** (BEST) | ep13000: 0.88 | ep13500: 0.96
+- ep14000: 0.95 | ep14500: 0.90 | ep15000: 0.88 | ep15500: 1.26 (collapse starts)
+- ep16000: 1.09 | ep16500: 1.15 | ep16999: 1.37
+
+Sweet spot: ep12500-15000 (all < 1.00, beating v3). Two local minima at ep12600 (0.87) and ep13000/15000 (0.88).
+Collapse onset: ep15500 (SegNet and PoseNet both degrade under weak Lagrangian).
+Cost: 9 × $0.29 = $2.61. High information density — maps full Pareto drift trajectory.
+
 ## 2026-04-14T13:20:00Z — NEW BEST: asym_v5_lagrangian_fixed renderer_best auth=0.8700
 
 - **auth=0.8700** — 13% improvement over v3 baseline (1.00 -> 0.87)
