@@ -1153,6 +1153,218 @@ def main(
 # ── TTO eval ─────────────────────────────────────────────────────────────────
 
 
+def _run_tto_auth_eval(tag: str, tto_dir: str) -> dict | None:
+    """Run authoritative evaluation on TTO-optimized frames.
+
+    Loads tto_frames.pt, upsamples to camera resolution (874x1164),
+    writes raw frames file, and runs upstream evaluate.py for scoring.
+
+    Args:
+        tag:     experiment tag (volume subdirectory)
+        tto_dir: path to tto_results directory containing tto_frames.pt
+
+    Returns:
+        Result dict with scores, or None if tto_frames.pt not found.
+    """
+    import json
+    import math
+    import os
+    import re
+    import subprocess
+    import sys
+    import time
+
+    import torch
+    import torch.nn.functional as F
+
+    t_start = time.monotonic()
+
+    UPSTREAM_ROOT = "/root/upstream"
+    OUT_H, OUT_W = 874, 1164
+    NUM_FRAMES = 1200
+    vol_dir = f"/results/{tag}"
+
+    frames_path = os.path.join(tto_dir, "tto_frames.pt")
+    if not os.path.exists(frames_path):
+        print(f"  [tto_auth_eval] tto_frames.pt not found at {frames_path}, skipping auth eval")
+        return None
+
+    print(f"\n{'=' * 60}")
+    print(f"=== TTO Auth Eval | tag: {tag} ===")
+    print(f"{'=' * 60}")
+
+    # ── 1. Load TTO frames ──
+    print("\nStage 1: Loading TTO frames ...")
+    tto_frames = torch.load(frames_path, map_location="cpu", weights_only=True)
+    print(f"  Shape: {tto_frames.shape}, dtype: {tto_frames.dtype}")
+    assert tto_frames.shape == (NUM_FRAMES, 384, 512, 3), (
+        f"Expected (1200, 384, 512, 3), got {tto_frames.shape}"
+    )
+    assert tto_frames.dtype == torch.uint8, f"Expected uint8, got {tto_frames.dtype}"
+
+    # ── 2. Upsample to camera resolution and write raw file ──
+    print(f"\nStage 2: Upsampling {NUM_FRAMES} frames to {OUT_H}x{OUT_W} and writing raw ...")
+    device = "cuda" if torch.cuda.is_available() else "cpu"
+
+    submission_dir = os.path.join(tto_dir, "submission")
+    os.makedirs(os.path.join(submission_dir, "inflated"), exist_ok=True)
+    raw_path = os.path.join(submission_dir, "inflated", "0.raw")
+
+    batch_size = 16
+    n_written = 0
+    with open(raw_path, "wb") as f:
+        for i in range(0, NUM_FRAMES, batch_size):
+            end = min(i + batch_size, NUM_FRAMES)
+            # (B, H, W, 3) uint8 -> (B, 3, H, W) float for interpolation
+            batch = tto_frames[i:end].float().permute(0, 3, 1, 2).to(device)
+            batch_up = F.interpolate(batch, size=(OUT_H, OUT_W), mode="bilinear", align_corners=False)
+            batch_uint8 = batch_up.round().clamp(0, 255).to(torch.uint8)
+            # (B, 3, H, W) -> (B, H, W, 3) contiguous for raw write
+            batch_hwc = batch_uint8.permute(0, 2, 3, 1).contiguous().cpu().numpy()
+            f.write(batch_hwc.tobytes())
+            n_written += end - i
+            if n_written % 200 == 0 or end == NUM_FRAMES:
+                print(f"    Upsampled: {n_written}/{NUM_FRAMES}")
+
+    raw_size = os.path.getsize(raw_path)
+    expected_size = OUT_H * OUT_W * 3 * NUM_FRAMES
+    assert raw_size == expected_size, f"Raw size mismatch: {raw_size} vs {expected_size}"
+    print(f"  Written {n_written} frames, raw size: {raw_size:,} bytes")
+
+    del tto_frames  # free memory
+
+    # ── 3. Copy archive.zip for rate calculation ──
+    print("\nStage 3: Setting up archive.zip ...")
+    archive_zip = os.path.join(submission_dir, "archive.zip")
+
+    # Look for existing archive.zip from a previous auth eval of this tag
+    source_archive = os.path.join(vol_dir, "submission", "archive.zip")
+    if not os.path.exists(source_archive):
+        # Try renderer .bin files to create archive from scratch
+        import zipfile
+        bin_candidates = [
+            os.path.join(vol_dir, "renderer_best.bin"),
+            os.path.join(vol_dir, "renderer.bin"),
+        ]
+        bin_path = None
+        for bc in bin_candidates:
+            if os.path.exists(bc):
+                bin_path = bc
+                break
+        if bin_path is None:
+            print("  ERROR: No archive.zip or .bin found for rate calculation")
+            print("  Available files:", os.listdir(vol_dir) if os.path.isdir(vol_dir) else "dir missing")
+            return None
+        with zipfile.ZipFile(archive_zip, "w", zipfile.ZIP_STORED) as zf:
+            zf.write(bin_path, "renderer.bin")
+        print(f"  Created archive.zip from {bin_path}")
+    else:
+        import shutil
+        if source_archive != archive_zip:
+            shutil.copy2(source_archive, archive_zip)
+        print(f"  Copied archive.zip from {source_archive}")
+
+    archive_size = os.path.getsize(archive_zip)
+    print(f"  Archive size: {archive_size:,} bytes")
+
+    # ── 4. Run upstream evaluate.py ──
+    print("\nStage 4: Scoring via upstream evaluate.py (DALI) ...")
+    report_path = os.path.join(submission_dir, "report.txt")
+    eval_device = "cuda" if torch.cuda.is_available() else "cpu"
+    eval_cmd = [
+        sys.executable, os.path.join(UPSTREAM_ROOT, "evaluate.py"),
+        "--submission-dir", submission_dir,
+        "--uncompressed-dir", os.path.join(UPSTREAM_ROOT, "videos"),
+        "--video-names-file", os.path.join(UPSTREAM_ROOT, "public_test_video_names.txt"),
+        "--device", eval_device,
+        "--report", report_path,
+    ]
+    print(f"  Command: {' '.join(eval_cmd)}")
+    eval_result = subprocess.run(eval_cmd, capture_output=True, text=True, timeout=600)
+
+    if eval_result.returncode != 0:
+        print(f"  evaluate.py FAILED (exit {eval_result.returncode})")
+        print(f"  STDERR: {eval_result.stderr[-1000:]}")
+        return None
+
+    # ── 5. Parse report ──
+    report_text = open(report_path).read()
+    print(f"  Report:\n{report_text}")
+
+    def _parse(pattern, text):
+        m = re.search(pattern, text)
+        return float(m.group(1).replace(",", "")) if m else None
+
+    avg_posenet = _parse(r"Average PoseNet Distortion:\s*([0-9.]+)", report_text)
+    avg_segnet = _parse(r"Average SegNet Distortion:\s*([0-9.]+)", report_text)
+    rate = _parse(r"Compression Rate:\s*([0-9.]+)", report_text)
+    final_score_parsed = _parse(r"Final score:.*=\s*([0-9.]+)", report_text)
+    n_samples_raw = _parse(r"over (\d+) samples", report_text)
+    n_samples = int(n_samples_raw) if n_samples_raw else 600
+
+    gt_size = os.path.getsize(os.path.join(UPSTREAM_ROOT, "videos", "0.mkv"))
+    if rate is None:
+        rate = archive_size / gt_size
+
+    score = final_score_parsed if final_score_parsed else (
+        100 * avg_segnet + math.sqrt(10 * avg_posenet) + 25 * rate
+    )
+
+    t_total = time.monotonic() - t_start
+
+    print(f"\n{'=' * 60}")
+    print(f"=== TTO Authoritative Evaluation Results ({n_samples} samples) ===")
+    print(f"{'=' * 60}")
+    print(f"  Average PoseNet Distortion: {avg_posenet:.8f}")
+    print(f"  Average SegNet Distortion:  {avg_segnet:.8f}")
+    print(f"  Archive size:               {archive_size:,} bytes")
+    print(f"  GT size:                    {gt_size:,} bytes")
+    print(f"  Compression Rate:           {rate:.8f}")
+    print(f"  Score breakdown:")
+    print(f"    100*seg  = {100 * avg_segnet:.4f}")
+    print(f"    sqrt(10*pose) = {math.sqrt(10 * avg_posenet):.4f}")
+    print(f"    25*rate  = {25 * rate:.4f}")
+    print(f"  FINAL SCORE: {score:.4f}")
+    print(f"  Total time: {t_total:.1f}s")
+    print(f"{'=' * 60}")
+
+    # ── 6. Save results ──
+    result = {
+        "tag": tag,
+        "source": "tto_frames",
+        "avg_posenet_dist": avg_posenet,
+        "avg_segnet_dist": avg_segnet,
+        "archive_size_bytes": archive_size,
+        "gt_size_bytes": gt_size,
+        "rate": rate,
+        "score_seg": 100 * avg_segnet,
+        "score_pose": math.sqrt(10 * avg_posenet),
+        "score_rate": 25 * rate,
+        "final_score": score,
+        "n_samples": n_samples,
+        "n_frames": NUM_FRAMES,
+        "eval_method": f"upstream_evaluate_py_{eval_device}",
+        "device": eval_device,
+        "timestamp": time.strftime("%Y-%m-%dT%H:%M:%SZ"),
+        "elapsed_seconds": t_total,
+    }
+
+    result_path = os.path.join(tto_dir, "tto_auth_eval.json")
+    with open(result_path, "w") as f:
+        json.dump(result, f, indent=2)
+    print(f"\n  Results saved: {result_path}")
+
+    # Clean up the .raw file (large, ~3.6GB)
+    if os.path.exists(raw_path):
+        os.remove(raw_path)
+        print(f"  Cleaned up: {raw_path}")
+
+    results_vol.commit()
+    print("  [volume] Committed TTO auth eval results")
+
+    return result
+
+
 @app.function(
     image=image,
     gpu="T4",
@@ -1245,7 +1457,24 @@ def tto_eval(
         artifacts = sorted(os.listdir(output_dir))
         print(f"  TTO artifacts ({len(artifacts)}): {', '.join(artifacts[:15])}")
 
-    return {"exit_code": result.returncode, "output_dir": output_dir}
+    # ── Auth eval on TTO frames ──────────────────────────────────────────────
+    auth_result = None
+    if result.returncode == 0:
+        print("\n--- Running auth eval on TTO frames ---")
+        try:
+            auth_result = _run_tto_auth_eval(tag, output_dir)
+        except Exception as exc:
+            print(f"  TTO auth eval FAILED (non-fatal): {exc}")
+            import traceback
+            traceback.print_exc()
+    else:
+        print("  Skipping TTO auth eval (subprocess failed)")
+
+    return {
+        "exit_code": result.returncode,
+        "output_dir": output_dir,
+        "auth_eval": auth_result,
+    }
 
 
 @app.local_entrypoint()
@@ -1284,4 +1513,17 @@ def tto_entry(
     status = "OK" if result["exit_code"] == 0 else f"FAILED (exit {result['exit_code']})"
     print(f"\n  Result: {status}")
     print(f"  Output: {result['output_dir']}")
+
+    # Display auth eval results if available
+    auth = result.get("auth_eval")
+    if auth:
+        print(f"\n=== TTO Auth Eval Results ===")
+        print(f"  Final Score: {auth['final_score']:.4f}")
+        print(f"    SegNet:  {auth['score_seg']:.4f}")
+        print(f"    PoseNet: {auth['score_pose']:.4f}")
+        print(f"    Rate:    {auth['score_rate']:.4f}")
+        print(f"  Time: {auth['elapsed_seconds']:.0f}s")
+    elif result["exit_code"] == 0:
+        print(f"\n  Auth eval: not available (tto_frames.pt may not have been produced)")
+
     print(f"\nDownload: .venv/bin/modal volume get {RESULTS_VOL} {tag}/tto_results/ ./tto_results_{tag}/")
