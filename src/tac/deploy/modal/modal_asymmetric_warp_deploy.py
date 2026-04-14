@@ -1212,7 +1212,7 @@ def _run_tto_auth_eval(tag: str, tto_dir: str) -> dict | None:
 
     batch_size = 16
     n_written = 0
-    with open(raw_path, "wb") as f:
+    with open(raw_path, "wb") as f, torch.inference_mode():
         for i in range(0, NUM_FRAMES, batch_size):
             end = min(i + batch_size, NUM_FRAMES)
             # (B, H, W, 3) uint8 -> (B, 3, H, W) float for interpolation
@@ -1232,6 +1232,8 @@ def _run_tto_auth_eval(tag: str, tto_dir: str) -> dict | None:
     print(f"  Written {n_written} frames, raw size: {raw_size:,} bytes")
 
     del tto_frames  # free memory
+    if torch.cuda.is_available():
+        torch.cuda.empty_cache()
 
     # ── 3. Copy archive.zip for rate calculation ──
     print("\nStage 3: Setting up archive.zip ...")
