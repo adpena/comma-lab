@@ -122,23 +122,35 @@ def _kaggle_setup() -> None:
     _upstream = _ensure_upstream()
     _set_training_env(_upstream)
 
-    # Stage 3.5: Preflight — verify all required assets exist ON DISK before proceeding.
-    # The Kaggle API may report files as present while the kernel mount lags behind.
-    # This catches race conditions that wait_for_dataset_ready() (API-level) misses.
+    # Stage 3.5: Preflight — verify all required assets exist ON DISK with nonzero size.
+    # Kaggle mounts may show files before they're fully synced from object storage.
+    # Retry up to 5 times with 60s sleep to handle mount propagation delay.
+    import time as _time
     _asset_root = _input_root / "comma-lab-private-assets"
     _required = ["raft_flow.pt", "renderer_best_v3.pt", "posenet_targets.bin", "0.mkv"]
-    _missing = [f for f in _required if not (_asset_root / f).exists()]
-    if _missing:
+    for _attempt in range(1, 6):
+        _missing = []
+        for _f in _required:
+            _p = _asset_root / _f
+            if not _p.exists():
+                _missing.append(_f)
+            elif _p.stat().st_size == 0:
+                _missing.append(f"{{_f}} (0 bytes — mount incomplete)")
+        if not _missing:
+            print(f"  Preflight OK: {{len(_required)}} required assets verified on disk (attempt {{_attempt}})")
+            break
+        if _attempt < 5:
+            print(f"  Preflight attempt {{_attempt}}: {{len(_missing)}} missing — {{_missing}}. Retrying in 60s...")
+            _time.sleep(60)
+    else:
         _available = sorted(str(p.name) for p in _asset_root.iterdir()) if _asset_root.exists() else []
         raise FileNotFoundError(
-            f"Preflight FAILED: {{len(_missing)}} required asset(s) missing from disk:\\n"
+            f"Preflight FAILED after 5 attempts: {{len(_missing)}} asset(s) missing/incomplete:\\n"
             f"  Missing: {{_missing}}\\n"
             f"  Mount: {{_asset_root}}\\n"
             f"  Available: {{_available}}\\n"
-            f"  This is likely a Kaggle dataset mount race condition.\\n"
-            f"  Re-push the kernel after verifying the dataset version."
+            f"  Dataset mount never propagated. Re-push after longer wait."
         )
-    print(f"  Preflight OK: {{len(_required)}} required assets verified on disk")
 
     # Stage 4: resolve assets and build CLI flags via canonical runner logic
     _resume = _os.environ.get("RESUME_FROM") or None
