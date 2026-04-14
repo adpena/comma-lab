@@ -1,5 +1,15 @@
 # run log
 
+## 2026-04-14T18:00:00Z — COUPLED TRAJECTORY: PoseNet converges (independent diverged)
+
+Independent constrained gen: PoseNet DIVERGES 0.17→0.80 in 200 steps (SegNet dominates)
+Coupled trajectory (4D-Var): PoseNet CONVERGES 0.39→0.27 in 200 steps, still trending down
+  Joint optimization over all frames with single Adam optimizer.
+  PoseNet gradient flows through both frames of each pair simultaneously.
+  2.5x faster (4.1 vs 1.6 steps/s on MPS). Estimated 1000 steps: 4 min MPS.
+  This is the architecture that attacks the 47x PoseNet gap vs Quantizr.
+  Kaggle base v5 still RUNNING (first successful Kaggle kernel ever).
+
 ## 2026-04-14T16:00:00Z — λ-SWEEP COMPLETE: 0.87 is architectural ceiling
 
 λ_cap sweep from v5-best (auth=0.87): {500→0.90, 750→0.87, 1000→0.87, 1500→0.90, 2000→0.87}
