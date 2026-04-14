@@ -157,6 +157,30 @@ def _kaggle_setup() -> None:
             f"  Dataset mount never propagated. Re-push after longer wait."
         )
 
+    # Stage 4: CUDA capability check — P100 (sm_60) is unsupported by PyTorch >= 2.5.
+    # Asymmetric warp training on CPU is impractical, so exit early with a clear error.
+    import torch as _torch
+    if _torch.cuda.is_available():
+        _major, _minor = _torch.cuda.get_device_capability(0)
+        _dev_name = _torch.cuda.get_device_name(0)
+        if _major < 7:
+            print(f"  FATAL: {{_dev_name}} (sm_{{_major}}{{_minor}}) is unsupported.")
+            print(f"  PyTorch >= 2.5 requires sm_70+ (V100 or newer).")
+            print(f"  Asymmetric warp training on CPU is impractical — exiting.")
+            _sys.exit(1)
+        # Warmup: force a real CUDA kernel to confirm the device is actually usable.
+        try:
+            _ = _torch.zeros(1, device="cuda") + 1
+            print(f"  CUDA OK: {{_dev_name}} (sm_{{_major}}{{_minor}})")
+        except Exception as _e:
+            print(f"  FATAL: {{_dev_name}} CUDA warmup failed ({{_e}}).")
+            print(f"  Asymmetric warp training requires a working GPU — exiting.")
+            _sys.exit(1)
+    else:
+        print("  FATAL: No CUDA device available.")
+        print("  Asymmetric warp training requires a GPU — exiting.")
+        _sys.exit(1)
+
     # Stage 4.5: Redirect results to /kaggle/working/ (writable).
     # The training script sets RESULTS_DIR = Path(__file__).parent / "results" / ...
     # On Kaggle, __file__ = /kaggle/src/script.py, so results lands in /kaggle/src/results
@@ -405,9 +429,38 @@ def wait_for_dataset_ready(
 
 
 def push_kernels(bundle_dirs: list[Path]) -> None:
-    """Push each kernel bundle to Kaggle, failing fast if any push fails."""
+    """Push each kernel bundle to Kaggle, failing fast if any push fails.
+
+    Before pushing, checks if each kernel exists on Kaggle. New kernels
+    cannot be created via the API for script kernels — the user must
+    create them manually on kaggle.com first.
+    """
     kaggle = _kaggle_bin()
+    username = kaggle_username()
+    pushed = 0
     for bundle_dir in bundle_dirs:
+        # Read slug from kernel-metadata.json
+        meta_path = bundle_dir / "kernel-metadata.json"
+        if meta_path.exists():
+            meta = json.loads(meta_path.read_text())
+            kernel_ref = meta.get("id", "")
+        else:
+            kernel_ref = f"{username}/{bundle_dir.name}"
+
+        # Check if kernel exists before pushing
+        result = subprocess.run(
+            [kaggle, "kernels", "status", kernel_ref],
+            capture_output=True, text=True,
+        )
+        if "not found" in result.stderr.lower() or (
+            result.returncode != 0 and "not found" in (result.stdout + result.stderr).lower()
+        ):
+            slug = kernel_ref.split("/", 1)[-1] if "/" in kernel_ref else kernel_ref
+            print(f"  WARNING: Kernel {kernel_ref} does not exist on Kaggle.")
+            print(f"  Create it first at: https://www.kaggle.com/code/{username}/{slug}/edit")
+            print(f"  Then re-run this push command.")
+            continue  # skip this kernel, push the rest
+
         print(f"  Pushing kernel: {bundle_dir.name} ...")
         result = subprocess.run(
             [kaggle, "kernels", "push", "-p", str(bundle_dir)],
@@ -418,7 +471,8 @@ def push_kernels(bundle_dirs: list[Path]) -> None:
                 f"kaggle kernels push failed for {bundle_dir.name}:\n{result.stderr}"
             )
         print(f"  {result.stdout.strip()}")
-    print(f"\n  {len(bundle_dirs)} kernel(s) pushed.")
+        pushed += 1
+    print(f"\n  {pushed}/{len(bundle_dirs)} kernel(s) pushed.")
 
 
 def build_arg_parser() -> argparse.ArgumentParser:
