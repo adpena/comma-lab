@@ -42,8 +42,12 @@ def parse_args() -> argparse.Namespace:
 
 
 def modal_bin() -> str:
-    """Find the modal CLI binary."""
+    """Find the modal CLI binary — checks venv first, then PATH."""
     import shutil
+    from pathlib import Path
+    venv_modal = Path(__file__).resolve().parent.parent / ".venv" / "bin" / "modal"
+    if venv_modal.exists():
+        return str(venv_modal)
     found = shutil.which("modal")
     if found:
         return found
