@@ -889,13 +889,16 @@ def train_fridrich_renderer(cfg: FridrichRendererConfig) -> dict[str, Any]:
         gt_frames_hwc = gt_list
         print(f"  Loaded {len(gt_frames_hwc)} GT frames from precomputed")
     else:
-        # Try GT video directly
+        # Try GT video directly — check env vars, Kaggle dataset, then hardcoded paths
         gt_candidates = [
+            Path(os.environ["TAC_UPSTREAM_DIR"]) / "videos" / "0.mkv" if os.environ.get("TAC_UPSTREAM_DIR") else None,
+            Path("/kaggle/working/upstream/videos/0.mkv"),
+            Path("/kaggle/input/datasets/adpena/comma-lab-private-assets/0.mkv"),
             Path("/home/zeus/content/upstream/videos/0.mkv"),
             Path(__file__).resolve().parent.parent / "upstream" / "videos" / "0.mkv",
         ]
         for gp in gt_candidates:
-            if gp.exists():
+            if gp is not None and gp.exists():
                 gt_frames_hwc = decode_video(str(gp), target_h=cfg.target_h, target_w=cfg.target_w)
                 print(f"  Decoded {len(gt_frames_hwc)} frames from {gp}")
                 break
