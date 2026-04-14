@@ -81,7 +81,7 @@ for _p in _CANDIDATE_WEIGHTS:
         WEIGHTS_DIR = _p
         break
 
-RESULTS_DIR = Path(__file__).resolve().parent / "results" / "fridrich_renderer"
+RESULTS_DIR = Path(os.environ.get("TAC_RESULTS_DIR", "")) if os.environ.get("TAC_RESULTS_DIR") else Path(__file__).resolve().parent / "results" / "fridrich_renderer"
 
 
 # ---------------------------------------------------------------------------

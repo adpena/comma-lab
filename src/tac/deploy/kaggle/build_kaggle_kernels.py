@@ -157,7 +157,24 @@ def _kaggle_setup() -> None:
             f"  Dataset mount never propagated. Re-push after longer wait."
         )
 
-    # Stage 4: resolve assets and build CLI flags via canonical runner logic
+    # Stage 4.5: Redirect results to /kaggle/working/ (writable).
+    # The training script sets RESULTS_DIR = Path(__file__).parent / "results" / ...
+    # On Kaggle, __file__ = /kaggle/src/script.py, so results lands in /kaggle/src/results
+    # which is READ-ONLY. Create a symlink so writes go to /kaggle/working/.
+    _results_parent = _Path(__file__).resolve().parent / "results"
+    if not _results_parent.exists():
+        _working_results = _Path("/kaggle/working/results")
+        _working_results.mkdir(parents=True, exist_ok=True)
+        try:
+            _results_parent.symlink_to(_working_results)
+            print(f"  Results redirected: {{_results_parent}} -> {{_working_results}}")
+        except OSError:
+            # /kaggle/src might truly be read-only even for symlinks
+            # Fallback: override RESULTS_DIR via environment variable
+            _os.environ["TAC_RESULTS_DIR"] = str(_working_results / "fridrich_renderer")
+            print(f"  Results env override: TAC_RESULTS_DIR={{_os.environ['TAC_RESULTS_DIR']}}")
+
+    # Stage 5: resolve assets and build CLI flags via canonical runner logic
     _resume = _os.environ.get("RESUME_FROM") or None
     if _resume and not _Path(_resume).exists():
         # Try the new Kaggle mount path (datasets/owner/slug/)
