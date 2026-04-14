@@ -88,6 +88,29 @@ This is critical for the doc evolution viewer and the competition writeup. Our g
 - **For non-code files** (`.md`, `.json`, `.env`, `.sh`, config, docs, reports): `REVIEW_GATE_OVERRIDE=1` is acceptable since the review tracker is designed for code review.
 - If the gate blocks a `.py` commit, that means the code needs review first. That is the gate **working**, not the gate being broken.
 
+## Tailscale fleet — non-negotiable
+
+All lab machines are on Tailscale. **Always use Tailscale IPs** for SSH, rsync, and any remote operations. Never use raw LAN IPs or hostnames.
+
+| Machine | Tailscale IP | OS | GPU | Notes |
+|---------|-------------|-----|-----|-------|
+| primary (M5 Max) | 100.81.85.28 | macOS | MPS 128GB | This machine |
+| alejandros-mac-mini | 100.125.140.94 | macOS | Intel | Build server, Python 3.13 + uv |
+| bat00 | 100.120.99.124 | Windows + WSL2 Ubuntu 24.04 | RTX 2070S (→3090) | Port 22=PowerShell, port 2222=WSL2 |
+| molt | 100.114.131.54 | Linux | n/a | |
+| tertiary | 100.65.24.39 | macOS | MPS | M1 MacBook Pro |
+
+- `ssh adpena@100.120.99.124` connects to bat00 (Windows OpenSSH → PowerShell)
+- bat00 has WSL2 Ubuntu 24.04 running (accessible via `wsl` commands inside PowerShell)
+- bat00's NVIDIA driver supports WSL2 GPU passthrough
+- Run `tailscale status` to verify all machines are online
+- For bat00 Linux commands: use `python scripts/bat00.py wsl "command"` (port 2222, direct WSL2 sshd)
+- For bat00 PowerShell: use `python scripts/bat00.py ps "command"` (port 22, Windows OpenSSH — rate-limited, avoid rapid successive calls)
+- For bat00 status: `python scripts/bat00.py status`
+- Windows OpenSSH has aggressive rate limiting (MaxStartups). Never send more than 2-3 SSH connections in quick succession to port 22. Use WSL2 port 2222 instead.
+- **Never waste time debugging LAN connectivity. Tailscale is always the answer.**
+- **Always use `scripts/bat00.py` for bat00 interaction — it handles quoting and port selection correctly.**
+
 ## Deployment version checklist — non-negotiable
 
 Before deploying ANY code to Modal, Kaggle, Lightning, or any remote platform:
