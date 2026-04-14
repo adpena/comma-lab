@@ -122,8 +122,25 @@ def _kaggle_setup() -> None:
     _upstream = _ensure_upstream()
     _set_training_env(_upstream)
 
-    # Stage 4: resolve assets and build CLI flags via canonical runner logic
+    # Stage 3.5: Preflight — verify all required assets exist ON DISK before proceeding.
+    # The Kaggle API may report files as present while the kernel mount lags behind.
+    # This catches race conditions that wait_for_dataset_ready() (API-level) misses.
     _asset_root = _input_root / "comma-lab-private-assets"
+    _required = ["raft_flow.pt", "renderer_best_v3.pt", "posenet_targets.bin", "0.mkv"]
+    _missing = [f for f in _required if not (_asset_root / f).exists()]
+    if _missing:
+        _available = sorted(str(p.name) for p in _asset_root.iterdir()) if _asset_root.exists() else []
+        raise FileNotFoundError(
+            f"Preflight FAILED: {{len(_missing)}} required asset(s) missing from disk:\\n"
+            f"  Missing: {{_missing}}\\n"
+            f"  Mount: {{_asset_root}}\\n"
+            f"  Available: {{_available}}\\n"
+            f"  This is likely a Kaggle dataset mount race condition.\\n"
+            f"  Re-push the kernel after verifying the dataset version."
+        )
+    print(f"  Preflight OK: {{len(_required)}} required assets verified on disk")
+
+    # Stage 4: resolve assets and build CLI flags via canonical runner logic
     _resume = _os.environ.get("RESUME_FROM") or None
     if _resume and not _Path(_resume).exists():
         print(f"  WARNING: RESUME_FROM not found: {{_resume}} — starting from scratch")
@@ -248,6 +265,7 @@ REQUIRED_DATASET_ASSETS: dict[str, int] = {
     "renderer_best_v3.pt": 3_527_290,
     "posenet_targets.bin": 6_794,
     "0.mkv": 37_545_489,
+    "tac-1.0.5-py3-none-any.whl": 0,  # size varies; 0 = existence check only
 }
 
 
@@ -319,7 +337,7 @@ def wait_for_dataset_ready(
             for fname, expected_size in required.items():
                 if fname not in present:
                     missing.append(fname)
-                elif abs(present[fname] - expected_size) > expected_size * 0.01:
+                elif expected_size > 0 and abs(present[fname] - expected_size) > expected_size * 0.01:
                     wrong_size.append(
                         f"{fname}: got {present[fname]:,} expected ~{expected_size:,}"
                     )
