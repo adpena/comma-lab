@@ -88,6 +88,20 @@ This is critical for the doc evolution viewer and the competition writeup. Our g
 - **For non-code files** (`.md`, `.json`, `.env`, `.sh`, config, docs, reports): `REVIEW_GATE_OVERRIDE=1` is acceptable since the review tracker is designed for code review.
 - If the gate blocks a `.py` commit, that means the code needs review first. That is the gate **working**, not the gate being broken.
 
+## Deployment version checklist — non-negotiable
+
+Before deploying ANY code to Modal, Kaggle, Lightning, or any remote platform:
+
+1. **Bump `pyproject.toml` version** if any `src/tac/` code has changed since the last wheel.
+2. **Update `deploy_config.py` BASE_FLAGS** to match any changed defaults in the training script. The "default override" antipattern has caused 4 bugs: never change a default without grepping for callers that pass it explicitly.
+3. **Rebuild the wheel** (`uv build --wheel`) AFTER all code changes are committed.
+4. **For Kaggle**: upload the new wheel to the dataset, run `wait_for_dataset_ready()`, then push kernels. The old wheel in the dataset will silently use old code.
+5. **For Modal**: `add_local_dir` mounts source at startup — Modal always gets the latest committed code. But `deploy_config.py` CLI flags still override script defaults. Verify the flags match.
+6. **Verify the REQUIRED_DATASET_ASSETS dict** in `build_kaggle_kernels.py` includes the new wheel filename (update version string when bumping).
+7. **Never push Kaggle kernels without verifying** that every required asset exists in the dataset at the expected size. The preflight disk check inside kernels is a last resort — it should never fire.
+
+The consequence of skipping this checklist: experiments run with stale code, produce misleading results, and waste GPU hours. This has happened repeatedly (tac 1.0.4 deployed with old Lagrangian caps, raft_flow.pt missing from dataset, R1 OOM fix bypassed).
+
 ## Recursive adversarial review protocol — non-negotiable
 
 Before deploying any change to training code (`train_renderer_fridrich.py`, training configs, loss functions, Lagrangian parameters), run the recursive skunkworks council review:
