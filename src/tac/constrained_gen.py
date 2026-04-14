@@ -900,22 +900,29 @@ def generate_in_scorer_space(
     segnet: torch.nn.Module,
     noise_seed: int = 42,
     num_steps: int = 1000,
-    lr: float = 0.1,
+    lr: float = 0.01,
     seg_weight: float = 100.0,
     pose_weight: float = 10.0,
     compress_weight: float = 1.0,
     device: torch.device | str = "cpu",
     log_every: int = 100,
+    expected_pose: torch.Tensor | None = None,
 ) -> torch.Tensor:
-    """Generate frames directly in the scorer's internal representation space.
+    """Generate scorer-optimal frames via coupled trajectory optimization.
 
-    Instead of optimizing in RGB and losing information through the scorer's
-    preprocessing, we optimize directly in the scorer's YUV420 space and
-    invert at the end. This eliminates the lossy preprocessing from the
-    optimization loop entirely.
+    Delegates to coupled_trajectory_optimize with all improvements:
+    - Coupled pair optimization (PoseNet gradient through both frames)
+    - Compress weight annealing (prevents PoseNet divergence)
+    - PoseNet transient snapshot (returns best PoseNet state)
 
-    The scorer sees exactly what we optimize -- no information is lost
-    through the preprocessing bottleneck during gradient descent.
+    If expected_pose is not provided, falls back to heuristic estimation
+    from mask dynamics (less accurate — prefer GT targets from posenet_targets.bin).
+
+    Key insight from scorer analysis:
+    - SegNet uses raw RGB (no YUV). preprocess_input just resizes.
+    - PoseNet converts to YUV6 internally via its own preprocess_input.
+    - Optimizing in RGB is correct — both scorers handle their own preprocessing.
+    - The original YUV6 parameterization was a red herring.
 
     Args:
         masks: (N, H, W) long tensor with class indices.
@@ -929,113 +936,38 @@ def generate_in_scorer_space(
         compress_weight: compressibility weight.
         device: computation device.
         log_every: print loss every N steps.
+        expected_pose: (P, 6) GT pose targets. If None, uses heuristic estimation.
 
     Returns:
         (N, H, W, 3) float tensor in [0, 255] (RGB, HWC format).
     """
-    device = torch.device(device)
-    N = masks.shape[0]
-    P = N // 2  # non-overlapping pairs, matching upstream scorer seq_len=2
+    # Use GT pose targets if provided, otherwise fall back to heuristic
+    if expected_pose is None:
+        print("  [scorer-space] WARNING: using heuristic pose targets (inaccurate). "
+              "Pass expected_pose from GT for best results.")
+        expected_pose = estimate_expected_pose(masks, device=device)
 
-    # Initialize in scorer space: start from class-mean colors converted to YUV6
-    init_frames = generate_initial_frames(masks, noise_seed, device=device)
-    # Convert HWC -> CHW -> resize -> YUV6
-    init_chw = init_frames.permute(0, 3, 1, 2).contiguous()  # (N, 3, H, W)
-    init_resized = F.interpolate(
-        init_chw,
-        size=(SEGNET_INPUT_H, SEGNET_INPUT_W),
-        mode="bilinear",
-        align_corners=False,
-    )  # (N, 3, 384, 512)
-    scorer_frames = rgb_to_yuv6(init_resized)  # (N, 6, 192, 256)
-    scorer_frames = scorer_frames.detach().requires_grad_(True)
-
-    optimizer = torch.optim.Adam([scorer_frames], lr=lr)
-
-    # Estimate expected pose from masks if not provided
-    expected_pose = estimate_expected_pose(masks, device=device)
-
-    for step in range(num_steps):
-        optimizer.zero_grad()
-
-        # Convert YUV6 back to RGB for scorer evaluation.
-        # Even though we optimize in YUV space, the scorers must receive input
-        # through their canonical preprocess_input path to match eval-time behavior.
-        rgb_for_scorers = yuv6_to_rgb(scorer_frames)  # (N, 3, 384, 512)
-
-        # SegNet loss: use preprocess_input path (expects (B, T, C, H, W))
-        seg_btchw = rgb_for_scorers.unsqueeze(1).contiguous()  # (N, 1, C, H, W)
-        seg_input = segnet.preprocess_input(seg_btchw)
-        seg_logits = segnet(seg_input)  # (N, NUM_CLASSES, H_out, W_out)
-
-        H_out, W_out = seg_logits.shape[2], seg_logits.shape[3]
-        masks_resized = (
-            F.interpolate(
-                masks.float().unsqueeze(1).to(device),
-                size=(H_out, W_out),
-                mode="nearest",
-            )
-            .squeeze(1)
-            .long()
-        )
-        seg_loss = F.cross_entropy(seg_logits, masks_resized)
-
-        # PoseNet loss: use preprocess_input path (expects (B, T, C, H, W))
-        pose_loss = torch.tensor(0.0, device=device)
-        if P > 0 and expected_pose.shape[0] > 0:
-            # Non-overlapping pairs: pair k = (frames[2k], frames[2k+1]).
-            # Matches upstream DaliVideoDataset(seq_len=2) semantics so that
-            # expected_pose (shape P = N//2) aligns with pred_pose.
-            rgb_t0 = rgb_for_scorers[0::2][:P]  # (P, 3, H, W) — even frames
-            rgb_t1 = rgb_for_scorers[1::2][:P]  # (P, 3, H, W) — odd frames
-            pair_btchw = torch.stack([rgb_t0, rgb_t1], dim=1).contiguous()  # (P, 2, 3, H, W)
-            posenet_in = posenet.preprocess_input(pair_btchw)
-            posenet_out = posenet(posenet_in)
-            pred_pose = posenet_out["pose"][..., :6]
-            pose_loss = (pred_pose - expected_pose.to(device)).pow(2).mean()
-
-        # Compressibility in scorer space (TV on YUV channels)
-        tv_h = (scorer_frames[:, :, 1:, :] - scorer_frames[:, :, :-1, :]).abs().mean()
-        tv_w = (scorer_frames[:, :, :, 1:] - scorer_frames[:, :, :, :-1]).abs().mean()
-        temporal = torch.tensor(0.0, device=device)
-        if N > 1:
-            temporal = (scorer_frames[1:] - scorer_frames[:-1]).abs().mean()
-        compress_loss = tv_h + tv_w + 0.5 * temporal
-
-        total_loss = (
-            seg_weight * seg_loss
-            + pose_weight * pose_loss
-            + compress_weight * compress_loss
-        )
-
-        total_loss.backward()
-        optimizer.step()
-
-        # Clamp to valid YUV range
-        with torch.no_grad():
-            scorer_frames.data.clamp_(0.0, 255.0)
-
-        if log_every > 0 and (step + 1) % log_every == 0:
-            print(
-                f"  [scorer-space] step {step + 1:4d}/{num_steps}: "
-                f"total={total_loss.item():.4f} "
-                f"seg={seg_loss.item():.4f} "
-                f"pose={pose_loss.item():.4f} "
-                f"compress={compress_loss.item():.4f}"
-            )
-
-    # Invert from scorer space to RGB at camera resolution
-    with torch.no_grad():
-        rgb_chw = inverse_preprocess_input(
-            scorer_frames.detach(),
-            target_h=masks.shape[1],
-            target_w=masks.shape[2],
-        )  # (N, 3, H, W)
-        # CHW -> HWC
-        result = rgb_chw.permute(0, 2, 3, 1).contiguous()
-        result = result.round().clamp(0.0, 255.0)
-
-    return result
+    # Delegate to coupled_trajectory_optimize which has all improvements:
+    # - Coupled pair optimization (Fix #2)
+    # - Compress weight annealing (Fix #4a)
+    # - PoseNet transient snapshot (Fix #4b)
+    # Fix #1 (lossy round-trip) is moot: SegNet uses raw RGB, PoseNet converts
+    # internally. Optimizing in RGB and letting scorers preprocess is correct.
+    # Fix #3 (GT targets) is handled by the expected_pose parameter above.
+    return coupled_trajectory_optimize(
+        masks=masks,
+        expected_pose=expected_pose,
+        posenet=posenet,
+        segnet=segnet,
+        num_steps=num_steps,
+        lr=lr,
+        seg_weight=seg_weight,
+        pose_weight=pose_weight,
+        compress_weight=compress_weight,
+        noise_seed=noise_seed,
+        device=str(device),
+        log_every=log_every,
+    )
 
 
 # ---- High-level interface ----
