@@ -158,8 +158,11 @@ def _kaggle_setup() -> None:
     print(f"  [Kaggle] variant={{_ASYM_VARIANT}} | argv={{_sys.argv[1:]}}")
 
 
-if __name__ == "__main__":
-    _kaggle_setup()
+# Execute setup at module scope — MUST run before the training script's
+# imports (torch, click, etc.) are parsed. Guarding with __main__ is wrong:
+# Python parses ALL imports before executing __main__, so torch/click would
+# fail before _kaggle_setup() installs them.
+_kaggle_setup()
 # --- end Kaggle bootstrap ---"""
 
 
