@@ -1442,17 +1442,47 @@ def tto_eval(
 
     env = {**os.environ, "PYTHONPATH": "/root/src:/root/upstream"}
     print(f"  Command: {' '.join(cmd)}")
+
+    # Write start log immediately + commit so we can monitor progress
+    log_path = os.path.join(output_dir, "tto_run.log")
+    with open(log_path, "w") as f:
+        f.write(f"status: running\n")
+        f.write(f"tag: {tag}\n")
+        f.write(f"checkpoint: {checkpoint}\n")
+        f.write(f"tto_steps: {tto_steps}\n")
+        f.write(f"tto_lr: {tto_lr}\n")
+        f.write(f"batch_pairs: {batch_pairs}\n")
+        f.write(f"started: {time.strftime('%Y-%m-%dT%H:%M:%SZ', time.gmtime())}\n")
+    results_vol.commit()
+    print(f"  [volume] Start log committed")
     print("  ---")
 
-    result = subprocess.run(cmd, env=env, capture_output=False)
+    # Run TTO subprocess — pipe stdout to both console AND log file via tee
+    stdout_log = os.path.join(output_dir, "tto_stdout.log")
+    with open(stdout_log, "w") as log_f:
+        proc = subprocess.Popen(
+            cmd, env=env, stdout=subprocess.PIPE, stderr=subprocess.STDOUT,
+            bufsize=1, text=True,
+        )
+        for line in proc.stdout:
+            print(line, end="")  # console
+            log_f.write(line)    # file
+            log_f.flush()
+        proc.wait()
+        result_code = proc.returncode
+
+    # Wrap in a namespace-like object for compatibility
+    class _Result:
+        returncode = result_code
+    result = _Result()
 
     print("  ---")
     print(f"  End: {time.strftime('%Y-%m-%d %H:%M:%S')}")
     print(f"  Exit code: {result.returncode}")
 
-    # Save stdout log (subprocess prints to console, but record exit status)
-    log_path = os.path.join(output_dir, "tto_run.log")
+    # Update log with final status
     with open(log_path, "w") as f:
+        f.write(f"status: {'ok' if result.returncode == 0 else 'failed'}\n")
         f.write(f"exit_code: {result.returncode}\n")
         f.write(f"tag: {tag}\n")
         f.write(f"checkpoint: {checkpoint}\n")
@@ -1461,7 +1491,7 @@ def tto_eval(
         f.write(f"batch_pairs: {batch_pairs}\n")
         f.write(f"finished: {time.strftime('%Y-%m-%dT%H:%M:%SZ', time.gmtime())}\n")
 
-    # Commit volume so results survive
+    # Commit volume so results survive even if auth eval crashes
     results_vol.commit()
     print(f"  [volume] Final commit done")
 
