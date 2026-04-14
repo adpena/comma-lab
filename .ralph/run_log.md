@@ -1,5 +1,15 @@
 # run log
 
+## 2026-04-14T19:00:00Z — COUPLED + ANNEALING: PoseNet 0.163, snapshot strategy works
+
+Improved coupled optimizer: compress weight annealing (1.0→0.1 after 40%) + PoseNet snapshot.
+Before: PoseNet diverged 0.170→0.584. After: PoseNet 0.163 snapshot, divergence delayed to 0.236.
+Kaggle mount path FIXED (datasets/owner/slug structure found via debug kernel).
+Kaggle raft_only ran for first time ever, base died (different error TBD).
+Quantizr deep intel: FP4 custom codebook, mask-as-video, marshal-obfuscated arch.
+Council revised: constrained gen FROM NOISE is weak, but TTO ON TOP OF renderer is the killer combo.
+  Renderer (PoseNet=0.031) + TTO refinement could push to PoseNet<0.005 → score ~0.52.
+
 ## 2026-04-14T18:00:00Z — COUPLED TRAJECTORY: PoseNet converges (independent diverged)
 
 Independent constrained gen: PoseNet DIVERGES 0.17→0.80 in 200 steps (SegNet dominates)
