@@ -60,6 +60,9 @@ def parse_args() -> argparse.Namespace:
     p.add_argument("--output-dir", type=str, default=None, help="Output directory (default: timestamped)")
     p.add_argument("--video", type=str, default=None, help="Path to GT video (default: upstream/videos/0.mkv)")
     p.add_argument("--smoke", action="store_true", help="Smoke test: 20 frames, 50 steps")
+    p.add_argument("--simulate-resize", action="store_true",
+                   help="Simulate official scorer's resolution round-trip (384→874→384) in proxy scoring. "
+                        "Makes proxy score more faithful to auth eval at the cost of slight pessimism.")
     return p.parse_args()
 
 
@@ -255,6 +258,7 @@ def compute_proxy_score(
     device: torch.device,
     rate: float = 0.0,
     batch_size: int = 16,
+    simulate_resize: bool = False,
 ) -> dict:
     """Compute proxy score matching the official scorer formula.
 
@@ -311,6 +315,17 @@ def compute_proxy_score(
 
         # uint8 round-trip to match official scorer (GT is already integer-valued from uint8 decode)
         cand_chw = cand_chw.round().clamp(0, 255)
+
+        # Simulate official scorer's resolution round-trip: up to camera res then back down.
+        # The official scorer loads (874, 1164) frames and resizes to (384, 512) internally.
+        # TTO-optimized (384, 512) frames go through up→down which introduces interpolation loss.
+        if simulate_resize:
+            CAMERA_H, CAMERA_W = 874, 1164
+            flat = cand_chw.reshape(-1, *cand_chw.shape[2:])
+            flat = F.interpolate(flat, size=(CAMERA_H, CAMERA_W), mode="bilinear", align_corners=False)
+            flat = flat.round().clamp(0, 255)  # uint8 at camera res
+            flat = F.interpolate(flat, size=(SEGNET_INPUT_H, SEGNET_INPUT_W), mode="bilinear", align_corners=False)
+            cand_chw = flat.reshape(B, T, *flat.shape[1:])
 
         with torch.no_grad():
             # PoseNet
@@ -540,7 +555,8 @@ def main():
 
     # ── Baseline proxy score (renderer only, no TTO) ─────────────────────
     print("\n[...] Computing baseline proxy score (renderer only)...")
-    baseline = compute_proxy_score(renderer_frames, gt_frames, posenet, segnet, device)
+    baseline = compute_proxy_score(renderer_frames, gt_frames, posenet, segnet, device,
+                                   simulate_resize=args.simulate_resize)
     print(f"[baseline] score={baseline['score']:.4f} | "
           f"seg={baseline['seg']:.6f} ({baseline['seg_contribution']:.4f}) | "
           f"pose={baseline['pose']:.6f} ({baseline['pose_contribution']:.4f}) | "
@@ -568,7 +584,8 @@ def main():
 
     # ── Step 8: Compute proxy score on TTO-refined frames ────────────────
     print("\n[8/8] Computing TTO proxy score...")
-    tto_result = compute_proxy_score(tto_frames, gt_frames, posenet, segnet, device)
+    tto_result = compute_proxy_score(tto_frames, gt_frames, posenet, segnet, device,
+                                     simulate_resize=args.simulate_resize)
 
     t_total = time.monotonic() - t_total_start
 
