@@ -126,7 +126,12 @@ def _kaggle_setup() -> None:
     # Kaggle mounts may show files before they're fully synced from object storage.
     # Retry up to 5 times with 60s sleep to handle mount propagation delay.
     import time as _time
+    # Kaggle mount path varies: older kernels use /kaggle/input/<slug>,
+    # newer kernels use /kaggle/input/datasets/<owner>/<slug>.
+    # Search both to be robust across Kaggle platform changes.
     _asset_root = _input_root / "comma-lab-private-assets"
+    if not _asset_root.exists():
+        _asset_root = _input_root / "datasets" / "adpena" / "comma-lab-private-assets"
     _required = ["raft_flow.pt", "renderer_best_v3.pt", "posenet_targets.bin", "0.mkv"]
     for _attempt in range(1, 6):
         _missing = []
@@ -155,8 +160,14 @@ def _kaggle_setup() -> None:
     # Stage 4: resolve assets and build CLI flags via canonical runner logic
     _resume = _os.environ.get("RESUME_FROM") or None
     if _resume and not _Path(_resume).exists():
-        print(f"  WARNING: RESUME_FROM not found: {{_resume}} — starting from scratch")
-        _resume = None
+        # Try the new Kaggle mount path (datasets/owner/slug/)
+        _alt_resume = _asset_root / _Path(_resume).name
+        if _alt_resume.exists():
+            _resume = str(_alt_resume)
+            print(f"  RESUME_FROM resolved to new path: {{_resume}}")
+        else:
+            print(f"  WARNING: RESUME_FROM not found: {{_resume}} — starting from scratch")
+            _resume = None
 
     _cmd = _build_cmd(
         variant=_ASYM_VARIANT,

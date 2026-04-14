@@ -340,7 +340,10 @@ def main(
     ensure_tac(input_root)
     upstream = ensure_upstream(working_dir)
 
+    # Kaggle mount path varies across platform versions
     asset_root = input_root / ASSET_DATASET_SLUG
+    if not asset_root.exists():
+        asset_root = input_root / "datasets" / "adpena" / ASSET_DATASET_SLUG
     script_path = resolve_training_script(Path(launcher_path))
 
     if variant is None:
