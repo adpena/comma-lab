@@ -1370,7 +1370,7 @@ def scorer_as_compressor(
 
 def coupled_trajectory_optimize(
     masks: torch.Tensor,  # (N, H, W)
-    expected_pose: torch.Tensor,  # (N-1, 6)
+    expected_pose: torch.Tensor,  # (P, 6) where P = N//2 (non-overlapping pairs)
     posenet: torch.nn.Module,
     segnet: torch.nn.Module,
     num_steps: int = 1000,
@@ -1706,7 +1706,7 @@ def gpu_lane_full_pipeline(
 
 def alternating_projections_optimize(
     masks: torch.Tensor,  # (N, H, W)
-    expected_pose: torch.Tensor,  # (N-1, 6)
+    expected_pose: torch.Tensor,  # (P, 6) where P = N//2 (non-overlapping pairs)
     posenet: torch.nn.Module,
     segnet: torch.nn.Module,
     num_outer_iterations: int = 100,

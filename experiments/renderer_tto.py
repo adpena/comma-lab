@@ -135,16 +135,13 @@ def extract_gt_masks(
                 mode="bilinear", align_corners=False,
             )
 
-        # SegNet expects preprocessed input via preprocess_input
-        # Build fake pair format: (B, 2, C, H, W) — SegNet only uses one frame
-        pairs = frames_chw.unsqueeze(1).expand(-1, 2, -1, -1, -1)
-        seg_in = segnet.preprocess_input(pairs)
+        # SegNet.preprocess_input expects (B, T, C, H, W) and selects x[:, -1, ...]
+        # Use T=1 so it selects the only frame. Output is (B, classes, H, W).
+        seg_in_btchw = frames_chw.unsqueeze(1)  # (B, 1, C, H, W)
+        seg_in = segnet.preprocess_input(seg_in_btchw)
         with torch.no_grad():
             seg_out = segnet(seg_in)
-        mask = seg_out.argmax(dim=1)  # (B*2, H, W) — but we only need half
-        # preprocess_input flattens (B, 2, C, H, W) to (B*2, C, H, W)
-        # so seg_out is (B*2, classes, H, W), take every other starting at 0
-        mask = mask[::2]  # (B, H, W) — first frame of each pair
+        mask = seg_out.argmax(dim=1)  # (B, H, W) — all frames, no skipping
         masks.append(mask.cpu())
 
     return torch.cat(masks, dim=0).long()
@@ -581,7 +578,7 @@ def main():
     delta_score = baseline['score'] - tto_result['score']
     delta_pose = baseline['pose'] - tto_result['pose']
     delta_seg = baseline['seg'] - tto_result['seg']
-    print(f"    score: {delta_score:+.4f} ({'-' if delta_score < 0 else ''}{'better' if delta_score > 0 else 'worse'})")
+    print(f"    score: {delta_score:+.4f} ({'better' if delta_score > 0 else 'worse'})")
     print(f"    pose:  {delta_pose:+.6f}")
     print(f"    seg:   {delta_seg:+.6f}")
     print(f"  Timing:")
