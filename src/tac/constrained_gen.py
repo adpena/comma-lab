@@ -280,6 +280,7 @@ def generate_initial_frames(
         gen = torch.Generator(device="cpu")
         gen.manual_seed(noise_seed)
         noise = torch.randn(N, H, W, 3, generator=gen) * 5.0
+        noise = noise.to(device)
     frames = (frames + noise).clamp(0.0, 255.0)
 
     return frames
