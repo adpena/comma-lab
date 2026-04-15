@@ -618,11 +618,14 @@ def cmd_run(args: argparse.Namespace) -> int:
 
         print(f"  Uploading checkpoint: {experiment.needs_checkpoint}...")
         ssh_cmd = "ssh " + " ".join(shlex.quote(o) for o in _ssh_opts(key)) + f" -p {inst['ssh_port']}"
-        subprocess.run(
+        rsync_result = subprocess.run(
             ["rsync", "-avz", "--progress", "-e", ssh_cmd,
              str(ckpt_path), f"root@{inst['ssh_host']}:/workspace/{experiment.needs_checkpoint}"],
             text=True, timeout=600,
         )
+        if rsync_result.returncode != 0:
+            print(f"{_RED}Checkpoint upload failed (rsync exit code {rsync_result.returncode}){_RESET}")
+            return 1
 
     # Build run script
     args_str = " ".join(experiment.args)

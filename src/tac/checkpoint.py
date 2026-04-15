@@ -17,6 +17,7 @@ History:
 from __future__ import annotations
 
 import hashlib
+import math
 from pathlib import Path
 
 # ── Constants ────────────────────────────────────────────────────────────────
@@ -102,7 +103,7 @@ def verify_checkpoint_identity(
 
 
 def verify_checkpoint_quality(
-    checkpoint_path: str,
+    checkpoint_path: str | Path,
     upstream_path: str,
     device: str = "mps",
     max_expected_posenet: float = 1.0,
@@ -178,6 +179,15 @@ def verify_checkpoint_quality(
         "md5_prefix": md5,
         "checkpoint_path": str(checkpoint_path),
     }
+
+    if math.isnan(posenet_mse) or math.isinf(posenet_mse):
+        raise ValueError(
+            f"CHECKPOINT SANITY CHECK FAILED -- NaN/Inf PoseNet\n"
+            f"  PoseNet MSE: {posenet_mse}\n"
+            f"  MD5 prefix:  {md5}\n"
+            f"  Path:        {checkpoint_path}\n"
+            f"  The checkpoint may be corrupt or produce degenerate output."
+        )
 
     if posenet_mse > max_expected_posenet:
         raise ValueError(

@@ -3,7 +3,7 @@
 These results were produced using a 5-epoch smoke-test model (MD5: a9aee326),
 NOT the auth=0.87 renderer (MD5: cff8dca4). All absolute numbers are meaningless.
 
-Qualitative findings (phase transition at ~100 steps, cosine LR delays convergence)
+Qualitative findings (phase transition at ~100 steps for PoseNet)
 likely hold but need re-validation with the correct checkpoint.
 
 Re-run needed on Vast.ai with the correct checkpoint.
