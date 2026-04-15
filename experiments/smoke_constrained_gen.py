@@ -40,14 +40,9 @@ def main() -> int:
 
     # 1. Load scorers via tac.scorer (handles PoseNet vs DistortionNet correctly)
     print("\n[1/4] Loading scorers...")
-    from tac.scorer import load_scorers
-    posenet, segnet = load_scorers(
-        posenet_path=UPSTREAM / "models" / "posenet.safetensors",
-        segnet_path=UPSTREAM / "models" / "segnet.safetensors",
-        device=device,
-        upstream_dir=UPSTREAM,
-    )
-    print(f"  Scorers loaded on {device}")
+    from tac.scorer import load_differentiable_scorers
+    posenet, segnet = load_differentiable_scorers(UPSTREAM, device=device)
+    print(f"  Scorers loaded + patched differentiable on {device}")
 
     # 2. Extract masks + pose targets
     print("\n[2/4] Extracting masks + pose targets...")

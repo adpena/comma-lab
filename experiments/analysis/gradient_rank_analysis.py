@@ -42,38 +42,25 @@ import torch.nn as nn
 
 
 def detect_device() -> str:
-    if torch.cuda.is_available():
-        return "cuda"
-    if hasattr(torch.backends, "mps") and torch.backends.mps.is_available():
-        return "mps"
-    return "cpu"
+    from tac.scorer import detect_device as _detect
+    return str(_detect())
 
 
 def find_project_root() -> Path:
-    """Walk up from this file to find the project root (contains src/)."""
-    p = Path(__file__).resolve().parent
-    while p != p.parent:
-        if (p / "src").is_dir() and (p / "upstream").is_dir():
-            return p
-        p = p.parent
-    raise RuntimeError("Cannot find project root (expected src/ and upstream/ dirs)")
+    """Walk up from this file to find the project root."""
+    from tac.utils import find_project_root as _find
+    return _find(Path(__file__).resolve().parent)
 
 
 def load_posenet(device: str, project_root: Path) -> nn.Module:
-    """Load frozen PoseNet scorer."""
+    """Load frozen PoseNet scorer with differentiable preprocessing.
+
+    Uses load_differentiable_scorers to ensure rgb_to_yuv6 gradients flow.
+    Without this, all gradient/Jacobian computations through PoseNet are zero.
+    """
     upstream = project_root / "upstream"
-    if str(upstream) not in sys.path:
-        sys.path.insert(0, str(upstream))
-
-    from modules import PoseNet
-    from safetensors.torch import load_file
-
-    posenet = PoseNet().eval()
-    weights_path = upstream / "models" / "posenet.safetensors"
-    posenet.load_state_dict(load_file(str(weights_path), device="cpu"))
-    posenet = posenet.to(device)
-    for p in posenet.parameters():
-        p.requires_grad = False
+    from tac.scorer import load_differentiable_scorers
+    posenet, _ = load_differentiable_scorers(upstream, device=device)
     return posenet
 
 

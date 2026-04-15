@@ -278,7 +278,9 @@ def main(
     t0 = time.time()
     print("\n[gpu_lane] Step 1: Loading scorer models...")
     posenet, segnet = load_scorers(pnet, snet, device=device, upstream_dir=upstream)
-    print(f"  Loaded in {time.time() - t0:.1f}s")
+    from tac.scorer import make_scorers_differentiable
+    make_scorers_differentiable(posenet, segnet)
+    print(f"  Loaded + patched differentiable in {time.time() - t0:.1f}s")
 
     # ----------------------------------------------------------------
     # Step 2: Decode source video
