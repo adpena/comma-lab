@@ -600,10 +600,22 @@ def cmd_run(args: argparse.Namespace) -> int:
 
     # Upload checkpoint if needed
     if experiment.needs_checkpoint:
-        ckpt_path = REPO_ROOT / "experiments" / "results" / "fridrich_renderer" / experiment.needs_checkpoint
+        # Use canonical checkpoint directory (v5_lagrangian_renderer)
+        from tac.checkpoint import CANONICAL_CHECKPOINT_DIR, verify_checkpoint_identity
+
+        ckpt_path = REPO_ROOT / CANONICAL_CHECKPOINT_DIR / experiment.needs_checkpoint
         if not ckpt_path.exists():
             print(f"{_RED}Missing checkpoint: {ckpt_path}{_RESET}")
             return 1
+
+        # Verify checkpoint identity before uploading
+        try:
+            md5 = verify_checkpoint_identity(ckpt_path)
+            print(f"  {_GREEN}Checkpoint verified (MD5: {md5}){_RESET}")
+        except ValueError as exc:
+            print(f"{_RED}{exc}{_RESET}")
+            return 1
+
         print(f"  Uploading checkpoint: {experiment.needs_checkpoint}...")
         ssh_cmd = "ssh " + " ".join(shlex.quote(o) for o in _ssh_opts(key)) + f" -p {inst['ssh_port']}"
         subprocess.run(
