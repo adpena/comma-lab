@@ -883,14 +883,15 @@ def auth_eval(tag: str, checkpoint: str = "renderer_best.pt", strategy: str = "s
         "--report", report_path,
     ]
     print(f"  Command: {' '.join(eval_cmd)}")
-    eval_result = subprocess.run(eval_cmd, capture_output=True, text=True, timeout=600)
+    eval_result = subprocess.run(eval_cmd, capture_output=True, text=True, timeout=1200)
     if eval_result.returncode != 0:
         print(f"  STDERR: {eval_result.stderr[-500:]}", file=sys.stderr)
         raise RuntimeError(f"evaluate.py failed with exit code {eval_result.returncode}")
 
     # Parse the report
     import re
-    report_text = open(report_path).read()
+    with open(report_path) as _f:
+        report_text = _f.read()
     print(f"  Report:\n{report_text}")
 
     def _parse(pattern, text):
@@ -1351,7 +1352,7 @@ def _run_contest_compliant_auth_eval(
         eval_cmd,
         capture_output=True,
         text=True,
-        timeout=600,
+        timeout=1200,
         env={**os.environ, "PYTHONPATH": upstream_root},
     )
     eval_elapsed = time.monotonic() - t_eval_start
@@ -1365,7 +1366,8 @@ def _run_contest_compliant_auth_eval(
         )
 
     # ── Step 4: Parse report ────────────────────────────────────────────────
-    report_text = open(report_path).read()
+    with open(report_path) as _f:
+        report_text = _f.read()
     print(f"  Report:\n{report_text}")
 
     def _parse(pattern: str, text: str):
@@ -1684,7 +1686,7 @@ def _run_tto_auth_eval(tag: str, tto_dir: str) -> dict | None:
     ]
     print(f"  Command: {' '.join(eval_cmd)}")
     with profiler.stage("scoring_evaluate_py"):
-        eval_result = subprocess.run(eval_cmd, capture_output=True, text=True, timeout=600)
+        eval_result = subprocess.run(eval_cmd, capture_output=True, text=True, timeout=1200)
 
     if eval_result.returncode != 0:
         print(f"  evaluate.py FAILED (exit {eval_result.returncode})")
@@ -1693,7 +1695,8 @@ def _run_tto_auth_eval(tag: str, tto_dir: str) -> dict | None:
 
     # ── 5. Parse report ──
     with profiler.stage("parse_report"):
-        report_text = open(report_path).read()
+        with open(report_path) as _f:
+            report_text = _f.read()
     print(f"  Report:\n{report_text}")
 
     def _parse(pattern, text):
