@@ -1,0 +1,5719 @@
+{
+  "experiment": "pair_difficulty_map",
+  "config": {
+    "checkpoint": "experiments/results/v5_lagrangian_renderer/renderer_best.pt",
+    "device": "mps",
+    "n_frames": 1200,
+    "n_pairs": 600,
+    "batch_size": 8,
+    "simulate_resize": true,
+    "smoke": false
+  },
+  "statistics": {
+    "n_pairs": 600,
+    "posenet": {
+      "mean": 0.017261539000258685,
+      "std": 0.02258028728209143,
+      "min": 8.037834049900994e-05,
+      "max": 0.16703473031520844,
+      "median": 0.008827947545796633,
+      "p10": 0.0010004287585616111,
+      "p25": 0.002834360464476049,
+      "p50": 0.008827947545796633,
+      "p75": 0.02293146587908268,
+      "p90": 0.04676116406917573
+    },
+    "segnet": {
+      "mean": 0.0021460215823026372,
+      "std": 0.0007984830907669917,
+      "min": 0.0011952718487009406,
+      "max": 0.0126800537109375,
+      "median": 0.0019887289963662624,
+      "p10": 0.0016225179424509406,
+      "p25": 0.001763661770382896,
+      "p50": 0.0019887289963662624,
+      "p75": 0.0023371378774754703,
+      "p90": 0.002777608251199126
+    },
+    "score": {
+      "mean": 0.5626530216666666,
+      "std": 0.23734029704231543,
+      "min": 0.203319,
+      "max": 1.49325,
+      "median": 0.514187,
+      "p10": 0.3122845,
+      "p25": 0.37423399999999996,
+      "p50": 0.514187,
+      "p75": 0.68824175,
+      "p90": 0.8978763000000001
+    },
+    "tiers": {
+      "posenet": {
+        "easy_count": 300,
+        "easy_threshold": 0.008827947545796633,
+        "medium_count": 180,
+        "hard_count": 120,
+        "hard_threshold": 0.027570225670933726,
+        "easy_pair_indices": [
+          0,
+          2,
+          3,
+          4,
+          5,
+          10,
+          11,
+          14,
+          16,
+          17,
+          18,
+          19,
+          20,
+          23,
+          25,
+          27,
+          28,
+          29,
+          31,
+          32,
+          33,
+          34,
+          35,
+          37,
+          41,
+          45,
+          46,
+          48,
+          49,
+          50,
+          51,
+          53,
+          56,
+          57,
+          62,
+          63,
+          68,
+          69,
+          70,
+          71,
+          72,
+          74,
+          76,
+          79,
+          80,
+          81,
+          83,
+          88,
+          89,
+          90,
+          91,
+          94,
+          95,
+          100,
+          102,
+          115,
+          120,
+          121,
+          122,
+          127,
+          128,
+          133,
+          140,
+          141,
+          142,
+          144,
+          145,
+          146,
+          147,
+          149,
+          150,
+          151,
+          154,
+          157,
+          160,
+          165,
+          167,
+          168,
+          172,
+          173,
+          175,
+          176,
+          180,
+          182,
+          184,
+          185,
+          186,
+          188,
+          190,
+          193,
+          195,
+          196,
+          199,
+          201,
+          202,
+          203,
+          204,
+          207,
+          212,
+          213,
+          219,
+          220,
+          221,
+          223,
+          224,
+          226,
+          227,
+          228,
+          231,
+          232,
+          233,
+          234,
+          236,
+          237,
+          240,
+          245,
+          247,
+          250,
+          253,
+          254,
+          258,
+          260,
+          262,
+          263,
+          265,
+          267,
+          268,
+          269,
+          271,
+          273,
+          274,
+          276,
+          277,
+          278,
+          281,
+          282,
+          283,
+          284,
+          287,
+          290,
+          291,
+          292,
+          294,
+          295,
+          296,
+          297,
+          298,
+          299,
+          300,
+          302,
+          303,
+          304,
+          305,
+          307,
+          310,
+          311,
+          312,
+          316,
+          320,
+          321,
+          322,
+          325,
+          326,
+          327,
+          328,
+          329,
+          330,
+          334,
+          336,
+          338,
+          339,
+          341,
+          342,
+          345,
+          351,
+          352,
+          354,
+          357,
+          359,
+          363,
+          365,
+          366,
+          367,
+          368,
+          370,
+          372,
+          373,
+          375,
+          376,
+          377,
+          379,
+          382,
+          383,
+          384,
+          387,
+          389,
+          390,
+          396,
+          397,
+          398,
+          401,
+          404,
+          405,
+          406,
+          407,
+          408,
+          409,
+          411,
+          414,
+          416,
+          417,
+          420,
+          422,
+          424,
+          427,
+          429,
+          431,
+          432,
+          433,
+          434,
+          437,
+          439,
+          440,
+          442,
+          444,
+          448,
+          450,
+          452,
+          455,
+          459,
+          460,
+          463,
+          464,
+          465,
+          467,
+          468,
+          470,
+          471,
+          474,
+          477,
+          478,
+          479,
+          482,
+          483,
+          484,
+          489,
+          492,
+          493,
+          494,
+          495,
+          496,
+          498,
+          499,
+          500,
+          501,
+          502,
+          503,
+          504,
+          505,
+          507,
+          510,
+          511,
+          512,
+          515,
+          516,
+          518,
+          519,
+          520,
+          523,
+          526,
+          529,
+          531,
+          533,
+          536,
+          537,
+          539,
+          541,
+          543,
+          544,
+          546,
+          549,
+          550,
+          551,
+          553,
+          561,
+          566,
+          567,
+          570,
+          571,
+          572,
+          574,
+          580,
+          582,
+          583,
+          587,
+          592,
+          593,
+          594,
+          596,
+          599
+        ],
+        "hard_pair_indices": [
+          1,
+          21,
+          26,
+          30,
+          36,
+          38,
+          39,
+          40,
+          43,
+          54,
+          64,
+          66,
+          67,
+          78,
+          82,
+          84,
+          86,
+          92,
+          96,
+          101,
+          103,
+          104,
+          107,
+          108,
+          109,
+          110,
+          111,
+          112,
+          114,
+          117,
+          124,
+          125,
+          129,
+          134,
+          135,
+          139,
+          153,
+          156,
+          158,
+          159,
+          161,
+          163,
+          164,
+          166,
+          170,
+          171,
+          191,
+          206,
+          208,
+          211,
+          216,
+          242,
+          244,
+          249,
+          255,
+          256,
+          259,
+          266,
+          270,
+          275,
+          279,
+          285,
+          289,
+          308,
+          314,
+          317,
+          319,
+          323,
+          337,
+          350,
+          353,
+          355,
+          356,
+          358,
+          360,
+          371,
+          380,
+          381,
+          385,
+          386,
+          395,
+          399,
+          412,
+          413,
+          415,
+          419,
+          441,
+          446,
+          447,
+          451,
+          454,
+          461,
+          462,
+          469,
+          476,
+          480,
+          481,
+          485,
+          490,
+          491,
+          509,
+          514,
+          522,
+          528,
+          530,
+          532,
+          540,
+          555,
+          556,
+          559,
+          560,
+          565,
+          578,
+          579,
+          581,
+          585,
+          590,
+          595,
+          597,
+          598
+        ]
+      },
+      "segnet": {
+        "easy_count": 302,
+        "easy_threshold": 0.0019887289963662624,
+        "hard_count": 120,
+        "hard_threshold": 0.0024576823227107527,
+        "easy_pair_indices": [
+          1,
+          2,
+          3,
+          4,
+          5,
+          6,
+          7,
+          8,
+          9,
+          10,
+          11,
+          13,
+          14,
+          16,
+          17,
+          19,
+          23,
+          24,
+          25,
+          26,
+          27,
+          28,
+          29,
+          30,
+          31,
+          33,
+          35,
+          36,
+          38,
+          39,
+          40,
+          41,
+          42,
+          43,
+          44,
+          46,
+          47,
+          48,
+          49,
+          51,
+          52,
+          53,
+          55,
+          56,
+          57,
+          58,
+          59,
+          60,
+          62,
+          63,
+          64,
+          67,
+          68,
+          69,
+          77,
+          78,
+          79,
+          80,
+          81,
+          82,
+          83,
+          84,
+          85,
+          87,
+          88,
+          89,
+          90,
+          91,
+          92,
+          94,
+          95,
+          96,
+          97,
+          98,
+          100,
+          101,
+          102,
+          108,
+          109,
+          110,
+          111,
+          113,
+          114,
+          116,
+          117,
+          118,
+          121,
+          122,
+          123,
+          124,
+          125,
+          129,
+          130,
+          131,
+          132,
+          135,
+          139,
+          141,
+          144,
+          145,
+          146,
+          147,
+          148,
+          149,
+          150,
+          153,
+          154,
+          155,
+          156,
+          157,
+          160,
+          162,
+          171,
+          172,
+          174,
+          181,
+          183,
+          184,
+          185,
+          186,
+          188,
+          189,
+          190,
+          193,
+          195,
+          197,
+          198,
+          203,
+          204,
+          205,
+          206,
+          207,
+          208,
+          209,
+          211,
+          212,
+          213,
+          214,
+          216,
+          217,
+          218,
+          219,
+          220,
+          221,
+          223,
+          225,
+          226,
+          228,
+          232,
+          234,
+          235,
+          236,
+          237,
+          238,
+          239,
+          242,
+          243,
+          247,
+          249,
+          250,
+          251,
+          252,
+          254,
+          255,
+          256,
+          258,
+          259,
+          260,
+          261,
+          262,
+          263,
+          264,
+          265,
+          266,
+          268,
+          269,
+          270,
+          271,
+          272,
+          273,
+          274,
+          275,
+          276,
+          277,
+          278,
+          279,
+          281,
+          282,
+          283,
+          286,
+          287,
+          288,
+          290,
+          291,
+          292,
+          294,
+          295,
+          296,
+          297,
+          298,
+          299,
+          300,
+          301,
+          302,
+          304,
+          305,
+          306,
+          308,
+          309,
+          311,
+          313,
+          320,
+          322,
+          333,
+          334,
+          335,
+          336,
+          337,
+          338,
+          339,
+          340,
+          341,
+          344,
+          345,
+          346,
+          347,
+          349,
+          350,
+          351,
+          352,
+          353,
+          354,
+          355,
+          356,
+          357,
+          359,
+          360,
+          362,
+          363,
+          364,
+          365,
+          366,
+          367,
+          368,
+          369,
+          370,
+          371,
+          372,
+          373,
+          374,
+          375,
+          376,
+          377,
+          378,
+          379,
+          380,
+          381,
+          382,
+          383,
+          384,
+          385,
+          387,
+          388,
+          389,
+          390,
+          391,
+          392,
+          393,
+          394,
+          395,
+          397,
+          398,
+          399,
+          400,
+          402,
+          403,
+          404,
+          406,
+          407,
+          409,
+          410,
+          411,
+          412,
+          414,
+          415,
+          417,
+          419,
+          420,
+          421,
+          424,
+          425,
+          430,
+          431,
+          432,
+          435,
+          464,
+          475,
+          485,
+          528,
+          535,
+          581,
+          599
+        ],
+        "hard_pair_indices": [
+          70,
+          104,
+          133,
+          136,
+          138,
+          140,
+          163,
+          164,
+          165,
+          170,
+          173,
+          177,
+          178,
+          191,
+          192,
+          196,
+          210,
+          227,
+          284,
+          316,
+          318,
+          325,
+          327,
+          329,
+          330,
+          439,
+          440,
+          446,
+          447,
+          451,
+          456,
+          457,
+          459,
+          461,
+          465,
+          466,
+          467,
+          468,
+          469,
+          470,
+          471,
+          472,
+          473,
+          476,
+          479,
+          480,
+          488,
+          489,
+          490,
+          492,
+          493,
+          494,
+          495,
+          496,
+          497,
+          498,
+          499,
+          501,
+          502,
+          503,
+          504,
+          505,
+          506,
+          507,
+          508,
+          509,
+          510,
+          511,
+          512,
+          513,
+          514,
+          515,
+          516,
+          517,
+          518,
+          519,
+          520,
+          521,
+          522,
+          523,
+          525,
+          527,
+          529,
+          531,
+          534,
+          536,
+          537,
+          539,
+          540,
+          542,
+          543,
+          544,
+          546,
+          547,
+          548,
+          552,
+          555,
+          556,
+          557,
+          561,
+          562,
+          563,
+          564,
+          565,
+          566,
+          567,
+          568,
+          569,
+          570,
+          571,
+          572,
+          573,
+          574,
+          576,
+          577,
+          583,
+          584,
+          587,
+          594,
+          595
+        ]
+      }
+    }
+  },
+  "pairs_by_difficulty": [
+    {
+      "pair_idx": 560,
+      "posenet_mse": 0.1649182140827179,
+      "segnet_disagree": 0.0020904541015625,
+      "pose_contribution": 1.284205,
+      "seg_contribution": 0.209045,
+      "score": 1.49325
+    },
+    {
+      "pair_idx": 109,
+      "posenet_mse": 0.16703473031520844,
+      "segnet_disagree": 0.0018564860802143812,
+      "pose_contribution": 1.292419,
+      "seg_contribution": 0.185649,
+      "score": 1.478068
+    },
+    {
+      "pair_idx": 519,
+      "posenet_mse": 0.004341058898717165,
+      "segnet_disagree": 0.012629191391170025,
+      "pose_contribution": 0.208352,
+      "seg_contribution": 1.262919,
+      "score": 1.471271
+    },
+    {
+      "pair_idx": 514,
+      "posenet_mse": 0.11627990007400513,
+      "segnet_disagree": 0.0036417644005268812,
+      "pose_contribution": 1.078332,
+      "seg_contribution": 0.364176,
+      "score": 1.442508
+    },
+    {
+      "pair_idx": 206,
+      "posenet_mse": 0.15370571613311768,
+      "segnet_disagree": 0.0019887289963662624,
+      "pose_contribution": 1.239781,
+      "seg_contribution": 0.198873,
+      "score": 1.438654
+    },
+    {
+      "pair_idx": 518,
+      "posenet_mse": 0.0011199902510270476,
+      "segnet_disagree": 0.0126800537109375,
+      "pose_contribution": 0.10583,
+      "seg_contribution": 1.268005,
+      "score": 1.373835
+    },
+    {
+      "pair_idx": 26,
+      "posenet_mse": 0.1280265599489212,
+      "segnet_disagree": 0.0018870036583393812,
+      "pose_contribution": 1.131488,
+      "seg_contribution": 0.1887,
+      "score": 1.320189
+    },
+    {
+      "pair_idx": 285,
+      "posenet_mse": 0.11359276622533798,
+      "segnet_disagree": 0.0023295085411518812,
+      "pose_contribution": 1.065799,
+      "seg_contribution": 0.232951,
+      "score": 1.29875
+    },
+    {
+      "pair_idx": 92,
+      "posenet_mse": 0.10510668158531189,
+      "segnet_disagree": 0.0017751058330759406,
+      "pose_contribution": 1.025215,
+      "seg_contribution": 0.177511,
+      "score": 1.202726
+    },
+    {
+      "pair_idx": 124,
+      "posenet_mse": 0.10062287002801895,
+      "segnet_disagree": 0.0019276937237009406,
+      "pose_contribution": 1.00311,
+      "seg_contribution": 0.192769,
+      "score": 1.195879
+    },
+    {
+      "pair_idx": 581,
+      "posenet_mse": 0.09234386682510376,
+      "segnet_disagree": 0.001953125,
+      "pose_contribution": 0.960957,
+      "seg_contribution": 0.195312,
+      "score": 1.15627
+    },
+    {
+      "pair_idx": 1,
+      "posenet_mse": 0.09134644269943237,
+      "segnet_disagree": 0.0019683837890625,
+      "pose_contribution": 0.955753,
+      "seg_contribution": 0.196838,
+      "score": 1.152592
+    },
+    {
+      "pair_idx": 84,
+      "posenet_mse": 0.09338727593421936,
+      "segnet_disagree": 0.00164794921875,
+      "pose_contribution": 0.966371,
+      "seg_contribution": 0.164795,
+      "score": 1.131166
+    },
+    {
+      "pair_idx": 317,
+      "posenet_mse": 0.08209020644426346,
+      "segnet_disagree": 0.002166748046875,
+      "pose_contribution": 0.906036,
+      "seg_contribution": 0.216675,
+      "score": 1.122711
+    },
+    {
+      "pair_idx": 555,
+      "posenet_mse": 0.06988801062107086,
+      "segnet_disagree": 0.0028432211838662624,
+      "pose_contribution": 0.83599,
+      "seg_contribution": 0.284322,
+      "score": 1.120313
+    },
+    {
+      "pair_idx": 159,
+      "posenet_mse": 0.08392145484685898,
+      "segnet_disagree": 0.0020345053635537624,
+      "pose_contribution": 0.916087,
+      "seg_contribution": 0.203451,
+      "score": 1.119537
+    },
+    {
+      "pair_idx": 579,
+      "posenet_mse": 0.08023559302091599,
+      "segnet_disagree": 0.002197265625,
+      "pose_contribution": 0.895743,
+      "seg_contribution": 0.219727,
+      "score": 1.11547
+    },
+    {
+      "pair_idx": 522,
+      "posenet_mse": 0.045398831367492676,
+      "segnet_disagree": 0.0043487548828125,
+      "pose_contribution": 0.673787,
+      "seg_contribution": 0.434875,
+      "score": 1.108662
+    },
+    {
+      "pair_idx": 191,
+      "posenet_mse": 0.06863148510456085,
+      "segnet_disagree": 0.0027974448166787624,
+      "pose_contribution": 0.828441,
+      "seg_contribution": 0.279744,
+      "score": 1.108186
+    },
+    {
+      "pair_idx": 38,
+      "posenet_mse": 0.08083187788724899,
+      "segnet_disagree": 0.0017801921349018812,
+      "pose_contribution": 0.899066,
+      "seg_contribution": 0.178019,
+      "score": 1.077085
+    },
+    {
+      "pair_idx": 481,
+      "posenet_mse": 0.06536680459976196,
+      "segnet_disagree": 0.0024159750901162624,
+      "pose_contribution": 0.808497,
+      "seg_contribution": 0.241598,
+      "score": 1.050095
+    },
+    {
+      "pair_idx": 509,
+      "posenet_mse": 0.05296877399086952,
+      "segnet_disagree": 0.0032196044921875,
+      "pose_contribution": 0.727796,
+      "seg_contribution": 0.32196,
+      "score": 1.049757
+    },
+    {
+      "pair_idx": 54,
+      "posenet_mse": 0.07000482082366943,
+      "segnet_disagree": 0.0021209716796875,
+      "pose_contribution": 0.836689,
+      "seg_contribution": 0.212097,
+      "score": 1.048786
+    },
+    {
+      "pair_idx": 171,
+      "posenet_mse": 0.07387863844633102,
+      "segnet_disagree": 0.0018310546875,
+      "pose_contribution": 0.859527,
+      "seg_contribution": 0.183105,
+      "score": 1.042632
+    },
+    {
+      "pair_idx": 275,
+      "posenet_mse": 0.06974493712186813,
+      "segnet_disagree": 0.0019887289963662624,
+      "pose_contribution": 0.835134,
+      "seg_contribution": 0.198873,
+      "score": 1.034007
+    },
+    {
+      "pair_idx": 319,
+      "posenet_mse": 0.06396553665399551,
+      "segnet_disagree": 0.0023244223557412624,
+      "pose_contribution": 0.799785,
+      "seg_contribution": 0.232442,
+      "score": 1.032227
+    },
+    {
+      "pair_idx": 337,
+      "posenet_mse": 0.07085509598255157,
+      "segnet_disagree": 0.0019022624474018812,
+      "pose_contribution": 0.841755,
+      "seg_contribution": 0.190226,
+      "score": 1.031981
+    },
+    {
+      "pair_idx": 517,
+      "posenet_mse": 0.01024386752396822,
+      "segnet_disagree": 0.0070648193359375,
+      "pose_contribution": 0.32006,
+      "seg_contribution": 0.706482,
+      "score": 1.026542
+    },
+    {
+      "pair_idx": 211,
+      "posenet_mse": 0.06803883612155914,
+      "segnet_disagree": 0.001953125,
+      "pose_contribution": 0.824857,
+      "seg_contribution": 0.195312,
+      "score": 1.020169
+    },
+    {
+      "pair_idx": 111,
+      "posenet_mse": 0.0679238811135292,
+      "segnet_disagree": 0.0019276937237009406,
+      "pose_contribution": 0.824159,
+      "seg_contribution": 0.192769,
+      "score": 1.016929
+    },
+    {
+      "pair_idx": 125,
+      "posenet_mse": 0.06765217334032059,
+      "segnet_disagree": 0.0018513997783884406,
+      "pose_contribution": 0.822509,
+      "seg_contribution": 0.18514,
+      "score": 1.007649
+    },
+    {
+      "pair_idx": 161,
+      "posenet_mse": 0.06208378076553345,
+      "segnet_disagree": 0.0021718344651162624,
+      "pose_contribution": 0.787933,
+      "seg_contribution": 0.217183,
+      "score": 1.005116
+    },
+    {
+      "pair_idx": 110,
+      "posenet_mse": 0.06704729050397873,
+      "segnet_disagree": 0.0018513997783884406,
+      "pose_contribution": 0.818824,
+      "seg_contribution": 0.18514,
+      "score": 1.003964
+    },
+    {
+      "pair_idx": 66,
+      "posenet_mse": 0.06044366955757141,
+      "segnet_disagree": 0.0022633871994912624,
+      "pose_contribution": 0.777455,
+      "seg_contribution": 0.226339,
+      "score": 1.003794
+    },
+    {
+      "pair_idx": 446,
+      "posenet_mse": 0.05021226778626442,
+      "segnet_disagree": 0.0028635661583393812,
+      "pose_contribution": 0.708606,
+      "seg_contribution": 0.286357,
+      "score": 0.994963
+    },
+    {
+      "pair_idx": 380,
+      "posenet_mse": 0.07303383201360703,
+      "segnet_disagree": 0.0013936361065134406,
+      "pose_contribution": 0.854598,
+      "seg_contribution": 0.139364,
+      "score": 0.993962
+    },
+    {
+      "pair_idx": 412,
+      "posenet_mse": 0.06375784426927567,
+      "segnet_disagree": 0.0018056234112009406,
+      "pose_contribution": 0.798485,
+      "seg_contribution": 0.180562,
+      "score": 0.979047
+    },
+    {
+      "pair_idx": 164,
+      "posenet_mse": 0.040766309946775436,
+      "segnet_disagree": 0.0033772788010537624,
+      "pose_contribution": 0.638485,
+      "seg_contribution": 0.337728,
+      "score": 0.976213
+    },
+    {
+      "pair_idx": 415,
+      "posenet_mse": 0.06208920478820801,
+      "segnet_disagree": 0.001861572265625,
+      "pose_contribution": 0.787967,
+      "seg_contribution": 0.186157,
+      "score": 0.974124
+    },
+    {
+      "pair_idx": 78,
+      "posenet_mse": 0.06063345447182655,
+      "segnet_disagree": 0.00189208984375,
+      "pose_contribution": 0.778675,
+      "seg_contribution": 0.189209,
+      "score": 0.967884
+    },
+    {
+      "pair_idx": 308,
+      "posenet_mse": 0.06452088803052902,
+      "segnet_disagree": 0.0016225179424509406,
+      "pose_contribution": 0.803249,
+      "seg_contribution": 0.162252,
+      "score": 0.965501
+    },
+    {
+      "pair_idx": 451,
+      "posenet_mse": 0.04936927184462547,
+      "segnet_disagree": 0.0024973552208393812,
+      "pose_contribution": 0.702633,
+      "seg_contribution": 0.249736,
+      "score": 0.952368
+    },
+    {
+      "pair_idx": 530,
+      "posenet_mse": 0.05298465117812157,
+      "segnet_disagree": 0.0022074382286518812,
+      "pose_contribution": 0.727906,
+      "seg_contribution": 0.220744,
+      "score": 0.948649
+    },
+    {
+      "pair_idx": 314,
+      "posenet_mse": 0.05526992306113243,
+      "segnet_disagree": 0.00201416015625,
+      "pose_contribution": 0.743437,
+      "seg_contribution": 0.201416,
+      "score": 0.944853
+    },
+    {
+      "pair_idx": 255,
+      "posenet_mse": 0.060532670468091965,
+      "segnet_disagree": 0.0016530355205759406,
+      "pose_contribution": 0.778027,
+      "seg_contribution": 0.165304,
+      "score": 0.943331
+    },
+    {
+      "pair_idx": 358,
+      "posenet_mse": 0.05501025915145874,
+      "segnet_disagree": 0.0019989013671875,
+      "pose_contribution": 0.741689,
+      "seg_contribution": 0.19989,
+      "score": 0.941579
+    },
+    {
+      "pair_idx": 40,
+      "posenet_mse": 0.05993465706706047,
+      "segnet_disagree": 0.0016733806114643812,
+      "pose_contribution": 0.774175,
+      "seg_contribution": 0.167338,
+      "score": 0.941513
+    },
+    {
+      "pair_idx": 107,
+      "posenet_mse": 0.052793893963098526,
+      "segnet_disagree": 0.0021311442833393812,
+      "pose_contribution": 0.726594,
+      "seg_contribution": 0.213114,
+      "score": 0.939708
+    },
+    {
+      "pair_idx": 532,
+      "posenet_mse": 0.05001383647322655,
+      "segnet_disagree": 0.0022837321739643812,
+      "pose_contribution": 0.707205,
+      "seg_contribution": 0.228373,
+      "score": 0.935578
+    },
+    {
+      "pair_idx": 158,
+      "posenet_mse": 0.048334941267967224,
+      "segnet_disagree": 0.0024007163010537624,
+      "pose_contribution": 0.695233,
+      "seg_contribution": 0.240072,
+      "score": 0.935305
+    },
+    {
+      "pair_idx": 170,
+      "posenet_mse": 0.03931397572159767,
+      "segnet_disagree": 0.0030771892052143812,
+      "pose_contribution": 0.627009,
+      "seg_contribution": 0.307719,
+      "score": 0.934727
+    },
+    {
+      "pair_idx": 598,
+      "posenet_mse": 0.050050925463438034,
+      "segnet_disagree": 0.0022633871994912624,
+      "pose_contribution": 0.707467,
+      "seg_contribution": 0.226339,
+      "score": 0.933806
+    },
+    {
+      "pair_idx": 461,
+      "posenet_mse": 0.04617771878838539,
+      "segnet_disagree": 0.00250244140625,
+      "pose_contribution": 0.679542,
+      "seg_contribution": 0.250244,
+      "score": 0.929786
+    },
+    {
+      "pair_idx": 129,
+      "posenet_mse": 0.051411937922239304,
+      "segnet_disagree": 0.0019887289963662624,
+      "pose_contribution": 0.717021,
+      "seg_contribution": 0.198873,
+      "score": 0.915894
+    },
+    {
+      "pair_idx": 104,
+      "posenet_mse": 0.042273785918951035,
+      "segnet_disagree": 0.002655029296875,
+      "pose_contribution": 0.650183,
+      "seg_contribution": 0.265503,
+      "score": 0.915686
+    },
+    {
+      "pair_idx": 556,
+      "posenet_mse": 0.04269759729504585,
+      "segnet_disagree": 0.002593994140625,
+      "pose_contribution": 0.653434,
+      "seg_contribution": 0.259399,
+      "score": 0.912833
+    },
+    {
+      "pair_idx": 135,
+      "posenet_mse": 0.05076627805829048,
+      "segnet_disagree": 0.0019734702073037624,
+      "pose_contribution": 0.712505,
+      "seg_contribution": 0.197347,
+      "score": 0.909852
+    },
+    {
+      "pair_idx": 43,
+      "posenet_mse": 0.0538443960249424,
+      "segnet_disagree": 0.0017598470440134406,
+      "pose_contribution": 0.733787,
+      "seg_contribution": 0.175985,
+      "score": 0.909772
+    },
+    {
+      "pair_idx": 112,
+      "posenet_mse": 0.04276607558131218,
+      "segnet_disagree": 0.0024566650390625,
+      "pose_contribution": 0.653958,
+      "seg_contribution": 0.245667,
+      "score": 0.899624
+    },
+    {
+      "pair_idx": 385,
+      "posenet_mse": 0.05084389075636864,
+      "segnet_disagree": 0.0018564860802143812,
+      "pose_contribution": 0.713049,
+      "seg_contribution": 0.185649,
+      "score": 0.898698
+    },
+    {
+      "pair_idx": 64,
+      "posenet_mse": 0.05232002213597298,
+      "segnet_disagree": 0.0017445882549509406,
+      "pose_contribution": 0.723326,
+      "seg_contribution": 0.174459,
+      "score": 0.897785
+    },
+    {
+      "pair_idx": 491,
+      "posenet_mse": 0.04446770250797272,
+      "segnet_disagree": 0.0022735595703125,
+      "pose_contribution": 0.666841,
+      "seg_contribution": 0.227356,
+      "score": 0.894197
+    },
+    {
+      "pair_idx": 166,
+      "posenet_mse": 0.042408909648656845,
+      "segnet_disagree": 0.0024261474609375,
+      "pose_contribution": 0.651221,
+      "seg_contribution": 0.242615,
+      "score": 0.893836
+    },
+    {
+      "pair_idx": 371,
+      "posenet_mse": 0.05244825780391693,
+      "segnet_disagree": 0.0016225179424509406,
+      "pose_contribution": 0.724212,
+      "seg_contribution": 0.162252,
+      "score": 0.886463
+    },
+    {
+      "pair_idx": 399,
+      "posenet_mse": 0.0470832921564579,
+      "segnet_disagree": 0.001953125,
+      "pose_contribution": 0.686173,
+      "seg_contribution": 0.195312,
+      "score": 0.881485
+    },
+    {
+      "pair_idx": 86,
+      "posenet_mse": 0.039803680032491684,
+      "segnet_disagree": 0.0024515788536518812,
+      "pose_contribution": 0.630902,
+      "seg_contribution": 0.245158,
+      "score": 0.876059
+    },
+    {
+      "pair_idx": 249,
+      "posenet_mse": 0.052475687116384506,
+      "segnet_disagree": 0.0015055339317768812,
+      "pose_contribution": 0.724401,
+      "seg_contribution": 0.150553,
+      "score": 0.874954
+    },
+    {
+      "pair_idx": 256,
+      "posenet_mse": 0.05068649724125862,
+      "segnet_disagree": 0.0016225179424509406,
+      "pose_contribution": 0.711945,
+      "seg_contribution": 0.162252,
+      "score": 0.874196
+    },
+    {
+      "pair_idx": 208,
+      "posenet_mse": 0.046971362084150314,
+      "segnet_disagree": 0.0018768310546875,
+      "pose_contribution": 0.685357,
+      "seg_contribution": 0.187683,
+      "score": 0.87304
+    },
+    {
+      "pair_idx": 485,
+      "posenet_mse": 0.050508659332990646,
+      "segnet_disagree": 0.0016225179424509406,
+      "pose_contribution": 0.710694,
+      "seg_contribution": 0.162252,
+      "score": 0.872946
+    },
+    {
+      "pair_idx": 419,
+      "posenet_mse": 0.048436593264341354,
+      "segnet_disagree": 0.001739501953125,
+      "pose_contribution": 0.695964,
+      "seg_contribution": 0.17395,
+      "score": 0.869914
+    },
+    {
+      "pair_idx": 355,
+      "posenet_mse": 0.04719195142388344,
+      "segnet_disagree": 0.0017903646221384406,
+      "pose_contribution": 0.686964,
+      "seg_contribution": 0.179036,
+      "score": 0.866
+    },
+    {
+      "pair_idx": 101,
+      "posenet_mse": 0.04673780873417854,
+      "segnet_disagree": 0.001800537109375,
+      "pose_contribution": 0.683651,
+      "seg_contribution": 0.180054,
+      "score": 0.863704
+    },
+    {
+      "pair_idx": 323,
+      "posenet_mse": 0.042959701269865036,
+      "segnet_disagree": 0.0020751953125,
+      "pose_contribution": 0.655437,
+      "seg_contribution": 0.20752,
+      "score": 0.862956
+    },
+    {
+      "pair_idx": 540,
+      "posenet_mse": 0.03193788230419159,
+      "segnet_disagree": 0.002960205078125,
+      "pose_contribution": 0.565136,
+      "seg_contribution": 0.296021,
+      "score": 0.861157
+    },
+    {
+      "pair_idx": 490,
+      "posenet_mse": 0.03553762659430504,
+      "segnet_disagree": 0.0026346843224018812,
+      "pose_contribution": 0.596134,
+      "seg_contribution": 0.263468,
+      "score": 0.859603
+    },
+    {
+      "pair_idx": 476,
+      "posenet_mse": 0.030451545491814613,
+      "segnet_disagree": 0.0029856364708393812,
+      "pose_contribution": 0.551829,
+      "seg_contribution": 0.298564,
+      "score": 0.850393
+    },
+    {
+      "pair_idx": 134,
+      "posenet_mse": 0.040259189903736115,
+      "segnet_disagree": 0.0021565756760537624,
+      "pose_contribution": 0.634501,
+      "seg_contribution": 0.215658,
+      "score": 0.850159
+    },
+    {
+      "pair_idx": 96,
+      "posenet_mse": 0.04774698615074158,
+      "segnet_disagree": 0.00152587890625,
+      "pose_contribution": 0.690992,
+      "seg_contribution": 0.152588,
+      "score": 0.84358
+    },
+    {
+      "pair_idx": 469,
+      "posenet_mse": 0.0302414670586586,
+      "segnet_disagree": 0.0029093425255268812,
+      "pose_contribution": 0.549922,
+      "seg_contribution": 0.290934,
+      "score": 0.840857
+    },
+    {
+      "pair_idx": 597,
+      "posenet_mse": 0.03946928307414055,
+      "segnet_disagree": 0.0021158854942768812,
+      "pose_contribution": 0.628246,
+      "seg_contribution": 0.211589,
+      "score": 0.839834
+    },
+    {
+      "pair_idx": 108,
+      "posenet_mse": 0.041937608271837234,
+      "segnet_disagree": 0.0019124349346384406,
+      "pose_contribution": 0.647593,
+      "seg_contribution": 0.191243,
+      "score": 0.838836
+    },
+    {
+      "pair_idx": 462,
+      "posenet_mse": 0.03585820272564888,
+      "segnet_disagree": 0.0023854575119912624,
+      "pose_contribution": 0.598817,
+      "seg_contribution": 0.238546,
+      "score": 0.837363
+    },
+    {
+      "pair_idx": 39,
+      "posenet_mse": 0.0420776903629303,
+      "segnet_disagree": 0.0018666585674509406,
+      "pose_contribution": 0.648673,
+      "seg_contribution": 0.186666,
+      "score": 0.835339
+    },
+    {
+      "pair_idx": 117,
+      "posenet_mse": 0.04202766716480255,
+      "segnet_disagree": 0.0018564860802143812,
+      "pose_contribution": 0.648287,
+      "seg_contribution": 0.185649,
+      "score": 0.833936
+    },
+    {
+      "pair_idx": 480,
+      "posenet_mse": 0.03230951353907585,
+      "segnet_disagree": 0.0026397705078125,
+      "pose_contribution": 0.568415,
+      "seg_contribution": 0.263977,
+      "score": 0.832392
+    },
+    {
+      "pair_idx": 441,
+      "posenet_mse": 0.03443754464387894,
+      "segnet_disagree": 0.0024210612755268812,
+      "pose_contribution": 0.586835,
+      "seg_contribution": 0.242106,
+      "score": 0.828941
+    },
+    {
+      "pair_idx": 559,
+      "posenet_mse": 0.03666152060031891,
+      "segnet_disagree": 0.0021718344651162624,
+      "pose_contribution": 0.605488,
+      "seg_contribution": 0.217183,
+      "score": 0.822671
+    },
+    {
+      "pair_idx": 447,
+      "posenet_mse": 0.02969958633184433,
+      "segnet_disagree": 0.0027618408203125,
+      "pose_contribution": 0.544973,
+      "seg_contribution": 0.276184,
+      "score": 0.821157
+    },
+    {
+      "pair_idx": 259,
+      "posenet_mse": 0.03810378536581993,
+      "segnet_disagree": 0.0019734702073037624,
+      "pose_contribution": 0.617283,
+      "seg_contribution": 0.197347,
+      "score": 0.81463
+    },
+    {
+      "pair_idx": 595,
+      "posenet_mse": 0.029524514451622963,
+      "segnet_disagree": 0.0026804606895893812,
+      "pose_contribution": 0.543365,
+      "seg_contribution": 0.268046,
+      "score": 0.811411
+    },
+    {
+      "pair_idx": 454,
+      "posenet_mse": 0.0321810320019722,
+      "segnet_disagree": 0.00238037109375,
+      "pose_contribution": 0.567283,
+      "seg_contribution": 0.238037,
+      "score": 0.80532
+    },
+    {
+      "pair_idx": 585,
+      "posenet_mse": 0.03223760053515434,
+      "segnet_disagree": 0.0023549399338662624,
+      "pose_contribution": 0.567782,
+      "seg_contribution": 0.235494,
+      "score": 0.803276
+    },
+    {
+      "pair_idx": 565,
+      "posenet_mse": 0.029605725780129433,
+      "segnet_disagree": 0.0025787353515625,
+      "pose_contribution": 0.544111,
+      "seg_contribution": 0.257874,
+      "score": 0.801985
+    },
+    {
+      "pair_idx": 488,
+      "posenet_mse": 0.020311394706368446,
+      "segnet_disagree": 0.003509521484375,
+      "pose_contribution": 0.450682,
+      "seg_contribution": 0.350952,
+      "score": 0.801634
+    },
+    {
+      "pair_idx": 528,
+      "posenet_mse": 0.03874112293124199,
+      "segnet_disagree": 0.0017903646221384406,
+      "pose_contribution": 0.622424,
+      "seg_contribution": 0.179036,
+      "score": 0.80146
+    },
+    {
+      "pair_idx": 513,
+      "posenet_mse": 0.0224214568734169,
+      "segnet_disagree": 0.0032704672776162624,
+      "pose_contribution": 0.473513,
+      "seg_contribution": 0.327047,
+      "score": 0.80056
+    },
+    {
+      "pair_idx": 527,
+      "posenet_mse": 0.027564875781536102,
+      "segnet_disagree": 0.0027414958458393812,
+      "pose_contribution": 0.525023,
+      "seg_contribution": 0.27415,
+      "score": 0.799172
+    },
+    {
+      "pair_idx": 163,
+      "posenet_mse": 0.02767830342054367,
+      "segnet_disagree": 0.0027008056640625,
+      "pose_contribution": 0.526102,
+      "seg_contribution": 0.270081,
+      "score": 0.796182
+    },
+    {
+      "pair_idx": 244,
+      "posenet_mse": 0.03201507404446602,
+      "segnet_disagree": 0.0022786459885537624,
+      "pose_contribution": 0.565819,
+      "seg_contribution": 0.227865,
+      "score": 0.793683
+    },
+    {
+      "pair_idx": 353,
+      "posenet_mse": 0.04287301376461983,
+      "segnet_disagree": 0.0013427734375,
+      "pose_contribution": 0.654775,
+      "seg_contribution": 0.134277,
+      "score": 0.789052
+    },
+    {
+      "pair_idx": 590,
+      "posenet_mse": 0.03263745456933975,
+      "segnet_disagree": 0.0021565756760537624,
+      "pose_contribution": 0.571292,
+      "seg_contribution": 0.215658,
+      "score": 0.78695
+    },
+    {
+      "pair_idx": 138,
+      "posenet_mse": 0.025995930656790733,
+      "segnet_disagree": 0.0027618408203125,
+      "pose_contribution": 0.509862,
+      "seg_contribution": 0.276184,
+      "score": 0.786046
+    },
+    {
+      "pair_idx": 577,
+      "posenet_mse": 0.026874782517552376,
+      "segnet_disagree": 0.0026499431114643812,
+      "pose_contribution": 0.518409,
+      "seg_contribution": 0.264994,
+      "score": 0.783403
+    },
+    {
+      "pair_idx": 153,
+      "posenet_mse": 0.036066144704818726,
+      "segnet_disagree": 0.0018157958984375,
+      "pose_contribution": 0.600551,
+      "seg_contribution": 0.18158,
+      "score": 0.782131
+    },
+    {
+      "pair_idx": 114,
+      "posenet_mse": 0.03788274899125099,
+      "segnet_disagree": 0.0016530355205759406,
+      "pose_contribution": 0.61549,
+      "seg_contribution": 0.165304,
+      "score": 0.780793
+    },
+    {
+      "pair_idx": 508,
+      "posenet_mse": 0.016093643382191658,
+      "segnet_disagree": 0.0037943522911518812,
+      "pose_contribution": 0.401169,
+      "seg_contribution": 0.379435,
+      "score": 0.780604
+    },
+    {
+      "pair_idx": 413,
+      "posenet_mse": 0.029820596799254417,
+      "segnet_disagree": 0.0023345947265625,
+      "pose_contribution": 0.546082,
+      "seg_contribution": 0.233459,
+      "score": 0.779542
+    },
+    {
+      "pair_idx": 30,
+      "posenet_mse": 0.03496846556663513,
+      "segnet_disagree": 0.0018819173565134406,
+      "pose_contribution": 0.591341,
+      "seg_contribution": 0.188192,
+      "score": 0.779533
+    },
+    {
+      "pair_idx": 395,
+      "posenet_mse": 0.03543646261096001,
+      "segnet_disagree": 0.001800537109375,
+      "pose_contribution": 0.595285,
+      "seg_contribution": 0.180054,
+      "score": 0.775339
+    },
+    {
+      "pair_idx": 266,
+      "posenet_mse": 0.03468126058578491,
+      "segnet_disagree": 0.001861572265625,
+      "pose_contribution": 0.588908,
+      "seg_contribution": 0.186157,
+      "score": 0.775065
+    },
+    {
+      "pair_idx": 21,
+      "posenet_mse": 0.032729990780353546,
+      "segnet_disagree": 0.0020294189453125,
+      "pose_contribution": 0.572101,
+      "seg_contribution": 0.202942,
+      "score": 0.775043
+    },
+    {
+      "pair_idx": 103,
+      "posenet_mse": 0.02795293927192688,
+      "segnet_disagree": 0.0024566650390625,
+      "pose_contribution": 0.528705,
+      "seg_contribution": 0.245667,
+      "score": 0.774372
+    },
+    {
+      "pair_idx": 82,
+      "posenet_mse": 0.03658134862780571,
+      "segnet_disagree": 0.0015920003643259406,
+      "pose_contribution": 0.604825,
+      "seg_contribution": 0.1592,
+      "score": 0.764025
+    },
+    {
+      "pair_idx": 216,
+      "posenet_mse": 0.032418545335531235,
+      "segnet_disagree": 0.001922607421875,
+      "pose_contribution": 0.569373,
+      "seg_contribution": 0.192261,
+      "score": 0.761634
+    },
+    {
+      "pair_idx": 177,
+      "posenet_mse": 0.014533101581037045,
+      "segnet_disagree": 0.0037892661057412624,
+      "pose_contribution": 0.381223,
+      "seg_contribution": 0.378927,
+      "score": 0.76015
+    },
+    {
+      "pair_idx": 552,
+      "posenet_mse": 0.023712754249572754,
+      "segnet_disagree": 0.0027211508713662624,
+      "pose_contribution": 0.486957,
+      "seg_contribution": 0.272115,
+      "score": 0.759073
+    },
+    {
+      "pair_idx": 381,
+      "posenet_mse": 0.031323011964559555,
+      "segnet_disagree": 0.0019378662109375,
+      "pose_contribution": 0.55967,
+      "seg_contribution": 0.193787,
+      "score": 0.753456
+    },
+    {
+      "pair_idx": 270,
+      "posenet_mse": 0.0354190431535244,
+      "segnet_disagree": 0.0015767415752634406,
+      "pose_contribution": 0.595139,
+      "seg_contribution": 0.157674,
+      "score": 0.752813
+    },
+    {
+      "pair_idx": 578,
+      "posenet_mse": 0.02969123236835003,
+      "segnet_disagree": 0.0020599365234375,
+      "pose_contribution": 0.544897,
+      "seg_contribution": 0.205994,
+      "score": 0.75089
+    },
+    {
+      "pair_idx": 554,
+      "posenet_mse": 0.025907481089234352,
+      "segnet_disagree": 0.0023905436974018812,
+      "pose_contribution": 0.508994,
+      "seg_contribution": 0.239054,
+      "score": 0.748048
+    },
+    {
+      "pair_idx": 584,
+      "posenet_mse": 0.023335596546530724,
+      "segnet_disagree": 0.0026346843224018812,
+      "pose_contribution": 0.483069,
+      "seg_contribution": 0.263468,
+      "score": 0.746538
+    },
+    {
+      "pair_idx": 557,
+      "posenet_mse": 0.021360674872994423,
+      "segnet_disagree": 0.0028330485802143812,
+      "pose_contribution": 0.462176,
+      "seg_contribution": 0.283305,
+      "score": 0.745481
+    },
+    {
+      "pair_idx": 289,
+      "posenet_mse": 0.02804029919207096,
+      "segnet_disagree": 0.0021464030724018812,
+      "pose_contribution": 0.529531,
+      "seg_contribution": 0.21464,
+      "score": 0.744171
+    },
+    {
+      "pair_idx": 156,
+      "posenet_mse": 0.03301089629530907,
+      "segnet_disagree": 0.0016937255859375,
+      "pose_contribution": 0.574551,
+      "seg_contribution": 0.169373,
+      "score": 0.743924
+    },
+    {
+      "pair_idx": 241,
+      "posenet_mse": 0.026876645162701607,
+      "segnet_disagree": 0.0022481284104287624,
+      "pose_contribution": 0.518427,
+      "seg_contribution": 0.224813,
+      "score": 0.74324
+    },
+    {
+      "pair_idx": 575,
+      "posenet_mse": 0.02468286268413067,
+      "segnet_disagree": 0.0023956298828125,
+      "pose_contribution": 0.496819,
+      "seg_contribution": 0.239563,
+      "score": 0.736381
+    },
+    {
+      "pair_idx": 210,
+      "posenet_mse": 0.020873041823506355,
+      "segnet_disagree": 0.0027872722130268812,
+      "pose_contribution": 0.45687,
+      "seg_contribution": 0.278727,
+      "score": 0.735597
+    },
+    {
+      "pair_idx": 386,
+      "posenet_mse": 0.027683226391673088,
+      "segnet_disagree": 0.0020802817307412624,
+      "pose_contribution": 0.526149,
+      "seg_contribution": 0.208028,
+      "score": 0.734177
+    },
+    {
+      "pair_idx": 248,
+      "posenet_mse": 0.026501528918743134,
+      "segnet_disagree": 0.002166748046875,
+      "pose_contribution": 0.514796,
+      "seg_contribution": 0.216675,
+      "score": 0.731471
+    },
+    {
+      "pair_idx": 350,
+      "posenet_mse": 0.028898978605866432,
+      "segnet_disagree": 0.0019175212364643812,
+      "pose_contribution": 0.537578,
+      "seg_contribution": 0.191752,
+      "score": 0.72933
+    },
+    {
+      "pair_idx": 279,
+      "posenet_mse": 0.034619588404893875,
+      "segnet_disagree": 0.0013885498046875,
+      "pose_contribution": 0.588384,
+      "seg_contribution": 0.138855,
+      "score": 0.727239
+    },
+    {
+      "pair_idx": 36,
+      "posenet_mse": 0.030786260962486267,
+      "segnet_disagree": 0.001708984375,
+      "pose_contribution": 0.554854,
+      "seg_contribution": 0.170898,
+      "score": 0.725752
+    },
+    {
+      "pair_idx": 562,
+      "posenet_mse": 0.022483108565211296,
+      "segnet_disagree": 0.0024770102463662624,
+      "pose_contribution": 0.474164,
+      "seg_contribution": 0.247701,
+      "score": 0.721865
+    },
+    {
+      "pair_idx": 456,
+      "posenet_mse": 0.021094197407364845,
+      "segnet_disagree": 0.0026143393479287624,
+      "pose_contribution": 0.459284,
+      "seg_contribution": 0.261434,
+      "score": 0.720718
+    },
+    {
+      "pair_idx": 423,
+      "posenet_mse": 0.02396838180720806,
+      "segnet_disagree": 0.002288818359375,
+      "pose_contribution": 0.489575,
+      "seg_contribution": 0.228882,
+      "score": 0.718457
+    },
+    {
+      "pair_idx": 356,
+      "posenet_mse": 0.028004610911011696,
+      "segnet_disagree": 0.0018768310546875,
+      "pose_contribution": 0.529194,
+      "seg_contribution": 0.187683,
+      "score": 0.716877
+    },
+    {
+      "pair_idx": 242,
+      "posenet_mse": 0.029537172988057137,
+      "segnet_disagree": 0.0017191569786518812,
+      "pose_contribution": 0.543481,
+      "seg_contribution": 0.171916,
+      "score": 0.715397
+    },
+    {
+      "pair_idx": 67,
+      "posenet_mse": 0.027591625228524208,
+      "segnet_disagree": 0.0018208822002634406,
+      "pose_contribution": 0.525277,
+      "seg_contribution": 0.182088,
+      "score": 0.707366
+    },
+    {
+      "pair_idx": 257,
+      "posenet_mse": 0.022547222673892975,
+      "segnet_disagree": 0.0023244223557412624,
+      "pose_contribution": 0.474839,
+      "seg_contribution": 0.232442,
+      "score": 0.707281
+    },
+    {
+      "pair_idx": 589,
+      "posenet_mse": 0.02335752360522747,
+      "segnet_disagree": 0.0022176108323037624,
+      "pose_contribution": 0.483296,
+      "seg_contribution": 0.221761,
+      "score": 0.705057
+    },
+    {
+      "pair_idx": 222,
+      "posenet_mse": 0.023714812472462654,
+      "segnet_disagree": 0.0021464030724018812,
+      "pose_contribution": 0.486979,
+      "seg_contribution": 0.21464,
+      "score": 0.701619
+    },
+    {
+      "pair_idx": 8,
+      "posenet_mse": 0.027158066630363464,
+      "segnet_disagree": 0.001800537109375,
+      "pose_contribution": 0.521134,
+      "seg_contribution": 0.180054,
+      "score": 0.701188
+    },
+    {
+      "pair_idx": 139,
+      "posenet_mse": 0.03236183896660805,
+      "segnet_disagree": 0.0013224284630268812,
+      "pose_contribution": 0.568875,
+      "seg_contribution": 0.132243,
+      "score": 0.701118
+    },
+    {
+      "pair_idx": 178,
+      "posenet_mse": 0.015207555145025253,
+      "segnet_disagree": 0.0031026205979287624,
+      "pose_contribution": 0.389969,
+      "seg_contribution": 0.310262,
+      "score": 0.700231
+    },
+    {
+      "pair_idx": 261,
+      "posenet_mse": 0.025797531008720398,
+      "segnet_disagree": 0.0019175212364643812,
+      "pose_contribution": 0.507913,
+      "seg_contribution": 0.191752,
+      "score": 0.699665
+    },
+    {
+      "pair_idx": 394,
+      "posenet_mse": 0.027449889108538628,
+      "segnet_disagree": 0.0017242431640625,
+      "pose_contribution": 0.523926,
+      "seg_contribution": 0.172424,
+      "score": 0.696351
+    },
+    {
+      "pair_idx": 246,
+      "posenet_mse": 0.024661162868142128,
+      "segnet_disagree": 0.0019938151817768812,
+      "pose_contribution": 0.4966,
+      "seg_contribution": 0.199382,
+      "score": 0.695982
+    },
+    {
+      "pair_idx": 343,
+      "posenet_mse": 0.02349800616502762,
+      "segnet_disagree": 0.0020955405198037624,
+      "pose_contribution": 0.484747,
+      "seg_contribution": 0.209554,
+      "score": 0.694301
+    },
+    {
+      "pair_idx": 392,
+      "posenet_mse": 0.025272993370890617,
+      "segnet_disagree": 0.0018819173565134406,
+      "pose_contribution": 0.502723,
+      "seg_contribution": 0.188192,
+      "score": 0.690914
+    },
+    {
+      "pair_idx": 264,
+      "posenet_mse": 0.02416018210351467,
+      "segnet_disagree": 0.0019582114182412624,
+      "pose_contribution": 0.49153,
+      "seg_contribution": 0.195821,
+      "score": 0.687351
+    },
+    {
+      "pair_idx": 118,
+      "posenet_mse": 0.02485080622136593,
+      "segnet_disagree": 0.0018870036583393812,
+      "pose_contribution": 0.498506,
+      "seg_contribution": 0.1887,
+      "score": 0.687206
+    },
+    {
+      "pair_idx": 563,
+      "posenet_mse": 0.01653154008090496,
+      "segnet_disagree": 0.0027974448166787624,
+      "pose_contribution": 0.40659,
+      "seg_contribution": 0.279744,
+      "score": 0.686334
+    },
+    {
+      "pair_idx": 402,
+      "posenet_mse": 0.025510914623737335,
+      "segnet_disagree": 0.0017801921349018812,
+      "pose_contribution": 0.505083,
+      "seg_contribution": 0.178019,
+      "score": 0.683103
+    },
+    {
+      "pair_idx": 132,
+      "posenet_mse": 0.02463006228208542,
+      "segnet_disagree": 0.0018666585674509406,
+      "pose_contribution": 0.496287,
+      "seg_contribution": 0.186666,
+      "score": 0.682953
+    },
+    {
+      "pair_idx": 360,
+      "posenet_mse": 0.02818155102431774,
+      "segnet_disagree": 0.001495361328125,
+      "pose_contribution": 0.530863,
+      "seg_contribution": 0.149536,
+      "score": 0.680399
+    },
+    {
+      "pair_idx": 309,
+      "posenet_mse": 0.02651093155145645,
+      "segnet_disagree": 0.0016530355205759406,
+      "pose_contribution": 0.514888,
+      "seg_contribution": 0.165304,
+      "score": 0.680191
+    },
+    {
+      "pair_idx": 65,
+      "posenet_mse": 0.01993836648762226,
+      "segnet_disagree": 0.0023142497520893812,
+      "pose_contribution": 0.446524,
+      "seg_contribution": 0.231425,
+      "score": 0.677949
+    },
+    {
+      "pair_idx": 542,
+      "posenet_mse": 0.010402309708297253,
+      "segnet_disagree": 0.0035196940880268812,
+      "pose_contribution": 0.322526,
+      "seg_contribution": 0.351969,
+      "score": 0.674496
+    },
+    {
+      "pair_idx": 521,
+      "posenet_mse": 0.016470149159431458,
+      "segnet_disagree": 0.0026601157151162624,
+      "pose_contribution": 0.405834,
+      "seg_contribution": 0.266012,
+      "score": 0.671846
+    },
+    {
+      "pair_idx": 547,
+      "posenet_mse": 0.01408142875880003,
+      "segnet_disagree": 0.0029652914963662624,
+      "pose_contribution": 0.375252,
+      "seg_contribution": 0.296529,
+      "score": 0.671781
+    },
+    {
+      "pair_idx": 506,
+      "posenet_mse": 0.008957364596426487,
+      "segnet_disagree": 0.0037180583458393812,
+      "pose_contribution": 0.299289,
+      "seg_contribution": 0.371806,
+      "score": 0.671094
+    },
+    {
+      "pair_idx": 315,
+      "posenet_mse": 0.021348191425204277,
+      "segnet_disagree": 0.0020751953125,
+      "pose_contribution": 0.462041,
+      "seg_contribution": 0.20752,
+      "score": 0.669561
+    },
+    {
+      "pair_idx": 205,
+      "posenet_mse": 0.025359531864523888,
+      "segnet_disagree": 0.0016530355205759406,
+      "pose_contribution": 0.503582,
+      "seg_contribution": 0.165304,
+      "score": 0.668886
+    },
+    {
+      "pair_idx": 239,
+      "posenet_mse": 0.022924626246094704,
+      "segnet_disagree": 0.0018971761455759406,
+      "pose_contribution": 0.478797,
+      "seg_contribution": 0.189718,
+      "score": 0.668514
+    },
+    {
+      "pair_idx": 77,
+      "posenet_mse": 0.02512940764427185,
+      "segnet_disagree": 0.0016581218224018812,
+      "pose_contribution": 0.501292,
+      "seg_contribution": 0.165812,
+      "score": 0.667105
+    },
+    {
+      "pair_idx": 333,
+      "posenet_mse": 0.02519524097442627,
+      "segnet_disagree": 0.00164794921875,
+      "pose_contribution": 0.501949,
+      "seg_contribution": 0.164795,
+      "score": 0.666744
+    },
+    {
+      "pair_idx": 515,
+      "posenet_mse": 0.008678403683006763,
+      "segnet_disagree": 0.0037180583458393812,
+      "pose_contribution": 0.294591,
+      "seg_contribution": 0.371806,
+      "score": 0.666397
+    },
+    {
+      "pair_idx": 486,
+      "posenet_mse": 0.018913978710770607,
+      "segnet_disagree": 0.0022379558067768812,
+      "pose_contribution": 0.434902,
+      "seg_contribution": 0.223796,
+      "score": 0.658698
+    },
+    {
+      "pair_idx": 97,
+      "posenet_mse": 0.023193463683128357,
+      "segnet_disagree": 0.0017598470440134406,
+      "pose_contribution": 0.481596,
+      "seg_contribution": 0.175985,
+      "score": 0.657581
+    },
+    {
+      "pair_idx": 9,
+      "posenet_mse": 0.022009992972016335,
+      "segnet_disagree": 0.0018819173565134406,
+      "pose_contribution": 0.469148,
+      "seg_contribution": 0.188192,
+      "score": 0.65734
+    },
+    {
+      "pair_idx": 573,
+      "posenet_mse": 0.010518298484385014,
+      "segnet_disagree": 0.0033111572265625,
+      "pose_contribution": 0.324319,
+      "seg_contribution": 0.331116,
+      "score": 0.655435
+    },
+    {
+      "pair_idx": 99,
+      "posenet_mse": 0.020349107682704926,
+      "segnet_disagree": 0.0019938151817768812,
+      "pose_contribution": 0.4511,
+      "seg_contribution": 0.199382,
+      "score": 0.650481
+    },
+    {
+      "pair_idx": 457,
+      "posenet_mse": 0.01215767115354538,
+      "segnet_disagree": 0.0030161540489643812,
+      "pose_contribution": 0.348679,
+      "seg_contribution": 0.301615,
+      "score": 0.650294
+    },
+    {
+      "pair_idx": 346,
+      "posenet_mse": 0.022951984778046608,
+      "segnet_disagree": 0.0016988118877634406,
+      "pose_contribution": 0.479082,
+      "seg_contribution": 0.169881,
+      "score": 0.648963
+    },
+    {
+      "pair_idx": 564,
+      "posenet_mse": 0.015712084248661995,
+      "segnet_disagree": 0.0025227866135537624,
+      "pose_contribution": 0.396385,
+      "seg_contribution": 0.252279,
+      "score": 0.648663
+    },
+    {
+      "pair_idx": 42,
+      "posenet_mse": 0.022156402468681335,
+      "segnet_disagree": 0.00177001953125,
+      "pose_contribution": 0.470706,
+      "seg_contribution": 0.177002,
+      "score": 0.647708
+    },
+    {
+      "pair_idx": 362,
+      "posenet_mse": 0.02095089666545391,
+      "segnet_disagree": 0.0018870036583393812,
+      "pose_contribution": 0.457721,
+      "seg_contribution": 0.1887,
+      "score": 0.646422
+    },
+    {
+      "pair_idx": 497,
+      "posenet_mse": 0.013343575410544872,
+      "segnet_disagree": 0.0028025310020893812,
+      "pose_contribution": 0.365289,
+      "seg_contribution": 0.280253,
+      "score": 0.645542
+    },
+    {
+      "pair_idx": 293,
+      "posenet_mse": 0.017681190744042397,
+      "segnet_disagree": 0.0022430419921875,
+      "pose_contribution": 0.42049,
+      "seg_contribution": 0.224304,
+      "score": 0.644794
+    },
+    {
+      "pair_idx": 131,
+      "posenet_mse": 0.020857779309153557,
+      "segnet_disagree": 0.0018717448692768812,
+      "pose_contribution": 0.456703,
+      "seg_contribution": 0.187174,
+      "score": 0.643878
+    },
+    {
+      "pair_idx": 458,
+      "posenet_mse": 0.018414776772260666,
+      "segnet_disagree": 0.0021413168869912624,
+      "pose_contribution": 0.429124,
+      "seg_contribution": 0.214132,
+      "score": 0.643256
+    },
+    {
+      "pair_idx": 344,
+      "posenet_mse": 0.021966062486171722,
+      "segnet_disagree": 0.0017445882549509406,
+      "pose_contribution": 0.46868,
+      "seg_contribution": 0.174459,
+      "score": 0.643138
+    },
+    {
+      "pair_idx": 421,
+      "posenet_mse": 0.02239651419222355,
+      "segnet_disagree": 0.0016733806114643812,
+      "pose_contribution": 0.47325,
+      "seg_contribution": 0.167338,
+      "score": 0.640588
+    },
+    {
+      "pair_idx": 47,
+      "posenet_mse": 0.023308925330638885,
+      "segnet_disagree": 0.0015767415752634406,
+      "pose_contribution": 0.482793,
+      "seg_contribution": 0.157674,
+      "score": 0.640467
+    },
+    {
+      "pair_idx": 286,
+      "posenet_mse": 0.02319868840277195,
+      "segnet_disagree": 0.0015869140625,
+      "pose_contribution": 0.48165,
+      "seg_contribution": 0.158691,
+      "score": 0.640342
+    },
+    {
+      "pair_idx": 403,
+      "posenet_mse": 0.020722242072224617,
+      "segnet_disagree": 0.0018463134765625,
+      "pose_contribution": 0.455217,
+      "seg_contribution": 0.184631,
+      "score": 0.639848
+    },
+    {
+      "pair_idx": 487,
+      "posenet_mse": 0.01747027225792408,
+      "segnet_disagree": 0.0022176108323037624,
+      "pose_contribution": 0.417975,
+      "seg_contribution": 0.221761,
+      "score": 0.639736
+    },
+    {
+      "pair_idx": 466,
+      "posenet_mse": 0.013584432192146778,
+      "segnet_disagree": 0.0027008056640625,
+      "pose_contribution": 0.368571,
+      "seg_contribution": 0.270081,
+      "score": 0.638651
+    },
+    {
+      "pair_idx": 119,
+      "posenet_mse": 0.018621230497956276,
+      "segnet_disagree": 0.0020599365234375,
+      "pose_contribution": 0.431523,
+      "seg_contribution": 0.205994,
+      "score": 0.637517
+    },
+    {
+      "pair_idx": 183,
+      "posenet_mse": 0.022813841700553894,
+      "segnet_disagree": 0.0015920003643259406,
+      "pose_contribution": 0.477638,
+      "seg_contribution": 0.1592,
+      "score": 0.636838
+    },
+    {
+      "pair_idx": 569,
+      "posenet_mse": 0.009890125133097172,
+      "segnet_disagree": 0.0032094321213662624,
+      "pose_contribution": 0.314486,
+      "seg_contribution": 0.320943,
+      "score": 0.635429
+    },
+    {
+      "pair_idx": 280,
+      "posenet_mse": 0.01785227097570896,
+      "segnet_disagree": 0.0021260580979287624,
+      "pose_contribution": 0.422519,
+      "seg_contribution": 0.212606,
+      "score": 0.635125
+    },
+    {
+      "pair_idx": 453,
+      "posenet_mse": 0.017940495163202286,
+      "segnet_disagree": 0.002105712890625,
+      "pose_contribution": 0.423562,
+      "seg_contribution": 0.210571,
+      "score": 0.634134
+    },
+    {
+      "pair_idx": 436,
+      "posenet_mse": 0.018007246777415276,
+      "segnet_disagree": 0.0020904541015625,
+      "pose_contribution": 0.424349,
+      "seg_contribution": 0.209045,
+      "score": 0.633395
+    },
+    {
+      "pair_idx": 534,
+      "posenet_mse": 0.013729092665016651,
+      "segnet_disagree": 0.0026092529296875,
+      "pose_contribution": 0.370528,
+      "seg_contribution": 0.260925,
+      "score": 0.631453
+    },
+    {
+      "pair_idx": 545,
+      "posenet_mse": 0.015192701481282711,
+      "segnet_disagree": 0.0024007163010537624,
+      "pose_contribution": 0.389778,
+      "seg_contribution": 0.240072,
+      "score": 0.62985
+    },
+    {
+      "pair_idx": 318,
+      "posenet_mse": 0.01239074394106865,
+      "segnet_disagree": 0.002777099609375,
+      "pose_contribution": 0.352005,
+      "seg_contribution": 0.27771,
+      "score": 0.629715
+    },
+    {
+      "pair_idx": 58,
+      "posenet_mse": 0.021143915131688118,
+      "segnet_disagree": 0.001678466796875,
+      "pose_contribution": 0.459825,
+      "seg_contribution": 0.167847,
+      "score": 0.627672
+    },
+    {
+      "pair_idx": 148,
+      "posenet_mse": 0.019445696845650673,
+      "segnet_disagree": 0.0018361409893259406,
+      "pose_contribution": 0.440973,
+      "seg_contribution": 0.183614,
+      "score": 0.624587
+    },
+    {
+      "pair_idx": 229,
+      "posenet_mse": 0.016898253932595253,
+      "segnet_disagree": 0.0021260580979287624,
+      "pose_contribution": 0.411075,
+      "seg_contribution": 0.212606,
+      "score": 0.623681
+    },
+    {
+      "pair_idx": 75,
+      "posenet_mse": 0.016371434554457664,
+      "segnet_disagree": 0.002166748046875,
+      "pose_contribution": 0.404616,
+      "seg_contribution": 0.216675,
+      "score": 0.621291
+    },
+    {
+      "pair_idx": 218,
+      "posenet_mse": 0.021767860278487206,
+      "segnet_disagree": 0.0015360515099018812,
+      "pose_contribution": 0.46656,
+      "seg_contribution": 0.153605,
+      "score": 0.620166
+    },
+    {
+      "pair_idx": 169,
+      "posenet_mse": 0.016756875440478325,
+      "segnet_disagree": 0.002105712890625,
+      "pose_contribution": 0.409352,
+      "seg_contribution": 0.210571,
+      "score": 0.619923
+    },
+    {
+      "pair_idx": 155,
+      "posenet_mse": 0.02051629312336445,
+      "segnet_disagree": 0.00164794921875,
+      "pose_contribution": 0.452949,
+      "seg_contribution": 0.164795,
+      "score": 0.617744
+    },
+    {
+      "pair_idx": 568,
+      "posenet_mse": 0.012614508159458637,
+      "segnet_disagree": 0.0026194255333393812,
+      "pose_contribution": 0.355169,
+      "seg_contribution": 0.261943,
+      "score": 0.617112
+    },
+    {
+      "pair_idx": 215,
+      "posenet_mse": 0.015990717336535454,
+      "segnet_disagree": 0.0021260580979287624,
+      "pose_contribution": 0.399884,
+      "seg_contribution": 0.212606,
+      "score": 0.61249
+    },
+    {
+      "pair_idx": 116,
+      "posenet_mse": 0.018589850515127182,
+      "segnet_disagree": 0.001800537109375,
+      "pose_contribution": 0.431159,
+      "seg_contribution": 0.180054,
+      "score": 0.611213
+    },
+    {
+      "pair_idx": 473,
+      "posenet_mse": 0.01071808859705925,
+      "segnet_disagree": 0.0028330485802143812,
+      "pose_contribution": 0.327385,
+      "seg_contribution": 0.283305,
+      "score": 0.61069
+    },
+    {
+      "pair_idx": 12,
+      "posenet_mse": 0.015351896174252033,
+      "segnet_disagree": 0.0021565756760537624,
+      "pose_contribution": 0.391815,
+      "seg_contribution": 0.215658,
+      "score": 0.607473
+    },
+    {
+      "pair_idx": 546,
+      "posenet_mse": 0.0012433090014383197,
+      "segnet_disagree": 0.0049591064453125,
+      "pose_contribution": 0.111504,
+      "seg_contribution": 0.495911,
+      "score": 0.607414
+    },
+    {
+      "pair_idx": 369,
+      "posenet_mse": 0.020523304119706154,
+      "segnet_disagree": 0.0015360515099018812,
+      "pose_contribution": 0.453027,
+      "seg_contribution": 0.153605,
+      "score": 0.606632
+    },
+    {
+      "pair_idx": 238,
+      "posenet_mse": 0.01811959780752659,
+      "segnet_disagree": 0.0018056234112009406,
+      "pose_contribution": 0.425671,
+      "seg_contribution": 0.180562,
+      "score": 0.606234
+    },
+    {
+      "pair_idx": 538,
+      "posenet_mse": 0.015171055682003498,
+      "segnet_disagree": 0.002166748046875,
+      "pose_contribution": 0.3895,
+      "seg_contribution": 0.216675,
+      "score": 0.606175
+    },
+    {
+      "pair_idx": 535,
+      "posenet_mse": 0.017084980383515358,
+      "segnet_disagree": 0.0019276937237009406,
+      "pose_contribution": 0.41334,
+      "seg_contribution": 0.192769,
+      "score": 0.606109
+    },
+    {
+      "pair_idx": 243,
+      "posenet_mse": 0.017516452819108963,
+      "segnet_disagree": 0.0018564860802143812,
+      "pose_contribution": 0.418527,
+      "seg_contribution": 0.185649,
+      "score": 0.604175
+    },
+    {
+      "pair_idx": 235,
+      "posenet_mse": 0.018463080748915672,
+      "segnet_disagree": 0.0017293294658884406,
+      "pose_contribution": 0.429687,
+      "seg_contribution": 0.172933,
+      "score": 0.60262
+    },
+    {
+      "pair_idx": 143,
+      "posenet_mse": 0.015330538153648376,
+      "segnet_disagree": 0.0020802817307412624,
+      "pose_contribution": 0.391542,
+      "seg_contribution": 0.208028,
+      "score": 0.59957
+    },
+    {
+      "pair_idx": 425,
+      "posenet_mse": 0.01800350844860077,
+      "segnet_disagree": 0.0017445882549509406,
+      "pose_contribution": 0.424305,
+      "seg_contribution": 0.174459,
+      "score": 0.598764
+    },
+    {
+      "pair_idx": 197,
+      "posenet_mse": 0.01624261401593685,
+      "segnet_disagree": 0.001953125,
+      "pose_contribution": 0.403021,
+      "seg_contribution": 0.195312,
+      "score": 0.598334
+    },
+    {
+      "pair_idx": 252,
+      "posenet_mse": 0.01634998433291912,
+      "segnet_disagree": 0.0019327800255268812,
+      "pose_contribution": 0.404351,
+      "seg_contribution": 0.193278,
+      "score": 0.597629
+    },
+    {
+      "pair_idx": 130,
+      "posenet_mse": 0.020520277321338654,
+      "segnet_disagree": 0.0014444987755268812,
+      "pose_contribution": 0.452993,
+      "seg_contribution": 0.14445,
+      "score": 0.597443
+    },
+    {
+      "pair_idx": 586,
+      "posenet_mse": 0.013480406254529953,
+      "segnet_disagree": 0.0022989909630268812,
+      "pose_contribution": 0.367157,
+      "seg_contribution": 0.229899,
+      "score": 0.597056
+    },
+    {
+      "pair_idx": 136,
+      "posenet_mse": 0.011464850045740604,
+      "segnet_disagree": 0.0025634765625,
+      "pose_contribution": 0.338598,
+      "seg_contribution": 0.256348,
+      "score": 0.594946
+    },
+    {
+      "pair_idx": 548,
+      "posenet_mse": 0.01206184271723032,
+      "segnet_disagree": 0.002471923828125,
+      "pose_contribution": 0.347302,
+      "seg_contribution": 0.247192,
+      "score": 0.594494
+    },
+    {
+      "pair_idx": 494,
+      "posenet_mse": 0.008481900207698345,
+      "segnet_disagree": 0.0030161540489643812,
+      "pose_contribution": 0.291237,
+      "seg_contribution": 0.301615,
+      "score": 0.592852
+    },
+    {
+      "pair_idx": 192,
+      "posenet_mse": 0.011034674942493439,
+      "segnet_disagree": 0.0025990805588662624,
+      "pose_contribution": 0.332185,
+      "seg_contribution": 0.259908,
+      "score": 0.592093
+    },
+    {
+      "pair_idx": 435,
+      "posenet_mse": 0.016055116429924965,
+      "segnet_disagree": 0.0019073486328125,
+      "pose_contribution": 0.400688,
+      "seg_contribution": 0.190735,
+      "score": 0.591423
+    },
+    {
+      "pair_idx": 106,
+      "posenet_mse": 0.012930765748023987,
+      "segnet_disagree": 0.0023142497520893812,
+      "pose_contribution": 0.359594,
+      "seg_contribution": 0.231425,
+      "score": 0.591019
+    },
+    {
+      "pair_idx": 572,
+      "posenet_mse": 0.007590150460600853,
+      "segnet_disagree": 0.0031483969651162624,
+      "pose_contribution": 0.275502,
+      "seg_contribution": 0.31484,
+      "score": 0.590342
+    },
+    {
+      "pair_idx": 472,
+      "posenet_mse": 0.010456767864525318,
+      "segnet_disagree": 0.002655029296875,
+      "pose_contribution": 0.323369,
+      "seg_contribution": 0.265503,
+      "score": 0.588872
+    },
+    {
+      "pair_idx": 510,
+      "posenet_mse": 0.007570199202746153,
+      "segnet_disagree": 0.0031026205979287624,
+      "pose_contribution": 0.27514,
+      "seg_contribution": 0.310262,
+      "score": 0.585402
+    },
+    {
+      "pair_idx": 525,
+      "posenet_mse": 0.011021614074707031,
+      "segnet_disagree": 0.002532958984375,
+      "pose_contribution": 0.331988,
+      "seg_contribution": 0.253296,
+      "score": 0.585284
+    },
+    {
+      "pair_idx": 126,
+      "posenet_mse": 0.014552059583365917,
+      "segnet_disagree": 0.0020345053635537624,
+      "pose_contribution": 0.381472,
+      "seg_contribution": 0.203451,
+      "score": 0.584922
+    },
+    {
+      "pair_idx": 576,
+      "posenet_mse": 0.010531228967010975,
+      "segnet_disagree": 0.002593994140625,
+      "pose_contribution": 0.324519,
+      "seg_contribution": 0.259399,
+      "score": 0.583918
+    },
+    {
+      "pair_idx": 137,
+      "posenet_mse": 0.012473850511014462,
+      "segnet_disagree": 0.0023040771484375,
+      "pose_contribution": 0.353183,
+      "seg_contribution": 0.230408,
+      "score": 0.583591
+    },
+    {
+      "pair_idx": 60,
+      "posenet_mse": 0.01773890107870102,
+      "segnet_disagree": 0.0016225179424509406,
+      "pose_contribution": 0.421176,
+      "seg_contribution": 0.162252,
+      "score": 0.583428
+    },
+    {
+      "pair_idx": 22,
+      "posenet_mse": 0.014404748566448689,
+      "segnet_disagree": 0.0020243327599018812,
+      "pose_contribution": 0.379536,
+      "seg_contribution": 0.202433,
+      "score": 0.581969
+    },
+    {
+      "pair_idx": 105,
+      "posenet_mse": 0.01130416989326477,
+      "segnet_disagree": 0.0024566650390625,
+      "pose_contribution": 0.336217,
+      "seg_contribution": 0.245667,
+      "score": 0.581883
+    },
+    {
+      "pair_idx": 523,
+      "posenet_mse": 0.007714267820119858,
+      "segnet_disagree": 0.0030314128380268812,
+      "pose_contribution": 0.277746,
+      "seg_contribution": 0.303141,
+      "score": 0.580887
+    },
+    {
+      "pair_idx": 426,
+      "posenet_mse": 0.014242123812437057,
+      "segnet_disagree": 0.0020090739708393812,
+      "pose_contribution": 0.377387,
+      "seg_contribution": 0.200907,
+      "score": 0.578295
+    },
+    {
+      "pair_idx": 378,
+      "posenet_mse": 0.01906067319214344,
+      "segnet_disagree": 0.0014139811974018812,
+      "pose_contribution": 0.436585,
+      "seg_contribution": 0.141398,
+      "score": 0.577983
+    },
+    {
+      "pair_idx": 13,
+      "posenet_mse": 0.014265719801187515,
+      "segnet_disagree": 0.001983642578125,
+      "pose_contribution": 0.3777,
+      "seg_contribution": 0.198364,
+      "score": 0.576064
+    },
+    {
+      "pair_idx": 189,
+      "posenet_mse": 0.01657848432660103,
+      "segnet_disagree": 0.0016886394005268812,
+      "pose_contribution": 0.407167,
+      "seg_contribution": 0.168864,
+      "score": 0.576031
+    },
+    {
+      "pair_idx": 361,
+      "posenet_mse": 0.014144066721200943,
+      "segnet_disagree": 0.0019989013671875,
+      "pose_contribution": 0.376086,
+      "seg_contribution": 0.19989,
+      "score": 0.575976
+    },
+    {
+      "pair_idx": 113,
+      "posenet_mse": 0.015082795172929764,
+      "segnet_disagree": 0.0018513997783884406,
+      "pose_contribution": 0.388366,
+      "seg_contribution": 0.18514,
+      "score": 0.573506
+    },
+    {
+      "pair_idx": 391,
+      "posenet_mse": 0.014200507663190365,
+      "segnet_disagree": 0.0019582114182412624,
+      "pose_contribution": 0.376836,
+      "seg_contribution": 0.195821,
+      "score": 0.572657
+    },
+    {
+      "pair_idx": 418,
+      "posenet_mse": 0.012502397410571575,
+      "segnet_disagree": 0.0021820068359375,
+      "pose_contribution": 0.353587,
+      "seg_contribution": 0.218201,
+      "score": 0.571788
+    },
+    {
+      "pair_idx": 52,
+      "posenet_mse": 0.014134633354842663,
+      "segnet_disagree": 0.0019327800255268812,
+      "pose_contribution": 0.375961,
+      "seg_contribution": 0.193278,
+      "score": 0.569239
+    },
+    {
+      "pair_idx": 410,
+      "posenet_mse": 0.016060180962085724,
+      "segnet_disagree": 0.0016530355205759406,
+      "pose_contribution": 0.400752,
+      "seg_contribution": 0.165304,
+      "score": 0.566055
+    },
+    {
+      "pair_idx": 306,
+      "posenet_mse": 0.014130928553640842,
+      "segnet_disagree": 0.0018971761455759406,
+      "pose_contribution": 0.375911,
+      "seg_contribution": 0.189718,
+      "score": 0.565629
+    },
+    {
+      "pair_idx": 374,
+      "posenet_mse": 0.016538584604859352,
+      "segnet_disagree": 0.0015767415752634406,
+      "pose_contribution": 0.406677,
+      "seg_contribution": 0.157674,
+      "score": 0.564351
+    },
+    {
+      "pair_idx": 335,
+      "posenet_mse": 0.014478649012744427,
+      "segnet_disagree": 0.0018361409893259406,
+      "pose_contribution": 0.380508,
+      "seg_contribution": 0.183614,
+      "score": 0.564122
+    },
+    {
+      "pair_idx": 331,
+      "posenet_mse": 0.01026653777807951,
+      "segnet_disagree": 0.002410888671875,
+      "pose_contribution": 0.320414,
+      "seg_contribution": 0.241089,
+      "score": 0.561503
+    },
+    {
+      "pair_idx": 591,
+      "posenet_mse": 0.012709314934909344,
+      "segnet_disagree": 0.002044677734375,
+      "pose_contribution": 0.356501,
+      "seg_contribution": 0.204468,
+      "score": 0.560969
+    },
+    {
+      "pair_idx": 187,
+      "posenet_mse": 0.012453272007405758,
+      "segnet_disagree": 0.0020701091270893812,
+      "pose_contribution": 0.352892,
+      "seg_contribution": 0.207011,
+      "score": 0.559903
+    },
+    {
+      "pair_idx": 15,
+      "posenet_mse": 0.011018057353794575,
+      "segnet_disagree": 0.0022735595703125,
+      "pose_contribution": 0.331935,
+      "seg_contribution": 0.227356,
+      "score": 0.559291
+    },
+    {
+      "pair_idx": 24,
+      "posenet_mse": 0.015432111918926239,
+      "segnet_disagree": 0.0016632080078125,
+      "pose_contribution": 0.392837,
+      "seg_contribution": 0.166321,
+      "score": 0.559158
+    },
+    {
+      "pair_idx": 73,
+      "posenet_mse": 0.011037543416023254,
+      "segnet_disagree": 0.0022532145958393812,
+      "pose_contribution": 0.332228,
+      "seg_contribution": 0.225321,
+      "score": 0.557549
+    },
+    {
+      "pair_idx": 539,
+      "posenet_mse": 0.006552720908075571,
+      "segnet_disagree": 0.0030110678635537624,
+      "pose_contribution": 0.255983,
+      "seg_contribution": 0.301107,
+      "score": 0.55709
+    },
+    {
+      "pair_idx": 574,
+      "posenet_mse": 0.006769777741283178,
+      "segnet_disagree": 0.002960205078125,
+      "pose_contribution": 0.260188,
+      "seg_contribution": 0.296021,
+      "score": 0.556208
+    },
+    {
+      "pair_idx": 174,
+      "posenet_mse": 0.014174383133649826,
+      "segnet_disagree": 0.0017852783203125,
+      "pose_contribution": 0.376489,
+      "seg_contribution": 0.178528,
+      "score": 0.555017
+    },
+    {
+      "pair_idx": 428,
+      "posenet_mse": 0.01089533045887947,
+      "segnet_disagree": 0.0022379558067768812,
+      "pose_contribution": 0.330081,
+      "seg_contribution": 0.223796,
+      "score": 0.553876
+    },
+    {
+      "pair_idx": 133,
+      "posenet_mse": 0.007458361331373453,
+      "segnet_disagree": 0.0028025310020893812,
+      "pose_contribution": 0.2731,
+      "seg_contribution": 0.280253,
+      "score": 0.553353
+    },
+    {
+      "pair_idx": 179,
+      "posenet_mse": 0.011949151754379272,
+      "segnet_disagree": 0.0020751953125,
+      "pose_contribution": 0.345675,
+      "seg_contribution": 0.20752,
+      "score": 0.553195
+    },
+    {
+      "pair_idx": 61,
+      "posenet_mse": 0.012216698378324509,
+      "segnet_disagree": 0.0020345053635537624,
+      "pose_contribution": 0.349524,
+      "seg_contribution": 0.203451,
+      "score": 0.552974
+    },
+    {
+      "pair_idx": 430,
+      "posenet_mse": 0.013071856461465359,
+      "segnet_disagree": 0.0019124349346384406,
+      "pose_contribution": 0.36155,
+      "seg_contribution": 0.191243,
+      "score": 0.552794
+    },
+    {
+      "pair_idx": 162,
+      "posenet_mse": 0.012810696847736835,
+      "segnet_disagree": 0.0019327800255268812,
+      "pose_contribution": 0.35792,
+      "seg_contribution": 0.193278,
+      "score": 0.551198
+    },
+    {
+      "pair_idx": 449,
+      "posenet_mse": 0.009561124257743359,
+      "segnet_disagree": 0.002410888671875,
+      "pose_contribution": 0.309211,
+      "seg_contribution": 0.241089,
+      "score": 0.5503
+    },
+    {
+      "pair_idx": 445,
+      "posenet_mse": 0.01170822512358427,
+      "segnet_disagree": 0.0020701091270893812,
+      "pose_contribution": 0.342173,
+      "seg_contribution": 0.207011,
+      "score": 0.549184
+    },
+    {
+      "pair_idx": 93,
+      "posenet_mse": 0.012004614807665348,
+      "segnet_disagree": 0.00201416015625,
+      "pose_contribution": 0.346477,
+      "seg_contribution": 0.201416,
+      "score": 0.547893
+    },
+    {
+      "pair_idx": 499,
+      "posenet_mse": 0.005449783056974411,
+      "segnet_disagree": 0.0031331381760537624,
+      "pose_contribution": 0.233448,
+      "seg_contribution": 0.313314,
+      "score": 0.546762
+    },
+    {
+      "pair_idx": 332,
+      "posenet_mse": 0.010429970920085907,
+      "segnet_disagree": 0.002227783203125,
+      "pose_contribution": 0.322955,
+      "seg_contribution": 0.222778,
+      "score": 0.545733
+    },
+    {
+      "pair_idx": 347,
+      "posenet_mse": 0.012114242650568485,
+      "segnet_disagree": 0.0019632976036518812,
+      "pose_contribution": 0.348055,
+      "seg_contribution": 0.19633,
+      "score": 0.544385
+    },
+    {
+      "pair_idx": 588,
+      "posenet_mse": 0.009473036974668503,
+      "segnet_disagree": 0.0023549399338662624,
+      "pose_contribution": 0.307783,
+      "seg_contribution": 0.235494,
+      "score": 0.543277
+    },
+    {
+      "pair_idx": 98,
+      "posenet_mse": 0.014090741984546185,
+      "segnet_disagree": 0.0016225179424509406,
+      "pose_contribution": 0.375376,
+      "seg_contribution": 0.162252,
+      "score": 0.537628
+    },
+    {
+      "pair_idx": 85,
+      "posenet_mse": 0.014460589736700058,
+      "segnet_disagree": 0.0015716552734375,
+      "pose_contribution": 0.380271,
+      "seg_contribution": 0.157166,
+      "score": 0.537436
+    },
+    {
+      "pair_idx": 594,
+      "posenet_mse": 0.00770639069378376,
+      "segnet_disagree": 0.002593994140625,
+      "pose_contribution": 0.277604,
+      "seg_contribution": 0.259399,
+      "score": 0.537003
+    },
+    {
+      "pair_idx": 225,
+      "posenet_mse": 0.011858850717544556,
+      "segnet_disagree": 0.001922607421875,
+      "pose_contribution": 0.344367,
+      "seg_contribution": 0.192261,
+      "score": 0.536628
+    },
+    {
+      "pair_idx": 471,
+      "posenet_mse": 0.005419107154011726,
+      "segnet_disagree": 0.0030314128380268812,
+      "pose_contribution": 0.23279,
+      "seg_contribution": 0.303141,
+      "score": 0.535931
+    },
+    {
+      "pair_idx": 324,
+      "posenet_mse": 0.010481749661266804,
+      "segnet_disagree": 0.0020955405198037624,
+      "pose_contribution": 0.323755,
+      "seg_contribution": 0.209554,
+      "score": 0.533309
+    },
+    {
+      "pair_idx": 272,
+      "posenet_mse": 0.014517836272716522,
+      "segnet_disagree": 0.0015157064190134406,
+      "pose_contribution": 0.381023,
+      "seg_contribution": 0.151571,
+      "score": 0.532593
+    },
+    {
+      "pair_idx": 493,
+      "posenet_mse": 0.0059044272638857365,
+      "segnet_disagree": 0.0028940837364643812,
+      "pose_contribution": 0.24299,
+      "seg_contribution": 0.289408,
+      "score": 0.532399
+    },
+    {
+      "pair_idx": 520,
+      "posenet_mse": 0.0076459962874650955,
+      "segnet_disagree": 0.0025075278244912624,
+      "pose_contribution": 0.276514,
+      "seg_contribution": 0.250753,
+      "score": 0.527267
+    },
+    {
+      "pair_idx": 200,
+      "posenet_mse": 0.010483303107321262,
+      "segnet_disagree": 0.0020294189453125,
+      "pose_contribution": 0.323779,
+      "seg_contribution": 0.202942,
+      "score": 0.526721
+    },
+    {
+      "pair_idx": 349,
+      "posenet_mse": 0.01366423163563013,
+      "segnet_disagree": 0.0015614827862009406,
+      "pose_contribution": 0.369652,
+      "seg_contribution": 0.156148,
+      "score": 0.5258
+    },
+    {
+      "pair_idx": 217,
+      "posenet_mse": 0.013810413889586926,
+      "segnet_disagree": 0.0015360515099018812,
+      "pose_contribution": 0.371624,
+      "seg_contribution": 0.153605,
+      "score": 0.525229
+    },
+    {
+      "pair_idx": 524,
+      "posenet_mse": 0.009061084128916264,
+      "segnet_disagree": 0.002227783203125,
+      "pose_contribution": 0.301016,
+      "seg_contribution": 0.222778,
+      "score": 0.523795
+    },
+    {
+      "pair_idx": 194,
+      "posenet_mse": 0.009824906475841999,
+      "segnet_disagree": 0.0021006267052143812,
+      "pose_contribution": 0.313447,
+      "seg_contribution": 0.210063,
+      "score": 0.52351
+    },
+    {
+      "pair_idx": 288,
+      "posenet_mse": 0.01439556386321783,
+      "segnet_disagree": 0.0014394124737009406,
+      "pose_contribution": 0.379415,
+      "seg_contribution": 0.143941,
+      "score": 0.523356
+    },
+    {
+      "pair_idx": 580,
+      "posenet_mse": 0.008069237694144249,
+      "segnet_disagree": 0.0023905436974018812,
+      "pose_contribution": 0.284064,
+      "seg_contribution": 0.239054,
+      "score": 0.523118
+    },
+    {
+      "pair_idx": 55,
+      "posenet_mse": 0.012112910859286785,
+      "segnet_disagree": 0.0017445882549509406,
+      "pose_contribution": 0.348036,
+      "seg_contribution": 0.174459,
+      "score": 0.522495
+    },
+    {
+      "pair_idx": 438,
+      "posenet_mse": 0.009805780835449696,
+      "segnet_disagree": 0.0020904541015625,
+      "pose_contribution": 0.313142,
+      "seg_contribution": 0.209045,
+      "score": 0.522187
+    },
+    {
+      "pair_idx": 198,
+      "posenet_mse": 0.012102550826966763,
+      "segnet_disagree": 0.0017242431640625,
+      "pose_contribution": 0.347887,
+      "seg_contribution": 0.172424,
+      "score": 0.520312
+    },
+    {
+      "pair_idx": 348,
+      "posenet_mse": 0.009747018106281757,
+      "segnet_disagree": 0.0020599365234375,
+      "pose_contribution": 0.312202,
+      "seg_contribution": 0.205994,
+      "score": 0.518196
+    },
+    {
+      "pair_idx": 301,
+      "posenet_mse": 0.010622907429933548,
+      "segnet_disagree": 0.0019124349346384406,
+      "pose_contribution": 0.325928,
+      "seg_contribution": 0.191243,
+      "score": 0.517172
+    },
+    {
+      "pair_idx": 558,
+      "posenet_mse": 0.010091482661664486,
+      "segnet_disagree": 0.0019938151817768812,
+      "pose_contribution": 0.317671,
+      "seg_contribution": 0.199382,
+      "score": 0.517052
+    },
+    {
+      "pair_idx": 87,
+      "posenet_mse": 0.010853822343051434,
+      "segnet_disagree": 0.0018717448692768812,
+      "pose_contribution": 0.329451,
+      "seg_contribution": 0.187174,
+      "score": 0.516626
+    },
+    {
+      "pair_idx": 168,
+      "posenet_mse": 0.008087105117738247,
+      "segnet_disagree": 0.0023142497520893812,
+      "pose_contribution": 0.284378,
+      "seg_contribution": 0.231425,
+      "score": 0.515803
+    },
+    {
+      "pair_idx": 230,
+      "posenet_mse": 0.009878692217171192,
+      "segnet_disagree": 0.0020039877854287624,
+      "pose_contribution": 0.314304,
+      "seg_contribution": 0.200399,
+      "score": 0.514703
+    },
+    {
+      "pair_idx": 537,
+      "posenet_mse": 0.006912620272487402,
+      "segnet_disagree": 0.0025075278244912624,
+      "pose_contribution": 0.262919,
+      "seg_contribution": 0.250753,
+      "score": 0.513671
+    },
+    {
+      "pair_idx": 536,
+      "posenet_mse": 0.006074694450944662,
+      "segnet_disagree": 0.0026702880859375,
+      "pose_contribution": 0.246469,
+      "seg_contribution": 0.267029,
+      "score": 0.513498
+    },
+    {
+      "pair_idx": 393,
+      "posenet_mse": 0.01175204198807478,
+      "segnet_disagree": 0.0017038981895893812,
+      "pose_contribution": 0.342813,
+      "seg_contribution": 0.17039,
+      "score": 0.513202
+    },
+    {
+      "pair_idx": 443,
+      "posenet_mse": 0.009153591468930244,
+      "segnet_disagree": 0.0020802817307412624,
+      "pose_contribution": 0.302549,
+      "seg_contribution": 0.208028,
+      "score": 0.510577
+    },
+    {
+      "pair_idx": 165,
+      "posenet_mse": 0.0028229125309735537,
+      "segnet_disagree": 0.0034230551682412624,
+      "pose_contribution": 0.168015,
+      "seg_contribution": 0.342306,
+      "score": 0.510321
+    },
+    {
+      "pair_idx": 152,
+      "posenet_mse": 0.009495473466813564,
+      "segnet_disagree": 0.00201416015625,
+      "pose_contribution": 0.308147,
+      "seg_contribution": 0.201416,
+      "score": 0.509563
+    },
+    {
+      "pair_idx": 340,
+      "posenet_mse": 0.012260650284588337,
+      "segnet_disagree": 0.0015818278770893812,
+      "pose_contribution": 0.350152,
+      "seg_contribution": 0.158183,
+      "score": 0.508335
+    },
+    {
+      "pair_idx": 251,
+      "posenet_mse": 0.013227411545813084,
+      "segnet_disagree": 0.0014444987755268812,
+      "pose_contribution": 0.363695,
+      "seg_contribution": 0.14445,
+      "score": 0.508145
+    },
+    {
+      "pair_idx": 544,
+      "posenet_mse": 0.005985473748296499,
+      "segnet_disagree": 0.0026346843224018812,
+      "pose_contribution": 0.244652,
+      "seg_contribution": 0.263468,
+      "score": 0.508121
+    },
+    {
+      "pair_idx": 463,
+      "posenet_mse": 0.008260481990873814,
+      "segnet_disagree": 0.002197265625,
+      "pose_contribution": 0.287411,
+      "seg_contribution": 0.219727,
+      "score": 0.507137
+    },
+    {
+      "pair_idx": 50,
+      "posenet_mse": 0.008272931911051273,
+      "segnet_disagree": 0.0021413168869912624,
+      "pose_contribution": 0.287627,
+      "seg_contribution": 0.214132,
+      "score": 0.501759
+    },
+    {
+      "pair_idx": 284,
+      "posenet_mse": 0.006018113810569048,
+      "segnet_disagree": 0.0025380454026162624,
+      "pose_contribution": 0.245318,
+      "seg_contribution": 0.253805,
+      "score": 0.499123
+    },
+    {
+      "pair_idx": 59,
+      "posenet_mse": 0.009844551794230938,
+      "segnet_disagree": 0.0018513997783884406,
+      "pose_contribution": 0.31376,
+      "seg_contribution": 0.18514,
+      "score": 0.4989
+    },
+    {
+      "pair_idx": 496,
+      "posenet_mse": 0.006042452063411474,
+      "segnet_disagree": 0.0025227866135537624,
+      "pose_contribution": 0.245814,
+      "seg_contribution": 0.252279,
+      "score": 0.498093
+    },
+    {
+      "pair_idx": 592,
+      "posenet_mse": 0.006474700290709734,
+      "segnet_disagree": 0.0024363200645893812,
+      "pose_contribution": 0.254454,
+      "seg_contribution": 0.243632,
+      "score": 0.498086
+    },
+    {
+      "pair_idx": 32,
+      "posenet_mse": 0.008360890671610832,
+      "segnet_disagree": 0.0020802817307412624,
+      "pose_contribution": 0.289152,
+      "seg_contribution": 0.208028,
+      "score": 0.49718
+    },
+    {
+      "pair_idx": 44,
+      "posenet_mse": 0.00885041430592537,
+      "segnet_disagree": 0.0019785563927143812,
+      "pose_contribution": 0.297496,
+      "seg_contribution": 0.197856,
+      "score": 0.495352
+    },
+    {
+      "pair_idx": 7,
+      "posenet_mse": 0.009021208621561527,
+      "segnet_disagree": 0.0019429525127634406,
+      "pose_contribution": 0.300353,
+      "seg_contribution": 0.194295,
+      "score": 0.494649
+    },
+    {
+      "pair_idx": 364,
+      "posenet_mse": 0.010882087051868439,
+      "segnet_disagree": 0.0016428630333393812,
+      "pose_contribution": 0.32988,
+      "seg_contribution": 0.164286,
+      "score": 0.494166
+    },
+    {
+      "pair_idx": 313,
+      "posenet_mse": 0.010645137168467045,
+      "segnet_disagree": 0.0016682943096384406,
+      "pose_contribution": 0.326269,
+      "seg_contribution": 0.166829,
+      "score": 0.493098
+    },
+    {
+      "pair_idx": 172,
+      "posenet_mse": 0.008805480785667896,
+      "segnet_disagree": 0.0019378662109375,
+      "pose_contribution": 0.29674,
+      "seg_contribution": 0.193787,
+      "score": 0.490527
+    },
+    {
+      "pair_idx": 214,
+      "posenet_mse": 0.00985462125390768,
+      "segnet_disagree": 0.0017547607421875,
+      "pose_contribution": 0.313921,
+      "seg_contribution": 0.175476,
+      "score": 0.489397
+    },
+    {
+      "pair_idx": 19,
+      "posenet_mse": 0.008556891232728958,
+      "segnet_disagree": 0.0019683837890625,
+      "pose_contribution": 0.292522,
+      "seg_contribution": 0.196838,
+      "score": 0.48936
+    },
+    {
+      "pair_idx": 176,
+      "posenet_mse": 0.007106713950634003,
+      "segnet_disagree": 0.0022125244140625,
+      "pose_contribution": 0.266584,
+      "seg_contribution": 0.221252,
+      "score": 0.487837
+    },
+    {
+      "pair_idx": 20,
+      "posenet_mse": 0.006936708930879831,
+      "segnet_disagree": 0.0022379558067768812,
+      "pose_contribution": 0.263376,
+      "seg_contribution": 0.223796,
+      "score": 0.487172
+    },
+    {
+      "pair_idx": 400,
+      "posenet_mse": 0.008893894031643867,
+      "segnet_disagree": 0.0018768310546875,
+      "pose_contribution": 0.298226,
+      "seg_contribution": 0.187683,
+      "score": 0.485909
+    },
+    {
+      "pair_idx": 596,
+      "posenet_mse": 0.007377494126558304,
+      "segnet_disagree": 0.0021413168869912624,
+      "pose_contribution": 0.271615,
+      "seg_contribution": 0.214132,
+      "score": 0.485747
+    },
+    {
+      "pair_idx": 467,
+      "posenet_mse": 0.005063226446509361,
+      "segnet_disagree": 0.0025990805588662624,
+      "pose_contribution": 0.225016,
+      "seg_contribution": 0.259908,
+      "score": 0.484924
+    },
+    {
+      "pair_idx": 88,
+      "posenet_mse": 0.008782003074884415,
+      "segnet_disagree": 0.0018768310546875,
+      "pose_contribution": 0.296344,
+      "seg_contribution": 0.187683,
+      "score": 0.484028
+    },
+    {
+      "pair_idx": 444,
+      "posenet_mse": 0.006890017539262772,
+      "segnet_disagree": 0.0022125244140625,
+      "pose_contribution": 0.262488,
+      "seg_contribution": 0.221252,
+      "score": 0.483741
+    },
+    {
+      "pair_idx": 123,
+      "posenet_mse": 0.008906803093850613,
+      "segnet_disagree": 0.0018513997783884406,
+      "pose_contribution": 0.298443,
+      "seg_contribution": 0.18514,
+      "score": 0.483583
+    },
+    {
+      "pair_idx": 226,
+      "posenet_mse": 0.008759249933063984,
+      "segnet_disagree": 0.0018717448692768812,
+      "pose_contribution": 0.29596,
+      "seg_contribution": 0.187174,
+      "score": 0.483135
+    },
+    {
+      "pair_idx": 543,
+      "posenet_mse": 0.00229396834038198,
+      "segnet_disagree": 0.0033060710411518812,
+      "pose_contribution": 0.151459,
+      "seg_contribution": 0.330607,
+      "score": 0.482066
+    },
+    {
+      "pair_idx": 511,
+      "posenet_mse": 0.003843519138172269,
+      "segnet_disagree": 0.0028533935546875,
+      "pose_contribution": 0.196049,
+      "seg_contribution": 0.285339,
+      "score": 0.481388
+    },
+    {
+      "pair_idx": 173,
+      "posenet_mse": 0.0054570999927818775,
+      "segnet_disagree": 0.002471923828125,
+      "pose_contribution": 0.233604,
+      "seg_contribution": 0.247192,
+      "score": 0.480797
+    },
+    {
+      "pair_idx": 516,
+      "posenet_mse": 0.0050917635671794415,
+      "segnet_disagree": 0.0025482177734375,
+      "pose_contribution": 0.225649,
+      "seg_contribution": 0.254822,
+      "score": 0.480471
+    },
+    {
+      "pair_idx": 327,
+      "posenet_mse": 0.005348889622837305,
+      "segnet_disagree": 0.0024770102463662624,
+      "pose_contribution": 0.231277,
+      "seg_contribution": 0.247701,
+      "score": 0.478978
+    },
+    {
+      "pair_idx": 464,
+      "posenet_mse": 0.007862020283937454,
+      "segnet_disagree": 0.0019785563927143812,
+      "pose_contribution": 0.280393,
+      "seg_contribution": 0.197856,
+      "score": 0.478249
+    },
+    {
+      "pair_idx": 388,
+      "posenet_mse": 0.009128558449447155,
+      "segnet_disagree": 0.0017496745567768812,
+      "pose_contribution": 0.302135,
+      "seg_contribution": 0.174967,
+      "score": 0.477102
+    },
+    {
+      "pair_idx": 398,
+      "posenet_mse": 0.008626730181276798,
+      "segnet_disagree": 0.0018259685020893812,
+      "pose_contribution": 0.293713,
+      "seg_contribution": 0.182597,
+      "score": 0.47631
+    },
+    {
+      "pair_idx": 512,
+      "posenet_mse": 0.004250877071171999,
+      "segnet_disagree": 0.002685546875,
+      "pose_contribution": 0.206177,
+      "seg_contribution": 0.268555,
+      "score": 0.474731
+    },
+    {
+      "pair_idx": 220,
+      "posenet_mse": 0.008308514952659607,
+      "segnet_disagree": 0.001861572265625,
+      "pose_contribution": 0.288245,
+      "seg_contribution": 0.186157,
+      "score": 0.474402
+    },
+    {
+      "pair_idx": 181,
+      "posenet_mse": 0.00893065519630909,
+      "segnet_disagree": 0.0017344157677143812,
+      "pose_contribution": 0.298842,
+      "seg_contribution": 0.173442,
+      "score": 0.472284
+    },
+    {
+      "pair_idx": 489,
+      "posenet_mse": 0.0032872867304831743,
+      "segnet_disagree": 0.0029093425255268812,
+      "pose_contribution": 0.181309,
+      "seg_contribution": 0.290934,
+      "score": 0.472243
+    },
+    {
+      "pair_idx": 291,
+      "posenet_mse": 0.007964388467371464,
+      "segnet_disagree": 0.0018971761455759406,
+      "pose_contribution": 0.282212,
+      "seg_contribution": 0.189718,
+      "score": 0.47193
+    },
+    {
+      "pair_idx": 455,
+      "posenet_mse": 0.005463651847094297,
+      "segnet_disagree": 0.00238037109375,
+      "pose_contribution": 0.233745,
+      "seg_contribution": 0.238037,
+      "score": 0.471782
+    },
+    {
+      "pair_idx": 416,
+      "posenet_mse": 0.006702791433781385,
+      "segnet_disagree": 0.0021209716796875,
+      "pose_contribution": 0.258897,
+      "seg_contribution": 0.212097,
+      "score": 0.470995
+    },
+    {
+      "pair_idx": 72,
+      "posenet_mse": 0.006101215723901987,
+      "segnet_disagree": 0.0022328696213662624,
+      "pose_contribution": 0.247006,
+      "seg_contribution": 0.223287,
+      "score": 0.470293
+    },
+    {
+      "pair_idx": 431,
+      "posenet_mse": 0.007410187739878893,
+      "segnet_disagree": 0.0019683837890625,
+      "pose_contribution": 0.272217,
+      "seg_contribution": 0.196838,
+      "score": 0.469055
+    },
+    {
+      "pair_idx": 505,
+      "posenet_mse": 0.002955000614747405,
+      "segnet_disagree": 0.0029551188927143812,
+      "pose_contribution": 0.171901,
+      "seg_contribution": 0.295512,
+      "score": 0.467413
+    },
+    {
+      "pair_idx": 80,
+      "posenet_mse": 0.008742870762944221,
+      "segnet_disagree": 0.001678466796875,
+      "pose_contribution": 0.295683,
+      "seg_contribution": 0.167847,
+      "score": 0.46353
+    },
+    {
+      "pair_idx": 470,
+      "posenet_mse": 0.001220201258547604,
+      "segnet_disagree": 0.0035196940880268812,
+      "pose_contribution": 0.110463,
+      "seg_contribution": 0.351969,
+      "score": 0.462432
+    },
+    {
+      "pair_idx": 571,
+      "posenet_mse": 0.0036668048705905676,
+      "segnet_disagree": 0.0027058920823037624,
+      "pose_contribution": 0.191489,
+      "seg_contribution": 0.270589,
+      "score": 0.462078
+    },
+    {
+      "pair_idx": 475,
+      "posenet_mse": 0.009215490892529488,
+      "segnet_disagree": 0.0015767415752634406,
+      "pose_contribution": 0.30357,
+      "seg_contribution": 0.157674,
+      "score": 0.461244
+    },
+    {
+      "pair_idx": 329,
+      "posenet_mse": 0.00408586673438549,
+      "segnet_disagree": 0.0025889079552143812,
+      "pose_contribution": 0.202135,
+      "seg_contribution": 0.258891,
+      "score": 0.461026
+    },
+    {
+      "pair_idx": 396,
+      "posenet_mse": 0.006665585096925497,
+      "segnet_disagree": 0.00201416015625,
+      "pose_contribution": 0.258178,
+      "seg_contribution": 0.201416,
+      "score": 0.459594
+    },
+    {
+      "pair_idx": 401,
+      "posenet_mse": 0.006340615916997194,
+      "segnet_disagree": 0.0020751953125,
+      "pose_contribution": 0.251806,
+      "seg_contribution": 0.20752,
+      "score": 0.459325
+    },
+    {
+      "pair_idx": 439,
+      "posenet_mse": 0.0042321933433413506,
+      "segnet_disagree": 0.002532958984375,
+      "pose_contribution": 0.205723,
+      "seg_contribution": 0.253296,
+      "score": 0.459019
+    },
+    {
+      "pair_idx": 199,
+      "posenet_mse": 0.0054822699166834354,
+      "segnet_disagree": 0.0022430419921875,
+      "pose_contribution": 0.234142,
+      "seg_contribution": 0.224304,
+      "score": 0.458447
+    },
+    {
+      "pair_idx": 18,
+      "posenet_mse": 0.006295489612966776,
+      "segnet_disagree": 0.0020701091270893812,
+      "pose_contribution": 0.250908,
+      "seg_contribution": 0.207011,
+      "score": 0.457919
+    },
+    {
+      "pair_idx": 232,
+      "posenet_mse": 0.007799698039889336,
+      "segnet_disagree": 0.0017649333458393812,
+      "pose_contribution": 0.279279,
+      "seg_contribution": 0.176493,
+      "score": 0.455773
+    },
+    {
+      "pair_idx": 6,
+      "posenet_mse": 0.00895755272358656,
+      "segnet_disagree": 0.0015614827862009406,
+      "pose_contribution": 0.299292,
+      "seg_contribution": 0.156148,
+      "score": 0.45544
+    },
+    {
+      "pair_idx": 262,
+      "posenet_mse": 0.007966235280036926,
+      "segnet_disagree": 0.0017242431640625,
+      "pose_contribution": 0.282245,
+      "seg_contribution": 0.172424,
+      "score": 0.45467
+    },
+    {
+      "pair_idx": 387,
+      "posenet_mse": 0.008666747249662876,
+      "segnet_disagree": 0.0016021728515625,
+      "pose_contribution": 0.294393,
+      "seg_contribution": 0.160217,
+      "score": 0.454611
+    },
+    {
+      "pair_idx": 302,
+      "posenet_mse": 0.007898516952991486,
+      "segnet_disagree": 0.0017344157677143812,
+      "pose_contribution": 0.281043,
+      "seg_contribution": 0.173442,
+      "score": 0.454485
+    },
+    {
+      "pair_idx": 203,
+      "posenet_mse": 0.007481205742806196,
+      "segnet_disagree": 0.001800537109375,
+      "pose_contribution": 0.273518,
+      "seg_contribution": 0.180054,
+      "score": 0.453572
+    },
+    {
+      "pair_idx": 228,
+      "posenet_mse": 0.006956099066883326,
+      "segnet_disagree": 0.0018768310546875,
+      "pose_contribution": 0.263744,
+      "seg_contribution": 0.187683,
+      "score": 0.451427
+    },
+    {
+      "pair_idx": 115,
+      "posenet_mse": 0.005561740603297949,
+      "segnet_disagree": 0.0021514892578125,
+      "pose_contribution": 0.235833,
+      "seg_contribution": 0.215149,
+      "score": 0.450982
+    },
+    {
+      "pair_idx": 250,
+      "posenet_mse": 0.008176562376320362,
+      "segnet_disagree": 0.00164794921875,
+      "pose_contribution": 0.285947,
+      "seg_contribution": 0.164795,
+      "score": 0.450742
+    },
+    {
+      "pair_idx": 140,
+      "posenet_mse": 0.002871918259188533,
+      "segnet_disagree": 0.0028076171875,
+      "pose_contribution": 0.169467,
+      "seg_contribution": 0.280762,
+      "score": 0.450229
+    },
+    {
+      "pair_idx": 341,
+      "posenet_mse": 0.006410213187336922,
+      "segnet_disagree": 0.001953125,
+      "pose_contribution": 0.253184,
+      "seg_contribution": 0.195312,
+      "score": 0.448496
+    },
+    {
+      "pair_idx": 405,
+      "posenet_mse": 0.0059857540763914585,
+      "segnet_disagree": 0.0020294189453125,
+      "pose_contribution": 0.244658,
+      "seg_contribution": 0.202942,
+      "score": 0.4476
+    },
+    {
+      "pair_idx": 276,
+      "posenet_mse": 0.0072128199972212315,
+      "segnet_disagree": 0.0017852783203125,
+      "pose_contribution": 0.268567,
+      "seg_contribution": 0.178528,
+      "score": 0.447095
+    },
+    {
+      "pair_idx": 339,
+      "posenet_mse": 0.007287781685590744,
+      "segnet_disagree": 0.00177001953125,
+      "pose_contribution": 0.269959,
+      "seg_contribution": 0.177002,
+      "score": 0.446961
+    },
+    {
+      "pair_idx": 83,
+      "posenet_mse": 0.0074649229645729065,
+      "segnet_disagree": 0.0017293294658884406,
+      "pose_contribution": 0.27322,
+      "seg_contribution": 0.172933,
+      "score": 0.446153
+    },
+    {
+      "pair_idx": 271,
+      "posenet_mse": 0.007141198962926865,
+      "segnet_disagree": 0.00177001953125,
+      "pose_contribution": 0.26723,
+      "seg_contribution": 0.177002,
+      "score": 0.444232
+    },
+    {
+      "pair_idx": 503,
+      "posenet_mse": 0.003150117816403508,
+      "segnet_disagree": 0.0026652019005268812,
+      "pose_contribution": 0.177486,
+      "seg_contribution": 0.26652,
+      "score": 0.444006
+    },
+    {
+      "pair_idx": 227,
+      "posenet_mse": 0.0031646343413740396,
+      "segnet_disagree": 0.0026448569260537624,
+      "pose_contribution": 0.177894,
+      "seg_contribution": 0.264486,
+      "score": 0.44238
+    },
+    {
+      "pair_idx": 397,
+      "posenet_mse": 0.00667450949549675,
+      "segnet_disagree": 0.0018361409893259406,
+      "pose_contribution": 0.258351,
+      "seg_contribution": 0.183614,
+      "score": 0.441965
+    },
+    {
+      "pair_idx": 247,
+      "posenet_mse": 0.007788531016558409,
+      "segnet_disagree": 0.001617431640625,
+      "pose_contribution": 0.279079,
+      "seg_contribution": 0.161743,
+      "score": 0.440823
+    },
+    {
+      "pair_idx": 95,
+      "posenet_mse": 0.006166832055896521,
+      "segnet_disagree": 0.0019175212364643812,
+      "pose_contribution": 0.248331,
+      "seg_contribution": 0.191752,
+      "score": 0.440083
+    },
+    {
+      "pair_idx": 31,
+      "posenet_mse": 0.0064611900597810745,
+      "segnet_disagree": 0.0018463134765625,
+      "pose_contribution": 0.254189,
+      "seg_contribution": 0.184631,
+      "score": 0.43882
+    },
+    {
+      "pair_idx": 128,
+      "posenet_mse": 0.003723517758771777,
+      "segnet_disagree": 0.0024312338791787624,
+      "pose_contribution": 0.192964,
+      "seg_contribution": 0.243123,
+      "score": 0.436088
+    },
+    {
+      "pair_idx": 209,
+      "posenet_mse": 0.009126169607043266,
+      "segnet_disagree": 0.0013376872520893812,
+      "pose_contribution": 0.302096,
+      "seg_contribution": 0.133769,
+      "score": 0.435864
+    },
+    {
+      "pair_idx": 17,
+      "posenet_mse": 0.006100788246840239,
+      "segnet_disagree": 0.0018870036583393812,
+      "pose_contribution": 0.246998,
+      "seg_contribution": 0.1887,
+      "score": 0.435698
+    },
+    {
+      "pair_idx": 328,
+      "posenet_mse": 0.004456693772226572,
+      "segnet_disagree": 0.0022226970177143812,
+      "pose_contribution": 0.211109,
+      "seg_contribution": 0.22227,
+      "score": 0.433379
+    },
+    {
+      "pair_idx": 433,
+      "posenet_mse": 0.004624157678335905,
+      "segnet_disagree": 0.0021820068359375,
+      "pose_contribution": 0.215039,
+      "seg_contribution": 0.218201,
+      "score": 0.433239
+    },
+    {
+      "pair_idx": 237,
+      "posenet_mse": 0.007817409932613373,
+      "segnet_disagree": 0.0015360515099018812,
+      "pose_contribution": 0.279596,
+      "seg_contribution": 0.153605,
+      "score": 0.433201
+    },
+    {
+      "pair_idx": 409,
+      "posenet_mse": 0.005860143806785345,
+      "segnet_disagree": 0.0018971761455759406,
+      "pose_contribution": 0.242077,
+      "seg_contribution": 0.189718,
+      "score": 0.431795
+    },
+    {
+      "pair_idx": 504,
+      "posenet_mse": 0.0012939252192154527,
+      "segnet_disagree": 0.0031789145432412624,
+      "pose_contribution": 0.113751,
+      "seg_contribution": 0.317891,
+      "score": 0.431642
+    },
+    {
+      "pair_idx": 81,
+      "posenet_mse": 0.007959856651723385,
+      "segnet_disagree": 0.0014801025390625,
+      "pose_contribution": 0.282132,
+      "seg_contribution": 0.14801,
+      "score": 0.430142
+    },
+    {
+      "pair_idx": 141,
+      "posenet_mse": 0.006704485509544611,
+      "segnet_disagree": 0.001708984375,
+      "pose_contribution": 0.25893,
+      "seg_contribution": 0.170898,
+      "score": 0.429829
+    },
+    {
+      "pair_idx": 41,
+      "posenet_mse": 0.00804759282618761,
+      "segnet_disagree": 0.0014546712627634406,
+      "pose_contribution": 0.283683,
+      "seg_contribution": 0.145467,
+      "score": 0.42915
+    },
+    {
+      "pair_idx": 375,
+      "posenet_mse": 0.0065323058515787125,
+      "segnet_disagree": 0.0017344157677143812,
+      "pose_contribution": 0.255584,
+      "seg_contribution": 0.173442,
+      "score": 0.429025
+    },
+    {
+      "pair_idx": 310,
+      "posenet_mse": 0.0044236253015697,
+      "segnet_disagree": 0.0021820068359375,
+      "pose_contribution": 0.210324,
+      "seg_contribution": 0.218201,
+      "score": 0.428525
+    },
+    {
+      "pair_idx": 57,
+      "posenet_mse": 0.006102769169956446,
+      "segnet_disagree": 0.0018107097130268812,
+      "pose_contribution": 0.247038,
+      "seg_contribution": 0.181071,
+      "score": 0.428109
+    },
+    {
+      "pair_idx": 4,
+      "posenet_mse": 0.006446871906518936,
+      "segnet_disagree": 0.0017140706768259406,
+      "pose_contribution": 0.253907,
+      "seg_contribution": 0.171407,
+      "score": 0.425314
+    },
+    {
+      "pair_idx": 459,
+      "posenet_mse": 0.0017959467368200421,
+      "segnet_disagree": 0.0029093425255268812,
+      "pose_contribution": 0.134013,
+      "seg_contribution": 0.290934,
+      "score": 0.424947
+    },
+    {
+      "pair_idx": 34,
+      "posenet_mse": 0.005018130410462618,
+      "segnet_disagree": 0.0020090739708393812,
+      "pose_contribution": 0.224012,
+      "seg_contribution": 0.200907,
+      "score": 0.424919
+    },
+    {
+      "pair_idx": 76,
+      "posenet_mse": 0.0045215957798063755,
+      "segnet_disagree": 0.0021209716796875,
+      "pose_contribution": 0.21264,
+      "seg_contribution": 0.212097,
+      "score": 0.424738
+    },
+    {
+      "pair_idx": 79,
+      "posenet_mse": 0.005169783253222704,
+      "segnet_disagree": 0.0019480388145893812,
+      "pose_contribution": 0.227372,
+      "seg_contribution": 0.194804,
+      "score": 0.422175
+    },
+    {
+      "pair_idx": 142,
+      "posenet_mse": 0.00387420947663486,
+      "segnet_disagree": 0.0022532145958393812,
+      "pose_contribution": 0.19683,
+      "seg_contribution": 0.225321,
+      "score": 0.422152
+    },
+    {
+      "pair_idx": 219,
+      "posenet_mse": 0.0060539389960467815,
+      "segnet_disagree": 0.0017496745567768812,
+      "pose_contribution": 0.246048,
+      "seg_contribution": 0.174967,
+      "score": 0.421015
+    },
+    {
+      "pair_idx": 51,
+      "posenet_mse": 0.006067317444831133,
+      "segnet_disagree": 0.0017445882549509406,
+      "pose_contribution": 0.246319,
+      "seg_contribution": 0.174459,
+      "score": 0.420778
+    },
+    {
+      "pair_idx": 553,
+      "posenet_mse": 0.0036696884781122208,
+      "segnet_disagree": 0.0022837321739643812,
+      "pose_contribution": 0.191564,
+      "seg_contribution": 0.228373,
+      "score": 0.419938
+    },
+    {
+      "pair_idx": 27,
+      "posenet_mse": 0.005803188309073448,
+      "segnet_disagree": 0.0017852783203125,
+      "pose_contribution": 0.240898,
+      "seg_contribution": 0.178528,
+      "score": 0.419426
+    },
+    {
+      "pair_idx": 570,
+      "posenet_mse": 0.0016174372285604477,
+      "segnet_disagree": 0.0029195151291787624,
+      "pose_contribution": 0.127179,
+      "seg_contribution": 0.291952,
+      "score": 0.41913
+    },
+    {
+      "pair_idx": 62,
+      "posenet_mse": 0.005310107488185167,
+      "segnet_disagree": 0.0018768310546875,
+      "pose_contribution": 0.230437,
+      "seg_contribution": 0.187683,
+      "score": 0.41812
+    },
+    {
+      "pair_idx": 440,
+      "posenet_mse": 0.0029485265258699656,
+      "segnet_disagree": 0.0024617514573037624,
+      "pose_contribution": 0.171713,
+      "seg_contribution": 0.246175,
+      "score": 0.417888
+    },
+    {
+      "pair_idx": 354,
+      "posenet_mse": 0.006077927071601152,
+      "segnet_disagree": 0.0016632080078125,
+      "pose_contribution": 0.246535,
+      "seg_contribution": 0.166321,
+      "score": 0.412855
+    },
+    {
+      "pair_idx": 452,
+      "posenet_mse": 0.0027673235163092613,
+      "segnet_disagree": 0.0024515788536518812,
+      "pose_contribution": 0.166353,
+      "seg_contribution": 0.245158,
+      "score": 0.411511
+    },
+    {
+      "pair_idx": 550,
+      "posenet_mse": 0.0031634513288736343,
+      "segnet_disagree": 0.0023193359375,
+      "pose_contribution": 0.177861,
+      "seg_contribution": 0.231934,
+      "score": 0.409795
+    },
+    {
+      "pair_idx": 478,
+      "posenet_mse": 0.0029420198407024145,
+      "segnet_disagree": 0.00238037109375,
+      "pose_contribution": 0.171523,
+      "seg_contribution": 0.238037,
+      "score": 0.40956
+    },
+    {
+      "pair_idx": 359,
+      "posenet_mse": 0.006691512186080217,
+      "segnet_disagree": 0.0015055339317768812,
+      "pose_contribution": 0.25868,
+      "seg_contribution": 0.150553,
+      "score": 0.409233
+    },
+    {
+      "pair_idx": 223,
+      "posenet_mse": 0.005001976620405912,
+      "segnet_disagree": 0.0018463134765625,
+      "pose_contribution": 0.223651,
+      "seg_contribution": 0.184631,
+      "score": 0.408282
+    },
+    {
+      "pair_idx": 498,
+      "posenet_mse": 0.0019070302369073033,
+      "segnet_disagree": 0.0026906332932412624,
+      "pose_contribution": 0.138095,
+      "seg_contribution": 0.269063,
+      "score": 0.407159
+    },
+    {
+      "pair_idx": 325,
+      "posenet_mse": 0.0008864339324645698,
+      "segnet_disagree": 0.0031280517578125,
+      "pose_contribution": 0.094151,
+      "seg_contribution": 0.312805,
+      "score": 0.406956
+    },
+    {
+      "pair_idx": 587,
+      "posenet_mse": 0.0023397114127874374,
+      "segnet_disagree": 0.0025278727989643812,
+      "pose_contribution": 0.152961,
+      "seg_contribution": 0.252787,
+      "score": 0.405748
+    },
+    {
+      "pair_idx": 224,
+      "posenet_mse": 0.003966110292822123,
+      "segnet_disagree": 0.0020395915489643812,
+      "pose_contribution": 0.199151,
+      "seg_contribution": 0.203959,
+      "score": 0.40311
+    },
+    {
+      "pair_idx": 492,
+      "posenet_mse": 0.0015438934788107872,
+      "segnet_disagree": 0.0027821860276162624,
+      "pose_contribution": 0.124254,
+      "seg_contribution": 0.278219,
+      "score": 0.402472
+    },
+    {
+      "pair_idx": 283,
+      "posenet_mse": 0.0062012746930122375,
+      "segnet_disagree": 0.00152587890625,
+      "pose_contribution": 0.249024,
+      "seg_contribution": 0.152588,
+      "score": 0.401611
+    },
+    {
+      "pair_idx": 566,
+      "posenet_mse": 0.0012640970526263118,
+      "segnet_disagree": 0.0028737387619912624,
+      "pose_contribution": 0.112432,
+      "seg_contribution": 0.287374,
+      "score": 0.399806
+    },
+    {
+      "pair_idx": 305,
+      "posenet_mse": 0.0041107432916760445,
+      "segnet_disagree": 0.0019429525127634406,
+      "pose_contribution": 0.20275,
+      "seg_contribution": 0.194295,
+      "score": 0.397045
+    },
+    {
+      "pair_idx": 207,
+      "posenet_mse": 0.005430434364825487,
+      "segnet_disagree": 0.0016377767315134406,
+      "pose_contribution": 0.233033,
+      "seg_contribution": 0.163778,
+      "score": 0.396811
+    },
+    {
+      "pair_idx": 167,
+      "posenet_mse": 0.0035248289350420237,
+      "segnet_disagree": 0.0020904541015625,
+      "pose_contribution": 0.187745,
+      "seg_contribution": 0.209045,
+      "score": 0.396791
+    },
+    {
+      "pair_idx": 196,
+      "posenet_mse": 0.0018864944577217102,
+      "segnet_disagree": 0.002593994140625,
+      "pose_contribution": 0.13735,
+      "seg_contribution": 0.259399,
+      "score": 0.396749
+    },
+    {
+      "pair_idx": 583,
+      "posenet_mse": 0.0016207760199904442,
+      "segnet_disagree": 0.0026906332932412624,
+      "pose_contribution": 0.12731,
+      "seg_contribution": 0.269063,
+      "score": 0.396373
+    },
+    {
+      "pair_idx": 367,
+      "posenet_mse": 0.005322289187461138,
+      "segnet_disagree": 0.0016530355205759406,
+      "pose_contribution": 0.230701,
+      "seg_contribution": 0.165304,
+      "score": 0.396004
+    },
+    {
+      "pair_idx": 28,
+      "posenet_mse": 0.00492000812664628,
+      "segnet_disagree": 0.0017191569786518812,
+      "pose_contribution": 0.221811,
+      "seg_contribution": 0.171916,
+      "score": 0.393727
+    },
+    {
+      "pair_idx": 25,
+      "posenet_mse": 0.0043673948384821415,
+      "segnet_disagree": 0.0018310546875,
+      "pose_contribution": 0.208983,
+      "seg_contribution": 0.183105,
+      "score": 0.392089
+    },
+    {
+      "pair_idx": 120,
+      "posenet_mse": 0.002828763099387288,
+      "segnet_disagree": 0.0022379558067768812,
+      "pose_contribution": 0.168189,
+      "seg_contribution": 0.223796,
+      "score": 0.391985
+    },
+    {
+      "pair_idx": 63,
+      "posenet_mse": 0.004185373894870281,
+      "segnet_disagree": 0.001861572265625,
+      "pose_contribution": 0.204582,
+      "seg_contribution": 0.186157,
+      "score": 0.390739
+    },
+    {
+      "pair_idx": 434,
+      "posenet_mse": 0.0023902158718556166,
+      "segnet_disagree": 0.0023447673302143812,
+      "pose_contribution": 0.154603,
+      "seg_contribution": 0.234477,
+      "score": 0.38908
+    },
+    {
+      "pair_idx": 70,
+      "posenet_mse": 0.0017554002115502954,
+      "segnet_disagree": 0.0025431315880268812,
+      "pose_contribution": 0.132492,
+      "seg_contribution": 0.254313,
+      "score": 0.386805
+    },
+    {
+      "pair_idx": 351,
+      "posenet_mse": 0.004832572769373655,
+      "segnet_disagree": 0.0016682943096384406,
+      "pose_contribution": 0.219831,
+      "seg_contribution": 0.166829,
+      "score": 0.386661
+    },
+    {
+      "pair_idx": 236,
+      "posenet_mse": 0.0037368556950241327,
+      "segnet_disagree": 0.0019276937237009406,
+      "pose_contribution": 0.193309,
+      "seg_contribution": 0.192769,
+      "score": 0.386079
+    },
+    {
+      "pair_idx": 201,
+      "posenet_mse": 0.0023749114479869604,
+      "segnet_disagree": 0.0023142497520893812,
+      "pose_contribution": 0.154107,
+      "seg_contribution": 0.231425,
+      "score": 0.385532
+    },
+    {
+      "pair_idx": 460,
+      "posenet_mse": 0.002060103463009,
+      "segnet_disagree": 0.0023956298828125,
+      "pose_contribution": 0.143531,
+      "seg_contribution": 0.239563,
+      "score": 0.383094
+    },
+    {
+      "pair_idx": 35,
+      "posenet_mse": 0.004334235563874245,
+      "segnet_disagree": 0.0017445882549509406,
+      "pose_contribution": 0.208188,
+      "seg_contribution": 0.174459,
+      "score": 0.382647
+    },
+    {
+      "pair_idx": 531,
+      "posenet_mse": 0.0006061365711502731,
+      "segnet_disagree": 0.0030415854416787624,
+      "pose_contribution": 0.077855,
+      "seg_contribution": 0.304159,
+      "score": 0.382013
+    },
+    {
+      "pair_idx": 154,
+      "posenet_mse": 0.0038133941125124693,
+      "segnet_disagree": 0.0018666585674509406,
+      "pose_contribution": 0.195279,
+      "seg_contribution": 0.186666,
+      "score": 0.381945
+    },
+    {
+      "pair_idx": 404,
+      "posenet_mse": 0.0036649855319410563,
+      "segnet_disagree": 0.0019022624474018812,
+      "pose_contribution": 0.191442,
+      "seg_contribution": 0.190226,
+      "score": 0.381668
+    },
+    {
+      "pair_idx": 91,
+      "posenet_mse": 0.003951318096369505,
+      "segnet_disagree": 0.0018259685020893812,
+      "pose_contribution": 0.198779,
+      "seg_contribution": 0.182597,
+      "score": 0.381376
+    },
+    {
+      "pair_idx": 474,
+      "posenet_mse": 0.0024171993136405945,
+      "segnet_disagree": 0.0022481284104287624,
+      "pose_contribution": 0.155473,
+      "seg_contribution": 0.224813,
+      "score": 0.380286
+    },
+    {
+      "pair_idx": 274,
+      "posenet_mse": 0.005296161863952875,
+      "segnet_disagree": 0.0014902751427143812,
+      "pose_contribution": 0.230134,
+      "seg_contribution": 0.149028,
+      "score": 0.379161
+    },
+    {
+      "pair_idx": 468,
+      "posenet_mse": 0.0007747517083771527,
+      "segnet_disagree": 0.002899169921875,
+      "pose_contribution": 0.08802,
+      "seg_contribution": 0.289917,
+      "score": 0.377937
+    },
+    {
+      "pair_idx": 90,
+      "posenet_mse": 0.003603051183745265,
+      "segnet_disagree": 0.0018768310546875,
+      "pose_contribution": 0.189817,
+      "seg_contribution": 0.187683,
+      "score": 0.3775
+    },
+    {
+      "pair_idx": 160,
+      "posenet_mse": 0.0033433723729103804,
+      "segnet_disagree": 0.0019276937237009406,
+      "pose_contribution": 0.182849,
+      "seg_contribution": 0.192769,
+      "score": 0.375618
+    },
+    {
+      "pair_idx": 296,
+      "posenet_mse": 0.003957598004490137,
+      "segnet_disagree": 0.0017547607421875,
+      "pose_contribution": 0.198937,
+      "seg_contribution": 0.175476,
+      "score": 0.374413
+    },
+    {
+      "pair_idx": 501,
+      "posenet_mse": 0.0007052264991216362,
+      "segnet_disagree": 0.0029042563401162624,
+      "pose_contribution": 0.083978,
+      "seg_contribution": 0.290426,
+      "score": 0.374403
+    },
+    {
+      "pair_idx": 502,
+      "posenet_mse": 0.0005649555823765695,
+      "segnet_disagree": 0.0029856364708393812,
+      "pose_contribution": 0.075164,
+      "seg_contribution": 0.298564,
+      "score": 0.373727
+    },
+    {
+      "pair_idx": 427,
+      "posenet_mse": 0.002560144290328026,
+      "segnet_disagree": 0.00213623046875,
+      "pose_contribution": 0.160005,
+      "seg_contribution": 0.213623,
+      "score": 0.373628
+    },
+    {
+      "pair_idx": 122,
+      "posenet_mse": 0.004365995991975069,
+      "segnet_disagree": 0.0016428630333393812,
+      "pose_contribution": 0.20895,
+      "seg_contribution": 0.164286,
+      "score": 0.373236
+    },
+    {
+      "pair_idx": 182,
+      "posenet_mse": 0.0026530807372182608,
+      "segnet_disagree": 0.0020955405198037624,
+      "pose_contribution": 0.162883,
+      "seg_contribution": 0.209554,
+      "score": 0.372437
+    },
+    {
+      "pair_idx": 202,
+      "posenet_mse": 0.0026192236691713333,
+      "segnet_disagree": 0.002105712890625,
+      "pose_contribution": 0.16184,
+      "seg_contribution": 0.210571,
+      "score": 0.372411
+    },
+    {
+      "pair_idx": 150,
+      "posenet_mse": 0.003908807877451181,
+      "segnet_disagree": 0.0017191569786518812,
+      "pose_contribution": 0.197707,
+      "seg_contribution": 0.171916,
+      "score": 0.369623
+    },
+    {
+      "pair_idx": 188,
+      "posenet_mse": 0.0032665675971657038,
+      "segnet_disagree": 0.0018768310546875,
+      "pose_contribution": 0.180736,
+      "seg_contribution": 0.187683,
+      "score": 0.36842
+    },
+    {
+      "pair_idx": 53,
+      "posenet_mse": 0.002945283195003867,
+      "segnet_disagree": 0.0019632976036518812,
+      "pose_contribution": 0.171618,
+      "seg_contribution": 0.19633,
+      "score": 0.367948
+    },
+    {
+      "pair_idx": 479,
+      "posenet_mse": 0.0008817247580736876,
+      "segnet_disagree": 0.0027313232421875,
+      "pose_contribution": 0.0939,
+      "seg_contribution": 0.273132,
+      "score": 0.367033
+    },
+    {
+      "pair_idx": 561,
+      "posenet_mse": 0.0013402871554717422,
+      "segnet_disagree": 0.0024820964317768812,
+      "pose_contribution": 0.115771,
+      "seg_contribution": 0.24821,
+      "score": 0.36398
+    },
+    {
+      "pair_idx": 437,
+      "posenet_mse": 0.0024397920351475477,
+      "segnet_disagree": 0.0020751953125,
+      "pose_contribution": 0.156198,
+      "seg_contribution": 0.20752,
+      "score": 0.363718
+    },
+    {
+      "pair_idx": 292,
+      "posenet_mse": 0.004042866639792919,
+      "segnet_disagree": 0.0016225179424509406,
+      "pose_contribution": 0.201069,
+      "seg_contribution": 0.162252,
+      "score": 0.363321
+    },
+    {
+      "pair_idx": 281,
+      "posenet_mse": 0.0043341186828911304,
+      "segnet_disagree": 0.0015309652080759406,
+      "pose_contribution": 0.208185,
+      "seg_contribution": 0.153097,
+      "score": 0.361282
+    },
+    {
+      "pair_idx": 121,
+      "posenet_mse": 0.002856132574379444,
+      "segnet_disagree": 0.0019175212364643812,
+      "pose_contribution": 0.169001,
+      "seg_contribution": 0.191752,
+      "score": 0.360753
+    },
+    {
+      "pair_idx": 307,
+      "posenet_mse": 0.001953464699909091,
+      "segnet_disagree": 0.0022023520432412624,
+      "pose_contribution": 0.139766,
+      "seg_contribution": 0.220235,
+      "score": 0.360002
+    },
+    {
+      "pair_idx": 253,
+      "posenet_mse": 0.002286867704242468,
+      "segnet_disagree": 0.0020853679161518812,
+      "pose_contribution": 0.151224,
+      "seg_contribution": 0.208537,
+      "score": 0.359761
+    },
+    {
+      "pair_idx": 48,
+      "posenet_mse": 0.0033487165346741676,
+      "segnet_disagree": 0.0017598470440134406,
+      "pose_contribution": 0.182995,
+      "seg_contribution": 0.175985,
+      "score": 0.35898
+    },
+    {
+      "pair_idx": 233,
+      "posenet_mse": 0.002362193539738655,
+      "segnet_disagree": 0.002044677734375,
+      "pose_contribution": 0.153694,
+      "seg_contribution": 0.204468,
+      "score": 0.358162
+    },
+    {
+      "pair_idx": 304,
+      "posenet_mse": 0.0028362262528389692,
+      "segnet_disagree": 0.0018971761455759406,
+      "pose_contribution": 0.168411,
+      "seg_contribution": 0.189718,
+      "score": 0.358129
+    },
+    {
+      "pair_idx": 414,
+      "posenet_mse": 0.003296705661341548,
+      "segnet_disagree": 0.0017649333458393812,
+      "pose_contribution": 0.181568,
+      "seg_contribution": 0.176493,
+      "score": 0.358062
+    },
+    {
+      "pair_idx": 334,
+      "posenet_mse": 0.003016354748979211,
+      "segnet_disagree": 0.0018361409893259406,
+      "pose_contribution": 0.173677,
+      "seg_contribution": 0.183614,
+      "score": 0.357291
+    },
+    {
+      "pair_idx": 151,
+      "posenet_mse": 0.002047549234703183,
+      "segnet_disagree": 0.0021413168869912624,
+      "pose_contribution": 0.143093,
+      "seg_contribution": 0.214132,
+      "score": 0.357224
+    },
+    {
+      "pair_idx": 541,
+      "posenet_mse": 0.0012549258535727859,
+      "segnet_disagree": 0.0024515788536518812,
+      "pose_contribution": 0.112023,
+      "seg_contribution": 0.245158,
+      "score": 0.357181
+    },
+    {
+      "pair_idx": 221,
+      "posenet_mse": 0.004842625465244055,
+      "segnet_disagree": 0.0013529460411518812,
+      "pose_contribution": 0.22006,
+      "seg_contribution": 0.135295,
+      "score": 0.355354
+    },
+    {
+      "pair_idx": 326,
+      "posenet_mse": 0.001257876749150455,
+      "segnet_disagree": 0.0024312338791787624,
+      "pose_contribution": 0.112155,
+      "seg_contribution": 0.243123,
+      "score": 0.355278
+    },
+    {
+      "pair_idx": 180,
+      "posenet_mse": 0.002134923590347171,
+      "segnet_disagree": 0.0020802817307412624,
+      "pose_contribution": 0.146114,
+      "seg_contribution": 0.208028,
+      "score": 0.354142
+    },
+    {
+      "pair_idx": 23,
+      "posenet_mse": 0.003409193130210042,
+      "segnet_disagree": 0.0016937255859375,
+      "pose_contribution": 0.18464,
+      "seg_contribution": 0.169373,
+      "score": 0.354013
+    },
+    {
+      "pair_idx": 408,
+      "posenet_mse": 0.0018635531887412071,
+      "segnet_disagree": 0.0021718344651162624,
+      "pose_contribution": 0.136512,
+      "seg_contribution": 0.217183,
+      "score": 0.353695
+    },
+    {
+      "pair_idx": 336,
+      "posenet_mse": 0.003162045031785965,
+      "segnet_disagree": 0.0017547607421875,
+      "pose_contribution": 0.177821,
+      "seg_contribution": 0.175476,
+      "score": 0.353297
+    },
+    {
+      "pair_idx": 432,
+      "posenet_mse": 0.002412493573501706,
+      "segnet_disagree": 0.0019683837890625,
+      "pose_contribution": 0.155322,
+      "seg_contribution": 0.196838,
+      "score": 0.35216
+    },
+    {
+      "pair_idx": 321,
+      "posenet_mse": 0.0015617097960785031,
+      "segnet_disagree": 0.0022481284104287624,
+      "pose_contribution": 0.124968,
+      "seg_contribution": 0.224813,
+      "score": 0.349781
+    },
+    {
+      "pair_idx": 147,
+      "posenet_mse": 0.0027233995497226715,
+      "segnet_disagree": 0.0018412272911518812,
+      "pose_contribution": 0.165027,
+      "seg_contribution": 0.184123,
+      "score": 0.34915
+    },
+    {
+      "pair_idx": 320,
+      "posenet_mse": 0.0031121072825044394,
+      "segnet_disagree": 0.0017242431640625,
+      "pose_contribution": 0.176412,
+      "seg_contribution": 0.172424,
+      "score": 0.348836
+    },
+    {
+      "pair_idx": 282,
+      "posenet_mse": 0.0022577298805117607,
+      "segnet_disagree": 0.001983642578125,
+      "pose_contribution": 0.150257,
+      "seg_contribution": 0.198364,
+      "score": 0.348622
+    },
+    {
+      "pair_idx": 175,
+      "posenet_mse": 0.0015409048646688461,
+      "segnet_disagree": 0.0022430419921875,
+      "pose_contribution": 0.124133,
+      "seg_contribution": 0.224304,
+      "score": 0.348437
+    },
+    {
+      "pair_idx": 74,
+      "posenet_mse": 0.0011707207886502147,
+      "segnet_disagree": 0.0023854575119912624,
+      "pose_contribution": 0.1082,
+      "seg_contribution": 0.238546,
+      "score": 0.346746
+    },
+    {
+      "pair_idx": 294,
+      "posenet_mse": 0.0036285435780882835,
+      "segnet_disagree": 0.0015614827862009406,
+      "pose_contribution": 0.190487,
+      "seg_contribution": 0.156148,
+      "score": 0.346636
+    },
+    {
+      "pair_idx": 312,
+      "posenet_mse": 0.0019409982487559319,
+      "segnet_disagree": 0.0020701091270893812,
+      "pose_contribution": 0.13932,
+      "seg_contribution": 0.207011,
+      "score": 0.346331
+    },
+    {
+      "pair_idx": 149,
+      "posenet_mse": 0.004079028964042664,
+      "segnet_disagree": 0.0014292399864643812,
+      "pose_contribution": 0.201966,
+      "seg_contribution": 0.142924,
+      "score": 0.34489
+    },
+    {
+      "pair_idx": 379,
+      "posenet_mse": 0.0030615616124123335,
+      "segnet_disagree": 0.0016988118877634406,
+      "pose_contribution": 0.174973,
+      "seg_contribution": 0.169881,
+      "score": 0.344854
+    },
+    {
+      "pair_idx": 89,
+      "posenet_mse": 0.0024528016801923513,
+      "segnet_disagree": 0.0018819173565134406,
+      "pose_contribution": 0.156614,
+      "seg_contribution": 0.188192,
+      "score": 0.344806
+    },
+    {
+      "pair_idx": 529,
+      "posenet_mse": 0.0009253671742044389,
+      "segnet_disagree": 0.0024770102463662624,
+      "pose_contribution": 0.096196,
+      "seg_contribution": 0.247701,
+      "score": 0.343897
+    },
+    {
+      "pair_idx": 127,
+      "posenet_mse": 0.001643081777729094,
+      "segnet_disagree": 0.0021464030724018812,
+      "pose_contribution": 0.128183,
+      "seg_contribution": 0.21464,
+      "score": 0.342823
+    },
+    {
+      "pair_idx": 102,
+      "posenet_mse": 0.0025177064817398787,
+      "segnet_disagree": 0.0018361409893259406,
+      "pose_contribution": 0.158673,
+      "seg_contribution": 0.183614,
+      "score": 0.342287
+    },
+    {
+      "pair_idx": 316,
+      "posenet_mse": 0.0005561521393246949,
+      "segnet_disagree": 0.0026753745041787624,
+      "pose_contribution": 0.074576,
+      "seg_contribution": 0.267537,
+      "score": 0.342113
+    },
+    {
+      "pair_idx": 507,
+      "posenet_mse": 9.503201727056876e-05,
+      "segnet_disagree": 0.0031077067833393812,
+      "pose_contribution": 0.030827,
+      "seg_contribution": 0.310771,
+      "score": 0.341598
+    },
+    {
+      "pair_idx": 69,
+      "posenet_mse": 0.003450964344665408,
+      "segnet_disagree": 0.0015360515099018812,
+      "pose_contribution": 0.185768,
+      "seg_contribution": 0.153605,
+      "score": 0.339373
+    },
+    {
+      "pair_idx": 14,
+      "posenet_mse": 0.0024960050359368324,
+      "segnet_disagree": 0.0018107097130268812,
+      "pose_contribution": 0.157988,
+      "seg_contribution": 0.181071,
+      "score": 0.339058
+    },
+    {
+      "pair_idx": 11,
+      "posenet_mse": 0.002929219976067543,
+      "segnet_disagree": 0.001678466796875,
+      "pose_contribution": 0.17115,
+      "seg_contribution": 0.167847,
+      "score": 0.338996
+    },
+    {
+      "pair_idx": 330,
+      "posenet_mse": 0.0006801284034736454,
+      "segnet_disagree": 0.0025634765625,
+      "pose_contribution": 0.08247,
+      "seg_contribution": 0.256348,
+      "score": 0.338818
+    },
+    {
+      "pair_idx": 234,
+      "posenet_mse": 0.00247996230609715,
+      "segnet_disagree": 0.0018107097130268812,
+      "pose_contribution": 0.157479,
+      "seg_contribution": 0.181071,
+      "score": 0.33855
+    },
+    {
+      "pair_idx": 269,
+      "posenet_mse": 0.002263828879222274,
+      "segnet_disagree": 0.0018717448692768812,
+      "pose_contribution": 0.15046,
+      "seg_contribution": 0.187174,
+      "score": 0.337635
+    },
+    {
+      "pair_idx": 500,
+      "posenet_mse": 0.0016885693185031414,
+      "segnet_disagree": 0.0020751953125,
+      "pose_contribution": 0.129945,
+      "seg_contribution": 0.20752,
+      "score": 0.337464
+    },
+    {
+      "pair_idx": 411,
+      "posenet_mse": 0.0023196071851998568,
+      "segnet_disagree": 0.0018412272911518812,
+      "pose_contribution": 0.152303,
+      "seg_contribution": 0.184123,
+      "score": 0.336425
+    },
+    {
+      "pair_idx": 37,
+      "posenet_mse": 0.0015919283032417297,
+      "segnet_disagree": 0.0020853679161518812,
+      "pose_contribution": 0.126172,
+      "seg_contribution": 0.208537,
+      "score": 0.334708
+    },
+    {
+      "pair_idx": 0,
+      "posenet_mse": 0.001460653729736805,
+      "segnet_disagree": 0.0021260580979287624,
+      "pose_contribution": 0.120858,
+      "seg_contribution": 0.212606,
+      "score": 0.333463
+    },
+    {
+      "pair_idx": 3,
+      "posenet_mse": 0.002427509753033519,
+      "segnet_disagree": 0.0017649333458393812,
+      "pose_contribution": 0.155805,
+      "seg_contribution": 0.176493,
+      "score": 0.332298
+    },
+    {
+      "pair_idx": 295,
+      "posenet_mse": 0.0029191107023507357,
+      "segnet_disagree": 0.0016123454552143812,
+      "pose_contribution": 0.170854,
+      "seg_contribution": 0.161235,
+      "score": 0.332089
+    },
+    {
+      "pair_idx": 424,
+      "posenet_mse": 0.0018142651533707976,
+      "segnet_disagree": 0.0019683837890625,
+      "pose_contribution": 0.134695,
+      "seg_contribution": 0.196838,
+      "score": 0.331533
+    },
+    {
+      "pair_idx": 146,
+      "posenet_mse": 0.002348387846723199,
+      "segnet_disagree": 0.0017751058330759406,
+      "pose_contribution": 0.153245,
+      "seg_contribution": 0.177511,
+      "score": 0.330755
+    },
+    {
+      "pair_idx": 526,
+      "posenet_mse": 0.0013909490080550313,
+      "segnet_disagree": 0.0021260580979287624,
+      "pose_contribution": 0.117939,
+      "seg_contribution": 0.212606,
+      "score": 0.330544
+    },
+    {
+      "pair_idx": 240,
+      "posenet_mse": 0.0016581622185185552,
+      "segnet_disagree": 0.00201416015625,
+      "pose_contribution": 0.12877,
+      "seg_contribution": 0.201416,
+      "score": 0.330186
+    },
+    {
+      "pair_idx": 533,
+      "posenet_mse": 0.0008350972202606499,
+      "segnet_disagree": 0.0023854575119912624,
+      "pose_contribution": 0.091384,
+      "seg_contribution": 0.238546,
+      "score": 0.329929
+    },
+    {
+      "pair_idx": 297,
+      "posenet_mse": 0.0030287550762295723,
+      "segnet_disagree": 0.001556396484375,
+      "pose_contribution": 0.174033,
+      "seg_contribution": 0.15564,
+      "score": 0.329673
+    },
+    {
+      "pair_idx": 582,
+      "posenet_mse": 0.0011931955814361572,
+      "segnet_disagree": 0.0021921794395893812,
+      "pose_contribution": 0.109233,
+      "seg_contribution": 0.219218,
+      "score": 0.328451
+    },
+    {
+      "pair_idx": 567,
+      "posenet_mse": 0.0005138334236107767,
+      "segnet_disagree": 0.0025380454026162624,
+      "pose_contribution": 0.071682,
+      "seg_contribution": 0.253805,
+      "score": 0.325487
+    },
+    {
+      "pair_idx": 370,
+      "posenet_mse": 0.003355948254466057,
+      "segnet_disagree": 0.0014190673828125,
+      "pose_contribution": 0.183192,
+      "seg_contribution": 0.141907,
+      "score": 0.325099
+    },
+    {
+      "pair_idx": 300,
+      "posenet_mse": 0.0027977966237813234,
+      "segnet_disagree": 0.0015665690880268812,
+      "pose_contribution": 0.167266,
+      "seg_contribution": 0.156657,
+      "score": 0.323923
+    },
+    {
+      "pair_idx": 157,
+      "posenet_mse": 0.0024629468098282814,
+      "segnet_disagree": 0.0016682943096384406,
+      "pose_contribution": 0.156938,
+      "seg_contribution": 0.166829,
+      "score": 0.323767
+    },
+    {
+      "pair_idx": 71,
+      "posenet_mse": 0.0010006343945860863,
+      "segnet_disagree": 0.0022226970177143812,
+      "pose_contribution": 0.100032,
+      "seg_contribution": 0.22227,
+      "score": 0.322301
+    },
+    {
+      "pair_idx": 448,
+      "posenet_mse": 0.0009800043189898133,
+      "segnet_disagree": 0.0022328696213662624,
+      "pose_contribution": 0.098995,
+      "seg_contribution": 0.223287,
+      "score": 0.322282
+    },
+    {
+      "pair_idx": 193,
+      "posenet_mse": 0.002931525930762291,
+      "segnet_disagree": 0.0015106201171875,
+      "pose_contribution": 0.171217,
+      "seg_contribution": 0.151062,
+      "score": 0.322279
+    },
+    {
+      "pair_idx": 384,
+      "posenet_mse": 0.002666489453986287,
+      "segnet_disagree": 0.0015869140625,
+      "pose_contribution": 0.163294,
+      "seg_contribution": 0.158691,
+      "score": 0.321985
+    },
+    {
+      "pair_idx": 422,
+      "posenet_mse": 0.001342211733572185,
+      "segnet_disagree": 0.0020599365234375,
+      "pose_contribution": 0.115854,
+      "seg_contribution": 0.205994,
+      "score": 0.321848
+    },
+    {
+      "pair_idx": 68,
+      "posenet_mse": 0.0015360185643658042,
+      "segnet_disagree": 0.0019734702073037624,
+      "pose_contribution": 0.123936,
+      "seg_contribution": 0.197347,
+      "score": 0.321283
+    },
+    {
+      "pair_idx": 287,
+      "posenet_mse": 0.0026457523927092552,
+      "segnet_disagree": 0.0015767415752634406,
+      "pose_contribution": 0.162658,
+      "seg_contribution": 0.157674,
+      "score": 0.320332
+    },
+    {
+      "pair_idx": 184,
+      "posenet_mse": 0.003241243539378047,
+      "segnet_disagree": 0.0013936361065134406,
+      "pose_contribution": 0.180035,
+      "seg_contribution": 0.139364,
+      "score": 0.319398
+    },
+    {
+      "pair_idx": 290,
+      "posenet_mse": 0.002468117279931903,
+      "segnet_disagree": 0.001617431640625,
+      "pose_contribution": 0.157102,
+      "seg_contribution": 0.161743,
+      "score": 0.318846
+    },
+    {
+      "pair_idx": 599,
+      "posenet_mse": 0.0015333878109231591,
+      "segnet_disagree": 0.0019480388145893812,
+      "pose_contribution": 0.12383,
+      "seg_contribution": 0.194804,
+      "score": 0.318634
+    },
+    {
+      "pair_idx": 482,
+      "posenet_mse": 0.0008948550093919039,
+      "segnet_disagree": 0.0022379558067768812,
+      "pose_contribution": 0.094597,
+      "seg_contribution": 0.223796,
+      "score": 0.318392
+    },
+    {
+      "pair_idx": 372,
+      "posenet_mse": 0.0020934350322932005,
+      "segnet_disagree": 0.0017293294658884406,
+      "pose_contribution": 0.144687,
+      "seg_contribution": 0.172933,
+      "score": 0.31762
+    },
+    {
+      "pair_idx": 268,
+      "posenet_mse": 0.001991893397644162,
+      "segnet_disagree": 0.0017598470440134406,
+      "pose_contribution": 0.141134,
+      "seg_contribution": 0.175985,
+      "score": 0.317119
+    },
+    {
+      "pair_idx": 450,
+      "posenet_mse": 0.0007693974766880274,
+      "segnet_disagree": 0.0022939047776162624,
+      "pose_contribution": 0.087715,
+      "seg_contribution": 0.22939,
+      "score": 0.317106
+    },
+    {
+      "pair_idx": 144,
+      "posenet_mse": 0.0022206015419214964,
+      "segnet_disagree": 0.0016632080078125,
+      "pose_contribution": 0.149017,
+      "seg_contribution": 0.166321,
+      "score": 0.315338
+    },
+    {
+      "pair_idx": 278,
+      "posenet_mse": 0.0024363810662180185,
+      "segnet_disagree": 0.0015920003643259406,
+      "pose_contribution": 0.156089,
+      "seg_contribution": 0.1592,
+      "score": 0.315289
+    },
+    {
+      "pair_idx": 390,
+      "posenet_mse": 0.0014279469614848495,
+      "segnet_disagree": 0.001953125,
+      "pose_contribution": 0.119497,
+      "seg_contribution": 0.195312,
+      "score": 0.314809
+    },
+    {
+      "pair_idx": 245,
+      "posenet_mse": 0.000995707348920405,
+      "segnet_disagree": 0.0021464030724018812,
+      "pose_contribution": 0.099785,
+      "seg_contribution": 0.21464,
+      "score": 0.314425
+    },
+    {
+      "pair_idx": 549,
+      "posenet_mse": 0.0009332659537903965,
+      "segnet_disagree": 0.0021718344651162624,
+      "pose_contribution": 0.096606,
+      "seg_contribution": 0.217183,
+      "score": 0.313789
+    },
+    {
+      "pair_idx": 420,
+      "posenet_mse": 0.0016448870301246643,
+      "segnet_disagree": 0.0018463134765625,
+      "pose_contribution": 0.128253,
+      "seg_contribution": 0.184631,
+      "score": 0.312884
+    },
+    {
+      "pair_idx": 495,
+      "posenet_mse": 0.00038575450889766216,
+      "segnet_disagree": 0.00250244140625,
+      "pose_contribution": 0.062109,
+      "seg_contribution": 0.250244,
+      "score": 0.312353
+    },
+    {
+      "pair_idx": 442,
+      "posenet_mse": 0.0007108495919965208,
+      "segnet_disagree": 0.0022735595703125,
+      "pose_contribution": 0.084312,
+      "seg_contribution": 0.227356,
+      "score": 0.311668
+    },
+    {
+      "pair_idx": 551,
+      "posenet_mse": 0.0009070237283594906,
+      "segnet_disagree": 0.0021616618614643812,
+      "pose_contribution": 0.095238,
+      "seg_contribution": 0.216166,
+      "score": 0.311404
+    },
+    {
+      "pair_idx": 593,
+      "posenet_mse": 0.0007526387344114482,
+      "segnet_disagree": 0.002227783203125,
+      "pose_contribution": 0.086755,
+      "seg_contribution": 0.222778,
+      "score": 0.309533
+    },
+    {
+      "pair_idx": 429,
+      "posenet_mse": 0.0008736421004869044,
+      "segnet_disagree": 0.0021514892578125,
+      "pose_contribution": 0.093469,
+      "seg_contribution": 0.215149,
+      "score": 0.308618
+    },
+    {
+      "pair_idx": 303,
+      "posenet_mse": 0.0008589583449065685,
+      "segnet_disagree": 0.0021413168869912624,
+      "pose_contribution": 0.09268,
+      "seg_contribution": 0.214132,
+      "score": 0.306812
+    },
+    {
+      "pair_idx": 29,
+      "posenet_mse": 0.001997078536078334,
+      "segnet_disagree": 0.00164794921875,
+      "pose_contribution": 0.141318,
+      "seg_contribution": 0.164795,
+      "score": 0.306113
+    },
+    {
+      "pair_idx": 16,
+      "posenet_mse": 0.0012131783878430724,
+      "segnet_disagree": 0.001953125,
+      "pose_contribution": 0.110144,
+      "seg_contribution": 0.195312,
+      "score": 0.305457
+    },
+    {
+      "pair_idx": 204,
+      "posenet_mse": 0.0013332711532711983,
+      "segnet_disagree": 0.0018819173565134406,
+      "pose_contribution": 0.115467,
+      "seg_contribution": 0.188192,
+      "score": 0.303659
+    },
+    {
+      "pair_idx": 263,
+      "posenet_mse": 0.0026304712519049644,
+      "segnet_disagree": 0.0013936361065134406,
+      "pose_contribution": 0.162187,
+      "seg_contribution": 0.139364,
+      "score": 0.301551
+    },
+    {
+      "pair_idx": 363,
+      "posenet_mse": 0.001394753810018301,
+      "segnet_disagree": 0.0018259685020893812,
+      "pose_contribution": 0.1181,
+      "seg_contribution": 0.182597,
+      "score": 0.300697
+    },
+    {
+      "pair_idx": 212,
+      "posenet_mse": 0.0011411051964387298,
+      "segnet_disagree": 0.0019378662109375,
+      "pose_contribution": 0.106823,
+      "seg_contribution": 0.193787,
+      "score": 0.300609
+    },
+    {
+      "pair_idx": 299,
+      "posenet_mse": 0.0016876081936061382,
+      "segnet_disagree": 0.0017038981895893812,
+      "pose_contribution": 0.129908,
+      "seg_contribution": 0.17039,
+      "score": 0.300298
+    },
+    {
+      "pair_idx": 465,
+      "posenet_mse": 0.00010076350736198947,
+      "segnet_disagree": 0.002685546875,
+      "pose_contribution": 0.031743,
+      "seg_contribution": 0.268555,
+      "score": 0.300298
+    },
+    {
+      "pair_idx": 231,
+      "posenet_mse": 0.0006104950443841517,
+      "segnet_disagree": 0.0022023520432412624,
+      "pose_contribution": 0.078134,
+      "seg_contribution": 0.220235,
+      "score": 0.298369
+    },
+    {
+      "pair_idx": 195,
+      "posenet_mse": 0.0012513009132817388,
+      "segnet_disagree": 0.001861572265625,
+      "pose_contribution": 0.111862,
+      "seg_contribution": 0.186157,
+      "score": 0.298019
+    },
+    {
+      "pair_idx": 477,
+      "posenet_mse": 0.00032541409018449485,
+      "segnet_disagree": 0.0024007163010537624,
+      "pose_contribution": 0.057045,
+      "seg_contribution": 0.240072,
+      "score": 0.297117
+    },
+    {
+      "pair_idx": 100,
+      "posenet_mse": 0.0013377036666497588,
+      "segnet_disagree": 0.0017954509239643812,
+      "pose_contribution": 0.115659,
+      "seg_contribution": 0.179545,
+      "score": 0.295204
+    },
+    {
+      "pair_idx": 2,
+      "posenet_mse": 0.0014907001750543714,
+      "segnet_disagree": 0.0017293294658884406,
+      "pose_contribution": 0.122094,
+      "seg_contribution": 0.172933,
+      "score": 0.295027
+    },
+    {
+      "pair_idx": 145,
+      "posenet_mse": 0.0009985780343413353,
+      "segnet_disagree": 0.0019480388145893812,
+      "pose_contribution": 0.099929,
+      "seg_contribution": 0.194804,
+      "score": 0.294733
+    },
+    {
+      "pair_idx": 298,
+      "posenet_mse": 0.0009349414031021297,
+      "segnet_disagree": 0.0019785563927143812,
+      "pose_contribution": 0.096692,
+      "seg_contribution": 0.197856,
+      "score": 0.294548
+    },
+    {
+      "pair_idx": 33,
+      "posenet_mse": 0.000921659346204251,
+      "segnet_disagree": 0.0019582114182412624,
+      "pose_contribution": 0.096003,
+      "seg_contribution": 0.195821,
+      "score": 0.291824
+    },
+    {
+      "pair_idx": 185,
+      "posenet_mse": 0.0013086522230878472,
+      "segnet_disagree": 0.0017496745567768812,
+      "pose_contribution": 0.114396,
+      "seg_contribution": 0.174967,
+      "score": 0.289364
+    },
+    {
+      "pair_idx": 190,
+      "posenet_mse": 0.0013997532660141587,
+      "segnet_disagree": 0.0017038981895893812,
+      "pose_contribution": 0.118311,
+      "seg_contribution": 0.17039,
+      "score": 0.288701
+    },
+    {
+      "pair_idx": 267,
+      "posenet_mse": 0.0007163530681282282,
+      "segnet_disagree": 0.0019938151817768812,
+      "pose_contribution": 0.084638,
+      "seg_contribution": 0.199382,
+      "score": 0.284019
+    },
+    {
+      "pair_idx": 213,
+      "posenet_mse": 0.00137315783649683,
+      "segnet_disagree": 0.0016632080078125,
+      "pose_contribution": 0.117182,
+      "seg_contribution": 0.166321,
+      "score": 0.283503
+    },
+    {
+      "pair_idx": 94,
+      "posenet_mse": 0.000986625556834042,
+      "segnet_disagree": 0.0018310546875,
+      "pose_contribution": 0.099329,
+      "seg_contribution": 0.183105,
+      "score": 0.282434
+    },
+    {
+      "pair_idx": 368,
+      "posenet_mse": 0.0008001570240594447,
+      "segnet_disagree": 0.001922607421875,
+      "pose_contribution": 0.089451,
+      "seg_contribution": 0.192261,
+      "score": 0.281712
+    },
+    {
+      "pair_idx": 407,
+      "posenet_mse": 0.0016223443672060966,
+      "segnet_disagree": 0.0015309652080759406,
+      "pose_contribution": 0.127371,
+      "seg_contribution": 0.153097,
+      "score": 0.280468
+    },
+    {
+      "pair_idx": 383,
+      "posenet_mse": 0.0017331383423879743,
+      "segnet_disagree": 0.0014750163536518812,
+      "pose_contribution": 0.131649,
+      "seg_contribution": 0.147502,
+      "score": 0.27915
+    },
+    {
+      "pair_idx": 311,
+      "posenet_mse": 0.0007012254209257662,
+      "segnet_disagree": 0.0019480388145893812,
+      "pose_contribution": 0.083739,
+      "seg_contribution": 0.194804,
+      "score": 0.278543
+    },
+    {
+      "pair_idx": 483,
+      "posenet_mse": 0.0003753303608391434,
+      "segnet_disagree": 0.00213623046875,
+      "pose_contribution": 0.061264,
+      "seg_contribution": 0.213623,
+      "score": 0.274887
+    },
+    {
+      "pair_idx": 389,
+      "posenet_mse": 0.001439145766198635,
+      "segnet_disagree": 0.0015411376953125,
+      "pose_contribution": 0.119964,
+      "seg_contribution": 0.154114,
+      "score": 0.274078
+    },
+    {
+      "pair_idx": 352,
+      "posenet_mse": 0.0005647909129038453,
+      "segnet_disagree": 0.0019785563927143812,
+      "pose_contribution": 0.075153,
+      "seg_contribution": 0.197856,
+      "score": 0.273008
+    },
+    {
+      "pair_idx": 484,
+      "posenet_mse": 0.00030770213925279677,
+      "segnet_disagree": 0.0021413168869912624,
+      "pose_contribution": 0.055471,
+      "seg_contribution": 0.214132,
+      "score": 0.269603
+    },
+    {
+      "pair_idx": 45,
+      "posenet_mse": 0.0004718777781818062,
+      "segnet_disagree": 0.0019938151817768812,
+      "pose_contribution": 0.068693,
+      "seg_contribution": 0.199382,
+      "score": 0.268075
+    },
+    {
+      "pair_idx": 260,
+      "posenet_mse": 0.001314608845859766,
+      "segnet_disagree": 0.0015207927208393812,
+      "pose_contribution": 0.114656,
+      "seg_contribution": 0.152079,
+      "score": 0.266736
+    },
+    {
+      "pair_idx": 46,
+      "posenet_mse": 0.0007698449771851301,
+      "segnet_disagree": 0.0017598470440134406,
+      "pose_contribution": 0.087741,
+      "seg_contribution": 0.175985,
+      "score": 0.263726
+    },
+    {
+      "pair_idx": 342,
+      "posenet_mse": 0.000368862267350778,
+      "segnet_disagree": 0.00201416015625,
+      "pose_contribution": 0.060734,
+      "seg_contribution": 0.201416,
+      "score": 0.26215
+    },
+    {
+      "pair_idx": 417,
+      "posenet_mse": 0.00044032244477421045,
+      "segnet_disagree": 0.001953125,
+      "pose_contribution": 0.066357,
+      "seg_contribution": 0.195312,
+      "score": 0.261669
+    },
+    {
+      "pair_idx": 56,
+      "posenet_mse": 0.0006976556614972651,
+      "segnet_disagree": 0.0017598470440134406,
+      "pose_contribution": 0.083526,
+      "seg_contribution": 0.175985,
+      "score": 0.25951
+    },
+    {
+      "pair_idx": 382,
+      "posenet_mse": 0.0007718021515756845,
+      "segnet_disagree": 0.0016988118877634406,
+      "pose_contribution": 0.087852,
+      "seg_contribution": 0.169881,
+      "score": 0.257733
+    },
+    {
+      "pair_idx": 265,
+      "posenet_mse": 0.0008576323161832988,
+      "segnet_disagree": 0.00164794921875,
+      "pose_contribution": 0.092608,
+      "seg_contribution": 0.164795,
+      "score": 0.257403
+    },
+    {
+      "pair_idx": 273,
+      "posenet_mse": 0.0008256161236204207,
+      "segnet_disagree": 0.0016581218224018812,
+      "pose_contribution": 0.090863,
+      "seg_contribution": 0.165812,
+      "score": 0.256676
+    },
+    {
+      "pair_idx": 406,
+      "posenet_mse": 0.0006191168795339763,
+      "segnet_disagree": 0.0017547607421875,
+      "pose_contribution": 0.078684,
+      "seg_contribution": 0.175476,
+      "score": 0.25416
+    },
+    {
+      "pair_idx": 345,
+      "posenet_mse": 0.00043030144297517836,
+      "segnet_disagree": 0.0018819173565134406,
+      "pose_contribution": 0.065597,
+      "seg_contribution": 0.188192,
+      "score": 0.253789
+    },
+    {
+      "pair_idx": 5,
+      "posenet_mse": 0.0007407369557768106,
+      "segnet_disagree": 0.0016682943096384406,
+      "pose_contribution": 0.086066,
+      "seg_contribution": 0.166829,
+      "score": 0.252896
+    },
+    {
+      "pair_idx": 186,
+      "posenet_mse": 0.0008733167196623981,
+      "segnet_disagree": 0.0015716552734375,
+      "pose_contribution": 0.093451,
+      "seg_contribution": 0.157166,
+      "score": 0.250617
+    },
+    {
+      "pair_idx": 377,
+      "posenet_mse": 0.0007692172075621784,
+      "segnet_disagree": 0.0016021728515625,
+      "pose_contribution": 0.087705,
+      "seg_contribution": 0.160217,
+      "score": 0.247922
+    },
+    {
+      "pair_idx": 277,
+      "posenet_mse": 0.0016319258138537407,
+      "segnet_disagree": 0.0011952718487009406,
+      "pose_contribution": 0.127747,
+      "seg_contribution": 0.119527,
+      "score": 0.247274
+    },
+    {
+      "pair_idx": 10,
+      "posenet_mse": 0.0004690667556133121,
+      "segnet_disagree": 0.0016937255859375,
+      "pose_contribution": 0.068488,
+      "seg_contribution": 0.169373,
+      "score": 0.237861
+    },
+    {
+      "pair_idx": 357,
+      "posenet_mse": 0.00024796868092380464,
+      "segnet_disagree": 0.0018666585674509406,
+      "pose_contribution": 0.049796,
+      "seg_contribution": 0.186666,
+      "score": 0.236462
+    },
+    {
+      "pair_idx": 49,
+      "posenet_mse": 0.0007650619954802096,
+      "segnet_disagree": 0.0014851888408884406,
+      "pose_contribution": 0.087468,
+      "seg_contribution": 0.148519,
+      "score": 0.235987
+    },
+    {
+      "pair_idx": 338,
+      "posenet_mse": 0.00041440976201556623,
+      "segnet_disagree": 0.0017140706768259406,
+      "pose_contribution": 0.064375,
+      "seg_contribution": 0.171407,
+      "score": 0.235782
+    },
+    {
+      "pair_idx": 366,
+      "posenet_mse": 0.00046494859270751476,
+      "segnet_disagree": 0.0016733806114643812,
+      "pose_contribution": 0.068187,
+      "seg_contribution": 0.167338,
+      "score": 0.235525
+    },
+    {
+      "pair_idx": 376,
+      "posenet_mse": 0.0004902341170236468,
+      "segnet_disagree": 0.0016530355205759406,
+      "pose_contribution": 0.070017,
+      "seg_contribution": 0.165304,
+      "score": 0.23532
+    },
+    {
+      "pair_idx": 365,
+      "posenet_mse": 0.0005068077007308602,
+      "segnet_disagree": 0.0016276042442768812,
+      "pose_contribution": 0.07119,
+      "seg_contribution": 0.16276,
+      "score": 0.233951
+    },
+    {
+      "pair_idx": 258,
+      "posenet_mse": 0.00023014740145299584,
+      "segnet_disagree": 0.00177001953125,
+      "pose_contribution": 0.047974,
+      "seg_contribution": 0.177002,
+      "score": 0.224976
+    },
+    {
+      "pair_idx": 373,
+      "posenet_mse": 0.00024338795628864318,
+      "segnet_disagree": 0.0017496745567768812,
+      "pose_contribution": 0.049334,
+      "seg_contribution": 0.174967,
+      "score": 0.224302
+    },
+    {
+      "pair_idx": 254,
+      "posenet_mse": 0.00031032299739308655,
+      "segnet_disagree": 0.00164794921875,
+      "pose_contribution": 0.055707,
+      "seg_contribution": 0.164795,
+      "score": 0.220502
+    },
+    {
+      "pair_idx": 322,
+      "posenet_mse": 8.037834049900994e-05,
+      "segnet_disagree": 0.0017496745567768812,
+      "pose_contribution": 0.028351,
+      "seg_contribution": 0.174967,
+      "score": 0.203319
+    }
+  ],
+  "total_time_s": 40.85
+}
