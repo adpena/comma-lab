@@ -248,8 +248,24 @@ PY
 rm -rf "$SELF_DIR/archive" "$ARCHIVE_ZIP"
 mkdir -p "$ARCHIVE_DIR"
 
+# Skip video encoding entirely when using renderer inflate path.
+# The renderer generates frames from masks + neural network — it never uses
+# the compressed video. Including 0.mkv in the archive wastes rate budget
+# (every byte counts: rate_term = 25 * archive_size / gt_size).
+SKIP_VIDEO_ENCODE="${SKIP_VIDEO_ENCODE:-0}"
+if [ "$PYTHON_INFLATE" = "renderer" ]; then
+  SKIP_VIDEO_ENCODE=1
+  echo "[compress] PYTHON_INFLATE=renderer: skipping video encoding (renderer doesn't use compressed video)"
+fi
+
 while IFS= read -r rel; do
   [ -n "$rel" ] || continue
+
+  if [ "$SKIP_VIDEO_ENCODE" = "1" ]; then
+    echo "[compress] Skipping video encode for $rel (renderer path)"
+    continue
+  fi
+
   in_path="$UPSTREAM_ROOT/videos/$rel"
   stem="${rel%.*}"
 
