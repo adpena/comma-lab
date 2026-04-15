@@ -77,6 +77,11 @@ def parse_args() -> argparse.Namespace:
                    help="Weight for 2x2-block variance penalty. PoseNet operates on "
                         "2x-downsampled YUV, so sub-block noise is invisible to PoseNet "
                         "but costs bits. Recommended 0.1-0.5. Default 0.0 (disabled).")
+    p.add_argument("--lr-schedule", type=str, default="constant",
+                   choices=["constant", "cosine"],
+                   help="LR schedule for TTO. 'constant' = fixed LR (default). "
+                        "'cosine' = warmup 50 steps (0.001->peak_lr) then cosine "
+                        "decay to 0.0001. Peak LR = --tto-lr value.")
     return p.parse_args()
 
 
@@ -275,6 +280,7 @@ def run_batched_tto(
     pose_embeddings: torch.Tensor | None = None,
     seg_odd_only: bool = False,
     antialias_weight: float = 0.0,
+    lr_schedule: str = "constant",
 ) -> torch.Tensor:
     """Run TTO in batches of pairs to avoid OOM.
 
@@ -381,6 +387,7 @@ def run_batched_tto(
             expected_pose_embeddings=batch_embeddings,
             seg_odd_only=seg_odd_only,
             antialias_weight=antialias_weight,
+            lr_schedule=lr_schedule,
         )
         dt = time.monotonic() - t0
 
@@ -547,6 +554,7 @@ def main():
         pose_embeddings=pose_embeddings,
         seg_odd_only=args.seg_odd_only,
         antialias_weight=args.antialias_weight,
+        lr_schedule=args.lr_schedule,
     )
     t_tto = time.monotonic() - t0
     print(f"\n[7/8] TTO completed in {t_tto:.1f}s ({t_tto / args.n_frames:.2f}s/frame)")
