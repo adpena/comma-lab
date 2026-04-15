@@ -86,7 +86,6 @@ RSYNC_EXCLUDES = [
     "experiments/results",
     "experiments/raft_flow.pt",
     "reports/raw",
-    ".omx/state/review_tracker.duckdb",
     "submissions",
 ]
 
