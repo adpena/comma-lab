@@ -1,0 +1,1782 @@
+{
+  "patch_size": 7,
+  "n_frames": 20,
+  "n_pairs": 10,
+  "n_patches": 3942,
+  "map_shape": [
+    384,
+    512
+  ],
+  "sensitivity_stats": {
+    "min": 7.19204981578514e-05,
+    "max": 0.04853816330432892,
+    "mean": 0.004433972295373678,
+    "std": 0.004782517906278372
+  },
+  "n_low_sensitivity": 2262,
+  "low_sensitivity_fraction": 0.573820395738204,
+  "top_insensitive": [
+    {
+      "row": 0,
+      "col": 56,
+      "h": 7,
+      "w": 7,
+      "mean_sensitivity": 0.0002196373388869688,
+      "max_sensitivity": 0.0003695933846756816
+    },
+    {
+      "row": 0,
+      "col": 63,
+      "h": 7,
+      "w": 7,
+      "mean_sensitivity": 0.00023493226035498083,
+      "max_sensitivity": 0.0005321379867382348
+    },
+    {
+      "row": 0,
+      "col": 77,
+      "h": 7,
+      "w": 7,
+      "mean_sensitivity": 0.00023819103080313653,
+      "max_sensitivity": 0.0004777592548634857
+    },
+    {
+      "row": 0,
+      "col": 49,
+      "h": 7,
+      "w": 7,
+      "mean_sensitivity": 0.0002451553591527045,
+      "max_sensitivity": 0.0003865740727633238
+    },
+    {
+      "row": 0,
+      "col": 70,
+      "h": 7,
+      "w": 7,
+      "mean_sensitivity": 0.00025128686684183776,
+      "max_sensitivity": 0.0004972638562321663
+    },
+    {
+      "row": 0,
+      "col": 0,
+      "h": 7,
+      "w": 7,
+      "mean_sensitivity": 0.00025207363069057465,
+      "max_sensitivity": 0.00046909309457987547
+    },
+    {
+      "row": 63,
+      "col": 0,
+      "h": 7,
+      "w": 7,
+      "mean_sensitivity": 0.00026103874552063644,
+      "max_sensitivity": 0.000480807590065524
+    },
+    {
+      "row": 0,
+      "col": 91,
+      "h": 7,
+      "w": 7,
+      "mean_sensitivity": 0.0002621853491291404,
+      "max_sensitivity": 0.0005212654359638691
+    },
+    {
+      "row": 0,
+      "col": 28,
+      "h": 7,
+      "w": 7,
+      "mean_sensitivity": 0.000262709625530988,
+      "max_sensitivity": 0.0004820702597498894
+    },
+    {
+      "row": 28,
+      "col": 0,
+      "h": 7,
+      "w": 7,
+      "mean_sensitivity": 0.00026451784651726484,
+      "max_sensitivity": 0.0004261136054992676
+    },
+    {
+      "row": 0,
+      "col": 112,
+      "h": 7,
+      "w": 7,
+      "mean_sensitivity": 0.00026470108423382044,
+      "max_sensitivity": 0.0005383085808716714
+    },
+    {
+      "row": 70,
+      "col": 0,
+      "h": 7,
+      "w": 7,
+      "mean_sensitivity": 0.0002649651432875544,
+      "max_sensitivity": 0.0004070350551046431
+    },
+    {
+      "row": 0,
+      "col": 84,
+      "h": 7,
+      "w": 7,
+      "mean_sensitivity": 0.000268673145910725,
+      "max_sensitivity": 0.0004641110426746309
+    },
+    {
+      "row": 0,
+      "col": 105,
+      "h": 7,
+      "w": 7,
+      "mean_sensitivity": 0.0002701162302400917,
+      "max_sensitivity": 0.0005799452774226665
+    },
+    {
+      "row": 77,
+      "col": 0,
+      "h": 7,
+      "w": 7,
+      "mean_sensitivity": 0.0002721573691815138,
+      "max_sensitivity": 0.0004566187271848321
+    },
+    {
+      "row": 56,
+      "col": 0,
+      "h": 7,
+      "w": 7,
+      "mean_sensitivity": 0.0002738322364166379,
+      "max_sensitivity": 0.00046655131154693663
+    },
+    {
+      "row": 35,
+      "col": 0,
+      "h": 7,
+      "w": 7,
+      "mean_sensitivity": 0.00027428846806287766,
+      "max_sensitivity": 0.0004113383765798062
+    },
+    {
+      "row": 0,
+      "col": 42,
+      "h": 7,
+      "w": 7,
+      "mean_sensitivity": 0.00027743386453948915,
+      "max_sensitivity": 0.0005225034547038376
+    },
+    {
+      "row": 21,
+      "col": 0,
+      "h": 7,
+      "w": 7,
+      "mean_sensitivity": 0.00028260634280741215,
+      "max_sensitivity": 0.00038616161327809095
+    },
+    {
+      "row": 0,
+      "col": 35,
+      "h": 7,
+      "w": 7,
+      "mean_sensitivity": 0.0002869991003535688,
+      "max_sensitivity": 0.0004963738610967994
+    },
+    {
+      "row": 0,
+      "col": 119,
+      "h": 7,
+      "w": 7,
+      "mean_sensitivity": 0.00029539247043430805,
+      "max_sensitivity": 0.0004808851226698607
+    },
+    {
+      "row": 0,
+      "col": 98,
+      "h": 7,
+      "w": 7,
+      "mean_sensitivity": 0.0002978105330839753,
+      "max_sensitivity": 0.0005251647671684623
+    },
+    {
+      "row": 189,
+      "col": 504,
+      "h": 7,
+      "w": 7,
+      "mean_sensitivity": 0.00030723013333044946,
+      "max_sensitivity": 0.00047324111801572144
+    },
+    {
+      "row": 63,
+      "col": 504,
+      "h": 7,
+      "w": 7,
+      "mean_sensitivity": 0.0003076947177760303,
+      "max_sensitivity": 0.0004720230062957853
+    },
+    {
+      "row": 0,
+      "col": 126,
+      "h": 7,
+      "w": 7,
+      "mean_sensitivity": 0.0003087103832513094,
+      "max_sensitivity": 0.0005766328540630639
+    },
+    {
+      "row": 84,
+      "col": 0,
+      "h": 7,
+      "w": 7,
+      "mean_sensitivity": 0.0003112661652266979,
+      "max_sensitivity": 0.0005358143826015294
+    },
+    {
+      "row": 0,
+      "col": 21,
+      "h": 7,
+      "w": 7,
+      "mean_sensitivity": 0.00031991017749533057,
+      "max_sensitivity": 0.0005367942503653467
+    },
+    {
+      "row": 91,
+      "col": 504,
+      "h": 7,
+      "w": 7,
+      "mean_sensitivity": 0.0003223425301257521,
+      "max_sensitivity": 0.0005732119898311794
+    },
+    {
+      "row": 49,
+      "col": 0,
+      "h": 7,
+      "w": 7,
+      "mean_sensitivity": 0.0003251011366955936,
+      "max_sensitivity": 0.0004902833024971187
+    },
+    {
+      "row": 42,
+      "col": 0,
+      "h": 7,
+      "w": 7,
+      "mean_sensitivity": 0.00032548944000154734,
+      "max_sensitivity": 0.0004668395849876106
+    },
+    {
+      "row": 70,
+      "col": 504,
+      "h": 7,
+      "w": 7,
+      "mean_sensitivity": 0.000331894465489313,
+      "max_sensitivity": 0.0006351740448735654
+    },
+    {
+      "row": 14,
+      "col": 0,
+      "h": 7,
+      "w": 7,
+      "mean_sensitivity": 0.00033393240300938487,
+      "max_sensitivity": 0.00054346484830603
+    },
+    {
+      "row": 77,
+      "col": 504,
+      "h": 7,
+      "w": 7,
+      "mean_sensitivity": 0.0003393923689145595,
+      "max_sensitivity": 0.0005531028145924211
+    },
+    {
+      "row": 84,
+      "col": 504,
+      "h": 7,
+      "w": 7,
+      "mean_sensitivity": 0.0003422530717216432,
+      "max_sensitivity": 0.0005842739483341575
+    },
+    {
+      "row": 0,
+      "col": 441,
+      "h": 7,
+      "w": 7,
+      "mean_sensitivity": 0.00034243238042108715,
+      "max_sensitivity": 0.000545269635040313
+    },
+    {
+      "row": 35,
+      "col": 504,
+      "h": 7,
+      "w": 7,
+      "mean_sensitivity": 0.00034352822694927454,
+      "max_sensitivity": 0.0005551041685976088
+    },
+    {
+      "row": 0,
+      "col": 434,
+      "h": 7,
+      "w": 7,
+      "mean_sensitivity": 0.000354872114257887,
+      "max_sensitivity": 0.0005851521855220199
+    },
+    {
+      "row": 196,
+      "col": 504,
+      "h": 7,
+      "w": 7,
+      "mean_sensitivity": 0.00035663385642692447,
+      "max_sensitivity": 0.0006386188324540854
+    },
+    {
+      "row": 0,
+      "col": 140,
+      "h": 7,
+      "w": 7,
+      "mean_sensitivity": 0.0003635786415543407,
+      "max_sensitivity": 0.0007684958400204778
+    },
+    {
+      "row": 0,
+      "col": 182,
+      "h": 7,
+      "w": 7,
+      "mean_sensitivity": 0.0003639694768935442,
+      "max_sensitivity": 0.0006476218695752323
+    },
+    {
+      "row": 182,
+      "col": 504,
+      "h": 7,
+      "w": 7,
+      "mean_sensitivity": 0.0003741110267583281,
+      "max_sensitivity": 0.0005849535809829831
+    },
+    {
+      "row": 0,
+      "col": 203,
+      "h": 7,
+      "w": 7,
+      "mean_sensitivity": 0.0003759961109608412,
+      "max_sensitivity": 0.0006446416955441236
+    },
+    {
+      "row": 91,
+      "col": 0,
+      "h": 7,
+      "w": 7,
+      "mean_sensitivity": 0.0003790599585045129,
+      "max_sensitivity": 0.0007034285226836801
+    },
+    {
+      "row": 0,
+      "col": 14,
+      "h": 7,
+      "w": 7,
+      "mean_sensitivity": 0.0003793347568716854,
+      "max_sensitivity": 0.0006375845987349749
+    },
+    {
+      "row": 0,
+      "col": 175,
+      "h": 7,
+      "w": 7,
+      "mean_sensitivity": 0.0003813026996795088,
+      "max_sensitivity": 0.0007889267290011048
+    },
+    {
+      "row": 98,
+      "col": 504,
+      "h": 7,
+      "w": 7,
+      "mean_sensitivity": 0.0003860219439957291,
+      "max_sensitivity": 0.0005512114148586988
+    },
+    {
+      "row": 0,
+      "col": 210,
+      "h": 7,
+      "w": 7,
+      "mean_sensitivity": 0.0003866342594847083,
+      "max_sensitivity": 0.0007085305987857282
+    },
+    {
+      "row": 7,
+      "col": 0,
+      "h": 7,
+      "w": 7,
+      "mean_sensitivity": 0.00038895843317732215,
+      "max_sensitivity": 0.0005605270271189511
+    },
+    {
+      "row": 0,
+      "col": 427,
+      "h": 7,
+      "w": 7,
+      "mean_sensitivity": 0.00039129628567025065,
+      "max_sensitivity": 0.0009084029588848352
+    },
+    {
+      "row": 0,
+      "col": 161,
+      "h": 7,
+      "w": 7,
+      "mean_sensitivity": 0.0003914816479664296,
+      "max_sensitivity": 0.0007403707131743431
+    },
+    {
+      "row": 0,
+      "col": 133,
+      "h": 7,
+      "w": 7,
+      "mean_sensitivity": 0.0003919547889381647,
+      "max_sensitivity": 0.000836277729831636
+    },
+    {
+      "row": 0,
+      "col": 154,
+      "h": 7,
+      "w": 7,
+      "mean_sensitivity": 0.00039528653724119067,
+      "max_sensitivity": 0.0007762630702927709
+    },
+    {
+      "row": 56,
+      "col": 504,
+      "h": 7,
+      "w": 7,
+      "mean_sensitivity": 0.0003953789419028908,
+      "max_sensitivity": 0.0006103942869231105
+    },
+    {
+      "row": 42,
+      "col": 504,
+      "h": 7,
+      "w": 7,
+      "mean_sensitivity": 0.00039559329161420465,
+      "max_sensitivity": 0.0005735143786296248
+    },
+    {
+      "row": 189,
+      "col": 497,
+      "h": 7,
+      "w": 7,
+      "mean_sensitivity": 0.00039645357173867524,
+      "max_sensitivity": 0.0005854532355442643
+    },
+    {
+      "row": 0,
+      "col": 448,
+      "h": 7,
+      "w": 7,
+      "mean_sensitivity": 0.0003980588517151773,
+      "max_sensitivity": 0.0008287000237032771
+    },
+    {
+      "row": 0,
+      "col": 196,
+      "h": 7,
+      "w": 7,
+      "mean_sensitivity": 0.00039836837095208466,
+      "max_sensitivity": 0.0007371830870397389
+    },
+    {
+      "row": 0,
+      "col": 189,
+      "h": 7,
+      "w": 7,
+      "mean_sensitivity": 0.00040113760042004287,
+      "max_sensitivity": 0.0007239256519824266
+    },
+    {
+      "row": 28,
+      "col": 7,
+      "h": 7,
+      "w": 7,
+      "mean_sensitivity": 0.0004032792057842016,
+      "max_sensitivity": 0.0005424645496532321
+    },
+    {
+      "row": 105,
+      "col": 504,
+      "h": 7,
+      "w": 7,
+      "mean_sensitivity": 0.0004035230667795986,
+      "max_sensitivity": 0.0006132875569164753
+    },
+    {
+      "row": 49,
+      "col": 504,
+      "h": 7,
+      "w": 7,
+      "mean_sensitivity": 0.00040365493623539805,
+      "max_sensitivity": 0.0006249250727705657
+    },
+    {
+      "row": 28,
+      "col": 28,
+      "h": 7,
+      "w": 7,
+      "mean_sensitivity": 0.0004084109968971461,
+      "max_sensitivity": 0.0005466455477289855
+    },
+    {
+      "row": 21,
+      "col": 28,
+      "h": 7,
+      "w": 7,
+      "mean_sensitivity": 0.0004150229215156287,
+      "max_sensitivity": 0.0006156247109174728
+    },
+    {
+      "row": 0,
+      "col": 420,
+      "h": 7,
+      "w": 7,
+      "mean_sensitivity": 0.000415098387748003,
+      "max_sensitivity": 0.0009433864033780992
+    },
+    {
+      "row": 140,
+      "col": 504,
+      "h": 7,
+      "w": 7,
+      "mean_sensitivity": 0.00041529288864694536,
+      "max_sensitivity": 0.0006810151971876621
+    },
+    {
+      "row": 42,
+      "col": 14,
+      "h": 7,
+      "w": 7,
+      "mean_sensitivity": 0.0004168066952843219,
+      "max_sensitivity": 0.0005937371752224863
+    },
+    {
+      "row": 112,
+      "col": 504,
+      "h": 7,
+      "w": 7,
+      "mean_sensitivity": 0.00041973066981881857,
+      "max_sensitivity": 0.0006968722445890307
+    },
+    {
+      "row": 42,
+      "col": 7,
+      "h": 7,
+      "w": 7,
+      "mean_sensitivity": 0.00042053600191138685,
+      "max_sensitivity": 0.0006780463736504316
+    },
+    {
+      "row": 35,
+      "col": 7,
+      "h": 7,
+      "w": 7,
+      "mean_sensitivity": 0.0004243958683218807,
+      "max_sensitivity": 0.000565079040825367
+    },
+    {
+      "row": 35,
+      "col": 21,
+      "h": 7,
+      "w": 7,
+      "mean_sensitivity": 0.00042636258876882493,
+      "max_sensitivity": 0.0005622620228677988
+    },
+    {
+      "row": 98,
+      "col": 497,
+      "h": 7,
+      "w": 7,
+      "mean_sensitivity": 0.00042869040044024587,
+      "max_sensitivity": 0.0006493246764875948
+    },
+    {
+      "row": 0,
+      "col": 168,
+      "h": 7,
+      "w": 7,
+      "mean_sensitivity": 0.0004322149034123868,
+      "max_sensitivity": 0.0008769970154389739
+    },
+    {
+      "row": 119,
+      "col": 504,
+      "h": 7,
+      "w": 7,
+      "mean_sensitivity": 0.00043319392716512084,
+      "max_sensitivity": 0.0008481434779241681
+    },
+    {
+      "row": 63,
+      "col": 7,
+      "h": 7,
+      "w": 7,
+      "mean_sensitivity": 0.0004340868617873639,
+      "max_sensitivity": 0.0005931294872425497
+    },
+    {
+      "row": 0,
+      "col": 7,
+      "h": 7,
+      "w": 7,
+      "mean_sensitivity": 0.0004347772628534585,
+      "max_sensitivity": 0.0006592449499294162
+    },
+    {
+      "row": 21,
+      "col": 7,
+      "h": 7,
+      "w": 7,
+      "mean_sensitivity": 0.0004367875517345965,
+      "max_sensitivity": 0.0006173994042910635
+    },
+    {
+      "row": 63,
+      "col": 14,
+      "h": 7,
+      "w": 7,
+      "mean_sensitivity": 0.000437484763097018,
+      "max_sensitivity": 0.000554423313587904
+    },
+    {
+      "row": 98,
+      "col": 0,
+      "h": 7,
+      "w": 7,
+      "mean_sensitivity": 0.00043913538684137166,
+      "max_sensitivity": 0.0006667439010925591
+    },
+    {
+      "row": 35,
+      "col": 28,
+      "h": 7,
+      "w": 7,
+      "mean_sensitivity": 0.000439886876847595,
+      "max_sensitivity": 0.0005911120679229498
+    },
+    {
+      "row": 91,
+      "col": 497,
+      "h": 7,
+      "w": 7,
+      "mean_sensitivity": 0.00044214760418981314,
+      "max_sensitivity": 0.0007700452115386724
+    },
+    {
+      "row": 28,
+      "col": 21,
+      "h": 7,
+      "w": 7,
+      "mean_sensitivity": 0.0004430106782820076,
+      "max_sensitivity": 0.0005193992983549833
+    },
+    {
+      "row": 0,
+      "col": 336,
+      "h": 7,
+      "w": 7,
+      "mean_sensitivity": 0.00044477995834313333,
+      "max_sensitivity": 0.0008547334582544863
+    },
+    {
+      "row": 0,
+      "col": 343,
+      "h": 7,
+      "w": 7,
+      "mean_sensitivity": 0.0004451315035112202,
+      "max_sensitivity": 0.0008423045510426164
+    },
+    {
+      "row": 56,
+      "col": 21,
+      "h": 7,
+      "w": 7,
+      "mean_sensitivity": 0.0004460729833226651,
+      "max_sensitivity": 0.0006147701060399413
+    },
+    {
+      "row": 28,
+      "col": 504,
+      "h": 7,
+      "w": 7,
+      "mean_sensitivity": 0.00044780399184674025,
+      "max_sensitivity": 0.0007578832446597517
+    },
+    {
+      "row": 0,
+      "col": 238,
+      "h": 7,
+      "w": 7,
+      "mean_sensitivity": 0.00044809639803133905,
+      "max_sensitivity": 0.0008680919418111444
+    },
+    {
+      "row": 56,
+      "col": 7,
+      "h": 7,
+      "w": 7,
+      "mean_sensitivity": 0.0004481951182242483,
+      "max_sensitivity": 0.0007073060842230916
+    },
+    {
+      "row": 0,
+      "col": 287,
+      "h": 7,
+      "w": 7,
+      "mean_sensitivity": 0.0004484696837607771,
+      "max_sensitivity": 0.0007842084742151201
+    },
+    {
+      "row": 21,
+      "col": 21,
+      "h": 7,
+      "w": 7,
+      "mean_sensitivity": 0.0004500971408560872,
+      "max_sensitivity": 0.0005817166529595852
+    },
+    {
+      "row": 0,
+      "col": 455,
+      "h": 7,
+      "w": 7,
+      "mean_sensitivity": 0.0004502104129642248,
+      "max_sensitivity": 0.0009947993094101548
+    },
+    {
+      "row": 0,
+      "col": 224,
+      "h": 7,
+      "w": 7,
+      "mean_sensitivity": 0.00045177299762144685,
+      "max_sensitivity": 0.0008625299669802189
+    },
+    {
+      "row": 21,
+      "col": 35,
+      "h": 7,
+      "w": 7,
+      "mean_sensitivity": 0.0004531668091658503,
+      "max_sensitivity": 0.000605784123763442
+    },
+    {
+      "row": 28,
+      "col": 35,
+      "h": 7,
+      "w": 7,
+      "mean_sensitivity": 0.0004553461039904505,
+      "max_sensitivity": 0.0006135683506727219
+    },
+    {
+      "row": 0,
+      "col": 308,
+      "h": 7,
+      "w": 7,
+      "mean_sensitivity": 0.0004560209345072508,
+      "max_sensitivity": 0.00087441859068349
+    },
+    {
+      "row": 0,
+      "col": 322,
+      "h": 7,
+      "w": 7,
+      "mean_sensitivity": 0.00045650824904441833,
+      "max_sensitivity": 0.0008446876890957355
+    },
+    {
+      "row": 42,
+      "col": 21,
+      "h": 7,
+      "w": 7,
+      "mean_sensitivity": 0.0004571758327074349,
+      "max_sensitivity": 0.0006103153573349118
+    },
+    {
+      "row": 0,
+      "col": 245,
+      "h": 7,
+      "w": 7,
+      "mean_sensitivity": 0.0004590364405885339,
+      "max_sensitivity": 0.0007603715639561415
+    },
+    {
+      "row": 0,
+      "col": 315,
+      "h": 7,
+      "w": 7,
+      "mean_sensitivity": 0.0004600962856784463,
+      "max_sensitivity": 0.0009471182711422443
+    },
+    {
+      "row": 0,
+      "col": 364,
+      "h": 7,
+      "w": 7,
+      "mean_sensitivity": 0.0004630387993529439,
+      "max_sensitivity": 0.0010181154357269406
+    },
+    {
+      "row": 42,
+      "col": 35,
+      "h": 7,
+      "w": 7,
+      "mean_sensitivity": 0.00046528465463779867,
+      "max_sensitivity": 0.000578251900151372
+    },
+    {
+      "row": 42,
+      "col": 28,
+      "h": 7,
+      "w": 7,
+      "mean_sensitivity": 0.00046600657515227795,
+      "max_sensitivity": 0.0006097648292779922
+    },
+    {
+      "row": 28,
+      "col": 42,
+      "h": 7,
+      "w": 7,
+      "mean_sensitivity": 0.00046620197826996446,
+      "max_sensitivity": 0.0005876801442354918
+    },
+    {
+      "row": 49,
+      "col": 7,
+      "h": 7,
+      "w": 7,
+      "mean_sensitivity": 0.00046651961747556925,
+      "max_sensitivity": 0.0006087844958528876
+    },
+    {
+      "row": 84,
+      "col": 497,
+      "h": 7,
+      "w": 7,
+      "mean_sensitivity": 0.00046672220923937857,
+      "max_sensitivity": 0.0005812403978779912
+    },
+    {
+      "row": 35,
+      "col": 14,
+      "h": 7,
+      "w": 7,
+      "mean_sensitivity": 0.00046994598233141005,
+      "max_sensitivity": 0.0005894085043109953
+    },
+    {
+      "row": 0,
+      "col": 217,
+      "h": 7,
+      "w": 7,
+      "mean_sensitivity": 0.000470020022476092,
+      "max_sensitivity": 0.0008438091026619077
+    },
+    {
+      "row": 0,
+      "col": 147,
+      "h": 7,
+      "w": 7,
+      "mean_sensitivity": 0.0004705446772277355,
+      "max_sensitivity": 0.0009067137143574655
+    },
+    {
+      "row": 77,
+      "col": 21,
+      "h": 7,
+      "w": 7,
+      "mean_sensitivity": 0.00047088248538784683,
+      "max_sensitivity": 0.0006743272533640265
+    },
+    {
+      "row": 49,
+      "col": 21,
+      "h": 7,
+      "w": 7,
+      "mean_sensitivity": 0.0004777295107487589,
+      "max_sensitivity": 0.0006322683184407651
+    },
+    {
+      "row": 28,
+      "col": 49,
+      "h": 7,
+      "w": 7,
+      "mean_sensitivity": 0.0004778299480676651,
+      "max_sensitivity": 0.0006158341420814395
+    },
+    {
+      "row": 0,
+      "col": 350,
+      "h": 7,
+      "w": 7,
+      "mean_sensitivity": 0.0004790342936757952,
+      "max_sensitivity": 0.0009319136152043939
+    },
+    {
+      "row": 28,
+      "col": 14,
+      "h": 7,
+      "w": 7,
+      "mean_sensitivity": 0.00047914148308336735,
+      "max_sensitivity": 0.0006632792646996677
+    },
+    {
+      "row": 77,
+      "col": 7,
+      "h": 7,
+      "w": 7,
+      "mean_sensitivity": 0.0004815282882191241,
+      "max_sensitivity": 0.0006833122461102903
+    },
+    {
+      "row": 98,
+      "col": 490,
+      "h": 7,
+      "w": 7,
+      "mean_sensitivity": 0.0004819669702555984,
+      "max_sensitivity": 0.0006886727060191333
+    },
+    {
+      "row": 0,
+      "col": 280,
+      "h": 7,
+      "w": 7,
+      "mean_sensitivity": 0.0004821651673410088,
+      "max_sensitivity": 0.0007376490975730121
+    },
+    {
+      "row": 126,
+      "col": 504,
+      "h": 7,
+      "w": 7,
+      "mean_sensitivity": 0.0004825727373827249,
+      "max_sensitivity": 0.0009037807467393577
+    },
+    {
+      "row": 0,
+      "col": 294,
+      "h": 7,
+      "w": 7,
+      "mean_sensitivity": 0.00048418232472613454,
+      "max_sensitivity": 0.0010079826461151242
+    },
+    {
+      "row": 70,
+      "col": 14,
+      "h": 7,
+      "w": 7,
+      "mean_sensitivity": 0.00048494437942281365,
+      "max_sensitivity": 0.000641871418338269
+    },
+    {
+      "row": 70,
+      "col": 7,
+      "h": 7,
+      "w": 7,
+      "mean_sensitivity": 0.0004849485703743994,
+      "max_sensitivity": 0.0007138174260035157
+    },
+    {
+      "row": 77,
+      "col": 14,
+      "h": 7,
+      "w": 7,
+      "mean_sensitivity": 0.00048525570309720933,
+      "max_sensitivity": 0.0006401021382771432
+    },
+    {
+      "row": 77,
+      "col": 483,
+      "h": 7,
+      "w": 7,
+      "mean_sensitivity": 0.00048555160174146295,
+      "max_sensitivity": 0.0007345222984440625
+    },
+    {
+      "row": 63,
+      "col": 21,
+      "h": 7,
+      "w": 7,
+      "mean_sensitivity": 0.00048597328714095056,
+      "max_sensitivity": 0.0005932216299697757
+    },
+    {
+      "row": 49,
+      "col": 35,
+      "h": 7,
+      "w": 7,
+      "mean_sensitivity": 0.00048666854854673147,
+      "max_sensitivity": 0.0006374865770339966
+    },
+    {
+      "row": 56,
+      "col": 14,
+      "h": 7,
+      "w": 7,
+      "mean_sensitivity": 0.0004868744290433824,
+      "max_sensitivity": 0.0007182462140917778
+    },
+    {
+      "row": 0,
+      "col": 252,
+      "h": 7,
+      "w": 7,
+      "mean_sensitivity": 0.0004873326688539237,
+      "max_sensitivity": 0.000959168653935194
+    },
+    {
+      "row": 84,
+      "col": 7,
+      "h": 7,
+      "w": 7,
+      "mean_sensitivity": 0.0004914696328341961,
+      "max_sensitivity": 0.0006931852549314499
+    },
+    {
+      "row": 21,
+      "col": 14,
+      "h": 7,
+      "w": 7,
+      "mean_sensitivity": 0.0004916180623695254,
+      "max_sensitivity": 0.0007097218767739832
+    },
+    {
+      "row": 14,
+      "col": 35,
+      "h": 7,
+      "w": 7,
+      "mean_sensitivity": 0.0004957207129336894,
+      "max_sensitivity": 0.0007038391777314246
+    },
+    {
+      "row": 77,
+      "col": 497,
+      "h": 7,
+      "w": 7,
+      "mean_sensitivity": 0.0004971795133315027,
+      "max_sensitivity": 0.0007639313116669655
+    },
+    {
+      "row": 0,
+      "col": 329,
+      "h": 7,
+      "w": 7,
+      "mean_sensitivity": 0.0004977327189408243,
+      "max_sensitivity": 0.0008682319894433022
+    },
+    {
+      "row": 175,
+      "col": 504,
+      "h": 7,
+      "w": 7,
+      "mean_sensitivity": 0.0004985413397662342,
+      "max_sensitivity": 0.0007099418435245752
+    },
+    {
+      "row": 189,
+      "col": 490,
+      "h": 7,
+      "w": 7,
+      "mean_sensitivity": 0.0005004189442843199,
+      "max_sensitivity": 0.0006871627410873771
+    },
+    {
+      "row": 42,
+      "col": 42,
+      "h": 7,
+      "w": 7,
+      "mean_sensitivity": 0.0005008064326830208,
+      "max_sensitivity": 0.0006937739672139287
+    },
+    {
+      "row": 105,
+      "col": 497,
+      "h": 7,
+      "w": 7,
+      "mean_sensitivity": 0.0005033381166867912,
+      "max_sensitivity": 0.0006686272099614143
+    },
+    {
+      "row": 7,
+      "col": 28,
+      "h": 7,
+      "w": 7,
+      "mean_sensitivity": 0.0005041572148911655,
+      "max_sensitivity": 0.0006930435774847865
+    },
+    {
+      "row": 49,
+      "col": 14,
+      "h": 7,
+      "w": 7,
+      "mean_sensitivity": 0.0005064446595497429,
+      "max_sensitivity": 0.0007622422417625785
+    },
+    {
+      "row": 105,
+      "col": 0,
+      "h": 7,
+      "w": 7,
+      "mean_sensitivity": 0.0005068007158115506,
+      "max_sensitivity": 0.0010362041648477316
+    },
+    {
+      "row": 35,
+      "col": 35,
+      "h": 7,
+      "w": 7,
+      "mean_sensitivity": 0.000507376913446933,
+      "max_sensitivity": 0.0006169932312332094
+    },
+    {
+      "row": 0,
+      "col": 413,
+      "h": 7,
+      "w": 7,
+      "mean_sensitivity": 0.0005084906588308513,
+      "max_sensitivity": 0.0010383601766079664
+    },
+    {
+      "row": 70,
+      "col": 21,
+      "h": 7,
+      "w": 7,
+      "mean_sensitivity": 0.0005094013176858425,
+      "max_sensitivity": 0.000668556138407439
+    },
+    {
+      "row": 49,
+      "col": 28,
+      "h": 7,
+      "w": 7,
+      "mean_sensitivity": 0.0005123928422108293,
+      "max_sensitivity": 0.000623922620434314
+    },
+    {
+      "row": 0,
+      "col": 301,
+      "h": 7,
+      "w": 7,
+      "mean_sensitivity": 0.0005177583079785109,
+      "max_sensitivity": 0.0009278534562326968
+    },
+    {
+      "row": 133,
+      "col": 504,
+      "h": 7,
+      "w": 7,
+      "mean_sensitivity": 0.0005187679780647159,
+      "max_sensitivity": 0.000933362462092191
+    },
+    {
+      "row": 14,
+      "col": 21,
+      "h": 7,
+      "w": 7,
+      "mean_sensitivity": 0.0005233325064182281,
+      "max_sensitivity": 0.0006594198639504611
+    },
+    {
+      "row": 35,
+      "col": 497,
+      "h": 7,
+      "w": 7,
+      "mean_sensitivity": 0.0005250294925644994,
+      "max_sensitivity": 0.0007472379365935922
+    },
+    {
+      "row": 49,
+      "col": 42,
+      "h": 7,
+      "w": 7,
+      "mean_sensitivity": 0.0005287686362862587,
+      "max_sensitivity": 0.0006659779464825988
+    },
+    {
+      "row": 14,
+      "col": 28,
+      "h": 7,
+      "w": 7,
+      "mean_sensitivity": 0.0005309227271936834,
+      "max_sensitivity": 0.0006963963387534022
+    },
+    {
+      "row": 77,
+      "col": 490,
+      "h": 7,
+      "w": 7,
+      "mean_sensitivity": 0.0005312084686011076,
+      "max_sensitivity": 0.0007920936914160848
+    },
+    {
+      "row": 56,
+      "col": 35,
+      "h": 7,
+      "w": 7,
+      "mean_sensitivity": 0.0005313600413501263,
+      "max_sensitivity": 0.0006777170347049832
+    },
+    {
+      "row": 7,
+      "col": 56,
+      "h": 7,
+      "w": 7,
+      "mean_sensitivity": 0.0005331163411028683,
+      "max_sensitivity": 0.000723550037946552
+    },
+    {
+      "row": 91,
+      "col": 469,
+      "h": 7,
+      "w": 7,
+      "mean_sensitivity": 0.0005361828370951116,
+      "max_sensitivity": 0.0008709097164683044
+    },
+    {
+      "row": 196,
+      "col": 497,
+      "h": 7,
+      "w": 7,
+      "mean_sensitivity": 0.0005364012904465199,
+      "max_sensitivity": 0.000875091296620667
+    },
+    {
+      "row": 0,
+      "col": 357,
+      "h": 7,
+      "w": 7,
+      "mean_sensitivity": 0.0005373947788029909,
+      "max_sensitivity": 0.0011014206102117896
+    },
+    {
+      "row": 63,
+      "col": 35,
+      "h": 7,
+      "w": 7,
+      "mean_sensitivity": 0.0005388458957895637,
+      "max_sensitivity": 0.0007339164149016142
+    },
+    {
+      "row": 70,
+      "col": 483,
+      "h": 7,
+      "w": 7,
+      "mean_sensitivity": 0.0005406541749835014,
+      "max_sensitivity": 0.0007108416757546365
+    },
+    {
+      "row": 0,
+      "col": 406,
+      "h": 7,
+      "w": 7,
+      "mean_sensitivity": 0.0005424854462035,
+      "max_sensitivity": 0.0009464555187150836
+    },
+    {
+      "row": 35,
+      "col": 490,
+      "h": 7,
+      "w": 7,
+      "mean_sensitivity": 0.0005434263148345053,
+      "max_sensitivity": 0.0007583486731164157
+    },
+    {
+      "row": 56,
+      "col": 42,
+      "h": 7,
+      "w": 7,
+      "mean_sensitivity": 0.0005436112405732274,
+      "max_sensitivity": 0.0007501665386371315
+    },
+    {
+      "row": 21,
+      "col": 56,
+      "h": 7,
+      "w": 7,
+      "mean_sensitivity": 0.0005440516979433596,
+      "max_sensitivity": 0.0007367986836470664
+    },
+    {
+      "row": 42,
+      "col": 49,
+      "h": 7,
+      "w": 7,
+      "mean_sensitivity": 0.0005443809786811471,
+      "max_sensitivity": 0.0006739714299328625
+    },
+    {
+      "row": 98,
+      "col": 483,
+      "h": 7,
+      "w": 7,
+      "mean_sensitivity": 0.0005446745199151337,
+      "max_sensitivity": 0.000844167429022491
+    },
+    {
+      "row": 84,
+      "col": 21,
+      "h": 7,
+      "w": 7,
+      "mean_sensitivity": 0.0005447710864245892,
+      "max_sensitivity": 0.0006849358906038105
+    },
+    {
+      "row": 49,
+      "col": 469,
+      "h": 7,
+      "w": 7,
+      "mean_sensitivity": 0.0005475656944327056,
+      "max_sensitivity": 0.0006663789972662926
+    },
+    {
+      "row": 21,
+      "col": 42,
+      "h": 7,
+      "w": 7,
+      "mean_sensitivity": 0.0005495005170814693,
+      "max_sensitivity": 0.0007797558791935444
+    },
+    {
+      "row": 28,
+      "col": 56,
+      "h": 7,
+      "w": 7,
+      "mean_sensitivity": 0.0005500430124811828,
+      "max_sensitivity": 0.0007021480705589056
+    },
+    {
+      "row": 7,
+      "col": 49,
+      "h": 7,
+      "w": 7,
+      "mean_sensitivity": 0.000551584642380476,
+      "max_sensitivity": 0.0008987280307337642
+    },
+    {
+      "row": 35,
+      "col": 483,
+      "h": 7,
+      "w": 7,
+      "mean_sensitivity": 0.0005525767337530851,
+      "max_sensitivity": 0.0007290305220521986
+    },
+    {
+      "row": 28,
+      "col": 63,
+      "h": 7,
+      "w": 7,
+      "mean_sensitivity": 0.0005535644595511258,
+      "max_sensitivity": 0.0007809583330526948
+    },
+    {
+      "row": 7,
+      "col": 21,
+      "h": 7,
+      "w": 7,
+      "mean_sensitivity": 0.00055605114903301,
+      "max_sensitivity": 0.0008043844718486071
+    },
+    {
+      "row": 147,
+      "col": 504,
+      "h": 7,
+      "w": 7,
+      "mean_sensitivity": 0.0005574544193223119,
+      "max_sensitivity": 0.0009996811859309673
+    },
+    {
+      "row": 28,
+      "col": 483,
+      "h": 7,
+      "w": 7,
+      "mean_sensitivity": 0.0005607674829661846,
+      "max_sensitivity": 0.0008961963467299938
+    },
+    {
+      "row": 77,
+      "col": 476,
+      "h": 7,
+      "w": 7,
+      "mean_sensitivity": 0.000561037624720484,
+      "max_sensitivity": 0.0008403988904319704
+    },
+    {
+      "row": 91,
+      "col": 462,
+      "h": 7,
+      "w": 7,
+      "mean_sensitivity": 0.0005620099836960435,
+      "max_sensitivity": 0.0007692675571888685
+    },
+    {
+      "row": 14,
+      "col": 7,
+      "h": 7,
+      "w": 7,
+      "mean_sensitivity": 0.0005629388033412397,
+      "max_sensitivity": 0.0008249571546912193
+    },
+    {
+      "row": 49,
+      "col": 497,
+      "h": 7,
+      "w": 7,
+      "mean_sensitivity": 0.0005649861413985491,
+      "max_sensitivity": 0.0007910758722573519
+    },
+    {
+      "row": 84,
+      "col": 490,
+      "h": 7,
+      "w": 7,
+      "mean_sensitivity": 0.0005652960971929133,
+      "max_sensitivity": 0.0007855737931095064
+    },
+    {
+      "row": 7,
+      "col": 35,
+      "h": 7,
+      "w": 7,
+      "mean_sensitivity": 0.000565333291888237,
+      "max_sensitivity": 0.0007156229694373906
+    },
+    {
+      "row": 7,
+      "col": 77,
+      "h": 7,
+      "w": 7,
+      "mean_sensitivity": 0.0005672300467267632,
+      "max_sensitivity": 0.0007758232532069087
+    },
+    {
+      "row": 70,
+      "col": 490,
+      "h": 7,
+      "w": 7,
+      "mean_sensitivity": 0.0005713896825909615,
+      "max_sensitivity": 0.0009131581755355
+    },
+    {
+      "row": 63,
+      "col": 28,
+      "h": 7,
+      "w": 7,
+      "mean_sensitivity": 0.0005726772360503674,
+      "max_sensitivity": 0.0006922060856595635
+    },
+    {
+      "row": 84,
+      "col": 35,
+      "h": 7,
+      "w": 7,
+      "mean_sensitivity": 0.0005727878888137639,
+      "max_sensitivity": 0.0007827770314179361
+    },
+    {
+      "row": 42,
+      "col": 490,
+      "h": 7,
+      "w": 7,
+      "mean_sensitivity": 0.0005732259014621377,
+      "max_sensitivity": 0.000898637983482331
+    },
+    {
+      "row": 0,
+      "col": 371,
+      "h": 7,
+      "w": 7,
+      "mean_sensitivity": 0.0005732288118451834,
+      "max_sensitivity": 0.0011327327229082584
+    },
+    {
+      "row": 42,
+      "col": 476,
+      "h": 7,
+      "w": 7,
+      "mean_sensitivity": 0.0005788016715086997,
+      "max_sensitivity": 0.0007152465404942632
+    },
+    {
+      "row": 56,
+      "col": 28,
+      "h": 7,
+      "w": 7,
+      "mean_sensitivity": 0.0005790896248072386,
+      "max_sensitivity": 0.0007579278899356723
+    },
+    {
+      "row": 126,
+      "col": 0,
+      "h": 7,
+      "w": 7,
+      "mean_sensitivity": 0.000579426996409893,
+      "max_sensitivity": 0.0013470379635691643
+    },
+    {
+      "row": 0,
+      "col": 259,
+      "h": 7,
+      "w": 7,
+      "mean_sensitivity": 0.0005806431290693581,
+      "max_sensitivity": 0.0013434289721772075
+    },
+    {
+      "row": 91,
+      "col": 490,
+      "h": 7,
+      "w": 7,
+      "mean_sensitivity": 0.0005807630368508399,
+      "max_sensitivity": 0.0008266949444077909
+    },
+    {
+      "row": 14,
+      "col": 56,
+      "h": 7,
+      "w": 7,
+      "mean_sensitivity": 0.0005808785208500922,
+      "max_sensitivity": 0.0007886922685429454
+    },
+    {
+      "row": 35,
+      "col": 70,
+      "h": 7,
+      "w": 7,
+      "mean_sensitivity": 0.0005810548318549991,
+      "max_sensitivity": 0.0007574186893180013
+    },
+    {
+      "row": 84,
+      "col": 28,
+      "h": 7,
+      "w": 7,
+      "mean_sensitivity": 0.0005823065876029432,
+      "max_sensitivity": 0.0008560940041206777
+    },
+    {
+      "row": 70,
+      "col": 28,
+      "h": 7,
+      "w": 7,
+      "mean_sensitivity": 0.0005827153217978776,
+      "max_sensitivity": 0.0007351709064096212
+    },
+    {
+      "row": 28,
+      "col": 497,
+      "h": 7,
+      "w": 7,
+      "mean_sensitivity": 0.0005857234937138855,
+      "max_sensitivity": 0.0010539860231801867
+    },
+    {
+      "row": 91,
+      "col": 7,
+      "h": 7,
+      "w": 7,
+      "mean_sensitivity": 0.0005860168021172285,
+      "max_sensitivity": 0.0009128652745857835
+    },
+    {
+      "row": 196,
+      "col": 490,
+      "h": 7,
+      "w": 7,
+      "mean_sensitivity": 0.0005861259414814413,
+      "max_sensitivity": 0.0008048631134442985
+    },
+    {
+      "row": 112,
+      "col": 0,
+      "h": 7,
+      "w": 7,
+      "mean_sensitivity": 0.0005867245490662754,
+      "max_sensitivity": 0.0011044848943129182
+    },
+    {
+      "row": 21,
+      "col": 98,
+      "h": 7,
+      "w": 7,
+      "mean_sensitivity": 0.0005870687891729176,
+      "max_sensitivity": 0.0007699331035837531
+    },
+    {
+      "row": 70,
+      "col": 469,
+      "h": 7,
+      "w": 7,
+      "mean_sensitivity": 0.0005876813665963709,
+      "max_sensitivity": 0.0008160211727954447
+    },
+    {
+      "row": 42,
+      "col": 497,
+      "h": 7,
+      "w": 7,
+      "mean_sensitivity": 0.0005882964469492435,
+      "max_sensitivity": 0.0007413174607791007
+    },
+    {
+      "row": 203,
+      "col": 504,
+      "h": 7,
+      "w": 7,
+      "mean_sensitivity": 0.000590133189689368,
+      "max_sensitivity": 0.001022088574245572
+    }
+  ],
+  "most_sensitive": [
+    {
+      "row": 224,
+      "col": 175,
+      "h": 7,
+      "w": 7,
+      "mean_sensitivity": 0.02581719495356083,
+      "max_sensitivity": 0.03420443832874298
+    },
+    {
+      "row": 217,
+      "col": 336,
+      "h": 7,
+      "w": 7,
+      "mean_sensitivity": 0.026314273476600647,
+      "max_sensitivity": 0.03561360761523247
+    },
+    {
+      "row": 224,
+      "col": 322,
+      "h": 7,
+      "w": 7,
+      "mean_sensitivity": 0.026683729141950607,
+      "max_sensitivity": 0.03572043403983116
+    },
+    {
+      "row": 224,
+      "col": 196,
+      "h": 7,
+      "w": 7,
+      "mean_sensitivity": 0.027138574048876762,
+      "max_sensitivity": 0.03759988769888878
+    },
+    {
+      "row": 224,
+      "col": 336,
+      "h": 7,
+      "w": 7,
+      "mean_sensitivity": 0.027198253199458122,
+      "max_sensitivity": 0.0415133573114872
+    },
+    {
+      "row": 203,
+      "col": 301,
+      "h": 7,
+      "w": 7,
+      "mean_sensitivity": 0.02785508893430233,
+      "max_sensitivity": 0.039756208658218384
+    },
+    {
+      "row": 224,
+      "col": 182,
+      "h": 7,
+      "w": 7,
+      "mean_sensitivity": 0.028195882216095924,
+      "max_sensitivity": 0.04160746559500694
+    },
+    {
+      "row": 238,
+      "col": 350,
+      "h": 7,
+      "w": 7,
+      "mean_sensitivity": 0.02827121689915657,
+      "max_sensitivity": 0.03686036169528961
+    },
+    {
+      "row": 231,
+      "col": 175,
+      "h": 7,
+      "w": 7,
+      "mean_sensitivity": 0.02837110124528408,
+      "max_sensitivity": 0.03533453866839409
+    },
+    {
+      "row": 217,
+      "col": 329,
+      "h": 7,
+      "w": 7,
+      "mean_sensitivity": 0.028971968218684196,
+      "max_sensitivity": 0.03614203259348869
+    },
+    {
+      "row": 196,
+      "col": 224,
+      "h": 7,
+      "w": 7,
+      "mean_sensitivity": 0.02908696047961712,
+      "max_sensitivity": 0.040884580463171005
+    },
+    {
+      "row": 210,
+      "col": 322,
+      "h": 7,
+      "w": 7,
+      "mean_sensitivity": 0.029788749292492867,
+      "max_sensitivity": 0.04071759432554245
+    },
+    {
+      "row": 224,
+      "col": 329,
+      "h": 7,
+      "w": 7,
+      "mean_sensitivity": 0.030070671811699867,
+      "max_sensitivity": 0.03805563598871231
+    },
+    {
+      "row": 224,
+      "col": 189,
+      "h": 7,
+      "w": 7,
+      "mean_sensitivity": 0.030735356733202934,
+      "max_sensitivity": 0.044297296553850174
+    },
+    {
+      "row": 210,
+      "col": 308,
+      "h": 7,
+      "w": 7,
+      "mean_sensitivity": 0.03105168230831623,
+      "max_sensitivity": 0.0461825355887413
+    },
+    {
+      "row": 217,
+      "col": 322,
+      "h": 7,
+      "w": 7,
+      "mean_sensitivity": 0.031185997650027275,
+      "max_sensitivity": 0.04061732813715935
+    },
+    {
+      "row": 210,
+      "col": 203,
+      "h": 7,
+      "w": 7,
+      "mean_sensitivity": 0.03129064291715622,
+      "max_sensitivity": 0.04139865189790726
+    },
+    {
+      "row": 210,
+      "col": 196,
+      "h": 7,
+      "w": 7,
+      "mean_sensitivity": 0.03146309778094292,
+      "max_sensitivity": 0.043306998908519745
+    },
+    {
+      "row": 210,
+      "col": 315,
+      "h": 7,
+      "w": 7,
+      "mean_sensitivity": 0.032935988157987595,
+      "max_sensitivity": 0.04853816330432892
+    },
+    {
+      "row": 217,
+      "col": 196,
+      "h": 7,
+      "w": 7,
+      "mean_sensitivity": 0.034268248826265335,
+      "max_sensitivity": 0.04629979282617569
+    }
+  ]
+}
