@@ -1379,6 +1379,49 @@ def _run_tto_auth_eval(tag: str, tto_dir: str) -> dict | None:
     results_vol.commit()
     print("  [volume] Committed TTO auth eval results")
 
+    # ── 7. Generate analysis visualization panels (non-fatal) ──
+    try:
+        from tac.viz.analysis_panels import generate_analysis_panels
+
+        # Reload TTO frames (they were freed in stage 2 to save memory).
+        viz_frames = torch.load(frames_path, map_location="cpu", weights_only=True)
+        viz_dir = os.path.join(tto_dir, "viz")
+
+        # Load SegNet for visualization (PoseNet not needed here).
+        upstream_str = UPSTREAM_ROOT
+        if upstream_str not in sys.path:
+            sys.path.insert(0, upstream_str)
+        from tac.scorer import load_scorers
+
+        _, segnet_viz = load_scorers(
+            os.path.join(UPSTREAM_ROOT, "models", "posenet.safetensors"),
+            os.path.join(UPSTREAM_ROOT, "models", "segnet.safetensors"),
+            device=device,
+            upstream_dir=upstream_str,
+        )
+
+        viz_result = generate_analysis_panels(
+            tto_frames=viz_frames,
+            gt_video_path=Path(UPSTREAM_ROOT) / "videos" / "0.mkv",
+            segnet=segnet_viz,
+            output_dir=Path(viz_dir),
+            auth_matched=True,
+        )
+        del viz_frames, segnet_viz
+        if torch.cuda.is_available():
+            torch.cuda.empty_cache()
+
+        results_vol.commit()
+        print(f"  [viz] Analysis panels saved: {viz_result['gif_path']}")
+        result["viz"] = {
+            "gif_path": str(viz_result["gif_path"]),
+            "seg_disagree_mean": viz_result["seg_disagree_mean"],
+            "pixel_error_mean": viz_result["pixel_error_mean"],
+            "n_frames_rendered": viz_result["n_frames_rendered"],
+        }
+    except Exception as e:
+        print(f"  [viz] Visualization failed (non-fatal): {e}")
+
     return result
 
 
