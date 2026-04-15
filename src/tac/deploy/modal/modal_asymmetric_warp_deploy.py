@@ -1181,7 +1181,10 @@ def _run_tto_auth_eval(tag: str, tto_dir: str) -> dict | None:
     import torch
     import torch.nn.functional as F
 
+    from tac.profiling import PipelineProfiler
+
     t_start = time.monotonic()
+    profiler = PipelineProfiler(budget_seconds=1800.0, name="tto_auth_eval")
 
     UPSTREAM_ROOT = "/root/upstream"
     OUT_H, OUT_W = 874, 1164
@@ -1199,7 +1202,8 @@ def _run_tto_auth_eval(tag: str, tto_dir: str) -> dict | None:
 
     # ── 1. Load TTO frames ──
     print("\nStage 1: Loading TTO frames ...")
-    tto_frames = torch.load(frames_path, map_location="cpu", weights_only=True)
+    with profiler.stage("load_tto_frames"):
+        tto_frames = torch.load(frames_path, map_location="cpu", weights_only=True)
     print(f"  Shape: {tto_frames.shape}, dtype: {tto_frames.dtype}")
     N = tto_frames.shape[0]
     assert tto_frames.ndim == 4 and tto_frames.shape[1:] == (384, 512, 3), (
@@ -1211,6 +1215,9 @@ def _run_tto_auth_eval(tag: str, tto_dir: str) -> dict | None:
     # ── 2. Upsample to camera resolution and write raw file ──
     print(f"\nStage 2: Upsampling {NUM_FRAMES} frames to {OUT_H}x{OUT_W} and writing raw ...")
     device = "cuda" if torch.cuda.is_available() else "cpu"
+    profiler.add_metadata("device", device)
+    profiler.add_metadata("num_frames", NUM_FRAMES)
+    profiler.add_metadata("output_resolution", f"{OUT_H}x{OUT_W}")
 
     submission_dir = os.path.join(tto_dir, "submission")
     os.makedirs(os.path.join(submission_dir, "inflated"), exist_ok=True)
@@ -1218,19 +1225,20 @@ def _run_tto_auth_eval(tag: str, tto_dir: str) -> dict | None:
 
     batch_size = 16
     n_written = 0
-    with open(raw_path, "wb") as f, torch.inference_mode():
-        for i in range(0, NUM_FRAMES, batch_size):
-            end = min(i + batch_size, NUM_FRAMES)
-            # (B, H, W, 3) uint8 -> (B, 3, H, W) float for interpolation
-            batch = tto_frames[i:end].float().permute(0, 3, 1, 2).to(device)
-            batch_up = F.interpolate(batch, size=(OUT_H, OUT_W), mode="bilinear", align_corners=False)
-            batch_uint8 = batch_up.round().clamp(0, 255).to(torch.uint8)
-            # (B, 3, H, W) -> (B, H, W, 3) contiguous for raw write
-            batch_hwc = batch_uint8.permute(0, 2, 3, 1).contiguous().cpu().numpy()
-            f.write(batch_hwc.tobytes())
-            n_written += end - i
-            if n_written % 200 == 0 or end == NUM_FRAMES:
-                print(f"    Upsampled: {n_written}/{NUM_FRAMES}")
+    with profiler.stage("upscale_and_write_raw"):
+        with open(raw_path, "wb") as f, torch.inference_mode():
+            for i in range(0, NUM_FRAMES, batch_size):
+                end = min(i + batch_size, NUM_FRAMES)
+                # (B, H, W, 3) uint8 -> (B, 3, H, W) float for interpolation
+                batch = tto_frames[i:end].float().permute(0, 3, 1, 2).to(device)
+                batch_up = F.interpolate(batch, size=(OUT_H, OUT_W), mode="bilinear", align_corners=False)
+                batch_uint8 = batch_up.round().clamp(0, 255).to(torch.uint8)
+                # (B, 3, H, W) -> (B, H, W, 3) contiguous for raw write
+                batch_hwc = batch_uint8.permute(0, 2, 3, 1).contiguous().cpu().numpy()
+                f.write(batch_hwc.tobytes())
+                n_written += end - i
+                if n_written % 200 == 0 or end == NUM_FRAMES:
+                    print(f"    Upsampled: {n_written}/{NUM_FRAMES}")
 
     raw_size = os.path.getsize(raw_path)
     expected_size = OUT_H * OUT_W * 3 * NUM_FRAMES
@@ -1245,34 +1253,36 @@ def _run_tto_auth_eval(tag: str, tto_dir: str) -> dict | None:
     print("\nStage 3: Setting up archive.zip ...")
     archive_zip = os.path.join(submission_dir, "archive.zip")
 
-    # Look for existing archive.zip from a previous auth eval of this tag
-    source_archive = os.path.join(vol_dir, "submission", "archive.zip")
-    if not os.path.exists(source_archive):
-        # Try renderer .bin files to create archive from scratch
-        import zipfile
-        bin_candidates = [
-            os.path.join(vol_dir, "renderer_best.bin"),
-            os.path.join(vol_dir, "renderer.bin"),
-        ]
-        bin_path = None
-        for bc in bin_candidates:
-            if os.path.exists(bc):
-                bin_path = bc
-                break
-        if bin_path is None:
-            print("  ERROR: No archive.zip or .bin found for rate calculation")
-            print("  Available files:", os.listdir(vol_dir) if os.path.isdir(vol_dir) else "dir missing")
-            return None
-        with zipfile.ZipFile(archive_zip, "w", zipfile.ZIP_DEFLATED, compresslevel=9) as zf:
-            zf.write(bin_path, "renderer.bin")
-        print(f"  Created archive.zip from {bin_path}")
-    else:
-        import shutil
-        if source_archive != archive_zip:
-            shutil.copy2(source_archive, archive_zip)
-        print(f"  Copied archive.zip from {source_archive}")
+    with profiler.stage("setup_archive"):
+        # Look for existing archive.zip from a previous auth eval of this tag
+        source_archive = os.path.join(vol_dir, "submission", "archive.zip")
+        if not os.path.exists(source_archive):
+            # Try renderer .bin files to create archive from scratch
+            import zipfile
+            bin_candidates = [
+                os.path.join(vol_dir, "renderer_best.bin"),
+                os.path.join(vol_dir, "renderer.bin"),
+            ]
+            bin_path = None
+            for bc in bin_candidates:
+                if os.path.exists(bc):
+                    bin_path = bc
+                    break
+            if bin_path is None:
+                print("  ERROR: No archive.zip or .bin found for rate calculation")
+                print("  Available files:", os.listdir(vol_dir) if os.path.isdir(vol_dir) else "dir missing")
+                return None
+            with zipfile.ZipFile(archive_zip, "w", zipfile.ZIP_DEFLATED, compresslevel=9) as zf:
+                zf.write(bin_path, "renderer.bin")
+            print(f"  Created archive.zip from {bin_path}")
+        else:
+            import shutil
+            if source_archive != archive_zip:
+                shutil.copy2(source_archive, archive_zip)
+            print(f"  Copied archive.zip from {source_archive}")
 
     archive_size = os.path.getsize(archive_zip)
+    profiler.add_metadata("archive_size_bytes", archive_size)
     print(f"  Archive size: {archive_size:,} bytes")
 
     # ── 4. Run upstream evaluate.py ──
@@ -1288,7 +1298,8 @@ def _run_tto_auth_eval(tag: str, tto_dir: str) -> dict | None:
         "--report", report_path,
     ]
     print(f"  Command: {' '.join(eval_cmd)}")
-    eval_result = subprocess.run(eval_cmd, capture_output=True, text=True, timeout=600)
+    with profiler.stage("scoring_evaluate_py"):
+        eval_result = subprocess.run(eval_cmd, capture_output=True, text=True, timeout=600)
 
     if eval_result.returncode != 0:
         print(f"  evaluate.py FAILED (exit {eval_result.returncode})")
@@ -1296,7 +1307,8 @@ def _run_tto_auth_eval(tag: str, tto_dir: str) -> dict | None:
         return None
 
     # ── 5. Parse report ──
-    report_text = open(report_path).read()
+    with profiler.stage("parse_report"):
+        report_text = open(report_path).read()
     print(f"  Report:\n{report_text}")
 
     def _parse(pattern, text):
@@ -1370,6 +1382,21 @@ def _run_tto_auth_eval(tag: str, tto_dir: str) -> dict | None:
     with open(result_path, "w") as f:
         json.dump(result, f, indent=2)
     print(f"\n  Results saved: {result_path}")
+
+    # ── Save profiling timings ──
+    profiler.add_metadata("tag", tag)
+    profiler.add_metadata("final_score", score)
+    timings_path = profiler.save(os.path.join(tto_dir, "tto_auth_eval_timings.json"))
+    profiler.print_report()
+    print(f"  Timings saved: {timings_path}")
+
+    # Embed timings summary in the main result dict too
+    result["timings"] = profiler.stage_elapsed()
+    result["within_budget"] = profiler.report().get("within_budget", True)
+    result["budget_utilization_pct"] = profiler.report().get("budget_utilization_pct", 0.0)
+    # Re-save with timings included
+    with open(result_path, "w") as f:
+        json.dump(result, f, indent=2)
 
     # Clean up the .raw file (large, ~3.6GB)
     if os.path.exists(raw_path):
