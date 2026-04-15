@@ -50,9 +50,9 @@ from typing import Any
 # ---- Constants ---- #
 
 CONTEST_TIMEOUT_SECONDS: float = 1800.0  # 30 minutes (eval.yml timeout-minutes: 30)
-FRAME_BYTES: int = 1164 * 874 * 3  # single frame: 3,050,088 bytes
+FRAME_BYTES: int = 1164 * 874 * 3  # single frame: 3,052,008 bytes
 EXPECTED_FRAMES: int = 1200
-EXPECTED_RAW_BYTES: int = FRAME_BYTES * EXPECTED_FRAMES  # 3,660,105,600
+EXPECTED_RAW_BYTES: int = FRAME_BYTES * EXPECTED_FRAMES  # 3,662,409,600
 
 
 @dataclass

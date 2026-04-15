@@ -262,12 +262,10 @@ def run_single_step_count(
 
     elapsed = time.monotonic() - t0
 
-    # Measure distortion
-    full_frames = renderer_frames.clone()
-    full_frames[frame_start:frame_end] = refined
+    # Measure distortion — score refined frames against correct GT slice
     distortions = compute_pair_distortions(
         refined, gt_frames, posenet, segnet, device,
-        pair_start=0, n_pairs=n_pairs,
+        pair_start=pair_start, n_pairs=n_pairs,
         simulate_resize=simulate_resize,
     )
     distortions["elapsed_s"] = round(elapsed, 2)

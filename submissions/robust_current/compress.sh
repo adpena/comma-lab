@@ -252,6 +252,7 @@ mkdir -p "$ARCHIVE_DIR"
 # The renderer generates frames from masks + neural network — it never uses
 # the compressed video. Including 0.mkv in the archive wastes rate budget
 # (every byte counts: rate_term = 25 * archive_size / gt_size).
+PYTHON_INFLATE="${PYTHON_INFLATE:-0}"
 SKIP_VIDEO_ENCODE="${SKIP_VIDEO_ENCODE:-0}"
 if [ "$PYTHON_INFLATE" = "renderer" ]; then
   SKIP_VIDEO_ENCODE=1
