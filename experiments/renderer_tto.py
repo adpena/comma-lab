@@ -442,7 +442,8 @@ def main():
     print(f"[config] early_stop_patience={args.early_stop_patience}, "
           f"use_embedding_loss={args.use_embedding_loss}, "
           f"seg_odd_only={args.seg_odd_only}, "
-          f"antialias_weight={args.antialias_weight}")
+          f"antialias_weight={args.antialias_weight}, "
+          f"lr_schedule={args.lr_schedule}")
     print(f"[config] checkpoint={args.checkpoint}")
     print(f"[config] video={video_path}")
     print(f"[config] output_dir={output_dir}")
@@ -619,6 +620,8 @@ def main():
             "use_embedding_loss": args.use_embedding_loss,
             "seg_odd_only": args.seg_odd_only,
             "antialias_weight": args.antialias_weight,
+            "lr_schedule": args.lr_schedule,
+            "simulate_resize": args.simulate_resize,
         },
         "timing": {
             "total_s": round(t_total, 2),

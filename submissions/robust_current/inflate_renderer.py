@@ -496,15 +496,11 @@ def _find_upstream_root(archive_dir: str) -> Path:
     # 2. Local dev layout
     candidates.append(Path(__file__).resolve().parent.parent.parent / "upstream")
 
-    # 3. Environment variable
-    env_root = os.environ.get("UPSTREAM_ROOT")
-    if env_root:
-        candidates.append(Path(env_root))
-
-    # Also check COMMA_CHALLENGE_ROOT (used by inflate_postfilter.py)
-    env_root2 = os.environ.get("COMMA_CHALLENGE_ROOT")
-    if env_root2:
-        candidates.append(Path(env_root2))
+    # 3. Environment variables (check all known conventions)
+    for env_var in ("UPSTREAM_ROOT", "TAC_UPSTREAM_DIR", "COMMA_CHALLENGE_ROOT"):
+        env_val = os.environ.get(env_var)
+        if env_val:
+            candidates.append(Path(env_val))
 
     for candidate in candidates:
         if not candidate.exists():
@@ -1162,6 +1158,7 @@ def inflate_renderer(
             Path(archive_dir).parent / rel,  # scorer layout: data/<video>.mkv
             Path(archive_dir).parent.parent / "data" / rel,
             upstream_root / "data" / rel,
+            upstream_root / "videos" / rel,  # upstream repo layout
         ]
         # Also check COMMA_DATA_DIR env var
         data_dir = os.environ.get("COMMA_DATA_DIR")

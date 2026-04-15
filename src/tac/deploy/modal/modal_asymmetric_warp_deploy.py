@@ -1257,9 +1257,11 @@ def _run_contest_compliant_auth_eval(
     t_inflate_start = time.monotonic()
 
     # Set up environment: inflate_renderer.py needs upstream in PYTHONPATH
+    # and UPSTREAM_ROOT for _find_upstream_root() to locate models/ and videos/
     inflate_env = {
         **os.environ,
         "PYTHONPATH": f"{upstream_root}:{os.environ.get('PYTHONPATH', '')}",
+        "UPSTREAM_ROOT": upstream_root,
     }
 
     inflate_cmd = [

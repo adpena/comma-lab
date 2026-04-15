@@ -1647,10 +1647,15 @@ def coupled_trajectory_optimize(
         warmup_steps = min(50, num_steps // 5)
 
         def _cosine_with_warmup(step: int) -> float:
-            """LR multiplier: warmup from 0.1x to 1.0x, then cosine decay to 0.01x."""
+            """LR multiplier: warmup from 0.1x to 1.0x, then cosine decay to 0.01x.
+
+            Continuous at step=warmup_steps: warmup reaches exactly 1.0,
+            cosine starts at exactly 1.0.
+            """
             if step < warmup_steps:
-                # Linear warmup: lr/10 -> lr
-                return 0.1 + 0.9 * (step / max(warmup_steps, 1))
+                # Linear warmup: lr/10 -> lr (reaches 1.0 at step=warmup_steps-1
+                # when warmup_steps > 1, or 0.1 at step=0 when warmup_steps=1)
+                return 0.1 + 0.9 * (step / max(warmup_steps - 1, 1))
             # Cosine decay: lr -> lr/100
             progress = (step - warmup_steps) / max(num_steps - warmup_steps - 1, 1)
             return 0.01 + 0.99 * 0.5 * (1.0 + math.cos(math.pi * progress))
