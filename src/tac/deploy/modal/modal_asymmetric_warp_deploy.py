@@ -1398,6 +1398,7 @@ def tto_eval(
     seg_odd_only: bool = False,
     early_stop_patience: int = 150,
     antialias_weight: float = 0.0,
+    tto_subdir: str = "tto_results",
 ):
     """Run renderer+TTO on Modal T4.
 
@@ -1423,7 +1424,7 @@ def tto_eval(
 
     vol_dir = f"/results/{tag}"
     ckpt_path = f"{vol_dir}/{checkpoint}"
-    output_dir = f"{vol_dir}/tto_results"
+    output_dir = f"{vol_dir}/{tto_subdir}"
     os.makedirs(output_dir, exist_ok=True)
 
     print(f"=== Renderer + TTO | tag: {tag} ===")
@@ -1560,6 +1561,7 @@ def tto_entry(
     seg_odd_only: bool = False,
     early_stop_patience: int = 150,
     antialias_weight: float = 0.0,
+    tto_subdir: str = "tto_results",
 ):
     """Launch renderer+TTO on Modal T4.
 
@@ -1596,6 +1598,7 @@ def tto_entry(
         seg_odd_only=seg_odd_only,
         early_stop_patience=early_stop_patience,
         antialias_weight=antialias_weight,
+        tto_subdir=tto_subdir,
     )
 
     status = "OK" if result["exit_code"] == 0 else f"FAILED (exit {result['exit_code']})"
