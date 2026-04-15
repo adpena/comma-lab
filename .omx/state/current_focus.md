@@ -1,48 +1,64 @@
-# Current Focus -- 2026-04-15T07:00:00Z
+# Current Focus -- 2026-04-15T14:30:00Z
 
 ## Scores
 - **Renderer baseline**: auth=0.87 (seg=0.21, pose=0.56, rate=0.10)
-- **TTO v3 (embedding loss)**: auth=0.74 (seg=0.21, pose=0.43, rate=0.10) -- DEAD
-  - Embedding loss barely helped PoseNet (0.0172 -> 0.0173 WORSE proxy)
-  - Config: lr=0.01, seg=10, pose=50, compress=0, embed_loss=True, seg_odd_only=True
-- **TTO v4 (RUNNING on Modal)**: v1 config + seg_odd_only + antialias
-  - Config: lr=0.005, seg=100, pose=10, compress=0.5, seg_odd_only=True, antialias=0.2
-  - Expected: proxy ~0.59 (v1 proved 6.3% improvement), auth TBD
-- **Joint Pair Generator v1 (RUNNING on Modal)**: 576K param Y-shaped U-Net
-  - 5000 epochs, base_ch=48, T4
-- **Target**: sub-0.50 auth
+- **TTO v5a (Lagrangian fixed)**: auth=0.43 (first valid TTO with PoseNet gradients)
+- **TTO v3 (embedding loss)**: DEAD -- embedding loss made PoseNet WORSE
+- **TTO v5b (embedding loss, RUNNING on Modal)**: app=ap-24iBdzVH05oWpQ73kl2OL3
+  - Config: lr=0.005, seg=100, pose=10, compress=0.5, embed_loss=True, seg_odd_only=True, patience=150
+  - Purpose: first VALID test of 512D embedding loss (v3 had zero gradients)
+- **TTO v5c (aggressive PoseNet, RUNNING on Modal)**: app=ap-VRS7zqEOIm0jAEGGuqCqQE
+  - Config: lr=0.005, seg=1, pose=100, compress=0.01, seg_odd_only=True, patience=300, steps=1000
+  - Purpose: find PoseNet optimization CEILING -- how low can pose_dist go if we sacrifice SegNet?
+- **Target**: sub-0.20 auth
 
-## Sub-0.5 Score Budget
+## Score Decomposition (auth=0.43, v5a)
 ```
-Score = 100*seg + sqrt(10*pose) + 25*rate < 0.50
-  SegNet:  < 0.15 -> seg_dist < 0.0015
-  PoseNet: < 0.25 -> pose_dist < 0.00625
-  Rate:    < 0.10 -> archive < 150KB
+Score = 100*seg + sqrt(10*pose) + 25*rate
+  auth=0.43 -> significant improvement from renderer baseline 0.87
+  Key: PoseNet gradients now WORKING (fix validated)
+```
+
+## Sub-0.2 Score Budget
+```
+Score = 100*seg + sqrt(10*pose) + 25*rate < 0.20
+  SegNet:  < 0.08 -> seg_dist < 0.0008
+  PoseNet: < 0.08 -> pose_dist < 0.00064
+  Rate:    < 0.04 -> archive < ~60KB
 ```
 
 ## Active Experiments
 
-### TTO v4 (Modal T4, RUNNING)
-- App: ap-U9fxnDuw13vda1ejuBHRTC
-- Improvements over v3:
-  1. Back to v1 output MSE loss (proven 6.3% improvement)
-  2. seg_odd_only=True (frees even frames for PoseNet)
-  3. antialias_weight=0.2 (penalizes PoseNet-invisible sub-2x2 noise)
-- Archive compression: ZIP_DEFLATED level 9 (saves ~20% on renderer.bin)
+### TTO v5b (Modal T4, RUNNING)
+- App: ap-24iBdzVH05oWpQ73kl2OL3
+- Config: embedding loss (512D) + seg_odd_only + standard weights
+- Question: does embedding loss help NOW that gradients actually flow?
+- Pre-registered criteria:
+  - Success: proxy < 0.50 (improvement over v5a)
+  - Kill: proxy > 0.55 (no improvement)
 
-### Joint Pair Generator v1 (Modal T4, RUNNING)
-- App: ap-8kcsjA0IDtrWJEpNqvyUcL
-- Y-shaped U-Net, mask-conditioned pair generation
-- Backup path if TTO doesn't reach sub-0.50
+### TTO v5c (Modal T4, RUNNING)
+- App: ap-VRS7zqEOIm0jAEGGuqCqQE
+- Config: pose_weight=100, seg_weight=1 (extreme PoseNet focus)
+- Question: what is the PoseNet optimization FLOOR when we don't care about SegNet?
+- Pre-registered criteria:
+  - Success: pose_dist < 0.005 (significant reduction)
+  - Kill: pose_dist > 0.015 (no improvement over v5a)
 
-### Ensemble Pipeline (READY)
-- src/tac/ensemble.py: per-pair best-of-N selection
-- Combine TTO v4 + joint pair results when both available
+## Archive Compression Analysis
+- Current: 150KB (ZIP_STORED), 4-bit quantized, 285K params
+- LZMA: 113KB (-25%) -- easy win, no quality loss
+- DEFLATE: 119KB (-21%) -- simpler, nearly as good
+- 3-bit: ~112KB (quality risk, needs testing)
+- 2-bit: ~76KB (likely too destructive)
+- Rate impact: negligible (rate is ~10% of total score, compression saves <0.02 points)
+- Verdict: apply DEFLATE/LZMA as free improvement, but PoseNet/SegNet dominate score
 
-## Code Changes This Session
-1. antialias regularization in constrained_gen.py + renderer_tto.py + modal deploy
-2. Archive compression: ZIP_STORED -> ZIP_DEFLATED (-20% archive size)
-3. renderer_tto.py: deduplicated 210 lines via tac.scorer imports
+## PoseNet Sensitivity Map
+- Running locally on MPS with 20 frames (quick test)
+- Previous maps were ALL ZERO (gradient bug)
+- This is the first valid sensitivity map with real gradients
+- Will reveal which pixels PoseNet is sensitive to vs insensitive to
 
 ## CRITICAL BUG FOUND: TTO PoseNet Gradients Were ZERO (2026-04-15)
 
@@ -52,33 +68,23 @@ PoseNet's `preprocess_input()` calls this function. The training pipeline had a 
 code path that never received the fix. Result: every TTO run in the entire project history
 optimized with ZERO PoseNet gradients. The optimizer was completely blind to PoseNet.
 
-**Discovery**: Skunkworks council adversarial review. The Contrarian demanded: "if 50 steps
-make PoseNet WORSE, something is fundamentally wrong." Hotz traced the call chain from
-`preprocess_input()` through `rgb_to_yuv6()` to the `@torch.no_grad()` decorator. 13-0
-unanimous vote to fix immediately.
+**Status**: FIXED in v5a. auth=0.43 confirms fix is working (50% improvement over renderer 0.87).
 
-**Impact**: All TTO scores (v1 through v4) were running with only SegNet+rate gradients.
-PoseNet improvements were pure noise. The auth=0.87 renderer baseline is unaffected (training
-pipeline had the fix). But TTO on top of the renderer — our primary path to sub-0.50 — was
-fundamentally broken.
+## Battle Plan to Sub-0.2
 
-**Projected score with fix**: Renderer auth=0.87 has PoseNet=0.031 (35% of total score).
-TTO with actual PoseNet gradients could reduce PoseNet by 5-10x (based on SegNet's proven
-TTO response). Projected auth: 0.87 -> ~0.35.
-
-**Lesson**: A single `@torch.no_grad()` decorator in a dependency silently invalidated an
-entire optimization pipeline. The bug was invisible because: (1) TTO still reduced SegNet
-(masking the PoseNet failure), (2) proxy scores improved (SegNet-dominated), (3) no gradient
-norm monitoring was in place for individual scorer components.
+1. **v5b/v5c results** (in progress): determine optimal weight balance for PoseNet vs SegNet
+2. **Longer TTO**: increase steps from 500 to 2000+ for pairs that haven't converged
+3. **Per-pair adaptive weights**: Lagrangian-style automatic balancing per batch
+4. **Archive compression**: LZMA compression for free rate savings
+5. **Sensitivity-guided TTO**: only optimize PoseNet-sensitive pixels, leave SegNet-safe areas alone
+6. **Ensemble**: best-of-N selection across v5a/v5b/v5c per pair
 
 ## Key Insights
-1. Embedding loss is DEAD (v3 proved PoseNet got WORSE with embedding MSE)
-2. seg_odd_only already implemented and tested
-3. PoseNet operates on 2x-downsampled YUV -> sub-2x2 noise is invisible
-4. Archive already at 4-bit quantization (150KB), DEFLATE saves ~30KB more
-5. Rate contribution: 0.10 -> 0.08 with DEFLATE (saves 0.02 points)
-6. **TTO PoseNet gradients were ZERO** -- all TTO experiments were SegNet-only optimizations
-7. Fix: ensure `rgb_to_yuv6()` runs WITHOUT `@torch.no_grad()` in TTO scorer loading path
+1. PoseNet gradients fix was the single biggest breakthrough -- auth 0.87 -> 0.43
+2. Embedding loss needs re-evaluation now that gradients work (v3 was invalid)
+3. Archive compression is a free win but small impact on score
+4. PoseNet sensitivity map will enable targeted optimization
+5. Volume commits now every batch for real-time monitoring
 
 ## Deadline
 - May 3, 2026 (~18 days remaining)
