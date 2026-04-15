@@ -1,29 +1,51 @@
-# Next Experiments -- 2026-04-12
+# Next Experiments -- 2026-04-15
 
-## Promoted floor: 1.33 (dilated_h64, exact_current)
-## Auth score: 1.97 (robust_current, Lightning ep851)
-## Proxy score: 0.9238
+## Current Best: auth=0.74 (TTO v3, embedding loss -- DEAD)
+## Renderer Baseline: auth=0.87
+## Target: sub-0.50
 
-## Tripartite Pact Consensus (Yousfi + Fridrich + Contrarian + Karpathy + Tao)
+## Active Runs (both on Modal T4)
 
-### Priority 1: GPU Lane (high ceiling)
-1. `exp1_fridrich_proper.py` -- Fridrich constrained gen, 100 frames, 2000 steps
-   - Pre-registered: seg < 0.03, pose < 0.1, TV < 1.0
-   - Smoke showed seg=0.025, pose=0.078 -- near-feasible
-2. `exp2_tiny_dp_sims_proper.py` -- Tiny DP-SIMS, 100 frames, 5000 steps
-   - Pre-registered: score < 1.0 including rate at 78KB FP4
-3. `exp3_lbfgs_refinement.py` -- L-BFGS polish, 10 steps, chains after exp1/exp2
+### TTO v4 (RUNNING)
+- Config: v1 loss (output MSE) + seg_odd_only + antialias_weight=0.2
+- Expected improvement: v1 showed 6.3% proxy gain, seg_odd_only frees even-frame gradient
+- Pre-registered criteria:
+  - Success: proxy < 0.55 (significant over v3's 0.62)
+  - Kill: proxy > 0.60 (no improvement over baseline)
+  - Promote: auth < 0.65
 
-### Priority 2: CPU Lane (safe gains)
-4. `exp4_cpu_trick_stack.py` -- all tricks independently then stacked
-   - CRF sweep, quantization rounding, TTO, multi-pass, deblock
+### Joint Pair Generator v1 (RUNNING)
+- Y-shaped U-Net, 576K params, 5000 epochs
+- Backup path if TTO doesn't reach sub-0.50
+- Pre-registered criteria:
+  - Success: proxy < 0.60 (Quantizr-competitive)
+  - Kill: proxy > 0.80 after 2000 epochs
 
-### Priority 3: Infrastructure
-5. `exp5_auth_scorer_setup.py` -- Lightning auth scorer verification
+## Queue (after active runs complete)
+
+### Priority 1: TTO Tuning
+1. **TTO v5**: Higher pose_weight + lower antialias for PoseNet-focused optimization
+   - If v4 shows PoseNet improvement but not enough
+   - Config: pose_weight=20-50, seg_weight=50, antialias=0.1
+2. **TTO v6**: Longer patience + more steps
+   - If v4 early-stops too soon
+   - Config: patience=300, steps=1000
+
+### Priority 2: Ensemble
+3. **Best-of-N ensemble**: Combine TTO v4 + joint pair per-pair selection
+   - Guaranteed >= best individual approach
+   - Run after both active experiments complete
+
+### Priority 3: Architecture
+4. **Joint pair + TTO**: Use joint pair output as TTO init instead of renderer
+   - Could give better starting point than asymmetric warp renderer
+5. **Lower bit-depth export**: Test 3-bit or 2-bit renderer.bin for rate savings
+   - Risk: quality degradation may negate rate savings
 
 ## Decision Gates
-- 2026-04-17: GPU path decision (Fridrich vs DP-SIMS)
-- 2026-04-21: Lock final approach
+- 2026-04-15: TTO v4 auth eval -> decide TTO tuning direction
+- 2026-04-17: Joint pair + TTO v4 ensemble -> decide final approach
+- 2026-04-21: Lock final submission approach
 - 2026-05-03: DEADLINE
 
 ## Killed Techniques (NEVER retry)
@@ -31,5 +53,5 @@
 - Adaptive rebalance weights
 - PoseNet gradient caps
 - SegNet loss weight > 100
-- Brightness shift trick
 - PSD architecture
+- Embedding loss for TTO (v3: auth=0.74, PoseNet got WORSE)

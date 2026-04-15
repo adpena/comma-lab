@@ -116,7 +116,6 @@ def load_renderer(checkpoint_path: str, device: torch.device) -> torch.nn.Module
     return model
 
 
-
 # Re-export from tac.scorer for backward compatibility
 from tac.scorer import extract_gt_masks, extract_gt_pose_targets
 
@@ -248,17 +247,16 @@ from tac.scorer import compute_proxy_score
 def estimate_vram_mb(batch_pairs: int) -> float:
     """Estimate peak VRAM usage for a TTO batch.
 
-    Formula (empirically calibrated):
-    - Per frame: ~2.4MB (384*512*3*4 bytes float32 + grad)
-    - Adam buffers: 2x per frame (exp_avg + exp_avg_sq)
-    - Snapshot: 1x per frame
-    - Scorers: ~200MB fixed (SegNet ~100MB, PoseNet ~100MB)
-    - Autograd graph: ~3MB per frame per scorer forward
-    - Simplified: ~28MB per frame * batch_pairs * 2 + 200MB fixed
+    RECALIBRATED based on T4 OOM at batch_pairs=50:
+    - 50 pairs (100 frames) hit 14.5GB (OOM on T4 15GB)
+    - 10 pairs (20 frames) works fine at ~3GB
+    - Empirical: ~140MB per frame (384*512*3 float32 + grad + adam exp_avg +
+      adam exp_avg_sq + snapshot + autograd graph through 2 scorer networks)
+    - Scorers: ~500MB fixed (SegNet EfficientNet-B4 ~300MB, PoseNet ~200MB)
     """
     n_frames = batch_pairs * 2
-    per_frame_mb = 28.0  # float32 + grad + adam + snapshot + autograd
-    fixed_mb = 200.0     # scorers
+    per_frame_mb = 140.0  # recalibrated from T4 OOM at batch=50
+    fixed_mb = 500.0      # scorers + overhead
     return n_frames * per_frame_mb + fixed_mb
 
 
