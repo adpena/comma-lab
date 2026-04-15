@@ -469,16 +469,11 @@ def main():
     # ── Step 3: Decode GT video ──────────────────────────────────────────
     print(f"\n[3/8] Decoding GT video ({args.n_frames} frames)...")
     t0 = time.monotonic()
-    from tac.data import decode_video
-    from tac.camera import SEGNET_INPUT_H, SEGNET_INPUT_W
+    from tac.data import load_gt_video
 
     # Decode at SegNet resolution directly — renderer operates at this resolution
-    gt_frames_full = decode_video(video_path, target_h=SEGNET_INPUT_H, target_w=SEGNET_INPUT_W)
-    gt_frames = gt_frames_full[: args.n_frames]
-    # Update n_frames to actual count (video may be shorter than requested)
-    args.n_frames = len(gt_frames) - (len(gt_frames) % 2)  # ensure even
-    gt_frames = gt_frames[: args.n_frames]
-    assert args.n_frames >= 2, f"Need at least 2 frames, got {len(gt_frames)}"
+    gt_frames = load_gt_video(video_path, n_frames=args.n_frames)
+    args.n_frames = len(gt_frames)
     t_decode = time.monotonic() - t0
     print(f"[3/8] Decoded {args.n_frames} frames ({gt_frames[0].shape}) in {t_decode:.1f}s")
 
