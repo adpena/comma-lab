@@ -3,7 +3,7 @@
 
 The renderer generates RGB frames purely from SegNet masks.  The archive
 contains both the renderer weights (~150KB) and pre-extracted masks encoded
-as AV1 monochrome video (~30-50KB).  No SegNet loading at inflate time.
+as AV1 monochrome video (~79KB at 1/8 scale).  No SegNet loading at inflate time.
 
 Pipeline (contest-compliant, PR #35):
     archive/masks.mkv  ->  AV1 decode  ->  masks (384x512)
