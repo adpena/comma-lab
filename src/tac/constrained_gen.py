@@ -59,6 +59,7 @@ __all__ = [
     "generate_initial_frames",
     "compute_segnet_constraint_loss",
     "compute_posenet_constraint_loss",
+    "compute_posenet_embedding_constraint_loss",
     "compute_compressibility_loss",
     "estimate_expected_pose",
     "constrained_generate",
@@ -292,6 +293,7 @@ def compute_segnet_constraint_loss(
     masks: torch.Tensor,
     segnet: torch.nn.Module,
     batch_size: int = 32,
+    seg_odd_only: bool = False,
 ) -> torch.Tensor:
     """Cross-entropy loss forcing SegNet argmax to match target masks.
 
@@ -310,6 +312,11 @@ def compute_segnet_constraint_loss(
         masks: (N, H, W) long tensor with target class indices.
         segnet: frozen SegNet model.
         batch_size: frames per mini-batch (reduce if OOM, default 32).
+        seg_odd_only: if True, only compute SegNet loss on odd-indexed frames
+            (frame 2k+1). Matches the official scorer's ``x[:, -1, ...]``
+            behavior: SegNet evaluates only the second frame of each pair.
+            Even frames get zero SegNet gradient, freeing them for pure
+            PoseNet optimization.
 
     Returns:
         Scalar cross-entropy loss (mean over all frames).
@@ -317,13 +324,24 @@ def compute_segnet_constraint_loss(
     N, H, W, C = frames.shape
     device = frames.device
 
+    # When seg_odd_only, select only odd-indexed frames and their masks.
+    # Official scorer: SegNet sees x[:, -1, ...] = frame_2k+1 of each pair.
+    if seg_odd_only:
+        odd_indices = torch.arange(1, N, 2, device=device)
+        sel_frames = frames[odd_indices]    # (N//2, H, W, 3)
+        sel_masks = masks[odd_indices]      # (N//2, H, W)
+    else:
+        sel_frames = frames
+        sel_masks = masks
+
+    N_sel = sel_frames.shape[0]
     total_loss = torch.tensor(0.0, device=device)
     n_batches = 0
 
-    for start in range(0, N, batch_size):
-        end = min(start + batch_size, N)
-        batch_frames = frames[start:end]  # (B, H, W, 3)
-        batch_masks = masks[start:end]    # (B, H, W)
+    for start in range(0, N_sel, batch_size):
+        end = min(start + batch_size, N_sel)
+        batch_frames = sel_frames[start:end]  # (B, H, W, 3)
+        batch_masks = sel_masks[start:end]    # (B, H, W)
 
         # SegNet.preprocess_input expects (B, T, C, H, W), T=1 (last frame only).
         frames_btchw = batch_frames.permute(0, 3, 1, 2).unsqueeze(1).contiguous()
@@ -404,6 +422,88 @@ def compute_posenet_constraint_loss(
         target = expected_pose[start:end].to(device)  # (B, 6)
 
         total_loss = total_loss + (pred_pose - target).pow(2).mean()
+        n_batches += 1
+
+    return total_loss / max(n_batches, 1)
+
+
+def compute_posenet_embedding_constraint_loss(
+    frames: torch.Tensor,
+    expected_pose_embeddings: torch.Tensor,
+    posenet: torch.nn.Module,
+    batch_size: int = 32,
+    layer: str = "summary",
+) -> torch.Tensor:
+    """Embedding MSE loss between PoseNet intermediate features and GT embeddings.
+
+    Instead of comparing the 6-dim pose output (rank-6 gradient, only 6 pixel-space
+    directions), this compares the ~512-dim summarizer embedding (rank ~256, 42x more
+    gradient directions). This gives the optimizer a dramatically richer gradient
+    landscape for frame refinement.
+
+    Uses the same hook-based feature extraction as ``posenet_embedding_loss`` in
+    ``tac.losses``, but adapted for the constrained generation pipeline:
+    - Takes (N, H, W, 3) frames and forms non-overlapping pairs
+    - Compares against precomputed GT embeddings (not live GT frames)
+    - Mini-batched to avoid OOM
+
+    Args:
+        frames: (N, H, W, 3) float tensor in [0, 255], requires_grad.
+        expected_pose_embeddings: (P, D) float tensor of GT embeddings,
+            where P = N//2 (one embedding per non-overlapping pair) and
+            D is the embedding dimension (512 for summarizer).
+        posenet: frozen PoseNet model.
+        batch_size: pairs per mini-batch (reduce if OOM, default 32).
+        layer: which PoseNet layer to hook -- 'summary' for summarizer (512-d).
+
+    Returns:
+        Scalar normalized L2 embedding loss averaged over all pairs.
+    """
+    N = frames.shape[0]
+    num_pairs = expected_pose_embeddings.shape[0]
+    assert num_pairs == N // 2, (
+        f"Expected {N // 2} embedding targets for {N} frames, got {num_pairs}."
+    )
+    device = frames.device
+
+    # Resolve target module for hook
+    if layer == "summary":
+        target_module = posenet.summarizer
+    else:
+        target_module = posenet.vision
+        for part in layer.split("."):
+            target_module = target_module[int(part)] if part.isdigit() else getattr(target_module, part)
+
+    total_loss = torch.tensor(0.0, device=device)
+    n_batches = 0
+
+    for start in range(0, num_pairs, batch_size):
+        end = min(start + batch_size, num_pairs)
+
+        # Non-overlapping pairs: (frames[2k], frames[2k+1])
+        f1 = frames[2 * start:2 * end:2]           # (B, H, W, 3)
+        f2 = frames[2 * start + 1:2 * end + 1:2]  # (B, H, W, 3)
+        pairs_hwc = torch.stack([f1, f2], dim=1)    # (B, 2, H, W, 3)
+        pairs_chw = pairs_hwc.permute(0, 1, 4, 2, 3).contiguous()  # (B, 2, C, H, W)
+
+        # Hook to capture intermediate features
+        features = []
+
+        def _hook_fn(module, input, output):
+            features.append(output)
+
+        handle = target_module.register_forward_hook(_hook_fn)
+        posenet_in = posenet.preprocess_input(pairs_chw)
+        posenet(posenet_in)
+        handle.remove()
+
+        pred_emb = features[0]  # (B, D) embedding from the hooked layer
+        target_emb = expected_pose_embeddings[start:end].to(device)  # (B, D)
+
+        # Normalized L2 (same formula as posenet_embedding_loss in tac.losses)
+        emb_diff = pred_emb - target_emb
+        emb_norm = target_emb.detach().pow(2).mean().sqrt() + 1e-6
+        total_loss = total_loss + emb_diff.pow(2).mean() / emb_norm
         n_batches += 1
 
     return total_loss / max(n_batches, 1)
@@ -908,6 +1008,9 @@ def generate_in_scorer_space(
     device: torch.device | str = "cpu",
     log_every: int = 100,
     expected_pose: torch.Tensor | None = None,
+    use_embedding_loss: bool = False,
+    expected_pose_embeddings: torch.Tensor | None = None,
+    seg_odd_only: bool = False,
 ) -> torch.Tensor:
     """Generate scorer-optimal frames via coupled trajectory optimization.
 
@@ -915,6 +1018,8 @@ def generate_in_scorer_space(
     - Coupled pair optimization (PoseNet gradient through both frames)
     - Compress weight annealing (prevents PoseNet divergence)
     - PoseNet transient snapshot (returns best PoseNet state)
+    - Embedding loss for 42x richer PoseNet gradient (use_embedding_loss)
+    - Odd-frame-only SegNet loss matching official scorer (seg_odd_only)
 
     If expected_pose is not provided, falls back to heuristic estimation
     from mask dynamics (less accurate — prefer GT targets from posenet_targets.bin).
@@ -938,6 +1043,9 @@ def generate_in_scorer_space(
         device: computation device.
         log_every: print loss every N steps.
         expected_pose: (P, 6) GT pose targets. If None, uses heuristic estimation.
+        use_embedding_loss: use PoseNet embedding MSE instead of pose output MSE.
+        expected_pose_embeddings: (P, D) GT embeddings. Required if use_embedding_loss.
+        seg_odd_only: only compute SegNet loss on odd frames (scorer-matched).
 
     Returns:
         (N, H, W, 3) float tensor in [0, 255] (RGB, HWC format).
@@ -968,6 +1076,9 @@ def generate_in_scorer_space(
         noise_seed=noise_seed,
         device=str(device),
         log_every=log_every,
+        use_embedding_loss=use_embedding_loss,
+        expected_pose_embeddings=expected_pose_embeddings,
+        seg_odd_only=seg_odd_only,
     )
 
 
@@ -1384,6 +1495,9 @@ def coupled_trajectory_optimize(
     log_every: int = 100,
     init_frames: torch.Tensor | None = None,
     early_stop_patience: int = 150,
+    use_embedding_loss: bool = False,
+    expected_pose_embeddings: torch.Tensor | None = None,
+    seg_odd_only: bool = False,
     **cfg,
 ) -> torch.Tensor:
     """Jointly optimize ALL frames to satisfy coupled PoseNet constraints.
@@ -1422,6 +1536,15 @@ def coupled_trajectory_optimize(
         log_every: print loss every N steps (0 to disable).
         init_frames: (N, H, W, 3) float tensor to warm-start from (renderer+TTO).
             If None, starts from class-mean-colored noise.
+        early_stop_patience: stop if PoseNet hasn't improved in this many steps.
+        use_embedding_loss: if True, use PoseNet embedding MSE (~512-d) instead of
+            pose output MSE (6-d). Provides 42x more gradient directions.
+            Requires expected_pose_embeddings to be provided.
+        expected_pose_embeddings: (P, D) float tensor of GT PoseNet embeddings,
+            precomputed from GT frames. Required when use_embedding_loss=True.
+        seg_odd_only: if True, only compute SegNet loss on odd-indexed frames
+            (frame 2k+1), matching official scorer behavior. Frees even frames
+            for pure PoseNet optimization.
         **cfg: additional config (ignored, for profile compatibility).
 
     Returns:
@@ -1431,14 +1554,29 @@ def coupled_trajectory_optimize(
     N = masks.shape[0]
     P = N // 2  # non-overlapping pairs, matching upstream scorer seq_len=2
 
+    # Validate embedding loss config
+    if use_embedding_loss and expected_pose_embeddings is None:
+        raise ValueError(
+            "use_embedding_loss=True requires expected_pose_embeddings. "
+            "Precompute them with extract_gt_pose_embeddings() in renderer_tto.py."
+        )
+
     # Move inputs to device once (avoids repeated transfers in inner loop)
     masks = masks.to(device)
     expected_pose = expected_pose.to(device)
+    if expected_pose_embeddings is not None:
+        expected_pose_embeddings = expected_pose_embeddings.to(device)
 
     # Initialize ALL frames jointly — from renderer output (TTO) or noise
-    if init_frames is not None:
+    warm_start = init_frames is not None
+    if warm_start:
         frames = init_frames.to(device).float().detach().clone()
         print(f"  [coupled-4dvar] Warm-starting from init_frames (TTO mode)")
+        if use_embedding_loss:
+            print(f"  [coupled-4dvar] Using embedding loss (~{expected_pose_embeddings.shape[-1]}d) "
+                  f"instead of pose output (6d)")
+        if seg_odd_only:
+            print(f"  [coupled-4dvar] SegNet loss on odd frames only (scorer-matched)")
     else:
         frames = generate_initial_frames(masks, noise_seed, device=device)
     frames.requires_grad_(True)
@@ -1455,26 +1593,45 @@ def coupled_trajectory_optimize(
     for step in range(num_steps):
         optimizer.zero_grad()
 
-        # --- SegNet constraint: all frames independently ---
-        seg_loss = compute_segnet_constraint_loss(frames, masks, segnet)
+        # --- SegNet constraint: all frames (or odd-only if seg_odd_only) ---
+        seg_loss = compute_segnet_constraint_loss(
+            frames, masks, segnet, seg_odd_only=seg_odd_only,
+        )
 
         # --- PoseNet constraint: all consecutive PAIRS jointly ---
         pose_loss = torch.tensor(0.0, device=device)
         if P > 0 and expected_pose.shape[0] > 0:
-            pose_loss = compute_posenet_constraint_loss(
-                frames, expected_pose, posenet,
-            )
+            if use_embedding_loss:
+                # Embedding MSE: ~512 gradient directions instead of 6.
+                # 42x richer gradient landscape for frame refinement.
+                pose_loss = compute_posenet_embedding_constraint_loss(
+                    frames, expected_pose_embeddings, posenet,
+                )
+            else:
+                pose_loss = compute_posenet_constraint_loss(
+                    frames, expected_pose, posenet,
+                )
 
         # --- Compressibility: anneal weight to prevent PoseNet divergence ---
-        # Full weight for first 40% of steps (let compressibility shape the image),
-        # then decay to 10% by end (let PoseNet/SegNet dominate the fine structure).
         compress_loss = compute_compressibility_loss(frames)
         progress = step / max(num_steps - 1, 1)
-        if progress < 0.4:
-            effective_compress_weight = compress_weight
+
+        if warm_start:
+            # Fix #3: Skip annealing for warm-start (TTO mode).
+            # The annealing schedule was designed for from-noise optimization where
+            # compressibility shapes the image before scorers refine it. When warm-
+            # starting from renderer output, the image is already well-formed — the
+            # annealing keeps compress_weight at full for the first 40% of steps,
+            # exactly when PoseNet needs maximum gradient. Start at 10% immediately
+            # so PoseNet gets full gradient authority from step 0.
+            effective_compress_weight = compress_weight * 0.1
         else:
-            decay = 1.0 - 0.9 * ((progress - 0.4) / 0.6)  # 1.0 → 0.1
-            effective_compress_weight = compress_weight * decay
+            # From-noise: full weight for first 40%, then decay to 10%.
+            if progress < 0.4:
+                effective_compress_weight = compress_weight
+            else:
+                decay = 1.0 - 0.9 * ((progress - 0.4) / 0.6)  # 1.0 -> 0.1
+                effective_compress_weight = compress_weight * decay
 
         # --- Coupled total loss ---
         total_loss = (

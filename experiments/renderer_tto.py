@@ -63,6 +63,14 @@ def parse_args() -> argparse.Namespace:
     p.add_argument("--simulate-resize", action="store_true",
                    help="Simulate official scorer's resolution round-trip (384→874→384) in proxy scoring. "
                         "Makes proxy score more faithful to auth eval at the cost of slight pessimism.")
+    p.add_argument("--early-stop-patience", type=int, default=150,
+                   help="Stop TTO if PoseNet hasn't improved in this many steps")
+    p.add_argument("--use-embedding-loss", action="store_true",
+                   help="Use PoseNet embedding MSE (~512d) instead of pose output MSE (6d). "
+                        "Provides 42x more gradient directions for richer optimization.")
+    p.add_argument("--seg-odd-only", action="store_true",
+                   help="Only compute SegNet loss on odd-indexed frames (scorer-matched). "
+                        "Frees even frames for pure PoseNet optimization.")
     return p.parse_args()
 
 
@@ -204,6 +212,83 @@ def extract_gt_pose_targets(
         targets.append(pose.cpu())
 
     return torch.cat(targets, dim=0).float()
+
+
+def extract_gt_pose_embeddings(
+    gt_frames: list[torch.Tensor],
+    posenet: torch.nn.Module,
+    device: torch.device,
+    batch_size: int = 16,
+    layer: str = "summary",
+) -> torch.Tensor:
+    """Extract PoseNet embedding targets from GT frames using non-overlapping pairs.
+
+    Hooks PoseNet's summarizer (or specified layer) to capture the intermediate
+    embedding vector (~512-d) for each non-overlapping pair. These embeddings
+    serve as targets for the embedding loss in TTO, providing 42x more gradient
+    directions than the 6-d pose output.
+
+    Args:
+        gt_frames: list of (H, W, 3) uint8 tensors.
+        posenet: frozen PoseNet model.
+        device: computation device.
+        batch_size: pairs per forward pass.
+        layer: which PoseNet layer to hook ('summary' for 512-d summarizer).
+
+    Returns:
+        (P, D) float tensor of embeddings, P = len(gt_frames) // 2.
+    """
+    from tac.camera import SEGNET_INPUT_H, SEGNET_INPUT_W
+
+    # Resolve target module for hook
+    if layer == "summary":
+        target_module = posenet.summarizer
+    else:
+        target_module = posenet.vision
+        for part in layer.split("."):
+            target_module = target_module[int(part)] if part.isdigit() else getattr(target_module, part)
+
+    N = len(gt_frames)
+    P = N // 2
+    embeddings = []
+
+    for start in range(0, P, batch_size):
+        end = min(start + batch_size, P)
+        batch_pairs = []
+        for k in range(start, end):
+            f0 = gt_frames[2 * k].float()
+            f1 = gt_frames[2 * k + 1].float()
+            pair = torch.stack([f0, f1], dim=0)
+            batch_pairs.append(pair)
+
+        pairs = torch.stack(batch_pairs).to(device)  # (B, 2, H, W, 3)
+        pairs_chw = pairs.permute(0, 1, 4, 2, 3).contiguous()
+
+        B, T, C, H, W = pairs_chw.shape
+        if H != SEGNET_INPUT_H or W != SEGNET_INPUT_W:
+            pairs_flat = pairs_chw.reshape(B * T, C, H, W)
+            pairs_flat = F.interpolate(
+                pairs_flat, size=(SEGNET_INPUT_H, SEGNET_INPUT_W),
+                mode="bilinear", align_corners=False,
+            )
+            pairs_chw = pairs_flat.reshape(B, T, C, SEGNET_INPUT_H, SEGNET_INPUT_W)
+
+        # Hook to capture embedding
+        features = []
+
+        def _hook_fn(module, input, output):
+            features.append(output)
+
+        handle = target_module.register_forward_hook(_hook_fn)
+        posenet_in = posenet.preprocess_input(pairs_chw)
+        with torch.no_grad():
+            posenet(posenet_in)
+        handle.remove()
+
+        emb = features[0]  # (B, D)
+        embeddings.append(emb.cpu())
+
+    return torch.cat(embeddings, dim=0).float()
 
 
 def generate_renderer_frames(
@@ -394,6 +479,10 @@ def run_batched_tto(
     pose_weight: float = 10.0,
     compress_weight: float = 0.5,
     output_dir: Path | None = None,
+    early_stop_patience: int = 150,
+    use_embedding_loss: bool = False,
+    pose_embeddings: torch.Tensor | None = None,
+    seg_odd_only: bool = False,
 ) -> torch.Tensor:
     """Run TTO in batches of pairs to avoid OOM.
 
@@ -417,6 +506,10 @@ def run_batched_tto(
         pose_weight: PoseNet constraint weight.
         compress_weight: compressibility weight.
         output_dir: directory for batch checkpoints (enables resume).
+        early_stop_patience: stop if PoseNet hasn't improved in this many steps.
+        use_embedding_loss: use PoseNet embedding MSE instead of pose output MSE.
+        pose_embeddings: (P, D) GT embeddings. Required if use_embedding_loss.
+        seg_odd_only: only compute SegNet loss on odd frames (scorer-matched).
 
     Returns:
         (N, H, W, 3) float tensor of TTO-refined frames in [0, 255].
@@ -430,8 +523,15 @@ def run_batched_tto(
     n_batches = math.ceil(P / batch_pairs)
     refined_frames = torch.zeros_like(renderer_frames)
 
+    emb_info = ""
+    if use_embedding_loss and pose_embeddings is not None:
+        emb_info = f", embedding_loss={pose_embeddings.shape[-1]}d"
+    if seg_odd_only:
+        emb_info += ", seg_odd_only=True"
+
     print(f"\n[tto] Starting batched TTO: {P} pairs in {n_batches} batches "
-          f"({batch_pairs} pairs/batch, {tto_steps} steps, lr={tto_lr})")
+          f"({batch_pairs} pairs/batch, {tto_steps} steps, lr={tto_lr}, "
+          f"patience={early_stop_patience}{emb_info})")
 
     for batch_idx in range(n_batches):
         pair_start = batch_idx * batch_pairs
@@ -463,6 +563,11 @@ def run_batched_tto(
         batch_pose = pose_targets[pair_start:pair_end]
         batch_init = renderer_frames[frame_start:frame_end]
 
+        # Slice embedding targets for this batch if using embedding loss
+        batch_embeddings = None
+        if use_embedding_loss and pose_embeddings is not None:
+            batch_embeddings = pose_embeddings[pair_start:pair_end]
+
         t0 = time.monotonic()
         batch_result = coupled_trajectory_optimize(
             masks=batch_masks,
@@ -478,6 +583,10 @@ def run_batched_tto(
             device=str(device),
             log_every=max(tto_steps // 5, 1),
             init_frames=batch_init,
+            early_stop_patience=early_stop_patience,
+            use_embedding_loss=use_embedding_loss,
+            expected_pose_embeddings=batch_embeddings,
+            seg_odd_only=seg_odd_only,
         )
         dt = time.monotonic() - t0
 
@@ -529,6 +638,9 @@ def main():
           f"batch_pairs={args.batch_pairs}")
     print(f"[config] seg_weight={args.seg_weight}, pose_weight={args.pose_weight}, "
           f"compress_weight={args.compress_weight}")
+    print(f"[config] early_stop_patience={args.early_stop_patience}, "
+          f"use_embedding_loss={args.use_embedding_loss}, "
+          f"seg_odd_only={args.seg_odd_only}")
     print(f"[config] checkpoint={args.checkpoint}")
     print(f"[config] video={video_path}")
     print(f"[config] output_dir={output_dir}")
@@ -590,12 +702,22 @@ def main():
     if device.type == "cuda":
         torch.cuda.empty_cache()
 
-    # ── Step 6: Extract GT pose targets ──────────────────────────────────
+    # ── Step 6: Extract GT pose targets (and embeddings if needed) ───────
     print("\n[6/8] Extracting GT pose targets...")
     t0 = time.monotonic()
     pose_targets = extract_gt_pose_targets(gt_frames, posenet, device)
     t_pose = time.monotonic() - t0
     print(f"[6/8] Extracted {pose_targets.shape[0]} pose targets ({pose_targets.shape}) in {t_pose:.1f}s")
+
+    # Extract GT pose embeddings if embedding loss is enabled
+    pose_embeddings = None
+    if args.use_embedding_loss:
+        print("[6/8] Extracting GT pose embeddings for embedding loss...")
+        t0 = time.monotonic()
+        pose_embeddings = extract_gt_pose_embeddings(gt_frames, posenet, device)
+        t_emb = time.monotonic() - t0
+        print(f"[6/8] Extracted {pose_embeddings.shape[0]} embeddings "
+              f"({pose_embeddings.shape}) in {t_emb:.1f}s")
 
     # ── Baseline proxy score (renderer only, no TTO) ─────────────────────
     print("\n[...] Computing baseline proxy score (renderer only)...")
@@ -635,6 +757,10 @@ def main():
         pose_weight=args.pose_weight,
         compress_weight=args.compress_weight,
         output_dir=output_dir,
+        early_stop_patience=args.early_stop_patience,
+        use_embedding_loss=args.use_embedding_loss,
+        pose_embeddings=pose_embeddings,
+        seg_odd_only=args.seg_odd_only,
     )
     t_tto = time.monotonic() - t0
     print(f"\n[7/8] TTO completed in {t_tto:.1f}s ({t_tto / args.n_frames:.2f}s/frame)")
@@ -695,6 +821,9 @@ def main():
             "compress_weight": args.compress_weight,
             "video": video_path,
             "smoke": args.smoke,
+            "early_stop_patience": args.early_stop_patience,
+            "use_embedding_loss": args.use_embedding_loss,
+            "seg_odd_only": args.seg_odd_only,
         },
         "timing": {
             "total_s": round(t_total, 2),
