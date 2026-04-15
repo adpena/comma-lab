@@ -101,3 +101,37 @@ For completeness, we report approaches that failed to improve the authoritative 
 | SegNet weight > 100 | --- | --- | Overwhelms PoseNet signal |
 
 Two patterns emerge. First, proxy scores can be deeply misleading: KL distillation achieved a promising 1.25 proxy but scored 1.85 on auth, a distribution shift between local (PyAV) and official (DALI) video decoders. Second, several "failures" (embedding loss v1, v3) were invalidated by the gradient bug --- they may have worked with correct gradients. We have not re-run them, as the current approach already achieves sub-0.50.
+
+## 4.7 Operational findings
+
+### Inflate time budget
+
+The official evaluation imposes a 30-minute time limit for inflation on a T4 GPU instance (26 GB RAM, 16 GB VRAM). Our renderer inflate path (`inflate_renderer.py`) requires:
+
+1. Loading SegNet from upstream models (~2s)
+2. Decoding the GT video via PyAV (~15s)
+3. Extracting 1200 SegNet masks in batches (~30s)
+4. Running the renderer on 600 mask pairs (~120s on T4)
+5. Upscaling 1200 frames from 384x512 to 874x1164 and writing raw output (~60s)
+
+Total: approximately 4--5 minutes on T4 with CUDA. This is well within the 30-minute budget, leaving ample headroom for TTO-based inflation strategies that could consume 20--25 minutes.
+
+### Contest compliance gap
+
+A critical finding: our authoritative evaluation pipeline bypassed `inflate.sh` entirely. The standard `auth_eval()` function directly generates frames and writes raw output, skipping the actual contest pipeline (`unzip archive.zip -> bash inflate.sh -> evaluate.py`). This means our reported scores have never been validated through the end-to-end submission path.
+
+We implemented a `_run_contest_compliant_auth_eval()` function that replicates the exact `evaluate.sh` pipeline. This catches issues invisible to the direct path: missing dependencies at inflate time, incorrect argument handling, SegNet weight resolution from the upstream path, and raw output format mismatches.
+
+### Archive compression
+
+The archive was initially created with `ZIP_STORED` (no compression), yielding a 150,769-byte archive. Switching to `ZIP_DEFLATED` at compression level 9 reduced this to 119,160 bytes --- a 21% reduction. This directly improves the rate term from 0.1004 to 0.0793, saving 0.021 on the final score. LZMA compression would save an additional 6 KB but is not supported by the standard `unzip` utility used in the evaluation environment.
+
+### Scorer weight rule
+
+The contest rules state: "External libraries and tools can be used and won't count towards compressed size, unless they use large artifacts (neural networks, meshes, point clouds, etc.), in which case those artifacts should be included in the archive." Contest organizer Yassine Yousfi explicitly clarified (PR \#35) that this applies to the PoseNet and SegNet scorer weights.
+
+Our renderer inflate path currently loads SegNet from the upstream `models/` directory at inflate time to extract semantic masks from the GT video. Under a strict reading of the rule, these SegNet weights (~48 MB) would need to be included in the archive, which would increase the rate term from 0.08 to approximately 32 --- catastrophically uncompetitive. The leading submission (mask2mask, score 0.60) avoids this by storing pre-extracted masks in the archive rather than loading SegNet at inflate time. Resolving this compliance question is critical for submission viability.
+
+### Scalability
+
+The TTO optimization is embarrassingly parallel across frame-pair batches, making it straightforward to scale from T4 ($0.59/hr) to RTX 4090 ($0.25/hr on Vast.ai, 4--5x faster) or to distribute across multiple GPUs. The 500-step optimization per batch takes approximately 180 seconds on T4; on 4090, this drops to approximately 40 seconds, enabling full 1200-frame TTO in under 10 minutes.
