@@ -538,7 +538,6 @@ def auth_eval(tag: str, checkpoint: str = "renderer_best.pt", strategy: str = "s
     Results are saved to /results/<tag>/auth_eval_<checkpoint>.json
     """
     import json
-    import math
     import os
     import sys
     import time
@@ -866,69 +865,52 @@ def auth_eval(tag: str, checkpoint: str = "renderer_best.pt", strategy: str = "s
         os.rename(raw_path, expected_raw)
         raw_path = expected_raw
 
-    # Run upstream evaluate.py — uses DALI on CUDA for GT decode (leaderboard match)
-    import subprocess
-    report_path = os.path.join(submission_dir, "report.txt")
-    # Use upstream evaluate.py with DALI on CUDA for leaderboard-grade scoring.
-    # DALI_DISABLE_NVML=1 is set in the container env to work around Modal's
-    # lack of NVML access. DALI video decode still uses GPU (NVDEC), it just
-    # can't query GPU management info. Falls back to PyAV if DALI fails.
+    # Run upstream evaluate.py via canonical runner — uses DALI on CUDA for
+    # leaderboard-grade scoring. DALI_DISABLE_NVML=1 is set in the container env.
+    from tac.eval.auth_eval import (
+        run_evaluate_py as _run_eval,
+        score_breakdown as _breakdown,
+    )
+
     eval_device = "cuda" if torch.cuda.is_available() else "cpu"
-    eval_cmd = [
-        sys.executable, os.path.join(UPSTREAM_ROOT, "evaluate.py"),
-        "--submission-dir", submission_dir,
-        "--uncompressed-dir", os.path.join(UPSTREAM_ROOT, "videos"),
-        "--video-names-file", os.path.join(UPSTREAM_ROOT, "public_test_video_names.txt"),
-        "--device", eval_device,
-        "--report", report_path,
-    ]
-    print(f"  Command: {' '.join(eval_cmd)}")
-    eval_result = subprocess.run(eval_cmd, capture_output=True, text=True, timeout=1200)
-    if eval_result.returncode != 0:
-        print(f"  STDERR: {eval_result.stderr[-500:]}", file=sys.stderr)
-        raise RuntimeError(f"evaluate.py failed with exit code {eval_result.returncode}")
+    metrics = _run_eval(
+        submission_dir=submission_dir,
+        upstream_root=UPSTREAM_ROOT,
+        device=eval_device,
+        timeout=1200,
+    )
+    print(f"  Report:\n{metrics.report_text}")
 
-    # Parse the report
-    import re
-    with open(report_path) as _f:
-        report_text = _f.read()
-    print(f"  Report:\n{report_text}")
-
-    def _parse(pattern, text):
-        m = re.search(pattern, text)
-        return float(m.group(1).replace(",", "")) if m else None
-
-    avg_posenet = _parse(r"Average PoseNet Distortion:\s*([0-9.]+)", report_text)
-    avg_segnet = _parse(r"Average SegNet Distortion:\s*([0-9.]+)", report_text)
-    rate = _parse(r"Compression Rate:\s*([0-9.]+)", report_text)
-    final_score_parsed = _parse(r"Final score:.*=\s*([0-9.]+)", report_text)
-    n_samples_raw = _parse(r"over (\d+) samples", report_text)
-    n_samples = int(n_samples_raw) if n_samples_raw else 600
+    avg_posenet = metrics.avg_posenet_dist
+    avg_segnet = metrics.avg_segnet_dist
+    rate = metrics.compression_rate
+    n_samples = metrics.n_samples
 
     gt_size = os.path.getsize(os.path.join(UPSTREAM_ROOT, "videos", "0.mkv"))
     if rate is None:
         rate = archive_size / gt_size
 
-    # ── 8. Final score ──
-    # Prefer the score parsed directly from evaluate.py (most authoritative)
-    score = final_score_parsed if final_score_parsed else (
-        100 * avg_segnet + math.sqrt(10 * avg_posenet) + 25 * rate
-    )
+    score = metrics.best_score
+    bd = _breakdown(avg_segnet, avg_posenet, rate) if avg_segnet is not None and avg_posenet is not None else {}
 
     t_total = time.monotonic() - t_start
 
     print(f"\n{'=' * 60}")
     print(f"=== Authoritative Evaluation Results ({n_samples} samples) ===")
     print(f"{'=' * 60}")
-    print(f"  Average PoseNet Distortion: {avg_posenet:.8f}")
-    print(f"  Average SegNet Distortion:  {avg_segnet:.8f}")
+    if avg_posenet is not None:
+        print(f"  Average PoseNet Distortion: {avg_posenet:.8f}")
+    if avg_segnet is not None:
+        print(f"  Average SegNet Distortion:  {avg_segnet:.8f}")
     print(f"  Archive size:               {archive_size:,} bytes")
     print(f"  GT size:                    {gt_size:,} bytes")
-    print(f"  Compression Rate:           {rate:.8f}")
-    print(f"  Score breakdown:")
-    print(f"    100*seg  = {100 * avg_segnet:.4f}")
-    print(f"    sqrt(10*pose) = {math.sqrt(10 * avg_posenet):.4f}")
-    print(f"    25*rate  = {25 * rate:.4f}")
+    if rate is not None:
+        print(f"  Compression Rate:           {rate:.8f}")
+    if bd:
+        print(f"  Score breakdown:")
+        print(f"    100*seg  = {bd['seg_contribution']:.4f}")
+        print(f"    sqrt(10*pose) = {bd['pose_contribution']:.4f}")
+        print(f"    25*rate  = {bd['rate_contribution']:.4f}")
     print(f"  FINAL SCORE: {score:.4f}")
     print(f"  Total time: {t_total:.1f}s")
     print(f"{'=' * 60}")
@@ -943,9 +925,9 @@ def auth_eval(tag: str, checkpoint: str = "renderer_best.pt", strategy: str = "s
         "archive_size_bytes": archive_size,
         "gt_size_bytes": gt_size,
         "rate": rate,
-        "score_seg": 100 * avg_segnet,
-        "score_pose": math.sqrt(10 * avg_posenet),
-        "score_rate": 25 * rate,
+        "score_seg": bd.get("seg_contribution"),
+        "score_pose": bd.get("pose_contribution"),
+        "score_rate": bd.get("rate_contribution"),
         "final_score": score,
         "n_samples": n_samples,
         "n_frames": n_written,
@@ -1195,12 +1177,9 @@ def _run_contest_compliant_auth_eval(
         inflate_elapsed_seconds, eval_elapsed_seconds, total_elapsed_seconds.
     """
     import json
-    import math
     import os
-    import re
     import shutil
     import subprocess
-    import sys
     import time
 
     t_start = time.monotonic()
@@ -1333,61 +1312,31 @@ def _run_contest_compliant_auth_eval(
         )
     print(f"  All {len(video_names)} raw files present and valid.")
 
-    # ── Step 3: Run evaluate.py ─────────────────────────────────────────────
+    # ── Step 3: Run evaluate.py via canonical runner ─────────────────────────
+    from tac.eval.auth_eval import run_evaluate_py as _run_eval
+
     print(f"\nStep 3: Running evaluate.py ...")
-    report_path = os.path.join(submission_dir, "report.txt")
     t_eval_start = time.monotonic()
 
-    eval_cmd = [
-        sys.executable, os.path.join(upstream_root, "evaluate.py"),
-        "--submission-dir", submission_dir,
-        "--uncompressed-dir", os.path.join(upstream_root, "videos"),
-        "--video-names-file", video_names_file,
-        "--device", device,
-        "--report", report_path,
-    ]
-    print(f"  Command: {' '.join(eval_cmd)}")
-
-    eval_result = subprocess.run(
-        eval_cmd,
-        capture_output=True,
-        text=True,
+    metrics = _run_eval(
+        submission_dir=submission_dir,
+        upstream_root=upstream_root,
+        device=device,
         timeout=1200,
-        env={**os.environ, "PYTHONPATH": upstream_root},
     )
     eval_elapsed = time.monotonic() - t_eval_start
 
-    if eval_result.returncode != 0:
-        print(f"  evaluate.py stdout:\n{eval_result.stdout[-1000:]}")
-        raise RuntimeError(
-            f"evaluate.py failed (exit {eval_result.returncode}) "
-            f"after {eval_elapsed:.1f}s.\n"
-            f"stderr: {eval_result.stderr[-1000:]}"
-        )
+    print(f"  Report:\n{metrics.report_text}")
 
-    # ── Step 4: Parse report ────────────────────────────────────────────────
-    with open(report_path) as _f:
-        report_text = _f.read()
-    print(f"  Report:\n{report_text}")
-
-    def _parse(pattern: str, text: str):
-        m = re.search(pattern, text)
-        return float(m.group(1).replace(",", "")) if m else None
-
-    avg_posenet = _parse(r"Average PoseNet Distortion:\s*([0-9.]+)", report_text)
-    avg_segnet = _parse(r"Average SegNet Distortion:\s*([0-9.]+)", report_text)
-    compressed_size = _parse(r"Submission file size:\s*([0-9,]+)", report_text)
-    uncompressed_size = _parse(r"Original uncompressed size:\s*([0-9,]+)", report_text)
-    rate = _parse(r"Compression Rate:\s*([0-9.]+)", report_text)
-    final_score_parsed = _parse(r"Final score:.*=\s*([0-9.]+)", report_text)
-    n_samples_raw = _parse(r"over (\d+) samples", report_text)
-    n_samples = int(n_samples_raw) if n_samples_raw else 600
+    avg_posenet = metrics.avg_posenet_dist
+    avg_segnet = metrics.avg_segnet_dist
+    compressed_size = metrics.submission_file_size
+    uncompressed_size = metrics.uncompressed_size
+    rate = metrics.compression_rate
+    n_samples = metrics.n_samples
+    score = metrics.best_score
 
     t_total = time.monotonic() - t_start
-
-    score = final_score_parsed
-    if score is None and all(v is not None for v in (avg_posenet, avg_segnet, rate)):
-        score = 100 * avg_segnet + math.sqrt(10 * avg_posenet) + 25 * rate
 
     print(f"\n{'=' * 60}")
     print(f"=== Contest-Compliant Results ({n_samples} samples) ===")
@@ -1397,10 +1346,10 @@ def _run_contest_compliant_auth_eval(
     if avg_segnet is not None:
         print(f"  Average SegNet Distortion:  {avg_segnet:.8f}")
     if compressed_size is not None:
-        print(f"  Archive size:               {int(compressed_size):,} bytes")
+        print(f"  Archive size:               {compressed_size:,} bytes")
     if rate is not None:
         print(f"  Compression Rate:           {rate:.8f}")
-    if score is not None:
+    if score != float("inf"):
         print(f"  FINAL SCORE:                {score:.4f}")
     print(f"  Inflate time:               {inflate_elapsed:.1f}s")
     print(f"  Eval time:                  {eval_elapsed:.1f}s")
@@ -1411,16 +1360,16 @@ def _run_contest_compliant_auth_eval(
         "eval_method": "contest_compliant_inflate_sh",
         "avg_posenet_dist": avg_posenet,
         "avg_segnet_dist": avg_segnet,
-        "compressed_size_bytes": int(compressed_size) if compressed_size else None,
-        "uncompressed_size_bytes": int(uncompressed_size) if uncompressed_size else None,
+        "compressed_size_bytes": compressed_size,
+        "uncompressed_size_bytes": uncompressed_size,
         "rate": rate,
-        "final_score": score,
+        "final_score": score if score != float("inf") else None,
         "n_samples": n_samples,
         "inflate_elapsed_seconds": inflate_elapsed,
         "eval_elapsed_seconds": eval_elapsed,
         "total_elapsed_seconds": t_total,
         "submission_dir": submission_dir,
-        "report_text": report_text,
+        "report_text": metrics.report_text,
         "timestamp": time.strftime("%Y-%m-%dT%H:%M:%SZ"),
     }
 
@@ -1558,11 +1507,7 @@ def _run_tto_auth_eval(tag: str, tto_dir: str) -> dict | None:
         Result dict with scores, or None if tto_frames.pt not found.
     """
     import json
-    import math
     import os
-    import re
-    import subprocess
-    import sys
     import time
 
     import torch
@@ -1672,80 +1617,64 @@ def _run_tto_auth_eval(tag: str, tto_dir: str) -> dict | None:
     profiler.add_metadata("archive_size_bytes", archive_size)
     print(f"  Archive size: {archive_size:,} bytes")
 
-    # ── 4. Run upstream evaluate.py ──
-    print("\nStage 4: Scoring via upstream evaluate.py (DALI) ...")
-    report_path = os.path.join(submission_dir, "report.txt")
+    # ── 4. Run upstream evaluate.py via canonical runner ──
+    from tac.eval.auth_eval import (
+        run_evaluate_py as _run_eval,
+        score_breakdown as _breakdown,
+    )
+
     eval_device = "cuda" if torch.cuda.is_available() else "cpu"
-    eval_cmd = [
-        sys.executable, os.path.join(UPSTREAM_ROOT, "evaluate.py"),
-        "--submission-dir", submission_dir,
-        "--uncompressed-dir", os.path.join(UPSTREAM_ROOT, "videos"),
-        "--video-names-file", os.path.join(UPSTREAM_ROOT, "public_test_video_names.txt"),
-        "--device", eval_device,
-        "--report", report_path,
-    ]
-    print(f"  Command: {' '.join(eval_cmd)}")
+    print("\nStage 4: Scoring via upstream evaluate.py (DALI) ...")
     with profiler.stage("scoring_evaluate_py"):
-        eval_result = subprocess.run(eval_cmd, capture_output=True, text=True, timeout=1200)
+        try:
+            metrics = _run_eval(
+                submission_dir=submission_dir,
+                upstream_root=UPSTREAM_ROOT,
+                device=eval_device,
+                timeout=1200,
+            )
+        except RuntimeError as e:
+            print(f"  evaluate.py FAILED: {e}")
+            return None
 
-    if eval_result.returncode != 0:
-        print(f"  evaluate.py FAILED (exit {eval_result.returncode})")
-        print(f"  STDERR: {eval_result.stderr[-1000:]}")
-        return None
+    # ── 5. Extract parsed metrics ──
+    print(f"  Report:\n{metrics.report_text}")
 
-    # ── 5. Parse report ──
-    with profiler.stage("parse_report"):
-        with open(report_path) as _f:
-            report_text = _f.read()
-    print(f"  Report:\n{report_text}")
-
-    def _parse(pattern, text):
-        m = re.search(pattern, text)
-        return float(m.group(1).replace(",", "")) if m else None
-
-    avg_posenet = _parse(r"Average PoseNet Distortion:\s*([0-9.]+)", report_text)
-    avg_segnet = _parse(r"Average SegNet Distortion:\s*([0-9.]+)", report_text)
-    rate = _parse(r"Compression Rate:\s*([0-9.]+)", report_text)
-    final_score_parsed = _parse(r"Final score:.*=\s*([0-9.]+)", report_text)
-    n_samples_raw = _parse(r"over (\d+) samples", report_text)
-    n_samples = int(n_samples_raw) if n_samples_raw else 600
+    avg_posenet = metrics.avg_posenet_dist
+    avg_segnet = metrics.avg_segnet_dist
+    rate = metrics.compression_rate
+    n_samples = metrics.n_samples
 
     gt_size = os.path.getsize(os.path.join(UPSTREAM_ROOT, "videos", "0.mkv"))
     if rate is None:
         rate = archive_size / gt_size
 
-    metrics_valid = all(v is not None for v in (avg_posenet, avg_segnet, rate))
-    if not metrics_valid:
-        print("  WARNING: Could not parse all metrics from report. Partial results only.")
-        score = final_score_parsed or float("inf")
-    else:
-        score = final_score_parsed if final_score_parsed else (
-            100 * avg_segnet + math.sqrt(10 * avg_posenet) + 25 * rate
-        )
+    score = metrics.best_score
+    bd = _breakdown(avg_segnet, avg_posenet, rate) if metrics.all_metrics_present else {}
 
     t_total = time.monotonic() - t_start
 
     print(f"\n{'=' * 60}")
     print(f"=== TTO Authoritative Evaluation Results ({n_samples} samples) ===")
     print(f"{'=' * 60}")
-    if metrics_valid:
+    if metrics.all_metrics_present:
         print(f"  Average PoseNet Distortion: {avg_posenet:.8f}")
         print(f"  Average SegNet Distortion:  {avg_segnet:.8f}")
         print(f"  Archive size:               {archive_size:,} bytes")
         print(f"  GT size:                    {gt_size:,} bytes")
         print(f"  Compression Rate:           {rate:.8f}")
-        print(f"  Score breakdown:")
-        print(f"    100*seg  = {100 * avg_segnet:.4f}")
-        print(f"    sqrt(10*pose) = {math.sqrt(10 * avg_posenet):.4f}")
-        print(f"    25*rate  = {25 * rate:.4f}")
+        if bd:
+            print(f"  Score breakdown:")
+            print(f"    100*seg  = {bd['seg_contribution']:.4f}")
+            print(f"    sqrt(10*pose) = {bd['pose_contribution']:.4f}")
+            print(f"    25*rate  = {bd['rate_contribution']:.4f}")
+    else:
+        print("  WARNING: Could not parse all metrics from report. Partial results only.")
     print(f"  FINAL SCORE: {score:.4f}")
     print(f"  Total time: {t_total:.1f}s")
     print(f"{'=' * 60}")
 
     # ── 6. Save results ──
-    score_seg = 100 * avg_segnet if avg_segnet is not None else None
-    score_pose = math.sqrt(10 * avg_posenet) if avg_posenet is not None else None
-    score_rate = 25 * rate if rate is not None else None
     result = {
         "tag": tag,
         "source": "tto_frames",
@@ -1754,10 +1683,10 @@ def _run_tto_auth_eval(tag: str, tto_dir: str) -> dict | None:
         "archive_size_bytes": archive_size,
         "gt_size_bytes": gt_size,
         "rate": rate,
-        "score_seg": score_seg,
-        "score_pose": score_pose,
-        "score_rate": score_rate,
-        "final_score": score,
+        "score_seg": bd.get("seg_contribution"),
+        "score_pose": bd.get("pose_contribution"),
+        "score_rate": bd.get("rate_contribution"),
+        "final_score": score if score != float("inf") else None,
         "n_samples": n_samples,
         "n_frames": NUM_FRAMES,
         "eval_method": f"upstream_evaluate_py_{eval_device}",

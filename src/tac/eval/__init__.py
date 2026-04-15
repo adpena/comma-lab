@@ -15,6 +15,47 @@ Usage::
     print(results.score)
 """
 
-from .auth_eval import AuthEvaluator, RendererMode
+from .auth_eval import (
+    EXPECTED_FRAME_BYTES,
+    EXPECTED_RAW_BYTES,
+    FALLBACK_UNCOMPRESSED_SIZE,
+    NUM_FRAMES,
+    OUT_H,
+    OUT_W,
+    SEG_H,
+    SEG_W,
+    AuthEvaluator,
+    AuthResult,
+    RendererMode,
+    ReportMetrics,
+    compute_final_score,
+    parse_report,
+    parse_report_file,
+    run_evaluate_py,
+    score_breakdown,
+    validate_raw_file,
+)
 
-__all__ = ["AuthEvaluator", "RendererMode"]
+__all__ = [
+    # Constants
+    "EXPECTED_FRAME_BYTES",
+    "EXPECTED_RAW_BYTES",
+    "FALLBACK_UNCOMPRESSED_SIZE",
+    "NUM_FRAMES",
+    "OUT_H",
+    "OUT_W",
+    "SEG_H",
+    "SEG_W",
+    # Classes
+    "AuthEvaluator",
+    "AuthResult",
+    "RendererMode",
+    "ReportMetrics",
+    # Functions — report parsing & scoring
+    "compute_final_score",
+    "parse_report",
+    "parse_report_file",
+    "run_evaluate_py",
+    "score_breakdown",
+    "validate_raw_file",
+]

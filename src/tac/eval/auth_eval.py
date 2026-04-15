@@ -29,6 +29,9 @@ import enum
 import json
 import logging
 import math
+import os
+import re
+import subprocess
 import sys
 import time
 from dataclasses import dataclass, field
@@ -129,6 +132,346 @@ class AuthResult:
             f"n_pairs={self.n_pairs}  "
             f"mode={self.renderer_mode}"
         )
+
+
+# ---------------------------------------------------------------------------
+# Standalone scoring formula
+# ---------------------------------------------------------------------------
+
+
+def compute_final_score(
+    segnet_dist: float,
+    posenet_dist: float,
+    rate: float,
+) -> float:
+    """Compute the contest final score from distortion metrics and rate.
+
+    This is the SINGLE source of truth for the scoring formula.
+    All code paths — AuthEvaluator, evaluate.py subprocess parsing,
+    and any vendor wrapper — must use this function.
+
+    Formula (upstream evaluate.py line 92):
+        score = 100 * segnet_dist + sqrt(10 * posenet_dist) + 25 * rate
+
+    Args:
+        segnet_dist: average SegNet hard-argmax disagreement (fraction in [0, 1])
+        posenet_dist: average PoseNet MSE distortion
+        rate: compression rate (archive_size / uncompressed_size)
+
+    Returns:
+        The final composite score (lower is better).
+    """
+    return 100.0 * segnet_dist + math.sqrt(10.0 * posenet_dist) + 25.0 * rate
+
+
+def score_breakdown(
+    segnet_dist: float,
+    posenet_dist: float,
+    rate: float,
+) -> dict[str, float]:
+    """Compute the final score with per-component breakdown.
+
+    Returns:
+        Dict with keys: final_score, seg_contribution, pose_contribution,
+        rate_contribution.
+    """
+    seg_c = 100.0 * segnet_dist
+    pose_c = math.sqrt(10.0 * posenet_dist)
+    rate_c = 25.0 * rate
+    return {
+        "final_score": seg_c + pose_c + rate_c,
+        "seg_contribution": seg_c,
+        "pose_contribution": pose_c,
+        "rate_contribution": rate_c,
+    }
+
+
+# ---------------------------------------------------------------------------
+# Report parsing — single source of truth for evaluate.py report.txt
+# ---------------------------------------------------------------------------
+
+# Compiled patterns for report.txt fields emitted by upstream evaluate.py.
+# Each pattern captures a single numeric value as group(1).
+_REPORT_PATTERNS: dict[str, re.Pattern[str]] = {
+    "avg_posenet_dist": re.compile(r"Average PoseNet Distortion:\s*([0-9.]+)"),
+    "avg_segnet_dist": re.compile(r"Average SegNet Distortion:\s*([0-9.]+)"),
+    "compression_rate": re.compile(r"Compression Rate:\s*([0-9.]+)"),
+    "final_score": re.compile(r"Final score:.*=\s*([0-9.]+)"),
+    "n_samples": re.compile(r"over (\d+) samples"),
+    "submission_file_size": re.compile(r"Submission file size:\s*([0-9,]+)"),
+    "uncompressed_size": re.compile(r"Original uncompressed size:\s*([0-9,]+)"),
+}
+
+
+@dataclass
+class ReportMetrics:
+    """Parsed metrics from an upstream evaluate.py report.txt file.
+
+    All float fields are None when the corresponding line was not found
+    in the report (e.g., truncated output or evaluation failure).
+    """
+
+    avg_posenet_dist: float | None = None
+    avg_segnet_dist: float | None = None
+    compression_rate: float | None = None
+    final_score: float | None = None
+    n_samples: int = 600  # upstream default when not reported
+    submission_file_size: int | None = None
+    uncompressed_size: int | None = None
+    report_text: str = ""
+
+    @property
+    def all_metrics_present(self) -> bool:
+        """True when PoseNet, SegNet, and rate were all parsed successfully."""
+        return all(
+            v is not None
+            for v in (self.avg_posenet_dist, self.avg_segnet_dist, self.compression_rate)
+        )
+
+    @property
+    def computed_score(self) -> float | None:
+        """Recompute score from parsed components using the canonical formula.
+
+        Returns None if any required metric is missing. Prefer this over
+        final_score when you need a guaranteed-consistent computation.
+        """
+        if not self.all_metrics_present:
+            return None
+        assert self.avg_segnet_dist is not None  # for type checker
+        assert self.avg_posenet_dist is not None
+        assert self.compression_rate is not None
+        return compute_final_score(
+            self.avg_segnet_dist, self.avg_posenet_dist, self.compression_rate
+        )
+
+    @property
+    def best_score(self) -> float:
+        """Best available score: parsed from report, or recomputed, or inf.
+
+        Prefers the score directly parsed from evaluate.py output (most
+        authoritative), falls back to recomputation, then to infinity.
+        """
+        if self.final_score is not None:
+            return self.final_score
+        if self.computed_score is not None:
+            return self.computed_score
+        return float("inf")
+
+
+def parse_report(report_text: str) -> ReportMetrics:
+    """Parse an upstream evaluate.py report.txt into structured metrics.
+
+    This is the SINGLE canonical report parser. All code that reads report.txt
+    — Modal, Kaggle, Vast.ai, CLI — must use this function.
+
+    Args:
+        report_text: full text content of report.txt
+
+    Returns:
+        ReportMetrics dataclass with all parsed fields.
+    """
+
+    def _extract(pattern: re.Pattern[str]) -> float | None:
+        m = pattern.search(report_text)
+        if m is None:
+            return None
+        return float(m.group(1).replace(",", ""))
+
+    posenet = _extract(_REPORT_PATTERNS["avg_posenet_dist"])
+    segnet = _extract(_REPORT_PATTERNS["avg_segnet_dist"])
+    rate = _extract(_REPORT_PATTERNS["compression_rate"])
+    score = _extract(_REPORT_PATTERNS["final_score"])
+    n_samples_raw = _extract(_REPORT_PATTERNS["n_samples"])
+    sub_size = _extract(_REPORT_PATTERNS["submission_file_size"])
+    uncomp_size = _extract(_REPORT_PATTERNS["uncompressed_size"])
+
+    return ReportMetrics(
+        avg_posenet_dist=posenet,
+        avg_segnet_dist=segnet,
+        compression_rate=rate,
+        final_score=score,
+        n_samples=int(n_samples_raw) if n_samples_raw is not None else 600,
+        submission_file_size=int(sub_size) if sub_size is not None else None,
+        uncompressed_size=int(uncomp_size) if uncomp_size is not None else None,
+        report_text=report_text,
+    )
+
+
+def parse_report_file(report_path: str | Path) -> ReportMetrics:
+    """Read and parse a report.txt file from disk.
+
+    Convenience wrapper around ``parse_report`` for the common case
+    of reading from a file path.
+
+    Args:
+        report_path: path to report.txt
+
+    Returns:
+        ReportMetrics dataclass
+
+    Raises:
+        FileNotFoundError: if report_path does not exist
+    """
+    path = Path(report_path)
+    if not path.exists():
+        raise FileNotFoundError(f"Report file not found: {path}")
+    return parse_report(path.read_text())
+
+
+# ---------------------------------------------------------------------------
+# Subprocess runner for upstream evaluate.py
+# ---------------------------------------------------------------------------
+
+
+def run_evaluate_py(
+    submission_dir: str | Path,
+    upstream_root: str | Path,
+    *,
+    device: str = "cuda",
+    timeout: int = 1200,
+    report_filename: str = "report.txt",
+    python_executable: str | None = None,
+) -> ReportMetrics:
+    """Run upstream evaluate.py as a subprocess and parse its report.
+
+    This is the canonical way to invoke the upstream scorer from any
+    platform. It constructs the correct command, sets up PYTHONPATH,
+    runs the subprocess, and parses the resulting report.txt.
+
+    The function is platform-agnostic: it works identically on Modal,
+    Kaggle, Vast.ai, Lightning, local machines, or any environment
+    where upstream evaluate.py is available.
+
+    Prerequisites (caller must ensure):
+        - submission_dir contains archive.zip
+        - submission_dir/inflated/ contains the .raw frame files
+        - upstream_root contains evaluate.py, models/, videos/,
+          and public_test_video_names.txt
+
+    Args:
+        submission_dir: directory containing archive.zip and inflated/ subdir
+        upstream_root: root of upstream scorer repo
+        device: PyTorch device for evaluation ('cuda' or 'cpu')
+        timeout: subprocess timeout in seconds (default 1200 = 20 min)
+        report_filename: name of the report file to write (default 'report.txt')
+        python_executable: Python interpreter path. Defaults to sys.executable.
+
+    Returns:
+        ReportMetrics with parsed results
+
+    Raises:
+        FileNotFoundError: if evaluate.py or video_names_file is missing
+        RuntimeError: if evaluate.py subprocess fails (non-zero exit)
+        subprocess.TimeoutExpired: if evaluation exceeds timeout
+    """
+    submission_dir = str(submission_dir)
+    upstream_root = str(upstream_root)
+    py = python_executable or sys.executable
+
+    evaluate_script = os.path.join(upstream_root, "evaluate.py")
+    video_names_file = os.path.join(upstream_root, "public_test_video_names.txt")
+    videos_dir = os.path.join(upstream_root, "videos")
+    report_path = os.path.join(submission_dir, report_filename)
+
+    # Preflight checks
+    for path, label in [
+        (evaluate_script, "evaluate.py"),
+        (video_names_file, "public_test_video_names.txt"),
+        (videos_dir, "videos directory"),
+    ]:
+        if not os.path.exists(path):
+            raise FileNotFoundError(
+                f"run_evaluate_py: {label} not found at {path}"
+            )
+
+    cmd = [
+        py, evaluate_script,
+        "--submission-dir", submission_dir,
+        "--uncompressed-dir", videos_dir,
+        "--video-names-file", video_names_file,
+        "--device", device,
+        "--report", report_path,
+    ]
+
+    logger.info("Running evaluate.py: %s", " ".join(cmd))
+
+    env = {**os.environ, "PYTHONPATH": upstream_root}
+    result = subprocess.run(
+        cmd,
+        capture_output=True,
+        text=True,
+        timeout=timeout,
+        env=env,
+    )
+
+    if result.returncode != 0:
+        stderr_tail = result.stderr[-1000:] if result.stderr else "(no stderr)"
+        stdout_tail = result.stdout[-500:] if result.stdout else "(no stdout)"
+        raise RuntimeError(
+            f"evaluate.py failed (exit {result.returncode}).\n"
+            f"stdout (last 500 chars): {stdout_tail}\n"
+            f"stderr (last 1000 chars): {stderr_tail}"
+        )
+
+    metrics = parse_report_file(report_path)
+    logger.info(
+        "evaluate.py complete: score=%.4f, posenet=%.6f, segnet=%.6f, rate=%.8f",
+        metrics.best_score,
+        metrics.avg_posenet_dist or 0.0,
+        metrics.avg_segnet_dist or 0.0,
+        metrics.compression_rate or 0.0,
+    )
+    return metrics
+
+
+# ---------------------------------------------------------------------------
+# Raw frame file validation
+# ---------------------------------------------------------------------------
+
+EXPECTED_FRAME_BYTES: int = OUT_H * OUT_W * 3
+"""Size of a single uncompressed RGB frame at output resolution (874 x 1164 x 3)."""
+
+EXPECTED_RAW_BYTES: int = EXPECTED_FRAME_BYTES * NUM_FRAMES
+"""Total size of the .raw file for 1200 frames at output resolution."""
+
+
+def validate_raw_file(
+    raw_path: str | Path,
+    expected_frames: int = NUM_FRAMES,
+) -> int:
+    """Validate a .raw frame file has the correct size.
+
+    Args:
+        raw_path: path to the .raw file
+        expected_frames: expected number of frames (default 1200)
+
+    Returns:
+        Actual number of frames in the file.
+
+    Raises:
+        FileNotFoundError: if raw_path does not exist
+        ValueError: if file size is not a multiple of frame size
+        ValueError: if frame count does not match expected_frames
+    """
+    path = Path(raw_path)
+    if not path.exists():
+        raise FileNotFoundError(f"Raw file not found: {path}")
+
+    actual_size = path.stat().st_size
+    remainder = actual_size % EXPECTED_FRAME_BYTES
+    if remainder != 0:
+        raise ValueError(
+            f"Raw file {path} has size {actual_size:,} bytes which is not a "
+            f"multiple of frame size {EXPECTED_FRAME_BYTES:,}. Likely corrupt."
+        )
+
+    n_frames = actual_size // EXPECTED_FRAME_BYTES
+    if n_frames != expected_frames:
+        raise ValueError(
+            f"Raw file {path} contains {n_frames} frames, expected {expected_frames}"
+        )
+
+    return n_frames
 
 
 # ---------------------------------------------------------------------------
@@ -709,8 +1052,8 @@ class AuthEvaluator:
         avg_pose = (total_pose / n_pairs).item()
         avg_seg = (total_seg / n_pairs).item()
 
-        # Score formula: exactly upstream evaluate.py line 92
-        score = 100.0 * avg_seg + math.sqrt(10.0 * avg_pose) + 25.0 * rate
+        # Score formula: canonical single source of truth
+        score = compute_final_score(avg_seg, avg_pose, rate)
 
         elapsed = time.monotonic() - t0
         logger.info(
@@ -718,14 +1061,15 @@ class AuthEvaluator:
             score, avg_seg, avg_pose, rate, elapsed,
         )
 
+        breakdown = score_breakdown(avg_seg, avg_pose, rate)
         return AuthResult(
             score=score,
             pose_dist=avg_pose,
             seg_dist=avg_seg,
             rate=rate,
-            seg_contribution=100.0 * avg_seg,
-            pose_contribution=math.sqrt(10.0 * avg_pose),
-            rate_contribution=25.0 * rate,
+            seg_contribution=breakdown["seg_contribution"],
+            pose_contribution=breakdown["pose_contribution"],
+            rate_contribution=breakdown["rate_contribution"],
             n_pairs=n_pairs,
             archive_size_bytes=archive_size_bytes,
             uncompressed_size_bytes=uncompressed_size,
