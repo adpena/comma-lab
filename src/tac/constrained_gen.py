@@ -29,6 +29,7 @@ Example::
 from __future__ import annotations
 
 import json
+import logging
 import struct
 from pathlib import Path
 from typing import Any, Callable
@@ -46,6 +47,8 @@ from tac.camera import (
     SEGNET_INPUT_W,
 )
 from tac.mask_codec import SEGNET_H, SEGNET_W  # noqa: F401 — used by downstream
+
+logger = logging.getLogger(__name__)
 
 __all__ = [
     "CAMERA_W",
@@ -79,6 +82,9 @@ __all__ = [
 # Constants are now imported from tac.camera (canonical source of truth).
 # The module-level names CAMERA_W, CAMERA_H, SEGNET_INPUT_W, SEGNET_INPUT_H,
 # CLASS_MEAN_COLORS, NUM_CLASSES remain available for backward compatibility.
+
+# Temporal smoothness weight for compressibility loss (L1 between consecutive frames)
+TEMPORAL_SMOOTHNESS_WEIGHT = 0.5
 
 
 # ---- YUV420 conversion utilities ----
@@ -546,7 +552,7 @@ def compute_compressibility_loss(
     else:
         temporal = torch.tensor(0.0, device=frames.device, dtype=frames.dtype)
 
-    loss = spatial_tv + 0.5 * temporal
+    loss = spatial_tv + TEMPORAL_SMOOTHNESS_WEIGHT * temporal
 
     # Anti-aliasing: penalize within-2x2-block variance.
     # PoseNet's rgb_to_yuv6 averages 2x2 blocks, so sub-block detail is
@@ -777,12 +783,10 @@ def constrained_generate(
         loss_val = total_loss.item()
 
         if log_every > 0 and (step + 1) % log_every == 0:
-            print(
-                f"  step {step + 1:4d}/{num_steps}: "
-                f"total={loss_val:.4f} "
-                f"seg={seg_loss.item():.4f} "
-                f"pose={pose_loss.item():.4f} "
-                f"compress={compress_loss.item():.4f}"
+            logger.info(
+                "  step %4d/%d: total=%.4f seg=%.4f pose=%.4f compress=%.4f",
+                step + 1, num_steps, loss_val, seg_loss.item(),
+                pose_loss.item(), compress_loss.item(),
             )
 
         # Early stopping (disabled when early_stop_patience == 0)
@@ -794,10 +798,9 @@ def constrained_generate(
                 no_improve_count += 1
                 if no_improve_count >= early_stop_patience:
                     if log_every > 0:
-                        print(
-                            f"  Early stop at step {step + 1}: "
-                            f"no improvement for {early_stop_patience} steps "
-                            f"(best={best_loss:.4f})"
+                        logger.info(
+                            "  Early stop at step %d: no improvement for %d steps (best=%.4f)",
+                            step + 1, early_stop_patience, best_loss,
                         )
                     break
 
@@ -870,10 +873,10 @@ def build_constrained_archive(
     (out / "meta.json").write_text(json.dumps(meta, indent=2))
 
     total = meta["total_bytes"]
-    print(f"Constrained archive: {total:,} bytes ({total / 1024:.1f} KB)")
-    print(f"  masks: {meta['compressed_masks_bytes']:,} bytes")
-    print(f"  poses: {meta['pose_bytes']:,} bytes")
-    print(f"  seed:  8 bytes")
+    logger.info("Constrained archive: %s bytes (%.1f KB)", f"{total:,}", total / 1024)
+    logger.info("  masks: %s bytes", f"{meta['compressed_masks_bytes']:,}")
+    logger.info("  poses: %s bytes", f"{meta['pose_bytes']:,}")
+    logger.info("  seed:  8 bytes")
 
     return out
 
@@ -947,8 +950,8 @@ def inflate_constrained(
     expected_pose = expected_pose.to(device)
 
     N = masks.shape[0]
-    print(f"Inflating {N} frames via constrained optimization...")
-    print(f"  steps={num_steps}, lr={lr}, seed={noise_seed}")
+    logger.info("Inflating %d frames via constrained optimization...", N)
+    logger.info("  steps=%d, lr=%s, seed=%d", num_steps, lr, noise_seed)
 
     frames = constrained_generate(
         masks=masks,
@@ -971,7 +974,7 @@ def inflate_constrained(
     raw_path = out / "frames.raw"
     frames_np.tofile(raw_path)
     n_bytes = raw_path.stat().st_size
-    print(f"Wrote {N} frames ({n_bytes:,} bytes) to {raw_path}")
+    logger.info("Wrote %d frames (%s bytes) to %s", N, f"{n_bytes:,}", raw_path)
 
     return out
 
@@ -1079,8 +1082,8 @@ def generate_in_scorer_space(
     """
     # Use GT pose targets if provided, otherwise fall back to heuristic
     if expected_pose is None:
-        print("  [scorer-space] WARNING: using heuristic pose targets (inaccurate). "
-              "Pass expected_pose from GT for best results.")
+        logger.warning("  [scorer-space] Using heuristic pose targets (inaccurate). "
+                       "Pass expected_pose from GT for best results.")
         expected_pose = estimate_expected_pose(masks, device=device)
 
     # Delegate to coupled_trajectory_optimize which has all improvements:
@@ -1315,7 +1318,7 @@ class ConstrainedFrameGenerator:
         # Convert HWC -> CHW for the pipeline
         frames = init_frames_hwc.permute(0, 3, 1, 2).contiguous()  # (N, 3, H, W)
         if log_every > 0:
-            print(f"  pipeline: initialized {N} frames ({H_m}x{W_m})")
+            logger.info("  pipeline: initialized %d frames (%dx%d)", N, H_m, W_m)
 
         # ---- Phase 1: Variational optimization (Euler) ----
         var_gen = VariationalFrameGenerator(cfg={
@@ -1330,7 +1333,7 @@ class ConstrainedFrameGenerator:
         )
         diagnostics["phases"]["variational"] = {"steps": phase1_steps}
         if log_every > 0:
-            print("  pipeline: Phase 1 (variational) complete")
+            logger.info("  pipeline: Phase 1 (variational) complete")
 
         # ---- Phase 1.5: Manifold projection (Tao) ----
         if do_manifold and N >= 1:
@@ -1352,7 +1355,7 @@ class ConstrainedFrameGenerator:
                 ).reshape(single.shape).clamp(0.0, 255.0)
             diagnostics["phases"]["manifold_projection"] = {"frames_projected": N}
             if log_every > 0:
-                print("  pipeline: Phase 1.5 (manifold projection) complete")
+                logger.info("  pipeline: Phase 1.5 (manifold projection) complete")
 
         # ---- Phase 2: Lagrangian dual optimization (Lagrange) ----
         dual_opt = LagrangianDualOptimizer(cfg={
@@ -1369,8 +1372,8 @@ class ConstrainedFrameGenerator:
         )
         diagnostics["phases"]["lagrangian_dual"] = dual_diag
         if log_every > 0:
-            print(f"  pipeline: Phase 2 (Lagrangian dual) complete, "
-                  f"lambda={dual_diag['final_lambda']:.3f}")
+            logger.info("  pipeline: Phase 2 (Lagrangian dual) complete, lambda=%.3f",
+                        dual_diag['final_lambda'])
 
         # ---- Phase 3: Hamiltonian refinement (Karpathy) ----
         if do_hamiltonian:
@@ -1395,8 +1398,8 @@ class ConstrainedFrameGenerator:
                 "steps": ham_diag["steps"],
             }
             if log_every > 0:
-                print(f"  pipeline: Phase 3 (Hamiltonian) complete, "
-                      f"V={ham_diag['best_potential']:.4f}")
+                logger.info("  pipeline: Phase 3 (Hamiltonian) complete, V=%.4f",
+                            ham_diag['best_potential'])
 
         # ---- Phase 4: Gradient-directed quantization ----
         if do_dithering:
@@ -1405,7 +1408,7 @@ class ConstrainedFrameGenerator:
             )
             diagnostics["phases"]["dithering"] = {"applied": True}
             if log_every > 0:
-                print("  pipeline: Phase 4 (gradient dithering) complete")
+                logger.info("  pipeline: Phase 4 (gradient dithering) complete")
         else:
             frames = frames.round().clamp(0.0, 255.0)
 
@@ -1594,6 +1597,21 @@ def coupled_trajectory_optimize(
             "Precompute them with extract_gt_pose_embeddings() in renderer_tto.py."
         )
 
+    # ── Validate PoseNet gradients flow (catch the @torch.no_grad bug) ────
+    # The upstream rgb_to_yuv6 has @torch.no_grad, which silently kills all
+    # PoseNet gradients. Call make_scorers_differentiable() before this function.
+    # This check costs ~1ms and prevents hours of wasted GPU time.
+    _test_in = torch.randn(1, 2, 3, 8, 8, device=device, requires_grad=True)
+    _test_out = posenet(posenet.preprocess_input(_test_in))
+    _grad = torch.autograd.grad(_test_out["pose"].sum(), _test_in, allow_unused=True)[0]
+    if _grad is None or _grad.abs().max() == 0:
+        raise RuntimeError(
+            "PoseNet gradients are ZERO through preprocess_input. "
+            "Call tac.scorer.make_scorers_differentiable(posenet, segnet) "
+            "before optimization. The upstream rgb_to_yuv6 has @torch.no_grad()."
+        )
+    del _test_in, _test_out, _grad
+
     # Move inputs to device once (avoids repeated transfers in inner loop)
     masks = masks.to(device)
     expected_pose = expected_pose.to(device)
@@ -1604,12 +1622,12 @@ def coupled_trajectory_optimize(
     warm_start = init_frames is not None
     if warm_start:
         frames = init_frames.to(device).float().detach().clone()
-        print(f"  [coupled-4dvar] Warm-starting from init_frames (TTO mode)")
+        logger.info("  [coupled-4dvar] Warm-starting from init_frames (TTO mode)")
         if use_embedding_loss:
-            print(f"  [coupled-4dvar] Using embedding loss (~{expected_pose_embeddings.shape[-1]}d) "
-                  f"instead of pose output (6d)")
+            logger.info("  [coupled-4dvar] Using embedding loss (~%dd) instead of pose output (6d)",
+                        expected_pose_embeddings.shape[-1])
         if seg_odd_only:
-            print(f"  [coupled-4dvar] SegNet loss on odd frames only (scorer-matched)")
+            logger.info("  [coupled-4dvar] SegNet loss on odd frames only (scorer-matched)")
     else:
         frames = generate_initial_frames(masks, noise_seed, device=device)
     frames.requires_grad_(True)
@@ -1693,24 +1711,22 @@ def coupled_trajectory_optimize(
         # the optimizer is past the transient and drifting. Stop and return snapshot.
         if early_stop_patience > 0 and steps_since_improvement >= early_stop_patience and best_frames_snapshot is not None:
             if log_every > 0:
-                print(f"  [coupled-4dvar] Early stop at step {step + 1}: "
-                      f"no PoseNet improvement in {early_stop_patience} steps")
+                logger.info("  [coupled-4dvar] Early stop at step %d: "
+                            "no PoseNet improvement in %d steps", step + 1, early_stop_patience)
             break
 
         if log_every > 0 and (step + 1) % log_every == 0:
-            print(
-                f"  [coupled-4dvar] step {step + 1:4d}/{num_steps}: "
-                f"total={total_loss.item():.4f} "
-                f"seg={seg_loss.item():.4f} "
-                f"pose={pose_loss.item():.4f} "
-                f"compress={compress_loss.item():.4f} "
-                f"cw={effective_compress_weight:.3f} "
-                f"best_pose={best_pose_loss:.4f}"
+            logger.info(
+                "  [coupled-4dvar] step %4d/%d: total=%.4f seg=%.4f pose=%.4f "
+                "compress=%.4f cw=%.3f best_pose=%.4f",
+                step + 1, num_steps, total_loss.item(), seg_loss.item(),
+                pose_loss.item(), compress_loss.item(),
+                effective_compress_weight, best_pose_loss,
             )
 
     # Return the snapshot with best PoseNet (not the final state which may have drifted)
     if best_frames_snapshot is not None:
-        print(f"  [coupled-4dvar] Returning best PoseNet snapshot (loss={best_pose_loss:.4f})")
+        logger.info("  [coupled-4dvar] Returning best PoseNet snapshot (loss=%.4f)", best_pose_loss)
         result = best_frames_snapshot.round().clamp(0.0, 255.0)
     else:
         with torch.no_grad():
@@ -1798,17 +1814,17 @@ def gpu_lane_full_pipeline(
     expected_pose = cfg.get("expected_pose", None)
     if expected_pose is None:
         t0 = time.time()
-        print("[gpu_lane_pipeline] Stage 1: Estimating expected pose from masks...")
+        logger.info("[gpu_lane_pipeline] Stage 1: Estimating expected pose from masks...")
         expected_pose = estimate_expected_pose(masks, device=device)
         diagnostics["pose_estimation_seconds"] = time.time() - t0
-        print(f"  Pose targets shape: {expected_pose.shape}")
+        logger.info("  Pose targets shape: %s", expected_pose.shape)
     else:
         diagnostics["pose_estimation_seconds"] = 0.0
-        print(f"[gpu_lane_pipeline] Stage 1: Using provided pose targets ({expected_pose.shape})")
+        logger.info("[gpu_lane_pipeline] Stage 1: Using provided pose targets (%s)", expected_pose.shape)
 
     # --- Stage 2: Coupled trajectory optimization (4D-Var) ---
     t0 = time.time()
-    print(f"[gpu_lane_pipeline] Stage 2: Coupled trajectory ({num_steps} steps)...")
+    logger.info("[gpu_lane_pipeline] Stage 2: Coupled trajectory (%d steps)...", num_steps)
     frames = coupled_trajectory_optimize(
         masks=masks,
         expected_pose=expected_pose,
@@ -1824,7 +1840,7 @@ def gpu_lane_full_pipeline(
         log_every=log_every,
     )
     diagnostics["coupled_trajectory_seconds"] = time.time() - t0
-    print(f"  Coupled trajectory done in {diagnostics['coupled_trajectory_seconds']:.1f}s")
+    logger.info("  Coupled trajectory done in %.1fs", diagnostics['coupled_trajectory_seconds'])
 
     boundary = None
     cost_map = None
@@ -1832,7 +1848,7 @@ def gpu_lane_full_pipeline(
     if not skip_fridrich:
         # --- Stage 3: Detection boundary estimation ---
         t0 = time.time()
-        print("[gpu_lane_pipeline] Stage 3: Estimating detection boundary...")
+        logger.info("[gpu_lane_pipeline] Stage 3: Estimating detection boundary...")
         frames_bchw = frames.permute(0, 3, 1, 2).contiguous()
         boundary = estimate_detection_boundary(
             frames_bchw, posenet, segnet,
@@ -1844,14 +1860,12 @@ def gpu_lane_full_pipeline(
         seg_boundary = boundary["seg_boundary"]
         pose_boundary = boundary["pose_boundary"]
         diagnostics["boundary_estimation_seconds"] = time.time() - t0
-        print(
-            f"  Boundary: seg={seg_boundary:.6f}, pose={pose_boundary:.6f} "
-            f"in {diagnostics['boundary_estimation_seconds']:.1f}s"
-        )
+        logger.info("  Boundary: seg=%.6f, pose=%.6f in %.1fs",
+                    seg_boundary, pose_boundary, diagnostics['boundary_estimation_seconds'])
 
         # --- Stage 4: Pixel cost map ---
         t0 = time.time()
-        print("[gpu_lane_pipeline] Stage 4: Computing pixel cost map...")
+        logger.info("[gpu_lane_pipeline] Stage 4: Computing pixel cost map...")
         cost_map = compute_pixel_cost_map(
             frames_bchw, posenet, segnet,
             method=cost_method,
@@ -1859,14 +1873,12 @@ def gpu_lane_full_pipeline(
             subsample_frames=1,
         )
         diagnostics["cost_map_seconds"] = time.time() - t0
-        print(
-            f"  Cost map: [{cost_map.min():.4f}, {cost_map.max():.4f}] "
-            f"in {diagnostics['cost_map_seconds']:.1f}s"
-        )
+        logger.info("  Cost map: [%.4f, %.4f] in %.1fs",
+                    cost_map.min(), cost_map.max(), diagnostics['cost_map_seconds'])
 
         # --- Stage 5: Fridrich constrained refinement ---
         t0 = time.time()
-        print(f"[gpu_lane_pipeline] Stage 5: Fridrich constrained refinement ({fridrich_steps} steps)...")
+        logger.info("[gpu_lane_pipeline] Stage 5: Fridrich constrained refinement (%d steps)...", fridrich_steps)
         refined_bchw = fridrich_constrained_optimize(
             frames,
             posenet, segnet,
@@ -1879,12 +1891,12 @@ def gpu_lane_full_pipeline(
             batch_size=batch_size,
         )
         diagnostics["fridrich_seconds"] = time.time() - t0
-        print(f"  Fridrich refinement done in {diagnostics['fridrich_seconds']:.1f}s")
+        logger.info("  Fridrich refinement done in %.1fs", diagnostics['fridrich_seconds'])
 
         # --- Stage 6: STC quantization ---
         if not skip_stc:
             t0 = time.time()
-            print("[gpu_lane_pipeline] Stage 6: STC quantization...")
+            logger.info("[gpu_lane_pipeline] Stage 6: STC quantization...")
             quantized_bchw = optimal_quantization_stc(
                 refined_bchw.float(),
                 cost_map,
@@ -1892,7 +1904,7 @@ def gpu_lane_full_pipeline(
             )
             frames = quantized_bchw.permute(0, 2, 3, 1).contiguous().float()
             diagnostics["stc_seconds"] = time.time() - t0
-            print(f"  STC quantization done in {diagnostics['stc_seconds']:.1f}s")
+            logger.info("  STC quantization done in %.1fs", diagnostics['stc_seconds'])
         else:
             frames = refined_bchw.permute(0, 2, 3, 1).contiguous().float()
             diagnostics["stc_seconds"] = 0.0
@@ -2038,9 +2050,9 @@ def alternating_projections_optimize(
                     else 0.0
                 )
                 c = compute_compressibility_loss(frames).item()
-            print(
-                f"  [dykstra] outer {outer + 1:3d}/{num_outer_iterations}: "
-                f"seg={s:.4f} pose={p:.4f} compress={c:.4f}"
+            logger.info(
+                "  [dykstra] outer %3d/%d: seg=%.4f pose=%.4f compress=%.4f",
+                outer + 1, num_outer_iterations, s, p, c,
             )
 
     with torch.no_grad():
@@ -2169,16 +2181,15 @@ def newton_step_optimize(
             frames.data.clamp_(0.0, 255.0)
 
         if log_every > 0 and (newton_step + 1) % log_every == 0 and step_losses:
-            print(
-                f"  [newton/lbfgs] step {newton_step + 1}/{num_newton_steps}: "
-                f"loss={step_losses[-1]:.6f} "
-                f"(evals={len(step_losses)})"
+            logger.info(
+                "  [newton/lbfgs] step %d/%d: loss=%.6f (evals=%d)",
+                newton_step + 1, num_newton_steps, step_losses[-1], len(step_losses),
             )
 
         # Convergence check: if loss barely changed
         if len(step_losses) >= 2 and abs(step_losses[-1] - step_losses[-2]) < 1e-8:
             if log_every > 0:
-                print(f"  [newton/lbfgs] converged at step {newton_step + 1}")
+                logger.info("  [newton/lbfgs] converged at step %d", newton_step + 1)
             break
 
     with torch.no_grad():

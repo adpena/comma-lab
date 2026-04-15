@@ -449,15 +449,11 @@ def main():
     # ── Step 1: Load scorers ─────────────────────────────────────────────
     print("\n[1/8] Loading scorers...")
     t0 = time.monotonic()
-    from tac.scorer import load_scorers
-    posenet, segnet = load_scorers(
-        posenet_path=upstream / "models" / "posenet.safetensors",
-        segnet_path=upstream / "models" / "segnet.safetensors",
-        device=str(device),
-        upstream_dir=str(upstream),
-    )
+    from tac.scorer import load_default_scorers, make_scorers_differentiable
+    posenet, segnet = load_default_scorers(upstream, device=str(device))
+    make_scorers_differentiable(posenet, segnet)
     t_scorers = time.monotonic() - t0
-    print(f"[1/8] Scorers loaded in {t_scorers:.1f}s")
+    print(f"[1/8] Scorers loaded + patched differentiable in {t_scorers:.1f}s")
 
     # ── Step 2: Load renderer ────────────────────────────────────────────
     print("\n[2/8] Loading renderer...")
