@@ -90,6 +90,66 @@ EXPERIMENTS: dict[str, ExperimentConfig] = {
         needs_checkpoint="renderer_best.pt",
         timeout_hours=20,
     ),
+    # ── v5b config (embedding loss, NEW BEST auth=0.41) ──
+    "tto_v5b_embedding": _exp(
+        name="tto_v5b_embedding",
+        script="experiments/renderer_tto.py",
+        args=(
+            "--checkpoint renderer_best.pt --device cuda --n-frames 1200 "
+            "--tto-steps 500 --tto-lr 0.005 --batch-pairs 10 "
+            "--seg-weight 100 --pose-weight 10 --compress-weight 0.5 "
+            "--use-embedding-loss --seg-odd-only --early-stop-patience 150 "
+            "--simulate-resize"
+        ),
+        needs_checkpoint="renderer_best.pt",
+        timeout_hours=3,
+    ),
+    # ── TTO step curve (highest signal experiment) ──
+    "tto_step_curve": _exp(
+        name="tto_step_curve",
+        script="experiments/tto_step_curve.py",
+        args=(
+            "--checkpoint renderer_best.pt --device cuda "
+            "--step-counts 10,25,50,100,150,200,300,500"
+        ),
+        needs_checkpoint="renderer_best.pt",
+        timeout_hours=3,
+    ),
+    # ── TTO step curve with cosine LR ──
+    "tto_step_curve_cosine": _exp(
+        name="tto_step_curve_cosine",
+        script="experiments/tto_step_curve.py",
+        args=(
+            "--checkpoint renderer_best.pt --device cuda "
+            "--step-counts 10,25,50,100,150,200,300,500 "
+            "--lr-schedule cosine"
+        ),
+        needs_checkpoint="renderer_best.pt",
+        timeout_hours=3,
+    ),
+    # ── v5c resume (PoseNet ceiling, aggressive 100:1 pose:seg) ──
+    "tto_v5c_pose_aggressive": _exp(
+        name="tto_v5c_pose_aggressive",
+        script="experiments/renderer_tto.py",
+        args=(
+            "--checkpoint renderer_best.pt --device cuda --n-frames 1200 "
+            "--tto-steps 1000 --tto-lr 0.005 --batch-pairs 10 "
+            "--seg-weight 1 --pose-weight 100 --compress-weight 0.01 "
+            "--seg-odd-only --early-stop-patience 300 "
+            "--simulate-resize"
+        ),
+        needs_checkpoint="renderer_best.pt",
+        timeout_hours=6,
+    ),
+    # ── Contest pipeline profiler (T4 timing data) ──
+    "contest_dry_run": _exp(
+        name="contest_dry_run",
+        script="scripts/profile_contest_pipeline.py",
+        args=(
+            "--submission-dir submissions/robust_current --device cuda"
+        ),
+        timeout_hours=1,
+    ),
 }
 """Registry of all known Vast.ai experiments.
 
