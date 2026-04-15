@@ -1,26 +1,39 @@
-# Current Focus -- 2026-04-15T18:00:00Z
+# Current Focus -- 2026-04-15T22:00:00Z
+
+## Session 35: DX Hardening + Data Permanence
+
+### Completed This Session
+- **Hinge loss** (P0): Implemented in tac, registered as experiment
+- **Two-phase TTO** (P1): Implemented (100 steps PoseNet, then SegNet-only)
+- **simulate_resize default**: Fixed (now True by default, matching auth eval)
+- **Cosine LR**: Empirically worse for TTO (step_curve_cosine experiment)
+- **check_vastai.py**: Canonical Vast.ai interaction script with cost tracking,
+  idle detection, SSH key verification, deploy bundles, destroy confirmation
+- **download_modal_tto_frames.py**: Data permanence script for Modal TTO frames
+- **PROVENANCE.md**: Full provenance documentation for all experiment results
+
+### URGENT: Download TTO Frames from Modal
+The highest-quality TTO frames (500-step) are on Modal volume:
+- `asym_v5_lagrangian_fixed/tto_v5a_output_mse/tto_frames.pt` (auth 0.43)
+- `asym_v5_lagrangian_fixed/tto_v5b_embedding/tto_frames.pt` (auth 0.41)
+
+Run: `python scripts/download_modal_tto_frames.py`
+
+These MUST be downloaded before Modal access expires. The Vast.ai 150-step
+frames were lost when the instance was destroyed -- do not repeat this.
 
 ## Paradigm Shift: SegNet is 77x More Important Than PoseNet
 
-The step curve experiment (Vast.ai RTX 4090, 30 pairs) revealed a fundamental
-reordering of priorities:
-
+The step curve experiment (Vast.ai RTX 4090, 30 pairs) revealed:
 - PoseNet saturates at 100 TTO steps (165.27 -> 0.042, 3970x reduction)
 - SegNet contributes 98.7% of remaining score after PoseNet convergence
-- Leverage ratio: 77:1 (every 0.001 SegNet reduction = 77x more valuable than same PoseNet reduction)
-- 500-step breakthrough: SegNet finally moves at high step counts (0.5036 -> 0.3435)
+- Leverage ratio: 77:1
+- 500-step breakthrough: SegNet finally moves (0.5036 -> 0.3435)
 
 ## Scores
 - **Renderer baseline**: auth=0.87 (seg=0.21, pose=0.56, rate=0.10)
 - **TTO v5a (gradient fix)**: auth=0.43 (first valid TTO with PoseNet gradients)
 - **Target**: sub-0.20 auth
-
-## Score Decomposition (auth=0.43, v5a)
-```
-Score = 100*seg + sqrt(10*pose) + 25*rate
-  SegNet dominates at our operating point (77:1 leverage over PoseNet)
-  The binding constraint is SegNet, not PoseNet
-```
 
 ## Step Curve Results (Complete)
 ```
@@ -36,18 +49,13 @@ Steps    PoseNet      SegNet      Score    s/frame
   500      0.025      0.3435      34.85     1.711  <-- SegNet breakthrough
 ```
 
-## Active Work
-1. **Step curve**: COMPLETE. Results saved to experiments/results/step_curve_v1/
-2. **Distillation TTO targets**: Being generated on Vast.ai Instance B (12/60 batches)
-3. **Per-pair difficulty map**: Script ready (experiments/pair_difficulty_map.py)
-4. **Paper update**: Section 4.7 added with step curve analysis
-
 ## Key Strategic Insight
 The path to sub-0.20 runs through SegNet, not PoseNet:
 - PoseNet is already near-zero after 100 TTO steps
 - SegNet improvement at 500 steps (32% reduction) proves it CAN be optimized
+- Hinge loss (new) should accelerate SegNet convergence by ignoring easy pixels
+- Two-phase TTO (new) allocates budget optimally: PoseNet first, then SegNet
 - Adaptive TTO budget: 100 steps for all pairs (PoseNet), then 500+ for hard SegNet pairs
-- SegNet architectural improvements may yield bigger gains than any TTO strategy
 
 ## Deadline
 - May 3, 2026 (~18 days remaining)
