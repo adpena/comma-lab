@@ -479,6 +479,12 @@ def main():
     print(f"[config] video={video_path}")
     print(f"[config] output_dir={output_dir}")
 
+    # ── Checkpoint sanity check ──────────────────────────────────────────
+    from tac.checkpoint import verify_checkpoint_identity
+
+    md5 = verify_checkpoint_identity(args.checkpoint)
+    print(f"[checkpoint] Verified MD5 prefix: {md5}")
+
     t_total_start = time.monotonic()
 
     # ── Step 1: Load scorers ─────────────────────────────────────────────
