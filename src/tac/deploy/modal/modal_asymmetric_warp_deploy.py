@@ -56,7 +56,7 @@ app = modal.App(APP_NAME)
 # Build image: PyTorch + scorer deps + tac source + experiments/
 image = (
     modal.Image.debian_slim(python_version="3.12")
-    .apt_install("git", "git-lfs", "ffmpeg")
+    .apt_install("git", "git-lfs", "ffmpeg", "unzip")
     .pip_install(
         "torch==2.6.*",
         "torchvision",
@@ -71,6 +71,8 @@ image = (
         "matplotlib",
         "nvidia-dali-cuda120",
     )
+    # Install uv (needed by inflate.sh for contest-compliant eval)
+    .run_commands("curl -LsSf https://astral.sh/uv/install.sh | sh")
     # Clone upstream scorer repo (PoseNet/SegNet model definitions + GT video)
     .run_commands(
         "git clone --depth 1 https://github.com/commaai/comma_video_compression_challenge.git /root/upstream",
@@ -86,6 +88,7 @@ image = (
     # add_local_dir must be LAST -- Modal mounts these at startup, not during build
     .add_local_dir(str(REPO_ROOT / "src" / "tac"), "/root/src/tac")
     .add_local_dir(str(REPO_ROOT / "experiments"), "/root/experiments")
+    .add_local_dir(str(REPO_ROOT / "submissions"), "/root/submissions")
 )
 
 results_vol = modal.Volume.from_name(RESULTS_VOL, create_if_missing=True)
@@ -850,7 +853,7 @@ def auth_eval(tag: str, checkpoint: str = "renderer_best.pt", strategy: str = "s
     if bin_path_for_archive is None:
         raise FileNotFoundError("No .bin export found for archive — rate calculation impossible")
 
-    with zipfile.ZipFile(archive_zip, "w", zipfile.ZIP_STORED) as zf:
+    with zipfile.ZipFile(archive_zip, "w", zipfile.ZIP_DEFLATED, compresslevel=9) as zf:
         zf.write(bin_path_for_archive, "renderer.bin")
     archive_size = os.path.getsize(archive_zip)
     print(f"  Archive: {archive_zip} ({archive_size:,} bytes)")
@@ -1153,6 +1156,385 @@ def main(
 
     print(f"\nResults: .venv/bin/modal volume ls {RESULTS_VOL}")
     print(f"Download: .venv/bin/modal volume get {RESULTS_VOL} {tag}/ ./results_{tag}/")
+
+
+# ── Contest-compliant auth eval ───────────────────────────────────────────────
+
+
+def _run_contest_compliant_auth_eval(
+    submission_dir: str,
+    upstream_root: str = "/root/upstream",
+    device: str = "cuda",
+) -> dict:
+    """Run contest-compliant authoritative evaluation through inflate.sh.
+
+    This replicates the EXACT pipeline that evaluate.sh runs on the contest
+    evaluation server:
+        1. unzip archive.zip -d archive/
+        2. bash inflate.sh archive/ inflated/ video_names.txt
+        3. python evaluate.py --submission-dir ... --uncompressed-dir ...
+
+    Our standard auth_eval() bypasses inflate.sh: it directly generates frames
+    and writes raw output. This function tests the ACTUAL submission pipeline
+    end-to-end, catching issues like:
+    - inflate.sh not accepting 3 args correctly
+    - SegNet weight loading from upstream path not resolving
+    - Raw output format/size mismatches
+    - Missing dependencies at inflate time
+    - Time budget violations (30 min limit on T4)
+
+    Args:
+        submission_dir: Path containing archive.zip + inflate.sh + inflate.py
+            (and any other submission scripts like inflate_renderer.py, config.env).
+        upstream_root: Path to upstream scorer repo (models, videos, evaluate.py).
+        device: 'cuda' or 'cpu' for evaluation.
+
+    Returns:
+        Dict with scores: final_score, avg_posenet_dist, avg_segnet_dist, rate,
+        inflate_elapsed_seconds, eval_elapsed_seconds, total_elapsed_seconds.
+    """
+    import json
+    import math
+    import os
+    import re
+    import shutil
+    import subprocess
+    import sys
+    import time
+
+    t_start = time.monotonic()
+
+    archive_zip = os.path.join(submission_dir, "archive.zip")
+    inflate_sh = os.path.join(submission_dir, "inflate.sh")
+    video_names_file = os.path.join(upstream_root, "public_test_video_names.txt")
+
+    # ── Preflight checks ────────────────────────────────────────────────────
+    for path, label in [
+        (archive_zip, "archive.zip"),
+        (inflate_sh, "inflate.sh"),
+        (video_names_file, "video_names_file"),
+    ]:
+        if not os.path.exists(path):
+            raise FileNotFoundError(f"Contest-compliant eval: {label} not found at {path}")
+
+    print(f"{'=' * 60}")
+    print(f"=== Contest-Compliant Auth Eval ===")
+    print(f"{'=' * 60}")
+    print(f"  submission_dir: {submission_dir}")
+    print(f"  archive.zip:    {os.path.getsize(archive_zip):,} bytes")
+    print(f"  inflate.sh:     {inflate_sh}")
+    print(f"  video_names:    {video_names_file}")
+    print(f"  device:         {device}")
+    print(f"  start:          {time.strftime('%Y-%m-%d %H:%M:%S')}")
+
+    # ── Step 1: unzip archive.zip -d archive/ ───────────────────────────────
+    archive_dir = os.path.join(submission_dir, "archive")
+    if os.path.isdir(archive_dir):
+        shutil.rmtree(archive_dir)
+    os.makedirs(archive_dir, exist_ok=True)
+
+    print(f"\nStep 1: Unzipping archive.zip ...")
+    unzip_cmd = ["unzip", "-o", archive_zip, "-d", archive_dir]
+    unzip_result = subprocess.run(unzip_cmd, capture_output=True, text=True, timeout=60)
+    if unzip_result.returncode != 0:
+        raise RuntimeError(
+            f"unzip failed (exit {unzip_result.returncode}):\n"
+            f"  stdout: {unzip_result.stdout[-500:]}\n"
+            f"  stderr: {unzip_result.stderr[-500:]}"
+        )
+    # List archive contents for verification
+    ls_result = subprocess.run(["find", archive_dir, "-type", "f"],
+                               capture_output=True, text=True)
+    print(f"  Archive contents:\n{ls_result.stdout}")
+
+    # ── Step 2: bash inflate.sh archive/ inflated/ video_names.txt ──────────
+    inflated_dir = os.path.join(submission_dir, "inflated")
+    if os.path.isdir(inflated_dir):
+        shutil.rmtree(inflated_dir)
+    os.makedirs(inflated_dir, exist_ok=True)
+
+    print(f"Step 2: Running inflate.sh (30 min budget) ...")
+    t_inflate_start = time.monotonic()
+
+    # Set up environment: inflate_renderer.py needs upstream in PYTHONPATH
+    inflate_env = {
+        **os.environ,
+        "PYTHONPATH": f"{upstream_root}:{os.environ.get('PYTHONPATH', '')}",
+    }
+
+    inflate_cmd = [
+        "bash", inflate_sh,
+        archive_dir,
+        inflated_dir,
+        video_names_file,
+    ]
+    print(f"  Command: {' '.join(inflate_cmd)}")
+
+    # Contest time limit is 30 minutes
+    inflate_result = subprocess.run(
+        inflate_cmd,
+        capture_output=True,
+        text=True,
+        timeout=1800,
+        env=inflate_env,
+    )
+    inflate_elapsed = time.monotonic() - t_inflate_start
+
+    print(f"  inflate.sh stdout (last 2000 chars):\n{inflate_result.stdout[-2000:]}")
+    if inflate_result.stderr:
+        print(f"  inflate.sh stderr (last 1000 chars):\n{inflate_result.stderr[-1000:]}")
+
+    if inflate_result.returncode != 0:
+        raise RuntimeError(
+            f"inflate.sh failed (exit {inflate_result.returncode}) "
+            f"after {inflate_elapsed:.1f}s.\n"
+            f"stderr: {inflate_result.stderr[-1000:]}"
+        )
+    print(f"  inflate.sh completed in {inflate_elapsed:.1f}s")
+
+    # ── Step 2b: Verify inflated output ─────────────────────────────────────
+    with open(video_names_file) as f:
+        video_names = [line.strip() for line in f if line.strip()]
+
+    OUT_W, OUT_H = 1164, 874
+    NUM_FRAMES = 1200
+    expected_frame_bytes = OUT_H * OUT_W * 3
+    expected_raw_bytes = expected_frame_bytes * NUM_FRAMES
+
+    missing = []
+    for vname in video_names:
+        base = os.path.splitext(vname)[0]
+        raw_path = os.path.join(inflated_dir, f"{base}.raw")
+        if not os.path.exists(raw_path):
+            missing.append(raw_path)
+        else:
+            actual_size = os.path.getsize(raw_path)
+            if actual_size != expected_raw_bytes:
+                # Check if it's a valid size (could be different frame count)
+                n_frames_actual = actual_size // expected_frame_bytes
+                remainder = actual_size % expected_frame_bytes
+                if remainder != 0:
+                    raise ValueError(
+                        f"Raw file {raw_path} has size {actual_size:,} bytes "
+                        f"which is not a multiple of frame size {expected_frame_bytes:,}. "
+                        f"Likely corrupt output from inflate.sh."
+                    )
+                if n_frames_actual != NUM_FRAMES:
+                    print(f"  WARNING: {raw_path}: {n_frames_actual} frames "
+                          f"(expected {NUM_FRAMES})")
+
+    if missing:
+        raise FileNotFoundError(
+            f"inflate.sh did not produce {len(missing)} expected raw files: "
+            f"{missing}"
+        )
+    print(f"  All {len(video_names)} raw files present and valid.")
+
+    # ── Step 3: Run evaluate.py ─────────────────────────────────────────────
+    print(f"\nStep 3: Running evaluate.py ...")
+    report_path = os.path.join(submission_dir, "report.txt")
+    t_eval_start = time.monotonic()
+
+    eval_cmd = [
+        sys.executable, os.path.join(upstream_root, "evaluate.py"),
+        "--submission-dir", submission_dir,
+        "--uncompressed-dir", os.path.join(upstream_root, "videos"),
+        "--video-names-file", video_names_file,
+        "--device", device,
+        "--report", report_path,
+    ]
+    print(f"  Command: {' '.join(eval_cmd)}")
+
+    eval_result = subprocess.run(
+        eval_cmd,
+        capture_output=True,
+        text=True,
+        timeout=600,
+        env={**os.environ, "PYTHONPATH": upstream_root},
+    )
+    eval_elapsed = time.monotonic() - t_eval_start
+
+    if eval_result.returncode != 0:
+        print(f"  evaluate.py stdout:\n{eval_result.stdout[-1000:]}")
+        raise RuntimeError(
+            f"evaluate.py failed (exit {eval_result.returncode}) "
+            f"after {eval_elapsed:.1f}s.\n"
+            f"stderr: {eval_result.stderr[-1000:]}"
+        )
+
+    # ── Step 4: Parse report ────────────────────────────────────────────────
+    report_text = open(report_path).read()
+    print(f"  Report:\n{report_text}")
+
+    def _parse(pattern: str, text: str):
+        m = re.search(pattern, text)
+        return float(m.group(1).replace(",", "")) if m else None
+
+    avg_posenet = _parse(r"Average PoseNet Distortion:\s*([0-9.]+)", report_text)
+    avg_segnet = _parse(r"Average SegNet Distortion:\s*([0-9.]+)", report_text)
+    compressed_size = _parse(r"Submission file size:\s*([0-9,]+)", report_text)
+    uncompressed_size = _parse(r"Original uncompressed size:\s*([0-9,]+)", report_text)
+    rate = _parse(r"Compression Rate:\s*([0-9.]+)", report_text)
+    final_score_parsed = _parse(r"Final score:.*=\s*([0-9.]+)", report_text)
+    n_samples_raw = _parse(r"over (\d+) samples", report_text)
+    n_samples = int(n_samples_raw) if n_samples_raw else 600
+
+    t_total = time.monotonic() - t_start
+
+    score = final_score_parsed
+    if score is None and all(v is not None for v in (avg_posenet, avg_segnet, rate)):
+        score = 100 * avg_segnet + math.sqrt(10 * avg_posenet) + 25 * rate
+
+    print(f"\n{'=' * 60}")
+    print(f"=== Contest-Compliant Results ({n_samples} samples) ===")
+    print(f"{'=' * 60}")
+    if avg_posenet is not None:
+        print(f"  Average PoseNet Distortion: {avg_posenet:.8f}")
+    if avg_segnet is not None:
+        print(f"  Average SegNet Distortion:  {avg_segnet:.8f}")
+    if compressed_size is not None:
+        print(f"  Archive size:               {int(compressed_size):,} bytes")
+    if rate is not None:
+        print(f"  Compression Rate:           {rate:.8f}")
+    if score is not None:
+        print(f"  FINAL SCORE:                {score:.4f}")
+    print(f"  Inflate time:               {inflate_elapsed:.1f}s")
+    print(f"  Eval time:                  {eval_elapsed:.1f}s")
+    print(f"  Total time:                 {t_total:.1f}s")
+    print(f"{'=' * 60}")
+
+    result = {
+        "eval_method": "contest_compliant_inflate_sh",
+        "avg_posenet_dist": avg_posenet,
+        "avg_segnet_dist": avg_segnet,
+        "compressed_size_bytes": int(compressed_size) if compressed_size else None,
+        "uncompressed_size_bytes": int(uncompressed_size) if uncompressed_size else None,
+        "rate": rate,
+        "final_score": score,
+        "n_samples": n_samples,
+        "inflate_elapsed_seconds": inflate_elapsed,
+        "eval_elapsed_seconds": eval_elapsed,
+        "total_elapsed_seconds": t_total,
+        "submission_dir": submission_dir,
+        "report_text": report_text,
+        "timestamp": time.strftime("%Y-%m-%dT%H:%M:%SZ"),
+    }
+
+    # Save result alongside the report
+    result_path = os.path.join(submission_dir, "contest_compliant_eval.json")
+    with open(result_path, "w") as f:
+        json.dump(result, f, indent=2)
+    print(f"  Results saved: {result_path}")
+
+    return result
+
+
+@app.function(
+    image=image,
+    gpu="T4",
+    timeout=3600,  # 1h — inflate (20-25 min) + scoring (~5 min)
+    volumes={"/results": results_vol},
+    memory=16384,
+)
+def contest_compliant_eval(
+    tag: str,
+    submission_src: str = "robust_current",
+):
+    """Run contest-compliant eval on Modal T4 via inflate.sh.
+
+    Copies submission files to the results volume, runs the full
+    evaluate.sh pipeline (unzip -> inflate.sh -> evaluate.py), and
+    saves the result.
+
+    Args:
+        tag:            experiment tag (volume subdirectory)
+        submission_src: which submission to test ('robust_current' or path
+                        to a directory on the results volume)
+    """
+    import json
+    import os
+    import shutil
+    import time
+
+    vol_dir = f"/results/{tag}"
+    submission_dir = os.path.join(vol_dir, "contest_submission")
+    os.makedirs(submission_dir, exist_ok=True)
+
+    UPSTREAM_ROOT = "/root/upstream"
+
+    print(f"=== Contest-Compliant Eval | tag: {tag} ===")
+    print(f"  GPU: T4")
+    print(f"  Start: {time.strftime('%Y-%m-%d %H:%M:%S')}")
+
+    # Copy submission files: archive.zip + inflate.sh + supporting scripts
+    # The submission scripts are mounted at /root/experiments/../submissions/
+    # via add_local_dir. For robust_current, they're part of the repo mount.
+    src_dir = f"/root/submissions/{submission_src}"
+    if not os.path.isdir(src_dir):
+        # Try results volume path
+        src_dir = os.path.join(vol_dir, submission_src)
+    if not os.path.isdir(src_dir):
+        raise FileNotFoundError(
+            f"Submission source not found: tried /root/submissions/{submission_src} "
+            f"and {os.path.join(vol_dir, submission_src)}"
+        )
+
+    # Copy required files
+    for fname in os.listdir(src_dir):
+        src_path = os.path.join(src_dir, fname)
+        if os.path.isfile(src_path):
+            shutil.copy2(src_path, os.path.join(submission_dir, fname))
+    print(f"  Copied submission files from {src_dir}")
+    print(f"  Contents: {os.listdir(submission_dir)}")
+
+    # Run the contest-compliant pipeline
+    result = _run_contest_compliant_auth_eval(
+        submission_dir=submission_dir,
+        upstream_root=UPSTREAM_ROOT,
+        device="cuda",
+    )
+    result["tag"] = tag
+    result["submission_src"] = submission_src
+
+    # Save to volume
+    result_path = os.path.join(vol_dir, "contest_compliant_eval.json")
+    with open(result_path, "w") as f:
+        json.dump(result, f, indent=2)
+
+    results_vol.commit()
+    print("  [volume] Committed contest-compliant eval results")
+
+    return result
+
+
+@app.local_entrypoint()
+def contest_eval_entry(
+    tag: str = "asymmetric_warp_t4",
+    submission_src: str = "robust_current",
+):
+    """Launch contest-compliant eval on Modal T4.
+
+    Usage:
+        .venv/bin/modal run src/tac/deploy/modal/modal_asymmetric_warp_deploy.py::app.contest_eval_entry --tag my_run
+    """
+    from tac.cost_tracker import print_cost_estimate
+
+    print(f"\n=== Contest-Compliant Eval -> Modal T4 ===")
+    print(f"  Tag:        {tag}")
+    print(f"  Submission: {submission_src}")
+
+    print("\n--- Cost Estimate ---")
+    print_cost_estimate(gpu="t4", estimated_hours=0.5, platform="modal")
+
+    print("\nLaunching contest-compliant eval ...")
+    result = contest_compliant_eval.remote(tag=tag, submission_src=submission_src)
+
+    print(f"\n=== Contest-Compliant Eval Complete ===")
+    print(f"  Final Score: {result.get('final_score', '?')}")
+    print(f"  Inflate time: {result.get('inflate_elapsed_seconds', '?'):.1f}s")
+    print(f"  Eval time: {result.get('eval_elapsed_seconds', '?'):.1f}s")
+    print(f"\nFull results: .venv/bin/modal volume get {RESULTS_VOL} {tag}/contest_compliant_eval.json ./")
+    return result
 
 
 # ── TTO eval ─────────────────────────────────────────────────────────────────
@@ -1475,6 +1857,7 @@ def tto_eval(
     early_stop_patience: int = 150,
     antialias_weight: float = 0.0,
     tto_subdir: str = "tto_results",
+    lr_schedule: str = "constant",
 ):
     """Run renderer+TTO on Modal T4.
 
@@ -1493,6 +1876,7 @@ def tto_eval(
         use_embedding_loss: use PoseNet embedding loss (rank-256) instead of output MSE (rank-6)
         seg_odd_only:       compute SegNet loss on odd frames only (matching scorer)
         early_stop_patience: steps without PoseNet improvement before stopping
+        lr_schedule:        LR schedule ('constant' or 'cosine')
     """
     import os
     import subprocess
@@ -1539,6 +1923,8 @@ def tto_eval(
         cmd.append("--seg-odd-only")
     if antialias_weight > 0.0:
         cmd.extend(["--antialias-weight", str(antialias_weight)])
+    if lr_schedule != "constant":
+        cmd.extend(["--lr-schedule", lr_schedule])
 
     env = {**os.environ, "PYTHONPATH": "/root/src:/root/upstream"}
     print(f"  Command: {' '.join(cmd)}")
