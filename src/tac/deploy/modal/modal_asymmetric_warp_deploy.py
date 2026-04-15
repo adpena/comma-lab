@@ -1497,10 +1497,10 @@ def tto_eval(
             print(line, end="")  # console
             log_f.write(line)    # file
             log_f.flush()
-            # Periodic volume commit every 10 batches so log survives timeout
+            # Volume commit every batch for real-time monitoring (~1-2s overhead per ~181s batch)
             if "[tto] Batch" in line and "done in" in line:
                 batch_count += 1
-                if batch_count % 10 == 0:
+                if batch_count % 1 == 0:
                     log_f.flush()
                     results_vol.commit()
                     print(f"  [volume] Checkpoint commit after batch {batch_count}")
