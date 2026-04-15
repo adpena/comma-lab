@@ -1,0 +1,163 @@
+[
+  {
+    "timestamp": "2026-04-06T06:16:37Z",
+    "score": 2.19,
+    "method": "av1_crf34_unsharp035",
+    "track": "robust_current",
+    "platform": "local_cpu",
+    "notes": "AV1 codec floor with film-grain22 + unsharp0.35"
+  },
+  {
+    "timestamp": "2026-04-06T16:48:41Z",
+    "score": 2.12,
+    "method": "av1_crf34_optimized",
+    "track": "robust_current",
+    "platform": "local_cpu",
+    "notes": "Rule-faithful floor after parameter tuning"
+  },
+  {
+    "timestamp": "2026-04-10T21:30:00Z",
+    "score": 1.33,
+    "method": "dilated_h64",
+    "track": "robust_current",
+    "platform": "modal_a10g",
+    "seg": 0.006,
+    "pose": 0.060,
+    "rate": 0.046,
+    "notes": "Dilated convolution with h=64 latent, INT8 quantization. First neural approach to beat AV1."
+  },
+  {
+    "timestamp": "2026-04-12T00:29:21Z",
+    "score": 1.413,
+    "method": "dilated_h64_training",
+    "track": "robust_current",
+    "platform": "modal_a10g",
+    "seg": 0.006,
+    "pose": 0.072,
+    "rate": 0.046,
+    "checkpoint": "ep84",
+    "notes": "Training in progress, 84/2500 epochs"
+  },
+  {
+    "timestamp": "2026-04-12T01:17:03Z",
+    "score": 2.50,
+    "method": "dp_sims",
+    "track": "robust_current",
+    "platform": "modal_a10g",
+    "seg": 0.003,
+    "pose": 0.482,
+    "rate": 2.262,
+    "checkpoint": "ep189",
+    "notes": "DP-SIMS renderer final Modal run. SegNet 0.003 ties Quantizr. PoseNet/rate gap."
+  },
+  {
+    "timestamp": "2026-04-13T21:25:00Z",
+    "score": 1.79,
+    "method": "asym_v4_supervised",
+    "track": "robust_current",
+    "platform": "modal_t4",
+    "seg": 0.5664,
+    "pose": 1.1188,
+    "rate": 0.1004,
+    "checkpoint": "renderer_epoch19999.pt",
+    "notes": "NEGATIVE: 7600 epochs supervised training regressed from baseline. PoseNet+SegNet both worse."
+  },
+  {
+    "timestamp": "2026-04-14T00:30:00Z",
+    "score": 2.87,
+    "method": "asym_v4_supervised_best_proxy",
+    "track": "robust_current",
+    "platform": "modal_t4",
+    "seg": 0.3002,
+    "pose": 2.4707,
+    "rate": 0.1004,
+    "checkpoint": "renderer_epoch16800_constraints_met.pt",
+    "notes": "NEGATIVE: best_proxy_constraints_met selected by training proxy. PoseNet catastrophic collapse."
+  },
+  {
+    "timestamp": "2026-04-14T01:00:00Z",
+    "score": 1.00,
+    "method": "asym_v3_longer_tight",
+    "track": "robust_current",
+    "platform": "modal_t4",
+    "seg": 0.002104,
+    "pose": 0.047917,
+    "rate": 0.100355,
+    "checkpoint": "renderer_best.pt",
+    "notes": "Pre-supervision baseline. BEST asymmetric warp result. Confirmed supervision caused regression."
+  },
+  {
+    "timestamp": "2026-04-14T13:20:00Z",
+    "score": 0.87,
+    "method": "asym_v5_lagrangian_fixed",
+    "track": "robust_current",
+    "platform": "modal_t4",
+    "seg": 0.00217,
+    "pose": 0.031,
+    "rate": 0.00401,
+    "checkpoint": "renderer_best.pt (ep12600)",
+    "notes": "NEW BEST. 13% over v3. Lagrangian clamp on resume found better PoseNet basin."
+  },
+  {
+    "timestamp": "2026-04-14T14:30:00Z",
+    "score": 0.93,
+    "method": "asym_v5_checkpoint_sweep",
+    "track": "robust_current",
+    "platform": "modal_t4",
+    "checkpoint": "ep12500",
+    "notes": "Checkpoint landscape sweep: ep12500=0.93, ep12600=0.87, ep13000=0.88, ep13500=0.96"
+  },
+  {
+    "timestamp": "2026-04-14T14:30:01Z",
+    "score": 0.87,
+    "method": "asym_v5_checkpoint_sweep",
+    "track": "robust_current",
+    "platform": "modal_t4",
+    "checkpoint": "ep12600",
+    "notes": "Sweet spot confirmed. Best of 9-checkpoint sweep."
+  },
+  {
+    "timestamp": "2026-04-14T14:30:02Z",
+    "score": 0.88,
+    "method": "asym_v5_checkpoint_sweep",
+    "track": "robust_current",
+    "platform": "modal_t4",
+    "checkpoint": "ep13000",
+    "notes": "Second local minimum in checkpoint landscape."
+  },
+  {
+    "timestamp": "2026-04-14T14:30:03Z",
+    "score": 0.88,
+    "method": "asym_v5_checkpoint_sweep",
+    "track": "robust_current",
+    "platform": "modal_t4",
+    "checkpoint": "ep15000",
+    "notes": "Third sub-0.90 point before collapse onset."
+  },
+  {
+    "timestamp": "2026-04-14T14:30:04Z",
+    "score": 1.37,
+    "method": "asym_v5_checkpoint_sweep",
+    "track": "robust_current",
+    "platform": "modal_t4",
+    "checkpoint": "ep16999",
+    "notes": "Late checkpoint regression. Weaker constraints caused drift."
+  },
+  {
+    "timestamp": "2026-04-14T16:00:00Z",
+    "score": 0.87,
+    "method": "asym_v5_lambda_sweep",
+    "track": "robust_current",
+    "platform": "modal_t4",
+    "notes": "Lambda-cap sweep confirmed 0.87 is architectural ceiling. Plateau across 3 lambda values."
+  },
+  {
+    "timestamp": "2026-04-14T19:00:00Z",
+    "score": null,
+    "method": "coupled_trajectory",
+    "track": "robust_current",
+    "platform": "local_mps",
+    "pose": 0.163,
+    "notes": "Coupled optimizer with annealing: PoseNet snapshot 0.163. Not auth-evaled."
+  }
+]
