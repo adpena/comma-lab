@@ -175,7 +175,6 @@ def plot_optimal_allocation(operating_points: list[dict], save_path: str) -> Non
     import matplotlib
     matplotlib.use("Agg")
     import matplotlib.pyplot as plt
-    from matplotlib.colors import LogNorm
 
     fig, axes = plt.subplots(2, 2, figsize=(14, 11))
     fig.suptitle(
@@ -326,16 +325,17 @@ def main():
     print("  If pose > 0.000250: improving PoseNet beats improving SegNet")
     print("  If pose < 0.000250: improving SegNet or rate is more valuable")
 
-    # Operating points to analyze
+    # Operating points to analyze.
+    # Component values are raw distortion inputs to the scoring formula:
+    #   score = 100*seg + sqrt(10*pose) + 25*rate
+    # Only entries with VERIFIED component-to-score consistency are included.
+    # v5 best: 100*0.00217 + sqrt(10*0.031) + 25*0.00401 = 0.874 (matches 0.87)
+    # Quantizr: 100*0.00264 + sqrt(10*0.000654) + 25*0.01029 = 0.602 (matches 0.60)
     operating_points = [
-        # Our current best (v5 renderer)
+        # Our current best (v5 renderer) -- verified
         analyze_operating_point(0.00217, 0.031, 0.00401, "v5 best (0.87)"),
-        # Our dilated h64 baseline
-        analyze_operating_point(0.006, 0.060, 0.046, "dilated h64 (1.33)"),
-        # Quantizr / mask2mask (PR#53)
+        # Quantizr / mask2mask (PR#53) -- verified from PR component breakdown
         analyze_operating_point(0.00264, 0.000654, 0.01029, "Quantizr (0.60)"),
-        # neural_inflate (PR#49)
-        analyze_operating_point(0.00434, 0.0715, 0.02443, "neural_inflate (1.89)"),
         # Our target operating point
         analyze_operating_point(0.002, 0.005, 0.004, "TARGET (sub-0.50)"),
         # Theoretical floor
@@ -351,7 +351,7 @@ def main():
     print("=" * 70)
 
     our_best = operating_points[0]  # v5 best
-    quantizr = operating_points[2]  # mask2mask
+    quantizr = operating_points[1]  # mask2mask
 
     print(f"\n  Our best score:    {our_best['score']:.2f}")
     print(f"  Quantizr's score:  {quantizr['score']:.2f}")
@@ -379,20 +379,24 @@ def main():
     print(f"  Rate    accounts for {100*rate_gap/total_gap:.1f}% of the gap")
     print()
     print(f"  At our current pose={our_best['pose']:.4f}:")
-    print(f"    d(score)/d(pose) = {our_best['d_score_d_pose']:.2f}")
-    print(f"    d(score)/d(seg)  = {our_best['d_score_d_seg']:.2f}")
-    print(f"    d(score)/d(rate) = {our_best['d_score_d_rate']:.2f}")
+    print(f"    d(score)/d(pose) = {our_best['d_score_d_pose']:.2f}  (decreasing -- low at high pose)")
+    print(f"    d(score)/d(seg)  = {our_best['d_score_d_seg']:.2f}  (constant)")
+    print(f"    d(score)/d(rate) = {our_best['d_score_d_rate']:.2f}  (constant)")
     print()
-    print(f"  PoseNet marginal ({our_best['d_score_d_pose']:.1f}) >> "
-          f"SegNet marginal ({our_best['d_score_d_seg']:.1f}) >> "
-          f"Rate marginal ({our_best['d_score_d_rate']:.1f})")
+    print(f"  Marginal ranking: SegNet ({our_best['d_score_d_seg']:.0f}) > "
+          f"Rate ({our_best['d_score_d_rate']:.0f}) > "
+          f"PoseNet ({our_best['d_score_d_pose']:.1f})")
     print()
-    print("  VERDICT: PoseNet is the ONLY lever that matters at our operating point.")
-    print("  Every unit of engineering effort should go to PoseNet until")
-    print(f"  pose < {pose_rate_xover:.6f} (rate crossover) or")
-    print(f"  pose < {pose_seg_xover:.6f} (SegNet crossover).")
+    print(f"  BUT: PoseNet accounts for {100*pose_gap/total_gap:.0f}% of the score gap vs Quantizr.")
+    print(f"  Our seg ({our_best['seg']:.5f}) already matches Quantizr ({quantizr['seg']:.5f}).")
+    print(f"  Our rate ({our_best['rate']:.5f}) already beats Quantizr ({quantizr['rate']:.5f}).")
+    print(f"  PoseNet is the ONLY dimension with large headroom.")
     print()
-    print(f"  We need to reduce pose by {our_best['pose']/quantizr['pose']:.0f}x to match Quantizr.")
+    print("  VERDICT: PoseNet reduction is the dominant strategy because it is the")
+    print("  only dimension where we trail Quantizr. Low marginal sensitivity means")
+    print("  diminishing returns per unit reduction, but we need a {:.0f}x reduction".format(
+        our_best['pose']/quantizr['pose']))
+    print("  to close the gap -- and no amount of seg/rate optimization can compensate.")
 
     # Generate plot
     project_root = Path(__file__).resolve().parent.parent.parent

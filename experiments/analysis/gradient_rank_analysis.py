@@ -2,21 +2,22 @@
 """Gradient Rank Analysis: PoseNet output vs embedding Jacobian.
 
 THE key figure for the paper: PoseNet has a 6-dimensional output but a
-512-dimensional embedding layer.  When we compute the Jacobian of each
-w.r.t. input pixels, the effective rank tells us the true dimensionality
-of the scorer's decision manifold.
+high-dimensional embedding layer (dimension discovered at runtime).
+When we compute the Jacobian of each w.r.t. input pixels, the effective
+rank tells us the true dimensionality of the scorer's decision manifold.
 
-If the output Jacobian has rank ~6 but the embedding Jacobian has rank
-~512, then the embedding carries ~85x more information about pixel
-perturbations than the scorer actually uses for its final pose prediction.
+If the output Jacobian has rank ~6 but the embedding Jacobian has much
+higher effective rank, then the embedding responds to pixel perturbations
+that the scorer discards before producing its final pose prediction.
 This means:
 
 1. Optimizing in embedding space (feature matching) captures structure
    the output never sees -- explaining why KL distill failed.
-2. The output-level Jacobian is the minimal sufficient statistic for
-   score optimization.
-3. The rank gap quantifies exactly how much "wasted capacity" sits in
-   the embedding that does not flow through to the pose output.
+2. The output-level Jacobian is the sufficient statistic for score
+   optimization (minimal in the sense of capturing only what the scorer
+   actually uses).
+3. The rank gap quantifies how much capacity in the embedding does not
+   flow through to the pose output.
 
 Usage::
 
@@ -31,7 +32,6 @@ from __future__ import annotations
 import argparse
 import gc
 import json
-import math
 import os
 import sys
 from pathlib import Path
