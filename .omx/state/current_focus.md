@@ -45,19 +45,24 @@ Score = 100*seg + sqrt(10*pose) + 25*rate < 0.20
   - Success: pose_dist < 0.005 (significant reduction)
   - Kill: pose_dist > 0.015 (no improvement over v5a)
 
-## Archive Compression Analysis -- UPDATED 2026-04-15
-- Old: 150,769 bytes (ZIP_STORED)
-- New: 119,160 bytes (ZIP_DEFLATED level 9) -- APPLIED
-- LZMA: 112,794 bytes (-25%) -- not supported by system `unzip` (contest uses `unzip`)
-- BZIP2: 124,538 bytes -- not supported by system `unzip`
-- Rate term improvement: 0.1004 -> 0.0793 (saves 0.0210 on score) -- FREE WIN
-- zstd-19: 117,089 bytes -- would need to be stored inside a zip wrapper, marginal gain
-- FP4 data is already dense (256 unique byte values, 0.3% zeros) -- hard to compress further
+## Archive Compression Analysis -- UPDATED 2026-04-15T14:30
+- **Current archive**: 183,780 bytes (renderer.bin + masks.mkv, ZIP_DEFLATED level 9)
+  - renderer.bin: 150,593 bytes raw -> 119,038 compressed
+  - masks.mkv: 79,071 bytes raw -> 64,526 compressed (48x64, AV1 preset=0 CRF=30)
+- Rate term: 0.1224 (was 0.0793 without masks)
+- Rate term cost of contest compliance: +0.043
 
-## CRITICAL: Contest Compliance Issues
+### Mask Encoding Analysis (exhaustive sweep)
+- Full-res (384x512) AV1 CRF=20: 2,016,202 bytes -- REJECTED (rate catastrophe +1.34)
+- Full-res entropy LZMA: 990,447 bytes -- REJECTED (rate +0.66)
+- 1/8 scale (48x64) AV1 preset=0 CRF=30: 79,071 bytes -- SELECTED (rate +0.043, 99.999% roundtrip)
+- 1/8 scale (48x64) entropy LZMA: 36,551 bytes -- smaller but requires inflate_renderer.py format change
+- Renderer handles mask upsampling internally via F.interpolate nearest-neighbor
+
+## Contest Compliance Issues -- UPDATED 2026-04-15T14:30
 1. **Auth eval bypasses inflate.sh**: Our auth_eval() directly generates frames, never tests the actual submission pipeline. Added `_run_contest_compliant_auth_eval()` to test full pipeline.
-2. **SegNet weights at inflate time**: inflate_renderer.py loads SegNet from upstream/models/ to extract masks. Under Yousfi's rule (PR#35), SegNet weights (~48MB) would need to be in archive.zip. Rate term would go from 0.08 to ~32 (catastrophic). Must switch to pre-extracted masks in archive like mask2mask does.
-3. **Archive.zip was ZIP_STORED**: Fixed to ZIP_DEFLATED level 9 (saves 0.021 on score).
+2. ~~**SegNet weights at inflate time**~~: **FIXED** -- masks.mkv now in archive. inflate_renderer.py reads pre-extracted masks, never loads SegNet. No SegNet weights needed in archive.
+3. ~~**Archive.zip was ZIP_STORED**~~: **FIXED** -- ZIP_DEFLATED level 9.
 
 ## PoseNet Sensitivity Map
 - Running locally on MPS with 20 frames (quick test)
