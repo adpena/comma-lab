@@ -103,6 +103,12 @@ def parse_args() -> argparse.Namespace:
     p.add_argument("--lr-schedule", type=str, default="constant",
                    choices=["constant", "cosine"],
                    help="LR schedule for TTO. 'cosine' = warmup then cosine decay.")
+    p.add_argument("--segnet-loss-mode", type=str, default="xent",
+                   choices=["xent", "hinge"],
+                   help="SegNet loss function. 'xent' = cross-entropy (default). "
+                        "'hinge' = logit-margin hinge loss.")
+    p.add_argument("--hinge-margin", type=float, default=0.5,
+                   help="Margin for hinge loss (only used with --segnet-loss-mode hinge).")
     return p.parse_args()
 
 
@@ -114,7 +120,7 @@ def compute_pair_distortions(
     device: torch.device,
     pair_start: int,
     n_pairs: int,
-    simulate_resize: bool = False,
+    simulate_resize: bool = True,
 ) -> dict[str, float]:
     """Compute PoseNet and SegNet distortions for a subset of pairs.
 
@@ -176,6 +182,8 @@ def run_single_step_count(
     seg_odd_only: bool,
     simulate_resize: bool,
     lr_schedule: str = "constant",
+    segnet_loss_mode: str = "xent",
+    hinge_margin: float = 0.5,
 ) -> dict[str, float]:
     """Run TTO at a single step count and measure distortion.
 
@@ -203,6 +211,8 @@ def run_single_step_count(
         seg_odd_only: SegNet on odd frames only.
         simulate_resize: simulate scorer resolution pipeline.
         lr_schedule: LR schedule ('constant' or 'cosine').
+        segnet_loss_mode: SegNet loss function (``"xent"`` or ``"hinge"``).
+        hinge_margin: margin for hinge loss.
 
     Returns:
         Dict with posenet, segnet, score, elapsed_s, steps.
@@ -256,6 +266,8 @@ def run_single_step_count(
             expected_pose_embeddings=sub_emb,
             seg_odd_only=seg_odd_only,
             lr_schedule=lr_schedule,
+            segnet_loss_mode=segnet_loss_mode,
+            hinge_margin=hinge_margin,
         )
         refined[sf_start:sf_end] = sub_result.cpu()
 
@@ -315,7 +327,9 @@ def main() -> None:
     print(f"[config] tto_lr={args.tto_lr}, seg_weight={args.seg_weight}, "
           f"pose_weight={args.pose_weight}, compress_weight={args.compress_weight}")
     print(f"[config] use_embedding_loss={args.use_embedding_loss}, "
-          f"seg_odd_only={args.seg_odd_only}")
+          f"seg_odd_only={args.seg_odd_only}, "
+          f"segnet_loss_mode={args.segnet_loss_mode}, "
+          f"hinge_margin={args.hinge_margin}")
     print(f"[config] checkpoint={args.checkpoint}")
     print(f"[config] video={video_path}")
     print(f"[config] output_dir={output_dir}")
@@ -438,6 +452,8 @@ def main() -> None:
             seg_odd_only=args.seg_odd_only,
             simulate_resize=args.simulate_resize,
             lr_schedule=args.lr_schedule,
+            segnet_loss_mode=args.segnet_loss_mode,
+            hinge_margin=args.hinge_margin,
         )
 
         results[str(step_count)] = distortions
@@ -498,6 +514,8 @@ def _save_results(
             "use_embedding_loss": args.use_embedding_loss,
             "seg_odd_only": args.seg_odd_only,
             "simulate_resize": args.simulate_resize,
+            "segnet_loss_mode": args.segnet_loss_mode,
+            "hinge_margin": args.hinge_margin,
         },
         "results": results,
     }
