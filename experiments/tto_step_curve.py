@@ -92,9 +92,11 @@ def parse_args() -> argparse.Namespace:
                    help="Compressibility weight")
     p.add_argument("--smoke", action="store_true",
                    help="Smoke test: 5 pairs, 3 step counts")
-    p.add_argument("--use-embedding-loss", action="store_true", default=True,
+    p.add_argument("--use-embedding-loss", action=argparse.BooleanOptionalAction,
+                   default=True,
                    help="Use PoseNet embedding MSE (v5b default: enabled)")
-    p.add_argument("--seg-odd-only", action="store_true", default=True,
+    p.add_argument("--seg-odd-only", action=argparse.BooleanOptionalAction,
+                   default=True,
                    help="SegNet loss on odd frames only (v5b default: enabled)")
     p.add_argument("--simulate-resize", action="store_true",
                    help="Simulate scorer resolution round-trip in proxy scoring")
