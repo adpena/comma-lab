@@ -1,5 +1,26 @@
 # run log
 
+## 2026-04-15T07:00:00Z — CRITICAL BUG: TTO PoseNet gradients were ZERO the entire project
+
+**Discovery timeline**:
+- TTO v3 (embedding loss) results came back: PoseNet 0.0172 -> 0.0173 (WORSE after 50 steps)
+- Council adversarial review convened to diagnose
+- Contrarian: "optimization cannot make its own objective worse. Gradients are broken."
+- Hotz traced the call chain: `preprocess_input()` -> `rgb_to_yuv6()` -> `@torch.no_grad()` in upstream `frame_utils.py`
+- Training pipeline had a patch for this in its scorer loading path
+- TTO pipeline used a different scorer loading path — no patch — zero PoseNet gradients
+- 13-0 council vote to fix immediately
+
+**What was broken**: Every TTO run (v1, v2, v3, v4) optimized with SegNet+rate gradients only. PoseNet was invisible to the optimizer. The "PoseNet improvements" in TTO logs were random noise.
+
+**What was NOT broken**: Renderer training (auth=0.87) used a different code path that had the fix. The 0.87 baseline is valid.
+
+**Root cause**: `@torch.no_grad()` decorator on `rgb_to_yuv6()` in upstream `frame_utils.py`. PoseNet calls this in its preprocessing. The decorator severs the gradient tape silently — no error, no warning.
+
+**Projected score impact**: With working PoseNet gradients, TTO should reduce PoseNet from 0.031 to ~0.003 (10x, matching SegNet's proven TTO response). Auth: 0.87 -> ~0.35.
+
+**The funniest part**: The biggest bug in the project was a single line decorator in code we don't own. Weeks of GPU time. The fix is removing (or wrapping around) one `@torch.no_grad()`.
+
 ## 2026-04-14T20:00:00Z — FOUR PARALLEL PATHS (council revised)
 
 Path 1: Renderer + TTO — warm-start constrained gen from renderer frames (PoseNet 0.031→<0.005?)
