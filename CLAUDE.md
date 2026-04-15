@@ -266,6 +266,13 @@ A candidate may be promoted only after:
 - **Always commit after every change.** Git history is the research timeline.
 - **Use `scripts/modal_check.py`** to check Modal TTO progress. Shows batch progress, ETA, recent PoseNet snapshots, and running apps. Run with `.venv/bin/python scripts/modal_check.py`.
 - **Use `scripts/kaggle_check.py`** to check Kaggle kernel status. Run with `.venv/bin/python scripts/kaggle_check.py`.
+- **Use `scripts/bat00.py`** for bat00 interaction. Handles quoting and port selection (port 22=PowerShell, port 2222=WSL2).
+- **"Multipane matplotlib data viz"** or **"canonical comma.ai data viz"** means the 6-panel analysis GIF/MP4:
+  - Row 1: GT Original | Our Reconstruction | Pixel Error (hot colormap)
+  - Row 2: GT SegNet masks | Our SegNet masks | SegNet Disagreement (red)
+  - Generated inline with pyav + SegNet + matplotlib colormaps, output to `~/Downloads/`
+  - Requires TTO frames (`tto_frames.pt` from Modal volume) and GT video (`upstream/videos/0.mkv`)
+  - SegNet needs `(B, T, C, H, W)` input format with `T=1` for the sequence dimension
 
 ## Critical lessons — DO NOT repeat these mistakes
 
