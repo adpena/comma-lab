@@ -466,7 +466,17 @@ def main() -> None:
     # ---- Step 2: Load renderer ----
     print("\n[2/5] Loading renderer...")
     t0 = time.monotonic()
-    from experiments.renderer_tto import load_renderer
+    # Import from sibling module using importlib (experiments/ is not a package)
+    import importlib.util
+
+    _spec = importlib.util.spec_from_file_location(
+        "renderer_tto",
+        Path(__file__).parent / "renderer_tto.py",
+    )
+    _renderer_tto = importlib.util.module_from_spec(_spec)
+    _spec.loader.exec_module(_renderer_tto)
+    load_renderer = _renderer_tto.load_renderer
+    generate_renderer_frames = _renderer_tto.generate_renderer_frames
 
     renderer = load_renderer(args.checkpoint, device)
     print(f"[2/5] Renderer loaded in {time.monotonic() - t0:.1f}s")
@@ -489,8 +499,7 @@ def main() -> None:
     print(f"[4/5] Extracted {masks.shape[0]} masks in {time.monotonic() - t0:.1f}s")
 
     t0 = time.monotonic()
-    from experiments.renderer_tto import generate_renderer_frames
-
+    # generate_renderer_frames already imported above via importlib
     rendered_frames = generate_renderer_frames(renderer, masks, device)
     print(
         f"[4/5] Generated {rendered_frames.shape[0]} rendered frames in "
