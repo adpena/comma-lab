@@ -1391,6 +1391,12 @@ def tto_eval(
     tto_steps: int = 500,
     tto_lr: float = 0.005,
     batch_pairs: int = 50,
+    seg_weight: float = 100.0,
+    pose_weight: float = 10.0,
+    compress_weight: float = 0.5,
+    use_embedding_loss: bool = False,
+    seg_odd_only: bool = False,
+    early_stop_patience: int = 150,
 ):
     """Run renderer+TTO on Modal T4.
 
@@ -1398,11 +1404,17 @@ def tto_eval(
     to avoid duplicating logic. Results saved to /results/<tag>/tto_results/.
 
     Args:
-        tag:         experiment tag (volume subdirectory containing checkpoint)
-        checkpoint:  checkpoint filename within /results/<tag>/
-        tto_steps:   number of TTO optimization steps per batch
-        tto_lr:      TTO learning rate
-        batch_pairs: number of frame pairs per TTO batch
+        tag:                experiment tag (volume subdirectory containing checkpoint)
+        checkpoint:         checkpoint filename within /results/<tag>/
+        tto_steps:          number of TTO optimization steps per batch
+        tto_lr:             TTO learning rate
+        batch_pairs:        number of frame pairs per TTO batch
+        seg_weight:         SegNet loss weight
+        pose_weight:        PoseNet loss weight
+        compress_weight:    compressibility weight
+        use_embedding_loss: use PoseNet embedding loss (rank-256) instead of output MSE (rank-6)
+        seg_odd_only:       compute SegNet loss on odd frames only (matching scorer)
+        early_stop_patience: steps without PoseNet improvement before stopping
     """
     import os
     import subprocess
@@ -1435,10 +1447,18 @@ def tto_eval(
         "--tto-steps", str(tto_steps),
         "--tto-lr", str(tto_lr),
         "--batch-pairs", str(batch_pairs),
+        "--seg-weight", str(seg_weight),
+        "--pose-weight", str(pose_weight),
+        "--compress-weight", str(compress_weight),
+        "--early-stop-patience", str(early_stop_patience),
         "--upstream", "/root/upstream",
         "--output-dir", output_dir,
         "--simulate-resize",
     ]
+    if use_embedding_loss:
+        cmd.append("--use-embedding-loss")
+    if seg_odd_only:
+        cmd.append("--seg-odd-only")
 
     env = {**os.environ, "PYTHONPATH": "/root/src:/root/upstream"}
     print(f"  Command: {' '.join(cmd)}")
@@ -1530,12 +1550,20 @@ def tto_entry(
     tto_steps: int = 500,
     tto_lr: float = 0.005,
     batch_pairs: int = 50,
+    seg_weight: float = 100.0,
+    pose_weight: float = 10.0,
+    compress_weight: float = 0.5,
+    use_embedding_loss: bool = False,
+    seg_odd_only: bool = False,
+    early_stop_patience: int = 150,
 ):
     """Launch renderer+TTO on Modal T4.
 
     Usage:
-        .venv/bin/modal run src/tac/deploy/modal/modal_asymmetric_warp_deploy.py::app.tto_entry
-        .venv/bin/modal run src/tac/deploy/modal/modal_asymmetric_warp_deploy.py::app.tto_entry --tag my_run --tto-steps 1000
+        # v1 (baseline):
+        .venv/bin/modal run ...::tto_entry
+        # v3 (embedding loss + all fixes):
+        .venv/bin/modal run ...::tto_entry --use-embedding-loss --seg-odd-only --tto-lr 0.01 --seg-weight 10 --pose-weight 50 --compress-weight 0.0 --early-stop-patience 300
     """
     from tac.cost_tracker import print_cost_estimate
 
@@ -1543,6 +1571,9 @@ def tto_entry(
     print(f"  Tag: {tag}")
     print(f"  Checkpoint: {checkpoint}")
     print(f"  TTO steps: {tto_steps}, lr: {tto_lr}, batch_pairs: {batch_pairs}")
+    print(f"  Weights: seg={seg_weight}, pose={pose_weight}, compress={compress_weight}")
+    print(f"  Embedding loss: {use_embedding_loss}, SegNet odd-only: {seg_odd_only}")
+    print(f"  Early stop patience: {early_stop_patience}")
 
     print("\n--- Cost Estimate ---")
     print_cost_estimate(gpu="t4", estimated_hours=1.0, platform="modal")
@@ -1554,6 +1585,12 @@ def tto_entry(
         tto_steps=tto_steps,
         tto_lr=tto_lr,
         batch_pairs=batch_pairs,
+        seg_weight=seg_weight,
+        pose_weight=pose_weight,
+        compress_weight=compress_weight,
+        use_embedding_loss=use_embedding_loss,
+        seg_odd_only=seg_odd_only,
+        early_stop_patience=early_stop_patience,
     )
 
     status = "OK" if result["exit_code"] == 0 else f"FAILED (exit {result['exit_code']})"
