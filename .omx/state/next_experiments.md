@@ -1,77 +1,61 @@
 # Next Experiments -- 2026-04-15
 
-## Current Best: auth=0.43 (TTO v5a, Lagrangian fixed, PoseNet gradients working)
+## Current Best: auth=0.43 (TTO v5a, gradient fix)
 ## Renderer Baseline: auth=0.87
 ## Target: sub-0.20
 
-## Active Runs (both on Modal T4)
+## Paradigm Shift: SegNet Dominance (77:1 Leverage Ratio)
 
-### TTO v5b (RUNNING)
-- App: ap-24iBdzVH05oWpQ73kl2OL3
-- Config: embedding loss (512D) + seg_odd_only, seg=100, pose=10, compress=0.5
-- Purpose: first VALID embedding loss test (v3 had zero gradients)
-- Pre-registered criteria:
-  - Success: proxy < 0.50
-  - Kill: proxy > 0.55
+Step curve experiment COMPLETE. PoseNet saturates at 100 steps. SegNet is
+the binding constraint -- 98.7% of remaining score.
 
-### TTO v5c (RUNNING)
-- App: ap-VRS7zqEOIm0jAEGGuqCqQE
-- Config: extreme PoseNet focus, pose=100, seg=1, compress=0.01, steps=1000
-- Purpose: find PoseNet optimization CEILING
-- Pre-registered criteria:
-  - Success: pose_dist < 0.005
-  - Kill: pose_dist > 0.015
+## Completed Experiments
+- [x] TTO step curve (Vast.ai 4090): phase transition at 100 steps, SegNet breakthrough at 500
+- [x] Per-pair difficulty map script (experiments/pair_difficulty_map.py)
 
-## Queue (after active runs complete)
+## In Progress
+- [ ] Distillation TTO targets (Vast.ai Instance B, 12/60 batches)
 
-### Priority 1: Weight Tuning Based on v5b/v5c Results
-1. **TTO v5d**: Optimal weight balance from v5b/v5c Pareto analysis
-   - If v5c shows PoseNet can go much lower, find the sweet spot
-   - Config: interpolate between v5a and v5c weights
-2. **TTO v5e**: Longer TTO (2000 steps) with best-found weights
-   - For pairs that haven't converged at 500-1000 steps
+## Queue (Priority Order -- SegNet First)
 
-### Priority 2: Sensitivity-Guided TTO
-3. **Masked TTO**: Use PoseNet sensitivity map to constrain optimization
-   - Only modify PoseNet-sensitive pixels
-   - Preserve SegNet-friendly pixels unchanged
-   - Requires: PoseNet sensitivity map (running locally now)
+### Priority 1: Adaptive TTO Budget Allocation
+1. **Per-pair difficulty map**: Run pair_difficulty_map.py with renderer checkpoint
+   - Identifies easy vs hard pairs for budget allocation
+   - Easy pairs: 100 steps (PoseNet saturation)
+   - Hard pairs: 500+ steps (SegNet optimization)
+   - Estimated savings: 3-4x total TTO compute
 
-### Priority 3: Ensemble & Archive
-4. **Best-of-N ensemble**: Per-pair selection across v5a/v5b/v5c
-   - Guaranteed >= best individual approach
-5. **Archive LZMA**: Switch from ZIP_STORED to LZMA for ~25% size reduction
-   - Free rate improvement, no quality loss
+### Priority 2: SegNet Architectural Improvements
+2. **SegNet-focused TTO loss**: Increase seg_weight beyond 100
+   - Step curve shows SegNet only moves at 500 steps -- maybe it needs MORE weight
+   - Test seg_weight=500, 1000 with pose_weight=1 (already saturated)
+3. **SegNet feature loss**: MSE on SegNet intermediate features instead of argmax
+   - Current: hard disagreement (argmax != argmax) is non-differentiable
+   - Proposed: soft disagreement on logits provides gradient for smooth optimization
+4. **Mask-conditioned residual learning**: Train a small network to predict
+   SegNet-optimal residuals given the current renderer output + mask
 
-### Priority 4: Architecture
-6. **Per-pair Lagrangian**: Auto-tune seg/pose weights per batch
-   - Some pairs may benefit from more SegNet focus, others more PoseNet
-7. **Multi-pass TTO**: Two TTO passes -- SegNet-focused then PoseNet-focused
-   - Avoids gradient conflict between SegNet and PoseNet objectives
+### Priority 3: TTO Distillation
+5. **Distillation targets**: Use 500-step TTO outputs as training targets
+   - Train renderer to directly output what TTO would produce
+   - Eliminates TTO at inflate time entirely
+   - In progress on Vast.ai (12/60 batches)
+
+### Priority 4: Ensemble & Compression
+6. **Best-of-N ensemble**: Per-pair selection across TTO variants
+7. **Archive LZMA compression**: Free rate improvement
 
 ## Decision Gates
-- 2026-04-15: v5b/v5c results -> determine optimal weight balance
-- 2026-04-17: Sensitivity map + masked TTO experiment
-- 2026-04-19: Ensemble from all v5 variants -> best submission candidate
-- 2026-04-21: Lock final approach, begin full-scale TTO
+- 2026-04-16: Per-pair difficulty map results -> allocate adaptive budget
+- 2026-04-17: SegNet-focused TTO experiment results
+- 2026-04-19: Distillation targets complete -> train distilled renderer
+- 2026-04-21: Lock final approach
 - 2026-05-03: DEADLINE
-
-## Battle Plan to Sub-0.2
-```
-Step 1: v5b/v5c -> find Pareto frontier (IN PROGRESS)
-Step 2: v5d -> optimal weight point on frontier
-Step 3: Sensitivity-guided TTO -> targeted pixel optimization
-Step 4: Ensemble across all variants -> per-pair best selection
-Step 5: Archive LZMA compression -> free rate savings
-Step 6: Longer TTO (2000+ steps) -> squeeze remaining gains
-
-Each step: auth eval after every experiment. No blind optimization.
-```
 
 ## Killed Techniques (NEVER retry)
 - KL distill loss mode
 - Adaptive rebalance weights
 - PoseNet gradient caps
-- SegNet loss weight > 100
 - PSD architecture
-- Any TTO without rgb_to_yuv6 patch (pre-v5a: all had zero PoseNet gradients)
+- Any TTO without rgb_to_yuv6 patch
+- Uniform step allocation (step curve proves diminishing returns after 100)
