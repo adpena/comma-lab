@@ -1,0 +1,111 @@
+{
+  "experiment": "tto_step_curve",
+  "config": {
+    "checkpoint": "renderer_best.pt",
+    "device": "cuda",
+    "n_pairs": 30,
+    "pair_start": 100,
+    "batch_pairs": 10,
+    "tto_lr": 0.005,
+    "seg_weight": 100.0,
+    "pose_weight": 10.0,
+    "compress_weight": 0.5,
+    "use_embedding_loss": true,
+    "seg_odd_only": true,
+    "simulate_resize": false
+  },
+  "results": {
+    "0": {
+      "posenet": 165.268083,
+      "segnet": 0.503626,
+      "score": 91.02,
+      "pose_contribution": 40.653,
+      "seg_contribution": 50.363,
+      "elapsed_s": 0.0,
+      "steps": 0,
+      "s_per_frame": 0.0
+    },
+    "10": {
+      "posenet": 104.759025,
+      "segnet": 0.503626,
+      "score": 82.73,
+      "pose_contribution": 32.367,
+      "seg_contribution": 50.363,
+      "elapsed_s": 3.33,
+      "steps": 10,
+      "s_per_frame": 0.056
+    },
+    "25": {
+      "posenet": 74.731641,
+      "segnet": 0.503626,
+      "score": 77.70,
+      "pose_contribution": 27.337,
+      "seg_contribution": 50.363,
+      "elapsed_s": 6.05,
+      "steps": 25,
+      "s_per_frame": 0.101
+    },
+    "50": {
+      "posenet": 43.289695,
+      "segnet": 0.503626,
+      "score": 71.17,
+      "pose_contribution": 20.806,
+      "seg_contribution": 50.363,
+      "elapsed_s": 11.09,
+      "steps": 50,
+      "s_per_frame": 0.185
+    },
+    "100": {
+      "posenet": 0.041602,
+      "segnet": 0.503626,
+      "score": 51.01,
+      "pose_contribution": 0.645,
+      "seg_contribution": 50.363,
+      "elapsed_s": 21.38,
+      "steps": 100,
+      "s_per_frame": 0.356
+    },
+    "150": {
+      "posenet": 0.037613,
+      "segnet": 0.503626,
+      "score": 50.98,
+      "pose_contribution": 0.613,
+      "seg_contribution": 50.363,
+      "elapsed_s": 31.51,
+      "steps": 150,
+      "s_per_frame": 0.525
+    },
+    "200": {
+      "posenet": 0.110569,
+      "segnet": 0.503626,
+      "score": 51.41,
+      "pose_contribution": 1.052,
+      "seg_contribution": 50.363,
+      "elapsed_s": 41.50,
+      "steps": 200,
+      "s_per_frame": 0.692
+    },
+    "300": {
+      "posenet": 0.027974,
+      "segnet": 0.503578,
+      "score": 50.89,
+      "pose_contribution": 0.529,
+      "seg_contribution": 50.358,
+      "elapsed_s": 62.65,
+      "steps": 300,
+      "s_per_frame": 1.044
+    },
+    "500": {
+      "posenet": 0.025064,
+      "segnet": 0.343526,
+      "score": 34.85,
+      "pose_contribution": 0.501,
+      "seg_contribution": 34.353,
+      "elapsed_s": 102.67,
+      "steps": 500,
+      "s_per_frame": 1.711
+    }
+  },
+  "platform": "vast.ai RTX 4090",
+  "total_time_s": 423.8
+}
