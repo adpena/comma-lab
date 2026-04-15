@@ -1,5 +1,82 @@
 # Findings
 
+## 2026-04-15 [RESEARCH] Contest rules — comprehensive audit from upstream repo, PRs, and Yousfi comments
+
+**Sources**: README.md, evaluate.sh, eval.yml, pyproject.toml, Issues #28/#33/#34, PRs #32/#35/#38/#49/#53, all Yousfi comments.
+
+### 1. Time Budget
+- **30 minutes total** for the entire evaluate.sh pipeline: unzip archive.zip + run inflate.sh + run evaluate.py.
+- The workflow YAML sets `timeout-minutes: 30` on the entire job.
+- This is NOT 30 min for inflation only — it includes scorer forward passes (evaluate.py).
+- Practical inflate budget: ~20-25 min (scoring takes 3-5 min on T4 with DALI).
+
+### 2. GPU / Hardware
+- **Two runner options**: `ubuntu-latest` (CPU: 4 cores, RAM: 16GB) or `linux-nvidia-t4` (T4 GPU, RAM: 26GB, VRAM: 16GB).
+- Submitters choose by answering "does your submission require gpu for evaluation (inflation)?" in the PR template.
+- If no GPU requested, CPU instance is used. If GPU requested, T4 instance.
+- GPU submissions use `uv sync --group cu128` (CUDA 12.8 + nvidia-dali-cuda120).
+- CPU submissions use `uv sync --group cpu`.
+
+### 3. Archive Size Limits
+- **No explicit size limit** on archive.zip.
+- Rate = archive_size / original_size (37,545,489 bytes for 0.mkv).
+- Rate is penalized as `25 * rate` in the score, so larger archives are penalized proportionally but not forbidden.
+
+### 4. Neural Network Weights at Inflate Time (the "Yousfi Rule")
+- **CONFIRMED by Yousfi himself on PRs #32 and #35**: "External libraries and tools can be used and won't count towards compressed size, unless they use large artifacts (neural networks, meshes, point clouds, etc.), in which case those artifacts should be included in the archive and will count towards the compressed size. This applies to the PoseNet and SegNet."
+- This means: if inflate.py loads ANY neural network weights (including the evaluation PoseNet/SegNet), those weights MUST be inside archive.zip.
+- PR #32 (gradient_optimized): AaronLeslie138 flagged this, mil1200 acknowledged and switched to precomputed labels.
+- PR #35 (tensor_inversion, score 0.75): Uses gradient descent through frozen scorers at inflate time — scored 0.75 but the weights question was raised. Yousfi quoted the rule directly.
+- PR #49 (neural_inflate, score 1.89): Uses neural network at inflate time. Archive is 917KB — appears to include model weights.
+- PR #53 (mask2mask, score 0.60): Quantizr's submission, 386KB archive. Yousfi commented "you can get even better than 0.50 with this strategy and some tricks ;)"
+- **Our implication**: Any renderer weights used at inflate time MUST be in archive.zip. This is the rate cost.
+
+### 5. Recently Added Rules / Clarifications
+- **Issue #34 (dllu)**: "Only 0.mkv will be used for final ranking. The public leaderboard IS the private leaderboard. Overfitting to 0.mkv and to the nets is fine and part of the challenge." — Yousfi
+- **Issue #28 (hypery11)**: No private submissions. All submissions are public PRs. "The openness of the challenge is by design."
+- **Issue #33 (dwallener)**: PoseNet sensitivity to texture acknowledged by Yousfi: "convnets are known for focusing on textures, and a posenet even more." Challenge: "how can you use this information to your advantage."
+- **PR #38/#36 (loophole_test)**: Demonstrated reading original video at inflate time via relative path for score 0.00. No sandboxing. Yousfi has not explicitly ruled this out, but it is obviously against the spirit. The eval runner checks out the repo, so the videos directory IS accessible.
+- **PR #50**: Yousfi: "please only open PRs when ready for review."
+
+### 6. Submission Deadline
+- **May 3rd, 2026 11:59pm AOE** (Anywhere on Earth).
+- 18 days from today (April 15, 2026).
+
+### 7. Python Packages Available at Inflate Time
+- From pyproject.toml: numpy, einops, timm, safetensors, segmentation-models-pytorch, tqdm, Pillow, av, charset-normalizer, requests, urllib3.
+- PyTorch and torchvision (version not pinned — whatever `uv sync` resolves for Python ~=3.11).
+- CUDA 12.8 group adds nvidia-dali-cuda120.
+- **Python version**: ~=3.11 (from pyproject.toml `requires-python`).
+- **PyTorch version**: Not pinned. Whatever is latest compatible. As of April 2026, likely PyTorch 2.6.x or 2.7.x.
+- No restriction on pip-installing additional packages in inflate.sh (several submissions do this, e.g., bundling SVT-AV1).
+- ffmpeg is installed via apt in the workflow.
+
+### 8. PyTorch Version in Eval Environment
+- Not explicitly pinned. The workflow runs `uv sync --group cu128` which resolves from the PyTorch cu128 index.
+- Upstream pyproject.toml does not pin torch version.
+- Safe assumption: latest stable PyTorch for CUDA 12.8 and Python 3.11.
+
+### 9. Prize Pool
+- 1st place: comma four OR $1,000 + special swag
+- 2nd place: $500 + special swag
+- 3rd place: $250 + special swag
+- Best write-up (visualizations, patterns, etc.): comma four OR $1,000 + special swag
+
+### 10. Scoring Formula (confirmed)
+- `score = 100 * segnet_dist + sqrt(10 * posenet_dist) + 25 * rate`
+- Lower is better.
+- segnet_dist: average class disagreements (argmax comparison)
+- posenet_dist: MSE of PoseNet outputs on consecutive frame pairs
+- rate: archive_size / original_size
+
+### Key Strategic Implications
+1. **18 days remaining.** Final submission deadline May 3, 2026.
+2. **Overfitting to 0.mkv is explicitly allowed and encouraged.** No hidden test set.
+3. **Neural weights in archive are mandatory** — this is the rate/quality tradeoff for learned approaches.
+4. **No sandboxing** — the loophole_test proved inflate.sh can access the entire repo. But this would be disqualifying in spirit.
+5. **T4 is the GPU** — all GPU submissions run on T4 with 16GB VRAM and CUDA 12.8.
+6. **30 min is total** including scoring, not just inflation.
+
 ## 2026-04-15 [CRITICAL BUG] TTO PoseNet gradients were ZERO — upstream @torch.no_grad() silently killed optimization
 
 **Severity**: The most consequential bug in the project. Every TTO experiment ever ran was blind to PoseNet.
