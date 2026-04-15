@@ -247,15 +247,34 @@ class VastClient:
         ):
             raise RuntimeError("Failed to upload experiments")
 
-    def upload_checkpoint(self, inst: InstanceInfo, checkpoint_name: str) -> None:
-        """Upload a checkpoint file to ``/workspace/`` on the instance."""
+    def upload_checkpoint(
+        self,
+        inst: InstanceInfo,
+        checkpoint_name: str,
+        checkpoint_dir: str | None = None,
+    ) -> None:
+        """Upload a checkpoint file to ``/workspace/`` on the instance.
+
+        Parameters
+        ----------
+        checkpoint_dir:
+            Directory containing the checkpoint, relative to repo root.
+            Defaults to the canonical v5 Lagrangian renderer directory.
+        """
+        from tac.checkpoint import CANONICAL_CHECKPOINT_DIR, verify_checkpoint_identity
+
         root = repo_root()
-        ckpt_path = root / "experiments" / "results" / "fridrich_renderer" / checkpoint_name
+        ckpt_dir = checkpoint_dir or CANONICAL_CHECKPOINT_DIR
+        ckpt_path = root / ckpt_dir / checkpoint_name
         if not ckpt_path.exists():
             raise FileNotFoundError(
                 f"Missing checkpoint: {ckpt_path}\n"
                 "Download from Modal first: modal volume get tac-asymmetric-results <tag>/renderer_best.pt"
             )
+
+        # Sanity check: verify this is the trained model, not a smoke-test
+        md5 = verify_checkpoint_identity(ckpt_path)
+        print(f"  {_GREEN}Checkpoint verified (MD5: {md5}){_RESET}")
 
         key = self._resolve_ssh_key(inst)
         if not self._rsync_upload(
