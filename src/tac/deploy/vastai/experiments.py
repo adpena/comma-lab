@@ -115,6 +115,18 @@ EXPERIMENTS: dict[str, ExperimentConfig] = {
         needs_checkpoint="renderer_best.pt",
         timeout_hours=3,
     ),
+    # ── TTO step curve with hinge loss ──
+    "tto_step_curve_hinge": _exp(
+        name="tto_step_curve_hinge",
+        script="experiments/tto_step_curve.py",
+        args=(
+            "--checkpoint renderer_best.pt --device cuda "
+            "--step-counts 10,25,50,100,150,200,300,500 "
+            "--segnet-loss-mode hinge"
+        ),
+        needs_checkpoint="renderer_best.pt",
+        timeout_hours=3,
+    ),
     # ── TTO step curve with cosine LR ──
     "tto_step_curve_cosine": _exp(
         name="tto_step_curve_cosine",
