@@ -1,62 +1,55 @@
-# Current Focus -- 2026-04-13T21:30:00Z
+# Current Focus -- 2026-04-15T05:45:00Z
 
 ## Scores
-- **Renderer baseline (ep 12400)**: auth=1.0000 — seg=0.210, pose=0.692, rate=0.100
-  - proxy at ep12400 was 0.6019 (proxy→auth gap ~0.40, calibration artifact)
-- **asym_v4_supervised ep19999 [NEGATIVE RESULT]**: auth=1.7900 — seg=0.5664, pose=1.1188, rate=0.1004
-  - REGRESSION: 7600 more epochs of PoseNet+RAFT supervision made things worse
-  - best_score=0.6019 was never beaten → periodic checkpoint, not best
-  - both seg and pose regressed vs ep12400 baseline
-- **CPU postfilter best**: ~1.89 auth (dilated_h64)
-- **Target**: beat Quantizr at 0.60
-- **Path**: cut pose_dist from 0.0479 → 0.016 (3× reduction needed)
+- **Renderer baseline**: auth=0.87 (seg=0.21, pose=0.56, rate=0.10)
+- **TTO v3 (embedding loss)**: auth=0.74 (seg=0.21, pose=0.43, rate=0.10) -- DEAD
+  - Embedding loss barely helped PoseNet (0.0172 -> 0.0173 WORSE proxy)
+  - Config: lr=0.01, seg=10, pose=50, compress=0, embed_loss=True, seg_odd_only=True
+- **TTO v4 (RUNNING on Modal)**: v1 config + seg_odd_only + antialias
+  - Config: lr=0.005, seg=100, pose=10, compress=0.5, seg_odd_only=True, antialias=0.2
+  - Expected: proxy ~0.59 (v1 proved 6.3% improvement), auth TBD
+- **Joint Pair Generator v1 (RUNNING on Modal)**: 576K param Y-shaped U-Net
+  - 5000 epochs, base_ch=48, T4
+- **Target**: sub-0.50 auth
+
+## Sub-0.5 Score Budget
+```
+Score = 100*seg + sqrt(10*pose) + 25*rate < 0.50
+  SegNet:  < 0.15 -> seg_dist < 0.0015
+  PoseNet: < 0.25 -> pose_dist < 0.00625
+  Rate:    < 0.10 -> archive < 150KB
+```
 
 ## Active Experiments
 
-### GPU Lane — Asymmetric Warp Renderer (A/B comparison)
+### TTO v4 (Modal T4, RUNNING)
+- App: ap-U9fxnDuw13vda1ejuBHRTC
+- Improvements over v3:
+  1. Back to v1 output MSE loss (proven 6.3% improvement)
+  2. seg_odd_only=True (frees even frames for PoseNet)
+  3. antialias_weight=0.2 (penalizes PoseNet-invisible sub-2x2 noise)
+- Archive compression: ZIP_DEFLATED level 9 (saves ~20% on renderer.bin)
 
-1. **asym_v4_supervised** (COMPLETE — NEGATIVE RESULT)
-   - Path A: PoseNet supervision (Layer 1) + RAFT flow (Layer 2)
-   - Resumed from ep12400 (renderer_best_v3.pt, proxy=0.6019)
-   - auth ep19999: 1.7900 (seg=0.5664, pose=1.1188) — REGRESSION vs baseline
-   - Volume: tac-asymmetric-results /asym_v4_supervised/
+### Joint Pair Generator v1 (Modal T4, RUNNING)
+- App: ap-8kcsjA0IDtrWJEpNqvyUcL
+- Y-shaped U-Net, mask-conditioned pair generation
+- Backup path if TTO doesn't reach sub-0.50
 
-2. **asym_v4_raft_only** (RUNNING, Kaggle T4, kernel v4, comma-lab-asym-warp-raft-only)
-   - Path B: RAFT flow only (isolates Layer 2 contribution)
-   - Resumed from ep12400 (renderer_best_v3.pt — in Kaggle dataset v4)
-   - Volume: /kaggle/working/ checkpoints every 500 epochs + timeout save at 8.5h
-   - Dataset: adpena/comma-lab-private-assets v4 (tac-1.0.1 + raft_flow.pt + posenet_targets.bin + renderer_best_v3.pt)
-   - Preamble: bootstrap injects sys.argv via runner.build_kaggle_command() before Click runs
+### Ensemble Pipeline (READY)
+- src/tac/ensemble.py: per-pair best-of-N selection
+- Combine TTO v4 + joint pair results when both available
 
-### KILLED
-- asym_v3_longer_tight: PERMANENTLY KILLED (base variant, served as seed for v4 runs)
-- asym_v4_raft_only (Modal): stopped at ep13000 — replaced by Kaggle run
+## Code Changes This Session
+1. antialias regularization in constrained_gen.py + renderer_tto.py + modal deploy
+2. Archive compression: ZIP_STORED -> ZIP_DEFLATED (-20% archive size)
+3. renderer_tto.py: deduplicated 210 lines via tac.scorer imports
 
-### Volume prerequisites (confirmed present)
-- posenet_targets.bin: ✓ on tac-asymmetric-results volume
-- raft_flow.pt: ✓ on tac-asymmetric-results volume (600 pairs, 0 null frames, mean=10.89px)
-- renderer_best_v3.pt: ✓ in Kaggle dataset v3 (ep12400, confirmed)
-
-## Code State
-- Rounds 26-28 complete: Kaggle DX hardened
-  - kaggle_asym_warp_launcher.py: slimmed to 54-line bootstrap stub
-  - runner.py: RESUME_FROM support, LFS retry, double-script bug fixed, post-install verify
-  - build_kaggle_kernels.py: launch_policy stripped, RESUME_FROM preamble injected
-  - 34 tests, all passing
-- Dataset v4 uploaded (2026-04-13): tac-1.0.1 wheel + raft_flow.pt + posenet_targets.bin + renderer_best_v3.pt
-- Kaggle kernel v4 pushed (2026-04-13) with code_file=train_renderer_fridrich.py + full bootstrap preamble
-- constrained_gen_smoke kernel v3 pushed (2026-04-13) with video path fix in tac-1.0.1
-
-## Paranoia Audit (2026-04-13)
-- Fridrich ✓: renderer_best_v3.pt confirmed ep12400, eval_every=200 in config
-- Yousfi ✓: training script has graceful timeout save (renderer_epochN_timeout.pt)
-- Quantizr ✓: raft_flow.pt has 0 null frames, mean=10.89px, max peak=277px — real signal
-
-## Kill/Promote
-- Kill supervised: proxy doesn't improve past 0.6019 by ep17000
-- Kill raft_only: same criteria
-- Promote: any checkpoint scores < 0.60 proxy
-- Target: score < 0.60 (beats Quantizr)
+## Key Insights
+1. Embedding loss is DEAD (v3 proved PoseNet got WORSE with embedding MSE)
+2. seg_odd_only already implemented and tested
+3. PoseNet operates on 2x-downsampled YUV -> sub-2x2 noise is invisible
+4. Archive already at 4-bit quantization (150KB), DEFLATE saves ~30KB more
+5. Rate contribution: 0.10 -> 0.08 with DEFLATE (saves 0.02 points)
 
 ## Deadline
-- May 3, 2026 (~20 days remaining)
+- May 3, 2026 (~18 days remaining)
