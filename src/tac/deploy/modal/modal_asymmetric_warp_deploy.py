@@ -479,11 +479,11 @@ def train_asymmetric_warp(
 
     print("  ---")
     print(f"  End: {time.strftime('%Y-%m-%d %H:%M:%S')}")
-    print(f"  Exit code: {result_code}")
+    print(f"  Exit code: {result.returncode}")
 
-    if result_code != 0:
+    if result.returncode != 0:
         raise RuntimeError(
-            f"Training subprocess failed with exit code {result_code}. "
+            f"Training subprocess failed with exit code {result.returncode}. "
             f"Check logs above for details."
         )
 
@@ -493,7 +493,7 @@ def train_asymmetric_warp(
     if len(artifacts) > 10:
         print(f"    ... and {len(artifacts) - 10} more")
 
-    return {"tag": tag, "exit_code": result_code, "artifacts": artifacts}
+    return {"tag": tag, "exit_code": result.returncode, "artifacts": artifacts}
 
 
 @app.function(
