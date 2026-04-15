@@ -77,7 +77,13 @@ With the fix, the optimizer runs all 500 steps (vs. early-stopping at 151 withou
 
 SegNet distortion is essentially unchanged, confirming that the fix's impact is specific to PoseNet. The SegNet gradient path was never obstructed.
 
-## 4.5 Negative results
+## 4.5 PoseNet sensitivity map
+
+To understand which regions of the frame PoseNet attends to, we computed a per-pixel gradient sensitivity map: the mean magnitude of $\partial \bar{d}_\text{pose} / \partial x_{ij}$ over 10 consecutive frame pairs. The map reveals a 675x dynamic range across the frame (min $7.2 \times 10^{-5}$, max $4.9 \times 10^{-2}$), with 57.4% of 7x7 patches falling below the mean sensitivity threshold.
+
+The high-sensitivity regions concentrate on the road surface and lane markings in the lower half of the frame --- the features PoseNet uses for ego-motion estimation. The sky, peripheral vegetation, and upper corners are nearly invisible to PoseNet. This asymmetry validates the ROI preprocessing approach (Section 2.2) and quantifies how much of the frame area can be degraded without measurable PoseNet cost.
+
+## 4.6 Negative results
 
 For completeness, we report approaches that failed to improve the authoritative score:
 

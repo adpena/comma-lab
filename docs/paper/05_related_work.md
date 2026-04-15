@@ -2,7 +2,7 @@
 
 ## 5.1 Neural video compression
 
-End-to-end learned video codecs have advanced rapidly in recent years. Ball\'e et al. [2018] established the variational autoencoder framework for image compression. For video, DCVC [Li et al. 2021] and its successors [Li et al. 2023] use learned motion compensation and conditional coding to approach or exceed H.266/VVC on perceptual metrics. Cool-Chic [Ladune et al. 2023] takes a different path: a tiny decoder (< 3K parameters) overfitted to each image, with the decoder weights transmitted as part of the bitstream --- a form of test-time optimization at the encoder side.
+End-to-end learned video codecs have advanced rapidly in recent years. Ballé et al. [2018] established the variational autoencoder framework for image compression. For video, DCVC [Li et al. 2021] and its successors [Li et al. 2023] use learned motion compensation and conditional coding to approach or exceed H.266/VVC on perceptual metrics. Cool-Chic [Ladune et al. 2023] takes a different path: a tiny decoder (< 3K parameters) overfitted to each image, with the decoder weights transmitted as part of the bitstream --- a form of test-time optimization at the encoder side.
 
 Our work differs from these in a fundamental way: we do not optimize for human perceptual quality. The distortion metrics are frozen neural networks (SegNet, PoseNet) with specific architectures and blind spots. A frame that looks terrible to a human can score well if it preserves the features these networks use. This inversion --- optimizing for machine perception rather than human perception --- changes the problem structure entirely.
 
@@ -18,7 +18,7 @@ Neural Radiance Fields [Mildenhall et al. 2020] and 3D Gaussian Splatting [Kerbl
 
 ## 5.3 Video coding for machines
 
-The MPEG Video Coding for Machines (VCM) initiative [Duan et al. 2020] standardized as ISO/IEC 23888 addresses compression optimized for downstream analysis tasks rather than human viewing. The VCM framework includes pre-processing and post-processing modules around a standard codec, with task-specific optimization.
+The MPEG Video Coding for Machines (VCM) initiative [Duan et al. 2020] standardized as ISO/IEC 23888, addresses compression optimized for downstream analysis tasks rather than human viewing. The VCM framework includes pre-processing and post-processing modules around a standard codec, with task-specific optimization.
 
 Neural Wrapping [Khan et al. 2025] adds learned pre- and post-processing around a standard codec, optimized for downstream task performance. Sandwiched Compression [Du et al. 2023] proposes a similar neural pre+post processor concept. Both target human perceptual metrics alongside task metrics; we optimize exclusively for the task.
 
