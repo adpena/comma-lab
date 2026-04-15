@@ -1,5 +1,48 @@
 # Findings
 
+## 2026-04-15 [CRITICAL BUG] TTO PoseNet gradients were ZERO — upstream @torch.no_grad() silently killed optimization
+
+**Severity**: The most consequential bug in the project. Every TTO experiment ever ran was blind to PoseNet.
+
+**Root cause chain**:
+1. Upstream `frame_utils.py` defines `rgb_to_yuv6()` with `@torch.no_grad()` decorator
+2. PoseNet's `preprocess_input()` calls `rgb_to_yuv6()` to convert RGB frames to YUV6 input
+3. The training pipeline (train_renderer_fridrich.py) had a fix: it patched the scorer loading path to remove `no_grad` contexts
+4. The TTO pipeline (renderer_tto.py, constrained_gen.py) loaded scorers through a DIFFERENT code path that never received the patch
+5. Result: `torch.no_grad()` propagated through `preprocess_input()`, zeroing all PoseNet gradients in TTO
+6. The optimizer saw SegNet and rate gradients only. PoseNet was a constant from the optimizer's perspective.
+
+**Why it was hard to find**:
+- TTO still reduced SegNet loss (masking the PoseNet failure in aggregate proxy scores)
+- Proxy scores improved run-over-run (because SegNet was improving)
+- No per-scorer gradient norm monitoring existed
+- The training pipeline worked correctly (different code path), so "scorers work" was a reasonable assumption
+- `@torch.no_grad()` is a silent operation — no error, no warning, no NaN
+
+**How it was found**:
+- Skunkworks council adversarial review of TTO v3 results
+- The Contrarian observed: "if 50 TTO steps make PoseNet WORSE, something is fundamentally wrong — optimization cannot make its own objective worse unless gradients are broken"
+- Hotz traced the full call chain: `TTO optimizer step` -> `scorer forward` -> `PoseNet.preprocess_input()` -> `rgb_to_yuv6()` -> `@torch.no_grad()` -> gradient tape severed
+- 13-0 unanimous council vote to fix immediately
+- Human's insistence on extreme paranoia adversarial review created the conditions for discovery. Neither the human nor the AI council would have found this alone.
+
+**Impact on prior results**:
+- TTO v1 (auth=0.74): SegNet-only optimization. PoseNet "improvement" was noise.
+- TTO v2: Same.
+- TTO v3 (embedding loss): Embedding loss couldn't help because PoseNet had no gradient signal. The entire experiment was invalid.
+- TTO v4 (running): Running with the same bug. Results will be invalid for PoseNet.
+- Renderer training (auth=0.87): UNAFFECTED — training pipeline had the fix.
+
+**Projected impact of fix**:
+- Renderer baseline: PoseNet=0.031 contributes ~0.56 to auth score (sqrt(10*0.031)=0.56)
+- With working TTO PoseNet gradients, 5-10x reduction plausible (SegNet achieved similar TTO gains)
+- PoseNet 0.031 -> 0.003 would give sqrt(10*0.003)=0.17, saving 0.39 points
+- Projected auth: 0.87 -> ~0.35 (sub-0.50 target achievable)
+
+**Paper-worthy insight**: A single `@torch.no_grad()` decorator in a third-party dependency silently invalidated an entire optimization pipeline for weeks. The bug is invisible to standard debugging (no errors, no NaN, no divergence — just suboptimal convergence). This is a general failure mode for any optimization pipeline that composes functions from dependencies with gradient-control decorators. Proposed mitigation: always verify `requires_grad` and gradient norms per-component after the first optimization step.
+
+**Meta-insight on human-AI collaboration**: The human's instinct to mandate extreme adversarial review (the "non-conservative skunkworks council" protocol) combined with the AI's ability to systematically trace call chains across files created the conditions for this discovery. The Contrarian's role — challenge results that don't make mathematical sense — is exactly what caught this. The protocol worked as designed.
+
 ## 2026-04-13 [NEGATIVE RESULT] asym_v4_supervised: PoseNet+RAFT supervision regressed the model
 
 - **auth ep19999 = 1.7900** (seg=0.5664, pose=1.1188, rate=0.1004)
