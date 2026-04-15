@@ -100,6 +100,9 @@ def parse_args() -> argparse.Namespace:
                    help="SegNet loss on odd frames only (v5b default: enabled)")
     p.add_argument("--simulate-resize", action="store_true",
                    help="Simulate scorer resolution round-trip in proxy scoring")
+    p.add_argument("--lr-schedule", type=str, default="constant",
+                   choices=["constant", "cosine"],
+                   help="LR schedule for TTO. 'cosine' = warmup then cosine decay.")
     return p.parse_args()
 
 
@@ -172,6 +175,7 @@ def run_single_step_count(
     use_embedding_loss: bool,
     seg_odd_only: bool,
     simulate_resize: bool,
+    lr_schedule: str = "constant",
 ) -> dict[str, float]:
     """Run TTO at a single step count and measure distortion.
 
@@ -198,6 +202,7 @@ def run_single_step_count(
         use_embedding_loss: use embedding MSE.
         seg_odd_only: SegNet on odd frames only.
         simulate_resize: simulate scorer resolution pipeline.
+        lr_schedule: LR schedule ('constant' or 'cosine').
 
     Returns:
         Dict with posenet, segnet, score, elapsed_s, steps.
@@ -250,6 +255,7 @@ def run_single_step_count(
             use_embedding_loss=use_embedding_loss,
             expected_pose_embeddings=sub_emb,
             seg_odd_only=seg_odd_only,
+            lr_schedule=lr_schedule,
         )
         refined[sf_start:sf_end] = sub_result.cpu()
 
@@ -431,6 +437,7 @@ def main() -> None:
             use_embedding_loss=args.use_embedding_loss,
             seg_odd_only=args.seg_odd_only,
             simulate_resize=args.simulate_resize,
+            lr_schedule=args.lr_schedule,
         )
 
         results[str(step_count)] = distortions
