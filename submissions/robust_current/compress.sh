@@ -488,7 +488,7 @@ fi
 
 (
   cd "$ARCHIVE_DIR"
-  zip -0 -r "$ARCHIVE_ZIP_TMP" .
+  zip -9 -r "$ARCHIVE_ZIP_TMP" .
 )
 
 mv "$ARCHIVE_ZIP_TMP" "$ARCHIVE_ZIP"

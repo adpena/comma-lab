@@ -1259,7 +1259,7 @@ def _run_tto_auth_eval(tag: str, tto_dir: str) -> dict | None:
             print("  ERROR: No archive.zip or .bin found for rate calculation")
             print("  Available files:", os.listdir(vol_dir) if os.path.isdir(vol_dir) else "dir missing")
             return None
-        with zipfile.ZipFile(archive_zip, "w", zipfile.ZIP_STORED) as zf:
+        with zipfile.ZipFile(archive_zip, "w", zipfile.ZIP_DEFLATED, compresslevel=9) as zf:
             zf.write(bin_path, "renderer.bin")
         print(f"  Created archive.zip from {bin_path}")
     else:
