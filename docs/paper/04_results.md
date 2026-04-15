@@ -102,7 +102,33 @@ For completeness, we report approaches that failed to improve the authoritative 
 
 Two patterns emerge. First, proxy scores can be deeply misleading: KL distillation achieved a promising 1.25 proxy but scored 1.85 on auth, a distribution shift between local (PyAV) and official (DALI) video decoders. Second, several "failures" (embedding loss v1, v3) were invalidated by the gradient bug --- they may have worked with correct gradients. We have not re-run them, as the current approach already achieves sub-0.50.
 
-## 4.7 Operational findings
+## 4.7 TTO step curve and the SegNet paradigm shift
+
+To determine the optimal TTO step budget, we measured distortion at 9 step counts (0--500) on a fixed subset of 30 pairs, each starting from the same renderer initialization. The experiment ran on a Vast.ai RTX 4090 ($0.25/hr).
+
+| Steps | PoseNet | SegNet | Score | Pose Contrib | Seg Contrib | s/frame |
+|------:|--------:|-------:|------:|-------------:|------------:|--------:|
+| 0 | 165.27 | 0.5036 | 91.02 | 40.65 | 50.36 | 0.000 |
+| 10 | 104.76 | 0.5036 | 82.73 | 32.37 | 50.36 | 0.056 |
+| 25 | 74.73 | 0.5036 | 77.70 | 27.34 | 50.36 | 0.101 |
+| 50 | 43.29 | 0.5036 | 71.17 | 20.81 | 50.36 | 0.185 |
+| **100** | **0.042** | **0.5036** | **51.01** | **0.645** | **50.36** | **0.356** |
+| 150 | 0.038 | 0.5036 | 50.98 | 0.613 | 50.36 | 0.525 |
+| 200 | 0.111 | 0.5036 | 51.41 | 1.052 | 50.36 | 0.692 |
+| 300 | 0.028 | 0.5036 | 50.89 | 0.529 | 50.36 | 1.044 |
+| 500 | 0.025 | 0.3435 | 34.85 | 0.501 | 34.35 | 1.711 |
+
+Three findings emerge:
+
+**Phase transition at 100 steps.** PoseNet drops 3,970x (165.27 $\to$ 0.042) in 100 steps, then plateaus. Steps 100--300 produce negligible PoseNet improvement. This is a sharp phase transition, not gradual diminishing returns: the optimizer finds the PoseNet-satisfying manifold quickly because PoseNet's 6-dimensional output space is low-rank.
+
+**SegNet is the binding constraint.** At 100 steps, SegNet contributes 50.36 out of 51.01 total score --- 98.7% of the remaining loss. The scoring formula's 100x weight on SegNet ($100 \times \text{seg}$) vs. the sqrt-compressed PoseNet ($\sqrt{10 \times \text{pose}}$) creates a 77:1 leverage ratio at our operating point. Every 0.001 reduction in SegNet disagreement is worth 77x more than the same reduction in PoseNet MSE.
+
+**500-step SegNet breakthrough.** Between steps 300 and 500, SegNet finally begins to move (0.5036 $\to$ 0.3435, a 32% reduction). This suggests that SegNet optimization requires a critical mass of gradient signal that only accumulates after PoseNet has converged. The score drops from 50.89 to 34.85 --- a 31% improvement from SegNet alone.
+
+These results rewrite the TTO budget strategy. Rather than allocating uniform steps across all pairs, the optimal approach is: (1) run 100 steps on all pairs to saturate PoseNet, (2) identify pairs with high SegNet disagreement, (3) allocate the remaining budget to those hard pairs at 500+ steps.
+
+## 4.8 Operational findings
 
 ### Inflate time budget
 
