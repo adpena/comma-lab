@@ -108,13 +108,12 @@ Two patterns emerge. First, proxy scores can be deeply misleading: KL distillati
 
 The official evaluation imposes a 30-minute time limit for inflation on a T4 GPU instance (26 GB RAM, 16 GB VRAM). Our renderer inflate path (`inflate_renderer.py`) requires:
 
-1. Loading SegNet from upstream models (~2s)
-2. Decoding the GT video via PyAV (~15s)
-3. Extracting 1200 SegNet masks in batches (~30s)
-4. Running the renderer on 600 mask pairs (~120s on T4)
-5. Upscaling 1200 frames from 384x512 to 874x1164 and writing raw output (~60s)
+1. Decoding pre-extracted masks from AV1 monochrome video (~1s)
+2. Loading the renderer from archive (~1s)
+3. Running the renderer on 600 mask pairs (~120s on T4)
+4. Upscaling 1200 frames from 384x512 to 874x1164 and writing raw output (~60s)
 
-Total: approximately 4--5 minutes on T4 with CUDA. This is well within the 30-minute budget, leaving ample headroom for TTO-based inflation strategies that could consume 20--25 minutes.
+Total: approximately 3 minutes on T4 with CUDA. The elimination of SegNet loading and GT video decoding (previously ~47s combined) further improves the time budget, leaving ample headroom for TTO-based inflation strategies that could consume 20--25 minutes.
 
 ### Contest compliance gap
 
@@ -130,7 +129,7 @@ The archive was initially created with `ZIP_STORED` (no compression), yielding a
 
 The contest rules state: "External libraries and tools can be used and won't count towards compressed size, unless they use large artifacts (neural networks, meshes, point clouds, etc.), in which case those artifacts should be included in the archive." Contest organizer Yassine Yousfi explicitly clarified (PR \#35) that this applies to the PoseNet and SegNet scorer weights.
 
-Our renderer inflate path currently loads SegNet from the upstream `models/` directory at inflate time to extract semantic masks from the GT video. Under a strict reading of the rule, these SegNet weights (~48 MB) would need to be included in the archive, which would increase the rate term from 0.08 to approximately 32 --- catastrophically uncompetitive. The leading submission (mask2mask, score 0.60) avoids this by storing pre-extracted masks in the archive rather than loading SegNet at inflate time. Resolving this compliance question is critical for submission viability.
+Our renderer inflate path originally loaded SegNet from the upstream `models/` directory at inflate time to extract semantic masks from the GT video. Under a strict reading of the rule, those SegNet weights (~48 MB) would need to be in the archive, increasing the rate term from 0.08 to approximately 32 --- catastrophically uncompetitive. We resolved this by pre-extracting masks at compress time: `compress_masks.py` runs SegNet on the GT video once, encodes the 5-class segmentation masks as an AV1 monochrome video (`masks.mkv`), and bundles it in the archive alongside `renderer.bin`. At inflate time, `inflate_renderer.py` decodes `masks.mkv` directly --- no SegNet loading, no upstream model dependency, full contest compliance. The mask video is typically 30--50 KB for 1200 frames at 384$\times$512, keeping the total archive under 200 KB. This mirrors the approach used by the leading submission (mask2mask, score 0.60).
 
 ### Scalability
 

@@ -1,15 +1,17 @@
 #!/usr/bin/env python
 """Inflate path using a trained DP-SIMS neural renderer.
 
-The renderer generates RGB frames purely from SegNet masks extracted from
-the ground-truth video.  No compressed video is stored — only the renderer
-weights (~200KB) are in the archive.  This is the ultimate rate-quality
-tradeoff: fixed rate regardless of content complexity.
+The renderer generates RGB frames purely from SegNet masks.  The archive
+contains both the renderer weights (~150KB) and pre-extracted masks encoded
+as AV1 monochrome video (~30-50KB).  No SegNet loading at inflate time.
 
-Pipeline:
+Pipeline (contest-compliant, PR #35):
+    archive/masks.mkv  ->  AV1 decode  ->  masks (384x512)
+    masks              ->  Renderer    ->  frames (384x512)
+    frames             ->  bilinear    ->  raw RGB (1164x874)
+
+Fallback (development only, not contest-compliant):
     GT video  ->  SegNet (upstream)  ->  masks (384x512)
-    masks     ->  DPSIMSRenderer     ->  frames (384x512)
-    frames    ->  bilinear upscale   ->  raw RGB (1164x874)
 
 Architecture classes (SPADE, SPADEResBlock, DPSIMSRenderer) are inlined
 for standalone operation on scorer machines without the tac package.
@@ -519,10 +521,117 @@ def _find_upstream_root(archive_dir: str) -> Path:
 
 
 # ============================================================
-# SegNet loading
+# Mask loading from archive (contest-compliant path)
+# ============================================================
+def _load_masks_from_archive(
+    mask_video_path: Path,
+    expected_frames: int = NUM_FRAMES,
+) -> torch.Tensor:
+    """Load pre-extracted masks from AV1 monochrome video in archive.
+
+    This is the contest-compliant path: masks were pre-extracted at compress
+    time by compress_masks.py, so no SegNet loading is needed at inflate time.
+
+    The AV1 video uses 5-class grayscale encoding:
+        pixel_value = class_label * (255 // 4)
+    Decoding inverts this with rounding to handle lossy compression artifacts.
+
+    Args:
+        mask_video_path: path to masks.mkv inside archive directory
+        expected_frames: expected number of frames (default: 1200)
+
+    Returns:
+        (N, SEGNET_H, SEGNET_W) long tensor with values in [0, 4]
+    """
+    import subprocess
+
+    t0 = time.monotonic()
+
+    if not mask_video_path.exists():
+        raise FileNotFoundError(
+            f"Pre-extracted mask video not found: {mask_video_path}\n"
+            f"Run compress_masks.py at compress time to generate masks.mkv, "
+            f"or set INFLATE_MASK_SOURCE=segnet to fall back to SegNet "
+            f"(not contest-compliant)."
+        )
+
+    # Probe video dimensions
+    probe_cmd = [
+        "ffprobe",
+        "-v", "error",
+        "-select_streams", "v:0",
+        "-show_entries", "stream=width,height",
+        "-of", "csv=p=0",
+        str(mask_video_path),
+    ]
+    probe = subprocess.run(probe_cmd, capture_output=True, text=True, timeout=30)
+    if probe.returncode != 0:
+        raise RuntimeError(f"ffprobe failed on {mask_video_path}: {probe.stderr}")
+
+    parts = probe.stdout.strip().split(",")
+    W, H = int(parts[0]), int(parts[1])
+
+    # Decode to raw gray frames
+    cmd = [
+        "ffmpeg",
+        "-i", str(mask_video_path),
+        "-f", "rawvideo",
+        "-pix_fmt", "gray",
+        "-v", "error",
+        "pipe:1",
+    ]
+    proc = subprocess.run(cmd, capture_output=True, timeout=300)
+    if proc.returncode != 0:
+        raise RuntimeError(
+            f"ffmpeg mask decoding failed:\n"
+            f"{proc.stderr.decode('utf-8', errors='replace')}"
+        )
+
+    raw = np.frombuffer(proc.stdout, dtype=np.uint8)
+    frame_size = H * W
+    N = len(raw) // frame_size
+    if len(raw) % frame_size != 0:
+        raise ValueError(
+            f"Decoded data size {len(raw)} not divisible by "
+            f"frame size {H}x{W}={frame_size}"
+        )
+
+    pixels = raw.reshape(N, H, W)
+
+    # Invert scaling: pixel -> class label
+    # Encoding used: class * (255 // 4) -> 0, 63, 127, 191, 255
+    scale_factor = 255 // (NUM_CLASSES - 1)
+    masks = np.round(pixels.astype(np.float32) / scale_factor).astype(np.int64)
+    masks = np.clip(masks, 0, NUM_CLASSES - 1)
+
+    result = torch.from_numpy(masks)
+
+    if expected_frames is not None and N != expected_frames:
+        print(
+            f"  WARNING: expected {expected_frames} mask frames, got {N}",
+            file=sys.stderr,
+        )
+
+    elapsed = time.monotonic() - t0
+    print(
+        f"  Loaded {N} pre-extracted masks ({H}x{W}) from {mask_video_path} "
+        f"({elapsed:.1f}s)",
+        file=sys.stderr,
+    )
+    return result
+
+
+# ============================================================
+# SegNet loading (fallback for development, NOT contest-compliant)
 # ============================================================
 def _load_segnet(upstream_root: Path, device: str) -> nn.Module:
-    """Load frozen SegNet from upstream for mask extraction."""
+    """Load frozen SegNet from upstream for mask extraction.
+
+    WARNING: This path is NOT contest-compliant. It loads SegNet (~48MB)
+    from the upstream models/ directory, which per Yousfi's PR #35 rule
+    would need to be included in the archive. Use pre-extracted masks
+    (masks.mkv in archive) for contest submissions.
+    """
     t0 = time.monotonic()
 
     # Import SegNet from upstream modules.py
@@ -1091,16 +1200,24 @@ def inflate_renderer(
     inflated_dir: str,
     video_names_file: str,
     renderer_filename: str = "renderer.bin",
+    mask_filename: str = "masks.mkv",
     out_w: int = OUT_W,
     out_h: int = OUT_H,
 ) -> None:
-    """Full inflate pipeline: GT video -> masks -> renderer -> raw RGB.
+    """Full inflate pipeline: archive masks -> renderer -> raw RGB.
+
+    Contest-compliant path (default):
+        archive/masks.mkv  ->  AV1 decode  ->  masks  ->  renderer  ->  raw RGB
+
+    Development fallback (INFLATE_MASK_SOURCE=segnet):
+        GT video  ->  SegNet (upstream)  ->  masks  ->  renderer  ->  raw RGB
 
     Args:
-        archive_dir: directory containing renderer.bin
+        archive_dir: directory containing renderer.bin and masks.mkv
         inflated_dir: output directory for .raw files
         video_names_file: text file listing video names (one per line)
         renderer_filename: renderer checkpoint filename within archive_dir
+        mask_filename: mask video filename within archive_dir
         out_w: output frame width
         out_h: output frame height
     """
@@ -1116,17 +1233,53 @@ def inflate_renderer(
         batch_size = 4
         print(f"Device: CPU ({os.cpu_count()} cores)", file=sys.stderr)
 
-    # ---- Upstream discovery ----
-    print("Stage 1: Discovering upstream environment ...", file=sys.stderr)
-    upstream_root = _find_upstream_root(archive_dir)
-    print(f"  Upstream root: {upstream_root}", file=sys.stderr)
+    # ---- Determine mask source ----
+    mask_source = os.environ.get("INFLATE_MASK_SOURCE", "archive")
+    mask_video_path = Path(archive_dir) / mask_filename
 
-    # ---- Load SegNet ----
-    print("Stage 2: Loading SegNet ...", file=sys.stderr)
-    segnet = _load_segnet(upstream_root, device)
+    # Auto-detect: if masks.mkv exists in archive, use it; otherwise fall back
+    if mask_source == "archive" and not mask_video_path.exists():
+        print(
+            f"  WARNING: {mask_video_path} not found in archive. "
+            f"Falling back to SegNet extraction (NOT contest-compliant).",
+            file=sys.stderr,
+        )
+        mask_source = "segnet"
+
+    use_archive_masks = mask_source == "archive"
+
+    if use_archive_masks:
+        print(
+            "Mask source: archive (contest-compliant, no SegNet loading)",
+            file=sys.stderr,
+        )
+    else:
+        print(
+            "Mask source: SegNet extraction (development mode, NOT contest-compliant)",
+            file=sys.stderr,
+        )
+
+    # ---- Upstream discovery (needed for SegNet fallback and GT video) ----
+    segnet = None
+    upstream_root = None
+    if not use_archive_masks:
+        print("Stage 1: Discovering upstream environment ...", file=sys.stderr)
+        upstream_root = _find_upstream_root(archive_dir)
+        print(f"  Upstream root: {upstream_root}", file=sys.stderr)
+
+        print("Stage 2: Loading SegNet (fallback mode) ...", file=sys.stderr)
+        segnet = _load_segnet(upstream_root, device)
+    else:
+        # Still need upstream_root for GT video discovery in SegNet fallback
+        # but for archive path we can try to find it (non-fatal if missing)
+        try:
+            upstream_root = _find_upstream_root(archive_dir)
+        except FileNotFoundError:
+            upstream_root = None
 
     # ---- Load renderer ----
-    print("Stage 3: Loading renderer ...", file=sys.stderr)
+    stage_num = 3 if not use_archive_masks else 1
+    print(f"Stage {stage_num}: Loading renderer ...", file=sys.stderr)
     renderer_path = Path(archive_dir) / renderer_filename
     if not renderer_path.exists():
         raise FileNotFoundError(
@@ -1134,6 +1287,20 @@ def inflate_renderer(
             f"Expected {renderer_filename} inside archive directory."
         )
     renderer = _load_renderer(str(renderer_path), device)
+
+    # ---- Load masks from archive (contest-compliant path) ----
+    masks = None
+    if use_archive_masks:
+        stage_num += 1
+        print(f"Stage {stage_num}: Loading pre-extracted masks ...", file=sys.stderr)
+        masks = _load_masks_from_archive(mask_video_path)
+
+        # Verify mask resolution
+        if masks.shape[1] != SEG_H or masks.shape[2] != SEG_W:
+            raise ValueError(
+                f"Mask resolution mismatch: {masks.shape[1]}x{masks.shape[2]} "
+                f"vs expected {SEG_H}x{SEG_W}"
+            )
 
     # ---- Process each video ----
     output_path = Path(inflated_dir)
@@ -1152,54 +1319,64 @@ def inflate_renderer(
         print(f"Video {idx+1}/{len(video_names)}: {rel}", file=sys.stderr)
         print(f"{'='*60}", file=sys.stderr)
 
-        # Find GT video: look in the upstream/scorer data directory
-        # The scorer provides GT videos alongside the archive for evaluation
-        gt_candidates = [
-            Path(archive_dir).parent / rel,  # scorer layout: data/<video>.mkv
-            Path(archive_dir).parent.parent / "data" / rel,
-            upstream_root / "data" / rel,
-            upstream_root / "videos" / rel,  # upstream repo layout
-        ]
-        # Also check COMMA_DATA_DIR env var
-        data_dir = os.environ.get("COMMA_DATA_DIR")
-        if data_dir:
-            gt_candidates.insert(0, Path(data_dir) / rel)
+        if use_archive_masks:
+            # Contest-compliant path: masks already loaded from archive
+            video_masks = masks
+        else:
+            # Development fallback: extract masks from GT video via SegNet
+            gt_candidates = [
+                Path(archive_dir).parent / rel,
+                Path(archive_dir).parent.parent / "data" / rel,
+            ]
+            if upstream_root:
+                gt_candidates.extend([
+                    upstream_root / "data" / rel,
+                    upstream_root / "videos" / rel,
+                ])
+            data_dir = os.environ.get("COMMA_DATA_DIR")
+            if data_dir:
+                gt_candidates.insert(0, Path(data_dir) / rel)
 
-        gt_path = None
-        for candidate in gt_candidates:
-            if candidate.exists():
-                gt_path = candidate
-                break
+            gt_path = None
+            for candidate in gt_candidates:
+                if candidate.exists():
+                    gt_path = candidate
+                    break
 
-        if gt_path is None:
-            tried = "\n  ".join(str(c) for c in gt_candidates)
-            raise FileNotFoundError(
-                f"GT video not found for {rel}.\nTried:\n  {tried}\n"
-                f"Set COMMA_DATA_DIR env var to the directory containing GT videos."
-            )
+            if gt_path is None:
+                tried = "\n  ".join(str(c) for c in gt_candidates)
+                raise FileNotFoundError(
+                    f"GT video not found for {rel}.\nTried:\n  {tried}\n"
+                    f"Set COMMA_DATA_DIR env var to the directory containing GT videos."
+                )
 
-        print(f"  GT video: {gt_path}", file=sys.stderr)
+            print(f"  GT video: {gt_path}", file=sys.stderr)
+            print("  Decoding GT video ...", file=sys.stderr)
+            gt_frames = _decode_gt_video(str(gt_path))
 
-        # Stage 4: Decode GT video
-        print("Stage 4: Decoding GT video ...", file=sys.stderr)
-        gt_frames = _decode_gt_video(str(gt_path))
+            if len(gt_frames) != NUM_FRAMES:
+                print(
+                    f"  WARNING: expected {NUM_FRAMES} frames, got {len(gt_frames)}",
+                    file=sys.stderr,
+                )
 
-        if len(gt_frames) != NUM_FRAMES:
-            print(f"  WARNING: expected {NUM_FRAMES} frames, got {len(gt_frames)}", file=sys.stderr)
-
-        # Stage 5: Extract masks
-        print("Stage 5: Extracting SegNet masks ...", file=sys.stderr)
-        masks = _extract_masks(gt_frames, segnet, device, batch_size)
-        del gt_frames  # free memory
+            print("  Extracting SegNet masks ...", file=sys.stderr)
+            video_masks = _extract_masks(gt_frames, segnet, device, batch_size)
+            del gt_frames
 
         # Verify mask resolution
-        assert masks.shape[1] == SEG_H and masks.shape[2] == SEG_W, \
-            f"Mask resolution mismatch: {masks.shape} vs expected ({SEG_H}, {SEG_W})"
+        assert video_masks.shape[1] == SEG_H and video_masks.shape[2] == SEG_W, \
+            f"Mask resolution mismatch: {video_masks.shape} vs expected ({SEG_H}, {SEG_W})"
 
-        # Stage 6: Generate and write
-        print("Stage 6: Generating frames via renderer ...", file=sys.stderr)
-        n_written = _generate_and_write(masks, renderer, str(raw_out), device, batch_size, out_h, out_w)
-        del masks  # free memory
+        # Generate and write
+        gen_stage = "Stage 3" if use_archive_masks else "Stage 6"
+        print(f"{gen_stage}: Generating frames via renderer ...", file=sys.stderr)
+        n_written = _generate_and_write(
+            video_masks, renderer, str(raw_out), device, batch_size, out_h, out_w
+        )
+
+        if not use_archive_masks:
+            del video_masks
 
         # Verify output
         actual_size = os.path.getsize(str(raw_out))
@@ -1230,17 +1407,20 @@ def _cli():
         # Fallback to plain argparse if click not available
         import argparse
         parser = argparse.ArgumentParser(description="Inflate via neural renderer")
-        parser.add_argument("archive_dir", help="Directory containing renderer.bin")
+        parser.add_argument("archive_dir", help="Directory containing renderer.bin and masks.mkv")
         parser.add_argument("inflated_dir", help="Output directory for .raw files")
         parser.add_argument("video_names_file", help="Text file listing video names")
         parser.add_argument("--renderer-filename", default="renderer.bin",
                             help="Renderer checkpoint filename")
+        parser.add_argument("--mask-filename", default="masks.mkv",
+                            help="Pre-extracted mask video filename")
         parser.add_argument("--target-w", type=int, default=OUT_W)
         parser.add_argument("--target-h", type=int, default=OUT_H)
         args = parser.parse_args()
         inflate_renderer(
             args.archive_dir, args.inflated_dir, args.video_names_file,
             renderer_filename=args.renderer_filename,
+            mask_filename=args.mask_filename,
             out_w=args.target_w, out_h=args.target_h,
         )
         return
@@ -1251,23 +1431,29 @@ def _cli():
     @click.argument("video_names_file", type=click.Path(exists=True))
     @click.option("--renderer-filename", default="renderer.bin", envvar="RENDERER_FILENAME",
                   help="Renderer checkpoint filename within archive_dir.")
+    @click.option("--mask-filename", default="masks.mkv", envvar="MASK_FILENAME",
+                  help="Pre-extracted mask video filename within archive_dir.")
     @click.option("--target-w", type=int, envvar="SOURCE_W",
                   default=OUT_W, help="Output frame width.")
     @click.option("--target-h", type=int, envvar="SOURCE_H",
                   default=OUT_H, help="Output frame height.")
     def inflate(archive_dir, inflated_dir, video_names_file,
-                renderer_filename, target_w, target_h):
+                renderer_filename, mask_filename, target_w, target_h):
         """Inflate compressed archive using a trained neural renderer.
 
         \b
         Positional arguments (compatible with inflate.sh dispatch):
-          ARCHIVE_DIR       Directory containing renderer.bin
+          ARCHIVE_DIR       Directory containing renderer.bin + masks.mkv
           INFLATED_DIR      Output directory for .raw files
           VIDEO_NAMES_FILE  Text file listing video names (one per line)
 
         \b
-        The renderer generates RGB frames from SegNet masks extracted from
-        the ground-truth video. No compressed video is needed in the archive.
+        Contest-compliant path: reads pre-extracted masks from masks.mkv
+        in the archive. No SegNet loading at inflate time.
+
+        \b
+        Fallback: set INFLATE_MASK_SOURCE=segnet to extract masks from GT
+        video via SegNet (development only, NOT contest-compliant).
 
         \b
         Device is auto-detected (CUDA if available, else CPU).
@@ -1276,6 +1462,7 @@ def _cli():
         inflate_renderer(
             archive_dir, inflated_dir, video_names_file,
             renderer_filename=renderer_filename,
+            mask_filename=mask_filename,
             out_w=target_w, out_h=target_h,
         )
 

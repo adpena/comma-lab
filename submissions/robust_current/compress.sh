@@ -414,6 +414,43 @@ if [ -f "$SELF_DIR/renderer.bin" ]; then
   echo "Bundled renderer.bin ($(stat -f%z "$SELF_DIR/renderer.bin" 2>/dev/null || stat -c%s "$SELF_DIR/renderer.bin") bytes) into archive"
 fi
 
+# ── Pre-extract SegNet masks (contest compliance: Yousfi PR #35) ──────
+# Extract masks at compress time so inflate_renderer.py never loads SegNet.
+# Without this, SegNet (~48MB) would need to be in archive.zip (rate catastrophe).
+# The mask video is typically ~30-50KB for 1200 frames at 384x512.
+MASK_PREEXTRACT="${MASK_PREEXTRACT:-1}"
+MASK_CRF="${MASK_CRF:-20}"
+MASK_BATCH_SIZE="${MASK_BATCH_SIZE:-8}"
+MASK_DEVICE="${MASK_DEVICE:-cpu}"
+if [ "$MASK_PREEXTRACT" = "1" ]; then
+  GT_VIDEO_PATH="${UPSTREAM_ROOT}/videos/0.mkv"
+  MASKS_OUTPUT="$ARCHIVE_DIR/masks.mkv"
+  if [ -f "$GT_VIDEO_PATH" ]; then
+    echo "Pre-extracting SegNet masks from GT video ..."
+    "$UV_BIN" run python "$SELF_DIR/compress_masks.py" \
+      --gt-video "$GT_VIDEO_PATH" \
+      --upstream "$UPSTREAM_ROOT" \
+      --output "$MASKS_OUTPUT" \
+      --crf "$MASK_CRF" \
+      --device "$MASK_DEVICE" \
+      --batch-size "$MASK_BATCH_SIZE" \
+      --verify
+    if [ -f "$MASKS_OUTPUT" ]; then
+      echo "Bundled masks.mkv ($(stat -f%z "$MASKS_OUTPUT" 2>/dev/null || stat -c%s "$MASKS_OUTPUT") bytes) into archive"
+    else
+      echo "ERROR: Mask pre-extraction failed — masks.mkv not created" >&2
+      exit 1
+    fi
+  else
+    echo "WARNING: Cannot pre-extract masks — GT video not found at $GT_VIDEO_PATH" >&2
+    echo "Set MASK_PREEXTRACT=0 to skip mask pre-extraction (not contest-compliant)" >&2
+  fi
+elif [ -f "$SELF_DIR/masks.mkv" ]; then
+  # Use pre-computed mask video if available alongside submission
+  cp "$SELF_DIR/masks.mkv" "$ARCHIVE_DIR/masks.mkv"
+  echo "Bundled pre-computed masks.mkv ($(stat -f%z "$SELF_DIR/masks.mkv" 2>/dev/null || stat -c%s "$SELF_DIR/masks.mkv") bytes) into archive"
+fi
+
 # ── Pre-compute corrections for CPU inflate pipeline (Eureka 1+2) ──
 # Generates scorer gradients, null-space basis, fragility maps, brightness
 # shifts, PoseNet targets, and hard-frame corrections in one pass.
