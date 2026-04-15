@@ -493,6 +493,9 @@ def build_parser() -> argparse.ArgumentParser:
     # tac viz-yuv-gif
     sp = subparsers.add_parser("viz-yuv-gif", help="Generate 3-panel YUV Y00 channel comparison GIF.")
 
+    # tac viz-analysis-panels
+    sp = subparsers.add_parser("viz-analysis-panels", help="Generate 6-panel TTO analysis visualization (GT/recon/error + SegNet).")
+
     return parser
 
 
@@ -1119,6 +1122,9 @@ def main(argv: list[str] | None = None) -> Any:
         return _viz_main()
     if args.command == "viz-yuv-gif":
         from tac.visualization.yuv_gif import main as _viz_main
+        return _viz_main()
+    if args.command == "viz-analysis-panels":
+        from scripts.generate_analysis_viz import main as _viz_main
         return _viz_main()
     raise SystemExit(f"Unknown command: {args.command}")
 
