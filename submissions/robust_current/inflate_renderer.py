@@ -1403,6 +1403,496 @@ def inflate_renderer(
 
 
 # ============================================================
+# Adaptive TTO at inflate time (EXPERIMENTAL, not default)
+# ============================================================
+# Council vote: 8-1, NOT assumed contest-compliant. Requires
+# compliance ruling before use in official submission.
+#
+# Environment variables:
+#   INFLATE_TTO=0          (default) renderer only, fully compliant
+#   INFLATE_TTO=1          renderer + adaptive TTO on hardest pairs
+#   INFLATE_TTO_BUDGET_SECONDS=1300  time budget for TTO phase
+#   INFLATE_TTO_STEPS=100  gradient steps per pair batch
+#   INFLATE_TTO_TOP_K=0.3  fraction of pairs to TTO (worst 30%)
+#   INFLATE_TTO_LR=0.005   TTO learning rate
+#   INFLATE_TTO_BATCH_PAIRS=10  pairs per optimization batch (VRAM)
+#   INFLATE_TTO_SEG_WEIGHT=100.0  SegNet loss weight
+#   INFLATE_TTO_POSE_WEIGHT=10.0  PoseNet loss weight
+# ============================================================
+
+def _compute_per_pair_posenet_distortion(
+    renderer_frames: torch.Tensor,
+    gt_frames: list[torch.Tensor],
+    posenet: nn.Module,
+    device: str,
+    batch_size: int = 16,
+) -> torch.Tensor:
+    """Compute PoseNet distortion for each non-overlapping pair.
+
+    PoseNet evaluates consecutive frame pairs: (frame[2k], frame[2k+1]).
+    This function returns a (P,) tensor of per-pair distortions, where
+    P = N // 2 and higher values indicate harder pairs.
+
+    Args:
+        renderer_frames: (N, H, W, 3) float [0, 255] rendered frames.
+        gt_frames: list of N (H, W, 3) uint8 tensors (ground truth).
+        posenet: frozen PoseNet scorer.
+        device: computation device string.
+        batch_size: pairs per forward pass.
+
+    Returns:
+        (P,) float tensor of per-pair PoseNet distortions.
+    """
+    N = renderer_frames.shape[0]
+    P = N // 2
+
+    # We need to import camera constants for resolution matching
+    try:
+        from tac.camera import SEGNET_INPUT_H, SEGNET_INPUT_W
+    except ImportError:
+        SEGNET_INPUT_H, SEGNET_INPUT_W = 384, 512
+
+    pair_dists = torch.zeros(P)
+
+    with torch.inference_mode():
+        for start in range(0, P, batch_size):
+            end = min(start + batch_size, P)
+            B = end - start
+
+            # Build rendered pairs: (B, 2, H, W, 3) -> posenet input
+            rendered_pairs = []
+            gt_pairs = []
+            for k in range(start, end):
+                r0 = renderer_frames[2 * k].float()
+                r1 = renderer_frames[2 * k + 1].float()
+                rendered_pairs.append(torch.stack([r0, r1], dim=0))
+
+                g0 = torch.as_tensor(gt_frames[2 * k]).float()
+                g1 = torch.as_tensor(gt_frames[2 * k + 1]).float()
+                gt_pairs.append(torch.stack([g0, g1], dim=0))
+
+            rendered_batch = torch.stack(rendered_pairs).to(device)  # (B, 2, H, W, 3)
+            gt_batch = torch.stack(gt_pairs).to(device)
+
+            # Convert HWC -> CHW for PoseNet
+            rendered_chw = rendered_batch.permute(0, 1, 4, 2, 3).contiguous()
+            gt_chw = gt_batch.permute(0, 1, 4, 2, 3).contiguous()
+
+            # Resize to scorer resolution if needed
+            _, _, C, H, W = rendered_chw.shape
+            if H != SEGNET_INPUT_H or W != SEGNET_INPUT_W:
+                rendered_flat = rendered_chw.reshape(B * 2, C, H, W)
+                rendered_flat = F.interpolate(
+                    rendered_flat, size=(SEGNET_INPUT_H, SEGNET_INPUT_W),
+                    mode="bilinear", align_corners=False,
+                )
+                rendered_chw = rendered_flat.reshape(B, 2, C, SEGNET_INPUT_H, SEGNET_INPUT_W)
+
+                gt_flat = gt_chw.reshape(B * 2, C, H, W)
+                gt_flat = F.interpolate(
+                    gt_flat, size=(SEGNET_INPUT_H, SEGNET_INPUT_W),
+                    mode="bilinear", align_corners=False,
+                )
+                gt_chw = gt_flat.reshape(B, 2, C, SEGNET_INPUT_H, SEGNET_INPUT_W)
+
+            # PoseNet forward
+            gt_in = posenet.preprocess_input(gt_chw)
+            rendered_in = posenet.preprocess_input(rendered_chw)
+
+            gt_pose = posenet(gt_in)      # (B, 6)
+            rendered_pose = posenet(rendered_in)  # (B, 6)
+
+            # Per-pair MSE distortion
+            dist = ((gt_pose - rendered_pose) ** 2).mean(dim=1)  # (B,)
+            pair_dists[start:end] = dist.cpu()
+
+    return pair_dists
+
+
+def _adaptive_tto_phase(
+    renderer_frames: torch.Tensor,
+    masks: torch.Tensor,
+    gt_frames: list[torch.Tensor],
+    posenet: nn.Module,
+    segnet: nn.Module,
+    device: str,
+    budget_seconds: float = 1300.0,
+    tto_steps: int = 100,
+    top_k_fraction: float = 0.3,
+    tto_lr: float = 0.005,
+    batch_pairs: int = 10,
+    seg_weight: float = 100.0,
+    pose_weight: float = 10.0,
+) -> torch.Tensor:
+    """Adaptive TTO: refine the hardest pairs within a time budget.
+
+    Strategy:
+        1. Compute per-pair PoseNet distortion (renderer output vs GT).
+        2. Sort pairs by distortion (hardest first).
+        3. TTO the hardest top_k fraction, stopping when budget exhausted.
+        4. Return mixed output: TTO-refined for hard pairs, renderer-only
+           for easy pairs.
+
+    COMPLIANCE WARNING: This loads PoseNet+SegNet at inflate time for
+    gradient-based optimization. Per council 8-1 vote, this is NOT
+    assumed contest-compliant. Requires explicit compliance ruling.
+
+    Args:
+        renderer_frames: (N, H, W, 3) float [0, 255] renderer output.
+        masks: (N, H, W) long tensor of segmentation masks.
+        gt_frames: list of N (H, W, 3) uint8 tensors (ground truth).
+        posenet: frozen PoseNet scorer (loaded from upstream).
+        segnet: frozen SegNet scorer (loaded from upstream).
+        device: computation device string.
+        budget_seconds: total wall-clock budget for the TTO phase.
+        tto_steps: gradient steps per pair batch.
+        top_k_fraction: fraction of pairs to TTO (0.3 = worst 30%).
+        tto_lr: Adam learning rate for TTO.
+        batch_pairs: pairs per optimization batch (VRAM constrained).
+        seg_weight: SegNet loss weight in TTO objective.
+        pose_weight: PoseNet loss weight in TTO objective.
+
+    Returns:
+        (N, H, W, 3) float tensor of refined frames in [0, 255].
+    """
+    try:
+        from tac.constrained_gen import coupled_trajectory_optimize
+        from tac.scorer import extract_gt_pose_targets
+    except ImportError as e:
+        print(f"  WARNING: tac package not available for TTO ({e}). "
+              f"Returning renderer-only output.", file=sys.stderr)
+        return renderer_frames
+
+    t_phase_start = time.monotonic()
+    N = renderer_frames.shape[0]
+    P = N // 2
+
+    # Step 1: Compute per-pair PoseNet distortion
+    print("  [TTO] Computing per-pair PoseNet distortion...", file=sys.stderr)
+    t0 = time.monotonic()
+    pair_dists = _compute_per_pair_posenet_distortion(
+        renderer_frames, gt_frames, posenet, device,
+    )
+    t_dist = time.monotonic() - t0
+    print(f"  [TTO] Per-pair distortion computed in {t_dist:.1f}s "
+          f"(mean={pair_dists.mean():.6f}, max={pair_dists.max():.6f})",
+          file=sys.stderr)
+
+    # Step 2: Sort pairs by distortion (hardest first)
+    hardest_indices = torch.argsort(pair_dists, descending=True)
+    n_to_tto = max(1, int(P * top_k_fraction))
+    tto_pairs = hardest_indices[:n_to_tto]
+    print(f"  [TTO] Will TTO {n_to_tto} of {P} pairs "
+          f"(top {top_k_fraction * 100:.0f}% by distortion)",
+          file=sys.stderr)
+
+    # Step 3: Extract GT pose targets for the pairs we will TTO
+    print("  [TTO] Extracting GT pose targets...", file=sys.stderr)
+    t0 = time.monotonic()
+    pose_targets = extract_gt_pose_targets(gt_frames, posenet, torch.device(device))
+    t_targets = time.monotonic() - t0
+    print(f"  [TTO] GT targets extracted in {t_targets:.1f}s", file=sys.stderr)
+
+    # Step 4: TTO hardest pairs within budget
+    refined_frames = renderer_frames.clone()
+    n_refined = 0
+    t_tto_start = time.monotonic()
+
+    # Process in sub-batches of batch_pairs
+    for sub_start in range(0, n_to_tto, batch_pairs):
+        # Check time budget
+        elapsed_total = time.monotonic() - t_phase_start
+        if elapsed_total >= budget_seconds:
+            print(f"  [TTO] Budget exhausted at pair {n_refined}/{n_to_tto} "
+                  f"({elapsed_total:.1f}s / {budget_seconds:.0f}s budget)",
+                  file=sys.stderr)
+            break
+
+        sub_end = min(sub_start + batch_pairs, n_to_tto)
+        sub_pair_indices = tto_pairs[sub_start:sub_end]
+
+        # Gather frames and masks for these pairs
+        frame_indices = []
+        for pi in sub_pair_indices:
+            frame_indices.extend([2 * pi.item(), 2 * pi.item() + 1])
+
+        sub_frames = renderer_frames[frame_indices].clone()
+        sub_masks = masks[frame_indices]
+        sub_pose_targets = pose_targets[sub_pair_indices]
+
+        n_sub_pairs = len(sub_pair_indices)
+        t0 = time.monotonic()
+
+        try:
+            sub_result = coupled_trajectory_optimize(
+                masks=sub_masks,
+                expected_pose=sub_pose_targets,
+                posenet=posenet,
+                segnet=segnet,
+                num_steps=tto_steps,
+                lr=tto_lr,
+                seg_weight=seg_weight,
+                pose_weight=pose_weight,
+                compress_weight=0.5,
+                noise_seed=42,
+                device=device,
+                log_every=max(tto_steps // 3, 1),
+                init_frames=sub_frames,
+                early_stop_patience=tto_steps + 1,
+            )
+
+            # Write back refined frames
+            for i, fi in enumerate(frame_indices):
+                refined_frames[fi] = sub_result[i].cpu()
+
+            n_refined += n_sub_pairs
+            dt = time.monotonic() - t0
+            print(f"  [TTO] Batch {sub_start // batch_pairs + 1}: "
+                  f"refined {n_sub_pairs} pairs in {dt:.1f}s "
+                  f"(total: {n_refined}/{n_to_tto})",
+                  file=sys.stderr)
+
+        except Exception as e:
+            print(f"  [TTO] WARNING: batch failed ({e}), using renderer output",
+                  file=sys.stderr)
+        finally:
+            # Free GPU memory
+            if device == "cuda":
+                torch.cuda.empty_cache()
+
+    t_tto_total = time.monotonic() - t_tto_start
+    t_phase_total = time.monotonic() - t_phase_start
+    print(f"  [TTO] Adaptive TTO complete: refined {n_refined}/{n_to_tto} pairs "
+          f"in {t_tto_total:.1f}s (phase total: {t_phase_total:.1f}s)",
+          file=sys.stderr)
+
+    return refined_frames
+
+
+def inflate_renderer_with_tto(
+    archive_dir: str,
+    inflated_dir: str,
+    video_names_file: str,
+    renderer_filename: str = "renderer.bin",
+    mask_filename: str = "masks.mkv",
+    out_w: int = OUT_W,
+    out_h: int = OUT_H,
+) -> None:
+    """Full inflate pipeline with optional adaptive TTO.
+
+    Wraps inflate_renderer() with an additional TTO refinement phase
+    controlled by environment variables. Default behavior (INFLATE_TTO=0)
+    is identical to inflate_renderer() -- no scorer loading, no TTO.
+
+    COMPLIANCE WARNING: When INFLATE_TTO=1, this loads PoseNet and SegNet
+    at inflate time for gradient-based optimization. Per council 8-1 vote,
+    this requires an explicit compliance ruling before contest use.
+
+    Environment variables:
+        INFLATE_TTO:                0 (off, default) or 1 (enable TTO)
+        INFLATE_TTO_BUDGET_SECONDS: seconds for TTO phase (default 1300)
+        INFLATE_TTO_STEPS:          gradient steps per batch (default 100)
+        INFLATE_TTO_TOP_K:          fraction of pairs to TTO (default 0.3)
+        INFLATE_TTO_LR:             learning rate (default 0.005)
+        INFLATE_TTO_BATCH_PAIRS:    pairs per batch (default 10)
+        INFLATE_TTO_SEG_WEIGHT:     SegNet weight (default 100.0)
+        INFLATE_TTO_POSE_WEIGHT:    PoseNet weight (default 10.0)
+    """
+    inflate_tto = os.environ.get("INFLATE_TTO", "0") == "1"
+
+    if not inflate_tto:
+        # Default path: renderer only, fully compliant
+        return inflate_renderer(
+            archive_dir, inflated_dir, video_names_file,
+            renderer_filename=renderer_filename,
+            mask_filename=mask_filename,
+            out_w=out_w, out_h=out_h,
+        )
+
+    # ---- TTO path (EXPERIMENTAL, requires compliance ruling) ----
+    print("=" * 60, file=sys.stderr)
+    print("INFLATE_TTO=1: Adaptive TTO enabled", file=sys.stderr)
+    print("WARNING: Requires compliance ruling for contest use", file=sys.stderr)
+    print("=" * 60, file=sys.stderr)
+
+    budget_seconds = float(os.environ.get("INFLATE_TTO_BUDGET_SECONDS", "1300"))
+    tto_steps = int(os.environ.get("INFLATE_TTO_STEPS", "100"))
+    top_k = float(os.environ.get("INFLATE_TTO_TOP_K", "0.3"))
+    tto_lr = float(os.environ.get("INFLATE_TTO_LR", "0.005"))
+    batch_pairs = int(os.environ.get("INFLATE_TTO_BATCH_PAIRS", "10"))
+    seg_weight = float(os.environ.get("INFLATE_TTO_SEG_WEIGHT", "100.0"))
+    pose_weight = float(os.environ.get("INFLATE_TTO_POSE_WEIGHT", "10.0"))
+
+    print(f"  TTO config: budget={budget_seconds}s, steps={tto_steps}, "
+          f"top_k={top_k}, lr={tto_lr}, batch_pairs={batch_pairs}",
+          file=sys.stderr)
+    print(f"  TTO weights: seg={seg_weight}, pose={pose_weight}",
+          file=sys.stderr)
+
+    t_total_start = time.monotonic()
+
+    # ---- Device detection ----
+    if torch.cuda.is_available():
+        device = "cuda"
+        render_batch_size = 16
+        print(f"Device: CUDA ({torch.cuda.get_device_name(0)})", file=sys.stderr)
+    else:
+        device = "cpu"
+        render_batch_size = 4
+        print(f"Device: CPU ({os.cpu_count()} cores)", file=sys.stderr)
+
+    # ---- Load renderer ----
+    renderer_path = Path(archive_dir) / renderer_filename
+    if not renderer_path.exists():
+        raise FileNotFoundError(f"Renderer not found: {renderer_path}")
+    renderer = _load_renderer(str(renderer_path), device)
+
+    # ---- Load masks from archive ----
+    mask_video_path = Path(archive_dir) / mask_filename
+    if not mask_video_path.exists():
+        raise FileNotFoundError(f"Mask video not found: {mask_video_path}")
+    masks = _load_masks_from_archive(mask_video_path)
+
+    # ---- Generate renderer frames (at SegNet resolution) ----
+    print("Stage 1: Generating renderer frames...", file=sys.stderr)
+    t0 = time.monotonic()
+    is_asymmetric = _is_asymmetric_model(renderer)
+    N = masks.shape[0]
+
+    torch.manual_seed(42)
+    all_frames = []
+    with torch.inference_mode():
+        if is_asymmetric:
+            P = N // 2
+            for start in range(0, P, render_batch_size):
+                end = min(start + render_batch_size, P)
+                masks_t = masks[2 * start:2 * end:2].to(device=device, dtype=torch.long)
+                masks_t1 = masks[2 * start + 1:2 * end + 1:2].to(device=device, dtype=torch.long)
+                pairs = renderer(masks_t, masks_t1)  # (B, 2, H, W, 3)
+                B = pairs.shape[0]
+                f0 = pairs[:, 0]  # (B, H, W, 3)
+                f1 = pairs[:, 1]
+                interleaved = torch.stack([f0, f1], dim=1).reshape(2 * B, *f0.shape[1:])
+                all_frames.append(interleaved.cpu())
+        else:
+            for i in range(0, N, render_batch_size):
+                end = min(i + render_batch_size, N)
+                batch_masks = masks[i:end].to(device=device, dtype=torch.long)
+                frames = renderer(batch_masks)  # (B, 3, H, W)
+                frames_hwc = frames.permute(0, 2, 3, 1)  # -> (B, H, W, 3)
+                all_frames.append(frames_hwc.cpu())
+
+    renderer_frames = torch.cat(all_frames, dim=0).float()  # (N, H, W, 3)
+    t_render = time.monotonic() - t0
+    print(f"  Generated {renderer_frames.shape[0]} frames in {t_render:.1f}s",
+          file=sys.stderr)
+
+    del renderer
+    if device == "cuda":
+        torch.cuda.empty_cache()
+
+    # ---- Load GT frames and scorers for TTO ----
+    print("Stage 2: Loading GT frames and scorers for TTO...", file=sys.stderr)
+    upstream_root = _find_upstream_root(archive_dir)
+    video_names = Path(video_names_file).read_text().splitlines()
+    video_names = [v.strip() for v in video_names if v.strip()]
+
+    # Find GT video
+    rel = video_names[0]
+    gt_candidates = [
+        upstream_root / "videos" / rel,
+        upstream_root / "data" / rel,
+    ]
+    data_dir = os.environ.get("COMMA_DATA_DIR")
+    if data_dir:
+        gt_candidates.insert(0, Path(data_dir) / rel)
+
+    gt_path = None
+    for c in gt_candidates:
+        if c.exists():
+            gt_path = c
+            break
+    if gt_path is None:
+        tried = "\n  ".join(str(c) for c in gt_candidates)
+        raise FileNotFoundError(
+            f"GT video not found. Tried:\n  {tried}\n"
+            f"Set COMMA_DATA_DIR to the directory containing GT videos."
+        )
+
+    gt_frames_np = _decode_gt_video(str(gt_path))
+    gt_frames_torch = [torch.from_numpy(f) for f in gt_frames_np]
+
+    # Load scorers via tac (differentiable mode)
+    try:
+        from tac.scorer import load_differentiable_scorers
+        posenet, segnet = load_differentiable_scorers(upstream_root, device=device)
+    except ImportError:
+        print("  FATAL: tac package required for TTO mode", file=sys.stderr)
+        raise
+
+    # ---- Run adaptive TTO ----
+    print("Stage 3: Running adaptive TTO...", file=sys.stderr)
+    refined_frames = _adaptive_tto_phase(
+        renderer_frames=renderer_frames,
+        masks=masks,
+        gt_frames=gt_frames_torch,
+        posenet=posenet,
+        segnet=segnet,
+        device=device,
+        budget_seconds=budget_seconds,
+        tto_steps=tto_steps,
+        top_k_fraction=top_k,
+        tto_lr=tto_lr,
+        batch_pairs=batch_pairs,
+        seg_weight=seg_weight,
+        pose_weight=pose_weight,
+    )
+
+    # Free scorers
+    del posenet, segnet
+    if device == "cuda":
+        torch.cuda.empty_cache()
+
+    # ---- Upscale and write raw output ----
+    print("Stage 4: Upscaling and writing raw RGB...", file=sys.stderr)
+    output_path = Path(inflated_dir)
+    output_path.mkdir(parents=True, exist_ok=True)
+
+    for idx, rel in enumerate(video_names):
+        stem = rel.rsplit(".", 1)[0]
+        raw_out = output_path / f"{stem}.raw"
+        raw_out.parent.mkdir(parents=True, exist_ok=True)
+
+        n_written = 0
+        with open(str(raw_out), "wb") as f:
+            for i in range(0, N, render_batch_size):
+                end = min(i + render_batch_size, N)
+                batch = refined_frames[i:end]  # (B, H, W, 3)
+                # Convert to CHW for interpolation
+                batch_chw = batch.permute(0, 3, 1, 2).to(device)  # (B, 3, H, W)
+                batch_up = F.interpolate(
+                    batch_chw, size=(out_h, out_w),
+                    mode="bilinear", align_corners=False,
+                )
+                batch_uint8 = batch_up.round().clamp(0, 255).to(torch.uint8)
+                batch_hwc = batch_uint8.permute(0, 2, 3, 1).contiguous().cpu().numpy()
+                f.write(batch_hwc.tobytes())
+                n_written += batch_hwc.shape[0]
+
+        actual_size = os.path.getsize(str(raw_out))
+        expected_size = out_w * out_h * 3 * n_written
+        if actual_size != expected_size:
+            raise RuntimeError(
+                f"Output size mismatch: {actual_size:,} != {expected_size:,}"
+            )
+        print(f"  Written {n_written} frames to {raw_out} ({actual_size:,} bytes)",
+              file=sys.stderr)
+
+    t_total = time.monotonic() - t_total_start
+    print(f"\nTotal inflate+TTO time: {t_total:.1f}s", file=sys.stderr)
+
+
+# ============================================================
 # Click CLI (matches inflate_postfilter.py pattern)
 # ============================================================
 def _cli():
@@ -1423,7 +1913,7 @@ def _cli():
         parser.add_argument("--target-w", type=int, default=OUT_W)
         parser.add_argument("--target-h", type=int, default=OUT_H)
         args = parser.parse_args()
-        inflate_renderer(
+        inflate_renderer_with_tto(
             args.archive_dir, args.inflated_dir, args.video_names_file,
             renderer_filename=args.renderer_filename,
             mask_filename=args.mask_filename,
@@ -1462,10 +1952,14 @@ def _cli():
         video via SegNet (development only, NOT contest-compliant).
 
         \b
+        Adaptive TTO: set INFLATE_TTO=1 to enable test-time optimization
+        on the hardest pairs. Requires compliance ruling for contest use.
+
+        \b
         Device is auto-detected (CUDA if available, else CPU).
         Batch size: GPU=16, CPU=4.
         """
-        inflate_renderer(
+        inflate_renderer_with_tto(
             archive_dir, inflated_dir, video_names_file,
             renderer_filename=renderer_filename,
             mask_filename=mask_filename,

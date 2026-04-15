@@ -1,12 +1,12 @@
-# 6. Discussion
+# 7. Discussion
 
-## 6.1 Human-AI collaboration as research methodology
+## 7.1 Human-AI collaboration as research methodology
 
 The author of this work has a background in mathematics and software engineering, with no prior experience in video compression, steganalysis, neural codecs, or the specific architectures used by comma.ai's driving stack. The project was conducted as a collaboration between one human engineer and a large language model (Claude, Anthropic) over approximately one week.
 
 This is not a disclaimer --- it is a methodological claim. The LLM contributed in ways that go beyond code generation:
 
-- **Domain synthesis.** The approach draws on steganalysis [Fridrich 2009], constrained optimization [Bertsekas 1999], data assimilation [Courtier et al. 1994], adversarial machine learning [Athalye et al. 2018], and neural video compression [Li et al. 2023]. No single researcher is likely to hold deep expertise across all of these fields simultaneously. The LLM acted as a cross-disciplinary synthesis engine, identifying structural parallels (e.g., the steganalysis framing of Section 5.5, the 4D-Var analogy of Section 2.4) that shaped the technical approach.
+- **Domain synthesis.** The approach draws on steganalysis [Fridrich 2009], constrained optimization [Bertsekas 1999], data assimilation [Courtier et al. 1994], adversarial machine learning [Athalye et al. 2018], and neural video compression [Li et al. 2023]. No single researcher is likely to hold deep expertise across all of these fields simultaneously. The LLM acted as a cross-disciplinary synthesis engine, identifying structural parallels (e.g., the steganalysis framing of Section 6.5, the 4D-Var analogy of Section 2.4) that shaped the technical approach.
 
 - **Competitive intelligence.** Reverse-engineering the leading submission's architecture --- deobfuscating compiled bytecode, identifying the asymmetric pair generation pattern, understanding the FP4 quantization scheme --- required rapid analysis of unfamiliar code and prior work. The LLM performed this analysis and identified the key architectural insight (joint pair generation for PoseNet) that our renderer design adopted.
 
@@ -14,7 +14,7 @@ This is not a disclaimer --- it is a methodological claim. The LLM contributed i
 
 The honest accounting: the LLM also introduced bugs (the training pipeline had 50+ issues caught through iterative review), proposed approaches that failed (KL distillation, adaptive weights), and occasionally generated plausible-sounding explanations that turned out to be wrong (PoseNet AllNorm invariance). The net contribution was strongly positive, but the process required active human judgment about which LLM outputs to trust and which to verify.
 
-## 6.2 The skunkworks council
+## 7.2 The skunkworks council
 
 A specific pattern emerged that we call the *skunkworks council*: a panel of simulated domain experts, each with a defined perspective and adversarial mandate, who review every design decision and experimental result. The council for this project included:
 
@@ -30,7 +30,7 @@ This pattern is not a toy. The council caught the gradient bug that no unit test
 
 Whether this constitutes a *methodology* or merely a useful prompting pattern is an open question. We note that the pattern is reproducible, that it caught a competition-changing bug, and that the resulting system outperforms a submission by a domain insider.
 
-## 6.3 Limitations
+## 7.3 Limitations
 
 **Single video.** The challenge evaluates on one 60-second clip. Our renderer is trained specifically for this clip --- the weights, masks, and TTO procedure are all instance-specific. Generalization to other clips would require re-training, though the framework (architecture + training procedure + TTO) transfers.
 
@@ -42,7 +42,7 @@ Whether this constitutes a *methodology* or merely a useful prompting pattern is
 
 **Proxy-auth gap.** Local evaluation (proxy) consistently underestimates the authoritative score, primarily due to differences between PyAV and DALI video decoders. Our proxy score of 0.29 maps to auth 0.43. This gap means that hyperparameter tuning on proxy scores can mislead, and authoritative evaluation is expensive (requires GPU access).
 
-## 6.4 Future work
+## 7.4 Future work
 
 **PoseNet architecture.** Mask2mask achieves PoseNet 0.00066 (3.2x better than ours) through joint pair generation in a single forward pass. Modifying our renderer to fuse pair processing --- cross-attention between frames, shared encoder features --- could close this gap.
 
@@ -54,7 +54,7 @@ Whether this constitutes a *methodology* or merely a useful prompting pattern is
 
 **Video coding for machines.** The broader question motivating the challenge --- how to compress video for downstream analysis rather than human viewing --- is increasingly relevant as autonomous systems generate and transmit vast quantities of video. The MPEG VCM standard [Duan et al. 2020] addresses this at a standards level; our work provides an empirical data point on what is achievable when the analysis networks are known and fixed.
 
-## 6.5 Conclusion
+## 7.5 Conclusion
 
 We presented a system for the comma.ai video compression challenge that achieves a score of 0.43, the lowest at the time of writing. The system combines an asymmetric warp renderer (287K parameters), Lagrangian annealing for constrained multi-objective training, and test-time optimization with coupled trajectory loss. The single largest improvement came from finding and fixing a gradient obstruction in the upstream scorer code --- a bug that made every prior TTO experiment invalid.
 
