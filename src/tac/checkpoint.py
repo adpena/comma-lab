@@ -131,8 +131,8 @@ def verify_checkpoint_quality(
         'checkpoint_path' keys.
 
     Raises:
-        ValueError: If PoseNet MSE > *max_expected_posenet*, indicating
-            the checkpoint is not a properly trained renderer.
+        ValueError: If PoseNet MSE is NaN/Inf (corrupt checkpoint) or
+            exceeds *max_expected_posenet* (undertrained checkpoint).
     """
     from pathlib import Path as _Path
 
