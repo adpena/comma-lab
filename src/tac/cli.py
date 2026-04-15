@@ -495,6 +495,11 @@ def build_parser() -> argparse.ArgumentParser:
 
     # tac viz-analysis-panels
     sp = subparsers.add_parser("viz-analysis-panels", help="Generate 6-panel TTO analysis visualization (GT/recon/error + SegNet).")
+    sp.add_argument("--frames", type=str, required=True, help="Path to TTO frames .pt file (N, H, W, 3) uint8 tensor.")
+    sp.add_argument("--upstream", type=str, required=True, help="Path to upstream directory with scorer models and GT videos.")
+    sp.add_argument("--output", type=str, required=True, help="Output directory for GIF/MP4 visualization files.")
+    sp.add_argument("--auth-matched", action="store_true", default=False, help="Upscale frames to camera resolution to match authoritative scorer.")
+    sp.add_argument("--device", type=str, default="cpu", help="Torch device (cpu, cuda, mps).")
 
     return parser
 
@@ -1124,8 +1129,31 @@ def main(argv: list[str] | None = None) -> Any:
         from tac.visualization.yuv_gif import main as _viz_main
         return _viz_main()
     if args.command == "viz-analysis-panels":
-        from scripts.generate_analysis_viz import main as _viz_main
-        return _viz_main()
+        from pathlib import Path
+
+        import torch
+
+        from tac.scorer import load_differentiable_scorers
+        from tac.viz.analysis_panels import generate_analysis_panels
+
+        device = torch.device(args.device)
+        tto_frames = torch.load(args.frames, map_location="cpu", weights_only=True)
+        _, segnet = load_differentiable_scorers(args.upstream, device=str(device))
+        gt_video_path = Path(args.upstream) / "videos" / "0.mkv"
+        result = generate_analysis_panels(
+            tto_frames=tto_frames,
+            gt_video_path=gt_video_path,
+            segnet=segnet,
+            output_dir=Path(args.output),
+            auth_matched=args.auth_matched,
+        )
+        print(f"Visualization complete: {result['n_frames_rendered']} frames")
+        print(f"  GIF: {result['gif_path']}")
+        if result.get("mp4_path"):
+            print(f"  MP4: {result['mp4_path']}")
+        print(f"  SegNet disagreement: {result['seg_disagree_mean']:.4f}")
+        print(f"  Pixel error: {result['pixel_error_mean']:.2f}")
+        return 0
     raise SystemExit(f"Unknown command: {args.command}")
 
 

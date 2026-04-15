@@ -88,7 +88,7 @@ def _segnet_classes(
     pair = frame_chw.unsqueeze(1).expand(-1, 2, -1, -1, -1)
     seg_input = segnet.preprocess_input(pair)
     seg_output = segnet(seg_input)
-    # seg_output: (B*T, num_classes, Hs, Ws) -- take first frame from pair.
+    # seg_output: (B, num_classes, Hs, Ws) -- SegNet selects last frame from pair internally.
     classes = seg_output[0].argmax(dim=0).cpu().numpy()
     return classes
 
@@ -590,8 +590,8 @@ def _write_mp4_ffmpeg(
     proc = subprocess.Popen(
         cmd,
         stdin=subprocess.PIPE,
-        stdout=subprocess.PIPE,
-        stderr=subprocess.PIPE,
+        stdout=subprocess.DEVNULL,
+        stderr=subprocess.DEVNULL,
     )
     for frame in frames:
         raw = np.array(frame.convert("RGB")).tobytes()
@@ -600,5 +600,4 @@ def _write_mp4_ffmpeg(
     proc.wait(timeout=120)
 
     if proc.returncode != 0:
-        stderr = proc.stderr.read().decode(errors="replace")
-        raise RuntimeError(f"ffmpeg failed (exit {proc.returncode}): {stderr[-500:]}")
+        raise RuntimeError(f"ffmpeg failed (exit {proc.returncode})")

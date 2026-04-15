@@ -155,7 +155,7 @@ def generate_initial_frames(
 # Scorer loading
 # ---------------------------------------------------------------------------
 
-def load_scorers(upstream_dir: Path, device: torch.device):
+def load_scorers(upstream_dir: Path, device: torch.device) -> tuple[torch.nn.Module, torch.nn.Module]:
     """Load frozen PoseNet + SegNet with differentiable preprocessing.
 
     Uses load_differentiable_scorers to ensure rgb_to_yuv6 gradients flow.

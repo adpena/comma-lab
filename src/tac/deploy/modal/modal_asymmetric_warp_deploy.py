@@ -68,6 +68,7 @@ image = (
         "einops",
         "segmentation-models-pytorch",
         "click",
+        "matplotlib",
         "nvidia-dali-cuda120",
     )
     # Clone upstream scorer repo (PoseNet/SegNet model definitions + GT video)
@@ -1392,8 +1393,9 @@ def _run_tto_auth_eval(tag: str, tto_dir: str) -> dict | None:
 
     # Embed timings summary in the main result dict too
     result["timings"] = profiler.stage_elapsed()
-    result["within_budget"] = profiler.report().get("within_budget", True)
-    result["budget_utilization_pct"] = profiler.report().get("budget_utilization_pct", 0.0)
+    _report = profiler.report()
+    result["within_budget"] = _report.get("within_budget", True)
+    result["budget_utilization_pct"] = _report.get("budget_utilization_pct", 0.0)
     # Re-save with timings included
     with open(result_path, "w") as f:
         json.dump(result, f, indent=2)

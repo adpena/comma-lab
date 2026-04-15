@@ -217,6 +217,8 @@ def main():
     logger.info("  seed: %d", args.seed)
 
     # Load scorers
+    # No differentiable patch needed -- compress only uses inference
+    # (torch.no_grad), not gradient optimization.
     logger.info("Loading scorers...")
     t0 = time.monotonic()
     try:
