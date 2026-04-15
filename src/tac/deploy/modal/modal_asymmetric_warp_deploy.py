@@ -479,11 +479,11 @@ def train_asymmetric_warp(
 
     print("  ---")
     print(f"  End: {time.strftime('%Y-%m-%d %H:%M:%S')}")
-    print(f"  Exit code: {result.returncode}")
+    print(f"  Exit code: {result_code}")
 
-    if result.returncode != 0:
+    if result_code != 0:
         raise RuntimeError(
-            f"Training subprocess failed with exit code {result.returncode}. "
+            f"Training subprocess failed with exit code {result_code}. "
             f"Check logs above for details."
         )
 
@@ -493,7 +493,7 @@ def train_asymmetric_warp(
     if len(artifacts) > 10:
         print(f"    ... and {len(artifacts) - 10} more")
 
-    return {"tag": tag, "exit_code": result.returncode, "artifacts": artifacts}
+    return {"tag": tag, "exit_code": result_code, "artifacts": artifacts}
 
 
 @app.function(
@@ -876,9 +876,9 @@ def auth_eval(tag: str, checkpoint: str = "renderer_best.pt", strategy: str = "s
     ]
     print(f"  Command: {' '.join(eval_cmd)}")
     eval_result = subprocess.run(eval_cmd, capture_output=True, text=True, timeout=600)
-    if eval_result.returncode != 0:
+    if eval_result_code != 0:
         print(f"  STDERR: {eval_result.stderr[-500:]}", file=sys.stderr)
-        raise RuntimeError(f"evaluate.py failed with exit code {eval_result.returncode}")
+        raise RuntimeError(f"evaluate.py failed with exit code {eval_result_code}")
 
     # Parse the report
     import re
@@ -1286,8 +1286,8 @@ def _run_tto_auth_eval(tag: str, tto_dir: str) -> dict | None:
     print(f"  Command: {' '.join(eval_cmd)}")
     eval_result = subprocess.run(eval_cmd, capture_output=True, text=True, timeout=600)
 
-    if eval_result.returncode != 0:
-        print(f"  evaluate.py FAILED (exit {eval_result.returncode})")
+    if eval_result_code != 0:
+        print(f"  evaluate.py FAILED (exit {eval_result_code})")
         print(f"  STDERR: {eval_result.stderr[-1000:]}")
         return None
 
@@ -1481,12 +1481,12 @@ def tto_eval(
 
     print("  ---")
     print(f"  End: {time.strftime('%Y-%m-%d %H:%M:%S')}")
-    print(f"  Exit code: {result.returncode}")
+    print(f"  Exit code: {result_code}")
 
     # Update log with final status
     with open(log_path, "w") as f:
-        f.write(f"status: {'ok' if result.returncode == 0 else 'failed'}\n")
-        f.write(f"exit_code: {result.returncode}\n")
+        f.write(f"status: {'ok' if result_code == 0 else 'failed'}\n")
+        f.write(f"exit_code: {result_code}\n")
         f.write(f"tag: {tag}\n")
         f.write(f"checkpoint: {checkpoint}\n")
         f.write(f"tto_steps: {tto_steps}\n")
@@ -1505,7 +1505,7 @@ def tto_eval(
 
     # ── Auth eval on TTO frames ──────────────────────────────────────────────
     auth_result = None
-    if result.returncode == 0:
+    if result_code == 0:
         print("\n--- Running auth eval on TTO frames ---")
         try:
             auth_result = _run_tto_auth_eval(tag, output_dir)
@@ -1517,7 +1517,7 @@ def tto_eval(
         print("  Skipping TTO auth eval (subprocess failed)")
 
     return {
-        "exit_code": result.returncode,
+        "exit_code": result_code,
         "output_dir": output_dir,
         "auth_eval": auth_result,
     }
