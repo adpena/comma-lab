@@ -486,7 +486,7 @@ def _find_upstream_root(archive_dir: str) -> Path:
     Search order:
         1. archive_dir/../../  (scorer environment: archive/ is 2 levels deep)
         2. <script_dir>/../../upstream/  (local dev layout)
-        3. UPSTREAM_ROOT env var
+        3. UPSTREAM_ROOT / TAC_UPSTREAM_DIR / COMMA_CHALLENGE_ROOT env vars
     """
     candidates = []
 
@@ -514,7 +514,7 @@ def _find_upstream_root(archive_dir: str) -> Path:
     raise FileNotFoundError(
         f"Cannot find upstream root (need modules.py + models/ dir).\n"
         f"Tried:\n  {tried}\n"
-        f"Set UPSTREAM_ROOT or COMMA_CHALLENGE_ROOT env var."
+        f"Set UPSTREAM_ROOT, TAC_UPSTREAM_DIR, or COMMA_CHALLENGE_ROOT env var."
     )
 
 
