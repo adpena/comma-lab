@@ -279,7 +279,7 @@ def compute_proxy_score(
     device: torch.device,
     rate: float = 0.0,
     batch_size: int = 16,
-    simulate_resize: bool = False,
+    simulate_resize: bool = True,
 ) -> dict:
     """Compute proxy score matching the official scorer formula.
 
