@@ -156,6 +156,32 @@ def load_default_scorers(
     )
 
 
+def load_differentiable_scorers(
+    upstream_dir: str | Path,
+    device: str | torch.device | None = None,
+) -> tuple:
+    """Load frozen scorers with differentiable PoseNet preprocessing.
+
+    Combines load_default_scorers() + make_scorers_differentiable() into a single
+    call. Use this whenever you need to backpropagate through PoseNet (TTO,
+    constrained generation, sensitivity analysis, any gradient-based optimization).
+
+    Without this, PoseNet gradients are ZERO due to upstream rgb_to_yuv6 having
+    @torch.no_grad(). This convenience function eliminates the class of bugs where
+    a script loads scorers but forgets to patch them.
+
+    Args:
+        upstream_dir: path to the upstream repository root.
+        device: target device (auto-detected if None).
+
+    Returns:
+        (posenet, segnet) tuple, both frozen, on device, with differentiable preprocessing.
+    """
+    posenet, segnet = load_default_scorers(upstream_dir, device=device)
+    make_scorers_differentiable(posenet, segnet)
+    return posenet, segnet
+
+
 def make_scorers_differentiable(posenet: torch.nn.Module, segnet: torch.nn.Module) -> None:
     """Patch frozen scorers for differentiable optimization (TTO, constrained gen).
 

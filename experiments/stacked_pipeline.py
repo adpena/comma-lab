@@ -154,8 +154,8 @@ def main():
 
     # ── Load scorers ─────────────────────────────────────────────────────
     print("[setup] Loading scorers...")
-    from tac.scorer import load_default_scorers
-    posenet, segnet = load_default_scorers(upstream, device=str(device))
+    from tac.scorer import load_differentiable_scorers
+    posenet, segnet = load_differentiable_scorers(upstream, device=str(device))
 
     # ── Decode GT video ──────────────────────────────────────────────────
     print(f"[setup] Decoding GT video ({args.n_frames} frames)...")

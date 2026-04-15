@@ -469,9 +469,9 @@ def main():
     # ── Step 1: Load scorers ─────────────────────────────────────────────
     print("\n[1/6] Loading scorers...")
     t0 = time.monotonic()
-    from tac.scorer import load_default_scorers
-    posenet, segnet = load_default_scorers(upstream, device=str(device))
-    print(f"[1/6] Scorers loaded in {time.monotonic() - t0:.1f}s")
+    from tac.scorer import load_differentiable_scorers
+    posenet, segnet = load_differentiable_scorers(upstream, device=str(device))
+    print(f"[1/6] Scorers loaded + patched differentiable in {time.monotonic() - t0:.1f}s")
 
     # ── Step 2: Decode GT video ──────────────────────────────────────────
     print(f"\n[2/6] Decoding GT video ({args.n_frames} frames)...")

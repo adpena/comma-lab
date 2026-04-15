@@ -445,9 +445,8 @@ def main():
     # ── Step 1: Load scorers ─────────────────────────────────────────────
     print("\n[1/8] Loading scorers...")
     t0 = time.monotonic()
-    from tac.scorer import load_default_scorers, make_scorers_differentiable
-    posenet, segnet = load_default_scorers(upstream, device=str(device))
-    make_scorers_differentiable(posenet, segnet)
+    from tac.scorer import load_differentiable_scorers
+    posenet, segnet = load_differentiable_scorers(upstream, device=str(device))
     t_scorers = time.monotonic() - t0
     print(f"[1/8] Scorers loaded + patched differentiable in {t_scorers:.1f}s")
 
