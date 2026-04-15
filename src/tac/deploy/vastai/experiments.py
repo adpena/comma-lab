@@ -153,6 +153,22 @@ EXPERIMENTS: dict[str, ExperimentConfig] = {
         needs_checkpoint="renderer_best.pt",
         timeout_hours=6,
     ),
+    # ── v6 config: ALL improvements (hinge + phase2 + embedding + simulate_resize) ──
+    "tto_v6_hinge_phase2": _exp(
+        name="tto_v6_hinge_phase2",
+        script="experiments/renderer_tto.py",
+        args=(
+            "--checkpoint renderer_best.pt --device cuda --n-frames 1200 "
+            "--tto-steps 150 --tto-lr 0.005 --batch-pairs 10 "
+            "--seg-weight 100 --pose-weight 10 --compress-weight 0.5 "
+            "--use-embedding-loss --seg-odd-only --early-stop-patience 100 "
+            "--simulate-resize "
+            "--segnet-loss-mode hinge --hinge-margin 0.5 "
+            "--tto-phase2-segnet-only --phase2-steps 200"
+        ),
+        needs_checkpoint="renderer_best.pt",
+        timeout_hours=2,
+    ),
     # ── Contest pipeline profiler (T4 timing data) ──
     "contest_dry_run": _exp(
         name="contest_dry_run",
