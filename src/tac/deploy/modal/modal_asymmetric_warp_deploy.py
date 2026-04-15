@@ -1610,3 +1610,264 @@ def tto_entry(
         print(f"\n  Auth eval: not available (tto_frames.pt may not have been produced)")
 
     print(f"\nDownload: .venv/bin/modal volume get {RESULTS_VOL} {tag}/tto_results/ ./tto_results_{tag}/")
+
+
+# ── GT-Sparse TTO: Modal deployment ──────────────────────────────────────
+
+
+@app.function(
+    image=image,
+    gpu="T4",
+    timeout=14400,  # 4h for full 1200 frames with restarts
+    volumes={"/results": results_vol},
+    memory=16384,
+)
+def gt_sparse_tto_eval(
+    tag: str,
+    n_frames: int = 1200,
+    n_patches: int = 50,
+    patch_size: int = 7,
+    n_restarts: int = 5,
+    steps_per_restart: int = 200,
+    lbfgs_lr: float = 1.0,
+    restart_noise: float = 5.0,
+    seg_weight: float = 100.0,
+    pose_weight: float = 10.0,
+    rate_weight: float = 2.0,
+    perturbation_budget: float = 30.0,
+    sensitivity_map_path: str | None = None,
+):
+    """Run GT-initialized sparse patch TTO on Modal T4.
+
+    Executes experiments/gt_sparse_tto.py as a subprocess. Results saved
+    to /results/<tag>/gt_sparse_tto/.
+
+    Args:
+        tag:                   experiment tag (volume subdirectory)
+        n_frames:              number of frames to process
+        n_patches:             insensitive patches per frame to optimize
+        patch_size:            patch size for sensitivity computation
+        n_restarts:            stochastic restart cycles
+        steps_per_restart:     L-BFGS steps per restart
+        lbfgs_lr:              L-BFGS learning rate
+        restart_noise:         noise magnitude for restarts
+        seg_weight:            SegNet preservation weight
+        pose_weight:           PoseNet preservation weight
+        rate_weight:           compressibility weight
+        perturbation_budget:   max per-pixel perturbation
+        sensitivity_map_path:  path to precomputed sensitivity map (optional)
+    """
+    import os
+    import subprocess
+    import time
+
+    vol_dir = f"/results/{tag}"
+    output_dir = f"{vol_dir}/gt_sparse_tto"
+    os.makedirs(output_dir, exist_ok=True)
+
+    print(f"=== GT-Sparse TTO | tag: {tag} ===")
+    print(f"  GPU: T4")
+    print(f"  Config: {n_patches} patches, {n_restarts} restarts x {steps_per_restart} steps")
+    print(f"  Output: {output_dir}")
+    print(f"  Start: {time.strftime('%Y-%m-%d %H:%M:%S')}")
+
+    cmd = [
+        "python", "/root/experiments/gt_sparse_tto.py",
+        "--device", "cuda",
+        "--n-frames", str(n_frames),
+        "--n-patches", str(n_patches),
+        "--patch-size", str(patch_size),
+        "--n-restarts", str(n_restarts),
+        "--steps-per-restart", str(steps_per_restart),
+        "--lbfgs-lr", str(lbfgs_lr),
+        "--restart-noise", str(restart_noise),
+        "--seg-weight", str(seg_weight),
+        "--pose-weight", str(pose_weight),
+        "--rate-weight", str(rate_weight),
+        "--perturbation-budget", str(perturbation_budget),
+        "--upstream", "/root/upstream",
+        "--output-dir", output_dir,
+        "--simulate-resize",
+    ]
+    if sensitivity_map_path:
+        cmd.extend(["--sensitivity-map", sensitivity_map_path])
+
+    env = {**os.environ}
+    result = subprocess.run(cmd, env=env)
+
+    results_vol.commit()
+    print(f"  [volume] Final commit done")
+
+    # Load results if available
+    results_file = os.path.join(output_dir, "results.json")
+    results_data = None
+    if os.path.exists(results_file):
+        import json
+        with open(results_file) as f:
+            results_data = json.load(f)
+
+    return {
+        "exit_code": result.returncode,
+        "output_dir": output_dir,
+        "results": results_data,
+    }
+
+
+@app.local_entrypoint()
+def gt_sparse_tto_entry(
+    tag: str = "gt_sparse_tto",
+    n_frames: int = 1200,
+    n_patches: int = 50,
+    n_restarts: int = 5,
+    steps_per_restart: int = 200,
+    seg_weight: float = 100.0,
+    pose_weight: float = 10.0,
+    rate_weight: float = 2.0,
+):
+    """Launch GT-initialized sparse patch TTO on Modal T4.
+
+    Usage:
+        .venv/bin/modal run src/tac/deploy/modal/modal_asymmetric_warp_deploy.py::app.gt_sparse_tto_entry
+        .venv/bin/modal run src/tac/deploy/modal/modal_asymmetric_warp_deploy.py::app.gt_sparse_tto_entry --n-patches 100 --n-restarts 10
+    """
+    from tac.cost_tracker import print_cost_estimate
+
+    print(f"=== GT-Sparse TTO -> Modal T4 ===")
+    print(f"  Tag: {tag}")
+    print(f"  Config: {n_patches} patches, {n_restarts} restarts x {steps_per_restart} steps")
+    print(f"  Weights: seg={seg_weight}, pose={pose_weight}, rate={rate_weight}")
+
+    print("\n--- Cost Estimate ---")
+    print_cost_estimate(gpu="t4", estimated_hours=2.0, platform="modal")
+
+    print("\nLaunching GT-Sparse TTO...")
+    result = gt_sparse_tto_eval.remote(
+        tag=tag,
+        n_frames=n_frames,
+        n_patches=n_patches,
+        n_restarts=n_restarts,
+        steps_per_restart=steps_per_restart,
+        seg_weight=seg_weight,
+        pose_weight=pose_weight,
+        rate_weight=rate_weight,
+    )
+
+    status = "OK" if result["exit_code"] == 0 else f"FAILED (exit {result['exit_code']})"
+    print(f"\n  Result: {status}")
+    print(f"  Output: {result['output_dir']}")
+
+    if result.get("results"):
+        r = result["results"]
+        if "optimized" in r:
+            opt = r["optimized"]
+            print(f"\n=== GT-Sparse TTO Results ===")
+            print(f"  Score: {opt['score']:.6f}")
+            print(f"    Pose: {opt['pose']:.6f}")
+            print(f"    Seg:  {opt['seg']:.6f}")
+
+    print(f"\nDownload: .venv/bin/modal volume get {RESULTS_VOL} {tag}/gt_sparse_tto/ ./gt_sparse_tto_{tag}/")
+
+
+# ── Joint Pair Generator: Modal deployment ───────────────────────────────
+
+
+@app.function(
+    image=image,
+    gpu="T4",
+    timeout=21600,  # 6h for full training
+    volumes={"/results": results_vol},
+    memory=16384,
+)
+def joint_pair_train(
+    tag: str,
+    epochs: int = 5000,
+    base_ch: int = 48,
+    lr: float = 1e-3,
+    seg_weight: float = 100.0,
+    pose_weight: float = 10.0,
+    tv_weight: float = 1.0,
+    extra_args: str = "",
+):
+    """Train Joint Pair Generator (Y-shaped U-Net) on Modal T4.
+
+    Executes experiments/train_joint_pair.py as a subprocess.
+
+    Args:
+        tag:         experiment tag (results saved to /results/<tag>/joint_pair/)
+        epochs:      number of training epochs
+        base_ch:     base channel count for the U-Net
+        lr:          learning rate
+        seg_weight:  SegNet loss weight
+        pose_weight: PoseNet loss weight
+        tv_weight:   total variation weight
+        extra_args:  additional CLI arguments (space-separated string)
+    """
+    import os
+    import subprocess
+    import time
+
+    vol_dir = f"/results/{tag}"
+    output_dir = f"{vol_dir}/joint_pair"
+    os.makedirs(output_dir, exist_ok=True)
+
+    print(f"=== Joint Pair Generator Training | tag: {tag} ===")
+    print(f"  GPU: T4, epochs: {epochs}, base_ch: {base_ch}")
+    print(f"  Output: {output_dir}")
+    print(f"  Start: {time.strftime('%Y-%m-%d %H:%M:%S')}")
+
+    cmd = [
+        "python", "/root/experiments/train_joint_pair.py",
+        "--epochs", str(epochs),
+        "--base-ch", str(base_ch),
+        "--lr", str(lr),
+        "--seg-weight", str(seg_weight),
+        "--pose-weight", str(pose_weight),
+        "--tv-weight", str(tv_weight),
+        "--device", "cuda",
+    ]
+    if extra_args:
+        cmd.extend(extra_args.split())
+
+    # Route results to volume via env var (train_joint_pair.py reads TAC_RESULTS_DIR)
+    env = {**os.environ, "TAC_RESULTS_DIR": output_dir}
+    result = _run_with_periodic_commits(cmd, env, commit_interval=300)
+
+    return {
+        "exit_code": result.returncode,
+        "output_dir": output_dir,
+    }
+
+
+@app.local_entrypoint()
+def joint_pair_train_entry(
+    tag: str = "joint_pair_v1",
+    epochs: int = 5000,
+    base_ch: int = 48,
+    extra_args: str = "",
+):
+    """Launch Joint Pair Generator training on Modal T4.
+
+    Usage:
+        .venv/bin/modal run src/tac/deploy/modal/modal_asymmetric_warp_deploy.py::app.joint_pair_train_entry
+        .venv/bin/modal run src/tac/deploy/modal/modal_asymmetric_warp_deploy.py::app.joint_pair_train_entry --tag joint_pair_v2 --epochs 10000
+    """
+    from tac.cost_tracker import print_cost_estimate
+
+    print(f"=== Joint Pair Generator Training -> Modal T4 ===")
+    print(f"  Tag: {tag}, epochs: {epochs}, base_ch: {base_ch}")
+
+    print("\n--- Cost Estimate ---")
+    print_cost_estimate(gpu="t4", estimated_hours=4.0, platform="modal")
+
+    print("\nLaunching training...")
+    result = joint_pair_train.remote(
+        tag=tag,
+        epochs=epochs,
+        base_ch=base_ch,
+        extra_args=extra_args,
+    )
+
+    status = "OK" if result["exit_code"] == 0 else f"FAILED (exit {result['exit_code']})"
+    print(f"\n  Result: {status}")
+    print(f"  Output: {result['output_dir']}")
+    print(f"\nDownload: .venv/bin/modal volume get {RESULTS_VOL} {tag}/joint_pair/ ./joint_pair_{tag}/")
