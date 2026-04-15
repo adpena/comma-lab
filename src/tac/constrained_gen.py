@@ -30,6 +30,7 @@ from __future__ import annotations
 
 import json
 import logging
+import math
 import struct
 from pathlib import Path
 from typing import Any, Callable
@@ -1529,6 +1530,7 @@ def coupled_trajectory_optimize(
     expected_pose_embeddings: torch.Tensor | None = None,
     seg_odd_only: bool = False,
     antialias_weight: float = 0.0,
+    lr_schedule: str = "constant",
     **cfg,
 ) -> torch.Tensor:
     """Jointly optimize ALL frames to satisfy coupled PoseNet constraints.
@@ -1581,6 +1583,10 @@ def coupled_trajectory_optimize(
             (rgb_to_yuv6 averages 2x2 blocks), so sub-block pixel noise is
             invisible to PoseNet but costs bits under any codec. Recommended
             0.1-0.5 for TTO mode. Default 0.0 (disabled, backward compatible).
+        lr_schedule: learning rate schedule. "constant" = fixed LR (default).
+            "cosine" = warmup from lr/10 over 50 steps, then cosine decay
+            from lr to lr/100 over remaining steps. Fridrich optimization
+            theory: coarse alignment early, fine refinement late.
         **cfg: additional config (ignored, for profile compatibility).
 
     Returns:
@@ -1634,6 +1640,26 @@ def coupled_trajectory_optimize(
 
     # Single optimizer over ALL frame pixels
     optimizer = torch.optim.Adam([frames], lr=lr)
+
+    # LR scheduler: cosine annealing with warmup for fine-grained control
+    scheduler = None
+    if lr_schedule == "cosine":
+        warmup_steps = min(50, num_steps // 5)
+
+        def _cosine_with_warmup(step: int) -> float:
+            """LR multiplier: warmup from 0.1x to 1.0x, then cosine decay to 0.01x."""
+            if step < warmup_steps:
+                # Linear warmup: lr/10 -> lr
+                return 0.1 + 0.9 * (step / max(warmup_steps, 1))
+            # Cosine decay: lr -> lr/100
+            progress = (step - warmup_steps) / max(num_steps - warmup_steps - 1, 1)
+            return 0.01 + 0.99 * 0.5 * (1.0 + math.cos(math.pi * progress))
+
+        scheduler = torch.optim.lr_scheduler.LambdaLR(optimizer, _cosine_with_warmup)
+        logger.info("  [coupled-4dvar] LR schedule: cosine with %d-step warmup "
+                     "(%.4f -> %.4f -> %.6f)", warmup_steps, lr * 0.1, lr, lr * 0.01)
+    elif lr_schedule != "constant":
+        raise ValueError(f"Unknown lr_schedule: {lr_schedule!r}. Use 'constant' or 'cosine'.")
 
     # Track best PoseNet snapshot (Lagrangian transient strategy: the optimizer
     # hits a PoseNet minimum around step 300-500 before compressibility diverges it).
@@ -1693,6 +1719,8 @@ def coupled_trajectory_optimize(
 
         total_loss.backward()
         optimizer.step()
+        if scheduler is not None:
+            scheduler.step()
 
         # Project back to valid pixel range
         with torch.no_grad():
