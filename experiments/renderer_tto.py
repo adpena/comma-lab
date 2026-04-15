@@ -71,6 +71,10 @@ def parse_args() -> argparse.Namespace:
     p.add_argument("--seg-odd-only", action="store_true",
                    help="Only compute SegNet loss on odd-indexed frames (scorer-matched). "
                         "Frees even frames for pure PoseNet optimization.")
+    p.add_argument("--antialias-weight", type=float, default=0.0,
+                   help="Weight for 2x2-block variance penalty. PoseNet operates on "
+                        "2x-downsampled YUV, so sub-block noise is invisible to PoseNet "
+                        "but costs bits. Recommended 0.1-0.5. Default 0.0 (disabled).")
     return p.parse_args()
 
 
@@ -483,6 +487,7 @@ def run_batched_tto(
     use_embedding_loss: bool = False,
     pose_embeddings: torch.Tensor | None = None,
     seg_odd_only: bool = False,
+    antialias_weight: float = 0.0,
 ) -> torch.Tensor:
     """Run TTO in batches of pairs to avoid OOM.
 
@@ -510,6 +515,7 @@ def run_batched_tto(
         use_embedding_loss: use PoseNet embedding MSE instead of pose output MSE.
         pose_embeddings: (P, D) GT embeddings. Required if use_embedding_loss.
         seg_odd_only: only compute SegNet loss on odd frames (scorer-matched).
+        antialias_weight: weight for 2x2-block variance penalty (PoseNet-invisible noise).
 
     Returns:
         (N, H, W, 3) float tensor of TTO-refined frames in [0, 255].
@@ -587,6 +593,7 @@ def run_batched_tto(
             use_embedding_loss=use_embedding_loss,
             expected_pose_embeddings=batch_embeddings,
             seg_odd_only=seg_odd_only,
+            antialias_weight=antialias_weight,
         )
         dt = time.monotonic() - t0
 
@@ -640,7 +647,8 @@ def main():
           f"compress_weight={args.compress_weight}")
     print(f"[config] early_stop_patience={args.early_stop_patience}, "
           f"use_embedding_loss={args.use_embedding_loss}, "
-          f"seg_odd_only={args.seg_odd_only}")
+          f"seg_odd_only={args.seg_odd_only}, "
+          f"antialias_weight={args.antialias_weight}")
     print(f"[config] checkpoint={args.checkpoint}")
     print(f"[config] video={video_path}")
     print(f"[config] output_dir={output_dir}")
@@ -761,6 +769,7 @@ def main():
         use_embedding_loss=args.use_embedding_loss,
         pose_embeddings=pose_embeddings,
         seg_odd_only=args.seg_odd_only,
+        antialias_weight=args.antialias_weight,
     )
     t_tto = time.monotonic() - t0
     print(f"\n[7/8] TTO completed in {t_tto:.1f}s ({t_tto / args.n_frames:.2f}s/frame)")
@@ -824,6 +833,7 @@ def main():
             "early_stop_patience": args.early_stop_patience,
             "use_embedding_loss": args.use_embedding_loss,
             "seg_odd_only": args.seg_odd_only,
+            "antialias_weight": args.antialias_weight,
         },
         "timing": {
             "total_s": round(t_total, 2),

@@ -1397,6 +1397,7 @@ def tto_eval(
     use_embedding_loss: bool = False,
     seg_odd_only: bool = False,
     early_stop_patience: int = 150,
+    antialias_weight: float = 0.0,
 ):
     """Run renderer+TTO on Modal T4.
 
@@ -1459,6 +1460,8 @@ def tto_eval(
         cmd.append("--use-embedding-loss")
     if seg_odd_only:
         cmd.append("--seg-odd-only")
+    if antialias_weight > 0.0:
+        cmd.extend(["--antialias-weight", str(antialias_weight)])
 
     env = {**os.environ, "PYTHONPATH": "/root/src:/root/upstream"}
     print(f"  Command: {' '.join(cmd)}")
@@ -1556,6 +1559,7 @@ def tto_entry(
     use_embedding_loss: bool = False,
     seg_odd_only: bool = False,
     early_stop_patience: int = 150,
+    antialias_weight: float = 0.0,
 ):
     """Launch renderer+TTO on Modal T4.
 
@@ -1573,7 +1577,7 @@ def tto_entry(
     print(f"  TTO steps: {tto_steps}, lr: {tto_lr}, batch_pairs: {batch_pairs}")
     print(f"  Weights: seg={seg_weight}, pose={pose_weight}, compress={compress_weight}")
     print(f"  Embedding loss: {use_embedding_loss}, SegNet odd-only: {seg_odd_only}")
-    print(f"  Early stop patience: {early_stop_patience}")
+    print(f"  Early stop patience: {early_stop_patience}, Antialias: {antialias_weight}")
 
     print("\n--- Cost Estimate ---")
     print_cost_estimate(gpu="t4", estimated_hours=1.0, platform="modal")
@@ -1591,6 +1595,7 @@ def tto_entry(
         use_embedding_loss=use_embedding_loss,
         seg_odd_only=seg_odd_only,
         early_stop_patience=early_stop_patience,
+        antialias_weight=antialias_weight,
     )
 
     status = "OK" if result["exit_code"] == 0 else f"FAILED (exit {result['exit_code']})"

@@ -509,15 +509,27 @@ def compute_posenet_embedding_constraint_loss(
     return total_loss / max(n_batches, 1)
 
 
-def compute_compressibility_loss(frames: torch.Tensor) -> torch.Tensor:
-    """Total variation + temporal smoothness for compressibility.
+def compute_compressibility_loss(
+    frames: torch.Tensor,
+    antialias_weight: float = 0.0,
+) -> torch.Tensor:
+    """Total variation + temporal smoothness + anti-aliasing for compressibility.
 
     Smooth frames compress better under any codec. This loss encourages:
     1. Spatial smoothness: small pixel differences between neighbors.
     2. Temporal smoothness: small differences between consecutive frames.
+    3. Anti-aliasing (optional): penalizes sub-2x2 pixel noise that is
+       invisible to PoseNet (which operates on 2x-downsampled YUV via
+       rgb_to_yuv6) but harms codec compressibility and SegNet.
+
+    The anti-aliasing term computes the variance within each 2x2 block.
+    If all pixels in a 2x2 block are identical, PoseNet sees the same
+    value regardless — so any within-block variation is wasted bits.
 
     Args:
         frames: (N, H, W, 3) float tensor in [0, 255].
+        antialias_weight: weight for the 2x2 block variance penalty.
+            0.0 disables it (backward compatible). Recommended: 0.1-0.5.
 
     Returns:
         Scalar compressibility loss (lower = more compressible).
@@ -534,7 +546,22 @@ def compute_compressibility_loss(frames: torch.Tensor) -> torch.Tensor:
     else:
         temporal = torch.tensor(0.0, device=frames.device, dtype=frames.dtype)
 
-    return spatial_tv + 0.5 * temporal
+    loss = spatial_tv + 0.5 * temporal
+
+    # Anti-aliasing: penalize within-2x2-block variance.
+    # PoseNet's rgb_to_yuv6 averages 2x2 blocks, so sub-block detail is
+    # invisible to PoseNet but costs bits under any codec.
+    if antialias_weight > 0.0:
+        N, H, W, C = frames.shape
+        # Reshape to (N, H//2, 2, W//2, 2, C) to access 2x2 blocks
+        H2, W2 = H // 2 * 2, W // 2 * 2  # ensure even dims
+        cropped = frames[:, :H2, :W2, :]
+        blocks = cropped.reshape(N, H2 // 2, 2, W2 // 2, 2, C)
+        block_mean = blocks.mean(dim=(2, 4), keepdim=True)  # (N, H/2, 1, W/2, 1, C)
+        block_var = (blocks - block_mean).pow(2).mean()
+        loss = loss + antialias_weight * block_var
+
+    return loss
 
 
 def estimate_expected_pose(
@@ -1498,6 +1525,7 @@ def coupled_trajectory_optimize(
     use_embedding_loss: bool = False,
     expected_pose_embeddings: torch.Tensor | None = None,
     seg_odd_only: bool = False,
+    antialias_weight: float = 0.0,
     **cfg,
 ) -> torch.Tensor:
     """Jointly optimize ALL frames to satisfy coupled PoseNet constraints.
@@ -1545,6 +1573,11 @@ def coupled_trajectory_optimize(
         seg_odd_only: if True, only compute SegNet loss on odd-indexed frames
             (frame 2k+1), matching official scorer behavior. Frees even frames
             for pure PoseNet optimization.
+        antialias_weight: weight for 2x2-block variance penalty in the
+            compressibility loss. PoseNet operates on 2x-downsampled YUV
+            (rgb_to_yuv6 averages 2x2 blocks), so sub-block pixel noise is
+            invisible to PoseNet but costs bits under any codec. Recommended
+            0.1-0.5 for TTO mode. Default 0.0 (disabled, backward compatible).
         **cfg: additional config (ignored, for profile compatibility).
 
     Returns:
@@ -1613,7 +1646,7 @@ def coupled_trajectory_optimize(
                 )
 
         # --- Compressibility: anneal weight to prevent PoseNet divergence ---
-        compress_loss = compute_compressibility_loss(frames)
+        compress_loss = compute_compressibility_loss(frames, antialias_weight=antialias_weight)
         progress = step / max(num_steps - 1, 1)
 
         if warm_start:
