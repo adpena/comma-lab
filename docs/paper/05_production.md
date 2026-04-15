@@ -46,11 +46,11 @@ The most natural deployment. comma's servers hold petabytes of driving video fro
 
 1. Decode the existing H.265 video
 2. Run SegNet to extract 5-class semantic masks
-3. Encode masks as AV1 monochrome video (~30 KB per 60 seconds)
+3. Encode masks as AV1 monochrome video (~60--80 KB per 60 seconds at 1/8 scale)
 4. Train or fine-tune the renderer against the specific route's scorer outputs (or use a fleet-wide pretrained renderer)
-5. Store: masks (30 KB) + renderer weights (150 KB) + metadata
+5. Store: masks (~79 KB at 1/8 scale) + renderer weights (150 KB) + metadata
 
-**Compression ratio.** The original H.265 video for 60 seconds at CRF 23 is approximately 2.5 MB. Our archive (masks + renderer weights) is 150--180 KB. This is a 14--17x compression ratio over the already-compressed H.265, or roughly 200x over raw video (1200 frames x 1164 x 874 x 3 bytes = ~2.9 GB uncompressed).
+**Compression ratio.** The original H.265 video for 60 seconds at CRF 23 is approximately 2.5 MB. Our archive (masks + renderer weights) is 184 KB (183,780 bytes measured). This is a ~14x compression ratio over the already-compressed H.265, or roughly 200x over raw video (1200 frames x 1164 x 874 x 3 bytes = ~2.9 GB uncompressed).
 
 **Reconstruction quality.** Auth score 0.87 (renderer only) or 0.43 (renderer + TTO). The 0.87 figure uses only a forward pass through the renderer --- no iterative optimization --- and runs in approximately 2 seconds on a T4 for 1200 frames. This means the perception models' outputs on reconstructed frames differ from outputs on original frames by less than 1% (SegNet cross-entropy 0.0022, PoseNet L2 0.031).
 
@@ -91,7 +91,9 @@ Estimated per-frame latency:
 | Upscale (384x512 -> 1164x874) | 0.5 ms | 2--4 ms | 1--2 ms |
 | **Total per frame** | **3.0 ms** | **12--24 ms** | **5--12 ms** |
 
-At 20 fps, the frame budget is 50 ms. Even the older Snapdragon 845 has sufficient headroom for real-time renderer-based playback at full frame rate. The newer Snapdragon 8 Gen 2 (comma four candidate SoC) would leave 38--45 ms of budget for other tasks.
+*Note: Snapdragon NPU latency estimates are analytical projections based on FLOP counts and published Snapdragon 845/8 Gen 2 NPU throughput specifications; no on-device measurements were performed.*
+
+At 20 fps, the frame budget is 50 ms. Even the older Snapdragon 845 has sufficient projected headroom for real-time renderer-based playback at full frame rate. The newer Snapdragon 8 Gen 2 (comma four candidate SoC) would leave 38--45 ms of budget for other tasks.
 
 **Limitation.** TTO is not feasible on-device. The 500-step optimization requires scorer forward and backward passes per step, totaling ~3 hours on T4. On mobile, this would take days. On-device reconstruction is renderer-only (auth 0.87 quality), not renderer+TTO (auth 0.43).
 
@@ -118,7 +120,7 @@ The critical observation: the renderer is the fixed cost (~150 KB, ~3 minutes), 
 
 ### Mask-based compression
 
-Semantic masks are a natural intermediate representation for driving video. A 5-class segmentation at 384x512 resolution, encoded as AV1 monochrome video at CRF 30, compresses 60 seconds (1200 frames) into 30--50 KB. This is 50--80x smaller than the equivalent H.265 video. The masks retain the scene's spatial structure --- road layout, lane boundaries, vehicle positions --- while discarding texture, lighting, and other perceptually rich but task-irrelevant detail.
+Semantic masks are a natural intermediate representation for driving video. A 5-class segmentation at 48x64 (1/8 scale), encoded as AV1 monochrome video at CRF 20, compresses 60 seconds (1200 frames) into approximately 79 KB. At full 384x512 resolution, the mask video is approximately 2 MB. The 1/8 scale encoding is 30--40x smaller than the equivalent H.265 video while preserving sufficient spatial structure for the renderer. The masks retain the scene's spatial structure --- road layout, lane boundaries, vehicle positions --- while discarding texture, lighting, and other perceptually rich but task-irrelevant detail.
 
 For fleet data pipelines, masks have utility beyond compression: they serve directly as training labels for SegNet updates, as input features for route analysis and scene classification, and as a compact scene descriptor for retrieval. Storing masks alongside or instead of video serves multiple downstream consumers.
 

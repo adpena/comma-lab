@@ -5,7 +5,8 @@ The GPU-lane pipeline replaces traditional video compression with:
 
 Segmentation masks are ideal for AV1: discrete values (0-4), enormous spatial
 coherence, near-zero temporal change within road segments. Typical AV1 encoding
-of 1200 frames of masks at 512x384 fits in ~200KB at CRF 20.
+of 1200 frames of masks at 48x64 (1/8 scale) fits in ~60-80KB at CRF 20;
+full 384x512 resolution is ~2MB.
 
 Codec options (pass codec= to encode/decode functions):
     - "av1": AV1 via ffmpeg (default, lossy, ~33KB at CRF 20)

@@ -433,7 +433,9 @@ fi
 # ── Pre-extract SegNet masks (contest compliance: Yousfi PR #35) ──────
 # Extract masks at compress time so inflate_renderer.py never loads SegNet.
 # Without this, SegNet (~48MB) would need to be in archive.zip (rate catastrophe).
-# The mask video is typically ~30-50KB for 1200 frames at 384x512.
+# The mask video is typically ~60-80KB for 1200 frames at 48x64 (1/8 scale);
+# ~2MB at full 384x512. Verification (--verify) is mandatory: if roundtrip
+# accuracy falls below 99.9%, compress_masks.py retries at CRF 10.
 MASK_PREEXTRACT="${MASK_PREEXTRACT:-1}"
 MASK_CRF="${MASK_CRF:-20}"
 MASK_BATCH_SIZE="${MASK_BATCH_SIZE:-8}"
@@ -443,6 +445,11 @@ if [ "$MASK_PREEXTRACT" = "1" ]; then
   MASKS_OUTPUT="$ARCHIVE_DIR/masks.mkv"
   if [ -f "$GT_VIDEO_PATH" ]; then
     echo "Pre-extracting SegNet masks from GT video ..."
+    # --verify is mandatory: it checks >99.9% roundtrip accuracy of the
+    # AV1 lossy encoding.  If verification fails, compress_masks.py retries
+    # at CRF 10 automatically.  If that also fails, the pipeline aborts.
+    # Without verification, AV1 lossy rounding at class boundaries could
+    # silently flip class labels, corrupting SegNet input at inflate time.
     "$UV_BIN" run python "$SELF_DIR/compress_masks.py" \
       --gt-video "$GT_VIDEO_PATH" \
       --upstream "$UPSTREAM_ROOT" \

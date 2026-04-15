@@ -12,7 +12,7 @@ masks at compress time, inflate_renderer.py no longer needs to load SegNet
 
 The mask video uses 5-class to grayscale mapping (0->0, 1->63, 2->127,
 3->191, 4->255) and AV1 monochrome encoding at CRF 20. Typical size:
-~30-50KB for 1200 frames at 384x512.
+~60-80KB for 1200 frames at 48x64 (1/8 scale); ~2MB at full 384x512.
 
 Usage:
     python compress_masks.py \\
@@ -25,6 +25,7 @@ Usage:
 from __future__ import annotations
 
 import argparse
+import os
 import sys
 import time
 from pathlib import Path
@@ -308,8 +309,15 @@ def main():
     )
     parser.add_argument(
         "--upstream",
-        required=True,
-        help="Path to upstream challenge root",
+        default=os.environ.get(
+            "TAC_UPSTREAM_DIR",
+            os.environ.get(
+                "UPSTREAM_ROOT",
+                os.environ.get("COMMA_CHALLENGE_ROOT", ""),
+            ),
+        ),
+        help="Path to upstream challenge root (or set TAC_UPSTREAM_DIR / "
+             "UPSTREAM_ROOT / COMMA_CHALLENGE_ROOT env var)",
     )
     parser.add_argument(
         "--output",
@@ -346,6 +354,11 @@ def main():
     )
 
     args = parser.parse_args()
+    if not args.upstream:
+        parser.error(
+            "--upstream is required (or set TAC_UPSTREAM_DIR / "
+            "UPSTREAM_ROOT / COMMA_CHALLENGE_ROOT env var)"
+        )
     verify = not args.no_verify
 
     compress_masks(
