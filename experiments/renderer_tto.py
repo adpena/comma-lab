@@ -82,6 +82,21 @@ def parse_args() -> argparse.Namespace:
                    help="LR schedule for TTO. 'constant' = fixed LR (default). "
                         "'cosine' = warmup 50 steps (0.001->peak_lr) then cosine "
                         "decay to 0.0001. Peak LR = --tto-lr value.")
+    p.add_argument("--segnet-loss-mode", type=str, default="xent",
+                   choices=["xent", "hinge"],
+                   help="SegNet loss function. 'xent' = cross-entropy (default). "
+                        "'hinge' = logit-margin hinge loss focusing gradient on "
+                        "boundary pixels at risk of argmax flip (2-5x more efficient).")
+    p.add_argument("--hinge-margin", type=float, default=0.5,
+                   help="Margin for hinge loss (only used with --segnet-loss-mode hinge).")
+    p.add_argument("--tto-phase2-segnet-only", action="store_true",
+                   help="After Phase 1 early-stops, run Phase 2: SegNet-only "
+                        "optimization on odd frames. Freezes even frames and "
+                        "PoseNet, polishes SegNet agreement without disturbing "
+                        "the PoseNet optimum.")
+    p.add_argument("--phase2-steps", type=int, default=200,
+                   help="Number of Phase 2 SegNet-only steps (only used with "
+                        "--tto-phase2-segnet-only).")
     return p.parse_args()
 
 
@@ -281,6 +296,10 @@ def run_batched_tto(
     seg_odd_only: bool = False,
     antialias_weight: float = 0.0,
     lr_schedule: str = "constant",
+    segnet_loss_mode: str = "xent",
+    hinge_margin: float = 0.5,
+    phase2_segnet_only: bool = False,
+    phase2_steps: int = 200,
 ) -> torch.Tensor:
     """Run TTO in batches of pairs to avoid OOM.
 
@@ -309,6 +328,10 @@ def run_batched_tto(
         pose_embeddings: (P, D) GT embeddings. Required if use_embedding_loss.
         seg_odd_only: only compute SegNet loss on odd frames (scorer-matched).
         antialias_weight: weight for 2x2-block variance penalty (PoseNet-invisible noise).
+        segnet_loss_mode: SegNet loss function (``"xent"`` or ``"hinge"``).
+        hinge_margin: margin for hinge loss.
+        phase2_segnet_only: run Phase 2 SegNet-only after Phase 1 early-stops.
+        phase2_steps: number of Phase 2 steps.
 
     Returns:
         (N, H, W, 3) float tensor of TTO-refined frames in [0, 255].
@@ -388,6 +411,10 @@ def run_batched_tto(
             seg_odd_only=seg_odd_only,
             antialias_weight=antialias_weight,
             lr_schedule=lr_schedule,
+            segnet_loss_mode=segnet_loss_mode,
+            hinge_margin=hinge_margin,
+            phase2_segnet_only=phase2_segnet_only,
+            phase2_steps=phase2_steps,
         )
         dt = time.monotonic() - t0
 
@@ -443,7 +470,11 @@ def main():
           f"use_embedding_loss={args.use_embedding_loss}, "
           f"seg_odd_only={args.seg_odd_only}, "
           f"antialias_weight={args.antialias_weight}, "
-          f"lr_schedule={args.lr_schedule}")
+          f"lr_schedule={args.lr_schedule}, "
+          f"segnet_loss_mode={args.segnet_loss_mode}, "
+          f"hinge_margin={args.hinge_margin}, "
+          f"phase2_segnet_only={args.tto_phase2_segnet_only}, "
+          f"phase2_steps={args.phase2_steps}")
     print(f"[config] checkpoint={args.checkpoint}")
     print(f"[config] video={video_path}")
     print(f"[config] output_dir={output_dir}")
@@ -556,6 +587,10 @@ def main():
         seg_odd_only=args.seg_odd_only,
         antialias_weight=args.antialias_weight,
         lr_schedule=args.lr_schedule,
+        segnet_loss_mode=args.segnet_loss_mode,
+        hinge_margin=args.hinge_margin,
+        phase2_segnet_only=args.tto_phase2_segnet_only,
+        phase2_steps=args.phase2_steps,
     )
     t_tto = time.monotonic() - t0
     print(f"\n[7/8] TTO completed in {t_tto:.1f}s ({t_tto / args.n_frames:.2f}s/frame)")
@@ -621,6 +656,10 @@ def main():
             "seg_odd_only": args.seg_odd_only,
             "antialias_weight": args.antialias_weight,
             "lr_schedule": args.lr_schedule,
+            "segnet_loss_mode": args.segnet_loss_mode,
+            "hinge_margin": args.hinge_margin,
+            "phase2_segnet_only": args.tto_phase2_segnet_only,
+            "phase2_steps": args.phase2_steps,
             "simulate_resize": args.simulate_resize,
         },
         "timing": {
