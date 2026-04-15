@@ -1,4 +1,4 @@
-# Current Focus -- 2026-04-15T05:45:00Z
+# Current Focus -- 2026-04-15T07:00:00Z
 
 ## Scores
 - **Renderer baseline**: auth=0.87 (seg=0.21, pose=0.56, rate=0.10)
@@ -44,12 +44,41 @@ Score = 100*seg + sqrt(10*pose) + 25*rate < 0.50
 2. Archive compression: ZIP_STORED -> ZIP_DEFLATED (-20% archive size)
 3. renderer_tto.py: deduplicated 210 lines via tac.scorer imports
 
+## CRITICAL BUG FOUND: TTO PoseNet Gradients Were ZERO (2026-04-15)
+
+**Root cause**: Upstream `frame_utils.py:rgb_to_yuv6()` is decorated with `@torch.no_grad()`.
+PoseNet's `preprocess_input()` calls this function. The training pipeline had a workaround
+(patching the scorer code path), but the TTO pipeline loaded scorers through a different
+code path that never received the fix. Result: every TTO run in the entire project history
+optimized with ZERO PoseNet gradients. The optimizer was completely blind to PoseNet.
+
+**Discovery**: Skunkworks council adversarial review. The Contrarian demanded: "if 50 steps
+make PoseNet WORSE, something is fundamentally wrong." Hotz traced the call chain from
+`preprocess_input()` through `rgb_to_yuv6()` to the `@torch.no_grad()` decorator. 13-0
+unanimous vote to fix immediately.
+
+**Impact**: All TTO scores (v1 through v4) were running with only SegNet+rate gradients.
+PoseNet improvements were pure noise. The auth=0.87 renderer baseline is unaffected (training
+pipeline had the fix). But TTO on top of the renderer — our primary path to sub-0.50 — was
+fundamentally broken.
+
+**Projected score with fix**: Renderer auth=0.87 has PoseNet=0.031 (35% of total score).
+TTO with actual PoseNet gradients could reduce PoseNet by 5-10x (based on SegNet's proven
+TTO response). Projected auth: 0.87 -> ~0.35.
+
+**Lesson**: A single `@torch.no_grad()` decorator in a dependency silently invalidated an
+entire optimization pipeline. The bug was invisible because: (1) TTO still reduced SegNet
+(masking the PoseNet failure), (2) proxy scores improved (SegNet-dominated), (3) no gradient
+norm monitoring was in place for individual scorer components.
+
 ## Key Insights
 1. Embedding loss is DEAD (v3 proved PoseNet got WORSE with embedding MSE)
 2. seg_odd_only already implemented and tested
 3. PoseNet operates on 2x-downsampled YUV -> sub-2x2 noise is invisible
 4. Archive already at 4-bit quantization (150KB), DEFLATE saves ~30KB more
 5. Rate contribution: 0.10 -> 0.08 with DEFLATE (saves 0.02 points)
+6. **TTO PoseNet gradients were ZERO** -- all TTO experiments were SegNet-only optimizations
+7. Fix: ensure `rgb_to_yuv6()` runs WITHOUT `@torch.no_grad()` in TTO scorer loading path
 
 ## Deadline
 - May 3, 2026 (~18 days remaining)
