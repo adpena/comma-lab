@@ -45,14 +45,19 @@ Score = 100*seg + sqrt(10*pose) + 25*rate < 0.20
   - Success: pose_dist < 0.005 (significant reduction)
   - Kill: pose_dist > 0.015 (no improvement over v5a)
 
-## Archive Compression Analysis
-- Current: 150KB (ZIP_STORED), 4-bit quantized, 285K params
-- LZMA: 113KB (-25%) -- easy win, no quality loss
-- DEFLATE: 119KB (-21%) -- simpler, nearly as good
-- 3-bit: ~112KB (quality risk, needs testing)
-- 2-bit: ~76KB (likely too destructive)
-- Rate impact: negligible (rate is ~10% of total score, compression saves <0.02 points)
-- Verdict: apply DEFLATE/LZMA as free improvement, but PoseNet/SegNet dominate score
+## Archive Compression Analysis -- UPDATED 2026-04-15
+- Old: 150,769 bytes (ZIP_STORED)
+- New: 119,160 bytes (ZIP_DEFLATED level 9) -- APPLIED
+- LZMA: 112,794 bytes (-25%) -- not supported by system `unzip` (contest uses `unzip`)
+- BZIP2: 124,538 bytes -- not supported by system `unzip`
+- Rate term improvement: 0.1004 -> 0.0793 (saves 0.0210 on score) -- FREE WIN
+- zstd-19: 117,089 bytes -- would need to be stored inside a zip wrapper, marginal gain
+- FP4 data is already dense (256 unique byte values, 0.3% zeros) -- hard to compress further
+
+## CRITICAL: Contest Compliance Issues
+1. **Auth eval bypasses inflate.sh**: Our auth_eval() directly generates frames, never tests the actual submission pipeline. Added `_run_contest_compliant_auth_eval()` to test full pipeline.
+2. **SegNet weights at inflate time**: inflate_renderer.py loads SegNet from upstream/models/ to extract masks. Under Yousfi's rule (PR#35), SegNet weights (~48MB) would need to be in archive.zip. Rate term would go from 0.08 to ~32 (catastrophic). Must switch to pre-extracted masks in archive like mask2mask does.
+3. **Archive.zip was ZIP_STORED**: Fixed to ZIP_DEFLATED level 9 (saves 0.021 on score).
 
 ## PoseNet Sensitivity Map
 - Running locally on MPS with 20 frames (quick test)
