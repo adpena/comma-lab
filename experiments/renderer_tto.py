@@ -41,6 +41,8 @@ from pathlib import Path
 import torch
 import torch.nn.functional as F
 
+from tac.scorer import compute_proxy_score, extract_gt_masks, extract_gt_pose_targets
+
 
 def parse_args() -> argparse.Namespace:
     p = argparse.ArgumentParser(
@@ -114,10 +116,6 @@ def load_renderer(checkpoint_path: str, device: torch.device) -> torch.nn.Module
     n_params = sum(p.numel() for p in model.parameters())
     print(f"[renderer] Loaded {n_params:,} params from {checkpoint_path}")
     return model
-
-
-# Re-export from tac.scorer for backward compatibility
-from tac.scorer import extract_gt_masks, extract_gt_pose_targets
 
 
 def extract_gt_pose_embeddings(
@@ -240,8 +238,6 @@ def generate_renderer_frames(
 
     return torch.cat(all_frames, dim=0).float()
 
-
-from tac.scorer import compute_proxy_score
 
 
 def estimate_vram_mb(batch_pairs: int) -> float:

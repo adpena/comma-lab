@@ -26,7 +26,6 @@ from __future__ import annotations
 
 import argparse
 import json
-import math
 import time
 from pathlib import Path
 
@@ -34,14 +33,8 @@ import torch
 import torch.nn.functional as F
 
 
-def find_project_root() -> Path:
-    """Walk up from this file to find the project root (contains src/)."""
-    p = Path(__file__).resolve().parent
-    while p != p.parent:
-        if (p / "src").is_dir() and (p / "upstream").is_dir():
-            return p
-        p = p.parent
-    raise RuntimeError("Cannot find project root (expected src/ and upstream/ dirs)")
+from tac.scorer import compute_proxy_score
+from tac.utils import find_project_root
 
 
 def parse_args() -> argparse.Namespace:
@@ -64,53 +57,6 @@ def parse_args() -> argparse.Namespace:
     p.add_argument("--simulate-resize", action="store_true",
                    help="Simulate official scorer resolution round-trip")
     return p.parse_args()
-
-
-def compute_raft_flow(
-    frame1: torch.Tensor,
-    frame2: torch.Tensor,
-    device: torch.device,
-) -> torch.Tensor:
-    """Compute RAFT optical flow from frame1 to frame2.
-
-    Uses torchvision's RAFT implementation (pretrained on Sintel).
-
-    Args:
-        frame1: (H, W, 3) float tensor in [0, 255].
-        frame2: (H, W, 3) float tensor in [0, 255].
-        device: computation device.
-
-    Returns:
-        (2, H, W) float tensor of pixel-space flow (dx, dy).
-    """
-    from torchvision.models.optical_flow import raft_small, Raft_Small_Weights
-
-    # RAFT expects (B, 3, H, W) in [0, 1]
-    f1 = frame1.permute(2, 0, 1).unsqueeze(0).to(device) / 255.0  # (1, 3, H, W)
-    f2 = frame2.permute(2, 0, 1).unsqueeze(0).to(device) / 255.0
-
-    # RAFT needs input dims divisible by 8; pad if needed
-    _, _, H, W = f1.shape
-    pad_h = (8 - H % 8) % 8
-    pad_w = (8 - W % 8) % 8
-    if pad_h > 0 or pad_w > 0:
-        f1 = F.pad(f1, (0, pad_w, 0, pad_h), mode="replicate")
-        f2 = F.pad(f2, (0, pad_w, 0, pad_h), mode="replicate")
-
-    weights = Raft_Small_Weights.DEFAULT
-    transforms = weights.transforms()
-
-    f1_t, f2_t = transforms(f1, f2)
-
-    model = raft_small(weights=weights, progress=False).to(device).eval()
-    with torch.no_grad():
-        flow_list = model(f1_t, f2_t)
-    flow = flow_list[-1]  # (1, 2, H_padded, W_padded) — last refinement iteration
-
-    # Remove padding
-    flow = flow[:, :, :H, :W].squeeze(0)  # (2, H, W)
-
-    return flow.cpu()
 
 
 def compute_raft_flow_batched(
@@ -220,88 +166,6 @@ def warp_frame(
     return warped.clamp(0.0, 255.0)
 
 
-def compute_proxy_score(
-    frames: torch.Tensor,
-    gt_frames: list[torch.Tensor],
-    posenet: torch.nn.Module,
-    segnet: torch.nn.Module,
-    device: torch.device,
-    rate: float = 0.0,
-    batch_size: int = 16,
-    simulate_resize: bool = False,
-) -> dict:
-    """Compute proxy score matching official scorer formula."""
-    from tac.camera import SEGNET_INPUT_H, SEGNET_INPUT_W
-
-    N = frames.shape[0]
-    P = N // 2
-    total_pose, total_seg, n_pairs = 0.0, 0.0, 0
-
-    for start in range(0, P, batch_size):
-        end = min(start + batch_size, P)
-
-        cand_pairs, gt_pairs = [], []
-        for k in range(start, end):
-            cand_pairs.append(torch.stack([frames[2 * k], frames[2 * k + 1]], dim=0))
-            gt_pairs.append(torch.stack([gt_frames[2 * k].float(), gt_frames[2 * k + 1].float()], dim=0))
-
-        cand_t = torch.stack(cand_pairs).to(device)
-        gt_t = torch.stack(gt_pairs).to(device)
-
-        cand_chw = cand_t.permute(0, 1, 4, 2, 3).contiguous()
-        gt_chw = gt_t.permute(0, 1, 4, 2, 3).contiguous()
-
-        B, T, C, H, W = cand_chw.shape
-        if H != SEGNET_INPUT_H or W != SEGNET_INPUT_W:
-            cand_flat = cand_chw.reshape(B * T, C, H, W)
-            gt_flat = gt_chw.reshape(B * T, C, H, W)
-            cand_flat = F.interpolate(cand_flat, size=(SEGNET_INPUT_H, SEGNET_INPUT_W),
-                                      mode="bilinear", align_corners=False)
-            gt_flat = F.interpolate(gt_flat, size=(SEGNET_INPUT_H, SEGNET_INPUT_W),
-                                    mode="bilinear", align_corners=False)
-            cand_chw = cand_flat.reshape(B, T, C, SEGNET_INPUT_H, SEGNET_INPUT_W)
-            gt_chw = gt_flat.reshape(B, T, C, SEGNET_INPUT_H, SEGNET_INPUT_W)
-
-        cand_chw = cand_chw.round().clamp(0, 255)
-
-        if simulate_resize:
-            flat = cand_chw.reshape(-1, *cand_chw.shape[2:])
-            flat = F.interpolate(flat, size=(874, 1164), mode="bilinear", align_corners=False)
-            flat = flat.round().clamp(0, 255)
-            flat = F.interpolate(flat, size=(SEGNET_INPUT_H, SEGNET_INPUT_W),
-                                 mode="bilinear", align_corners=False)
-            cand_chw = flat.reshape(B, T, *flat.shape[1:])
-
-        with torch.no_grad():
-            fp_in = posenet.preprocess_input(cand_chw)
-            gp_in = posenet.preprocess_input(gt_chw)
-            fp_out = posenet(fp_in)
-            gp_out = posenet(gp_in)
-            pose_mse = (fp_out["pose"][..., :6] - gp_out["pose"][..., :6]).pow(2).mean(dim=-1)
-            total_pose += pose_mse.sum().item()
-
-            fs_in = segnet.preprocess_input(cand_chw)
-            gs_in = segnet.preprocess_input(gt_chw)
-            fs_out = segnet(fs_in)
-            gs_out = segnet(gs_in)
-            diff = (fs_out.argmax(dim=1) != gs_out.argmax(dim=1)).float()
-            seg_disagree = diff.mean(dim=tuple(range(1, diff.ndim)))
-            total_seg += seg_disagree.sum().item()
-            n_pairs += B
-
-    avg_pose = total_pose / max(n_pairs, 1)
-    avg_seg = total_seg / max(n_pairs, 1)
-    pose_term = math.sqrt(max(0.0, 10.0 * avg_pose))
-    score = 100.0 * avg_seg + pose_term + 25.0 * rate
-
-    return {
-        "score": score, "pose": avg_pose, "seg": avg_seg, "rate": rate,
-        "pose_contribution": pose_term,
-        "seg_contribution": 100.0 * avg_seg,
-        "rate_contribution": 25.0 * rate,
-        "n_pairs": n_pairs,
-    }
-
 
 def main():
     args = parse_args()
@@ -332,26 +196,17 @@ def main():
     # ── Step 1: Load scorers ─────────────────────────────────────────────
     print("\n[1/4] Loading scorers...")
     t0 = time.monotonic()
-    from tac.scorer import load_scorers
-    posenet, segnet = load_scorers(
-        posenet_path=upstream / "models" / "posenet.safetensors",
-        segnet_path=upstream / "models" / "segnet.safetensors",
-        device=str(device),
-        upstream_dir=str(upstream),
-    )
+    from tac.scorer import load_default_scorers
+    posenet, segnet = load_default_scorers(upstream, device=str(device))
     print(f"[1/4] Scorers loaded in {time.monotonic() - t0:.1f}s")
 
     # ── Step 2: Decode GT video ──────────────────────────────────────────
     print(f"\n[2/4] Decoding GT video ({args.n_frames} frames)...")
     t0 = time.monotonic()
-    from tac.data import decode_video
-    from tac.camera import SEGNET_INPUT_H, SEGNET_INPUT_W
+    from tac.data import load_gt_video
 
-    gt_frames_full = decode_video(video_path, target_h=SEGNET_INPUT_H, target_w=SEGNET_INPUT_W)
-    gt_frames = gt_frames_full[:args.n_frames]
-    args.n_frames = len(gt_frames) - (len(gt_frames) % 2)
-    gt_frames = gt_frames[:args.n_frames]
-    assert args.n_frames >= 2
+    gt_frames = load_gt_video(video_path, n_frames=args.n_frames)
+    args.n_frames = len(gt_frames)
     print(f"[2/4] Decoded {args.n_frames} frames in {time.monotonic() - t0:.1f}s")
 
     # ── Step 3: Compute RAFT flow + warp ─────────────────────────────────

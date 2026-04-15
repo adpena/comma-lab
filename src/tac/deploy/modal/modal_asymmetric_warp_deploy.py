@@ -102,6 +102,10 @@ def _run_with_periodic_commits(cmd: list[str], env: dict, commit_interval: int =
 
     Commits results_vol every commit_interval seconds during training,
     so partial results survive if the local CLI is killed or times out.
+
+    Use this for long training runs needing checkpoint survival. Use
+    Popen+readline (see tto_eval) for real-time log streaming with
+    batch progress.
     """
     import subprocess
     import threading

@@ -22,10 +22,14 @@ Usage::
 """
 from __future__ import annotations
 
-import math
+import logging
 
 import torch
 import torch.nn.functional as F
+
+from tac.scorer import comma_score
+
+logger = logging.getLogger(__name__)
 
 
 def score_pairs(
@@ -100,11 +104,11 @@ def score_pairs(
             diff = (fs_out.argmax(dim=1) != gs_out.argmax(dim=1)).float()
             seg_disagree = diff.mean(dim=tuple(range(1, diff.ndim)))
 
-            # Combined per-pair score (same formula weights as official scorer)
+            # Combined per-pair score using official formula (evaluate.py line 92)
             for i in range(B):
                 pose_val = pose_mse[i].item()
                 seg_val = seg_disagree[i].item()
-                pair_scores[start + i] = 100.0 * seg_val + math.sqrt(max(0.0, 10.0 * pose_val))
+                pair_scores[start + i] = comma_score(pose_val, seg_val, rate=0.0)
 
     return pair_scores
 
@@ -147,13 +151,13 @@ def select_best_pairs(
             )
 
     # Score each candidate
-    print(f"[ensemble] Scoring {K} candidates ({P} pairs each)...")
+    logger.info("[ensemble] Scoring %d candidates (%d pairs each)...", K, P)
     all_scores = []
     for i, cand in enumerate(candidates):
         scores = score_pairs(cand, gt_frames, posenet, segnet, device, batch_size)
         all_scores.append(scores)
-        print(f"  Candidate {i}: mean_score={scores.mean():.4f}, "
-              f"min={scores.min():.4f}, max={scores.max():.4f}")
+        logger.info("  Candidate %d: mean_score=%.4f, min=%.4f, max=%.4f",
+                    i, scores.mean(), scores.min(), scores.max())
 
     # Stack: (K, P) and take argmin per pair
     score_matrix = torch.stack(all_scores, dim=0)  # (K, P)
@@ -187,9 +191,9 @@ def select_best_pairs(
         "improvement_over_best_individual": min(individual_means) - ensemble_mean,
     }
 
-    print(f"[ensemble] Selection: {selections}")
-    print(f"[ensemble] Individual means: {[f'{s:.4f}' for s in individual_means]}")
-    print(f"[ensemble] Ensemble mean: {ensemble_mean:.4f} "
-          f"(improvement: {stats['improvement_over_best_individual']:+.4f})")
+    logger.info("[ensemble] Selection: %s", selections)
+    logger.info("[ensemble] Individual means: %s", [f'{s:.4f}' for s in individual_means])
+    logger.info("[ensemble] Ensemble mean: %.4f (improvement: %+.4f)",
+                ensemble_mean, stats['improvement_over_best_individual'])
 
     return best_frames, stats

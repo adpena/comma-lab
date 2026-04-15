@@ -50,14 +50,8 @@ import torch
 import torch.nn.functional as F
 
 
-def find_project_root() -> Path:
-    """Walk up from this file to find the project root (contains src/)."""
-    p = Path(__file__).resolve().parent
-    while p != p.parent:
-        if (p / "src").is_dir() and (p / "upstream").is_dir():
-            return p
-        p = p.parent
-    raise RuntimeError("Cannot find project root (expected src/ and upstream/ dirs)")
+from tac.scorer import compute_proxy_score, extract_gt_masks, extract_gt_pose_targets
+from tac.utils import find_project_root
 
 
 def parse_args() -> argparse.Namespace:
@@ -92,100 +86,6 @@ def parse_args() -> argparse.Namespace:
                    help="Simulate official scorer resolution round-trip in proxy scoring")
     return p.parse_args()
 
-
-def extract_gt_masks(
-    gt_frames: list[torch.Tensor],
-    segnet: torch.nn.Module,
-    device: torch.device,
-    batch_size: int = 16,
-) -> torch.Tensor:
-    """Extract SegNet argmax masks from GT frames.
-
-    Args:
-        gt_frames: list of (H, W, 3) uint8 tensors.
-        segnet: frozen SegNet model.
-        device: computation device.
-        batch_size: frames per forward pass.
-
-    Returns:
-        (N, seg_H, seg_W) long tensor of class indices.
-    """
-    from tac.camera import SEGNET_INPUT_H, SEGNET_INPUT_W
-
-    masks = []
-    for i in range(0, len(gt_frames), batch_size):
-        batch = gt_frames[i:i + batch_size]
-        frames_t = torch.stack(batch).float().to(device)
-        frames_chw = frames_t.permute(0, 3, 1, 2).contiguous()
-
-        _, _, H, W = frames_chw.shape
-        if H != SEGNET_INPUT_H or W != SEGNET_INPUT_W:
-            frames_chw = F.interpolate(
-                frames_chw, size=(SEGNET_INPUT_H, SEGNET_INPUT_W),
-                mode="bilinear", align_corners=False,
-            )
-
-        seg_in_btchw = frames_chw.unsqueeze(1)
-        seg_in = segnet.preprocess_input(seg_in_btchw)
-        with torch.no_grad():
-            seg_out = segnet(seg_in)
-        mask = seg_out.argmax(dim=1)
-        masks.append(mask.cpu())
-
-    return torch.cat(masks, dim=0).long()
-
-
-def extract_gt_pose_targets(
-    gt_frames: list[torch.Tensor],
-    posenet: torch.nn.Module,
-    device: torch.device,
-    batch_size: int = 16,
-) -> torch.Tensor:
-    """Extract PoseNet targets from GT frames using non-overlapping pairs.
-
-    Args:
-        gt_frames: list of (H, W, 3) uint8 tensors.
-        posenet: frozen PoseNet model.
-        device: computation device.
-        batch_size: pairs per forward pass.
-
-    Returns:
-        (P, 6) float tensor of pose targets, P = len(gt_frames) // 2.
-    """
-    from tac.camera import SEGNET_INPUT_H, SEGNET_INPUT_W
-
-    N = len(gt_frames)
-    P = N // 2
-    targets = []
-
-    for start in range(0, P, batch_size):
-        end = min(start + batch_size, P)
-        batch_pairs = []
-        for k in range(start, end):
-            f0 = gt_frames[2 * k].float()
-            f1 = gt_frames[2 * k + 1].float()
-            pair = torch.stack([f0, f1], dim=0)
-            batch_pairs.append(pair)
-
-        pairs = torch.stack(batch_pairs).to(device)
-        pairs_chw = pairs.permute(0, 1, 4, 2, 3).contiguous()
-
-        B, T, C, H, W = pairs_chw.shape
-        if H != SEGNET_INPUT_H or W != SEGNET_INPUT_W:
-            pairs_flat = pairs_chw.reshape(B * T, C, H, W)
-            pairs_flat = F.interpolate(
-                pairs_flat, size=(SEGNET_INPUT_H, SEGNET_INPUT_W),
-                mode="bilinear", align_corners=False,
-            )
-            pairs_chw = pairs_flat.reshape(B, T, C, SEGNET_INPUT_H, SEGNET_INPUT_W)
-
-        posenet_in = posenet.preprocess_input(pairs_chw)
-        with torch.no_grad():
-            posenet_out = posenet(posenet_in)
-        pose = posenet_out["pose"][..., :6]
-        targets.append(pose.cpu())
-
-    return torch.cat(targets, dim=0).float()
 
 
 class SparsePatchPerturbation(torch.nn.Module):
@@ -508,14 +408,9 @@ def run_sparse_tto_batch(
                 # Re-evaluate for logging (closure may have been called multiple times by LBFGS)
                 with torch.no_grad():
                     perturbed = perturbation(gt_base)
-                    from tac.constrained_gen import (
-                        compute_compressibility_loss as ccl,
-                        compute_posenet_constraint_loss as cpcl,
-                        compute_segnet_constraint_loss as cscl,
-                    )
-                    p_loss = cpcl(perturbed, gt_pose_dev, posenet, batch_size=32).item()
-                    s_loss = cscl(perturbed, gt_masks_dev, segnet, batch_size=32).item()
-                    c_loss = ccl(perturbed).item()
+                    p_loss = compute_posenet_constraint_loss(perturbed, gt_pose_dev, posenet, batch_size=32).item()
+                    s_loss = compute_segnet_constraint_loss(perturbed, gt_masks_dev, segnet, batch_size=32).item()
+                    c_loss = compute_compressibility_loss(perturbed).item()
                 print(f"  [restart {restart + 1}/{n_restarts}] step {step + 1}/{steps_per_restart}: "
                       f"pose={p_loss:.6f} seg={s_loss:.4f} compress={c_loss:.4f}")
 
@@ -534,103 +429,6 @@ def run_sparse_tto_batch(
 
     return result.cpu()
 
-
-def compute_proxy_score(
-    frames: torch.Tensor,
-    gt_frames: list[torch.Tensor],
-    posenet: torch.nn.Module,
-    segnet: torch.nn.Module,
-    device: torch.device,
-    rate: float = 0.0,
-    batch_size: int = 16,
-    simulate_resize: bool = False,
-) -> dict:
-    """Compute proxy score matching official scorer formula.
-
-    Reuses the implementation from renderer_tto.py.
-    """
-    from tac.camera import SEGNET_INPUT_H, SEGNET_INPUT_W
-
-    N = frames.shape[0]
-    P = N // 2
-    total_pose, total_seg, n_pairs = 0.0, 0.0, 0
-
-    for start in range(0, P, batch_size):
-        end = min(start + batch_size, P)
-
-        cand_pairs = []
-        gt_pairs = []
-        for k in range(start, end):
-            cf0 = frames[2 * k]
-            cf1 = frames[2 * k + 1]
-            cand_pairs.append(torch.stack([cf0, cf1], dim=0))
-
-            gf0 = gt_frames[2 * k].float()
-            gf1 = gt_frames[2 * k + 1].float()
-            gt_pairs.append(torch.stack([gf0, gf1], dim=0))
-
-        cand_t = torch.stack(cand_pairs).to(device)
-        gt_t = torch.stack(gt_pairs).to(device)
-
-        cand_chw = cand_t.permute(0, 1, 4, 2, 3).contiguous()
-        gt_chw = gt_t.permute(0, 1, 4, 2, 3).contiguous()
-
-        B, T, C, H, W = cand_chw.shape
-        if H != SEGNET_INPUT_H or W != SEGNET_INPUT_W:
-            cand_flat = cand_chw.reshape(B * T, C, H, W)
-            gt_flat = gt_chw.reshape(B * T, C, H, W)
-            cand_flat = F.interpolate(cand_flat, size=(SEGNET_INPUT_H, SEGNET_INPUT_W),
-                                      mode="bilinear", align_corners=False)
-            gt_flat = F.interpolate(gt_flat, size=(SEGNET_INPUT_H, SEGNET_INPUT_W),
-                                    mode="bilinear", align_corners=False)
-            cand_chw = cand_flat.reshape(B, T, C, SEGNET_INPUT_H, SEGNET_INPUT_W)
-            gt_chw = gt_flat.reshape(B, T, C, SEGNET_INPUT_H, SEGNET_INPUT_W)
-
-        cand_chw = cand_chw.round().clamp(0, 255)
-
-        if simulate_resize:
-            CAMERA_H_VAL, CAMERA_W_VAL = 874, 1164
-            flat = cand_chw.reshape(-1, *cand_chw.shape[2:])
-            flat = F.interpolate(flat, size=(CAMERA_H_VAL, CAMERA_W_VAL),
-                                 mode="bilinear", align_corners=False)
-            flat = flat.round().clamp(0, 255)
-            flat = F.interpolate(flat, size=(SEGNET_INPUT_H, SEGNET_INPUT_W),
-                                 mode="bilinear", align_corners=False)
-            cand_chw = flat.reshape(B, T, *flat.shape[1:])
-
-        with torch.no_grad():
-            fp_in = posenet.preprocess_input(cand_chw)
-            gp_in = posenet.preprocess_input(gt_chw)
-            fp_out = posenet(fp_in)
-            gp_out = posenet(gp_in)
-            pose_mse = (fp_out["pose"][..., :6] - gp_out["pose"][..., :6]).pow(2).mean(dim=-1)
-            total_pose += pose_mse.sum().item()
-
-            fs_in = segnet.preprocess_input(cand_chw)
-            gs_in = segnet.preprocess_input(gt_chw)
-            fs_out = segnet(fs_in)
-            gs_out = segnet(gs_in)
-            diff = (fs_out.argmax(dim=1) != gs_out.argmax(dim=1)).float()
-            seg_disagree = diff.mean(dim=tuple(range(1, diff.ndim)))
-            total_seg += seg_disagree.sum().item()
-
-            n_pairs += B
-
-    avg_pose = total_pose / max(n_pairs, 1)
-    avg_seg = total_seg / max(n_pairs, 1)
-    pose_term = math.sqrt(max(0.0, 10.0 * avg_pose))
-    score = 100.0 * avg_seg + pose_term + 25.0 * rate
-
-    return {
-        "score": score,
-        "pose": avg_pose,
-        "seg": avg_seg,
-        "rate": rate,
-        "pose_contribution": pose_term,
-        "seg_contribution": 100.0 * avg_seg,
-        "rate_contribution": 25.0 * rate,
-        "n_pairs": n_pairs,
-    }
 
 
 def main():
@@ -671,26 +469,17 @@ def main():
     # ── Step 1: Load scorers ─────────────────────────────────────────────
     print("\n[1/6] Loading scorers...")
     t0 = time.monotonic()
-    from tac.scorer import load_scorers
-    posenet, segnet = load_scorers(
-        posenet_path=upstream / "models" / "posenet.safetensors",
-        segnet_path=upstream / "models" / "segnet.safetensors",
-        device=str(device),
-        upstream_dir=str(upstream),
-    )
+    from tac.scorer import load_default_scorers
+    posenet, segnet = load_default_scorers(upstream, device=str(device))
     print(f"[1/6] Scorers loaded in {time.monotonic() - t0:.1f}s")
 
     # ── Step 2: Decode GT video ──────────────────────────────────────────
     print(f"\n[2/6] Decoding GT video ({args.n_frames} frames)...")
     t0 = time.monotonic()
-    from tac.data import decode_video
-    from tac.camera import SEGNET_INPUT_H, SEGNET_INPUT_W
+    from tac.data import load_gt_video
 
-    gt_frames_full = decode_video(video_path, target_h=SEGNET_INPUT_H, target_w=SEGNET_INPUT_W)
-    gt_frames = gt_frames_full[:args.n_frames]
-    args.n_frames = len(gt_frames) - (len(gt_frames) % 2)
-    gt_frames = gt_frames[:args.n_frames]
-    assert args.n_frames >= 2, f"Need at least 2 frames, got {len(gt_frames)}"
+    gt_frames = load_gt_video(video_path, n_frames=args.n_frames)
+    args.n_frames = len(gt_frames)
     print(f"[2/6] Decoded {args.n_frames} frames ({gt_frames[0].shape}) in {time.monotonic() - t0:.1f}s")
 
     # ── Step 3: Compute or load sensitivity map ──────────────────────────

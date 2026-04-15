@@ -80,6 +80,35 @@ def decode_archive(archive_path: str | Path) -> list[torch.Tensor]:
         return decode_video(str(mkv))
 
 
+def load_gt_video(
+    video_path: str | Path,
+    n_frames: int = 1200,
+    device: str = "cpu",
+) -> list[torch.Tensor]:
+    """Load and prepare GT video frames for experiment scripts.
+
+    Handles the common boilerplate: decode at SegNet resolution, truncate to
+    n_frames, ensure even frame count, and assert at least 2 frames.
+
+    Args:
+        video_path: path to the ground-truth video file.
+        n_frames: maximum number of frames to load.
+        device: unused (reserved for future on-device loading).
+
+    Returns:
+        List of (H, W, 3) uint8 tensors, length is even and >= 2.
+    """
+    from tac.camera import SEGNET_INPUT_H, SEGNET_INPUT_W
+
+    gt_frames_full = decode_video(video_path, target_h=SEGNET_INPUT_H, target_w=SEGNET_INPUT_W)
+    gt_frames = gt_frames_full[:n_frames]
+    # Ensure even frame count (PoseNet evaluates non-overlapping pairs)
+    n = len(gt_frames) - (len(gt_frames) % 2)
+    gt_frames = gt_frames[:n]
+    assert len(gt_frames) >= 2, f"Need at least 2 frames, got {len(gt_frames)}"
+    return gt_frames
+
+
 def build_pairs(frames: list[torch.Tensor]) -> list[torch.Tensor]:
     """Build non-overlapping frame pairs as (1, 2, H, W, 3) uint8 tensors.
 

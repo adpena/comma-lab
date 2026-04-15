@@ -35,14 +35,7 @@ import torch
 import torch.nn.functional as F
 
 
-def find_project_root() -> Path:
-    """Walk up from this file to find the project root (contains src/)."""
-    p = Path(__file__).resolve().parent
-    while p != p.parent:
-        if (p / "src").is_dir() and (p / "upstream").is_dir():
-            return p
-        p = p.parent
-    raise RuntimeError("Cannot find project root (expected src/ and upstream/ dirs)")
+from tac.utils import find_project_root
 
 
 def parse_args() -> argparse.Namespace:
@@ -279,26 +272,17 @@ def main():
     # ── Step 1: Load scorers ─────────────────────────────────────────────
     print("\n[1/4] Loading PoseNet...")
     t0 = time.monotonic()
-    from tac.scorer import load_scorers
-    posenet, _ = load_scorers(
-        posenet_path=upstream / "models" / "posenet.safetensors",
-        segnet_path=upstream / "models" / "segnet.safetensors",
-        device=str(device),
-        upstream_dir=str(upstream),
-    )
+    from tac.scorer import load_default_scorers
+    posenet, _ = load_default_scorers(upstream, device=str(device))
     print(f"[1/4] PoseNet loaded in {time.monotonic() - t0:.1f}s")
 
     # ── Step 2: Decode GT video ──────────────────────────────────────────
     print(f"\n[2/4] Decoding GT video ({args.n_frames} frames)...")
     t0 = time.monotonic()
-    from tac.data import decode_video
-    from tac.camera import SEGNET_INPUT_H, SEGNET_INPUT_W
+    from tac.data import load_gt_video
 
-    gt_frames_full = decode_video(video_path, target_h=SEGNET_INPUT_H, target_w=SEGNET_INPUT_W)
-    gt_frames = gt_frames_full[:args.n_frames]
-    args.n_frames = len(gt_frames) - (len(gt_frames) % 2)
-    gt_frames = gt_frames[:args.n_frames]
-    assert args.n_frames >= 2, f"Need at least 2 frames, got {len(gt_frames)}"
+    gt_frames = load_gt_video(video_path, n_frames=args.n_frames)
+    args.n_frames = len(gt_frames)
     print(f"[2/4] Decoded {args.n_frames} frames ({gt_frames[0].shape}) in {time.monotonic() - t0:.1f}s")
 
     # ── Step 3: Compute sensitivity map ──────────────────────────────────
