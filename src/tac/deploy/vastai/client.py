@@ -473,6 +473,7 @@ class VastClient:
             "create", "instance", str(offer_id),
             "--image", spec.docker_image,
             "--disk", str(int(spec.disk_gb)),
+            "--ssh", "--direct",  # Enable direct SSH (not proxy) on port 22
             "--onstart-cmd", ONSTART_SCRIPT,
             "--label", label,
             "--raw",
@@ -490,9 +491,14 @@ class VastClient:
         # Wait for running state + SSH info
         ssh_host, ssh_port = self._wait_for_running(instance_id)
 
-        # Generate ephemeral SSH key
+        # Register ephemeral SSH key with Vast.ai account
+        # The `create ssh-key` command adds the key globally (auto-applied to all instances).
+        # See: https://docs.vast.ai/api-reference/accounts/create-ssh-key
         key_path, pub_key = self._generate_ssh_key(instance_id)
-        self._run_cli(["ssh-key", "put", pub_key])
+        key_result = self._run_cli(["create", "ssh-key", pub_key])
+        if key_result.returncode != 0:
+            print(f"  {_YELLOW}SSH key registration failed, falling back to default key{_RESET}")
+            key_path = None  # Will use default ~/.ssh/id_* keys
 
         inst = InstanceInfo(
             instance_id=instance_id,
@@ -530,10 +536,11 @@ class VastClient:
             status = info.get("actual_status", info.get("status_msg", ""))
             if status == "running":
                 ssh_host = info.get("ssh_host", info.get("public_ipaddr"))
-                ssh_port = info.get(
-                    "ssh_port",
-                    info.get("ports", {}).get("22/tcp", [{}])[0].get("HostPort", 22),
-                )
+                ssh_port = info.get("ssh_port")
+                # Vast.ai uses high-numbered mapped ports, never port 22.
+                # If ssh_port is missing, instance isn't fully provisioned yet.
+                if not ssh_port:
+                    continue
                 if ssh_host and ssh_port:
                     print(f"  {_GREEN}Instance running: {ssh_host}:{ssh_port}{_RESET}")
                     return str(ssh_host), int(ssh_port)
