@@ -285,6 +285,12 @@ def select_patches_for_frames(
             })
 
     patches.sort(key=lambda x: x["mean_sensitivity"])
+    if n_patches > len(patches):
+        import warnings
+        warnings.warn(
+            f"Requested {n_patches} patches but only {len(patches)} available "
+            f"(map {H}x{W}, patch_size={patch_size}). Using all {len(patches)}."
+        )
     selected = patches[:n_patches]
 
     if selected:
@@ -357,8 +363,8 @@ def compute_sensitivity_map_live(
                 mode="bilinear", align_corners=False,
             ).squeeze()
 
-        grad_accum += grad_mag_avg.cpu().double()
-        n_accumulated += 1
+        grad_accum += grad_mag_avg.cpu().double() * B
+        n_accumulated += B
 
         del pairs_hwc, pairs_chw, posenet_in, posenet_out, pose, scalar_loss, grad
         if device.type == "cuda":
@@ -491,7 +497,12 @@ def run_sparse_tto_batch(
 
             loss = optimizer.step(closure)
 
-            loss_val = loss.item() if isinstance(loss, torch.Tensor) else loss
+            if loss is None:
+                loss_val = float("inf")
+            elif isinstance(loss, torch.Tensor):
+                loss_val = loss.item()
+            else:
+                loss_val = float(loss)
 
             if step % log_every == 0 or step == steps_per_restart - 1:
                 # Re-evaluate for logging (closure may have been called multiple times by LBFGS)
@@ -508,8 +519,8 @@ def run_sparse_tto_batch(
                 print(f"  [restart {restart + 1}/{n_restarts}] step {step + 1}/{steps_per_restart}: "
                       f"pose={p_loss:.6f} seg={s_loss:.4f} compress={c_loss:.4f}")
 
-            # Track best
-            if loss_val < best_loss:
+            # Track best (skip NaN — L-BFGS can produce NaN on degenerate line search)
+            if math.isfinite(loss_val) and loss_val < best_loss:
                 best_loss = loss_val
                 best_delta_state = perturbation.delta.data.detach().clone()
 
@@ -607,14 +618,15 @@ def compute_proxy_score(
 
     avg_pose = total_pose / max(n_pairs, 1)
     avg_seg = total_seg / max(n_pairs, 1)
-    score = 100.0 * avg_seg + math.sqrt(10.0 * avg_pose) + 25.0 * rate
+    pose_term = math.sqrt(max(0.0, 10.0 * avg_pose))
+    score = 100.0 * avg_seg + pose_term + 25.0 * rate
 
     return {
         "score": score,
         "pose": avg_pose,
         "seg": avg_seg,
         "rate": rate,
-        "pose_contribution": math.sqrt(10.0 * avg_pose),
+        "pose_contribution": pose_term,
         "seg_contribution": 100.0 * avg_seg,
         "rate_contribution": 25.0 * rate,
         "n_pairs": n_pairs,

@@ -291,11 +291,12 @@ def compute_proxy_score(
 
     avg_pose = total_pose / max(n_pairs, 1)
     avg_seg = total_seg / max(n_pairs, 1)
-    score = 100.0 * avg_seg + math.sqrt(10.0 * avg_pose) + 25.0 * rate
+    pose_term = math.sqrt(max(0.0, 10.0 * avg_pose))
+    score = 100.0 * avg_seg + pose_term + 25.0 * rate
 
     return {
         "score": score, "pose": avg_pose, "seg": avg_seg, "rate": rate,
-        "pose_contribution": math.sqrt(10.0 * avg_pose),
+        "pose_contribution": pose_term,
         "seg_contribution": 100.0 * avg_seg,
         "rate_contribution": 25.0 * rate,
         "n_pairs": n_pairs,

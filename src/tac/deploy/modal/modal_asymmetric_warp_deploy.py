@@ -1692,7 +1692,7 @@ def gt_sparse_tto_eval(
     if sensitivity_map_path:
         cmd.extend(["--sensitivity-map", sensitivity_map_path])
 
-    env = {**os.environ}
+    env = {**os.environ, "PYTHONPATH": "/root/src:/root/upstream"}
     result = subprocess.run(cmd, env=env)
 
     results_vol.commit()
@@ -1720,9 +1720,12 @@ def gt_sparse_tto_entry(
     n_patches: int = 50,
     n_restarts: int = 5,
     steps_per_restart: int = 200,
+    lbfgs_lr: float = 1.0,
+    restart_noise: float = 5.0,
     seg_weight: float = 100.0,
     pose_weight: float = 10.0,
     rate_weight: float = 2.0,
+    perturbation_budget: float = 30.0,
 ):
     """Launch GT-initialized sparse patch TTO on Modal T4.
 
@@ -1736,6 +1739,7 @@ def gt_sparse_tto_entry(
     print(f"  Tag: {tag}")
     print(f"  Config: {n_patches} patches, {n_restarts} restarts x {steps_per_restart} steps")
     print(f"  Weights: seg={seg_weight}, pose={pose_weight}, rate={rate_weight}")
+    print(f"  L-BFGS: lr={lbfgs_lr}, restart_noise={restart_noise}, budget={perturbation_budget}")
 
     print("\n--- Cost Estimate ---")
     print_cost_estimate(gpu="t4", estimated_hours=2.0, platform="modal")
@@ -1747,9 +1751,12 @@ def gt_sparse_tto_entry(
         n_patches=n_patches,
         n_restarts=n_restarts,
         steps_per_restart=steps_per_restart,
+        lbfgs_lr=lbfgs_lr,
+        restart_noise=restart_noise,
         seg_weight=seg_weight,
         pose_weight=pose_weight,
         rate_weight=rate_weight,
+        perturbation_budget=perturbation_budget,
     )
 
     status = "OK" if result["exit_code"] == 0 else f"FAILED (exit {result['exit_code']})"
@@ -1829,7 +1836,7 @@ def joint_pair_train(
         cmd.extend(extra_args.split())
 
     # Route results to volume via env var (train_joint_pair.py reads TAC_RESULTS_DIR)
-    env = {**os.environ, "TAC_RESULTS_DIR": output_dir}
+    env = {**os.environ, "PYTHONPATH": "/root/src:/root/upstream", "TAC_RESULTS_DIR": output_dir}
     result = _run_with_periodic_commits(cmd, env, commit_interval=300)
 
     return {
@@ -1843,6 +1850,10 @@ def joint_pair_train_entry(
     tag: str = "joint_pair_v1",
     epochs: int = 5000,
     base_ch: int = 48,
+    lr: float = 1e-3,
+    seg_weight: float = 100.0,
+    pose_weight: float = 10.0,
+    tv_weight: float = 1.0,
     extra_args: str = "",
 ):
     """Launch Joint Pair Generator training on Modal T4.
@@ -1855,6 +1866,7 @@ def joint_pair_train_entry(
 
     print(f"=== Joint Pair Generator Training -> Modal T4 ===")
     print(f"  Tag: {tag}, epochs: {epochs}, base_ch: {base_ch}")
+    print(f"  Weights: seg={seg_weight}, pose={pose_weight}, tv={tv_weight}, lr={lr}")
 
     print("\n--- Cost Estimate ---")
     print_cost_estimate(gpu="t4", estimated_hours=4.0, platform="modal")
@@ -1864,6 +1876,10 @@ def joint_pair_train_entry(
         tag=tag,
         epochs=epochs,
         base_ch=base_ch,
+        lr=lr,
+        seg_weight=seg_weight,
+        pose_weight=pose_weight,
+        tv_weight=tv_weight,
         extra_args=extra_args,
     )
 

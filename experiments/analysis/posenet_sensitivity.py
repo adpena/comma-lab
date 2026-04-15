@@ -150,8 +150,8 @@ def compute_posenet_gradient_map(
                 mode="bilinear", align_corners=False,
             ).squeeze()
 
-        grad_accum += grad_mag_avg.cpu().double()
-        n_accumulated += 1
+        grad_accum += grad_mag_avg.cpu().double() * B
+        n_accumulated += B
 
         # Free memory
         del pairs_hwc, pairs_chw, posenet_in, posenet_out, pose, scalar_loss, grad
@@ -322,11 +322,15 @@ def main():
           f"Most sensitive: mean={patches[-1]['mean_sensitivity']:.6f}")
 
     # Sensitivity ratio: how many patches have <10% of max sensitivity
-    max_sens = patches[-1]["mean_sensitivity"]
-    threshold = max_sens * 0.1
-    n_low = sum(1 for p in patches if p["mean_sensitivity"] < threshold)
-    print(f"[4/4] {n_low}/{n_patches} patches ({100 * n_low / n_patches:.1f}%) "
-          f"below 10% threshold = safe to perturb")
+    if n_patches > 0:
+        max_sens = patches[-1]["mean_sensitivity"]
+        threshold = max_sens * 0.1
+        n_low = sum(1 for p in patches if p["mean_sensitivity"] < threshold)
+        print(f"[4/4] {n_low}/{n_patches} patches ({100 * n_low / n_patches:.1f}%) "
+              f"below 10% threshold = safe to perturb")
+    else:
+        n_low = 0
+        print("[4/4] WARNING: no patches found (map too small for patch size)")
 
     # Save artifacts
     torch.save(sensitivity_map, output_dir / "sensitivity_map.pt")
@@ -346,7 +350,7 @@ def main():
             "std": float(sensitivity_map.std()),
         },
         "n_low_sensitivity": n_low,
-        "low_sensitivity_fraction": n_low / n_patches,
+        "low_sensitivity_fraction": n_low / max(n_patches, 1),
         "top_insensitive": patches[:200],
         "most_sensitive": patches[-20:],
     }
@@ -372,7 +376,7 @@ def main():
     print(f"  Frames analyzed: {args.n_frames}")
     print(f"  Patch size: {args.patch_size}x{args.patch_size}")
     print(f"  Total patches: {n_patches}")
-    print(f"  Safe patches (<10% max): {n_low} ({100 * n_low / n_patches:.1f}%)")
+    print(f"  Safe patches (<10% max): {n_low} ({100 * n_low / max(n_patches, 1):.1f}%)")
     print(f"  Sensitivity range: [{sensitivity_map.min():.6f}, {sensitivity_map.max():.6f}]")
     print(f"  Output: {output_dir}")
     print(f"{'=' * 60}")

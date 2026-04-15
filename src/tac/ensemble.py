@@ -104,7 +104,7 @@ def score_pairs(
             for i in range(B):
                 pose_val = pose_mse[i].item()
                 seg_val = seg_disagree[i].item()
-                pair_scores[start + i] = 100.0 * seg_val + math.sqrt(10.0 * pose_val)
+                pair_scores[start + i] = 100.0 * seg_val + math.sqrt(max(0.0, 10.0 * pose_val))
 
     return pair_scores
 
@@ -140,6 +140,11 @@ def select_best_pairs(
 
     N = candidates[0].shape[0]
     P = N // 2
+    for i, cand in enumerate(candidates):
+        if cand.shape != candidates[0].shape:
+            raise ValueError(
+                f"Candidate {i} shape {cand.shape} != candidate 0 shape {candidates[0].shape}"
+            )
 
     # Score each candidate
     print(f"[ensemble] Scoring {K} candidates ({P} pairs each)...")
