@@ -289,6 +289,46 @@ A candidate may be promoted only after:
 - **5 adaptive frontier items**: boundary dispatch for standard loss, sin² ramp, replay gate, 3-phase eval, plateau LR scheduler
 - These are implemented but unvalidated. Do not promote without authoritative eval.
 
+## Strict scorer rule — non-negotiable (canonical, binding)
+
+- **NO loading PoseNet or SegNet at inflate time.** If our inflate script loads scorer weights for ANY purpose (TTO optimization, mask extraction, embedding computation, gradient descent), those weights must be in archive.zip per Yousfi's PR #35 rule. Including them (~73MB) destroys the rate term. Therefore: no scorers at inflate time, period.
+- **TTO is a compress-time tool ONLY.** TTO frames are training data for the renderer, not submission artifacts. Unlimited compute at compress time, single forward pass at inflate time.
+- **Any inflate-time feature that loads scorers** must be labeled "non-compliant, requires compliance ruling" and disabled by default (`INFLATE_TTO=0`).
+- **NEVER claim a contest-compliant score** that depends on inflate-time scorer access.
+
+## Lane separation — non-negotiable
+
+There are TWO score lanes. They MUST NEVER be conflated.
+
+- **Lane 1: Contest-Compliant (PRIORITY).** Goes through inflate.sh → inflate_renderer.py → evaluate.py within 30 min on T4. No scorers at inflate time. Current best: renderer-only auth 0.87. This is what gets submitted.
+- **Lane 2: Unlimited Compute (Paper).** TTO optimization at compress time, unlimited steps. Current best: v5b auth 0.41 (embedding loss). For the arXiv paper scalability section ONLY.
+- **Every score must be labeled** `[contest-compliant]` or `[unlimited-compute]`. No exceptions.
+- **NEVER say "our score is X"** without specifying which lane.
+
+## Submission PR gate — non-negotiable
+
+- **NEVER submit a PR** until the score has undergone a 5-turn consecutive clean-pass adversarial skunkworks council review with extreme paranoia. This is stricter than the standard 3-pass greenup. All 15 council members review. ANY issue resets the counter to 0.
+- **The score used for submission** must come from the contest-compliant auth eval (through inflate.sh), not proxy or bypassed eval.
+
+## Vast.ai deployment — non-negotiable
+
+- **API key** at `~/.config/vastai/vast_api_key`. SSH key must be registered at account level BEFORE creating instances.
+- **Always use `python3 -u`** (unbuffered) for background jobs on Vast.ai. Python stdout buffering eats logs otherwise.
+- **Always include repo root in PYTHONPATH**: `PYTHONPATH=src:upstream:$PWD`.
+- **Search pattern**: `vastai search offers 'gpu_name=RTX_4090 reliability>0.95 inet_down>200 disk_space>30 num_gpus=1' -o 'dph'`
+- **Budget**: $25 total ($24 hard cap). Track all spend. Destroy instances immediately when done.
+- **Modal credits exhausted** as of 2026-04-15. Use Vast.ai for all new GPU work.
+
+## SegNet paradigm shift — non-negotiable knowledge
+
+At our operating point, **SegNet is 77x more important than PoseNet** in the scoring formula:
+- SegNet: 100 × seg_dist → dominates the score
+- PoseNet: √(10 × pose_dist) → essentially solved at 100 TTO steps
+- **ALL optimization effort must prioritize SegNet reduction.**
+- PoseNet improvement has negligible score impact. SegNet improvement has massive score impact.
+- TTO step curve (empirical, Vast.ai 4090): phase transition at 80-100 steps for PoseNet. SegNet only moves at 300-500 steps.
+- The renderer has hit its SegNet architectural ceiling. Breaking through requires architectural changes, not more TTO.
+
 ## Ralph-style execution model
 
 Treat files and git as memory.
