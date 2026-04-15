@@ -876,9 +876,9 @@ def auth_eval(tag: str, checkpoint: str = "renderer_best.pt", strategy: str = "s
     ]
     print(f"  Command: {' '.join(eval_cmd)}")
     eval_result = subprocess.run(eval_cmd, capture_output=True, text=True, timeout=600)
-    if eval_result_code != 0:
+    if eval_result.returncode != 0:
         print(f"  STDERR: {eval_result.stderr[-500:]}", file=sys.stderr)
-        raise RuntimeError(f"evaluate.py failed with exit code {eval_result_code}")
+        raise RuntimeError(f"evaluate.py failed with exit code {eval_result.returncode}")
 
     # Parse the report
     import re
@@ -1286,8 +1286,8 @@ def _run_tto_auth_eval(tag: str, tto_dir: str) -> dict | None:
     print(f"  Command: {' '.join(eval_cmd)}")
     eval_result = subprocess.run(eval_cmd, capture_output=True, text=True, timeout=600)
 
-    if eval_result_code != 0:
-        print(f"  evaluate.py FAILED (exit {eval_result_code})")
+    if eval_result.returncode != 0:
+        print(f"  evaluate.py FAILED (exit {eval_result.returncode})")
         print(f"  STDERR: {eval_result.stderr[-1000:]}")
         return None
 
