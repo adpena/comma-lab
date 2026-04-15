@@ -79,6 +79,10 @@ RSYNC_EXCLUDES = [
     "*.pt",
     "*.pth",
     "*.onnx",
+    ".env*",
+    ".claude",
+    ".ralph",
+    ".omx",
     "experiments/results",
     "experiments/raft_flow.pt",
     "reports/raw",
@@ -126,6 +130,13 @@ def _load_budget() -> dict:
     if budget_file.exists():
         return json.loads(budget_file.read_text())
     return {"total_spent": 0.0, "sessions": []}
+
+
+def _save_budget(budget: dict) -> None:
+    """Persist budget state to disk."""
+    budget_file = RESULTS_BASE / "budget.json"
+    budget_file.parent.mkdir(parents=True, exist_ok=True)
+    budget_file.write_text(json.dumps(budget, indent=2) + "\n")
 
 
 def _budget_check(estimated_cost: float = 0.0) -> bool:
@@ -741,6 +752,15 @@ def cmd_destroy(args: argparse.Namespace) -> int:
     instances[iid]["status"] = "destroyed"
     _save_instances(instances)
 
+    # Record cost in budget
+    budget["total_spent"] = spent + instance_cost
+    budget.setdefault("sessions", []).append({
+        "timestamp": datetime.now(timezone.utc).isoformat(),
+        "amount": round(instance_cost, 4),
+        "description": f"instance {iid} ({inst.get('experiment', 'unknown')}) {elapsed_hours:.1f}h",
+    })
+    _save_budget(budget)
+
     # Clean up SSH key
     ssh_dir = RESULTS_BASE / ".ssh"
     for suffix in ["", ".pub"]:
@@ -776,12 +796,30 @@ def cmd_destroy_all(args: argparse.Namespace) -> int:
             print("  Cancelled.")
             return 0
 
+    now = datetime.now(timezone.utc)
+    total_cost = 0.0
     for iid in active:
         _run_vastai(["destroy", "instance", iid])
         instances[iid]["status"] = "destroyed"
-        print(f"  {_GREEN}Destroyed {iid}{_RESET}")
 
+        # Calculate and record this instance's cost
+        inst = active[iid]
+        created = datetime.fromisoformat(inst["created_at"])
+        elapsed_hours = (now - created).total_seconds() / 3600
+        instance_cost = inst.get("dph", 0) * elapsed_hours
+        total_cost += instance_cost
+
+        budget.setdefault("sessions", []).append({
+            "timestamp": now.isoformat(),
+            "amount": round(instance_cost, 4),
+            "description": f"instance {iid} ({inst.get('experiment', 'unknown')}) {elapsed_hours:.1f}h [destroy-all]",
+        })
+        print(f"  {_GREEN}Destroyed {iid} (${instance_cost:.2f}){_RESET}")
+
+    budget["total_spent"] = spent + total_cost
+    _save_budget(budget)
     _save_instances(instances)
+    print(f"\n  Total cost recorded: ${total_cost:.2f}")
     return 0
 
 
