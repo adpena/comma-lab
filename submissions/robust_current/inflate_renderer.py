@@ -1646,16 +1646,19 @@ def _adaptive_tto_phase(
     print("  [TTO] Gradient sanity check...", file=sys.stderr)
     try:
         test_pair = renderer_frames[:2].clone().to(device).requires_grad_(True)
-        test_masks = masks[:2].to(device)
+        # SegNet path: (B, 1, C, H, W) -> preprocess -> forward
         seg_in = segnet.preprocess_input(
             test_pair.permute(0, 3, 1, 2).unsqueeze(1).float()
         )
         seg_out = segnet(seg_in)
         seg_loss = seg_out.sum()
 
-        from tac.scorer import _yuv6_pair
-        yuv6 = _yuv6_pair(test_pair[0:1], test_pair[1:2])
-        pose_out = posenet(yuv6)
+        # PoseNet path: (1, 2, C, H, W) -> preprocess -> forward
+        # PoseNet expects consecutive frame pairs as the T dimension
+        pose_in_chw = test_pair.permute(0, 3, 1, 2).float()  # (2, C, H, W)
+        pose_in = pose_in_chw.unsqueeze(0)  # (1, 2, C, H, W)
+        pose_preprocessed = posenet.preprocess_input(pose_in)  # (1, 12, H/2, W/2)
+        pose_out = posenet(pose_preprocessed)  # (1, 6)
         pose_loss = pose_out.sum()
 
         total = seg_loss + pose_loss
@@ -1671,7 +1674,7 @@ def _adaptive_tto_phase(
             return renderer_frames
         print(f"  [TTO] Gradient check PASSED (grad_norm={grad_norm:.4e})",
               file=sys.stderr)
-        del test_pair, test_masks, seg_in, seg_out, pose_out, yuv6
+        del test_pair, seg_in, seg_out, pose_in, pose_in_chw, pose_preprocessed, pose_out
         if device == "cuda":
             torch.cuda.empty_cache()
     except Exception as e:
