@@ -2,7 +2,7 @@
   "version": 3,
   "last_scan": "2026-04-15T19:29:56.656931+00:00",
   "entity_count": 3439,
-  "review_count": 9366,
+  "review_count": 9479,
   "entities": {
     "experiments.analysis.gradient_rank_analysis::compute_jacobian_embedding": {
       "module": "experiments.analysis.gradient_rank_analysis",
@@ -5355,7 +5355,7 @@
       "last_modified_date": "",
       "review_status": "reviewed",
       "reviewed_by": "council",
-      "reviewed_at": "2026-04-15T19:30:01.507186+00:00",
+      "reviewed_at": "2026-04-15T19:55:05.642393+00:00",
       "review_pass": "",
       "notes": ""
     },
@@ -5372,7 +5372,7 @@
       "last_modified_date": "",
       "review_status": "reviewed",
       "reviewed_by": "council",
-      "reviewed_at": "2026-04-15T19:30:01.507186+00:00",
+      "reviewed_at": "2026-04-15T19:55:05.642393+00:00",
       "review_pass": "",
       "notes": ""
     },
@@ -5389,7 +5389,7 @@
       "last_modified_date": "",
       "review_status": "reviewed",
       "reviewed_by": "council",
-      "reviewed_at": "2026-04-15T19:30:01.507186+00:00",
+      "reviewed_at": "2026-04-15T19:55:05.642393+00:00",
       "review_pass": "",
       "notes": ""
     },
@@ -5406,7 +5406,7 @@
       "last_modified_date": "",
       "review_status": "reviewed",
       "reviewed_by": "council",
-      "reviewed_at": "2026-04-15T19:30:01.507186+00:00",
+      "reviewed_at": "2026-04-15T19:55:05.642393+00:00",
       "review_pass": "",
       "notes": ""
     },
@@ -5423,7 +5423,7 @@
       "last_modified_date": "",
       "review_status": "reviewed",
       "reviewed_by": "council",
-      "reviewed_at": "2026-04-15T19:30:01.507186+00:00",
+      "reviewed_at": "2026-04-15T19:55:05.642393+00:00",
       "review_pass": "",
       "notes": ""
     },
@@ -6152,9 +6152,9 @@
       "complexity": 2,
       "last_modified_commit": "da0745e524ef",
       "last_modified_date": "2026-04-15T11:22:11-05:00",
-      "review_status": "unreviewed",
-      "reviewed_by": "",
-      "reviewed_at": "",
+      "review_status": "reviewed",
+      "reviewed_by": "council",
+      "reviewed_at": "2026-04-15T19:55:04.777472+00:00",
       "review_pass": "",
       "notes": ""
     },
@@ -6169,9 +6169,9 @@
       "complexity": 4,
       "last_modified_commit": "da0745e524ef",
       "last_modified_date": "2026-04-15T11:22:11-05:00",
-      "review_status": "unreviewed",
-      "reviewed_by": "",
-      "reviewed_at": "",
+      "review_status": "reviewed",
+      "reviewed_by": "council",
+      "reviewed_at": "2026-04-15T19:55:04.777472+00:00",
       "review_pass": "",
       "notes": ""
     },
@@ -6186,9 +6186,9 @@
       "complexity": 4,
       "last_modified_commit": "da0745e524ef",
       "last_modified_date": "2026-04-15T11:22:11-05:00",
-      "review_status": "unreviewed",
-      "reviewed_by": "",
-      "reviewed_at": "",
+      "review_status": "reviewed",
+      "reviewed_by": "council",
+      "reviewed_at": "2026-04-15T19:55:04.777472+00:00",
       "review_pass": "",
       "notes": ""
     },
@@ -6203,9 +6203,9 @@
       "complexity": 4,
       "last_modified_commit": "da0745e524ef",
       "last_modified_date": "2026-04-15T11:22:11-05:00",
-      "review_status": "unreviewed",
-      "reviewed_by": "",
-      "reviewed_at": "",
+      "review_status": "reviewed",
+      "reviewed_by": "council",
+      "reviewed_at": "2026-04-15T19:55:04.777472+00:00",
       "review_pass": "",
       "notes": ""
     },
@@ -6220,9 +6220,9 @@
       "complexity": 6,
       "last_modified_commit": "da0745e524ef",
       "last_modified_date": "2026-04-15T11:22:11-05:00",
-      "review_status": "unreviewed",
-      "reviewed_by": "",
-      "reviewed_at": "",
+      "review_status": "reviewed",
+      "reviewed_by": "council",
+      "reviewed_at": "2026-04-15T19:55:04.777472+00:00",
       "review_pass": "",
       "notes": ""
     },
@@ -6237,9 +6237,9 @@
       "complexity": 1,
       "last_modified_commit": "da0745e524ef",
       "last_modified_date": "2026-04-15T11:22:11-05:00",
-      "review_status": "unreviewed",
-      "reviewed_by": "",
-      "reviewed_at": "",
+      "review_status": "reviewed",
+      "reviewed_by": "council",
+      "reviewed_at": "2026-04-15T19:55:04.777472+00:00",
       "review_pass": "",
       "notes": ""
     },
@@ -6442,8 +6442,8 @@
       "last_modified_commit": "6cfff5741cad",
       "last_modified_date": "2026-04-15T14:27:28-05:00",
       "review_status": "reviewed",
-      "reviewed_by": "council",
-      "reviewed_at": "2026-04-15T19:32:20.634469+00:00",
+      "reviewed_by": "council_greenup",
+      "reviewed_at": "2026-04-15T19:58:12.727910+00:00",
       "review_pass": "",
       "notes": ""
     },
@@ -6459,8 +6459,8 @@
       "last_modified_commit": "6cfff5741cad",
       "last_modified_date": "2026-04-15T14:27:28-05:00",
       "review_status": "reviewed",
-      "reviewed_by": "council",
-      "reviewed_at": "2026-04-15T19:30:59.170161+00:00",
+      "reviewed_by": "council_greenup",
+      "reviewed_at": "2026-04-15T19:58:12.727910+00:00",
       "review_pass": "",
       "notes": ""
     },
@@ -6476,8 +6476,8 @@
       "last_modified_commit": "6cfff5741cad",
       "last_modified_date": "2026-04-15T14:27:28-05:00",
       "review_status": "reviewed",
-      "reviewed_by": "council",
-      "reviewed_at": "2026-04-15T19:32:20.437920+00:00",
+      "reviewed_by": "council_greenup",
+      "reviewed_at": "2026-04-15T19:58:12.727910+00:00",
       "review_pass": "",
       "notes": ""
     },
@@ -6493,8 +6493,8 @@
       "last_modified_commit": "6cfff5741cad",
       "last_modified_date": "2026-04-15T14:27:28-05:00",
       "review_status": "reviewed",
-      "reviewed_by": "council",
-      "reviewed_at": "2026-04-15T19:30:59.170161+00:00",
+      "reviewed_by": "council_greenup",
+      "reviewed_at": "2026-04-15T19:58:12.727910+00:00",
       "review_pass": "",
       "notes": ""
     },
@@ -6510,8 +6510,8 @@
       "last_modified_commit": "6cfff5741cad",
       "last_modified_date": "2026-04-15T14:27:28-05:00",
       "review_status": "reviewed",
-      "reviewed_by": "council",
-      "reviewed_at": "2026-04-15T19:30:59.170161+00:00",
+      "reviewed_by": "council_greenup",
+      "reviewed_at": "2026-04-15T19:58:12.727910+00:00",
       "review_pass": "",
       "notes": ""
     },
@@ -6527,8 +6527,8 @@
       "last_modified_commit": "6cfff5741cad",
       "last_modified_date": "2026-04-15T14:27:28-05:00",
       "review_status": "reviewed",
-      "reviewed_by": "council",
-      "reviewed_at": "2026-04-15T19:30:59.170161+00:00",
+      "reviewed_by": "council_greenup",
+      "reviewed_at": "2026-04-15T19:58:12.727910+00:00",
       "review_pass": "",
       "notes": ""
     },
@@ -6544,8 +6544,8 @@
       "last_modified_commit": "6cfff5741cad",
       "last_modified_date": "2026-04-15T14:27:28-05:00",
       "review_status": "reviewed",
-      "reviewed_by": "council",
-      "reviewed_at": "2026-04-15T19:30:59.170161+00:00",
+      "reviewed_by": "council_greenup",
+      "reviewed_at": "2026-04-15T19:58:12.727910+00:00",
       "review_pass": "",
       "notes": ""
     },
@@ -6561,8 +6561,8 @@
       "last_modified_commit": "6cfff5741cad",
       "last_modified_date": "2026-04-15T14:27:28-05:00",
       "review_status": "reviewed",
-      "reviewed_by": "council",
-      "reviewed_at": "2026-04-15T19:30:59.170161+00:00",
+      "reviewed_by": "council_greenup",
+      "reviewed_at": "2026-04-15T19:58:12.727910+00:00",
       "review_pass": "",
       "notes": ""
     },
@@ -6578,8 +6578,8 @@
       "last_modified_commit": "6cfff5741cad",
       "last_modified_date": "2026-04-15T14:27:28-05:00",
       "review_status": "reviewed",
-      "reviewed_by": "council",
-      "reviewed_at": "2026-04-15T19:30:59.170161+00:00",
+      "reviewed_by": "council_greenup",
+      "reviewed_at": "2026-04-15T19:58:12.727910+00:00",
       "review_pass": "",
       "notes": ""
     },
@@ -6595,8 +6595,8 @@
       "last_modified_commit": "6cfff5741cad",
       "last_modified_date": "2026-04-15T14:27:28-05:00",
       "review_status": "reviewed",
-      "reviewed_by": "council",
-      "reviewed_at": "2026-04-15T19:30:59.170161+00:00",
+      "reviewed_by": "council_greenup",
+      "reviewed_at": "2026-04-15T19:58:12.727910+00:00",
       "review_pass": "",
       "notes": ""
     },
@@ -6612,8 +6612,8 @@
       "last_modified_commit": "6cfff5741cad",
       "last_modified_date": "2026-04-15T14:27:28-05:00",
       "review_status": "reviewed",
-      "reviewed_by": "council",
-      "reviewed_at": "2026-04-15T19:30:59.170161+00:00",
+      "reviewed_by": "council_greenup",
+      "reviewed_at": "2026-04-15T19:58:12.727910+00:00",
       "review_pass": "",
       "notes": ""
     },
@@ -6629,8 +6629,8 @@
       "last_modified_commit": "6cfff5741cad",
       "last_modified_date": "2026-04-15T14:27:28-05:00",
       "review_status": "reviewed",
-      "reviewed_by": "council",
-      "reviewed_at": "2026-04-15T19:32:20.234308+00:00",
+      "reviewed_by": "council_greenup",
+      "reviewed_at": "2026-04-15T19:58:12.727910+00:00",
       "review_pass": "",
       "notes": ""
     },
@@ -6646,8 +6646,8 @@
       "last_modified_commit": "6cfff5741cad",
       "last_modified_date": "2026-04-15T14:27:28-05:00",
       "review_status": "reviewed",
-      "reviewed_by": "council",
-      "reviewed_at": "2026-04-15T19:30:59.170161+00:00",
+      "reviewed_by": "council_greenup",
+      "reviewed_at": "2026-04-15T19:58:12.727910+00:00",
       "review_pass": "",
       "notes": ""
     },
@@ -6663,8 +6663,8 @@
       "last_modified_commit": "6cfff5741cad",
       "last_modified_date": "2026-04-15T14:27:28-05:00",
       "review_status": "reviewed",
-      "reviewed_by": "council",
-      "reviewed_at": "2026-04-15T19:30:59.170161+00:00",
+      "reviewed_by": "council_greenup",
+      "reviewed_at": "2026-04-15T19:58:12.727910+00:00",
       "review_pass": "",
       "notes": ""
     },
@@ -6680,8 +6680,8 @@
       "last_modified_commit": "6cfff5741cad",
       "last_modified_date": "2026-04-15T14:27:28-05:00",
       "review_status": "reviewed",
-      "reviewed_by": "council",
-      "reviewed_at": "2026-04-15T19:30:59.170161+00:00",
+      "reviewed_by": "council_greenup",
+      "reviewed_at": "2026-04-15T19:58:12.727910+00:00",
       "review_pass": "",
       "notes": ""
     },
@@ -6697,8 +6697,8 @@
       "last_modified_commit": "6cfff5741cad",
       "last_modified_date": "2026-04-15T14:27:28-05:00",
       "review_status": "reviewed",
-      "reviewed_by": "council",
-      "reviewed_at": "2026-04-15T19:32:20.834573+00:00",
+      "reviewed_by": "council_greenup",
+      "reviewed_at": "2026-04-15T19:58:12.727910+00:00",
       "review_pass": "",
       "notes": ""
     },
@@ -6714,8 +6714,8 @@
       "last_modified_commit": "6cfff5741cad",
       "last_modified_date": "2026-04-15T14:27:28-05:00",
       "review_status": "reviewed",
-      "reviewed_by": "council",
-      "reviewed_at": "2026-04-15T19:30:59.170161+00:00",
+      "reviewed_by": "council_greenup",
+      "reviewed_at": "2026-04-15T19:58:12.727910+00:00",
       "review_pass": "",
       "notes": ""
     },
@@ -32435,9 +32435,9 @@
       "last_modified_commit": "be7a340f6f54",
       "last_modified_date": "2026-04-11T13:03:14-05:00",
       "review_status": "reviewed",
-      "reviewed_by": "nsa_final",
-      "reviewed_at": "2026-04-11T19:19:51.217434+00:00",
-      "review_pass": "nsa_final_20260411",
+      "reviewed_by": "council",
+      "reviewed_at": "2026-04-15T19:55:05.437991+00:00",
+      "review_pass": "",
       "notes": ""
     },
     "tac.mask_codec::compute_semantic_qp_offsets": {
@@ -32452,9 +32452,9 @@
       "last_modified_commit": "be7a340f6f54",
       "last_modified_date": "2026-04-11T13:03:14-05:00",
       "review_status": "reviewed",
-      "reviewed_by": "nsa_final",
-      "reviewed_at": "2026-04-11T19:19:51.217434+00:00",
-      "review_pass": "nsa_final_20260411",
+      "reviewed_by": "council",
+      "reviewed_at": "2026-04-15T19:55:05.437991+00:00",
+      "review_pass": "",
       "notes": ""
     },
     "tac.mask_codec::decode_masks": {
@@ -32469,9 +32469,9 @@
       "last_modified_commit": "be7a340f6f54",
       "last_modified_date": "2026-04-11T13:03:14-05:00",
       "review_status": "reviewed",
-      "reviewed_by": "nsa_final",
-      "reviewed_at": "2026-04-11T19:19:51.217434+00:00",
-      "review_pass": "nsa_final_20260411",
+      "reviewed_by": "council",
+      "reviewed_at": "2026-04-15T19:55:05.437991+00:00",
+      "review_pass": "",
       "notes": ""
     },
     "tac.mask_codec::decode_masks_auto": {
@@ -32486,9 +32486,9 @@
       "last_modified_commit": "be7a340f6f54",
       "last_modified_date": "2026-04-11T13:03:14-05:00",
       "review_status": "reviewed",
-      "reviewed_by": "nsa_final",
-      "reviewed_at": "2026-04-11T19:19:51.217434+00:00",
-      "review_pass": "nsa_final_20260411",
+      "reviewed_by": "council",
+      "reviewed_at": "2026-04-15T19:55:05.437991+00:00",
+      "review_pass": "",
       "notes": ""
     },
     "tac.mask_codec::decode_masks_vvc": {
@@ -32503,9 +32503,9 @@
       "last_modified_commit": "be7a340f6f54",
       "last_modified_date": "2026-04-11T13:03:14-05:00",
       "review_status": "reviewed",
-      "reviewed_by": "nsa_final",
-      "reviewed_at": "2026-04-11T19:19:51.217434+00:00",
-      "review_pass": "nsa_final_20260411",
+      "reviewed_by": "council",
+      "reviewed_at": "2026-04-15T19:55:05.437991+00:00",
+      "review_pass": "",
       "notes": ""
     },
     "tac.mask_codec::encode_masks": {
@@ -32520,9 +32520,9 @@
       "last_modified_commit": "be7a340f6f54",
       "last_modified_date": "2026-04-11T13:03:14-05:00",
       "review_status": "reviewed",
-      "reviewed_by": "nsa_final",
-      "reviewed_at": "2026-04-11T19:19:51.217434+00:00",
-      "review_pass": "nsa_final_20260411",
+      "reviewed_by": "council",
+      "reviewed_at": "2026-04-15T19:55:05.437991+00:00",
+      "review_pass": "",
       "notes": ""
     },
     "tac.mask_codec::encode_masks_auto": {
@@ -32537,9 +32537,9 @@
       "last_modified_commit": "be7a340f6f54",
       "last_modified_date": "2026-04-11T13:03:14-05:00",
       "review_status": "reviewed",
-      "reviewed_by": "nsa_final",
-      "reviewed_at": "2026-04-11T19:19:51.217434+00:00",
-      "review_pass": "nsa_final_20260411",
+      "reviewed_by": "council",
+      "reviewed_at": "2026-04-15T19:55:05.437991+00:00",
+      "review_pass": "",
       "notes": ""
     },
     "tac.mask_codec::encode_masks_monochrome": {
@@ -32554,9 +32554,9 @@
       "last_modified_commit": "be7a340f6f54",
       "last_modified_date": "2026-04-11T13:03:14-05:00",
       "review_status": "reviewed",
-      "reviewed_by": "nsa_final",
-      "reviewed_at": "2026-04-11T19:19:51.217434+00:00",
-      "review_pass": "nsa_final_20260411",
+      "reviewed_by": "council",
+      "reviewed_at": "2026-04-15T19:55:05.437991+00:00",
+      "review_pass": "",
       "notes": ""
     },
     "tac.mask_codec::encode_masks_semantic_rate": {
@@ -32571,9 +32571,9 @@
       "last_modified_commit": "be7a340f6f54",
       "last_modified_date": "2026-04-11T13:03:14-05:00",
       "review_status": "reviewed",
-      "reviewed_by": "nsa_final",
-      "reviewed_at": "2026-04-11T19:19:51.217434+00:00",
-      "review_pass": "nsa_final_20260411",
+      "reviewed_by": "council",
+      "reviewed_at": "2026-04-15T19:55:05.437991+00:00",
+      "review_pass": "",
       "notes": ""
     },
     "tac.mask_codec::encode_masks_vvc": {
@@ -32588,9 +32588,9 @@
       "last_modified_commit": "be7a340f6f54",
       "last_modified_date": "2026-04-11T13:03:14-05:00",
       "review_status": "reviewed",
-      "reviewed_by": "nsa_final",
-      "reviewed_at": "2026-04-11T19:19:51.217434+00:00",
-      "review_pass": "nsa_final_20260411",
+      "reviewed_by": "council",
+      "reviewed_at": "2026-04-15T19:55:05.437991+00:00",
+      "review_pass": "",
       "notes": ""
     },
     "tac.mask_codec::extract_masks": {
@@ -32605,9 +32605,9 @@
       "last_modified_commit": "be7a340f6f54",
       "last_modified_date": "2026-04-11T13:03:14-05:00",
       "review_status": "reviewed",
-      "reviewed_by": "nsa_final",
-      "reviewed_at": "2026-04-11T19:19:51.217434+00:00",
-      "review_pass": "nsa_final_20260411",
+      "reviewed_by": "council",
+      "reviewed_at": "2026-04-15T19:55:05.437991+00:00",
+      "review_pass": "",
       "notes": ""
     },
     "tac.mask_codec::generate_roi_qp_map": {
@@ -32622,9 +32622,9 @@
       "last_modified_commit": "be7a340f6f54",
       "last_modified_date": "2026-04-11T13:03:14-05:00",
       "review_status": "reviewed",
-      "reviewed_by": "nsa_final",
-      "reviewed_at": "2026-04-11T19:19:51.217434+00:00",
-      "review_pass": "nsa_final_20260411",
+      "reviewed_by": "council",
+      "reviewed_at": "2026-04-15T19:55:05.437991+00:00",
+      "review_pass": "",
       "notes": ""
     },
     "tac.mask_codec::mask_pair_from_index": {
@@ -32639,9 +32639,9 @@
       "last_modified_commit": "be7a340f6f54",
       "last_modified_date": "2026-04-11T13:03:14-05:00",
       "review_status": "reviewed",
-      "reviewed_by": "nsa_final",
-      "reviewed_at": "2026-04-11T19:19:51.217434+00:00",
-      "review_pass": "nsa_final_20260411",
+      "reviewed_by": "council",
+      "reviewed_at": "2026-04-15T19:55:05.437991+00:00",
+      "review_pass": "",
       "notes": ""
     },
     "tac.mask_codec::masks_to_pairs": {
@@ -32656,9 +32656,9 @@
       "last_modified_commit": "be7a340f6f54",
       "last_modified_date": "2026-04-11T13:03:14-05:00",
       "review_status": "reviewed",
-      "reviewed_by": "nsa_final",
-      "reviewed_at": "2026-04-11T19:19:51.217434+00:00",
-      "review_pass": "nsa_final_20260411",
+      "reviewed_by": "council",
+      "reviewed_at": "2026-04-15T19:55:05.437991+00:00",
+      "review_pass": "",
       "notes": ""
     },
     "tac.mask_codec::measure_mask_rate": {
@@ -32673,9 +32673,9 @@
       "last_modified_commit": "be7a340f6f54",
       "last_modified_date": "2026-04-11T13:03:14-05:00",
       "review_status": "reviewed",
-      "reviewed_by": "nsa_final",
-      "reviewed_at": "2026-04-11T19:19:51.217434+00:00",
-      "review_pass": "nsa_final_20260411",
+      "reviewed_by": "council",
+      "reviewed_at": "2026-04-15T19:55:05.437991+00:00",
+      "review_pass": "",
       "notes": ""
     },
     "tac.mask_codec::restore_thin_structures": {
@@ -32690,9 +32690,9 @@
       "last_modified_commit": "be7a340f6f54",
       "last_modified_date": "2026-04-11T13:03:14-05:00",
       "review_status": "reviewed",
-      "reviewed_by": "nsa_final",
-      "reviewed_at": "2026-04-11T19:19:51.217434+00:00",
-      "review_pass": "nsa_final_20260411",
+      "reviewed_by": "council",
+      "reviewed_at": "2026-04-15T19:55:05.437991+00:00",
+      "review_pass": "",
       "notes": ""
     },
     "tac.mask_codec::sharpen_mask_boundaries": {
@@ -32707,9 +32707,9 @@
       "last_modified_commit": "be7a340f6f54",
       "last_modified_date": "2026-04-11T13:03:14-05:00",
       "review_status": "reviewed",
-      "reviewed_by": "nsa_final",
-      "reviewed_at": "2026-04-11T19:19:51.217434+00:00",
-      "review_pass": "nsa_final_20260411",
+      "reviewed_by": "council",
+      "reviewed_at": "2026-04-15T19:55:05.437991+00:00",
+      "review_pass": "",
       "notes": ""
     },
     "tac.mask_entropy_coder::_build_fulldelta_payload": {

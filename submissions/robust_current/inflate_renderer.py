@@ -588,6 +588,10 @@ def _load_masks_from_archive(
             f"{proc.stderr.decode('utf-8', errors='replace')}"
         )
 
+    # Note: proc.stdout buffers the entire decoded video in memory.
+    # At 1200 frames x 48x64 = ~3.5 MB, this is fine.  At full 384x512
+    # it would be ~235 MB.  For production at full resolution, consider
+    # Popen with streaming reads instead of capture_output.
     raw = np.frombuffer(proc.stdout, dtype=np.uint8)
     frame_size = H * W
     N = len(raw) // frame_size
@@ -1196,6 +1200,53 @@ def _generate_and_write(
 # ============================================================
 # Main inflate function
 # ============================================================
+def _detect_device_and_batch_size() -> tuple[str, int]:
+    """Detect best available device and appropriate batch size.
+
+    Returns:
+        (device_string, batch_size) tuple.
+    """
+    if torch.cuda.is_available():
+        device = "cuda"
+        batch_size = 16
+        print(f"Device: CUDA ({torch.cuda.get_device_name(0)})", file=sys.stderr)
+    else:
+        device = "cpu"
+        batch_size = 4
+        print(f"Device: CPU ({os.cpu_count()} cores)", file=sys.stderr)
+    return device, batch_size
+
+
+def _load_renderer_and_masks(
+    archive_dir: str,
+    device: str,
+    renderer_filename: str = "renderer.bin",
+    mask_filename: str = "masks.mkv",
+) -> tuple:
+    """Load renderer and masks from the archive directory.
+
+    Shared loading logic used by both inflate_renderer() and
+    inflate_renderer_with_tto() to avoid code duplication.
+
+    Returns:
+        (renderer, masks, mask_video_path) tuple.
+    """
+    renderer_path = Path(archive_dir) / renderer_filename
+    if not renderer_path.exists():
+        raise FileNotFoundError(
+            f"Renderer not found: {renderer_path}\n"
+            f"Expected {renderer_filename} inside archive directory."
+        )
+    renderer = _load_renderer(str(renderer_path), device)
+
+    mask_video_path = Path(archive_dir) / mask_filename
+    if not mask_video_path.exists():
+        raise FileNotFoundError(f"Mask video not found: {mask_video_path}")
+    masks = _load_masks_from_archive(mask_video_path)
+
+    return renderer, masks, mask_video_path
+
+
 def inflate_renderer(
     archive_dir: str,
     inflated_dir: str,
@@ -1296,12 +1347,23 @@ def inflate_renderer(
         print(f"Stage {stage_num}: Loading pre-extracted masks ...", file=sys.stderr)
         masks = _load_masks_from_archive(mask_video_path)
 
-        # Verify mask resolution
-        if masks.shape[1] != SEG_H or masks.shape[2] != SEG_W:
-            raise ValueError(
-                f"Mask resolution mismatch: {masks.shape[1]}x{masks.shape[2]} "
-                f"vs expected {SEG_H}x{SEG_W}"
-            )
+        # Verify mask resolution (accept clean downscale factors)
+        mask_h, mask_w = masks.shape[1], masks.shape[2]
+        if mask_h != SEG_H or mask_w != SEG_W:
+            if SEG_H % mask_h == 0 and SEG_W % mask_w == 0:
+                scale = SEG_H // mask_h
+                print(
+                    f"  Archive masks at {mask_h}x{mask_w} "
+                    f"(1/{scale} of {SEG_H}x{SEG_W}). "
+                    f"Renderer will upsample internally.",
+                    file=sys.stderr,
+                )
+            else:
+                raise ValueError(
+                    f"Mask resolution {mask_h}x{mask_w} is not a clean "
+                    f"downscale factor of {SEG_H}x{SEG_W}. Expected "
+                    f"dimensions that evenly divide {SEG_H}x{SEG_W}."
+                )
 
     # ---- Process each video ----
     output_path = Path(inflated_dir)
@@ -1366,13 +1428,24 @@ def inflate_renderer(
             del gt_frames
 
         # Verify mask resolution (may be downscaled for rate savings)
-        if video_masks.shape[1] != SEG_H or video_masks.shape[2] != SEG_W:
-            print(
-                f"  Masks at {video_masks.shape[1]}x{video_masks.shape[2]} "
-                f"(target: {SEG_H}x{SEG_W}). Renderer will upsample via "
-                f"nearest-neighbor internally.",
-                file=sys.stderr,
-            )
+        mask_h, mask_w = video_masks.shape[1], video_masks.shape[2]
+        if mask_h != SEG_H or mask_w != SEG_W:
+            # Accept clean downscale factors (e.g. 48x64 = 384/8 x 512/8)
+            if SEG_H % mask_h == 0 and SEG_W % mask_w == 0:
+                scale = SEG_H // mask_h
+                print(
+                    f"  Masks at {mask_h}x{mask_w} "
+                    f"(1/{scale} of {SEG_H}x{SEG_W}). "
+                    f"Renderer will upsample via nearest-neighbor internally.",
+                    file=sys.stderr,
+                )
+            else:
+                raise ValueError(
+                    f"Mask resolution {mask_h}x{mask_w} is not a clean "
+                    f"downscale factor of {SEG_H}x{SEG_W}. This would "
+                    f"produce interpolation artifacts. Expected dimensions "
+                    f"that evenly divide {SEG_H}x{SEG_W}."
+                )
 
         # Generate and write
         gen_stage = "Stage 3" if use_archive_masks else "Stage 6"
@@ -1567,6 +1640,46 @@ def _adaptive_tto_phase(
     N = renderer_frames.shape[0]
     P = N // 2
 
+    # Step 0: Gradient sanity check — verify gradients flow before committing
+    # to TTO. If upstream rgb_to_yuv6 or similar has @torch.no_grad, all TTO
+    # steps would produce zero PoseNet gradients (the "great gradient bug").
+    print("  [TTO] Gradient sanity check...", file=sys.stderr)
+    try:
+        test_pair = renderer_frames[:2].clone().to(device).requires_grad_(True)
+        test_masks = masks[:2].to(device)
+        seg_in = segnet.preprocess_input(
+            test_pair.permute(0, 3, 1, 2).unsqueeze(1).float()
+        )
+        seg_out = segnet(seg_in)
+        seg_loss = seg_out.sum()
+
+        from tac.scorer import _yuv6_pair
+        yuv6 = _yuv6_pair(test_pair[0:1], test_pair[1:2])
+        pose_out = posenet(yuv6)
+        pose_loss = pose_out.sum()
+
+        total = seg_loss + pose_loss
+        total.backward()
+
+        grad_norm = test_pair.grad.norm().item() if test_pair.grad is not None else 0.0
+        if grad_norm < 1e-12:
+            print(
+                f"  [TTO] ERROR: Dead gradients detected (grad_norm={grad_norm:.2e}). "
+                f"Skipping TTO, returning renderer-only output.",
+                file=sys.stderr,
+            )
+            return renderer_frames
+        print(f"  [TTO] Gradient check PASSED (grad_norm={grad_norm:.4e})",
+              file=sys.stderr)
+        del test_pair, test_masks, seg_in, seg_out, pose_out, yuv6
+        if device == "cuda":
+            torch.cuda.empty_cache()
+    except Exception as e:
+        print(f"  [TTO] ERROR: Gradient check failed ({e}). "
+              f"Skipping TTO, returning renderer-only output.",
+              file=sys.stderr)
+        return renderer_frames
+
     # Step 1: Compute per-pair PoseNet distortion
     print("  [TTO] Computing per-pair PoseNet distortion...", file=sys.stderr)
     t0 = time.monotonic()
@@ -1731,27 +1844,13 @@ def inflate_renderer_with_tto(
 
     t_total_start = time.monotonic()
 
-    # ---- Device detection ----
-    if torch.cuda.is_available():
-        device = "cuda"
-        render_batch_size = 16
-        print(f"Device: CUDA ({torch.cuda.get_device_name(0)})", file=sys.stderr)
-    else:
-        device = "cpu"
-        render_batch_size = 4
-        print(f"Device: CPU ({os.cpu_count()} cores)", file=sys.stderr)
-
-    # ---- Load renderer ----
-    renderer_path = Path(archive_dir) / renderer_filename
-    if not renderer_path.exists():
-        raise FileNotFoundError(f"Renderer not found: {renderer_path}")
-    renderer = _load_renderer(str(renderer_path), device)
-
-    # ---- Load masks from archive ----
-    mask_video_path = Path(archive_dir) / mask_filename
-    if not mask_video_path.exists():
-        raise FileNotFoundError(f"Mask video not found: {mask_video_path}")
-    masks = _load_masks_from_archive(mask_video_path)
+    # ---- Device detection and loading (shared with inflate_renderer) ----
+    device, render_batch_size = _detect_device_and_batch_size()
+    renderer, masks, mask_video_path = _load_renderer_and_masks(
+        archive_dir, device,
+        renderer_filename=renderer_filename,
+        mask_filename=mask_filename,
+    )
 
     # ---- Generate renderer frames (at SegNet resolution) ----
     print("Stage 1: Generating renderer frames...", file=sys.stderr)
