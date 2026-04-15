@@ -180,7 +180,7 @@ def plot_optimal_allocation(operating_points: list[dict], save_path: str) -> Non
     fig.suptitle(
         "Shannon's Optimal Capacity Allocation\n"
         r"score = 100$\cdot$seg + $\sqrt{10\cdot\mathrm{pose}}$ + 25$\cdot$rate",
-        fontsize=14, fontweight="bold",
+        fontsize=15, fontweight="bold", y=0.98,
     )
 
     # --- Panel 1: Marginal sensitivity as function of pose ---
@@ -203,16 +203,16 @@ def plot_optimal_allocation(operating_points: list[dict], save_path: str) -> Non
             op["label"], (op["pose"], dp_val),
             textcoords="offset points", xytext=(10, 5), fontsize=8,
         )
-    ax1.set_xlabel("PoseNet distortion")
-    ax1.set_ylabel("Marginal sensitivity")
-    ax1.set_title("Marginal Returns vs PoseNet")
-    ax1.legend(fontsize=8)
+    ax1.set_xlabel("PoseNet distortion (raw)", fontsize=10)
+    ax1.set_ylabel(r"$\partial$(score) / $\partial$(component)", fontsize=10)
+    ax1.set_title("Marginal Returns vs PoseNet", fontsize=12, fontweight="bold")
     ax1.grid(True, alpha=0.3)
-    # Shade regions
+    # Shade regions (before legend so labels appear)
     ax1.fill_between(pose_range, 0, dp, where=(dp > 100), alpha=0.1, color="blue",
-                     label="PoseNet dominates")
+                     label="PoseNet dominates SegNet")
     ax1.fill_between(pose_range, 0, np.full_like(pose_range, 100), where=(dp < 100) & (dp > 25),
-                     alpha=0.1, color="red")
+                     alpha=0.1, color="red", label="SegNet dominates, PoseNet > rate")
+    ax1.legend(fontsize=7, loc="upper right")
 
     # --- Panel 2: Score iso-contours in (seg, pose) space ---
     ax2 = axes[0, 1]
@@ -231,9 +231,9 @@ def plot_optimal_allocation(operating_points: list[dict], save_path: str) -> Non
             textcoords="offset points", xytext=(5, 5), fontsize=7,
             bbox=dict(boxstyle="round,pad=0.2", facecolor="white", alpha=0.8),
         )
-    ax2.set_xlabel("SegNet distortion")
-    ax2.set_ylabel("PoseNet distortion")
-    ax2.set_title("Score Iso-contours (rate=0.004)")
+    ax2.set_xlabel("SegNet distortion (raw)", fontsize=10)
+    ax2.set_ylabel("PoseNet distortion (raw)", fontsize=10)
+    ax2.set_title("Score Iso-contours (rate=0.004)", fontsize=12, fontweight="bold")
     ax2.grid(True, alpha=0.3)
 
     # --- Panel 3: Score contribution breakdown bar chart ---
@@ -252,8 +252,8 @@ def plot_optimal_allocation(operating_points: list[dict], save_path: str) -> Non
             label="25*rate", color="tab:green", alpha=0.8)
     ax3.set_xticks(x)
     ax3.set_xticklabels(labels, rotation=30, ha="right", fontsize=8)
-    ax3.set_ylabel("Score contribution")
-    ax3.set_title("Score Decomposition by Component")
+    ax3.set_ylabel("Score contribution (score points)", fontsize=10)
+    ax3.set_title("Score Decomposition by Component", fontsize=12, fontweight="bold")
     ax3.legend(fontsize=8)
     ax3.grid(True, alpha=0.3, axis="y")
 
@@ -269,7 +269,8 @@ def plot_optimal_allocation(operating_points: list[dict], save_path: str) -> Non
     GPOSE = np.sqrt(10.0) / (2.0 * np.sqrt(PO))
     # Normalize for display
     MAG = np.sqrt(GSEG**2 + GPOSE**2)
-    ax4.quiver(SG, PO, -GSEG / MAG, -GPOSE / MAG, MAG, cmap="coolwarm", alpha=0.7)
+    q = ax4.quiver(SG, PO, -GSEG / MAG, -GPOSE / MAG, MAG, cmap="coolwarm", alpha=0.7)
+    plt.colorbar(q, ax=ax4, label=r"$\|\nabla\mathrm{score}\|$", fraction=0.046)
     for op in operating_points:
         ax4.plot(op["seg"], op["pose"], "ko", markersize=10, zorder=5)
         ax4.annotate(
@@ -283,9 +284,9 @@ def plot_optimal_allocation(operating_points: list[dict], save_path: str) -> Non
                 label=f"pose={pose_seg_xover:.5f}: seg=pose marginal")
     ax4.axhline(pose_rate_xover, color="green", linestyle="--", alpha=0.5,
                 label=f"pose={pose_rate_xover:.4f}: pose=rate marginal")
-    ax4.set_xlabel("SegNet distortion")
-    ax4.set_ylabel("PoseNet distortion")
-    ax4.set_title("Steepest Descent Direction (gradient field)")
+    ax4.set_xlabel("SegNet distortion (raw)", fontsize=10)
+    ax4.set_ylabel("PoseNet distortion (raw)", fontsize=10)
+    ax4.set_title("Steepest Descent Direction (gradient field)", fontsize=12, fontweight="bold")
     ax4.legend(fontsize=7, loc="upper right")
     ax4.grid(True, alpha=0.3)
 

@@ -258,10 +258,10 @@ def plot_spectra(
     matplotlib.use("Agg")
     import matplotlib.pyplot as plt
 
-    fig, axes = plt.subplots(1, 3, figsize=(16, 5))
+    fig, axes = plt.subplots(1, 3, figsize=(18, 6))
     fig.suptitle(
         "PoseNet Jacobian Rank Analysis: Output (6-dim) vs Embedding",
-        fontsize=13, fontweight="bold",
+        fontsize=14, fontweight="bold", y=0.98,
     )
 
     # Panel 1: Singular value spectra (normalized)
@@ -278,9 +278,9 @@ def plot_spectra(
         ax1.semilogy(range(1, len(sv_norm) + 1), sv_norm, "b.-",
                      markersize=3, linewidth=1, alpha=0.6,
                      label=f"Embedding (pair {r.get('pair_idx', '?')})")
-    ax1.set_xlabel("Singular value index")
-    ax1.set_ylabel("Normalized singular value (log scale)")
-    ax1.set_title("Singular Value Spectrum")
+    ax1.set_xlabel("Singular value index", fontsize=11)
+    ax1.set_ylabel(r"$\sigma_i / \sigma_1$ (normalized, log scale)", fontsize=11)
+    ax1.set_title("Singular Value Spectrum", fontsize=12, fontweight="bold")
     ax1.legend(fontsize=7)
     ax1.grid(True, alpha=0.3)
 
@@ -302,9 +302,9 @@ def plot_spectra(
         ax2.text(i - width/2, r + 0.1, f"{r:.1f}/{m}", ha="center", fontsize=7)
     for i, (r, m) in enumerate(zip(emb_ranks, emb_max)):
         ax2.text(i + width/2, r + 0.5, f"{r:.1f}/{m}", ha="center", fontsize=7)
-    ax2.set_xlabel("Frame pair index")
-    ax2.set_ylabel("Effective rank")
-    ax2.set_title("Effective Rank: Output vs Embedding")
+    ax2.set_xlabel("Frame pair index", fontsize=11)
+    ax2.set_ylabel("Effective rank (Shannon entropy)", fontsize=11)
+    ax2.set_title("Effective Rank: Output vs Embedding", fontsize=12, fontweight="bold")
     ax2.legend(fontsize=8)
     ax2.grid(True, alpha=0.3, axis="y")
 

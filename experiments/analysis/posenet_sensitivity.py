@@ -211,23 +211,26 @@ def visualize_sensitivity(
     import matplotlib.pyplot as plt
     import matplotlib.patches as mpatches
 
-    fig, axes = plt.subplots(1, 2, figsize=(16, 6))
+    fig, axes = plt.subplots(1, 2, figsize=(16, 7))
 
     # Left: raw sensitivity heatmap
     sm_np = sensitivity_map.numpy()
-    im = axes[0].imshow(sm_np, cmap="hot", aspect="auto")
-    axes[0].set_title("PoseNet Gradient Sensitivity Map")
-    axes[0].set_xlabel("Width")
-    axes[0].set_ylabel("Height")
-    plt.colorbar(im, ax=axes[0], label="Gradient Magnitude")
+    im = axes[0].imshow(sm_np, cmap="hot", aspect="equal")
+    axes[0].set_title("PoseNet Gradient Sensitivity Map", fontsize=13, fontweight="bold")
+    axes[0].set_xlabel("Width (px)", fontsize=11)
+    axes[0].set_ylabel("Height (px)", fontsize=11)
+    cb1 = plt.colorbar(im, ax=axes[0], label="Gradient Magnitude (L2 norm)", fraction=0.046)
+    cb1.ax.tick_params(labelsize=9)
 
     # Right: log-scale with patch overlay
     sm_log = np.log1p(sm_np)
-    im2 = axes[1].imshow(sm_log, cmap="hot", aspect="auto")
-    axes[1].set_title(f"Log Sensitivity + Top-{n_show} Insensitive Patches")
-    axes[1].set_xlabel("Width")
-    axes[1].set_ylabel("Height")
-    plt.colorbar(im2, ax=axes[1], label="log(1 + Gradient Magnitude)")
+    im2 = axes[1].imshow(sm_log, cmap="hot", aspect="equal")
+    axes[1].set_title(f"Log Sensitivity + Top-{n_show} Insensitive Patches",
+                      fontsize=13, fontweight="bold")
+    axes[1].set_xlabel("Width (px)", fontsize=11)
+    axes[1].set_ylabel("Height (px)", fontsize=11)
+    cb2 = plt.colorbar(im2, ax=axes[1], label=r"$\ln(1 + \|\nabla\|_2)$", fraction=0.046)
+    cb2.ax.tick_params(labelsize=9)
 
     if top_k_patches:
         for i, p in enumerate(top_k_patches[:n_show]):
