@@ -282,6 +282,60 @@ class TacLosslessNextFrameCoderTests(unittest.TestCase):
         self.assertEqual(result["model_backend"], "tiny_frame_predictor")
         self.assertEqual(result["model_profile"], "tiny_frame_predictor_small")
 
+    def test_encode_commavq_next_frame_sample_loads_tiny_runtime_checkpoint(self) -> None:
+        import torch
+
+        from tac.lossless.next_frame_coder import encode_commavq_next_frame_sample
+        from tac.lossless.tiny_frame_predictor import (
+            load_tiny_frame_predictor_runtime,
+            save_tiny_frame_predictor_checkpoint,
+        )
+
+        with tempfile.TemporaryDirectory() as tmpdir:
+            root = Path(tmpdir)
+            token_path = root / "tokens.bin"
+            output_path = root / "sample.nfg"
+            checkpoint_path = root / "tiny_runtime.pt"
+            frame0 = np.full((8, 16), 3, dtype=np.uint16)
+            frame1 = np.full((8, 16), 4, dtype=np.uint16)
+            frame2 = np.full((8, 16), 5, dtype=np.uint16)
+            flat = np.concatenate(
+                [
+                    np.array([1024], dtype=np.uint16), frame0.reshape(-1),
+                    np.array([1024], dtype=np.uint16), frame1.reshape(-1),
+                    np.array([1024], dtype=np.uint16), frame2.reshape(-1),
+                    np.array([1025], dtype=np.uint16),
+                ]
+            )
+            flat.tofile(token_path)
+
+            runtime = load_tiny_frame_predictor_runtime(
+                "tiny_frame_predictor_small",
+                vocab_size=1024,
+                device="cpu",
+            )
+            with torch.no_grad():
+                runtime._model.output_projection.bias.zero_()
+                runtime._model.output_projection.bias[11] = 6.0
+            save_tiny_frame_predictor_checkpoint(runtime, checkpoint_path)
+
+            result = encode_commavq_next_frame_sample(
+                token_path=token_path,
+                encoded_path=output_path,
+                profile="tiny_frame_predictor_small",
+                checkpoint_path=checkpoint_path,
+                verify_decode=True,
+                device="cpu",
+            )
+
+            self.assertTrue(output_path.exists())
+
+        self.assertEqual(result["command"], "lossless_next_frame_sample")
+        self.assertTrue(result["exact_match"])
+        self.assertEqual(result["model_backend"], "tiny_frame_predictor")
+        self.assertEqual(result["model_profile"], "tiny_frame_predictor_small")
+        self.assertEqual(result["model_path"], str(checkpoint_path))
+
 
 if __name__ == "__main__":
     unittest.main()

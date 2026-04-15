@@ -1,0 +1,56 @@
+{
+  "command": "lossless_tiny_frame_train_probe",
+  "profile": "tiny_frame_predictor_small",
+  "output_path": "/Users/adpena/Projects/pact/reports/raw/2026-04-12-commavq-tiny-frame-train-probe/train_split01_probe_batch1_v2.json",
+  "device": "cpu",
+  "batch_size": 2,
+  "context_frames": 8,
+  "max_records": 2,
+  "sample_offset": 0,
+  "max_batches": 1,
+  "learning_rate": 0.05,
+  "parameter_count": 413057,
+  "state_dict_bytes": 1659108,
+  "observed_batch_count": 1,
+  "train_steps": [
+    {
+      "step": 1,
+      "mode": "train",
+      "loss": 7.05323600769043,
+      "token_accuracy": 0.0,
+      "correct_tokens": 0,
+      "token_count": 256,
+      "batch_size": 2,
+      "context_frames": 8,
+      "positions": 128
+    }
+  ],
+  "train": {
+    "mode": "train",
+    "loss": 7.05323600769043,
+    "token_accuracy": 0.0,
+    "correct_tokens": 0,
+    "token_count": 256,
+    "batch_size": 2,
+    "context_frames": 8,
+    "positions": 128
+  },
+  "eval": {
+    "mode": "eval",
+    "loss": 6.85957670211792,
+    "token_accuracy": 0.0,
+    "correct_tokens": 0,
+    "token_count": 256,
+    "batch_size": 2,
+    "context_frames": 8,
+    "positions": 128
+  },
+  "file_names": [
+    "3b41c0fa8959aea6c118e5714f412a2e_13",
+    "3b41c0fa8959aea6c118e5714f412a2e_13"
+  ],
+  "target_frame_indices": [
+    1,
+    2
+  ]
+}

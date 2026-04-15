@@ -1,0 +1,195 @@
+{
+  "command": "lossless_tiny_frame_real_run",
+  "profile": "tiny_frame_predictor_small",
+  "device": "mps",
+  "train_data_files": [
+    "data-0000.tar.gz"
+  ],
+  "holdout_data_files": [
+    "data-0001.tar.gz"
+  ],
+  "max_records": 256,
+  "max_batches": 2000,
+  "batch_size": 32,
+  "context_frames": 8,
+  "learning_rate": 0.0003,
+  "train_seconds": 34.02318891699542,
+  "checkpoint_path": "/Users/adpena/Projects/pact/reports/raw/2026-04-12-commavq-tiny-frame-real-run/tiny_frame_predictor_small_train256_b2000_lr3e4.pt",
+  "self_compressed_path": "/Users/adpena/Projects/pact/reports/raw/2026-04-12-commavq-tiny-frame-real-run/tiny_frame_predictor_small_train256_b2000_lr3e4_output_projection_4bit.selfc",
+  "train_steps": [
+    {
+      "step": 1,
+      "mode": "train",
+      "loss": 7.043462753295898,
+      "token_accuracy": 0.000732421875,
+      "correct_tokens": 3,
+      "token_count": 4096,
+      "batch_size": 32,
+      "context_frames": 8,
+      "positions": 128
+    },
+    {
+      "step": 2,
+      "mode": "train",
+      "loss": 7.021856784820557,
+      "token_accuracy": 0.0009765625,
+      "correct_tokens": 4,
+      "token_count": 4096,
+      "batch_size": 32,
+      "context_frames": 8,
+      "positions": 128
+    },
+    {
+      "step": 5,
+      "mode": "train",
+      "loss": 6.9086480140686035,
+      "token_accuracy": 0.00537109375,
+      "correct_tokens": 22,
+      "token_count": 4096,
+      "batch_size": 32,
+      "context_frames": 8,
+      "positions": 128
+    },
+    {
+      "step": 10,
+      "mode": "train",
+      "loss": 6.931032657623291,
+      "token_accuracy": 0.001220703125,
+      "correct_tokens": 5,
+      "token_count": 4096,
+      "batch_size": 32,
+      "context_frames": 8,
+      "positions": 128
+    },
+    {
+      "step": 20,
+      "mode": "train",
+      "loss": 6.866503715515137,
+      "token_accuracy": 0.002197265625,
+      "correct_tokens": 9,
+      "token_count": 4096,
+      "batch_size": 32,
+      "context_frames": 8,
+      "positions": 128
+    },
+    {
+      "step": 50,
+      "mode": "train",
+      "loss": 6.759120941162109,
+      "token_accuracy": 0.004638671875,
+      "correct_tokens": 19,
+      "token_count": 4096,
+      "batch_size": 32,
+      "context_frames": 8,
+      "positions": 128
+    },
+    {
+      "step": 100,
+      "mode": "train",
+      "loss": 7.127181529998779,
+      "token_accuracy": 0.001220703125,
+      "correct_tokens": 5,
+      "token_count": 4096,
+      "batch_size": 32,
+      "context_frames": 8,
+      "positions": 128
+    },
+    {
+      "step": 200,
+      "mode": "train",
+      "loss": 6.679500102996826,
+      "token_accuracy": 0.0048828125,
+      "correct_tokens": 20,
+      "token_count": 4096,
+      "batch_size": 32,
+      "context_frames": 8,
+      "positions": 128
+    },
+    {
+      "step": 500,
+      "mode": "train",
+      "loss": 6.857845783233643,
+      "token_accuracy": 0.008056640625,
+      "correct_tokens": 33,
+      "token_count": 4096,
+      "batch_size": 32,
+      "context_frames": 8,
+      "positions": 128
+    },
+    {
+      "step": 1000,
+      "mode": "train",
+      "loss": 6.852116584777832,
+      "token_accuracy": 0.003173828125,
+      "correct_tokens": 13,
+      "token_count": 4096,
+      "batch_size": 32,
+      "context_frames": 8,
+      "positions": 128
+    },
+    {
+      "step": 1500,
+      "mode": "train",
+      "loss": 6.73002290725708,
+      "token_accuracy": 0.002197265625,
+      "correct_tokens": 9,
+      "token_count": 4096,
+      "batch_size": 32,
+      "context_frames": 8,
+      "positions": 128
+    },
+    {
+      "step": 2000,
+      "mode": "train",
+      "loss": 6.851147651672363,
+      "token_accuracy": 0.003173828125,
+      "correct_tokens": 13,
+      "token_count": 4096,
+      "batch_size": 32,
+      "context_frames": 8,
+      "positions": 128
+    }
+  ],
+  "final_train": {
+    "mode": "train",
+    "loss": 6.851147651672363,
+    "token_accuracy": 0.003173828125,
+    "correct_tokens": 13,
+    "token_count": 4096,
+    "batch_size": 32,
+    "context_frames": 8,
+    "positions": 128
+  },
+  "encode_result": {
+    "command": "lossless_next_frame_sample",
+    "token_path": "/Users/adpena/Projects/pact/reports/raw/2026-04-12-commavq-tiny-frame-real-run/holdout129_frame_major_tokens.bin",
+    "encoded_path": "/Users/adpena/Projects/pact/reports/raw/2026-04-12-commavq-tiny-frame-real-run/tiny_frame_predictor_small_holdout129_train256_b2000_lr3e4.nfg",
+    "profile": "tiny_frame_predictor_small",
+    "device": "mps",
+    "dtype": "float32",
+    "context_frames": 8,
+    "frame_count": 129,
+    "raw_token_count": 16642,
+    "encoded_bytes": 21027,
+    "original_bytes": 33024,
+    "compression_ratio": 1.5705521472392638,
+    "exact_match": null,
+    "local_only": true,
+    "measured": false,
+    "model_backend": "tiny_frame_predictor",
+    "execution_provider": "mps",
+    "execution_providers": [
+      "mps"
+    ],
+    "model_path": "/Users/adpena/Projects/pact/reports/raw/2026-04-12-commavq-tiny-frame-real-run/tiny_frame_predictor_small_train256_b2000_lr3e4.pt",
+    "model_profile": "tiny_frame_predictor_small"
+  },
+  "combined_bytes": {
+    "model_checkpoint_path": "/Users/adpena/Projects/pact/reports/raw/2026-04-12-commavq-tiny-frame-real-run/tiny_frame_predictor_small_train256_b2000_lr3e4.pt",
+    "model_checkpoint_bytes": 1660508,
+    "self_compressed_path": "/Users/adpena/Projects/pact/reports/raw/2026-04-12-commavq-tiny-frame-real-run/tiny_frame_predictor_small_train256_b2000_lr3e4_output_projection_4bit.selfc",
+    "self_compressed_bytes": 102727,
+    "combined_bytes": 1763235
+  },
+  "holdout_file_name": "6ae52b4e7346efa3613e66cd643ab0c8_17"
+}

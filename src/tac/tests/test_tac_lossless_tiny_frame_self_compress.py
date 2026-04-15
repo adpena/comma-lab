@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import tempfile
 import sys
 import unittest
 from pathlib import Path
@@ -85,6 +86,33 @@ class TacLosslessTinyFrameSelfCompressTests(unittest.TestCase):
         self.assertEqual(summary["target_layer_names"], names)
         self.assertEqual(summary["payload_bytes"], sum(layer["total_payload_bytes"] for layer in summary["layers"]))
         self.assertEqual(summary["total_bytes"], len(artifact.data))
+
+    def test_tiny_frame_self_compression_byte_count_matches_export_and_artifact_path(self) -> None:
+        from tac.lossless.tiny_frame_self_compress import (
+            export_tiny_frame_self_compression,
+            tiny_frame_self_compression_byte_count,
+        )
+
+        model = self._build_model()
+        artifact = export_tiny_frame_self_compression(model)
+
+        self.assertEqual(
+            tiny_frame_self_compression_byte_count(model),
+            artifact.summary["total_bytes"],
+        )
+        self.assertEqual(
+            tiny_frame_self_compression_byte_count(model),
+            tiny_frame_self_compression_byte_count(model),
+        )
+
+        with tempfile.TemporaryDirectory() as tmpdir:
+            artifact_path = Path(tmpdir) / "tiny_frame.selfc"
+            artifact_path.write_bytes(artifact.data)
+
+            self.assertEqual(
+                tiny_frame_self_compression_byte_count(artifact_path=artifact_path),
+                len(artifact.data),
+            )
 
 
 if __name__ == "__main__":

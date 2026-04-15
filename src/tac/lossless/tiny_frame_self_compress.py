@@ -4,6 +4,7 @@ import json
 import math
 import struct
 from dataclasses import dataclass
+from pathlib import Path
 from typing import Any
 
 
@@ -204,8 +205,30 @@ def export_tiny_frame_self_compression(
     return TinyFrameSelfCompressionArtifact(data=bytes(data), summary=summary)
 
 
+def tiny_frame_self_compression_byte_count(
+    model=None,
+    *,
+    artifact_path: str | Path | None = None,
+    layer_names: tuple[str, ...] | list[str] | None = ("output_projection",),
+    largest_layers: int | None = None,
+    weight_bits: int = 4,
+) -> int:
+    if artifact_path is not None:
+        return int(Path(artifact_path).stat().st_size)
+    if model is None:
+        raise ValueError("model is required when artifact_path is not provided")
+    artifact = export_tiny_frame_self_compression(
+        model,
+        layer_names=layer_names,
+        largest_layers=largest_layers,
+        weight_bits=weight_bits,
+    )
+    return int(artifact.summary["total_bytes"])
+
+
 __all__ = [
     "TinyFrameSelfCompressionArtifact",
     "export_tiny_frame_self_compression",
     "select_tiny_frame_linear_layers",
+    "tiny_frame_self_compression_byte_count",
 ]

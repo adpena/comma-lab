@@ -1,0 +1,102 @@
+{
+  "meta": {
+    "device": "cuda",
+    "cuda_available": true,
+    "gpu": "Tesla T4",
+    "upstream": "/home/zeus/content/upstream"
+  },
+  "siren": {
+    "test": "siren_memorization",
+    "status": "ok",
+    "param_count": 12931,
+    "model_bytes_fp16": 25862,
+    "model_kb_fp16": 25.26,
+    "final_mse": 437.7378,
+    "final_psnr": 21.72,
+    "pose_distortion": 118.29173584,
+    "seg_distortion": 0.56265007,
+    "rate_mb": 0.025862,
+    "estimated_score": 91.3051,
+    "elapsed_seconds": 47.1,
+    "vram_peak_mb": 544.0,
+    "resolution": "218x291 (1/4 of 874x1164)",
+    "verdict": "MARGINAL"
+  },
+  "fridrich": {
+    "test": "fridrich_constrained_gen",
+    "status": "ok",
+    "final_seg_dist": 0.02484728,
+    "final_pose_dist": 0.07779313,
+    "delta_mean_magnitude": 2.9389,
+    "score_at_current_rate": 18.2417,
+    "score_at_zero_rate": 3.3667,
+    "seg_satisfied": false,
+    "pose_satisfied": true,
+    "history": [
+      {
+        "outer": 0,
+        "seg_dist": 0.02826,
+        "pose_dist": 0.002142,
+        "seg_satisfied": false,
+        "pose_satisfied": true,
+        "lam_s": 1.18,
+        "lam_p": 1.0,
+        "rho": 13.0,
+        "tv": 2.0245
+      },
+      {
+        "outer": 1,
+        "seg_dist": 0.027007,
+        "pose_dist": 0.01848,
+        "seg_satisfied": false,
+        "pose_satisfied": true,
+        "lam_s": 1.4,
+        "lam_p": 1.0,
+        "rho": 16.9,
+        "tv": 1.3752
+      },
+      {
+        "outer": 2,
+        "seg_dist": 0.026079,
+        "pose_dist": 0.038437,
+        "seg_satisfied": false,
+        "pose_satisfied": true,
+        "lam_s": 1.68,
+        "lam_p": 1.0,
+        "rho": 21.97,
+        "tv": 1.0476
+      },
+      {
+        "outer": 3,
+        "seg_dist": 0.026039,
+        "pose_dist": 0.05585,
+        "seg_satisfied": false,
+        "pose_satisfied": true,
+        "lam_s": 2.03,
+        "lam_p": 1.0,
+        "rho": 28.56,
+        "tv": 0.8686
+      },
+      {
+        "outer": 4,
+        "seg_dist": 0.026069,
+        "pose_dist": 0.103199,
+        "seg_satisfied": false,
+        "pose_satisfied": false,
+        "lam_s": 2.49,
+        "lam_p": 1.09,
+        "rho": 37.13,
+        "tv": 0.7646
+      }
+    ],
+    "elapsed_seconds": 53.3,
+    "vram_peak_mb": 1787.0,
+    "verdict": "PARTIAL_SEG_VIOLATED"
+  },
+  "compress": {
+    "test": "compress",
+    "status": "error",
+    "error": "No module named 'tac.self_compress'",
+    "traceback": "Traceback (most recent call last):\n  File \"/home/zeus/content/pact/frontier_smoke_tests.py\", line 899, in main\n    result = test_self_compressing_postfilter(device=args.device)\n             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\n  File \"/home/zeus/content/pact/frontier_smoke_tests.py\", line 681, in test_self_compressing_postfilter\n    from tac.self_compress import (\nModuleNotFoundError: No module named 'tac.self_compress'\n"
+  }
+}

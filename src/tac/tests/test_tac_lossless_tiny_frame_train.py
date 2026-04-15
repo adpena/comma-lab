@@ -155,6 +155,34 @@ class TacLosslessTinyFrameTrainTests(unittest.TestCase):
         self.assertGreater(eval_summary["loss"], 0.0)
         self.assertTrue(torch.equal(eval_before, model.output_projection.weight.detach()))
 
+    def test_tiny_frame_model_checkpoint_byte_count_matches_serialized_model_and_artifact_path(self) -> None:
+        import torch
+
+        from tac.lossless.tiny_frame_train import (
+            build_tiny_frame_training_model,
+            tiny_frame_model_checkpoint_byte_count,
+        )
+
+        torch.manual_seed(0)
+        model = build_tiny_frame_training_model(
+            "tiny_frame_predictor_small",
+            context_frames=2,
+            device="cpu",
+        )
+
+        model_byte_count = tiny_frame_model_checkpoint_byte_count(model)
+        self.assertGreater(model_byte_count, 0)
+        self.assertEqual(model_byte_count, tiny_frame_model_checkpoint_byte_count(model))
+
+        with tempfile.TemporaryDirectory() as tmpdir:
+            checkpoint_path = Path(tmpdir) / "tiny_frame.pt"
+            torch.save(model.state_dict(), checkpoint_path)
+
+            self.assertEqual(
+                tiny_frame_model_checkpoint_byte_count(checkpoint_path=checkpoint_path),
+                checkpoint_path.stat().st_size,
+            )
+
     def test_probe_tiny_frame_training_writes_json_artifact_with_model_size_metadata(self) -> None:
         import torch
 
@@ -207,6 +235,48 @@ class TacLosslessTinyFrameTrainTests(unittest.TestCase):
         self.assertEqual(result["train"]["mode"], "train")
         self.assertEqual(result["eval"]["mode"], "eval")
         self.assertEqual(written, result)
+
+    def test_probe_tiny_frame_training_reports_combined_bytes_from_available_artifact_paths(self) -> None:
+        import torch
+
+        from tac.lossless.tiny_frame_train import probe_tiny_frame_training
+
+        with tempfile.TemporaryDirectory() as tmpdir:
+            root = Path(tmpdir)
+            shard_path = root / "data-0000.tar.gz"
+            checkpoint_path = root / "tiny_frame.pt"
+            self_compressed_path = root / "tiny_frame.selfc"
+            frames = np.stack([_frame(1), _frame(2), _frame(3)], axis=0)
+            with tarfile.open(shard_path, "w:gz") as tar:
+                _write_record(tar, stem="clip_probe", frames=frames)
+
+            checkpoint_path.write_bytes(b"checkpoint-bytes")
+            self_compressed_path.write_bytes(b"self-compressed")
+
+            torch.manual_seed(0)
+            result = probe_tiny_frame_training(
+                profile="tiny_frame_predictor_small",
+                shard_paths=[shard_path],
+                batch_size=2,
+                context_frames=2,
+                max_records=1,
+                sample_offset=0,
+                max_batches=1,
+                learning_rate=0.05,
+                checkpoint_path=checkpoint_path,
+                self_compressed_path=self_compressed_path,
+                device="cpu",
+            )
+
+        self.assertEqual(result["model_checkpoint_bytes"], len(b"checkpoint-bytes"))
+        self.assertEqual(result["self_compressed_bytes"], len(b"self-compressed"))
+        self.assertEqual(
+            result["combined_bytes"],
+            len(b"checkpoint-bytes") + len(b"self-compressed"),
+        )
+        self.assertEqual(result["model_checkpoint_path"], str(checkpoint_path))
+        self.assertEqual(result["self_compressed_path"], str(self_compressed_path))
+        self.assertGreater(result["state_dict_bytes"], result["model_checkpoint_bytes"])
 
 
 if __name__ == "__main__":

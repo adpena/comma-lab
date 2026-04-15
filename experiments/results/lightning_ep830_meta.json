@@ -1,0 +1,29 @@
+{
+  "epoch": 851,
+  "scorer": 0.9238385447402224,
+  "pose": 0.01868433,
+  "seg": 0.00491585,
+  "fp32_path": "/home/zeus/content/pact/results/postfilter_lightning_full_overnight_best_fp32.pt",
+  "int8_path": "/home/zeus/content/pact/results/postfilter_lightning_full_overnight_best_int8.pt",
+  "int8_size": 46497,
+  "meta": {
+    "variant": "dilated",
+    "hidden": 64,
+    "kernel": 3,
+    "alpha": 20.0
+  },
+  "config": {
+    "variant": "dilated",
+    "hidden": 64,
+    "loss_mode": "standard",
+    "boundary_weight": 5.0,
+    "segnet_loss_weight": 100.0,
+    "hard_frame_ratio": 0.0,
+    "temperature_start": 1.0,
+    "temperature_end": 0.05,
+    "temp_schedule": "exponential",
+    "alpha": 20.0
+  },
+  "baseline_pose": 0.08234951,
+  "baseline_seg": 0.00568971
+}

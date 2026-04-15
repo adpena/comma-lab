@@ -228,6 +228,7 @@ def _load_next_frame_runtime(
     model_url: str | None,
     gpt_module_path: str | Path | None,
     model_loader: Callable[..., object] | None,
+    checkpoint_path: str | Path | None,
 ) -> object:
     if model_loader is not None:
         return model_loader(
@@ -244,6 +245,7 @@ def _load_next_frame_runtime(
             vocab_size=vocab_size,
             device=device,
             dtype=dtype,
+            checkpoint_path=checkpoint_path,
         )
     return load_official_commavq_gpt_model(
         device=device,
@@ -276,6 +278,7 @@ def encode_commavq_next_frame_sample(
     model_url: str | None = None,
     gpt_module_path: str | Path | None = None,
     model_loader: Callable[..., object] | None = None,
+    checkpoint_path: str | Path | None = None,
 ) -> dict[str, object]:
     config = load_next_frame_predictor_profile(profile)
     if max_frames <= 0:
@@ -305,6 +308,7 @@ def encode_commavq_next_frame_sample(
         model_url=model_url,
         gpt_module_path=gpt_module_path,
         model_loader=model_loader,
+        checkpoint_path=checkpoint_path,
     )
     runtime_metadata = _next_frame_runtime_metadata(model)
     encoded = encode_next_frame_stream_with_logits_fn(

@@ -1,0 +1,14 @@
+{
+  "command": "lossless_global_prev_symbol_order_sample",
+  "output_path": "/Users/adpena/Projects/pact/reports/raw/2026-04-11-commavq-rgb-labels-sample/rgb_label_lexicographic_128_v2_tool.json",
+  "encoded_dir": "/Users/adpena/Projects/pact/reports/raw/2026-04-11-commavq-rgb-labels-sample/rgb_label_lexicographic_128_v2_tool",
+  "strategy": "label_lexicographic_clip_rank",
+  "frame_order": "canonical",
+  "labels_path": "/Users/adpena/Projects/pact/reports/raw/2026-04-11-commavq-rgb-labels-sample/rgb_labels_128_v2.json",
+  "order_path": null,
+  "max_records": 128,
+  "archive_bytes": 12509606,
+  "original_bytes": 24576000,
+  "compression_ratio": 1.9645702670411842,
+  "exact_match": true
+}

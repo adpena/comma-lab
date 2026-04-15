@@ -1,0 +1,50 @@
+{
+  "baseline": {
+    "score": 0.527324594178281,
+    "pose": 0.012318965792655946,
+    "seg": 0.0017634075134992599,
+    "rate": 0.0,
+    "pose_contribution": 0.35098384282835504,
+    "seg_contribution": 0.176340751349926,
+    "rate_contribution": 0.0,
+    "n_pairs": 10
+  },
+  "tto": {
+    "score": 0.5288700303314509,
+    "pose": 0.012997084856033325,
+    "seg": 0.00168355330824852,
+    "rate": 0.0,
+    "pose_contribution": 0.3605146995065988,
+    "seg_contribution": 0.168355330824852,
+    "rate_contribution": 0.0,
+    "n_pairs": 10
+  },
+  "improvement": {
+    "score": -0.0015454361531698213,
+    "pose": -0.0006781190633773793,
+    "seg": 7.985420525073988e-05
+  },
+  "config": {
+    "checkpoint": "/tmp/v5_renderer_best.pt",
+    "device": "mps",
+    "n_frames": 20,
+    "tto_steps": 50,
+    "tto_lr": 0.005,
+    "batch_pairs": 10,
+    "seg_weight": 100.0,
+    "pose_weight": 10.0,
+    "compress_weight": 0.5,
+    "video": "upstream/videos/0.mkv",
+    "smoke": true
+  },
+  "timing": {
+    "total_s": 25.75,
+    "tto_s": 12.48,
+    "scorers_s": 1.3,
+    "renderer_s": 0.02,
+    "decode_s": 9.28,
+    "masks_s": 0.59,
+    "render_s": 1.24,
+    "pose_targets_s": 0.13
+  }
+}

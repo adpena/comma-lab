@@ -269,6 +269,49 @@ def _serialized_state_dict_byte_count(model) -> int:
     return int(buffer.tell())
 
 
+def tiny_frame_model_checkpoint_byte_count(
+    model=None,
+    *,
+    checkpoint_path: str | Path | None = None,
+) -> int:
+    if checkpoint_path is not None:
+        return int(Path(checkpoint_path).stat().st_size)
+    if model is None:
+        raise ValueError("model is required when checkpoint_path is not provided")
+    return _serialized_state_dict_byte_count(model)
+
+
+def summarize_tiny_frame_combined_bytes(
+    model,
+    *,
+    checkpoint_path: str | Path | None = None,
+    self_compressed_path: str | Path | None = None,
+    self_compress_layer_names: tuple[str, ...] | list[str] | None = ("output_projection",),
+    self_compress_largest_layers: int | None = None,
+    self_compress_weight_bits: int = 4,
+) -> dict[str, object]:
+    from .tiny_frame_self_compress import tiny_frame_self_compression_byte_count
+
+    model_checkpoint_bytes = tiny_frame_model_checkpoint_byte_count(
+        model,
+        checkpoint_path=checkpoint_path,
+    )
+    self_compressed_bytes = tiny_frame_self_compression_byte_count(
+        model,
+        artifact_path=self_compressed_path,
+        layer_names=self_compress_layer_names,
+        largest_layers=self_compress_largest_layers,
+        weight_bits=self_compress_weight_bits,
+    )
+    return {
+        "model_checkpoint_path": str(Path(checkpoint_path)) if checkpoint_path is not None else None,
+        "model_checkpoint_bytes": model_checkpoint_bytes,
+        "self_compressed_path": str(Path(self_compressed_path)) if self_compressed_path is not None else None,
+        "self_compressed_bytes": self_compressed_bytes,
+        "combined_bytes": model_checkpoint_bytes + self_compressed_bytes,
+    }
+
+
 def probe_tiny_frame_training(
     *,
     profile: str = "tiny_frame_predictor_small",
@@ -281,6 +324,11 @@ def probe_tiny_frame_training(
     sample_offset: int = 0,
     max_batches: int = 1,
     learning_rate: float = 0.05,
+    checkpoint_path: str | Path | None = None,
+    self_compressed_path: str | Path | None = None,
+    self_compress_layer_names: tuple[str, ...] | list[str] | None = ("output_projection",),
+    self_compress_largest_layers: int | None = None,
+    self_compress_weight_bits: int = 4,
     device: str = "cpu",
 ) -> dict[str, object]:
     if learning_rate <= 0.0:
@@ -320,6 +368,14 @@ def probe_tiny_frame_training(
         raise ValueError("tiny frame train probe did not observe any batches")
 
     eval_summary = run_tiny_frame_supervised_step(model, last_batch, optimizer=None, device=device)
+    combined_byte_report = summarize_tiny_frame_combined_bytes(
+        model,
+        checkpoint_path=checkpoint_path,
+        self_compressed_path=self_compressed_path,
+        self_compress_layer_names=self_compress_layer_names,
+        self_compress_largest_layers=self_compress_largest_layers,
+        self_compress_weight_bits=self_compress_weight_bits,
+    )
     payload = {
         "command": "lossless_tiny_frame_train_probe",
         "profile": profile,
@@ -333,6 +389,7 @@ def probe_tiny_frame_training(
         "learning_rate": float(learning_rate),
         "parameter_count": int(sum(int(param.numel()) for param in model.parameters())),
         "state_dict_bytes": _serialized_state_dict_byte_count(model),
+        **combined_byte_report,
         "observed_batch_count": len(train_steps),
         "train_steps": train_steps,
         "train": train_summary,

@@ -1,0 +1,29 @@
+{
+  "epoch": 1224,
+  "scorer": 1.4432317596575057,
+  "pose": 0.0786337,
+  "seg": 0.00556475,
+  "fp32_path": "experiments/results/featmatch/postfilter_featmatch_overnight_best_fp32.pt",
+  "int8_path": "experiments/results/featmatch/postfilter_featmatch_overnight_best_int8.pt",
+  "int8_size": 46407,
+  "meta": {
+    "variant": "dilated",
+    "hidden": 64,
+    "kernel": 3,
+    "alpha": 20.0
+  },
+  "config": {
+    "variant": "dilated",
+    "hidden": 64,
+    "loss_mode": "feature_match",
+    "boundary_weight": 1.0,
+    "segnet_loss_weight": 100.0,
+    "hard_frame_ratio": 0.0,
+    "temperature_start": 1.0,
+    "temperature_end": 0.05,
+    "temp_schedule": "exponential",
+    "alpha": 20.0
+  },
+  "baseline_pose": 0.08245915,
+  "baseline_seg": 0.00569067
+}

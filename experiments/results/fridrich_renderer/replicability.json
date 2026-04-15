@@ -1,0 +1,12 @@
+{
+  "timestamp": "2026-04-12T22:27:37-0500",
+  "hostname": "Primary.local",
+  "python_version": "3.12.13 (main, Mar 10 2026, 18:18:07) [Clang 21.1.4 ]",
+  "torch_version": "2.11.0",
+  "cuda_version": null,
+  "cuda_available": false,
+  "gpu_name": null,
+  "device": "cpu",
+  "git_commit": "1b8a5336cb576a19df88f5021763aeb670824aab",
+  "git_dirty": true
+}

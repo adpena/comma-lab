@@ -1255,6 +1255,7 @@ name = "tac"
 version = "1.0.0"
 source = { editable = "." }
 dependencies = [
+    { name = "click" },
     { name = "numpy" },
     { name = "pydantic" },
     { name = "torch" },
@@ -1279,6 +1280,7 @@ viz = [
 
 [package.metadata]
 requires-dist = [
+    { name = "click", specifier = ">=8.0" },
     { name = "hypothesis", marker = "extra == 'dev'", specifier = ">=6.0" },
     { name = "marimo", marker = "extra == 'notebooks'", specifier = ">=0.3" },
     { name = "mlx", marker = "extra == 'mlx'", specifier = ">=0.5" },

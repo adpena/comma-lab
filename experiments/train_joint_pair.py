@@ -23,6 +23,7 @@ Usage:
 from __future__ import annotations
 
 import json
+import math
 import os
 import sys
 import time
@@ -798,6 +799,9 @@ def train_joint_pair(cfg: JointPairConfig) -> dict[str, Any]:
 
             # Loss 4: TV smoothness
             loss_tv = _tv_loss(torch.stack([gen_t, gen_t1], dim=1))
+            # Guard against NaN (FP4 QAT on MPS can produce NaN outputs)
+            if torch.isnan(loss_tv):
+                loss_tv = torch.tensor(0.0, device=device)
 
             # Combine losses
             if is_warmup:
@@ -813,6 +817,12 @@ def train_joint_pair(cfg: JointPairConfig) -> dict[str, Any]:
                     + cfg.pose_weight * loss_pose
                     + cfg.tv_weight * loss_tv
                 )
+
+            # Skip step if loss is NaN (MPS FP4 QAT edge case)
+            if torch.isnan(total_loss):
+                optimizer.zero_grad(set_to_none=True)
+                n_steps += 1
+                continue
 
             # Rate penalty (always on, proportional to model size)
             model_bytes = n_model_params * 4 / 8  # FP4 estimate

@@ -10,7 +10,7 @@ set -euo pipefail
 
 SELF_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 REPO_ROOT="$(cd "$SELF_DIR/../.." && pwd)"
-LIGHTNING_USER="${LIGHTNING_USER:-s_01knw7wnzbe79wfq5mqqbx1mbz}"
+LIGHTNING_USER="${LIGHTNING_USER:?Set LIGHTNING_USER env var}"
 LIGHTNING_HOST="${LIGHTNING_USER}@ssh.lightning.ai"
 SSH_KEY="${HOME}/.ssh/lightning_rsa"
 REMOTE_RESULTS="/home/zeus/content/pact/results"

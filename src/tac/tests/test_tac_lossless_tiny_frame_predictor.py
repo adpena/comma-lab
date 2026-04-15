@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import sys
+import tempfile
 import unittest
 from pathlib import Path
 
@@ -91,6 +92,55 @@ class TacLosslessTinyFramePredictorTests(unittest.TestCase):
         self.assertEqual(model_a._tac_model_profile, "tiny_frame_predictor_small")
         self.assertEqual(tuple(logits_a.shape), (128, 16))
         self.assertTrue(np.array_equal(logits_a, logits_b))
+
+    def test_tiny_frame_predictor_checkpoint_roundtrips_and_runtime_can_load_it(self) -> None:
+        import torch
+
+        from tac.lossless.tiny_frame_predictor import (
+            TinyFramePredictorConfig,
+            build_tiny_frame_predictor,
+            load_tiny_frame_predictor_checkpoint,
+            load_tiny_frame_predictor_runtime,
+            save_tiny_frame_predictor_checkpoint,
+        )
+
+        config = TinyFramePredictorConfig(
+            context_frames=2,
+            positions=128,
+            vocab_size=16,
+            embed_dim=8,
+            hidden_dim=16,
+            mixer_layers=1,
+        )
+        model = build_tiny_frame_predictor(config)
+        with torch.no_grad():
+            for param in model.parameters():
+                param.zero_()
+            model.output_projection.bias[7] = 9.0
+
+        prefix = np.arange(128, dtype=np.uint16).reshape(1, 8, 16) % config.vocab_size
+
+        with tempfile.TemporaryDirectory() as tmpdir:
+            checkpoint_path = Path(tmpdir) / "tiny_predictor.pt"
+            save_tiny_frame_predictor_checkpoint(model, checkpoint_path, config=config)
+            checkpoint = load_tiny_frame_predictor_checkpoint(checkpoint_path)
+            loaded_runtime = load_tiny_frame_predictor_runtime(
+                config,
+                checkpoint_path=checkpoint_path,
+                device="cpu",
+            )
+
+            self.assertEqual(checkpoint.config, config)
+            self.assertEqual(loaded_runtime._tac_model_artifact_path, str(checkpoint_path))
+            for name, value in model.state_dict().items():
+                self.assertTrue(torch.equal(checkpoint.state_dict[name], value), msg=name)
+
+        baseline_runtime = load_tiny_frame_predictor_runtime(config, device="cpu")
+        baseline_logits = baseline_runtime.next_frame_logits(prefix, context_frames=config.context_frames)
+        loaded_logits = loaded_runtime.next_frame_logits(prefix, context_frames=config.context_frames)
+
+        self.assertEqual(int(np.argmax(loaded_logits[0])), 7)
+        self.assertFalse(np.array_equal(loaded_logits, baseline_logits))
 
 
 if __name__ == "__main__":

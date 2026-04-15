@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 from dataclasses import asdict, dataclass
+from pathlib import Path
 
 import numpy as np
 
@@ -38,6 +39,12 @@ class TinyFramePredictorConfig:
             raise ValueError("mixer_layers must be positive")
 
 
+@dataclass(frozen=True)
+class TinyFramePredictorCheckpoint:
+    config: TinyFramePredictorConfig
+    state_dict: dict[str, object]
+
+
 class TinyFramePredictor:
     def __init__(
         self,
@@ -49,6 +56,7 @@ class TinyFramePredictor:
         device: str,
         dtype: str,
         fallback_reason: str | None = None,
+        artifact_path: str | None = None,
     ) -> None:
         self._model = model
         self._config = config
@@ -61,6 +69,8 @@ class TinyFramePredictor:
         self._tac_execution_providers = [device]
         if fallback_reason:
             self._tac_bridge_fallback_reason = fallback_reason
+        if artifact_path:
+            self._tac_model_artifact_path = artifact_path
 
     def _prepare_tokens(self, prefix_frames: np.ndarray, *, context_frames: int) -> np.ndarray:
         if int(context_frames) != self._config.context_frames:
@@ -232,6 +242,59 @@ def _initialize_deterministic_tiny_frame_predictor(model, *, torch) -> None:
             phase += float(param.numel())
 
 
+def _extract_tiny_frame_predictor_checkpoint_parts(model_or_runtime, *, config=None) -> tuple[object, TinyFramePredictorConfig]:
+    resolved_model = getattr(model_or_runtime, "_model", model_or_runtime)
+    resolved_config = getattr(model_or_runtime, "_config", config)
+    if resolved_config is None:
+        resolved_config = getattr(model_or_runtime, "config", None)
+    if resolved_config is None:
+        raise TypeError("config is required when saving a tiny frame predictor checkpoint")
+    if not hasattr(resolved_model, "state_dict"):
+        raise TypeError("model_or_runtime must provide state_dict()")
+    _, normalized_config = _config_from_profile(resolved_config)
+    return resolved_model, normalized_config
+
+
+def save_tiny_frame_predictor_checkpoint(model_or_runtime, checkpoint_path: str | Path, *, config=None) -> Path:
+    torch, _ = _require_torch()
+    model, normalized_config = _extract_tiny_frame_predictor_checkpoint_parts(model_or_runtime, config=config)
+    state_dict = {}
+    for name, value in model.state_dict().items():
+        state_dict[name] = value.detach().to(device="cpu").clone()
+    payload = {
+        "config": asdict(normalized_config),
+        "state_dict": state_dict,
+    }
+    target = Path(checkpoint_path)
+    target.parent.mkdir(parents=True, exist_ok=True)
+    torch.save(payload, target)
+    return target
+
+
+def _torch_load_checkpoint(torch, checkpoint_path: str | Path, *, map_location: str = "cpu"):
+    try:
+        return torch.load(checkpoint_path, map_location=map_location, weights_only=True)
+    except TypeError:
+        return torch.load(checkpoint_path, map_location=map_location)
+
+
+def load_tiny_frame_predictor_checkpoint(checkpoint_path: str | Path) -> TinyFramePredictorCheckpoint:
+    torch, _ = _require_torch()
+    payload = _torch_load_checkpoint(torch, checkpoint_path, map_location="cpu")
+    if not isinstance(payload, dict):
+        raise ValueError("checkpoint payload must be a mapping")
+    raw_config = payload.get("config")
+    raw_state_dict = payload.get("state_dict")
+    if not isinstance(raw_config, dict):
+        raise ValueError("checkpoint payload must include config")
+    if not isinstance(raw_state_dict, dict):
+        raise ValueError("checkpoint payload must include state_dict")
+    return TinyFramePredictorCheckpoint(
+        config=TinyFramePredictorConfig(**raw_config),
+        state_dict=dict(raw_state_dict),
+    )
+
+
 def load_tiny_frame_predictor_runtime(
     profile: str | TinyFramePredictorProfileConfig | TinyFramePredictorConfig,
     *,
@@ -239,6 +302,7 @@ def load_tiny_frame_predictor_runtime(
     vocab_size: int | None = None,
     device: str = "auto",
     dtype: str = "auto",
+    checkpoint_path: str | Path | None = None,
 ) -> TinyFramePredictor:
     torch, _ = _require_torch()
     profile_name, config = _config_from_profile(profile, context_frames=context_frames, vocab_size=vocab_size)
@@ -249,7 +313,15 @@ def load_tiny_frame_predictor_runtime(
     model = build_tiny_frame_predictor(config)
     model = model.to(device=resolved_device, dtype=torch_dtype)
     model.eval()
-    _initialize_deterministic_tiny_frame_predictor(model, torch=torch)
+    artifact_path = None
+    if checkpoint_path is None:
+        _initialize_deterministic_tiny_frame_predictor(model, torch=torch)
+    else:
+        checkpoint = load_tiny_frame_predictor_checkpoint(checkpoint_path)
+        if checkpoint.config != config:
+            raise ValueError("checkpoint config does not match tiny frame predictor runtime")
+        model.load_state_dict(checkpoint.state_dict)
+        artifact_path = str(Path(checkpoint_path))
 
     return TinyFramePredictor(
         model,
@@ -259,6 +331,7 @@ def load_tiny_frame_predictor_runtime(
         device=resolved_device,
         dtype=resolved_dtype,
         fallback_reason="; ".join(fallback_parts) if fallback_parts else None,
+        artifact_path=artifact_path,
     )
 
 

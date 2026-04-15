@@ -1,0 +1,96 @@
+{
+  "command": "lossless_tiny_frame_combined_probe",
+  "tiny_profile": "tiny_frame_predictor_small",
+  "sample_artifact": "/Users/adpena/Projects/pact/reports/raw/2026-04-12-commavq-next-frame/tiny_frame_predictor_small_sample_33_v1.nfg",
+  "sample_stream_bytes": 5385,
+  "trained_state_dict_bytes": 1659108,
+  "self_compressed_bytes_output_projection_only": 102727,
+  "combined_with_state_dict_bytes": 1664493,
+  "combined_with_self_compress_bytes": 108112,
+  "train_probe": {
+    "command": "lossless_tiny_frame_train_probe",
+    "profile": "tiny_frame_predictor_small",
+    "output_path": "/Users/adpena/Projects/pact/reports/raw/2026-04-12-commavq-tiny-frame-train-probe/train_split01_probe_batch1_v2.json",
+    "device": "cpu",
+    "batch_size": 2,
+    "context_frames": 8,
+    "max_records": 2,
+    "sample_offset": 0,
+    "max_batches": 1,
+    "learning_rate": 0.05,
+    "parameter_count": 413057,
+    "state_dict_bytes": 1659108,
+    "observed_batch_count": 1,
+    "train_steps": [
+      {
+        "step": 1,
+        "mode": "train",
+        "loss": 7.05323600769043,
+        "token_accuracy": 0,
+        "correct_tokens": 0,
+        "token_count": 256,
+        "batch_size": 2,
+        "context_frames": 8,
+        "positions": 128
+      }
+    ],
+    "train": {
+      "mode": "train",
+      "loss": 7.05323600769043,
+      "token_accuracy": 0,
+      "correct_tokens": 0,
+      "token_count": 256,
+      "batch_size": 2,
+      "context_frames": 8,
+      "positions": 128
+    },
+    "eval": {
+      "mode": "eval",
+      "loss": 6.85957670211792,
+      "token_accuracy": 0,
+      "correct_tokens": 0,
+      "token_count": 256,
+      "batch_size": 2,
+      "context_frames": 8,
+      "positions": 128
+    },
+    "file_names": [
+      "3b41c0fa8959aea6c118e5714f412a2e_13",
+      "3b41c0fa8959aea6c118e5714f412a2e_13"
+    ],
+    "target_frame_indices": [
+      1,
+      2
+    ]
+  },
+  "self_compress_summary": {
+    "command": "lossless_tiny_frame_self_compress_summary",
+    "format": "tiny_frame_linear_self_compress",
+    "version": 1,
+    "weight_bits": 4,
+    "target_layer_names": [
+      "output_projection"
+    ],
+    "layer_count": 1,
+    "header_bytes": 227,
+    "payload_bytes": 102500,
+    "total_bytes": 102727,
+    "layers": [
+      {
+        "name": "output_projection",
+        "rows": 1025,
+        "cols": 192,
+        "weight_bits": 4,
+        "weight_values": 196800,
+        "row_scale_bytes": 2050,
+        "packed_weight_bytes": 98400,
+        "weight_payload_bytes": 100450,
+        "bias_values": 1025,
+        "bias_payload_bytes": 2050,
+        "total_payload_bytes": 102500,
+        "baseline_bytes": 791300,
+        "compression_ratio": 7.72
+      }
+    ]
+  }
+}

@@ -1,0 +1,54 @@
+{
+  "meta": {
+    "device": "cuda",
+    "cuda_available": true,
+    "gpu": "Tesla T4",
+    "upstream": "/home/zeus/content/upstream"
+  },
+  "compress": {
+    "test": "self_compressing_postfilter",
+    "status": "ok",
+    "baseline_bytes": 40451.0,
+    "final_bytes": 38477.75,
+    "compression_ratio": 1.05,
+    "layer_stats": [
+      {
+        "name": "conv1",
+        "channels": 64,
+        "active": 64,
+        "pruned": 0,
+        "mean_bits": 7.61,
+        "weight_bits": 13149,
+        "bias_bits": 487
+      },
+      {
+        "name": "conv2",
+        "channels": 64,
+        "active": 64,
+        "pruned": 0,
+        "mean_bits": 7.61,
+        "weight_bits": 280528,
+        "bias_bits": 487
+      },
+      {
+        "name": "conv3",
+        "channels": 3,
+        "active": 3,
+        "pruned": 0,
+        "mean_bits": 7.61,
+        "weight_bits": 13149,
+        "bias_bits": 22
+      }
+    ],
+    "export_bytes": 42305,
+    "export_kb": 41.31,
+    "roundtrip_max_diff": 0.0282,
+    "roundtrip_mean_diff": 0.0014,
+    "roundtrip_bitexact": true,
+    "savings_kb": 4.69,
+    "rate_savings_score": 0.1172,
+    "elapsed_seconds": 107.2,
+    "vram_peak_mb": 2593.0,
+    "verdict": "NEEDS_MORE_STEPS"
+  }
+}

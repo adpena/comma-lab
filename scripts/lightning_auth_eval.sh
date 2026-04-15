@@ -7,7 +7,7 @@
 
 set -euo pipefail
 
-LIGHTNING_USER="${LIGHTNING_USER:-s_01knw7wnzbe79wfq5mqqbx1mbz}"
+LIGHTNING_USER="${LIGHTNING_USER:?Set LIGHTNING_USER env var (e.g. s_XXXXX)}"
 LIGHTNING_HOST="${LIGHTNING_USER}@ssh.lightning.ai"
 SSH_KEY="${HOME}/.ssh/lightning_rsa"
 SSH="ssh -i $SSH_KEY -o StrictHostKeyChecking=no"

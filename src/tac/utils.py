@@ -19,6 +19,28 @@ REPO_ROOT = Path(__file__).resolve().parent.parent.parent
 TRACKER_DB = REPO_ROOT / ".omx" / "state" / "review_tracker.duckdb"
 
 
+def find_project_root(start: Path | None = None) -> Path:
+    """Walk up from *start* to find the project root (contains src/ and upstream/).
+
+    Args:
+        start: starting directory (defaults to caller's file location via REPO_ROOT).
+
+    Returns:
+        Path to the project root.
+
+    Raises:
+        RuntimeError: if no directory with both src/ and upstream/ is found.
+    """
+    if start is None:
+        return REPO_ROOT
+    p = Path(start).resolve()
+    while p != p.parent:
+        if (p / "src").is_dir() and (p / "upstream").is_dir():
+            return p
+        p = p.parent
+    raise RuntimeError("Cannot find project root (expected src/ and upstream/ dirs)")
+
+
 def setup_signal_handlers(save_fn: Callable[[], None]) -> None:
     """Register SIGTERM/SIGINT/SIGHUP + atexit to call *save_fn* before exit.
 
