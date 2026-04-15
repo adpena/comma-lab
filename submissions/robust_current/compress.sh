@@ -429,6 +429,9 @@ fi
 if [ -f "$SELF_DIR/renderer.bin" ]; then
   cp "$SELF_DIR/renderer.bin" "$ARCHIVE_DIR/renderer.bin"
   echo "Bundled renderer.bin ($(stat -f%z "$SELF_DIR/renderer.bin" 2>/dev/null || stat -c%s "$SELF_DIR/renderer.bin") bytes) into archive"
+elif [ "$PYTHON_INFLATE" = "renderer" ]; then
+  echo "ERROR: PYTHON_INFLATE=renderer but renderer.bin not found at $SELF_DIR/renderer.bin" >&2
+  exit 1
 fi
 
 # ── Pre-extract SegNet masks (contest compliance: Yousfi PR #35) ──────

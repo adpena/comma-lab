@@ -1572,8 +1572,8 @@ def _compute_per_pair_posenet_distortion(
             gt_in = posenet.preprocess_input(gt_chw)
             rendered_in = posenet.preprocess_input(rendered_chw)
 
-            gt_pose = posenet(gt_in)      # (B, 6)
-            rendered_pose = posenet(rendered_in)  # (B, 6)
+            gt_pose = posenet(gt_in)["pose"][..., :6]      # (B, 6)
+            rendered_pose = posenet(rendered_in)["pose"][..., :6]  # (B, 6)
 
             # Per-pair MSE distortion
             dist = ((gt_pose - rendered_pose) ** 2).mean(dim=1)  # (B,)
@@ -1658,7 +1658,7 @@ def _adaptive_tto_phase(
         pose_in_chw = test_pair.permute(0, 3, 1, 2).float()  # (2, C, H, W)
         pose_in = pose_in_chw.unsqueeze(0)  # (1, 2, C, H, W)
         pose_preprocessed = posenet.preprocess_input(pose_in)  # (1, 12, H/2, W/2)
-        pose_out = posenet(pose_preprocessed)  # (1, 6)
+        pose_out = posenet(pose_preprocessed)["pose"][..., :6]  # (1, 6)
         pose_loss = pose_out.sum()
 
         total = seg_loss + pose_loss

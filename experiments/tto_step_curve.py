@@ -262,15 +262,19 @@ def run_single_step_count(
 
     elapsed = time.monotonic() - t0
 
-    # Measure distortion — score refined frames against correct GT slice
+    # Measure distortion — both refined and GT must be LOCAL subsets
+    # starting at index 0, with matching pairs aligned.
+    # refined is already a local subset [0:2*n_pairs].
+    # gt_frames must be sliced to the same range.
+    gt_slice = gt_frames[frame_start:frame_end]
     distortions = compute_pair_distortions(
-        refined, gt_frames, posenet, segnet, device,
-        pair_start=pair_start, n_pairs=n_pairs,
+        refined, gt_slice, posenet, segnet, device,
+        pair_start=0, n_pairs=n_pairs,
         simulate_resize=simulate_resize,
     )
     distortions["elapsed_s"] = round(elapsed, 2)
     distortions["steps"] = step_count
-    distortions["s_per_frame"] = round(elapsed / (2 * n_pairs), 3)
+    distortions["s_per_frame"] = round(elapsed / max(2 * n_pairs, 1), 3)
 
     return distortions
 
