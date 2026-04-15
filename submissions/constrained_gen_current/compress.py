@@ -224,11 +224,20 @@ def main():
         posenet, segnet = load_differentiable_scorers(upstream, device=str(device))
     except ImportError:
         sys.path.insert(0, str(upstream))
-        from score import load_model as _load
-        posenet = _load("posenet", upstream, device=str(device))
-        segnet = _load("segnet", upstream, device=str(device))
-        posenet.eval()
-        segnet.eval()
+        from modules import PoseNet, SegNet
+        from safetensors.torch import load_file
+
+        posenet = PoseNet().eval()
+        posenet.load_state_dict(
+            load_file(str(upstream / "models" / "posenet.safetensors"), device="cpu")
+        )
+        segnet = SegNet().eval()
+        segnet.load_state_dict(
+            load_file(str(upstream / "models" / "segnet.safetensors"), device="cpu")
+        )
+        posenet, segnet = posenet.to(device), segnet.to(device)
+        for p in list(posenet.parameters()) + list(segnet.parameters()):
+            p.requires_grad_(False)
     logger.info("  Scorers loaded in %.1fs", time.monotonic() - t0)
 
     # Decode GT video
@@ -268,12 +277,20 @@ def main():
         meta = build_archive(masks, pose_targets, args.seed, output_dir)
 
         # Verify: rate calculation
-        # rate = archive_bytes / (3 * H * W * N)
+        # Official scorer: rate = archive.zip size / sum(uncompressed file sizes)
+        # The uncompressed dir contains raw video files (MKV), not raw pixels.
+        # Here we report both the official denominator (MKV file size) and the
+        # raw pixel denominator for reference.
+        mkv_size = video_path.stat().st_size
+        rate_official = meta["total_bytes"] / mkv_size
         raw_bytes = 3 * 1164 * 874 * len(frames)
-        rate = meta["total_bytes"] / raw_bytes
-        logger.info("  Rate: %.6f (archive %s / raw %s)",
-                     rate, f"{meta['total_bytes']:,}", f"{raw_bytes:,}")
-        logger.info("  Rate contribution to score: 25 * %.6f = %.4f", rate, 25 * rate)
+        rate_raw = meta["total_bytes"] / raw_bytes
+        logger.info("  Rate (official, vs MKV): %.6f (archive %s / MKV %s)",
+                     rate_official, f"{meta['total_bytes']:,}", f"{mkv_size:,}")
+        logger.info("  Rate (vs raw pixels): %.6f (archive %s / raw %s)",
+                     rate_raw, f"{meta['total_bytes']:,}", f"{raw_bytes:,}")
+        logger.info("  Rate contribution to score: 25 * %.6f = %.4f",
+                     rate_official, 25 * rate_official)
 
     logger.info("Compress complete.")
 

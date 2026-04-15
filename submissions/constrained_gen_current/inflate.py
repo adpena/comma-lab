@@ -168,14 +168,19 @@ def load_scorers(upstream_dir: Path, device: torch.device):
     except ImportError:
         # Fallback: load directly from upstream (for contest machines without tac)
         sys.path.insert(0, str(upstream_dir))
-        from score import load_model as _load
-        posenet = _load("posenet", upstream_dir, device=str(device))
-        segnet = _load("segnet", upstream_dir, device=str(device))
-        posenet.eval()
-        segnet.eval()
-        for p in posenet.parameters():
-            p.requires_grad_(False)
-        for p in segnet.parameters():
+        from modules import PoseNet, SegNet
+        from safetensors.torch import load_file
+
+        posenet = PoseNet().eval()
+        posenet.load_state_dict(
+            load_file(str(upstream_dir / "models" / "posenet.safetensors"), device="cpu")
+        )
+        segnet = SegNet().eval()
+        segnet.load_state_dict(
+            load_file(str(upstream_dir / "models" / "segnet.safetensors"), device="cpu")
+        )
+        posenet, segnet = posenet.to(device), segnet.to(device)
+        for p in list(posenet.parameters()) + list(segnet.parameters()):
             p.requires_grad_(False)
         # CRITICAL: patch rgb_to_yuv6 to be differentiable
         _patch_differentiable_yuv(posenet)
@@ -241,6 +246,32 @@ def _patch_differentiable_yuv(posenet):
 
 
 # ---------------------------------------------------------------------------
+# Gradient validation
+# ---------------------------------------------------------------------------
+
+def validate_gradients(posenet: torch.nn.Module, device: torch.device) -> None:
+    """Verify that PoseNet gradients flow through the differentiable pipeline.
+
+    Creates a small test tensor, forwards through PoseNet, and checks that
+    gradients are nonzero. This catches the @torch.no_grad bug on rgb_to_yuv6.
+
+    Raises RuntimeError if gradients are dead.
+    """
+    test = torch.randn(1, 2, 3, SEG_H, SEG_W, device=device, requires_grad=True)
+    pre = posenet.preprocess_input(test)
+    out = posenet(pre)
+    pose = out["pose"][..., :6]
+    loss = pose.sum()
+    loss.backward()
+    if test.grad is None or test.grad.abs().max().item() == 0.0:
+        raise RuntimeError(
+            "FATAL: PoseNet gradients are ZERO. The differentiable YUV patch "
+            "is not working. All optimization would produce dead gradients."
+        )
+    logger.info("  Gradient validation passed (max grad=%.6f)", test.grad.abs().max().item())
+
+
+# ---------------------------------------------------------------------------
 # Per-pair constrained optimization
 # ---------------------------------------------------------------------------
 
@@ -254,7 +285,7 @@ def optimize_pair(
     segnet: torch.nn.Module,
     num_steps: int,
     device: torch.device,
-) -> tuple[torch.Tensor, torch.Tensor, float]:
+) -> tuple[torch.Tensor, torch.Tensor, float, int]:
     """Optimize a single pair of frames against SegNet + PoseNet constraints.
 
     Args:
@@ -267,7 +298,7 @@ def optimize_pair(
         device: computation device.
 
     Returns:
-        (frame_t_opt, frame_t1_opt, final_loss) tuple.
+        (frame_t_opt, frame_t1_opt, final_loss, actual_steps) tuple.
     """
     # Stack into optimizable pair
     pair = torch.stack([frame_t, frame_t1], dim=0).to(device)  # (2, H, W, 3)
@@ -279,11 +310,13 @@ def optimize_pair(
 
     best_loss = float("inf")
     no_improve = 0
+    actual_steps = 0
 
     for step in range(num_steps):
+        actual_steps += 1
         optimizer.zero_grad()
 
-        # SegNet constraint: cross-entropy on both frames
+        # SegNet constraint: cross-entropy on second frame only (matches scorer)
         seg_loss = _segnet_loss(pair, masks_pair, segnet)
 
         # PoseNet constraint: L2 on pose output
@@ -313,7 +346,7 @@ def optimize_pair(
     with torch.no_grad():
         result = pair.detach().round().clamp(0.0, 255.0)
 
-    return result[0], result[1], best_loss
+    return result[0], result[1], best_loss, actual_steps
 
 
 def _segnet_loss(
@@ -321,7 +354,11 @@ def _segnet_loss(
     masks: torch.Tensor,
     segnet: torch.nn.Module,
 ) -> torch.Tensor:
-    """SegNet cross-entropy loss for a pair of frames.
+    """SegNet cross-entropy loss on the SECOND frame only.
+
+    The official scorer computes SegNet distortion on x[:, -1, ...] (the last
+    frame of each pair). Computing loss on both frames wastes gradient budget
+    on a frame that doesn't affect the SegNet score component.
 
     Args:
         pair: (2, H, W, 3) float tensor.
@@ -331,22 +368,25 @@ def _segnet_loss(
     Returns:
         Scalar loss tensor.
     """
-    # pair is HWC, segnet expects CHW batched
-    frames_chw = pair.permute(0, 3, 1, 2).contiguous()  # (2, 3, H, W)
-    logits = segnet(frames_chw)  # (2, C, H', W')
+    # Only the second frame (index 1) matters for SegNet scoring
+    frame1 = pair[1:2]  # (1, H, W, 3)
+    mask1 = masks[1:2]  # (1, H, W)
 
-    # Resize masks to match logits spatial dims if needed
+    frame1_chw = frame1.permute(0, 3, 1, 2).contiguous()  # (1, 3, H, W)
+    logits = segnet(frame1_chw)  # (1, C, H', W')
+
+    # Resize mask to match logits spatial dims if needed
     _, C, Hl, Wl = logits.shape
-    if Hl != masks.shape[1] or Wl != masks.shape[2]:
-        masks_resized = F.interpolate(
-            masks.unsqueeze(1).float(),
+    if Hl != mask1.shape[1] or Wl != mask1.shape[2]:
+        mask_resized = F.interpolate(
+            mask1.unsqueeze(1).float(),
             size=(Hl, Wl),
             mode="nearest",
         ).squeeze(1).long()
     else:
-        masks_resized = masks
+        mask_resized = mask1
 
-    return F.cross_entropy(logits, masks_resized)
+    return F.cross_entropy(logits, mask_resized)
 
 
 def _posenet_loss(
@@ -485,6 +525,10 @@ def inflate_constrained_gen(
     t_load = time.monotonic() - t0
     logger.info("  Scorers loaded in %.1fs", t_load)
 
+    # ---- Stage 1b: Validate gradients ----
+    logger.info("Stage 1b: Validating PoseNet gradients...")
+    validate_gradients(posenet, device)
+
     # ---- Stage 2: Load archive ----
     logger.info("Stage 2: Loading archive...")
     masks, expected_pose, noise_seed = load_archive(archive_dir)
@@ -509,7 +553,7 @@ def inflate_constrained_gen(
     # Warm-up: time one step to estimate ms_per_step
     logger.info("  Calibrating step time...")
     t_cal = time.monotonic()
-    _ = optimize_pair(
+    warmup_f0, warmup_f1, warmup_loss, warmup_steps = optimize_pair(
         frames[0], frames[1],
         masks[0], masks[1],
         expected_pose[0],
@@ -517,15 +561,23 @@ def inflate_constrained_gen(
         num_steps=3,
         device=device,
     )
-    ms_per_step = ((time.monotonic() - t_cal) / 3) * 1000
-    logger.info("  Calibrated: %.1f ms/step", ms_per_step)
+    ms_per_step = ((time.monotonic() - t_cal) / max(warmup_steps, 1)) * 1000
+    logger.info("  Calibrated: %.1f ms/step (%d warmup steps)", ms_per_step, warmup_steps)
 
     # Optimize each pair with adaptive budgeting
     optimized_frames = torch.zeros(N, SEG_H, SEG_W, 3, dtype=torch.float32)
     total_steps = 0
-    total_early_stops = 0
 
-    for pair_idx in range(P):
+    # S1: Reuse warmup optimization result for pair 0
+    optimized_frames[0] = warmup_f0.cpu()
+    optimized_frames[1] = warmup_f1.cpu()
+    total_steps += warmup_steps
+    logger.info(
+        "  Pair 1/%d (warmup reuse): steps=%d, loss=%.4f",
+        P, warmup_steps, warmup_loss,
+    )
+
+    for pair_idx in range(1, P):
         t_pair_start = time.monotonic()
         time_remaining = opt_budget_s - (t_pair_start - t_opt_start)
 
@@ -545,7 +597,7 @@ def inflate_constrained_gen(
         f0_idx = pair_idx * 2
         f1_idx = pair_idx * 2 + 1
 
-        f0_opt, f1_opt, loss = optimize_pair(
+        f0_opt, f1_opt, loss, actual = optimize_pair(
             frames[f0_idx], frames[f1_idx],
             masks[f0_idx], masks[f1_idx],
             expected_pose[pair_idx],
@@ -556,15 +608,15 @@ def inflate_constrained_gen(
 
         optimized_frames[f0_idx] = f0_opt.cpu()
         optimized_frames[f1_idx] = f1_opt.cpu()
-        total_steps += steps
+        total_steps += actual
 
         dt_pair = time.monotonic() - t_pair_start
 
-        if (pair_idx + 1) % 50 == 0 or pair_idx == 0:
+        if (pair_idx + 1) % 50 == 0:
             logger.info(
-                "  Pair %d/%d: steps=%d, loss=%.4f, %.1fs, "
+                "  Pair %d/%d: steps=%d/%d, loss=%.4f, %.1fs, "
                 "%.0fs remaining",
-                pair_idx + 1, P, steps, loss, dt_pair,
+                pair_idx + 1, P, actual, steps, loss, dt_pair,
                 opt_budget_s - (time.monotonic() - t_opt_start),
             )
 

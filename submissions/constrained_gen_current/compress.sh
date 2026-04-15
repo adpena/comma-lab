@@ -50,13 +50,22 @@ if [ -f "$ARCHIVE_ZIP" ]; then
     echo "[compress] Backed up existing archive to $BACKUP_NAME" >&2
 fi
 
-# Run the compression script
-"$UV_BIN" run --with av --with torch --with numpy python "$SELF_DIR/compress.py" \
-    --upstream-root "$UPSTREAM_ROOT" \
-    --device "$DEVICE" \
-    --seed "$NOISE_SEED" \
-    --video-names-file "$VIDEO_NAMES_FILE" \
-    --output-dir "$SELF_DIR/archive_staging"
+# Run the compression script (try uv first, fall back to python3)
+if command -v "$UV_BIN" &>/dev/null; then
+    "$UV_BIN" run --with av --with torch --with numpy python "$SELF_DIR/compress.py" \
+        --upstream-root "$UPSTREAM_ROOT" \
+        --device "$DEVICE" \
+        --seed "$NOISE_SEED" \
+        --video-names-file "$VIDEO_NAMES_FILE" \
+        --output-dir "$SELF_DIR/archive_staging"
+else
+    python3 "$SELF_DIR/compress.py" \
+        --upstream-root "$UPSTREAM_ROOT" \
+        --device "$DEVICE" \
+        --seed "$NOISE_SEED" \
+        --video-names-file "$VIDEO_NAMES_FILE" \
+        --output-dir "$SELF_DIR/archive_staging"
+fi
 
 # Package into archive.zip
 echo "[compress] Packaging archive.zip..."
@@ -64,6 +73,6 @@ cd "$SELF_DIR/archive_staging"
 zip -r "$ARCHIVE_ZIP" .
 cd "$SELF_DIR"
 
-ARCHIVE_SIZE=$(stat -f%z "$ARCHIVE_ZIP" 2>/dev/null || stat --format=%s "$ARCHIVE_ZIP" 2>/dev/null || echo "?")
+ARCHIVE_SIZE=$(stat --format=%s "$ARCHIVE_ZIP" 2>/dev/null || stat -f%z "$ARCHIVE_ZIP" 2>/dev/null || echo "?")
 echo "[compress] archive.zip: $ARCHIVE_SIZE bytes"
 echo "[compress] Done."

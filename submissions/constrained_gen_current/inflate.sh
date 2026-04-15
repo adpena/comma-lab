@@ -16,5 +16,13 @@ mkdir -p "$INFLATED_DIR"
 echo "[constrained-gen inflate] Archive: $ARCHIVE_DIR"
 echo "[constrained-gen inflate] Output:  $INFLATED_DIR"
 
-"$UV_BIN" run --with av --with torch --with numpy python "$SELF_DIR/inflate.py" \
-    "$ARCHIVE_DIR" "$INFLATED_DIR" "$VIDEO_NAMES_FILE"
+# Try uv first, fall back to python3 directly
+if command -v "$UV_BIN" &>/dev/null; then
+    "$UV_BIN" run --with torch --with numpy --with einops --with timm \
+        --with segmentation-models-pytorch --with safetensors \
+        python "$SELF_DIR/inflate.py" \
+        "$ARCHIVE_DIR" "$INFLATED_DIR" "$VIDEO_NAMES_FILE"
+else
+    python3 "$SELF_DIR/inflate.py" \
+        "$ARCHIVE_DIR" "$INFLATED_DIR" "$VIDEO_NAMES_FILE"
+fi
