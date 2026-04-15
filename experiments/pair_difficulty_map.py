@@ -106,7 +106,7 @@ def compute_per_pair_distortions(
     segnet: torch.nn.Module,
     device: torch.device,
     batch_size: int = 8,
-    simulate_resize: bool = False,
+    simulate_resize: bool = True,
 ) -> list[dict[str, float]]:
     """Compute PoseNet MSE and SegNet disagreement for each pair independently.
 
