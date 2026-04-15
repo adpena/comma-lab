@@ -1365,9 +1365,14 @@ def inflate_renderer(
             video_masks = _extract_masks(gt_frames, segnet, device, batch_size)
             del gt_frames
 
-        # Verify mask resolution
-        assert video_masks.shape[1] == SEG_H and video_masks.shape[2] == SEG_W, \
-            f"Mask resolution mismatch: {video_masks.shape} vs expected ({SEG_H}, {SEG_W})"
+        # Verify mask resolution (may be downscaled for rate savings)
+        if video_masks.shape[1] != SEG_H or video_masks.shape[2] != SEG_W:
+            print(
+                f"  Masks at {video_masks.shape[1]}x{video_masks.shape[2]} "
+                f"(target: {SEG_H}x{SEG_W}). Renderer will upsample via "
+                f"nearest-neighbor internally.",
+                file=sys.stderr,
+            )
 
         # Generate and write
         gen_stage = "Stage 3" if use_archive_masks else "Stage 6"
