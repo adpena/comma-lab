@@ -219,13 +219,34 @@ A candidate may be promoted only after:
 - Add sparse residuals before adding heavier learned components.
 - Only promote a neural side-model if its bytes and runtime clearly justify themselves.
 
-## GPU budget — non-negotiable
+## GPU budget and compute resources — non-negotiable
 
-- **ONLY use T4 or less powerful GPUs** unless the human explicitly grants permission for a specific run on a more powerful GPU (A10G, A100, H100, etc.).
-- T4 is the default for ALL training, evaluation, and experimentation on Modal, Lightning, Kaggle, and any other cloud platform.
-- The rationale: T4 at $0.59/hr gives maximum iteration budget per dollar. Our model (287K params, ~800MB VRAM) does not need more powerful hardware. Iteration count matters more than per-run speed.
-- If a specific experiment genuinely requires more VRAM or throughput (e.g., batch_size=32, multi-model ensemble), request human approval BEFORE switching to a more expensive GPU.
-- Never default deploy scripts to A10G, A100, or H100 without explicit human approval in the current conversation.
+### Optimal GPU: RTX 4090 on Vast.ai
+- **RTX 4090 at $0.25/hr on Vast.ai** is the optimal price/performance for our workload (287K param model, ~800MB VRAM, dominated by scorer forward/backward passes).
+- 4-5x faster than T4 at roughly the same cost. A 2-hour T4 run finishes in ~25 min on 4090.
+- Filter: `gpu_name=RTX_4090 reliability>0.95 inet_down>200 disk_space>30`
+- Budget: $25 credits available. Hard cap at $24. Track all spend.
+
+### Platform hierarchy (price/performance order)
+| Platform | GPU | $/hr | Speed vs T4 | $/experiment | Use For |
+|----------|-----|------|-------------|--------------|---------|
+| Vast.ai | RTX 4090 | $0.25 | 4-5x | $0.20 | New experiments (primary) |
+| AWS spot | T4 (g4dn.xlarge) | $0.22 | 1x | $0.60 | Scale-out, auth eval fleet |
+| Modal | T4 | $0.59 | 1x | $0.60 | Existing infra, quick deploys |
+| Local M5 Max | MPS | Free | ~0.5x | Free | Development, smoke tests |
+| Kaggle | T4/P100 | Free | 1x | Free | Bonus parallelism (unreliable) |
+
+### Budget caps (DO NOT OVERSPEND)
+- Vast.ai: $25 total ($24 hard cap in deploy script)
+- AWS: $100 total (free credits)
+- Azure: $200 total (free credits, need `az login`)
+- Modal: $30/mo free credits
+
+### Deployment rules
+- **Always use `modal run --detach`** for long-running experiments (prevents disconnect kill).
+- **Always use unique `--tto-subdir`** per experiment to prevent checkpoint contamination.
+- Vast.ai deployment goes through `src/tac/deploy/vastai/` (canonical module, not ad-hoc scripts).
+- All platforms must use `load_differentiable_scorers()` for any gradient-based optimization.
 
 ## Tooling — non-negotiable
 
@@ -243,6 +264,8 @@ A candidate may be promoted only after:
   - **Use precomputed data** when available: `--precomputed experiments/precomputed_local` (skips 5-min video decode).
   - **Adaptive weight formula was retired** (`src/tac/adaptive.py`): T² cancels in the derivation, making the formula vacuous. Use standard loss with static weights instead.
 - **Always commit after every change.** Git history is the research timeline.
+- **Use `scripts/modal_check.py`** to check Modal TTO progress. Shows batch progress, ETA, recent PoseNet snapshots, and running apps. Run with `.venv/bin/python scripts/modal_check.py`.
+- **Use `scripts/kaggle_check.py`** to check Kaggle kernel status. Run with `.venv/bin/python scripts/kaggle_check.py`.
 
 ## Critical lessons — DO NOT repeat these mistakes
 
