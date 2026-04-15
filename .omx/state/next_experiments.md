@@ -1,6 +1,6 @@
 # Next Experiments -- 2026-04-15
 
-## Current Best: auth=0.43 (TTO v5a, gradient fix)
+## Current Best: auth=0.41 (TTO v5b, embedding loss)
 ## Renderer Baseline: auth=0.87
 ## Target: sub-0.20
 
@@ -17,6 +17,15 @@ the binding constraint -- 98.7% of remaining score.
 - [x] simulate_resize default fix: now True by default
 - [x] check_vastai.py: canonical Vast.ai interaction script
 - [x] download_modal_tto_frames.py: data permanence script
+- [x] Pair difficulty map: COMPLETED (600 pairs, 41.1s on MPS)
+- [x] tto_v6_hinge_phase2 registered in Vast.ai experiment registry
+
+## Pair Difficulty Map Results
+- 600 pairs analyzed with simulate_resize=True
+- PoseNet MSE: mean=158.98, range=[85.75, 199.55]
+- SegNet disagree: mean=0.505, range=[0.490, 0.519]
+- 120 hard pairs (top 20%), 300 easy pairs (bottom 50%)
+- Hardest pair: #523 (score=95.43), easiest: #514 (score=79.74)
 
 ## URGENT: Data Permanence
 - [ ] Download v5a tto_frames.pt from Modal (auth 0.43, 500-step)
@@ -34,48 +43,45 @@ the binding constraint -- 98.7% of remaining score.
 - **Kill criteria**: SegNet worse than MSE at all step counts
 - **Cost**: ~$0.12 on RTX 4090
 
+### P0.5: v6 Full Run (ALL Improvements Combined)
+- **What**: Run tto_v6_hinge_phase2 on Vast.ai 4090
+- **Why**: Combines ALL discoveries: embedding + hinge + two-phase + simulate_resize
+- **Config**: `tto_v6_hinge_phase2` in Vast.ai registry
+- **Expected**: auth < 0.30 (if hinge + phase2 work as theorized)
+- **Cost**: ~$0.25 on RTX 4090
+
 ### P1: Two-Phase TTO Validation
 - **What**: Run TTO with two-phase schedule (100 PoseNet + 400 SegNet-only)
 - **Why**: Don't waste steps on PoseNet after it saturates at 100
 - **Expected**: Better SegNet than uniform 500 steps
 - **Cost**: ~$0.12 on RTX 4090
 
-### P2: Per-Pair Difficulty Map
-1. **Per-pair difficulty map**: Run pair_difficulty_map.py with renderer checkpoint
-   - Identifies easy vs hard pairs for budget allocation
-   - Easy pairs: 100 steps (PoseNet saturation)
-   - Hard pairs: 500+ steps (SegNet optimization)
-   - Estimated savings: 3-4x total TTO compute
+### P2: Adaptive TTO Budget (Uses Pair Difficulty Map)
+- **What**: Allocate TTO steps based on per-pair difficulty
+- **Why**: 120 hard pairs need 500+ steps, 300 easy pairs need ~100
+- **Expected**: 3-4x total TTO compute savings with same quality
+- **Requires**: pair_difficulty_map.json (COMPLETED)
 
 ### P3: SegNet Architectural Improvements
-2. **SegNet-focused TTO loss**: Increase seg_weight beyond 100
-   - Step curve shows SegNet only moves at 500 steps -- maybe it needs MORE weight
-   - Test seg_weight=500, 1000 with pose_weight=1 (already saturated)
-3. **SegNet feature loss**: MSE on SegNet intermediate features instead of argmax
-   - Current: hard disagreement (argmax != argmax) is non-differentiable
-   - Proposed: soft disagreement on logits provides gradient for smooth optimization
+- **SegNet-focused TTO loss**: Increase seg_weight beyond 100
+- **SegNet feature loss**: MSE on SegNet intermediate features
 
 ### P4: Latent-Conditioned Renderer
-4. **Pair-specific latent**: Condition renderer on a per-pair latent vector
-   - Amortizes TTO: learn a mapping from pair difficulty to optimal residual
-   - Train on 500-step TTO targets as ground truth
-   - Eliminates TTO at inflate time entirely
+- Pair-specific latent vectors: amortize TTO into renderer
 
 ### P5: TTO Distillation
-5. **Distillation targets**: Use 500-step TTO outputs as training targets
-   - Train renderer to directly output what TTO would produce
-   - Previous attempt incomplete (12/60 batches before instance destroyed)
-   - Requires downloading v5a tto_frames.pt from Modal first
+- Use 500-step TTO outputs as training targets
+- Requires downloading v5a/v5b tto_frames.pt from Modal
 
 ### P6: Ensemble & Compression
-6. **Best-of-N ensemble**: Per-pair selection across TTO variants
-7. **Archive LZMA compression**: Free rate improvement
+- Best-of-N ensemble: per-pair selection across TTO variants
+- Archive LZMA compression: free rate improvement
 
 ## Decision Gates
 - 2026-04-16: Download Modal TTO frames -> data permanence achieved
 - 2026-04-16: Hinge loss step curve -> validate or kill hinge approach
-- 2026-04-17: Two-phase TTO validation
-- 2026-04-18: Per-pair difficulty map results -> allocate adaptive budget
+- 2026-04-17: v6 full run -> combined improvements auth eval
+- 2026-04-18: Two-phase TTO validation
 - 2026-04-20: Distillation targets -> train distilled renderer
 - 2026-04-21: Lock final approach
 - 2026-05-03: DEADLINE

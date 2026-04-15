@@ -1,43 +1,81 @@
-# latest report
+# Latest Report -- 2026-04-15
 
-## current state - 2026-04-15
+## Session 35 Summary: DX Hardening + SegNet Paradigm Shift
 
-**CRITICAL BUG DISCOVERED AND FIXED**: TTO PoseNet gradients were ZERO.
+### Current Best Scores
+| Track | Auth Score | Details |
+|-------|-----------|---------|
+| TTO v5b (embedding) | **0.41** | 500-step, embedding loss, seg_odd_only |
+| TTO v5a (output MSE) | **0.43** | 500-step, first valid TTO with PoseNet gradients |
+| Renderer baseline | **0.87** | asym_v5_lagrangian_fixed, ep12600 |
 
-### The bug
+### Paradigm Shift: SegNet Dominates at 77:1 Leverage Ratio
 
-Upstream `frame_utils.py:rgb_to_yuv6()` has `@torch.no_grad()`. PoseNet's `preprocess_input()` calls this function. The training pipeline had a fix (patched scorer loading), but the TTO pipeline loaded scorers through a different code path without the fix. Every TTO experiment in the project ran with zero PoseNet gradients — the optimizer was blind to PoseNet.
+Step curve experiment (Vast.ai RTX 4090, 30 pairs) revealed:
+- PoseNet saturates at 100 TTO steps (165.27 -> 0.042, 3970x reduction)
+- SegNet contributes 98.7% of remaining score after PoseNet convergence
+- 500-step breakthrough: SegNet moves from 0.5036 to 0.3435 (32% reduction)
+- All future effort must target SegNet
 
-### How it was found
+### Three Breakthroughs Implemented (UNTESTED)
 
-Skunkworks council adversarial review of TTO v3 results. The Contrarian noted that 50 TTO steps made PoseNet *worse*, which is mathematically impossible if gradients are correct. Hotz traced the call chain to the `@torch.no_grad()` decorator. 13-0 council vote to fix.
+1. **Hinge loss for SegNet** (P0): Logit-margin hinge loss focuses gradient on
+   boundary pixels at risk of argmax flip. Ignores already-correct pixels.
+   Expected 2-5x faster SegNet convergence.
 
-### Impact
+2. **Two-phase TTO** (P1): Phase 1 (100 steps) = joint PoseNet+SegNet optimization.
+   Phase 2 (200+ steps) = SegNet-only on odd frames. Freezes even frames and
+   PoseNet after Phase 1, preventing PoseNet regression during SegNet polish.
 
-- All TTO results (v1-v4) are **invalidated** for PoseNet — they were SegNet-only optimizations
-- Renderer training (auth=0.87) is **unaffected** — different code path had the fix
-- Projected score with working TTO: **0.87 -> ~0.35** (PoseNet 0.031 -> ~0.003)
+3. **Latent codes per pair**: Pair-specific learnable vectors for amortized TTO.
+   Not yet integrated into deployment.
 
-### Why it matters
+### Session Commits: 40+
+- Hinge loss implementation in tac library
+- Two-phase TTO with Phase 2 SegNet-only mode
+- simulate_resize default changed to True
+- check_vastai.py canonical DX script
+- download_modal_tto_frames.py data permanence
+- PROVENANCE.md experiment provenance documentation
+- Pair difficulty map script (first run this session)
+- Vast.ai tto_v6_hinge_phase2 experiment registered
 
-A single decorator in upstream code silently broke an entire optimization pipeline for weeks. No errors, no warnings, no NaN — just suboptimal convergence masked by SegNet improvements. This is paper-worthy as a general failure mode for gradient-based optimization pipelines that compose functions from third-party code.
+### Council Decisions (Binding)
+- Hinge loss approved unanimously (15-0)
+- Two-phase TTO approved unanimously (15-0)
+- Cosine LR killed (empirically worse than constant)
+- SegNet is the binding constraint, all effort must target it
+
+### What's Ready to Deploy
+- `tto_v6_hinge_phase2` experiment in Vast.ai registry: combines ALL discoveries
+  (embedding loss, hinge loss, two-phase, constant LR, simulate_resize, seg_odd_only)
+- `tto_step_curve_hinge` experiment: validates hinge loss improvement curve
+- Cost estimate: ~$0.12-0.25 per experiment on RTX 4090
+
+### Vast.ai Budget
+- Spent: $0.27 of $24.00 hard cap
+- Remaining: $23.73
+- All instances destroyed
+
+### Critical Data on Modal Volume
+- `asym_v5_lagrangian_fixed/tto_v5a_output_mse/tto_frames.pt` (auth 0.43)
+- `asym_v5_lagrangian_fixed/tto_v5b_embedding/tto_frames.pt` (auth 0.41)
+- MUST download before Modal access expires
+
+### 18-Day Plan (Deadline: May 3, 2026)
+1. Download Modal TTO frames (data permanence)
+2. Hinge loss step curve validation
+3. Two-phase TTO validation
+4. Per-pair difficulty map -> adaptive budget allocation
+5. Distillation targets from 500-step TTO
+6. Lock final approach by April 21
+7. Final submission packaging
 
 ---
 
-## renderer baseline (current best)
-
+## Renderer Baseline (reference)
 - Track: `robust_current`
 - Variant: `asym_v5_lagrangian_fixed`
 - Platform: `modal_t4`
-- Auth score: **`0.87`** (seg=0.21, pose=0.56, rate=0.10)
+- Auth score: **0.87** (seg=0.21, pose=0.56, rate=0.10)
 - Checkpoint: `renderer_best.pt` at ep12600
-
-## authoritative promoted floor (legacy)
-
-- Track: `robust_current`
-- Variant: `dilated_h64`
-- Platform: `modal_a10g`
-- Current-workflow score: **`1.33`** at `864,167` bytes
-- Distortions: PoseNet `0.00218374`, SegNet `0.00609921`
-- Rate: `0.02301653`
-- Evidence: `reports/raw/2026-04-10-dilated-h64-authoritative/robust_current-dilated-h64-authoritative-cpu-report.txt`
