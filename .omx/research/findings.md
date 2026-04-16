@@ -1,5 +1,39 @@
 # Findings
 
+## 2026-04-16 [EXPERIMENT] Hinge loss breakthrough + correct checkpoint re-validation
+
+**Context**: All prior Vast.ai experiments used wrong checkpoint (5-epoch smoke model, MD5:a9aee326). Re-ran with correct auth=0.87 renderer (MD5:cff8dca4).
+
+### Key Results
+1. **Hinge loss is strictly better than xent** from 50+ TTO steps:
+   - At 200 steps: 0.190 vs 0.267 (29% better proxy score)
+   - At 500 steps: 0.145 vs 0.192 (24% better)
+   - SegNet at 500: 0.000639 vs 0.001259 (49% better!)
+   - PoseNet comparable (slightly worse with hinge, but SegNet gain dominates)
+
+2. **Phase transition at ~100 steps confirmed** with correct checkpoint.
+
+3. **Early TTO hurts PoseNet** (new finding):
+   - PoseNet goes from 0.037 (baseline) to 0.068 at 25 steps before recovering
+   - This SegNet-PoseNet tug-of-war was invisible in the wrong-checkpoint data
+   - Implication: per-pair adaptive TTO should ensure minimum ~50 steps
+
+4. **v6 full pipeline proxy = 0.275** (600 pairs, hinge+phase2+embedding):
+   - Baseline 0.634 -> TTO 0.275 (57% reduction)
+   - PoseNet: 0.00249 (86% improvement from baseline)
+   - SegNet: 0.00118 (45% improvement from baseline)
+   - Total time: 29.4 min on RTX 4090
+
+5. **DX script (check_vastai.py) had 6 bugs** on first real use:
+   - pyav->av, Python 3.12->3.11, GPU name quoting, contract!=instance ID,
+     missing onstart, torch version pinning
+
+### Artifacts
+- `experiments/results/step_curve_v2/` -- xent re-validation
+- `experiments/results/step_curve_hinge/` -- hinge breakthrough
+- `experiments/results/tto_v6_hinge_phase2/` -- full v6 TTO (includes 708MB frames)
+- All use checkpoint MD5: cff8dca4
+
 ## 2026-04-15 [RESEARCH] Contest rules — comprehensive audit from upstream repo, PRs, and Yousfi comments
 
 **Sources**: README.md, evaluate.sh, eval.yml, pyproject.toml, Issues #28/#33/#34, PRs #32/#35/#38/#49/#53, all Yousfi comments.
