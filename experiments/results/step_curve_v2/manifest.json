@@ -1,0 +1,16 @@
+{
+  "experiment": "tto_step_curve_xent_v2",
+  "description": "TTO step-vs-improvement curve with CORRECT checkpoint (xent loss)",
+  "platform": "Vast.ai",
+  "gpu": "RTX 4090 24GB",
+  "instance_id": "35026289",
+  "checkpoint": "experiments/results/v5_lagrangian_renderer/renderer_best.pt",
+  "checkpoint_md5_prefix": "cff8dca4",
+  "loss_mode": "xent",
+  "n_pairs": 30,
+  "step_counts": [10, 25, 50, 100, 150, 200, 300, 500],
+  "total_time_s": 433.1,
+  "date": "2026-04-16T00:03:39Z",
+  "cost_estimate_usd": 0.04,
+  "notes": "Re-validation with correct checkpoint after discovering all prior Vast.ai experiments used wrong 5-epoch smoke-test model (MD5: a9aee326). Phase transition confirmed at ~100 steps. Baseline score 0.809, best at 500 steps: 0.192."
+}

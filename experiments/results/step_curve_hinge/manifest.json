@@ -1,0 +1,17 @@
+{
+  "experiment": "tto_step_curve_hinge",
+  "description": "TTO step-vs-improvement curve with hinge loss (correct checkpoint)",
+  "platform": "Vast.ai",
+  "gpu": "RTX 4090 24GB",
+  "instance_id": "35026289",
+  "checkpoint": "experiments/results/v5_lagrangian_renderer/renderer_best.pt",
+  "checkpoint_md5_prefix": "cff8dca4",
+  "loss_mode": "hinge",
+  "hinge_margin": 0.5,
+  "n_pairs": 30,
+  "step_counts": [10, 25, 50, 100, 150, 200, 300, 500],
+  "total_time_s": 806.4,
+  "date": "2026-04-16T00:18:03Z",
+  "cost_estimate_usd": 0.07,
+  "notes": "Hinge loss BEATS xent at all step counts from 50+. At 500 steps: hinge 0.145 vs xent 0.192 (24% improvement). SegNet improvement is dramatic: 0.000639 vs 0.001259 (49% better). PoseNet comparable. Hinge loss confirmed as P0 breakthrough."
+}
