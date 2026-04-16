@@ -1,0 +1,109 @@
+{
+  "experiment": "tto_step_curve",
+  "config": {
+    "checkpoint": "renderer_best.pt",
+    "device": "cuda",
+    "n_pairs": 30,
+    "pair_start": 100,
+    "batch_pairs": 10,
+    "tto_lr": 0.005,
+    "seg_weight": 100.0,
+    "pose_weight": 10.0,
+    "compress_weight": 0.5,
+    "use_embedding_loss": true,
+    "seg_odd_only": true,
+    "simulate_resize": false
+  },
+  "results": {
+    "0": {
+      "posenet": 0.037498911221822105,
+      "segnet": 0.0019714356089631717,
+      "score": 0.8095071066909872,
+      "pose_contribution": 0.6123635457946701,
+      "seg_contribution": 0.19714356089631715,
+      "elapsed_s": 0.0,
+      "steps": 0,
+      "s_per_frame": 0.0
+    },
+    "10": {
+      "posenet": 0.054994392395019534,
+      "segnet": 0.0019253201161821684,
+      "score": 0.934114052899015,
+      "pose_contribution": 0.7415820412807981,
+      "seg_contribution": 0.19253201161821684,
+      "elapsed_s": 3.53,
+      "steps": 10,
+      "s_per_frame": 0.059
+    },
+    "25": {
+      "posenet": 0.06829589009284973,
+      "segnet": 0.0018559773763020834,
+      "score": 1.0120110125287287,
+      "pose_contribution": 0.8264132748985203,
+      "seg_contribution": 0.18559773763020834,
+      "elapsed_s": 6.83,
+      "steps": 25,
+      "s_per_frame": 0.114
+    },
+    "50": {
+      "posenet": 0.0436456561088562,
+      "segnet": 0.001772054098546505,
+      "score": 0.8378540010803959,
+      "pose_contribution": 0.6606485912257454,
+      "seg_contribution": 0.1772054098546505,
+      "elapsed_s": 12.5,
+      "steps": 50,
+      "s_per_frame": 0.208
+    },
+    "100": {
+      "posenet": 0.009348985801140467,
+      "segnet": 0.0016871135681867599,
+      "score": 0.47447246947266386,
+      "pose_contribution": 0.30576111265398787,
+      "seg_contribution": 0.168711356818676,
+      "elapsed_s": 24.14,
+      "steps": 100,
+      "s_per_frame": 0.402
+    },
+    "150": {
+      "posenet": 0.0036513822774092357,
+      "segnet": 0.00162031389772892,
+      "score": 0.3531172939471464,
+      "pose_contribution": 0.19108590417425445,
+      "seg_contribution": 0.162031389772892,
+      "elapsed_s": 35.42,
+      "steps": 150,
+      "s_per_frame": 0.59
+    },
+    "200": {
+      "posenet": 0.0012476307029525438,
+      "segnet": 0.0015519884725411733,
+      "score": 0.266896237687043,
+      "pose_contribution": 0.11169739043292569,
+      "seg_contribution": 0.15519884725411734,
+      "elapsed_s": 47.14,
+      "steps": 200,
+      "s_per_frame": 0.786
+    },
+    "300": {
+      "posenet": 0.0005644477438181639,
+      "segnet": 0.0014436510081092516,
+      "score": 0.21949483818689125,
+      "pose_contribution": 0.07512973737596611,
+      "seg_contribution": 0.14436510081092516,
+      "elapsed_s": 69.64,
+      "steps": 300,
+      "s_per_frame": 1.161
+    },
+    "500": {
+      "posenet": 0.00048420301948984463,
+      "segnet": 0.0012583415334423383,
+      "score": 0.19541885133810635,
+      "pose_contribution": 0.06958469799387251,
+      "seg_contribution": 0.12583415334423384,
+      "elapsed_s": 115.75,
+      "steps": 500,
+      "s_per_frame": 1.929
+    }
+  }
+}
