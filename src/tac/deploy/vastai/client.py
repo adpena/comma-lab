@@ -64,11 +64,11 @@ export PATH="$HOME/.local/bin:$PATH"
 
 # Create venv inheriting system torch from the Docker image
 cd /workspace
-uv venv --python 3.12 --system-site-packages
+uv venv --system-site-packages
 source .venv/bin/activate
 
 # Only install deps NOT in the base image (torch/torchvision already present)
-uv pip install pyav safetensors segmentation-models-pytorch timm einops pydantic click
+uv pip install av safetensors segmentation-models-pytorch timm einops pydantic click
 
 # Clone upstream scorer (PoseNet/SegNet models + GT video)
 if [ ! -d /workspace/upstream ]; then
@@ -604,7 +604,7 @@ class VastClient:
     def _build_search_query(spec: InstanceSpec) -> str:
         """Build a Vast.ai search query string from an InstanceSpec."""
         return (
-            f"gpu_name='{spec.gpu_type}' "
+            f"gpu_name={spec.gpu_type.replace(' ', '_')} "
             f"num_gpus={spec.num_gpus} "
             f"reliability>{spec.min_reliability} "
             f"inet_down>{spec.min_download_mbps} "

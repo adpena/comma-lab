@@ -89,6 +89,50 @@ RSYNC_EXCLUDES = [
     "submissions",
 ]
 
+# Onstart script: runs when the Vast.ai instance boots.
+# The Docker image already has PyTorch 2.5.1 + CUDA 12.4 installed system-wide.
+# We create a venv with --system-site-packages to inherit torch, then only
+# install the missing dependencies and clone the upstream scorer repo.
+ONSTART_SCRIPT = """\
+#!/bin/bash
+set -ex
+
+# Install uv for package management
+curl -LsSf https://astral.sh/uv/install.sh | sh
+export PATH="$HOME/.local/bin:$PATH"
+
+# Create venv inheriting system torch from the Docker image
+cd /workspace
+uv venv --system-site-packages
+source .venv/bin/activate
+
+# Detect the system torch version and pin it so uv doesn't upgrade to
+# an incompatible version (e.g., torch 2.11 needs CUDA 13, but the host
+# driver may only support CUDA 12.x).
+TORCH_VER=$(python3 -c "import torch; print(torch.__version__)" 2>/dev/null || echo "")
+if [ -n "$TORCH_VER" ]; then
+    echo "Pinning system torch: $TORCH_VER"
+    # Determine the correct index URL based on the CUDA version
+    CUDA_TAG=$(echo "$TORCH_VER" | grep -oP '\\+cu\\K[0-9]+' || echo "")
+    if [ -n "$CUDA_TAG" ]; then
+        INDEX_URL="https://download.pytorch.org/whl/cu${CUDA_TAG}"
+        uv pip install "torch==${TORCH_VER}" --index-url "$INDEX_URL" 2>/dev/null || true
+    fi
+fi
+
+# Install deps NOT in the base image (torch/torchvision already present)
+uv pip install av safetensors segmentation-models-pytorch timm einops pydantic click
+
+# Clone upstream scorer (PoseNet/SegNet models + GT video)
+if [ ! -d /workspace/upstream ]; then
+    apt-get update && apt-get install -y git-lfs
+    git clone --depth 1 https://github.com/commaai/comma_video_compression_challenge.git /workspace/upstream
+    cd /workspace/upstream && git lfs pull
+fi
+
+echo "SETUP_COMPLETE" > /workspace/.setup_done
+"""
+
 
 # ── Helpers ───────────────────────────────────────────────────────────────────
 
@@ -361,7 +405,7 @@ def cmd_create(args: argparse.Namespace) -> int:
 
     print(f"\n{_BOLD}Searching for RTX 4090 instances...{_RESET}")
     search_query = (
-        "gpu_name='RTX 4090' num_gpus=1 reliability>0.95 "
+        "gpu_name=RTX_4090 num_gpus=1 reliability>0.95 "
         "inet_down>200 disk_space>40 rentable=True"
     )
     result = _run_vastai(["search", "offers", search_query, "--order", "dph_total", "--limit", "5", "--raw"])
@@ -395,6 +439,7 @@ def cmd_create(args: argparse.Namespace) -> int:
         "--image", "pytorch/pytorch:2.5.1-cuda12.4-cudnn9-runtime",
         "--disk", "40",
         "--ssh", "--direct",
+        "--onstart-cmd", ONSTART_SCRIPT,
         "--label", label,
         "--raw",
     ])
@@ -402,47 +447,65 @@ def cmd_create(args: argparse.Namespace) -> int:
         print(f"{_RED}Instance creation failed: {create_result.stderr}{_RESET}")
         return 1
 
-    # Parse instance ID
+    # Parse contract ID from the create response.
+    # NOTE: new_contract != instance ID in the Vast.ai API.
+    # We use 'show instances' to find the actual instance by label.
     try:
         data = json.loads(create_result.stdout)
-        iid = str(data.get("new_contract", data.get("id", "")))
+        contract_id = str(data.get("new_contract", data.get("id", "")))
     except (json.JSONDecodeError, TypeError):
-        import re
-        match = re.search(r"\d{4,}", create_result.stdout)
-        iid = match.group(0) if match else ""
+        contract_id = ""
 
-    if not iid:
-        print(f"{_RED}Could not determine instance ID{_RESET}")
+    if not contract_id:
+        print(f"{_RED}Could not determine contract ID{_RESET}")
         return 1
 
-    print(f"  {_GREEN}Instance created: {iid}{_RESET}")
+    print(f"  {_GREEN}Contract created: {contract_id}{_RESET}")
     print(f"  Waiting for instance to start...")
 
-    # Wait for running + SSH info
+    # Wait for running + SSH info.
+    # Vast.ai's 'show instance <id>' can fail with TypeError on newly created
+    # instances (start_date is None).  Instead, poll 'show instances' (list all)
+    # and match by label.
+    iid = None
+    ssh_host = None
+    ssh_port = None
     for attempt in range(60):
         time.sleep(10)
         try:
-            info_result = _run_vastai(["show", "instance", iid, "--raw"])
-            if info_result.returncode != 0:
+            list_result = _run_vastai(["show", "instances", "--raw"])
+            if list_result.returncode != 0:
                 continue
-            info = json.loads(info_result.stdout)
-            status = info.get("actual_status", "")
-            if status == "running":
-                ssh_host = info.get("ssh_host", info.get("public_ipaddr"))
-                ssh_port = info.get("ssh_port")
-                if ssh_host and ssh_port:
-                    break
-            elif status in ("exited", "error"):
-                print(f"{_RED}Instance failed to start: {status}{_RESET}")
-                _run_vastai(["destroy", "instance", iid])
-                return 1
+            instances_list = json.loads(list_result.stdout)
+            for inst_data in instances_list:
+                inst_label = inst_data.get("label", "")
+                if inst_label == label or str(inst_data.get("id", "")) == contract_id:
+                    iid = str(inst_data["id"])
+                    status = inst_data.get("actual_status", "")
+                    if status == "running":
+                        ssh_host = inst_data.get("ssh_host", inst_data.get("public_ipaddr"))
+                        ssh_port = inst_data.get("ssh_port")
+                        if ssh_host and ssh_port:
+                            break
+                    elif status in ("exited", "error"):
+                        print(f"{_RED}Instance failed to start: {status}{_RESET}")
+                        if iid:
+                            _run_vastai(["destroy", "instance", iid])
+                        return 1
+            if ssh_host and ssh_port:
+                break
         except (json.JSONDecodeError, subprocess.TimeoutExpired):
             continue
         if attempt % 6 == 0 and attempt > 0:
             print(f"  {_DIM}Still waiting... ({attempt * 10}s){_RESET}")
     else:
         print(f"{_RED}Timed out waiting for instance{_RESET}")
-        _run_vastai(["destroy", "instance", iid])
+        if iid:
+            _run_vastai(["destroy", "instance", iid])
+        return 1
+
+    if not iid:
+        print(f"{_RED}Could not find instance by label {label}{_RESET}")
         return 1
 
     # Save instance
@@ -458,6 +521,38 @@ def cmd_create(args: argparse.Namespace) -> int:
         "label": label,
     }
     _save_instances(instances)
+
+    # Wait for onstart setup script to complete (venv, deps, upstream clone)
+    print(f"  Waiting for setup script (venv + deps + upstream clone)...")
+    key = None
+    for key_name in ["id_ed25519", "id_rsa"]:
+        key_path = Path.home() / ".ssh" / key_name
+        if key_path.exists():
+            key = str(key_path)
+            break
+    if not key:
+        print(f"{_YELLOW}No SSH key for setup check, skipping wait{_RESET}")
+    else:
+        setup_ok = False
+        for attempt in range(90):  # 15 minutes max (90 * 10s)
+            time.sleep(10)
+            try:
+                check = _ssh_exec(
+                    ssh_host, int(ssh_port), key,
+                    "cat /workspace/.setup_done 2>/dev/null || echo PENDING",
+                    timeout=15,
+                )
+                if check.returncode == 0 and "SETUP_COMPLETE" in check.stdout:
+                    setup_ok = True
+                    break
+            except (subprocess.TimeoutExpired, OSError):
+                pass
+            if attempt % 6 == 0 and attempt > 0:
+                print(f"  {_DIM}Setup still running... ({attempt * 10}s){_RESET}")
+        if setup_ok:
+            print(f"  {_GREEN}Setup complete (venv, deps, upstream){_RESET}")
+        else:
+            print(f"  {_YELLOW}Setup may still be running after 15 min. Check manually.{_RESET}")
 
     print(f"\n  {_GREEN}{_BOLD}Instance ready!{_RESET}")
     print(f"  ID: {iid}")
