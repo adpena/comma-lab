@@ -1,10 +1,10 @@
 {
-  "total_spent": 0.33,
+  "total_spent": 1.01,
   "sessions": [
     {
-      "timestamp": "2026-04-16T01:00:00Z",
-      "amount": 0.33,
-      "description": "instance 35026289 (tto_revalidation) ~1.0h: step_curve_xent + step_curve_hinge + tto_v6_hinge_phase2"
+      "timestamp": "2026-04-16T01:05:00Z",
+      "amount": 1.01,
+      "description": "instance 35026289 (tto_revalidation) 3.1h at $0.329/hr: step_curve_xent + step_curve_hinge + tto_v6_hinge_phase2. Setup took ~1h (manual fixes for onstart bugs), experiments ~1h, download+idle ~1h."
     }
   ]
 }
