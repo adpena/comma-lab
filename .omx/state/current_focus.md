@@ -1,62 +1,55 @@
-# Current Focus -- 2026-04-15T24:00:00Z
+# Current Focus -- 2026-04-16T00:45:00Z
 
-## Session 36: Wrong Checkpoint Discovery + Hardening
+## Session 37: Re-Validation on Vast.ai + Hinge Loss Breakthrough
 
-### CRITICAL: Wrong Checkpoint Bug (2026-04-15)
+### Re-Validated Step Curve (CORRECT checkpoint, cff8dca4)
 
-ALL Vast.ai experiments used a 5-epoch smoke-test model (MD5: a9aee326)
-instead of the auth=0.87 renderer (MD5: cff8dca4). This was discovered
-when pair difficulty map results showed PoseNet mean=158 instead of ~0.017.
+Vast.ai RTX 4090, 30 pairs, 8 step counts (10-500):
 
-**Impact:**
-- step_curve_v1/ results: INVALIDATED (absolute numbers meaningless)
-- step_curve_cosine/ results: INVALIDATED (absolute numbers meaningless)
-- Pair difficulty map v2: CORRECT (re-run with verified checkpoint)
-- Hinge loss code: VALID but UNTESTED against correct model
-- Two-phase TTO code: VALID but UNTESTED against correct model
-- simulate_resize code: VALID but UNTESTED against correct model
+**xent (baseline):**
+| Steps | PoseNet   | SegNet   | Score  |
+|-------|-----------|----------|--------|
+| 0     | 0.0374    | 0.00197  | 0.809  |
+| 100   | 0.0093    | 0.00169  | 0.473  |
+| 200   | 0.0013    | 0.00155  | 0.267  |
+| 500   | 0.0004    | 0.00126  | 0.192  |
 
-**Fix applied:**
-- Correct checkpoint stored permanently at:
-  `experiments/results/v5_lagrangian_renderer/renderer_best.pt` (MD5: cff8dca4)
-- `experiments/results/fridrich_renderer/renderer_best.pt` overwritten with correct
-- Checkpoint sanity check added: `src/tac/checkpoint.py`
-  - `verify_checkpoint_identity()` -- MD5-based, instant, no GPU needed
-  - `verify_checkpoint_quality()` -- 2-pair PoseNet sanity check, < 5 seconds
-- All experiment scripts now call `verify_checkpoint_identity()` before main loop:
-  - `experiments/pair_difficulty_map.py`
-  - `experiments/tto_step_curve.py`
-  - `experiments/renderer_tto.py`
-- `scripts/check_vastai.py` deploy/run commands verify before upload
-- `src/tac/deploy/vastai/client.py` uses canonical checkpoint dir, verifies on upload
-- INVALIDATED.md added to both step curve result directories
+**hinge (BREAKTHROUGH):**
+| Steps | PoseNet   | SegNet   | Score  |
+|-------|-----------|----------|--------|
+| 0     | 0.0375    | 0.00197  | 0.810  |
+| 100   | 0.0076    | 0.00131  | 0.407  |
+| 200   | 0.0008    | 0.00102  | 0.190  |
+| 500   | 0.0007    | 0.00064  | 0.145  |
 
-### Re-Validation Needed
-1. **step_curve_v1** -- re-run on Vast.ai with correct checkpoint
-2. **step_curve_cosine** -- re-run on Vast.ai with correct checkpoint
-3. **tto_step_curve_hinge** -- never ran, needs correct checkpoint
-4. **tto_v6_hinge_phase2** -- never ran, needs correct checkpoint
+**Hinge beats xent at every step count from 50+:**
+- At 200 steps: 0.190 vs 0.267 (29% better)
+- At 500 steps: 0.145 vs 0.192 (24% better)
+- SegNet at 500: 0.000639 vs 0.001259 (49% better!)
+- Phase transition confirmed at ~100 steps
 
-### Completed This Session (prior to checkpoint discovery)
-- **Hinge loss** (P0): Implemented in tac, registered as experiment
-- **Two-phase TTO** (P1): Implemented (100 steps PoseNet, then SegNet-only)
-- **simulate_resize default**: Fixed (now True by default, matching auth eval)
-- **Cosine LR**: Empirically worse for TTO (step_curve_cosine -- BUT INVALIDATED)
-- **check_vastai.py**: Canonical Vast.ai interaction script
-- **Pair difficulty map v2**: CORRECT (600 pairs, verified checkpoint)
+### DX Script Bugs Found + Fixed (check_vastai.py)
 
-## Pair Difficulty Map v2 Results (VALID)
+1. `pyav` -> `av` (pip package name)
+2. `--python 3.12` removed (Docker has 3.11)
+3. `gpu_name='RTX 4090'` -> `gpu_name=RTX_4090` (CLI quoting)
+4. `new_contract` != instance ID (Vast.ai API quirk)
+5. Missing onstart script + setup wait
+6. Torch version pinning needed (uv installs incompatible 2.11.0)
 
-600 pairs analyzed with correct checkpoint + simulate_resize=True:
-- PoseNet MSE: mean=0.01726 (matches auth eval)
-- SegNet disagree: mean=0.00215 (matches auth eval)
-- Data enables adaptive TTO budget allocation
+### Running: v6 TTO (hinge + phase2 + embedding)
+
+- Instance 35026289 on ssh7.vast.ai:26288
+- Processing all 600 pairs (1200 frames)
+- Config: 150 P1 steps + 200 P2 segnet-only steps, hinge, embedding loss
+- Estimated completion: ~20 min from batch 15/60
 
 ## Scores
-- **Renderer baseline**: auth=0.87 (seg=0.21, pose=0.56, rate=0.10)
-- **TTO v5a (gradient fix)**: auth=0.43 (first valid TTO with PoseNet gradients)
-- **TTO v5b (embedding)**: auth=0.41 (10.8% improvement over v5a)
+- **Renderer baseline**: auth=0.87
+- **TTO v5a (gradient fix)**: auth=0.43
+- **TTO v5b (embedding)**: auth=0.41
+- **TTO v6 (hinge step curve proxy)**: ~0.145 at 500 steps (30 pairs)
 - **Target**: sub-0.20 auth
 
 ## Deadline
-- May 3, 2026 (~18 days remaining)
+- May 3, 2026 (~17 days remaining)
