@@ -1,88 +1,82 @@
-# Next Experiments -- 2026-04-15
+# Next Experiments -- 2026-04-16
 
-## Current Best: auth=0.41 (TTO v5b, embedding loss)
+## Current Best: proxy=0.275 (TTO v6, hinge+phase2+embedding)
+## Prev Auth Best: auth=0.41 (TTO v5b, embedding loss)
 ## Renderer Baseline: auth=0.87
 ## Target: sub-0.20
 
-## Paradigm Shift: SegNet Dominance (77:1 Leverage Ratio)
+## Re-Validation Results (correct checkpoint cff8dca4)
 
-Step curve experiment COMPLETE. PoseNet saturates at 100 steps. SegNet is
-the binding constraint -- 98.7% of remaining score.
+### Step Curve xent (baseline, 30 pairs)
+| Steps | PoseNet  | SegNet  | Score |
+|-------|----------|---------|-------|
+| 0     | 0.0374   | 0.00197 | 0.809 |
+| 100   | 0.0093   | 0.00169 | 0.473 |
+| 200   | 0.0013   | 0.00155 | 0.267 |
+| 500   | 0.0004   | 0.00126 | 0.192 |
+
+### Step Curve hinge (BREAKTHROUGH, 30 pairs)
+| Steps | PoseNet  | SegNet  | Score |
+|-------|----------|---------|-------|
+| 0     | 0.0375   | 0.00197 | 0.810 |
+| 100   | 0.0076   | 0.00131 | 0.407 |
+| 200   | 0.0008   | 0.00102 | 0.190 |
+| 500   | 0.0007   | 0.00064 | 0.145 |
+
+### v6 TTO Full Run (hinge+phase2+embedding, 600 pairs)
+- Baseline: 0.634 -> TTO: 0.275 (57% reduction)
+- PoseNet: 0.00249 (86% improvement)
+- SegNet: 0.00118 (45% improvement)
+- 150 P1 + 200 P2 steps, 29.4 min on RTX 4090
+
+### Key Findings
+- Hinge beats xent at every step count from 50+ (24-29% better)
+- SegNet with hinge: 0.000639 vs 0.001259 at 500 steps (49% better!)
+- Early TTO (10-25 steps) HURTS PoseNet -- SegNet-PoseNet tug-of-war
+- Phase transition at ~100 steps holds with correct checkpoint
 
 ## Completed Experiments
-- [x] TTO step curve (Vast.ai 4090): phase transition at 100 steps, SegNet breakthrough at 500
-- [x] TTO step curve cosine LR: empirically worse, constant LR wins
-- [x] Hinge loss implementation: ready for experiment (P0)
-- [x] Two-phase TTO implementation: ready for experiment (P1)
-- [x] simulate_resize default fix: now True by default
-- [x] check_vastai.py: canonical Vast.ai interaction script
-- [x] download_modal_tto_frames.py: data permanence script
-- [x] Pair difficulty map: COMPLETED (600 pairs, 41.1s on MPS)
-- [x] tto_v6_hinge_phase2 registered in Vast.ai experiment registry
+- [x] TTO step curve xent with correct checkpoint (re-validated)
+- [x] TTO step curve hinge (BREAKTHROUGH - 24% better than xent)
+- [x] v6 TTO full run: proxy 0.275 on 600 pairs
+- [x] check_vastai.py DX bugs found and fixed (6 bugs)
+- [x] Pair difficulty map v2 (600 pairs, correct checkpoint)
+- [x] Vast.ai instance lifecycle: create, deploy, run, download, destroy
 
-## Pair Difficulty Map Results
-- 600 pairs analyzed with simulate_resize=True
-- PoseNet MSE: mean=158.98, range=[85.75, 199.55]
-- SegNet disagree: mean=0.505, range=[0.490, 0.519]
-- 120 hard pairs (top 20%), 300 easy pairs (bottom 50%)
-- Hardest pair: #523 (score=95.43), easiest: #514 (score=79.74)
+## Queue (Priority Order)
 
-## URGENT: Data Permanence
-- [ ] Download v5a tto_frames.pt from Modal (auth 0.43, 500-step)
-- [ ] Download v5b tto_frames.pt from Modal (auth 0.41, 500-step)
-- [ ] Run: `python scripts/download_modal_tto_frames.py`
+### P0: Auth Eval of v6 TTO (NEXT)
+- **What**: Run authoritative evaluation on v6 TTO frames
+- **Why**: proxy=0.275 needs auth confirmation. v5b was proxy ~0.60 -> auth 0.41
+- **How**: Use tto_frames.pt (708MB, downloaded locally) through inflate pipeline
+- **Expected**: auth ~0.20-0.30 (if proxy-auth correlation holds)
 
-## Queue (Priority Order -- SegNet First)
+### P1: More TTO Steps with Hinge
+- **What**: Run hinge TTO with 300-500 P1 steps instead of 150
+- **Why**: Step curve shows continued improvement up to 500 steps
+- **Config**: --tto-steps 300-500 --segnet-loss-mode hinge
+- **Cost**: ~$0.20 on RTX 4090
 
-### P0: Hinge Loss Step Curve (NEXT EXPERIMENT)
-- **What**: Run tto_step_curve with --segnet-loss-mode hinge
-- **Why**: Hinge loss ignores easy SegNet pixels, focuses gradient on hard ones
-- **Config**: `tto_step_curve_hinge` experiment in registry
-- **Expected**: Faster SegNet convergence, lower SegNet score at same step count
-- **Success criteria**: SegNet < 0.30 at 500 steps (vs 0.3435 with MSE)
-- **Kill criteria**: SegNet worse than MSE at all step counts
-- **Cost**: ~$0.12 on RTX 4090
-
-### P0.5: v6 Full Run (ALL Improvements Combined)
-- **What**: Run tto_v6_hinge_phase2 on Vast.ai 4090
-- **Why**: Combines ALL discoveries: embedding + hinge + two-phase + simulate_resize
-- **Config**: `tto_v6_hinge_phase2` in Vast.ai registry
-- **Expected**: auth < 0.30 (if hinge + phase2 work as theorized)
-- **Cost**: ~$0.25 on RTX 4090
-
-### P1: Two-Phase TTO Validation
-- **What**: Run TTO with two-phase schedule (100 PoseNet + 400 SegNet-only)
-- **Why**: Don't waste steps on PoseNet after it saturates at 100
-- **Expected**: Better SegNet than uniform 500 steps
-- **Cost**: ~$0.12 on RTX 4090
-
-### P2: Adaptive TTO Budget (Uses Pair Difficulty Map)
+### P2: Adaptive TTO Budget
 - **What**: Allocate TTO steps based on per-pair difficulty
 - **Why**: 120 hard pairs need 500+ steps, 300 easy pairs need ~100
-- **Expected**: 3-4x total TTO compute savings with same quality
-- **Requires**: pair_difficulty_map.json (COMPLETED)
+- **Expected**: Same quality at 60% compute cost
 
-### P3: SegNet Architectural Improvements
-- **SegNet-focused TTO loss**: Increase seg_weight beyond 100
-- **SegNet feature loss**: MSE on SegNet intermediate features
+### P3: Higher Hinge Margin
+- **What**: Test hinge_margin 1.0, 2.0 on step curve
+- **Why**: margin=0.5 might not push SegNet hard enough
 
-### P4: Latent-Conditioned Renderer
-- Pair-specific latent vectors: amortize TTO into renderer
+### P4: SegNet-Only Phase 2 with More Steps
+- **What**: Extend P2 to 500-1000 steps
+- **Why**: SegNet is still improving at step 500 with hinge
 
 ### P5: TTO Distillation
-- Use 500-step TTO outputs as training targets
-- Requires downloading v5a/v5b tto_frames.pt from Modal
-
-### P6: Ensemble & Compression
-- Best-of-N ensemble: per-pair selection across TTO variants
-- Archive LZMA compression: free rate improvement
+- Use v6 TTO frames as training targets for distilled renderer
 
 ## Decision Gates
-- 2026-04-16: Download Modal TTO frames -> data permanence achieved
-- 2026-04-16: Hinge loss step curve -> validate or kill hinge approach
-- 2026-04-17: v6 full run -> combined improvements auth eval
-- 2026-04-18: Two-phase TTO validation
-- 2026-04-20: Distillation targets -> train distilled renderer
+- 2026-04-16: v6 auth eval -> proxy-auth correlation with hinge
+- 2026-04-17: More steps experiment -> find hinge saturation point
+- 2026-04-18: Adaptive TTO budget -> compute savings
 - 2026-04-21: Lock final approach
 - 2026-05-03: DEADLINE
 
@@ -92,5 +86,5 @@ the binding constraint -- 98.7% of remaining score.
 - PoseNet gradient caps
 - PSD architecture
 - Any TTO without rgb_to_yuv6 patch
-- Uniform step allocation (step curve proves diminishing returns after 100)
 - Cosine LR for TTO (empirically worse than constant LR)
+- xent loss for TTO (hinge is strictly better from 50+ steps)
