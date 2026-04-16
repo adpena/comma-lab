@@ -1,0 +1,10 @@
+{
+  "total_spent": 0.33,
+  "sessions": [
+    {
+      "timestamp": "2026-04-16T01:00:00Z",
+      "amount": 0.33,
+      "description": "instance 35026289 (tto_revalidation) ~1.0h: step_curve_xent + step_curve_hinge + tto_v6_hinge_phase2"
+    }
+  ]
+}

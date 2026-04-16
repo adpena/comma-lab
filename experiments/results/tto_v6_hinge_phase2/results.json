@@ -1,0 +1,60 @@
+{
+  "baseline": {
+    "score": 0.6339135791132915,
+    "pose": 0.017580358212192854,
+    "seg": 0.0021462420156846446,
+    "rate": 0.0,
+    "pose_contribution": 0.4192893775448271,
+    "seg_contribution": 0.21462420156846446,
+    "rate_contribution": 0.0,
+    "n_pairs": 600
+  },
+  "tto": {
+    "score": 0.27519889000184483,
+    "pose": 0.0024867505704363187,
+    "seg": 0.0011750454735010862,
+    "rate": 0.0,
+    "pose_contribution": 0.1576943426517362,
+    "seg_contribution": 0.11750454735010862,
+    "rate_contribution": 0.0,
+    "n_pairs": 600
+  },
+  "improvement": {
+    "score": 0.35871468911144666,
+    "pose": 0.015093607641756535,
+    "seg": 0.0009711965421835584
+  },
+  "config": {
+    "checkpoint": "renderer_best.pt",
+    "device": "cuda",
+    "n_frames": 1200,
+    "tto_steps": 150,
+    "tto_lr": 0.005,
+    "batch_pairs": 10,
+    "seg_weight": 100.0,
+    "pose_weight": 10.0,
+    "compress_weight": 0.5,
+    "video": "upstream/videos/0.mkv",
+    "smoke": false,
+    "early_stop_patience": 100,
+    "use_embedding_loss": true,
+    "seg_odd_only": true,
+    "antialias_weight": 0.0,
+    "lr_schedule": "constant",
+    "segnet_loss_mode": "hinge",
+    "hinge_margin": 0.5,
+    "phase2_segnet_only": true,
+    "phase2_steps": 200,
+    "simulate_resize": true
+  },
+  "timing": {
+    "total_s": 1765.58,
+    "tto_s": 1604.24,
+    "scorers_s": 3.09,
+    "renderer_s": 0.02,
+    "decode_s": 107.19,
+    "masks_s": 8.6,
+    "render_s": 8.58,
+    "pose_targets_s": 5.02
+  }
+}

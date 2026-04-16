@@ -1,0 +1,37 @@
+{
+  "experiment": "tto_v6_hinge_phase2",
+  "description": "Full 600-pair TTO with hinge loss + phase2 SegNet-only + embedding loss",
+  "platform": "Vast.ai",
+  "gpu": "RTX 4090 24GB",
+  "instance_id": "35026289",
+  "checkpoint": "experiments/results/v5_lagrangian_renderer/renderer_best.pt",
+  "checkpoint_md5_prefix": "cff8dca4",
+  "config": {
+    "tto_steps": 150,
+    "phase2_steps": 200,
+    "segnet_loss_mode": "hinge",
+    "hinge_margin": 0.5,
+    "use_embedding_loss": true,
+    "seg_odd_only": true,
+    "simulate_resize": true,
+    "lr_schedule": "constant",
+    "tto_lr": 0.005,
+    "seg_weight": 100.0,
+    "pose_weight": 10.0,
+    "compress_weight": 0.5,
+    "early_stop_patience": 100,
+    "n_frames": 1200,
+    "batch_pairs": 10
+  },
+  "results": {
+    "baseline_score": 0.634,
+    "tto_score": 0.275,
+    "improvement": 0.359,
+    "posenet": 0.00249,
+    "segnet": 0.00118,
+    "total_time_s": 1765.6
+  },
+  "date": "2026-04-16T00:33:36Z",
+  "cost_estimate_usd": 0.16,
+  "notes": "First full-pipeline TTO with hinge loss on correct checkpoint. Proxy score 0.275 (vs v5b 0.41 auth). TTO frames saved at 708MB (tto_frames.pt). Phase 2 engaged for all 600 pairs, adding ~50% time per batch. Total 29.4 min on RTX 4090."
+}

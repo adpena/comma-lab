@@ -1,0 +1,12 @@
+{
+  "35026289": {
+    "experiment": "tto_revalidation",
+    "dph": 0.329,
+    "ssh_host": "ssh7.vast.ai",
+    "ssh_port": 26288,
+    "created_at": "2026-04-15T22:00:00+00:00",
+    "timeout_hours": 4.0,
+    "status": "destroyed",
+    "label": "pact-tto_revalidation"
+  }
+}
