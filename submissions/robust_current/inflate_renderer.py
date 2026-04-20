@@ -1944,6 +1944,18 @@ def _inflate_renderer_with_mini_tto(
         mask_filename=mask_filename,
     )
 
+    # ---- Load poses for FiLM conditioning (if available) ----
+    poses = None
+    poses_path = archive_path / "poses.pt"
+    poses_bin_path = archive_path / "poses.bin"
+    if poses_path.exists():
+        poses = torch.load(str(poses_path), map_location="cpu", weights_only=True).float()
+        print(f"  Loaded GT poses: {poses.shape} from archive", file=sys.stderr)
+    elif poses_bin_path.exists():
+        raw = poses_bin_path.read_bytes()
+        poses = torch.frombuffer(bytearray(raw), dtype=torch.float16).reshape(-1, 6).float()
+        print(f"  Loaded GT poses: {poses.shape} from archive (bin)", file=sys.stderr)
+
     # ---- Generate renderer frames ----
     print("Stage 1: Generating renderer frames...", file=sys.stderr)
     t0 = time.monotonic()
@@ -1959,7 +1971,17 @@ def _inflate_renderer_with_mini_tto(
                 end = min(start + render_batch_size, P)
                 masks_t = masks[2 * start:2 * end:2].to(device=device, dtype=torch.long)
                 masks_t1 = masks[2 * start + 1:2 * end + 1:2].to(device=device, dtype=torch.long)
-                pairs = renderer(masks_t, masks_t1)  # (B, 2, H, W, 3)
+
+                # Pass pose conditioning for FiLM models
+                batch_pose = None
+                if poses is not None and hasattr(renderer, 'pose_dim') and renderer.pose_dim > 0:
+                    if end <= poses.shape[0]:
+                        batch_pose = poses[start:end].to(device=device)
+
+                if batch_pose is not None:
+                    pairs = renderer(masks_t, masks_t1, pose=batch_pose)
+                else:
+                    pairs = renderer(masks_t, masks_t1)  # (B, 2, H, W, 3)
                 B = pairs.shape[0]
                 f0 = pairs[:, 0]
                 f1 = pairs[:, 1]
