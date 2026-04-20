@@ -113,12 +113,16 @@ def generate_renderer_frames(
 ) -> torch.Tensor:
     """Generate all frames from renderer.
 
+    Handles both model types:
+        - AsymmetricPairGenerator: processes consecutive mask PAIRS, returns (B, 2, H, W, 3)
+        - DPSIMSRenderer/MaskRenderer: processes individual masks, returns (B, 3, H, W)
+
     Args:
         renderer: trained renderer model.
         masks: (N, H, W) long — input masks.
         poses: (P, 6) float — GT poses for FiLM conditioning.
         device: computation device.
-        batch_size: frames per batch.
+        batch_size: pairs per batch (for asymmetric) or frames per batch (for single-frame).
 
     Returns:
         (N, 3, H, W) float tensor in [0, 255].
@@ -126,33 +130,60 @@ def generate_renderer_frames(
     N = masks.shape[0]
     all_frames = []
 
+    # Detect model type by checking for motion sub-module (AsymmetricPairGenerator signature)
+    is_asymmetric = (
+        hasattr(renderer, "renderer") and hasattr(renderer, "motion")
+        and hasattr(renderer.motion, "output_channels")
+    )
+
     with torch.no_grad():
-        for i in range(0, N, batch_size):
-            batch_masks = masks[i:i + batch_size].to(device)
-            batch_idx = torch.arange(i, min(i + batch_size, N))
+        if is_asymmetric:
+            # AsymmetricPairGenerator: forward(mask_t, mask_t1, pose=...) -> (B, 2, H, W, 3)
+            P = N // 2
+            for start in range(0, P, batch_size):
+                end = min(start + batch_size, P)
+                masks_t = masks[2 * start:2 * end:2].to(device)
+                masks_t1 = masks[2 * start + 1:2 * end + 1:2].to(device)
 
-            # Try different renderer forward signatures
-            try:
-                # AsymmetricWarpRenderer with poses
-                pair_idx = batch_idx // 2
-                batch_poses = poses[pair_idx.clamp(max=poses.shape[0] - 1)].to(device)
-                frames = renderer(batch_masks, poses=batch_poses)
-            except TypeError:
-                try:
-                    frames = renderer(batch_masks)
-                except Exception:
-                    # Last resort: just masks
-                    frames = renderer.forward(batch_masks)
+                # Pass pose conditioning if available and model supports it
+                batch_pose = None
+                if poses is not None and hasattr(renderer, "pose_dim") and renderer.pose_dim > 0:
+                    if end <= poses.shape[0]:
+                        batch_pose = poses[start:end].to(device)
 
-            # Ensure (B, 3, H, W) format
-            if frames.ndim == 4 and frames.shape[1] == 3:
-                pass  # already (B, 3, H, W)
-            elif frames.ndim == 4 and frames.shape[-1] == 3:
-                frames = frames.permute(0, 3, 1, 2)  # (B, H, W, 3) -> (B, 3, H, W)
-            else:
-                raise ValueError(f"Unexpected renderer output shape: {frames.shape}")
+                if batch_pose is not None:
+                    pairs = renderer(masks_t, masks_t1, pose=batch_pose)
+                else:
+                    pairs = renderer(masks_t, masks_t1)  # (B, 2, H, W, 3)
 
-            all_frames.append(frames.cpu())
+                # Convert pair output (B, 2, H, W, 3) to interleaved (2B, 3, H, W)
+                B = pairs.shape[0]
+                f0 = pairs[:, 0].permute(0, 3, 1, 2)  # (B, 3, H, W)
+                f1 = pairs[:, 1].permute(0, 3, 1, 2)  # (B, 3, H, W)
+                # Interleave: [f0_0, f1_0, f0_1, f1_1, ...]
+                interleaved = torch.stack([f0, f1], dim=1).reshape(2 * B, 3, *f0.shape[2:])
+                all_frames.append(interleaved.cpu())
+
+            # Handle odd trailing mask via the renderer sub-module directly
+            if N % 2 != 0:
+                last_mask = masks[N - 1:N].to(device)
+                frame = renderer.renderer(last_mask)  # (1, 3, H, W)
+                all_frames.append(frame.cpu())
+        else:
+            # Single-frame renderer (DPSIMSRenderer / MaskRenderer)
+            for i in range(0, N, batch_size):
+                batch_masks = masks[i:i + batch_size].to(device)
+                frames = renderer(batch_masks)  # (B, 3, H, W)
+
+                # Ensure (B, 3, H, W) format
+                if frames.ndim == 4 and frames.shape[1] == 3:
+                    pass  # already correct
+                elif frames.ndim == 4 and frames.shape[-1] == 3:
+                    frames = frames.permute(0, 3, 1, 2)
+                else:
+                    raise ValueError(f"Unexpected renderer output shape: {frames.shape}")
+
+                all_frames.append(frames.cpu())
 
     return torch.cat(all_frames, dim=0)
 
