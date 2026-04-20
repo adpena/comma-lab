@@ -1,0 +1,30 @@
+{
+  "theoretical": {
+    "null_space_dim_per_block": 6,
+    "null_space_dim_per_frame": 1526004,
+    "total_dim_per_frame": 3052008,
+    "free_fraction": 0.5,
+    "null_space_verification_max_error": 7.873371288269482e-08
+  },
+  "empirical": {
+    "n_pairs_tested": 10,
+    "perturbation_magnitude": 5.0,
+    "posenet_invariance": {
+      "mean_max_diff": 0.0033050537109375,
+      "worst_case_max_diff": 0.0071258544921875,
+      "is_invariant": false
+    },
+    "segnet_effect": {
+      "mean_argmax_disagreement_pct": 0.0,
+      "mean_soft_distance": 0.0349456787109375,
+      "is_affected": false
+    },
+    "total_time_s": 1.066598892211914
+  },
+  "conclusion": {
+    "posenet_null_space_confirmed": false,
+    "segnet_affected_by_null_space": false,
+    "exploitable": false,
+    "free_dimensions_per_frame": 1526004
+  }
+}
