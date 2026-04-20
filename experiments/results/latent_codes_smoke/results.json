@@ -1,0 +1,91 @@
+{
+  "per_pair": [
+    {
+      "pair_idx": 0,
+      "best_loss": 191.26919555664062,
+      "best_step": 0,
+      "time_s": 5.536945104598999,
+      "final_pose_dist": 190.51348876953125,
+      "final_seg_dist": 0.5324256420135498
+    },
+    {
+      "pair_idx": 1,
+      "best_loss": 193.14910888671875,
+      "best_step": 0,
+      "time_s": 4.838099002838135,
+      "final_pose_dist": 195.49510192871094,
+      "final_seg_dist": 0.5332953929901123
+    },
+    {
+      "pair_idx": 2,
+      "best_loss": 182.59548950195312,
+      "best_step": 0,
+      "time_s": 5.291493892669678,
+      "final_pose_dist": 166.85006713867188,
+      "final_seg_dist": 0.5342502593994141
+    },
+    {
+      "pair_idx": 3,
+      "best_loss": 188.1955108642578,
+      "best_step": 0,
+      "time_s": 4.841760873794556,
+      "final_pose_dist": 182.03335571289062,
+      "final_seg_dist": 0.5327576994895935
+    },
+    {
+      "pair_idx": 4,
+      "best_loss": 190.16543579101562,
+      "best_step": 0,
+      "time_s": 4.854754209518433,
+      "final_pose_dist": 187.45298767089844,
+      "final_seg_dist": 0.5325196981430054
+    },
+    {
+      "pair_idx": 5,
+      "best_loss": 189.68019104003906,
+      "best_step": 0,
+      "time_s": 4.83962607383728,
+      "final_pose_dist": 186.3111572265625,
+      "final_seg_dist": 0.5318434238433838
+    },
+    {
+      "pair_idx": 6,
+      "best_loss": 185.1666717529297,
+      "best_step": 0,
+      "time_s": 4.84103798866272,
+      "final_pose_dist": 174.03399658203125,
+      "final_seg_dist": 0.5324471592903137
+    },
+    {
+      "pair_idx": 7,
+      "best_loss": 191.35809326171875,
+      "best_step": 0,
+      "time_s": 4.839653253555298,
+      "final_pose_dist": 190.65023803710938,
+      "final_seg_dist": 0.532819390296936
+    },
+    {
+      "pair_idx": 8,
+      "best_loss": 188.09849548339844,
+      "best_step": 0,
+      "time_s": 4.855972051620483,
+      "final_pose_dist": 181.99136352539062,
+      "final_seg_dist": 0.5319432020187378
+    },
+    {
+      "pair_idx": 9,
+      "best_loss": 186.99630737304688,
+      "best_step": 0,
+      "time_s": 4.8475868701934814,
+      "final_pose_dist": 178.8131103515625,
+      "final_seg_dist": 0.5327528119087219
+    }
+  ],
+  "total_time": 49.59132385253906,
+  "archive_bytes": 4260,
+  "archive_breakdown": {
+    "codes_int8": 160,
+    "scales_fp16": 20,
+    "projector": 4080
+  }
+}

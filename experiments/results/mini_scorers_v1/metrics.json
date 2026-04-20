@@ -1,0 +1,65 @@
+{
+  "experiment": "train_mini_scorer",
+  "timestamp": "2026-04-20T18:49:24",
+  "args": {
+    "checkpoint": "experiments/results/v5_lagrangian_renderer/renderer_best.pt",
+    "device": "mps",
+    "n_frames": 1200,
+    "upstream": "upstream/",
+    "video": null,
+    "output_dir": "experiments/results/mini_scorers_v1",
+    "seg_epochs": 200,
+    "pose_epochs": 300,
+    "lr": 0.001,
+    "batch_size": 32,
+    "hidden": 16,
+    "no_quantize": false,
+    "smoke": false
+  },
+  "elapsed_seconds": 114.63820004463196,
+  "segnet": {
+    "param_count": 5173,
+    "final_val_accuracy": 0.9703904893663194,
+    "fidelity": {
+      "agreement": 0.9704092746310764,
+      "per_class_agreement": {
+        "0": 0.9667094516441234,
+        "1": 0.017784067456807596,
+        "2": 0.9854878249320437,
+        "3": 0.5622616878348609,
+        "4": 0.9858011317817386
+      },
+      "num_frames": 1200,
+      "correct_pixels": 14309267,
+      "total_pixels": 14745600
+    }
+  },
+  "posenet": {
+    "param_count": 5718,
+    "final_val_r2": 0.004664220400561803,
+    "fidelity": {
+      "r_squared": 7.446666580968042e-05,
+      "mse": 0.2545218765735626,
+      "per_dim_r2": [
+        0.00012987881886372676,
+        -0.13341140792284278,
+        -0.003392643390381922,
+        -2.1071809717874457,
+        -9.070121508059081e-05,
+        -0.09564398679608521
+      ],
+      "num_pairs": 600
+    }
+  },
+  "archive_sizes": {
+    "mini_segnet_bytes": 13701,
+    "mini_posenet_bytes": 14353,
+    "total_bytes": 28054
+  },
+  "rate_cost_estimate": 0.018680007070889394,
+  "verdict": {
+    "segnet_pass": false,
+    "posenet_pass": false,
+    "both_pass": false
+  }
+}

@@ -1,0 +1,11 @@
+{
+  "total_time_s": 127.79699468612671,
+  "best_loss": 1768.4000244140625,
+  "n_lora_params": 1100,
+  "archive_bytes_fp16": 2200,
+  "rank": 4,
+  "epochs": 100,
+  "final_pose": 183.12412719726564,
+  "final_seg": 2.1839035034179686,
+  "history_len": 100
+}
