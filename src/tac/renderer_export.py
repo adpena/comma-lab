@@ -630,8 +630,26 @@ def _infer_asymmetric_config(model: nn.Module) -> dict:
 
     num_classes = getattr(renderer, "num_classes", 5)
     embed_dim = getattr(renderer, "embed_dim", 6)
-    base_ch = renderer.stem_conv.out_channels if hasattr(renderer, "stem_conv") else 36
-    mid_ch = renderer.down_conv.out_channels if hasattr(renderer, "down_conv") else 60
+
+    # Infer base_ch: stem_conv may be nn.Sequential (DSConv) or plain Conv2d
+    base_ch = 36  # default
+    if hasattr(renderer, "stem_conv"):
+        stem = renderer.stem_conv
+        if hasattr(stem, "out_channels"):
+            base_ch = stem.out_channels
+        elif isinstance(stem, nn.Sequential):
+            # DSConv: Sequential(depthwise, pointwise) — pointwise is [-1]
+            base_ch = stem[-1].out_channels
+
+    # Infer mid_ch: down_conv may be nn.Sequential (DSConv) or plain Conv2d
+    mid_ch = 60  # default
+    if hasattr(renderer, "down_conv"):
+        down = renderer.down_conv
+        if hasattr(down, "out_channels"):
+            mid_ch = down.out_channels
+        elif isinstance(down, nn.Sequential):
+            mid_ch = down[-1].out_channels
+
     depth = getattr(renderer, "depth", 1)
 
     # Motion predictor config — U-Net architecture stores hidden in stem[0]
@@ -654,6 +672,10 @@ def _infer_asymmetric_config(model: nn.Module) -> dict:
     max_residual = getattr(motion, "max_residual", 20.0)
     flow_only = getattr(motion, "flow_only", False)
 
+    # FiLM / DSConv architecture flags (required for faithful inline deserialize)
+    pose_dim = getattr(model, "pose_dim", 0)
+    use_dsconv = getattr(model, "use_dsconv", False)
+
     return {
         "num_classes": num_classes,
         "embed_dim": embed_dim,
@@ -667,15 +689,18 @@ def _infer_asymmetric_config(model: nn.Module) -> dict:
         "max_flow_px": max_flow_px,
         "max_residual": max_residual,
         "flow_only": flow_only,
+        "pose_dim": pose_dim,
+        "use_dsconv": use_dsconv,
     }
 
 
 def _collect_all_conv_layers(model: nn.Module) -> list[dict]:
-    """Walk an arbitrary model and collect all Conv2d / ConvTranspose2d layers.
+    """Walk an arbitrary model and collect all Conv2d, ConvTranspose2d, and Linear layers.
 
     Unlike _collect_conv_layers (which looks for LearnableBitDepth), this is
     a simpler variant used for AsymmetricPairGenerator where all layers use
-    uniform quantization.
+    uniform quantization.  nn.Linear layers (from FiLM conditioning) are treated
+    as Conv2d(in, out, 1) for serialization purposes.
     """
     layers = []
     for name, module in model.named_modules():
@@ -684,6 +709,15 @@ def _collect_all_conv_layers(model: nn.Module) -> list[dict]:
                 "name": name,
                 "module": module,
                 "transposed": isinstance(module, nn.ConvTranspose2d),
+                "is_linear": False,
+                "bit_depth": None,
+            })
+        elif isinstance(module, nn.Linear):
+            layers.append({
+                "name": name,
+                "module": module,
+                "transposed": False,
+                "is_linear": True,
                 "bit_depth": None,
             })
     return layers
@@ -749,11 +783,12 @@ def export_asymmetric_checkpoint(
             "is_embedding": True,
         })
 
-    # Export all conv layers with uniform bit-depth
+    # Export all conv/linear layers with uniform bit-depth
     for layer_info in conv_layers:
         name = layer_info["name"]
         module = layer_info["module"]
         transposed = layer_info["transposed"]
+        is_linear = layer_info.get("is_linear", False)
 
         weight = module.weight.detach().cpu().float()
         bias = module.bias.detach().cpu().float() if module.bias is not None else None
@@ -794,6 +829,7 @@ def export_asymmetric_checkpoint(
             "has_bias": has_bias,
             "bias_blob_len": len(bias_packed),
             "transposed": transposed,
+            "is_linear": is_linear,
         })
 
     # Build header
@@ -885,6 +921,8 @@ def load_asymmetric_checkpoint(
         max_flow_px=header.get("max_flow_px", 20.0),
         max_residual=header.get("max_residual", 20.0),
         flow_only=header.get("flow_only", False),
+        pose_dim=header.get("pose_dim", 0),
+        use_dsconv=header.get("use_dsconv", False),
     )
 
     # Build name -> module lookups
@@ -893,7 +931,7 @@ def load_asymmetric_checkpoint(
     for name, module in model.named_modules():
         if isinstance(module, nn.Embedding):
             embedding_lookup[name] = module
-        elif isinstance(module, (nn.Conv2d, nn.ConvTranspose2d)):
+        elif isinstance(module, (nn.Conv2d, nn.ConvTranspose2d, nn.Linear)):
             conv_lookup[name] = module
 
     # Iterate layers in header order and restore weights

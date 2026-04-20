@@ -35,7 +35,7 @@ import av
 OUT_W, OUT_H = 1164, 874
 SEG_W, SEG_H = 512, 384
 NUM_FRAMES = 1200
-NUM_CLASSES = 5
+NUM_CLASSES = 5  # Canonical source: tac.camera.NUM_CLASSES (kept local for standalone operation)
 EXPECTED_RAW_BYTES = OUT_W * OUT_H * 3 * NUM_FRAMES  # 3,662,409,600
 
 
@@ -314,22 +314,59 @@ if not _HAS_TAC_RENDERER:
             h = self.conv2(h)
             return x + h
 
+    def _make_conv(c_in: int, c_out: int, kernel: int, *, use_dsconv: bool = False, **kwargs) -> nn.Module:
+        """Create Conv2d or depthwise-separable Conv2d (MobileNet v1 style)."""
+        if not use_dsconv:
+            return nn.Conv2d(c_in, c_out, kernel, **kwargs)
+        dw_kwargs = {k: v for k, v in kwargs.items() if k in ("stride", "padding")}
+        pw_bias = kwargs.get("bias", True)
+        return nn.Sequential(
+            nn.Conv2d(c_in, c_in, kernel, groups=c_in, bias=False, **dw_kwargs),
+            nn.Conv2d(c_in, c_out, 1, bias=pw_bias),
+        )
+
+    class FiLMLayer(nn.Module):
+        """Feature-wise Linear Modulation (Perez et al. 2018).
+
+        Applies affine transformation conditioned on an external signal:
+            output = (1 + scale(signal)) * features + shift(signal)
+        """
+
+        def __init__(self, signal_dim: int, feature_dim: int):
+            super().__init__()
+            self.scale = nn.Linear(signal_dim, feature_dim)
+            self.shift = nn.Linear(signal_dim, feature_dim)
+            nn.init.zeros_(self.scale.weight)
+            nn.init.zeros_(self.scale.bias)
+            nn.init.zeros_(self.shift.weight)
+            nn.init.zeros_(self.shift.bias)
+
+        def forward(self, x: torch.Tensor, signal: torch.Tensor) -> torch.Tensor:
+            gamma = self.scale(signal).unsqueeze(-1).unsqueeze(-1) + 1.0
+            beta = self.shift(signal).unsqueeze(-1).unsqueeze(-1)
+            return gamma * x + beta
+
     class MaskRenderer(nn.Module):
         def __init__(self, num_classes=5, embed_dim=6, base_ch=36, mid_ch=60,
-                     embedding=None, depth=1):
+                     embedding=None, depth=1, pose_dim=0, use_dsconv=False):
             super().__init__()
             self.num_classes = num_classes
             self.embed_dim = embed_dim
             self.depth = depth
+            self.pose_dim = pose_dim
+            self.use_dsconv = use_dsconv
             self.embedding = embedding if embedding is not None else nn.Embedding(num_classes, embed_dim)
             self.use_coord_grid = True
             coord_channels = 2
-            self.stem_conv = nn.Conv2d(embed_dim + coord_channels, base_ch, 3, padding=1, bias=True)
+            self.stem_conv = _make_conv(embed_dim + coord_channels, base_ch, 3,
+                                        padding=1, bias=True, use_dsconv=use_dsconv)
             self.stem_res = ResBlock(base_ch, num_classes=num_classes)
-            self.down_conv = nn.Conv2d(base_ch, mid_ch, 3, stride=2, padding=1, bias=True)
+            self.down_conv = _make_conv(base_ch, mid_ch, 3, stride=2, padding=1,
+                                        bias=True, use_dsconv=use_dsconv)
             self.down_res = ResBlock(mid_ch, num_classes=num_classes)
             if depth >= 2:
-                self.down2_conv = nn.Conv2d(mid_ch, mid_ch, 3, stride=2, padding=1, bias=True)
+                self.down2_conv = _make_conv(mid_ch, mid_ch, 3, stride=2, padding=1,
+                                             bias=True, use_dsconv=use_dsconv)
                 self.down2_res = ResBlock(mid_ch, num_classes=num_classes)
             self.bottleneck = ResBlock(mid_ch, num_classes=num_classes)
             if depth >= 2:
@@ -342,8 +379,15 @@ if not _HAS_TAC_RENDERER:
             self.head = nn.Conv2d(base_ch, 3, 1, bias=True)
             nn.init.zeros_(self.head.weight)
             nn.init.zeros_(self.head.bias)
+            # FiLM conditioning (pose_dim > 0 enables pose-conditioned rendering)
+            if pose_dim > 0:
+                self.film_bottleneck = FiLMLayer(pose_dim, mid_ch)
+                self.film_decoder = FiLMLayer(pose_dim, base_ch)
+            else:
+                self.film_bottleneck = None
+                self.film_decoder = None
 
-        def forward(self, masks: torch.Tensor) -> torch.Tensor:
+        def forward(self, masks: torch.Tensor, pose: torch.Tensor | None = None) -> torch.Tensor:
             x = self.embedding(masks).permute(0, 3, 1, 2).contiguous()
             B, _, H, W = x.shape
             gy = torch.linspace(-1, 1, H, device=x.device, dtype=x.dtype)
@@ -367,12 +411,18 @@ if not _HAS_TAC_RENDERER:
                 half_res = self.fuse2_conv(fused2)
             else:
                 half_res = self.bottleneck(down1, masks)
+            # FiLM: modulate bottleneck output with pose signal
+            if self.film_bottleneck is not None and pose is not None:
+                half_res = self.film_bottleneck(half_res, pose)
             up = self.up_conv(half_res)
             if up.shape[2:] != stem.shape[2:]:
                 up = F.interpolate(up, size=stem.shape[2:], mode="bilinear", align_corners=False)
             up = self.up_res(up, masks)
             fused = torch.cat([stem, up], dim=1)
             fused = self.fuse_conv(fused)
+            # FiLM: modulate decoder output with pose signal
+            if self.film_decoder is not None and pose is not None:
+                fused = self.film_decoder(fused, pose)
             rgb = 255.0 * torch.sigmoid(self.head(fused) / 50.0)
             return rgb
 
@@ -458,13 +508,17 @@ if not _HAS_TAC_RENDERER:
     class AsymmetricPairGenerator(nn.Module):
         def __init__(self, num_classes=5, embed_dim=6, base_ch=36, mid_ch=60,
                      motion_hidden=32, depth=1, max_flow_px=20.0,
-                     max_residual=20.0, flow_only=False):
+                     max_residual=20.0, flow_only=False,
+                     pose_dim=0, use_dsconv=False):
             super().__init__()
+            self.pose_dim = pose_dim
+            self.use_dsconv = use_dsconv
             shared_emb = nn.Embedding(num_classes, embed_dim)
             self.renderer = MaskRenderer(
                 num_classes=num_classes, embed_dim=embed_dim,
                 base_ch=base_ch, mid_ch=mid_ch,
                 embedding=shared_emb, depth=depth,
+                pose_dim=pose_dim, use_dsconv=use_dsconv,
             )
             self.motion = MotionPredictor(
                 num_classes=num_classes, embed_dim=embed_dim,
@@ -476,7 +530,7 @@ if not _HAS_TAC_RENDERER:
 
         def forward(self, mask_t: torch.Tensor, mask_t1: torch.Tensor,
                     pose: torch.Tensor | None = None, **kwargs) -> torch.Tensor:
-            frame_t1 = self.renderer(mask_t1)
+            frame_t1 = self.renderer(mask_t1, pose=pose)
             motion_out = self.motion(mask_t, mask_t1)
             flow = motion_out[:, :2]
             gate = motion_out[:, 2:3]
@@ -815,6 +869,8 @@ def _inline_load_asym(raw_bytes: bytes, device: str = "cpu") -> nn.Module:
         max_flow_px=header.get("max_flow_px", 20.0),
         max_residual=header.get("max_residual", 20.0),
         flow_only=header.get("flow_only", False),
+        pose_dim=header.get("pose_dim", 0),
+        use_dsconv=header.get("use_dsconv", False),
     )
 
     # Build name → module lookups
@@ -823,7 +879,7 @@ def _inline_load_asym(raw_bytes: bytes, device: str = "cpu") -> nn.Module:
     for name, module in model.named_modules():
         if isinstance(module, nn.Embedding):
             embedding_lookup[name] = module
-        elif isinstance(module, (nn.Conv2d, nn.ConvTranspose2d)):
+        elif isinstance(module, (nn.Conv2d, nn.ConvTranspose2d, nn.Linear)):
             conv_lookup[name] = module
 
     # Iterate layers in header order and restore weights
@@ -972,6 +1028,7 @@ def _load_renderer(renderer_path: str, device: str) -> nn.Module:
         return renderer
 
     # PyTorch pickle format (.pt checkpoint from training)
+    # weights_only=False required: training checkpoints contain config dicts, optimizer state
     ckpt = torch.load(renderer_path, map_location=device, weights_only=False)
 
     # Extract config for architecture reconstruction
@@ -999,6 +1056,8 @@ def _load_renderer(renderer_path: str, device: str) -> nn.Module:
             max_flow_px=config.get("max_flow_px", 20.0),
             max_residual=config.get("max_residual", 20.0),
             flow_only=config.get("flow_only", False),
+            pose_dim=config.get("pose_dim", 0),
+            use_dsconv=config.get("use_dsconv", False),
         )
         renderer.load_state_dict(raw_sd, strict=True)
         renderer.to(device).eval()
