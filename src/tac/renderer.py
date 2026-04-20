@@ -23,6 +23,42 @@ import torch.nn.functional as F
 # ── Building blocks ─────────────────────────────────────────────────────
 
 
+def _make_conv(
+    c_in: int, c_out: int, kernel: int, *, use_dsconv: bool = False, **kwargs
+) -> nn.Module:
+    """Create Conv2d or depthwise-separable Conv2d.
+
+    When ``use_dsconv=True``, replaces a standard ``Conv2d(c_in, c_out, k)``
+    with a depthwise-separable pair::
+
+        nn.Sequential(
+            nn.Conv2d(c_in, c_in, k, groups=c_in, bias=False, ...),
+            nn.Conv2d(c_in, c_out, 1, bias=True),
+        )
+
+    DSConv uses ~1/c_out the parameters of a standard conv for 3x3 kernels,
+    enabling wider channels (more expressivity per layer) at the same param
+    budget. See MobileNet v1 (Howard et al., 2017).
+
+    Args:
+        c_in: input channels
+        c_out: output channels
+        kernel: kernel size
+        use_dsconv: if True, use depthwise-separable convolution
+        **kwargs: forwarded to Conv2d (stride, padding, bias, etc.)
+    """
+    if not use_dsconv:
+        return nn.Conv2d(c_in, c_out, kernel, **kwargs)
+
+    # Extract kwargs for the depthwise conv (no bias) vs pointwise (has bias)
+    dw_kwargs = {k: v for k, v in kwargs.items() if k in ("stride", "padding")}
+    pw_bias = kwargs.get("bias", True)
+    return nn.Sequential(
+        nn.Conv2d(c_in, c_in, kernel, groups=c_in, bias=False, **dw_kwargs),
+        nn.Conv2d(c_in, c_out, 1, bias=pw_bias),
+    )
+
+
 class CLADENorm(nn.Module):
     """GroupNorm with per-class affine modulation (CLADE, arxiv 2012.04644).
 
@@ -141,12 +177,14 @@ class MaskRenderer(nn.Module):
         embedding: nn.Embedding | None = None,
         depth: int = 1,
         pose_dim: int = 0,
+        use_dsconv: bool = False,
     ):
         super().__init__()
         self.num_classes = num_classes
         self.embed_dim = embed_dim
         self.depth = depth
         self.pose_dim = pose_dim
+        self.use_dsconv = use_dsconv
 
         # Class embedding: each of 5 classes → learned embed_dim-dimensional vector
         # Accepts external embedding for weight sharing with MotionPredictor
@@ -157,16 +195,22 @@ class MaskRenderer(nn.Module):
         coord_channels = 2 if self.use_coord_grid else 0
 
         # Stem: (embed_dim + coord_channels) → base_ch at full resolution
-        self.stem_conv = nn.Conv2d(embed_dim + coord_channels, base_ch, 3, padding=1, bias=True)
+        self.stem_conv = _make_conv(
+            embed_dim + coord_channels, base_ch, 3, padding=1, bias=True, use_dsconv=use_dsconv
+        )
         self.stem_res = ResBlock(base_ch, num_classes=num_classes)
 
         # Downsample 1: base_ch → mid_ch at half resolution
-        self.down_conv = nn.Conv2d(base_ch, mid_ch, 3, stride=2, padding=1, bias=True)
+        self.down_conv = _make_conv(
+            base_ch, mid_ch, 3, stride=2, padding=1, bias=True, use_dsconv=use_dsconv
+        )
         self.down_res = ResBlock(mid_ch, num_classes=num_classes)
 
         if depth >= 2:
             # Downsample 2: mid_ch → mid_ch at quarter resolution
-            self.down2_conv = nn.Conv2d(mid_ch, mid_ch, 3, stride=2, padding=1, bias=True)
+            self.down2_conv = _make_conv(
+                mid_ch, mid_ch, 3, stride=2, padding=1, bias=True, use_dsconv=use_dsconv
+            )
             self.down2_res = ResBlock(mid_ch, num_classes=num_classes)
 
         # Bottleneck at lowest resolution
@@ -846,9 +890,11 @@ class AsymmetricPairGenerator(nn.Module):
         max_residual: float = 20.0,
         flow_only: bool = False,
         pose_dim: int = 0,
+        use_dsconv: bool = False,
     ):
         super().__init__()
         self.pose_dim = pose_dim
+        self.use_dsconv = use_dsconv
         # Shared embedding between renderer and motion predictor
         shared_emb = nn.Embedding(num_classes, embed_dim)
         self.renderer = MaskRenderer(
@@ -859,6 +905,7 @@ class AsymmetricPairGenerator(nn.Module):
             embedding=shared_emb,
             depth=depth,
             pose_dim=pose_dim,
+            use_dsconv=use_dsconv,
         )
         self.motion = MotionPredictor(
             num_classes=num_classes,
