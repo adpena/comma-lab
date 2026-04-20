@@ -108,6 +108,43 @@ Many killed techniques have valid applications outside this specific competition
 
 ---
 
+---
+
+## Reconsidering (FiLM-revived, April 2026)
+
+Quantizr PR#55 (score 0.33, FiLM+DSConv+eval-resize) and 2024-2026 literature survey
+(Cool-chic, NeRV) justify reopening three previously deprioritized lanes.
+
+### DP-SIMS Independent Generation + FiLM
+- **Original kill**: PoseNet 0.482 (catastrophic) despite SegNet 0.003 (excellent)
+- **Why reconsider**: FiLM on pose vectors directly addresses PoseNet consistency.
+  The DP-SIMS renderer already produces near-perfect SegNet output.
+  Adding FiLM conditioning on GT pose could fix the temporal coherence gap.
+  Quantizr's 0.33 score empirically validates FiLM for this exact problem.
+- **Council assessment**: Worth a 2-hour smoke test on MPS (30 pairs, 100 steps hinge).
+  Needs tripartite pact sign-off before implementation begins.
+
+### Constrained Generation from Noise + FiLM
+- **Original kill**: 78KB model too small, no temporal structure
+- **Why reconsider**: GPU Eureka projected 0.135. Cool-chic (ICCV 2023) achieves
+  VVC-competitive quality with 629-800 parameter per-instance overfitted decoders.
+  This validates the "overfit tiny model to video" paradigm. With FiLM pose conditioning
+  + larger capacity (10K params) + hinge loss, the approach could produce scorer-optimal
+  frames from noise in <50 seconds on T4.
+- **Council assessment**: Gated behind Lane 2 architecture improvements. For the arXiv
+  paper scalability section (unlimited-compute lane), not the submission path.
+
+### SIREN/NeRV Video Memorization
+- **Original kill**: Insufficient test (1/4 res, 500 steps, "janky smoke test")
+- **Why reconsider**: Cool-chic (ICCV 2023) achieves VVC-competitive quality with
+  629-800 parameter per-instance overfitted decoders. This validates the paradigm.
+  Our test was underpowered by at least 10x in both resolution and steps.
+  NeRV (Neural Representations for Videos) literature shows this CAN work at scale.
+- **Council assessment**: Low priority (renderer+TTO path is more promising) but lane
+  open per CLAUDE.md rules. No janky smoke test result justifies a conclusive kill.
+
+---
+
 ## How to Use This Document
 
 1. **Before proposing a technique:** Check if it's killed here
