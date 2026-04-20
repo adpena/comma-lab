@@ -243,7 +243,7 @@ def optimize_latent_codes(
     seg_weight: float = 100.0,
     pose_weight: float = 10.0,
     rate_penalty: float = 0.001,
-    simulate_resize: bool = False,
+    simulate_resize: bool = True,
     output_dir: Path | None = None,
 ) -> dict:
     """Optimize latent codes for all pairs via gradient descent.
@@ -415,8 +415,9 @@ def parse_args() -> argparse.Namespace:
     p.add_argument("--pose-weight", type=float, default=10.0, help="PoseNet loss weight")
     p.add_argument("--rate-penalty", type=float, default=0.001,
                    help="L2 penalty on latent magnitude (controls archive size)")
-    p.add_argument("--simulate-resize", action="store_true",
-                   help="Apply eval roundtrip (384→874→384) in scoring")
+    p.add_argument("--no-simulate-resize", dest="simulate_resize",
+                   action="store_false", default=True,
+                   help="Disable eval roundtrip (384→874→384) in scoring")
     p.add_argument("--upstream", type=str, default=None, help="Path to upstream repo")
     p.add_argument("--video", type=str, default=None, help="Path to GT video")
     p.add_argument("--output-dir", type=str, default=None, help="Output directory")
@@ -483,7 +484,7 @@ def main() -> None:
 
     if args.resume:
         print(f"[latent] Resuming from {args.resume}")
-        resume_state = torch.load(args.resume, map_location=device, weights_only=False)
+        resume_state = torch.load(args.resume, map_location=device, weights_only=True)
         model.load_state_dict(resume_state, strict=False)
 
     # Load scorers

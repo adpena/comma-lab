@@ -83,8 +83,9 @@ def parse_args() -> argparse.Namespace:
     p.add_argument("--qat-lr", type=float, default=0.0003,
                    help="QAT learning rate (lower than initial training)")
     p.add_argument("--batch-size", type=int, default=8, help="Pairs per batch for eval")
-    p.add_argument("--simulate-resize", action="store_true",
-                   help="Apply eval roundtrip in scoring")
+    p.add_argument("--no-simulate-resize", dest="simulate_resize",
+                   action="store_false", default=True,
+                   help="Disable eval roundtrip in scoring")
     p.add_argument("--upstream", type=str, default=None, help="Path to upstream repo")
     p.add_argument("--video", type=str, default=None, help="Path to GT video")
     p.add_argument("--output-dir", type=str, default=None, help="Output directory")
@@ -131,7 +132,7 @@ def evaluate_model(
     posenet: nn.Module,
     segnet: nn.Module,
     device: torch.device,
-    simulate_resize: bool = False,
+    simulate_resize: bool = True,
     max_pairs: int | None = None,
 ) -> dict[str, float]:
     """Evaluate model quality using proxy scorer.
@@ -353,15 +354,15 @@ def main() -> None:
 
     # QAT fine-tuning (optional)
     if args.qat:
-        from tac.fp4_quantize import FakeQuantFP4
+        from tac.fp4_quantize import QATRendererFP4
 
         print(f"\n[quantize] === QAT FINE-TUNING ===")
         # Reload FP32 weights
         model.load_state_dict(renderer_state, strict=False)
         model = model.to(device).train()
 
-        # Insert fake quantization
-        fake_quant = FakeQuantFP4(block_size=32)
+        # Wrap model with FP4 fake quantization (STE parametrize)
+        qat_model = QATRendererFP4(model, block_size=32)
 
         optimizer = torch.optim.Adam(model.parameters(), lr=args.qat_lr)
         from tac.losses import scorer_forward_pair
@@ -376,7 +377,7 @@ def main() -> None:
             for batch_start in range(0, n_pairs, args.batch_size):
                 batch_idx = perm[batch_start:batch_start + args.batch_size]
                 optimizer.zero_grad()
-                batch_loss = torch.tensor(0.0, device=device, requires_grad=True)
+                batch_loss = torch.tensor(0.0, device=device)
 
                 for idx in batch_idx:
                     i = idx.item()
@@ -384,9 +385,8 @@ def main() -> None:
                     m1 = gt_masks[i * 2 + 1].to(device)
                     masks = torch.stack([m0, m1], dim=0)
 
-                    # Apply fake quantization to weights before forward
-                    with fake_quant.apply_to(model):
-                        rgb = model(masks)
+                    # Forward with FP4 fake quantization (STE gradients)
+                    rgb = qat_model(masks)
 
                     if args.simulate_resize:
                         _, _, H, W = rgb.shape
@@ -418,7 +418,8 @@ def main() -> None:
                 print(f"  QAT epoch {epoch}/{args.qat_epochs} loss={epoch_loss/n_pairs:.4f}")
                 qat_history.append({"epoch": epoch, "loss": epoch_loss / n_pairs})
 
-        # Evaluate after QAT
+        # Evaluate after QAT: remove parametrizations and eval
+        qat_model.remove_hooks()
         model.eval()
         packed_qat = quantize_fp4(model.state_dict(), block_size=32)
         restored_qat = dequantize_fp4(packed_qat)
