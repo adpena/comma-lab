@@ -130,7 +130,7 @@ def main() -> None:
     frames_hwc_before = frames_chw.permute(0, 2, 3, 1).contiguous()  # (N, H, W, 3)
     score_before = compute_proxy_score(frames_hwc_before, gt_frames, posenet, segnet, device=device)
     logger.info("Score BEFORE mini-TTO: %.4f (seg=%.4f, pose=%.6f)",
-                score_before["total"], score_before.get("segnet", 0), score_before.get("posenet", 0))
+                score_before["score"], score_before["seg"], score_before["pose"])
 
     # ── Prepare mini-TTO targets ─────────────────────────────────────
     # Target masks at mini resolution (from full SegNet on GT frames — the gold standard)
@@ -188,17 +188,17 @@ def main() -> None:
     logger.info("Scoring after mini-TTO...")
     score_after = compute_proxy_score(frames_hwc_after, gt_frames, posenet, segnet, device=device)
     logger.info("Score AFTER mini-TTO: %.4f (seg=%.4f, pose=%.6f)",
-                score_after["total"], score_after.get("segnet", 0), score_after.get("posenet", 0))
+                score_after["score"], score_after["seg"], score_after["pose"])
 
     # ── Results ──────────────────────────────────────────────────────
-    improvement = score_before["total"] - score_after["total"]
+    improvement = score_before["score"] - score_after["score"]
     logger.info("=" * 60)
     logger.info("MINI-TTO RESULTS")
     logger.info("=" * 60)
-    logger.info("  Before: %.4f", score_before["total"])
-    logger.info("  After:  %.4f", score_after["total"])
+    logger.info("  Before: %.4f", score_before["score"])
+    logger.info("  After:  %.4f", score_after["score"])
     logger.info("  Improvement: %.4f (%+.1f%%)",
-                improvement, -100 * improvement / max(score_before["total"], 1e-8))
+                improvement, -100 * improvement / max(score_before["score"], 1e-8))
     logger.info("  TTO time: %.1f seconds", tto_time)
     logger.info("  Steps: %d", args.tto_steps)
 
