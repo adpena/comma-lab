@@ -83,6 +83,7 @@ class DistillConfig:
     pose_dim: int = 6  # FiLM conditioning on pose vectors
     max_flow_px: float = 20.0
     max_residual: float = 20.0
+    use_dsconv: bool = False  # Depthwise-separable convolutions (fewer params, wider channels)
 
     # Data paths
     tto_frames_path: str = "experiments/results/tto_v7_hinge_500/tto_frames.pt"
@@ -226,6 +227,7 @@ def create_model(cfg: DistillConfig, device: torch.device) -> nn.Module:
         max_flow_px=cfg.max_flow_px,
         max_residual=cfg.max_residual,
         pose_dim=cfg.pose_dim,
+        use_dsconv=cfg.use_dsconv,
     )
     model = model.to(device)
     n_params = sum(p.numel() for p in model.parameters())
@@ -841,6 +843,8 @@ def parse_args() -> argparse.Namespace:
     p.add_argument("--base-ch", type=int, default=36)
     p.add_argument("--mid-ch", type=int, default=60)
     p.add_argument("--depth", type=int, default=1)
+    p.add_argument("--use-dsconv", action="store_true",
+                   help="Use depthwise-separable convolutions (fewer params, wider channels)")
 
     # Training
     p.add_argument("--device", type=str, default="cuda", choices=["cuda", "mps", "cpu"])
@@ -895,6 +899,7 @@ def main() -> None:
         base_ch=args.base_ch,
         mid_ch=args.mid_ch,
         depth=args.depth,
+        use_dsconv=args.use_dsconv,
         eval_roundtrip=args.eval_roundtrip and not args.no_eval_roundtrip,
         segnet_loss_mode=args.segnet_loss_mode,
         hinge_margin=args.hinge_margin,

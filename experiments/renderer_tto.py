@@ -101,6 +101,14 @@ def parse_args() -> argparse.Namespace:
                    help="Simulate contest eval resolution roundtrip (384->874->uint8->384) "
                         "in TTO loss. Makes gradients compensate for resampling+quantization "
                         "artifacts that occur during official evaluation.")
+    p.add_argument("--use-null-space", action="store_true",
+                   help="Apply YUV null space projection to improve SegNet without "
+                        "affecting PoseNet. PoseNet uses 4:2:0 chroma subsampling; "
+                        "perturbations invisible to PoseNet can still help SegNet.")
+    p.add_argument("--null-space-step", type=float, default=0.5,
+                   help="Step size for null space projection (only with --use-null-space).")
+    p.add_argument("--null-space-every", type=int, default=10,
+                   help="Apply null space projection every N steps (only with --use-null-space).")
     return p.parse_args()
 
 
@@ -305,6 +313,9 @@ def run_batched_tto(
     phase2_segnet_only: bool = False,
     phase2_steps: int = 200,
     eval_roundtrip: bool = False,
+    use_null_space: bool = False,
+    null_space_step: float = 0.5,
+    null_space_every: int = 10,
 ) -> torch.Tensor:
     """Run TTO in batches of pairs to avoid OOM.
 
@@ -338,6 +349,9 @@ def run_batched_tto(
         phase2_segnet_only: run Phase 2 SegNet-only after Phase 1 early-stops.
         phase2_steps: number of Phase 2 steps.
         eval_roundtrip: simulate contest eval resolution roundtrip in loss.
+        use_null_space: apply YUV null space projection for free SegNet improvement.
+        null_space_step: step size for null space projection.
+        null_space_every: apply null space projection every N steps.
 
     Returns:
         (N, H, W, 3) float tensor of TTO-refined frames in [0, 255].
@@ -422,6 +436,9 @@ def run_batched_tto(
             phase2_segnet_only=phase2_segnet_only,
             phase2_steps=phase2_steps,
             eval_roundtrip=eval_roundtrip,
+            use_null_space=use_null_space,
+            null_space_step=null_space_step,
+            null_space_every=null_space_every,
         )
         dt = time.monotonic() - t0
 
@@ -481,7 +498,8 @@ def main():
           f"segnet_loss_mode={args.segnet_loss_mode}, "
           f"hinge_margin={args.hinge_margin}, "
           f"phase2_segnet_only={args.tto_phase2_segnet_only}, "
-          f"phase2_steps={args.phase2_steps}")
+          f"phase2_steps={args.phase2_steps}, "
+          f"use_null_space={args.use_null_space}")
     print(f"[config] checkpoint={args.checkpoint}")
     print(f"[config] video={video_path}")
     print(f"[config] output_dir={output_dir}")
@@ -605,6 +623,9 @@ def main():
         phase2_segnet_only=args.tto_phase2_segnet_only,
         phase2_steps=args.phase2_steps,
         eval_roundtrip=args.eval_roundtrip,
+        use_null_space=args.use_null_space,
+        null_space_step=args.null_space_step,
+        null_space_every=args.null_space_every,
     )
     t_tto = time.monotonic() - t0
     print(f"\n[7/8] TTO completed in {t_tto:.1f}s ({t_tto / args.n_frames:.2f}s/frame)")
@@ -675,6 +696,9 @@ def main():
             "phase2_segnet_only": args.tto_phase2_segnet_only,
             "phase2_steps": args.phase2_steps,
             "simulate_resize": args.simulate_resize,
+            "use_null_space": args.use_null_space,
+            "null_space_step": args.null_space_step,
+            "null_space_every": args.null_space_every,
         },
         "timing": {
             "total_s": round(t_total, 2),

@@ -223,6 +223,21 @@ EXPERIMENTS: dict[str, ExperimentConfig] = {
         needs_checkpoint="renderer_best.pt",
         timeout_hours=1,
     ),
+    # ── DSConv wide distillation (P4: wider channels, fewer params via depthwise-separable) ──
+    "distill_dsconv_wide": _exp(
+        name="distill_dsconv_wide",
+        script="experiments/train_distill.py",
+        args=(
+            "--device cuda --pose-dim 6 --base-ch 64 --mid-ch 96 --use-dsconv "
+            "--eval-roundtrip --segnet-loss-mode hinge --hinge-margin 0.5 "
+            "--phase1-epochs 2000 --phase2-epochs 5000 --phase3-epochs 2000 "
+            "--tto-frames experiments/results/tto_v7_hinge_500/tto_frames.pt "
+            "--checkpoint renderer_best.pt "
+            "--gt-poses experiments/results/gt_poses.pt"
+        ),
+        needs_checkpoint="renderer_best.pt",
+        timeout_hours=8,
+    ),
 }
 """Registry of all known Vast.ai experiments.
 
