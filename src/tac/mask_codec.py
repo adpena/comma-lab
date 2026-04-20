@@ -35,10 +35,7 @@ import numpy as np
 import torch
 import torch.nn.functional as F
 
-# SegNet native resolution — all masks are produced and consumed at this size
-SEGNET_H = 384
-SEGNET_W = 512
-NUM_CLASSES = 5
+from tac.camera import FRAME_H as SEGNET_H, FRAME_W as SEGNET_W, NUM_CLASSES
 
 
 def extract_masks(

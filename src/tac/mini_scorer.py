@@ -44,6 +44,8 @@ import torch
 import torch.nn as nn
 import torch.nn.functional as F
 
+from tac.camera import NUM_CLASSES
+
 logger = logging.getLogger(__name__)
 
 __all__ = [
@@ -64,7 +66,6 @@ MINI_SEG_H = 96
 MINI_SEG_W = 128
 MINI_POSE_H = 48
 MINI_POSE_W = 64
-NUM_CLASSES = 5
 
 
 # ── MiniSegNet ─────────────────────────────────────────────────────────

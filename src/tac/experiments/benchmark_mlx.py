@@ -38,8 +38,7 @@ from tac.mlx_renderer import (
     _bilinear_upsample_2x,
 )
 
-H, W = 384, 512
-NUM_CLASSES = 5
+from tac.camera import FRAME_H as H, FRAME_W as W, NUM_CLASSES
 
 
 def make_fake_data(batch_size: int = 1):

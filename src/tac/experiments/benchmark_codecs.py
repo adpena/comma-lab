@@ -16,10 +16,10 @@ from pathlib import Path
 
 import numpy as np
 
+from tac.camera import FRAME_H as H, FRAME_W as W, NUM_CLASSES
+
 # ── Constants matching our pipeline ──────────────────────────────────────────
 NUM_FRAMES = 120
-H, W = 384, 512
-NUM_CLASSES = 5
 SCALE_FACTOR = 255 // (NUM_CLASSES - 1)  # 63
 FPS = 20
 

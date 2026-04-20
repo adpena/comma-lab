@@ -29,9 +29,10 @@ from pathlib import Path
 import numpy as np
 import torch
 
+from tac.camera import NUM_CLASSES
+
 MAGIC = b"MSKV"
 VERSION = 4
-NUM_CLASSES = 5
 HEADER_SIZE = 4 + 1 + 1 + 4 + 2 + 2 + 1 + 4  # 19 bytes
 
 
