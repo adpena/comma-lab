@@ -662,6 +662,14 @@ def feature_matching_loss(
 ) -> tuple[torch.Tensor, float, float]:
     """Loss that matches PoseNet INTERMEDIATE features, not outputs.
 
+    .. deprecated::
+        This function is superseded by :func:`tac.feature_matching.compute_feature_matching_loss`,
+        which supports multi-layer hooking, batched forward passes, configurable
+        normalization, and proper layer-weight configuration.  New code should
+        import from ``tac.feature_matching`` instead.  This function is kept for
+        backward compatibility with existing callers and will be removed in a
+        future release.
+
     Steganalysis insight: match what the detector LOOKS AT (texture statistics
     in mid-layers), not what it OUTPUTS (6 pose values). This is strictly
     more informative because intermediate features are higher-dimensional.

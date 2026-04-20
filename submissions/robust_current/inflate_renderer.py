@@ -2265,13 +2265,27 @@ def inflate_renderer_with_tto(
     multi_pass = int(os.environ.get("INFLATE_MULTI_PASS", "1"))
     if multi_pass < 1:
         multi_pass = 1
+    if multi_pass > 4:
+        print(
+            f"  WARNING: INFLATE_MULTI_PASS={multi_pass} exceeds max of 4; "
+            "clamping to 4 to avoid inflating well below the time budget.",
+            file=sys.stderr,
+        )
+        multi_pass = 4
     if multi_pass > 1:
         print(f"  Multi-pass TTO: {multi_pass} passes (quantize between passes)",
               file=sys.stderr)
-        # Split budget evenly across passes
-        budget_per_pass = budget_seconds / multi_pass
+        # First pass gets 75% of the budget — it starts from the renderer output
+        # and captures most of the easy gains.  Subsequent passes share the
+        # remaining 25% evenly; they correct rounding artifacts after uint8
+        # quantization so they need far less time.
+        first_pass_budget = budget_seconds * 0.75
+        remainder_budget = budget_seconds * 0.25
+        remaining_passes = multi_pass - 1
+        subsequent_budget = remainder_budget / remaining_passes if remaining_passes > 0 else 0.0
+        pass_budgets = [first_pass_budget] + [subsequent_budget] * remaining_passes
     else:
-        budget_per_pass = budget_seconds
+        pass_budgets = [budget_seconds]
 
     refined_frames = renderer_frames
     for pass_idx in range(multi_pass):
@@ -2285,7 +2299,7 @@ def inflate_renderer_with_tto(
             posenet=posenet,
             segnet=segnet,
             device=device,
-            budget_seconds=budget_per_pass,
+            budget_seconds=pass_budgets[pass_idx],
             tto_steps=tto_steps,
             top_k_fraction=top_k,
             tto_lr=tto_lr,

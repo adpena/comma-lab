@@ -78,7 +78,12 @@ def compute_feature_matching_loss(
         layer_names: list of dotted module paths to hook. If None, uses
             the default top-3 PoseNet layers from scorer internals analysis.
         weights: per-layer weight multipliers. If None, uses default weights.
-        batch_size: frames per forward pass to avoid OOM.
+        batch_size: frames per forward pass to avoid OOM.  NOTE: this only
+            controls the peak memory of the *forward pass*. All per-batch
+            losses are accumulated into ``layer_losses`` tensors before the
+            final backward call, so total graph memory still scales with N.
+            A true per-batch backward (zero_grad each iteration) would require
+            a different API and is not implemented here.
         normalize: if True, normalize activations before computing L2 distance
             (makes the loss scale-invariant across layers).
 
@@ -94,7 +99,11 @@ def compute_feature_matching_loss(
     N = rendered_frames.shape[0]
     P = N // 2  # PoseNet operates on pairs
 
-    # Accumulate per-layer losses across batches
+    # Accumulate per-layer losses across batches.
+    # WARNING: accumulated tensors retain their computation graphs, so total
+    # backward-pass memory is O(N), not O(batch_size).  If OOM occurs during
+    # backward, reduce the number of layer_names or call .backward() inside the
+    # loop (requires restructuring this function).
     layer_losses = {name: torch.tensor(0.0, device=device) for name in layer_names}
     n_batches = 0
 

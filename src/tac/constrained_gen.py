@@ -462,6 +462,7 @@ def compute_segnet_constraint_loss(
             if per_class_weights is not None:
                 # Weight by inverse class frequency: rare classes (lanes, vehicles)
                 # get higher weight, focusing gradient on driving-critical pixels.
+                per_class_weights = per_class_weights.to(device)
                 pixel_weights = per_class_weights[target]  # (B, H_out, W_out)
                 batch_loss = (hinge_per_pixel * pixel_weights).mean()
             else:
