@@ -468,7 +468,8 @@ if not _HAS_TAC_RENDERER:
                 flow_only=flow_only,
             )
 
-        def forward(self, mask_t: torch.Tensor, mask_t1: torch.Tensor) -> torch.Tensor:
+        def forward(self, mask_t: torch.Tensor, mask_t1: torch.Tensor,
+                    pose: torch.Tensor | None = None, **kwargs) -> torch.Tensor:
             frame_t1 = self.renderer(mask_t1)
             motion_out = self.motion(mask_t, mask_t1)
             flow = motion_out[:, :2]
@@ -1135,7 +1136,12 @@ def _generate_and_write(
                             batch_pose = poses[pose_start:pose_end].to(device=device)
 
                     # Generate pairs: (B, 2, H, W, 3) HWC in [0, 255]
-                    pairs = renderer(masks_t, masks_t1, pose=batch_pose)  # (B, 2, H, W, 3)
+                    # Only pass pose kwarg if the model's forward accepts it
+                    # (inline fallback AsymmetricPairGenerator does not)
+                    if batch_pose is not None:
+                        pairs = renderer(masks_t, masks_t1, pose=batch_pose)
+                    else:
+                        pairs = renderer(masks_t, masks_t1)  # (B, 2, H, W, 3)
 
                     # Upscale each frame in each pair
                     B_pairs = pairs.shape[0]
