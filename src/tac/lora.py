@@ -72,7 +72,9 @@ class LoRAConv2d(nn.Module):
         c_out = original.out_channels
 
         # Low-rank factors as 1x1 convolutions (efficient, no kernel size dependency)
-        self.lora_A = nn.Conv2d(c_in, rank, kernel_size=1, bias=False)
+        # Match stride of original in lora_A so spatial dims align with base_out
+        stride = original.stride if isinstance(original.stride, int) else original.stride[0]
+        self.lora_A = nn.Conv2d(c_in, rank, kernel_size=1, stride=stride, bias=False)
         self.lora_B = nn.Conv2d(rank, c_out, kernel_size=1, bias=False)
 
         # Init: A ~ N(0, 1/sqrt(rank)), B = 0 → LoRA output starts at zero
