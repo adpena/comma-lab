@@ -1,4 +1,37 @@
-# Current Focus -- 2026-04-16T00:45:00Z
+# Current Focus -- 2026-04-15T18:00:00Z
+
+## Context: 13 Days Remaining. Quantizr at 0.33. Three-Lane Strategy.
+
+**Deadline**: May 3, 2026 (~13 days)
+**New threat**: Quantizr PR#55 = 0.33 (FiLM + DSConv + eval resize)
+**Our contest-compliant best**: auth=0.87 (renderer baseline)
+**Our unlimited-compute best**: auth=0.43 (TTO v5b, gradient fix validated)
+**Our best proxy**: 0.275 (TTO v6, hinge+phase2+embedding, 600 pairs, RTX 4090)
+
+---
+
+## Three-Lane Strategy
+
+### Lane 1: Contest-Compliant TTO (PRIORITY)
+- TTO runs at compress time (unlimited); inflate = single forward pass
+- Hinge loss confirmed 24-49% better than xent from 50+ steps
+- v6 proxy=0.275 needs auth eval to confirm
+- **Next**: Auth eval of v6 TTO frames (708MB tto_frames.pt downloaded locally)
+- **Path to 0.20**: Extend TTO steps to 500 P1 + 500 P2 with hinge
+
+### Lane 2: FiLM Architecture (NEW — Quantizr validated)
+- FiLM pose conditioning on renderer feature maps
+- Directly addresses DP-SIMS PoseNet failure (temporal coherence via pose conditioning)
+- Quantizr at 0.33 proves the paradigm works
+- **Gate**: Implement FiLM in inflate_renderer.py, then run smoke test on MPS
+- **Target**: FiLM + hinge TTO should reach 0.15-0.20 [contest-compliant]
+
+### Lane 3: Constrained Generation from Noise (Paper / GPU Eureka)
+- GPU Eureka projected 0.135. Cool-chic literature validates the paradigm.
+- Gated behind Lane 2 architecture work
+- For arXiv scalability section; not the submission path
+
+---
 
 ## Session 37: Re-Validation on Vast.ai + Hinge Loss Breakthrough
 
@@ -37,19 +70,30 @@ Vast.ai RTX 4090, 30 pairs, 8 step counts (10-500):
 5. Missing onstart script + setup wait
 6. Torch version pinning needed (uv installs incompatible 2.11.0)
 
-### Running: v6 TTO (hinge + phase2 + embedding)
+### DX Hardening (this session)
+- `scripts/build_deploy_bundle.sh` created: fresh, complete deploy bundle (never stale again)
+- `tto_v7_hinge_roundtrip` added to Vast.ai experiment registry
+- Research findings updated with Quantizr PR#55 intelligence + literature survey
+- Killed techniques registry updated with FiLM-revived reassessments
+- next_experiments.md updated with full priority queue
 
-- Instance 35026289 on ssh7.vast.ai:26288
-- Processing all 600 pairs (1200 frames)
-- Config: 150 P1 steps + 200 P2 segnet-only steps, hinge, embedding loss
-- Estimated completion: ~20 min from batch 15/60
+## Score Scoreboard
 
-## Scores
-- **Renderer baseline**: auth=0.87
-- **TTO v5a (gradient fix)**: auth=0.43
-- **TTO v5b (embedding)**: auth=0.41
-- **TTO v6 (hinge step curve proxy)**: ~0.145 at 500 steps (30 pairs)
-- **Target**: sub-0.20 auth
+| Lane | Score | Notes |
+|------|-------|-------|
+| Contest-compliant baseline | 0.87 | Renderer only, no TTO |
+| Unlimited-compute | 0.43 | TTO v5b, gradient fix |
+| Unlimited-compute | 0.41 | TTO v5b, embedding loss |
+| Proxy (30 pairs) | 0.145 | Hinge, 500 steps |
+| Proxy (600 pairs) | 0.275 | v6 hinge+phase2+embedding |
+| Quantizr threat | 0.33 | PR#55, FiLM+DSConv |
 
-## Deadline
-- May 3, 2026 (~17 days remaining)
+## Decision Gates
+
+| Date | Gate | Action |
+|------|------|--------|
+| 2026-04-16 | v6 auth eval | Proxy-auth correlation with hinge |
+| 2026-04-17 | 500-step hinge auth | Find saturation, confirm auth gap |
+| 2026-04-18 | FiLM smoke test | MPS, 30 pairs, 100 steps |
+| 2026-04-21 | Lock architecture | FiLM vs warp, binding council vote |
+| 2026-05-03 | DEADLINE | Submit PR |
