@@ -61,6 +61,7 @@ __all__ = [
     "yuv6_to_rgb",
     "validate_yuv_parity",
     "generate_initial_frames",
+    "compute_segnet_class_weights",
     "compute_segnet_constraint_loss",
     "compute_posenet_constraint_loss",
     "compute_posenet_embedding_constraint_loss",
@@ -296,6 +297,46 @@ def generate_initial_frames(
     return frames
 
 
+def compute_segnet_class_weights(
+    masks: torch.Tensor,
+    num_classes: int = NUM_CLASSES,
+) -> torch.Tensor:
+    """Compute inverse-frequency class weights from mask statistics.
+
+    Uses median-frequency balancing: weight[c] = median_freq / freq[c].
+    This normalizes weights so the majority class gets ~1.0 and rare classes
+    get proportionally higher weights.
+
+    Args:
+        masks: (N, H, W) long tensor with class indices.
+        num_classes: number of classes (default 5 for comma).
+
+    Returns:
+        (num_classes,) float tensor of per-class weights.
+    """
+    total_pixels = masks.numel()
+    weights = torch.ones(num_classes, dtype=torch.float32, device=masks.device)
+    freqs = []
+    for c in range(num_classes):
+        count = (masks == c).sum().item()
+        freq = count / max(total_pixels, 1)
+        freqs.append(freq)
+
+    # Median-frequency balancing (avoids extreme weights from very rare classes)
+    freqs_tensor = torch.tensor(freqs, dtype=torch.float32, device=masks.device)
+    # Filter out zero-frequency classes for median computation
+    nonzero_freqs = freqs_tensor[freqs_tensor > 0]
+    if len(nonzero_freqs) > 0:
+        median_freq = nonzero_freqs.median()
+        for c in range(num_classes):
+            if freqs[c] > 0:
+                weights[c] = (median_freq / freqs_tensor[c]).clamp(max=50.0)
+            else:
+                weights[c] = 1.0  # no pixels of this class, neutral weight
+
+    return weights
+
+
 def compute_segnet_constraint_loss(
     frames: torch.Tensor,
     masks: torch.Tensor,
@@ -304,6 +345,7 @@ def compute_segnet_constraint_loss(
     seg_odd_only: bool = False,
     loss_mode: str = "xent",
     hinge_margin: float = 0.5,
+    per_class_weights: torch.Tensor | None = None,
 ) -> torch.Tensor:
     """Compute SegNet constraint loss forcing argmax to match target masks.
 
@@ -338,6 +380,13 @@ def compute_segnet_constraint_loss(
             ``"hinge"`` for logit-margin hinge loss.
         hinge_margin: margin for hinge loss. Larger values push the correct
             class logit further above the best wrong class. Default 0.5.
+        per_class_weights: (NUM_CLASSES,) optional float tensor of per-class
+            weights. When provided, the per-pixel hinge loss is multiplied by
+            the weight for that pixel's target class, focusing gradient on rare
+            but important classes (e.g., lane markings, vehicles). Compute via
+            :func:`compute_segnet_class_weights` or pass manually (e.g.,
+            ``[1.0, 15.0, 1.5, 3.0, 7.0]``). Only affects ``"hinge"`` mode.
+            Default None (uniform weighting, backward compatible).
 
     Returns:
         Scalar loss (mean over all frames and pixels).
@@ -406,9 +455,17 @@ def compute_segnet_constraint_loss(
             max_wrong = mask_fill.max(dim=1, keepdim=True).values  # (B, 1, H_out, W_out)
             # Loss = relu(margin - (correct - best_wrong)). Zero when correct
             # class leads by >= margin, positive when it doesn't.
-            batch_loss = F.relu(
+            hinge_per_pixel = F.relu(
                 hinge_margin - (target_logits - max_wrong),
-            ).mean()
+            ).squeeze(1)  # (B, H_out, W_out)
+
+            if per_class_weights is not None:
+                # Weight by inverse class frequency: rare classes (lanes, vehicles)
+                # get higher weight, focusing gradient on driving-critical pixels.
+                pixel_weights = per_class_weights[target]  # (B, H_out, W_out)
+                batch_loss = (hinge_per_pixel * pixel_weights).mean()
+            else:
+                batch_loss = hinge_per_pixel.mean()
         else:
             batch_loss = F.cross_entropy(logits, masks_resized)
 
@@ -1692,6 +1749,7 @@ def coupled_trajectory_optimize(
     null_space_step: float = 0.5,
     null_space_every: int = 10,
     pair_weights: torch.Tensor | None = None,
+    segnet_class_weights: torch.Tensor | str | None = None,
     **cfg,
 ) -> torch.Tensor:
     """Jointly optimize ALL frames to satisfy coupled PoseNet constraints.
@@ -1818,6 +1876,21 @@ def coupled_trajectory_optimize(
     if pair_weights is not None:
         pair_weights = pair_weights.to(device)
 
+    # Resolve per-class weights for SegNet hinge loss
+    _per_class_weights: torch.Tensor | None = None
+    if segnet_class_weights is not None:
+        if isinstance(segnet_class_weights, str) and segnet_class_weights == "auto":
+            _per_class_weights = compute_segnet_class_weights(masks)
+            logger.info("  [coupled-4dvar] Auto class weights: %s",
+                        [f"{w:.2f}" for w in _per_class_weights.tolist()])
+        elif isinstance(segnet_class_weights, torch.Tensor):
+            _per_class_weights = segnet_class_weights.to(device)
+        else:
+            raise ValueError(
+                f"segnet_class_weights must be 'auto', a Tensor, or None. "
+                f"Got: {type(segnet_class_weights)}"
+            )
+
     # Initialize ALL frames jointly — from renderer output (TTO) or noise
     warm_start = init_frames is not None
     if warm_start:
@@ -1884,6 +1957,7 @@ def coupled_trajectory_optimize(
         seg_loss = compute_segnet_constraint_loss(
             frames_for_loss, masks, segnet, seg_odd_only=seg_odd_only,
             loss_mode=segnet_loss_mode, hinge_margin=hinge_margin,
+            per_class_weights=_per_class_weights,
         )
 
         # --- PoseNet constraint: all consecutive PAIRS jointly ---
@@ -1947,6 +2021,7 @@ def coupled_trajectory_optimize(
             seg_loss_ns = compute_segnet_constraint_loss(
                 frames_ns, masks, segnet, seg_odd_only=seg_odd_only,
                 loss_mode=segnet_loss_mode, hinge_margin=hinge_margin,
+                per_class_weights=_per_class_weights,
             )
             seg_grad = torch.autograd.grad(seg_loss_ns, frames_ns)[0]
             # Project into PoseNet null space and apply (no grad needed)
@@ -2028,6 +2103,7 @@ def coupled_trajectory_optimize(
                 seg_odd_only=False,  # already selected odd frames
                 loss_mode=segnet_loss_mode,
                 hinge_margin=hinge_margin,
+                per_class_weights=_per_class_weights,
             )
 
             seg_loss_p2.backward()
