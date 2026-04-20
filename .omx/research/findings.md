@@ -353,3 +353,55 @@ The definitive fix is to run CUDA+DALI scoring (requires GPU), or to submit.
 
 GPU Eureka 1-4: (1) Generate in scorer-input space, invert preprocessing. (2) Pre-compute expected PoseNet output from ego-motion trajectory. (3) Frame generation as constrained optimization: minimize rate subject to PoseNet=expected + SegNet argmax=masks. (4) No neural renderer needed — start from noise seed, run 1000 gradient descent steps against constraints. Archive: masks 239B + targets 7KB + seed 64B = 8KB total. Score projection: 0.135. Fits in 50 seconds on T4.
 - Score: 0.135
+
+## 2026-04-20 [BREAKTHROUGH] Fourth Lane: Constrained Generation from Noise with Mini-Scorers
+
+**Concept**: No renderer needed. Directly optimize pixel values from a semantic prior (class-mean initialization from GT masks) against mini-scorers stored in the archive. Contest-compliant because mini-scorer weights ARE in the archive.
+
+**Archive**: mini_segnet.bin (25KB) + mini_posenet.bin (25KB) + poses.pt (8.7KB) + masks.mkv (79KB) = ~138KB total. SMALLER than renderer path (184KB). Rate: 0.092 (vs 0.122 for renderer).
+
+**Council findings**:
+1. Class-mean initialization reduces optimization distance ~10x vs random noise
+2. Mini-scorer at 96x128 has boundary resolution concern — consider 192x256 variant
+3. MiniScorerTTO lacks hinge loss (critical bug, needs fix)
+4. Gradient cosine similarity > 0.7 between mini and full scorers is the promotion gate
+5. Hybrid (renderer warm-start + mini-scorer refinement) may outperform either alone
+6. 1000 steps fits in 4-6 min on T4. Budget allows 2000-3000 steps.
+7. Time budget: 4 min for constrained gen + 47s for evaluate.py = 5 min total. Enormous headroom.
+
+**Theoretical floor**: 0.135 (GPU Eureka with full scorers). With mini-scorers: 0.15-0.25 realistic if fidelity > 95%.
+
+**Files**: experiments/constrained_gen_from_noise.py, experiments/constrained_gen_inflate.py, inflate_renderer.py INFLATE_CONSTRAINED_GEN=1
+
+## 2026-04-20 [RESULT] Distillation v2 (pose_weight=10, warm restart) — proxy 0.481 at epoch 230
+
+**Config**: Resume from Phase 2 checkpoint (0.518), pose_weight=10.0, seg_weight=100, hinge loss, eval roundtrip, FiLM pose_dim=6, lr=3e-4
+**Key insight**: pose_weight=1.0 → 10.0 was THE critical fix. 4x faster early convergence.
+**Trajectory**: 0.807 → 0.696 (ep10) ��� 0.596 (ep50) → 0.521 (ep130) → 0.481 (ep230)
+**Still converging**: PoseNet 0.0096, SegNet 0.00212 (better than original renderer)
+
+## 2026-04-20 [RESULT] Step curve VALIDATED with correct checkpoint
+
+**Hinge at 500 steps proxy 0.146 vs xent 0.195** (25% better). Confirmed on RTX 4090 with MD5:cff8dca4.
+**v7 TTO auth 0.37** [unlimited-compute] — hinge 500 steps, all 600 pairs.
+
+## 2026-04-20 [TECHNIQUE] 3 Quick Wins Implemented + Reviewed
+
+1. **OASIS per-class weighting**: lane markings 50x weight vs road in hinge loss. Correct but strategically low priority at current operating point (PoseNet dominates).
+2. **Feature matching on top-3 PoseNet layers**: L2 on intermediate activations. Memory bug (C1) documented. Dead code — needs wiring into pipeline.  
+3. **Multi-pass refinement**: Theoretical max < 0.001 improvement. Low priority.
+
+## 2026-04-20 [TECHNIQUE] 45 techniques tracked across project
+
+- 14 active/tested
+- 8 implemented but untested (PoseNet blind spots, SegNet skip exploit, multi-pass, cross-frame attention, LoRA, DSConv, latent codes, postfilter)
+- 7 not implemented (adaptive quantization, archive codebook, LoRA+latent combined, ghost modules, OASIS class weights, feature matching on layers, ensemble)
+- 3 killed with evidence (KL distillation, Hinton T², backward deltas)
+
+## 2026-04-20 [BUG] Strategy review gap — reviews checked code bugs but not training recipe
+
+Distillation v1 ran with --skip-phase1 and pose_weight=1.0. Both were strategically wrong. Code reviews caught syntax/crash bugs but NOT the wrong hyperparameters. New rule: every deployment review must include a STRATEGY section.
+
+## 2026-04-20 [INTELLIGENCE] Quantizr PR#55 scored 0.33
+
+88K params, FiLM on pose, DSConv, eval-matched resize, single mask per pair. They're done working on it. Says sub-0.30 possible with conv dim sweep.
