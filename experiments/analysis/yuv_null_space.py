@@ -160,17 +160,16 @@ def generate_null_space_perturbation(
     # Result: (n_blocks, 12) — reshape to (H, W, 3)
     delta_flat = coeffs @ null_basis  # (n_blocks, 12)
 
-    # Reshape: each block is [R00, G00, B00, R01, G01, B01, R10, G10, B10, R11, G11, B11]
+    # Vectorized reshape: each block's 12 values are [R00,G00,B00, R01,G01,B01, R10,G10,B10, R11,G11,B11]
+    # Reshape to (H//2, W//2, 4_pixels, 3_channels), then scatter into (H, W, 3)
+    bH, bW = H // 2, W // 2
+    delta_blocks = delta_flat.reshape(bH, bW, 4, 3)  # 4 pixels per block, 3 channels
+
     perturbation = torch.zeros(H, W, 3)
-    block_idx = 0
-    for by in range(0, H, 2):
-        for bx in range(0, W, 2):
-            d = delta_flat[block_idx]
-            perturbation[by, bx] = d[0:3]      # pixel (0,0)
-            perturbation[by, bx + 1] = d[3:6]  # pixel (0,1)
-            perturbation[by + 1, bx] = d[6:9]  # pixel (1,0)
-            perturbation[by + 1, bx + 1] = d[9:12]  # pixel (1,1)
-            block_idx += 1
+    perturbation[0::2, 0::2] = delta_blocks[:, :, 0]  # pixel (0,0)
+    perturbation[0::2, 1::2] = delta_blocks[:, :, 1]  # pixel (0,1)
+    perturbation[1::2, 0::2] = delta_blocks[:, :, 2]  # pixel (1,0)
+    perturbation[1::2, 1::2] = delta_blocks[:, :, 3]  # pixel (1,1)
 
     # Clamp to maintain valid pixel range
     # Scale so max perturbation is roughly magnitude
@@ -396,8 +395,20 @@ def main() -> None:
         },
     }
 
+    # Convert numpy/torch bools to Python bools for JSON serialization
+    def make_serializable(obj):
+        if isinstance(obj, dict):
+            return {k: make_serializable(v) for k, v in obj.items()}
+        elif isinstance(obj, (list, tuple)):
+            return [make_serializable(v) for v in obj]
+        elif hasattr(obj, 'item'):  # numpy/torch scalar
+            return obj.item()
+        elif isinstance(obj, bool):
+            return bool(obj)
+        return obj
+
     with open(output_dir / "results.json", "w") as f:
-        json.dump(results, f, indent=2)
+        json.dump(make_serializable(results), f, indent=2)
 
     # Save null space basis for use in training
     torch.save(null_basis, output_dir / "null_space_basis.pt")
