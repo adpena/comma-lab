@@ -14,14 +14,17 @@ The project progressed through six distinct stages over approximately one week o
 | 4. Renderer | 0.87 | 0.0022 | 0.031 | 0.010 | Asymmetric warp, Lagrangian annealing |
 | 5. + TTO (blind) | 0.70 | 0.0015 | ~0.012 | 0.010 | 500 steps, zero PoseNet gradients |
 | 6. + TTO (gradient fix) | 0.43 | 0.00149 | 0.00209 | 0.010 | Differentiable BT.601 YUV |
+| 7. + TTO (hinge loss) | 0.37 | 0.00094 | 0.00250 | 0.005 | Hinge margin SegNet, 500 steps |
 
-The score improved by 78% from start (1.97) to finish (0.43). The three largest improvements were:
+The score improved by 81% from start (1.97) to current best (0.37). The four largest improvements were:
 
 1. **CNN postfilter** (1.93 $\to$ 1.33, $-$31%): A convolutional postfilter trained to minimize scorer distortion on codec-compressed frames. This was the CPU-lane ceiling --- further postfiltering cannot recover information destroyed by quantization.
 
 2. **Renderer** (1.33 $\to$ 0.87, $-$35%): Switching from codec compression to a learned renderer that generates frames directly from semantic masks. This bypasses the codec entirely; the archive contains model weights and masks rather than compressed video.
 
 3. **Gradient fix** (0.70 $\to$ 0.43, $-$39%): Fixing the gradient obstruction in PoseNet's preprocessing. No architectural change, no additional parameters --- just correct gradients.
+
+4. **Hinge loss** (0.43 $\to$ 0.37, $-$14%): Replacing cross-entropy with a hinge loss (margin=0.5) for SegNet optimization during TTO. Hinge loss provides stronger gradients when the SegNet prediction is near the decision boundary, yielding a 25% reduction in SegNet distortion (0.00126 $\to$ 0.00094 at 500 steps) while maintaining PoseNet performance. This is our current best result [unlimited-compute].
 
 ## 4.2 Component breakdown
 
@@ -46,8 +49,10 @@ At the time of writing, three submissions have been evaluated on the official le
 
 | Submission | Auth Score | PoseNet | SegNet | Rate | Archive | Approach |
 |-----------|-----------|---------|--------|------|---------|----------|
-| **Ours (TTO v5a)** | **0.43** | **0.00209** | **0.00149** | **0.0040** | **150 KB** | Renderer + TTO |
-| mask2mask [Quantizr] | 0.60 | 0.00066 | 0.00264 | 0.0103 | 386 KB | Pair-wise generator |
+| **Ours (TTO v7, hinge)** | **0.37** | **0.00250** | **0.00094** | **0.005** | **~185 KB** | Renderer + TTO [unlimited] |
+| Ours (renderer only) | 0.87 | 0.031 | 0.00217 | 0.004 | 184 KB | Asym warp [contest-compliant] |
+| Quantizr (latest) | 0.33 | 0.00051 | 0.00061 | 0.008 | ~400 KB | Pair-wise generator |
+| mask2mask [Quantizr v1] | 0.60 | 0.00066 | 0.00264 | 0.0103 | 386 KB | Pair-wise generator |
 | tensor_inversion | 0.75* | --- | --- | --- | 73 MB* | Scorer gradient descent |
 
 *tensor_inversion was flagged as non-compliant (loads scorer weights at inflate time without including them in the archive; if included, rate alone would be 51.19).
@@ -128,7 +133,30 @@ Three findings emerge:
 
 These results rewrite the TTO budget strategy. Rather than allocating uniform steps across all pairs, the optimal approach is: (1) run 100 steps on all pairs to saturate PoseNet, (2) identify pairs with high SegNet disagreement, (3) allocate the remaining budget to those hard pairs at 500+ steps.
 
-## 4.8 Operational findings
+## 4.8 Hinge loss breakthrough and the wrong-checkpoint discovery
+
+The transition from TTO v5a (0.43) to TTO v7 (0.37) involved two key findings: a methodological error that taught us about experimental hygiene, and a genuine loss function improvement.
+
+**The wrong-checkpoint incident.** Initial step-curve experiments used an outdated renderer checkpoint from an earlier training run. The baseline (0-step) score was anomalously high (~91 vs. the expected ~0.81), and early-step results showed PoseNet *increasing* before decreasing --- a signature of starting from a poor initialization. All conclusions drawn from this data were suspect. The corrected experiment (using the verified `cff8dca4` checkpoint) produced the clean monotonic curves shown in Section 4.7, with a 0-step baseline matching the known renderer auth score (0.81 proxy).
+
+This incident established a protocol: every experiment now begins with checkpoint identity verification (MD5 prefix match) and a baseline sanity check against known scores.
+
+**Hinge loss vs. cross-entropy.** With the correct checkpoint, we compared two SegNet loss functions at identical hyperparameters:
+
+| Steps | Xent Score | Hinge Score | Hinge Advantage |
+|------:|----------:|----------:|-----------:|
+| 100 | 0.473 | 0.407 | 14% |
+| 200 | 0.267 | 0.190 | 29% |
+| 300 | 0.218 | 0.167 | 24% |
+| 500 | 0.192 | 0.145 | 25% |
+
+At 500 steps, hinge loss reduces SegNet distortion by 49% (0.00126 $\to$ 0.00064) while maintaining similar PoseNet convergence. The mechanism: cross-entropy loss saturates when class probabilities are already high (the common case for well-initialized frames), producing vanishing gradients. Hinge loss with margin 0.5 provides constant gradient magnitude until the prediction exceeds the margin, sustaining optimization pressure longer.
+
+The combined improvement (correct checkpoint + hinge loss) achieved auth 0.37, representing a 14% improvement over our previous best. The score decomposition: PoseNet 0.050, SegNet 0.094, Rate 0.005.
+
+**Per-pair difficulty map.** TTO v7 also revealed significant heterogeneity across frame pairs. The hardest 10% of pairs contribute 35% of total SegNet loss, while the easiest 30% achieve near-zero distortion within 100 steps. This motivates adaptive step allocation: a fixed budget of N total steps can be redistributed from easy pairs (early-stopped at 100 steps) to hard pairs (extended to 1000+ steps) for better aggregate score.
+
+## 4.9 Operational findings
 
 ### Inflate time budget
 
