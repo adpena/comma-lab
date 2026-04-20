@@ -1,6 +1,29 @@
 # Battle Plan: April 20 - May 3 (13 days)
 
-Status: Contest-compliant auth=0.87, Unlimited-compute auth=0.41, Quantizr leads at 0.33.
+Status: Contest-compliant auth=0.87, Unlimited-compute auth=0.37, Quantizr leads at 0.33.
+
+## NEXT DEPLOYMENT: Distillation (Lane 1 priority)
+
+**Goal:** Train renderer to reproduce v7 TTO frames (auth 0.37) in a single forward pass.
+This eliminates TTO compute at inflate time, making the 0.37 result contest-compliant.
+
+**Script:** `experiments/train_distill.py`
+**Vast.ai registry:** `distill_full` (6h timeout, RTX 4090)
+
+**Prerequisites:**
+1. Extract GT poses: `PYTHONPATH=src:upstream python -m tac.pose_extraction --upstream upstream/ --output experiments/results/gt_poses.pt --device mps`
+2. Verify TTO frames exist: `experiments/results/tto_v7_hinge_500/tto_frames.pt`
+3. Verify renderer checkpoint: `experiments/results/v5_lagrangian_renderer/renderer_best.pt`
+
+**Deploy command:**
+```bash
+python scripts/check_vastai.py run <id> distill_full
+```
+
+**Expected cost:** $1.50 (6h x $0.25/hr)
+**Expected result:** auth 0.45-0.55 (gap between pure distillation and TTO)
+
+---
 
 ## The Three Lanes
 

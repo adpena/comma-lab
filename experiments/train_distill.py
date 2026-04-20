@@ -1,0 +1,1104 @@
+#!/usr/bin/env python3
+"""Distillation training: teach the renderer to reproduce TTO frames in one forward pass.
+
+This is THE path to contest-compliant sub-0.33. The v7 TTO achieved auth=0.37
+with 500 gradient steps per pair at inflate time. Distillation eliminates that
+cost by training the renderer to match TTO frames directly, then fine-tuning
+with scorer feedback.
+
+Phases:
+    Phase 1 (pixel regression): L1 loss against TTO frames. Fast warm-start.
+    Phase 2 (scorer-guided): Contest formula loss through frozen PoseNet + SegNet.
+    Phase 3 (hard-pair fine-tuning): Weighted loss on hardest 20% of pairs.
+
+Usage:
+    # Smoke test (local MPS):
+    PYTHONPATH=src:upstream python experiments/train_distill.py --smoke --device mps
+
+    # Full run (Vast.ai 4090):
+    PYTHONPATH=src:upstream python experiments/train_distill.py \
+        --device cuda \
+        --tto-frames experiments/results/tto_v7_hinge_500/tto_frames.pt \
+        --checkpoint experiments/results/v5_lagrangian_renderer/renderer_best.pt \
+        --gt-poses experiments/results/gt_poses.pt
+
+    # Resume from checkpoint:
+    PYTHONPATH=src:upstream python experiments/train_distill.py \
+        --device cuda --resume experiments/results/distillation/distill_latest.pt
+"""
+from __future__ import annotations
+
+import argparse
+import gc
+import json
+import math
+import os
+import sys
+import time
+from dataclasses import asdict, dataclass
+from pathlib import Path
+from typing import Any
+
+import torch
+import torch.nn as nn
+import torch.nn.functional as F
+
+# ---------------------------------------------------------------------------
+# Path setup
+# ---------------------------------------------------------------------------
+_CANDIDATE_UPSTREAM = [
+    Path(os.environ["TAC_UPSTREAM_DIR"]) if os.environ.get("TAC_UPSTREAM_DIR") else None,
+    Path(os.environ["UPSTREAM_ROOT"]) if os.environ.get("UPSTREAM_ROOT") else None,
+    Path("/kaggle/working/upstream"),
+    Path(__file__).resolve().parent.parent / "upstream",
+]
+UPSTREAM_ROOT: Path | None = None
+for _p in _CANDIDATE_UPSTREAM:
+    if _p is not None and (_p / "modules.py").exists():
+        UPSTREAM_ROOT = _p
+        break
+if UPSTREAM_ROOT is not None and str(UPSTREAM_ROOT) not in sys.path:
+    sys.path.insert(0, str(UPSTREAM_ROOT))
+
+RESULTS_DIR = (
+    Path(os.environ["TAC_RESULTS_DIR"])
+    if os.environ.get("TAC_RESULTS_DIR")
+    else Path(__file__).resolve().parent / "results" / "distillation"
+)
+
+
+# ---------------------------------------------------------------------------
+# Config
+# ---------------------------------------------------------------------------
+@dataclass
+class DistillConfig:
+    """All hyperparameters for distillation training."""
+
+    # Architecture (must match checkpoint)
+    embed_dim: int = 6
+    base_ch: int = 36
+    mid_ch: int = 60
+    motion_hidden: int = 32
+    depth: int = 1
+    pose_dim: int = 6  # FiLM conditioning on pose vectors
+    max_flow_px: float = 20.0
+    max_residual: float = 20.0
+
+    # Data paths
+    tto_frames_path: str = "experiments/results/tto_v7_hinge_500/tto_frames.pt"
+    checkpoint_path: str = "experiments/results/v5_lagrangian_renderer/renderer_best.pt"
+    gt_poses_path: str = "experiments/results/gt_poses.pt"
+    upstream_dir: str = "upstream/"
+
+    # Training
+    device: str = "cuda"
+    seed: int = 42
+
+    # Phase 1: pixel regression
+    phase1_epochs: int = 2000
+    phase1_lr: float = 1e-3
+    phase1_batch_size: int = 8  # pairs
+
+    # Phase 2: scorer-guided fine-tuning
+    phase2_epochs: int = 5000
+    phase2_lr: float = 3e-4
+    phase2_batch_size: int = 4  # scorer is VRAM-intensive
+    phase2_pixel_weight: float = 0.1
+    phase2_pose_weight: float = 1.0
+    phase2_seg_weight: float = 100.0
+    segnet_loss_mode: str = "hinge"  # "hinge" or "xent"
+    hinge_margin: float = 0.5
+
+    # Phase 3: hard-pair fine-tuning
+    phase3_epochs: int = 2000
+    phase3_lr: float = 1e-4
+    phase3_batch_size: int = 4
+    hard_pair_fraction: float = 0.2  # top 20% hardest pairs
+    hard_pair_weight: float = 5.0  # weight multiplier for hard pairs
+
+    # Eval-matched resize roundtrip
+    eval_roundtrip: bool = True
+
+    # Optimizer
+    weight_decay: float = 1e-4
+    grad_clip: float = 1.0
+
+    # Checkpointing and logging
+    checkpoint_every: int = 500
+    eval_every: int = 200
+    log_every: int = 50
+
+    # Export
+    export_bits: int = 4  # FP4 for contest
+
+    # Smoke test
+    smoke: bool = False
+
+    # Resume
+    resume: str | None = None
+
+
+# ---------------------------------------------------------------------------
+# Data loading
+# ---------------------------------------------------------------------------
+
+
+def load_tto_frames(path: str, device: str, n_frames: int = 1200) -> torch.Tensor:
+    """Load TTO target frames.
+
+    Expected shape: (N, H, W, 3) float32 in [0, 255].
+    """
+    data = torch.load(path, map_location="cpu", weights_only=True)
+    if isinstance(data, dict):
+        # Handle various save formats
+        if "frames" in data:
+            frames = data["frames"]
+        elif "tto_frames" in data:
+            frames = data["tto_frames"]
+        else:
+            raise KeyError(f"Cannot find frames in {path}. Keys: {list(data.keys())}")
+    else:
+        frames = data
+
+    # Normalize shape to (N, H, W, 3)
+    if frames.ndim == 4 and frames.shape[1] == 3:
+        # (N, 3, H, W) -> (N, H, W, 3)
+        frames = frames.permute(0, 2, 3, 1).contiguous()
+
+    frames = frames[:n_frames].float()
+    if frames.max() <= 1.0:
+        frames = frames * 255.0
+
+    print(f"  TTO frames loaded: {frames.shape}, range [{frames.min():.1f}, {frames.max():.1f}]")
+    return frames
+
+
+def load_gt_video(upstream_dir: str, n_frames: int = 1200) -> list[torch.Tensor]:
+    """Load GT video frames from upstream."""
+    import av
+
+    video_path = Path(upstream_dir) / "videos" / "0.mkv"
+    if not video_path.exists():
+        raise FileNotFoundError(f"GT video not found: {video_path}")
+
+    frames = []
+    with av.open(str(video_path)) as container:
+        stream = container.streams.video[0]
+        for i, frame in enumerate(container.decode(stream)):
+            if i >= n_frames:
+                break
+            arr = frame.to_ndarray(format="rgb24")
+            frames.append(torch.from_numpy(arr))
+
+    print(f"  GT video loaded: {len(frames)} frames, {frames[0].shape}")
+    return frames
+
+
+def load_masks(
+    gt_frames: list[torch.Tensor],
+    segnet: torch.nn.Module,
+    device: torch.device,
+) -> torch.Tensor:
+    """Extract SegNet masks from GT frames."""
+    from tac.scorer import extract_gt_masks
+
+    masks = extract_gt_masks(gt_frames, segnet, device, batch_size=32)
+    print(f"  Masks extracted: {masks.shape}, classes: {masks.unique().tolist()}")
+    return masks
+
+
+# ---------------------------------------------------------------------------
+# Model creation
+# ---------------------------------------------------------------------------
+
+
+def create_model(cfg: DistillConfig, device: torch.device) -> nn.Module:
+    """Create AsymmetricPairGenerator with FiLM conditioning."""
+    from tac.renderer import AsymmetricPairGenerator
+
+    model = AsymmetricPairGenerator(
+        num_classes=5,
+        embed_dim=cfg.embed_dim,
+        base_ch=cfg.base_ch,
+        mid_ch=cfg.mid_ch,
+        motion_hidden=cfg.motion_hidden,
+        depth=cfg.depth,
+        max_flow_px=cfg.max_flow_px,
+        max_residual=cfg.max_residual,
+        pose_dim=cfg.pose_dim,
+    )
+    model = model.to(device)
+    n_params = sum(p.numel() for p in model.parameters())
+    print(f"  Model created: {n_params:,} parameters")
+    return model
+
+
+def load_checkpoint_weights(model: nn.Module, path: str, device: torch.device) -> None:
+    """Load renderer checkpoint, handling shape mismatches from FiLM layers."""
+    state = torch.load(path, map_location=device, weights_only=True)
+
+    # Handle wrapped checkpoints
+    if "model_state_dict" in state:
+        state = state["model_state_dict"]
+    elif "state_dict" in state:
+        state = state["state_dict"]
+
+    # Filter out mismatched keys (FiLM layers won't exist in old checkpoints)
+    model_state = model.state_dict()
+    compatible = {}
+    skipped = []
+    for k, v in state.items():
+        if k in model_state and v.shape == model_state[k].shape:
+            compatible[k] = v
+        else:
+            skipped.append(k)
+
+    # Also handle keys present in model but not in checkpoint (new FiLM layers)
+    missing = [k for k in model_state if k not in compatible]
+
+    model.load_state_dict(compatible, strict=False)
+    print(f"  Checkpoint loaded: {len(compatible)} params, {len(skipped)} skipped, {len(missing)} new (FiLM)")
+
+
+# ---------------------------------------------------------------------------
+# Training phases
+# ---------------------------------------------------------------------------
+
+
+def compute_pixel_loss(predicted: torch.Tensor, target: torch.Tensor) -> torch.Tensor:
+    """L1 pixel loss between predicted and target frame pairs.
+
+    Args:
+        predicted: (B, 2, H, W, 3) predicted pairs from renderer
+        target: (B, 2, H, W, 3) TTO target pairs
+
+    Returns:
+        Scalar L1 loss averaged over all elements.
+    """
+    return F.l1_loss(predicted, target)
+
+
+def compute_scorer_loss(
+    predicted_pairs: torch.Tensor,
+    gt_pairs: torch.Tensor,
+    posenet: torch.nn.Module,
+    segnet: torch.nn.Module,
+    masks_even: torch.Tensor,
+    masks_odd: torch.Tensor,
+    cfg: DistillConfig,
+    eval_roundtrip: bool = True,
+) -> tuple[torch.Tensor, dict[str, float]]:
+    """Compute contest-formula scorer loss with eval-matched roundtrip.
+
+    Args:
+        predicted_pairs: (B, 2, H, W, 3) predicted frame pairs
+        gt_pairs: (B, 2, H, W, 3) GT frame pairs
+        posenet: frozen differentiable PoseNet
+        segnet: frozen SegNet
+        masks_even: (B, H, W) target masks for even frames
+        masks_odd: (B, H, W) target masks for odd frames
+        cfg: training config
+        eval_roundtrip: whether to apply simulate_eval_roundtrip
+
+    Returns:
+        (total_loss, metrics_dict)
+    """
+    from tac.constrained_gen import compute_segnet_constraint_loss
+    from tac.renderer import simulate_eval_roundtrip
+
+    B = predicted_pairs.shape[0]
+    device = predicted_pairs.device
+
+    # Flatten pairs to frames: (B, 2, H, W, 3) -> (2B, H, W, 3)
+    pred_frames = predicted_pairs.reshape(B * 2, *predicted_pairs.shape[2:])
+    gt_frames = gt_pairs.reshape(B * 2, *gt_pairs.shape[2:])
+
+    # Apply eval-matched resize roundtrip (STE for gradients)
+    if eval_roundtrip:
+        from tac.camera import CAMERA_H, CAMERA_W
+
+        pred_chw = pred_frames.permute(0, 3, 1, 2)  # (2B, 3, H, W)
+        pred_chw = simulate_eval_roundtrip(pred_chw, target_h=CAMERA_H, target_w=CAMERA_W)
+        pred_frames_for_loss = pred_chw.permute(0, 2, 3, 1)  # (2B, H, W, 3)
+
+        gt_chw = gt_frames.permute(0, 3, 1, 2)
+        gt_chw = simulate_eval_roundtrip(gt_chw, target_h=CAMERA_H, target_w=CAMERA_W)
+        gt_frames_for_loss = gt_chw.permute(0, 2, 3, 1)
+    else:
+        pred_frames_for_loss = pred_frames
+        gt_frames_for_loss = gt_frames
+
+    # SegNet loss (hinge or xent)
+    # Interleave masks to match frame order: even, odd, even, odd, ...
+    all_masks = torch.stack([masks_even, masks_odd], dim=1).reshape(B * 2, *masks_even.shape[1:])
+    seg_loss = compute_segnet_constraint_loss(
+        pred_frames_for_loss, all_masks, segnet,
+        batch_size=B * 2,
+        loss_mode=cfg.segnet_loss_mode,
+        hinge_margin=cfg.hinge_margin,
+    )
+
+    # PoseNet loss: pairs format (B, 2, C, H, W)
+    pred_pairs_chw = pred_frames_for_loss.reshape(B, 2, *pred_frames_for_loss.shape[1:])
+    pred_pairs_chw = pred_pairs_chw.permute(0, 1, 4, 2, 3).contiguous()  # (B, 2, 3, H, W)
+    gt_pairs_chw = gt_frames_for_loss.reshape(B, 2, *gt_frames_for_loss.shape[1:])
+    gt_pairs_chw = gt_pairs_chw.permute(0, 1, 4, 2, 3).contiguous()
+
+    # PoseNet forward on predicted pairs
+    posenet_in_pred = posenet.preprocess_input(pred_pairs_chw)
+    posenet_out_pred = posenet(posenet_in_pred)
+    pred_pose = posenet_out_pred["pose"][..., :6]
+
+    # PoseNet forward on GT pairs (no grad needed)
+    with torch.no_grad():
+        posenet_in_gt = posenet.preprocess_input(gt_pairs_chw)
+        posenet_out_gt = posenet(posenet_in_gt)
+        gt_pose = posenet_out_gt["pose"][..., :6]
+
+    pose_loss = (pred_pose - gt_pose).pow(2).mean()
+
+    # Contest formula: 100 * seg + sqrt(10 * pose) + 25 * rate
+    # Rate is fixed (archive size), so we optimize seg + pose only
+    total = cfg.phase2_seg_weight * seg_loss + cfg.phase2_pose_weight * pose_loss
+
+    metrics = {
+        "seg_loss": seg_loss.item(),
+        "pose_loss": pose_loss.item(),
+        "total_loss": total.item(),
+    }
+    return total, metrics
+
+
+def train_phase1(
+    model: nn.Module,
+    masks: torch.Tensor,
+    tto_frames: torch.Tensor,
+    poses: torch.Tensor | None,
+    cfg: DistillConfig,
+    device: torch.device,
+    start_epoch: int = 0,
+) -> int:
+    """Phase 1: pixel regression warm-start.
+
+    Returns the epoch number after completion.
+    """
+    print("\n" + "=" * 70)
+    print("PHASE 1: Pixel Regression Warm-Start")
+    print("=" * 70)
+
+    model.train()
+    optimizer = torch.optim.AdamW(
+        model.parameters(), lr=cfg.phase1_lr, weight_decay=cfg.weight_decay
+    )
+    scheduler = torch.optim.lr_scheduler.CosineAnnealingLR(
+        optimizer, T_max=cfg.phase1_epochs, eta_min=cfg.phase1_lr * 0.01
+    )
+
+    n_pairs = masks.shape[0] // 2
+    best_loss = float("inf")
+    t0 = time.time()
+
+    for epoch in range(start_epoch, start_epoch + cfg.phase1_epochs):
+        epoch_loss = 0.0
+        n_batches = 0
+
+        # Shuffle pair indices
+        pair_indices = torch.randperm(n_pairs, device="cpu")
+
+        for batch_start in range(0, n_pairs, cfg.phase1_batch_size):
+            batch_end = min(batch_start + cfg.phase1_batch_size, n_pairs)
+            batch_idx = pair_indices[batch_start:batch_end]
+
+            # Get masks for this batch of pairs
+            even_idx = batch_idx * 2
+            odd_idx = batch_idx * 2 + 1
+            mask_even = masks[even_idx].to(device)
+            mask_odd = masks[odd_idx].to(device)
+
+            # Get TTO target frames
+            tto_even = tto_frames[even_idx].to(device)
+            tto_odd = tto_frames[odd_idx].to(device)
+            target_pairs = torch.stack([tto_even, tto_odd], dim=1)  # (B, 2, H, W, 3)
+
+            # Get pose conditioning
+            pose = poses[batch_idx].to(device) if poses is not None else None
+
+            # Forward pass
+            predicted_pairs = model(mask_even, mask_odd, pose=pose)  # (B, 2, H, W, 3)
+
+            # L1 loss
+            loss = compute_pixel_loss(predicted_pairs, target_pairs)
+
+            # Backward
+            optimizer.zero_grad()
+            loss.backward()
+            if cfg.grad_clip > 0:
+                nn.utils.clip_grad_norm_(model.parameters(), cfg.grad_clip)
+            optimizer.step()
+
+            epoch_loss += loss.item()
+            n_batches += 1
+
+        scheduler.step()
+        avg_loss = epoch_loss / max(n_batches, 1)
+
+        if avg_loss < best_loss:
+            best_loss = avg_loss
+
+        if (epoch - start_epoch) % cfg.log_every == 0:
+            elapsed = time.time() - t0
+            lr = optimizer.param_groups[0]["lr"]
+            print(
+                f"  [Phase1] epoch {epoch:5d} | loss {avg_loss:.4f} | "
+                f"best {best_loss:.4f} | lr {lr:.2e} | {elapsed:.0f}s"
+            )
+
+        if (epoch - start_epoch) % cfg.checkpoint_every == 0 and epoch > start_epoch:
+            _save_checkpoint(model, optimizer, epoch, "phase1", cfg)
+
+    _save_checkpoint(model, optimizer, start_epoch + cfg.phase1_epochs, "phase1_final", cfg)
+    print(f"  Phase 1 complete. Best L1: {best_loss:.4f}")
+    return start_epoch + cfg.phase1_epochs
+
+
+def train_phase2(
+    model: nn.Module,
+    masks: torch.Tensor,
+    tto_frames: torch.Tensor,
+    gt_frames: list[torch.Tensor],
+    poses: torch.Tensor | None,
+    posenet: torch.nn.Module,
+    segnet: torch.nn.Module,
+    cfg: DistillConfig,
+    device: torch.device,
+    start_epoch: int = 0,
+) -> tuple[int, torch.Tensor]:
+    """Phase 2: scorer-guided fine-tuning.
+
+    Returns (final_epoch, per_pair_difficulty).
+    """
+    print("\n" + "=" * 70)
+    print("PHASE 2: Scorer-Guided Fine-Tuning")
+    print("=" * 70)
+
+    model.train()
+    optimizer = torch.optim.AdamW(
+        model.parameters(), lr=cfg.phase2_lr, weight_decay=cfg.weight_decay
+    )
+    scheduler = torch.optim.lr_scheduler.CosineAnnealingLR(
+        optimizer, T_max=cfg.phase2_epochs, eta_min=cfg.phase2_lr * 0.01
+    )
+
+    n_pairs = masks.shape[0] // 2
+    n_frames = masks.shape[0]
+    best_score = float("inf")
+    per_pair_loss = torch.zeros(n_pairs)
+    t0 = time.time()
+
+    # Prepare GT frames as tensors at scorer resolution
+    from tac.camera import SEGNET_INPUT_H, SEGNET_INPUT_W
+
+    gt_tensor = torch.stack(gt_frames[:n_frames]).float()  # (N, H, W, 3)
+    # Resize GT to scorer resolution if needed
+    if gt_tensor.shape[1] != SEGNET_INPUT_H or gt_tensor.shape[2] != SEGNET_INPUT_W:
+        gt_chw = gt_tensor.permute(0, 3, 1, 2)
+        gt_chw = F.interpolate(gt_chw, size=(SEGNET_INPUT_H, SEGNET_INPUT_W), mode="bilinear", align_corners=False)
+        gt_tensor = gt_chw.permute(0, 2, 3, 1).contiguous()
+
+    for epoch in range(start_epoch, start_epoch + cfg.phase2_epochs):
+        epoch_loss = 0.0
+        epoch_seg = 0.0
+        epoch_pose = 0.0
+        n_batches = 0
+
+        pair_indices = torch.randperm(n_pairs, device="cpu")
+
+        for batch_start in range(0, n_pairs, cfg.phase2_batch_size):
+            batch_end = min(batch_start + cfg.phase2_batch_size, n_pairs)
+            batch_idx = pair_indices[batch_start:batch_end]
+
+            even_idx = batch_idx * 2
+            odd_idx = batch_idx * 2 + 1
+            mask_even = masks[even_idx].to(device)
+            mask_odd = masks[odd_idx].to(device)
+
+            # GT pairs for scorer comparison
+            gt_even = gt_tensor[even_idx].to(device)
+            gt_odd = gt_tensor[odd_idx].to(device)
+            gt_pairs = torch.stack([gt_even, gt_odd], dim=1)
+
+            # Pose conditioning
+            pose = poses[batch_idx].to(device) if poses is not None else None
+
+            # Forward pass
+            predicted_pairs = model(mask_even, mask_odd, pose=pose)
+
+            # Pixel loss (anchor toward TTO quality)
+            tto_even = tto_frames[even_idx].to(device)
+            tto_odd = tto_frames[odd_idx].to(device)
+            tto_pairs = torch.stack([tto_even, tto_odd], dim=1)
+            pixel_loss = compute_pixel_loss(predicted_pairs, tto_pairs)
+
+            # Scorer loss
+            scorer_loss, metrics = compute_scorer_loss(
+                predicted_pairs, gt_pairs, posenet, segnet,
+                mask_even, mask_odd, cfg, eval_roundtrip=cfg.eval_roundtrip,
+            )
+
+            # Combined loss
+            total = cfg.phase2_pixel_weight * pixel_loss + scorer_loss
+
+            optimizer.zero_grad()
+            total.backward()
+            if cfg.grad_clip > 0:
+                nn.utils.clip_grad_norm_(model.parameters(), cfg.grad_clip)
+            optimizer.step()
+
+            epoch_loss += total.item()
+            epoch_seg += metrics["seg_loss"]
+            epoch_pose += metrics["pose_loss"]
+            n_batches += 1
+
+            # Track per-pair difficulty via EMA (detached)
+            with torch.no_grad():
+                batch_loss_val = total.item() / max(len(batch_idx), 1)
+                for idx in batch_idx:
+                    per_pair_loss[idx.item()] = 0.9 * per_pair_loss[idx.item()] + 0.1 * batch_loss_val
+
+        scheduler.step()
+        avg_loss = epoch_loss / max(n_batches, 1)
+        avg_seg = epoch_seg / max(n_batches, 1)
+        avg_pose = epoch_pose / max(n_batches, 1)
+
+        # Proxy score estimate
+        proxy_score = 100 * avg_seg + math.sqrt(max(10 * avg_pose, 0))
+        if proxy_score < best_score:
+            best_score = proxy_score
+            _save_checkpoint(model, optimizer, epoch, "phase2_best", cfg)
+
+        if (epoch - start_epoch) % cfg.log_every == 0:
+            elapsed = time.time() - t0
+            lr = optimizer.param_groups[0]["lr"]
+            print(
+                f"  [Phase2] epoch {epoch:5d} | loss {avg_loss:.4f} | "
+                f"seg {avg_seg:.5f} | pose {avg_pose:.5f} | "
+                f"proxy ~{proxy_score:.3f} | best {best_score:.3f} | "
+                f"lr {lr:.2e} | {elapsed:.0f}s"
+            )
+
+        if (epoch - start_epoch) % cfg.checkpoint_every == 0 and epoch > start_epoch:
+            _save_checkpoint(model, optimizer, epoch, "phase2", cfg)
+
+    _save_checkpoint(model, optimizer, start_epoch + cfg.phase2_epochs, "phase2_final", cfg)
+    print(f"  Phase 2 complete. Best proxy: {best_score:.3f}")
+    return start_epoch + cfg.phase2_epochs, per_pair_loss
+
+
+def train_phase3(
+    model: nn.Module,
+    masks: torch.Tensor,
+    tto_frames: torch.Tensor,
+    gt_frames: list[torch.Tensor],
+    poses: torch.Tensor | None,
+    posenet: torch.nn.Module,
+    segnet: torch.nn.Module,
+    per_pair_difficulty: torch.Tensor,
+    cfg: DistillConfig,
+    device: torch.device,
+    start_epoch: int = 0,
+) -> int:
+    """Phase 3: hard-pair fine-tuning.
+
+    Trains on the hardest pairs with increased weight.
+    Returns the final epoch number.
+    """
+    print("\n" + "=" * 70)
+    print("PHASE 3: Hard-Pair Fine-Tuning")
+    print("=" * 70)
+
+    model.train()
+    optimizer = torch.optim.AdamW(
+        model.parameters(), lr=cfg.phase3_lr, weight_decay=cfg.weight_decay
+    )
+    scheduler = torch.optim.lr_scheduler.CosineAnnealingLR(
+        optimizer, T_max=cfg.phase3_epochs, eta_min=cfg.phase3_lr * 0.1
+    )
+
+    n_pairs = masks.shape[0] // 2
+    n_frames = masks.shape[0]
+
+    # Identify hard pairs (top fraction by difficulty)
+    n_hard = max(1, int(n_pairs * cfg.hard_pair_fraction))
+    hard_indices = per_pair_difficulty.topk(n_hard).indices
+    print(f"  Hard pairs: {n_hard} (top {cfg.hard_pair_fraction*100:.0f}%)")
+    print(f"  Difficulty range: {per_pair_difficulty[hard_indices].min():.4f} - "
+          f"{per_pair_difficulty[hard_indices].max():.4f}")
+
+    # Prepare GT frames
+    from tac.camera import SEGNET_INPUT_H, SEGNET_INPUT_W
+
+    gt_tensor = torch.stack(gt_frames[:n_frames]).float()
+    if gt_tensor.shape[1] != SEGNET_INPUT_H or gt_tensor.shape[2] != SEGNET_INPUT_W:
+        gt_chw = gt_tensor.permute(0, 3, 1, 2)
+        gt_chw = F.interpolate(gt_chw, size=(SEGNET_INPUT_H, SEGNET_INPUT_W), mode="bilinear", align_corners=False)
+        gt_tensor = gt_chw.permute(0, 2, 3, 1).contiguous()
+
+    best_score = float("inf")
+    t0 = time.time()
+
+    for epoch in range(start_epoch, start_epoch + cfg.phase3_epochs):
+        epoch_loss = 0.0
+        n_batches = 0
+
+        # Sample: 50% hard pairs, 50% random (prevent catastrophic forgetting)
+        n_hard_batch = max(1, cfg.phase3_batch_size // 2)
+        n_easy_batch = cfg.phase3_batch_size - n_hard_batch
+
+        hard_perm = hard_indices[torch.randperm(len(hard_indices))]
+        easy_perm = torch.randperm(n_pairs)
+
+        for batch_start in range(0, n_hard, n_hard_batch):
+            batch_hard = hard_perm[batch_start:min(batch_start + n_hard_batch, len(hard_perm))]
+            # Random easy pairs (wrap around if needed)
+            easy_start = (batch_start * n_easy_batch // max(n_hard_batch, 1)) % n_pairs
+            easy_end = min(easy_start + n_easy_batch, n_pairs)
+            batch_easy = easy_perm[easy_start:easy_end]
+            batch_idx = torch.cat([batch_hard, batch_easy])
+
+            even_idx = batch_idx * 2
+            odd_idx = batch_idx * 2 + 1
+            mask_even = masks[even_idx].to(device)
+            mask_odd = masks[odd_idx].to(device)
+
+            gt_even = gt_tensor[even_idx].to(device)
+            gt_odd = gt_tensor[odd_idx].to(device)
+            gt_pairs = torch.stack([gt_even, gt_odd], dim=1)
+
+            pose = poses[batch_idx].to(device) if poses is not None else None
+
+            predicted_pairs = model(mask_even, mask_odd, pose=pose)
+
+            # Scorer loss
+            scorer_loss, metrics = compute_scorer_loss(
+                predicted_pairs, gt_pairs, posenet, segnet,
+                mask_even, mask_odd, cfg, eval_roundtrip=cfg.eval_roundtrip,
+            )
+
+            # Weight hard pairs more
+            # The first n_hard_batch pairs in the batch are hard
+            # Simple approach: multiply total loss by weight factor
+            # (all pairs in batch get weighted since hard pairs dominate gradients)
+            weight = (cfg.hard_pair_weight + 1.0) / 2.0  # average of hard_weight and 1.0
+            total = weight * scorer_loss
+
+            optimizer.zero_grad()
+            total.backward()
+            if cfg.grad_clip > 0:
+                nn.utils.clip_grad_norm_(model.parameters(), cfg.grad_clip)
+            optimizer.step()
+
+            epoch_loss += total.item()
+            n_batches += 1
+
+        scheduler.step()
+        avg_loss = epoch_loss / max(n_batches, 1)
+
+        if avg_loss < best_score:
+            best_score = avg_loss
+            _save_checkpoint(model, optimizer, epoch, "phase3_best", cfg)
+
+        if (epoch - start_epoch) % cfg.log_every == 0:
+            elapsed = time.time() - t0
+            lr = optimizer.param_groups[0]["lr"]
+            print(
+                f"  [Phase3] epoch {epoch:5d} | loss {avg_loss:.4f} | "
+                f"best {best_score:.4f} | lr {lr:.2e} | {elapsed:.0f}s"
+            )
+
+        if (epoch - start_epoch) % cfg.checkpoint_every == 0 and epoch > start_epoch:
+            _save_checkpoint(model, optimizer, epoch, "phase3", cfg)
+
+    _save_checkpoint(model, optimizer, start_epoch + cfg.phase3_epochs, "phase3_final", cfg)
+    print(f"  Phase 3 complete. Best loss: {best_score:.4f}")
+    return start_epoch + cfg.phase3_epochs
+
+
+# ---------------------------------------------------------------------------
+# Checkpointing and export
+# ---------------------------------------------------------------------------
+
+
+def _save_checkpoint(
+    model: nn.Module,
+    optimizer: torch.optim.Optimizer,
+    epoch: int,
+    tag: str,
+    cfg: DistillConfig,
+) -> None:
+    """Save training checkpoint."""
+    RESULTS_DIR.mkdir(parents=True, exist_ok=True)
+    path = RESULTS_DIR / f"distill_{tag}.pt"
+    torch.save(
+        {
+            "model_state_dict": model.state_dict(),
+            "optimizer_state_dict": optimizer.state_dict(),
+            "epoch": epoch,
+            "tag": tag,
+            "config": asdict(cfg),
+        },
+        path,
+    )
+    # Also save as "latest" for easy resume
+    latest_path = RESULTS_DIR / "distill_latest.pt"
+    torch.save(
+        {
+            "model_state_dict": model.state_dict(),
+            "optimizer_state_dict": optimizer.state_dict(),
+            "epoch": epoch,
+            "tag": tag,
+            "config": asdict(cfg),
+        },
+        latest_path,
+    )
+
+
+def export_model(model: nn.Module, cfg: DistillConfig) -> int:
+    """Export model to ASYM .bin format for inflate_renderer.py.
+
+    Returns archive size in bytes.
+    """
+    from tac.renderer_export import export_asymmetric_checkpoint
+
+    RESULTS_DIR.mkdir(parents=True, exist_ok=True)
+    output_path = RESULTS_DIR / "renderer_distilled.bin"
+    nbytes = export_asymmetric_checkpoint(model, output_path, default_bits=cfg.export_bits)
+    print(f"  Exported: {output_path} ({nbytes:,} bytes)")
+    return nbytes
+
+
+def run_proxy_eval(
+    model: nn.Module,
+    masks: torch.Tensor,
+    gt_frames: list[torch.Tensor],
+    poses: torch.Tensor | None,
+    posenet: torch.nn.Module,
+    segnet: torch.nn.Module,
+    device: torch.device,
+    n_frames: int = 1200,
+) -> dict[str, float]:
+    """Run proxy evaluation on the full frame set."""
+    from tac.scorer import compute_proxy_score
+
+    model.eval()
+    n_pairs = min(n_frames // 2, masks.shape[0] // 2)
+
+    # Generate all frames
+    all_frames = []
+    with torch.no_grad():
+        for i in range(0, n_pairs, 8):
+            end = min(i + 8, n_pairs)
+            even_idx = torch.arange(i * 2, end * 2, 2)
+            odd_idx = torch.arange(i * 2 + 1, end * 2 + 1, 2)
+            mask_even = masks[even_idx].to(device)
+            mask_odd = masks[odd_idx].to(device)
+            pose = poses[i:end].to(device) if poses is not None else None
+
+            pairs = model(mask_even, mask_odd, pose=pose)  # (B, 2, H, W, 3)
+            # Unpack pairs to frames
+            for j in range(pairs.shape[0]):
+                all_frames.append(pairs[j, 0].cpu())
+                all_frames.append(pairs[j, 1].cpu())
+
+    frames_tensor = torch.stack(all_frames[:n_frames])
+    result = compute_proxy_score(
+        frames_tensor, gt_frames[:n_frames],
+        posenet, segnet, device,
+        rate=0.0, simulate_resize=True,
+    )
+    model.train()
+    return result
+
+
+# ---------------------------------------------------------------------------
+# Main
+# ---------------------------------------------------------------------------
+
+
+def parse_args() -> argparse.Namespace:
+    p = argparse.ArgumentParser(
+        description="Distillation: train renderer to reproduce TTO frames",
+        formatter_class=argparse.ArgumentDefaultsHelpFormatter,
+    )
+    # Data paths
+    p.add_argument("--tto-frames", type=str, default="experiments/results/tto_v7_hinge_500/tto_frames.pt")
+    p.add_argument("--checkpoint", type=str, default="experiments/results/v5_lagrangian_renderer/renderer_best.pt")
+    p.add_argument("--gt-poses", type=str, default="experiments/results/gt_poses.pt")
+    p.add_argument("--upstream", type=str, default="upstream/")
+    p.add_argument("--output-dir", type=str, default=None)
+
+    # Architecture
+    p.add_argument("--pose-dim", type=int, default=6)
+    p.add_argument("--base-ch", type=int, default=36)
+    p.add_argument("--mid-ch", type=int, default=60)
+    p.add_argument("--depth", type=int, default=1)
+
+    # Training
+    p.add_argument("--device", type=str, default="cuda", choices=["cuda", "mps", "cpu"])
+    p.add_argument("--seed", type=int, default=42)
+    p.add_argument("--eval-roundtrip", action="store_true", default=True)
+    p.add_argument("--no-eval-roundtrip", action="store_true")
+    p.add_argument("--segnet-loss-mode", type=str, default="hinge", choices=["hinge", "xent"])
+    p.add_argument("--hinge-margin", type=float, default=0.5)
+
+    # Phase config
+    p.add_argument("--phase1-epochs", type=int, default=2000)
+    p.add_argument("--phase2-epochs", type=int, default=5000)
+    p.add_argument("--phase3-epochs", type=int, default=2000)
+    p.add_argument("--phase1-lr", type=float, default=1e-3)
+    p.add_argument("--phase2-lr", type=float, default=3e-4)
+    p.add_argument("--phase3-lr", type=float, default=1e-4)
+    p.add_argument("--phase1-batch-size", type=int, default=8)
+    p.add_argument("--phase2-batch-size", type=int, default=4)
+    p.add_argument("--phase3-batch-size", type=int, default=4)
+
+    # Scorer weights
+    p.add_argument("--seg-weight", type=float, default=100.0)
+    p.add_argument("--pose-weight", type=float, default=1.0)
+    p.add_argument("--pixel-weight", type=float, default=0.1)
+
+    # Control
+    p.add_argument("--smoke", action="store_true", help="Smoke test: tiny config")
+    p.add_argument("--resume", type=str, default=None)
+    p.add_argument("--skip-phase1", action="store_true", help="Skip Phase 1 (resume from Phase 2)")
+    p.add_argument("--only-phase1", action="store_true", help="Run only Phase 1")
+
+    # Logging
+    p.add_argument("--checkpoint-every", type=int, default=500)
+    p.add_argument("--eval-every", type=int, default=200)
+    p.add_argument("--log-every", type=int, default=50)
+
+    return p.parse_args()
+
+
+def main() -> None:
+    args = parse_args()
+
+    # Build config from args
+    cfg = DistillConfig(
+        tto_frames_path=args.tto_frames,
+        checkpoint_path=args.checkpoint,
+        gt_poses_path=args.gt_poses,
+        upstream_dir=args.upstream,
+        device=args.device,
+        seed=args.seed,
+        pose_dim=args.pose_dim,
+        base_ch=args.base_ch,
+        mid_ch=args.mid_ch,
+        depth=args.depth,
+        eval_roundtrip=args.eval_roundtrip and not args.no_eval_roundtrip,
+        segnet_loss_mode=args.segnet_loss_mode,
+        hinge_margin=args.hinge_margin,
+        phase1_epochs=args.phase1_epochs,
+        phase2_epochs=args.phase2_epochs,
+        phase3_epochs=args.phase3_epochs,
+        phase1_lr=args.phase1_lr,
+        phase2_lr=args.phase2_lr,
+        phase3_lr=args.phase3_lr,
+        phase1_batch_size=args.phase1_batch_size,
+        phase2_batch_size=args.phase2_batch_size,
+        phase3_batch_size=args.phase3_batch_size,
+        phase2_seg_weight=args.seg_weight,
+        phase2_pose_weight=args.pose_weight,
+        phase2_pixel_weight=args.pixel_weight,
+        checkpoint_every=args.checkpoint_every,
+        eval_every=args.eval_every,
+        log_every=args.log_every,
+        resume=args.resume,
+    )
+
+    # Smoke test overrides
+    if args.smoke:
+        cfg.phase1_epochs = 5
+        cfg.phase2_epochs = 5
+        cfg.phase3_epochs = 5
+        cfg.phase1_batch_size = 2
+        cfg.phase2_batch_size = 2
+        cfg.phase3_batch_size = 2
+        cfg.log_every = 1
+        cfg.checkpoint_every = 3
+        cfg.eval_every = 3
+        cfg.smoke = True
+
+    # Output directory
+    if args.output_dir:
+        global RESULTS_DIR
+        RESULTS_DIR = Path(args.output_dir)
+    RESULTS_DIR.mkdir(parents=True, exist_ok=True)
+
+    # Save config
+    with open(RESULTS_DIR / "config.json", "w") as f:
+        json.dump(asdict(cfg), f, indent=2)
+
+    print("=" * 70)
+    print("DISTILLATION TRAINING")
+    print("=" * 70)
+    print(f"  Device: {cfg.device}")
+    print(f"  Phases: {cfg.phase1_epochs} + {cfg.phase2_epochs} + {cfg.phase3_epochs} epochs")
+    print(f"  TTO frames: {cfg.tto_frames_path}")
+    print(f"  Checkpoint: {cfg.checkpoint_path}")
+    print(f"  Output: {RESULTS_DIR}")
+    print()
+
+    # Setup
+    torch.manual_seed(cfg.seed)
+    device = torch.device(cfg.device)
+
+    # Determine number of frames
+    n_frames = 1200
+    if cfg.smoke:
+        n_frames = 20
+        print("  [SMOKE TEST] Using 20 frames only")
+
+    # Load TTO frames
+    print("Loading TTO target frames...")
+    tto_frames = load_tto_frames(cfg.tto_frames_path, cfg.device, n_frames)
+
+    # Load GT poses (optional but recommended for FiLM)
+    poses = None
+    if cfg.pose_dim > 0 and Path(cfg.gt_poses_path).exists():
+        print("Loading GT poses for FiLM conditioning...")
+        poses_data = torch.load(cfg.gt_poses_path, map_location="cpu", weights_only=True)
+        if isinstance(poses_data, dict):
+            poses = poses_data.get("poses", poses_data.get("gt_poses", None))
+        else:
+            poses = poses_data
+        if poses is not None:
+            n_pairs = n_frames // 2
+            poses = poses[:n_pairs].float()
+            print(f"  GT poses loaded: {poses.shape}")
+    elif cfg.pose_dim > 0:
+        print(f"  WARNING: pose_dim={cfg.pose_dim} but gt_poses not found at {cfg.gt_poses_path}")
+        print("  FiLM conditioning will use zero vectors (no benefit)")
+
+    # Load scorers (needed for Phase 2+3 and eval)
+    print("Loading scorers...")
+    upstream_dir = cfg.upstream_dir
+    if UPSTREAM_ROOT is not None:
+        upstream_dir = str(UPSTREAM_ROOT)
+    from tac.scorer import load_differentiable_scorers
+    posenet, segnet = load_differentiable_scorers(upstream_dir, device=device)
+    print("  Scorers loaded (differentiable PoseNet + frozen SegNet)")
+
+    # Load GT video for scorer eval
+    print("Loading GT video...")
+    gt_frames = load_gt_video(upstream_dir, n_frames)
+
+    # Extract masks
+    print("Extracting SegNet masks from GT...")
+    masks = load_masks(gt_frames, segnet, device)
+
+    # Resize TTO frames to match mask resolution if needed
+    from tac.camera import SEGNET_INPUT_H, SEGNET_INPUT_W
+    if tto_frames.shape[1] != SEGNET_INPUT_H or tto_frames.shape[2] != SEGNET_INPUT_W:
+        print(f"  Resizing TTO frames from {tto_frames.shape[1:3]} to ({SEGNET_INPUT_H}, {SEGNET_INPUT_W})...")
+        tto_chw = tto_frames.permute(0, 3, 1, 2)
+        tto_chw = F.interpolate(tto_chw, size=(SEGNET_INPUT_H, SEGNET_INPUT_W), mode="bilinear", align_corners=False)
+        tto_frames = tto_chw.permute(0, 2, 3, 1).contiguous()
+
+    # Create model
+    print("Creating model...")
+    model = create_model(cfg, device)
+
+    # Load pretrained weights
+    if cfg.resume:
+        print(f"Resuming from {cfg.resume}...")
+        ckpt = torch.load(cfg.resume, map_location=device, weights_only=True)
+        model.load_state_dict(ckpt["model_state_dict"])
+        start_epoch = ckpt.get("epoch", 0)
+        resume_tag = ckpt.get("tag", "unknown")
+        print(f"  Resumed from epoch {start_epoch}, tag={resume_tag}")
+    elif Path(cfg.checkpoint_path).exists():
+        print(f"Loading pretrained weights from {cfg.checkpoint_path}...")
+        load_checkpoint_weights(model, cfg.checkpoint_path, device)
+        start_epoch = 0
+    else:
+        print("  No checkpoint found, training from scratch")
+        start_epoch = 0
+
+    # ── Training phases ───────────────────────────────────────────────
+    current_epoch = start_epoch
+    per_pair_difficulty = None
+
+    # Phase 1: pixel regression
+    if not args.skip_phase1 and (not cfg.resume or "phase1" in (cfg.resume or "")):
+        current_epoch = train_phase1(
+            model, masks, tto_frames, poses, cfg, device, start_epoch=current_epoch,
+        )
+        gc.collect()
+        if device.type == "cuda":
+            torch.cuda.empty_cache()
+
+    if args.only_phase1:
+        print("\n  --only-phase1 set, stopping after Phase 1.")
+        export_model(model, cfg)
+        return
+
+    # Phase 2: scorer-guided
+    current_epoch, per_pair_difficulty = train_phase2(
+        model, masks, tto_frames, gt_frames, poses,
+        posenet, segnet, cfg, device, start_epoch=current_epoch,
+    )
+    gc.collect()
+    if device.type == "cuda":
+        torch.cuda.empty_cache()
+
+    # Proxy eval after Phase 2
+    print("\nRunning proxy evaluation after Phase 2...")
+    result = run_proxy_eval(model, masks, gt_frames, poses, posenet, segnet, device, n_frames)
+    print(f"  Proxy score: {result.get('score', 'N/A')}")
+    print(f"  PoseNet: {result.get('pose', 'N/A'):.5f}, SegNet: {result.get('seg', 'N/A'):.5f}")
+
+    # Phase 3: hard-pair fine-tuning
+    if per_pair_difficulty is not None:
+        current_epoch = train_phase3(
+            model, masks, tto_frames, gt_frames, poses,
+            posenet, segnet, per_pair_difficulty, cfg, device,
+            start_epoch=current_epoch,
+        )
+
+    # Final eval
+    print("\nRunning final proxy evaluation...")
+    result = run_proxy_eval(model, masks, gt_frames, poses, posenet, segnet, device, n_frames)
+    print(f"  FINAL proxy score: {result.get('score', 'N/A')}")
+    print(f"  PoseNet: {result.get('pose', 'N/A'):.5f}, SegNet: {result.get('seg', 'N/A'):.5f}")
+
+    # Export
+    print("\nExporting model...")
+    archive_bytes = export_model(model, cfg)
+    uncompressed = n_frames * SEGNET_INPUT_H * SEGNET_INPUT_W * 3
+    rate = archive_bytes / uncompressed
+    print(f"  Rate: {rate:.6f} (archive {archive_bytes:,} / uncompressed {uncompressed:,})")
+
+    # Save final results
+    final_results = {
+        "proxy_score": result.get("score"),
+        "pose_dist": result.get("pose"),
+        "seg_dist": result.get("seg"),
+        "rate": rate,
+        "archive_bytes": archive_bytes,
+        "total_epochs": current_epoch,
+        "config": asdict(cfg),
+    }
+    with open(RESULTS_DIR / "results.json", "w") as f:
+        json.dump(final_results, f, indent=2)
+
+    print("\n" + "=" * 70)
+    print("DISTILLATION COMPLETE")
+    print(f"  Results: {RESULTS_DIR / 'results.json'}")
+    print(f"  Best checkpoint: {RESULTS_DIR / 'distill_phase3_best.pt'}")
+    print(f"  Export: {RESULTS_DIR / 'renderer_distilled.bin'}")
+    print("=" * 70)
+
+
+if __name__ == "__main__":
+    main()

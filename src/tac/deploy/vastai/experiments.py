@@ -195,6 +195,34 @@ EXPERIMENTS: dict[str, ExperimentConfig] = {
         needs_checkpoint="renderer_best.pt",
         timeout_hours=3,
     ),
+    # ── Distillation: train renderer to reproduce TTO frames ──
+    "distill_full": _exp(
+        name="distill_full",
+        script="experiments/train_distill.py",
+        args=(
+            "--device cuda --pose-dim 6 --eval-roundtrip "
+            "--segnet-loss-mode hinge --hinge-margin 0.5 "
+            "--phase1-epochs 2000 --phase2-epochs 5000 --phase3-epochs 2000 "
+            "--tto-frames experiments/results/tto_v7_hinge_500/tto_frames.pt "
+            "--checkpoint renderer_best.pt "
+            "--gt-poses experiments/results/gt_poses.pt"
+        ),
+        needs_checkpoint="renderer_best.pt",
+        timeout_hours=6,
+    ),
+    "distill_phase1_only": _exp(
+        name="distill_phase1_only",
+        script="experiments/train_distill.py",
+        args=(
+            "--device cuda --pose-dim 6 --only-phase1 "
+            "--phase1-epochs 2000 "
+            "--tto-frames experiments/results/tto_v7_hinge_500/tto_frames.pt "
+            "--checkpoint renderer_best.pt "
+            "--gt-poses experiments/results/gt_poses.pt"
+        ),
+        needs_checkpoint="renderer_best.pt",
+        timeout_hours=1,
+    ),
 }
 """Registry of all known Vast.ai experiments.
 
