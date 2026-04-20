@@ -1,0 +1,303 @@
+[config] device=cuda, n_frames=1200, tto_steps=500, tto_lr=0.005, batch_pairs=10
+[config] seg_weight=100.0, pose_weight=10.0, compress_weight=0.5
+[config] early_stop_patience=500, use_embedding_loss=True, seg_odd_only=True, antialias_weight=0.0, lr_schedule=constant, segnet_loss_mode=hinge, hinge_margin=0.5, phase2_segnet_only=False, phase2_steps=200
+[config] checkpoint=renderer_best.pt
+[config] video=upstream/videos/0.mkv
+[config] output_dir=experiments/results/tto_v7_hinge_500
+[checkpoint] Verified MD5 prefix: cff8dca4
+
+[1/8] Loading scorers...
+[1/8] Scorers loaded + patched differentiable in 20.8s
+
+[2/8] Loading renderer...
+[renderer] Loaded 287,019 params from renderer_best.pt
+[2/8] Renderer loaded in 0.3s
+
+[3/8] Decoding GT video (1200 frames)...
+[3/8] Decoded 1200 frames (torch.Size([384, 512, 3])) in 106.9s
+
+[4/8] Extracting SegNet masks from GT frames...
+[4/8] Extracted 1200 masks (torch.Size([1200, 384, 512])) in 9.7s
+
+[5/8] Generating renderer frames...
+[5/8] Generated 1200 frames (torch.Size([1200, 384, 512, 3])) in 10.2s
+
+[6/8] Extracting GT pose targets...
+[6/8] Extracted 600 pose targets (torch.Size([600, 6])) in 5.2s
+[6/8] Extracting GT pose embeddings for embedding loss...
+[6/8] Extracted 600 embeddings (torch.Size([600, 512])) in 5.2s
+
+[...] Computing baseline proxy score (renderer only)...
+[baseline] score=0.6340 | seg=0.002146 (0.2146) | pose=0.017585 (0.4193) | rate=0.0000 (0.0000)
+
+[vram] Estimated peak VRAM: 3300 MB (10 pairs/batch = 20 frames)
+
+[7/8] Running batched TTO...
+
+[tto] Starting batched TTO: 600 pairs in 60 batches (10 pairs/batch, 500 steps, lr=0.005, patience=500, embedding_loss=512d, seg_odd_only=True)
+
+[tto] Batch 1/60: pairs [0:10] = 10 pairs, 20 frames
+[tto] Batch 1/60 done in 43.0s (2.15s/frame)
+[tto] Checkpoint saved: experiments/results/tto_v7_hinge_500/tto_batch_000.pt
+
+[tto] Batch 2/60: pairs [10:20] = 10 pairs, 20 frames
+[tto] Batch 2/60 done in 40.5s (2.03s/frame)
+[tto] Checkpoint saved: experiments/results/tto_v7_hinge_500/tto_batch_001.pt
+
+[tto] Batch 3/60: pairs [20:30] = 10 pairs, 20 frames
+[tto] Batch 3/60 done in 40.6s (2.03s/frame)
+[tto] Checkpoint saved: experiments/results/tto_v7_hinge_500/tto_batch_002.pt
+
+[tto] Batch 4/60: pairs [30:40] = 10 pairs, 20 frames
+[tto] Batch 4/60 done in 40.0s (2.00s/frame)
+[tto] Checkpoint saved: experiments/results/tto_v7_hinge_500/tto_batch_003.pt
+
+[tto] Batch 5/60: pairs [40:50] = 10 pairs, 20 frames
+[tto] Batch 5/60 done in 39.0s (1.95s/frame)
+[tto] Checkpoint saved: experiments/results/tto_v7_hinge_500/tto_batch_004.pt
+
+[tto] Batch 6/60: pairs [50:60] = 10 pairs, 20 frames
+[tto] Batch 6/60 done in 39.9s (1.99s/frame)
+[tto] Checkpoint saved: experiments/results/tto_v7_hinge_500/tto_batch_005.pt
+
+[tto] Batch 7/60: pairs [60:70] = 10 pairs, 20 frames
+[tto] Batch 7/60 done in 39.8s (1.99s/frame)
+[tto] Checkpoint saved: experiments/results/tto_v7_hinge_500/tto_batch_006.pt
+
+[tto] Batch 8/60: pairs [70:80] = 10 pairs, 20 frames
+[tto] Batch 8/60 done in 39.3s (1.96s/frame)
+[tto] Checkpoint saved: experiments/results/tto_v7_hinge_500/tto_batch_007.pt
+
+[tto] Batch 9/60: pairs [80:90] = 10 pairs, 20 frames
+[tto] Batch 9/60 done in 39.9s (1.99s/frame)
+[tto] Checkpoint saved: experiments/results/tto_v7_hinge_500/tto_batch_008.pt
+
+[tto] Batch 10/60: pairs [90:100] = 10 pairs, 20 frames
+[tto] Batch 10/60 done in 40.1s (2.00s/frame)
+[tto] Checkpoint saved: experiments/results/tto_v7_hinge_500/tto_batch_009.pt
+
+[tto] Batch 11/60: pairs [100:110] = 10 pairs, 20 frames
+[tto] Batch 11/60 done in 39.8s (1.99s/frame)
+[tto] Checkpoint saved: experiments/results/tto_v7_hinge_500/tto_batch_010.pt
+
+[tto] Batch 12/60: pairs [110:120] = 10 pairs, 20 frames
+[tto] Batch 12/60 done in 39.6s (1.98s/frame)
+[tto] Checkpoint saved: experiments/results/tto_v7_hinge_500/tto_batch_011.pt
+
+[tto] Batch 13/60: pairs [120:130] = 10 pairs, 20 frames
+[tto] Batch 13/60 done in 38.8s (1.94s/frame)
+[tto] Checkpoint saved: experiments/results/tto_v7_hinge_500/tto_batch_012.pt
+
+[tto] Batch 14/60: pairs [130:140] = 10 pairs, 20 frames
+[tto] Batch 14/60 done in 39.4s (1.97s/frame)
+[tto] Checkpoint saved: experiments/results/tto_v7_hinge_500/tto_batch_013.pt
+
+[tto] Batch 15/60: pairs [140:150] = 10 pairs, 20 frames
+[tto] Batch 15/60 done in 39.7s (1.99s/frame)
+[tto] Checkpoint saved: experiments/results/tto_v7_hinge_500/tto_batch_014.pt
+
+[tto] Batch 16/60: pairs [150:160] = 10 pairs, 20 frames
+[tto] Batch 16/60 done in 39.1s (1.96s/frame)
+[tto] Checkpoint saved: experiments/results/tto_v7_hinge_500/tto_batch_015.pt
+
+[tto] Batch 17/60: pairs [160:170] = 10 pairs, 20 frames
+[tto] Batch 17/60 done in 39.1s (1.96s/frame)
+[tto] Checkpoint saved: experiments/results/tto_v7_hinge_500/tto_batch_016.pt
+
+[tto] Batch 18/60: pairs [170:180] = 10 pairs, 20 frames
+[tto] Batch 18/60 done in 39.0s (1.95s/frame)
+[tto] Checkpoint saved: experiments/results/tto_v7_hinge_500/tto_batch_017.pt
+
+[tto] Batch 19/60: pairs [180:190] = 10 pairs, 20 frames
+[tto] Batch 19/60 done in 38.6s (1.93s/frame)
+[tto] Checkpoint saved: experiments/results/tto_v7_hinge_500/tto_batch_018.pt
+
+[tto] Batch 20/60: pairs [190:200] = 10 pairs, 20 frames
+[tto] Batch 20/60 done in 40.0s (2.00s/frame)
+[tto] Checkpoint saved: experiments/results/tto_v7_hinge_500/tto_batch_019.pt
+
+[tto] Batch 21/60: pairs [200:210] = 10 pairs, 20 frames
+[tto] Batch 21/60 done in 39.7s (1.98s/frame)
+[tto] Checkpoint saved: experiments/results/tto_v7_hinge_500/tto_batch_020.pt
+
+[tto] Batch 22/60: pairs [210:220] = 10 pairs, 20 frames
+[tto] Batch 22/60 done in 38.7s (1.94s/frame)
+[tto] Checkpoint saved: experiments/results/tto_v7_hinge_500/tto_batch_021.pt
+
+[tto] Batch 23/60: pairs [220:230] = 10 pairs, 20 frames
+[tto] Batch 23/60 done in 39.2s (1.96s/frame)
+[tto] Checkpoint saved: experiments/results/tto_v7_hinge_500/tto_batch_022.pt
+
+[tto] Batch 24/60: pairs [230:240] = 10 pairs, 20 frames
+[tto] Batch 24/60 done in 38.8s (1.94s/frame)
+[tto] Checkpoint saved: experiments/results/tto_v7_hinge_500/tto_batch_023.pt
+
+[tto] Batch 25/60: pairs [240:250] = 10 pairs, 20 frames
+[tto] Batch 25/60 done in 38.8s (1.94s/frame)
+[tto] Checkpoint saved: experiments/results/tto_v7_hinge_500/tto_batch_024.pt
+
+[tto] Batch 26/60: pairs [250:260] = 10 pairs, 20 frames
+[tto] Batch 26/60 done in 39.8s (1.99s/frame)
+[tto] Checkpoint saved: experiments/results/tto_v7_hinge_500/tto_batch_025.pt
+
+[tto] Batch 27/60: pairs [260:270] = 10 pairs, 20 frames
+[tto] Batch 27/60 done in 39.8s (1.99s/frame)
+[tto] Checkpoint saved: experiments/results/tto_v7_hinge_500/tto_batch_026.pt
+
+[tto] Batch 28/60: pairs [270:280] = 10 pairs, 20 frames
+[tto] Batch 28/60 done in 41.6s (2.08s/frame)
+[tto] Checkpoint saved: experiments/results/tto_v7_hinge_500/tto_batch_027.pt
+
+[tto] Batch 29/60: pairs [280:290] = 10 pairs, 20 frames
+[tto] Batch 29/60 done in 41.1s (2.05s/frame)
+[tto] Checkpoint saved: experiments/results/tto_v7_hinge_500/tto_batch_028.pt
+
+[tto] Batch 30/60: pairs [290:300] = 10 pairs, 20 frames
+[tto] Batch 30/60 done in 39.6s (1.98s/frame)
+[tto] Checkpoint saved: experiments/results/tto_v7_hinge_500/tto_batch_029.pt
+
+[tto] Batch 31/60: pairs [300:310] = 10 pairs, 20 frames
+[tto] Batch 31/60 done in 39.2s (1.96s/frame)
+[tto] Checkpoint saved: experiments/results/tto_v7_hinge_500/tto_batch_030.pt
+
+[tto] Batch 32/60: pairs [310:320] = 10 pairs, 20 frames
+[tto] Batch 32/60 done in 41.3s (2.06s/frame)
+[tto] Checkpoint saved: experiments/results/tto_v7_hinge_500/tto_batch_031.pt
+
+[tto] Batch 33/60: pairs [320:330] = 10 pairs, 20 frames
+[tto] Batch 33/60 done in 39.8s (1.99s/frame)
+[tto] Checkpoint saved: experiments/results/tto_v7_hinge_500/tto_batch_032.pt
+
+[tto] Batch 34/60: pairs [330:340] = 10 pairs, 20 frames
+[tto] Batch 34/60 done in 40.2s (2.01s/frame)
+[tto] Checkpoint saved: experiments/results/tto_v7_hinge_500/tto_batch_033.pt
+
+[tto] Batch 35/60: pairs [340:350] = 10 pairs, 20 frames
+[tto] Batch 35/60 done in 39.5s (1.97s/frame)
+[tto] Checkpoint saved: experiments/results/tto_v7_hinge_500/tto_batch_034.pt
+
+[tto] Batch 36/60: pairs [350:360] = 10 pairs, 20 frames
+[tto] Batch 36/60 done in 38.5s (1.92s/frame)
+[tto] Checkpoint saved: experiments/results/tto_v7_hinge_500/tto_batch_035.pt
+
+[tto] Batch 37/60: pairs [360:370] = 10 pairs, 20 frames
+[tto] Batch 37/60 done in 40.4s (2.02s/frame)
+[tto] Checkpoint saved: experiments/results/tto_v7_hinge_500/tto_batch_036.pt
+
+[tto] Batch 38/60: pairs [370:380] = 10 pairs, 20 frames
+[tto] Batch 38/60 done in 39.9s (1.99s/frame)
+[tto] Checkpoint saved: experiments/results/tto_v7_hinge_500/tto_batch_037.pt
+
+[tto] Batch 39/60: pairs [380:390] = 10 pairs, 20 frames
+[tto] Batch 39/60 done in 40.6s (2.03s/frame)
+[tto] Checkpoint saved: experiments/results/tto_v7_hinge_500/tto_batch_038.pt
+
+[tto] Batch 40/60: pairs [390:400] = 10 pairs, 20 frames
+[tto] Batch 40/60 done in 39.6s (1.98s/frame)
+[tto] Checkpoint saved: experiments/results/tto_v7_hinge_500/tto_batch_039.pt
+
+[tto] Batch 41/60: pairs [400:410] = 10 pairs, 20 frames
+[tto] Batch 41/60 done in 41.0s (2.05s/frame)
+[tto] Checkpoint saved: experiments/results/tto_v7_hinge_500/tto_batch_040.pt
+
+[tto] Batch 42/60: pairs [410:420] = 10 pairs, 20 frames
+[tto] Batch 42/60 done in 41.5s (2.08s/frame)
+[tto] Checkpoint saved: experiments/results/tto_v7_hinge_500/tto_batch_041.pt
+
+[tto] Batch 43/60: pairs [420:430] = 10 pairs, 20 frames
+[tto] Batch 43/60 done in 40.4s (2.02s/frame)
+[tto] Checkpoint saved: experiments/results/tto_v7_hinge_500/tto_batch_042.pt
+
+[tto] Batch 44/60: pairs [430:440] = 10 pairs, 20 frames
+[tto] Batch 44/60 done in 41.0s (2.05s/frame)
+[tto] Checkpoint saved: experiments/results/tto_v7_hinge_500/tto_batch_043.pt
+
+[tto] Batch 45/60: pairs [440:450] = 10 pairs, 20 frames
+[tto] Batch 45/60 done in 40.0s (2.00s/frame)
+[tto] Checkpoint saved: experiments/results/tto_v7_hinge_500/tto_batch_044.pt
+
+[tto] Batch 46/60: pairs [450:460] = 10 pairs, 20 frames
+[tto] Batch 46/60 done in 40.7s (2.04s/frame)
+[tto] Checkpoint saved: experiments/results/tto_v7_hinge_500/tto_batch_045.pt
+
+[tto] Batch 47/60: pairs [460:470] = 10 pairs, 20 frames
+[tto] Batch 47/60 done in 40.5s (2.03s/frame)
+[tto] Checkpoint saved: experiments/results/tto_v7_hinge_500/tto_batch_046.pt
+
+[tto] Batch 48/60: pairs [470:480] = 10 pairs, 20 frames
+[tto] Batch 48/60 done in 40.5s (2.02s/frame)
+[tto] Checkpoint saved: experiments/results/tto_v7_hinge_500/tto_batch_047.pt
+
+[tto] Batch 49/60: pairs [480:490] = 10 pairs, 20 frames
+[tto] Batch 49/60 done in 41.3s (2.06s/frame)
+[tto] Checkpoint saved: experiments/results/tto_v7_hinge_500/tto_batch_048.pt
+
+[tto] Batch 50/60: pairs [490:500] = 10 pairs, 20 frames
+[tto] Batch 50/60 done in 40.3s (2.01s/frame)
+[tto] Checkpoint saved: experiments/results/tto_v7_hinge_500/tto_batch_049.pt
+
+[tto] Batch 51/60: pairs [500:510] = 10 pairs, 20 frames
+[tto] Batch 51/60 done in 40.3s (2.02s/frame)
+[tto] Checkpoint saved: experiments/results/tto_v7_hinge_500/tto_batch_050.pt
+
+[tto] Batch 52/60: pairs [510:520] = 10 pairs, 20 frames
+[tto] Batch 52/60 done in 40.2s (2.01s/frame)
+[tto] Checkpoint saved: experiments/results/tto_v7_hinge_500/tto_batch_051.pt
+
+[tto] Batch 53/60: pairs [520:530] = 10 pairs, 20 frames
+[tto] Batch 53/60 done in 40.1s (2.00s/frame)
+[tto] Checkpoint saved: experiments/results/tto_v7_hinge_500/tto_batch_052.pt
+
+[tto] Batch 54/60: pairs [530:540] = 10 pairs, 20 frames
+[tto] Batch 54/60 done in 38.2s (1.91s/frame)
+[tto] Checkpoint saved: experiments/results/tto_v7_hinge_500/tto_batch_053.pt
+
+[tto] Batch 55/60: pairs [540:550] = 10 pairs, 20 frames
+[tto] Batch 55/60 done in 39.4s (1.97s/frame)
+[tto] Checkpoint saved: experiments/results/tto_v7_hinge_500/tto_batch_054.pt
+
+[tto] Batch 56/60: pairs [550:560] = 10 pairs, 20 frames
+[tto] Batch 56/60 done in 38.8s (1.94s/frame)
+[tto] Checkpoint saved: experiments/results/tto_v7_hinge_500/tto_batch_055.pt
+
+[tto] Batch 57/60: pairs [560:570] = 10 pairs, 20 frames
+[tto] Batch 57/60 done in 38.9s (1.94s/frame)
+[tto] Checkpoint saved: experiments/results/tto_v7_hinge_500/tto_batch_056.pt
+
+[tto] Batch 58/60: pairs [570:580] = 10 pairs, 20 frames
+[tto] Batch 58/60 done in 39.0s (1.95s/frame)
+[tto] Checkpoint saved: experiments/results/tto_v7_hinge_500/tto_batch_057.pt
+
+[tto] Batch 59/60: pairs [580:590] = 10 pairs, 20 frames
+[tto] Batch 59/60 done in 39.5s (1.98s/frame)
+[tto] Checkpoint saved: experiments/results/tto_v7_hinge_500/tto_batch_058.pt
+
+[tto] Batch 60/60: pairs [590:600] = 10 pairs, 20 frames
+[tto] Batch 60/60 done in 39.1s (1.95s/frame)
+[tto] Checkpoint saved: experiments/results/tto_v7_hinge_500/tto_batch_059.pt
+
+[7/8] TTO completed in 2408.8s (2.01s/frame)
+
+[8/8] Computing TTO proxy score...
+
+========================================================================
+RENDERER + TTO RESULTS
+========================================================================
+  Baseline (renderer only):
+    score = 0.6340
+    seg   = 0.002146  (contribution: 0.2146)
+    pose  = 0.017585  (contribution: 0.4193)
+  After TTO:
+    score = 0.1947
+    seg   = 0.000745  (contribution: 0.0745)
+    pose  = 0.001444  (contribution: 0.1202)
+  Improvement:
+    score: +0.4393 (better)
+    pose:  +0.016141
+    seg:   +0.001401
+  Timing:
+    total = 2590.3s | TTO = 2408.8s | scorers = 20.8s | decode = 106.9s
+========================================================================
+
+[save] TTO frames saved to experiments/results/tto_v7_hinge_500/tto_frames.pt (708MB uint8)
+[save] Results saved to experiments/results/tto_v7_hinge_500/results.json

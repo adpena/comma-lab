@@ -1,0 +1,17 @@
+=== Evaluation config ===
+  batch_size: 16
+  device: cuda
+  num_threads: 2
+  prefetch_queue_depth: 4
+  report: experiments/results/tto_v7_hinge_500/auth_report.txt
+  seed: 1234
+  submission_dir: experiments/results/tto_v7_hinge_500/submission
+  uncompressed_dir: upstream/videos
+  video_names_file: upstream/public_test_video_names.txt
+=== Evaluation results over 600 samples ===
+  Average PoseNet Distortion: 0.00249562
+  Average SegNet Distortion: 0.00093970
+  Submission file size: 183,780 bytes
+  Original uncompressed size: 37,545,489 bytes
+  Compression Rate: 0.00489486
+  Final score: 100*segnet_dist + √(10*posenet_dist) + 25*rate = 0.37
