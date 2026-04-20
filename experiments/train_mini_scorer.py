@@ -84,15 +84,29 @@ def load_renderer(checkpoint_path: str, device: torch.device) -> torch.nn.Module
         state_dict = ckpt
         config = {}
 
-    # Infer architecture from state dict
+    # Reconstruct architecture from config (must match training params)
     num_classes = config.get("num_classes", 5)
     base_ch = config.get("base_ch", 36)
     mid_ch = config.get("mid_ch", 60)
+    motion_hidden = config.get("motion_hidden", 32)
+    depth = config.get("depth", config.get("renderer_depth", 1))
+    max_flow_px = config.get("max_flow_px", 20.0)
+    max_residual = config.get("max_residual", 20.0)
+    pose_dim = config.get("pose_dim", 0)
+    use_dsconv = config.get("use_dsconv", False)
+    flow_only = config.get("flow_only", False)
 
     renderer = AsymmetricPairGenerator(
         num_classes=num_classes,
         base_ch=base_ch,
         mid_ch=mid_ch,
+        motion_hidden=motion_hidden,
+        depth=depth,
+        max_flow_px=max_flow_px,
+        max_residual=max_residual,
+        pose_dim=pose_dim,
+        use_dsconv=use_dsconv,
+        flow_only=flow_only,
     )
     renderer.load_state_dict(state_dict, strict=False)
     renderer = renderer.to(device).eval()
