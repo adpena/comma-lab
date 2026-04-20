@@ -189,7 +189,7 @@ EXPERIMENTS: dict[str, ExperimentConfig] = {
             "--tto-steps 500 --tto-lr 0.005 --batch-pairs 10 "
             "--seg-weight 100 --pose-weight 10 --compress-weight 0.5 "
             "--use-embedding-loss --seg-odd-only --early-stop-patience 500 "
-            "--simulate-resize "
+            "--simulate-resize --eval-roundtrip "
             "--segnet-loss-mode hinge --hinge-margin 0.5"
         ),
         needs_checkpoint="renderer_best.pt",

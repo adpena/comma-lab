@@ -83,7 +83,7 @@ def main() -> None:
     args = parser.parse_args()
 
     upstream = Path(args.upstream)
-    if upstream not in sys.path:
+    if str(upstream) not in sys.path:
         sys.path.insert(0, str(upstream))
 
     video_path = Path(args.video) if args.video else upstream / "videos" / "0.mkv"

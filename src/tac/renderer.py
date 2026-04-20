@@ -1536,9 +1536,9 @@ class FiLMLayer(nn.Module):
         super().__init__()
         self.scale = nn.Linear(signal_dim, feature_dim)
         self.shift = nn.Linear(signal_dim, feature_dim)
-        # Init: gamma=1, beta=0 -> identity at start (like CLADE)
-        nn.init.ones_(self.scale.weight[:, 0])  # first signal dim -> 1
-        nn.init.zeros_(self.scale.weight[:, 1:])
+        # Init: scale(signal)=0, shift(signal)=0 -> gamma=1, beta=0 (identity)
+        # The +1.0 residual in forward() already gives identity when scale output is 0.
+        nn.init.zeros_(self.scale.weight)
         nn.init.zeros_(self.scale.bias)
         nn.init.zeros_(self.shift.weight)
         nn.init.zeros_(self.shift.bias)
