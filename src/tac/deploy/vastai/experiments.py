@@ -178,6 +178,23 @@ EXPERIMENTS: dict[str, ExperimentConfig] = {
         ),
         timeout_hours=1,
     ),
+    # ── v7 TTO: hinge + eval roundtrip + FiLM (when FiLM conditioning is available) ──
+    # Adds --simulate-resize and eval-roundtrip to hinge baseline from v6.
+    # FiLM pose conditioning gated: enable once FiLM arch lands in inflate_renderer.py.
+    "tto_v7_hinge_roundtrip": _exp(
+        name="tto_v7_hinge_roundtrip",
+        script="experiments/renderer_tto.py",
+        args=(
+            "--checkpoint renderer_best.pt --device cuda --n-frames 1200 "
+            "--tto-steps 500 --tto-lr 0.005 --batch-pairs 10 "
+            "--seg-weight 100 --pose-weight 10 --compress-weight 0.5 "
+            "--use-embedding-loss --seg-odd-only --early-stop-patience 500 "
+            "--simulate-resize "
+            "--segnet-loss-mode hinge --hinge-margin 0.5"
+        ),
+        needs_checkpoint="renderer_best.pt",
+        timeout_hours=3,
+    ),
 }
 """Registry of all known Vast.ai experiments.
 
