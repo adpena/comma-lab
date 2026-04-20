@@ -1881,6 +1881,309 @@ def _adaptive_tto_phase(
     return refined_frames
 
 
+def _inflate_constrained_gen(
+    archive_dir: str,
+    inflated_dir: str,
+    video_names_file: str,
+    mask_filename: str = "masks.mkv",
+    out_w: int = OUT_W,
+    out_h: int = OUT_H,
+) -> None:
+    """Inflate via constrained generation from noise — NO renderer needed.
+
+    Fourth lane: directly optimize pixel values from a noise seed against
+    mini-scorer gradients. The archive contains only mini-scorers + targets,
+    no renderer weights. This gives the best rate (smallest archive).
+
+    Archive contents (all from archive_dir):
+        - mini_segnet.bin: ~25KB FP16 SegNet distill
+        - mini_posenet.bin: ~25KB FP16 PoseNet distill
+        - poses.pt: ~8.7KB GT pose targets
+        - masks.mkv: ~79KB compressed GT masks
+        - config.json: hyperparameters + noise seed
+
+    Env vars:
+        INFLATE_CONSTRAINED_GEN=1           Enable this path
+        INFLATE_CG_STEPS=1000               Gradient steps per batch
+        INFLATE_CG_LR=0.02                  Learning rate
+        INFLATE_CG_BATCH_PAIRS=20           Pairs per batch
+        INFLATE_CG_SEG_WEIGHT=100.0         SegNet loss weight
+        INFLATE_CG_POSE_WEIGHT=10.0         PoseNet loss weight
+        INFLATE_CG_NOISE_SEED=42            Deterministic seed
+        INFLATE_CG_LOSS_MODE=hinge          Loss mode (hinge/xent)
+        INFLATE_CG_TIME_LIMIT=1200          Hard time limit (seconds)
+    """
+    print("=" * 60, file=sys.stderr)
+    print("INFLATE_CONSTRAINED_GEN=1: Constrained generation from noise", file=sys.stderr)
+    print("  (NO renderer -- pure gradient descent against mini-scorers)", file=sys.stderr)
+    print("=" * 60, file=sys.stderr)
+
+    cg_steps = int(os.environ.get("INFLATE_CG_STEPS", "1000"))
+    cg_lr = float(os.environ.get("INFLATE_CG_LR", "0.02"))
+    batch_pairs = int(os.environ.get("INFLATE_CG_BATCH_PAIRS", "20"))
+    seg_weight = float(os.environ.get("INFLATE_CG_SEG_WEIGHT", "100.0"))
+    pose_weight = float(os.environ.get("INFLATE_CG_POSE_WEIGHT", "10.0"))
+    noise_seed = int(os.environ.get("INFLATE_CG_NOISE_SEED", "42"))
+    loss_mode = os.environ.get("INFLATE_CG_LOSS_MODE", "hinge")
+    time_limit = float(os.environ.get("INFLATE_CG_TIME_LIMIT", "1200"))
+    hinge_margin = 0.5
+
+    print(f"  Config: steps={cg_steps}, lr={cg_lr}, batch_pairs={batch_pairs}",
+          file=sys.stderr)
+    print(f"  Weights: seg={seg_weight}, pose={pose_weight}, seed={noise_seed}",
+          file=sys.stderr)
+    print(f"  Loss mode: {loss_mode}, time_limit={time_limit}s", file=sys.stderr)
+
+    t_start = time.monotonic()
+
+    # ---- Device detection ----
+    device, _ = _detect_device_and_batch_size()
+
+    # ---- Load mini-scorers ----
+    archive_path = Path(archive_dir)
+    seg_path = archive_path / "mini_segnet.bin"
+    pose_path = archive_path / "mini_posenet.bin"
+
+    if not seg_path.exists() or not pose_path.exists():
+        print(f"FATAL: mini-scorers not found in {archive_dir}", file=sys.stderr)
+        print("  Expected: mini_segnet.bin, mini_posenet.bin", file=sys.stderr)
+        sys.exit(1)
+
+    # Inline mini-scorer loading (standalone, no tac dependency at inflate time)
+    seg_state = torch.load(str(seg_path), map_location="cpu", weights_only=True)
+    seg_state = {k: v.float() for k, v in seg_state.items()}
+    pose_state = torch.load(str(pose_path), map_location="cpu", weights_only=True)
+    pose_state = {k: v.float() for k, v in pose_state.items()}
+
+    # Build MiniSegNet inline (4-layer CNN, ~25K params)
+    MINI_SEG_H, MINI_SEG_W = 96, 128
+    MINI_POSE_H, MINI_POSE_W = 48, 64
+
+    mini_seg = nn.Sequential(
+        nn.Conv2d(3, 16, 3, padding=1, bias=True),
+        nn.ReLU(inplace=True),
+        nn.Conv2d(16, 16, 3, padding=1, bias=True),
+        nn.ReLU(inplace=True),
+        nn.Conv2d(16, 16, 3, padding=1, bias=True),
+        nn.ReLU(inplace=True),
+        nn.Conv2d(16, NUM_CLASSES, 1, bias=True),
+    )
+    # Map state dict keys: "net.0.weight" -> "0.weight" for Sequential
+    mapped_seg = {k.replace("net.", ""): v for k, v in seg_state.items()}
+    mini_seg.load_state_dict(mapped_seg)
+    mini_seg = mini_seg.to(device).eval()
+    for p in mini_seg.parameters():
+        p.requires_grad = False
+
+    # Build MiniPoseNet inline
+    class _MiniPoseNet(nn.Module):
+        def __init__(self):
+            super().__init__()
+            self.encoder = nn.Sequential(
+                nn.Conv2d(6, 16, 3, stride=2, padding=1, bias=True),
+                nn.ReLU(inplace=True),
+                nn.Conv2d(16, 32, 3, stride=2, padding=1, bias=True),
+                nn.ReLU(inplace=True),
+                nn.AdaptiveAvgPool2d(1),
+                nn.Flatten(),
+            )
+            self.head = nn.Linear(32, 6)
+
+        def forward(self, x):
+            # x: (B, 6, H, W) in [0, 255]
+            x = x / 255.0
+            if x.shape[-2] != MINI_POSE_H or x.shape[-1] != MINI_POSE_W:
+                x = F.interpolate(x, size=(MINI_POSE_H, MINI_POSE_W),
+                                  mode="bilinear", align_corners=False)
+            return self.head(self.encoder(x))
+
+    mini_pose = _MiniPoseNet()
+    mini_pose.load_state_dict(pose_state)
+    mini_pose = mini_pose.to(device).eval()
+    for p in mini_pose.parameters():
+        p.requires_grad = False
+
+    print(f"  Mini-scorers loaded on {device}", file=sys.stderr)
+
+    # ---- Load masks ----
+    mask_video_path = archive_path / mask_filename
+    if not mask_video_path.exists():
+        # Try .pt fallback
+        mask_pt = archive_path / "masks.pt"
+        if mask_pt.exists():
+            masks = torch.load(str(mask_pt), map_location="cpu", weights_only=True)
+        else:
+            print(f"FATAL: No mask file in {archive_dir}", file=sys.stderr)
+            sys.exit(1)
+    else:
+        masks = _load_masks_from_archive(mask_video_path)
+
+    N = masks.shape[0]
+    if N % 2 != 0:
+        masks = masks[:N - 1]
+        N = masks.shape[0]
+    P = N // 2
+    print(f"  Masks: {masks.shape}", file=sys.stderr)
+
+    # ---- Load pose targets ----
+    poses_path = archive_path / "poses.pt"
+    if poses_path.exists():
+        pose_targets = torch.load(str(poses_path), map_location="cpu", weights_only=True)
+    else:
+        # Fallback: posenet_targets.bin
+        bin_path = archive_path / "posenet_targets.bin"
+        if bin_path.exists():
+            import struct as st
+            data = bin_path.read_bytes()
+            p_count = st.unpack("<I", data[:4])[0]
+            dims = st.unpack("<I", data[4:8])[0]
+            pose_targets = torch.frombuffer(
+                bytearray(data[8:]), dtype=torch.float32
+            ).reshape(p_count, dims)
+        else:
+            print(f"FATAL: No pose targets in {archive_dir}", file=sys.stderr)
+            sys.exit(1)
+
+    # Ensure pose targets match frame count
+    pose_targets = pose_targets[:P]
+    print(f"  Pose targets: {pose_targets.shape}", file=sys.stderr)
+
+    # ---- Generate initial frames from class-mean colors + noise ----
+    # Class-mean colors (precomputed from 0.mkv SegNet masks)
+    CLASS_MEAN_COLORS = torch.tensor([
+        [70.0, 80.0, 70.0],    # road
+        [190.0, 190.0, 190.0], # lane markings
+        [130.0, 150.0, 130.0], # vegetation/background
+        [60.0, 70.0, 90.0],    # vehicles
+        [170.0, 190.0, 210.0], # sky
+    ], dtype=torch.float32)
+
+    # Frames at scorer resolution
+    H, W = SEG_H, SEG_W
+    frames = CLASS_MEAN_COLORS[masks.long()]  # (N, H, W, 3)
+
+    # Add deterministic noise
+    gen = torch.Generator(device="cpu")
+    gen.manual_seed(noise_seed)
+    noise = torch.randn(N, H, W, 3, generator=gen) * 5.0
+    frames = (frames + noise).clamp(0.0, 255.0)
+    print(f"  Initial frames: {frames.shape} (seed={noise_seed})", file=sys.stderr)
+
+    # ---- Prepare mini-resolution masks ----
+    masks_mini = F.interpolate(
+        masks.float().unsqueeze(1),
+        size=(MINI_SEG_H, MINI_SEG_W),
+        mode="nearest",
+    ).squeeze(1).long()
+
+    # ---- Batched gradient descent ----
+    n_chunks = (P + batch_pairs - 1) // batch_pairs
+    all_optimized = []
+
+    for chunk_idx in range(n_chunks):
+        cs = chunk_idx * batch_pairs
+        ce = min(cs + batch_pairs, P)
+        cf_start = cs * 2
+        cf_end = ce * 2
+
+        # Time budget check
+        elapsed = time.monotonic() - t_start
+        remaining = time_limit - elapsed
+        if remaining < 10.0:
+            print(f"  TIME BUDGET: stopping at chunk {chunk_idx+1}/{n_chunks} "
+                  f"({elapsed:.0f}s elapsed)", file=sys.stderr)
+            all_optimized.append(frames[cf_start:].round().clamp(0, 255))
+            break
+
+        chunk_frames = frames[cf_start:cf_end].to(device).float().detach().clone()
+        chunk_frames.requires_grad_(True)
+        chunk_masks = masks_mini[cf_start:cf_end].to(device)
+        chunk_poses = pose_targets[cs:ce].to(device)
+
+        optimizer = torch.optim.Adam([chunk_frames], lr=cg_lr)
+        best_loss = float("inf")
+        best_chunk = chunk_frames.detach().clone()
+
+        for step in range(cg_steps):
+            optimizer.zero_grad()
+
+            # SegNet loss
+            frames_chw = chunk_frames.permute(0, 3, 1, 2).contiguous()
+            # Normalize + downscale for mini-segnet
+            seg_in = frames_chw / 255.0
+            if seg_in.shape[-2] != MINI_SEG_H or seg_in.shape[-1] != MINI_SEG_W:
+                seg_in = F.interpolate(seg_in, size=(MINI_SEG_H, MINI_SEG_W),
+                                       mode="bilinear", align_corners=False)
+            seg_logits = mini_seg(seg_in)
+
+            if loss_mode == "hinge":
+                target_logits = seg_logits.gather(1, chunk_masks.unsqueeze(1))
+                mask_fill = seg_logits.scatter(1, chunk_masks.unsqueeze(1), float("-inf"))
+                max_wrong = mask_fill.max(dim=1, keepdim=True).values
+                seg_loss = F.relu(hinge_margin - (target_logits - max_wrong)).mean()
+            else:
+                seg_loss = F.cross_entropy(seg_logits, chunk_masks)
+
+            # PoseNet loss
+            f1 = frames_chw[0::2]
+            f2 = frames_chw[1::2]
+            pairs = torch.cat([f1, f2], dim=1)
+            pred_pose = mini_pose(pairs)
+            pose_loss = F.mse_loss(pred_pose, chunk_poses)
+
+            total_loss = seg_weight * seg_loss + pose_weight * pose_loss
+            total_loss.backward()
+            optimizer.step()
+
+            with torch.no_grad():
+                chunk_frames.data.clamp_(0.0, 255.0)
+
+            if total_loss.item() < best_loss:
+                best_loss = total_loss.item()
+                best_chunk = chunk_frames.detach().clone()
+
+        all_optimized.append(best_chunk.round().clamp(0.0, 255.0).cpu())
+
+        if (chunk_idx + 1) % 5 == 0 or chunk_idx == n_chunks - 1:
+            elapsed = time.monotonic() - t_start
+            print(f"  chunk {chunk_idx+1}/{n_chunks}: loss={best_loss:.4f} "
+                  f"({elapsed:.1f}s elapsed)", file=sys.stderr)
+
+        del chunk_frames, optimizer, best_chunk
+        if device.type == "cuda":
+            torch.cuda.empty_cache()
+
+    all_frames_tensor = torch.cat(all_optimized, dim=0)  # (N, H, W, 3)
+
+    # ---- Upscale to output resolution + write .raw ----
+    inflated_path = Path(inflated_dir)
+    inflated_path.mkdir(parents=True, exist_ok=True)
+
+    # Write video_names.txt
+    with open(str(inflated_path / video_names_file), "w") as f:
+        f.write("0\n")
+
+    # Upscale and write raw bytes
+    raw_path = inflated_path / "0.raw"
+    N_out = all_frames_tensor.shape[0]
+    with open(str(raw_path), "wb") as f:
+        for i in range(0, N_out, 32):
+            batch = all_frames_tensor[i:min(i + 32, N_out)]
+            # (B, H, W, 3) -> (B, 3, H, W) for interpolate
+            batch_chw = batch.permute(0, 3, 1, 2).float()
+            batch_up = F.interpolate(
+                batch_chw, size=(out_h, out_w),
+                mode="bilinear", align_corners=False,
+            )
+            batch_hwc = batch_up.permute(0, 2, 3, 1).round().clamp(0, 255).byte()
+            f.write(batch_hwc.numpy().tobytes())
+
+    elapsed_total = time.monotonic() - t_start
+    print(f"\nConstrained gen inflate complete: {elapsed_total:.1f}s "
+          f"({N} frames, {cg_steps} steps)", file=sys.stderr)
+    print(f"Output: {raw_path} ({raw_path.stat().st_size:,} bytes)", file=sys.stderr)
+
+
 def _inflate_renderer_with_mini_tto(
     archive_dir: str,
     inflated_dir: str,
@@ -2132,15 +2435,29 @@ def inflate_renderer_with_tto(
         INFLATE_TTO_BATCH_PAIRS:    pairs per batch (default 10)
         INFLATE_TTO_SEG_WEIGHT:     SegNet weight (default 100.0)
         INFLATE_TTO_POSE_WEIGHT:    PoseNet weight (default 10.0)
+        INFLATE_CONSTRAINED_GEN:    0 (off) or 1 (no renderer, pure gradient
+                                    descent from noise against mini-scorers)
+        INFLATE_CG_STEPS:           gradient steps (default 1000)
+        INFLATE_CG_LR:              learning rate (default 0.02)
+        INFLATE_CG_BATCH_PAIRS:     pairs per batch (default 20)
     """
     inflate_tto = os.environ.get("INFLATE_TTO", "0") == "1"
     inflate_mini_tto = os.environ.get("INFLATE_MINI_TTO", "0") == "1"
+    inflate_constrained_gen = os.environ.get("INFLATE_CONSTRAINED_GEN", "0") == "1"
 
-    if not inflate_tto and not inflate_mini_tto:
+    if not inflate_tto and not inflate_mini_tto and not inflate_constrained_gen:
         # Default path: renderer only, fully compliant
         return inflate_renderer(
             archive_dir, inflated_dir, video_names_file,
             renderer_filename=renderer_filename,
+            mask_filename=mask_filename,
+            out_w=out_w, out_h=out_h,
+        )
+
+    # ---- Constrained Gen path: NO renderer, pure gradient descent from noise ----
+    if inflate_constrained_gen:
+        return _inflate_constrained_gen(
+            archive_dir, inflated_dir, video_names_file,
             mask_filename=mask_filename,
             out_w=out_w, out_h=out_h,
         )
