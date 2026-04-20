@@ -1578,6 +1578,7 @@ def coupled_trajectory_optimize(
     hinge_margin: float = 0.5,
     phase2_segnet_only: bool = False,
     phase2_steps: int = 200,
+    eval_roundtrip: bool = False,
     **cfg,
 ) -> torch.Tensor:
     """Jointly optimize ALL frames to satisfy coupled PoseNet constraints.
@@ -1640,6 +1641,11 @@ def coupled_trajectory_optimize(
             flip, 2--5x more efficient for TTO.
         hinge_margin: margin for hinge loss (only used when
             ``segnet_loss_mode="hinge"``). Default 0.5.
+        eval_roundtrip: if True, simulates the contest eval resolution
+            roundtrip (scorer res -> camera res -> uint8 -> scorer res) using
+            STE before computing PoseNet/SegNet losses. Makes training loss
+            match the actual evaluation pipeline. Default False (backward
+            compatible).
         phase2_segnet_only: if True, after ``early_stop_patience`` steps of
             Phase 1 (joint optimization), switch to Phase 2 where only odd
             frames (SegNet frames) are optimized with SegNet-only loss. Even
@@ -1735,9 +1741,20 @@ def coupled_trajectory_optimize(
     for step in range(num_steps):
         optimizer.zero_grad()
 
+        # Apply eval-matched roundtrip if enabled (STE for gradients)
+        if eval_roundtrip:
+            from tac.renderer import simulate_eval_roundtrip
+            frames_for_loss = simulate_eval_roundtrip(
+                frames.permute(0, 3, 1, 2),  # (N, H, W, 3) -> (N, 3, H, W)
+                target_h=CAMERA_H,
+                target_w=CAMERA_W,
+            ).permute(0, 2, 3, 1)  # (N, 3, H, W) -> (N, H, W, 3)
+        else:
+            frames_for_loss = frames
+
         # --- SegNet constraint: all frames (or odd-only if seg_odd_only) ---
         seg_loss = compute_segnet_constraint_loss(
-            frames, masks, segnet, seg_odd_only=seg_odd_only,
+            frames_for_loss, masks, segnet, seg_odd_only=seg_odd_only,
             loss_mode=segnet_loss_mode, hinge_margin=hinge_margin,
         )
 
@@ -1748,11 +1765,11 @@ def coupled_trajectory_optimize(
                 # Embedding MSE: ~512 gradient directions instead of 6.
                 # 42x richer gradient landscape for frame refinement.
                 pose_loss = compute_posenet_embedding_constraint_loss(
-                    frames, expected_pose_embeddings, posenet,
+                    frames_for_loss, expected_pose_embeddings, posenet,
                 )
             else:
                 pose_loss = compute_posenet_constraint_loss(
-                    frames, expected_pose, posenet,
+                    frames_for_loss, expected_pose, posenet,
                 )
 
         # --- Compressibility: anneal weight to prevent PoseNet divergence ---

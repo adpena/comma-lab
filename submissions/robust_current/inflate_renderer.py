@@ -1064,6 +1064,7 @@ def _generate_and_write(
     batch_size: int,
     out_h: int = OUT_H,
     out_w: int = OUT_W,
+    poses: torch.Tensor | None = None,
 ) -> int:
     """Generate frames from masks via renderer, upscale, and write raw RGB.
 
@@ -1085,6 +1086,7 @@ def _generate_and_write(
         batch_size: inference batch size
         out_h: output frame height
         out_w: output frame width
+        poses: (P, 6) optional pose conditioning vectors for FiLM
 
     Returns:
         Number of frames written
@@ -1124,8 +1126,16 @@ def _generate_and_write(
                     masks_t = torch.stack(batch_pairs_t).to(device=device, dtype=torch.long)
                     masks_t1 = torch.stack(batch_pairs_t1).to(device=device, dtype=torch.long)
 
+                    # Get pose conditioning for this batch (if available)
+                    batch_pose = None
+                    if poses is not None and hasattr(renderer, 'pose_dim') and renderer.pose_dim > 0:
+                        pose_start = pair_idx // 2
+                        pose_end = pose_start + masks_t.shape[0]
+                        if pose_end <= poses.shape[0]:
+                            batch_pose = poses[pose_start:pose_end].to(device=device)
+
                     # Generate pairs: (B, 2, H, W, 3) HWC in [0, 255]
-                    pairs = renderer(masks_t, masks_t1)  # (B, 2, H, W, 3)
+                    pairs = renderer(masks_t, masks_t1, pose=batch_pose)  # (B, 2, H, W, 3)
 
                     # Upscale each frame in each pair
                     B_pairs = pairs.shape[0]
@@ -1365,6 +1375,20 @@ def inflate_renderer(
                     f"dimensions that evenly divide {SEG_H}x{SEG_W}."
                 )
 
+    # ---- Load GT poses from archive (for FiLM-conditioned rendering) ----
+    poses = None
+    poses_path = Path(archive_dir) / "poses.pt"
+    if poses_path.exists():
+        poses = torch.load(str(poses_path), map_location="cpu", weights_only=True).float()
+        print(f"  Loaded GT poses: {poses.shape} from archive", file=sys.stderr)
+    else:
+        # Also check for poses.bin (raw fp16 buffer)
+        poses_bin_path = Path(archive_dir) / "poses.bin"
+        if poses_bin_path.exists():
+            raw = poses_bin_path.read_bytes()
+            poses = torch.frombuffer(bytearray(raw), dtype=torch.float16).reshape(-1, 6).float()
+            print(f"  Loaded GT poses: {poses.shape} from archive (bin)", file=sys.stderr)
+
     # ---- Process each video ----
     output_path = Path(inflated_dir)
     output_path.mkdir(parents=True, exist_ok=True)
@@ -1451,7 +1475,8 @@ def inflate_renderer(
         gen_stage = "Stage 3" if use_archive_masks else "Stage 6"
         print(f"{gen_stage}: Generating frames via renderer ...", file=sys.stderr)
         n_written = _generate_and_write(
-            video_masks, renderer, str(raw_out), device, batch_size, out_h, out_w
+            video_masks, renderer, str(raw_out), device, batch_size, out_h, out_w,
+            poses=poses,
         )
 
         if not use_archive_masks:

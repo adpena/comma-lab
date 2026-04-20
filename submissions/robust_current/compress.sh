@@ -521,6 +521,34 @@ if [ "$MASK_CODEC" = "vvc" ] && ! command -v vvencapp >/dev/null 2>&1; then
   MASK_CODEC="av1"
 fi
 
+# ── Extract GT poses for FiLM-conditioned renderer ──────────────────
+# Extracts PoseNet outputs from GT frame pairs for use as FiLM conditioning.
+# Storage: 600 pairs x 6 values x 2 bytes (fp16) = 7.2KB.
+POSE_EXTRACT_ENABLE="${POSE_EXTRACT_ENABLE:-0}"
+if [ "$POSE_EXTRACT_ENABLE" = "1" ]; then
+  POSES_OUT="$ARCHIVE_DIR/poses.pt"
+  GT_VIDEO_PATH="${UPSTREAM_ROOT}/videos/0.mkv"
+  if [ -f "$GT_VIDEO_PATH" ]; then
+    echo "Extracting GT poses for FiLM conditioning ..."
+    "$UV_BIN" run python -m tac.pose_extraction \
+      --upstream "$UPSTREAM_ROOT" \
+      --output "$POSES_OUT" \
+      --device "${POSE_EXTRACT_DEVICE:-cpu}" \
+      --batch-size "${POSE_EXTRACT_BATCH_SIZE:-16}" \
+      --video "$GT_VIDEO_PATH"
+    if [ -f "$POSES_OUT" ]; then
+      echo "Bundled poses.pt ($(stat -f%z "$POSES_OUT" 2>/dev/null || stat -c%s "$POSES_OUT") bytes) into archive"
+    else
+      echo "WARNING: Pose extraction failed" >&2
+    fi
+  else
+    echo "WARNING: Cannot extract poses - GT video not found at $GT_VIDEO_PATH" >&2
+  fi
+elif [ -f "$SELF_DIR/poses.pt" ]; then
+  cp "$SELF_DIR/poses.pt" "$ARCHIVE_DIR/poses.pt"
+  echo "Bundled pre-computed poses.pt ($(stat -f%z "$SELF_DIR/poses.pt" 2>/dev/null || stat -c%s "$SELF_DIR/poses.pt") bytes) into archive"
+fi
+
 # Extract and bundle PoseNet targets for supervised TTO at inflate time
 # This pre-computes PoseNet(original) outputs so inflate can optimize against them
 POSENET_TARGETS_ENABLE="${POSENET_TARGETS_ENABLE:-0}"

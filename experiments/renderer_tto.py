@@ -97,6 +97,10 @@ def parse_args() -> argparse.Namespace:
     p.add_argument("--phase2-steps", type=int, default=200,
                    help="Number of Phase 2 SegNet-only steps (only used with "
                         "--tto-phase2-segnet-only).")
+    p.add_argument("--eval-roundtrip", action="store_true",
+                   help="Simulate contest eval resolution roundtrip (384->874->uint8->384) "
+                        "in TTO loss. Makes gradients compensate for resampling+quantization "
+                        "artifacts that occur during official evaluation.")
     return p.parse_args()
 
 
@@ -300,6 +304,7 @@ def run_batched_tto(
     hinge_margin: float = 0.5,
     phase2_segnet_only: bool = False,
     phase2_steps: int = 200,
+    eval_roundtrip: bool = False,
 ) -> torch.Tensor:
     """Run TTO in batches of pairs to avoid OOM.
 
@@ -332,6 +337,7 @@ def run_batched_tto(
         hinge_margin: margin for hinge loss.
         phase2_segnet_only: run Phase 2 SegNet-only after Phase 1 early-stops.
         phase2_steps: number of Phase 2 steps.
+        eval_roundtrip: simulate contest eval resolution roundtrip in loss.
 
     Returns:
         (N, H, W, 3) float tensor of TTO-refined frames in [0, 255].
@@ -415,6 +421,7 @@ def run_batched_tto(
             hinge_margin=hinge_margin,
             phase2_segnet_only=phase2_segnet_only,
             phase2_steps=phase2_steps,
+            eval_roundtrip=eval_roundtrip,
         )
         dt = time.monotonic() - t0
 
@@ -597,6 +604,7 @@ def main():
         hinge_margin=args.hinge_margin,
         phase2_segnet_only=args.tto_phase2_segnet_only,
         phase2_steps=args.phase2_steps,
+        eval_roundtrip=args.eval_roundtrip,
     )
     t_tto = time.monotonic() - t0
     print(f"\n[7/8] TTO completed in {t_tto:.1f}s ({t_tto / args.n_frames:.2f}s/frame)")

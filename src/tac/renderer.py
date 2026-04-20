@@ -143,11 +143,13 @@ class MaskRenderer(nn.Module):
         mid_ch: int = 60,
         embedding: nn.Embedding | None = None,
         depth: int = 1,
+        pose_dim: int = 0,
     ):
         super().__init__()
         self.num_classes = num_classes
         self.embed_dim = embed_dim
         self.depth = depth
+        self.pose_dim = pose_dim
 
         # Class embedding: each of 5 classes → learned embed_dim-dimensional vector
         # Accepts external embedding for weight sharing with MotionPredictor
@@ -193,11 +195,20 @@ class MaskRenderer(nn.Module):
         nn.init.zeros_(self.head.weight)
         nn.init.zeros_(self.head.bias)
 
-    def forward(self, masks: torch.Tensor) -> torch.Tensor:
+        # FiLM conditioning (pose_dim > 0 enables pose-conditioned rendering)
+        if pose_dim > 0:
+            self.film_bottleneck = FiLMLayer(pose_dim, mid_ch)
+            self.film_decoder = FiLMLayer(pose_dim, base_ch)
+        else:
+            self.film_bottleneck = None
+            self.film_decoder = None
+
+    def forward(self, masks: torch.Tensor, pose: torch.Tensor | None = None) -> torch.Tensor:
         """Render RGB frames from segmentation masks.
 
         Args:
             masks: (B, H, W) long tensor with values in [0, num_classes)
+            pose: (B, pose_dim) optional conditioning signal (ego-motion vector)
 
         Returns:
             (B, 3, H, W) float tensor in [0, 255]
@@ -244,6 +255,10 @@ class MaskRenderer(nn.Module):
             # Bottleneck at half res (original behavior)
             half_res = self.bottleneck(down1, masks)
 
+        # FiLM: modulate bottleneck output with pose signal
+        if self.film_bottleneck is not None and pose is not None:
+            half_res = self.film_bottleneck(half_res, pose)
+
         # Up 1 (half → full res)
         up = self.up_conv(half_res)
         # Handle potential size mismatch from odd dimensions
@@ -254,6 +269,10 @@ class MaskRenderer(nn.Module):
         # Skip connection: concatenate stem features with upsampled
         fused = torch.cat([stem, up], dim=1)
         fused = self.fuse_conv(fused)
+
+        # FiLM: modulate decoder output with pose signal
+        if self.film_decoder is not None and pose is not None:
+            fused = self.film_decoder(fused, pose)
 
         # Head: soft sigmoid output — gradients always flow, no dead zones
         # sigmoid(0/50) = 0.5 → 127.5 at init (mid-gray)
@@ -829,8 +848,10 @@ class AsymmetricPairGenerator(nn.Module):
         max_flow_px: float = 20.0,
         max_residual: float = 20.0,
         flow_only: bool = False,
+        pose_dim: int = 0,
     ):
         super().__init__()
+        self.pose_dim = pose_dim
         # Shared embedding between renderer and motion predictor
         shared_emb = nn.Embedding(num_classes, embed_dim)
         self.renderer = MaskRenderer(
@@ -840,6 +861,7 @@ class AsymmetricPairGenerator(nn.Module):
             mid_ch=mid_ch,
             embedding=shared_emb,
             depth=depth,
+            pose_dim=pose_dim,
         )
         self.motion = MotionPredictor(
             num_classes=num_classes,
@@ -860,6 +882,7 @@ class AsymmetricPairGenerator(nn.Module):
         mask_t1: torch.Tensor,
         residual_scale: float = 1.0,
         ego_flow: torch.Tensor | None = None,
+        pose: torch.Tensor | None = None,
     ) -> torch.Tensor:
         """Generate a frame pair using warp-based asymmetric generation.
 
@@ -874,12 +897,14 @@ class AsymmetricPairGenerator(nn.Module):
                 predictor's flow output. Gate + residual still come from the
                 motion predictor. This gives PoseNet the geometric warp signal
                 it needs while letting the network learn only corrections.
+            pose: (B, 6) optional pose conditioning vector for FiLM layers.
+                When provided and pose_dim > 0, modulates renderer features.
 
         Returns:
             (B, 2, H, W, 3) float HWC pair in [0, 255]
         """
         # Render anchor frame (frame_t1) directly from mask
-        frame_t1 = self.renderer(mask_t1)  # (B, 3, H, W) float [0, 255]
+        frame_t1 = self.renderer(mask_t1, pose=pose)  # (B, 3, H, W) float [0, 255]
 
         # Predict motion from both masks (gate + residual always from network)
         motion_out = self.motion(mask_t, mask_t1)  # (B, 6, H, W)
@@ -1442,3 +1467,92 @@ class ChannelRecurrentRenderer(nn.Module):
 
     def param_count(self) -> int:
         return sum(p.numel() for p in self.parameters() if p.requires_grad)
+
+
+# ── Eval-matched resize utility ───────────────────────────────────────
+
+
+def simulate_eval_roundtrip(
+    frames_chw: torch.Tensor,
+    target_h: int = 874,
+    target_w: int = 1164,
+) -> torch.Tensor:
+    """Simulate the contest eval resolution roundtrip for training.
+
+    Matches evaluate.py's pipeline: render at scorer res -> upscale to camera res ->
+    uint8 quantize -> downscale back to scorer res. Gradients flow through via STE.
+
+    The contest scorer upscales rendered frames to camera resolution (874x1164),
+    converts to uint8, then downscales back to scorer resolution (384x512) before
+    computing PoseNet/SegNet losses. Training without this roundtrip means the
+    renderer never learns to compensate for quantization and resampling artifacts.
+
+    Args:
+        frames_chw: (B, 3, H, W) float [0, 255] frames at scorer resolution
+        target_h: camera native height (874)
+        target_w: camera native width (1164)
+
+    Returns:
+        (B, 3, H, W) frames after simulated roundtrip, same shape as input
+    """
+    orig_h, orig_w = frames_chw.shape[2], frames_chw.shape[3]
+
+    # Upscale to camera resolution (bilinear, same as contest)
+    up = F.interpolate(
+        frames_chw, size=(target_h, target_w), mode="bilinear", align_corners=False
+    )
+
+    # Simulate uint8 quantization with Straight-Through Estimator
+    # forward: round + clamp; backward: identity (gradients pass through)
+    up_quantized = up + (up.round().clamp(0, 255) - up).detach()
+
+    # Downscale back to scorer resolution
+    down = F.interpolate(
+        up_quantized, size=(orig_h, orig_w), mode="bilinear", align_corners=False
+    )
+
+    return down
+
+
+# ── FiLM conditioning layer ───────────────────────────────────────────
+
+
+class FiLMLayer(nn.Module):
+    """Feature-wise Linear Modulation (Perez et al. 2018).
+
+    Applies affine transformation conditioned on an external signal:
+        output = gamma(signal) * features + beta(signal)
+
+    Used to inject pose vectors into the renderer. Unlike CLADE (which
+    modulates per-class spatially), FiLM modulates globally based on
+    the ego-motion between frames.
+
+    Args:
+        signal_dim: dimensionality of conditioning signal (e.g. 6 for pose)
+        feature_dim: number of feature channels to modulate
+    """
+
+    def __init__(self, signal_dim: int, feature_dim: int):
+        super().__init__()
+        self.scale = nn.Linear(signal_dim, feature_dim)
+        self.shift = nn.Linear(signal_dim, feature_dim)
+        # Init: gamma=1, beta=0 -> identity at start (like CLADE)
+        nn.init.ones_(self.scale.weight[:, 0])  # first signal dim -> 1
+        nn.init.zeros_(self.scale.weight[:, 1:])
+        nn.init.zeros_(self.scale.bias)
+        nn.init.zeros_(self.shift.weight)
+        nn.init.zeros_(self.shift.bias)
+
+    def forward(self, x: torch.Tensor, signal: torch.Tensor) -> torch.Tensor:
+        """Apply FiLM conditioning.
+
+        Args:
+            x: (B, C, H, W) feature tensor
+            signal: (B, signal_dim) conditioning vector
+
+        Returns:
+            (B, C, H, W) modulated features
+        """
+        gamma = self.scale(signal).unsqueeze(-1).unsqueeze(-1) + 1.0  # residual: 1 + learned
+        beta = self.shift(signal).unsqueeze(-1).unsqueeze(-1)
+        return gamma * x + beta
