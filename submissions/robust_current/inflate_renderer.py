@@ -2261,23 +2261,46 @@ def inflate_renderer_with_tto(
         print("  FATAL: tac package required for TTO mode", file=sys.stderr)
         raise
 
-    # ---- Run adaptive TTO ----
-    print("Stage 3: Running adaptive TTO...", file=sys.stderr)
-    refined_frames = _adaptive_tto_phase(
-        renderer_frames=renderer_frames,
-        masks=masks,
-        gt_frames=gt_frames_torch,
-        posenet=posenet,
-        segnet=segnet,
-        device=device,
-        budget_seconds=budget_seconds,
-        tto_steps=tto_steps,
-        top_k_fraction=top_k,
-        tto_lr=tto_lr,
-        batch_pairs=batch_pairs,
-        seg_weight=seg_weight,
-        pose_weight=pose_weight,
-    )
+    # ---- Run adaptive TTO (with optional multi-pass refinement) ----
+    multi_pass = int(os.environ.get("INFLATE_MULTI_PASS", "1"))
+    if multi_pass < 1:
+        multi_pass = 1
+    if multi_pass > 1:
+        print(f"  Multi-pass TTO: {multi_pass} passes (quantize between passes)",
+              file=sys.stderr)
+        # Split budget evenly across passes
+        budget_per_pass = budget_seconds / multi_pass
+    else:
+        budget_per_pass = budget_seconds
+
+    refined_frames = renderer_frames
+    for pass_idx in range(multi_pass):
+        pass_label = f"pass {pass_idx + 1}/{multi_pass}" if multi_pass > 1 else ""
+        print(f"Stage 3: Running adaptive TTO {pass_label}...", file=sys.stderr)
+
+        refined_frames = _adaptive_tto_phase(
+            renderer_frames=refined_frames,
+            masks=masks,
+            gt_frames=gt_frames_torch,
+            posenet=posenet,
+            segnet=segnet,
+            device=device,
+            budget_seconds=budget_per_pass,
+            tto_steps=tto_steps,
+            top_k_fraction=top_k,
+            tto_lr=tto_lr,
+            batch_pairs=batch_pairs,
+            seg_weight=seg_weight,
+            pose_weight=pose_weight,
+        )
+
+        # Between passes: quantize to uint8 and back to float (simulates the
+        # contest eval pipeline). This exposes rounding artifacts for the next
+        # pass to correct.
+        if pass_idx < multi_pass - 1:
+            refined_frames = refined_frames.round().clamp(0, 255).to(torch.uint8).float()
+            print(f"  Multi-pass: quantized to uint8 after pass {pass_idx + 1}",
+                  file=sys.stderr)
 
     # Free scorers
     del posenet, segnet
