@@ -73,6 +73,7 @@ __all__ = [
     "inverse_preprocess_input",
     "generate_in_scorer_space",
     "scorer_as_compressor",
+    "yuv_null_space_projection",
     "coupled_trajectory_optimize",
     "gpu_lane_full_pipeline",
     "alternating_projections_optimize",
@@ -422,6 +423,7 @@ def compute_posenet_constraint_loss(
     expected_pose: torch.Tensor,
     posenet: torch.nn.Module,
     batch_size: int = 32,
+    pair_weights: torch.Tensor | None = None,
 ) -> torch.Tensor:
     """L2 loss between PoseNet output and expected ego-motion targets.
 
@@ -440,9 +442,12 @@ def compute_posenet_constraint_loss(
             where P = N//2 (one pose per non-overlapping pair, seq_len=2).
         posenet: frozen PoseNet model.
         batch_size: pairs per mini-batch (reduce if OOM, default 32).
+        pair_weights: (P,) optional float tensor of per-pair importance weights.
+            Scales per-pair MSE before averaging. Use to focus gradient on hard
+            pairs. Default None (uniform weighting, backward compatible).
 
     Returns:
-        Scalar L2 loss averaged over all pairs and dimensions.
+        Scalar L2 loss (weighted average over all pairs and dimensions).
     """
     N = frames.shape[0]
     num_pairs = expected_pose.shape[0]
@@ -453,7 +458,7 @@ def compute_posenet_constraint_loss(
     device = frames.device
 
     total_loss = torch.tensor(0.0, device=device)
-    n_batches = 0
+    total_weight = torch.tensor(0.0, device=device)
 
     for start in range(0, num_pairs, batch_size):
         end = min(start + batch_size, num_pairs)
@@ -471,10 +476,18 @@ def compute_posenet_constraint_loss(
         pred_pose = posenet_out["pose"][..., :6]  # (B, 6) — first 6 of 12 outputs
         target = expected_pose[start:end].to(device)  # (B, 6)
 
-        total_loss = total_loss + (pred_pose - target).pow(2).mean()
-        n_batches += 1
+        # Per-pair MSE: (B, 6) -> mean over dims -> (B,)
+        per_pair_mse = (pred_pose - target).pow(2).mean(dim=1)  # (B,)
 
-    return total_loss / max(n_batches, 1)
+        if pair_weights is not None:
+            w = pair_weights[start:end].to(device)  # (B,)
+            total_loss = total_loss + (per_pair_mse * w).sum()
+            total_weight = total_weight + w.sum()
+        else:
+            total_loss = total_loss + per_pair_mse.sum()
+            total_weight = total_weight + per_pair_mse.shape[0]
+
+    return total_loss / total_weight.clamp(min=1e-8)
 
 
 def compute_posenet_embedding_constraint_loss(
@@ -1554,6 +1567,102 @@ def scorer_as_compressor(
     }
 
 
+def yuv_null_space_projection(
+    frames: torch.Tensor,
+    segnet_grad: torch.Tensor,
+    step_size: float = 1.0,
+) -> torch.Tensor:
+    """Project SegNet gradient into PoseNet null space and apply.
+
+    The PoseNet preprocess converts RGB to YUV6 with 4:2:0 chroma subsampling.
+    Specifically, U and V channels are averaged over 2x2 blocks. Perturbations
+    to the RGB that create zero-mean changes within each 2x2 block in the
+    chroma (U, V) channels are invisible to PoseNet but can improve SegNet.
+
+    Null space structure:
+        Y = 0.299*R + 0.587*G + 0.114*B  (full resolution, every pixel matters)
+        U = (B - Y) / 1.772 + 128  →  averaged over 2x2 blocks
+        V = (R - Y) / 1.402 + 128  →  averaged over 2x2 blocks
+
+        Within each 2x2 block, perturbations to U (or V) that sum to zero
+        vanish after averaging. That gives 3 DOF per 2x2 block per chroma
+        channel (6 null dimensions per 4-pixel block in chroma space).
+
+        Additionally, any change purely in the Y high-frequency component
+        (differences within a 2x2 block) that doesn't affect U/V averages
+        is also invisible to PoseNet's chroma path.
+
+    Implementation: for each 2x2 block, subtract the block mean from the
+    SegNet gradient's U/V components, then convert back to RGB space.
+    This residual is in PoseNet's null space by construction.
+
+    Args:
+        frames: (N, H, W, 3) current frames in [0, 255]
+        segnet_grad: (N, H, W, 3) gradient of SegNet loss w.r.t. frames
+        step_size: scaling factor for the null-space step
+
+    Returns:
+        (N, H, W, 3) updated frames with null-space perturbation applied
+    """
+    N, H, W, _ = frames.shape
+    H2, W2 = H // 2 * 2, W // 2 * 2  # Ensure even dimensions
+
+    # Work in CHW for convenience
+    grad_chw = segnet_grad[:, :H2, :W2, :].permute(0, 3, 1, 2)  # (N, 3, H2, W2)
+
+    # Convert gradient to YUV space
+    R_g, G_g, B_g = grad_chw[:, 0], grad_chw[:, 1], grad_chw[:, 2]
+    kYR, kYG, kYB = 0.299, 0.587, 0.114
+
+    # dU/dRGB and dV/dRGB (Jacobian of chroma w.r.t. RGB)
+    # U = (B - Y) / 1.772, where Y = 0.299R + 0.587G + 0.114B
+    # dU/dR = -0.299/1.772, dU/dG = -0.587/1.772, dU/dB = (1-0.114)/1.772
+    # V = (R - Y) / 1.402
+    # dV/dR = (1-0.299)/1.402, dV/dG = -0.587/1.402, dV/dB = -0.114/1.402
+
+    # Project gradient into U, V components
+    U_grad = (-kYR * R_g - kYG * G_g + (1 - kYB) * B_g) / 1.772
+    V_grad = ((1 - kYR) * R_g - kYG * G_g - kYB * B_g) / 1.402
+
+    # For each 2x2 block, subtract the block mean (null space = zero-sum within block)
+    # Reshape to blocks: (N, H2//2, 2, W2//2, 2)
+    U_blocks = U_grad.reshape(N, H2 // 2, 2, W2 // 2, 2)
+    V_blocks = V_grad.reshape(N, H2 // 2, 2, W2 // 2, 2)
+
+    # Block means (what PoseNet would see)
+    U_mean = U_blocks.mean(dim=(2, 4), keepdim=True)
+    V_mean = V_blocks.mean(dim=(2, 4), keepdim=True)
+
+    # Null-space component: gradient minus what PoseNet sees
+    U_null = (U_blocks - U_mean).reshape(N, H2, W2)
+    V_null = (V_blocks - V_mean).reshape(N, H2, W2)
+
+    # Convert null-space UV gradient back to RGB space
+    # Solve: given dU_null and dV_null, find dR, dG, dB
+    # Using the pseudoinverse of the YUV Jacobian restricted to chroma:
+    # dR = -1.772 * kYR/(1-kYR-kYB) * dU + 1.402 * (1-kYR)/(1-kYR-kYB) * dV
+    # ... but simpler: use the direct chroma-to-RGB inverse
+    # For null space in U: dB - dY = 1.772 * dU_null, and we want minimal RGB change
+    # Simplest correct approach: perturb only B for U-null, only R for V-null
+    # (these are the dominant contributors to U and V respectively)
+
+    # Minimal perturbation: B carries U, R carries V (approximate but correct null space)
+    dR_null = 1.402 * V_null  # V = (R-Y)/1.402, so dR ≈ 1.402*dV for V-null
+    dB_null = 1.772 * U_null  # U = (B-Y)/1.772, so dB ≈ 1.772*dU for U-null
+    # Compensate Y to keep Y unchanged: dY = kYR*dR + kYB*dB, solve for dG
+    dG_null = -(kYR * dR_null + kYB * dB_null) / kYG
+
+    # Stack and apply (descend along SegNet gradient in PoseNet null space)
+    null_step = torch.stack([dR_null, dG_null, dB_null], dim=1)  # (N, 3, H2, W2)
+    null_step_hwc = null_step.permute(0, 2, 3, 1)  # (N, H2, W2, 3)
+
+    # Apply step (negative because we're minimizing SegNet loss)
+    result = frames.clone()
+    result[:, :H2, :W2, :] = result[:, :H2, :W2, :] - step_size * null_step_hwc
+    result.clamp_(0.0, 255.0)
+    return result
+
+
 def coupled_trajectory_optimize(
     masks: torch.Tensor,  # (N, H, W)
     expected_pose: torch.Tensor,  # (P, 6) where P = N//2 (non-overlapping pairs)
@@ -1579,6 +1688,10 @@ def coupled_trajectory_optimize(
     phase2_segnet_only: bool = False,
     phase2_steps: int = 200,
     eval_roundtrip: bool = False,
+    use_null_space: bool = False,
+    null_space_step: float = 0.5,
+    null_space_every: int = 10,
+    pair_weights: torch.Tensor | None = None,
     **cfg,
 ) -> torch.Tensor:
     """Jointly optimize ALL frames to satisfy coupled PoseNet constraints.
@@ -1653,6 +1766,19 @@ def coupled_trajectory_optimize(
             disturbing PoseNet. Default False (single-phase, backward compatible).
         phase2_steps: number of Phase 2 steps (only used when
             ``phase2_segnet_only=True``). Default 200.
+        use_null_space: if True, after each optimizer step, apply a YUV null
+            space projection that improves SegNet without affecting PoseNet.
+            PoseNet operates on 4:2:0 subsampled YUV; perturbations that are
+            zero-mean within 2x2 chroma blocks are invisible to PoseNet.
+            Default False (backward compatible).
+        null_space_step: step size for the null space projection (only used
+            when ``use_null_space=True``). Default 0.5.
+        null_space_every: apply null space projection every N steps (only used
+            when ``use_null_space=True``). Default 10.
+        pair_weights: (P,) optional float tensor of per-pair importance weights.
+            Scales the per-pair PoseNet loss before averaging. Use to focus TTO
+            gradient budget on hard pairs (from pair_difficulty_map). Default None
+            (uniform weighting, backward compatible).
         **cfg: additional config (ignored, for profile compatibility).
 
     Returns:
@@ -1689,6 +1815,8 @@ def coupled_trajectory_optimize(
     expected_pose = expected_pose.to(device)
     if expected_pose_embeddings is not None:
         expected_pose_embeddings = expected_pose_embeddings.to(device)
+    if pair_weights is not None:
+        pair_weights = pair_weights.to(device)
 
     # Initialize ALL frames jointly — from renderer output (TTO) or noise
     warm_start = init_frames is not None
@@ -1770,6 +1898,7 @@ def coupled_trajectory_optimize(
             else:
                 pose_loss = compute_posenet_constraint_loss(
                     frames_for_loss, expected_pose, posenet,
+                    pair_weights=pair_weights,
                 )
 
         # --- Compressibility: anneal weight to prevent PoseNet divergence ---
@@ -1808,6 +1937,22 @@ def coupled_trajectory_optimize(
         # Project back to valid pixel range
         with torch.no_grad():
             frames.data.clamp_(0.0, 255.0)
+
+        # YUV null space projection: improve SegNet without touching PoseNet
+        if use_null_space and (step + 1) % null_space_every == 0:
+            # Compute SegNet gradient w.r.t. current frames (needs grad enabled)
+            frames_ns = frames.detach().clone().requires_grad_(True)
+            seg_loss_ns = compute_segnet_constraint_loss(
+                frames_ns, masks, segnet, seg_odd_only=seg_odd_only,
+                loss_mode=segnet_loss_mode, hinge_margin=hinge_margin,
+            )
+            seg_grad = torch.autograd.grad(seg_loss_ns, frames_ns)[0]
+            # Project into PoseNet null space and apply (no grad needed)
+            with torch.no_grad():
+                frames.data.copy_(
+                    yuv_null_space_projection(frames.data, seg_grad, step_size=null_space_step)
+                )
+            del frames_ns, seg_grad, seg_loss_ns
 
         # Snapshot best PoseNet state (transient capture)
         pose_val = pose_loss.item()
