@@ -14,6 +14,10 @@ echo "Building deploy bundle -> $BUNDLE_DIR"
 rm -rf "$BUNDLE_DIR"
 mkdir -p "$BUNDLE_DIR"
 
+# pyproject.toml (needed for uv pip install -e . and version detection)
+echo "  copying pyproject.toml ..."
+cp pyproject.toml "$BUNDLE_DIR/pyproject.toml"
+
 # Source code (complete, not cherry-picked)
 echo "  syncing src/tac/ ..."
 rsync -a --exclude='__pycache__' --exclude='*.pyc' --exclude='*.pyo' \
