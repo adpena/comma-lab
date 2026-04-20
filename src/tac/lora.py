@@ -183,6 +183,9 @@ def apply_lora(
     for p in model.parameters():
         p.requires_grad = False
 
+    # Determine target device from model parameters
+    device = next(model.parameters()).device
+
     total_params = 0
     for name in target_layers:
         original = getattr(model, name, None)
@@ -196,6 +199,8 @@ def apply_lora(
         else:
             raise TypeError(f"Layer {name} is {type(original)}, expected Conv2d or ConvTranspose2d")
 
+        # Move adapter to same device as the model
+        adapter = adapter.to(device)
         setattr(model, name, adapter)
         total_params += adapter.trainable_params
 
