@@ -1,6 +1,6 @@
 """Joint Pair Generator — Y-shaped U-Net for mask-conditioned frame pair generation.
 
-Architecture (council-approved, LeCun + Tao + Quantizr):
+Architecture:
   Input: concatenated mask pair (B, 10, H, W) — 5 one-hot classes × 2 frames
   Shared encoder: 4 downsampling blocks with skip connections
   Two decoder heads: each produces one frame (B, 3, H, W)
@@ -9,12 +9,9 @@ Architecture (council-approved, LeCun + Tao + Quantizr):
 Design rationale:
   - Y-shape ensures shared latent captures inter-frame relationship (PoseNet coupling)
   - Skip connections from encoder to BOTH decoders (SegNet boundary preservation)
-  - Concatenated mask input (Tao): model sees both masks simultaneously
+  - Concatenated mask input: model sees both masks simultaneously
   - No warp/flow — frames generated directly from masks (avoids interpolation artifacts)
   - 500K params target, 300KB FP4 (within rate budget)
-
-This is the architecture Quantizr uses (confirmed from PR #53 analysis).
-His AsymmetricPairGenerator takes mask pairs and outputs frame pairs.
 
 Usage:
     model = JointPairGenerator(num_classes=5, base_ch=48)
@@ -74,7 +71,7 @@ class UpBlock(nn.Module):
 class JointPairGenerator(nn.Module):
     """Y-shaped U-Net: shared encoder → two decoder heads → two frames.
 
-    Council design (LeCun + Tao + Quantizr):
+    Architecture:
     - Input: (mask1, mask2) each (B, H, W) long → one-hot → concat → (B, 10, H, W)
     - Shared encoder captures inter-frame relationship
     - Skip connections to BOTH decoders preserve spatial detail

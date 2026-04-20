@@ -340,10 +340,15 @@ def main(
     ensure_tac(input_root)
     upstream = ensure_upstream(working_dir)
 
-    # Kaggle mount path varies across platform versions
+    # Kaggle mount path varies across platform versions.
+    # Old: /kaggle/input/<slug>
+    # New: /kaggle/input/datasets/<owner>/<slug>  (owner = any Kaggle username)
     asset_root = input_root / ASSET_DATASET_SLUG
     if not asset_root.exists():
-        asset_root = input_root / "datasets" / "adpena" / ASSET_DATASET_SLUG
+        # Discover dynamically: search for the slug under any owner directory
+        candidates = list((input_root / "datasets").glob(f"*/{ASSET_DATASET_SLUG}"))
+        if candidates:
+            asset_root = candidates[0]
     script_path = resolve_training_script(Path(launcher_path))
 
     if variant is None:

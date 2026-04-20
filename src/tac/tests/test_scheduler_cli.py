@@ -42,17 +42,17 @@ def registry_payload() -> dict[str, object]:
                 },
             },
             {
-                "name": "bat00",
+                "name": "remote-gpu",
                 "kind": "remote",
                 "manifest_globs": [
-                    ".omx/logs/remote_jobs/bat00-*.json",
-                    "remote-runs/bat00/*/manifest.json",
+                    ".omx/logs/remote_jobs/remote-gpu-*.json",
+                    "remote-runs/remote-gpu/*/manifest.json",
                 ],
                 "status_globs": [
-                    ".omx/status/bat00-*.json",
-                    "remote-runs/bat00/*/status.json",
+                    ".omx/status/remote-gpu-*.json",
+                    "remote-runs/remote-gpu/*/status.json",
                 ],
-                "ledger_paths": ["remote-runs/bat00/_ledger.jsonl"],
+                "ledger_paths": ["remote-runs/remote-gpu/_ledger.jsonl"],
                 "budget": {
                     "max_active_runs": 1,
                     "max_failed_runs": 1,
@@ -162,17 +162,17 @@ class SchedulerCliTests(unittest.TestCase):
             ],
         )
         write_json(
-            self.repo_root / "remote-runs" / "bat00" / "lane-alpha" / "manifest.json",
+            self.repo_root / "remote-runs" / "remote-gpu" / "lane-alpha" / "manifest.json",
             {
                 "slug": "lane-alpha",
                 "run_id": "20260409T120000Z",
-                "host": "bat00",
+                "host": "remote-gpu",
                 "started_at_utc": "20260409T120000Z",
                 "status": "starting",
             },
         )
         write_json(
-            self.repo_root / "remote-runs" / "bat00" / "lane-alpha" / "status.json",
+            self.repo_root / "remote-runs" / "remote-gpu" / "lane-alpha" / "status.json",
             {
                 "slug": "lane-alpha",
                 "run_id": "20260409T120000Z",
@@ -225,12 +225,12 @@ class SchedulerCliTests(unittest.TestCase):
         self.assertEqual(len(records), 8)
         self.assertEqual(
             {record.platform for record in records},
-            {"bat00", "coiled", "kaggle", "local", "modal"},
+            {"remote-gpu", "coiled", "kaggle", "local", "modal"},
         )
         self.assertEqual(budget.platforms["local"].usage.total_runs, 2)
         self.assertEqual(budget.platforms["local"].usage.archive_bytes, 864167)
         self.assertEqual(budget.platforms["local"].usage.active_runs, 1)
-        self.assertEqual(budget.platforms["bat00"].usage.active_runs, 1)
+        self.assertEqual(budget.platforms["remote-gpu"].usage.active_runs, 1)
         self.assertEqual(budget.platforms["kaggle"].usage.active_runs, 1)
         self.assertEqual(budget.platforms["coiled"].usage.active_runs, 1)
         self.assertEqual(budget.platforms["modal"].usage.total_runs, 1)
@@ -255,7 +255,7 @@ class SchedulerCliTests(unittest.TestCase):
         self.assertEqual(payload["tracks"][0]["latest_result"]["platform"], "coiled")
         self.assertEqual(
             {item["platform"] for item in payload["active_runs"]},
-            {"bat00", "coiled", "kaggle", "local"},
+            {"remote-gpu", "coiled", "kaggle", "local"},
         )
 
     def test_sched_results_json_honors_limit(self) -> None:
@@ -289,7 +289,7 @@ class SchedulerCliTests(unittest.TestCase):
         self.assertEqual(rc, 0, stderr)
         payload = json.loads(stdout)
         local = next(item for item in payload["platforms"] if item["name"] == "local")
-        bat00 = next(item for item in payload["platforms"] if item["name"] == "bat00")
+        remote-gpu = next(item for item in payload["platforms"] if item["name"] == "remote-gpu")
         kaggle = next(item for item in payload["platforms"] if item["name"] == "kaggle")
         modal = next(item for item in payload["platforms"] if item["name"] == "modal")
         coiled = next(item for item in payload["platforms"] if item["name"] == "coiled")
@@ -297,7 +297,7 @@ class SchedulerCliTests(unittest.TestCase):
         self.assertEqual(local["usage"]["archive_bytes"], 864167)
         self.assertFalse(local["over_budget"])
         self.assertEqual(local["usage"]["active_runs"], 1)
-        self.assertEqual(bat00["usage"]["active_runs"], 1)
+        self.assertEqual(remote-gpu["usage"]["active_runs"], 1)
         self.assertEqual(kaggle["usage"]["active_runs"], 1)
         self.assertEqual(modal["usage"]["total_runs"], 1)
         self.assertEqual(coiled["usage"]["active_runs"], 1)

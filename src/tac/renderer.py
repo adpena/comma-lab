@@ -1,8 +1,5 @@
 """Neural renderer: segment masks → RGB frames for GPU-lane submission.
 
-Architecture reverse-engineered from mask2mask competitor (score 0.60),
-then redesigned for clarity and integration with tac training infrastructure.
-
 Pipeline:
     GT frames → frozen SegNet → 5-class masks → AV1 encode/decode →
     MaskRenderer → RGB frames → scored by frozen PoseNet + SegNet
@@ -13,7 +10,7 @@ Key classes:
     - MotionPredictor: predicts optical flow from consecutive mask pairs
     - PairGenerator: combines renderer + motion for PoseNet-compatible pairs
 
-Design target: ~300K parameters (matching competitor's proven size).
+Design target: ~300K parameters.
 Channel widths: 36→60→36 (compact) or 48→80→48 (extended capacity).
 """
 
@@ -217,7 +214,7 @@ class MaskRenderer(nn.Module):
         x = self.embedding(masks)
         x = x.permute(0, 3, 1, 2).contiguous()
 
-        # Coordinate grid: normalized [-1, 1] spatial coords (Quantizr insight)
+        # Coordinate grid: normalized [-1, 1] spatial coords (positional encoding)
         if self.use_coord_grid:
             B, _, H, W = x.shape
             gy = torch.linspace(-1, 1, H, device=x.device, dtype=x.dtype)
@@ -449,11 +446,11 @@ class MotionPredictor(nn.Module):
         # Input: e_t + e_t1 + optional |e_t1 - e_t| + optional coords
         in_ch = embed_dim * 2
         if use_diff_features:
-            in_ch += embed_dim  # |e_t1 - e_t| (Quantizr insight)
+            in_ch += embed_dim  # |e_t1 - e_t| (difference features for motion)
         if use_coord_grid:
             in_ch += 2  # normalized xy coords
 
-        # U-Net-like structure for global receptive field (Quantizr TinyMotionFromMasks)
+        # U-Net-like structure for global receptive field
         # Stem: full resolution
         self.stem = nn.Sequential(
             nn.Conv2d(in_ch, hidden, 3, padding=1, bias=True),
@@ -815,7 +812,7 @@ class HintedMaskRenderer(nn.Module):
 
 
 class AsymmetricPairGenerator(nn.Module):
-    """Quantizr-inspired warp-based pair generation (council decision 2026-04-12).
+    """Warp-based pair generation with asymmetric render + flow architecture.
 
     The key insight: frame2 is rendered directly from mask2 (anchor frame).
     Frame1 is derived by warping frame2 with learned optical flow + gated
@@ -1018,7 +1015,7 @@ def build_renderer(
 ) -> PairGenerator:
     """Build the full mask-to-pair rendering pipeline.
 
-    Default settings match the competitor's proven ~300K param budget.
+    Default settings produce a ~300K parameter model.
 
     Features:
         - Shared embedding between renderer and motion predictor

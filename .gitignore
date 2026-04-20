@@ -27,6 +27,20 @@ experiments/cache/
 experiments/postfilter_weights/
 workspace/tools/
 
+# Model checkpoints and large tensors (use Git LFS or external storage instead)
+# Note: some .pt files are intentionally tracked (small backups, reports).
+# The ones below are known large files that should never be in git.
+experiments/raft_flow.pt
+experiments/results/**/*.pt
+
+# Secrets and credentials
+.env
+*.env.local
+*.env.*.local
+*_api_key
+*.key
+credentials.json
+
 # Generated submission scratch artifacts
 submissions/robust_current/archive/
 submissions/robust_current/inflated/

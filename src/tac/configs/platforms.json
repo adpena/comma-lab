@@ -19,18 +19,18 @@
       }
     },
     {
-      "name": "bat00",
+      "name": "remote-gpu",
       "kind": "remote",
       "manifest_globs": [
-        ".omx/logs/remote_jobs/bat00-*.json",
-        "remote-runs/bat00/*/manifest.json"
+        ".omx/logs/remote_jobs/remote-gpu-*.json",
+        "remote-runs/remote-gpu/*/manifest.json"
       ],
       "status_globs": [
-        ".omx/status/bat00-*.json",
-        "remote-runs/bat00/*/status.json"
+        ".omx/status/remote-gpu-*.json",
+        "remote-runs/remote-gpu/*/status.json"
       ],
       "ledger_paths": [
-        "remote-runs/bat00/_ledger.jsonl"
+        "remote-runs/remote-gpu/_ledger.jsonl"
       ],
       "budget": {
         "max_active_runs": 2,

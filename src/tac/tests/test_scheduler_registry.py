@@ -22,11 +22,11 @@ def sample_registry_payload() -> dict[str, object]:
                 },
             },
             {
-                "name": "bat00",
+                "name": "remote-gpu",
                 "kind": "remote",
-                "manifest_globs": ["remote-runs/bat00/*/manifest.json"],
-                "status_globs": ["remote-runs/bat00/*/status.json"],
-                "ledger_paths": ["remote-runs/bat00/_ledger.jsonl"],
+                "manifest_globs": ["remote-runs/remote-gpu/*/manifest.json"],
+                "status_globs": ["remote-runs/remote-gpu/*/status.json"],
+                "ledger_paths": ["remote-runs/remote-gpu/_ledger.jsonl"],
                 "budget": {
                     "max_active_runs": 1,
                     "max_failed_runs": 2,
@@ -72,12 +72,12 @@ class SchedulerRegistryTests(unittest.TestCase):
             registry = load_platform_registry(registry_path)
 
         self.assertEqual(registry.version, 1)
-        self.assertEqual(sorted(registry.platforms), ["bat00", "coiled", "kaggle", "local", "modal"])
+        self.assertEqual(sorted(registry.platforms), ["remote-gpu", "coiled", "kaggle", "local", "modal"])
         self.assertEqual(registry.platforms["local"].budget.max_runs, 3)
         self.assertEqual(registry.platforms["local"].budget.max_archive_bytes, 2000000)
         self.assertEqual(
-            registry.platforms["bat00"].status_globs,
-            ("remote-runs/bat00/*/status.json",),
+            registry.platforms["remote-gpu"].status_globs,
+            ("remote-runs/remote-gpu/*/status.json",),
         )
         self.assertEqual(
             registry.platforms["coiled"].ledger_paths,
@@ -130,11 +130,11 @@ class SchedulerRegistryTests(unittest.TestCase):
         self.assertEqual(registry.version, 1)
         self.assertEqual(
             sorted(registry.platforms),
-            ["bat00", "coiled", "kaggle", "local", "modal"],
+            ["remote-gpu", "coiled", "kaggle", "local", "modal"],
         )
         self.assertEqual(registry.platforms["local"].result_devices, ("cpu", "mps"))
-        self.assertIn(".omx/logs/remote_jobs/bat00-*.json", registry.platforms["bat00"].manifest_globs)
-        self.assertIn("remote-runs/bat00/*/manifest.json", registry.platforms["bat00"].manifest_globs)
+        self.assertIn(".omx/logs/remote_jobs/remote-gpu-*.json", registry.platforms["remote-gpu"].manifest_globs)
+        self.assertIn("remote-runs/remote-gpu/*/manifest.json", registry.platforms["remote-gpu"].manifest_globs)
         self.assertIn(".omx/logs/remote_jobs/kaggle-*.json", registry.platforms["kaggle"].manifest_globs)
         self.assertIn("remote-runs/kaggle/_ledger.jsonl", registry.platforms["kaggle"].ledger_paths)
         self.assertIn(".omx/status/modal-*.json", registry.platforms["modal"].status_globs)

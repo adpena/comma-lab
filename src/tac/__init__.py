@@ -27,7 +27,7 @@ Quick start::
 
 from __future__ import annotations
 
-__version__ = "1.0.0"
+__version__ = "1.0.5"
 
 # ── Lazy public API ──────────────────────────────────────────────────────
 # Heavy imports (torch, pydantic) are deferred so that `import tac` stays

@@ -6,7 +6,7 @@ fallback) for temporal propagation across video frames.
 
 Toolchain priority (conditioned on availability):
   1. SAM 3 MLX (native Apple Silicon — fastest local path)
-  2. SAM 3 (requires CUDA/Triton — use on bat00 with RTX 2070 Super)
+  2. SAM 3 (requires CUDA/Triton — use on a Linux GPU machine)
   3. SAM 2.1 (works on Apple Silicon via MPS — local fallback)
   4. Gradient + temporal variance masking (no ML — last resort)
 
@@ -422,7 +422,7 @@ def _try_import_sam():
 
     Priority:
       1. SAM 3 MLX (Apple Silicon native — fastest local path)
-      2. SAM 3 (requires Triton/CUDA — works on bat00 with RTX 2070 Super)
+      2. SAM 3 (requires Triton/CUDA — use on a Linux GPU machine)
       3. SAM 2.1 (works on Apple Silicon MPS — local fallback)
     """
     if _sam_import_cache:

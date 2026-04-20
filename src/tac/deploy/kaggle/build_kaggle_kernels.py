@@ -26,7 +26,16 @@ from kaggle_kernel_builder import KaggleKernelSpec, write_bundle
 REPO_ROOT = Path(__file__).resolve().parents[4]
 KAGGLE_ROOT = REPO_ROOT / "experiments" / "kaggle_kernels"
 KAGGLE_CREDS = Path.home() / ".kaggle" / "kaggle.json"
-ASSET_DATASET_REF = "adpena/comma-lab-private-assets"
+ASSET_DATASET_SLUG = "comma-lab-private-assets"
+
+
+def kaggle_dataset_ref() -> str:
+    """Return the Kaggle dataset ref for the private assets dataset.
+
+    Reads the username from ``~/.kaggle/kaggle.json`` so this module does
+    not hard-code any account name.
+    """
+    return f"{kaggle_username()}/{ASSET_DATASET_SLUG}"
 
 
 def load_tac_bootstrap_renderer():
@@ -131,7 +140,10 @@ def _kaggle_setup() -> None:
     # Search both to be robust across Kaggle platform changes.
     _asset_root = _input_root / "comma-lab-private-assets"
     if not _asset_root.exists():
-        _asset_root = _input_root / "datasets" / "adpena" / "comma-lab-private-assets"
+        # Discover dynamically: search for the slug under any owner directory
+        _candidates = list((_input_root / "datasets").glob("*/comma-lab-private-assets"))
+        if _candidates:
+            _asset_root = _candidates[0]
     _required = ["raft_flow.pt", "renderer_best_v3.pt", "posenet_targets.bin", "0.mkv"]
     for _attempt in range(1, 6):
         _missing = []
@@ -270,7 +282,7 @@ def kernel_specs() -> dict[str, KaggleKernelSpec]:
             # preamble handles all setup inline before main() runs.
             code_source=REPO_ROOT / "experiments" / "train_renderer_fridrich.py",
             code_file="train_renderer_fridrich.py",
-            dataset_sources=(ASSET_DATASET_REF,),
+            dataset_sources=(kaggle_dataset_ref(),),
             bootstrap_preamble=_asym_warp_variant_preamble(variant, resume_from=resume_from),
         )
 
@@ -281,7 +293,7 @@ def kernel_specs() -> dict[str, KaggleKernelSpec]:
             title="comma-lab dilated h64 long1000",
             code_source=REPO_ROOT / "experiments" / "train_postfilter_dilated_h64.py",
             code_file="train_postfilter_dilated_h64.py",
-            dataset_sources=(ASSET_DATASET_REF,),
+            dataset_sources=(kaggle_dataset_ref(),),
             bootstrap_preamble=render_bootstrap(
                 required_symbols=(
                     "build_postfilter_meta",
@@ -300,7 +312,7 @@ def kernel_specs() -> dict[str, KaggleKernelSpec]:
             title="comma-lab segnet attack fixed h32",
             code_source=REPO_ROOT / "experiments" / "cloud_segnet_attack_h32_trainer.py",
             code_file="cloud_segnet_attack_h32_trainer.py",
-            dataset_sources=(ASSET_DATASET_REF,),
+            dataset_sources=(kaggle_dataset_ref(),),
             bootstrap_preamble=render_bootstrap(
                 required_symbols=(
                     "build_postfilter_meta",
@@ -320,14 +332,14 @@ def kernel_specs() -> dict[str, KaggleKernelSpec]:
             title="comma-lab pairaware smoke",
             code_source=REPO_ROOT / "experiments" / "train_postfilter_pairaware.py",
             code_file="train_postfilter_pairaware.py",
-            dataset_sources=(ASSET_DATASET_REF,),
+            dataset_sources=(kaggle_dataset_ref(),),
         ),
         "constrained_gen_smoke": KaggleKernelSpec(
             slug="comma-lab-constrained-gen-smoke",
             title="comma-lab constrained gen smoke",
             code_source=REPO_ROOT / "experiments" / "kaggle_constrained_gen_launcher.py",
             code_file="kaggle_constrained_gen_launcher.py",
-            dataset_sources=(ASSET_DATASET_REF,),
+            dataset_sources=(kaggle_dataset_ref(),),
         ),
     }
 
@@ -361,7 +373,7 @@ def _kaggle_bin() -> str:
 
 
 def wait_for_dataset_ready(
-    dataset_ref: str = ASSET_DATASET_REF,
+    dataset_ref: str | None = None,
     required: dict[str, int] | None = None,
     poll_interval: int = 60,
     max_attempts: int = 30,
@@ -380,6 +392,8 @@ def wait_for_dataset_ready(
         poll_interval: Seconds between API polls (default 60).
         max_attempts:  Max polls before giving up (default 30 = 30 min).
     """
+    if dataset_ref is None:
+        dataset_ref = kaggle_dataset_ref()
     if required is None:
         required = REQUIRED_DATASET_ASSETS
     kaggle = _kaggle_bin()
