@@ -349,7 +349,13 @@ class MotionPredictor(nn.Module):
         if self.output_channels == 2:
             return raw * 0.1
         else:
-            flow = raw[:, :2].tanh() * (self.max_flow_px / max(mask_t.shape[-2], mask_t.shape[-1]) * 2)
+            # Per-axis normalization matching canonical src/tac/renderer.py
+            # Council ruling (round 20): use (W-1)/(H-1) for align_corners=True
+            H, W = mask_t.shape[-2], mask_t.shape[-1]
+            flow_raw = raw[:, :2].tanh()
+            flow_x = flow_raw[:, 0:1] * (self.max_flow_px / (W - 1) * 2)
+            flow_y = flow_raw[:, 1:2] * (self.max_flow_px / (H - 1) * 2)
+            flow = torch.cat([flow_x, flow_y], dim=1)
             if self.flow_only:
                 gate = torch.zeros_like(raw[:, 2:3])
                 residual = torch.zeros_like(raw[:, 3:6])
@@ -630,7 +636,7 @@ def load_asym_bin(raw_bytes: bytes, device: str = "cpu") -> nn.Module:
     for name, module in model.named_modules():
         if isinstance(module, nn.Embedding):
             embedding_lookup[name] = module
-        elif isinstance(module, (nn.Conv2d, nn.ConvTranspose2d)):
+        elif isinstance(module, (nn.Conv2d, nn.ConvTranspose2d, nn.Linear)):
             conv_lookup[name] = module
 
     for layer_meta in header["layers"]:

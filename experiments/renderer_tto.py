@@ -131,6 +131,8 @@ def load_renderer(checkpoint_path: str, device: torch.device) -> torch.nn.Module
         max_flow_px=model_cfg.get("max_flow_px", 20.0),
         max_residual=model_cfg.get("max_residual", 20.0),
         flow_only=model_cfg.get("flow_only", False),
+        pose_dim=model_cfg.get("pose_dim", 0),
+        use_dsconv=model_cfg.get("use_dsconv", False),
     )
 
     # Load weights — handle both direct state_dict and nested checkpoint formats

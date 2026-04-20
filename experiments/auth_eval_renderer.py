@@ -181,6 +181,8 @@ def _load_renderer_checkpoint(ckpt_path: str, device: str) -> tuple[nn.Module, d
             max_flow_px=config.get("max_flow_px", 20.0),
             max_residual=config.get("max_residual", 20.0),
             flow_only=config.get("flow_only", False),
+            pose_dim=config.get("pose_dim", 0),
+            use_dsconv=config.get("use_dsconv", False),
         )
     else:
         model = MaskRenderer(
