@@ -119,7 +119,8 @@ def load_renderer(checkpoint_path: str, device: torch.device) -> torch.nn.Module
     ckpt = torch.load(checkpoint_path, map_location="cpu", weights_only=False)
 
     # Detect model config from checkpoint if available
-    model_cfg = ckpt.get("model_config", {})
+    # Training scripts (train_renderer_fridrich.py) save under "config"
+    model_cfg = ckpt.get("model_config", ckpt.get("config", {}))
     model = AsymmetricPairGenerator(
         num_classes=model_cfg.get("num_classes", 5),
         embed_dim=model_cfg.get("embed_dim", 6),
