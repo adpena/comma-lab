@@ -657,6 +657,8 @@ def auth_eval(tag: str, checkpoint: str = "renderer_best.pt", strategy: str = "s
             max_flow_px=config.get("max_flow_px", 20.0),
             max_residual=config.get("max_residual", 20.0),
             flow_only=config.get("flow_only", False),
+            pose_dim=config.get("pose_dim", 0),
+            use_dsconv=config.get("use_dsconv", False),
         )
         model.load_state_dict(ckpt_data["model_state_dict"], strict=False)
         model.to(device).eval()

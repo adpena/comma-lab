@@ -798,6 +798,8 @@ class AuthEvaluator:
             max_flow_px=config.get("max_flow_px", 20.0),
             max_residual=config.get("max_residual", 20.0),
             flow_only=config.get("flow_only", False),
+            pose_dim=config.get("pose_dim", 0),
+            use_dsconv=config.get("use_dsconv", False),
         )
 
     # ------------------------------------------------------------------
@@ -1296,6 +1298,8 @@ def _inline_load_asym(raw_bytes: bytes, device: str = "cpu") -> nn.Module:
         max_flow_px=header.get("max_flow_px", 20.0),
         max_residual=header.get("max_residual", 20.0),
         flow_only=header.get("flow_only", False),
+        pose_dim=header.get("pose_dim", 0),
+        use_dsconv=header.get("use_dsconv", False),
     )
 
     # Build name -> module lookups
@@ -1304,7 +1308,7 @@ def _inline_load_asym(raw_bytes: bytes, device: str = "cpu") -> nn.Module:
     for name, module in model.named_modules():
         if isinstance(module, nn.Embedding):
             embedding_lookup[name] = module
-        elif isinstance(module, (nn.Conv2d, nn.ConvTranspose2d)):
+        elif isinstance(module, (nn.Conv2d, nn.ConvTranspose2d, nn.Linear)):
             conv_lookup[name] = module
 
     # Restore weights from header-ordered layers
