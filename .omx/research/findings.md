@@ -1,5 +1,73 @@
 # Findings
 
+## 2026-04-15 [INTELLIGENCE] Quantizr PR#55 score 0.33 — FiLM + DSConv + eval resize
+
+**Source**: Competitive intelligence from PR#55 in the upstream contest repo.
+
+- **Score**: 0.33 (new leaderboard leader as of 2026-04-15)
+- **Architecture**: FiLM (Feature-wise Linear Modulation) conditioning on pose vectors + depthwise separable convolutions (DSConv) + eval-resize simulation during training
+- **Implication**: FiLM pose conditioning directly addresses the temporal coherence gap we observed in DP-SIMS. The renderer uses GT pose vectors to modulate intermediate feature maps, enabling pose-consistent generation WITHOUT temporal recurrence.
+- **Rate**: ~500KB archive (includes model weights). Rate ~0.013.
+- **Key insight**: Eval resize simulation (training with the same resize the scorer applies) is likely worth ~0.05 score improvement on its own.
+
+**Strategic response**:
+- FiLM conditioning is now the highest-priority architectural improvement.
+- Our renderer (AsymmetricPairGenerator + warp + residual) could accept FiLM conditioning on pose vectors at the warp stage.
+- DSConv reduces parameter count while maintaining capacity — worth integrating for rate efficiency.
+- `--simulate-resize` flag in renderer_tto.py already addresses the eval resize gap for TTO.
+
+**New target**: Sub-0.25 contest-compliant (to beat 0.33). Current best: 0.43 [unlimited-compute].
+
+## 2026-04-15 [RESEARCH] 2024-2026 literature survey — top techniques for scorer-aware video compression
+
+**Scope**: 2024-2026 papers on neural video compression, task-aware compression, and steganographic/adversarial generation.
+
+### Top 8 Techniques Ranked by Relevance
+
+1. **FiLM (Feature-wise Linear Modulation)** [Perez et al. 2018, widely adopted 2024+]
+   - Modulate intermediate features with affine transforms conditioned on external vectors (e.g., pose)
+   - Directly addresses temporal coherence in our DP-SIMS paradigm
+   - Quantizr PR#55 uses this — empirically validated at 0.33
+
+2. **Cool-chic / COIN++ (per-instance overfitted decoders)** [ICCV 2023, ECCV 2024]
+   - Train a tiny MLP (629-800 params) per video instance. Weights ARE the compressed representation.
+   - Cool-chic achieves VVC-competitive quality. Relevant to our "constrained generation from noise" GPU Eureka.
+   - Our SIREN test was underpowered (1/4 res, 500 steps). Cool-chic paradigm validates the approach.
+
+3. **Hinge loss for semantic preservation** [validated in-house, April 2026]
+   - Hinge margin loss for SegNet optimization is 24-49% better than cross-entropy at 50+ TTO steps.
+   - Phase transition at ~100 steps confirmed with correct checkpoint (cff8dca4).
+
+4. **Augmented Lagrangian for rate-distortion** [Balle et al., extended by Fridrich constraints]
+   - Our v5 Lagrangian annealing achieved auth=0.87 baseline. Foundation for all TTO work.
+   - Key finding: drift at ep16999 suggests the Lagrangian multiplier needs slow rho growth.
+
+5. **Depthwise Separable Convolutions (DSConv)** [MobileNet heritage, used by Quantizr PR#55]
+   - Replace 3x3 conv with depthwise + pointwise. 8-9x parameter reduction with minimal quality loss.
+   - Relevant for reducing archive size (rate term) while maintaining SegNet accuracy.
+
+6. **Task-aware rate allocation** [VCM/MPEG, 2024]
+   - Allocate more bits to semantically important regions (road, vehicles) and fewer to sky/background.
+   - Our compress_masks.py does coarse version. Per-region rate allocation is unexplored.
+
+7. **Test-Time Optimization (TTO) with differentiable scorers** [in-house, validated]
+   - Core technique: differentiable scorer forward passes + gradient descent on renderer activations.
+   - Validated at auth=0.43 [unlimited-compute]. The gradient bug fix (rgb_to_yuv6 @no_grad) was paper-worthy.
+
+8. **Eval-resize simulation during training** [in-house + Quantizr PR#55]
+   - Train renderer with the same resize operation the scorer applies at eval time.
+   - Eliminates distribution shift between training and scoring. Already in renderer_tto.py (--simulate-resize).
+
+### Premature Kill Reassessment
+
+Based on literature survey and Quantizr PR#55, three previously deprioritized techniques deserve reassessment:
+
+**DP-SIMS Independent Generation + FiLM**: The original kill (PoseNet=0.482) was due to lack of temporal conditioning. FiLM directly addresses this. High priority smoke test.
+
+**Constrained Generation from Noise**: GPU Eureka projected 0.135. Cool-chic paradigm validates the "overfit tiny model to video" approach. With hinge loss + FiLM conditioning + proper step count (1000+), this is worth a real test.
+
+**SIREN/NeRV Video Memorization**: The 500-step test at 1/4 resolution was explicitly labeled a "janky smoke test" in the council review. Cool-chic (ICCV 2023) proves the paradigm works at full resolution with proper architecture. Lane must stay open.
+
 ## 2026-04-16 [EXPERIMENT] Hinge loss breakthrough + correct checkpoint re-validation
 
 **Context**: All prior Vast.ai experiments used wrong checkpoint (5-epoch smoke model, MD5:a9aee326). Re-ran with correct auth=0.87 renderer (MD5:cff8dca4).
