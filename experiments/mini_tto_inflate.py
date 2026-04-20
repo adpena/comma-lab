@@ -90,6 +90,7 @@ def main() -> None:
     # ── Load full scorers (for scoring, not for TTO) ─────────────────
     logger.info("Loading full scorers for evaluation...")
     from tac.scorer import load_differentiable_scorers, extract_gt_masks, extract_gt_pose_targets
+    from tac.data import load_gt_video
     posenet, segnet = load_differentiable_scorers(args.upstream, device=device)
 
     # ── Load mini-scorers (for TTO) ─────────────────────────────────
@@ -101,16 +102,22 @@ def main() -> None:
                 sum(p.numel() for p in mini_seg.parameters()),
                 sum(p.numel() for p in mini_pose.parameters()))
 
+    # ── Load GT frames and extract targets ─────────────────────────────
+    video_path = args.video or str(Path(args.upstream) / "videos" / "0.mkv")
+    logger.info("Loading GT frames from %s...", video_path)
+    gt_frames = load_gt_video(video_path, n_frames=args.n_frames)
+    logger.info("Loaded %d GT frames", len(gt_frames))
+
+    logger.info("Extracting GT masks and poses...")
+    gt_masks_full = extract_gt_masks(gt_frames, segnet, device=device)
+    gt_poses = extract_gt_pose_targets(gt_frames, posenet, device=device)
+
     # ── Generate renderer frames ─────────────────────────────────────
     logger.info("Loading renderer and generating frames...")
     from experiments.train_mini_scorer import load_renderer, generate_renderer_frames
 
     renderer = load_renderer(args.checkpoint, device)
-    video_path = args.video or str(Path(args.upstream) / "videos" / "0.mkv")
-    gt_masks = extract_gt_masks(video_path, segnet, device=device, n_frames=args.n_frames)
-    gt_poses = extract_gt_pose_targets(video_path, posenet, device=device, n_frames=args.n_frames)
-
-    frames_chw = generate_renderer_frames(renderer, gt_masks, gt_poses, device, batch_size=20)
+    frames_chw = generate_renderer_frames(renderer, gt_masks_full, gt_poses, device, batch_size=20)
     del renderer
     if device.type == "cuda":
         torch.cuda.empty_cache()
@@ -121,22 +128,23 @@ def main() -> None:
     logger.info("Scoring renderer output (before mini-TTO)...")
     from tac.scorer import compute_proxy_score
     frames_hwc_before = frames_chw.permute(0, 2, 3, 1).contiguous()  # (N, H, W, 3)
-    score_before = compute_proxy_score(frames_hwc_before, posenet, segnet, device=device)
+    score_before = compute_proxy_score(frames_hwc_before, gt_frames, posenet, segnet, device=device)
     logger.info("Score BEFORE mini-TTO: %.4f (seg=%.4f, pose=%.6f)",
                 score_before["total"], score_before.get("segnet", 0), score_before.get("posenet", 0))
 
     # ── Prepare mini-TTO targets ─────────────────────────────────────
-    # Target masks at mini resolution (from full SegNet on renderer frames)
-    logger.info("Computing mini-TTO targets...")
+    # Target masks at mini resolution (from full SegNet on GT frames — the gold standard)
+    logger.info("Computing mini-TTO targets from GT frames...")
     with torch.no_grad():
-        # Get full SegNet labels, downsample to mini res
         target_masks_list = []
-        for i in range(0, args.n_frames, 32):
-            batch = frames_chw[i:i+32].to(device)
-            if batch.shape[-2] != 384 or batch.shape[-1] != 512:
-                batch_resized = F.interpolate(batch, size=(384, 512), mode="bilinear", align_corners=False)
+        for i in range(0, len(gt_frames), 32):
+            batch_list = gt_frames[i:i+32]
+            batch = torch.stack(batch_list).float().to(device)  # (B, H, W, 3)
+            batch_chw = batch.permute(0, 3, 1, 2).contiguous()  # (B, 3, H, W)
+            if batch_chw.shape[-2] != 384 or batch_chw.shape[-1] != 512:
+                batch_resized = F.interpolate(batch_chw, size=(384, 512), mode="bilinear", align_corners=False)
             else:
-                batch_resized = batch
+                batch_resized = batch_chw
             logits = segnet(batch_resized)
             labels = logits.argmax(dim=1)  # (B, 384, 512)
             labels_mini = F.interpolate(
@@ -147,7 +155,7 @@ def main() -> None:
             target_masks_list.append(labels_mini.cpu())
         target_masks = torch.cat(target_masks_list, dim=0)
 
-    # Target poses from full PoseNet
+    # Target poses from full PoseNet on GT frames
     target_poses = gt_poses  # (P, 6)
 
     # Load pair weights if available
@@ -178,7 +186,7 @@ def main() -> None:
 
     # ── Score AFTER mini-TTO ─────────────────────────────────────────
     logger.info("Scoring after mini-TTO...")
-    score_after = compute_proxy_score(frames_hwc_after, posenet, segnet, device=device)
+    score_after = compute_proxy_score(frames_hwc_after, gt_frames, posenet, segnet, device=device)
     logger.info("Score AFTER mini-TTO: %.4f (seg=%.4f, pose=%.6f)",
                 score_after["total"], score_after.get("segnet", 0), score_after.get("posenet", 0))
 

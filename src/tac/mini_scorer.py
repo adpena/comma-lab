@@ -241,9 +241,9 @@ def train_mini_segnet(
     device = torch.device(device) if isinstance(device, str) else device
     N = frames_chw.shape[0]
 
-    # Default validation: every 10th frame
+    # Default validation: every 5th frame (20% held out)
     if val_indices is None:
-        val_indices = list(range(0, N, 10))
+        val_indices = list(range(0, N, 5))
     train_indices = [i for i in range(N) if i not in set(val_indices)]
 
     # ── Step 1: Generate teacher labels ──────────────────────────────
@@ -379,9 +379,9 @@ def train_mini_posenet(
     assert N % 2 == 0, f"Need even number of frames for pairs, got {N}"
     P = N // 2  # number of pairs
 
-    # Default validation: every 10th pair
+    # Default validation: every 5th pair (20% held out)
     if val_indices is None:
-        val_indices = list(range(0, P, 10))
+        val_indices = list(range(0, P, 5))
     train_indices = [i for i in range(P) if i not in set(val_indices)]
 
     # ── Step 1: Generate teacher pose targets ────────────────────────
@@ -645,13 +645,21 @@ def save_mini_scorers(
     output_dir: str | Path,
     quantize_int8: bool = True,
 ) -> dict[str, int]:
-    """Save mini-scorers for archive inclusion.
+    """Save mini-scorers for archive inclusion using FP16 storage.
+
+    FP16 halves all parameter storage (Conv2d included), unlike dynamic INT8
+    quantization which only affects Linear layers. For our tiny all-Conv2d
+    models, FP16 is strictly better: same compression, simpler roundtrip,
+    no quantization key mismatches.
+
+    The quantize_int8 argument is kept for API compatibility but now uses FP16
+    regardless (the improvement applies universally).
 
     Args:
         mini_seg: trained MiniSegNet.
         mini_pose: trained MiniPoseNet.
         output_dir: directory to save into.
-        quantize_int8: if True, apply dynamic INT8 quantization.
+        quantize_int8: kept for API compat (FP16 always used for compression).
 
     Returns:
         Dict with file sizes in bytes.
@@ -659,23 +667,16 @@ def save_mini_scorers(
     output_dir = Path(output_dir)
     output_dir.mkdir(parents=True, exist_ok=True)
 
-    # Quantize if requested
-    if quantize_int8:
-        mini_seg_save = torch.quantization.quantize_dynamic(
-            mini_seg.cpu().eval(), {nn.Conv2d, nn.Linear}, dtype=torch.qint8
-        )
-        mini_pose_save = torch.quantization.quantize_dynamic(
-            mini_pose.cpu().eval(), {nn.Conv2d, nn.Linear}, dtype=torch.qint8
-        )
-    else:
-        mini_seg_save = mini_seg.cpu().eval()
-        mini_pose_save = mini_pose.cpu().eval()
-
     seg_path = output_dir / "mini_segnet.bin"
     pose_path = output_dir / "mini_posenet.bin"
 
-    torch.save(mini_seg_save.state_dict(), str(seg_path))
-    torch.save(mini_pose_save.state_dict(), str(pose_path))
+    # Always save as FP16 state_dict — compresses ALL params (Conv2d + Linear)
+    # and maintains clean load_state_dict roundtrip
+    seg_state = {k: v.half() for k, v in mini_seg.cpu().eval().state_dict().items()}
+    pose_state = {k: v.half() for k, v in mini_pose.cpu().eval().state_dict().items()}
+
+    torch.save(seg_state, str(seg_path))
+    torch.save(pose_state, str(pose_path))
 
     sizes = {
         "mini_segnet_bytes": seg_path.stat().st_size,
@@ -684,7 +685,7 @@ def save_mini_scorers(
     }
 
     logger.info(
-        "[mini-scorer] Saved: segnet=%d bytes, posenet=%d bytes, total=%d bytes",
+        "[mini-scorer] Saved (FP16): segnet=%d bytes, posenet=%d bytes, total=%d bytes",
         sizes["mini_segnet_bytes"], sizes["mini_posenet_bytes"], sizes["total_bytes"],
     )
     return sizes
@@ -695,32 +696,29 @@ def load_mini_scorers(
     device: str | torch.device = "cpu",
     quantized: bool = False,
 ) -> tuple[MiniSegNet, MiniPoseNet]:
-    """Load mini-scorers from saved files.
+    """Load mini-scorers from saved FP16 files.
 
     Args:
         input_dir: directory containing mini_segnet.bin and mini_posenet.bin.
         device: target device.
-        quantized: if True, load as quantized models (for size, not for training).
+        quantized: deprecated, kept for API compat (FP16 state_dict always loaded).
 
     Returns:
-        (mini_segnet, mini_posenet) tuple on device.
+        (mini_segnet, mini_posenet) tuple on device in FP32.
     """
     input_dir = Path(input_dir)
     device = torch.device(device) if isinstance(device, str) else device
 
-    if quantized:
-        # For quantized models, load directly
-        mini_seg = torch.load(str(input_dir / "mini_segnet.bin"), map_location="cpu")
-        mini_pose = torch.load(str(input_dir / "mini_posenet.bin"), map_location="cpu")
-    else:
-        mini_seg = MiniSegNet()
-        mini_seg.load_state_dict(
-            torch.load(str(input_dir / "mini_segnet.bin"), map_location="cpu", weights_only=True)
-        )
-        mini_pose = MiniPoseNet()
-        mini_pose.load_state_dict(
-            torch.load(str(input_dir / "mini_posenet.bin"), map_location="cpu", weights_only=True)
-        )
+    # Load FP16 state_dict and cast back to FP32 for computation
+    seg_state = torch.load(str(input_dir / "mini_segnet.bin"), map_location="cpu", weights_only=True)
+    seg_state = {k: v.float() for k, v in seg_state.items()}
+    mini_seg = MiniSegNet()
+    mini_seg.load_state_dict(seg_state)
+
+    pose_state = torch.load(str(input_dir / "mini_posenet.bin"), map_location="cpu", weights_only=True)
+    pose_state = {k: v.float() for k, v in pose_state.items()}
+    mini_pose = MiniPoseNet()
+    mini_pose.load_state_dict(pose_state)
 
     mini_seg = mini_seg.to(device).eval()
     mini_pose = mini_pose.to(device).eval()
@@ -824,57 +822,88 @@ class MiniScorerTTO(nn.Module):
         pose_weight: float = 10.0,
         pair_weights: torch.Tensor | None = None,
         log_every: int = 25,
+        batch_pairs: int = 10,
     ) -> torch.Tensor:
-        """Run TTO optimization using mini-scorers.
+        """Run TTO optimization using mini-scorers in memory-safe batches.
+
+        Processes frames in chunks of `batch_pairs` pairs (2*batch_pairs frames)
+        to avoid OOM on T4 (16GB). Each chunk is optimized independently with
+        its own Adam state, then results are concatenated.
 
         Args:
             init_frames: (N, H, W, 3) float [0, 255] — warm-start from renderer.
             target_masks: (N, H_seg, W_seg) long — target class indices at mini res.
             target_poses: (P, 6) float — target pose for each pair.
-            num_steps: optimization steps.
+            num_steps: optimization steps per batch.
             lr: learning rate.
             seg_weight: SegNet loss weight.
             pose_weight: PoseNet loss weight.
             pair_weights: (P,) optional per-pair difficulty weights.
             log_every: log frequency (0 to disable).
+            batch_pairs: number of pairs (2x frames) per optimization batch.
 
         Returns:
             (N, H, W, 3) float [0, 255] optimized frames.
         """
-        frames = init_frames.to(self.device).float().detach().clone()
-        frames.requires_grad_(True)
+        N = init_frames.shape[0]
+        P = N // 2
+        batch_frames = batch_pairs * 2  # frames per chunk
 
-        optimizer = torch.optim.Adam([frames], lr=lr)
+        all_optimized = []
 
-        best_loss = float("inf")
-        best_frames = frames.detach().clone()
+        for chunk_start_pair in range(0, P, batch_pairs):
+            chunk_end_pair = min(chunk_start_pair + batch_pairs, P)
+            chunk_start_frame = chunk_start_pair * 2
+            chunk_end_frame = chunk_end_pair * 2
+            n_pairs_in_chunk = chunk_end_pair - chunk_start_pair
 
-        for step in range(num_steps):
-            optimizer.zero_grad()
+            # Extract chunk
+            chunk_frames = init_frames[chunk_start_frame:chunk_end_frame].to(self.device).float().detach().clone()
+            chunk_frames.requires_grad_(True)
+            chunk_masks = target_masks[chunk_start_frame:chunk_end_frame]
+            chunk_poses = target_poses[chunk_start_pair:chunk_end_pair]
+            chunk_pw = pair_weights[chunk_start_pair:chunk_end_pair] if pair_weights is not None else None
 
-            seg_loss = self.compute_seg_loss(frames, target_masks)
-            pose_loss = self.compute_pose_loss(frames, target_poses, pair_weights=pair_weights)
+            optimizer = torch.optim.Adam([chunk_frames], lr=lr)
 
-            total_loss = seg_weight * seg_loss + pose_weight * pose_loss
-            total_loss.backward()
-            optimizer.step()
+            best_loss = float("inf")
+            best_chunk = chunk_frames.detach().clone()
 
-            with torch.no_grad():
-                frames.data.clamp_(0.0, 255.0)
+            for step in range(num_steps):
+                optimizer.zero_grad()
 
-            loss_val = total_loss.item()
-            if loss_val < best_loss:
-                best_loss = loss_val
-                best_frames = frames.detach().clone()
+                seg_loss = self.compute_seg_loss(chunk_frames, chunk_masks)
+                pose_loss = self.compute_pose_loss(chunk_frames, chunk_poses, pair_weights=chunk_pw)
 
-            if log_every > 0 and (step + 1) % log_every == 0:
-                logger.info(
-                    "[mini-tto] step %d/%d: total=%.4f seg=%.4f pose=%.6f",
-                    step + 1, num_steps, total_loss.item(),
-                    seg_loss.item(), pose_loss.item(),
-                )
+                total_loss = seg_weight * seg_loss + pose_weight * pose_loss
+                total_loss.backward()
+                optimizer.step()
 
-        return best_frames.round().clamp(0.0, 255.0)
+                with torch.no_grad():
+                    chunk_frames.data.clamp_(0.0, 255.0)
+
+                loss_val = total_loss.item()
+                if loss_val < best_loss:
+                    best_loss = loss_val
+                    best_chunk = chunk_frames.detach().clone()
+
+                if log_every > 0 and (step + 1) % log_every == 0:
+                    logger.info(
+                        "[mini-tto] batch %d/%d step %d/%d: total=%.4f seg=%.4f pose=%.6f",
+                        chunk_start_pair // batch_pairs + 1,
+                        (P + batch_pairs - 1) // batch_pairs,
+                        step + 1, num_steps, total_loss.item(),
+                        seg_loss.item(), pose_loss.item(),
+                    )
+
+            all_optimized.append(best_chunk.round().clamp(0.0, 255.0).cpu())
+
+            # Free GPU memory between chunks
+            del chunk_frames, optimizer, best_chunk
+            if self.device.type == "cuda":
+                torch.cuda.empty_cache()
+
+        return torch.cat(all_optimized, dim=0)
 
 
 # ── Internal helpers ─────────────────────────────────────────────────────

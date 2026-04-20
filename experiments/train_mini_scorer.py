@@ -69,7 +69,7 @@ def parse_args() -> argparse.Namespace:
 
 def load_renderer(checkpoint_path: str, device: torch.device) -> torch.nn.Module:
     """Load the trained renderer from checkpoint."""
-    from tac.renderer import AsymmetricWarpRenderer
+    from tac.renderer import AsymmetricPairGenerator
 
     ckpt = torch.load(checkpoint_path, map_location="cpu", weights_only=False)
 
@@ -85,12 +85,14 @@ def load_renderer(checkpoint_path: str, device: torch.device) -> torch.nn.Module
         config = {}
 
     # Infer architecture from state dict
-    hidden = config.get("hidden", 64)
     num_classes = config.get("num_classes", 5)
+    base_ch = config.get("base_ch", 36)
+    mid_ch = config.get("mid_ch", 60)
 
-    renderer = AsymmetricWarpRenderer(
+    renderer = AsymmetricPairGenerator(
         num_classes=num_classes,
-        hidden=hidden,
+        base_ch=base_ch,
+        mid_ch=mid_ch,
     )
     renderer.load_state_dict(state_dict, strict=False)
     renderer = renderer.to(device).eval()
@@ -98,7 +100,7 @@ def load_renderer(checkpoint_path: str, device: torch.device) -> torch.nn.Module
     for p in renderer.parameters():
         p.requires_grad = False
 
-    logger.info("Loaded renderer from %s (hidden=%d)", checkpoint_path, hidden)
+    logger.info("Loaded renderer from %s (base_ch=%d, mid_ch=%d)", checkpoint_path, base_ch, mid_ch)
     return renderer
 
 
@@ -179,14 +181,19 @@ def main() -> None:
     logger.info("Loading renderer from %s...", args.checkpoint)
     renderer = load_renderer(args.checkpoint, device)
 
-    # Get GT masks and poses
+    # Load GT frames, then extract masks and poses
+    from tac.data import load_gt_video
     from tac.scorer import extract_gt_masks, extract_gt_pose_targets
 
     video_path = args.video or str(Path(args.upstream) / "videos" / "0.mkv")
-    logger.info("Extracting GT masks from %s...", video_path)
-    gt_masks = extract_gt_masks(video_path, segnet, device=device, n_frames=args.n_frames)
+    logger.info("Loading GT frames from %s...", video_path)
+    gt_frames = load_gt_video(video_path, n_frames=args.n_frames)
+    logger.info("Loaded %d GT frames", len(gt_frames))
+
+    logger.info("Extracting GT masks...")
+    gt_masks = extract_gt_masks(gt_frames, segnet, device=device)
     logger.info("Extracting GT poses...")
-    gt_poses = extract_gt_pose_targets(video_path, posenet, device=device, n_frames=args.n_frames)
+    gt_poses = extract_gt_pose_targets(gt_frames, posenet, device=device)
 
     logger.info("Generating %d renderer frames...", args.n_frames)
     frames_chw = generate_renderer_frames(renderer, gt_masks, gt_poses, device, batch_size=20)

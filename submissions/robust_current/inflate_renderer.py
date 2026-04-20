@@ -1816,6 +1816,207 @@ def _adaptive_tto_phase(
     return refined_frames
 
 
+def _inflate_renderer_with_mini_tto(
+    archive_dir: str,
+    inflated_dir: str,
+    video_names_file: str,
+    renderer_filename: str = "renderer.bin",
+    mask_filename: str = "masks.mkv",
+    out_w: int = OUT_W,
+    out_h: int = OUT_H,
+) -> None:
+    """Inflate with mini-scorer TTO: uses tiny distilled scorers from archive.
+
+    Contest-compliant: mini-scorer weights are inside archive.zip, no full
+    scorer loading required. The mini-scorers (~25KB each) provide approximate
+    gradients for test-time optimization.
+
+    Env vars:
+        INFLATE_MINI_TTO=1              Enable this path
+        INFLATE_MINI_TTO_STEPS=100      Gradient steps per batch
+        INFLATE_MINI_TTO_LR=0.01        Learning rate
+        INFLATE_MINI_TTO_BATCH_PAIRS=10 Pairs per optimization batch
+        INFLATE_MINI_TTO_SEG_WEIGHT=100 SegNet loss weight
+        INFLATE_MINI_TTO_POSE_WEIGHT=10 PoseNet loss weight
+    """
+    print("=" * 60, file=sys.stderr)
+    print("INFLATE_MINI_TTO=1: Mini-scorer TTO enabled", file=sys.stderr)
+    print("  (contest-compliant: mini-scorers from archive)", file=sys.stderr)
+    print("=" * 60, file=sys.stderr)
+
+    tto_steps = int(os.environ.get("INFLATE_MINI_TTO_STEPS", "100"))
+    tto_lr = float(os.environ.get("INFLATE_MINI_TTO_LR", "0.01"))
+    batch_pairs = int(os.environ.get("INFLATE_MINI_TTO_BATCH_PAIRS", "10"))
+    seg_weight = float(os.environ.get("INFLATE_MINI_TTO_SEG_WEIGHT", "100.0"))
+    pose_weight = float(os.environ.get("INFLATE_MINI_TTO_POSE_WEIGHT", "10.0"))
+
+    print(f"  Mini-TTO config: steps={tto_steps}, lr={tto_lr}, "
+          f"batch_pairs={batch_pairs}", file=sys.stderr)
+    print(f"  Weights: seg={seg_weight}, pose={pose_weight}", file=sys.stderr)
+
+    t_total_start = time.monotonic()
+
+    # ---- Check for mini-scorer files in archive ----
+    archive_path = Path(archive_dir)
+    mini_seg_path = archive_path / "mini_segnet.bin"
+    mini_pose_path = archive_path / "mini_posenet.bin"
+
+    if not mini_seg_path.exists() or not mini_pose_path.exists():
+        print("  WARNING: mini-scorer files not found in archive. "
+              "Falling back to renderer-only inflation.", file=sys.stderr)
+        return inflate_renderer(
+            archive_dir, inflated_dir, video_names_file,
+            renderer_filename=renderer_filename,
+            mask_filename=mask_filename,
+            out_w=out_w, out_h=out_h,
+        )
+
+    # ---- Device detection and loading ----
+    device, render_batch_size = _detect_device_and_batch_size()
+    renderer, masks, mask_video_path = _load_renderer_and_masks(
+        archive_dir, device,
+        renderer_filename=renderer_filename,
+        mask_filename=mask_filename,
+    )
+
+    # ---- Generate renderer frames ----
+    print("Stage 1: Generating renderer frames...", file=sys.stderr)
+    t0 = time.monotonic()
+    is_asymmetric = _is_asymmetric_model(renderer)
+    N = masks.shape[0]
+
+    torch.manual_seed(42)
+    all_frames = []
+    with torch.inference_mode():
+        if is_asymmetric:
+            P = N // 2
+            for start in range(0, P, render_batch_size):
+                end = min(start + render_batch_size, P)
+                masks_t = masks[2 * start:2 * end:2].to(device=device, dtype=torch.long)
+                masks_t1 = masks[2 * start + 1:2 * end + 1:2].to(device=device, dtype=torch.long)
+                pairs = renderer(masks_t, masks_t1)  # (B, 2, H, W, 3)
+                B = pairs.shape[0]
+                f0 = pairs[:, 0]
+                f1 = pairs[:, 1]
+                interleaved = torch.stack([f0, f1], dim=1).reshape(2 * B, *f0.shape[1:])
+                all_frames.append(interleaved.cpu())
+        else:
+            for i in range(0, N, render_batch_size):
+                end = min(i + render_batch_size, N)
+                batch_masks = masks[i:end].to(device=device, dtype=torch.long)
+                frames = renderer(batch_masks)  # (B, 3, H, W)
+                frames_hwc = frames.permute(0, 2, 3, 1)
+                all_frames.append(frames_hwc.cpu())
+
+    renderer_frames = torch.cat(all_frames, dim=0).float()  # (N, H, W, 3)
+    t_render = time.monotonic() - t0
+    print(f"  Generated {renderer_frames.shape[0]} frames in {t_render:.1f}s",
+          file=sys.stderr)
+
+    del renderer
+    if device == "cuda":
+        torch.cuda.empty_cache()
+
+    # ---- Load mini-scorers ----
+    print("Stage 2: Loading mini-scorers from archive...", file=sys.stderr)
+    try:
+        from tac.mini_scorer import load_mini_scorers, MiniScorerTTO, MINI_SEG_H, MINI_SEG_W
+    except ImportError:
+        print("  FATAL: tac.mini_scorer required for mini-TTO mode", file=sys.stderr)
+        raise
+
+    mini_seg, mini_pose = load_mini_scorers(str(archive_path), device=device)
+    mini_tto = MiniScorerTTO(mini_seg, mini_pose, device=device)
+    print(f"  Mini-scorers loaded (seg params={sum(p.numel() for p in mini_seg.parameters())}, "
+          f"pose params={sum(p.numel() for p in mini_pose.parameters())})", file=sys.stderr)
+
+    # ---- Compute targets from pre-stored masks ----
+    # Use archive masks downscaled to mini resolution as SegNet targets
+    print("Stage 3: Computing mini-TTO targets from archive masks...", file=sys.stderr)
+    target_masks = F.interpolate(
+        masks.float().unsqueeze(1),
+        size=(MINI_SEG_H, MINI_SEG_W),
+        mode="nearest",
+    ).squeeze(1).long()
+
+    # Pose targets: load from archive if available, else use zeros
+    poses_path = archive_path / "poses.pt"
+    poses_bin_path = archive_path / "poses.bin"
+    if poses_path.exists():
+        target_poses = torch.load(str(poses_path), map_location="cpu", weights_only=True).float()
+    elif poses_bin_path.exists():
+        raw = poses_bin_path.read_bytes()
+        target_poses = torch.frombuffer(bytearray(raw), dtype=torch.float16).reshape(-1, 6).float()
+    else:
+        # No pre-computed poses — skip PoseNet TTO
+        target_poses = torch.zeros(N // 2, 6)
+        print("  WARNING: No pose targets in archive. PoseNet TTO disabled.", file=sys.stderr)
+        pose_weight = 0.0
+
+    # ---- Run mini-TTO ----
+    print(f"Stage 4: Running mini-TTO ({tto_steps} steps, batch_pairs={batch_pairs})...",
+          file=sys.stderr)
+    t_tto = time.monotonic()
+
+    refined_frames = mini_tto.optimize(
+        init_frames=renderer_frames,
+        target_masks=target_masks,
+        target_poses=target_poses,
+        num_steps=tto_steps,
+        lr=tto_lr,
+        seg_weight=seg_weight,
+        pose_weight=pose_weight,
+        batch_pairs=batch_pairs,
+        log_every=max(1, tto_steps // 5),
+    )
+
+    t_tto_elapsed = time.monotonic() - t_tto
+    print(f"  Mini-TTO complete in {t_tto_elapsed:.1f}s", file=sys.stderr)
+
+    del mini_tto, mini_seg, mini_pose
+    if device == "cuda":
+        torch.cuda.empty_cache()
+
+    # ---- Upscale and write raw output ----
+    print("Stage 5: Upscaling and writing raw RGB...", file=sys.stderr)
+    output_path = Path(inflated_dir)
+    output_path.mkdir(parents=True, exist_ok=True)
+
+    video_names = Path(video_names_file).read_text().splitlines()
+    video_names = [v.strip() for v in video_names if v.strip()]
+
+    for idx, rel in enumerate(video_names):
+        stem = rel.rsplit(".", 1)[0]
+        raw_out = output_path / f"{stem}.raw"
+        raw_out.parent.mkdir(parents=True, exist_ok=True)
+
+        n_written = 0
+        with open(str(raw_out), "wb") as f:
+            for i in range(0, N, render_batch_size):
+                end = min(i + render_batch_size, N)
+                batch = refined_frames[i:end]  # (B, H, W, 3)
+                batch_chw = batch.permute(0, 3, 1, 2).to(device)  # (B, 3, H, W)
+                batch_up = F.interpolate(
+                    batch_chw, size=(out_h, out_w),
+                    mode="bilinear", align_corners=False,
+                )
+                batch_out = batch_up.permute(0, 2, 3, 1).round().clamp(0, 255).byte()
+                f.write(batch_out.cpu().numpy().tobytes())
+                n_written += batch_out.shape[0]
+
+        actual_size = os.path.getsize(str(raw_out))
+        expected_size = out_w * out_h * 3 * n_written
+        if actual_size != expected_size:
+            raise RuntimeError(
+                f"Output size mismatch: {actual_size:,} != expected {expected_size:,}"
+            )
+
+        print(f"  Written {n_written} frames to {raw_out}", file=sys.stderr)
+
+    t_total = time.monotonic() - t_total_start
+    print(f"\nTotal mini-TTO inflate time: {t_total:.1f}s", file=sys.stderr)
+
+
 def inflate_renderer_with_tto(
     archive_dir: str,
     inflated_dir: str,
@@ -1846,10 +2047,20 @@ def inflate_renderer_with_tto(
         INFLATE_TTO_POSE_WEIGHT:    PoseNet weight (default 10.0)
     """
     inflate_tto = os.environ.get("INFLATE_TTO", "0") == "1"
+    inflate_mini_tto = os.environ.get("INFLATE_MINI_TTO", "0") == "1"
 
-    if not inflate_tto:
+    if not inflate_tto and not inflate_mini_tto:
         # Default path: renderer only, fully compliant
         return inflate_renderer(
+            archive_dir, inflated_dir, video_names_file,
+            renderer_filename=renderer_filename,
+            mask_filename=mask_filename,
+            out_w=out_w, out_h=out_h,
+        )
+
+    # ---- Mini-TTO path: uses mini-scorers from archive, no full scorer needed ----
+    if inflate_mini_tto:
+        return _inflate_renderer_with_mini_tto(
             archive_dir, inflated_dir, video_names_file,
             renderer_filename=renderer_filename,
             mask_filename=mask_filename,
