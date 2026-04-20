@@ -195,6 +195,22 @@ EXPERIMENTS: dict[str, ExperimentConfig] = {
         needs_checkpoint="renderer_best.pt",
         timeout_hours=3,
     ),
+    # ── TTO v7 with adaptive per-pixel null space projection ──
+    "tto_v7_null_space": _exp(
+        name="tto_v7_null_space",
+        script="experiments/renderer_tto.py",
+        args=(
+            "--checkpoint renderer_best.pt --device cuda --n-frames 1200 "
+            "--tto-steps 500 --tto-lr 0.005 --batch-pairs 10 "
+            "--seg-weight 100 --pose-weight 10 --compress-weight 0.5 "
+            "--use-embedding-loss --seg-odd-only --early-stop-patience 500 "
+            "--simulate-resize --eval-roundtrip "
+            "--segnet-loss-mode hinge --hinge-margin 0.5 "
+            "--use-null-space --null-space-step 0.5 --null-space-every 5"
+        ),
+        needs_checkpoint="renderer_best.pt",
+        timeout_hours=3,
+    ),
     # ── Distillation: train renderer to reproduce TTO frames ──
     "distill_full": _exp(
         name="distill_full",

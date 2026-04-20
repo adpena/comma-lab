@@ -109,6 +109,12 @@ def parse_args() -> argparse.Namespace:
                         "'hinge' = logit-margin hinge loss.")
     p.add_argument("--hinge-margin", type=float, default=0.5,
                    help="Margin for hinge loss (only used with --segnet-loss-mode hinge).")
+    p.add_argument("--use-null-space", action="store_true",
+                   help="Apply adaptive per-pixel YUV null space projection for free SegNet improvement.")
+    p.add_argument("--null-space-step", type=float, default=0.5,
+                   help="Step size for null space projection (only with --use-null-space).")
+    p.add_argument("--null-space-every", type=int, default=10,
+                   help="Apply null space projection every N steps (only with --use-null-space).")
     return p.parse_args()
 
 
@@ -184,6 +190,9 @@ def run_single_step_count(
     lr_schedule: str = "constant",
     segnet_loss_mode: str = "xent",
     hinge_margin: float = 0.5,
+    use_null_space: bool = False,
+    null_space_step: float = 0.5,
+    null_space_every: int = 10,
 ) -> dict[str, float]:
     """Run TTO at a single step count and measure distortion.
 
@@ -213,6 +222,9 @@ def run_single_step_count(
         lr_schedule: LR schedule ('constant' or 'cosine').
         segnet_loss_mode: SegNet loss function (``"xent"`` or ``"hinge"``).
         hinge_margin: margin for hinge loss.
+        use_null_space: apply adaptive per-pixel YUV null space projection.
+        null_space_step: step size for null space projection.
+        null_space_every: apply null space projection every N steps.
 
     Returns:
         Dict with posenet, segnet, score, elapsed_s, steps.
@@ -268,6 +280,9 @@ def run_single_step_count(
             lr_schedule=lr_schedule,
             segnet_loss_mode=segnet_loss_mode,
             hinge_margin=hinge_margin,
+            use_null_space=use_null_space,
+            null_space_step=null_space_step,
+            null_space_every=null_space_every,
         )
         refined[sf_start:sf_end] = sub_result.cpu()
 
@@ -460,6 +475,9 @@ def main() -> None:
             lr_schedule=args.lr_schedule,
             segnet_loss_mode=args.segnet_loss_mode,
             hinge_margin=args.hinge_margin,
+            use_null_space=args.use_null_space,
+            null_space_step=args.null_space_step,
+            null_space_every=args.null_space_every,
         )
 
         results[str(step_count)] = distortions
@@ -522,6 +540,9 @@ def _save_results(
             "simulate_resize": args.simulate_resize,
             "segnet_loss_mode": args.segnet_loss_mode,
             "hinge_margin": args.hinge_margin,
+            "use_null_space": args.use_null_space,
+            "null_space_step": args.null_space_step,
+            "null_space_every": args.null_space_every,
         },
         "results": results,
     }

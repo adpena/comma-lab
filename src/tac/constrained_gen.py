@@ -1938,7 +1938,9 @@ def coupled_trajectory_optimize(
         with torch.no_grad():
             frames.data.clamp_(0.0, 255.0)
 
-        # YUV null space projection: improve SegNet without touching PoseNet
+        # Adaptive per-pixel YUV null space projection: improve SegNet without
+        # touching PoseNet. Uses the empirical null space basis (6 directions in
+        # the 12D 2x2 block space that are invisible to PoseNet's YUV420 preprocessing).
         if use_null_space and (step + 1) % null_space_every == 0:
             # Compute SegNet gradient w.r.t. current frames (needs grad enabled)
             frames_ns = frames.detach().clone().requires_grad_(True)
@@ -1949,9 +1951,26 @@ def coupled_trajectory_optimize(
             seg_grad = torch.autograd.grad(seg_loss_ns, frames_ns)[0]
             # Project into PoseNet null space and apply (no grad needed)
             with torch.no_grad():
-                frames.data.copy_(
-                    yuv_null_space_projection(frames.data, seg_grad, step_size=null_space_step)
+                from tac.scorer_exploits import (
+                    load_null_space_basis,
+                    project_segnet_grad_to_posenet_null_space,
                 )
+                # Load basis once (cached after first call via module-level)
+                if not hasattr(coupled_trajectory_optimize, "_null_basis"):
+                    coupled_trajectory_optimize._null_basis = load_null_space_basis(
+                        device=device,
+                    )
+                null_basis = coupled_trajectory_optimize._null_basis
+
+                # seg_grad is (N, H, W, 3), need (N, 3, H, W) for the projection
+                seg_grad_chw = seg_grad.permute(0, 3, 1, 2)
+                projected_grad = project_segnet_grad_to_posenet_null_space(
+                    seg_grad_chw, null_basis, max_magnitude=null_space_step * 10.0,
+                )
+                # Apply: descend in null space direction (negative = minimize loss)
+                projected_hwc = projected_grad.permute(0, 2, 3, 1)
+                frames.data.sub_(null_space_step * projected_hwc)
+                frames.data.clamp_(0.0, 255.0)
             del frames_ns, seg_grad, seg_loss_ns
 
         # Snapshot best PoseNet state (transient capture)
