@@ -1,0 +1,4 @@
+AUTH 0.36: ep1000 + ALL 600 optimized poses [CONTEST-COMPLIANT]
+PoseNet=0.00245, SegNet=0.00082, Rate=0.00489
+From 0.87 baseline → 0.61 distilled → 0.51 partial poses → 0.36 full poses
+Gap to Quantizr: 0.03. FP4 archive saves 0.009 more. Sub-0.33 REACHABLE.
