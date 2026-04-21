@@ -43,6 +43,8 @@ __all__ = [
     "load_renderer_checkpoint",
     "export_asymmetric_checkpoint",
     "load_asymmetric_checkpoint",
+    "export_asymmetric_checkpoint_fp4",
+    "load_asymmetric_checkpoint_fp4",
 ]
 
 
@@ -1041,11 +1043,378 @@ def load_asymmetric_checkpoint(
     return model
 
 
+def export_asymmetric_checkpoint_fp4(
+    model: nn.Module,
+    output_path: Path,
+    block_size: int = 32,
+) -> int:
+    """Serialize an AsymmetricPairGenerator to compact .bin file using FP4 quantization.
+
+    Uses the FP4 codebook scheme (3-bit index + 1-bit sign = 4 bits/weight) with
+    per-block scaling (block_size=32). This achieves ~2x compression over int8,
+    reducing a 296KB FP8 export to ~148KB.
+
+    Format: [FP4A magic (4B)] [header_len (4B)] [JSON header] [blob_len (4B)] [blob] ...
+
+    Each weight blob is packed as:
+        [n_blocks x 2B float16 scale] [packed 4-bit nibbles]
+
+    Biases remain in float16 (negligible size contribution).
+
+    Args:
+        model: AsymmetricPairGenerator instance.
+        output_path: path to write the .bin file.
+        block_size: weights per FP4 scale group (default 32).
+
+    Returns:
+        Number of bytes written.
+    """
+    from tac.fp4_quantize import (
+        DEFAULT_CODEBOOK,
+        _quantize_block,
+        _pack_indices_signs,
+    )
+
+    model.eval()
+    config = _infer_asymmetric_config(model)
+
+    # Collect all conv layers from the full model (renderer.* and motion.*)
+    conv_layers = _collect_all_conv_layers(model)
+
+    # Build layer metadata and weight blobs
+    layers_meta: list[dict] = []
+    weight_blobs: list[bytes] = []
+
+    codebook = DEFAULT_CODEBOOK.clone()
+
+    # Export all nn.Embedding layers (deduplicated by id)
+    embedding_layers: list[tuple[str, nn.Embedding]] = []
+    seen_emb_ids: set[int] = set()
+    for name, module in model.named_modules():
+        if isinstance(module, nn.Embedding):
+            if id(module) not in seen_emb_ids:
+                embedding_layers.append((name, module))
+                seen_emb_ids.add(id(module))
+
+    for emb_name, emb_module in embedding_layers:
+        weight = emb_module.weight.detach().cpu().float().reshape(-1)
+        n = weight.shape[0]
+
+        # Pad to block boundary
+        pad_len = (block_size - n % block_size) % block_size
+        if pad_len > 0:
+            weight = torch.cat([weight, torch.zeros(pad_len)])
+
+        # Quantize blocks
+        all_packed = []
+        all_scales = []
+        for start in range(0, weight.shape[0], block_size):
+            block = weight[start:start + block_size]
+            indices, signs, scale = _quantize_block(block, codebook)
+            packed = _pack_indices_signs(indices, signs)
+            all_packed.append(packed)
+            all_scales.append(float(scale) if isinstance(scale, torch.Tensor) else scale)
+
+        # Build blob: [scales (float16)] [packed nibbles]
+        blob = bytearray()
+        for s in all_scales:
+            blob.extend(struct.pack("<e", s))
+        for p in all_packed:
+            blob.extend(p.numpy().tobytes())
+
+        weight_blobs.append(bytes(blob))
+        layers_meta.append({
+            "name": emb_name,
+            "shape": list(emb_module.weight.shape),
+            "bits": 4,
+            "has_bias": False,
+            "transposed": False,
+            "is_embedding": True,
+            "numel": int(emb_module.weight.numel()),
+            "block_size": block_size,
+        })
+
+    # Export all conv/linear layers with FP4
+    for layer_info in conv_layers:
+        name = layer_info["name"]
+        module = layer_info["module"]
+        transposed = layer_info["transposed"]
+        is_linear = layer_info.get("is_linear", False)
+
+        weight = module.weight.detach().cpu().float()
+        bias = module.bias.detach().cpu().float() if module.bias is not None else None
+        has_bias = bias is not None
+
+        # Flatten all weights and quantize with FP4
+        flat = weight.reshape(-1)
+        n = flat.shape[0]
+        pad_len = (block_size - n % block_size) % block_size
+        if pad_len > 0:
+            flat = torch.cat([flat, torch.zeros(pad_len)])
+
+        all_packed = []
+        all_scales = []
+        for start in range(0, flat.shape[0], block_size):
+            block = flat[start:start + block_size]
+            indices, signs, scale = _quantize_block(block, codebook)
+            packed = _pack_indices_signs(indices, signs)
+            all_packed.append(packed)
+            all_scales.append(float(scale) if isinstance(scale, torch.Tensor) else scale)
+
+        # Build weight blob: [scales] [packed data]
+        weight_blob = bytearray()
+        for s in all_scales:
+            weight_blob.extend(struct.pack("<e", s))
+        for p in all_packed:
+            weight_blob.extend(p.numpy().tobytes())
+
+        # Build bias blob: float16 per channel (no quantization, negligible size)
+        bias_blob = bytearray()
+        if has_bias:
+            for ch_idx in range(bias.shape[0]):
+                bias_blob.extend(struct.pack("<e", bias[ch_idx].item()))
+
+        weight_blobs.append(bytes(weight_blob))
+        weight_blobs.append(bytes(bias_blob))
+
+        if transposed:
+            C_out = weight.shape[1]
+        else:
+            C_out = weight.shape[0]
+
+        layers_meta.append({
+            "name": name,
+            "shape": list(weight.shape),
+            "bits": 4,
+            "has_bias": has_bias,
+            "bias_blob_len": len(bias_blob),
+            "transposed": transposed,
+            "is_linear": is_linear,
+            "numel": n,
+            "block_size": block_size,
+        })
+
+    # Build header
+    header = {
+        "version": 3,
+        "pair_mode": "asymmetric",
+        "quantization": "fp4",
+        "block_size": block_size,
+        "codebook": codebook.tolist(),
+        **config,
+        "layers": layers_meta,
+    }
+
+    # Collect scalar parameters
+    scalar_params: dict[str, float] = {}
+    conv_names = {cl["name"] for cl in conv_layers}
+    emb_names = {el[0] for el in embedding_layers}
+    for pname, param in model.named_parameters():
+        if param.numel() == 1:
+            if not any(pname.startswith(cn) for cn in conv_names | emb_names):
+                scalar_params[pname] = param.item()
+    header["scalar_params"] = scalar_params
+
+    header_json = json.dumps(header, separators=(",", ":")).encode("utf-8")
+
+    # Pack: [magic (4B)] [header_len (4B)] [header JSON] [blob_len (4B)] [blob] ...
+    _MAGIC = b"FP4A"
+    buf = bytearray()
+    buf.extend(_MAGIC)
+    buf.extend(struct.pack("<I", len(header_json)))
+    buf.extend(header_json)
+    for blob in weight_blobs:
+        buf.extend(struct.pack("<I", len(blob)))
+        buf.extend(blob)
+
+    output_path = Path(output_path)
+    output_path.parent.mkdir(parents=True, exist_ok=True)
+    output_path.write_bytes(bytes(buf))
+
+    param_count = sum(p.numel() for p in model.parameters())
+    print(f"[fp4-export] {param_count:,} params → {len(buf):,} bytes "
+          f"({len(buf) / param_count * 8:.2f} bits/param)")
+    return len(buf)
+
+
+def load_asymmetric_checkpoint_fp4(
+    data_or_path: Union[bytes, Path],
+    device: str = "cpu",
+) -> nn.Module:
+    """Deserialize AsymmetricPairGenerator from FP4-packed .bin file.
+
+    Args:
+        data_or_path: raw bytes or path to .bin file.
+        device: device to place the model on.
+
+    Returns:
+        AsymmetricPairGenerator in eval mode with restored weights.
+    """
+    from tac.fp4_quantize import (
+        DEFAULT_CODEBOOK,
+        _unpack_indices_signs,
+        _dequantize_block,
+    )
+    from tac.renderer import AsymmetricPairGenerator
+
+    if isinstance(data_or_path, (str, Path)):
+        data = Path(data_or_path).read_bytes()
+    else:
+        data = data_or_path
+
+    offset = 0
+
+    # Read and verify magic
+    _MAGIC = b"FP4A"
+    if data[offset:offset + 4] != _MAGIC:
+        raise ValueError(
+            f"Not an FP4A renderer binary (expected magic {_MAGIC!r}, "
+            f"got {data[offset:offset+4]!r})"
+        )
+    offset += 4
+
+    # Read header
+    header_len = struct.unpack("<I", data[offset:offset + 4])[0]
+    offset += 4
+    header = json.loads(data[offset:offset + header_len].decode("utf-8"))
+    offset += header_len
+
+    version = header.get("version", 0)
+    if version != 3:
+        raise ValueError(f"Unsupported FP4 export version {version} (expected 3)")
+
+    block_size = header["block_size"]
+    codebook = torch.tensor(header["codebook"], dtype=torch.float32)
+
+    # Build fresh AsymmetricPairGenerator
+    model = AsymmetricPairGenerator(
+        num_classes=header.get("num_classes", 5),
+        embed_dim=header.get("embed_dim", 6),
+        base_ch=header.get("base_ch", 36),
+        mid_ch=header.get("mid_ch", 60),
+        motion_hidden=header.get("motion_hidden", 32),
+        depth=header.get("depth", 1),
+        max_flow_px=header.get("max_flow_px", 20.0),
+        max_residual=header.get("max_residual", 20.0),
+        flow_only=header.get("flow_only", False),
+        pose_dim=header.get("pose_dim", 0),
+        use_dsconv=header.get("use_dsconv", False),
+    )
+
+    # Build name -> module lookups
+    embedding_lookup: dict[str, nn.Embedding] = {}
+    conv_lookup: dict[str, nn.Module] = {}
+    for name, module in model.named_modules():
+        if isinstance(module, nn.Embedding):
+            embedding_lookup[name] = module
+        elif isinstance(module, (nn.Conv2d, nn.ConvTranspose2d, nn.Linear)):
+            conv_lookup[name] = module
+
+    def _dequantize_fp4_blob(blob_data: bytes, numel: int, blk_size: int) -> torch.Tensor:
+        """Dequantize an FP4 blob back to a flat float tensor."""
+        padded_numel = numel + (blk_size - numel % blk_size) % blk_size
+        n_blocks = padded_numel // blk_size
+
+        # Read scales (n_blocks x 2 bytes float16)
+        scales_bytes = n_blocks * 2
+        scales = []
+        for i in range(n_blocks):
+            s = struct.unpack("<e", blob_data[i * 2:(i + 1) * 2])[0]
+            scales.append(s)
+
+        # Read packed nibbles
+        packed_offset = scales_bytes
+        # Each block: block_size weights -> block_size/2 bytes of packed data
+        bytes_per_block = blk_size // 2
+        total_packed_bytes = n_blocks * bytes_per_block
+        packed_data = torch.tensor(
+            list(blob_data[packed_offset:packed_offset + total_packed_bytes]),
+            dtype=torch.uint8,
+        )
+
+        # Dequantize block by block
+        all_values = []
+        for i in range(n_blocks):
+            block_packed = packed_data[i * bytes_per_block:(i + 1) * bytes_per_block]
+            indices, signs = _unpack_indices_signs(block_packed, blk_size)
+            scale_t = torch.tensor(scales[i], dtype=torch.float32)
+            block_values = _dequantize_block(indices, signs, scale_t, codebook)
+            all_values.append(block_values)
+
+        flat = torch.cat(all_values)[:numel]
+        return flat
+
+    # Iterate layers in header order and restore weights
+    for layer_meta in header["layers"]:
+        name = layer_meta["name"]
+        is_embedding = layer_meta.get("is_embedding", False)
+        numel = layer_meta["numel"]
+        blk_size = layer_meta.get("block_size", block_size)
+
+        # Read blob
+        blob_len = struct.unpack("<I", data[offset:offset + 4])[0]
+        offset += 4
+        blob_data = data[offset:offset + blob_len]
+        offset += blob_len
+
+        if is_embedding:
+            shape = layer_meta["shape"]
+            flat = _dequantize_fp4_blob(blob_data, numel, blk_size)
+            with torch.no_grad():
+                embedding_lookup[name].weight.copy_(flat.reshape(shape))
+            continue
+
+        # Read bias blob
+        bias_blob_len = struct.unpack("<I", data[offset:offset + 4])[0]
+        offset += 4
+        bias_data = data[offset:offset + bias_blob_len]
+        offset += bias_blob_len
+
+        module = conv_lookup[name]
+        shape = layer_meta["shape"]
+
+        # Dequantize weights
+        flat = _dequantize_fp4_blob(blob_data, numel, blk_size)
+        with torch.no_grad():
+            module.weight.copy_(flat.reshape(shape))
+
+            # Restore bias from float16
+            if layer_meta["has_bias"] and bias_data:
+                transposed = layer_meta.get("transposed", False)
+                C_out = shape[1] if transposed else shape[0]
+                for ch_idx in range(C_out):
+                    b_val = struct.unpack("<e", bias_data[ch_idx * 2:(ch_idx + 1) * 2])[0]
+                    module.bias[ch_idx] = b_val
+
+    # Restore scalar parameters
+    scalar_params = header.get("scalar_params", {})
+    if scalar_params:
+        param_dict = dict(model.named_parameters())
+        with torch.no_grad():
+            for pname, pval in scalar_params.items():
+                if pname in param_dict:
+                    param_dict[pname].fill_(pval)
+
+    # Verify shared embedding invariant
+    if hasattr(model, "renderer") and hasattr(model, "motion"):
+        r_emb = getattr(model.renderer, "embedding", None)
+        m_emb = getattr(model.motion, "embedding", None)
+        if r_emb is not None and m_emb is not None:
+            assert r_emb is m_emb, (
+                "Shared embedding invariant violated after load"
+            )
+
+    model = model.to(device)
+    model.eval()
+    return model
+
+
 def detect_checkpoint_type(data_or_path: Union[bytes, Path]) -> str:
     """Detect the type of a renderer checkpoint.
 
     Returns:
         "dpsm" for DPSIMSRenderer, "asymmetric" for AsymmetricPairGenerator,
+        "asymmetric_fp4" for FP4-quantized AsymmetricPairGenerator,
         "pytorch" for raw PyTorch checkpoints.
     """
     if isinstance(data_or_path, (str, Path)):
@@ -1055,6 +1424,8 @@ def detect_checkpoint_type(data_or_path: Union[bytes, Path]) -> str:
 
     if data[:4] == b"DPSM":
         return "dpsm"
+    elif data[:4] == b"FP4A":
+        return "asymmetric_fp4"
     elif data[:4] == b"ASYM":
         return "asymmetric"
     else:
@@ -1067,7 +1438,7 @@ def load_any_renderer_checkpoint(
 ) -> nn.Module:
     """Load any renderer checkpoint, auto-detecting the format.
 
-    Supports: DPSM (.bin), ASYM (.bin), and raw PyTorch (.pt) checkpoints.
+    Supports: DPSM (.bin), ASYM (.bin), FP4A (.bin), and raw PyTorch (.pt) checkpoints.
 
     Returns:
         The loaded model in eval mode on the specified device.
@@ -1075,6 +1446,8 @@ def load_any_renderer_checkpoint(
     fmt = detect_checkpoint_type(data_or_path)
     if fmt == "dpsm":
         return load_renderer_checkpoint(data_or_path, device=device)
+    elif fmt == "asymmetric_fp4":
+        return load_asymmetric_checkpoint_fp4(data_or_path, device=device)
     elif fmt == "asymmetric":
         return load_asymmetric_checkpoint(data_or_path, device=device)
     else:
