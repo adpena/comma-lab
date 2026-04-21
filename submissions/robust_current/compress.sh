@@ -425,6 +425,19 @@ if [ -f "$SELF_DIR/postfilter_int8.pt" ]; then
   echo "Bundled postfilter_int8.pt ($(stat -f%z "$SELF_DIR/postfilter_int8.pt" 2>/dev/null || stat -c%s "$SELF_DIR/postfilter_int8.pt") bytes) into archive"
 fi
 
+# Bundle mini-scorer binaries for INFLATE_MINI_TTO path
+BUNDLE_MINI_SCORERS="${BUNDLE_MINI_SCORERS:-0}"
+if [ "$BUNDLE_MINI_SCORERS" = "1" ]; then
+  if [ -f "$SELF_DIR/mini_segnet.bin" ] && [ -f "$SELF_DIR/mini_posenet.bin" ]; then
+    cp "$SELF_DIR/mini_segnet.bin" "$ARCHIVE_DIR/mini_segnet.bin"
+    cp "$SELF_DIR/mini_posenet.bin" "$ARCHIVE_DIR/mini_posenet.bin"
+    echo "Bundled mini_segnet.bin ($(stat -f%z "$SELF_DIR/mini_segnet.bin" 2>/dev/null || stat -c%s "$SELF_DIR/mini_segnet.bin") bytes) into archive"
+    echo "Bundled mini_posenet.bin ($(stat -f%z "$SELF_DIR/mini_posenet.bin" 2>/dev/null || stat -c%s "$SELF_DIR/mini_posenet.bin") bytes) into archive"
+  else
+    echo "WARNING: BUNDLE_MINI_SCORERS=1 but mini_segnet.bin/mini_posenet.bin not found in $SELF_DIR" >&2
+  fi
+fi
+
 # Bundle renderer binary for GPU/CPU renderer inflate path
 if [ -f "$SELF_DIR/renderer.bin" ]; then
   cp "$SELF_DIR/renderer.bin" "$ARCHIVE_DIR/renderer.bin"
