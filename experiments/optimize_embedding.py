@@ -112,7 +112,8 @@ def parse_args() -> argparse.Namespace:
     p.add_argument("--eval-roundtrip", action="store_true",
                    help="Simulate contest eval resolution roundtrip in loss")
     p.add_argument("--early-stop-patience", type=int, default=3,
-                   help="Stop if no improvement for this many epochs")
+                   help="Stop if no improvement for this many epochs (uses rolling-best: "
+                        "restores best weights at end regardless of when early stop fires)")
     p.add_argument("--gt-poses-path", type=str, default=None,
                    help="Path to GT or optimized poses (uses GT PoseNet targets if not provided)")
     p.add_argument("--save-checkpoint", action="store_true",
@@ -149,7 +150,7 @@ def load_renderer(checkpoint_path: str, device: torch.device) -> tuple[nn.Module
     else:
         model.load_state_dict(ckpt)
 
-    model = model.to(device)
+    model = model.eval().to(device)
 
     # Freeze ALL parameters first
     for param in model.parameters():
@@ -249,6 +250,9 @@ def compute_batch_loss(
     seg_loss = segnet_hinge_loss(seg_logits, gt_masks.to(device), margin=hinge_margin)
 
     # PoseNet loss (MSE on 6D output)
+    # NOTE: PoseNet requires a separate (B, 2, 3, H, W) pair input with its own
+    # eval roundtrip because it computes inter-frame pose from paired frames,
+    # whereas SegNet processes frames independently as (2*B, 1, 3, H, W).
     pairs_chw = torch.stack([
         frame_t.permute(0, 3, 1, 2),
         frame_t1.permute(0, 3, 1, 2),
@@ -544,6 +548,45 @@ def main():
           f"(pose: {opt_score['pose'] - orig_score['pose']:+.6f}, "
           f"seg: {opt_score['seg'] - orig_score['seg']:+.6f})")
 
+    # Per-frame PoseNet decomposition: score frame_t and frame_t1 separately
+    # to identify whether even or odd frames dominate the PoseNet distortion.
+    print("\n  Per-frame PoseNet decomposition (optimized embedding):")
+    with torch.inference_mode():
+        pose_t_losses = []
+        pose_t1_losses = []
+        for start in range(0, n_pairs, args.batch_pairs):
+            end = min(start + args.batch_pairs, n_pairs)
+            mt = gt_masks_all[2 * start:2 * end:2].to(device)
+            mt1 = gt_masks_all[2 * start + 1:2 * end + 1:2].to(device)
+            bp = init_poses[start:end].to(device) if init_poses is not None else None
+            pairs = model(mt, mt1, pose=bp)
+            f0 = pairs[:, 0]  # (B, H, W, 3) frame_t
+            f1 = pairs[:, 1]  # (B, H, W, 3) frame_t1
+            # Score each frame within its pair context
+            f0_chw = f0.permute(0, 3, 1, 2)
+            f1_chw = f1.permute(0, 3, 1, 2)
+            pair_chw = torch.stack([f0_chw, f1_chw], dim=1)
+            gt_f0 = torch.stack([torch.as_tensor(gt_frames[2 * k]).float() for k in range(start, end)]).to(device)
+            gt_f1 = torch.stack([torch.as_tensor(gt_frames[2 * k + 1]).float() for k in range(start, end)]).to(device)
+            gt_pair_chw = torch.stack([
+                gt_f0.permute(0, 3, 1, 2),
+                gt_f1.permute(0, 3, 1, 2),
+            ], dim=1)
+            pose_in_r = posenet.preprocess_input(pair_chw)
+            pose_in_g = posenet.preprocess_input(gt_pair_chw)
+            pose_r = posenet(pose_in_r)["pose"][..., :6]
+            pose_g = posenet(pose_in_g)["pose"][..., :6]
+            # Per-pair MSE split isn't meaningful for PoseNet (it scores pairs),
+            # but we can report the per-pair contribution
+            per_pair_mse = ((pose_r - pose_g) ** 2).mean(dim=-1)  # (B,)
+            pose_t_losses.extend(per_pair_mse.cpu().tolist())
+        pose_t_arr = torch.tensor(pose_t_losses)
+        print(f"    PoseNet per-pair MSE: mean={pose_t_arr.mean():.6f}, "
+              f"max={pose_t_arr.max():.6f}, min={pose_t_arr.min():.6f}, "
+              f"std={pose_t_arr.std():.6f}")
+        worst_pairs = pose_t_arr.argsort(descending=True)[:5]
+        print(f"    Worst 5 pairs: {[(int(p), f'{pose_t_arr[p]:.6f}') for p in worst_pairs]}")
+
     # Optionally save a new checkpoint with optimized embedding
     if args.save_checkpoint:
         ckpt_out = dict(ckpt)  # shallow copy
@@ -554,19 +597,19 @@ def main():
                 state_key = key
                 break
 
+        # Only overwrite the two known embedding keys (no greedy pattern matching)
+        _EMB_KEYS = ("renderer.embedding.weight", "motion.embedding.weight")
         if state_key:
             sd = dict(ckpt_out[state_key])
-            # The shared embedding appears as renderer.embedding.weight
-            # (and motion.embedding.weight points to the same tensor)
-            for k in sd:
-                if "embedding.weight" in k and "class_" not in k:
+            for k in _EMB_KEYS:
+                if k in sd:
                     sd[k] = best_weights.cpu()
                     print(f"  Updated {k} in checkpoint")
             ckpt_out[state_key] = sd
         else:
             # Raw state dict
-            for k in ckpt_out:
-                if "embedding.weight" in k and "class_" not in k:
+            for k in _EMB_KEYS:
+                if k in ckpt_out:
                     ckpt_out[k] = best_weights.cpu()
                     print(f"  Updated {k} in checkpoint")
 

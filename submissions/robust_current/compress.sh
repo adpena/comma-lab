@@ -637,6 +637,36 @@ elif [ -f "$SELF_DIR/optimized_poses.pt" ]; then
   echo "Bundled pre-computed optimized_poses.pt ($(stat -f%z "$SELF_DIR/optimized_poses.pt" 2>/dev/null || stat -c%s "$SELF_DIR/optimized_poses.pt") bytes) into archive"
 fi
 
+# ── Bundle optimized embedding (compress-time embedding TTO) ──────────
+BUNDLE_EMBEDDING="${BUNDLE_EMBEDDING:-0}"
+if [ "$BUNDLE_EMBEDDING" = "1" ]; then
+  if [ -f "$SELF_DIR/optimized_embedding.pt" ]; then
+    cp "$SELF_DIR/optimized_embedding.pt" "$ARCHIVE_DIR/optimized_embedding.pt"
+    echo "Bundled optimized_embedding.pt ($(stat -f%z "$SELF_DIR/optimized_embedding.pt" 2>/dev/null || stat -c%s "$SELF_DIR/optimized_embedding.pt") bytes) into archive"
+  else
+    echo "WARNING: BUNDLE_EMBEDDING=1 but optimized_embedding.pt not found in $SELF_DIR" >&2
+  fi
+elif [ -f "$SELF_DIR/optimized_embedding.pt" ]; then
+  # Auto-bundle if file exists alongside submission (backward compat)
+  cp "$SELF_DIR/optimized_embedding.pt" "$ARCHIVE_DIR/optimized_embedding.pt"
+  echo "Bundled pre-computed optimized_embedding.pt ($(stat -f%z "$SELF_DIR/optimized_embedding.pt" 2>/dev/null || stat -c%s "$SELF_DIR/optimized_embedding.pt") bytes) into archive"
+fi
+
+# ── Bundle gradient corrections (compress-time pre-computed pixel adjustments) ──
+BUNDLE_CORRECTIONS="${BUNDLE_CORRECTIONS:-0}"
+if [ "$BUNDLE_CORRECTIONS" = "1" ]; then
+  if [ -f "$SELF_DIR/gradient_corrections.bin" ]; then
+    cp "$SELF_DIR/gradient_corrections.bin" "$ARCHIVE_DIR/gradient_corrections.bin"
+    echo "Bundled gradient_corrections.bin ($(stat -f%z "$SELF_DIR/gradient_corrections.bin" 2>/dev/null || stat -c%s "$SELF_DIR/gradient_corrections.bin") bytes) into archive"
+  else
+    echo "WARNING: BUNDLE_CORRECTIONS=1 but gradient_corrections.bin not found in $SELF_DIR" >&2
+  fi
+elif [ -f "$SELF_DIR/gradient_corrections.bin" ]; then
+  # Auto-bundle if file exists alongside submission (backward compat)
+  cp "$SELF_DIR/gradient_corrections.bin" "$ARCHIVE_DIR/gradient_corrections.bin"
+  echo "Bundled pre-computed gradient_corrections.bin ($(stat -f%z "$SELF_DIR/gradient_corrections.bin" 2>/dev/null || stat -c%s "$SELF_DIR/gradient_corrections.bin") bytes) into archive"
+fi
+
 (
   cd "$ARCHIVE_DIR"
   zip -9 -r "$ARCHIVE_ZIP_TMP" .
