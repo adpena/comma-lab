@@ -314,7 +314,7 @@ def optimize_poses_batch(
             pairs_chw = flat.reshape(B_p, T_p, C_p, H_p, W_p)
 
         pose_in = posenet.preprocess_input(pairs_chw)
-        pose_out = posenet(pose_in)[:, :6]  # (B, 6) -- first 6 are pose
+        pose_out = posenet(pose_in)["pose"][..., :6]  # (B, 6)
         pose_loss = F.mse_loss(pose_out, pose_targets.to(device))
 
         # Combined loss
