@@ -578,6 +578,52 @@ elif [ -f "$SELF_DIR/posenet_targets.bin" ]; then
   echo "Bundled pre-computed posenet_targets.bin ($(stat -f%z "$SELF_DIR/posenet_targets.bin" 2>/dev/null || stat -c%s "$SELF_DIR/posenet_targets.bin") bytes) into archive"
 fi
 
+# ── Pose-Space TTO: optimize FiLM conditioning vectors at compress time ──
+# Runs gradient descent through frozen scorers to find optimal 6D pose vectors
+# per pair. These replace GT poses in the archive for better rendering.
+# Requires: renderer.bin with pose_dim > 0, GT video, upstream scorers.
+POSE_TTO_ENABLE="${POSE_TTO_ENABLE:-0}"
+POSE_TTO_STEPS="${POSE_TTO_STEPS:-500}"
+POSE_TTO_LR="${POSE_TTO_LR:-0.01}"
+POSE_TTO_DEVICE="${POSE_TTO_DEVICE:-cpu}"
+POSE_TTO_BATCH="${POSE_TTO_BATCH:-50}"
+POSE_TTO_LATENT_DIM="${POSE_TTO_LATENT_DIM:-0}"
+if [ "$POSE_TTO_ENABLE" = "1" ]; then
+  OPTIMIZED_POSES_OUT="$ARCHIVE_DIR/optimized_poses.pt"
+  GT_VIDEO_PATH="${UPSTREAM_ROOT}/videos/0.mkv"
+  RENDERER_PATH="$ARCHIVE_DIR/renderer.bin"
+  if [ -f "$GT_VIDEO_PATH" ] && [ -f "$RENDERER_PATH" ]; then
+    echo "Running Pose-Space TTO (steps=${POSE_TTO_STEPS}, lr=${POSE_TTO_LR}, device=${POSE_TTO_DEVICE}) ..."
+    POSE_TTO_ARGS=(
+      --checkpoint "$RENDERER_PATH"
+      --device "$POSE_TTO_DEVICE"
+      --steps "$POSE_TTO_STEPS"
+      --lr "$POSE_TTO_LR"
+      --batch-pairs "$POSE_TTO_BATCH"
+      --upstream "$UPSTREAM_ROOT"
+      --video "$GT_VIDEO_PATH"
+      --output-dir "$WORK_DIR/pose_tto"
+    )
+    if [ "$POSE_TTO_LATENT_DIM" -gt 0 ] 2>/dev/null; then
+      POSE_TTO_ARGS+=(--latent-dim "$POSE_TTO_LATENT_DIM")
+    fi
+    PROJECT_ROOT="$(cd "$SELF_DIR/../.." && pwd)"
+    PYTHONPATH="${PROJECT_ROOT}/src:${UPSTREAM_ROOT}:${PYTHONPATH:-}" \
+      "$UV_BIN" run python "${PROJECT_ROOT}/experiments/optimize_poses.py" "${POSE_TTO_ARGS[@]}"
+    if [ -f "$WORK_DIR/pose_tto/optimized_poses.pt" ]; then
+      cp "$WORK_DIR/pose_tto/optimized_poses.pt" "$OPTIMIZED_POSES_OUT"
+      echo "Bundled optimized_poses.pt ($(stat -f%z "$OPTIMIZED_POSES_OUT" 2>/dev/null || stat -c%s "$OPTIMIZED_POSES_OUT") bytes) into archive"
+    else
+      echo "WARNING: Pose-space TTO failed -- no optimized_poses.pt produced" >&2
+    fi
+  else
+    echo "WARNING: Cannot run pose TTO -- need GT video ($GT_VIDEO_PATH) and renderer ($RENDERER_PATH)" >&2
+  fi
+elif [ -f "$SELF_DIR/optimized_poses.pt" ]; then
+  cp "$SELF_DIR/optimized_poses.pt" "$ARCHIVE_DIR/optimized_poses.pt"
+  echo "Bundled pre-computed optimized_poses.pt ($(stat -f%z "$SELF_DIR/optimized_poses.pt" 2>/dev/null || stat -c%s "$SELF_DIR/optimized_poses.pt") bytes) into archive"
+fi
+
 (
   cd "$ARCHIVE_DIR"
   zip -9 -r "$ARCHIVE_ZIP_TMP" .
