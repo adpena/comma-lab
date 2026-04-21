@@ -18,8 +18,10 @@ for standalone operation on scorer machines without the tac package.
 """
 import json
 import os
+import struct
 import sys
 import time
+import zlib
 from pathlib import Path
 
 import numpy as np
@@ -37,6 +39,86 @@ SEG_W, SEG_H = 512, 384
 NUM_FRAMES = 1200
 NUM_CLASSES = 5  # Canonical source: tac.camera.NUM_CLASSES (kept local for standalone operation)
 EXPECTED_RAW_BYTES = OUT_W * OUT_H * 3 * NUM_FRAMES  # 3,662,409,600
+
+
+# ============================================================
+# Gradient corrections: unpack and apply pre-computed pixel adjustments
+# Ported from experiments/precompute_gradient_corrections.py for
+# contest-compliant inflate-time application (no scorer needed).
+# ============================================================
+def _unpack_sparse_corrections(data: bytes, compressed: bool = True) -> dict:
+    """Unpack sparse gradient corrections from binary format."""
+    if compressed:
+        data = zlib.decompress(data)
+
+    header_len = struct.unpack("<I", data[:4])[0]
+    header = json.loads(data[4:4 + header_len].decode("utf-8"))
+
+    offset = 4 + header_len
+    n_kept = header["n_kept"]
+    indices_size = n_kept * 4  # uint32
+    indices = np.frombuffer(data[offset:offset + indices_size], dtype=np.uint32)
+    offset += indices_size
+
+    qbits = header["quantize_bits"]
+    if qbits in (4, 8):
+        values = np.frombuffer(data[offset:], dtype=np.int8).reshape(n_kept, 3)
+    elif qbits == 16:
+        values = np.frombuffer(data[offset:], dtype=np.float16).reshape(n_kept, 3)
+    else:
+        raise ValueError(f"Unsupported quantize_bits={qbits}")
+
+    return {
+        "indices": indices,
+        "values": values,
+        "scale": header["scale"],
+        "shape": header["shape"],
+        "quantize_bits": qbits,
+        "n_kept": n_kept,
+        "n_total": header["n_total"],
+    }
+
+
+def _apply_gradient_corrections(
+    frames: np.ndarray,
+    corrections: dict,
+    alpha: float = 1.0,
+) -> np.ndarray:
+    """Apply pre-computed gradient corrections to rendered frames (no scorer needed).
+
+    Args:
+        frames: (N, H, W, 3) float32 rendered frames
+        corrections: dict from _unpack_sparse_corrections()
+        alpha: step size multiplier
+
+    Returns:
+        (N, H, W, 3) corrected frames
+    """
+    N, H, W, C = frames.shape
+    assert N * H * W == corrections["n_total"], (
+        f"Resolution mismatch: {N * H * W} vs {corrections['n_total']}"
+    )
+    flat_frames = frames.reshape(-1, C).copy()
+
+    indices = corrections["indices"]
+    values = corrections["values"]
+    scale = corrections["scale"]
+    qbits = corrections["quantize_bits"]
+
+    # Dequantize
+    if qbits == 8:
+        dequant = values.astype(np.float32) / 127.0 * scale
+    elif qbits == 4:
+        dequant = values.astype(np.float32) / 7.0 * scale
+    elif qbits == 16:
+        dequant = values.astype(np.float32)
+    else:
+        raise ValueError(f"Unsupported quantize_bits={qbits}")
+
+    flat_frames[indices] += alpha * dequant
+    flat_frames = np.clip(flat_frames, 0, 255)
+
+    return flat_frames.reshape(N, H, W, C)
 
 
 # ============================================================
@@ -1131,6 +1213,8 @@ def _generate_and_write(
     out_h: int = OUT_H,
     out_w: int = OUT_W,
     poses: torch.Tensor | None = None,
+    gradient_corrections: dict | None = None,
+    gradient_alpha: float = 1.0,
 ) -> int:
     """Generate frames from masks via renderer, upscale, and write raw RGB.
 
@@ -1153,6 +1237,9 @@ def _generate_and_write(
         out_h: output frame height
         out_w: output frame width
         poses: (P, 6) optional pose conditioning vectors for FiLM
+        gradient_corrections: optional dict from _unpack_sparse_corrections(),
+            applied AFTER rendering, BEFORE upscale (at renderer resolution)
+        gradient_alpha: step size for gradient corrections (default 1.0)
 
     Returns:
         Number of frames written
@@ -1208,11 +1295,43 @@ def _generate_and_write(
                     else:
                         pairs = renderer(masks_t, masks_t1)  # (B, 2, H, W, 3)
 
-                    # Upscale each frame in each pair
+                    # Apply gradient corrections at renderer resolution, then upscale
                     B_pairs = pairs.shape[0]
                     for p in range(B_pairs):
                         for frame_idx in range(2):  # frame_t then frame_t1
                             frame_hwc = pairs[p, frame_idx]  # (H, W, 3)
+
+                            # Apply per-frame gradient correction BEFORE upscale
+                            if gradient_corrections is not None:
+                                frame_np = frame_hwc.cpu().float().numpy()
+                                frame_1 = frame_np[np.newaxis]  # (1, H, W, 3)
+                                gc_H, gc_W = gradient_corrections["shape"][1], gradient_corrections["shape"][2]
+                                f_H, f_W = frame_np.shape[0], frame_np.shape[1]
+                                if f_H == gc_H and f_W == gc_W:
+                                    hw_pixels = f_H * f_W
+                                    gc_indices = gradient_corrections["indices"]
+                                    # Filter to indices belonging to this frame
+                                    frame_global_start = n_written * hw_pixels
+                                    frame_global_end = frame_global_start + hw_pixels
+                                    mask = (gc_indices >= frame_global_start) & (gc_indices < frame_global_end)
+                                    if mask.any():
+                                        local_idx = gc_indices[mask] - frame_global_start
+                                        gc_vals = gradient_corrections["values"][mask]
+                                        gc_scale = gradient_corrections["scale"]
+                                        qbits = gradient_corrections["quantize_bits"]
+                                        if qbits == 8:
+                                            dequant = gc_vals.astype(np.float32) / 127.0 * gc_scale
+                                        elif qbits == 4:
+                                            dequant = gc_vals.astype(np.float32) / 7.0 * gc_scale
+                                        elif qbits == 16:
+                                            dequant = gc_vals.astype(np.float32)
+                                        else:
+                                            dequant = gc_vals.astype(np.float32)
+                                        flat_frame = frame_np.reshape(-1, 3)
+                                        flat_frame[local_idx] += gradient_alpha * dequant
+                                        frame_np = np.clip(flat_frame.reshape(f_H, f_W, 3), 0, 255)
+                                    frame_hwc = torch.from_numpy(frame_np).to(device=device)
+
                             # Convert HWC -> CHW for interpolation
                             frame_chw = frame_hwc.permute(2, 0, 1).unsqueeze(0)  # (1, 3, H, W)
                             frame_up = F.interpolate(
@@ -1421,6 +1540,23 @@ def inflate_renderer(
         )
     renderer = _load_renderer(str(renderer_path), device)
 
+    # ---- Load optimized embedding (C3: embedding-space TTO at compress time) ----
+    optimized_emb_path = Path(archive_dir) / "optimized_embedding.pt"
+    if optimized_emb_path.exists():
+        optimized_emb = torch.load(str(optimized_emb_path), map_location=device, weights_only=True)
+        if hasattr(renderer, 'renderer') and hasattr(renderer.renderer, 'embedding'):
+            renderer.renderer.embedding.weight.data = optimized_emb.to(device)
+            # If motion.embedding is the same object, it's already updated.
+            # If not (separate copies), update it explicitly.
+            if hasattr(renderer, 'motion') and hasattr(renderer.motion, 'embedding'):
+                if id(renderer.renderer.embedding) != id(renderer.motion.embedding):
+                    renderer.motion.embedding.weight.data = optimized_emb.to(device)
+            print(f"  Loaded OPTIMIZED embedding: {optimized_emb.shape} from archive",
+                  file=sys.stderr)
+        else:
+            print(f"  WARNING: optimized_embedding.pt found but renderer has no embedding attr",
+                  file=sys.stderr)
+
     # ---- Load masks from archive (contest-compliant path) ----
     masks = None
     if use_archive_masks:
@@ -1470,6 +1606,15 @@ def inflate_renderer(
         raw = poses_bin_path.read_bytes()
         poses = torch.frombuffer(bytearray(raw), dtype=torch.float16).reshape(-1, 6).float()
         print(f"  Loaded GT poses: {poses.shape} from archive (bin)", file=sys.stderr)
+
+    # ---- Load gradient corrections (C4: pre-computed pixel adjustments) ----
+    grad_corrections = None
+    grad_corr_path = Path(archive_dir) / "gradient_corrections.bin"
+    if grad_corr_path.exists():
+        raw_corr = grad_corr_path.read_bytes()
+        grad_corrections = _unpack_sparse_corrections(raw_corr, compressed=True)
+        print(f"  Loaded gradient corrections: {grad_corrections['n_kept']:,} pixels "
+              f"from {grad_corr_path.name}", file=sys.stderr)
 
     # ---- Process each video ----
     output_path = Path(inflated_dir)
@@ -1559,6 +1704,7 @@ def inflate_renderer(
         n_written = _generate_and_write(
             video_masks, renderer, str(raw_out), device, batch_size, out_h, out_w,
             poses=poses,
+            gradient_corrections=grad_corrections,
         )
 
         if not use_archive_masks:
