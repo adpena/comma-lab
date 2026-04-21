@@ -103,6 +103,12 @@ def parse_args() -> argparse.Namespace:
                    help="Simulate contest eval resolution roundtrip in loss")
     p.add_argument("--early-stop-patience", type=int, default=100,
                    help="Stop if loss hasn't improved in this many steps")
+    p.add_argument("--argmax-constraint", action="store_true",
+                   help="Hard constraint: reject steps that flip SegNet argmax (projected GD)")
+    p.add_argument("--max-retries", type=int, default=3,
+                   help="Max retries with halved LR when argmax flips (with --argmax-constraint)")
+    p.add_argument("--flip-budget", type=float, default=0.0,
+                   help="Fraction of pixels allowed to flip argmax (0.0=strict, 0.001=~3900 px budget)")
     p.add_argument("--latent-dim", type=int, default=0,
                    help="Extra latent dimensions per pair (0=pose only, 16=22D total)")
     p.add_argument("--gt-poses-path", type=str, default=None,
@@ -220,6 +226,9 @@ def optimize_poses_batch(
     hinge_margin: float = 0.5,
     eval_roundtrip: bool = False,
     early_stop_patience: int = 100,
+    argmax_constraint: bool = False,
+    max_retries: int = 3,
+    flip_budget: float = 0.0,
     latent_dim: int = 0,
     log_every: int = 25,
 ) -> tuple[torch.Tensor, dict]:
@@ -241,6 +250,9 @@ def optimize_poses_batch(
         hinge_margin: margin for hinge loss
         eval_roundtrip: simulate eval resolution roundtrip
         early_stop_patience: stop if no improvement for this many steps
+        argmax_constraint: if True, reject steps that flip SegNet argmax
+        max_retries: max retries with halved step when argmax flips
+        flip_budget: fraction of pixels allowed to flip (0.0=strict)
         latent_dim: extra latent dimensions (0 = pose only)
         log_every: logging frequency
 
@@ -262,6 +274,23 @@ def optimize_poses_batch(
     best_loss = float("inf")
     best_cond = conditioning.detach().clone()
     patience_counter = 0
+    argmax_rejections = 0
+
+    # Compute reference SegNet argmax if using hard constraint
+    if argmax_constraint:
+        with torch.no_grad():
+            ref_pose = init_poses.to(device)
+            ref_pairs = renderer(masks_t, masks_t1, pose=ref_pose)
+            ref_ft = ref_pairs[:, 0]
+            ref_ft1 = ref_pairs[:, 1]
+            ref_hwc = torch.cat([ref_ft, ref_ft1], dim=0)
+            ref_chw = ref_hwc.permute(0, 3, 1, 2).contiguous()
+            ref_seg_in = segnet.preprocess_input(ref_chw.unsqueeze(1))
+            ref_seg_logits = segnet(ref_seg_in)
+            ref_argmax = ref_seg_logits.argmax(dim=1)  # (2*B, H, W)
+        flip_threshold = int(ref_argmax.numel() * flip_budget)
+        print(f"  [argmax constraint] Reference argmax: {ref_argmax.shape}, "
+              f"flip budget={flip_budget:.4f} ({flip_threshold} px)")
 
     metrics = {
         "steps_run": 0,
@@ -270,9 +299,15 @@ def optimize_poses_batch(
         "final_seg_loss": float("inf"),
         "initial_loss": float("inf"),
         "improvement_pct": 0.0,
+        "argmax_rejections": 0,
     }
 
     for step in range(steps):
+        # Save state before step (for argmax constraint rollback)
+        if argmax_constraint:
+            pre_step_cond = conditioning.detach().clone()
+            pre_step_state = optimizer.state_dict()
+
         optimizer.zero_grad()
 
         # Extract pose part of conditioning
@@ -282,7 +317,6 @@ def optimize_poses_batch(
         pairs = renderer(masks_t, masks_t1, pose=pose_part)  # (B, 2, H, W, 3)
 
         # Convert to CHW for scorer input
-        # pairs shape: (B, 2, H, W, 3) -> need (2*B, 3, H, W) for scorers
         frame_t = pairs[:, 0]   # (B, H, W, 3)
         frame_t1 = pairs[:, 1]  # (B, H, W, 3)
         frames_hwc = torch.cat([frame_t, frame_t1], dim=0)  # (2*B, H, W, 3)
@@ -293,21 +327,18 @@ def optimize_poses_batch(
             frames_chw = simulate_eval_roundtrip(frames_chw)
 
         # --- SegNet loss (hinge) ---
-        # SegNet expects (B, 1, 3, H, W) via preprocess_input
         seg_in = segnet.preprocess_input(frames_chw.unsqueeze(1))
         seg_logits = segnet(seg_in)  # (2*B, 5, H, W)
 
         seg_loss = segnet_hinge_loss(seg_logits, gt_masks.to(device), margin=hinge_margin)
 
         # --- PoseNet loss (MSE on 6D output) ---
-        # PoseNet expects (B, 2, 3, H, W) via preprocess_input
         pairs_chw = torch.stack([
             frame_t.permute(0, 3, 1, 2),
             frame_t1.permute(0, 3, 1, 2),
         ], dim=1)  # (B, 2, 3, H, W)
 
         if eval_roundtrip:
-            # Apply roundtrip to the pair format too
             B_p, T_p, C_p, H_p, W_p = pairs_chw.shape
             flat = pairs_chw.reshape(B_p * T_p, C_p, H_p, W_p)
             flat = simulate_eval_roundtrip(flat)
@@ -322,6 +353,64 @@ def optimize_poses_batch(
 
         total_loss.backward()
         optimizer.step()
+
+        # --- Argmax constraint: reject steps that flip SegNet argmax ---
+        if argmax_constraint:
+            with torch.no_grad():
+                # Re-forward to check argmax after optimizer step
+                check_pose = conditioning[:, :pose_dim]
+                check_pairs = renderer(masks_t, masks_t1, pose=check_pose)
+                check_ft = check_pairs[:, 0]
+                check_ft1 = check_pairs[:, 1]
+                check_hwc = torch.cat([check_ft, check_ft1], dim=0)
+                check_chw = check_hwc.permute(0, 3, 1, 2).contiguous()
+                check_seg_in = segnet.preprocess_input(check_chw.unsqueeze(1))
+                check_logits = segnet(check_seg_in)
+                new_argmax = check_logits.argmax(dim=1)
+
+                flipped_pixels = (new_argmax != ref_argmax).sum().item()
+                total_pixels = ref_argmax.numel()
+                flip_threshold = int(total_pixels * flip_budget)
+
+                if flipped_pixels > flip_threshold:
+                    # Reject: rollback and try with smaller effective step
+                    argmax_rejections += 1
+                    retry_accepted = False
+
+                    for retry in range(max_retries):
+                        # Interpolate: move halfway between pre-step and post-step
+                        alpha = 0.5 ** (retry + 1)
+                        with torch.no_grad():
+                            conditioning.copy_(
+                                pre_step_cond + alpha * (conditioning.detach() - pre_step_cond)
+                            )
+                        # Check argmax again
+                        check_pose2 = conditioning[:, :pose_dim]
+                        check_pairs2 = renderer(masks_t, masks_t1, pose=check_pose2)
+                        check_ft2 = check_pairs2[:, 0]
+                        check_ft12 = check_pairs2[:, 1]
+                        check_hwc2 = torch.cat([check_ft2, check_ft12], dim=0)
+                        check_chw2 = check_hwc2.permute(0, 3, 1, 2).contiguous()
+                        check_seg_in2 = segnet.preprocess_input(check_chw2.unsqueeze(1))
+                        check_logits2 = segnet(check_seg_in2)
+                        new_argmax2 = check_logits2.argmax(dim=1)
+                        flipped2 = (new_argmax2 != ref_argmax).sum().item()
+
+                        if flipped2 <= flip_threshold:
+                            retry_accepted = True
+                            if step % log_every == 0:
+                                print(f"    [argmax] step {step}: rejected ({flipped_pixels}/{total_pixels} "
+                                      f"flipped), accepted at alpha={alpha:.3f} after {retry + 1} retries")
+                            break
+
+                    if not retry_accepted:
+                        # Full rollback
+                        with torch.no_grad():
+                            conditioning.copy_(pre_step_cond)
+                        optimizer.load_state_dict(pre_step_state)
+                        if step % log_every == 0:
+                            print(f"    [argmax] step {step}: FULL ROLLBACK ({flipped_pixels} px flipped, "
+                                  f"all {max_retries} retries failed)")
 
         loss_val = total_loss.item()
 
@@ -338,9 +427,10 @@ def optimize_poses_batch(
         if step % log_every == 0 or step == steps - 1:
             grad_norm = conditioning.grad.norm().item() if conditioning.grad is not None else 0.0
             pose_change = (conditioning[:, :pose_dim].detach() - init_poses.to(device)).norm(dim=1).mean().item()
+            constraint_str = f" rejections={argmax_rejections}" if argmax_constraint else ""
             print(f"  step {step:4d}/{steps}: loss={loss_val:.6f} "
                   f"(seg={seg_loss.item():.6f}, pose={pose_loss.item():.6f}) "
-                  f"|grad|={grad_norm:.4f} |dpose|={pose_change:.4f}")
+                  f"|grad|={grad_norm:.4f} |dpose|={pose_change:.4f}{constraint_str}")
 
         if patience_counter >= early_stop_patience:
             print(f"  Early stop at step {step} (no improvement for {early_stop_patience} steps)")
@@ -350,6 +440,7 @@ def optimize_poses_batch(
     metrics["final_loss"] = best_loss
     metrics["final_seg_loss"] = seg_loss.item()
     metrics["final_pose_loss"] = pose_loss.item()
+    metrics["argmax_rejections"] = argmax_rejections
     if metrics["initial_loss"] > 0:
         metrics["improvement_pct"] = (
             (metrics["initial_loss"] - best_loss) / metrics["initial_loss"] * 100
@@ -391,6 +482,7 @@ def main():
     print(f"[config] lr={args.lr}, batch_pairs={args.batch_pairs}")
     print(f"[config] seg_weight={args.seg_weight}, pose_weight={args.pose_weight}")
     print(f"[config] hinge_margin={args.hinge_margin}, eval_roundtrip={args.eval_roundtrip}")
+    print(f"[config] argmax_constraint={args.argmax_constraint}, max_retries={args.max_retries}")
     print(f"[config] latent_dim={args.latent_dim} (conditioning dim={cond_dim})")
     print(f"[config] checkpoint={args.checkpoint}")
     print(f"[config] output_dir={output_dir}")
@@ -493,6 +585,9 @@ def main():
             hinge_margin=args.hinge_margin,
             eval_roundtrip=args.eval_roundtrip,
             early_stop_patience=args.early_stop_patience,
+            argmax_constraint=args.argmax_constraint,
+            max_retries=args.max_retries,
+            flip_budget=args.flip_budget,
             latent_dim=args.latent_dim,
             log_every=args.log_every,
         )

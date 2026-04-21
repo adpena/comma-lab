@@ -1,0 +1,66 @@
+{
+  "config": {
+    "checkpoint": "/tmp/distill_v2_latest_best.pt",
+    "device": "mps",
+    "n_frames": 20,
+    "steps": 100,
+    "lr": 0.001,
+    "batch_pairs": 10,
+    "seg_weight": 0.0,
+    "pose_weight": 1.0,
+    "hinge_margin": 0.5,
+    "upstream": "upstream/",
+    "output_dir": "experiments/results/pose_tto_poseonly_argmax",
+    "video": null,
+    "smoke": true,
+    "eval_roundtrip": true,
+    "early_stop_patience": 50,
+    "argmax_constraint": true,
+    "max_retries": 5,
+    "flip_budget": 0.0001,
+    "latent_dim": 0,
+    "gt_poses_path": null,
+    "log_every": 10
+  },
+  "gt_score": {
+    "score": 0.3163507600014701,
+    "pose": 0.005713991075754166,
+    "seg": 0.0007731120102107524,
+    "rate": 0.0,
+    "pose_contribution": 0.23903955898039483,
+    "seg_contribution": 0.07731120102107525,
+    "rate_contribution": 0.0,
+    "n_pairs": 10
+  },
+  "optimized_score": {
+    "score": 0.1329220712933969,
+    "pose": 0.0003002719022333622,
+    "seg": 0.00078125,
+    "rate": 0.0,
+    "pose_contribution": 0.05479707129339689,
+    "seg_contribution": 0.078125,
+    "rate_contribution": 0.0,
+    "n_pairs": 10
+  },
+  "delta_score": -0.18342868870807322,
+  "total_time_s": 109.96524862502702,
+  "total_steps": 100,
+  "n_pairs": 10,
+  "pose_delta_mean": 0.09390975534915924,
+  "pose_delta_max": 0.16052918136119843,
+  "batch_metrics": [
+    {
+      "steps_run": 100,
+      "final_loss": 5.851758396602236e-05,
+      "final_pose_loss": 5.8717279898701236e-05,
+      "final_seg_loss": 0.023647135123610497,
+      "initial_loss": 0.00505277281627059,
+      "improvement_pct": 98.84187185741682,
+      "argmax_rejections": 0,
+      "batch_idx": 0,
+      "time_s": 98.86553016596008
+    }
+  ],
+  "archive_bytes_fp32": 240,
+  "archive_bytes_fp16": 120
+}
