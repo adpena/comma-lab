@@ -1,5 +1,58 @@
 # Findings
 
+## 2026-04-15 [TECHNIQUE] Embedding-Space TTO — 30-value global optimization
+
+**Concept**: The renderer's AsymmetricPairGenerator has a shared nn.Embedding(5, 6) between MaskRenderer and MotionPredictor. These 30 values control the internal representation of all 5 semantic classes. Optimizing them at compress time against frozen scorers makes each class scorer-optimal.
+
+**Key properties**:
+- GLOBAL: one embedding serves all 600 pairs (unlike pose TTO which is per-pair)
+- Compounds with pose TTO: first optimize embedding, then per-pair poses
+- Archive cost: 120 bytes (5 x 6 x float32) or 60 bytes (fp16)
+- No scorers needed at inflate time
+- Shared between renderer and motion predictor (verified: same object via id())
+
+**Implementation**: `experiments/optimize_embedding.py`
+- Epoch-based: N full passes over all 600 pairs
+- Adam optimizer on embedding.weight only (all other params frozen)
+- Same loss as pose TTO: hinge SegNet + MSE PoseNet
+- Optional: save new checkpoint with optimized embedding for chaining
+
+**Expected impact**: Small but compounding. Embedding controls the base representation that ALL downstream operations (rendering, motion prediction, warping) depend on. Even a 1-2% improvement here propagates through every frame.
+
+## 2026-04-15 [TECHNIQUE] Pre-Computed Gradient Corrections — one-step TTO without scorer
+
+**Concept**: At compress time, compute d(score)/d(pixel) for all 1200 frames. Store the sparse, quantized gradient as a correction map in the archive. At inflate time: frames = renderer_output + alpha * stored_correction. No scorer needed.
+
+**Key properties**:
+- Raw: 1200 x 384 x 512 x 3 x float32 = ~2.8 GB
+- After top-5% sparsification + int8 quantization + zlib: expected ~50-100 KB
+- Contest-compliant: correction map is just a pre-computed array, not a neural network
+- Rate cost: 50-100 KB / 37.5 MB = 0.001-0.003 (negligible)
+- ONE gradient step is optimal: d(score)/d(pixel) at the rendering point is the steepest descent direction. Multiple steps would need iterative computation.
+
+**Implementation**: `experiments/precompute_gradient_corrections.py`
+- Batch-wise gradient computation through differentiable scorers
+- Sparsification: argpartition (O(n)) for top-K selection
+- Quantization: int8 with per-tensor scale factor
+- Packing: zlib-compressed binary format with JSON header
+- Validation: apply corrections and re-score to verify improvement
+
+**Inflate-time cost**: ~10ms (decompress + scatter-add). Negligible.
+
+## 2026-04-15 [RESULT] Pose-Space TTO breakthrough — seg_weight=0, -94.7% PoseNet
+
+**Config**: seg_weight=0 (pure PoseNet optimization), pose_weight=10, 500 steps, FiLM pose_dim=6
+**Result**: PoseNet distortion 0.031 -> 0.0016 (-94.7%) in 500 steps
+**Auth eval (ep300)**: 0.61 (contest-compliant, no scorers at inflate time)
+**Insight**: FiLM conditioning vectors are the optimal control surface for PoseNet. 6 values per pair vs 707M pixel values. The PoseNet-satisfying manifold is low-rank (6D output).
+
+## 2026-04-15 [RESULT] Distillation trajectory — proxy 0.375 at ep550
+
+**Config**: pose_weight=10.0, seg_weight=100, hinge loss, eval roundtrip, FiLM pose_dim=6, lr=3e-4
+**Trajectory**: 0.807 (ep0) -> 0.596 (ep50) -> 0.481 (ep230) -> 0.375 (ep550)
+**Status**: Still converging. PoseNet 0.0096, SegNet 0.00212 (better than original renderer).
+**Key insight**: pose_weight=1.0 -> 10.0 was THE critical fix. 4x faster early convergence.
+
 ## 2026-04-15 [INTELLIGENCE] Quantizr PR#55 score 0.33 — FiLM + DSConv + eval resize
 
 **Source**: Competitive intelligence from PR#55 in the upstream contest repo.

@@ -1,6 +1,51 @@
-# Battle Plan: April 20 - May 3 (13 days)
+# Battle Plan: April 15 - May 3 (18 days)
 
 Status: Contest-compliant auth=0.87, Unlimited-compute auth=0.37, Quantizr leads at 0.33.
+
+## LATEST BREAKTHROUGHS
+
+### Pose-Space TTO (April 15)
+- **seg_weight=0**: Pure PoseNet optimization via FiLM conditioning vectors.
+- **Result**: -94.7% PoseNet distortion (0.031 -> 0.0016) in 500 steps.
+- **Auth eval (ep300)**: 0.61 (contest-compliant, no scorers at inflate time).
+- **Archive cost**: 14.4 KB (600 poses x 6 x float32). Rate: 0.0004.
+- Per-pair: 6 values optimized instead of 707M pixel values.
+
+### Distillation Trajectory
+- **proxy 0.375 at ep550** (from 0.807 at ep0). Still converging.
+- Config: pose_weight=10, seg_weight=100, hinge loss, eval roundtrip, FiLM pose_dim=6.
+- Warm restart from Phase 2 checkpoint.
+
+### Five Moonshots (implemented April 15)
+1. **Embedding-Space TTO** (`experiments/optimize_embedding.py`): Optimize the renderer's
+   shared nn.Embedding(5,6) -- 30 values that control class appearance. GLOBAL optimization
+   (one pass over all pairs), compounds with pose TTO. Archive cost: 120 bytes.
+2. **Pre-Computed Gradient Corrections** (`experiments/precompute_gradient_corrections.py`):
+   Compute full d(score)/d(pixel) at compress time, sparsify top 5%, quantize to int8,
+   compress with zlib. ONE-STEP TTO at inflate time without any scorer. Expected ~50-100 KB.
+3. **Embedding + Pose TTO pipeline**: First optimize embedding (global), then optimize
+   poses (per-pair) with the improved embedding. Compounds both gains.
+4. **Constrained Generation from Noise** (existing): No renderer needed, direct pixel
+   optimization from class-mean initialization.
+5. **Distillation**: Train renderer to reproduce TTO frames in single forward pass.
+
+### Council Binding Decisions
+- Hinge loss is mandatory for SegNet (25% better than xent at 500 steps).
+- seg_weight=0 for pose-space TTO (pure PoseNet lane).
+- Embedding optimization is GLOBAL, must precede per-pair pose optimization.
+- Gradient corrections at inflate time are contest-compliant (no neural weights).
+
+### Revised Timeline
+| Days | Action | Target |
+|------|--------|--------|
+| 1-2 | Embedding TTO smoke test + full run | Validate 30-value optimization |
+| 2-3 | Gradient corrections full run on 4090 | Measure archive size and score delta |
+| 3-5 | Combined pipeline: embedding + pose + corrections | Target sub-0.30 proxy |
+| 5-7 | Distillation convergence + auth eval | Contest-compliant sub-0.50 |
+| 7-9 | FiLM integration into renderer training (v6) | Renderer conditioned on pose |
+| 9-11 | DSConv + capacity sweep | Rate improvement |
+| 11-13 | Archive compression, final auth eval | Final score |
+| 13-18 | Integration, submission PR, paper | May 3 deadline |
 
 ## NEXT DEPLOYMENT: Distillation (Lane 1 priority)
 

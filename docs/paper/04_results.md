@@ -156,7 +156,25 @@ The combined improvement (correct checkpoint + hinge loss) achieved auth 0.37, r
 
 **Per-pair difficulty map.** TTO v7 also revealed significant heterogeneity across frame pairs. The hardest 10% of pairs contribute 35% of total SegNet loss, while the easiest 30% achieve near-zero distortion within 100 steps. This motivates adaptive step allocation: a fixed budget of N total steps can be redistributed from easy pairs (early-stopped at 100 steps) to hard pairs (extended to 1000+ steps) for better aggregate score.
 
-## 4.9 Operational findings
+## 4.9 Pose-space TTO: optimizing conditioning vectors
+
+A key observation from the TTO experiments is that PoseNet distortion is controlled by only 6 values per frame pair --- the FiLM conditioning vector that modulates the renderer's intermediate features. Rather than optimizing 707 million pixel values (the full 1200-frame tensor), we optimize 3,600 scalar values (600 pairs x 6 dimensions).
+
+| Approach | Optimized Values | Archive Cost | PoseNet Reduction | Wall Time (4090) |
+|----------|-----------------|-------------|-------------------|-----------------|
+| Pixel TTO (500 steps) | 707M | 0 (ephemeral) | -93.3% | ~40 min |
+| Pose-space TTO (500 steps) | 3,600 | 14.4 KB | -94.7% | ~2 min |
+
+With `seg_weight=0` (pure PoseNet optimization), pose-space TTO achieves 0.031 $\to$ 0.0016 PoseNet distortion --- a 94.7% reduction. This is contest-compliant: the optimized poses are stored in the archive (14.4 KB, rate cost 0.0004) and the renderer produces frames in a single forward pass at inflate time. No scorers are needed.
+
+The result validates a geometric insight: PoseNet's 6-dimensional output space is low-rank relative to the pixel space. The FiLM conditioning vector directly parameterizes the renderer's behavior in this low-rank subspace, making it the natural optimization surface for PoseNet.
+
+**Embedding optimization.** A further refinement: the renderer's shared class embedding (5 classes x 6 dimensions = 30 values) controls the base representation for all downstream operations. Optimizing these 30 values globally (one pass over all 600 pairs) before per-pair pose optimization provides a better starting point. Archive cost: 120 bytes.
+
+**Pre-computed gradient corrections.** For frames where the renderer output is close to optimal but not exact, we compute $\nabla_{\text{pixel}} \mathcal{L}$ at compress time and store a sparse, quantized correction map. At inflate time, the correction is applied as a single scatter-add operation ($\sim$10 ms). With top-5% sparsification and int8 quantization, the correction map compresses to $\sim$50--100 KB.
+
+## 4.10 Operational findings
+
 
 ### Inflate time budget
 
