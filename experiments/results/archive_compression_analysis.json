@@ -1,0 +1,36 @@
+{
+  "analysis_date": "2026-04-15",
+  "gt_video_bytes": 37545489,
+  "components": {
+    "renderer_fp8": {"bytes": 296776, "kb": 289.8},
+    "renderer_fp4": {"bytes": 169830, "kb": 165.8},
+    "masks_mkv": {"bytes": 79071, "kb": 77.2},
+    "poses_pt": {"bytes": 14400, "kb": 14.1}
+  },
+  "configs": {
+    "current_fp8": {
+      "total_bytes": 390247,
+      "rate": 0.01039,
+      "rate_contribution": 0.260
+    },
+    "fp4_dropin": {
+      "total_bytes": 263301,
+      "rate": 0.00701,
+      "rate_contribution": 0.175,
+      "savings_vs_current": 0.085
+    },
+    "fp4_crf30_masks": {
+      "total_bytes": 224230,
+      "rate": 0.00597,
+      "rate_contribution": 0.149,
+      "savings_vs_current": 0.111
+    },
+    "fp4_crf30_optimized_poses": {
+      "total_bytes": 219830,
+      "rate": 0.00586,
+      "rate_contribution": 0.146,
+      "savings_vs_current": 0.113
+    }
+  },
+  "key_finding": "FP4 renderer saves 126,946 bytes = 0.085 auth points with zero quality loss risk (same weights, just lower precision storage)"
+}
