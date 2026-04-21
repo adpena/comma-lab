@@ -1,72 +1,83 @@
-# Battle Plan: April 15 - May 3 (18 days)
+# Battle Plan: April 15 - May 3 (12 days remaining)
 
-Status: Contest-compliant auth=0.87, Unlimited-compute auth=0.37, Quantizr leads at 0.33.
+Status: Contest-compliant auth=0.61 (pose TTO + distillation), Unlimited-compute auth=0.37, Quantizr leads at 0.33.
 
-## LATEST BREAKTHROUGHS
+## LATEST RESULTS (as of 2026-04-15)
 
-### Pose-Space TTO (April 15)
+### Score Scoreboard
+| Lane | Score | Proxy | Notes |
+|------|-------|-------|-------|
+| Unlimited-compute | **0.37** | 0.195 | TTO v7, hinge, 500 steps |
+| Contest-compliant | **0.61** | 0.446 | Distillation ep300 (auth eval done) |
+| Contest-compliant | **0.61** | — | Pose-space TTO ep300 |
+| Contest-compliant baseline | 0.87 | 0.807 | Renderer only |
+| Distillation (running) | ~0.47* | 0.338 | Epoch 900, still converging |
+| Quantizr (threat) | 0.33 | — | PR#55, FiLM+DSConv+eval resize |
+
+*Projected from proxy trajectory
+
+### Pose-Space TTO (April 15 — CONFIRMED)
 - **seg_weight=0**: Pure PoseNet optimization via FiLM conditioning vectors.
 - **Result**: -94.7% PoseNet distortion (0.031 -> 0.0016) in 500 steps.
-- **Auth eval (ep300)**: 0.61 (contest-compliant, no scorers at inflate time).
+- **Auth eval (ep300)**: 0.61 [contest-compliant]. No scorers at inflate time.
 - **Archive cost**: 14.4 KB (600 poses x 6 x float32). Rate: 0.0004.
-- Per-pair: 6 values optimized instead of 707M pixel values.
+- **Insight**: 196K:1 compression of optimization space. PoseNet-SegNet orthogonality in FiLM space.
 
-### Distillation Trajectory
-- **proxy 0.375 at ep550** (from 0.807 at ep0). Still converging.
+### Distillation v2 Trajectory (RUNNING — Vast.ai RTX 4090)
+- **proxy 0.338 at ep900** (from 0.807 at ep0). Still converging, no plateau.
+- **Auth at ep300**: 0.61 [contest-compliant].
 - Config: pose_weight=10, seg_weight=100, hinge loss, eval roundtrip, FiLM pose_dim=6.
-- Warm restart from Phase 2 checkpoint.
+- Warm restart from Phase 2 checkpoint. pose_weight=10 was THE critical fix.
 
-### Five Moonshots (implemented April 15)
-1. **Embedding-Space TTO** (`experiments/optimize_embedding.py`): Optimize the renderer's
-   shared nn.Embedding(5,6) -- 30 values that control class appearance. GLOBAL optimization
-   (one pass over all pairs), compounds with pose TTO. Archive cost: 120 bytes.
-2. **Pre-Computed Gradient Corrections** (`experiments/precompute_gradient_corrections.py`):
-   Compute full d(score)/d(pixel) at compress time, sparsify top 5%, quantize to int8,
-   compress with zlib. ONE-STEP TTO at inflate time without any scorer. Expected ~50-100 KB.
-3. **Embedding + Pose TTO pipeline**: First optimize embedding (global), then optimize
-   poses (per-pair) with the improved embedding. Compounds both gains.
-4. **Constrained Generation from Noise** (existing): No renderer needed, direct pixel
-   optimization from class-mean initialization.
-5. **Distillation**: Train renderer to reproduce TTO frames in single forward pass.
+### FP4 Export (DONE — 0.085 free rate points)
+- Renderer FP32 ZIP: 297 KB → FP4: 170 KB. Saves 0.085 score points.
+- FP4 + CRF30 masks: 215 KB total archive. Saves 0.113 vs FP32 baseline.
+- No training changes required.
 
-### Council Binding Decisions
+### Gradient Corrections (DEPRIORITIZED — too large)
+- Measured: 743 KB for 20 frames → projected ~44 MB for 1200 frames.
+- Rate cost ~1.19 (catastrophic). Not viable for production.
+- Fundamental issue: gradient signal too dense to sparsify at 5%.
+
+### Mini-Scorer Results (DONE)
+- **MiniSegNet (h=32)**: 98.7% fidelity PASSES. Archive: 87 KB (FP16).
+- **MiniPoseNet**: FAILS. R²=0.002. Architecture bottleneck, not hyperparameters.
+- Workaround: store GT pose targets (14.4 KB) instead.
+
+### Five Moonshots (implemented April 15 — status updated)
+1. **Embedding-Space TTO** (`experiments/optimize_embedding.py`): 30 values. Archive: 120 bytes. PENDING validation.
+2. **Pre-Computed Gradient Corrections**: DEPRIORITIZED — 743KB for 20 frames, too large.
+3. **Embedding + Pose TTO pipeline**: PENDING — embedding first, then per-pair poses.
+4. **Constrained Generation from Noise**: PENDING — gated behind Lane 2.
+5. **Distillation**: RUNNING — proxy 0.338 at ep900, auth 0.61 at ep300.
+
+### Council Binding Decisions (confirmed)
 - Hinge loss is mandatory for SegNet (25% better than xent at 500 steps).
 - seg_weight=0 for pose-space TTO (pure PoseNet lane).
-- Embedding optimization is GLOBAL, must precede per-pair pose optimization.
-- Gradient corrections at inflate time are contest-compliant (no neural weights).
+- Gradient corrections: DEAD. Archive too large (43MB projected).
+- FP4 export: APPROVED. 170KB renderer, 215KB total archive.
+- MiniSegNet (87KB) for inflate-time TTO — viable.
+- MiniPoseNet: DEAD. Use stored pose targets instead.
 
-### Revised Timeline
-| Days | Action | Target |
-|------|--------|--------|
-| 1-2 | Embedding TTO smoke test + full run | Validate 30-value optimization |
-| 2-3 | Gradient corrections full run on 4090 | Measure archive size and score delta |
-| 3-5 | Combined pipeline: embedding + pose + corrections | Target sub-0.30 proxy |
-| 5-7 | Distillation convergence + auth eval | Contest-compliant sub-0.50 |
-| 7-9 | FiLM integration into renderer training (v6) | Renderer conditioned on pose |
-| 9-11 | DSConv + capacity sweep | Rate improvement |
-| 11-13 | Archive compression, final auth eval | Final score |
-| 13-18 | Integration, submission PR, paper | May 3 deadline |
+### Updated Timeline (12 days to deadline)
+| Days | Action | Target | Status |
+|------|--------|--------|--------|
+| 0 | Distillation ep900 auth eval | auth ~0.47 | RUNNING |
+| 1-2 | Distillation ep1000+ auth eval | auth ~0.45 | NEXT |
+| 2-3 | Pose TTO on distilled renderer | auth ~0.35 | PLANNED |
+| 3-4 | FP4 archive + auth eval | Rate -0.085 | PLANNED |
+| 4-6 | MiniSegNet inflate TTO | auth ~0.30 | PLANNED |
+| 6-8 | Combined: distilled + pose TTO + FP4 | auth ~0.28 | PLANNED |
+| 8-10 | Embedding TTO validation | Compound gain | PLANNED |
+| 10-12 | Integration, final auth eval, PR | Final score | DEADLINE |
 
-## NEXT DEPLOYMENT: Distillation (Lane 1 priority)
+**Budget status**: ~$15 remaining (of $24 cap).
 
-**Goal:** Train renderer to reproduce v7 TTO frames (auth 0.37) in a single forward pass.
-This eliminates TTO compute at inflate time, making the 0.37 result contest-compliant.
+## NEXT DEPLOYMENT: Distillation auth eval at ep900+
 
-**Script:** `experiments/train_distill.py`
-**Vast.ai registry:** `distill_full` (6h timeout, RTX 4090)
+**Goal:** Auth eval of current distillation run (proxy 0.338 at ep900).
 
-**Prerequisites:**
-1. Extract GT poses: `PYTHONPATH=src:upstream python -m tac.pose_extraction --upstream upstream/ --output experiments/results/gt_poses.pt --device mps`
-2. Verify TTO frames exist: `experiments/results/tto_v7_hinge_500/tto_frames.pt`
-3. Verify renderer checkpoint: `experiments/results/v5_lagrangian_renderer/renderer_best.pt`
-
-**Deploy command:**
-```bash
-python scripts/check_vastai.py run <id> distill_full
-```
-
-**Expected cost:** $1.50 (6h x $0.25/hr)
-**Expected result:** auth 0.45-0.55 (gap between pure distillation and TTO)
+**Expected:** auth ~0.47 (proxy 0.338 × 1.4x ratio).
 
 ---
 

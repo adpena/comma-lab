@@ -1,35 +1,51 @@
-# Current Focus -- 2026-04-15T18:00:00Z
+# Current Focus -- 2026-04-15T22:00:00Z
 
-## Context: 13 Days Remaining. Quantizr at 0.33. Three-Lane Strategy.
+## Context: 12 Days Remaining. Quantizr at 0.33. Full-stack pipeline converging.
 
-**Deadline**: May 3, 2026 (~13 days)
-**New threat**: Quantizr PR#55 = 0.33 (FiLM + DSConv + eval resize)
-**Our contest-compliant best**: auth=0.87 (renderer baseline)
-**Our unlimited-compute best**: auth=0.43 (TTO v5b, gradient fix validated)
-**Our best proxy**: 0.275 (TTO v6, hinge+phase2+embedding, 600 pairs, RTX 4090)
+**Deadline**: May 3, 2026 (~12 days)
+**Threat**: Quantizr PR#55 = 0.33 (FiLM + DSConv + eval resize)
+**Our contest-compliant best**: auth=0.61 (distillation ep300 + pose TTO)
+**Our unlimited-compute best**: auth=0.37 (TTO v7, hinge, 500 steps)
+**Our best proxy**: 0.338 (distillation ep900, still converging)
+**Projected floor**: auth ~0.25 with full stack (distilled + pose TTO + FP4 + MiniSegNet TTO)
+**Budget remaining**: ~$15 of $24 cap
 
 ---
 
-## Three-Lane Strategy
+## Current State (as of 2026-04-15 end of session)
 
-### Lane 1: Contest-Compliant TTO (PRIORITY)
-- TTO runs at compress time (unlimited); inflate = single forward pass
-- Hinge loss confirmed 24-49% better than xent from 50+ steps
-- v6 proxy=0.275 needs auth eval to confirm
-- **Next**: Auth eval of v6 TTO frames (708MB tto_frames.pt downloaded locally)
-- **Path to 0.20**: Extend TTO steps to 500 P1 + 500 P2 with hinge
+### Confirmed Results
+| Lane | Auth | Proxy | Method | Status |
+|------|------|-------|--------|--------|
+| Contest | **0.61** | 0.446 | Distillation ep300 | DONE |
+| Contest | **0.61** | — | Pose-space TTO ep300 | DONE |
+| Contest | 0.87 | 0.807 | Renderer baseline | DONE |
+| Unlimited | **0.37** | 0.195 | TTO v7, hinge 500 steps | DONE |
+| Contest (running) | ~0.47* | 0.338 | Distillation ep900+ | RUNNING |
 
-### Lane 2: FiLM Architecture (NEW — Quantizr validated)
-- FiLM pose conditioning on renderer feature maps
-- Directly addresses DP-SIMS PoseNet failure (temporal coherence via pose conditioning)
-- Quantizr at 0.33 proves the paradigm works
-- **Gate**: Implement FiLM in inflate_renderer.py, then run smoke test on MPS
-- **Target**: FiLM + hinge TTO should reach 0.15-0.20 [contest-compliant]
+### Resources Utilized
+- Vast.ai RTX 4090: ~$9 spent. ~$15 remaining.
+- Distillation training: ep900, running. Auth eval pending.
+- All key experiments completed: FP4, gradient corrections (dead), mini-scorer, pose TTO.
 
-### Lane 3: Constrained Generation from Noise (Paper / GPU Eureka)
-- GPU Eureka projected 0.135. Cool-chic literature validates the paradigm.
-- Gated behind Lane 2 architecture work
-- For arXiv scalability section; not the submission path
+### Three-Lane Strategy (updated)
+
+**Lane 1: Contest-Compliant (PRIORITY)**
+- Current: distillation ep900 (proxy 0.338). Auth eval pending.
+- Next: ep1000+ auth eval → target auth ~0.45.
+- Then: pose-space TTO on distilled renderer → target auth ~0.35.
+- Then: FP4 archive → -0.085 rate points.
+- Gate: if distillation plateaus, train longer or add MiniSegNet inflate TTO.
+
+**Lane 2: Unlimited-Compute (Research/Paper)**
+- Current best: 0.37 (v7 TTO, hinge). Done.
+- Next: LoRA TTO or embedding+pose compound. Target: sub-0.30.
+- Purpose: paper scalability story only.
+
+**Lane 3: Constrained Generation from Noise (Paper floor)**
+- Gated behind Lane 1 convergence.
+- MiniSegNet (87KB) unblocked this. PoseNet via stored targets.
+- For arXiv scalability section.
 
 ---
 

@@ -18,22 +18,29 @@
 We present a system for task-aware video compression that achieves a score of 0.37 on comma.ai's video compression challenge, approaching the current leader (0.33) through a fundamentally different paradigm than traditional codecs. Our approach evolved through three phases: (1) a CNN post-filter on codec output (1.33), (2) a neural renderer with asymmetric warp architecture that bypasses the codec entirely (0.87), and (3) test-time optimization (TTO) that fine-tunes per-frame embeddings against the frozen scorers at compress time (0.37). The key technical contributions are: discovery of a gradient obstruction in the upstream scorer's YUV preprocessing that invalidated all prior PoseNet optimization (fixing it alone improved the score from 0.70 to 0.43); a hinge loss formulation for SegNet that provides 25% better convergence than cross-entropy by sustaining gradient pressure past the decision boundary; and the TTO paradigm itself, which treats compress time as an optimization opportunity rather than a fixed encoding step. The contest-compliant path (no TTO at inflate time) scores 0.87; the unlimited-compute path (TTO at compress time, distilled into the renderer) is projected to reach sub-0.33. We report 30+ negative results and analyze the scoring formula's geometry to explain why PoseNet optimization exhibits a sharp phase transition while SegNet requires sustained optimization.
 
 **Current best: 0.37** [unlimited-compute] | seg=0.00094, pose=0.00250, rate=0.005
-**Contest-compliant: 0.87** | seg=0.00217, pose=0.031, rate=0.004
+**Contest-compliant: 0.61** [distillation ep300 / pose TTO] | seg=~0.0020, pose=~0.007, rate=0.004
+**Contest-compliant baseline: 0.87** | seg=0.00217, pose=0.031, rate=0.004
 
 ---
 
 ## Score Evolution
 
-| Stage | Score | Key Technique | Insight |
-|-------|-------|---------------|---------|
-| H.265 baseline | 1.97 | CRF 28, no processing | Starting point |
-| CNN postfilter | 1.33 | Dilated conv, scorer gradients | CPU-lane ceiling |
-| Neural renderer | 0.87 | Asymmetric warp + Lagrangian | Bypass codec entirely |
-| TTO (gradient fix) | 0.43 | Differentiable BT.601 YUV | Just correct gradients |
-| TTO (hinge loss) | 0.37 | Margin-based SegNet loss | Sustained gradient pressure |
-| Distillation (projected) | <0.33 | Renderer learns TTO frames | Compress-time intelligence |
+| Stage | Score | Lane | Key Technique | Insight |
+|-------|-------|------|---------------|---------|
+| H.265 baseline | 1.97 | — | CRF 28, no processing | Starting point |
+| CNN postfilter | 1.33 | — | Dilated conv, scorer gradients | CPU-lane ceiling |
+| Neural renderer | 0.87 | Contest | Asymmetric warp + Lagrangian | Bypass codec entirely |
+| TTO (gradient fix) | 0.43 | Unlimited | Differentiable BT.601 YUV | Just correct gradients |
+| TTO (hinge loss) | 0.37 | Unlimited | Margin-based SegNet loss | Sustained gradient pressure |
+| Pose TTO + Distillation ep300 | 0.61 | Contest | FiLM conditioning space | 196K:1 optimization compression |
+| Distillation ep900 (running) | ~0.47* | Contest | Renderer learns TTO frames | Compress-time intelligence |
+| Full stack (projected) | ~0.25 | Contest | Distilled + pose TTO + FP4 + MiniSegNet | All components combined |
 
-The story is one of successive paradigm shifts, each abandoning assumptions of the previous stage. The postfilter assumes a codec exists. The renderer removes the codec. TTO removes the constraint that compression is a single forward pass. Distillation removes the constraint that TTO must run at inflate time.
+*Projected from proxy trajectory (0.338 at ep900, still converging).
+
+The story is one of successive paradigm shifts, each abandoning assumptions of the previous stage. The postfilter assumes a codec exists. The renderer removes the codec. TTO removes the constraint that compression is a single forward pass. Pose-space TTO removes the constraint that TTO must operate in pixel space. Distillation removes the constraint that TTO must run at inflate time.
+
+The conditioning-space insight is publishable in its own right: the FiLM conditioning vector (6D per pair) is 196,608× smaller than pixel space, yet achieves comparable or better optimization efficiency because PoseNet's output space is intrinsically 6-dimensional. In this space, PoseNet and SegNet gradients are approximately orthogonal, enabling pure-PoseNet optimization without SegNet tradeoff.
 
 ---
 
