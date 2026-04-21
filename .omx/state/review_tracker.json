@@ -2,7 +2,7 @@
   "version": 3,
   "last_scan": "2026-04-21T03:44:49.049595+00:00",
   "entity_count": 3613,
-  "review_count": 12377,
+  "review_count": 12383,
   "entities": {
     "experiments.analysis.gradient_rank_analysis::compute_jacobian_embedding": {
       "module": "experiments.analysis.gradient_rank_analysis",
@@ -5574,9 +5574,9 @@
       "complexity": 4,
       "last_modified_commit": "2a9b403a2c96",
       "last_modified_date": "2026-04-20T21:50:13-05:00",
-      "review_status": "stale",
+      "review_status": "reviewed",
       "reviewed_by": "council",
-      "reviewed_at": "2026-04-21T02:49:14.360237+00:00",
+      "reviewed_at": "2026-04-21T03:46:22.581465+00:00",
       "review_pass": "",
       "notes": ""
     },
@@ -8041,7 +8041,7 @@
       "last_modified_date": "2026-04-15T10:36:55-05:00",
       "review_status": "reviewed",
       "reviewed_by": "council",
-      "reviewed_at": "2026-04-21T03:44:36.142467+00:00",
+      "reviewed_at": "2026-04-21T03:46:23.194143+00:00",
       "review_pass": "",
       "notes": ""
     },
@@ -8534,7 +8534,7 @@
       "last_modified_date": "2026-04-20T21:50:24-05:00",
       "review_status": "reviewed",
       "reviewed_by": "council",
-      "reviewed_at": "2026-04-21T03:44:52.650871+00:00",
+      "reviewed_at": "2026-04-21T03:46:22.898434+00:00",
       "review_pass": "",
       "notes": ""
     },
@@ -8670,7 +8670,7 @@
       "last_modified_date": "2026-04-20T21:50:24-05:00",
       "review_status": "reviewed",
       "reviewed_by": "council",
-      "reviewed_at": "2026-04-21T03:44:52.650871+00:00",
+      "reviewed_at": "2026-04-21T03:46:23.194143+00:00",
       "review_pass": "",
       "notes": ""
     },
@@ -8738,7 +8738,7 @@
       "last_modified_date": "2026-04-20T21:50:24-05:00",
       "review_status": "reviewed",
       "reviewed_by": "council",
-      "reviewed_at": "2026-04-21T03:44:52.650871+00:00",
+      "reviewed_at": "2026-04-21T03:46:21.675255+00:00",
       "review_pass": "",
       "notes": ""
     },
@@ -8857,7 +8857,7 @@
       "last_modified_date": "2026-04-20T21:50:24-05:00",
       "review_status": "reviewed",
       "reviewed_by": "council",
-      "reviewed_at": "2026-04-21T03:44:52.650871+00:00",
+      "reviewed_at": "2026-04-21T03:46:22.581465+00:00",
       "review_pass": "",
       "notes": ""
     },

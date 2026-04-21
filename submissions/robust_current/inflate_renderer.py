@@ -915,6 +915,166 @@ def _inline_dequantize_values(values, bits, scale):
     )
 
 
+def _inline_load_fp4a(raw_bytes: bytes, device: str = "cpu") -> nn.Module:
+    """Inline FP4A .bin deserializer — no tac dependency required.
+
+    Reads FP4A header -> parses JSON config -> reconstructs AsymmetricPairGenerator
+    -> loads FP4-quantized weights from blobs.
+
+    FP4 uses a codebook [0.0, 0.5, 1.0, 1.5, 2.0, 3.0, 4.0, 6.0] with per-block
+    scaling (block_size=32). Each weight is packed as 4 bits (3-bit index + 1-bit sign).
+    """
+    offset = 0
+
+    if raw_bytes[offset:offset + 4] != b"FP4A":
+        raise ValueError(f"Not an FP4A binary (got {raw_bytes[:4]!r})")
+    offset += 4
+
+    header_len = struct.unpack("<I", raw_bytes[offset:offset + 4])[0]
+    offset += 4
+    header = json.loads(raw_bytes[offset:offset + header_len].decode("utf-8"))
+    offset += header_len
+
+    version = header.get("version", 0)
+    if version != 3:
+        raise ValueError(f"Unsupported FP4A export version {version} (expected 3)")
+
+    block_size = header["block_size"]
+    codebook = torch.tensor(header["codebook"], dtype=torch.float32)
+
+    # Build the model
+    if _HAS_TAC_RENDERER:
+        from tac.renderer import AsymmetricPairGenerator as _APG
+        model = _APG(
+            num_classes=header.get("num_classes", 5),
+            embed_dim=header.get("embed_dim", 6),
+            base_ch=header.get("base_ch", 36),
+            mid_ch=header.get("mid_ch", 60),
+            motion_hidden=header.get("motion_hidden", 32),
+            depth=header.get("depth", 1),
+            max_flow_px=header.get("max_flow_px", 20.0),
+            max_residual=header.get("max_residual", 20.0),
+            flow_only=header.get("flow_only", False),
+            pose_dim=header.get("pose_dim", 0),
+            use_dsconv=header.get("use_dsconv", False),
+        )
+    else:
+        raise RuntimeError(
+            "FP4A format requires the tac package for model construction. "
+            "Install tac or use ASYM format."
+        )
+
+    # Build lookups
+    embedding_lookup: dict = {}
+    conv_lookup: dict = {}
+    for name, module in model.named_modules():
+        if isinstance(module, nn.Embedding):
+            embedding_lookup[name] = module
+        elif isinstance(module, (nn.Conv2d, nn.ConvTranspose2d, nn.Linear)):
+            conv_lookup[name] = module
+
+    def _unpack_fp4_nibbles(packed_bytes: bytes, count: int):
+        """Unpack 4-bit nibbles to (indices, signs)."""
+        packed = torch.tensor(list(packed_bytes), dtype=torch.uint8)
+        high = (packed >> 4) & 0x0F
+        low = packed & 0x0F
+        nibbles = torch.stack([high, low], dim=1).reshape(-1)[:count]
+        indices = (nibbles & 0x07).to(torch.uint8)
+        sign_bits = (nibbles >> 3) & 0x01
+        signs = torch.where(
+            sign_bits == 0,
+            torch.tensor(1, dtype=torch.int8),
+            torch.tensor(-1, dtype=torch.int8),
+        )
+        return indices, signs
+
+    def _dequant_fp4_blob(blob_data: bytes, numel: int, blk_size: int) -> torch.Tensor:
+        """Dequantize an FP4 blob."""
+        padded_numel = numel + (blk_size - numel % blk_size) % blk_size
+        n_blocks = padded_numel // blk_size
+
+        # Read scales
+        scales_bytes = n_blocks * 2
+        scales = []
+        for i in range(n_blocks):
+            s = struct.unpack("<e", blob_data[i * 2:(i + 1) * 2])[0]
+            scales.append(s)
+
+        # Read packed nibbles
+        packed_start = scales_bytes
+        bytes_per_block = blk_size // 2
+        total_packed = n_blocks * bytes_per_block
+        packed_raw = blob_data[packed_start:packed_start + total_packed]
+
+        # Unpack all at once
+        indices, signs = _unpack_fp4_nibbles(packed_raw, padded_numel)
+
+        # Dequantize
+        all_values = []
+        for i in range(n_blocks):
+            start = i * blk_size
+            end = start + blk_size
+            block_indices = indices[start:end]
+            block_signs = signs[start:end]
+            values = codebook[block_indices.long()]
+            block_out = values * block_signs.float() * scales[i]
+            all_values.append(block_out)
+
+        return torch.cat(all_values)[:numel]
+
+    # Iterate layers
+    for layer_meta in header["layers"]:
+        name = layer_meta["name"]
+        is_embedding = layer_meta.get("is_embedding", False)
+        numel = layer_meta["numel"]
+        blk_size = layer_meta.get("block_size", block_size)
+
+        blob_len = struct.unpack("<I", raw_bytes[offset:offset + 4])[0]
+        offset += 4
+        blob_data = raw_bytes[offset:offset + blob_len]
+        offset += blob_len
+
+        if is_embedding:
+            shape = layer_meta["shape"]
+            flat = _dequant_fp4_blob(blob_data, numel, blk_size)
+            with torch.no_grad():
+                embedding_lookup[name].weight.copy_(flat.reshape(shape))
+            continue
+
+        # Bias blob
+        bias_blob_len = struct.unpack("<I", raw_bytes[offset:offset + 4])[0]
+        offset += 4
+        bias_data = raw_bytes[offset:offset + bias_blob_len]
+        offset += bias_blob_len
+
+        module = conv_lookup[name]
+        shape = layer_meta["shape"]
+        transposed = layer_meta.get("transposed", False)
+
+        flat = _dequant_fp4_blob(blob_data, numel, blk_size)
+        with torch.no_grad():
+            module.weight.copy_(flat.reshape(shape))
+
+            if layer_meta["has_bias"] and bias_data:
+                C_out = shape[1] if transposed else shape[0]
+                for ch_idx in range(C_out):
+                    b_val = struct.unpack("<e", bias_data[ch_idx * 2:(ch_idx + 1) * 2])[0]
+                    module.bias[ch_idx] = b_val
+
+    # Restore scalars
+    scalar_params = header.get("scalar_params", {})
+    if scalar_params:
+        param_dict = dict(model.named_parameters())
+        with torch.no_grad():
+            for pname, pval in scalar_params.items():
+                if pname in param_dict:
+                    param_dict[pname].fill_(pval)
+
+    model = model.to(device)
+    model.eval()
+    return model
+
+
 def _inline_load_asym(raw_bytes: bytes, device: str = "cpu") -> nn.Module:
     """Inline ASYM .bin deserializer — no tac dependency required.
 
@@ -1077,6 +1237,18 @@ def _load_renderer(renderer_path: str, device: str) -> nn.Module:
     raw_bytes = renderer_path.read_bytes()
 
     magic = raw_bytes[:4]
+
+    # ── FP4A format: FP4-quantized AsymmetricPairGenerator ──
+    if magic == b"FP4A":
+        try:
+            from tac.renderer_export import load_asymmetric_checkpoint_fp4
+            model = load_asymmetric_checkpoint_fp4(raw_bytes, device=device)
+        except ImportError:
+            model = _inline_load_fp4a(raw_bytes, device=device)
+        elapsed = time.monotonic() - t0
+        print(f"  Loaded FP4 AsymmetricPairGenerator from .bin ({len(raw_bytes):,} bytes, {elapsed:.1f}s)",
+              file=sys.stderr)
+        return model
 
     # ── ASYM format: AsymmetricPairGenerator ──
     if magic == b"ASYM":
@@ -1304,7 +1476,6 @@ def _generate_and_write(
                             # Apply per-frame gradient correction BEFORE upscale
                             if gradient_corrections is not None:
                                 frame_np = frame_hwc.cpu().float().numpy()
-                                frame_1 = frame_np[np.newaxis]  # (1, H, W, 3)
                                 gc_H, gc_W = gradient_corrections["shape"][1], gradient_corrections["shape"][2]
                                 f_H, f_W = frame_np.shape[0], frame_np.shape[1]
                                 if f_H == gc_H and f_W == gc_W:
@@ -1326,7 +1497,7 @@ def _generate_and_write(
                                         elif qbits == 16:
                                             dequant = gc_vals.astype(np.float32)
                                         else:
-                                            dequant = gc_vals.astype(np.float32)
+                                            raise ValueError(f"Unsupported quantize_bits={qbits}")
                                         flat_frame = frame_np.reshape(-1, 3)
                                         flat_frame[local_idx] += gradient_alpha * dequant
                                         frame_np = np.clip(flat_frame.reshape(f_H, f_W, 3), 0, 255)
