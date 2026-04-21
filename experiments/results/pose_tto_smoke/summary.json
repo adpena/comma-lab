@@ -1,0 +1,62 @@
+{
+  "config": {
+    "checkpoint": "/tmp/distill_v2_latest_best.pt",
+    "device": "mps",
+    "n_frames": 20,
+    "steps": 100,
+    "lr": 0.01,
+    "batch_pairs": 10,
+    "seg_weight": 100.0,
+    "pose_weight": 10.0,
+    "hinge_margin": 0.5,
+    "upstream": "upstream/",
+    "output_dir": "experiments/results/pose_tto_smoke",
+    "video": null,
+    "smoke": true,
+    "eval_roundtrip": false,
+    "early_stop_patience": 100,
+    "latent_dim": 0,
+    "gt_poses_path": null,
+    "log_every": 10
+  },
+  "gt_score": {
+    "score": 0.3163507600014701,
+    "pose": 0.005713991075754166,
+    "seg": 0.0007731120102107524,
+    "rate": 0.0,
+    "pose_contribution": 0.23903955898039483,
+    "seg_contribution": 0.07731120102107525,
+    "rate_contribution": 0.0,
+    "n_pairs": 10
+  },
+  "optimized_score": {
+    "score": 0.3326972076247796,
+    "pose": 0.0020009152591228484,
+    "seg": 0.0019124349579215049,
+    "rate": 0.0,
+    "pose_contribution": 0.14145371183262914,
+    "seg_contribution": 0.1912434957921505,
+    "rate_contribution": 0.0,
+    "n_pairs": 10
+  },
+  "delta_score": 0.0163464476233095,
+  "total_time_s": 73.53705566597637,
+  "total_steps": 100,
+  "n_pairs": 10,
+  "pose_delta_mean": 1.33400559425354,
+  "pose_delta_max": 1.6384328603744507,
+  "batch_metrics": [
+    {
+      "steps_run": 100,
+      "final_loss": 2.223602056503296,
+      "final_pose_loss": 7.084478420438245e-05,
+      "final_seg_loss": 0.022228937596082687,
+      "initial_loss": 2.410439968109131,
+      "improvement_pct": 7.751195386641382,
+      "batch_idx": 0,
+      "time_s": 62.274142874986865
+    }
+  ],
+  "archive_bytes_fp32": 240,
+  "archive_bytes_fp16": 120
+}
