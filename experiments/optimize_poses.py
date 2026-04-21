@@ -220,7 +220,6 @@ def optimize_poses_batch(
     renderer: torch.nn.Module,
     masks_t: torch.Tensor,
     masks_t1: torch.Tensor,
-    gt_frames: list[torch.Tensor],
     gt_masks: torch.Tensor,
     pose_targets: torch.Tensor,
     posenet: torch.nn.Module,
@@ -245,7 +244,6 @@ def optimize_poses_batch(
     Args:
         renderer: FROZEN AsymmetricPairGenerator
         masks_t, masks_t1: (B, H, W) even/odd masks
-        gt_frames: list of (H, W, 3) uint8 tensors (for scorer comparison)
         gt_masks: (2*B, H, W) GT SegNet masks for the batch frames
         pose_targets: (B, 6) GT PoseNet outputs for these pairs
         posenet, segnet: FROZEN differentiable scorers
@@ -653,7 +651,6 @@ def main():
         batch_masks_t = gt_masks[frame_start:frame_end:2].to(device)
         batch_masks_t1 = gt_masks[frame_start + 1:frame_end + 1:2].to(device)
         batch_gt_masks = gt_masks[frame_start:frame_end].to(device)
-        batch_gt_frames = gt_frames[frame_start:frame_end]
         batch_pose_targets = pose_targets[pair_start:pair_end]
         batch_init_poses = init_poses[pair_start:pair_end]
 
@@ -662,7 +659,6 @@ def main():
             renderer=renderer,
             masks_t=batch_masks_t,
             masks_t1=batch_masks_t1,
-            gt_frames=batch_gt_frames,
             gt_masks=batch_gt_masks,
             pose_targets=batch_pose_targets,
             posenet=posenet,

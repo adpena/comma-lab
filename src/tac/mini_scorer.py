@@ -800,8 +800,12 @@ class MiniScorerTTO(nn.Module):
             mask_inf.scatter_(1, masks.unsqueeze(1), float("-inf"))
             runner_up = (logits + mask_inf).max(dim=1).values  # (B, H, W)
             return F.relu(hinge_margin - (correct - runner_up)).mean()
-        else:
+        elif loss_mode == "xent":
             return F.cross_entropy(logits, masks)
+        else:
+            raise ValueError(
+                f"Unknown loss_mode={loss_mode!r}. Supported: 'hinge', 'xent'."
+            )
 
     def compute_pose_loss(
         self,
