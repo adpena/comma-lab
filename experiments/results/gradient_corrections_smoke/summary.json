@@ -1,0 +1,71 @@
+{
+  "config": {
+    "checkpoint": "/tmp/distill_v2_ep850_best.pt",
+    "device": "cpu",
+    "n_frames": 20,
+    "batch_pairs": 5,
+    "seg_weight": 100.0,
+    "pose_weight": 10.0,
+    "hinge_margin": 0.5,
+    "top_k_pct": 5.0,
+    "alpha": 1.0,
+    "n_steps": 1,
+    "upstream": "upstream/",
+    "output_dir": "experiments/results/gradient_corrections_smoke",
+    "video": null,
+    "smoke": true,
+    "eval_roundtrip": false,
+    "gt_poses_path": null,
+    "quantize_bits": 8,
+    "compression": "zlib"
+  },
+  "original_score": {
+    "score": 0.3393888207279144,
+    "pose": 0.007901734858751296,
+    "seg": 0.0005828857421875,
+    "rate": 0.0,
+    "pose_contribution": 0.2811002465091644,
+    "seg_contribution": 0.05828857421875001,
+    "rate_contribution": 0.0,
+    "n_pairs": 10
+  },
+  "corrected_score": {
+    "score": 0.33981012110037595,
+    "pose": 0.00792543813586235,
+    "seg": 0.0005828857421875,
+    "rate": 0.0,
+    "pose_contribution": 0.28152154688162595,
+    "seg_contribution": 0.05828857421875001,
+    "rate_contribution": 0.0,
+    "n_pairs": 10
+  },
+  "delta_score": 0.0004213003724615749,
+  "packed_size_bytes": 760855,
+  "packed_size_kb": 743.0224609375,
+  "correction_rate": 0.020264884551110786,
+  "sparse_stats": {
+    "n_kept": 196608,
+    "n_total": 3932160,
+    "sparsity_pct": 5.0,
+    "scale": 0.006473407614976168
+  },
+  "gradient_stats": [
+    {
+      "batch": 0,
+      "pairs": "0-5",
+      "grad_mean": 5.553451046580449e-05,
+      "grad_max": 0.006295182276517153,
+      "grad_nonzero_pct": 95.40247321128845
+    },
+    {
+      "batch": 1,
+      "pairs": "5-10",
+      "grad_mean": 6.706856947857887e-05,
+      "grad_max": 0.007274361327290535,
+      "grad_nonzero_pct": 88.97801637649536
+    }
+  ],
+  "total_time_s": 43.41033108404372,
+  "gradient_time_s": 13.656442999956198,
+  "pack_time_s": 10.401652166969143
+}
