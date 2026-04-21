@@ -79,7 +79,12 @@ def compute_farneback_flow(
     try:
         import cv2
     except ImportError:
-        # Fallback: simple difference-based "flow" (no motion compensation)
+        import warnings
+        warnings.warn(
+            "cv2 (OpenCV) not installed — returning zero flow. "
+            "Install with: uv pip install opencv-python-headless",
+            stacklevel=2,
+        )
         return torch.zeros(frame_src.shape[0], frame_src.shape[1], 2)
 
     # Convert to grayscale

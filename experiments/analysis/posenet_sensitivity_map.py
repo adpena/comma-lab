@@ -172,8 +172,14 @@ def main() -> None:
     for pair_idx in range(n_pairs):
         for frame_offset in range(2):
             frame_idx = pair_idx * 2 + frame_offset
-            mask = gt_masks[frame_idx].cpu()  # (H, W)
+            mask = gt_masks[frame_idx].cpu()  # (mask_H, mask_W) — may differ from (H, W)
             sens = sensitivity_tensor[pair_idx, frame_offset]  # (H, W)
+            # Resize mask to match sensitivity resolution if needed
+            if mask.shape != sens.shape:
+                mask = F.interpolate(
+                    mask.float().unsqueeze(0).unsqueeze(0),
+                    size=sens.shape, mode="nearest",
+                ).squeeze().long()
             for c in range(5):
                 c_mask = (mask == c)
                 class_sensitivity[c][c_mask] += sens[c_mask]

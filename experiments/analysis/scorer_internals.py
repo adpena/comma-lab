@@ -149,7 +149,6 @@ def compute_activation_distances(
             # Run GT through both scorers
             posenet_hook.clear()
             segnet_hook.clear()
-            posenet.preprocess_input(gt_pair)  # just preprocess
             posenet(posenet.preprocess_input(gt_pair))
             gt_posenet_acts = {k: v.clone() for k, v in posenet_hook.activations.items()}
 

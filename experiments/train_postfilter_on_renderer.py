@@ -254,7 +254,7 @@ def main() -> None:
         for batch_start in range(0, n_pairs, args.batch_size):
             batch_indices = perm[batch_start:batch_start + args.batch_size]
             optimizer.zero_grad()
-            batch_loss = torch.tensor(0.0, device=device, requires_grad=True)
+            batch_loss = torch.tensor(0.0, device=device)
 
             for idx in batch_indices:
                 idx_val = idx.item()
