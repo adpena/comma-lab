@@ -114,6 +114,14 @@ def parse_args() -> argparse.Namespace:
     p.add_argument("--gt-poses-path", type=str, default=None,
                    help="Path to pre-extracted GT poses (poses.pt). "
                         "If not provided, extracts from GT video.")
+    p.add_argument("--optimize-embedding", action="store_true",
+                   help="Also optimize the renderer's shared class embedding (30 values, 120 bytes). "
+                        "Embedding is GLOBAL (shared across all pairs), optimized once before "
+                        "per-pair pose optimization begins.")
+    p.add_argument("--embedding-lr", type=float, default=0.005,
+                   help="Adam learning rate for embedding optimization (with --optimize-embedding)")
+    p.add_argument("--embedding-epochs", type=int, default=5,
+                   help="Number of epochs over all pairs for embedding optimization")
     p.add_argument("--log-every", type=int, default=25,
                    help="Log metrics every N steps")
     return p.parse_args()
@@ -539,7 +547,90 @@ def main():
         print(f"  Using PoseNet GT targets as warm start: {init_poses.shape}")
     init_poses = init_poses[:n_pairs]
 
-    # ── Step 5: Batched pose optimization ────────────────────────────────
+    # ── Step 5a (optional): Global embedding optimization ────────────────
+    if args.optimize_embedding:
+        print(f"\n[5.5/6] Optimizing shared class embedding "
+              f"({args.embedding_epochs} epochs, lr={args.embedding_lr})...")
+        t0 = time.monotonic()
+
+        # Unfreeze ONLY the shared embedding
+        shared_emb = renderer.renderer.embedding
+        original_emb = shared_emb.weight.data.clone()
+        shared_emb.weight.requires_grad_(True)
+
+        emb_optimizer = torch.optim.Adam([shared_emb.weight], lr=args.embedding_lr)
+        best_emb_loss = float("inf")
+        best_emb_weights = shared_emb.weight.data.clone()
+        n_emb_batches = math.ceil(n_pairs / args.batch_pairs)
+
+        for emb_epoch in range(args.embedding_epochs):
+            epoch_loss = 0.0
+            epoch_count = 0
+            for bi in range(n_emb_batches):
+                ps = bi * args.batch_pairs
+                pe = min(ps + args.batch_pairs, n_pairs)
+                fs, fe = 2 * ps, 2 * pe
+
+                mt = gt_masks[fs:fe:2].to(device)
+                mt1 = gt_masks[fs + 1:fe + 1:2].to(device)
+                gm = gt_masks[fs:fe].to(device)
+                pt = pose_targets[ps:pe]
+
+                bp = init_poses[ps:pe].to(device) if renderer_pose_dim > 0 else None
+
+                emb_optimizer.zero_grad()
+                pairs = renderer(mt, mt1, pose=bp)
+                ft, ft1 = pairs[:, 0], pairs[:, 1]
+                frames_hwc = torch.cat([ft, ft1], dim=0)
+                frames_chw = frames_hwc.permute(0, 3, 1, 2).contiguous()
+
+                if args.eval_roundtrip:
+                    frames_chw = simulate_eval_roundtrip(frames_chw)
+
+                seg_in = segnet.preprocess_input(frames_chw.unsqueeze(1))
+                seg_logits = segnet(seg_in)
+                s_loss = segnet_hinge_loss(seg_logits, gm, margin=args.hinge_margin)
+
+                pairs_chw = torch.stack([
+                    ft.permute(0, 3, 1, 2), ft1.permute(0, 3, 1, 2)
+                ], dim=1)
+                if args.eval_roundtrip:
+                    Bp, Tp, Cp, Hp, Wp = pairs_chw.shape
+                    flat = pairs_chw.reshape(Bp * Tp, Cp, Hp, Wp)
+                    flat = simulate_eval_roundtrip(flat)
+                    pairs_chw = flat.reshape(Bp, Tp, Cp, Hp, Wp)
+                pose_in = posenet.preprocess_input(pairs_chw)
+                pose_out = posenet(pose_in)["pose"][..., :6]
+                p_loss = F.mse_loss(pose_out, pt.to(device))
+
+                total = args.seg_weight * s_loss + args.pose_weight * p_loss
+                total.backward()
+                emb_optimizer.step()
+
+                epoch_loss += total.item()
+                epoch_count += 1
+
+            avg = epoch_loss / max(epoch_count, 1)
+            emb_delta = (shared_emb.weight.data - original_emb.to(device)).norm().item()
+            print(f"    Embedding epoch {emb_epoch}: avg_loss={avg:.6f}, |dw|={emb_delta:.4f}")
+
+            if avg < best_emb_loss:
+                best_emb_loss = avg
+                best_emb_weights = shared_emb.weight.data.clone()
+
+        # Restore best and re-freeze
+        shared_emb.weight.data = best_emb_weights
+        shared_emb.weight.requires_grad_(False)
+
+        emb_delta_final = (best_emb_weights - original_emb.to(device)).norm().item()
+        print(f"    Embedding optimization done in {time.monotonic() - t0:.1f}s, "
+              f"|total_delta|={emb_delta_final:.4f}")
+
+        # Save optimized embedding separately (120 bytes fp32)
+        torch.save(best_emb_weights.cpu(), output_dir / "optimized_embedding.pt")
+        print(f"    Saved optimized_embedding.pt ({best_emb_weights.numel() * 4} bytes)")
+
+    # ── Step 5b: Batched pose optimization ────────────────────────────────
     print(f"\n[6/6] Optimizing {n_pairs} pose vectors in batches of {args.batch_pairs}...")
     n_batches = math.ceil(n_pairs / args.batch_pairs)
 
