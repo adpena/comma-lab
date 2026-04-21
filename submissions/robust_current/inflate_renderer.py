@@ -1446,19 +1446,30 @@ def inflate_renderer(
                     f"dimensions that evenly divide {SEG_H}x{SEG_W}."
                 )
 
-    # ---- Load GT poses from archive (for FiLM-conditioned rendering) ----
+    # ---- Load poses from archive (for FiLM-conditioned rendering) ----
+    # Priority: optimized_poses.pt > poses.pt > poses.bin
+    # Optimized poses are FiLM conditioning vectors tuned at compress time
+    # via gradient descent through the scorers (pose-space TTO).
     poses = None
+    optimized_poses_path = Path(archive_dir) / "optimized_poses.pt"
     poses_path = Path(archive_dir) / "poses.pt"
-    if poses_path.exists():
+    optimized_bin_path = Path(archive_dir) / "optimized_poses.bin"
+    poses_bin_path = Path(archive_dir) / "poses.bin"
+
+    if optimized_poses_path.exists():
+        poses = torch.load(str(optimized_poses_path), map_location="cpu", weights_only=True).float()
+        print(f"  Loaded OPTIMIZED poses: {poses.shape} from archive (pose-space TTO)", file=sys.stderr)
+    elif optimized_bin_path.exists():
+        raw = optimized_bin_path.read_bytes()
+        poses = torch.frombuffer(bytearray(raw), dtype=torch.float16).reshape(-1, 6).float()
+        print(f"  Loaded OPTIMIZED poses: {poses.shape} from archive (bin, pose-space TTO)", file=sys.stderr)
+    elif poses_path.exists():
         poses = torch.load(str(poses_path), map_location="cpu", weights_only=True).float()
         print(f"  Loaded GT poses: {poses.shape} from archive", file=sys.stderr)
-    else:
-        # Also check for poses.bin (raw fp16 buffer)
-        poses_bin_path = Path(archive_dir) / "poses.bin"
-        if poses_bin_path.exists():
-            raw = poses_bin_path.read_bytes()
-            poses = torch.frombuffer(bytearray(raw), dtype=torch.float16).reshape(-1, 6).float()
-            print(f"  Loaded GT poses: {poses.shape} from archive (bin)", file=sys.stderr)
+    elif poses_bin_path.exists():
+        raw = poses_bin_path.read_bytes()
+        poses = torch.frombuffer(bytearray(raw), dtype=torch.float16).reshape(-1, 6).float()
+        print(f"  Loaded GT poses: {poses.shape} from archive (bin)", file=sys.stderr)
 
     # ---- Process each video ----
     output_path = Path(inflated_dir)
@@ -2248,10 +2259,20 @@ def _inflate_renderer_with_mini_tto(
     )
 
     # ---- Load poses for FiLM conditioning (if available) ----
+    # Priority: optimized_poses > GT poses (same as inflate_renderer)
     poses = None
+    optimized_poses_path = archive_path / "optimized_poses.pt"
     poses_path = archive_path / "poses.pt"
+    optimized_bin_path = archive_path / "optimized_poses.bin"
     poses_bin_path = archive_path / "poses.bin"
-    if poses_path.exists():
+    if optimized_poses_path.exists():
+        poses = torch.load(str(optimized_poses_path), map_location="cpu", weights_only=True).float()
+        print(f"  Loaded OPTIMIZED poses: {poses.shape} from archive (pose-space TTO)", file=sys.stderr)
+    elif optimized_bin_path.exists():
+        raw = optimized_bin_path.read_bytes()
+        poses = torch.frombuffer(bytearray(raw), dtype=torch.float16).reshape(-1, 6).float()
+        print(f"  Loaded OPTIMIZED poses: {poses.shape} from archive (bin, pose-space TTO)", file=sys.stderr)
+    elif poses_path.exists():
         poses = torch.load(str(poses_path), map_location="cpu", weights_only=True).float()
         print(f"  Loaded GT poses: {poses.shape} from archive", file=sys.stderr)
     elif poses_bin_path.exists():
