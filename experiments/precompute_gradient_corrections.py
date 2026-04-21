@@ -395,6 +395,9 @@ def apply_corrections(
         (N, H, W, 3) corrected frames
     """
     N, H, W, C = frames.shape
+    assert N * H * W == corrections["n_total"], (
+        f"Resolution mismatch: {N * H * W} vs {corrections['n_total']}"
+    )
     flat_frames = frames.reshape(-1, C).copy()
 
     indices = corrections["indices"]
@@ -523,8 +526,8 @@ def main():
             pairs = renderer(batch_masks_t, batch_masks_t1, pose=batch_pose)
             frame_t = pairs[:, 0]   # (B, H, W, 3)
             frame_t1 = pairs[:, 1]  # (B, H, W, 3)
-            # Interleave: [f0_0, f1_0, f0_1, f1_1, ...]
-            rendered = torch.cat([frame_t, frame_t1], dim=0)  # (2*B, H, W, 3)
+            # Interleave to match gt_masks ordering: [f0_t, f0_t1, f1_t, f1_t1, ...]
+            rendered = torch.stack([frame_t, frame_t1], dim=1).reshape(-1, *frame_t.shape[1:])  # (2*B, H, W, 3)
 
         all_rendered.append(rendered.cpu())
 
@@ -622,8 +625,15 @@ def main():
     )
 
     # Rate cost of corrections
-    original_rate = 0.005  # approximate current renderer archive rate
-    correction_rate = packed_size / 37_545_489  # archive_size / original_size
+    # Compute original rate from actual archive size if available, else estimate
+    archive_path = Path(args.checkpoint).parent / "archive.zip"
+    if archive_path.exists():
+        archive_bytes = archive_path.stat().st_size
+        original_rate = archive_bytes / 37_545_489
+    else:
+        # Fallback: estimate from typical renderer archive (~187KB)
+        original_rate = 187_000 / 37_545_489
+    correction_rate = packed_size / 37_545_489
     total_rate = original_rate + correction_rate
 
     print(f"\n  Original:  score={orig_score['score']:.4f} "
