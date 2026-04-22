@@ -125,7 +125,7 @@ def encode_masks(
 
     # Scale class labels to byte range: 0→0, 1→63, 2→127, 3→191, 4→255
     scale_factor = 255 // (NUM_CLASSES - 1)
-    pixels = (masks * scale_factor).clamp(0, 255).to(torch.uint8).numpy()
+    pixels = (masks.to(torch.int32) * scale_factor).clamp(0, 255).to(torch.uint8).numpy()
 
     # Write raw frames to ffmpeg stdin, encode as AV1
     cmd = [
@@ -302,7 +302,7 @@ def encode_masks_vvc(
 
     # Scale class labels to byte range: 0→0, 1→63, 2→127, 3→191, 4→255
     scale_factor = 255 // (NUM_CLASSES - 1)
-    pixels = (masks * scale_factor).clamp(0, 255).to(torch.uint8).numpy()
+    pixels = (masks.to(torch.int32) * scale_factor).clamp(0, 255).to(torch.uint8).numpy()
 
     with tempfile.TemporaryDirectory() as tmpdir:
         yuv_path = Path(tmpdir) / "masks.yuv"
