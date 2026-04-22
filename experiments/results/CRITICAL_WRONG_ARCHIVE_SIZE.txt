@@ -1,0 +1,16 @@
+CRITICAL: All auth eval scores used renderer-only archive (119KB).
+True submission archive is 183KB+ (renderer + masks + poses).
+Every score is OPTIMISTIC by 0.04-0.05 points.
+
+CORRECTED SCORES:
+  Auth 0.36 (reported) → ~0.40-0.41 (corrected)
+  Auth 0.51 (reported) → ~0.55-0.56 (corrected)  
+  Auth 0.59 (reported) → ~0.63-0.64 (corrected)
+  Auth 0.61 (reported) → ~0.65-0.66 (corrected)
+
+Quantizr is at 0.33. True gap is ~0.07-0.08, not 0.03.
+
+FIXES NEEDED:
+1. Auth eval must use CORRECT archive size (with all submission artifacts)
+2. optimize_poses.py must default --eval-roundtrip to True
+3. auth_eval.py eval_checkpoint must support pose loading
