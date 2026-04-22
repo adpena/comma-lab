@@ -2478,7 +2478,7 @@ def _inflate_constrained_gen(
                   f"({elapsed:.1f}s elapsed)", file=sys.stderr)
 
         del chunk_frames, optimizer, best_chunk
-        if device.type == "cuda":
+        if device == "cuda":
             torch.cuda.empty_cache()
 
     all_frames_tensor = torch.cat(all_optimized, dim=0)  # (N, H, W, 3)
@@ -2487,8 +2487,10 @@ def _inflate_constrained_gen(
     inflated_path = Path(inflated_dir)
     inflated_path.mkdir(parents=True, exist_ok=True)
 
-    # Write video_names.txt
-    with open(str(inflated_path / video_names_file), "w") as f:
+    # Write video_names.txt — video_names_file is an absolute path, write there directly
+    vn_path = Path(video_names_file)
+    vn_path.parent.mkdir(parents=True, exist_ok=True)
+    with open(str(vn_path), "w") as f:
         f.write("0\n")
 
     # Upscale and write raw bytes
