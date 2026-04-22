@@ -1745,7 +1745,8 @@ def coupled_trajectory_optimize(
     hinge_margin: float = 0.5,
     phase2_segnet_only: bool = False,
     phase2_steps: int = 200,
-    eval_roundtrip: bool = False,
+    eval_roundtrip: bool = True,
+    roundtrip_noise_std: float = 0.5,
     use_null_space: bool = False,
     null_space_step: float = 0.5,
     null_space_every: int = 10,
@@ -1861,7 +1862,7 @@ def coupled_trajectory_optimize(
     _test_in = torch.randn(1, 2, 3, 8, 8, device=device, requires_grad=True)
     _test_out = posenet(posenet.preprocess_input(_test_in))
     _grad = torch.autograd.grad(_test_out["pose"].sum(), _test_in, allow_unused=True)[0]
-    if _grad is None or _grad.abs().max() == 0:
+    if _grad is None or _grad.abs().max().item() < 1e-10:
         raise RuntimeError(
             "PoseNet gradients are ZERO through preprocess_input. "
             "Call tac.scorer.make_scorers_differentiable(posenet, segnet) "
@@ -1950,6 +1951,7 @@ def coupled_trajectory_optimize(
                 frames.permute(0, 3, 1, 2),  # (N, H, W, 3) -> (N, 3, H, W)
                 target_h=CAMERA_H,
                 target_w=CAMERA_W,
+                noise_std=roundtrip_noise_std,
             ).permute(0, 2, 3, 1)  # (N, 3, H, W) -> (N, H, W, 3)
         else:
             frames_for_loss = frames
@@ -2032,11 +2034,12 @@ def coupled_trajectory_optimize(
                     project_segnet_grad_to_posenet_null_space,
                 )
                 # Load basis once (cached after first call via module-level)
-                if not hasattr(coupled_trajectory_optimize, "_null_basis"):
-                    coupled_trajectory_optimize._null_basis = load_null_space_basis(
+                _cache_key = f"_null_basis_{device}"
+                if not hasattr(coupled_trajectory_optimize, _cache_key):
+                    setattr(coupled_trajectory_optimize, _cache_key, load_null_space_basis(
                         device=device,
-                    )
-                null_basis = coupled_trajectory_optimize._null_basis
+                    ))
+                null_basis = getattr(coupled_trajectory_optimize, _cache_key)
 
                 # seg_grad is (N, H, W, 3), need (N, 3, H, W) for the projection
                 seg_grad_chw = seg_grad.permute(0, 3, 1, 2)
