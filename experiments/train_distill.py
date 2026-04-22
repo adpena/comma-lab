@@ -105,7 +105,7 @@ class DistillConfig:
     phase2_lr: float = 3e-4
     phase2_batch_size: int = 4  # scorer is VRAM-intensive
     phase2_pixel_weight: float = 0.1
-    phase2_pose_weight: float = 1.0
+    phase2_pose_weight: float = 10.0
     phase2_seg_weight: float = 100.0
     segnet_loss_mode: str = "hinge"  # "hinge" or "xent"
     hinge_margin: float = 0.5
@@ -686,7 +686,16 @@ def train_phase3(
     print("PHASE 3: Hard-Pair Fine-Tuning")
     print("=" * 70)
 
-    model.train()
+    # Maintain QAT wrapper if active (same parametrizations from Phase 1/2)
+    if cfg.qat_enabled or cfg.qat_from_phase2:
+        from tac.fp4_quantize import QATRendererFP4
+        train_model = QATRendererFP4(model, block_size=cfg.fp4_block_size)
+        # Won't double-register thanks to C1 fix (is_parametrized check)
+        print(f"  QAT active in Phase 3 ({len(train_model._parametrized_modules)} layers)")
+    else:
+        train_model = model
+
+    train_model.train()
     optimizer = torch.optim.AdamW(
         model.parameters(), lr=cfg.phase3_lr, weight_decay=cfg.weight_decay
     )
@@ -746,7 +755,7 @@ def train_phase3(
 
             pose = poses[batch_idx].to(device) if poses is not None else None
 
-            predicted_pairs = model(mask_even, mask_odd, pose=pose)
+            predicted_pairs = train_model(mask_even, mask_odd, pose=pose)
 
             # Scorer loss
             scorer_loss, metrics = compute_scorer_loss(
@@ -798,6 +807,24 @@ def train_phase3(
 # ---------------------------------------------------------------------------
 
 
+def _clean_state_dict(state_dict: dict) -> dict:
+    """Strip nn.utils.parametrize keys to plain weight keys for clean resume.
+
+    When QAT is active, state_dict has keys like
+    'layer.parametrizations.weight.original' instead of 'layer.weight'.
+    This makes load_state_dict crash on a bare model. Strip them.
+    """
+    clean = {}
+    for k, v in state_dict.items():
+        if ".parametrizations.weight.original" in k:
+            clean[k.replace(".parametrizations.weight.original", ".weight")] = v
+        elif ".parametrizations." in k:
+            continue  # skip codebook buffers
+        else:
+            clean[k] = v
+    return clean
+
+
 def _save_checkpoint(
     model: nn.Module,
     optimizer: torch.optim.Optimizer,
@@ -805,12 +832,12 @@ def _save_checkpoint(
     tag: str,
     cfg: DistillConfig,
 ) -> None:
-    """Save training checkpoint."""
+    """Save training checkpoint with clean (non-parametrized) state dict."""
     RESULTS_DIR.mkdir(parents=True, exist_ok=True)
     path = RESULTS_DIR / f"distill_{tag}.pt"
     torch.save(
         {
-            "model_state_dict": model.state_dict(),
+            "model_state_dict": _clean_state_dict(model.state_dict()),
             "optimizer_state_dict": optimizer.state_dict(),
             "epoch": epoch,
             "tag": tag,
@@ -822,7 +849,7 @@ def _save_checkpoint(
     latest_path = RESULTS_DIR / "distill_latest.pt"
     torch.save(
         {
-            "model_state_dict": model.state_dict(),
+            "model_state_dict": _clean_state_dict(model.state_dict()),
             "optimizer_state_dict": optimizer.state_dict(),
             "epoch": epoch,
             "tag": tag,

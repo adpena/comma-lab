@@ -416,10 +416,16 @@ class QATRendererFP4(nn.Module):
         self._register_parametrizations()
 
     def _register_parametrizations(self):
-        """Attach FP4 STE parametrizations to all quantizable layers."""
+        """Attach FP4 STE parametrizations to all quantizable layers.
+
+        Skips layers already parametrized (prevents double-wrapping if
+        called from both Phase 1 and Phase 2 — C1 fix).
+        """
         for module in self.base.modules():
             if isinstance(module, (nn.Conv2d, nn.ConvTranspose2d, nn.Embedding)):
                 if hasattr(module, "weight") and module.weight.ndim >= 2:
+                    if nn.utils.parametrize.is_parametrized(module, "weight"):
+                        continue  # already wrapped — skip to prevent double quantization
                     nn.utils.parametrize.register_parametrization(
                         module,
                         "weight",
