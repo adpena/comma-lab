@@ -1003,8 +1003,10 @@ class AuthEvaluator:
         n_pairs = 0
 
         with torch.inference_mode():
-            # Process pairs in batches, matching upstream evaluate.py
-            pair_indices = list(range(N - 1))
+            # Process NON-OVERLAPPING pairs, matching upstream evaluate.py
+            # Upstream: seq_len=2, fills seq_buf then clears → (0,1),(2,3),...
+            # NOT overlapping (0,1),(1,2),(2,3) which we had before (BUG)
+            pair_indices = list(range(0, N - 1, 2))
 
             for batch_start in range(0, len(pair_indices), batch_size):
                 batch_end = min(batch_start + batch_size, len(pair_indices))
@@ -1182,13 +1184,12 @@ class AuthEvaluator:
                     archive_size_bytes, candidate,
                 )
             else:
-                archive_size_bytes = checkpoint_path.stat().st_size
-                logger.warning(
-                    "WARNING: No archive_size_bytes provided AND no archive.zip found. "
-                    "Falling back to checkpoint size: %d bytes. "
-                    "THIS IS LIKELY WRONG — the rate term will be underestimated. "
-                    "Pass archive_size_bytes explicitly for accurate scoring.",
-                    archive_size_bytes,
+                raise ValueError(
+                    f"No archive_size_bytes provided AND no archive.zip found next to "
+                    f"{checkpoint_path}. Cannot compute rate term. "
+                    f"Pass archive_size_bytes explicitly or place archive.zip next to checkpoint. "
+                    f"Using checkpoint size would produce WRONG scores (the exact bug that "
+                    f"caused the 0.108-point measurement disaster)."
                 )
 
         # 7. Score
