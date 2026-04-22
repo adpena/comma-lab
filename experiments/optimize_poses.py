@@ -97,6 +97,11 @@ def parse_args() -> argparse.Namespace:
                    help="Output directory (default: timestamped)")
     p.add_argument("--video", type=str, default=None,
                    help="Path to GT video (default: upstream/videos/0.mkv)")
+    p.add_argument("--masks", type=str, default=None,
+                   help="Path to pre-decoded masks (.pt or .mkv). "
+                        "CRITICAL: must match the actual archive masks, not fresh SegNet. "
+                        "Without this, poses are optimized against perfect masks but "
+                        "deployed with lossy AV1 masks — 27x PoseNet regression.")
     p.add_argument("--smoke", action="store_true",
                    help="Smoke test: 20 frames, 100 steps")
     p.add_argument("--eval-roundtrip", action="store_true", default=True,
@@ -565,10 +570,46 @@ def main():
     n_pairs = args.n_frames // 2
     print(f"[3/6] Decoded {args.n_frames} frames in {time.monotonic() - t0:.1f}s")
 
-    print("\n[4/6] Extracting GT masks and pose targets...")
+    print("\n[4/6] Loading/extracting masks and pose targets...")
     t0 = time.monotonic()
     from tac.scorer import extract_gt_masks, extract_gt_pose_targets
-    gt_masks = extract_gt_masks(gt_frames, segnet, device)
+
+    if args.masks:
+        # Use pre-decoded masks (MUST match the archive masks for correct optimization)
+        masks_path = Path(args.masks)
+        if masks_path.suffix == ".pt":
+            gt_masks = torch.load(str(masks_path), weights_only=True).long()
+        elif masks_path.suffix in (".mkv", ".mp4"):
+            # Decode from AV1 video (same path as inflate_renderer.py)
+            import subprocess, numpy as np
+            cmd = ["ffmpeg", "-v", "quiet", "-i", str(masks_path),
+                   "-f", "rawvideo", "-pix_fmt", "gray", "pipe:1"]
+            proc = subprocess.run(cmd, capture_output=True)
+            probe = subprocess.run(
+                ["ffprobe", "-v", "quiet", "-select_streams", "v:0",
+                 "-show_entries", "stream=width,height", "-of", "csv=p=0", str(masks_path)],
+                capture_output=True, text=True,
+            )
+            w, h = map(int, probe.stdout.strip().split(","))
+            pixels = np.frombuffer(proc.stdout, dtype=np.uint8).reshape(-1, h, w)
+            scale = 255 // 4
+            masks_np = np.clip(np.round(pixels.astype(np.float32) / scale).astype(np.int64), 0, 4)
+            gt_masks = torch.from_numpy(masks_np)
+        else:
+            raise ValueError(f"Unknown mask format: {masks_path.suffix}")
+        print(f"  Loaded archive masks from {args.masks}: {gt_masks.shape}")
+        # Upsample to 384x512 if needed (same logic as inflate_renderer.py)
+        if gt_masks.shape[1] < 384 or gt_masks.shape[2] < 512:
+            import torch.nn.functional as F
+            gt_masks = F.interpolate(
+                gt_masks.float().unsqueeze(1), size=(384, 512), mode="nearest"
+            ).squeeze(1).long()
+            print(f"  Upsampled to {gt_masks.shape}")
+    else:
+        gt_masks = extract_gt_masks(gt_frames, segnet, device)
+        print(f"  WARNING: Using fresh SegNet masks. If archive uses AV1-encoded masks,")
+        print(f"  pass --masks <path_to_archive_masks.mkv> for correct optimization.")
+
     pose_targets = extract_gt_pose_targets(gt_frames, posenet, device)
     print(f"[4/6] Masks: {gt_masks.shape}, Poses: {pose_targets.shape} in {time.monotonic() - t0:.1f}s")
 
