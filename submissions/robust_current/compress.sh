@@ -641,10 +641,18 @@ if [ "$POSE_TTO_ENABLE" = "1" ]; then
     echo "POSE_TTO_ENABLE=1 requires both files to exist. Fix the pipeline." >&2
     exit 1
   fi
-elif [ -f "$SELF_DIR/optimized_poses.pt" ]; then
-  cp "$SELF_DIR/optimized_poses.pt" "$ARCHIVE_DIR/optimized_poses.pt"
-  echo "Bundled pre-computed optimized_poses.pt ($(stat -f%z "$SELF_DIR/optimized_poses.pt" 2>/dev/null || stat -c%s "$SELF_DIR/optimized_poses.pt") bytes) into archive"
+elif [ "${BUNDLE_OPTIMIZED_POSES:-0}" = "1" ]; then
+  if [ -f "$SELF_DIR/optimized_poses.pt" ]; then
+    cp "$SELF_DIR/optimized_poses.pt" "$ARCHIVE_DIR/optimized_poses.pt"
+    echo "Bundled pre-computed optimized_poses.pt ($(stat -f%z "$SELF_DIR/optimized_poses.pt" 2>/dev/null || stat -c%s "$SELF_DIR/optimized_poses.pt") bytes) into archive"
+  else
+    echo "ERROR: BUNDLE_OPTIMIZED_POSES=1 but optimized_poses.pt not found in $SELF_DIR" >&2
+    exit 1
+  fi
 fi
+# NOTE: Removed auto-bundle of optimized_poses.pt by file existence.
+# Same fix as optimized_embedding.pt and gradient_corrections.bin —
+# explicit flag required, no silent artifact poisoning.
 
 # ── Bundle optimized embedding (compress-time embedding TTO) ──────────
 BUNDLE_EMBEDDING="${BUNDLE_EMBEDDING:-0}"
