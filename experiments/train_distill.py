@@ -867,7 +867,7 @@ def parse_args() -> argparse.Namespace:
 
     # Scorer weights
     p.add_argument("--seg-weight", type=float, default=100.0)
-    p.add_argument("--pose-weight", type=float, default=1.0)
+    p.add_argument("--pose-weight", type=float, default=10.0)
     p.add_argument("--pixel-weight", type=float, default=0.1)
 
     # Control
