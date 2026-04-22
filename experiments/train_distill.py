@@ -120,6 +120,16 @@ class DistillConfig:
     # Eval-matched resize roundtrip
     eval_roundtrip: bool = True
 
+    # Fridrich inverse steganalysis losses (Phase 2+3 only)
+    use_texture_loss: bool = False       # UNIWARD: weight errors by texture complexity
+    texture_loss_weight: float = 0.5     # weight for texture-aware L1
+    use_linf_penalty: bool = False       # Square root law: penalize peak errors
+    linf_weight: float = 0.01           # weight for L∞ penalty
+    use_boundary_hinge: bool = False     # Enhanced hinge with boundary weighting
+    boundary_extra_weight: float = 5.0   # extra weight on class boundary pixels
+    use_markov_loss: bool = False        # HUGO: preserve local gradient statistics
+    markov_weight: float = 0.1          # weight for Markov chain loss
+
     # Optimizer
     weight_decay: float = 1e-4
     grad_clip: float = 1.0
@@ -363,10 +373,40 @@ def compute_scorer_loss(
     # Rate is fixed (archive size), so we optimize seg + pose only
     total = cfg.phase2_seg_weight * seg_loss + cfg.phase2_pose_weight * pose_loss
 
+    # ── Fridrich inverse steganalysis losses (additive) ──────────────
+    # These are gated by config flags and OFF by default.
+    # Enable via --use-texture-loss, --use-linf-penalty, etc.
+    fridrich_metrics: dict[str, float] = {}
+
+    if cfg.use_texture_loss and cfg.texture_loss_weight > 0:
+        from tac.fridrich_losses import texture_weighted_loss
+        tex_loss = texture_weighted_loss(
+            pred_frames_for_loss.permute(0, 3, 1, 2),
+            gt_frames_for_loss.permute(0, 3, 1, 2),
+        )
+        total = total + cfg.texture_loss_weight * tex_loss
+        fridrich_metrics["texture_loss"] = tex_loss.item()
+
+    if cfg.use_linf_penalty and cfg.linf_weight > 0:
+        from tac.fridrich_losses import linf_penalty
+        linf = linf_penalty(pred_frames_for_loss, gt_frames_for_loss)
+        total = total + cfg.linf_weight * linf
+        fridrich_metrics["linf_penalty"] = linf.item()
+
+    if cfg.use_markov_loss and cfg.markov_weight > 0:
+        from tac.fridrich_losses import markov_chain_loss
+        mc_loss = markov_chain_loss(
+            pred_frames_for_loss.permute(0, 3, 1, 2),
+            gt_frames_for_loss.permute(0, 3, 1, 2),
+        )
+        total = total + cfg.markov_weight * mc_loss
+        fridrich_metrics["markov_loss"] = mc_loss.item()
+
     metrics = {
         "seg_loss": seg_loss.item(),
         "pose_loss": pose_loss.item(),
         "total_loss": total.item(),
+        **fridrich_metrics,
     }
     return total, metrics
 
@@ -854,6 +894,17 @@ def parse_args() -> argparse.Namespace:
     p.add_argument("--segnet-loss-mode", type=str, default="hinge", choices=["hinge", "xent"])
     p.add_argument("--hinge-margin", type=float, default=0.5)
 
+    # Fridrich inverse steganalysis losses
+    p.add_argument("--use-texture-loss", action="store_true",
+                   help="UNIWARD: weight errors by texture complexity (Holub & Fridrich 2014)")
+    p.add_argument("--texture-loss-weight", type=float, default=0.5)
+    p.add_argument("--use-linf-penalty", action="store_true",
+                   help="Square root law: penalize peak errors (Ker, Filler & Fridrich 2008)")
+    p.add_argument("--linf-weight", type=float, default=0.01)
+    p.add_argument("--use-markov-loss", action="store_true",
+                   help="HUGO: preserve local gradient statistics (Filler, Judas & Fridrich 2010)")
+    p.add_argument("--markov-weight", type=float, default=0.1)
+
     # Phase config
     p.add_argument("--phase1-epochs", type=int, default=2000)
     p.add_argument("--phase2-epochs", type=int, default=5000)
@@ -919,6 +970,12 @@ def main() -> None:
         eval_every=args.eval_every,
         log_every=args.log_every,
         resume=args.resume,
+        use_texture_loss=args.use_texture_loss,
+        texture_loss_weight=args.texture_loss_weight,
+        use_linf_penalty=args.use_linf_penalty,
+        linf_weight=args.linf_weight,
+        use_markov_loss=args.use_markov_loss,
+        markov_weight=args.markov_weight,
     )
 
     # Smoke test overrides
