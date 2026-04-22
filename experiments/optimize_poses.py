@@ -99,8 +99,10 @@ def parse_args() -> argparse.Namespace:
                    help="Path to GT video (default: upstream/videos/0.mkv)")
     p.add_argument("--smoke", action="store_true",
                    help="Smoke test: 20 frames, 100 steps")
-    p.add_argument("--eval-roundtrip", action="store_true",
-                   help="Simulate contest eval resolution roundtrip in loss")
+    p.add_argument("--eval-roundtrip", action="store_true", default=True,
+                   help="Simulate contest eval resolution roundtrip in loss (default: on)")
+    p.add_argument("--no-eval-roundtrip", dest="eval_roundtrip", action="store_false",
+                   help="Disable contest eval resolution roundtrip")
     p.add_argument("--early-stop-patience", type=int, default=100,
                    help="Stop if loss hasn't improved in this many steps")
     p.add_argument("--argmax-constraint", action="store_true",
@@ -268,6 +270,15 @@ def optimize_poses_batch(
     """
     B = masks_t.shape[0]
     pose_dim = init_poses.shape[1]
+
+    if latent_dim > 0:
+        raise NotImplementedError(
+            f"--latent-dim {latent_dim} is not yet supported: the renderer has no "
+            f"latent FiLM layer, so latent dimensions receive zero gradient and "
+            f"produce meaningless output. Remove --latent-dim or implement latent "
+            f"conditioning in the renderer architecture first."
+        )
+
     cond_dim = pose_dim + latent_dim
 
     # Initialize conditioning vector: [pose (warm start) | latent (zeros)]
@@ -279,6 +290,8 @@ def optimize_poses_batch(
 
     best_loss = float("inf")
     best_cond = conditioning.detach().clone()
+    best_seg_loss = 0.0
+    best_pose_loss = 0.0
     patience_counter = 0
     argmax_rejections = 0
 
@@ -426,6 +439,8 @@ def optimize_poses_batch(
         if loss_val < best_loss:
             best_loss = loss_val
             best_cond = conditioning.detach().clone()
+            best_seg_loss = seg_loss.item()
+            best_pose_loss = pose_loss.item()
             patience_counter = 0
         else:
             patience_counter += 1
@@ -444,8 +459,8 @@ def optimize_poses_batch(
 
     metrics["steps_run"] = step + 1
     metrics["final_loss"] = best_loss
-    metrics["final_seg_loss"] = seg_loss.item()
-    metrics["final_pose_loss"] = pose_loss.item()
+    metrics["final_seg_loss"] = best_seg_loss
+    metrics["final_pose_loss"] = best_pose_loss
     metrics["argmax_rejections"] = argmax_rejections
     if metrics["initial_loss"] > 0:
         metrics["improvement_pct"] = (
