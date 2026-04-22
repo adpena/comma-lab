@@ -546,8 +546,12 @@ def train_phase2(
         from tac.fp4_quantize import QATRendererFP4
         qat_wrapper = QATRendererFP4(model, block_size=cfg.fp4_block_size)
         train_model = qat_wrapper  # forward through fake-quant weights
-        n_quant = sum(1 for _ in qat_wrapper._parametrized_modules)
-        print(f"  Integrated QAT: FP4 fake-quant on {n_quant} layers (block_size={cfg.fp4_block_size})")
+        import torch.nn.utils.parametrize as _pm
+        n_quant = sum(1 for m in model.modules()
+                      if isinstance(m, (nn.Conv2d, nn.ConvTranspose2d, nn.Embedding))
+                      and _pm.is_parametrized(m, "weight"))
+        n_new = len(qat_wrapper._parametrized_modules)
+        print(f"  Integrated QAT: {n_quant} FP4-parametrized layers ({n_new} new, block_size={cfg.fp4_block_size})")
     else:
         train_model = model
 
@@ -631,6 +635,8 @@ def train_phase2(
 
             # Track per-pair difficulty via EMA (detached)
             # Use per-pair PoseNet MSE for difficulty (more discriminative than batch avg)
+            # Scorers loaded in eval() mode by load_differentiable_scorers — defensive check
+            posenet.eval()
             with torch.no_grad():
                 pred_chw = predicted_pairs.reshape(-1, *predicted_pairs.shape[2:]).permute(0, 3, 1, 2)
                 gt_chw = gt_pairs.reshape(-1, *gt_pairs.shape[2:]).permute(0, 3, 1, 2)
@@ -671,7 +677,7 @@ def train_phase2(
 
     _save_checkpoint(model, optimizer, start_epoch + cfg.phase2_epochs, "phase2_final", cfg)
     print(f"  Phase 2 complete. Best proxy: {best_score:.3f}")
-    return start_epoch + cfg.phase2_epochs, per_pair_loss
+    return start_epoch + cfg.phase2_epochs, per_pair_loss, train_model
 
 
 def train_phase3(
@@ -686,24 +692,25 @@ def train_phase3(
     cfg: DistillConfig,
     device: torch.device,
     start_epoch: int = 0,
+    train_model: nn.Module | None = None,
 ) -> int:
     """Phase 3: hard-pair fine-tuning.
 
     Trains on the hardest pairs with increased weight.
+    train_model is the QAT wrapper from Phase 2 (or model itself if no QAT).
     Returns the final epoch number.
     """
+    if train_model is None:
+        train_model = model
+
     print("\n" + "=" * 70)
     print("PHASE 3: Hard-Pair Fine-Tuning")
     print("=" * 70)
 
-    # Maintain QAT wrapper if active (same parametrizations from Phase 1/2)
-    if cfg.qat_enabled or cfg.qat_from_phase2:
-        from tac.fp4_quantize import QATRendererFP4
-        train_model = QATRendererFP4(model, block_size=cfg.fp4_block_size)
-        # Won't double-register thanks to C1 fix (is_parametrized check)
-        print(f"  QAT active in Phase 3 ({len(train_model._parametrized_modules)} layers)")
-    else:
-        train_model = model
+    # Reuse the QAT wrapper from Phase 2 (passed via train_model_p2 in main)
+    # Do NOT create a new QATRendererFP4 — that would produce an empty
+    # _parametrized_modules list since modules are already parametrized.
+    # The train_model variable is set by the caller (main) before this call.
 
     train_model.train()
     optimizer = torch.optim.AdamW(
@@ -1179,8 +1186,8 @@ def main() -> None:
         export_model(model, cfg)
         return
 
-    # Phase 2: scorer-guided
-    current_epoch, per_pair_difficulty = train_phase2(
+    # Phase 2: scorer-guided (returns train_model which is QAT wrapper if enabled)
+    current_epoch, per_pair_difficulty, train_model_p2 = train_phase2(
         model, masks, tto_frames, gt_frames, poses,
         posenet, segnet, cfg, device, start_epoch=current_epoch,
     )
@@ -1194,12 +1201,13 @@ def main() -> None:
     print(f"  Proxy score: {result.get('score', 'N/A')}")
     print(f"  PoseNet: {result.get('pose', 'N/A'):.5f}, SegNet: {result.get('seg', 'N/A'):.5f}")
 
-    # Phase 3: hard-pair fine-tuning
+    # Phase 3: hard-pair fine-tuning (pass QAT wrapper from Phase 2)
     if per_pair_difficulty is not None:
         current_epoch = train_phase3(
             model, masks, tto_frames, gt_frames, poses,
             posenet, segnet, per_pair_difficulty, cfg, device,
             start_epoch=current_epoch,
+            train_model=train_model_p2,
         )
 
     # Final eval
