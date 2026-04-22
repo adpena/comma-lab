@@ -419,11 +419,19 @@ while IFS= read -r rel; do
   fi
 done < "$VIDEO_NAMES_FILE"
 
-# Bundle neural network artifact inside archive (contest rules require it)
-if [ -f "$SELF_DIR/postfilter_int8.pt" ]; then
-  cp "$SELF_DIR/postfilter_int8.pt" "$ARCHIVE_DIR/postfilter_int8.pt"
-  echo "Bundled postfilter_int8.pt ($(stat -f%z "$SELF_DIR/postfilter_int8.pt" 2>/dev/null || stat -c%s "$SELF_DIR/postfilter_int8.pt") bytes) into archive"
+# Bundle postfilter artifact — ONLY when explicitly requested
+BUNDLE_POSTFILTER="${BUNDLE_POSTFILTER:-0}"
+if [ "$BUNDLE_POSTFILTER" = "1" ]; then
+  if [ -f "$SELF_DIR/postfilter_int8.pt" ]; then
+    cp "$SELF_DIR/postfilter_int8.pt" "$ARCHIVE_DIR/postfilter_int8.pt"
+    echo "Bundled postfilter_int8.pt ($(stat -f%z "$SELF_DIR/postfilter_int8.pt" 2>/dev/null || stat -c%s "$SELF_DIR/postfilter_int8.pt") bytes) into archive"
+  else
+    echo "ERROR: BUNDLE_POSTFILTER=1 but postfilter_int8.pt not found in $SELF_DIR" >&2
+    exit 1
+  fi
 fi
+# NOTE: Removed auto-bundle of postfilter_int8.pt by file existence.
+# Same pattern as optimized_embedding.pt, gradient_corrections.bin, optimized_poses.pt.
 
 # Bundle mini-scorer binaries for INFLATE_MINI_TTO path
 BUNDLE_MINI_SCORERS="${BUNDLE_MINI_SCORERS:-0}"
