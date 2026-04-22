@@ -130,9 +130,32 @@ def parse_args() -> argparse.Namespace:
 
 
 def load_renderer(checkpoint_path: str, device: torch.device) -> torch.nn.Module:
-    """Load AsymmetricPairGenerator from checkpoint (reuses renderer_tto logic)."""
-    from tac.renderer import AsymmetricPairGenerator
+    """Load AsymmetricPairGenerator from checkpoint, .bin, or .pt."""
+    from pathlib import Path
 
+    raw = Path(checkpoint_path).read_bytes()
+
+    # Auto-detect format by magic bytes
+    if raw[:4] == b"ASYM":
+        from tac.renderer_export import load_asymmetric_checkpoint
+        model = load_asymmetric_checkpoint(raw, device=str(device))
+        model = model.eval()
+        n_params = sum(p.numel() for p in model.parameters())
+        pose_dim = model.pose_dim
+        print(f"[renderer] Loaded ASYM: {n_params:,} params, pose_dim={pose_dim}")
+        return model
+
+    if raw[:4] == b"FP4A":
+        from tac.renderer_export import load_asymmetric_checkpoint_fp4
+        model = load_asymmetric_checkpoint_fp4(raw, device=str(device))
+        model = model.eval()
+        n_params = sum(p.numel() for p in model.parameters())
+        pose_dim = model.pose_dim
+        print(f"[renderer] Loaded FP4A: {n_params:,} params, pose_dim={pose_dim}")
+        return model
+
+    # PyTorch .pt format
+    from tac.renderer import AsymmetricPairGenerator
     ckpt = torch.load(checkpoint_path, map_location="cpu", weights_only=False)
     model_cfg = ckpt.get("model_config", ckpt.get("config", {}))
     model = AsymmetricPairGenerator(
@@ -145,7 +168,7 @@ def load_renderer(checkpoint_path: str, device: torch.device) -> torch.nn.Module
         max_flow_px=model_cfg.get("max_flow_px", 20.0),
         max_residual=model_cfg.get("max_residual", 20.0),
         flow_only=model_cfg.get("flow_only", False),
-        pose_dim=model_cfg.get("pose_dim", 0),
+        pose_dim=model_cfg.get("pose_dim", 6),
         use_dsconv=model_cfg.get("use_dsconv", False),
     )
 
