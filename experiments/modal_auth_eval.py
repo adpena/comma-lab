@@ -17,7 +17,7 @@ app = modal.App("comma-auth-eval")
 # Image with all dependencies (matches contest T4 environment)
 image = (
     modal.Image.debian_slim(python_version="3.11")
-    .apt_install("ffmpeg", "git")
+    .apt_install("ffmpeg", "git", "unzip")
     .pip_install(
         "torch==2.5.1",
         "torchvision",
@@ -32,17 +32,17 @@ image = (
 )
 
 
+eval_image = (
+    image
+    .add_local_dir("upstream", remote_path="/root/upstream")
+    .add_local_dir("submissions/robust_current", remote_path="/root/submission")
+)
+
+
 @app.function(
-    image=image,
+    image=eval_image,
     gpu="T4",
     timeout=2400,  # 40 min (30 min contest + 10 min overhead)
-    mounts=[
-        modal.Mount.from_local_dir("upstream", remote_path="/root/upstream"),
-        modal.Mount.from_local_dir(
-            "submissions/robust_current",
-            remote_path="/root/submission",
-        ),
-    ],
 )
 def run_auth_eval(archive_bytes: bytes) -> dict:
     """Run full contest-compliant auth eval on T4.
