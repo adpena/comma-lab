@@ -80,7 +80,7 @@ echo ""
 echo "=== INFLATE ==="
 echo "0.mkv" > "$WORK_DIR/video_names.txt"
 
-SCRIPT_DIR="$(cd "$(dirname "$0")/.." && pwd)"
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd -P)"
 PYTHONPATH="$SCRIPT_DIR/src:$SCRIPT_DIR/upstream:$SCRIPT_DIR" \
     python3 -u "$SCRIPT_DIR/submissions/robust_current/inflate_renderer.py" \
     "$ARCHIVE_DIR" \
