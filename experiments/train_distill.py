@@ -320,7 +320,7 @@ def compute_scorer_loss(
         from tac.camera import CAMERA_H, CAMERA_W
 
         pred_chw = pred_frames.permute(0, 3, 1, 2)  # (2B, 3, H, W)
-        pred_chw = simulate_eval_roundtrip(pred_chw, target_h=CAMERA_H, target_w=CAMERA_W)
+        pred_chw = simulate_eval_roundtrip(pred_chw, target_h=CAMERA_H, target_w=CAMERA_W, noise_std=0.5)
         pred_frames_for_loss = pred_chw.permute(0, 2, 3, 1)  # (2B, H, W, 3)
 
         gt_chw = gt_frames.permute(0, 3, 1, 2)
