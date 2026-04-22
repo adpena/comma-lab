@@ -130,9 +130,10 @@ class DistillConfig:
     use_markov_loss: bool = False        # HUGO: preserve local gradient statistics
     markov_weight: float = 0.1          # weight for Markov chain loss
 
-    # Integrated QAT — train through FP4 quantization from Phase 2 start
-    # This is how Quantizr does it. Post-hoc QAT degrades PoseNet 26x.
-    qat_from_phase2: bool = False       # wrap model in FP4 fake-quant at Phase 2 start
+    # Integrated QAT — train through FP4 quantization from the start
+    # Post-hoc QAT degrades PoseNet 26x. Training through it adapts weights.
+    qat_enabled: bool = False           # wrap model in FP4 fake-quant during training
+    qat_from_phase2: bool = False       # legacy: start QAT at Phase 2 only (not Phase 1)
     fp4_block_size: int = 32            # FP4 block size
 
     # Optimizer
@@ -433,7 +434,16 @@ def train_phase1(
     print("PHASE 1: Pixel Regression Warm-Start")
     print("=" * 70)
 
-    model.train()
+    # Integrated QAT from Phase 1 (full training through FP4)
+    if cfg.qat_enabled and not cfg.qat_from_phase2:
+        from tac.fp4_quantize import QATRendererFP4
+        qat_p1 = QATRendererFP4(model, block_size=cfg.fp4_block_size)
+        train_model = qat_p1
+        print(f"  QAT from Phase 1: FP4 fake-quant on {len(qat_p1._parametrized_modules)} layers")
+    else:
+        train_model = model
+
+    train_model.train()
     optimizer = torch.optim.AdamW(
         model.parameters(), lr=cfg.phase1_lr, weight_decay=cfg.weight_decay
     )
@@ -470,8 +480,8 @@ def train_phase1(
             # Get pose conditioning
             pose = poses[batch_idx].to(device) if poses is not None else None
 
-            # Forward pass
-            predicted_pairs = model(mask_even, mask_odd, pose=pose)  # (B, 2, H, W, 3)
+            # Forward pass — use train_model (has QAT wrapper if enabled)
+            predicted_pairs = train_model(mask_even, mask_odd, pose=pose)  # (B, 2, H, W, 3)
 
             # L1 loss
             loss = compute_pixel_loss(predicted_pairs, target_pairs)
@@ -532,7 +542,7 @@ def train_phase2(
     # This trains the weights to be robust to FP4 noise from the start,
     # instead of post-hoc QAT which degrades PoseNet 26x on large models.
     qat_wrapper = None
-    if cfg.qat_from_phase2:
+    if cfg.qat_enabled or cfg.qat_from_phase2:
         from tac.fp4_quantize import QATRendererFP4
         qat_wrapper = QATRendererFP4(model, block_size=cfg.fp4_block_size)
         train_model = qat_wrapper  # forward through fake-quant weights
@@ -913,8 +923,10 @@ def parse_args() -> argparse.Namespace:
     p.add_argument("--hinge-margin", type=float, default=0.5)
 
     # Integrated QAT
+    p.add_argument("--qat", action="store_true", dest="qat_enabled",
+                   help="Train with FP4 fake-quant from Phase 1 (full QAT)")
     p.add_argument("--qat-from-phase2", action="store_true",
-                   help="Train with FP4 fake-quant from Phase 2 (Quantizr approach)")
+                   help="Start FP4 fake-quant at Phase 2 only (not Phase 1)")
     p.add_argument("--fp4-block-size", type=int, default=32)
 
     # Fridrich inverse steganalysis losses
@@ -993,6 +1005,7 @@ def main() -> None:
         eval_every=args.eval_every,
         log_every=args.log_every,
         resume=args.resume,
+        qat_enabled=args.qat_enabled,
         qat_from_phase2=args.qat_from_phase2,
         fp4_block_size=args.fp4_block_size,
         use_texture_loss=args.use_texture_loss,
