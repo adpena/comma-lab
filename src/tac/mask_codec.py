@@ -545,8 +545,10 @@ def encode_masks_monochrome(
     N, H, W = masks.shape
 
     # Scale class labels to byte range
+    # Cast to int32 first — masks may be int8 from SegNet extraction,
+    # and int8 * 63 overflows (4 * 63 = 252 > 127 = int8 max)
     scale_factor = 255 // (NUM_CLASSES - 1)
-    pixels = (masks * scale_factor).clamp(0, 255).to(torch.uint8).numpy()
+    pixels = (masks.to(torch.int32) * scale_factor).clamp(0, 255).to(torch.uint8).numpy()
 
     cmd = [
         "ffmpeg",
