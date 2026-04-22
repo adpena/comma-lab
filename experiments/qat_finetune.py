@@ -199,12 +199,11 @@ def apply_fp4_fake_quant(
 
     wrapped = []
     for name, module in model.named_modules():
-        # Skip FiLM layers in mixed-precision mode (film_bottleneck, film_decoder)
-        if mixed_precision and isinstance(module, nn.Linear):
-            if "film" in name.lower():
-                continue
-
-        if isinstance(module, (nn.Conv2d, nn.ConvTranspose2d, nn.Embedding)):
+        # NOTE: We considered skipping FiLM Linear layers (mixed precision) but
+        # export_asymmetric_checkpoint_fp4 quantizes ALL layers including FiLM.
+        # Training must match deployment — if FiLM is FP4 at inference, it must
+        # be FP4 during QAT. (I5 fix from adversarial review)
+        if isinstance(module, (nn.Conv2d, nn.ConvTranspose2d, nn.Embedding, nn.Linear)):
             if hasattr(module, "weight") and module.weight.ndim >= 2:
                 nn.utils.parametrize.register_parametrization(
                     module,
@@ -258,7 +257,8 @@ def compute_scorer_loss(
     pred_all = torch.cat([pred_even, pred_odd], dim=0)
     gt_all = torch.cat([gt_frames_even, gt_frames_odd], dim=0)
 
-    # eval_roundtrip: simulate contest resize chain with noise
+    # eval_roundtrip: simulate contest resize chain
+    # Noise only on PRED (not GT) — matches train_distill.py (I1 fix)
     if cfg.eval_roundtrip:
         pred_chw = pred_all.permute(0, 3, 1, 2)
         pred_chw = simulate_eval_roundtrip(
@@ -266,27 +266,33 @@ def compute_scorer_loss(
         )
         pred_for_loss = pred_chw.permute(0, 2, 3, 1)
 
-        gt_chw = gt_all.permute(0, 3, 1, 2)
-        gt_chw = simulate_eval_roundtrip(
-            gt_chw, target_h=CAMERA_H, target_w=CAMERA_W, noise_std=cfg.noise_std,
-        )
-        gt_for_loss = gt_chw.permute(0, 2, 3, 1)
+        with torch.no_grad():
+            gt_chw = gt_all.permute(0, 3, 1, 2)
+            gt_chw = simulate_eval_roundtrip(
+                gt_chw, target_h=CAMERA_H, target_w=CAMERA_W, noise_std=0.0,
+            )
+            gt_for_loss = gt_chw.permute(0, 2, 3, 1)
     else:
         pred_for_loss = pred_all
         gt_for_loss = gt_all
 
-    # SegNet loss (hinge)
-    from tac.camera import SEGNET_INPUT_H, SEGNET_INPUT_W
+    # SegNet loss (hinge) — use pre-extracted integer masks as targets (C2 fix)
+    # Running SegNet on GT frames is wasteful and can produce different targets
+    # than the pre-extracted masks due to preprocessing differences.
     pred_seg_chw = pred_for_loss.permute(0, 3, 1, 2)
-    gt_seg_chw = gt_for_loss.permute(0, 3, 1, 2)
-
     pred_seg_in = segnet.preprocess_input(pred_seg_chw.unsqueeze(1))
-    gt_seg_in = segnet.preprocess_input(gt_seg_chw.unsqueeze(1))
     pred_seg_logits = segnet(pred_seg_in)
-    gt_seg_argmax = segnet(gt_seg_in).argmax(dim=1)
+
+    # Use the pre-extracted masks directly as GT argmax targets
+    gt_seg_argmax = torch.cat([masks_even, masks_odd], dim=0)  # (2B, H, W)
+    # Resize to match logit spatial dims
+    logit_h, logit_w = pred_seg_logits.shape[2], pred_seg_logits.shape[3]
+    if gt_seg_argmax.shape[1] != logit_h or gt_seg_argmax.shape[2] != logit_w:
+        gt_seg_argmax = F.interpolate(
+            gt_seg_argmax.float().unsqueeze(1), size=(logit_h, logit_w), mode="nearest",
+        ).squeeze(1).long()
 
     if cfg.segnet_loss_mode == "hinge":
-        # Hinge loss: penalize pixels at risk of argmax flip
         correct = pred_seg_logits.gather(1, gt_seg_argmax.unsqueeze(1)).squeeze(1)
         mask_inf = torch.zeros_like(pred_seg_logits)
         mask_inf.scatter_(1, gt_seg_argmax.unsqueeze(1), float("-inf"))
@@ -295,22 +301,18 @@ def compute_scorer_loss(
     else:
         seg_loss = F.cross_entropy(pred_seg_logits, gt_seg_argmax)
 
-    # PoseNet loss (MSE on 6D pose)
+    # PoseNet loss (MSE on 6D pose) — GT path with no_grad (C3 fix)
     pred_pose_chw = pred_for_loss.permute(0, 3, 1, 2)
-    gt_pose_chw = gt_for_loss.permute(0, 3, 1, 2)
-
-    # Build pairs for PoseNet: (B, 2, C, H, W)
-    pred_pose_pairs = torch.stack([
-        pred_pose_chw[:B], pred_pose_chw[B:]
-    ], dim=1)
-    gt_pose_pairs = torch.stack([
-        gt_pose_chw[:B], gt_pose_chw[B:]
-    ], dim=1)
-
+    pred_pose_pairs = torch.stack([pred_pose_chw[:B], pred_pose_chw[B:]], dim=1)
     pred_pose_in = posenet.preprocess_input(pred_pose_pairs)
-    gt_pose_in = posenet.preprocess_input(gt_pose_pairs)
     pred_pose_out = posenet(pred_pose_in)["pose"][..., :6]
-    gt_pose_out = posenet(gt_pose_in)["pose"][..., :6]
+
+    with torch.no_grad():
+        gt_pose_chw = gt_for_loss.permute(0, 3, 1, 2)
+        gt_pose_pairs = torch.stack([gt_pose_chw[:B], gt_pose_chw[B:]], dim=1)
+        gt_pose_in = posenet.preprocess_input(gt_pose_pairs)
+        gt_pose_out = posenet(gt_pose_in)["pose"][..., :6]
+
     pose_loss = (pred_pose_out - gt_pose_out).pow(2).mean()
 
     # Combined loss
@@ -341,13 +343,19 @@ def evaluate_fp4_quality(
     n_pairs: int = 20,
 ) -> dict[str, float]:
     """Quick quality check: generate frames and compute distortion via upstream scorer."""
-    sys.path.insert(0, str(UPSTREAM_ROOT))
+    upstream_root = UPSTREAM_ROOT or Path("upstream")
+    if not (upstream_root / "modules.py").exists():
+        raise RuntimeError(
+            f"Cannot find upstream at {upstream_root}. "
+            f"Set TAC_UPSTREAM_DIR or pass --upstream."
+        )
+    sys.path.insert(0, str(upstream_root))
     from modules import DistortionNet
 
     dn = DistortionNet().eval().to(device)
     dn.load_state_dicts(
-        str(UPSTREAM_ROOT / "models" / "posenet.safetensors"),
-        str(UPSTREAM_ROOT / "models" / "segnet.safetensors"),
+        str(upstream_root / "models" / "posenet.safetensors"),
+        str(upstream_root / "models" / "segnet.safetensors"),
         str(device),
     )
 
@@ -499,11 +507,18 @@ def main() -> None:
     print(f"  pose_d={baseline['pose_d']:.5f} seg_d={baseline['seg_d']:.5f} "
           f"distortion={baseline['distortion']:.3f}")
 
-    # ── Prepare training data (pre-extract GT scorer features) ────────
+    # ── Prepare training data at scorer resolution ─────────────────────
+    # Store GT at 384x512 (scorer res), NOT 874x1164 (camera res).
+    # Camera res would be 1200*874*1164*3*4 = 14.6GB — OOM on most GPUs (I7 fix).
+    from tac.camera import SEGNET_INPUT_H, SEGNET_INPUT_W
     n_pairs = masks.shape[0] // 2
     gt_frames_tensor = torch.stack([
-        torch.from_numpy(f).float() for f in gt_frames
-    ])  # (N, H, W, 3)
+        F.interpolate(
+            torch.from_numpy(f).float().permute(2, 0, 1).unsqueeze(0),
+            size=(SEGNET_INPUT_H, SEGNET_INPUT_W), mode="bilinear", align_corners=False,
+        ).squeeze(0).permute(1, 2, 0)
+        for f in gt_frames
+    ])  # (N, 384, 512, 3)
 
     best_distortion = float("inf")
     best_state = None
@@ -526,7 +541,7 @@ def main() -> None:
 
         model.train()
         for epoch in range(cfg.int8_warmup_epochs):
-            lr = cosine_lr(epoch, total_steps, cfg.base_lr, 0.1, cfg.warmup_steps)
+            lr = cosine_lr(epoch, total_steps, cfg.base_lr, cfg.lr_min_ratio, cfg.warmup_steps)
             for pg in optimizer.param_groups:
                 pg["lr"] = lr
 
@@ -621,7 +636,18 @@ def main() -> None:
 
             if q["distortion"] < best_distortion:
                 best_distortion = q["distortion"]
-                best_state = {k: v.cpu().clone() for k, v in model.state_dict().items()}
+                # Strip parametrize keys to plain weight keys so load_state_dict
+                # works AFTER parametrizations are removed (C1 fix)
+                raw_state = model.state_dict()
+                clean_state = {}
+                for k, v in raw_state.items():
+                    if ".parametrizations.weight.original" in k:
+                        clean_state[k.replace(".parametrizations.weight.original", ".weight")] = v.cpu().clone()
+                    elif ".parametrizations." in k:
+                        continue  # skip codebook buffers from parametrize
+                    else:
+                        clean_state[k] = v.cpu().clone()
+                best_state = clean_state
                 print(f"  [FP4] ★ NEW BEST: distortion={best_distortion:.3f}")
 
         if epoch > 0 and epoch % cfg.checkpoint_every == 0:
