@@ -1,0 +1,31 @@
+{
+  "score": 7.49434,
+  "pose_dist": 4.283438205718994,
+  "seg_dist": 0.007192867808043957,
+  "rate": 0.009210214308302125,
+  "seg_contribution": 0.719287,
+  "pose_contribution": 6.544798,
+  "rate_contribution": 0.230255,
+  "n_pairs": 600,
+  "archive_size_bytes": 345802,
+  "uncompressed_size_bytes": 37545489,
+  "checkpoint_path": "/Users/adpena/Projects/pact/submissions/robust_current/renderer.bin",
+  "renderer_mode": "asymmetric",
+  "device": "mps",
+  "timing": {
+    "load_scorers_s": 1.09,
+    "decode_gt_s": 8.36,
+    "extract_masks_s": 8.11,
+    "load_renderer_s": 0.06,
+    "generate_frames_s": 14.91,
+    "scoring_s": 11.99,
+    "total_s": 44.53
+  },
+  "provenance": {
+    "session": "comprehensive_review_round",
+    "archive_md5": "c8eb338e17ae",
+    "archive_bytes": 345802,
+    "pair_fix": "non-overlapping_600_pairs",
+    "archive_fix": "full_338KB_with_all_artifacts"
+  }
+}
