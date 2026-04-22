@@ -1171,13 +1171,25 @@ class AuthEvaluator:
         )
         timing["generate_frames_s"] = time.monotonic() - t0
 
-        # 6. Determine archive size
+        # 6. Determine archive size — MUST be the full submission archive
         if archive_size_bytes is None:
-            archive_size_bytes = checkpoint_path.stat().st_size
-            logger.info(
-                "No archive_size_bytes provided, using checkpoint size: %d bytes",
-                archive_size_bytes,
-            )
+            # Look for archive.zip next to the checkpoint
+            candidate = checkpoint_path.parent / "archive.zip"
+            if candidate.exists():
+                archive_size_bytes = candidate.stat().st_size
+                logger.warning(
+                    "No archive_size_bytes provided, using archive.zip: %d bytes (%s)",
+                    archive_size_bytes, candidate,
+                )
+            else:
+                archive_size_bytes = checkpoint_path.stat().st_size
+                logger.warning(
+                    "WARNING: No archive_size_bytes provided AND no archive.zip found. "
+                    "Falling back to checkpoint size: %d bytes. "
+                    "THIS IS LIKELY WRONG — the rate term will be underestimated. "
+                    "Pass archive_size_bytes explicitly for accurate scoring.",
+                    archive_size_bytes,
+                )
 
         # 7. Score
         t0 = time.monotonic()
