@@ -135,15 +135,34 @@ def create_model(cfg: QATConfig, device: torch.device) -> nn.Module:
 
 
 def load_float_checkpoint(model: nn.Module, path: str, device: torch.device) -> None:
-    """Load the float checkpoint from distillation training."""
-    ckpt = torch.load(path, map_location=device, weights_only=True)
-    if "model_state_dict" in ckpt:
-        state = ckpt["model_state_dict"]
-    elif "state_dict" in ckpt:
-        state = ckpt["state_dict"]
+    """Load the float checkpoint from distillation training or ASYM .bin export."""
+    from pathlib import Path
+    raw = Path(path).read_bytes()
+
+    # Detect format by magic bytes
+    if raw[:4] == b"ASYM":
+        # ASYM .bin format — load via renderer_export
+        from tac.renderer_export import load_asymmetric_checkpoint
+        loaded = load_asymmetric_checkpoint(raw, device=str(device))
+        model.load_state_dict(loaded.state_dict(), strict=True)
+        print(f"  Loaded ASYM checkpoint from {path}")
+    elif raw[:4] == b"FP4A":
+        # FP4A .bin format — dequantize to float
+        from tac.renderer_export import load_asymmetric_checkpoint_fp4
+        loaded = load_asymmetric_checkpoint_fp4(raw, device=str(device))
+        model.load_state_dict(loaded.state_dict(), strict=True)
+        print(f"  Loaded FP4A checkpoint from {path}")
     else:
-        state = ckpt
-    model.load_state_dict(state, strict=True)
+        # PyTorch .pt format (from training)
+        ckpt = torch.load(path, map_location=device, weights_only=False)
+        if "model_state_dict" in ckpt:
+            state = ckpt["model_state_dict"]
+        elif "state_dict" in ckpt:
+            state = ckpt["state_dict"]
+        else:
+            state = ckpt
+        model.load_state_dict(state, strict=True)
+        print(f"  Loaded .pt checkpoint from {path}")
     print(f"  Loaded float checkpoint from {path}")
 
 
@@ -498,6 +517,32 @@ def main() -> None:
     model = create_model(cfg, device)
     n_params = sum(p.numel() for p in model.parameters())
     print(f"  {n_params:,} parameters")
+
+    # Auto-detect architecture from ASYM header if possible
+    raw = Path(cfg.checkpoint_path).read_bytes()
+    if raw[:4] == b"ASYM":
+        import json, struct
+        header_len = struct.unpack("<I", raw[4:8])[0]
+        header = json.loads(raw[8:8+header_len])
+        detected_cfg = {
+            "base_ch": header.get("base_ch", cfg.base_ch),
+            "mid_ch": header.get("mid_ch", cfg.mid_ch),
+            "pose_dim": header.get("pose_dim", cfg.pose_dim),
+            "use_dsconv": header.get("use_dsconv", cfg.use_dsconv),
+            "depth": header.get("depth", cfg.depth),
+            "embed_dim": header.get("embed_dim", cfg.embed_dim),
+        }
+        if any(detected_cfg[k] != getattr(cfg, k) for k in detected_cfg):
+            print(f"  Auto-detected architecture from ASYM header:")
+            for k, v in detected_cfg.items():
+                old = getattr(cfg, k)
+                if v != old:
+                    print(f"    {k}: {old} → {v}")
+                    setattr(cfg, k, v)
+            # Recreate model with correct architecture
+            model = create_model(cfg, device)
+            n_params = sum(p.numel() for p in model.parameters())
+            print(f"  Recreated model: {n_params:,} parameters")
 
     load_float_checkpoint(model, cfg.checkpoint_path, device)
 
