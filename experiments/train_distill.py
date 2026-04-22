@@ -630,10 +630,20 @@ def train_phase2(
             n_batches += 1
 
             # Track per-pair difficulty via EMA (detached)
+            # Use per-pair PoseNet MSE for difficulty (more discriminative than batch avg)
             with torch.no_grad():
-                batch_loss_val = total.item() / max(len(batch_idx), 1)
-                for idx in batch_idx:
-                    per_pair_loss[idx.item()] = 0.9 * per_pair_loss[idx.item()] + 0.1 * batch_loss_val
+                pred_chw = predicted_pairs.reshape(-1, *predicted_pairs.shape[2:]).permute(0, 3, 1, 2)
+                gt_chw = gt_pairs.reshape(-1, *gt_pairs.shape[2:]).permute(0, 3, 1, 2)
+                B_pairs = len(batch_idx)
+                pred_pose_p = pred_chw.reshape(B_pairs, 2, *pred_chw.shape[1:])
+                gt_pose_p = gt_chw.reshape(B_pairs, 2, *gt_chw.shape[1:])
+                p_in = posenet.preprocess_input(pred_pose_p)
+                g_in = posenet.preprocess_input(gt_pose_p)
+                p_out = posenet(p_in)["pose"][..., :6]
+                g_out = posenet(g_in)["pose"][..., :6]
+                per_pair_mse = (p_out - g_out).pow(2).mean(dim=1)  # (B,)
+                for k, idx in enumerate(batch_idx):
+                    per_pair_loss[idx.item()] = 0.9 * per_pair_loss[idx.item()] + 0.1 * per_pair_mse[k].item()
 
         scheduler.step()
         avg_loss = epoch_loss / max(n_batches, 1)
@@ -845,18 +855,10 @@ def _save_checkpoint(
         },
         path,
     )
-    # Also save as "latest" for easy resume
+    # Also save as "latest" for easy resume (copy, not second torch.save)
+    import shutil
     latest_path = RESULTS_DIR / "distill_latest.pt"
-    torch.save(
-        {
-            "model_state_dict": _clean_state_dict(model.state_dict()),
-            "optimizer_state_dict": optimizer.state_dict(),
-            "epoch": epoch,
-            "tag": tag,
-            "config": asdict(cfg),
-        },
-        latest_path,
-    )
+    shutil.copy2(path, latest_path)
 
 
 def export_model(model: nn.Module, cfg: DistillConfig) -> int:
@@ -886,8 +888,14 @@ def run_proxy_eval(
     """Run proxy evaluation on the full frame set."""
     from tac.scorer import compute_proxy_score
 
+    import torch.nn.utils.parametrize as parametrize_mod
+    is_qat = any(parametrize_mod.is_parametrized(m, "weight")
+                 for m in model.modules()
+                 if isinstance(m, (nn.Conv2d, nn.ConvTranspose2d, nn.Embedding)))
     model.eval()
     n_pairs = min(n_frames // 2, masks.shape[0] // 2)
+    mode_tag = "[QAT-FP4]" if is_qat else "[float]"
+    print(f"  Proxy eval {mode_tag}: {n_pairs} pairs")
 
     # Generate all frames
     all_frames = []
@@ -1157,7 +1165,8 @@ def main() -> None:
     per_pair_difficulty = None
 
     # Phase 1: pixel regression
-    if not args.skip_phase1 and (not cfg.resume or "phase1" in (cfg.resume or "")):
+    # Skip if --skip-phase1 OR if resuming from any checkpoint (resume = continue from where we left off)
+    if not args.skip_phase1 and not cfg.resume:
         current_epoch = train_phase1(
             model, masks, tto_frames, poses, cfg, device, start_epoch=current_epoch,
         )
