@@ -1146,6 +1146,27 @@ class AuthEvaluator:
         timing: dict[str, float] = {}
         t_total = time.monotonic()
 
+        # 0. Validate archive if archive_size_bytes provided with a path
+        if archive_size_bytes is not None:
+            # Try to find and validate the archive
+            for candidate in [
+                checkpoint_path.parent / "archive.zip",
+                Path("submissions/robust_current/archive.zip"),
+            ]:
+                if candidate.exists() and candidate.stat().st_size == archive_size_bytes:
+                    try:
+                        from tac.submission_archive import validate_archive
+                        v = validate_archive(candidate, strict=False)
+                        logger.info(
+                            "Archive validated: %s (%d bytes, rate=%.4f, valid=%s)",
+                            candidate, v.archive_bytes, v.rate_term, v.valid,
+                        )
+                        if not v.valid:
+                            logger.warning("Archive validation issues: %s", v.errors)
+                    except Exception as e:
+                        logger.warning("Archive validation skipped: %s", e)
+                    break
+
         # 1. Load scorers
         t0 = time.monotonic()
         self.load_scorers()

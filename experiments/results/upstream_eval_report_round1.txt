@@ -1,0 +1,17 @@
+=== Evaluation config ===
+  batch_size: 4
+  device: mps
+  num_threads: 2
+  prefetch_queue_depth: 4
+  report: /var/folders/xr/cdmnz18s68j8sybt6vcwjs200000gn/T/tmp.rtusAcB57W/report.txt
+  seed: 1234
+  submission_dir: /var/folders/xr/cdmnz18s68j8sybt6vcwjs200000gn/T/tmp.rtusAcB57W
+  uncompressed_dir: upstream/videos
+  video_names_file: /var/folders/xr/cdmnz18s68j8sybt6vcwjs200000gn/T/tmp.rtusAcB57W/video_names.txt
+=== Evaluation results over 600 samples ===
+  Average PoseNet Distortion: 94.63206482
+  Average SegNet Distortion: 0.72281492
+  Submission file size: 345,802 bytes
+  Original uncompressed size: 37,545,489 bytes
+  Compression Rate: 0.00921021
+  Final score: 100*segnet_dist + √(10*posenet_dist) + 25*rate = 103.27
