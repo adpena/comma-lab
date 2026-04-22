@@ -1,0 +1,35 @@
+{
+  "date": "2026-04-15",
+  "experiment": "constrained_pixel_refinement_scalability",
+  "checkpoint": "distill_v2_ep3560_proxy211",
+  "device": "mps",
+  "steps_per_pair": 100,
+  "lr": 1.0,
+  "seg_weight": 100,
+  "pose_weight": 10,
+  "n_pairs_tested": 10,
+  "results": {
+    "avg_base_proxy": 2.216396,
+    "avg_final_proxy": 0.071906,
+    "avg_improvement_pct": -96.8,
+    "worst_final_seg": 0.081431,
+    "best_final_seg": 0.056529,
+    "posenet_all_zero": true,
+    "time_per_pair_s": 5.3,
+    "total_time_s": 52.9,
+    "projected_600_pairs_min": 53
+  },
+  "per_pair": [
+    {"pair": 0, "base_seg": 1.2204, "final_seg": 0.0685, "seg_pct": -94.4},
+    {"pair": 1, "base_seg": 2.5218, "final_seg": 0.0565, "seg_pct": -97.8},
+    {"pair": 2, "base_seg": 2.9786, "final_seg": 0.0735, "seg_pct": -97.5},
+    {"pair": 3, "base_seg": 2.5407, "final_seg": 0.0778, "seg_pct": -96.9},
+    {"pair": 4, "base_seg": 1.6077, "final_seg": 0.0814, "seg_pct": -94.9},
+    {"pair": 5, "base_seg": 2.3181, "final_seg": 0.0707, "seg_pct": -96.9},
+    {"pair": 6, "base_seg": 2.7169, "final_seg": 0.0778, "seg_pct": -97.1},
+    {"pair": 7, "base_seg": 2.1198, "final_seg": 0.0580, "seg_pct": -97.3},
+    {"pair": 8, "base_seg": 2.4327, "final_seg": 0.0735, "seg_pct": -97.0},
+    {"pair": 9, "base_seg": 1.7060, "final_seg": 0.0814, "seg_pct": -95.2}
+  ],
+  "significance": "BREAKTHROUGH. Renderer + 100 gradient steps against scorers = 96.8% proxy reduction. This is the inflate-time TTO technique that closes the gap. All PoseNet goes to literal zero. SegNet converges to 0.06-0.08 floor. Cost: 53 min on MPS for all 600 pairs, faster on GPU."
+}

@@ -1520,6 +1520,7 @@ def simulate_eval_roundtrip(
     frames_chw: torch.Tensor,
     target_h: int = 874,
     target_w: int = 1164,
+    noise_std: float = 0.0,
 ) -> torch.Tensor:
     """Simulate the contest eval resolution roundtrip for training.
 
@@ -1549,6 +1550,15 @@ def simulate_eval_roundtrip(
     # Simulate uint8 quantization with Straight-Through Estimator
     # forward: round + clamp; backward: identity (gradients pass through)
     up_quantized = up + (up.round().clamp(0, 255) - up).detach()
+
+    # Roundtrip robustness noise (Hotz fix for proxy-auth drift):
+    # The STE is a leaky abstraction — gradients pretend quantization doesn't exist,
+    # so the renderer learns textures that survive STE but not real uint8 quantization.
+    # Adding noise with std ~0.5 (half a quantization level) during training makes the
+    # renderer robust to roundtrip perturbation. This closes the proxy-auth PoseNet gap
+    # which grew from 2.1x (ep300) to 11.1x (ep3560) without this fix.
+    if noise_std > 0.0 and up_quantized.requires_grad:
+        up_quantized = up_quantized + torch.randn_like(up_quantized) * noise_std
 
     # Downscale back to scorer resolution
     down = F.interpolate(
