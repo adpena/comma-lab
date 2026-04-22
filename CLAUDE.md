@@ -276,8 +276,33 @@ A candidate may be promoted only after:
 
 ## Critical lessons — DO NOT repeat these mistakes
 
-- **KL distill is DEAD.** Two authoritative evals confirmed PoseNet collapse: proxy 1.25 scored 1.85 auth (sw=100, with cap), proxy 1.43 scored 2.05 auth (sw=30, no cap). The second eval proved the failure is structural, not just a cap artifact. NEVER use KL distill loss_mode.
-- **Adaptive weights are DEAD.** The Hinton T² correction was already inside the KL loss, so dividing by T² in the weight formula double-corrected. The compound invariant w_s*T² was trivially constant by construction. The formula produced w_s=0.80 when the empirical winner used w_s=100 (125x mismatch). Do NOT use adaptive_rebalance=True.
+### CATASTROPHIC FAILURES (2026-04-21) — never again
+
+These failures cost weeks of wasted work and produced months of invalid measurements:
+
+- **MASKS.MKV AT 48x64 DESTROYED THE SCORE.** The mask video was at 1/8 resolution (48x64), but the renderer was trained on 384x512. The renderer outputs at the same resolution as input masks — so it produced 48x64 frames upscaled 18x to camera resolution. PoseNet distortion was 94.63 (catastrophic) vs 0.015 with correct masks. Score was 103.27 vs projected ~0.71. **ALWAYS verify mask resolution matches renderer training resolution. ALWAYS run the full inflate.sh → evaluate.py pipeline before claiming any score.**
+- **ARCHIVE MEASUREMENT DISASTER.** All auth evals for weeks used a renderer-only archive (119-180KB) instead of the full submission archive (338KB+). Rate term was wrong by 0.108 points. Every score reported was optimistic. **ALWAYS use `submission_archive.require_valid_archive()` before any eval.**
+- **1199 OVERLAPPING PAIRS vs 600 NON-OVERLAPPING.** auth_eval.py used `range(N-1)` (1199 overlapping pairs) but upstream evaluate.py uses `seq_len=2` non-overlapping batching (600 pairs). Every `eval_checkpoint()` score was computed with wrong pair construction. **ALWAYS diff new scoring code against upstream evaluate.py line by line.**
+- **eval_roundtrip DEFAULTED FALSE.** All TTO runs optimized against a proxy that didn't simulate the contest eval roundtrip (384→874→uint8→384). Combined with noise_std=0 (Hotz fix dead code), this caused proxy-auth PoseNet drift up to 11x. **eval_roundtrip MUST default True. noise_std MUST be threaded.**
+- **AUTO-BUNDLE BY FILE EXISTENCE.** compress.sh auto-included any .pt/.bin file sitting next to the submission. Stale experiment artifacts silently inflated archive size. **ALL archive contents must require explicit flags. No implicit bundling.**
+
+### Root cause pattern
+
+Every failure above is the same pattern: **a component quietly produced wrong output, and no downstream check caught it.** The fix is the same every time: hard errors, not warnings. Validation gates, not hopes. Full e2e pipeline tests, not component-level checks.
+
+### Non-negotiable protocol after every change
+
+1. Run `inflate_renderer.py` on the archive
+2. Run upstream `evaluate.py` on the inflated output
+3. Compare the score to the last known-good score
+4. If any component was changed, verify the full e2e score moved in the expected direction
+
+If you skip this protocol, you WILL produce invalid scores. This has happened 4 times. There is no excuse for a 5th.
+
+### Previously known failures (still valid)
+
+- **KL distill is DEAD.** Two authoritative evals confirmed PoseNet collapse.
+- **Adaptive weights are DEAD.** Hinton T² double-correction.
 - **Neural artifacts must be inside archive.zip** per contest rules (affects rate calculation).
 - **Do NOT use PoseNet gradient caps/clamps.** Caused 26x PoseNet regression.
 - **Do NOT use segnet_loss_weight > 100 with any loss mode.** Overwhelms PoseNet signal.
@@ -300,8 +325,8 @@ A candidate may be promoted only after:
 
 There are TWO score lanes. They MUST NEVER be conflated.
 
-- **Lane 1: Contest-Compliant (PRIORITY).** Goes through inflate.sh → inflate_renderer.py → evaluate.py within 30 min on T4. No scorers at inflate time. Current best: renderer-only auth 0.87. This is what gets submitted.
-- **Lane 2: Unlimited Compute (Paper).** TTO optimization at compress time, unlimited steps. Current best: v5b auth 0.41 (embedding loss). For the arXiv paper scalability section ONLY.
+- **Lane 1: Contest-Compliant (PRIORITY).** Goes through inflate.sh → inflate_renderer.py → evaluate.py within 30 min on T4. No scorers at inflate time. Previous "0.87" was INVALID (48x64 masks + wrong pairs + wrong archive). True baseline with full-res masks: pending full e2e eval (projected ~2.2 from 10-pair sample).
+- **Lane 2: Unlimited Compute (Paper).** TTO optimization at compress time, unlimited steps. Previous "0.41" was INVALID (same measurement bugs). For the arXiv paper scalability section ONLY.
 - **Every score must be labeled** `[contest-compliant]` or `[unlimited-compute]`. No exceptions.
 - **NEVER say "our score is X"** without specifying which lane.
 
