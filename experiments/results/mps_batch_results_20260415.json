@@ -1,0 +1,74 @@
+{
+  "date": "2026-04-15",
+  "checkpoint": "distill_v2_ep3560_proxy211",
+  "experiments": {
+    "fp4_export": {
+      "status": "SUCCESS",
+      "output_file": "submissions/robust_current/renderer_fp4_ep3560.bin",
+      "size_bytes": 169830,
+      "bits_per_param": 4.71,
+      "compression_vs_fp32": "6.8x",
+      "total_params": 288363
+    },
+    "embedding_tto_smoke": {
+      "status": "SUCCESS",
+      "pairs": 10,
+      "epochs": 3,
+      "device": "mps",
+      "params_optimized": 30,
+      "original_proxy": 0.3080,
+      "optimized_proxy": 0.2758,
+      "delta": -0.0322,
+      "pose_improvement": -0.001742,
+      "seg_change": 0.000006,
+      "time_seconds": 16.8,
+      "note": "Smoke test only (20 frames). Full run expected to show larger gains."
+    },
+    "vastai_checkpoint_sync": {
+      "status": "SUCCESS",
+      "vastai_best_epoch": 3545,
+      "checkpoints_found": ["distill_latest.pt", "distill_phase2.pt", "distill_phase2_best.pt"],
+      "downloaded": "distill_phase2_best.pt -> /tmp/distill_v2_best_latest.pt"
+    },
+    "archive_rate_analysis": {
+      "status": "SUCCESS",
+      "fp4_renderer_bytes": 169830,
+      "masks_bytes": 79071,
+      "inflate_sh_bytes": 8358,
+      "inflate_py_bytes": 131709,
+      "projected_total_bytes": 388968,
+      "projected_bpp": 0.002548,
+      "baseline_bpp": 0.6,
+      "rate_penalty": 0,
+      "ratio_below_baseline": "235x"
+    },
+    "constrained_pixel_refinement": {
+      "status": "SUCCESS - CRITICAL FINDING",
+      "device": "mps",
+      "steps": 100,
+      "lr": 1.0,
+      "seg_weight": 100,
+      "pose_weight": 10,
+      "pair_tested": 0,
+      "baseline": {
+        "posenet_mse": 0.000062,
+        "segnet_mse": 1.220437,
+        "proxy": 1.220499
+      },
+      "after_refinement": {
+        "posenet_mse": 0.000000,
+        "segnet_mse": 0.067825,
+        "proxy": 0.067825
+      },
+      "improvement": {
+        "posenet_pct": "-99.9%",
+        "segnet_pct": "-94.4%",
+        "proxy_pct": "-94.4%"
+      },
+      "pixel_l2_delta": 6.42,
+      "time_per_pair_seconds": 5.5,
+      "projected_600_pairs": "55 minutes on MPS",
+      "note": "Renderer output + 100 gradient steps = near-zero scorer loss. This is the missing piece for inflate-time optimization."
+    }
+  }
+}
