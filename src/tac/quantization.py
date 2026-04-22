@@ -33,7 +33,7 @@ class FakeQuantSTE(torch.autograd.Function):
             if w.ndim >= 2:
                 # Per-channel: scale per output channel (dim 0)
                 # Matches _save_checkpoint and _evaluate_int8 per-channel path
-                flat = w.detach().reshape(w.shape[0], -1)
+                flat = w.detach().contiguous().reshape(w.shape[0], -1)
                 scale = flat.abs().amax(dim=1) / 127.0
                 scale = scale.clamp(min=1e-10)
                 scale_view = scale.reshape(-1, *([1] * (w.ndim - 1)))
