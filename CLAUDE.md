@@ -359,6 +359,35 @@ Quantizr (Jimmy, UCLA CSE/Neuro) leads at 0.33. **Archive is 299,970 bytes (293K
 
 Yousfi (challenge creator) was Fridrich's PhD student at Binghamton DDE Lab. EfficientNet steganalysis surgery → informed SegNet scorer design. The challenge IS inverse steganalysis.
 
+## Exact scorer architectures — VERIFIED from upstream modules.py
+
+**SegNet**: `smp.Unet('tu-efficientnet_b2', classes=5, activation=None, encoder_weights=None)`
+- EfficientNet-B2 (NOT B4), vanilla stride-2 stem (no Yousfi surgery)
+- Input: LAST frame only `x[:, -1, ...]`, bilinear resize to (512, 384)
+- Output: 5-class logits, distortion = argmax disagreement rate
+- **Blind spot**: stride-2 stem loses half resolution immediately → artifacts below (256,192) invisible
+- **Key**: only argmax matters — tiny logit perturbations at class boundaries are the ENTIRE signal
+
+**PoseNet**: FastViT-T12 backbone (NOT EfficientNet)
+- 12-channel input: 2 frames × YUV6 (4 luma + 2 chroma subsampled)
+- rgb_to_yuv6 → resize to (512,384) → normalize (mean=127.5, std=63.75)
+- Hydra head: vision(2048) → summary(512) → ResBlock → 12-dim pose → first 6 used
+- Distortion = MSE on first 6 pose dimensions
+
+**Yousfi's repos (competitive intelligence)**:
+- `github.com/DDELab/deepsteganalysis` — surgery code for EfficientNet steganalysis
+- `github.com/YassineYousfi/alaska` — JPEG steganalysis challenge code
+- `github.com/YassineYousfi/OneHotConv` — CNN vs classical features paper
+- `github.com/YassineYousfi/comma10k-baseline` — comma segmentation baseline
+- `github.com/YassineYousfi/autostego` — adversarial steganography framework
+
+## Fridrich inverse steganalysis — how to beat the scorer
+
+1. **UNIWARD**: errors in textured regions are undetectable. Weight loss by inverse local variance.
+2. **Detector-informed embedding** = our TTO approach. Fridrich-approved (Yousfi 2022).
+3. **Square root law**: spread small errors (L∞ penalty), don't concentrate large ones.
+4. **CNN blind spots**: EfficientNet misses DCT statistics, has texture-region blind spots.
+
 ## QAT pipeline — non-negotiable for FP4 deployment
 
 For our ~80-100K param renderer:
