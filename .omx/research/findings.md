@@ -538,3 +538,17 @@ Distillation v1 ran with --skip-phase1 and pose_weight=1.0. Both were strategica
 ## 2026-04-20 [INTELLIGENCE] Quantizr PR#55 scored 0.33
 
 88K params, FiLM on pose, DSConv, eval-matched resize, single mask per pair. They're done working on it. Says sub-0.30 possible with conv dim sweep.
+
+## 2026-04-21 [CRITICAL] Proxy-Auth PoseNet Drift — STE Roundtrip is a Leaky Abstraction
+
+**Root cause (Tao + Karpathy + Council):** The renderer overfits to proxy-specific texture patterns that survive bilinear STE but NOT actual uint8 quantization via DALI. PoseNet proxy-auth ratio went from 2.1x (ep300) to 11.1x (ep3560).
+
+**The fix (Hotz):** Add Gaussian noise (σ=0.5 pixel) after every roundtrip in training. One line: `x = x + torch.randn_like(x) * 0.5`. This makes the renderer robust to roundtrip perturbation. Standard adversarial training technique.
+
+**The strategy (Council binding):**
+1. Pose TTO on ep3560 (SegNet 0.00060 is spectacular — TTO fixes PoseNet)
+2. Checkpoint sweep ep500-3000 to find auth sweet spot
+3. Fix training with roundtrip noise for future runs
+4. Do NOT ship 0.36 when 0.32 is one experiment away
+
+**Projected: ep3560 + pose TTO could hit auth 0.32 if PoseNet drops to 0.002 (SegNet 0.060 + PoseNet 0.141 + Rate 0.122 = 0.323)**
