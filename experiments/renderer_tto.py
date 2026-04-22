@@ -97,10 +97,12 @@ def parse_args() -> argparse.Namespace:
     p.add_argument("--phase2-steps", type=int, default=200,
                    help="Number of Phase 2 SegNet-only steps (only used with "
                         "--tto-phase2-segnet-only).")
-    p.add_argument("--eval-roundtrip", action="store_true",
+    p.add_argument("--eval-roundtrip", action="store_true", default=True,
                    help="Simulate contest eval resolution roundtrip (384->874->uint8->384) "
-                        "in TTO loss. Makes gradients compensate for resampling+quantization "
-                        "artifacts that occur during official evaluation.")
+                        "in TTO loss (default: on). Makes gradients compensate for "
+                        "resampling+quantization artifacts during official evaluation.")
+    p.add_argument("--no-eval-roundtrip", dest="eval_roundtrip", action="store_false",
+                   help="Disable eval roundtrip simulation.")
     p.add_argument("--use-null-space", action="store_true",
                    help="Apply YUV null space projection to improve SegNet without "
                         "affecting PoseNet. PoseNet uses 4:2:0 chroma subsampling; "
@@ -315,7 +317,7 @@ def run_batched_tto(
     hinge_margin: float = 0.5,
     phase2_segnet_only: bool = False,
     phase2_steps: int = 200,
-    eval_roundtrip: bool = False,
+    eval_roundtrip: bool = True,
     use_null_space: bool = False,
     null_space_step: float = 0.5,
     null_space_every: int = 10,
