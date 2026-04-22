@@ -305,6 +305,16 @@ There are TWO score lanes. They MUST NEVER be conflated.
 - **Every score must be labeled** `[contest-compliant]` or `[unlimited-compute]`. No exceptions.
 - **NEVER say "our score is X"** without specifying which lane.
 
+## Auth eval measurement — non-negotiable
+
+- **EVERY auth eval must use the EXACT archive that will be submitted.** Never create a temporary archive with different contents. The rate term depends on archive.zip file size — wrong archive = wrong score.
+- **EVERY auth eval report must print the archive size used.** If it doesn't match the submission archive, the score is INVALID.
+- **Auto-auth-eval in training must construct archives with ALL submission artifacts** (renderer.bin, masks.mkv, poses.pt, any other bundled files). Not just renderer.bin.
+- **NEVER celebrate a score without verifying the measurement apparatus.** Check: archive size, inflate pipeline, eval pipeline. A wrong measurement is worse than no measurement.
+- **Proxy scores are APPROXIMATIONS, not truth.** The proxy-auth gap can be 2-11x for PoseNet. Always label proxy vs auth. Always run auth eval before claiming any result.
+
+This rule exists because we celebrated auth 0.36 that was actually ~0.41 due to using a renderer-only archive (119KB) instead of the full submission archive (183KB). Every auth eval in the session was wrong by 0.04-0.05 points.
+
 ## Submission PR gate — non-negotiable
 
 - **NEVER submit a PR** until the score has undergone a 5-turn consecutive clean-pass adversarial skunkworks council review with extreme paranoia. This is stricter than the standard 3-pass greenup. All 15 council members review. ANY issue resets the counter to 0.
