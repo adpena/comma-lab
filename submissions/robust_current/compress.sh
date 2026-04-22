@@ -438,13 +438,15 @@ if [ "$BUNDLE_MINI_SCORERS" = "1" ]; then
   fi
 fi
 
-# Bundle renderer binary for GPU/CPU renderer inflate path
-if [ -f "$SELF_DIR/renderer.bin" ]; then
-  cp "$SELF_DIR/renderer.bin" "$ARCHIVE_DIR/renderer.bin"
-  echo "Bundled renderer.bin ($(stat -f%z "$SELF_DIR/renderer.bin" 2>/dev/null || stat -c%s "$SELF_DIR/renderer.bin") bytes) into archive"
-elif [ "$PYTHON_INFLATE" = "renderer" ]; then
-  echo "ERROR: PYTHON_INFLATE=renderer but renderer.bin not found at $SELF_DIR/renderer.bin" >&2
-  exit 1
+# Bundle renderer binary — ONLY when renderer inflate path is active
+if [ "$PYTHON_INFLATE" = "renderer" ]; then
+  if [ -f "$SELF_DIR/renderer.bin" ]; then
+    cp "$SELF_DIR/renderer.bin" "$ARCHIVE_DIR/renderer.bin"
+    echo "Bundled renderer.bin ($(stat -f%z "$SELF_DIR/renderer.bin" 2>/dev/null || stat -c%s "$SELF_DIR/renderer.bin") bytes) into archive"
+  else
+    echo "ERROR: PYTHON_INFLATE=renderer but renderer.bin not found at $SELF_DIR/renderer.bin" >&2
+    exit 1
+  fi
 fi
 
 # ── Pre-extract SegNet masks (contest compliance: Yousfi PR #35) ──────
@@ -482,6 +484,11 @@ if [ "$MASK_PREEXTRACT" = "1" ]; then
       exit 1
     fi
   else
+    if [ "$PYTHON_INFLATE" = "renderer" ]; then
+      echo "ERROR: MASK_PREEXTRACT=1 and PYTHON_INFLATE=renderer but GT video not found at $GT_VIDEO_PATH" >&2
+      echo "The renderer inflate path REQUIRES masks.mkv in the archive." >&2
+      exit 1
+    fi
     echo "WARNING: Cannot pre-extract masks — GT video not found at $GT_VIDEO_PATH" >&2
     echo "Set MASK_PREEXTRACT=0 to skip mask pre-extraction (not contest-compliant)" >&2
   fi
@@ -630,7 +637,9 @@ if [ "$POSE_TTO_ENABLE" = "1" ]; then
       echo "WARNING: Pose-space TTO failed -- no optimized_poses.pt produced" >&2
     fi
   else
-    echo "WARNING: Cannot run pose TTO -- need GT video ($GT_VIDEO_PATH) and renderer ($RENDERER_PATH)" >&2
+    echo "ERROR: Cannot run pose TTO -- need GT video ($GT_VIDEO_PATH) and renderer ($RENDERER_PATH)" >&2
+    echo "POSE_TTO_ENABLE=1 requires both files to exist. Fix the pipeline." >&2
+    exit 1
   fi
 elif [ -f "$SELF_DIR/optimized_poses.pt" ]; then
   cp "$SELF_DIR/optimized_poses.pt" "$ARCHIVE_DIR/optimized_poses.pt"
@@ -646,11 +655,10 @@ if [ "$BUNDLE_EMBEDDING" = "1" ]; then
   else
     echo "WARNING: BUNDLE_EMBEDDING=1 but optimized_embedding.pt not found in $SELF_DIR" >&2
   fi
-elif [ -f "$SELF_DIR/optimized_embedding.pt" ]; then
-  # Auto-bundle if file exists alongside submission (backward compat)
-  cp "$SELF_DIR/optimized_embedding.pt" "$ARCHIVE_DIR/optimized_embedding.pt"
-  echo "Bundled pre-computed optimized_embedding.pt ($(stat -f%z "$SELF_DIR/optimized_embedding.pt" 2>/dev/null || stat -c%s "$SELF_DIR/optimized_embedding.pt") bytes) into archive"
 fi
+# NOTE: Removed auto-bundle of optimized_embedding.pt by file existence.
+# Stale experiment artifacts silently inflating archive size caused the
+# 0.108-point measurement disaster. Set BUNDLE_EMBEDDING=1 explicitly.
 
 # ── Bundle gradient corrections (compress-time pre-computed pixel adjustments) ──
 BUNDLE_CORRECTIONS="${BUNDLE_CORRECTIONS:-0}"
@@ -661,11 +669,9 @@ if [ "$BUNDLE_CORRECTIONS" = "1" ]; then
   else
     echo "WARNING: BUNDLE_CORRECTIONS=1 but gradient_corrections.bin not found in $SELF_DIR" >&2
   fi
-elif [ -f "$SELF_DIR/gradient_corrections.bin" ]; then
-  # Auto-bundle if file exists alongside submission (backward compat)
-  cp "$SELF_DIR/gradient_corrections.bin" "$ARCHIVE_DIR/gradient_corrections.bin"
-  echo "Bundled pre-computed gradient_corrections.bin ($(stat -f%z "$SELF_DIR/gradient_corrections.bin" 2>/dev/null || stat -c%s "$SELF_DIR/gradient_corrections.bin") bytes) into archive"
 fi
+# NOTE: Removed auto-bundle of gradient_corrections.bin by file existence.
+# Same reason as optimized_embedding.pt — explicit > implicit for archive contents.
 
 (
   cd "$ARCHIVE_DIR"
@@ -674,5 +680,15 @@ fi
 
 mv "$ARCHIVE_ZIP_TMP" "$ARCHIVE_ZIP"
 
+# ── Archive provenance (non-negotiable measurement rule) ──────────────
+# EVERY archive build MUST print size and rate. This is how we prevent
+# the 0.108-point measurement disaster from ever recurring.
+FINAL_SIZE="$(stat -f%z "$ARCHIVE_ZIP" 2>/dev/null || stat -c%s "$ARCHIVE_ZIP")"
 echo
-echo "Wrote $ARCHIVE_ZIP"
+echo "=== ARCHIVE PROVENANCE ==="
+echo "  Path: $ARCHIVE_ZIP"
+echo "  Size: ${FINAL_SIZE} bytes"
+echo "  Rate term: 25 * ${FINAL_SIZE} / 37545489 = $(python3 -c "print(f'{25 * ${FINAL_SIZE} / 37545489:.6f}')" 2>/dev/null || echo 'N/A')"
+echo "  Contents:"
+unzip -l "$ARCHIVE_ZIP" 2>/dev/null | grep -v "^Archive" | grep -v "^$" | sed 's/^/    /'
+echo "=========================="
