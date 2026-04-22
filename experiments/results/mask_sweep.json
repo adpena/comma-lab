@@ -1,0 +1,26 @@
+[
+  {
+    "label": "192x256_crf30",
+    "error": "invalid literal for int() with base 10: '941695 bytes'"
+  },
+  {
+    "label": "192x256_crf40",
+    "error": "invalid literal for int() with base 10: '638453 bytes'"
+  },
+  {
+    "label": "192x256_crf50",
+    "error": "invalid literal for int() with base 10: '459451 bytes'"
+  },
+  {
+    "label": "96x128_crf30",
+    "error": "invalid literal for int() with base 10: '563240 bytes'"
+  },
+  {
+    "label": "96x128_crf40",
+    "error": "invalid literal for int() with base 10: '422693 bytes'"
+  },
+  {
+    "label": "96x128_crf50",
+    "error": "invalid literal for int() with base 10: '352825 bytes'"
+  }
+]

@@ -1451,6 +1451,21 @@ def _generate_and_write(
                     masks_t = torch.stack(batch_pairs_t).to(device=device, dtype=torch.long)
                     masks_t1 = torch.stack(batch_pairs_t1).to(device=device, dtype=torch.long)
 
+                    # Upsample masks to renderer training resolution if needed.
+                    # The renderer produces output at input mask resolution.
+                    # If masks are at 48x64 (from rate-optimized encoding),
+                    # running the renderer at 48x64 and upscaling 18x is
+                    # catastrophically worse than upsampling masks first.
+                    if masks_t.shape[1] < SEG_H or masks_t.shape[2] < SEG_W:
+                        masks_t = torch.nn.functional.interpolate(
+                            masks_t.float().unsqueeze(1),
+                            size=(SEG_H, SEG_W), mode="nearest",
+                        ).squeeze(1).long()
+                        masks_t1 = torch.nn.functional.interpolate(
+                            masks_t1.float().unsqueeze(1),
+                            size=(SEG_H, SEG_W), mode="nearest",
+                        ).squeeze(1).long()
+
                     # Get pose conditioning for this batch (if available)
                     batch_pose = None
                     if poses is not None and hasattr(renderer, 'pose_dim') and renderer.pose_dim > 0:

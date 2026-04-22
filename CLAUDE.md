@@ -301,7 +301,7 @@ If you skip this protocol, you WILL produce invalid scores. This has happened 4 
 
 ### Previously known failures (still valid)
 
-- **KL distill is DEAD.** Two authoritative evals confirmed PoseNet collapse.
+- **KL distill caused PoseNet collapse as primary loss.** BUT Quantizr uses kl_on_logits(T=2.0) for SegNet during specific training phases alongside standard loss. Revisit with staged approach — KL distill for SegNet only, not as sole loss.
 - **Adaptive weights are DEAD.** Hinton T² double-correction.
 - **Neural artifacts must be inside archive.zip** per contest rules (affects rate calculation).
 - **Do NOT use PoseNet gradient caps/clamps.** Caused 26x PoseNet regression.
@@ -344,6 +344,47 @@ This rule exists because we celebrated auth 0.36 that was actually ~0.41 due to 
 
 - **NEVER submit a PR** until the score has undergone a 5-turn consecutive clean-pass adversarial skunkworks council review with extreme paranoia. This is stricter than the standard 3-pass greenup. All 15 council members review. ANY issue resets the counter to 0.
 - **The score used for submission** must come from the contest-compliant auth eval (through inflate.sh), not proxy or bypassed eval.
+
+## Quantizr intelligence — verified competitive data (2026-04-21)
+
+Quantizr (Jimmy, UCLA CSE/Neuro) leads at 0.33. **Archive is 299,970 bytes (293KB), NOT 15KB.**
+
+- **Architecture**: FiLM-conditioned depthwise-separable CNN, 88K params, ~64KB FP4
+- **Archive contents**: renderer.bin (FP4+Brotli) + masks.mkv (AV1, ONLY frame2 masks, higher CRF) + poses.pt
+- **Training**: 5-stage pipeline (anchor→finetune→joint→QAT→final), EMA, diff_round(), diff_rgb_to_yuv6()
+- **SegNet**: kl_on_logits() with T=2.0 for distillation during training
+- **Key trick**: Encodes only 600 odd-frame masks (frame1 is warped from frame2)
+- **His own assessment**: "sub 0.30 is possible just by sweeping conv dims" — he stopped optimizing
+- **Rate**: 25 * 299970 / 37545489 = 0.200. Their distortion is ~0.13.
+
+Yousfi (challenge creator) was Fridrich's PhD student at Binghamton DDE Lab. EfficientNet steganalysis surgery → informed SegNet scorer design. The challenge IS inverse steganalysis.
+
+## QAT pipeline — non-negotiable for FP4 deployment
+
+For our ~80-100K param renderer:
+1. **Train float first** with all techniques (eval_roundtrip, noise, EMA, hinge loss)
+2. **Freeze BatchNorm stats** (eval mode on BN layers)
+3. **Insert per-channel FP4 fake-quant** on weights + per-tensor on activations
+4. **Fine-tune 20% of original epochs** at 0.1× LR (LSQ step size lr = 0.01 × base_lr)
+5. **Export**: 4 bits/param → ~40-50KB for 80K params
+
+We HAVE FakeQuantSTE, Uint8STE, FakeQuantFP4 in `src/tac/quantization.py`. We HAVE LSQ support in training.py. These are wired but have never been used in a complete training pipeline for the renderer.
+
+## Mask encoding — verified data (2026-04-21)
+
+- **Renderer REQUIRES 384x512 masks.** Lower resolution catastrophically degrades: 192x256 → 2.9x worse, 96x128 → 34x worse, 48x64 → 108x worse.
+- **Entropy coder** (mask_entropy_coder.py): 990KB for 1200 frames at 384x512, lossless. ~495KB for 600 frames.
+- **AV1 monochrome** (mask_codec.py): has int8_t overflow bug at 384x512. Must fix.
+- **Quantizr paradigm**: Store ONLY 600 odd-frame masks (frame2). Frame1 is warped.
+- **inflate_renderer.py has mask upsample fix** (added 2026-04-21) for sub-native resolution masks.
+
+## TRUE score data (2026-04-21) — verified via upstream evaluate.py
+
+| Config | Seg | Pose | Rate | TOTAL | Notes |
+|--------|-----|------|------|-------|-------|
+| 384x512 masks + ASYM + poses | 0.116 | 0.374 | 1.528 | **2.01** | Full-res masks, rate-limited |
+| 48x64 masks (old, NOT upsampled) | 72.3 | 30.8 | 0.23 | **103.27** | Catastrophic mask bug |
+| 48x64 masks (old, upsampled) | 28.3 | 25.0 | 0.23 | **53.61** | Old AV1 artifacts in masks |
 
 ## Vast.ai deployment — non-negotiable
 
