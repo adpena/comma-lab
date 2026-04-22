@@ -1,0 +1,102 @@
+{
+  "n_pairs": 10,
+  "total_time_s": 0.4835972785949707,
+  "aggregate_stats": {
+    "mean": 1.2874083950009663e-05,
+    "std": 2.552219302742742e-05,
+    "max": 0.0006023023743182421,
+    "min": 0.0
+  },
+  "per_class_mean_sensitivity": {
+    "class_0": 6.287936685112072e-06,
+    "class_1": 5.723920821765205e-07,
+    "class_2": 2.376583324803505e-06,
+    "class_3": 8.421575614647736e-08,
+    "class_4": 4.343298314779531e-06
+  },
+  "top_20_hardest_pairs": [
+    {
+      "pair_idx": 6,
+      "total_sensitivity": 42.42329025268555
+    },
+    {
+      "pair_idx": 9,
+      "total_sensitivity": 36.53919219970703
+    },
+    {
+      "pair_idx": 4,
+      "total_sensitivity": 25.157617568969727
+    },
+    {
+      "pair_idx": 7,
+      "total_sensitivity": 24.284687042236328
+    },
+    {
+      "pair_idx": 3,
+      "total_sensitivity": 23.537439346313477
+    },
+    {
+      "pair_idx": 8,
+      "total_sensitivity": 23.039257049560547
+    },
+    {
+      "pair_idx": 1,
+      "total_sensitivity": 22.84326934814453
+    },
+    {
+      "pair_idx": 2,
+      "total_sensitivity": 21.747882843017578
+    },
+    {
+      "pair_idx": 5,
+      "total_sensitivity": 21.350215911865234
+    },
+    {
+      "pair_idx": 0,
+      "total_sensitivity": 21.02251434326172
+    }
+  ],
+  "bottom_20_easiest_pairs": [
+    {
+      "pair_idx": 6,
+      "total_sensitivity": 42.42329025268555
+    },
+    {
+      "pair_idx": 9,
+      "total_sensitivity": 36.53919219970703
+    },
+    {
+      "pair_idx": 4,
+      "total_sensitivity": 25.157617568969727
+    },
+    {
+      "pair_idx": 7,
+      "total_sensitivity": 24.284687042236328
+    },
+    {
+      "pair_idx": 3,
+      "total_sensitivity": 23.537439346313477
+    },
+    {
+      "pair_idx": 8,
+      "total_sensitivity": 23.039257049560547
+    },
+    {
+      "pair_idx": 1,
+      "total_sensitivity": 22.84326934814453
+    },
+    {
+      "pair_idx": 2,
+      "total_sensitivity": 21.747882843017578
+    },
+    {
+      "pair_idx": 5,
+      "total_sensitivity": 21.350215911865234
+    },
+    {
+      "pair_idx": 0,
+      "total_sensitivity": 21.02251434326172
+    }
+  ],
+  "sensitivity_ratio_hard_vs_easy": 2.0179931648510614
+}

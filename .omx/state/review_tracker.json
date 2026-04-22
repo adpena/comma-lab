@@ -2,7 +2,7 @@
   "version": 3,
   "last_scan": "2026-04-21T03:44:49.049595+00:00",
   "entity_count": 3613,
-  "review_count": 12726,
+  "review_count": 12765,
   "entities": {
     "experiments.analysis.gradient_rank_analysis::compute_jacobian_embedding": {
       "module": "experiments.analysis.gradient_rank_analysis",
@@ -8536,12 +8536,7 @@
       "reviewed_by": "adversarial_round1",
       "reviewed_at": "2026-04-22T01:43:30.457804+00:00",
       "review_pass": "",
-      "notes": "",
-      "status": "reviewed",
-      "reviewers": [
-        "council",
-        "adversarial_round1"
-      ]
+      "notes": ""
     },
     "submissions.robust_current.inflate_renderer::_cli": {
       "module": "submissions.robust_current.inflate_renderer",
@@ -8677,12 +8672,7 @@
       "reviewed_by": "adversarial_round1",
       "reviewed_at": "2026-04-22T01:43:30.457804+00:00",
       "review_pass": "",
-      "notes": "",
-      "status": "reviewed",
-      "reviewers": [
-        "council",
-        "adversarial_round1"
-      ]
+      "notes": ""
     },
     "submissions.robust_current.inflate_renderer::_inflate_renderer_with_mini_tto": {
       "module": "submissions.robust_current.inflate_renderer",
@@ -8750,12 +8740,7 @@
       "reviewed_by": "adversarial_round1",
       "reviewed_at": "2026-04-22T01:43:30.457804+00:00",
       "review_pass": "",
-      "notes": "",
-      "status": "reviewed",
-      "reviewers": [
-        "council",
-        "adversarial_round1"
-      ]
+      "notes": ""
     },
     "submissions.robust_current.inflate_renderer::_inline_unpack_values": {
       "module": "submissions.robust_current.inflate_renderer",
@@ -8874,12 +8859,7 @@
       "reviewed_by": "adversarial_round1",
       "reviewed_at": "2026-04-22T01:43:30.457804+00:00",
       "review_pass": "",
-      "notes": "",
-      "status": "reviewed",
-      "reviewers": [
-        "council",
-        "adversarial_round1"
-      ]
+      "notes": ""
     },
     "submissions.robust_current.inflate_renderer::inflate_renderer": {
       "module": "submissions.robust_current.inflate_renderer",
@@ -24040,8 +24020,8 @@
       "last_modified_commit": "1fb5aa472fa8",
       "last_modified_date": "2026-04-20T15:52:49-05:00",
       "review_status": "reviewed",
-      "reviewed_by": "council",
-      "reviewed_at": "2026-04-22T01:42:29.023645+00:00",
+      "reviewed_by": "adversarial_round2",
+      "reviewed_at": "2026-04-22T02:21:27.103841+00:00",
       "review_pass": "",
       "notes": ""
     },
@@ -24057,8 +24037,8 @@
       "last_modified_commit": "1fb5aa472fa8",
       "last_modified_date": "2026-04-20T15:52:49-05:00",
       "review_status": "reviewed",
-      "reviewed_by": "council",
-      "reviewed_at": "2026-04-22T01:42:29.023645+00:00",
+      "reviewed_by": "adversarial_round2",
+      "reviewed_at": "2026-04-22T02:21:27.103841+00:00",
       "review_pass": "",
       "notes": ""
     },
@@ -24074,8 +24054,8 @@
       "last_modified_commit": "1fb5aa472fa8",
       "last_modified_date": "2026-04-20T15:52:49-05:00",
       "review_status": "reviewed",
-      "reviewed_by": "council",
-      "reviewed_at": "2026-04-22T01:42:29.023645+00:00",
+      "reviewed_by": "adversarial_round2",
+      "reviewed_at": "2026-04-22T02:21:27.103841+00:00",
       "review_pass": "",
       "notes": ""
     },
@@ -24091,8 +24071,8 @@
       "last_modified_commit": "1fb5aa472fa8",
       "last_modified_date": "2026-04-20T15:52:49-05:00",
       "review_status": "reviewed",
-      "reviewed_by": "council",
-      "reviewed_at": "2026-04-22T01:42:29.023645+00:00",
+      "reviewed_by": "adversarial_round2",
+      "reviewed_at": "2026-04-22T02:21:27.103841+00:00",
       "review_pass": "",
       "notes": ""
     },
@@ -24108,8 +24088,8 @@
       "last_modified_commit": "1fb5aa472fa8",
       "last_modified_date": "2026-04-20T15:52:49-05:00",
       "review_status": "reviewed",
-      "reviewed_by": "council",
-      "reviewed_at": "2026-04-22T01:42:29.023645+00:00",
+      "reviewed_by": "adversarial_round2",
+      "reviewed_at": "2026-04-22T02:21:27.103841+00:00",
       "review_pass": "",
       "notes": ""
     },
@@ -24125,8 +24105,8 @@
       "last_modified_commit": "1fb5aa472fa8",
       "last_modified_date": "2026-04-20T15:52:49-05:00",
       "review_status": "reviewed",
-      "reviewed_by": "council",
-      "reviewed_at": "2026-04-22T01:42:29.023645+00:00",
+      "reviewed_by": "adversarial_round2",
+      "reviewed_at": "2026-04-22T02:21:27.103841+00:00",
       "review_pass": "",
       "notes": ""
     },
@@ -24142,8 +24122,8 @@
       "last_modified_commit": "1fb5aa472fa8",
       "last_modified_date": "2026-04-20T15:52:49-05:00",
       "review_status": "reviewed",
-      "reviewed_by": "council",
-      "reviewed_at": "2026-04-22T01:42:29.023645+00:00",
+      "reviewed_by": "adversarial_round2",
+      "reviewed_at": "2026-04-22T02:21:27.103841+00:00",
       "review_pass": "",
       "notes": ""
     },
@@ -24159,8 +24139,8 @@
       "last_modified_commit": "1fb5aa472fa8",
       "last_modified_date": "2026-04-20T15:52:49-05:00",
       "review_status": "reviewed",
-      "reviewed_by": "council",
-      "reviewed_at": "2026-04-22T01:42:29.023645+00:00",
+      "reviewed_by": "adversarial_round2",
+      "reviewed_at": "2026-04-22T02:21:27.103841+00:00",
       "review_pass": "",
       "notes": ""
     },
@@ -24176,8 +24156,8 @@
       "last_modified_commit": "1fb5aa472fa8",
       "last_modified_date": "2026-04-20T15:52:49-05:00",
       "review_status": "reviewed",
-      "reviewed_by": "council",
-      "reviewed_at": "2026-04-22T01:42:29.023645+00:00",
+      "reviewed_by": "adversarial_round2",
+      "reviewed_at": "2026-04-22T02:21:27.103841+00:00",
       "review_pass": "",
       "notes": ""
     },
@@ -24193,8 +24173,8 @@
       "last_modified_commit": "1fb5aa472fa8",
       "last_modified_date": "2026-04-20T15:52:49-05:00",
       "review_status": "reviewed",
-      "reviewed_by": "council",
-      "reviewed_at": "2026-04-22T01:42:29.023645+00:00",
+      "reviewed_by": "adversarial_round2",
+      "reviewed_at": "2026-04-22T02:21:27.103841+00:00",
       "review_pass": "",
       "notes": ""
     },
@@ -24210,8 +24190,8 @@
       "last_modified_commit": "1fb5aa472fa8",
       "last_modified_date": "2026-04-20T15:52:49-05:00",
       "review_status": "reviewed",
-      "reviewed_by": "council",
-      "reviewed_at": "2026-04-22T01:42:29.023645+00:00",
+      "reviewed_by": "adversarial_round2",
+      "reviewed_at": "2026-04-22T02:21:27.103841+00:00",
       "review_pass": "",
       "notes": ""
     },
@@ -24227,8 +24207,8 @@
       "last_modified_commit": "1fb5aa472fa8",
       "last_modified_date": "2026-04-20T15:52:49-05:00",
       "review_status": "reviewed",
-      "reviewed_by": "council",
-      "reviewed_at": "2026-04-22T01:42:29.023645+00:00",
+      "reviewed_by": "adversarial_round2",
+      "reviewed_at": "2026-04-22T02:21:27.103841+00:00",
       "review_pass": "",
       "notes": ""
     },
@@ -24244,8 +24224,8 @@
       "last_modified_commit": "1fb5aa472fa8",
       "last_modified_date": "2026-04-20T15:52:49-05:00",
       "review_status": "reviewed",
-      "reviewed_by": "council",
-      "reviewed_at": "2026-04-22T01:42:29.023645+00:00",
+      "reviewed_by": "adversarial_round2",
+      "reviewed_at": "2026-04-22T02:21:27.103841+00:00",
       "review_pass": "",
       "notes": ""
     },
@@ -24261,8 +24241,8 @@
       "last_modified_commit": "1fb5aa472fa8",
       "last_modified_date": "2026-04-20T15:52:49-05:00",
       "review_status": "reviewed",
-      "reviewed_by": "council",
-      "reviewed_at": "2026-04-22T01:42:29.023645+00:00",
+      "reviewed_by": "adversarial_round2",
+      "reviewed_at": "2026-04-22T02:21:27.103841+00:00",
       "review_pass": "",
       "notes": ""
     },
@@ -24278,8 +24258,8 @@
       "last_modified_commit": "1fb5aa472fa8",
       "last_modified_date": "2026-04-20T15:52:49-05:00",
       "review_status": "reviewed",
-      "reviewed_by": "council",
-      "reviewed_at": "2026-04-22T01:42:29.023645+00:00",
+      "reviewed_by": "adversarial_round2",
+      "reviewed_at": "2026-04-22T02:21:27.103841+00:00",
       "review_pass": "",
       "notes": ""
     },
@@ -24295,8 +24275,8 @@
       "last_modified_commit": "1fb5aa472fa8",
       "last_modified_date": "2026-04-20T15:52:49-05:00",
       "review_status": "reviewed",
-      "reviewed_by": "council",
-      "reviewed_at": "2026-04-22T01:42:29.023645+00:00",
+      "reviewed_by": "adversarial_round2",
+      "reviewed_at": "2026-04-22T02:21:27.103841+00:00",
       "review_pass": "",
       "notes": ""
     },
@@ -24312,8 +24292,8 @@
       "last_modified_commit": "1fb5aa472fa8",
       "last_modified_date": "2026-04-20T15:52:49-05:00",
       "review_status": "reviewed",
-      "reviewed_by": "council",
-      "reviewed_at": "2026-04-22T01:42:29.023645+00:00",
+      "reviewed_by": "adversarial_round2",
+      "reviewed_at": "2026-04-22T02:21:27.103841+00:00",
       "review_pass": "",
       "notes": ""
     },
@@ -24329,8 +24309,8 @@
       "last_modified_commit": "1fb5aa472fa8",
       "last_modified_date": "2026-04-20T15:52:49-05:00",
       "review_status": "reviewed",
-      "reviewed_by": "council",
-      "reviewed_at": "2026-04-22T01:42:29.023645+00:00",
+      "reviewed_by": "adversarial_round2",
+      "reviewed_at": "2026-04-22T02:21:27.103841+00:00",
       "review_pass": "",
       "notes": ""
     },
@@ -24346,8 +24326,8 @@
       "last_modified_commit": "1fb5aa472fa8",
       "last_modified_date": "2026-04-20T15:52:49-05:00",
       "review_status": "reviewed",
-      "reviewed_by": "council",
-      "reviewed_at": "2026-04-22T01:42:29.023645+00:00",
+      "reviewed_by": "adversarial_round2",
+      "reviewed_at": "2026-04-22T02:21:27.103841+00:00",
       "review_pass": "",
       "notes": ""
     },
@@ -24363,8 +24343,8 @@
       "last_modified_commit": "1fb5aa472fa8",
       "last_modified_date": "2026-04-20T15:52:49-05:00",
       "review_status": "reviewed",
-      "reviewed_by": "council",
-      "reviewed_at": "2026-04-22T01:42:29.023645+00:00",
+      "reviewed_by": "adversarial_round2",
+      "reviewed_at": "2026-04-22T02:21:27.103841+00:00",
       "review_pass": "",
       "notes": ""
     },
@@ -24380,8 +24360,8 @@
       "last_modified_commit": "1fb5aa472fa8",
       "last_modified_date": "2026-04-20T15:52:49-05:00",
       "review_status": "reviewed",
-      "reviewed_by": "council",
-      "reviewed_at": "2026-04-22T01:42:29.023645+00:00",
+      "reviewed_by": "adversarial_round2",
+      "reviewed_at": "2026-04-22T02:21:27.103841+00:00",
       "review_pass": "",
       "notes": ""
     },
@@ -24397,8 +24377,8 @@
       "last_modified_commit": "1fb5aa472fa8",
       "last_modified_date": "2026-04-20T15:52:49-05:00",
       "review_status": "reviewed",
-      "reviewed_by": "council",
-      "reviewed_at": "2026-04-22T01:42:29.023645+00:00",
+      "reviewed_by": "adversarial_round2",
+      "reviewed_at": "2026-04-22T02:21:27.103841+00:00",
       "review_pass": "",
       "notes": ""
     },
@@ -24414,8 +24394,8 @@
       "last_modified_commit": "1fb5aa472fa8",
       "last_modified_date": "2026-04-20T15:52:49-05:00",
       "review_status": "reviewed",
-      "reviewed_by": "council",
-      "reviewed_at": "2026-04-22T01:42:29.023645+00:00",
+      "reviewed_by": "adversarial_round2",
+      "reviewed_at": "2026-04-22T02:21:27.103841+00:00",
       "review_pass": "",
       "notes": ""
     },
@@ -24431,8 +24411,8 @@
       "last_modified_commit": "1fb5aa472fa8",
       "last_modified_date": "2026-04-20T15:52:49-05:00",
       "review_status": "reviewed",
-      "reviewed_by": "council",
-      "reviewed_at": "2026-04-22T01:42:29.023645+00:00",
+      "reviewed_by": "adversarial_round2",
+      "reviewed_at": "2026-04-22T02:21:27.103841+00:00",
       "review_pass": "",
       "notes": ""
     },
@@ -24448,8 +24428,8 @@
       "last_modified_commit": "1fb5aa472fa8",
       "last_modified_date": "2026-04-20T15:52:49-05:00",
       "review_status": "reviewed",
-      "reviewed_by": "council",
-      "reviewed_at": "2026-04-22T01:42:29.023645+00:00",
+      "reviewed_by": "adversarial_round2",
+      "reviewed_at": "2026-04-22T02:21:27.103841+00:00",
       "review_pass": "",
       "notes": ""
     },
@@ -24465,8 +24445,8 @@
       "last_modified_commit": "1fb5aa472fa8",
       "last_modified_date": "2026-04-20T15:52:49-05:00",
       "review_status": "reviewed",
-      "reviewed_by": "council",
-      "reviewed_at": "2026-04-22T01:42:29.023645+00:00",
+      "reviewed_by": "adversarial_round2",
+      "reviewed_at": "2026-04-22T02:21:27.103841+00:00",
       "review_pass": "",
       "notes": ""
     },
@@ -24482,8 +24462,8 @@
       "last_modified_commit": "1fb5aa472fa8",
       "last_modified_date": "2026-04-20T15:52:49-05:00",
       "review_status": "reviewed",
-      "reviewed_by": "council",
-      "reviewed_at": "2026-04-22T01:42:29.023645+00:00",
+      "reviewed_by": "adversarial_round2",
+      "reviewed_at": "2026-04-22T02:21:27.103841+00:00",
       "review_pass": "",
       "notes": ""
     },
@@ -24499,8 +24479,8 @@
       "last_modified_commit": "1fb5aa472fa8",
       "last_modified_date": "2026-04-20T15:52:49-05:00",
       "review_status": "reviewed",
-      "reviewed_by": "council",
-      "reviewed_at": "2026-04-22T01:42:29.023645+00:00",
+      "reviewed_by": "adversarial_round2",
+      "reviewed_at": "2026-04-22T02:21:27.103841+00:00",
       "review_pass": "",
       "notes": ""
     },
@@ -24516,8 +24496,8 @@
       "last_modified_commit": "1fb5aa472fa8",
       "last_modified_date": "2026-04-20T15:52:49-05:00",
       "review_status": "reviewed",
-      "reviewed_by": "council",
-      "reviewed_at": "2026-04-22T01:42:29.023645+00:00",
+      "reviewed_by": "adversarial_round2",
+      "reviewed_at": "2026-04-22T02:21:27.103841+00:00",
       "review_pass": "",
       "notes": ""
     },
@@ -24533,8 +24513,8 @@
       "last_modified_commit": "1fb5aa472fa8",
       "last_modified_date": "2026-04-20T15:52:49-05:00",
       "review_status": "reviewed",
-      "reviewed_by": "council",
-      "reviewed_at": "2026-04-22T01:42:29.023645+00:00",
+      "reviewed_by": "adversarial_round2",
+      "reviewed_at": "2026-04-22T02:21:27.103841+00:00",
       "review_pass": "",
       "notes": ""
     },
@@ -24550,8 +24530,8 @@
       "last_modified_commit": "1fb5aa472fa8",
       "last_modified_date": "2026-04-20T15:52:49-05:00",
       "review_status": "reviewed",
-      "reviewed_by": "council",
-      "reviewed_at": "2026-04-22T01:42:29.023645+00:00",
+      "reviewed_by": "adversarial_round2",
+      "reviewed_at": "2026-04-22T02:21:27.103841+00:00",
       "review_pass": "",
       "notes": ""
     },
@@ -24567,8 +24547,8 @@
       "last_modified_commit": "1fb5aa472fa8",
       "last_modified_date": "2026-04-20T15:52:49-05:00",
       "review_status": "reviewed",
-      "reviewed_by": "council",
-      "reviewed_at": "2026-04-22T01:42:29.023645+00:00",
+      "reviewed_by": "adversarial_round2",
+      "reviewed_at": "2026-04-22T02:21:27.103841+00:00",
       "review_pass": "",
       "notes": ""
     },
@@ -24584,8 +24564,8 @@
       "last_modified_commit": "1fb5aa472fa8",
       "last_modified_date": "2026-04-20T15:52:49-05:00",
       "review_status": "reviewed",
-      "reviewed_by": "council",
-      "reviewed_at": "2026-04-22T01:42:29.023645+00:00",
+      "reviewed_by": "adversarial_round2",
+      "reviewed_at": "2026-04-22T02:21:27.103841+00:00",
       "review_pass": "",
       "notes": ""
     },
@@ -24601,8 +24581,8 @@
       "last_modified_commit": "1fb5aa472fa8",
       "last_modified_date": "2026-04-20T15:52:49-05:00",
       "review_status": "reviewed",
-      "reviewed_by": "council",
-      "reviewed_at": "2026-04-22T01:42:29.023645+00:00",
+      "reviewed_by": "adversarial_round2",
+      "reviewed_at": "2026-04-22T02:21:27.103841+00:00",
       "review_pass": "",
       "notes": ""
     },
@@ -24618,8 +24598,8 @@
       "last_modified_commit": "1fb5aa472fa8",
       "last_modified_date": "2026-04-20T15:52:49-05:00",
       "review_status": "reviewed",
-      "reviewed_by": "council",
-      "reviewed_at": "2026-04-22T01:42:29.023645+00:00",
+      "reviewed_by": "adversarial_round2",
+      "reviewed_at": "2026-04-22T02:21:27.103841+00:00",
       "review_pass": "",
       "notes": ""
     },
@@ -24635,8 +24615,8 @@
       "last_modified_commit": "1fb5aa472fa8",
       "last_modified_date": "2026-04-20T15:52:49-05:00",
       "review_status": "reviewed",
-      "reviewed_by": "council",
-      "reviewed_at": "2026-04-22T01:42:29.023645+00:00",
+      "reviewed_by": "adversarial_round2",
+      "reviewed_at": "2026-04-22T02:21:27.103841+00:00",
       "review_pass": "",
       "notes": ""
     },
@@ -24652,8 +24632,8 @@
       "last_modified_commit": "1fb5aa472fa8",
       "last_modified_date": "2026-04-20T15:52:49-05:00",
       "review_status": "reviewed",
-      "reviewed_by": "council",
-      "reviewed_at": "2026-04-22T01:42:29.023645+00:00",
+      "reviewed_by": "adversarial_round2",
+      "reviewed_at": "2026-04-22T02:21:27.103841+00:00",
       "review_pass": "",
       "notes": ""
     },
@@ -24669,8 +24649,8 @@
       "last_modified_commit": "1fb5aa472fa8",
       "last_modified_date": "2026-04-20T15:52:49-05:00",
       "review_status": "reviewed",
-      "reviewed_by": "council",
-      "reviewed_at": "2026-04-22T01:42:29.023645+00:00",
+      "reviewed_by": "adversarial_round2",
+      "reviewed_at": "2026-04-22T02:21:27.103841+00:00",
       "review_pass": "",
       "notes": ""
     },
@@ -24686,8 +24666,8 @@
       "last_modified_commit": "1fb5aa472fa8",
       "last_modified_date": "2026-04-20T15:52:49-05:00",
       "review_status": "reviewed",
-      "reviewed_by": "council",
-      "reviewed_at": "2026-04-22T01:42:29.023645+00:00",
+      "reviewed_by": "adversarial_round2",
+      "reviewed_at": "2026-04-22T02:21:27.103841+00:00",
       "review_pass": "",
       "notes": ""
     },

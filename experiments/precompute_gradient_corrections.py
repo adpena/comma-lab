@@ -374,6 +374,7 @@ def unpack_sparse_corrections(data: bytes, compressed: bool = True) -> dict:
         "shape": header["shape"],
         "quantize_bits": qbits,
         "n_kept": n_kept,
+        "n_total": header["n_total"],
     }
 
 

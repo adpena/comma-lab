@@ -553,7 +553,6 @@ def main():
     print("\n  Per-frame PoseNet decomposition (optimized embedding):")
     with torch.inference_mode():
         pose_t_losses = []
-        pose_t1_losses = []
         for start in range(0, n_pairs, args.batch_pairs):
             end = min(start + args.batch_pairs, n_pairs)
             mt = gt_masks_all[2 * start:2 * end:2].to(device)
