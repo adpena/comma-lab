@@ -521,7 +521,7 @@ def main() -> None:
     # Auto-detect architecture from ASYM header if possible
     raw = Path(cfg.checkpoint_path).read_bytes()
     if raw[:4] == b"ASYM":
-        import json, struct
+        import struct
         header_len = struct.unpack("<I", raw[4:8])[0]
         header = json.loads(raw[8:8+header_len])
         detected_cfg = {
