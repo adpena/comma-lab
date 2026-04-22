@@ -32,15 +32,17 @@ class FakeQuantSTE(torch.autograd.Function):
         with torch.no_grad():
             if w.ndim >= 2:
                 # Per-channel: scale per output channel (dim 0)
-                # Matches _save_checkpoint and _evaluate_int8 per-channel path
-                flat = w.detach().contiguous().reshape(w.shape[0], -1)
+                # .contiguous() needed for MPS — parametrized weights can
+                # have incompatible strides from nn.utils.parametrize
+                w_c = w.contiguous()
+                flat = w_c.detach().reshape(w_c.shape[0], -1)
                 scale = flat.abs().amax(dim=1) / 127.0
                 scale = scale.clamp(min=1e-10)
-                scale_view = scale.reshape(-1, *([1] * (w.ndim - 1)))
-                q = (w / scale_view).round().clamp(-128.0, 127.0)
-                saturated = (w / scale_view).abs() > 127.5
+                scale_view = scale.reshape(-1, *([1] * (w_c.ndim - 1)))
+                q = (w_c / scale_view).round().clamp(-128.0, 127.0)
+                saturated = ((w_c / scale_view).abs() > 127.5).contiguous()
                 ctx.save_for_backward(saturated)
-                return q * scale_view
+                return (q * scale_view).contiguous()
             else:
                 # Per-tensor for 1D (bias)
                 scale = w.detach().abs().max() / 127.0
