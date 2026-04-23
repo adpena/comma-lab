@@ -1156,7 +1156,7 @@ def main() -> None:
             scale = 255 // 4
             masks = torch.from_numpy(
                 np.clip(np.round(pixels.astype(np.float32) / scale).astype(np.int64), 0, 4)
-            ).to(torch.int8)
+            ).long()
         else:
             masks = torch.load(str(masks_path), weights_only=True)
         print(f"Loaded archive masks from {args.masks}: {masks.shape}")
