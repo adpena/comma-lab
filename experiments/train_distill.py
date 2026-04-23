@@ -136,6 +136,10 @@ class DistillConfig:
     qat_from_phase2: bool = False       # legacy: start QAT at Phase 2 only (not Phase 1)
     fp4_block_size: int = 32            # FP4 block size
 
+    # EMA (Quantizr uses decay=0.997, we have the class, never wired it)
+    use_ema: bool = True              # EMA on by default — no reason not to
+    ema_decay: float = 0.997
+
     # Optimizer
     weight_decay: float = 1e-4
     grad_clip: float = 1.0
@@ -425,6 +429,7 @@ def train_phase1(
     cfg: DistillConfig,
     device: torch.device,
     start_epoch: int = 0,
+    ema: object | None = None,
 ) -> int:
     """Phase 1: pixel regression warm-start.
 
@@ -492,6 +497,8 @@ def train_phase1(
             if cfg.grad_clip > 0:
                 nn.utils.clip_grad_norm_(model.parameters(), cfg.grad_clip)
             optimizer.step()
+            if ema is not None:
+                ema.update(model)
 
             epoch_loss += loss.item()
             n_batches += 1
@@ -529,7 +536,8 @@ def train_phase2(
     cfg: DistillConfig,
     device: torch.device,
     start_epoch: int = 0,
-) -> tuple[int, torch.Tensor]:
+    ema: object | None = None,
+) -> tuple[int, torch.Tensor, nn.Module]:
     """Phase 2: scorer-guided fine-tuning.
 
     Returns (final_epoch, per_pair_difficulty).
@@ -627,6 +635,8 @@ def train_phase2(
             if cfg.grad_clip > 0:
                 nn.utils.clip_grad_norm_(model.parameters(), cfg.grad_clip)
             optimizer.step()
+            if ema is not None:
+                ema.update(model)
 
             epoch_loss += total.item()
             epoch_seg += metrics["seg_loss"]
@@ -693,6 +703,7 @@ def train_phase3(
     device: torch.device,
     start_epoch: int = 0,
     train_model: nn.Module | None = None,
+    ema: object | None = None,
 ) -> int:
     """Phase 3: hard-pair fine-tuning.
 
@@ -792,6 +803,8 @@ def train_phase3(
             if cfg.grad_clip > 0:
                 nn.utils.clip_grad_norm_(model.parameters(), cfg.grad_clip)
             optimizer.step()
+            if ema is not None:
+                ema.update(model)
 
             epoch_loss += total.item()
             n_batches += 1
@@ -848,13 +861,17 @@ def _save_checkpoint(
     epoch: int,
     tag: str,
     cfg: DistillConfig,
+    ema: object | None = None,
 ) -> None:
-    """Save training checkpoint with clean (non-parametrized) state dict."""
+    """Save training checkpoint with clean (non-parametrized) state dict.
+    If EMA is provided, saves EMA weights as the model state (better for eval)."""
     RESULTS_DIR.mkdir(parents=True, exist_ok=True)
     path = RESULTS_DIR / f"distill_{tag}.pt"
+    # Use EMA weights if available (smoother, better for eval/export)
+    state = ema.state_dict() if ema is not None else model.state_dict()
     torch.save(
         {
-            "model_state_dict": _clean_state_dict(model.state_dict()),
+            "model_state_dict": _clean_state_dict(state),
             "optimizer_state_dict": optimizer.state_dict(),
             "epoch": epoch,
             "tag": tag,
@@ -968,6 +985,9 @@ def parse_args() -> argparse.Namespace:
     p.add_argument("--hinge-margin", type=float, default=0.5)
 
     # Integrated QAT
+    p.add_argument("--no-ema", action="store_true",
+                   help="Disable EMA (on by default, Quantizr uses decay=0.997)")
+    p.add_argument("--ema-decay", type=float, default=0.997)
     p.add_argument("--qat", action="store_true", dest="qat_enabled",
                    help="Train with FP4 fake-quant from Phase 1 (full QAT)")
     p.add_argument("--qat-from-phase2", action="store_true",
@@ -1050,6 +1070,8 @@ def main() -> None:
         eval_every=args.eval_every,
         log_every=args.log_every,
         resume=args.resume,
+        use_ema=not args.no_ema,
+        ema_decay=args.ema_decay,
         qat_enabled=args.qat_enabled,
         qat_from_phase2=args.qat_from_phase2,
         fp4_block_size=args.fp4_block_size,
@@ -1192,6 +1214,13 @@ def main() -> None:
         print("  No checkpoint found, training from scratch")
         start_epoch = 0
 
+    # ── EMA ────────────────────────────────────────────────────────────
+    ema = None
+    if cfg.use_ema:
+        from tac.training import EMA
+        ema = EMA(model, decay=cfg.ema_decay)
+        print(f"  EMA enabled (decay={cfg.ema_decay})")
+
     # ── Training phases ───────────────────────────────────────────────
     current_epoch = start_epoch
     per_pair_difficulty = None
@@ -1200,7 +1229,7 @@ def main() -> None:
     # Skip if --skip-phase1 OR if resuming from any checkpoint (resume = continue from where we left off)
     if not args.skip_phase1 and not cfg.resume:
         current_epoch = train_phase1(
-            model, masks, tto_frames, poses, cfg, device, start_epoch=current_epoch,
+            model, masks, tto_frames, poses, cfg, device, start_epoch=current_epoch, ema=ema,
         )
         gc.collect()
         if device.type == "cuda":
@@ -1214,7 +1243,7 @@ def main() -> None:
     # Phase 2: scorer-guided (returns train_model which is QAT wrapper if enabled)
     current_epoch, per_pair_difficulty, train_model_p2 = train_phase2(
         model, masks, tto_frames, gt_frames, poses,
-        posenet, segnet, cfg, device, start_epoch=current_epoch,
+        posenet, segnet, cfg, device, start_epoch=current_epoch, ema=ema,
     )
     gc.collect()
     if device.type == "cuda":
@@ -1233,6 +1262,7 @@ def main() -> None:
             posenet, segnet, per_pair_difficulty, cfg, device,
             start_epoch=current_epoch,
             train_model=train_model_p2,
+            ema=ema,
         )
 
     # Final eval
