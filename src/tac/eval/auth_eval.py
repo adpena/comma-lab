@@ -1146,6 +1146,13 @@ class AuthEvaluator:
         timing: dict[str, float] = {}
         t_total = time.monotonic()
 
+        # Preflight
+        try:
+            from tac.preflight import preflight_check
+            preflight_check(renderer_path=str(checkpoint_path), verbose=False)
+        except Exception:
+            pass  # preflight is advisory in eval, not blocking
+
         # 0. Validate archive if archive_size_bytes provided with a path
         if archive_size_bytes is not None:
             # Try to find and validate the archive

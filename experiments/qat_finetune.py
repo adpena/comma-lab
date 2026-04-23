@@ -461,6 +461,10 @@ def main() -> None:
         mixed_precision=not args.no_mixed_precision,
     )
 
+    # Preflight
+    from tac.preflight import preflight_check
+    preflight_check(renderer_path=cfg.checkpoint_path)
+
     out_dir = Path(cfg.output_dir)
     out_dir.mkdir(parents=True, exist_ok=True)
     with open(out_dir / "qat_config.json", "w") as f:

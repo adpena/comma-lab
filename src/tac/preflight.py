@@ -166,9 +166,12 @@ def preflight_check(
             _warn(f"Poses mean abs {p.abs().mean():.6f} — near zero, may not have been optimized")
 
     # ── Pose-mask consistency ────────────────────────────────────
-    if poses_path and masks_path and masks_path.suffix in (".mkv", ".mp4"):
-        _warn("Cannot verify poses were optimized against THESE masks (not fresh SegNet). "
-              "Use --masks flag in optimize_poses.py to ensure match.")
+    # This is the #1 source of score regressions in this project.
+    # Poses optimized against wrong masks caused 27x PoseNet degradation.
+    if poses_path and masks_path:
+        _warn("CRITICAL: Verify poses were optimized against THESE EXACT masks. "
+              "Mismatched poses caused 27x PoseNet regression. "
+              "optimize_poses.py now requires --masks to prevent this.")
 
     # ── Archive checks ───────────────────────────────────────────
     if archive_path:

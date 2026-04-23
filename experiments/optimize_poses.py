@@ -501,6 +501,14 @@ def optimize_poses_batch(
 def main():
     args = parse_args()
 
+    # Preflight: catch integration mismatches before burning GPU time
+    from tac.preflight import preflight_check
+    preflight_check(
+        renderer_path=args.checkpoint,
+        masks_path=args.masks,
+        poses_path=None,  # poses don't exist yet — we're creating them
+    )
+
     if args.smoke:
         args.n_frames = 20
         args.steps = 100
@@ -606,9 +614,11 @@ def main():
             ).squeeze(1).long()
             print(f"  Upsampled to {gt_masks.shape}")
     else:
-        gt_masks = extract_gt_masks(gt_frames, segnet, device)
-        print(f"  WARNING: Using fresh SegNet masks. If archive uses AV1-encoded masks,")
-        print(f"  pass --masks <path_to_archive_masks.mkv> for correct optimization.")
+        print(f"  ERROR: --masks is required. Poses MUST be optimized against the")
+        print(f"  EXACT masks that will be in the archive. Using fresh SegNet masks")
+        print(f"  causes 27x PoseNet regression at deployment.")
+        print(f"  Pass --masks <path_to_archive_masks.mkv>")
+        sys.exit(1)
 
     pose_targets = extract_gt_pose_targets(gt_frames, posenet, device)
     print(f"[4/6] Masks: {gt_masks.shape}, Poses: {pose_targets.shape} in {time.monotonic() - t0:.1f}s")
