@@ -1,0 +1,21 @@
+  Pair 0/600: pose_d=0.24566
+  Pair 50/600: pose_d=0.18796
+  Pair 100/600: pose_d=0.00075
+  Pair 150/600: pose_d=0.00187
+  Pair 200/600: pose_d=0.00125
+  Pair 250/600: pose_d=0.00066
+  Pair 300/600: pose_d=0.17530
+  Pair 350/600: pose_d=0.00211
+  Pair 400/600: pose_d=1.34586
+  Pair 450/600: pose_d=1.13573
+  Pair 500/600: pose_d=0.00246
+  Pair 550/600: pose_d=0.00432
+Difficulty map: torch.Size([600])
+  Mean: 0.12436
+  Max: 11.55639 (pair 73)
+  Top 20% threshold: 0.02178
+  Top 20% mean: 0.61105
+  Bottom 80% mean: 0.00269
+  Sqrt exploit: fixing top 20% from 0.6111 to 0.001
+  New average: 0.00235 (was 0.12436)
+  PoseNet improvement: 1.115 → 0.153
