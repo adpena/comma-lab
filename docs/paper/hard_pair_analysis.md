@@ -160,7 +160,50 @@ TTO frames are the gold standard but cost 500 gradient steps per pair at inflate
 - **Hard pairs**: renderer struggles, TTO provides the largest improvement, concentrate distillation epochs here
 - **Curriculum**: train on easy pairs first (fast convergence), then progressively add hard pairs (hard-frame curriculum)
 
-## 7. Validation Protocol
+## 7. Empirical Difficulty Distribution (2026-04-23)
+
+We computed the full per-pair PoseNet distortion map for our 103K-param renderer
+with CRF50-matched poses on all 600 pairs:
+
+| Statistic | Value |
+|-----------|-------|
+| Mean pose_d | 0.124 |
+| Top 20% mean | 0.611 |
+| Bottom 80% mean | 0.003 |
+| Max (pair 73) | 11.56 |
+| Top 20% / Bottom 80% ratio | **227x** |
+
+The distribution is extremely heavy-tailed. The top 20% of pairs contribute
+>98% of the PoseNet average. A single pair (pair 73, pose_d=11.56) contributes
+more to the average than the bottom 400 pairs combined.
+
+**The sqrt exploit**: fixing the top 20% from mean 0.611 to 0.001 reduces
+the PoseNet contribution from sqrt(10*0.124)=1.115 to sqrt(10*0.002)=0.153 ---
+a 0.962 point improvement. At a postfilter cost of 0.030 rate (46KB), this is
+a net +0.932 points. This is the single highest-leverage optimization available.
+
+The difficulty map is saved as `difficulty.pt` (2.4KB, 600 float values) and
+can be bundled in the archive to enable per-pair adaptive processing at inflate time.
+
+## 8. Fridrich Loss Ablation (2026-04-23)
+
+Head-to-head experiment with identical training configurations (Float + EMA + CRF50 masks +
+103K DSConv + FiLM + CLADE) on separate 4090 GPUs, differing only in Fridrich losses:
+
+| Epoch | No-Fridrich best | Fridrich best | Fridrich advantage |
+|-------|-----------------|---------------|-------------------|
+| Phase 1 ep 875 | 0.540 | 0.513 | +5% |
+| Phase 2 ep 1050 | 1.155 | 1.249 | -8% (no-Fridrich ahead) |
+| Phase 2 ep 1100 | ~1.10 | 1.006 | +9% (Fridrich catches up) |
+
+**Finding**: Fridrich losses (UNIWARD texture weighting + L-infinity penalty) improve
+Phase 1 pixel regression by 5-7% consistently. In Phase 2 (scorer-guided), they initially
+hurt (competing with scorer gradients for capacity) but catch up by epoch 1100.
+
+**Recommendation**: Apply Fridrich losses in Phase 1 and Phase 3 only. Disable in Phase 2
+where the scorer itself provides texture-aware gradient signal.
+
+## 9. Validation Protocol
 
 The difficulty prior is validated by computing Spearman rank correlation between $h^{(k)}$ and the true per-pair difficulty $\delta^{(k)}(\theta^*)$ on the best renderer checkpoint:
 
