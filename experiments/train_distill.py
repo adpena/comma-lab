@@ -645,8 +645,7 @@ def train_phase2(
 
             # Track per-pair difficulty via EMA (detached)
             # Use per-pair PoseNet MSE for difficulty (more discriminative than batch avg)
-            # Scorers loaded in eval() mode by load_differentiable_scorers — defensive check
-            posenet.eval()
+            # posenet is already in eval() mode from load_differentiable_scorers
             with torch.no_grad():
                 pred_chw = predicted_pairs.reshape(-1, *predicted_pairs.shape[2:]).permute(0, 3, 1, 2)
                 gt_chw = gt_pairs.reshape(-1, *gt_pairs.shape[2:]).permute(0, 3, 1, 2)
@@ -1237,6 +1236,8 @@ def main() -> None:
 
     if args.only_phase1:
         print("\n  --only-phase1 set, stopping after Phase 1.")
+        if ema is not None:
+            ema.apply(model)
         export_model(model, cfg)
         return
 
@@ -1265,13 +1266,18 @@ def main() -> None:
             ema=ema,
         )
 
-    # Apply EMA weights before final eval and export
-    if ema is not None:
-        print("\nApplying EMA weights for final eval and export...")
-        ema.apply(model)
+    # Load BEST checkpoint (EMA weights from best scorer epoch) for final eval/export
+    best_candidates = ["distill_phase3_best.pt", "distill_phase2_best.pt", "distill_latest.pt"]
+    for bc in best_candidates:
+        best_path = RESULTS_DIR / bc
+        if best_path.exists():
+            print(f"\nLoading best checkpoint: {bc}")
+            best_ckpt = torch.load(str(best_path), map_location=device, weights_only=True)
+            model.load_state_dict(best_ckpt["model_state_dict"])
+            break
 
     # Final eval
-    print("\nRunning final proxy evaluation...")
+    print("\nRunning final proxy evaluation (best checkpoint)...")
     result = run_proxy_eval(model, masks, gt_frames, poses, posenet, segnet, device, n_frames)
     print(f"  FINAL proxy score: {result.get('score', 'N/A')}")
     print(f"  PoseNet: {result.get('pose', 'N/A'):.5f}, SegNet: {result.get('seg', 'N/A'):.5f}")
