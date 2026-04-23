@@ -943,6 +943,9 @@ def parse_args() -> argparse.Namespace:
     )
     # Data paths
     p.add_argument("--tto-frames", type=str, default="experiments/results/tto_v7_hinge_500/tto_frames.pt")
+    p.add_argument("--masks", type=str, default=None,
+                   help="Pre-encoded masks (.mkv). Train with THESE masks instead of fresh SegNet. "
+                        "CRITICAL: must match the masks that will be in archive.zip.")
     p.add_argument("--checkpoint", type=str, default="experiments/results/v5_lagrangian_renderer/renderer_best.pt")
     p.add_argument("--gt-poses", type=str, default="experiments/results/gt_poses.pt")
     p.add_argument("--upstream", type=str, default="upstream/")
@@ -1136,8 +1139,30 @@ def main() -> None:
     gt_frames = load_gt_video(upstream_dir, n_frames)
 
     # Extract masks
-    print("Extracting SegNet masks from GT...")
-    masks = load_masks(gt_frames, segnet, device)
+    if args.masks:
+        # Use pre-encoded masks (MUST match archive masks)
+        masks_path = Path(args.masks)
+        if masks_path.suffix in (".mkv", ".mp4"):
+            import subprocess, numpy as np
+            cmd = ["ffmpeg", "-v", "quiet", "-i", str(masks_path),
+                   "-f", "rawvideo", "-pix_fmt", "gray", "pipe:1"]
+            proc = subprocess.run(cmd, capture_output=True)
+            probe = subprocess.run(
+                ["ffprobe", "-v", "quiet", "-select_streams", "v:0",
+                 "-show_entries", "stream=width,height", "-of", "csv=p=0", str(masks_path)],
+                capture_output=True, text=True)
+            w, h = map(int, probe.stdout.strip().split(","))
+            pixels = np.frombuffer(proc.stdout, dtype=np.uint8).reshape(-1, h, w)
+            scale = 255 // 4
+            masks = torch.from_numpy(
+                np.clip(np.round(pixels.astype(np.float32) / scale).astype(np.int64), 0, 4)
+            ).to(torch.int8)
+        else:
+            masks = torch.load(str(masks_path), weights_only=True)
+        print(f"Loaded archive masks from {args.masks}: {masks.shape}")
+    else:
+        print("Extracting SegNet masks from GT...")
+        masks = load_masks(gt_frames, segnet, device)
 
     # Resize TTO frames to match mask resolution if needed
     from tac.camera import SEGNET_INPUT_H, SEGNET_INPUT_W
