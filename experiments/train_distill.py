@@ -518,9 +518,9 @@ def train_phase1(
             )
 
         if (epoch - start_epoch) % cfg.checkpoint_every == 0 and epoch > start_epoch:
-            _save_checkpoint(model, optimizer, epoch, "phase1", cfg)
+            _save_checkpoint(model, optimizer, epoch, "phase1", cfg, ema=ema)
 
-    _save_checkpoint(model, optimizer, start_epoch + cfg.phase1_epochs, "phase1_final", cfg)
+    _save_checkpoint(model, optimizer, start_epoch + cfg.phase1_epochs, "phase1_final", cfg, ema=ema)
     print(f"  Phase 1 complete. Best L1: {best_loss:.4f}")
     return start_epoch + cfg.phase1_epochs
 
@@ -670,7 +670,7 @@ def train_phase2(
         proxy_score = 100 * avg_seg + math.sqrt(max(10 * avg_pose, 0))
         if proxy_score < best_score:
             best_score = proxy_score
-            _save_checkpoint(model, optimizer, epoch, "phase2_best", cfg)
+            _save_checkpoint(model, optimizer, epoch, "phase2_best", cfg, ema=ema)
 
         if (epoch - start_epoch) % cfg.log_every == 0:
             elapsed = time.time() - t0
@@ -683,9 +683,9 @@ def train_phase2(
             )
 
         if (epoch - start_epoch) % cfg.checkpoint_every == 0 and epoch > start_epoch:
-            _save_checkpoint(model, optimizer, epoch, "phase2", cfg)
+            _save_checkpoint(model, optimizer, epoch, "phase2", cfg, ema=ema)
 
-    _save_checkpoint(model, optimizer, start_epoch + cfg.phase2_epochs, "phase2_final", cfg)
+    _save_checkpoint(model, optimizer, start_epoch + cfg.phase2_epochs, "phase2_final", cfg, ema=ema)
     print(f"  Phase 2 complete. Best proxy: {best_score:.3f}")
     return start_epoch + cfg.phase2_epochs, per_pair_loss, train_model
 
@@ -814,7 +814,7 @@ def train_phase3(
 
         if avg_loss < best_score:
             best_score = avg_loss
-            _save_checkpoint(model, optimizer, epoch, "phase3_best", cfg)
+            _save_checkpoint(model, optimizer, epoch, "phase3_best", cfg, ema=ema)
 
         if (epoch - start_epoch) % cfg.log_every == 0:
             elapsed = time.time() - t0
@@ -825,9 +825,9 @@ def train_phase3(
             )
 
         if (epoch - start_epoch) % cfg.checkpoint_every == 0 and epoch > start_epoch:
-            _save_checkpoint(model, optimizer, epoch, "phase3", cfg)
+            _save_checkpoint(model, optimizer, epoch, "phase3", cfg, ema=ema)
 
-    _save_checkpoint(model, optimizer, start_epoch + cfg.phase3_epochs, "phase3_final", cfg)
+    _save_checkpoint(model, optimizer, start_epoch + cfg.phase3_epochs, "phase3_final", cfg, ema=ema)
     print(f"  Phase 3 complete. Best loss: {best_score:.4f}")
     return start_epoch + cfg.phase3_epochs
 
@@ -1264,6 +1264,11 @@ def main() -> None:
             train_model=train_model_p2,
             ema=ema,
         )
+
+    # Apply EMA weights before final eval and export
+    if ema is not None:
+        print("\nApplying EMA weights for final eval and export...")
+        ema.apply(model)
 
     # Final eval
     print("\nRunning final proxy evaluation...")
