@@ -142,8 +142,8 @@ def run_auth_eval(archive_bytes: bytes) -> dict:
             "--submission-dir", work,
             "--uncompressed-dir", "/root/upstream/videos/",
             "--video-names-file", video_names_file,
-            "--device", "cuda",
-            "--batch-size", "16",
+            "--device", "cpu",  # Use AVVideoDataset, not DALI (DALI has NVML driver issues on Modal T4)
+            "--batch-size", "4",
             "--report", report_path,
         ],
         env={**os.environ, "PYTHONPATH": "/root/upstream"},
