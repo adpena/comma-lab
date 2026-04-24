@@ -689,12 +689,72 @@ fi
 # NOTE: Removed auto-bundle of gradient_corrections.bin by file existence.
 # Same reason as optimized_embedding.pt — explicit > implicit for archive contents.
 
-(
-  cd "$ARCHIVE_DIR"
-  zip -9 -r "$ARCHIVE_ZIP_TMP" .
-)
+# ── Build archive via validated Python builder ──────────────────────────
+# The canonical archive builder (compress_archive.py) uses
+# build_submission_archive() with proper manifest validation.
+# Supports half-frame masks (600 odd frames) and binary poses (.bin).
+# Falls back to manual zip if the Python builder fails.
+USE_PYTHON_ARCHIVE="${USE_PYTHON_ARCHIVE:-1}"
+HALF_FRAME_MASKS="${HALF_FRAME_MASKS:-0}"
+BINARY_POSES="${BINARY_POSES:-0}"
 
-mv "$ARCHIVE_ZIP_TMP" "$ARCHIVE_ZIP"
+_python_archive_built=0
+if [ "$USE_PYTHON_ARCHIVE" = "1" ] && [ "$PYTHON_INFLATE" = "renderer" ]; then
+  # Locate the required artifacts in ARCHIVE_DIR
+  _renderer_bin="$ARCHIVE_DIR/renderer.bin"
+  _masks_mkv="$ARCHIVE_DIR/masks.mkv"
+  # Find poses: optimized_poses.pt > optimized_poses.bin > poses.pt
+  _poses_file=""
+  for _pf in "$ARCHIVE_DIR/optimized_poses.pt" "$ARCHIVE_DIR/optimized_poses.bin" "$ARCHIVE_DIR/poses.pt"; do
+    if [ -f "$_pf" ]; then
+      _poses_file="$_pf"
+      break
+    fi
+  done
+
+  if [ -f "$_renderer_bin" ] && [ -f "$_masks_mkv" ] && [ -n "$_poses_file" ]; then
+    echo "[compress] Building archive via compress_archive.py (validated builder)"
+    _compress_archive_args=(
+      --renderer-bin "$_renderer_bin"
+      --masks-path "$_masks_mkv"
+      --poses-path "$_poses_file"
+      --output "$ARCHIVE_ZIP"
+    )
+    if [ "$HALF_FRAME_MASKS" = "1" ]; then
+      _compress_archive_args+=(--half-frame)
+      echo "[compress]   half-frame masks: enabled (600 odd frames only)"
+    fi
+    if [ "$BINARY_POSES" = "1" ]; then
+      _compress_archive_args+=(--binary-poses)
+      echo "[compress]   binary poses: enabled (.bin instead of .pt)"
+    fi
+
+    PROJECT_ROOT="$(cd "$SELF_DIR/../.." && pwd)"
+    if PYTHONPATH="${PROJECT_ROOT}/src:${PYTHONPATH:-}" \
+       "$UV_BIN" run python "$SELF_DIR/compress_archive.py" "${_compress_archive_args[@]}"; then
+      _python_archive_built=1
+      echo "[compress] Archive built successfully via Python builder"
+    else
+      echo "[compress] WARNING: Python archive builder failed, falling back to zip" >&2
+    fi
+  else
+    echo "[compress] Skipping Python archive builder (missing artifacts:" \
+         "renderer=$([ -f "$_renderer_bin" ] && echo 'ok' || echo 'MISSING')," \
+         "masks=$([ -f "$_masks_mkv" ] && echo 'ok' || echo 'MISSING')," \
+         "poses=$([ -n "$_poses_file" ] && echo 'ok' || echo 'MISSING'))" >&2
+  fi
+fi
+
+# Fallback: manual zip (used when Python builder is disabled or fails,
+# and for non-renderer inflate paths that don't have the required artifacts)
+if [ "$_python_archive_built" = "0" ]; then
+  echo "[compress] Building archive via zip -9 -r (manual fallback)"
+  (
+    cd "$ARCHIVE_DIR"
+    zip -9 -r "$ARCHIVE_ZIP_TMP" .
+  )
+  mv "$ARCHIVE_ZIP_TMP" "$ARCHIVE_ZIP"
+fi
 
 # ── Archive provenance (non-negotiable measurement rule) ──────────────
 # EVERY archive build MUST print size and rate. This is how we prevent
