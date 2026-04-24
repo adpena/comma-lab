@@ -2067,6 +2067,61 @@ WILDE = {
     "log_every": 25,
 }
 
+# ── Shiraz: mathematically principled adaptive training ──────────────
+# A/B test against WILDE. Same architecture, different training strategy.
+# Instead of freeze/unfreeze (brute force), uses:
+# - PCGrad gradient projection (conflict resolution without freezing)
+# - Focal STE loss (principled per-pixel weighting, gamma=2)
+# - Continuous adaptive training (no arbitrary phase boundaries)
+# Council dissents recorded:
+#   Quantizr: "activation PCGrad insufficient, predict 10-20% worse SegNet"
+#   Hotz: "use existing tested components only" → simplified to focal_ste + pcgrad
+#   Fridrich: "use focal_ste not focal+hinge" → adopted
+SHIRAZ = {
+    "experiment_type": "renderer_training",
+    # Architecture: matched to WILDE for fair A/B comparison
+    "base_ch": 32,
+    "mid_ch": 48,
+    "embed_dim": 6,
+    "motion_hidden": 24,
+    "depth": 1,
+    "pose_dim": 6,
+    "use_dsconv": True,
+    "padding_mode": "replicate",
+    "use_dilation": True,
+    "eval_roundtrip": True,
+    # Loss: focal STE with PCGrad gradient surgery
+    "loss_mode": "pcgrad",          # scorer_loss_pcgrad for conflict resolution
+    "segnet_loss_mode": "hinge",    # hinge for Phase 3 hard-pair
+    "hinge_margin": 1.0,
+    "focal_gamma": 2.0,            # focal per-pixel reweighting (Lin et al. 2017)
+    "error_boost": 1.0,            # NO error_boost — focal handles hard pixels
+    "pose_weight": 10.0,
+    "seg_weight": 100.0,
+    "pixel_weight": 0.1,
+    "ema_decay": 0.997,
+    # NO freeze/unfreeze — continuous adaptive training
+    "freeze_motion_phase2": False,
+    "freeze_renderer_phase3": False,
+    # Training schedule (same total epochs as WILDE for fair comparison)
+    "phase1_epochs": 400,           # pixel warmup
+    "phase2_epochs": 1080,          # scorer-guided (continuous, no anchor/boost split)
+    "phase3_epochs": 200,           # hard-pair fine-tune
+    "phase1_lr": 1e-3,
+    "phase2_lr": 3e-4,
+    "phase3_lr": 1e-4,
+    "phase1_batch_size": 16,
+    "phase2_batch_size": 8,
+    "phase3_batch_size": 8,
+    # Hard-frame curriculum
+    "hard_frame_ratio": 0.3,
+    "error_replay_every": 100,
+    "checkpoint_every": 100,
+    "eval_every": 50,
+    "log_every": 25,
+}
+
+
 # Current 4090 config (103K params, proxy 0.612 at ep1500)
 DEFINITIVE_FLOAT_EMA = {
     "experiment_type": "renderer_training",
@@ -2118,6 +2173,7 @@ PROFILES = {
     "kaggle_p100_long": KAGGLE_P100_LONG,
     # Renderer training profiles
     "wilde": WILDE,
+    "shiraz": SHIRAZ,
     "definitive_float_ema": DEFINITIVE_FLOAT_EMA,
     "mask_renderer_smoke": MASK_RENDERER_SMOKE,
     "mask_renderer_full": MASK_RENDERER_FULL,
