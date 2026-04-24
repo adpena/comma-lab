@@ -2036,7 +2036,10 @@ WILDE = {
     "eval_roundtrip": True,
     "segnet_loss_mode": "hinge",
     "hinge_margin": 0.5,
-    "error_boost": 9.0,  # Quantizr: 9x per-pixel error magnification
+    "error_boost": 9.0,  # Quantizr anchor: 9x per-pixel error magnification
+    "error_boost_phase3": 49.0,  # Quantizr anchor_boost: 49x extreme hard mining
+    "freeze_motion_phase2": True,  # Freeze MotionPredictor during SegNet training
+    "freeze_renderer_phase3": True,  # Freeze MaskRenderer during PoseNet training
     "pose_weight": 10.0,
     "seg_weight": 100.0,
     "pixel_weight": 0.1,

@@ -362,16 +362,15 @@ def optimize_zoom_scalars(
 
     n_frames = masks.shape[0]
     n_pairs = n_frames // 2
-    all_indices = torch.arange(n_pairs, device=device)
 
     H, W = masks.shape[1], masks.shape[2]
 
     for step in range(steps):
         # Sample a random batch of pair indices
-        perm = torch.randperm(n_pairs, device=device)[:batch_size]
-        pair_idx = all_indices[perm]
+        perm = torch.randperm(n_pairs)[:batch_size]  # CPU for indexing
+        pair_idx = perm.to(device)  # GPU for zoom_scalars lookup
 
-        # Gather masks
+        # Gather masks (CPU indexing, then move to device)
         mask_t = masks[2 * perm].to(device)
         mask_t1 = masks[2 * perm + 1].to(device)
 

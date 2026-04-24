@@ -112,6 +112,11 @@ class DistillConfig:
     segnet_loss_mode: str = "hinge"  # "hinge" or "xent"
     hinge_margin: float = 0.5
     error_boost: float = 1.0  # Quantizr: 9.0 in anchor, 49.0 in anchor_boost
+    error_boost_phase3: float = 1.0  # Quantizr anchor_boost: 49.0
+
+    # Freeze/unfreeze (Quantizr 5-stage technique — SegNet/PoseNet orthogonal optimization)
+    freeze_motion_phase2: bool = False  # Freeze MotionPredictor during SegNet training
+    freeze_renderer_phase3: bool = False  # Freeze MaskRenderer during PoseNet training
 
     # Phase 3: hard-pair fine-tuning
     phase3_epochs: int = 2000
@@ -571,8 +576,21 @@ def train_phase2(
         train_model = model
 
     train_model.train()
+
+    # Freeze/unfreeze: Quantizr's key SegNet technique.
+    # Freeze MotionPredictor during Phase 2 so ALL gradient goes to MaskRenderer.
+    # SegNet sees only frame_t1 (rendered by MaskRenderer). Freezing motion
+    # ensures zero cross-contamination between SegNet and PoseNet objectives.
+    if cfg.freeze_motion_phase2 and hasattr(model, 'motion'):
+        for p in model.motion.parameters():
+            p.requires_grad_(False)
+        n_frozen = sum(1 for p in model.motion.parameters() if not p.requires_grad)
+        n_total = sum(1 for p in model.motion.parameters())
+        print(f"  Freeze: MotionPredictor frozen ({n_frozen}/{n_total} params)")
+
     optimizer = torch.optim.AdamW(
-        model.parameters(), lr=cfg.phase2_lr, weight_decay=cfg.weight_decay
+        [p for p in model.parameters() if p.requires_grad],
+        lr=cfg.phase2_lr, weight_decay=cfg.weight_decay,
     )
     scheduler = torch.optim.lr_scheduler.CosineAnnealingLR(
         optimizer, T_max=cfg.phase2_epochs, eta_min=cfg.phase2_lr * 0.01
@@ -730,8 +748,23 @@ def train_phase3(
     # The train_model variable is set by the caller (main) before this call.
 
     train_model.train()
+
+    # Freeze/unfreeze: Phase 3 can freeze renderer for pure PoseNet optimization.
+    # Unfreeze MotionPredictor if it was frozen in Phase 2.
+    if cfg.freeze_motion_phase2 and hasattr(model, 'motion'):
+        for p in model.motion.parameters():
+            p.requires_grad_(True)
+        print("  Unfreeze: MotionPredictor unfrozen for Phase 3")
+
+    if cfg.freeze_renderer_phase3 and hasattr(model, 'renderer'):
+        for p in model.renderer.parameters():
+            p.requires_grad_(False)
+        n_frozen = sum(1 for p in model.renderer.parameters() if not p.requires_grad)
+        print(f"  Freeze: MaskRenderer frozen ({n_frozen} params) — pure PoseNet optimization")
+
     optimizer = torch.optim.AdamW(
-        model.parameters(), lr=cfg.phase3_lr, weight_decay=cfg.weight_decay
+        [p for p in model.parameters() if p.requires_grad],
+        lr=cfg.phase3_lr, weight_decay=cfg.weight_decay,
     )
     scheduler = torch.optim.lr_scheduler.CosineAnnealingLR(
         optimizer, T_max=cfg.phase3_epochs, eta_min=cfg.phase3_lr * 0.1
@@ -997,7 +1030,13 @@ def parse_args() -> argparse.Namespace:
     p.add_argument("--segnet-loss-mode", type=str, default="hinge", choices=["hinge", "xent"])
     p.add_argument("--hinge-margin", type=float, default=0.5)
     p.add_argument("--error-boost", type=float, default=1.0,
-                   help="Per-pixel error magnification (Quantizr: 9.0 anchor, 49.0 boost)")
+                   help="Per-pixel error magnification for Phase 2 (Quantizr: 9.0)")
+    p.add_argument("--error-boost-phase3", type=float, default=1.0,
+                   help="Error boost for Phase 3 (Quantizr anchor_boost: 49.0)")
+    p.add_argument("--freeze-motion-phase2", action="store_true",
+                   help="Freeze MotionPredictor during Phase 2 (pure SegNet optimization)")
+    p.add_argument("--freeze-renderer-phase3", action="store_true",
+                   help="Freeze MaskRenderer during Phase 3 (pure PoseNet optimization)")
 
     # Integrated QAT
     p.add_argument("--no-ema", action="store_true",
@@ -1073,6 +1112,9 @@ def main() -> None:
         segnet_loss_mode=args.segnet_loss_mode,
         hinge_margin=args.hinge_margin,
         error_boost=args.error_boost,
+        error_boost_phase3=args.error_boost_phase3,
+        freeze_motion_phase2=args.freeze_motion_phase2,
+        freeze_renderer_phase3=args.freeze_renderer_phase3,
         phase1_epochs=args.phase1_epochs,
         phase2_epochs=args.phase2_epochs,
         phase3_epochs=args.phase3_epochs,
