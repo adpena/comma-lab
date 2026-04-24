@@ -2109,6 +2109,8 @@ WILDE = {
     "seg_weight": 100.0,
     "pixel_weight": 0.1,
     "ema_decay": 0.997,
+    "use_per_class_weights": True,  # Lane markings 15x (Yousfi: 1.2% but critical)
+    "use_swa": True,               # Wider minima, better FP4 survival (Polyak 1992)
     "phase1_epochs": 600,  # Pixel warmup (200) + anchor (400)
     "phase2_epochs": 880,  # Anchor boost (80) + joint (800)
     "phase3_epochs": 200,  # Hard-pair fine-tune
@@ -2204,6 +2206,8 @@ SHIRAZ = {
     "seg_weight": 100.0,
     "pixel_weight": 0.1,
     "ema_decay": 0.997,
+    "use_per_class_weights": True,  # Lane markings 15x (Yousfi: 1.2% but critical)
+    "use_swa": True,               # Wider minima, better FP4 survival (Polyak 1992)
     # NO freeze/unfreeze — continuous adaptive training
     "freeze_motion_phase2": False,
     "freeze_renderer_phase3": False,

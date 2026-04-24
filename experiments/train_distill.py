@@ -120,6 +120,14 @@ class DistillConfig:
     error_boost: float = 1.0  # Quantizr: 9.0 in anchor, 49.0 in anchor_boost
     error_boost_phase3: float = 1.0  # Quantizr anchor_boost: 49.0
 
+    # Per-class SegNet weighting (Yousfi: lane markings 1.2% but critical)
+    use_per_class_weights: bool = False  # weight rare classes higher in hinge loss
+    segnet_class_weights: str = "1.0,15.0,1.5,3.0,7.0"  # road,lane,bg,vehicle,sky
+
+    # SWA (Stochastic Weight Averaging, Polyak 1992)
+    use_swa: bool = False  # average weights in last 20% of Phase 2 for wider minima
+    swa_start_frac: float = 0.8  # fraction of Phase 2 epochs before SWA starts
+
     # SHIRAZ loss mode: selects scorer loss function for Phase 2+3
     loss_mode: str = "standard"  # "standard", "pcgrad", or "focal_ste"
     focal_gamma: float = 2.0  # focal loss gamma (only used when loss_mode="focal_ste")
@@ -437,12 +445,19 @@ def compute_scorer_loss(
     # SegNet loss (hinge or xent)
     # Interleave masks to match frame order: even, odd, even, odd, ...
     all_masks = torch.stack([masks_even, masks_odd], dim=1).reshape(B * 2, *masks_even.shape[1:])
+    # Per-class weights: lane markings (1.2% of pixels) get 15x gradient
+    _pcw = None
+    if cfg.use_per_class_weights:
+        _pcw = torch.tensor([float(x) for x in cfg.segnet_class_weights.split(",")],
+                            device=pred_frames_for_loss.device)
+
     seg_loss = compute_segnet_constraint_loss(
         pred_frames_for_loss, all_masks, segnet,
         batch_size=B * 2,
         loss_mode=cfg.segnet_loss_mode,
         hinge_margin=cfg.hinge_margin,
         error_boost=error_boost_override if error_boost_override is not None else cfg.error_boost,
+        per_class_weights=_pcw,
     )
 
     # PoseNet loss: pairs format (B, 2, C, H, W)
@@ -904,8 +919,23 @@ def train_phase2(
                 f"lr {lr:.2e} | {elapsed:.0f}s{extra}"
             )
 
+        # SWA: snapshot EMA weights in last 20% of Phase 2 for wider minima
+        if cfg.use_swa and ema is not None:
+            progress = (epoch - start_epoch) / max(cfg.phase2_epochs, 1)
+            if progress >= cfg.swa_start_frac:
+                if not hasattr(train_phase2, '_swa'):
+                    from tac.training import SWA
+                    train_phase2._swa = SWA()
+                    print(f"  [SWA] Started at epoch {epoch} ({progress:.0%} of Phase 2)")
+                train_phase2._swa.update(ema)
+
         if (epoch - start_epoch) % cfg.checkpoint_every == 0 and epoch > start_epoch:
             _save_checkpoint(model, optimizer, epoch, "phase2", cfg, ema=ema)
+
+    # Apply SWA average to EMA before final save
+    if cfg.use_swa and ema is not None and hasattr(train_phase2, '_swa'):
+        train_phase2._swa.apply(ema)
+        del train_phase2._swa
 
     _save_checkpoint(model, optimizer, start_epoch + cfg.phase2_epochs, "phase2_final", cfg, ema=ema)
     print(f"  Phase 2 complete. Best proxy: {best_score:.3f}")
@@ -1233,6 +1263,17 @@ def parse_args() -> argparse.Namespace:
     p.add_argument("--error-boost-phase3", type=float, default=1.0,
                    help="Error boost for Phase 3 (Quantizr anchor_boost: 49.0)")
 
+    # Per-class SegNet weighting
+    p.add_argument("--use-per-class-weights", action="store_true",
+                   help="Weight rare SegNet classes higher (lane markings 15x)")
+    p.add_argument("--segnet-class-weights", type=str, default="1.0,15.0,1.5,3.0,7.0",
+                   help="Per-class weights: road,lane,bg,vehicle,sky")
+    # SWA
+    p.add_argument("--use-swa", action="store_true",
+                   help="Stochastic Weight Averaging in last 20%% of Phase 2")
+    p.add_argument("--swa-start-frac", type=float, default=0.8,
+                   help="Fraction of Phase 2 before SWA starts")
+
     # SHIRAZ loss mode
     p.add_argument("--loss-mode", type=str, default="standard",
                    choices=["standard", "pcgrad", "focal_ste"],
@@ -1326,6 +1367,10 @@ def main() -> None:
         hinge_margin=args.hinge_margin,
         error_boost=args.error_boost,
         error_boost_phase3=args.error_boost_phase3,
+        use_per_class_weights=args.use_per_class_weights,
+        segnet_class_weights=args.segnet_class_weights,
+        use_swa=args.use_swa,
+        swa_start_frac=args.swa_start_frac,
         loss_mode=args.loss_mode,
         focal_gamma=args.focal_gamma,
         hard_frame_ratio=args.hard_frame_ratio,
