@@ -792,10 +792,15 @@ def main():
     print("RESULTS: GT poses vs optimized poses")
     print("=" * 70)
 
-    # Save optimized poses
+    # Save optimized poses (both formats for compatibility)
     optimized_poses = all_optimized[:, :6]  # pose part only
     torch.save(optimized_poses, output_dir / "optimized_poses.pt")
-    print(f"  Saved optimized_poses.pt: {optimized_poses.shape}")
+    pt_size = (output_dir / "optimized_poses.pt").stat().st_size
+    # Also save compact binary format (raw fp16, ~53% smaller)
+    from tac.submission_archive import save_poses_binary
+    bin_size = save_poses_binary(optimized_poses, output_dir / "optimized_poses.bin")
+    print(f"  Saved optimized_poses.pt: {optimized_poses.shape} ({pt_size:,} bytes)")
+    print(f"  Saved optimized_poses.bin: {optimized_poses.shape} ({bin_size:,} bytes, -{100*(1-bin_size/pt_size):.0f}%)")
 
     if args.latent_dim > 0:
         optimized_latents = all_optimized[:, 6:]
