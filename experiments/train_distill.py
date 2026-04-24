@@ -114,6 +114,14 @@ class DistillConfig:
     error_boost: float = 1.0  # Quantizr: 9.0 in anchor, 49.0 in anchor_boost
     error_boost_phase3: float = 1.0  # Quantizr anchor_boost: 49.0
 
+    # SHIRAZ loss mode: selects scorer loss function for Phase 2+3
+    loss_mode: str = "standard"  # "standard", "pcgrad", or "focal_ste"
+    focal_gamma: float = 2.0  # focal loss gamma (only used when loss_mode="focal_ste")
+
+    # SHIRAZ continuous curriculum: difficulty-weighted sampling in Phase 2
+    hard_frame_ratio: float = 0.0  # 0.0 = uniform, 0.3 = weight 30% toward hard pairs
+    error_replay_every: int = 0  # 0 = never, N = recompute difficulty weights every N epochs
+
     # Freeze/unfreeze (Quantizr 5-stage technique — SegNet/PoseNet orthogonal optimization)
     freeze_motion_phase2: bool = False  # Freeze MotionPredictor during SegNet training
     freeze_renderer_phase3: bool = False  # Freeze MaskRenderer during PoseNet training
@@ -324,6 +332,11 @@ def compute_scorer_loss(
 ) -> tuple[torch.Tensor, dict[str, float]]:
     """Compute contest-formula scorer loss with eval-matched roundtrip.
 
+    Supports three loss modes (cfg.loss_mode):
+      - "standard": hinge/xent SegNet + PoseNet MSE (original behavior)
+      - "pcgrad": PCGrad non-opposing gradient from tac.losses (handles conflict)
+      - "focal_ste": focal STE for SegNet + PoseNet from tac.losses
+
     Args:
         predicted_pairs: (B, 2, H, W, 3) predicted frame pairs
         gt_pairs: (B, 2, H, W, 3) GT frame pairs
@@ -337,7 +350,6 @@ def compute_scorer_loss(
     Returns:
         (total_loss, metrics_dict)
     """
-    from tac.constrained_gen import compute_segnet_constraint_loss
     from tac.renderer import simulate_eval_roundtrip
 
     B = predicted_pairs.shape[0]
@@ -361,6 +373,19 @@ def compute_scorer_loss(
     else:
         pred_frames_for_loss = pred_frames
         gt_frames_for_loss = gt_frames
+
+    # ── Dispatch on loss_mode ────────────────────────────────────────
+    if cfg.loss_mode == "pcgrad":
+        return _compute_pcgrad_loss(
+            pred_frames_for_loss, gt_frames_for_loss, B, posenet, segnet, cfg,
+        )
+    elif cfg.loss_mode == "focal_ste":
+        return _compute_focal_ste_loss(
+            pred_frames_for_loss, gt_frames_for_loss, B, posenet, segnet, cfg,
+        )
+
+    # ── loss_mode="standard": original hinge/xent path ──────────────
+    from tac.constrained_gen import compute_segnet_constraint_loss
 
     # SegNet loss (hinge or xent)
     # Interleave masks to match frame order: even, odd, even, odd, ...
@@ -432,6 +457,79 @@ def compute_scorer_loss(
         **fridrich_metrics,
     }
     return total, metrics
+
+
+def _compute_pcgrad_loss(
+    pred_frames_for_loss: torch.Tensor,
+    gt_frames_for_loss: torch.Tensor,
+    B: int,
+    posenet: torch.nn.Module,
+    segnet: torch.nn.Module,
+    cfg: DistillConfig,
+) -> tuple[torch.Tensor, dict[str, float]]:
+    """PCGrad non-opposing gradient loss (SHIRAZ loss_mode="pcgrad").
+
+    Reshapes roundtripped frames into (B, T=2, H, W, C) pairs for
+    scorer_loss_pcgrad() which handles _hwc_to_chw conversion internally.
+    """
+    from tac.losses import scorer_loss_pcgrad
+
+    # Reshape (2B, H, W, 3) -> (B, 2, H, W, 3) for scorer_loss_pcgrad
+    pred_pairs_hwc = pred_frames_for_loss.reshape(B, 2, *pred_frames_for_loss.shape[1:])
+    gt_pairs_hwc = gt_frames_for_loss.reshape(B, 2, *gt_frames_for_loss.shape[1:])
+
+    loss, pose_dist, seg_dist, conflict = scorer_loss_pcgrad(
+        pred_pairs_hwc,
+        gt_pairs_hwc,
+        posenet,
+        segnet,
+        segnet_weight=cfg.phase2_seg_weight,
+        do_projection=True,
+    )
+
+    metrics = {
+        "seg_loss": seg_dist,
+        "pose_loss": pose_dist,
+        "total_loss": loss.item(),
+        "pcgrad_conflict": float(conflict),
+    }
+    return loss, metrics
+
+
+def _compute_focal_ste_loss(
+    pred_frames_for_loss: torch.Tensor,
+    gt_frames_for_loss: torch.Tensor,
+    B: int,
+    posenet: torch.nn.Module,
+    segnet: torch.nn.Module,
+    cfg: DistillConfig,
+) -> tuple[torch.Tensor, dict[str, float]]:
+    """Focal STE loss (SHIRAZ loss_mode="focal_ste").
+
+    Reshapes roundtripped frames into (B, T=2, H, W, C) pairs for
+    focal_segnet_ste_loss() which handles _hwc_to_chw conversion internally.
+    The focal loss already applies the contest scoring formula (100*seg + sqrt(10*pose)).
+    """
+    from tac.losses import focal_segnet_ste_loss
+
+    # Reshape (2B, H, W, 3) -> (B, 2, H, W, 3) for focal_segnet_ste_loss
+    pred_pairs_hwc = pred_frames_for_loss.reshape(B, 2, *pred_frames_for_loss.shape[1:])
+    gt_pairs_hwc = gt_frames_for_loss.reshape(B, 2, *gt_frames_for_loss.shape[1:])
+
+    loss, pose_dist, seg_dist = focal_segnet_ste_loss(
+        pred_pairs_hwc,
+        gt_pairs_hwc,
+        posenet,
+        segnet,
+        gamma=cfg.focal_gamma,
+    )
+
+    metrics = {
+        "seg_loss": seg_dist,
+        "pose_loss": pose_dist,
+        "total_loss": loss.item(),
+    }
+    return loss, metrics
 
 
 def train_phase1(
@@ -557,6 +655,7 @@ def train_phase2(
     """
     print("\n" + "=" * 70)
     print("PHASE 2: Scorer-Guided Fine-Tuning")
+    print(f"  loss_mode={cfg.loss_mode}" + (f" (gamma={cfg.focal_gamma})" if cfg.loss_mode == "focal_ste" else ""))
     print("=" * 70)
 
     # Integrated QAT: wrap model with FP4 fake quantization BEFORE training
@@ -603,6 +702,16 @@ def train_phase2(
     per_pair_loss = torch.zeros(n_pairs)
     t0 = time.time()
 
+    # SHIRAZ continuous curriculum: difficulty-weighted sampling
+    # difficulty_weights is a probability distribution over pairs. Updated every
+    # error_replay_every epochs. When hard_frame_ratio=0, falls back to uniform.
+    difficulty_weights: torch.Tensor | None = None
+    if cfg.hard_frame_ratio > 0:
+        # Initialize uniform until first replay computes real difficulties
+        difficulty_weights = torch.ones(n_pairs) / n_pairs
+        print(f"  SHIRAZ curriculum: hard_frame_ratio={cfg.hard_frame_ratio}, "
+              f"error_replay_every={cfg.error_replay_every}")
+
     # Prepare GT frames as tensors at scorer resolution
     from tac.camera import SEGNET_INPUT_H, SEGNET_INPUT_W
 
@@ -617,9 +726,29 @@ def train_phase2(
         epoch_loss = 0.0
         epoch_seg = 0.0
         epoch_pose = 0.0
+        epoch_conflicts = 0  # PCGrad conflict count
         n_batches = 0
 
-        pair_indices = torch.randperm(n_pairs, device="cpu")
+        # SHIRAZ: recompute difficulty weights periodically
+        if (difficulty_weights is not None
+                and cfg.error_replay_every > 0
+                and (epoch - start_epoch) > 0
+                and (epoch - start_epoch) % cfg.error_replay_every == 0):
+            # Use per_pair_loss EMA as difficulty signal
+            raw = per_pair_loss.clamp(min=1e-8)
+            # Blend: hard_frame_ratio of weight goes to difficulty, rest uniform
+            uniform = torch.ones_like(raw) / n_pairs
+            normed = raw / raw.sum()
+            difficulty_weights = (1.0 - cfg.hard_frame_ratio) * uniform + cfg.hard_frame_ratio * normed
+            print(f"  [Curriculum] epoch {epoch}: recomputed difficulty weights "
+                  f"(top={difficulty_weights.max():.4f}, bot={difficulty_weights.min():.4f})")
+
+        # Sample pair indices: weighted or uniform
+        if difficulty_weights is not None and cfg.hard_frame_ratio > 0:
+            # Weighted sampling without replacement for one epoch
+            pair_indices = torch.multinomial(difficulty_weights, n_pairs, replacement=False)
+        else:
+            pair_indices = torch.randperm(n_pairs, device="cpu")
 
         for batch_start in range(0, n_pairs, cfg.phase2_batch_size):
             batch_end = min(batch_start + cfg.phase2_batch_size, n_pairs)
@@ -667,6 +796,8 @@ def train_phase2(
             epoch_loss += total.item()
             epoch_seg += metrics["seg_loss"]
             epoch_pose += metrics["pose_loss"]
+            if metrics.get("pcgrad_conflict", 0.0) > 0:
+                epoch_conflicts += 1
             n_batches += 1
 
             # Track per-pair difficulty via EMA (detached)
@@ -700,11 +831,14 @@ def train_phase2(
         if (epoch - start_epoch) % cfg.log_every == 0:
             elapsed = time.time() - t0
             lr = optimizer.param_groups[0]["lr"]
+            extra = ""
+            if cfg.loss_mode == "pcgrad":
+                extra = f" | conflicts {epoch_conflicts}/{n_batches}"
             print(
                 f"  [Phase2] epoch {epoch:5d} | loss {avg_loss:.4f} | "
                 f"seg {avg_seg:.5f} | pose {avg_pose:.5f} | "
                 f"proxy ~{proxy_score:.3f} | best {best_score:.3f} | "
-                f"lr {lr:.2e} | {elapsed:.0f}s"
+                f"lr {lr:.2e} | {elapsed:.0f}s{extra}"
             )
 
         if (epoch - start_epoch) % cfg.checkpoint_every == 0 and epoch > start_epoch:
@@ -1035,6 +1169,20 @@ def parse_args() -> argparse.Namespace:
                    help="Per-pixel error magnification for Phase 2 (Quantizr: 9.0)")
     p.add_argument("--error-boost-phase3", type=float, default=1.0,
                    help="Error boost for Phase 3 (Quantizr anchor_boost: 49.0)")
+
+    # SHIRAZ loss mode
+    p.add_argument("--loss-mode", type=str, default="standard",
+                   choices=["standard", "pcgrad", "focal_ste"],
+                   help="Scorer loss function: standard (hinge/xent), pcgrad (gradient conflict), focal_ste (focal STE)")
+    p.add_argument("--focal-gamma", type=float, default=2.0,
+                   help="Focal loss gamma for loss_mode=focal_ste (higher = more focus on hard pixels)")
+
+    # SHIRAZ continuous curriculum
+    p.add_argument("--hard-frame-ratio", type=float, default=0.0,
+                   help="Difficulty-weighted sampling ratio in Phase 2 (0.0=uniform, 0.3=30%% hard bias)")
+    p.add_argument("--error-replay-every", type=int, default=0,
+                   help="Recompute difficulty weights every N epochs (0=never)")
+
     p.add_argument("--freeze-motion-phase2", action="store_true",
                    help="Freeze MotionPredictor during Phase 2 (pure SegNet optimization)")
     p.add_argument("--freeze-renderer-phase3", action="store_true",
@@ -1115,6 +1263,10 @@ def main() -> None:
         hinge_margin=args.hinge_margin,
         error_boost=args.error_boost,
         error_boost_phase3=args.error_boost_phase3,
+        loss_mode=args.loss_mode,
+        focal_gamma=args.focal_gamma,
+        hard_frame_ratio=args.hard_frame_ratio,
+        error_replay_every=args.error_replay_every,
         freeze_motion_phase2=args.freeze_motion_phase2,
         freeze_renderer_phase3=args.freeze_renderer_phase3,
         phase1_epochs=args.phase1_epochs,
@@ -1173,7 +1325,10 @@ def main() -> None:
     print("DISTILLATION TRAINING")
     print("=" * 70)
     print(f"  Device: {cfg.device}")
+    print(f"  Loss mode: {cfg.loss_mode}" + (f" (gamma={cfg.focal_gamma})" if cfg.loss_mode == "focal_ste" else ""))
     print(f"  Phases: {cfg.phase1_epochs} + {cfg.phase2_epochs} + {cfg.phase3_epochs} epochs")
+    if cfg.hard_frame_ratio > 0:
+        print(f"  Curriculum: hard_frame_ratio={cfg.hard_frame_ratio}, replay_every={cfg.error_replay_every}")
     print(f"  TTO frames: {cfg.tto_frames_path}")
     print(f"  Checkpoint: {cfg.checkpoint_path}")
     print(f"  Output: {RESULTS_DIR}")
