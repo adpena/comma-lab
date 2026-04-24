@@ -2189,9 +2189,11 @@ SHIRAZ = {
     "padding_mode": "replicate",
     "use_dilation": True,
     "eval_roundtrip": True,
-    # Loss: focal STE with PCGrad gradient surgery
-    "loss_mode": "pcgrad",          # scorer_loss_pcgrad for conflict resolution
-    "segnet_loss_mode": "hinge",    # hinge for Phase 3 hard-pair
+    # Loss: focal STE (principled per-pixel weighting, replaces error_boost)
+    # Council Fridrich dissent: "use focal_ste not focal+hinge" — adopted.
+    # focal_gamma only works with loss_mode=focal_ste, so we use that mode.
+    "loss_mode": "focal_ste",       # STE: forward=hard argmax, backward=focal CE
+    "segnet_loss_mode": "hinge",    # fallback for Phase 3 if needed
     "hinge_margin": 1.0,
     "focal_gamma": 2.0,            # focal per-pixel reweighting (Lin et al. 2017)
     "error_boost": 1.0,            # NO error_boost — focal handles hard pixels
