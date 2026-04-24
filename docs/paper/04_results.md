@@ -295,7 +295,7 @@ The combined FP4 + CRF30 mask archive reaches 215 KB, saving 0.113 rate points c
 To enable contest-compliant TTO at inflate time without loading the full scorer weights (which would require including them in the archive), we trained distilled "mini-scorer" networks:
 
 **MiniSegNet (hidden=32): PASSES — 98.7% fidelity**
-- Pixel-wise argmax agreement with full SegNet EfficientNet-B4 U-Net: 98.69%
+- Pixel-wise argmax agreement with full SegNet EfficientNet-B2 U-Net: 98.69%
 - Archive cost: 87 KB (FP16)
 - Suitable for inflate-time SegNet TTO and constrained generation
 - Below threshold at hidden=16 (97.04%)

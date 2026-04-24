@@ -14,7 +14,7 @@ The comma four uses a newer Snapdragon SoC with the same camera configuration. B
 
 Two perception networks are relevant to the challenge and to production:
 
-- **SegNet** (EfficientNet-B4 U-Net, ~13M parameters): semantic segmentation into 6 road-scene classes (road, lane markings, undrivable, movable, ego car, sky). Trained on comma10k, a 10,000-image subset of fleet data. No backup sensor provides equivalent information --- if compression degrades SegNet input, scene understanding degrades with no fallback.
+- **SegNet** (EfficientNet-B2 U-Net, ~13M parameters): semantic segmentation into 6 road-scene classes (road, lane markings, undrivable, movable, ego car, sky). Trained on comma10k, a 10,000-image subset of fleet data. No backup sensor provides equivalent information --- if compression degrades SegNet input, scene understanding degrades with no fallback.
 
 - **PoseNet** (convolutional, ~2M parameters): estimates 6-DOF ego-motion from consecutive YUV frame pairs. The driving stack fuses PoseNet output with IMU and wheel odometry through a Kalman filter. PoseNet is therefore partially redundant: degraded PoseNet input causes accuracy loss but not total failure, because the filter can rely on inertial sensors.
 
@@ -166,7 +166,7 @@ The renderer's 287K parameters make it small enough for mobile deployment (150 K
 
 ### Generalization to other cameras and models
 
-The renderer is trained against specific scorer architectures (EfficientNet-B4 SegNet, convolutional PoseNet) processing specific input from a specific camera (AR0231AT at 1164x874). Changing any of these --- different camera intrinsics, different model architectures, different training data --- requires re-training. The framework transfers (the training procedure, TTO, mask representation), but the weights do not.
+The renderer is trained against specific scorer architectures (EfficientNet-B2 SegNet, convolutional PoseNet) processing specific input from a specific camera (AR0231AT at 1164x874). Changing any of these --- different camera intrinsics, different model architectures, different training data --- requires re-training. The framework transfers (the training procedure, TTO, mask representation), but the weights do not.
 
 comma.ai updates their perception models periodically. Each model update would require re-training the renderer. This is a maintenance cost, though a modest one: renderer training takes 2 hours on a 4090 and is fully automated.
 

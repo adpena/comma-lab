@@ -64,7 +64,7 @@ This is computable at compress time and directly measures how much inter-frame m
 
 ## 3. What Makes a Pair Hard for SegNet
 
-SegNet is an EfficientNet-B4 U-Net that predicts 5-class segmentation at 384x512. Distortion is argmax disagreement:
+SegNet is an EfficientNet-B2 U-Net (`smp.Unet('tu-efficientnet_b2', classes=5)`) that predicts 5-class segmentation at 384x512. Distortion is argmax disagreement:
 
 $$d_\text{seg}^{(k)} = \frac{1}{HW}\sum_{i,j}\mathbb{1}\left[\arg\max_c s_c^{(k)}(i,j;\text{comp}) \neq \arg\max_c s_c^{(k)}(i,j;\text{GT})\right]$$
 
