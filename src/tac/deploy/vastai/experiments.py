@@ -45,7 +45,7 @@ EXPERIMENTS: dict[str, ExperimentConfig] = {
             "--checkpoint renderer_best.pt --device cuda --n-frames 1200 "
             "--tto-steps 500 --tto-lr 0.005 --batch-pairs 10 "
             "--seg-weight 100 --pose-weight 10 --compress-weight 0.5 "
-            "--simulate-resize"
+            "--eval-roundtrip"
         ),
         needs_checkpoint="renderer_best.pt",
         timeout_hours=2,
@@ -57,7 +57,7 @@ EXPERIMENTS: dict[str, ExperimentConfig] = {
             "--checkpoint renderer_best.pt --device cuda --n-frames 1200 "
             "--tto-steps 500 --tto-lr 0.005 --batch-pairs 10 "
             "--seg-weight 100 --pose-weight 10 --compress-weight 0.5 "
-            "--seg-odd-only --simulate-resize"
+            "--seg-odd-only --eval-roundtrip"
         ),
         needs_checkpoint="renderer_best.pt",
         timeout_hours=2,
@@ -99,7 +99,7 @@ EXPERIMENTS: dict[str, ExperimentConfig] = {
             "--tto-steps 500 --tto-lr 0.005 --batch-pairs 10 "
             "--seg-weight 100 --pose-weight 10 --compress-weight 0.5 "
             "--use-embedding-loss --seg-odd-only --early-stop-patience 150 "
-            "--simulate-resize"
+            "--eval-roundtrip"
         ),
         needs_checkpoint="renderer_best.pt",
         timeout_hours=3,
@@ -148,12 +148,12 @@ EXPERIMENTS: dict[str, ExperimentConfig] = {
             "--tto-steps 1000 --tto-lr 0.005 --batch-pairs 10 "
             "--seg-weight 1 --pose-weight 100 --compress-weight 0.01 "
             "--seg-odd-only --early-stop-patience 300 "
-            "--simulate-resize"
+            "--eval-roundtrip"
         ),
         needs_checkpoint="renderer_best.pt",
         timeout_hours=6,
     ),
-    # ── v6 config: ALL improvements (hinge + phase2 + embedding + simulate_resize) ──
+    # ── v6 config: ALL improvements (hinge + phase2 + embedding + eval_roundtrip) ──
     "tto_v6_hinge_phase2": _exp(
         name="tto_v6_hinge_phase2",
         script="experiments/renderer_tto.py",
@@ -162,7 +162,7 @@ EXPERIMENTS: dict[str, ExperimentConfig] = {
             "--tto-steps 150 --tto-lr 0.005 --batch-pairs 10 "
             "--seg-weight 100 --pose-weight 10 --compress-weight 0.5 "
             "--use-embedding-loss --seg-odd-only --early-stop-patience 100 "
-            "--simulate-resize "
+            "--eval-roundtrip "
             "--segnet-loss-mode hinge --hinge-margin 0.5 "
             "--tto-phase2-segnet-only --phase2-steps 200"
         ),
@@ -179,7 +179,7 @@ EXPERIMENTS: dict[str, ExperimentConfig] = {
         timeout_hours=1,
     ),
     # ── v7 TTO: hinge + eval roundtrip + FiLM (when FiLM conditioning is available) ──
-    # Adds --simulate-resize and eval-roundtrip to hinge baseline from v6.
+    # Adds --eval-roundtrip to hinge baseline from v6.
     # FiLM pose conditioning gated: enable once FiLM arch lands in inflate_renderer.py.
     "tto_v7_hinge_roundtrip": _exp(
         name="tto_v7_hinge_roundtrip",
@@ -189,7 +189,7 @@ EXPERIMENTS: dict[str, ExperimentConfig] = {
             "--tto-steps 500 --tto-lr 0.005 --batch-pairs 10 "
             "--seg-weight 100 --pose-weight 10 --compress-weight 0.5 "
             "--use-embedding-loss --seg-odd-only --early-stop-patience 500 "
-            "--simulate-resize --eval-roundtrip "
+            "--eval-roundtrip --eval-roundtrip "
             "--segnet-loss-mode hinge --hinge-margin 0.5"
         ),
         needs_checkpoint="renderer_best.pt",
@@ -204,7 +204,7 @@ EXPERIMENTS: dict[str, ExperimentConfig] = {
             "--tto-steps 500 --tto-lr 0.005 --batch-pairs 10 "
             "--seg-weight 100 --pose-weight 10 --compress-weight 0.5 "
             "--use-embedding-loss --seg-odd-only --early-stop-patience 500 "
-            "--simulate-resize --eval-roundtrip "
+            "--eval-roundtrip --eval-roundtrip "
             "--segnet-loss-mode hinge --hinge-margin 0.5 "
             "--use-null-space --null-space-step 0.5 --null-space-every 5"
         ),

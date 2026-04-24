@@ -159,10 +159,11 @@ class TrainConfig(BaseModel):
         "This has caused EVERY wasted training run in this project.",
     )
     roundtrip_noise_std: float = Field(
-        0.0,
+        0.5,
         ge=0.0,
         description="Gaussian noise std after STE quantization in roundtrip. "
-        "0.5 = Hotz fix for proxy-auth drift. 0.0 = no noise.",
+        "0.5 = Hotz fix for proxy-auth drift. 0.0 = no noise. "
+        "Default 0.5 — matches train_distill.py and all other training scripts.",
     )
 
     # Yousfi council tricks

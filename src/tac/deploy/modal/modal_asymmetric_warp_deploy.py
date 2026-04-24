@@ -1851,7 +1851,7 @@ def tto_eval(
         "--early-stop-patience", str(early_stop_patience),
         "--upstream", "/root/upstream",
         "--output-dir", output_dir,
-        "--simulate-resize",
+        "--eval-roundtrip",
     ]
     if use_embedding_loss:
         cmd.append("--use-embedding-loss")
@@ -2093,7 +2093,7 @@ def gt_sparse_tto_eval(
         "--perturbation-budget", str(perturbation_budget),
         "--upstream", "/root/upstream",
         "--output-dir", output_dir,
-        "--simulate-resize",
+        "--eval-roundtrip",
     ]
     if sensitivity_map_path:
         cmd.extend(["--sensitivity-map", sensitivity_map_path])

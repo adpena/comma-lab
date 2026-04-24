@@ -279,7 +279,7 @@ def compute_proxy_score(
     device: torch.device,
     rate: float = 0.0,
     batch_size: int = 16,
-    simulate_resize: bool = True,
+    eval_roundtrip: bool = True,
 ) -> dict:
     """Compute proxy score matching the official scorer formula.
 
@@ -294,7 +294,7 @@ def compute_proxy_score(
         device: computation device.
         rate: rate term (archive_size / uncompressed_size).
         batch_size: pairs per forward pass.
-        simulate_resize: if True, simulates the official scorer's
+        eval_roundtrip: if True, simulates the official scorer's
             resolution round-trip (384->874->384) for more faithful proxy.
 
     Returns:
@@ -341,7 +341,7 @@ def compute_proxy_score(
 
         cand_chw = cand_chw.round().clamp(0, 255)
 
-        if simulate_resize:
+        if eval_roundtrip:
             flat = cand_chw.reshape(-1, *cand_chw.shape[2:])
             flat = F.interpolate(
                 flat, size=(CAMERA_H, CAMERA_W),

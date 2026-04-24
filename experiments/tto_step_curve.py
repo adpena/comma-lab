@@ -98,7 +98,7 @@ def parse_args() -> argparse.Namespace:
     p.add_argument("--seg-odd-only", action=argparse.BooleanOptionalAction,
                    default=True,
                    help="SegNet loss on odd frames only (v5b default: enabled)")
-    p.add_argument("--simulate-resize", action="store_true",
+    p.add_argument("--eval-roundtrip", action="store_true",
                    help="Simulate scorer resolution round-trip in proxy scoring")
     p.add_argument("--lr-schedule", type=str, default="constant",
                    choices=["constant", "cosine"],
@@ -126,7 +126,7 @@ def compute_pair_distortions(
     device: torch.device,
     pair_start: int,
     n_pairs: int,
-    simulate_resize: bool = True,
+    eval_roundtrip: bool = True,
 ) -> dict[str, float]:
     """Compute PoseNet and SegNet distortions for a subset of pairs.
 
@@ -141,7 +141,7 @@ def compute_pair_distortions(
         device: computation device.
         pair_start: first pair index in the subset.
         n_pairs: number of pairs to evaluate.
-        simulate_resize: simulate official scorer resolution pipeline.
+        eval_roundtrip: simulate official scorer resolution pipeline.
 
     Returns:
         Dict with 'posenet', 'segnet', 'score' keys.
@@ -156,7 +156,7 @@ def compute_pair_distortions(
 
     result = compute_proxy_score(
         subset_frames, subset_gt, posenet, segnet, device,
-        simulate_resize=simulate_resize,
+        eval_roundtrip=eval_roundtrip,
     )
     return {
         "posenet": result["pose"],
@@ -186,7 +186,7 @@ def run_single_step_count(
     compress_weight: float,
     use_embedding_loss: bool,
     seg_odd_only: bool,
-    simulate_resize: bool,
+    eval_roundtrip: bool,
     lr_schedule: str = "constant",
     segnet_loss_mode: str = "xent",
     hinge_margin: float = 0.5,
@@ -218,7 +218,7 @@ def run_single_step_count(
         compress_weight: compressibility weight.
         use_embedding_loss: use embedding MSE.
         seg_odd_only: SegNet on odd frames only.
-        simulate_resize: simulate scorer resolution pipeline.
+        eval_roundtrip: simulate scorer resolution pipeline.
         lr_schedule: LR schedule ('constant' or 'cosine').
         segnet_loss_mode: SegNet loss function (``"xent"`` or ``"hinge"``).
         hinge_margin: margin for hinge loss.
@@ -303,7 +303,7 @@ def run_single_step_count(
     distortions = compute_pair_distortions(
         refined, gt_slice, posenet, segnet, device,
         pair_start=0, n_pairs=n_pairs,
-        simulate_resize=simulate_resize,
+        eval_roundtrip=eval_roundtrip,
     )
     distortions["elapsed_s"] = round(elapsed, 2)
     distortions["steps"] = step_count
@@ -436,7 +436,7 @@ def main() -> None:
     baseline = compute_pair_distortions(
         renderer_frames, gt_frames, posenet, segnet, device,
         pair_start=args.pair_start, n_pairs=args.n_pairs,
-        simulate_resize=args.simulate_resize,
+        eval_roundtrip=args.eval_roundtrip,
     )
     baseline["elapsed_s"] = 0.0
     baseline["steps"] = 0
@@ -471,7 +471,7 @@ def main() -> None:
             compress_weight=args.compress_weight,
             use_embedding_loss=args.use_embedding_loss,
             seg_odd_only=args.seg_odd_only,
-            simulate_resize=args.simulate_resize,
+            eval_roundtrip=args.eval_roundtrip,
             lr_schedule=args.lr_schedule,
             segnet_loss_mode=args.segnet_loss_mode,
             hinge_margin=args.hinge_margin,
@@ -537,7 +537,7 @@ def _save_results(
             "compress_weight": args.compress_weight,
             "use_embedding_loss": args.use_embedding_loss,
             "seg_odd_only": args.seg_odd_only,
-            "simulate_resize": args.simulate_resize,
+            "eval_roundtrip": args.eval_roundtrip,
             "segnet_loss_mode": args.segnet_loss_mode,
             "hinge_margin": args.hinge_margin,
             "use_null_space": args.use_null_space,

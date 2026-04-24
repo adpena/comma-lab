@@ -82,7 +82,7 @@ def parse_args() -> argparse.Namespace:
     p.add_argument("--sensitivity-map", type=str, default=None,
                    help="Path to precomputed sensitivity_map.pt (skips recomputation)")
     p.add_argument("--smoke", action="store_true", help="Smoke test: 20 frames, 2 restarts, 20 steps")
-    p.add_argument("--simulate-resize", action="store_true",
+    p.add_argument("--eval-roundtrip", action="store_true",
                    help="Simulate official scorer resolution round-trip in proxy scoring")
     return p.parse_args()
 
@@ -521,7 +521,7 @@ def main():
     gt_frames_tensor = torch.stack(gt_frames).float()
     gt_baseline = compute_proxy_score(
         gt_frames_tensor, gt_frames, posenet, segnet, device,
-        simulate_resize=args.simulate_resize,
+        eval_roundtrip=args.eval_roundtrip,
     )
     print(f"[baseline] GT score={gt_baseline['score']:.6f} | "
           f"seg={gt_baseline['seg']:.6f} | pose={gt_baseline['pose']:.6f}")
@@ -589,7 +589,7 @@ def main():
     print("\n[eval] Computing proxy score on optimized frames...")
     optimized_result = compute_proxy_score(
         all_optimized, gt_frames, posenet, segnet, device,
-        simulate_resize=args.simulate_resize,
+        eval_roundtrip=args.eval_roundtrip,
     )
 
     t_total = time.monotonic() - t_total_start

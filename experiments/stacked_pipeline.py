@@ -66,7 +66,7 @@ def parse_args() -> argparse.Namespace:
     p.add_argument("--sensitivity-map", type=str, default=None,
                    help="Precomputed sensitivity map for TTO")
 
-    p.add_argument("--simulate-resize", action="store_true",
+    p.add_argument("--eval-roundtrip", action="store_true",
                    help="Simulate official scorer resolution round-trip")
     p.add_argument("--smoke", action="store_true", help="Smoke test")
     return p.parse_args()
@@ -167,7 +167,7 @@ def main():
     # GT baseline
     gt_tensor = torch.stack(gt_frames).float()
     gt_score = compute_proxy_score(gt_tensor, gt_frames, posenet, segnet, device,
-                                   simulate_resize=args.simulate_resize)
+                                   eval_roundtrip=args.eval_roundtrip)
     stage_results["gt_baseline"] = gt_score
     print(f"[GT baseline] score={gt_score['score']:.6f}")
 
@@ -241,7 +241,7 @@ def main():
 
     # Score after stage 1
     s1_score = compute_proxy_score(current_frames, gt_frames, posenet, segnet, device,
-                                   simulate_resize=args.simulate_resize)
+                                   eval_roundtrip=args.eval_roundtrip)
     stage_results["after_tto"] = s1_score
     print(f"[stage 1] score={s1_score['score']:.6f} | "
           f"pose={s1_score['pose']:.6f} | seg={s1_score['seg']:.6f}")
@@ -258,7 +258,7 @@ def main():
         print(f"[stage 2] Post-filter done in {dt:.1f}s")
 
         s2_score = compute_proxy_score(current_frames, gt_frames, posenet, segnet, device,
-                                       simulate_resize=args.simulate_resize)
+                                       eval_roundtrip=args.eval_roundtrip)
         stage_results["after_postfilter"] = s2_score
         print(f"[stage 2] score={s2_score['score']:.6f} | "
               f"pose={s2_score['pose']:.6f} | seg={s2_score['seg']:.6f}")
@@ -293,7 +293,7 @@ def main():
             "tto_restarts": args.tto_restarts,
             "tto_steps": args.tto_steps,
             "skip_postfilter": args.skip_postfilter,
-            "simulate_resize": args.simulate_resize,
+            "eval_roundtrip": args.eval_roundtrip,
         },
         "timing": {"total_s": round(t_total, 2)},
     }

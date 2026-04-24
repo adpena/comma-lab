@@ -54,7 +54,7 @@ def parse_args() -> argparse.Namespace:
     p.add_argument("--blend-alpha", type=float, default=0.0,
                    help="Blend factor with GT: result = (1-alpha)*warped + alpha*gt. "
                         "0.0 = pure warp, 1.0 = pure GT.")
-    p.add_argument("--simulate-resize", action="store_true",
+    p.add_argument("--eval-roundtrip", action="store_true",
                    help="Simulate official scorer resolution round-trip")
     return p.parse_args()
 
@@ -250,13 +250,13 @@ def main():
     # GT baseline
     gt_tensor = torch.stack(gt_frames).float()
     gt_score = compute_proxy_score(gt_tensor, gt_frames, posenet, segnet, device,
-                                   simulate_resize=args.simulate_resize)
+                                   eval_roundtrip=args.eval_roundtrip)
     print(f"[GT baseline] score={gt_score['score']:.6f} | "
           f"pose={gt_score['pose']:.6f} | seg={gt_score['seg']:.6f}")
 
     # Warped score
     warped_score = compute_proxy_score(warped_frames, gt_frames, posenet, segnet, device,
-                                       simulate_resize=args.simulate_resize)
+                                       eval_roundtrip=args.eval_roundtrip)
 
     t_total = time.monotonic() - t_total_start
 

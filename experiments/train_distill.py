@@ -941,7 +941,7 @@ def run_proxy_eval(
     result = compute_proxy_score(
         frames_tensor, gt_frames[:n_frames],
         posenet, segnet, device,
-        rate=0.0, simulate_resize=True,
+        rate=0.0, eval_roundtrip=True,
     )
     model.train()
     return result

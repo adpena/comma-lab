@@ -62,7 +62,7 @@ def parse_args() -> argparse.Namespace:
     p.add_argument("--output-dir", type=str, default=None, help="Output directory (default: timestamped)")
     p.add_argument("--video", type=str, default=None, help="Path to GT video (default: upstream/videos/0.mkv)")
     p.add_argument("--smoke", action="store_true", help="Smoke test: 20 frames, 50 steps")
-    p.add_argument("--simulate-resize", action="store_true",
+    p.add_argument("--eval-roundtrip", action="store_true",
                    help="Simulate official scorer's resolution round-trip (384→874→384) in proxy scoring. "
                         "Makes proxy score more faithful to auth eval at the cost of slight pessimism.")
     p.add_argument("--early-stop-patience", type=int, default=150,
@@ -582,7 +582,7 @@ def main():
     # ── Baseline proxy score (renderer only, no TTO) ─────────────────────
     print("\n[...] Computing baseline proxy score (renderer only)...")
     baseline = compute_proxy_score(renderer_frames, gt_frames, posenet, segnet, device,
-                                   simulate_resize=args.simulate_resize)
+                                   eval_roundtrip=args.eval_roundtrip)
     print(f"[baseline] score={baseline['score']:.4f} | "
           f"seg={baseline['seg']:.6f} ({baseline['seg_contribution']:.4f}) | "
           f"pose={baseline['pose']:.6f} ({baseline['pose_contribution']:.4f}) | "
@@ -638,7 +638,7 @@ def main():
     # ── Step 8: Compute proxy score on TTO-refined frames ────────────────
     print("\n[8/8] Computing TTO proxy score...")
     tto_result = compute_proxy_score(tto_frames, gt_frames, posenet, segnet, device,
-                                     simulate_resize=args.simulate_resize)
+                                     eval_roundtrip=args.eval_roundtrip)
 
     t_total = time.monotonic() - t_total_start
 
@@ -700,7 +700,7 @@ def main():
             "hinge_margin": args.hinge_margin,
             "phase2_segnet_only": args.tto_phase2_segnet_only,
             "phase2_steps": args.phase2_steps,
-            "simulate_resize": args.simulate_resize,
+            "eval_roundtrip": args.eval_roundtrip,
             "use_null_space": args.use_null_space,
             "null_space_step": args.null_space_step,
             "null_space_every": args.null_space_every,
