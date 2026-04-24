@@ -297,7 +297,7 @@ def optimize_poses_batch(
 
     # Initialize conditioning vector: [pose (warm start) | latent (zeros)]
     conditioning = torch.zeros(B, cond_dim, device=device, dtype=torch.float32)
-    conditioning[:, :pose_dim] = init_poses.to(device)
+    conditioning[:, :pose_dim] = init_poses[:B].to(device)
     conditioning.requires_grad_(True)
 
     optimizer = torch.optim.Adam([conditioning], lr=lr)
