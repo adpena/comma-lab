@@ -2015,7 +2015,13 @@ NETWORK_CODEC_FULL = {
 
 # ── Wilde: compact renderer matched to Quantizr's 88K / 64KB FP4 ────────
 # Compact renderer: minimal params, maximum scorer fidelity.
-# For use with train_distill.py on Vast.ai 4090.
+# Reference config for train_distill.py — translate fields to CLI args:
+#   --base-ch 16 --mid-ch 24 --depth 1 --pose-dim 6 --use-dsconv
+#   --segnet-loss-mode hinge --hinge-margin 0.5 --error-boost 9.0
+#   --pose-weight 10.0 --seg-weight 100.0 --pixel-weight 0.1
+#   --ema-decay 0.997 --eval-roundtrip
+#   --phase1-epochs 800 --phase2-epochs 1200 --phase3-epochs 400
+# NOTE: motion_hidden=16 requires adding --motion-hidden to train_distill.py
 WILDE = {
     "experiment_type": "renderer_training",
     "base_ch": 16,

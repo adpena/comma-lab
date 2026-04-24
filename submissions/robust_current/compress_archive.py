@@ -270,35 +270,36 @@ def main() -> int:
             print("Step 2: Using .pt poses (no binary conversion)", file=sys.stderr)
             final_poses_pt = poses_path
 
-        # Step 3: Brotli compression (if requested)
-        final_renderer = renderer_bin
-        if args.brotli:
-            print("Step 3: Brotli-compressing renderer.bin ...", file=sys.stderr)
-            final_renderer = _brotli_compress(renderer_bin, tmpdir_path)
-        else:
-            print("Step 3: Using renderer.bin as-is (no Brotli)", file=sys.stderr)
-
-        # Step 4: Select manifest based on options
+        # Step 3: Select manifest based on options
         if args.binary_poses:
             manifest = RENDERER_COMPACT_MANIFEST
         else:
             manifest = RENDERER_SUBMISSION_MANIFEST
+
+        use_brotli = bool(args.brotli)
+        if use_brotli:
+            print("Step 3: Brotli compression ENABLED (applied by archive builder)", file=sys.stderr)
+        else:
+            print("Step 3: Brotli compression disabled", file=sys.stderr)
+
         print(
             f"\nStep 4: Building archive with manifest: "
-            f"{manifest.required_files()}",
+            f"{manifest.required_files()}"
+            f"{' + Brotli' if use_brotli else ''}",
             file=sys.stderr,
         )
 
-        # Step 5: Build and validate
+        # Step 5: Build and validate (Brotli handled inside build_submission_archive)
         t0 = time.monotonic()
         result = build_submission_archive(
             output_path=output_path,
-            renderer_bin=final_renderer,
+            renderer_bin=renderer_bin,
             masks_mkv=final_masks,
             optimized_poses_pt=final_poses_pt,
             optimized_poses_bin=final_poses_bin,
             manifest=manifest,
             validate=True,
+            use_brotli=use_brotli,
         )
         elapsed = time.monotonic() - t0
 

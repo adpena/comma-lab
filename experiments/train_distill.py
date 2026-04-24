@@ -976,6 +976,8 @@ def parse_args() -> argparse.Namespace:
     p.add_argument("--depth", type=int, default=1)
     p.add_argument("--use-dsconv", action="store_true",
                    help="Use depthwise-separable convolutions (fewer params, wider channels)")
+    p.add_argument("--motion-hidden", type=int, default=32,
+                   help="MotionPredictor hidden channels (wilde: 16, default: 32)")
 
     # Training
     p.add_argument("--device", type=str, default="cuda", choices=["cuda", "mps", "cpu"])
@@ -1054,6 +1056,7 @@ def main() -> None:
         mid_ch=args.mid_ch,
         depth=args.depth,
         use_dsconv=args.use_dsconv,
+        motion_hidden=args.motion_hidden,
         eval_roundtrip=args.eval_roundtrip and not args.no_eval_roundtrip,
         segnet_loss_mode=args.segnet_loss_mode,
         hinge_margin=args.hinge_margin,

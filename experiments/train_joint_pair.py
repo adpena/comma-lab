@@ -777,6 +777,15 @@ def train_joint_pair(cfg: JointPairConfig) -> dict[str, Any]:
                     F.mse_loss(gen_t, gt_t) + F.mse_loss(gen_t1, gt_t1)
                 ) / 2.0
 
+            # eval_roundtrip: simulate contest eval resize chain before scorer losses
+            if eval_roundtrip:
+                from tac.renderer import simulate_eval_roundtrip
+                from tac.camera import CAMERA_H, CAMERA_W
+                gen_t = simulate_eval_roundtrip(gen_t, target_h=CAMERA_H, target_w=CAMERA_W, noise_std=0.5)
+                gen_t1 = simulate_eval_roundtrip(gen_t1, target_h=CAMERA_H, target_w=CAMERA_W, noise_std=0.5)
+                gt_t = simulate_eval_roundtrip(gt_t, target_h=CAMERA_H, target_w=CAMERA_W, noise_std=0.0)
+                gt_t1 = simulate_eval_roundtrip(gt_t1, target_h=CAMERA_H, target_w=CAMERA_W, noise_std=0.0)
+
             # Loss 2: SegNet cross-entropy (last frame only — matches official
             # scorer's x[:, -1, ...] behavior)
             loss_seg = torch.tensor(0.0, device=device)
@@ -1024,6 +1033,7 @@ def train_joint_pair(cfg: JointPairConfig) -> dict[str, Any]:
 @click.option("--pose-targets", default=None, type=str, help="Path to posenet_targets.bin")
 @click.option("--resume", default=None, type=str, help="Resume from checkpoint path")
 @click.option("--max-hours", default=48.0, type=float, help="Wall-clock budget in hours")
+@click.option("--eval-roundtrip/--no-eval-roundtrip", default=True, help="Simulate contest eval resize chain (default: on)")
 @click.option("--smoke", is_flag=True, help="Smoke test: 10 epochs, 20 frames")
 def main(
     epochs: int,
@@ -1042,6 +1052,7 @@ def main(
     pose_targets: str | None,
     resume: str | None,
     max_hours: float,
+    eval_roundtrip: bool,
     smoke: bool,
 ):
     """Train the JointPairGenerator: mask pairs -> frame pairs."""
