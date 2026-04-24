@@ -346,6 +346,7 @@ def compute_segnet_constraint_loss(
     loss_mode: str = "xent",
     hinge_margin: float = 0.5,
     per_class_weights: torch.Tensor | None = None,
+    error_boost: float = 1.0,
 ) -> torch.Tensor:
     """Compute SegNet constraint loss forcing argmax to match target masks.
 
@@ -387,6 +388,10 @@ def compute_segnet_constraint_loss(
             :func:`compute_segnet_class_weights` or pass manually (e.g.,
             ``[1.0, 15.0, 1.5, 3.0, 7.0]``). Only affects ``"hinge"`` mode.
             Default None (uniform weighting, backward compatible).
+        error_boost: per-pixel error magnification factor (Quantizr technique).
+            Pixels with higher error get quadratically more gradient weight.
+            1.0 = no boost (default), 9.0 = Quantizr anchor, 49.0 = extreme.
+            Applied to both hinge and xent modes.
 
     Returns:
         Scalar loss (mean over all frames and pixels).
@@ -459,16 +464,33 @@ def compute_segnet_constraint_loss(
                 hinge_margin - (target_logits - max_wrong),
             ).squeeze(1)  # (B, H_out, W_out)
 
+            # error_boost: per-pixel weight proportional to error magnitude.
+            # Quantizr uses 9x in anchor, 49x in anchor_boost. Focuses gradient
+            # on the hardest pixels, not just boundary pixels.
+            # boost_weight = 1 + (error_boost - 1) * normalized_error²
+            if error_boost > 1.0:
+                with torch.no_grad():
+                    error_magnitude = hinge_per_pixel / (hinge_per_pixel.mean() + 1e-8)
+                    boost_weights = 1.0 + (error_boost - 1.0) * error_magnitude.pow(2)
+                hinge_per_pixel = hinge_per_pixel * boost_weights
+
             if per_class_weights is not None:
-                # Weight by inverse class frequency: rare classes (lanes, vehicles)
-                # get higher weight, focusing gradient on driving-critical pixels.
                 per_class_weights = per_class_weights.to(device)
                 pixel_weights = per_class_weights[target]  # (B, H_out, W_out)
                 batch_loss = (hinge_per_pixel * pixel_weights).mean()
             else:
                 batch_loss = hinge_per_pixel.mean()
         else:
-            batch_loss = F.cross_entropy(logits, masks_resized)
+            # xent mode: error_boost via focal-style weighting
+            if error_boost > 1.0:
+                log_probs = F.log_softmax(logits, dim=1)
+                nll = F.nll_loss(log_probs, masks_resized, reduction='none')
+                with torch.no_grad():
+                    error_magnitude = nll / (nll.mean() + 1e-8)
+                    boost_weights = 1.0 + (error_boost - 1.0) * error_magnitude.pow(2)
+                batch_loss = (nll * boost_weights).mean()
+            else:
+                batch_loss = F.cross_entropy(logits, masks_resized)
 
         total_loss = total_loss + batch_loss
         n_batches += 1

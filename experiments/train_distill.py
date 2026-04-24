@@ -109,6 +109,7 @@ class DistillConfig:
     phase2_seg_weight: float = 100.0
     segnet_loss_mode: str = "hinge"  # "hinge" or "xent"
     hinge_margin: float = 0.5
+    error_boost: float = 1.0  # Quantizr: 9.0 in anchor, 49.0 in anchor_boost
 
     # Phase 3: hard-pair fine-tuning
     phase3_epochs: int = 2000
@@ -358,6 +359,7 @@ def compute_scorer_loss(
         batch_size=B * 2,
         loss_mode=cfg.segnet_loss_mode,
         hinge_margin=cfg.hinge_margin,
+        error_boost=cfg.error_boost,
     )
 
     # PoseNet loss: pairs format (B, 2, C, H, W)
@@ -982,6 +984,8 @@ def parse_args() -> argparse.Namespace:
     p.add_argument("--no-eval-roundtrip", action="store_true")
     p.add_argument("--segnet-loss-mode", type=str, default="hinge", choices=["hinge", "xent"])
     p.add_argument("--hinge-margin", type=float, default=0.5)
+    p.add_argument("--error-boost", type=float, default=1.0,
+                   help="Per-pixel error magnification (Quantizr: 9.0 anchor, 49.0 boost)")
 
     # Integrated QAT
     p.add_argument("--no-ema", action="store_true",
@@ -1053,6 +1057,7 @@ def main() -> None:
         eval_roundtrip=args.eval_roundtrip and not args.no_eval_roundtrip,
         segnet_loss_mode=args.segnet_loss_mode,
         hinge_margin=args.hinge_margin,
+        error_boost=args.error_boost,
         phase1_epochs=args.phase1_epochs,
         phase2_epochs=args.phase2_epochs,
         phase3_epochs=args.phase3_epochs,

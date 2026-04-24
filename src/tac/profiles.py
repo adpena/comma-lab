@@ -2028,6 +2028,7 @@ WILDE = {
     "eval_roundtrip": True,
     "segnet_loss_mode": "hinge",
     "hinge_margin": 0.5,
+    "error_boost": 9.0,  # Quantizr anchor: 9x per-pixel error magnification
     "pose_weight": 10.0,
     "seg_weight": 100.0,
     "pixel_weight": 0.1,
