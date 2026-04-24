@@ -84,6 +84,8 @@ class DistillConfig:
     max_flow_px: float = 20.0
     max_residual: float = 20.0
     use_dsconv: bool = False  # Depthwise-separable convolutions (fewer params, wider channels)
+    padding_mode: str = "replicate"  # Yousfi: zeros creates boundary artifacts
+    use_dilation: bool = False  # Dilated ResBlocks [1,2,4] cascade (3x receptive field, 0 extra params)
 
     # Data paths
     tto_frames_path: str = "experiments/results/tto_v7_hinge_500/tto_frames.pt"
@@ -249,10 +251,13 @@ def create_model(cfg: DistillConfig, device: torch.device) -> nn.Module:
         max_residual=cfg.max_residual,
         pose_dim=cfg.pose_dim,
         use_dsconv=cfg.use_dsconv,
+        padding_mode=cfg.padding_mode,
+        use_dilation=cfg.use_dilation,
     )
     model = model.to(device)
     n_params = sum(p.numel() for p in model.parameters())
-    print(f"  Model created: {n_params:,} parameters")
+    print(f"  Model created: {n_params:,} parameters "
+          f"(padding={cfg.padding_mode}, dilation={cfg.use_dilation})")
     return model
 
 
@@ -978,6 +983,11 @@ def parse_args() -> argparse.Namespace:
                    help="Use depthwise-separable convolutions (fewer params, wider channels)")
     p.add_argument("--motion-hidden", type=int, default=32,
                    help="MotionPredictor hidden channels (wilde: 16, default: 32)")
+    p.add_argument("--padding-mode", type=str, default="replicate",
+                   choices=["zeros", "reflect", "replicate", "circular"],
+                   help="Conv padding mode (Yousfi: zeros creates boundary artifacts)")
+    p.add_argument("--use-dilation", action="store_true",
+                   help="Dilated ResBlocks [1,2,4] cascade (3x receptive field, 0 extra params)")
 
     # Training
     p.add_argument("--device", type=str, default="cuda", choices=["cuda", "mps", "cpu"])
@@ -1057,6 +1067,8 @@ def main() -> None:
         depth=args.depth,
         use_dsconv=args.use_dsconv,
         motion_hidden=args.motion_hidden,
+        padding_mode=args.padding_mode,
+        use_dilation=args.use_dilation,
         eval_roundtrip=args.eval_roundtrip and not args.no_eval_roundtrip,
         segnet_loss_mode=args.segnet_loss_mode,
         hinge_margin=args.hinge_margin,

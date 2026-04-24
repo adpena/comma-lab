@@ -51,7 +51,7 @@ def _make_conv(
         return nn.Conv2d(c_in, c_out, kernel, **kwargs)
 
     # Extract kwargs for the depthwise conv (no bias) vs pointwise (has bias)
-    dw_kwargs = {k: v for k, v in kwargs.items() if k in ("stride", "padding")}
+    dw_kwargs = {k: v for k, v in kwargs.items() if k in ("stride", "padding", "padding_mode")}
     pw_bias = kwargs.get("bias", True)
     return nn.Sequential(
         nn.Conv2d(c_in, c_in, kernel, groups=c_in, bias=False, **dw_kwargs),
@@ -105,9 +105,10 @@ class ResBlock(nn.Module):
     When num_classes == 0, uses plain GroupNorm (backward-compatible).
     """
 
-    def __init__(self, channels: int, kernel: int = 3, num_classes: int = 5):
+    def __init__(self, channels: int, kernel: int = 3, num_classes: int = 5,
+                 padding_mode: str = "zeros", dilation: int = 1):
         super().__init__()
-        pad = kernel // 2
+        pad = (kernel // 2) * dilation  # scale padding with dilation to preserve spatial dims
         self.use_clade = num_classes > 0
         if self.use_clade:
             self.norm1 = CLADENorm(channels, num_classes)
@@ -115,8 +116,10 @@ class ResBlock(nn.Module):
         else:
             self.norm1 = nn.GroupNorm(1, channels)
             self.norm2 = nn.GroupNorm(1, channels)
-        self.conv1 = nn.Conv2d(channels, channels, kernel, padding=pad, bias=False)
-        self.conv2 = nn.Conv2d(channels, channels, kernel, padding=pad, bias=False)
+        self.conv1 = nn.Conv2d(channels, channels, kernel, padding=pad, bias=False,
+                               padding_mode=padding_mode, dilation=dilation)
+        self.conv2 = nn.Conv2d(channels, channels, kernel, padding=pad, bias=False,
+                               padding_mode=padding_mode, dilation=dilation)
         self.act = nn.ReLU(inplace=True)
         # Zero-init second conv so residual starts as identity
         nn.init.zeros_(self.conv2.weight)
@@ -178,6 +181,8 @@ class MaskRenderer(nn.Module):
         depth: int = 1,
         pose_dim: int = 0,
         use_dsconv: bool = False,
+        padding_mode: str = "zeros",
+        use_dilation: bool = False,
     ):
         super().__init__()
         self.num_classes = num_classes
@@ -185,6 +190,8 @@ class MaskRenderer(nn.Module):
         self.depth = depth
         self.pose_dim = pose_dim
         self.use_dsconv = use_dsconv
+        self.padding_mode = padding_mode
+        self.use_dilation = use_dilation
 
         # Class embedding: each of 5 classes → learned embed_dim-dimensional vector
         # Accepts external embedding for weight sharing with MotionPredictor
@@ -194,38 +201,63 @@ class MaskRenderer(nn.Module):
         self.use_coord_grid = True
         coord_channels = 2 if self.use_coord_grid else 0
 
+        # Dilation cascade for ResBlocks: expands receptive field at zero param cost.
+        # Symmetric pattern mirrors the U-Net encoder-decoder structure.
+        # kaileh57 PR#58: dilated convs = "single largest win" (1.92 vs 2.03).
+        if use_dilation:
+            if depth >= 2:
+                dilations = [1, 2, 4, 4, 2, 1]  # stem, down, down2, bottleneck, up2, up
+            else:
+                dilations = [1, 2, 4, 1]  # stem, down, bottleneck, up
+        else:
+            dilations = [1] * (6 if depth >= 2 else 4)
+
+        pm = padding_mode  # shorthand
+
         # Stem: (embed_dim + coord_channels) → base_ch at full resolution
         self.stem_conv = _make_conv(
-            embed_dim + coord_channels, base_ch, 3, padding=1, bias=True, use_dsconv=use_dsconv
+            embed_dim + coord_channels, base_ch, 3, padding=1, bias=True,
+            use_dsconv=use_dsconv, padding_mode=pm,
         )
-        self.stem_res = ResBlock(base_ch, num_classes=num_classes)
+        self.stem_res = ResBlock(base_ch, num_classes=num_classes,
+                                 padding_mode=pm, dilation=dilations[0])
 
         # Downsample 1: base_ch → mid_ch at half resolution
         self.down_conv = _make_conv(
-            base_ch, mid_ch, 3, stride=2, padding=1, bias=True, use_dsconv=use_dsconv
+            base_ch, mid_ch, 3, stride=2, padding=1, bias=True,
+            use_dsconv=use_dsconv, padding_mode=pm,
         )
-        self.down_res = ResBlock(mid_ch, num_classes=num_classes)
+        self.down_res = ResBlock(mid_ch, num_classes=num_classes,
+                                 padding_mode=pm, dilation=dilations[1])
 
         if depth >= 2:
             # Downsample 2: mid_ch → mid_ch at quarter resolution
             self.down2_conv = _make_conv(
-                mid_ch, mid_ch, 3, stride=2, padding=1, bias=True, use_dsconv=use_dsconv
+                mid_ch, mid_ch, 3, stride=2, padding=1, bias=True,
+                use_dsconv=use_dsconv, padding_mode=pm,
             )
-            self.down2_res = ResBlock(mid_ch, num_classes=num_classes)
+            self.down2_res = ResBlock(mid_ch, num_classes=num_classes,
+                                      padding_mode=pm, dilation=dilations[2])
 
         # Bottleneck at lowest resolution
-        self.bottleneck = ResBlock(mid_ch, num_classes=num_classes)
+        bot_idx = 3 if depth >= 2 else 2
+        self.bottleneck = ResBlock(mid_ch, num_classes=num_classes,
+                                   padding_mode=pm, dilation=dilations[bot_idx])
 
         if depth >= 2:
             # Upsample 2: mid_ch → mid_ch back to half resolution
+            # ConvTranspose2d padding is output cropping, NOT input zero-padding —
+            # does NOT cause the boundary artifact Yousfi flagged. Left as-is.
             self.up2_conv = nn.ConvTranspose2d(mid_ch, mid_ch, 4, stride=2, padding=1, bias=True)
-            self.up2_res = ResBlock(mid_ch, num_classes=num_classes)
-            # Fusion after skip at half resolution: mid_ch (skip) + mid_ch (upsampled) → mid_ch
+            self.up2_res = ResBlock(mid_ch, num_classes=num_classes,
+                                    padding_mode=pm, dilation=dilations[4])
             self.fuse2_conv = nn.Conv2d(mid_ch * 2, mid_ch, 1, bias=True)
 
         # Upsample 1: mid_ch → base_ch at full resolution
         self.up_conv = nn.ConvTranspose2d(mid_ch, base_ch, 4, stride=2, padding=1, bias=True)
-        self.up_res = ResBlock(base_ch, num_classes=num_classes)
+        up_idx = 5 if depth >= 2 else 3
+        self.up_res = ResBlock(base_ch, num_classes=num_classes,
+                               padding_mode=pm, dilation=dilations[up_idx])
 
         # Fusion after skip: base_ch (skip) + base_ch (upsampled) → base_ch
         self.fuse_conv = nn.Conv2d(base_ch * 2, base_ch, 1, bias=True)
@@ -475,6 +507,7 @@ class MotionPredictor(nn.Module):
         max_flow_px: float = 20.0,
         max_residual: float = 20.0,
         flow_only: bool = False,
+        padding_mode: str = "zeros",
     ):
         super().__init__()
         self.num_classes = num_classes
@@ -484,6 +517,7 @@ class MotionPredictor(nn.Module):
         self.max_flow_px = max_flow_px
         self.max_residual = max_residual
         self.flow_only = flow_only
+        self.padding_mode = padding_mode
         # Accepts external embedding for weight sharing with MaskRenderer
         self.embedding = embedding if embedding is not None else nn.Embedding(num_classes, embed_dim)
 
@@ -494,26 +528,28 @@ class MotionPredictor(nn.Module):
         if use_coord_grid:
             in_ch += 2  # normalized xy coords
 
+        pm = padding_mode
+
         # U-Net-like structure for global receptive field
         # Stem: full resolution
         self.stem = nn.Sequential(
-            nn.Conv2d(in_ch, hidden, 3, padding=1, bias=True),
+            nn.Conv2d(in_ch, hidden, 3, padding=1, bias=True, padding_mode=pm),
             nn.SiLU(inplace=True),
         )
         # Down: stride-2 → half resolution
         self.down = nn.Sequential(
-            nn.Conv2d(hidden, hidden, 3, stride=2, padding=1, bias=True),
+            nn.Conv2d(hidden, hidden, 3, stride=2, padding=1, bias=True, padding_mode=pm),
             nn.SiLU(inplace=True),
         )
-        # Bottleneck at half resolution
-        self.bottleneck = ResBlock(hidden, num_classes=0)
+        # Bottleneck at half resolution (no dilation in motion predictor — needs local precision)
+        self.bottleneck = ResBlock(hidden, num_classes=0, padding_mode=pm)
         # Up: upsample back to full resolution
-        self.up_conv = nn.Conv2d(hidden, hidden, 3, padding=1, bias=True)
+        self.up_conv = nn.Conv2d(hidden, hidden, 3, padding=1, bias=True, padding_mode=pm)
         self.up_act = nn.SiLU(inplace=True)
         # Skip fusion: concat skip + upsampled → hidden
         self.fuse = nn.Conv2d(hidden * 2, hidden, 1, bias=True)
         # Head: predict output channels
-        self.head = nn.Conv2d(hidden, output_channels, 3, padding=1, bias=True)
+        self.head = nn.Conv2d(hidden, output_channels, 3, padding=1, bias=True, padding_mode=pm)
 
         # Zero-init output — start with zero motion (identity warp)
         nn.init.zeros_(self.head.weight)
@@ -891,10 +927,14 @@ class AsymmetricPairGenerator(nn.Module):
         flow_only: bool = False,
         pose_dim: int = 0,
         use_dsconv: bool = False,
+        padding_mode: str = "zeros",
+        use_dilation: bool = False,
     ):
         super().__init__()
         self.pose_dim = pose_dim
         self.use_dsconv = use_dsconv
+        self.padding_mode = padding_mode
+        self.use_dilation = use_dilation
         # Shared embedding between renderer and motion predictor
         shared_emb = nn.Embedding(num_classes, embed_dim)
         self.renderer = MaskRenderer(
@@ -906,6 +946,8 @@ class AsymmetricPairGenerator(nn.Module):
             depth=depth,
             pose_dim=pose_dim,
             use_dsconv=use_dsconv,
+            padding_mode=padding_mode,
+            use_dilation=use_dilation,
         )
         self.motion = MotionPredictor(
             num_classes=num_classes,
@@ -918,6 +960,7 @@ class AsymmetricPairGenerator(nn.Module):
             max_flow_px=max_flow_px,
             max_residual=max_residual,
             flow_only=flow_only,
+            padding_mode=padding_mode,
         )
 
     def forward(

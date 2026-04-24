@@ -2031,10 +2031,12 @@ WILDE = {
     "depth": 1,
     "pose_dim": 6,
     "use_dsconv": True,
+    "padding_mode": "replicate",  # Yousfi: zeros creates boundary artifacts
+    "use_dilation": True,  # kaileh57: "single largest win"
     "eval_roundtrip": True,
     "segnet_loss_mode": "hinge",
     "hinge_margin": 0.5,
-    "error_boost": 9.0,  # Quantizr anchor: 9x per-pixel error magnification
+    "error_boost": 9.0,  # Quantizr: 9x per-pixel error magnification
     "pose_weight": 10.0,
     "seg_weight": 100.0,
     "pixel_weight": 0.1,
