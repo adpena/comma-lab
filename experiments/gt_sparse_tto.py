@@ -82,8 +82,10 @@ def parse_args() -> argparse.Namespace:
     p.add_argument("--sensitivity-map", type=str, default=None,
                    help="Path to precomputed sensitivity_map.pt (skips recomputation)")
     p.add_argument("--smoke", action="store_true", help="Smoke test: 20 frames, 2 restarts, 20 steps")
-    p.add_argument("--eval-roundtrip", action="store_true",
-                   help="Simulate official scorer resolution round-trip in proxy scoring")
+    p.add_argument("--eval-roundtrip", action="store_true", default=True,
+                   help="Simulate official scorer resolution round-trip in proxy scoring (default: on)")
+    p.add_argument("--no-eval-roundtrip", dest="eval_roundtrip", action="store_false",
+                   help="Disable eval roundtrip simulation")
     return p.parse_args()
 
 

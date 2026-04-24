@@ -62,9 +62,6 @@ def parse_args() -> argparse.Namespace:
     p.add_argument("--output-dir", type=str, default=None, help="Output directory (default: timestamped)")
     p.add_argument("--video", type=str, default=None, help="Path to GT video (default: upstream/videos/0.mkv)")
     p.add_argument("--smoke", action="store_true", help="Smoke test: 20 frames, 50 steps")
-    p.add_argument("--eval-roundtrip", action="store_true",
-                   help="Simulate official scorer's resolution round-trip (384→874→384) in proxy scoring. "
-                        "Makes proxy score more faithful to auth eval at the cost of slight pessimism.")
     p.add_argument("--early-stop-patience", type=int, default=150,
                    help="Stop TTO if PoseNet hasn't improved in this many steps")
     p.add_argument("--use-embedding-loss", action="store_true",

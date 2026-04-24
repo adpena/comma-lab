@@ -37,7 +37,7 @@ import torch
 import torch.nn.functional as F
 
 # ---------------------------------------------------------------------------
-# Path setup
+# Path setup (must run before tac imports)
 # ---------------------------------------------------------------------------
 _CANDIDATE_UPSTREAM = [
     Path(os.environ["TAC_UPSTREAM_DIR"]) if os.environ.get("TAC_UPSTREAM_DIR") else None,
@@ -59,11 +59,12 @@ RESULTS_DIR = (
 )
 
 
+from tac.renderer import simulate_eval_roundtrip  # canonical impl (no local copy)
+
 # ---------------------------------------------------------------------------
 # Constants
 # ---------------------------------------------------------------------------
 SEGNET_INPUT_H, SEGNET_INPUT_W = 384, 512
-CAMERA_H, CAMERA_W = 874, 1164
 NUM_FRAMES = 1200
 NUM_PAIRS = NUM_FRAMES // 2
 
@@ -200,21 +201,6 @@ def load_renderer(checkpoint_path: str, device: torch.device) -> torch.nn.Module
     return model
 
 
-def simulate_eval_roundtrip(frames_chw: torch.Tensor) -> torch.Tensor:
-    """Simulate contest eval resolution roundtrip: scorer_res -> camera_res -> uint8 -> scorer_res.
-
-    Gradients flow through via STE (Straight-Through Estimator).
-    """
-    orig_h, orig_w = frames_chw.shape[2], frames_chw.shape[3]
-    up = F.interpolate(frames_chw, size=(CAMERA_H, CAMERA_W),
-                       mode="bilinear", align_corners=False)
-    # STE quantization: forward = round+clamp, backward = identity
-    up_q = up + (up.round().clamp(0, 255) - up).detach()
-    down = F.interpolate(up_q, size=(orig_h, orig_w),
-                         mode="bilinear", align_corners=False)
-    return down
-
-
 def segnet_hinge_loss(
     logits: torch.Tensor,
     gt_masks: torch.Tensor,
@@ -261,7 +247,7 @@ def optimize_poses_batch(
     seg_weight: float = 100.0,
     pose_weight: float = 10.0,
     hinge_margin: float = 0.5,
-    eval_roundtrip: bool = False,
+    eval_roundtrip: bool = True,
     early_stop_patience: int = 100,
     argmax_constraint: bool = False,
     max_retries: int = 3,

@@ -69,11 +69,12 @@ RESULTS_DIR = (
     else Path(__file__).resolve().parent / "results" / "gradient_corrections"
 )
 
+from tac.renderer import simulate_eval_roundtrip  # canonical impl (no local copy)
+
 # ---------------------------------------------------------------------------
 # Constants
 # ---------------------------------------------------------------------------
 SEGNET_INPUT_H, SEGNET_INPUT_W = 384, 512
-CAMERA_H, CAMERA_W = 874, 1164
 NUM_FRAMES = 1200
 NUM_PAIRS = NUM_FRAMES // 2
 
@@ -111,8 +112,10 @@ def parse_args() -> argparse.Namespace:
                    help="Path to GT video (default: upstream/videos/0.mkv)")
     p.add_argument("--smoke", action="store_true",
                    help="Smoke test: 20 frames")
-    p.add_argument("--eval-roundtrip", action="store_true",
-                   help="Simulate contest eval resolution roundtrip in loss")
+    p.add_argument("--eval-roundtrip", action="store_true", default=True,
+                   help="Simulate contest eval resolution roundtrip in loss (default: on)")
+    p.add_argument("--no-eval-roundtrip", dest="eval_roundtrip", action="store_false",
+                   help="Disable eval roundtrip simulation")
     p.add_argument("--gt-poses-path", type=str, default=None,
                    help="Path to GT or optimized poses")
     p.add_argument("--quantize-bits", type=int, default=8,
@@ -156,17 +159,6 @@ def load_renderer(checkpoint_path: str, device: torch.device) -> torch.nn.Module
     n_params = sum(p_param.numel() for p_param in model.parameters())
     print(f"[renderer] Loaded {n_params:,} params from {checkpoint_path}")
     return model
-
-
-def simulate_eval_roundtrip(frames_chw: torch.Tensor) -> torch.Tensor:
-    """Simulate contest eval resolution roundtrip."""
-    orig_h, orig_w = frames_chw.shape[2], frames_chw.shape[3]
-    up = F.interpolate(frames_chw, size=(CAMERA_H, CAMERA_W),
-                       mode="bilinear", align_corners=False)
-    up_q = up + (up.round().clamp(0, 255) - up).detach()
-    down = F.interpolate(up_q, size=(orig_h, orig_w),
-                         mode="bilinear", align_corners=False)
-    return down
 
 
 def segnet_hinge_loss(

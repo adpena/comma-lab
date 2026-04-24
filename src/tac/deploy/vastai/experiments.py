@@ -71,7 +71,7 @@ EXPERIMENTS: dict[str, ExperimentConfig] = {
     "warp_baseline": _exp(
         name="warp_baseline",
         script="experiments/warp_gen_baseline.py",
-        args="--device cuda --n-frames 1200",
+        args="--device cuda --n-frames 1200 --eval-roundtrip",
         timeout_hours=1,
     ),
     "gt_sparse_tto": _exp(
@@ -79,7 +79,8 @@ EXPERIMENTS: dict[str, ExperimentConfig] = {
         script="experiments/gt_sparse_tto.py",
         args=(
             "--device cuda --n-frames 1200 --n-patches 50 "
-            "--n-restarts 20 --steps-per-restart 500"
+            "--n-restarts 20 --steps-per-restart 500 "
+            "--eval-roundtrip"
         ),
         timeout_hours=4,
     ),
@@ -110,7 +111,8 @@ EXPERIMENTS: dict[str, ExperimentConfig] = {
         script="experiments/tto_step_curve.py",
         args=(
             "--checkpoint renderer_best.pt --device cuda "
-            "--step-counts 10,25,50,100,150,200,300,500"
+            "--step-counts 10,25,50,100,150,200,300,500 "
+            "--eval-roundtrip"
         ),
         needs_checkpoint="renderer_best.pt",
         timeout_hours=3,
@@ -122,7 +124,7 @@ EXPERIMENTS: dict[str, ExperimentConfig] = {
         args=(
             "--checkpoint renderer_best.pt --device cuda "
             "--step-counts 10,25,50,100,150,200,300,500 "
-            "--segnet-loss-mode hinge"
+            "--segnet-loss-mode hinge --eval-roundtrip"
         ),
         needs_checkpoint="renderer_best.pt",
         timeout_hours=3,
@@ -134,7 +136,7 @@ EXPERIMENTS: dict[str, ExperimentConfig] = {
         args=(
             "--checkpoint renderer_best.pt --device cuda "
             "--step-counts 10,25,50,100,150,200,300,500 "
-            "--lr-schedule cosine"
+            "--lr-schedule cosine --eval-roundtrip"
         ),
         needs_checkpoint="renderer_best.pt",
         timeout_hours=3,
@@ -189,7 +191,7 @@ EXPERIMENTS: dict[str, ExperimentConfig] = {
             "--tto-steps 500 --tto-lr 0.005 --batch-pairs 10 "
             "--seg-weight 100 --pose-weight 10 --compress-weight 0.5 "
             "--use-embedding-loss --seg-odd-only --early-stop-patience 500 "
-            "--eval-roundtrip --eval-roundtrip "
+            "--eval-roundtrip "
             "--segnet-loss-mode hinge --hinge-margin 0.5"
         ),
         needs_checkpoint="renderer_best.pt",
@@ -204,7 +206,7 @@ EXPERIMENTS: dict[str, ExperimentConfig] = {
             "--tto-steps 500 --tto-lr 0.005 --batch-pairs 10 "
             "--seg-weight 100 --pose-weight 10 --compress-weight 0.5 "
             "--use-embedding-loss --seg-odd-only --early-stop-patience 500 "
-            "--eval-roundtrip --eval-roundtrip "
+            "--eval-roundtrip "
             "--segnet-loss-mode hinge --hinge-margin 0.5 "
             "--use-null-space --null-space-step 0.5 --null-space-every 5"
         ),

@@ -588,7 +588,7 @@ def kl_distill_scorer_loss(
     at high temperatures so gradient norms are consistent across T values.
 
     Args:
-        temperature: softmax temperature (anneal from 5.0 → 1.0 over training)
+        temperature: softmax temperature (anneal from 2.0 → 1.0 over training)
         boundary_mask: (H, W) float, 1.0 at class boundaries
         boundary_weight: gradient amplification at boundaries (default 10×)
         segnet_weight: weight on SegNet term (default 100, matches scorer formula)

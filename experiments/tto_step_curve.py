@@ -98,8 +98,10 @@ def parse_args() -> argparse.Namespace:
     p.add_argument("--seg-odd-only", action=argparse.BooleanOptionalAction,
                    default=True,
                    help="SegNet loss on odd frames only (v5b default: enabled)")
-    p.add_argument("--eval-roundtrip", action="store_true",
-                   help="Simulate scorer resolution round-trip in proxy scoring")
+    p.add_argument("--eval-roundtrip", action="store_true", default=True,
+                   help="Simulate scorer resolution round-trip in proxy scoring (default: on)")
+    p.add_argument("--no-eval-roundtrip", dest="eval_roundtrip", action="store_false",
+                   help="Disable eval roundtrip simulation")
     p.add_argument("--lr-schedule", type=str, default="constant",
                    choices=["constant", "cosine"],
                    help="LR schedule for TTO. 'cosine' = warmup then cosine decay.")

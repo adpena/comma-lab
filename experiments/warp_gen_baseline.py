@@ -54,8 +54,10 @@ def parse_args() -> argparse.Namespace:
     p.add_argument("--blend-alpha", type=float, default=0.0,
                    help="Blend factor with GT: result = (1-alpha)*warped + alpha*gt. "
                         "0.0 = pure warp, 1.0 = pure GT.")
-    p.add_argument("--eval-roundtrip", action="store_true",
-                   help="Simulate official scorer resolution round-trip")
+    p.add_argument("--eval-roundtrip", action="store_true", default=True,
+                   help="Simulate official scorer resolution round-trip (default: on)")
+    p.add_argument("--no-eval-roundtrip", dest="eval_roundtrip", action="store_false",
+                   help="Disable eval roundtrip simulation")
     return p.parse_args()
 
 

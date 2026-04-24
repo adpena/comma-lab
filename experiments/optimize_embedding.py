@@ -67,11 +67,12 @@ RESULTS_DIR = (
     else Path(__file__).resolve().parent / "results" / "embedding_tto"
 )
 
+from tac.renderer import simulate_eval_roundtrip  # canonical impl (no local copy)
+
 # ---------------------------------------------------------------------------
 # Constants
 # ---------------------------------------------------------------------------
 SEGNET_INPUT_H, SEGNET_INPUT_W = 384, 512
-CAMERA_H, CAMERA_W = 874, 1164
 NUM_FRAMES = 1200
 NUM_PAIRS = NUM_FRAMES // 2
 
@@ -109,8 +110,10 @@ def parse_args() -> argparse.Namespace:
                    help="Path to GT video (default: upstream/videos/0.mkv)")
     p.add_argument("--smoke", action="store_true",
                    help="Smoke test: 20 frames, 3 epochs")
-    p.add_argument("--eval-roundtrip", action="store_true",
-                   help="Simulate contest eval resolution roundtrip in loss")
+    p.add_argument("--eval-roundtrip", action="store_true", default=True,
+                   help="Simulate contest eval resolution roundtrip in loss (default: on)")
+    p.add_argument("--no-eval-roundtrip", dest="eval_roundtrip", action="store_false",
+                   help="Disable eval roundtrip simulation")
     p.add_argument("--early-stop-patience", type=int, default=3,
                    help="Stop if no improvement for this many epochs (uses rolling-best: "
                         "restores best weights at end regardless of when early stop fires)")
@@ -185,17 +188,6 @@ def find_shared_embedding(model: nn.Module) -> nn.Embedding:
           f"({emb.weight.numel() * 4} bytes fp32, {emb.weight.numel() * 2} bytes fp16)")
 
     return emb
-
-
-def simulate_eval_roundtrip(frames_chw: torch.Tensor) -> torch.Tensor:
-    """Simulate contest eval resolution roundtrip: scorer_res -> camera_res -> uint8 -> scorer_res."""
-    orig_h, orig_w = frames_chw.shape[2], frames_chw.shape[3]
-    up = F.interpolate(frames_chw, size=(CAMERA_H, CAMERA_W),
-                       mode="bilinear", align_corners=False)
-    up_q = up + (up.round().clamp(0, 255) - up).detach()
-    down = F.interpolate(up_q, size=(orig_h, orig_w),
-                         mode="bilinear", align_corners=False)
-    return down
 
 
 def segnet_hinge_loss(

@@ -121,8 +121,10 @@ def parse_args() -> argparse.Namespace:
                    help="Apply YUV null space projection for free SegNet improvement")
     p.add_argument("--null-space-every", type=int, default=10)
     p.add_argument("--null-space-step", type=float, default=0.5)
-    p.add_argument("--eval-roundtrip", action="store_true",
-                   help="Simulate scorer resize roundtrip in loss")
+    p.add_argument("--eval-roundtrip", action="store_true", default=True,
+                   help="Simulate scorer resize roundtrip in loss (default: on)")
+    p.add_argument("--no-eval-roundtrip", dest="eval_roundtrip", action="store_false",
+                   help="Disable eval roundtrip simulation")
     p.add_argument("--early-stop-patience", type=int, default=200,
                    help="Early stop on PoseNet plateau (higher for from-noise)")
     p.add_argument("--antialias-weight", type=float, default=0.2,
