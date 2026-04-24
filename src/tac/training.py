@@ -1308,6 +1308,11 @@ class Trainer:
             for v in gt_scorer_cache.values()
         )
         print(f"[trainer-lazy] P0: Cached {len(gt_scorer_cache)} GT scorer outputs ({cache_bytes / 1e6:.1f}MB)")
+        if cfg.eval_roundtrip:
+            print(f"[trainer-lazy] eval_roundtrip=True (noise_std={cfg.roundtrip_noise_std}) — "
+                  "GT cache BYPASSED, roundtrip active on both pred+GT")
+        else:
+            print("[trainer-lazy] eval_roundtrip=False — WARNING: proxy-auth gap 2-6x on PoseNet")
 
         # Precompute boundary masks if needed (dual saliency OR kl_distill with boundary weighting)
         self._boundary_masks = None
