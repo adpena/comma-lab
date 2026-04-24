@@ -2013,6 +2013,71 @@ NETWORK_CODEC_FULL = {
     "target_size_kb": 50,
 }
 
+# ── Wilde: compact renderer matched to Quantizr's 88K / 64KB FP4 ────────
+# Compact renderer: minimal params, maximum scorer fidelity.
+# For use with train_distill.py on Vast.ai 4090.
+WILDE = {
+    "experiment_type": "renderer_training",
+    "base_ch": 16,
+    "mid_ch": 24,
+    "embed_dim": 6,
+    "motion_hidden": 16,
+    "depth": 1,
+    "pose_dim": 6,
+    "use_dsconv": True,
+    "eval_roundtrip": True,
+    "segnet_loss_mode": "hinge",
+    "hinge_margin": 0.5,
+    "pose_weight": 10.0,
+    "seg_weight": 100.0,
+    "pixel_weight": 0.1,
+    "ema_decay": 0.997,
+    "phase1_epochs": 800,
+    "phase2_epochs": 1200,
+    "phase3_epochs": 400,
+    "phase1_lr": 1e-3,
+    "phase2_lr": 3e-4,
+    "phase3_lr": 1e-4,
+    "phase1_batch_size": 16,
+    "phase2_batch_size": 8,
+    "phase3_batch_size": 8,
+    "checkpoint_every": 100,
+    "eval_every": 50,
+    "log_every": 25,
+}
+
+# Current 4090 config (103K params, proxy 0.612 at ep1500)
+DEFINITIVE_FLOAT_EMA = {
+    "experiment_type": "renderer_training",
+    "base_ch": 20,
+    "mid_ch": 28,
+    "embed_dim": 6,
+    "motion_hidden": 32,
+    "depth": 1,
+    "pose_dim": 6,
+    "use_dsconv": True,
+    "eval_roundtrip": True,
+    "segnet_loss_mode": "hinge",
+    "hinge_margin": 0.5,
+    "pose_weight": 10.0,
+    "seg_weight": 100.0,
+    "pixel_weight": 0.1,
+    "ema_decay": 0.997,
+    "phase1_epochs": 1000,
+    "phase2_epochs": 1500,
+    "phase3_epochs": 500,
+    "phase1_lr": 1e-3,
+    "phase2_lr": 3e-4,
+    "phase3_lr": 1e-4,
+    "phase1_batch_size": 8,
+    "phase2_batch_size": 4,
+    "phase3_batch_size": 4,
+    "checkpoint_every": 100,
+    "eval_every": 50,
+    "log_every": 25,
+}
+
+
 PROFILES = {
     "council_v1": COUNCIL_V1,
     "council_v2_adaptive": COUNCIL_V2_ADAPTIVE,
@@ -2030,6 +2095,9 @@ PROFILES = {
     "dilated_h16_smoke": DILATED_H16_SMOKE,
     "kaggle_p100_dilated": KAGGLE_P100_DILATED,
     "kaggle_p100_long": KAGGLE_P100_LONG,
+    # Renderer training profiles
+    "wilde": WILDE,
+    "definitive_float_ema": DEFINITIVE_FLOAT_EMA,
     "mask_renderer_smoke": MASK_RENDERER_SMOKE,
     "mask_renderer_full": MASK_RENDERER_FULL,
     "mask_renderer_wide": MASK_RENDERER_WIDE,

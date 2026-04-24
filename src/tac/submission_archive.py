@@ -35,6 +35,7 @@ class ArchiveManifest:
     renderer_bin: bool = False
     masks_mkv: bool = False
     optimized_poses_pt: bool = False
+    optimized_poses_bin: bool = False  # raw fp16 binary (half the size of .pt)
     optimized_embedding_pt: bool = False
     poses_pt: bool = False
     corrections_bin: bool = False
@@ -48,6 +49,7 @@ class ArchiveManifest:
             "renderer_bin": "renderer.bin",
             "masks_mkv": "masks.mkv",
             "optimized_poses_pt": "optimized_poses.pt",
+            "optimized_poses_bin": "optimized_poses.bin",
             "optimized_embedding_pt": "optimized_embedding.pt",
             "poses_pt": "poses.pt",
             "corrections_bin": "corrections.bin",
@@ -68,6 +70,13 @@ RENDERER_SUBMISSION_MANIFEST = ArchiveManifest(
     renderer_bin=True,
     masks_mkv=True,
     optimized_poses_pt=True,
+)
+
+# Compact manifest: raw binary poses instead of .pt (saves ~8KB)
+RENDERER_COMPACT_MANIFEST = ArchiveManifest(
+    renderer_bin=True,
+    masks_mkv=True,
+    optimized_poses_bin=True,
 )
 
 
@@ -213,11 +222,43 @@ def compute_rate_term(archive_path: Path | str) -> float:
     return 25 * archive_path.stat().st_size / ORIGINAL_VIDEO_BYTES
 
 
+def save_poses_binary(poses: "torch.Tensor", output_path: Path | str) -> int:
+    """Save poses as raw fp16 binary (minimal overhead, ~7.2KB for 600×6).
+
+    Args:
+        poses: (N, 6) float tensor of optimized pose vectors
+        output_path: output .bin file path
+
+    Returns:
+        File size in bytes
+    """
+    import torch
+
+    output_path = Path(output_path)
+    output_path.parent.mkdir(parents=True, exist_ok=True)
+    raw = poses.half().cpu().numpy().tobytes()
+    output_path.write_bytes(raw)
+    return len(raw)
+
+
+def load_poses_binary(path: Path | str, pose_dim: int = 6) -> "torch.Tensor":
+    """Load poses from raw fp16 binary.
+
+    Returns:
+        (N, pose_dim) float32 tensor
+    """
+    import torch
+
+    raw = Path(path).read_bytes()
+    return torch.frombuffer(bytearray(raw), dtype=torch.float16).reshape(-1, pose_dim).float()
+
+
 def build_submission_archive(
     output_path: Path | str,
     renderer_bin: Path | str | None = None,
     masks_mkv: Path | str | None = None,
     optimized_poses_pt: Path | str | None = None,
+    optimized_poses_bin: Path | str | None = None,
     optimized_embedding_pt: Path | str | None = None,
     manifest: ArchiveManifest = RENDERER_SUBMISSION_MANIFEST,
     validate: bool = True,
@@ -231,6 +272,7 @@ def build_submission_archive(
         renderer_bin: Path to renderer.bin
         masks_mkv: Path to masks.mkv
         optimized_poses_pt: Path to optimized_poses.pt
+        optimized_poses_bin: Path to optimized_poses.bin (raw fp16, smaller)
         optimized_embedding_pt: Path to optimized_embedding.pt (optional)
         manifest: Expected contents manifest
         validate: If True, validate after building (default True)
@@ -249,6 +291,7 @@ def build_submission_archive(
         "renderer.bin": Path(renderer_bin) if renderer_bin else None,
         "masks.mkv": Path(masks_mkv) if masks_mkv else None,
         "optimized_poses.pt": Path(optimized_poses_pt) if optimized_poses_pt else None,
+        "optimized_poses.bin": Path(optimized_poses_bin) if optimized_poses_bin else None,
         "optimized_embedding.pt": Path(optimized_embedding_pt) if optimized_embedding_pt else None,
     }
 

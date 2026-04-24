@@ -566,7 +566,7 @@ def kl_distill_scorer_loss(
     gt_pair_hwc: torch.Tensor,
     posenet,
     segnet,
-    temperature: float = 5.0,
+    temperature: float = 2.0,
     boundary_mask: torch.Tensor | None = None,
     boundary_weight: float = 10.0,
     segnet_weight: float = 100.0,

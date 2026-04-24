@@ -847,6 +847,25 @@ def mask_pair_from_index(
     return masks[start_idx].unsqueeze(0), masks[start_idx + 1].unsqueeze(0)
 
 
+def extract_half_masks(
+    frames: list[torch.Tensor],
+    segnet,
+    device: str | torch.device = "cpu",
+    batch_size: int = 4,
+) -> torch.Tensor:
+    """Extract masks for odd frames only (Quantizr half-frame paradigm).
+
+    Only frames at indices 1, 3, 5, ... are processed. In the asymmetric warp
+    paradigm, frame_t1 (odd) is rendered from its mask, and frame_t (even) is
+    warped from frame_t1. So only odd-frame masks are needed in the archive.
+
+    Returns:
+        (N//2, SEGNET_H, SEGNET_W) long tensor — 600 masks from 1200 frames.
+    """
+    odd_frames = frames[1::2]
+    return extract_masks(odd_frames, segnet, device=device, batch_size=batch_size)
+
+
 def encode_masks_auto(
     masks: torch.Tensor,
     output_path: str | Path,
