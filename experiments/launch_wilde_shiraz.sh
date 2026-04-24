@@ -79,8 +79,8 @@ case "$COMMAND" in
             $SCP "$f" "root@$SSH_HOST:/workspace/pact/$f"
         done
 
-        # Install dependencies
-        $SSH "cd /workspace/pact && pip install -q safetensors segmentation-models-pytorch timm brotli einops"
+        # Install dependencies (C1: av for video decode, C2: ffmpeg for mask decode, C3: pydantic for training config)
+        $SSH "apt-get update && apt-get install -y ffmpeg && pip install -q safetensors segmentation-models-pytorch timm brotli einops av pydantic numpy"
 
         echo "=== Upload complete ==="
         ;;
