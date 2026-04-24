@@ -320,6 +320,7 @@ def compute_scorer_loss(
     masks_odd: torch.Tensor,
     cfg: DistillConfig,
     eval_roundtrip: bool = True,
+    error_boost_override: float | None = None,
 ) -> tuple[torch.Tensor, dict[str, float]]:
     """Compute contest-formula scorer loss with eval-matched roundtrip.
 
@@ -369,7 +370,7 @@ def compute_scorer_loss(
         batch_size=B * 2,
         loss_mode=cfg.segnet_loss_mode,
         hinge_margin=cfg.hinge_margin,
-        error_boost=cfg.error_boost,
+        error_boost=error_boost_override if error_boost_override is not None else cfg.error_boost,
     )
 
     # PoseNet loss: pairs format (B, 2, C, H, W)
@@ -824,10 +825,11 @@ def train_phase3(
 
             predicted_pairs = train_model(mask_even, mask_odd, pose=pose)
 
-            # Scorer loss
+            # Scorer loss (Phase 3 uses error_boost_phase3 for extreme hard mining)
             scorer_loss, metrics = compute_scorer_loss(
                 predicted_pairs, gt_pairs, posenet, segnet,
                 mask_even, mask_odd, cfg, eval_roundtrip=cfg.eval_roundtrip,
+                error_boost_override=cfg.error_boost_phase3,
             )
 
             # Weight hard pairs more

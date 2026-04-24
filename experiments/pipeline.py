@@ -101,6 +101,8 @@ class PipelineConfig:
     pose_dim: int = 6
     embed_dim: int = 6
     use_dsconv: bool = True
+    padding_mode: str = "replicate"
+    use_dilation: bool = False
 
     # Pose TTO — adaptive convergence
     pose_max_steps: int = 2000        # upper bound
@@ -192,6 +194,7 @@ def step_export(cfg: PipelineConfig, iteration: int = 0) -> Path:
         base_ch=cfg.base_ch, mid_ch=cfg.mid_ch,
         motion_hidden=cfg.motion_hidden, depth=cfg.depth,
         pose_dim=cfg.pose_dim, use_dsconv=cfg.use_dsconv,
+        padding_mode=cfg.padding_mode, use_dilation=cfg.use_dilation,
     )
     model.load_state_dict(state, strict=False)
     n_params = sum(p.numel() for p in model.parameters())
@@ -469,6 +472,9 @@ def main() -> int:
     comp.add_argument("--pose-dim", type=int, default=6)
     comp.add_argument("--embed-dim", type=int, default=6)
     comp.add_argument("--use-dsconv", action="store_true")
+    comp.add_argument("--padding-mode", type=str, default="replicate",
+                      choices=["zeros", "reflect", "replicate", "circular"])
+    comp.add_argument("--use-dilation", action="store_true")
     # Optimization
     comp.add_argument("--pose-max-steps", type=int, default=2000)
     comp.add_argument("--pose-lr", type=float, default=0.01)
@@ -501,6 +507,8 @@ def main() -> int:
             motion_hidden=args.motion_hidden, depth=args.depth,
             pose_dim=args.pose_dim, embed_dim=args.embed_dim,
             use_dsconv=args.use_dsconv,
+            padding_mode=args.padding_mode,
+            use_dilation=args.use_dilation,
             pose_max_steps=args.pose_max_steps, pose_lr=args.pose_lr,
             qat_max_epochs=args.qat_max_epochs, qat_lr=args.qat_lr,
             half_frame=args.half_frame, binary_poses=args.binary_poses,
