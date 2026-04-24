@@ -74,6 +74,12 @@ RESULTS_DIR = (
 class DistillConfig:
     """All hyperparameters for distillation training."""
 
+    def __post_init__(self):
+        if not (0.0 <= self.hard_frame_ratio <= 1.0):
+            raise ValueError(f"hard_frame_ratio must be in [0, 1], got {self.hard_frame_ratio}")
+        if self.loss_mode not in ("standard", "pcgrad", "focal_ste"):
+            raise ValueError(f"loss_mode must be standard/pcgrad/focal_ste, got {self.loss_mode!r}")
+
     # Architecture (must match checkpoint)
     embed_dim: int = 6
     base_ch: int = 36
@@ -373,6 +379,25 @@ def compute_scorer_loss(
     else:
         pred_frames_for_loss = pred_frames
         gt_frames_for_loss = gt_frames
+
+    # ── Validate: Fridrich losses and error_boost only work with standard mode ──
+    if cfg.loss_mode != "standard":
+        fridrich_active = any([cfg.use_texture_loss, cfg.use_linf_penalty,
+                               cfg.use_markov_loss, cfg.use_boundary_hinge])
+        if fridrich_active:
+            raise ValueError(
+                f"Fridrich losses (texture/linf/markov/boundary) are only supported "
+                f"with loss_mode='standard', got {cfg.loss_mode!r}. "
+                f"PCGrad and focal_ste have their own gradient shaping."
+            )
+        boost = error_boost_override if error_boost_override is not None else cfg.error_boost
+        if boost > 1.0:
+            import warnings
+            warnings.warn(
+                f"error_boost={boost} has no effect with loss_mode={cfg.loss_mode!r} "
+                f"(only applies to loss_mode='standard')",
+                stacklevel=2,
+            )
 
     # ── Dispatch on loss_mode ────────────────────────────────────────
     if cfg.loss_mode == "pcgrad":
