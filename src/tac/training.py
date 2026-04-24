@@ -1490,23 +1490,24 @@ class Trainer:
                 if cfg.eval_roundtrip:
                     from tac.renderer import simulate_eval_roundtrip
                     from tac.camera import CAMERA_H, CAMERA_W
-                    # filtered is (1, 2, 3, H, W) — apply roundtrip to each frame
-                    B_f, T_f = filtered.shape[:2]
-                    flat = filtered.reshape(B_f * T_f, *filtered.shape[2:])
-                    flat = simulate_eval_roundtrip(
-                        flat, target_h=CAMERA_H, target_w=CAMERA_W,
+                    # filtered is (B, 2, H, W, 3) HWC — convert to CHW for roundtrip
+                    B_f, T_f, H_f, W_f, C_f = filtered.shape
+                    flat_chw = filtered.reshape(B_f * T_f, H_f, W_f, C_f).permute(0, 3, 1, 2).contiguous()
+                    flat_chw = simulate_eval_roundtrip(
+                        flat_chw, target_h=CAMERA_H, target_w=CAMERA_W,
                         noise_std=cfg.roundtrip_noise_std,
                     )
-                    filtered = flat.reshape(B_f, T_f, *flat.shape[1:])
+                    # Back to HWC: (B*T, C, H, W) → (B*T, H, W, C) → (B, T, H, W, C)
+                    filtered = flat_chw.permute(0, 2, 3, 1).contiguous().reshape(B_f, T_f, H_f, W_f, C_f)
 
                     # GT roundtrip (no noise, no grad)
                     with torch.no_grad():
-                        gt_flat = gt_pair.reshape(B_f * T_f, *gt_pair.shape[2:])
-                        gt_flat = simulate_eval_roundtrip(
-                            gt_flat, target_h=CAMERA_H, target_w=CAMERA_W,
+                        gt_chw = gt_pair.reshape(B_f * T_f, H_f, W_f, C_f).permute(0, 3, 1, 2).contiguous()
+                        gt_chw = simulate_eval_roundtrip(
+                            gt_chw, target_h=CAMERA_H, target_w=CAMERA_W,
                             noise_std=0.0,
                         )
-                        gt_pair = gt_flat.reshape(B_f, T_f, *gt_flat.shape[1:])
+                        gt_pair = gt_chw.permute(0, 2, 3, 1).contiguous().reshape(B_f, T_f, H_f, W_f, C_f)
 
                 # P0: Load cached GT scorer outputs (avoids redundant GT forward pass)
                 # Skip GT cache when eval_roundtrip is on — cached values were
