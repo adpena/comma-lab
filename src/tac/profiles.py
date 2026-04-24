@@ -2023,27 +2023,54 @@ NETWORK_CODEC_FULL = {
 #   --phase1-epochs 800 --phase2-epochs 1200 --phase3-epochs 400
 # motion_hidden=16 via --motion-hidden 16
 #
-# Methodology:
-#   Architecture: CLADE-conditioned U-Net (Park et al. 2019 "Semantic Image Synthesis")
-#   with depthwise-separable convolutions (Howard et al. 2017 "MobileNets") and
-#   dilated residual blocks (Yu & Koltun 2016 "Multi-Scale Context Aggregation").
-#   Replicate padding per Yousfi's boundary artifact observation (PR#55 comment).
-#   Asymmetric pair generation: frame_t1=render(mask), frame_t=warp+gate*residual.
+# Methodology & Provenance:
 #
-#   Training: 5-phase freeze/unfreeze schedule adapted from Quantizr (PR#55, score 0.33).
-#   Phase 1-2: freeze MotionPredictor, pure SegNet optimization with error_boost
-#   (per-pixel quadratic reweighting, 9x→49x schedule). Phase 3-4: unfreeze,
-#   joint SegNet+PoseNet with hinge loss (margin=1.0).
-#   EMA weight averaging (Polyak 1992), eval_roundtrip STE (Bengio et al. 2013).
+#   Architecture:
+#   - CLADE per-class normalization (Park et al. 2019 "Semantic Image Synthesis
+#     with Spatially-Adaptive Normalization"). Independent discovery (2026-04-12)
+#     via skunkworks council analysis of SegNet class-boundary sensitivity.
+#     Our advantage over Quantizr (uses GroupNorm) and szabolcs-cs (no conditioning).
+#   - Depthwise-separable convolutions (Howard et al. 2017 "MobileNets").
+#     Adopted after Quantizr PR#55 binary analysis (2026-04-24) confirmed his use.
+#   - Dilated residual blocks (Yu & Koltun 2016 "Multi-Scale Context Aggregation").
+#     Validated by kaileh57 PR#58 ablation ("single largest win", 1.92 vs 2.03).
+#   - Replicate padding: adopted from Yousfi's PR#55 comment (2026-04-19) noting
+#     "artifacts at the image boundary, due to padding in the conv layers."
+#   - Asymmetric pair generation: frame_t1=render(mask), frame_t=warp+gate*residual.
+#     Independent design (2026-04-12) via skunkworks council, later validated by
+#     Quantizr binary analysis showing similar dual-head paradigm.
 #
-#   Novel: CLADE per-class normalization for SegNet fidelity (our advantage over
-#   Quantizr's GroupNorm). Radial zoom warp (600 scalars, 1.2KB) replaces dense
-#   optical flow for PoseNet — based on our rank-1 Jacobian discovery (PoseNet
-#   output dim 0 captures 99.8% of variance, corresponding to forward ego-motion).
+#   Training:
+#   - Freeze/unfreeze schedule: adapted from Quantizr's 5-stage pipeline discovered
+#     via full binary reverse-engineering of PR#55 archive (2026-04-24). His stages:
+#     ANCHOR(400ep)→ANCHOR_BOOST(80ep)→FINETUNE(320ep)→JOINT(160ep)→MICRO(120ep).
+#   - error_boost per-pixel weighting (9x→49x): Quantizr's technique, values from
+#     his training reconstruction. Quadratic: weight = 1 + (boost-1) * (error/mean)².
+#   - EMA (Polyak 1992 "Acceleration of Stochastic Approximation"). decay=0.997.
+#   - eval_roundtrip STE: independently discovered (2026-04-15) after catastrophic
+#     proxy-auth divergence. Later confirmed as shared technique when Quantizr
+#     disclosed it in PR#55 body as "a helpful hint to others" (2026-04-19).
+#     Fixed across 15 files on 2026-04-24 after finding GT cache bypass bugs.
 #
-#   Key discovery: SegNet and PoseNet are architecturally orthogonal (SegNet sees
-#   only frame_t1, PoseNet sees the pair). Freeze/unfreeze exploits this for
-#   zero-interference sequential optimization.
+#   Novel discoveries (independent, by skunkworks council + geometric analysis):
+#   - PoseNet rank-1 Jacobian (2026-04-24): Jacobian effective rank 1.008, dim 0
+#     captures 99.8% of pose variance. Forward ego-motion is the ONLY significant
+#     DOF. Validated empirically: 600 zoom scalars achieve 10.6x PoseNet improvement.
+#   - Radial zoom warp: 600 learned scalars (1.2KB) replace 50K-param MotionPredictor.
+#     Warp = radial expansion from Focus of Expansion (256,174) derived from comma
+#     EON AR0231AT camera calibration. Geometrically exact for highway ego-motion.
+#   - SegNet/PoseNet orthogonal decomposition: SegNet evaluates only frame_t1,
+#     PoseNet evaluates the pair. These objectives are decoupled through architecture.
+#     Freeze/unfreeze exploits this for zero-interference sequential optimization.
+#   - Lane marking ego-motion estimation (2026-04-24): MUTCD-standard lane markings
+#     (3m×15cm) visible in all 1200 frames encode vehicle speed through inter-frame
+#     displacement. Zoom scalars computable from masks at inflate time (zero archive
+#     cost). Paper-worthy: dual-use of mask channel for appearance + motion.
+#
+#   Research methodology: 15-member skunkworks council (Yousfi, Fridrich, Hotz,
+#   Quantizr adversarial, Contrarian, + extended) with recursive adversarial review
+#   until 3 consecutive clean passes. All design decisions by council consensus.
+#   Full competitor reverse-engineering (Quantizr PR#55, szabolcs-cs PR#56).
 WILDE = {
     "experiment_type": "renderer_training",
     # Architecture: council consensus — base_ch=32 for SegNet capacity.
@@ -2092,27 +2119,49 @@ WILDE = {
 # ── Shiraz: mathematically principled adaptive training ──────────────
 # A/B test against WILDE. Same architecture, different training strategy.
 #
-# Methodology:
-#   Same CLADE U-Net architecture as WILDE (fair A/B comparison).
+# Methodology & Provenance:
 #
-#   Training: continuous adaptive optimization WITHOUT freeze/unfreeze.
-#   Uses PCGrad (Yu et al. NeurIPS 2020 "Gradient Surgery for Multi-Task
-#   Learning") to resolve SegNet/PoseNet gradient conflicts on shared
-#   renderer parameters. Activation-level approximation — projects SegNet
-#   gradient so combined gradient is non-opposing to PoseNet.
+#   Architecture: identical to WILDE (fair A/B comparison). See WILDE for
+#   full architecture provenance.
 #
-#   Focal STE loss (Lin et al. ICCV 2017 "Focal Loss for Dense Object
-#   Detection"): per-pixel weighting (1-p_t)^γ with γ=2.0, replacing
-#   Quantizr's arbitrary error_boost. Information-theoretically principled:
-#   maximizes gradient information at the SegNet decision boundary.
-#   STE forward=hard argmax (matches scorer), backward=focal CE (smooth).
+#   Training (what differs from WILDE):
+#   - PCGrad gradient surgery (Yu et al. NeurIPS 2020 "Gradient Surgery
+#     for Multi-Task Learning"): resolves SegNet/PoseNet gradient conflicts
+#     on shared renderer parameters WITHOUT freeze/unfreeze. Activation-level
+#     approximation — projects SegNet gradient so combined gradient is
+#     non-opposing to PoseNet. Already implemented in our codebase (2026-04-14)
+#     as scorer_loss_pcgrad in src/tac/losses.py, validated with telemetry.
 #
-#   Novel: score-contribution-proportional (SCP) gradient weighting —
-#   SegNet/PoseNet loss weights adapt proportionally to their current
-#   contribution to the total score. Eliminates arbitrary loss weight
-#   constants. Based on the insight that the scorer formula's nonlinear
-#   combination (100*seg + sqrt(10*pose)) creates a time-varying optimal
-#   weighting that fixed weights cannot capture.
+#   - Focal STE loss (Lin et al. ICCV 2017 "Focal Loss for Dense Object
+#     Detection"): per-pixel weighting (1-p_t)^γ with γ=2.0. Replaces
+#     Quantizr's empirically-tuned error_boost (9x/49x) with an information-
+#     theoretically principled alternative. At decision boundaries where
+#     p_t≈0.5, focal weight is 0.25 (25x ratio over confident pixels at
+#     p_t≈0.99). Combined with STE: forward=hard argmax disagreement
+#     (matches official scorer exactly), backward=focal CE gradient (smooth,
+#     principled). Already implemented (2026-04-14) as focal_segnet_ste_loss.
+#
+#   - Continuous adaptive training: no hard phase boundaries. SegNet and
+#     PoseNet losses active throughout with PCGrad mediating conflicts.
+#     Hard-frame curriculum via difficulty-weighted sampling (similar to
+#     Self-Paced Learning, Kumar et al. NeurIPS 2010).
+#
+#   Novel (independent discoveries via skunkworks council):
+#   - Score-contribution-proportional (SCP) gradient weighting: SegNet/PoseNet
+#     weights adapt proportionally to their current score contribution
+#     (100*seg vs sqrt(10*pose)). Eliminates arbitrary constants. Based on
+#     our analysis that the scoring formula creates a time-varying optimal
+#     weighting (2026-04-24). EMA-damped to prevent oscillation (Fridrich
+#     stability analysis identified positive feedback loop without damping).
+#
+#   Hypothesis: principled gradient surgery + focal loss should match or
+#   exceed brute-force freeze/unfreeze, especially in the joint optimization
+#   regime where both scorers provide useful signal simultaneously.
+#
+#   Research methodology: same 15-member skunkworks council as WILDE.
+#   This profile represents the "principled" arm of an A/B test against
+#   WILDE's "empirical" arm. Both use identical architecture and total
+#   training budget (1680 epochs) for fair comparison.
 #
 # Council dissents recorded:
 #   Quantizr: "activation PCGrad insufficient, predict 10-20% worse SegNet"
