@@ -289,6 +289,72 @@ def step_qat(cfg: PipelineConfig, iteration: int = 0) -> Path:
     return qat_bin
 
 
+def step_fridrich_refine(cfg: PipelineConfig, iteration: int = 0) -> Path:
+    """Step 3.5: Fridrich steganalytic refinement (post-QAT polish).
+
+    100 epochs at very low LR with ONLY Fridrich losses (texture + L-inf + Markov).
+    Pushes pixel-level errors further into the scorer's null space without
+    disturbing the QAT-optimized scorer distortion. Our competitive advantage.
+    """
+    iter_dir = Path(cfg.output_dir) / f"iter_{iteration}"
+    iter_dir.mkdir(parents=True, exist_ok=True)
+    step_name = "fridrich_refine"
+
+    if _step_done(iter_dir, step_name):
+        _log(f"Fridrich refinement already done (iter {iteration}), skipping")
+        return iter_dir / "renderer_fridrich.bin"
+
+    # Find best QAT checkpoint to start from
+    qat_ckpt = iter_dir / "renderer_qat_best.pt"
+    if not qat_ckpt.exists():
+        qat_ckpt = iter_dir / "distill_latest.pt"
+    if not qat_ckpt.exists():
+        _log("No QAT checkpoint found, skipping Fridrich refinement", "WARN")
+        _mark_done(iter_dir, step_name, {"skipped": True})
+        return iter_dir / "renderer_qat.bin"
+
+    _log("Fridrich steganalytic refinement (100 epochs, Fridrich-only)")
+    cmd = [
+        sys.executable, "-u", "experiments/train_distill.py",
+        "--checkpoint", str(qat_ckpt),
+        "--masks", cfg.masks,
+        "--device", cfg.device,
+        "--output-dir", str(iter_dir / "fridrich"),
+        "--base-ch", str(cfg.base_ch), "--mid-ch", str(cfg.mid_ch),
+        "--motion-hidden", str(cfg.motion_hidden),
+        "--depth", str(cfg.depth), "--pose-dim", str(cfg.pose_dim),
+        "--embed-dim", str(cfg.embed_dim),
+        "--padding-mode", cfg.padding_mode,
+        "--eval-roundtrip",
+        # Zero scorer loss — ONLY Fridrich pixel-space losses
+        "--seg-weight", "0.0", "--pose-weight", "0.0", "--pixel-weight", "0.0",
+        "--use-texture-loss", "--texture-loss-weight", "1.0",
+        "--use-linf-penalty", "--linf-weight", "0.1",
+        "--use-markov-loss", "--markov-weight", "0.5",
+        "--phase1-epochs", "0", "--phase2-epochs", "100", "--phase3-epochs", "0",
+        "--phase2-lr", "1e-5",
+        "--ema-decay", "0.997",
+        "--checkpoint-every", "50", "--eval-every", "25", "--log-every", "10",
+    ]
+    if cfg.use_dsconv:
+        cmd.append("--use-dsconv")
+    if cfg.use_dilation:
+        cmd.append("--use-dilation")
+
+    t0 = time.monotonic()
+    result = subprocess.run(cmd)
+    elapsed = time.monotonic() - t0
+
+    if result.returncode != 0:
+        _log(f"Fridrich refinement failed (exit {result.returncode})", "WARN")
+        _mark_done(iter_dir, step_name, {"failed": True})
+        return iter_dir / "renderer_qat.bin"
+
+    _log(f"  Fridrich refinement complete in {elapsed/60:.1f} min")
+    _mark_done(iter_dir, step_name, {"elapsed_s": round(elapsed)})
+    return iter_dir / "fridrich" / "distill_phase2_best.pt"
+
+
 def step_archive(cfg: PipelineConfig, renderer_bin: Path, poses_path: Path,
                  iteration: int = 0) -> Path:
     """Build optimized submission archive."""
@@ -406,8 +472,15 @@ def run_compress(cfg: PipelineConfig) -> None:
         # Step 3: QAT
         qat_bin = step_qat(cfg, iteration)
 
-        # Step 4: Archive
-        final_renderer = qat_bin if qat_bin.exists() else renderer_bin
+        # Step 3.5: Fridrich steganalytic refinement (post-QAT polish)
+        fridrich_ckpt = step_fridrich_refine(cfg, iteration)
+
+        # Step 4: Archive (use Fridrich-refined if available, else QAT, else float)
+        if fridrich_ckpt.exists() and fridrich_ckpt.suffix == ".pt":
+            # Re-export Fridrich-refined checkpoint to FP4
+            final_renderer = step_export(cfg, iteration)  # will use updated checkpoint
+        else:
+            final_renderer = qat_bin if qat_bin.exists() else renderer_bin
         archive_path = step_archive(cfg, final_renderer, poses_path, iteration)
 
         # Step 5: Eval
