@@ -2024,29 +2024,38 @@ NETWORK_CODEC_FULL = {
 # motion_hidden=16 via --motion-hidden 16
 WILDE = {
     "experiment_type": "renderer_training",
-    "base_ch": 16,
-    "mid_ch": 24,
+    # Architecture: council consensus — base_ch=32 for SegNet capacity.
+    # SegNet gap is 5.7x (0.00347 vs Quantizr's 0.000613). Width is the #1 lever.
+    # 181K params, ~89KB FP4. Rate cost 0.060 (vs 0.200 Quantizr). Worth it.
+    "base_ch": 32,
+    "mid_ch": 48,
     "embed_dim": 6,
-    "motion_hidden": 16,
+    "motion_hidden": 24,
     "depth": 1,
     "pose_dim": 6,  # FiLM retained — council: keep correction path, zoom overrides flow only
     "use_dsconv": True,
     "padding_mode": "replicate",  # Yousfi: zeros creates boundary artifacts
     "use_dilation": True,  # kaileh57: "single largest win"
     "eval_roundtrip": True,
-    "segnet_loss_mode": "hinge",
-    "hinge_margin": 0.5,
-    "error_boost": 9.0,  # Quantizr anchor: 9x per-pixel error magnification
-    "error_boost_phase3": 49.0,  # Quantizr anchor_boost: 49x extreme hard mining
+    # Training: 5-phase Quantizr-adapted schedule
+    # Phase 1 (pixel warmup): all params, L1 loss
+    # Phase 2 (anchor): freeze motion, SegNet CE + KL(T=2.0), error_boost=9x
+    # Phase 3 (anchor_boost): same freeze, error_boost=49x, low LR
+    # Phase 4 (joint): unfreeze all, hinge loss + PoseNet MSE
+    # Phase 5 (hard-pair): top 20%, error_boost=25x
+    "segnet_loss_mode": "hinge",  # Phase 4+5 (Phase 2+3 use xent per council)
+    "hinge_margin": 1.0,  # Council: 1.0 > 0.5 for larger safety margin
+    "error_boost": 9.0,  # Phase 2 anchor: 9x
+    "error_boost_phase3": 49.0,  # Phase 3 anchor_boost: 49x extreme hard mining
     "freeze_motion_phase2": True,  # Freeze MotionPredictor during SegNet training
     "freeze_renderer_phase3": True,  # Freeze MaskRenderer during PoseNet training
     "pose_weight": 10.0,
     "seg_weight": 100.0,
     "pixel_weight": 0.1,
     "ema_decay": 0.997,
-    "phase1_epochs": 800,
-    "phase2_epochs": 1200,
-    "phase3_epochs": 400,
+    "phase1_epochs": 600,  # Pixel warmup (200) + anchor (400)
+    "phase2_epochs": 880,  # Anchor boost (80) + joint (800)
+    "phase3_epochs": 200,  # Hard-pair fine-tune
     "phase1_lr": 1e-3,
     "phase2_lr": 3e-4,
     "phase3_lr": 1e-4,
