@@ -92,9 +92,12 @@ def parse_args() -> argparse.Namespace:
         help="Smoke test: first 20 pairs only",
     )
     p.add_argument(
-        "--simulate-resize",
-        action="store_true",
-        help="Simulate official scorer's resolution round-trip (384->874->384)",
+        "--eval-roundtrip", action="store_true", default=True,
+        help="Simulate contest eval resize chain in scorer loss (default: on)",
+    )
+    p.add_argument(
+        "--no-eval-roundtrip", dest="eval_roundtrip", action="store_false",
+        help="Disable eval roundtrip simulation",
     )
     return p.parse_args()
 
@@ -106,7 +109,7 @@ def compute_per_pair_distortions(
     segnet: torch.nn.Module,
     device: torch.device,
     batch_size: int = 8,
-    simulate_resize: bool = True,
+    eval_roundtrip: bool = True,
 ) -> list[dict[str, float]]:
     """Compute PoseNet MSE and SegNet disagreement for each pair independently.
 
@@ -120,7 +123,7 @@ def compute_per_pair_distortions(
         segnet: frozen SegNet.
         device: computation device.
         batch_size: pairs per forward pass.
-        simulate_resize: simulate official scorer resolution pipeline.
+        eval_roundtrip: simulate official scorer resolution pipeline.
 
     Returns:
         List of dicts, one per pair, with 'posenet_mse', 'segnet_disagree',
@@ -181,7 +184,7 @@ def compute_per_pair_distortions(
 
         cand_chw = cand_chw.round().clamp(0, 255)
 
-        if simulate_resize:
+        if eval_roundtrip:
             flat = cand_chw.reshape(-1, *cand_chw.shape[2:])
             flat = F.interpolate(
                 flat,
@@ -451,7 +454,7 @@ def main() -> None:
     print(f"[config] checkpoint={args.checkpoint}")
     print(f"[config] video={video_path}")
     print(f"[config] output_dir={output_dir}")
-    print(f"[config] simulate_resize={args.simulate_resize}")
+    print(f"[config] eval_roundtrip={args.eval_roundtrip}")
 
     # ---- Checkpoint sanity check ----
     from tac.checkpoint import verify_checkpoint_identity
@@ -530,7 +533,7 @@ def main() -> None:
         segnet,
         device,
         batch_size=args.batch_size,
-        simulate_resize=args.simulate_resize,
+        eval_roundtrip=args.eval_roundtrip,
     )
     t_distort = time.monotonic() - t0
     print(f"[5/5] Computed {len(pair_results)} pair distortions in {t_distort:.1f}s")
@@ -552,7 +555,7 @@ def main() -> None:
             "n_frames": n_actual,
             "n_pairs": n_pairs,
             "batch_size": args.batch_size,
-            "simulate_resize": args.simulate_resize,
+            "eval_roundtrip": args.eval_roundtrip,
             "smoke": args.smoke,
         },
         "statistics": stats,

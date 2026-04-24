@@ -83,9 +83,10 @@ def parse_args() -> argparse.Namespace:
     p.add_argument("--qat-lr", type=float, default=0.0003,
                    help="QAT learning rate (lower than initial training)")
     p.add_argument("--batch-size", type=int, default=8, help="Pairs per batch for eval")
-    p.add_argument("--no-simulate-resize", dest="simulate_resize",
-                   action="store_false", default=True,
-                   help="Disable eval roundtrip in scoring")
+    p.add_argument("--eval-roundtrip", action="store_true", default=True,
+                   help="Simulate contest eval resize chain in scorer loss (default: on)")
+    p.add_argument("--no-eval-roundtrip", dest="eval_roundtrip", action="store_false",
+                   help="Disable eval roundtrip simulation")
     p.add_argument("--upstream", type=str, default=None, help="Path to upstream repo")
     p.add_argument("--video", type=str, default=None, help="Path to GT video")
     p.add_argument("--output-dir", type=str, default=None, help="Output directory")
@@ -132,7 +133,7 @@ def evaluate_model(
     posenet: nn.Module,
     segnet: nn.Module,
     device: torch.device,
-    simulate_resize: bool = True,
+    eval_roundtrip: bool = True,
     max_pairs: int | None = None,
 ) -> dict[str, float]:
     """Evaluate model quality using proxy scorer.
@@ -158,10 +159,12 @@ def evaluate_model(
 
             rgb = model(masks)  # (2, 3, H, W)
 
-            if simulate_resize:
-                _, _, H, W = rgb.shape
-                small = F.interpolate(rgb, size=(384, 512), mode="bilinear", align_corners=False)
-                rgb = F.interpolate(small, size=(H, W), mode="bilinear", align_corners=False)
+            if eval_roundtrip:
+                from tac.renderer import simulate_eval_roundtrip
+                from tac.camera import CAMERA_H, CAMERA_W
+                rgb = simulate_eval_roundtrip(
+                    rgb, target_h=CAMERA_H, target_w=CAMERA_W, noise_std=0.0,
+                )
 
             pair_chw = rgb.unsqueeze(0)
             fp_out, fs_out = scorer_forward_pair(pair_chw, posenet, segnet)
@@ -259,7 +262,7 @@ def main() -> None:
     print(f"\n[quantize] === BASELINE (FP32) ===")
     baseline = evaluate_model(
         model, gt_frames, gt_masks, posenet, segnet, device,
-        simulate_resize=args.simulate_resize,
+        eval_roundtrip=args.eval_roundtrip,
         max_pairs=min(len(gt_frames) // 2, 50) if args.smoke else None,
     )
     print(f"  Proxy score: {baseline['proxy_score']:.4f}")
@@ -293,7 +296,7 @@ def main() -> None:
         # Measure quality
         quality = evaluate_model(
             model, gt_frames, gt_masks, posenet, segnet, device,
-            simulate_resize=args.simulate_resize,
+            eval_roundtrip=args.eval_roundtrip,
             max_pairs=min(len(gt_frames) // 2, 50) if args.smoke else None,
         )
 
@@ -339,7 +342,7 @@ def main() -> None:
 
     int8_quality = evaluate_model(
         model, gt_frames, gt_masks, posenet, segnet, device,
-        simulate_resize=args.simulate_resize,
+        eval_roundtrip=args.eval_roundtrip,
         max_pairs=min(len(gt_frames) // 2, 50) if args.smoke else None,
     )
     int8_bytes = n_params  # 1 byte per param + scales
@@ -388,10 +391,12 @@ def main() -> None:
                     # Forward with FP4 fake quantization (STE gradients)
                     rgb = qat_model(masks)
 
-                    if args.simulate_resize:
-                        _, _, H, W = rgb.shape
-                        small = F.interpolate(rgb, size=(384, 512), mode="bilinear", align_corners=False)
-                        rgb = F.interpolate(small, size=(H, W), mode="bilinear", align_corners=False)
+                    if args.eval_roundtrip:
+                        from tac.renderer import simulate_eval_roundtrip
+                        from tac.camera import CAMERA_H, CAMERA_W
+                        rgb = simulate_eval_roundtrip(
+                            rgb, target_h=CAMERA_H, target_w=CAMERA_W, noise_std=0.5,
+                        )
 
                     pair_chw = rgb.unsqueeze(0)
                     fp_out, fs_out = scorer_forward_pair(pair_chw, posenet, segnet)
@@ -427,7 +432,7 @@ def main() -> None:
 
         qat_quality = evaluate_model(
             model, gt_frames, gt_masks, posenet, segnet, device,
-            simulate_resize=args.simulate_resize,
+            eval_roundtrip=args.eval_roundtrip,
         )
         print(f"  QAT result: proxy={qat_quality['proxy_score']:.4f}")
         results["qat"] = {
