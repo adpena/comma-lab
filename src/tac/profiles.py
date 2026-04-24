@@ -2232,6 +2232,21 @@ SHIRAZ = {
 }
 
 
+# ── WILDE + zoom-aware MotionPredictor ─────────────────────────────────
+# Same architecture as WILDE except MotionPredictor outputs gate(1)+residual(3)
+# only (4 channels). Flow is provided externally by RadialZoomWarp.
+# Saves ~14K params and ~3.5KB in FP4 archive. Architecturally cleaner:
+# zoom captures 99.8% of PoseNet variance (rank 1.008 Jacobian), so predicting
+# flow with a full CNN is redundant when zoom scalars are available.
+# Council decision (2026-04-24): unanimous 5-0, all design questions resolved.
+GREEN = {
+    **WILDE,
+    "use_zoom_flow": True,  # MotionPredictor: 4ch (gate+residual), flow from RadialZoomWarp
+    # GREEN = iteration 2 profile. Builds on WILDE winner + zoom-aware architecture.
+    # Zoom handles the rank-1 PoseNet signal (99.8% variance). MotionPredictor
+    # only learns gate+residual corrections (4ch vs 6ch). Smaller, more focused.
+}
+
 # Current 4090 config (103K params, proxy 0.612 at ep1500)
 DEFINITIVE_FLOAT_EMA = {
     "experiment_type": "renderer_training",
@@ -2283,6 +2298,7 @@ PROFILES = {
     "kaggle_p100_long": KAGGLE_P100_LONG,
     # Renderer training profiles
     "wilde": WILDE,
+    "green": GREEN,
     "shiraz": SHIRAZ,
     "definitive_float_ema": DEFINITIVE_FLOAT_EMA,
     "mask_renderer_smoke": MASK_RENDERER_SMOKE,

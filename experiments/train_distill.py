@@ -92,6 +92,7 @@ class DistillConfig:
     use_dsconv: bool = False  # Depthwise-separable convolutions (fewer params, wider channels)
     padding_mode: str = "replicate"  # Yousfi: zeros creates boundary artifacts
     use_dilation: bool = False  # Dilated ResBlocks [1,2,4] cascade (3x receptive field, 0 extra params)
+    use_zoom_flow: bool = False  # Zoom mode: MotionPredictor outputs gate+residual only (4ch), flow from ego_flow
 
     # Data paths
     tto_frames_path: str = "experiments/results/tto_v7_hinge_500/tto_frames.pt"
@@ -281,6 +282,7 @@ def create_model(cfg: DistillConfig, device: torch.device) -> nn.Module:
         use_dsconv=cfg.use_dsconv,
         padding_mode=cfg.padding_mode,
         use_dilation=cfg.use_dilation,
+        use_zoom_flow=cfg.use_zoom_flow,
     )
     model = model.to(device)
     n_params = sum(p.numel() for p in model.parameters())
@@ -1250,6 +1252,8 @@ def parse_args() -> argparse.Namespace:
                    help="Conv padding mode (Yousfi: zeros creates boundary artifacts)")
     p.add_argument("--use-dilation", action="store_true",
                    help="Dilated ResBlocks [1,2,4] cascade (3x receptive field, 0 extra params)")
+    p.add_argument("--use-zoom-flow", action="store_true",
+                   help="Zoom mode: MotionPredictor outputs gate+residual only (4ch), flow from ego_flow")
 
     # Training
     p.add_argument("--device", type=str, default="cuda", choices=["cuda", "mps", "cpu"])
@@ -1362,6 +1366,7 @@ def main() -> None:
         motion_hidden=args.motion_hidden,
         padding_mode=args.padding_mode,
         use_dilation=args.use_dilation,
+        use_zoom_flow=args.use_zoom_flow,
         eval_roundtrip=args.eval_roundtrip and not args.no_eval_roundtrip,
         segnet_loss_mode=args.segnet_loss_mode,
         hinge_margin=args.hinge_margin,

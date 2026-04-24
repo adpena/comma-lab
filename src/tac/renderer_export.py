@@ -677,6 +677,7 @@ def _infer_asymmetric_config(model: nn.Module) -> dict:
     # FiLM / DSConv architecture flags (required for faithful inline deserialize)
     pose_dim = getattr(model, "pose_dim", 0)
     use_dsconv = getattr(model, "use_dsconv", False)
+    use_zoom_flow = getattr(model, "use_zoom_flow", False)
 
     return {
         "num_classes": num_classes,
@@ -693,6 +694,7 @@ def _infer_asymmetric_config(model: nn.Module) -> dict:
         "flow_only": flow_only,
         "pose_dim": pose_dim,
         "use_dsconv": use_dsconv,
+        "use_zoom_flow": use_zoom_flow,
     }
 
 
@@ -925,6 +927,7 @@ def load_asymmetric_checkpoint(
         flow_only=header.get("flow_only", False),
         pose_dim=header.get("pose_dim", 0),
         use_dsconv=header.get("use_dsconv", False),
+        use_zoom_flow=header.get("use_zoom_flow", False),
     )
 
     # Build name -> module lookups
@@ -1299,6 +1302,7 @@ def load_asymmetric_checkpoint_fp4(
         flow_only=header.get("flow_only", False),
         pose_dim=header.get("pose_dim", 0),
         use_dsconv=header.get("use_dsconv", False),
+        use_zoom_flow=header.get("use_zoom_flow", False),
     )
 
     # Build name -> module lookups

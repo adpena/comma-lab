@@ -590,7 +590,12 @@ if not _HAS_TAC_RENDERER:
             nn.init.zeros_(self.head.weight)
             nn.init.zeros_(self.head.bias)
             # Gate channel bias -2.0 → sigmoid(-2)=0.12 (trust warp, not residual)
-            if output_channels >= 3:
+            if output_channels == 4:
+                # Zoom mode: gate is channel 0
+                with torch.no_grad():
+                    self.head.bias[0] = -2.0
+            elif output_channels >= 3:
+                # Standard mode: gate is channel 2 (after flow(2))
                 with torch.no_grad():
                     self.head.bias[2] = -2.0
 
@@ -618,6 +623,11 @@ if not _HAS_TAC_RENDERER:
             raw = self.head(fused)
             if self.output_channels == 2:
                 return raw * 0.1
+            elif self.output_channels == 4:
+                # Zoom mode: gate(1) + residual(3), no flow prediction
+                gate = raw[:, 0:1].sigmoid()
+                residual = raw[:, 1:4].tanh() * self.max_residual
+                return torch.cat([gate, residual], dim=1)
             else:
                 # Per-axis normalization matching canonical src/tac/renderer.py
                 # Council ruling (round 20): use (W-1)/(H-1) for align_corners=True
@@ -638,10 +648,12 @@ if not _HAS_TAC_RENDERER:
         def __init__(self, num_classes=5, embed_dim=6, base_ch=36, mid_ch=60,
                      motion_hidden=32, depth=1, max_flow_px=20.0,
                      max_residual=20.0, flow_only=False,
-                     pose_dim=0, use_dsconv=False):
+                     pose_dim=0, use_dsconv=False, use_zoom_flow=False):
             super().__init__()
             self.pose_dim = pose_dim
             self.use_dsconv = use_dsconv
+            self.use_zoom_flow = use_zoom_flow
+            motion_output_channels = 4 if use_zoom_flow else 6
             shared_emb = nn.Embedding(num_classes, embed_dim)
             self.renderer = MaskRenderer(
                 num_classes=num_classes, embed_dim=embed_dim,
@@ -652,18 +664,29 @@ if not _HAS_TAC_RENDERER:
             self.motion = MotionPredictor(
                 num_classes=num_classes, embed_dim=embed_dim,
                 hidden=motion_hidden, embedding=shared_emb,
-                output_channels=6, use_coord_grid=True, use_diff_features=True,
+                output_channels=motion_output_channels,
+                use_coord_grid=True, use_diff_features=True,
                 max_flow_px=max_flow_px, max_residual=max_residual,
                 flow_only=flow_only,
             )
 
         def forward(self, mask_t: torch.Tensor, mask_t1: torch.Tensor,
-                    pose: torch.Tensor | None = None, **kwargs) -> torch.Tensor:
+                    pose: torch.Tensor | None = None,
+                    ego_flow: torch.Tensor | None = None, **kwargs) -> torch.Tensor:
             frame_t1 = self.renderer(mask_t1, pose=pose)
             motion_out = self.motion(mask_t, mask_t1)
-            flow = motion_out[:, :2]
-            gate = motion_out[:, 2:3]
-            residual = motion_out[:, 3:6]
+            if self.use_zoom_flow:
+                if ego_flow is None:
+                    raise ValueError(
+                        "use_zoom_flow=True requires ego_flow to be provided."
+                    )
+                flow = ego_flow
+                gate = motion_out[:, 0:1]
+                residual = motion_out[:, 1:4]
+            else:
+                flow = ego_flow if ego_flow is not None else motion_out[:, :2]
+                gate = motion_out[:, 2:3]
+                residual = motion_out[:, 3:6]
             warped_t1 = warp_with_flow(frame_t1, flow)
             frame_t = (warped_t1 + gate * residual).clamp(0.0, 255.0)
             pair = torch.stack([frame_t, frame_t1], dim=1)
@@ -1004,6 +1027,7 @@ def _inline_load_fp4a(raw_bytes: bytes, device: str = "cpu") -> nn.Module:
             flow_only=header.get("flow_only", False),
             pose_dim=header.get("pose_dim", 0),
             use_dsconv=header.get("use_dsconv", False),
+            use_zoom_flow=header.get("use_zoom_flow", False),
         )
     else:
         raise RuntimeError(
@@ -1160,6 +1184,7 @@ def _inline_load_asym(raw_bytes: bytes, device: str = "cpu") -> nn.Module:
         flow_only=header.get("flow_only", False),
         pose_dim=header.get("pose_dim", 0),
         use_dsconv=header.get("use_dsconv", False),
+        use_zoom_flow=header.get("use_zoom_flow", False),
     )
 
     # Build name → module lookups
@@ -1465,6 +1490,7 @@ def _load_renderer(renderer_path: str, device: str) -> nn.Module:
             flow_only=config.get("flow_only", False),
             pose_dim=config.get("pose_dim", 0),
             use_dsconv=config.get("use_dsconv", False),
+            use_zoom_flow=config.get("use_zoom_flow", False),
         )
         renderer.load_state_dict(raw_sd, strict=True)
         renderer.to(device).eval()
@@ -1525,7 +1551,7 @@ def _is_asymmetric_model(model: nn.Module) -> bool:
         type(model).__name__ == "AsymmetricPairGenerator"
         or (hasattr(model, "renderer") and hasattr(model, "motion")
             and hasattr(model.motion, "output_channels")
-            and getattr(model.motion, "output_channels", 2) == 6)
+            and getattr(model.motion, "output_channels", 2) in (4, 6))
     )
 
 

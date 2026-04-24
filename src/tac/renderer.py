@@ -554,10 +554,17 @@ class MotionPredictor(nn.Module):
         # Zero-init output — start with zero motion (identity warp)
         nn.init.zeros_(self.head.weight)
         nn.init.zeros_(self.head.bias)
-        # Gate channel (index 2) init bias to -2.0 → sigmoid(-2)=0.12
+        # Gate channel init bias to -2.0 → sigmoid(-2)=0.12
         # This makes the model trust the warp from the start, using residual
         # only for correction. Without this, gate=0.5 → half the signal lost.
-        if output_channels >= 3:
+        # Gate is at index 2 for 6-ch (flow(2)+gate+residual(3)),
+        # or at index 0 for 4-ch zoom mode (gate+residual(3)).
+        if output_channels == 4:
+            # Zoom mode: gate is channel 0
+            with torch.no_grad():
+                self.head.bias[0] = -2.0
+        elif output_channels >= 3:
+            # Standard mode: gate is channel 2 (after flow(2))
             with torch.no_grad():
                 self.head.bias[2] = -2.0
 
@@ -605,8 +612,14 @@ class MotionPredictor(nn.Module):
         if self.output_channels == 2:
             # Legacy: flow only, scaled to small range
             return raw * 0.1
+        elif self.output_channels == 4:
+            # Zoom mode: gate(1) + residual(3), no flow prediction.
+            # Flow is provided externally by RadialZoomWarp or similar.
+            gate = raw[:, 0:1].sigmoid()
+            residual = raw[:, 1:4].tanh() * self.max_residual
+            return torch.cat([gate, residual], dim=1)
         else:
-            # Asymmetric mode: flow(2) + gate(1) + residual(3)
+            # Standard asymmetric mode: flow(2) + gate(1) + residual(3)
             # Per-axis normalization: grid_sample uses [-1,1] coordinates.
             # flow[:,0] drives x (width), flow[:,1] drives y (height).
             # Council sweep: max(H,W) caused 25% y-flow underscale for 874x1164.
@@ -929,12 +942,17 @@ class AsymmetricPairGenerator(nn.Module):
         use_dsconv: bool = False,
         padding_mode: str = "zeros",
         use_dilation: bool = False,
+        use_zoom_flow: bool = False,
     ):
         super().__init__()
         self.pose_dim = pose_dim
         self.use_dsconv = use_dsconv
         self.padding_mode = padding_mode
         self.use_dilation = use_dilation
+        self.use_zoom_flow = use_zoom_flow
+        # When zoom handles flow, MotionPredictor only needs gate(1) + residual(3) = 4 channels.
+        # This saves ~14K params (motion_hidden=24) by not predicting a redundant rank-1 flow signal.
+        motion_output_channels = 4 if use_zoom_flow else 6
         # Shared embedding between renderer and motion predictor
         shared_emb = nn.Embedding(num_classes, embed_dim)
         self.renderer = MaskRenderer(
@@ -954,7 +972,7 @@ class AsymmetricPairGenerator(nn.Module):
             embed_dim=embed_dim,
             hidden=motion_hidden,
             embedding=shared_emb,
-            output_channels=6,  # flow(2) + gate(1) + residual(3)
+            output_channels=motion_output_channels,
             use_coord_grid=True,
             use_diff_features=True,
             max_flow_px=max_flow_px,
@@ -993,16 +1011,29 @@ class AsymmetricPairGenerator(nn.Module):
         # Render anchor frame (frame_t1) directly from mask
         frame_t1 = self.renderer(mask_t1, pose=pose)  # (B, 3, H, W) float [0, 255]
 
-        # Predict motion from both masks (gate + residual always from network)
-        motion_out = self.motion(mask_t, mask_t1)  # (B, 6, H, W)
-        gate = motion_out[:, 2:3]      # (B, 1, H, W) [0, 1]
-        residual = motion_out[:, 3:6]  # (B, 3, H, W) [-20, 20]
+        # Predict motion from both masks
+        motion_out = self.motion(mask_t, mask_t1)
 
-        # Flow: use precomputed ego-flow if provided, else from motion predictor
-        if ego_flow is not None:
+        if self.use_zoom_flow:
+            # Zoom mode: MotionPredictor outputs gate(1) + residual(3) = 4 channels.
+            # Flow MUST come from ego_flow (RadialZoomWarp or similar).
+            if ego_flow is None:
+                raise ValueError(
+                    "use_zoom_flow=True requires ego_flow to be provided. "
+                    "Flow is not predicted by the MotionPredictor in zoom mode."
+                )
             flow = ego_flow
+            gate = motion_out[:, 0:1]      # (B, 1, H, W) [0, 1]
+            residual = motion_out[:, 1:4]  # (B, 3, H, W) [-max_residual, max_residual]
         else:
-            flow = motion_out[:, :2]   # (B, 2, H, W) normalized flow
+            # Standard mode: MotionPredictor outputs flow(2) + gate(1) + residual(3) = 6 channels.
+            gate = motion_out[:, 2:3]      # (B, 1, H, W) [0, 1]
+            residual = motion_out[:, 3:6]  # (B, 3, H, W) [-max_residual, max_residual]
+            # Flow: use precomputed ego-flow if provided, else from motion predictor
+            if ego_flow is not None:
+                flow = ego_flow
+            else:
+                flow = motion_out[:, :2]   # (B, 2, H, W) normalized flow
 
         # Warp anchor backward to produce frame_t
         warped_t1 = warp_with_flow(frame_t1, flow)
