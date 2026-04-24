@@ -472,6 +472,9 @@ def compute_segnet_constraint_loss(
                 with torch.no_grad():
                     error_magnitude = hinge_per_pixel / (hinge_per_pixel.mean() + 1e-8)
                     boost_weights = 1.0 + (error_boost - 1.0) * error_magnitude.pow(2)
+                    # Clamp to prevent single-pixel gradient domination
+                    # (Yousfi audit: outlier at 10x mean → 4801x weight without clamp)
+                    boost_weights = boost_weights.clamp(max=error_boost * 10)
                 hinge_per_pixel = hinge_per_pixel * boost_weights
 
             if per_class_weights is not None:
@@ -488,6 +491,7 @@ def compute_segnet_constraint_loss(
                 with torch.no_grad():
                     error_magnitude = nll / (nll.mean() + 1e-8)
                     boost_weights = 1.0 + (error_boost - 1.0) * error_magnitude.pow(2)
+                    boost_weights = boost_weights.clamp(max=error_boost * 10)
                 batch_loss = (nll * boost_weights).mean()
             else:
                 batch_loss = F.cross_entropy(logits, masks_resized)

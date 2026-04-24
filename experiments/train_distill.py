@@ -147,8 +147,9 @@ class DistillConfig:
     texture_loss_weight: float = 0.5     # weight for texture-aware L1
     use_linf_penalty: bool = False       # Square root law: penalize peak errors
     linf_weight: float = 0.01           # weight for L∞ penalty
-    use_boundary_hinge: bool = False     # Enhanced hinge with boundary weighting
-    boundary_extra_weight: float = 5.0   # extra weight on class boundary pixels
+    # use_boundary_hinge: REMOVED — was declared but never wired to any loss
+    # computation. boundary_sensitive_hinge exists in fridrich_losses.py but
+    # was never integrated. Removed to prevent dead-feature trap.
     use_markov_loss: bool = False        # HUGO: preserve local gradient statistics
     markov_weight: float = 0.1          # weight for Markov chain loss
 
@@ -383,7 +384,7 @@ def compute_scorer_loss(
     # ── Validate: Fridrich losses and error_boost only work with standard mode ──
     if cfg.loss_mode != "standard":
         fridrich_active = any([cfg.use_texture_loss, cfg.use_linf_penalty,
-                               cfg.use_markov_loss, cfg.use_boundary_hinge])
+                               cfg.use_markov_loss])
         if fridrich_active:
             raise ValueError(
                 f"Fridrich losses (texture/linf/markov/boundary) are only supported "
@@ -771,7 +772,12 @@ def train_phase2(
         # Sample pair indices: weighted or uniform
         if difficulty_weights is not None and cfg.hard_frame_ratio > 0:
             # Weighted sampling without replacement for one epoch
-            pair_indices = torch.multinomial(difficulty_weights, n_pairs, replacement=False)
+            # replacement=True allows hard pairs to appear multiple times per epoch
+            # (Yousfi audit: replacement=False makes curriculum effectively uniform)
+            # Floor weights at 0.5/n to prevent complete starvation of easy pairs
+            floored_weights = difficulty_weights.clamp(min=0.5 / n_pairs)
+            floored_weights = floored_weights / floored_weights.sum()
+            pair_indices = torch.multinomial(floored_weights, n_pairs, replacement=True)
         else:
             pair_indices = torch.randperm(n_pairs, device="cpu")
 
@@ -825,22 +831,33 @@ def train_phase2(
                 epoch_conflicts += 1
             n_batches += 1
 
-            # Track per-pair difficulty via EMA (detached)
-            # Use per-pair PoseNet MSE for difficulty (more discriminative than batch avg)
-            # posenet is already in eval() mode from load_differentiable_scorers
+            # Track per-pair difficulty via EMA using FULL score contribution
+            # (Yousfi audit: PoseNet-only was wrong — SegNet is 77x more important)
+            # difficulty = 100*seg_dist + sqrt(10*pose_dist) per the contest formula
             with torch.no_grad():
                 pred_chw = predicted_pairs.reshape(-1, *predicted_pairs.shape[2:]).permute(0, 3, 1, 2)
                 gt_chw = gt_pairs.reshape(-1, *gt_pairs.shape[2:]).permute(0, 3, 1, 2)
                 B_pairs = len(batch_idx)
+                # PoseNet: per-pair MSE on 6D pose
                 pred_pose_p = pred_chw.reshape(B_pairs, 2, *pred_chw.shape[1:])
                 gt_pose_p = gt_chw.reshape(B_pairs, 2, *gt_chw.shape[1:])
                 p_in = posenet.preprocess_input(pred_pose_p)
                 g_in = posenet.preprocess_input(gt_pose_p)
                 p_out = posenet(p_in)["pose"][..., :6]
                 g_out = posenet(g_in)["pose"][..., :6]
-                per_pair_mse = (p_out - g_out).pow(2).mean(dim=1)  # (B,)
+                per_pair_pose = (p_out - g_out).pow(2).mean(dim=1)  # (B,)
+                # SegNet: per-pair argmax disagreement on frame_t1 (odd frame)
+                odd_pred = pred_chw.reshape(B_pairs, 2, *pred_chw.shape[1:])[:, 1]  # (B, 3, H, W)
+                odd_gt = gt_chw.reshape(B_pairs, 2, *gt_chw.shape[1:])[:, 1]
+                seg_in_p = segnet.preprocess_input(odd_pred.unsqueeze(1))
+                seg_in_g = segnet.preprocess_input(odd_gt.unsqueeze(1))
+                seg_p = segnet(seg_in_p).argmax(dim=1)
+                seg_g = segnet(seg_in_g).argmax(dim=1)
+                per_pair_seg = (seg_p != seg_g).float().mean(dim=(1, 2))  # (B,)
+                # Contest formula: 100*seg + sqrt(10*pose)
+                per_pair_difficulty = 100 * per_pair_seg + (10 * per_pair_pose).sqrt()
                 for k, idx in enumerate(batch_idx):
-                    per_pair_loss[idx.item()] = 0.9 * per_pair_loss[idx.item()] + 0.1 * per_pair_mse[k].item()
+                    per_pair_loss[idx.item()] = 0.9 * per_pair_loss[idx.item()] + 0.1 * per_pair_difficulty[k].item()
 
         scheduler.step()
         avg_loss = epoch_loss / max(n_batches, 1)

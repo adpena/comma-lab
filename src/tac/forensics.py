@@ -128,8 +128,10 @@ def boundary_artifact_score(
 
     # Mean gradient magnitude per pixel (average over both directions)
     # Pad to original size for mask alignment
-    grad_h_padded = F.pad(grad_h, (0, 0, 0, 1))  # (B, C, H, W)
-    grad_w_padded = F.pad(grad_w, (0, 1, 0, 0))   # (B, C, H, W)
+    # Use replicate padding — NOT zero padding (Fridrich: a tool detecting
+    # zero-padding artifacts must not introduce zero-padding artifacts itself)
+    grad_h_padded = F.pad(grad_h, (0, 0, 0, 1), mode="replicate")  # (B, C, H, W)
+    grad_w_padded = F.pad(grad_w, (0, 1, 0, 0), mode="replicate")   # (B, C, H, W)
     grad_mag = (grad_h_padded + grad_w_padded) / 2.0  # (B, C, H, W)
 
     grad_flat = grad_mag.reshape(B * C, H, W)
@@ -148,8 +150,9 @@ def boundary_artifact_score(
     norm_var = abs(math.log(var_ratio + 1e-8))
     norm_grad = abs(math.log(grad_ratio + 1e-8))
 
-    # Geometric mean (all three must be low for a good score)
-    artifact_score = (norm_mean * norm_var * norm_grad) ** (1.0 / 3.0)
+    # Max of normalized metrics (Fridrich: each metric captures an independent
+    # detection feature — geometric mean masks artifacts when any single metric is zero)
+    artifact_score = max(norm_mean, norm_var, norm_grad)
 
     return {
         "mean_diff": mean_diff,
@@ -257,15 +260,20 @@ def segnet_class_boundary_analysis(
 
             disagree = (pred_cls != gt_cls)  # (B, H', W')
 
-            # Find class boundaries in GT: pixels where any 4-connected
-            # neighbour has a different class
-            gt_shifted_h = torch.zeros_like(gt_cls, dtype=torch.bool)
-            gt_shifted_w = torch.zeros_like(gt_cls, dtype=torch.bool)
-            gt_shifted_h[:, 1:, :] |= (gt_cls[:, 1:, :] != gt_cls[:, :-1, :])
-            gt_shifted_h[:, :-1, :] |= (gt_cls[:, :-1, :] != gt_cls[:, 1:, :])
-            gt_shifted_w[:, :, 1:] |= (gt_cls[:, :, 1:] != gt_cls[:, :, :-1])
-            gt_shifted_w[:, :, :-1] |= (gt_cls[:, :, :-1] != gt_cls[:, :, 1:])
-            is_boundary = gt_shifted_h | gt_shifted_w  # (B, H', W')
+            # Find class boundaries in GT: 8-connected (includes diagonals)
+            # Fridrich: SRNet uses 3x3 kernels with full 8-connectivity.
+            # 4-connected misses diagonal lane markings by 10-20%.
+            is_boundary = torch.zeros_like(gt_cls, dtype=torch.bool)
+            # Horizontal + vertical (4-connected)
+            is_boundary[:, 1:, :] |= (gt_cls[:, 1:, :] != gt_cls[:, :-1, :])
+            is_boundary[:, :-1, :] |= (gt_cls[:, :-1, :] != gt_cls[:, 1:, :])
+            is_boundary[:, :, 1:] |= (gt_cls[:, :, 1:] != gt_cls[:, :, :-1])
+            is_boundary[:, :, :-1] |= (gt_cls[:, :, :-1] != gt_cls[:, :, 1:])
+            # Diagonal (8-connected)
+            is_boundary[:, 1:, 1:] |= (gt_cls[:, 1:, 1:] != gt_cls[:, :-1, :-1])
+            is_boundary[:, :-1, :-1] |= (gt_cls[:, :-1, :-1] != gt_cls[:, 1:, 1:])
+            is_boundary[:, 1:, :-1] |= (gt_cls[:, 1:, :-1] != gt_cls[:, :-1, 1:])
+            is_boundary[:, :-1, 1:] |= (gt_cls[:, :-1, 1:] != gt_cls[:, 1:, :-1])
             is_interior = ~is_boundary
 
             boundary_errors += disagree[is_boundary].sum().item()
