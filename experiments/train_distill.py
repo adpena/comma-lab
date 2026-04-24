@@ -381,16 +381,8 @@ def compute_scorer_loss(
         pred_frames_for_loss = pred_frames
         gt_frames_for_loss = gt_frames
 
-    # ── Validate: Fridrich losses and error_boost only work with standard mode ──
+    # ── Validate: error_boost only works with standard mode ──
     if cfg.loss_mode != "standard":
-        fridrich_active = any([cfg.use_texture_loss, cfg.use_linf_penalty,
-                               cfg.use_markov_loss])
-        if fridrich_active:
-            raise ValueError(
-                f"Fridrich losses (texture/linf/markov/boundary) are only supported "
-                f"with loss_mode='standard', got {cfg.loss_mode!r}. "
-                f"PCGrad and focal_ste have their own gradient shaping."
-            )
         boost = error_boost_override if error_boost_override is not None else cfg.error_boost
         if boost > 1.0:
             import warnings
@@ -402,13 +394,42 @@ def compute_scorer_loss(
 
     # ── Dispatch on loss_mode ────────────────────────────────────────
     if cfg.loss_mode == "pcgrad":
-        return _compute_pcgrad_loss(
+        loss, metrics = _compute_pcgrad_loss(
             pred_frames_for_loss, gt_frames_for_loss, B, posenet, segnet, cfg,
         )
     elif cfg.loss_mode == "focal_ste":
-        return _compute_focal_ste_loss(
+        loss, metrics = _compute_focal_ste_loss(
             pred_frames_for_loss, gt_frames_for_loss, B, posenet, segnet, cfg,
         )
+    else:
+        loss, metrics = None, None  # fall through to standard path below
+
+    # ── Fridrich losses: additive pixel-space regularizers (ALL loss modes) ──
+    # These are our competitive advantage — inverse steganalysis loss shaping.
+    # Independent of scorer loss mode: they operate in pixel space on the
+    # rendered frames, directing errors into the scorer's null space.
+    if loss is not None:
+        # pcgrad or focal_ste path — add Fridrich on top
+        fridrich_extra = torch.tensor(0.0, device=pred_frames_for_loss.device)
+        if cfg.use_texture_loss:
+            from tac.fridrich_losses import texture_weighted_loss
+            fridrich_extra = fridrich_extra + cfg.texture_loss_weight * texture_weighted_loss(
+                pred_frames_for_loss, gt_frames_for_loss,
+            )
+        if cfg.use_linf_penalty:
+            from tac.fridrich_losses import linf_penalty
+            fridrich_extra = fridrich_extra + cfg.linf_weight * linf_penalty(
+                pred_frames_for_loss, gt_frames_for_loss,
+            )
+        if cfg.use_markov_loss:
+            from tac.fridrich_losses import markov_chain_loss
+            fridrich_extra = fridrich_extra + cfg.markov_weight * markov_chain_loss(
+                pred_frames_for_loss, gt_frames_for_loss,
+            )
+        if fridrich_extra.item() > 0:
+            loss = loss + fridrich_extra
+            metrics["fridrich_loss"] = round(fridrich_extra.item(), 6)
+        return loss, metrics
 
     # ── loss_mode="standard": original hinge/xent path ──────────────
     from tac.constrained_gen import compute_segnet_constraint_loss

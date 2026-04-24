@@ -2193,6 +2193,13 @@ SHIRAZ = {
     "hinge_margin": 1.0,
     "focal_gamma": 2.0,            # focal per-pixel reweighting (Lin et al. 2017)
     "error_boost": 1.0,            # NO error_boost — focal handles hard pixels
+    # Fridrich inverse steganalysis (works with ALL loss modes now)
+    "use_texture_loss": True,      # UNIWARD: hide errors in textured regions
+    "texture_loss_weight": 0.5,
+    "use_linf_penalty": True,      # Square root law: spread errors
+    "linf_weight": 0.01,
+    "use_markov_loss": True,       # HUGO: preserve local gradient statistics
+    "markov_weight": 0.1,
     "pose_weight": 10.0,
     "seg_weight": 100.0,
     "pixel_weight": 0.1,
