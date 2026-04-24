@@ -2022,6 +2022,28 @@ NETWORK_CODEC_FULL = {
 #   --ema-decay 0.997 --eval-roundtrip
 #   --phase1-epochs 800 --phase2-epochs 1200 --phase3-epochs 400
 # motion_hidden=16 via --motion-hidden 16
+#
+# Methodology:
+#   Architecture: CLADE-conditioned U-Net (Park et al. 2019 "Semantic Image Synthesis")
+#   with depthwise-separable convolutions (Howard et al. 2017 "MobileNets") and
+#   dilated residual blocks (Yu & Koltun 2016 "Multi-Scale Context Aggregation").
+#   Replicate padding per Yousfi's boundary artifact observation (PR#55 comment).
+#   Asymmetric pair generation: frame_t1=render(mask), frame_t=warp+gate*residual.
+#
+#   Training: 5-phase freeze/unfreeze schedule adapted from Quantizr (PR#55, score 0.33).
+#   Phase 1-2: freeze MotionPredictor, pure SegNet optimization with error_boost
+#   (per-pixel quadratic reweighting, 9x→49x schedule). Phase 3-4: unfreeze,
+#   joint SegNet+PoseNet with hinge loss (margin=1.0).
+#   EMA weight averaging (Polyak 1992), eval_roundtrip STE (Bengio et al. 2013).
+#
+#   Novel: CLADE per-class normalization for SegNet fidelity (our advantage over
+#   Quantizr's GroupNorm). Radial zoom warp (600 scalars, 1.2KB) replaces dense
+#   optical flow for PoseNet — based on our rank-1 Jacobian discovery (PoseNet
+#   output dim 0 captures 99.8% of variance, corresponding to forward ego-motion).
+#
+#   Key discovery: SegNet and PoseNet are architecturally orthogonal (SegNet sees
+#   only frame_t1, PoseNet sees the pair). Freeze/unfreeze exploits this for
+#   zero-interference sequential optimization.
 WILDE = {
     "experiment_type": "renderer_training",
     # Architecture: council consensus — base_ch=32 for SegNet capacity.
@@ -2069,10 +2091,29 @@ WILDE = {
 
 # ── Shiraz: mathematically principled adaptive training ──────────────
 # A/B test against WILDE. Same architecture, different training strategy.
-# Instead of freeze/unfreeze (brute force), uses:
-# - PCGrad gradient projection (conflict resolution without freezing)
-# - Focal STE loss (principled per-pixel weighting, gamma=2)
-# - Continuous adaptive training (no arbitrary phase boundaries)
+#
+# Methodology:
+#   Same CLADE U-Net architecture as WILDE (fair A/B comparison).
+#
+#   Training: continuous adaptive optimization WITHOUT freeze/unfreeze.
+#   Uses PCGrad (Yu et al. NeurIPS 2020 "Gradient Surgery for Multi-Task
+#   Learning") to resolve SegNet/PoseNet gradient conflicts on shared
+#   renderer parameters. Activation-level approximation — projects SegNet
+#   gradient so combined gradient is non-opposing to PoseNet.
+#
+#   Focal STE loss (Lin et al. ICCV 2017 "Focal Loss for Dense Object
+#   Detection"): per-pixel weighting (1-p_t)^γ with γ=2.0, replacing
+#   Quantizr's arbitrary error_boost. Information-theoretically principled:
+#   maximizes gradient information at the SegNet decision boundary.
+#   STE forward=hard argmax (matches scorer), backward=focal CE (smooth).
+#
+#   Novel: score-contribution-proportional (SCP) gradient weighting —
+#   SegNet/PoseNet loss weights adapt proportionally to their current
+#   contribution to the total score. Eliminates arbitrary loss weight
+#   constants. Based on the insight that the scorer formula's nonlinear
+#   combination (100*seg + sqrt(10*pose)) creates a time-varying optimal
+#   weighting that fixed weights cannot capture.
+#
 # Council dissents recorded:
 #   Quantizr: "activation PCGrad insufficient, predict 10-20% worse SegNet"
 #   Hotz: "use existing tested components only" → simplified to focal_ste + pcgrad
