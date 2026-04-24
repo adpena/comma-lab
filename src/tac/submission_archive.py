@@ -22,6 +22,103 @@ from pathlib import Path
 
 logger = logging.getLogger(__name__)
 
+
+# ============================================================
+# Brotli compression utilities
+# ============================================================
+
+def brotli_compress(data: bytes, quality: int = 11, lgwin: int = 24) -> bytes:
+    """Compress bytes with Brotli (quality 11 = max, matches Quantizr)."""
+    import brotli
+    return brotli.compress(data, quality=quality, lgwin=lgwin)
+
+
+def brotli_decompress(data: bytes) -> bytes:
+    """Decompress Brotli-compressed bytes."""
+    import brotli
+    return brotli.decompress(data)
+
+
+def compress_file_brotli(
+    input_path: Path, output_path: Path | None = None, quality: int = 11
+) -> Path:
+    """Compress a file with Brotli, producing .br suffix.
+
+    Args:
+        input_path: file to compress
+        output_path: destination (default: input_path + '.br')
+        quality: Brotli quality 0-11 (11 = max, matches Quantizr)
+
+    Returns:
+        Path to the compressed file.
+    """
+    input_path = Path(input_path)
+    if output_path is None:
+        output_path = input_path.with_suffix(input_path.suffix + ".br")
+    data = input_path.read_bytes()
+    compressed = brotli_compress(data, quality=quality)
+    output_path.write_bytes(compressed)
+    ratio = len(compressed) / len(data) * 100
+    logger.info(
+        "Brotli: %s %d B -> %d B (%.1f%%)", input_path.name, len(data), len(compressed), ratio
+    )
+    print(f"  Brotli: {input_path.name} {len(data):,}B -> {len(compressed):,}B ({ratio:.1f}%)")
+    return output_path
+
+
+def decompress_file_brotli(input_path: Path, output_path: Path | None = None) -> Path:
+    """Decompress a .br file.
+
+    Args:
+        input_path: Brotli-compressed file (typically *.br)
+        output_path: destination (default: strip .br suffix)
+
+    Returns:
+        Path to the decompressed file.
+    """
+    input_path = Path(input_path)
+    if output_path is None:
+        # Strip .br suffix
+        if input_path.suffix == ".br":
+            output_path = input_path.with_suffix("")
+        else:
+            raise ValueError(
+                f"Cannot infer output path: {input_path} does not end in .br. "
+                f"Provide output_path explicitly."
+            )
+    data = input_path.read_bytes()
+    decompressed = brotli_decompress(data)
+    output_path.write_bytes(decompressed)
+    logger.info(
+        "Brotli decompress: %s %d B -> %s %d B",
+        input_path.name, len(data), output_path.name, len(decompressed),
+    )
+    return output_path
+
+
+def decompress_brotli_files_in_dir(directory: Path | str) -> int:
+    """Decompress all .br files in a directory, removing the .br originals.
+
+    This is the canonical inflate-time decompression step: after the archive
+    is extracted, any .br files are decompressed in place before the inflate
+    pipeline reads them.
+
+    Args:
+        directory: directory to scan for .br files
+
+    Returns:
+        Number of files decompressed.
+    """
+    directory = Path(directory)
+    count = 0
+    for br_file in sorted(directory.glob("*.br")):
+        decompressed_path = decompress_file_brotli(br_file)
+        br_file.unlink()  # remove .br, keep decompressed
+        logger.info("Decompressed and removed: %s -> %s", br_file.name, decompressed_path.name)
+        count += 1
+    return count
+
+
 # Contest constants
 ORIGINAL_VIDEO_BYTES = 37_545_489
 NUM_FRAMES = 1200
@@ -178,35 +275,39 @@ def validate_archive(
                 else:
                     result.warnings.append(msg)
 
-    # Sanity checks on known file sizes
-    if "renderer.bin" in result.files_found:
-        size = result.files_found["renderer.bin"]
-        if size < 10_000:
-            result.errors.append(
-                f"renderer.bin suspiciously small: {size} bytes (expected ~150-300KB)"
-            )
-            result.valid = False
-        elif size > 5_000_000:
-            result.warnings.append(
-                f"renderer.bin unusually large: {size} bytes (expected ~150-300KB)"
-            )
+    # Sanity checks on known file sizes (skip for Brotli-compressed archives
+    # since .br files have unpredictable sizes after compression)
+    is_brotli = any(name.endswith(".br") for name in result.files_found)
 
-    if "masks.mkv" in result.files_found:
-        size = result.files_found["masks.mkv"]
-        if size < 1_000:
-            result.errors.append(
-                f"masks.mkv suspiciously small: {size} bytes (expected ~50-200KB)"
-            )
-            result.valid = False
+    if not is_brotli:
+        if "renderer.bin" in result.files_found:
+            size = result.files_found["renderer.bin"]
+            if size < 10_000:
+                result.errors.append(
+                    f"renderer.bin suspiciously small: {size} bytes (expected ~150-300KB)"
+                )
+                result.valid = False
+            elif size > 5_000_000:
+                result.warnings.append(
+                    f"renderer.bin unusually large: {size} bytes (expected ~150-300KB)"
+                )
 
-    if "optimized_poses.pt" in result.files_found:
-        size = result.files_found["optimized_poses.pt"]
-        # 600 pairs * 6 values * 2 bytes (fp16) = 7.2KB minimum
-        if size < 1_000:
-            result.errors.append(
-                f"optimized_poses.pt suspiciously small: {size} bytes (expected ~7-20KB)"
-            )
-            result.valid = False
+        if "masks.mkv" in result.files_found:
+            size = result.files_found["masks.mkv"]
+            if size < 1_000:
+                result.errors.append(
+                    f"masks.mkv suspiciously small: {size} bytes (expected ~50-200KB)"
+                )
+                result.valid = False
+
+        if "optimized_poses.pt" in result.files_found:
+            size = result.files_found["optimized_poses.pt"]
+            # 600 pairs * 6 values * 2 bytes (fp16) = 7.2KB minimum
+            if size < 1_000:
+                result.errors.append(
+                    f"optimized_poses.pt suspiciously small: {size} bytes (expected ~7-20KB)"
+                )
+                result.valid = False
 
     return result
 
@@ -262,6 +363,8 @@ def build_submission_archive(
     optimized_embedding_pt: Path | str | None = None,
     manifest: ArchiveManifest = RENDERER_SUBMISSION_MANIFEST,
     validate: bool = True,
+    use_brotli: bool = False,
+    brotli_quality: int = 11,
 ) -> ArchiveValidationResult:
     """Build and validate a submission archive.
 
@@ -276,6 +379,12 @@ def build_submission_archive(
         optimized_embedding_pt: Path to optimized_embedding.pt (optional)
         manifest: Expected contents manifest
         validate: If True, validate after building (default True)
+        use_brotli: If True, Brotli-compress each artifact before adding
+            to the ZIP. Archive will contain .br files (e.g. renderer.bin.br).
+            The inflate side must call decompress_brotli_files_in_dir()
+            after extraction.
+        brotli_quality: Brotli quality level 0-11 (default 11 = max,
+            matches Quantizr). Only used when use_brotli=True.
 
     Returns:
         ArchiveValidationResult with full provenance.
@@ -313,15 +422,45 @@ def build_submission_archive(
 
     # Build the archive
     output_path.parent.mkdir(parents=True, exist_ok=True)
-    with zipfile.ZipFile(output_path, "w", zipfile.ZIP_DEFLATED, compresslevel=9) as zf:
+
+    # When using Brotli, we store pre-compressed .br blobs with ZIP_STORED
+    # (no double compression). Without Brotli, use ZIP_DEFLATED as before.
+    zip_method = zipfile.ZIP_STORED if use_brotli else zipfile.ZIP_DEFLATED
+    zip_kwargs: dict = {} if use_brotli else {"compresslevel": 9}
+
+    if use_brotli:
+        print("Brotli compression enabled (quality=%d)" % brotli_quality)
+
+    with zipfile.ZipFile(output_path, "w", zip_method, **zip_kwargs) as zf:
         for name in required:
             src = source_map[name]
             assert src is not None  # guaranteed by check above
-            zf.write(src, arcname=name)
-            logger.info("  Added %s (%d bytes)", name, src.stat().st_size)
 
-    # Validate what we just built
-    result = validate_archive(output_path, manifest=manifest, strict=True)
+            if use_brotli:
+                # Brotli-compress the artifact data, store as name.br
+                raw_data = src.read_bytes()
+                compressed_data = brotli_compress(raw_data, quality=brotli_quality)
+                br_name = name + ".br"
+                zf.writestr(br_name, compressed_data)
+                ratio = len(compressed_data) / len(raw_data) * 100
+                logger.info(
+                    "  Added %s (%d -> %d bytes, %.1f%%)",
+                    br_name, len(raw_data), len(compressed_data), ratio,
+                )
+                print(
+                    f"  Brotli: {name} {len(raw_data):,}B -> "
+                    f"{len(compressed_data):,}B ({ratio:.1f}%) as {br_name}"
+                )
+            else:
+                zf.write(src, arcname=name)
+                logger.info("  Added %s (%d bytes)", name, src.stat().st_size)
+
+    # Determine expected archive names for validation
+    if use_brotli:
+        brotli_manifest = _brotli_manifest(manifest)
+        result = validate_archive(output_path, manifest=brotli_manifest, strict=True)
+    else:
+        result = validate_archive(output_path, manifest=manifest, strict=True)
 
     logger.info("Archive built: %s", result.summary())
 
@@ -331,6 +470,31 @@ def build_submission_archive(
         )
 
     return result
+
+
+def _brotli_manifest(manifest: ArchiveManifest) -> ArchiveManifest:
+    """Create a Brotli-aware manifest that expects .br suffixed filenames.
+
+    This is used internally for validation of Brotli-compressed archives.
+    The manifest mirrors the original but maps each file to name.br.
+    """
+    # We cannot reuse ArchiveManifest directly because required_files()
+    # returns hardcoded names. Instead, create a thin wrapper manifest
+    # that validates .br names.
+    return _BrotliManifest(manifest)
+
+
+class _BrotliManifest(ArchiveManifest):
+    """Manifest wrapper that expects .br suffixed filenames."""
+
+    def __init__(self, inner: ArchiveManifest):
+        # Copy all fields from inner
+        for k, v in vars(inner).items():
+            setattr(self, k, v)
+        self._inner = inner
+
+    def required_files(self) -> list[str]:
+        return [name + ".br" for name in self._inner.required_files()]
 
 
 def require_valid_archive(

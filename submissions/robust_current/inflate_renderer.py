@@ -122,6 +122,53 @@ def _apply_gradient_corrections(
 
 
 # ============================================================
+# Brotli decompression for archive artifacts
+# ============================================================
+def _decompress_brotli_in_archive(archive_dir: str) -> None:
+    """Decompress any .br files in the archive directory after extraction.
+
+    Called at the start of inflate to transparently handle Brotli-compressed
+    archives. If no .br files exist, this is a no-op.
+
+    After decompression, the .br files are removed and the original filenames
+    are restored (e.g. renderer.bin.br -> renderer.bin).
+    """
+    archive_path = Path(archive_dir)
+    br_files = sorted(archive_path.glob("*.br"))
+    if not br_files:
+        return
+
+    try:
+        import brotli
+    except ImportError:
+        print(
+            "FATAL: Archive contains Brotli-compressed files (.br) but "
+            "'brotli' package is not installed. Install with: pip install brotli",
+            file=sys.stderr,
+        )
+        sys.exit(1)
+
+    print(f"Decompressing {len(br_files)} Brotli-compressed archive files...",
+          file=sys.stderr)
+
+    for br_file in br_files:
+        # Strip .br suffix to get the original filename
+        if br_file.suffix != ".br":
+            continue
+        out_path = br_file.with_suffix("")  # e.g. renderer.bin.br -> renderer.bin
+        data = br_file.read_bytes()
+        decompressed = brotli.decompress(data)
+        out_path.write_bytes(decompressed)
+        ratio = len(data) / len(decompressed) * 100 if len(decompressed) > 0 else 0
+        print(
+            f"  {br_file.name} -> {out_path.name}: "
+            f"{len(data):,}B -> {len(decompressed):,}B ({ratio:.1f}%)",
+            file=sys.stderr,
+        )
+        br_file.unlink()  # remove .br, keep decompressed
+
+
+# ============================================================
 # Canonical YUV->RGB (BT.601 limited range, matches frame_utils.py)
 # Copied from inflate_postfilter.py — must stay identical.
 # ============================================================
@@ -1670,6 +1717,9 @@ def inflate_renderer(
     """
     t_total_start = time.monotonic()
 
+    # ---- Brotli decompression: decompress any .br files from archive ----
+    _decompress_brotli_in_archive(archive_dir)
+
     # ---- Device detection ----
     if torch.cuda.is_available():
         device = "cuda"
@@ -2805,6 +2855,9 @@ def inflate_renderer_with_tto(
         INFLATE_CG_LR:              learning rate (default 0.02)
         INFLATE_CG_BATCH_PAIRS:     pairs per batch (default 20)
     """
+    # ---- Brotli decompression: decompress any .br files from archive ----
+    _decompress_brotli_in_archive(archive_dir)
+
     inflate_tto = os.environ.get("INFLATE_TTO", "0") == "1"
     inflate_mini_tto = os.environ.get("INFLATE_MINI_TTO", "0") == "1"
     inflate_constrained_gen = os.environ.get("INFLATE_CONSTRAINED_GEN", "0") == "1"
