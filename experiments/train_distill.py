@@ -291,6 +291,28 @@ def create_model(cfg: DistillConfig, device: torch.device) -> nn.Module:
     return model
 
 
+def _make_zoom_flow(cfg: DistillConfig, batch_idx: "torch.Tensor",
+                    H: int, W: int, device: "torch.device") -> "torch.Tensor | None":
+    """Compute identity zoom flow for use_zoom_flow=True models.
+
+    During renderer training, zoom scalars are NOT optimized — they stay at
+    identity (zero). The MotionPredictor learns gate+residual corrections for
+    the identity warp. Post-training, optimize_zoom_scalars() finds the optimal
+    zoom per pair via gradient descent through PoseNet.
+
+    Returns (B, 2, H, W) flow or None if zoom not enabled.
+    """
+    if not cfg.use_zoom_flow:
+        return None
+    # Import lazily to avoid circular deps
+    from tac.radial_zoom import RadialZoomWarp
+    if not hasattr(_make_zoom_flow, '_zoom_warp'):
+        n_pairs = 600  # fixed for this competition
+        _make_zoom_flow._zoom_warp = RadialZoomWarp(n_pairs=n_pairs).to(device)
+        print(f"  [zoom] Created RadialZoomWarp ({n_pairs} pairs, identity init)")
+    return _make_zoom_flow._zoom_warp(batch_idx, H=H, W=W)
+
+
 def load_checkpoint_weights(model: nn.Module, path: str, device: torch.device) -> None:
     """Load renderer checkpoint, handling shape mismatches from FiLM layers."""
     state = torch.load(path, map_location=device, weights_only=True)
@@ -661,7 +683,8 @@ def train_phase1(
             pose = poses[batch_idx].to(device) if poses is not None else None
 
             # Forward pass — use train_model (has QAT wrapper if enabled)
-            predicted_pairs = train_model(mask_even, mask_odd, pose=pose)  # (B, 2, H, W, 3)
+            ego_flow = _make_zoom_flow(cfg, batch_idx, mask_even.shape[1], mask_even.shape[2], device)
+            predicted_pairs = train_model(mask_even, mask_odd, pose=pose, ego_flow=ego_flow)  # (B, 2, H, W, 3)
 
             # L1 loss
             loss = compute_pixel_loss(predicted_pairs, target_pairs)
@@ -837,7 +860,8 @@ def train_phase2(
             pose = poses[batch_idx].to(device) if poses is not None else None
 
             # Forward pass — use train_model (has QAT wrapper if enabled)
-            predicted_pairs = train_model(mask_even, mask_odd, pose=pose)
+            ego_flow = _make_zoom_flow(cfg, batch_idx, mask_even.shape[1], mask_even.shape[2], device)
+            predicted_pairs = train_model(mask_even, mask_odd, pose=pose, ego_flow=ego_flow)
 
             # Pixel loss (anchor toward TTO quality)
             tto_even = tto_frames[even_idx].to(device)
@@ -1052,7 +1076,8 @@ def train_phase3(
 
             pose = poses[batch_idx].to(device) if poses is not None else None
 
-            predicted_pairs = train_model(mask_even, mask_odd, pose=pose)
+            ego_flow = _make_zoom_flow(cfg, batch_idx, mask_even.shape[1], mask_even.shape[2], device)
+            predicted_pairs = train_model(mask_even, mask_odd, pose=pose, ego_flow=ego_flow)
 
             # Scorer loss (Phase 3 uses error_boost_phase3 for extreme hard mining)
             scorer_loss, metrics = compute_scorer_loss(
@@ -1202,7 +1227,9 @@ def run_proxy_eval(
             mask_odd = masks[odd_idx].to(device)
             pose = poses[i:end].to(device) if poses is not None else None
 
-            pairs = model(mask_even, mask_odd, pose=pose)  # (B, 2, H, W, 3)
+            eval_batch_idx = torch.arange(i, end)
+            ego_flow = _make_zoom_flow(cfg, eval_batch_idx, mask_even.shape[1], mask_even.shape[2], device)
+            pairs = model(mask_even, mask_odd, pose=pose, ego_flow=ego_flow)  # (B, 2, H, W, 3)
             # Unpack pairs to frames
             for j in range(pairs.shape[0]):
                 all_frames.append(pairs[j, 0].cpu())
