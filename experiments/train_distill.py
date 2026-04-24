@@ -792,7 +792,7 @@ def train_phase2(
 
         # Sample pair indices: weighted or uniform
         if difficulty_weights is not None and cfg.hard_frame_ratio > 0:
-            # Weighted sampling without replacement for one epoch
+            # Weighted sampling WITH replacement — hard pairs appear multiple times
             # replacement=True allows hard pairs to appear multiple times per epoch
             # (Yousfi audit: replacement=False makes curriculum effectively uniform)
             # Floor weights at 0.5/n to prevent complete starvation of easy pairs
