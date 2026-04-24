@@ -1,12 +1,29 @@
 # program
 
-Mission: minimize the official challenge score on a pinned upstream snapshot while keeping a patched-world submission viable at all times.
+Mission: minimize the official challenge score on a pinned upstream snapshot using a task-aware neural renderer, trained end-to-end against the frozen scorers.
 
 ## Primary objectives
 
-1. Keep `submissions/exact_current` runnable under the current published workflow.
-2. Keep `submissions/robust_current` improving under a more rule-faithful interpretation.
-3. Collect clean evidence for the best-write-up track from day one.
+1. Train the asymmetric warp renderer (WILDE/SHIRAZ/GREEN profiles) to minimize the combined scoring formula.
+2. Compress the trained renderer + masks + poses into a submission archive that achieves the lowest possible score.
+3. Maintain contest compliance: no scorers loaded at inflate time, single forward pass, under 30 minutes on T4.
+4. Collect clean evidence for the writeup track from day one.
+
+## Architecture
+
+The renderer is a CLADE-conditioned U-Net (`AsymmetricPairGenerator` in `src/tac/renderer.py`):
+- Frame2 rendered directly from segmentation mask via spatially-adaptive normalization.
+- Frame1 derived by warping frame2 with learned optical flow + gated residual correction.
+- Trained against frozen SegNet and PoseNet scorers with Fridrich inverse steganalysis losses.
+- Quantized to int4+LZMA2 or FP4 for archive compression.
+
+## Experiment profiles
+
+| Profile | Philosophy | Status |
+|---------|-----------|--------|
+| WILDE | Empirical 5-phase freeze/unfreeze | Training complete, proxy 0.407 |
+| SHIRAZ | PCGrad + focal STE (principled) | A/B test against WILDE |
+| GREEN | WILDE + radial zoom warp | Iteration 2, pending |
 
 ## Mutation frontier
 
@@ -30,11 +47,9 @@ The agent may edit only:
 The agent may **not** edit without explicit human approval:
 
 - the pinned upstream snapshot
-- `scripts/bootstrap.sh`
-- `scripts/start_lab.sh`
-- `start.sh`
 - `submissions/exact_current/inflate.py`
 - `submissions/exact_current/inflate.sh`
+- `start.sh`
 - `LICENSE`
 - `THIRD_PARTY_NOTICES.md`
 
@@ -44,15 +59,29 @@ The agent may **not** edit without explicit human approval:
 - Prefer the official evaluator over proxies.
 - Use proxy evaluation only to rank cheap candidates before promotion.
 - Record config, command, artifact size, and score breakdown for each promoted run.
+- Label every score as `[contest-compliant]` or `[unlimited-compute]`.
 
-## Packaging rules
+## Scoring lanes
 
-Always maintain two packaging views:
+- **Contest-compliant**: inflate.sh -> inflate_renderer.py -> evaluate.py within 30 min on T4. No scorers at inflate time.
+- **Unlimited-compute**: TTO at compress time, unlimited steps. For the paper only.
 
-- `current_workflow`: reflects the published GitHub Action behavior.
-- `rule_faithful`: reflects what a stricter interpretation would count.
+Never conflate the two.
 
-Never confuse the two in reports.
+## Pipeline
+
+The canonical pipeline (`experiments/pipeline.py`) runs:
+
+1. Mask extraction (SegNet on GT video)
+2. FP4/int4 export
+3. Adaptive pose TTO (convergence-driven)
+4. QAT fine-tuning (quality-monitored)
+5. Fridrich steganalytic refinement
+6. Weight compression
+7. Archive packaging
+8. Auth evaluation
+
+Each step is idempotent. The pipeline iterates until convergence.
 
 ## Operating loop
 
@@ -66,12 +95,6 @@ At each cycle:
 6. summarize what changed and what the evidence says
 7. update the next experiment queue
 
-## Track gates
-
-- If `exact_current` stops producing near-zero or near-zero-like distortion with tiny rate, demote it immediately to a research note and move effort to `robust_current`.
-- If `robust_current` does not beat the published baseline floor after a focused x265 search, shrink the search space before adding complexity.
-- If a learned postfilter or decoder cannot justify its bytes or runtime, cut it.
-
 ## Reporting standards
 
 Every promoted run should record:
@@ -80,7 +103,7 @@ Every promoted run should record:
 - submission track
 - packaging mode
 - archive size
-- measured score
+- measured score (labeled by lane)
 - segnet distortion
 - posenet distortion
 - rate

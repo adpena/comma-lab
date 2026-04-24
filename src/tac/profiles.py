@@ -2232,19 +2232,35 @@ SHIRAZ = {
 }
 
 
-# ── WILDE + zoom-aware MotionPredictor ─────────────────────────────────
-# Same architecture as WILDE except MotionPredictor outputs gate(1)+residual(3)
-# only (4 channels). Flow is provided externally by RadialZoomWarp.
-# Saves ~14K params and ~3.5KB in FP4 archive. Architecturally cleaner:
-# zoom captures 99.8% of PoseNet variance (rank 1.008 Jacobian), so predicting
-# flow with a full CNN is redundant when zoom scalars are available.
-# Council decision (2026-04-24): unanimous 5-0, all design questions resolved.
+# ── GREEN: WILDE + radial zoom warp ────────────────────────────────────
+# Iteration 2 profile. Builds on WILDE with architecturally-motivated
+# simplification of the motion pathway.
+#
+# Methodology & Provenance:
+#
+#   Architecture: identical to WILDE except MotionPredictor outputs
+#   gate(1) + residual(3) only (4 channels). Optical flow is provided
+#   externally by RadialZoomWarp (src/tac/radial_zoom.py).
+#
+#   Motivation: the PoseNet Jacobian has effective rank 1.008 (verified
+#   empirically in experiments/results/gradient_rank_analysis.json across
+#   5 pairs). Only one degree of freedom matters: forward ego-motion as a
+#   radial zoom from the Focus of Expansion. A full CNN predicting 2-channel
+#   flow is redundant when 600 learned scalars capture 99.8% of pose variance.
+#
+#   Savings: ~14K fewer parameters, ~3.5KB smaller FP4 archive. The
+#   MotionPredictor becomes a residual corrector rather than a full flow
+#   predictor, which is architecturally cleaner and more constrained.
+#
+#   Council decision (2026-04-24): unanimous 5-0. Hotz: "if it's rank-1
+#   just learn a scalar." Fridrich: "radial zoom IS the forward-translation
+#   FOE structure." All design questions resolved.
+#
+#   Training: inherits WILDE's 5-phase schedule unchanged. The zoom scalars
+#   are optimized separately via optimize_zoom_scalars() during pose TTO.
 GREEN = {
     **WILDE,
     "use_zoom_flow": True,  # MotionPredictor: 4ch (gate+residual), flow from RadialZoomWarp
-    # GREEN = iteration 2 profile. Builds on WILDE winner + zoom-aware architecture.
-    # Zoom handles the rank-1 PoseNet signal (99.8% variance). MotionPredictor
-    # only learns gate+residual corrections (4ch vs 6ch). Smaller, more focused.
 }
 
 # Current 4090 config (103K params, proxy 0.612 at ep1500)

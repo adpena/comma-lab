@@ -1,108 +1,110 @@
-# comma video lab ball pack
+# pact
 
-A single-zip starter repo for the `comma_video_compression_challenge`, shaped for a one-command bootstrap and a one-prompt kickoff in an oh-my-codex Ralph loop.
+Task-aware video compression for the [comma.ai video compression challenge](https://github.com/commaai/comma_video_compression_challenge). A 287K-parameter conditional generative model compresses a 60-second driving video so that two frozen neural networks (SegNet, PoseNet) produce nearly identical outputs on the reconstruction.
 
-This pack keeps two tracks alive from day one:
+Scoring formula: `S = 100 * seg_distortion + sqrt(10 * pose_distortion) + 25 * rate`
 
-- `exact_current`: the current-workflow submission shaped around the challenge exactly as it is published and evaluated today.
-- `robust_current`: the patched-world submission shaped to survive stricter counting and evaluator changes.
+Current best: **0.407 proxy** (training complete, auth eval pending). Leaderboard leader is 0.33.
 
-It also includes:
+## Architecture
 
-- a small auditable Python CLI
-- one-shot bootstrap and launch scripts
-- an `AGENTS.md` contract for Codex and oh-my-codex
-- a single top-level `PROMPT.md` designed for a `$ralph`-style loop
-- docs, budgets, search spaces, and promotion rules
-- Rust, CUDA, Mojo, and JAX side lanes
+The renderer is an asymmetric warp pair generator built on CLADE-conditioned U-Net blocks ([arxiv 2012.04644](https://arxiv.org/abs/2012.04644)):
 
-## The shortest path
+```
+frame2 = renderer(mask2)                        # Direct render from segmentation mask
+flow, gate, residual = motion(mask1, mask2)     # Motion prediction from both masks
+frame1 = warp(frame2, flow) + gate * residual   # Geometric warp + gated correction
+```
+
+Frame2 is rendered directly. Frame1 is derived by warping frame2 with learned optical flow and a gated residual, making temporal coherence architectural rather than learned through loss alone. PoseNet sees geometric ego-motion between frames, which is what real driving video produces.
+
+Key components:
+
+- **CLADENorm**: GroupNorm with per-class affine modulation from the 5-class segmentation mask. Spatially-varying conditioning at ~10 parameters per layer.
+- **Radial zoom warp** (`src/tac/radial_zoom.py`): The PoseNet Jacobian has effective rank 1.008 (verified empirically). Only one degree of freedom matters: a scalar radial zoom from the Focus of Expansion. Replaces a 50K-param motion predictor with 600 learned scalars (1.2 KB at FP16).
+- **Int4+LZMA2 export** (`src/tac/mixed_precision_export.py`): Per-tensor symmetric int4 quantization followed by LZMA2 compression. Achieves ~2.2 bits/weight vs 4.4 bits/weight for FP4 codebook approaches.
+- **Fridrich inverse steganalysis losses** (`src/tac/fridrich.py`, `src/tac/fridrich_losses.py`): The challenge scorers are forensic detectors. Training losses derived from Fridrich's steganalysis framework push errors into the scorers' null space: UNIWARD texture masking, L-infinity spreading (square root law), and Markov transition statistics.
+- **Forensic analysis tools** (`src/tac/forensics.py`): Boundary artifact detection, SegNet class-boundary error analysis, PoseNet per-pixel Jacobian sensitivity maps, and eval roundtrip distortion maps.
+
+## Quick start
 
 ```bash
-cd comma_video_lab_ball_pack
-bash start.sh
+# Install
+git clone https://github.com/adpena/pact.git && cd pact
+uv venv && uv pip install -e ".[dev]"
+
+# Compress a video
+PYTHONPATH=src:upstream python experiments/pipeline.py compress \
+    --video upstream/videos/0.mkv \
+    --checkpoint path/to/checkpoint.pt \
+    --device cuda --output-dir results/run_01
+
+# Evaluate an archive
+PYTHONPATH=src:upstream python experiments/pipeline.py eval \
+    --archive results/run_01/archive.zip \
+    --video upstream/videos/0.mkv --device cuda
 ```
 
-Then, when the Codex/OMX session opens, paste the contents of:
+## Training profiles
 
-```text
-PROMPT.md
-```
+Three experiment profiles encode different training philosophies. All share the same architecture for fair comparison.
 
-That is the intended "one `.sh` + one prompt" path.
-
-## What `start.sh` does
-
-- creates a local Python virtual environment for this pack
-- installs the local `comma-lab` helper CLI
-- clones or refreshes the upstream comma challenge repo into `workspace/upstream/comma_video_compression_challenge`
-- snapshots the upstream files that matter for the two-track strategy
-- installs `exact_current` and `robust_current` into the upstream repo
-- attempts a local install of Codex CLI, oh-my-codex, and Ralph into `.tooling/`
-- runs `omx setup` and `omx doctor` when available
-- launches `omx --madmax --high` when available
-
-The script is conservative about system mutation. It prefers local installs under this repo over global installs.
-
-## Repo map
-
-```text
-AGENTS.md                           repo contract for Codex/OMX
-PROGRAM.md                          operating constitution for the lab
-PROMPT.md                           single kickoff prompt to paste into OMX/Codex
-start.sh                            one-shot bootstrap and launch script
-configs/                            budgets, search spaces, promotion rules
-cuda/                               CUDA side lane
-docs/                               challenge notes, runbooks, speculative notes
-jax/                                JAX side lane for surrogates/search
-mojo/                               experimental Mojo lane
-prompts/                            internal role prompts
-runtime-rs/                         Rust hot-path workspace
-scripts/                            convenience wrappers
-src/comma_lab/                      local helper CLI
-submissions/exact_current/          current-workflow submission
-submissions/robust_current/         patched-world baseline submission
-workspace/                          upstream clone and snapshots
-.omx/                               durable OMX state scaffold
-.ralph/                             file-based Ralph state scaffold
-.agents/tasks/                      seeded task and PRD files
-```
-
-## First-run assumptions
-
-- macOS, Linux, or WSL2 with bash
-- `git`, `python3`, and `curl`
-- `node` + `npm` if you want the oh-my-codex path
-- `git-lfs` and `ffmpeg` for real challenge runs
-- Codex auth already configured if you want the script to launch an agent session immediately
-
-## Practical guidance
-
-- Use the MacBook Pro as the control plane, analysis box, and MPS lane.
-- Use the Windows RTX machine through WSL2 or Linux for CUDA work and promoted candidate checks.
-- Keep `exact_current` and `robust_current` both healthy.
-- Treat JAX and Mojo as research lanes, not as required runtime dependencies.
-- Treat handwritten assembly as a last-mile optimization after profiling.
-
-## Notes on speculative lanes
-
-- JAX is good for fast local surrogate training, differentiable search, and vectorized experiment code. It is **not** the first choice for the shipped inflator.
-- Mojo is interesting for performance experiments, but still a side lane.
-- "WASM in the weights" or overfitting a generative model is a fun idea, but it is a moonshot lane; the mainline should stay smaller, cheaper, and easier to score.
-- TurboQuant is about aggressive LLM/vector quantization and KV-cache compression, so it is mostly relevant as inspiration for how we quantize tiny side models or caches, not as a direct solution path for this challenge.
-
-## After bootstrap
-
-Inside the upstream repo, the two core manual checks remain:
+| Profile | Strategy | Key idea |
+|---------|----------|----------|
+| **WILDE** | Empirical 5-phase schedule | Freeze/unfreeze phases with hard-mined error boosting (9x/49x). Quantizr-adapted anchor training. |
+| **SHIRAZ** | Principled adaptive training | PCGrad gradient surgery + focal STE loss. No freeze/unfreeze. Score-contribution-proportional weighting. |
+| **GREEN** | WILDE + radial zoom warp | Same as WILDE but MotionPredictor outputs only gate+residual (4ch). Flow from RadialZoomWarp. 14K fewer params. |
 
 ```bash
-cd workspace/upstream/comma_video_compression_challenge
-bash evaluate.sh --submission-dir ./submissions/exact_current --device cpu
-bash ./submissions/robust_current/compress.sh
-bash evaluate.sh --submission-dir ./submissions/robust_current --device cpu
+# Train with a named profile
+PYTHONPATH=src:upstream python experiments/train_tac.py --profile wilde --device cuda
 ```
 
-## Important intent
+Profiles are defined in `src/tac/profiles.py` with full provenance for every hyperparameter choice.
 
-The harness is designed so the **score** is the authority and the agent is the mutator.
-The repo should feel easy to operate, but not magical.
+## Project structure
+
+```
+src/tac/                    Core library: renderer, losses, quantization, forensics
+experiments/                Training scripts, pipeline, analysis tools
+experiments/pipeline.py     Canonical compress + eval pipeline
+docs/paper/                 Technical paper (in progress)
+submissions/                Submission packaging
+upstream/                   Pinned upstream challenge snapshot (read-only)
+```
+
+## Results timeline
+
+| Stage | Score | Method |
+|-------|-------|--------|
+| H.265 re-encode | 1.97 | CRF 28, no postfilter |
+| CPU postfilter | 1.33 | Dilated h=64 CNN trained against scorers |
+| Asymmetric warp renderer | 0.87 | Lagrangian annealing, FP4 quantized |
+| + TTO (blind PoseNet) | 0.70 | 500-step test-time optimization, SegNet spillover only |
+| + TTO (gradient fix) | 0.43 | Differentiable BT.601 YUV — fixed upstream `@torch.no_grad` bug |
+| + WILDE/SHIRAZ training | 0.407 | Proxy score, auth eval pending |
+
+The single largest improvement (0.70 to 0.43, 38.6% reduction) came from discovering that the upstream scorer's RGB-to-YUV conversion was decorated with `@torch.no_grad`, silently zeroing all PoseNet gradients during test-time optimization. Every prior TTO experiment was optimizing PoseNet blind. See `docs/paper/03_gradient_bug.md`.
+
+## Methodology
+
+Design decisions are made by a 15-member skunkworks council with domain expertise in steganalysis, neural compression, and adversarial ML. The challenge creator (Yousfi) was Fridrich's PhD student at Binghamton; the SegNet scorer is a steganalysis detector. We frame the problem as inverse steganalysis and apply Fridrich's framework directly.
+
+All training code passes a recursive adversarial review protocol: 3 consecutive clean passes from 5 independent reviewers before deployment. The review gate is enforced by pre-commit hooks.
+
+Research state is maintained in durable files (`.omx/state/`, `.ralph/run_log.md`, `reports/`) so work can resume across sessions without relying on chat context.
+
+## Paper
+
+The technical paper is in `docs/paper/`. It covers the asymmetric warp architecture, the gradient obstruction bug discovery, Fridrich-informed loss design, and the rank-1 radial zoom warp derivation.
+
+## Requirements
+
+- Python 3.11+
+- PyTorch 2.0+
+- ffmpeg (video decode)
+- CUDA GPU recommended (MPS and CPU supported for development)
+
+## License
+
+MIT

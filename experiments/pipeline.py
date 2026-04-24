@@ -1,33 +1,41 @@
 #!/usr/bin/env python3
-"""Canonical compression pipeline: video → trained renderer → optimized archive.
+"""Canonical compression pipeline: video -> trained renderer -> optimized archive.
 
 Production-grade pipeline for the comma.ai video compression challenge.
-Takes a video (or list of videos) as input, produces an optimized archive.
+Takes a video and a trained renderer checkpoint as input, produces an
+optimized submission archive through a multi-step coordinate descent on
+the rate-distortion surface.
 
-The pipeline is smarter than manual orchestration:
-- Adaptive pose optimization: converges to tolerance, not fixed step count
-- Adaptive QAT: monitors quality degradation, stops when marginal
-- Iterative refinement: model→pose→QAT cycles until convergence
-- Automatic rate-distortion optimization: explores the Pareto frontier
-- Idempotent: re-running resumes from last completed step
+Pipeline steps per iteration:
+    1. Export: float checkpoint -> quantized renderer.bin
+    2. Pose TTO: adaptive gradient-based pose optimization (converges to tolerance)
+    3. QAT: quantization-aware fine-tuning (monitors quality degradation)
+    4. Fridrich refinement: steganalytic polish with texture/L-inf/Markov losses
+    5. Weight compression: int4+LZMA2 or FP4 (configurable, auto mode available)
+    6. Archive: build submission zip with masks + renderer + poses
+    7. Eval: full end-to-end auth evaluation through upstream scorer
+
+The pipeline is idempotent: each step writes a .done marker, and re-running
+resumes from the last completed step. Iterative refinement continues until
+score improvement falls below a convergence tolerance.
 
 Usage:
     # Compress a single video:
-    PYTHONPATH=src:upstream python experiments/pipeline.py compress \
-        --video upstream/videos/0.mkv \
-        --checkpoint experiments/results/definitive_float_ema/distill_phase2_best.pt \
+    PYTHONPATH=src:upstream python experiments/pipeline.py compress \\
+        --video upstream/videos/0.mkv \\
+        --checkpoint path/to/distill_phase2_best.pt \\
         --device cuda --output-dir results/submission_v1
 
     # Compress with all optimizations:
-    PYTHONPATH=src:upstream python experiments/pipeline.py compress \
-        --video upstream/videos/0.mkv \
-        --checkpoint experiments/results/definitive_float_ema/distill_phase2_best.pt \
-        --device cuda --output-dir results/submission_v1 \
-        --half-frame --binary-poses --brotli --iterations 2
+    PYTHONPATH=src:upstream python experiments/pipeline.py compress \\
+        --video upstream/videos/0.mkv \\
+        --checkpoint path/to/distill_phase2_best.pt \\
+        --device cuda --output-dir results/submission_v1 \\
+        --half-frame --binary-poses --brotli --weight-compression auto
 
     # Evaluate an existing archive:
-    PYTHONPATH=src:upstream python experiments/pipeline.py eval \
-        --archive results/submission_v1/archive.zip \
+    PYTHONPATH=src:upstream python experiments/pipeline.py eval \\
+        --archive results/submission_v1/archive.zip \\
         --video upstream/videos/0.mkv --device cuda
 """
 from __future__ import annotations
