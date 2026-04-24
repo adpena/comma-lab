@@ -2086,6 +2086,13 @@ WILDE = {
     "padding_mode": "replicate",  # Yousfi: zeros creates boundary artifacts
     "use_dilation": True,  # kaileh57: "single largest win"
     "eval_roundtrip": True,
+    # Fridrich inverse steganalysis losses (our competitive advantage)
+    "use_texture_loss": True,      # UNIWARD: hide errors in textured regions
+    "texture_loss_weight": 0.5,
+    "use_linf_penalty": True,      # Square root law: spread errors, don't concentrate
+    "linf_weight": 0.01,
+    "use_markov_loss": True,       # HUGO: preserve local gradient statistics
+    "markov_weight": 0.1,
     # Training: 5-phase Quantizr-adapted schedule
     # Phase 1 (pixel warmup): all params, L1 loss
     # Phase 2 (anchor): freeze motion, SegNet CE + KL(T=2.0), error_boost=9x
