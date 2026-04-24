@@ -2021,7 +2021,7 @@ NETWORK_CODEC_FULL = {
 #   --pose-weight 10.0 --seg-weight 100.0 --pixel-weight 0.1
 #   --ema-decay 0.997 --eval-roundtrip
 #   --phase1-epochs 800 --phase2-epochs 1200 --phase3-epochs 400
-# NOTE: motion_hidden=16 requires adding --motion-hidden to train_distill.py
+# motion_hidden=16 via --motion-hidden 16
 WILDE = {
     "experiment_type": "renderer_training",
     "base_ch": 16,

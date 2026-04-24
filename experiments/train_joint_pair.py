@@ -137,6 +137,9 @@ class JointPairConfig:
     # Resume from checkpoint
     resume: str | None = None
 
+    # eval_roundtrip: simulate contest eval resize chain
+    eval_roundtrip: bool = True
+
     # Smoke test
     smoke: bool = False
 
@@ -778,7 +781,7 @@ def train_joint_pair(cfg: JointPairConfig) -> dict[str, Any]:
                 ) / 2.0
 
             # eval_roundtrip: simulate contest eval resize chain before scorer losses
-            if eval_roundtrip:
+            if cfg.eval_roundtrip:
                 from tac.renderer import simulate_eval_roundtrip
                 from tac.camera import CAMERA_H, CAMERA_W
                 gen_t = simulate_eval_roundtrip(gen_t, target_h=CAMERA_H, target_w=CAMERA_W, noise_std=0.5)
@@ -1083,6 +1086,7 @@ def main(
         pose_targets_path=pose_targets,
         resume=resume,
         max_hours=max_hours,
+        eval_roundtrip=eval_roundtrip,
         smoke=smoke,
     )
 

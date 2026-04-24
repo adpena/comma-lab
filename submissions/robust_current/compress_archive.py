@@ -174,31 +174,6 @@ def _convert_poses_to_binary(
     return bin_path
 
 
-def _brotli_compress(src_path: Path, output_dir: Path) -> Path:
-    """Brotli-compress a file. Returns path to compressed output."""
-    try:
-        import brotli
-    except ImportError:
-        print(
-            "    WARNING: brotli package not installed, skipping Brotli compression. "
-            "Install with: uv pip install brotli",
-            file=sys.stderr,
-        )
-        return src_path
-
-    t0 = time.monotonic()
-    raw = src_path.read_bytes()
-    compressed = brotli.compress(raw, quality=11)
-    out_path = output_dir / src_path.name
-    out_path.write_bytes(compressed)
-    ratio = len(compressed) / len(raw) * 100
-    print(
-        f"    Brotli: {src_path.name} {len(raw):,} -> {len(compressed):,} bytes "
-        f"({ratio:.1f}%, {time.monotonic() - t0:.1f}s)",
-        file=sys.stderr,
-    )
-    return out_path
-
 
 def main() -> int:
     args = _parse_args()
