@@ -110,7 +110,7 @@ class PipelineConfig:
     pose_lr: float = 0.01
     pose_convergence_tol: float = 1e-4  # stop when improvement < tol for patience steps
     pose_patience: int = 50
-    pose_batch_pairs: int = 50
+    pose_batch_pairs: int = 16  # 50 OOMs on 4090 with both scorers loaded
 
     # QAT — adaptive quality monitoring
     qat_max_epochs: int = 500         # upper bound
