@@ -29,9 +29,9 @@ Usage:
         --device cuda --epochs 3000 \
         --checkpoint experiments/results/v5_lagrangian_renderer/renderer_best.pt
 
-    # With eval roundtrip (recommended for auth-faithful proxy):
+    # eval_roundtrip is ON by default (auth-faithful proxy):
     PYTHONPATH=src:upstream python experiments/train_postfilter_on_renderer.py \
-        --device cuda --epochs 3000 --simulate-resize --segnet-loss-mode hinge
+        --device cuda --epochs 3000 --segnet-loss-mode hinge
 """
 from __future__ import annotations
 
@@ -131,8 +131,10 @@ def parse_args() -> argparse.Namespace:
     p.add_argument("--dilation", type=int, default=2, help="Middle conv dilation")
     p.add_argument("--seg-weight", type=float, default=100.0, help="SegNet loss weight")
     p.add_argument("--pose-weight", type=float, default=10.0, help="PoseNet loss weight")
-    p.add_argument("--simulate-resize", action="store_true",
-                   help="Apply eval roundtrip (384→874→384) in scoring")
+    p.add_argument("--eval-roundtrip", action="store_true", default=True,
+                   help="Simulate contest eval resize chain in scorer loss (default: on)")
+    p.add_argument("--no-eval-roundtrip", dest="eval_roundtrip", action="store_false",
+                   help="Disable eval roundtrip simulation")
     p.add_argument("--segnet-loss-mode", type=str, default="hinge",
                    choices=["xent", "hinge"], help="SegNet loss function")
     p.add_argument("--hinge-margin", type=float, default=0.5, help="Hinge loss margin")
@@ -264,18 +266,39 @@ def main() -> None:
                 # Apply postfilter
                 corrected = postfilter(renderer_rgb)  # (2, 3, H, W)
 
-                # Optional eval roundtrip
-                if args.simulate_resize:
-                    _, _, H, W = corrected.shape
-                    small = F.interpolate(corrected, size=(384, 512), mode="bilinear", align_corners=False)
-                    corrected = F.interpolate(small, size=(H, W), mode="bilinear", align_corners=False)
+                # eval_roundtrip: simulate contest eval resize chain (384→874→uint8→384)
+                # Applied to BOTH pred and GT frames before scorer comparison.
+                use_roundtrip = args.eval_roundtrip
+                if use_roundtrip:
+                    from tac.renderer import simulate_eval_roundtrip
+                    from tac.camera import CAMERA_H, CAMERA_W
+                    corrected = simulate_eval_roundtrip(
+                        corrected, target_h=CAMERA_H, target_w=CAMERA_W, noise_std=0.5,
+                    )
 
                 # Score
                 pair_chw = corrected.unsqueeze(0)  # (1, 2, C, H, W)
                 fp_out, fs_out = scorer_forward_pair(pair_chw, posenet, segnet)
 
-                gt_pose_6 = gt_pose_cache[idx_val].to(device)
-                gt_seg_soft = gt_seg_cache[idx_val].to(device)
+                # Skip GT cache when eval_roundtrip is on — cached values were
+                # computed without roundtrip. Force recomputation.
+                if use_roundtrip:
+                    from tac.camera import CAMERA_H, CAMERA_W
+                    from tac.renderer import simulate_eval_roundtrip
+                    f0 = gt_frames[idx_val * 2].float().to(device)
+                    f1 = gt_frames[idx_val * 2 + 1].float().to(device)
+                    gt_chw = torch.stack([f0, f1], dim=0).permute(0, 3, 1, 2).contiguous()
+                    gt_chw = simulate_eval_roundtrip(
+                        gt_chw, target_h=CAMERA_H, target_w=CAMERA_W, noise_std=0.0,
+                    )
+                    gt_pair_for_scorer = gt_chw.unsqueeze(0)
+                    with torch.no_grad():
+                        gp_gt, gs_gt = scorer_forward_pair(gt_pair_for_scorer, posenet, segnet)
+                    gt_pose_6 = gp_gt["pose"][..., :6]
+                    gt_seg_soft = F.softmax(gs_gt, dim=1)
+                else:
+                    gt_pose_6 = gt_pose_cache[idx_val].to(device)
+                    gt_seg_soft = gt_seg_cache[idx_val].to(device)
 
                 pose_dist = (fp_out["pose"][..., :6] - gt_pose_6).pow(2).mean()
 

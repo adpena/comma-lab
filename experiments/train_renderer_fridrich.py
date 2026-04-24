@@ -238,6 +238,10 @@ class FridrichRendererConfig:
     # EMA weight averaging (DX hardening — Karpathy/NVIDIA standard)
     ema_decay: float = 0.9995  # 2000-epoch effective window; shadow tracks best smoothed weights
 
+    # eval_roundtrip: simulate contest eval resize chain (384→874→uint8→384) in scorer loss.
+    # WITHOUT this, proxy-auth gap is 2-6x on PoseNet. Default True — NO EXCEPTIONS.
+    eval_roundtrip: bool = True
+
     # Smoke test overrides
     smoke: bool = False
 
@@ -866,6 +870,10 @@ def train_fridrich_renderer(cfg: FridrichRendererConfig) -> dict[str, Any]:
     print(f"Batch size: {cfg.batch_size}")
     print(f"Phase1 end: {cfg.phase1_end:.0%}, Phase2 end: {cfg.phase2_end:.0%}")
     print(f"SegNet boundary: {cfg.seg_boundary}, PoseNet boundary: {cfg.pose_boundary}")
+    if cfg.eval_roundtrip:
+        print("eval_roundtrip=True — contest eval resize chain active (noise_std=0.5)")
+    else:
+        print("eval_roundtrip=False — WARNING: proxy-auth gap will be 2-6x on PoseNet")
     print()
 
     # ---- Load scorers ----
@@ -1365,6 +1373,17 @@ def train_fridrich_renderer(cfg: FridrichRendererConfig) -> dict[str, Any]:
         # MSE reconstruction normalized to [0,1] range (Bug fix: raw [0,255] MSE
         # was ~21000, drowning seg (~5) and pose (~180) terms completely)
         mse_loss = F.mse_loss(gen_t / 255.0, gt_t / 255.0) + F.mse_loss(gen_t1 / 255.0, gt_t1 / 255.0)
+
+        # eval_roundtrip: simulate contest eval resize chain (384→874→uint8→384)
+        # before computing scorer distortion. WITHOUT this, proxy-auth gap is 2-6x.
+        # Applied AFTER MSE (pixel reconstruction) but BEFORE scorer losses.
+        if cfg.eval_roundtrip:
+            from tac.renderer import simulate_eval_roundtrip
+            from tac.camera import CAMERA_H, CAMERA_W
+            gen_t = simulate_eval_roundtrip(gen_t, target_h=CAMERA_H, target_w=CAMERA_W, noise_std=0.5)
+            gen_t1 = simulate_eval_roundtrip(gen_t1, target_h=CAMERA_H, target_w=CAMERA_W, noise_std=0.5)
+            gt_t = simulate_eval_roundtrip(gt_t, target_h=CAMERA_H, target_w=CAMERA_W, noise_std=0.0)
+            gt_t1 = simulate_eval_roundtrip(gt_t1, target_h=CAMERA_H, target_w=CAMERA_W, noise_std=0.0)
 
         # SegNet distortion — ONLY on frame_t1 (council #5: SegNet uses x[:, -1, ...]
         # which selects the LAST frame. frame_t is invisible to SegNet at eval time.
@@ -1974,6 +1993,7 @@ def train_fridrich_renderer(cfg: FridrichRendererConfig) -> dict[str, Any]:
 @click.option("--raft-flow-path", type=str, default=None, help="Path to raft_flow.pt for frozen warp (council Layer 2)")
 @click.option("--flow-supervision-weight", type=float, default=0.0, help="MotionPredictor flow supervision weight")
 @click.option("--ema-decay", type=float, default=0.9995, help="EMA shadow decay (0.9995=2000-epoch window, Karpathy/NVIDIA standard)")
+@click.option("--eval-roundtrip/--no-eval-roundtrip", default=True, help="Simulate contest eval resize chain in scorer loss (default: on)")
 def main(
     precomputed, epochs, batch_size, lr, channels, spade_hidden,
     seg_boundary, pose_boundary, rho_init, rho_growth,
@@ -1993,7 +2013,7 @@ def main(
     use_ego_flow, ego_flow_max_px, ego_flow_lr,
     pose_supervision_weight, pose_targets_path, pose_embed_loss, p1_pose_sup_weight,
     raft_flow_path, flow_supervision_weight,
-    ema_decay,
+    ema_decay, eval_roundtrip,
 ):
     """Train DP-SIMS renderer with Fridrich constrained optimization."""
 
@@ -2070,6 +2090,7 @@ def main(
         raft_flow_path=raft_flow_path,
         flow_supervision_weight=flow_supervision_weight,
         ema_decay=ema_decay,
+        eval_roundtrip=eval_roundtrip,
     )
 
     # Set precomputed dir env var for the training function

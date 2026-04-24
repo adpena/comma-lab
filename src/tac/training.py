@@ -1504,7 +1504,10 @@ class Trainer:
                         gt_pair = gt_flat.reshape(B_f, T_f, *gt_flat.shape[1:])
 
                 # P0: Load cached GT scorer outputs (avoids redundant GT forward pass)
-                _cached_gt = gt_scorer_cache.get(start)
+                # Skip GT cache when eval_roundtrip is on — cached values were
+                # computed without roundtrip, so they don't match the roundtripped
+                # filtered output. Force recomputation through the roundtripped gt_pair.
+                _cached_gt = None if cfg.eval_roundtrip else gt_scorer_cache.get(start)
                 if _cached_gt is not None:
                     _gt_pose_6 = _cached_gt["pose_6"].to(self.device)
                     _gt_seg_soft = _cached_gt["seg_soft"].to(self.device)

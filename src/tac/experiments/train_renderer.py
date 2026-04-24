@@ -59,7 +59,7 @@ from tac.losses import (  # noqa: E402
 )
 from tac.mask_codec import extract_masks, mask_pair_from_index  # noqa: E402
 from tac.profiles import PROFILES  # noqa: E402
-from tac.renderer import build_renderer  # noqa: E402
+from tac.renderer import build_renderer, simulate_eval_roundtrip  # noqa: E402
 from tac.contrib.wavelet_renderer import build_wavelet_renderer  # noqa: E402
 from tac.scorer import detect_device, load_scorers  # noqa: E402
 from tac.training import EMA  # noqa: E402
@@ -109,6 +109,10 @@ def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
                    "(SegNet only evaluates odd frames in the scorer)")
     p.add_argument("--frequency-loss-weight", type=float, default=0.0,
                    help="Trick 2: wavelet frequency-domain loss weight (0=disabled)")
+    p.add_argument("--eval-roundtrip", action="store_true", default=True,
+                   help="Simulate contest eval resize chain in scorer loss (default: on)")
+    p.add_argument("--no-eval-roundtrip", dest="eval_roundtrip", action="store_false",
+                   help="Disable eval roundtrip simulation")
 
     # Data
     p.add_argument("--precomputed", type=str,
@@ -406,6 +410,10 @@ def train(args: argparse.Namespace):
         for v in gt_scorer_cache.values()
     )
     print(f"[train] P0: Cached {len(gt_scorer_cache)} GT scorer outputs ({cache_bytes / 1e6:.1f}MB)")
+    if args.eval_roundtrip:
+        print("[train] eval_roundtrip=True — GT cache DISABLED, roundtrip simulation active (noise_std=0.5)")
+    else:
+        print("[train] eval_roundtrip=False — using GT scorer cache (WARNING: proxy-auth gap will be large)")
 
     best_scorer = float("inf")
     best_epoch = -1
@@ -510,8 +518,24 @@ def train(args: argparse.Namespace):
                 loss = pretrain_loss(rendered_pair, gt_pair)
                 pd, sd = 0.0, 0.0
             else:
+                # eval_roundtrip: simulate contest eval resize chain before scorer
+                if args.eval_roundtrip:
+                    from tac.camera import CAMERA_H, CAMERA_W
+                    # rendered_pair is (B, 2, H, W, 3) — flatten to (B*2, 3, H, W) for roundtrip
+                    rp_flat = rendered_pair.reshape(-1, *rendered_pair.shape[2:]).permute(0, 3, 1, 2).contiguous()
+                    rp_flat = simulate_eval_roundtrip(rp_flat, target_h=CAMERA_H, target_w=CAMERA_W, noise_std=0.5)
+                    B_r, C_r, H_r, W_r = rp_flat.shape
+                    rendered_pair = rp_flat.permute(0, 2, 3, 1).reshape(-1, 2, H_r, W_r, C_r)
+
+                    gt_flat = gt_pair.reshape(-1, *gt_pair.shape[2:]).permute(0, 3, 1, 2).contiguous()
+                    gt_flat = simulate_eval_roundtrip(gt_flat, target_h=CAMERA_H, target_w=CAMERA_W, noise_std=0.0)
+                    gt_pair = gt_flat.permute(0, 2, 3, 1).reshape(-1, 2, H_r, W_r, C_r)
+
                 # Phase 2: Scorer loss (use cached GT scorer outputs when available)
-                _cached_gt = gt_scorer_cache.get(start)
+                # Skip GT cache when eval_roundtrip is on — cached values were
+                # computed without roundtrip, so they don't match the roundtripped
+                # gt_pair. Force recomputation through the roundtripped gt_pair.
+                _cached_gt = None if args.eval_roundtrip else gt_scorer_cache.get(start)
                 if _cached_gt is not None:
                     _gt_pose_6 = _cached_gt["pose_6"].to(device)
                     _gt_seg_soft = _cached_gt["seg_soft"].to(device)

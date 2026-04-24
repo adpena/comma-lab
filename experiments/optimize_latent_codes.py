@@ -243,7 +243,7 @@ def optimize_latent_codes(
     seg_weight: float = 100.0,
     pose_weight: float = 10.0,
     rate_penalty: float = 0.001,
-    simulate_resize: bool = True,
+    eval_roundtrip: bool = True,
     output_dir: Path | None = None,
 ) -> dict:
     """Optimize latent codes for all pairs via gradient descent.
@@ -260,7 +260,7 @@ def optimize_latent_codes(
         seg_weight: SegNet loss weight
         pose_weight: PoseNet loss weight
         rate_penalty: L2 penalty on latent magnitude (discourages large codes)
-        simulate_resize: apply eval roundtrip (384→874→384) before scoring
+        eval_roundtrip: simulate contest eval resize chain (384→874→uint8→384) before scoring
         output_dir: save intermediate results
 
     Returns:
@@ -305,9 +305,22 @@ def optimize_latent_codes(
         m1 = gt_masks[pair_idx * 2 + 1].to(device)
         masks_batch = torch.stack([m0, m1], dim=0)  # (2, H, W)
 
-        # GT targets on device
-        gt_pose_6 = gt_pose_cache[pair_idx].to(device)
-        gt_seg_soft = gt_seg_cache[pair_idx].to(device)
+        # GT targets: recompute through roundtrip when eval_roundtrip is on
+        if eval_roundtrip:
+            from tac.renderer import simulate_eval_roundtrip
+            from tac.camera import CAMERA_H, CAMERA_W
+            f0 = gt_frames[pair_idx * 2].float().to(device)
+            f1 = gt_frames[pair_idx * 2 + 1].float().to(device)
+            gt_chw = torch.stack([f0, f1], dim=0).permute(0, 3, 1, 2).contiguous()
+            gt_chw = simulate_eval_roundtrip(gt_chw, target_h=CAMERA_H, target_w=CAMERA_W, noise_std=0.0)
+            gt_pair_for_scorer = gt_chw.unsqueeze(0)
+            with torch.no_grad():
+                gp_gt, gs_gt = scorer_forward_pair(gt_pair_for_scorer, posenet, segnet)
+            gt_pose_6 = gp_gt["pose"][..., :6]
+            gt_seg_soft = F.softmax(gs_gt, dim=1)
+        else:
+            gt_pose_6 = gt_pose_cache[pair_idx].to(device)
+            gt_seg_soft = gt_seg_cache[pair_idx].to(device)
 
         best_loss = float("inf")
         best_step = 0
@@ -318,12 +331,13 @@ def optimize_latent_codes(
             # Render with latent modulation
             rgb = model(masks_batch, pair_idx)  # (2, 3, H, W)
 
-            # Optional eval roundtrip simulation
-            if simulate_resize:
-                # 874→384→874 bilinear round-trip (official scorer pipeline)
-                _, _, H, W = rgb.shape
-                small = F.interpolate(rgb, size=(384, 512), mode="bilinear", align_corners=False)
-                rgb_rt = F.interpolate(small, size=(H, W), mode="bilinear", align_corners=False)
+            # eval_roundtrip: simulate contest eval resize chain (384→874→uint8→384)
+            if eval_roundtrip:
+                from tac.renderer import simulate_eval_roundtrip
+                from tac.camera import CAMERA_H, CAMERA_W
+                rgb_rt = simulate_eval_roundtrip(
+                    rgb, target_h=CAMERA_H, target_w=CAMERA_W, noise_std=0.5,
+                )
             else:
                 rgb_rt = rgb
 
@@ -415,9 +429,10 @@ def parse_args() -> argparse.Namespace:
     p.add_argument("--pose-weight", type=float, default=10.0, help="PoseNet loss weight")
     p.add_argument("--rate-penalty", type=float, default=0.001,
                    help="L2 penalty on latent magnitude (controls archive size)")
-    p.add_argument("--no-simulate-resize", dest="simulate_resize",
-                   action="store_false", default=True,
-                   help="Disable eval roundtrip (384→874→384) in scoring")
+    p.add_argument("--eval-roundtrip", action="store_true", default=True,
+                   help="Simulate contest eval resize chain in scorer loss (default: on)")
+    p.add_argument("--no-eval-roundtrip", dest="eval_roundtrip", action="store_false",
+                   help="Disable eval roundtrip simulation")
     p.add_argument("--upstream", type=str, default=None, help="Path to upstream repo")
     p.add_argument("--video", type=str, default=None, help="Path to GT video")
     p.add_argument("--output-dir", type=str, default=None, help="Output directory")
@@ -512,7 +527,7 @@ def main() -> None:
         seg_weight=args.seg_weight,
         pose_weight=args.pose_weight,
         rate_penalty=args.rate_penalty,
-        simulate_resize=args.simulate_resize,
+        eval_roundtrip=args.eval_roundtrip,
         output_dir=output_dir,
     )
 
