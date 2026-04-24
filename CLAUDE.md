@@ -4,6 +4,22 @@ You are operating inside a dual-track lab for the comma video compression challe
 
 Read `PROGRAM.md` before making changes.
 
+## Score target — NON-NEGOTIABLE, HIGHEST EMPHASIS
+
+**Any auth score above 1.0 is UNACCEPTABLE.** Do the math during training. If projected auth > 1.0, something is wrong — stop and fix it before burning more GPU hours. Every training run, TTO, postfilter, and optimization must be evaluated against this target BEFORE launch, not after.
+
+## eval_roundtrip — NON-NEGOTIABLE, HIGHEST EMPHASIS
+
+**EVERY training path MUST use eval_roundtrip.** There are ZERO exceptions. This includes:
+- train_distill.py (has it)
+- training.py Trainer (NOW has it, eval_roundtrip=True by default)
+- constrained_gen.py (has it)
+- optimize_poses.py (has it)
+- qat_finetune.py (has it)
+- ANY new training script or optimization
+
+Without eval_roundtrip, proxy-auth gap is 2-6x on PoseNet. Every training run without it is a WASTED run. This mistake has been made on EVERY component in this project. It stops now.
+
 ## Primary duties
 
 1. Keep `submissions/exact_current` runnable under the current published workflow.

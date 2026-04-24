@@ -151,6 +151,20 @@ class TrainConfig(BaseModel):
     )
     use_lsq: bool = Field(False, description="Enable Learned Step Size Quantization")
 
+    # Eval-matched roundtrip (MANDATORY for auth-faithful training)
+    eval_roundtrip: bool = Field(
+        True,
+        description="Simulate contest eval resize chain (384→874→uint8→384) in scorer loss. "
+        "WITHOUT this, proxy-auth gap is 2-6x on PoseNet. "
+        "This has caused EVERY wasted training run in this project.",
+    )
+    roundtrip_noise_std: float = Field(
+        0.0,
+        ge=0.0,
+        description="Gaussian noise std after STE quantization in roundtrip. "
+        "0.5 = Hotz fix for proxy-auth drift. 0.0 = no noise.",
+    )
+
     # Yousfi council tricks
     even_frame_skip_seg: bool = Field(
         False,
@@ -1466,6 +1480,28 @@ class Trainer:
                     torch.cuda.empty_cache()
                     self.optimizer.zero_grad(set_to_none=True)
                     continue
+
+                # Apply eval-matched roundtrip (simulate contest eval resize chain)
+                if cfg.eval_roundtrip:
+                    from tac.renderer import simulate_eval_roundtrip
+                    from tac.camera import CAMERA_H, CAMERA_W
+                    # filtered is (1, 2, 3, H, W) — apply roundtrip to each frame
+                    B_f, T_f = filtered.shape[:2]
+                    flat = filtered.reshape(B_f * T_f, *filtered.shape[2:])
+                    flat = simulate_eval_roundtrip(
+                        flat, target_h=CAMERA_H, target_w=CAMERA_W,
+                        noise_std=cfg.roundtrip_noise_std,
+                    )
+                    filtered = flat.reshape(B_f, T_f, *flat.shape[1:])
+
+                    # GT roundtrip (no noise, no grad)
+                    with torch.no_grad():
+                        gt_flat = gt_pair.reshape(B_f * T_f, *gt_pair.shape[2:])
+                        gt_flat = simulate_eval_roundtrip(
+                            gt_flat, target_h=CAMERA_H, target_w=CAMERA_W,
+                            noise_std=0.0,
+                        )
+                        gt_pair = gt_flat.reshape(B_f, T_f, *gt_flat.shape[1:])
 
                 # P0: Load cached GT scorer outputs (avoids redundant GT forward pass)
                 _cached_gt = gt_scorer_cache.get(start)
