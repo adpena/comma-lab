@@ -2029,7 +2029,7 @@ WILDE = {
     "embed_dim": 6,
     "motion_hidden": 16,
     "depth": 1,
-    "pose_dim": 6,
+    "pose_dim": 6,  # FiLM retained — council: keep correction path, zoom overrides flow only
     "use_dsconv": True,
     "padding_mode": "replicate",  # Yousfi: zeros creates boundary artifacts
     "use_dilation": True,  # kaileh57: "single largest win"

@@ -375,7 +375,14 @@ def posenet_sensitivity_map(
     # Forward through PoseNet
     posenet.eval()
     preprocessed = posenet.preprocess_input(pair_chw)
-    pose_out = posenet(preprocessed)  # (1, >=6)
+
+    # Verify gradients flow through preprocess (same gradient bug check as radial_zoom)
+    assert preprocessed.requires_grad, (
+        "PoseNet preprocess_input kills gradients. Use load_differentiable_scorers()."
+    )
+
+    pose_out_raw = posenet(preprocessed)  # dict{'pose': (1, 12)} or tensor
+    pose_vals = pose_out_raw["pose"] if isinstance(pose_out_raw, dict) else pose_out_raw
 
     # Compute gradient for each of the 6 scored pose dims
     # and accumulate the squared gradient per-pixel
@@ -383,7 +390,7 @@ def posenet_sensitivity_map(
 
     for dim_idx in range(6):
         pair_chw.grad = None
-        pose_out[0, dim_idx].backward(retain_graph=(dim_idx < 5))
+        pose_vals[0, dim_idx].backward(retain_graph=(dim_idx < 5))
         if pair_chw.grad is not None:
             sensitivity_sq += pair_chw.grad.detach() ** 2
 

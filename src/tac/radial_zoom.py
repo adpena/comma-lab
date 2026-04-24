@@ -82,7 +82,7 @@ class RadialZoomWarp(nn.Module):
         foe_w: float = float(VANISHING_POINT[0]),    # 256.0
         target_h: int = SEGNET_INPUT_H,              # 384
         target_w: int = SEGNET_INPUT_W,              # 512
-        max_zoom_log: float = 0.1,
+        max_zoom_log: float = 0.15,  # Council: 0.1 tight for 70mph; 0.15 gives gradient headroom
         learn_foe: bool = False,
     ) -> None:
         super().__init__()
@@ -339,6 +339,17 @@ def optimize_zoom_scalars(
     renderer = renderer.to(device).eval()
     posenet = posenet.to(device).eval()
 
+    # Verify PoseNet is patched for differentiable gradients.
+    # The upstream rgb_to_yuv6 has @torch.no_grad which kills ALL gradients.
+    # This is the exact "GREAT GRADIENT BUG" from the project history.
+    _test_input = torch.randn(1, 2, 3, 8, 8, device=device, requires_grad=True)
+    _test_prep = posenet.preprocess_input(_test_input)
+    assert _test_prep.requires_grad, (
+        "PoseNet preprocess_input kills gradients (upstream @torch.no_grad). "
+        "Call load_differentiable_scorers() or patch_scorers_for_training() first."
+    )
+    del _test_input, _test_prep
+
     # Freeze everything except zoom scalars
     for p in renderer.parameters():
         p.requires_grad_(False)
@@ -419,11 +430,13 @@ def optimize_zoom_scalars(
         gt_pose = posenet.preprocess_input(gt_chw)
 
         with torch.no_grad():
-            gt_out = posenet(gt_pose)
-        pred_out = posenet(pred_pose)
+            gt_out_raw = posenet(gt_pose)
+            gt_pose_6 = (gt_out_raw["pose"] if isinstance(gt_out_raw, dict) else gt_out_raw)[..., :6]
+        pred_out_raw = posenet(pred_pose)
+        pred_pose_6 = (pred_out_raw["pose"] if isinstance(pred_out_raw, dict) else pred_out_raw)[..., :6]
 
         # MSE on first 6 pose dimensions (the scored ones)
-        loss = F.mse_loss(pred_out[:, :6], gt_out[:, :6].detach())
+        loss = F.mse_loss(pred_pose_6, gt_pose_6.detach())
 
         optimiser.zero_grad()
         loss.backward()
