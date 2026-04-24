@@ -56,24 +56,41 @@ At the time of writing, the official leaderboard contains these results:
 
 | Submission | Auth Score | PoseNet | SegNet | Rate | Archive | Approach |
 |-----------|-----------|---------|--------|------|---------|----------|
-| **Ours (TTO v7, hinge)** | **0.37** | **0.00250** | **0.00094** | **0.005** | **~185 KB** | Renderer + TTO [unlimited] |
+| **Quantizr (PR#55)** | **0.33** | **0.00051** | **0.00061** | **0.200** | **293 KB** | **FiLM+pose, DSConv, 5-stage QAT** |
+| Ours (TTO v7, hinge) | 0.37 | 0.00250 | 0.00094 | 0.005 | ~185 KB | Renderer + TTO [unlimited] |
+| szabolcs-cs (PR#56) | ~0.55 | --- | --- | --- | --- | Block FP quantization |
+| kaileh57 (PR#58) | ~0.60 | --- | --- | --- | --- | Dilated convs, ablation study |
 | Ours (distillation ep300) | 0.61 | ~0.007 | ~0.0020 | 0.004 | ~215 KB | Distillation [contest-compliant] |
-| Ours (pose TTO ep300) | 0.61 | ~0.009 | ~0.0015 | 0.004 | ~200 KB | Pose-space TTO [contest-compliant] |
 | Ours (renderer only) | 0.87 | 0.031 | 0.00217 | 0.004 | 184 KB | Asym warp [contest-compliant] |
-| Quantizr (PR#55) | 0.33 | 0.00051 | 0.00061 | 0.008 | ~400 KB | FiLM+pose, DSConv |
 | mask2mask [Quantizr v1] | 0.60 | 0.00066 | 0.00264 | 0.0103 | 386 KB | Pair-wise generator |
 | tensor_inversion | 0.75* | --- | --- | --- | 73 MB* | Scorer gradient descent |
 
 *tensor_inversion was flagged as non-compliant (loads scorer weights at inflate time without including them in the archive; if included, rate alone would be 51.19).
 
-**Comparison with mask2mask.** Quantizr's mask2mask uses a similar overall strategy --- a learned generator producing frame pairs from semantic masks, trained against the frozen scorers. Key differences:
+### Quantizr (Jimmy, UCLA CSE/Neuro)
 
-- *PoseNet*: mask2mask achieves 0.00066 (3.2x better than ours). Their `AsymmetricPairGenerator` produces both frames in a single forward pass with shared latent state, providing stronger temporal coherence than our warp-based approach.
-- *SegNet*: we achieve 0.00149 (1.8x better). Our CLADE U-Net with SPADE normalization appears to preserve semantic boundaries more accurately.
-- *Rate*: we achieve 0.0040 (2.6x better). Our archive is 150 KB vs. 386 KB, largely due to having fewer parameters (287K vs. ~500K estimated) and more aggressive quantization.
-- *Score*: the sqrt on PoseNet means their 3.2x PoseNet advantage contributes less than our 1.8x SegNet advantage at the 100x weight. This is the scoring formula's geometry at work.
+The leading submission at 0.33 uses a FiLM-conditioned depthwise-separable CNN with 88K parameters, quantized to FP4 and compressed to ~64 KB. The full archive is 293 KB (299,970 bytes), giving a rate term of 0.200. His architecture is well-engineered: depthwise-separable convolutions [Howard et al. 2017] for parameter efficiency, FiLM conditioning with 6-dimensional pose vectors, and a 5-stage training pipeline (ANCHOR $\to$ ANCHOR_BOOST $\to$ FINETUNE $\to$ JOINT $\to$ MICRO). He encodes only the 600 odd-frame masks (frame 1 is warped from frame 2 at inflate time), halving the mask storage.
 
-Quantizr is a comma.ai contributor with insider knowledge of the scorer architectures. That our approach --- developed by a solo engineer with no prior domain expertise --- achieves a better overall score speaks to the effectiveness of systematic optimization through the scoring formula rather than domain-specific intuition alone.
+Quantizr achieves PoseNet 0.00051 (4.9x better than ours) and SegNet 0.00061 (1.5x better). His own assessment: "sub 0.30 is possible just by sweeping conv dims." He stopped optimizing.
+
+### szabolcs-cs
+
+Uses block floating-point quantization for model weights --- a technique from the hardware quantization literature where groups of weights share an exponent. A different approach to the rate-distortion tradeoff: rather than reducing parameters, reduce bits per parameter at fine granularity.
+
+### kaileh57
+
+Published a careful ablation study (PR#58) showing that dilated convolutions were the "single largest win" in their system (1.92 vs. 2.03 without). We adopted dilated ResBlocks based on this result (Section 2.2.2). Good experimental methodology --- the ablation provided actionable information for the entire competition.
+
+### Comparison with Quantizr
+
+The key differences between Quantizr's approach and ours:
+
+- *PoseNet*: Quantizr achieves 0.00051 (4.9x better). His `AsymmetricPairGenerator` produces both frames in a single forward pass with shared latent state. Our radial zoom warp is geometrically principled but has not yet been trained end-to-end in the submitted system.
+- *SegNet*: Quantizr achieves 0.00061 (1.5x better). With only 88K parameters vs. our 287K, his network is more parameter-efficient. The gap suggests architectural efficiency matters more than raw capacity at this scale.
+- *Rate*: Quantizr's archive is 293 KB (rate 0.200) vs. our ~185 KB (rate 0.005). Despite his smaller model, his archive is larger because it includes higher-quality mask encoding and pose tables.
+- *Score*: Quantizr leads 0.33 vs. our 0.37. The gap is primarily in distortion (his 0.130 vs. our 0.365), partially offset by our rate advantage.
+
+Quantizr is a comma.ai contributor with direct knowledge of the scorer architectures. Several of our techniques --- eval_roundtrip simulation, freeze/unfreeze training, error_boost weighting --- were independently developed and later confirmed when Quantizr disclosed them as "helpful hints" in his PR description.
 
 ## 4.4 Ablation: gradient fix
 
@@ -327,3 +344,66 @@ Based on the measured results and the component analysis, the projected floor fo
 | **Total** | **0.37** | **~0.25** | Full stack [contest-compliant] |
 
 The distillation trajectory at proxy 0.338 (epoch 900, still converging) projects to auth ~0.45--0.47. Adding pose-space TTO on top of distillation and switching to FP4 archive brings the projected auth to 0.30--0.35. With MiniSegNet inflate TTO (87KB, no full scorer at inflate time), the target of sub-0.25 is achievable within the 30-minute T4 budget.
+
+## 4.18 Measurement pitfalls: the eval_roundtrip audit
+
+On April 24, a systematic audit of the codebase uncovered that `eval_roundtrip` --- the simulation of the contest's resize-and-quantize pipeline (384x512 $\to$ 874x1164 $\to$ uint8 $\to$ 384x512) --- was broken or bypassed in **15 files** across **3 distinct bug patterns**:
+
+**Pattern 1: Default `False`.** The `eval_roundtrip` parameter defaulted to `False` in several training and optimization entry points. Code that omitted the flag silently skipped the roundtrip, producing proxy scores that did not reflect the quantization noise the contest evaluation introduces. This was the original bug discovered on April 15 that prompted the audit. Files affected: `constrained_gen.py`, `optimize_poses.py`, `renderer_tto.py`, and 4 experiment scripts.
+
+**Pattern 2: GT cache bypass.** Several scripts cached ground-truth scorer outputs (GT PoseNet poses, GT SegNet logits) at full precision, then compared them against roundtripped predictions. The GT cache was computed *without* roundtrip simulation, creating an asymmetric comparison: the predicted frames went through resize/quantize, but the targets did not. The optimizer learned to compensate for the quantization noise --- a systematic bias that vanished on auth eval.
+
+**Pattern 3: Dead code after refactor.** The `eval_roundtrip` flag was threaded through function signatures but never connected to the actual roundtrip call. The parameter existed, was set to `True`, and appeared in logs --- but the codepath it controlled had been disconnected during a refactor. This is the most insidious pattern: code review sees the flag, sees it set correctly, and moves on.
+
+The consequence: proxy-to-auth gaps of 2--6x on PoseNet distortion for any pipeline that did not correctly simulate the roundtrip. Every training run, TTO experiment, and optimization loop that used a broken roundtrip was producing scores that could not replicate on the official scorer. The fix touched 15 files and was verified with a grep-based audit for all callsites.
+
+The lesson is general. Any training pipeline that optimizes for a downstream evaluation must simulate that evaluation faithfully during optimization. "Almost correct" simulation produces systematically biased results. The bias is invisible in proxy metrics (they look fine) and only appears when the real evaluation runs.
+
+### The HWC/CHW mismatch
+
+A separate measurement bug discovered during the same audit period: a tensor dimension ordering mismatch between HWC (height, width, channels) and CHW (channels, height, width) format in one of the evaluation pathways produced a 50x inflation in scorer distortion. The scorer expected CHW; the evaluation code passed HWC. PyTorch did not error --- it interpreted the spatial dimensions as channels and produced nonsensical predictions. The resulting "scorer distortion" was real (the scorer produced output) but meaningless (the input was garbage).
+
+This was caught because the distortion value was anomalously high. It would have been caught immediately by a shape assertion: `assert x.shape[1] == 3, f"Expected CHW, got {x.shape}"`. We now include such assertions at every scorer boundary.
+
+## 4.19 Weight distribution analysis
+
+Analysis of the trained renderer's weight distribution reveals properties relevant to quantization strategy:
+
+| Metric | Value |
+|--------|-------|
+| Kurtosis | 33.6 |
+| Fraction of weights carrying 90% of energy | ~27% |
+| Fraction of weights carrying < 1% of energy | ~37% |
+| Weight range (99th percentile) | $[-0.42, 0.42]$ |
+
+The high kurtosis (33.6, vs. 3.0 for a Gaussian) indicates a heavy-tailed distribution: most weights are near zero, with a small fraction of large-magnitude weights carrying most of the signal. This distribution favors mixed-precision quantization --- the bulk of weights can be aggressively quantized (or pruned), while the high-energy tail requires more bits.
+
+**Int4+LZMA2 compression benchmark.** Exploiting this distribution, per-tensor symmetric int4 quantization followed by LZMA2 compression achieves **2.18 bits per weight** (vs. 4.4 bits for FP4 with per-block scales). The mechanism: int4 quantization maps the heavy-tailed distribution to a zero-heavy discrete distribution (37% of quantized weights are exactly 0), which LZMA2 compresses efficiently. For our 287K-parameter renderer, this yields approximately 78 KB --- roughly half the FP4 archive size.
+
+| Format | Bits/weight | Archive size | Rate term |
+|--------|-------------|-------------|-----------|
+| FP32 | 32 | ~1.1 MB | 0.029 |
+| FP4 (codebook) | ~4.4 | ~150 KB | 0.004 |
+| Int4+LZMA2 | ~2.18 | ~78 KB | 0.002 |
+
+The tradeoff is quantization error: int4 per-tensor is coarser than FP4 per-block for outlier-heavy distributions. The FP4 codebook's non-uniform spacing ($\{0, 0.5, 1, 1.5, 2, 3, 4, 6\}$) handles tails better. For our renderer (well-conditioned, kurtosis notwithstanding), the distortion difference is negligible, making int4+LZMA2 the Pareto-optimal choice for rate.
+
+## 4.20 Score trajectory: 2.01 to 0.407
+
+The full measurement-corrected trajectory from the true baseline to the current proxy state:
+
+| Date | Event | Proxy | Auth | Notes |
+|------|-------|-------|------|-------|
+| Apr 12 | H.265 baseline | 1.97 | 1.97 | CRF 28 |
+| Apr 13 | CNN postfilter | 1.33 | 1.33 | Dilated h=64 |
+| Apr 14 | Renderer v1 | 0.87 | 0.87 | Lagrangian annealing |
+| Apr 15 | TTO (blind PoseNet) | 0.70 | 0.70 | SegNet spillover only |
+| Apr 15 | TTO + gradient fix | 0.29 | 0.43 | Differentiable BT.601 |
+| Apr 16 | TTO + hinge | 0.24 | 0.37 | SegNet hinge margin |
+| Apr 21 | **Measurement disaster** | --- | **2.01** | All prior auth scores re-validated |
+| Apr 22 | Corrected masks + archive | --- | 2.01 | True contest-compliant baseline |
+| Apr 24 | Proxy trajectory | **0.407** | *pending* | After roundtrip fixes |
+
+The April 21 measurement disaster deserves emphasis. The reported auth score of 0.87 was wrong: the mask video was at 48x64 (1/8 resolution), producing catastrophic scorer distortion. The true contest-compliant score with correctly-sized masks was 2.01. The 0.43 and 0.37 scores remain valid for the unlimited-compute lane (TTO at inflate time), but the contest-compliant path had to be rebuilt from the corrected baseline.
+
+The current proxy of 0.407 reflects the cumulative fixes: correct mask resolution, correct eval_roundtrip in all 15 files, correct HWC/CHW ordering, correct archive construction. Whether this proxy maps to auth ~0.55--0.65 (at the historical 1.4x ratio) remains to be verified through a full auth eval run.

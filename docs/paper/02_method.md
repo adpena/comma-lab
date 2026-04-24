@@ -4,9 +4,9 @@
 
 The challenge video is a single 60-second clip from a Comma EON dashcam (AR0231AT sensor, 1164x874, 20 fps, 1200 frames). Two frozen scorer networks define the distortion:
 
-- **SegNet**: an EfficientNet-B4 U-Net [Tan and Le 2019] trained on comma10k for 6-class road scene segmentation. It processes each frame independently at 384x512, comparing predicted class logits against ground truth via cross-entropy.
+- **SegNet**: a `smp.Unet('tu-efficientnet_b2', classes=5)` [Tan and Le 2019] trained on comma10k for 5-class road scene segmentation. It processes only the *last frame* in each pair at 384x512, comparing argmax class predictions against ground truth to produce a disagreement rate. The vanilla stride-2 stem loses half-resolution information immediately --- artifacts below (256, 192) are invisible to it.
 
-- **PoseNet**: a convolutional ego-motion estimator that consumes consecutive frame *pairs* in YUV 4:2:0 format (6 channels at 192x256) and predicts 6-DOF relative pose $[t_x, t_y, t_z, r_x, r_y, r_z]$. Distortion is L2 distance between poses predicted from compressed vs. original frames.
+- **PoseNet**: a FastViT-T12 backbone ego-motion estimator that consumes consecutive frame *pairs* in YUV 4:2:0 format (12 channels: 2 frames x 6 channels at 512x384) and predicts 12-dimensional output, of which the first 6 dimensions $[t_x, t_y, t_z, r_x, r_y, r_z]$ are used. Distortion is L2 distance between poses predicted from compressed vs. original frames.
 
 The scoring formula $S = 100\bar{d}_\text{seg} + \sqrt{10\bar{d}_\text{pose}} + 25r$ has a specific geometric structure. The partial derivative $\partial S / \partial \bar{d}_\text{pose} = \sqrt{10} / (2\sqrt{\bar{d}_\text{pose}})$ diverges as PoseNet loss approaches zero --- diminishing returns. At $\bar{d}_\text{pose} = 0.0005$, a 10% PoseNet improvement is worth the same as a 0.007% SegNet improvement. This means there is a *knee* in the PoseNet curve beyond which further optimization yields negligible score gains. Identifying this knee and reallocating effort to SegNet and rate was a turning point in our strategy.
 
@@ -24,7 +24,45 @@ This design is motivated by PoseNet's evaluation protocol. PoseNet measures ego-
 
 **Parameters.** The full model has 287K parameters. Channel widths are (36, 60) for the U-Net encoder/decoder. The flow predictor outputs 5 channels (2 for flow, 1 for gate, 2 for residual corrections). Masks encode 5 semantic classes as grayscale values at 63-pixel intervals, stored as compressed video.
 
-**Quantization.** Weights are quantized to FP4 using a custom 8-level codebook $\{0, 0.5, 1.0, 1.5, 2.0, 3.0, 4.0, 6.0\}$ with a sign bit, reducing the archive from ~1.1 MB (FP32) to ~150 KB.
+**Quantization.** Weights are quantized to FP4 using a custom 8-level codebook $\{0, 0.5, 1.0, 1.5, 2.0, 3.0, 4.0, 6.0\}$ with a sign bit, reducing the archive from ~1.1 MB (FP32) to ~150 KB. A separate Int4+LZMA2 scheme achieves 2.18 bits per weight (Section 4.19).
+
+### 2.2.1 CLADE per-class normalization
+
+Each ResBlock in the U-Net uses class-adaptive layer-wise denormalization (CLADE) [Park et al. 2019] rather than plain GroupNorm. After GroupNorm normalizes features, per-class affine parameters $\gamma_c, \beta_c$ are looked up from the segmentation mask and applied as spatially-varying modulation:
+
+$$h_{i,j} = \gamma_{c(i,j)} \cdot \hat{h}_{i,j} + \beta_{c(i,j)}$$
+
+where $c(i,j)$ is the semantic class at pixel $(i,j)$ and $\hat{h}$ is the GroupNorm output. With 5 classes, this adds only $2 \times C$ parameters per normalization layer (where $C$ is the channel width), but provides class-specific feature statistics --- the network learns different appearance distributions for road, sky, lane markings, vehicles, and background.
+
+This is a competitive differentiator. Quantizr's renderer uses plain GroupNorm; szabolcs-cs uses no conditioning at all. CLADE gives the renderer direct knowledge of *which class* each pixel belongs to at every layer of the network, enabling it to specialize texture generation per class. The mask does double duty: it provides the spatial layout (through the embedding input) and the normalization statistics (through CLADE).
+
+### 2.2.2 Dilated residual blocks
+
+The ResBlock cascade uses a symmetric dilation pattern $[1, 2, 4, 1]$ that expands the receptive field from $7 \times 7$ (standard $3 \times 3$ convolutions) to $31 \times 31$ at zero additional parameter cost [Yu and Koltun 2016]. This was validated independently by kaileh57's PR#58 ablation on the same challenge, where dilated convolutions were reported as the "single largest win" (1.92 vs. 2.03).
+
+The expanded receptive field is particularly important for SegNet, whose EfficientNet-B2 backbone has a receptive field of approximately $200 \times 200$ pixels. Without dilation, the renderer's effective view at each layer is smaller than a single SegNet filter --- it cannot reason about the spatial context that SegNet uses to make classification decisions.
+
+### 2.2.3 Replicate padding
+
+All convolutional layers use `padding_mode='replicate'` instead of the default zero padding. This change was prompted by Yousfi's comment on PR#55 (2026-04-19): "artifacts at the image boundary, due to padding in the conv layers." Zero padding introduces artificial edge statistics that SegNet's learned filters can detect --- effectively a steganographic signature at the frame boundary. Replicate padding extends the edge pixels outward, producing more natural boundary statistics.
+
+This is a direct application of Fridrich's principle: any systematic pattern introduced by the embedding process (here, frame generation) is a potential signal for the detector (here, SegNet). Zero-padded boundaries are such a pattern.
+
+### 2.2.4 Radial zoom warp: the rank-1 PoseNet Jacobian
+
+The standard motion model uses a learned `MotionPredictor` network (~50K parameters) to predict per-pixel optical flow from consecutive mask pairs. We discovered that this is dramatically overparameterized for the actual task.
+
+Computing the output Jacobian $J = \partial \text{pose} / \partial \text{pixels}$ at 5 evenly-spaced pairs across the video reveals that PoseNet's 6-dimensional output has **effective rank 1.008** (mean across pairs; range 1.003--1.013). The first singular value captures 99.8% of total variance; the condition number exceeds 350. One degree of freedom is doing all the work.
+
+The geometric interpretation is immediate. The challenge video is a forward-facing dashcam on a highway. The dominant ego-motion is forward translation, which produces a radial expansion pattern centered at the focus of expansion (FoE). The FoE position is determined by the camera calibration of the comma EON's AR0231AT sensor: pixel $(256, 174)$ at the scorer's $384 \times 512$ resolution. The warp for pair $i$ is
+
+$$\text{grid} = \text{foe} + e^{s_i} \cdot (\text{coord\_grid} - \text{foe})$$
+
+where $s_i$ is a single learned scalar per pair, bounded by $|s_i| \leq 0.15$ (approximately $\pm 15\%$ zoom, sufficient for highway speeds). The 600 scalars replace the 50K-parameter `MotionPredictor` at 1.2 KB (FP16) or 300 bytes (FP4).
+
+Validated empirically: radial zoom scalars achieve a 10.6x PoseNet improvement over the baseline renderer, comparable to the full `MotionPredictor`. The 83x parameter reduction (50K to 600) translates directly to archive savings.
+
+This finding generalizes beyond the challenge. Any ego-motion estimator operating on forward-facing video from a calibrated camera will have a near-rank-1 Jacobian, because forward translation dominates the motion field. The radial zoom is the sufficient statistic.
 
 ## 2.3 Training: Lagrangian annealing with Fridrich constraints
 
@@ -39,6 +77,32 @@ This is solved via augmented Lagrangian relaxation with penalty parameter $\rho$
 $$\mathcal{L} = \mathcal{L}_\text{rate} + \lambda_s (\bar{d}_\text{seg} - \epsilon_s) + \frac{\rho}{2}(\bar{d}_\text{seg} - \epsilon_s)_+^2 + \lambda_p (\bar{d}_\text{pose} - \epsilon_p) + \frac{\rho}{2}(\bar{d}_\text{pose} - \epsilon_p)_+^2$$
 
 **Lagrangian annealing.** During training, the penalty caps ($\rho_\text{max}$, $\lambda_\text{cap}$) control how aggressively the optimizer enforces constraints. We discovered that temporarily *reducing* these caps allows the optimizer to explore the Pareto frontier more freely, sometimes finding better basins. Our best checkpoint (auth 0.87) came from resuming training with $\lambda_\text{cap}$ reduced from 10,000 to 1,000 --- the model found a 13% better solution in 200 epochs, though it drifted under the weaker caps over subsequent thousands of epochs. The practical protocol: anneal caps briefly, snapshot the transient improvement, re-tighten or discard late epochs.
+
+### 2.3.1 Fridrich inverse steganalysis losses
+
+Beyond the Lagrangian structure, three loss terms are drawn directly from the steganalysis literature:
+
+**UNIWARD texture weighting** [Holub and Fridrich 2014]. Errors in textured regions are harder for CNN detectors to identify than errors in smooth regions. We compute a local variance map (sliding $5 \times 5$ window) as a proxy for texture complexity, then weight per-pixel L1 loss inversely: smooth regions receive $3\times$ weight, textured regions $0.3\times$. This is the spatial-domain analog of UNIWARD's wavelet directional filter bank distortion cost --- the renderer learns to hide its approximation errors where SegNet is least sensitive.
+
+**$L^\infty$ penalty (square root law)** [Ker, Filler, and Fridrich 2008]. Fridrich's square root law shows that spreading many small errors is fundamentally less detectable than concentrating large ones. We add a penalty on the top-1% pixel errors (soft top-$k$ for gradient stability), encouraging the renderer to distribute its reconstruction error evenly rather than accepting a few badly-rendered pixels. This directly mirrors the capacity formula for steganographic security.
+
+**Markov chain loss** [Filler, Judas, and Fridrich 2010]. HUGO showed that preserving local pixel dependency statistics makes modifications undetectable. We penalize the L1 difference between horizontal and vertical gradients of predicted vs. target frames --- a first-order approximation of the Markov chain transition probabilities. This encourages the renderer to preserve the local spatial structure (edges, gradients, texture orientation) that SegNet's convolutional filters detect.
+
+These three losses are not ad-hoc regularizers. They are the spatial-domain translations of techniques that Fridrich and collaborators developed over two decades to make steganographic modifications invisible to CNN-based detectors. In our setting, the "modifications" are the renderer's approximation errors and the "detector" is SegNet.
+
+### 2.3.2 Freeze/unfreeze training
+
+The training schedule is adapted from Quantizr's 5-stage pipeline, discovered through binary reverse-engineering of his PR#55 submission archive:
+
+| Phase | Epochs | Frozen | Loss focus | Adapted from |
+|-------|--------|--------|------------|-------------|
+| 1. Pixel warmup | ~400 | None | L1 pixel loss | Quantizr ANCHOR |
+| 2. Anchor | ~300 | Motion predictor | SegNet CE + error_boost 9x | Quantizr ANCHOR_BOOST |
+| 3. Fine-tune | ~300 | None | Full Lagrangian + Fridrich | Quantizr FINETUNE |
+| 4. Joint | ~200 | Embedding | Joint SegNet + PoseNet | Quantizr JOINT |
+| 5. Polish | ~100 | Motion + embedding | Low LR, error_boost 49x | Quantizr MICRO |
+
+The key insight behind freeze/unfreeze is that SegNet and PoseNet optimization are approximately orthogonal in this architecture. SegNet evaluates only frame $t+1$ (the directly rendered frame); PoseNet evaluates the pair $(t, t+1)$ where frame $t$ is the warp. Freezing the motion predictor during SegNet-focused phases prevents PoseNet-oriented gradients from interfering with SegNet convergence. The error_boost values (quadratic: $w = 1 + (b-1) \cdot (e/\bar{e})^2$) are from Quantizr's training reconstruction.
 
 ## 2.4 Test-time optimization: coupled trajectory
 
