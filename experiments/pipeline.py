@@ -160,7 +160,12 @@ def step_extract_masks(cfg: PipelineConfig) -> Path:
     gt_frames = decode_video(cfg.video, target_h=SEGNET_H, target_w=SEGNET_W)[:NUM_FRAMES]
     _log(f"  Decoded {len(gt_frames)} frames at {SEGNET_H}x{SEGNET_W}")
 
-    _, segnet = load_scorers(str(Path(cfg.upstream) / "models"), device=cfg.device)
+    models_dir = Path(cfg.upstream) / "models"
+    _, segnet = load_scorers(
+        str(models_dir / "posenet.safetensors"),
+        str(models_dir / "segnet.safetensors"),
+        device=cfg.device,
+    )
 
     if cfg.half_frame:
         masks = extract_half_masks(gt_frames, segnet, device=cfg.device)
