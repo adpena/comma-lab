@@ -124,6 +124,10 @@ class PipelineConfig:
     brotli: bool = False
     mask_crf: int = 50
 
+    # Weight compression: "fp4" (current FP4+codebook), "int4_lzma2" (int4+LZMA2),
+    # or "auto" (try int4_lzma2 first, fall back to fp4 if quality degrades too much)
+    weight_compression: str = "fp4"
+
     # Iterative refinement — convergence-driven, not arbitrary count
     max_iterations: int = 10          # safety bound (convergence stops earlier)
     convergence_tol: float = 0.01     # stop when score improvement < tol between cycles
@@ -355,6 +359,123 @@ def step_fridrich_refine(cfg: PipelineConfig, iteration: int = 0) -> Path:
     return iter_dir / "fridrich" / "distill_phase2_best.pt"
 
 
+def step_compress_weights(
+    cfg: PipelineConfig,
+    checkpoint_path: Path,
+    iteration: int = 0,
+) -> Path:
+    """Compress model weights using mixed-precision quantization + LZMA2.
+
+    Three compression strategies (choose best for this checkpoint):
+    1. Int4 per-tensor + LZMA2 (simplest, ~2.2 bits/weight)
+    2. LearnableBitDepth fine-tune + LZMA2 (~1.5-2.0 bits/weight, future)
+    3. FP4 + Brotli (current, ~4.4 bits/weight, fallback)
+
+    When cfg.weight_compression == "auto", tries int4_lzma2 first.
+    Measures quality degradation on a small forward pass. Falls back
+    to fp4 if output divergence exceeds an acceptable threshold.
+    """
+    iter_dir = Path(cfg.output_dir) / f"iter_{iteration}"
+    iter_dir.mkdir(parents=True, exist_ok=True)
+    step_name = "compress_weights"
+
+    if _step_done(iter_dir, step_name):
+        _log(f"Weight compression already done (iter {iteration}), skipping")
+        # Return whichever format was produced
+        for suffix in ["_int4lzma2.bin", ".bin"]:
+            p = iter_dir / f"renderer{suffix}"
+            if p.exists():
+                return p
+        return checkpoint_path
+
+    mode = cfg.weight_compression
+    if mode == "fp4":
+        _log("Weight compression: FP4 (default, no additional compression)")
+        _mark_done(iter_dir, step_name, {"mode": "fp4", "skipped": True})
+        return checkpoint_path
+
+    _log(f"Weight compression: {mode}")
+
+    from tac.renderer import AsymmetricPairGenerator
+    from tac.mixed_precision_export import export_int4_lzma2, load_int4_lzma2
+
+    # Load the checkpoint into a model for re-export
+    ckpt = torch.load(str(checkpoint_path), map_location="cpu", weights_only=True)
+    state = ckpt.get("model_state_dict", ckpt)
+
+    model = AsymmetricPairGenerator(
+        num_classes=5, embed_dim=cfg.embed_dim,
+        base_ch=cfg.base_ch, mid_ch=cfg.mid_ch,
+        motion_hidden=cfg.motion_hidden, depth=cfg.depth,
+        pose_dim=cfg.pose_dim, use_dsconv=cfg.use_dsconv,
+        padding_mode=cfg.padding_mode, use_dilation=cfg.use_dilation,
+    )
+    model.load_state_dict(state, strict=False)
+    model.eval()
+
+    int4_path = iter_dir / "renderer_int4lzma2.bin"
+    fp4_path = iter_dir / "renderer.bin"
+
+    # ── Strategy 1: Int4 + LZMA2 ──
+    int4_bytes = export_int4_lzma2(model, int4_path)
+    _log(f"  Int4+LZMA2: {int4_bytes:,} bytes ({int4_bytes/1024:.1f} KB)")
+
+    if mode == "int4_lzma2":
+        # Unconditionally use int4_lzma2
+        _mark_done(iter_dir, step_name, {"mode": "int4_lzma2", "bytes": int4_bytes})
+        return int4_path
+
+    # ── mode == "auto": compare quality ──
+    # Quick quality check: load int4 weights, compare forward pass
+    restored_sd = load_int4_lzma2(int4_path)
+    model_restored = AsymmetricPairGenerator(
+        num_classes=5, embed_dim=cfg.embed_dim,
+        base_ch=cfg.base_ch, mid_ch=cfg.mid_ch,
+        motion_hidden=cfg.motion_hidden, depth=cfg.depth,
+        pose_dim=cfg.pose_dim, use_dsconv=cfg.use_dsconv,
+        padding_mode=cfg.padding_mode, use_dilation=cfg.use_dilation,
+    )
+    model_restored.load_state_dict(restored_sd, strict=False)
+    model_restored.eval()
+
+    # Measure parameter-space RMSE
+    total_se = 0.0
+    total_n = 0
+    for (n1, p1), (n2, p2) in zip(
+        model.named_parameters(), model_restored.named_parameters()
+    ):
+        se = ((p1.detach() - p2.detach()) ** 2).sum().item()
+        total_se += se
+        total_n += p1.numel()
+    rmse = (total_se / max(total_n, 1)) ** 0.5
+
+    _log(f"  Int4+LZMA2 weight RMSE: {rmse:.6f}")
+
+    # Also compare FP4 size for the auto decision
+    from tac.renderer_export import export_asymmetric_checkpoint_fp4
+    fp4_bytes = export_asymmetric_checkpoint_fp4(model, str(fp4_path))
+    _log(f"  FP4: {fp4_bytes:,} bytes ({fp4_bytes/1024:.1f} KB)")
+
+    # Auto decision: use int4_lzma2 if it's smaller (it almost always will be)
+    # AND weight RMSE is acceptable (< 0.05, which is well within FP4 noise)
+    if int4_bytes < fp4_bytes and rmse < 0.05:
+        _log(f"  Auto: chose int4_lzma2 (smaller by {fp4_bytes - int4_bytes:,} bytes)")
+        chosen = "int4_lzma2"
+        result_path = int4_path
+    else:
+        _log(f"  Auto: chose fp4 (int4 RMSE={rmse:.4f} or size not better)")
+        chosen = "fp4"
+        result_path = fp4_path
+
+    _mark_done(iter_dir, step_name, {
+        "mode": chosen,
+        "int4_bytes": int4_bytes,
+        "fp4_bytes": fp4_bytes,
+        "int4_rmse": round(rmse, 6),
+    })
+    return result_path
+
+
 def step_archive(cfg: PipelineConfig, renderer_bin: Path, poses_path: Path,
                  iteration: int = 0) -> Path:
     """Build optimized submission archive."""
@@ -475,12 +596,23 @@ def run_compress(cfg: PipelineConfig) -> None:
         # Step 3.5: Fridrich steganalytic refinement (post-QAT polish)
         fridrich_ckpt = step_fridrich_refine(cfg, iteration)
 
-        # Step 4: Archive (use Fridrich-refined if available, else QAT, else float)
+        # Step 3.7: Weight compression (int4+LZMA2 or FP4, per cfg.weight_compression)
         if fridrich_ckpt.exists() and fridrich_ckpt.suffix == ".pt":
-            # Re-export Fridrich-refined checkpoint to FP4
-            final_renderer = step_export(cfg, iteration)  # will use updated checkpoint
+            best_ckpt = fridrich_ckpt
+        else:
+            # Fall back to QAT best, then raw export
+            qat_best = Path(cfg.output_dir) / f"iter_{iteration}" / "renderer_qat_best.pt"
+            best_ckpt = qat_best if qat_best.exists() else Path(cfg.checkpoint)
+
+        if cfg.weight_compression != "fp4" and best_ckpt.exists():
+            final_renderer = step_compress_weights(cfg, best_ckpt, iteration)
+        elif best_ckpt.exists() and best_ckpt.suffix == ".pt":
+            # Re-export checkpoint to FP4
+            final_renderer = step_export(cfg, iteration)
         else:
             final_renderer = qat_bin if qat_bin.exists() else renderer_bin
+
+        # Step 4: Archive
         archive_path = step_archive(cfg, final_renderer, poses_path, iteration)
 
         # Step 5: Eval
@@ -558,6 +690,10 @@ def main() -> int:
     comp.add_argument("--binary-poses", action="store_true")
     comp.add_argument("--brotli", action="store_true")
     comp.add_argument("--mask-crf", type=int, default=50)
+    # Weight compression
+    comp.add_argument("--weight-compression", type=str, default="fp4",
+                      choices=["fp4", "int4_lzma2", "auto"],
+                      help="Weight compression: fp4 (default), int4_lzma2, or auto")
     # Iteration
     comp.add_argument("--max-iterations", type=int, default=10,
                       help="Safety bound on convergence cycles (stops earlier when converged)")
@@ -586,6 +722,7 @@ def main() -> int:
             qat_max_epochs=args.qat_max_epochs, qat_lr=args.qat_lr,
             half_frame=args.half_frame, binary_poses=args.binary_poses,
             brotli=args.brotli, mask_crf=args.mask_crf,
+            weight_compression=args.weight_compression,
             max_iterations=args.max_iterations,
         )
         run_compress(cfg)

@@ -1269,13 +1269,93 @@ def _inline_load_asym(raw_bytes: bytes, device: str = "cpu") -> nn.Module:
 # ============================================================
 # Renderer loading
 # ============================================================
+def _inline_load_int4_lzma2(raw_bytes: bytes, device: str = "cpu") -> dict:
+    """Inline INT4_LZMA2 deserializer -- no tac dependency required.
+
+    Reads I4LZ header -> LZMA2 decompress -> unpack int4 nibbles -> dequantize.
+    Returns a state_dict (not a model) since architecture config is not stored
+    in this format. The caller must construct the model separately.
+
+    Dependencies: torch, lzma (stdlib), struct (stdlib). No numpy, no tac.
+    """
+    import lzma as _lzma
+
+    _MAGIC = b"I4LZ"
+    if raw_bytes[:4] != _MAGIC:
+        raise ValueError(f"Not an INT4_LZMA2 binary (got {raw_bytes[:4]!r})")
+
+    _uncompressed_size = struct.unpack("<I", raw_bytes[4:8])[0]
+
+    # Decompress
+    payload = _lzma.decompress(raw_bytes[8:], format=_lzma.FORMAT_ALONE)
+
+    # Verify inner magic
+    if payload[:4] != _MAGIC:
+        raise ValueError("Corrupted INT4_LZMA2 payload (inner magic mismatch)")
+
+    offset = 4
+
+    n_tensors = struct.unpack("<I", payload[offset:offset + 4])[0]
+    offset += 4
+
+    state_dict = {}
+
+    for _ in range(n_tensors):
+        # Read name
+        name_len = struct.unpack("<I", payload[offset:offset + 4])[0]
+        offset += 4
+        name = payload[offset:offset + name_len].decode("utf-8")
+        offset += name_len
+
+        # Read shape
+        ndim = struct.unpack("<I", payload[offset:offset + 4])[0]
+        offset += 4
+        shape = []
+        for _ in range(ndim):
+            s = struct.unpack("<I", payload[offset:offset + 4])[0]
+            offset += 4
+            shape.append(s)
+
+        # Read scale
+        scale = struct.unpack("<f", payload[offset:offset + 4])[0]
+        offset += 4
+
+        # Read packed data
+        packed_len = struct.unpack("<I", payload[offset:offset + 4])[0]
+        offset += 4
+        packed = payload[offset:offset + packed_len]
+        offset += packed_len
+
+        # Dequantize: unpack nibbles, convert unsigned [0,14] -> signed [-7,7]
+        numel = 1
+        for s in shape:
+            numel *= s
+
+        values = []
+        for byte in packed:
+            high = (byte >> 4) & 0x0F
+            low = byte & 0x0F
+            values.append(high)
+            values.append(low)
+        values = values[:numel]
+
+        tensor = torch.tensor(
+            [(v - 7) * scale for v in values],
+            dtype=torch.float32,
+        ).reshape(shape)
+        state_dict[name] = tensor.to(device)
+
+    return state_dict
+
+
 def _load_renderer(renderer_path: str, device: str) -> nn.Module:
     """Load renderer from a .bin or .pt checkpoint.
 
-    Supports three checkpoint formats:
+    Supports four checkpoint formats:
         1. DPSM binary: DPSIMSRenderer (magic b"DPSM")
         2. ASYM binary: AsymmetricPairGenerator (magic b"ASYM")
-        3. PyTorch pickle: state_dict or PairGenerator checkpoint
+        3. INT4_LZMA2 binary: int4+LZMA2 compressed (magic b"I4LZ")
+        4. PyTorch pickle: state_dict or PairGenerator checkpoint
 
     Config metadata is read from the checkpoint's header/config key.
     """
@@ -1284,6 +1364,32 @@ def _load_renderer(renderer_path: str, device: str) -> nn.Module:
     raw_bytes = renderer_path.read_bytes()
 
     magic = raw_bytes[:4]
+
+    # ── INT4_LZMA2 format: int4 per-tensor + LZMA2 ──
+    if magic == b"I4LZ":
+        state_dict = _inline_load_int4_lzma2(raw_bytes, device=device)
+        # Infer architecture from state dict
+        emb_key = next((k for k in state_dict if "embedding.weight" in k), None)
+        if emb_key is not None:
+            num_classes, embed_dim = state_dict[emb_key].shape
+        else:
+            num_classes, embed_dim = NUM_CLASSES, 6
+        try:
+            from tac.renderer import AsymmetricPairGenerator as _APG
+            model = _APG(
+                num_classes=num_classes, embed_dim=embed_dim,
+            )
+        except ImportError:
+            raise RuntimeError(
+                "INT4_LZMA2 format requires the tac package for model construction. "
+                "Install tac or use FP4A/ASYM format."
+            )
+        model.load_state_dict(state_dict, strict=False)
+        model = model.eval().to(device)
+        elapsed = time.monotonic() - t0
+        print(f"  Loaded INT4+LZMA2 renderer from .bin ({len(raw_bytes):,} bytes, {elapsed:.1f}s)",
+              file=sys.stderr)
+        return model
 
     # ── FP4A format: FP4-quantized AsymmetricPairGenerator ──
     if magic == b"FP4A":

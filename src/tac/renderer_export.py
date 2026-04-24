@@ -1415,6 +1415,7 @@ def detect_checkpoint_type(data_or_path: Union[bytes, Path]) -> str:
     Returns:
         "dpsm" for DPSIMSRenderer, "asymmetric" for AsymmetricPairGenerator,
         "asymmetric_fp4" for FP4-quantized AsymmetricPairGenerator,
+        "int4_lzma2" for int4 per-tensor + LZMA2 compressed,
         "pytorch" for raw PyTorch checkpoints.
     """
     if isinstance(data_or_path, (str, Path)):
@@ -1428,6 +1429,8 @@ def detect_checkpoint_type(data_or_path: Union[bytes, Path]) -> str:
         return "asymmetric_fp4"
     elif data[:4] == b"ASYM":
         return "asymmetric"
+    elif data[:4] == b"I4LZ":
+        return "int4_lzma2"
     else:
         return "pytorch"
 
@@ -1438,7 +1441,8 @@ def load_any_renderer_checkpoint(
 ) -> nn.Module:
     """Load any renderer checkpoint, auto-detecting the format.
 
-    Supports: DPSM (.bin), ASYM (.bin), FP4A (.bin), and raw PyTorch (.pt) checkpoints.
+    Supports: DPSM (.bin), ASYM (.bin), FP4A (.bin), INT4_LZMA2 (.bin),
+    and raw PyTorch (.pt) checkpoints.
 
     Returns:
         The loaded model in eval mode on the specified device.
@@ -1450,6 +1454,33 @@ def load_any_renderer_checkpoint(
         return load_asymmetric_checkpoint_fp4(data_or_path, device=device)
     elif fmt == "asymmetric":
         return load_asymmetric_checkpoint(data_or_path, device=device)
+    elif fmt == "int4_lzma2":
+        from tac.mixed_precision_export import load_int4_lzma2
+        from tac.renderer import AsymmetricPairGenerator
+
+        # Load state dict and infer architecture from it
+        state_dict = load_int4_lzma2(data_or_path, device=device)
+
+        # Infer architecture params from state dict keys/shapes
+        # The embedding weight shape tells us embed_dim and num_classes
+        emb_key = next((k for k in state_dict if "embedding.weight" in k), None)
+        if emb_key is not None:
+            num_classes, embed_dim = state_dict[emb_key].shape
+        else:
+            num_classes, embed_dim = 5, 6
+
+        # Infer base_ch from first conv weight shape
+        first_conv_key = next(
+            (k for k in state_dict if "weight" in k and state_dict[k].ndim == 4),
+            None,
+        )
+        # Use defaults — the caller should construct the model with correct params
+        model = AsymmetricPairGenerator(
+            num_classes=num_classes,
+            embed_dim=embed_dim,
+        )
+        model.load_state_dict(state_dict, strict=False)
+        return model.eval().to(device)
     else:
         raise ValueError(
             f"Raw PyTorch checkpoint detected — use _load_renderer() in "
