@@ -647,6 +647,29 @@ def test_extract_eval_score_validates_schema_strictly() -> None:
         pipeline._extract_eval_score(stdout)
 
 
+def test_expected_auth_eval_schema_matches_emitter_source() -> None:
+    """R32: contract regression test — the schema_version in
+    auth_eval_renderer.py's emit code must match EXPECTED_AUTH_EVAL_SCHEMA
+    in pipeline.py. Without this test, a bump in one without the other
+    silently breaks every pipeline eval (parser raises RuntimeError, no
+    score, .done_eval gets None, pipeline loops without convergence).
+    """
+    pipeline = _load_pipeline_module("_pipeline_schema_match")
+    auth_eval_path = (Path(__file__).resolve().parent.parent.parent.parent
+                      / "experiments" / "auth_eval_renderer.py")
+    text = auth_eval_path.read_text()
+    # Find the literal "schema_version": <int> in the emit payload
+    import re as _re
+    m = _re.search(r'"schema_version":\s*(\d+)', text)
+    assert m, "auth_eval_renderer.py must emit a schema_version int literal"
+    emitter_version = int(m.group(1))
+    assert emitter_version == pipeline.EXPECTED_AUTH_EVAL_SCHEMA, (
+        f"schema drift: auth_eval_renderer.py emits schema_version="
+        f"{emitter_version} but pipeline.py expects "
+        f"{pipeline.EXPECTED_AUTH_EVAL_SCHEMA}. Bump both in lockstep."
+    )
+
+
 def test_extract_eval_score_uses_last_result_json_when_multiple() -> None:
     """If the eval emits multiple RESULT_JSON lines (e.g., per-iteration),
     the LAST one wins."""

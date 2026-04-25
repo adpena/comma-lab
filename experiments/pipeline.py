@@ -282,6 +282,46 @@ def step_export(cfg: PipelineConfig, iteration: int = 0) -> Path:
     return renderer_bin
 
 
+def _export_refined_checkpoint(cfg: PipelineConfig, ckpt_path: Path,
+                                iteration: int) -> Path:
+    """Export a refined (Fridrich/QAT) checkpoint to FP4 .bin.
+
+    R32 fix: split out from step_export because step_export is gated by
+    .done_export which is set with the ORIGINAL cfg.checkpoint at iteration
+    start. Re-calling step_export would silently return stale weights and
+    discard whatever refinement just happened. This helper writes to a
+    distinct filename so the .done_export gate cannot collide.
+    """
+    iter_dir = Path(cfg.output_dir) / f"iter_{iteration}"
+    iter_dir.mkdir(parents=True, exist_ok=True)
+    out_path = iter_dir / "renderer_refined.bin"
+
+    from tac.renderer import AsymmetricPairGenerator
+    from tac.renderer_export import export_asymmetric_checkpoint_fp4
+
+    ckpt = torch.load(str(ckpt_path), map_location="cpu", weights_only=True)
+    state = ckpt.get("model_state_dict", ckpt)
+    model = AsymmetricPairGenerator(
+        num_classes=5, embed_dim=cfg.embed_dim,
+        base_ch=cfg.base_ch, mid_ch=cfg.mid_ch,
+        motion_hidden=cfg.motion_hidden, depth=cfg.depth,
+        pose_dim=cfg.pose_dim, use_dsconv=cfg.use_dsconv,
+        padding_mode=cfg.padding_mode, use_dilation=cfg.use_dilation,
+        use_zoom_flow=cfg.use_zoom_flow,
+    )
+    missing, unexpected = model.load_state_dict(state, strict=False)
+    if missing or unexpected:
+        raise RuntimeError(
+            f"_export_refined_checkpoint: shape mismatch on {ckpt_path}. "
+            f"missing={list(missing)[:5]} unexpected={list(unexpected)[:5]}. "
+            f"Verify arch (use_zoom_flow={cfg.use_zoom_flow}, base_ch={cfg.base_ch}) "
+            f"matches the refined checkpoint."
+        )
+    nbytes = export_asymmetric_checkpoint_fp4(model, str(out_path))
+    _log(f"  Refined export → {out_path.name} ({nbytes:,}B = {nbytes/1024:.1f}KB)")
+    return out_path
+
+
 def step_pose_tto(cfg: PipelineConfig, iteration: int = 0) -> Path:
     """Adaptive pose TTO with convergence detection."""
     iter_dir = Path(cfg.output_dir) / f"iter_{iteration}"
@@ -506,6 +546,11 @@ def step_fridrich_refine(cfg: PipelineConfig, iteration: int = 0) -> Path:
         R31 fix: prior version returned a hardcoded `fridrich/distill_phase2_best.pt`
         path that may not exist if train_distill.py used a different name.
         Glob the fridrich subdir; on resume from failure, fall back to QAT.
+
+        R32 fix: glob sort by mtime (newest first) — alphabetical sort could
+        return a partial `*_tmp.pt` save instead of the latest complete one.
+        Last-resort fallback raises RuntimeError instead of returning the
+        original input — the pipeline made no progress, fail loud.
         """
         fridrich_dir = iter_dir / "fridrich"
         if fridrich_dir.exists():
@@ -514,7 +559,10 @@ def step_fridrich_refine(cfg: PipelineConfig, iteration: int = 0) -> Path:
                               fridrich_dir / "distill_latest.pt"):
                 if candidate.exists():
                     return candidate
-            pts = sorted(fridrich_dir.glob("*.pt"))
+            # Sort by mtime (newest last); last item is most recent successful save.
+            pts = sorted(fridrich_dir.glob("*.pt"), key=lambda p: p.stat().st_mtime)
+            # Skip obvious tempfiles in the name.
+            pts = [p for p in pts if "tmp" not in p.name.lower()]
             if pts:
                 return pts[-1]
         # No Fridrich output exists — fall back to the QAT pre-Fridrich checkpoint.
@@ -522,9 +570,12 @@ def step_fridrich_refine(cfg: PipelineConfig, iteration: int = 0) -> Path:
                    iter_dir / "renderer_fp4.bin"):
             if fb.exists():
                 return fb
-        # Last resort: the input checkpoint (cfg.checkpoint), so the pipeline
-        # can continue with the un-refined model rather than silently breaking.
-        return Path(cfg.checkpoint)
+        # Last resort: pipeline made NO progress. Fail loud per R32 finding.
+        raise RuntimeError(
+            f"_resolve_fridrich_output: no Fridrich, QAT-best, or FP4 output "
+            f"found in {iter_dir}. Pipeline made no progress beyond input. "
+            f"Delete .done_fridrich_refine and .done_qat to force rerun."
+        )
 
     if _step_done(iter_dir, step_name):
         _log(f"Fridrich refinement already done (iter {iteration}), skipping")
@@ -689,7 +740,16 @@ def step_compress_weights(
         padding_mode=cfg.padding_mode, use_dilation=cfg.use_dilation,
         use_zoom_flow=cfg.use_zoom_flow,
     )
-    model.load_state_dict(state, strict=False)
+    # R32 fix: same hard-fail-on-shape-mismatch pattern as step_export.
+    # Silent strict=False permits use_zoom_flow channel-count mismatches.
+    missing, unexpected = model.load_state_dict(state, strict=False)
+    if missing or unexpected:
+        raise RuntimeError(
+            f"step_compress_weights: shape mismatch on {checkpoint_path}. "
+            f"missing={list(missing)[:5]} unexpected={list(unexpected)[:5]}. "
+            f"Verify arch (use_zoom_flow={cfg.use_zoom_flow}, base_ch={cfg.base_ch}) "
+            f"matches the checkpoint."
+        )
     model.eval()
 
     int4_path = iter_dir / "renderer_int4lzma2.bin"
@@ -1140,8 +1200,13 @@ def run_compress(cfg: PipelineConfig) -> None:
                 cfg, best_ckpt, iteration, sensitivity_json=sensitivity_json,
             )
         elif best_ckpt.exists() and best_ckpt.suffix == ".pt":
-            # Re-export checkpoint to FP4
-            final_renderer = step_export(cfg, iteration)
+            # R32 fix: do NOT re-call step_export — its .done_export marker
+            # was set at iteration start with the ORIGINAL cfg.checkpoint
+            # path, so it would silently return the stale renderer.bin and
+            # discard the Fridrich-refined weights. Inline the export here
+            # to a distinct filename (renderer_refined.bin) so the
+            # downstream consumer sees the right artifact.
+            final_renderer = _export_refined_checkpoint(cfg, best_ckpt, iteration)
         else:
             final_renderer = qat_bin if qat_bin.exists() else renderer_bin
 
