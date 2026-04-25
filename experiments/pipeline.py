@@ -672,6 +672,18 @@ def step_fridrich_refine(cfg: PipelineConfig, iteration: int = 0) -> Path:
                         stale.unlink()
                     except OSError:
                         pass
+            # R40 fix: ALSO remove iter_dir-level distill_latest.pt if present
+            # — it could be from an ad-hoc resumed run (different arch /
+            # different training session) and silently become the Fridrich
+            # input on retry. The canonical path is qat_best_float.pt;
+            # distill_latest.pt at the iter_dir level is suspect.
+            stale_top = iter_dir / "distill_latest.pt"
+            if stale_top.exists():
+                try:
+                    stale_top.unlink()
+                    _log(f"  Removed suspect {stale_top.name} (ad-hoc artifact)", "WARN")
+                except OSError:
+                    pass
 
         try:
             done_meta = json.loads((iter_dir / f".done_{step_name}").read_text())
@@ -790,14 +802,32 @@ def step_compress_weights(
     iter_dir.mkdir(parents=True, exist_ok=True)
     step_name = "compress_weights"
 
+    # R40 fix: invalidate cache when cfg.weight_compression mode differs
+    # from the mode recorded in the .done marker. Prior version cached
+    # `skipped=True` from a fp4 run and silently blocked the next run from
+    # actually running int4_lzma2 even after the operator switched modes.
+    done_path = iter_dir / f".done_{step_name}"
     if _step_done(iter_dir, step_name):
-        _log(f"Weight compression already done (iter {iteration}), skipping")
-        # Return whichever format was produced
-        for suffix in ["_int4lzma2.bin", ".bin"]:
-            p = iter_dir / f"renderer{suffix}"
-            if p.exists():
-                return p
-        return checkpoint_path
+        prior_mode = None
+        try:
+            prior_mode = json.loads(done_path.read_text()).get("mode")
+        except (json.JSONDecodeError, FileNotFoundError):
+            pass
+        if prior_mode is not None and prior_mode != cfg.weight_compression:
+            _log(f"Weight compression mode changed: {prior_mode!r} → "
+                 f"{cfg.weight_compression!r}; invalidating cache", "WARN")
+            try:
+                done_path.unlink()
+            except FileNotFoundError:
+                pass
+        else:
+            _log(f"Weight compression already done (iter {iteration}), skipping")
+            # Return whichever format was produced
+            for suffix in ["_int4lzma2.bin", ".bin"]:
+                p = iter_dir / f"renderer{suffix}"
+                if p.exists():
+                    return p
+            return checkpoint_path
 
     mode = cfg.weight_compression
     if mode == "fp4":

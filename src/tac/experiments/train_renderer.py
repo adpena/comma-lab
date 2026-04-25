@@ -145,7 +145,7 @@ def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
     p.add_argument("--even-frame-skip-seg", action="store_true", default=False,
                    help="Trick 3: skip SegNet loss when frame_t1 is even-indexed "
                    "(SegNet only evaluates odd frames in the scorer)")
-    p.add_argument("--frequency-loss-weight", type=float, default=0.0,
+    p.add_argument("--frequency-loss-weight", type=float, default=None,
                    help="Trick 2: wavelet frequency-domain loss weight (0=disabled)")
     p.add_argument("--eval-roundtrip", action="store_true", default=True,
                    help="Simulate contest eval resize chain in scorer loss (default: on)")
@@ -249,8 +249,13 @@ def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
     # Yousfi council tricks (resolve from profile if not set via CLI)
     if not args.even_frame_skip_seg:
         args.even_frame_skip_seg = profile_vals.get("even_frame_skip_seg", False)
-    if args.frequency_loss_weight == 0.0:
-        args.frequency_loss_weight = profile_vals.get("frequency_loss_weight", 0.0)
+    # R40 fix: was `if args.frequency_loss_weight == 0.0` which inverted
+    # CLI-overrides-profile semantics: a user passing --frequency-loss-weight 0.0
+    # against a profile that sets 0.1 would silently get 0.1 back. Use the
+    # canonical _resolve() path with default=None argparse sentinel.
+    args.frequency_loss_weight = _resolve(
+        args.frequency_loss_weight, "frequency_loss_weight", 0.0,
+    )
 
     return args
 
