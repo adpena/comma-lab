@@ -319,7 +319,10 @@ def optimize_poses_batch(
     if argmax_constraint:
         with torch.no_grad():
             ref_pose = init_poses.to(device)
-            ref_pairs = renderer(masks_t, masks_t1, pose=ref_pose)
+            ref_kwargs = {"pose": ref_pose}
+            if zoom_warp is not None and batch_pair_indices is not None:
+                ref_kwargs["ego_flow"] = zoom_warp(batch_pair_indices, masks_t.shape[1], masks_t.shape[2])
+            ref_pairs = renderer(masks_t, masks_t1, **ref_kwargs)
             ref_ft = ref_pairs[:, 0]
             ref_ft1 = ref_pairs[:, 1]
             ref_hwc = torch.cat([ref_ft, ref_ft1], dim=0)
@@ -401,7 +404,10 @@ def optimize_poses_batch(
             with torch.no_grad():
                 # Re-forward to check argmax after optimizer step
                 check_pose = conditioning[:, :pose_dim]
-                check_pairs = renderer(masks_t, masks_t1, pose=check_pose)
+                check_kwargs = {"pose": check_pose}
+                if zoom_warp is not None and batch_pair_indices is not None:
+                    check_kwargs["ego_flow"] = zoom_warp(batch_pair_indices, masks_t.shape[1], masks_t.shape[2])
+                check_pairs = renderer(masks_t, masks_t1, **check_kwargs)
                 check_ft = check_pairs[:, 0]
                 check_ft1 = check_pairs[:, 1]
                 check_hwc = torch.cat([check_ft, check_ft1], dim=0)
@@ -428,7 +434,10 @@ def optimize_poses_batch(
                             )
                         # Check argmax again
                         check_pose2 = conditioning[:, :pose_dim]
-                        check_pairs2 = renderer(masks_t, masks_t1, pose=check_pose2)
+                        check_kwargs2 = {"pose": check_pose2}
+                        if zoom_warp is not None and batch_pair_indices is not None:
+                            check_kwargs2["ego_flow"] = zoom_warp(batch_pair_indices, masks_t.shape[1], masks_t.shape[2])
+                        check_pairs2 = renderer(masks_t, masks_t1, **check_kwargs2)
                         check_ft2 = check_pairs2[:, 0]
                         check_ft12 = check_pairs2[:, 1]
                         check_hwc2 = torch.cat([check_ft2, check_ft12], dim=0)
@@ -553,6 +562,27 @@ def main():
     t0 = time.monotonic()
     renderer = load_renderer(args.checkpoint, device)
     print(f"[2/6] Renderer loaded in {time.monotonic() - t0:.1f}s")
+
+    # Load zoom warp for use_zoom_flow models
+    zoom_warp = None
+    if hasattr(renderer, 'use_zoom_flow') and renderer.use_zoom_flow:
+        from tac.radial_zoom import RadialZoomWarp
+        ckpt_path = Path(args.checkpoint)
+        if ckpt_path.suffix == ".pt":
+            ckpt_data = torch.load(str(ckpt_path), map_location="cpu", weights_only=False)
+            if isinstance(ckpt_data, dict) and "zoom_warp_state_dict" in ckpt_data:
+                n_p = ckpt_data["zoom_warp_state_dict"]["zoom_scalars"].shape[0]
+                zoom_warp = RadialZoomWarp(n_pairs=n_p).to(device)
+                zoom_warp.load_state_dict(ckpt_data["zoom_warp_state_dict"])
+                print(f"  Loaded zoom scalars ({n_p} pairs) from checkpoint")
+        if zoom_warp is None:
+            zoom_path = ckpt_path.parent / "zoom_scalars.bin"
+            if zoom_path.exists():
+                from tac.radial_zoom import load_zoom_scalars
+                zoom_warp = load_zoom_scalars(zoom_path, device=str(device))
+                print(f"  Loaded zoom scalars from {zoom_path.name}")
+        if zoom_warp is None:
+            print(f"  WARNING: use_zoom_flow but no zoom scalars found. Using identity zoom.")
 
     # Verify pose_dim compatibility
     renderer_pose_dim = getattr(renderer, "pose_dim", 0)
@@ -769,6 +799,8 @@ def main():
             flip_budget=args.flip_budget,
             latent_dim=args.latent_dim,
             log_every=args.log_every,
+            zoom_warp=zoom_warp,
+            batch_pair_indices=torch.arange(pair_start, pair_end, device=device),
         )
         dt = time.monotonic() - t0
 
@@ -815,13 +847,13 @@ def main():
     from tac.scorer import compute_proxy_score
 
     # Generate frames with GT poses
-    gt_pose_frames = _generate_frames(renderer, gt_masks, init_poses[:n_pairs], device, args.batch_pairs)
+    gt_pose_frames = _generate_frames(renderer, gt_masks, init_poses[:n_pairs], device, args.batch_pairs, zoom_warp=zoom_warp)
     gt_score = compute_proxy_score(
         gt_pose_frames, gt_frames, posenet, segnet, device, rate=0.0,
     )
 
     # Generate frames with optimized poses
-    opt_pose_frames = _generate_frames(renderer, gt_masks, optimized_poses, device, args.batch_pairs)
+    opt_pose_frames = _generate_frames(renderer, gt_masks, optimized_poses, device, args.batch_pairs, zoom_warp=zoom_warp)
     opt_score = compute_proxy_score(
         opt_pose_frames, gt_frames, posenet, segnet, device, rate=0.0,
     )
