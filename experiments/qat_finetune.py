@@ -244,6 +244,7 @@ def compute_scorer_loss(
     segnet: nn.Module,
     cfg: QATConfig,
     device: torch.device,
+    ego_flow: torch.Tensor | None = None,
 ) -> tuple[torch.Tensor, dict[str, float]]:
     """Compute the contest-faithful scorer loss.
 
@@ -261,6 +262,8 @@ def compute_scorer_loss(
     pair_kwargs = {}
     if poses is not None and hasattr(model, "pose_dim") and model.pose_dim > 0:
         pair_kwargs["pose"] = poses
+    if ego_flow is not None:
+        pair_kwargs["ego_flow"] = ego_flow
     # Handle QAT wrapper
     renderer = model.base if hasattr(model, "base") else model
     pairs = renderer(masks_even, masks_odd, **pair_kwargs)  # (B, 2, H, W, 3)
@@ -593,6 +596,26 @@ def main() -> None:
     best_state = None
     history = []
 
+    # ── Zoom warp for use_zoom_flow models ───────────────────────────
+    zoom_warp = None
+    if cfg.use_zoom_flow:
+        from tac.radial_zoom import RadialZoomWarp
+        zoom_warp = RadialZoomWarp(n_pairs=n_pairs).to(device)
+        # Load zoom scalars from checkpoint
+        ckpt_path = Path(cfg.checkpoint_path)
+        if ckpt_path.suffix == ".pt":
+            ckpt_data = torch.load(str(ckpt_path), map_location="cpu", weights_only=False)
+            if isinstance(ckpt_data, dict) and "zoom_warp_state_dict" in ckpt_data:
+                zoom_warp.load_state_dict(ckpt_data["zoom_warp_state_dict"])
+                print(f"  Loaded zoom scalars from checkpoint")
+        else:
+            zoom_path = ckpt_path.parent / "zoom_scalars.bin"
+            if zoom_path.exists():
+                from tac.radial_zoom import load_zoom_scalars
+                zoom_warp = load_zoom_scalars(zoom_path, device=str(device))
+                print(f"  Loaded zoom scalars from {zoom_path.name}")
+        print(f"  RadialZoomWarp: {n_pairs} pairs")
+
     # ══════════════════════════════════════════════════════════════════
     # PHASE A: INT8 Warm-Up (progressive quantization)
     # Research: Bit-by-Bit (ICLR 2026) — coarse quant first, then fine
@@ -620,11 +643,14 @@ def main() -> None:
             gt_even = gt_frames_tensor[idx * 2].to(device)
             gt_odd = gt_frames_tensor[idx * 2 + 1].to(device)
             p = poses[idx].to(device) if poses is not None else None
+            batch_ego_flow = None
+            if zoom_warp is not None:
+                batch_ego_flow = zoom_warp(idx.to(device), m_even.shape[1], m_even.shape[2])
 
             optimizer.zero_grad()
             loss, metrics = compute_scorer_loss(
                 model, m_even, m_odd, gt_even, gt_odd, p,
-                posenet, segnet, cfg, device,
+                posenet, segnet, cfg, device, ego_flow=batch_ego_flow,
             )
             loss.backward()
             torch.nn.utils.clip_grad_norm_(model.parameters(), cfg.grad_clip)
@@ -679,11 +705,14 @@ def main() -> None:
         gt_even = gt_frames_tensor[idx * 2].to(device)
         gt_odd = gt_frames_tensor[idx * 2 + 1].to(device)
         p = poses[idx].to(device) if poses is not None else None
+        batch_ego_flow = None
+        if zoom_warp is not None:
+            batch_ego_flow = zoom_warp(idx.to(device), m_even.shape[1], m_even.shape[2])
 
         optimizer.zero_grad()
         loss, metrics = compute_scorer_loss(
             model, m_even, m_odd, gt_even, gt_odd, p,
-            posenet, segnet, cfg, device,
+            posenet, segnet, cfg, device, ego_flow=batch_ego_flow,
         )
         loss.backward()
         torch.nn.utils.clip_grad_norm_(model.parameters(), cfg.grad_clip)
