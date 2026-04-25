@@ -157,6 +157,12 @@ class ArchiveManifest:
     mini_segnet_bin: bool = False
     mini_posenet_bin: bool = False
     posenet_targets_bin: bool = False
+    # R-radial-zoom 2026-04-25 (Hotz council #94): per-pair scalar zoom from
+    # the FoE — replaces 7KB poses.bin with 2.4KB zoom_scalars.bin for renderers
+    # with use_zoom_flow=True. inflate_renderer.py already loads this from
+    # archive_dir/zoom_scalars.bin (lines 2076-2090), but build_submission_archive
+    # had no way to put it in the archive. Now wired.
+    zoom_scalars_bin: bool = False
 
     def required_files(self) -> list[str]:
         mapping = {
@@ -171,6 +177,7 @@ class ArchiveManifest:
             "mini_segnet_bin": "mini_segnet.bin",
             "mini_posenet_bin": "mini_posenet.bin",
             "posenet_targets_bin": "posenet_targets.bin",
+            "zoom_scalars_bin": "zoom_scalars.bin",
         }
         return [
             mapping[k]
@@ -191,6 +198,15 @@ RENDERER_COMPACT_MANIFEST = ArchiveManifest(
     renderer_bin=True,
     masks_mkv=True,
     optimized_poses_bin=True,
+)
+
+# Radial zoom manifest: replaces optimized_poses_bin with zoom_scalars_bin
+# (2.4KB instead of 7KB; per-pair scalar zoom from FoE). Use this for
+# renderers trained with use_zoom_flow=True (e.g. GREEN profile).
+RENDERER_RADIAL_ZOOM_MANIFEST = ArchiveManifest(
+    renderer_bin=True,
+    masks_mkv=True,
+    zoom_scalars_bin=True,
 )
 
 
@@ -397,6 +413,7 @@ def build_submission_archive(
     optimized_poses_bin: Path | str | None = None,
     optimized_embedding_pt: Path | str | None = None,
     gradient_corrections_bin: Path | str | None = None,
+    zoom_scalars_bin: Path | str | None = None,
     manifest: ArchiveManifest = RENDERER_SUBMISSION_MANIFEST,
     validate: bool = True,
     use_brotli: bool = False,
@@ -439,6 +456,7 @@ def build_submission_archive(
         "optimized_poses.bin": Path(optimized_poses_bin) if optimized_poses_bin else None,
         "optimized_embedding.pt": Path(optimized_embedding_pt) if optimized_embedding_pt else None,
         "gradient_corrections.bin": Path(gradient_corrections_bin) if gradient_corrections_bin else None,
+        "zoom_scalars.bin": Path(zoom_scalars_bin) if zoom_scalars_bin else None,
     }
 
     required = set(manifest.required_files())
