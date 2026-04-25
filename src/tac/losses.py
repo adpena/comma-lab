@@ -885,9 +885,12 @@ def segnet_kl_divergence_loss(
 
     loss = seg_weight * seg_kl
 
-    # TODO: PoseNet MSE term was stubbed out but never implemented.
-    # The caller is responsible for adding PoseNet loss if needed.
-    # Removed dead code that ran PoseNet forward without using the result.
+    # SegNet-only by design: this function deliberately returns ONLY the
+    # segmentation KL term. Callers wanting a combined loss should add a
+    # PoseNet term explicitly (see scorer_loss / kl_distill_scorer_loss for
+    # combined variants). Keeping the SegNet path isolated lets callers
+    # weight or schedule the two terms independently — required by Quantizr's
+    # 5-stage training where PoseNet pressure is added/removed per phase.
 
     return loss, seg_kl.item(), seg_argmax_dist
 

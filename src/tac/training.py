@@ -922,9 +922,15 @@ class Trainer:
     def _save_checkpoint(self, epoch: int, scorer: float):
         """Save best int8 checkpoint with atomic writes.
 
-        TODO: The per-channel int8 quantization logic below duplicates
-        quantize_state_dict() in quantization.py. Refactor to call that
-        function instead of reimplementing the same loop here.
+        Note on the apparent duplication with quantize_state_dict() in
+        quantization.py: that function returns a DEQUANTIZED state dict
+        (for in-memory proxy eval — round-trip simulation). This loop
+        produces the PACKED int8 archive format that inflate-time code
+        deserializes (name+".q" int8 tensor + name+".s" fp32 scale
+        tensor + meta dict). They look similar but produce different
+        artifacts. Calling quantize_state_dict here would also discard
+        the meta + config_fingerprint that the inflate-side validator
+        depends on.
         """
         out_dir = Path(self.config.output_dir)
         out_dir.mkdir(parents=True, exist_ok=True)
