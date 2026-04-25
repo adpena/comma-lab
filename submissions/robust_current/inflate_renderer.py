@@ -1635,19 +1635,13 @@ def _generate_and_write(
                     batch_pairs_t = []
                     batch_pairs_t1 = []
                     batch_end = min(pair_idx + batch_size * 2, N - 1)
-                    # Half-frame mode: if masks has N/2 frames (only odd/frame2),
-                    # use the same mask for both even and odd (motion predictor
-                    # handles the difference via learned flow). Saves ~50% mask storage.
-                    half_frame = (masks.shape[0] == N // 2)
+                    # Half-frame duplication is handled upstream in
+                    # _load_masks_from_archive via repeat_interleave.
+                    # masks always has N entries (1200) by this point.
                     for j in range(pair_idx, batch_end, 2):
                         if j + 1 < N:
-                            if half_frame:
-                                pair_idx_half = j // 2
-                                batch_pairs_t.append(masks[pair_idx_half])  # reuse odd mask for even
-                                batch_pairs_t1.append(masks[pair_idx_half])
-                            else:
-                                batch_pairs_t.append(masks[j])
-                                batch_pairs_t1.append(masks[j + 1])
+                            batch_pairs_t.append(masks[j])
+                            batch_pairs_t1.append(masks[j + 1])
 
                     if not batch_pairs_t:
                         break
