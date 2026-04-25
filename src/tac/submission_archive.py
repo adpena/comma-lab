@@ -434,14 +434,30 @@ def build_submission_archive(
     masks_src = source_map.get("masks.mkv")
     if masks_src and masks_src.exists():
         import subprocess as _sp
-        probe = _sp.run(
-            ["ffprobe", "-v", "error", "-count_frames",
-             "-select_streams", "v:0",
-             "-show_entries", "stream=nb_read_frames",
-             "-of", "csv=p=0", str(masks_src)],
-            capture_output=True, text=True, timeout=60,
-        )
-        if probe.returncode == 0 and probe.stdout.strip():
+        try:
+            probe = _sp.run(
+                ["ffprobe", "-v", "error", "-count_frames",
+                 "-select_streams", "v:0",
+                 "-show_entries", "stream=nb_read_frames",
+                 "-of", "csv=p=0", str(masks_src)],
+                capture_output=True, text=True, timeout=60,
+            )
+        except FileNotFoundError:
+            raise FileNotFoundError(
+                "ffprobe is required to validate mask frame count but was not found. "
+                "Install ffmpeg (which includes ffprobe) to enable mask validation."
+            )
+        if probe.returncode != 0:
+            logger.warning(
+                "ffprobe returned non-zero (%d) for %s — mask frame count NOT validated. "
+                "stderr: %s", probe.returncode, masks_src, probe.stderr.strip(),
+            )
+        elif not probe.stdout.strip():
+            logger.warning(
+                "ffprobe returned empty output for %s — mask frame count NOT validated.",
+                masks_src,
+            )
+        else:
             n_mask_frames = int(probe.stdout.strip())
             if n_mask_frames not in (NUM_FRAMES, HALF_FRAMES):
                 raise ValueError(

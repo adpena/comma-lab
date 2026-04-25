@@ -14,8 +14,8 @@ Research-backed design choices:
   - QAT fraction 30% of total training for <200K-param models (Apple, Sep 2025)
   - Per-block FP4 with block_size=32 (our codebook matches BOF4 structure)
   - STE gradient estimator (PEGE offers 1-2% but adds complexity)
-  - Mixed precision: Embedding + FiLM Linear stay in FP16 (negligible rate,
-    disproportionate quality impact). Only Conv2d/ConvTranspose2d in FP4.
+  - ALL layers quantized to FP4 (Conv2d, ConvTranspose2d, Embedding, Linear)
+    to match export_asymmetric_checkpoint_fp4 exactly — train matches deploy.
   - eval_roundtrip=True + noise_std=0.5 in loss (mandatory per our findings)
   - Scorer loss matches training: hinge SegNet + PoseNet MSE
 
@@ -366,7 +366,9 @@ def evaluate_fp4_quality(
             f"Cannot find upstream at {upstream_root}. "
             f"Set TAC_UPSTREAM_DIR or pass --upstream."
         )
-    sys.path.insert(0, str(upstream_root))
+    upstream_str = str(upstream_root)
+    if upstream_str not in sys.path:
+        sys.path.insert(0, upstream_str)
     from modules import DistortionNet
 
     dn = DistortionNet().eval().to(device)
@@ -388,14 +390,16 @@ def evaluate_fp4_quality(
             kwargs = {"pose": p} if p is not None else {}
             pair = renderer(m_t, m_t1, **kwargs)
             chw = pair[0].permute(0, 3, 1, 2).float()
+            # eval_roundtrip: simulate contest resize chain (NON-NEGOTIABLE)
+            # 384x512 → 874x1164 → uint8 → 384x512 (matches upstream evaluate.py)
             cam = F.interpolate(chw, size=(874, 1164), mode="bilinear", align_corners=False)
-            cam = cam.round().clamp(0, 255)
+            cam = cam.round().clamp(0, 255).to(torch.uint8).float()
 
             gt_p = torch.stack([
                 torch.from_numpy(gt_frames[2 * i]).float(),
                 torch.from_numpy(gt_frames[2 * i + 1]).float(),
             ]).unsqueeze(0).to(device)
-            comp_p = cam.permute(0, 2, 3, 1).unsqueeze(0)
+            comp_p = cam.permute(0, 2, 3, 1).unsqueeze(0).contiguous()
             pd, sd = dn.compute_distortion(gt_p, comp_p)  # upstream convention: (gt, compressed)
             pd_list.append(pd.item())
             sd_list.append(sd.item())
