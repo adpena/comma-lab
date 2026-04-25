@@ -573,9 +573,9 @@ def step_eval(cfg: PipelineConfig, archive_path: Path, iteration: int = 0) -> di
     _log("Running full e2e auth evaluation")
     cmd = [
         sys.executable, "-u", "experiments/auth_eval_renderer.py",
-        "--archive", str(archive_path),
+        "--checkpoint", str(archive_path),
+        "--upstream-dir", cfg.upstream,
         "--device", cfg.device,
-        "--upstream", cfg.upstream,
     ]
 
     t0 = time.monotonic()
