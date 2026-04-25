@@ -71,14 +71,41 @@ def ssh(host: str, port: int, cmd: str, timeout: int = 30) -> str:
 
 
 def preflight(profile: str, instance_id: int) -> None:
-    """Validate everything BEFORE launching. Raise if anything is wrong."""
-    print(f"[preflight] Profile '{profile}'...")
-    # 1. Profile exists locally
+    """Validate everything BEFORE launching. Raise if anything is wrong.
+
+    Runs FIVE layers of preflight via tac.preflight.preflight_all:
+      1. check_codebase_drift: AST scan blocks ad-hoc patterns (no nohup, no launch_*.sh)
+      2. preflight_arity: every subprocess.run flag matches target argparse signature
+      3. preflight_profiles: every renderer profile has required arch keys + eval_roundtrip
+      4. preflight_training_inputs: TTO range, profile arch, eval_roundtrip
+      5. preflight_check: artifact validation if relevant
+    Plus deployment-specific checks: profile registered, instance running,
+    ssh+tmux ready, NO stale ad-hoc run_pipeline.sh on remote.
+    """
     sys.path.insert(0, str(REPO_ROOT / "src"))
+
+    # 1. Profile exists locally
     from tac.profiles import PROFILES
     if profile not in PROFILES:
         raise RuntimeError(f"Profile '{profile}' not in PROFILES. Available: {list(PROFILES.keys())}")
-    print(f"[preflight] OK profile registered")
+    profile_dict = PROFILES[profile]
+    print(f"[preflight] OK profile '{profile}' registered")
+
+    # 2. Run all-layers preflight (codebase drift + training inputs)
+    from tac.preflight import preflight_all
+    print(f"[preflight] Running tac.preflight.preflight_all ...")
+    tto_path = REPO_ROOT / "experiments/results/tto_v7_hinge_500/tto_frames.pt"
+    gt_poses = REPO_ROOT / "experiments/results/gt_poses.pt"
+    masks = REPO_ROOT / "submissions/robust_current/masks_crf50.mkv"
+    preflight_all(
+        profile_name=profile,
+        profile_arch=profile_dict,
+        tto_frames_path=tto_path if tto_path.exists() else None,
+        gt_poses_path=gt_poses if gt_poses.exists() else None,
+        masks_path=masks if masks.exists() else None,
+        check_codebase=True,
+        verbose=True,
+    )
 
     # 2. pipeline.py exists
     if not PIPELINE_PY.exists():
@@ -107,6 +134,35 @@ def preflight(profile: str, instance_id: int) -> None:
     if "pipeline.py" not in out:
         raise RuntimeError("/workspace/pact/experiments/pipeline.py missing on remote — sync code first")
     print(f"[preflight] OK pipeline.py exists on remote")
+
+    # 6. NO stale ad-hoc run_pipeline.sh on remote.
+    # rsync excludes experiments/results/, so any shell script left in
+    # results/ from a prior ad-hoc deploy will silently survive code syncs
+    # and keep invoking stale CLI args. (Round 23 finding.)
+    # Compound check emits a sentinel token so we can distinguish "no script
+    # found" from "SSH failed" — a silent SSH failure would otherwise return
+    # empty string and let the check pass. (Round 24 finding.)
+    sentinel = "__PREFLIGHT_CHECK_OK__"
+    cmd = (
+        "ls /workspace/pact/experiments/results/*/run_pipeline.sh 2>/dev/null; "
+        f"echo {sentinel}"
+    )
+    out = ssh(host, port, cmd, timeout=15)
+    if sentinel not in out:
+        raise RuntimeError(
+            f"SSH check 6 (stale run_pipeline.sh) did not return sentinel — "
+            f"SSH may have failed. Cannot certify remote state. Output: {out!r}"
+        )
+    stale = out.replace(sentinel, "").strip()
+    if stale:
+        raise RuntimeError(
+            "Stale ad-hoc run_pipeline.sh found on remote — these survive "
+            "code sync (results/ is rsync-excluded) and bypass the canonical "
+            "pipeline.py. Remove them before deploying:\n"
+            f"  {stale}\n"
+            f"Run: ssh -p {port} root@{host} 'rm /workspace/pact/experiments/results/*/run_pipeline.sh'"
+        )
+    print(f"[preflight] OK no stale run_pipeline.sh on remote")
 
 
 def sync_code(instance_id: int) -> None:

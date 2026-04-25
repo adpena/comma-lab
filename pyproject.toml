@@ -89,7 +89,7 @@ ignore = [
 known-first-party = ["tac", "comma_lab"]
 
 [tool.pytest.ini_options]
-testpaths = ["tests"]
+testpaths = ["tests", "src/tac/tests"]
 timeout = 60
 markers = [
     "slow: marks tests that load scorer models (deselect with '-m \"not slow\"')",
