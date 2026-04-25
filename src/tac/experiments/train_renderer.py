@@ -108,6 +108,21 @@ def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
     p.add_argument("--max-frames", type=int, default=None,
                    help="Truncate GT frames to first N (for trend / smoke runs). "
                         "Default: use all loaded frames (typically 1200).")
+
+    # Mask augmentation: train against AV1-quantized masks so the renderer
+    # learns to handle the masks it will actually see at inflate time.
+    # Yousfi diagnosis (2026-04-25): the gating measurement showed CRF=63
+    # masks caused 34x PoseNet explosion because the renderer was only ever
+    # trained on clean GT masks. Mixing noisy variants during training closes
+    # this distribution gap.
+    p.add_argument("--mask-noise-mkv", type=str, default=None,
+                   help="Path to a CRF-encoded masks.mkv to augment training. "
+                        "Decoded once at startup; randomly swapped in per pair "
+                        "with probability --mask-noise-prob.")
+    p.add_argument("--mask-noise-prob", type=float, default=0.5,
+                   help="Probability of using the noisy mask variant on each "
+                        "training step (default 0.5 = 50/50 mix).")
+
     p.add_argument("--subsample", type=int, default=4,
                    help="Train on 1/N of pairs per epoch")
     p.add_argument("--eval-every", type=int, default=None)
@@ -474,6 +489,33 @@ def train(args: argparse.Namespace):
     # Keep masks on CPU, move per-pair to device during training
     all_masks = all_masks.cpu()
 
+    # Optional noisy-mask augmentation: decode a CRF-encoded mkv and randomly
+    # mix in during training so the renderer becomes robust to AV1 quantization
+    # at inflate time. (Yousfi 2026-04-25 diagnosis after CRF=63 gating.)
+    noisy_masks = None
+    if args.mask_noise_mkv is not None:
+        from tac.mask_codec import decode_masks
+        print(f"[masks] Decoding noisy masks from {args.mask_noise_mkv} ...")
+        noisy_masks = decode_masks(args.mask_noise_mkv).cpu()
+        if noisy_masks.shape[0] != all_masks.shape[0]:
+            # Truncate or pad — must match GT mask count
+            n_match = min(noisy_masks.shape[0], all_masks.shape[0])
+            if noisy_masks.shape[0] != all_masks.shape[0]:
+                print(f"[masks] WARNING: noisy masks ({noisy_masks.shape[0]}) != "
+                      f"GT masks ({all_masks.shape[0]}); truncating both to {n_match}")
+                noisy_masks = noisy_masks[:n_match]
+                all_masks = all_masks[:n_match]
+        # Sanity-check resolution match
+        if noisy_masks.shape[1:] != all_masks.shape[1:]:
+            raise ValueError(
+                f"Noisy mask resolution {noisy_masks.shape[1:]} != "
+                f"GT mask resolution {all_masks.shape[1:]}. "
+                f"Re-encode noisy masks at the renderer's input resolution."
+            )
+        disagree = float((noisy_masks != all_masks).float().mean().item())
+        print(f"[masks] Noisy-mask augmentation enabled "
+              f"(prob={args.mask_noise_prob}, disagreement vs GT={disagree:.4f})")
+
     # Build model (dispatch by variant)
     if args.variant == "wavelet_renderer":
         model = build_wavelet_renderer(
@@ -698,8 +740,16 @@ def train(args: argparse.Namespace):
             mask_t = mask_t1 = gt_pair = rendered_pair = None
             start = all_pair_starts[pair_idx.item()]
 
-            # Load mask pair and GT pair
-            mask_t, mask_t1 = mask_pair_from_index(all_masks, start)
+            # Load mask pair and GT pair. R-mask-aug 2026-04-25: with prob
+            # --mask-noise-prob, swap to the AV1-quantized variant so the
+            # renderer trains against the same mask distribution it sees at
+            # inflate time. The GT pair is unchanged (we still measure the
+            # renderer against the true frames — only the mask input is noisy).
+            if (noisy_masks is not None
+                    and random.random() < args.mask_noise_prob):
+                mask_t, mask_t1 = mask_pair_from_index(noisy_masks, start)
+            else:
+                mask_t, mask_t1 = mask_pair_from_index(all_masks, start)
             mask_t = mask_t.to(device)
             mask_t1 = mask_t1.to(device)
             gt_pair = pair_from_frames(gt_frames, start).to(device)
