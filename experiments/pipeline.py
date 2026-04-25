@@ -43,10 +43,12 @@ from __future__ import annotations
 import argparse
 import json
 import math
+import os
 import re
 import subprocess
 import sys
 import time
+from pydantic import BaseModel
 from dataclasses import asdict, dataclass, fields
 from pathlib import Path
 
@@ -82,10 +84,21 @@ def _step_done(output_dir: Path, step: str) -> bool:
 
 
 def _mark_done(output_dir: Path, step: str, meta: dict | None = None) -> None:
+    """Atomically write a .done_<step> marker.
+
+    R29 fix: write to a tempfile then os.replace — guarantees a concurrent
+    reader sees either the OLD marker or the COMPLETE NEW marker, never a
+    partial JSON. Path.write_text is non-atomic on POSIX (open+write+close);
+    a concurrent process could read mid-write and treat partial JSON as a
+    complete .done marker.
+    """
     info = {"step": step, "ts": time.strftime("%Y-%m-%dT%H:%M:%S")}
     if meta:
         info.update(meta)
-    (output_dir / f".done_{step}").write_text(json.dumps(info, indent=2))
+    target = output_dir / f".done_{step}"
+    tmp = output_dir / f".done_{step}.tmp.{os.getpid()}"
+    tmp.write_text(json.dumps(info, indent=2))
+    os.replace(tmp, target)
 
 
 # ── Pipeline configuration ──────────────────────────────────────────────
@@ -273,6 +286,20 @@ def step_pose_tto(cfg: PipelineConfig, iteration: int = 0) -> Path:
     """Adaptive pose TTO with convergence detection."""
     iter_dir = Path(cfg.output_dir) / f"iter_{iteration}"
     iter_dir.mkdir(parents=True, exist_ok=True)
+    # R29 fix: validate masks BEFORE constructing the subprocess cmd. Prior
+    # version passed cfg.masks blindly, so an empty string flowed through
+    # to optimize_poses.py and produced a cryptic decode failure deep in the
+    # subprocess instead of a clear "masks not set" error here.
+    if not cfg.masks:
+        raise RuntimeError(
+            f"step_pose_tto: cfg.masks is empty. step_extract_masks must run "
+            f"first AND populate cfg.masks. iter={iteration} output_dir={cfg.output_dir}"
+        )
+    if not Path(cfg.masks).exists():
+        raise RuntimeError(
+            f"step_pose_tto: masks file does not exist: {cfg.masks!r}. "
+            f"iter={iteration} output_dir={cfg.output_dir}"
+        )
 
     if _step_done(iter_dir, "pose_tto"):
         _log(f"Pose TTO already done (iter {iteration}), skipping")
@@ -841,39 +868,56 @@ def step_eval(cfg: PipelineConfig, renderer_bin: Path, archive_path: Path,
     return meta
 
 
-# Match a score line emitted by auth_eval_renderer.py. We accept ONLY:
-#   - a line containing "TOTAL" followed by a float
-#   - a line containing "auth score" followed by a float
-#   - a line containing "score:" followed by a float (canonical key:value)
-# We DO NOT match "distortion" — that key prefixes per-component values
-# (seg/pose/rate) which would silently overwrite the real TOTAL on the same
-# line via re.search returning the first hit. (R28 finding.)
-_SCORE_LINE_RE = re.compile(
-    r"\b(?:TOTAL|auth\s*score|score\s*[:=])\s*[^0-9+\-]*([+-]?\d+\.\d+|\d+)",
-    re.IGNORECASE,
-)
+# R29: replaced fragile regex (caught bugs across rounds 28 + 29) with a
+# schema-first contract. auth_eval_renderer.py now emits a single
+# `RESULT_JSON: {...}` line; we json.loads + Pydantic-validate. No more
+# token-by-token guessing whether a number is a score, a timing measurement,
+# or a component breakdown. Schema-first per CLAUDE.md.
+_RESULT_JSON_RE = re.compile(r"^RESULT_JSON:\s*(\{.*\})\s*$", re.MULTILINE)
+
+
+class AuthEvalResult(BaseModel):
+    """Validated payload from auth_eval_renderer.py's RESULT_JSON sentinel line.
+
+    Strict: every field must be present and the right type, or pydantic raises
+    ValidationError. Schema versioned so future emit changes can be coordinated.
+    """
+    model_config = {"extra": "forbid"}
+    schema_version: int
+    final_score: float
+    score_seg: float
+    score_pose: float
+    score_rate: float
+    avg_segnet_dist: float
+    avg_posenet_dist: float
+    rate: float
+    archive_size_bytes: int
+    gt_size_bytes: int
 
 
 def _extract_eval_score(stdout: str, logger=None) -> float | None:
-    """Pull the auth score from auth_eval_renderer.py stdout.
+    """Parse the RESULT_JSON sentinel line from auth_eval_renderer.py stdout.
 
-    Only accepts numbers on a line that explicitly says 'TOTAL', 'auth score',
-    or 'score:'. Returns the LAST such number — the auth eval's final TOTAL
-    line is the canonical score. Returns None if no score line was found.
+    Returns the validated final_score, or None if no RESULT_JSON line was
+    found. Raises ValidationError if the payload is malformed (caller should
+    treat that as a hard failure, not a None — the eval ran but emitted bad
+    data, which is worse than no data).
     """
-    score: float | None = None
-    for line in stdout.split("\n"):
-        if logger and ("TOTAL" in line.upper() or "score" in line.lower()):
-            logger(f"  >> {line.strip()}")
-        m = _SCORE_LINE_RE.search(line)
-        if m:
-            try:
-                val = float(m.group(1))
-                if 0 < val < 100:
-                    score = val
-            except ValueError:
-                continue
-    return score
+    matches = list(_RESULT_JSON_RE.finditer(stdout))
+    if not matches:
+        if logger:
+            logger("  No RESULT_JSON line in auth_eval stdout — eval may be "
+                   "running an old version without the sentinel emit", "WARN")
+        return None
+    # Use the LAST match — defensive against an eval that emits multiple
+    # (e.g., per-iteration). The last is the final result.
+    payload = matches[-1].group(1)
+    parsed = AuthEvalResult.model_validate_json(payload)
+    if logger:
+        logger(f"  Parsed RESULT_JSON: final={parsed.final_score:.4f} "
+               f"seg={parsed.score_seg:.4f} pose={parsed.score_pose:.4f} "
+               f"rate={parsed.score_rate:.4f}")
+    return parsed.final_score
 
 
 # ── Main pipeline ────────────────────────────────────────────────────────
@@ -1009,14 +1053,25 @@ def run_compress(cfg: PipelineConfig) -> None:
 
 
 def run_eval(args: argparse.Namespace) -> None:
-    """Evaluate an existing archive."""
+    """Evaluate an existing archive against an existing renderer checkpoint.
+
+    R29 fix: prior version passed `archive` as both args to step_eval, which
+    sent the archive .zip as --checkpoint to auth_eval_renderer.py. The eval
+    script expected a renderer .pt/.bin → cryptic load error. Every
+    `pipeline.py eval` invocation was broken.
+    """
     cfg = PipelineConfig(
         video=args.video, device=args.device, upstream=args.upstream,
         output_dir=str(Path(args.archive).parent),
     )
-    # For standalone eval, the archive IS the checkpoint (pass same for both)
     archive = Path(args.archive)
-    result = step_eval(cfg, archive, archive)
+    checkpoint = Path(args.checkpoint)
+    if not checkpoint.exists():
+        raise SystemExit(
+            f"--checkpoint {checkpoint} does not exist. eval needs both the "
+            f"archive (for rate calculation) and the renderer (for forward pass)."
+        )
+    result = step_eval(cfg, checkpoint, archive)
     score = result.get("score")
     if score:
         _log(f"Final score: {score:.4f}")
@@ -1178,7 +1233,9 @@ def main() -> int:
 
     # eval subcommand
     ev = sub.add_parser("eval", help="Evaluate an existing archive")
-    ev.add_argument("--archive", required=True, help="Path to archive.zip")
+    ev.add_argument("--archive", required=True, help="Path to archive.zip (for rate calculation)")
+    ev.add_argument("--checkpoint", required=True,
+                    help="Renderer checkpoint (.pt or .bin) for forward pass. R29 fix.")
     ev.add_argument("--video", required=True, help="GT video for scoring")
     ev.add_argument("--device", default="cuda", choices=["cuda", "mps", "cpu"])
     ev.add_argument("--upstream", default="upstream")

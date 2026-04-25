@@ -615,31 +615,73 @@ def test_user_provided_flags_requires_active_subcommand() -> None:
         pipeline._user_provided_flags(parser, ["compress", "--base-ch", "32"])
 
 
-def test_extract_eval_score_distortion_keyword_does_not_clobber() -> None:
-    """R28: 'distortion: 0.116 TOTAL 2.014' must capture 2.014, not 0.116."""
+def test_extract_eval_score_human_lines_ignored_in_favor_of_json() -> None:
+    """R29: human-readable score lines must be ignored — only RESULT_JSON counts.
+
+    Replaces the R28 regex-era test. The new parser fundamentally cannot be
+    fooled by component-value lines because it doesn't read them at all.
+    """
     pipeline = _load_pipeline_module("_pipeline_eval_distortion")
-    # Even on a single line, only 'TOTAL' should match — 'distortion' is
-    # explicitly NOT in the keyword set.
-    stdout = "Distortion components: seg=0.116 pose=0.476 rate=1.528 TOTAL 2.014"
-    assert pipeline._extract_eval_score(stdout) == 2.014
+    # Lots of distractor numbers; only the JSON sentinel should be parsed.
+    stdout = (
+        "Distortion components: seg=0.116 pose=0.476 rate=1.528 TOTAL 2.014\n"
+        'RESULT_JSON: {"schema_version":1,"final_score":99.9,'
+        '"score_seg":0,"score_pose":0,"score_rate":0,'
+        '"avg_segnet_dist":0,"avg_posenet_dist":0,"rate":0,'
+        '"archive_size_bytes":0,"gt_size_bytes":1}'
+    )
+    # Returns 99.9 (the JSON value), not 2.014 (the human line).
+    assert pipeline._extract_eval_score(stdout) == 99.9
 
 
-def test_extract_eval_score_ignores_timing_lines() -> None:
-    """`elapsed 45.2s` must NOT be parsed as a score. Only score-line patterns count."""
+def test_extract_eval_score_validates_schema_strictly() -> None:
+    """R29: malformed RESULT_JSON must raise ValidationError, not return None.
+
+    A garbage payload means the eval ran but emitted bad data — that's
+    worse than no data and must fail loud.
+    """
+    pipeline = _load_pipeline_module("_pipeline_eval_strict")
+    from pydantic import ValidationError
+    stdout = 'RESULT_JSON: {"schema_version":1,"final_score":"not_a_number"}'
+    with pytest.raises(ValidationError):
+        pipeline._extract_eval_score(stdout)
+
+
+def test_extract_eval_score_uses_last_result_json_when_multiple() -> None:
+    """If the eval emits multiple RESULT_JSON lines (e.g., per-iteration),
+    the LAST one wins."""
+    pipeline = _load_pipeline_module("_pipeline_eval_multi")
+    payload1 = ('RESULT_JSON: {"schema_version":1,"final_score":1.5,'
+                '"score_seg":0,"score_pose":0,"score_rate":0,'
+                '"avg_segnet_dist":0,"avg_posenet_dist":0,"rate":0,'
+                '"archive_size_bytes":0,"gt_size_bytes":1}')
+    payload2 = ('RESULT_JSON: {"schema_version":1,"final_score":2.5,'
+                '"score_seg":0,"score_pose":0,"score_rate":0,'
+                '"avg_segnet_dist":0,"avg_posenet_dist":0,"rate":0,'
+                '"archive_size_bytes":0,"gt_size_bytes":1}')
+    assert pipeline._extract_eval_score(f"{payload1}\n{payload2}") == 2.5
+
+
+def test_extract_eval_score_parses_result_json_sentinel() -> None:
+    """R29: parser is now schema-first JSON, not regex."""
     pipeline = _load_pipeline_module("_pipeline_eval_1")
     stdout = "\n".join([
         "Loading scorer models...",
         "Pair 5/600 elapsed 45.2s",
-        "Pair 100/600 elapsed 12.3s",
-        "TOTAL 2.014",
+        "TOTAL 2.014",  # human line — must be IGNORED by parser
+        'RESULT_JSON: {"schema_version":1,"final_score":2.014,'
+        '"score_seg":11.6,"score_pose":2.18,"score_rate":9.4,'
+        '"avg_segnet_dist":0.116,"avg_posenet_dist":0.476,'
+        '"rate":0.376,"archive_size_bytes":338000,"gt_size_bytes":37545489}',
         "All done in 67.8 seconds",
     ])
     assert pipeline._extract_eval_score(stdout) == 2.014
 
 
-def test_extract_eval_score_returns_none_when_no_score_line() -> None:
+def test_extract_eval_score_returns_none_when_no_sentinel_line() -> None:
+    """No RESULT_JSON line → None (caller decides what to do)."""
     pipeline = _load_pipeline_module("_pipeline_eval_2")
-    stdout = "\n".join(["Loading models...", "Pair 5/600 elapsed 45.2s"])
+    stdout = "\n".join(["Loading models...", "TOTAL 2.014", "Pair 5/600 elapsed 45.2s"])
     assert pipeline._extract_eval_score(stdout) is None
 
 

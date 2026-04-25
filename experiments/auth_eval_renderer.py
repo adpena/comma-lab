@@ -666,6 +666,26 @@ def run_auth_eval(
     print(f"  Total time:       {t_total:.1f}s")
     print(f"{'=' * 60}")
 
+    # Schema-first sentinel line for downstream tooling. Parsing the human-
+    # readable output above with regex is fragile (multiple R28+R29 review
+    # rounds caught regex bugs); the sentinel + JSON payload is the canonical
+    # contract. Parser: re.search(r"^RESULT_JSON: (.+)$", line, re.M) +
+    # AuthEvalResult.model_validate_json(payload).
+    import json as _json
+    _result_payload = {
+        "schema_version": 1,
+        "final_score": float(final_score),
+        "score_seg": float(score_seg),
+        "score_pose": float(score_pose),
+        "score_rate": float(score_rate),
+        "avg_segnet_dist": float(avg_segnet),
+        "avg_posenet_dist": float(avg_posenet),
+        "rate": float(rate),
+        "archive_size_bytes": int(archive_size),
+        "gt_size_bytes": int(gt_size),
+    }
+    print(f"RESULT_JSON: {_json.dumps(_result_payload, separators=(',', ':'))}")
+
     # Save results JSON
     result = {
         "checkpoint": str(Path(checkpoint).resolve()),
