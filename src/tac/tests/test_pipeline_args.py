@@ -60,7 +60,8 @@ class TestPipelineSubprocessArgs(unittest.TestCase):
     def test_pipeline_qat_args_match_qat_finetune(self):
         """pipeline.py step_qat passes valid args (fp4-epochs, lr, upstream, arch flags)."""
         src = Path("experiments/pipeline.py").read_text()
-        qat_section = src.split("qat_finetune.py")[1].split("]")[0]
+        parts = src.split("qat_finetune.py")
+        qat_section = parts[-1].split("]")[0]  # last occurrence = actual cmd
         for flag in ["--checkpoint", "--upstream", "--device", "--fp4-epochs", "--lr",
                       "--output-dir", "--base-ch", "--mid-ch", "--pose-dim"]:
             assert flag in qat_section, f"pipeline.py missing {flag} for qat_finetune"

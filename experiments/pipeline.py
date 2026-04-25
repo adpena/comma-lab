@@ -322,6 +322,10 @@ def step_qat(cfg: PipelineConfig, iteration: int = 0) -> Path:
     ]
     if cfg.use_dsconv:
         cmd.append("--use-dsconv")
+    if cfg.use_dilation:
+        cmd.append("--use-dilation")
+    if cfg.padding_mode != "zeros":
+        cmd.extend(["--padding-mode", cfg.padding_mode])
 
     t0 = time.monotonic()
     result = subprocess.run(cmd)
@@ -389,7 +393,6 @@ def step_fridrich_refine(cfg: PipelineConfig, iteration: int = 0) -> Path:
         "--ema-decay", "0.997",
         "--checkpoint-every", "50", "--eval-every", "25", "--log-every", "10",
         "--upstream", cfg.upstream,
-        "--video", cfg.video,
     ]
     if cfg.use_dsconv:
         cmd.append("--use-dsconv")

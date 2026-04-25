@@ -70,16 +70,18 @@ for _p in _UPSTREAM_CANDIDATES:
 class QATConfig:
     """All hyperparameters for QAT fine-tuning."""
 
-    # Architecture (must match the float checkpoint)
+    # Architecture (must match the float checkpoint — use ArchConfig defaults)
     embed_dim: int = 6
-    base_ch: int = 24
-    mid_ch: int = 32
+    base_ch: int = 36
+    mid_ch: int = 60
     motion_hidden: int = 32
     depth: int = 1
     pose_dim: int = 6
     max_flow_px: float = 20.0
     max_residual: float = 20.0
-    use_dsconv: bool = True
+    use_dsconv: bool = False
+    padding_mode: str = "zeros"
+    use_dilation: bool = False
 
     # Paths
     checkpoint_path: str = ""
@@ -130,6 +132,8 @@ def create_model(cfg: QATConfig, device: torch.device) -> nn.Module:
         max_residual=cfg.max_residual,
         pose_dim=cfg.pose_dim,
         use_dsconv=cfg.use_dsconv,
+        padding_mode=cfg.padding_mode,
+        use_dilation=cfg.use_dilation,
     )
     return model.to(device)
 
@@ -425,11 +429,14 @@ def main() -> None:
     parser.add_argument("--output-dir", default="experiments/results/qat_fp4")
     parser.add_argument("--device", default="cuda", choices=["cuda", "mps", "cpu"])
 
-    # Architecture (must match float training)
-    parser.add_argument("--base-ch", type=int, default=24)
-    parser.add_argument("--mid-ch", type=int, default=32)
+    # Architecture (must match float training — use ArchConfig defaults)
+    parser.add_argument("--base-ch", type=int, default=36)
+    parser.add_argument("--mid-ch", type=int, default=60)
     parser.add_argument("--pose-dim", type=int, default=6)
-    parser.add_argument("--use-dsconv", action="store_true", default=True)
+    parser.add_argument("--use-dsconv", action="store_true")
+    parser.add_argument("--padding-mode", type=str, default="zeros",
+                        choices=["zeros", "reflect", "replicate", "circular"])
+    parser.add_argument("--use-dilation", action="store_true")
 
     # QAT schedule
     parser.add_argument("--int8-warmup-epochs", type=int, default=50)
@@ -454,6 +461,8 @@ def main() -> None:
         mid_ch=args.mid_ch,
         pose_dim=args.pose_dim,
         use_dsconv=args.use_dsconv,
+        padding_mode=args.padding_mode,
+        use_dilation=args.use_dilation,
         int8_warmup_epochs=0 if args.skip_int8_warmup else args.int8_warmup_epochs,
         fp4_epochs=args.fp4_epochs,
         base_lr=args.lr,
