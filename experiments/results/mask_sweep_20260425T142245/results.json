@@ -1,0 +1,162 @@
+{
+  "n_frames": 1200,
+  "resolution": [
+    384,
+    512
+  ],
+  "rate_denominator_bytes": 37545489,
+  "results": [
+    {
+      "codec": "av1_monochrome",
+      "mode": "full",
+      "crf": 30,
+      "size_bytes": 1459414,
+      "rate_term": 0.9717638782118406,
+      "disagreement": 0.0001111009405576624,
+      "encode_s": 14.7,
+      "frames_encoded": 1200,
+      "path": "/Users/adpena/Projects/pact/experiments/results/mask_sweep_20260425T142245/masks_av1mono_full_crf30.mkv"
+    },
+    {
+      "codec": "av1_monochrome",
+      "mode": "full",
+      "crf": 40,
+      "size_bytes": 803567,
+      "rate_term": 0.5350622813835239,
+      "disagreement": 0.0008359993807971478,
+      "encode_s": 17.2,
+      "frames_encoded": 1200,
+      "path": "/Users/adpena/Projects/pact/experiments/results/mask_sweep_20260425T142245/masks_av1mono_full_crf40.mkv"
+    },
+    {
+      "codec": "av1_monochrome",
+      "mode": "full",
+      "crf": 50,
+      "size_bytes": 421054,
+      "rate_term": 0.28036257564790273,
+      "disagreement": 0.0021956805139780045,
+      "encode_s": 23.0,
+      "frames_encoded": 1200,
+      "path": "/Users/adpena/Projects/pact/experiments/results/mask_sweep_20260425T142245/masks_av1mono_full_crf50.mkv"
+    },
+    {
+      "codec": "av1_monochrome",
+      "mode": "full",
+      "crf": 56,
+      "size_bytes": 287001,
+      "rate_term": 0.1911021854050163,
+      "disagreement": 0.003389549208804965,
+      "encode_s": 26.2,
+      "frames_encoded": 1200,
+      "path": "/Users/adpena/Projects/pact/experiments/results/mask_sweep_20260425T142245/masks_av1mono_full_crf56.mkv"
+    },
+    {
+      "codec": "av1_monochrome",
+      "mode": "full",
+      "crf": 60,
+      "size_bytes": 198878,
+      "rate_term": 0.1324246968790312,
+      "disagreement": 0.004652892239391804,
+      "encode_s": 27.6,
+      "frames_encoded": 1200,
+      "path": "/Users/adpena/Projects/pact/experiments/results/mask_sweep_20260425T142245/masks_av1mono_full_crf60.mkv"
+    },
+    {
+      "codec": "av1_monochrome",
+      "mode": "full",
+      "crf": 63,
+      "size_bytes": 108758,
+      "rate_term": 0.07241748802366112,
+      "disagreement": 0.007410265505313873,
+      "encode_s": 28.5,
+      "frames_encoded": 1200,
+      "path": "/Users/adpena/Projects/pact/experiments/results/mask_sweep_20260425T142245/masks_av1mono_full_crf63.mkv"
+    },
+    {
+      "codec": "av1_monochrome",
+      "mode": "half",
+      "crf": 30,
+      "size_bytes": 796646,
+      "rate_term": 0.5304538715689653,
+      "disagreement": 0.0043723126873373985,
+      "encode_s": 7.6,
+      "frames_encoded": 600,
+      "path": "/Users/adpena/Projects/pact/experiments/results/mask_sweep_20260425T142245/masks_av1mono_half_crf30.mkv"
+    },
+    {
+      "codec": "av1_monochrome",
+      "mode": "half",
+      "crf": 40,
+      "size_bytes": 444425,
+      "rate_term": 0.295924365241321,
+      "disagreement": 0.004790704697370529,
+      "encode_s": 9.2,
+      "frames_encoded": 600,
+      "path": "/Users/adpena/Projects/pact/experiments/results/mask_sweep_20260425T142245/masks_av1mono_half_crf40.mkv"
+    },
+    {
+      "codec": "av1_monochrome",
+      "mode": "half",
+      "crf": 50,
+      "size_bytes": 234351,
+      "rate_term": 0.15604471152313398,
+      "disagreement": 0.0056668855249881744,
+      "encode_s": 12.4,
+      "frames_encoded": 600,
+      "path": "/Users/adpena/Projects/pact/experiments/results/mask_sweep_20260425T142245/masks_av1mono_half_crf50.mkv"
+    },
+    {
+      "codec": "av1_monochrome",
+      "mode": "half",
+      "crf": 56,
+      "size_bytes": 159105,
+      "rate_term": 0.10594148873650307,
+      "disagreement": 0.006508928723633289,
+      "encode_s": 13.4,
+      "frames_encoded": 600,
+      "path": "/Users/adpena/Projects/pact/experiments/results/mask_sweep_20260425T142245/masks_av1mono_half_crf56.mkv"
+    },
+    {
+      "codec": "av1_monochrome",
+      "mode": "half",
+      "crf": 60,
+      "size_bytes": 109347,
+      "rate_term": 0.07280967894705007,
+      "disagreement": 0.0073889922350645065,
+      "encode_s": 14.6,
+      "frames_encoded": 600,
+      "path": "/Users/adpena/Projects/pact/experiments/results/mask_sweep_20260425T142245/masks_av1mono_half_crf60.mkv"
+    },
+    {
+      "codec": "av1_monochrome",
+      "mode": "half",
+      "crf": 63,
+      "size_bytes": 59406,
+      "rate_term": 0.03955601696917571,
+      "disagreement": 0.009589805267751217,
+      "encode_s": 15.1,
+      "frames_encoded": 600,
+      "path": "/Users/adpena/Projects/pact/experiments/results/mask_sweep_20260425T142245/masks_av1mono_half_crf63.mkv"
+    },
+    {
+      "codec": "entropy_lossless",
+      "mode": "full",
+      "size_bytes": 990483,
+      "rate_term": 0.6595219734653076,
+      "disagreement": 0.0,
+      "encode_s": 7.6,
+      "frames_encoded": 1200,
+      "path": "/Users/adpena/Projects/pact/experiments/results/mask_sweep_20260425T142245/masks_entropy_full.bin"
+    },
+    {
+      "codec": "entropy_lossless",
+      "mode": "half",
+      "size_bytes": 582559,
+      "rate_term": 0.38790212587189904,
+      "disagreement": 0.004321068525314331,
+      "encode_s": 3.4,
+      "frames_encoded": 600,
+      "path": "/Users/adpena/Projects/pact/experiments/results/mask_sweep_20260425T142245/masks_entropy_half.bin"
+    }
+  ]
+}
