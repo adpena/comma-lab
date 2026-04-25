@@ -1450,6 +1450,9 @@ def _load_renderer(renderer_path: str, device: str) -> nn.Module:
             if "film_bottleneck" in k:
                 pose_dim = 6
                 break
+        # WARNING: I4LZ format has no header — padding_mode and use_dilation
+        # cannot be inferred from state dict. Defaults to zeros/False.
+        # Use ASYM or FP4A format for models trained with non-default values.
         model = _APG(
             num_classes=num_classes, embed_dim=embed_dim,
             base_ch=base_ch, mid_ch=mid_ch,
@@ -1460,6 +1463,8 @@ def _load_renderer(renderer_path: str, device: str) -> nn.Module:
         elapsed = time.monotonic() - t0
         print(f"  Loaded INT4+LZMA2 renderer from .bin ({len(raw_bytes):,} bytes, {elapsed:.1f}s)",
               file=sys.stderr)
+        print(f"  WARNING: I4LZ format lacks arch header — assuming "
+              f"padding_mode=zeros, use_dilation=False", file=sys.stderr)
         return model
 
     # ── FP4A format: FP4-quantized AsymmetricPairGenerator ──
@@ -1500,7 +1505,6 @@ def _load_renderer(renderer_path: str, device: str) -> nn.Module:
                 f"or use a .pt checkpoint instead."
             )
         renderer = load_renderer_checkpoint(raw_bytes, device=device)
-        _renderer_pose_dim = getattr(renderer, 'pose_dim', 6)
         elapsed = time.monotonic() - t0
         print(f"  Loaded renderer from .bin format ({len(raw_bytes):,} bytes, {elapsed:.1f}s)",
               file=sys.stderr)
@@ -1538,6 +1542,8 @@ def _load_renderer(renderer_path: str, device: str) -> nn.Module:
             pose_dim=config.get("pose_dim", 0),
             use_dsconv=config.get("use_dsconv", False),
             use_zoom_flow=config.get("use_zoom_flow", False),
+            padding_mode=config.get("padding_mode", "zeros"),
+            use_dilation=config.get("use_dilation", False),
         )
         renderer.load_state_dict(raw_sd, strict=True)
         renderer.to(device).eval()
