@@ -311,13 +311,17 @@ def step_qat(cfg: PipelineConfig, iteration: int = 0) -> Path:
     cmd = [
         sys.executable, "-u", "experiments/qat_finetune.py",
         "--checkpoint", cfg.checkpoint,
-        "--masks", cfg.masks,
+        "--upstream", cfg.upstream,
         "--device", cfg.device,
-        "--qat-epochs", str(cfg.qat_max_epochs),
-        "--qat-lr", str(cfg.qat_lr),
-        "--eval-roundtrip",
+        "--fp4-epochs", str(cfg.qat_max_epochs),
+        "--lr", str(cfg.qat_lr),
         "--output-dir", str(iter_dir),
+        "--base-ch", str(cfg.base_ch),
+        "--mid-ch", str(cfg.mid_ch),
+        "--pose-dim", str(cfg.pose_dim),
     ]
+    if cfg.use_dsconv:
+        cmd.append("--use-dsconv")
 
     t0 = time.monotonic()
     result = subprocess.run(cmd)
@@ -383,6 +387,8 @@ def step_fridrich_refine(cfg: PipelineConfig, iteration: int = 0) -> Path:
         "--phase2-lr", "1e-5",
         "--ema-decay", "0.997",
         "--checkpoint-every", "50", "--eval-every", "25", "--log-every", "10",
+        "--upstream", cfg.upstream,
+        "--video", cfg.video,
     ]
     if cfg.use_dsconv:
         cmd.append("--use-dsconv")
@@ -562,8 +568,14 @@ def step_archive(cfg: PipelineConfig, renderer_bin: Path, poses_path: Path,
     return archive_path
 
 
-def step_eval(cfg: PipelineConfig, archive_path: Path, iteration: int = 0) -> dict:
-    """Full e2e auth evaluation through upstream scorer."""
+def step_eval(cfg: PipelineConfig, renderer_bin: Path, archive_path: Path,
+              iteration: int = 0) -> dict:
+    """Full e2e auth evaluation through upstream scorer.
+
+    Args:
+        renderer_bin: path to renderer.bin (checkpoint for auth_eval_renderer.py)
+        archive_path: path to archive.zip (for rate calculation via --archive-size-bytes)
+    """
     iter_dir = Path(cfg.output_dir) / f"iter_{iteration}"
 
     if _step_done(iter_dir, "eval"):
@@ -571,11 +583,13 @@ def step_eval(cfg: PipelineConfig, archive_path: Path, iteration: int = 0) -> di
         return json.loads((iter_dir / ".done_eval").read_text())
 
     _log("Running full e2e auth evaluation")
+    archive_bytes = archive_path.stat().st_size if archive_path.exists() else 0
     cmd = [
         sys.executable, "-u", "experiments/auth_eval_renderer.py",
-        "--checkpoint", str(archive_path),
+        "--checkpoint", str(renderer_bin),
         "--upstream-dir", cfg.upstream,
         "--device", cfg.device,
+        "--archive-size-bytes", str(archive_bytes),
     ]
 
     t0 = time.monotonic()
@@ -583,6 +597,12 @@ def step_eval(cfg: PipelineConfig, archive_path: Path, iteration: int = 0) -> di
     elapsed = time.monotonic() - t0
 
     _log(f"  Complete in {elapsed/60:.1f} min")
+
+    if result.returncode != 0:
+        _log(f"  Auth eval FAILED (exit {result.returncode})", "ERROR")
+        if result.stderr:
+            for line in result.stderr.strip().split("\n")[-10:]:
+                _log(f"  stderr: {line}")
 
     # Extract score from output
     score = None
@@ -662,8 +682,8 @@ def run_compress(cfg: PipelineConfig) -> None:
         # Step 4: Archive
         archive_path = step_archive(cfg, final_renderer, poses_path, iteration)
 
-        # Step 5: Eval
-        eval_result = step_eval(cfg, archive_path, iteration)
+        # Step 5: Eval (pass renderer.bin for scoring, archive.zip for rate)
+        eval_result = step_eval(cfg, final_renderer, archive_path, iteration)
         score = eval_result.get("score")
 
         if score is not None:
@@ -693,7 +713,9 @@ def run_eval(args: argparse.Namespace) -> None:
         video=args.video, device=args.device, upstream=args.upstream,
         output_dir=str(Path(args.archive).parent),
     )
-    result = step_eval(cfg, Path(args.archive))
+    # For standalone eval, the archive IS the checkpoint (pass same for both)
+    archive = Path(args.archive)
+    result = step_eval(cfg, archive, archive)
     score = result.get("score")
     if score:
         _log(f"Final score: {score:.4f}")
