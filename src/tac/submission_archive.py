@@ -447,12 +447,18 @@ def build_submission_archive(
                 "ffprobe is required to validate mask frame count but was not found. "
                 "Install ffmpeg (which includes ffprobe) to enable mask validation."
             )
-        if probe.returncode != 0:
+        except _sp.TimeoutExpired:
+            logger.warning(
+                "ffprobe timed out on %s — mask frame count NOT validated. "
+                "File may be corrupted or on a slow mount.", masks_src,
+            )
+            probe = None
+        if probe is not None and probe.returncode != 0:
             logger.warning(
                 "ffprobe returned non-zero (%d) for %s — mask frame count NOT validated. "
                 "stderr: %s", probe.returncode, masks_src, probe.stderr.strip(),
             )
-        elif not probe.stdout.strip():
+        elif probe is not None and not probe.stdout.strip():
             logger.warning(
                 "ffprobe returned empty output for %s — mask frame count NOT validated.",
                 masks_src,
