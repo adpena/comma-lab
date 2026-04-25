@@ -610,7 +610,7 @@ def step_compress_weights(
 
 
 def step_archive(cfg: PipelineConfig, renderer_bin: Path, poses_path: Path,
-                 iteration: int = 0) -> Path:
+                 iteration: int = 0, corrections_bin: Path | None = None) -> Path:
     """Build optimized submission archive."""
     iter_dir = Path(cfg.output_dir) / f"iter_{iteration}"
     archive_path = iter_dir / "archive.zip"
@@ -628,12 +628,26 @@ def step_archive(cfg: PipelineConfig, renderer_bin: Path, poses_path: Path,
     is_bin = poses_path.suffix == ".bin"
     manifest = RENDERER_COMPACT_MANIFEST if (cfg.binary_poses or is_bin) else RENDERER_SUBMISSION_MANIFEST
 
+    # Include gradient corrections if available (Eureka 6 — Contrarian)
+    corr_path = corrections_bin if (corrections_bin and corrections_bin.exists()) else None
+    if corr_path:
+        from tac.submission_archive import ArchiveManifest
+        manifest = ArchiveManifest(
+            renderer_bin=manifest.renderer_bin,
+            masks_mkv=manifest.masks_mkv,
+            optimized_poses_pt=manifest.optimized_poses_pt,
+            optimized_poses_bin=manifest.optimized_poses_bin,
+            gradient_corrections_bin=True,
+        )
+        _log(f"  Including gradient corrections: {corr_path} ({corr_path.stat().st_size:,} bytes)")
+
     result = build_submission_archive(
         output_path=archive_path,
         renderer_bin=renderer_bin,
-        masks_mkv=cfg.masks_archive or cfg.masks,  # half-frame for archive, full as fallback
+        masks_mkv=cfg.masks_archive or cfg.masks,
         optimized_poses_pt=None if is_bin else poses_path,
         optimized_poses_bin=poses_path if is_bin else None,
+        gradient_corrections_bin=corr_path,
         manifest=manifest,
         validate=True,
         use_brotli=cfg.brotli,
@@ -809,8 +823,12 @@ def run_compress(cfg: PipelineConfig) -> None:
         else:
             final_renderer = qat_bin if qat_bin.exists() else renderer_bin
 
-        # Step 4: Archive
-        archive_path = step_archive(cfg, final_renderer, poses_path, iteration)
+        # Step 3.8: Engineered SegNet corrections (Eureka 6 — Contrarian)
+        corrections_bin = step_engineered_corrections(cfg, final_renderer, iteration)
+
+        # Step 4: Archive (include corrections if available)
+        archive_path = step_archive(cfg, final_renderer, poses_path, iteration,
+                                     corrections_bin=corrections_bin)
 
         # Step 5: Eval (pass renderer.bin for scoring, archive.zip for rate)
         eval_result = step_eval(cfg, final_renderer, archive_path, iteration)

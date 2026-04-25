@@ -370,6 +370,7 @@ def build_submission_archive(
     optimized_poses_pt: Path | str | None = None,
     optimized_poses_bin: Path | str | None = None,
     optimized_embedding_pt: Path | str | None = None,
+    gradient_corrections_bin: Path | str | None = None,
     manifest: ArchiveManifest = RENDERER_SUBMISSION_MANIFEST,
     validate: bool = True,
     use_brotli: bool = False,
@@ -411,6 +412,7 @@ def build_submission_archive(
         "optimized_poses.pt": Path(optimized_poses_pt) if optimized_poses_pt else None,
         "optimized_poses.bin": Path(optimized_poses_bin) if optimized_poses_bin else None,
         "optimized_embedding.pt": Path(optimized_embedding_pt) if optimized_embedding_pt else None,
+        "gradient_corrections.bin": Path(gradient_corrections_bin) if gradient_corrections_bin else None,
     }
 
     required = set(manifest.required_files())
