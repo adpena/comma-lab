@@ -96,7 +96,8 @@ class PipelineConfig:
     # Input
     video: str = ""
     checkpoint: str = ""
-    masks: str = ""  # pre-extracted masks (optional, extracted from video if empty)
+    masks: str = ""  # FULL masks (1200 frames) for training/pose TTO. Extracted from video if empty.
+    masks_archive: str = ""  # HALF-FRAME masks (600 frames) for archive. Built from full masks if empty.
     output_dir: str = "experiments/results/pipeline"
     device: str = "cuda"
     upstream: str = "upstream"
@@ -147,47 +148,65 @@ class PipelineConfig:
 
 # ── Step implementations ─────────────────────────────────────────────────
 
-def step_extract_masks(cfg: PipelineConfig) -> Path:
-    """Extract SegNet masks from GT video if not provided."""
+def step_extract_masks(cfg: PipelineConfig) -> tuple[Path, Path]:
+    """Extract SegNet masks — FULL (1200) for training/TTO, HALF (600) for archive.
+
+    Training and pose TTO need full-frame masks (both frame_t and frame_t1).
+    The archive only needs half-frame masks (frame_t1 only, frame_t derived via warp).
+    These are DIFFERENT requirements — conflating them caused a batch 38/75 crash
+    when pose TTO tried to make 600 pairs from 600 half-frame masks.
+    """
     out = Path(cfg.output_dir)
     out.mkdir(parents=True, exist_ok=True)
 
+    # Full masks (1200 frames) — for training and pose TTO
     if cfg.masks and Path(cfg.masks).exists():
-        _log(f"Using pre-extracted masks: {cfg.masks}")
-        return Path(cfg.masks)
-
-    if _step_done(out, "masks"):
-        _log("Mask extraction already done, skipping")
-        return out / "masks.mkv"
-
-    _log("Extracting SegNet masks from video...")
-    from tac.data import decode_video
-    from tac.scorer import load_scorers
-    from tac.mask_codec import extract_masks, extract_half_masks, encode_masks
-
-    gt_frames = decode_video(cfg.video, target_h=SEGNET_H, target_w=SEGNET_W)[:NUM_FRAMES]
-    _log(f"  Decoded {len(gt_frames)} frames at {SEGNET_H}x{SEGNET_W}")
-
-    models_dir = Path(cfg.upstream) / "models"
-    _, segnet = load_scorers(
-        str(models_dir / "posenet.safetensors"),
-        str(models_dir / "segnet.safetensors"),
-        device=cfg.device,
-    )
-
-    if cfg.half_frame:
-        masks = extract_half_masks(gt_frames, segnet, device=cfg.device)
-        _log(f"  Extracted {masks.shape[0]} half-frame masks")
+        full_masks_path = Path(cfg.masks)
+        _log(f"Using pre-extracted full masks: {full_masks_path}")
+    elif _step_done(out, "masks_full"):
+        full_masks_path = out / "masks_full.mkv"
+        _log("Full mask extraction already done, skipping")
     else:
+        _log("Extracting FULL SegNet masks (1200 frames) from video...")
+        from tac.data import decode_video
+        from tac.scorer import load_scorers
+        from tac.mask_codec import extract_masks, encode_masks
+
+        gt_frames = decode_video(cfg.video, target_h=SEGNET_H, target_w=SEGNET_W)[:NUM_FRAMES]
+        _log(f"  Decoded {len(gt_frames)} frames")
+
+        models_dir = Path(cfg.upstream) / "models"
+        _, segnet = load_scorers(
+            str(models_dir / "posenet.safetensors"),
+            str(models_dir / "segnet.safetensors"),
+            device=cfg.device,
+        )
         masks = extract_masks(gt_frames, segnet, device=cfg.device)
-        _log(f"  Extracted {masks.shape[0]} full-frame masks")
+        full_masks_path = out / "masks_full.mkv"
+        nbytes = encode_masks(masks, full_masks_path, crf=cfg.mask_crf)
+        _log(f"  Full masks: {masks.shape[0]} frames, {nbytes:,} bytes")
+        _mark_done(out, "masks_full", {"n_masks": masks.shape[0], "bytes": nbytes})
 
-    mask_path = out / "masks.mkv"
-    nbytes = encode_masks(masks, mask_path, crf=cfg.mask_crf)
-    _log(f"  Encoded: {mask_path} ({nbytes:,} bytes, CRF {cfg.mask_crf})")
+    # Half-frame masks (600 frames) — for archive only
+    if cfg.masks_archive and Path(cfg.masks_archive).exists():
+        half_masks_path = Path(cfg.masks_archive)
+        _log(f"Using pre-extracted half-frame masks: {half_masks_path}")
+    elif cfg.half_frame:
+        if _step_done(out, "masks_half"):
+            half_masks_path = out / "masks_half.mkv"
+        else:
+            _log("Building half-frame masks from full masks...")
+            from tac.mask_codec import decode_masks, encode_masks
+            full = decode_masks(str(full_masks_path))
+            half = full[1::2]  # odd frames only
+            half_masks_path = out / "masks_half.mkv"
+            nbytes = encode_masks(half, half_masks_path, crf=cfg.mask_crf)
+            _log(f"  Half masks: {half.shape[0]} frames, {nbytes:,} bytes")
+            _mark_done(out, "masks_half", {"n_masks": half.shape[0], "bytes": nbytes})
+    else:
+        half_masks_path = full_masks_path  # no half-frame, use full for archive too
 
-    _mark_done(out, "masks", {"n_masks": masks.shape[0], "bytes": nbytes})
-    return mask_path
+    return full_masks_path, half_masks_path
 
 
 def step_export(cfg: PipelineConfig, iteration: int = 0) -> Path:
@@ -511,7 +530,7 @@ def step_archive(cfg: PipelineConfig, renderer_bin: Path, poses_path: Path,
     result = build_submission_archive(
         output_path=archive_path,
         renderer_bin=renderer_bin,
-        masks_mkv=cfg.masks,
+        masks_mkv=cfg.masks_archive or cfg.masks,  # half-frame for archive, full as fallback
         optimized_poses_pt=None if is_bin else poses_path,
         optimized_poses_bin=poses_path if is_bin else None,
         manifest=manifest,
@@ -590,8 +609,11 @@ def run_compress(cfg: PipelineConfig) -> None:
     _log(f"Optimizations: half_frame={cfg.half_frame}, binary_poses={cfg.binary_poses}, brotli={cfg.brotli}")
 
     # Step 0: Extract masks (once, shared across iterations)
-    masks_path = step_extract_masks(cfg)
-    cfg.masks = str(masks_path)
+    # FULL masks (1200 frames) for training/pose TTO
+    # HALF masks (600 frames) for archive only
+    full_masks_path, half_masks_path = step_extract_masks(cfg)
+    cfg.masks = str(full_masks_path)  # training/TTO always uses full
+    cfg.masks_archive = str(half_masks_path)  # archive uses half (if --half-frame)
 
     prev_score = float("inf")
     for iteration in range(cfg.max_iterations):
@@ -678,7 +700,8 @@ def main() -> int:
     comp = sub.add_parser("compress", help="Compress video to submission archive")
     comp.add_argument("--video", required=True, help="Input video path")
     comp.add_argument("--checkpoint", required=True, help="Trained renderer checkpoint")
-    comp.add_argument("--masks", default="", help="Pre-extracted masks (optional)")
+    comp.add_argument("--masks", default="", help="FULL masks (1200 frames) for training/TTO")
+    comp.add_argument("--masks-archive", default="", help="HALF-FRAME masks (600 frames) for archive only")
     comp.add_argument("--output-dir", default="experiments/results/pipeline")
     comp.add_argument("--device", default="cuda", choices=["cuda", "mps", "cpu"])
     comp.add_argument("--upstream", default="upstream")
@@ -723,7 +746,8 @@ def main() -> int:
     if args.command == "compress":
         cfg = PipelineConfig(
             video=args.video, checkpoint=args.checkpoint,
-            masks=args.masks, output_dir=args.output_dir,
+            masks=args.masks, masks_archive=args.masks_archive,
+            output_dir=args.output_dir,
             device=args.device, upstream=args.upstream,
             base_ch=args.base_ch, mid_ch=args.mid_ch,
             motion_hidden=args.motion_hidden, depth=args.depth,
