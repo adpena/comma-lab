@@ -651,6 +651,44 @@ def step_archive(cfg: PipelineConfig, renderer_bin: Path, poses_path: Path,
     return archive_path
 
 
+def step_engineered_corrections(cfg: PipelineConfig, renderer_bin: Path,
+                                 iteration: int = 0) -> Path | None:
+    """Eureka 6: Compute gradient-directed SegNet corrections.
+
+    Pre-computes sparse pixel perturbations that flip wrong SegNet predictions
+    to match GT. Stored as gradient_corrections.bin for inflate-time application.
+    Contest-compliant: no scorers at inflate time.
+    """
+    iter_dir = Path(cfg.output_dir) / f"iter_{iteration:03d}"
+    step_name = "engineered_corrections"
+    done_marker = iter_dir / f".done_{step_name}"
+    corrections_bin = iter_dir / "gradient_corrections.bin"
+
+    if done_marker.exists() and corrections_bin.exists():
+        _log(f"[{step_name}] Skipping — already done ({corrections_bin})")
+        return corrections_bin
+
+    _log(f"[{step_name}] Computing SegNet-targeting corrections...")
+    cmd = [
+        sys.executable, "-u", "experiments/engineered_quant_noise.py",
+        "--checkpoint", str(renderer_bin),
+        "--upstream", str(cfg.upstream_dir),
+        "--device", cfg.device,
+        "--output-dir", str(iter_dir),
+    ]
+    result = subprocess.run(cmd, env=_pipeline_env())
+    if result.returncode != 0:
+        _log(f"[{step_name}] WARNING: Failed (exit {result.returncode}), skipping corrections")
+        return None
+
+    done_marker.touch()
+    if corrections_bin.exists():
+        size = corrections_bin.stat().st_size
+        _log(f"[{step_name}] Done: {corrections_bin} ({size:,} bytes)")
+        return corrections_bin
+    return None
+
+
 def step_eval(cfg: PipelineConfig, renderer_bin: Path, archive_path: Path,
               iteration: int = 0) -> dict:
     """Full e2e auth evaluation through upstream scorer.

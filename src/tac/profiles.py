@@ -950,6 +950,74 @@ COORD_RENDERER_SMOKE = {
     "pretrain_epochs": 100,
 }
 
+# Technique 9B: Cool-Chic-style shared latent renderer (Orange/CNES).
+# Multi-resolution learned latents + tiny synthesis decoder. This is a
+# deterministic overfitting experiment; no KL distill, no adaptive rebalance.
+COOLCHIC_RENDERER_SMOKE = {
+    "experiment_type": "smoke_test",
+    "variant": "coolchic_renderer",
+    "hidden": 32,  # tiny synthesis decoder width
+    "embed_dim": 6,
+    "latent_ch": 8,
+    "latent_shapes": ((6, 8), (12, 16), (24, 32)),
+    "motion_hidden": 24,
+    "epochs": 200,
+    "lr": 1e-3,
+    "ema_decay": 0.997,
+    "alpha": 0.0,
+    "sal_lambda": 0.0,
+    "loss_mode": "standard",
+    "segnet_loss_weight": 100.0,
+    "boundary_weight": 1.0,
+    "hard_frame_ratio": 0.0,
+    "eval_every": 10,
+    "accum_steps": 2,
+    "quantize_mode": "fp4",
+    "pretrain_epochs": 100,
+    "seed": 42,
+    "deterministic": True,
+    "adaptive_rebalance": False,
+}
+
+COOLCHIC_RENDERER_FULL = {
+    **COOLCHIC_RENDERER_SMOKE,
+    "experiment_type": "training",
+    "epochs": 2500,
+    "lr": 5e-4,
+    "motion_hidden": 32,
+    "boundary_weight": 50.0,
+    "hard_frame_ratio": 0.3,
+    "error_replay_every": 200,
+    "eval_every": 5,
+    "accum_steps": 4,
+    "use_swa": True,
+    "pretrain_epochs": 500,
+}
+
+# Technique 9C: C3-style coordinate residual codec.
+# A Cool-Chic-style base renderer produces the coarse frame; a zero-initialized
+# coordinate MLP learns bounded residuals. This isolates the C3 residual idea
+# while preserving the mask-renderer training and evaluation contract.
+C3_RESIDUAL_RENDERER_SMOKE = {
+    **COOLCHIC_RENDERER_SMOKE,
+    "variant": "c3_residual_renderer",
+    "hidden": 24,
+    "latent_ch": 6,
+    "residual_hidden": 32,
+    "residual_layers": 2,
+    "residual_scale": 16.0,
+}
+
+C3_RESIDUAL_RENDERER_FULL = {
+    **COOLCHIC_RENDERER_FULL,
+    "variant": "c3_residual_renderer",
+    "hidden": 24,
+    "latent_ch": 6,
+    "residual_hidden": 48,
+    "residual_layers": 2,
+    "residual_scale": 16.0,
+}
+
 # ── Yousfi Council Decode: Aggressive Overfitting ────────────────────
 # CPU lane: overfit postfilter to 0.mkv with all tricks (10K epochs)
 OVERFIT_CPU = {
@@ -2263,6 +2331,31 @@ GREEN = {
     "use_zoom_flow": True,  # MotionPredictor: 4ch (gate+residual), flow from RadialZoomWarp
 }
 
+# ── Next-gen profiles: self-compression eureka findings (2026-04-25) ──────
+
+# WILDE v2: beneficial quantization noise during scorer training
+# Eureka 1+2: quantization noise in rendered frames acts as beneficial
+# steganalytic cover. Renderer learns to produce scorer-robust output.
+WILDE_V2 = {
+    **WILDE,
+    "beneficial_quant_noise": True,
+    "quant_noise_bits": 6,  # uint6 quantization before scorer (conservative start)
+}
+
+# SHIRAZ v2: same addition
+SHIRAZ_V2 = {
+    **{k: v for k, v in SHIRAZ.items()},
+    "beneficial_quant_noise": True,
+    "quant_noise_bits": 4,  # uint4 more aggressive (SHIRAZ uses focal STE, more robust)
+}
+
+# GREEN v2: zoom flow + beneficial noise
+GREEN_V2 = {
+    **GREEN,
+    "beneficial_quant_noise": True,
+    "quant_noise_bits": 6,
+}
+
 # Current 4090 config (103K params, proxy 0.612 at ep1500)
 DEFINITIVE_FLOAT_EMA = {
     "experiment_type": "renderer_training",
@@ -2316,6 +2409,9 @@ PROFILES = {
     "wilde": WILDE,
     "green": GREEN,
     "shiraz": SHIRAZ,
+    "wilde_v2": WILDE_V2,
+    "green_v2": GREEN_V2,
+    "shiraz_v2": SHIRAZ_V2,
     "definitive_float_ema": DEFINITIVE_FLOAT_EMA,
     "mask_renderer_smoke": MASK_RENDERER_SMOKE,
     "mask_renderer_full": MASK_RENDERER_FULL,
@@ -2340,6 +2436,10 @@ PROFILES = {
     "depthwise_renderer_smoke": DEPTHWISE_RENDERER_SMOKE,
     "channel_recurrent_smoke": CHANNEL_RECURRENT_SMOKE,
     "coord_renderer_smoke": COORD_RENDERER_SMOKE,
+    "coolchic_renderer_smoke": COOLCHIC_RENDERER_SMOKE,
+    "coolchic_renderer_full": COOLCHIC_RENDERER_FULL,
+    "c3_residual_renderer_smoke": C3_RESIDUAL_RENDERER_SMOKE,
+    "c3_residual_renderer_full": C3_RESIDUAL_RENDERER_FULL,
     # Yousfi CPU lane profiles
     "proven_baseline_boundary": PROVEN_BASELINE_BOUNDARY,
     "proven_baseline_vp_saliency": PROVEN_BASELINE_VP_SALIENCY,
