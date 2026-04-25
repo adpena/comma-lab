@@ -358,26 +358,35 @@ def evaluate_fp4_quality(
     poses: torch.Tensor | None,
     device: torch.device,
     n_pairs: int = 20,
+    distortion_net: nn.Module | None = None,
 ) -> dict[str, float]:
-    """Quick quality check: generate frames and compute distortion via upstream scorer."""
-    upstream_root = UPSTREAM_ROOT or Path("upstream")
-    if not (upstream_root / "modules.py").exists():
-        raise RuntimeError(
-            f"Cannot find upstream at {upstream_root}. "
-            f"Set TAC_UPSTREAM_DIR or pass --upstream."
-        )
-    upstream_str = str(upstream_root)
-    if upstream_str not in sys.path:
-        sys.path.insert(0, upstream_str)
-    from modules import DistortionNet
+    """Quick quality check: generate frames and compute distortion via upstream scorer.
 
-    dn = DistortionNet().eval().to(device)
-    dn.load_state_dicts(
-        upstream_root / "models" / "posenet.safetensors",
-        upstream_root / "models" / "segnet.safetensors",
-        device,
+    Args:
+        distortion_net: pre-loaded DistortionNet to reuse (avoids reloading from
+            disk on every eval call). If None, loads from upstream models.
+    """
+    owns_dn = distortion_net is None
+    if owns_dn:
+        upstream_root = UPSTREAM_ROOT or Path("upstream")
+        if not (upstream_root / "modules.py").exists():
+            raise RuntimeError(
+                f"Cannot find upstream at {upstream_root}. "
+                f"Set TAC_UPSTREAM_DIR or pass --upstream."
+            )
+        upstream_str = str(upstream_root)
+        if upstream_str not in sys.path:
+            sys.path.insert(0, upstream_str)
+        from modules import DistortionNet
+
+        distortion_net = DistortionNet().eval().to(device)
+        distortion_net.load_state_dicts(
+            upstream_root / "models" / "posenet.safetensors",
+            upstream_root / "models" / "segnet.safetensors",
+            device,
     )
 
+    dn = distortion_net
     renderer = model.base if hasattr(model, "base") else model
     renderer.eval()
 
@@ -405,10 +414,11 @@ def evaluate_fp4_quality(
             sd_list.append(sd.item())
 
     renderer.train()
-    del dn
-    gc.collect()
-    if device.type == "cuda":
-        torch.cuda.empty_cache()
+    if owns_dn:
+        del dn
+        gc.collect()
+        if device.type == "cuda":
+            torch.cuda.empty_cache()
 
     avg_pose = sum(pd_list) / max(len(pd_list), 1)
     avg_seg = sum(sd_list) / max(len(sd_list), 1)

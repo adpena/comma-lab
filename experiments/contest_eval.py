@@ -358,8 +358,9 @@ def main():
             args.output_json.write_text(json.dumps(structured, indent=2))
             print(f"\n  Results saved: {args.output_json}")
 
-        # Also save alongside archive
-        default_json = archive_path.parent / "contest_eval_result.json"
+        # Also save alongside archive (include stem to avoid race with concurrent evals)
+        result_name = f"contest_eval_{archive_path.stem}.json"
+        default_json = archive_path.parent / result_name
         default_json.write_text(json.dumps(structured, indent=2))
 
     finally:
