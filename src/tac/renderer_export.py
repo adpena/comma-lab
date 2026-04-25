@@ -679,6 +679,11 @@ def _infer_asymmetric_config(model: nn.Module) -> dict:
     use_dsconv = getattr(model, "use_dsconv", False)
     use_zoom_flow = getattr(model, "use_zoom_flow", False)
 
+    # Conv behavior flags — MUST be serialized to prevent silent corruption
+    # (C1 from round 4 review: omitting these caused wrong padding at inflate time)
+    padding_mode = getattr(renderer, "padding_mode", "zeros")
+    use_dilation = getattr(renderer, "use_dilation", False)
+
     return {
         "num_classes": num_classes,
         "embed_dim": embed_dim,
@@ -695,6 +700,8 @@ def _infer_asymmetric_config(model: nn.Module) -> dict:
         "pose_dim": pose_dim,
         "use_dsconv": use_dsconv,
         "use_zoom_flow": use_zoom_flow,
+        "padding_mode": padding_mode,
+        "use_dilation": use_dilation,
     }
 
 
@@ -928,6 +935,8 @@ def load_asymmetric_checkpoint(
         pose_dim=header.get("pose_dim", 0),
         use_dsconv=header.get("use_dsconv", False),
         use_zoom_flow=header.get("use_zoom_flow", False),
+        padding_mode=header.get("padding_mode", "zeros"),
+        use_dilation=header.get("use_dilation", False),
     )
 
     # Build name -> module lookups
@@ -1303,6 +1312,8 @@ def load_asymmetric_checkpoint_fp4(
         pose_dim=header.get("pose_dim", 0),
         use_dsconv=header.get("use_dsconv", False),
         use_zoom_flow=header.get("use_zoom_flow", False),
+        padding_mode=header.get("padding_mode", "zeros"),
+        use_dilation=header.get("use_dilation", False),
     )
 
     # Build name -> module lookups

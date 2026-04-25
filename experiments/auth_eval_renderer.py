@@ -348,6 +348,14 @@ def generate_raw(
                         pose_end = pose_start + masks_t.shape[0]
                         if pose_end <= poses.shape[0]:
                             batch_pose = poses[pose_start:pose_end].to(device=device)
+                        else:
+                            # Clamp to available poses, pad remainder with zeros
+                            avail = max(0, poses.shape[0] - pose_start)
+                            if avail > 0:
+                                batch_pose = torch.zeros(masks_t.shape[0], poses.shape[1], device=device)
+                                batch_pose[:avail] = poses[pose_start:pose_start + avail].to(device=device)
+                            print(f"    WARNING: pose index {pose_start}:{pose_end} exceeds "
+                                  f"poses.shape[0]={poses.shape[0]}", file=sys.stderr)
 
                     if batch_pose is not None:
                         pairs = model(masks_t, masks_t1, pose=batch_pose)
@@ -557,8 +565,9 @@ def run_auth_eval(
     if poses_path is not None:
         poses_p = Path(poses_path)
         if poses_p.suffix == ".bin":
+            pose_dim = getattr(model, 'pose_dim', 6)
             raw = poses_p.read_bytes()
-            poses = torch.frombuffer(bytearray(raw), dtype=torch.float16).reshape(-1, 6).float()
+            poses = torch.frombuffer(bytearray(raw), dtype=torch.float16).reshape(-1, pose_dim).float()
         else:
             poses = torch.load(str(poses_p), map_location="cpu", weights_only=True).float()
         print(f"  Loaded poses: {poses.shape} from {poses_p.name}")
