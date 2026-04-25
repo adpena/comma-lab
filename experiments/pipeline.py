@@ -988,11 +988,64 @@ def run_eval(args: argparse.Namespace) -> None:
 
 # ── CLI ──────────────────────────────────────────────────────────────────
 
-def _apply_profile(args: argparse.Namespace, profile_name: str) -> None:
-    """Load PROFILES[profile_name] and override args attributes for every
-    overlapping key. The profile is the experiment definition — all fields
-    a `PipelineConfig` accepts are taken from the profile, including the
-    boolean discipline flags that don't have CLI counterparts.
+def _user_provided_flags(parser: argparse.ArgumentParser, argv: list[str]) -> set[str]:
+    """Return the set of arg.dest values that the user explicitly passed in argv.
+
+    Walks every action under every subparser. Returns the dest names of any
+    option that appears in argv. This lets the profile loader distinguish
+    "user explicitly set --base-ch 999" from "user accepted default 36".
+    """
+    user_set: set[str] = set()
+
+    def _collect_actions(p: argparse.ArgumentParser) -> list[argparse.Action]:
+        out = list(p._actions)
+        for sub_action in p._actions:
+            if isinstance(sub_action, argparse._SubParsersAction):
+                for sp in sub_action.choices.values():
+                    out.extend(_collect_actions(sp))
+        return out
+
+    actions = _collect_actions(parser)
+    for action in actions:
+        if not action.option_strings:
+            continue
+        for opt in action.option_strings:
+            for token in argv:
+                if token == opt or token.startswith(opt + "="):
+                    user_set.add(action.dest)
+                    break
+    return user_set
+
+
+# Profile keys that exist for training-script consumption (train_distill.py,
+# qat_finetune.py) but are NOT PipelineConfig fields. Listed so we can
+# distinguish "intentionally not in PipelineConfig" from "typo".
+_PROFILE_KEYS_NOT_IN_PIPELINE_CONFIG = {
+    "experiment_type", "variant", "hidden", "kernel", "epochs", "lr",
+    "ema_decay", "alpha", "sal_lambda", "loss_mode", "boundary_weight",
+    "hard_frame_ratio", "error_replay_every", "eval_every", "accum_steps",
+    "segnet_loss_weight", "segnet_loss_mode", "hinge_margin", "focal_gamma",
+    "error_boost", "use_texture_loss", "texture_loss_weight",
+    "use_linf_penalty", "linf_weight", "use_markov_loss", "markov_weight",
+    "pose_weight", "seg_weight", "pixel_weight",
+    "phase1_epochs", "phase2_epochs", "phase3_epochs",
+    "phase1_lr", "phase2_lr", "phase3_lr",
+    "phase1_batch_size", "phase2_batch_size", "phase3_batch_size",
+    "checkpoint_every", "log_every", "seed", "eval_roundtrip",
+    "noise_std", "quant_noise_bits", "boundary_anneal", "use_swa_phase",
+    "temperature_start", "temperature_end", "temp_schedule",
+}
+
+
+def _apply_profile(args: argparse.Namespace, profile_name: str,
+                   user_provided_flags: set[str] | None = None) -> None:
+    """Load PROFILES[profile_name]. Profile fills in defaults; explicit CLI
+    flags from `user_provided_flags` win. Unknown profile keys (typos) FAIL
+    LOUDLY — the silent-drop path is the SHIRAZ class in a new location.
+
+    `user_provided_flags` is a set of arg names (e.g., {"base_ch", "device"})
+    that the operator explicitly passed on the command line. These are NOT
+    overwritten by the profile; everything else is filled in from the profile.
 
     This is the canonical way to launch a pipeline run. Without --profile,
     every arch flag must be passed explicitly (which is the SHIRAZ-class bug
@@ -1005,12 +1058,23 @@ def _apply_profile(args: argparse.Namespace, profile_name: str) -> None:
             f"unknown --profile {profile_name!r}. Available: {sorted(PROFILES.keys())}"
         )
     profile = PROFILES[profile_name]
-    # Every PipelineConfig field that overlaps a profile key is overridden.
+    user_provided_flags = user_provided_flags or set()
+
     pcfg_fields = {f.name for f in fields(PipelineConfig)}
+    # Sanity: every profile key must be either a PipelineConfig field or in
+    # the explicit allowlist of training-only keys. Anything else is a typo.
+    unknown_keys = set(profile.keys()) - pcfg_fields - _PROFILE_KEYS_NOT_IN_PIPELINE_CONFIG
+    if unknown_keys:
+        raise SystemExit(
+            f"profile {profile_name!r} contains unknown keys {sorted(unknown_keys)}. "
+            f"Either add them to PipelineConfig, register them in "
+            f"_PROFILE_KEYS_NOT_IN_PIPELINE_CONFIG (training-only), or fix the typo. "
+            f"This is the SHIRAZ-class silent-drop bug — failing loud per CLAUDE.md."
+        )
+
     for key, value in profile.items():
-        if key in pcfg_fields:
+        if key in pcfg_fields and key not in user_provided_flags:
             setattr(args, key, value)
-    # Stash the resolved profile name in args for provenance
     args._resolved_profile = profile_name
 
 
@@ -1082,35 +1146,21 @@ def main() -> int:
     args = parser.parse_args()
 
     if args.command == "compress":
-        # Profile loading happens AFTER argparse so explicit CLI flags take
-        # precedence — but in canonical use, --profile sets every overlapping
-        # field and CLI overrides should be rare.
+        # Discover which flags the user explicitly typed (vs argparse defaults)
+        # by walking sys.argv. This preserves "explicit CLI overrides profile"
+        # semantics so `--profile X --base-ch 999` actually uses base_ch=999.
+        # Anything else is filled in from the profile.
+        user_provided = _user_provided_flags(parser, sys.argv[1:])
         if getattr(args, "profile", None):
-            _apply_profile(args, args.profile)
-        cfg = PipelineConfig(
-            video=args.video, checkpoint=args.checkpoint,
-            masks=args.masks, masks_archive=args.masks_archive,
-            output_dir=args.output_dir,
-            device=args.device, upstream=args.upstream,
-            base_ch=args.base_ch, mid_ch=args.mid_ch,
-            motion_hidden=args.motion_hidden, depth=args.depth,
-            pose_dim=args.pose_dim, embed_dim=args.embed_dim,
-            use_dsconv=args.use_dsconv,
-            padding_mode=args.padding_mode,
-            use_dilation=args.use_dilation,
-            use_zoom_flow=args.use_zoom_flow,
-            use_swa=args.use_swa,
-            use_per_class_weights=args.use_per_class_weights,
-            freeze_motion_phase2=args.freeze_motion_phase2,
-            freeze_renderer_phase3=args.freeze_renderer_phase3,
-            beneficial_quant_noise=args.beneficial_quant_noise,
-            pose_max_steps=args.pose_max_steps, pose_lr=args.pose_lr,
-            qat_max_epochs=args.qat_max_epochs, qat_lr=args.qat_lr,
-            half_frame=args.half_frame, binary_poses=args.binary_poses,
-            brotli=args.brotli, mask_crf=args.mask_crf,
-            weight_compression=args.weight_compression,
-            max_iterations=args.max_iterations,
-        )
+            _apply_profile(args, args.profile, user_provided_flags=user_provided)
+        # Build PipelineConfig from every args field that overlaps a
+        # dataclass field. This automatically picks up any new field added
+        # to PipelineConfig OR set by _apply_profile, with no risk of
+        # forgetting to thread one through (R26 finding: 7 fields were
+        # silently stuck at dataclass defaults under the manual approach).
+        pcfg_field_names = {f.name for f in fields(PipelineConfig)}
+        kwargs = {k: v for k, v in vars(args).items() if k in pcfg_field_names}
+        cfg = PipelineConfig(**kwargs)
         run_compress(cfg)
     elif args.command == "eval":
         run_eval(args)

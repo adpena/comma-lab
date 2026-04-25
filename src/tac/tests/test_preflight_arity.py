@@ -402,6 +402,96 @@ def test_profiles_validator_fails_on_unknown_experiment_type(monkeypatch) -> Non
         preflight_profiles(strict=True, verbose=False)
 
 
+def test_apply_profile_loads_overlapping_keys(monkeypatch) -> None:
+    """_apply_profile must populate args from profile for overlapping keys."""
+    import argparse
+    import importlib.util
+    import sys as _sys
+    spec = importlib.util.spec_from_file_location(
+        "_pipeline_under_test",
+        Path(__file__).resolve().parent.parent.parent.parent / "experiments" / "pipeline.py",
+    )
+    pipeline = importlib.util.module_from_spec(spec)
+    _sys.modules["_pipeline_under_test"] = pipeline
+    spec.loader.exec_module(pipeline)
+
+    ns = argparse.Namespace(base_ch=36, mid_ch=60, use_dsconv=False, padding_mode="zeros")
+    pipeline._apply_profile(ns, "shiraz", user_provided_flags=set())
+    assert ns.base_ch == 32
+    assert ns.mid_ch == 48
+    assert ns.use_dsconv is True
+    assert ns.padding_mode == "replicate"
+
+
+def test_apply_profile_user_flags_win_over_profile(monkeypatch) -> None:
+    """When user passes --base-ch 999, the profile's base_ch=32 must NOT win.
+
+    R26 finding: prior version overwrote CLI flags with profile values
+    despite the comment claiming the opposite.
+    """
+    import argparse
+    import importlib.util
+    import sys as _sys
+    spec = importlib.util.spec_from_file_location(
+        "_pipeline_under_test2",
+        Path(__file__).resolve().parent.parent.parent.parent / "experiments" / "pipeline.py",
+    )
+    pipeline = importlib.util.module_from_spec(spec)
+    _sys.modules["_pipeline_under_test2"] = pipeline
+    spec.loader.exec_module(pipeline)
+
+    ns = argparse.Namespace(base_ch=999, mid_ch=60, use_dsconv=False, padding_mode="zeros")
+    pipeline._apply_profile(ns, "shiraz", user_provided_flags={"base_ch"})
+    # User override survives; non-overridden fields take profile values
+    assert ns.base_ch == 999
+    assert ns.mid_ch == 48
+    assert ns.padding_mode == "replicate"
+
+
+def test_apply_profile_unknown_key_fails_loudly(monkeypatch) -> None:
+    """Typo'd profile key must SystemExit, not silently drop (the SHIRAZ class)."""
+    import argparse
+    import importlib.util
+    import sys as _sys
+    spec = importlib.util.spec_from_file_location(
+        "_pipeline_under_test3",
+        Path(__file__).resolve().parent.parent.parent.parent / "experiments" / "pipeline.py",
+    )
+    pipeline = importlib.util.module_from_spec(spec)
+    _sys.modules["_pipeline_under_test3"] = pipeline
+    spec.loader.exec_module(pipeline)
+
+    import tac.profiles as profiles_mod
+    monkeypatch.setattr(profiles_mod, "PROFILES", {
+        "typo_profile": {
+            "experiment_type": "renderer_training",
+            "base_ch": 32,
+            "motino_hidden": 24,  # TYPO: should be motion_hidden
+        },
+    })
+    ns = argparse.Namespace(base_ch=36)
+    with pytest.raises(SystemExit, match="motino_hidden"):
+        pipeline._apply_profile(ns, "typo_profile", user_provided_flags=set())
+
+
+def test_apply_profile_unknown_profile_name_fails_loudly() -> None:
+    """Profile name not in PROFILES must SystemExit."""
+    import argparse
+    import importlib.util
+    import sys as _sys
+    spec = importlib.util.spec_from_file_location(
+        "_pipeline_under_test4",
+        Path(__file__).resolve().parent.parent.parent.parent / "experiments" / "pipeline.py",
+    )
+    pipeline = importlib.util.module_from_spec(spec)
+    _sys.modules["_pipeline_under_test4"] = pipeline
+    spec.loader.exec_module(pipeline)
+
+    ns = argparse.Namespace()
+    with pytest.raises(SystemExit, match="unknown --profile"):
+        pipeline._apply_profile(ns, "does_not_exist", user_provided_flags=set())
+
+
 def test_arch_flag_constants_are_disjoint() -> None:
     """ARCH_FLAGS_REQUIRED and ARCH_FLAGS_BOOLEAN must not overlap.
 

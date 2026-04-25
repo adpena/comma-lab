@@ -92,17 +92,30 @@ def preflight(profile: str, instance_id: int) -> None:
     print(f"[preflight] OK profile '{profile}' registered")
 
     # 2. Run all-layers preflight (codebase drift + training inputs)
+    # CLAUDE.md non-negotiable: TTO frames must be in TTO range, not GT range
+    # (the WILDE failure mode). Don't silently skip when the artifact is
+    # absent — refuse to deploy. (R26 finding.)
     from tac.preflight import preflight_all
     print(f"[preflight] Running tac.preflight.preflight_all ...")
     tto_path = REPO_ROOT / "experiments/results/tto_v7_hinge_500/tto_frames.pt"
     gt_poses = REPO_ROOT / "experiments/results/gt_poses.pt"
     masks = REPO_ROOT / "submissions/robust_current/masks_crf50.mkv"
+    missing_artifacts = [name for name, p in [
+        ("tto_frames", tto_path), ("gt_poses", gt_poses), ("masks", masks),
+    ] if not p.exists()]
+    if missing_artifacts:
+        raise RuntimeError(
+            f"Missing local training artifacts: {missing_artifacts}. "
+            f"Cannot validate WILDE failure mode (TTO frames at GT range) without them. "
+            f"Generate them locally before deploying, or pass --skip-input-preflight "
+            f"only if you know the remote already has correct artifacts."
+        )
     preflight_all(
         profile_name=profile,
         profile_arch=profile_dict,
-        tto_frames_path=tto_path if tto_path.exists() else None,
-        gt_poses_path=gt_poses if gt_poses.exists() else None,
-        masks_path=masks if masks.exists() else None,
+        tto_frames_path=tto_path,
+        gt_poses_path=gt_poses,
+        masks_path=masks,
         check_codebase=True,
         verbose=True,
     )
