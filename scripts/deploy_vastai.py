@@ -210,25 +210,31 @@ def launch(profile: str, instance_id: int, sync: bool = True) -> str:
     ssh(host, port, f"tmux kill-session -t {shlex.quote(session_name)} 2>/dev/null || true")
 
     # Start canonical pipeline in tmux. pipeline.py uses subcommands —
-    # `compress` is the experiment-running entry point. (R25 finding: prior
-    # invocation omitted the subcommand and would have died at argparse.)
-    # R27 finding: tmux new-session may exec the command directly (no shell)
-    # depending on default-shell config; the `2>&1 | tee` would be silently
-    # dropped. Wrap in `bash -c` to guarantee shell pipeline semantics.
-    # R27 finding: `python3` may resolve to system Python without torch/tac.
-    # Prefer the uv-managed venv if present.
+    # `compress` is the experiment-running entry point. (R25 finding.)
+    # R28 fix: the prior approach used `shlex.quote(pipeline_cmd)` which
+    # wrapped the whole command in single quotes, suppressing every `$VAR`
+    # and `$(...)` expansion → bash exec'd literal `$PYBIN` and failed.
+    # Resolve the remote python path NOW (before tmux), then embed the
+    # absolute path literally — no shell expansion needed at runtime.
     output_dir = f"experiments/results/{profile}"
     video = "/workspace/pact/upstream/videos/0.mkv"
     checkpoint_glob = f"/workspace/pact/{output_dir}/distill_phase3_best.pt"
-    python_select = (
-        "PYBIN=/workspace/pact/.venv/bin/python3; "
-        "if [ ! -x \"$PYBIN\" ]; then PYBIN=$(command -v python3); fi; "
-    )
+    venv_check = ssh(host, port,
+                     "test -x /workspace/pact/.venv/bin/python3 && echo VENV || echo SYS",
+                     timeout=15).strip()
+    if "VENV" in venv_check:
+        python_bin = "/workspace/pact/.venv/bin/python3"
+    elif "SYS" in venv_check:
+        python_bin = "python3"
+    else:
+        raise RuntimeError(
+            f"Cannot determine remote python — SSH probe returned {venv_check!r}. "
+            f"SSH may have failed."
+        )
     pipeline_cmd = (
         f"cd /workspace/pact && "
-        f"{python_select}"
-        f"PYTHONPATH=src:upstream:$PWD "
-        f'\"$PYBIN\" -u experiments/pipeline.py compress '
+        f"PYTHONPATH=/workspace/pact/src:/workspace/pact/upstream:/workspace/pact "
+        f"{python_bin} -u experiments/pipeline.py compress "
         f"--profile {shlex.quote(profile)} "
         f"--video {shlex.quote(video)} "
         f"--checkpoint {shlex.quote(checkpoint_glob)} "
@@ -236,10 +242,19 @@ def launch(profile: str, instance_id: int, sync: bool = True) -> str:
         f"--output-dir {shlex.quote(output_dir)} "
         f"2>&1 | tee {output_dir}/deploy.log"
     )
+    # pipeline_cmd contains no single quotes (shlex.quote safe args + plain
+    # paths). Wrap in literal single quotes for bash -c so no further
+    # expansion happens to our embedded args.
+    if "'" in pipeline_cmd:
+        raise RuntimeError(
+            f"pipeline_cmd contains a single quote — would break bash -c wrapping. "
+            f"Profile or path contains a special char that shlex.quote escaped: "
+            f"{pipeline_cmd!r}"
+        )
     tmux_cmd = (
         f"mkdir -p /workspace/pact/{output_dir} && "
         f"tmux new-session -d -s {shlex.quote(session_name)} -- "
-        f"bash -c {shlex.quote(pipeline_cmd)}"
+        f"bash -c '{pipeline_cmd}'"
     )
     ssh(host, port, tmux_cmd)
 

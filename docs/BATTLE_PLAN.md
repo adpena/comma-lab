@@ -16,7 +16,7 @@ These actions move the score the most per dollar. Do them BEFORE any new trainin
 |---|--------|------|----------------|---------|
 | **1+3 (combined)** | **Half-frame mask + even-from-odd reconstruction**: store only 600 odd-frame masks in archive; at inflate, reconstruct even-frame masks from stored ones via grid_sample warp using stored pose. Quantizr's paradigm. Existing `inflate_renderer.py` half-frame path uses `repeat_interleave` (duplication) which zeroes the MotionPredictor's diff features — the warp version preserves motion. | CPU, ~1 day (encode sweep + warp impl + e2e validation) | rate −0.12 to −0.18 (one delta, not two) | None — int8 overflow already fixed in `encode_masks_monochrome` (R27 reviewer correction) |
 | **2** | **SHIRAZ Phase 3 → immediate auth eval** (download checkpoint, run inflate → upstream evaluate.py). Do NOT wait for QAT chain to finish. Get the auth number BEFORE deciding next deploy. | local, ~3h | establishes ground truth | SHIRAZ Phase 3 complete |
-| **4 (NEW NUCLEAR — promoted from "open gaps")** | **Add `--profile X` to `train_distill.py` + deterministic seeding (cudnn, numpy, random) + add CI to run preflight tests on every push.** These are CLAUDE.md non-negotiables and NOT council decisions. Without them, every experiment is unreproducible by definition. | local, ~4h | unblocks 5-pass review gate | None |
+| **4 (NEW NUCLEAR — promoted from "open gaps")** | **Add `--profile X` to `train_distill.py` + deterministic seeding (cudnn, numpy, random) + add CI to run preflight tests on every push.** These are CLAUDE.md non-negotiables and NOT council decisions. Without them, every experiment is unreproducible by definition. | local, **4–6h** (timebox strictly; CI alone is 1–2h on a fresh repo + iteration) | unblocks 5-pass review gate | None |
 
 Combined projection of NUCLEAR #1+3 + #2 baseline: rate term drops by 0.12-0.18 from 9.4-point contribution.
 
@@ -50,7 +50,7 @@ The SHIRAZ A100 trained with `motion_hidden=24, depth=1`, but `pipeline.py` invo
 | 15 | I4LZ format has no arch header → contest-time silent default `padding_mode=zeros` for non-default arches | `step_compress_weights` falls back to FP4 when arch needs header |
 | 16 | `ARCH_FLAGS_BOOLEAN` set incomplete (missing `--use-swa`, `--beneficial-quant-noise`, freeze flags, etc.) | Set expanded; Rule D now flags 5 real launcher gaps in `step_fridrich_refine` (fixed) |
 
-**31/31 tests pass** (`src/tac/tests/test_preflight_arity.py` + `test_integration_boundaries.py`).
+**Tests pass: 46/46** (`src/tac/tests/test_preflight_arity.py` + `test_integration_boundaries.py`). R28 added 2 more tests for the score regex distortion-keyword check + _user_provided_flags required-arg semantic, and strengthened the profile-matrix check to round-trip through PipelineConfig (catches type mismatches).
 
 ## Open architectural gaps
 
@@ -108,7 +108,7 @@ The earlier KILL list was too aggressive. Two items are restored to HOLD pending
 | + winner_v2 noise | −0.10 to −0.20 SegNet | beneficial_quant_noise | SPECULATIVE (zero empirical backing) |
 | **Realistic best stacked** | **1.6–1.8** | baseline + #1+3 + MXLZ + corrections | MEDIUM |
 | **Optimistic best stacked** | **1.3–1.6** | + speculative v2 noise | LOW |
-| **Aggressive (training breakthrough required)** | **<1.0** | needs SHIRAZ auth substantially under 2.0 baseline | not yet measured |
+| **Aggressive (training breakthrough required)** | **<1.0** | requires `100·seg + √(10·pose) < (1.0 − rate_term)`. At rate=0.376 (current full-res masks) → distortion budget < 0.624. At rate=0.20 (after #1+3 mask reduction) → distortion budget < 0.80. Currently SegNet ≈ 0.116 contributes 11.6 alone — needs ~10× SegNet improvement, OR rate < 0.05 (basically impossible without removing scorer-required artifacts). | not yet measured |
 | **To beat Quantizr (0.33)** | needs SegNet ~0.001, PoseNet ~0.001, rate ~0.15 | new arch family or major training breakthrough | NOT achievable with current architectures in 8 days |
 
 > **R27 reviewer math:** earlier "0.8–1.4 realistic" was 4× the stated deltas. Sum check from 2.01: −0.18 (#1+3) − 0.09 (MXLZ) − 0.10 (corrections) = 1.64 floor. The −0.20 speculative v2 only reaches 1.44 if it actually delivers (no auth evidence).

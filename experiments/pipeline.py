@@ -601,6 +601,7 @@ def step_compress_weights(
         motion_hidden=cfg.motion_hidden, depth=cfg.depth,
         pose_dim=cfg.pose_dim, use_dsconv=cfg.use_dsconv,
         padding_mode=cfg.padding_mode, use_dilation=cfg.use_dilation,
+        use_zoom_flow=cfg.use_zoom_flow,
     )
     model.load_state_dict(state, strict=False)
     model.eval()
@@ -642,6 +643,7 @@ def step_compress_weights(
         motion_hidden=cfg.motion_hidden, depth=cfg.depth,
         pose_dim=cfg.pose_dim, use_dsconv=cfg.use_dsconv,
         padding_mode=cfg.padding_mode, use_dilation=cfg.use_dilation,
+        use_zoom_flow=cfg.use_zoom_flow,
     )
     model_restored.load_state_dict(restored_sd, strict=False)
     model_restored.eval()
@@ -766,7 +768,14 @@ def step_engineered_corrections(cfg: PipelineConfig, renderer_bin: Path,
         "--device", cfg.device,
         "--output-dir", str(iter_dir),
     ]
-    result = subprocess.run(cmd)
+    # 1-hour timeout — corrections is a single-pass gradient computation that
+    # should complete in 5-30 minutes on a 4090. Anything longer is hung.
+    # (R28 finding: prior call had no timeout — could block the pipeline forever.)
+    try:
+        result = subprocess.run(cmd, timeout=3600)
+    except subprocess.TimeoutExpired:
+        _log(f"[{step_name}] WARNING: Timed out after 1h, skipping corrections")
+        return None
     if result.returncode != 0:
         _log(f"[{step_name}] WARNING: Failed (exit {result.returncode}), skipping corrections")
         return None
@@ -832,8 +841,15 @@ def step_eval(cfg: PipelineConfig, renderer_bin: Path, archive_path: Path,
     return meta
 
 
+# Match a score line emitted by auth_eval_renderer.py. We accept ONLY:
+#   - a line containing "TOTAL" followed by a float
+#   - a line containing "auth score" followed by a float
+#   - a line containing "score:" followed by a float (canonical key:value)
+# We DO NOT match "distortion" — that key prefixes per-component values
+# (seg/pose/rate) which would silently overwrite the real TOTAL on the same
+# line via re.search returning the first hit. (R28 finding.)
 _SCORE_LINE_RE = re.compile(
-    r"\b(?:total|score|auth\s*score|distortion)\b\D*([+-]?\d+\.\d+|\d+)",
+    r"\b(?:TOTAL|auth\s*score|score\s*[:=])\s*[^0-9+\-]*([+-]?\d+\.\d+|\d+)",
     re.IGNORECASE,
 )
 
@@ -841,10 +857,9 @@ _SCORE_LINE_RE = re.compile(
 def _extract_eval_score(stdout: str, logger=None) -> float | None:
     """Pull the auth score from auth_eval_renderer.py stdout.
 
-    Only accepts numbers on a line that explicitly mentions 'TOTAL', 'score',
-    'auth score', or 'distortion' (case-insensitive). Returns the LAST such
-    number — the auth eval's final TOTAL line is the canonical score.
-    Returns None if no score-line was found.
+    Only accepts numbers on a line that explicitly says 'TOTAL', 'auth score',
+    or 'score:'. Returns the LAST such number — the auth eval's final TOTAL
+    line is the canonical score. Returns None if no score line was found.
     """
     score: float | None = None
     for line in stdout.split("\n"):
@@ -1011,7 +1026,7 @@ def run_eval(args: argparse.Namespace) -> None:
 
 def _user_provided_flags(
     parser: argparse.ArgumentParser, argv: list[str],
-    active_subcommand: str | None = None,
+    *, active_subcommand: str,
 ) -> set[str]:
     """Return the set of arg.dest values that the user explicitly passed in argv.
 
@@ -1019,12 +1034,20 @@ def _user_provided_flags(
     subparser, which could mark the wrong dest if two subparsers share an
     option string with different dest names. (R27 finding.)
 
-    `active_subcommand` should be `args.command` after `parse_args()`.
+    `active_subcommand` is REQUIRED (kw-only, no default). Earlier versions
+    accepted None and silently returned an empty set for subparser flags —
+    a footgun that would clobber every CLI override with profile values.
+    (R28 finding.)
     """
+    if not active_subcommand or not isinstance(active_subcommand, str):
+        raise ValueError(
+            f"active_subcommand must be the name of the active subparser "
+            f"(e.g., 'compress'). Got {active_subcommand!r}."
+        )
     user_set: set[str] = set()
     actions: list[argparse.Action] = list(parser._actions)
     for action in parser._actions:
-        if isinstance(action, argparse._SubParsersAction) and active_subcommand:
+        if isinstance(action, argparse._SubParsersAction):
             sub = action.choices.get(active_subcommand)
             if sub is not None:
                 actions.extend(sub._actions)

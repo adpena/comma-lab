@@ -572,22 +572,56 @@ def test_capture_provenance_returns_required_fields() -> None:
 
 
 def test_capture_provenance_handles_non_git_dir(tmp_path, monkeypatch) -> None:
-    """If git rev-parse fails, the function must not raise — just record the error."""
+    """If git rev-parse fails, the function must not raise — just record the error.
+
+    R28: track that ALL git calls (rev-parse + status --porcelain) are made,
+    not just the first; a regression in either branch would slip past a
+    fail-on-first test.
+    """
     pipeline = _load_pipeline_module("_pipeline_prov_2")
-    # Force git to fail by giving it a bogus cwd via subprocess.check_output
-    # monkey: we patch subprocess.check_output to raise for git calls
-    import subprocess as _sp
-    real_check = _sp.check_output
+    git_call_count = 0
     def fake_check(cmd, **kw):
+        nonlocal git_call_count
         if cmd and cmd[0] == "git":
+            git_call_count += 1
             raise FileNotFoundError("git not found (test)")
-        return real_check(cmd, **kw)
+        import subprocess as _sp
+        return _sp.check_output(cmd, **kw)
     monkeypatch.setattr(pipeline.subprocess, "check_output", fake_check)
     prov = pipeline._capture_provenance(pipeline.PipelineConfig())
     assert "git_hash_error" in prov
-    # Still has timestamp + config — not crashed
     assert "config" in prov
     assert "timestamp_utc" in prov
+    # The whole try-block bails on the first exception, so only one git call
+    # is expected. Document this behavior so a refactor that splits git into
+    # two try-except branches won't silently regress.
+    assert git_call_count == 1, \
+        f"expected one git invocation in single try-block, got {git_call_count}"
+
+
+def test_user_provided_flags_requires_active_subcommand() -> None:
+    """R28: the prior None default was a footgun. Now positional kw-only required."""
+    import argparse
+    pipeline = _load_pipeline_module("_pipeline_uvf_required")
+    parser = argparse.ArgumentParser()
+    sub = parser.add_subparsers(dest="command")
+    comp = sub.add_parser("compress")
+    comp.add_argument("--base-ch", type=int)
+    with pytest.raises(ValueError, match="active_subcommand"):
+        pipeline._user_provided_flags(parser, ["compress", "--base-ch", "32"],
+                                       active_subcommand="")
+    with pytest.raises(TypeError):
+        # Caller forgot the kw-only arg entirely
+        pipeline._user_provided_flags(parser, ["compress", "--base-ch", "32"])
+
+
+def test_extract_eval_score_distortion_keyword_does_not_clobber() -> None:
+    """R28: 'distortion: 0.116 TOTAL 2.014' must capture 2.014, not 0.116."""
+    pipeline = _load_pipeline_module("_pipeline_eval_distortion")
+    # Even on a single line, only 'TOTAL' should match — 'distortion' is
+    # explicitly NOT in the keyword set.
+    stdout = "Distortion components: seg=0.116 pose=0.476 rate=1.528 TOTAL 2.014"
+    assert pipeline._extract_eval_score(stdout) == 2.014
 
 
 def test_extract_eval_score_ignores_timing_lines() -> None:
@@ -610,23 +644,44 @@ def test_extract_eval_score_returns_none_when_no_score_line() -> None:
 
 
 def test_all_renderer_profiles_load_without_typo_errors() -> None:
-    """Every PROFILES entry must pass _apply_profile without SystemExit.
+    """Every PROFILES entry must pass _apply_profile without SystemExit AND
+    actually construct a PipelineConfig without TypeError.
 
-    R27 finding: the prior typo-allowlist was incomplete; ~30 profiles
-    would crash _apply_profile with 'unknown keys'. The new Levenshtein
-    close-match approach should accept all of them.
+    R28 finding: the prior version of this test only setattr'd onto an empty
+    Namespace and never built PipelineConfig — string-vs-int type mismatches
+    in profile values would silently pass. Now we round-trip to a real
+    PipelineConfig.
     """
     import argparse
+    from dataclasses import fields
     pipeline = _load_pipeline_module("_pipeline_profile_matrix")
     from tac.profiles import PROFILES
     failures = []
+    pcfg_field_names = {f.name for f in fields(pipeline.PipelineConfig)}
     for name in PROFILES:
         ns = argparse.Namespace()
         try:
             pipeline._apply_profile(ns, name, user_provided_flags=set())
         except SystemExit as e:
-            failures.append(f"{name}: {e}")
-    assert not failures, "Profiles failed _apply_profile:\n" + "\n".join(failures)
+            failures.append(f"{name}: SystemExit {e}")
+            continue
+        # Construct a real PipelineConfig from the applied namespace.
+        # Type mismatches (e.g., profile value "32" str instead of 32 int)
+        # would surface here as TypeError or unexpected behavior.
+        try:
+            kwargs = {k: v for k, v in vars(ns).items() if k in pcfg_field_names}
+            cfg = pipeline.PipelineConfig(**kwargs)
+            # Spot-check a couple of known-int and known-str fields if the
+            # profile sets them.
+            if "base_ch" in kwargs:
+                assert isinstance(cfg.base_ch, int), \
+                    f"profile {name!r}: base_ch type {type(cfg.base_ch).__name__}"
+            if "padding_mode" in kwargs:
+                assert isinstance(cfg.padding_mode, str), \
+                    f"profile {name!r}: padding_mode type {type(cfg.padding_mode).__name__}"
+        except (TypeError, AssertionError) as e:
+            failures.append(f"{name}: {type(e).__name__} {e}")
+    assert not failures, "Profiles failed _apply_profile or PipelineConfig:\n" + "\n".join(failures)
 
 
 def test_apply_profile_catches_levenshtein_typos() -> None:
