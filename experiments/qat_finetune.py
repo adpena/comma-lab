@@ -386,7 +386,6 @@ def evaluate_fp4_quality(
             device,
     )
 
-    dn = distortion_net
     renderer = model.base if hasattr(model, "base") else model
     renderer.eval()
 
@@ -409,13 +408,13 @@ def evaluate_fp4_quality(
                 torch.from_numpy(gt_frames[2 * i + 1]).float(),
             ]).unsqueeze(0).to(device)
             comp_p = cam.permute(0, 2, 3, 1).unsqueeze(0).contiguous()
-            pd, sd = dn.compute_distortion(gt_p, comp_p)  # upstream convention: (gt, compressed)
+            pd, sd = distortion_net.compute_distortion(gt_p, comp_p)  # upstream convention: (gt, compressed)
             pd_list.append(pd.item())
             sd_list.append(sd.item())
 
     renderer.train()
     if owns_dn:
-        del dn
+        del distortion_net
         gc.collect()
         if device.type == "cuda":
             torch.cuda.empty_cache()

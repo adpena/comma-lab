@@ -445,13 +445,8 @@ def score_with_upstream(
     dl_gt = torch.utils.data.DataLoader(ds_gt, batch_size=None, num_workers=0)
 
     # Compressed dataset — TensorVideoDataset (reads .raw)
+    # Caller must ensure raw_path is named 0.raw (run_auth_eval does this)
     raw_dir = Path(raw_path).parent
-    # Ensure file is named 0.raw for TensorVideoDataset
-    expected_raw = raw_dir / "0.raw"
-    if Path(raw_path) != expected_raw:
-        if expected_raw.exists():
-            expected_raw.unlink()
-        Path(raw_path).rename(expected_raw)
 
     ds_comp = TensorVideoDataset(
         video_names,
@@ -511,6 +506,7 @@ def run_auth_eval(
         batch_size: inference batch size (auto-detected if None)
         archive_size_override: explicit archive size for rate calculation
         output_dir: directory for output files (default: alongside checkpoint)
+        poses_path: path to optimized poses (.pt or .bin) for FiLM conditioning
 
     Returns:
         dict with all score components

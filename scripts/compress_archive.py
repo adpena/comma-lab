@@ -28,18 +28,15 @@ from __future__ import annotations
 
 import argparse
 import io
-import json
 import os
 import shutil
 import struct
 import sys
 import tempfile
-import time
 import zipfile
 from pathlib import Path
 
-
-GT_SIZE = 37_545_489  # 0.raw uncompressed = 1164 * 874 * 3 * 1200 bytes (approx)
+from tac.submission_archive import ORIGINAL_VIDEO_BYTES as GT_SIZE
 
 
 def parse_args() -> argparse.Namespace:

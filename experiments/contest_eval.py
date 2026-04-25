@@ -303,7 +303,7 @@ def main():
         print("\n[3/4] Validating inflated output...")
         validate_inflated(inflated_dir, video_names)
         raw_size = (inflated_dir / "0.raw").stat().st_size
-        print(f"  0.raw: {raw_size:,} bytes (expected {EXPECTED_RAW_BYTES:,}) ✓")
+        print(f"  0.raw: {raw_size:,} bytes (expected {EXPECTED_RAW_BYTES:,}) OK")
 
         # ── Step 5: Score via upstream evaluate.py ────────────────
         print("\n[4/4] Scoring via upstream evaluate.py...")
@@ -335,7 +335,7 @@ def main():
         print(f"  Inflate time:  {inflate_time:.1f}s")
         print(f"  Score time:    {score_time:.1f}s")
         print(f"  Total time:    {total_time:.1f}s")
-        print(f"  T4 budget:     {'✓ PASS' if total_time < 1800 else '✗ FAIL'} ({total_time:.0f}s / 1800s)")
+        print(f"  T4 budget:     {'PASS' if total_time < 1800 else 'FAIL'} ({total_time:.0f}s / 1800s)")
         print("=" * 60)
 
         # Write structured JSON
