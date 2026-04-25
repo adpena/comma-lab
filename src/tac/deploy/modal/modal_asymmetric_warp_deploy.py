@@ -1735,6 +1735,10 @@ def _run_tto_auth_eval(tag: str, tto_dir: str) -> dict | None:
         viz_dir = os.path.join(tto_dir, "viz")
 
         # Load SegNet for visualization (PoseNet not needed here).
+        # R41 fix: import sys locally — Modal function bodies execute remotely
+        # where each cell has its own scope. Static analysis (ruff/ty) doesn't
+        # know this, and an `import sys` at module-top would shadow the local.
+        import sys
         upstream_str = UPSTREAM_ROOT
         if upstream_str not in sys.path:
             sys.path.insert(0, upstream_str)

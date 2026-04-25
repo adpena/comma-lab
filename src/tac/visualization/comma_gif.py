@@ -39,6 +39,8 @@ import os
 import sys
 from pathlib import Path
 
+from typing import TYPE_CHECKING
+
 import numpy as np
 import torch
 
@@ -47,6 +49,12 @@ from tac.versioned_output import versioned_write
 import matplotlib
 matplotlib.use("Agg")
 import matplotlib.pyplot as plt
+
+if TYPE_CHECKING:
+    # R41 fix: PIL.ImageFont was only imported lazily inside _get_mono_font, but
+    # the cache type annotation references it at module level. TYPE_CHECKING
+    # gives ruff/ty resolution without requiring PIL at module import.
+    from PIL import ImageFont  # noqa: F401
 
 
 # ---------------------------------------------------------------------------

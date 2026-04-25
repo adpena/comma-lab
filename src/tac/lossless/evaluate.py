@@ -7,7 +7,7 @@ import subprocess
 import sys
 import tempfile
 import zipfile
-from collections.abc import Iterable, Mapping
+from collections.abc import Callable, Iterable, Mapping
 from pathlib import Path
 
 from .contracts import LosslessCompressionResult, LosslessVerificationResult
@@ -270,7 +270,7 @@ def evaluate_local_submission_contract(
     dataset_name: str = "commaai/commavq",
     num_proc: int | None = None,
     python_executable: str | None = None,
-) -> tuple[LosslessCompressionResult, LosslessVerificationResult, Path, "typing.Callable[[], None] | None"]:
+) -> tuple[LosslessCompressionResult, LosslessVerificationResult, Path, "Callable[[], None] | None"]:
     """Evaluate a submission archive against the commavq dataset.
 
     Returns (result, verification, decompressed_root, cleanup_fn).

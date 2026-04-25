@@ -24,6 +24,10 @@ import numpy as np
 
 from tac.architectures import build_postfilter
 
+# R41 fix: PROJECT_ROOT was used in CLI defaults without being defined.
+# Resolve from this file's location.
+PROJECT_ROOT = Path(__file__).resolve().parents[3]
+
 
 # ── INT4 Quantization (uniform symmetric) ─────────────────────────────
 

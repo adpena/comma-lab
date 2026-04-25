@@ -2,6 +2,13 @@ from __future__ import annotations
 
 import heapq
 from dataclasses import dataclass
+from typing import TYPE_CHECKING
+
+if TYPE_CHECKING:
+    # R41 fix: Path was only imported inside function bodies, leaving the
+    # signature annotations (`str | Path`) unresolvable for ruff F821 / ty.
+    # TYPE_CHECKING import keeps the runtime light while satisfying the checkers.
+    from pathlib import Path
 
 STREAM_MAGIC = b"TFC1"
 PREV_SYMBOL_STREAM_MAGIC = b"TPC1"

@@ -65,6 +65,7 @@ tac = ["py.typed"]
 [tool.ruff]
 target-version = "py311"
 line-length = 120
+extend-exclude = ["experiments/archive"]  # archived experiments — dead code
 
 [tool.ruff.lint]
 select = [
@@ -100,3 +101,30 @@ markers = [
     "slow: marks tests that load scorer models (deselect with '-m \"not slow\"')",
     "compliance: marks tests that verify upstream scorer compliance",
 ]
+
+[tool.ty]
+# Astral ty — Rust-native type checker (sibling to ruff, ~50x faster than mypy).
+# Pragmatic gradual config: scan src/tac, allow unresolved 3rd-party imports
+# (upstream/torch/numpy stubs are inconsistent), surface real bugs without
+# chasing a perfectly-clean baseline.
+[tool.ty.environment]
+python-version = "3.12"
+
+[tool.ty.src]
+# Project sources to type-check. experiments/ + contrib/ are intentionally
+# excluded — high churn, low long-term value to gate on.
+include = ["src/tac"]
+exclude = [
+  "src/tac/tests/**",        # tests — many use ad-hoc fixtures with dynamic types
+  "src/tac/contrib/**",      # contrib — research code, often duck-typed
+  "src/tac/deploy/**",       # deploy code — string-heavy CLI assembly
+]
+
+[tool.ty.rules]
+# Promote NameError / undefined symbols to errors (the auth_eval bug class).
+# Other rules can be tightened once the baseline is clean.
+unresolved-reference = "error"
+unresolved-import = "ignore"           # 3rd-party stubs flaky
+possibly-unbound = "warn"
+invalid-argument-type = "warn"
+invalid-return-type = "warn"

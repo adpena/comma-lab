@@ -33,6 +33,13 @@ import sys
 import time
 import zipfile
 from pathlib import Path
+from typing import TYPE_CHECKING
+
+if TYPE_CHECKING:
+    # R41 fix: torch only imported lazily inside functions to keep the script
+    # importable on cold Kaggle workers without torch in path. TYPE_CHECKING
+    # gives the type checker (ty/ruff) what it needs without runtime cost.
+    import torch
 
 # ---------------------------------------------------------------------------
 # Constants
@@ -100,7 +107,7 @@ def ensure_upstream(working_dir: Path) -> Path:
 # Core: decode GT video + extract masks/targets from upstream models
 # ---------------------------------------------------------------------------
 
-def _decode_frames(video_path: Path) -> "torch.Tensor":
+def _decode_frames(video_path: Path) -> torch.Tensor:
     """Decode all frames via av + yuv420_to_rgb.
 
     frame_utils.yuv420_to_rgb uses bilinear chroma upsampling + BT.601 limited-range
@@ -115,7 +122,7 @@ def _decode_frames(video_path: Path) -> "torch.Tensor":
 
     with av.open(str(video_path)) as container:
         stream = container.streams.video[0]
-        frames_list: list["torch.Tensor"] = []
+        frames_list: list[torch.Tensor] = []
         for frame in container.decode(stream):
             frames_list.append(yuv420_to_rgb(frame))  # (H, W, 3) uint8
     if not frames_list:
@@ -125,7 +132,7 @@ def _decode_frames(video_path: Path) -> "torch.Tensor":
 
 def _load_models(
     upstream_root: Path, device: str
-) -> "tuple[torch.nn.Module, torch.nn.Module]":
+) -> tuple[torch.nn.Module, torch.nn.Module]:
     """Load SegNet + PoseNet with weights from upstream safetensors files.
 
     Returns:
@@ -149,8 +156,8 @@ def extract_masks_and_targets(
     video_path: Path,
     upstream_root: Path,
     device: str,
-    segnet: "torch.nn.Module",
-    posenet: "torch.nn.Module",
+    segnet: torch.nn.Module,
+    posenet: torch.nn.Module,
     batch_size: int = EXTRACT_BATCH,
 ) -> tuple:
     """Extract SegNet masks + PoseNet targets from a GT video.
@@ -193,7 +200,7 @@ def extract_masks_and_targets(
     # Feed each frame as T=1 so last-frame logic picks it up.
     # Masks come out at (SEGNET_H=384, SEGNET_W=512).
     print("  Extracting SegNet masks ...")
-    masks_list: list["torch.Tensor"] = []
+    masks_list: list[torch.Tensor] = []
     with torch.no_grad():
         for start in range(0, N, batch_size):
             end = min(start + batch_size, N)
@@ -211,7 +218,7 @@ def extract_masks_and_targets(
     # PoseNet.preprocess_input(x) expects (B, 2, C, H, W).
     print("  Extracting PoseNet targets (non-overlapping pairs, seq_len=2) ...")
     num_pairs = N // 2
-    targets_list: list["torch.Tensor"] = []
+    targets_list: list[torch.Tensor] = []
     with torch.no_grad():
         for start in range(0, num_pairs, batch_size):
             end = min(start + batch_size, num_pairs)
@@ -235,10 +242,10 @@ def extract_masks_and_targets(
 # ---------------------------------------------------------------------------
 
 def compute_proxy_score(
-    generated_frames: "torch.Tensor",
-    gt_frames: "torch.Tensor",
-    segnet: "torch.nn.Module",
-    posenet: "torch.nn.Module",
+    generated_frames: torch.Tensor,
+    gt_frames: torch.Tensor,
+    segnet: torch.nn.Module,
+    posenet: torch.nn.Module,
     device: str,
     archive_size_bytes: int = 0,
 ) -> dict:
@@ -472,7 +479,7 @@ def main(
     # Fix: batch downsample gt in 64-frame chunks; peak per chunk = 784 MB, total safe.
     import torch.nn.functional as _F
     _DSAMP_BATCH = 64
-    _gt_small_chunks: list["torch.Tensor"] = []
+    _gt_small_chunks: list[torch.Tensor] = []
     with torch.no_grad():
         for _ds in range(0, gt_frames.shape[0], _DSAMP_BATCH):
             _de = min(_ds + _DSAMP_BATCH, gt_frames.shape[0])
@@ -570,7 +577,7 @@ def main(
     # NOTE — rate denominator is hardcoded to CAMERA_H×CAMERA_W bytes (not input H×W).
     # For a 64-byte seed archive the rate ≈ 0 regardless, so this is inconsequential.
     print("\n  Computing proxy score (at SegNet resolution 384×512) ...")
-    _gt_small_proxy_chunks: list["torch.Tensor"] = []
+    _gt_small_proxy_chunks: list[torch.Tensor] = []
     with torch.no_grad():
         for _ps in range(0, gt_frames.shape[0], _DSAMP_BATCH):
             _pe = min(_ps + _DSAMP_BATCH, gt_frames.shape[0])

@@ -1110,7 +1110,7 @@ class FinanceEnsembleOptimizer(FinanceOptimizer):
         base_lr (float): global LR override. Default 1.0.
     """
 
-    REGISTRY: dict[str, type[CrossDisciplinaryOptimizer]] = {
+    REGISTRY: dict[str, type[FinanceOptimizer]] = {
         "almgren_chriss": AlmgrenChrissOptimizer,
         "kelly": KellyCriterionOptimizer,
         "implied_vol": ImpliedVolatilityOptimizer,
@@ -1127,7 +1127,7 @@ class FinanceEnsembleOptimizer(FinanceOptimizer):
         super().__init__(config, device)
         self.blend_mode = config.get("blend_mode", "weighted_average")
 
-        self.sub_optimizers: list[tuple[float, CrossDisciplinaryOptimizer]] = []
+        self.sub_optimizers: list[tuple[float, FinanceOptimizer]] = []
         for spec in config.get("optimizers", []):
             name = spec["name"]
             weight = spec.get("weight", 1.0)
@@ -1533,7 +1533,7 @@ def yousfi_contrarian_picks() -> dict[str, Any]:
 OPTIMIZER_REGISTRY = FinanceEnsembleOptimizer.REGISTRY
 
 
-def get_optimizer(name: str, config: dict[str, Any], device: str = "cpu") -> CrossDisciplinaryOptimizer:
+def get_optimizer(name: str, config: dict[str, Any], device: str = "cpu") -> FinanceOptimizer:
     """Get a finance optimizer by name.
 
     Args:
