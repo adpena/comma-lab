@@ -330,7 +330,13 @@ def step_pose_tto(cfg: PipelineConfig, iteration: int = 0) -> Path:
             break
 
     t0 = time.monotonic()
-    result = subprocess.run(cmd)
+    # R30: 4-hour timeout (pose TTO is the longest-running subprocess; A100
+    # 4090 typical wall is 30-90 min). A hung scorer or DataLoader would
+    # otherwise block the pipeline forever.
+    try:
+        result = subprocess.run(cmd, timeout=14400)
+    except subprocess.TimeoutExpired:
+        raise RuntimeError("Pose TTO timed out after 4h — likely hung GPU/DataLoader")
     elapsed = time.monotonic() - t0
 
     if result.returncode != 0:
@@ -377,7 +383,14 @@ def step_sensitivity_sweep(cfg: PipelineConfig, iteration: int = 0) -> Path | No
     ]
 
     t0 = time.monotonic()
-    result = subprocess.run(cmd)
+    # R30: 1-hour timeout for sensitivity sweep (Yousfi Jacobian; 5 pairs
+    # should be 5-15 min on A100). Hung Jacobian must not block the pipeline.
+    try:
+        result = subprocess.run(cmd, timeout=3600)
+    except subprocess.TimeoutExpired:
+        _log("Sensitivity sweep timed out after 1h, continuing without", "WARN")
+        _mark_done(iter_dir, step_name, {"failed": True, "timeout": True})
+        return None
     elapsed = time.monotonic() - t0
 
     if result.returncode != 0:
@@ -455,7 +468,11 @@ def step_qat(cfg: PipelineConfig, iteration: int = 0,
         _log(f"  Using mixed-precision allocation from: {mixed_precision_json}")
 
     t0 = time.monotonic()
-    result = subprocess.run(cmd)
+    # R30: 6-hour timeout for QAT (250 FP4 epochs typical 1-3h on A100).
+    try:
+        result = subprocess.run(cmd, timeout=21600)
+    except subprocess.TimeoutExpired:
+        raise RuntimeError("QAT timed out after 6h — likely hung")
     elapsed = time.monotonic() - t0
 
     if result.returncode != 0:
@@ -542,7 +559,13 @@ def step_fridrich_refine(cfg: PipelineConfig, iteration: int = 0) -> Path:
         cmd.append("--beneficial-quant-noise")
 
     t0 = time.monotonic()
-    result = subprocess.run(cmd)
+    # R30: 2-hour timeout for Fridrich refinement (100 epochs typical 30-60min).
+    try:
+        result = subprocess.run(cmd, timeout=7200)
+    except subprocess.TimeoutExpired:
+        _log("Fridrich refinement timed out after 2h, falling back to QAT output", "WARN")
+        _mark_done(iter_dir, step_name, {"failed": True, "timeout": True})
+        return iter_dir / "renderer_qat.bin"
     elapsed = time.monotonic() - t0
 
     if result.returncode != 0:
@@ -778,11 +801,13 @@ def step_engineered_corrections(cfg: PipelineConfig, renderer_bin: Path,
     Contest-compliant: no scorers at inflate time.
     """
     iter_dir = Path(cfg.output_dir) / f"iter_{iteration}"
+    iter_dir.mkdir(parents=True, exist_ok=True)
     step_name = "engineered_corrections"
-    done_marker = iter_dir / f".done_{step_name}"
     corrections_bin = iter_dir / "gradient_corrections.bin"
 
-    if done_marker.exists() and corrections_bin.exists():
+    # R30: use canonical _step_done/_mark_done instead of bare touch() —
+    # consistent with every other step + atomic .done write.
+    if _step_done(iter_dir, step_name) and corrections_bin.exists():
         _log(f"[{step_name}] Skipping — already done ({corrections_bin})")
         return corrections_bin
 
@@ -807,11 +832,13 @@ def step_engineered_corrections(cfg: PipelineConfig, renderer_bin: Path,
         _log(f"[{step_name}] WARNING: Failed (exit {result.returncode}), skipping corrections")
         return None
 
-    done_marker.touch()
     if corrections_bin.exists():
         size = corrections_bin.stat().st_size
+        _mark_done(iter_dir, step_name, {"corrections_bytes": size})
         _log(f"[{step_name}] Done: {corrections_bin} ({size:,} bytes)")
         return corrections_bin
+    # Subprocess succeeded but didn't produce the expected file.
+    _log(f"[{step_name}] WARNING: subprocess returned 0 but {corrections_bin} not produced")
     return None
 
 
@@ -839,29 +866,46 @@ def step_eval(cfg: PipelineConfig, renderer_bin: Path, archive_path: Path,
         "--archive-size-bytes", str(archive_bytes),
     ]
 
+    # R30: stream stdout to a tempfile rather than capture_output=True. A
+    # 30-min auth eval emits MB of pair-by-pair logs; buffering all of it in
+    # memory could OOM on small instances. The full log lives at
+    # iter_dir/auth_eval.stdout.log for postmortem; we read it back to
+    # extract the RESULT_JSON sentinel.
+    stdout_log = iter_dir / "auth_eval.stdout.log"
+    stderr_log = iter_dir / "auth_eval.stderr.log"
     t0 = time.monotonic()
-    result = subprocess.run(cmd, capture_output=True, text=True)
+    with stdout_log.open("w") as out_f, stderr_log.open("w") as err_f:
+        try:
+            result = subprocess.run(cmd, stdout=out_f, stderr=err_f, timeout=3600)
+        except subprocess.TimeoutExpired:
+            raise RuntimeError(
+                "Auth eval timed out after 1h — should typically take 20-30 min on T4"
+            )
     elapsed = time.monotonic() - t0
 
     _log(f"  Complete in {elapsed/60:.1f} min")
 
     if result.returncode != 0:
         _log(f"  Auth eval FAILED (exit {result.returncode})", "ERROR")
-        if result.stderr:
-            for line in result.stderr.strip().split("\n")[-10:]:
+        # Read the last 10 lines of stderr without buffering the whole file
+        try:
+            stderr_tail = stderr_log.read_text().strip().split("\n")[-10:]
+            for line in stderr_tail:
                 _log(f"  stderr: {line}")
+        except Exception:
+            pass
         # NEVER mark a failed eval as done — that would cache the failure and
         # the next pipeline run would skip eval and return a phantom score.
         # (R24 finding.)
         raise RuntimeError(
             f"Auth eval failed (exit {result.returncode}). "
-            f"Investigate stderr above; do NOT cache this failure."
+            f"Investigate {stderr_log}; do NOT cache this failure."
         )
 
-    # Extract score from output. Anchor to score-line pattern, NOT every
-    # numeric token in (0,100), or a line like "elapsed 45.2s" silently
-    # overwrites the real score. (R27 finding.)
-    score = _extract_eval_score(result.stdout or "", logger=_log)
+    # Parse the RESULT_JSON sentinel from the stdout log (R29 schema-first
+    # contract; replaces R27/R28 fragile regex).
+    stdout_text = stdout_log.read_text()
+    score = _extract_eval_score(stdout_text, logger=_log)
 
     meta = {"elapsed_s": round(elapsed), "score": score}
     _mark_done(iter_dir, "eval", meta)
@@ -876,13 +920,18 @@ def step_eval(cfg: PipelineConfig, renderer_bin: Path, archive_path: Path,
 _RESULT_JSON_RE = re.compile(r"^RESULT_JSON:\s*(\{.*\})\s*$", re.MULTILINE)
 
 
+EXPECTED_AUTH_EVAL_SCHEMA = 1
+
+
 class AuthEvalResult(BaseModel):
     """Validated payload from auth_eval_renderer.py's RESULT_JSON sentinel line.
 
-    Strict: every field must be present and the right type, or pydantic raises
-    ValidationError. Schema versioned so future emit changes can be coordinated.
+    Required fields are strictly typed. extra='ignore' so the emitter can add
+    new optional fields without breaking older parsers (forward-compat).
+    schema_version is checked separately against EXPECTED_AUTH_EVAL_SCHEMA;
+    a bump there means coordinated parser change.
     """
-    model_config = {"extra": "forbid"}
+    model_config = {"extra": "ignore"}
     schema_version: int
     final_score: float
     score_seg: float
@@ -899,9 +948,8 @@ def _extract_eval_score(stdout: str, logger=None) -> float | None:
     """Parse the RESULT_JSON sentinel line from auth_eval_renderer.py stdout.
 
     Returns the validated final_score, or None if no RESULT_JSON line was
-    found. Raises ValidationError if the payload is malformed (caller should
-    treat that as a hard failure, not a None — the eval ran but emitted bad
-    data, which is worse than no data).
+    found. Raises ValidationError if the payload is malformed, or
+    RuntimeError if the schema version doesn't match expectations.
     """
     matches = list(_RESULT_JSON_RE.finditer(stdout))
     if not matches:
@@ -913,6 +961,12 @@ def _extract_eval_score(stdout: str, logger=None) -> float | None:
     # (e.g., per-iteration). The last is the final result.
     payload = matches[-1].group(1)
     parsed = AuthEvalResult.model_validate_json(payload)
+    if parsed.schema_version != EXPECTED_AUTH_EVAL_SCHEMA:
+        raise RuntimeError(
+            f"RESULT_JSON schema_version={parsed.schema_version} does not match "
+            f"expected={EXPECTED_AUTH_EVAL_SCHEMA}. Update AuthEvalResult and "
+            f"EXPECTED_AUTH_EVAL_SCHEMA in lockstep with auth_eval_renderer.py."
+        )
     if logger:
         logger(f"  Parsed RESULT_JSON: final={parsed.final_score:.4f} "
                f"seg={parsed.score_seg:.4f} pose={parsed.score_pose:.4f} "
@@ -961,9 +1015,27 @@ def run_compress(cfg: PipelineConfig) -> None:
     output_dir.mkdir(parents=True, exist_ok=True)
 
     # Save full provenance for reproducibility (R25 fix: was just asdict(cfg)).
-    (output_dir / "pipeline_config.json").write_text(
-        json.dumps(_capture_provenance(cfg), indent=2)
-    )
+    # R30 fix: on resume, append a `resumes` list rather than overwrite the
+    # original timestamp/git_hash — otherwise the .done markers reference the
+    # original run but the JSON timestamp claims today.
+    prov_path = output_dir / "pipeline_config.json"
+    new_prov = _capture_provenance(cfg)
+    if prov_path.exists():
+        try:
+            existing = json.loads(prov_path.read_text())
+            resumes = existing.setdefault("resumes", [])
+            resumes.append({
+                "timestamp_utc": new_prov.get("timestamp_utc"),
+                "git_hash": new_prov.get("git_hash"),
+                "git_dirty": new_prov.get("git_dirty"),
+                "torch_version": new_prov.get("torch_version"),
+            })
+            prov_path.write_text(json.dumps(existing, indent=2))
+        except (json.JSONDecodeError, KeyError):
+            # Existing JSON is corrupted; overwrite.
+            prov_path.write_text(json.dumps(new_prov, indent=2))
+    else:
+        prov_path.write_text(json.dumps(new_prov, indent=2))
 
     t0 = time.monotonic()
     _banner(f"COMPRESSION PIPELINE — {cfg.max_iterations} iteration(s)")
@@ -1059,11 +1131,24 @@ def run_eval(args: argparse.Namespace) -> None:
     sent the archive .zip as --checkpoint to auth_eval_renderer.py. The eval
     script expected a renderer .pt/.bin → cryptic load error. Every
     `pipeline.py eval` invocation was broken.
+    R30 fix: support --profile so arch fields can match training.
     """
-    cfg = PipelineConfig(
-        video=args.video, device=args.device, upstream=args.upstream,
-        output_dir=str(Path(args.archive).parent),
-    )
+    # If --profile given, load matching arch fields onto args.
+    if getattr(args, "profile", None):
+        _apply_profile(args, args.profile, user_provided_flags=set())
+    pcfg_field_names = {f.name for f in fields(PipelineConfig)}
+    base_kwargs = {
+        "video": args.video, "device": args.device,
+        "upstream": getattr(args, "upstream", "upstream"),
+        "output_dir": str(Path(args.archive).parent),
+    }
+    # Pull any arch fields the profile injected; they're already on args.
+    for field_name in pcfg_field_names:
+        if field_name in base_kwargs:
+            continue
+        if hasattr(args, field_name):
+            base_kwargs[field_name] = getattr(args, field_name)
+    cfg = PipelineConfig(**base_kwargs)
     archive = Path(args.archive)
     checkpoint = Path(args.checkpoint)
     if not checkpoint.exists():
@@ -1073,7 +1158,9 @@ def run_eval(args: argparse.Namespace) -> None:
         )
     result = step_eval(cfg, checkpoint, archive)
     score = result.get("score")
-    if score:
+    # R30 fix: was `if score:` which is falsy for score=0.0 (a perfect score).
+    # Use explicit None check, mirroring the pattern in run_compress.
+    if score is not None:
         _log(f"Final score: {score:.4f}")
 
 
@@ -1238,6 +1325,11 @@ def main() -> int:
                     help="Renderer checkpoint (.pt or .bin) for forward pass. R29 fix.")
     ev.add_argument("--video", required=True, help="GT video for scoring")
     ev.add_argument("--device", default="cuda", choices=["cuda", "mps", "cpu"])
+    # R30: auth_eval_renderer.py reads arch from checkpoint header for .bin
+    # formats but inherits PipelineConfig defaults for .pt loading. Make
+    # arch overridable so an eval-only invocation can match the training arch.
+    ev.add_argument("--profile", default=None,
+                    help="Optional profile name to populate arch fields (matches compress)")
     ev.add_argument("--upstream", default="upstream")
 
     args = parser.parse_args()
