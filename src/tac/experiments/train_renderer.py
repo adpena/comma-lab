@@ -51,6 +51,7 @@ from tac.losses import (  # noqa: E402
     _hwc_to_chw,
     eval_scorer_loss,
     frequency_aware_loss,
+    kl_distill_scorer_loss,
     scorer_forward_pair,
     scorer_loss,
     scorer_loss_cached,
@@ -122,6 +123,17 @@ def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
     p.add_argument("--mask-noise-prob", type=float, default=0.5,
                    help="Probability of using the noisy mask variant on each "
                         "training step (default 0.5 = 50/50 mix).")
+
+    # KL distillation: Quantizr's secret sauce per CLAUDE.md. Adds Hinton-style
+    # KL divergence on SegNet soft distributions ALONGSIDE the standard scorer
+    # loss (NOT replacing it — that caused PoseNet collapse historically).
+    # T=2.0 with weight ~1.0 is the proven recipe.
+    p.add_argument("--kl-distill-weight", type=float, default=0.0,
+                   help="Auxiliary KL distill loss weight (default 0.0 = off). "
+                        "Quantizr uses this with T=2.0 to crush SegNet to 0.001. "
+                        "Recommended: 1.0 during Phase 2.")
+    p.add_argument("--kl-distill-temperature", type=float, default=2.0,
+                   help="Softmax temperature for KL distillation (default 2.0).")
 
     p.add_argument("--subsample", type=int, default=4,
                    help="Train on 1/N of pairs per epoch")
@@ -810,6 +822,60 @@ def train(args: argparse.Namespace):
             if not in_pretrain and args.frequency_loss_weight > 0:
                 freq_loss = frequency_aware_loss(rendered_pair, gt_pair)
                 loss = loss + args.frequency_loss_weight * freq_loss
+
+            # Fridrich inverse-steganalysis losses (R-fridrich-wire 2026-04-25):
+            # WILDE/SHIRAZ/GREEN profiles SET these flags but train_renderer.py
+            # never consumed them. Per Fridrich council R41 audit: "every
+            # renderer training has been UNIFORM-loss — equal error budget on
+            # smooth sky pixels and textured curb pixels. Estimated leak:
+            # SegNet 0.0024 → 0.0010 = -0.14 score." Wire them up:
+            #   - texture_loss: UNIWARD wavelet cost — hide errors in textured regions
+            #   - linf_penalty: square root law — spread small errors, don't concentrate
+            #   - markov_loss: HUGO-style local gradient continuity
+            if not in_pretrain:
+                if args.use_texture_loss and args.texture_loss_weight > 0:
+                    # rendered_pair: (B, 2, H, W, 3); use frame_t1 only (the one
+                    # SegNet actually evaluates) and L1-weighted by inverse-variance
+                    # of GT 8x8 blocks (textured regions get DOWN-weighted = errors there are FREE).
+                    rgb_pred = rendered_pair[:, 1].float()  # (B, H, W, 3)
+                    rgb_gt = gt_pair[:, 1].float()
+                    # Inverse local variance via box filter — high-variance (textured)
+                    # regions get LOW weight (we can hide errors there).
+                    diff = (rgb_pred - rgb_gt).abs().mean(dim=-1)  # (B, H, W)
+                    # 8x8 mean = local variance proxy via Sobel-style smoothing
+                    inv_var = 1.0 / (rgb_gt.var(dim=-1).clamp(min=1.0) + 1.0)  # (B, H, W)
+                    texture_loss = (diff * inv_var).mean()
+                    loss = loss + args.texture_loss_weight * texture_loss
+                if args.use_linf_penalty and args.linf_weight > 0:
+                    # L∞ on per-pixel reconstruction error — penalize the WORST
+                    # pixel hard so errors spread instead of concentrating (SRL).
+                    rgb_pred = rendered_pair.float()
+                    rgb_gt = gt_pair.float()
+                    pixel_err = (rgb_pred - rgb_gt).abs().amax()
+                    loss = loss + args.linf_weight * pixel_err
+                if args.use_markov_loss and args.markov_weight > 0:
+                    # First-order spatial gradient continuity (HUGO).
+                    rgb_pred = rendered_pair[:, 1].float()
+                    rgb_gt = gt_pair[:, 1].float()
+                    grad_x_pred = rgb_pred[:, :, 1:, :] - rgb_pred[:, :, :-1, :]
+                    grad_x_gt = rgb_gt[:, :, 1:, :] - rgb_gt[:, :, :-1, :]
+                    grad_y_pred = rgb_pred[:, 1:, :, :] - rgb_pred[:, :-1, :, :]
+                    grad_y_gt = rgb_gt[:, 1:, :, :] - rgb_gt[:, :-1, :, :]
+                    markov_loss = (grad_x_pred - grad_x_gt).abs().mean() + \
+                                  (grad_y_pred - grad_y_gt).abs().mean()
+                    loss = loss + args.markov_weight * markov_loss
+
+                # KL distillation auxiliary (Quantizr's SegNet 0.001 secret).
+                # ALONGSIDE the primary scorer_loss, NOT replacing it (replacing
+                # caused PoseNet collapse historically per CLAUDE.md). Weight 1.0
+                # is conservative; Quantizr likely uses higher in his joint phase.
+                if args.kl_distill_weight > 0:
+                    kl_loss, _kl_pose, _kl_seg = kl_distill_scorer_loss(
+                        rendered_pair, gt_pair, posenet, segnet,
+                        temperature=args.kl_distill_temperature,
+                        segnet_weight=100.0,
+                    )
+                    loss = loss + args.kl_distill_weight * kl_loss
 
             scaled_loss = loss / accum
 
