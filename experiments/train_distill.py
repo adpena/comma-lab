@@ -171,6 +171,14 @@ class DistillConfig:
     use_markov_loss: bool = False        # HUGO: preserve local gradient statistics
     markov_weight: float = 0.1          # weight for Markov chain loss
 
+    # Beneficial quantization noise (Eureka 1/2: Yousfi + Fridrich)
+    # Quantize rendered frames to low bit-depth before scorer forward pass.
+    # STE lets gradients flow. The renderer learns to produce output that
+    # scores well even when quantized — and the quantization noise hides
+    # in texture regions that SegNet cannot distinguish from natural signal.
+    beneficial_quant_noise: bool = False  # apply pixel-level quant before scorer
+    quant_noise_bits: int = 6            # bit depth (4=uint4, 6=uint6, 8=noop)
+
     # Integrated QAT — train through FP4 quantization from the start
     # Post-hoc QAT degrades PoseNet 26x. Training through it adapts weights.
     qat_enabled: bool = False           # wrap model in FP4 fake-quant during training
@@ -370,6 +378,28 @@ def compute_pixel_loss(predicted: torch.Tensor, target: torch.Tensor) -> torch.T
         Scalar L1 loss averaged over all elements.
     """
     return F.l1_loss(predicted, target)
+
+
+def apply_beneficial_quant_noise(
+    frames: torch.Tensor, bits: int = 6,
+) -> torch.Tensor:
+    """Quantize rendered frames to *bits* bit-depth with straight-through estimator.
+
+    Eureka 1 (Yousfi) + Eureka 2 (Fridrich): quantization noise in texture
+    regions is indistinguishable from natural signal to SegNet.  By quantizing
+    the renderer output before the scorer forward pass (with STE so gradients
+    still flow), the renderer learns to produce frames that score well even
+    after quantization — and the residual noise actively helps.
+
+    Expects pixel values in [0, 255] float range.  Returns same shape/dtype.
+    """
+    if bits >= 8:
+        return frames  # noop
+    n_levels = (1 << bits) - 1  # e.g. 63 for 6 bits
+    # Quantize: scale down, round, scale back up
+    quantized = torch.round(frames * (n_levels / 255.0)) * (255.0 / n_levels)
+    # STE: forward uses quantized, backward uses identity
+    return frames + (quantized - frames).detach()
 
 
 def compute_scorer_loss(
@@ -759,6 +789,8 @@ def train_phase2(
     print("\n" + "=" * 70)
     print("PHASE 2: Scorer-Guided Fine-Tuning")
     print(f"  loss_mode={cfg.loss_mode}" + (f" (gamma={cfg.focal_gamma})" if cfg.loss_mode == "focal_ste" else ""))
+    if cfg.beneficial_quant_noise:
+        print(f"  beneficial_quant_noise={cfg.quant_noise_bits}-bit (Eureka 1+2)")
     print("=" * 70)
 
     # Integrated QAT: wrap model with FP4 fake quantization BEFORE training
@@ -885,13 +917,19 @@ def train_phase2(
             tto_pairs = torch.stack([tto_even, tto_odd], dim=1)
             pixel_loss = compute_pixel_loss(predicted_pairs, tto_pairs)
 
+            # Beneficial quantization noise (Eureka 1+2): quantize rendered
+            # frames before scorer so renderer learns quant-robust output.
+            scorer_input = predicted_pairs
+            if cfg.beneficial_quant_noise:
+                scorer_input = apply_beneficial_quant_noise(predicted_pairs, cfg.quant_noise_bits)
+
             # Scorer loss
             scorer_loss, metrics = compute_scorer_loss(
-                predicted_pairs, gt_pairs, posenet, segnet,
+                scorer_input, gt_pairs, posenet, segnet,
                 mask_even, mask_odd, cfg, eval_roundtrip=cfg.eval_roundtrip,
             )
 
-            # Combined loss
+            # Combined loss (pixel loss uses un-quantized predicted_pairs)
             total = cfg.phase2_pixel_weight * pixel_loss + scorer_loss
 
             optimizer.zero_grad()
@@ -1096,9 +1134,14 @@ def train_phase3(
             ego_flow = _compute_ego_flow(zoom_warp, batch_idx, mask_even.shape[1], mask_even.shape[2])
             predicted_pairs = train_model(mask_even, mask_odd, pose=pose, ego_flow=ego_flow)
 
+            # Beneficial quantization noise (Phase 3 too)
+            scorer_input = predicted_pairs
+            if cfg.beneficial_quant_noise:
+                scorer_input = apply_beneficial_quant_noise(predicted_pairs, cfg.quant_noise_bits)
+
             # Scorer loss (Phase 3 uses error_boost_phase3 for extreme hard mining)
             scorer_loss, metrics = compute_scorer_loss(
-                predicted_pairs, gt_pairs, posenet, segnet,
+                scorer_input, gt_pairs, posenet, segnet,
                 mask_even, mask_odd, cfg, eval_roundtrip=cfg.eval_roundtrip,
                 error_boost_override=cfg.error_boost_phase3,
             )
@@ -1359,6 +1402,12 @@ def parse_args() -> argparse.Namespace:
                    help="Start FP4 fake-quant at Phase 2 only (not Phase 1)")
     p.add_argument("--fp4-block-size", type=int, default=32)
 
+    # Beneficial quantization noise (Eureka 1+2)
+    p.add_argument("--beneficial-quant-noise", action="store_true",
+                   help="Quantize rendered frames before scorer (STE). Noise hides in texture.")
+    p.add_argument("--quant-noise-bits", type=int, default=6, choices=[2, 3, 4, 5, 6, 7],
+                   help="Bit depth for beneficial quant noise (lower = more noise)")
+
     # Fridrich inverse steganalysis losses
     p.add_argument("--use-texture-loss", action="store_true",
                    help="UNIWARD: weight errors by texture complexity (Holub & Fridrich 2014)")
@@ -1459,6 +1508,8 @@ def main() -> None:
         qat_enabled=args.qat_enabled,
         qat_from_phase2=args.qat_from_phase2,
         fp4_block_size=args.fp4_block_size,
+        beneficial_quant_noise=args.beneficial_quant_noise,
+        quant_noise_bits=args.quant_noise_bits,
         use_texture_loss=args.use_texture_loss,
         texture_loss_weight=args.texture_loss_weight,
         use_linf_penalty=args.use_linf_penalty,
