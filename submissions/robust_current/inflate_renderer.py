@@ -2089,8 +2089,17 @@ def inflate_renderer(
                       file=sys.stderr)
                 zoom_warp = None
         else:
-            print(f"  WARNING: use_zoom_flow=True but no zoom_scalars found in archive. "
-                  f"Using identity zoom.", file=sys.stderr)
+            # No zoom scalars in archive — create identity zoom (scalars=0 → no zoom)
+            try:
+                from tac.radial_zoom import RadialZoomWarp
+                n_pairs = masks.shape[0] // 2 if masks is not None else 600
+                zoom_warp = RadialZoomWarp(n_pairs=n_pairs).to(device)
+                print(f"  WARNING: No zoom scalars in archive. Using identity zoom ({n_pairs} pairs).",
+                      file=sys.stderr)
+            except ImportError:
+                print(f"  FATAL: use_zoom_flow=True but tac.radial_zoom not available and "
+                      f"no zoom_scalars in archive.", file=sys.stderr)
+                raise RuntimeError("Cannot inflate use_zoom_flow model without zoom scalars or tac package")
 
     # ---- Load gradient corrections (C4: pre-computed pixel adjustments) ----
     grad_corrections = None
