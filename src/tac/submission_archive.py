@@ -19,6 +19,14 @@ import struct
 import zipfile
 from dataclasses import dataclass, field
 from pathlib import Path
+from typing import TYPE_CHECKING
+
+if TYPE_CHECKING:
+    # R41 fix: ruff F821 flagged torch.Tensor string annotations as undefined
+    # because torch wasn't importable in this scope. TYPE_CHECKING import keeps
+    # the runtime light (torch never loaded at module import) while letting type
+    # checkers AND ruff resolve the symbol.
+    import torch
 
 logger = logging.getLogger(__name__)
 
@@ -350,7 +358,7 @@ def compute_rate_term(archive_path: Path | str) -> float:
     return 25 * archive_path.stat().st_size / ORIGINAL_VIDEO_BYTES
 
 
-def save_poses_binary(poses: "torch.Tensor", output_path: Path | str) -> int:
+def save_poses_binary(poses: torch.Tensor, output_path: Path | str) -> int:
     """Save poses as raw fp16 binary (minimal overhead, ~7.2KB for 600×6).
 
     Args:
@@ -369,7 +377,7 @@ def save_poses_binary(poses: "torch.Tensor", output_path: Path | str) -> int:
     return len(raw)
 
 
-def load_poses_binary(path: Path | str, pose_dim: int = 6) -> "torch.Tensor":
+def load_poses_binary(path: Path | str, pose_dim: int = 6) -> torch.Tensor:
     """Load poses from raw fp16 binary.
 
     Returns:
