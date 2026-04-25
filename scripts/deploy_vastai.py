@@ -191,6 +191,47 @@ def preflight(profile: str, instance_id: int) -> None:
         )
     print(f"[preflight] OK no stale run_pipeline.sh on remote")
 
+    # 7. Remote code parity (R-remote-parity 2026-04-25). Per CLAUDE.md
+    # HIGHEST-EMPHASIS rule "Remote code parity required before launch":
+    # SHIRAZ wasted 16h + $10 because the deployed auth_eval_renderer.py
+    # had a NameError that we'd fixed locally that morning. The deploy
+    # script must verify the critical files on remote match local HEAD.
+    crit_files = [
+        "experiments/auth_eval_renderer.py",
+        "experiments/pipeline.py",
+        "src/tac/preflight.py",
+        "src/tac/submission_archive.py",
+        "src/tac/experiments/train_renderer.py",
+        "src/tac/fp4_quantize.py",
+        "src/tac/losses.py",
+        "src/tac/renderer_export.py",
+    ]
+    parity_violations = []
+    for rel in crit_files:
+        local = REPO_ROOT / rel
+        if not local.exists():
+            continue  # local missing — preflight 5 (artifact validation) catches
+        local_md5 = subprocess.check_output(["md5", "-q", str(local)],
+                                             stderr=subprocess.DEVNULL).decode().strip()
+        # macOS has md5 -q; linux has md5sum
+        if not local_md5:
+            local_md5 = subprocess.check_output(["md5sum", str(local)]).decode().split()[0]
+        remote_md5 = ssh(host, port,
+                         f"md5sum /workspace/pact/{rel} 2>/dev/null | cut -d' ' -f1",
+                         timeout=10).strip()
+        if not remote_md5:
+            parity_violations.append(f"  {rel}: MISSING on remote")
+        elif remote_md5 != local_md5:
+            parity_violations.append(f"  {rel}: REMOTE={remote_md5[:8]}.. LOCAL={local_md5[:8]}.. (DRIFT)")
+    if parity_violations:
+        raise RuntimeError(
+            "Remote code parity check FAILED — critical files differ from local HEAD.\n"
+            "This is the SHIRAZ-class failure mode that wasted 16h+$10 on 2026-04-25.\n"
+            "Run sync_code() to fix, OR pass --allow-stale-remote to bypass (NOT recommended):\n"
+            + "\n".join(parity_violations)
+        )
+    print(f"[preflight] OK remote code parity verified ({len(crit_files)} critical files)")
+
 
 def sync_code(instance_id: int) -> None:
     """Rsync src + experiments + upstream to remote."""
