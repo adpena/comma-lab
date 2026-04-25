@@ -2008,8 +2008,11 @@ class Trainer:
         # Drops when pose regresses (ratio > 2) OR improves implausibly (ratio < 0.05).
         # Normal training drives pose from baseline toward ~0.3x baseline over hundreds of epochs.
         proxy_confidence = 1.0
-        if hasattr(self, "_baseline_pose") and self._baseline_pose and self._baseline_pose > 0:
-            pose_ratio = avg_p / self._baseline_pose
+        # R41 fix: `truthy and >0` short-circuits when _baseline_pose=0.0 (falsy).
+        # The first `> 0` already handles None via getattr default + comparison guard.
+        _bp = getattr(self, "_baseline_pose", None)
+        if _bp is not None and _bp > 0:
+            pose_ratio = avg_p / _bp
 
             if pose_ratio > 2.0:
                 # PoseNet regressing — proxy may be masking damage

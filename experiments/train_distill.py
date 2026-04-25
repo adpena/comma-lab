@@ -108,6 +108,10 @@ class DistillConfig:
     checkpoint_path: str = "experiments/results/v5_lagrangian_renderer/renderer_best.pt"
     gt_poses_path: str = "experiments/results/gt_poses.pt"
     upstream_dir: str = "upstream/"
+    # R41 fix: pre-encoded masks path was a CLI flag but never persisted to
+    # config.json, leaving training provenance incomplete (couldn't tell which
+    # masks an archived run trained against). Adding it as a field closes the gap.
+    masks_path: str | None = None  # pre-encoded masks (.mkv); None → fresh SegNet extraction
 
     # Training
     device: str = "cuda"
@@ -1458,6 +1462,7 @@ def main() -> None:
         checkpoint_path=args.checkpoint,
         gt_poses_path=args.gt_poses,
         upstream_dir=args.upstream,
+        masks_path=args.masks,  # R41: persist masks path to config.json provenance
         device=args.device,
         seed=args.seed,
         embed_dim=args.embed_dim,
@@ -1554,8 +1559,16 @@ def main() -> None:
     print(f"  Output: {RESULTS_DIR}")
     print()
 
-    # Setup
+    # R41 fix: seed all RNG sources, not just torch — numpy and python random
+    # are used in shuffling, sampling, and curriculum mining elsewhere in the
+    # training loop, so missing them broke determinism guarantees.
+    import random as _random
+    import numpy as _np
     torch.manual_seed(cfg.seed)
+    _np.random.seed(cfg.seed)
+    _random.seed(cfg.seed)
+    if torch.cuda.is_available():
+        torch.cuda.manual_seed_all(cfg.seed)
     device = torch.device(cfg.device)
 
     # Determine number of frames

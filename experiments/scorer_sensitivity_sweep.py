@@ -47,9 +47,28 @@ def main():
     parser.add_argument("--device", default="mps")
     parser.add_argument("--n-pairs", type=int, default=5)
     parser.add_argument("--output", default="experiments/results/scorer_sensitivity_sweep.json")
+    parser.add_argument("--upstream", default=None,
+                        help="Upstream dir (default: TAC_UPSTREAM_DIR env or <repo>/upstream)")
+    parser.add_argument("--masks-mkv", default=None,
+                        help="Masks .mkv path (default: <repo>/submissions/robust_current/masks_crf50.mkv)")
+    parser.add_argument("--poses", default=None,
+                        help="GT poses .pt (default: <repo>/experiments/results/gt_poses.pt)")
     args = parser.parse_args()
 
     device = torch.device(args.device)
+
+    # R41 fix: resolve paths from script location + optional env/CLI override
+    # so the script works regardless of cwd. Pipeline subprocess invocation
+    # does not set cwd=, so cwd-relative literals were silently failing on
+    # non-project-root invocations.
+    _REPO = Path(__file__).resolve().parent.parent
+    import os as _os
+    upstream_root = Path(args.upstream) if args.upstream else \
+        Path(_os.environ.get("TAC_UPSTREAM_DIR", str(_REPO / "upstream")))
+    masks_mkv = Path(args.masks_mkv) if args.masks_mkv else \
+        _REPO / "submissions" / "robust_current" / "masks_crf50.mkv"
+    poses_path = Path(args.poses) if args.poses else \
+        _REPO / "experiments" / "results" / "gt_poses.pt"
 
     # Load model
     from tac.renderer_export import load_any_renderer_checkpoint
@@ -62,24 +81,23 @@ def main():
     from modules import DistortionNet
     dn = DistortionNet().eval().to(device)
     dn.load_state_dicts(
-        Path("upstream/models/posenet.safetensors"),
-        Path("upstream/models/segnet.safetensors"),
+        upstream_root / "models" / "posenet.safetensors",
+        upstream_root / "models" / "segnet.safetensors",
         device,
     )
 
     # Load data
     import av
     gt_frames = []
-    with av.open("upstream/videos/0.mkv") as container:
+    with av.open(str(upstream_root / "videos" / "0.mkv")) as container:
         for frame in container.decode(container.streams.video[0]):
             gt_frames.append(frame.to_ndarray(format="rgb24"))
             if len(gt_frames) >= args.n_pairs * 2:
                 break
 
     from tac.mask_codec import decode_masks
-    masks = decode_masks("submissions/robust_current/masks_crf50.mkv")
+    masks = decode_masks(str(masks_mkv))
 
-    poses_path = Path("experiments/results/gt_poses.pt")
     poses = torch.load(str(poses_path), map_location="cpu", weights_only=True).float() if poses_path.exists() else None
 
     print(f"Model: {sum(p.numel() for p in model.parameters()):,} params")

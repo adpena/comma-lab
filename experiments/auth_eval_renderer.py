@@ -496,9 +496,9 @@ def score_with_upstream(
     print(f"  Scored {n_samples} samples ({elapsed:.1f}s)")
 
     # Clean up the .raw file (3.6 GB)
-    if os.path.exists(expected_raw):
-        os.remove(expected_raw)
-        print(f"  Cleaned up: {expected_raw}")
+    if os.path.exists(raw_path):
+        os.remove(raw_path)
+        print(f"  Cleaned up: {raw_path}")
 
     return avg_posenet, avg_segnet
 

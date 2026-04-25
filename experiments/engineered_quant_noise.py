@@ -14,6 +14,14 @@ import argparse, json, os, struct, sys, time, zlib
 from pathlib import Path
 import numpy as np, torch, torch.nn.functional as F
 
+# Bootstrap project root onto sys.path so `from experiments.X` imports work
+# regardless of cwd (R41 fix: subprocess invocation from pipeline.py only adds
+# experiments/ to sys.path, not project root, so 'from experiments.X' would
+# silently fail at runtime).
+_PROJECT_ROOT = Path(__file__).resolve().parent.parent
+if str(_PROJECT_ROOT) not in sys.path:
+    sys.path.insert(0, str(_PROJECT_ROOT))
+
 for _p in [Path(os.environ.get("TAC_UPSTREAM_DIR", "")),
            Path(os.environ.get("UPSTREAM_ROOT", "")),
            Path(__file__).resolve().parent.parent / "upstream"]:
