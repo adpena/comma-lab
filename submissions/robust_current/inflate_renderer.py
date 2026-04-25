@@ -1853,7 +1853,6 @@ def _load_renderer_and_masks(
             f"Expected {renderer_filename} inside archive directory."
         )
     renderer = _load_renderer(str(renderer_path), device)
-    _renderer_pose_dim = getattr(renderer, 'pose_dim', 6)
 
     mask_video_path = Path(archive_dir) / mask_filename
     if not mask_video_path.exists():
@@ -2825,6 +2824,7 @@ def _inflate_renderer_with_mini_tto(
         renderer_filename=renderer_filename,
         mask_filename=mask_filename,
     )
+    _renderer_pose_dim = getattr(renderer, 'pose_dim', 6)
 
     # ---- Load poses for FiLM conditioning (if available) ----
     # Priority: optimized_poses > GT poses (same as inflate_renderer)
