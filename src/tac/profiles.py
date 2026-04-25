@@ -2343,8 +2343,10 @@ WILDE_V2 = {
 }
 
 # SHIRAZ v2: same addition
+# R36 fix: use ** spread idiom matching WILDE_V2 / GREEN_V2 (was redundant
+# dict comprehension that obscured intent).
 SHIRAZ_V2 = {
-    **{k: v for k, v in SHIRAZ.items()},
+    **SHIRAZ,
     "beneficial_quant_noise": True,
     "quant_noise_bits": 4,  # uint4 more aggressive (SHIRAZ uses focal STE, more robust)
 }

@@ -261,6 +261,7 @@ def preflight_all(
         check_codebase_drift(strict=True)
         preflight_arity(strict=True, verbose=verbose)
         preflight_profiles(strict=True, verbose=verbose)
+        preflight_arch_consistency(strict=True, verbose=verbose)
         preflight_filename_contract(strict=True, verbose=verbose)
 
     # 2. Training inputs (only if profile + tto_frames provided)
@@ -505,11 +506,15 @@ def check_codebase_drift(strict: bool = True) -> list[str]:
             )
         all_violations.extend(_scan_bash_text_for_forbidden(sh_path))
 
-    # 3. Python files with nohup or watcher patterns
-    for py_path in (REPO_ROOT / "scripts").glob("*.py"):
-        all_violations.extend(_scan_python_for_forbidden(py_path))
-    for py_path in (REPO_ROOT / "experiments").glob("*.py"):
-        all_violations.extend(_scan_python_for_forbidden(py_path))
+    # 3. Python files with nohup or watcher patterns. R36 extended scan to
+    # src/tac/ and contrib/ — any new module could grow an ad-hoc deploy
+    # pattern.
+    drift_scan_dirs = ["scripts", "experiments",
+                       "src/tac/contrib", "src/tac/deploy",
+                       "src/tac/experiments"]
+    for d in drift_scan_dirs:
+        for py_path in (REPO_ROOT / d).rglob("*.py"):
+            all_violations.extend(_scan_python_for_forbidden(py_path))
 
     if all_violations and strict:
         msg = (
@@ -1045,11 +1050,36 @@ def _extract_write_literals(path: Path) -> set[str]:
                         out.add(base)
         return out
 
-    # Pass 1: collect Name → set of artifact basenames assigned to that name.
-    # Tracks `name = <expr-containing-artifact-literal>` and treats Return
-    # nodes whose enclosing function name has a write prefix as additional
-    # write evidence (catches `def helper(): return iter_dir / "X.bin"`).
+    # Pass 1a: collect Name → set of artifact basenames assigned to that name.
+    # Tracks `name = <expr-containing-artifact-literal>` for later write-context
+    # cross-linking.
     name_to_literals: dict[str, set[str]] = {}
+    # Map FunctionDef → its name (so we can scope Return tracking).
+    WRITE_FN_PREFIXES = (
+        "export_", "save_", "write_", "encode_", "build_",
+        "pack_", "dump_", "emit_", "serialize_",
+    )
+
+    def _is_write_named_fn(fn_node: ast.AST) -> bool:
+        if isinstance(fn_node, (ast.FunctionDef, ast.AsyncFunctionDef)):
+            return fn_node.name.startswith(WRITE_FN_PREFIXES)
+        return False
+
+    # Build parent-pointer map so we can walk up from a Return to find its
+    # enclosing function.
+    parents: dict[int, ast.AST] = {}
+    for node in ast.walk(tree):
+        for child in ast.iter_child_nodes(node):
+            parents[id(child)] = node
+
+    def _enclosing_fn(node: ast.AST) -> ast.AST | None:
+        cur = parents.get(id(node))
+        while cur is not None:
+            if isinstance(cur, (ast.FunctionDef, ast.AsyncFunctionDef)):
+                return cur
+            cur = parents.get(id(cur))
+        return None
+
     for node in ast.walk(tree):
         if isinstance(node, ast.Assign) and len(node.targets) == 1:
             t = node.targets[0]
@@ -1057,15 +1087,16 @@ def _extract_write_literals(path: Path) -> set[str]:
                 lits = _collect_artifact_literals_in(node.value)
                 if lits:
                     name_to_literals.setdefault(t.id, set()).update(lits)
-        # Also collect literals from Return statements — they're not Assigns
-        # but the returned literal is still produced by the function.
+        # R36 fix: only count Return literals when the enclosing function
+        # has a write-prefix name. Otherwise a helper like
+        # `def get_input_path(): return Path("input.bin")` would falsely
+        # mark "input.bin" as produced.
         if isinstance(node, ast.Return) and node.value is not None:
-            lits = _collect_artifact_literals_in(node.value)
-            if lits:
-                # No specific name to bind to; record under a synthetic key
-                # so the literal makes it into `found` via the write_prefix
-                # path or is at least considered "produced by this file".
-                found.update(lits)
+            fn = _enclosing_fn(node)
+            if fn is not None and _is_write_named_fn(fn):
+                lits = _collect_artifact_literals_in(node.value)
+                if lits:
+                    found.update(lits)
 
     def _names_referenced(node: ast.AST) -> set[str]:
         return {sub.id for sub in ast.walk(node) if isinstance(sub, ast.Name)}
@@ -1213,6 +1244,74 @@ def preflight_filename_contract(
             "  1. Fix the consumer to use the actual producer filename\n"
             "  2. Add the filename to a producer that should write it\n"
             "  3. Add it to _EXTERNAL_FILENAMES if it's contest/upstream data"
+        )
+    return violations
+
+
+# ── Profile-vs-ArchConfig field consistency ───────────────────────────────────
+#
+# Bug class this catches: a profile sets `use_dscovn: True` (typo of
+# use_dsconv) and the model is built without DSConv silently — same SHIRAZ
+# class but at the profile-key level instead of the CLI-flag level.
+#
+# preflight_arity catches CLI flag drift (--use-dsconv missing). This new
+# validator catches profile-key drift (profile says `use_dscovn` but
+# ArchConfig has `use_dsconv` — close-match Levenshtein typo).
+
+
+def preflight_arch_consistency(strict: bool = True, verbose: bool = True) -> list[str]:
+    """Cross-validate every renderer-training PROFILES entry's arch keys
+    against tac.renderer.ArchConfig fields.
+
+    Two checks:
+      A. Every profile arch-like key (matches Levenshtein cutoff 0.85 to an
+         ArchConfig field) MUST exactly match an ArchConfig field name.
+         Otherwise it's a likely typo.
+      B. Every required ArchConfig field that profiles typically override
+         (PROFILE_REQUIRED_ARCH_KEYS) must be present in the profile.
+    """
+    import difflib
+    violations: list[str] = []
+    try:
+        from tac.profiles import PROFILES
+        from tac.renderer import ArchConfig
+    except ImportError as e:
+        msg = f"  [arch_consistency] cannot import: {e}"
+        if verbose:
+            print(msg)
+        return [msg]
+    arch_field_names = {
+        f.name for f in __import__("dataclasses").fields(ArchConfig)
+    }
+    n_profiles = 0
+    for name, prof in PROFILES.items():
+        if prof.get("experiment_type") != "renderer_training":
+            continue
+        n_profiles += 1
+        for key in prof.keys():
+            if key in arch_field_names:
+                continue
+            # Is it close to any ArchConfig field name?
+            close = difflib.get_close_matches(key, arch_field_names, n=1, cutoff=0.85)
+            if close:
+                violations.append(
+                    f"profile {name!r}: key {key!r} is close to ArchConfig "
+                    f"field {close[0]!r} but not an exact match. Likely typo. "
+                    f"If intentional (training-script-only key), rename to "
+                    f"something distinct from ArchConfig fields."
+                )
+    if verbose and violations:
+        print(f"  [arch_consistency] {len(violations)} violation(s):")
+        for v in violations:
+            print(f"    • {v}")
+    elif verbose:
+        print(f"  [arch_consistency] OK: {n_profiles} renderer profile(s) "
+              f"× {len(arch_field_names)} ArchConfig fields clean")
+    if violations and strict:
+        raise PreflightError(
+            "ARCH CONSISTENCY VIOLATIONS — profile keys close to but not "
+            "matching ArchConfig fields:\n"
+            + "\n".join(f"  • {v}" for v in violations)
         )
     return violations
 

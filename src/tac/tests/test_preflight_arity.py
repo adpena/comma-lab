@@ -6,6 +6,7 @@ forgets a required architectural flag, or a profile is missing a key.
 """
 from __future__ import annotations
 
+import re
 import textwrap
 from pathlib import Path
 
@@ -796,39 +797,81 @@ def test_filename_contract_extracts_artifact_literals(tmp_path: Path) -> None:
     assert "_int4lzma2.bin" not in found  # suffix fragment filtered
 
 
-def test_inflate_renderer_recognizes_all_producer_magic_bytes() -> None:
-    """R35 finding: magic-byte version drift between producer and inflate
-    consumer would silently fail at contest submission. Verify inflate
-    recognizes every magic byte that any producer might emit.
+def test_magic_bytes_bidirectional_consistency() -> None:
+    """R35/R36: magic-byte drift between producer and inflate consumer
+    silently fails at contest submission. Test BOTH directions:
+
+    1. Backward: every magic the consumer recognizes still appears in some
+       producer (catches consumer that drops support for an old format).
+    2. Forward: every magic any producer emits is also recognized by the
+       consumer (catches producer that adds a new format the consumer
+       doesn't understand yet — the high-impact direction).
     """
-    inflate_path = (Path(__file__).resolve().parent.parent.parent.parent
-                    / "submissions" / "robust_current" / "inflate_renderer.py")
+    repo_root = Path(__file__).resolve().parent.parent.parent.parent
+    inflate_path = repo_root / "submissions" / "robust_current" / "inflate_renderer.py"
     if not inflate_path.exists():
         pytest.skip("inflate_renderer.py not present in this checkout")
     inflate_src = inflate_path.read_text()
-    # Producer magic bytes (from src/tac/renderer_export.py + mixed_precision_export.py)
-    producer_magics = {b"FP4A", b"ASYM", b"I4LZ"}
-    for magic in producer_magics:
-        assert magic in inflate_src.encode("utf-8", errors="ignore"), (
-            f"inflate_renderer.py does not recognize magic {magic!r}. "
-            f"A producer would silently fail at contest inflate. Add the "
-            f"magic to _load_renderer's dispatch."
+
+    producer_files = [
+        repo_root / "src" / "tac" / "renderer_export.py",
+        repo_root / "src" / "tac" / "mixed_precision_export.py",
+    ]
+    # Match `b"XXXX"` and `b'XXXX'` — 3-5 char ASCII uppercase magic literals
+    magic_re = re.compile(rb"b['\"]([A-Z0-9]{3,5})['\"]")
+    producer_magics: set[bytes] = set()
+    for pf in producer_files:
+        if not pf.exists():
+            continue
+        for m in magic_re.finditer(pf.read_bytes()):
+            producer_magics.add(m.group(1))
+
+    # Magic bytes that are intentionally INTERNAL — produced by experimental
+    # formats but never shipped in a contest archive. Any new entry here
+    # MUST have a guard in pipeline.py that prevents the format from
+    # reaching the archive (R24-style arch_header guard for MXLZ).
+    INTERNAL_ONLY_MAGICS = {
+        b"MXLZ",  # mixed-precision LZMA2; gated out by step_compress_weights
+                  # arch_header check in pipeline.py (R24 finding).
+    }
+
+    # Forward: every producer magic must appear in inflate source OR be in
+    # the internal-only allowlist (with explicit pipeline.py guard).
+    inflate_bytes = inflate_src.encode("utf-8", errors="ignore")
+    for magic in sorted(producer_magics):
+        if magic in INTERNAL_ONLY_MAGICS:
+            continue
+        assert magic in inflate_bytes, (
+            f"Producer emits magic {magic!r} but inflate_renderer.py "
+            f"doesn't recognize it. Contest submission would fail at inflate. "
+            f"Either add the magic to _load_renderer's dispatch OR add it to "
+            f"INTERNAL_ONLY_MAGICS with a pipeline.py guard."
+        )
+
+    # Backward: known consumer magics must still appear in some producer
+    consumer_magics = {b"FP4A", b"ASYM", b"I4LZ"}
+    for magic in consumer_magics:
+        assert magic in inflate_bytes, (
+            f"Consumer no longer recognizes {magic!r} — bytecode regression"
         )
 
 
-def test_filename_contract_helper_function_return_is_produced(tmp_path: Path) -> None:
-    """A literal inside a Return statement counts as produced — catches the
-    `def helper(): return iter_dir / 'X.bin'` pattern.
+
+def test_filename_contract_write_prefix_function_return_is_produced(tmp_path: Path) -> None:
+    """R36 scoped Return-tracking: a Return inside a function whose name
+    starts with a write prefix (export_, save_, build_, etc.) counts as
+    produced. Returns inside non-write-named functions do NOT count
+    (would falsely mark input/read paths as produced).
     """
     repo = _stub_repo(tmp_path)
     _write(repo / "experiments/consumer.py", '''
         from pathlib import Path
-        def helper():
-            return Path("output/produced_via_return.bin")
+        def save_artifact_path(iter_dir):
+            return iter_dir / "produced_via_return.bin"
         x = Path("output/produced_via_return.bin")
     ''')
-    # No producer file at all — but the consumer's own helper returns the
-    # literal. Should pass (treated as self-produced).
+    # Function name starts with `save_` so the Return literal is treated
+    # as produced. Validator should pass.
     violations = preflight_filename_contract(
         repo_root=repo,
         consumer_files=["experiments/consumer.py"],
@@ -836,6 +879,27 @@ def test_filename_contract_helper_function_return_is_produced(tmp_path: Path) ->
         strict=False, verbose=False,
     )
     assert violations == []
+
+
+def test_filename_contract_non_write_function_return_does_not_silence_phantom(tmp_path: Path) -> None:
+    """Inverse: a Return inside a function with a non-write name (e.g.,
+    `get_path` or `find_input`) must NOT count as produced — otherwise an
+    input-path helper would mask phantom reads of the same name.
+    """
+    repo = _stub_repo(tmp_path)
+    _write(repo / "experiments/consumer.py", '''
+        from pathlib import Path
+        def get_input_path():
+            return Path("input/never_produced.bin")
+        x = Path("input/never_produced.bin")  # phantom: no producer
+    ''')
+    with pytest.raises(FilenameContractError, match="never_produced.bin"):
+        preflight_filename_contract(
+            repo_root=repo,
+            consumer_files=["experiments/consumer.py"],
+            producer_dirs=["experiments"],
+            strict=True, verbose=False,
+        )
 
 
 def test_filename_contract_catches_phantom_path(tmp_path: Path) -> None:

@@ -995,10 +995,27 @@ def step_eval(cfg: PipelineConfig, renderer_bin: Path, archive_path: Path,
         archive_path: path to archive.zip (for rate calculation via --archive-size-bytes)
     """
     iter_dir = Path(cfg.output_dir) / f"iter_{iteration}"
+    iter_dir.mkdir(parents=True, exist_ok=True)
 
+    # R36 fix: invalidate the .done_eval cache when the renderer or archive
+    # has been modified after the cache was written. Without this, the eval
+    # subcommand silently returns a stale score on a re-run with a different
+    # archive — a footgun that would invalidate iterative measurement.
+    done_path = iter_dir / ".done_eval"
     if _step_done(iter_dir, "eval"):
-        _log(f"Eval already done (iter {iteration}), skipping")
-        return json.loads((iter_dir / ".done_eval").read_text())
+        try:
+            done_mtime = done_path.stat().st_mtime
+            stale = False
+            for inp_path in (renderer_bin, archive_path):
+                if Path(inp_path).exists() and Path(inp_path).stat().st_mtime > done_mtime:
+                    stale = True
+                    _log(f"Eval cache stale: {inp_path} modified after .done_eval; rerunning")
+                    break
+            if not stale:
+                _log(f"Eval already done (iter {iteration}), skipping")
+                return json.loads(done_path.read_text())
+        except (OSError, json.JSONDecodeError):
+            pass  # fall through to re-run on any cache-read error
 
     _log("Running full e2e auth evaluation")
     archive_bytes = archive_path.stat().st_size if archive_path.exists() else 0

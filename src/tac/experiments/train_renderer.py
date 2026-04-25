@@ -110,9 +110,13 @@ def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
     p.add_argument("--eval-every", type=int, default=None)
     p.add_argument("--segnet-weight", type=float, default=None,
                    help="Weight for SegNet term in scorer_loss")
-    p.add_argument("--use-qat", action="store_true", default=True,
-                   help="Enable FP4 QAT (default: on)")
+    # R36 fix: store_true with default=True is dead code (the flag is True
+    # before parsing, so --use-qat is a no-op). Use set_defaults for the
+    # default and let --use-qat / --no-qat both work as explicit toggles.
+    p.add_argument("--use-qat", action="store_true",
+                   help="Enable FP4 QAT (default: on; --no-qat to disable)")
     p.add_argument("--no-qat", dest="use_qat", action="store_false")
+    p.set_defaults(use_qat=True)
     p.add_argument("--even-frame-skip-seg", action="store_true", default=False,
                    help="Trick 3: skip SegNet loss when frame_t1 is even-indexed "
                    "(SegNet only evaluates odd frames in the scorer)")
