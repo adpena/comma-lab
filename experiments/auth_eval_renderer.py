@@ -302,6 +302,7 @@ def generate_raw(
     device: str,
     batch_size: int,
     poses: torch.Tensor | None = None,
+    zoom_warp: nn.Module | None = None,
 ) -> int:
     """Generate frames from masks, upscale to 874x1164, write .raw.
 
@@ -312,6 +313,7 @@ def generate_raw(
         device: torch device
         batch_size: number of pairs per batch
         poses: (N//2, 6) optional FiLM conditioning vectors
+        zoom_warp: RadialZoomWarp for ego_flow (use_zoom_flow models)
 
     Returns number of frames written.
     """
@@ -320,6 +322,7 @@ def generate_raw(
     n_written = 0
     is_asym = _is_asymmetric(model)
     has_film = hasattr(model, 'pose_dim') and model.pose_dim > 0
+    has_zoom = hasattr(model, 'use_zoom_flow') and model.use_zoom_flow
     torch.manual_seed(42)
 
     with open(raw_path, "wb") as f:
@@ -359,10 +362,22 @@ def generate_raw(
                             print(f"    WARNING: pose index {pose_start}:{pose_end} exceeds "
                                   f"poses.shape[0]={poses.shape[0]}", file=sys.stderr)
 
+                    # Zoom flow (ego_flow from RadialZoomWarp)
+                    ego_flow = None
+                    if has_zoom and zoom_warp is not None:
+                        pair_indices = torch.arange(
+                            pair_idx // 2,
+                            pair_idx // 2 + masks_t.shape[0],
+                            device=device,
+                        )
+                        ego_flow = zoom_warp(pair_indices, masks_t.shape[1], masks_t.shape[2])
+
+                    kwargs = {}
                     if batch_pose is not None:
-                        pairs = model(masks_t, masks_t1, pose=batch_pose)
-                    else:
-                        pairs = model(masks_t, masks_t1)  # (B, 2, H, W, 3)
+                        kwargs["pose"] = batch_pose
+                    if ego_flow is not None:
+                        kwargs["ego_flow"] = ego_flow
+                    pairs = model(masks_t, masks_t1, **kwargs)  # (B, 2, H, W, 3)
 
                     B_pairs = pairs.shape[0]
                     for p_idx in range(B_pairs):
@@ -573,13 +588,39 @@ def run_auth_eval(
         print("  WARNING: Model has FiLM (pose_dim>0) but no --poses provided. "
               "Using zero poses — PoseNet score will be degraded.")
 
+    # Stage 4c: Load zoom warp (for use_zoom_flow models)
+    zoom_warp = None
+    if hasattr(model, 'use_zoom_flow') and model.use_zoom_flow:
+        from tac.radial_zoom import RadialZoomWarp
+        n_pairs = masks.shape[0] // 2
+        zoom_warp = RadialZoomWarp(n_pairs=n_pairs).to(device)
+        # Try loading saved zoom scalars from checkpoint
+        ckpt_path = Path(checkpoint)
+        if ckpt_path.suffix == ".pt":
+            ckpt_data = torch.load(str(ckpt_path), map_location="cpu", weights_only=False)
+            if isinstance(ckpt_data, dict) and "zoom_warp_state_dict" in ckpt_data:
+                zoom_warp.load_state_dict(ckpt_data["zoom_warp_state_dict"])
+                print(f"  Loaded zoom scalars from checkpoint")
+            else:
+                print(f"  WARNING: use_zoom_flow model but no zoom_warp_state_dict in checkpoint. "
+                      f"Using identity zoom — PoseNet may be degraded.")
+        else:
+            # For .bin format, check for companion zoom_scalars.bin
+            zoom_path = ckpt_path.parent / "zoom_scalars.bin"
+            if zoom_path.exists():
+                from tac.radial_zoom import load_zoom_scalars
+                zoom_warp = load_zoom_scalars(zoom_path, device=device)
+                print(f"  Loaded zoom scalars from {zoom_path.name}")
+            else:
+                print(f"  WARNING: use_zoom_flow but no zoom_scalars.bin found. Using identity zoom.")
+
     # Stage 5: Generate frames
     print("\nStage 5: Generating frames ...")
     if output_dir is None:
         output_dir = str(Path(checkpoint).resolve().parent)
     os.makedirs(output_dir, exist_ok=True)
     raw_path = os.path.join(output_dir, "auth_eval_inflated.raw")
-    n_written = generate_raw(masks, model, raw_path, device, batch_size, poses=poses)
+    n_written = generate_raw(masks, model, raw_path, device, batch_size, poses=poses, zoom_warp=zoom_warp)
     del model, masks, poses  # free VRAM
 
     # Rename raw for scorer (expects 0.raw)

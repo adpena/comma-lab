@@ -256,6 +256,8 @@ def optimize_poses_batch(
     argmax_constraint: bool = False,
     max_retries: int = 3,
     flip_budget: float = 0.0,
+    zoom_warp: torch.nn.Module | None = None,
+    batch_pair_indices: torch.Tensor | None = None,
     latent_dim: int = 0,
     log_every: int = 25,
 ) -> tuple[torch.Tensor, dict]:
@@ -351,7 +353,10 @@ def optimize_poses_batch(
         pose_part = conditioning[:, :pose_dim]
 
         # Forward: renderer produces (B, 2, H, W, 3) HWC pairs
-        pairs = renderer(masks_t, masks_t1, pose=pose_part)  # (B, 2, H, W, 3)
+        fwd_kwargs = {"pose": pose_part}
+        if zoom_warp is not None and batch_pair_indices is not None:
+            fwd_kwargs["ego_flow"] = zoom_warp(batch_pair_indices, masks_t.shape[1], masks_t.shape[2])
+        pairs = renderer(masks_t, masks_t1, **fwd_kwargs)  # (B, 2, H, W, 3)
 
         # Convert to CHW for scorer input
         frame_t = pairs[:, 0]   # (B, H, W, 3)
@@ -869,6 +874,7 @@ def _generate_frames(
     poses: torch.Tensor,
     device: torch.device,
     batch_size: int = 16,
+    zoom_warp: torch.nn.Module | None = None,
 ) -> torch.Tensor:
     """Generate frames using renderer with pose conditioning.
 
@@ -893,7 +899,11 @@ def _generate_frames(
             mask_t1 = masks[2 * start + 1:2 * end + 1:2].to(device)
             batch_pose = poses[start:end].to(device)
 
-            pairs = renderer(mask_t, mask_t1, pose=batch_pose)  # (B, 2, H, W, 3)
+            fwd_kwargs = {"pose": batch_pose}
+            if zoom_warp is not None:
+                pair_idx = torch.arange(start, end, device=device)
+                fwd_kwargs["ego_flow"] = zoom_warp(pair_idx, mask_t.shape[1], mask_t.shape[2])
+            pairs = renderer(mask_t, mask_t1, **fwd_kwargs)  # (B, 2, H, W, 3)
             f0 = pairs[:, 0]
             f1 = pairs[:, 1]
             B = f0.shape[0]
