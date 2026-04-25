@@ -227,3 +227,34 @@ Cost: 9 × $0.29 = $2.61. High information density — maps full Pareto drift tr
 - SegNet: 0.00300000
 - Rate: 2.262
 - Notes: FINAL Modal run. SegNet 0.003 TIES Quantizr! PoseNet 480x gap + rate 5.7x gap = entire remaining problem.
+
+## 2026-04-25: DX Hardening + Deployment
+
+### Review Rounds
+- 11 consecutive review rounds, 64 issues found and fixed (7 critical)
+- Key criticals: gradient flow killed (R1), padding_mode not serialized (R4), inline APG TypeError (R8), brotli DQ (R9)
+- 3 consecutive clean passes at critical/important level achieved (greenup)
+
+### Auth Score
+- 2.26 [contest-compliant] via contest_eval.py → upstream evaluate.py
+- SegNet: 0.238, PoseNet: 1.566, Rate: 0.457
+- Float renderer (290KB), masks_crf50 (421KB), optimized poses (7KB), no Brotli
+
+### Deployment
+- SHIRAZ: A100 SXM4, focal_ste + curriculum + Fridrich, TTO targets
+- WILDE: A100 SXM4, hinge + freeze/unfreeze + Fridrich, GT targets (unplanned A/B)
+- GREEN: A100 SXM4, WILDE + use_zoom_flow, TTO targets
+- Full auto-pipeline: train → QAT (50+250) → pose TTO (200) → auth eval → bundle
+- Estimated cost: ~$15-18 total, within $24 cap
+
+### DX Improvements
+- contest_eval.py: single-command e2e eval matching upstream 1:1
+- Half-frame mask auto-duplication with hard error on bad count
+- All 7 renderer loaders handle padding_mode/use_dilation
+- I4LZ decompression integrity check
+- Archive rebuilt without Brotli (scorer doesn't have brotli package)
+- Environment sanitization in contest_eval (strips INFLATE_TTO etc.)
+
+### Flags for Results Analysis
+- FLAG 1: WILDE GT targets vs SHIRAZ TTO targets (A/B test)
+- FLAG 2: Phase 1 plateau at 181K params (architecture ceiling?)
