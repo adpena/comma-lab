@@ -1,0 +1,45 @@
+{
+  "checkpoint": "experiments/results/local_trend_coolchic_c3_20260425/c3_residual/renderer_local_c3_residual_trend32_e20_20260425_best_fp32.pt",
+  "n_params": 36626,
+  "results": [
+    {
+      "config": "DEFAULT codebook  + max-scale     (legacy)",
+      "l1_per_weight": 0.002992,
+      "linf": 0.275247,
+      "n_weights": 36626,
+      "zero_collapse_pct": 4.75,
+      "n_zero_collapse": 1739,
+      "n_nonzero_orig": 36609
+    },
+    {
+      "config": "DEFAULT codebook  + p99.5-scale  (R-FP4-fix #2)",
+      "l1_per_weight": 0.002985,
+      "linf": 0.24888,
+      "n_weights": 36626,
+      "zero_collapse_pct": 4.693,
+      "n_zero_collapse": 1718,
+      "n_nonzero_orig": 36609
+    },
+    {
+      "config": "RESIDUAL codebook + max-scale    (R-FP4-fix #1)",
+      "l1_per_weight": 0.00402,
+      "linf": 0.275247,
+      "n_weights": 36626,
+      "zero_collapse_pct": 1.257,
+      "n_zero_collapse": 460,
+      "n_nonzero_orig": 36609
+    },
+    {
+      "config": "RESIDUAL codebook + p99.5-scale  (R-FP4-fix #1+#2)",
+      "l1_per_weight": 0.004001,
+      "linf": 0.24888,
+      "n_weights": 36626,
+      "zero_collapse_pct": 1.248,
+      "n_zero_collapse": 457,
+      "n_nonzero_orig": 36609
+    }
+  ],
+  "winner": "DEFAULT codebook  + p99.5-scale  (R-FP4-fix #2)",
+  "improvement_l1_pct": 0.23,
+  "improvement_zero_collapse_pp": 0.057
+}

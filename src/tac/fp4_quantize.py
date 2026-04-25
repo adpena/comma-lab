@@ -224,6 +224,18 @@ def quantize_fp4(
             packed_state[name] = param.clone()
             continue
 
+        # R-FP4-fix: skip ndim<2 tensors. QATRendererFP4 only wraps ndim>=2
+        # weights (Conv/Linear/Embedding), but quantize_fp4 historically
+        # quantized everything — including 1-D buffers like Fourier-feature
+        # frequency vectors that can be in the [1, 100] range. Quantizing
+        # those with the small-magnitude codebook causes train↔export drift
+        # (training never sees the quantization noise on these tensors).
+        # Storing them as float passthroughs costs ~24 bytes per buffer —
+        # negligible vs the train/export consistency win.
+        if param.ndim < 2:
+            packed_state[name] = param.detach().cpu().clone()
+            continue
+
         p = param.detach().cpu().float().reshape(-1)
         n = p.shape[0]
 

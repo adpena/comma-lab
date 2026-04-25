@@ -105,6 +105,9 @@ def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
     p.add_argument("--warmup-epochs", type=int, default=10)
     p.add_argument("--pretrain-epochs", type=int, default=None,
                    help="Phase 1 epochs: L1+edge loss, no scorer (default: from profile or 0)")
+    p.add_argument("--max-frames", type=int, default=None,
+                   help="Truncate GT frames to first N (for trend / smoke runs). "
+                        "Default: use all loaded frames (typically 1200).")
     p.add_argument("--subsample", type=int, default=4,
                    help="Train on 1/N of pairs per epoch")
     p.add_argument("--eval-every", type=int, default=None)
@@ -117,6 +120,21 @@ def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
                    help="Enable FP4 QAT (default: on; --no-qat to disable)")
     p.add_argument("--no-qat", dest="use_qat", action="store_false")
     p.set_defaults(use_qat=True)
+
+    # R-FP4-fix CLI: opt-in robustness flags for FP4 QAT. Defaults match the
+    # legacy behaviour to avoid surprising old runs. Set all three for residual
+    # heads (Cool-Chic / C3) to close the float-FP4 gap.
+    p.add_argument("--fp4-codebook", choices=("default", "residual"),
+                   default="default",
+                   help="FP4 codebook: 'default' = mask2mask uniform spacing, "
+                        "'residual' = denser-near-zero (4× better small-mag preservation). "
+                        "Use 'residual' for renderers with a correction head.")
+    p.add_argument("--fp4-stochastic", action="store_true", default=False,
+                   help="Stochastic rounding during training (unbiased dither). "
+                        "Auto-disabled in eval mode for inflate determinism.")
+    p.add_argument("--fp4-robust-scale", action="store_true", default=False,
+                   help="Per-block scale via p99.5 quantile instead of max(|w|). "
+                        "Protects small-magnitude tail from outlier-driven collapse.")
 
     # R39 fix: register CLI flags for the 9 R38-added profile resolvers so
     # operators can override from CLI AND the arity validator can enforce
@@ -305,19 +323,33 @@ def evaluate_fp4(
     posenet,
     segnet,
     device: torch.device,
+    *,
+    fp4_codebook: str = "default",
+    fp4_robust_scale: bool = False,
 ) -> tuple[float, float, float]:
     """Evaluate the EMA model after FP4 round-trip quantization.
 
+    R-FP4-fix: codebook + robust_scale must match the QAT wrapper used during
+    training. Mismatched eval-time quantization gives a misleading FP4 scorer
+    (that's how the trend report's 93.44 plateau hid the real float→FP4 gap).
+
     Returns: (scorer, avg_pose, avg_seg)
     """
+    from tac.fp4_quantize import DEFAULT_CODEBOOK, RESIDUAL_CODEBOOK
+    codebook = (RESIDUAL_CODEBOOK if fp4_codebook == "residual"
+                else DEFAULT_CODEBOOK).clone()
+
     # Build a temporary model with FP4-quantized EMA weights
     orig_state = {k: v.clone() for k, v in model.state_dict().items()}
 
     # Load EMA weights
     ema.apply(model)
 
-    # FP4 round-trip: quantize then dequantize
-    fp4_packed = quantize_fp4(model.state_dict())
+    # FP4 round-trip: quantize then dequantize using the SAME codebook + scale
+    # path that QAT trained against.
+    fp4_packed = quantize_fp4(
+        model.state_dict(), codebook=codebook, robust_scale=fp4_robust_scale,
+    )
     fp4_state = dequantize_fp4(fp4_packed)
     model.load_state_dict(fp4_state)
     model.eval()
@@ -424,6 +456,13 @@ def train(args: argparse.Namespace):
 
     # Load GT frames
     gt_frames = load_gt_frames(args)
+    # R-FP4-fix: --max-frames lets trend/smoke runs use a small slice without
+    # repacking the precomputed file. Truncate to even count to preserve
+    # pair-construction invariants (every pair = even+odd frame).
+    if args.max_frames is not None and len(gt_frames) > args.max_frames:
+        n_keep = (args.max_frames // 2) * 2
+        gt_frames = gt_frames[:n_keep]
+        print(f"[data] --max-frames={args.max_frames} → truncated to {n_keep}")
     n_frames = len(gt_frames)
     print(f"[data] {n_frames} GT frames loaded, shape {gt_frames[0].shape}")
 
@@ -511,11 +550,24 @@ def train(args: argparse.Namespace):
     if device.type == "cuda":
         model = model.to(memory_format=torch.channels_last)
 
-    # Wrap with FP4 QAT if enabled
+    # Wrap with FP4 QAT if enabled. R-FP4-fix: pass codebook + robustness flags
+    # so the trend report's float→FP4 gap (93.44 plateau while float kept
+    # improving) can be closed by --fp4-codebook=residual --fp4-stochastic
+    # --fp4-robust-scale on residual-head renderers.
     qat_wrapper = None
     if args.use_qat:
-        qat_wrapper = QATRendererFP4(model).to(device)
-        print("[train] FP4 QAT enabled via forward hooks")
+        from tac.fp4_quantize import DEFAULT_CODEBOOK, RESIDUAL_CODEBOOK
+        codebook = (RESIDUAL_CODEBOOK if args.fp4_codebook == "residual"
+                    else DEFAULT_CODEBOOK).clone()
+        qat_wrapper = QATRendererFP4(
+            model,
+            codebook=codebook,
+            stochastic=args.fp4_stochastic,
+            robust_scale=args.fp4_robust_scale,
+        ).to(device)
+        print(f"[train] FP4 QAT enabled (codebook={args.fp4_codebook}, "
+              f"stochastic={args.fp4_stochastic}, "
+              f"robust_scale={args.fp4_robust_scale})")
 
     # Training infrastructure
     ema = EMA(model, decay=args.ema_decay)
@@ -762,6 +814,8 @@ def train(args: argparse.Namespace):
             scorer_val, eval_pose, eval_seg = evaluate_fp4(
                 model, ema, all_masks, gt_frames,
                 all_pair_starts, posenet, segnet, device,
+                fp4_codebook=args.fp4_codebook,
+                fp4_robust_scale=args.fp4_robust_scale,
             )
         else:
             # scorer_val is stale (carried from last eval) on non-eval epochs
@@ -789,11 +843,23 @@ def train(args: argparse.Namespace):
             best_epoch = epoch
             marker = " *BEST*"
 
-            # Save FP4 checkpoint from EMA weights
+            # Save FP4 checkpoint from EMA weights. R-FP4-fix: pass codebook +
+            # robust_scale to match what QAT trained against — mismatched
+            # quantization at save time silently corrupts the deployed model.
             save_state = ema.state_dict()
             fp4_path = out_dir / f"renderer_{args.tag}_best_fp4.pt"
-            fp4_packed = quantize_fp4(save_state)
+            from tac.fp4_quantize import DEFAULT_CODEBOOK, RESIDUAL_CODEBOOK
+            _save_codebook = (RESIDUAL_CODEBOOK if args.fp4_codebook == "residual"
+                              else DEFAULT_CODEBOOK).clone()
+            fp4_packed = quantize_fp4(
+                save_state,
+                codebook=_save_codebook,
+                robust_scale=args.fp4_robust_scale,
+            )
             fp4_packed["__meta__"] = {
+                "fp4_codebook": args.fp4_codebook,
+                "fp4_robust_scale": args.fp4_robust_scale,
+                "fp4_stochastic": args.fp4_stochastic,
                 "epoch": epoch,
                 "scorer": best_scorer,
                 "pose": eval_pose,

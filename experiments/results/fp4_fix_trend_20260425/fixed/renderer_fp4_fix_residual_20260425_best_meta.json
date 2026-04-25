@@ -1,0 +1,41 @@
+{
+  "epoch": 5,
+  "scorer": 93.44085567328467,
+  "pose": 182.91457080841064,
+  "seg": 0.5067234262824059,
+  "fp4_path": "experiments/results/fp4_fix_trend_20260425/fixed/renderer_fp4_fix_residual_20260425_best_fp4.pt",
+  "fp4_size": 66966,
+  "args": {
+    "base_ch": 24,
+    "mid_ch": 60,
+    "embed_dim": 6,
+    "motion_hidden": 24,
+    "depth": 1,
+    "pretrain_epochs": 5,
+    "epochs": 20,
+    "lr": 0.001,
+    "profile": "c3_residual_renderer_smoke",
+    "tag": "fp4_fix_residual_20260425",
+    "variant": "c3_residual_renderer",
+    "latent_ch": 6,
+    "latent_shapes": [
+      [
+        6,
+        8
+      ],
+      [
+        12,
+        16
+      ],
+      [
+        24,
+        32
+      ]
+    ],
+    "residual_hidden": 32,
+    "residual_layers": 2,
+    "residual_scale": 16.0,
+    "seed": 42,
+    "deterministic": true
+  }
+}
