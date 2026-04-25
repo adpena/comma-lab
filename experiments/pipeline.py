@@ -683,10 +683,11 @@ def step_engineered_corrections(cfg: PipelineConfig, renderer_bin: Path,
         return corrections_bin
 
     _log(f"[{step_name}] Computing SegNet-targeting corrections...")
+    video_path = Path(cfg.upstream) / "videos" / "0.mkv"
     cmd = [
         sys.executable, "-u", "experiments/engineered_quant_noise.py",
         "--checkpoint", str(renderer_bin),
-        "--upstream", str(cfg.upstream),
+        "--video", str(video_path),
         "--device", cfg.device,
         "--output-dir", str(iter_dir),
     ]

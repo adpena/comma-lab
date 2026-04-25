@@ -874,14 +874,23 @@ def main() -> None:
     mp_json_path = Path(cfg.mixed_precision_json) if cfg.mixed_precision_json else None
     if mp_json_path and mp_json_path.exists():
         # Mixed-precision MXLZ export (matches training allocation)
+        # WARNING: MXLZ format is NOT yet supported by inflate_renderer.py
+        # (standalone contest submission path). Use FP4A for contest submissions.
+        # MXLZ is for research/paper evaluation only until inflate support is added.
         print("\nExporting mixed-precision MXLZ binary...")
+        print("  WARNING: MXLZ not yet supported by inflate_renderer.py for contest submission")
         from tac.mixed_precision_export import export_int4_lzma2
         mp_data = json.loads(mp_json_path.read_text())
         bit_allocation = mp_data.get("allocation", {})
         fp4_path = out_dir / "renderer_mixed.bin"
         export_int4_lzma2(model, fp4_path, bit_allocation=bit_allocation)
+        # ALSO export FP4A for contest-compliant path
+        fp4a_path = out_dir / "renderer_fp4.bin"
+        from tac.renderer_export import export_asymmetric_checkpoint_fp4
+        export_asymmetric_checkpoint_fp4(model, fp4a_path)
+        print(f"  Also exported FP4A for contest: {fp4a_path.stat().st_size:,} bytes")
     else:
-        # Uniform FP4 export (default)
+        # Uniform FP4 export (default, contest-compliant)
         print("\nExporting FP4 binary...")
         from tac.renderer_export import export_asymmetric_checkpoint_fp4
         fp4_path = out_dir / "renderer_fp4.bin"
