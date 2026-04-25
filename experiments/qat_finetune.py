@@ -576,15 +576,7 @@ def main() -> None:
 
     load_float_checkpoint(model, cfg.checkpoint_path, device)
 
-    # ── Baseline quality (float, no quantization) ─────────────────────
-    print("\nBaseline quality (float32):")
-    baseline = evaluate_fp4_quality(model, masks, gt_frames, poses, device, zoom_warp=zoom_warp)
-    print(f"  pose_d={baseline['pose_d']:.5f} seg_d={baseline['seg_d']:.5f} "
-          f"distortion={baseline['distortion']:.3f}")
-
     # ── Prepare training data at scorer resolution ─────────────────────
-    # Store GT at 384x512 (scorer res), NOT 874x1164 (camera res).
-    # Camera res would be 1200*874*1164*3*4 = 14.6GB — OOM on most GPUs (I7 fix).
     from tac.camera import SEGNET_INPUT_H, SEGNET_INPUT_W
     n_pairs = masks.shape[0] // 2
     gt_frames_tensor = torch.stack([
@@ -595,11 +587,8 @@ def main() -> None:
         for f in gt_frames
     ])  # (N, 384, 512, 3)
 
-    best_distortion = float("inf")
-    best_state = None
-    history = []
-
     # ── Zoom warp for use_zoom_flow models ───────────────────────────
+    # MUST be before baseline eval — otherwise UnboundLocalError (Round 15 C1)
     zoom_warp = None
     if cfg.use_zoom_flow:
         from tac.radial_zoom import RadialZoomWarp
@@ -618,6 +607,16 @@ def main() -> None:
                 zoom_warp = load_zoom_scalars(zoom_path, device=str(device))
                 print(f"  Loaded zoom scalars from {zoom_path.name}")
         print(f"  RadialZoomWarp: {n_pairs} pairs")
+
+    # ── Baseline quality (float, no quantization) ─────────────────────
+    print("\nBaseline quality (float32):")
+    baseline = evaluate_fp4_quality(model, masks, gt_frames, poses, device, zoom_warp=zoom_warp)
+    print(f"  pose_d={baseline['pose_d']:.5f} seg_d={baseline['seg_d']:.5f} "
+          f"distortion={baseline['distortion']:.3f}")
+
+    best_distortion = float("inf")
+    best_state = None
+    history = []
 
     # ══════════════════════════════════════════════════════════════════
     # PHASE A: INT8 Warm-Up (progressive quantization)
