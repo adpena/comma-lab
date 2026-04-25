@@ -443,6 +443,12 @@ def _scan_python_for_forbidden(path: Path) -> list[str]:
     except SyntaxError:
         return [f"{path}: SyntaxError (cannot parse)"]
 
+    # R-mps-noise-rule 2026-04-25: NEW. Per CLAUDE.md "MPS auth eval is NOISE",
+    # detect any auth_eval invocation hardcoded to --device mps. Allowed only
+    # in test files / smoke tests (path contains "/tests/" or "/smoke").
+    is_test_or_smoke = ("/tests/" in str(path) or "/smoke" in str(path).lower()
+                        or "test_" in path.name)
+
     for node in ast.walk(tree):
         # subprocess.* / os.system with 'nohup' in args. R38 fix: extended
         # to subprocess.check_call/check_output and os.system.
@@ -466,6 +472,17 @@ def _scan_python_for_forbidden(path: Path) -> list[str]:
                                     violations.append(
                                         f"{path}:{node.lineno}: {func_str} with nohup arg — use tmux"
                                     )
+                # R-mps-noise: detect auth_eval invocations with --device mps.
+                # Allow in test/smoke paths.
+                if not is_test_or_smoke:
+                    full = ast.unparse(node) if hasattr(ast, "unparse") else ""
+                    if "auth_eval" in full and re.search(r"--device['\"\s,]+mps", full):
+                        violations.append(
+                            f"{path}:{node.lineno}: auth_eval invocation with "
+                            f"'--device mps' — MPS auth scores are NOISE per CLAUDE.md "
+                            f"HIGHEST-EMPHASIS rule (23x PoseNet drift verified 2026-04-25). "
+                            f"Use --device cuda."
+                        )
 
         # f-string SSH commands containing 'nohup ... &' (the killer pattern)
         if isinstance(node, ast.JoinedStr):
