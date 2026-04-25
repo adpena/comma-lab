@@ -59,14 +59,28 @@ def ssh_url(instance_id: int) -> tuple[str, int]:
     return host, int(port)
 
 
-def ssh(host: str, port: int, cmd: str, timeout: int = 30) -> str:
-    """Run a remote command via SSH, return stdout."""
+def ssh(host: str, port: int, cmd: str, timeout: int = 30,
+        allow_remote_failure: bool = False) -> str:
+    """Run a remote command via SSH, return stdout.
+
+    R38 fix: prior version silently swallowed non-zero remote exit codes
+    (capture_output without check, no returncode inspection). Every preflight
+    "X in out" check could false-pass on SSH failure. Now raises RuntimeError
+    on non-zero exit unless allow_remote_failure=True (for probes that
+    legitimately expect non-zero like `which tmux` on missing binary).
+    """
     full = [
         "ssh", "-o", "StrictHostKeyChecking=no",
         "-o", f"ConnectTimeout={min(timeout, 10)}",
         "-p", str(port), f"root@{host}", cmd,
     ]
     result = subprocess.run(full, capture_output=True, text=True, timeout=timeout)
+    if result.returncode != 0 and not allow_remote_failure:
+        raise RuntimeError(
+            f"SSH command failed (exit {result.returncode}) on {host}:{port}\n"
+            f"  cmd: {cmd[:120]}{'…' if len(cmd) > 120 else ''}\n"
+            f"  stderr: {(result.stderr or '').strip()[:300]}"
+        )
     return result.stdout
 
 
@@ -190,7 +204,15 @@ def sync_code(instance_id: int) -> None:
             f"{REPO_ROOT}/{src}",
             f"root@{host}:/workspace/pact/{src}",
         ]
-        subprocess.run(cmd, check=True, capture_output=True)
+        # R38 fix: surface rsync stderr on failure (was silenced by
+        # capture_output=True; CalledProcessError stack trace gave no
+        # actionable diagnostic).
+        rsync_result = subprocess.run(cmd, capture_output=True, text=True)
+        if rsync_result.returncode != 0:
+            raise RuntimeError(
+                f"rsync failed (exit {rsync_result.returncode}) syncing {src}\n"
+                f"  stderr: {(rsync_result.stderr or '').strip()[:500]}"
+            )
     print(f"[sync] OK")
 
 
@@ -218,7 +240,19 @@ def launch(profile: str, instance_id: int, sync: bool = True) -> str:
     # absolute path literally — no shell expansion needed at runtime.
     output_dir = f"experiments/results/{profile}"
     video = "/workspace/pact/upstream/videos/0.mkv"
-    checkpoint_glob = f"/workspace/pact/{output_dir}/distill_phase3_best.pt"
+    # R38 fix: probe remote for actual checkpoint name. Prior version
+    # hardcoded distill_phase3_best.pt — would FileNotFoundError loudly but
+    # with a misleading diagnostic if training saved under a different name
+    # (distill_phase2_best.pt, distill_latest.pt, qat_best_float.pt, etc.).
+    probe = ssh(host, port,
+                f"ls -t /workspace/pact/{output_dir}/*.pt 2>/dev/null | head -1",
+                timeout=15, allow_remote_failure=True).strip()
+    if not probe:
+        raise RuntimeError(
+            f"No .pt checkpoint found in /workspace/pact/{output_dir}/ on remote. "
+            f"Training must complete and save a checkpoint before deploy."
+        )
+    checkpoint_glob = probe
     venv_check = ssh(host, port,
                      "test -x /workspace/pact/.venv/bin/python3 && echo VENV || echo SYS",
                      timeout=15).strip()
@@ -260,10 +294,13 @@ def launch(profile: str, instance_id: int, sync: bool = True) -> str:
 
     # Postflight: verify tmux session is alive and process is running
     time.sleep(2)
-    sessions = ssh(host, port, f"tmux ls 2>/dev/null", timeout=10)
+    # tmux ls and pgrep both exit non-zero on no-match; tolerate that.
+    sessions = ssh(host, port, "tmux ls 2>/dev/null", timeout=10,
+                   allow_remote_failure=True)
     if session_name not in sessions:
         raise RuntimeError(f"tmux session {session_name} did not start. Output: {sessions}")
-    procs = ssh(host, port, "pgrep -af pipeline.py", timeout=10)
+    procs = ssh(host, port, "pgrep -af pipeline.py", timeout=10,
+                allow_remote_failure=True)
     if "pipeline.py" not in procs:
         raise RuntimeError(f"pipeline.py not running. tmux says: {sessions}")
     print(f"[launch] OK tmux session '{session_name}' running pipeline.py --profile {profile}")

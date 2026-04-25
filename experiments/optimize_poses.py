@@ -98,7 +98,9 @@ def parse_args() -> argparse.Namespace:
                    help="Output directory (default: timestamped)")
     p.add_argument("--video", type=str, default=None,
                    help="Path to GT video (default: upstream/videos/0.mkv)")
-    p.add_argument("--masks", type=str, default=None,
+    # R38 fix: was optional default=None — silent pose-mask distribution
+    # mismatch caused 27x PoseNet regression per CLAUDE.md. Make required.
+    p.add_argument("--masks", type=str, required=True,
                    help="Path to pre-decoded masks (.pt or .mkv). "
                         "CRITICAL: must match the actual archive masks, not fresh SegNet. "
                         "Without this, poses are optimized against perfect masks but "

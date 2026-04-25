@@ -128,6 +128,28 @@ def test_scanner_isolates_per_function_scope(tmp_path: Path) -> None:
     assert "--motion-hidden" in by_target["experiments/target_b.py"]
 
 
+def test_scanner_resolves_binop_list_concatenation(tmp_path: Path) -> None:
+    """R38 fix: launchers commonly do `cmd = base + extras` or
+    `["python", target] + flag_list`. Prior scanner returned None for
+    BinOp, silently skipping the invocation — Rule C/D could not fire.
+    """
+    launcher = tmp_path / "launcher.py"
+    _write(launcher, """
+        import subprocess
+        def run():
+            base = ["python", "experiments/qat.py", "--checkpoint", "x"]
+            extras = ["--motion-hidden", "24"]
+            cmd = base + extras
+            subprocess.run(cmd)
+    """)
+    invocations, _ = _scan_launcher_invocations(launcher)
+    assert len(invocations) == 1
+    _, target, flags = invocations[0]
+    assert target == "experiments/qat.py"
+    assert "--checkpoint" in flags
+    assert "--motion-hidden" in flags
+
+
 def test_scanner_walks_top_level_subprocess_calls(tmp_path: Path) -> None:
     """Top-level subprocess calls (not inside functions) must still be detected."""
     launcher = tmp_path / "launcher.py"
@@ -879,6 +901,74 @@ def test_filename_contract_write_prefix_function_return_is_produced(tmp_path: Pa
         strict=False, verbose=False,
     )
     assert violations == []
+
+
+def test_preflight_training_inputs_catches_gt_video_range(tmp_path) -> None:
+    """R38 regression: TTO frames at GT-video range [0,255] (max ~255)
+    must FAIL — this is the WILDE catastrophe. Frames at TTO-optimized
+    range cluster around max ~184."""
+    import torch
+    from tac.preflight import preflight_training_inputs, PreflightError
+    # Synthetic GT-video-range frames (max 255, NOT TTO-optimized)
+    bad = torch.randint(0, 256, (1200, 384, 512, 3), dtype=torch.uint8).float()
+    bad_path = tmp_path / "tto_frames.pt"
+    torch.save(bad, bad_path)
+    poses_path = tmp_path / "gt_poses.pt"
+    torch.save(torch.randn(600, 6), poses_path)
+    # Need a fake masks file too (ffprobe will fail but TTO check fires first)
+    masks_path = tmp_path / "masks.mkv"
+    masks_path.write_bytes(b"fake")
+    with pytest.raises(PreflightError, match="GT-video range"):
+        preflight_training_inputs(
+            tto_frames_path=bad_path, gt_poses_path=poses_path,
+            masks_path=masks_path, profile_name="test",
+            profile_arch={"base_ch": 32, "mid_ch": 48, "depth": 1,
+                          "pose_dim": 6, "padding_mode": "zeros",
+                          "eval_roundtrip": True},
+            verbose=False,
+        )
+
+
+def test_preflight_training_inputs_accepts_tto_optimized_range(tmp_path) -> None:
+    """Counterpart: frames at TTO-optimized range (max ~184) must PASS the
+    range check (mask ffprobe will still fail since masks file is fake;
+    we only verify the range check itself doesn't raise prematurely).
+    """
+    import torch
+    from tac.preflight import preflight_training_inputs, PreflightError
+    good = torch.rand(1200, 384, 512, 3) * 184  # TTO-optimized range
+    good_path = tmp_path / "tto_frames.pt"
+    torch.save(good, good_path)
+    poses_path = tmp_path / "gt_poses.pt"
+    torch.save(torch.randn(600, 6), poses_path)
+    masks_path = tmp_path / "masks.mkv"
+    masks_path.write_bytes(b"fake")
+    # Range check passes; ffprobe on fake masks raises later.
+    # We catch that and assert it's NOT the TTO-range error.
+    try:
+        preflight_training_inputs(
+            tto_frames_path=good_path, gt_poses_path=poses_path,
+            masks_path=masks_path, profile_name="test",
+            profile_arch={"base_ch": 32, "mid_ch": 48, "depth": 1,
+                          "pose_dim": 6, "padding_mode": "zeros",
+                          "eval_roundtrip": True},
+            verbose=False,
+        )
+    except PreflightError as e:
+        assert "GT-video range" not in str(e), (
+            f"TTO-optimized range was rejected as GT range: {e}"
+        )
+
+
+def test_preflight_check_rejects_wrong_pair_count_in_poses(tmp_path) -> None:
+    """R38 regression: the 1199-overlapping-pairs catastrophe. preflight_check
+    must reject pose tensors with the wrong N (not 600 for 600 pairs)."""
+    import torch
+    from tac.preflight import preflight_check, PreflightError
+    pose_path = tmp_path / "poses.pt"
+    torch.save(torch.randn(1199, 6), pose_path)
+    with pytest.raises(PreflightError):
+        preflight_check(poses_path=pose_path, verbose=False)
 
 
 def test_filename_contract_return_with_name_indirection_resolves(tmp_path: Path) -> None:

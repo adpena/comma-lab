@@ -241,9 +241,22 @@ def step_export(cfg: PipelineConfig, iteration: int = 0) -> Path:
     iter_dir = Path(cfg.output_dir) / f"iter_{iteration}"
     iter_dir.mkdir(parents=True, exist_ok=True)
 
+    # R38 fix: invalidate cache when cfg.checkpoint was modified after the
+    # .done_export marker (mirrors R36 step_eval mtime invalidation).
+    done_path = iter_dir / ".done_export"
     if _step_done(iter_dir, "export"):
-        _log(f"Export already done (iter {iteration}), skipping")
-        return iter_dir / "renderer.bin"
+        try:
+            ckpt_mtime = Path(cfg.checkpoint).stat().st_mtime
+            done_mtime = done_path.stat().st_mtime
+            if ckpt_mtime > done_mtime:
+                _log(f"Export cache stale: {cfg.checkpoint} modified after "
+                     f".done_export ({ckpt_mtime} > {done_mtime}), rerunning")
+            else:
+                _log(f"Export already done (iter {iteration}), skipping")
+                return iter_dir / "renderer.bin"
+        except (OSError, FileNotFoundError):
+            _log(f"Export already done (iter {iteration}), skipping")
+            return iter_dir / "renderer.bin"
 
     _log("Exporting checkpoint to FP4")
     from tac.renderer import AsymmetricPairGenerator
@@ -370,9 +383,19 @@ def step_pose_tto(cfg: PipelineConfig, iteration: int = 0) -> Path:
         return iter_dir / "optimized_poses.pt"
 
     _log(f"Pose TTO (up to {cfg.pose_max_steps} steps, converge at tol={cfg.pose_convergence_tol})")
+    # R38 fix: use the FP4-exported renderer.bin from THIS iteration's
+    # step_export, NOT the original cfg.checkpoint. Prior version optimized
+    # poses against the float training checkpoint while the archive shipped
+    # the FP4-quantized version → quantization-induced proxy-auth drift.
+    pose_tto_checkpoint = iter_dir / "renderer.bin"
+    if not pose_tto_checkpoint.exists():
+        # Fallback to cfg.checkpoint if step_export hasn't run yet (e.g.,
+        # called out-of-order); preserve old behavior so this fix is purely
+        # additive — no regression on currently-passing flows.
+        pose_tto_checkpoint = Path(cfg.checkpoint)
     cmd = [
         sys.executable, "-u", "experiments/optimize_poses.py",
-        "--checkpoint", cfg.checkpoint,
+        "--checkpoint", str(pose_tto_checkpoint),
         "--masks", cfg.masks,
         "--device", cfg.device,
         "--steps", str(cfg.pose_max_steps),
@@ -615,16 +638,27 @@ def step_fridrich_refine(cfg: PipelineConfig, iteration: int = 0) -> Path:
         )
 
     if _step_done(iter_dir, step_name):
-        _log(f"Fridrich refinement already done (iter {iteration}), skipping")
-        # Read the .done marker — if the previous run was a failure/timeout,
-        # we should NOT pretend a fridrich output exists.
+        # R38 fix: if the prior run was a failure/timeout, REMOVE the .done
+        # marker and re-run rather than blocking forever. Prior version
+        # logged a warning then short-circuited via fallback — the operator
+        # had to manually rm the marker to get retry.
         try:
             done_meta = json.loads((iter_dir / f".done_{step_name}").read_text())
-            if done_meta.get("failed") or done_meta.get("timeout") or done_meta.get("skipped"):
-                _log(f"  Previous Fridrich was {done_meta} — using QAT fallback", "WARN")
+            if done_meta.get("failed") or done_meta.get("timeout"):
+                _log(f"  Prior Fridrich was {done_meta} — clearing marker and retrying", "WARN")
+                (iter_dir / f".done_{step_name}").unlink()
+            elif done_meta.get("skipped"):
+                _log(f"  Fridrich previously skipped (no QAT input); using fallback")
+                return _resolve_fridrich_output()
+            else:
+                _log(f"Fridrich refinement already done (iter {iteration}), skipping")
+                return _resolve_fridrich_output()
         except (json.JSONDecodeError, FileNotFoundError):
-            pass
-        return _resolve_fridrich_output()
+            _log(f"Fridrich marker unreadable; running fresh")
+            try:
+                (iter_dir / f".done_{step_name}").unlink()
+            except FileNotFoundError:
+                pass
 
     # Find best QAT checkpoint to start from
     # qat_finetune.py saves: qat_best_float.pt, renderer_fp4.bin
@@ -1092,7 +1126,12 @@ def step_eval(cfg: PipelineConfig, renderer_bin: Path, archive_path: Path,
 # `RESULT_JSON: {...}` line; we json.loads + Pydantic-validate. No more
 # token-by-token guessing whether a number is a score, a timing measurement,
 # or a component breakdown. Schema-first per CLAUDE.md.
-_RESULT_JSON_RE = re.compile(r"^RESULT_JSON:\s*(\{.*\})\s*$", re.MULTILINE)
+# R38 fix: DOTALL so `.` matches newlines. The current emitter uses
+# json.dumps(separators=(',',':')) (compact, single-line) — but a future
+# pretty-print would silently produce score=None without DOTALL. Defense
+# in depth.
+_RESULT_JSON_RE = re.compile(r"^RESULT_JSON:\s*(\{.*?\})\s*$",
+                              re.MULTILINE | re.DOTALL)
 
 
 # NON-NEGOTIABLE CONTRACT: any breaking change to the RESULT_JSON payload

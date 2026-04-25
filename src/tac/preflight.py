@@ -188,8 +188,11 @@ def preflight_check(
             _fail(f"Archive not found: {archive_path}")
 
         try:
-            from tac.submission_archive import validate_archive, RENDERER_SUBMISSION_MANIFEST
-            result = validate_archive(archive_path, RENDERER_SUBMISSION_MANIFEST, strict=False)
+            # R38 fix: use detect_pose_manifest to autopick the right
+            # manifest based on which pose format the archive actually has.
+            from tac.submission_archive import validate_archive, detect_pose_manifest
+            manifest = detect_pose_manifest(archive_path)
+            result = validate_archive(archive_path, manifest, strict=False)
             if result.valid:
                 _pass(f"Archive: {result.archive_bytes:,}B, rate={result.rate_term:.4f}, valid")
             else:
@@ -212,25 +215,10 @@ def preflight_check(
     return warnings
 
 
-if __name__ == "__main__":
-    import argparse
-    parser = argparse.ArgumentParser(description="Preflight pipeline validator")
-    parser.add_argument("--renderer", type=str, default=None)
-    parser.add_argument("--masks", type=str, default=None)
-    parser.add_argument("--poses", type=str, default=None)
-    parser.add_argument("--archive", type=str, default=None)
-    args = parser.parse_args()
-
-    try:
-        preflight_check(
-            renderer_path=args.renderer,
-            masks_path=args.masks,
-            poses_path=args.poses,
-            archive_path=args.archive,
-        )
-    except PreflightError as e:
-        print(f"\nPREFLIGHT FAILED: {e}")
-        sys.exit(1)
+# Note: __main__ block moved to the bottom of the module so all validator
+# functions (preflight_all et al.) are defined before invocation. Was a
+# misleading-CLI bug per R38 — operators running `python -m tac.preflight`
+# only got artifact validation, silently skipping all 5 codebase layers.
 
 
 def preflight_all(
@@ -318,12 +306,27 @@ def preflight_training_inputs(
         t = torch.load(str(p), map_location="cpu", weights_only=True)
     except Exception as e:
         raise PreflightError(f"TTO frames corrupted (cannot torch.load): {p} — {e}")
-    if t.ndim != 4 or t.shape[1:] != (384, 512, 3):
-        raise PreflightError(f"TTO frames wrong shape {tuple(t.shape)} (expected (N,384,512,3)): {p}")
+    # R38 fix: accept HWC (N,384,512,3) OR CHW (N,3,384,512). Project history
+    # has had silent HWC/CHW format bugs; the validator should not assume one.
+    if t.ndim != 4:
+        raise PreflightError(f"TTO frames wrong ndim {t.ndim} (expected 4): {p}")
+    valid_shapes = {(384, 512, 3), (3, 384, 512)}
+    if tuple(t.shape[1:]) not in valid_shapes:
+        raise PreflightError(
+            f"TTO frames wrong shape {tuple(t.shape)} (expected (N,384,512,3) HWC "
+            f"or (N,3,384,512) CHW): {p}"
+        )
     tmin, tmax = float(t.min()), float(t.max())
     if not (0 <= tmin and tmax < 1e6):
         raise PreflightError(f"TTO frames out of range [{tmin},{tmax}] — likely corrupted: {p}")
-    is_gt_video = tmax > 200  # TTO-optimized frames cluster around max ~184
+    # R38 fix: support both [0,255] uint-scale and [0,1] normalized scale.
+    # If max ≤ 1.5, treat as [0,1] — TTO-optimized [0,1] frames cluster ~0.72.
+    # If max > 1.5, treat as [0,255] — TTO-optimized clusters ~184.
+    if tmax > 1.5:
+        is_gt_video = tmax > 200
+    else:
+        # [0,1] scale: GT frames clamp to ~1.0; TTO-optimized cluster ~0.72.
+        is_gt_video = tmax > 0.95
     if is_gt_video:
         raise PreflightError(
             f"TTO frames at GT-video range [0, {tmax:.0f}] — these are RAW GT FRAMES, "
@@ -343,6 +346,12 @@ def preflight_training_inputs(
             poses = poses.get("poses", poses.get("gt_poses"))
     except Exception as e:
         raise PreflightError(f"GT poses corrupted: {pp} — {e}")
+    # R38 fix: was AttributeError on poses=None when neither 'poses' nor
+    # 'gt_poses' key existed in the dict.
+    if poses is None:
+        raise PreflightError(
+            f"GT poses dict has neither 'poses' nor 'gt_poses' key: {pp}"
+        )
     if poses.ndim != 2 or poses.shape[1] != 6:
         raise PreflightError(f"GT poses wrong shape {tuple(poses.shape)} (expected (N,6)): {pp}")
     if poses.shape[0] not in (600, 1200):
@@ -435,10 +444,13 @@ def _scan_python_for_forbidden(path: Path) -> list[str]:
         return [f"{path}: SyntaxError (cannot parse)"]
 
     for node in ast.walk(tree):
-        # subprocess.run(...) / subprocess.Popen(...) with 'nohup' in args
+        # subprocess.* / os.system with 'nohup' in args. R38 fix: extended
+        # to subprocess.check_call/check_output and os.system.
         if isinstance(node, ast.Call):
             func_str = ast.unparse(node.func) if hasattr(ast, "unparse") else ""
-            if func_str in ("subprocess.run", "subprocess.Popen", "subprocess.call"):
+            if func_str in ("subprocess.run", "subprocess.Popen", "subprocess.call",
+                            "subprocess.check_call", "subprocess.check_output",
+                            "os.system", "os.popen"):
                 # Check positional args for 'nohup' string literal
                 for arg in node.args:
                     if isinstance(arg, ast.Constant) and isinstance(arg.value, str):
@@ -578,7 +590,9 @@ LAUNCHER_FILES = [
 ]
 
 # Target script directories: every .py here is a potential subprocess target.
-TARGET_DIRS = ["experiments", "scripts"]
+# R38 fix: src/tac/experiments/ added — train_renderer.py is a de-facto
+# launcher invoked directly via `python -m tac.experiments.train_renderer`.
+TARGET_DIRS = ["experiments", "scripts", "src/tac/experiments"]
 
 
 class ArityViolation(Exception):
@@ -638,16 +652,27 @@ def _parse_argparse_signature(path: Path) -> dict[str, dict] | None:
     return flags if has_argparse else None
 
 
-def _statically_resolve_list(node: ast.AST, scope: dict[str, ast.AST]) -> list[ast.AST] | None:
+def _statically_resolve_list(node, scope: dict) -> list | None:
     """Try to resolve `node` to a list of AST elements (literals or names).
 
-    Handles: List literal, Name → scope lookup, BinOp/list extend via .extend()
-    aren't fully tracked, but we record what we can.
+    Handles: List literal, Name → scope lookup (which may already be a
+    resolved Python list of AST nodes), BinOp `+` of two resolvable lists
+    (R38: closes an arity-validator escape hatch). `.extend()` is tracked
+    elsewhere (in scope's list_vars).
     """
+    # Already-resolved Python list of AST nodes (from scope's list_vars).
+    if isinstance(node, list):
+        return list(node)
     if isinstance(node, ast.List):
         return list(node.elts)
     if isinstance(node, ast.Name) and node.id in scope:
         return _statically_resolve_list(scope[node.id], scope)
+    # R38 fix: handle `cmd = ["a","b"] + extras` and `["x"] + flags` patterns.
+    if isinstance(node, ast.BinOp) and isinstance(node.op, ast.Add):
+        left = _statically_resolve_list(node.left, scope)
+        right = _statically_resolve_list(node.right, scope)
+        if left is not None and right is not None:
+            return left + right
     return None
 
 
@@ -711,11 +736,13 @@ def _extract_invocations_from_scope(
             else:
                 return
 
-        # Track `name = [...]`
+        # Track `name = [...]` and `name = a + b` (R38 BinOp).
         if isinstance(node, ast.Assign):
             if len(node.targets) == 1 and isinstance(node.targets[0], ast.Name):
-                if isinstance(node.value, ast.List):
-                    list_vars[node.targets[0].id] = list(node.value.elts)
+                # Try the full resolver — handles List, Name, BinOp(+).
+                resolved = _statically_resolve_list(node.value, list_vars)
+                if resolved is not None:
+                    list_vars[node.targets[0].id] = resolved
 
         # Track `name.extend([...])` and `name.append("--flag")`
         if isinstance(node, ast.Expr) and isinstance(node.value, ast.Call):
@@ -736,11 +763,12 @@ def _extract_invocations_from_scope(
             func_str = ast.unparse(node.func) if hasattr(ast, "unparse") else ""
             if func_str in _SUBPROCESS_FUNCS and node.args:
                 cmd_node = node.args[0]
-                elts: list[ast.AST] | None = None
-                if isinstance(cmd_node, ast.List):
-                    elts = list(cmd_node.elts)
-                elif isinstance(cmd_node, ast.Name) and cmd_node.id in list_vars:
-                    elts = list_vars[cmd_node.id]
+                # R38 fix: route through _statically_resolve_list so BinOp
+                # `+` patterns (cmd = ["a"] + flags) are tracked, closing
+                # the prior arity-validator escape hatch.
+                elts: list[ast.AST] | None = _statically_resolve_list(
+                    cmd_node, list_vars
+                )
                 if elts is not None:
                     target = _extract_target_script(elts)
                     flags = _extract_flag_strings(elts)
@@ -1384,11 +1412,22 @@ def preflight_profiles(strict: bool = True, verbose: bool = True) -> list[str]:
                 f"Expected one of {sorted(KNOWN_TYPES)}."
             )
             continue
+        # R38 fix: enforce eval_roundtrip=True on ALL training profile types
+        # ("training" + "renderer_training"), not just renderer_training.
+        # CLAUDE.md non-negotiable applies to every training path.
+        if etype in ("training", "renderer_training"):
+            if "eval_roundtrip" in prof and prof.get("eval_roundtrip") is not True:
+                violations.append(
+                    f"profile {name!r} has eval_roundtrip={prof.get('eval_roundtrip')!r}, "
+                    f"must be True (CLAUDE.md non-negotiable)"
+                )
         if etype not in RENDERER_TYPES:
             continue
         for key in PROFILE_REQUIRED_ARCH_KEYS:
             if key not in prof:
                 violations.append(f"profile {name!r} missing required arch key {key!r}")
+        # eval_roundtrip on renderer profiles is REQUIRED to be True (not just
+        # "if present, True").
         if prof.get("eval_roundtrip") is not True:
             violations.append(
                 f"profile {name!r} has eval_roundtrip={prof.get('eval_roundtrip')!r}, "
@@ -1397,9 +1436,15 @@ def preflight_profiles(strict: bool = True, verbose: bool = True) -> list[str]:
         pm = prof.get("padding_mode")
         if pm is not None and pm not in {"zeros", "replicate", "reflect", "circular"}:
             violations.append(f"profile {name!r} invalid padding_mode={pm!r}")
+        # R38 fix: catch non-int depth before int() raises ValueError.
         depth = prof.get("depth")
-        if depth is not None and not (1 <= int(depth) <= 4):
-            violations.append(f"profile {name!r} depth={depth} out of range [1,4]")
+        if depth is not None:
+            if not isinstance(depth, int):
+                violations.append(
+                    f"profile {name!r} depth={depth!r} type {type(depth).__name__}, expected int"
+                )
+            elif not (1 <= depth <= 4):
+                violations.append(f"profile {name!r} depth={depth} out of range [1,4]")
 
     if verbose and violations:
         print(f"  [profiles] {len(violations)} violation(s):")
@@ -1415,3 +1460,50 @@ def preflight_profiles(strict: bool = True, verbose: bool = True) -> list[str]:
             + "\n".join(f"  • {v}" for v in violations)
         )
     return violations
+
+
+if __name__ == "__main__":
+    import argparse
+    parser = argparse.ArgumentParser(
+        description="Preflight pipeline validator — runs ALL layers by default"
+    )
+    parser.add_argument("--renderer", type=str, default=None,
+                        help="Optional renderer .bin/.pt for artifact check")
+    parser.add_argument("--masks", type=str, default=None)
+    parser.add_argument("--poses", type=str, default=None)
+    parser.add_argument("--archive", type=str, default=None)
+    parser.add_argument("--no-codebase", action="store_true",
+                        help="Skip codebase / arity / profiles / filenames / arch_consistency")
+    parser.add_argument("--profile", type=str, default=None,
+                        help="Profile name for training-input validation")
+    parser.add_argument("--tto-frames", type=str, default=None)
+    parser.add_argument("--gt-poses", type=str, default=None)
+    args = parser.parse_args()
+
+    try:
+        # R38 fix: was preflight_check (artifact-only) — now preflight_all
+        # so the CLI runs the full 5-layer validation. Operators running
+        # `python -m tac.preflight` expected comprehensive validation.
+        profile_arch = None
+        if args.profile:
+            from tac.profiles import PROFILES
+            if args.profile not in PROFILES:
+                print(f"Unknown profile: {args.profile}", file=sys.stderr)
+                sys.exit(2)
+            profile_arch = PROFILES[args.profile]
+        preflight_all(
+            profile_name=args.profile,
+            profile_arch=profile_arch,
+            tto_frames_path=args.tto_frames,
+            gt_poses_path=args.gt_poses,
+            masks_path=args.masks,
+            renderer_path=args.renderer,
+            archive_path=args.archive,
+            check_codebase=not args.no_codebase,
+            verbose=True,
+        )
+        print("\nPREFLIGHT PASSED")
+    except (PreflightError, ArityViolation, FilenameContractError,
+            CodebaseDriftError) as e:
+        print(f"\nPREFLIGHT FAILED: {e}", file=sys.stderr)
+        sys.exit(1)

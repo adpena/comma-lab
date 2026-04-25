@@ -93,9 +93,25 @@ class TestPoseShape(unittest.TestCase):
     """Poses must be (n_pairs, 6) and match the number of mask pairs."""
 
     def test_pose_shape_matches_pairs(self):
-        """600 pairs need exactly 600 pose vectors."""
-        poses = torch.randn(600, 6)
-        self.assertEqual(poses.shape, (600, 6))
+        """R38 fix: was tautology test (assert randn(600,6).shape == (600,6)).
+        Now verifies preflight_check actually rejects wrong-shape poses,
+        regression-protecting the catastrophic 1199-overlapping-pairs bug.
+        """
+        from tac.preflight import preflight_check, PreflightError
+        # Wrong number of pairs (1199 overlapping vs 600 non-overlapping).
+        with tempfile.NamedTemporaryFile(suffix=".pt", delete=False) as f:
+            torch.save(torch.randn(1199, 6), f.name)
+            with self.assertRaises(PreflightError):
+                preflight_check(poses_path=f.name, verbose=False)
+        # Wrong DOF dimension.
+        with tempfile.NamedTemporaryFile(suffix=".pt", delete=False) as f:
+            torch.save(torch.randn(600, 5), f.name)
+            with self.assertRaises(PreflightError):
+                preflight_check(poses_path=f.name, verbose=False)
+        # Correct shape — must NOT raise.
+        with tempfile.NamedTemporaryFile(suffix=".pt", delete=False) as f:
+            torch.save(torch.randn(600, 6), f.name)
+            preflight_check(poses_path=f.name, verbose=False)
 
     def test_pose_fp32_and_fp16_roundtrip(self):
         """Poses saved as fp32, loaded as float — no precision issues."""

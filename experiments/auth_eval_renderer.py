@@ -124,7 +124,9 @@ def _load_renderer_checkpoint(ckpt_path: str, device: str) -> tuple[nn.Module, d
 
     # ── Binary formats (ASYM, DPSM, FP4A, I4LZ) ──
     # Use the canonical loader which handles ALL formats
-    if magic in (b"ASYM", b"DPSM", b"FP4A", b"I4LZ"):
+    # R38 fix: MXLZ added to dispatch. Mixed-precision LZMA2 was missing
+    # → fell through to .pt path → cryptic torch.load error on a binary file.
+    if magic in (b"ASYM", b"DPSM", b"FP4A", b"I4LZ", b"MXLZ"):
         try:
             from tac.renderer_export import load_any_renderer_checkpoint
             model = load_any_renderer_checkpoint(str(ckpt_path), device=device)
@@ -136,7 +138,7 @@ def _load_renderer_checkpoint(ckpt_path: str, device: str) -> tuple[nn.Module, d
 
         # Extract config from header (if present)
         config = {}
-        if magic in (b"ASYM", b"DPSM", b"FP4A"):
+        if magic in (b"ASYM", b"DPSM", b"FP4A", b"MXLZ"):
             header_len = struct.unpack("<I", raw_bytes[4:8])[0]
             config = json.loads(raw_bytes[8:8 + header_len].decode("utf-8"))
         elif magic == b"I4LZ" and hasattr(model, 'arch_dict'):

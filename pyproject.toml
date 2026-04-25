@@ -24,11 +24,16 @@ classifiers = [
     "Topic :: Scientific/Engineering :: Artificial Intelligence",
     "Typing :: Typed",
 ]
+# R38 fix: pin major versions to prevent silent runtime divergence across
+# fresh checkouts and remote deploys. Was unbounded `>=` ranges, which
+# meant `uv pip install --upgrade` could change behavior. Major-version
+# upper bounds preserve compatibility within a major (semver) while
+# preventing torch 2 → 3 jumps that could break CUDA kernels.
 dependencies = [
-    "torch>=2.0",
-    "pydantic>=2.0",
-    "numpy>=1.24",
-    "click>=8.0",
+    "torch>=2.0,<3.0",
+    "pydantic>=2.0,<3.0",
+    "numpy>=1.24,<3.0",
+    "click>=8.0,<9.0",
 ]
 
 [project.optional-dependencies]

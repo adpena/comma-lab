@@ -80,7 +80,11 @@ class QATConfig:
     max_flow_px: float = 20.0
     max_residual: float = 20.0
     use_dsconv: bool = False
-    padding_mode: str = "zeros"
+    # R38 fix: distill_distill.py overrides ArchConfig padding_mode to
+    # "replicate" (boundary-artifact avoidance per Yousfi). QAT default
+    # was "zeros" creating silent arch divergence with checkpoints trained
+    # by train_distill.py. Match the canonical training default.
+    padding_mode: str = "replicate"
     use_dilation: bool = False
     use_zoom_flow: bool = False
 
@@ -535,7 +539,7 @@ def main() -> None:
     parser.add_argument("--mid-ch", type=int, default=60)
     parser.add_argument("--pose-dim", type=int, default=6)
     parser.add_argument("--use-dsconv", action="store_true")
-    parser.add_argument("--padding-mode", type=str, default="zeros",
+    parser.add_argument("--padding-mode", type=str, default="replicate",
                         choices=["zeros", "reflect", "replicate", "circular"])
     parser.add_argument("--use-dilation", action="store_true")
     parser.add_argument("--motion-hidden", type=int, default=32,

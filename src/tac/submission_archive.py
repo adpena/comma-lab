@@ -186,6 +186,24 @@ RENDERER_COMPACT_MANIFEST = ArchiveManifest(
 )
 
 
+def detect_pose_manifest(archive_path) -> ArchiveManifest:
+    """R38 fix: inspect the archive and return whichever manifest matches
+    the pose format actually present. Prior code at validation sites used
+    a fixed manifest and reported false-negative MISSING for the other
+    pose format. Use this helper at every validation site to auto-pick.
+    """
+    import zipfile
+    try:
+        with zipfile.ZipFile(str(archive_path), "r") as zf:
+            names = set(zf.namelist())
+    except (zipfile.BadZipFile, FileNotFoundError):
+        # Default to .pt manifest; the validator will catch the missing zip.
+        return RENDERER_SUBMISSION_MANIFEST
+    if "optimized_poses.bin" in names:
+        return RENDERER_COMPACT_MANIFEST
+    return RENDERER_SUBMISSION_MANIFEST
+
+
 @dataclass
 class ArchiveValidationResult:
     """Result of archive validation."""

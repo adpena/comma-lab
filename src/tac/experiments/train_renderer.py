@@ -170,11 +170,42 @@ def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
     # Resolve variant from CLI, profile, or default
     args.variant = _resolve(args.variant, "variant", "mask_renderer")
 
-    args.base_ch = _resolve(args.base_ch, "hidden", 36)
+    # R38 fix: profiles canonically use "base_ch" key; "hidden" is a legacy
+    # alias used by older postfilter profiles. Try the canonical key first.
+    args.base_ch = _resolve(args.base_ch, "base_ch",
+                            profile_vals.get("hidden", 36))
     args.mid_ch = _resolve(args.mid_ch, "mid_ch", 60)
     args.embed_dim = _resolve(args.embed_dim, "embed_dim", 6)
     args.motion_hidden = _resolve(args.motion_hidden, "motion_hidden", 32)
     args.depth = _resolve(args.depth, "depth", 1)
+    # R38 fix: WILDE/SHIRAZ/GREEN profiles set use_dilation, padding_mode,
+    # use_dsconv, use_zoom_flow but train_renderer.py's resolver dropped
+    # them. Silent wrong-arch training. Add resolvers.
+    args.use_dilation = _resolve(getattr(args, "use_dilation", None),
+                                  "use_dilation", False)
+    args.padding_mode = _resolve(getattr(args, "padding_mode", None),
+                                  "padding_mode", "zeros")
+    args.use_dsconv = _resolve(getattr(args, "use_dsconv", None),
+                                "use_dsconv", False)
+    args.use_zoom_flow = _resolve(getattr(args, "use_zoom_flow", None),
+                                   "use_zoom_flow", False)
+    # Fridrich inverse-steganalysis losses (WILDE / SHIRAZ "competitive
+    # advantage" — were silently disabled by missing resolver):
+    args.use_texture_loss = _resolve(getattr(args, "use_texture_loss", None),
+                                      "use_texture_loss", False)
+    args.texture_loss_weight = _resolve(getattr(args, "texture_loss_weight", None),
+                                         "texture_loss_weight", 0.5)
+    args.use_linf_penalty = _resolve(getattr(args, "use_linf_penalty", None),
+                                      "use_linf_penalty", False)
+    args.linf_weight = _resolve(getattr(args, "linf_weight", None),
+                                 "linf_weight", 0.01)
+    args.use_markov_loss = _resolve(getattr(args, "use_markov_loss", None),
+                                     "use_markov_loss", False)
+    args.markov_weight = _resolve(getattr(args, "markov_weight", None),
+                                   "markov_weight", 0.1)
+    args.use_per_class_weights = _resolve(getattr(args, "use_per_class_weights", None),
+                                           "use_per_class_weights", False)
+    args.use_swa = _resolve(getattr(args, "use_swa", None), "use_swa", False)
     args.latent_ch = _resolve(args.latent_ch, "latent_ch", 8)
     args.latent_shapes = profile_vals.get("latent_shapes", ((6, 8), (12, 16), (24, 32)))
     args.residual_hidden = _resolve(args.residual_hidden, "residual_hidden", 32)
