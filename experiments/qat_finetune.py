@@ -99,7 +99,6 @@ class QATConfig:
 
     # FP4 quantization
     fp4_block_size: int = 32          # weights per scale group
-    mixed_precision: bool = True      # keep Embedding + FiLM Linear in FP16
 
     # Scorer loss (must match float training)
     seg_weight: float = 100.0
@@ -167,7 +166,6 @@ def load_float_checkpoint(model: nn.Module, path: str, device: torch.device) -> 
             state = ckpt
         model.load_state_dict(state, strict=True)
         print(f"  Loaded .pt checkpoint from {path}")
-    print(f"  Loaded float checkpoint from {path}")
 
 
 def apply_int8_fake_quant(model: nn.Module) -> list[tuple[nn.Module, str]]:
@@ -202,19 +200,16 @@ def remove_parametrizations(wrapped: list[tuple[nn.Module, str]]) -> None:
 def apply_fp4_fake_quant(
     model: nn.Module,
     block_size: int = 32,
-    mixed_precision: bool = True,
 ) -> list[tuple[nn.Module, str]]:
-    """Wrap quantizable layers with FP4 FakeQuant STE (Phase B).
+    """Wrap ALL quantizable layers with FP4 FakeQuant STE (Phase B).
 
-    Mixed precision (research-backed):
-      - Conv2d, ConvTranspose2d: FP4 (bulk of parameters, most benefit)
-      - Embedding: FP4 (only 30 params, but large impact on class boundaries)
-      - Linear (FiLM): SKIP if mixed_precision=True (small layers, high sensitivity)
+    Wraps Conv2d, ConvTranspose2d, Embedding, and Linear (including FiLM).
+    All layers are quantized because export_asymmetric_checkpoint_fp4 quantizes
+    ALL layers — training must match deployment exactly.
 
     Args:
         model: the renderer to wrap
         block_size: FP4 block size (32 = default, good for small models)
-        mixed_precision: if True, skip FiLM Linear layers
 
     Returns:
         list of (module, param_name) for cleanup
@@ -223,10 +218,6 @@ def apply_fp4_fake_quant(
 
     wrapped = []
     for name, module in model.named_modules():
-        # NOTE: We considered skipping FiLM Linear layers (mixed precision) but
-        # export_asymmetric_checkpoint_fp4 quantizes ALL layers including FiLM.
-        # Training must match deployment — if FiLM is FP4 at inference, it must
-        # be FP4 during QAT. (I5 fix from adversarial review)
         if isinstance(module, (nn.Conv2d, nn.ConvTranspose2d, nn.Embedding, nn.Linear)):
             if hasattr(module, "weight") and module.weight.ndim >= 2:
                 nn.utils.parametrize.register_parametrization(
@@ -236,9 +227,7 @@ def apply_fp4_fake_quant(
                 )
                 wrapped.append((module, "weight"))
 
-    n_fp4 = len(wrapped)
-    n_skip = sum(1 for _, m in model.named_modules() if isinstance(m, nn.Linear) and "film" in _.lower())
-    print(f"  FP4 parametrized: {n_fp4} layers, skipped: {n_skip} FiLM Linear layers")
+    print(f"  FP4 parametrized: {len(wrapped)} layers (all Conv/Linear/Embedding)")
     return wrapped
 
 
@@ -450,8 +439,6 @@ def main() -> None:
     parser.add_argument("--batch-size", type=int, default=4)
 
     # Control
-    parser.add_argument("--no-mixed-precision", action="store_true",
-                        help="Quantize ALL layers including FiLM (not recommended)")
     parser.add_argument("--skip-int8-warmup", action="store_true",
                         help="Skip INT8 warm-up phase (direct FP4)")
 
@@ -472,7 +459,6 @@ def main() -> None:
         fp4_epochs=args.fp4_epochs,
         base_lr=args.lr,
         batch_size=args.batch_size,
-        mixed_precision=not args.no_mixed_precision,
     )
 
     # Preflight
@@ -490,7 +476,6 @@ def main() -> None:
     print(f"  Float checkpoint: {cfg.checkpoint_path}")
     print(f"  Schedule: {cfg.int8_warmup_epochs} INT8 warm-up + {cfg.fp4_epochs} FP4")
     print(f"  LR: {cfg.base_lr} (cosine → 0)")
-    print(f"  Mixed precision: {cfg.mixed_precision} (FiLM layers in FP16)")
     print(f"  Device: {cfg.device}")
     print()
 
@@ -549,6 +534,8 @@ def main() -> None:
             "use_dsconv": header.get("use_dsconv", cfg.use_dsconv),
             "depth": header.get("depth", cfg.depth),
             "embed_dim": header.get("embed_dim", cfg.embed_dim),
+            "padding_mode": header.get("padding_mode", cfg.padding_mode),
+            "use_dilation": header.get("use_dilation", cfg.use_dilation),
         }
         if any(detected_cfg[k] != getattr(cfg, k) for k in detected_cfg):
             print(f"  Auto-detected architecture from ASYM header:")
@@ -655,7 +642,6 @@ def main() -> None:
     fp4_wrapped = apply_fp4_fake_quant(
         model,
         block_size=cfg.fp4_block_size,
-        mixed_precision=cfg.mixed_precision,
     )
 
     optimizer = torch.optim.Adam(model.parameters(), lr=cfg.base_lr, weight_decay=1e-4)

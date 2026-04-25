@@ -396,10 +396,10 @@ class FP4Parametrize(nn.Module):
 class QATRendererFP4(nn.Module):
     """Wraps a PairGenerator with FP4 fake quantization during training.
 
-    Uses nn.utils.parametrize on Conv2d, ConvTranspose2d, and Embedding
-    layers to inject fake FP4 quantization noise. The parametrization
-    intercepts the weight access so the forward pass sees quantized weights
-    while gradients flow through the STE to the original FP32 parameters.
+    Uses nn.utils.parametrize on Conv2d, ConvTranspose2d, Embedding, and
+    Linear layers to inject fake FP4 quantization noise. ALL layer types
+    are wrapped because export_asymmetric_checkpoint_fp4 quantizes ALL
+    layers — training must match deployment exactly.
 
     Biases are left in full precision (negligible size contribution).
     """
@@ -424,7 +424,7 @@ class QATRendererFP4(nn.Module):
         called from both Phase 1 and Phase 2 — C1 fix).
         """
         for module in self.base.modules():
-            if isinstance(module, (nn.Conv2d, nn.ConvTranspose2d, nn.Embedding)):
+            if isinstance(module, (nn.Conv2d, nn.ConvTranspose2d, nn.Embedding, nn.Linear)):
                 if hasattr(module, "weight") and module.weight.ndim >= 2:
                     if nn.utils.parametrize.is_parametrized(module, "weight"):
                         continue  # already wrapped — skip to prevent double quantization
