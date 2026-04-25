@@ -648,11 +648,13 @@ def main():
             ).squeeze(1).long()
             print(f"  Upsampled to {gt_masks.shape}")
     else:
-        print(f"  ERROR: --masks is required. Poses MUST be optimized against the")
-        print(f"  EXACT masks that will be in the archive. Using fresh SegNet masks")
-        print(f"  causes 27x PoseNet regression at deployment.")
-        print(f"  Pass --masks <path_to_archive_masks.mkv>")
-        sys.exit(1)
+        # R39 fix: dead branch — argparse required=True guarantees args.masks
+        # is set, so the `if args.masks:` above is always True. Keeping a
+        # defensive raise here in case argparse ever gets relaxed.
+        raise RuntimeError(
+            "--masks is required (argparse required=True). If you reached "
+            "this branch, the requirement was relaxed — restore it."
+        )
 
     if args.gt_pose_targets and Path(args.gt_pose_targets).exists():
         pose_targets = torch.load(args.gt_pose_targets, map_location="cpu", weights_only=True).float()

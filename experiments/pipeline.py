@@ -243,7 +243,11 @@ def step_export(cfg: PipelineConfig, iteration: int = 0) -> Path:
 
     # R38 fix: invalidate cache when cfg.checkpoint was modified after the
     # .done_export marker (mirrors R36 step_eval mtime invalidation).
+    # R39 fix: also verify renderer.bin actually EXISTS on disk before
+    # returning; the phantom-path bug class (R23/R34) was reintroduced if
+    # someone deleted renderer.bin while .done_export survived.
     done_path = iter_dir / ".done_export"
+    bin_path = iter_dir / "renderer.bin"
     if _step_done(iter_dir, "export"):
         try:
             ckpt_mtime = Path(cfg.checkpoint).stat().st_mtime
@@ -251,12 +255,17 @@ def step_export(cfg: PipelineConfig, iteration: int = 0) -> Path:
             if ckpt_mtime > done_mtime:
                 _log(f"Export cache stale: {cfg.checkpoint} modified after "
                      f".done_export ({ckpt_mtime} > {done_mtime}), rerunning")
+            elif not bin_path.exists():
+                _log(f"Export marker present but renderer.bin missing — "
+                     f"forcing re-export to avoid phantom path", "WARN")
             else:
                 _log(f"Export already done (iter {iteration}), skipping")
-                return iter_dir / "renderer.bin"
+                return bin_path
         except (OSError, FileNotFoundError):
-            _log(f"Export already done (iter {iteration}), skipping")
-            return iter_dir / "renderer.bin"
+            if bin_path.exists():
+                _log(f"Export already done (iter {iteration}), skipping")
+                return bin_path
+            _log(f"Export marker unreadable + bin missing, forcing re-export", "WARN")
 
     _log("Exporting checkpoint to FP4")
     from tac.renderer import AsymmetricPairGenerator
@@ -387,11 +396,16 @@ def step_pose_tto(cfg: PipelineConfig, iteration: int = 0) -> Path:
     # step_export, NOT the original cfg.checkpoint. Prior version optimized
     # poses against the float training checkpoint while the archive shipped
     # the FP4-quantized version → quantization-induced proxy-auth drift.
+    # R39 fix: WARN loudly when falling back so operators see the regression
+    # (silent fallback would re-introduce the original bug invisibly).
     pose_tto_checkpoint = iter_dir / "renderer.bin"
     if not pose_tto_checkpoint.exists():
-        # Fallback to cfg.checkpoint if step_export hasn't run yet (e.g.,
-        # called out-of-order); preserve old behavior so this fix is purely
-        # additive — no regression on currently-passing flows.
+        _log(
+            f"renderer.bin missing for iter {iteration} — pose TTO will use "
+            f"the float cfg.checkpoint ({cfg.checkpoint}). This silently reverts "
+            f"the FP4-checkpoint TTO fix; verify step_export ran.",
+            "WARN",
+        )
         pose_tto_checkpoint = Path(cfg.checkpoint)
     cmd = [
         sys.executable, "-u", "experiments/optimize_poses.py",
@@ -642,23 +656,42 @@ def step_fridrich_refine(cfg: PipelineConfig, iteration: int = 0) -> Path:
         # marker and re-run rather than blocking forever. Prior version
         # logged a warning then short-circuited via fallback — the operator
         # had to manually rm the marker to get retry.
-        try:
-            done_meta = json.loads((iter_dir / f".done_{step_name}").read_text())
-            if done_meta.get("failed") or done_meta.get("timeout"):
-                _log(f"  Prior Fridrich was {done_meta} — clearing marker and retrying", "WARN")
-                (iter_dir / f".done_{step_name}").unlink()
-            elif done_meta.get("skipped"):
-                _log(f"  Fridrich previously skipped (no QAT input); using fallback")
-                return _resolve_fridrich_output()
-            else:
-                _log(f"Fridrich refinement already done (iter {iteration}), skipping")
-                return _resolve_fridrich_output()
-        except (json.JSONDecodeError, FileNotFoundError):
-            _log(f"Fridrich marker unreadable; running fresh")
+        # R39 fix: also re-check skipped precondition (qat_best_float.pt
+        # may have appeared since the skip). And on retry, remove any
+        # partial fridrich/ output to prevent stale .pt globs.
+        def _clear_marker_and_partial() -> None:
             try:
                 (iter_dir / f".done_{step_name}").unlink()
             except FileNotFoundError:
                 pass
+            # Remove only .pt files in fridrich/ — keep config.json etc.
+            fridrich_dir = iter_dir / "fridrich"
+            if fridrich_dir.exists():
+                for stale in fridrich_dir.glob("*.pt"):
+                    try:
+                        stale.unlink()
+                    except OSError:
+                        pass
+
+        try:
+            done_meta = json.loads((iter_dir / f".done_{step_name}").read_text())
+            if done_meta.get("failed") or done_meta.get("timeout"):
+                _log(f"  Prior Fridrich was {done_meta} — clearing marker + partial output, retrying", "WARN")
+                _clear_marker_and_partial()
+            elif done_meta.get("skipped"):
+                # R39: re-check whether the skip precondition still holds.
+                if (iter_dir / "qat_best_float.pt").exists():
+                    _log(f"  Fridrich was skipped but qat_best_float.pt now exists — retrying", "WARN")
+                    _clear_marker_and_partial()
+                else:
+                    _log(f"  Fridrich previously skipped (no QAT input); using fallback")
+                    return _resolve_fridrich_output()
+            else:
+                _log(f"Fridrich refinement already done (iter {iteration}), skipping")
+                return _resolve_fridrich_output()
+        except (json.JSONDecodeError, FileNotFoundError):
+            _log(f"Fridrich marker unreadable; running fresh", "WARN")
+            _clear_marker_and_partial()
 
     # Find best QAT checkpoint to start from
     # qat_finetune.py saves: qat_best_float.pt, renderer_fp4.bin

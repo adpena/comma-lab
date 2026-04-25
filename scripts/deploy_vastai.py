@@ -240,22 +240,44 @@ def launch(profile: str, instance_id: int, sync: bool = True) -> str:
     # absolute path literally — no shell expansion needed at runtime.
     output_dir = f"experiments/results/{profile}"
     video = "/workspace/pact/upstream/videos/0.mkv"
-    # R38 fix: probe remote for actual checkpoint name. Prior version
-    # hardcoded distill_phase3_best.pt — would FileNotFoundError loudly but
-    # with a misleading diagnostic if training saved under a different name
-    # (distill_phase2_best.pt, distill_latest.pt, qat_best_float.pt, etc.).
-    probe = ssh(host, port,
-                f"ls -t /workspace/pact/{output_dir}/*.pt 2>/dev/null | head -1",
-                timeout=15, allow_remote_failure=True).strip()
-    if not probe:
+    # R38+R39 fix: probe remote for actual checkpoint name with whitelist
+    # protection. Prior version (R38) hardcoded distill_phase3_best.pt and
+    # then `ls -t | head -1` would silently pick the most-recent .pt — could
+    # be a stale partial save from a failed Fridrich/QAT run. R39 restricts
+    # to canonical training-output basenames + logs the choice loudly.
+    # R39+: removed distill_best.pt — no producer writes that name
+    # (caught by preflight_filename_contract on first run; R33 removed
+    # it from _resolve_fridrich_output for the same reason).
+    CANONICAL_CHECKPOINT_NAMES = (
+        "distill_phase3_best.pt",
+        "distill_phase2_best.pt",
+        "qat_best_float.pt",
+        "distill_latest.pt",
+    )
+    # Try each canonical name in priority order; first hit wins.
+    checkpoint_glob = None
+    for name in CANONICAL_CHECKPOINT_NAMES:
+        candidate = f"/workspace/pact/{output_dir}/{name}"
+        check = ssh(host, port, f"test -f {shlex.quote(candidate)} && echo OK || echo MISS",
+                    timeout=10, allow_remote_failure=False).strip()
+        if "OK" in check:
+            checkpoint_glob = candidate
+            print(f"[preflight] OK probed checkpoint: {candidate}")
+            break
+    if checkpoint_glob is None:
         raise RuntimeError(
-            f"No .pt checkpoint found in /workspace/pact/{output_dir}/ on remote. "
-            f"Training must complete and save a checkpoint before deploy."
+            f"No canonical checkpoint found in /workspace/pact/{output_dir}/ on remote.\n"
+            f"  Expected one of: {', '.join(CANONICAL_CHECKPOINT_NAMES)}\n"
+            f"  Training must complete and save under a canonical name before deploy.\n"
+            f"  If the actual filename differs, add it to CANONICAL_CHECKPOINT_NAMES."
         )
-    checkpoint_glob = probe
+    # R39 fix: pass allow_remote_failure=True since `test -x` exits non-zero
+    # when the venv path doesn't exist. The `|| echo SYS` branch makes the
+    # outer command exit 0, but a future simplification could remove that
+    # branch and silently start crashing in preflight.
     venv_check = ssh(host, port,
                      "test -x /workspace/pact/.venv/bin/python3 && echo VENV || echo SYS",
-                     timeout=15).strip()
+                     timeout=15, allow_remote_failure=True).strip()
     if "VENV" in venv_check:
         python_bin = "/workspace/pact/.venv/bin/python3"
     elif "SYS" in venv_check:

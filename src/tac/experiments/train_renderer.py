@@ -117,6 +117,31 @@ def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
                    help="Enable FP4 QAT (default: on; --no-qat to disable)")
     p.add_argument("--no-qat", dest="use_qat", action="store_false")
     p.set_defaults(use_qat=True)
+
+    # R39 fix: register CLI flags for the 9 R38-added profile resolvers so
+    # operators can override from CLI AND the arity validator can enforce
+    # them. dest=None on store_true means default to None (not False) so
+    # _resolve() can detect "user did not pass" vs "user passed False".
+    p.add_argument("--use-dilation", action="store_true", default=None,
+                   help="Enable Conv2d dilation (profile-driven)")
+    p.add_argument("--padding-mode", type=str, default=None,
+                   choices=["zeros", "reflect", "replicate", "circular"],
+                   help="Conv2d padding mode (profile default 'zeros'; renderer profiles use 'replicate')")
+    p.add_argument("--use-dsconv", action="store_true", default=None,
+                   help="Depthwise-separable convolutions")
+    p.add_argument("--use-zoom-flow", action="store_true", default=None,
+                   help="GREEN profile: 4ch MotionPredictor + RadialZoomWarp")
+    p.add_argument("--use-texture-loss", action="store_true", default=None,
+                   help="Fridrich UNIWARD: hide errors in textured regions")
+    p.add_argument("--texture-loss-weight", type=float, default=None)
+    p.add_argument("--use-linf-penalty", action="store_true", default=None,
+                   help="Fridrich square root law: spread errors")
+    p.add_argument("--linf-weight", type=float, default=None)
+    p.add_argument("--use-markov-loss", action="store_true", default=None,
+                   help="Fridrich HUGO: preserve local gradient statistics")
+    p.add_argument("--markov-weight", type=float, default=None)
+    p.add_argument("--use-per-class-weights", action="store_true", default=None)
+    p.add_argument("--use-swa", action="store_true", default=None)
     p.add_argument("--even-frame-skip-seg", action="store_true", default=False,
                    help="Trick 3: skip SegNet loss when frame_t1 is even-indexed "
                    "(SegNet only evaluates odd frames in the scorer)")
