@@ -500,9 +500,43 @@ def step_fridrich_refine(cfg: PipelineConfig, iteration: int = 0) -> Path:
     iter_dir.mkdir(parents=True, exist_ok=True)
     step_name = "fridrich_refine"
 
+    def _resolve_fridrich_output() -> Path:
+        """Find the best Fridrich refinement output, with explicit fallbacks.
+
+        R31 fix: prior version returned a hardcoded `fridrich/distill_phase2_best.pt`
+        path that may not exist if train_distill.py used a different name.
+        Glob the fridrich subdir; on resume from failure, fall back to QAT.
+        """
+        fridrich_dir = iter_dir / "fridrich"
+        if fridrich_dir.exists():
+            for candidate in (fridrich_dir / "distill_phase2_best.pt",
+                              fridrich_dir / "distill_best.pt",
+                              fridrich_dir / "distill_latest.pt"):
+                if candidate.exists():
+                    return candidate
+            pts = sorted(fridrich_dir.glob("*.pt"))
+            if pts:
+                return pts[-1]
+        # No Fridrich output exists — fall back to the QAT pre-Fridrich checkpoint.
+        for fb in (iter_dir / "qat_best_float.pt", iter_dir / "renderer_qat.bin",
+                   iter_dir / "renderer_fp4.bin"):
+            if fb.exists():
+                return fb
+        # Last resort: the input checkpoint (cfg.checkpoint), so the pipeline
+        # can continue with the un-refined model rather than silently breaking.
+        return Path(cfg.checkpoint)
+
     if _step_done(iter_dir, step_name):
         _log(f"Fridrich refinement already done (iter {iteration}), skipping")
-        return iter_dir / "renderer_fridrich.bin"
+        # Read the .done marker — if the previous run was a failure/timeout,
+        # we should NOT pretend a fridrich output exists.
+        try:
+            done_meta = json.loads((iter_dir / f".done_{step_name}").read_text())
+            if done_meta.get("failed") or done_meta.get("timeout") or done_meta.get("skipped"):
+                _log(f"  Previous Fridrich was {done_meta} — using QAT fallback", "WARN")
+        except (json.JSONDecodeError, FileNotFoundError):
+            pass
+        return _resolve_fridrich_output()
 
     # Find best QAT checkpoint to start from
     # qat_finetune.py saves: qat_best_float.pt, renderer_fp4.bin
@@ -512,7 +546,7 @@ def step_fridrich_refine(cfg: PipelineConfig, iteration: int = 0) -> Path:
     if not qat_ckpt.exists():
         _log("No QAT checkpoint found, skipping Fridrich refinement", "WARN")
         _mark_done(iter_dir, step_name, {"skipped": True})
-        return iter_dir / "renderer_fp4.bin"
+        return _resolve_fridrich_output()
 
     _log("Fridrich steganalytic refinement (100 epochs, Fridrich-only)")
     cmd = [
@@ -565,17 +599,19 @@ def step_fridrich_refine(cfg: PipelineConfig, iteration: int = 0) -> Path:
     except subprocess.TimeoutExpired:
         _log("Fridrich refinement timed out after 2h, falling back to QAT output", "WARN")
         _mark_done(iter_dir, step_name, {"failed": True, "timeout": True})
-        return iter_dir / "renderer_qat.bin"
+        return _resolve_fridrich_output()
     elapsed = time.monotonic() - t0
 
     if result.returncode != 0:
         _log(f"Fridrich refinement failed (exit {result.returncode})", "WARN")
         _mark_done(iter_dir, step_name, {"failed": True})
-        return iter_dir / "renderer_qat.bin"
+        return _resolve_fridrich_output()
 
     _log(f"  Fridrich refinement complete in {elapsed/60:.1f} min")
     _mark_done(iter_dir, step_name, {"elapsed_s": round(elapsed)})
-    return iter_dir / "fridrich" / "distill_phase2_best.pt"
+    # R31: glob for the actual best checkpoint instead of returning a hardcoded
+    # path that may not exist if train_distill.py used a different filename.
+    return _resolve_fridrich_output()
 
 
 def step_compress_weights(
@@ -874,13 +910,22 @@ def step_eval(cfg: PipelineConfig, renderer_bin: Path, archive_path: Path,
     stdout_log = iter_dir / "auth_eval.stdout.log"
     stderr_log = iter_dir / "auth_eval.stderr.log"
     t0 = time.monotonic()
+    timed_out = False
     with stdout_log.open("w") as out_f, stderr_log.open("w") as err_f:
         try:
             result = subprocess.run(cmd, stdout=out_f, stderr=err_f, timeout=3600)
         except subprocess.TimeoutExpired:
-            raise RuntimeError(
-                "Auth eval timed out after 1h — should typically take 20-30 min on T4"
-            )
+            # Mark in-stream so postmortem readers know the log was truncated.
+            timed_out = True
+    if timed_out:
+        # Append the sentinel AFTER the with block closes the file so the
+        # marker is the last line, not interleaved with kernel-buffered writes.
+        with stdout_log.open("a") as out_f:
+            out_f.write("\n[PIPELINE TIMEOUT — eval killed after 1h]\n")
+        raise RuntimeError(
+            "Auth eval timed out after 1h — should typically take 20-30 min "
+            f"on T4. See {stdout_log} (last line marked TIMEOUT)."
+        )
     elapsed = time.monotonic() - t0
 
     _log(f"  Complete in {elapsed/60:.1f} min")
@@ -920,6 +965,14 @@ def step_eval(cfg: PipelineConfig, renderer_bin: Path, archive_path: Path,
 _RESULT_JSON_RE = re.compile(r"^RESULT_JSON:\s*(\{.*\})\s*$", re.MULTILINE)
 
 
+# NON-NEGOTIABLE CONTRACT: any breaking change to the RESULT_JSON payload
+# emitted by `experiments/auth_eval_renderer.py` MUST bump BOTH:
+#   1. EXPECTED_AUTH_EVAL_SCHEMA below
+#   2. The `schema_version` int in `auth_eval_renderer.py`'s _result_payload
+# Adding a new optional field is NOT a breaking change (extra='ignore' tolerates
+# it). Removing a field, renaming, or changing types IS a breaking change.
+# Mismatched versions raise RuntimeError at parse time, surfacing the drift
+# loudly per the schema-first standard.
 EXPECTED_AUTH_EVAL_SCHEMA = 1
 
 
