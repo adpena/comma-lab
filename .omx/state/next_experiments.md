@@ -165,3 +165,14 @@
 - DP-SIMS independent generation + FiLM (pending smoke test)
 - Constrained generation from noise + FiLM + hinge (gated behind Lane 2)
 - SIREN/NeRV memorization (lane open, Cool-chic validates paradigm)
+
+## 2026-04-25 NUCLEAR queue (post Rounds 23-26)
+- NUCLEAR: half-frame mask encoder at 384×512, CRF sweep 24..48 (CPU only)
+- NUCLEAR: SHIRAZ Phase 3 → inflate.sh → upstream evaluate.py auth eval (local)
+- NUCLEAR: implement even-from-odd warp in inflate_renderer.py
+- After auth: decide v2 (beneficial_quant_noise) deploy based on SHIRAZ proxy-auth gap
+- Open architectural gaps (do not deploy v2 until):
+  - train_distill.py needs --profile flag
+  - deterministic seeding (cudnn, numpy, random)
+  - data hashes / lockfile
+  - download subcommand for deploy_vastai

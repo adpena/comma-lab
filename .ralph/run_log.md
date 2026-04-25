@@ -302,3 +302,24 @@ Cost: 9 × $0.29 = $2.61. High information density — maps full Pareto drift tr
   - uniform int4+LZMA2 trend export: `16,493 B`.
 - Interpretation: C3 residual has a real float-path learning signal, but the gain is not surviving FP4 evaluation. Next blocker is quantization robustness / mixed precision, not basic architecture viability.
 - CPU replay of 8-frame Cool-Chic smoke: scorer-stable vs MPS (`93.6397169` CPU vs `93.6397184` MPS), but tensor delta up to `0.0147`.
+
+## 2026-04-25T14:41Z — Rounds 23-26: SHIRAZ-class bug class hardened
+
+Five rounds of fresh-eyes adversarial review (each with 3-5 parallel reviewers from rotating council perspectives) found 19 distinct bugs in the deployment chain across the validator system, pipeline orchestration, profile loading, archive packaging, and remote sync. Every CRITICAL is now fixed and pinned by tests. Commit chain:
+
+- 3793a32e fix: Round 22-24 — qat_finetune missing arch CLI args, pipeline arch propagation, optimize_poses .pt loader
+- (preflight commit) preflight: arity + profile + boolean-flag SHIRAZ guards (R23+R24)
+- 04392166 critical: kill ad-hoc deployment forever — canonical pipeline only
+- (battleplan) battleplan: R23+R24 postmortem, NUCLEAR experiments today, kill list
+- (R25) fix: Round 25 — pipeline --profile, deploy_vastai compress subcommand, full provenance
+- (R26) fix: Round 26 — _apply_profile honest semantics, kwarg-filter PipelineConfig, fail loud on typo
+
+Validator state: 23/23 tests pass in `src/tac/tests/test_preflight_arity.py` covering: arity rules A-D, short-form alias indexing, per-scope list_vars isolation, top-level subprocess detection, bash -c wrapper detection, profile load, CLI override semantics, typo detection, unknown-profile failure. preflight_arity + preflight_profiles + check_codebase_drift run clean against the live repo.
+
+Pipeline canonicalization: `pipeline.py compress --profile X --video Y --checkpoint Z` is the single entry point. Profile fills defaults; explicit CLI flags win. PipelineConfig built via kwarg-filter from args so new fields auto-thread. Full provenance (git hash, GPU, PyTorch, platform, timestamp) saved to pipeline_config.json. deploy_vastai.py launch invokes the proper subcommand.
+
+NUCLEAR experiments queued (zero-GPU, run TODAY):
+1. Half-frame mask AV1 sweep at 384×512 (CRF 24..48) — int8 overflow already fixed in encode_masks_monochrome (R25 reviewer corrected my battleplan claim)
+2. SHIRAZ Phase 3 → immediate auth eval before any v2 deploy
+3. Even-frame-warp-from-odd at inflate (Quantizr paradigm) — same architectural change as #1, NOT additive (R25 reviewer caught my double-counting)
+
