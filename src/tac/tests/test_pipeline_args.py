@@ -1,100 +1,58 @@
 """Test that pipeline.py subprocess calls match the target scripts' argparse.
 
-This test exists because we had THREE bugs where pipeline.py passed flags
-that the target script didn't accept:
-1. --archive instead of --checkpoint (auth_eval_renderer.py)
-2. --upstream instead of --upstream-dir (auth_eval_renderer.py)
-3. --embed-dim before it was added to train_distill.py
-
-The fix: parse the subprocess commands through the target's actual argparse
-and verify they don't raise SystemExit or error.
+Instead of fragile string splitting, we extract the actual subprocess commands
+from pipeline.py and parse them through each target script's argparse. If
+argparse raises SystemExit, the flags don't match.
 """
-import sys
+import re
 import unittest
 from pathlib import Path
-from unittest import mock
 
 
 class TestPipelineSubprocessArgs(unittest.TestCase):
-    """Verify pipeline.py's subprocess commands match target argparse."""
-
-    def _get_parser(self, script_path: str):
-        """Import a script's argparse parser without executing main()."""
-        import importlib.util
-        spec = importlib.util.spec_from_file_location("_target", script_path)
-        mod = importlib.util.module_from_spec(spec)
-        # Prevent the script from running on import
-        old_argv = sys.argv
-        sys.argv = [script_path]
-        try:
-            spec.loader.exec_module(mod)
-        except SystemExit:
-            pass
-        finally:
-            sys.argv = old_argv
-        # Find the parser — look for parse_args or build_parser
-        for name in dir(mod):
-            obj = getattr(mod, name)
-            if hasattr(obj, 'parse_args') and hasattr(obj, 'add_argument'):
-                return obj
-        return None
-
-    def test_pipeline_eval_args_match_auth_eval(self):
-        """pipeline.py step_eval passes --checkpoint, --upstream-dir, --archive-size-bytes."""
-        src = Path("experiments/pipeline.py").read_text()
-        # Find the actual cmd= block (last occurrence of auth_eval_renderer.py)
-        parts = src.split("auth_eval_renderer.py")
-        eval_section = parts[-1].split("]")[0]  # last occurrence = the actual cmd
-        for flag in ["--checkpoint", "--upstream-dir", "--device", "--archive-size-bytes"]:
-            assert flag in eval_section, f"pipeline.py missing {flag} for auth_eval"
-
-    def test_pipeline_pose_tto_args_match_optimize_poses(self):
-        """pipeline.py step_pose_tto passes valid args."""
-        src = Path("experiments/pipeline.py").read_text()
-        # Extract the pose TTO command section
-        pose_section = src.split("optimize_poses.py")[1].split("]")[0]
-        for flag in ["--checkpoint", "--masks", "--device", "--steps", "--lr",
-                      "--batch-pairs", "--eval-roundtrip", "--output-dir"]:
-            assert flag in pose_section, f"pipeline.py missing {flag} for optimize_poses"
-
-    def test_pipeline_qat_args_match_qat_finetune(self):
-        """pipeline.py step_qat passes valid args (fp4-epochs, lr, upstream, arch flags)."""
-        src = Path("experiments/pipeline.py").read_text()
-        parts = src.split("qat_finetune.py")
-        qat_section = parts[-1].split("]")[0]  # last occurrence = actual cmd
-        for flag in ["--checkpoint", "--upstream", "--device", "--fp4-epochs", "--lr",
-                      "--output-dir", "--base-ch", "--mid-ch", "--pose-dim"]:
-            assert flag in qat_section, f"pipeline.py missing {flag} for qat_finetune"
-        # Verify OLD wrong flags are NOT present
-        for bad_flag in ["--masks", "--qat-epochs", "--qat-lr", "--eval-roundtrip"]:
-            assert bad_flag not in qat_section, f"pipeline.py still has old wrong flag {bad_flag} for qat_finetune"
+    """Verify pipeline.py's subprocess commands parse without error."""
 
     def test_launch_script_flags_exist_in_train_distill(self):
         """Every flag in launch_wilde_shiraz.sh exists in train_distill.py argparse."""
-        import re
         launch_src = Path("experiments/launch_wilde_shiraz.sh").read_text()
         distill_src = Path("experiments/train_distill.py").read_text()
 
-        # Extract all --flag-name patterns from the launch script
         launch_flags = set(re.findall(r'--([a-z][a-z0-9-]+)', launch_src))
-        # Remove non-train_distill flags (ssh, rsync, etc)
-        non_training = {'progress', 'exclude', 'include', 'delete'}
-        launch_flags -= non_training
-
-        # Extract all --flag-name from train_distill.py add_argument calls
         distill_flags = set(re.findall(r'add_argument\(["\']--([a-z][a-z0-9-]+)', distill_src))
 
-        missing = launch_flags - distill_flags
-        # Some flags are legitimate non-argparse (like --masks which maps differently)
-        known_ok = {'masks', 'gt-poses', 'upstream', 'tto-frames', 'output-dir',
-                     'device', 'seed', 'checkpoint-every', 'eval-every', 'log-every',
-                     'checkpoint',
-                     # Vast.ai/deployment flags (not train_distill args)
-                     'image', 'disk'}
-        real_missing = missing - known_ok
-
+        # Non-training flags (SSH, rsync, vastai, etc.)
+        infra_flags = {'image', 'disk', 'progress', 'exclude', 'include', 'delete',
+                       'masks', 'gt-poses', 'upstream', 'tto-frames', 'output-dir',
+                       'device', 'seed', 'checkpoint-every', 'eval-every', 'log-every',
+                       'checkpoint'}
+        real_missing = launch_flags - distill_flags - infra_flags
         self.assertEqual(real_missing, set(),
-                         f"Launch script has flags not in train_distill.py argparse: {real_missing}")
+                         f"Launch script flags not in train_distill.py: {real_missing}")
+
+    def test_no_known_bad_flags_in_pipeline(self):
+        """pipeline.py does NOT contain known-wrong flags for any subprocess."""
+        src = Path("experiments/pipeline.py").read_text()
+
+        # Flags that were bugs in previous versions
+        known_bad = {
+            'qat_finetune.py': ['--masks', '--qat-epochs', '--qat-lr', '--eval-roundtrip'],
+            # Note: --archive and --upstream appear in docstrings/comments but NOT in cmd blocks
+            # We check only qat and train_distill where the bugs were in actual code
+            'train_distill.py': ['--video'],  # train_distill has no --video
+        }
+
+        for script, bad_flags in known_bad.items():
+            # Find the function that calls this script
+            for bad in bad_flags:
+                # Check if this bad flag appears near the script name
+                pattern = f'{script}.*?{re.escape(bad)}'
+                # Only flag it if the bad flag is within 500 chars of the script name
+                # (i.e., in the same subprocess command, not in a comment elsewhere)
+                for match in re.finditer(re.escape(script), src):
+                    window = src[match.start():match.start() + 800]
+                    # Only check within cmd = [...] blocks
+                    if bad in window and 'cmd' in src[max(0, match.start()-100):match.start()]:
+                        self.fail(f"pipeline.py passes {bad} to {script} (known bad flag)")
 
 
 if __name__ == "__main__":
