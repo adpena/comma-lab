@@ -673,7 +673,7 @@ def step_engineered_corrections(cfg: PipelineConfig, renderer_bin: Path,
     to match GT. Stored as gradient_corrections.bin for inflate-time application.
     Contest-compliant: no scorers at inflate time.
     """
-    iter_dir = Path(cfg.output_dir) / f"iter_{iteration:03d}"
+    iter_dir = Path(cfg.output_dir) / f"iter_{iteration}"
     step_name = "engineered_corrections"
     done_marker = iter_dir / f".done_{step_name}"
     corrections_bin = iter_dir / "gradient_corrections.bin"
@@ -686,11 +686,11 @@ def step_engineered_corrections(cfg: PipelineConfig, renderer_bin: Path,
     cmd = [
         sys.executable, "-u", "experiments/engineered_quant_noise.py",
         "--checkpoint", str(renderer_bin),
-        "--upstream", str(cfg.upstream_dir),
+        "--upstream", str(cfg.upstream),
         "--device", cfg.device,
         "--output-dir", str(iter_dir),
     ]
-    result = subprocess.run(cmd, env=_pipeline_env())
+    result = subprocess.run(cmd)
     if result.returncode != 0:
         _log(f"[{step_name}] WARNING: Failed (exit {result.returncode}), skipping corrections")
         return None
