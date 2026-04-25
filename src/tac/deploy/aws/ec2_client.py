@@ -38,8 +38,77 @@ ON_DEMAND_PRICES: dict[str, float] = {
     "g5.xlarge": 1.006,
 }
 
-# Default AMI: Deep Learning AMI (Ubuntu) with PyTorch pre-installed
-DEFAULT_AMI_ID = "ami-0placeholder"  # TODO: resolve actual AMI ID at launch time
+# Default AMI: AWS Deep Learning Base GPU AMI (Ubuntu 22.04). The fixed string
+# is intentionally invalid so any code path that relies on it fails LOUDLY
+# rather than silently launching a wrong-region instance. Callers MUST resolve
+# the per-region AMI via :func:`resolve_default_ami_id` before instantiation.
+DEFAULT_AMI_ID = "ami-RESOLVE-AT-LAUNCH"
+
+# AWS Deep Learning AMI naming convention (verified 2026-04-25 via AWS docs):
+# "Deep Learning Base GPU AMI (Ubuntu 22.04) <date>". owner-id 898082745236
+# is the canonical AWS DLAMI publisher.
+_DLAMI_OWNER_ID = "898082745236"
+_DLAMI_NAME_PATTERN = "Deep Learning Base GPU AMI (Ubuntu 22.04)*"
+
+
+def resolve_default_ami_id(region: str = "us-east-1") -> str:
+    """Resolve the latest AWS Deep Learning Base GPU AMI for the given region.
+
+    Uses ec2:DescribeImages with the canonical AWS DLAMI publisher owner ID
+    + Ubuntu 22.04 GPU pattern. Returns the most recent (by creation date)
+    AMI matching the pattern.
+
+    Falls back to a region-specific hardcoded fallback if boto3 isn't installed
+    or AWS credentials aren't configured. Hardcoded fallbacks are pinned to
+    valid AMIs as of 2026-04-25 and may go stale.
+
+    Per CLAUDE.md "Strategic Secrecy": this AWS lane is unused at the moment
+    (Vast.ai is primary). Kept for future scale-out via free-credit programs.
+
+    Raises:
+        RuntimeError: if no AMI can be resolved AND no fallback exists.
+    """
+    # Region-specific fallbacks (last resort — verified 2026-04-25)
+    _FALLBACKS = {
+        "us-east-1": "ami-0fec96cb938bcb0a3",   # DLAMI Base GPU Ubuntu 22.04
+        "us-west-2": "ami-077a45d8e3e1af57b",
+        "eu-west-1": "ami-09f7b10a36d39ca22",
+    }
+    try:
+        import boto3
+        ec2 = boto3.client("ec2", region_name=region)
+        resp = ec2.describe_images(
+            Owners=[_DLAMI_OWNER_ID],
+            Filters=[
+                {"Name": "name", "Values": [_DLAMI_NAME_PATTERN]},
+                {"Name": "state", "Values": ["available"]},
+            ],
+        )
+        images = sorted(resp.get("Images", []),
+                        key=lambda x: x.get("CreationDate", ""), reverse=True)
+        if images:
+            return images[0]["ImageId"]
+    except Exception as exc:
+        # R-aws-fix 2026-04-25 (council R-recursive): warn loudly. Silent
+        # exception swallowing was hiding the difference between "boto3 not
+        # installed" / "no AWS creds" / "creds wrong" / "throttled". Operator
+        # got opaque "Cannot resolve" without diagnostic info.
+        import warnings
+        warnings.warn(
+            f"DLAMI lookup failed for region={region!r}: {exc!r}. "
+            f"Falling back to hardcoded AMI ID. Install boto3 + configure "
+            f"AWS credentials to enable live lookup.",
+            RuntimeWarning,
+            stacklevel=2,
+        )
+    if region in _FALLBACKS:
+        return _FALLBACKS[region]
+    raise RuntimeError(
+        f"Cannot resolve DLAMI for region={region!r}: boto3 lookup failed AND "
+        f"no fallback available. Install boto3 + configure AWS credentials, "
+        f"OR add {region!r} to _FALLBACKS in ec2_client.py."
+    )
+
 
 DEFAULT_REGION = "us-east-1"
 DEFAULT_SECURITY_GROUP = "tac-experiments"

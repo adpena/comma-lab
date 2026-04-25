@@ -37,29 +37,29 @@ POLL_INTERVAL = 30  # seconds
 PROXY_THRESHOLD = 3.55  # scorer below this → proxy-score candidate
 MPS_WATERMARK = "0.0"
 
-# Default queue if none exists
+# Default queue if none exists.
+#
+# HISTORY: the historical modal_h96_deploy.py + modal_h128 references pointed
+# to scripts that no longer exist (Modal credits exhausted per CLAUDE.md
+# memory; Vast.ai is the primary platform).
+#
+# IMPORTANT: launch_mps_job is the ONLY dispatcher in this module. The runner
+# does NOT yet have a vastai dispatch branch — Vast.ai launches go through
+# scripts/deploy_vastai.py (separate tool). Keep this queue MPS-executable;
+# anything platform != mps would silently sit unrun (council R-recursive
+# review caught this). For Vast.ai dispatch, use:
+#     python scripts/deploy_vastai.py --profile <name> --instance-id <id>
+#
+# Per CLAUDE.md "Canonical Pipeline Standard": all experiments through
+# experiments/pipeline.py with a profile name.
 DEFAULT_QUEUE = [
     {
-        "tag": "standard_h64_long2500",
-        "cmd": "experiments/train_postfilter_qat_ema.py --hidden 64 --epochs 2500 --alpha 20 --tag standard_h64_long2500",
+        "tag": "smoke_pipeline",
+        # Smoke profile: 1 epoch, validates pipeline plumbing on local MPS
+        "cmd": "experiments/pipeline.py compress --profile smoke --device mps",
         "platform": "mps",
-        "status": "running",
-        "priority": 1,
-    },
-    {
-        "tag": "h96_modal",
-        "cmd": "modal run experiments/modal_h96_deploy.py",
-        "platform": "modal",
-        "status": "running",
-        "priority": 1,
-    },
-    {
-        "tag": "standard_h128_modal",
-        "cmd": "modal run experiments/modal_h96_deploy.py",  # TODO: h128 config
-        "platform": "modal",
         "status": "queued",
-        "priority": 2,
-        "depends_on": "h96_modal",
+        "priority": 1,
     },
 ]
 
@@ -116,6 +116,16 @@ def is_process_alive(tag: str) -> bool:
 
 
 def launch_mps_job(job: dict) -> subprocess.Popen | None:
+    # R-mps-noise-guard 2026-04-25: per CLAUDE.md HIGHEST-EMPHASIS rule
+    # "MPS auth eval is NOISE", reject any auth_eval invocation on MPS.
+    # Verified 2026-04-25: PoseNet drifts 23x between MPS and CUDA on the
+    # same archive. MPS is only acceptable for smoke / proxy / code-correctness.
+    cmd_str = job.get("cmd", "")
+    if "auth_eval" in cmd_str or "evaluate.py" in cmd_str:
+        log(f"REJECT: auth eval on MPS is NOISE (CLAUDE.md non-negotiable). "
+            f"job={job['tag']}, cmd={cmd_str}. Use scripts/deploy_vastai.py "
+            f"to dispatch on CUDA instead.")
+        return None
     cmd = f"{VENV_PYTHON} -u {job['cmd']}"
     log_path = f"/tmp/{job['tag']}.log"
     env = {**os.environ, "PYTORCH_MPS_HIGH_WATERMARK_RATIO": MPS_WATERMARK}
