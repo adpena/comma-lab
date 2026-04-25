@@ -1266,6 +1266,8 @@ def parse_args() -> argparse.Namespace:
     p.add_argument("--output-dir", type=str, default=None)
 
     # Architecture
+    p.add_argument("--embed-dim", type=int, default=6,
+                   help="Per-class embedding dimension (must match scorer: 5 classes)")
     p.add_argument("--pose-dim", type=int, default=6)
     p.add_argument("--base-ch", type=int, default=36)
     p.add_argument("--mid-ch", type=int, default=60)
@@ -1281,6 +1283,10 @@ def parse_args() -> argparse.Namespace:
                    help="Dilated ResBlocks [1,2,4] cascade (3x receptive field, 0 extra params)")
     p.add_argument("--use-zoom-flow", action="store_true",
                    help="Zoom mode: MotionPredictor outputs gate+residual only (4ch), flow from ego_flow")
+
+    # Optimizer
+    p.add_argument("--weight-decay", type=float, default=1e-4)
+    p.add_argument("--grad-clip", type=float, default=1.0)
 
     # Training
     p.add_argument("--device", type=str, default="cuda", choices=["cuda", "mps", "cpu"])
@@ -1385,6 +1391,9 @@ def main() -> None:
         upstream_dir=args.upstream,
         device=args.device,
         seed=args.seed,
+        embed_dim=args.embed_dim,
+        weight_decay=args.weight_decay,
+        grad_clip=args.grad_clip,
         pose_dim=args.pose_dim,
         base_ch=args.base_ch,
         mid_ch=args.mid_ch,
