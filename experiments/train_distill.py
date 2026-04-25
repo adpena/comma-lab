@@ -72,7 +72,14 @@ RESULTS_DIR = (
 # ---------------------------------------------------------------------------
 @dataclass
 class DistillConfig:
-    """All hyperparameters for distillation training."""
+    """All hyperparameters for distillation training.
+
+    Architecture defaults are sourced from ``tac.renderer.ArchConfig``.
+    ``padding_mode`` is overridden to "replicate" (Yousfi: zeros creates
+    boundary artifacts) and ``pose_dim`` to 6 (FiLM conditioning) because
+    those are the proven training defaults even though the model constructor
+    defaults differ.
+    """
 
     def __post_init__(self):
         if not (0.0 <= self.hard_frame_ratio <= 1.0):
@@ -80,19 +87,21 @@ class DistillConfig:
         if self.loss_mode not in ("standard", "pcgrad", "focal_ste"):
             raise ValueError(f"loss_mode must be standard/pcgrad/focal_ste, got {self.loss_mode!r}")
 
-    # Architecture (must match checkpoint)
-    embed_dim: int = 6
-    base_ch: int = 36
-    mid_ch: int = 60
-    motion_hidden: int = 32
-    depth: int = 1
-    pose_dim: int = 6  # FiLM conditioning on pose vectors
-    max_flow_px: float = 20.0
-    max_residual: float = 20.0
-    use_dsconv: bool = False  # Depthwise-separable convolutions (fewer params, wider channels)
-    padding_mode: str = "replicate"  # Yousfi: zeros creates boundary artifacts
-    use_dilation: bool = False  # Dilated ResBlocks [1,2,4] cascade (3x receptive field, 0 extra params)
-    use_zoom_flow: bool = False  # Zoom mode: MotionPredictor outputs gate+residual only (4ch), flow from ego_flow
+    # Architecture — defaults from ArchConfig (see tac.renderer.ArchConfig).
+    # padding_mode and pose_dim intentionally differ from ArchConfig constructor
+    # defaults: replicate avoids boundary artifacts (Yousfi), pose_dim=6 enables FiLM.
+    embed_dim: int = 6      # ArchConfig default: 6
+    base_ch: int = 36       # ArchConfig default: 36
+    mid_ch: int = 60        # ArchConfig default: 60
+    motion_hidden: int = 32  # ArchConfig default: 32
+    depth: int = 1          # ArchConfig default: 1
+    pose_dim: int = 6       # ArchConfig default: 6 (FiLM conditioning on pose vectors)
+    max_flow_px: float = 20.0   # ArchConfig default: 20.0
+    max_residual: float = 20.0  # ArchConfig default: 20.0
+    use_dsconv: bool = False  # ArchConfig default: False — depthwise-separable convolutions
+    padding_mode: str = "replicate"  # ArchConfig default: "zeros" — override: Yousfi says zeros creates boundary artifacts
+    use_dilation: bool = False  # ArchConfig default: False — dilated ResBlocks [1,2,4] cascade
+    use_zoom_flow: bool = False  # ArchConfig default: False — zoom mode: flow from ego_flow
 
     # Data paths
     tto_frames_path: str = "experiments/results/tto_v7_hinge_500/tto_frames.pt"
@@ -291,26 +300,31 @@ def create_model(cfg: DistillConfig, device: torch.device) -> nn.Module:
     return model
 
 
-def _make_zoom_flow(cfg: DistillConfig, batch_idx: "torch.Tensor",
-                    H: int, W: int, device: "torch.device") -> "torch.Tensor | None":
-    """Compute identity zoom flow for use_zoom_flow=True models.
+def _compute_ego_flow(
+    zoom_warp: "nn.Module | None",
+    batch_idx: "torch.Tensor",
+    H: int, W: int,
+) -> "torch.Tensor | None":
+    """Compute identity zoom flow when zoom_warp is available.
 
-    During renderer training, zoom scalars are NOT optimized — they stay at
+    During renderer training, zoom scalars are NOT optimized -- they stay at
     identity (zero). The MotionPredictor learns gate+residual corrections for
     the identity warp. Post-training, optimize_zoom_scalars() finds the optimal
     zoom per pair via gradient descent through PoseNet.
 
-    Returns (B, 2, H, W) flow or None if zoom not enabled.
+    Args:
+        zoom_warp: A RadialZoomWarp instance created during training setup,
+            or None if use_zoom_flow is disabled.
+        batch_idx: pair indices for the current batch.
+        H: spatial height.
+        W: spatial width.
+
+    Returns:
+        (B, 2, H, W) flow tensor, or None if zoom_warp is None.
     """
-    if not cfg.use_zoom_flow:
+    if zoom_warp is None:
         return None
-    # Import lazily to avoid circular deps
-    from tac.radial_zoom import RadialZoomWarp
-    if not hasattr(_make_zoom_flow, '_zoom_warp'):
-        n_pairs = 600  # fixed for this competition
-        _make_zoom_flow._zoom_warp = RadialZoomWarp(n_pairs=n_pairs).to(device)
-        print(f"  [zoom] Created RadialZoomWarp ({n_pairs} pairs, identity init)")
-    return _make_zoom_flow._zoom_warp(batch_idx, H=H, W=W)
+    return zoom_warp(batch_idx, H=H, W=W)
 
 
 def load_checkpoint_weights(model: nn.Module, path: str, device: torch.device) -> None:
@@ -627,6 +641,7 @@ def train_phase1(
     device: torch.device,
     start_epoch: int = 0,
     ema: object | None = None,
+    zoom_warp: nn.Module | None = None,
 ) -> int:
     """Phase 1: pixel regression warm-start.
 
@@ -683,7 +698,7 @@ def train_phase1(
             pose = poses[batch_idx].to(device) if poses is not None else None
 
             # Forward pass — use train_model (has QAT wrapper if enabled)
-            ego_flow = _make_zoom_flow(cfg, batch_idx, mask_even.shape[1], mask_even.shape[2], device)
+            ego_flow = _compute_ego_flow(zoom_warp, batch_idx, mask_even.shape[1], mask_even.shape[2])
             predicted_pairs = train_model(mask_even, mask_odd, pose=pose, ego_flow=ego_flow)  # (B, 2, H, W, 3)
 
             # L1 loss
@@ -735,6 +750,7 @@ def train_phase2(
     device: torch.device,
     start_epoch: int = 0,
     ema: object | None = None,
+    zoom_warp: nn.Module | None = None,
 ) -> tuple[int, torch.Tensor, nn.Module]:
     """Phase 2: scorer-guided fine-tuning.
 
@@ -860,7 +876,7 @@ def train_phase2(
             pose = poses[batch_idx].to(device) if poses is not None else None
 
             # Forward pass — use train_model (has QAT wrapper if enabled)
-            ego_flow = _make_zoom_flow(cfg, batch_idx, mask_even.shape[1], mask_even.shape[2], device)
+            ego_flow = _compute_ego_flow(zoom_warp, batch_idx, mask_even.shape[1], mask_even.shape[2])
             predicted_pairs = train_model(mask_even, mask_odd, pose=pose, ego_flow=ego_flow)
 
             # Pixel loss (anchor toward TTO quality)
@@ -982,6 +998,7 @@ def train_phase3(
     start_epoch: int = 0,
     train_model: nn.Module | None = None,
     ema: object | None = None,
+    zoom_warp: nn.Module | None = None,
 ) -> int:
     """Phase 3: hard-pair fine-tuning.
 
@@ -1076,7 +1093,7 @@ def train_phase3(
 
             pose = poses[batch_idx].to(device) if poses is not None else None
 
-            ego_flow = _make_zoom_flow(cfg, batch_idx, mask_even.shape[1], mask_even.shape[2], device)
+            ego_flow = _compute_ego_flow(zoom_warp, batch_idx, mask_even.shape[1], mask_even.shape[2])
             predicted_pairs = train_model(mask_even, mask_odd, pose=pose, ego_flow=ego_flow)
 
             # Scorer loss (Phase 3 uses error_boost_phase3 for extreme hard mining)
@@ -1203,6 +1220,7 @@ def run_proxy_eval(
     segnet: torch.nn.Module,
     device: torch.device,
     n_frames: int = 1200,
+    zoom_warp: nn.Module | None = None,
 ) -> dict[str, float]:
     """Run proxy evaluation on the full frame set."""
     from tac.scorer import compute_proxy_score
@@ -1228,7 +1246,7 @@ def run_proxy_eval(
             pose = poses[i:end].to(device) if poses is not None else None
 
             eval_batch_idx = torch.arange(i, end)
-            ego_flow = _make_zoom_flow(cfg, eval_batch_idx, mask_even.shape[1], mask_even.shape[2], device)
+            ego_flow = _compute_ego_flow(zoom_warp, eval_batch_idx, mask_even.shape[1], mask_even.shape[2])
             pairs = model(mask_even, mask_odd, pose=pose, ego_flow=ego_flow)  # (B, 2, H, W, 3)
             # Unpack pairs to frames
             for j in range(pairs.shape[0]):
@@ -1565,6 +1583,15 @@ def main() -> None:
     print("Creating model...")
     model = create_model(cfg, device)
 
+    # Create RadialZoomWarp once if zoom flow is enabled (replaces the old
+    # _make_zoom_flow function-attribute singleton).
+    zoom_warp: nn.Module | None = None
+    if cfg.use_zoom_flow:
+        from tac.radial_zoom import RadialZoomWarp
+        n_pairs = n_frames // 2
+        zoom_warp = RadialZoomWarp(n_pairs=n_pairs).to(device)
+        print(f"  [zoom] Created RadialZoomWarp ({n_pairs} pairs, identity init)")
+
     # Load pretrained weights
     if cfg.resume:
         print(f"Resuming from {cfg.resume}...")
@@ -1596,7 +1623,8 @@ def main() -> None:
     # Skip if --skip-phase1 OR if resuming from any checkpoint (resume = continue from where we left off)
     if not args.skip_phase1 and not cfg.resume:
         current_epoch = train_phase1(
-            model, masks, tto_frames, poses, cfg, device, start_epoch=current_epoch, ema=ema,
+            model, masks, tto_frames, poses, cfg, device,
+            start_epoch=current_epoch, ema=ema, zoom_warp=zoom_warp,
         )
         gc.collect()
         if device.type == "cuda":
@@ -1613,6 +1641,7 @@ def main() -> None:
     current_epoch, per_pair_difficulty, train_model_p2 = train_phase2(
         model, masks, tto_frames, gt_frames, poses,
         posenet, segnet, cfg, device, start_epoch=current_epoch, ema=ema,
+        zoom_warp=zoom_warp,
     )
     gc.collect()
     if device.type == "cuda":
@@ -1620,7 +1649,10 @@ def main() -> None:
 
     # Proxy eval after Phase 2
     print("\nRunning proxy evaluation after Phase 2...")
-    result = run_proxy_eval(model, masks, gt_frames, poses, posenet, segnet, device, n_frames)
+    result = run_proxy_eval(
+        model, masks, gt_frames, poses, posenet, segnet, device, n_frames,
+        zoom_warp=zoom_warp,
+    )
     print(f"  Proxy score: {result.get('score', 'N/A')}")
     print(f"  PoseNet: {result.get('pose', 'N/A'):.5f}, SegNet: {result.get('seg', 'N/A'):.5f}")
 
@@ -1632,6 +1664,7 @@ def main() -> None:
             start_epoch=current_epoch,
             train_model=train_model_p2,
             ema=ema,
+            zoom_warp=zoom_warp,
         )
 
     # Load BEST checkpoint (EMA weights from best scorer epoch) for final eval/export
@@ -1646,7 +1679,10 @@ def main() -> None:
 
     # Final eval
     print("\nRunning final proxy evaluation (best checkpoint)...")
-    result = run_proxy_eval(model, masks, gt_frames, poses, posenet, segnet, device, n_frames)
+    result = run_proxy_eval(
+        model, masks, gt_frames, poses, posenet, segnet, device, n_frames,
+        zoom_warp=zoom_warp,
+    )
     print(f"  FINAL proxy score: {result.get('score', 'N/A')}")
     print(f"  PoseNet: {result.get('pose', 'N/A'):.5f}, SegNet: {result.get('seg', 'N/A'):.5f}")
 

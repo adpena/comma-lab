@@ -91,7 +91,12 @@ def _mark_done(output_dir: Path, step: str, meta: dict | None = None) -> None:
 
 @dataclass
 class PipelineConfig:
-    """Production pipeline configuration."""
+    """Production pipeline configuration.
+
+    Architecture defaults match ``tac.renderer.ArchConfig`` (the single source
+    of truth).  ``padding_mode`` is overridden to "replicate" because Yousfi's
+    analysis showed that zeros creates boundary artifacts.
+    """
 
     # Input
     video: str = ""
@@ -102,16 +107,16 @@ class PipelineConfig:
     device: str = "cuda"
     upstream: str = "upstream"
 
-    # Architecture (must match checkpoint)
-    base_ch: int = 20
-    mid_ch: int = 28
-    motion_hidden: int = 32
-    depth: int = 1
-    pose_dim: int = 6
-    embed_dim: int = 6
-    use_dsconv: bool = True
-    padding_mode: str = "replicate"
-    use_dilation: bool = False
+    # Architecture — defaults from ArchConfig (see tac.renderer.ArchConfig)
+    base_ch: int = 36       # ArchConfig default: 36  (was 20 — BUG: diverged from DistillConfig)
+    mid_ch: int = 60        # ArchConfig default: 60  (was 28 — BUG: diverged from DistillConfig)
+    motion_hidden: int = 32  # ArchConfig default: 32
+    depth: int = 1          # ArchConfig default: 1
+    pose_dim: int = 6       # ArchConfig default: 6
+    embed_dim: int = 6      # ArchConfig default: 6
+    use_dsconv: bool = False  # ArchConfig default: False (was True — BUG: diverged from DistillConfig)
+    padding_mode: str = "replicate"  # ArchConfig default: "zeros" — override: boundary artifact avoidance
+    use_dilation: bool = False  # ArchConfig default: False
 
     # Pose TTO — adaptive convergence
     pose_max_steps: int = 2000        # upper bound
@@ -706,13 +711,13 @@ def main() -> int:
     comp.add_argument("--device", default="cuda", choices=["cuda", "mps", "cpu"])
     comp.add_argument("--upstream", default="upstream")
     # Architecture
-    comp.add_argument("--base-ch", type=int, default=20)
-    comp.add_argument("--mid-ch", type=int, default=28)
+    comp.add_argument("--base-ch", type=int, default=36)
+    comp.add_argument("--mid-ch", type=int, default=60)
     comp.add_argument("--motion-hidden", type=int, default=32)
     comp.add_argument("--depth", type=int, default=1)
     comp.add_argument("--pose-dim", type=int, default=6)
     comp.add_argument("--embed-dim", type=int, default=6)
-    comp.add_argument("--use-dsconv", action="store_true")
+    comp.add_argument("--use-dsconv", action="store_true", default=False)
     comp.add_argument("--padding-mode", type=str, default="replicate",
                       choices=["zeros", "reflect", "replicate", "circular"])
     comp.add_argument("--use-dilation", action="store_true")

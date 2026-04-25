@@ -16,9 +16,38 @@ Channel widths: 36→60→36 (compact) or 48→80→48 (extended capacity).
 
 from __future__ import annotations
 
+from dataclasses import dataclass
+
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
+
+
+# ── Architecture configuration ──────────────────────────────────────────
+
+
+@dataclass
+class ArchConfig:
+    """Single source of truth for renderer architecture parameters.
+
+    Every entry point that constructs a MaskRenderer or AsymmetricPairGenerator
+    (DistillConfig, PipelineConfig, deploy configs) should derive its
+    architecture fields from these defaults so that they stay in sync.
+    """
+    num_classes: int = 5
+    embed_dim: int = 6
+    base_ch: int = 36
+    mid_ch: int = 60
+    motion_hidden: int = 32
+    depth: int = 1
+    pose_dim: int = 6
+    max_flow_px: float = 20.0
+    max_residual: float = 20.0
+    use_dsconv: bool = False
+    padding_mode: str = "zeros"
+    use_dilation: bool = False
+    use_zoom_flow: bool = False
+
 
 # ── Building blocks ─────────────────────────────────────────────────────
 
@@ -950,6 +979,18 @@ class AsymmetricPairGenerator(nn.Module):
         self.padding_mode = padding_mode
         self.use_dilation = use_dilation
         self.use_zoom_flow = use_zoom_flow
+        # Store ALL constructor args for checkpoint serialization.
+        # Any code that has a model can call model.arch_dict() instead of
+        # independently reconstructing the config from external state.
+        self._arch_config = {
+            'num_classes': num_classes, 'embed_dim': embed_dim,
+            'base_ch': base_ch, 'mid_ch': mid_ch,
+            'motion_hidden': motion_hidden, 'depth': depth,
+            'pose_dim': pose_dim, 'max_flow_px': max_flow_px,
+            'max_residual': max_residual, 'use_dsconv': use_dsconv,
+            'padding_mode': padding_mode, 'use_dilation': use_dilation,
+            'use_zoom_flow': use_zoom_flow,
+        }
         # When zoom handles flow, MotionPredictor only needs gate(1) + residual(3) = 4 channels.
         # This saves ~14K params (motion_hidden=24) by not predicting a redundant rank-1 flow signal.
         motion_output_channels = 4 if use_zoom_flow else 6
@@ -980,6 +1021,16 @@ class AsymmetricPairGenerator(nn.Module):
             flow_only=flow_only,
             padding_mode=padding_mode,
         )
+
+    def arch_dict(self) -> dict:
+        """Return architecture config for checkpoint serialization.
+
+        Provides a complete, self-contained dictionary of all constructor
+        arguments needed to recreate this model. Export functions can use
+        ``model.arch_dict()`` instead of independently reconstructing
+        the config from external state.
+        """
+        return dict(self._arch_config)
 
     def forward(
         self,
