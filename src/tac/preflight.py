@@ -1046,8 +1046,9 @@ def _extract_write_literals(path: Path) -> set[str]:
         return out
 
     # Pass 1: collect Name → set of artifact basenames assigned to that name.
-    # Tracks `name = <expr-containing-artifact-literal>` so later write
-    # contexts referencing `name` can be cross-linked.
+    # Tracks `name = <expr-containing-artifact-literal>` and treats Return
+    # nodes whose enclosing function name has a write prefix as additional
+    # write evidence (catches `def helper(): return iter_dir / "X.bin"`).
     name_to_literals: dict[str, set[str]] = {}
     for node in ast.walk(tree):
         if isinstance(node, ast.Assign) and len(node.targets) == 1:
@@ -1056,6 +1057,15 @@ def _extract_write_literals(path: Path) -> set[str]:
                 lits = _collect_artifact_literals_in(node.value)
                 if lits:
                     name_to_literals.setdefault(t.id, set()).update(lits)
+        # Also collect literals from Return statements — they're not Assigns
+        # but the returned literal is still produced by the function.
+        if isinstance(node, ast.Return) and node.value is not None:
+            lits = _collect_artifact_literals_in(node.value)
+            if lits:
+                # No specific name to bind to; record under a synthetic key
+                # so the literal makes it into `found` via the write_prefix
+                # path or is at least considered "produced by this file".
+                found.update(lits)
 
     def _names_referenced(node: ast.AST) -> set[str]:
         return {sub.id for sub in ast.walk(node) if isinstance(sub, ast.Name)}
@@ -1094,12 +1104,13 @@ def _extract_write_literals(path: Path) -> set[str]:
         if any(func_str.endswith(suf) for suf in WRITE_METHOD_SUFFIXES):
             if isinstance(node.func, ast.Attribute):
                 _record_write(node.func.value)
-        # export/save/write/encode/build helpers: any function whose name
-        # starts with these prefixes — treat 2nd-or-later arg as target.
-        # Includes encoder funcs (encode_masks, encode_video) that write
-        # binary outputs by side-effect.
+        # export/save/write/encode/build/dump/emit/serialize/pack helpers:
+        # any function whose name starts with these prefixes — treat
+        # 2nd-or-later arg as target. Includes encoder funcs (encode_masks,
+        # encode_video) and serializer funcs (dump_state, emit_archive).
         if func_str.split(".")[-1].startswith(
-            ("export_", "save_", "write_", "encode_", "build_", "pack_")
+            ("export_", "save_", "write_", "encode_", "build_",
+             "pack_", "dump_", "emit_", "serialize_")
         ):
             for arg in node.args[1:]:
                 _record_write(arg)

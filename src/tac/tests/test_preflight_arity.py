@@ -772,22 +772,70 @@ def test_apply_profile_catches_levenshtein_typos() -> None:
 
 
 def test_filename_contract_extracts_artifact_literals(tmp_path: Path) -> None:
-    """_extract_artifact_filenames pulls .bin/.pt/.mkv/.zip literals."""
+    """_extract_artifact_filenames pulls .bin/.pt/.mkv/.zip/.tar.gz literals."""
     src = tmp_path / "consumer.py"
     _write(src, '''
         from pathlib import Path
         x = Path("foo/renderer_qat.bin")
         y = Path("bar/qat_best_float.pt")
         z = Path("masks_full.mkv")
+        bundle = Path("output/bundle.tar.gz")
         ignore = "logs/run.txt"  # not artifact
         ignore2 = "*.bin"  # glob pattern
+        ignore3 = ".bin"  # extension fragment
+        ignore4 = "_int4lzma2.bin"  # suffix fragment, no real stem
     ''')
     found = _extract_artifact_filenames(src)
     assert "renderer_qat.bin" in found
     assert "qat_best_float.pt" in found
     assert "masks_full.mkv" in found
+    assert "bundle.tar.gz" in found
     assert "run.txt" not in found
     assert "*.bin" not in found
+    assert ".bin" not in found
+    assert "_int4lzma2.bin" not in found  # suffix fragment filtered
+
+
+def test_inflate_renderer_recognizes_all_producer_magic_bytes() -> None:
+    """R35 finding: magic-byte version drift between producer and inflate
+    consumer would silently fail at contest submission. Verify inflate
+    recognizes every magic byte that any producer might emit.
+    """
+    inflate_path = (Path(__file__).resolve().parent.parent.parent.parent
+                    / "submissions" / "robust_current" / "inflate_renderer.py")
+    if not inflate_path.exists():
+        pytest.skip("inflate_renderer.py not present in this checkout")
+    inflate_src = inflate_path.read_text()
+    # Producer magic bytes (from src/tac/renderer_export.py + mixed_precision_export.py)
+    producer_magics = {b"FP4A", b"ASYM", b"I4LZ"}
+    for magic in producer_magics:
+        assert magic in inflate_src.encode("utf-8", errors="ignore"), (
+            f"inflate_renderer.py does not recognize magic {magic!r}. "
+            f"A producer would silently fail at contest inflate. Add the "
+            f"magic to _load_renderer's dispatch."
+        )
+
+
+def test_filename_contract_helper_function_return_is_produced(tmp_path: Path) -> None:
+    """A literal inside a Return statement counts as produced — catches the
+    `def helper(): return iter_dir / 'X.bin'` pattern.
+    """
+    repo = _stub_repo(tmp_path)
+    _write(repo / "experiments/consumer.py", '''
+        from pathlib import Path
+        def helper():
+            return Path("output/produced_via_return.bin")
+        x = Path("output/produced_via_return.bin")
+    ''')
+    # No producer file at all — but the consumer's own helper returns the
+    # literal. Should pass (treated as self-produced).
+    violations = preflight_filename_contract(
+        repo_root=repo,
+        consumer_files=["experiments/consumer.py"],
+        producer_dirs=["experiments"],
+        strict=False, verbose=False,
+    )
+    assert violations == []
 
 
 def test_filename_contract_catches_phantom_path(tmp_path: Path) -> None:
