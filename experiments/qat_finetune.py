@@ -82,6 +82,7 @@ class QATConfig:
     use_dsconv: bool = False
     padding_mode: str = "zeros"
     use_dilation: bool = False
+    use_zoom_flow: bool = False
 
     # Paths
     checkpoint_path: str = ""
@@ -133,6 +134,7 @@ def create_model(cfg: QATConfig, device: torch.device) -> nn.Module:
         use_dsconv=cfg.use_dsconv,
         padding_mode=cfg.padding_mode,
         use_dilation=cfg.use_dilation,
+        use_zoom_flow=cfg.use_zoom_flow,
     )
     return model.to(device)
 
@@ -444,6 +446,8 @@ def main() -> None:
     parser.add_argument("--padding-mode", type=str, default="zeros",
                         choices=["zeros", "reflect", "replicate", "circular"])
     parser.add_argument("--use-dilation", action="store_true")
+    parser.add_argument("--use-zoom-flow", action="store_true",
+                        help="Enable RadialZoomWarp (4ch MotionPredictor)")
 
     # QAT schedule
     parser.add_argument("--int8-warmup-epochs", type=int, default=50)
@@ -468,6 +472,7 @@ def main() -> None:
         use_dsconv=args.use_dsconv,
         padding_mode=args.padding_mode,
         use_dilation=args.use_dilation,
+        use_zoom_flow=args.use_zoom_flow,
         int8_warmup_epochs=0 if args.skip_int8_warmup else args.int8_warmup_epochs,
         fp4_epochs=args.fp4_epochs,
         base_lr=args.lr,
@@ -549,6 +554,7 @@ def main() -> None:
             "embed_dim": header.get("embed_dim", cfg.embed_dim),
             "padding_mode": header.get("padding_mode", cfg.padding_mode),
             "use_dilation": header.get("use_dilation", cfg.use_dilation),
+            "use_zoom_flow": header.get("use_zoom_flow", cfg.use_zoom_flow),
         }
         if any(detected_cfg[k] != getattr(cfg, k) for k in detected_cfg):
             print(f"  Auto-detected architecture from ASYM header:")

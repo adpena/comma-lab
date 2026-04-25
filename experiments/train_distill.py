@@ -731,9 +731,9 @@ def train_phase1(
             )
 
         if (epoch - start_epoch) % cfg.checkpoint_every == 0 and epoch > start_epoch:
-            _save_checkpoint(model, optimizer, epoch, "phase1", cfg, ema=ema)
+            _save_checkpoint(model, optimizer, epoch, "phase1", cfg, ema=ema, zoom_warp=zoom_warp)
 
-    _save_checkpoint(model, optimizer, start_epoch + cfg.phase1_epochs, "phase1_final", cfg, ema=ema)
+    _save_checkpoint(model, optimizer, start_epoch + cfg.phase1_epochs, "phase1_final", cfg, ema=ema, zoom_warp=zoom_warp)
     print(f"  Phase 1 complete. Best L1: {best_loss:.4f}")
     return start_epoch + cfg.phase1_epochs
 
@@ -946,7 +946,7 @@ def train_phase2(
         proxy_score = 100 * avg_seg + math.sqrt(max(10 * avg_pose, 0))
         if proxy_score < best_score:
             best_score = proxy_score
-            _save_checkpoint(model, optimizer, epoch, "phase2_best", cfg, ema=ema)
+            _save_checkpoint(model, optimizer, epoch, "phase2_best", cfg, ema=ema, zoom_warp=zoom_warp)
 
         if (epoch - start_epoch) % cfg.log_every == 0:
             elapsed = time.time() - t0
@@ -972,14 +972,14 @@ def train_phase2(
                 train_phase2._swa.update(ema)
 
         if (epoch - start_epoch) % cfg.checkpoint_every == 0 and epoch > start_epoch:
-            _save_checkpoint(model, optimizer, epoch, "phase2", cfg, ema=ema)
+            _save_checkpoint(model, optimizer, epoch, "phase2", cfg, ema=ema, zoom_warp=zoom_warp)
 
     # Apply SWA average to EMA before final save
     if cfg.use_swa and ema is not None and hasattr(train_phase2, '_swa'):
         train_phase2._swa.apply(ema)
         del train_phase2._swa
 
-    _save_checkpoint(model, optimizer, start_epoch + cfg.phase2_epochs, "phase2_final", cfg, ema=ema)
+    _save_checkpoint(model, optimizer, start_epoch + cfg.phase2_epochs, "phase2_final", cfg, ema=ema, zoom_warp=zoom_warp)
     print(f"  Phase 2 complete. Best proxy: {best_score:.3f}")
     return start_epoch + cfg.phase2_epochs, per_pair_loss, train_model
 
@@ -1126,7 +1126,7 @@ def train_phase3(
 
         if avg_loss < best_score:
             best_score = avg_loss
-            _save_checkpoint(model, optimizer, epoch, "phase3_best", cfg, ema=ema)
+            _save_checkpoint(model, optimizer, epoch, "phase3_best", cfg, ema=ema, zoom_warp=zoom_warp)
 
         if (epoch - start_epoch) % cfg.log_every == 0:
             elapsed = time.time() - t0
@@ -1137,9 +1137,9 @@ def train_phase3(
             )
 
         if (epoch - start_epoch) % cfg.checkpoint_every == 0 and epoch > start_epoch:
-            _save_checkpoint(model, optimizer, epoch, "phase3", cfg, ema=ema)
+            _save_checkpoint(model, optimizer, epoch, "phase3", cfg, ema=ema, zoom_warp=zoom_warp)
 
-    _save_checkpoint(model, optimizer, start_epoch + cfg.phase3_epochs, "phase3_final", cfg, ema=ema)
+    _save_checkpoint(model, optimizer, start_epoch + cfg.phase3_epochs, "phase3_final", cfg, ema=ema, zoom_warp=zoom_warp)
     print(f"  Phase 3 complete. Best loss: {best_score:.4f}")
     return start_epoch + cfg.phase3_epochs
 
@@ -1174,23 +1174,25 @@ def _save_checkpoint(
     tag: str,
     cfg: DistillConfig,
     ema: object | None = None,
+    zoom_warp: nn.Module | None = None,
 ) -> None:
     """Save training checkpoint with clean (non-parametrized) state dict.
-    If EMA is provided, saves EMA weights as the model state (better for eval)."""
+    If EMA is provided, saves EMA weights as the model state (better for eval).
+    If zoom_warp is provided, saves zoom scalars alongside the checkpoint."""
     RESULTS_DIR.mkdir(parents=True, exist_ok=True)
     path = RESULTS_DIR / f"distill_{tag}.pt"
     # Use EMA weights if available (smoother, better for eval/export)
     state = ema.state_dict() if ema is not None else model.state_dict()
-    torch.save(
-        {
-            "model_state_dict": _clean_state_dict(state),
-            "optimizer_state_dict": optimizer.state_dict(),
-            "epoch": epoch,
-            "tag": tag,
-            "config": asdict(cfg),
-        },
-        path,
-    )
+    ckpt = {
+        "model_state_dict": _clean_state_dict(state),
+        "optimizer_state_dict": optimizer.state_dict(),
+        "epoch": epoch,
+        "tag": tag,
+        "config": asdict(cfg),
+    }
+    if zoom_warp is not None:
+        ckpt["zoom_warp_state_dict"] = zoom_warp.state_dict()
+    torch.save(ckpt, path)
     # Also save as "latest" for easy resume (copy, not second torch.save)
     import shutil
     latest_path = RESULTS_DIR / "distill_latest.pt"
