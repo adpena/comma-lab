@@ -1632,6 +1632,7 @@ def _generate_and_write(
     poses: torch.Tensor | None = None,
     gradient_corrections: dict | None = None,
     gradient_alpha: float = 1.0,
+    zoom_warp: "nn.Module | None" = None,
 ) -> int:
     """Generate frames from masks via renderer, upscale, and write raw RGB.
 
@@ -1722,13 +1723,23 @@ def _generate_and_write(
                         if pose_end <= poses.shape[0]:
                             batch_pose = poses[pose_start:pose_end].to(device=device)
 
+                    # Compute ego_flow for zoom models
+                    batch_ego_flow = None
+                    if zoom_warp is not None and hasattr(renderer, 'use_zoom_flow') and renderer.use_zoom_flow:
+                        pair_indices = torch.arange(
+                            pair_idx // 2,
+                            pair_idx // 2 + masks_t.shape[0],
+                            device=device if isinstance(device, str) else str(device),
+                        )
+                        batch_ego_flow = zoom_warp(pair_indices, masks_t.shape[1], masks_t.shape[2])
+
                     # Generate pairs: (B, 2, H, W, 3) HWC in [0, 255]
-                    # Only pass pose kwarg if the model's forward accepts it
-                    # (inline fallback AsymmetricPairGenerator does not)
+                    fwd_kwargs = {}
                     if batch_pose is not None:
-                        pairs = renderer(masks_t, masks_t1, pose=batch_pose)
-                    else:
-                        pairs = renderer(masks_t, masks_t1)  # (B, 2, H, W, 3)
+                        fwd_kwargs["pose"] = batch_pose
+                    if batch_ego_flow is not None:
+                        fwd_kwargs["ego_flow"] = batch_ego_flow
+                    pairs = renderer(masks_t, masks_t1, **fwd_kwargs)  # (B, 2, H, W, 3)
 
                     # Apply gradient corrections at renderer resolution, then upscale
                     B_pairs = pairs.shape[0]
@@ -2045,6 +2056,50 @@ def inflate_renderer(
         poses = torch.frombuffer(bytearray(raw), dtype=torch.float16).reshape(-1, _renderer_pose_dim).float()
         print(f"  Loaded GT poses: {poses.shape} from archive (bin)", file=sys.stderr)
 
+    # ---- Load zoom warp scalars (for use_zoom_flow models) ----
+    zoom_warp = None
+    if hasattr(renderer, 'use_zoom_flow') and renderer.use_zoom_flow:
+        zoom_scalars_path = Path(archive_dir) / "zoom_scalars.bin"
+        zoom_scalars_pt = Path(archive_dir) / "zoom_scalars.pt"
+        if zoom_scalars_path.exists():
+            # Raw binary: fp16 scalars, one per pair
+            raw_zs = zoom_scalars_path.read_bytes()
+            scalars = torch.frombuffer(bytearray(raw_zs), dtype=torch.float16).float()
+            # Inline RadialZoomWarp construction (standalone, no tac dependency)
+            zoom_warp = type('ZoomWarp', (nn.Module,), {
+                '__init__': lambda self, s: (super(type(self), self).__init__(),
+                    setattr(self, 'scalars', nn.Parameter(s, requires_grad=False))),
+                'forward': lambda self, idx, H, W: self._compute(idx, H, W),
+            })
+            # Use tac RadialZoomWarp if available, else basic inline
+            try:
+                from tac.radial_zoom import RadialZoomWarp
+                zoom_warp = RadialZoomWarp(n_pairs=len(scalars))
+                zoom_warp.zoom_scalars.data = scalars
+                zoom_warp = zoom_warp.to(device)
+                print(f"  Loaded zoom scalars: {scalars.shape} from {zoom_scalars_path.name}",
+                      file=sys.stderr)
+            except ImportError:
+                print(f"  WARNING: use_zoom_flow=True but tac.radial_zoom not available. "
+                      f"Zoom flow disabled.", file=sys.stderr)
+                zoom_warp = None
+        elif zoom_scalars_pt.exists():
+            try:
+                from tac.radial_zoom import RadialZoomWarp
+                zw_state = torch.load(str(zoom_scalars_pt), map_location="cpu", weights_only=True)
+                n_pairs = masks.shape[0] // 2 if masks is not None else 600
+                zoom_warp = RadialZoomWarp(n_pairs=n_pairs)
+                zoom_warp.load_state_dict(zw_state)
+                zoom_warp = zoom_warp.to(device)
+                print(f"  Loaded zoom scalars from {zoom_scalars_pt.name}", file=sys.stderr)
+            except ImportError:
+                print(f"  WARNING: use_zoom_flow=True but tac.radial_zoom not available.",
+                      file=sys.stderr)
+                zoom_warp = None
+        else:
+            print(f"  WARNING: use_zoom_flow=True but no zoom_scalars found in archive. "
+                  f"Using identity zoom.", file=sys.stderr)
+
     # ---- Load gradient corrections (C4: pre-computed pixel adjustments) ----
     grad_corrections = None
     grad_corr_path = Path(archive_dir) / "gradient_corrections.bin"
@@ -2143,6 +2198,7 @@ def inflate_renderer(
             video_masks, renderer, str(raw_out), device, batch_size, out_h, out_w,
             poses=poses,
             gradient_corrections=grad_corrections,
+            zoom_warp=zoom_warp,
         )
 
         if not use_archive_masks:
