@@ -43,6 +43,7 @@ from __future__ import annotations
 import argparse
 import json
 import math
+import re
 import subprocess
 import sys
 import time
@@ -821,23 +822,43 @@ def step_eval(cfg: PipelineConfig, renderer_bin: Path, archive_path: Path,
             f"Investigate stderr above; do NOT cache this failure."
         )
 
-    # Extract score from output
-    score = None
-    for line in (result.stdout or "").split("\n"):
-        if "TOTAL" in line.upper() or "score" in line.lower():
-            _log(f"  >> {line.strip()}")
-        # Try to parse numeric score
-        for token in line.split():
-            try:
-                val = float(token)
-                if 0 < val < 100:
-                    score = val
-            except ValueError:
-                pass
+    # Extract score from output. Anchor to score-line pattern, NOT every
+    # numeric token in (0,100), or a line like "elapsed 45.2s" silently
+    # overwrites the real score. (R27 finding.)
+    score = _extract_eval_score(result.stdout or "", logger=_log)
 
     meta = {"elapsed_s": round(elapsed), "score": score}
     _mark_done(iter_dir, "eval", meta)
     return meta
+
+
+_SCORE_LINE_RE = re.compile(
+    r"\b(?:total|score|auth\s*score|distortion)\b\D*([+-]?\d+\.\d+|\d+)",
+    re.IGNORECASE,
+)
+
+
+def _extract_eval_score(stdout: str, logger=None) -> float | None:
+    """Pull the auth score from auth_eval_renderer.py stdout.
+
+    Only accepts numbers on a line that explicitly mentions 'TOTAL', 'score',
+    'auth score', or 'distortion' (case-insensitive). Returns the LAST such
+    number — the auth eval's final TOTAL line is the canonical score.
+    Returns None if no score-line was found.
+    """
+    score: float | None = None
+    for line in stdout.split("\n"):
+        if logger and ("TOTAL" in line.upper() or "score" in line.lower()):
+            logger(f"  >> {line.strip()}")
+        m = _SCORE_LINE_RE.search(line)
+        if m:
+            try:
+                val = float(m.group(1))
+                if 0 < val < 100:
+                    score = val
+            except ValueError:
+                continue
+    return score
 
 
 # ── Main pipeline ────────────────────────────────────────────────────────
@@ -988,69 +1009,57 @@ def run_eval(args: argparse.Namespace) -> None:
 
 # ── CLI ──────────────────────────────────────────────────────────────────
 
-def _user_provided_flags(parser: argparse.ArgumentParser, argv: list[str]) -> set[str]:
+def _user_provided_flags(
+    parser: argparse.ArgumentParser, argv: list[str],
+    active_subcommand: str | None = None,
+) -> set[str]:
     """Return the set of arg.dest values that the user explicitly passed in argv.
 
-    Walks every action under every subparser. Returns the dest names of any
-    option that appears in argv. This lets the profile loader distinguish
-    "user explicitly set --base-ch 999" from "user accepted default 36".
+    Walks the top-level parser AND the active subparser only — NOT every
+    subparser, which could mark the wrong dest if two subparsers share an
+    option string with different dest names. (R27 finding.)
+
+    `active_subcommand` should be `args.command` after `parse_args()`.
     """
     user_set: set[str] = set()
+    actions: list[argparse.Action] = list(parser._actions)
+    for action in parser._actions:
+        if isinstance(action, argparse._SubParsersAction) and active_subcommand:
+            sub = action.choices.get(active_subcommand)
+            if sub is not None:
+                actions.extend(sub._actions)
 
-    def _collect_actions(p: argparse.ArgumentParser) -> list[argparse.Action]:
-        out = list(p._actions)
-        for sub_action in p._actions:
-            if isinstance(sub_action, argparse._SubParsersAction):
-                for sp in sub_action.choices.values():
-                    out.extend(_collect_actions(sp))
-        return out
-
-    actions = _collect_actions(parser)
     for action in actions:
         if not action.option_strings:
             continue
         for opt in action.option_strings:
+            matched = False
             for token in argv:
                 if token == opt or token.startswith(opt + "="):
                     user_set.add(action.dest)
+                    matched = True
                     break
+            if matched:
+                break
     return user_set
-
-
-# Profile keys that exist for training-script consumption (train_distill.py,
-# qat_finetune.py) but are NOT PipelineConfig fields. Listed so we can
-# distinguish "intentionally not in PipelineConfig" from "typo".
-_PROFILE_KEYS_NOT_IN_PIPELINE_CONFIG = {
-    "experiment_type", "variant", "hidden", "kernel", "epochs", "lr",
-    "ema_decay", "alpha", "sal_lambda", "loss_mode", "boundary_weight",
-    "hard_frame_ratio", "error_replay_every", "eval_every", "accum_steps",
-    "segnet_loss_weight", "segnet_loss_mode", "hinge_margin", "focal_gamma",
-    "error_boost", "use_texture_loss", "texture_loss_weight",
-    "use_linf_penalty", "linf_weight", "use_markov_loss", "markov_weight",
-    "pose_weight", "seg_weight", "pixel_weight",
-    "phase1_epochs", "phase2_epochs", "phase3_epochs",
-    "phase1_lr", "phase2_lr", "phase3_lr",
-    "phase1_batch_size", "phase2_batch_size", "phase3_batch_size",
-    "checkpoint_every", "log_every", "seed", "eval_roundtrip",
-    "noise_std", "quant_noise_bits", "boundary_anneal", "use_swa_phase",
-    "temperature_start", "temperature_end", "temp_schedule",
-}
 
 
 def _apply_profile(args: argparse.Namespace, profile_name: str,
                    user_provided_flags: set[str] | None = None) -> None:
     """Load PROFILES[profile_name]. Profile fills in defaults; explicit CLI
-    flags from `user_provided_flags` win. Unknown profile keys (typos) FAIL
-    LOUDLY — the silent-drop path is the SHIRAZ class in a new location.
+    flags from `user_provided_flags` win. Profile keys that don't match a
+    PipelineConfig field are SILENTLY SKIPPED (they're for training scripts
+    like train_distill.py that consume the profile separately).
 
-    `user_provided_flags` is a set of arg names (e.g., {"base_ch", "device"})
-    that the operator explicitly passed on the command line. These are NOT
-    overwritten by the profile; everything else is filled in from the profile.
+    However, a profile key that LOOKS like a PipelineConfig field but is
+    misspelled (Levenshtein close-match) FAILS LOUDLY — that's the SHIRAZ
+    class. E.g. `motino_hidden` is close to `motion_hidden` → fail.
+    `use_tto` is not close to anything → silent skip (training-only).
 
-    This is the canonical way to launch a pipeline run. Without --profile,
-    every arch flag must be passed explicitly (which is the SHIRAZ-class bug
-    waiting to happen).
+    `user_provided_flags` is a set of arg names that the operator explicitly
+    passed on the command line. These are NOT overwritten by the profile.
     """
+    import difflib
     sys.path.insert(0, str(Path(__file__).resolve().parent.parent / "src"))
     from tac.profiles import PROFILES
     if profile_name not in PROFILES:
@@ -1061,15 +1070,23 @@ def _apply_profile(args: argparse.Namespace, profile_name: str,
     user_provided_flags = user_provided_flags or set()
 
     pcfg_fields = {f.name for f in fields(PipelineConfig)}
-    # Sanity: every profile key must be either a PipelineConfig field or in
-    # the explicit allowlist of training-only keys. Anything else is a typo.
-    unknown_keys = set(profile.keys()) - pcfg_fields - _PROFILE_KEYS_NOT_IN_PIPELINE_CONFIG
-    if unknown_keys:
+    likely_typos: list[tuple[str, str]] = []
+    for key in profile.keys():
+        if key in pcfg_fields:
+            continue
+        # cutoff=0.85: tight enough to flag motino_hidden→motion_hidden but
+        # not loose enough to flag every training-only key as a typo of
+        # something. Empirical: 0.85 catches 1-2 char edits on names ≥6 chars.
+        close = difflib.get_close_matches(key, pcfg_fields, n=1, cutoff=0.85)
+        if close:
+            likely_typos.append((key, close[0]))
+    if likely_typos:
+        msg_parts = [f"  {k!r} → did you mean {v!r}?" for k, v in likely_typos]
         raise SystemExit(
-            f"profile {profile_name!r} contains unknown keys {sorted(unknown_keys)}. "
-            f"Either add them to PipelineConfig, register them in "
-            f"_PROFILE_KEYS_NOT_IN_PIPELINE_CONFIG (training-only), or fix the typo. "
-            f"This is the SHIRAZ-class silent-drop bug — failing loud per CLAUDE.md."
+            f"profile {profile_name!r} has likely-typo keys (close-match to "
+            f"a real PipelineConfig field):\n" + "\n".join(msg_parts) +
+            "\n\nFix the typos or, if intentional, rename the key to something "
+            "clearly distinct from existing PipelineConfig field names."
         )
 
     for key, value in profile.items():
@@ -1150,7 +1167,7 @@ def main() -> int:
         # by walking sys.argv. This preserves "explicit CLI overrides profile"
         # semantics so `--profile X --base-ch 999` actually uses base_ch=999.
         # Anything else is filled in from the profile.
-        user_provided = _user_provided_flags(parser, sys.argv[1:])
+        user_provided = _user_provided_flags(parser, sys.argv[1:], active_subcommand="compress")
         if getattr(args, "profile", None):
             _apply_profile(args, args.profile, user_provided_flags=user_provided)
         # Build PipelineConfig from every args field that overlaps a

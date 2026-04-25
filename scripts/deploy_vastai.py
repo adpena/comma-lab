@@ -212,13 +212,23 @@ def launch(profile: str, instance_id: int, sync: bool = True) -> str:
     # Start canonical pipeline in tmux. pipeline.py uses subcommands —
     # `compress` is the experiment-running entry point. (R25 finding: prior
     # invocation omitted the subcommand and would have died at argparse.)
+    # R27 finding: tmux new-session may exec the command directly (no shell)
+    # depending on default-shell config; the `2>&1 | tee` would be silently
+    # dropped. Wrap in `bash -c` to guarantee shell pipeline semantics.
+    # R27 finding: `python3` may resolve to system Python without torch/tac.
+    # Prefer the uv-managed venv if present.
     output_dir = f"experiments/results/{profile}"
     video = "/workspace/pact/upstream/videos/0.mkv"
     checkpoint_glob = f"/workspace/pact/{output_dir}/distill_phase3_best.pt"
+    python_select = (
+        "PYBIN=/workspace/pact/.venv/bin/python3; "
+        "if [ ! -x \"$PYBIN\" ]; then PYBIN=$(command -v python3); fi; "
+    )
     pipeline_cmd = (
         f"cd /workspace/pact && "
+        f"{python_select}"
         f"PYTHONPATH=src:upstream:$PWD "
-        f"python3 -u experiments/pipeline.py compress "
+        f'\"$PYBIN\" -u experiments/pipeline.py compress '
         f"--profile {shlex.quote(profile)} "
         f"--video {shlex.quote(video)} "
         f"--checkpoint {shlex.quote(checkpoint_glob)} "
@@ -226,7 +236,11 @@ def launch(profile: str, instance_id: int, sync: bool = True) -> str:
         f"--output-dir {shlex.quote(output_dir)} "
         f"2>&1 | tee {output_dir}/deploy.log"
     )
-    tmux_cmd = f"mkdir -p /workspace/pact/{output_dir} && tmux new-session -d -s {shlex.quote(session_name)} {shlex.quote(pipeline_cmd)}"
+    tmux_cmd = (
+        f"mkdir -p /workspace/pact/{output_dir} && "
+        f"tmux new-session -d -s {shlex.quote(session_name)} -- "
+        f"bash -c {shlex.quote(pipeline_cmd)}"
+    )
     ssh(host, port, tmux_cmd)
 
     # Postflight: verify tmux session is alive and process is running

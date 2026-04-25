@@ -492,6 +492,162 @@ def test_apply_profile_unknown_profile_name_fails_loudly() -> None:
         pipeline._apply_profile(ns, "does_not_exist", user_provided_flags=set())
 
 
+def _load_pipeline_module(name: str = "_pipeline_under_test_shared"):
+    """Helper: import experiments/pipeline.py as a module via spec_from_file_location."""
+    import importlib.util
+    import sys as _sys
+    spec = importlib.util.spec_from_file_location(
+        name,
+        Path(__file__).resolve().parent.parent.parent.parent / "experiments" / "pipeline.py",
+    )
+    pipeline = importlib.util.module_from_spec(spec)
+    _sys.modules[name] = pipeline
+    spec.loader.exec_module(pipeline)
+    return pipeline
+
+
+def test_user_provided_flags_detects_explicit_cli_arg() -> None:
+    """The function that powers '--profile X --base-ch 999 wins' must work.
+
+    R27 finding: this function had ZERO test coverage; if it silently returned
+    an empty set, every CLI override would be clobbered by the profile.
+    """
+    import argparse
+    pipeline = _load_pipeline_module("_pipeline_uvf_1")
+    parser = argparse.ArgumentParser()
+    sub = parser.add_subparsers(dest="command", required=True)
+    comp = sub.add_parser("compress")
+    comp.add_argument("--base-ch", type=int, default=36)
+    comp.add_argument("--profile", default=None)
+    flags = pipeline._user_provided_flags(
+        parser, ["compress", "--base-ch", "999", "--profile", "shiraz"],
+        active_subcommand="compress",
+    )
+    assert "base_ch" in flags
+    assert "profile" in flags
+
+
+def test_user_provided_flags_handles_equals_form() -> None:
+    """`--base-ch=999` must be detected just like `--base-ch 999`."""
+    import argparse
+    pipeline = _load_pipeline_module("_pipeline_uvf_2")
+    parser = argparse.ArgumentParser()
+    sub = parser.add_subparsers(dest="command")
+    comp = sub.add_parser("compress")
+    comp.add_argument("--base-ch", type=int, default=36)
+    flags = pipeline._user_provided_flags(parser, ["compress", "--base-ch=999"],
+                                           active_subcommand="compress")
+    assert "base_ch" in flags
+
+
+def test_user_provided_flags_does_not_walk_inactive_subparsers() -> None:
+    """If two subparsers share an option string with different dest, walking
+    BOTH would mark the wrong dest. Scope to active subcommand only.
+    """
+    import argparse
+    pipeline = _load_pipeline_module("_pipeline_uvf_3")
+    parser = argparse.ArgumentParser()
+    sub = parser.add_subparsers(dest="command")
+    comp = sub.add_parser("compress")
+    comp.add_argument("--out", dest="output_dir")
+    ev = sub.add_parser("eval")
+    ev.add_argument("--out", dest="out_dir")  # different dest!
+    flags = pipeline._user_provided_flags(parser, ["compress", "--out", "X"],
+                                           active_subcommand="compress")
+    assert "output_dir" in flags
+    assert "out_dir" not in flags
+
+
+def test_capture_provenance_returns_required_fields() -> None:
+    """Provenance JSON must include config + timestamp at minimum, and
+    torch_version when torch is importable."""
+    pipeline = _load_pipeline_module("_pipeline_prov_1")
+    cfg = pipeline.PipelineConfig()
+    prov = pipeline._capture_provenance(cfg)
+    assert "config" in prov
+    assert "timestamp_utc" in prov
+    assert prov["config"]["device"] == "cuda"  # default
+    # torch is a hard dep of this repo; should always be present
+    assert "torch_version" in prov
+
+
+def test_capture_provenance_handles_non_git_dir(tmp_path, monkeypatch) -> None:
+    """If git rev-parse fails, the function must not raise — just record the error."""
+    pipeline = _load_pipeline_module("_pipeline_prov_2")
+    # Force git to fail by giving it a bogus cwd via subprocess.check_output
+    # monkey: we patch subprocess.check_output to raise for git calls
+    import subprocess as _sp
+    real_check = _sp.check_output
+    def fake_check(cmd, **kw):
+        if cmd and cmd[0] == "git":
+            raise FileNotFoundError("git not found (test)")
+        return real_check(cmd, **kw)
+    monkeypatch.setattr(pipeline.subprocess, "check_output", fake_check)
+    prov = pipeline._capture_provenance(pipeline.PipelineConfig())
+    assert "git_hash_error" in prov
+    # Still has timestamp + config — not crashed
+    assert "config" in prov
+    assert "timestamp_utc" in prov
+
+
+def test_extract_eval_score_ignores_timing_lines() -> None:
+    """`elapsed 45.2s` must NOT be parsed as a score. Only score-line patterns count."""
+    pipeline = _load_pipeline_module("_pipeline_eval_1")
+    stdout = "\n".join([
+        "Loading scorer models...",
+        "Pair 5/600 elapsed 45.2s",
+        "Pair 100/600 elapsed 12.3s",
+        "TOTAL 2.014",
+        "All done in 67.8 seconds",
+    ])
+    assert pipeline._extract_eval_score(stdout) == 2.014
+
+
+def test_extract_eval_score_returns_none_when_no_score_line() -> None:
+    pipeline = _load_pipeline_module("_pipeline_eval_2")
+    stdout = "\n".join(["Loading models...", "Pair 5/600 elapsed 45.2s"])
+    assert pipeline._extract_eval_score(stdout) is None
+
+
+def test_all_renderer_profiles_load_without_typo_errors() -> None:
+    """Every PROFILES entry must pass _apply_profile without SystemExit.
+
+    R27 finding: the prior typo-allowlist was incomplete; ~30 profiles
+    would crash _apply_profile with 'unknown keys'. The new Levenshtein
+    close-match approach should accept all of them.
+    """
+    import argparse
+    pipeline = _load_pipeline_module("_pipeline_profile_matrix")
+    from tac.profiles import PROFILES
+    failures = []
+    for name in PROFILES:
+        ns = argparse.Namespace()
+        try:
+            pipeline._apply_profile(ns, name, user_provided_flags=set())
+        except SystemExit as e:
+            failures.append(f"{name}: {e}")
+    assert not failures, "Profiles failed _apply_profile:\n" + "\n".join(failures)
+
+
+def test_apply_profile_catches_levenshtein_typos() -> None:
+    """Typo close to a real PipelineConfig field still fails loudly."""
+    import argparse
+    pipeline = _load_pipeline_module("_pipeline_profile_typo")
+    import tac.profiles as profiles_mod
+    saved = profiles_mod.PROFILES.copy()
+    try:
+        profiles_mod.PROFILES["typo_close"] = {
+            "experiment_type": "renderer_training",
+            "motino_hidden": 24,  # close to "motion_hidden"
+        }
+        with pytest.raises(SystemExit, match="motion_hidden"):
+            pipeline._apply_profile(argparse.Namespace(), "typo_close",
+                                    user_provided_flags=set())
+    finally:
+        profiles_mod.PROFILES.clear()
+        profiles_mod.PROFILES.update(saved)
+
+
 def test_arch_flag_constants_are_disjoint() -> None:
     """ARCH_FLAGS_REQUIRED and ARCH_FLAGS_BOOLEAN must not overlap.
 

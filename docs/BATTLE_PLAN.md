@@ -8,15 +8,17 @@
 
 ## TODAY (Apr 25) — NUCLEAR (zero GPU)
 
-These two actions move the score the most per dollar. Do them BEFORE any new training.
+These actions move the score the most per dollar. Do them BEFORE any new training.
+
+> **R27 correction:** prior battleplan double-counted NUCLEAR #1 and #3 — they are TWO SIDES of one architectural change (store odd frames + reconstruct even at inflate). Combined delta is −0.12 to −0.18 once, not twice.
 
 | # | Action | Cost | Expected delta | Blocker |
 |---|--------|------|----------------|---------|
-| **1** | **Half-frame mask AV1 encoding sweep at 384×512** (CRF 24..48 over 600 odd frames). Quantizr stores masks for odd frames only and warps the even frame from it at inflate. Our masks are ~76% of archive bytes today. | CPU, ~2h | rate −0.12 to −0.18 | Fix AV1 int8 overflow at 384×512 (one-line patch in `src/tac/mask_codec.py`) |
+| **1+3 (combined)** | **Half-frame mask + even-from-odd reconstruction**: store only 600 odd-frame masks in archive; at inflate, reconstruct even-frame masks from stored ones via grid_sample warp using stored pose. Quantizr's paradigm. Existing `inflate_renderer.py` half-frame path uses `repeat_interleave` (duplication) which zeroes the MotionPredictor's diff features — the warp version preserves motion. | CPU, ~1 day (encode sweep + warp impl + e2e validation) | rate −0.12 to −0.18 (one delta, not two) | None — int8 overflow already fixed in `encode_masks_monochrome` (R27 reviewer correction) |
 | **2** | **SHIRAZ Phase 3 → immediate auth eval** (download checkpoint, run inflate → upstream evaluate.py). Do NOT wait for QAT chain to finish. Get the auth number BEFORE deciding next deploy. | local, ~3h | establishes ground truth | SHIRAZ Phase 3 complete |
-| **3** | **Even-frame-warp-from-odd at inflate time** (mirror of Quantizr paradigm). Modify `submissions/robust_current/inflate_renderer.py` to grid_sample frame2 mask from frame1 mask using stored pose. Zero archive bytes added; halves mask budget multiplicatively with #1. | local, ~2h coding | rate −0.12 to −0.18 (multiplicative with #1) | None |
+| **4 (NEW NUCLEAR — promoted from "open gaps")** | **Add `--profile X` to `train_distill.py` + deterministic seeding (cudnn, numpy, random) + add CI to run preflight tests on every push.** These are CLAUDE.md non-negotiables and NOT council decisions. Without them, every experiment is unreproducible by definition. | local, ~4h | unblocks 5-pass review gate | None |
 
-These three are stackable and additive on the rate term. Combined projection: rate term drops from 9.4 → 4–6 points, before any further renderer work.
+Combined projection of NUCLEAR #1+3 + #2 baseline: rate term drops by 0.12-0.18 from 9.4-point contribution.
 
 ## Round 23 + 24 Postmortem (2026-04-25)
 
@@ -50,15 +52,19 @@ The SHIRAZ A100 trained with `motion_hidden=24, depth=1`, but `pipeline.py` invo
 
 **31/31 tests pass** (`src/tac/tests/test_preflight_arity.py` + `test_integration_boundaries.py`).
 
-## Open architectural gaps (planned, not yet fixed)
+## Open architectural gaps
 
-These are deeper than R23/R24 fixes and require council consensus before implementation. Documented here so they can't slip:
+R27 reviewer correction: items 1, 2, 4 are CLAUDE.md non-negotiables and have been promoted to NUCLEAR #4 above (timeboxed, ~4h total). Items 3, 5, 6 remain open:
 
-1. **`train_distill.py` has no `--profile` flag.** Profile dicts are documentation today; their boolean fields only take effect if a launcher explicitly translates them into CLI flags. Required fix: `train_distill.py --profile X` loads `PROFILES[X]` and applies every field; remove the launcher translation layer.
-2. **`pipeline.py` has no `--profile` flag either.** Currently invoked with arch flags from CLI. Required: `pipeline.py --profile X` loads `PipelineConfig.from_profile(PROFILES[X])`.
-3. **Profile-key vs ArchConfig-field cross-validation.** A profile typo (`use_dscovn=True`) is silently ignored. `preflight_profiles` should warn on any profile key not present in `ArchConfig.__dataclass_fields__`.
-4. **No deterministic reproducibility.** `train_distill.py` only seeds `torch.manual_seed`; no `numpy`, no `random`, no `cudnn.deterministic`, no `torch.use_deterministic_algorithms`. No git hash in provenance JSON. No data hashes. No `uv.lock` lockfile. No CI. A fresh checkout cannot reproduce SHIRAZ's result.
+3. **Profile-key vs ArchConfig-field cross-validation.** R26 added Levenshtein typo detection, but a profile key that's training-only AND happens to be far from any PipelineConfig name is silently dropped. Acceptable for now (training scripts consume their own profile keys), but `preflight_profiles` should grow a similar warning for `ArchConfig.__dataclass_fields__`.
 5. **Chain bugs in pipeline.py:** sensitivity_sweep runs on `cfg.checkpoint` which mutates across iterations (silent semantic drift); fridrich_refine runs AFTER QAT (should be before — Fridrich sculpts float weights into scorer null-space, then QAT bakes the sculpting in); `subprocess.run` has no timeout (no preemption recovery).
+6. **No `download` subcommand on deploy_vastai.py.** After pipeline completes, results in `/workspace/pact/experiments/results/<profile>/` require manual SCP. Risk: operator destroys instance before downloading. Add `python scripts/deploy_vastai.py --download <instance_id>` and gate `--kill` behind a confirmation prompt.
+
+## Re-opened HOLD items (R27 reviewer correction)
+
+The earlier KILL list was too aggressive. Two items are restored to HOLD pending fix:
+
+- **Cool-Chic / C3 residual**: KILL was based on "FP4 quantization erases float gains." But the run log shows C3 float-path SegNet improving from 92.3 → 68.7 over 20 epochs — real signal. The FP4 export is broken (QAT parametrization buffers not on training device), not the architecture. Status: HOLD until FP4 export bug is fixed. Then re-evaluate.
 
 ## Experiment ranking (Round 24 Contrarian decision)
 
@@ -88,20 +94,24 @@ These are deeper than R23/R24 fixes and require council consensus before impleme
 | May 1-2 | Final polish + buffer. |
 | May 3 | Deadline. |
 
-## Score Projections (honest)
+> **Contingency** (R27 reviewer): Rounds 23-27 each found CRITICAL bugs (zero clean rounds so far). 5 consecutive clean passes by May 1 is statistically implausible at the current find-rate. **If the gate is not clean by May 1, the submission is whatever passes review by May 3 OR is withheld.** A non-compliant submission ranks worse than no submission per the writeup strategy. Quality of the gate is more important than meeting the original timeline.
+
+## Score Projections (honest, R27 math correction)
 
 | Scenario | Score | Path | Confidence |
 |----------|-------|------|------------|
 | Verified baseline (Apr 21) | 2.01 [contest-compliant] | masks 384×512 + ASYM renderer + poses | HIGH |
 | SHIRAZ Phase 3 auth (pending) | unknown | A100 7-stage chain | proxy says 0.8, auth gap unknown |
-| + half-frame masks | −0.12 to −0.18 | mask sweep | HIGH (math is direct) |
-| + even-from-odd warp | −0.12 to −0.18 | inflate change | MEDIUM (depends on warp quality) |
+| + half-frame + warp (NUCLEAR #1+3, ONE change) | −0.12 to −0.18 | mask sweep + warp at inflate | HIGH (math direct) |
 | + MXLZ renderer | −0.06 to −0.09 | sensitivity sweep + mixed-precision | MEDIUM (arch_header guard added) |
 | + engineered corrections | −0.05 to −0.10 SegNet | gradient-directed pixels | LOW (no auth validation yet) |
 | + winner_v2 noise | −0.10 to −0.20 SegNet | beneficial_quant_noise | SPECULATIVE (zero empirical backing) |
-| **Realistic best stacked** | **0.8–1.4** | everything verified | MEDIUM |
-| **Optimistic best stacked** | **0.5–0.8** | everything including speculative | LOW |
+| **Realistic best stacked** | **1.6–1.8** | baseline + #1+3 + MXLZ + corrections | MEDIUM |
+| **Optimistic best stacked** | **1.3–1.6** | + speculative v2 noise | LOW |
+| **Aggressive (training breakthrough required)** | **<1.0** | needs SHIRAZ auth substantially under 2.0 baseline | not yet measured |
 | **To beat Quantizr (0.33)** | needs SegNet ~0.001, PoseNet ~0.001, rate ~0.15 | new arch family or major training breakthrough | NOT achievable with current architectures in 8 days |
+
+> **R27 reviewer math:** earlier "0.8–1.4 realistic" was 4× the stated deltas. Sum check from 2.01: −0.18 (#1+3) − 0.09 (MXLZ) − 0.10 (corrections) = 1.64 floor. The −0.20 speculative v2 only reaches 1.44 if it actually delivers (no auth evidence).
 
 ## Non-Negotiable
 
