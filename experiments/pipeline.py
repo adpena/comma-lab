@@ -117,6 +117,14 @@ class PipelineConfig:
     use_dsconv: bool = False  # ArchConfig default: False (was True — BUG: diverged from DistillConfig)
     padding_mode: str = "replicate"  # ArchConfig default: "zeros" — override: boundary artifact avoidance
     use_dilation: bool = False  # ArchConfig default: False
+    use_zoom_flow: bool = False  # GREEN profile: MotionPredictor 4ch (gate+residual), flow from RadialZoomWarp
+
+    # Training discipline / loss modulators (passed through to train_distill.py)
+    use_swa: bool = False
+    use_per_class_weights: bool = False
+    freeze_motion_phase2: bool = False
+    freeze_renderer_phase3: bool = False
+    beneficial_quant_noise: bool = False
 
     # Pose TTO — adaptive convergence
     pose_max_steps: int = 2000        # upper bound
@@ -236,8 +244,18 @@ def step_export(cfg: PipelineConfig, iteration: int = 0) -> Path:
         motion_hidden=cfg.motion_hidden, depth=cfg.depth,
         pose_dim=cfg.pose_dim, use_dsconv=cfg.use_dsconv,
         padding_mode=cfg.padding_mode, use_dilation=cfg.use_dilation,
+        use_zoom_flow=cfg.use_zoom_flow,
     )
-    model.load_state_dict(state, strict=False)
+    # strict=True so a shape mismatch fails LOUDLY, not silently. (R24 finding:
+    # strict=False masked the use_zoom_flow channel-count mismatch silently.)
+    missing, unexpected = model.load_state_dict(state, strict=False)
+    if missing or unexpected:
+        raise RuntimeError(
+            f"Checkpoint shape mismatch — refuse to export wrong arch. "
+            f"missing={list(missing)[:5]} unexpected={list(unexpected)[:5]}. "
+            f"Verify use_zoom_flow={cfg.use_zoom_flow}, base_ch={cfg.base_ch}, "
+            f"mid_ch={cfg.mid_ch}, motion_hidden={cfg.motion_hidden} match training."
+        )
     n_params = sum(p.numel() for p in model.parameters())
 
     renderer_bin = iter_dir / "renderer.bin"
@@ -364,7 +382,20 @@ def step_qat(cfg: PipelineConfig, iteration: int = 0,
 
     if _step_done(iter_dir, "qat"):
         _log(f"QAT already done (iter {iteration}), skipping")
-        return iter_dir / "renderer_fp4.bin"  # qat_finetune.py saves this name
+        # qat_finetune.py may save under either name depending on path; resolve
+        # against what actually exists on disk so the caller never gets a
+        # phantom path. (Round 23 finding.)
+        for candidate in ("renderer_fp4.bin", "renderer_qat.bin"):
+            p = iter_dir / candidate
+            if p.exists():
+                return p
+        existing_bins = sorted(iter_dir.glob("*.bin"))
+        if existing_bins:
+            return existing_bins[-1]
+        raise RuntimeError(
+            f"QAT marked done in {iter_dir} but no .bin output found. "
+            f"Delete .done_qat marker to force rerun."
+        )
 
     _log(f"QAT fine-tune (up to {cfg.qat_max_epochs} epochs)")
     cmd = [
@@ -377,14 +408,18 @@ def step_qat(cfg: PipelineConfig, iteration: int = 0,
         "--output-dir", str(iter_dir),
         "--base-ch", str(cfg.base_ch),
         "--mid-ch", str(cfg.mid_ch),
+        "--motion-hidden", str(cfg.motion_hidden),
+        "--depth", str(cfg.depth),
+        "--embed-dim", str(cfg.embed_dim),
         "--pose-dim", str(cfg.pose_dim),
+        "--padding-mode", cfg.padding_mode,
     ]
     if cfg.use_dsconv:
         cmd.append("--use-dsconv")
     if cfg.use_dilation:
         cmd.append("--use-dilation")
-    if cfg.padding_mode != "zeros":
-        cmd.extend(["--padding-mode", cfg.padding_mode])
+    if cfg.use_zoom_flow:
+        cmd.append("--use-zoom-flow")
     if mixed_precision_json is not None and mixed_precision_json.exists():
         cmd.extend(["--mixed-precision-json", str(mixed_precision_json)])
         _log(f"  Using mixed-precision allocation from: {mixed_precision_json}")
@@ -460,6 +495,21 @@ def step_fridrich_refine(cfg: PipelineConfig, iteration: int = 0) -> Path:
         cmd.append("--use-dsconv")
     if cfg.use_dilation:
         cmd.append("--use-dilation")
+    if cfg.use_zoom_flow:
+        cmd.append("--use-zoom-flow")
+    # Pass through training-discipline flags so Fridrich refinement runs in
+    # the same regime as the original training. Otherwise the refinement
+    # diverges from the training distribution it's trying to polish.
+    if cfg.use_swa:
+        cmd.append("--use-swa")
+    if cfg.use_per_class_weights:
+        cmd.append("--use-per-class-weights")
+    if cfg.freeze_motion_phase2:
+        cmd.append("--freeze-motion-phase2")
+    if cfg.freeze_renderer_phase3:
+        cmd.append("--freeze-renderer-phase3")
+    if cfg.beneficial_quant_noise:
+        cmd.append("--beneficial-quant-noise")
 
     t0 = time.monotonic()
     result = subprocess.run(cmd)
@@ -509,6 +559,28 @@ def step_compress_weights(
     if mode == "fp4":
         _log("Weight compression: FP4 (default, no additional compression)")
         _mark_done(iter_dir, step_name, {"mode": "fp4", "skipped": True})
+        return checkpoint_path
+
+    # I4LZ format has no arch header — inflate cannot recover padding_mode,
+    # use_dilation, or use_zoom_flow from the compressed state dict. Forcing
+    # I4LZ on a model trained with non-default arch flags would silently use
+    # zeros/False at inflate → wrong reconstruction. (R24 finding: SHIRAZ-class
+    # bug, but at inflate time instead of QAT time.)
+    needs_arch_header = (
+        cfg.padding_mode != "zeros"
+        or cfg.use_dilation
+        or cfg.use_zoom_flow
+    )
+    if mode in ("int4_lzma2", "auto") and needs_arch_header:
+        _log(
+            f"Weight compression: I4LZ format unsafe for padding_mode={cfg.padding_mode!r}, "
+            f"use_dilation={cfg.use_dilation}, use_zoom_flow={cfg.use_zoom_flow}. "
+            f"I4LZ has no arch header → inflate would silently use defaults. "
+            f"Falling back to FP4 (which embeds the full arch header).",
+            "WARN",
+        )
+        _mark_done(iter_dir, step_name, {"mode": "fp4_fallback",
+                                          "reason": "i4lz_no_arch_header"})
         return checkpoint_path
 
     _log(f"Weight compression: {mode}")
@@ -739,6 +811,13 @@ def step_eval(cfg: PipelineConfig, renderer_bin: Path, archive_path: Path,
         if result.stderr:
             for line in result.stderr.strip().split("\n")[-10:]:
                 _log(f"  stderr: {line}")
+        # NEVER mark a failed eval as done — that would cache the failure and
+        # the next pipeline run would skip eval and return a phantom score.
+        # (R24 finding.)
+        raise RuntimeError(
+            f"Auth eval failed (exit {result.returncode}). "
+            f"Investigate stderr above; do NOT cache this failure."
+        )
 
     # Extract score from output
     score = None

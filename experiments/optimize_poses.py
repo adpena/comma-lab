@@ -168,6 +168,10 @@ def load_renderer(checkpoint_path: str, device: torch.device) -> torch.nn.Module
     from tac.renderer import AsymmetricPairGenerator
     ckpt = torch.load(checkpoint_path, map_location="cpu", weights_only=False)
     model_cfg = ckpt.get("model_config", ckpt.get("config", {}))
+    # Every arch field that AsymmetricPairGenerator accepts must be threaded
+    # from model_cfg, including padding_mode and use_dilation. Missing either
+    # silently changes Conv2d behavior at boundaries → wrong outputs → wrong
+    # pose TTO targets. (Round 23 finding.)
     model = AsymmetricPairGenerator(
         num_classes=model_cfg.get("num_classes", 5),
         embed_dim=model_cfg.get("embed_dim", 6),
@@ -180,6 +184,9 @@ def load_renderer(checkpoint_path: str, device: torch.device) -> torch.nn.Module
         flow_only=model_cfg.get("flow_only", False),
         pose_dim=model_cfg.get("pose_dim", 6),
         use_dsconv=model_cfg.get("use_dsconv", False),
+        padding_mode=model_cfg.get("padding_mode", "zeros"),
+        use_dilation=model_cfg.get("use_dilation", False),
+        use_zoom_flow=model_cfg.get("use_zoom_flow", False),
     )
 
     if "model_state_dict" in ckpt:

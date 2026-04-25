@@ -538,6 +538,12 @@ def main() -> None:
     parser.add_argument("--padding-mode", type=str, default="zeros",
                         choices=["zeros", "reflect", "replicate", "circular"])
     parser.add_argument("--use-dilation", action="store_true")
+    parser.add_argument("--motion-hidden", type=int, default=32,
+                        help="MotionPredictor hidden channels (must match training)")
+    parser.add_argument("--depth", type=int, default=1,
+                        help="Renderer depth (must match training, 1 or 2)")
+    parser.add_argument("--embed-dim", type=int, default=6,
+                        help="Embedding dim (must match training)")
     parser.add_argument("--use-zoom-flow", action="store_true",
                         help="Enable RadialZoomWarp (4ch MotionPredictor)")
 
@@ -565,6 +571,9 @@ def main() -> None:
         mid_ch=args.mid_ch,
         pose_dim=args.pose_dim,
         use_dsconv=args.use_dsconv,
+        motion_hidden=args.motion_hidden,
+        depth=args.depth,
+        embed_dim=args.embed_dim,
         padding_mode=args.padding_mode,
         use_dilation=args.use_dilation,
         use_zoom_flow=args.use_zoom_flow,

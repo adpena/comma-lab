@@ -2366,6 +2366,7 @@ DEFINITIVE_FLOAT_EMA = {
     "depth": 1,
     "pose_dim": 6,
     "use_dsconv": True,
+    "padding_mode": "zeros",
     "eval_roundtrip": True,
     "segnet_loss_mode": "hinge",
     "hinge_margin": 0.5,
