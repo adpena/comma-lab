@@ -20,6 +20,40 @@ Read `PROGRAM.md` before making changes.
 
 Without eval_roundtrip, proxy-auth gap is 2-6x on PoseNet. Every training run without it is a WASTED run. This mistake has been made on EVERY component in this project. It stops now.
 
+## MPS auth eval is NOISE — NON-NEGOTIABLE, HIGHEST EMPHASIS
+
+**LOCAL MPS IS NEVER TO BE USED FOR STRATEGY, PLANNING, OR ANALYSIS.** Verified 2026-04-25 with side-by-side gating measurement on the same pinned archive:
+
+| Metric | Local MPS | CUDA A100 (contest scorer) | Drift |
+|---|---|---|---|
+| PoseNet distortion | 0.245 | **0.0107** | **23x WORSE on MPS** |
+| SegNet distortion | 0.0024 | 0.00116 | 2x WORSE on MPS |
+| **Final score** | **2.26** | **0.90** | **2.5x WORSE on MPS** |
+
+PoseNet specifically drifts 23×. Likely cause: FastViT-T12 attention softmax + YUV6 chroma plane numerics differ between MPS and CUDA float16 implementations.
+
+**Rules:**
+1. ALL auth eval must run on CUDA (Vast.ai 4090, A100, T4). Never MPS, never CPU.
+2. MPS is acceptable ONLY for proxy scoring during training (continuous monitoring), smoke tests (architecture validation), and code-correctness checks. NEVER for strategy decisions, ranking, or shipping.
+3. Score numbers measured on MPS may NOT be reported as "auth" or "contest-compliant" anywhere — in commits, run_log, BATTLE_PLAN, or summaries. Tag them `[MPS-PROXY]` and treat as advisory only.
+4. Before any major decision (kill/promote/ship), the score MUST come from a CUDA `inflate.sh` + `upstream/evaluate.py` run on the EXACT archive bytes.
+5. preflight should reject auth eval invocations with `--device mps` and warn loudly.
+6. The historical "2.01" / "2.26" / "2.91" numbers in memory and BATTLE_PLAN may all be MPS artifacts. The first verified CUDA contest-compliant baseline is 0.90 (2026-04-25 21:00).
+
+This is the 5th catastrophic measurement bug class. Every score above this line in the run_log was potentially wrong by a factor of 2-3. Sub-Quantizr-0.33 is genuinely reachable from the true 0.90 baseline; do not give up real GPU dollars on the wrong baseline ever again.
+
+## Remote code parity — NON-NEGOTIABLE, HIGHEST EMPHASIS
+
+**Before any remote eval or training run, verify the deployed code matches local HEAD.** Stale code on remote killed SHIRAZ today (16h training successful, then auth eval crashed silently because the deployed version had a NameError I had fixed locally that morning).
+
+Rules:
+1. `deploy_vastai.py launch()` MUST run `git pull --ff-only` on the remote BEFORE starting any work. If git pull fails (uncommitted changes, conflict, missing repo), abort the launch.
+2. preflight should add a "remote_code_parity" check: SSH in, get `cd /workspace/pact && git rev-parse HEAD`, compare to local HEAD; block launch on mismatch unless `--allow-stale-remote` is passed (with warning).
+3. The script process inside tmux MUST write a heartbeat to `/tmp/heartbeat_<session>.log` every N minutes. A separate watchdog reads heartbeats; alerts if stale > 30 min. Tmux session existence is NOT a heartbeat.
+4. Any auth eval failure on remote that has been running > 1 hour is a CRITICAL incident — investigate immediately, do not let the instance keep accruing cost while broken.
+
+This is the 6th catastrophic operational pattern. The cost: $3-10 per occurrence in idle GPU time + multi-day delays in measurement. Build the protocol so it never happens again.
+
 ## Primary duties
 
 1. Keep `submissions/exact_current` runnable under the current published workflow.
