@@ -879,7 +879,7 @@ def main() -> None:
         mp_data = json.loads(mp_json_path.read_text())
         bit_allocation = mp_data.get("allocation", {})
         fp4_path = out_dir / "renderer_mixed.bin"
-        export_int4_lzma2(model.state_dict(), fp4_path, bit_allocation=bit_allocation)
+        export_int4_lzma2(model, fp4_path, bit_allocation=bit_allocation)
     else:
         # Uniform FP4 export (default)
         print("\nExporting FP4 binary...")
