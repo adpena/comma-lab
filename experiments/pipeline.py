@@ -296,6 +296,13 @@ def _export_refined_checkpoint(cfg: PipelineConfig, ckpt_path: Path,
     iter_dir.mkdir(parents=True, exist_ok=True)
     out_path = iter_dir / "renderer_refined.bin"
 
+    # R33 fix: idempotence guard. Match every other step's resume contract
+    # so a restart doesn't re-do the load+export. The output is deterministic
+    # given (cfg arch, ckpt_path) so reusing the existing file is safe.
+    if out_path.exists() and out_path.stat().st_size > 0:
+        _log(f"  Refined export already exists, skipping ({out_path.name})")
+        return out_path
+
     from tac.renderer import AsymmetricPairGenerator
     from tac.renderer_export import export_asymmetric_checkpoint_fp4
 
@@ -791,7 +798,18 @@ def step_compress_weights(
         padding_mode=cfg.padding_mode, use_dilation=cfg.use_dilation,
         use_zoom_flow=cfg.use_zoom_flow,
     )
-    model_restored.load_state_dict(restored_sd, strict=False)
+    # R33 fix: same hard-fail-on-shape-mismatch pattern as step_export.
+    # Without this, a corrupt/truncated I4LZ file silently restores partial
+    # weights and the RMSE quality measurement compares against zeros for
+    # missing layers — producing artificially low RMSE that would make the
+    # 'auto' mode incorrectly choose I4LZ over FP4.
+    missing_r, unexpected_r = model_restored.load_state_dict(restored_sd, strict=False)
+    if missing_r or unexpected_r:
+        raise RuntimeError(
+            f"step_compress_weights: I4LZ restore shape mismatch. "
+            f"missing={list(missing_r)[:5]} unexpected={list(unexpected_r)[:5]}. "
+            f"I4LZ archive may be truncated/corrupt."
+        )
     model_restored.eval()
 
     # Measure parameter-space RMSE
@@ -1191,8 +1209,11 @@ def run_compress(cfg: PipelineConfig) -> None:
         if fridrich_ckpt.exists() and fridrich_ckpt.suffix == ".pt":
             best_ckpt = fridrich_ckpt
         else:
-            # Fall back to QAT best, then raw export
-            qat_best = Path(cfg.output_dir) / f"iter_{iteration}" / "renderer_qat_best.pt"
+            # Fall back to QAT best, then raw export. R33 fix: filename is
+            # qat_best_float.pt (per qat_finetune.py), not renderer_qat_best.pt.
+            # The wrong name made this fallback ALWAYS fall through to
+            # cfg.checkpoint, silently using pre-QAT weights.
+            qat_best = Path(cfg.output_dir) / f"iter_{iteration}" / "qat_best_float.pt"
             best_ckpt = qat_best if qat_best.exists() else Path(cfg.checkpoint)
 
         if cfg.weight_compression != "fp4" and best_ckpt.exists():
@@ -1231,12 +1252,19 @@ def run_compress(cfg: PipelineConfig) -> None:
 
             prev_score = score
 
-        # For next iteration: use QAT output as starting point
+        # For next iteration: use QAT output as starting point.
+        # R33 fix: filename is qat_best_float.pt (per qat_finetune.py), not
+        # renderer_qat_best.pt. The wrong name made this guard ALWAYS False,
+        # so cfg.checkpoint never advanced — every multi-iteration run was
+        # silently equivalent to --max-iterations 1.
         if iteration < cfg.max_iterations - 1:
-            qat_ckpt = Path(cfg.output_dir) / f"iter_{iteration}" / "renderer_qat_best.pt"
+            qat_ckpt = Path(cfg.output_dir) / f"iter_{iteration}" / "qat_best_float.pt"
             if qat_ckpt.exists():
                 cfg.checkpoint = str(qat_ckpt)
                 _log(f"  Next iteration starts from: {qat_ckpt}")
+            else:
+                _log(f"  WARN: qat_best_float.pt not found in iter_{iteration} — "
+                     f"next iteration will re-train from original cfg.checkpoint")
 
     total = time.monotonic() - t0
     _banner(f"PIPELINE COMPLETE — {total/60:.1f} min total")
