@@ -825,10 +825,26 @@ def _load_masks_from_archive(
     result = torch.from_numpy(masks)
 
     if expected_frames is not None and N != expected_frames:
-        print(
-            f"  WARNING: expected {expected_frames} mask frames, got {N}",
-            file=sys.stderr,
-        )
+        if N == expected_frames // 2:
+            # Half-frame masks (600 odd-frame only): duplicate each mask to
+            # reconstruct the full 1200-frame sequence.  Frame layout:
+            #   pair_i uses mask[i] for both frame_t and frame_t1.
+            # This matches Quantizr's paradigm: store only odd-frame masks,
+            # derive even-frame masks at inflate time.
+            print(
+                f"  Half-frame masks detected: {N} frames → duplicating to {expected_frames}",
+                file=sys.stderr,
+            )
+            # Interleave: [m0, m0, m1, m1, ...] so pair (0,1) shares m0, etc.
+            result = result.repeat_interleave(2, dim=0)
+            N = result.shape[0]
+        else:
+            raise ValueError(
+                f"FATAL: Expected {expected_frames} mask frames, got {N}. "
+                f"Archive masks must contain exactly {expected_frames} frames "
+                f"(or {expected_frames // 2} for half-frame encoding). "
+                f"Rebuild the archive with correct mask count."
+            )
 
     elapsed = time.monotonic() - t0
     print(
