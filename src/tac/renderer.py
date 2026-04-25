@@ -989,7 +989,7 @@ class AsymmetricPairGenerator(nn.Module):
             'pose_dim': pose_dim, 'max_flow_px': max_flow_px,
             'max_residual': max_residual, 'use_dsconv': use_dsconv,
             'padding_mode': padding_mode, 'use_dilation': use_dilation,
-            'use_zoom_flow': use_zoom_flow,
+            'use_zoom_flow': use_zoom_flow, 'flow_only': flow_only,
         }
         # When zoom handles flow, MotionPredictor only needs gate(1) + residual(3) = 4 channels.
         # This saves ~14K params (motion_hidden=24) by not predicting a redundant rank-1 flow signal.
