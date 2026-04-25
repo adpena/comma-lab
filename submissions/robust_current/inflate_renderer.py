@@ -836,6 +836,12 @@ def _load_masks_from_archive(
                 file=sys.stderr,
             )
             # Interleave: [m0, m0, m1, m1, ...] so pair (0,1) shares m0, etc.
+            # NOTE: With duplicated masks, mask_t == mask_t1 for every pair.
+            # This zeroes the MotionPredictor's diff features (e_t1 - e_t).abs(),
+            # effectively disabling learned flow and reducing to gate*residual.
+            # This is the Quantizr paradigm and works IF the model was trained
+            # with half-frame masks. If trained with full 1200 distinct masks,
+            # deploying with half-frame may degrade quality.
             result = result.repeat_interleave(2, dim=0)
             N = result.shape[0]
         else:
@@ -1426,12 +1432,28 @@ def _load_renderer(renderer_path: str, device: str) -> nn.Module:
                 "INT4_LZMA2 format requires the tac package for model construction. "
                 "Install tac or use FP4A/ASYM format."
             )
-        # Infer architecture from state dict shapes to prevent silent mismatch
-        base_ch = state_dict.get("renderer.stem_conv.weight", torch.zeros(36)).shape[0]
-        mid_ch = state_dict.get("renderer.down_conv.weight", torch.zeros(60)).shape[0]
+        # Infer architecture from state dict shapes to prevent silent mismatch.
+        # Handle both plain Conv2d (stem_conv.weight) and DSConv Sequential
+        # (stem_conv.1.weight for pointwise conv — .0 is depthwise).
+        def _infer_ch(prefix, default):
+            for suffix in [f"{prefix}.weight", f"{prefix}.1.weight"]:
+                if suffix in state_dict:
+                    return state_dict[suffix].shape[0]
+            return default
+        base_ch = _infer_ch("renderer.stem_conv", 36)
+        mid_ch = _infer_ch("renderer.down_conv", 60)
+        # Infer use_dsconv from key presence
+        use_dsconv = "renderer.stem_conv.0.weight" in state_dict
+        # Infer pose_dim from FiLM layer presence
+        pose_dim = 0
+        for k in state_dict:
+            if "film_bottleneck" in k:
+                pose_dim = 6
+                break
         model = _APG(
             num_classes=num_classes, embed_dim=embed_dim,
             base_ch=base_ch, mid_ch=mid_ch,
+            use_dsconv=use_dsconv, pose_dim=pose_dim,
         )
         model.load_state_dict(state_dict, strict=True)
         model = model.eval().to(device)
@@ -1478,6 +1500,7 @@ def _load_renderer(renderer_path: str, device: str) -> nn.Module:
                 f"or use a .pt checkpoint instead."
             )
         renderer = load_renderer_checkpoint(raw_bytes, device=device)
+        _renderer_pose_dim = getattr(renderer, 'pose_dim', 6)
         elapsed = time.monotonic() - t0
         print(f"  Loaded renderer from .bin format ({len(raw_bytes):,} bytes, {elapsed:.1f}s)",
               file=sys.stderr)
@@ -1830,6 +1853,7 @@ def _load_renderer_and_masks(
             f"Expected {renderer_filename} inside archive directory."
         )
     renderer = _load_renderer(str(renderer_path), device)
+    _renderer_pose_dim = getattr(renderer, 'pose_dim', 6)
 
     mask_video_path = Path(archive_dir) / mask_filename
     if not mask_video_path.exists():
@@ -1934,6 +1958,7 @@ def inflate_renderer(
             f"Expected {renderer_filename} inside archive directory."
         )
     renderer = _load_renderer(str(renderer_path), device)
+    _renderer_pose_dim = getattr(renderer, 'pose_dim', 6)
 
     # ---- Load optimized embedding (C3: embedding-space TTO at compress time) ----
     optimized_emb_path = Path(archive_dir) / "optimized_embedding.pt"
@@ -1992,16 +2017,14 @@ def inflate_renderer(
         print(f"  Loaded OPTIMIZED poses: {poses.shape} from archive (pose-space TTO)", file=sys.stderr)
     elif optimized_bin_path.exists():
         raw = optimized_bin_path.read_bytes()
-        _pose_dim = getattr(renderer, 'pose_dim', 6) if 'renderer' in dir() else 6
-        poses = torch.frombuffer(bytearray(raw), dtype=torch.float16).reshape(-1, _pose_dim).float()
+        poses = torch.frombuffer(bytearray(raw), dtype=torch.float16).reshape(-1, _renderer_pose_dim).float()
         print(f"  Loaded OPTIMIZED poses: {poses.shape} from archive (bin, pose-space TTO)", file=sys.stderr)
     elif poses_path.exists():
         poses = torch.load(str(poses_path), map_location="cpu", weights_only=True).float()
         print(f"  Loaded GT poses: {poses.shape} from archive", file=sys.stderr)
     elif poses_bin_path.exists():
         raw = poses_bin_path.read_bytes()
-        _pose_dim = getattr(renderer, 'pose_dim', 6) if 'renderer' in dir() else 6
-        poses = torch.frombuffer(bytearray(raw), dtype=torch.float16).reshape(-1, _pose_dim).float()
+        poses = torch.frombuffer(bytearray(raw), dtype=torch.float16).reshape(-1, _renderer_pose_dim).float()
         print(f"  Loaded GT poses: {poses.shape} from archive (bin)", file=sys.stderr)
 
     # ---- Load gradient corrections (C4: pre-computed pixel adjustments) ----
@@ -2815,16 +2838,14 @@ def _inflate_renderer_with_mini_tto(
         print(f"  Loaded OPTIMIZED poses: {poses.shape} from archive (pose-space TTO)", file=sys.stderr)
     elif optimized_bin_path.exists():
         raw = optimized_bin_path.read_bytes()
-        _pose_dim = getattr(renderer, 'pose_dim', 6) if 'renderer' in dir() else 6
-        poses = torch.frombuffer(bytearray(raw), dtype=torch.float16).reshape(-1, _pose_dim).float()
+        poses = torch.frombuffer(bytearray(raw), dtype=torch.float16).reshape(-1, _renderer_pose_dim).float()
         print(f"  Loaded OPTIMIZED poses: {poses.shape} from archive (bin, pose-space TTO)", file=sys.stderr)
     elif poses_path.exists():
         poses = torch.load(str(poses_path), map_location="cpu", weights_only=True).float()
         print(f"  Loaded GT poses: {poses.shape} from archive", file=sys.stderr)
     elif poses_bin_path.exists():
         raw = poses_bin_path.read_bytes()
-        _pose_dim = getattr(renderer, 'pose_dim', 6) if 'renderer' in dir() else 6
-        poses = torch.frombuffer(bytearray(raw), dtype=torch.float16).reshape(-1, _pose_dim).float()
+        poses = torch.frombuffer(bytearray(raw), dtype=torch.float16).reshape(-1, _renderer_pose_dim).float()
         print(f"  Loaded GT poses: {poses.shape} from archive (bin)", file=sys.stderr)
 
     # ---- Generate renderer frames ----
@@ -2904,10 +2925,10 @@ def _inflate_renderer_with_mini_tto(
         target_poses = torch.load(str(poses_path), map_location="cpu", weights_only=True).float()
     elif poses_bin_path.exists():
         raw = poses_bin_path.read_bytes()
-        target_poses = torch.frombuffer(bytearray(raw), dtype=torch.float16).reshape(-1, 6).float()
+        target_poses = torch.frombuffer(bytearray(raw), dtype=torch.float16).reshape(-1, _renderer_pose_dim).float()
     else:
         # No pre-computed poses — skip PoseNet TTO
-        target_poses = torch.zeros(N // 2, 6)
+        target_poses = torch.zeros(N // 2, _renderer_pose_dim)
         print("  WARNING: No pose targets in archive. PoseNet TTO disabled.", file=sys.stderr)
         pose_weight = 0.0
 
