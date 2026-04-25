@@ -379,7 +379,7 @@ def optimize_poses_batch(
 
         pose_in = posenet.preprocess_input(pairs_chw)
         pose_out = posenet(pose_in)["pose"][..., :6]  # (B, 6)
-        pose_loss = F.mse_loss(pose_out, pose_targets.to(device))
+        pose_loss = F.mse_loss(pose_out, pose_targets[:pose_out.shape[0]].to(device))
 
         # Combined loss
         total_loss = seg_weight * seg_loss + pose_weight * pose_loss
