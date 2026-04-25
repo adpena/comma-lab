@@ -103,6 +103,10 @@ def parse_args() -> argparse.Namespace:
                         "CRITICAL: must match the actual archive masks, not fresh SegNet. "
                         "Without this, poses are optimized against perfect masks but "
                         "deployed with lossy AV1 masks — 27x PoseNet regression.")
+    p.add_argument("--gt-pose-targets", type=str, default=None,
+                   help="Path to precomputed GT pose targets (.pt, shape [N_pairs, 6]). "
+                        "Skips expensive PoseNet inference on all GT frame pairs. "
+                        "Generate with: extract_gt_pose_targets() and torch.save().")
     p.add_argument("--smoke", action="store_true",
                    help="Smoke test: 20 frames, 100 steps")
     p.add_argument("--eval-roundtrip", action="store_true", default=True,
@@ -606,7 +610,15 @@ def main():
         print(f"  Pass --masks <path_to_archive_masks.mkv>")
         sys.exit(1)
 
-    pose_targets = extract_gt_pose_targets(gt_frames, posenet, device)
+    if args.gt_pose_targets and Path(args.gt_pose_targets).exists():
+        pose_targets = torch.load(args.gt_pose_targets, map_location="cpu", weights_only=True).float()
+        print(f"  Loaded precomputed pose targets from {args.gt_pose_targets}: {pose_targets.shape}")
+    else:
+        pose_targets = extract_gt_pose_targets(gt_frames, posenet, device)
+        # Save for reuse on future runs
+        cache_path = Path(args.output_dir) / "gt_pose_targets.pt"
+        torch.save(pose_targets, cache_path)
+        print(f"  Computed pose targets and cached to {cache_path}")
     print(f"[4/6] Masks: {gt_masks.shape}, Poses: {pose_targets.shape} in {time.monotonic() - t0:.1f}s")
 
     # ── Step 4: Load or extract initial GT poses ────────────────────────

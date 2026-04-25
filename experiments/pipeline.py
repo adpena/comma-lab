@@ -274,6 +274,13 @@ def step_pose_tto(cfg: PipelineConfig, iteration: int = 0) -> Path:
         "--output-dir", str(iter_dir),
     ]
 
+    # Reuse cached pose targets from previous runs (saves ~15 min of PoseNet inference)
+    for candidate in [iter_dir / "gt_pose_targets.pt", Path(cfg.output_dir) / "gt_pose_targets.pt"]:
+        if candidate.exists():
+            cmd.extend(["--gt-pose-targets", str(candidate)])
+            _log(f"  Using cached pose targets: {candidate}")
+            break
+
     t0 = time.monotonic()
     result = subprocess.run(cmd)
     elapsed = time.monotonic() - t0
