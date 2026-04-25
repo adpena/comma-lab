@@ -170,59 +170,33 @@ def load_float_checkpoint(model: nn.Module, path: str, device: torch.device) -> 
     print(f"  Loaded float checkpoint from {path}")
 
 
-class FakeQuantContext:
-    """Classic QAT: inject FakeQuant noise into weights for forward pass.
+def apply_int8_fake_quant(model: nn.Module) -> list[tuple[nn.Module, str]]:
+    """Wrap Conv2d weights with INT8 FakeQuant STE via nn.utils.parametrize.
 
-    Avoids nn.utils.parametrize which causes MPS stride incompatibility
-    in backward (.view() failures on non-contiguous parametrized tensors).
-
-    Usage:
-        ctx = FakeQuantContext(model, quant_fn)
-        ctx.inject()   # replace weights with fake-quantized versions
-        loss = model(...)
-        loss.backward()  # gradients flow to shadow (original) weights via STE
-        ctx.restore()  # swap back original weights
-        optimizer.step()  # update original weights
-    """
-
-    def __init__(self, model: nn.Module, quant_fn, layer_types=(nn.Conv2d, nn.ConvTranspose2d)):
-        self.targets = []
-        for name, module in model.named_modules():
-            if isinstance(module, layer_types) and hasattr(module, "weight"):
-                self.targets.append(module)
-        self.quant_fn = quant_fn
-        self.saved: list[torch.Tensor] = []
-
-    def inject(self) -> None:
-        """Replace weights with fake-quantized versions. Call before forward."""
-        self.saved = []
-        for module in self.targets:
-            w = module.weight.data
-            self.saved.append(w.clone())
-            module.weight.data = self.quant_fn(w.contiguous())
-
-    def restore(self) -> None:
-        """Restore original weights. Call after backward, before optimizer.step()."""
-        for module, w_orig in zip(self.targets, self.saved):
-            module.weight.data = w_orig
-        self.saved = []
-
-
-def apply_int8_fake_quant(model: nn.Module) -> "FakeQuantContext":
-    """Create INT8 FakeQuant context for QAT Phase A.
-
-    Returns a FakeQuantContext — call .inject() before forward, .restore() after backward.
+    Returns list of (module, param_name) for later removal.
     """
     from tac.quantization import FakeQuantSTE
 
-    ctx = FakeQuantContext(model, lambda w: FakeQuantSTE.apply(w))
-    print(f"  INT8 parametrized: {len(ctx.targets)} layers")
-    return ctx
+    class Int8Parametrize(nn.Module):
+        def forward(self, weight: torch.Tensor) -> torch.Tensor:
+            return FakeQuantSTE.apply(weight.contiguous())
+
+    wrapped = []
+    for name, module in model.named_modules():
+        if isinstance(module, (nn.Conv2d, nn.ConvTranspose2d)):
+            nn.utils.parametrize.register_parametrization(
+                module, "weight", Int8Parametrize()
+            )
+            wrapped.append((module, "weight"))
+    print(f"  INT8 parametrized: {len(wrapped)} layers")
+    return wrapped
 
 
-def remove_parametrizations(wrapped) -> None:
-    """No-op for FakeQuantContext (cleanup is automatic via .restore())."""
-    pass
+def remove_parametrizations(wrapped: list[tuple[nn.Module, str]]) -> None:
+    """Remove all registered parametrizations."""
+    for module, param_name in wrapped:
+        if nn.utils.parametrize.is_parametrized(module, param_name):
+            nn.utils.parametrize.remove_parametrizations(module, param_name)
 
 
 def apply_fp4_fake_quant(
@@ -433,7 +407,7 @@ def evaluate_fp4_quality(
                 torch.from_numpy(gt_frames[2 * i + 1]).float(),
             ]).unsqueeze(0).to(device)
             comp_p = cam.permute(0, 2, 3, 1).unsqueeze(0)
-            pd, sd = dn.compute_distortion(comp_p, gt_p)
+            pd, sd = dn.compute_distortion(gt_p, comp_p)  # upstream convention: (gt, compressed)
             pd_list.append(pd.item())
             sd_list.append(sd.item())
 
@@ -622,7 +596,7 @@ def main() -> None:
         print(f"PHASE A: INT8 Warm-Up ({cfg.int8_warmup_epochs} epochs)")
         print(f"{'='*70}")
 
-        int8_ctx = apply_int8_fake_quant(model)
+        int8_wrapped = apply_int8_fake_quant(model)
 
         optimizer = torch.optim.Adam(model.parameters(), lr=cfg.base_lr, weight_decay=1e-4)
         total_steps = cfg.int8_warmup_epochs
@@ -642,13 +616,11 @@ def main() -> None:
             p = poses[idx].to(device) if poses is not None else None
 
             optimizer.zero_grad()
-            int8_ctx.inject()  # apply fake-quant noise to weights
             loss, metrics = compute_scorer_loss(
                 model, m_even, m_odd, gt_even, gt_odd, p,
                 posenet, segnet, cfg, device,
             )
             loss.backward()
-            int8_ctx.restore()  # restore original weights before optimizer step
             torch.nn.utils.clip_grad_norm_(model.parameters(), cfg.grad_clip)
             optimizer.step()
 
@@ -663,9 +635,9 @@ def main() -> None:
                 print(f"  [INT8] eval: distortion={q['distortion']:.3f}")
                 history.append({"phase": "int8", "epoch": epoch, **q})
 
-        # INT8 context auto-cleans via .restore() — no parametrizations to remove
-        del int8_ctx
-        print("  INT8 phase complete")
+        # Remove INT8 parametrizations before Phase B
+        remove_parametrizations(int8_wrapped)
+        print("  INT8 parametrizations removed")
 
         del optimizer
         gc.collect()
@@ -680,14 +652,11 @@ def main() -> None:
     print(f"PHASE B: FP4 Fine-Tune ({cfg.fp4_epochs} epochs)")
     print(f"{'='*70}")
 
-    from tac.fp4_quantize import fake_quant_fp4, DEFAULT_CODEBOOK
-
-    fp4_ctx = FakeQuantContext(
+    fp4_wrapped = apply_fp4_fake_quant(
         model,
-        lambda w: fake_quant_fp4(w, DEFAULT_CODEBOOK.to(w.device), cfg.fp4_block_size),
-        layer_types=(nn.Conv2d, nn.ConvTranspose2d, nn.Embedding, nn.Linear),
+        block_size=cfg.fp4_block_size,
+        mixed_precision=cfg.mixed_precision,
     )
-    print(f"  FP4 context: {len(fp4_ctx.targets)} layers")
 
     optimizer = torch.optim.Adam(model.parameters(), lr=cfg.base_lr, weight_decay=1e-4)
     total_steps = cfg.fp4_epochs
@@ -707,13 +676,11 @@ def main() -> None:
         p = poses[idx].to(device) if poses is not None else None
 
         optimizer.zero_grad()
-        fp4_ctx.inject()  # apply FP4 fake-quant noise
         loss, metrics = compute_scorer_loss(
             model, m_even, m_odd, gt_even, gt_odd, p,
             posenet, segnet, cfg, device,
         )
         loss.backward()
-        fp4_ctx.restore()  # restore original weights before optimizer step
         torch.nn.utils.clip_grad_norm_(model.parameters(), cfg.grad_clip)
         optimizer.step()
 
@@ -754,8 +721,8 @@ def main() -> None:
                 "distortion": metrics["total_loss"],
             }, ckpt_path)
 
-    # ── FP4 context auto-cleans via .restore() — no parametrizations needed
-    del fp4_ctx
+    # ── Remove FP4 parametrizations and restore best weights ──────────
+    remove_parametrizations(fp4_wrapped)
 
     if best_state is not None:
         model.load_state_dict(best_state)

@@ -165,7 +165,11 @@ def run_upstream_evaluate(
 
 
 def parse_report(report_path: Path) -> dict:
-    """Parse upstream report.txt into structured data."""
+    """Parse upstream report.txt into structured data.
+
+    Raises ValueError if any required field is missing — prevents silent
+    fallback to zero which would produce unrealistically good scores.
+    """
     text = report_path.read_text()
     result = {}
     for line in text.splitlines():
@@ -182,6 +186,14 @@ def parse_report(report_path: Path) -> dict:
             result["rate"] = float(line.split(":")[-1].strip())
         elif "Final score" in line:
             result["score"] = float(line.split("=")[-1].strip())
+
+    required = ["posenet_dist", "segnet_dist", "rate", "score"]
+    missing = [k for k in required if k not in result]
+    if missing:
+        raise ValueError(
+            f"FATAL: Failed to parse upstream report — missing fields: {missing}\n"
+            f"Report contents:\n{text}"
+        )
     return result
 
 
