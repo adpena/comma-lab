@@ -87,6 +87,7 @@ class QATConfig:
     # Paths
     checkpoint_path: str = ""
     upstream_dir: str = "upstream/"
+    mixed_precision_json: str = ""  # scorer sensitivity JSON for mixed-precision QAT
     output_dir: str = "experiments/results/qat_fp4"
 
     # QAT schedule — research-backed (Apple 2025, Bit-by-Bit 2026)
@@ -230,6 +231,93 @@ def apply_fp4_fake_quant(
                 wrapped.append((module, "weight"))
 
     print(f"  FP4 parametrized: {len(wrapped)} layers (all Conv/Linear/Embedding)")
+    return wrapped
+
+
+def apply_mixed_precision_quant(
+    model: nn.Module,
+    bit_allocation: dict[str, int],
+    block_size: int = 32,
+) -> list[tuple[nn.Module, str]]:
+    """Wrap layers with VARIABLE bit-depth FakeQuant (scorer-optimal allocation).
+
+    Uses Yousfi's scorer-Jacobian sensitivity to allocate bits per layer.
+    Layers with negative scorer sensitivity get 2 bits (quantization noise
+    acts as beneficial steganalytic texture). High-sensitivity layers get 8 bits.
+
+    Args:
+        model: the renderer to wrap
+        bit_allocation: dict mapping parameter name → bit depth (from sensitivity sweep)
+        block_size: quantization block size
+
+    Returns:
+        list of (module, param_name) for cleanup
+    """
+    from tac.quantization import FakeQuantSTE
+    from tac.fp4_quantize import FP4Parametrize, DEFAULT_CODEBOOK
+
+    class VariableBitParametrize(nn.Module):
+        """Parametrize that quantizes to a specific bit-depth via STE."""
+        def __init__(self, bits: int):
+            super().__init__()
+            self.bits = bits
+
+        def forward(self, weight: torch.Tensor) -> torch.Tensor:
+            w = weight.contiguous()
+            if self.bits >= 16:
+                return w
+            if self.bits == 4:
+                # Use our FP4 codebook for 4-bit (matches export)
+                from tac.fp4_quantize import fake_quant_fp4
+                return fake_quant_fp4(w, DEFAULT_CODEBOOK.to(w.device), block_size)
+            # For other bit-depths: uniform symmetric quantization with STE
+            n_levels = 2 ** self.bits
+            if w.ndim >= 2:
+                # Per-channel quantization
+                flat = w.detach().reshape(w.shape[0], -1)
+                scale = flat.abs().amax(dim=1) / (n_levels / 2 - 1)
+                scale = scale.clamp(min=1e-10)
+                scale_view = scale.reshape(-1, *([1] * (w.ndim - 1)))
+                q = (w / scale_view).round().clamp(-(n_levels // 2), n_levels // 2 - 1)
+                return (q * scale_view - w).detach() + w  # STE
+            else:
+                scale = w.detach().abs().max() / (n_levels / 2 - 1)
+                if scale.item() < 1e-10:
+                    return w
+                q = (w / scale).round().clamp(-(n_levels // 2), n_levels // 2 - 1)
+                return (q * scale - w).detach() + w  # STE
+
+    wrapped = []
+    bits_summary = {}
+    for name, module in model.named_modules():
+        if isinstance(module, (nn.Conv2d, nn.ConvTranspose2d, nn.Embedding, nn.Linear)):
+            if hasattr(module, "weight") and module.weight.ndim >= 2:
+                # Find the matching allocation key
+                param_name = None
+                for pname, _ in model.named_parameters():
+                    if pname.endswith(".weight") and name in pname:
+                        param_name = pname
+                        break
+                bits = bit_allocation.get(param_name, 4)  # default to FP4
+                bits_summary[param_name or name] = bits
+
+                nn.utils.parametrize.register_parametrization(
+                    module, "weight", VariableBitParametrize(bits),
+                )
+                wrapped.append((module, "weight"))
+
+    # Summary
+    total_bits = sum(
+        dict(model.named_parameters())[n].numel() * b
+        for n, b in bits_summary.items()
+        if n in dict(model.named_parameters())
+    )
+    n_2bit = sum(1 for b in bits_summary.values() if b == 2)
+    n_4bit = sum(1 for b in bits_summary.values() if b == 4)
+    n_8bit = sum(1 for b in bits_summary.values() if b == 8)
+    print(f"  Mixed-precision: {len(wrapped)} layers "
+          f"(2b={n_2bit}, 4b={n_4bit}, 8b={n_8bit}, "
+          f"total={total_bits / 8 / 1024:.1f}KB)")
     return wrapped
 
 
@@ -464,6 +552,9 @@ def main() -> None:
     # Control
     parser.add_argument("--skip-int8-warmup", action="store_true",
                         help="Skip INT8 warm-up phase (direct FP4)")
+    parser.add_argument("--mixed-precision-json", type=Path, default=None,
+                        help="Path to scorer sensitivity JSON for mixed-precision QAT. "
+                             "Use experiments/scorer_sensitivity_sweep.py to generate.")
 
     args = parser.parse_args()
 
@@ -483,6 +574,7 @@ def main() -> None:
         fp4_epochs=args.fp4_epochs,
         base_lr=args.lr,
         batch_size=args.batch_size,
+        mixed_precision_json=str(args.mixed_precision_json) if args.mixed_precision_json else "",
     )
 
     # Preflight
@@ -686,10 +778,18 @@ def main() -> None:
     print(f"PHASE B: FP4 Fine-Tune ({cfg.fp4_epochs} epochs)")
     print(f"{'='*70}")
 
-    fp4_wrapped = apply_fp4_fake_quant(
-        model,
-        block_size=cfg.fp4_block_size,
-    )
+    mp_json_path = Path(cfg.mixed_precision_json) if cfg.mixed_precision_json else None
+    if mp_json_path and mp_json_path.exists():
+        mp_data = json.loads(mp_json_path.read_text())
+        bit_allocation = mp_data.get("allocation", {})
+        print(f"  Using scorer-optimal mixed-precision from {mp_json_path}")
+        fp4_wrapped = apply_mixed_precision_quant(
+            model, bit_allocation, block_size=cfg.fp4_block_size,
+        )
+    else:
+        fp4_wrapped = apply_fp4_fake_quant(
+            model, block_size=cfg.fp4_block_size,
+        )
 
     optimizer = torch.optim.Adam(model.parameters(), lr=cfg.base_lr, weight_decay=1e-4)
     total_steps = cfg.fp4_epochs
