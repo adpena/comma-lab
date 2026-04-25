@@ -80,6 +80,10 @@ def run_inflate(
 
     env = os.environ.copy()
     env["PYTHONPATH"] = f"{repo_root / 'src'}:{repo_root / 'upstream'}:{repo_root}"
+    # Remove env vars that would make inflate non-contest-compliant
+    for unsafe_var in ("INFLATE_MASK_SOURCE", "INFLATE_TTO", "INFLATE_MINI_TTO",
+                       "INFLATE_SKIP_MASKS"):
+        env.pop(unsafe_var, None)
 
     t0 = time.monotonic()
     result = subprocess.run(

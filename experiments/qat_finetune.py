@@ -399,8 +399,8 @@ def evaluate_fp4_quality(
             kwargs = {"pose": p} if p is not None else {}
             pair = renderer(m_t, m_t1, **kwargs)
             chw = pair[0].permute(0, 3, 1, 2).float()
-            # eval_roundtrip: simulate contest resize chain (NON-NEGOTIABLE)
-            # 384x512 → 874x1164 → uint8 → 384x512 (matches upstream evaluate.py)
+            # eval_roundtrip: upscale to camera res + uint8 quantize
+            # (DistortionNet internally resizes to scorer res — matches upstream)
             cam = F.interpolate(chw, size=(874, 1164), mode="bilinear", align_corners=False)
             cam = cam.round().clamp(0, 255).to(torch.uint8).float()
 

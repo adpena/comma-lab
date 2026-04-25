@@ -75,7 +75,7 @@ def analyze_archive(archive_path: str) -> dict[str, int]:
     return result
 
 
-def requantize_poses(poses_data: bytes, output_format: str) -> bytes:
+def requantize_poses(poses_data: bytes, output_format: str, pose_dim: int = 6) -> bytes:
     """Convert poses from whatever format to target format.
 
     Poses are stored as torch tensors. We load, convert, and re-save.
@@ -88,7 +88,7 @@ def requantize_poses(poses_data: bytes, output_format: str) -> bytes:
         poses = torch.load(buf, map_location="cpu", weights_only=True).float()
     except Exception:
         # Might be raw binary (fp16 buffer)
-        poses = torch.frombuffer(bytearray(poses_data), dtype=torch.float16).reshape(-1, 6).float()
+        poses = torch.frombuffer(bytearray(poses_data), dtype=torch.float16).reshape(-1, pose_dim).float()
 
     if output_format == "fp32":
         out_buf = io.BytesIO()

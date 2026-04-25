@@ -1484,17 +1484,26 @@ def load_any_renderer_checkpoint(
         else:
             num_classes, embed_dim = 5, 6
 
-        # Infer base_ch from first conv weight shape
-        first_conv_key = next(
-            (k for k in state_dict if "weight" in k and state_dict[k].ndim == 4),
-            None,
-        )
-        # Use defaults — the caller should construct the model with correct params
+        # Infer architecture from state dict to prevent silent mismatches
+        def _get_ch(prefix, default):
+            for suffix in [f"{prefix}.weight", f"{prefix}.1.weight"]:
+                if suffix in state_dict:
+                    return state_dict[suffix].shape[0]
+            return default
+        base_ch = _get_ch("renderer.stem_conv", 36)
+        mid_ch = _get_ch("renderer.down_conv", 60)
+        use_dsconv = "renderer.stem_conv.0.weight" in state_dict
+        pose_dim = 6 if any("film_bottleneck" in k for k in state_dict) else 0
+
         model = AsymmetricPairGenerator(
             num_classes=num_classes,
             embed_dim=embed_dim,
+            base_ch=base_ch,
+            mid_ch=mid_ch,
+            use_dsconv=use_dsconv,
+            pose_dim=pose_dim,
         )
-        model.load_state_dict(state_dict, strict=False)
+        model.load_state_dict(state_dict, strict=True)
         return model.eval().to(device)
     else:
         raise ValueError(
