@@ -34,7 +34,8 @@ CANDIDATE_BITS = torch.tensor([2.0, 3.0, 4.0, 6.0, 8.0])
 
 def quantize_to_bits_differentiable(tensor: torch.Tensor, bits: float) -> torch.Tensor:
     """Simulate quantization to fractional bits via interpolation (STE)."""
-    n_levels = 2 ** bits
+    bits_val = bits.item() if isinstance(bits, torch.Tensor) else bits
+    n_levels = 2 ** bits_val
     vmin = tensor.min()
     vmax = tensor.max()
     if (vmax - vmin).item() < 1e-10:
