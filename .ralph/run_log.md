@@ -1,5 +1,41 @@
 # run log
 
+## 2026-04-25T15:30:00-05:00 — NUCLEAR #1 + FP4 fix: -0.237 rate-term lever staged
+
+**Mask sweep landed (commit bc53d474):**
+- AV1mono full CRF=63: 109KB / rate=0.072 / 0.74% pixel disagreement
+- AV1mono half CRF=63 + naive frame-doubling: 59KB / 0.96% disagreement
+- Current archive (CRF=50): 411KB / 0.281 / 0.22% disagreement
+- Pareto winner: CRF=63 full — minimal disagreement at 4× rate-term reduction
+
+**FP4 robustness fix landed (commits 70d754b3, 77379ab2):**
+- Three composable improvements to `tac.fp4_quantize`:
+  1. RESIDUAL_CODEBOOK (denser near zero) — opt-in via `--fp4-codebook=residual`
+  2. robust_scale (p99.5 quantile) — opt-in via `--fp4-robust-scale`
+  3. stochastic rounding (training-time dither) — `--fp4-stochastic`
+  4. (bonus) ndim<2 buffers no longer quantized at export — closes silent
+     train↔export drift on `renderer.freqs` (Linf 16.77 → 0.275)
+- Audit on existing C3 trend ckpt (experiments/fp4_roundtrip_audit.py):
+  - DEFAULT codebook: 4.75% zero-collapse (1739/36609 small weights die)
+  - RESIDUAL codebook: 1.26% zero-collapse — **3.7× fewer dead weights**
+- Trend re-test on 32 frames: baseline + fixed both plateau at 93.4409 —
+  slice too small to exercise the fix (the audit on the production ckpt
+  is the real evidence). Deciding test = scaled run (1200 frames).
+- 10/10 new property tests pass (test_fp4_robustness.py).
+- Train↔export consistency invariant pinned by 2 round-trip tests.
+
+**Council deliberation (5-member inner: Yousfi/Fridrich/Hotz/Quantizr/Contrarian):**
+- 5/5 approved CRF=63 ship after gating e2e measurement
+- 5/5 voted RUN E2E NOW with current renderer (not Cool-Chic 16KB)
+- 3/5 deferred NUCLEAR #3 warp until A and C measured
+- Contrarian VETO: no combined claim until inflate.sh→evaluate.py confirms
+
+**E2E gating archive built (369KB total, rate=0.246 vs current 0.483):**
+- Components: dilated h64 renderer (297KB) + masks_crf63.mkv (109KB) + poses (7KB)
+- Inflate + evaluate running in background (b2332dj1i)
+- Expected: rate-term -0.237 minus SegNet impact from 0.74% disagreement
+- Next entry: actual auth score result + decision on shipping
+
 ## 2026-04-15T07:00:00Z — CRITICAL BUG: TTO PoseNet gradients were ZERO the entire project
 
 **Discovery timeline**:
