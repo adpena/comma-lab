@@ -15,6 +15,7 @@ from __future__ import annotations
 import argparse
 import json
 import math
+import os as _os
 import random
 import sys
 import time
@@ -31,8 +32,6 @@ _script_dir = Path(__file__).resolve().parent
 _repo = _script_dir.parent.parent.parent  # src/tac/experiments -> repo root
 sys.path.insert(0, str(_repo / "src"))
 
-import os as _os
-
 _upstream = Path(_os.environ.get(
     "TAC_UPSTREAM_DIR",
     str(_repo / "workspace" / "upstream" / "comma_video_compression_challenge"),
@@ -47,7 +46,6 @@ from tac.fp4_quantize import (  # noqa: E402
     QATRendererFP4,
     dequantize_fp4,
     quantize_fp4,
-    save_fp4,
 )
 from tac.losses import (  # noqa: E402
     _hwc_to_chw,
@@ -73,11 +71,18 @@ def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
     p = argparse.ArgumentParser(description="Train mask-conditioned renderer (GPU lane)")
 
     # Profile
-    renderer_profiles = [k for k in PROFILES if k.startswith(("mask_renderer", "wavelet_renderer"))]
+    renderer_profiles = [
+        k for k in PROFILES
+        if k.startswith(("mask_renderer", "wavelet_renderer", "coord_renderer", "coolchic_renderer", "c3_residual_renderer"))
+    ]
     p.add_argument("--profile", type=str, default=None, choices=list(PROFILES.keys()),
                    help=f"Named profile. Renderer profiles: {renderer_profiles}")
     p.add_argument("--variant", type=str, default=None,
-                   choices=["mask_renderer", "wavelet_renderer", "dp_sims", "vqvae", "diffusion_teacher"],
+                   choices=[
+                       "mask_renderer", "wavelet_renderer", "coord_renderer",
+                       "coolchic_renderer", "c3_residual_renderer",
+                       "dp_sims", "vqvae", "diffusion_teacher",
+                   ],
                    help="Renderer variant (auto-detected from profile if not set)")
 
     # Architecture
@@ -86,6 +91,10 @@ def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
     p.add_argument("--embed-dim", type=int, default=None, help="Per-class embedding dim")
     p.add_argument("--motion-hidden", type=int, default=None, help="MotionPredictor hidden channels")
     p.add_argument("--depth", type=int, default=None, help="U-Net depth (1=single-scale, 2=two-scale)")
+    p.add_argument("--latent-ch", type=int, default=None, help="Cool-Chic/C3 latent channels")
+    p.add_argument("--residual-hidden", type=int, default=None, help="C3 residual head hidden width")
+    p.add_argument("--residual-layers", type=int, default=None, help="C3 residual hidden layer count")
+    p.add_argument("--residual-scale", type=float, default=None, help="C3 residual pixel bound")
 
     # Training
     p.add_argument("--epochs", type=int, default=None)
@@ -129,6 +138,12 @@ def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
                    help="Max wall-clock seconds before emergency save + clean exit (0=no limit)")
     p.add_argument("--resume-from", type=str, default=None,
                    help="Path to training_state_*.pt checkpoint to resume from")
+    p.add_argument("--seed", type=int, default=None,
+                   help="Random seed for reproducible experiment replay")
+    p.add_argument("--deterministic", action="store_true", default=None,
+                   help="Use deterministic torch algorithms where available")
+    p.add_argument("--nondeterministic", dest="deterministic", action="store_false",
+                   help="Allow nondeterministic kernels for speed")
 
     # Output
     p.add_argument("--tag", type=str, required=True)
@@ -156,6 +171,11 @@ def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
     args.embed_dim = _resolve(args.embed_dim, "embed_dim", 6)
     args.motion_hidden = _resolve(args.motion_hidden, "motion_hidden", 32)
     args.depth = _resolve(args.depth, "depth", 1)
+    args.latent_ch = _resolve(args.latent_ch, "latent_ch", 8)
+    args.latent_shapes = profile_vals.get("latent_shapes", ((6, 8), (12, 16), (24, 32)))
+    args.residual_hidden = _resolve(args.residual_hidden, "residual_hidden", 32)
+    args.residual_layers = _resolve(args.residual_layers, "residual_layers", 2)
+    args.residual_scale = _resolve(args.residual_scale, "residual_scale", 16.0)
     args.epochs = _resolve(args.epochs, "epochs", 200)
     args.lr = _resolve(args.lr, "lr", 1e-3)
     args.ema_decay = _resolve(args.ema_decay, "ema_decay", 0.997)
@@ -163,6 +183,8 @@ def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
     args.eval_every = _resolve(args.eval_every, "eval_every", 10)
     args.segnet_weight = _resolve(args.segnet_weight, "segnet_loss_weight", 100.0)
     args.pretrain_epochs = _resolve(args.pretrain_epochs, "pretrain_epochs", 0)
+    args.seed = _resolve(args.seed, "seed", 42)
+    args.deterministic = _resolve(args.deterministic, "deterministic", True)
 
     # Yousfi council tricks (resolve from profile if not set via CLI)
     if not args.even_frame_skip_seg:
@@ -171,6 +193,20 @@ def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
         args.frequency_loss_weight = profile_vals.get("frequency_loss_weight", 0.0)
 
     return args
+
+
+def configure_reproducibility(seed: int, deterministic: bool) -> None:
+    """Configure process-level reproducibility for local and remote runs."""
+    if deterministic:
+        _os.environ.setdefault("CUBLAS_WORKSPACE_CONFIG", ":4096:8")
+    random.seed(seed)
+    torch.manual_seed(seed)
+    if torch.cuda.is_available():
+        torch.cuda.manual_seed_all(seed)
+    torch.use_deterministic_algorithms(bool(deterministic), warn_only=True)
+    if hasattr(torch.backends, "cudnn"):
+        torch.backends.cudnn.benchmark = not deterministic
+        torch.backends.cudnn.deterministic = deterministic
 
 
 # ── Data loading ────────────────────────────────────────────────────────
@@ -293,12 +329,24 @@ def pretrain_loss(rendered_pair: torch.Tensor, gt_pair: torch.Tensor) -> torch.T
     return l1 + 0.5 * edge_loss
 
 
+def resize_pair_hwc(pair: torch.Tensor, target_h: int, target_w: int) -> torch.Tensor:
+    """Resize a ``(B, 2, H, W, 3)`` pair tensor while preserving HWC layout."""
+    if pair.shape[2:4] == (target_h, target_w):
+        return pair
+    bsz, frames, _h, _w, channels = pair.shape
+    flat = pair.reshape(bsz * frames, _h, _w, channels).permute(0, 3, 1, 2).contiguous()
+    flat = F.interpolate(flat.float(), size=(target_h, target_w), mode="bilinear", align_corners=False)
+    return flat.permute(0, 2, 3, 1).contiguous().reshape(bsz, frames, target_h, target_w, channels)
+
+
 # ── Training loop ───────────────────────────────────────────────────────
 
 
 def train(args: argparse.Namespace):
+    configure_reproducibility(args.seed, args.deterministic)
     device = torch.device(args.device) if args.device else detect_device()
     print(f"[train] Device: {device}")
+    print(f"[train] Reproducibility: seed={args.seed}, deterministic={args.deterministic}")
 
     # Load scorer models (respect TAC_MODELS_DIR env var for Modal/remote deploys)
     _models_dir = Path(_os.environ.get("TAC_MODELS_DIR", str(_upstream / "models")))
@@ -330,17 +378,52 @@ def train(args: argparse.Namespace):
             hidden=args.base_ch,
             motion_hidden=args.motion_hidden,
         )
+    elif args.variant == "coord_renderer":
+        from tac.contrib.coord_renderer import build_coord_renderer
+        model = build_coord_renderer(
+            num_classes=5,
+            class_embed_dim=args.embed_dim,
+            hidden_dim=args.base_ch,
+            motion_hidden=args.motion_hidden,
+        )
+    elif args.variant == "coolchic_renderer":
+        from tac.contrib.coolchic_renderer import build_coolchic_renderer
+        model = build_coolchic_renderer(
+            num_classes=5,
+            embed_dim=args.embed_dim,
+            latent_ch=args.latent_ch,
+            hidden=args.base_ch,
+            motion_hidden=args.motion_hidden,
+            latent_shapes=args.latent_shapes,
+            blend_mode=getattr(args, "blend_mode", "scalar"),
+            noise_mode=getattr(args, "noise_mode", "deterministic"),
+        )
+    elif args.variant == "c3_residual_renderer":
+        from tac.contrib.coolchic_renderer import build_c3_residual_renderer
+        model = build_c3_residual_renderer(
+            num_classes=5,
+            embed_dim=args.embed_dim,
+            latent_ch=args.latent_ch,
+            hidden=args.base_ch,
+            motion_hidden=args.motion_hidden,
+            residual_hidden=args.residual_hidden,
+            residual_layers=args.residual_layers,
+            residual_scale=args.residual_scale,
+            latent_shapes=args.latent_shapes,
+            blend_mode=getattr(args, "blend_mode", "scalar"),
+            noise_mode=getattr(args, "noise_mode", "deterministic"),
+        )
     elif args.variant == "dp_sims":
-        from tac.dp_sims_renderer import build_dp_sims_renderer  # noqa: E402
+        from tac.dp_sims_renderer import build_dp_sims_renderer
         model = build_dp_sims_renderer(
             num_classes=5,
             motion_hidden=args.motion_hidden,
         )
     elif args.variant == "vqvae":
-        from tac.contrib.vqvae_codec import build_vqvae_pair_generator  # noqa: E402
+        from tac.contrib.vqvae_codec import build_vqvae_pair_generator
         model = build_vqvae_pair_generator()
     elif args.variant == "diffusion_teacher":
-        from tac.contrib.diffusion_renderer import build_diffusion_teacher  # noqa: E402
+        from tac.contrib.diffusion_renderer import build_diffusion_teacher
         model = build_diffusion_teacher(
             num_classes=5,
             beta_start=getattr(args, "beta_start", 1e-4),
@@ -366,7 +449,7 @@ def train(args: argparse.Namespace):
     # Wrap with FP4 QAT if enabled
     qat_wrapper = None
     if args.use_qat:
-        qat_wrapper = QATRendererFP4(model)
+        qat_wrapper = QATRendererFP4(model).to(device)
         print("[train] FP4 QAT enabled via forward hooks")
 
     # Training infrastructure
@@ -441,6 +524,8 @@ def train(args: argparse.Namespace):
             "best_epoch": best_epoch,
             "baseline_pose": baseline_pose,
             "baseline_seg": baseline_seg,
+            "seed": args.seed,
+            "deterministic": args.deterministic,
         }, tmp_path)
         tmp_path.rename(path)  # atomic on POSIX
 
@@ -493,6 +578,7 @@ def train(args: argparse.Namespace):
         accum = args.accum_steps
 
         for step, pair_idx in enumerate(perm):
+            mask_t = mask_t1 = gt_pair = rendered_pair = None
             start = all_pair_starts[pair_idx.item()]
 
             # Load mask pair and GT pair
@@ -521,6 +607,7 @@ def train(args: argparse.Namespace):
                 # eval_roundtrip: simulate contest eval resize chain before scorer
                 if args.eval_roundtrip:
                     from tac.camera import CAMERA_H, CAMERA_W
+                    gt_pair = resize_pair_hwc(gt_pair, rendered_pair.shape[2], rendered_pair.shape[3])
                     # rendered_pair is (B, 2, H, W, 3) — flatten to (B*2, 3, H, W) for roundtrip
                     rp_flat = rendered_pair.reshape(-1, *rendered_pair.shape[2:]).permute(0, 3, 1, 2).contiguous()
                     rp_flat = simulate_eval_roundtrip(rp_flat, target_h=CAMERA_H, target_w=CAMERA_W, noise_std=0.5)
@@ -563,7 +650,7 @@ def train(args: argparse.Namespace):
                 scaled_loss.backward()
             except torch.cuda.OutOfMemoryError:
                 print(f"[train] CUDA OOM at step {step}, skipping")
-                del mask_t, mask_t1, gt_pair, rendered_pair
+                mask_t = mask_t1 = gt_pair = rendered_pair = None
                 torch.cuda.empty_cache()
                 optimizer.zero_grad(set_to_none=True)
                 continue
@@ -579,7 +666,7 @@ def train(args: argparse.Namespace):
                 ema.update(model)
                 optimizer.zero_grad(set_to_none=True)
 
-            del mask_t, mask_t1, gt_pair, rendered_pair
+            mask_t = mask_t1 = gt_pair = rendered_pair = None
 
         if torch.cuda.is_available():
             torch.cuda.empty_cache()
@@ -651,6 +738,14 @@ def train(args: argparse.Namespace):
                 "embed_dim": args.embed_dim,
                 "motion_hidden": args.motion_hidden,
                 "depth": args.depth,
+                "latent_ch": args.latent_ch,
+                "latent_shapes": args.latent_shapes,
+                "residual_hidden": args.residual_hidden,
+                "residual_layers": args.residual_layers,
+                "residual_scale": args.residual_scale,
+                "variant": args.variant,
+                "seed": args.seed,
+                "deterministic": args.deterministic,
             }
             fp4_tmp = fp4_path.with_suffix(".pt.tmp")
             torch.save(fp4_packed, fp4_tmp)
@@ -685,6 +780,14 @@ def train(args: argparse.Namespace):
                     "lr": args.lr,
                     "profile": args.profile,
                     "tag": args.tag,
+                    "variant": args.variant,
+                    "latent_ch": args.latent_ch,
+                    "latent_shapes": args.latent_shapes,
+                    "residual_hidden": args.residual_hidden,
+                    "residual_layers": args.residual_layers,
+                    "residual_scale": args.residual_scale,
+                    "seed": args.seed,
+                    "deterministic": args.deterministic,
                 },
             }, indent=2))
 
@@ -714,6 +817,8 @@ def train(args: argparse.Namespace):
                 "phase": phase,
                 "tag": args.tag,
                 "variant": args.variant,
+                "seed": args.seed,
+                "deterministic": args.deterministic,
                 "epoch_sec": round(epoch_sec, 2),
                 "eval_pose": round(eval_pose, 8),
                 "eval_seg": round(eval_seg, 8),

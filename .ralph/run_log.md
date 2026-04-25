@@ -258,3 +258,47 @@ Cost: 9 × $0.29 = $2.61. High information density — maps full Pareto drift tr
 ### Flags for Results Analysis
 - FLAG 1: WILDE GT targets vs SHIRAZ TTO targets (A/B test)
 - FLAG 2: Phase 1 plateau at 181K params (architecture ceiling?)
+
+## 2026-04-25T00:00:00-05:00 — Cool-Chic/C3 prototype implementation and paper update
+
+- Implemented requested experimental items 1 and 3 as unpromoted lanes:
+  - `coolchic_renderer`: learned multi-resolution latent grids plus tiny shared synthesis decoder.
+  - `c3_residual_renderer`: base renderer plus zero-initialized coordinate MLP residual head.
+- Added deterministic seed plumbing and metadata capture in renderer training.
+- Added profile entries and tests for smoke/full Cool-Chic and C3 residual variants.
+- Verification completed on the changed surface: focused renderer/profile tests, hardening profile tests, quantization/compliance tests, FP4 strict roundtrip, adversarial shape smoke, CLI help, ruff, compile, and diff whitespace.
+- Repo-wide full suite remains non-green for unrelated scheduler/Kaggle blockers; do not represent the full repository as clean until those are handled.
+- Paper/report/state updates now separate proven archive evidence from unpromoted prototype evidence.
+- Council decision: keep Cool-Chic as the high-upside base-representation lane and C3 as the safer residual lane. No deployment to Vast.ai until deterministic smoke, eval-roundtrip proxy, archive audit, and authoritative evidence exist.
+
+## 2026-04-25T03:45:00-05:00 — Local smoke testing: Cool-Chic/C3/self-compression
+
+- Built an 8-frame local smoke dataset at `experiments/results/local_smoke_coolchic_c3_20260425/data/gt_frames.pt`.
+- Fixed two smoke blockers:
+  - full-resolution GT eval-roundtrip reshape bug in `train_renderer.py`;
+  - MPS FP4 QAT NaNs caused by parametrization buffers not moving to the training device.
+- Cool-Chic 2-epoch scorer/QAT smoke passed:
+  - params=37,170;
+  - FP4 checkpoint=56,525 B;
+  - uniform int4+LZMA2=16,509 B.
+- C3 residual 2-epoch scorer/QAT smoke passed:
+  - params=36,492;
+  - FP4 checkpoint=67,743 B;
+  - uniform int4+LZMA2=16,877 B.
+- Self-compression/mixed-precision exporter smoke passed. Crude `latents8` allocation increased bytes, which is expected; next allocation must be scorer-sensitive.
+- Determinism finding: Cool-Chic replay has identical scorer metadata but not byte-identical MPS FP4 output; max dequantized delta `4.58e-05`.
+
+## 2026-04-25T04:00:00-05:00 — 32-frame trend smoke
+
+- Ran 32-frame/20-epoch MPS trend smokes for Cool-Chic and C3 residual.
+- Cool-Chic:
+  - loss epoch 5 -> 19: `94.3579` -> `93.7085`;
+  - best FP4 scorer stayed at `93.4409` from epoch 5;
+  - uniform int4+LZMA2 trend export: `16,295 B`.
+- C3 residual:
+  - loss epoch 5 -> 19: `92.3028` -> `68.7140`;
+  - SegNet `0.5399` -> `0.2763`, PoseNet `147.0910` -> `168.9101`;
+  - best FP4 scorer stayed at `93.4409` from epoch 5;
+  - uniform int4+LZMA2 trend export: `16,493 B`.
+- Interpretation: C3 residual has a real float-path learning signal, but the gain is not surviving FP4 evaluation. Next blocker is quantization robustness / mixed precision, not basic architecture viability.
+- CPU replay of 8-frame Cool-Chic smoke: scorer-stable vs MPS (`93.6397169` CPU vs `93.6397184` MPS), but tensor delta up to `0.0147`.

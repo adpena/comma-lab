@@ -1,3 +1,57 @@
+# Latest Report -- 2026-04-25
+
+## Session Addendum: Cool-Chic/C3 Experimental Prototypes
+
+### Local Smoke Update
+- Local 8-frame smoke passed for both `coolchic_renderer_smoke` and `c3_residual_renderer_smoke` after fixing two integration bugs.
+- Bugs fixed: full-resolution GT eval-roundtrip reshape, and MPS FP4 QAT parametrization buffers staying on CPU.
+- Smoke artifact report: `reports/local_smoke_coolchic_c3_20260425.md`.
+- Self-compression smoke passed: uniform int4+LZMA2 exported the Cool-Chic smoke checkpoint at 16,509 B and the C3 residual smoke checkpoint at 16,877 B.
+- Deterministic replay is metric-stable but not byte-stable on MPS: max dequantized FP4 delta was `4.58e-05`.
+
+### 32-Frame Trend Update
+- Trend artifact report: `reports/local_trend_coolchic_c3_20260425.md`.
+- Cool-Chic 20-epoch trend: float/scorer loss moved slightly down, but best FP4 checkpoint stayed at epoch 5 (`93.4409`).
+- C3 residual 20-epoch trend: float/scorer loss dropped from `92.3028` to `68.7140`, mainly through SegNet (`0.5399` to `0.2763`), but FP4 evaluation did not preserve the gain.
+- Uniform int4+LZMA2 trend exports stayed near 16KB: Cool-Chic `16,295 B`, C3 residual `16,493 B`.
+- CPU replay confirms cross-device scorer stability but not tensor stability: MPS scorer `93.6397184`, CPU scorer `93.6397169`, max dequantized weight delta `0.0147`.
+
+### Evidence Tier
+| Lane | Status | Evidence |
+|------|--------|----------|
+| Proven baseline | Trustworthy contest-compliant floor | `proven_baseline`, standard loss, eval roundtrip discipline |
+| Cool-Chic-style renderer | Implemented prototype, unpromoted | Forward tests, small shared decoder check, local scorer/QAT smoke, FP4/int4 export smoke |
+| C3-style residual renderer | Implemented prototype, unpromoted | Zero-init identity residual test, local scorer/QAT smoke, FP4/int4 export smoke |
+| Repo-wide suite | Not clean for unrelated reasons | Scheduler syntax error and Kaggle registry assertions block full green |
+
+### What Changed
+- Added a Cool-Chic-style low-complexity renderer lane: learned multi-resolution latent grids plus a tiny shared synthesis decoder.
+- Added a C3-style residual lane: base renderer plus zero-initialized coordinate MLP residual head.
+- Registered deterministic profile-driven experiment entries: `coolchic_renderer_smoke`, `coolchic_renderer_full`, `c3_residual_renderer_smoke`, `c3_residual_renderer_full`.
+- Added seed/determinism metadata to renderer training so experiments can be replayed instead of relying on ad-hoc flags.
+- Updated the paper to separate proven archive facts from unpromoted Cool-Chic/C3 research lanes.
+
+### Verification Completed
+- Focused renderer/profile tests passed.
+- Hardening profile validation passed for the affected profile families.
+- Quantization, compliance, FP4 strict roundtrip, adversarial shape, CLI help, ruff, compile, and diff-whitespace checks passed on the changed surface.
+- Full `src/tac/tests` remains blocked by unrelated existing failures:
+  - `src/tac/tests/test_scheduler_cli.py` has an invalid `remote-gpu = ...` assignment.
+  - `src/tac/tests/test_build_kaggle_kernels.py` expects `ASSET_DATASET_REF`, while the module exposes `ASSET_DATASET_SLUG`.
+  - `src/tac/tests/test_scheduler_registry.py` compares sorted platform output to an unsorted expected list.
+
+### Scientific Gate Before Promotion
+1. Run deterministic smoke training from the named profiles only.
+2. Score decoded outputs through eval roundtrip, not raw tensors.
+3. Prove every neural artifact is inside `archive.zip`.
+4. Measure inflate runtime under the contest budget.
+5. Submit or authoritative-eval only after the local proxy artifact is reproducible.
+
+### Council Read
+Cool-Chic is the higher-upside base-representation experiment. C3 is safer as a residual codec because it preserves the semantic-mask prior and starts exactly at the base renderer. Neither should displace the proven baseline until it beats it through the full archive path.
+
+---
+
 # Latest Report -- 2026-04-15
 
 ## Session 35 Summary: DX Hardening + SegNet Paradigm Shift

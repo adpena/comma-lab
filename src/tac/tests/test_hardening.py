@@ -23,6 +23,7 @@ _NON_POSTFILTER_PROFILES = {
         "mask_renderer", "wavelet_renderer", "diffusion_teacher",
         "distillation", "dp_sims", "vqvae",
         "depthwise_renderer", "channel_recurrent", "coord_renderer",
+        "coolchic_renderer", "c3_residual_renderer",
         # Constrained-generation and dual-optimization pipelines
         "constrained_gen", "constrained_gen_pipeline",
         "variational_gen", "lagrangian_dual", "pareto_trace",

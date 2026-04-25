@@ -1,0 +1,18 @@
+{
+  "c3_residual": {
+    "missing_keys": [],
+    "mixed_latents8_bytes": 19921,
+    "param_count": 36492,
+    "state_path": "experiments/results/local_smoke_coolchic_c3_20260425/c3_residual/renderer_local_c3_residual_smoke_20260425_best_fp32.pt",
+    "unexpected_keys": [],
+    "uniform_i4lz_bytes": 16877
+  },
+  "coolchic": {
+    "missing_keys": [],
+    "mixed_latents8_bytes": 20590,
+    "param_count": 37170,
+    "state_path": "experiments/results/local_smoke_coolchic_c3_20260425/coolchic/renderer_local_coolchic_smoke_20260425_best_fp32.pt",
+    "unexpected_keys": [],
+    "uniform_i4lz_bytes": 16509
+  }
+}

@@ -141,3 +141,33 @@ Several properties of the scoring formula shaped our optimization strategy:
 **Rate is cheap.** At our archive size (~150 KB), the rate contribution is 0.10. Halving the archive saves only 0.05. Below ~100 KB, rate optimization has negligible marginal value compared to scorer distortion reduction.
 
 **The detection boundary.** Fridrich's formulation reframes the problem: instead of minimizing a weighted sum, find the *detection boundary* --- the scorer distortion level below which further reduction yields negligible score improvement --- and minimize rate while staying below it. This is more natural than tuning loss weights and converges faster in practice.
+
+## 2.7 Frontier prototypes: low-complexity overfitted neural codecs
+
+The April 25 frontier work adds two experimental renderer families motivated by Cool-Chic and C3. These are not promoted results and should not be read as score claims. They are architectural prototypes added behind named profiles so they can be trained, round-tripped, and falsified without disturbing the proven baseline.
+
+**Cool-Chic-style latent renderer.** Cool-Chic compresses a single image or video by overfitting a small neural decoder and compact learned latent representation to that instance. The implemented prototype follows the same low-complexity principle rather than the exact paper bitstream: it replaces the mask renderer with multi-resolution learned latent grids plus a tiny shared `1x1` synthesis decoder. The frame-specific information lives in low-resolution latent tensors; the decoder is shared across all frames. This gives us a controlled test for the hypothesis that the archive should spend bits on a small overfitted representation rather than on a larger convolutional renderer.
+
+The prototype is deliberately constrained:
+
+- It is selected only by the `coolchic_renderer_*` profiles.
+- It uses standard static loss, not KL distillation or retired adaptive rebalancing.
+- It records seed and deterministic settings in checkpoint metadata.
+- Its state dict passes FP4 strict round-trip smoke tests.
+- It is not production-ready until archive packaging, inflate compatibility, and authoritative evaluation are demonstrated end to end.
+
+**C3-style residual renderer.** C3 emphasizes high-performance neural compression with low decoder complexity. Our prototype uses C3 as a residual idea rather than as a full replacement codec: a base renderer produces the image and a coordinate-conditioned MLP adds a bounded residual field. The residual head is zero-initialized, so the model starts exactly at the base renderer and can only earn complexity by improving the residual objective. This is important experimentally because it separates "does a coordinate MLP help?" from unrelated initialization noise.
+
+The scientific gate for both prototypes is strict. A local forward pass, parameter count, or proxy loss is not sufficient. Promotion requires:
+
+1. deterministic smoke training from a named profile;
+2. eval-roundtrip scoring on decoded outputs, not raw tensors;
+3. archive-size accounting with all neural artifacts inside `archive.zip`;
+4. inflate-time runtime measurement under the contest budget;
+5. proxy-vs-authoritative comparison before any claim of score improvement.
+
+The council interpretation is that Cool-Chic and C3 are high-upside lanes, not replacements for the current floor. They are most likely to matter as rate-distortion experiments for the next training cycle: Cool-Chic as a smaller base representation, and C3 as a residual codec on top of the scorer-aligned renderer.
+
+Initial local smoke testing on April 25 caught two engineering issues before any remote deployment: full-resolution ground-truth frames were not resized before eval-roundtrip scorer loss, and FP4 QAT parametrization buffers were not moved to MPS with the wrapped model. After fixing both, the Cool-Chic and C3 prototype profiles completed 8-frame scorer/QAT smokes and exported FP4 plus int4+LZMA2 artifacts. This is integration evidence only; the tiny-slice scorer value is not a rate-distortion result.
+
+A subsequent 32-frame, 20-epoch trend smoke sharpened the diagnosis. The C3 residual head reduced float/scorer training loss substantially, especially the SegNet term, but the FP4-evaluated checkpoint did not improve. The immediate research question is therefore not whether the residual head can learn, but whether its learned correction can survive the current FP4 quantization and export path. Uniform int4+LZMA2 was much smaller than FP4 in these smoke artifacts, but scorer-sensitive bit allocation is required before treating self-compression as a deployable replacement.

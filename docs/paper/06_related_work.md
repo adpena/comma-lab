@@ -2,11 +2,25 @@
 
 ## 6.1 Neural video compression
 
-End-to-end learned video codecs have advanced rapidly in recent years. Ballé et al. [2018] established the variational autoencoder framework for image compression. For video, DCVC [Li et al. 2021] and its successors [Li et al. 2023] use learned motion compensation and conditional coding to approach or exceed H.266/VVC on perceptual metrics. Cool-Chic [Ladune et al. 2023] takes a different path: a tiny decoder (< 3K parameters) overfitted to each image, with the decoder weights transmitted as part of the bitstream --- a form of test-time optimization at the encoder side.
+End-to-end learned video codecs have advanced rapidly in recent years. Ballé et al. [2018] established the variational autoencoder framework for image compression. For video, DCVC [Li et al. 2021] and its successors [Li et al. 2023] use learned motion compensation and conditional coding to approach or exceed H.266/VVC on perceptual metrics. Cool-Chic [Ladune et al. 2023; Ladune et al. 2024] takes a different path: it overfits a very small decoder and compact latent representation to a single image or video, with the learned representation transmitted as the bitstream. This is encoder-side instance optimization rather than a universal feed-forward codec.
 
 Our work differs from these in a fundamental way: we do not optimize for human perceptual quality. The distortion metrics are frozen neural networks (SegNet, PoseNet) with specific architectures and blind spots. A frame that looks terrible to a human can score well if it preserves the features these networks use. This inversion --- optimizing for machine perception rather than human perception --- changes the problem structure entirely.
 
-C3 [Kim et al. 2024] applies neural compression to the comma.ai challenge specifically, using a NeRV-style [Chen et al. 2021] implicit neural representation. Our approach is closer to Cool-Chic in spirit (small model, test-time optimization) but replaces the autoencoder framework with a conditional generator that exploits the known structure of the distortion metrics.
+C3 [Kim et al. 2024] is the closest recent work to our April 25 experimental direction: high-performance neural compression from a single image or video with emphasis on low decoder complexity. It is relevant because the decoder itself can be the archive, and because coordinate-conditioned representations are natural residual models. Our current C3 lane is only a prototype residual head on top of a scorer-aware renderer; it does not yet reproduce the paper's full coding system, entropy model, or bit allocation strategy.
+
+The key distinction is that Cool-Chic and C3 target conventional reconstruction rate-distortion, while this challenge is task-aware compression against fixed SegNet and PoseNet scorers. We borrow their low-complexity overfitting principle, but every claim must be revalidated against eval-roundtrip scorer behavior and archive compliance.
+
+Paper-faithfulness audit for the April 25 prototypes:
+
+| Component | Cool-Chic/C3 papers | Current prototype | Risk |
+|-----------|---------------------|-------------------|------|
+| Instance optimization | Overfit representation to one image/video | Yes, through profile-specific renderer training | Needs smoke training evidence |
+| Low-complexity decoder | Central design constraint | Yes, tiny shared decoder or small coordinate MLP | Parameter count is necessary but not sufficient |
+| Entropy coding | Core rate term | Not implemented | Archive size may overstate paper-equivalent efficiency |
+| Learned quantization / bit allocation | Core compression mechanism | Not implemented beyond existing FP4 roundtrip | Uniform FP4 may waste bits |
+| Temporal sharing | Explicit in video setting | Shared decoder, no full temporal entropy model | May miss video-rate gains |
+| Task-aware objective | Not the primary paper objective | Yes, our scorer losses define distortion | Paper PSNR/MS-SSIM claims do not transfer |
+| Contest inflate path | Not applicable to papers | Not yet complete for prototypes | Blocks deployment claims |
 
 ## 6.2 Test-time optimization and adaptation
 

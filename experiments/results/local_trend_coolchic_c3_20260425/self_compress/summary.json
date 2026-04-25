@@ -1,0 +1,20 @@
+{
+  "c3_residual": {
+    "fp32_bytes": 168009,
+    "fp4_bytes": 70969,
+    "missing_keys": [],
+    "mixed_latents8_bytes": 19533,
+    "param_count": 36492,
+    "unexpected_keys": [],
+    "uniform_i4lz_bytes": 16493
+  },
+  "coolchic": {
+    "fp32_bytes": 165287,
+    "fp4_bytes": 58839,
+    "missing_keys": [],
+    "mixed_latents8_bytes": 20368,
+    "param_count": 37170,
+    "unexpected_keys": [],
+    "uniform_i4lz_bytes": 16295
+  }
+}

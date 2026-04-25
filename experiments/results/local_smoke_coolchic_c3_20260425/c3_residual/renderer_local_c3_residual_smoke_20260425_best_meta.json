@@ -1,0 +1,41 @@
+{
+  "epoch": 1,
+  "scorer": 93.63971843249183,
+  "pose": 183.6695556640625,
+  "seg": 0.5078303217887878,
+  "fp4_path": "experiments/results/local_smoke_coolchic_c3_20260425/c3_residual/renderer_local_c3_residual_smoke_20260425_best_fp4.pt",
+  "fp4_size": 67743,
+  "args": {
+    "base_ch": 24,
+    "mid_ch": 60,
+    "embed_dim": 6,
+    "motion_hidden": 24,
+    "depth": 1,
+    "pretrain_epochs": 1,
+    "epochs": 2,
+    "lr": 0.001,
+    "profile": "c3_residual_renderer_smoke",
+    "tag": "local_c3_residual_smoke_20260425",
+    "variant": "c3_residual_renderer",
+    "latent_ch": 6,
+    "latent_shapes": [
+      [
+        6,
+        8
+      ],
+      [
+        12,
+        16
+      ],
+      [
+        24,
+        32
+      ]
+    ],
+    "residual_hidden": 32,
+    "residual_layers": 2,
+    "residual_scale": 16.0,
+    "seed": 42,
+    "deterministic": true
+  }
+}

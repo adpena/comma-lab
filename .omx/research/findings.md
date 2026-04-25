@@ -1,5 +1,66 @@
 # Findings
 
+## 2026-04-25 [TECHNIQUE] Cool-Chic/C3 prototype lanes implemented but not promoted
+
+**Scope**: Implemented experimental renderer variants for the requested items 1 and 3:
+- `coolchic_renderer`: learned multi-resolution latent grids with a tiny shared synthesis decoder, selected through `coolchic_renderer_*` profiles.
+- `c3_residual_renderer`: base renderer plus zero-initialized coordinate residual MLP, selected through `c3_residual_renderer_*` profiles.
+
+**Rigor status**:
+- Deterministic seed plumbing added to renderer training metadata.
+- Profiles use standard static loss, `eval_roundtrip=True`, `adaptive_rebalance=False`, and no KL distillation.
+- Focused tests, profile hardening tests, FP4 strict roundtrip smoke, adversarial shapes, ruff, compile, and diff whitespace checks passed on the changed surface.
+- Full repo test green is still blocked by unrelated scheduler/Kaggle test failures; these are not evidence against the new renderer lanes but they do block a blanket "all tests pass" claim.
+
+**Scientific interpretation**:
+- Cool-Chic/C3 validate the direction of low-complexity per-instance neural codecs, but the current prototypes are principle tests, not faithful reproductions of the full papers.
+- The main missing pieces are entropy coding, learned bit allocation, final inflate wiring, archive accounting, cross-device deterministic replay, and authoritative scoring.
+- C3 is most defensible first as a residual codec on top of the proven renderer, because zero initialization gives an honest identity baseline and isolates residual value.
+- Cool-Chic is the stronger architectural bet if the current mask renderer is rate-inefficient, but it carries higher training and deployment risk.
+
+**Decision**: Keep both lanes open as next-cycle experiments. Do not promote, deploy, or headline until deterministic smoke training plus eval-roundtrip proxy plus archive audit plus authoritative score all agree.
+
+## 2026-04-25 [SMOKE] Cool-Chic/C3 local scorer smokes passed; two integration bugs fixed
+
+**Dataset**: 8-frame local slice from `precomputed_local/gt_frames.pt`.
+
+**Passed smoke lanes**:
+- Cool-Chic: 37,170 params, FP4 checkpoint 56,525 B, uniform int4+LZMA2 16,509 B.
+- C3 residual: 36,492 params, FP4 checkpoint 67,743 B, uniform int4+LZMA2 16,877 B.
+
+**Bugs caught**:
+- Full-resolution GT tensors were reshaped as renderer-resolution tensors in the eval-roundtrip scorer path. Fixed by resizing GT pairs to renderer resolution before roundtrip.
+- FP4 QAT parametrization buffers stayed on CPU when training on MPS, causing NaNs for zero-initialized Cool-Chic/C3 weights. Fixed by moving the QAT wrapper to the training device after attaching parametrizations.
+
+**Reproducibility note**: Cool-Chic replay produced identical metadata and scorer values, but FP4 files were not byte-identical on MPS. Max dequantized state delta was `4.57763671875e-05`. Treat this as metric-stable smoke evidence, not byte-stable determinism.
+
+**Do not overclaim**: tiny-slice scorer value was `93.6397` after one scorer epoch. This is a wiring smoke only and says nothing about leaderboard quality.
+
+## 2026-04-25 [TREND] C3 residual learns in float path, but compressed checkpoint does not preserve gain
+
+**Dataset**: 32-frame local slice, 20 epochs, 5 pretrain + 15 scorer epochs, MPS, FP4 QAT enabled.
+
+**Cool-Chic**:
+- loss `94.3579` at epoch 5 -> `93.7085` at epoch 19.
+- best FP4 scorer stayed at epoch 5: `93.4409`.
+- Interpretation: slight learning signal, no compressed-checkpoint improvement.
+
+**C3 residual**:
+- loss `92.3028` at epoch 5 -> `68.7140` at epoch 19.
+- SegNet term improved `0.5399` -> `0.2763`; PoseNet worsened `147.0910` -> `168.9101`.
+- best FP4 scorer still stayed at epoch 5: `93.4409`.
+- Interpretation: the residual head is learning a scorer-relevant correction in the float training path, but FP4 evaluation is not preserving it. This is now a quantization robustness/export problem, not a forward-path viability problem.
+
+**Self-compression**:
+- Trend Cool-Chic uniform int4+LZMA2: `16,295 B` vs FP4 `58,839 B`.
+- Trend C3 uniform int4+LZMA2: `16,493 B` vs FP4 `70,969 B`.
+- Crude `latents8` mixed allocation increased bytes; next allocation must be scorer-sensitive.
+
+**Determinism**:
+- CPU replay and MPS replay match at scorer level within ~`1.5e-06`.
+- FP4 states differ across CPU/MPS with max dequantized delta `0.0147`.
+- Current tier: scorer-stable, not tensor-stable.
+
 ## 2026-04-15 [RESULT] Auth 0.51 [contest-compliant] with pose-space TTO (SUPERSEDED by 0.61)
 
 **Note**: Initial pose TTO auth eval reported 0.51. Subsequent eval with ep300 distillation checkpoint confirmed 0.61. Both are contest-compliant.

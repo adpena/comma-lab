@@ -54,8 +54,31 @@ Whether this constitutes a *methodology* or merely a useful prompting pattern is
 
 **Video coding for machines.** The broader question motivating the challenge --- how to compress video for downstream analysis rather than human viewing --- is increasingly relevant as autonomous systems generate and transmit vast quantities of video. The MPEG VCM standard [Duan et al. 2020] addresses this at a standards level; our work provides an empirical data point on what is achievable when the analysis networks are known and fixed.
 
-## 7.5 Conclusion
+## 7.5 Frontier prototypes: challenges and opportunities
 
-We presented a system for the comma.ai video compression challenge that achieves a score of 0.43, the lowest at the time of writing. The system combines an asymmetric warp renderer (287K parameters), Lagrangian annealing for constrained multi-objective training, and test-time optimization with coupled trajectory loss. The single largest improvement came from finding and fixing a gradient obstruction in the upstream scorer code --- a bug that made every prior TTO experiment invalid.
+On April 25 we implemented two unpromoted prototype lanes, a Cool-Chic-style latent renderer and a C3-style coordinate residual renderer. They are useful because they test whether the archive should be a small overfitted decoder rather than a mask-conditioned convolutional renderer. They are not yet evidence of a better score.
+
+The main challenges are:
+
+- **Paper-faithfulness gap.** The prototypes borrow architectural principles from Cool-Chic and C3, but do not yet implement the papers' entropy models, latent coding, learned bit allocation, or exact decoder designs.
+- **Archive/inflate gap.** Training checkpoints and FP4 smoke tests are not enough. The contest artifact must include every neural component inside `archive.zip`, inflate deterministically, and run inside the scorer budget.
+- **Scorer mismatch.** Cool-Chic and C3 optimize reconstruction quality. Our loss surface is SegNet/PoseNet task distortion. A representation that is efficient for PSNR or MS-SSIM may spend bits on details the scorers ignore, or miss features they over-weight.
+- **Mask-conditioned versus coordinate synthesis.** The current renderer uses semantic masks as a strong structural prior. Pure coordinate decoders may waste capacity relearning geometry that masks already provide. The residual variant is safer because it keeps the mask prior and lets the coordinate MLP model only leftover error.
+- **Deterministic reproducibility.** Same-seed local checks passed for the prototype modules, but cross-device replay still needs confirmation on MPS, CUDA T4/A100, and the final evaluation environment.
+- **Pipeline mismatch.** The canonical training entry points are profile-driven, while some lower-level scripts still expose variant flags directly. Before deployment, the Cool-Chic/C3 lanes need the same no-ad-hoc profile discipline as the proven baseline.
+- **Full-suite noise.** The focused tests for these prototypes pass, but the current repository has unrelated test blockers in scheduler/Kaggle tests. That prevents a clean repo-wide green signal until those independent failures are either fixed or quarantined.
+
+The opportunities are correspondingly clear:
+
+- Use a Cool-Chic-style shared decoder plus per-frame latent grids as a smaller base renderer.
+- Use a C3-style coordinate MLP only as a residual codec, initialized to identity, on top of the proven renderer.
+- Learn mixed precision or self-compressed bit allocation across latent grids, decoder weights, and residual head weights.
+- Share the decoder globally while allowing per-scene or per-pair latent banks.
+- Allocate residual capacity using scorer sensitivity: SegNet boundaries and PoseNet-sensitive mid-frequency regions should receive more bits than sky or smooth road interiors.
+- Treat the prototypes as next-cycle experiments unless a deterministic smoke run, eval-roundtrip proxy, archive audit, and authoritative score all agree.
+
+## 7.6 Conclusion
+
+We presented a system for the comma.ai video compression challenge built around an asymmetric warp renderer, constrained scorer-aware training, and test-time optimization with coupled trajectory loss. The trustworthy promoted floor remains the contest-compliant archive; lower proxy and TTO lanes are useful research evidence only when their archive, inflate path, and authoritative evaluation are reproduced. The single largest methodological improvement came from finding and fixing a gradient obstruction in the upstream scorer code --- a bug that made every prior TTO experiment invalid.
 
 The gradient bug is the most important result in this paper. Not because it is technically deep (the fix is a matrix multiply), but because it illustrates how subtle failures in gradient flow can silently invalidate optimization pipelines, and because adversarial review --- not unit tests, not loss monitoring, not ablation studies --- was what caught it. Anyone optimizing through frozen networks should validate their gradients. It takes 1ms.

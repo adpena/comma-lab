@@ -1,4 +1,56 @@
-# Next Experiments -- 2026-04-15 (DX Hardening Update)
+# Next Experiments -- 2026-04-25 (Cool-Chic/C3 Update)
+
+## Current Experiment Queue Addendum
+
+### P0: Cool-Chic Renderer Deterministic Smoke
+- **Status**: Local 8-frame scorer/QAT smoke passed; 32-frame/20-epoch trend shows slight float-path improvement but no FP4 improvement.
+- **What**: Pause larger Cool-Chic runs until quantized eval can preserve training movement.
+- **Why**: Establish whether learned latent grids plus a tiny shared decoder can reduce scorer loss, not merely run.
+- **Command family**: `.venv/bin/python -m tac.experiments.train_renderer --profile coolchic_renderer_smoke --tag coolchic_smoke_20260425 --precomputed experiments/precomputed_local`
+- **Gate**: same seed produces the same metadata and numerically stable checkpoint; decoded eval-roundtrip score is finite and trending downward.
+- **Promotion rule**: no score claim until archive packaging and authoritative eval exist.
+
+### P1: C3 Residual Renderer Deterministic Smoke
+- **Status**: Local 8-frame scorer/QAT smoke passed; 32-frame/20-epoch trend shows strong float-path SegNet learning but no FP4 preservation.
+- **What**: Diagnose quantization robustness for the residual head before any longer training.
+- **Why**: Test the safer residual hypothesis: keep the mask prior, let a coordinate MLP spend bits only on leftover error.
+- **Command family**: `.venv/bin/python -m tac.experiments.train_renderer --profile c3_residual_renderer_smoke --tag c3_residual_smoke_20260425 --precomputed experiments/precomputed_local`
+- **Gate**: epoch 0 output equals the base renderer within the zero-init tolerance, then training must improve eval-roundtrip proxy without destabilizing PoseNet.
+
+### P2: Self-Compression / Mixed-Precision Smoke
+- **Status**: Existing tiny-frame self-compression tests passed; mixed-precision exporter smoke passed; uniform int4+LZMA2 exported both experimental checkpoints.
+- **What**: Replace crude `latents8` allocation with scorer-sensitive bit allocation over latents, decoder, motion, and residual head; measure scorer delta against FP4.
+- **Why**: Uniform int4+LZMA2 is smaller than current FP4 in the tiny smoke, but quality needs layer-specific precision.
+- **Gate**: round-trip output delta and scorer delta measured against FP4 on the same smoke artifact.
+
+### P3: Archive/Inflate Integration Audit
+- **What**: Trace whether `coolchic_renderer` and `c3_residual_renderer` can be serialized, included in `archive.zip`, inflated, and scored by upstream `evaluate.py`.
+- **Why**: A training checkpoint is not a contest submission. Neural artifacts outside the archive are non-compliant.
+- **Gate**: one-command archive build, byte accounting, inflate runtime, and decoded scorer result.
+
+### P4: Cross-Device Determinism Check
+- **What**: Replay the 8-frame Cool-Chic smoke on CPU and CUDA/T4.
+- **Why**: MPS replay was metric-stable but not byte-stable (`4.58e-05` max dequantized delta).
+- **Gate**: define acceptable determinism tier: byte-stable, tensor-stable within tolerance, or metric-stable only.
+
+### P5: Canonical Pipeline Adapter
+- **What**: Ensure the new renderer lanes are reachable through profile-defined experiment paths only.
+- **Why**: Prevent ad-hoc flag drift before Vast.ai deployment.
+- **Gate**: profile configs carry seed, deterministic, loss mode, eval roundtrip, latent/residual hyperparameters, and no retired settings.
+
+### P6: Paper-Faithfulness Gap Review
+- **What**: Compare the prototypes against Cool-Chic and C3 papers item by item: entropy model, latent quantization, decoder complexity, bit allocation, video temporal sharing.
+- **Why**: Avoid claiming paper-equivalent behavior from a principle prototype.
+- **Gate**: written delta table before any "Cool-Chic/C3" headline result.
+
+### P7: Full-Suite Hygiene
+- **What**: Resolve or quarantine unrelated scheduler/Kaggle test blockers.
+- **Why**: The prototype surface has focused green evidence, but repo-wide rigor still needs a clean signal before deployment.
+- **Known blockers**: `test_scheduler_cli.py` syntax error, Kaggle asset constant mismatch, sorted scheduler platform assertions.
+
+---
+
+# Previous Queue -- 2026-04-15 (DX Hardening Update)
 
 ## Scoreboard
 - **Current best [contest-compliant]**: auth=0.87 (renderer baseline, no TTO)

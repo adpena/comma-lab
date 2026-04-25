@@ -223,3 +223,115 @@ if __name__ == "__main__":
     except PreflightError as e:
         print(f"\nPREFLIGHT FAILED: {e}")
         sys.exit(1)
+
+
+def preflight_training_inputs(
+    tto_frames_path: str | Path,
+    gt_poses_path: str | Path,
+    masks_path: str | Path,
+    profile_name: str,
+    profile_arch: dict,
+    verbose: bool = True,
+) -> None:
+    """Validate training inputs BEFORE the GPU starts.
+
+    Catches the failure modes that destroyed WILDE+GREEN on 2026-04-25:
+      - TTO frames at GT range [0, 255] instead of TTO-optimized [0, ~184]
+      - tto_frames.pt is corrupted (wrong dtype, infinite values)
+      - Mask count doesn't match expected_n_frames
+      - GT poses missing or wrong shape
+      - Profile architecture doesn't match what the renderer would expect
+
+    Raises PreflightError on fatal issues. No warnings — every fail is fatal.
+    """
+    if verbose:
+        print("=" * 60)
+        print(f"TRAINING PREFLIGHT — profile '{profile_name}'")
+        print("=" * 60)
+
+    # 1. TTO frames must exist, be valid, and be TTO-OPTIMIZED (range < 200)
+    p = Path(tto_frames_path)
+    if not p.exists():
+        raise PreflightError(f"TTO frames missing: {p}")
+    try:
+        t = torch.load(str(p), map_location="cpu", weights_only=True)
+    except Exception as e:
+        raise PreflightError(f"TTO frames corrupted (cannot torch.load): {p} — {e}")
+    if t.ndim != 4 or t.shape[1:] != (384, 512, 3):
+        raise PreflightError(f"TTO frames wrong shape {tuple(t.shape)} (expected (N,384,512,3)): {p}")
+    tmin, tmax = float(t.min()), float(t.max())
+    if not (0 <= tmin and tmax < 1e6):
+        raise PreflightError(f"TTO frames out of range [{tmin},{tmax}] — likely corrupted: {p}")
+    is_gt_video = tmax > 200  # TTO-optimized frames cluster around max ~184
+    if is_gt_video:
+        raise PreflightError(
+            f"TTO frames at GT-video range [0, {tmax:.0f}] — these are RAW GT FRAMES, "
+            f"not TTO-optimized. This is the WILDE failure mode (proxy 267 instead of 0.5). "
+            f"Re-run optimize_poses.py to generate TTO-optimized frames first. Path: {p}"
+        )
+    if verbose:
+        print(f"  [PASS] tto_frames.pt: {tuple(t.shape)} {t.dtype} range [{tmin:.1f},{tmax:.1f}] (TTO-optimized)")
+
+    # 2. GT poses must exist with shape (600, 6)
+    pp = Path(gt_poses_path)
+    if not pp.exists():
+        raise PreflightError(f"GT poses missing: {pp}")
+    try:
+        poses = torch.load(str(pp), map_location="cpu", weights_only=True)
+        if isinstance(poses, dict):
+            poses = poses.get("poses", poses.get("gt_poses"))
+    except Exception as e:
+        raise PreflightError(f"GT poses corrupted: {pp} — {e}")
+    if poses.ndim != 2 or poses.shape[1] != 6:
+        raise PreflightError(f"GT poses wrong shape {tuple(poses.shape)} (expected (N,6)): {pp}")
+    if poses.shape[0] not in (600, 1200):
+        raise PreflightError(f"GT poses {poses.shape[0]} entries (expected 600 pairs or 1200 frames): {pp}")
+    if verbose:
+        print(f"  [PASS] gt_poses.pt: {tuple(poses.shape)}")
+
+    # 3. Mask video frame count
+    mp = Path(masks_path)
+    if not mp.exists():
+        raise PreflightError(f"Masks missing: {mp}")
+    try:
+        out = subprocess.check_output(
+            ["ffprobe", "-v", "error", "-count_frames",
+             "-select_streams", "v:0", "-show_entries", "stream=nb_read_frames",
+             "-of", "csv=p=0", str(mp)],
+            text=True, timeout=60,
+        ).strip()
+        nframes = int(out)
+    except (subprocess.TimeoutExpired, ValueError, subprocess.CalledProcessError) as e:
+        raise PreflightError(f"ffprobe failed on masks: {mp} — {e}")
+    if nframes not in (600, 1200):
+        raise PreflightError(
+            f"Masks have {nframes} frames (expected 600 half-frame or 1200 full): {mp}"
+        )
+    if verbose:
+        print(f"  [PASS] masks.mkv: {nframes} frames ({'half-frame' if nframes == 600 else 'full'})")
+
+    # 4. Profile architecture sanity
+    required_keys = ["base_ch", "mid_ch", "depth", "pose_dim", "padding_mode"]
+    missing = [k for k in required_keys if k not in profile_arch]
+    if missing:
+        raise PreflightError(f"Profile '{profile_name}' missing arch keys: {missing}")
+    if profile_arch["padding_mode"] not in ("zeros", "replicate", "reflect"):
+        raise PreflightError(f"Profile '{profile_name}' has invalid padding_mode={profile_arch['padding_mode']}")
+    if not (1 <= profile_arch["depth"] <= 4):
+        raise PreflightError(f"Profile '{profile_name}' depth={profile_arch['depth']} out of range [1,4]")
+    if verbose:
+        print(f"  [PASS] profile arch: base_ch={profile_arch['base_ch']} "
+              f"mid_ch={profile_arch['mid_ch']} depth={profile_arch['depth']} "
+              f"pose_dim={profile_arch['pose_dim']} padding={profile_arch['padding_mode']}")
+
+    # 5. Profile must include eval_roundtrip=True (NON-NEGOTIABLE)
+    if not profile_arch.get("eval_roundtrip", False):
+        raise PreflightError(
+            f"Profile '{profile_name}' has eval_roundtrip=False. "
+            f"This causes 2-11x proxy-auth gap. NON-NEGOTIABLE per CLAUDE.md."
+        )
+    if verbose:
+        print(f"  [PASS] eval_roundtrip=True (CLAUDE.md non-negotiable)")
+
+    if verbose:
+        print(f"  ALL TRAINING PREFLIGHT CHECKS PASSED for profile '{profile_name}'")

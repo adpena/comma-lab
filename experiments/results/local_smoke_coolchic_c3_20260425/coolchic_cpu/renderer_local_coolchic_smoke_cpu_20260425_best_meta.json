@@ -1,0 +1,41 @@
+{
+  "epoch": 1,
+  "scorer": 93.63971694237571,
+  "pose": 183.6695556640625,
+  "seg": 0.5078303068876266,
+  "fp4_path": "experiments/results/local_smoke_coolchic_c3_20260425/coolchic_cpu/renderer_local_coolchic_smoke_cpu_20260425_best_fp4.pt",
+  "fp4_size": 56937,
+  "args": {
+    "base_ch": 32,
+    "mid_ch": 60,
+    "embed_dim": 6,
+    "motion_hidden": 24,
+    "depth": 1,
+    "pretrain_epochs": 1,
+    "epochs": 2,
+    "lr": 0.001,
+    "profile": "coolchic_renderer_smoke",
+    "tag": "local_coolchic_smoke_cpu_20260425",
+    "variant": "coolchic_renderer",
+    "latent_ch": 8,
+    "latent_shapes": [
+      [
+        6,
+        8
+      ],
+      [
+        12,
+        16
+      ],
+      [
+        24,
+        32
+      ]
+    ],
+    "residual_hidden": 32,
+    "residual_layers": 2,
+    "residual_scale": 16.0,
+    "seed": 42,
+    "deterministic": true
+  }
+}
