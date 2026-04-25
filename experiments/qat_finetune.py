@@ -34,6 +34,18 @@ References:
 """
 from __future__ import annotations
 
+# DX-fix 2026-04-25: line-buffer stdout/stderr so progress logs flush
+# immediately when piped to log files (Python buffers ~8KB by default,
+# making long-running scripts appear silent for hours per the optimize_poses
+# incident on the A100 today).
+import sys as _dx_sys
+try:
+    _dx_sys.stdout.reconfigure(line_buffering=True)  # type: ignore[attr-defined]
+    _dx_sys.stderr.reconfigure(line_buffering=True)  # type: ignore[attr-defined]
+except (AttributeError, OSError):
+    pass
+
+
 import argparse
 import gc
 import json

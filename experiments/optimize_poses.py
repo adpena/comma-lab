@@ -25,6 +25,18 @@ Usage:
 """
 from __future__ import annotations
 
+# DX-fix 2026-04-25: line-buffer stdout/stderr so progress logs flush
+# immediately when piped to log files (Python buffers ~8KB by default,
+# making long-running scripts appear silent for hours per the optimize_poses
+# incident on the A100 today).
+import sys as _dx_sys
+try:
+    _dx_sys.stdout.reconfigure(line_buffering=True)  # type: ignore[attr-defined]
+    _dx_sys.stderr.reconfigure(line_buffering=True)  # type: ignore[attr-defined]
+except (AttributeError, OSError):
+    pass
+
+
 import argparse
 import json
 import math
@@ -154,7 +166,7 @@ def load_renderer(checkpoint_path: str, device: torch.device) -> torch.nn.Module
         model = model.eval()
         n_params = sum(p.numel() for p in model.parameters())
         pose_dim = model.pose_dim
-        print(f"[renderer] Loaded ASYM: {n_params:,} params, pose_dim={pose_dim}")
+        print(f"[renderer] Loaded ASYM: {n_params:,} params, pose_dim={pose_dim}", flush=True)
         return model
 
     if raw[:4] == b"FP4A":
@@ -163,7 +175,7 @@ def load_renderer(checkpoint_path: str, device: torch.device) -> torch.nn.Module
         model = model.eval()
         n_params = sum(p.numel() for p in model.parameters())
         pose_dim = model.pose_dim
-        print(f"[renderer] Loaded FP4A: {n_params:,} params, pose_dim={pose_dim}")
+        print(f"[renderer] Loaded FP4A: {n_params:,} params, pose_dim={pose_dim}", flush=True)
         return model
 
     # PyTorch .pt format
@@ -205,12 +217,12 @@ def load_renderer(checkpoint_path: str, device: torch.device) -> torch.nn.Module
 
     n_params = sum(p_param.numel() for p_param in model.parameters())
     pose_dim = model_cfg.get("pose_dim", 0)
-    print(f"[renderer] Loaded {n_params:,} params, pose_dim={pose_dim} from {checkpoint_path}")
+    print(f"[renderer] Loaded {n_params:,} params, pose_dim={pose_dim} from {checkpoint_path}", flush=True)
 
     if pose_dim == 0:
-        print("[WARNING] Renderer has pose_dim=0 -- FiLM layers are disabled.")
-        print("[WARNING] Pose optimization will have NO effect on output.")
-        print("[WARNING] Consider training a renderer with --pose-dim 6.")
+        print("[WARNING] Renderer has pose_dim=0 -- FiLM layers are disabled.", flush=True)
+        print("[WARNING] Pose optimization will have NO effect on output.", flush=True)
+        print("[WARNING] Consider training a renderer with --pose-dim 6.", flush=True)
     return model
 
 
@@ -341,7 +353,7 @@ def optimize_poses_batch(
             ref_argmax = ref_seg_logits.argmax(dim=1)  # (2*B, H, W)
         flip_threshold = int(ref_argmax.numel() * flip_budget)
         print(f"  [argmax constraint] Reference argmax: {ref_argmax.shape}, "
-              f"flip budget={flip_budget:.4f} ({flip_threshold} px)")
+              f"flip budget={flip_budget:.4f} ({flip_threshold} px)", flush=True)
 
     metrics = {
         "steps_run": 0,
@@ -460,7 +472,7 @@ def optimize_poses_batch(
                             retry_accepted = True
                             if step % log_every == 0:
                                 print(f"    [argmax] step {step}: rejected ({flipped_pixels}/{total_pixels} "
-                                      f"flipped), accepted at alpha={alpha:.3f} after {retry + 1} retries")
+                                      f"flipped), accepted at alpha={alpha:.3f} after {retry + 1} retries", flush=True)
                             break
 
                     if not retry_accepted:
@@ -470,7 +482,7 @@ def optimize_poses_batch(
                         optimizer.load_state_dict(pre_step_state)
                         if step % log_every == 0:
                             print(f"    [argmax] step {step}: FULL ROLLBACK ({flipped_pixels} px flipped, "
-                                  f"all {max_retries} retries failed)")
+                                  f"all {max_retries} retries failed)", flush=True)
 
         loss_val = total_loss.item()
 
@@ -492,10 +504,10 @@ def optimize_poses_batch(
             constraint_str = f" rejections={argmax_rejections}" if argmax_constraint else ""
             print(f"  step {step:4d}/{steps}: loss={loss_val:.6f} "
                   f"(seg={seg_loss.item():.6f}, pose={pose_loss.item():.6f}) "
-                  f"|grad|={grad_norm:.4f} |dpose|={pose_change:.4f}{constraint_str}")
+                  f"|grad|={grad_norm:.4f} |dpose|={pose_change:.4f}{constraint_str}", flush=True)
 
         if patience_counter >= early_stop_patience:
-            print(f"  Early stop at step {step} (no improvement for {early_stop_patience} steps)")
+            print(f"  Early stop at step {step} (no improvement for {early_stop_patience} steps)", flush=True)
             break
 
     metrics["steps_run"] = step + 1
@@ -527,7 +539,7 @@ def main():
         args.steps = 100
         args.batch_pairs = 10
         args.log_every = 10
-        print("[smoke] Smoke test: 20 frames, 100 steps, 10 pairs/batch")
+        print("[smoke] Smoke test: 20 frames, 100 steps, 10 pairs/batch", flush=True)
 
     # Ensure even frame count
     args.n_frames = args.n_frames - (args.n_frames % 2)
@@ -536,7 +548,7 @@ def main():
     device = torch.device(args.device)
     upstream = Path(args.upstream) if args.upstream else UPSTREAM_ROOT
     if upstream is None:
-        print("ERROR: Cannot find upstream root. Set --upstream or TAC_UPSTREAM_DIR.", file=sys.stderr)
+        print("ERROR: Cannot find upstream root. Set --upstream or TAC_UPSTREAM_DIR.", file=sys.stderr, flush=True)
         sys.exit(1)
 
     if args.output_dir is None:
@@ -548,29 +560,29 @@ def main():
     video_path = args.video or str(upstream / "videos" / "0.mkv")
     cond_dim = 6 + args.latent_dim
 
-    print(f"[config] device={device}, n_frames={args.n_frames}, steps={args.steps}")
-    print(f"[config] lr={args.lr}, batch_pairs={args.batch_pairs}")
-    print(f"[config] seg_weight={args.seg_weight}, pose_weight={args.pose_weight}")
-    print(f"[config] hinge_margin={args.hinge_margin}, eval_roundtrip={args.eval_roundtrip}")
-    print(f"[config] argmax_constraint={args.argmax_constraint}, max_retries={args.max_retries}")
-    print(f"[config] latent_dim={args.latent_dim} (conditioning dim={cond_dim})")
-    print(f"[config] checkpoint={args.checkpoint}")
-    print(f"[config] output_dir={output_dir}")
+    print(f"[config] device={device}, n_frames={args.n_frames}, steps={args.steps}", flush=True)
+    print(f"[config] lr={args.lr}, batch_pairs={args.batch_pairs}", flush=True)
+    print(f"[config] seg_weight={args.seg_weight}, pose_weight={args.pose_weight}", flush=True)
+    print(f"[config] hinge_margin={args.hinge_margin}, eval_roundtrip={args.eval_roundtrip}", flush=True)
+    print(f"[config] argmax_constraint={args.argmax_constraint}, max_retries={args.max_retries}", flush=True)
+    print(f"[config] latent_dim={args.latent_dim} (conditioning dim={cond_dim})", flush=True)
+    print(f"[config] checkpoint={args.checkpoint}", flush=True)
+    print(f"[config] output_dir={output_dir}", flush=True)
 
     t_total = time.monotonic()
 
     # ── Step 1: Load scorers ─────────────────────────────────────────────
-    print("\n[1/6] Loading differentiable scorers...")
+    print("\n[1/6] Loading differentiable scorers...", flush=True)
     t0 = time.monotonic()
     from tac.scorer import load_differentiable_scorers
     posenet, segnet = load_differentiable_scorers(upstream, device=str(device))
-    print(f"[1/6] Scorers loaded in {time.monotonic() - t0:.1f}s")
+    print(f"[1/6] Scorers loaded in {time.monotonic() - t0:.1f}s", flush=True)
 
     # ── Step 2: Load renderer ────────────────────────────────────────────
-    print("\n[2/6] Loading renderer...")
+    print("\n[2/6] Loading renderer...", flush=True)
     t0 = time.monotonic()
     renderer = load_renderer(args.checkpoint, device)
-    print(f"[2/6] Renderer loaded in {time.monotonic() - t0:.1f}s")
+    print(f"[2/6] Renderer loaded in {time.monotonic() - t0:.1f}s", flush=True)
 
     # Load zoom warp for use_zoom_flow models
     zoom_warp = None
@@ -583,36 +595,36 @@ def main():
                 n_p = ckpt_data["zoom_warp_state_dict"]["zoom_scalars"].shape[0]
                 zoom_warp = RadialZoomWarp(n_pairs=n_p).to(device)
                 zoom_warp.load_state_dict(ckpt_data["zoom_warp_state_dict"])
-                print(f"  Loaded zoom scalars ({n_p} pairs) from checkpoint")
+                print(f"  Loaded zoom scalars ({n_p} pairs) from checkpoint", flush=True)
         if zoom_warp is None:
             zoom_path = ckpt_path.parent / "zoom_scalars.bin"
             if zoom_path.exists():
                 from tac.radial_zoom import load_zoom_scalars
                 zoom_warp = load_zoom_scalars(zoom_path, device=str(device))
-                print(f"  Loaded zoom scalars from {zoom_path.name}")
+                print(f"  Loaded zoom scalars from {zoom_path.name}", flush=True)
         if zoom_warp is None:
-            print(f"  WARNING: use_zoom_flow but no zoom scalars found. Using identity zoom.")
+            print(f"  WARNING: use_zoom_flow but no zoom scalars found. Using identity zoom.", flush=True)
 
     # Verify pose_dim compatibility
     renderer_pose_dim = getattr(renderer, "pose_dim", 0)
     if renderer_pose_dim == 0:
-        print("\n" + "=" * 70)
-        print("FATAL: Renderer has pose_dim=0. FiLM layers are not present.")
-        print("Pose-space TTO requires a renderer trained with --pose-dim 6.")
-        print("Aborting.")
-        print("=" * 70)
+        print("\n" + "=" * 70, flush=True)
+        print("FATAL: Renderer has pose_dim=0. FiLM layers are not present.", flush=True)
+        print("Pose-space TTO requires a renderer trained with --pose-dim 6.", flush=True)
+        print("Aborting.", flush=True)
+        print("=" * 70, flush=True)
         sys.exit(1)
 
     # ── Step 3: Decode GT video + extract masks + pose targets ──────────
-    print(f"\n[3/6] Decoding GT video ({args.n_frames} frames)...")
+    print(f"\n[3/6] Decoding GT video ({args.n_frames} frames)...", flush=True)
     t0 = time.monotonic()
     from tac.data import load_gt_video
     gt_frames = load_gt_video(video_path, n_frames=args.n_frames)
     args.n_frames = len(gt_frames)
     n_pairs = args.n_frames // 2
-    print(f"[3/6] Decoded {args.n_frames} frames in {time.monotonic() - t0:.1f}s")
+    print(f"[3/6] Decoded {args.n_frames} frames in {time.monotonic() - t0:.1f}s", flush=True)
 
-    print("\n[4/6] Loading/extracting masks and pose targets...")
+    print("\n[4/6] Loading/extracting masks and pose targets...", flush=True)
     t0 = time.monotonic()
     from tac.scorer import extract_gt_masks, extract_gt_pose_targets
 
@@ -639,14 +651,14 @@ def main():
             gt_masks = torch.from_numpy(masks_np)
         else:
             raise ValueError(f"Unknown mask format: {masks_path.suffix}")
-        print(f"  Loaded archive masks from {args.masks}: {gt_masks.shape}")
+        print(f"  Loaded archive masks from {args.masks}: {gt_masks.shape}", flush=True)
         # Upsample to 384x512 if needed (same logic as inflate_renderer.py)
         if gt_masks.shape[1] < 384 or gt_masks.shape[2] < 512:
             import torch.nn.functional as F
             gt_masks = F.interpolate(
                 gt_masks.float().unsqueeze(1), size=(384, 512), mode="nearest"
             ).squeeze(1).long()
-            print(f"  Upsampled to {gt_masks.shape}")
+            print(f"  Upsampled to {gt_masks.shape}", flush=True)
     else:
         # R39 fix: dead branch — argparse required=True guarantees args.masks
         # is set, so the `if args.masks:` above is always True. Keeping a
@@ -658,30 +670,30 @@ def main():
 
     if args.gt_pose_targets and Path(args.gt_pose_targets).exists():
         pose_targets = torch.load(args.gt_pose_targets, map_location="cpu", weights_only=True).float()
-        print(f"  Loaded precomputed pose targets from {args.gt_pose_targets}: {pose_targets.shape}")
+        print(f"  Loaded precomputed pose targets from {args.gt_pose_targets}: {pose_targets.shape}", flush=True)
     else:
         pose_targets = extract_gt_pose_targets(gt_frames, posenet, device)
         # Save for reuse on future runs
         cache_path = Path(args.output_dir) / "gt_pose_targets.pt"
         torch.save(pose_targets, cache_path)
-        print(f"  Computed pose targets and cached to {cache_path}")
-    print(f"[4/6] Masks: {gt_masks.shape}, Poses: {pose_targets.shape} in {time.monotonic() - t0:.1f}s")
+        print(f"  Computed pose targets and cached to {cache_path}", flush=True)
+    print(f"[4/6] Masks: {gt_masks.shape}, Poses: {pose_targets.shape} in {time.monotonic() - t0:.1f}s", flush=True)
 
     # ── Step 4: Load or extract initial GT poses ────────────────────────
-    print("\n[5/6] Loading initial pose vectors...")
+    print("\n[5/6] Loading initial pose vectors...", flush=True)
     if args.gt_poses_path and Path(args.gt_poses_path).exists():
         init_poses = torch.load(args.gt_poses_path, map_location="cpu", weights_only=True).float()
-        print(f"  Loaded GT poses from {args.gt_poses_path}: {init_poses.shape}")
+        print(f"  Loaded GT poses from {args.gt_poses_path}: {init_poses.shape}", flush=True)
     else:
         # Use pose_targets as warm start (these are PoseNet outputs on GT frames)
         init_poses = pose_targets.clone()
-        print(f"  Using PoseNet GT targets as warm start: {init_poses.shape}")
+        print(f"  Using PoseNet GT targets as warm start: {init_poses.shape}", flush=True)
     init_poses = init_poses[:n_pairs]
 
     # ── Step 5a (optional): Global embedding optimization ────────────────
     if args.optimize_embedding:
         print(f"\n[5.5/6] Optimizing shared class embedding "
-              f"({args.embedding_epochs} epochs, lr={args.embedding_lr})...")
+              f"({args.embedding_epochs} epochs, lr={args.embedding_lr})...", flush=True)
         t0 = time.monotonic()
 
         # Unfreeze ONLY the shared embedding
@@ -743,7 +755,7 @@ def main():
 
             avg = epoch_loss / max(epoch_count, 1)
             emb_delta = (shared_emb.weight.data - original_emb.to(device)).norm().item()
-            print(f"    Embedding epoch {emb_epoch}: avg_loss={avg:.6f}, |dw|={emb_delta:.4f}")
+            print(f"    Embedding epoch {emb_epoch}: avg_loss={avg:.6f}, |dw|={emb_delta:.4f}", flush=True)
 
             if avg < best_emb_loss:
                 best_emb_loss = avg
@@ -755,14 +767,14 @@ def main():
 
         emb_delta_final = (best_emb_weights - original_emb.to(device)).norm().item()
         print(f"    Embedding optimization done in {time.monotonic() - t0:.1f}s, "
-              f"|total_delta|={emb_delta_final:.4f}")
+              f"|total_delta|={emb_delta_final:.4f}", flush=True)
 
         # Save optimized embedding separately (120 bytes fp32)
         torch.save(best_emb_weights.cpu(), output_dir / "optimized_embedding.pt")
-        print(f"    Saved optimized_embedding.pt ({best_emb_weights.numel() * 4} bytes)")
+        print(f"    Saved optimized_embedding.pt ({best_emb_weights.numel() * 4} bytes)", flush=True)
 
     # ── Step 5b: Batched pose optimization ────────────────────────────────
-    print(f"\n[6/6] Optimizing {n_pairs} pose vectors in batches of {args.batch_pairs}...")
+    print(f"\n[6/6] Optimizing {n_pairs} pose vectors in batches of {args.batch_pairs}...", flush=True)
     n_batches = math.ceil(n_pairs / args.batch_pairs)
 
     all_optimized = torch.zeros(n_pairs, cond_dim)
@@ -777,7 +789,7 @@ def main():
         n_batch_pairs = pair_end - pair_start
 
         print(f"\n--- Batch {batch_idx + 1}/{n_batches}: pairs [{pair_start}:{pair_end}] "
-              f"({n_batch_pairs} pairs, {n_batch_pairs * 2} frames) ---")
+              f"({n_batch_pairs} pairs, {n_batch_pairs * 2} frames) ---", flush=True)
 
         # Prepare batch data
         # Masks: even-indexed for mask_t, odd-indexed for mask_t1
@@ -822,7 +834,7 @@ def main():
         total_steps += batch_metrics["steps_run"]
 
         print(f"  Batch {batch_idx + 1} done in {dt:.1f}s "
-              f"(improvement: {batch_metrics['improvement_pct']:.1f}%)")
+              f"(improvement: {batch_metrics['improvement_pct']:.1f}%)", flush=True)
 
         # Save intermediate results
         torch.save(all_optimized[:pair_end], output_dir / "optimized_poses_partial.pt")
@@ -834,9 +846,9 @@ def main():
             torch.mps.empty_cache()
 
     # ── Step 6: Compare GT poses vs optimized poses ─────────────────────
-    print("\n" + "=" * 70)
-    print("RESULTS: GT poses vs optimized poses")
-    print("=" * 70)
+    print("\n" + "=" * 70, flush=True)
+    print("RESULTS: GT poses vs optimized poses", flush=True)
+    print("=" * 70, flush=True)
 
     # Save optimized poses (both formats for compatibility)
     optimized_poses = all_optimized[:, :6]  # pose part only
@@ -845,16 +857,16 @@ def main():
     # Also save compact binary format (raw fp16, ~53% smaller)
     from tac.submission_archive import save_poses_binary
     bin_size = save_poses_binary(optimized_poses, output_dir / "optimized_poses.bin")
-    print(f"  Saved optimized_poses.pt: {optimized_poses.shape} ({pt_size:,} bytes)")
-    print(f"  Saved optimized_poses.bin: {optimized_poses.shape} ({bin_size:,} bytes, -{100*(1-bin_size/pt_size):.0f}%)")
+    print(f"  Saved optimized_poses.pt: {optimized_poses.shape} ({pt_size:,} bytes)", flush=True)
+    print(f"  Saved optimized_poses.bin: {optimized_poses.shape} ({bin_size:,} bytes, -{100*(1-bin_size/pt_size):.0f}%)", flush=True)
 
     if args.latent_dim > 0:
         optimized_latents = all_optimized[:, 6:]
         torch.save(optimized_latents, output_dir / "optimized_latents.pt")
-        print(f"  Saved optimized_latents.pt: {optimized_latents.shape}")
+        print(f"  Saved optimized_latents.pt: {optimized_latents.shape}", flush=True)
 
     # Compute proxy score with GT poses vs optimized poses
-    print("\n  Computing proxy scores (GT poses vs optimized poses)...")
+    print("\n  Computing proxy scores (GT poses vs optimized poses)...", flush=True)
     from tac.scorer import compute_proxy_score
 
     # Generate frames with GT poses
@@ -870,22 +882,22 @@ def main():
     )
 
     print(f"\n  GT Poses:        score={gt_score['score']:.4f} "
-          f"(pose={gt_score['pose']:.6f}, seg={gt_score['seg']:.6f})")
+          f"(pose={gt_score['pose']:.6f}, seg={gt_score['seg']:.6f})", flush=True)
     print(f"  Optimized Poses: score={opt_score['score']:.4f} "
-          f"(pose={opt_score['pose']:.6f}, seg={opt_score['seg']:.6f})")
+          f"(pose={opt_score['pose']:.6f}, seg={opt_score['seg']:.6f})", flush=True)
     print(f"  Delta:           {opt_score['score'] - gt_score['score']:+.4f} "
           f"(pose: {opt_score['pose'] - gt_score['pose']:+.6f}, "
-          f"seg: {opt_score['seg'] - gt_score['seg']:+.6f})")
+          f"seg: {opt_score['seg'] - gt_score['seg']:+.6f})", flush=True)
 
     # Pose vector statistics
     pose_delta = (optimized_poses - init_poses[:n_pairs]).norm(dim=1)
     print(f"\n  Pose delta: mean={pose_delta.mean():.4f}, "
-          f"max={pose_delta.max():.4f}, min={pose_delta.min():.4f}")
+          f"max={pose_delta.max():.4f}, min={pose_delta.min():.4f}", flush=True)
 
     # Archive size estimate
     archive_bytes = n_pairs * cond_dim * 4  # float32
     archive_fp16_bytes = n_pairs * cond_dim * 2  # float16
-    print(f"\n  Archive size: {archive_bytes:,} bytes (fp32), {archive_fp16_bytes:,} bytes (fp16)")
+    print(f"\n  Archive size: {archive_bytes:,} bytes (fp32), {archive_fp16_bytes:,} bytes (fp16)", flush=True)
 
     # Save summary
     total_time = time.monotonic() - t_total
@@ -906,9 +918,9 @@ def main():
     with open(output_dir / "summary.json", "w") as f:
         json.dump(summary, f, indent=2, default=str)
 
-    print(f"\n  Total time: {total_time:.1f}s")
-    print(f"  Results saved to: {output_dir}")
-    print("=" * 70)
+    print(f"\n  Total time: {total_time:.1f}s", flush=True)
+    print(f"  Results saved to: {output_dir}", flush=True)
+    print("=" * 70, flush=True)
 
 
 def _generate_frames(
