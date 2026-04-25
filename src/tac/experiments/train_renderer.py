@@ -703,7 +703,11 @@ def train(args: argparse.Namespace):
     # Resume from checkpoint if specified
     if args.resume_from and Path(args.resume_from).exists():
         state = torch.load(args.resume_from, map_location=device, weights_only=False)
-        model.load_state_dict(state["model"])
+        # R-resume-fix: support both "model" key (training_state save format) AND
+        # "model_state_dict" key (fp32 best save format) — Bug A from council R2.
+        # Falls back gracefully if either is missing.
+        model_state = state.get("model", state.get("model_state_dict", state))
+        model.load_state_dict(model_state)
         ema.shadow = {k: v.to(device) for k, v in state["ema_shadow"].items()}
         if "optimizer" in state:
             optimizer.load_state_dict(state["optimizer"])
