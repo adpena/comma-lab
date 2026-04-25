@@ -507,13 +507,17 @@ def check_codebase_drift(strict: bool = True) -> list[str]:
         all_violations.extend(_scan_bash_text_for_forbidden(sh_path))
 
     # 3. Python files with nohup or watcher patterns. R36 extended scan to
-    # src/tac/ and contrib/ — any new module could grow an ad-hoc deploy
-    # pattern.
+    # src/tac/ subtrees; R37 added existence guard so a fresh checkout
+    # missing one of these dirs doesn't crash preflight (Python <3.12
+    # rglob raises FileNotFoundError on missing path).
     drift_scan_dirs = ["scripts", "experiments",
                        "src/tac/contrib", "src/tac/deploy",
                        "src/tac/experiments"]
     for d in drift_scan_dirs:
-        for py_path in (REPO_ROOT / d).rglob("*.py"):
+        d_path = REPO_ROOT / d
+        if not d_path.exists():
+            continue
+        for py_path in d_path.rglob("*.py"):
             all_violations.extend(_scan_python_for_forbidden(py_path))
 
     if all_violations and strict:
@@ -1080,6 +1084,9 @@ def _extract_write_literals(path: Path) -> set[str]:
             cur = parents.get(id(cur))
         return None
 
+    # Pass 1a: build name_to_literals BEFORE any Return-tracking pass so
+    # the lookup is complete (ast.walk order isn't guaranteed; a Return
+    # could be visited before its Assign otherwise).
     for node in ast.walk(tree):
         if isinstance(node, ast.Assign) and len(node.targets) == 1:
             t = node.targets[0]
@@ -1087,16 +1094,21 @@ def _extract_write_literals(path: Path) -> set[str]:
                 lits = _collect_artifact_literals_in(node.value)
                 if lits:
                     name_to_literals.setdefault(t.id, set()).update(lits)
-        # R36 fix: only count Return literals when the enclosing function
-        # has a write-prefix name. Otherwise a helper like
-        # `def get_input_path(): return Path("input.bin")` would falsely
-        # mark "input.bin" as produced.
+
+    # Pass 1b: process Return statements. R36: only count when enclosing
+    # function has a write-prefix name. R37: also follow Name indirection
+    # (`return path` where path = dir / "X.bin" was assigned earlier).
+    for node in ast.walk(tree):
         if isinstance(node, ast.Return) and node.value is not None:
             fn = _enclosing_fn(node)
             if fn is not None and _is_write_named_fn(fn):
                 lits = _collect_artifact_literals_in(node.value)
                 if lits:
                     found.update(lits)
+                for nm in {sub.id for sub in ast.walk(node.value)
+                           if isinstance(sub, ast.Name)}:
+                    if nm in name_to_literals:
+                        found.update(name_to_literals[nm])
 
     def _names_referenced(node: ast.AST) -> set[str]:
         return {sub.id for sub in ast.walk(node) if isinstance(sub, ast.Name)}

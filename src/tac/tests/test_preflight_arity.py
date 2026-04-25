@@ -881,6 +881,27 @@ def test_filename_contract_write_prefix_function_return_is_produced(tmp_path: Pa
     assert violations == []
 
 
+def test_filename_contract_return_with_name_indirection_resolves(tmp_path: Path) -> None:
+    """R37: write-prefix function that returns a Name (not a literal) where
+    the Name was assigned a Path-with-literal earlier — should resolve.
+    """
+    repo = _stub_repo(tmp_path)
+    _write(repo / "experiments/consumer.py", '''
+        from pathlib import Path
+        def save_via_indirection(iter_dir):
+            path = iter_dir / "indirect_produced.bin"
+            return path
+        x = Path("output/indirect_produced.bin")
+    ''')
+    violations = preflight_filename_contract(
+        repo_root=repo,
+        consumer_files=["experiments/consumer.py"],
+        producer_dirs=["experiments"],
+        strict=False, verbose=False,
+    )
+    assert violations == []
+
+
 def test_filename_contract_non_write_function_return_does_not_silence_phantom(tmp_path: Path) -> None:
     """Inverse: a Return inside a function with a non-write name (e.g.,
     `get_path` or `find_input`) must NOT count as produced — otherwise an
