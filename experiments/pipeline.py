@@ -46,7 +46,7 @@ import math
 import subprocess
 import sys
 import time
-from dataclasses import asdict, dataclass
+from dataclasses import asdict, dataclass, fields
 from pathlib import Path
 
 import torch
@@ -246,8 +246,10 @@ def step_export(cfg: PipelineConfig, iteration: int = 0) -> Path:
         padding_mode=cfg.padding_mode, use_dilation=cfg.use_dilation,
         use_zoom_flow=cfg.use_zoom_flow,
     )
-    # strict=True so a shape mismatch fails LOUDLY, not silently. (R24 finding:
-    # strict=False masked the use_zoom_flow channel-count mismatch silently.)
+    # strict=False so we get the missing/unexpected lists; we then raise
+    # if either is non-empty — equivalent to strict=True but with a much
+    # better error message. (R24 finding: silent strict=False permitted
+    # use_zoom_flow channel-count mismatch.)
     missing, unexpected = model.load_state_dict(state, strict=False)
     if missing or unexpected:
         raise RuntimeError(
@@ -840,13 +842,48 @@ def step_eval(cfg: PipelineConfig, renderer_bin: Path, archive_path: Path,
 
 # ── Main pipeline ────────────────────────────────────────────────────────
 
+def _capture_provenance(cfg: PipelineConfig) -> dict:
+    """Build a full-provenance dict for `pipeline_config.json`. Captures the
+    config + git hash + GPU info + library versions per CLAUDE.md non-negotiable
+    'Full provenance' rule. (R25 finding: prior config dump had none of this.)
+    """
+    prov = {"config": asdict(cfg)}
+    try:
+        import torch
+        prov["torch_version"] = torch.__version__
+        if torch.cuda.is_available():
+            prov["gpu_name"] = torch.cuda.get_device_name(0)
+            prov["cuda_version"] = torch.version.cuda
+    except Exception as e:
+        prov["torch_version_error"] = str(e)
+    try:
+        import platform
+        prov["python_version"] = platform.python_version()
+        prov["platform"] = platform.platform()
+    except Exception:
+        pass
+    try:
+        prov["git_hash"] = subprocess.check_output(
+            ["git", "rev-parse", "HEAD"], text=True, cwd=Path(__file__).parent.parent,
+        ).strip()
+        prov["git_dirty"] = bool(subprocess.check_output(
+            ["git", "status", "--porcelain"], text=True, cwd=Path(__file__).parent.parent,
+        ).strip())
+    except Exception as e:
+        prov["git_hash_error"] = str(e)
+    prov["timestamp_utc"] = time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime())
+    return prov
+
+
 def run_compress(cfg: PipelineConfig) -> None:
     """Full compress pipeline: video → archive with iterative optimization."""
     output_dir = Path(cfg.output_dir)
     output_dir.mkdir(parents=True, exist_ok=True)
 
-    # Save config for reproducibility
-    (output_dir / "pipeline_config.json").write_text(json.dumps(asdict(cfg), indent=2))
+    # Save full provenance for reproducibility (R25 fix: was just asdict(cfg)).
+    (output_dir / "pipeline_config.json").write_text(
+        json.dumps(_capture_provenance(cfg), indent=2)
+    )
 
     t0 = time.monotonic()
     _banner(f"COMPRESSION PIPELINE — {cfg.max_iterations} iteration(s)")
@@ -951,6 +988,32 @@ def run_eval(args: argparse.Namespace) -> None:
 
 # ── CLI ──────────────────────────────────────────────────────────────────
 
+def _apply_profile(args: argparse.Namespace, profile_name: str) -> None:
+    """Load PROFILES[profile_name] and override args attributes for every
+    overlapping key. The profile is the experiment definition — all fields
+    a `PipelineConfig` accepts are taken from the profile, including the
+    boolean discipline flags that don't have CLI counterparts.
+
+    This is the canonical way to launch a pipeline run. Without --profile,
+    every arch flag must be passed explicitly (which is the SHIRAZ-class bug
+    waiting to happen).
+    """
+    sys.path.insert(0, str(Path(__file__).resolve().parent.parent / "src"))
+    from tac.profiles import PROFILES
+    if profile_name not in PROFILES:
+        raise SystemExit(
+            f"unknown --profile {profile_name!r}. Available: {sorted(PROFILES.keys())}"
+        )
+    profile = PROFILES[profile_name]
+    # Every PipelineConfig field that overlaps a profile key is overridden.
+    pcfg_fields = {f.name for f in fields(PipelineConfig)}
+    for key, value in profile.items():
+        if key in pcfg_fields:
+            setattr(args, key, value)
+    # Stash the resolved profile name in args for provenance
+    args._resolved_profile = profile_name
+
+
 def main() -> int:
     parser = argparse.ArgumentParser(
         prog="pipeline",
@@ -960,6 +1023,10 @@ def main() -> int:
 
     # compress subcommand
     comp = sub.add_parser("compress", help="Compress video to submission archive")
+    comp.add_argument("--profile", default=None,
+                      help="Named profile from src/tac/profiles.py — overrides every "
+                           "matching arch/discipline arg with the profile value. The "
+                           "canonical way to launch (no SHIRAZ-class arg drift).")
     comp.add_argument("--video", required=True, help="Input video path")
     comp.add_argument("--checkpoint", required=True, help="Trained renderer checkpoint")
     comp.add_argument("--masks", default="", help="FULL masks (1200 frames) for training/TTO")
@@ -978,6 +1045,15 @@ def main() -> int:
     comp.add_argument("--padding-mode", type=str, default="replicate",
                       choices=["zeros", "reflect", "replicate", "circular"])
     comp.add_argument("--use-dilation", action="store_true")
+    comp.add_argument("--use-zoom-flow", action="store_true",
+                      help="GREEN profile: 4ch MotionPredictor + RadialZoomWarp")
+    # Training-discipline boolean flags (passed through to step_fridrich_refine,
+    # which re-invokes train_distill.py). Profile-driven; usually set via --profile.
+    comp.add_argument("--use-swa", action="store_true")
+    comp.add_argument("--use-per-class-weights", action="store_true")
+    comp.add_argument("--freeze-motion-phase2", action="store_true")
+    comp.add_argument("--freeze-renderer-phase3", action="store_true")
+    comp.add_argument("--beneficial-quant-noise", action="store_true")
     # Optimization
     comp.add_argument("--pose-max-steps", type=int, default=2000)
     comp.add_argument("--pose-lr", type=float, default=0.01)
@@ -1006,6 +1082,11 @@ def main() -> int:
     args = parser.parse_args()
 
     if args.command == "compress":
+        # Profile loading happens AFTER argparse so explicit CLI flags take
+        # precedence — but in canonical use, --profile sets every overlapping
+        # field and CLI overrides should be rare.
+        if getattr(args, "profile", None):
+            _apply_profile(args, args.profile)
         cfg = PipelineConfig(
             video=args.video, checkpoint=args.checkpoint,
             masks=args.masks, masks_archive=args.masks_archive,
@@ -1017,6 +1098,12 @@ def main() -> int:
             use_dsconv=args.use_dsconv,
             padding_mode=args.padding_mode,
             use_dilation=args.use_dilation,
+            use_zoom_flow=args.use_zoom_flow,
+            use_swa=args.use_swa,
+            use_per_class_weights=args.use_per_class_weights,
+            freeze_motion_phase2=args.freeze_motion_phase2,
+            freeze_renderer_phase3=args.freeze_renderer_phase3,
+            beneficial_quant_noise=args.beneficial_quant_noise,
             pose_max_steps=args.pose_max_steps, pose_lr=args.pose_lr,
             qat_max_epochs=args.qat_max_epochs, qat_lr=args.qat_lr,
             half_frame=args.half_frame, binary_poses=args.binary_poses,

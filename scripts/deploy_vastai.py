@@ -196,13 +196,19 @@ def launch(profile: str, instance_id: int, sync: bool = True) -> str:
     # Kill any existing session with this name
     ssh(host, port, f"tmux kill-session -t {shlex.quote(session_name)} 2>/dev/null || true")
 
-    # Start canonical pipeline in tmux
+    # Start canonical pipeline in tmux. pipeline.py uses subcommands —
+    # `compress` is the experiment-running entry point. (R25 finding: prior
+    # invocation omitted the subcommand and would have died at argparse.)
     output_dir = f"experiments/results/{profile}"
+    video = "/workspace/pact/upstream/videos/0.mkv"
+    checkpoint_glob = f"/workspace/pact/{output_dir}/distill_phase3_best.pt"
     pipeline_cmd = (
         f"cd /workspace/pact && "
         f"PYTHONPATH=src:upstream:$PWD "
-        f"python3 -u experiments/pipeline.py "
+        f"python3 -u experiments/pipeline.py compress "
         f"--profile {shlex.quote(profile)} "
+        f"--video {shlex.quote(video)} "
+        f"--checkpoint {shlex.quote(checkpoint_glob)} "
         f"--device cuda "
         f"--output-dir {shlex.quote(output_dir)} "
         f"2>&1 | tee {output_dir}/deploy.log"
