@@ -291,12 +291,10 @@ def apply_mixed_precision_quant(
     for name, module in model.named_modules():
         if isinstance(module, (nn.Conv2d, nn.ConvTranspose2d, nn.Embedding, nn.Linear)):
             if hasattr(module, "weight") and module.weight.ndim >= 2:
-                # Find the matching allocation key
-                param_name = None
-                for pname, _ in model.named_parameters():
-                    if pname.endswith(".weight") and name in pname:
-                        param_name = pname
-                        break
+                # Find the matching allocation key (exact match, not substring)
+                param_name = name + ".weight"
+                if param_name not in dict(model.named_parameters()):
+                    param_name = None
                 bits = bit_allocation.get(param_name, 4)  # default to FP4
                 bits_summary[param_name or name] = bits
 
@@ -872,14 +870,24 @@ def main() -> None:
     print(f"  pose_d={final_float['pose_d']:.5f} seg_d={final_float['seg_d']:.5f} "
           f"distortion={final_float['distortion']:.3f}")
 
-    # ── Export FP4 binary ─────────────────────────────────────────────
-    print("\nExporting FP4 binary...")
-    from tac.renderer_export import export_asymmetric_checkpoint_fp4
-
-    fp4_path = out_dir / "renderer_fp4.bin"
-    export_asymmetric_checkpoint_fp4(model, fp4_path)
+    # ── Export binary ──────────────────────────────────────────────────
+    mp_json_path = Path(cfg.mixed_precision_json) if cfg.mixed_precision_json else None
+    if mp_json_path and mp_json_path.exists():
+        # Mixed-precision MXLZ export (matches training allocation)
+        print("\nExporting mixed-precision MXLZ binary...")
+        from tac.mixed_precision_export import export_int4_lzma2
+        mp_data = json.loads(mp_json_path.read_text())
+        bit_allocation = mp_data.get("allocation", {})
+        fp4_path = out_dir / "renderer_mixed.bin"
+        export_int4_lzma2(model.state_dict(), fp4_path, bit_allocation=bit_allocation)
+    else:
+        # Uniform FP4 export (default)
+        print("\nExporting FP4 binary...")
+        from tac.renderer_export import export_asymmetric_checkpoint_fp4
+        fp4_path = out_dir / "renderer_fp4.bin"
+        export_asymmetric_checkpoint_fp4(model, fp4_path)
     fp4_size = fp4_path.stat().st_size
-    print(f"  FP4 export: {fp4_size:,} bytes ({fp4_size/1024:.1f} KB)")
+    print(f"  Export: {fp4_size:,} bytes ({fp4_size/1024:.1f} KB)")
 
     # Save float checkpoint too (for pose TTO)
     float_path = out_dir / "qat_best_float.pt"
