@@ -170,32 +170,59 @@ def load_float_checkpoint(model: nn.Module, path: str, device: torch.device) -> 
     print(f"  Loaded float checkpoint from {path}")
 
 
-def apply_int8_fake_quant(model: nn.Module) -> list[tuple[nn.Module, str]]:
-    """Wrap Conv2d weights with INT8 FakeQuant STE (Phase A warm-up).
+class FakeQuantContext:
+    """Classic QAT: inject FakeQuant noise into weights for forward pass.
 
-    Returns list of (module, param_name) for later removal.
+    Avoids nn.utils.parametrize which causes MPS stride incompatibility
+    in backward (.view() failures on non-contiguous parametrized tensors).
+
+    Usage:
+        ctx = FakeQuantContext(model, quant_fn)
+        ctx.inject()   # replace weights with fake-quantized versions
+        loss = model(...)
+        loss.backward()  # gradients flow to shadow (original) weights via STE
+        ctx.restore()  # swap back original weights
+        optimizer.step()  # update original weights
+    """
+
+    def __init__(self, model: nn.Module, quant_fn, layer_types=(nn.Conv2d, nn.ConvTranspose2d)):
+        self.targets = []
+        for name, module in model.named_modules():
+            if isinstance(module, layer_types) and hasattr(module, "weight"):
+                self.targets.append(module)
+        self.quant_fn = quant_fn
+        self.saved: list[torch.Tensor] = []
+
+    def inject(self) -> None:
+        """Replace weights with fake-quantized versions. Call before forward."""
+        self.saved = []
+        for module in self.targets:
+            w = module.weight.data
+            self.saved.append(w.clone())
+            module.weight.data = self.quant_fn(w.contiguous())
+
+    def restore(self) -> None:
+        """Restore original weights. Call after backward, before optimizer.step()."""
+        for module, w_orig in zip(self.targets, self.saved):
+            module.weight.data = w_orig
+        self.saved = []
+
+
+def apply_int8_fake_quant(model: nn.Module) -> "FakeQuantContext":
+    """Create INT8 FakeQuant context for QAT Phase A.
+
+    Returns a FakeQuantContext — call .inject() before forward, .restore() after backward.
     """
     from tac.quantization import FakeQuantSTE
 
-    class Int8Parametrize(nn.Module):
-        def forward(self, weight: torch.Tensor) -> torch.Tensor:
-            return FakeQuantSTE.apply(weight)
-
-    wrapped = []
-    for name, module in model.named_modules():
-        if isinstance(module, (nn.Conv2d, nn.ConvTranspose2d)):
-            nn.utils.parametrize.register_parametrization(
-                module, "weight", Int8Parametrize()
-            )
-            wrapped.append((module, "weight"))
-    return wrapped
+    ctx = FakeQuantContext(model, lambda w: FakeQuantSTE.apply(w))
+    print(f"  INT8 parametrized: {len(ctx.targets)} layers")
+    return ctx
 
 
-def remove_parametrizations(wrapped: list[tuple[nn.Module, str]]) -> None:
-    """Remove all registered parametrizations."""
-    for module, param_name in wrapped:
-        if nn.utils.parametrize.is_parametrized(module, param_name):
-            nn.utils.parametrize.remove_parametrizations(module, param_name)
+def remove_parametrizations(wrapped) -> None:
+    """No-op for FakeQuantContext (cleanup is automatic via .restore())."""
+    pass
 
 
 def apply_fp4_fake_quant(
@@ -302,8 +329,10 @@ def compute_scorer_loss(
     # SegNet loss (hinge) — use pre-extracted integer masks as targets (C2 fix)
     # Running SegNet on GT frames is wasteful and can produce different targets
     # than the pre-extracted masks due to preprocessing differences.
-    pred_seg_chw = pred_for_loss.permute(0, 3, 1, 2)
-    pred_seg_in = segnet.preprocess_input(pred_seg_chw.unsqueeze(1))
+    # .contiguous() required for MPS: eval_roundtrip + permute can produce
+    # non-contiguous tensors that fail upstream's x.view(-1, 1) in AllNorm
+    pred_seg_chw = pred_for_loss.permute(0, 3, 1, 2).contiguous()
+    pred_seg_in = segnet.preprocess_input(pred_seg_chw.unsqueeze(1).contiguous())
     pred_seg_logits = segnet(pred_seg_in)
 
     # Use the pre-extracted masks directly as GT argmax targets
@@ -325,14 +354,16 @@ def compute_scorer_loss(
         seg_loss = F.cross_entropy(pred_seg_logits, gt_seg_argmax)
 
     # PoseNet loss (MSE on 6D pose) — GT path with no_grad (C3 fix)
-    pred_pose_chw = pred_for_loss.permute(0, 3, 1, 2)
-    pred_pose_pairs = torch.stack([pred_pose_chw[:B], pred_pose_chw[B:]], dim=1)
+    # .contiguous() for MPS: upstream AllNorm uses x.view(-1, 1) which fails
+    # on non-contiguous tensors from permute operations
+    pred_pose_chw = pred_for_loss.permute(0, 3, 1, 2).contiguous()
+    pred_pose_pairs = torch.stack([pred_pose_chw[:B], pred_pose_chw[B:]], dim=1).contiguous()
     pred_pose_in = posenet.preprocess_input(pred_pose_pairs)
     pred_pose_out = posenet(pred_pose_in)["pose"][..., :6]
 
     with torch.no_grad():
-        gt_pose_chw = gt_for_loss.permute(0, 3, 1, 2)
-        gt_pose_pairs = torch.stack([gt_pose_chw[:B], gt_pose_chw[B:]], dim=1)
+        gt_pose_chw = gt_for_loss.permute(0, 3, 1, 2).contiguous()
+        gt_pose_pairs = torch.stack([gt_pose_chw[:B], gt_pose_chw[B:]], dim=1).contiguous()
         gt_pose_in = posenet.preprocess_input(gt_pose_pairs)
         gt_pose_out = posenet(gt_pose_in)["pose"][..., :6]
 
@@ -591,8 +622,7 @@ def main() -> None:
         print(f"PHASE A: INT8 Warm-Up ({cfg.int8_warmup_epochs} epochs)")
         print(f"{'='*70}")
 
-        int8_wrapped = apply_int8_fake_quant(model)
-        print(f"  INT8 parametrized: {len(int8_wrapped)} layers")
+        int8_ctx = apply_int8_fake_quant(model)
 
         optimizer = torch.optim.Adam(model.parameters(), lr=cfg.base_lr, weight_decay=1e-4)
         total_steps = cfg.int8_warmup_epochs
@@ -612,11 +642,13 @@ def main() -> None:
             p = poses[idx].to(device) if poses is not None else None
 
             optimizer.zero_grad()
+            int8_ctx.inject()  # apply fake-quant noise to weights
             loss, metrics = compute_scorer_loss(
                 model, m_even, m_odd, gt_even, gt_odd, p,
                 posenet, segnet, cfg, device,
             )
             loss.backward()
+            int8_ctx.restore()  # restore original weights before optimizer step
             torch.nn.utils.clip_grad_norm_(model.parameters(), cfg.grad_clip)
             optimizer.step()
 
@@ -631,9 +663,9 @@ def main() -> None:
                 print(f"  [INT8] eval: distortion={q['distortion']:.3f}")
                 history.append({"phase": "int8", "epoch": epoch, **q})
 
-        # Remove INT8 parametrizations before Phase B
-        remove_parametrizations(int8_wrapped)
-        print("  INT8 parametrizations removed")
+        # INT8 context auto-cleans via .restore() — no parametrizations to remove
+        del int8_ctx
+        print("  INT8 phase complete")
 
         del optimizer
         gc.collect()
@@ -648,11 +680,14 @@ def main() -> None:
     print(f"PHASE B: FP4 Fine-Tune ({cfg.fp4_epochs} epochs)")
     print(f"{'='*70}")
 
-    fp4_wrapped = apply_fp4_fake_quant(
+    from tac.fp4_quantize import fake_quant_fp4, DEFAULT_CODEBOOK
+
+    fp4_ctx = FakeQuantContext(
         model,
-        block_size=cfg.fp4_block_size,
-        mixed_precision=cfg.mixed_precision,
+        lambda w: fake_quant_fp4(w, DEFAULT_CODEBOOK.to(w.device), cfg.fp4_block_size),
+        layer_types=(nn.Conv2d, nn.ConvTranspose2d, nn.Embedding, nn.Linear),
     )
+    print(f"  FP4 context: {len(fp4_ctx.targets)} layers")
 
     optimizer = torch.optim.Adam(model.parameters(), lr=cfg.base_lr, weight_decay=1e-4)
     total_steps = cfg.fp4_epochs
@@ -672,11 +707,13 @@ def main() -> None:
         p = poses[idx].to(device) if poses is not None else None
 
         optimizer.zero_grad()
+        fp4_ctx.inject()  # apply FP4 fake-quant noise
         loss, metrics = compute_scorer_loss(
             model, m_even, m_odd, gt_even, gt_odd, p,
             posenet, segnet, cfg, device,
         )
         loss.backward()
+        fp4_ctx.restore()  # restore original weights before optimizer step
         torch.nn.utils.clip_grad_norm_(model.parameters(), cfg.grad_clip)
         optimizer.step()
 
@@ -717,8 +754,8 @@ def main() -> None:
                 "distortion": metrics["total_loss"],
             }, ckpt_path)
 
-    # ── Remove FP4 parametrizations and restore best weights ──────────
-    remove_parametrizations(fp4_wrapped)
+    # ── FP4 context auto-cleans via .restore() — no parametrizations needed
+    del fp4_ctx
 
     if best_state is not None:
         model.load_state_dict(best_state)

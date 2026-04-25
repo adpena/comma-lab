@@ -388,7 +388,9 @@ class FP4Parametrize(nn.Module):
         self.block_size = block_size
 
     def forward(self, weight: torch.Tensor) -> torch.Tensor:
-        return fake_quant_fp4(weight, self.codebook, self.block_size)
+        # .contiguous() required for MPS: nn.utils.parametrize can produce
+        # non-contiguous weight views that cause reshape failures in backward
+        return fake_quant_fp4(weight.contiguous(), self.codebook, self.block_size)
 
 
 class QATRendererFP4(nn.Module):
