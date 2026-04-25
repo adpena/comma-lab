@@ -324,7 +324,20 @@ def _export_refined_checkpoint(cfg: PipelineConfig, ckpt_path: Path,
             f"Verify arch (use_zoom_flow={cfg.use_zoom_flow}, base_ch={cfg.base_ch}) "
             f"matches the refined checkpoint."
         )
-    nbytes = export_asymmetric_checkpoint_fp4(model, str(out_path))
+    # R34 fix: atomic write via tmp + os.replace. Without this, a concurrent
+    # invocation (or interrupted run + immediate resume) could observe a
+    # partial file via the idempotence guard's `out_path.stat().st_size > 0`
+    # check and ship truncated weights downstream.
+    tmp_path = out_path.with_suffix(f".tmp.{os.getpid()}.bin")
+    try:
+        nbytes = export_asymmetric_checkpoint_fp4(model, str(tmp_path))
+        os.replace(tmp_path, out_path)
+    finally:
+        if tmp_path.exists():
+            try:
+                tmp_path.unlink()
+            except OSError:
+                pass
     _log(f"  Refined export → {out_path.name} ({nbytes:,}B = {nbytes/1024:.1f}KB)")
     return out_path
 
@@ -527,10 +540,26 @@ def step_qat(cfg: PipelineConfig, iteration: int = 0,
 
     _log(f"  Complete in {elapsed/60:.1f} min")
 
-    qat_bin = iter_dir / "renderer_qat.bin"
+    # R34 fix: qat_finetune.py saves 'renderer_fp4.bin', NOT 'renderer_qat.bin'.
+    # Prior code returned the wrong-name path and only the glob fallback
+    # rescued at runtime. Worse, the alphabetical glob could return the
+    # PRE-QAT 'renderer.bin' if 'renderer_fp4.bin' wasn't present, silently
+    # using the un-quantized model downstream.
+    qat_bin = iter_dir / "renderer_fp4.bin"
     if not qat_bin.exists():
-        bins = sorted(iter_dir.glob("*.bin"))
-        qat_bin = bins[-1] if bins else iter_dir / "renderer.bin"
+        # Try the legacy/alternative names before falling back.
+        for alt in ("renderer_qat.bin", "renderer_mixed.bin"):
+            cand = iter_dir / alt
+            if cand.exists():
+                qat_bin = cand
+                break
+        else:
+            raise RuntimeError(
+                f"QAT step succeeded but no QAT artifact found in {iter_dir}. "
+                f"Expected renderer_fp4.bin (or renderer_qat.bin / renderer_mixed.bin). "
+                f"Refusing to fall back to pre-QAT renderer.bin (would silently "
+                f"ship un-quantized weights)."
+            )
 
     _mark_done(iter_dir, "qat", {"elapsed_s": round(elapsed)})
     return qat_bin
@@ -985,8 +1014,13 @@ def step_eval(cfg: PipelineConfig, renderer_bin: Path, archive_path: Path,
     # memory could OOM on small instances. The full log lives at
     # iter_dir/auth_eval.stdout.log for postmortem; we read it back to
     # extract the RESULT_JSON sentinel.
-    stdout_log = iter_dir / "auth_eval.stdout.log"
-    stderr_log = iter_dir / "auth_eval.stderr.log"
+    # R34 fix: pid-suffix the log files so concurrent invocations don't
+    # truncate each other's output via open("w"). After success, we rename
+    # to canonical names with os.replace for postmortem-friendly paths.
+    stdout_log_pid = iter_dir / f"auth_eval.stdout.{os.getpid()}.log"
+    stderr_log_pid = iter_dir / f"auth_eval.stderr.{os.getpid()}.log"
+    stdout_log = stdout_log_pid
+    stderr_log = stderr_log_pid
     t0 = time.monotonic()
     timed_out = False
     with stdout_log.open("w") as out_f, stderr_log.open("w") as err_f:
@@ -1128,11 +1162,17 @@ def _capture_provenance(cfg: PipelineConfig) -> dict:
     except Exception:
         pass
     try:
+        # R34 fix: timeouts on git subprocesses. NFS-backed home dirs and
+        # broken post-checkout hooks can hang `git rev-parse` indefinitely;
+        # provenance capture should never block the pipeline. The except
+        # clause already records TimeoutExpired (subclass of Exception).
         prov["git_hash"] = subprocess.check_output(
-            ["git", "rev-parse", "HEAD"], text=True, cwd=Path(__file__).parent.parent,
+            ["git", "rev-parse", "HEAD"], text=True,
+            cwd=Path(__file__).parent.parent, timeout=10,
         ).strip()
         prov["git_dirty"] = bool(subprocess.check_output(
-            ["git", "status", "--porcelain"], text=True, cwd=Path(__file__).parent.parent,
+            ["git", "status", "--porcelain"], text=True,
+            cwd=Path(__file__).parent.parent, timeout=10,
         ).strip())
     except Exception as e:
         prov["git_hash_error"] = str(e)
@@ -1449,6 +1489,8 @@ def main() -> int:
     # Optimization
     comp.add_argument("--pose-max-steps", type=int, default=2000)
     comp.add_argument("--pose-lr", type=float, default=0.01)
+    comp.add_argument("--pose-batch-pairs", type=int, default=16,
+                      help="OOM mitigation knob — reduce on smaller GPUs (R34)")
     comp.add_argument("--qat-max-epochs", type=int, default=500)
     comp.add_argument("--qat-lr", type=float, default=5e-5)
     # Archive
