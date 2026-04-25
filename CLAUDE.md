@@ -138,6 +138,25 @@ All lab machines are on Tailscale. **Always use Tailscale IPs** for SSH, rsync, 
 - **`/kaggle/src/` is read-only** — results must go to `/kaggle/working/`.
 - **All kernel code is in the code_file** — Kaggle script kernels only upload the single file. The tac wheel provides runtime deps.
 
+## Canonical pipeline standard — non-negotiable
+
+ALL experiments MUST run through `experiments/pipeline.py` with a profile name. No ad-hoc shell scripts. No hand-crafted SSH commands. One command, one standard, deterministic reproducibility everywhere.
+
+```
+python experiments/pipeline.py --profile shiraz --device cuda --output-dir results/shiraz
+```
+
+Requirements:
+1. **Profile from `profiles.py` is the ONLY config source.** No CLI flag overrides for architecture params. The profile IS the experiment definition.
+2. **Seeds pinned.** `torch.manual_seed`, `numpy.random.seed`, `random.seed` — all from `profile.seed`. Deterministic CUDA (`torch.use_deterministic_algorithms(True)` where possible).
+3. **Full provenance.** Git hash, GPU info, PyTorch version, profile dict, timestamps per stage — saved as JSON alongside results.
+4. **Validate at every boundary.** Checkpoint exists, shapes match, loss is finite, archive size reasonable. Hard errors, not warnings.
+5. **Full chain.** train → QAT → pose TTO → build archive → contest_eval. Every stage runs automatically. No manual intervention between stages.
+6. **Bundle all artifacts.** Checkpoints, logs, provenance JSON, auth eval results — packaged as tarball for download.
+7. **Platform-agnostic.** Works on cuda, mps, cpu. Same pipeline locally and on Vast.ai/Modal/Kaggle.
+
+This is the openpilot standard: deterministic, reproducible, no runtime format negotiation, schema-first data contracts, fail-fast validation at every boundary. We are professional engineers contributing to production infrastructure. The ad-hoc approach is over.
+
 ## Deployment version checklist — non-negotiable
 
 Before deploying ANY code to Modal, Kaggle, Lightning, or any remote platform:
