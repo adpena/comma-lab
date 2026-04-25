@@ -298,7 +298,66 @@ def step_pose_tto(cfg: PipelineConfig, iteration: int = 0) -> Path:
     return poses_path
 
 
-def step_qat(cfg: PipelineConfig, iteration: int = 0) -> Path:
+def step_sensitivity_sweep(cfg: PipelineConfig, iteration: int = 0) -> Path | None:
+    """Run scorer-Jacobian sensitivity sweep to determine per-layer bit allocation.
+
+    Measures how quantization noise in each renderer layer propagates through
+    the actual SegNet + PoseNet scorers. Layers that are scorer-insensitive
+    get fewer bits (2), scorer-sensitive layers get more bits (8), and the
+    rest stay at 4. The output JSON is consumed by the QAT step and the
+    weight compression step for mixed-precision export.
+
+    Returns path to the sensitivity sweep JSON, or None if skipped.
+    """
+    iter_dir = Path(cfg.output_dir) / f"iter_{iteration}"
+    iter_dir.mkdir(parents=True, exist_ok=True)
+    step_name = "sensitivity_sweep"
+
+    sweep_json = iter_dir / "scorer_sensitivity_sweep.json"
+
+    if _step_done(iter_dir, step_name):
+        _log(f"Sensitivity sweep already done (iter {iteration}), skipping")
+        return sweep_json if sweep_json.exists() else None
+
+    _log("Scorer-Jacobian sensitivity sweep (Yousfi approach)")
+    cmd = [
+        sys.executable, "-u", "experiments/scorer_sensitivity_sweep.py",
+        "--checkpoint", cfg.checkpoint,
+        "--device", cfg.device,
+        "--n-pairs", "5",
+        "--output", str(sweep_json),
+    ]
+
+    t0 = time.monotonic()
+    result = subprocess.run(cmd)
+    elapsed = time.monotonic() - t0
+
+    if result.returncode != 0:
+        _log(f"Sensitivity sweep failed (exit {result.returncode}), continuing without", "WARN")
+        _mark_done(iter_dir, step_name, {"failed": True, "elapsed_s": round(elapsed)})
+        return None
+
+    _log(f"  Complete in {elapsed/60:.1f} min")
+
+    # Log the allocation summary
+    if sweep_json.exists():
+        try:
+            data = json.loads(sweep_json.read_text())
+            alloc = data.get("allocation", {})
+            uniform_kb = data.get("uniform_kb", 0)
+            mixed_kb = data.get("mixed_kb", 0)
+            _log(f"  Allocation: {len(alloc)} layers, "
+                 f"uniform={uniform_kb:.1f}KB -> mixed={mixed_kb:.1f}KB "
+                 f"({(1 - mixed_kb / max(uniform_kb, 0.1)) * 100:.1f}% savings)")
+        except (json.JSONDecodeError, KeyError):
+            pass
+
+    _mark_done(iter_dir, step_name, {"elapsed_s": round(elapsed)})
+    return sweep_json
+
+
+def step_qat(cfg: PipelineConfig, iteration: int = 0,
+             mixed_precision_json: Path | None = None) -> Path:
     """QAT fine-tune with quality monitoring."""
     iter_dir = Path(cfg.output_dir) / f"iter_{iteration}"
     iter_dir.mkdir(parents=True, exist_ok=True)
@@ -326,6 +385,9 @@ def step_qat(cfg: PipelineConfig, iteration: int = 0) -> Path:
         cmd.append("--use-dilation")
     if cfg.padding_mode != "zeros":
         cmd.extend(["--padding-mode", cfg.padding_mode])
+    if mixed_precision_json is not None and mixed_precision_json.exists():
+        cmd.extend(["--mixed-precision-json", str(mixed_precision_json)])
+        _log(f"  Using mixed-precision allocation from: {mixed_precision_json}")
 
     t0 = time.monotonic()
     result = subprocess.run(cmd)
@@ -417,6 +479,7 @@ def step_compress_weights(
     cfg: PipelineConfig,
     checkpoint_path: Path,
     iteration: int = 0,
+    sensitivity_json: Path | None = None,
 ) -> Path:
     """Compress model weights using mixed-precision quantization + LZMA2.
 
@@ -470,9 +533,25 @@ def step_compress_weights(
     int4_path = iter_dir / "renderer_int4lzma2.bin"
     fp4_path = iter_dir / "renderer.bin"
 
-    # ── Strategy 1: Int4 + LZMA2 ──
-    int4_bytes = export_int4_lzma2(model, int4_path)
-    _log(f"  Int4+LZMA2: {int4_bytes:,} bytes ({int4_bytes/1024:.1f} KB)")
+    # Load per-layer bit allocation from sensitivity sweep (if available)
+    bit_allocation: dict[str, int] | None = None
+    if sensitivity_json is not None and sensitivity_json.exists():
+        try:
+            sweep_data = json.loads(sensitivity_json.read_text())
+            bit_allocation = sweep_data.get("allocation")
+            if bit_allocation:
+                _log(f"  Using mixed-precision allocation from: {sensitivity_json}")
+                bit_counts = {}
+                for b in bit_allocation.values():
+                    bit_counts[b] = bit_counts.get(b, 0) + 1
+                _log(f"  Allocation: {', '.join(f'{b}b:{n}' for b, n in sorted(bit_counts.items()))}")
+        except (json.JSONDecodeError, KeyError) as e:
+            _log(f"  Failed to load sensitivity sweep: {e}", "WARN")
+
+    # ── Strategy 1: Int4/Mixed + LZMA2 ──
+    int4_bytes = export_int4_lzma2(model, int4_path, bit_allocation=bit_allocation)
+    label = "Mixed" if bit_allocation else "Int4"
+    _log(f"  {label}+LZMA2: {int4_bytes:,} bytes ({int4_bytes/1024:.1f} KB)")
 
     if mode == "int4_lzma2":
         # Unconditionally use int4_lzma2
@@ -661,8 +740,15 @@ def run_compress(cfg: PipelineConfig) -> None:
         # Step 2: Pose TTO
         poses_path = step_pose_tto(cfg, iteration)
 
-        # Step 3: QAT
-        qat_bin = step_qat(cfg, iteration)
+        # Step 2.5: Scorer-Jacobian sensitivity sweep (Eureka 3 — Hotz)
+        # Runs BEFORE QAT so the bit allocation can inform quantization-aware
+        # training. Only runs when weight_compression is not plain fp4.
+        sensitivity_json: Path | None = None
+        if cfg.weight_compression != "fp4":
+            sensitivity_json = step_sensitivity_sweep(cfg, iteration)
+
+        # Step 3: QAT (pass mixed-precision allocation if available)
+        qat_bin = step_qat(cfg, iteration, mixed_precision_json=sensitivity_json)
 
         # Step 3.5: Fridrich steganalytic refinement (post-QAT polish)
         fridrich_ckpt = step_fridrich_refine(cfg, iteration)
@@ -676,7 +762,9 @@ def run_compress(cfg: PipelineConfig) -> None:
             best_ckpt = qat_best if qat_best.exists() else Path(cfg.checkpoint)
 
         if cfg.weight_compression != "fp4" and best_ckpt.exists():
-            final_renderer = step_compress_weights(cfg, best_ckpt, iteration)
+            final_renderer = step_compress_weights(
+                cfg, best_ckpt, iteration, sensitivity_json=sensitivity_json,
+            )
         elif best_ckpt.exists() and best_ckpt.suffix == ".pt":
             # Re-export checkpoint to FP4
             final_renderer = step_export(cfg, iteration)

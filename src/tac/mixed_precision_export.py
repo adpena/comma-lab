@@ -32,15 +32,28 @@ Format (INT4_LZMA2):
         [4 bytes] uncompressed_size (uint32 LE)
         [remaining bytes] LZMA2-compressed payload
 
-Dependencies: torch, struct, lzma (stdlib). No numpy, no external libs.
+Mixed-precision format (MIXED_LZMA2, magic b"MXLZ"):
+    Same structure as INT4_LZMA2, but each tensor header includes a
+    [1 byte] bits field after the scale, indicating the bit-depth
+    (2, 4, 8, or 16) used for that layer. The loader dispatches to
+    the appropriate dequantizer per tensor.
+
+Dependencies: torch, struct, lzma (stdlib). numpy only for 8-bit/16-bit
+dequantization paths.
 
 Usage::
 
     from tac.mixed_precision_export import export_int4_lzma2, load_int4_lzma2
 
+    # Uniform 4-bit (backward-compatible default):
     size = export_int4_lzma2(model, Path("renderer.bin"))
     state_dict = load_int4_lzma2(Path("renderer.bin"))
     model.load_state_dict(state_dict)
+
+    # Mixed-precision from sensitivity sweep:
+    allocation = {"encoder.conv1.weight": 8, "decoder.conv3.weight": 2}
+    size = export_int4_lzma2(model, Path("renderer.bin"), bit_allocation=allocation)
+    state_dict = load_int4_lzma2(Path("renderer.bin"))  # auto-detects format
 """
 
 from __future__ import annotations
@@ -59,10 +72,14 @@ __all__ = [
     "load_int4_lzma2",
     "quantize_int4_tensor",
     "dequantize_int4_tensor",
+    "quantize_uniform_tensor",
+    "dequantize_uniform_tensor",
     "MAGIC_INT4_LZMA2",
+    "MAGIC_MIXED_LZMA2",
 ]
 
 MAGIC_INT4_LZMA2 = b"I4LZ"
+MAGIC_MIXED_LZMA2 = b"MXLZ"
 
 
 # ── Int4 quantization primitives ──────────────────────────────────────
@@ -158,6 +175,142 @@ def dequantize_int4_tensor(
     return result.reshape(shape)
 
 
+# ── Variable-bit uniform quantization primitives ─────────────────────
+
+
+def quantize_uniform_tensor(
+    tensor: torch.Tensor,
+    bits: int,
+) -> tuple[float, bytes]:
+    """Quantize a tensor to signed uniform at the given bit-depth and pack.
+
+    Per-tensor symmetric quantization:
+        max_val = 2^(bits-1) - 1  (e.g., 1 for 2-bit, 7 for 4-bit, 127 for 8-bit)
+        scale = max(|w|) / max_val
+        q = round(w / scale).clamp(-max_val, max_val)
+
+    Packing depends on bit-depth:
+        2-bit: 4 values per byte (unsigned [0, 2^bits-1])
+        4-bit: 2 values per byte (same as quantize_int4_tensor)
+        8-bit: 1 value per byte (signed int8)
+        16-bit: passthrough (no quantization, raw float16 bytes)
+
+    Args:
+        tensor: any-shape float tensor.
+        bits: bit-depth (2, 4, 8, or 16).
+
+    Returns:
+        (scale, packed_bytes).
+    """
+    if bits == 4:
+        return quantize_int4_tensor(tensor)
+
+    flat = tensor.detach().cpu().float().reshape(-1)
+    n = flat.shape[0]
+
+    if bits == 16:
+        # Passthrough: store as float16 bytes
+        packed = flat.half().numpy().tobytes()
+        return 1.0, packed
+
+    abs_max = flat.abs().max().item()
+    max_val = (1 << (bits - 1)) - 1  # 1 for 2-bit, 127 for 8-bit
+
+    if abs_max < 1e-10:
+        scale = 1.0
+        if bits == 2:
+            zero_point = 1  # unsigned zero-point for 2-bit signed range [-1, 1]
+            byte_val = (zero_point << 6) | (zero_point << 4) | (zero_point << 2) | zero_point
+            packed = bytes((byte_val,) * ((n + 3) // 4))
+        elif bits == 8:
+            packed = bytes(n)  # all zeros
+        else:
+            raise ValueError(f"Unsupported bit-depth: {bits}")
+        return scale, packed
+
+    scale = abs_max / max_val
+
+    # Quantize
+    quantized = (flat / scale).round().clamp(-max_val, max_val).to(torch.int8)
+
+    if bits == 2:
+        # Signed range [-1, 1] -> unsigned [0, 2] (add max_val=1)
+        unsigned = (quantized + max_val).to(torch.uint8)
+        values = unsigned.tolist()
+        # Pad to multiple of 4
+        while len(values) % 4 != 0:
+            values.append(max_val)  # zero in signed domain
+        packed = bytearray()
+        for i in range(0, len(values), 4):
+            b = ((values[i] & 0x03) << 6) | ((values[i+1] & 0x03) << 4) | \
+                ((values[i+2] & 0x03) << 2) | (values[i+3] & 0x03)
+            packed.append(b)
+        return scale, bytes(packed)
+
+    elif bits == 8:
+        # Signed int8 directly
+        packed = quantized.numpy().astype("int8").tobytes()
+        return scale, packed
+
+    else:
+        raise ValueError(f"Unsupported bit-depth: {bits}. Use 2, 4, 8, or 16.")
+
+
+def dequantize_uniform_tensor(
+    packed: bytes,
+    scale: float,
+    shape: tuple[int, ...],
+    bits: int,
+) -> torch.Tensor:
+    """Dequantize packed bytes back to a float tensor at the given bit-depth.
+
+    Args:
+        packed: packed bytes from quantize_uniform_tensor.
+        scale: the per-tensor scale factor.
+        shape: original tensor shape.
+        bits: bit-depth (2, 4, 8, or 16).
+
+    Returns:
+        Float32 tensor with the dequantized values, reshaped to shape.
+    """
+    if bits == 4:
+        return dequantize_int4_tensor(packed, scale, shape)
+
+    import numpy as np
+
+    numel = 1
+    for s in shape:
+        numel *= s
+
+    if bits == 16:
+        arr = np.frombuffer(packed, dtype=np.float16)[:numel]
+        return torch.from_numpy(arr.astype(np.float32).copy()).reshape(shape)
+
+    max_val = (1 << (bits - 1)) - 1
+
+    if bits == 2:
+        values = []
+        for byte in packed:
+            values.append((byte >> 6) & 0x03)
+            values.append((byte >> 4) & 0x03)
+            values.append((byte >> 2) & 0x03)
+            values.append(byte & 0x03)
+        values = values[:numel]
+        result = torch.tensor(
+            [(v - max_val) * scale for v in values],
+            dtype=torch.float32,
+        )
+        return result.reshape(shape)
+
+    elif bits == 8:
+        arr = np.frombuffer(packed, dtype=np.int8)[:numel]
+        result = torch.from_numpy(arr.astype(np.float32).copy()) * scale
+        return result.reshape(shape)
+
+    else:
+        raise ValueError(f"Unsupported bit-depth: {bits}. Use 2, 4, 8, or 16.")
+
+
 # ── Export / import ───────────────────────────────────────────────────
 
 
@@ -166,36 +319,66 @@ def export_int4_lzma2(
     output_path: Path,
     *,
     exclude_buffers: bool = True,
+    bit_allocation: dict[str, int] | None = None,
 ) -> int:
-    """Export model weights as int4 per-tensor + LZMA2.
+    """Export model weights as quantized + LZMA2.
+
+    When ``bit_allocation`` is None (default), all layers use uniform 4-bit
+    quantization — identical to the original behaviour.
+
+    When ``bit_allocation`` is provided, each layer is quantized at the
+    bit-depth specified in the dict. Layers missing from the dict default
+    to 4 bits. Supported bit-depths: 2, 4, 8, 16.
+
+    The on-disk format is extended for mixed precision:
+        - Magic changes to ``MXLZ`` (vs ``I4LZ`` for uniform int4).
+        - Each tensor header includes a ``[1 byte] bits`` field after the
+          scale, so the loader knows how to unpack.
+
+    Uniform int4 files still use the ``I4LZ`` magic for backward compat.
 
     For each parameter tensor:
-    - Compute per-tensor scale = max(|w|) / 7
-    - Quantize to int4: q = round(w / scale).clamp(-7, 7)
-    - Pack two int4 values per byte
-    - Store: [name_len][name][ndim][shape...][scale][packed_data]
+    - Look up per-layer bit-depth from ``bit_allocation`` (default 4)
+    - Compute per-tensor scale and quantize at that bit-depth
+    - Pack according to bit-depth
+    - Store: [name_len][name][ndim][shape...][scale][bits][packed_len][packed_data]
     - Wrap entire blob in LZMA2
 
     Args:
         model: nn.Module whose parameters to export.
         output_path: path to write the compressed .bin file.
         exclude_buffers: if True, only export nn.Parameter (skip buffers).
+        bit_allocation: optional dict mapping layer name -> bit-depth (2, 4, 8, 16).
+            Layers not in the dict default to 4 bits. When None, all layers
+            use 4 bits (backward-compatible uniform mode).
 
     Returns:
         File size in bytes.
     """
     model.eval()
 
+    is_mixed = bit_allocation is not None and any(
+        v != 4 for v in bit_allocation.values()
+    )
+    magic = MAGIC_MIXED_LZMA2 if is_mixed else MAGIC_INT4_LZMA2
+
     # Build uncompressed payload
     payload = bytearray()
-    payload.extend(MAGIC_INT4_LZMA2)
+    payload.extend(magic)
 
     # Collect parameters
     params = list(model.named_parameters())
     payload.extend(struct.pack("<I", len(params)))
 
     total_params = 0
+    total_bits = 0
+    bits_summary: dict[int, int] = {}  # bits -> param count
+
     for name, param in params:
+        bits = 4
+        if bit_allocation is not None and name in bit_allocation:
+            bits = bit_allocation[name]
+
         # Tensor name
         name_bytes = name.encode("utf-8")
         payload.extend(struct.pack("<I", len(name_bytes)))
@@ -207,15 +390,27 @@ def export_int4_lzma2(
         for s in shape:
             payload.extend(struct.pack("<I", s))
 
-        # Quantize and pack
-        scale, packed = quantize_int4_tensor(param)
+        # Quantize and pack at the chosen bit-depth
+        if is_mixed:
+            scale, packed = quantize_uniform_tensor(param, bits)
+        else:
+            # Uniform int4 path — preserves exact original behaviour
+            scale, packed = quantize_int4_tensor(param)
+
         payload.extend(struct.pack("<f", scale))
+
+        # For mixed-precision: store bits-per-weight so loader can unpack
+        if is_mixed:
+            payload.extend(struct.pack("<B", bits))
 
         # Packed data length then data
         payload.extend(struct.pack("<I", len(packed)))
         payload.extend(packed)
 
-        total_params += param.numel()
+        n = param.numel()
+        total_params += n
+        total_bits += n * bits
+        bits_summary[bits] = bits_summary.get(bits, 0) + n
 
     # LZMA2 compress the payload
     compressed = lzma.compress(
@@ -229,18 +424,23 @@ def export_int4_lzma2(
     output_path.parent.mkdir(parents=True, exist_ok=True)
 
     buf = bytearray()
-    buf.extend(MAGIC_INT4_LZMA2)
+    buf.extend(magic)
     buf.extend(struct.pack("<I", len(payload)))
     buf.extend(compressed)
 
     output_path.write_bytes(bytes(buf))
     file_size = len(buf)
 
+    avg_bits = total_bits / max(total_params, 1)
     bits_per_param = file_size * 8 / max(total_params, 1)
+    mode_label = "mixed" if is_mixed else "int4"
+
+    summary_parts = [f"{b}b:{n:,}" for b, n in sorted(bits_summary.items())]
     print(
-        f"[int4-lzma2] {total_params:,} params -> {file_size:,} bytes "
-        f"({bits_per_param:.2f} bits/param, "
-        f"LZMA2 ratio {len(compressed)/len(payload)*100:.1f}%)"
+        f"[{mode_label}-lzma2] {total_params:,} params -> {file_size:,} bytes "
+        f"({bits_per_param:.2f} bits/param, avg {avg_bits:.1f}b uncompressed, "
+        f"LZMA2 ratio {len(compressed)/len(payload)*100:.1f}%) "
+        f"[{', '.join(summary_parts)}]"
     )
 
     return file_size
@@ -250,7 +450,11 @@ def load_int4_lzma2(
     path_or_bytes: Union[Path, str, bytes],
     device: str = "cpu",
 ) -> dict[str, torch.Tensor]:
-    """Load and dequantize int4+LZMA2 weights.
+    """Load and dequantize int4+LZMA2 or mixed-precision+LZMA2 weights.
+
+    Automatically detects the format from the magic bytes:
+        - ``I4LZ``: uniform int4 (original format)
+        - ``MXLZ``: mixed-precision (variable bit-depth per layer)
 
     Args:
         path_or_bytes: path to .bin file or raw bytes.
@@ -265,11 +469,14 @@ def load_int4_lzma2(
         raw = path_or_bytes
 
     # Verify outer magic
-    if raw[:4] != MAGIC_INT4_LZMA2:
+    outer_magic = raw[:4]
+    if outer_magic not in (MAGIC_INT4_LZMA2, MAGIC_MIXED_LZMA2):
         raise ValueError(
-            f"Not an INT4_LZMA2 binary (expected magic {MAGIC_INT4_LZMA2!r}, "
-            f"got {raw[:4]!r})"
+            f"Not an INT4_LZMA2/MIXED_LZMA2 binary (expected magic "
+            f"{MAGIC_INT4_LZMA2!r} or {MAGIC_MIXED_LZMA2!r}, got {outer_magic!r})"
         )
+
+    is_mixed = outer_magic == MAGIC_MIXED_LZMA2
 
     # Read uncompressed size (informational, lzma handles it)
     _uncompressed_size = struct.unpack("<I", raw[4:8])[0]
@@ -278,8 +485,11 @@ def load_int4_lzma2(
     payload = lzma.decompress(raw[8:], format=lzma.FORMAT_ALONE)
 
     # Verify inner magic
-    if payload[:4] != MAGIC_INT4_LZMA2:
-        raise ValueError("Corrupted INT4_LZMA2 payload (inner magic mismatch)")
+    inner_magic = payload[:4]
+    if inner_magic != outer_magic:
+        raise ValueError(
+            f"Corrupted payload (inner magic {inner_magic!r} != outer {outer_magic!r})"
+        )
 
     offset = 4
 
@@ -310,14 +520,25 @@ def load_int4_lzma2(
         scale = struct.unpack("<f", payload[offset:offset + 4])[0]
         offset += 4
 
+        # Read per-layer bit-depth (mixed-precision only)
+        if is_mixed:
+            bits = struct.unpack("<B", payload[offset:offset + 1])[0]
+            offset += 1
+        else:
+            bits = 4
+
         # Read packed data
         packed_len = struct.unpack("<I", payload[offset:offset + 4])[0]
         offset += 4
         packed = payload[offset:offset + packed_len]
         offset += packed_len
 
-        # Dequantize
-        tensor = dequantize_int4_tensor(packed, scale, shape_tuple)
+        # Dequantize at the appropriate bit-depth
+        if is_mixed:
+            tensor = dequantize_uniform_tensor(packed, scale, shape_tuple, bits)
+        else:
+            tensor = dequantize_int4_tensor(packed, scale, shape_tuple)
+
         state_dict[name] = tensor.to(device)
 
     return state_dict
