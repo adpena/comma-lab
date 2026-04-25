@@ -2062,16 +2062,8 @@ def inflate_renderer(
         zoom_scalars_path = Path(archive_dir) / "zoom_scalars.bin"
         zoom_scalars_pt = Path(archive_dir) / "zoom_scalars.pt"
         if zoom_scalars_path.exists():
-            # Raw binary: fp16 scalars, one per pair
             raw_zs = zoom_scalars_path.read_bytes()
             scalars = torch.frombuffer(bytearray(raw_zs), dtype=torch.float16).float()
-            # Inline RadialZoomWarp construction (standalone, no tac dependency)
-            zoom_warp = type('ZoomWarp', (nn.Module,), {
-                '__init__': lambda self, s: (super(type(self), self).__init__(),
-                    setattr(self, 'scalars', nn.Parameter(s, requires_grad=False))),
-                'forward': lambda self, idx, H, W: self._compute(idx, H, W),
-            })
-            # Use tac RadialZoomWarp if available, else basic inline
             try:
                 from tac.radial_zoom import RadialZoomWarp
                 zoom_warp = RadialZoomWarp(n_pairs=len(scalars))
