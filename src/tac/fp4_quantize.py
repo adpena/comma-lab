@@ -32,9 +32,31 @@ import torch.nn as nn
 
 # Default codebook: 8 positive values, used with separate sign bit
 # These are the magnitudes; actual weight = sign * scale * codebook[index]
+#
+# DEFAULT_CODEBOOK is the original mask2mask competitor codebook. It has
+# uniform spacing in [0, 6] which is GOOD for weights uniformly distributed
+# but BAD for residual heads where most weights are near zero. The smallest
+# nonzero entry is 0.5, meaning anything below 0.25*scale rounds to zero.
+# For a typical scale 0.167 (max_mag=1.0), that wipes out all weights
+# below 0.042 — devastating for the small-magnitude tail of a residual head.
+#
+# RESIDUAL_CODEBOOK is denser near zero (geometric-ish spacing). The
+# boundary between 0 and the first nonzero entry drops from 0.25 → 0.0625,
+# preserving 4× more small-magnitude detail. Use this for renderers with a
+# residual / correction head (e.g., Cool-Chic, C3 residual).
+#
+# (R-FP4-fix 2026-04-25: trend report showed FP4 SegNet plateau at ep5 while
+# float SegNet kept dropping 0.54 → 0.28 — confirming small-mag clipping.)
 DEFAULT_CODEBOOK = torch.tensor([0.0, 0.5, 1.0, 1.5, 2.0, 3.0, 4.0, 6.0])
+RESIDUAL_CODEBOOK = torch.tensor([0.0, 0.125, 0.25, 0.5, 1.0, 2.0, 4.0, 6.0])
 
 DEFAULT_BLOCK_SIZE = 32
+
+# Percentile used for scale calculation when robust=True. Using max(|w|) is
+# fragile to outliers — a single 5σ weight in a 32-block forces everything
+# else to round near zero. p99.5 keeps the same dynamic range while ignoring
+# at most 0-1 outliers per block.
+ROBUST_SCALE_PERCENTILE = 0.995
 
 
 # ── Core quantization ───────────────────────────────────────────────────
@@ -43,12 +65,17 @@ DEFAULT_BLOCK_SIZE = 32
 def _quantize_block(
     block: torch.Tensor,
     codebook: torch.Tensor,
+    *,
+    robust_scale: bool = False,
 ) -> tuple[torch.Tensor, torch.Tensor, torch.Tensor]:
     """Quantize a 1D block of weights to FP4.
 
     Args:
         block: (block_size,) float tensor
         codebook: (8,) positive codebook values
+        robust_scale: use percentile-based scale instead of max(|w|).
+            R-FP4-fix: must match the training-time setting on QATRendererFP4
+            so round-trip weights are identical to what training saw.
 
     Returns:
         (indices, signs, scale) where:
@@ -61,10 +88,14 @@ def _quantize_block(
     signs[signs == 0] = 1.0  # map zero to positive
     magnitudes = block.abs()
 
-    # Compute block scale: maps max magnitude to max codebook value
-    max_mag = magnitudes.max()
+    # Compute block scale: maps max (or p99.5) magnitude to max codebook value.
     max_cb = codebook[-1]
-    scale = max_mag / max_cb if max_mag > 1e-10 else torch.tensor(1.0, device=block.device)
+    if robust_scale:
+        # Single-block percentile — quantile expects float32 input.
+        ref_mag = torch.quantile(magnitudes.float(), ROBUST_SCALE_PERCENTILE)
+    else:
+        ref_mag = magnitudes.max()
+    scale = ref_mag / max_cb if ref_mag > 1e-10 else torch.tensor(1.0, device=block.device)
 
     # Normalize magnitudes to codebook range
     normalized = magnitudes / scale
@@ -158,6 +189,8 @@ def quantize_fp4(
     state_dict: dict[str, torch.Tensor],
     codebook: torch.Tensor | None = None,
     block_size: int = DEFAULT_BLOCK_SIZE,
+    *,
+    robust_scale: bool = False,
 ) -> dict[str, Any]:
     """Quantize a model state dict to FP4 packed format.
 
@@ -199,12 +232,13 @@ def quantize_fp4(
         if pad_len > 0:
             p = torch.cat([p, torch.zeros(pad_len)])
 
-        # Quantize each block
+        # Quantize each block. R-FP4-fix: robust_scale must match the QAT
+        # wrapper setting so the saved scales reproduce training-time values.
         all_packed = []
         all_scales = []
         for start in range(0, p.shape[0], block_size):
             block = p[start : start + block_size]
-            indices, signs, scale = _quantize_block(block, codebook)
+            indices, signs, scale = _quantize_block(block, codebook, robust_scale=robust_scale)
             packed = _pack_indices_signs(indices, signs)
             all_packed.append(packed)
             all_scales.append(scale)
@@ -292,6 +326,32 @@ def dequantize_fp4(
 # ── Fake quantization for QAT ──────────────────────────────────────────
 
 
+def _block_scales(
+    magnitudes: torch.Tensor,
+    max_cb: torch.Tensor,
+    *,
+    robust: bool,
+) -> torch.Tensor:
+    """Per-block scale factor.
+
+    robust=False: max(|w|) / max_cb (original behaviour, sensitive to outliers).
+    robust=True:  quantile(|w|, ROBUST_SCALE_PERCENTILE) / max_cb — ignores
+                  the top ~0.5% of weights so a single outlier per block can't
+                  push the small-magnitude tail past the rounding boundary.
+
+    The clamp(min=1e-10) is preserved either way to avoid div-by-zero on
+    all-zero blocks (which happen at the padded tail of every weight).
+    """
+    if robust:
+        # quantile is along dim=1 (within each block); float() cast required
+        # because torch.quantile rejects float16/bfloat16.
+        scales = torch.quantile(magnitudes.float(), ROBUST_SCALE_PERCENTILE, dim=1)
+        scales = scales.to(magnitudes.dtype) / max_cb
+    else:
+        scales = magnitudes.amax(dim=1) / max_cb
+    return scales.clamp(min=1e-10)
+
+
 class FakeQuantFP4(torch.autograd.Function):
     """Straight-through estimator for FP4 quantization.
 
@@ -300,6 +360,22 @@ class FakeQuantFP4(torch.autograd.Function):
 
     This trains the model to be robust to FP4 quantization noise,
     similar to how FakeQuantSTE trains for int8 robustness.
+
+    Args:
+        w: weights to quantize
+        codebook: positive-magnitude codebook
+        block_size: weights per per-block scale
+        stochastic: if True, use stochastic rounding (round to floor/ceil
+            with probability proportional to fractional distance) — adds
+            unbiased dither that helps small-magnitude weights receive
+            non-zero gradient signal during training. Use False at eval/export.
+        robust_scale: if True, use percentile-based per-block scale instead
+            of max(|w|) — protects against outlier-driven small-magnitude
+            collapse. Default False for backward compat.
+
+    R-FP4-fix 2026-04-25: stochastic + robust_scale + RESIDUAL_CODEBOOK
+    together close the float→FP4 gap that left the trend report's FP4 score
+    plateaued at 93.44 while float kept improving.
     """
 
     @staticmethod
@@ -308,6 +384,8 @@ class FakeQuantFP4(torch.autograd.Function):
         w: torch.Tensor,
         codebook: torch.Tensor,
         block_size: int,
+        stochastic: bool = False,
+        robust_scale: bool = False,
     ) -> torch.Tensor:
         original_shape = w.shape
         flat = w.detach().reshape(-1)
@@ -325,18 +403,36 @@ class FakeQuantFP4(torch.autograd.Function):
         magnitudes = blocks.abs()
 
         # Per-block scales: (B,)
-        max_mag = magnitudes.amax(dim=1)
-        max_cb = codebook[-1]
-        scales = max_mag / max_cb
-        scales = scales.clamp(min=1e-10)
+        cb = codebook.to(w.device)
+        max_cb = cb[-1]
+        scales = _block_scales(magnitudes, max_cb, robust=robust_scale)
 
         # Normalize magnitudes to codebook range: (B, block_size)
         normalized = magnitudes / scales.unsqueeze(1)
 
         # Find nearest codebook entry via broadcasting: (B, block_size, 1) vs (1, 1, 8)
-        cb = codebook.to(w.device)
-        dists = (normalized.unsqueeze(2) - cb.reshape(1, 1, -1)).abs()
-        indices = dists.argmin(dim=2)  # (B, block_size)
+        # When stochastic=True we instead pick between the two surrounding
+        # codebook entries with probability proportional to fractional position
+        # — this is unbiased dither and lets small-magnitude weights get nonzero
+        # expected value over many forward passes.
+        if stochastic:
+            # Find the two nearest codebook entries (one above, one below)
+            # by position in the SORTED codebook. Codebook is monotonically
+            # increasing, so torch.bucketize gives the upper-bound index.
+            upper_idx = torch.bucketize(normalized, cb)
+            upper_idx = upper_idx.clamp(max=cb.numel() - 1)
+            lower_idx = (upper_idx - 1).clamp(min=0)
+            cb_lower = cb[lower_idx]
+            cb_upper = cb[upper_idx]
+            denom = (cb_upper - cb_lower).clamp(min=1e-10)
+            p_upper = ((normalized - cb_lower) / denom).clamp(0.0, 1.0)
+            # Sample uniform[0,1) per element; pick upper if u < p_upper else lower.
+            # Use torch.rand on the right device + dtype.
+            u = torch.rand_like(normalized)
+            indices = torch.where(u < p_upper, upper_idx, lower_idx)
+        else:
+            dists = (normalized.unsqueeze(2) - cb.reshape(1, 1, -1)).abs()
+            indices = dists.argmin(dim=2)  # (B, block_size)
 
         # Dequantize: reconstruct from codebook values
         values = cb[indices]  # (B, block_size)
@@ -346,14 +442,17 @@ class FakeQuantFP4(torch.autograd.Function):
 
     @staticmethod
     def backward(ctx, grad_out: torch.Tensor):
-        # STE: pass gradient through unchanged
-        return grad_out, None, None
+        # STE: pass gradient through unchanged. Return None for non-tensor args.
+        return grad_out, None, None, None, None
 
 
 def fake_quant_fp4(
     t: torch.Tensor,
     codebook: torch.Tensor | None = None,
     block_size: int = DEFAULT_BLOCK_SIZE,
+    *,
+    stochastic: bool = False,
+    robust_scale: bool = False,
 ) -> torch.Tensor:
     """Apply fake FP4 quantization with STE for training.
 
@@ -361,13 +460,15 @@ def fake_quant_fp4(
         t: weight tensor to quantize
         codebook: 8-value codebook (default used if None)
         block_size: weights per scale group
+        stochastic: stochastic rounding for training-time dither (default False)
+        robust_scale: percentile-based per-block scale (default False)
 
     Returns:
         Fake-quantized tensor (same shape, quantization noise injected)
     """
     if codebook is None:
         codebook = DEFAULT_CODEBOOK.to(t.device)
-    return FakeQuantFP4.apply(t, codebook, block_size)
+    return FakeQuantFP4.apply(t, codebook, block_size, stochastic, robust_scale)
 
 
 # ── QAT Wrapper ─────────────────────────────────────────────────────────
@@ -380,17 +481,40 @@ class FP4Parametrize(nn.Module):
     while gradients flow through the STE to the original FP32 parameters.
     Unlike the old hook-based approach, this never mutates .data directly,
     so the autograd graph is fully preserved.
+
+    Stochastic rounding + robust scale are training-time toggles; export
+    paths must use deterministic argmin rounding + max-based scale to match
+    what dequantize_fp4() produces (see _quantize_block at module top).
+    Toggle them off via .eval() (forwarded by parent QATRendererFP4) so that
+    proxy/auth eval matches inflate-time math.
     """
 
-    def __init__(self, codebook: torch.Tensor, block_size: int):
+    def __init__(
+        self,
+        codebook: torch.Tensor,
+        block_size: int,
+        *,
+        stochastic: bool = False,
+        robust_scale: bool = False,
+    ):
         super().__init__()
         self.register_buffer("codebook", codebook)
         self.block_size = block_size
+        self.stochastic = stochastic
+        self.robust_scale = robust_scale
 
     def forward(self, weight: torch.Tensor) -> torch.Tensor:
         # .contiguous() required for MPS: nn.utils.parametrize can produce
         # non-contiguous weight views that cause reshape failures in backward
-        return fake_quant_fp4(weight.contiguous(), self.codebook, self.block_size)
+        # R-FP4-fix: stochastic + robust_scale ONLY apply at training time so
+        # eval matches export. self.training inherits from the parent module.
+        return fake_quant_fp4(
+            weight.contiguous(),
+            self.codebook,
+            self.block_size,
+            stochastic=self.stochastic and self.training,
+            robust_scale=self.robust_scale,
+        )
 
 
 class QATRendererFP4(nn.Module):
@@ -409,11 +533,25 @@ class QATRendererFP4(nn.Module):
         base_model: nn.Module,
         codebook: torch.Tensor | None = None,
         block_size: int = DEFAULT_BLOCK_SIZE,
+        *,
+        stochastic: bool = False,
+        robust_scale: bool = False,
     ):
+        """
+        R-FP4-fix args:
+          stochastic: stochastic rounding during training (unbiased dither
+            that helps small-magnitude weights gradient flow). Export uses
+            deterministic argmin regardless. Recommended for residual heads.
+          robust_scale: percentile-based per-block scale instead of max(|w|).
+            Protects small-magnitude tail from outlier-driven collapse.
+            Recommended unless an audit confirms outlier-free weight stats.
+        """
         super().__init__()
         self.base = base_model
         self.register_buffer("codebook", codebook if codebook is not None else DEFAULT_CODEBOOK.clone())
         self.block_size = block_size
+        self.stochastic = stochastic
+        self.robust_scale = robust_scale
         self._parametrized_modules: list[nn.Module] = []
         self._register_parametrizations()
 
@@ -431,7 +569,12 @@ class QATRendererFP4(nn.Module):
                     nn.utils.parametrize.register_parametrization(
                         module,
                         "weight",
-                        FP4Parametrize(self.codebook.clone(), self.block_size),
+                        FP4Parametrize(
+                            self.codebook.clone(),
+                            self.block_size,
+                            stochastic=self.stochastic,
+                            robust_scale=self.robust_scale,
+                        ),
                     )
                     self._parametrized_modules.append(module)
 
@@ -456,6 +599,7 @@ def save_fp4(
     meta: dict[str, Any] | None = None,
     codebook: torch.Tensor | None = None,
     block_size: int = DEFAULT_BLOCK_SIZE,
+    robust_scale: bool = False,
 ) -> int:
     """Save model weights in FP4 packed format.
 
@@ -465,19 +609,25 @@ def save_fp4(
         model: the renderer/pair_generator module
         path: output .pt file path
         meta: optional metadata dict
-        codebook: quantization codebook
+        codebook: quantization codebook (use RESIDUAL_CODEBOOK for renderers
+            with a residual / correction head — denser near zero)
         block_size: weights per scale group
+        robust_scale: percentile-based per-block scale. R-FP4-fix: MUST match
+            the QATRendererFP4 setting that trained this model — mismatched
+            scale calculation between train and export breaks round-trip.
 
     Returns:
         File size in bytes
     """
-    packed = quantize_fp4(model.state_dict(), codebook, block_size)
+    packed = quantize_fp4(model.state_dict(), codebook, block_size,
+                          robust_scale=robust_scale)
     if meta is not None:
         packed["__meta__"] = dict(meta)
     torch.save(packed, path)
     size = os.path.getsize(path)
     param_count = sum(p.numel() for p in model.parameters())
-    print(f"[fp4] Saved {param_count:,} params to {path} ({size:,} bytes, {size / param_count * 8:.2f} bits/param)")
+    print(f"[fp4] Saved {param_count:,} params to {path} ({size:,} bytes, "
+          f"{size / param_count * 8:.2f} bits/param, robust_scale={robust_scale})")
     return size
 
 
