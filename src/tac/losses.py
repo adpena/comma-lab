@@ -652,6 +652,43 @@ def kl_distill_scorer_loss(
     return loss, pose_dist.item(), seg_kl.item()
 
 
+def kl_distill_segnet_only(
+    filtered_pair_hwc: torch.Tensor,
+    gt_pair_hwc: torch.Tensor,
+    segnet,
+    temperature: float = 2.0,
+) -> tuple[torch.Tensor, float]:
+    """SegNet-ONLY KL divergence — auxiliary helper for stacking on top of scorer_loss.
+
+    Use this INSTEAD of kl_distill_scorer_loss when you want KL distillation
+    AS AN AUXILIARY LOSS alongside the standard scorer_loss. The full
+    kl_distill_scorer_loss returns 100*seg_kl + sqrt(10*pose_dist) — adding
+    that to scorer_loss double-counts BOTH the SegNet term (200x weight) and
+    the PoseNet term (gradient stack), which historically caused PoseNet
+    collapse per CLAUDE.md "Critical Lessons".
+
+    This helper returns ONLY the SegNet KL value (multiplied by T² per Hinton 2015).
+    The caller chooses the auxiliary weight (typical: 1.0).
+
+    Returns: (seg_kl * T², seg_kl_value_unscaled)
+    """
+    fx = _hwc_to_chw(filtered_pair_hwc)
+    gx = _hwc_to_chw(gt_pair_hwc)
+
+    fs_in = segnet.preprocess_input(fx)
+    with torch.no_grad():
+        gs_in = segnet.preprocess_input(gx)
+    fs_logits = segnet(fs_in)
+    with torch.no_grad():
+        gs_logits = segnet(gs_in)
+
+    T = temperature
+    log_p = F.log_softmax(fs_logits / T, dim=1)
+    q = F.softmax(gs_logits / T, dim=1)
+    kl = F.kl_div(log_p, q, reduction="batchmean") * (T * T)
+    return kl, kl.item()
+
+
 def feature_matching_loss(
     filtered_pair_hwc: torch.Tensor,
     gt_pair_hwc: torch.Tensor,

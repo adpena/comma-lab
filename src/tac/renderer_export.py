@@ -1059,6 +1059,8 @@ def export_asymmetric_checkpoint_fp4(
     model: nn.Module,
     output_path: Path,
     block_size: int = 32,
+    codebook_name: str = "default",
+    robust_scale: bool = False,
 ) -> int:
     """Serialize an AsymmetricPairGenerator to compact .bin file using FP4 quantization.
 
@@ -1073,16 +1075,26 @@ def export_asymmetric_checkpoint_fp4(
 
     Biases remain in float16 (negligible size contribution).
 
+    R-fp4-export-fix 2026-04-25: codebook_name and robust_scale args MUST be
+    threaded through from the QAT training config (saved in the .pt's __meta__
+    dict). Pipeline.step_export reads those flags and passes them here. Without
+    this, training with --fp4-codebook=residual would silently ship a default-
+    codebook archive — same SHIRAZ-class silent arch drift bug.
+
     Args:
         model: AsymmetricPairGenerator instance.
         output_path: path to write the .bin file.
         block_size: weights per FP4 scale group (default 32).
+        codebook_name: "default" (legacy uniform) or "residual" (denser-near-zero
+            for residual heads). MUST match what QAT trained against.
+        robust_scale: per-block scale via p99.5 quantile (vs max). MUST match QAT.
 
     Returns:
         Number of bytes written.
     """
     from tac.fp4_quantize import (
         DEFAULT_CODEBOOK,
+        RESIDUAL_CODEBOOK,
         _quantize_block,
         _pack_indices_signs,
     )
@@ -1097,7 +1109,10 @@ def export_asymmetric_checkpoint_fp4(
     layers_meta: list[dict] = []
     weight_blobs: list[bytes] = []
 
-    codebook = DEFAULT_CODEBOOK.clone()
+    if codebook_name == "residual":
+        codebook = RESIDUAL_CODEBOOK.clone()
+    else:
+        codebook = DEFAULT_CODEBOOK.clone()
 
     # Export all nn.Embedding layers (deduplicated by id)
     embedding_layers: list[tuple[str, nn.Embedding]] = []
@@ -1122,7 +1137,7 @@ def export_asymmetric_checkpoint_fp4(
         all_scales = []
         for start in range(0, weight.shape[0], block_size):
             block = weight[start:start + block_size]
-            indices, signs, scale = _quantize_block(block, codebook)
+            indices, signs, scale = _quantize_block(block, codebook, robust_scale=robust_scale)
             packed = _pack_indices_signs(indices, signs)
             all_packed.append(packed)
             all_scales.append(float(scale) if isinstance(scale, torch.Tensor) else scale)
@@ -1168,7 +1183,7 @@ def export_asymmetric_checkpoint_fp4(
         all_scales = []
         for start in range(0, flat.shape[0], block_size):
             block = flat[start:start + block_size]
-            indices, signs, scale = _quantize_block(block, codebook)
+            indices, signs, scale = _quantize_block(block, codebook, robust_scale=robust_scale)
             packed = _pack_indices_signs(indices, signs)
             all_packed.append(packed)
             all_scales.append(float(scale) if isinstance(scale, torch.Tensor) else scale)

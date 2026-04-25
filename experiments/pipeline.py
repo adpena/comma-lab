@@ -271,8 +271,21 @@ def step_export(cfg: PipelineConfig, iteration: int = 0) -> Path:
     from tac.renderer import AsymmetricPairGenerator
     from tac.renderer_export import export_asymmetric_checkpoint_fp4
 
-    ckpt = torch.load(cfg.checkpoint, map_location="cpu", weights_only=True)
-    state = ckpt.get("model_state_dict", ckpt)
+    ckpt = torch.load(cfg.checkpoint, map_location="cpu", weights_only=False)
+    state = ckpt.get("model_state_dict", ckpt) if isinstance(ckpt, dict) else ckpt
+
+    # R-fp4-export-fix 2026-04-25: read FP4 metadata from the checkpoint's
+    # __meta__ dict if present (saved by train_renderer.py when
+    # --fp4-codebook=residual or --fp4-robust-scale was used). Without this,
+    # train uses RESIDUAL codebook but export silently uses DEFAULT — silent
+    # arch drift exactly like the SHIRAZ class of bugs.
+    fp4_codebook = "default"
+    fp4_robust_scale = False
+    if isinstance(ckpt, dict):
+        meta = ckpt.get("__meta__", {})
+        if isinstance(meta, dict):
+            fp4_codebook = meta.get("fp4_codebook", fp4_codebook)
+            fp4_robust_scale = meta.get("fp4_robust_scale", fp4_robust_scale)
 
     model = AsymmetricPairGenerator(
         num_classes=5, embed_dim=cfg.embed_dim,
@@ -297,10 +310,18 @@ def step_export(cfg: PipelineConfig, iteration: int = 0) -> Path:
     n_params = sum(p.numel() for p in model.parameters())
 
     renderer_bin = iter_dir / "renderer.bin"
-    nbytes = export_asymmetric_checkpoint_fp4(model, str(renderer_bin))
+    _log(f"  FP4 codebook={fp4_codebook}, robust_scale={fp4_robust_scale}")
+    nbytes = export_asymmetric_checkpoint_fp4(
+        model, str(renderer_bin),
+        codebook_name=fp4_codebook,
+        robust_scale=fp4_robust_scale,
+    )
     _log(f"  {n_params:,} params → {nbytes:,} bytes ({nbytes/1024:.1f} KB)")
 
-    _mark_done(iter_dir, "export", {"params": n_params, "bytes": nbytes})
+    _mark_done(iter_dir, "export", {
+        "params": n_params, "bytes": nbytes,
+        "fp4_codebook": fp4_codebook, "fp4_robust_scale": fp4_robust_scale,
+    })
     return renderer_bin
 
 

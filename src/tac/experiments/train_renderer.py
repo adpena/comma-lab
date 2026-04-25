@@ -51,7 +51,7 @@ from tac.losses import (  # noqa: E402
     _hwc_to_chw,
     eval_scorer_loss,
     frequency_aware_loss,
-    kl_distill_scorer_loss,
+    kl_distill_segnet_only,
     scorer_forward_pair,
     scorer_loss,
     scorer_loss_cached,
@@ -834,25 +834,44 @@ def train(args: argparse.Namespace):
             #   - markov_loss: HUGO-style local gradient continuity
             if not in_pretrain:
                 if args.use_texture_loss and args.texture_loss_weight > 0:
-                    # rendered_pair: (B, 2, H, W, 3); use frame_t1 only (the one
-                    # SegNet actually evaluates) and L1-weighted by inverse-variance
-                    # of GT 8x8 blocks (textured regions get DOWN-weighted = errors there are FREE).
+                    # R-texture-fix: original implementation used .var(dim=-1)
+                    # which is variance OVER 3 RGB CHANNELS at each pixel — NOT
+                    # local spatial variance, so the "down-weight textured regions"
+                    # claim was false. Compute true local variance via 8x8 box-
+                    # filter on luma, then weight L1 reconstruction error by the
+                    # inverse: textured regions (high local var) → low weight (errors
+                    # there are invisible to the scorer, FREE bits per UNIWARD).
                     rgb_pred = rendered_pair[:, 1].float()  # (B, H, W, 3)
                     rgb_gt = gt_pair[:, 1].float()
-                    # Inverse local variance via box filter — high-variance (textured)
-                    # regions get LOW weight (we can hide errors there).
+                    # Per-pixel L1 (averaged over channels)
                     diff = (rgb_pred - rgb_gt).abs().mean(dim=-1)  # (B, H, W)
-                    # 8x8 mean = local variance proxy via Sobel-style smoothing
-                    inv_var = 1.0 / (rgb_gt.var(dim=-1).clamp(min=1.0) + 1.0)  # (B, H, W)
+                    # Luma proxy + local variance via 8x8 box filter (avg pool)
+                    luma = rgb_gt.mean(dim=-1)  # (B, H, W)
+                    luma_bchw = luma.unsqueeze(1)  # (B, 1, H, W)
+                    local_mean = F.avg_pool2d(luma_bchw, kernel_size=8, stride=1, padding=4)
+                    local_mean = local_mean[:, :, : luma_bchw.shape[2], : luma_bchw.shape[3]]
+                    local_sqmean = F.avg_pool2d(luma_bchw.pow(2), kernel_size=8, stride=1, padding=4)
+                    local_sqmean = local_sqmean[:, :, : luma_bchw.shape[2], : luma_bchw.shape[3]]
+                    local_var = (local_sqmean - local_mean.pow(2)).clamp(min=0.0).squeeze(1)
+                    # inv_var: high in smooth regions (errors visible, EXPENSIVE),
+                    # low in textured regions (errors hidden, FREE). Normalized so
+                    # the loss scale stays comparable to vanilla L1.
+                    inv_var = 1.0 / (local_var.sqrt() + 8.0)  # +8 = pixel-scale floor
+                    inv_var = inv_var / inv_var.mean().clamp(min=1e-8)  # mean=1
                     texture_loss = (diff * inv_var).mean()
                     loss = loss + args.texture_loss_weight * texture_loss
                 if args.use_linf_penalty and args.linf_weight > 0:
-                    # L∞ on per-pixel reconstruction error — penalize the WORST
-                    # pixel hard so errors spread instead of concentrating (SRL).
+                    # R-linf-fix: original .amax() reduced over the WHOLE batch
+                    # → only 1 pixel got gradient per step (opposite of "spread").
+                    # Per-pair top-32 mean = bound the worst pixels per pair so
+                    # gradient distributes across pairs and worst regions, which
+                    # is what the square-root law actually wants.
                     rgb_pred = rendered_pair.float()
                     rgb_gt = gt_pair.float()
-                    pixel_err = (rgb_pred - rgb_gt).abs().amax()
-                    loss = loss + args.linf_weight * pixel_err
+                    pixel_err = (rgb_pred - rgb_gt).abs().mean(dim=-1)  # (B, T, H, W)
+                    flat = pixel_err.flatten(start_dim=1)  # (B, T*H*W)
+                    topk = flat.topk(min(32, flat.shape[-1]), dim=-1).values  # (B, 32)
+                    loss = loss + args.linf_weight * topk.mean()
                 if args.use_markov_loss and args.markov_weight > 0:
                     # First-order spatial gradient continuity (HUGO).
                     rgb_pred = rendered_pair[:, 1].float()
@@ -865,15 +884,17 @@ def train(args: argparse.Namespace):
                                   (grad_y_pred - grad_y_gt).abs().mean()
                     loss = loss + args.markov_weight * markov_loss
 
-                # KL distillation auxiliary (Quantizr's SegNet 0.001 secret).
-                # ALONGSIDE the primary scorer_loss, NOT replacing it (replacing
-                # caused PoseNet collapse historically per CLAUDE.md). Weight 1.0
-                # is conservative; Quantizr likely uses higher in his joint phase.
+                # KL distillation auxiliary — SegNet ONLY (R-fix-double-count).
+                # The original wiring used kl_distill_scorer_loss which returns
+                # 100*seg_kl + sqrt(10*pose_dist), and adding that to scorer_loss
+                # double-counts BOTH terms (200x SegNet, double PoseNet pressure).
+                # That matches the historical "KL distill caused PoseNet collapse"
+                # failure mode per CLAUDE.md "Critical Lessons". Use the SegNet-
+                # only helper that returns ONLY T²-scaled seg_kl.
                 if args.kl_distill_weight > 0:
-                    kl_loss, _kl_pose, _kl_seg = kl_distill_scorer_loss(
-                        rendered_pair, gt_pair, posenet, segnet,
+                    kl_loss, _kl_seg = kl_distill_segnet_only(
+                        rendered_pair, gt_pair, segnet,
                         temperature=args.kl_distill_temperature,
-                        segnet_weight=100.0,
                     )
                     loss = loss + args.kl_distill_weight * kl_loss
 
@@ -1004,7 +1025,22 @@ def train(args: argparse.Namespace):
             # Also save EMA fp32 for resuming
             fp32_path = out_dir / f"renderer_{args.tag}_best_fp32.pt"
             fp32_tmp = fp32_path.with_suffix(".pt.tmp")
-            torch.save(save_state, fp32_tmp)
+            # R-fp4-export-fix: save FP4 metadata in the fp32 checkpoint too,
+            # so pipeline.step_export reads it and uses the matching codebook
+            # at re-export time. Without this, training writes residual codebook
+            # in the fp4 file, but step_export's later re-export uses default.
+            fp32_payload = {
+                "model_state_dict": save_state,
+                "__meta__": {
+                    "fp4_codebook": args.fp4_codebook,
+                    "fp4_robust_scale": args.fp4_robust_scale,
+                    "fp4_stochastic": args.fp4_stochastic,
+                    "epoch": epoch,
+                    "variant": args.variant,
+                    "seed": args.seed,
+                },
+            }
+            torch.save(fp32_payload, fp32_tmp)
             fp32_tmp.rename(fp32_path)
 
             # Save metadata
