@@ -1429,6 +1429,20 @@ def _load_renderer(renderer_path: str, device: str) -> nn.Module:
 
     magic = raw_bytes[:4]
 
+    # R39 fix: MXLZ (mixed-precision LZMA2) handler — rejects with a clear
+    # message rather than falling through to .pt loader with cryptic crash.
+    # MXLZ is internal/experimental; pipeline.py R24 guard prevents it from
+    # reaching contest archives, but if a misconfigured archive contains it
+    # we want a loud error pointing to the cause.
+    if magic == b"MXLZ":
+        raise RuntimeError(
+            "MXLZ (mixed-precision LZMA2) format is internal/experimental and "
+            "cannot be inflated by the contest path. The pipeline.py "
+            "needs_arch_header guard should have prevented this from reaching "
+            "the archive — verify cfg.padding_mode/use_dilation/use_zoom_flow "
+            "match an arch with header support, or use FP4A export."
+        )
+
     # ── INT4_LZMA2 format: int4 per-tensor + LZMA2 ──
     if magic == b"I4LZ":
         state_dict = _inline_load_int4_lzma2(raw_bytes, device=device)
