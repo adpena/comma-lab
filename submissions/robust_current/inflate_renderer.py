@@ -1344,10 +1344,14 @@ def _inline_load_int4_lzma2(raw_bytes: bytes, device: str = "cpu") -> dict:
     if raw_bytes[:4] != _MAGIC:
         raise ValueError(f"Not an INT4_LZMA2 binary (got {raw_bytes[:4]!r})")
 
-    _uncompressed_size = struct.unpack("<I", raw_bytes[4:8])[0]
+    expected_size = struct.unpack("<I", raw_bytes[4:8])[0]
 
     # Decompress
     payload = _lzma.decompress(raw_bytes[8:], format=_lzma.FORMAT_ALONE)
+    if len(payload) != expected_size:
+        raise ValueError(
+            f"I4LZ decompressed size mismatch: expected {expected_size}, got {len(payload)}"
+        )
 
     # Verify inner magic
     if payload[:4] != _MAGIC:
@@ -1972,7 +1976,7 @@ def inflate_renderer(
             f"Expected {renderer_filename} inside archive directory."
         )
     renderer = _load_renderer(str(renderer_path), device)
-    _renderer_pose_dim = getattr(renderer, 'pose_dim', 6)
+    _renderer_pose_dim = getattr(renderer, 'pose_dim', 0)
 
     # ---- Load optimized embedding (C3: embedding-space TTO at compress time) ----
     optimized_emb_path = Path(archive_dir) / "optimized_embedding.pt"
@@ -2839,7 +2843,7 @@ def _inflate_renderer_with_mini_tto(
         renderer_filename=renderer_filename,
         mask_filename=mask_filename,
     )
-    _renderer_pose_dim = getattr(renderer, 'pose_dim', 6)
+    _renderer_pose_dim = getattr(renderer, 'pose_dim', 0)
 
     # ---- Load poses for FiLM conditioning (if available) ----
     # Priority: optimized_poses > GT poses (same as inflate_renderer)
