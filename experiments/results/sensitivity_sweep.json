@@ -1,0 +1,255 @@
+{
+  "allocation": {
+    "renderer.down_res.norm1.class_gamma.weight": 8,
+    "renderer.up_res.conv2.weight": 8,
+    "renderer.up_res.norm2.class_gamma.weight": 8,
+    "renderer.fuse_conv.weight": 8,
+    "renderer.stem_res.conv2.weight": 8,
+    "renderer.up_res.conv1.weight": 8,
+    "renderer.head.weight": 8,
+    "renderer.stem_res.norm2.class_gamma.weight": 8,
+    "motion.bottleneck.conv2.weight": 8,
+    "renderer.up_conv.weight": 8,
+    "renderer.down_res.conv2.weight": 8,
+    "renderer.up_res.norm2.class_beta.weight": 8,
+    "renderer.down_conv.weight": 8,
+    "renderer.bottleneck.norm2.class_beta.weight": 8,
+    "renderer.stem_res.norm1.class_beta.weight": 8,
+    "renderer.bottleneck.conv2.weight": 8,
+    "renderer.up_res.norm1.class_gamma.weight": 8,
+    "renderer.bottleneck.norm1.class_gamma.weight": 8,
+    "renderer.stem_conv.weight": 8,
+    "renderer.stem_res.norm2.class_beta.weight": 8,
+    "renderer.down_res.norm2.class_beta.weight": 8,
+    "renderer.down_res.norm2.class_gamma.weight": 8,
+    "renderer.down_res.norm1.class_beta.weight": 8,
+    "renderer.up_res.norm1.class_beta.weight": 8,
+    "renderer.stem_res.conv1.weight": 8,
+    "motion.up_conv.weight": 8,
+    "motion.down.0.weight": 8,
+    "renderer.stem_res.norm1.class_gamma.weight": 8,
+    "motion.stem.0.weight": 8,
+    "motion.fuse.weight": 8,
+    "renderer.bottleneck.norm2.class_gamma.weight": 8,
+    "renderer.down_res.conv1.weight": 8,
+    "motion.bottleneck.conv1.weight": 8,
+    "renderer.bottleneck.norm1.class_beta.weight": 8,
+    "renderer.embedding.weight": 8,
+    "renderer.bottleneck.conv1.weight": 8,
+    "motion.head.weight": 8,
+    "renderer.film_bottleneck.scale.weight": 2,
+    "renderer.film_bottleneck.shift.weight": 2,
+    "renderer.film_decoder.scale.weight": 2,
+    "renderer.film_decoder.shift.weight": 2
+  },
+  "uniform_kb": 140.1220703125,
+  "mixed_kb": 279.400390625,
+  "savings_pct": -99.39784646478726,
+  "layer_results": {
+    "renderer.embedding.weight": {
+      "n_params": 30,
+      "sensitivity": 41.86911489431777,
+      "allocated_bits": 8
+    },
+    "renderer.stem_conv.weight": {
+      "n_params": 2592,
+      "sensitivity": 100.55514814566524,
+      "allocated_bits": 8
+    },
+    "renderer.stem_res.norm1.class_gamma.weight": {
+      "n_params": 180,
+      "sensitivity": 59.13744296899003,
+      "allocated_bits": 8
+    },
+    "renderer.stem_res.norm1.class_beta.weight": {
+      "n_params": 180,
+      "sensitivity": 133.901015497522,
+      "allocated_bits": 8
+    },
+    "renderer.stem_res.norm2.class_gamma.weight": {
+      "n_params": 180,
+      "sensitivity": 183.56513223192468,
+      "allocated_bits": 8
+    },
+    "renderer.stem_res.norm2.class_beta.weight": {
+      "n_params": 180,
+      "sensitivity": 98.79347378050294,
+      "allocated_bits": 8
+    },
+    "renderer.stem_res.conv1.weight": {
+      "n_params": 11664,
+      "sensitivity": 77.27771992978907,
+      "allocated_bits": 8
+    },
+    "renderer.stem_res.conv2.weight": {
+      "n_params": 11664,
+      "sensitivity": 492.49492876881914,
+      "allocated_bits": 8
+    },
+    "renderer.down_conv.weight": {
+      "n_params": 19440,
+      "sensitivity": 137.18794605541999,
+      "allocated_bits": 8
+    },
+    "renderer.down_res.norm1.class_gamma.weight": {
+      "n_params": 300,
+      "sensitivity": 322503.14698326745,
+      "allocated_bits": 8
+    },
+    "renderer.down_res.norm1.class_beta.weight": {
+      "n_params": 300,
+      "sensitivity": 92.12218886574668,
+      "allocated_bits": 8
+    },
+    "renderer.down_res.norm2.class_gamma.weight": {
+      "n_params": 300,
+      "sensitivity": 95.8348251082242,
+      "allocated_bits": 8
+    },
+    "renderer.down_res.norm2.class_beta.weight": {
+      "n_params": 300,
+      "sensitivity": 97.42919139593005,
+      "allocated_bits": 8
+    },
+    "renderer.down_res.conv1.weight": {
+      "n_params": 32400,
+      "sensitivity": 50.59079621552047,
+      "allocated_bits": 8
+    },
+    "renderer.down_res.conv2.weight": {
+      "n_params": 32400,
+      "sensitivity": 153.21717432228087,
+      "allocated_bits": 8
+    },
+    "renderer.bottleneck.norm1.class_gamma.weight": {
+      "n_params": 300,
+      "sensitivity": 103.5253973306921,
+      "allocated_bits": 8
+    },
+    "renderer.bottleneck.norm1.class_beta.weight": {
+      "n_params": 300,
+      "sensitivity": 45.14671427400773,
+      "allocated_bits": 8
+    },
+    "renderer.bottleneck.norm2.class_gamma.weight": {
+      "n_params": 300,
+      "sensitivity": 52.24930904000308,
+      "allocated_bits": 8
+    },
+    "renderer.bottleneck.norm2.class_beta.weight": {
+      "n_params": 300,
+      "sensitivity": 136.1223569339317,
+      "allocated_bits": 8
+    },
+    "renderer.bottleneck.conv1.weight": {
+      "n_params": 32400,
+      "sensitivity": 25.779100749696877,
+      "allocated_bits": 8
+    },
+    "renderer.bottleneck.conv2.weight": {
+      "n_params": 32400,
+      "sensitivity": 132.10509117747,
+      "allocated_bits": 8
+    },
+    "renderer.up_conv.weight": {
+      "n_params": 34560,
+      "sensitivity": 170.0601848410012,
+      "allocated_bits": 8
+    },
+    "renderer.up_res.norm1.class_gamma.weight": {
+      "n_params": 180,
+      "sensitivity": 116.96779429023456,
+      "allocated_bits": 8
+    },
+    "renderer.up_res.norm1.class_beta.weight": {
+      "n_params": 180,
+      "sensitivity": 84.06408586798122,
+      "allocated_bits": 8
+    },
+    "renderer.up_res.norm2.class_gamma.weight": {
+      "n_params": 180,
+      "sensitivity": 721.9861540948541,
+      "allocated_bits": 8
+    },
+    "renderer.up_res.norm2.class_beta.weight": {
+      "n_params": 180,
+      "sensitivity": 146.2661625784159,
+      "allocated_bits": 8
+    },
+    "renderer.up_res.conv1.weight": {
+      "n_params": 11664,
+      "sensitivity": 431.01585762290694,
+      "allocated_bits": 8
+    },
+    "renderer.up_res.conv2.weight": {
+      "n_params": 11664,
+      "sensitivity": 1615.8535853720566,
+      "allocated_bits": 8
+    },
+    "renderer.fuse_conv.weight": {
+      "n_params": 2592,
+      "sensitivity": 589.3645607341597,
+      "allocated_bits": 8
+    },
+    "renderer.head.weight": {
+      "n_params": 108,
+      "sensitivity": 203.796851579385,
+      "allocated_bits": 8
+    },
+    "renderer.film_bottleneck.scale.weight": {
+      "n_params": 360,
+      "sensitivity": 0.0,
+      "allocated_bits": 2
+    },
+    "renderer.film_bottleneck.shift.weight": {
+      "n_params": 360,
+      "sensitivity": 0.0,
+      "allocated_bits": 2
+    },
+    "renderer.film_decoder.scale.weight": {
+      "n_params": 216,
+      "sensitivity": 0.0,
+      "allocated_bits": 2
+    },
+    "renderer.film_decoder.shift.weight": {
+      "n_params": 216,
+      "sensitivity": 0.0,
+      "allocated_bits": 2
+    },
+    "motion.stem.0.weight": {
+      "n_params": 5760,
+      "sensitivity": 56.480420282036675,
+      "allocated_bits": 8
+    },
+    "motion.down.0.weight": {
+      "n_params": 9216,
+      "sensitivity": 65.84844860005136,
+      "allocated_bits": 8
+    },
+    "motion.bottleneck.conv1.weight": {
+      "n_params": 9216,
+      "sensitivity": 50.24948354392573,
+      "allocated_bits": 8
+    },
+    "motion.bottleneck.conv2.weight": {
+      "n_params": 9216,
+      "sensitivity": 175.57215199175835,
+      "allocated_bits": 8
+    },
+    "motion.up_conv.weight": {
+      "n_params": 9216,
+      "sensitivity": 67.8808179815316,
+      "allocated_bits": 8
+    },
+    "motion.fuse.weight": {
+      "n_params": 2048,
+      "sensitivity": 55.87771614564378,
+      "allocated_bits": 8
+    },
+    "motion.head.weight": {
+      "n_params": 1728,
+      "sensitivity": 12.051555957210198,
+      "allocated_bits": 8
+    }
+  }
+}
