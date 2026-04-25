@@ -364,6 +364,7 @@ def evaluate_fp4_quality(
     device: torch.device,
     n_pairs: int = 20,
     distortion_net: nn.Module | None = None,
+    zoom_warp: nn.Module | None = None,
 ) -> dict[str, float]:
     """Quick quality check: generate frames and compute distortion via upstream scorer.
 
@@ -401,6 +402,8 @@ def evaluate_fp4_quality(
             m_t1 = masks[2 * i + 1 : 2 * i + 2].to(device=device, dtype=torch.int64)
             p = poses[i : i + 1].to(device) if poses is not None else None
             kwargs = {"pose": p} if p is not None else {}
+            if zoom_warp is not None:
+                kwargs["ego_flow"] = zoom_warp(torch.tensor([i], device=device), m_t.shape[1], m_t.shape[2])
             pair = renderer(m_t, m_t1, **kwargs)
             chw = pair[0].permute(0, 3, 1, 2).float()
             # eval_roundtrip: upscale to camera res + uint8 quantize
@@ -575,7 +578,7 @@ def main() -> None:
 
     # ── Baseline quality (float, no quantization) ─────────────────────
     print("\nBaseline quality (float32):")
-    baseline = evaluate_fp4_quality(model, masks, gt_frames, poses, device)
+    baseline = evaluate_fp4_quality(model, masks, gt_frames, poses, device, zoom_warp=zoom_warp)
     print(f"  pose_d={baseline['pose_d']:.5f} seg_d={baseline['seg_d']:.5f} "
           f"distortion={baseline['distortion']:.3f}")
 
@@ -663,7 +666,7 @@ def main() -> None:
                       f"lr={lr:.2e}")
 
             if epoch > 0 and epoch % cfg.eval_every == 0:
-                q = evaluate_fp4_quality(model, masks, gt_frames, poses, device, n_pairs=10)
+                q = evaluate_fp4_quality(model, masks, gt_frames, poses, device, n_pairs=10, zoom_warp=zoom_warp)
                 print(f"  [INT8] eval: distortion={q['distortion']:.3f}")
                 history.append({"phase": "int8", "epoch": epoch, **q})
 
@@ -725,7 +728,7 @@ def main() -> None:
                   f"lr={lr:.2e}")
 
         if epoch > 0 and epoch % cfg.eval_every == 0:
-            q = evaluate_fp4_quality(model, masks, gt_frames, poses, device, n_pairs=15)
+            q = evaluate_fp4_quality(model, masks, gt_frames, poses, device, n_pairs=15, zoom_warp=zoom_warp)
             print(f"  [FP4] eval: distortion={q['distortion']:.3f} "
                   f"(pose={q['pose_d']:.5f} seg={q['seg_d']:.5f})")
             history.append({"phase": "fp4", "epoch": epoch, **q})
@@ -766,7 +769,7 @@ def main() -> None:
 
     # ── Final quality check ───────────────────────────────────────────
     print("\nFinal quality (QAT-trained, float inference):")
-    final_float = evaluate_fp4_quality(model, masks, gt_frames, poses, device)
+    final_float = evaluate_fp4_quality(model, masks, gt_frames, poses, device, zoom_warp=zoom_warp)
     print(f"  pose_d={final_float['pose_d']:.5f} seg_d={final_float['seg_d']:.5f} "
           f"distortion={final_float['distortion']:.3f}")
 
@@ -790,7 +793,7 @@ def main() -> None:
     model_fp4.eval()
 
     # Quick distortion check
-    fp4_quality = evaluate_fp4_quality(model_fp4, masks, gt_frames, poses, device)
+    fp4_quality = evaluate_fp4_quality(model_fp4, masks, gt_frames, poses, device, zoom_warp=zoom_warp)
     print(f"  pose_d={fp4_quality['pose_d']:.5f} seg_d={fp4_quality['seg_d']:.5f} "
           f"distortion={fp4_quality['distortion']:.3f}")
 
