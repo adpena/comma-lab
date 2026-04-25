@@ -122,25 +122,25 @@ def _load_renderer_checkpoint(ckpt_path: str, device: str) -> tuple[nn.Module, d
     magic = raw_bytes[:4]
     file_size = len(raw_bytes)
 
-    # ── .bin formats (ASYM or DPSM) ──
-    if magic in (b"ASYM", b"DPSM"):
-        # Prefer tac library; fall back to inflate_renderer inline loader
+    # ── Binary formats (ASYM, DPSM, FP4A, I4LZ) ──
+    # Use the canonical loader which handles ALL formats
+    if magic in (b"ASYM", b"DPSM", b"FP4A", b"I4LZ"):
         try:
-            if magic == b"ASYM":
-                from tac.renderer_export import load_asymmetric_checkpoint
-                model = load_asymmetric_checkpoint(raw_bytes, device=device)
-            else:
-                from tac.renderer_export import load_renderer_checkpoint
-                model = load_renderer_checkpoint(raw_bytes, device=device)
+            from tac.renderer_export import load_any_renderer_checkpoint
+            model = load_any_renderer_checkpoint(str(ckpt_path), device=device)
         except ImportError:
             # Fall back to inflate_renderer.py inline loaders
             sys.path.insert(0, str(Path(__file__).resolve().parent.parent / "submissions" / "robust_current"))
             from inflate_renderer import _load_renderer
             model = _load_renderer(str(ckpt_path), device)
 
-        # Extract config from header
-        header_len = struct.unpack("<I", raw_bytes[4:8])[0]
-        config = json.loads(raw_bytes[8:8 + header_len].decode("utf-8"))
+        # Extract config from header (if present)
+        config = {}
+        if magic in (b"ASYM", b"DPSM", b"FP4A"):
+            header_len = struct.unpack("<I", raw_bytes[4:8])[0]
+            config = json.loads(raw_bytes[8:8 + header_len].decode("utf-8"))
+        elif magic == b"I4LZ" and hasattr(model, 'arch_dict'):
+            config = model.arch_dict()
 
         model.eval()
         for p in model.parameters():

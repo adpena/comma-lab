@@ -305,7 +305,7 @@ def step_qat(cfg: PipelineConfig, iteration: int = 0) -> Path:
 
     if _step_done(iter_dir, "qat"):
         _log(f"QAT already done (iter {iteration}), skipping")
-        return iter_dir / "renderer_qat.bin"
+        return iter_dir / "renderer_fp4.bin"  # qat_finetune.py saves this name
 
     _log(f"QAT fine-tune (up to {cfg.qat_max_epochs} epochs)")
     cmd = [
@@ -357,13 +357,14 @@ def step_fridrich_refine(cfg: PipelineConfig, iteration: int = 0) -> Path:
         return iter_dir / "renderer_fridrich.bin"
 
     # Find best QAT checkpoint to start from
-    qat_ckpt = iter_dir / "renderer_qat_best.pt"
+    # qat_finetune.py saves: qat_best_float.pt, renderer_fp4.bin
+    qat_ckpt = iter_dir / "qat_best_float.pt"
     if not qat_ckpt.exists():
         qat_ckpt = iter_dir / "distill_latest.pt"
     if not qat_ckpt.exists():
         _log("No QAT checkpoint found, skipping Fridrich refinement", "WARN")
         _mark_done(iter_dir, step_name, {"skipped": True})
-        return iter_dir / "renderer_qat.bin"
+        return iter_dir / "renderer_fp4.bin"
 
     _log("Fridrich steganalytic refinement (100 epochs, Fridrich-only)")
     cmd = [
