@@ -1,64 +1,115 @@
 # Battle Plan: Beat Quantizr (0.33)
 
 **Deadline: May 3, 2026. 8 days remaining.**
-**Current auth: 2.26. Target: < 0.33.**
+**Last verified contest-compliant auth: 2.01 (April 21, full e2e through inflate.sh → upstream evaluate.py).**
+**Target: < 0.33. Realistic stretch this cycle: 1.0–1.5 with current architectures.**
 
-## Active Experiments (A100s, overnight Apr 25)
+> **IMPORTANT — score honesty:** the previously cited "auth 2.26" came from a SHIRAZ proxy of 0.804 translated through a chain that contained the Round 22 QAT arch-mismatch bug. It is NOT a verified contest-compliant score. The last fully measured number is 2.01 (April 21, post mask-resolution fix).
 
-| Experiment | Profile | GPU | Status | Key Variable |
-|------------|---------|-----|--------|-------------|
-| SHIRAZ | focal_ste + curriculum | A100 40GB | Phase 2 ep500, proxy 0.804 | TTO targets |
-| WILDE | hinge + freeze/unfreeze | A100 40GB | Phase 1 ep225 | GT targets (A/B) |
-| GREEN | WILDE + zoom_flow | A100 40GB | Phase 1 ep150 | RadialZoomWarp |
+## TODAY (Apr 25) — NUCLEAR (zero GPU)
 
-## Post-Training Pipeline (auto-chained on A100)
+These two actions move the score the most per dollar. Do them BEFORE any new training.
 
-train → QAT (50 INT8 + 250 FP4) → pose TTO → auth eval → bundle
+| # | Action | Cost | Expected delta | Blocker |
+|---|--------|------|----------------|---------|
+| **1** | **Half-frame mask AV1 encoding sweep at 384×512** (CRF 24..48 over 600 odd frames). Quantizr stores masks for odd frames only and warps the even frame from it at inflate. Our masks are ~76% of archive bytes today. | CPU, ~2h | rate −0.12 to −0.18 | Fix AV1 int8 overflow at 384×512 (one-line patch in `src/tac/mask_codec.py`) |
+| **2** | **SHIRAZ Phase 3 → immediate auth eval** (download checkpoint, run inflate → upstream evaluate.py). Do NOT wait for QAT chain to finish. Get the auth number BEFORE deciding next deploy. | local, ~3h | establishes ground truth | SHIRAZ Phase 3 complete |
+| **3** | **Even-frame-warp-from-odd at inflate time** (mirror of Quantizr paradigm). Modify `submissions/robust_current/inflate_renderer.py` to grid_sample frame2 mask from frame1 mask using stored pose. Zero archive bytes added; halves mask budget multiplicatively with #1. | local, ~2h coding | rate −0.12 to −0.18 (multiplicative with #1) | None |
 
-## Eureka Techniques (built, ready to deploy)
+These three are stackable and additive on the rate term. Combined projection: rate term drops from 9.4 → 4–6 points, before any further renderer work.
 
-1. **Beneficial quant noise** (`--beneficial-quant-noise`): STE quantization between renderer and scorer during Phase 2. Renderer learns scorer-robust output.
-2. **Scorer sensitivity sweep** (`step_sensitivity_sweep`): Yousfi's per-layer scorer Jacobian. Produces optimal bit allocation.
-3. **Mixed-precision QAT** (`--mixed-precision-json`): Variable bit-depth per layer from sensitivity data. Knapsack-constrained to uniform FP4 budget.
-4. **MXLZ export** (`export_int4_lzma2 + bit_allocation`): Mixed-precision LZMA2. Projected 25-35KB renderer.
-5. **Engineered corrections** (`step_engineered_corrections`): Gradient-directed SegNet pixel fixes. Pre-computed, contest-compliant.
+## Round 23 + 24 Postmortem (2026-04-25)
 
-## Next-Gen Profiles (v2)
+The SHIRAZ A100 trained with `motion_hidden=24, depth=1`, but `pipeline.py` invoked `qat_finetune.py` without `--motion-hidden`/`--depth`/`--embed-dim`. QAT silently rebuilt the wrong arch. Two rounds of fresh-eyes adversarial review surfaced 14+ findings; all CRITICAL ones are fixed:
 
-| Profile | Base | Addition |
-|---------|------|----------|
-| wilde_v2 | WILDE | + beneficial_quant_noise (6-bit) |
-| shiraz_v2 | SHIRAZ | + beneficial_quant_noise (4-bit) |
-| green_v2 | GREEN | + beneficial_quant_noise (6-bit) |
+**Round 23 fixes (10):**
 
-## Timeline
+| # | Bug class | Fix |
+|---|-----------|-----|
+| 1 | Cross-function `cmd` variable scope pollution in arity validator | `_extract_invocations_from_scope` per-scope `list_vars` |
+| 2 | Short-form alias (`-m, --motion-hidden`) not indexed | `_parse_argparse_signature` iterates all positionals |
+| 3 | `ARCH_FLAGS_BOOLEAN` declared but never checked → boolean-flag SHIRAZ | Rule D in `preflight_arity` |
+| 4 | `bash -c "python experiments/x.py"` was a blind spot | `_BASH_C_TARGET_RE` |
+| 5 | `optimize_poses.py` `.pt` loader missing `padding_mode` + `use_dilation` | Pass through from `model_cfg` |
+| 6 | `step_qat` skip path returned hardcoded filename → phantom path | Disk-resolve actual artifact |
+| 7 | Stale `run_pipeline.sh` survives rsync on remote | `deploy_vastai.py` preflight check 6 |
+| 8 | New tests at `src/tac/tests/` not in `pyproject.toml testpaths` | `testpaths = ["tests", "src/tac/tests"]` |
+| 9 | `preflight_profiles` silently skips profiles with no `experiment_type` | Fail on missing/unknown |
+| 10 | Validator error referenced deleted `preflight_codebase.py` | Message updated |
+
+**Round 24 fixes (5):**
+
+| # | Bug class | Fix |
+|---|-----------|-----|
+| 11 | `step_export` built `AsymmetricPairGenerator` without `use_zoom_flow` → silent wrong arch on GREEN | Pass `use_zoom_flow`; load_state_dict mismatch now hard-errors |
+| 12 | `PipelineConfig` missing `use_zoom_flow` (and other discipline flags) → `getattr` fallbacks masked omission | Real fields, removed `getattr` |
+| 13 | SSH check 6 returned empty on SSH failure → false-negative | Sentinel-token compound check |
+| 14 | `step_eval` cached `.done_eval` on auth-eval failure → phantom score on resume | Raise instead of mark done |
+| 15 | I4LZ format has no arch header → contest-time silent default `padding_mode=zeros` for non-default arches | `step_compress_weights` falls back to FP4 when arch needs header |
+| 16 | `ARCH_FLAGS_BOOLEAN` set incomplete (missing `--use-swa`, `--beneficial-quant-noise`, freeze flags, etc.) | Set expanded; Rule D now flags 5 real launcher gaps in `step_fridrich_refine` (fixed) |
+
+**31/31 tests pass** (`src/tac/tests/test_preflight_arity.py` + `test_integration_boundaries.py`).
+
+## Open architectural gaps (planned, not yet fixed)
+
+These are deeper than R23/R24 fixes and require council consensus before implementation. Documented here so they can't slip:
+
+1. **`train_distill.py` has no `--profile` flag.** Profile dicts are documentation today; their boolean fields only take effect if a launcher explicitly translates them into CLI flags. Required fix: `train_distill.py --profile X` loads `PROFILES[X]` and applies every field; remove the launcher translation layer.
+2. **`pipeline.py` has no `--profile` flag either.** Currently invoked with arch flags from CLI. Required: `pipeline.py --profile X` loads `PipelineConfig.from_profile(PROFILES[X])`.
+3. **Profile-key vs ArchConfig-field cross-validation.** A profile typo (`use_dscovn=True`) is silently ignored. `preflight_profiles` should warn on any profile key not present in `ArchConfig.__dataclass_fields__`.
+4. **No deterministic reproducibility.** `train_distill.py` only seeds `torch.manual_seed`; no `numpy`, no `random`, no `cudnn.deterministic`, no `torch.use_deterministic_algorithms`. No git hash in provenance JSON. No data hashes. No `uv.lock` lockfile. No CI. A fresh checkout cannot reproduce SHIRAZ's result.
+5. **Chain bugs in pipeline.py:** sensitivity_sweep runs on `cfg.checkpoint` which mutates across iterations (silent semantic drift); fridrich_refine runs AFTER QAT (should be before — Fridrich sculpts float weights into scorer null-space, then QAT bakes the sculpting in); `subprocess.run` has no timeout (no preemption recovery).
+
+## Experiment ranking (Round 24 Contrarian decision)
+
+| Tier | Experiment | Justification |
+|------|-----------|---------------|
+| **NUCLEAR** | Half-frame mask AV1 sweep | CPU-only; largest single rate reduction available |
+| **NUCLEAR** | SHIRAZ auth eval immediately on Phase 3 exit | Truth before next deploy; do NOT skip to keep momentum |
+| **NUCLEAR** | Even-frame-warp-from-odd at inflate | Zero archive cost; multiplicative with mask sweep |
+| **PROMOTE** | MXLZ sensitivity sweep + mixed-precision export on winner | rate −0.06 to −0.09; requires arch_header guard (just added) |
+| **PROMOTE** | Engineered corrections | SegNet −0.05 to −0.10; only after auth baseline known |
+| **PARALLEL** | `winner_v2` (SHIRAZ_V2 or WILDE_V2) | beneficial_quant_noise has ZERO empirical backing; only deploy after winner auth is known |
+| **HOLD** | GREEN auth eval | A/B for zoom_flow ablation; passive value |
+| **KILL** | Cool-Chic full, C3 full | FP4 quantization erases float gains; not solved |
+| **KILL** | DP-SIMS revival, all VQ-VAE, diffusion teacher, distillation full | No auth evidence; no time |
+| **KILL** | All `cross_disc_*`, `finance_*`, `variational_*`, `lagrangian_dual_*` | Theory-only; not submission candidates |
+| **KILL** | `OVERFIT_CPU/GPU`, `wavelet`, `coord`, `depthwise`, `channel_recurrent` smokes | No auth evidence; no time |
+
+## Rebuilt Timeline
 
 | Day | Action |
 |-----|--------|
-| Apr 25 AM | Download results. Auth eval. Pick winner. |
-| Apr 25 PM | Sensitivity sweep on winner (full 600 pairs on A100). Deploy winner_v2. |
-| Apr 26 | v2 results. Engineered corrections. Full auth eval. |
-| Apr 27-28 | Optimize: half-frame masks, CRF sweep, archive compression. |
-| Apr 29-30 | Final polish: postfilter, multi-pass TTO. |
-| May 1-2 | Submit PR. 5-pass adversarial review. |
+| Apr 25 (today, AM) | Half-frame AV1 sweep (CPU, parallel with everything else). Even-from-odd inflate code. |
+| Apr 25 (today, PM) | SHIRAZ Phase 3 auth eval. Diagnose proxy-auth gap if > 1.5x. Decide v2 deploy based on result. |
+| Apr 26 | Deploy winner_v2 if SHIRAZ auth is in [0.5, 1.2]. MXLZ sensitivity sweep on winner. Engineered corrections on winner. |
+| Apr 27 | v2 results. Stack: half-mask + even-from-odd + MXLZ + engineered. Full e2e auth eval. |
+| Apr 28-30 | **5-pass adversarial review starts NOW (not May 1).** Review inflate.sh, archive packaging, contest compliance, T4 timing. Each round resets on any finding. |
+| May 1-2 | Final polish + buffer. |
 | May 3 | Deadline. |
 
-## Score Projections
+## Score Projections (honest)
 
-| Scenario | Score | Path |
-|----------|-------|------|
-| Current v1 (proxy 0.804) | 1.0-1.5 auth | SHIRAZ auto-chain |
-| + Mixed-precision MXLZ | -0.09 rate | 25-35KB renderer |
-| + Engineered corrections | -0.05-0.1 SegNet | Targeted pixel fixes |
-| + v2 beneficial noise | -0.1-0.2 SegNet | Scorer-robust training |
-| + Half-frame masks | -0.12 rate | 210KB → rate 0.20 |
-| **Projected best** | **0.5-0.8** | Everything stacked |
-| **To beat Quantizr** | **< 0.33** | Needs 2+ training cycles |
+| Scenario | Score | Path | Confidence |
+|----------|-------|------|------------|
+| Verified baseline (Apr 21) | 2.01 [contest-compliant] | masks 384×512 + ASYM renderer + poses | HIGH |
+| SHIRAZ Phase 3 auth (pending) | unknown | A100 7-stage chain | proxy says 0.8, auth gap unknown |
+| + half-frame masks | −0.12 to −0.18 | mask sweep | HIGH (math is direct) |
+| + even-from-odd warp | −0.12 to −0.18 | inflate change | MEDIUM (depends on warp quality) |
+| + MXLZ renderer | −0.06 to −0.09 | sensitivity sweep + mixed-precision | MEDIUM (arch_header guard added) |
+| + engineered corrections | −0.05 to −0.10 SegNet | gradient-directed pixels | LOW (no auth validation yet) |
+| + winner_v2 noise | −0.10 to −0.20 SegNet | beneficial_quant_noise | SPECULATIVE (zero empirical backing) |
+| **Realistic best stacked** | **0.8–1.4** | everything verified | MEDIUM |
+| **Optimistic best stacked** | **0.5–0.8** | everything including speculative | LOW |
+| **To beat Quantizr (0.33)** | needs SegNet ~0.001, PoseNet ~0.001, rate ~0.15 | new arch family or major training breakthrough | NOT achievable with current architectures in 8 days |
 
 ## Non-Negotiable
 
-- All experiments through `pipeline.py --profile <name>`
-- eval_roundtrip = True everywhere
-- 3 consecutive auth evals within 0.01 before submission
-- No ad-hoc scripts
-- Destroy instances immediately after download
+- All experiments through `pipeline.py` invoked from `scripts/deploy_vastai.py launch()`. No ad-hoc shell scripts. No `nohup`. tmux only.
+- `eval_roundtrip = True` everywhere.
+- 3 consecutive auth evals within 0.01 before submission, AND 5 consecutive clean adversarial review passes.
+- No ad-hoc scripts. Preflight check 6 enforces no `experiments/results/*/run_pipeline.sh` on remote.
+- Destroy Vast.ai instances IMMEDIATELY after download — $24 hard cap.
+- Every score labeled `[contest-compliant]` or `[unlimited-compute]`.
+- Profile is the experiment definition. Any flag passed via launcher CLI must come from the profile dict.
+- I4LZ weight compression DISABLED for non-default arch (padding_mode != zeros, use_dilation, use_zoom_flow) until I4LZ format gains an arch header.

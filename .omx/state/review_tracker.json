@@ -2,7 +2,7 @@
   "version": 3,
   "last_scan": "2026-04-25T08:26:29.949782+00:00",
   "entity_count": 3808,
-  "review_count": 1824,
+  "review_count": 1863,
   "entities": {
     "experiments.analysis.gradient_rank_analysis::compute_jacobian_embedding": {
       "module": "experiments.analysis.gradient_rank_analysis",
@@ -5710,9 +5710,9 @@
       "complexity": 3,
       "last_modified_commit": "4451462456be",
       "last_modified_date": "2026-04-25T02:44:24-05:00",
-      "review_status": "stale",
+      "review_status": "reviewed",
       "reviewed_by": "council",
-      "reviewed_at": "2026-04-25T07:44:24.093425+00:00",
+      "reviewed_at": "2026-04-25T14:25:46.086889+00:00",
       "review_pass": "",
       "notes": ""
     },
@@ -5727,9 +5727,9 @@
       "complexity": 10,
       "last_modified_commit": "4451462456be",
       "last_modified_date": "2026-04-25T02:44:24-05:00",
-      "review_status": "stale",
+      "review_status": "reviewed",
       "reviewed_by": "council",
-      "reviewed_at": "2026-04-25T07:44:24.093425+00:00",
+      "reviewed_at": "2026-04-25T14:25:46.086889+00:00",
       "review_pass": "",
       "notes": ""
     },
@@ -5744,9 +5744,9 @@
       "complexity": 35,
       "last_modified_commit": "4451462456be",
       "last_modified_date": "2026-04-25T02:44:24-05:00",
-      "review_status": "stale",
+      "review_status": "reviewed",
       "reviewed_by": "council",
-      "reviewed_at": "2026-04-25T07:44:24.093425+00:00",
+      "reviewed_at": "2026-04-25T14:25:46.086889+00:00",
       "review_pass": "",
       "notes": ""
     },
@@ -5761,9 +5761,9 @@
       "complexity": 30,
       "last_modified_commit": "4451462456be",
       "last_modified_date": "2026-04-25T02:44:24-05:00",
-      "review_status": "stale",
+      "review_status": "reviewed",
       "reviewed_by": "council",
-      "reviewed_at": "2026-04-25T07:44:24.093425+00:00",
+      "reviewed_at": "2026-04-25T14:25:46.086889+00:00",
       "review_pass": "",
       "notes": ""
     },
@@ -5778,9 +5778,9 @@
       "complexity": 1,
       "last_modified_commit": "4451462456be",
       "last_modified_date": "2026-04-25T02:44:24-05:00",
-      "review_status": "stale",
+      "review_status": "reviewed",
       "reviewed_by": "council",
-      "reviewed_at": "2026-04-25T07:44:24.093425+00:00",
+      "reviewed_at": "2026-04-25T14:25:46.086889+00:00",
       "review_pass": "",
       "notes": ""
     },
@@ -5795,9 +5795,9 @@
       "complexity": 1,
       "last_modified_commit": "4451462456be",
       "last_modified_date": "2026-04-25T02:44:24-05:00",
-      "review_status": "stale",
+      "review_status": "reviewed",
       "reviewed_by": "council",
-      "reviewed_at": "2026-04-25T07:44:24.093425+00:00",
+      "reviewed_at": "2026-04-25T14:25:46.086889+00:00",
       "review_pass": "",
       "notes": ""
     },
@@ -5899,7 +5899,7 @@
       "last_modified_date": "2026-04-25T03:24:12-05:00",
       "review_status": "reviewed",
       "reviewed_by": "council",
-      "reviewed_at": "2026-04-25T08:34:25.559600+00:00",
+      "reviewed_at": "2026-04-25T14:25:45.699603+00:00",
       "review_pass": "",
       "notes": ""
     },
@@ -5916,7 +5916,7 @@
       "last_modified_date": "2026-04-25T03:24:12-05:00",
       "review_status": "reviewed",
       "reviewed_by": "council",
-      "reviewed_at": "2026-04-25T08:34:25.559600+00:00",
+      "reviewed_at": "2026-04-25T14:25:45.699603+00:00",
       "review_pass": "",
       "notes": ""
     },
@@ -5933,7 +5933,7 @@
       "last_modified_date": "2026-04-25T03:24:12-05:00",
       "review_status": "reviewed",
       "reviewed_by": "council",
-      "reviewed_at": "2026-04-25T08:34:25.559600+00:00",
+      "reviewed_at": "2026-04-25T14:25:45.699603+00:00",
       "review_pass": "",
       "notes": ""
     },
@@ -5950,7 +5950,7 @@
       "last_modified_date": "2026-04-25T03:24:12-05:00",
       "review_status": "reviewed",
       "reviewed_by": "council",
-      "reviewed_at": "2026-04-25T08:34:25.559600+00:00",
+      "reviewed_at": "2026-04-25T14:25:45.699603+00:00",
       "review_pass": "",
       "notes": ""
     },
@@ -5967,7 +5967,7 @@
       "last_modified_date": "2026-04-25T03:24:12-05:00",
       "review_status": "reviewed",
       "reviewed_by": "council",
-      "reviewed_at": "2026-04-25T08:34:25.559600+00:00",
+      "reviewed_at": "2026-04-25T14:25:45.699603+00:00",
       "review_pass": "",
       "notes": ""
     },
@@ -5984,7 +5984,7 @@
       "last_modified_date": "2026-04-25T03:24:12-05:00",
       "review_status": "reviewed",
       "reviewed_by": "council",
-      "reviewed_at": "2026-04-25T08:34:25.559600+00:00",
+      "reviewed_at": "2026-04-25T14:25:45.699603+00:00",
       "review_pass": "",
       "notes": ""
     },
@@ -6001,7 +6001,7 @@
       "last_modified_date": "2026-04-25T03:24:12-05:00",
       "review_status": "reviewed",
       "reviewed_by": "council",
-      "reviewed_at": "2026-04-25T08:34:25.559600+00:00",
+      "reviewed_at": "2026-04-25T14:25:45.699603+00:00",
       "review_pass": "",
       "notes": ""
     },
@@ -6018,7 +6018,7 @@
       "last_modified_date": "2026-04-25T03:24:12-05:00",
       "review_status": "reviewed",
       "reviewed_by": "council",
-      "reviewed_at": "2026-04-25T08:34:25.559600+00:00",
+      "reviewed_at": "2026-04-25T14:25:45.699603+00:00",
       "review_pass": "",
       "notes": ""
     },
@@ -6035,7 +6035,7 @@
       "last_modified_date": "2026-04-25T03:24:12-05:00",
       "review_status": "reviewed",
       "reviewed_by": "council",
-      "reviewed_at": "2026-04-25T08:34:25.559600+00:00",
+      "reviewed_at": "2026-04-25T14:25:45.699603+00:00",
       "review_pass": "",
       "notes": ""
     },
@@ -6052,7 +6052,7 @@
       "last_modified_date": "2026-04-25T03:24:12-05:00",
       "review_status": "reviewed",
       "reviewed_by": "council",
-      "reviewed_at": "2026-04-25T08:34:25.559600+00:00",
+      "reviewed_at": "2026-04-25T14:25:45.699603+00:00",
       "review_pass": "",
       "notes": ""
     },
@@ -6069,7 +6069,7 @@
       "last_modified_date": "2026-04-25T03:24:12-05:00",
       "review_status": "reviewed",
       "reviewed_by": "council",
-      "reviewed_at": "2026-04-25T08:34:25.559600+00:00",
+      "reviewed_at": "2026-04-25T14:25:45.699603+00:00",
       "review_pass": "",
       "notes": ""
     },
@@ -6086,7 +6086,7 @@
       "last_modified_date": "2026-04-25T03:24:12-05:00",
       "review_status": "reviewed",
       "reviewed_by": "council",
-      "reviewed_at": "2026-04-25T08:34:25.559600+00:00",
+      "reviewed_at": "2026-04-25T14:25:45.699603+00:00",
       "review_pass": "",
       "notes": ""
     },
@@ -6103,7 +6103,7 @@
       "last_modified_date": "2026-04-25T03:24:12-05:00",
       "review_status": "reviewed",
       "reviewed_by": "council",
-      "reviewed_at": "2026-04-25T08:34:25.559600+00:00",
+      "reviewed_at": "2026-04-25T14:25:45.699603+00:00",
       "review_pass": "",
       "notes": ""
     },
@@ -6120,7 +6120,7 @@
       "last_modified_date": "2026-04-25T03:24:12-05:00",
       "review_status": "reviewed",
       "reviewed_by": "council",
-      "reviewed_at": "2026-04-25T08:34:25.559600+00:00",
+      "reviewed_at": "2026-04-25T14:25:45.699603+00:00",
       "review_pass": "",
       "notes": ""
     },
@@ -6137,7 +6137,7 @@
       "last_modified_date": "2026-04-25T03:24:12-05:00",
       "review_status": "reviewed",
       "reviewed_by": "council",
-      "reviewed_at": "2026-04-25T08:34:25.559600+00:00",
+      "reviewed_at": "2026-04-25T14:25:45.699603+00:00",
       "review_pass": "",
       "notes": ""
     },
@@ -6154,7 +6154,7 @@
       "last_modified_date": "2026-04-25T03:24:12-05:00",
       "review_status": "reviewed",
       "reviewed_by": "council",
-      "reviewed_at": "2026-04-25T08:34:25.559600+00:00",
+      "reviewed_at": "2026-04-25T14:25:45.699603+00:00",
       "review_pass": "",
       "notes": ""
     },
@@ -6171,7 +6171,7 @@
       "last_modified_date": "2026-04-25T03:24:12-05:00",
       "review_status": "reviewed",
       "reviewed_by": "council",
-      "reviewed_at": "2026-04-25T08:34:25.559600+00:00",
+      "reviewed_at": "2026-04-25T14:25:45.699603+00:00",
       "review_pass": "",
       "notes": ""
     },
@@ -6409,7 +6409,7 @@
       "last_modified_date": "2026-04-25T03:22:13-05:00",
       "review_status": "reviewed",
       "reviewed_by": "council",
-      "reviewed_at": "2026-04-25T08:28:49.587257+00:00",
+      "reviewed_at": "2026-04-25T14:25:45.891535+00:00",
       "review_pass": "",
       "notes": ""
     },
@@ -6426,7 +6426,7 @@
       "last_modified_date": "2026-04-25T03:22:13-05:00",
       "review_status": "reviewed",
       "reviewed_by": "council",
-      "reviewed_at": "2026-04-25T08:28:49.587257+00:00",
+      "reviewed_at": "2026-04-25T14:25:45.891535+00:00",
       "review_pass": "",
       "notes": ""
     },
@@ -6443,7 +6443,7 @@
       "last_modified_date": "2026-04-25T03:22:13-05:00",
       "review_status": "reviewed",
       "reviewed_by": "council",
-      "reviewed_at": "2026-04-25T08:28:49.587257+00:00",
+      "reviewed_at": "2026-04-25T14:25:45.891535+00:00",
       "review_pass": "",
       "notes": ""
     },
@@ -6460,7 +6460,7 @@
       "last_modified_date": "2026-04-25T03:22:13-05:00",
       "review_status": "reviewed",
       "reviewed_by": "council",
-      "reviewed_at": "2026-04-25T08:28:49.587257+00:00",
+      "reviewed_at": "2026-04-25T14:25:45.891535+00:00",
       "review_pass": "",
       "notes": ""
     },
@@ -6477,7 +6477,7 @@
       "last_modified_date": "2026-04-25T03:22:13-05:00",
       "review_status": "reviewed",
       "reviewed_by": "council",
-      "reviewed_at": "2026-04-25T08:28:49.587257+00:00",
+      "reviewed_at": "2026-04-25T14:25:45.891535+00:00",
       "review_pass": "",
       "notes": ""
     },
@@ -6494,7 +6494,7 @@
       "last_modified_date": "2026-04-25T03:22:13-05:00",
       "review_status": "reviewed",
       "reviewed_by": "council",
-      "reviewed_at": "2026-04-25T08:28:49.587257+00:00",
+      "reviewed_at": "2026-04-25T14:25:45.891535+00:00",
       "review_pass": "",
       "notes": ""
     },
@@ -6511,7 +6511,7 @@
       "last_modified_date": "2026-04-25T03:22:13-05:00",
       "review_status": "reviewed",
       "reviewed_by": "council",
-      "reviewed_at": "2026-04-25T08:28:49.587257+00:00",
+      "reviewed_at": "2026-04-25T14:25:45.891535+00:00",
       "review_pass": "",
       "notes": ""
     },
@@ -6528,7 +6528,7 @@
       "last_modified_date": "2026-04-25T03:22:13-05:00",
       "review_status": "reviewed",
       "reviewed_by": "council",
-      "reviewed_at": "2026-04-25T08:28:49.587257+00:00",
+      "reviewed_at": "2026-04-25T14:25:45.891535+00:00",
       "review_pass": "",
       "notes": ""
     },
@@ -6545,7 +6545,7 @@
       "last_modified_date": "2026-04-25T03:22:13-05:00",
       "review_status": "reviewed",
       "reviewed_by": "council",
-      "reviewed_at": "2026-04-25T08:28:49.587257+00:00",
+      "reviewed_at": "2026-04-25T14:25:45.891535+00:00",
       "review_pass": "",
       "notes": ""
     },
@@ -6562,7 +6562,7 @@
       "last_modified_date": "2026-04-25T03:22:13-05:00",
       "review_status": "reviewed",
       "reviewed_by": "council",
-      "reviewed_at": "2026-04-25T08:28:49.587257+00:00",
+      "reviewed_at": "2026-04-25T14:25:45.891535+00:00",
       "review_pass": "",
       "notes": ""
     },
@@ -6579,7 +6579,7 @@
       "last_modified_date": "2026-04-25T03:22:13-05:00",
       "review_status": "reviewed",
       "reviewed_by": "council",
-      "reviewed_at": "2026-04-25T08:28:49.587257+00:00",
+      "reviewed_at": "2026-04-25T14:25:45.891535+00:00",
       "review_pass": "",
       "notes": ""
     },
@@ -40052,7 +40052,7 @@
       "last_modified_date": "2026-04-22T19:00:36-05:00",
       "review_status": "reviewed",
       "reviewed_by": "council",
-      "reviewed_at": "2026-04-25T13:51:03.728661+00:00",
+      "reviewed_at": "2026-04-25T14:25:45.269651+00:00",
       "review_pass": "",
       "notes": ""
     },
@@ -40069,7 +40069,7 @@
       "last_modified_date": "2026-04-22T19:00:36-05:00",
       "review_status": "reviewed",
       "reviewed_by": "council",
-      "reviewed_at": "2026-04-25T13:51:03.728661+00:00",
+      "reviewed_at": "2026-04-25T14:25:45.269651+00:00",
       "review_pass": "",
       "notes": ""
     },
@@ -40086,7 +40086,7 @@
       "last_modified_date": "2026-04-22T19:00:36-05:00",
       "review_status": "reviewed",
       "reviewed_by": "council",
-      "reviewed_at": "2026-04-25T13:51:03.728661+00:00",
+      "reviewed_at": "2026-04-25T14:25:45.269651+00:00",
       "review_pass": "",
       "notes": ""
     },
@@ -40103,7 +40103,7 @@
       "last_modified_date": "2026-04-22T19:00:36-05:00",
       "review_status": "reviewed",
       "reviewed_by": "council",
-      "reviewed_at": "2026-04-25T13:51:03.728661+00:00",
+      "reviewed_at": "2026-04-25T14:25:45.269651+00:00",
       "review_pass": "",
       "notes": ""
     },
@@ -40307,7 +40307,7 @@
       "last_modified_date": "2026-04-24T17:54:05-05:00",
       "review_status": "reviewed",
       "reviewed_by": "council",
-      "reviewed_at": "2026-04-25T08:26:36.125405+00:00",
+      "reviewed_at": "2026-04-25T14:25:46.612099+00:00",
       "review_pass": "",
       "notes": ""
     },
