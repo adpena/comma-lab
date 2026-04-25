@@ -1044,6 +1044,8 @@ def _inline_load_fp4a(raw_bytes: bytes, device: str = "cpu") -> nn.Module:
             pose_dim=header.get("pose_dim", 0),
             use_dsconv=header.get("use_dsconv", False),
             use_zoom_flow=header.get("use_zoom_flow", False),
+            padding_mode=header.get("padding_mode", "zeros"),
+            use_dilation=header.get("use_dilation", False),
         )
     else:
         raise RuntimeError(
@@ -1201,6 +1203,8 @@ def _inline_load_asym(raw_bytes: bytes, device: str = "cpu") -> nn.Module:
         pose_dim=header.get("pose_dim", 0),
         use_dsconv=header.get("use_dsconv", False),
         use_zoom_flow=header.get("use_zoom_flow", False),
+        padding_mode=header.get("padding_mode", "zeros"),
+        use_dilation=header.get("use_dilation", False),
     )
 
     # Build name → module lookups
@@ -1417,15 +1421,19 @@ def _load_renderer(renderer_path: str, device: str) -> nn.Module:
             num_classes, embed_dim = NUM_CLASSES, 6
         try:
             from tac.renderer import AsymmetricPairGenerator as _APG
-            model = _APG(
-                num_classes=num_classes, embed_dim=embed_dim,
-            )
         except ImportError:
             raise RuntimeError(
                 "INT4_LZMA2 format requires the tac package for model construction. "
                 "Install tac or use FP4A/ASYM format."
             )
-        model.load_state_dict(state_dict, strict=False)
+        # Infer architecture from state dict shapes to prevent silent mismatch
+        base_ch = state_dict.get("renderer.stem_conv.weight", torch.zeros(36)).shape[0]
+        mid_ch = state_dict.get("renderer.down_conv.weight", torch.zeros(60)).shape[0]
+        model = _APG(
+            num_classes=num_classes, embed_dim=embed_dim,
+            base_ch=base_ch, mid_ch=mid_ch,
+        )
+        model.load_state_dict(state_dict, strict=True)
         model = model.eval().to(device)
         elapsed = time.monotonic() - t0
         print(f"  Loaded INT4+LZMA2 renderer from .bin ({len(raw_bytes):,} bytes, {elapsed:.1f}s)",
@@ -1984,14 +1992,16 @@ def inflate_renderer(
         print(f"  Loaded OPTIMIZED poses: {poses.shape} from archive (pose-space TTO)", file=sys.stderr)
     elif optimized_bin_path.exists():
         raw = optimized_bin_path.read_bytes()
-        poses = torch.frombuffer(bytearray(raw), dtype=torch.float16).reshape(-1, 6).float()
+        _pose_dim = getattr(renderer, 'pose_dim', 6) if 'renderer' in dir() else 6
+        poses = torch.frombuffer(bytearray(raw), dtype=torch.float16).reshape(-1, _pose_dim).float()
         print(f"  Loaded OPTIMIZED poses: {poses.shape} from archive (bin, pose-space TTO)", file=sys.stderr)
     elif poses_path.exists():
         poses = torch.load(str(poses_path), map_location="cpu", weights_only=True).float()
         print(f"  Loaded GT poses: {poses.shape} from archive", file=sys.stderr)
     elif poses_bin_path.exists():
         raw = poses_bin_path.read_bytes()
-        poses = torch.frombuffer(bytearray(raw), dtype=torch.float16).reshape(-1, 6).float()
+        _pose_dim = getattr(renderer, 'pose_dim', 6) if 'renderer' in dir() else 6
+        poses = torch.frombuffer(bytearray(raw), dtype=torch.float16).reshape(-1, _pose_dim).float()
         print(f"  Loaded GT poses: {poses.shape} from archive (bin)", file=sys.stderr)
 
     # ---- Load gradient corrections (C4: pre-computed pixel adjustments) ----
@@ -2805,14 +2815,16 @@ def _inflate_renderer_with_mini_tto(
         print(f"  Loaded OPTIMIZED poses: {poses.shape} from archive (pose-space TTO)", file=sys.stderr)
     elif optimized_bin_path.exists():
         raw = optimized_bin_path.read_bytes()
-        poses = torch.frombuffer(bytearray(raw), dtype=torch.float16).reshape(-1, 6).float()
+        _pose_dim = getattr(renderer, 'pose_dim', 6) if 'renderer' in dir() else 6
+        poses = torch.frombuffer(bytearray(raw), dtype=torch.float16).reshape(-1, _pose_dim).float()
         print(f"  Loaded OPTIMIZED poses: {poses.shape} from archive (bin, pose-space TTO)", file=sys.stderr)
     elif poses_path.exists():
         poses = torch.load(str(poses_path), map_location="cpu", weights_only=True).float()
         print(f"  Loaded GT poses: {poses.shape} from archive", file=sys.stderr)
     elif poses_bin_path.exists():
         raw = poses_bin_path.read_bytes()
-        poses = torch.frombuffer(bytearray(raw), dtype=torch.float16).reshape(-1, 6).float()
+        _pose_dim = getattr(renderer, 'pose_dim', 6) if 'renderer' in dir() else 6
+        poses = torch.frombuffer(bytearray(raw), dtype=torch.float16).reshape(-1, _pose_dim).float()
         print(f"  Loaded GT poses: {poses.shape} from archive (bin)", file=sys.stderr)
 
     # ---- Generate renderer frames ----
