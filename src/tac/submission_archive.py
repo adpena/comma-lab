@@ -119,10 +119,19 @@ def decompress_brotli_files_in_dir(directory: Path | str) -> int:
     return count
 
 
-# Contest constants
+# ============================================================
+# Contest data contract — single source of truth
+# Both builder (compress) and inflater (inflate) import these.
+# Upstream evaluate.py expects these exact dimensions.
+# ============================================================
 ORIGINAL_VIDEO_BYTES = 37_545_489
 NUM_FRAMES = 1200
 NUM_PAIRS = 600
+HALF_FRAMES = 600  # For half-frame mask encoding (Quantizr paradigm)
+OUT_W, OUT_H = 1164, 874  # Camera output resolution
+SEG_W, SEG_H = 512, 384  # SegNet / renderer resolution
+EXPECTED_RAW_BYTES = OUT_W * OUT_H * 3 * NUM_FRAMES  # 3,662,409,600
+POSE_DIM = 6  # FiLM conditioning vector dimension
 
 
 @dataclass
@@ -418,6 +427,43 @@ def build_submission_archive(
             raise FileNotFoundError(
                 f"Required artifact {name} not found at {src}. "
                 f"Build it first, then pass the path."
+            )
+
+    # ── Validate artifact integrity before building ──
+    # Mask frame count: must be NUM_FRAMES (1200) or HALF_FRAMES (600)
+    masks_src = source_map.get("masks.mkv")
+    if masks_src and masks_src.exists():
+        import subprocess as _sp
+        probe = _sp.run(
+            ["ffprobe", "-v", "error", "-count_frames",
+             "-select_streams", "v:0",
+             "-show_entries", "stream=nb_read_frames",
+             "-of", "csv=p=0", str(masks_src)],
+            capture_output=True, text=True, timeout=60,
+        )
+        if probe.returncode == 0 and probe.stdout.strip():
+            n_mask_frames = int(probe.stdout.strip())
+            if n_mask_frames not in (NUM_FRAMES, HALF_FRAMES):
+                raise ValueError(
+                    f"masks.mkv has {n_mask_frames} frames. "
+                    f"Expected {NUM_FRAMES} (full) or {HALF_FRAMES} (half-frame). "
+                    f"Rebuild masks with correct frame count."
+                )
+            logger.info("Mask frame count: %d (%s)",
+                        n_mask_frames,
+                        "full" if n_mask_frames == NUM_FRAMES else "half-frame")
+
+    # FP4 without QAT warning: check renderer.bin header
+    renderer_src = source_map.get("renderer.bin")
+    if renderer_src and renderer_src.exists():
+        header = renderer_src.read_bytes()[:4]
+        is_fp4 = header == b"FP4A"
+        renderer_size = renderer_src.stat().st_size
+        if is_fp4:
+            logger.warning(
+                "FP4 renderer detected (%d bytes). Ensure QAT was used — "
+                "FP4 without QAT introduces ~11.6 pixel mean error (39x pose signal).",
+                renderer_size,
             )
 
     # Build the archive

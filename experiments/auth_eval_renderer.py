@@ -299,8 +299,17 @@ def generate_raw(
     raw_path: str,
     device: str,
     batch_size: int,
+    poses: torch.Tensor | None = None,
 ) -> int:
     """Generate frames from masks, upscale to 874x1164, write .raw.
+
+    Args:
+        masks: (N, H, W) segmentation masks
+        model: renderer model (AsymmetricPairGenerator or DPSIMSRenderer)
+        raw_path: output path for raw frames
+        device: torch device
+        batch_size: number of pairs per batch
+        poses: (N//2, 6) optional FiLM conditioning vectors
 
     Returns number of frames written.
     """
@@ -308,12 +317,15 @@ def generate_raw(
     N = masks.shape[0]
     n_written = 0
     is_asym = _is_asymmetric(model)
+    has_film = hasattr(model, 'pose_dim') and model.pose_dim > 0
     torch.manual_seed(42)
 
     with open(raw_path, "wb") as f:
         with torch.inference_mode():
             if is_asym:
                 print(f"  Mode: asymmetric pair generation ({N} masks)")
+                if has_film and poses is not None:
+                    print(f"  FiLM conditioning: {poses.shape[0]} pose vectors")
                 pair_idx = 0
                 while pair_idx < N - 1:
                     batch_t_list = []
@@ -328,7 +340,19 @@ def generate_raw(
 
                     masks_t = torch.stack(batch_t_list).to(device=device, dtype=torch.long)
                     masks_t1 = torch.stack(batch_t1_list).to(device=device, dtype=torch.long)
-                    pairs = model(masks_t, masks_t1)  # (B, 2, H, W, 3)
+
+                    # FiLM pose conditioning
+                    batch_pose = None
+                    if has_film and poses is not None:
+                        pose_start = pair_idx // 2
+                        pose_end = pose_start + masks_t.shape[0]
+                        if pose_end <= poses.shape[0]:
+                            batch_pose = poses[pose_start:pose_end].to(device=device)
+
+                    if batch_pose is not None:
+                        pairs = model(masks_t, masks_t1, pose=batch_pose)
+                    else:
+                        pairs = model(masks_t, masks_t1)  # (B, 2, H, W, 3)
 
                     B_pairs = pairs.shape[0]
                     for p_idx in range(B_pairs):
@@ -403,7 +427,7 @@ def score_with_upstream(
     # GT dataset — AVVideoDataset (PyAV decode, non-cuda device required)
     ds_gt = AVVideoDataset(
         video_names,
-        data_dir=str(upstream_dir / "videos"),
+        data_dir=upstream_dir / "videos",
         batch_size=batch_size,
         device=torch.device("cpu"),
     )
@@ -411,13 +435,13 @@ def score_with_upstream(
     dl_gt = torch.utils.data.DataLoader(ds_gt, batch_size=None, num_workers=0)
 
     # Compressed dataset — TensorVideoDataset (reads .raw)
-    raw_dir = str(Path(raw_path).parent)
+    raw_dir = Path(raw_path).parent
     # Ensure file is named 0.raw for TensorVideoDataset
-    expected_raw = os.path.join(raw_dir, "0.raw")
-    if raw_path != expected_raw:
-        if os.path.exists(expected_raw):
-            os.remove(expected_raw)
-        os.rename(raw_path, expected_raw)
+    expected_raw = raw_dir / "0.raw"
+    if Path(raw_path) != expected_raw:
+        if expected_raw.exists():
+            expected_raw.unlink()
+        Path(raw_path).rename(expected_raw)
 
     ds_comp = TensorVideoDataset(
         video_names,
@@ -466,6 +490,7 @@ def run_auth_eval(
     batch_size: int | None = None,
     archive_size_override: int | None = None,
     output_dir: str | None = None,
+    poses_path: str | None = None,
 ) -> dict:
     """Run the full authoritative evaluation pipeline.
 
@@ -509,7 +534,7 @@ def run_auth_eval(
 
     segnet = SegNet()
     segnet_path = upstream / "models" / "segnet.safetensors"
-    sd = load_file(str(segnet_path), device=device)
+    sd = load_file(segnet_path, device=device)
     segnet.load_state_dict(sd)
     segnet.to(device).eval()
     for p in segnet.parameters():
@@ -527,14 +552,28 @@ def run_auth_eval(
     masks = extract_masks(gt_frames, segnet, device, batch_size)
     del gt_frames, segnet  # free memory
 
+    # Stage 4b: Load optimized poses (for FiLM conditioning)
+    poses = None
+    if poses_path is not None:
+        poses_p = Path(poses_path)
+        if poses_p.suffix == ".bin":
+            raw = poses_p.read_bytes()
+            poses = torch.frombuffer(bytearray(raw), dtype=torch.float16).reshape(-1, 6).float()
+        else:
+            poses = torch.load(str(poses_p), map_location="cpu", weights_only=True).float()
+        print(f"  Loaded poses: {poses.shape} from {poses_p.name}")
+    elif hasattr(model, 'pose_dim') and model.pose_dim > 0:
+        print("  WARNING: Model has FiLM (pose_dim>0) but no --poses provided. "
+              "Using zero poses — PoseNet score will be degraded.")
+
     # Stage 5: Generate frames
     print("\nStage 5: Generating frames ...")
     if output_dir is None:
         output_dir = str(Path(checkpoint).resolve().parent)
     os.makedirs(output_dir, exist_ok=True)
     raw_path = os.path.join(output_dir, "auth_eval_inflated.raw")
-    n_written = generate_raw(masks, model, raw_path, device, batch_size)
-    del model, masks  # free VRAM
+    n_written = generate_raw(masks, model, raw_path, device, batch_size, poses=poses)
+    del model, masks, poses  # free VRAM
 
     # Rename raw for scorer (expects 0.raw)
     expected_raw = os.path.join(output_dir, "0.raw")
@@ -639,6 +678,10 @@ def main():
         "--output-dir", default=None,
         help="Directory for output files (default: alongside checkpoint)",
     )
+    parser.add_argument(
+        "--poses", default=None,
+        help="Path to optimized poses (.pt or .bin) for FiLM conditioning",
+    )
     args = parser.parse_args()
 
     if args.device == "cuda" and not torch.cuda.is_available():
@@ -652,6 +695,7 @@ def main():
         batch_size=args.batch_size,
         archive_size_override=args.archive_size_bytes,
         output_dir=args.output_dir,
+        poses_path=args.poses,
     )
 
     # Exit with non-zero if score is suspiciously high (sanity check)

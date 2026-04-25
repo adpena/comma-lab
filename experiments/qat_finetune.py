@@ -377,9 +377,9 @@ def evaluate_fp4_quality(
 
     dn = DistortionNet().eval().to(device)
     dn.load_state_dicts(
-        str(upstream_root / "models" / "posenet.safetensors"),
-        str(upstream_root / "models" / "segnet.safetensors"),
-        str(device),
+        upstream_root / "models" / "posenet.safetensors",
+        upstream_root / "models" / "segnet.safetensors",
+        device,
     )
 
     renderer = model.base if hasattr(model, "base") else model
