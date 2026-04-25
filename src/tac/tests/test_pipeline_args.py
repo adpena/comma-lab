@@ -40,13 +40,13 @@ class TestPipelineSubprocessArgs(unittest.TestCase):
         return None
 
     def test_pipeline_eval_args_match_auth_eval(self):
-        """pipeline.py step_eval passes --checkpoint and --upstream-dir."""
-        # Read pipeline.py source and extract the eval command
+        """pipeline.py step_eval passes --checkpoint, --upstream-dir, --archive-size-bytes."""
         src = Path("experiments/pipeline.py").read_text()
-        assert "--checkpoint" in src, "pipeline.py should pass --checkpoint to auth_eval"
-        assert "--upstream-dir" in src, "pipeline.py should pass --upstream-dir to auth_eval"
-        assert "--archive" not in src.split("step_eval")[1].split("def ")[0], \
-            "pipeline.py should NOT pass --archive (old bug)"
+        # Find the actual cmd= block (last occurrence of auth_eval_renderer.py)
+        parts = src.split("auth_eval_renderer.py")
+        eval_section = parts[-1].split("]")[0]  # last occurrence = the actual cmd
+        for flag in ["--checkpoint", "--upstream-dir", "--device", "--archive-size-bytes"]:
+            assert flag in eval_section, f"pipeline.py missing {flag} for auth_eval"
 
     def test_pipeline_pose_tto_args_match_optimize_poses(self):
         """pipeline.py step_pose_tto passes valid args."""
@@ -58,11 +58,15 @@ class TestPipelineSubprocessArgs(unittest.TestCase):
             assert flag in pose_section, f"pipeline.py missing {flag} for optimize_poses"
 
     def test_pipeline_qat_args_match_qat_finetune(self):
-        """pipeline.py step_qat passes valid args."""
+        """pipeline.py step_qat passes valid args (fp4-epochs, lr, upstream, arch flags)."""
         src = Path("experiments/pipeline.py").read_text()
         qat_section = src.split("qat_finetune.py")[1].split("]")[0]
-        for flag in ["--checkpoint", "--masks", "--device", "--eval-roundtrip", "--output-dir"]:
+        for flag in ["--checkpoint", "--upstream", "--device", "--fp4-epochs", "--lr",
+                      "--output-dir", "--base-ch", "--mid-ch", "--pose-dim"]:
             assert flag in qat_section, f"pipeline.py missing {flag} for qat_finetune"
+        # Verify OLD wrong flags are NOT present
+        for bad_flag in ["--masks", "--qat-epochs", "--qat-lr", "--eval-roundtrip"]:
+            assert bad_flag not in qat_section, f"pipeline.py still has old wrong flag {bad_flag} for qat_finetune"
 
     def test_launch_script_flags_exist_in_train_distill(self):
         """Every flag in launch_wilde_shiraz.sh exists in train_distill.py argparse."""
