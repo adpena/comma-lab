@@ -477,25 +477,32 @@ if not _HAS_TAC_RENDERER:
 
     class MaskRenderer(nn.Module):
         def __init__(self, num_classes=5, embed_dim=6, base_ch=36, mid_ch=60,
-                     embedding=None, depth=1, pose_dim=0, use_dsconv=False):
+                     embedding=None, depth=1, pose_dim=0, use_dsconv=False,
+                     padding_mode="zeros", use_dilation=False):
             super().__init__()
             self.num_classes = num_classes
             self.embed_dim = embed_dim
             self.depth = depth
             self.pose_dim = pose_dim
             self.use_dsconv = use_dsconv
+            self.padding_mode = padding_mode
+            self.use_dilation = use_dilation
             self.embedding = embedding if embedding is not None else nn.Embedding(num_classes, embed_dim)
             self.use_coord_grid = True
             coord_channels = 2
+            _pm = padding_mode
             self.stem_conv = _make_conv(embed_dim + coord_channels, base_ch, 3,
-                                        padding=1, bias=True, use_dsconv=use_dsconv)
+                                        padding=1, bias=True, use_dsconv=use_dsconv,
+                                        padding_mode=_pm)
             self.stem_res = ResBlock(base_ch, num_classes=num_classes)
             self.down_conv = _make_conv(base_ch, mid_ch, 3, stride=2, padding=1,
-                                        bias=True, use_dsconv=use_dsconv)
+                                        bias=True, use_dsconv=use_dsconv,
+                                        padding_mode=_pm)
             self.down_res = ResBlock(mid_ch, num_classes=num_classes)
             if depth >= 2:
                 self.down2_conv = _make_conv(mid_ch, mid_ch, 3, stride=2, padding=1,
-                                             bias=True, use_dsconv=use_dsconv)
+                                             bias=True, use_dsconv=use_dsconv,
+                                             padding_mode=_pm)
                 self.down2_res = ResBlock(mid_ch, num_classes=num_classes)
             self.bottleneck = ResBlock(mid_ch, num_classes=num_classes)
             if depth >= 2:
@@ -648,7 +655,8 @@ if not _HAS_TAC_RENDERER:
         def __init__(self, num_classes=5, embed_dim=6, base_ch=36, mid_ch=60,
                      motion_hidden=32, depth=1, max_flow_px=20.0,
                      max_residual=20.0, flow_only=False,
-                     pose_dim=0, use_dsconv=False, use_zoom_flow=False):
+                     pose_dim=0, use_dsconv=False, use_zoom_flow=False,
+                     padding_mode="zeros", use_dilation=False):
             super().__init__()
             self.pose_dim = pose_dim
             self.use_dsconv = use_dsconv
@@ -660,6 +668,7 @@ if not _HAS_TAC_RENDERER:
                 base_ch=base_ch, mid_ch=mid_ch,
                 embedding=shared_emb, depth=depth,
                 pose_dim=pose_dim, use_dsconv=use_dsconv,
+                padding_mode=padding_mode, use_dilation=use_dilation,
             )
             self.motion = MotionPredictor(
                 num_classes=num_classes, embed_dim=embed_dim,
@@ -2020,14 +2029,14 @@ def inflate_renderer(
     if optimized_poses_path.exists():
         poses = torch.load(str(optimized_poses_path), map_location="cpu", weights_only=True).float()
         print(f"  Loaded OPTIMIZED poses: {poses.shape} from archive (pose-space TTO)", file=sys.stderr)
-    elif optimized_bin_path.exists():
+    elif optimized_bin_path.exists() and _renderer_pose_dim > 0:
         raw = optimized_bin_path.read_bytes()
         poses = torch.frombuffer(bytearray(raw), dtype=torch.float16).reshape(-1, _renderer_pose_dim).float()
         print(f"  Loaded OPTIMIZED poses: {poses.shape} from archive (bin, pose-space TTO)", file=sys.stderr)
     elif poses_path.exists():
         poses = torch.load(str(poses_path), map_location="cpu", weights_only=True).float()
         print(f"  Loaded GT poses: {poses.shape} from archive", file=sys.stderr)
-    elif poses_bin_path.exists():
+    elif poses_bin_path.exists() and _renderer_pose_dim > 0:
         raw = poses_bin_path.read_bytes()
         poses = torch.frombuffer(bytearray(raw), dtype=torch.float16).reshape(-1, _renderer_pose_dim).float()
         print(f"  Loaded GT poses: {poses.shape} from archive (bin)", file=sys.stderr)
@@ -2842,14 +2851,14 @@ def _inflate_renderer_with_mini_tto(
     if optimized_poses_path.exists():
         poses = torch.load(str(optimized_poses_path), map_location="cpu", weights_only=True).float()
         print(f"  Loaded OPTIMIZED poses: {poses.shape} from archive (pose-space TTO)", file=sys.stderr)
-    elif optimized_bin_path.exists():
+    elif optimized_bin_path.exists() and _renderer_pose_dim > 0:
         raw = optimized_bin_path.read_bytes()
         poses = torch.frombuffer(bytearray(raw), dtype=torch.float16).reshape(-1, _renderer_pose_dim).float()
         print(f"  Loaded OPTIMIZED poses: {poses.shape} from archive (bin, pose-space TTO)", file=sys.stderr)
     elif poses_path.exists():
         poses = torch.load(str(poses_path), map_location="cpu", weights_only=True).float()
         print(f"  Loaded GT poses: {poses.shape} from archive", file=sys.stderr)
-    elif poses_bin_path.exists():
+    elif poses_bin_path.exists() and _renderer_pose_dim > 0:
         raw = poses_bin_path.read_bytes()
         poses = torch.frombuffer(bytearray(raw), dtype=torch.float16).reshape(-1, _renderer_pose_dim).float()
         print(f"  Loaded GT poses: {poses.shape} from archive (bin)", file=sys.stderr)
