@@ -1,5 +1,41 @@
 # run log
 
+## 2026-04-25T22:00:00-05:00 — CUDA gate landed + 3 critical bugs fixed + SHIRAZ re-TTO dispatched
+
+**THE TRUE BASELINE (2026-04-25 21:00 CUDA A100):**
+- Pinned dilated h64 + CRF=50 + poses → **0.9001** contest-CUDA
+- Same archive 2nd eval → **0.9001** (deterministic, baseline real)
+- vs MPS local 2.26 → **2.5× drift** (PoseNet specifically 23×)
+- vs Quantizr 0.33 → gap is **0.57**, not 1.93
+
+CONTRARIAN VINDICATED: yesterday's veto saved us from spending hours optimizing against MPS noise. New CLAUDE.md non-negotiable: MPS auth = NOISE, ALL auth on CUDA.
+
+**SHIRAZ result (2026-04-25 18:00 finished training, 21:00 first auth eval):**
+- Phase 3 complete: proxy 0.49, PoseNet 0.0028, SegNet 0.0032, renderer 99KB
+- Standalone CUDA eval (with stale dilated-h64 poses): **4.83** (poses don't match)
+- Pose re-TTO dispatched, ~30-60 min, will give the real SHIRAZ score
+
+**3 CRITICAL bugs in today's wiring fixed (council R1 + R2):**
+1. KL distill double-counted SegNet+PoseNet → kl_distill_segnet_only helper
+2. texture_loss var(dim=-1) over channels (silent no-op) → 8x8 box-pool spatial variance
+3. pipeline FP4 export hardcoded DEFAULT_CODEBOOK → reads __meta__ from fp32 ckpt
+
+**3 NEW CLAUDE.md HIGHEST-EMPHASIS rules:**
+- MPS auth eval is NOISE — never report as auth
+- Remote code parity required before launch
+- Per-pair fp4_codebook + robust_scale propagated through fp32 ckpt → export
+
+**SHIRAZ wasted ~16h + $10 because deployed code was stale** — the auth_eval_renderer.py NameError I fixed locally that morning had not been pushed to the A100. Fixed by remote-parity rule.
+
+**Memories saved (durable):**
+- feedback_no_wasted_resources.md
+- feedback_scorer_alignment_audit.md (UNIWARD-vs-PoseNet alignment gaps)
+- project_hardware_geometry_chroma_full.md (FoE + chroma + T4 + MPS drift knowledge base)
+- project_arbitrary_vs_learnable_taxonomy.md (what to derive vs sweep vs train)
+- feedback_mps_cuda_drift_critical.md
+- feedback_remote_code_parity_required.md
+- project_cuda_gate_result_20260425.md
+
 ## 2026-04-25T15:30:00-05:00 — NUCLEAR #1 + FP4 fix: -0.237 rate-term lever staged
 
 **Mask sweep landed (commit bc53d474):**
