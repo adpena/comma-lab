@@ -153,27 +153,57 @@ def main():
               f"2b_delta={layer_results[2]['delta']:+.4f} | "
               f"8b_delta={layer_results[8]['delta']:+.4f}")
 
-    # Allocate based on SCORER sensitivity (not pixel sensitivity)
-    print(f"\n{'='*60}")
-    print("SCORER-OPTIMAL ALLOCATION (Yousfi approach):")
-    allocation = {}
-    for name, info in sorted(results.items(), key=lambda x: -x[1]["scorer_sensitivity"]):
-        s = info["scorer_sensitivity"]
-        if s > 0.01:
-            bits = 8
-        elif s > 0.001:
-            bits = 4
-        else:
-            bits = 2
-        allocation[name] = bits
-        print(f"  {name}: {bits}b (scorer_sens={s:.5f}, {info['n_params']} params)")
+    # Budget-constrained allocation (knapsack):
+    # Target: same or smaller archive than uniform FP4.
+    # Strategy: start at 2 bits everywhere, upgrade layers with highest
+    # scorer sensitivity until budget is exhausted.
+    total_params = sum(p.numel() for p in param_groups.values())
+    budget_bits = total_params * 4  # uniform FP4 budget (target: stay at or below)
 
-    total_uniform = sum(p.numel() * 4 for p in param_groups.values())
+    print(f"\n{'='*60}")
+    print("BUDGET-CONSTRAINED ALLOCATION (knapsack, Yousfi approach):")
+    print(f"  Budget: {budget_bits / 8 / 1024:.1f} KB (uniform FP4 equivalent)")
+
+    # Start all at 2 bits
+    allocation = {name: 2 for name in results}
+    used_bits = sum(results[n]["n_params"] * 2 for n in results)
+
+    # Layers with NEGATIVE sensitivity: keep at 2 bits (quantization HELPS)
+    # Layers with positive sensitivity: upgrade in order of sensitivity
+    upgradeable = [
+        (name, info) for name, info in results.items()
+        if info["scorer_sensitivity"] > 0
+    ]
+    upgradeable.sort(key=lambda x: -x[1]["scorer_sensitivity"])
+
+    upgrade_sequence = [(2, 4), (4, 8)]  # upgrade path: 2→4→8
+    for from_bits, to_bits in upgrade_sequence:
+        for name, info in upgradeable:
+            if allocation[name] != from_bits:
+                continue
+            extra_bits = info["n_params"] * (to_bits - from_bits)
+            if used_bits + extra_bits <= budget_bits:
+                allocation[name] = to_bits
+                used_bits += extra_bits
+
+    for name in sorted(allocation.keys(), key=lambda n: -results[n]["scorer_sensitivity"]):
+        info = results[name]
+        print(f"  {name}: {allocation[name]}b "
+              f"(scorer_sens={info['scorer_sensitivity']:.5f}, {info['n_params']} params)")
+
+    total_uniform = total_params * 4
     total_mixed = sum(results[n]["n_params"] * allocation[n] for n in allocation)
     print(f"\nUniform FP4: {total_uniform / 8 / 1024:.1f} KB")
     print(f"Scorer-optimal: {total_mixed / 8 / 1024:.1f} KB")
     print(f"Savings: {(total_uniform - total_mixed) / 8 / 1024:.1f} KB "
           f"({(1 - total_mixed / total_uniform) * 100:.1f}%)")
+
+    # Layers that BENEFIT from 2-bit (negative sensitivity)
+    beneficial = [(n, results[n]) for n in allocation if results[n]["scorer_sensitivity"] < 0]
+    if beneficial:
+        print(f"\n  Layers where 2-bit IMPROVES score ({len(beneficial)}):")
+        for n, info in sorted(beneficial, key=lambda x: x[1]["scorer_sensitivity"]):
+            print(f"    {n}: sens={info['scorer_sensitivity']:.5f} (FREE quality)")
 
     # Save
     output_path = Path(args.output)

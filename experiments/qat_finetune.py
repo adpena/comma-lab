@@ -253,27 +253,26 @@ def apply_mixed_precision_quant(
     Returns:
         list of (module, param_name) for cleanup
     """
-    from tac.quantization import FakeQuantSTE
     from tac.fp4_quantize import FP4Parametrize, DEFAULT_CODEBOOK
 
     class VariableBitParametrize(nn.Module):
         """Parametrize that quantizes to a specific bit-depth via STE."""
-        def __init__(self, bits: int):
+        def __init__(self, bits: int, codebook: torch.Tensor, blk_size: int):
             super().__init__()
             self.bits = bits
+            self.register_buffer("codebook", codebook)
+            self.blk_size = blk_size
 
         def forward(self, weight: torch.Tensor) -> torch.Tensor:
             w = weight.contiguous()
             if self.bits >= 16:
                 return w
             if self.bits == 4:
-                # Use our FP4 codebook for 4-bit (matches export)
                 from tac.fp4_quantize import fake_quant_fp4
-                return fake_quant_fp4(w, DEFAULT_CODEBOOK.to(w.device), block_size)
+                return fake_quant_fp4(w, self.codebook, self.blk_size)
             # For other bit-depths: uniform symmetric quantization with STE
             n_levels = 2 ** self.bits
             if w.ndim >= 2:
-                # Per-channel quantization
                 flat = w.detach().reshape(w.shape[0], -1)
                 scale = flat.abs().amax(dim=1) / (n_levels / 2 - 1)
                 scale = scale.clamp(min=1e-10)
@@ -302,7 +301,8 @@ def apply_mixed_precision_quant(
                 bits_summary[param_name or name] = bits
 
                 nn.utils.parametrize.register_parametrization(
-                    module, "weight", VariableBitParametrize(bits),
+                    module, "weight",
+                    VariableBitParametrize(bits, DEFAULT_CODEBOOK.clone(), block_size),
                 )
                 wrapped.append((module, "weight"))
 

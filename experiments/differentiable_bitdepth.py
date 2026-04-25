@@ -99,29 +99,46 @@ class MixedPrecisionWrapper(nn.Module):
         return total_bits
 
     def apply_quantization(self):
-        """Apply current bit-depth allocation to model weights (for forward pass)."""
+        """Apply quantization via nn.utils.parametrize (preserves autograd graph).
+
+        Unlike .data mutation, parametrize intercepts weight access in forward
+        and routes gradients through the Gumbel-softmax bit selection.
+        """
         candidates = CANDIDATE_BITS.to(next(self.model.parameters()).device)
-        saved = {}
+
+        class BitSelectParametrize(nn.Module):
+            def __init__(self, logits, tau, training_mode):
+                super().__init__()
+                self.logits = logits
+                self.tau = tau
+                self.training_mode = training_mode
+
+            def forward(self, weight):
+                if self.training_mode:
+                    probs = F.gumbel_softmax(self.logits, tau=self.tau, hard=True)
+                else:
+                    probs = torch.zeros_like(self.logits)
+                    probs[self.logits.argmax()] = 1.0
+                selected_bits = (probs * candidates).sum()
+                return quantize_to_bits_differentiable(weight.contiguous(), selected_bits)
+
         for name, safe_name, _ in self.param_names:
-            param = dict(self.model.named_parameters())[name]
-            saved[name] = param.data.clone()
-
-            # Gumbel-softmax selection
-            if self.training:
-                probs = F.gumbel_softmax(self.bit_logits[safe_name], tau=self.tau, hard=True)
-            else:
-                probs = torch.zeros_like(self.bit_logits[safe_name])
-                probs[self.bit_logits[safe_name].argmax()] = 1.0
-
-            selected_bits = (probs * candidates).sum()
-            param.data = quantize_to_bits_differentiable(param.data, selected_bits)
-        return saved
+            module = dict(self.model.named_modules())[".".join(name.split(".")[:-1])]
+            if not nn.utils.parametrize.is_parametrized(module, "weight"):
+                nn.utils.parametrize.register_parametrization(
+                    module, "weight",
+                    BitSelectParametrize(
+                        self.bit_logits[safe_name], self.tau, self.training
+                    ),
+                )
+        return {}  # no saved state needed — parametrize handles it
 
     def restore_weights(self, saved: dict):
-        """Restore original weights after quantized forward pass."""
-        for name, param in self.model.named_parameters():
-            if name in saved:
-                param.data = saved[name]
+        """Remove parametrizations to restore original weights."""
+        for name, safe_name, _ in self.param_names:
+            module = dict(self.model.named_modules())[".".join(name.split(".")[:-1])]
+            if nn.utils.parametrize.is_parametrized(module, "weight"):
+                nn.utils.parametrize.remove_parametrizations(module, "weight")
 
 
 def main():
@@ -221,7 +238,7 @@ def main():
 
         # Scorer distortion
         pd, sd = dn.compute_distortion(gt_p, comp_p)
-        distortion_loss = 100 * sd.mean() + math.sqrt(max(10 * pd.mean().item(), 0))
+        distortion_loss = 100 * sd.mean() + torch.sqrt(torch.clamp(10 * pd.mean(), min=1e-8))
 
         # Rate loss (total bits)
         rate_loss = wrapper.compute_rate_loss()
