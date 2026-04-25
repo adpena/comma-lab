@@ -15,11 +15,14 @@ from tac.preflight import (
     ARCH_FLAGS_BOOLEAN,
     ARCH_FLAGS_REQUIRED,
     ArityViolation,
+    FilenameContractError,
     PreflightError,
     _build_target_signatures,
+    _extract_artifact_filenames,
     _parse_argparse_signature,
     _scan_launcher_invocations,
     preflight_arity,
+    preflight_filename_contract,
     preflight_profiles,
 )
 
@@ -766,6 +769,102 @@ def test_apply_profile_catches_levenshtein_typos() -> None:
     finally:
         profiles_mod.PROFILES.clear()
         profiles_mod.PROFILES.update(saved)
+
+
+def test_filename_contract_extracts_artifact_literals(tmp_path: Path) -> None:
+    """_extract_artifact_filenames pulls .bin/.pt/.mkv/.zip literals."""
+    src = tmp_path / "consumer.py"
+    _write(src, '''
+        from pathlib import Path
+        x = Path("foo/renderer_qat.bin")
+        y = Path("bar/qat_best_float.pt")
+        z = Path("masks_full.mkv")
+        ignore = "logs/run.txt"  # not artifact
+        ignore2 = "*.bin"  # glob pattern
+    ''')
+    found = _extract_artifact_filenames(src)
+    assert "renderer_qat.bin" in found
+    assert "qat_best_float.pt" in found
+    assert "masks_full.mkv" in found
+    assert "run.txt" not in found
+    assert "*.bin" not in found
+
+
+def test_filename_contract_catches_phantom_path(tmp_path: Path) -> None:
+    """R33/R34 bug class: consumer reads a name no producer writes → fail."""
+    repo = _stub_repo(tmp_path)
+    _write(repo / "experiments/consumer.py", '''
+        from pathlib import Path
+        x = Path("output/renderer_typo.bin")  # NO producer writes this
+        subprocess_path = Path("output/renderer_qat.bin")  # producer DOES write
+    ''')
+    _write(repo / "experiments/producer.py", '''
+        import torch
+        torch.save({}, "output/renderer_qat.bin")  # writes the canonical name
+    ''')
+    with pytest.raises(FilenameContractError, match="renderer_typo.bin"):
+        preflight_filename_contract(
+            repo_root=repo,
+            consumer_files=["experiments/consumer.py"],
+            producer_dirs=["experiments"],
+            strict=True, verbose=False,
+        )
+
+
+def test_filename_contract_passes_when_all_consumed_names_are_produced(tmp_path: Path) -> None:
+    repo = _stub_repo(tmp_path)
+    _write(repo / "experiments/consumer.py", '''
+        from pathlib import Path
+        x = Path("output/renderer_qat.bin")
+    ''')
+    _write(repo / "experiments/producer.py", '''
+        import torch
+        torch.save({}, "output/renderer_qat.bin")
+    ''')
+    violations = preflight_filename_contract(
+        repo_root=repo,
+        consumer_files=["experiments/consumer.py"],
+        producer_dirs=["experiments"],
+        strict=False, verbose=False,
+    )
+    assert violations == []
+
+
+def test_filename_contract_skips_external_filenames(tmp_path: Path) -> None:
+    """0.mkv, masks.mkv, archive.zip etc. are contest-external; not validated."""
+    repo = _stub_repo(tmp_path)
+    _write(repo / "experiments/consumer.py", '''
+        from pathlib import Path
+        x = Path("upstream/videos/0.mkv")  # external
+        y = Path("submission.zip")  # external
+    ''')
+    # No producer writes either. Should still pass — they're whitelisted.
+    violations = preflight_filename_contract(
+        repo_root=repo,
+        consumer_files=["experiments/consumer.py"],
+        producer_dirs=["experiments"],
+        strict=False, verbose=False,
+    )
+    assert violations == []
+
+
+def test_filename_contract_handles_shell_script_producers(tmp_path: Path) -> None:
+    """Shell scripts (compress.sh, inflate.sh) often write archive artifacts."""
+    repo = _stub_repo(tmp_path)
+    _write(repo / "experiments/consumer.py", '''
+        from pathlib import Path
+        x = Path("output/result.tar.gz")
+    ''')
+    sh_path = repo / "experiments/build.sh"
+    sh_path.parent.mkdir(parents=True, exist_ok=True)
+    sh_path.write_text("#!/bin/bash\ntar czf output/result.tar.gz output/\n")
+    violations = preflight_filename_contract(
+        repo_root=repo,
+        consumer_files=["experiments/consumer.py"],
+        producer_dirs=["experiments"],
+        strict=False, verbose=False,
+    )
+    assert violations == []
 
 
 def test_arch_flag_constants_are_disjoint() -> None:

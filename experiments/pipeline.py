@@ -590,8 +590,9 @@ def step_fridrich_refine(cfg: PipelineConfig, iteration: int = 0) -> Path:
         """
         fridrich_dir = iter_dir / "fridrich"
         if fridrich_dir.exists():
+            # R34: distill_best.pt removed — no producer ever writes it.
+            # train_distill.py saves distill_phase2_best.pt and distill_latest.pt.
             for candidate in (fridrich_dir / "distill_phase2_best.pt",
-                              fridrich_dir / "distill_best.pt",
                               fridrich_dir / "distill_latest.pt"):
                 if candidate.exists():
                     return candidate

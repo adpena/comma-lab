@@ -261,6 +261,7 @@ def preflight_all(
         check_codebase_drift(strict=True)
         preflight_arity(strict=True, verbose=verbose)
         preflight_profiles(strict=True, verbose=verbose)
+        preflight_filename_contract(strict=True, verbose=verbose)
 
     # 2. Training inputs (only if profile + tto_frames provided)
     if profile_name and tto_frames_path and gt_poses_path and masks_path and profile_arch:
@@ -932,6 +933,275 @@ def preflight_arity(
             + "\n".join(f"  • {v}" for v in violations)
             + "\n\nFix every violation. Each one is a real bug class that has "
             "burned GPU money in this repo (see CLAUDE.md SHIRAZ A100 incident)."
+        )
+    return violations
+
+
+# ── Filename contract validation ──────────────────────────────────────────────
+#
+# Bug class this catches: a consumer script (pipeline.py) constructs a path
+# like `iter_dir / "renderer_qat_best.pt"` and reads/exists-checks it, but
+# the producer script (qat_finetune.py) actually saves it as
+# `qat_best_float.pt`. The mismatch is silent — exists() returns False, the
+# fallback branch fires, and the pipeline silently uses the wrong artifact.
+#
+# Caught manually in R33 (renderer_qat_best.pt → qat_best_float.pt) and R34
+# (renderer_qat.bin → renderer_fp4.bin). This validator automates the check.
+
+class FilenameContractError(Exception):
+    """A consumer-side filename literal is never produced by any script."""
+
+
+# Filename suffixes that represent artifacts (versus, e.g., test fixtures or
+# config files). Anything matching these suffixes that's read in a launcher
+# but never written anywhere is a phantom path.
+_ARTIFACT_SUFFIXES = (".bin", ".pt", ".pth", ".mkv", ".mp4", ".raw",
+                      ".zip", ".tar", ".tar.gz", ".tgz")
+
+# Filenames that are deliberately external (not produced by our code) — they
+# come from upstream data, the contest archive, third-party tools, etc.
+_EXTERNAL_FILENAMES = {
+    "0.mkv",  # upstream/videos/0.mkv (contest GT)
+    "masks.mkv", "poses.pt", "renderer.bin",  # contest-required submission filenames
+    "video_names.txt",  # contest input
+    "submission.zip", "archive.zip",  # contest output filenames (built by submission_archive)
+    "pretrained.pth",  # pretrained model weights
+}
+
+
+def _extract_artifact_filenames(path: Path) -> set[str]:
+    """AST-extract every artifact-suffix string literal from a Python file.
+
+    Returns names like {"renderer_fp4.bin", "qat_best_float.pt"}. Skips
+    non-artifact strings (URLs, log file names, fixture paths).
+    """
+    try:
+        tree = ast.parse(path.read_text(), filename=str(path))
+    except (SyntaxError, UnicodeDecodeError):
+        return set()
+    found: set[str] = set()
+    for node in ast.walk(tree):
+        if isinstance(node, ast.Constant) and isinstance(node.value, str):
+            v = node.value
+            if v.endswith(_ARTIFACT_SUFFIXES):
+                # Take just the basename; we don't care about the directory.
+                base = v.split("/")[-1]
+                # Skip glob patterns and obvious non-literal hints.
+                if "*" in base or "{" in base:
+                    continue
+                # Skip suffix-fragments used in f-string concat
+                # (e.g., `for suffix in ["_int4lzma2.bin", ".bin"]`).
+                # Real basenames have a non-empty stem before the suffix.
+                stem = base
+                for suf in _ARTIFACT_SUFFIXES:
+                    if stem.endswith(suf):
+                        stem = stem[:-len(suf)]
+                        break
+                if not stem or stem.startswith(("_", ".")):
+                    continue
+                # Skip very generic names that are too noisy to validate.
+                if base in _EXTERNAL_FILENAMES:
+                    continue
+                found.add(base)
+    return found
+
+
+def _extract_write_literals(path: Path) -> set[str]:
+    """AST-extract artifact filenames that appear in WRITE contexts.
+
+    Detects two layers:
+
+    Direct (literal IS the call argument):
+      - `torch.save(_, "X.pt")` — second arg literal
+      - `open("X", "w"|"a"|"wb"|"ab")` — first arg literal with write mode
+      - `<expr>.write_bytes(_)` / `.write_text(_)` / `.touch()` — receiver
+        path expression containing an artifact literal
+      - `os.replace(_, "X")` / `shutil.copy(_, "X")` — target literal
+
+    Indirect (literal is in a Path-assignment, then the variable is used
+    in a write context):
+      - `out_path = iter_dir / "X.bin"`
+        `torch.save(model, str(out_path))` or
+        `export_fn(_, str(out_path))` or
+        `out_path.write_bytes(...)` etc.
+      This catches the common pipeline.py pattern.
+
+    Returns just basenames.
+    """
+    try:
+        tree = ast.parse(path.read_text(), filename=str(path))
+    except (SyntaxError, UnicodeDecodeError):
+        return set()
+    found: set[str] = set()
+
+    def _collect_artifact_literals_in(node: ast.AST) -> set[str]:
+        out: set[str] = set()
+        for sub in ast.walk(node):
+            if isinstance(sub, ast.Constant) and isinstance(sub.value, str):
+                v = sub.value
+                if v.endswith(_ARTIFACT_SUFFIXES):
+                    base = v.split("/")[-1]
+                    if "*" not in base and "{" not in base:
+                        out.add(base)
+        return out
+
+    # Pass 1: collect Name → set of artifact basenames assigned to that name.
+    # Tracks `name = <expr-containing-artifact-literal>` so later write
+    # contexts referencing `name` can be cross-linked.
+    name_to_literals: dict[str, set[str]] = {}
+    for node in ast.walk(tree):
+        if isinstance(node, ast.Assign) and len(node.targets) == 1:
+            t = node.targets[0]
+            if isinstance(t, ast.Name):
+                lits = _collect_artifact_literals_in(node.value)
+                if lits:
+                    name_to_literals.setdefault(t.id, set()).update(lits)
+
+    def _names_referenced(node: ast.AST) -> set[str]:
+        return {sub.id for sub in ast.walk(node) if isinstance(sub, ast.Name)}
+
+    def _record_write(arg_node: ast.AST) -> None:
+        """Record literals from arg_node, including via Name indirection."""
+        found.update(_collect_artifact_literals_in(arg_node))
+        for nm in _names_referenced(arg_node):
+            if nm in name_to_literals:
+                found.update(name_to_literals[nm])
+
+    # Pass 2: detect write-context calls and extract literals (direct or via Name).
+    WRITE_FUNCS_2ND_ARG = {"torch.save", "os.replace", "shutil.copy",
+                           "shutil.copyfile", "shutil.move", "os.rename"}
+    WRITE_METHOD_SUFFIXES = (".write_bytes", ".write_text", ".touch",
+                             ".save", ".dump")
+    for node in ast.walk(tree):
+        if not isinstance(node, ast.Call):
+            continue
+        func_str = ast.unparse(node.func) if hasattr(ast, "unparse") else ""
+        # torch.save / os.replace / shutil.copy: 2nd positional arg is the target
+        if func_str in WRITE_FUNCS_2ND_ARG and len(node.args) >= 2:
+            _record_write(node.args[1])
+        # open(target, "w"/"a"/"x")
+        if func_str == "open" and node.args:
+            mode_arg = None
+            if len(node.args) >= 2:
+                mode_arg = node.args[1]
+            for kw in node.keywords:
+                if kw.arg == "mode":
+                    mode_arg = kw.value
+            if isinstance(mode_arg, ast.Constant) and isinstance(mode_arg.value, str):
+                if any(c in mode_arg.value for c in ("w", "a", "x")):
+                    _record_write(node.args[0])
+        # x.write_bytes(...) / x.write_text(...) / x.touch() / x.save() / x.dump()
+        if any(func_str.endswith(suf) for suf in WRITE_METHOD_SUFFIXES):
+            if isinstance(node.func, ast.Attribute):
+                _record_write(node.func.value)
+        # export/save/write/encode/build helpers: any function whose name
+        # starts with these prefixes — treat 2nd-or-later arg as target.
+        # Includes encoder funcs (encode_masks, encode_video) that write
+        # binary outputs by side-effect.
+        if func_str.split(".")[-1].startswith(
+            ("export_", "save_", "write_", "encode_", "build_", "pack_")
+        ):
+            for arg in node.args[1:]:
+                _record_write(arg)
+    return found
+
+
+def preflight_filename_contract(
+    repo_root: Path | None = None,
+    consumer_files: list[str] | None = None,
+    producer_dirs: list[str] | None = None,
+    strict: bool = True,
+    verbose: bool = True,
+) -> list[str]:
+    """Validate that every artifact filename READ by a consumer is WRITTEN
+    by some producer script.
+
+    Consumer = pipeline.py and other launchers. They read filenames via
+        Path expressions and check existence / load weights / pass to subprocess.
+    Producer = anything in experiments/ or src/tac/ that writes the file via
+        torch.save, file.write_*, ffmpeg subprocess, etc.
+
+    AST-level approach: extract every artifact-suffixed string literal from
+    consumer files. Extract the same from producer files. The set difference
+    {consumer_literals} - {producer_literals} - {external} is the violation set.
+
+    This is conservative: a literal appearing in producer source is treated
+    as "produced" even if the producer code path is dead. Catches the
+    obvious filename-typo bug class (R33, R34) without false positives on
+    legitimate refactors.
+    """
+    root = repo_root or REPO_ROOT
+    consumer_files = consumer_files or LAUNCHER_FILES + [
+        "experiments/pipeline.py",  # also a producer (step_export, etc.)
+    ]
+    producer_dirs = producer_dirs or ["experiments", "src/tac",
+                                       "submissions/robust_current"]
+
+    consumer_literals: dict[str, set[str]] = {}
+    consumer_paths_resolved: set[Path] = set()
+    for cf in consumer_files:
+        cp = (root / cf).resolve()
+        if cp.exists():
+            consumer_literals[cf] = _extract_artifact_filenames(cp)
+            consumer_paths_resolved.add(cp)
+
+    # Producer scan: every script EXCEPT the consumer files. A consumer that
+    # is also a producer (e.g., pipeline.py writes renderer.bin) would
+    # otherwise self-validate every typo. We collect a separate set of
+    # "consumer self-writes" via AST write-context detection; those literals
+    # ARE legitimate (the file produces what it consumes).
+    producer_literals: set[str] = set(_EXTERNAL_FILENAMES)
+    producer_literals.discard("renderer.bin")  # we DO produce this
+    n_producer_files = 0
+    for pd in producer_dirs:
+        for py in (root / pd).rglob("*.py"):
+            if py.resolve() in consumer_paths_resolved:
+                continue  # skip consumer files in producer scan
+            n_producer_files += 1
+            producer_literals.update(_extract_artifact_filenames(py))
+        for sh in (root / pd).rglob("*.sh"):
+            try:
+                text = sh.read_text()
+                for token in re.findall(
+                    r'[\w./_-]+\.(?:bin|pt|pth|mkv|mp4|raw|zip|tar\.gz|tar|tgz)', text):
+                    producer_literals.add(token.split("/")[-1])
+            except (OSError, UnicodeDecodeError):
+                pass
+
+    # Also scan consumer files themselves for explicit WRITE-context literals
+    # (torch.save target, open(..., "w") arg, .write_bytes/.write_text receiver
+    # path with the literal). Those are legitimate self-produced names.
+    for cp in consumer_paths_resolved:
+        producer_literals.update(_extract_write_literals(cp))
+
+    violations: list[str] = []
+    for consumer, lits in consumer_literals.items():
+        phantoms = lits - producer_literals
+        for ph in sorted(phantoms):
+            violations.append(
+                f"{consumer}: reads {ph!r} but no producer in "
+                f"{producer_dirs} ever writes that name. "
+                f"R33/R34 bug class — verify the producer's actual output filename."
+            )
+
+    if verbose and violations:
+        print(f"  [filenames] {len(violations)} violation(s):")
+        for v in violations:
+            print(f"    • {v}")
+    elif verbose:
+        n_consumer = sum(1 for cf in consumer_files if (root / cf).exists())
+        print(f"  [filenames] OK: {n_consumer} consumers x {n_producer_files} "
+              f"producer files clean ({len(producer_literals)} known artifacts)")
+
+    if violations and strict:
+        raise FilenameContractError(
+            "FILENAME CONTRACT VIOLATIONS — consumer reads a filename no "
+            "producer writes:\n"
+            + "\n".join(f"  • {v}" for v in violations)
+            + "\n\nThis is the R33/R34 bug class. Either:\n"
+            "  1. Fix the consumer to use the actual producer filename\n"
+            "  2. Add the filename to a producer that should write it\n"
+            "  3. Add it to _EXTERNAL_FILENAMES if it's contest/upstream data"
         )
     return violations
 
