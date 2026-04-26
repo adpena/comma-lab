@@ -31,7 +31,12 @@
 #   PYTHONHASHSEED=42                ← matches profile.seed
 #   PYTHONUNBUFFERED=1               ← so logs land in real time
 
-set -uo pipefail
+# 2026-04-26: lane_b auth eval crashed with 'argument --archive-size-bytes:
+# expected one argument' because (1) the PyTorch container doesn't ship `zip`,
+# (2) the original `set -uo pipefail` had no `-e`, so zip's silent failure
+# left ARCHIVE_BYTES empty and the script kept running. Add -e to abort on
+# the first command failure (matches the other two bootstrap scripts).
+set -euo pipefail
 
 WORKSPACE=/workspace/pact
 PYBIN=/opt/conda/bin/python
@@ -63,8 +68,17 @@ if [ "${1:-}" = "--inner" ]; then
     GIT_HASH=$(cd "$WORKSPACE" && git rev-parse HEAD 2>/dev/null || echo "no-git")
     GPU_NAME=$(nvidia-smi --query-gpu=name --format=csv,noheader 2>&1 | head -1)
     DRIVER_VER=$(nvidia-smi --query-gpu=driver_version --format=csv,noheader 2>&1 | head -1)
+    # DX #6 (2026-04-26): enriched provenance — see remote_train_bootstrap.sh
+    # for the full rationale. Captures ffmpeg/svtav1/brotli versions, env vars,
+    # sys.argv, and mask_resolution (the 48x64 catastrophe-class field).
     "$PYBIN" -c "
-import json, time, torch
+import json, os, subprocess, sys, time
+import torch
+def _shell(cmd):
+    try:
+        return subprocess.check_output(cmd, text=True, stderr=subprocess.STDOUT, timeout=10).strip()
+    except Exception as e:
+        return f'<error:{e}>'
 prov = {
     'started_at_utc': time.strftime('%Y-%m-%dT%H:%M:%SZ', time.gmtime()),
     'git_hash': '$GIT_HASH',
@@ -81,7 +95,36 @@ prov = {
     'steps': $STEPS,
     'cublas_workspace_config': '$CUBLAS_WORKSPACE_CONFIG',
     'pythonhashseed': '$PYTHONHASHSEED',
+    'sys_argv': ['$0', '--inner', '$RENDERER_BIN', '$MASKS_MKV', '$OUTPUT_SUBDIR'],
 }
+ffv = _shell(['ffmpeg', '-version'])
+prov['ffmpeg_version'] = ffv.splitlines()[0] if ffv and not ffv.startswith('<error') else ffv
+encs = _shell(['ffmpeg', '-encoders'])
+svt = [ln.strip() for ln in encs.splitlines() if 'svtav1' in ln.lower() or 'svt-av1' in ln.lower()]
+prov['libsvtav1_version'] = svt[0] if svt else None
+try:
+    import brotli
+    prov['brotli_version'] = getattr(brotli, '__version__', 'unknown')
+except Exception as e:
+    prov['brotli_version_error'] = str(e)
+prov['env_vars'] = {k: os.environ.get(k) for k in (
+    'LD_LIBRARY_PATH', 'PYTHONPATH', 'CUBLAS_WORKSPACE_CONFIG',
+    'PYTORCH_CUDA_ALLOC_CONF', 'TAC_UPSTREAM_DIR', 'PYTHONHASHSEED',
+    'TAC_MODELS_DIR', 'INFLATE_TTO',
+)}
+masks = '$MASKS_MKV'
+if masks and os.path.exists(masks):
+    try:
+        ffp = subprocess.check_output(
+            ['ffprobe', '-v', 'error', '-select_streams', 'v:0',
+             '-show_entries', 'stream=width,height', '-of', 'csv=p=0', masks],
+            text=True, stderr=subprocess.STDOUT, timeout=10,
+        ).strip()
+        if ',' in ffp:
+            w, h = ffp.split(',', 1)
+            prov['mask_resolution'] = f'{h.strip()}x{w.strip()}'
+    except Exception as e:
+        prov['mask_resolution_error'] = str(e)
 with open('$PROVENANCE', 'w') as f:
     json.dump(prov, f, indent=2)
 print('provenance:', json.dumps(prov, indent=2))
@@ -146,16 +189,34 @@ print('provenance:', json.dumps(prov, indent=2))
     fi
 
     # ── Stage 3: build canonical archive ───────────────────────────────────
+    # 2026-04-26 (post-LANE-B catastrophe): use Python's zipfile module —
+    # the PyTorch container does NOT ship `zip`, and apt-installing it adds
+    # one more failure surface. Python is guaranteed available and gives us
+    # the resulting size in a single subprocess. No shell quoting traps.
     echo "=== STAGE 3: build archive ==="
     mkdir -p "$LOG_DIR/iter_0"
     cp "$RENDERER_BIN" "$LOG_DIR/iter_0/renderer.bin"
     cp "$MASKS_MKV" "$LOG_DIR/iter_0/masks.mkv"
     cp "$LOG_DIR/optimized_poses.bin" "$LOG_DIR/iter_0/optimized_poses.bin"
-    cd "$LOG_DIR/iter_0"
-    zip -j archive.zip renderer.bin masks.mkv optimized_poses.bin >/dev/null
-    ARCHIVE_BYTES=$(stat -c '%s' archive.zip)
+    ARCHIVE_BYTES=$("$PYBIN" -c "
+import os, zipfile
+src = '$LOG_DIR/iter_0'
+dst = os.path.join(src, 'archive.zip')
+with zipfile.ZipFile(dst, 'w', zipfile.ZIP_DEFLATED, compresslevel=9) as z:
+    for n in ('renderer.bin', 'masks.mkv', 'optimized_poses.bin'):
+        p = os.path.join(src, n)
+        assert os.path.isfile(p), f'missing archive input: {p}'
+        z.write(p, arcname=n)
+print(os.path.getsize(dst))
+")
+    # Hard-fail if archive is empty/missing — prevents the empty-string
+    # cascade that crashed LANE-B's auth eval with 'expected one argument'.
+    if [ -z "${ARCHIVE_BYTES:-}" ] || [ "$ARCHIVE_BYTES" -le 0 ]; then
+        echo "FATAL: archive.zip not built or 0 bytes (got '${ARCHIVE_BYTES:-empty}')" >&2
+        exit 3
+    fi
     echo "  archive: $ARCHIVE_BYTES bytes"
-    cd "$WORKSPACE"
+    echo "[$(date -u +%FT%TZ)] archive built: $ARCHIVE_BYTES bytes" >> "$HEARTBEAT"
 
     # ── Stage 4: CUDA auth eval (only valid measurement) ───────────────────
     echo "=== STAGE 4: CUDA auth eval ==="
@@ -166,6 +227,13 @@ print('provenance:', json.dumps(prov, indent=2))
         --archive-size-bytes "$ARCHIVE_BYTES" \
         --poses "$LOG_DIR/iter_0/optimized_poses.bin" \
         2>&1 | tee "$LOG_DIR/auth_eval.log"
+
+    # Validate auth_eval actually produced a score — otherwise the run is
+    # just a $5 receipt for nothing (same paranoia as no-wasted-resources).
+    if ! grep -q '^RESULT_JSON:' "$LOG_DIR/auth_eval.log"; then
+        echo "FATAL: auth_eval did not emit RESULT_JSON — see $LOG_DIR/auth_eval.log" >&2
+        exit 4
+    fi
 
     echo "=== POSE_TTO_ONLY_DONE_$(date +%s) ==="
     echo "[$(date -u +%FT%TZ)] POSE_TTO_ONLY_PIPELINE_DONE" >> "$HEARTBEAT"
