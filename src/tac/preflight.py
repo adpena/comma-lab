@@ -1119,14 +1119,16 @@ class FilenameContractError(Exception):
 # Filename suffixes that represent artifacts (versus, e.g., test fixtures or
 # config files). Anything matching these suffixes that's read in a launcher
 # but never written anywhere is a phantom path.
+# .amrc = Yousfi council #8 lossless argmax-RLE mask codec (2026-04-26).
 _ARTIFACT_SUFFIXES = (".bin", ".pt", ".pth", ".mkv", ".mp4", ".raw",
-                      ".zip", ".tar", ".tar.gz", ".tgz")
+                      ".zip", ".tar", ".tar.gz", ".tgz", ".amrc")
 
 # Filenames that are deliberately external (not produced by our code) — they
 # come from upstream data, the contest archive, third-party tools, etc.
 _EXTERNAL_FILENAMES = {
     "0.mkv",  # upstream/videos/0.mkv (contest GT)
-    "masks.mkv", "poses.pt", "renderer.bin",  # contest-required submission filenames
+    "masks.mkv", "masks.amrc",  # mask artifacts (av1 + lossless argmax-RLE)
+    "poses.pt", "renderer.bin",  # contest-required submission filenames
     "video_names.txt",  # contest input
     "submission.zip", "archive.zip",  # contest output filenames (built by submission_archive)
     "pretrained.pth",  # pretrained model weights
@@ -1475,6 +1477,16 @@ def preflight_filename_contract(
         print(f"  [filenames] OK: {n_consumer} consumers x {n_producer_files} "
               f"producer files clean ({len(producer_literals)} known artifacts)")
 
+    # ── AMRC mask-file validation hook ──
+    # If any archive directory under the repo has a masks.amrc artifact,
+    # validate its magic + header. This catches a future regression where
+    # a producer writes a malformed AMRC blob without anyone noticing.
+    amrc_violations = _validate_amrc_artifacts(root)
+    violations.extend(amrc_violations)
+    if amrc_violations and verbose:
+        for v in amrc_violations:
+            print(f"    • [amrc] {v}")
+
     if violations and strict:
         raise FilenameContractError(
             "FILENAME CONTRACT VIOLATIONS — consumer reads a filename no "
@@ -1486,6 +1498,43 @@ def preflight_filename_contract(
             "  3. Add it to _EXTERNAL_FILENAMES if it's contest/upstream data"
         )
     return violations
+
+
+def _validate_amrc_artifacts(root: Path) -> list[str]:
+    """Walk the repo for any *.amrc files in archive-like directories and
+    validate they begin with the AMRC magic bytes + a current version.
+
+    Searches: submissions/robust_current/**/*.amrc and
+    experiments/results/**/*.amrc (the conventional archive output dirs).
+    Skips directories that don't exist (this preflight is non-fatal in
+    those cases).
+    """
+    findings: list[str] = []
+    candidate_dirs = [
+        root / "submissions" / "robust_current",
+        root / "experiments" / "results",
+    ]
+    try:
+        from tac.lossless.argmax_codec import validate_amrc_file
+    except ImportError as e:
+        # Codec module not yet built — skip the check rather than fail
+        # the whole preflight. The contract violation list will still
+        # surface if a consumer reads masks.amrc but no producer writes it.
+        findings.append(
+            f"argmax_codec not importable ({e}); skipping AMRC validation"
+        )
+        return findings
+    for d in candidate_dirs:
+        if not d.exists():
+            continue
+        for amrc in d.rglob("*.amrc"):
+            try:
+                validate_amrc_file(amrc)
+            except (ValueError, OSError) as e:
+                findings.append(
+                    f"{amrc}: invalid AMRC header — {e}"
+                )
+    return findings
 
 
 # ── Profile-vs-ArchConfig field consistency ───────────────────────────────────

@@ -148,6 +148,10 @@ class ArchiveManifest:
 
     renderer_bin: bool = False
     masks_mkv: bool = False
+    # Yousfi council #8 (2026-04-26): lossless argmax-RLE mask codec
+    # (src/tac/lossless/argmax_codec.py). Mutually exclusive with
+    # masks_mkv — see required_files() invariant.
+    masks_amrc: bool = False
     optimized_poses_pt: bool = False
     optimized_poses_bin: bool = False  # raw fp16 binary (half the size of .pt)
     optimized_embedding_pt: bool = False
@@ -168,6 +172,7 @@ class ArchiveManifest:
         mapping = {
             "renderer_bin": "renderer.bin",
             "masks_mkv": "masks.mkv",
+            "masks_amrc": "masks.amrc",
             "optimized_poses_pt": "optimized_poses.pt",
             "optimized_poses_bin": "optimized_poses.bin",
             "optimized_embedding_pt": "optimized_embedding.pt",
@@ -179,6 +184,11 @@ class ArchiveManifest:
             "posenet_targets_bin": "posenet_targets.bin",
             "zoom_scalars_bin": "zoom_scalars.bin",
         }
+        if self.masks_mkv and self.masks_amrc:
+            raise ValueError(
+                "ArchiveManifest: masks_mkv and masks_amrc are mutually "
+                "exclusive — pick one mask format per submission archive."
+            )
         return [
             mapping[k]
             for k, v in vars(self).items()
@@ -207,6 +217,18 @@ RENDERER_RADIAL_ZOOM_MANIFEST = ArchiveManifest(
     renderer_bin=True,
     masks_mkv=True,
     zoom_scalars_bin=True,
+)
+
+# AMRC mask manifest: drops masks.mkv in favour of the lossless argmax-RLE
+# codec (Yousfi council #8, 2026-04-26). Use this when the renderer has
+# been trained against a clean (non-AV1-noised) mask source — the AMRC blob
+# is byte-identical to the pre-encoder masks, so the train/test mask
+# distribution is exactly the same and the renderer cannot leak through
+# AV1 dithering artifacts.
+RENDERER_AMRC_MANIFEST = ArchiveManifest(
+    renderer_bin=True,
+    masks_amrc=True,
+    optimized_poses_pt=True,
 )
 
 
@@ -350,6 +372,23 @@ def validate_archive(
                     f"masks.mkv suspiciously small: {size} bytes (expected ~50-200KB)"
                 )
                 result.valid = False
+
+        if "masks.amrc" in result.files_found:
+            size = result.files_found["masks.amrc"]
+            if size < 32:
+                # AMRC header is ~32 bytes; anything smaller is malformed.
+                result.errors.append(
+                    f"masks.amrc suspiciously small: {size} bytes "
+                    f"(header alone is ~32 bytes)"
+                )
+                result.valid = False
+            elif size > 10_000_000:
+                # 10MB is way past anything realistic for 1200 frames at
+                # 384x512. Likely a corrupted blob or wrong file.
+                result.warnings.append(
+                    f"masks.amrc unusually large: {size:,} bytes "
+                    f"(expected ~0.5-2MB for 1200 frames)"
+                )
 
         if "optimized_poses.pt" in result.files_found:
             size = result.files_found["optimized_poses.pt"]
@@ -519,6 +558,7 @@ def build_submission_archive(
     output_path: Path | str,
     renderer_bin: Path | str | None = None,
     masks_mkv: Path | str | None = None,
+    masks_amrc: Path | str | None = None,
     optimized_poses_pt: Path | str | None = None,
     optimized_poses_bin: Path | str | None = None,
     optimized_embedding_pt: Path | str | None = None,
@@ -562,6 +602,7 @@ def build_submission_archive(
     source_map: dict[str, Path | None] = {
         "renderer.bin": Path(renderer_bin) if renderer_bin else None,
         "masks.mkv": Path(masks_mkv) if masks_mkv else None,
+        "masks.amrc": Path(masks_amrc) if masks_amrc else None,
         "optimized_poses.pt": Path(optimized_poses_pt) if optimized_poses_pt else None,
         "optimized_poses.bin": Path(optimized_poses_bin) if optimized_poses_bin else None,
         "optimized_embedding.pt": Path(optimized_embedding_pt) if optimized_embedding_pt else None,

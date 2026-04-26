@@ -746,6 +746,67 @@ def _find_upstream_root(archive_dir: str) -> Path:
 # ============================================================
 # Mask loading from archive (contest-compliant path)
 # ============================================================
+def _load_masks_from_amrc(
+    amrc_path: Path,
+    expected_frames: int = NUM_FRAMES,
+) -> torch.Tensor:
+    """Load pre-extracted masks from a lossless AMRC archive.
+
+    AMRC = "Argmax Mask RLE Codec" — Yousfi council recommendation #8
+    (2026-04-26). Bit-identical to the SegNet argmax output the renderer
+    was trained against; no AV1 dithering noise to leak through.
+
+    The codec module (``tac.lossless.argmax_codec``) is pure-Python +
+    numpy and self-contained, so the inflate-time dependency is just the
+    one file (no AV1 decoder needed).
+
+    Args:
+        amrc_path: path to masks.amrc inside archive directory
+        expected_frames: expected number of frames (default: 1200)
+
+    Returns:
+        (N, SEGNET_H, SEGNET_W) long tensor with values in [0, 4]
+    """
+    t0 = time.monotonic()
+    if not amrc_path.exists():
+        raise FileNotFoundError(f"AMRC mask file not found: {amrc_path}")
+    # Local import: keeps this file usable even if the tac package layout
+    # shifts. The argmax_codec module is single-file and copies cleanly
+    # into a contest container.
+    try:
+        from tac.lossless.argmax_codec import decode_argmax_masks
+    except ImportError as e:
+        raise ImportError(
+            f"AMRC mask file present at {amrc_path} but tac.lossless."
+            f"argmax_codec is not importable ({e}). The codec is required "
+            f"to inflate masks.amrc; either ship the module in the inflate "
+            f"environment or convert masks back to .mkv before submission."
+        ) from e
+    blob = amrc_path.read_bytes()
+    masks = decode_argmax_masks(blob)
+    n_frames = int(masks.shape[0])
+    if expected_frames is not None and n_frames not in (expected_frames, expected_frames // 2):
+        raise ValueError(
+            f"AMRC frame count {n_frames} does not match expected "
+            f"{expected_frames} (or half = {expected_frames // 2})."
+        )
+    if n_frames == expected_frames // 2:
+        # Half-frame masks: same Quantizr paradigm as the AV1 path.
+        masks._half_frame_only = True  # type: ignore[attr-defined]
+        print(
+            f"  Half-frame AMRC masks detected: {n_frames} odd-frame masks "
+            f"(deferred warp expansion)",
+            file=sys.stderr,
+        )
+    elapsed = time.monotonic() - t0
+    print(
+        f"  Loaded {n_frames} pre-extracted AMRC masks "
+        f"({masks.shape[1]}x{masks.shape[2]}) from {amrc_path} ({elapsed:.2f}s)",
+        file=sys.stderr,
+    )
+    return masks
+
+
 def _load_masks_from_archive(
     mask_video_path: Path,
     expected_frames: int = NUM_FRAMES,
@@ -759,8 +820,13 @@ def _load_masks_from_archive(
         pixel_value = class_label * (255 // 4)
     Decoding inverts this with rounding to handle lossy compression artifacts.
 
+    Dispatch: if ``mask_video_path`` ends in ``.amrc`` (or starts with the
+    AMRC magic bytes after a wrapper renamed the suffix), routes to the
+    lossless argmax-RLE decoder instead. Suffix is checked first for
+    speed; magic-byte fallback handles renamed files.
+
     Args:
-        mask_video_path: path to masks.mkv inside archive directory
+        mask_video_path: path to masks.mkv (or masks.amrc) inside archive
         expected_frames: expected number of frames (default: 1200)
 
     Returns:
@@ -777,6 +843,13 @@ def _load_masks_from_archive(
             f"or set INFLATE_MASK_SOURCE=segnet to fall back to SegNet "
             f"(not contest-compliant)."
         )
+
+    # Codec routing: prefer extension hint, fall back to magic-byte sniff.
+    if mask_video_path.suffix.lower() == ".amrc":
+        return _load_masks_from_amrc(mask_video_path, expected_frames=expected_frames)
+    head = mask_video_path.read_bytes()[:4] if mask_video_path.stat().st_size >= 4 else b""
+    if head == b"AMRC":
+        return _load_masks_from_amrc(mask_video_path, expected_frames=expected_frames)
 
     # Probe video dimensions
     probe_cmd = [
@@ -1882,6 +1955,33 @@ def _detect_device_and_batch_size() -> tuple[str, int]:
     return device, batch_size
 
 
+def _resolve_mask_path(archive_dir: str | Path, mask_filename: str) -> Path:
+    """Pick the mask file inside the archive, supporting both AV1 (.mkv)
+    and the lossless argmax-RLE codec (.amrc). The given ``mask_filename``
+    is tried first; if it does not exist, we look for the sibling format
+    automatically. This lets callers pass the legacy default
+    "masks.mkv" while still working with new AMRC archives.
+    """
+    archive = Path(archive_dir)
+    primary = archive / mask_filename
+    if primary.exists():
+        return primary
+    # Try the sibling format. Preserve any non-standard prefix so a future
+    # "masks_half.mkv" → "masks_half.amrc" mapping still works.
+    stem = primary.stem
+    siblings = []
+    if mask_filename.endswith(".mkv"):
+        siblings.append(archive / f"{stem}.amrc")
+    elif mask_filename.endswith(".amrc"):
+        siblings.append(archive / f"{stem}.mkv")
+    # Also try the canonical names as a last resort.
+    siblings.extend([archive / "masks.amrc", archive / "masks.mkv"])
+    for sib in siblings:
+        if sib.exists():
+            return sib
+    return primary  # caller will see FileNotFoundError downstream
+
+
 def _load_renderer_and_masks(
     archive_dir: str,
     device: str,
@@ -1904,9 +2004,12 @@ def _load_renderer_and_masks(
         )
     renderer = _load_renderer(str(renderer_path), device)
 
-    mask_video_path = Path(archive_dir) / mask_filename
+    mask_video_path = _resolve_mask_path(archive_dir, mask_filename)
     if not mask_video_path.exists():
-        raise FileNotFoundError(f"Mask video not found: {mask_video_path}")
+        raise FileNotFoundError(
+            f"Mask file not found: {mask_video_path} (also tried .amrc / .mkv "
+            f"siblings inside {archive_dir})."
+        )
     masks = _load_masks_from_archive(mask_video_path)
 
     return renderer, masks, mask_video_path
@@ -1955,12 +2058,14 @@ def inflate_renderer(
 
     # ---- Determine mask source ----
     mask_source = os.environ.get("INFLATE_MASK_SOURCE", "archive")
-    mask_video_path = Path(archive_dir) / mask_filename
+    mask_video_path = _resolve_mask_path(archive_dir, mask_filename)
 
-    # Auto-detect: if masks.mkv exists in archive, use it; otherwise fall back
+    # Auto-detect: if a mask file exists in archive (either .mkv or .amrc),
+    # use it; otherwise fall back to SegNet extraction.
     if mask_source == "archive" and not mask_video_path.exists():
         print(
-            f"  WARNING: {mask_video_path} not found in archive. "
+            f"  WARNING: no mask file found in archive (looked for "
+            f"{mask_filename} and .amrc/.mkv siblings). "
             f"Falling back to SegNet extraction (NOT contest-compliant).",
             file=sys.stderr,
         )
@@ -2732,14 +2837,18 @@ def _inflate_constrained_gen(
     print(f"  Mini-scorers loaded on {device}", file=sys.stderr)
 
     # ---- Load masks ----
-    mask_video_path = archive_path / mask_filename
+    mask_video_path = _resolve_mask_path(archive_path, mask_filename)
     if not mask_video_path.exists():
         # Try .pt fallback
         mask_pt = archive_path / "masks.pt"
         if mask_pt.exists():
             masks = torch.load(str(mask_pt), map_location="cpu", weights_only=True)
         else:
-            print(f"FATAL: No mask file in {archive_dir}", file=sys.stderr)
+            print(
+                f"FATAL: No mask file in {archive_dir} (looked for "
+                f"{mask_filename}, .amrc/.mkv siblings, and masks.pt)",
+                file=sys.stderr,
+            )
             sys.exit(1)
     else:
         masks = _load_masks_from_archive(mask_video_path)

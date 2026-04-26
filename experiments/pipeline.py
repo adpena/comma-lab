@@ -160,6 +160,14 @@ class PipelineConfig:
     brotli: bool = False
     mask_crf: int = 50
 
+    # Mask codec for the ARCHIVE artifact. "av1_monochrome" is the
+    # legacy default (lossy, ffmpeg dependency); "argmax_rle" is the
+    # Yousfi council #8 lossless codec (pure Python, single-file
+    # `tac.lossless.argmax_codec`). The TRAINING masks always use the
+    # lossy AV1 path because we already store full-resolution intermediates
+    # on disk; only the in-archive copy is affected by this flag.
+    mask_codec: str = "av1_monochrome"
+
     # Weight compression: "fp4" (current FP4+codebook), "int4_lzma2" (int4+LZMA2),
     # or "auto" (try int4_lzma2 first, fall back to fp4 if quality degrades too much)
     weight_compression: str = "fp4"
@@ -215,23 +223,64 @@ def step_extract_masks(cfg: PipelineConfig) -> tuple[Path, Path]:
         _mark_done(out, "masks_full", {"n_masks": masks.shape[0], "bytes": nbytes})
 
     # Half-frame masks (600 frames) — for archive only
+    archive_suffix = ".amrc" if cfg.mask_codec == "argmax_rle" else ".mkv"
+    archive_basename = f"masks_half{archive_suffix}" if cfg.half_frame else None
+
     if cfg.masks_archive and Path(cfg.masks_archive).exists():
         half_masks_path = Path(cfg.masks_archive)
         _log(f"Using pre-extracted half-frame masks: {half_masks_path}")
     elif cfg.half_frame:
-        if _step_done(out, "masks_half"):
-            half_masks_path = out / "masks_half.mkv"
+        # Cache key is keyed off codec name so a codec switch invalidates.
+        cache_step = f"masks_half_{cfg.mask_codec}"
+        cached_path = out / archive_basename
+        if _step_done(out, cache_step) and cached_path.exists():
+            half_masks_path = cached_path
+            _log(f"Reusing cached half-frame archive: {half_masks_path}")
         else:
-            _log("Building half-frame masks from full masks...")
-            from tac.mask_codec import decode_masks, encode_masks
-            full = decode_masks(str(full_masks_path))
-            half = full[1::2]  # odd frames only
-            half_masks_path = out / "masks_half.mkv"
-            nbytes = encode_masks(half, half_masks_path, crf=cfg.mask_crf)
-            _log(f"  Half masks: {half.shape[0]} frames, {nbytes:,} bytes")
-            _mark_done(out, "masks_half", {"n_masks": half.shape[0], "bytes": nbytes})
+            _log(
+                f"Building half-frame archive masks via codec={cfg.mask_codec}..."
+            )
+            from tac.mask_codec import decode_masks_auto, encode_masks_auto
+            # full_masks_path is always the AV1 intermediate (lossy training cache).
+            full = decode_masks_auto(str(full_masks_path), codec="av1_monochrome")
+            half = full[1::2]
+            half_masks_path = cached_path
+            if cfg.mask_codec == "argmax_rle":
+                nbytes = encode_masks_auto(half, half_masks_path, codec="argmax_rle")
+            else:
+                nbytes = encode_masks_auto(
+                    half, half_masks_path, codec="av1_monochrome",
+                    crf=cfg.mask_crf,
+                )
+            _log(f"  Half masks: {half.shape[0]} frames, {nbytes:,} bytes "
+                 f"({cfg.mask_codec})")
+            _mark_done(out, cache_step, {
+                "n_masks": int(half.shape[0]),
+                "bytes": nbytes,
+                "codec": cfg.mask_codec,
+            })
     else:
-        half_masks_path = full_masks_path  # no half-frame, use full for archive too
+        # No half-frame — archive uses the full mask source.
+        if cfg.mask_codec == "argmax_rle":
+            # Re-encode the full sequence under AMRC for the archive copy.
+            cache_step = f"masks_full_{cfg.mask_codec}"
+            cached_path = out / f"masks_full{archive_suffix}"
+            if _step_done(out, cache_step) and cached_path.exists():
+                half_masks_path = cached_path
+                _log(f"Reusing cached AMRC archive masks: {half_masks_path}")
+            else:
+                from tac.mask_codec import decode_masks_auto, encode_masks_auto
+                full = decode_masks_auto(str(full_masks_path), codec="av1_monochrome")
+                half_masks_path = cached_path
+                nbytes = encode_masks_auto(full, half_masks_path, codec="argmax_rle")
+                _log(f"  AMRC archive masks: {full.shape[0]} frames, {nbytes:,} bytes")
+                _mark_done(out, cache_step, {
+                    "n_masks": int(full.shape[0]),
+                    "bytes": nbytes,
+                    "codec": cfg.mask_codec,
+                })
+        else:
+            half_masks_path = full_masks_path  # legacy: archive uses AV1 intermediate
 
     return full_masks_path, half_masks_path
 
@@ -1011,11 +1060,28 @@ def step_archive(cfg: PipelineConfig, renderer_bin: Path, poses_path: Path,
     _log("Building submission archive")
     from tac.submission_archive import (
         build_submission_archive, RENDERER_SUBMISSION_MANIFEST,
-        RENDERER_COMPACT_MANIFEST,
+        RENDERER_COMPACT_MANIFEST, RENDERER_AMRC_MANIFEST,
     )
 
     is_bin = poses_path.suffix == ".bin"
-    manifest = RENDERER_COMPACT_MANIFEST if (cfg.binary_poses or is_bin) else RENDERER_SUBMISSION_MANIFEST
+    archive_mask_path = Path(cfg.masks_archive or cfg.masks)
+    is_amrc = archive_mask_path.suffix.lower() == ".amrc"
+
+    if is_amrc:
+        # AMRC manifest: lossless argmax-RLE codec instead of AV1.
+        # The pose field is .pt by default; override to .bin if requested.
+        if cfg.binary_poses or is_bin:
+            from tac.submission_archive import ArchiveManifest
+            manifest = ArchiveManifest(
+                renderer_bin=True, masks_amrc=True, optimized_poses_bin=True,
+            )
+        else:
+            manifest = RENDERER_AMRC_MANIFEST
+    else:
+        manifest = (
+            RENDERER_COMPACT_MANIFEST if (cfg.binary_poses or is_bin)
+            else RENDERER_SUBMISSION_MANIFEST
+        )
 
     # Include gradient corrections if available (Eureka 6 — Contrarian)
     corr_path = corrections_bin if (corrections_bin and corrections_bin.exists()) else None
@@ -1024,6 +1090,7 @@ def step_archive(cfg: PipelineConfig, renderer_bin: Path, poses_path: Path,
         manifest = ArchiveManifest(
             renderer_bin=manifest.renderer_bin,
             masks_mkv=manifest.masks_mkv,
+            masks_amrc=manifest.masks_amrc,
             optimized_poses_pt=manifest.optimized_poses_pt,
             optimized_poses_bin=manifest.optimized_poses_bin,
             gradient_corrections_bin=True,
@@ -1033,7 +1100,8 @@ def step_archive(cfg: PipelineConfig, renderer_bin: Path, poses_path: Path,
     result = build_submission_archive(
         output_path=archive_path,
         renderer_bin=renderer_bin,
-        masks_mkv=cfg.masks_archive or cfg.masks,
+        masks_mkv=str(archive_mask_path) if not is_amrc else None,
+        masks_amrc=str(archive_mask_path) if is_amrc else None,
         optimized_poses_pt=None if is_bin else poses_path,
         optimized_poses_bin=poses_path if is_bin else None,
         gradient_corrections_bin=corr_path,

@@ -866,6 +866,23 @@ def extract_half_masks(
     return extract_masks(odd_frames, segnet, device=device, batch_size=batch_size)
 
 
+_AV1_MONOCHROME = "av1_monochrome"
+_ENTROPY_LOSSLESS = "entropy_lossless"
+_ARGMAX_RLE = "argmax_rle"
+
+# Canonical mask-format identifiers used across the pipeline. Any new
+# codec MUST be added here and routed in encode_masks_auto / decode_masks_auto
+# before any callsite is allowed to use it.
+SUPPORTED_MASK_FORMATS = (
+    "av1",                 # alias for av1_monochrome (legacy default)
+    _AV1_MONOCHROME,
+    "vvc",
+    "entropy",             # alias for entropy_lossless
+    _ENTROPY_LOSSLESS,
+    _ARGMAX_RLE,           # Yousfi council #8 lossless RLE+Huffman+delta codec
+)
+
+
 def encode_masks_auto(
     masks: torch.Tensor,
     output_path: str | Path,
@@ -876,24 +893,35 @@ def encode_masks_auto(
 
     Args:
         masks: (N, H, W) long tensor with values in [0, NUM_CLASSES)
-        output_path: output file path (.mp4 for av1, .266 for vvc, .msk for entropy)
-        codec: "av1", "vvc", or "entropy"
+        output_path: output file path. Suffix is informational, not trusted —
+            prefer ``.mkv`` for av1, ``.266`` for vvc, ``.bin`` for entropy,
+            ``.amrc`` for argmax_rle.
+        codec: one of SUPPORTED_MASK_FORMATS
         **kwargs: passed to underlying encoder (crf/fps for av1, qp/fps for vvc,
-                  backend for entropy)
+                  backend for entropy; argmax_rle takes no kwargs)
 
     Returns:
         File size in bytes
     """
-    if codec == "av1":
+    if codec in ("av1", _AV1_MONOCHROME):
         return encode_masks(masks, output_path, **kwargs)
     elif codec == "vvc":
         return encode_masks_vvc(masks, output_path, **kwargs)
-    elif codec == "entropy":
+    elif codec in ("entropy", _ENTROPY_LOSSLESS):
         from .mask_entropy_coder import encode_masks_entropy
 
         return encode_masks_entropy(masks, output_path, **kwargs)
+    elif codec == _ARGMAX_RLE:
+        # Local import keeps numpy-only path lazy; argmax_rle does NOT
+        # depend on torch at the inflate boundary.
+        from .lossless.argmax_codec import pack_archive
+
+        return pack_archive(masks, output_path)
     else:
-        raise ValueError(f"Unknown mask codec: {codec!r} (use 'av1', 'vvc', or 'entropy')")
+        raise ValueError(
+            f"Unknown mask codec: {codec!r}. "
+            f"Supported: {SUPPORTED_MASK_FORMATS}"
+        )
 
 
 def decode_masks_auto(
@@ -905,22 +933,59 @@ def decode_masks_auto(
 
     Args:
         mask_path: path to encoded mask file
-        codec: "av1", "vvc", or "entropy"
+        codec: one of SUPPORTED_MASK_FORMATS
         **kwargs: passed to underlying decoder
 
     Returns:
         (N, H, W) long tensor with values in [0, NUM_CLASSES)
     """
-    if codec == "av1":
+    if codec in ("av1", _AV1_MONOCHROME):
         return decode_masks(mask_path, **kwargs)
     elif codec == "vvc":
         return decode_masks_vvc(mask_path, **kwargs)
-    elif codec == "entropy":
+    elif codec in ("entropy", _ENTROPY_LOSSLESS):
         from .mask_entropy_coder import decode_masks_entropy
 
         return decode_masks_entropy(mask_path, **kwargs)
+    elif codec == _ARGMAX_RLE:
+        from .lossless.argmax_codec import unpack_archive
+
+        return unpack_archive(mask_path)
     else:
-        raise ValueError(f"Unknown mask codec: {codec!r} (use 'av1', 'vvc', or 'entropy')")
+        raise ValueError(
+            f"Unknown mask codec: {codec!r}. "
+            f"Supported: {SUPPORTED_MASK_FORMATS}"
+        )
+
+
+def detect_mask_codec(path: str | Path) -> str:
+    """Best-effort codec sniffing from the file's first bytes.
+
+    Returns one of ``av1_monochrome``, ``entropy_lossless``, ``argmax_rle``,
+    or raises ValueError for unrecognized data. Used by the inflate-side
+    loader to pick the right decoder when only the file path is known.
+
+    Suffix is checked LAST so a wrapper renaming (.mkv → .bin etc.) cannot
+    silently route to the wrong decoder — content-based detection only.
+    """
+    path = Path(path)
+    if not path.exists():
+        raise FileNotFoundError(f"Mask file not found: {path}")
+    head = path.read_bytes()[:32]
+    if len(head) < 4:
+        raise ValueError(f"Mask file too small to identify codec: {path}")
+    # AMRC magic from src/tac/lossless/argmax_codec.py.
+    if head[:4] == b"AMRC":
+        return _ARGMAX_RLE
+    # Entropy coder magic from src/tac/mask_entropy_coder.py.
+    if head[:4] == b"MSKV":
+        return _ENTROPY_LOSSLESS
+    # Matroska / WebM EBML header used by AV1 in our pipeline (.mkv files).
+    if head[:4] == b"\x1a\x45\xdf\xa3":
+        return _AV1_MONOCHROME
+    raise ValueError(
+        f"Unrecognized mask codec for {path}; first bytes: {head[:8]!r}"
+    )
 
 
 def measure_mask_rate(
