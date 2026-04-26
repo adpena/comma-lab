@@ -136,6 +136,25 @@ def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
                    help="Probability of using the noisy mask variant on each "
                         "training step (default 0.5 = 50/50 mix).")
 
+    # Half-frame mask simulation: replace mask_t with inverse-warp(mask_t1)
+    # so the renderer learns the same mask distribution it sees at inflate
+    # when the archive ships only odd-frame masks (Quantizr paradigm — the
+    # main rate lever, saves ~50% of mask bytes).
+    #
+    # Without this, the model trains on (mask_t, mask_t1) where both are
+    # ground-truth, but at inflate sees (warp(mask_t1), mask_t1) where
+    # mask_t is approximated. This train/inflate mismatch costs 0.05–0.10
+    # score points. Wiring closes the gap.
+    #
+    # Zoom scalars come from analytical lane-mark-speed estimation (no GT
+    # poses needed — the masks themselves are sufficient per Hotz). The
+    # warp uses tac.radial_zoom.RadialZoomWarp.warp_inverse_masks.
+    p.add_argument("--mask-half-sim-prob", type=float, default=0.0,
+                   help="Probability of replacing mask_t with inverse-warp("
+                        "mask_t1) during training (default 0.0 = off). Set to "
+                        "0.5 when shipping a half-frame archive (Quantizr "
+                        "paradigm) so train/inflate distributions match.")
+
     # KL distillation: Quantizr's secret sauce per CLAUDE.md. Adds Hinton-style
     # KL divergence on SegNet soft distributions ALONGSIDE the standard scorer
     # loss (NOT replacing it — that caused PoseNet collapse historically).
@@ -288,6 +307,14 @@ def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
     args.use_per_class_weights = _resolve(getattr(args, "use_per_class_weights", None),
                                            "use_per_class_weights", False)
     args.use_swa = _resolve(getattr(args, "use_swa", None), "use_swa", False)
+    # Half-frame mask simulation (Lane D2). When enabled, training periodically
+    # replaces mask_t with inverse_warp(mask_t1, analytical_zoom[k]) so the
+    # renderer learns the same distribution it sees at inflate when the
+    # archive ships only odd-frame masks.
+    args.mask_half_sim_prob = _resolve(
+        getattr(args, "mask_half_sim_prob", None),
+        "mask_half_sim_prob", 0.0,
+    )
     args.latent_ch = _resolve(args.latent_ch, "latent_ch", 8)
     args.latent_shapes = profile_vals.get("latent_shapes", ((6, 8), (12, 16), (24, 32)))
     args.residual_hidden = _resolve(args.residual_hidden, "residual_hidden", 32)
@@ -540,6 +567,29 @@ def train(args: argparse.Namespace):
         print(f"[masks] Noisy-mask augmentation enabled "
               f"(prob={args.mask_noise_prob}, disagreement vs GT={disagree:.4f})")
 
+    # Half-frame mask simulation precompute. When --mask-half-sim-prob > 0,
+    # we periodically replace mask_t with inverse_warp(mask_t1, zoom[k]) so
+    # the renderer learns the same distribution it sees at inflate. Compute
+    # the analytical zoom scalars once from the masks themselves (Hotz: lane
+    # markings encode forward speed → radial zoom from FoE), no GT poses
+    # needed. RadialZoomWarp + warp_inverse_masks come from tac.radial_zoom.
+    sim_zoom_warp = None
+    sim_warp_cache: dict[int, torch.Tensor] = {}
+    if getattr(args, "mask_half_sim_prob", 0.0) > 0:
+        from tac.lane_mark_speed import zoom_from_masks
+        from tac.radial_zoom import RadialZoomWarp
+        n_sim_pairs = all_masks.shape[0] // 2
+        sim_zooms = zoom_from_masks(all_masks)  # (n_pairs,) float32
+        sim_zoom_warp = RadialZoomWarp(n_pairs=n_sim_pairs).to(device)
+        with torch.no_grad():
+            sim_zoom_warp.zoom_scalars.data.copy_(
+                sim_zooms.clamp(-sim_zoom_warp.max_zoom_log, sim_zoom_warp.max_zoom_log)
+            )
+        print(f"[masks] Half-frame simulation enabled "
+              f"(prob={args.mask_half_sim_prob}, "
+              f"zoom mean={sim_zooms.mean():.4f}, std={sim_zooms.std():.4f}, "
+              f"n_pairs={n_sim_pairs})")
+
     # Build model (dispatch by variant)
     if args.variant == "wavelet_renderer":
         model = build_wavelet_renderer(
@@ -780,6 +830,20 @@ def train(args: argparse.Namespace):
                 mask_t, mask_t1 = mask_pair_from_index(all_masks, start)
             mask_t = mask_t.to(device)
             mask_t1 = mask_t1.to(device)
+
+            # Half-frame mask simulation (Quantizr paradigm). With prob
+            # --mask-half-sim-prob, replace mask_t with inverse_warp(mask_t1)
+            # so this pair simulates inflate-time conditions where only the
+            # odd-frame mask was archived. The GT pair (gt_pair below) is
+            # unchanged — we still measure renderer output against the true
+            # frames; only the mask INPUT distribution shifts.
+            if (sim_zoom_warp is not None
+                    and random.random() < args.mask_half_sim_prob):
+                pair_idx_int = start // 2
+                pair_idx_t = torch.tensor([pair_idx_int], device=device,
+                                          dtype=torch.long)
+                mask_t = sim_zoom_warp.warp_inverse_masks(mask_t1, pair_idx_t)
+
             gt_pair = pair_from_frames(gt_frames, start).to(device)
 
             # Horizontal flip augmentation (50% probability)

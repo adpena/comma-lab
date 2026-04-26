@@ -152,3 +152,54 @@ def test_warp_inverse_validates_indices_within_bounds() -> None:
     masks = torch.zeros(2, 384, 512, dtype=torch.long)
     with pytest.raises((IndexError, RuntimeError)):
         zw.warp_inverse_masks(masks, torch.tensor([0, 999]))
+
+
+# ── Lane D2: profile validation for mask_half_sim_prob ───────────────────
+
+
+def test_preflight_catches_mask_half_sim_without_zoom_flow() -> None:
+    """A profile setting mask_half_sim_prob > 0 without use_zoom_flow=True
+    is dead-weight compute (the renderer can't consume the flow signal)."""
+    from tac.preflight import preflight_profiles, PreflightError
+    from tac.profiles import PROFILES
+
+    # Inject a bad profile temporarily
+    bad = dict(PROFILES["shiraz"])
+    bad["mask_half_sim_prob"] = 0.5
+    bad["use_zoom_flow"] = False
+    PROFILES["__bad_test__"] = bad
+    try:
+        with pytest.raises(PreflightError) as ei:
+            preflight_profiles(strict=True, verbose=False)
+        msg = str(ei.value)
+        assert "mask_half_sim_prob" in msg
+        assert "use_zoom_flow" in msg
+    finally:
+        del PROFILES["__bad_test__"]
+
+
+def test_preflight_accepts_mask_half_sim_with_zoom_flow() -> None:
+    """The valid combination (both set, both consistent) must pass cleanly."""
+    from tac.preflight import preflight_profiles
+    from tac.profiles import PROFILES
+
+    good = dict(PROFILES["green"])  # already has use_zoom_flow=True
+    good["mask_half_sim_prob"] = 0.5
+    PROFILES["__good_test__"] = good
+    try:
+        # Should not raise
+        violations = preflight_profiles(strict=False, verbose=False)
+        bad_for_us = [v for v in violations if "__good_test__" in v]
+        assert not bad_for_us, f"unexpected violations: {bad_for_us}"
+    finally:
+        del PROFILES["__good_test__"]
+
+
+def test_den_profile_consistency() -> None:
+    """The DEN profile (Lane C) must satisfy the new rule."""
+    from tac.profiles import DEN
+    if DEN.get("mask_half_sim_prob", 0) > 0:
+        assert DEN.get("use_zoom_flow"), (
+            "DEN sets mask_half_sim_prob but use_zoom_flow not True — "
+            "would trigger preflight failure"
+        )

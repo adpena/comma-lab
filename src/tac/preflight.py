@@ -1556,6 +1556,27 @@ def preflight_profiles(strict: bool = True, verbose: bool = True) -> list[str]:
             elif not (1 <= depth <= 4):
                 violations.append(f"profile {name!r} depth={depth} out of range [1,4]")
 
+        # Lane D2: mask_half_sim_prob requires use_zoom_flow=True. The
+        # training-side simulation derives the warp from RadialZoomWarp via
+        # tac.lane_mark_speed.zoom_from_masks; with use_zoom_flow=False the
+        # renderer doesn't accept the flow signal and the simulation is dead
+        # weight (consumes compute, doesn't shift the trained distribution).
+        msp = prof.get("mask_half_sim_prob", 0.0)
+        if msp is not None and msp > 0:
+            if not isinstance(msp, (int, float)) or not (0 <= msp <= 1):
+                violations.append(
+                    f"profile {name!r} mask_half_sim_prob={msp!r} must be in [0, 1]"
+                )
+            if not prof.get("use_zoom_flow"):
+                violations.append(
+                    f"profile {name!r} sets mask_half_sim_prob={msp} but "
+                    f"use_zoom_flow={prof.get('use_zoom_flow')!r}. The "
+                    f"training-side mask-half simulation only matches inflate "
+                    f"behaviour when use_zoom_flow=True (the inflate side warps "
+                    f"odd-frame masks via RadialZoomWarp). Either enable "
+                    f"use_zoom_flow=True or set mask_half_sim_prob=0."
+                )
+
     if verbose and violations:
         print(f"  [profiles] {len(violations)} violation(s):")
         for v in violations:

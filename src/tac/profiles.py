@@ -2489,6 +2489,12 @@ DEN = {
     # Mask augmentation: train on mixed CRF so we don't overfit to one mask
     # encoding. Tested at compress time on whatever Lane A0 picks.
     "mask_noise_prob": 0.5,         # 50% of training pairs use augmented mask
+    # Half-frame mask simulation (Lane D2): with prob 0.5, replace mask_t with
+    # inverse_warp(mask_t1, analytical_zoom[k]) so the renderer learns the
+    # paradigm it sees at inflate when the archive ships only odd-frame masks.
+    # Closes the train/inflate distribution gap that would otherwise cost
+    # 0.05–0.10 score points when shipping half-frame.
+    "mask_half_sim_prob": 0.5,
     # Hard-frame curriculum carried from SHIRAZ.
     "hard_frame_ratio": 0.3,
     "error_replay_every": 100,

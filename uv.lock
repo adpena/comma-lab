@@ -1252,7 +1252,7 @@ wheels = [
 
 [[package]]
 name = "tac"
-version = "1.0.0"
+version = "1.0.5"
 source = { editable = "." }
 dependencies = [
     { name = "click" },
@@ -1280,17 +1280,17 @@ viz = [
 
 [package.metadata]
 requires-dist = [
-    { name = "click", specifier = ">=8.0" },
+    { name = "click", specifier = ">=8.0,<9.0" },
     { name = "hypothesis", marker = "extra == 'dev'", specifier = ">=6.0" },
     { name = "marimo", marker = "extra == 'notebooks'", specifier = ">=0.3" },
     { name = "mlx", marker = "extra == 'mlx'", specifier = ">=0.5" },
-    { name = "numpy", specifier = ">=1.24" },
+    { name = "numpy", specifier = ">=1.24,<3.0" },
     { name = "plotly", marker = "extra == 'viz'", specifier = ">=5.0" },
-    { name = "pydantic", specifier = ">=2.0" },
+    { name = "pydantic", specifier = ">=2.0,<3.0" },
     { name = "pytest", marker = "extra == 'dev'", specifier = ">=8.0" },
     { name = "pytest-timeout", marker = "extra == 'dev'", specifier = ">=2.0" },
     { name = "ruff", marker = "extra == 'dev'", specifier = ">=0.4" },
-    { name = "torch", specifier = ">=2.0" },
+    { name = "torch", specifier = ">=2.0,<3.0" },
 ]
 provides-extras = ["mlx", "viz", "notebooks", "dev"]
 
