@@ -251,6 +251,7 @@ def preflight_all(
         preflight_profiles(strict=True, verbose=verbose)
         preflight_arch_consistency(strict=True, verbose=verbose)
         preflight_filename_contract(strict=True, verbose=verbose)
+        preflight_canonical_checkpoints(strict=True, verbose=verbose)
 
     # 2. Training inputs (only if profile + tto_frames provided)
     if profile_name and tto_frames_path and gt_poses_path and masks_path and profile_arch:
@@ -1312,6 +1313,79 @@ def _extract_write_literals(path: Path) -> set[str]:
             for arg in node.args[1:]:
                 _record_write(arg)
     return found
+
+
+def preflight_canonical_checkpoints(strict: bool = True, verbose: bool = True) -> list[str]:
+    """Validate that every training producer's emitted checkpoint name is
+    in the canonical registry (tac.checkpoint_names.canonical_checkpoint_names).
+
+    Without this, deploys aborted at Stage 4 of the bootstrap because the
+    producer wrote `renderer_<profile>_best_fp32.pt` but the consumer probe
+    only had `distill_*.pt`. We wasted a full DEN training run on 2026-04-26
+    before realising this. Now: any new training script that emits a
+    different name MUST be added to PRODUCER_OUTPUTS in checkpoint_names.py
+    AND its filename MUST appear in canonical_checkpoint_names() output.
+    """
+    violations: list[str] = []
+    try:
+        from tac.checkpoint_names import (
+            PRODUCER_OUTPUTS,
+            canonical_checkpoint_names,
+        )
+    except ImportError as e:
+        msg = f"  [canonical_checkpoints] cannot import tac.checkpoint_names: {e}"
+        if verbose:
+            print(msg)
+        return [msg]
+
+    # Build the set of all canonical names across all known profiles. Each
+    # profile-specific name has a placeholder so we strip the profile and
+    # check the suffix pattern.
+    try:
+        from tac.profiles import PROFILES
+        profiles = sorted(PROFILES.keys())
+    except ImportError:
+        profiles = []
+
+    all_canonical: set[str] = set(canonical_checkpoint_names(profile=None))
+    for prof in profiles:
+        all_canonical.update(canonical_checkpoint_names(profile=prof))
+
+    for producer_path, expected_name in PRODUCER_OUTPUTS.items():
+        # Substitute <profile> placeholder if present.
+        if "<profile>" in expected_name:
+            # Match against any profile-instantiated form.
+            matched = any(
+                name.startswith("renderer_") and name.endswith("_best_fp32.pt")
+                for name in all_canonical
+            )
+        else:
+            matched = expected_name in all_canonical
+        if not matched:
+            violations.append(
+                f"checkpoint_names.PRODUCER_OUTPUTS[{producer_path!r}] = "
+                f"{expected_name!r} but that name is NOT in "
+                f"canonical_checkpoint_names() output. Update either the "
+                f"producer's output naming or canonical_checkpoint_names() "
+                f"to match. 2026-04-26 hardening: this catches the "
+                f"renderer_<profile>_best_fp32.pt vs distill_*.pt mismatch "
+                f"that wasted a DEN training run."
+            )
+
+    if verbose and violations:
+        print(f"  [canonical_checkpoints] {len(violations)} violation(s):")
+        for v in violations:
+            print(f"    • {v}")
+    elif verbose:
+        print(f"  [canonical_checkpoints] OK: {len(PRODUCER_OUTPUTS)} producer(s) "
+              f"validated against {len(all_canonical)} canonical name(s)")
+
+    if violations and strict:
+        raise PreflightError(
+            "CANONICAL CHECKPOINT NAMES VIOLATIONS:\n"
+            + "\n".join(f"  • {v}" for v in violations)
+        )
+    return violations
 
 
 def preflight_filename_contract(

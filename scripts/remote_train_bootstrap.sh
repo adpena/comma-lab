@@ -116,17 +116,23 @@ print('provenance:', json.dumps(prov, indent=2))
         --device cuda \
         --output-dir "$OUTPUT_SUBDIR"
 
-    # Stage 4: probe canonical checkpoint (matches deploy_vastai's
-    # CANONICAL_CHECKPOINT_NAMES order).
+    # Stage 4: probe canonical checkpoint via tac.checkpoint_names registry.
+    # ONE source of truth shared with deploy_vastai.py. 2026-04-26: DEN
+    # deploy crashed because train_renderer emits `renderer_den_best_fp32.pt`
+    # but the old list only had `distill_*.pt`. Centralised registry
+    # eliminates this class of bug.
     echo "=== STAGE 4 ($PROFILE): probe canonical checkpoint ==="
-    CKPT=""
-    for name in distill_phase3_best.pt distill_phase2_best.pt qat_best_float.pt distill_latest.pt; do
-        if [ -f "$LOG_DIR/$name" ]; then
-            CKPT="$LOG_DIR/$name"
-            echo "  using $CKPT"
-            break
-        fi
-    done
+    CKPT=$("$PYBIN" -c "
+import sys; sys.path.insert(0, '$WORKSPACE/src')
+from pathlib import Path
+from tac.checkpoint_names import canonical_checkpoint_names
+log_dir = Path('$LOG_DIR')
+for name in canonical_checkpoint_names('$PROFILE'):
+    p = log_dir / name
+    if p.exists():
+        print(p)
+        break
+")
     if [ -z "$CKPT" ]; then
         echo "ABORT: no canonical checkpoint found in $LOG_DIR"
         ls -la "$LOG_DIR/"

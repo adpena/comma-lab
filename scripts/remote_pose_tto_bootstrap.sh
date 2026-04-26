@@ -114,6 +114,11 @@ print('provenance written:', '$PROVENANCE')
     # build with manifest validation) → step_eval (CUDA auth eval).
     echo "=== STAGE 3: pipeline.py compress (FULL post-training + auth eval) ==="
     echo "[$(date -u +%FT%TZ)] launching pipeline.py compress profile=$PROFILE" >> "$HEARTBEAT"
+    # batch-pairs=8 (default 16 OOMs on 4090 24GB with EfficientNet-B2 SegNet
+    # in the gradient graph — 22.5GB allocated, 41MB free at crash on
+    # 2026-04-26 SHIRAZ). 8 is the safe ceiling for this hardware.
+    # PYTORCH_CUDA_ALLOC_CONF=expandable_segments helps with fragmentation.
+    export PYTORCH_CUDA_ALLOC_CONF=expandable_segments:True
     "$PYBIN" -u "$WORKSPACE/experiments/pipeline.py" compress \
         --profile "$PROFILE" \
         --video "$WORKSPACE/upstream/videos/0.mkv" \
@@ -121,6 +126,7 @@ print('provenance written:', '$PROVENANCE')
         --masks "$MASKS" \
         --device cuda \
         --output-dir "$OUTPUT_SUBDIR" \
+        --pose-batch-pairs 8 \
         2>&1 | tee "$LOG_DIR/pipeline.log"
 
     # Stage 4: snapshot final results into a record file the human can keep.

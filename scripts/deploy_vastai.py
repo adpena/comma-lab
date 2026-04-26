@@ -286,15 +286,13 @@ def launch(profile: str, instance_id: int, sync: bool = True) -> str:
     # then `ls -t | head -1` would silently pick the most-recent .pt — could
     # be a stale partial save from a failed Fridrich/QAT run. R39 restricts
     # to canonical training-output basenames + logs the choice loudly.
-    # R39+: removed distill_best.pt — no producer writes that name
-    # (caught by preflight_filename_contract on first run; R33 removed
-    # it from _resolve_fridrich_output for the same reason).
-    CANONICAL_CHECKPOINT_NAMES = (
-        "distill_phase3_best.pt",
-        "distill_phase2_best.pt",
-        "qat_best_float.pt",
-        "distill_latest.pt",
-    )
+    # 2026-04-26 hardening: canonical name registry now lives in
+    # tac.checkpoint_names so deploy_vastai, remote_train_bootstrap.sh,
+    # and preflight all share ONE source of truth. Adding a new training
+    # script that emits a different name? Update the registry, not here.
+    sys.path.insert(0, str(REPO_ROOT / "src"))
+    from tac.checkpoint_names import canonical_checkpoint_names
+    CANONICAL_CHECKPOINT_NAMES = canonical_checkpoint_names(profile=profile)
     # Try each canonical name in priority order; first hit wins.
     checkpoint_glob = None
     for name in CANONICAL_CHECKPOINT_NAMES:
