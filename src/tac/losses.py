@@ -1375,3 +1375,226 @@ def train_scorer_proxy(
 
     discriminator.eval()
     return losses_history
+
+
+# ── Yousfi trick #3: UNIWARD-aligned variance-weighted quantization noise ──
+#
+# Companion loss for `tac.fridrich.variance_weighted_noise`. Adds spatially
+# adaptive noise to the renderer's output (concentrated in textured regions
+# per the UNIWARD principle) and measures the L2 distance to the target
+# AFTER the noise has been injected. Training against this loss teaches the
+# renderer to produce outputs that are robust to quantization noise IN the
+# regions the scorer cannot see — which is exactly the regime where, at
+# inflate time, the FP4 / mask-codec pipeline injects most of its real
+# quantization error. Orthogonal to KL distill (T=2.0) and DCT-Q-table
+# losses already in the pipeline; can be combined freely.
+
+def uniward_quant_noise_loss(
+    reconstructed: torch.Tensor,
+    target: torch.Tensor,
+    base_std: float = 2.0,
+    kernel_size: int = 8,
+    mode: str = "variance",
+) -> torch.Tensor:
+    """L2 reconstruction loss after UNIWARD-shaped noise injection.
+
+    The noise field is generated from `target`'s local variance (so the
+    noise budget is keyed off the GT image — a fixed reference — rather
+    than the renderer's evolving output, which would create a feedback
+    loop). The L2 distance is then measured between (reconstructed + noise)
+    and target. As the renderer learns to ignore high-variance noise, the
+    loss decreases; concretely, the renderer is rewarded for producing
+    outputs that survive a worst-case (UNIWARD-distributed) quantization
+    perturbation.
+
+    Operates on either CHW (B, 3, H, W) or HWC (B, H, W, 3) input — both
+    are common in the codebase. The conversion is detected automatically
+    via shape inspection (last-axis-is-3) for symmetry with the existing
+    Fridrich losses.
+
+    Args:
+        reconstructed: renderer output, (B, 3, H, W) or (B, H, W, 3),
+            float in [0, 255]. Gradients flow through this argument.
+        target: ground-truth frames, same shape and range as `reconstructed`.
+            Used (detached) to compute the noise variance field. No
+            gradients flow through target.
+        base_std: average noise std across the image (in pixel units).
+            Default 2.0 corresponds to roughly half the magnitude of FP4
+            weight quantization noise on a 0-255 image — small enough
+            not to dominate the scorer signal but large enough to bite.
+        kernel_size: spatial extent of the local-variance window.
+        mode: 'variance' (UNIWARD default) or 'inverse_variance'
+            (ablation only).
+
+    Returns:
+        Scalar L2 loss tensor with gradients flowing through `reconstructed`.
+    """
+    from tac.fridrich import variance_weighted_noise
+
+    # HWC → CHW for noise generation. The fridrich helper requires CHW.
+    if reconstructed.ndim == 4 and reconstructed.shape[-1] == 3:
+        recon_chw = reconstructed.permute(0, 3, 1, 2).contiguous()
+        target_chw = target.permute(0, 3, 1, 2).contiguous()
+    else:
+        recon_chw = reconstructed
+        target_chw = target
+
+    # Noise is shaped by the GT (a fixed reference) so the loss surface
+    # doesn't shift as the renderer changes its output mid-training. This
+    # also means we can pre-compute the noise field from cached GT in
+    # principle (left for a follow-up optimisation).
+    noise = variance_weighted_noise(
+        target_chw.detach(),
+        base_std=base_std,
+        kernel_size=kernel_size,
+        mode=mode,
+    )
+
+    perturbed = recon_chw + noise
+    return F.mse_loss(perturbed, target_chw)
+
+
+# ── Yousfi trick #5: ScanNet-style spatial uncertainty-weighted loss ──────
+#
+# Companion loss for `tac.fridrich.segnet_uncertainty_map`. The renderer
+# is rewarded for matching the target MORE in pixels SegNet is most
+# confident about (low entropy on the GT) and LESS in pixels SegNet is
+# itself ambiguous about (high entropy — class boundaries, occlusions).
+#
+# Score-mechanic justification: contest seg_distortion is the rate of
+# argmax disagreement on the SegNet input grid. A wrong argmax in a
+# low-entropy region is essentially a "free" point against us — SegNet is
+# confident, so a flip is almost certainly counted. A wrong argmax in a
+# high-entropy region is ambiguous: SegNet itself hovers near the decision
+# boundary there, the contest scorer's argmax is noisy in those pixels,
+# and the renderer's pixel budget is better spent on confident pixels.
+#
+# Council-recorded interaction notes (see CLAUDE.md "Design decisions"):
+#
+#   * Yousfi #3 (variance_weighted_noise) routes UNIWARD-shaped quant
+#     noise into HIGH-VARIANCE (textured) regions. Yousfi #5 routes
+#     reconstruction emphasis into HIGH-CONFIDENCE (low-entropy)
+#     regions. These signals are correlated but NOT identical:
+#     uniform asphalt is low-variance AND low-entropy (lane 0 / road),
+#     a textured tree near a sky/foliage boundary is high-variance AND
+#     high-entropy. Treat the two losses as overlapping (~30-50%
+#     spatial coverage) but not redundant. Keep both weights small
+#     (~0.1) to avoid amplifying the same signal.
+#
+#   * KL distill on SegNet logits (kl_distill_segnet_only) directly
+#     targets the soft probability distribution and is stronger and
+#     more direct than entropy-weighted L1. Running both is safe but
+#     redundant: KL distill subsumes the uncertainty-weighting signal
+#     in the limit. Recommended use: uncertainty-weighted L1 as a
+#     light sweetener (weight ≤ 0.5) when KL distill is OFF; reduce
+#     weight further (≤ 0.1) when KL distill is ON.
+#
+#   * Cost: an extra SegNet forward pass per loss invocation (~10-20%
+#     of one PoseNet forward in our regime). Quantified by Hotz: at
+#     batch_size=8, MPS, the extra cost is ~25 ms/step vs ~210 ms total
+#     step time → ~12 % epoch slowdown. Acceptable when uncertainty
+#     map is computed on the GT (not the prediction), so it can be
+#     CACHED across an epoch in a future optimisation.
+
+def segnet_uncertainty_weighted_loss(
+    reconstructed: torch.Tensor,
+    target: torch.Tensor,
+    segnet,
+    base_loss_fn=F.l1_loss,
+    eps: float = 1e-6,
+    weight_floor: float = 0.1,
+) -> torch.Tensor:
+    """Per-pixel reconstruction loss weighted by inverse SegNet entropy.
+
+    Implements Yousfi #5 (ScanNet-style spatial-uncertainty maps): the
+    renderer's reconstruction error is up-weighted in pixels where SegNet
+    is most confident about the class on the GT frame, and down-weighted
+    in pixels where SegNet itself is ambiguous.
+
+    The weight field is `1 / (eps + H_normalised)` where `H_normalised` is
+    the SegNet entropy map normalised to mean 1 over each batch element,
+    so the average weight equals 1 — keeping the loss on the same scale
+    as the unweighted base loss across content. A `weight_floor` term is
+    added so high-entropy pixels still contribute (the renderer doesn't
+    completely abandon them, which would create boundary artefacts of the
+    kind UNIWARD specifically tries to avoid).
+
+    The base loss is computed in CHW per-channel form, then averaged
+    across channels (so the same per-pixel weight applies to R/G/B).
+
+    Args:
+        reconstructed: renderer output, (B, 3, H, W) or (B, H, W, 3),
+            float in [0, 255]. Gradients flow through this argument.
+        target: ground-truth frames, same shape and range. Used (detached)
+            to compute the entropy map. No gradients flow through target.
+        segnet: frozen upstream SegNet. Required to compute the
+            entropy map. Must be on the same device as the inputs.
+        base_loss_fn: per-element loss function. Default F.l1_loss
+            because L1 has the most direct interpretation in
+            uncertainty-weighted form (each pixel contributes its
+            absolute error, weighted). F.mse_loss is also valid.
+            The function MUST accept (input, target, reduction='none')
+            and return a tensor of the same shape as `input`.
+        eps: numerical stabiliser to avoid division by zero in pixels
+            with zero entropy.
+        weight_floor: minimum weight applied to every pixel before the
+            inverse-entropy boost. Acts as a small uniform residual so
+            high-entropy pixels still receive supervision (default 0.1).
+            Set to 0 to recover the strict inverse-entropy regime.
+
+    Returns:
+        Scalar weighted loss tensor with gradients flowing through
+        `reconstructed`. On the same numerical scale as the unweighted
+        base loss when content is well-conditioned (mean weight ≈ 1).
+
+    Caveat:
+        SegNet is the very network we are trying to fool. Its entropy
+        is a USEFUL proxy for "how much will an argmax flip count against
+        me", not an absolute epistemic-uncertainty measure. See the
+        module-level note in `tac.fridrich.segnet_uncertainty_map`.
+    """
+    from tac.fridrich import segnet_uncertainty_map
+
+    # HWC → CHW for the SegNet path. SegNet preprocess wants CHW.
+    if reconstructed.ndim == 4 and reconstructed.shape[-1] == 3:
+        recon_chw = reconstructed.permute(0, 3, 1, 2).contiguous()
+        target_chw = target.permute(0, 3, 1, 2).contiguous()
+    else:
+        recon_chw = reconstructed
+        target_chw = target
+
+    # Entropy lives on the SegNet input grid (typically 384 x 512); we
+    # interpolate it to the reconstruction grid so per-pixel weights
+    # align with per-pixel base losses. Bilinear keeps the weights
+    # smooth across class-boundary transitions.
+    entropy = segnet_uncertainty_map(segnet, target_chw.detach(), eps=eps)
+    if entropy.shape[-2:] != recon_chw.shape[-2:]:
+        entropy = F.interpolate(
+            entropy,
+            size=recon_chw.shape[-2:],
+            mode="bilinear",
+            align_corners=False,
+        )
+
+    # Normalise entropy to mean 1 per batch element so the inverse-
+    # weighting field has mean ≈ 1, keeping the loss on a comparable
+    # scale to the unweighted base loss.
+    entropy_mean = entropy.mean(dim=(2, 3), keepdim=True).clamp(min=eps)
+    entropy_norm = entropy / entropy_mean
+
+    # Inverse-entropy weight, with a uniform floor so high-entropy
+    # pixels are not entirely ignored. Detach: this is a stop-grad
+    # weight on the loss, not a learnable signal.
+    weight = (weight_floor + 1.0 / (entropy_norm + eps)).detach()
+
+    # Per-element base loss → broadcast weight across the channel dim.
+    per_elem = base_loss_fn(recon_chw, target_chw, reduction="none")
+    # Average across channels so the (B, 1, H, W) weight broadcasts
+    # cleanly. Keeps the loss numerics stable across F.l1_loss /
+    # F.mse_loss / Huber choices.
+    per_pixel = per_elem.mean(dim=1, keepdim=True)  # (B, 1, H, W)
+
+    weighted = per_pixel * weight
+    # Final reduction is mean — divides by total pixel count so the
+    # loss is independent of resolution.
+    return weighted.mean()

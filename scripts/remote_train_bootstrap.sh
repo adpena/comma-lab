@@ -105,8 +105,12 @@ print('provenance:', json.dumps(prov, indent=2))
         DEBIAN_FRONTEND=noninteractive apt-get install -y -qq ffmpeg 2>&1 | tail -2
     fi
     [ -f "$WORKSPACE/README.md" ] || { echo "FATAL: README.md missing — setuptools install will fail. rsync the full repo."; exit 1; }
-    "$PYBIN" -m pip install -q -e . 2>&1 | tail -3
-    "$PYBIN" -m pip install -q av opencv-python pydantic timm einops segmentation_models_pytorch 2>&1 | tail -3
+    # 2026-04-26: canonical via pyproject.toml [project.optional-dependencies.runtime]
+    # — adding a new dep means editing pyproject.toml, NOT this bootstrap.
+    # ensurepip first so pip exists even on a stripped-down container image.
+    "$PYBIN" -m ensurepip --upgrade 2>&1 | tail -1
+    "$PYBIN" -m pip install -q --upgrade pip 2>&1 | tail -1
+    "$PYBIN" -m pip install -q -e ".[runtime]" 2>&1 | tail -3
 
     # Stage 1b: Make upstream/ffmpeg-new usable. Ubuntu 22.04's apt ffmpeg
     # is 4.4.2 — does NOT support `-svtav1-params` that mask_codec.py
