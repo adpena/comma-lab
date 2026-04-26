@@ -1486,6 +1486,11 @@ def preflight_arch_consistency(strict: bool = True, verbose: bool = True) -> lis
 
 PROFILE_REQUIRED_ARCH_KEYS = {
     "base_ch", "mid_ch", "depth", "pose_dim", "padding_mode", "eval_roundtrip",
+    # 2026-04-26 hardening: every renderer profile MUST declare seed +
+    # deterministic explicitly. tools/check_determinism.py refuses to run
+    # without them. SHIRAZ launch crashed mid-deploy on this exact missing
+    # key on 2026-04-26.
+    "seed", "deterministic",
 }
 PROFILE_RECOMMENDED_KEYS = {
     "embed_dim", "motion_hidden", "use_dsconv", "use_dilation",

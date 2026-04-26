@@ -80,20 +80,27 @@ print('provenance:', json.dumps(prov, indent=2))
     HB_PID=$!
     trap "kill $HB_PID 2>/dev/null || true" EXIT
 
-    # Stage 1: use container's base Python (has torch + CUDA pre-wired).
-    # Earlier attempts to create a fresh uv venv pulled torch wheels that
-    # didn't match the host CUDA driver (Error 804). The base pytorch image
-    # is exactly what we need. Pin PYBIN for downstream stages.
-    echo "=== STAGE 1 ($PROFILE): use container Python + install deps ==="
+    # Stage 1: use container's base Python + install ALL system + Python
+    # deps. Hardened against historical failure modes (2026-04-26):
+    #   - fresh uv venv pulled wrong-CUDA torch wheels (Error 804) → use
+    #     container's /opt/conda/bin/python which has matching torch+CUDA.
+    #   - ffprobe/ffmpeg missing → preflight_check + optimize_poses crash.
+    #   - timm/einops/segmentation_models_pytorch missing → upstream
+    #     modules.py fails to import.
+    #   - tac install needs README.md (setuptools readme= field).
+    echo "=== STAGE 1 ($PROFILE): system + Python deps ==="
     PYBIN="/opt/conda/bin/python"
     if [ ! -x "$PYBIN" ]; then
         echo "FATAL: no /opt/conda/bin/python — container is not the expected"
         echo "       pytorch/pytorch:2.5.1-cuda12.4-cudnn9-devel image."
         exit 1
     fi
-    # Install only what's missing; assume torch+numpy are already present.
+    if ! command -v ffprobe >/dev/null 2>&1; then
+        DEBIAN_FRONTEND=noninteractive apt-get install -y -qq ffmpeg 2>&1 | tail -2
+    fi
+    [ -f "$WORKSPACE/README.md" ] || { echo "FATAL: README.md missing — setuptools install will fail. rsync the full repo."; exit 1; }
     "$PYBIN" -m pip install -q -e . 2>&1 | tail -3
-    "$PYBIN" -m pip install -q av opencv-python pydantic 2>&1 | tail -3
+    "$PYBIN" -m pip install -q av opencv-python pydantic timm einops segmentation_models_pytorch 2>&1 | tail -3
 
     # Stage 2: standalone determinism check (CUDA + CUBLAS_WORKSPACE_CONFIG +
     # profile contract). Standalone Python file ⇒ no heredoc quoting issues.
