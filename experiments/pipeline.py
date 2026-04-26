@@ -1571,6 +1571,19 @@ def run_compress(cfg: PipelineConfig) -> None:
     _log(f"Video: {cfg.video}")
     _log(f"Checkpoint: {cfg.checkpoint}")
     _log(f"Device: {cfg.device}")
+
+    # 2026-04-26 Quantizr R2 + Contrarian R2 CRITICAL: --half-frame requires
+    # use_zoom_flow=True so the inflate side can warp frame_t from frame_t1
+    # via RadialZoomWarp. With use_zoom_flow=False the inflate falls back to
+    # repeat_interleave (catastrophic distortion spike — Quantizr R1 #6).
+    # Auto-disable instead of crashing the lane after 2h of training.
+    if cfg.half_frame and not cfg.use_zoom_flow:
+        _log("--half-frame requires use_zoom_flow=True (renderer must have "
+             "RadialZoomWarp to reconstruct even frames). Profile has "
+             "use_zoom_flow=False — disabling --half-frame to prevent "
+             "catastrophic frame-duplication at inflate.", "WARN")
+        cfg.half_frame = False
+
     _log(f"Optimizations: half_frame={cfg.half_frame}, binary_poses={cfg.binary_poses}, brotli={cfg.brotli}")
 
     # Step 0: Extract masks (once, shared across iterations)
