@@ -67,6 +67,7 @@ from tac.losses import (  # noqa: E402
     scorer_forward_pair,
     scorer_loss,
     scorer_loss_cached,
+    segnet_uncertainty_weighted_loss,
 )
 from tac.mask_codec import extract_masks, mask_pair_from_index  # noqa: E402
 from tac.profiles import PROFILES  # noqa: E402
@@ -118,7 +119,37 @@ def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
     p.add_argument("--accum-steps", type=int, default=None)
     p.add_argument("--warmup-epochs", type=int, default=10)
     p.add_argument("--pretrain-epochs", type=int, default=None,
-                   help="Phase 1 epochs: L1+edge loss, no scorer (default: from profile or 0)")
+                   help="Phase 1 epochs: L1+edge loss, no scorer (default: from profile or 0). "
+                        "LEGACY 2-phase API. New profiles should use --phase{1..5}-epochs.")
+    # Quantizr-style 5-phase QAT schedule (R2 C3 architectural fix
+    # 2026-04-26). Per Quantizr's published recipe:
+    #   Phase 1 anchor: pretrain renderer on pixel L1 vs GT only.
+    #   Phase 2 finetune: add SegNet hinge + PoseNet MSE.
+    #   Phase 3 joint: + Fridrich (texture / l_inf / markov / dct_quant) + KL.
+    #   Phase 4 QAT: enable FP4 fake-quant on weights, low LR.
+    #   Phase 5 final: hard-pair-emphasis sampler at very low LR.
+    # Defaults are None so the profile resolver wins; phases with 0 epochs
+    # are skipped (preserving legacy 2-phase profiles).
+    p.add_argument("--phase1-epochs", type=int, default=None,
+                   help="Phase 1 (anchor) epoch count. Pixel L1 only.")
+    p.add_argument("--phase2-epochs", type=int, default=None,
+                   help="Phase 2 (finetune) epoch count. Pixel + scorer.")
+    p.add_argument("--phase3-epochs", type=int, default=None,
+                   help="Phase 3 (joint) epoch count. Full Fridrich + KL stack.")
+    p.add_argument("--phase4-epochs", type=int, default=None,
+                   help="Phase 4 (QAT) epoch count. Enables FP4 fake-quant.")
+    p.add_argument("--phase5-epochs", type=int, default=None,
+                   help="Phase 5 (final) epoch count. Hard-pair emphasis polish.")
+    p.add_argument("--phase1-lr", type=float, default=None,
+                   help="Phase 1 LR (anchor). Default 1e-3.")
+    p.add_argument("--phase2-lr", type=float, default=None,
+                   help="Phase 2 LR (finetune). Default 5e-4.")
+    p.add_argument("--phase3-lr", type=float, default=None,
+                   help="Phase 3 LR (joint). Default 3e-4.")
+    p.add_argument("--phase4-lr", type=float, default=None,
+                   help="Phase 4 LR (QAT). Default 5e-5 (10x reduction from Phase 3).")
+    p.add_argument("--phase5-lr", type=float, default=None,
+                   help="Phase 5 LR (final polish). Default 1e-5.")
     p.add_argument("--max-frames", type=int, default=None,
                    help="Truncate GT frames to first N (for trend / smoke runs). "
                         "Default: use all loaded frames (typically 1200).")
@@ -220,6 +251,16 @@ def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
     p.add_argument("--use-markov-loss", action="store_true", default=None,
                    help="Fridrich HUGO: preserve local gradient statistics")
     p.add_argument("--markov-weight", type=float, default=None)
+    # Yousfi #5 (council 5/0 vote 2026-04-26): ScanNet-style spatial uncertainty
+    # weighting via inverse-SegNet-entropy. Profile keys used by WILDE/SHIRAZ
+    # (weight 0.05) and DEN (weight 0.02 — kept light because DEN already runs
+    # KL distill which subsumes ~80% of the same signal).
+    p.add_argument("--use-uncertainty-loss", action="store_true", default=None,
+                   help="Yousfi #5: weight L1 by inverse-SegNet-entropy (focus "
+                        "loss on pixels SegNet is most confident about)")
+    p.add_argument("--uncertainty-loss-weight", type=float, default=None,
+                   help="Weight applied to segnet_uncertainty_weighted_loss "
+                        "(default 0.0 = disabled). Profiles set 0.02-0.05.")
     p.add_argument("--dct-quant-weight", type=float, default=None,
                    help="Fridrich council #1: JPEG-Q-table-weighted DCT-domain "
                         "residual loss (0=disabled). Penalises low-freq leak; "
@@ -329,6 +370,33 @@ def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
                                        "kl_distill_weight", 0.0)
     args.kl_distill_temperature = _resolve(getattr(args, "kl_distill_temperature", None),
                                             "kl_distill_temperature", 2.0)
+    # Yousfi #5 council wiring (2026-04-26): WILDE/SHIRAZ/DEN profiles set
+    # use_uncertainty_loss=True with weights 0.02-0.05 but train_renderer.py
+    # had no resolver — feature was DEAD CODE in profile (same class of bug
+    # as KL distill above). Per Fridrich R2 C1 audit, wire it through.
+    # See module-level note in tac.losses.segnet_uncertainty_weighted_loss
+    # for caveats (SegNet entropy is a proxy, not absolute uncertainty).
+    args.use_uncertainty_loss = _resolve(getattr(args, "use_uncertainty_loss", None),
+                                          "use_uncertainty_loss", False)
+    args.uncertainty_loss_weight = _resolve(getattr(args, "uncertainty_loss_weight", None),
+                                             "uncertainty_loss_weight", 0.0)
+    # Yousfi #3 (use_variance_noise / variance_noise_*) — RE-ENABLED on
+    # 2026-04-26 after Fridrich R2 C2 fix: the box-filter variance estimator
+    # has been replaced with an un-decimated Daubechies-8 sub-band energy
+    # map (see tac.wavelet_variance.wavelet_variance_map). This is the
+    # UNIWARD-correct construction per Holub & Fridrich 2014 §III.B.
+    # Profiles default to mode='wavelet_db4'; the legacy 'box' / 'variance'
+    # mode is still accepted for A/B comparison ONLY.
+    args.use_variance_noise = _resolve(getattr(args, "use_variance_noise", None),
+                                        "use_variance_noise", False)
+    args.variance_noise_weight = _resolve(getattr(args, "variance_noise_weight", None),
+                                           "variance_noise_weight", 0.1)
+    args.variance_noise_base_std = _resolve(getattr(args, "variance_noise_base_std", None),
+                                             "variance_noise_base_std", 2.0)
+    args.variance_noise_kernel = _resolve(getattr(args, "variance_noise_kernel", None),
+                                           "variance_noise_kernel", 8)
+    args.variance_noise_mode = _resolve(getattr(args, "variance_noise_mode", None),
+                                         "variance_noise_mode", "wavelet_db4")
     args.use_per_class_weights = _resolve(getattr(args, "use_per_class_weights", None),
                                            "use_per_class_weights", False)
     args.use_swa = _resolve(getattr(args, "use_swa", None), "use_swa", False)
@@ -352,6 +420,21 @@ def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
     args.eval_every = _resolve(args.eval_every, "eval_every", 10)
     args.segnet_weight = _resolve(args.segnet_weight, "segnet_loss_weight", 100.0)
     args.pretrain_epochs = _resolve(args.pretrain_epochs, "pretrain_epochs", 0)
+    # 5-phase Quantizr-adapted QAT schedule (Quantizr R2 C3 architectural
+    # fix 2026-04-26). Default 0 epochs = phase disabled. The legacy
+    # `pretrain_epochs` / `epochs` keys still work when no phaseN_epochs are
+    # declared (backwards-compat path). See _phase_for_epoch() below for
+    # the dispatch + boundaries logic.
+    args.phase1_epochs = _resolve(args.phase1_epochs, "phase1_epochs", 0)
+    args.phase2_epochs = _resolve(args.phase2_epochs, "phase2_epochs", 0)
+    args.phase3_epochs = _resolve(args.phase3_epochs, "phase3_epochs", 0)
+    args.phase4_epochs = _resolve(args.phase4_epochs, "phase4_epochs", 0)
+    args.phase5_epochs = _resolve(args.phase5_epochs, "phase5_epochs", 0)
+    args.phase1_lr = _resolve(args.phase1_lr, "phase1_lr", 1e-3)
+    args.phase2_lr = _resolve(args.phase2_lr, "phase2_lr", 5e-4)
+    args.phase3_lr = _resolve(args.phase3_lr, "phase3_lr", 3e-4)
+    args.phase4_lr = _resolve(args.phase4_lr, "phase4_lr", 5e-5)
+    args.phase5_lr = _resolve(args.phase5_lr, "phase5_lr", 1e-5)
     args.seed = _resolve(args.seed, "seed", 42)
     args.deterministic = _resolve(args.deterministic, "deterministic", True)
 
@@ -515,6 +598,82 @@ def pretrain_loss(rendered_pair: torch.Tensor, gt_pair: torch.Tensor) -> torch.T
     edge_loss = F.l1_loss(edge_r, edge_g)
 
     return l1 + 0.5 * edge_loss
+
+
+# ── 5-Phase Quantizr-style QAT schedule helpers ────────────────────────
+#
+# Quantizr's published recipe (project_quantizr_full_intel_20260421 +
+# project_quantizr_definitive_binary_analysis):
+#   Phase 1 (anchor):    pretrain on pixel L1 vs GT only.
+#   Phase 2 (finetune):  add SegNet hinge + PoseNet MSE.
+#   Phase 3 (joint):     add Fridrich (UNIWARD/L_inf/Markov/DCT) + KL distill.
+#   Phase 4 (QAT):       enable FP4 fake-quant on weights, low LR.
+#   Phase 5 (final):     hard-pair-emphasis sampler at very low LR.
+# Each phase has its own LR + epoch count. Backwards-compat: if no
+# phaseN_epochs are declared (all zero), the legacy two-phase loop
+# (pretrain_epochs / epochs) is used unchanged.
+
+PHASE_NAMES = {1: "anchor", 2: "finetune", 3: "joint", 4: "qat", 5: "final"}
+
+
+def has_5phase_schedule(args: argparse.Namespace) -> bool:
+    """True iff at least one phaseN_epochs > 0 — opts into the new schedule.
+
+    Backwards-compat: when False, callers fall back to the legacy
+    `pretrain_epochs` / `epochs` two-phase loop. The 5-phase loop NEVER
+    activates implicitly — a profile must declare phase epochs explicitly.
+    """
+    return any(
+        getattr(args, f"phase{i}_epochs", 0) > 0 for i in range(1, 6)
+    )
+
+
+def phase_boundaries(args: argparse.Namespace) -> list[int]:
+    """Cumulative epoch boundaries for the 5-phase schedule.
+
+    Returns [b1, b2, b3, b4, b5] where epoch < b1 → phase 1, b1 <= epoch < b2
+    → phase 2, etc. b5 == total_epochs.
+    """
+    out = []
+    cum = 0
+    for i in range(1, 6):
+        cum += int(getattr(args, f"phase{i}_epochs", 0))
+        out.append(cum)
+    return out
+
+
+def current_phase(epoch: int, boundaries: list[int]) -> int:
+    """Return 1..5 for `epoch`, or the last non-empty phase if past the end."""
+    for phase_idx, b in enumerate(boundaries, start=1):
+        if epoch < b:
+            return phase_idx
+    # Past the schedule: return the last phase with epochs > 0
+    for phase_idx in range(5, 0, -1):
+        if boundaries[phase_idx - 1] > (boundaries[phase_idx - 2] if phase_idx >= 2 else 0):
+            return phase_idx
+    return 5
+
+
+def lr_for_phase(args: argparse.Namespace, phase: int) -> float:
+    """Resolve per-phase LR from args (already populated by the resolver)."""
+    return float(getattr(args, f"phase{phase}_lr"))
+
+
+def phase_epoch_offset(epoch: int, phase: int, boundaries: list[int]) -> tuple[int, int]:
+    """(epoch_within_phase, phase_total_epochs) — used for cosine annealing
+    within a single phase (so each phase ramps its own LR independently)."""
+    start = boundaries[phase - 2] if phase >= 2 else 0
+    total = boundaries[phase - 1] - start
+    return (epoch - start, max(1, total))
+
+
+def cosine_lr(base_lr: float, step: int, total: int, eta_min: float = 1e-6) -> float:
+    """Cosine annealing within a single phase."""
+    if total <= 0:
+        return base_lr
+    step = max(0, min(step, total))
+    cos = 0.5 * (1 + math.cos(math.pi * step / total))
+    return eta_min + (base_lr - eta_min) * cos
 
 
 def resize_pair_hwc(pair: torch.Tensor, target_h: int, target_w: int) -> torch.Tensor:
@@ -700,12 +859,42 @@ def train(args: argparse.Namespace):
     if device.type == "cuda":
         model = model.to(memory_format=torch.channels_last)
 
+    # 5-phase schedule detection (Quantizr R2 C3 architectural fix).
+    # When a profile declares any phase{1..5}_epochs > 0 we activate the
+    # 5-phase Quantizr-adapted QAT schedule; otherwise the legacy 2-phase
+    # `pretrain_epochs` / `epochs` loop is preserved unchanged.
+    use_5phase = has_5phase_schedule(args)
+    boundaries: list[int] = phase_boundaries(args) if use_5phase else []
+    if use_5phase:
+        # Phase 4 may enable QAT lazily even when --no-qat was passed at the
+        # CLI; phase 1-3 always run float (matches Quantizr's recipe).
+        total_phase_epochs = boundaries[-1]
+        # Override args.epochs to the schedule sum so resume / log accounting
+        # stays consistent. The legacy loop reads args.epochs as the cap.
+        args.epochs = total_phase_epochs
+        print(
+            f"[train] 5-phase Quantizr-style schedule active. "
+            f"Boundaries: {boundaries} (total {total_phase_epochs} epochs). "
+            + " | ".join(
+                f"P{i}({PHASE_NAMES[i]}):"
+                f"{getattr(args, f'phase{i}_epochs')}ep@{getattr(args, f'phase{i}_lr'):.1e}"
+                for i in range(1, 6)
+                if getattr(args, f"phase{i}_epochs") > 0
+            )
+        )
+
     # Wrap with FP4 QAT if enabled. R-FP4-fix: pass codebook + robustness flags
     # so the trend report's float→FP4 gap (93.44 plateau while float kept
     # improving) can be closed by --fp4-codebook=residual --fp4-stochastic
     # --fp4-robust-scale on residual-head renderers.
+    #
+    # 5-phase note: when use_5phase is True, QAT is deferred until Phase 4 by
+    # default (Quantizr recipe). If the user passes --use-qat AND we're in
+    # 5-phase mode, QAT activates immediately for backwards-compat.
     qat_wrapper = None
-    if args.use_qat:
+    qat_active = False
+    qat_phase4_pending = use_5phase and args.use_qat and args.phase4_epochs > 0
+    if args.use_qat and not qat_phase4_pending:
         from tac.fp4_quantize import DEFAULT_CODEBOOK, RESIDUAL_CODEBOOK
         codebook = (RESIDUAL_CODEBOOK if args.fp4_codebook == "residual"
                     else DEFAULT_CODEBOOK).clone()
@@ -715,9 +904,15 @@ def train(args: argparse.Namespace):
             stochastic=args.fp4_stochastic,
             robust_scale=args.fp4_robust_scale,
         ).to(device)
+        qat_active = True
         print(f"[train] FP4 QAT enabled (codebook={args.fp4_codebook}, "
               f"stochastic={args.fp4_stochastic}, "
               f"robust_scale={args.fp4_robust_scale})")
+    elif qat_phase4_pending:
+        print(
+            "[train] FP4 QAT deferred until Phase 4 "
+            f"(starts epoch {boundaries[2] if len(boundaries) >= 3 else 0})"
+        )
 
     # Training infrastructure
     ema = EMA(model, decay=args.ema_decay)
@@ -824,6 +1019,10 @@ def train(args: argparse.Namespace):
     setup_signal_handlers(save_training_state)
 
     has_pretrain = args.pretrain_epochs > 0
+    # Track per-pair difficulty for Phase 5 hard-pair emphasis sampling.
+    # Initialized uniform; updated each epoch from per-step scorer loss.
+    pair_difficulty = torch.ones(n_total, dtype=torch.float32)
+    last_phase = 0
 
     for epoch in range(start_epoch, args.epochs):
         current_epoch = epoch
@@ -831,18 +1030,66 @@ def train(args: argparse.Namespace):
         model.train()
         in_pretrain = has_pretrain and epoch < args.pretrain_epochs
 
-        # Warmup LR
-        if epoch < args.warmup_epochs:
-            lr = args.lr * (epoch + 1) / args.warmup_epochs
+        # 5-phase Quantizr schedule: derive phase + per-phase LR from cosine
+        # within the current phase. Each phase has its own optimizer.lr
+        # baseline (--phaseN-lr). Cosine annealing applies WITHIN the phase.
+        if use_5phase:
+            phase_idx = current_phase(epoch, boundaries)
+            in_pretrain = phase_idx == 1   # Phase 1 still pixel-only
+            # Phase transition logging + Phase 4 lazy QAT activation.
+            if phase_idx != last_phase:
+                print(
+                    f"[train] === Phase {phase_idx} ({PHASE_NAMES[phase_idx]}) "
+                    f"start at epoch {epoch} === lr={lr_for_phase(args, phase_idx):.2e}"
+                )
+                if phase_idx == 4 and qat_phase4_pending and not qat_active:
+                    from tac.fp4_quantize import DEFAULT_CODEBOOK, RESIDUAL_CODEBOOK
+                    codebook = (
+                        RESIDUAL_CODEBOOK if args.fp4_codebook == "residual"
+                        else DEFAULT_CODEBOOK
+                    ).clone()
+                    qat_wrapper = QATRendererFP4(
+                        model,
+                        codebook=codebook,
+                        stochastic=args.fp4_stochastic,
+                        robust_scale=args.fp4_robust_scale,
+                    ).to(device)
+                    qat_active = True
+                    print(
+                        "[train] === Phase 4 QAT activated "
+                        f"(FakeQuantFP4 codebook={args.fp4_codebook}, "
+                        f"stochastic={args.fp4_stochastic}, "
+                        f"robust_scale={args.fp4_robust_scale}) ==="
+                    )
+                last_phase = phase_idx
+            base_lr = lr_for_phase(args, phase_idx)
+            phase_step, phase_total = phase_epoch_offset(
+                epoch, phase_idx, boundaries,
+            )
+            lr = cosine_lr(base_lr, phase_step, phase_total)
             for pg in optimizer.param_groups:
                 pg["lr"] = lr
+        else:
+            # Legacy 2-phase path (unchanged).
+            phase_idx = 1 if in_pretrain else 2
+            # Warmup LR
+            if epoch < args.warmup_epochs:
+                lr = args.lr * (epoch + 1) / args.warmup_epochs
+                for pg in optimizer.param_groups:
+                    pg["lr"] = lr
+            # Log phase transition
+            if has_pretrain and epoch == args.pretrain_epochs:
+                print(f"[train] === Phase 2 start (epoch {epoch}) === switching to scorer loss")
 
-        # Log phase transition
-        if has_pretrain and epoch == args.pretrain_epochs:
-            print(f"[train] === Phase 2 start (epoch {epoch}) === switching to scorer loss")
-
-        # Sample pairs for this epoch
-        perm = torch.randperm(n_total)[:train_size]
+        # Sample pairs for this epoch. Phase 5 (final): hard-pair emphasis.
+        # Probability of sampling pair i is proportional to pair_difficulty[i].
+        # In all other phases the legacy uniform-random sampling is used.
+        if use_5phase and phase_idx == 5 and pair_difficulty.sum() > 0:
+            probs = pair_difficulty.clamp(min=1e-6)
+            probs = probs / probs.sum()
+            perm = torch.multinomial(probs, train_size, replacement=False)
+        else:
+            perm = torch.randperm(n_total)[:train_size]
 
         total_loss, total_pose, total_seg = 0.0, 0.0, 0.0
         optimizer.zero_grad(set_to_none=True)
@@ -946,7 +1193,16 @@ def train(args: argparse.Namespace):
             #   - texture_loss: UNIWARD wavelet cost — hide errors in textured regions
             #   - linf_penalty: square root law — spread small errors, don't concentrate
             #   - markov_loss: HUGO-style local gradient continuity
-            if not in_pretrain:
+            #
+            # 5-phase Quantizr schedule (Quantizr R2 C3, 2026-04-26): the full
+            # Fridrich + KL + uncertainty stack is gated to Phase 3+ so Phase
+            # 2 cleanly isolates "scorer-only" finetune (matches Quantizr's
+            # published "finetune" stage). Legacy 2-phase mode keeps the
+            # historical behaviour (active throughout post-pretrain).
+            fridrich_active = (not in_pretrain) and (
+                (not use_5phase) or phase_idx >= 3
+            )
+            if fridrich_active:
                 if args.use_texture_loss and args.texture_loss_weight > 0:
                     # R-texture-fix: original implementation used .var(dim=-1)
                     # which is variance OVER 3 RGB CHANNELS at each pixel — NOT
@@ -959,14 +1215,15 @@ def train(args: argparse.Namespace):
                     rgb_gt = gt_pair[:, 1].float()
                     # Per-pixel L1 (averaged over channels)
                     diff = (rgb_pred - rgb_gt).abs().mean(dim=-1)  # (B, H, W)
-                    # Luma proxy + local variance via 8x8 box filter (avg pool)
-                    luma = rgb_gt.mean(dim=-1)  # (B, H, W)
-                    luma_bchw = luma.unsqueeze(1)  # (B, 1, H, W)
-                    local_mean = F.avg_pool2d(luma_bchw, kernel_size=8, stride=1, padding=4)
-                    local_mean = local_mean[:, :, : luma_bchw.shape[2], : luma_bchw.shape[3]]
-                    local_sqmean = F.avg_pool2d(luma_bchw.pow(2), kernel_size=8, stride=1, padding=4)
-                    local_sqmean = local_sqmean[:, :, : luma_bchw.shape[2], : luma_bchw.shape[3]]
-                    local_var = (local_sqmean - local_mean.pow(2)).clamp(min=0.0).squeeze(1)
+                    # 2026-04-26 Hotz R2 #5: shared luma_local_variance helper.
+                    # Previous inline impl used `padding=4` inside avg_pool2d
+                    # AND a manual crop — symmetric pad of 4 with kernel_size=8
+                    # produces a 1-pixel asymmetric output that the crop only
+                    # papered over. The helper uses explicit reflect-pad and
+                    # matches variance_weighted_noise's UNIWARD path so the
+                    # texture loss and noise field stay numerically consistent.
+                    from tac.fridrich import luma_local_variance
+                    local_var = luma_local_variance(rgb_gt, kernel_size=8)  # (B, H, W)
                     # inv_var: high in smooth regions (errors visible, EXPENSIVE),
                     # low in textured regions (errors hidden, FREE). Normalized so
                     # the loss scale stays comparable to vanilla L1.
@@ -1020,6 +1277,24 @@ def train(args: argparse.Namespace):
                     )
                     loss = loss + args.kl_distill_weight * kl_loss
 
+                # Yousfi #5 (council 5/0 vote 2026-04-26): inverse-SegNet-
+                # entropy weighted L1 on the SegNet-evaluated frame (index 1
+                # of the pair — the upstream scorer takes x[:, -1, ...]).
+                # Default weight is 0.0 — no overhead unless profile/CLI
+                # explicitly enables it. See module-level note in
+                # tac.losses.segnet_uncertainty_weighted_loss.
+                if args.use_uncertainty_loss and args.uncertainty_loss_weight > 0:
+                    # 2026-04-26 R3 Yousfi: thread uncertainty_loss_floor
+                    # from the profile resolver. Without this, the profile
+                    # value (e.g. WILDE/SHIRAZ/DEN's 0.1) was silently
+                    # discarded — function default won. Same dead-code class
+                    # as the kl_distill resolver bug Quantizr R1 fixed.
+                    uncert_loss = segnet_uncertainty_weighted_loss(
+                        rendered_pair[:, 1], gt_pair[:, 1], segnet,
+                        weight_floor=args.uncertainty_loss_floor,
+                    )
+                    loss = loss + args.uncertainty_loss_weight * uncert_loss
+
             scaled_loss = loss / accum
 
             try:
@@ -1035,6 +1310,19 @@ def train(args: argparse.Namespace):
             total_pose += pd
             total_seg += sd
 
+            # Phase 5 hard-pair sampling: track per-pair loss as the
+            # difficulty signal. EMA-blended (0.5) so noisy single-step
+            # measurements don't dominate. Updated for ALL phases so that
+            # by the time Phase 5 starts the difficulty estimate is warm.
+            try:
+                _pair_idx_int = int(pair_idx.item())
+                pair_difficulty[_pair_idx_int] = (
+                    0.5 * pair_difficulty[_pair_idx_int]
+                    + 0.5 * float(loss.item())
+                )
+            except (TypeError, ValueError):
+                pass
+
             # Gradient accumulation step (Feature 5: grad clipping already present)
             if (step + 1) % accum == 0 or (step + 1) == len(perm):
                 nn.utils.clip_grad_norm_(model.parameters(), args.grad_clip)
@@ -1047,8 +1335,9 @@ def train(args: argparse.Namespace):
         if torch.cuda.is_available():
             torch.cuda.empty_cache()
 
-        # LR scheduler
-        if epoch >= args.warmup_epochs:
+        # LR scheduler. 5-phase mode manages LR explicitly per-epoch via
+        # cosine_lr() above, so the legacy CosineAnnealingLR is bypassed.
+        if not use_5phase and epoch >= args.warmup_epochs:
             scheduler.step()
 
         n_steps = len(perm)
@@ -1060,8 +1349,12 @@ def train(args: argparse.Namespace):
         # Per-epoch timing (Feature 7)
         epoch_sec = time.monotonic() - epoch_start
 
-        # Determine current phase label
-        phase = "pretrain" if in_pretrain else "scorer"
+        # Determine current phase label. 5-phase mode uses Quantizr's named
+        # phases; legacy mode keeps the historical "pretrain"/"scorer" labels.
+        if use_5phase:
+            phase = f"phase{phase_idx}_{PHASE_NAMES[phase_idx]}"
+        else:
+            phase = "pretrain" if in_pretrain else "scorer"
 
         # FP4 evaluation (skip during Phase 1 -- scorer scores are meaningless)
         is_eval_epoch = (not in_pretrain and
@@ -1214,7 +1507,7 @@ def train(args: argparse.Namespace):
 
         # Epoch log with timing (Feature 7)
         eta_hours = epoch_sec * (args.epochs - epoch - 1) / 3600
-        phase_tag = "P1" if in_pretrain else "P2"
+        phase_tag = f"P{phase_idx}" if use_5phase else ("P1" if in_pretrain else "P2")
         if is_eval_epoch:
             print(f"[ep {epoch:4d}/{args.epochs} {phase_tag}] loss={avg_loss:.4f} "
                   f"pose={avg_pose:.6f} seg={avg_seg:.6f} "
@@ -1275,7 +1568,66 @@ def train(args: argparse.Namespace):
     return best_scorer
 
 
+def _list_profiles_table(describe: bool = False) -> int:
+    """Print a friendly table of training profiles and exit.
+
+    DX #7 (2026-04-26): the `--profile` help text dumps 130 names into the
+    `choices=` list, which is unreadable. Operators want a one-shot table
+    showing each renderer-relevant profile with its key knobs (variant,
+    base_ch / mid_ch / depth, pose_dim).
+
+    `--describe` adds a longer description column derived from the profile
+    dict's `description` / `notes` field if present. Without it, only the
+    name + variant tag + size summary are printed.
+    """
+    rows: list[tuple[str, str, str, str]] = []
+    for name in sorted(PROFILES.keys()):
+        prof = PROFILES[name]
+        if not isinstance(prof, dict):
+            continue
+        # Heuristic: a "renderer profile" sets at least one of these keys.
+        is_renderer = any(k in prof for k in (
+            "base_ch", "mid_ch", "embed_dim", "motion_hidden", "depth",
+            "variant", "use_zoom_flow",
+        ))
+        if not is_renderer:
+            continue
+        variant = str(prof.get("variant", "mask_renderer"))
+        size = (
+            f"base={prof.get('base_ch', '?')} mid={prof.get('mid_ch', '?')} "
+            f"depth={prof.get('depth', '?')} pose={prof.get('pose_dim', 0)}"
+        )
+        notes = ""
+        if describe:
+            notes = str(
+                prof.get("description")
+                or prof.get("notes")
+                or prof.get("doc")
+                or ""
+            )[:80]
+        rows.append((name, variant, size, notes))
+
+    name_w = max((len(r[0]) for r in rows), default=10)
+    var_w = max((len(r[1]) for r in rows), default=10)
+    size_w = max((len(r[2]) for r in rows), default=20)
+    print(f"{'profile':<{name_w}}  {'variant':<{var_w}}  {'arch':<{size_w}}  notes")
+    print("-" * (name_w + var_w + size_w + 12))
+    for name, var, size, notes in rows:
+        print(f"{name:<{name_w}}  {var:<{var_w}}  {size:<{size_w}}  {notes}")
+    print()
+    print(f"Total: {len(rows)} renderer profiles in tac.profiles.PROFILES")
+    print("Run with --describe for the description column (if set in the profile).")
+    return 0
+
+
 def main():
+    # DX #7 (2026-04-26): handle --list-profiles BEFORE argparse so the
+    # operator does not have to satisfy --profile=<choice> first. We peek
+    # at sys.argv directly; argparse never sees these flags.
+    import sys as _sys
+    if "--list-profiles" in _sys.argv:
+        describe = "--describe" in _sys.argv
+        raise SystemExit(_list_profiles_table(describe=describe))
     args = parse_args()
     return train(args)
 

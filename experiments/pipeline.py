@@ -45,6 +45,7 @@ import json
 import math
 import os
 import re
+import shlex
 import subprocess
 import sys
 import time
@@ -75,6 +76,58 @@ def _banner(msg: str) -> None:
     _log("=" * w)
     _log(f"  {msg}")
     _log("=" * w)
+
+
+# ── Subprocess helper (DX top-1, council 5/0 approved 2026-04-26) ─────────
+#
+# Bug class this prevents: 5 of 6 subprocess.run() call sites previously
+# inherited the parent's stdout/stderr (no capture). When a child crashed
+# with a 200-line traceback, the pipeline only saw `exit N` — no log file,
+# no replay command. This helper captures stderr + stdout to disk, surfaces
+# the last 20 lines on failure, and prints the full shell-quoted command
+# for replay. Apply to every new subprocess.run call.
+
+def _run_step(
+    cmd: list[str],
+    step_name: str,
+    iter_dir: Path,
+    timeout: int | None = None,
+    env: dict | None = None,
+) -> int:
+    """Subprocess wrapper that captures stderr to <iter_dir>/<step_name>.stderr.log
+    and surfaces last 20 lines on failure with the cmd string for replay.
+
+    Returns the subprocess returncode (0 on success). Raises
+    subprocess.TimeoutExpired on timeout (after logging it). Caller is
+    responsible for converting non-zero returns into RuntimeError.
+    """
+    iter_dir.mkdir(parents=True, exist_ok=True)
+    stderr_log = iter_dir / f"{step_name}.stderr.log"
+    stdout_log = iter_dir / f"{step_name}.stdout.log"
+    cmd_str = " ".join(shlex.quote(c) for c in cmd)
+    _log(f"[{step_name}] $ {cmd_str}")
+    try:
+        with stderr_log.open("w") as err_f, stdout_log.open("w") as out_f:
+            result = subprocess.run(
+                cmd, stdout=out_f, stderr=err_f,
+                timeout=timeout, env=env,
+            )
+    except subprocess.TimeoutExpired:
+        _log(f"[{step_name}] TIMEOUT after {timeout}s. Cmd: {cmd_str}", "ERROR")
+        raise
+    if result.returncode != 0:
+        try:
+            tail = stderr_log.read_text().splitlines()[-20:]
+            for line in tail:
+                _log(f"[{step_name}] stderr: {line}", "ERROR")
+        except OSError:
+            pass
+        _log(
+            f"[{step_name}] FAILED (exit {result.returncode}). "
+            f"Full stderr: {stderr_log}. Replay: {cmd_str}",
+            "ERROR",
+        )
+    return result.returncode
 
 
 # ── Resume support ───────────────────────────────────────────────────────
@@ -498,12 +551,22 @@ def step_pose_tto(cfg: PipelineConfig, iteration: int = 0) -> Path:
     if not cfg.masks:
         raise RuntimeError(
             f"step_pose_tto: cfg.masks is empty. step_extract_masks must run "
-            f"first AND populate cfg.masks. iter={iteration} output_dir={cfg.output_dir}"
+            f"first AND populate cfg.masks. iter={iteration} "
+            f"output_dir={cfg.output_dir}. "
+            f"Fix: verify run_compress() called step_extract_masks before "
+            f"step_pose_tto, OR run extraction directly: "
+            f"`python -m experiments.pipeline extract-masks --video {cfg.video} "
+            f"--output-dir {cfg.output_dir}`."
         )
     if not Path(cfg.masks).exists():
         raise RuntimeError(
             f"step_pose_tto: masks file does not exist: {cfg.masks!r}. "
-            f"iter={iteration} output_dir={cfg.output_dir}"
+            f"iter={iteration} output_dir={cfg.output_dir}. "
+            f"Fix: re-run mask extraction — "
+            f"`python experiments/pipeline.py extract-masks --video {cfg.video} "
+            f"--output-dir {cfg.output_dir}` — and confirm the output is "
+            f"384x512 via `ffprobe {cfg.masks}` (CLAUDE.md catastrophic mask "
+            f"res failure pattern)."
         )
 
     if _step_done(iter_dir, "pose_tto"):
@@ -574,25 +637,58 @@ def step_pose_tto(cfg: PipelineConfig, iteration: int = 0) -> Path:
         "--output-dir", str(iter_dir),
     ]
 
-    # Reuse cached pose targets from previous runs (saves ~15 min of PoseNet inference)
+    # Reuse cached pose targets from previous runs (saves ~15 min of PoseNet inference).
+    # DX #5 (2026-04-26): mtime-gate the cache. iter_dir was created (or
+    # touched) when this iteration started; a gt_pose_targets.pt OLDER than
+    # iter_dir is left over from a prior session under a different profile,
+    # different scorers, or different upstream snapshot. Silent reuse there
+    # is exactly the catastrophe pattern (wrong cache → wrong PoseNet
+    # targets → silently optimised the wrong objective).
+    iter_dir_mtime = iter_dir.stat().st_mtime
     for candidate in [iter_dir / "gt_pose_targets.pt", Path(cfg.output_dir) / "gt_pose_targets.pt"]:
-        if candidate.exists():
-            cmd.extend(["--gt-pose-targets", str(candidate)])
-            _log(f"  Using cached pose targets: {candidate}")
-            break
+        if not candidate.exists():
+            continue
+        cand_mtime = candidate.stat().st_mtime
+        if cand_mtime < iter_dir_mtime:
+            age_h = (iter_dir_mtime - cand_mtime) / 3600.0
+            _log(
+                f"  Found stale {candidate.name} from {age_h:.1f}h ago "
+                f"(older than iter_dir creation) — re-deriving instead of "
+                f"silently using.", "WARN",
+            )
+            continue
+        cmd.extend(["--gt-pose-targets", str(candidate)])
+        _log(f"  Using cached pose targets: {candidate}")
+        break
 
     t0 = time.monotonic()
     # R30: 4-hour timeout (pose TTO is the longest-running subprocess; A100
     # 4090 typical wall is 30-90 min). A hung scorer or DataLoader would
     # otherwise block the pipeline forever.
+    # 2026-04-26: routed through _run_step so a crash surfaces the last
+    # 20 stderr lines + replay command instead of silent `exit N`.
     try:
-        result = subprocess.run(cmd, timeout=14400)
+        rc = _run_step(cmd, "pose_tto", iter_dir, timeout=14400)
     except subprocess.TimeoutExpired:
-        raise RuntimeError("Pose TTO timed out after 4h — likely hung GPU/DataLoader")
+        raise RuntimeError(
+            "Pose TTO timed out after 4h — likely hung GPU/DataLoader. "
+            f"Fix: SSH in and run `nvidia-smi`; if util=0%% kill the python "
+            f"process (`pkill -f optimize_poses`), then "
+            f"`rm {iter_dir}/.done_pose_tto` and re-launch. Inspect "
+            f"{iter_dir}/pose_tto.stderr.log for stalls."
+        )
     elapsed = time.monotonic() - t0
 
-    if result.returncode != 0:
-        raise RuntimeError(f"Pose TTO failed (exit {result.returncode})")
+    if rc != 0:
+        raise RuntimeError(
+            f"Pose TTO failed (exit {rc}); see {iter_dir}/pose_tto.stderr.log. "
+            f"Fix: tail -100 the stderr log for the actual exception. Common "
+            f"causes: (1) FP4 .bin shape mismatch — verify --base-ch / --mid-ch "
+            f"match the checkpoint's profile; (2) CUDA OOM — drop "
+            f"--pose-batch-pairs to 4; (3) masks resolution wrong — verify "
+            f"{cfg.masks} is 384x512 not 48x64 (cf. CLAUDE.md catastrophic mask "
+            f"res failure)."
+        )
 
     _log(f"  Complete in {elapsed/60:.1f} min")
 
@@ -721,14 +817,29 @@ def step_qat(cfg: PipelineConfig, iteration: int = 0,
 
     t0 = time.monotonic()
     # R30: 6-hour timeout for QAT (250 FP4 epochs typical 1-3h on A100).
+    # 2026-04-26: routed through _run_step so a crash surfaces the last
+    # 20 stderr lines + replay command instead of silent `exit N`.
     try:
-        result = subprocess.run(cmd, timeout=21600)
+        rc = _run_step(cmd, "qat", iter_dir, timeout=21600)
     except subprocess.TimeoutExpired:
-        raise RuntimeError("QAT timed out after 6h — likely hung")
+        raise RuntimeError(
+            "QAT timed out after 6h — likely hung. "
+            f"Fix: SSH in, `nvidia-smi` to confirm util=0%%, then "
+            f"`pkill -f qat_finetune` and `rm {iter_dir}/.done_qat` to retry. "
+            f"If the renderer is large (>200K params) consider --qat-max-epochs "
+            f"100 instead of the profile default."
+        )
     elapsed = time.monotonic() - t0
 
-    if result.returncode != 0:
-        raise RuntimeError(f"QAT failed (exit {result.returncode})")
+    if rc != 0:
+        raise RuntimeError(
+            f"QAT failed (exit {rc}); see {iter_dir}/qat.stderr.log. "
+            f"Fix: tail -100 the stderr log. Common causes: (1) checkpoint "
+            f"shape mismatch — verify the float .pt was trained with the same "
+            f"--base-ch / --mid-ch / --depth as the profile in cfg; (2) FP4 "
+            f"codebook missing — confirm renderer.py exports FakeQuantFP4 "
+            f"correctly; (3) NaN loss — drop --qat-lr by 10x and retry."
+        )
 
     _log(f"  Complete in {elapsed/60:.1f} min")
 
@@ -748,9 +859,13 @@ def step_qat(cfg: PipelineConfig, iteration: int = 0,
         else:
             raise RuntimeError(
                 f"QAT step succeeded but no QAT artifact found in {iter_dir}. "
-                f"Expected renderer_fp4.bin (or renderer_qat.bin / renderer_mixed.bin). "
-                f"Refusing to fall back to pre-QAT renderer.bin (would silently "
-                f"ship un-quantized weights)."
+                f"Expected renderer_fp4.bin (or renderer_qat.bin / "
+                f"renderer_mixed.bin). Refusing to fall back to pre-QAT "
+                f"renderer.bin (would silently ship un-quantized weights). "
+                f"Fix: inspect {iter_dir}/qat.stdout.log for the export step; "
+                f"verify qat_finetune.py's `--output-dir` arg matches the "
+                f"iter_dir, and that export_asymmetric_checkpoint_fp4() ran "
+                f"to completion. Re-run with `rm {iter_dir}/.done_qat` to retry."
             )
 
     _mark_done(iter_dir, "qat", {"elapsed_s": round(elapsed)})
@@ -928,18 +1043,22 @@ def step_fridrich_refine(cfg: PipelineConfig, iteration: int = 0) -> Path:
             "--uncertainty-loss-floor", str(cfg.uncertainty_loss_floor),
         ])
 
+    # R30: 2-hour timeout. 2026-04-26 Hotz R3: route through _run_step so
+    # stderr is captured to <iter_dir>/fridrich_refine.stderr.log — without
+    # this, a 2h training subprocess would crash and leave only "exit N" as
+    # diagnostic. Same waste class as the SHIRAZ 16h burn (memory:
+    # feedback_no_wasted_resources).
     t0 = time.monotonic()
-    # R30: 2-hour timeout for Fridrich refinement (100 epochs typical 30-60min).
     try:
-        result = subprocess.run(cmd, timeout=7200)
+        rc = _run_step(cmd, "fridrich_refine", iter_dir, timeout=7200)
     except subprocess.TimeoutExpired:
         _log("Fridrich refinement timed out after 2h, falling back to QAT output", "WARN")
         _mark_done(iter_dir, step_name, {"failed": True, "timeout": True})
         return _resolve_fridrich_output()
     elapsed = time.monotonic() - t0
 
-    if result.returncode != 0:
-        _log(f"Fridrich refinement failed (exit {result.returncode})", "WARN")
+    if rc != 0:
+        _log(f"Fridrich refinement failed (exit {rc}). See iter_{iteration}/fridrich_refine.stderr.log", "WARN")
         _mark_done(iter_dir, step_name, {"failed": True})
         return _resolve_fridrich_output()
 
@@ -1264,23 +1383,48 @@ def step_engineered_corrections(cfg: PipelineConfig, renderer_bin: Path,
 
     _log(f"[{step_name}] Computing SegNet-targeting corrections...")
     video_path = Path(cfg.upstream) / "videos" / "0.mkv"
+    # Yousfi R1 #2 fix (2026-04-26 council 5/0): wire the byte cap from cfg
+    # so over-budget runs trigger the explicit top-K-drop / non-zero exit
+    # path inside engineered_quant_noise instead of silently bundling a
+    # rate-busting artifact (or, worse, conflating exit 2 with an unrelated
+    # subprocess crash).
     cmd = [
         sys.executable, "-u", "experiments/engineered_quant_noise.py",
         "--checkpoint", str(renderer_bin),
         "--video", str(video_path),
         "--device", cfg.device,
         "--output-dir", str(iter_dir),
+        "--max-artifact-bytes", str(int(cfg.engineered_max_bytes)),
     ]
     # 1-hour timeout — corrections is a single-pass gradient computation that
     # should complete in 5-30 minutes on a 4090. Anything longer is hung.
     # (R28 finding: prior call had no timeout — could block the pipeline forever.)
+    # 2026-04-26: routed through _run_step so a crash surfaces the last
+    # 20 stderr lines + replay command instead of silent `exit N`.
     try:
-        result = subprocess.run(cmd, timeout=3600)
+        rc = _run_step(cmd, step_name, iter_dir, timeout=3600)
     except subprocess.TimeoutExpired:
         _log(f"[{step_name}] WARNING: Timed out after 1h, skipping corrections")
         return None
-    if result.returncode != 0:
-        _log(f"[{step_name}] WARNING: Failed (exit {result.returncode}), skipping corrections")
+    if rc == 2:
+        # Exit 2 is the documented "magnitude budget exceeded OR cannot fit
+        # under --max-artifact-bytes even after top-K drop" signal from
+        # engineered_quant_noise. Surface it loudly so the operator knows to
+        # bump the cap or relax the magnitude budget rather than confuse it
+        # with a generic crash.
+        _log(
+            f"[{step_name}] OVER BUDGET (exit 2): magnitude or byte cap "
+            f"exceeded — see {iter_dir}/{step_name}.stderr.log. "
+            f"Bump cfg.engineered_max_bytes (current "
+            f"{int(cfg.engineered_max_bytes):,}) or relax the magnitude "
+            f"budget. Skipping corrections."
+        )
+        return None
+    if rc != 0:
+        _log(
+            f"[{step_name}] WARNING: Failed (exit {rc}), skipping corrections; "
+            f"see {iter_dir}/{step_name}.stderr.log"
+        )
         return None
 
     if corrections_bin.exists():
@@ -1337,14 +1481,35 @@ def step_eval(cfg: PipelineConfig, renderer_bin: Path, archive_path: Path,
     # step_pose_tto. Without this, FiLM-conditioned renderers (pose_dim>0)
     # silently render with zero poses → catastrophic PoseNet collapse
     # (verified 2026-04-26 with SHIRAZ v4: pose_d 0.342 vs ~0.011).
+    #
+    # DX #5 (2026-04-26): mtime-gate. A poses file OLDER than iter_dir is
+    # almost certainly from a prior session against a different renderer
+    # checkpoint. Silent use of a stale .bin produced the SHIRAZ 4.83
+    # pseudo-baseline; warn loudly here so the operator chooses to re-run
+    # pose TTO instead of getting a misleading score.
     if poses_path is None:
+        try:
+            iter_dir_mtime = iter_dir.stat().st_mtime
+        except OSError:
+            iter_dir_mtime = 0.0
         search_dirs = [iter_dir, archive_path.parent]
         for d in search_dirs:
             for cand_name in ("optimized_poses.bin", "optimized_poses.pt"):
                 cand = d / cand_name
-                if cand.exists():
-                    poses_path = cand
-                    break
+                if not cand.exists():
+                    continue
+                cand_mtime = cand.stat().st_mtime
+                if iter_dir_mtime and cand_mtime < iter_dir_mtime:
+                    age_h = (iter_dir_mtime - cand_mtime) / 3600.0
+                    _log(
+                        f"  Found stale {cand.name} from {age_h:.1f}h ago "
+                        f"(older than iter_dir) — eval will use ZERO poses "
+                        f"instead. Re-run step_pose_tto to refresh.",
+                        "WARN",
+                    )
+                    continue
+                poses_path = cand
+                break
             if poses_path is not None:
                 break
 
@@ -1389,7 +1554,12 @@ def step_eval(cfg: PipelineConfig, renderer_bin: Path, archive_path: Path,
             out_f.write("\n[PIPELINE TIMEOUT — eval killed after 1h]\n")
         raise RuntimeError(
             "Auth eval timed out after 1h — should typically take 20-30 min "
-            f"on T4. See {stdout_log} (last line marked TIMEOUT)."
+            f"on T4. See {stdout_log} (last line marked TIMEOUT). "
+            f"Fix: SSH in and `nvidia-smi` to confirm GPU not stuck. Then "
+            f"`pkill -f auth_eval_renderer` and inspect the stdout log for "
+            f"the last successful pair index — if it stalled mid-frame the "
+            f"renderer is producing NaN. Re-run after `rm "
+            f"{iter_dir}/.done_eval` (deleting cache so a clean retry runs)."
         )
     elapsed = time.monotonic() - t0
 
@@ -1409,7 +1579,14 @@ def step_eval(cfg: PipelineConfig, renderer_bin: Path, archive_path: Path,
         # (R24 finding.)
         raise RuntimeError(
             f"Auth eval failed (exit {result.returncode}). "
-            f"Investigate {stderr_log}; do NOT cache this failure."
+            f"Investigate {stderr_log}; do NOT cache this failure. "
+            f"Fix: tail -100 {stderr_log} for the actual exception. Common "
+            f"causes: (1) renderer.bin shape/profile mismatch — confirm "
+            f"profile metadata in {renderer_bin} matches what auth_eval "
+            f"expects; (2) MPS device leak — re-run with --device cuda only "
+            f"(MPS auth is NOISE per CLAUDE.md, 23x PoseNet drift); (3) "
+            f"stale optimized_poses — delete {iter_dir}/optimized_poses.* "
+            f"and re-run step_pose_tto."
         )
 
     # Parse the RESULT_JSON sentinel from the stdout log (R29 schema-first
@@ -1503,8 +1680,18 @@ def _capture_provenance(cfg: PipelineConfig) -> dict:
     """Build a full-provenance dict for `pipeline_config.json`. Captures the
     config + git hash + GPU info + library versions per CLAUDE.md non-negotiable
     'Full provenance' rule. (R25 finding: prior config dump had none of this.)
+
+    DX #6 (2026-04-26): added ffmpeg_version, libsvtav1_version, brotli_version,
+    env_vars (LD_LIBRARY_PATH / PYTHONPATH / CUBLAS_WORKSPACE_CONFIG /
+    PYTORCH_CUDA_ALLOC_CONF / TAC_UPSTREAM_DIR), sys_argv, profile_dict (the
+    resolved profile, not just its name), and mask_resolution. These were the
+    fields Fridrich + Quantizr asked for so a CUDA score is reproducible from
+    the JSON alone with no human archeology.
     """
-    prov = {"config": asdict(cfg)}
+    prov: dict = {"config": asdict(cfg)}
+    # Always capture argv first so even an early exception in another probe
+    # leaves a record of "what command was actually run".
+    prov["sys_argv"] = list(sys.argv)
     try:
         import torch
         prov["torch_version"] = torch.__version__
@@ -1534,6 +1721,94 @@ def _capture_provenance(cfg: PipelineConfig) -> dict:
         ).strip())
     except Exception as e:
         prov["git_hash_error"] = str(e)
+
+    # DX #6 — toolchain versions. These break the pipeline differently
+    # depending on minor version (e.g. ffmpeg 4.4 lacks svtav1-params),
+    # so a CUDA score reproduction needs the exact versions to know what
+    # to install.
+    try:
+        out = subprocess.check_output(
+            ["ffmpeg", "-version"], text=True,
+            stderr=subprocess.STDOUT, timeout=10,
+        )
+        prov["ffmpeg_version"] = out.splitlines()[0].strip() if out else None
+    except Exception as e:  # missing ffmpeg, timeout, etc.
+        prov["ffmpeg_version_error"] = str(e)
+    try:
+        out = subprocess.check_output(
+            ["ffmpeg", "-encoders"], text=True,
+            stderr=subprocess.STDOUT, timeout=10,
+        )
+        svt = [ln.strip() for ln in out.splitlines() if "svt" in ln.lower() or "svtav1" in ln.lower()]
+        prov["libsvtav1_version"] = svt[0] if svt else None
+    except Exception as e:
+        prov["libsvtav1_version_error"] = str(e)
+    try:
+        import brotli  # type: ignore
+        prov["brotli_version"] = getattr(brotli, "__version__", "unknown")
+    except Exception as e:
+        prov["brotli_version_error"] = str(e)
+
+    # DX #6 — env vars that materially change reproducibility. We only
+    # capture the ones we know matter; capturing all of os.environ would
+    # leak secrets (HF_TOKEN, AWS keys, ...).
+    env_keys = (
+        "LD_LIBRARY_PATH",
+        "PYTHONPATH",
+        "CUBLAS_WORKSPACE_CONFIG",
+        "PYTORCH_CUDA_ALLOC_CONF",
+        "TAC_UPSTREAM_DIR",
+        "PYTHONHASHSEED",
+        "TAC_MODELS_DIR",
+        "INFLATE_TTO",  # safety: must be 0 for contest-compliant runs
+    )
+    prov["env_vars"] = {k: os.environ.get(k) for k in env_keys}
+
+    # DX #6 — full resolved profile. cfg.profile is just the name; the
+    # caller may have CLI-overridden specific fields. Capture the dict so a
+    # reproduction does not have to chase every CLI flag in argv.
+    try:
+        from tac.profiles import PROFILES  # type: ignore
+        profile_name = getattr(cfg, "profile", None)
+        if profile_name and profile_name in PROFILES:
+            prof = PROFILES[profile_name]
+            # Only record the dict body — strip values that aren't
+            # JSON-serialisable (lambdas, classes) so json.dumps doesn't
+            # crash. defaultdict / OrderedDict get coerced to plain dict.
+            def _safe(v):
+                try:
+                    json.dumps(v)
+                    return v
+                except (TypeError, ValueError):
+                    return repr(v)
+                except Exception:
+                    return "<unserialisable>"
+            prov["profile_dict"] = {k: _safe(v) for k, v in dict(prof).items()}
+    except Exception as e:
+        prov["profile_dict_error"] = str(e)
+
+    # DX #6 — mask resolution. Catastrophic failure 2026-04-21 was caused
+    # by 48x64 masks; recording H x W in provenance makes it auditable
+    # post-hoc rather than buried in the masks.mkv container metadata.
+    try:
+        masks_path = getattr(cfg, "masks", None) or getattr(cfg, "masks_archive", None)
+        if masks_path and Path(masks_path).exists():
+            try:
+                ffp = subprocess.check_output(
+                    ["ffprobe", "-v", "error", "-select_streams", "v:0",
+                     "-show_entries", "stream=width,height", "-of", "csv=p=0",
+                     str(masks_path)],
+                    text=True, stderr=subprocess.STDOUT, timeout=10,
+                ).strip()
+                if "," in ffp:
+                    w, h = ffp.split(",", 1)
+                    prov["mask_resolution"] = f"{h.strip()}x{w.strip()}"
+            except Exception:
+                # Fallback: try torch loading for .pt mask tensors
+                pass
+    except Exception as e:
+        prov["mask_resolution_error"] = str(e)
+
     prov["timestamp_utc"] = time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime())
     return prov
 
