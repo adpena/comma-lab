@@ -112,44 +112,18 @@ def parse_args() -> argparse.Namespace:
 
 
 def load_renderer(checkpoint_path: str, device: torch.device) -> torch.nn.Module:
-    """Load AsymmetricPairGenerator from checkpoint."""
-    from tac.renderer import AsymmetricPairGenerator
+    """Load AsymmetricPairGenerator from checkpoint with content-based format
+    dispatch.
 
-    ckpt = torch.load(checkpoint_path, map_location="cpu", weights_only=False)
-
-    # Detect model config from checkpoint if available
-    # Training scripts (train_renderer_fridrich.py) save under "config"
-    model_cfg = ckpt.get("model_config", ckpt.get("config", {}))
-    model = AsymmetricPairGenerator(
-        num_classes=model_cfg.get("num_classes", 5),
-        embed_dim=model_cfg.get("embed_dim", 6),
-        base_ch=model_cfg.get("base_ch", 36),
-        mid_ch=model_cfg.get("mid_ch", 60),
-        motion_hidden=model_cfg.get("motion_hidden", 32),
-        depth=model_cfg.get("depth", 1),
-        max_flow_px=model_cfg.get("max_flow_px", 20.0),
-        max_residual=model_cfg.get("max_residual", 20.0),
-        flow_only=model_cfg.get("flow_only", False),
-        pose_dim=model_cfg.get("pose_dim", 0),
-        use_dsconv=model_cfg.get("use_dsconv", False),
+    Defers to experiments.precompute_gradient_corrections.load_renderer so all
+    consumers share one canonical content-detecting loader. This module's old
+    suffix-blind torch.load path was the 2026-04-26 DEN-V2 bug surface — same
+    crash as engineered_quant_noise on FP4 .bin files.
+    """
+    from experiments.precompute_gradient_corrections import (
+        load_renderer as _canonical_load_renderer,
     )
-
-    # Load weights — handle both direct state_dict and nested checkpoint formats
-    if "model_state_dict" in ckpt:
-        model.load_state_dict(ckpt["model_state_dict"])
-    elif "state_dict" in ckpt:
-        model.load_state_dict(ckpt["state_dict"])
-    else:
-        # Try loading the whole checkpoint as a state dict
-        model.load_state_dict(ckpt)
-
-    model = model.eval().to(device)
-    for p in model.parameters():
-        p.requires_grad = False
-
-    n_params = sum(p.numel() for p in model.parameters())
-    print(f"[renderer] Loaded {n_params:,} params from {checkpoint_path}")
-    return model
+    return _canonical_load_renderer(checkpoint_path, device)
 
 
 def extract_gt_pose_embeddings(

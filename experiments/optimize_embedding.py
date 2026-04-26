@@ -139,41 +139,29 @@ def parse_args() -> argparse.Namespace:
 
 
 def load_renderer(checkpoint_path: str, device: torch.device) -> tuple[nn.Module, dict]:
-    """Load AsymmetricPairGenerator, returning model and checkpoint dict."""
-    from tac.renderer import AsymmetricPairGenerator
+    """Load AsymmetricPairGenerator, returning model and checkpoint dict.
 
-    ckpt = torch.load(checkpoint_path, map_location="cpu", weights_only=False)
-    model_cfg = ckpt.get("model_config", ckpt.get("config", {}))
-    model = AsymmetricPairGenerator(
-        num_classes=model_cfg.get("num_classes", 5),
-        embed_dim=model_cfg.get("embed_dim", 6),
-        base_ch=model_cfg.get("base_ch", 36),
-        mid_ch=model_cfg.get("mid_ch", 60),
-        motion_hidden=model_cfg.get("motion_hidden", 32),
-        depth=model_cfg.get("depth", 1),
-        max_flow_px=model_cfg.get("max_flow_px", 20.0),
-        max_residual=model_cfg.get("max_residual", 20.0),
-        flow_only=model_cfg.get("flow_only", False),
-        pose_dim=model_cfg.get("pose_dim", 0),
-        use_dsconv=model_cfg.get("use_dsconv", False),
+    Uses content-based format dispatch via the canonical loader. For native
+    binary exports (FP4A/ASYM/DPSM/I4LZ), returns an empty dict for ckpt
+    since those formats don't carry a Python-pickle config dict.
+    """
+    from experiments.precompute_gradient_corrections import (
+        load_renderer as _canonical_load_renderer,
+        _looks_like_pytorch_pickle,
     )
 
-    if "model_state_dict" in ckpt:
-        model.load_state_dict(ckpt["model_state_dict"])
-    elif "state_dict" in ckpt:
-        model.load_state_dict(ckpt["state_dict"])
-    else:
-        model.load_state_dict(ckpt)
-
-    model = model.eval().to(device)
-
+    model = _canonical_load_renderer(checkpoint_path, device)
     # Freeze ALL parameters first
     for param in model.parameters():
         param.requires_grad = False
 
-    n_params = sum(p.numel() for p in model.parameters())
-    print(f"[renderer] Loaded {n_params:,} params from {checkpoint_path}")
-
+    # Only the legacy pytorch-pickle path carries an inspectable ckpt dict.
+    with open(checkpoint_path, "rb") as fh:
+        magic = fh.read(4)
+    if _looks_like_pytorch_pickle(magic):
+        ckpt = torch.load(checkpoint_path, map_location="cpu", weights_only=False)
+    else:
+        ckpt = {}
     return model, ckpt
 
 

@@ -137,40 +137,144 @@ def parse_args() -> argparse.Namespace:
     return p.parse_args()
 
 
+# Magic-byte registry for content-based renderer-checkpoint dispatch.
+#
+# 2026-04-26 DEN-V2 bug class: load_renderer() did
+# `torch.load(path, weights_only=False)` on a path that turned out to be an
+# FP4-format .bin file (header `b'FP4A'`, NOT a PyTorch pickle). torch.load
+# crashed with `ValueError: could not convert string to float: 'P4AV'` after
+# parsing the magic as ASCII text. The pipeline soft-skipped, but only after a
+# full subprocess crash — every DEN-class deploy hit this. Same root pattern
+# as the 2026-04-26 SHIRAZ pose-loader bug (suffix-based dispatch on a file
+# whose actual format differed from its extension).
+#
+# Permanent fix: content-detection. Read the first 4 bytes, dispatch on the
+# magic. New formats register here; consumers never need to change. Mirrors
+# the style of `tac.submission_archive.load_optimized_poses` and
+# `tac.renderer_export.detect_checkpoint_type`.
+_RENDERER_MAGIC_FP4A = b"FP4A"
+_RENDERER_MAGIC_ASYM = b"ASYM"
+_RENDERER_MAGIC_DPSM = b"DPSM"
+_RENDERER_MAGIC_INT4_LZMA2 = b"I4LZ"
+_RENDERER_PICKLE_MAGICS = (
+    b"\x80\x02",      # pickle protocol 2
+    b"\x80\x03",      # pickle protocol 3
+    b"\x80\x04",      # pickle protocol 4
+    b"\x80\x05",      # pickle protocol 5
+    b"PK\x03\x04",    # ZIP (PyTorch >=1.6 default torch.save container)
+)
+
+
+def _looks_like_pytorch_pickle(raw: bytes) -> bool:
+    """True iff the first bytes match a known torch.save container header."""
+    return any(raw.startswith(m) for m in _RENDERER_PICKLE_MAGICS)
+
+
 def load_renderer(checkpoint_path: str, device: torch.device) -> torch.nn.Module:
-    """Load AsymmetricPairGenerator from checkpoint."""
-    from tac.renderer import AsymmetricPairGenerator
+    """Load an AsymmetricPairGenerator-compatible renderer with content-based
+    format detection.
 
-    ckpt = torch.load(checkpoint_path, map_location="cpu", weights_only=False)
-    model_cfg = ckpt.get("model_config", ckpt.get("config", {}))
-    model = AsymmetricPairGenerator(
-        num_classes=model_cfg.get("num_classes", 5),
-        embed_dim=model_cfg.get("embed_dim", 6),
-        base_ch=model_cfg.get("base_ch", 36),
-        mid_ch=model_cfg.get("mid_ch", 60),
-        motion_hidden=model_cfg.get("motion_hidden", 32),
-        depth=model_cfg.get("depth", 1),
-        max_flow_px=model_cfg.get("max_flow_px", 20.0),
-        max_residual=model_cfg.get("max_residual", 20.0),
-        flow_only=model_cfg.get("flow_only", False),
-        pose_dim=model_cfg.get("pose_dim", 0),
-        use_dsconv=model_cfg.get("use_dsconv", False),
+    This is the canonical loader for downstream consumers (engineered_quant_noise,
+    pair_difficulty_map, etc.). Dispatch is on the file's first 4 magic bytes,
+    NOT the suffix — suffix-based dispatch is what produced the 2026-04-26
+    DEN-V2 crash where an FP4-format .bin file got handed to torch.load and
+    raised "could not convert string to float: 'P4AV'".
+
+    Supported formats:
+        - FP4A (.bin) — FP4-quantized AsymmetricPairGenerator → loaded via
+          tac.renderer_export.load_asymmetric_checkpoint_fp4
+        - ASYM (.bin) — float ASYM export → loaded via
+          tac.renderer_export.load_asymmetric_checkpoint
+        - DPSM (.bin) — DP-SIMS renderer → loaded via
+          tac.renderer_export.load_renderer_checkpoint
+        - I4LZ (.bin) — int4 + LZMA2 → routed through load_any_renderer_checkpoint
+        - PyTorch pickle / zip (.pt) — legacy training-checkpoint dict with
+          `model_state_dict` / `state_dict` / raw state dict + `model_config`
+
+    Anything else raises a RuntimeError that names both the magic seen and the
+    accepted formats. Never silently degrade to torch.load.
+    """
+    from pathlib import Path
+
+    ckpt_path = Path(checkpoint_path)
+    if not ckpt_path.exists():
+        raise FileNotFoundError(f"Renderer checkpoint not found: {ckpt_path}")
+
+    # Read just enough to dispatch — full file is read again by the format
+    # loader. Cheap on every supported size.
+    with ckpt_path.open("rb") as fh:
+        magic = fh.read(4)
+
+    if len(magic) < 4:
+        raise RuntimeError(
+            f"Renderer checkpoint {ckpt_path} is too short ({len(magic)}B); "
+            f"expected at least 4 magic bytes (FP4A/ASYM/DPSM/I4LZ) or a "
+            f"PyTorch pickle/zip header."
+        )
+
+    # Branch A: native binary export formats. Defer to the canonical
+    # auto-detecting loader so I4LZ/ASYM/DPSM/FP4A all stay correct without
+    # us reimplementing arch inference here.
+    if magic in (_RENDERER_MAGIC_FP4A, _RENDERER_MAGIC_ASYM,
+                 _RENDERER_MAGIC_DPSM, _RENDERER_MAGIC_INT4_LZMA2):
+        from tac.renderer_export import load_any_renderer_checkpoint
+        device_str = str(device) if not isinstance(device, str) else device
+        model = load_any_renderer_checkpoint(ckpt_path, device=device_str).eval()
+        for p_param in model.parameters():
+            p_param.requires_grad = False
+        n_params = sum(p_param.numel() for p_param in model.parameters())
+        print(f"[renderer] Loaded {n_params:,} params from {ckpt_path} "
+              f"(format={magic.decode('ascii', errors='replace')})")
+        return model
+
+    # Branch B: legacy PyTorch pickle / zip checkpoint. This is the original
+    # training-checkpoint format: a dict with `config` / `model_config` and
+    # one of `model_state_dict` / `state_dict` / a raw state dict.
+    if _looks_like_pytorch_pickle(magic):
+        from tac.renderer import AsymmetricPairGenerator
+
+        ckpt = torch.load(str(ckpt_path), map_location="cpu", weights_only=False)
+        model_cfg = ckpt.get("model_config", ckpt.get("config", {}))
+        model = AsymmetricPairGenerator(
+            num_classes=model_cfg.get("num_classes", 5),
+            embed_dim=model_cfg.get("embed_dim", 6),
+            base_ch=model_cfg.get("base_ch", 36),
+            mid_ch=model_cfg.get("mid_ch", 60),
+            motion_hidden=model_cfg.get("motion_hidden", 32),
+            depth=model_cfg.get("depth", 1),
+            max_flow_px=model_cfg.get("max_flow_px", 20.0),
+            max_residual=model_cfg.get("max_residual", 20.0),
+            flow_only=model_cfg.get("flow_only", False),
+            pose_dim=model_cfg.get("pose_dim", 0),
+            use_dsconv=model_cfg.get("use_dsconv", False),
+        )
+
+        if "model_state_dict" in ckpt:
+            model.load_state_dict(ckpt["model_state_dict"])
+        elif "state_dict" in ckpt:
+            model.load_state_dict(ckpt["state_dict"])
+        else:
+            model.load_state_dict(ckpt)
+
+        model = model.eval().to(device)
+        for p_param in model.parameters():
+            p_param.requires_grad = False
+
+        n_params = sum(p_param.numel() for p_param in model.parameters())
+        print(f"[renderer] Loaded {n_params:,} params from {ckpt_path} "
+              f"(format=pytorch)")
+        return model
+
+    # Unknown — fail loudly with the exact magic bytes seen and the accepted set.
+    raise RuntimeError(
+        f"Unrecognized renderer checkpoint format at {ckpt_path}: "
+        f"magic bytes {magic!r}. Accepted formats: "
+        f"FP4A/ASYM/DPSM/I4LZ binary exports, or a PyTorch pickle/zip "
+        f"(magics {[m for m in _RENDERER_PICKLE_MAGICS]}). "
+        f"This is the 2026-04-26 DEN-V2 bug class — do NOT add a fallback to "
+        f"torch.load; instead fix the producer or register a new magic in "
+        f"experiments/precompute_gradient_corrections.load_renderer."
     )
-
-    if "model_state_dict" in ckpt:
-        model.load_state_dict(ckpt["model_state_dict"])
-    elif "state_dict" in ckpt:
-        model.load_state_dict(ckpt["state_dict"])
-    else:
-        model.load_state_dict(ckpt)
-
-    model = model.eval().to(device)
-    for p_param in model.parameters():
-        p_param.requires_grad = False
-
-    n_params = sum(p_param.numel() for p_param in model.parameters())
-    print(f"[renderer] Loaded {n_params:,} params from {checkpoint_path}")
-    return model
 
 
 def segnet_hinge_loss(

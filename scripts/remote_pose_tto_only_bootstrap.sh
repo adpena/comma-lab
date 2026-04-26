@@ -106,8 +106,10 @@ print('provenance:', json.dumps(prov, indent=2))
         DEBIAN_FRONTEND=noninteractive apt-get install -y -qq ffmpeg 2>&1 | tail -2
     fi
     [ -f "$WORKSPACE/README.md" ] || { echo "FATAL: README.md missing — setuptools install will fail"; exit 1; }
-    "$PYBIN" -m pip install -q -e . 2>&1 | tail -3
-    "$PYBIN" -m pip install -q av opencv-python pydantic timm einops segmentation_models_pytorch 2>&1 | tail -3
+    # 2026-04-26: canonical via pyproject.toml [project.optional-dependencies.runtime]
+    "$PYBIN" -m ensurepip --upgrade 2>&1 | tail -1
+    "$PYBIN" -m pip install -q --upgrade pip 2>&1 | tail -1
+    "$PYBIN" -m pip install -q -e ".[runtime]" 2>&1 | tail -3
 
     # ── Stage 1b: ffmpeg-new + libsvtav1 (per memory: feedback_ffmpeg_svtav1_deploy) ─
     FFMPEG_NEW="$WORKSPACE/upstream/ffmpeg-new"

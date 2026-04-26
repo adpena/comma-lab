@@ -185,7 +185,29 @@ class DistillConfig:
     # computation. boundary_sensitive_hinge exists in fridrich_losses.py but
     # was never integrated. Removed to prevent dead-feature trap.
     use_markov_loss: bool = False        # HUGO: preserve local gradient statistics
-    markov_weight: float = 0.1          # weight for Markov chain loss
+    markov_weight: float = 0.1
+
+    # Yousfi #3: spatially-adaptive quantization noise weighted by local variance
+    # Companion to texture_loss: that down-weights L1 in textured regions, this
+    # actively injects noise there during training so the renderer learns to be
+    # robust to quant perturbations exactly where they're steganographically
+    # free (UNIWARD principle). Orthogonal to KL distill / DCT-Q-table losses.
+    use_variance_noise: bool = False     # UNIWARD: adaptive quant-noise loss
+    variance_noise_weight: float = 0.1   # multiplier for the L2-after-noise term
+    variance_noise_base_std: float = 2.0  # mean noise std (pixel units, 0-255 range)
+    variance_noise_kernel: int = 8       # local-variance window size
+    variance_noise_mode: str = "variance"  # 'variance' (UNIWARD) | 'inverse_variance'
+
+    # Yousfi #5: ScanNet-style spatial uncertainty maps. Up-weights the
+    # reconstruction loss in pixels SegNet is most CONFIDENT about (low
+    # softmax entropy) and down-weights it in pixels SegNet is itself
+    # ambiguous about. See `tac.losses.segnet_uncertainty_weighted_loss`
+    # for the loss and `tac.fridrich.segnet_uncertainty_map` for the
+    # entropy computation. Caveat: SegNet is the network we're fooling,
+    # so its confidence is a USEFUL proxy, not absolute uncertainty.
+    use_uncertainty_loss: bool = False
+    uncertainty_loss_weight: float = 0.1   # keep small — can overlap with KL distill / Yousfi #3
+    uncertainty_loss_floor: float = 0.1   # minimum per-pixel weight so high-entropy pixels still contribute
 
     # Beneficial quantization noise (Eureka 1/2: Yousfi + Fridrich)
     # Quantize rendered frames to low bit-depth before scorer forward pass.
@@ -518,6 +540,22 @@ def compute_scorer_loss(
             fridrich_extra = fridrich_extra + cfg.markov_weight * markov_chain_loss(
                 pred_frames_for_loss, gt_frames_for_loss,
             )
+        if cfg.use_variance_noise and cfg.variance_noise_weight > 0:
+            from tac.losses import uniward_quant_noise_loss
+            fridrich_extra = fridrich_extra + cfg.variance_noise_weight * uniward_quant_noise_loss(
+                pred_frames_for_loss, gt_frames_for_loss,
+                base_std=cfg.variance_noise_base_std,
+                kernel_size=cfg.variance_noise_kernel,
+                mode=cfg.variance_noise_mode,
+            )
+        # Yousfi #5: ScanNet-style spatial uncertainty-weighted reconstruction.
+        # Costs an extra SegNet forward pass on the (detached) GT frames.
+        if cfg.use_uncertainty_loss and cfg.uncertainty_loss_weight > 0:
+            from tac.losses import segnet_uncertainty_weighted_loss
+            fridrich_extra = fridrich_extra + cfg.uncertainty_loss_weight * segnet_uncertainty_weighted_loss(
+                pred_frames_for_loss, gt_frames_for_loss, segnet,
+                weight_floor=cfg.uncertainty_loss_floor,
+            )
         if fridrich_extra.item() > 0:
             loss = loss + fridrich_extra
             metrics["fridrich_loss"] = round(fridrich_extra.item(), 6)
@@ -595,6 +633,30 @@ def compute_scorer_loss(
         )
         total = total + cfg.markov_weight * mc_loss
         fridrich_metrics["markov_loss"] = mc_loss.item()
+
+    if cfg.use_variance_noise and cfg.variance_noise_weight > 0:
+        from tac.losses import uniward_quant_noise_loss
+        # pred_frames_for_loss is (B, H, W, C) HWC — uniward_quant_noise_loss
+        # auto-detects HWC and converts internally.
+        vn_loss = uniward_quant_noise_loss(
+            pred_frames_for_loss, gt_frames_for_loss,
+            base_std=cfg.variance_noise_base_std,
+            kernel_size=cfg.variance_noise_kernel,
+            mode=cfg.variance_noise_mode,
+        )
+        total = total + cfg.variance_noise_weight * vn_loss
+        fridrich_metrics["variance_noise_loss"] = vn_loss.item()
+
+    # Yousfi #5: ScanNet-style spatial uncertainty-weighted reconstruction.
+    # Same HWC → CHW auto-detection. Costs an extra SegNet forward pass.
+    if cfg.use_uncertainty_loss and cfg.uncertainty_loss_weight > 0:
+        from tac.losses import segnet_uncertainty_weighted_loss
+        unc_loss = segnet_uncertainty_weighted_loss(
+            pred_frames_for_loss, gt_frames_for_loss, segnet,
+            weight_floor=cfg.uncertainty_loss_floor,
+        )
+        total = total + cfg.uncertainty_loss_weight * unc_loss
+        fridrich_metrics["uncertainty_loss"] = unc_loss.item()
 
     metrics = {
         "seg_loss": seg_loss.item(),
@@ -1434,6 +1496,34 @@ def parse_args() -> argparse.Namespace:
     p.add_argument("--use-markov-loss", action="store_true",
                    help="HUGO: preserve local gradient statistics (Filler, Judas & Fridrich 2010)")
     p.add_argument("--markov-weight", type=float, default=0.1)
+    # Yousfi #3: spatially-adaptive quantization noise (UNIWARD-aligned)
+    p.add_argument("--use-variance-noise", action="store_true",
+                   help="UNIWARD: noise concentrated in textured regions where "
+                        "the scorer is steganographically blind (Yousfi #3, Holub & "
+                        "Fridrich 2014). Companion to --use-texture-loss.")
+    p.add_argument("--variance-noise-weight", type=float, default=0.1,
+                   help="Weight on the L2-after-noise term (default 0.1)")
+    p.add_argument("--variance-noise-base-std", type=float, default=2.0,
+                   help="Average noise std in pixel units (0-255 range, default 2.0)")
+    p.add_argument("--variance-noise-kernel", type=int, default=8,
+                   help="Local-variance window size (default 8 = SegNet stride-2 RF)")
+    p.add_argument("--variance-noise-mode", type=str, default="variance",
+                   choices=["variance", "inverse_variance"],
+                   help="UNIWARD direction: 'variance' (default, noise in texture) or "
+                        "'inverse_variance' (ablation)")
+    # Yousfi #5: ScanNet-style spatial uncertainty maps
+    p.add_argument("--use-uncertainty-loss", action="store_true",
+                   help="Yousfi #5: weight the renderer's reconstruction loss by "
+                        "inverse SegNet entropy on the GT - focus pixel budget on "
+                        "pixels SegNet is most CONFIDENT about (low entropy). "
+                        "Costs one extra SegNet forward per loss invocation; "
+                        "overlaps spatially with --use-variance-noise (about 30-50 "
+                        "percent) and is partially redundant with KL distill on SegNet.")
+    p.add_argument("--uncertainty-loss-weight", type=float, default=0.1,
+                   help="Multiplier on the uncertainty-weighted L1 term (default 0.1)")
+    p.add_argument("--uncertainty-loss-floor", type=float, default=0.1,
+                   help="Per-pixel weight floor so high-entropy pixels still receive "
+                        "supervision (default 0.1; set to 0 for strict inverse entropy)")
 
     # Phase config
     p.add_argument("--phase1-epochs", type=int, default=2000)
@@ -1533,6 +1623,14 @@ def main() -> None:
         linf_weight=args.linf_weight,
         use_markov_loss=args.use_markov_loss,
         markov_weight=args.markov_weight,
+        use_variance_noise=args.use_variance_noise,
+        variance_noise_weight=args.variance_noise_weight,
+        variance_noise_base_std=args.variance_noise_base_std,
+        variance_noise_kernel=args.variance_noise_kernel,
+        variance_noise_mode=args.variance_noise_mode,
+        use_uncertainty_loss=args.use_uncertainty_loss,
+        uncertainty_loss_weight=args.uncertainty_loss_weight,
+        uncertainty_loss_floor=args.uncertainty_loss_floor,
     )
 
     # Smoke test overrides

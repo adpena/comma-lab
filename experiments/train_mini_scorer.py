@@ -68,53 +68,17 @@ def parse_args() -> argparse.Namespace:
 
 
 def load_renderer(checkpoint_path: str, device: torch.device) -> torch.nn.Module:
-    """Load the trained renderer from checkpoint."""
-    from tac.renderer import AsymmetricPairGenerator
+    """Load the trained renderer with content-based format dispatch.
 
-    ckpt = torch.load(checkpoint_path, map_location="cpu", weights_only=False)
-
-    # Handle both raw state_dict and wrapped checkpoint formats
-    if "model_state_dict" in ckpt:
-        state_dict = ckpt["model_state_dict"]
-        config = ckpt.get("config", {})
-    elif "state_dict" in ckpt:
-        state_dict = ckpt["state_dict"]
-        config = ckpt.get("config", {})
-    else:
-        state_dict = ckpt
-        config = {}
-
-    # Reconstruct architecture from config (must match training params)
-    num_classes = config.get("num_classes", 5)
-    base_ch = config.get("base_ch", 36)
-    mid_ch = config.get("mid_ch", 60)
-    motion_hidden = config.get("motion_hidden", 32)
-    depth = config.get("depth", config.get("renderer_depth", 1))
-    max_flow_px = config.get("max_flow_px", 20.0)
-    max_residual = config.get("max_residual", 20.0)
-    pose_dim = config.get("pose_dim", 0)
-    use_dsconv = config.get("use_dsconv", False)
-    flow_only = config.get("flow_only", False)
-
-    renderer = AsymmetricPairGenerator(
-        num_classes=num_classes,
-        base_ch=base_ch,
-        mid_ch=mid_ch,
-        motion_hidden=motion_hidden,
-        depth=depth,
-        max_flow_px=max_flow_px,
-        max_residual=max_residual,
-        pose_dim=pose_dim,
-        use_dsconv=use_dsconv,
-        flow_only=flow_only,
+    Defers to experiments.precompute_gradient_corrections.load_renderer so all
+    consumers share one canonical content-detecting loader. Suffix-blind
+    torch.load on FP4 .bin files was the 2026-04-26 DEN-V2 bug surface.
+    """
+    from experiments.precompute_gradient_corrections import (
+        load_renderer as _canonical_load_renderer,
     )
-    renderer.load_state_dict(state_dict, strict=False)
-    renderer = renderer.to(device).eval()
-
-    for p in renderer.parameters():
-        p.requires_grad = False
-
-    logger.info("Loaded renderer from %s (base_ch=%d, mid_ch=%d)", checkpoint_path, base_ch, mid_ch)
+    renderer = _canonical_load_renderer(checkpoint_path, device)
+    logger.info("Loaded renderer from %s", checkpoint_path)
     return renderer
 
 
