@@ -254,6 +254,7 @@ def preflight_all(
         preflight_loader_format_safety(strict=True, verbose=verbose)
         preflight_canonical_checkpoints(strict=True, verbose=verbose)
         preflight_build_renderer_signature(strict=True, verbose=verbose)
+        preflight_bootstrap_safety(strict=True, verbose=verbose)
 
     # 2. Training inputs (only if profile + tto_frames provided)
     if profile_name and tto_frames_path and gt_poses_path and masks_path and profile_arch:
@@ -2160,6 +2161,110 @@ def preflight_profiles(strict: bool = True, verbose: bool = True) -> list[str]:
     if violations and strict:
         raise PreflightError(
             "PROFILE VALIDATION FAILED:\n"
+            + "\n".join(f"  • {v}" for v in violations)
+        )
+    return violations
+
+
+def preflight_bootstrap_safety(
+    scripts_dir: str | Path | None = None,
+    strict: bool = True,
+    verbose: bool = True,
+) -> list[str]:
+    """Scan scripts/*_bootstrap.sh for the silent-failure cascade patterns
+    that nuked LANE-B (2026-04-26, 6.5h + ~$2 wasted).
+
+    The LANE-B kill chain (post-mortem in feedback_zip_dep_bootstrap_trap.md):
+      1. PyTorch container has no `zip` binary; shell `zip` failed.
+      2. `set -uo pipefail` (no `-e`) didn't abort on the failure.
+      3. Empty ARCHIVE_BYTES crashed auth_eval at the very end.
+
+    This preflight catches #1 and #2 statically by reading every bootstrap
+    script's source. Patterns enforced:
+
+      A. `set -euo pipefail` (or any -e* form) — `-e` is non-negotiable.
+      B. No bare `zip` shell command (use python `zipfile.ZipFile` instead).
+
+    Each violation explains what went wrong and the canonical fix.
+
+    Args:
+        scripts_dir: directory containing *_bootstrap.sh (defaults to repo
+            scripts/). Pass a different path for testing.
+        strict: raise PreflightError on any violation.
+        verbose: print summary.
+
+    Returns:
+        list of violation strings (may be empty).
+    """
+    import re
+    from pathlib import Path as _Path
+
+    if scripts_dir is None:
+        # Repo root resolution — preflight.py lives in src/tac/, so up two.
+        scripts_dir = _Path(__file__).resolve().parents[2] / "scripts"
+    scripts_dir = _Path(scripts_dir)
+
+    violations: list[str] = []
+    if not scripts_dir.is_dir():
+        msg = f"  [bootstrap] scripts dir not found: {scripts_dir}"
+        if verbose:
+            print(msg)
+        return [msg]
+
+    bootstraps = sorted(scripts_dir.glob("*_bootstrap.sh"))
+    if not bootstraps:
+        if verbose:
+            print(f"  [bootstrap] no *_bootstrap.sh found in {scripts_dir}")
+        return []
+
+    # Match `set -e`, `set -eu`, `set -euo`, `set -ue`, etc. — any combination
+    # that includes a literal `-e` flag (with or without -u / -o / pipefail).
+    SET_E_RE = re.compile(r"^\s*set\s+-[a-z]*e[a-z]*(\s|$)", re.MULTILINE)
+
+    for path in bootstraps:
+        text = path.read_text()
+
+        # Strip comments + heredocs lazily — we want code-line analysis only.
+        code_lines = []
+        for line in text.splitlines():
+            stripped = line.strip()
+            if stripped.startswith("#"):
+                continue
+            code_lines.append(line)
+        code = "\n".join(code_lines)
+
+        # A. set -e flag present
+        if not SET_E_RE.search(code):
+            violations.append(
+                f"{path.name}: missing `set -e` (any -e* flag) — silent "
+                f"command failures will cascade. LANE-B died this way: "
+                f"`zip` failed, script kept running, 6.5h of pose TTO "
+                f"output got crashed at the very end. Use "
+                f"`set -euo pipefail` (matches the other bootstraps)."
+            )
+
+        # B. No `zip` shell binary (PyTorch container doesn't ship it).
+        # Match `zip ` at command position, not `zipfile`/`unzip`/`gzip`.
+        bad = re.search(r"(^|[\s;&|`\(])zip\s+(?!file)", code)
+        if bad:
+            violations.append(
+                f"{path.name}: invokes `zip` shell binary (match: "
+                f"{bad.group(0).strip()!r}). The PyTorch CUDA container "
+                f"`pytorch/pytorch:2.5.1-cuda12.4-cudnn9-devel` does NOT "
+                f"ship `zip` — the command will silently fail. Use python "
+                f"`zipfile.ZipFile` instead (no apt dep, deterministic)."
+            )
+
+    if verbose and violations:
+        print(f"  [bootstrap] {len(violations)} violation(s) across {len(bootstraps)} script(s):")
+        for v in violations:
+            print(f"    • {v}")
+    elif verbose:
+        print(f"  [bootstrap] OK: {len(bootstraps)} bootstrap script(s) clean")
+
+    if violations and strict:
+        raise PreflightError(
+            "BOOTSTRAP SCRIPT SAFETY FAILED (LANE-B kill chain):\n"
             + "\n".join(f"  • {v}" for v in violations)
         )
     return violations
