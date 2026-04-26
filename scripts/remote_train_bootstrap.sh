@@ -41,7 +41,35 @@ if [ "${1:-}" = "--inner" ]; then
 
     LOG_DIR="$WORKSPACE/$OUTPUT_SUBDIR"
     HEARTBEAT="$LOG_DIR/heartbeat.log"
+    PROVENANCE="$LOG_DIR/provenance.json"
     mkdir -p "$LOG_DIR"
+
+    # Provenance record (CLAUDE.md canonical pipeline standard: full
+    # provenance per run — git hash, GPU, torch+CUDA versions, profile,
+    # timestamps, deterministic config). Written BEFORE any work starts so
+    # the record exists even if the run dies mid-stage.
+    GIT_HASH=$(cd "$WORKSPACE" && git rev-parse HEAD 2>/dev/null || echo "no-git")
+    GPU_NAME=$(nvidia-smi --query-gpu=name --format=csv,noheader 2>&1 | head -1)
+    DRIVER_VER=$(nvidia-smi --query-gpu=driver_version --format=csv,noheader 2>&1 | head -1)
+    /opt/conda/bin/python -c "
+import json, time, torch
+prov = {
+    'started_at_utc': time.strftime('%Y-%m-%dT%H:%M:%SZ', time.gmtime()),
+    'git_hash': '$GIT_HASH',
+    'gpu_name': '$GPU_NAME',
+    'driver_version': '$DRIVER_VER',
+    'torch_version': torch.__version__,
+    'cuda_version': torch.version.cuda,
+    'cuda_available': torch.cuda.is_available(),
+    'profile': '$PROFILE',
+    'output_dir': '$LOG_DIR',
+    'pipeline': 'remote_train_bootstrap.sh -> train_renderer.py + pipeline.py compress',
+    'cublas_workspace_config': '$CUBLAS_WORKSPACE_CONFIG',
+}
+with open('$PROVENANCE', 'w') as f:
+    json.dump(prov, f, indent=2)
+print('provenance:', json.dumps(prov, indent=2))
+"
 
     # Heartbeat: 60s cadence, profile cookie ⇒ never `pgrep -f` self-matches.
     ( while true; do
