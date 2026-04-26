@@ -2501,6 +2501,13 @@ DEN = {
     "checkpoint_every": 100,
     "eval_every": 100,              # auth-eval-style score at every checkpoint
     "log_every": 25,
+    # Deterministic reproducibility (CLAUDE.md canonical pipeline standard).
+    # configure_reproducibility() pins random/torch/cuda RNGs, sets
+    # use_deterministic_algorithms(True), cudnn.deterministic=True, and
+    # CUBLAS_WORKSPACE_CONFIG=:4096:8 — making CUDA matmuls bit-exact across
+    # runs (within the same GPU SKU and PyTorch version).
+    "seed": 42,
+    "deterministic": True,
 }
 
 

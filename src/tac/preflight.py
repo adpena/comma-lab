@@ -449,6 +449,22 @@ def _scan_text_for_dangerous_patterns(text: str, location: str) -> list[str]:
     """
     violations: list[str] = []
 
+    # Ad-hoc remote bootstrap scripts in /tmp. The 2026-04-26 SHIRAZ deploy
+    # repeatedly wrote /tmp/*.sh files that vanished on instance restart and
+    # were never under version control. The canonical entry point is
+    # `scripts/remote_train_bootstrap.sh <profile>` (rsynced with the repo).
+    # Allow `/tmp/*.log`, `/tmp/foo.bin`, `/tmp/cache/...` etc — only fire on
+    # bash/python shell files written to /tmp and then EXECUTED.
+    if re.search(r"\b(bash|sh|python3?)\s+/tmp/[A-Za-z_][\w./]*\.(sh|py)\b", text):
+        if "scripts/remote_train_bootstrap.sh" not in text:
+            violations.append(
+                f"{location}: executes a /tmp/*.{{sh,py}} script — ad-hoc "
+                f"deploy scripts in /tmp vanish across instance restarts and "
+                f"are not version-controlled. Use the canonical "
+                f"`scripts/remote_train_bootstrap.sh <profile>` instead, or "
+                f"add the path to scripts/ if it's a reusable tool."
+            )
+
     # Self-matching `pgrep -f TOKEN` deadlock. 2026-04-26 SHIRAZ:
     #   bash -c "while pgrep -f train_distill > /dev/null; do sleep 60; done; bash run_pipeline.sh"
     # The bash -c argv literally contained "train_distill", so pgrep -f matched
