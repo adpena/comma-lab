@@ -1572,6 +1572,24 @@ def preflight_profiles(strict: bool = True, verbose: bool = True) -> list[str]:
             elif not (1 <= depth <= 4):
                 violations.append(f"profile {name!r} depth={depth} out of range [1,4]")
 
+        # Fridrich council #1 (2026-04-26): dct_quant_weight bounds check.
+        # Catches typo'd huge values (e.g. 50.0) that would dominate the loss
+        # stack and starve the scorer signal. Reasonable range: 0 (off) to
+        # 10.0 (heavy weight, larger than any other Fridrich aux loss in DEN).
+        dqw = prof.get("dct_quant_weight")
+        if dqw is not None:
+            if not isinstance(dqw, (int, float)):
+                violations.append(
+                    f"profile {name!r} dct_quant_weight={dqw!r} type "
+                    f"{type(dqw).__name__}, expected float"
+                )
+            elif not (0.0 <= float(dqw) <= 10.0):
+                violations.append(
+                    f"profile {name!r} dct_quant_weight={dqw} out of range "
+                    f"[0.0, 10.0] — values >10 would overwhelm scorer signal "
+                    f"and starve PoseNet/SegNet gradients."
+                )
+
         # Lane D2: mask_half_sim_prob requires use_zoom_flow=True. The
         # training-side simulation derives the warp from RadialZoomWarp via
         # tac.lane_mark_speed.zoom_from_masks; with use_zoom_flow=False the

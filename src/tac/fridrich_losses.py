@@ -11,12 +11,217 @@ References:
     [4] Yousfi & Fridrich 2020 — "An Intriguing Struggle of CNNs in JPEG
         Steganalysis and the OneHot Solution"
     [5] Yousfi, Dworetzky & Fridrich 2022 — Detector-Informed Batch Steganography
+    [6] JPEG Standard ITU-T T.81 Annex K, Table K.1 — Luminance quantization table
 """
 from __future__ import annotations
+
+import math
 
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
+
+
+# ── JPEG luminance quantization table (ITU-T T.81 Annex K, Table K.1) ──────
+#
+# This is the canonical quality=50 luminance Q-table that JPEG encoders use
+# to scale DCT coefficients before integer rounding. It encodes the human
+# visual system's frequency sensitivity curve: low spatial frequencies (top-
+# left of the 8x8 block) have small divisors (16-26) — humans see errors
+# there clearly; high frequencies (bottom-right) have large divisors (95-99)
+# — humans cannot see errors there.
+#
+# Fridrich's inverse-steganalysis principle: scorer CNNs (EfficientNet-B2 +
+# FastViT-T12) likely inherit a similar low-frequency bias from training on
+# natural images. By weighting our DCT-domain residual loss by 1/Q, we
+# penalize residual energy in low-freq bins much more than high-freq bins
+# (a unit coefficient in the (0,0) bin costs (1/16)² ≈ 38× more than in the
+# (7,7) bin), concentrating renderer error into directions the scorers
+# cannot detect.
+JPEG_LUMA_Q_TABLE = [
+    [16, 11, 10, 16, 24, 40, 51, 61],
+    [12, 12, 14, 19, 26, 58, 60, 55],
+    [14, 13, 16, 24, 40, 57, 69, 56],
+    [14, 17, 22, 29, 51, 87, 80, 62],
+    [18, 22, 37, 56, 68, 109, 103, 77],
+    [24, 35, 55, 64, 81, 104, 113, 92],
+    [49, 64, 78, 87, 103, 121, 120, 101],
+    [72, 92, 95, 98, 112, 100, 103, 99],
+]
+
+
+def _build_dct8_matrix(dtype: torch.dtype = torch.float32) -> torch.Tensor:
+    """Build the orthonormal 8x8 DCT-II basis matrix.
+
+    Defined as M[k, n] = α(k) · cos(π·(2n+1)·k / 16) where α(0)=√(1/8)
+    and α(k>0)=√(2/8). This is the canonical orthonormal type-II DCT used
+    by JPEG (after the 1/√N normalisation factor is folded in).
+
+    A 2D DCT of an 8×8 block X is then:  Y = M @ X @ Mᵀ
+    The inverse transform is:           X = Mᵀ @ Y @ M
+
+    We construct it explicitly here (rather than via torch.fft) because the
+    backward pass through fft on some accelerators is non-deterministic,
+    which violates the project's eval_roundtrip determinism contract. A
+    plain matmul is bit-exact and trivially differentiable.
+    """
+    n_idx = torch.arange(8, dtype=dtype)
+    k_idx = torch.arange(8, dtype=dtype).unsqueeze(1)  # (8, 1)
+    # cos((2n+1) k π / 16)
+    basis = torch.cos(math.pi * (2 * n_idx + 1) * k_idx / 16.0)
+    # Orthonormal scaling: row 0 multiplied by √(1/8); rows 1-7 by √(2/8).
+    alpha = torch.full((8, 1), math.sqrt(2.0 / 8.0), dtype=dtype)
+    alpha[0, 0] = math.sqrt(1.0 / 8.0)
+    return alpha * basis  # (8, 8)
+
+
+# Module-level cached basis (CPU, float32). The loss copies it to the
+# correct device/dtype on first call (then cached per-device via _DCT_CACHE).
+_DCT8_CPU = _build_dct8_matrix(dtype=torch.float32)
+_DCT_CACHE: dict[tuple[torch.device, torch.dtype], torch.Tensor] = {}
+_QTABLE_CACHE: dict[tuple[torch.device, torch.dtype], torch.Tensor] = {}
+
+
+def _get_dct8(device: torch.device, dtype: torch.dtype) -> torch.Tensor:
+    key = (device, dtype)
+    cached = _DCT_CACHE.get(key)
+    if cached is None:
+        cached = _DCT8_CPU.to(device=device, dtype=dtype)
+        _DCT_CACHE[key] = cached
+    return cached
+
+
+def _get_inv_qtable(device: torch.device, dtype: torch.dtype) -> torch.Tensor:
+    key = (device, dtype)
+    cached = _QTABLE_CACHE.get(key)
+    if cached is None:
+        q = torch.tensor(JPEG_LUMA_Q_TABLE, dtype=dtype, device=device)
+        cached = 1.0 / q
+        _QTABLE_CACHE[key] = cached
+    return cached
+
+
+def dct_quant_loss(
+    rendered_pair: torch.Tensor,
+    gt_pair: torch.Tensor,
+    weight: float = 1.0,
+    channel_mode: str = "luma",
+) -> torch.Tensor:
+    """JPEG-Q-table-weighted DCT-domain residual loss (Fridrich council #1).
+
+    For each 8×8 block of the residual `rendered - gt` (in luma or per-RGB),
+    take the orthonormal 2D DCT-II and weight each frequency coefficient by
+    1/Q_jpeg[i,j] where Q_jpeg is the standard ITU-T T.81 luminance table.
+    Sum the squared weighted coefficients as the loss.
+
+    The mechanism (see module docstring on JPEG_LUMA_Q_TABLE): scorer CNNs
+    inherit human-visual-system-like frequency sensitivity, which JPEG's
+    Q-table already encodes. The loss contribution of one unit of DCT
+    coefficient energy is (coeff / Q[i,j])², so a unit residual in the
+    (0,0) DC bin costs (1/16)² ≈ 3.9e-3 while the same in the (7,7)
+    HF bin costs (1/99)² ≈ 1.0e-4 — a ~38× cheaper hiding place. The
+    renderer responds by concentrating its inevitable approximation error
+    in the DCT directions the scorer cannot see — a direct UNIWARD analog
+    in the DCT domain.
+
+    Caveat (Yousfi council audit): the JPEG luminance Q-table encodes the
+    HVS frequency-sensitivity curve. Our scorers (EfficientNet-B2 +
+    FastViT-T12) likely inherit a similar low-freq bias from training on
+    natural images, but that's a hypothesis. Empirical validation of the
+    proxy-auth gap on a renderer trained with this loss is the
+    next-required experiment.
+
+    Args:
+        rendered_pair: (B, 2, H, W, 3) HWC RGB tensor at scorer resolution
+            (typically (1, 2, 384, 512, 3) post eval_roundtrip).
+        gt_pair: (B, 2, H, W, 3) GT, same shape and device as rendered_pair.
+        weight: scalar multiplier applied to the returned loss. Caller may
+            also externally scale; included here so the loss can be a self-
+            contained term.
+        channel_mode: "luma" (BT.601 Y from RGB) or "rgb" (sum over channels).
+
+    Returns:
+        Scalar tensor on the input's device/dtype.
+
+    Raises:
+        ValueError: on shape, dtype, or channel_mode contract violations.
+    """
+    if rendered_pair.shape != gt_pair.shape:
+        raise ValueError(
+            f"dct_quant_loss: rendered_pair shape {tuple(rendered_pair.shape)} "
+            f"!= gt_pair shape {tuple(gt_pair.shape)}"
+        )
+    if rendered_pair.ndim != 5 or rendered_pair.shape[-1] != 3:
+        raise ValueError(
+            f"dct_quant_loss: expected (B, T, H, W, 3) HWC RGB input, got "
+            f"shape {tuple(rendered_pair.shape)}"
+        )
+    if channel_mode not in ("luma", "rgb"):
+        raise ValueError(
+            f"dct_quant_loss: channel_mode must be 'luma' or 'rgb', got "
+            f"{channel_mode!r}"
+        )
+
+    # Residual in HWC RGB. Cast to the renderer's working dtype (typically
+    # float32 — but support float64 for tests that probe orthonormality).
+    residual = rendered_pair - gt_pair  # (B, T, H, W, 3)
+    B, T, H, W, _ = residual.shape
+
+    if channel_mode == "luma":
+        # BT.601 luma — matches the convention already used in
+        # compute_texture_complexity above and elsewhere in the project.
+        r = residual[..., 0]
+        g = residual[..., 1]
+        b = residual[..., 2]
+        chan = (0.299 * r + 0.587 * g + 0.114 * b).unsqueeze(-1)  # (B,T,H,W,1)
+        n_channels = 1
+    else:
+        chan = residual  # (B, T, H, W, 3)
+        n_channels = 3
+
+    # Reshape to (B*T*C, 1, H, W) for F.pad / blocking. The leading dim
+    # collapses pair, batch, and (optionally) channel — every 2D slice gets
+    # independent 8x8 block DCT.
+    # chan: (B, T, H, W, C) -> (B, T, C, H, W) -> (B*T*C, 1, H, W)
+    flat = chan.permute(0, 1, 4, 2, 3).reshape(B * T * n_channels, 1, H, W)
+
+    # Pad H and W to multiples of 8 using replicate (matches the renderer's
+    # padding_mode='replicate' convention — a constant or zero pad would
+    # introduce a high-freq artifact at the boundary that the loss would
+    # then "punish" the renderer for, even though the renderer never
+    # produced it).
+    pad_h = (8 - H % 8) % 8
+    pad_w = (8 - W % 8) % 8
+    if pad_h or pad_w:
+        # F.pad signature for 4D: (left, right, top, bottom)
+        flat = F.pad(flat, (0, pad_w, 0, pad_h), mode="replicate")
+    H_p = H + pad_h
+    W_p = W + pad_w
+    h_blocks = H_p // 8
+    w_blocks = W_p // 8
+
+    # Block reshape: (N, 1, H_p, W_p) -> (N, h_blocks, 8, w_blocks, 8) ->
+    # (N, h_blocks, w_blocks, 8, 8) -> (N * h_blocks * w_blocks, 8, 8)
+    N = flat.shape[0]
+    blocks = flat.view(N, 1, h_blocks, 8, w_blocks, 8)
+    blocks = blocks.permute(0, 1, 2, 4, 3, 5).contiguous()  # (N,1,hb,wb,8,8)
+    blocks = blocks.view(-1, 8, 8)  # (N * hb * wb, 8, 8)
+
+    # 2D orthonormal DCT-II per 8x8 block: Y = M @ X @ Mᵀ
+    M = _get_dct8(blocks.device, blocks.dtype)  # (8, 8)
+    # X @ Mᵀ first → (B*, 8, 8); then M @ (X @ Mᵀ) → (B*, 8, 8)
+    coeffs = torch.matmul(M, torch.matmul(blocks, M.t()))  # (B*, 8, 8)
+
+    # Multiply each (8,8) block by the inverse Q table elementwise. Squared
+    # weighted coefficients give us per-block per-bin energy in the
+    # perceptually weighted basis.
+    inv_q = _get_inv_qtable(blocks.device, blocks.dtype)  # (8, 8)
+    weighted = coeffs * inv_q  # broadcast over leading dim
+    loss = (weighted * weighted).mean()
+
+    if weight != 1.0:
+        loss = loss * weight
+    return loss
 
 
 def compute_texture_complexity(

@@ -70,6 +70,7 @@ from tac.losses import (  # noqa: E402
 )
 from tac.mask_codec import extract_masks, mask_pair_from_index  # noqa: E402
 from tac.profiles import PROFILES  # noqa: E402
+from tac.fridrich_losses import dct_quant_loss  # noqa: E402
 from tac.renderer import build_renderer, simulate_eval_roundtrip  # noqa: E402
 from tac.contrib.wavelet_renderer import build_wavelet_renderer  # noqa: E402
 from tac.scorer import detect_device, load_scorers  # noqa: E402
@@ -216,6 +217,12 @@ def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
     p.add_argument("--use-markov-loss", action="store_true", default=None,
                    help="Fridrich HUGO: preserve local gradient statistics")
     p.add_argument("--markov-weight", type=float, default=None)
+    p.add_argument("--dct-quant-weight", type=float, default=None,
+                   help="Fridrich council #1: JPEG-Q-table-weighted DCT-domain "
+                        "residual loss (0=disabled). Penalises low-freq leak; "
+                        "lets renderer hide error in high-freq DCT bins the "
+                        "scorer cannot see. Recommended 0.5 (similar to "
+                        "texture_loss_weight).")
     p.add_argument("--use-per-class-weights", action="store_true", default=None)
     p.add_argument("--use-swa", action="store_true", default=None)
     p.add_argument("--even-frame-skip-seg", action="store_true", default=False,
@@ -304,6 +311,10 @@ def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
                                      "use_markov_loss", False)
     args.markov_weight = _resolve(getattr(args, "markov_weight", None),
                                    "markov_weight", 0.1)
+    # Fridrich council #1 (2026-04-26): JPEG-Q-table-weighted DCT loss.
+    # Default 0.0 = disabled (zero overhead — call site is gated).
+    args.dct_quant_weight = _resolve(getattr(args, "dct_quant_weight", None),
+                                      "dct_quant_weight", 0.0)
     args.use_per_class_weights = _resolve(getattr(args, "use_per_class_weights", None),
                                            "use_per_class_weights", False)
     args.use_swa = _resolve(getattr(args, "use_swa", None), "use_swa", False)
@@ -963,6 +974,14 @@ def train(args: argparse.Namespace):
                     markov_loss = (grad_x_pred - grad_x_gt).abs().mean() + \
                                   (grad_y_pred - grad_y_gt).abs().mean()
                     loss = loss + args.markov_weight * markov_loss
+                # Fridrich council #1 (2026-04-26): JPEG-Q-table-weighted DCT
+                # loss. Penalises low-frequency residual energy ~6× more than
+                # high-frequency, hiding error in DCT bins the scorers cannot
+                # see. Zero-overhead when weight=0 (call site is gated).
+                if args.dct_quant_weight > 0:
+                    loss = loss + args.dct_quant_weight * dct_quant_loss(
+                        rendered_pair, gt_pair,
+                    )
 
                 # KL distillation auxiliary — SegNet ONLY (R-fix-double-count).
                 # The original wiring used kl_distill_scorer_loss which returns

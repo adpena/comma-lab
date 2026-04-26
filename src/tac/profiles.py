@@ -2450,6 +2450,12 @@ DEN = {
     "linf_weight": 0.01,
     "use_markov_loss": True,
     "markov_weight": 0.1,
+    # Fridrich council #1 (2026-04-26): JPEG-Q-table-weighted DCT loss.
+    # Penalises low-freq residual energy ~6× more than high-freq, letting
+    # the renderer hide error in DCT directions the scorers cannot see
+    # (UNIWARD analog in the DCT domain). Council recommended weight 0.5,
+    # matching texture_loss_weight scale. Estimated +0.04-0.08 score impact.
+    "dct_quant_weight": 0.5,
     # KL distill SegNet-only (no PoseNet double-counting). Schedule decay
     # over phases so distillation pressure tapers as the model converges.
     "kl_distill_weight": 1.0,
