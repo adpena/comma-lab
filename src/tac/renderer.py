@@ -713,6 +713,31 @@ class PairGenerator(nn.Module):
         self.blend_mode = blend_mode
         self.noise_mode = noise_mode
 
+        # 2026-04-26 arch-drift unification: forward arch-introspection
+        # attributes from the inner MaskRenderer so PairGenerator and
+        # AsymmetricPairGenerator expose the same shape of interface.
+        # Downstream consumers (auth_eval_renderer, optimize_poses,
+        # qat_finetune, sensitivity_sweep, _infer_asymmetric_config)
+        # historically did `model.use_dsconv`, `model.pose_dim`, etc.
+        # Without these forwards, every PairGenerator-class run crashed
+        # at deploy time with AttributeError. Plain attributes (not
+        # @property) so .to(device) and torch.save round-trip cleanly.
+        self.pose_dim = getattr(renderer, "pose_dim", 0)
+        self.use_dsconv = getattr(renderer, "use_dsconv", False)
+        self.padding_mode = getattr(renderer, "padding_mode", "zeros")
+        self.use_dilation = getattr(renderer, "use_dilation", False)
+        self.use_zoom_flow = False  # PairGenerator never has zoom flow
+        self.embed_dim = getattr(renderer, "embed_dim", 6)
+        self.base_ch = getattr(renderer, "base_ch", 36)
+        self.mid_ch = getattr(renderer, "mid_ch", 60)
+        self.depth = getattr(renderer, "depth", 1)
+        self.num_classes = getattr(renderer, "num_classes", 5)
+        # Motion-side attrs that AsymmetricPairGenerator exposes directly
+        self.motion_hidden = getattr(motion, "hidden", getattr(motion, "motion_hidden", 32))
+        self.max_flow_px = getattr(motion, "max_flow_px", 20.0)
+        self.max_residual = getattr(motion, "max_residual", 20.0)
+        self.flow_only = getattr(motion, "flow_only", False)
+
         # Blend modes:
         #   "scalar"  — single learned alpha (original behavior)
         #   "spatial" — per-pixel learned blend map via 1x1 conv
