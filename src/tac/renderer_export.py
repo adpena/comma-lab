@@ -675,8 +675,13 @@ def _infer_asymmetric_config(model: nn.Module) -> dict:
     flow_only = getattr(motion, "flow_only", False)
 
     # FiLM / DSConv architecture flags (required for faithful inline deserialize)
-    pose_dim = getattr(model, "pose_dim", 0)
-    use_dsconv = getattr(model, "use_dsconv", False)
+    # 2026-04-26: PairGenerator stores use_dsconv on its `renderer` sub-module
+    # (MaskRenderer), not on itself. AsymmetricPairGenerator stores it directly.
+    # Fall back through the renderer attr so PairGenerator is handled too —
+    # without this, DEN's exported .bin had use_dsconv=False (wrong) and the
+    # inflate side built a fatter model whose conv lookup didn't match.
+    pose_dim = getattr(model, "pose_dim", getattr(renderer, "pose_dim", 0))
+    use_dsconv = getattr(model, "use_dsconv", getattr(renderer, "use_dsconv", False))
     use_zoom_flow = getattr(model, "use_zoom_flow", False)
 
     # Conv behavior flags — MUST be serialized to prevent silent corruption
@@ -1313,22 +1318,26 @@ def load_asymmetric_checkpoint_fp4(
     block_size = header["block_size"]
     codebook = torch.tensor(header["codebook"], dtype=torch.float32)
 
-    # Build fresh AsymmetricPairGenerator
-    model = AsymmetricPairGenerator(
-        num_classes=header.get("num_classes", 5),
+    # 2026-04-26 arch-drift fix layer 4: dispatch via build_renderer (the
+    # SAME function used by train_renderer + step_export). PairGenerator
+    # (use_zoom_flow=False) and AsymmetricPairGenerator (=True) have
+    # DIFFERENT module-name structures; named_modules() iteration order
+    # differs. Hardcoding AsymmetricPairGenerator here meant any
+    # PairGenerator .bin produced by step_export crashed in the conv
+    # lookup with KeyError on `renderer.stem_conv.0`. build_renderer
+    # routes correctly; export and inflate now share dispatch.
+    from tac.renderer import build_renderer
+    model = build_renderer(
         embed_dim=header.get("embed_dim", 6),
         base_ch=header.get("base_ch", 36),
         mid_ch=header.get("mid_ch", 60),
         motion_hidden=header.get("motion_hidden", 32),
         depth=header.get("depth", 1),
-        max_flow_px=header.get("max_flow_px", 20.0),
-        max_residual=header.get("max_residual", 20.0),
-        flow_only=header.get("flow_only", False),
         pose_dim=header.get("pose_dim", 0),
         use_dsconv=header.get("use_dsconv", False),
-        use_zoom_flow=header.get("use_zoom_flow", False),
         padding_mode=header.get("padding_mode", "zeros"),
         use_dilation=header.get("use_dilation", False),
+        use_zoom_flow=header.get("use_zoom_flow", False),
     )
 
     # Build name -> module lookups

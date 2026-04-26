@@ -317,11 +317,33 @@ def step_export(cfg: PipelineConfig, iteration: int = 0) -> Path:
             _log(f"Export marker unreadable + bin missing, forcing re-export", "WARN")
 
     _log("Exporting checkpoint to FP4")
-    from tac.renderer import AsymmetricPairGenerator
+    from tac.renderer import build_renderer
     from tac.renderer_export import export_asymmetric_checkpoint_fp4
 
     ckpt = torch.load(cfg.checkpoint, map_location="cpu", weights_only=False)
     state = ckpt.get("model_state_dict", ckpt) if isinstance(ckpt, dict) else ckpt
+
+    # 2026-04-26 fourth-layer arch-drift fix: train_renderer (DEN profile)
+    # saves the model with torch.nn.utils.parametrize hooks attached for
+    # self-compression / fake-quantization. State keys look like
+    # `<layer>.parametrizations.weight.original` and the constructed
+    # model (no hooks) expects plain `<layer>.weight`. Normalize here so
+    # the same .pt loads cleanly into a fresh build_renderer() output.
+    # Drop codebook tensors (`.parametrizations.<n>.0.codebook`) — those
+    # are QAT internals not part of the plain weight tensor.
+    if any(".parametrizations." in k for k in state.keys()):
+        normalized = {}
+        for k, v in state.items():
+            if ".parametrizations." not in k:
+                normalized[k] = v
+                continue
+            # Pattern: <prefix>.parametrizations.<name>.original  →  <prefix>.<name>
+            head, _, tail = k.partition(".parametrizations.")
+            name, _, suffix = tail.partition(".")
+            if suffix == "original":
+                normalized[f"{head}.{name}"] = v
+            # else: drop codebook + other parametrize internals
+        state = normalized
 
     # 2026-04-26 council fix (arch drift): read FULL arch from __meta__
     # (saved by train_renderer.py with use_zoom_flow / use_dsconv / etc).
@@ -339,8 +361,14 @@ def step_export(cfg: PipelineConfig, iteration: int = 0) -> Path:
     def _arch(key, default):
         return meta.get(key, getattr(cfg, key, default)) if meta else getattr(cfg, key, default)
 
-    model = AsymmetricPairGenerator(
-        num_classes=5,
+    # 2026-04-26 third-layer arch-drift fix: route through build_renderer
+    # — the SAME function train_renderer uses — so PairGenerator vs
+    # AsymmetricPairGenerator dispatch is identical on both sides.
+    # PairGenerator wraps a MaskRenderer + MotionPredictor (bias [2] for
+    # 2-channel flow), AsymmetricPairGenerator inlines its own constructor
+    # (bias [6] for the zoom-flow path). Hardcoding either constructor
+    # here was the root of the DEN-V2 step_export crash.
+    model = build_renderer(
         embed_dim=_arch("embed_dim", 6),
         base_ch=_arch("base_ch", 36),
         mid_ch=_arch("mid_ch", 60),
