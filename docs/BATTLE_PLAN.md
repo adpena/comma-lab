@@ -1,125 +1,103 @@
 # Battle Plan: Beat Quantizr (0.33)
 
-**Deadline: May 3, 2026. 8 days remaining.**
-**Last verified contest-compliant auth: 2.01 (April 21, full e2e through inflate.sh → upstream evaluate.py).**
-**Target: < 0.33. Realistic stretch this cycle: 1.0–1.5 with current architectures.**
+**Deadline: May 3, 2026. 7 days remaining.**
+**Verified contest-CUDA baseline: 0.9001** (pinned dilated h64 + CRF=50 + matched poses, 2026-04-25).
+**Target: < 0.33 (beat Quantizr). Verified gap: 0.57.**
 
-> **IMPORTANT — score honesty:** the previously cited "auth 2.26" came from a SHIRAZ proxy of 0.804 translated through a chain that contained the Round 22 QAT arch-mismatch bug. It is NOT a verified contest-compliant score. The last fully measured number is 2.01 (April 21, post mask-resolution fix).
+> **What's true:** the 0.90 is the *only* number this lab has ever measured on the real CUDA contest scorer that is not a measurement artifact. SHIRAZ (181K) and DEN (123K) both lost to it. Bigger architecture (or better training of the dilated-h64 family) is the path forward, not smaller experimental renderers.
 
-## TODAY (Apr 25) — NUCLEAR (zero GPU)
+## Score decomposition vs Quantizr
 
-These actions move the score the most per dollar. Do them BEFORE any new training.
+| Component | Baseline 0.90 | Quantizr 0.33 (est.) | Required for us |
+|---|---|---|---|
+| 100·seg_d | 0.24 (seg=0.0024) | ~0.07 | **0.05** |
+| √(10·pose_d) | 0.327 (pose=0.0107) | ~0.06 | **0.05** |
+| 25·rate | ~0.32 (~480KB archive) | 0.20 (~300KB) | **0.20** |
+| **Sum** | **~0.90** | **~0.33** | **~0.30** |
 
-> **R27 correction:** prior battleplan double-counted NUCLEAR #1 and #3 — they are TWO SIDES of one architectural change (store odd frames + reconstruct even at inflate). Combined delta is −0.12 to −0.18 once, not twice.
+Pose is the single biggest component (0.327 = 36% of score). Rate is the second-largest fixed cost. SegNet third. Cutting all three by ~3× hits target.
 
-| # | Action | Cost | Expected delta | Blocker |
-|---|--------|------|----------------|---------|
-| **1+3 (combined)** | **Half-frame mask + even-from-odd reconstruction**: store only 600 odd-frame masks in archive; at inflate, reconstruct even-frame masks from stored ones via grid_sample warp using stored pose. Quantizr's paradigm. Existing `inflate_renderer.py` half-frame path uses `repeat_interleave` (duplication) which zeroes the MotionPredictor's diff features — the warp version preserves motion. | CPU, ~1 day (encode sweep + warp impl + e2e validation) | rate −0.12 to −0.18 (one delta, not two) | None — int8 overflow already fixed in `encode_masks_monochrome` (R27 reviewer correction) |
-| **2** | **SHIRAZ Phase 3 → immediate auth eval** (download checkpoint, run inflate → upstream evaluate.py). Do NOT wait for QAT chain to finish. Get the auth number BEFORE deciding next deploy. | local, ~3h | establishes ground truth | SHIRAZ Phase 3 complete |
-| **4 (NEW NUCLEAR — promoted from "open gaps")** | **Add `--profile X` to `train_distill.py` + deterministic seeding (cudnn, numpy, random) + add CI to run preflight tests on every push.** These are CLAUDE.md non-negotiables and NOT council decisions. Without them, every experiment is unreproducible by definition. | local, **4–6h** (timebox strictly; CI alone is 1–2h on a fresh repo + iteration) | unblocks 5-pass review gate | None |
+## Three pillars to attack the gap
 
-Combined projection of NUCLEAR #1+3 + #2 baseline: rate term drops by 0.12-0.18 from 9.4-point contribution.
+### Pillar A — Reduce rate (target: 0.32 → 0.20, win 0.12)
 
-## Round 23 + 24 Postmortem (2026-04-25)
+| # | Action | Cost | Expected delta | Status |
+|---|--------|------|----------------|--------|
+| A1 | **Mask CRF sweep on baseline archive** (CRF 50→56→63 on the dilated-h64 baseline). Build archive at each, e2e auth eval. Pick Pareto best. | CPU + 3× CUDA eval = ~30min, $0.50 | rate −0.05 to −0.10 (potential SegNet trade) | NEW |
+| A2 | **Half-frame mask encoding** (Quantizr trick — store only 600 odd-frame masks; reconstruct even from odd via warp at inflate). Already implemented locally. Apply to baseline archive. | CPU local, eval ~10min | rate −0.05 to −0.10, distortion neutral if warp clean | code ready, untested on baseline |
+| A3 | **Lane-mark-zoom in archive** (Hotz analytical: zero archive cost, infers per-frame zoom from masks at inflate). | local code merge + eval | rate 0 (free), pose −0.001 to −0.005 | code ready, untested |
 
-The SHIRAZ A100 trained with `motion_hidden=24, depth=1`, but `pipeline.py` invoked `qat_finetune.py` without `--motion-hidden`/`--depth`/`--embed-dim`. QAT silently rebuilt the wrong arch. Two rounds of fresh-eyes adversarial review surfaced 14+ findings; all CRITICAL ones are fixed:
+### Pillar B — Reduce PoseNet distortion (target: 0.327 → 0.05, win 0.28)
 
-**Round 23 fixes (10):**
+PoseNet is 36% of total score. The biggest single lever.
 
-| # | Bug class | Fix |
-|---|-----------|-----|
-| 1 | Cross-function `cmd` variable scope pollution in arity validator | `_extract_invocations_from_scope` per-scope `list_vars` |
-| 2 | Short-form alias (`-m, --motion-hidden`) not indexed | `_parse_argparse_signature` iterates all positionals |
-| 3 | `ARCH_FLAGS_BOOLEAN` declared but never checked → boolean-flag SHIRAZ | Rule D in `preflight_arity` |
-| 4 | `bash -c "python experiments/x.py"` was a blind spot | `_BASH_C_TARGET_RE` |
-| 5 | `optimize_poses.py` `.pt` loader missing `padding_mode` + `use_dilation` | Pass through from `model_cfg` |
-| 6 | `step_qat` skip path returned hardcoded filename → phantom path | Disk-resolve actual artifact |
-| 7 | Stale `run_pipeline.sh` survives rsync on remote | `deploy_vastai.py` preflight check 6 |
-| 8 | New tests at `src/tac/tests/` not in `pyproject.toml testpaths` | `testpaths = ["tests", "src/tac/tests"]` |
-| 9 | `preflight_profiles` silently skips profiles with no `experiment_type` | Fail on missing/unknown |
-| 10 | Validator error referenced deleted `preflight_codebase.py` | Message updated |
+| # | Action | Cost | Expected delta | Status |
+|---|--------|------|----------------|--------|
+| B1 | **Pose TTO on the dilated-h64 baseline** (we ran SHIRAZ TTO but never on h64; the 0.90 used the original training poses, not optimized). | $0.30 (1h on 4090) | pose −50% to −70% (proxy) → CUDA pose 0.005-0.008 | UNTESTED on baseline |
+| B2 | **eval_roundtrip + noise_std=0.5 in pose TTO** (already canonicalized — but verify it's wired into the dilated-h64 path) | trivial | proxy-CUDA gap < 5% (vs 23× MPS noise) | enforced |
+| B3 | **Larger pose TTO budget** (2000 steps vs default 600). Diminishing returns but still positive. | +30 min | pose −10-20% additional | speculative |
 
-**Round 24 fixes (5):**
+### Pillar C — Reduce SegNet distortion (target: 0.24 → 0.05, win 0.19)
 
-| # | Bug class | Fix |
-|---|-----------|-----|
-| 11 | `step_export` built `AsymmetricPairGenerator` without `use_zoom_flow` → silent wrong arch on GREEN | Pass `use_zoom_flow`; load_state_dict mismatch now hard-errors |
-| 12 | `PipelineConfig` missing `use_zoom_flow` (and other discipline flags) → `getattr` fallbacks masked omission | Real fields, removed `getattr` |
-| 13 | SSH check 6 returned empty on SSH failure → false-negative | Sentinel-token compound check |
-| 14 | `step_eval` cached `.done_eval` on auth-eval failure → phantom score on resume | Raise instead of mark done |
-| 15 | I4LZ format has no arch header → contest-time silent default `padding_mode=zeros` for non-default arches | `step_compress_weights` falls back to FP4 when arch needs header |
-| 16 | `ARCH_FLAGS_BOOLEAN` set incomplete (missing `--use-swa`, `--beneficial-quant-noise`, freeze flags, etc.) | Set expanded; Rule D now flags 5 real launcher gaps in `step_fridrich_refine` (fixed) |
+| # | Action | Cost | Expected delta | Status |
+|---|--------|------|----------------|--------|
+| C1 | **Re-train dilated-h64 with new techniques** (DCT-quant loss, KL distill T=2.0 on SegNet, UNIWARD/L∞/Markov, hinge loss, mixed-CRF mask aug). All techniques shipped today; never applied to the h64 path. | $0.80 (2-3h on 4090) | seg −30% to −50% (~0.0012-0.0017) | UNTESTED on h64 |
+| C2 | **Engineered SegNet corrections** (gradient-directed pixel patches at compress time). | local CPU | seg −0.05 to −0.10 (proxy; auth gap unknown) | code exists, FP4 load broken — needs fix |
+| C3 | **Bigger renderer** (scale h64 up — the user's insight that bigger = better for this arch family). E.g., dilated h96 or h128 with more channels. | $1-2 (3-4h on 4090) | seg + pose better, rate worse | ⚠ counter to rate goal — only if A pillar wins enough headroom |
 
-**Tests pass: 46/46** (`src/tac/tests/test_preflight_arity.py` + `test_integration_boundaries.py`). R28 added 2 more tests for the score regex distortion-keyword check + _user_provided_flags required-arg semantic, and strengthened the profile-matrix check to round-trip through PipelineConfig (catches type mismatches).
+## Stacked projection
 
-## Open architectural gaps
+| Path | Score | Math | Confidence |
+|---|---|---|---|
+| Verified today | **0.90** | dilated-h64 baseline | HIGH |
+| + A1 (CRF tune) | **0.85** | rate −0.05 | HIGH |
+| + A2 (half-frame masks) | **0.78** | rate −0.07 (−0.10 raw, +0.03 SegNet bleed) | MEDIUM |
+| + B1 (pose TTO on h64) | **0.55** | pose 0.327 → 0.10 (sqrt(10·0.001) ≈ 0.10) | MEDIUM-HIGH |
+| + C1 (h64 retrain new techniques) | **0.40** | seg 0.24 → 0.10 + further pose tightening | MEDIUM |
+| + C3 (bigger arch, paid for by A wins) | **0.30** | breakthrough — needs measurement | SPECULATIVE |
+| **Quantizr** | **0.33** | their published score | reference |
 
-R27 reviewer correction: items 1, 2, 4 are CLAUDE.md non-negotiables and have been promoted to NUCLEAR #4 above (timeboxed, ~4h total). Items 3, 5, 6 remain open:
+The path to sub-0.33 is **A1 + A2 + B1 + C1** stacked. None require fundamentally new techniques — every piece is already implemented, just never applied to the dilated-h64 baseline.
 
-3. **Profile-key vs ArchConfig-field cross-validation.** R26 added Levenshtein typo detection, but a profile key that's training-only AND happens to be far from any PipelineConfig name is silently dropped. Acceptable for now (training scripts consume their own profile keys), but `preflight_profiles` should grow a similar warning for `ArchConfig.__dataclass_fields__`.
-5. **Chain bugs in pipeline.py:** sensitivity_sweep runs on `cfg.checkpoint` which mutates across iterations (silent semantic drift); fridrich_refine runs AFTER QAT (should be before — Fridrich sculpts float weights into scorer null-space, then QAT bakes the sculpting in); `subprocess.run` has no timeout (no preemption recovery).
-6. **No `download` subcommand on deploy_vastai.py.** After pipeline completes, results in `/workspace/pact/experiments/results/<profile>/` require manual SCP. Risk: operator destroys instance before downloading. Add `python scripts/deploy_vastai.py --download <instance_id>` and gate `--kill` behind a confirmation prompt.
+## Today's order of execution (zero waste, score-driven)
 
-## Re-opened HOLD items (R27 reviewer correction)
+1. **A1 mask CRF sweep on existing 0.90 archive** — local CPU, no GPU, ~30 min. Picks the right CRF for the next steps.
+2. **A2 half-frame masks on the same archive** — local CPU + 1 CUDA eval, ~20 min. Confirms the rate win.
+3. **B1 pose TTO on dilated-h64 baseline** — fresh 4090, ~1h, $0.30. This is the biggest single lever (PoseNet 36% of score). Use the canonical bootstraps.
+4. **C1 h64 retrain with new techniques** — fresh 4090, ~3h, $0.80. Only after A+B confirm the rate+pose lane is solid.
+5. Eval after EACH step. Verify on real CUDA. Don't stack 4 changes and then measure.
 
-The earlier KILL list was too aggressive. Two items are restored to HOLD pending fix:
+## What we are explicitly NOT doing
 
-- **Cool-Chic / C3 residual**: KILL was based on "FP4 quantization erases float gains." But the run log shows C3 float-path SegNet improving from 92.3 → 68.7 over 20 epochs — real signal. The FP4 export is broken (QAT parametrization buffers not on training device), not the architecture. Status: HOLD until FP4 export bug is fixed. Then re-evaluate.
+- **DEN-V2 deploy patching** — sunk cost. Trained checkpoint preserved in `experiments/results/den_v2_archive/` for future. The ~$1 burn taught us PairGenerator deployment needs a proper interface refactor (in working tree, blocked by review gate). The score of a smaller renderer wouldn't beat 0.90 anyway.
+- **SHIRAZ further iteration** — same architecture lesson. 109-181K is undermatched. SHIRAZ best is 2.70 (re-eval today with --poses fix); not on the path to 0.30.
+- **Cool-Chic / C3 / DP-SIMS / VQ-VAE / diffusion teacher / cross_disc_*** — none have CUDA-verified scores; not deployable in 7 days.
+- **Score chasing on MPS/proxy** — every score must be CUDA real. MPS has 23× drift on PoseNet alone.
 
-## Experiment ranking (Round 24 Contrarian decision)
+## Active hardware budget
 
-| Tier | Experiment | Justification |
-|------|-----------|---------------|
-| **NUCLEAR** | Half-frame mask AV1 sweep | CPU-only; largest single rate reduction available |
-| **NUCLEAR** | SHIRAZ auth eval immediately on Phase 3 exit | Truth before next deploy; do NOT skip to keep momentum |
-| **NUCLEAR** | Even-frame-warp-from-odd at inflate | Zero archive cost; multiplicative with mask sweep |
-| **PROMOTE** | MXLZ sensitivity sweep + mixed-precision export on winner | rate −0.06 to −0.09; requires arch_header guard (just added) |
-| **PROMOTE** | Engineered corrections | SegNet −0.05 to −0.10; only after auth baseline known |
-| **PARALLEL** | `winner_v2` (SHIRAZ_V2 or WILDE_V2) | beneficial_quant_noise has ZERO empirical backing; only deploy after winner auth is known |
-| **HOLD** | GREEN auth eval | A/B for zoom_flow ablation; passive value |
-| **KILL** | Cool-Chic full, C3 full | FP4 quantization erases float gains; not solved |
-| **KILL** | DP-SIMS revival, all VQ-VAE, diffusion teacher, distillation full | No auth evidence; no time |
-| **KILL** | All `cross_disc_*`, `finance_*`, `variational_*`, `lagrangian_dual_*` | Theory-only; not submission candidates |
-| **KILL** | `OVERFIT_CPU/GPU`, `wavelet`, `coord`, `depthwise`, `channel_recurrent` smokes | No auth evidence; no time |
+- **0.90 archive**: pinned, immutable, on local disk. No GPU needed for A1+A2.
+- **One 4090 needed for B1** (1h, $0.30). Use any cheap US/CA/EU instance via canonical bootstrap.
+- **Second 4090 for C1** when ready (3h, $0.80).
+- Total tonight projected: $1.10 to push the score from 0.90 to ~0.55. $2.00 total to attempt sub-0.40.
+- Hard cap remains $24. Burned so far ~$2.
 
-## Rebuilt Timeline
+## Hardening that must land before next deploy
 
-| Day | Action |
-|-----|--------|
-| Apr 25 (today, AM) | Half-frame AV1 sweep (CPU, parallel with everything else). Even-from-odd inflate code. |
-| Apr 25 (today, PM) | SHIRAZ Phase 3 auth eval. Diagnose proxy-auth gap if > 1.5x. Decide v2 deploy based on result. |
-| Apr 26 | Deploy winner_v2 if SHIRAZ auth is in [0.5, 1.2]. MXLZ sensitivity sweep on winner. Engineered corrections on winner. |
-| Apr 27 | v2 results. Stack: half-mask + even-from-odd + MXLZ + engineered. Full e2e auth eval. |
-| Apr 28-30 | **5-pass adversarial review starts NOW (not May 1).** Review inflate.sh, archive packaging, contest compliance, T4 timing. Each round resets on any finding. |
-| May 1-2 | Final polish + buffer. |
-| May 3 | Deadline. |
+| Item | Why | ETA |
+|---|---|---|
+| **Preflight: profile-pipeline interface check** | Instantiate `build_renderer(profile)`; verify all attrs the deploy chain reads exist. DEN burned $1 layer-by-layer because we lacked this. | 30 min |
+| **PairGenerator forwarding shim** | Already in working tree; needs proper greenup (2 distinct approvers + 1 human) before merge. Unblocks future PairGenerator-class profiles. | depends on greenup |
+| **step_pose_tto soft-skip on pose_dim=0** | LANDED commit 9436fb15 | done |
+| **pipeline.step_eval auto-pass --poses** | LANDED commit 63854f31 | done |
+| **mask_codec ffmpeg-new + LD_LIBRARY_PATH** | LANDED commit 2acbc25b | done |
+| **Bootstrap profile case-normalization** | LANDED commit 94566150 | done |
 
-> **Contingency** (R27 reviewer): Rounds 23-27 each found CRITICAL bugs (zero clean rounds so far). 5 consecutive clean passes by May 1 is statistically implausible at the current find-rate. **If the gate is not clean by May 1, the submission is whatever passes review by May 3 OR is withheld.** A non-compliant submission ranks worse than no submission per the writeup strategy. Quality of the gate is more important than meeting the original timeline.
+## Non-negotiables (carried forward)
 
-## Score Projections (honest, R27 math correction)
-
-| Scenario | Score | Path | Confidence |
-|----------|-------|------|------------|
-| Verified baseline (Apr 21) | 2.01 [contest-compliant] | masks 384×512 + ASYM renderer + poses | HIGH |
-| SHIRAZ Phase 3 auth (pending) | unknown | A100 7-stage chain | proxy says 0.8, auth gap unknown |
-| + half-frame + warp (NUCLEAR #1+3, ONE change) | −0.12 to −0.18 | mask sweep + warp at inflate | HIGH (math direct) |
-| + MXLZ renderer | −0.06 to −0.09 | sensitivity sweep + mixed-precision | MEDIUM (arch_header guard added) |
-| + engineered corrections | −0.05 to −0.10 SegNet | gradient-directed pixels | LOW (no auth validation yet) |
-| + winner_v2 noise | −0.10 to −0.20 SegNet | beneficial_quant_noise | SPECULATIVE (zero empirical backing) |
-| **Realistic best stacked** | **1.6–1.8** | baseline + #1+3 + MXLZ + corrections | MEDIUM |
-| **Optimistic best stacked** | **1.3–1.6** | + speculative v2 noise | LOW |
-| **Aggressive (training breakthrough required)** | **<1.0** | requires `100·seg + √(10·pose) < (1.0 − rate_term)`. At rate=0.376 (current full-res masks) → distortion budget < 0.624. At rate=0.20 (after #1+3 mask reduction) → distortion budget < 0.80. Currently SegNet ≈ 0.116 contributes 11.6 alone — needs ~10× SegNet improvement, OR rate < 0.05 (basically impossible without removing scorer-required artifacts). | not yet measured |
-| **To beat Quantizr (0.33)** | needs SegNet ~0.001, PoseNet ~0.001, rate ~0.15 | new arch family or major training breakthrough | NOT achievable with current architectures in 8 days |
-
-> **R27 reviewer math:** earlier "0.8–1.4 realistic" was 4× the stated deltas. Sum check from 2.01: −0.18 (#1+3) − 0.09 (MXLZ) − 0.10 (corrections) = 1.64 floor. The −0.20 speculative v2 only reaches 1.44 if it actually delivers (no auth evidence).
-
-## Non-Negotiable
-
-- All experiments through `pipeline.py` invoked from `scripts/deploy_vastai.py launch()`. No ad-hoc shell scripts. No `nohup`. tmux only.
-- `eval_roundtrip = True` everywhere.
-- 3 consecutive auth evals within 0.01 before submission, AND 5 consecutive clean adversarial review passes.
-- No ad-hoc scripts. Preflight check 6 enforces no `experiments/results/*/run_pipeline.sh` on remote.
+- All experiments through `pipeline.py` + canonical bootstraps. No ad-hoc.
+- `eval_roundtrip=True` everywhere.
+- All scores labeled `[contest-CUDA]` or `[proxy]`. MPS scores are noise.
+- Verified CUDA gate before any submission.
 - Destroy Vast.ai instances IMMEDIATELY after download — $24 hard cap.
-- Every score labeled `[contest-compliant]` or `[unlimited-compute]`.
-- Profile is the experiment definition. Any flag passed via launcher CLI must come from the profile dict.
-- I4LZ weight compression DISABLED for non-default arch (padding_mode != zeros, use_dilation, use_zoom_flow) until I4LZ format gains an arch header.
+- 5 consecutive clean adversarial review passes before final PR.
