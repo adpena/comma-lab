@@ -135,18 +135,26 @@ class QATConfig:
 
 
 def create_model(cfg: QATConfig, device: torch.device) -> nn.Module:
-    """Create AsymmetricPairGenerator matching the float checkpoint."""
-    from tac.renderer import AsymmetricPairGenerator
+    """Create renderer matching the float checkpoint.
 
-    model = AsymmetricPairGenerator(
+    Routes through build_renderer — the SAME function train_renderer uses —
+    so PairGenerator vs AsymmetricPairGenerator dispatch is identical on
+    both sides. PairGenerator (use_zoom_flow=False) wraps MaskRenderer +
+    MotionPredictor with motion.head emitting 2 channels of flow; the
+    AsymmetricPairGenerator path (use_zoom_flow=True) emits more channels
+    for zoom + flow + residual gating. Hardcoding either constructor here
+    was the LANE-D QAT crash root cause (mirrors pipeline.step_export
+    third-layer fix from c5214993).
+    """
+    from tac.renderer import build_renderer
+
+    model = build_renderer(
         num_classes=5,
         embed_dim=cfg.embed_dim,
         base_ch=cfg.base_ch,
         mid_ch=cfg.mid_ch,
         motion_hidden=cfg.motion_hidden,
         depth=cfg.depth,
-        max_flow_px=cfg.max_flow_px,
-        max_residual=cfg.max_residual,
         pose_dim=cfg.pose_dim,
         use_dsconv=cfg.use_dsconv,
         padding_mode=cfg.padding_mode,
@@ -183,7 +191,43 @@ def load_float_checkpoint(model: nn.Module, path: str, device: torch.device) -> 
             state = ckpt["state_dict"]
         else:
             state = ckpt
-        model.load_state_dict(state, strict=True)
+
+        # Fourth-layer arch-drift fix (mirrors pipeline.step_export from
+        # c5214993): train_renderer can save with torch.nn.utils.parametrize
+        # hooks attached for self-compression / fake-quantization. State
+        # keys look like `<layer>.parametrizations.weight.original` and a
+        # fresh model (no hooks) expects plain `<layer>.weight`. Normalize
+        # so the .pt loads cleanly. Drop codebook tensors — those are QAT
+        # internals not part of the plain weight tensor.
+        if any(".parametrizations." in k for k in state.keys()):
+            normalized = {}
+            for k, v in state.items():
+                if ".parametrizations." not in k:
+                    normalized[k] = v
+                    continue
+                head, _, tail = k.partition(".parametrizations.")
+                name, _, suffix = tail.partition(".")
+                if suffix == "original":
+                    normalized[f"{head}.{name}"] = v
+                # else: drop codebook + other parametrize internals
+            print(f"  Stripped parametrize hooks: {len(state)} → {len(normalized)} keys")
+            state = normalized
+
+        # strict=False so we surface missing/unexpected lists; raise with a
+        # helpful error if either is non-empty (equivalent to strict=True
+        # but with the actual mismatch printed instead of a wall of keys).
+        missing, unexpected = model.load_state_dict(state, strict=False)
+        if missing or unexpected:
+            raise RuntimeError(
+                f"QAT checkpoint shape mismatch — refuse to fine-tune wrong arch.\n"
+                f"  missing={list(missing)[:5]}\n"
+                f"  unexpected={list(unexpected)[:5]}\n"
+                f"  Path: {path}\n"
+                f"  cfg: use_zoom_flow={getattr(model, '_use_zoom_flow', '?')}, "
+                f"base_ch / mid_ch / motion_hidden / use_dsconv must match training.\n"
+                f"  Hint: PairGenerator (use_zoom_flow=False) has motion.head.bias [2]; "
+                f"AsymmetricPairGenerator (use_zoom_flow=True) has [6]."
+            )
         print(f"  Loaded .pt checkpoint from {path}")
 
 
