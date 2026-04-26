@@ -513,6 +513,38 @@ def step_pose_tto(cfg: PipelineConfig, iteration: int = 0) -> Path:
             "WARN",
         )
         pose_tto_checkpoint = Path(cfg.checkpoint)
+
+    # 2026-04-26: pose-space TTO requires FiLM conditioning (pose_dim>0).
+    # If the renderer has no FiLM (e.g., DEN profile with pose_dim=0), the
+    # optimized poses have nothing to influence and optimize_poses.py
+    # correctly aborts. Detect that here from the FP4 .bin header and
+    # soft-skip — return a sentinel "no poses" path so step_archive +
+    # step_eval downstream know not to bundle pose data. Without this
+    # skip, every non-FiLM profile fails the whole pipeline at this step.
+    if pose_tto_checkpoint.suffix == ".bin":
+        try:
+            import struct, json
+            with pose_tto_checkpoint.open("rb") as f:
+                head = f.read(8 + 65536)  # magic + len + (likely-enough) header
+            if head[:4] == b"FP4A":
+                hlen = struct.unpack("<I", head[4:8])[0]
+                hdr = json.loads(head[8:8 + hlen].decode())
+                bin_pose_dim = hdr.get("pose_dim", 0)
+                if bin_pose_dim == 0:
+                    _log(
+                        "renderer has pose_dim=0 (no FiLM) — pose TTO is "
+                        "architecturally meaningless; skipping. Archive + "
+                        "eval will run without optimized poses.", "WARN",
+                    )
+                    _mark_done(iter_dir, "pose_tto",
+                               {"skipped": True, "reason": "no_film"})
+                    # Sentinel: an absent path. step_archive + step_eval already
+                    # handle missing optimized_poses gracefully.
+                    return iter_dir / "optimized_poses.bin"
+        except (struct.error, json.JSONDecodeError, OSError):
+            # Fall through to the normal path; if the .bin is malformed
+            # optimize_poses.py will error with a more specific message.
+            pass
     cmd = [
         sys.executable, "-u", "experiments/optimize_poses.py",
         "--checkpoint", str(pose_tto_checkpoint),
