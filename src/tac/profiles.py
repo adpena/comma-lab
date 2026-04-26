@@ -2185,6 +2185,14 @@ WILDE = {
     "use_uncertainty_loss": True,
     "uncertainty_loss_weight": 0.05,
     "uncertainty_loss_floor": 0.1,
+    # Quantizr #1 SegNet trick: KL distillation on logits with T=2.0.
+    # Council 5/0 vote (2026-04-26): both WILDE and SHIRAZ must enable
+    # kl_distill alongside their primary segnet loss. Argparse resolver
+    # (commit 38a250b8) only enables KL distill when profile declares the
+    # key — without these two lines the lane runs without Quantizr's
+    # single most important SegNet trick.
+    "kl_distill_weight": 1.0,
+    "kl_distill_temperature": 2.0,
     # Training: 5-phase Quantizr-adapted schedule
     # Phase 1 (pixel warmup): all params, L1 loss
     # Phase 2 (anchor): freeze motion, SegNet CE + KL(T=2.0), error_boost=9x
@@ -2310,6 +2318,14 @@ SHIRAZ = {
     "use_uncertainty_loss": True,
     "uncertainty_loss_weight": 0.05,
     "uncertainty_loss_floor": 0.1,
+    # Quantizr #1 SegNet trick: KL distillation on logits with T=2.0.
+    # Council 5/0 vote (2026-04-26): both WILDE and SHIRAZ must enable
+    # kl_distill alongside their primary segnet loss. Argparse resolver
+    # (commit 38a250b8) only enables KL distill when profile declares the
+    # key — without these two lines the lane runs without Quantizr's
+    # single most important SegNet trick.
+    "kl_distill_weight": 1.0,
+    "kl_distill_temperature": 2.0,
     "pose_weight": 10.0,
     "seg_weight": 100.0,
     "pixel_weight": 0.1,
