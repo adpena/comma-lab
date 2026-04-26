@@ -71,6 +71,7 @@ import torch.nn.functional as F
 OUT_W, OUT_H = 1164, 874
 SEG_W, SEG_H = 512, 384
 NUM_FRAMES = 1200
+NUM_PAIRS = NUM_FRAMES // 2  # 600 contest pairs (non-overlapping seq_len=2)
 EXPECTED_RAW_BYTES = OUT_W * OUT_H * 3 * NUM_FRAMES
 
 
@@ -588,17 +589,20 @@ def run_auth_eval(
     masks = extract_masks(gt_frames, segnet, device, batch_size)
     del gt_frames, segnet  # free memory
 
-    # Stage 4b: Load optimized poses (for FiLM conditioning)
+    # Stage 4b: Load optimized poses (for FiLM conditioning).
+    # Use the canonical content-detecting loader so a wrapper that renamed
+    # `.pt` → `.bin` (the 2026-04-26 SHIRAZ crash) gets caught with a clear
+    # diagnostic instead of frombuffer-on-pickle silently corrupting.
     poses = None
     if poses_path is not None:
-        poses_p = Path(poses_path)
-        if poses_p.suffix == ".bin":
-            pose_dim = getattr(model, 'pose_dim', 6)
-            raw = poses_p.read_bytes()
-            poses = torch.frombuffer(bytearray(raw), dtype=torch.float16).reshape(-1, pose_dim).float()
-        else:
-            poses = torch.load(str(poses_p), map_location="cpu", weights_only=True).float()
-        print(f"  Loaded poses: {poses.shape} from {poses_p.name}")
+        from tac.submission_archive import load_optimized_poses
+        pose_dim = getattr(model, "pose_dim", 6) or 6
+        poses = load_optimized_poses(
+            poses_path,
+            pose_dim=pose_dim,
+            expected_n_pairs=NUM_PAIRS,
+        )
+        print(f"  Loaded poses: {tuple(poses.shape)} from {Path(poses_path).name}")
     elif hasattr(model, 'pose_dim') and model.pose_dim > 0:
         print("  WARNING: Model has FiLM (pose_dim>0) but no --poses provided. "
               "Using zero poses — PoseNet score will be degraded.")

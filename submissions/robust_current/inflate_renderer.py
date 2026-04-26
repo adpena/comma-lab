@@ -2055,20 +2055,22 @@ def inflate_renderer(
     optimized_bin_path = Path(archive_dir) / "optimized_poses.bin"
     poses_bin_path = Path(archive_dir) / "poses.bin"
 
+    # Use the canonical content-detecting loader (handles pickle vs raw fp16
+    # by magic bytes, validates buffer length is a multiple of pose_dim*2,
+    # raises a specific diagnostic on the .pt-renamed-to-.bin pattern).
+    from tac.submission_archive import load_optimized_poses as _load_poses
     if optimized_poses_path.exists():
-        poses = torch.load(str(optimized_poses_path), map_location="cpu", weights_only=True).float()
-        print(f"  Loaded OPTIMIZED poses: {poses.shape} from archive (pose-space TTO)", file=sys.stderr)
+        poses = _load_poses(optimized_poses_path, pose_dim=max(_renderer_pose_dim, 1))
+        print(f"  Loaded OPTIMIZED poses: {tuple(poses.shape)} from archive (pose-space TTO)", file=sys.stderr)
     elif optimized_bin_path.exists() and _renderer_pose_dim > 0:
-        raw = optimized_bin_path.read_bytes()
-        poses = torch.frombuffer(bytearray(raw), dtype=torch.float16).reshape(-1, _renderer_pose_dim).float()
-        print(f"  Loaded OPTIMIZED poses: {poses.shape} from archive (bin, pose-space TTO)", file=sys.stderr)
+        poses = _load_poses(optimized_bin_path, pose_dim=_renderer_pose_dim)
+        print(f"  Loaded OPTIMIZED poses: {tuple(poses.shape)} from archive (bin, pose-space TTO)", file=sys.stderr)
     elif poses_path.exists():
-        poses = torch.load(str(poses_path), map_location="cpu", weights_only=True).float()
-        print(f"  Loaded GT poses: {poses.shape} from archive", file=sys.stderr)
+        poses = _load_poses(poses_path, pose_dim=max(_renderer_pose_dim, 1))
+        print(f"  Loaded GT poses: {tuple(poses.shape)} from archive", file=sys.stderr)
     elif poses_bin_path.exists() and _renderer_pose_dim > 0:
-        raw = poses_bin_path.read_bytes()
-        poses = torch.frombuffer(bytearray(raw), dtype=torch.float16).reshape(-1, _renderer_pose_dim).float()
-        print(f"  Loaded GT poses: {poses.shape} from archive (bin)", file=sys.stderr)
+        poses = _load_poses(poses_bin_path, pose_dim=_renderer_pose_dim)
+        print(f"  Loaded GT poses: {tuple(poses.shape)} from archive (bin)", file=sys.stderr)
 
     # ---- Load zoom warp scalars (for use_zoom_flow models) ----
     zoom_warp = None
@@ -2923,20 +2925,19 @@ def _inflate_renderer_with_mini_tto(
     poses_path = archive_path / "poses.pt"
     optimized_bin_path = archive_path / "optimized_poses.bin"
     poses_bin_path = archive_path / "poses.bin"
+    from tac.submission_archive import load_optimized_poses as _load_poses
     if optimized_poses_path.exists():
-        poses = torch.load(str(optimized_poses_path), map_location="cpu", weights_only=True).float()
-        print(f"  Loaded OPTIMIZED poses: {poses.shape} from archive (pose-space TTO)", file=sys.stderr)
+        poses = _load_poses(optimized_poses_path, pose_dim=max(_renderer_pose_dim, 1))
+        print(f"  Loaded OPTIMIZED poses: {tuple(poses.shape)} from archive (pose-space TTO)", file=sys.stderr)
     elif optimized_bin_path.exists() and _renderer_pose_dim > 0:
-        raw = optimized_bin_path.read_bytes()
-        poses = torch.frombuffer(bytearray(raw), dtype=torch.float16).reshape(-1, _renderer_pose_dim).float()
-        print(f"  Loaded OPTIMIZED poses: {poses.shape} from archive (bin, pose-space TTO)", file=sys.stderr)
+        poses = _load_poses(optimized_bin_path, pose_dim=_renderer_pose_dim)
+        print(f"  Loaded OPTIMIZED poses: {tuple(poses.shape)} from archive (bin, pose-space TTO)", file=sys.stderr)
     elif poses_path.exists():
-        poses = torch.load(str(poses_path), map_location="cpu", weights_only=True).float()
-        print(f"  Loaded GT poses: {poses.shape} from archive", file=sys.stderr)
+        poses = _load_poses(poses_path, pose_dim=max(_renderer_pose_dim, 1))
+        print(f"  Loaded GT poses: {tuple(poses.shape)} from archive", file=sys.stderr)
     elif poses_bin_path.exists() and _renderer_pose_dim > 0:
-        raw = poses_bin_path.read_bytes()
-        poses = torch.frombuffer(bytearray(raw), dtype=torch.float16).reshape(-1, _renderer_pose_dim).float()
-        print(f"  Loaded GT poses: {poses.shape} from archive (bin)", file=sys.stderr)
+        poses = _load_poses(poses_bin_path, pose_dim=_renderer_pose_dim)
+        print(f"  Loaded GT poses: {tuple(poses.shape)} from archive (bin)", file=sys.stderr)
 
     # ---- Generate renderer frames ----
     print("Stage 1: Generating renderer frames...", file=sys.stderr)
@@ -3011,11 +3012,11 @@ def _inflate_renderer_with_mini_tto(
     # Pose targets: load from archive if available, else use zeros
     poses_path = archive_path / "poses.pt"
     poses_bin_path = archive_path / "poses.bin"
+    from tac.submission_archive import load_optimized_poses as _load_poses
     if poses_path.exists():
-        target_poses = torch.load(str(poses_path), map_location="cpu", weights_only=True).float()
+        target_poses = _load_poses(poses_path, pose_dim=max(_renderer_pose_dim, 1))
     elif poses_bin_path.exists():
-        raw = poses_bin_path.read_bytes()
-        target_poses = torch.frombuffer(bytearray(raw), dtype=torch.float16).reshape(-1, _renderer_pose_dim).float()
+        target_poses = _load_poses(poses_bin_path, pose_dim=max(_renderer_pose_dim, 1))
     else:
         # No pre-computed poses — skip PoseNet TTO
         target_poses = torch.zeros(N // 2, _renderer_pose_dim)

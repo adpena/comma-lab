@@ -836,8 +836,22 @@ def main():
         print(f"  Batch {batch_idx + 1} done in {dt:.1f}s "
               f"(improvement: {batch_metrics['improvement_pct']:.1f}%)", flush=True)
 
-        # Save intermediate results
+        # Save intermediate results. Emit BOTH .pt (for resume) and a .meta
+        # sidecar so any consumer can verify completeness without trusting the
+        # filename. 2026-04-26: a wrapper blindly used `optimized_poses_partial.pt`
+        # as the archive's `optimized_poses.bin` — auth_eval_renderer crashed
+        # 7 min later. The new `tac.submission_archive.load_optimized_poses(
+        # ..., expected_n_pairs=N)` check catches this, but writing the meta
+        # makes the partial-vs-final distinction first-class data, not a
+        # naming convention.
         torch.save(all_optimized[:pair_end], output_dir / "optimized_poses_partial.pt")
+        import json as _json
+        (output_dir / "optimized_poses_partial.meta").write_text(_json.dumps({
+            "n_pairs_complete": int(pair_end),
+            "n_pairs_total": int(n_pairs),
+            "is_final": False,
+            "batch_idx": int(batch_idx),
+        }))
 
         # Free GPU memory
         if device.type == "cuda":
@@ -854,9 +868,27 @@ def main():
     optimized_poses = all_optimized[:, :6]  # pose part only
     torch.save(optimized_poses, output_dir / "optimized_poses.pt")
     pt_size = (output_dir / "optimized_poses.pt").stat().st_size
-    # Also save compact binary format (raw fp16, ~53% smaller)
+    # Also save compact binary format (raw fp16, ~53% smaller). This is the
+    # canonical archive artifact — wrappers should ALWAYS reach for the .bin
+    # and never rename a .pt to .bin (the 2026-04-26 SHIRAZ crash).
     from tac.submission_archive import save_poses_binary
     bin_size = save_poses_binary(optimized_poses, output_dir / "optimized_poses.bin")
+    # Emit completion sidecar so consumers can distinguish final vs partial
+    # without trusting filename conventions.
+    import json as _json
+    (output_dir / "optimized_poses.meta").write_text(_json.dumps({
+        "n_pairs_complete": int(optimized_poses.shape[0]),
+        "n_pairs_total": int(optimized_poses.shape[0]),
+        "is_final": True,
+        "pose_dim": int(optimized_poses.shape[1]),
+    }))
+    # Atomically remove the partial markers — if both `optimized_poses.bin`
+    # and `optimized_poses_partial.pt` exist, downstream tooling has to guess.
+    # The final write is the source of truth; partials are debug-only.
+    for stale in ("optimized_poses_partial.pt", "optimized_poses_partial.meta"):
+        p = output_dir / stale
+        if p.exists():
+            p.unlink()
     print(f"  Saved optimized_poses.pt: {optimized_poses.shape} ({pt_size:,} bytes)", flush=True)
     print(f"  Saved optimized_poses.bin: {optimized_poses.shape} ({bin_size:,} bytes, -{100*(1-bin_size/pt_size):.0f}%)", flush=True)
 

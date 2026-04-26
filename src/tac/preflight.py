@@ -432,6 +432,86 @@ class CodebaseDriftError(Exception):
     """An ad-hoc pattern reappeared in the codebase. Block all deployment."""
 
 
+def _scan_text_for_dangerous_patterns(text: str, location: str) -> list[str]:
+    """Cross-language scan for shell patterns that have caused real outages.
+
+    Both bash files and Python files (via subprocess string literals + f-strings
+    + tmux-send-keys composition) feed through this. Each rule cites the exact
+    incident that motivated it so future maintainers can judge edge cases.
+
+    Args:
+        text: shell text — either a bash file body or a string literal that
+            will be passed to bash -c / ssh.
+        location: human-readable origin (e.g. "scripts/foo.sh" or
+            "src/tac/deploy/x.py:412") used in violation messages.
+
+    Returns: list of violations.
+    """
+    violations: list[str] = []
+
+    # Self-matching `pgrep -f TOKEN` deadlock. 2026-04-26 SHIRAZ:
+    #   bash -c "while pgrep -f train_distill > /dev/null; do sleep 60; done; bash run_pipeline.sh"
+    # The bash -c argv literally contained "train_distill", so pgrep -f matched
+    # the wrapper itself and the loop never exited — burned ~21h of A100 time.
+    # Detect any `pgrep -f TOKEN` whose TOKEN appears elsewhere in the SAME
+    # text blob (file or string literal).
+    for m in re.finditer(r"pgrep\s+-[a-z]*f[a-z]*\s+['\"]?([A-Za-z0-9_./-]+)", text):
+        token = m.group(1)
+        if len(token) < 3:
+            continue
+        if text.count(token) >= 2:
+            violations.append(
+                f"{location}: `pgrep -f {token}` will SELF-MATCH — the token "
+                f"appears elsewhere in this text, so the wait loop's own argv "
+                f"matches and the loop sleeps forever. 2026-04-26 SHIRAZ "
+                f"deadlock burned ~21h of A100 time. Use a pidfile, "
+                f"`pgrep -x <executable>` (exact name), or a unique cookie."
+            )
+            break
+
+    # Blind `.pt → .bin` rename. 2026-04-26 retto wrapper did
+    #   cp $(ls *_partial.pt) /tmp/.../optimized_poses.bin
+    # Pickle masqueraded as raw fp16 buffer; auth_eval_renderer crashed after
+    # 7 min of mask extraction with `frombuffer` size mismatch.
+    for m in re.finditer(
+        r"\b(?:cp|mv|install|ln\s+-s)\s+(?:-[a-zA-Z]+\s+)*(\S+\.pt)\s+(\S+\.bin)\b",
+        text,
+    ):
+        violations.append(
+            f"{location}: `{m.group(0)}` renames a pickle .pt to raw .bin. "
+            f"This corrupts pose loaders. Use tac.submission_archive."
+            f"save_poses_binary() or have the producer emit .bin directly."
+        )
+
+    # Wrapper that SHIPS `*_partial*` files as if they were finished artifacts.
+    # `optimized_poses_partial.pt` is what optimize_poses.py writes
+    # periodically; shipping it as the final archive artifact means N pairs
+    # rather than the full 600 are present. Only fire when the reference
+    # appears near a copy/move/archive operation — a producer that natively
+    # writes or resumes from its own partial is fine (e.g. optimize_poses.py
+    # itself, --resume CLI args, docstrings).
+    has_partial_ref = bool(
+        re.search(r"\b\S*_partial\.(?:pt|bin)\b", text)
+        or re.search(r"_partial\*\.(?:pt|bin)", text)
+    )
+    if has_partial_ref:
+        ships_or_renames = re.search(
+            r"\b(?:cp|mv|install|ln\s+-s|tar|zip|aws\s+s3|scp|rsync|"
+            r"build_submission_archive|optimized_poses\.bin|/archive/)",
+            text,
+        )
+        if ships_or_renames:
+            violations.append(
+                f"{location}: ships a `*_partial*` artifact (rename/copy/"
+                f"archive). Partial files are incomplete by definition. Wait "
+                f"for the canonical final write or re-run the producer. "
+                f"2026-04-26 SHIRAZ shipped 60 of 600 poses for a contest "
+                f"eval because of this pattern."
+            )
+
+    return violations
+
+
 def _scan_python_for_forbidden(path: Path) -> list[str]:
     """AST-scan a Python file for forbidden subprocess patterns.
 
@@ -492,6 +572,18 @@ def _scan_python_for_forbidden(path: Path) -> list[str]:
                     f"{path}:{node.lineno}: f-string with 'nohup ... &' over SSH "
                     f"— this is the WATCHER PATTERN that DIED on 2026-04-25. Use tmux."
                 )
+            # Pose-format and self-match scans on the unparsed f-string. This
+            # catches dynamically composed bash -c / ssh commands that never
+            # land on disk as a .sh file (the 2026-04-26 SHIRAZ root cause).
+            for v in _scan_text_for_dangerous_patterns(full, f"{path}:{node.lineno}"):
+                violations.append(v)
+
+        # Plain string constants over 40 chars also worth scanning — the
+        # `bash -c "..."` literal in deploy_vastai composes via str.join.
+        if isinstance(node, ast.Constant) and isinstance(node.value, str):
+            if len(node.value) > 40:
+                for v in _scan_text_for_dangerous_patterns(node.value, f"{path}:{node.lineno}"):
+                    violations.append(v)
 
     return violations
 
@@ -510,6 +602,7 @@ def _scan_bash_text_for_forbidden(path: Path) -> list[str]:
             f"{path}: ad-hoc invocation of train_distill.py. "
             f"Use 'python experiments/pipeline.py --profile <name>' (canonical entry point)."
         )
+    violations.extend(_scan_text_for_dangerous_patterns(text, str(path)))
     return violations
 
 

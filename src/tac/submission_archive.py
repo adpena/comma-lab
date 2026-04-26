@@ -393,16 +393,126 @@ def save_poses_binary(poses: torch.Tensor, output_path: Path | str) -> int:
     return len(raw)
 
 
+# Pickle / PyTorch checkpoint magic bytes. We detect format by content, not by
+# filename suffix, because wrappers have repeatedly renamed `.pt` → `.bin` (the
+# 2026-04-26 SHIRAZ auth-eval crash) and a suffix-only loader will silently
+# torch.frombuffer() over pickle bytes and reshape into nonsense.
+_PICKLE_MAGICS: tuple[bytes, ...] = (
+    b"\x80\x02",      # pickle protocol 2
+    b"\x80\x03",      # pickle protocol 3
+    b"\x80\x04",      # pickle protocol 4
+    b"\x80\x05",      # pickle protocol 5
+    b"PK\x03\x04",    # ZIP (PyTorch >=1.6 default torch.save container)
+)
+
+
+def _looks_like_pickle(raw: bytes) -> bool:
+    return any(raw.startswith(m) for m in _PICKLE_MAGICS)
+
+
+def load_optimized_poses(
+    path: Path | str,
+    pose_dim: int = 6,
+    expected_n_pairs: int | None = None,
+) -> torch.Tensor:
+    """Load optimized poses from EITHER a torch.save pickle (.pt) OR raw fp16
+    binary (.bin), detected by content.
+
+    This is the canonical loader for every consumer that touches a pose file
+    (auth_eval_renderer, inflate_renderer, postfilter pipeline, etc.). Always
+    use this — never call torch.frombuffer / torch.load directly on a pose
+    artifact, because suffix-based dispatch has burned us repeatedly.
+
+    Args:
+        path: file path. Suffix is informational, NOT trusted.
+        pose_dim: number of pose dimensions per pair (default 6).
+        expected_n_pairs: if given, raise unless the loaded tensor has exactly
+            this many rows. Pass 600 in eval contexts to catch partial-TTO
+            artifacts being shipped as final.
+
+    Returns:
+        (N, pose_dim) float32 tensor.
+
+    Raises:
+        FileNotFoundError if path missing.
+        ValueError with a specific, actionable diagnostic on any mismatch.
+    """
+    import torch
+
+    p = Path(path)
+    if not p.exists():
+        raise FileNotFoundError(f"Pose file not found: {p}")
+    raw = p.read_bytes()
+    n_bytes = len(raw)
+    if n_bytes == 0:
+        raise ValueError(f"Pose file is empty: {p}")
+
+    # Branch A: pickle / torch.save container — load as object then validate.
+    if _looks_like_pickle(raw):
+        try:
+            obj = torch.load(str(p), map_location="cpu", weights_only=False)
+        except Exception as e:
+            raise ValueError(
+                f"Pose file {p.name} starts with pickle/zip magic but torch.load "
+                f"failed: {e!r}. File size={n_bytes}B. If this was meant to be a "
+                f"raw fp16 archive artifact, regenerate via save_poses_binary()."
+            ) from e
+        if not isinstance(obj, torch.Tensor):
+            raise ValueError(
+                f"Pose file {p.name} is a pickle but contains "
+                f"{type(obj).__name__}, not Tensor. Wrappers must not pickle "
+                f"dicts/lists into a pose artifact."
+            )
+        poses = obj.detach().to(torch.float32).cpu()
+        if poses.ndim != 2 or poses.shape[-1] != pose_dim:
+            raise ValueError(
+                f"Pose tensor shape {tuple(poses.shape)} from {p.name} does "
+                f"not match expected (N, {pose_dim}). Wrong pose_dim or "
+                f"transposed export?"
+            )
+
+    # Branch B: raw fp16 buffer.
+    else:
+        elem_bytes = 2  # float16
+        row_bytes = pose_dim * elem_bytes
+        if n_bytes % row_bytes != 0:
+            raise ValueError(
+                f"Raw pose buffer {p.name}: file size {n_bytes}B is not a "
+                f"multiple of pose_dim*{elem_bytes} ({row_bytes}B per row). "
+                f"This usually means the file is a torch.save pickle that was "
+                f"renamed to .bin without conversion (the 2026-04-26 SHIRAZ "
+                f"bug), or a partial TTO write. Inspect the first 8 bytes: "
+                f"{raw[:8]!r}."
+            )
+        poses = (
+            torch.frombuffer(bytearray(raw), dtype=torch.float16)
+            .reshape(-1, pose_dim)
+            .float()
+        )
+
+    if expected_n_pairs is not None and poses.shape[0] != expected_n_pairs:
+        raise ValueError(
+            f"Pose count mismatch in {p.name}: got {poses.shape[0]} pairs, "
+            f"expected {expected_n_pairs}. This is the partial-TTO-shipped-as-"
+            f"final bug pattern (2026-04-26 SHIRAZ: 60 of 600 pairs saved "
+            f"because TTO was killed mid-run, then the wrapper used "
+            f"`*_partial.pt` as the archive artifact). Re-run optimize_poses "
+            f"to completion or use the canonical .bin emit."
+        )
+    return poses
+
+
 def load_poses_binary(path: Path | str, pose_dim: int = 6) -> torch.Tensor:
     """Load poses from raw fp16 binary.
+
+    Now defers to load_optimized_poses() so callers get content-based format
+    detection (pickle-renamed-to-.bin no longer silently corrupts) and a clear
+    error on any malformed buffer. Kept for backward compatibility.
 
     Returns:
         (N, pose_dim) float32 tensor
     """
-    import torch
-
-    raw = Path(path).read_bytes()
-    return torch.frombuffer(bytearray(raw), dtype=torch.float16).reshape(-1, pose_dim).float()
+    return load_optimized_poses(path, pose_dim=pose_dim)
 
 
 def build_submission_archive(
