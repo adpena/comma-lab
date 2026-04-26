@@ -53,9 +53,22 @@ def main() -> int:
     except ImportError as e:
         print(f"FATAL: cannot import tac.profiles ({e})", file=sys.stderr)
         return 1
+    # Profile names are case-insensitive: PROFILES uses lowercase keys
+    # ('den', 'shiraz', ...) but operators and bootstrap invocations
+    # often use uppercase. Normalize here so both work — 2026-04-26 the
+    # DEN-V2 deploy crashed at this exact spot (called as 'DEN', registry
+    # has 'den') and burned 18 min of GPU time at $0.30/hr.
     if profile_name not in PROFILES:
-        print(f"FATAL: profile {profile_name!r} not in PROFILES", file=sys.stderr)
-        return 1
+        if profile_name.lower() in PROFILES:
+            profile_name = profile_name.lower()
+        else:
+            known = sorted(PROFILES.keys())
+            print(
+                f"FATAL: profile {profile_name!r} not in PROFILES "
+                f"(known: {known[:10]}{'...' if len(known) > 10 else ''})",
+                file=sys.stderr,
+            )
+            return 1
     prof = PROFILES[profile_name]
 
     seed = prof.get("seed")

@@ -29,7 +29,13 @@ WORKSPACE=/workspace/pact
 
 # ── Mode dispatch ─────────────────────────────────────────────────────────
 if [ "${1:-}" = "--inner" ]; then
-    PROFILE="$2"
+    # Profile names are stored lowercase in tac/profiles.py PROFILES dict
+    # ('den', 'shiraz', 'wilde', ...). Operators frequently pass uppercase
+    # ('DEN'). Normalize once here so check_determinism.py + train_renderer.py
+    # + pipeline.py all see the canonical key. 2026-04-26: DEN-V2 burned
+    # 18 min of GPU at $0.30/hr because the call was 'DEN' and PROFILES
+    # has 'den' — argparse choices= rejected hard.
+    PROFILE=$(echo "$2" | tr '[:upper:]' '[:lower:]')
     OUTPUT_SUBDIR="$3"
     cd "$WORKSPACE"
 
@@ -162,7 +168,9 @@ if [ $# -lt 1 ]; then
     exit 1
 fi
 
-PROFILE="$1"
+# Mirror the inner-mode normalization so the tmux session name + output dir
+# are consistent regardless of the operator's case preference.
+PROFILE=$(echo "$1" | tr '[:upper:]' '[:lower:]')
 OUTPUT_SUBDIR="${2:-experiments/results/${PROFILE}}"
 SESSION="${PROFILE}_train"
 LOG_DIR="$WORKSPACE/$OUTPUT_SUBDIR"
