@@ -1659,15 +1659,75 @@ def _scan_python_for_unsafe_renderer_loader(path: Path) -> list[str]:
 
     violations: list[str] = []
 
-    # --- Pattern 1: any function named `load_renderer` (or alias starting
-    # with `load_renderer`) must mention one of the renderer magic bytes
-    # OR delegate to one of the canonical safe loaders.
+    # --- Pattern 1: any function whose name matches a known loader-shape
+    # MUST content-detect the format (or delegate to a safe loader). Original
+    # rule only matched `load_renderer*`; Contrarian R2 V3 (2026-04-26)
+    # showed a refactor to `load_checkpoint`/`load_model`/`load_weights`/
+    # `_load_ckpt`/`restore_model` would silently bypass the gate. The
+    # expanded set catches the realistic rename surface.
     SAFE_MAGIC_TOKENS = ("FP4A", "ASYM", "DPSM", "I4LZ", "PK\\x03\\x04")
+
+    def _is_loader_name(name: str) -> bool:
+        """Pattern 1 trigger: function names that are likely renderer/model
+        loaders. Intentionally broad — a false positive is a 1-line magic
+        check; a false negative is a DEN-V2-class production crash.
+
+        Contrarian R2 V3 (2026-04-26): expanded from `load_renderer*` only
+        to also catch `load_*`/`_load_*`/`restore_*` on model/renderer/
+        checkpoint/ckpt/weights/net suffixes — i.e. the realistic rename
+        surface that would silently bypass the original gate.
+
+        Exclusions: training-state and optimizer-state loaders are NOT
+        renderer artifacts (they're always pickle by construction —
+        optimizer state isn't tensor-only), so we exempt those names to
+        avoid noise.
+        """
+        n = name.lower()
+        # Any `load_*` / `_load_*` / `restore_*` / `_restore_*`
+        # whose suffix names a model/checkpoint-shaped object.
+        loader_prefixes = ("load_", "_load_", "restore_", "_restore_")
+        if not any(n.startswith(p) for p in loader_prefixes):
+            return False
+        # Explicitly NOT renderer loaders (they're always pickle by design).
+        non_renderer_suffixes = (
+            "training_state",
+            "optimizer_state",
+            "optimizer",
+            "scheduler",
+            "trainer_state",
+        )
+        if any(tok in n for tok in non_renderer_suffixes):
+            return False
+        # 2026-04-26 Mario R2 CRITICAL #1: explicit allowlist for known
+        # non-renderer loaders that the broad pattern (#1 below) would
+        # false-positive on. These are TRUSTED — they don't load the FP4
+        # renderer artifact format. Adding here exempts the function from
+        # Pattern 1 scan but consumers will still be caught by the call-site
+        # scan (Pattern 2) if they ever pass a renderer.bin path.
+        TRUSTED_NON_RENDERER_LOADERS = frozenset({
+            "load_checkpoint_weights",     # train_distill.py — training resume
+            "load_network_codec",          # network_codec.py — NeRV codec, not renderer
+            "load_checkpoint_state_dict",  # ensemble.py — ensemble combiner
+            "load_compressed_weights",     # generic int-quant deserializer
+            "load_postfilter",             # postfilter (different artifact class)
+        })
+        if name in TRUSTED_NON_RENDERER_LOADERS:
+            return False
+        # Suffix must look model/renderer/checkpoint-shaped.
+        loader_suffix_tokens = (
+            "renderer",
+            "model",
+            "checkpoint",
+            "ckpt",
+            "weights",
+            "net",
+        )
+        return any(tok in n for tok in loader_suffix_tokens)
 
     for node in ast.walk(tree):
         if not isinstance(node, (ast.FunctionDef, ast.AsyncFunctionDef)):
             continue
-        if not node.name.startswith("load_renderer"):
+        if not _is_loader_name(node.name):
             continue
         body_src = ast.unparse(node) if hasattr(ast, "unparse") else ""
         if not body_src:
@@ -1691,26 +1751,43 @@ def _scan_python_for_unsafe_renderer_loader(path: Path) -> list[str]:
         )
         if has_magic or delegates or does_magic_read:
             continue
-        # Otherwise, look for a torch.load call in the body. If found, the
-        # function is unsafe.
+        # Otherwise, look for a torch.load call in the body. If found AND
+        # it uses weights_only=False (DEN-V2's exact failure mode — the
+        # legacy pickle path that crashes cryptically on FP4A magic), the
+        # function is unsafe. Calls with weights_only=True are tensor-only
+        # state-dict loads and cannot trigger the FP4A pickle crash, so
+        # they are not the DEN-V2 bug class.
         for sub in ast.walk(node):
-            if isinstance(sub, ast.Call):
-                fn_str = ast.unparse(sub.func) if hasattr(ast, "unparse") else ""
-                if fn_str in ("torch.load", "torch.frombuffer"):
-                    violations.append(
-                        f"{path}:{node.lineno}: function `{node.name}` calls "
-                        f"`{fn_str}` without content-detecting the file format "
-                        f"first. This is the 2026-04-26 DEN-V2 bug pattern: "
-                        f"torch.load on an FP4A/ASYM/DPSM/I4LZ .bin file "
-                        f"crashes with 'could not convert string to float'. "
-                        f"Either add a magic-byte dispatch (read first 4 "
-                        f"bytes, branch on FP4A/ASYM/DPSM/I4LZ vs PyTorch "
-                        f"pickle) OR delegate to "
-                        f"experiments.precompute_gradient_corrections."
-                        f"load_renderer (the canonical content-detecting "
-                        f"loader)."
-                    )
-                    break  # one violation per function is enough
+            if not isinstance(sub, ast.Call):
+                continue
+            fn_str = ast.unparse(sub.func) if hasattr(ast, "unparse") else ""
+            if fn_str not in ("torch.load", "torch.frombuffer"):
+                continue
+            # Check weights_only=False (the DEN-V2 failure mode).
+            uses_legacy_pickle = False
+            for kw in sub.keywords:
+                if kw.arg == "weights_only" and isinstance(kw.value, ast.Constant):
+                    if kw.value.value is False:
+                        uses_legacy_pickle = True
+                        break
+            if not uses_legacy_pickle:
+                continue
+            violations.append(
+                f"{path}:{node.lineno}: function `{node.name}` calls "
+                f"`{fn_str}(..., weights_only=False)` without "
+                f"content-detecting the file format first. This is the "
+                f"2026-04-26 DEN-V2 bug pattern: torch.load on an "
+                f"FP4A/ASYM/DPSM/I4LZ .bin file crashes with 'could not "
+                f"convert string to float'. (Detected via expanded "
+                f"loader-name match — load_*/restore_*/_load_*/_restore_* "
+                f"over renderer/model/checkpoint/ckpt/weights/state/net; "
+                f"Contrarian R2 V3 fix.) Either add a magic-byte dispatch "
+                f"(read first 4 bytes, branch on FP4A/ASYM/DPSM/I4LZ vs "
+                f"PyTorch pickle) OR delegate to "
+                f"experiments.precompute_gradient_corrections.load_renderer "
+                f"(the canonical content-detecting loader)."
+            )
+            break  # one violation per function is enough
 
     # --- Pattern 2: any module-level (NOT inside a safe-named function) call
     # like `torch.load(<arg>)` where the arg is a Name spelled like a
