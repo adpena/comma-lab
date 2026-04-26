@@ -149,6 +149,13 @@ class PipelineConfig:
     use_uncertainty_loss: bool = False
     uncertainty_loss_weight: float = 0.1
     uncertainty_loss_floor: float = 0.1
+    # Yousfi council R2 CRITICAL (2026-04-26): step_engineered_corrections
+    # ran UNCONDITIONALLY on every pipeline run, costing 5-30 min compute
+    # AND silently bundling Fridrich-VETOED gradient_corrections.bin into
+    # archives. Now opt-in via cfg flag; default off until empirically proven
+    # to improve a CUDA contest score (council Fridrich currently VETOes).
+    use_engineered_corrections: bool = False
+    engineered_max_bytes: int = 51_200  # rate-budget guardrail (50 KB)
 
     # Pose TTO — adaptive convergence
     pose_max_steps: int = 2000        # upper bound
@@ -1622,8 +1629,15 @@ def run_compress(cfg: PipelineConfig) -> None:
         else:
             final_renderer = qat_bin if qat_bin.exists() else renderer_bin
 
-        # Step 3.8: Engineered SegNet corrections (Eureka 6 — Contrarian)
-        corrections_bin = step_engineered_corrections(cfg, final_renderer, iteration)
+        # Step 3.8: Engineered SegNet corrections (Eureka 6 — Contrarian).
+        # 2026-04-26 Yousfi R2 CRITICAL: gated behind cfg.use_engineered_corrections
+        # because Fridrich VETOed shipping (square-root-law violation; concentrates
+        # max-amplitude perturbations on most-detected pixels) AND every
+        # unconditional invocation cost 5-30min of compute.
+        corrections_bin = (
+            step_engineered_corrections(cfg, final_renderer, iteration)
+            if cfg.use_engineered_corrections else None
+        )
 
         # Step 4: Archive (include corrections if available)
         archive_path = step_archive(cfg, final_renderer, poses_path, iteration,
