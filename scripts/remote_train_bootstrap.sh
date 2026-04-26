@@ -173,6 +173,13 @@ for name in canonical_checkpoint_names('$PROFILE'):
     # Stage 5: pipeline.py compress = step_export (FP4 + self-compression
     # via RESIDUAL codebook + robust_scale + stochastic) → step_qat →
     # step_pose_tto → step_archive → step_eval (CUDA auth eval inline).
+    #
+    # Quantizr council #4 CRITICAL (2026-04-26): added --half-frame
+    # --binary-poses --brotli — without these, every deploy this week
+    # shipped full-frame masks, .pt poses, no Brotli (PipelineConfig
+    # defaults are False/False/False). That gave back ~110KB / +0.07
+    # rate term to Quantizr for free. Now defaulted ON for production
+    # deploys; profiles that want them off can pass --no-half-frame etc.
     echo "=== STAGE 5 ($PROFILE): pipeline.py compress (QAT + self-compress + archive + auth eval) ==="
     echo "[$(date -u +%FT%TZ)] launching pipeline.py compress $PROFILE checkpoint=$CKPT" >> "$HEARTBEAT"
     "$PYBIN" -u "$WORKSPACE/experiments/pipeline.py" compress \
@@ -180,6 +187,9 @@ for name in canonical_checkpoint_names('$PROFILE'):
         --video "$WORKSPACE/upstream/videos/0.mkv" \
         --checkpoint "$CKPT" \
         --device cuda \
+        --half-frame \
+        --binary-poses \
+        --brotli \
         --output-dir "$OUTPUT_SUBDIR"
 
     echo "=== ${PROFILE}_DONE_$(date +%s) ==="

@@ -139,6 +139,16 @@ class PipelineConfig:
     freeze_motion_phase2: bool = False
     freeze_renderer_phase3: bool = False
     beneficial_quant_noise: bool = False
+    # Yousfi #3: spatially-adaptive quantization noise (UNIWARD-aligned)
+    use_variance_noise: bool = False
+    variance_noise_weight: float = 0.1
+    variance_noise_base_std: float = 2.0
+    variance_noise_kernel: int = 8
+    variance_noise_mode: str = "variance"
+    # Yousfi #5: ScanNet-style spatial uncertainty maps
+    use_uncertainty_loss: bool = False
+    uncertainty_loss_weight: float = 0.1
+    uncertainty_loss_floor: float = 0.1
 
     # Pose TTO — adaptive convergence
     pose_max_steps: int = 2000        # upper bound
@@ -896,6 +906,20 @@ def step_fridrich_refine(cfg: PipelineConfig, iteration: int = 0) -> Path:
         cmd.append("--freeze-renderer-phase3")
     if cfg.beneficial_quant_noise:
         cmd.append("--beneficial-quant-noise")
+    if cfg.use_variance_noise:
+        cmd.extend([
+            "--use-variance-noise",
+            "--variance-noise-weight", str(cfg.variance_noise_weight),
+            "--variance-noise-base-std", str(cfg.variance_noise_base_std),
+            "--variance-noise-kernel", str(cfg.variance_noise_kernel),
+            "--variance-noise-mode", cfg.variance_noise_mode,
+        ])
+    if cfg.use_uncertainty_loss:
+        cmd.extend([
+            "--use-uncertainty-loss",
+            "--uncertainty-loss-weight", str(cfg.uncertainty_loss_weight),
+            "--uncertainty-loss-floor", str(cfg.uncertainty_loss_floor),
+        ])
 
     t0 = time.monotonic()
     # R30: 2-hour timeout for Fridrich refinement (100 epochs typical 30-60min).
@@ -1115,9 +1139,17 @@ def step_compress_weights(
     return result_path
 
 
-def step_archive(cfg: PipelineConfig, renderer_bin: Path, poses_path: Path,
+def step_archive(cfg: PipelineConfig, renderer_bin: Path, poses_path: Path | None,
                  iteration: int = 0, corrections_bin: Path | None = None) -> Path:
-    """Build optimized submission archive."""
+    """Build optimized submission archive.
+
+    poses_path may be None for non-FiLM renderers (pose_dim=0). In that case
+    step_pose_tto is correctly soft-skipped and the archive is built without
+    poses. Contrarian council CRITICAL 2026-04-26: prior soft-skip returned
+    a phantom path which crashed build_submission_archive with
+    FileNotFoundError. Now: detect None or non-existent path, switch to a
+    no-poses manifest variant.
+    """
     iter_dir = Path(cfg.output_dir) / f"iter_{iteration}"
     archive_path = iter_dir / "archive.zip"
 
@@ -1128,28 +1160,42 @@ def step_archive(cfg: PipelineConfig, renderer_bin: Path, poses_path: Path,
     _log("Building submission archive")
     from tac.submission_archive import (
         build_submission_archive, RENDERER_SUBMISSION_MANIFEST,
-        RENDERER_COMPACT_MANIFEST, RENDERER_AMRC_MANIFEST,
+        RENDERER_COMPACT_MANIFEST, RENDERER_AMRC_MANIFEST, ArchiveManifest,
     )
 
-    is_bin = poses_path.suffix == ".bin"
+    # 2026-04-26 Contrarian fix: handle no-poses (FiLM-less renderer) case.
+    has_poses = poses_path is not None and Path(poses_path).exists()
+    if not has_poses:
+        _log("  Building archive WITHOUT optimized poses (no-FiLM renderer or "
+             "pose_tto soft-skipped). Eval will use zero poses (safe only for "
+             "non-FiLM renderers).", "WARN")
+        poses_path = None
+
+    is_bin = (poses_path.suffix == ".bin") if has_poses else False
     archive_mask_path = Path(cfg.masks_archive or cfg.masks)
     is_amrc = archive_mask_path.suffix.lower() == ".amrc"
 
     if is_amrc:
         # AMRC manifest: lossless argmax-RLE codec instead of AV1.
         # The pose field is .pt by default; override to .bin if requested.
-        if cfg.binary_poses or is_bin:
-            from tac.submission_archive import ArchiveManifest
+        if not has_poses:
+            manifest = ArchiveManifest(
+                renderer_bin=True, masks_amrc=True,
+            )
+        elif cfg.binary_poses or is_bin:
             manifest = ArchiveManifest(
                 renderer_bin=True, masks_amrc=True, optimized_poses_bin=True,
             )
         else:
             manifest = RENDERER_AMRC_MANIFEST
     else:
-        manifest = (
-            RENDERER_COMPACT_MANIFEST if (cfg.binary_poses or is_bin)
-            else RENDERER_SUBMISSION_MANIFEST
-        )
+        if not has_poses:
+            manifest = ArchiveManifest(renderer_bin=True, masks_mkv=True)
+        else:
+            manifest = (
+                RENDERER_COMPACT_MANIFEST if (cfg.binary_poses or is_bin)
+                else RENDERER_SUBMISSION_MANIFEST
+            )
 
     # Include gradient corrections if available (Eureka 6 — Contrarian)
     corr_path = corrections_bin if (corrections_bin and corrections_bin.exists()) else None
@@ -1170,8 +1216,8 @@ def step_archive(cfg: PipelineConfig, renderer_bin: Path, poses_path: Path,
         renderer_bin=renderer_bin,
         masks_mkv=str(archive_mask_path) if not is_amrc else None,
         masks_amrc=str(archive_mask_path) if is_amrc else None,
-        optimized_poses_pt=None if is_bin else poses_path,
-        optimized_poses_bin=poses_path if is_bin else None,
+        optimized_poses_pt=poses_path if (has_poses and not is_bin) else None,
+        optimized_poses_bin=poses_path if (has_poses and is_bin) else None,
         gradient_corrections_bin=corr_path,
         manifest=manifest,
         validate=True,
@@ -1793,6 +1839,23 @@ def main() -> int:
     comp.add_argument("--freeze-motion-phase2", action="store_true")
     comp.add_argument("--freeze-renderer-phase3", action="store_true")
     comp.add_argument("--beneficial-quant-noise", action="store_true")
+    # Yousfi #3: spatially-adaptive quantization noise (UNIWARD)
+    comp.add_argument("--use-variance-noise", action="store_true",
+                      help="UNIWARD-aligned: noise concentrated in textured regions "
+                           "where the scorer is steganographically blind (Yousfi #3)")
+    comp.add_argument("--variance-noise-weight", type=float, default=0.1)
+    comp.add_argument("--variance-noise-base-std", type=float, default=2.0)
+    comp.add_argument("--variance-noise-kernel", type=int, default=8)
+    comp.add_argument("--variance-noise-mode", type=str, default="variance",
+                      choices=["variance", "inverse_variance"])
+    # Yousfi #5: ScanNet-style spatial uncertainty maps
+    comp.add_argument("--use-uncertainty-loss", action="store_true",
+                      help="Yousfi #5: weight reconstruction loss by inverse SegNet "
+                           "softmax entropy on the GT (focus on confident pixels)")
+    comp.add_argument("--uncertainty-loss-weight", type=float, default=0.1,
+                      help="Multiplier on uncertainty-weighted L1 (default 0.1)")
+    comp.add_argument("--uncertainty-loss-floor", type=float, default=0.1,
+                      help="Per-pixel weight floor (default 0.1)")
     # Optimization
     comp.add_argument("--pose-max-steps", type=int, default=2000)
     comp.add_argument("--pose-lr", type=float, default=0.01)

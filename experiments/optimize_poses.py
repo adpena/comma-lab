@@ -127,6 +127,11 @@ def parse_args() -> argparse.Namespace:
                    help="Simulate contest eval resolution roundtrip in loss (default: on)")
     p.add_argument("--no-eval-roundtrip", dest="eval_roundtrip", action="store_false",
                    help="Disable contest eval resolution roundtrip")
+    p.add_argument("--posetto-noise-std", type=float, default=0.5,
+                   help="Hotz STE: gaussian noise std added DURING simulate_eval_roundtrip "
+                        "(default 0.5). 2026-04-26 Fridrich council CRITICAL: prior default "
+                        "of 0.0 silently re-opened the proxy-CUDA gap up to 11x on PoseNet. "
+                        "Set 0 only for diagnostic ablations.")
     p.add_argument("--early-stop-patience", type=int, default=100,
                    help="Stop if loss hasn't improved in this many steps")
     p.add_argument("--argmax-constraint", action="store_true",
@@ -273,6 +278,7 @@ def optimize_poses_batch(
     pose_weight: float = 10.0,
     hinge_margin: float = 0.5,
     eval_roundtrip: bool = True,
+    posetto_noise_std: float = 0.5,
     early_stop_patience: int = 100,
     argmax_constraint: bool = False,
     max_retries: int = 3,
@@ -390,7 +396,7 @@ def optimize_poses_batch(
 
         # Optional eval roundtrip
         if eval_roundtrip:
-            frames_chw = simulate_eval_roundtrip(frames_chw)
+            frames_chw = simulate_eval_roundtrip(frames_chw, noise_std=posetto_noise_std)
 
         # --- SegNet loss (hinge) ---
         seg_in = segnet.preprocess_input(frames_chw.unsqueeze(1))
@@ -407,7 +413,7 @@ def optimize_poses_batch(
         if eval_roundtrip:
             B_p, T_p, C_p, H_p, W_p = pairs_chw.shape
             flat = pairs_chw.reshape(B_p * T_p, C_p, H_p, W_p)
-            flat = simulate_eval_roundtrip(flat)
+            flat = simulate_eval_roundtrip(flat, noise_std=posetto_noise_std)
             pairs_chw = flat.reshape(B_p, T_p, C_p, H_p, W_p)
 
         pose_in = posenet.preprocess_input(pairs_chw)
@@ -728,7 +734,7 @@ def main():
                 frames_chw = frames_hwc.permute(0, 3, 1, 2).contiguous()
 
                 if args.eval_roundtrip:
-                    frames_chw = simulate_eval_roundtrip(frames_chw)
+                    frames_chw = simulate_eval_roundtrip(frames_chw, noise_std=args.posetto_noise_std)
 
                 seg_in = segnet.preprocess_input(frames_chw.unsqueeze(1))
                 seg_logits = segnet(seg_in)
@@ -740,7 +746,7 @@ def main():
                 if args.eval_roundtrip:
                     Bp, Tp, Cp, Hp, Wp = pairs_chw.shape
                     flat = pairs_chw.reshape(Bp * Tp, Cp, Hp, Wp)
-                    flat = simulate_eval_roundtrip(flat)
+                    flat = simulate_eval_roundtrip(flat, noise_std=args.posetto_noise_std)
                     pairs_chw = flat.reshape(Bp, Tp, Cp, Hp, Wp)
                 pose_in = posenet.preprocess_input(pairs_chw)
                 pose_out = posenet(pose_in)["pose"][..., :6]
@@ -816,6 +822,7 @@ def main():
             pose_weight=args.pose_weight,
             hinge_margin=args.hinge_margin,
             eval_roundtrip=args.eval_roundtrip,
+            posetto_noise_std=args.posetto_noise_std,
             early_stop_patience=args.early_stop_patience,
             argmax_constraint=args.argmax_constraint,
             max_retries=args.max_retries,

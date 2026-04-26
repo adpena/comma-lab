@@ -160,12 +160,15 @@ def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
     # KL divergence on SegNet soft distributions ALONGSIDE the standard scorer
     # loss (NOT replacing it — that caused PoseNet collapse historically).
     # T=2.0 with weight ~1.0 is the proven recipe.
-    p.add_argument("--kl-distill-weight", type=float, default=0.0,
-                   help="Auxiliary KL distill loss weight (default 0.0 = off). "
-                        "Quantizr uses this with T=2.0 to crush SegNet to 0.001. "
-                        "Recommended: 1.0 during Phase 2.")
-    p.add_argument("--kl-distill-temperature", type=float, default=2.0,
-                   help="Softmax temperature for KL distillation (default 2.0).")
+    # default=None so the profile resolver can override (Quantizr council
+    # CRITICAL 2026-04-26): with default=0.0 the profile value was DEAD,
+    # KL distill never fired in any production training run.
+    p.add_argument("--kl-distill-weight", type=float, default=None,
+                   help="Auxiliary KL distill loss weight (default: from profile, "
+                        "else 0.0 = off). Quantizr uses 1.0 with T=2.0 — Phase 2 only.")
+    p.add_argument("--kl-distill-temperature", type=float, default=None,
+                   help="Softmax temperature for KL distillation (default: from "
+                        "profile, else 2.0).")
 
     p.add_argument("--subsample", type=int, default=4,
                    help="Train on 1/N of pairs per epoch")
@@ -315,6 +318,17 @@ def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
     # Default 0.0 = disabled (zero overhead — call site is gated).
     args.dct_quant_weight = _resolve(getattr(args, "dct_quant_weight", None),
                                       "dct_quant_weight", 0.0)
+    # Quantizr council #4 CRITICAL (2026-04-26): KL distillation T=2.0 on
+    # SegNet was DEAD CODE because the resolver wasn't reading from profile.
+    # DEN profile declared kl_distill_weight=1.0 but argparse default 0.0
+    # always won. Every WILDE/SHIRAZ/DEN training run since the KL feature
+    # landed has trained without KL distill — Quantizr's #1 SegNet trick.
+    # Resolved via standard _resolve() pattern — profile key wins over
+    # argparse default unless CLI explicitly passes the flag.
+    args.kl_distill_weight = _resolve(getattr(args, "kl_distill_weight", None),
+                                       "kl_distill_weight", 0.0)
+    args.kl_distill_temperature = _resolve(getattr(args, "kl_distill_temperature", None),
+                                            "kl_distill_temperature", 2.0)
     args.use_per_class_weights = _resolve(getattr(args, "use_per_class_weights", None),
                                            "use_per_class_weights", False)
     args.use_swa = _resolve(getattr(args, "use_swa", None), "use_swa", False)

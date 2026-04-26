@@ -992,6 +992,12 @@ COOLCHIC_RENDERER_FULL = {
     "accum_steps": 4,
     "use_swa": True,
     "pretrain_epochs": 500,
+    # CLAUDE.md non-negotiable: every renderer profile MUST have eval_roundtrip
+    # to close the proxy-CUDA gap. 2026-04-26 LANE-F preflight blocked because
+    # this was None. Inherits to C3_RESIDUAL_RENDERER_FULL too via spread.
+    "eval_roundtrip": True,
+    "seed": 42,
+    "deterministic": True,
 }
 
 # Technique 9C: C3-style coordinate residual codec.
@@ -2161,6 +2167,24 @@ WILDE = {
     "linf_weight": 0.01,
     "use_markov_loss": True,       # HUGO: preserve local gradient statistics
     "markov_weight": 0.1,
+    # Yousfi #3: UNIWARD-aligned spatially-adaptive quant noise. Companion
+    # to texture_loss — that down-weights L1 in textured regions, this
+    # actively trains for noise robustness in the same regions where the
+    # FP4/mask codecs will inject quantization error at inflate time.
+    "use_variance_noise": True,
+    "variance_noise_weight": 0.1,
+    "variance_noise_base_std": 2.0,
+    "variance_noise_kernel": 8,
+    "variance_noise_mode": "variance",
+    # Yousfi #5: ScanNet-style spatial uncertainty maps. Up-weights pixel
+    # loss in regions SegNet is most confident about (low GT entropy).
+    # Kept light (weight 0.05) to avoid amplifying the same signal as
+    # variance_noise (overlapping spatial coverage) and KL distill (which
+    # subsumes uncertainty information when active). See council notes
+    # in tac.losses.segnet_uncertainty_weighted_loss.
+    "use_uncertainty_loss": True,
+    "uncertainty_loss_weight": 0.05,
+    "uncertainty_loss_floor": 0.1,
     # Training: 5-phase Quantizr-adapted schedule
     # Phase 1 (pixel warmup): all params, L1 loss
     # Phase 2 (anchor): freeze motion, SegNet CE + KL(T=2.0), error_boost=9x
@@ -2275,6 +2299,17 @@ SHIRAZ = {
     "linf_weight": 0.01,
     "use_markov_loss": True,       # HUGO: preserve local gradient statistics
     "markov_weight": 0.1,
+    # Yousfi #3: UNIWARD-aligned spatially-adaptive quant noise.
+    "use_variance_noise": True,
+    "variance_noise_weight": 0.1,
+    "variance_noise_base_std": 2.0,
+    "variance_noise_kernel": 8,
+    "variance_noise_mode": "variance",
+    # Yousfi #5: ScanNet-style spatial uncertainty maps (light weight,
+    # see WILDE / DEN comments for full provenance and council notes).
+    "use_uncertainty_loss": True,
+    "uncertainty_loss_weight": 0.05,
+    "uncertainty_loss_floor": 0.1,
     "pose_weight": 10.0,
     "seg_weight": 100.0,
     "pixel_weight": 0.1,
@@ -2466,6 +2501,21 @@ DEN = {
     "linf_weight": 0.01,
     "use_markov_loss": True,
     "markov_weight": 0.1,
+    # Yousfi #3: UNIWARD-aligned spatially-adaptive quant noise.
+    "use_variance_noise": True,
+    "variance_noise_weight": 0.1,
+    "variance_noise_base_std": 2.0,
+    "variance_noise_kernel": 8,
+    "variance_noise_mode": "variance",
+    # Yousfi #5: ScanNet-style spatial uncertainty maps. DEN runs KL distill
+    # on SegNet (kl_distill_weight=1.0 below) which directly targets the
+    # softmax distribution and largely subsumes the uncertainty signal —
+    # so the weight is kept very low (0.02) to act as a sweetener rather
+    # than a competing objective. Council Quantizr (recorded): "with KL on,
+    # uncertainty loss is 80% redundant; keep it ≤0.05 or drop entirely."
+    "use_uncertainty_loss": True,
+    "uncertainty_loss_weight": 0.02,
+    "uncertainty_loss_floor": 0.1,
     # Fridrich council #1 (2026-04-26): JPEG-Q-table-weighted DCT loss.
     # Penalises low-freq residual energy ~6× more than high-freq, letting
     # the renderer hide error in DCT directions the scorers cannot see
