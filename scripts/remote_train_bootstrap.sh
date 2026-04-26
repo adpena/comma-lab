@@ -108,6 +108,31 @@ print('provenance:', json.dumps(prov, indent=2))
     "$PYBIN" -m pip install -q -e . 2>&1 | tail -3
     "$PYBIN" -m pip install -q av opencv-python pydantic timm einops segmentation_models_pytorch 2>&1 | tail -3
 
+    # Stage 1b: Make upstream/ffmpeg-new usable. Ubuntu 22.04's apt ffmpeg
+    # is 4.4.2 — does NOT support `-svtav1-params` that mask_codec.py
+    # requires. The upstream snapshot ships a static ffmpeg-new (n7.1)
+    # that does, but it (a) needs +x and (b) needs LD_LIBRARY_PATH to
+    # find libSvtAv1Enc.so.2 (also bundled in upstream). 2026-04-26 the
+    # DEN-V2 deploy crashed at the mask-encode step because of this —
+    # symlinking + LD path makes mask_codec._ffmpeg_binary() pick the
+    # right binary automatically.
+    FFMPEG_NEW="$WORKSPACE/upstream/ffmpeg-new"
+    SVT_LIB_DIR="$WORKSPACE/upstream/submissions/av1_roi_lanczos_unsharp/lib"
+    if [ -f "$FFMPEG_NEW" ]; then
+        chmod +x "$FFMPEG_NEW" 2>/dev/null || true
+        if [ -f "$SVT_LIB_DIR/libSvtAv1Enc.so.2.3.0" ] && [ ! -e "$SVT_LIB_DIR/libSvtAv1Enc.so.2" ]; then
+            ln -sf "$SVT_LIB_DIR/libSvtAv1Enc.so.2.3.0" "$SVT_LIB_DIR/libSvtAv1Enc.so.2"
+        fi
+        export LD_LIBRARY_PATH="$SVT_LIB_DIR${LD_LIBRARY_PATH:+:$LD_LIBRARY_PATH}"
+        # Quick smoke check: invoke ffmpeg-new -version so any future
+        # missing-library failure surfaces here, not at Stage 5.
+        if "$FFMPEG_NEW" -version >/dev/null 2>&1; then
+            echo "OK upstream/ffmpeg-new ready (n7.x with libsvtav1)"
+        else
+            echo "WARN: upstream/ffmpeg-new present but won't run — mask encoding may fall back to system ffmpeg" >&2
+        fi
+    fi
+
     # Stage 2: standalone determinism check (CUDA + CUBLAS_WORKSPACE_CONFIG +
     # profile contract). Standalone Python file ⇒ no heredoc quoting issues.
     echo "=== STAGE 2 ($PROFILE): determinism check ==="

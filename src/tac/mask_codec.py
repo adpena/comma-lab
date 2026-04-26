@@ -26,6 +26,7 @@ Functions:
 
 from __future__ import annotations
 
+import os
 import shutil
 import subprocess
 import tempfile
@@ -36,6 +37,34 @@ import torch
 import torch.nn.functional as F
 
 from tac.camera import FRAME_H as SEGNET_H, FRAME_W as SEGNET_W, NUM_CLASSES
+
+
+def _ffmpeg_binary() -> str:
+    """Resolve the ffmpeg binary to use for mask encoding.
+
+    Order:
+      1. $TAC_FFMPEG (operator override)
+      2. $TAC_UPSTREAM_DIR/ffmpeg-new (the upstream snapshot's static binary,
+         which has libsvtav1 — needed for `-svtav1-params`)
+      3. ./upstream/ffmpeg-new (relative to CWD)
+      4. "ffmpeg" on PATH (system default)
+
+    The upstream-shipped ffmpeg-new is preferred because Ubuntu 22.04's
+    apt-installed ffmpeg 4.4.2 has libaom but NOT libsvtav1, so the
+    `-svtav1-params` option fails with `Unrecognized option`. 2026-04-26
+    DEN-V2 deploy crashed at the mask-encode stage of pipeline.py compress
+    because of exactly this — added the resolver to make the codec robust
+    against ffmpeg-environment drift.
+    """
+    override = os.environ.get("TAC_FFMPEG")
+    if override and Path(override).exists() and os.access(override, os.X_OK):
+        return override
+    upstream_dir = os.environ.get("TAC_UPSTREAM_DIR", "upstream")
+    candidate = Path(upstream_dir) / "ffmpeg-new"
+    if candidate.exists() and os.access(candidate, os.X_OK):
+        return str(candidate.resolve())
+    # Final fallback to PATH
+    return "ffmpeg"
 
 
 def extract_masks(
@@ -129,7 +158,7 @@ def encode_masks(
 
     # Write raw frames to ffmpeg stdin, encode as AV1
     cmd = [
-        "ffmpeg",
+        _ffmpeg_binary(),
         "-y",
         "-f",
         "rawvideo",
@@ -221,7 +250,7 @@ def decode_masks(
 
     # Decode to raw gray frames
     cmd = [
-        "ffmpeg",
+        _ffmpeg_binary(),
         "-i",
         str(mask_video_path),
         "-f",
@@ -551,7 +580,7 @@ def encode_masks_monochrome(
     pixels = (masks.to(torch.int32) * scale_factor).clamp(0, 255).to(torch.uint8).numpy()
 
     cmd = [
-        "ffmpeg",
+        _ffmpeg_binary(),
         "-y",
         "-f",
         "rawvideo",
