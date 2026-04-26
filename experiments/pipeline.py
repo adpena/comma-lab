@@ -1181,12 +1181,16 @@ def step_engineered_corrections(cfg: PipelineConfig, renderer_bin: Path,
 
 
 def step_eval(cfg: PipelineConfig, renderer_bin: Path, archive_path: Path,
-              iteration: int = 0) -> dict:
+              iteration: int = 0, poses_path: Path | None = None) -> dict:
     """Full e2e auth evaluation through upstream scorer.
 
     Args:
         renderer_bin: path to renderer.bin (checkpoint for auth_eval_renderer.py)
         archive_path: path to archive.zip (for rate calculation via --archive-size-bytes)
+        poses_path: optional path to optimized_poses.{bin,pt}. If None, auto-discovers
+            in the archive's parent dir. Required for FiLM models (pose_dim>0); without
+            it, auth_eval_renderer.py renders with zero poses and PoseNet collapses
+            (verified 2026-04-26 with SHIRAZ v4: pose_d 0.342 vs ~0.011 with poses).
     """
     iter_dir = Path(cfg.output_dir) / f"iter_{iteration}"
     iter_dir.mkdir(parents=True, exist_ok=True)
@@ -1213,6 +1217,24 @@ def step_eval(cfg: PipelineConfig, renderer_bin: Path, archive_path: Path,
 
     _log("Running full e2e auth evaluation")
     archive_bytes = archive_path.stat().st_size if archive_path.exists() else 0
+
+    # Auto-discover optimized poses if caller didn't supply one. Search both
+    # the archive's iter_dir (compress flow) and the archive's parent
+    # (standalone `pipeline.py eval`) for the canonical filenames produced by
+    # step_pose_tto. Without this, FiLM-conditioned renderers (pose_dim>0)
+    # silently render with zero poses → catastrophic PoseNet collapse
+    # (verified 2026-04-26 with SHIRAZ v4: pose_d 0.342 vs ~0.011).
+    if poses_path is None:
+        search_dirs = [iter_dir, archive_path.parent]
+        for d in search_dirs:
+            for cand_name in ("optimized_poses.bin", "optimized_poses.pt"):
+                cand = d / cand_name
+                if cand.exists():
+                    poses_path = cand
+                    break
+            if poses_path is not None:
+                break
+
     cmd = [
         sys.executable, "-u", "experiments/auth_eval_renderer.py",
         "--checkpoint", str(renderer_bin),
@@ -1220,6 +1242,12 @@ def step_eval(cfg: PipelineConfig, renderer_bin: Path, archive_path: Path,
         "--device", cfg.device,
         "--archive-size-bytes", str(archive_bytes),
     ]
+    if poses_path is not None and poses_path.exists():
+        cmd.extend(["--poses", str(poses_path)])
+        _log(f"  Eval will use poses: {poses_path.name}")
+    else:
+        _log("  No optimized_poses.{bin,pt} in iter_dir — eval will use zero poses "
+             "(safe only for non-FiLM renderers).", "WARN")
 
     # R30: stream stdout to a tempfile rather than capture_output=True. A
     # 30-min auth eval emits MB of pair-by-pair logs; buffering all of it in
@@ -1495,8 +1523,10 @@ def run_compress(cfg: PipelineConfig) -> None:
         archive_path = step_archive(cfg, final_renderer, poses_path, iteration,
                                      corrections_bin=corrections_bin)
 
-        # Step 5: Eval (pass renderer.bin for scoring, archive.zip for rate)
-        eval_result = step_eval(cfg, final_renderer, archive_path, iteration)
+        # Step 5: Eval (pass renderer.bin for scoring, archive.zip for rate,
+        # and poses for FiLM conditioning — see step_eval docstring).
+        eval_result = step_eval(cfg, final_renderer, archive_path, iteration,
+                                 poses_path=poses_path)
         score = eval_result.get("score")
 
         if score is not None:

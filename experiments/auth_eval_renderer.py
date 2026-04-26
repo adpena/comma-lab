@@ -609,8 +609,16 @@ def run_auth_eval(
         )
         print(f"  Loaded poses: {tuple(poses.shape)} from {Path(poses_path).name}")
     elif hasattr(model, 'pose_dim') and model.pose_dim > 0:
-        print("  WARNING: Model has FiLM (pose_dim>0) but no --poses provided. "
-              "Using zero poses — PoseNet score will be degraded.")
+        # HARD ERROR (2026-04-26): SHIRAZ v4 silently scored 2.80 instead of
+        # ~0.5 because this used to be a WARN. FiLM models without poses
+        # render junk; the score is meaningless. Fail loud so the operator
+        # discovers the bug at eval time, not after burning $0.40 of GPU.
+        msg = (f"FATAL: Model has FiLM (pose_dim={model.pose_dim}) but no "
+               f"--poses provided. Auth eval would render with zero poses "
+               f"and PoseNet would collapse (verified ~32x distortion vs "
+               f"baseline). Pass --poses optimized_poses.{{bin,pt}}.")
+        print(msg)
+        raise SystemExit(msg)
 
     # Stage 4c: Load zoom warp (for use_zoom_flow models)
     zoom_warp = None
