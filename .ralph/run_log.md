@@ -26,8 +26,33 @@ Pose TTO actively HURT the score on this arch. Hypotheses to test (task #122): (
 **Instances destroyed:** LANE-B (35627136, completed) + LANE-E (35627141, dead 14h producing nothing, ~$4.4 wasted in 0% GPU burn). LANE-E never wrote a single log file in its entire 14h life — second time this session a "tmux alive but process never started" failure has cost real money. Lane_watchdog.py (DX #9, pending commit) catches this class.
 
 **Live lanes after triage:**
-- LANE-F (35627302): healthy, c3_residual_renderer Phase 2, last seen ep 560/2500, fp4_scorer=2.67 best, ETA ~21h.
+- LANE-F (35627302): healthy, c3_residual_renderer Phase 2, last seen ep 634/2500, fp4_scorer=2.60 best (improving), ~17h ETA.
 - LANE-B, LANE-C, LANE-D, LANE-E: all destroyed (3 produced zero measurement, 1 produced a "worse than baseline" measurement).
+
+**Auth scores measured to date (only contest-CUDA counts):**
+
+| Source | Auth Score | Pose | Seg | Rate (KB) | Date |
+|---|---|---|---|---|---|
+| **0.90 baseline (dilated-h64)** | **0.900** | 0.011 | 0.0024 | 293 | 2026-04-25 |
+| SHIRAZ v4 (181K renderer + poses) | 2.700 | 0.257 | 0.0075 | 519 | 2026-04-26 AM |
+| LANE-B (h64 + fresh TTO poses) | 2.395 | 0.246 | 0.0037 | 685 | 2026-04-26 PM |
+
+**Lane redeployment plan (post-fixes):**
+- **LANE-A** (local rate attack on 0.90 archive): never started, NOT blocked by any of today's bugs. Local work, can run anytime. Most promising lane — rate is 25% of the 0.90 score (0.225 of 0.90), halving 293KB → 147KB drops total to ~0.79.
+- **LANE-C / LANE-D** (h64 retrain + bigger arch): both died from the qat_finetune.py parametrize-strip + dispatch bug. Now fixed (commit 212bcaaf) AND covered by 6 regression tests AND covered by 12 preflight bootstrap-safety tests. Safe to redeploy. Recommend LANE-D first (bigger arch likelier to beat 0.90 if it converges).
+- **LANE-E** (Quantizr-clone 88K): never produced output in 14h. Different bug — likely the STAGE 4-5 probe loop (canonical-checkpoint detector retried indefinitely instead of failing). NOT covered by today's fixes. Need separate diagnosis before redeploy.
+- **LANE-B** (pose TTO): proxy MSE → 0.0007 vs auth 0.246 = 350x gap on CUDA-CUDA. Per memory (`feedback_proxy_auth_math_useless`) this is **structural, not a bug**. The proxy uses `load_differentiable_scorers` (smooth grads, FP16 quirks); auth uses `upstream/evaluate.py` (no-grad, integer round-trip, exact sampler). Bootstrap is now safe (preflight catches the kill chain) but pose TTO itself doesn't help on this arch — original baseline poses are 23x better. **Don't redeploy** until we have an auth-validated TTO loop (smoke auth every 100 steps).
+
+**LANE-B specifically — what happened:**
+1. Bootstrap deployed `optimize_poses.py` against `/workspace/pact/baseline/renderer.bin` (the dilated-h64 0.90 baseline) for 1000 steps × 75 pairs (~6.5h) on RTX 4090.
+2. Init poses came from `extract_gt_pose_targets(gt_frames, posenet)` — PoseNet predictions on raw GT frames, since `--gt-poses-path` was NOT passed.
+3. Optimizer minimized `F.mse_loss(pose_out, pose_targets)` to ~0.0007.
+4. But `load_differentiable_scorers` PoseNet ≠ `upstream/evaluate.py` PoseNet at the precision the optimizer cares about. The fp16 quirks, autograd-graph numerics, and the lack of strict integer round-trip mean the proxy "found" poses that don't generalize to the exact-eval pipeline.
+5. Bootstrap then crashed (zip missing → empty ARCHIVE_BYTES → auth_eval argparse error). Fixed silently inline; auth landed at 2.40.
+6. Fresh poses were 23x WORSE than baseline poses on PoseNet. **Pose TTO actively HURT the score.**
+7. Net cost: 6.5h × $0.34 + bootstrap re-run ≈ $2.30, plus the discovery that the LANE-B class of work is fundamentally bottlenecked.
+
+**Preflight gate added** (commit 8d0c9c2 + tests): `preflight_bootstrap_safety` is now wired into `preflight_all`. It scans `scripts/*_bootstrap.sh` for `set -e` and shell `zip` invocations. The LANE-B kill-chain is now structurally impossible to ship.
 
 ## 2026-04-26T03:50:00-05:00 — SHIRAZ v4 verified CUDA score + CRITICAL pose-passing fix
 
