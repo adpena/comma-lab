@@ -1,5 +1,35 @@
 # run log
 
+## 2026-04-26T03:50:00-05:00 — SHIRAZ v4 verified CUDA score + CRITICAL pose-passing fix
+
+**SHIRAZ v4 contest-compliant CUDA scores (181K renderer, 519KB archive, 250min pipeline):**
+
+| Run | PoseNet d | SegNet d | Rate | Final score |
+|---|---|---|---|---|
+| Initial eval (BROKEN — no poses) | 0.342 | 0.00608 | 0.346 | **2.802** |
+| Re-eval with --poses (FIXED) | **0.257** | 0.00750 | 0.346 | **2.700** |
+| Verified baseline (2026-04-25) | 0.0107 | 0.00240 | 0.225 | **0.9001** |
+
+**Verdict:** SHIRAZ v4 lane is dead. Even with proper poses, the 181K-param renderer scores 3× worse than the dilated h64 + CRF50 baseline. PoseNet specifically is 24× worse — the architecture is fundamentally undermatched. Pose TTO improvement (proxy 0.27 → CUDA 0.26) closed the proxy-auth gap successfully (eval_roundtrip working), but the renderer can't produce frames PoseNet can read.
+
+**CRITICAL fix landed (commit 63854f31):**
+- pipeline.step_eval was building auth_eval_renderer.py command WITHOUT --poses
+- FiLM-conditioned models silently rendered with zero poses → catastrophic PoseNet collapse (32× worse than reality)
+- Fix: step_eval auto-discovers optimized_poses.{bin,pt} in iter_dir AND archive parent
+- Fix: auth_eval_renderer.py now SystemExit's hard if FiLM model + no poses (was silent WARN)
+- Memory entry: feedback_film_eval_no_poses_critical.md
+
+**DEN-V2 launched in parallel (Quebec 4090 instance 35618112, $0.295/hr):**
+- Canonical bootstrap (remote_train_bootstrap.sh DEN)
+- Tests the arch-drift fix (commit 876f9bb7) end-to-end
+- Eval will benefit from the new pose-passing fix
+- Expected ~1.5h (train + QAT + pose TTO + archive + auth eval)
+
+**Open questions next:**
+- DEN-V2 result will tell us if the new architecture plus all techniques can beat 0.90
+- If DEN-V2 also lands above 1.0, we need to revisit fundamentals (renderer arch, training distribution, eval-roundtrip simulation fidelity)
+- SHIRAZ instance 35606165 idle, cost burn $0.25/hr (proposed: destroy after capturing artifacts; not yet done — awaiting confirmation)
+
 ## 2026-04-25T22:00:00-05:00 — CUDA gate landed + 3 critical bugs fixed + SHIRAZ re-TTO dispatched
 
 **THE TRUE BASELINE (2026-04-25 21:00 CUDA A100):**
