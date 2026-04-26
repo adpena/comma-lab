@@ -51,6 +51,8 @@ __all__ = [
     "apply_cost_weighted_postfilter",
     "optimal_quantization_stc",
     "fridrich_pipeline",
+    "variance_weighted_noise",
+    "segnet_uncertainty_map",
 ]
 
 
@@ -1120,6 +1122,247 @@ def compress_cost_map_topk(
         "indices": indices_per_frame,
         "values": values_per_frame,
     }
+
+
+# ── Yousfi trick #3: spatially-adaptive quantization noise ─────────────
+#
+# UNIWARD principle (Holub & Fridrich 2014): modifications hidden in highly
+# textured / high-variance regions are essentially undetectable by a CNN
+# steganalysis classifier (and the SegNet/PoseNet scorers ARE inverse
+# steganalysis detectors per project_yousfi_fridrich_connection). Conversely,
+# modifications in flat / low-variance regions (clear sky, road) are caught
+# instantly. So for renderer training, we want a noise distribution whose
+# per-pixel std is HIGH where local texture is HIGH — pushing the renderer
+# to be robust precisely where quantization-induced perturbations CAN hide.
+#
+# This is the dual of `texture_weighted_loss` in `fridrich_losses.py`: that
+# function down-weights the L1 reconstruction loss in textured regions so
+# the renderer doesn't waste capacity perfecting them; this function
+# concentrates noise injection there during training so the renderer learns
+# scorer-invariant outputs in exactly the regions where errors are
+# steganographically free.
+#
+# Two `mode` values are exposed for ablation only — the empirical default
+# (and the Fridrich/Yousfi-correct one) is `mode='variance'` which puts the
+# noise IN the texture. `mode='inverse_variance'` exists so we can A/B test
+# the "anti-UNIWARD" hypothesis without writing two functions.
+
+def variance_weighted_noise(
+    image: torch.Tensor,
+    base_std: float,
+    kernel_size: int = 8,
+    mode: str = "variance",
+    eps: float = 1e-6,
+) -> torch.Tensor:
+    """Generate per-pixel noise whose std is shaped by local image variance.
+
+    Implements Yousfi #3 (spatially-adaptive quantization noise) in its
+    UNIWARD-aligned form: noise concentrates where local variance is HIGH,
+    so quantization-induced perturbations live in regions the SegNet (and
+    its EfficientNet-B2 stride-2 stem) provably cannot detect.
+
+    Box filter (avg_pool2d + reflect padding) is used for the local mean and
+    second moment — Hotz: don't pay for a conv2d when avg_pool2d does the
+    same work cheaper. Local variance is computed in luma (BT.601) so the
+    noise field is shared across the three RGB channels at each pixel
+    (matches scorer numerics: PoseNet collapses to YUV6 anyway).
+
+    The std field is normalised by its mean over the spatial dims so that
+    `base_std` keeps its semantics — average noise std across the image
+    equals `base_std` regardless of mode or content. This makes the
+    spatially-adaptive noise a strict redistribution of a fixed noise budget.
+
+    Args:
+        image: (B, C, H, W) RGB tensor in [0, 255]. C must be 3.
+        base_std: average noise std across the image (in pixel units).
+        kernel_size: spatial extent of the local-variance window (default 8,
+            matches the scorer's stride-2 receptive field).
+        mode: 'variance' (UNIWARD: high-var → more noise) or
+            'inverse_variance' (ablation only).
+        eps: stabiliser to avoid division by zero in flat regions.
+
+    Returns:
+        Noise tensor with the same shape as `image`. The noise is sampled
+        from a per-pixel zero-mean Gaussian whose std varies spatially.
+
+    Raises:
+        ValueError: if mode is not in {'variance', 'inverse_variance'}, or
+            base_std is negative, or image is not 4D / has wrong channels.
+    """
+    if mode not in ("variance", "inverse_variance"):
+        raise ValueError(
+            f"mode must be 'variance' or 'inverse_variance', got {mode!r}"
+        )
+    if base_std < 0:
+        raise ValueError(f"base_std must be non-negative, got {base_std}")
+    if image.ndim != 4:
+        raise ValueError(
+            f"image must be (B, C, H, W); got shape {tuple(image.shape)}"
+        )
+    if image.shape[1] != 3:
+        raise ValueError(
+            f"image must have 3 channels (RGB); got C={image.shape[1]}"
+        )
+    if kernel_size < 1:
+        raise ValueError(f"kernel_size must be >= 1, got {kernel_size}")
+
+    if base_std == 0.0:
+        return torch.zeros_like(image)
+
+    # Always work in float for the variance estimate. The returned noise
+    # picks up the input dtype at the end so callers get matching tensors.
+    img_f = image.detach().float()
+
+    # BT.601 luma — single channel for the local-variance estimate. Sharing
+    # the noise field across RGB matches the scorer side (PoseNet collapses
+    # to YUV6 internally; SegNet feeds the same RGB three times).
+    luma = (
+        0.299 * img_f[:, 0:1]
+        + 0.587 * img_f[:, 1:2]
+        + 0.114 * img_f[:, 2:3]
+    )  # (B, 1, H, W)
+
+    pad = kernel_size // 2
+    luma_padded = F.pad(luma, (pad, pad, pad, pad), mode="reflect")
+    sq_padded = F.pad(luma * luma, (pad, pad, pad, pad), mode="reflect")
+
+    local_mean = F.avg_pool2d(luma_padded, kernel_size, stride=1)
+    local_sqmean = F.avg_pool2d(sq_padded, kernel_size, stride=1)
+    local_var = (local_sqmean - local_mean * local_mean).clamp(min=0.0)
+
+    # Crop back to the original spatial extent in case avg_pool2d left an
+    # off-by-one when kernel_size is even (pad=kernel_size//2 is asymmetric).
+    H, W = image.shape[2], image.shape[3]
+    local_var = local_var[:, :, :H, :W]
+
+    if mode == "variance":
+        scale = local_var
+    else:  # inverse_variance — exposed for A/B ablation only
+        scale = 1.0 / (local_var + eps)
+
+    # Normalise so the spatial mean of `scale` equals 1 → multiplying by
+    # base_std keeps the average noise std equal to base_std. This makes
+    # the function a pure spatial redistribution of a fixed noise budget,
+    # which keeps it apples-to-apples comparable with vanilla iid noise.
+    scale_mean = scale.mean(dim=(2, 3), keepdim=True).clamp(min=eps)
+    std_field = base_std * (scale / scale_mean)  # (B, 1, H, W)
+
+    # Broadcast (B, 1, H, W) → (B, 3, H, W). One std value per pixel,
+    # shared across RGB channels.
+    std_field = std_field.expand(-1, image.shape[1], -1, -1)
+
+    noise = torch.randn_like(img_f) * std_field
+    return noise.to(image.dtype)
+
+
+# ── Yousfi trick #5: ScanNet-style spatial uncertainty maps ──────────────
+#
+# ScanNet (Dai et al. CVPR 2017 "ScanNet: Richly-annotated 3D Reconstructions")
+# popularised epistemic-uncertainty per-voxel signals via softmax entropy /
+# MC-dropout variance for downstream task gating. Translated to our 2-frame
+# perception scorer setting:
+#
+#   - Run SegNet on the GT frame to obtain class logits (B, 5, H, W).
+#   - Convert to per-pixel softmax entropy over the 5 classes.
+#   - Pixels with LOW entropy are pixels SegNet is most CONFIDENT about —
+#     these are the pixels where, if our renderer's output makes argmax flip,
+#     it's the clearest "miss" against the scorer (and thus the clearest hit
+#     against the score, since seg_distortion = argmax disagreement rate).
+#   - Pixels with HIGH entropy are pixels SegNet is itself ambiguous about
+#     (class boundaries, occlusions, distant lane markings). Argmax disagreement
+#     there is essentially noise from the scorer's perspective and gives the
+#     renderer little reliable signal.
+#
+# The companion loss in `tac.losses.segnet_uncertainty_weighted_loss` uses
+# this map to UP-weight reconstruction error in low-entropy (high-confidence)
+# regions and DOWN-weight it in high-entropy regions — i.e. focus the
+# renderer's pixel budget on the pixels SegNet cares about.
+#
+# CAVEAT (Contrarian, council-recorded): SegNet is the scorer we are trying
+# to fool. Its confidence estimate is not epistemically valid in any
+# absolute sense — it merely encodes where THIS network's softmax happens
+# to be peaked. Fooling-via-uncertainty-targeting therefore inherits all
+# of the scorer's blind spots (EfficientNet-B2 stride-2 stem, no DCT
+# statistics, see CLAUDE.md). It is a USEFUL proxy, not a TRUTH. Document
+# this in any paper section that uses the technique.
+
+def segnet_uncertainty_map(
+    segnet: nn.Module,
+    image: torch.Tensor,
+    eps: float = 1e-6,
+) -> torch.Tensor:
+    """Per-pixel softmax entropy of SegNet predictions.
+
+    ScanNet-style epistemic uncertainty proxy (Yousfi trick #5). Runs the
+    upstream SegNet on `image` and computes pixel-wise entropy
+    H(x,y) = -Σ_c p(c|x,y) log(p(c|x,y)) over the 5 segmentation classes,
+    where p = softmax(logits, dim=class).
+
+    Low-entropy regions are where SegNet is MOST confident about the class;
+    these are the pixels most worth optimising the renderer to match
+    (a wrong argmax there is a clear "miss" against the contest scorer).
+
+    Notes:
+        * SegNet's `preprocess_input` expects a (B, T, C, H, W) tensor and
+          internally takes the LAST frame and resizes to (384, 512). To make
+          this function callable with a plain (B, 3, H, W) image we add a
+          singleton time dim before invoking preprocess. The returned map
+          therefore lives on the SegNet input grid (384, 512) regardless of
+          the input resolution.
+        * The forward pass runs under `torch.no_grad()` because the entropy
+          map is used as a STOP-GRAD weight on a downstream loss; gradients
+          flow through the per-pixel loss, not through SegNet.
+
+    Args:
+        segnet: frozen upstream SegNet (smp.Unet over EfficientNet-B2,
+            5 classes). Must be in eval mode; this function does not toggle
+            train/eval state.
+        image: (B, 3, H, W) RGB tensor in [0, 255] (the standard renderer
+            output / GT range in this codebase). Must be float.
+        eps: stabiliser added inside the log to avoid log(0). The default
+            1e-6 is below FP32's smallest representable softmax probability
+            for any class with non-degenerate logits, so it does not bias
+            the entropy estimate in normal use.
+
+    Returns:
+        (B, 1, H_seg, W_seg) entropy tensor on the SegNet input grid (typically
+        384 x 512), with values in [0, log(5)] ≈ [0, 1.609]. High = uncertain;
+        low = confident.
+
+    Raises:
+        ValueError: if `image` is not 4-D with 3 channels.
+    """
+    if image.ndim != 4:
+        raise ValueError(
+            f"image must be (B, 3, H, W); got shape {tuple(image.shape)}"
+        )
+    if image.shape[1] != 3:
+        raise ValueError(
+            f"image must have 3 channels (RGB); got C={image.shape[1]}"
+        )
+
+    # Upstream SegNet.preprocess_input expects (B, T, C, H, W) and slices
+    # `x[:, -1, ...]` internally. Add a singleton time axis so a plain
+    # frame works as a one-frame "sequence".
+    x = image.float().unsqueeze(1)  # (B, 1, 3, H, W)
+
+    # No grad: this map is a stop-grad weight on a downstream pixel loss.
+    # Gradients must flow through the loss arguments, not through SegNet.
+    with torch.no_grad():
+        seg_in = segnet.preprocess_input(x)  # (B, 3, H_seg, W_seg)
+        logits = segnet(seg_in)  # (B, 5, H_seg, W_seg)
+        # log_softmax then softmax keeps both numerics nice and avoids the
+        # log(0) singularity at one-hot logits (the +eps is a belt-and-braces
+        # guard for half-precision callers).
+        log_p = F.log_softmax(logits, dim=1)
+        p = log_p.exp()
+        # H = -Σ p log p, summed over classes → (B, H, W).
+        entropy = -(p * (log_p + eps)).sum(dim=1, keepdim=True)
+        # Numerical floor — at extreme one-hot inputs the (-eps * 1) term
+        # above can push the result very slightly negative.
+        entropy = entropy.clamp(min=0.0)
+
+    return entropy
 
 
 def decompress_cost_map_topk(

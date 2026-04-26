@@ -730,7 +730,7 @@ def load_asym_bin(raw_bytes: bytes, device: str = "cpu") -> nn.Module:
 
 
 def load_renderer(renderer_path: str, device: str) -> nn.Module:
-    """Load renderer from .bin or .pt checkpoint."""
+    """Load renderer from .bin or .pt checkpoint with content-based dispatch."""
     raw_bytes = Path(renderer_path).read_bytes()
     magic = raw_bytes[:4]
 
@@ -739,12 +739,32 @@ def load_renderer(renderer_path: str, device: str) -> nn.Module:
         print(f"Loaded AsymmetricPairGenerator from .bin ({len(raw_bytes):,} bytes)")
         return model
 
+    if magic == b"FP4A":
+        # Defer to the canonical FP4 loader from tac (kaggle env ships the
+        # tac wheel via REQUIRED_DATASET_ASSETS).
+        from tac.renderer_export import load_asymmetric_checkpoint_fp4
+        model = load_asymmetric_checkpoint_fp4(raw_bytes, device=device)
+        print(f"Loaded FP4 AsymmetricPairGenerator from .bin ({len(raw_bytes):,} bytes)")
+        return model
+
     if magic == b"DPSM":
         header_len = struct.unpack("<I", raw_bytes[4:8])[0]
         header = json.loads(raw_bytes[8:8 + header_len].decode("utf-8"))
         raise RuntimeError(
             f"DPSM .bin format detected (version={header.get('version')}). "
             f"DPSM deserialization requires the tac package. Use ASYM .bin or .pt instead."
+        )
+
+    # Verify it actually looks like a PyTorch pickle/zip before handing it to
+    # torch.load (otherwise we get the 2026-04-26 DEN-V2 cryptic ValueError).
+    _PICKLE_MAGICS = (
+        b"\x80\x02", b"\x80\x03", b"\x80\x04", b"\x80\x05", b"PK\x03\x04",
+    )
+    if not any(raw_bytes.startswith(m) for m in _PICKLE_MAGICS):
+        raise RuntimeError(
+            f"Unrecognized renderer checkpoint at {renderer_path}: "
+            f"magic bytes {magic!r}. Accepted: FP4A/ASYM/DPSM, or a PyTorch "
+            f"pickle/zip header. Check the producer."
         )
 
     # PyTorch pickle format

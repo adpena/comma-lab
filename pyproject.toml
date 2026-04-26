@@ -40,6 +40,21 @@ dependencies = [
 mlx = ["mlx>=0.5"]
 viz = ["plotly>=5.0"]
 notebooks = ["marimo>=0.3"]
+# 2026-04-26 — canonical runtime extras for GPU training/eval deploys.
+# scripts/remote_*_bootstrap.sh installs `tac[runtime]` so adding a new
+# runtime dep means editing ONE file (this one), not every bootstrap.
+# `brotli` was missed when --brotli was added to pipeline.py compress;
+# `av` is required for video decode in optimize_poses + auth_eval;
+# `timm`/`einops`/`segmentation_models_pytorch` are upstream scorer
+# direct deps via tac.scorers; `opencv-python` for frame-level utils.
+runtime = [
+    "av>=10.0",
+    "opencv-python>=4.5",
+    "timm>=0.9",
+    "einops>=0.7",
+    "segmentation-models-pytorch>=0.3",
+    "brotli>=1.0",
+]
 dev = [
     "pytest>=8.0",
     "pytest-timeout>=2.0",

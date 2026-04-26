@@ -87,11 +87,14 @@ def find_perturbations(frames_hwc, gt_masks, our_masks, segnet, device, max_delt
         for j in range(end-i):
             fd = bd[j]
             if not fd.any(): continue
+            # All gather/index ops below happen on CPU so dtype/device stay
+            # consistent (MPS would otherwise crash on int8 indexing or
+            # cross-device gather — verified 2026-04-26 smoke test).
             fg = grad[j].cpu()
             direction = fg / fg.norm(dim=-1, keepdim=True).clamp(min=1e-8)
             delta = (direction * max_delta).round().clamp(-max_delta, max_delta).to(torch.int8)
-            coords = fd.nonzero(as_tuple=False)
-            r, c = coords[:,0], coords[:,1]
+            coords = fd.cpu().nonzero(as_tuple=False)
+            r, c = coords[:, 0], coords[:, 1]
             pd = delta[r, c]
             flat = (fp+j) * H * W + r.long() * W + c.long()
             nz = pd.abs().sum(-1) > 0
@@ -127,6 +130,13 @@ def main():
     p.add_argument("--max-delta", type=int, default=2); p.add_argument("--output-dir", default=None)
     p.add_argument("--video", default=None); p.add_argument("--smoke", action="store_true")
     p.add_argument("--gt-poses-path", default=None); p.add_argument("--quantize-bits", type=int, default=8)
+    # Rate-budget guardrail (council Quantizr 2026-04-26): a poorly-trained
+    # or under-regularized renderer can produce a corrections.bin large
+    # enough to wipe out any score gain via the rate term. Default cap is
+    # 50KB → ~0.001 rate cost. Set to 0 to disable.
+    p.add_argument("--max-artifact-bytes", type=int, default=51_200,
+                   help="Abort with non-zero exit if the packed corrections "
+                        "exceed this size. Set 0 to disable.")
     a = p.parse_args()
     if a.smoke: a.n_frames = 20
     a.n_frames -= a.n_frames % 2
@@ -178,8 +188,20 @@ def main():
     if len(indices) == 0: print("  Nothing to fix."); return
 
     packed = pack_corrections(indices, deltas, tuple(rend.shape), a.max_delta, a.quantize_bits)
+    rate_cost = len(packed) / 37_545_489
+    if a.max_artifact_bytes > 0 and len(packed) > a.max_artifact_bytes:
+        # Hard fail: subprocess returns non-zero so pipeline.step_engineered_corrections
+        # will skip bundling the over-budget artifact rather than silently
+        # ship an archive that loses more on rate than it gains on SegNet.
+        print(f"  ERROR: Packed corrections {len(packed):,} bytes "
+              f"({len(packed)/1024:.1f} KB, rate={rate_cost:.6f}) exceeds "
+              f"--max-artifact-bytes={a.max_artifact_bytes:,}. Skipping save. "
+              f"Consider raising --max-delta, lowering --quantize-bits, "
+              f"or training the renderer further before re-running.",
+              file=sys.stderr)
+        sys.exit(2)
     (out / "gradient_corrections.bin").write_bytes(packed)
-    print(f"  Packed: {len(packed):,} bytes ({len(packed)/1024:.1f} KB), rate={len(packed)/37_545_489:.6f}")
+    print(f"  Packed: {len(packed):,} bytes ({len(packed)/1024:.1f} KB), rate={rate_cost:.6f}")
 
     # Validate
     corr = rend.clone().reshape(-1, 3)

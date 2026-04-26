@@ -251,6 +251,7 @@ def preflight_all(
         preflight_profiles(strict=True, verbose=verbose)
         preflight_arch_consistency(strict=True, verbose=verbose)
         preflight_filename_contract(strict=True, verbose=verbose)
+        preflight_loader_format_safety(strict=True, verbose=verbose)
         preflight_canonical_checkpoints(strict=True, verbose=verbose)
         preflight_build_renderer_signature(strict=True, verbose=verbose)
 
@@ -1599,6 +1600,276 @@ def _validate_amrc_artifacts(root: Path) -> list[str]:
     return findings
 
 
+# ── Loader format safety ──────────────────────────────────────────────────────
+#
+# Bug class this catches: a consumer (engineered_quant_noise.py,
+# pair_difficulty_map.py, kaggle_auth_eval_renderer.py, etc.) imports a
+# `load_renderer` helper that does a bare `torch.load(path, weights_only=False)`
+# on a path whose actual on-disk format is one of our binary exports
+# (FP4A/ASYM/DPSM/I4LZ). torch.load tries to interpret the magic bytes as
+# pickle, fails, and crashes with "could not convert string to float: 'P4AV'"
+# (DEN-V2 2026-04-26).
+#
+# Permanent fix: every `load_renderer`-style helper in the codebase MUST
+# content-detect the format. This validator AST-scans for the unsafe pattern.
+
+
+class LoaderFormatSafetyError(Exception):
+    """A consumer would torch.load a file path that might be a non-pickle
+    binary export (FP4A/ASYM/DPSM/I4LZ)."""
+
+
+# Module-relative names of canonical content-detecting loaders. A function
+# call resolved (statically) to one of these is treated as safe.
+_SAFE_LOADER_QUALNAMES = frozenset({
+    # Renderer loaders
+    "load_renderer",  # the canonical one in precompute_gradient_corrections
+    "load_any_renderer_checkpoint",
+    "load_asymmetric_checkpoint_fp4",
+    "load_asymmetric_checkpoint",
+    "load_renderer_checkpoint",
+    "detect_checkpoint_type",
+    "load_int4_lzma2",
+    # Pose loaders (use the same content-detect pattern; see submission_archive)
+    "load_optimized_poses",
+    "load_poses_binary",
+})
+
+
+def _scan_python_for_unsafe_renderer_loader(path: Path) -> list[str]:
+    """AST-scan a Python file for two related anti-patterns:
+
+      1. `def load_renderer(...)` whose body calls `torch.load(...)` directly
+         on the checkpoint argument WITHOUT a content-magic dispatch beforehand.
+         (Producer-side: the loader is unsafe.)
+      2. Bare `torch.load(<some>.bin / "*.bin" / a variable spelled "checkpoint*")`
+         outside of a function known to be content-detecting.
+         (Consumer-side: the call site is unsafe.)
+
+    Returns a list of human-readable violations. Empty if clean.
+    """
+    try:
+        text = path.read_text()
+    except (OSError, UnicodeDecodeError):
+        return []
+    try:
+        tree = ast.parse(text, filename=str(path))
+    except SyntaxError:
+        return [f"{path}: SyntaxError (cannot parse)"]
+
+    violations: list[str] = []
+
+    # --- Pattern 1: any function named `load_renderer` (or alias starting
+    # with `load_renderer`) must mention one of the renderer magic bytes
+    # OR delegate to one of the canonical safe loaders.
+    SAFE_MAGIC_TOKENS = ("FP4A", "ASYM", "DPSM", "I4LZ", "PK\\x03\\x04")
+
+    for node in ast.walk(tree):
+        if not isinstance(node, (ast.FunctionDef, ast.AsyncFunctionDef)):
+            continue
+        if not node.name.startswith("load_renderer"):
+            continue
+        body_src = ast.unparse(node) if hasattr(ast, "unparse") else ""
+        if not body_src:
+            continue
+        # Safe iff (a) the body mentions a known magic token, OR (b) the body
+        # delegates to one of the canonical safe loaders.
+        has_magic = any(tok in body_src for tok in SAFE_MAGIC_TOKENS)
+        delegates = any(
+            f"{nm}(" in body_src for nm in _SAFE_LOADER_QUALNAMES
+            if nm != node.name  # don't credit self-recursion
+        )
+        # Also consider it safe if it explicitly content-checks via a magic
+        # variable name pattern (e.g., `magic = raw[:4]`).
+        does_magic_read = bool(
+            re.search(r"\.read\(\s*4\s*\)", body_src)
+            or re.search(r"\[\s*:\s*4\s*\]", body_src)
+            or re.search(r"\b_PICKLE_MAGICS\b", body_src)
+            or re.search(r"\b_RENDERER_PICKLE_MAGICS\b", body_src)
+            or re.search(r"\b_looks_like_pytorch_pickle\b", body_src)
+            or re.search(r"\b_looks_like_pickle\b", body_src)
+        )
+        if has_magic or delegates or does_magic_read:
+            continue
+        # Otherwise, look for a torch.load call in the body. If found, the
+        # function is unsafe.
+        for sub in ast.walk(node):
+            if isinstance(sub, ast.Call):
+                fn_str = ast.unparse(sub.func) if hasattr(ast, "unparse") else ""
+                if fn_str in ("torch.load", "torch.frombuffer"):
+                    violations.append(
+                        f"{path}:{node.lineno}: function `{node.name}` calls "
+                        f"`{fn_str}` without content-detecting the file format "
+                        f"first. This is the 2026-04-26 DEN-V2 bug pattern: "
+                        f"torch.load on an FP4A/ASYM/DPSM/I4LZ .bin file "
+                        f"crashes with 'could not convert string to float'. "
+                        f"Either add a magic-byte dispatch (read first 4 "
+                        f"bytes, branch on FP4A/ASYM/DPSM/I4LZ vs PyTorch "
+                        f"pickle) OR delegate to "
+                        f"experiments.precompute_gradient_corrections."
+                        f"load_renderer (the canonical content-detecting "
+                        f"loader)."
+                    )
+                    break  # one violation per function is enough
+
+    # --- Pattern 2: any module-level (NOT inside a safe-named function) call
+    # like `torch.load(<arg>)` where the arg is a Name spelled like a
+    # checkpoint path. Skip calls that are inside a function we already know
+    # is safe (i.e., one whose body had the magic check above).
+
+    # Build a parent-pointer map.
+    parents: dict[int, ast.AST] = {}
+    for node in ast.walk(tree):
+        for child in ast.iter_child_nodes(node):
+            parents[id(child)] = node
+
+    def _enclosing_fn(node: ast.AST) -> ast.FunctionDef | None:
+        cur = parents.get(id(node))
+        while cur is not None:
+            if isinstance(cur, (ast.FunctionDef, ast.AsyncFunctionDef)):
+                return cur
+            cur = parents.get(id(cur))
+        return None
+
+    # Pattern 2 is intentionally NARROW: only flag when the FIRST positional
+    # arg looks SPECIFICALLY like a renderer-checkpoint variable (not just any
+    # "ckpt" — that's a TTO batch checkpoint, an optimizer state, etc.) AND
+    # the call uses `weights_only=False` (DEN-V2's exact failure mode — the
+    # legacy pickle path).
+    #
+    # The Contrarian forced this narrowing: an over-broad rule that flags
+    # every torch.load in the repo gets disabled, defeating the whole point.
+    # The tight rule stays on, catches the real DEN-V2 class without
+    # false-positing TTO checkpoint resume, training-state loads, etc.
+
+    for node in ast.walk(tree):
+        if not isinstance(node, ast.Call):
+            continue
+        fn_str = ast.unparse(node.func) if hasattr(ast, "unparse") else ""
+        if fn_str != "torch.load":
+            continue
+        if not node.args:
+            continue
+
+        # Require weights_only=False (or absent → defaults vary; tighten by
+        # requiring explicit False since that's the DEN-V2 failure mode).
+        has_weights_only_false = False
+        for kw in node.keywords:
+            if kw.arg == "weights_only" and isinstance(kw.value, ast.Constant):
+                if kw.value.value is False:
+                    has_weights_only_false = True
+        if not has_weights_only_false:
+            continue
+
+        # The first positional must be a "renderer-like" reference:
+        #   - a Name spelled with "renderer" (NOT just "checkpoint" / "ckpt"
+        #     which is too broad)
+        #   - OR a literal `.bin` filename
+        #   - OR a Call whose unparsed text contains "renderer"
+        first = node.args[0]
+        looks_renderer = False
+        if isinstance(first, ast.Name):
+            ident = first.id.lower()
+            if "renderer" in ident:
+                looks_renderer = True
+        elif isinstance(first, ast.Constant) and isinstance(first.value, str):
+            if first.value.endswith(".bin"):
+                looks_renderer = True
+        elif isinstance(first, ast.Call):
+            sub_str = ast.unparse(first) if hasattr(ast, "unparse") else ""
+            if "renderer" in sub_str.lower():
+                looks_renderer = True
+        if not looks_renderer:
+            continue
+
+        # If it's inside a function whose body has a magic check (covered by
+        # Pattern 1's safe-classification logic), let Pattern 1 own it.
+        enc = _enclosing_fn(node)
+        if enc is not None:
+            enc_src = ast.unparse(enc) if hasattr(ast, "unparse") else ""
+            if any(tok in enc_src for tok in SAFE_MAGIC_TOKENS):
+                continue
+            if any(f"{nm}(" in enc_src for nm in _SAFE_LOADER_QUALNAMES):
+                continue
+
+        # Test files are allowed to construct intentionally-wrong inputs.
+        if "/tests/" in str(path) or "test_" in path.name:
+            continue
+
+        violations.append(
+            f"{path}:{node.lineno}: bare `torch.load(<renderer-like>, "
+            f"weights_only=False)` with no content-magic dispatch. "
+            f"Use experiments.precompute_gradient_corrections.load_renderer "
+            f"(the canonical content-detecting loader) or "
+            f"tac.renderer_export.load_any_renderer_checkpoint instead. "
+            f"(Bug pattern: DEN-V2 2026-04-26 — torch.load on FP4A .bin "
+            f"crashes cryptically.)"
+        )
+
+    return violations
+
+
+def preflight_loader_format_safety(
+    repo_root: Path | None = None,
+    scan_dirs: list[str] | None = None,
+    strict: bool = True,
+    verbose: bool = True,
+) -> list[str]:
+    """Validate that every renderer checkpoint loader in the repo is
+    content-detecting (NOT bare torch.load).
+
+    Two scans per file:
+      1. Every `def load_renderer*` body must do magic-byte dispatch OR
+         delegate to a known safe loader.
+      2. No bare `torch.load(<checkpoint-like>)` outside a safe loader.
+
+    Skips test/smoke files (they construct intentionally-wrong inputs).
+
+    Returns the list of violations found. If `strict` and non-empty, raises
+    LoaderFormatSafetyError.
+    """
+    root = repo_root or REPO_ROOT
+    scan_dirs = scan_dirs or [
+        "experiments",
+        "src/tac",
+        "submissions/robust_current",
+    ]
+
+    all_violations: list[str] = []
+    n_scanned = 0
+    for d in scan_dirs:
+        d_path = root / d
+        if not d_path.exists():
+            continue
+        for py_path in d_path.rglob("*.py"):
+            n_scanned += 1
+            all_violations.extend(_scan_python_for_unsafe_renderer_loader(py_path))
+
+    if verbose:
+        if all_violations:
+            print(f"  [loader-format] {len(all_violations)} violation(s) "
+                  f"across {n_scanned} files:")
+            for v in all_violations:
+                print(f"    • {v}")
+        else:
+            print(f"  [loader-format] OK: {n_scanned} files clean — every "
+                  f"renderer loader is content-detecting")
+
+    if all_violations and strict:
+        raise LoaderFormatSafetyError(
+            "LOADER FORMAT SAFETY VIOLATIONS — a consumer would torch.load a "
+            "path that might be a non-pickle binary export. This is the "
+            "2026-04-26 DEN-V2 bug class:\n"
+            + "\n".join(f"  • {v}" for v in all_violations)
+            + "\n\nFix: use experiments.precompute_gradient_corrections."
+            "load_renderer (the canonical content-detecting loader) or add "
+            "magic-byte dispatch to your local helper. Suffix-based dispatch "
+            "is forbidden — it is what burned us in DEN-V2 (FP4 .bin) and "
+            "SHIRAZ (pickle .bin)."
+        )
+    return all_violations
+
+
 # ── Profile-vs-ArchConfig field consistency ───────────────────────────────────
 #
 # Bug class this catches: a profile sets `use_dscovn: True` (typo of
@@ -1859,6 +2130,6 @@ if __name__ == "__main__":
         )
         print("\nPREFLIGHT PASSED")
     except (PreflightError, ArityViolation, FilenameContractError,
-            CodebaseDriftError) as e:
+            CodebaseDriftError, LoaderFormatSafetyError) as e:
         print(f"\nPREFLIGHT FAILED: {e}", file=sys.stderr)
         sys.exit(1)
