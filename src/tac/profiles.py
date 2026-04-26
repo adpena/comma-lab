@@ -2297,6 +2297,9 @@ SHIRAZ = {
     "checkpoint_every": 100,
     "eval_every": 50,
     "log_every": 25,
+    # Deterministic reproducibility (CLAUDE.md canonical pipeline standard).
+    "seed": 42,
+    "deterministic": True,
 }
 
 
