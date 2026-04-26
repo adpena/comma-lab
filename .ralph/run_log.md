@@ -1,5 +1,34 @@
 # run log
 
+## 2026-04-26T16:50:00-05:00 — LANE-B pose TTO HURT score; bootstrap silent-cascade fixed; qat_finetune dispatch fixed
+
+**LANE-B (instance 35627136, RTX 4090, ~6.5h, ~$2):** first pose TTO run on the dilated-h64 baseline renderer with `noise_std=0.5` + `eval_roundtrip=True`. Proxy converged to PoseNet ~0.0007 across all 75 pairs but contest-CUDA auth measured **0.246 — a 350x proxy-auth gap** despite both fixes wired. Final auth score **2.40** (vs 0.90 baseline, **+1.5 worse**).
+
+| Metric | LANE-B | 0.90 baseline | Delta |
+|---|---|---|---|
+| PoseNet dist | 0.246 | 0.0107 | **23x worse** |
+| SegNet dist  | 0.0037 | 0.00116 | 3x worse |
+| Archive | 685KB | 293KB | 2.3x bigger |
+| Final | **2.40** | 0.90 | **+1.5 worse** |
+
+Pose TTO actively HURT the score on this arch. Hypotheses to test (task #122): (a) `motion.head` channel layout incompat with what `optimize_poses` assumes, (b) chroma/YUV6 numerics on dilated-h64, (c) ego_flow gating not threaded for dilated-h64, (d) `eval_roundtrip` resize math missing arch-specific behavior. Memory: `project_lane_b_pose_tto_proxy_auth_gap.md`.
+
+**Bootstrap silent-cascade trap (commit 813a4891):** LANE-B nearly produced ZERO measurement because three failures stacked silently: (1) PyTorch container has no `zip` binary, (2) `set -uo pipefail` (no -e) didn't abort, (3) empty `ARCHIVE_BYTES` crashed auth_eval at the very end. Fixes shipped:
+- `set -uo` → `set -euo` (matches the other two scripts)
+- `zip` shell command replaced with python `zipfile.ZipFile` (no apt dep)
+- hard-fail if `ARCHIVE_BYTES` empty/zero before auth_eval
+- validate `auth_eval.log` contains `RESULT_JSON:` before exit 0
+- 8 regression tests in `src/tac/tests/test_bootstrap_pose_tto_only.py`
+- Memory: `feedback_zip_dep_bootstrap_trap.md`
+
+**qat_finetune.py parametrize-strip + dispatch (commit 212bcaaf):** mirrored c5214993's pipeline.step_export fix to a second consumer of train_renderer checkpoints. `create_model` was hardcoded to AsymmetricPairGenerator regardless of `cfg.use_zoom_flow`; `load_float_checkpoint` didn't strip parametrize hooks from the .pt path. Both layers now fixed. 6 regression tests in `src/tac/tests/test_qat_finetune_loader.py`.
+
+**Instances destroyed:** LANE-B (35627136, completed) + LANE-E (35627141, dead 14h producing nothing, ~$4.4 wasted in 0% GPU burn). LANE-E never wrote a single log file in its entire 14h life — second time this session a "tmux alive but process never started" failure has cost real money. Lane_watchdog.py (DX #9, pending commit) catches this class.
+
+**Live lanes after triage:**
+- LANE-F (35627302): healthy, c3_residual_renderer Phase 2, last seen ep 560/2500, fp4_scorer=2.67 best, ETA ~21h.
+- LANE-B, LANE-C, LANE-D, LANE-E: all destroyed (3 produced zero measurement, 1 produced a "worse than baseline" measurement).
+
 ## 2026-04-26T03:50:00-05:00 — SHIRAZ v4 verified CUDA score + CRITICAL pose-passing fix
 
 **SHIRAZ v4 contest-compliant CUDA scores (181K renderer, 519KB archive, 250min pipeline):**
