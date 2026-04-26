@@ -835,24 +835,30 @@ def _load_masks_from_archive(
 
     if expected_frames is not None and N != expected_frames:
         if N == expected_frames // 2:
-            # Half-frame masks (600 odd-frame only): duplicate each mask to
-            # reconstruct the full 1200-frame sequence.  Frame layout:
-            #   pair_i uses mask[i] for both frame_t and frame_t1.
-            # This matches Quantizr's paradigm: store only odd-frame masks,
-            # derive even-frame masks at inflate time.
+            # Half-frame masks (600 odd-frame only): the archive stores only
+            # the t+1 mask of each pair. We need to recover the even-frame
+            # (t) masks here. Two paths:
+            #
+            #   (a) PROPER: when a RadialZoomWarp is available later in the
+            #       pipeline, warp t+1 → t via inverse zoom flow. This is
+            #       Quantizr's paradigm and gives full-quality reconstruction.
+            #       The warp expansion is deferred until after zoom_warp is
+            #       loaded — see _expand_half_frame_masks() below. We mark
+            #       the tensor here so the renderer loop knows to call it.
+            #
+            #   (b) FALLBACK: if zoom_warp is not present (legacy archives
+            #       or models trained without use_zoom_flow), duplicate.
+            #       This zeroes the MotionPredictor's diff features
+            #       (e_t1 - e_t).abs() and degrades quality.
+            #
+            # We default to (a) and tag the result. The renderer-side caller
+            # detects the tag attribute and expands.
             print(
-                f"  Half-frame masks detected: {N} frames → duplicating to {expected_frames}",
+                f"  Half-frame masks detected: {N} odd-frame masks (deferred warp expansion)",
                 file=sys.stderr,
             )
-            # Interleave: [m0, m0, m1, m1, ...] so pair (0,1) shares m0, etc.
-            # NOTE: With duplicated masks, mask_t == mask_t1 for every pair.
-            # This zeroes the MotionPredictor's diff features (e_t1 - e_t).abs(),
-            # effectively disabling learned flow and reducing to gate*residual.
-            # This is the Quantizr paradigm and works IF the model was trained
-            # with half-frame masks. If trained with full 1200 distinct masks,
-            # deploying with half-frame may degrade quality.
-            result = result.repeat_interleave(2, dim=0)
-            N = result.shape[0]
+            result._half_frame_only = True  # type: ignore[attr-defined]
+            return result
         else:
             raise ValueError(
                 f"FATAL: Expected {expected_frames} mask frames, got {N}. "
@@ -2095,7 +2101,13 @@ def inflate_renderer(
             try:
                 from tac.radial_zoom import RadialZoomWarp
                 zw_state = torch.load(str(zoom_scalars_pt), map_location="cpu", weights_only=True)
-                n_pairs = masks.shape[0] // 2 if masks is not None else 600
+                # If masks tensor is tagged half-frame, shape[0] IS n_pairs
+                # (each odd-frame mask corresponds to one pair). Otherwise the
+                # full 1200-frame layout means n_pairs = N/2.
+                n_pairs = (
+                    masks.shape[0] if (masks is not None and getattr(masks, "_half_frame_only", False))
+                    else (masks.shape[0] // 2 if masks is not None else 600)
+                )
                 zoom_warp = RadialZoomWarp(n_pairs=n_pairs)
                 zoom_warp.load_state_dict(zw_state)
                 zoom_warp = zoom_warp.to(device)
@@ -2108,7 +2120,13 @@ def inflate_renderer(
             # No zoom scalars in archive — create identity zoom (scalars=0 → no zoom)
             try:
                 from tac.radial_zoom import RadialZoomWarp
-                n_pairs = masks.shape[0] // 2 if masks is not None else 600
+                # If masks tensor is tagged half-frame, shape[0] IS n_pairs
+                # (each odd-frame mask corresponds to one pair). Otherwise the
+                # full 1200-frame layout means n_pairs = N/2.
+                n_pairs = (
+                    masks.shape[0] if (masks is not None and getattr(masks, "_half_frame_only", False))
+                    else (masks.shape[0] // 2 if masks is not None else 600)
+                )
                 zoom_warp = RadialZoomWarp(n_pairs=n_pairs).to(device)
                 print(f"  WARNING: No zoom scalars in archive. Using identity zoom ({n_pairs} pairs).",
                       file=sys.stderr)
@@ -2116,6 +2134,46 @@ def inflate_renderer(
                 print(f"  FATAL: use_zoom_flow=True but tac.radial_zoom not available and "
                       f"no zoom_scalars in archive.", file=sys.stderr)
                 raise RuntimeError("Cannot inflate use_zoom_flow model without zoom scalars or tac package")
+
+    # ---- Expand half-frame masks (Quantizr paradigm) ----
+    # If only odd-frame masks were stored in the archive, we need to recover
+    # the even-frame masks here. Two paths:
+    #   PROPER (zoom_warp present): warp t+1 → t via inverse radial zoom flow.
+    #     This is full-quality reconstruction matching the model's training
+    #     distribution. Saves ~50% of mask bytes ⇒ -0.10 score.
+    #   FALLBACK (no zoom_warp): duplicate (degraded mode, MotionPredictor
+    #     diff features go to zero — only acceptable if model trained that way).
+    if masks is not None and getattr(masks, "_half_frame_only", False):
+        n_odd = masks.shape[0]
+        if zoom_warp is None:
+            print(f"  WARNING: half-frame masks but no zoom_warp — degraded "
+                  f"duplicate path ({n_odd} → {2 * n_odd} frames)", file=sys.stderr)
+            masks = masks.repeat_interleave(2, dim=0)
+        else:
+            t_warp = time.monotonic()
+            masks_t1 = masks.to(device, dtype=torch.long)
+            pair_indices = torch.arange(n_odd, device=device)
+            warp_batch = 50  # OOM-safe on T4 16GB
+            warped_chunks = []
+            for s in range(0, n_odd, warp_batch):
+                e = min(s + warp_batch, n_odd)
+                with torch.inference_mode():
+                    chunk = zoom_warp.warp_inverse_masks(
+                        masks_t1[s:e], pair_indices[s:e]
+                    )
+                warped_chunks.append(chunk.cpu())
+            masks_t_warped = torch.cat(warped_chunks, dim=0)
+            # Interleave: [m_t_0, m_t1_0, m_t_1, m_t1_1, ...]
+            full_masks = torch.empty(
+                2 * n_odd, *masks.shape[1:],
+                dtype=masks.dtype, device="cpu",
+            )
+            full_masks[0::2] = masks_t_warped
+            full_masks[1::2] = masks.cpu()
+            masks = full_masks
+            dt = time.monotonic() - t_warp
+            print(f"  Half-frame masks WARPED via zoom flow: "
+                  f"{n_odd} → {2 * n_odd} frames in {dt:.1f}s", file=sys.stderr)
 
     # ---- Load gradient corrections (C4: pre-computed pixel adjustments) ----
     grad_corrections = None

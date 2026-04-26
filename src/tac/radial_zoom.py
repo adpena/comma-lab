@@ -195,6 +195,71 @@ class RadialZoomWarp(nn.Module):
             f"archive_fp16={self.archive_bytes_fp16()} B)"
         )
 
+    def warp_inverse_masks(
+        self,
+        masks_t1: torch.Tensor,
+        pair_indices: torch.Tensor,
+    ) -> torch.Tensor:
+        """Warp t+1 (odd-frame) masks BACKWARD to recover t (even-frame) masks.
+
+        Used at inflate when only odd-frame masks are stored in the archive
+        (Quantizr's half-frame paradigm). For pair k:
+            mask_t[k] = inverse_zoom(mask_t1[k], -zoom_scalars[k])
+
+        Discrete classes are preserved by ``mode='nearest'`` resampling. Out-
+        of-bounds samples take the border class (0 = road) which matches the
+        physical interpretation: pixels beyond the camera's previous-frame
+        field of view are unknown, treat as the most common class.
+
+        Parameters
+        ----------
+        masks_t1 : torch.Tensor
+            ``(B, H, W)`` integer tensor of class-index masks for time t+1.
+        pair_indices : torch.Tensor
+            ``(B,)`` int tensor of pair indices to look up zoom scalars.
+
+        Returns
+        -------
+        torch.Tensor
+            ``(B, H, W)`` integer tensor of warped masks for time t.
+        """
+        import torch.nn.functional as F
+
+        device = masks_t1.device
+        B, H, W = masks_t1.shape
+
+        # Forward zoom for these pairs: s_k = tanh(scalars[k]) * max_zoom_log
+        s = torch.tanh(self.zoom_scalars[pair_indices]) * self.max_zoom_log
+        # Inverse zoom: negate s so the mapping goes t+1 → t.
+        zoom_factor_inv = torch.exp(-s)  # (B,)
+
+        # FoE in normalised coords (matches forward())
+        foe_h_norm = 2.0 * self.foe[0] / (H - 1) - 1.0
+        foe_w_norm = 2.0 * self.foe[1] / (W - 1) - 1.0
+
+        yy = torch.linspace(-1.0, 1.0, H, device=device)
+        xx = torch.linspace(-1.0, 1.0, W, device=device)
+        grid_y, grid_x = torch.meshgrid(yy, xx, indexing="ij")
+
+        z = (zoom_factor_inv - 1.0).view(B, 1, 1)
+        flow_x = z * (grid_x.unsqueeze(0) - foe_w_norm)
+        flow_y = z * (grid_y.unsqueeze(0) - foe_h_norm)
+
+        base_y = grid_y.unsqueeze(0).expand(B, -1, -1)
+        base_x = grid_x.unsqueeze(0).expand(B, -1, -1)
+        warp_grid = torch.stack([base_x + flow_x, base_y + flow_y], dim=-1)  # (B, H, W, 2)
+
+        # grid_sample needs float input; mask is class indices.
+        masks_float = masks_t1.float().unsqueeze(1)  # (B, 1, H, W)
+        sampled = F.grid_sample(
+            masks_float,
+            warp_grid,
+            mode="nearest",          # preserve class boundaries
+            padding_mode="border",   # OOB pixels take the nearest valid class
+            align_corners=True,
+        )
+        return sampled.squeeze(1).to(masks_t1.dtype)
+
 
 # ======================================================================
 # Serialisation helpers
