@@ -661,6 +661,10 @@ def train(args: argparse.Namespace):
             beta_end=getattr(args, "beta_end", 0.02),
         )
     else:
+        # 2026-04-26 council fix (arch drift): pass ALL profile-resolved arch
+        # flags. Previously use_zoom_flow / use_dsconv / padding_mode /
+        # use_dilation / pose_dim were silently dropped here, causing the DEN
+        # checkpoint to mismatch consumer expectations and waste 1.2h of GPU.
         model = build_renderer(
             num_classes=5,
             embed_dim=args.embed_dim,
@@ -671,6 +675,11 @@ def train(args: argparse.Namespace):
             blend_mode=getattr(args, "blend_mode", "scalar"),
             noise_mode=getattr(args, "noise_mode", "deterministic"),
             motion_type=getattr(args, "motion_type", "learned_cnn"),
+            use_zoom_flow=args.use_zoom_flow,
+            use_dsconv=args.use_dsconv,
+            padding_mode=args.padding_mode,
+            use_dilation=args.use_dilation,
+            pose_dim=getattr(args, "pose_dim", 0) or 0,
         )
     model = model.to(device)
     # channels_last memory format: 10-30% speedup for conv2d on CUDA
@@ -1092,7 +1101,11 @@ def train(args: argparse.Namespace):
                 codebook=_save_codebook,
                 robust_scale=args.fp4_robust_scale,
             )
-            fp4_packed["__meta__"] = {
+            # 2026-04-26 council fix: include EVERY arch field so consumers
+            # (pipeline.py, auth_eval_renderer.py) can rebuild the exact same
+            # AsymmetricPairGenerator vs PairGenerator class with matching
+            # state_dict shapes. Without these, DEN crashed on load (1.2h burn).
+            _arch_meta = {
                 "fp4_codebook": args.fp4_codebook,
                 "fp4_robust_scale": args.fp4_robust_scale,
                 "fp4_stochastic": args.fp4_stochastic,
@@ -1100,11 +1113,23 @@ def train(args: argparse.Namespace):
                 "scorer": best_scorer,
                 "pose": eval_pose,
                 "seg": eval_seg,
+                # Architecture (the missing fields that caused the 2026-04-26
+                # arch drift bug — DEN profile said use_zoom_flow=True but
+                # train_renderer didn't pass it OR record it):
                 "base_ch": args.base_ch,
                 "mid_ch": args.mid_ch,
                 "embed_dim": args.embed_dim,
                 "motion_hidden": args.motion_hidden,
                 "depth": args.depth,
+                "pose_dim": getattr(args, "pose_dim", 0) or 0,
+                "use_zoom_flow": args.use_zoom_flow,
+                "use_dsconv": args.use_dsconv,
+                "use_dilation": args.use_dilation,
+                "padding_mode": args.padding_mode,
+                "blend_mode": getattr(args, "blend_mode", "scalar"),
+                "noise_mode": getattr(args, "noise_mode", "deterministic"),
+                "motion_type": getattr(args, "motion_type", "learned_cnn"),
+                # Variant + extras:
                 "latent_ch": args.latent_ch,
                 "latent_shapes": args.latent_shapes,
                 "residual_hidden": args.residual_hidden,
@@ -1113,7 +1138,11 @@ def train(args: argparse.Namespace):
                 "variant": args.variant,
                 "seed": args.seed,
                 "deterministic": args.deterministic,
+                # Class name so consumers know which to instantiate.
+                "model_class": "AsymmetricPairGenerator" if args.use_zoom_flow else "PairGenerator",
+                "profile": getattr(args, "profile", None),
             }
+            fp4_packed["__meta__"] = _arch_meta
             fp4_tmp = fp4_path.with_suffix(".pt.tmp")
             torch.save(fp4_packed, fp4_tmp)
             fp4_tmp.rename(fp4_path)
@@ -1128,16 +1157,12 @@ def train(args: argparse.Namespace):
             # so pipeline.step_export reads it and uses the matching codebook
             # at re-export time. Without this, training writes residual codebook
             # in the fp4 file, but step_export's later re-export uses default.
+            # 2026-04-26 council fix: fp32 __meta__ MUST include the same
+            # arch dict as fp4 so consumers can rebuild the right model class.
+            # Reuse the dict we just built above.
             fp32_payload = {
                 "model_state_dict": save_state,
-                "__meta__": {
-                    "fp4_codebook": args.fp4_codebook,
-                    "fp4_robust_scale": args.fp4_robust_scale,
-                    "fp4_stochastic": args.fp4_stochastic,
-                    "epoch": epoch,
-                    "variant": args.variant,
-                    "seed": args.seed,
-                },
+                "__meta__": dict(_arch_meta),
             }
             torch.save(fp32_payload, fp32_tmp)
             fp32_tmp.rename(fp32_path)

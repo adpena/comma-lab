@@ -323,26 +323,34 @@ def step_export(cfg: PipelineConfig, iteration: int = 0) -> Path:
     ckpt = torch.load(cfg.checkpoint, map_location="cpu", weights_only=False)
     state = ckpt.get("model_state_dict", ckpt) if isinstance(ckpt, dict) else ckpt
 
-    # R-fp4-export-fix 2026-04-25: read FP4 metadata from the checkpoint's
-    # __meta__ dict if present (saved by train_renderer.py when
-    # --fp4-codebook=residual or --fp4-robust-scale was used). Without this,
-    # train uses RESIDUAL codebook but export silently uses DEFAULT — silent
-    # arch drift exactly like the SHIRAZ class of bugs.
+    # 2026-04-26 council fix (arch drift): read FULL arch from __meta__
+    # (saved by train_renderer.py with use_zoom_flow / use_dsconv / etc).
+    # Without this we waste GPU runs on arch mismatches between trainer and
+    # consumer (DEN burned 1.2h on this exact bug). __meta__ wins over cfg
+    # because it's the trainer's exact spec for THIS checkpoint.
     fp4_codebook = "default"
     fp4_robust_scale = False
-    if isinstance(ckpt, dict):
-        meta = ckpt.get("__meta__", {})
-        if isinstance(meta, dict):
-            fp4_codebook = meta.get("fp4_codebook", fp4_codebook)
-            fp4_robust_scale = meta.get("fp4_robust_scale", fp4_robust_scale)
+    meta = ckpt.get("__meta__", {}) if isinstance(ckpt, dict) else {}
+    if isinstance(meta, dict):
+        fp4_codebook = meta.get("fp4_codebook", fp4_codebook)
+        fp4_robust_scale = meta.get("fp4_robust_scale", fp4_robust_scale)
+
+    # Take arch from __meta__ when present, fall back to cfg defaults.
+    def _arch(key, default):
+        return meta.get(key, getattr(cfg, key, default)) if meta else getattr(cfg, key, default)
 
     model = AsymmetricPairGenerator(
-        num_classes=5, embed_dim=cfg.embed_dim,
-        base_ch=cfg.base_ch, mid_ch=cfg.mid_ch,
-        motion_hidden=cfg.motion_hidden, depth=cfg.depth,
-        pose_dim=cfg.pose_dim, use_dsconv=cfg.use_dsconv,
-        padding_mode=cfg.padding_mode, use_dilation=cfg.use_dilation,
-        use_zoom_flow=cfg.use_zoom_flow,
+        num_classes=5,
+        embed_dim=_arch("embed_dim", 6),
+        base_ch=_arch("base_ch", 36),
+        mid_ch=_arch("mid_ch", 60),
+        motion_hidden=_arch("motion_hidden", 32),
+        depth=_arch("depth", 1),
+        pose_dim=_arch("pose_dim", 0),
+        use_dsconv=_arch("use_dsconv", False),
+        padding_mode=_arch("padding_mode", "zeros"),
+        use_dilation=_arch("use_dilation", False),
+        use_zoom_flow=_arch("use_zoom_flow", False),
     )
     # strict=False so we get the missing/unexpected lists; we then raise
     # if either is non-empty — equivalent to strict=True but with a much

@@ -1184,6 +1184,16 @@ def build_renderer(
     focal_length: tuple[float, float] | None = None,
     principal_point: tuple[float, float] | None = None,
     camera_height: float | None = None,
+    # 2026-04-26 council fix: profile-driven arch flags that were silently
+    # dropped at this API boundary, causing the train_renderer arch drift bug
+    # (DEN trained with use_zoom_flow=False instead of profile's True).
+    # When use_zoom_flow=True, returns AsymmetricPairGenerator (the class
+    # consumers expect). Otherwise legacy PairGenerator.
+    use_zoom_flow: bool = False,
+    use_dsconv: bool = False,
+    padding_mode: str = "zeros",
+    use_dilation: bool = False,
+    pose_dim: int = 0,
 ) -> PairGenerator:
     """Build the full mask-to-pair rendering pipeline.
 
@@ -1213,6 +1223,29 @@ def build_renderer(
     # class representation, reducing parameters and improving coherence
     shared_embed = nn.Embedding(num_classes, embed_dim)
 
+    # When use_zoom_flow=True the consumer-side AsymmetricPairGenerator
+    # builds these submodules itself with the right arch flags. We just
+    # need to pass them through. For the legacy PairGenerator path we
+    # still build MaskRenderer here.
+    if use_zoom_flow:
+        # Council 2026-04-26: AsymmetricPairGenerator handles its own
+        # MaskRenderer + MotionPredictor wiring. Build it directly so the
+        # checkpoint state_dict matches what consumers (pipeline.py,
+        # auth_eval_renderer.py) instantiate when loading.
+        return AsymmetricPairGenerator(
+            num_classes=num_classes,
+            embed_dim=embed_dim,
+            base_ch=base_ch,
+            mid_ch=mid_ch,
+            motion_hidden=motion_hidden,
+            depth=depth,
+            pose_dim=pose_dim,
+            use_dsconv=use_dsconv,
+            padding_mode=padding_mode,
+            use_dilation=use_dilation,
+            use_zoom_flow=True,
+        )
+
     renderer = MaskRenderer(
         num_classes=num_classes,
         embed_dim=embed_dim,
@@ -1220,6 +1253,10 @@ def build_renderer(
         mid_ch=mid_ch,
         embedding=shared_embed,
         depth=depth,
+        pose_dim=pose_dim,
+        use_dsconv=use_dsconv,
+        padding_mode=padding_mode,
+        use_dilation=use_dilation,
     )
 
     # Motion predictor type selection

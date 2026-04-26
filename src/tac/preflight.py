@@ -252,6 +252,7 @@ def preflight_all(
         preflight_arch_consistency(strict=True, verbose=verbose)
         preflight_filename_contract(strict=True, verbose=verbose)
         preflight_canonical_checkpoints(strict=True, verbose=verbose)
+        preflight_build_renderer_signature(strict=True, verbose=verbose)
 
     # 2. Training inputs (only if profile + tto_frames provided)
     if profile_name and tto_frames_path and gt_poses_path and masks_path and profile_arch:
@@ -1315,6 +1316,67 @@ def _extract_write_literals(path: Path) -> set[str]:
             for arg in node.args[1:]:
                 _record_write(arg)
     return found
+
+
+def preflight_build_renderer_signature(strict: bool = True, verbose: bool = True) -> list[str]:
+    """Validate that build_renderer() accepts every arch knob set by any
+    renderer training profile. The 2026-04-26 DEN arch drift bug existed
+    because build_renderer() didn't accept use_zoom_flow/use_dsconv/
+    padding_mode/use_dilation/pose_dim — the resolver in train_renderer
+    set the args.* fields correctly but the build_renderer call silently
+    dropped them. Result: 1.2h of wasted GPU on a checkpoint that
+    consumers couldn't load.
+
+    This rule introspects build_renderer's signature and confirms every
+    profile-declared arch field has a matching kwarg. Catches the bug
+    at lint time, not 1 hour into a $0.30 GPU run.
+    """
+    violations: list[str] = []
+    try:
+        import inspect
+        from tac.renderer import build_renderer
+        from tac.profiles import PROFILES
+    except ImportError as e:
+        msg = f"  [build_renderer_sig] cannot import: {e}"
+        if verbose:
+            print(msg)
+        return [msg]
+
+    sig = inspect.signature(build_renderer)
+    accepted = set(sig.parameters.keys())
+
+    arch_flags = (
+        "use_zoom_flow", "use_dsconv", "padding_mode", "use_dilation",
+        "pose_dim", "base_ch", "mid_ch", "embed_dim", "motion_hidden", "depth",
+    )
+    for prof_name, prof in PROFILES.items():
+        if prof.get("experiment_type") != "renderer_training":
+            continue
+        for flag in arch_flags:
+            if flag in prof and flag not in accepted:
+                violations.append(
+                    f"profile {prof_name!r} declares arch flag {flag!r} but "
+                    f"build_renderer() does NOT accept it as a kwarg. The "
+                    f"value is silently dropped at the call site, causing "
+                    f"arch drift between profile spec and saved checkpoint. "
+                    f"Add {flag!r} to build_renderer's signature + forward "
+                    f"to MaskRenderer/MotionPredictor/AsymmetricPairGenerator."
+                )
+
+    if verbose and violations:
+        print(f"  [build_renderer_sig] {len(violations)} violation(s):")
+        for v in violations:
+            print(f"    • {v}")
+    elif verbose:
+        print(f"  [build_renderer_sig] OK: build_renderer accepts all "
+              f"{len(arch_flags)} arch kwargs")
+
+    if violations and strict:
+        raise PreflightError(
+            "BUILD_RENDERER SIGNATURE VIOLATIONS:\n"
+            + "\n".join(f"  • {v}" for v in violations)
+        )
+    return violations
 
 
 def preflight_canonical_checkpoints(strict: bool = True, verbose: bool = True) -> list[str]:

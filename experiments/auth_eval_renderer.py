@@ -173,9 +173,14 @@ def _load_renderer_checkpoint(ckpt_path: str, device: str) -> tuple[nn.Module, d
             f"Got: {type(ckpt)} with keys {list(ckpt.keys()) if isinstance(ckpt, dict) else 'N/A'}"
         )
 
-    config = ckpt.get("config", {})
-    epoch = ckpt.get("epoch", "?")
-    best_score = ckpt.get("best_score")
+    # 2026-04-26 council fix (arch drift): __meta__ is the canonical arch
+    # source written by train_renderer.py. Fall back to legacy config/ckpt
+    # fields. __meta__ wins on conflict because it's the trainer's exact
+    # spec (whereas config may be stale or partial).
+    _meta = ckpt.get("__meta__", {}) or {}
+    config = {**ckpt.get("config", {}), **_meta}
+    epoch = config.get("epoch", ckpt.get("epoch", "?"))
+    best_score = ckpt.get("best_score") or config.get("scorer")
     print(f"  Training checkpoint: epoch={epoch}" +
           (f", proxy best_score={best_score:.4f}" if best_score else ""))
 

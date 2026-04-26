@@ -2444,7 +2444,14 @@ DEN = {
     "use_dsconv": True,             # depthwise-separable (Quantizr trick)
     "padding_mode": "replicate",
     "use_dilation": True,
-    "use_zoom_flow": True,          # GREEN-style radial zoom flow (Hotz)
+    # 2026-04-26 council: DEN initially set use_zoom_flow=True (Hotz radial
+    # zoom advantage) but train_renderer's training loop can't yet compute
+    # the ego_flow that AsymmetricPairGenerator(use_zoom_flow=True) requires
+    # as forward input. Flipped to False for the immediate retrain so DEN
+    # produces a loadable checkpoint via the standard MotionPredictor path.
+    # DEN-V2 with use_zoom_flow=True is queued for after the ego_flow
+    # plumbing in train_renderer is built (small refactor, ~1h).
+    "use_zoom_flow": False,
     "eval_roundtrip": True,         # NON-NEGOTIABLE
     # Loss configuration — focal STE + Fridrich aux losses + KL distill.
     "loss_mode": "focal_ste",
@@ -2504,12 +2511,11 @@ DEN = {
     # Mask augmentation: train on mixed CRF so we don't overfit to one mask
     # encoding. Tested at compress time on whatever Lane A0 picks.
     "mask_noise_prob": 0.5,         # 50% of training pairs use augmented mask
-    # Half-frame mask simulation (Lane D2): with prob 0.5, replace mask_t with
-    # inverse_warp(mask_t1, analytical_zoom[k]) so the renderer learns the
-    # paradigm it sees at inflate when the archive ships only odd-frame masks.
-    # Closes the train/inflate distribution gap that would otherwise cost
-    # 0.05–0.10 score points when shipping half-frame.
-    "mask_half_sim_prob": 0.5,
+    # Half-frame mask simulation (Lane D2): only useful when use_zoom_flow=True
+    # (the inflate side warps odd-frame masks via RadialZoomWarp). Disabled
+    # because DEN currently has use_zoom_flow=False — preflight enforces
+    # this consistency. Re-enable when DEN-V2 lands the zoom-flow path.
+    "mask_half_sim_prob": 0.0,
     # Hard-frame curriculum carried from SHIRAZ.
     "hard_frame_ratio": 0.3,
     "error_replay_every": 100,
