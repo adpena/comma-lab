@@ -2391,6 +2391,113 @@ DEFINITIVE_FLOAT_EMA = {
 }
 
 
+# ── DEN: Distill, Embed, Nuance — the everything-we-learned profile ──────
+#
+# Built 2026-04-26 to beat Quantizr (0.33) on the contest-CUDA gate. Combines
+# every validated win into one integrated training run:
+#
+#   - Architecture: matches Quantizr's capacity (88K params target) — DSConv
+#     + FiLM conditioning + use_zoom_flow=True (Hotz radial-zoom analytical).
+#   - Quantization: 5-stage with our RESIDUAL codebook + robust_scale +
+#     stochastic + ndim<2 buffer skip + train↔export consistency. Memory:
+#     project_5stage_quantization_advantage.md says we already strictly beat
+#     Quantizr's vanilla 5-stage.
+#   - Inverse steganalysis losses: UNIWARD texture (8x8 box-pool variance),
+#     L∞ top-32 mean per pair, Markov gradient continuity. All wired with
+#     correct semantics (not the silent-no-op variants from before).
+#   - KL distillation T=2.0 SegNet-only (kl_distill_segnet_only — no PoseNet
+#     double-counting). Adds during all phases at decreasing weight.
+#   - Mask augmentation: mixed CRF50/63 at training time so the renderer
+#     learns to be robust to high-CRF mask compression at compress time.
+#   - eval_roundtrip=True throughout (NON-NEGOTIABLE per CLAUDE.md).
+#   - Per-class weights with lane-marking 15x boost (Yousfi: 1.2% but critical).
+#   - SWA for FP4 robustness (Polyak 1992).
+#
+# Schedule: 5-stage QAT (Quantizr's recipe) — anchor → finetune → joint →
+# QAT → final. Phase boundaries set so we hit the auth-eval gate at hour 5
+# with first measurement.
+#
+# Council sign-off (2026-04-26): All 5 inner council members assented in
+# parallel. Yousfi: "if mask aug holds, this is the play." Fridrich: "L∞
+# wired correctly now, not topk-of-1." Hotz: "use_zoom_flow + analytical
+# zoom is the rank-1 truth." Quantizr: "matches my arch except for our QAT
+# advantage — should win." Contrarian: "single deficit is no auth gate
+# during training; mitigated by inline auth eval at end of each phase."
+DEN = {
+    "experiment_type": "renderer_training",
+    # Architecture: 88K params target (Quantizr-matched capacity).
+    "base_ch": 28,                  # Quantizr-class capacity
+    "mid_ch": 40,
+    "embed_dim": 6,
+    "motion_hidden": 16,            # smaller — radial zoom flow handles rank-1
+    "depth": 1,
+    "pose_dim": 6,
+    "use_dsconv": True,             # depthwise-separable (Quantizr trick)
+    "padding_mode": "replicate",
+    "use_dilation": True,
+    "use_zoom_flow": True,          # GREEN-style radial zoom flow (Hotz)
+    "eval_roundtrip": True,         # NON-NEGOTIABLE
+    # Loss configuration — focal STE + Fridrich aux losses + KL distill.
+    "loss_mode": "focal_ste",
+    "segnet_loss_mode": "hinge",
+    "hinge_margin": 1.0,
+    "focal_gamma": 2.0,
+    "error_boost": 1.0,
+    # Fridrich inverse-steganalysis (FIXED versions — no silent no-ops).
+    "use_texture_loss": True,
+    "texture_loss_weight": 0.5,
+    "use_linf_penalty": True,
+    "linf_weight": 0.01,
+    "use_markov_loss": True,
+    "markov_weight": 0.1,
+    # KL distill SegNet-only (no PoseNet double-counting). Schedule decay
+    # over phases so distillation pressure tapers as the model converges.
+    "kl_distill_weight": 1.0,
+    "kl_distill_temperature": 2.0,
+    # Per-class weights (lane markings 15x — Yousfi).
+    "use_per_class_weights": True,
+    # Score weights — DOMINATED BY SegNet (77x more important per scoring math).
+    "pose_weight": 10.0,
+    "seg_weight": 100.0,
+    "pixel_weight": 0.1,
+    "ema_decay": 0.997,
+    "use_swa": True,                # SWA for wider minima → FP4 survives
+    # NO freeze/unfreeze — continuous training across phases.
+    "freeze_motion_phase2": False,
+    "freeze_renderer_phase3": False,
+    # 5-stage QAT schedule. Phase 4 = QAT fine-tune, Phase 5 = final.
+    # Total ~3000 epochs ≈ 5h on 4090 (matches Lane C budget).
+    "phase1_epochs": 800,           # anchor: pixel + light scorer
+    "phase2_epochs": 1200,          # finetune: full scorer + Fridrich
+    "phase3_epochs": 600,           # joint: + KL distill ramp
+    "phase4_epochs": 300,           # QAT fine-tune (LSQ + FakeQuantFP4)
+    "phase5_epochs": 100,           # final consolidation at FP4
+    "phase1_lr": 1e-3,
+    "phase2_lr": 3e-4,
+    "phase3_lr": 1e-4,
+    "phase4_lr": 5e-5,              # 0.1× base for QAT (Lin et al. 2017)
+    "phase5_lr": 1e-5,
+    "phase1_batch_size": 16,
+    "phase2_batch_size": 8,
+    "phase3_batch_size": 8,
+    "phase4_batch_size": 8,
+    "phase5_batch_size": 8,
+    # 5-stage quantization config — our advantage over Quantizr's vanilla.
+    "fp4_codebook": "residual",     # RESIDUAL codebook beats uniform
+    "fp4_robust_scale": True,       # robust per-channel scaling
+    "fp4_stochastic": True,         # stochastic rounding in QAT
+    # Mask augmentation: train on mixed CRF so we don't overfit to one mask
+    # encoding. Tested at compress time on whatever Lane A0 picks.
+    "mask_noise_prob": 0.5,         # 50% of training pairs use augmented mask
+    # Hard-frame curriculum carried from SHIRAZ.
+    "hard_frame_ratio": 0.3,
+    "error_replay_every": 100,
+    "checkpoint_every": 100,
+    "eval_every": 100,              # auth-eval-style score at every checkpoint
+    "log_every": 25,
+}
+
+
 PROFILES = {
     "council_v1": COUNCIL_V1,
     "council_v2_adaptive": COUNCIL_V2_ADAPTIVE,
@@ -2412,6 +2519,7 @@ PROFILES = {
     "wilde": WILDE,
     "green": GREEN,
     "shiraz": SHIRAZ,
+    "den": DEN,
     "wilde_v2": WILDE_V2,
     "green_v2": GREEN_V2,
     "shiraz_v2": SHIRAZ_V2,
