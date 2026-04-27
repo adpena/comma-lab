@@ -264,6 +264,40 @@ def preflight_all(
         preflight_build_renderer_signature(strict=True, verbose=verbose)
         preflight_bootstrap_safety(strict=True, verbose=verbose)
 
+        # 2026-04-27 codex R5-3 Finding #4: wire the 8 meta-bug checks
+        # (FORBIDDEN PATTERNS / CLAUDE.md) into preflight_all WARN-ONLY.
+        # All 8 currently have non-zero live-codebase counts; flipping any
+        # to strict before fixing those would break Lane A's downstream
+        # eval. After fixes #5/#6/#7/#8 in the same commit, current live
+        # counts (per `python -c '... check_*(strict=False)'`):
+        #   check_no_mps_fallback_default:           1
+        #   check_shell_set_e_present:               1
+        #   check_no_shell_zip_binary:               1
+        #   check_no_pipefail_grep_q_trap:           1
+        #   check_no_eval_roundtrip_false:           0  (eligible for strict
+        #                                                once verified to
+        #                                                stay at 0 across
+        #                                                a Lane A cycle)
+        #   check_no_scorer_load_at_inflate:        13
+        #   check_training_scripts_have_auth_eval:   0  (eligible for strict
+        #                                                once verified to
+        #                                                stay at 0; AST-
+        #                                                upgraded in same
+        #                                                commit, no FPs)
+        #   check_no_disable_eval_roundtrip_flag:   16
+        # Promotion plan: each check flips to strict=True INDIVIDUALLY
+        # after operator confirms zero live violations on a clean Lane A
+        # cycle. Mirrors the pattern used for preflight_dead_resolvers
+        # (commit add2def5: warn-only → fixes → strict-flip).
+        check_no_mps_fallback_default(strict=False, verbose=verbose)
+        check_shell_set_e_present(strict=False, verbose=verbose)
+        check_no_shell_zip_binary(strict=False, verbose=verbose)
+        check_no_pipefail_grep_q_trap(strict=False, verbose=verbose)
+        check_no_eval_roundtrip_false(strict=False, verbose=verbose)
+        check_no_scorer_load_at_inflate(strict=False, verbose=verbose)
+        check_training_scripts_have_auth_eval(strict=False, verbose=verbose)
+        check_no_disable_eval_roundtrip_flag(strict=False, verbose=verbose)
+
     # 2. Training inputs (only if profile + tto_frames provided)
     if profile_name and tto_frames_path and gt_poses_path and masks_path and profile_arch:
         preflight_training_inputs(
@@ -1461,6 +1495,92 @@ def _iter_shell_files(root: Path, dirs: list[str]) -> list[Path]:
     return sorted(out)
 
 
+# Heredoc start: `<< [-]['"]?TOKEN['"]?` after a redirect-or-no-redirect operator.
+# We deliberately accept all heredoc forms: <<TOKEN, <<-TOKEN, <<"TOKEN",
+# <<'TOKEN', << TOKEN, <<- TOKEN, etc. The matched group 'token' is the bare
+# delimiter (quotes/dashes stripped). Tab/space separation between << and the
+# token is allowed by bash and by us.
+_HEREDOC_START_RE = re.compile(
+    r"""
+    <<-?\s*                  # << or <<- with optional whitespace
+    (?P<quote>['"])?         # optional opening quote
+    (?P<token>[A-Za-z_][A-Za-z0-9_]*)  # delimiter token
+    (?(quote)(?P=quote))     # closing quote (must match opener)
+    """,
+    re.VERBOSE,
+)
+
+
+def _mask_shell_heredocs(text: str) -> str:
+    """Replace bash heredoc bodies with empty lines.
+
+    Preserves total line count so reported lineno still matches the source.
+    Without this, shell scanners would treat heredoc bodies (which can
+    legitimately contain `set -uo pipefail`, `zip foo.zip bar`, `| grep -q`
+    as Python/docs/embedded snippets) as executable shell.
+
+    Behavior:
+      • Detects every `<<TOKEN`, `<<-TOKEN`, `<< TOKEN`, `<<"TOKEN"`,
+        `<<'TOKEN'` heredoc start on a non-comment line.
+      • Skips ahead until the next line whose stripped content equals TOKEN
+        (or, for `<<-TOKEN`, leading tabs are also stripped per bash).
+      • Replaces lines BETWEEN the start (exclusive) and the terminator
+        (exclusive) with empty strings. The start line itself is preserved
+        (so a violation written on the start line — unusual — is still
+        visible) and the terminator line is preserved.
+      • If multiple heredocs start on the same line (rare: `cmd <<A <<B`),
+        we mask both bodies in order, requiring A then B as terminators.
+      • A heredoc with no terminator (eof) means everything from start+1
+        to EOF is masked. This matches bash's runtime behavior of erroring,
+        but for static analysis "treat as quoted" is the safer call than
+        "treat as code".
+    """
+    lines = text.split("\n")
+    out_lines = list(lines)  # mutable copy
+    i = 0
+    while i < len(lines):
+        line = lines[i]
+        # Skip comment-only lines for heredoc-start detection.
+        stripped = line.lstrip()
+        if stripped.startswith("#"):
+            i += 1
+            continue
+        # Find ALL heredoc starts on this line (e.g. `cmd <<A <<B`).
+        # Order matters: bash reads bodies in left-to-right order.
+        matches = list(_HEREDOC_START_RE.finditer(line))
+        if not matches:
+            i += 1
+            continue
+        # Tokens to consume in order. Track whether each was `<<-` form
+        # (which strips leading TABS — not spaces — from the terminator
+        # comparison per POSIX).
+        pending: list[tuple[str, bool]] = []
+        for m in matches:
+            token = m.group("token")
+            stripped_form = line[max(0, m.start() - 1):m.start() + 3].lstrip("<")
+            # Simpler & robust: look at the raw match text from `<<` onward.
+            raw = line[m.start():m.end()]
+            is_dash = raw.startswith("<<-")
+            pending.append((token, is_dash))
+        j = i + 1
+        while pending and j < len(lines):
+            cand = lines[j]
+            token, is_dash = pending[0]
+            cmp = cand.lstrip("\t") if is_dash else cand
+            if cmp == token:
+                # Terminator hit — pop it; stop masking this body.
+                pending.pop(0)
+                j += 1
+                continue
+            # Mask this body line (preserve line count by emitting empty).
+            out_lines[j] = ""
+            j += 1
+        # If pending non-empty here, we hit EOF without terminator.
+        # Lines i+1..end are already masked above. Continue past current.
+        i = j
+    return "\n".join(out_lines)
+
+
 # ── Check 1: MPS-fallback device default ──────────────────────────────────────
 
 
@@ -1508,6 +1628,80 @@ def _scan_python_for_mps_fallback(path: Path, repo_root: Path) -> list[str]:
                     f"Default to CUDA-required; raise on no-CUDA; provide "
                     f"explicit `--device cpu` opt-in."
                 )
+
+    # codex R5-3 #7: BoolOp (and/or) device-selection chains. Pattern:
+    #   torch.cuda.is_available() and 'cuda' or torch.backends.mps.is_available() and 'mps' or 'cpu'
+    # Has no IfExp anywhere — must AST-walk BoolOp explicitly. Rule (refined
+    # to avoid the FP class `... or str(self.device) == "mps"` where "mps"
+    # is INSIDE a Compare and never selected as a value):
+    #   1. Walk top-level BoolOps (not nested inside Compare / Subscript /
+    #      Call / etc. — only BoolOps that COULD evaluate to the string
+    #      "mps" as a result).
+    #   2. The BoolOp tree must contain a `cuda.is_available()` call.
+    #   3. A string constant "mps" must appear as a DIRECT leaf operand of
+    #      a BoolOp value subtree (i.e., reachable by following only
+    #      BoolOp.values links, not by descending into Compare/Call/etc.).
+    #      That's exactly the position where a fallback chain would put it.
+    def _bool_value_leaves(node: ast.BoolOp):
+        """Yield every node that can be the BoolOp's RESULT value."""
+        for v in node.values:
+            if isinstance(v, ast.BoolOp):
+                yield from _bool_value_leaves(v)
+            else:
+                yield v
+
+    def _tree_has_cuda_check(node: ast.AST) -> bool:
+        for sub in ast.walk(node):
+            if isinstance(sub, ast.Call):
+                s = ast.unparse(sub.func) if hasattr(ast, "unparse") else ""
+                if "cuda.is_available" in s:
+                    return True
+        return False
+
+    seen_boolop_lines: set[int] = set()
+    # Find OUTERMOST BoolOps only (so a nested BoolOp inside another BoolOp
+    # doesn't double-count). Easiest: collect parent links once.
+    parents: dict[int, ast.AST] = {}
+    for parent in ast.walk(tree):
+        for child in ast.iter_child_nodes(parent):
+            parents[id(child)] = parent
+
+    for node in ast.walk(tree):
+        if not isinstance(node, ast.BoolOp):
+            continue
+        # Skip nested BoolOps — only flag the outermost.
+        p = parents.get(id(node))
+        if isinstance(p, ast.BoolOp):
+            continue
+        if node.lineno in seen_boolop_lines:
+            continue
+        if not _tree_has_cuda_check(node):
+            continue
+        # Check leaves: is "mps" a result-position string constant?
+        # Note: an `IfExp` inside a BoolOp value is treated as a value
+        # (we recurse the IfExp body+orelse for "mps").
+        is_fallback = False
+        for leaf in _bool_value_leaves(node):
+            # leaf can itself be an IfExp / Constant / Call / etc.
+            if isinstance(leaf, ast.Constant) and leaf.value == "mps":
+                is_fallback = True
+                break
+            if isinstance(leaf, ast.IfExp):
+                for sub in ast.walk(leaf):
+                    if isinstance(sub, ast.Constant) and sub.value == "mps":
+                        is_fallback = True
+                        break
+                if is_fallback:
+                    break
+        if is_fallback:
+            violations.append(
+                f"{rel}:{node.lineno}: BoolOp chain `... cuda.is_available() "
+                f"... 'mps' ...` — MPS-fallback device default. FORBIDDEN per "
+                f"CLAUDE.md (feedback_default_to_convenience_trap). Default "
+                f"to CUDA-required; raise on no-CUDA; provide explicit "
+                f"`--device cpu` opt-in."
+            )
+            seen_boolop_lines.add(node.lineno)
 
     # Text backup: one-line chains that AST already caught are deduped by lineno.
     seen_lines = {int(v.split(":")[1]) for v in violations}
@@ -1573,6 +1767,9 @@ def _scan_shell_for_missing_set_e(path: Path, repo_root: Path) -> list[str]:
         text = path.read_text()
     except (UnicodeDecodeError, FileNotFoundError):
         return []
+    # codex R5-3 #5: mask heredoc bodies so embedded Python/docs don't
+    # register as executable shell.
+    text = _mask_shell_heredocs(text)
     violations: list[str] = []
     # We accept any `set` line as long as somewhere in the file `set -e`
     # (or set -euo / -ex etc.) is present. Track presence first.
@@ -1669,6 +1866,9 @@ def _scan_shell_for_zip_binary(path: Path, repo_root: Path) -> list[str]:
         text = path.read_text()
     except (UnicodeDecodeError, FileNotFoundError):
         return []
+    # codex R5-3 #5: mask heredoc bodies so embedded Python (which often
+    # imports zipfile) doesn't register as a shell `zip` invocation.
+    text = _mask_shell_heredocs(text)
     violations: list[str] = []
     for i, line in enumerate(text.splitlines(), start=1):
         stripped = line.strip()
@@ -1725,18 +1925,57 @@ def check_no_shell_zip_binary(
 # ── Check 4: pipefail + `grep -q` SIGPIPE trap ────────────────────────────────
 
 
+# codex R5-3 #6: LHS commands that are SAFE upstream of `| grep -q`.
+# echo/printf are shell builtins that do not SIGPIPE meaningfully — they
+# write a fixed-size buffer once and exit. The capture-first remediation
+# (`OUT=$(cmd 2>&1); echo "$OUT" | grep -q ...`) MUST be allowed; otherwise
+# the scanner flags its own prescribed fix.
+_SAFE_GREP_Q_UPSTREAM_CMDS = ("echo", "printf")
+
+
+def _grep_q_lhs_is_safe(lhs: str) -> bool:
+    """Return True iff the pipe LHS is a safe builtin (echo/printf).
+
+    Strips leading whitespace and any inline `!`/negation chains (e.g.
+    `if ! echo "$X"`), then checks if the first token is a safe cmd.
+    """
+    s = lhs.strip()
+    # Drop common shell preludes that don't change the upstream cmd:
+    #   `if ! `, `! `, `&& `, `|| `, `; `, `then `, `do `, `{ `
+    # Accept any chain of these prefixes once, then look at the next token.
+    prefix_re = re.compile(
+        r"^(?:if\s+)?(?:then\s+)?(?:do\s+)?(?:while\s+)?"
+        r"(?:!\s+)?(?:\{?\s*)"
+    )
+    s = prefix_re.sub("", s).lstrip()
+    # Bare token check: first whitespace-separated token.
+    m = re.match(r"([A-Za-z_][A-Za-z0-9_]*)\b", s)
+    if not m:
+        return False
+    return m.group(1) in _SAFE_GREP_Q_UPSTREAM_CMDS
+
+
 def _scan_shell_for_pipefail_grep_q(path: Path, repo_root: Path) -> list[str]:
     """Find `... | grep -q PATTERN` lines under `set -e`/`pipefail`.
 
     grep -q closes stdin after first match; the upstream cmd then SIGPIPEs;
     pipefail propagates that as failure; `set -e` aborts the script.
     Remediation: capture-first idiom (`OUT=$(cmd); echo "$OUT" | grep -q ...`).
+
+    codex R5-3 #6 exemptions:
+      • `echo "$VAR" | grep -q PAT` — echo is a builtin, no meaningful SIGPIPE.
+      • `printf "..." | grep -q PAT` — same.
+      • `grep -q PAT <<< "$VAR"` — here-string, no pipe at all.
+      These forms are the prescribed fix for the bug class — flagging them
+      would block the remediation.
+    codex R5-3 #5: heredoc bodies are masked before scanning.
     """
     rel = path.relative_to(repo_root) if path.is_absolute() else path
     try:
         text = path.read_text()
     except (UnicodeDecodeError, FileNotFoundError):
         return []
+    text = _mask_shell_heredocs(text)
     # Only fire if file has set -e or pipefail somewhere.
     has_pipefail_or_e = False
     for line in text.splitlines():
@@ -1752,20 +1991,38 @@ def _scan_shell_for_pipefail_grep_q(path: Path, repo_root: Path) -> list[str]:
     if not has_pipefail_or_e:
         return []
 
+    grep_q_re = re.compile(r"\|\s*grep\s+-[a-zA-Z]*q")
+    here_string_re = re.compile(r"grep\s+-[a-zA-Z]*q\b[^|]*<<<")
     violations: list[str] = []
     for i, line in enumerate(text.splitlines(), start=1):
         # Skip comments
         if line.lstrip().startswith("#"):
             continue
-        # Look for `| grep -q` (allow `-qE`, `-qi`, etc.)
-        if re.search(r"\|\s*grep\s+-[a-zA-Z]*q", line):
-            violations.append(
-                f"{rel}:{i}: `| grep -q` under `set -e`/`pipefail` triggers "
-                f"SIGPIPE on the upstream command — pipeline aborts the "
-                f"script. Capture-first idiom: "
-                f"`OUT=$(cmd 2>&1); echo \"$OUT\" | grep -q ...`. "
-                f"(feedback_pipefail_grep_q_trap.)"
-            )
+        # Here-string form `grep -q PAT <<< "$VAR"` is exempt.
+        if here_string_re.search(line):
+            continue
+        m = grep_q_re.search(line)
+        if not m:
+            continue
+        # Inspect the LHS (everything before this `|`). If it ends with
+        # `echo ...` or `printf ...`, exempt. Use rfind to handle chains
+        # like `cmd1 | cmd2 | grep -q ...`: only the IMMEDIATE upstream
+        # matters for SIGPIPE on grep -q.
+        # m.start() points at the `|` of the `| grep -q` pattern; the
+        # upstream cmd is whatever follows the previous pipe (or line start).
+        upstream_end = m.start()
+        prev_pipe = line.rfind("|", 0, upstream_end)
+        upstream_start = prev_pipe + 1 if prev_pipe >= 0 else 0
+        lhs = line[upstream_start:upstream_end]
+        if _grep_q_lhs_is_safe(lhs):
+            continue
+        violations.append(
+            f"{rel}:{i}: `| grep -q` under `set -e`/`pipefail` triggers "
+            f"SIGPIPE on the upstream command — pipeline aborts the "
+            f"script. Capture-first idiom: "
+            f"`OUT=$(cmd 2>&1); echo \"$OUT\" | grep -q ...`. "
+            f"(feedback_pipefail_grep_q_trap.)"
+        )
     return violations
 
 
@@ -2013,44 +2270,187 @@ def check_no_scorer_load_at_inflate(
 # ── Check 7: training scripts MUST end with auth eval ─────────────────────────
 
 
-# Markers indicating a script either runs auth_eval as a subprocess or
-# imports/calls a tac auth_eval helper.
-_AUTH_EVAL_TOKENS = (
-    "auth_eval_renderer.py",   # subprocess invocation
-    "auth_eval_renderer",      # bare module ref
-    "from tac.auth_eval",      # import
-    "auth_eval(",              # function call
-    "run_auth_eval(",          # canonical helper
-    "--no-auth-eval-on-best",  # explicit operator opt-out (still satisfies)
-)
-# Hints that the script saves a model checkpoint (so it definitely produces
-# something that should be auth-evaluated).
-_SAVE_HINT_RE = re.compile(
-    r'torch\.save\([^)]*?(?:renderer|checkpoint|best|model|state_dict)',
-    re.IGNORECASE,
-)
+# codex R5-3 #8: tokens that mark a path string (literal) as referring to a
+# RENDERER artifact (the only thing that requires auth-eval — LoRA adapters,
+# postfilters, statistics tensors, etc. do not). Match is case-insensitive
+# on the path basename. We deliberately exclude generic "best"/"state_dict"
+# from this list — those are too broad and produced FPs (lora_best.pt
+# was misclassified as a renderer in the regex era).
+_RENDERER_PATH_TOKENS = ("renderer", "checkpoint", "fp4")
+# Generic "model" matches lora_*.pt / postfilter_*.pt FALSELY less often
+# than expected, but we keep "model" because a path like `model_best.pt`
+# IS likely a renderer. To minimize FPs the renderer-detector ALSO requires
+# the dict being saved to look like a model state (handled below).
+_RENDERER_PATH_TOKENS_GENERIC = ("model",)
+
+
+def _path_string_looks_like_renderer(s: str) -> bool:
+    """Return True if a string literal references a renderer artifact path.
+
+    Strict tokens (renderer/checkpoint/fp4) are sufficient on their own.
+    The 'model' token is generic and only counts if combined with a
+    typical artifact extension (.pt/.pth/.bin).
+    """
+    s_low = s.lower()
+    if any(tok in s_low for tok in _RENDERER_PATH_TOKENS):
+        return True
+    if any(tok in s_low for tok in _RENDERER_PATH_TOKENS_GENERIC):
+        if s_low.endswith((".pt", ".pth", ".bin")):
+            return True
+    return False
+
+
+def _node_references_renderer_path(node: ast.AST) -> bool:
+    """True if this AST subtree contains any string constant that matches
+    `_path_string_looks_like_renderer`. Handles f-strings, joinedstr,
+    Path() chains, and `output_dir / "renderer.bin"` BinOp expressions."""
+    for sub in ast.walk(node):
+        if isinstance(sub, ast.Constant) and isinstance(sub.value, str):
+            if _path_string_looks_like_renderer(sub.value):
+                return True
+        # f-strings: ast.JoinedStr containing FormattedValue + Constant parts.
+        if isinstance(sub, ast.JoinedStr):
+            for part in sub.values:
+                if isinstance(part, ast.Constant) and isinstance(part.value, str):
+                    if _path_string_looks_like_renderer(part.value):
+                        return True
+    return False
+
+
+def _call_is_auth_eval_subprocess(node: ast.Call) -> bool:
+    """True if `node` is `subprocess.run([..., "auth_eval_renderer.py", ...])`
+    or `subprocess.Popen(...)` / `subprocess.check_call(...)` with the same
+    auth-eval script as a list element."""
+    func_str = ast.unparse(node.func) if hasattr(ast, "unparse") else ""
+    if not (func_str.endswith("subprocess.run") or func_str.endswith("subprocess.Popen")
+            or func_str.endswith("subprocess.check_call") or func_str.endswith("subprocess.check_output")
+            or func_str == "run" or func_str == "Popen"
+            or func_str == "check_call" or func_str == "check_output"):
+        return False
+    for arg in node.args:
+        if isinstance(arg, ast.List):
+            for elt in arg.elts:
+                if isinstance(elt, ast.Constant) and isinstance(elt.value, str):
+                    if "auth_eval_renderer" in elt.value:
+                        return True
+        # Single-string form: subprocess.run("python auth_eval_renderer.py ...", shell=True)
+        if isinstance(arg, ast.Constant) and isinstance(arg.value, str):
+            if "auth_eval_renderer" in arg.value:
+                return True
+    return False
+
+
+def _call_is_auth_eval_helper(node: ast.Call) -> bool:
+    """True if `node` calls `auth_eval_renderer.main(...)`, `run_auth_eval(...)`,
+    `auth_eval(...)`, or any function whose unparse ends with these names."""
+    func_str = ast.unparse(node.func) if hasattr(ast, "unparse") else ""
+    targets = ("auth_eval_renderer.main", "run_auth_eval", "auth_eval",
+               "auth_eval_renderer", "auth_eval_on_best")
+    for t in targets:
+        if func_str == t or func_str.endswith("." + t):
+            return True
+    return False
+
+
+def _argparse_defines_no_auth_eval_optout(tree: ast.Module) -> bool:
+    """True if the script defines `--no-auth-eval-on-best` argparse flag
+    (operator's explicit opt-out — satisfies the rule)."""
+    for node in ast.walk(tree):
+        if not isinstance(node, ast.Call):
+            continue
+        func_str = ast.unparse(node.func) if hasattr(ast, "unparse") else ""
+        if not func_str.endswith(".add_argument"):
+            continue
+        for arg in node.args:
+            if isinstance(arg, ast.Constant) and isinstance(arg.value, str):
+                if arg.value == "--no-auth-eval-on-best":
+                    return True
+    return False
+
+
+def _script_imports_auth_eval(tree: ast.Module) -> bool:
+    """True if the script `import`s the auth_eval module (any form). An
+    import without a CALL is dead code — the rule requires an actual
+    invocation, but we keep this distinction so the violation message can
+    say 'imported but never called' for clarity."""
+    for node in ast.walk(tree):
+        if isinstance(node, ast.ImportFrom) and node.module:
+            if "auth_eval" in node.module:
+                return True
+        if isinstance(node, ast.Import):
+            for alias in node.names:
+                if "auth_eval" in alias.name:
+                    return True
+    return False
 
 
 def _scan_training_script_for_auth_eval(path: Path, repo_root: Path) -> list[str]:
-    """Flag a training script that saves a checkpoint but never references
-    any auth-eval invocation."""
+    """Flag a training script that saves a renderer checkpoint but does not
+    invoke auth_eval after it.
+
+    codex R5-3 #8: AST-based replacement of the regex token-grep. Old form
+    counted any token-anywhere (comment, help string, dead import) as
+    satisfying. New rule:
+      • Find every torch.save() call. If args reference a path matching
+        `_path_string_looks_like_renderer`, mark script as "saves a renderer".
+      • Find every subprocess.run([..., "auth_eval_renderer.py", ...])
+        OR direct call to auth_eval_renderer.main()/run_auth_eval()/etc.
+      • If --no-auth-eval-on-best is defined, satisfied (operator opt-out).
+      • A script that imports auth_eval but never calls it → violation
+        (dead-import-class).
+      • A script that saves a non-renderer (lora_best.pt, postfilter.pt,
+        masks.pt, posenet_targets.bin, stats.pt) → no violation.
+    """
     rel = path.relative_to(repo_root) if path.is_absolute() else path
     try:
         text = path.read_text()
-    except (UnicodeDecodeError, FileNotFoundError):
+        tree = ast.parse(text, filename=str(path))
+    except (SyntaxError, UnicodeDecodeError, FileNotFoundError):
         return []
-    if not _SAVE_HINT_RE.search(text):
-        # Doesn't look like it produces a checkpoint — skip.
+
+    saves_renderer = False
+    has_auth_eval_call = False
+    for node in ast.walk(tree):
+        if isinstance(node, ast.Call):
+            func_str = ast.unparse(node.func) if hasattr(ast, "unparse") else ""
+            # Detect `torch.save(...)` (the canonical form). Aliased forms
+            # like `from torch import save; save(...)` are intentionally NOT
+            # supported — the codebase uses `torch.save(...)` exclusively
+            # and the broader pattern would produce FPs (e.g. `model.save()`).
+            if func_str == "torch.save":
+                # Inspect args for renderer-like path string.
+                for arg in node.args:
+                    if _node_references_renderer_path(arg):
+                        saves_renderer = True
+                        break
+            if _call_is_auth_eval_subprocess(node) or _call_is_auth_eval_helper(node):
+                has_auth_eval_call = True
+
+    if not saves_renderer:
         return []
-    if any(tok in text for tok in _AUTH_EVAL_TOKENS):
+    if has_auth_eval_call:
         return []
+    if _argparse_defines_no_auth_eval_optout(tree):
+        return []
+    # Dead-import refinement: distinguish "imports but never calls" from
+    # "no reference at all" so the operator's fix is obvious.
+    if _script_imports_auth_eval(tree):
+        return [
+            f"{rel}: training script saves a renderer checkpoint and "
+            f"IMPORTS auth_eval but never CALLS it (dead import). Per "
+            f"CLAUDE.md \"Auth eval EVERYWHERE\": every chained experiment "
+            f"MUST end with a CUDA auth eval. Add an explicit "
+            f"`subprocess.run([..., 'auth_eval_renderer.py', ...])` or "
+            f"`run_auth_eval(...)` after the best save."
+        ]
     return [
-        f"{rel}: training script saves a checkpoint but references NO "
-        f"auth-eval invocation (auth_eval_renderer.py / tac.auth_eval / "
-        f"--no-auth-eval-on-best). Per CLAUDE.md \"Auth eval EVERYWHERE\": "
-        f"every chained experiment MUST end with a CUDA auth eval against "
-        f"its best checkpoint. Tracking only proxy is a wasted run "
-        f"(proxy-auth gap can be 100-350x even on CUDA-CUDA)."
+        f"{rel}: training script saves a renderer checkpoint but never "
+        f"invokes auth_eval (no `subprocess.run([..., 'auth_eval_renderer.py', "
+        f"...])`, no `run_auth_eval(...)`, no `auth_eval_renderer.main()`, "
+        f"and no `--no-auth-eval-on-best` opt-out flag). Per CLAUDE.md "
+        f"\"Auth eval EVERYWHERE\": every chained experiment MUST end with "
+        f"a CUDA auth eval against its best checkpoint. Tracking only proxy "
+        f"is a wasted run (proxy-auth gap can be 100-350x even on CUDA-CUDA)."
     ]
 
 
@@ -2165,18 +2565,9 @@ def check_no_disable_eval_roundtrip_flag(
     return violations
 
 
-# TODO(2026-04-27 follow-up): wire the new meta-bug checks into preflight_all()
-# AFTER the parallel subagent's preflight_all strict=True flip lands. Order:
-#   check_no_mps_fallback_default
-#   check_shell_set_e_present
-#   check_no_shell_zip_binary
-#   check_no_pipefail_grep_q_trap
-#   check_no_eval_roundtrip_false
-#   check_no_scorer_load_at_inflate
-#   check_training_scripts_have_auth_eval
-#   check_no_disable_eval_roundtrip_flag
-# All start strict=False; flip individually as each surfaces zero true-positive
-# violations on the live codebase.
+# NOTE: 2026-04-27 codex R5-3 Finding #4 — all 8 meta-bug checks are wired
+# into preflight_all() above (warn-only). See the codex R5-3 #4 comment block
+# in preflight_all() for live-violation counts and per-check promotion plan.
 
 
 # ── Filename contract validation ──────────────────────────────────────────────
