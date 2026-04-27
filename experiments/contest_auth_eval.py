@@ -119,9 +119,24 @@ def _record_provenance(work_dir: Path, archive: Path, inflate_sh: Path,
             "PYTHONHASHSEED", "PYTORCH_CUDA_ALLOC_CONF", "LD_LIBRARY_PATH",
         )},
     }
-    # GPU + driver
+    # GPU + driver — Council R3 #4 also requires WARN if non-T4 since
+    # contest scorer runs on T4. T4-vs-A100/4090 fp16 numerics diverge
+    # on FastViT softmax (≤0.5% on PoseNet historically).
     prov["gpu_model"] = _shell(["nvidia-smi", "--query-gpu=name", "--format=csv,noheader"])
     prov["gpu_driver"] = _shell(["nvidia-smi", "--query-gpu=driver_version", "--format=csv,noheader"])
+    gm = (prov["gpu_model"] or "").strip()
+    if gm and "T4" not in gm:
+        print(
+            f"\n[contest_auth_eval] *** WARNING: GPU is {gm!r}, NOT 'Tesla T4'. ***"
+            f"\n[contest_auth_eval] Contest scorer runs on T4. Cross-arch fp16"
+            f"\n[contest_auth_eval] numerics differ on FastViT softmax (~0.5% PoseNet"
+            f"\n[contest_auth_eval] historical drift). Score is ADVISORY until"
+            f"\n[contest_auth_eval] re-confirmed on T4. Recorded gpu_model={gm!r}.\n",
+            file=sys.stderr,
+        )
+        prov["gpu_t4_match"] = False
+    else:
+        prov["gpu_t4_match"] = bool(gm)
     # torch + cuda
     try:
         import torch
@@ -173,7 +188,12 @@ def _run_inflate(inflate_sh: Path, archive_dir: Path, inflated_dir: Path,
                  video_names_file: Path, *, timeout: int = 1800) -> None:
     """Invoke the submission's inflate.sh. Contest budget: 30 min on T4.
     Default timeout here is 30 min (1800s); pass --inflate-timeout for
-    longer development runs."""
+    longer development runs.
+
+    Council R3 #3 (CRITICAL): validate per-file byte counts so a partial
+    inflate (silent drop of 1 of N videos) is caught here, not 200 lines
+    later when upstream's `zip(dl_gt, dl_comp)` truncates to min().
+    """
     inflated_dir.mkdir(parents=True, exist_ok=True)
     cmd = [
         "bash", str(inflate_sh),
@@ -194,22 +214,103 @@ def _run_inflate(inflate_sh: Path, archive_dir: Path, inflated_dir: Path,
     print(f"[inflate] returncode={result.returncode} elapsed={elapsed:.1f}s")
     if result.returncode != 0:
         raise RuntimeError(f"[inflate] FAILED with returncode={result.returncode}")
-    # Sanity: did inflate produce any frames?
-    raw_files = list(inflated_dir.glob("*.raw"))
-    if not raw_files:
+
+    # Council R3 #3 fix: STRICT per-video byte-count validation.
+    # Each .raw is uint8 RGB at upstream/frame_utils.py's camera_size
+    # (1164w × 874h) × NUM_FRAMES (1200) × 3 channels = 3,663,237,120 B.
+    test_videos = [n.strip() for n in video_names_file.read_text().splitlines()
+                   if n.strip()]
+    OUT_W, OUT_H, NUM_FRAMES = 1164, 874, 1200
+    EXPECTED_RAW_BYTES = OUT_W * OUT_H * NUM_FRAMES * 3  # 3,663,237,120
+    missing: list[str] = []
+    wrong_size: list[tuple[str, int, int]] = []
+    for vname in test_videos:
+        # video name is e.g. "0.mkv" — the .raw is named after the stem
+        stem = Path(vname).stem
+        raw_path = inflated_dir / f"{stem}.raw"
+        if not raw_path.exists():
+            missing.append(stem)
+            continue
+        actual = raw_path.stat().st_size
+        if actual != EXPECTED_RAW_BYTES:
+            wrong_size.append((stem, actual, EXPECTED_RAW_BYTES))
+    if missing:
         raise RuntimeError(
-            f"[inflate] produced no .raw files in {inflated_dir}. Check "
-            f"the inflate.sh logs above for silent failures."
+            f"[inflate] PARTIAL inflate — missing .raw for {len(missing)}/"
+            f"{len(test_videos)} videos: {missing[:5]}{'…' if len(missing)>5 else ''}. "
+            f"Upstream zip(dl_gt,dl_comp) would silently truncate to min(); "
+            f"refusing to score."
         )
-    total_size = sum(f.stat().st_size for f in raw_files)
-    print(f"[inflate] produced {len(raw_files)} .raw file(s), total {total_size:,} bytes")
+    if wrong_size:
+        details = ", ".join(f"{n}={a}B (expected {e}B)" for n, a, e in wrong_size[:3])
+        raise RuntimeError(
+            f"[inflate] WRONG-SIZE .raw file(s): {details}. Each must be "
+            f"{EXPECTED_RAW_BYTES:,} bytes (1164×874×1200×3). Likely "
+            f"truncated mid-decode."
+        )
+    print(f"[inflate] produced {len(test_videos)} .raw file(s), each "
+          f"{EXPECTED_RAW_BYTES:,} bytes — STRICT validation passed.")
+
+
+def _validate_uncompressed_dir(uncompressed_dir: Path,
+                               video_names_file: Path) -> None:
+    """Council R3 #2 (CRITICAL): upstream/evaluate.py computes the rate
+    denominator as `sum(file.size for file in uncompressed_dir.rglob('*'))`
+    — every file under the dir tree. ANY extra file (e.g. .DS_Store, kaggle
+    ingest leftovers, stray .raw caches) silently inflates the denominator
+    and shifts the score vs the official scorer.
+
+    Strategy: walk the dir, compare to the videos listed in --video-names-file.
+    Fail loud on any extras OR missing files."""
+    expected = {Path(n.strip()).name for n in video_names_file.read_text().splitlines()
+                if n.strip()}
+    found = set()
+    extras: list[Path] = []
+    for p in uncompressed_dir.rglob("*"):
+        if not p.is_file():
+            continue
+        rel = p.relative_to(uncompressed_dir)
+        # Hidden files / common leakage suspects
+        if any(part.startswith(".") for part in rel.parts):
+            extras.append(rel)
+            continue
+        if rel.name not in expected:
+            extras.append(rel)
+        else:
+            found.add(rel.name)
+    missing = expected - found
+    if extras or missing:
+        msg_parts = []
+        if extras:
+            msg_parts.append(
+                f"EXTRA files in --uncompressed-dir ({len(extras)}): "
+                f"{[str(p) for p in extras[:5]]}{'…' if len(extras)>5 else ''}"
+            )
+        if missing:
+            msg_parts.append(f"MISSING: {sorted(missing)}")
+        raise RuntimeError(
+            f"[evaluate] uncompressed-dir contamination — score would drift "
+            f"vs official scorer (rate denominator off): {'; '.join(msg_parts)}. "
+            f"Move extras out of {uncompressed_dir} OR pass a clean --uncompressed-dir."
+        )
 
 
 def _run_upstream_evaluate(upstream_dir: Path, submission_dir: Path,
                            uncompressed_dir: Path, video_names_file: Path,
-                           device: str, *, timeout: int = 1800) -> dict:
+                           device: str, *, timeout: int = 1800,
+                           batch_size: int = 16, num_threads: int = 2,
+                           prefetch_queue_depth: int = 4,
+                           seed: int = 1234) -> dict:
     """Invoke upstream/evaluate.py — the contest scorer. Returns the
-    parsed score dict from the report.txt the script writes."""
+    parsed score dict from the report.txt the script writes.
+
+    Council R3 #1 (CRITICAL): all 4 score-affecting args (batch-size,
+    num-threads, prefetch-queue-depth, seed) are pinned EXPLICITLY here
+    so a future upstream default-bump doesn't silently shift our scores.
+    Council R3 #2 (CRITICAL): pre-validate uncompressed-dir for contamination.
+    Council R3 #4 (Medium): set determinism env vars."""
+    _validate_uncompressed_dir(uncompressed_dir, video_names_file)
+
     report_path = submission_dir / "report.txt"
     cmd = [
         sys.executable, str(upstream_dir / "evaluate.py"),
@@ -218,7 +319,11 @@ def _run_upstream_evaluate(upstream_dir: Path, submission_dir: Path,
         "--video-names-file", str(video_names_file),
         "--device", device,
         "--report", str(report_path),
-        "--seed", "1234",  # contest default
+        # PIN every contest-default arg explicitly (Council R3 #1):
+        "--seed", str(seed),
+        "--batch-size", str(batch_size),
+        "--num-threads", str(num_threads),
+        "--prefetch-queue-depth", str(prefetch_queue_depth),
     ]
     print(f"[evaluate] cmd: {' '.join(cmd)}")
     t0 = time.monotonic()
@@ -227,6 +332,13 @@ def _run_upstream_evaluate(upstream_dir: Path, submission_dir: Path,
     pp = env.get("PYTHONPATH", "")
     if str(upstream_dir) not in pp:
         env["PYTHONPATH"] = f"{upstream_dir}:{pp}" if pp else str(upstream_dir)
+    # Determinism env (Council R3 #4) — required per CLAUDE.md
+    # "deterministic reproducibility" non-negotiable. CUBLAS_WORKSPACE_CONFIG
+    # is required for torch.use_deterministic_algorithms; PYTHONHASHSEED
+    # affects dict iteration order in Python ≥ 3.6.
+    env.setdefault("CUBLAS_WORKSPACE_CONFIG", ":4096:8")
+    env["PYTHONHASHSEED"] = str(seed)
+
     result = subprocess.run(cmd, timeout=timeout, env=env, capture_output=True, text=True)
     elapsed = time.monotonic() - t0
     print(f"[evaluate] returncode={result.returncode} elapsed={elapsed:.1f}s")
@@ -270,9 +382,47 @@ def _parse_report(report_path: Path, *, archive_size: int) -> dict:
             f"[evaluate] could not parse report.txt:\n{text[:1024]}"
         )
 
+    # Council R3 #5 (Medium): reject NaN/inf — float() parses both silently.
+    # A divide-by-zero in upstream's distortion sum would slip through as
+    # final_score=NaN that "looks like" a number. Refuse loud.
+    import math as _math
+    for label, val in (("posenet_dist", pose), ("segnet_dist", seg),
+                       ("rate_unscaled", rate_unscaled), ("final_score", final)):
+        if not _math.isfinite(val):
+            raise RuntimeError(
+                f"[evaluate] non-finite {label}={val} in report.txt — refuse "
+                f"to ship a NaN/inf score. Investigate upstream evaluate run."
+            )
+    if pose < 0 or seg < 0 or rate_unscaled < 0 or final < 0:
+        raise RuntimeError(
+            f"[evaluate] negative metric in report (pose={pose}, seg={seg}, "
+            f"rate={rate_unscaled}, final={final}) — distortions must be ≥0."
+        )
+    expected_n = 600  # contest pair count (1200 frames / seq_len=2)
+    actual_n = int(n_samples.group(1)) if n_samples else None
+    if actual_n != expected_n:
+        raise RuntimeError(
+            f"[evaluate] expected {expected_n} samples but report says "
+            f"{actual_n}. Likely partial inflate (Council R3 #3) slipped "
+            f"past the .raw byte-count check."
+        )
+
     score_pose = (10.0 * pose) ** 0.5
     score_seg = 100.0 * seg
     score_rate = 25.0 * rate_unscaled
+    score_recomputed = score_seg + score_pose + score_rate
+
+    # Council R3 #6 (Medium): assert recomputed score matches reported
+    # within upstream's print precision (.2f → ±0.005, generous bound 0.01).
+    # A formula divergence (upstream changes the 100/√10/25 weights) would
+    # otherwise slip through without notice.
+    if abs(score_recomputed - final) > 0.01:
+        raise RuntimeError(
+            f"[evaluate] score formula divergence: reported final={final:.4f} "
+            f"but recomputed (100*seg + sqrt(10*pose) + 25*rate) = "
+            f"{score_recomputed:.4f}. Diff={abs(score_recomputed - final):.4f} "
+            f"exceeds 0.01 tolerance. Upstream may have changed weights."
+        )
 
     return {
         "schema_version": SCHEMA_VERSION,
@@ -283,9 +433,9 @@ def _parse_report(report_path: Path, *, archive_size: int) -> dict:
         "score_pose_contribution": score_pose,
         "score_seg_contribution": score_seg,
         "score_rate_contribution": score_rate,
-        "score_recomputed_from_components": score_seg + score_pose + score_rate,
+        "score_recomputed_from_components": score_recomputed,
         "archive_size_bytes": archive_size,
-        "n_samples": int(n_samples.group(1)) if n_samples else None,
+        "n_samples": actual_n,
         "report_path": str(report_path),
     }
 

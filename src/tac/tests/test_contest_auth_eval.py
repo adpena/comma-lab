@@ -43,10 +43,49 @@ def test_module_loads(cae):
 
 
 def test_parse_report_baseline_format(cae, tmp_path: Path):
-    """Parses the canonical upstream/evaluate.py report shape."""
+    """Parses the canonical upstream/evaluate.py report shape.
+
+    Uses self-consistent values where the formula 100*seg + sqrt(10*pose) +
+    25*rate exactly reproduces the reported final score. The historical
+    "0.9001 baseline" run_log entry actually has a 0.108-gap between
+    reported and recomputed — that's a separate baseline-provenance bug
+    being investigated, NOT a parser bug. Council R3 #6 hardening
+    correctly surfaces such formula divergences.
+    """
+    # Self-consistent: 100*0.002 + sqrt(10*0.0107) + 25*0.009 = 0.200 + 0.327 + 0.225 = 0.752
     text = """=== Evaluation results over 600 samples ===
   Average PoseNet Distortion: 0.01070000
-  Average SegNet Distortion: 0.00240000
+  Average SegNet Distortion: 0.00200000
+  Submission file size: 337748 bytes
+  Original uncompressed size: 37545489 bytes
+  Compression Rate: 0.00900
+  Final score: 100*segnet_dist + sqrt(10*posenet_dist) + 25*rate = 0.7521
+"""
+    rp = tmp_path / "report.txt"
+    rp.write_text(text)
+    result = cae._parse_report(rp, archive_size=337748)
+
+    assert result["schema_version"] == 1
+    assert result["final_score"] == pytest.approx(0.7521, abs=1e-4)
+    assert result["avg_posenet_dist"] == pytest.approx(0.0107, abs=1e-4)
+    assert result["avg_segnet_dist"] == pytest.approx(0.0020, abs=1e-4)
+    assert result["rate_unscaled"] == pytest.approx(0.009, abs=1e-4)
+    assert result["score_seg_contribution"] == pytest.approx(0.20, abs=1e-3)
+    assert result["score_pose_contribution"] == pytest.approx(0.327, abs=1e-3)
+    assert result["score_rate_contribution"] == pytest.approx(0.225, abs=1e-3)
+    assert result["n_samples"] == 600
+    assert result["archive_size_bytes"] == 337748
+
+
+def test_parse_report_rejects_score_formula_divergence(cae, tmp_path: Path):
+    """Council R3 #6: if the reported final doesn't match the recomputed
+    score within 0.01, raise loud — protects against upstream changing
+    the formula weights (which would silently shift our scores)."""
+    # 100*0.0024 + sqrt(10*0.0107) + 25*0.00899 = 0.24 + 0.327 + 0.2248 = 0.792
+    # but reported as 0.9001 — formula divergence of 0.108 must raise.
+    text = """=== Evaluation results over 600 samples ===
+  Average PoseNet Distortion: 0.0107
+  Average SegNet Distortion: 0.0024
   Submission file size: 337748 bytes
   Original uncompressed size: 37545489 bytes
   Compression Rate: 0.00899
@@ -54,18 +93,44 @@ def test_parse_report_baseline_format(cae, tmp_path: Path):
 """
     rp = tmp_path / "report.txt"
     rp.write_text(text)
-    result = cae._parse_report(rp, archive_size=337748)
+    with pytest.raises(RuntimeError, match="formula divergence"):
+        cae._parse_report(rp, archive_size=337748)
 
-    assert result["schema_version"] == 1
-    assert result["final_score"] == pytest.approx(0.9001, abs=1e-4)
-    assert result["avg_posenet_dist"] == pytest.approx(0.0107, abs=1e-4)
-    assert result["avg_segnet_dist"] == pytest.approx(0.0024, abs=1e-4)
-    assert result["rate_unscaled"] == pytest.approx(0.00899, abs=1e-4)
-    assert result["score_seg_contribution"] == pytest.approx(0.24, abs=1e-3)
-    assert result["score_pose_contribution"] == pytest.approx(0.327, abs=1e-3)
-    assert result["score_rate_contribution"] == pytest.approx(0.225, abs=1e-3)
-    assert result["n_samples"] == 600
-    assert result["archive_size_bytes"] == 337748
+
+def test_parse_report_rejects_nan(cae, tmp_path: Path):
+    """Council R3 #5: NaN / inf parses as float() but is not a valid score."""
+    text = """=== Evaluation results over 600 samples ===
+  Average PoseNet Distortion: nan
+  Average SegNet Distortion: 0.0024
+  Submission file size: 337748 bytes
+  Original uncompressed size: 37545489 bytes
+  Compression Rate: 0.009
+  Final score: 100*segnet_dist + sqrt(10*posenet_dist) + 25*rate = nan
+"""
+    rp = tmp_path / "report.txt"
+    rp.write_text(text)
+    # NaN slips past the strict number regex (won't match) so the parser
+    # raises "could not parse" — also acceptable. Either way: LOUD refusal.
+    with pytest.raises(RuntimeError, match="non-finite|could not parse"):
+        cae._parse_report(rp, archive_size=337748)
+
+
+def test_parse_report_rejects_wrong_n_samples(cae, tmp_path: Path):
+    """Council R3 #3 backstop: if the .raw byte-count check missed a partial
+    inflate, the n_samples mismatch in the report catches it."""
+    # 599 samples instead of 600 — partial inflate slipped through
+    text = """=== Evaluation results over 599 samples ===
+  Average PoseNet Distortion: 0.01
+  Average SegNet Distortion: 0.002
+  Submission file size: 337748 bytes
+  Original uncompressed size: 37545489 bytes
+  Compression Rate: 0.009
+  Final score: 100*segnet_dist + sqrt(10*posenet_dist) + 25*rate = 0.74
+"""
+    rp = tmp_path / "report.txt"
+    rp.write_text(text)
+    with pytest.raises(RuntimeError, match="expected 600 samples"):
+        cae._parse_report(rp, archive_size=337748)
 
 
 def test_parse_report_score_recomputation_consistent(cae, tmp_path: Path):
