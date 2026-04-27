@@ -689,6 +689,67 @@ def kl_distill_segnet_only(
     return kl, kl.item()
 
 
+def segnet_uncertainty_weighted_loss(
+    rendered_frame_hwc: torch.Tensor,
+    gt_frame_hwc: torch.Tensor,
+    segnet,
+    *,
+    weight_floor: float = 0.1,
+) -> torch.Tensor:
+    """Yousfi #5: weight L1 by inverse-SegNet-entropy.
+
+    Codex R-Lane-D-Issue1 (2026-04-27, INCIDENTAL FIX): this function was
+    referenced from train_renderer.py:62 + ~1612 since commit c9ef0884
+    ("council R3 fixes: Yousfi uncertainty_loss_floor wired") but was
+    NEVER actually defined in tac.losses. The HEAD `from tac.losses import
+    segnet_uncertainty_weighted_loss` raised ImportError on every fresh
+    import (test runs that "passed" did so because of stale .pyc caches).
+    Cleared caches → broken imports → broken tests → broken Lane D
+    deployments. Stub added here to unblock; weight_floor parameter is
+    consumed so the resolver remains correct. The semantics target Yousfi
+    council #5: focus L1 on pixels where SegNet is most CERTAIN (low
+    entropy → high inverse-entropy weight), so the renderer biases its
+    error budget toward pixels the scorer has high confidence about.
+
+    Args:
+        rendered_frame_hwc: (B, H, W, 3) renderer output for the SegNet-
+            evaluated frame (index 1 of the pair per upstream's
+            `x[:, -1, ...]` indexing).
+        gt_frame_hwc: (B, H, W, 3) GT frame, same indexing.
+        segnet: the frozen SegNet scorer (call as
+            ``segnet(segnet.preprocess_input(_hwc_to_chw(...)))``).
+        weight_floor: minimum value of the inverse-entropy weight
+            (default 0.1 = matches WILDE/SHIRAZ/DEN profile setting).
+            Bounds the weight so high-entropy regions still contribute
+            ~10% of L1 — without this, totally uncertain pixels (e.g.
+            class boundaries) get zero gradient.
+
+    Returns:
+        Scalar loss = inverse_entropy_weight-weighted L1 reconstruction.
+    """
+    rx = _hwc_to_chw(rendered_frame_hwc.unsqueeze(1))[:, :, 0]  # (B, 3, H, W)
+    gx = _hwc_to_chw(gt_frame_hwc.unsqueeze(1))[:, :, 0]
+    with torch.no_grad():
+        gs_in = segnet.preprocess_input(gx.unsqueeze(1))
+        gs_logits = segnet(gs_in)
+        # Compute SegNet entropy per pixel (lower entropy = more confident).
+        probs = F.softmax(gs_logits, dim=1).clamp_min(1e-6)
+        entropy = -(probs * probs.log()).sum(dim=1)  # (B, H_seg, W_seg)
+        H_r, W_r = rx.shape[-2:]
+        if entropy.shape[-2:] != (H_r, W_r):
+            entropy = F.interpolate(
+                entropy.unsqueeze(1).float(), size=(H_r, W_r),
+                mode="bilinear", align_corners=False,
+            ).squeeze(1)
+        # Inverse-entropy weight, bounded below by weight_floor (so
+        # high-entropy pixels still produce gradient).
+        max_ent = entropy.max().clamp_min(1e-6)
+        inv_ent = 1.0 - (entropy / max_ent)  # in [0, 1]
+        weight = inv_ent.clamp_min(float(weight_floor))
+    diff = (rx.float() - gx.float()).abs().mean(dim=1)  # (B, H, W) — mean over 3 RGB
+    return (diff * weight).mean()
+
+
 def feature_matching_loss(
     filtered_pair_hwc: torch.Tensor,
     gt_pair_hwc: torch.Tensor,

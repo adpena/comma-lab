@@ -304,6 +304,17 @@ def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
                    help="Use deterministic torch algorithms where available")
     p.add_argument("--nondeterministic", dest="deterministic", action="store_false",
                    help="Allow nondeterministic kernels for speed")
+    # Codex R-Lane-D-Issue1 (2026-04-27): explicit override for pose_dim that
+    # beats BOTH the profile resolver AND any checkpoint arch_meta autodetect.
+    # Use this when you intentionally want to retrain a different pose_dim arch
+    # from scratch (NOT a resume): pass the override + leave --resume-from
+    # unset. With a resume, --force-pose-dim mismatching the saved arch will
+    # raise a clear shape-mismatch error from load_state_dict — that is the
+    # intended behaviour (silent shape drift wasted 1.2h on DEN; we never
+    # accept a quiet shape mismatch again).
+    p.add_argument("--force-pose-dim", type=int, default=None,
+                   help="Override pose_dim, beating profile + checkpoint "
+                        "arch_meta. Default unset = profile/checkpoint wins.")
 
     # Output
     p.add_argument("--tag", type=str, required=True)
@@ -377,8 +388,17 @@ def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
     # Namespace (tests, logs, snapshots). Same dead-resolver pattern that
     # killed Yousfi #5 uncertainty loss — fix it here so Lane D's required
     # pose_dim=6 (FiLM modulation, baseline arch parity) is observable.
-    args.pose_dim = _resolve(getattr(args, "pose_dim", None),
-                              "pose_dim", 0)
+    #
+    # Codex R-Lane-D-Issue1 (2026-04-27): --force-pose-dim wins over both
+    # profile and CLI-via-getattr. Used to (a) intentionally retrain a
+    # different pose_dim arch from scratch, or (b) override a resume that
+    # would otherwise honour the checkpoint's arch_meta (which the train()
+    # path peeks BEFORE constructing the model, see _peek_checkpoint_arch_meta).
+    if getattr(args, "force_pose_dim", None) is not None:
+        args.pose_dim = int(args.force_pose_dim)
+    else:
+        args.pose_dim = _resolve(getattr(args, "pose_dim", None),
+                                  "pose_dim", 0)
     # Fridrich inverse-steganalysis losses (WILDE / SHIRAZ "competitive
     # advantage" — were silently disabled by missing resolver):
     args.use_texture_loss = _resolve(getattr(args, "use_texture_loss", None),
@@ -418,6 +438,15 @@ def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
                                           "use_uncertainty_loss", False)
     args.uncertainty_loss_weight = _resolve(getattr(args, "uncertainty_loss_weight", None),
                                              "uncertainty_loss_weight", 0.0)
+    # Codex R-Lane-D-Issue1 (2026-04-27, INCIDENTAL FIX): the call site at
+    # line ~1614 reads args.uncertainty_loss_floor but this attribute was
+    # NEVER resolved on args (no CLI flag, no resolver). Profiles like
+    # WILDE/SHIRAZ/DEN/Lane D set uncertainty_loss_floor=0.1, which silently
+    # never reached the helper — function default would have won at runtime
+    # (and AttributeError'd before that since the resolver was missing).
+    # Wire it through with the same _resolve() pattern.
+    args.uncertainty_loss_floor = _resolve(getattr(args, "uncertainty_loss_floor", None),
+                                            "uncertainty_loss_floor", 0.1)
     # Yousfi #3 (use_variance_noise / variance_noise_*) — RE-ENABLED on
     # 2026-04-26 after Fridrich R2 C2 fix: the box-filter variance estimator
     # has been replaced with an un-decimated Daubechies-8 sub-band energy
@@ -540,6 +569,7 @@ def evaluate_fp4(
     fp4_robust_scale: bool = False,
     sim_zoom_warp=None,
     use_zoom_flow: bool = False,
+    half_frame_mode: bool = False,
 ) -> tuple[float, float, float]:
     """Evaluate the EMA model after FP4 round-trip quantization.
 
@@ -552,11 +582,27 @@ def evaluate_fp4(
     an ego_flow tensor. Pass the same RadialZoomWarp used during training so
     the FP4 evaluation reflects the inflate-time motion structure.
 
+    Codex R-Lane-D-Issue2 (2026-04-27): when ``half_frame_mode=True`` we
+    REPLACE mask_t with ``warp_inverse_masks(mask_t1, pair_idx)``, mirroring
+    the inflate-side reconstruction path in
+    ``submissions/robust_current/inflate_renderer.py:2452``. This is what the
+    deployed model will actually see when only odd-frame masks ship in the
+    archive (Quantizr paradigm). Without this mode, best-checkpoint selection
+    optimises a distribution the deployed model never sees, and Lane D's
+    predicted 0.55-0.75 score depends on the wrong checkpoint shipping.
+
     Returns: (scorer, avg_pose, avg_seg)
     """
     from tac.fp4_quantize import DEFAULT_CODEBOOK, RESIDUAL_CODEBOOK
     codebook = (RESIDUAL_CODEBOOK if fp4_codebook == "residual"
                 else DEFAULT_CODEBOOK).clone()
+
+    if half_frame_mode and (sim_zoom_warp is None):
+        raise ValueError(
+            "evaluate_fp4(half_frame_mode=True) requires sim_zoom_warp; "
+            "without it the warp_inverse_masks() call has nothing to apply. "
+            "If you intended a full-frame eval, pass half_frame_mode=False."
+        )
 
     # Build a temporary model with FP4-quantized EMA weights
     orig_state = {k: v.clone() for k, v in model.state_dict().items()}
@@ -583,6 +629,18 @@ def evaluate_fp4(
             mask_t = mask_t.to(device)
             mask_t1 = mask_t1.to(device)
 
+            # Per-pair index (shared by half-frame warp AND ego_flow lookup).
+            # Pairs are formed as (frame[2k], frame[2k+1]); pair_starts steps
+            # by SEQ_LEN=2, so pair_idx = start // 2.
+            pair_idx_t = torch.tensor([start // 2], device=device, dtype=torch.long)
+
+            # Codex R-Lane-D-Issue2: replicate inflate-side mask reconstruction
+            # when the deployed archive will only ship odd-frame masks. This is
+            # the EXACT call inflate_renderer.py:2452 makes — same warp object,
+            # same nearest-neighbour resampling, same border class fill.
+            if half_frame_mode:
+                mask_t = sim_zoom_warp.warp_inverse_masks(mask_t1, pair_idx_t)
+
             gt_pair = pair_from_frames(gt_frames, start).to(device)
 
             # Lane D: ego_flow plumbing for use_zoom_flow=True models. Eval
@@ -590,7 +648,6 @@ def evaluate_fp4(
             # scalar lookup. No flip aug at eval time so no flow mirroring.
             ego_flow = None
             if use_zoom_flow and sim_zoom_warp is not None:
-                pair_idx_t = torch.tensor([start // 2], device=device, dtype=torch.long)
                 H_m, W_m = mask_t1.shape[-2], mask_t1.shape[-1]
                 ego_flow = sim_zoom_warp(pair_idx_t, H_m, W_m)
 
@@ -655,6 +712,117 @@ def pretrain_loss(rendered_pair: torch.Tensor, gt_pair: torch.Tensor) -> torch.T
     edge_loss = F.l1_loss(edge_r, edge_g)
 
     return l1 + 0.5 * edge_loss
+
+
+# ── Checkpoint arch_meta peek (resume-time pose_dim resolution) ────────
+#
+# Codex R-Lane-D-Issue1 (2026-04-27). Before building the model from the
+# profile we MUST peek the checkpoint to decide pose_dim. Three cases:
+#
+#   1. arch_meta present (NEW format): use arch_meta["pose_dim"] verbatim.
+#      Profile pose_dim is overridden with a loud warning if they disagree.
+#   2. arch_meta absent (LEGACY format) AND state_dict has any film_* keys:
+#      checkpoint was trained with pose_dim>0, infer pose_dim=6 (the only
+#      pose_dim ever used in production — DEN, SHIRAZ, WILDE, GREEN, Lane D
+#      all set pose_dim=6).
+#   3. arch_meta absent AND no film_* keys: legacy checkpoint with the dead
+#      resolver (pose_dim was effectively 0). Force pose_dim=0 with WARN so
+#      the resume succeeds, instead of crashing on strict load.
+#
+# --force-pose-dim N at the CLI beats all of the above; that path lives in
+# parse_args() and is checked before this helper runs.
+
+# Architecture-meta keys we know how to round-trip on resume. Adding a new
+# one? It must (a) be saved in BOTH save_training_state() AND the FP4 + fp32
+# best save sites, (b) be read here, and (c) be plumbed through to
+# build_renderer() at the construction site.
+_RESUMABLE_ARCH_KEYS = (
+    "pose_dim", "base_ch", "mid_ch", "embed_dim", "motion_hidden", "depth",
+    "use_zoom_flow", "use_dsconv", "use_dilation", "padding_mode",
+)
+
+
+def _peek_checkpoint_arch_meta(
+    ckpt_path: Path | str,
+    device: torch.device | str = "cpu",
+) -> dict | None:
+    """Return the saved arch_meta dict if present, else None.
+
+    Auto-detects legacy checkpoints that lack arch_meta and synthesises a
+    minimal {"pose_dim": ...} based on whether film_* keys appear in the
+    state_dict. Never raises — load failures are reported via stderr and
+    return None so the caller can fall back to the profile.
+    """
+    try:
+        state = torch.load(str(ckpt_path), map_location=device,
+                           weights_only=False)
+    except Exception as exc:  # noqa: BLE001
+        print(f"[resume] WARN: could not peek {ckpt_path} ({exc!r}); "
+              f"profile pose_dim will be used as-is.", file=sys.stderr)
+        return None
+
+    # NEW format: arch_meta stored as a sibling key.
+    arch = state.get("arch_meta") if isinstance(state, dict) else None
+    if isinstance(arch, dict) and "pose_dim" in arch:
+        return arch
+
+    # FP4 / fp32 best save format: __meta__ contains the same arch fields.
+    meta = state.get("__meta__") if isinstance(state, dict) else None
+    if isinstance(meta, dict) and "pose_dim" in meta:
+        return {k: meta[k] for k in _RESUMABLE_ARCH_KEYS if k in meta}
+
+    # LEGACY format: synthesise from state_dict film key presence.
+    sd = None
+    if isinstance(state, dict):
+        sd = state.get("model") or state.get("model_state_dict")
+        if sd is None and all(isinstance(v, torch.Tensor) for v in state.values()):
+            sd = state  # raw state_dict
+    if isinstance(sd, dict):
+        has_film = any("film_" in k for k in sd.keys())
+        synth = {"pose_dim": 6 if has_film else 0,
+                 "_legacy_no_arch_meta": True}
+        return synth
+
+    # Couldn't determine — let the caller fall back to profile.
+    return None
+
+
+def _resolve_pose_dim_for_resume(
+    args: argparse.Namespace,
+    ckpt_path: Path | str | None,
+) -> tuple[int, str]:
+    """Decide pose_dim for the model under construction. Returns (value, source).
+
+    Priority:
+        --force-pose-dim    > profile/checkpoint               (already
+                              applied in parse_args; we just echo it here)
+        checkpoint arch_meta > profile resolver
+        legacy auto-detect (film keys present) > profile resolver
+        legacy auto-detect (no film keys)      > FORCE 0 + warn
+    """
+    if getattr(args, "force_pose_dim", None) is not None:
+        return int(args.force_pose_dim), "cli_force"
+    if not ckpt_path or not Path(str(ckpt_path)).exists():
+        return int(getattr(args, "pose_dim", 0) or 0), "profile"
+    meta = _peek_checkpoint_arch_meta(ckpt_path)
+    if meta is None:
+        return int(getattr(args, "pose_dim", 0) or 0), "profile"
+    ckpt_pd = int(meta.get("pose_dim", 0) or 0)
+    profile_pd = int(getattr(args, "pose_dim", 0) or 0)
+    src = "checkpoint_arch_meta"
+    if meta.get("_legacy_no_arch_meta"):
+        src = ("legacy_film_autodetect" if ckpt_pd > 0
+               else "legacy_no_film_autodetect_zero")
+    if ckpt_pd != profile_pd:
+        print(
+            f"[resume] WARN: profile pose_dim={profile_pd} OVERRIDDEN to "
+            f"pose_dim={ckpt_pd} by checkpoint {src} "
+            f"(legacy={'yes' if meta.get('_legacy_no_arch_meta') else 'no'}). "
+            f"Pass --force-pose-dim {profile_pd} to override the override "
+            f"(but expect strict load_state_dict failure if shapes mismatch).",
+            file=sys.stderr,
+        )
+    return ckpt_pd, src
 
 
 # ── 5-Phase Quantizr-style QAT schedule helpers ────────────────────────
@@ -854,6 +1022,31 @@ def train(args: argparse.Namespace):
         print(f"[masks] RadialZoomWarp constructed for: {', '.join(roles)} "
               f"— zoom mean={sim_zooms.mean():.4f}, std={sim_zooms.std():.4f}, "
               f"n_pairs={n_sim_pairs}")
+
+    # Codex R-Lane-D-Issue1 (2026-04-27): peek the resume checkpoint BEFORE
+    # building the model so the saved arch_meta (or legacy autodetect) wins
+    # over the profile pose_dim. This fixes the regression where Lane D's
+    # newly-active resolver promoted profile pose_dim=6 → builds FiLM layers
+    # → strict load_state_dict crash on legacy checkpoints saved with the
+    # dead resolver (effective pose_dim=0 weights).
+    _resume_ckpt_path = (
+        args.resume_from
+        if getattr(args, "resume_from", None)
+        and Path(args.resume_from).exists()
+        else None
+    )
+    _resolved_pose_dim, _pose_dim_source = _resolve_pose_dim_for_resume(
+        args, _resume_ckpt_path,
+    )
+    if _resolved_pose_dim != int(getattr(args, "pose_dim", 0) or 0):
+        print(
+            f"[arch] pose_dim resolved from {_pose_dim_source}: "
+            f"profile/cli={getattr(args, 'pose_dim', 0)} → "
+            f"final={_resolved_pose_dim}"
+        )
+    else:
+        print(f"[arch] pose_dim={_resolved_pose_dim} (source={_pose_dim_source})")
+    args.pose_dim = _resolved_pose_dim
 
     # Build model (dispatch by variant)
     if args.variant == "wavelet_renderer":
@@ -1057,6 +1250,26 @@ def train(args: argparse.Namespace):
         path = Path(path)
         path.parent.mkdir(parents=True, exist_ok=True)
         tmp_path = path.with_suffix(".pt.tmp")
+        # Codex R-Lane-D-Issue1 (2026-04-27): persist arch_meta so the
+        # _peek_checkpoint_arch_meta() resume path can override the profile
+        # pose_dim (and friends) before model construction. Without this,
+        # legacy resumes built FiLM layers and crashed on strict load.
+        # schema_version bumps when an arch field is added/removed.
+        arch_meta = {
+            "schema_version": 1,
+            "pose_dim": int(getattr(args, "pose_dim", 0) or 0),
+            "base_ch": args.base_ch,
+            "mid_ch": args.mid_ch,
+            "embed_dim": args.embed_dim,
+            "motion_hidden": args.motion_hidden,
+            "depth": args.depth,
+            "use_zoom_flow": bool(args.use_zoom_flow),
+            "use_dsconv": bool(args.use_dsconv),
+            "use_dilation": bool(args.use_dilation),
+            "padding_mode": args.padding_mode,
+            "variant": args.variant,
+            "profile": getattr(args, "profile", None),
+        }
         torch.save({
             "epoch": current_epoch,
             "model": model.state_dict(),
@@ -1069,6 +1282,7 @@ def train(args: argparse.Namespace):
             "baseline_seg": baseline_seg,
             "seed": args.seed,
             "deterministic": args.deterministic,
+            "arch_meta": arch_meta,
         }, tmp_path)
         tmp_path.rename(path)  # atomic on POSIX
 
@@ -1477,8 +1691,26 @@ def train(args: argparse.Namespace):
                           or epoch == args.epochs - 1
                           or epoch == max(start_epoch, args.pretrain_epochs)))
         eval_pose, eval_seg = 0.0, 0.0
+        # Codex R-Lane-D-Issue2 (2026-04-27): when the deployed archive will
+        # ship only odd-frame masks (Quantizr paradigm — gated on
+        # use_zoom_flow=True OR mask_half_sim_prob > 0), evaluate BOTH the
+        # full-frame eval (legacy) AND the half-frame eval (mirrors inflate).
+        # The half-frame score is the one the deployed model is judged on, so
+        # we gate best-checkpoint selection on it. Without this, the best
+        # checkpoint optimises a distribution the deployed model never sees
+        # and Lane D's predicted 0.55-0.75 score depends on the wrong file
+        # shipping. Full-frame is still logged for diagnostic comparison.
+        eval_pose_full = eval_seg_full = scorer_val_full = None
+        eval_pose_half = eval_seg_half = scorer_val_half = None
+        _halfframe_eval_active = (
+            sim_zoom_warp is not None
+            and (
+                getattr(args, "use_zoom_flow", False)
+                or float(getattr(args, "mask_half_sim_prob", 0.0)) > 0
+            )
+        )
         if is_eval_epoch:
-            scorer_val, eval_pose, eval_seg = evaluate_fp4(
+            scorer_val_full, eval_pose_full, eval_seg_full = evaluate_fp4(
                 model, ema, all_masks, gt_frames,
                 all_pair_starts, posenet, segnet, device,
                 fp4_codebook=args.fp4_codebook,
@@ -1488,7 +1720,33 @@ def train(args: argparse.Namespace):
                 # the model was trained on (use_zoom_flow=True path).
                 sim_zoom_warp=sim_zoom_warp,
                 use_zoom_flow=getattr(args, "use_zoom_flow", False),
+                half_frame_mode=False,
             )
+            if _halfframe_eval_active:
+                scorer_val_half, eval_pose_half, eval_seg_half = evaluate_fp4(
+                    model, ema, all_masks, gt_frames,
+                    all_pair_starts, posenet, segnet, device,
+                    fp4_codebook=args.fp4_codebook,
+                    fp4_robust_scale=args.fp4_robust_scale,
+                    sim_zoom_warp=sim_zoom_warp,
+                    use_zoom_flow=getattr(args, "use_zoom_flow", False),
+                    half_frame_mode=True,
+                )
+                # Best-gate on HALF-FRAME score (deployment metric).
+                scorer_val = scorer_val_half
+                eval_pose = eval_pose_half
+                eval_seg = eval_seg_half
+                print(
+                    f"[eval] FULL-FRAME: scorer={scorer_val_full:.4f} "
+                    f"pose={eval_pose_full:.6f} seg={eval_seg_full:.6f} | "
+                    f"HALF-FRAME (gates best): scorer={scorer_val_half:.4f} "
+                    f"pose={eval_pose_half:.6f} seg={eval_seg_half:.6f}"
+                )
+            else:
+                # Legacy / baseline profiles — full-frame is the only path.
+                scorer_val = scorer_val_full
+                eval_pose = eval_pose_full
+                eval_seg = eval_seg_full
         else:
             # scorer_val is stale (carried from last eval) on non-eval epochs
             scorer_val = best_scorer
@@ -1514,6 +1772,19 @@ def train(args: argparse.Namespace):
             best_scorer = scorer_val
             best_epoch = epoch
             marker = " *BEST*"
+            # Codex R-Lane-D-Issue2: announce the gating metric so operators
+            # know which distribution the saved checkpoint is best on.
+            if _halfframe_eval_active:
+                print(
+                    f"[best] checkpoint @ ep{epoch} based on HALF-FRAME score: "
+                    f"{best_scorer:.4f} (full-frame for comparison: "
+                    f"{scorer_val_full:.4f})"
+                )
+            else:
+                print(
+                    f"[best] checkpoint @ ep{epoch} based on FULL-FRAME score: "
+                    f"{best_scorer:.4f}"
+                )
 
             # Save FP4 checkpoint from EMA weights. R-FP4-fix: pass codebook +
             # robust_scale to match what QAT trained against — mismatched
@@ -1674,6 +1945,26 @@ def train(args: argparse.Namespace):
                 "eval_seg": round(eval_seg, 8),
                 "best_epoch": best_epoch,
                 "timestamp": datetime.now(timezone.utc).isoformat(),
+                # Codex R-Lane-D-Issue2: surface BOTH eval modes when in
+                # half-frame mode so post-hoc analysis can spot proxy/auth
+                # divergence between full-frame and half-frame distributions.
+                "eval_full_frame": (
+                    {
+                        "scorer": round(scorer_val_full, 6),
+                        "pose": round(eval_pose_full, 8),
+                        "seg": round(eval_seg_full, 8),
+                    }
+                    if scorer_val_full is not None else None
+                ),
+                "eval_half_frame": (
+                    {
+                        "scorer": round(scorer_val_half, 6),
+                        "pose": round(eval_pose_half, 8),
+                        "seg": round(eval_seg_half, 8),
+                    }
+                    if scorer_val_half is not None else None
+                ),
+                "best_gate": "half_frame" if _halfframe_eval_active else "full_frame",
             }
             write_telemetry(out_dir / f"{args.tag}_telemetry.jsonl", telemetry)
 

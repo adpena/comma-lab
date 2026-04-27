@@ -400,7 +400,12 @@ def test_bootstrap_script_exists_and_executable() -> None:
 def test_bootstrap_script_uses_real_train_renderer_flags() -> None:
     """Every --flag the bootstrap script passes to train_renderer.py must
     exist in train_renderer.py's argparse. Catches the 'invented flag'
-    antipattern (cf. test_train_renderer_auth_eval_wiring.py)."""
+    antipattern (cf. test_train_renderer_auth_eval_wiring.py).
+
+    Codex R-Lane-D-Issue3: terminator is now `BEST_FP32=` (the script no
+    longer searches for a non-existent `*_fp4.bin` glob; it reads the
+    canonical fp32 .pt and exports a real FP4A renderer.bin via
+    tac.renderer_export.export_asymmetric_checkpoint_fp4)."""
     script_src = (REPO / "scripts" / "remote_lane_d_halfframe_retrain.sh").read_text()
     train_src = (REPO / "src" / "tac" / "experiments" / "train_renderer.py").read_text()
 
@@ -408,9 +413,12 @@ def test_bootstrap_script_uses_real_train_renderer_flags() -> None:
     real_flags = set(re.findall(r'add_argument\(\s*["\']--([a-z][a-z0-9-]+)', train_src))
     assert real_flags, "regex couldn't find any add_argument flags — fix the regex"
 
-    # Find the train_renderer.py invocation block in the bootstrap
+    # Find the train_renderer.py invocation block in the bootstrap. The
+    # terminator must be a marker that appears AFTER the invocation but
+    # BEFORE any other CLI-flag-bearing command (otherwise we'd pick up
+    # contest_auth_eval / optimize_poses flags).
     m = re.search(
-        r'src/tac/experiments/train_renderer\.py(.*?)(?=\n\s*BEST_BIN=|\Z)',
+        r'src/tac/experiments/train_renderer\.py(.*?)(?=\n\s*BEST_FP32=|\Z)',
         script_src, re.DOTALL,
     )
     assert m, "couldn't locate the train_renderer.py invocation in the bootstrap script"
@@ -500,4 +508,378 @@ def test_evaluate_fp4_signature_has_zoom_kwargs() -> None:
     )
     assert "use_zoom_flow" in sig.parameters, (
         "evaluate_fp4 missing use_zoom_flow kwarg — can't gate ego_flow path."
+    )
+
+
+# ── 8. Codex R-Lane-D-Issue1: pose_dim resume safety ─────────────────────
+
+
+def test_force_pose_dim_cli_flag_exists() -> None:
+    """Codex R-Lane-D-Issue1: --force-pose-dim must beat profile + checkpoint
+    arch_meta. Without it, an operator can't intentionally retrain a different
+    pose_dim arch from scratch when a profile or checkpoint disagrees."""
+    train_renderer = pytest.importorskip("tac.experiments.train_renderer")
+    args = train_renderer.parse_args(["--tag", "_t", "--force-pose-dim", "0"])
+    assert args.pose_dim == 0, (
+        f"--force-pose-dim 0 must override the default; got {args.pose_dim}"
+    )
+    args2 = train_renderer.parse_args([
+        "--tag", "_t", "--profile", "dilated_h64_half_frame",
+        "--force-pose-dim", "0",
+    ])
+    assert args2.pose_dim == 0, (
+        f"--force-pose-dim 0 must override profile pose_dim=6; got {args2.pose_dim}"
+    )
+
+
+def test_save_training_state_includes_arch_meta(tmp_path) -> None:
+    """Codex R-Lane-D-Issue1: training_state checkpoints MUST embed arch_meta
+    so resumes of legacy checkpoints don't crash on strict load_state_dict
+    when the now-active profile resolver promotes pose_dim 0 → 6."""
+    src = (REPO / "src" / "tac" / "experiments" / "train_renderer.py").read_text()
+    # The save site must build an arch_meta dict and pass it to torch.save.
+    assert 'arch_meta = {' in src, (
+        "save_training_state() must construct an arch_meta dict — Codex "
+        "R-Lane-D-Issue1. Without this, legacy resume crashes."
+    )
+    assert '"arch_meta": arch_meta' in src, (
+        "save_training_state() must persist arch_meta in the saved dict so "
+        "_peek_checkpoint_arch_meta() can recover it on resume."
+    )
+    assert '"schema_version": 1' in src, (
+        "arch_meta needs a schema_version so future arch additions are "
+        "backwards-compatible (bump → tracked migration)."
+    )
+
+
+def test_peek_checkpoint_arch_meta_handles_new_format(tmp_path) -> None:
+    """Codex R-Lane-D-Issue1: peeking a NEW-format checkpoint (with arch_meta
+    sibling key) must return arch_meta verbatim including pose_dim."""
+    from tac.experiments.train_renderer import _peek_checkpoint_arch_meta
+    ckpt_path = tmp_path / "training_state_test.pt"
+    torch.save(
+        {
+            "epoch": 5,
+            "model": {"renderer.const": torch.zeros(1, 4)},
+            "ema_shadow": {},
+            "arch_meta": {"schema_version": 1, "pose_dim": 6, "base_ch": 36},
+        },
+        ckpt_path,
+    )
+    meta = _peek_checkpoint_arch_meta(ckpt_path, device="cpu")
+    assert meta is not None and meta["pose_dim"] == 6
+
+
+def test_peek_checkpoint_arch_meta_legacy_with_film_keys(tmp_path) -> None:
+    """Codex R-Lane-D-Issue1: a LEGACY checkpoint (no arch_meta) with film_*
+    keys in the state_dict must auto-detect pose_dim=6 so resume builds the
+    matching FiLM model."""
+    from tac.experiments.train_renderer import _peek_checkpoint_arch_meta
+    ckpt_path = tmp_path / "training_state_legacy_film.pt"
+    # Synthesise a legacy save: no arch_meta, but state_dict has film_ keys.
+    torch.save(
+        {
+            "epoch": 1,
+            "model": {
+                "renderer.const": torch.zeros(1, 4),
+                "renderer.film_bottleneck.weight": torch.zeros(8, 6),
+            },
+            "ema_shadow": {},
+        },
+        ckpt_path,
+    )
+    meta = _peek_checkpoint_arch_meta(ckpt_path, device="cpu")
+    assert meta is not None
+    assert meta["pose_dim"] == 6
+    assert meta.get("_legacy_no_arch_meta") is True
+
+
+def test_peek_checkpoint_arch_meta_legacy_no_film_keys(tmp_path) -> None:
+    """Codex R-Lane-D-Issue1: a LEGACY checkpoint with NO film_* keys (the
+    dead-resolver case where pose_dim was effectively 0) must auto-detect
+    pose_dim=0 so resume succeeds with the matching non-FiLM model."""
+    from tac.experiments.train_renderer import _peek_checkpoint_arch_meta
+    ckpt_path = tmp_path / "training_state_legacy_nofilm.pt"
+    torch.save(
+        {
+            "epoch": 1,
+            "model": {"renderer.const": torch.zeros(1, 4)},  # no film_*
+            "ema_shadow": {},
+        },
+        ckpt_path,
+    )
+    meta = _peek_checkpoint_arch_meta(ckpt_path, device="cpu")
+    assert meta is not None
+    assert meta["pose_dim"] == 0
+    assert meta.get("_legacy_no_arch_meta") is True
+
+
+def test_resolve_pose_dim_for_resume_force_wins(tmp_path) -> None:
+    """Codex R-Lane-D-Issue1: --force-pose-dim must beat checkpoint arch_meta
+    AND profile resolution. The shape mismatch that follows is intentional —
+    silent shape drift is what we are protecting against, not preventing
+    operator-requested overrides."""
+    from tac.experiments.train_renderer import _resolve_pose_dim_for_resume
+    import argparse
+    ckpt_path = tmp_path / "ck.pt"
+    torch.save(
+        {"model": {}, "ema_shadow": {}, "arch_meta": {"pose_dim": 6}},
+        ckpt_path,
+    )
+    args = argparse.Namespace(force_pose_dim=0, pose_dim=6)
+    pd, src = _resolve_pose_dim_for_resume(args, ckpt_path)
+    assert pd == 0 and src == "cli_force"
+
+
+def test_resolve_pose_dim_for_resume_checkpoint_overrides_profile(tmp_path) -> None:
+    """Codex R-Lane-D-Issue1: when --force-pose-dim is unset AND the
+    checkpoint's arch_meta disagrees with the profile, the checkpoint wins
+    (resume must use the saved arch, otherwise strict load fails)."""
+    from tac.experiments.train_renderer import _resolve_pose_dim_for_resume
+    import argparse
+    ckpt_path = tmp_path / "ck.pt"
+    torch.save(
+        {"model": {}, "ema_shadow": {}, "arch_meta": {"pose_dim": 0}},
+        ckpt_path,
+    )
+    args = argparse.Namespace(force_pose_dim=None, pose_dim=6)
+    pd, src = _resolve_pose_dim_for_resume(args, ckpt_path)
+    assert pd == 0
+    assert src == "checkpoint_arch_meta"
+
+
+def test_resolve_pose_dim_for_resume_no_checkpoint_uses_profile() -> None:
+    """Codex R-Lane-D-Issue1: without a resume checkpoint, the profile
+    pose_dim wins (the original Lane D path)."""
+    from tac.experiments.train_renderer import _resolve_pose_dim_for_resume
+    import argparse
+    args = argparse.Namespace(force_pose_dim=None, pose_dim=6)
+    pd, src = _resolve_pose_dim_for_resume(args, None)
+    assert pd == 6 and src == "profile"
+
+
+# ── 9. Codex R-Lane-D-Issue2: half-frame eval gating ─────────────────────
+
+
+def test_evaluate_fp4_accepts_half_frame_mode_kwarg() -> None:
+    """Codex R-Lane-D-Issue2: evaluate_fp4 must accept half_frame_mode so the
+    in-training evaluator can mirror the inflate-side warp_inverse_masks
+    reconstruction. Without this, best checkpoint selection optimises a
+    distribution the deployed model never sees."""
+    from tac.experiments.train_renderer import evaluate_fp4
+    import inspect
+    sig = inspect.signature(evaluate_fp4)
+    assert "half_frame_mode" in sig.parameters, (
+        "evaluate_fp4 missing half_frame_mode kwarg — without it, half-frame "
+        "deployment scores can't be measured during training."
+    )
+    # Default must be False so legacy callers (DEN baseline path) keep
+    # full-frame eval semantics.
+    default = sig.parameters["half_frame_mode"].default
+    assert default is False, (
+        f"half_frame_mode default must be False (legacy compat), got {default}"
+    )
+
+
+def test_evaluate_fp4_half_frame_mode_requires_zoom_warp() -> None:
+    """Codex R-Lane-D-Issue2: evaluate_fp4(half_frame_mode=True) without a
+    sim_zoom_warp must FAIL LOUD instead of silently passing through —
+    silent half-frame eval falls back to mask_t = mask_t (the bug we are
+    fixing in the first place)."""
+    from tac.experiments.train_renderer import evaluate_fp4
+    import inspect
+    src_lines = inspect.getsource(evaluate_fp4)
+    assert "half_frame_mode=True) requires sim_zoom_warp" in src_lines, (
+        "evaluate_fp4 must raise when half_frame_mode=True but sim_zoom_warp "
+        "is None — Codex R-Lane-D-Issue2."
+    )
+
+
+def test_evaluate_fp4_half_frame_mode_calls_warp_inverse_masks() -> None:
+    """Codex R-Lane-D-Issue2: source-level pin — evaluate_fp4 in
+    half_frame_mode must call sim_zoom_warp.warp_inverse_masks. Without this,
+    the eval is full-frame even with the kwarg set."""
+    src = (REPO / "src" / "tac" / "experiments" / "train_renderer.py").read_text()
+    # Locate evaluate_fp4 body
+    m = re.search(
+        r"def evaluate_fp4\(.*?(?=\n(?:def |class )|\Z)",
+        src, re.DOTALL,
+    )
+    assert m, "couldn't locate evaluate_fp4 body"
+    body = m.group(0)
+    assert "sim_zoom_warp.warp_inverse_masks(" in body, (
+        "evaluate_fp4 body missing sim_zoom_warp.warp_inverse_masks() call. "
+        "Without it, half_frame_mode does nothing — Codex R-Lane-D-Issue2."
+    )
+    assert "if half_frame_mode" in body, (
+        "evaluate_fp4 must gate the warp_inverse_masks call on half_frame_mode "
+        "(otherwise full-frame eval is broken too)."
+    )
+
+
+def test_train_loop_runs_both_eval_modes_in_halfframe_profile() -> None:
+    """Codex R-Lane-D-Issue2: the train loop must call evaluate_fp4 TWICE
+    when in half-frame mode (once full-frame for diagnostics, once
+    half-frame for best-gating). Source-level pin."""
+    src = (REPO / "src" / "tac" / "experiments" / "train_renderer.py").read_text()
+    # Two evaluate_fp4 call sites should appear inside the eval block.
+    # Count specifically the calls that pass half_frame_mode=True / False
+    # explicitly — those are the dual-mode calls (the legacy single-mode
+    # call that doesn't pass the kwarg lives in test code only).
+    assert "half_frame_mode=False," in src, (
+        "train loop must pass half_frame_mode=False on the diagnostic call"
+    )
+    assert "half_frame_mode=True," in src, (
+        "train loop must pass half_frame_mode=True on the deployment-metric call"
+    )
+
+
+def test_best_checkpoint_uses_half_frame_score_when_halfframe_active() -> None:
+    """Codex R-Lane-D-Issue2: the best-checkpoint gate (`if scorer_val <
+    best_scorer`) must be fed the HALF-FRAME scorer when half-frame eval is
+    active. Without this, the saved checkpoint optimises the wrong
+    distribution and Lane D's predicted 0.55-0.75 ships the wrong file."""
+    src = (REPO / "src" / "tac" / "experiments" / "train_renderer.py").read_text()
+    # Locate the eval block (between the FP4 evaluation comment and the
+    # 'Log and save best' marker).
+    m = re.search(
+        r"# FP4 evaluation \(skip during Phase 1.*?# Log and save best",
+        src, re.DOTALL,
+    )
+    assert m, "couldn't locate eval block boundary"
+    block = m.group(0)
+    # Best-gate metric must be assigned from the half-frame eval, not the
+    # full-frame eval, when half-frame is active.
+    assert "scorer_val = scorer_val_half" in block, (
+        "best-gate must be fed scorer_val_half when half-frame eval is active "
+        "(Codex R-Lane-D-Issue2). Without this, best ships full-frame-best."
+    )
+    # And the legacy / non-half-frame path must STILL fall back to full-frame.
+    assert "scorer_val = scorer_val_full" in block, (
+        "non-half-frame profiles must keep full-frame best-gate semantics"
+    )
+
+
+def test_evaluate_fp4_full_frame_only_in_baseline_profile() -> None:
+    """Codex R-Lane-D-Issue2: profiles WITHOUT half-frame deployment (the
+    DILATED_H64 / SHIRAZ / DEN baselines) must NOT activate the half-frame
+    eval branch — running it would do unnecessary work and could mislead
+    operators with a deployment-irrelevant metric."""
+    src = (REPO / "src" / "tac" / "experiments" / "train_renderer.py").read_text()
+    # Hand-roll a paren-balanced extraction since arbitrarily-nested parens
+    # aren't trivially expressible with re.
+    start = src.find("_halfframe_eval_active = (")
+    assert start != -1, "couldn't locate _halfframe_eval_active gate"
+    depth = 0
+    end = -1
+    for i in range(start + len("_halfframe_eval_active = "), len(src)):
+        if src[i] == "(":
+            depth += 1
+        elif src[i] == ")":
+            depth -= 1
+            if depth == 0:
+                end = i + 1
+                break
+    assert end != -1, "couldn't find matching closing paren"
+    gate = src[start:end]
+    assert "sim_zoom_warp is not None" in gate, (
+        "half-frame eval gate must require sim_zoom_warp — without it, "
+        "warp_inverse_masks() raises AttributeError"
+    )
+    assert "use_zoom_flow" in gate and "mask_half_sim_prob" in gate, (
+        "half-frame eval gate must check BOTH use_zoom_flow and "
+        "mask_half_sim_prob (either alone is sufficient to ship half-frame)"
+    )
+
+
+# ── 10. Codex R-Lane-D-Issue3: bootstrap script real-flag enforcement ────
+
+
+def test_bootstrap_script_passes_required_tag_flag() -> None:
+    """Codex R-Lane-D-Issue3: train_renderer's --tag is required=True. The
+    previous script omitted it → argparse SystemExit on launch (the script
+    literally couldn't run)."""
+    script = (REPO / "scripts" / "remote_lane_d_halfframe_retrain.sh").read_text()
+    # Find the train_renderer invocation
+    m = re.search(
+        r'src/tac/experiments/train_renderer\.py(.*?)(?=\n\s*BEST_FP32=|\Z)',
+        script, re.DOTALL,
+    )
+    assert m, "couldn't locate train_renderer.py invocation"
+    invocation = m.group(0)
+    assert "--tag" in invocation, (
+        "bootstrap MUST pass --tag (required=True in train_renderer argparse). "
+        "Without it the script crashes immediately — Codex R-Lane-D-Issue3."
+    )
+
+
+def test_bootstrap_script_disables_or_satisfies_auth_eval_on_best() -> None:
+    """Codex R-Lane-D-Issue3: --auth-eval-on-best defaults TRUE. Without
+    matching --auth-eval-masks AND --auth-eval-poses, train_renderer hard-
+    fails. Lane D's bootstrap runs the auth eval as a separate Stage 4
+    (through contest_auth_eval.py) so the in-training auth eval must be
+    explicitly disabled."""
+    script = (REPO / "scripts" / "remote_lane_d_halfframe_retrain.sh").read_text()
+    m = re.search(
+        r'src/tac/experiments/train_renderer\.py(.*?)(?=\n\s*BEST_FP32=|\Z)',
+        script, re.DOTALL,
+    )
+    assert m
+    invocation = m.group(0)
+    has_disable = "--no-auth-eval-on-best" in invocation
+    has_masks = "--auth-eval-masks" in invocation
+    has_poses = "--auth-eval-poses" in invocation
+    assert has_disable or (has_masks and has_poses), (
+        "bootstrap MUST either pass --no-auth-eval-on-best OR provide both "
+        "--auth-eval-masks and --auth-eval-poses. Otherwise train_renderer "
+        "raises RuntimeError at the end of training (Council R3 fix)."
+    )
+
+
+def test_bootstrap_script_finds_real_checkpoint_path() -> None:
+    """Codex R-Lane-D-Issue3: train_renderer writes
+    `renderer_<tag>_best_fp32.pt` (canonical) and `renderer_<tag>_best_fp4.pt`
+    (FP4-packed dict, NOT a renderer.bin). The bootstrap must reference one of
+    these REAL filenames — not the previous `*_fp4.bin` glob that matched zero
+    files."""
+    script = (REPO / "scripts" / "remote_lane_d_halfframe_retrain.sh").read_text()
+    # The script must reference the real fp32 .pt name pattern.
+    assert "renderer_${TAG}_best_fp32.pt" in script or \
+           "renderer_<tag>_best_fp32.pt" in script.lower(), (
+        "bootstrap must reference renderer_<tag>_best_fp32.pt — the actual "
+        "filename train_renderer writes (NOT the previous *_fp4.bin glob "
+        "which matched zero files)."
+    )
+    # And the previous broken glob MUST NOT reappear.
+    assert "renderer_best_fp4.bin" not in script, (
+        "bootstrap still references the broken *_fp4.bin glob — Codex "
+        "R-Lane-D-Issue3 was incompletely applied."
+    )
+
+
+def test_bootstrap_script_exports_fp4a_renderer_bin() -> None:
+    """Codex R-Lane-D-Issue3: the .pt file train_renderer writes is a
+    torch.save dict of FP4-packed scales/indices — NOT a renderer.bin with
+    FP4A magic. The inflate path REQUIRES FP4A magic, so the bootstrap must
+    convert .pt → .bin via tac.renderer_export.export_asymmetric_checkpoint_fp4
+    (the same path pipeline.py:step_export uses)."""
+    script = (REPO / "scripts" / "remote_lane_d_halfframe_retrain.sh").read_text()
+    assert "export_asymmetric_checkpoint_fp4" in script, (
+        "bootstrap must call export_asymmetric_checkpoint_fp4 to produce a "
+        "real FP4A renderer.bin — Codex R-Lane-D-Issue3. Otherwise the "
+        "inflate side rejects the file (no FP4A magic bytes)."
+    )
+
+
+def test_bootstrap_script_has_dead_flag_preflight() -> None:
+    """Codex R-Lane-D-Issue3 (defensive): the bootstrap must run an inline
+    argparse-introspection preflight that asserts every --flag in the
+    train_renderer invocation exists in train_renderer.py's argparse. This
+    catches the dead-flag class of bug at script-launch time (before any
+    GPU spend), not just in CI tests."""
+    script = (REPO / "scripts" / "remote_lane_d_halfframe_retrain.sh").read_text()
+    # The preflight must read train_renderer.py source and grep add_argument.
+    assert "add_argument" in script and "INVENTED FLAGS" in script, (
+        "bootstrap missing inline dead-flag preflight — Codex R-Lane-D-Issue3 "
+        "defensive measure. Add a python -c block that introspects argparse."
     )

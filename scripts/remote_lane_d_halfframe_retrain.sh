@@ -37,6 +37,23 @@
 #   * deterministic=True → CUBLAS_WORKSPACE_CONFIG=:4096:8, cudnn.deterministic=True
 #   * PYTHONHASHSEED=1234 (set below for python's hash randomisation)
 #   * Same RTX 4090 SKU + PyTorch version → bit-exact checkpoints across re-runs
+#
+# Codex R-Lane-D-Issue3 (2026-04-27): the previous version had THREE
+# deployment-blocking bugs that argparse/glob/header-magic would have caught
+# only after $1.25 of 4090 burn:
+#   (a) train_renderer.py requires --tag (required=True) — script omitted it.
+#   (b) --auth-eval-on-best defaults TRUE; without --auth-eval-masks/--poses
+#       train_renderer hard-fails. Stage 4 below builds a real archive and
+#       runs contest_auth_eval.py separately, so we explicitly disable the
+#       built-in auth-eval here.
+#   (c) train_renderer writes renderer_<tag>_best_fp4.pt (a torch.save dict
+#       of FP4-packed scales/indices) — NOT a renderer.bin with FP4A magic.
+#       The previous glob `*_fp4.bin` matched zero files; if it had matched,
+#       cp'ing it to renderer.bin would still fail at inflate (no FP4A magic).
+#       We now use the renderer_<tag>_best_fp32.pt + tac.renderer_export →
+#       export_asymmetric_checkpoint_fp4 to produce a real .bin. Same path
+#       pipeline.py:step_export uses, so we get bit-identical bytes to
+#       the canonical chain.
 set -euo pipefail
 WORKSPACE=/workspace/pact
 PYBIN=/opt/conda/bin/python
@@ -46,13 +63,15 @@ export PYTHONHASHSEED=1234
 
 LOG_DIR="$WORKSPACE/lane_d_results"
 mkdir -p "$LOG_DIR"
+TAG="lane_d_halfframe"
 
 log() { echo "[lane-d] $(date -u +%FT%TZ) $*" | tee -a "$LOG_DIR/run.log"; }
 
 # Pre-flight: required artifacts present
 for f in upstream/videos/0.mkv \
          upstream/models/segnet.safetensors \
-         upstream/models/posenet.safetensors; do
+         upstream/models/posenet.safetensors \
+         submissions/baseline_dilated_h64_0_90/optimized_poses.pt; do
     [ -f "$f" ] || { echo "FATAL: missing $f" >&2; exit 1; }
 done
 
@@ -76,10 +95,33 @@ print(f'PROFILE OK: base_ch={p[\"base_ch\"]} mid_ch={p[\"mid_ch\"]} '
       f'total_epochs={sum(p[f\"phase{i}_epochs\"] for i in range(1,6))}')
 " 2>&1 | tee -a "$LOG_DIR/run.log"
 
+# Pre-flight: dead-flag-wiring guard — every CLI flag in the train_renderer
+# invocation below must exist in train_renderer.py's argparse. Catches the
+# class of bug CLAUDE.md's "NEVER invent CLI flags" rule was created for
+# (the 2026-04-26 dead-auth-eval-masks incident burned multiple chains).
+log "=== Pre-flight: argparse dead-flag scan ==="
+"$PYBIN" -c "
+import re, sys
+sys.path.insert(0, 'src')
+script = open('scripts/remote_lane_d_halfframe_retrain.sh').read()
+tr_src = open('src/tac/experiments/train_renderer.py').read()
+real = set(re.findall(r'add_argument\(\s*[\"\\']--([a-z][a-z0-9-]+)', tr_src))
+m = re.search(r'src/tac/experiments/train_renderer\.py(.*?)(?=\n\s*BEST_FP32=|\Z)',
+              script, re.DOTALL)
+assert m, 'could not locate train_renderer.py invocation in script'
+used = set(re.findall(r'\B--([a-z][a-z0-9-]+)', m.group(0)))
+invented = used - real
+if invented:
+    print(f'INVENTED FLAGS: {sorted(invented)} not in train_renderer argparse',
+          file=sys.stderr); sys.exit(3)
+print(f'OK: {len(used)} flags all real')
+" 2>&1 | tee -a "$LOG_DIR/run.log"
+
 log "=== Stage 1: full-frame training (NB: training uses full-frame masks; the"
 log "    --mask-half-sim-prob=0.5 setting injects warp-reconstructed even-frame"
 log "    masks into 50% of batches — no separate half-frame mask precompute needed) ==="
 log "  profile: dilated_h64_half_frame"
+log "  tag:     $TAG"
 log "  schedule: 400ep P1 + 1080ep P2 + 200ep P3 + 200ep P4 + 100ep P5 = 1980 epochs"
 log "  estimated wall clock on 4090: ~5h ($1.25 at \$0.25/hr)"
 
@@ -98,27 +140,79 @@ cat > "$LOG_DIR/kill_targets.json" <<'EOF'
 }
 EOF
 
+# Codex R-Lane-D-Issue3: --no-auth-eval-on-best because Stage 4 below builds
+# the real archive (renderer + masks + poses + zoom_scalars) and runs
+# contest_auth_eval.py against it. train_renderer's built-in auth-eval would
+# need both --auth-eval-masks AND --auth-eval-poses (which don't exist yet at
+# this point in the chain — masks haven't been encoded, poses haven't been
+# TTO-optimized).
 "$PYBIN" -u src/tac/experiments/train_renderer.py \
     --profile dilated_h64_half_frame \
+    --tag "$TAG" \
     --device cuda \
     --video upstream/videos/0.mkv \
     --output-dir "$LOG_DIR/train" \
     --use-qat \
-    2>&1 | tee "$LOG_DIR/train.log" | grep -E "^\[(train|eval|masks|phase)\]|epoch|Phase|scorer" | tail -200
+    --no-auth-eval-on-best \
+    2>&1 | tee "$LOG_DIR/train.log" | grep -E "^\[(train|eval|masks|phase|best|arch)\]|epoch|Phase|scorer" | tail -200
 
-# Find the best FP4 checkpoint produced by the 5-phase schedule
-BEST_BIN=$(find "$LOG_DIR/train" -name "renderer_best_fp4.bin" -o -name "renderer_*_fp4.bin" 2>/dev/null | head -1)
-[ -n "$BEST_BIN" ] && [ -f "$BEST_BIN" ] || {
-    echo "FATAL: train_renderer didn't produce a *_fp4.bin checkpoint" >&2
+# Codex R-Lane-D-Issue3: train_renderer writes the FP4-packed checkpoint as
+# `renderer_<tag>_best_fp4.pt` (torch.save of a quantize_fp4() dict — keys
+# look like `weight.packed`, `weight.scales`, `weight.shape`). It is NOT an
+# FP4A .bin. To get a renderer.bin the inflate side can read, we use the
+# fp32 .pt (which has `model_state_dict` + `__meta__`) and feed it to
+# tac.renderer_export.export_asymmetric_checkpoint_fp4 — same path
+# pipeline.py:step_export uses, so we get the canonical FP4A binary.
+BEST_FP32="$LOG_DIR/train/renderer_${TAG}_best_fp32.pt"
+[ -f "$BEST_FP32" ] || {
+    echo "FATAL: train_renderer didn't produce ${BEST_FP32}" >&2
     ls -la "$LOG_DIR/train/" >&2
     exit 2
 }
-log "  best FP4 checkpoint: $BEST_BIN ($(stat -c '%s' "$BEST_BIN") bytes)"
+log "  best fp32 checkpoint: $BEST_FP32 ($(stat -c '%s' "$BEST_FP32") bytes)"
+
+log "=== Stage 1b: export FP4A renderer.bin from fp32 best ==="
+mkdir -p "$LOG_DIR/iter_0"
+"$PYBIN" -c "
+import sys, torch
+sys.path.insert(0, 'src')
+from tac.renderer import build_renderer
+from tac.renderer_export import export_asymmetric_checkpoint_fp4
+ckpt_path = '$BEST_FP32'
+out_bin = '$LOG_DIR/iter_0/renderer.bin'
+ckpt = torch.load(ckpt_path, map_location='cpu', weights_only=False)
+state = ckpt.get('model_state_dict', ckpt)
+meta = ckpt.get('__meta__', {}) or {}
+fp4_codebook = meta.get('fp4_codebook', 'residual')
+fp4_robust_scale = bool(meta.get('fp4_robust_scale', True))
+def m(key, default):
+    return meta.get(key, default)
+model = build_renderer(
+    embed_dim=m('embed_dim', 6),
+    base_ch=m('base_ch', 36),
+    mid_ch=m('mid_ch', 60),
+    motion_hidden=m('motion_hidden', 32),
+    depth=m('depth', 1),
+    pose_dim=m('pose_dim', 6),
+    use_dsconv=m('use_dsconv', False),
+    padding_mode=m('padding_mode', 'zeros'),
+    use_dilation=m('use_dilation', False),
+    use_zoom_flow=m('use_zoom_flow', True),
+)
+missing, unexpected = model.load_state_dict(state, strict=False)
+if missing or unexpected:
+    raise RuntimeError(
+        f'shape mismatch refusing to ship: missing={list(missing)[:3]} '
+        f'unexpected={list(unexpected)[:3]}'
+    )
+nbytes = export_asymmetric_checkpoint_fp4(
+    model, out_bin, codebook_name=fp4_codebook, robust_scale=fp4_robust_scale,
+)
+print(f'WROTE {out_bin}: {nbytes} bytes (codebook={fp4_codebook}, robust={fp4_robust_scale})')
+" 2>&1 | tee -a "$LOG_DIR/run.log"
+[ -f "$LOG_DIR/iter_0/renderer.bin" ] || { echo "FATAL: FP4A export failed" >&2; exit 2; }
 
 log "=== Stage 2: build half-frame archive (renderer + 600 odd masks + poses + zoom_scalars) ==="
-mkdir -p "$LOG_DIR/iter_0"
-cp "$BEST_BIN" "$LOG_DIR/iter_0/renderer.bin"
-
 # Build half-frame masks (600 odd-frame masks only) — Quantizr paradigm
 "$PYBIN" experiments/build_baseline_archive.py \
     --device cuda --crf 50 --half-frame \
