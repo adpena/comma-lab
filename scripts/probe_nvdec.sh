@@ -70,31 +70,60 @@ fi
 # allocation but does NOT exercise the NVDEC hardware decode path. A
 # Hungary host PASSED build() but FAILED at share_outputs() during the
 # Lane A auth-eval relaunch — wasting 22 min and a CPU-fallback inflate.
-# The strengthened probe synthesizes a tiny in-memory MP4 (1 frame, 2x2
-# pixel) using PyAV, feeds it to DALI via fn.experimental.inputs.video,
-# runs a full schedule_run + share_outputs cycle, and verifies the
-# decoded output tensor has the expected shape. If NVDEC is missing,
-# share_outputs() raises CUDA_ERROR_NO_DEVICE here, NOT at the Lane A
-# auth-eval invocation 22 min later.
+#
+# 2026-04-27 codex R5-4 #1 fix: the previous strengthened probe imported
+# PyAV (`av`) to synthesize the test MP4 in-memory. On a fresh container
+# without PyAV, the import failed and the probe exit-2'd, falsely
+# reporting "host has no NVDEC" when the real failure was a missing
+# Python dep. Fix: embed a tiny pre-built MP4 (16x16, 2 frames, h264/
+# yuv420p) as base64 — no external Python deps needed beyond DALI's
+# own torch+numpy. The fixture was generated once via:
+#   ffmpeg -y -f lavfi -i color=black:s=16x16:d=2:r=1 \
+#     -pix_fmt yuv420p -c:v libx264 -t 2 /tmp/tiny.mp4
+#   base64 /tmp/tiny.mp4
+# Total embedded payload: ~2.1 KiB. Decoded at runtime by stdlib base64.
 PROBE_OUT=$("$PYBIN" -c "
-import io, av, numpy as np
+import base64, numpy as np
 import torch  # noqa: F401  # ensure CUDA context inits before DALI
 
-# Build a tiny in-memory MP4 (1 frame, 2x2 pixel) — forces NVDEC to
-# actually decode something rather than just allocate handles.
-buf = io.BytesIO()
-container = av.open(buf, mode='w', format='mp4')
-stream = container.add_stream('h264', rate=1)
-stream.width, stream.height = 16, 16
-stream.pix_fmt = 'yuv420p'
-for _ in range(2):
-    arr = np.zeros((16, 16, 3), dtype=np.uint8)
-    frame = av.VideoFrame.from_ndarray(arr, format='rgb24')
-    for packet in stream.encode(frame): container.mux(packet)
-for packet in stream.encode(): container.mux(packet)
-container.close()
-buf.seek(0)
-video_bytes = buf.read()
+# Pre-built tiny MP4 (16x16, 2 frames @ 1 fps, yuv420p, h264). Generated
+# locally with ffmpeg; never regenerated at runtime. Forces NVDEC to
+# actually decode something rather than just allocate handles. PyAV is
+# NOT imported here — that would make a missing PyAV install masquerade
+# as a missing-NVDEC host failure (codex R5-4 #1).
+TINY_MP4_B64 = (
+    'AAAAIGZ0eXBpc29tAAACAGlzb21pc28yYXZjMW1wNDEAAAAIZnJlZQAAAtltZGF0AAACrQYF'
+    '//+p3EXpvebZSLeWLNgg2SPu73gyNjQgLSBjb3JlIDE2NSByMzIyMiBiMzU2MDVhIC0gSC4y'
+    'NjQvTVBFRy00IEFWQyBjb2RlYyAtIENvcHlsZWZ0IDIwMDMtMjAyNSAtIGh0dHA6Ly93d3cu'
+    'dmlkZW9sYW4ub3JnL3gyNjQuaHRtbCAtIG9wdGlvbnM6IGNhYmFjPTEgcmVmPTMgZGVibG9j'
+    'az0xOjA6MCBhbmFseXNlPTB4MzoweDExMyBtZT1oZXggc3VibWU9NyBwc3k9MSBwc3lfcmQ9'
+    'MS4wMDowLjAwIG1peGVkX3JlZj0xIG1lX3JhbmdlPTE2IGNocm9tYV9tZT0xIHRyZWxsaXM9'
+    'MSA4eDhkY3Q9MSBjcW09MCBkZWFkem9uZT0yMSwxMSBmYXN0X3Bza2lwPTEgY2hyb21hX3Fw'
+    'X29mZnNldD0tMiB0aHJlYWRzPTEgbG9va2FoZWFkX3RocmVhZHM9MSBzbGljZWRfdGhyZWFk'
+    'cz0wIG5yPTAgZGVjaW1hdGU9MSBpbnRlcmxhY2VkPTAgYmx1cmF5X2NvbXBhdD0wIGNvbnN0'
+    'cmFpbmVkX2ludHJhPTAgYmZyYW1lcz0zIGJfcHlyYW1pZD0yIGJfYWRhcHQ9MSBiX2JpYXM9'
+    'MCBkaXJlY3Q9MSB3ZWlnaHRiPTEgb3Blbl9nb3A9MCB3ZWlnaHRwPTIga2V5aW50PTI1MCBr'
+    'ZXlpbnRfbWluPTEgc2NlbmVjdXQ9NDAgaW50cmFfcmVmcmVzaD0wIHJjX2xvb2thaGVhZD00'
+    'MCByYz1jcmYgbWJ0cmVlPTEgY3JmPTIzLjAgcWNvbXA9MC42MCBxcG1pbj0wIHFwbWF4PTY5'
+    'IHFwc3RlcD00IGlwX3JhdGlvPTEuNDAgYXE9MToxLjAwAIAAAAAQZYiEABb//vfTP8yy7Jol'
+    'gQAAAAhBmiFsQV/+8AAAAzFtb292AAAAbG12aGQAAAAAAAAAAAAAAAAAAAPoAAAH0AABAAAB'
+    'AAAAAAAAAAAAAAAAAQAAAAAAAAAAAAAAAAAAAAEAAAAAAAAAAAAAAAAAAEAAAAAAAAAAAAAA'
+    'AAAAAAAAAAAAAAAAAAAAAAAAAAACAAACW3RyYWsAAABcdGtoZAAAAAMAAAAAAAAAAAAAAAEA'
+    'AAAAAAAH0AAAAAAAAAAAAAAAAAAAAAAAAQAAAAAAAAAAAAAAAAAAAAEAAAAAAAAAAAAAAAAA'
+    'AEAAAAAAEAAAABAAAAAAACRlZHRzAAAAHGVsc3QAAAAAAAAAAQAAB9AAAAAAAAEAAAAAAdNt'
+    'ZGlhAAAAIG1kaGQAAAAAAAAAAAAAAAAAAEAAAACAAFXEAAAAAAAtaGRscgAAAAAAAAAAdmlk'
+    'ZQAAAAAAAAAAAAAAAFZpZGVvSGFuZGxlcgAAAAF+bWluZgAAABR2bWhkAAAAAQAAAAAAAAAA'
+    'AAAAJGRpbmYAAAAcZHJlZgAAAAAAAAABAAAADHVybCAAAAABAAABPnN0YmwAAAC+c3RzZAAA'
+    'AAAAAAABAAAArmF2YzEAAAAAAAAAAQAAAAAAAAAAAAAAAAAAAAAAEAAQAEgAAABIAAAAAAAA'
+    'AAEVTGF2YzYyLjI4LjEwMCBsaWJ4MjY0AAAAAAAAAAAAAAAY//8AAAA0YXZjQwFkAAr/4QAX'
+    'Z2QACqzZXsBEAAADAAQAAAMACDxIllgBAAZo6+PLIsD9+PgAAAAAEHBhc3AAAAABAAAAAQAA'
+    'ABRidHJ0AAAAAAAAC0QAAAAAAAAAGHN0dHMAAAAAAAAAAQAAAAIAAEAAAAAAFHN0c3MAAAAA'
+    'AAAAAQAAAAEAAAAcc3RzYwAAAAAAAAABAAAAAQAAAAIAAAABAAAAHHN0c3oAAAAAAAAAAAAA'
+    'AAIAAALFAAAADAAAABRzdGNvAAAAAAAAAAEAAAAwAAAAYnVkdGEAAABabWV0YQAAAAAAAAAh'
+    'aGRscgAAAAAAAAAAbWRpcmFwcGwAAAAAAAAAAAAAAAAtaWxzdAAAACWpdG9vAAAAHWRhdGEA'
+    'AAABAAAAAExhdmY2Mi4xMi4xMDA='
+)
+video_bytes = base64.b64decode(TINY_MP4_B64)
 
 from nvidia.dali import pipeline_def, fn
 import nvidia.dali.types as dali_types

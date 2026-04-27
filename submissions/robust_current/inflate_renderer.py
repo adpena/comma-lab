@@ -2839,12 +2839,13 @@ def _adaptive_tto_phase(
     # AST has no `from tac.scorer import ...` to walk. This whole function is
     # ONLY reachable when INFLATE_TTO=1 (default 0). The wrapper that calls us
     # already prints the [strict-scorer-rule] non-compliance banner.
-    # noqa: scorer-at-inflate (env-gated, pending-ruling, see INFLATE_TTO)
+    # SCORER_AT_INFLATE_WAIVED:env-gated-INFLATE_TTO=1
     try:
         import importlib
         coupled_trajectory_optimize = importlib.import_module(
             "tac.constrained_gen"
         ).coupled_trajectory_optimize
+        # SCORER_AT_INFLATE_WAIVED:env-gated-INFLATE_TTO=1
         extract_gt_pose_targets = getattr(
             importlib.import_module("tac.scorer"), "extract_gt_pose_targets"
         )
@@ -3737,10 +3738,11 @@ def inflate_renderer_with_tto(
     # AST has no `from tac.scorer import ...` to walk. Functionally identical
     # to a normal import. Reachable only when INFLATE_TTO=1 (default 0); the
     # [strict-scorer-rule] banner above already announced non-compliance.
-    # noqa: scorer-at-inflate (env-gated, pending-ruling, see INFLATE_TTO)
+    # SCORER_AT_INFLATE_WAIVED:env-gated-INFLATE_TTO=1
     try:
         import importlib
         _scorer_mod = importlib.import_module("tac.scorer")
+        # SCORER_AT_INFLATE_WAIVED:env-gated-INFLATE_TTO=1
         _load_diff = getattr(_scorer_mod, "load_differentiable_scorers")
         posenet, segnet = _load_diff(upstream_root, device=device)
     except (ImportError, AttributeError):

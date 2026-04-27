@@ -149,20 +149,19 @@ def parse_args() -> argparse.Namespace:
 
 def _enforce_eval_roundtrip(args) -> None:
     """CLAUDE.md non-negotiable: eval_roundtrip ALWAYS True; only escape hatch
-    is TAC_ALLOW_NO_ROUNDTRIP=1 env var with loud banner."""
-    if not args.eval_roundtrip:
-        if os.environ.get("TAC_ALLOW_NO_ROUNDTRIP") != "1":
-            raise SystemExit(
-                "FATAL: eval_roundtrip is False but TAC_ALLOW_NO_ROUNDTRIP=1 "
-                "is not set. Set the env var explicitly for diagnostic ablation."
-            )
-        print(
-            "\n" + "!" * 78 + "\n"
-            "DANGER: eval_roundtrip is DISABLED via TAC_ALLOW_NO_ROUNDTRIP=1.\n"
-            "  Proxy-auth gap will be 2-11x. Tag results [no-roundtrip-ablation].\n"
-            + "!" * 78 + "\n",
-            flush=True,
-        )
+    is TAC_ALLOW_NO_ROUNDTRIP=1 env var with loud banner.
+
+    2026-04-27 codex R5-4 #4: delegated to the centralised
+    `tac.eval_roundtrip_gate.enforce_eval_roundtrip` helper. The previous
+    per-script copies were sticky — they only printed the warning when
+    `args.eval_roundtrip` was already False, so a leftover env var in a
+    shell / tmux session silently relaxed later runs without acknowledgement.
+    The centralised helper warns whenever the env var is present and
+    records it in run provenance.
+    """
+    from tac.eval_roundtrip_gate import enforce_eval_roundtrip
+    output_dir = getattr(args, "output_dir", None)
+    enforce_eval_roundtrip(args, output_dir=output_dir, write_provenance=output_dir is not None)
 
 
 def main() -> None:

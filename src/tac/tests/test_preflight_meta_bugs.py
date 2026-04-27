@@ -1524,3 +1524,464 @@ class TestPreflightAllInvokesMetaBugChecks:
                         f"to warn-only."
                     )
                     break
+
+
+# ─── codex R5-4 #1: NVDEC probe must not fail on missing PyAV ────────────────
+
+
+class TestNvdecProbeNoPyavDep:
+    """The NVDEC probe used to import PyAV (`av`) inside the same block it
+    used to diagnose NVDEC failure. On a fresh container without PyAV the
+    import failed and the probe exit-2'd, falsely telling operators the
+    host had no NVDEC. Fix: embed a tiny pre-built MP4 as base64; decode
+    via stdlib `base64`. Tests pin both invariants.
+    """
+
+    PROBE_PATH = (
+        Path(__file__).resolve().parents[3] / "scripts" / "probe_nvdec.sh"
+    )
+
+    def test_probe_does_not_import_pyav(self) -> None:
+        text = self.PROBE_PATH.read_text()
+        # The base64 fixture appears in the heredoc; it must NOT pull `av`.
+        assert "import av" not in text, (
+            "probe_nvdec.sh imports `av` (PyAV) — that turns a missing "
+            "Python dep into a fake 'host has no NVDEC' exit-2. Use the "
+            "embedded base64 fixture instead (codex R5-4 #1)."
+        )
+        # The replacement path must use base64 + the embedded constant.
+        assert "TINY_MP4_B64" in text, (
+            "probe_nvdec.sh must contain the embedded TINY_MP4_B64 "
+            "fixture (codex R5-4 #1)."
+        )
+        assert "import base64" in text, (
+            "probe_nvdec.sh must use stdlib `base64` to decode the "
+            "embedded fixture."
+        )
+
+    def test_embedded_fixture_decodes_to_valid_mp4(self) -> None:
+        """The embedded fixture must round-trip to a valid MP4 (1.5-2 KiB)."""
+        import base64 as _b64
+        import re
+
+        text = self.PROBE_PATH.read_text()
+        m = re.search(r"TINY_MP4_B64\s*=\s*\((.*?)\)", text, re.DOTALL)
+        assert m, "TINY_MP4_B64 tuple not found in probe_nvdec.sh"
+        parts = re.findall(r"'([^']+)'", m.group(1))
+        assert len(parts) >= 2, f"expected multi-line tuple, got {len(parts)}"
+        data = _b64.b64decode("".join(parts))
+        # MP4 fixture should be small (1-3 KiB) and start with the ftyp box.
+        assert 500 < len(data) < 4096, (
+            f"embedded MP4 size suspicious: {len(data)} bytes"
+        )
+        # MP4 ftyp box: bytes 4-7 are 'ftyp'.
+        assert data[4:8] == b"ftyp", (
+            f"embedded fixture is not an MP4 (ftyp box missing): "
+            f"first 16 bytes = {data[:16]!r}"
+        )
+
+
+# ─── codex R5-4 #2: scorer scanner detects dynamic imports + waivers ─────────
+
+
+class TestScorerScannerDynamicImports:
+    """The static scanner used to only catch `from tac.scorer import ...`
+    and direct loader-name calls. Live inflate scripts deliberately used
+    `importlib.import_module("tac.scorer")` + `getattr(mod, "load_scorers")`
+    to bypass the scanner — strict mode reported clean while real scorer-
+    at-inflate code remained env-gated. The new scanner detects the
+    dynamic forms AND respects an explicit
+    `# SCORER_AT_INFLATE_WAIVED:<reason>` comment marker so legitimate
+    pending-ruling paths can be acknowledged rather than hidden.
+    """
+
+    def test_importlib_import_module_is_caught(self, tmp_path: Path) -> None:
+        from tac.preflight import _scan_inflate_for_scorer_load_with_waivers
+
+        root = _stub_repo(tmp_path)
+        inf = root / "submissions" / "robust_current" / "inflate.py"
+        _write(inf, """
+            import importlib
+            mod = importlib.import_module("tac.scorer")
+        """)
+        u, w = _scan_inflate_for_scorer_load_with_waivers(inf, root)
+        assert any("import_module" in s for s in u), u
+        assert w == [], w
+
+    def test_importlib_util_find_spec_is_caught(self, tmp_path: Path) -> None:
+        from tac.preflight import _scan_inflate_for_scorer_load_with_waivers
+
+        root = _stub_repo(tmp_path)
+        inf = root / "submissions" / "robust_current" / "inflate.py"
+        _write(inf, """
+            import importlib.util
+            spec = importlib.util.find_spec("tac.scorer_targets")
+        """)
+        u, _w = _scan_inflate_for_scorer_load_with_waivers(inf, root)
+        assert any("find_spec" in s for s in u), u
+
+    def test_dunder_import_is_caught(self, tmp_path: Path) -> None:
+        from tac.preflight import _scan_inflate_for_scorer_load_with_waivers
+
+        root = _stub_repo(tmp_path)
+        inf = root / "submissions" / "robust_current" / "inflate.py"
+        _write(inf, """
+            mod = __import__("tac.scorer")
+        """)
+        u, _w = _scan_inflate_for_scorer_load_with_waivers(inf, root)
+        assert any("__import__" in s for s in u), u
+
+    def test_getattr_loader_string_is_caught(self, tmp_path: Path) -> None:
+        from tac.preflight import _scan_inflate_for_scorer_load_with_waivers
+
+        root = _stub_repo(tmp_path)
+        inf = root / "submissions" / "robust_current" / "inflate.py"
+        _write(inf, """
+            import importlib
+            mod = importlib.import_module("tac.scorer")
+            fn = getattr(mod, "load_scorers")
+        """)
+        u, _w = _scan_inflate_for_scorer_load_with_waivers(inf, root)
+        # Two violations expected: import_module + getattr.
+        assert len(u) >= 2, u
+        assert any("getattr" in s and "load_scorers" in s for s in u), u
+
+    def test_getattr_extract_gt_pose_targets_is_caught(self, tmp_path: Path) -> None:
+        from tac.preflight import _scan_inflate_for_scorer_load_with_waivers
+
+        root = _stub_repo(tmp_path)
+        inf = root / "submissions" / "robust_current" / "inflate.py"
+        _write(inf, """
+            fn = getattr(somemod, "extract_gt_pose_targets")
+        """)
+        u, _w = _scan_inflate_for_scorer_load_with_waivers(inf, root)
+        assert any("extract_gt_pose_targets" in s for s in u), u
+
+    def test_waiver_marker_same_line(self, tmp_path: Path) -> None:
+        from tac.preflight import _scan_inflate_for_scorer_load_with_waivers
+
+        root = _stub_repo(tmp_path)
+        inf = root / "submissions" / "robust_current" / "inflate.py"
+        _write(inf, """
+            import importlib
+            mod = importlib.import_module("tac.scorer")  # SCORER_AT_INFLATE_WAIVED:env-gated-INFLATE_TTO=1
+        """)
+        u, w = _scan_inflate_for_scorer_load_with_waivers(inf, root)
+        assert u == [], (
+            f"same-line waiver marker should suppress strict failure; got: {u}"
+        )
+        assert any("import_module" in s for s in w), w
+
+    def test_waiver_marker_within_lookback(self, tmp_path: Path) -> None:
+        from tac.preflight import _scan_inflate_for_scorer_load_with_waivers
+
+        root = _stub_repo(tmp_path)
+        inf = root / "submissions" / "robust_current" / "inflate.py"
+        # Marker 3 lines above the call; must still waive.
+        _write(inf, """
+            import importlib
+            # SCORER_AT_INFLATE_WAIVED:env-gated-INFLATE_TTO=1
+            # extra context line 1
+            # extra context line 2
+            mod = importlib.import_module("tac.scorer")
+        """)
+        u, w = _scan_inflate_for_scorer_load_with_waivers(inf, root)
+        assert u == [], (
+            f"waiver marker within 6-line lookback should suppress; got: {u}"
+        )
+        assert len(w) == 1, w
+
+    def test_legacy_noqa_marker_is_recognised(self, tmp_path: Path) -> None:
+        from tac.preflight import _scan_inflate_for_scorer_load_with_waivers
+
+        root = _stub_repo(tmp_path)
+        inf = root / "submissions" / "robust_current" / "inflate.py"
+        _write(inf, """
+            import importlib
+            # noqa: scorer-at-inflate (env-gated, pending-ruling)
+            mod = importlib.import_module("tac.scorer")
+        """)
+        u, w = _scan_inflate_for_scorer_load_with_waivers(inf, root)
+        assert u == [], (
+            f"legacy `# noqa: scorer-at-inflate` marker should suppress; "
+            f"got: {u}"
+        )
+        assert len(w) == 1, w
+
+    def test_marker_inside_string_is_not_a_waiver(self, tmp_path: Path) -> None:
+        """The marker must be inside a comment, not a string literal."""
+        from tac.preflight import _scan_inflate_for_scorer_load_with_waivers
+
+        root = _stub_repo(tmp_path)
+        inf = root / "submissions" / "robust_current" / "inflate.py"
+        _write(inf, """
+            x = "SCORER_AT_INFLATE_WAIVED:fake"
+            import importlib
+            mod = importlib.import_module("tac.scorer")
+        """)
+        u, _w = _scan_inflate_for_scorer_load_with_waivers(inf, root)
+        # Note: our heuristic treats `# inside a string` literally — the
+        # `_line_is_waived` helper looks for `#` in the line text and
+        # only checks the post-# segment. The string here has no `#`,
+        # so no false-positive waiver. This pins that property.
+        assert any("import_module" in s for s in u), u
+
+    def test_check_strict_passes_with_only_waived(self, tmp_path: Path) -> None:
+        from tac.preflight import check_no_scorer_load_at_inflate
+
+        root = _stub_repo(tmp_path)
+        inf = root / "submissions" / "robust_current" / "inflate.py"
+        _write(inf, """
+            import importlib
+            mod = importlib.import_module("tac.scorer")  # SCORER_AT_INFLATE_WAIVED:env-gated-INFLATE_TTO=1
+        """)
+        # Strict mode must NOT raise — only waived hits remain.
+        v = check_no_scorer_load_at_inflate(repo_root=root, strict=True, verbose=False)
+        assert v == [], (
+            f"strict mode should pass with only waived violations; got: {v}"
+        )
+
+
+# ─── codex R5-4 #3: pack_sparse_delta promotion gate broader fixture ────────
+
+
+class TestPromotionGateFixtureExemptions:
+    """The previous exemption was `src/tac/tests/test_*.py` only. The
+    strict scanner now also scans `experiments/`, `scripts/`, and
+    `tools/` — a legitimate fixture or integration test under any of
+    those that constructs an approved blob with the internal token would
+    block strict preflight. The exemption now covers test files broadly
+    AND respects an explicit `# PACK_APPROVED_FIXTURE_OK` marker.
+    """
+
+    def test_experiments_test_file_is_exempt(self, tmp_path: Path) -> None:
+        from tac.preflight import (
+            check_no_pack_sparse_delta_approved_outside_promotion_tool,
+        )
+
+        root = _stub_repo(tmp_path)
+        # A legit integration-test fixture sitting in experiments/.
+        test = root / "experiments" / "test_some_pack_approved_workflow.py"
+        _write(test, """
+            from tac.uniward_delta import pack_sparse_delta
+            def test_fixture():
+                blob = pack_sparse_delta(
+                    delta, cost,
+                    l_inf_budget=4.0,
+                    compliance_status='approved',
+                    _internal_promotion_token=token,
+                )
+        """)
+        v = check_no_pack_sparse_delta_approved_outside_promotion_tool(
+            repo_root=root, strict=True, verbose=False,
+        )
+        assert v == [], (
+            f"test_*.py under experiments/ should be exempt (codex R5-4 "
+            f"#3); got {v}"
+        )
+
+    def test_conftest_is_exempt(self, tmp_path: Path) -> None:
+        from tac.preflight import (
+            check_no_pack_sparse_delta_approved_outside_promotion_tool,
+        )
+
+        root = _stub_repo(tmp_path)
+        conf = root / "experiments" / "conftest.py"
+        _write(conf, """
+            from tac.uniward_delta import pack_sparse_delta
+            def make_fixture():
+                return pack_sparse_delta(
+                    delta, cost,
+                    l_inf_budget=4.0,
+                    compliance_status='approved',
+                    _internal_promotion_token=token,
+                )
+        """)
+        v = check_no_pack_sparse_delta_approved_outside_promotion_tool(
+            repo_root=root, strict=True, verbose=False,
+        )
+        assert v == [], f"conftest.py should be exempt; got {v}"
+
+    def test_tests_dir_segment_is_exempt(self, tmp_path: Path) -> None:
+        from tac.preflight import (
+            check_no_pack_sparse_delta_approved_outside_promotion_tool,
+        )
+
+        root = _stub_repo(tmp_path)
+        # File NOT named test_*.py but inside a /tests/ segment.
+        f = root / "experiments" / "tests" / "shared_helpers.py"
+        _write(f, """
+            from tac.uniward_delta import pack_sparse_delta
+            def helper():
+                return pack_sparse_delta(
+                    d, c, l_inf_budget=4.0, compliance_status='approved',
+                )
+        """)
+        v = check_no_pack_sparse_delta_approved_outside_promotion_tool(
+            repo_root=root, strict=True, verbose=False,
+        )
+        assert v == [], (
+            f"any path containing /tests/ should be exempt; got {v}"
+        )
+
+    def test_explicit_marker_is_exempt(self, tmp_path: Path) -> None:
+        from tac.preflight import (
+            check_no_pack_sparse_delta_approved_outside_promotion_tool,
+        )
+
+        root = _stub_repo(tmp_path)
+        # A scripts-side fixture that's NOT a test file but carries the
+        # explicit waiver marker.
+        s = root / "scripts" / "build_negative_path_fixture.py"
+        _write(s, """
+            # PACK_APPROVED_FIXTURE_OK — builds an approved blob for the
+            # downstream attestation-rejection negative-path test.
+            from tac.uniward_delta import pack_sparse_delta
+            def build():
+                return pack_sparse_delta(
+                    d, c, l_inf_budget=4.0,
+                    compliance_status='approved',
+                    _internal_promotion_token=token,
+                )
+        """)
+        v = check_no_pack_sparse_delta_approved_outside_promotion_tool(
+            repo_root=root, strict=True, verbose=False,
+        )
+        assert v == [], (
+            f"file with `# PACK_APPROVED_FIXTURE_OK` marker should be "
+            f"exempt; got {v}"
+        )
+
+    def test_unmarked_non_test_file_still_blocks(self, tmp_path: Path) -> None:
+        """The exemption broadening must NOT silently let real violations
+        through. A non-test, non-fixture, non-marked file in scripts/
+        with `compliance_status='approved'` is still a violation."""
+        from tac.preflight import (
+            MetaBugViolation,
+            check_no_pack_sparse_delta_approved_outside_promotion_tool,
+        )
+
+        root = _stub_repo(tmp_path)
+        bad = root / "scripts" / "evil_promote.py"
+        _write(bad, """
+            from tac.uniward_delta import pack_sparse_delta
+            def evil():
+                return pack_sparse_delta(
+                    d, c, l_inf_budget=4.0, compliance_status='approved',
+                )
+        """)
+        with pytest.raises(MetaBugViolation):
+            check_no_pack_sparse_delta_approved_outside_promotion_tool(
+                repo_root=root, strict=True, verbose=False,
+            )
+
+
+# ─── codex R5-4 #4: centralised eval_roundtrip gate ──────────────────────────
+
+
+class TestEvalRoundtripGate:
+    """The per-script `_enforce_eval_roundtrip(args)` helper used to be a
+    duplicated copy in 16 different scripts. It only checked the env var
+    when args.eval_roundtrip was already False — so a leftover
+    TAC_ALLOW_NO_ROUNDTRIP=1 in a shell session silently relaxed later
+    runs without any per-run acknowledgement. The fix centralises the
+    helper into `tac.eval_roundtrip_gate` and warns whenever the env var
+    is present, regardless of the args value.
+    """
+
+    def setup_method(self) -> None:
+        # Always start each test with a clean env.
+        import os
+        self._saved = os.environ.pop("TAC_ALLOW_NO_ROUNDTRIP", None)
+
+    def teardown_method(self) -> None:
+        import os
+        os.environ.pop("TAC_ALLOW_NO_ROUNDTRIP", None)
+        if self._saved is not None:
+            os.environ["TAC_ALLOW_NO_ROUNDTRIP"] = self._saved
+
+    def _make_args(self, eval_roundtrip: bool):
+        class _A:
+            pass
+        a = _A()
+        a.eval_roundtrip = eval_roundtrip
+        return a
+
+    def test_true_no_env_is_clean(self, capsys) -> None:
+        from tac.eval_roundtrip_gate import enforce_eval_roundtrip
+
+        r = enforce_eval_roundtrip(
+            self._make_args(True), write_provenance=False,
+        )
+        assert r.eval_roundtrip is True
+        assert r.env_var_present is False
+        assert r.proceeded_via_escape_hatch is False
+        # No banner printed.
+        captured = capsys.readouterr()
+        assert "DANGER" not in captured.err
+        assert "WARNING" not in captured.err
+
+    def test_true_with_env_present_warns(self, capsys) -> None:
+        import os
+        from tac.eval_roundtrip_gate import enforce_eval_roundtrip
+
+        os.environ["TAC_ALLOW_NO_ROUNDTRIP"] = "1"
+        r = enforce_eval_roundtrip(
+            self._make_args(True), write_provenance=False,
+        )
+        assert r.eval_roundtrip is True
+        assert r.env_var_present is True
+        captured = capsys.readouterr()
+        assert "WARNING" in captured.err
+        assert "TAC_ALLOW_NO_ROUNDTRIP" in captured.err
+
+    def test_false_with_env_present_warns_and_proceeds(self, capsys) -> None:
+        import os
+        from tac.eval_roundtrip_gate import enforce_eval_roundtrip
+
+        os.environ["TAC_ALLOW_NO_ROUNDTRIP"] = "1"
+        r = enforce_eval_roundtrip(
+            self._make_args(False), write_provenance=False,
+        )
+        assert r.eval_roundtrip is False
+        assert r.proceeded_via_escape_hatch is True
+        captured = capsys.readouterr()
+        assert "DANGER" in captured.err
+
+    def test_false_no_env_raises_systemexit(self) -> None:
+        from tac.eval_roundtrip_gate import enforce_eval_roundtrip
+
+        with pytest.raises(SystemExit):
+            enforce_eval_roundtrip(
+                self._make_args(False), write_provenance=False,
+            )
+
+    def test_provenance_written_when_output_dir_given(self, tmp_path: Path) -> None:
+        import json
+        from tac.eval_roundtrip_gate import enforce_eval_roundtrip
+
+        out = tmp_path / "run_dir"
+        r = enforce_eval_roundtrip(
+            self._make_args(True), output_dir=out, write_provenance=True,
+        )
+        sidecar = out / "eval_roundtrip_gate.json"
+        assert sidecar.exists()
+        d = json.loads(sidecar.read_text())
+        assert d["eval_roundtrip"] is True
+        assert d["env_var_name"] == "TAC_ALLOW_NO_ROUNDTRIP"
+        assert d["env_var_present"] == r.env_var_present
+
+    def test_keyword_form_works_without_args(self) -> None:
+        """Programmatic callers can pass `eval_roundtrip=...` directly."""
+        from tac.eval_roundtrip_gate import enforce_eval_roundtrip
+
+        r = enforce_eval_roundtrip(
+            eval_roundtrip=True, write_provenance=False,
+        )
+        assert r.eval_roundtrip is True
+
+    def test_neither_args_nor_kwarg_raises_value_error(self) -> None:
+        from tac.eval_roundtrip_gate import enforce_eval_roundtrip
+
+        with pytest.raises(ValueError):
+            enforce_eval_roundtrip(write_provenance=False)

@@ -700,6 +700,10 @@ def inflate_with_postfilter(
         print(banner, file=sys.stderr, flush=True)
         try:
             import importlib
+            # SCORER_AT_INFLATE_WAIVED:env-gated-supervised-tto-steps>0
+            # Pending-ruling path: --supervised-tto-steps > 0 + targets file
+            # present. Banner above announces non-compliance. Waiver marker
+            # is recognised by tac.preflight._scan_inflate_for_scorer_load.
             load_posenet_targets = getattr(
                 importlib.import_module("tac.scorer_targets"), "load_posenet_targets"
             )
@@ -723,6 +727,7 @@ def inflate_with_postfilter(
                         # Dynamic import: scanner-silent. See banner above.
                         # Local alias avoids `endswith("load_scorers")` match
                         # in the preflight scanner (renamed to `_resolve_scorers`).
+                        # SCORER_AT_INFLATE_WAIVED:env-gated-supervised-tto-steps>0
                         _scorer_mod = importlib.import_module("tac.scorer")
                         _resolve_scorers = getattr(_scorer_mod, "load_scorers")
                         if posenet_path and segnet_path:
@@ -795,9 +800,13 @@ def inflate_with_postfilter(
             import importlib
             # Local aliases avoid `endswith("load_scorers")` /
             # `endswith("load_posenet")` matches in the preflight scanner.
+            # SCORER_AT_INFLATE_WAIVED:env-gated-supervised-tto-if-available
+            # Reachable only when --supervised-tto-if-available is set; banner
+            # above already announced non-compliance. Pending council ruling.
             _scorer_mod = importlib.import_module("tac.scorer")
             _resolve_scorers = getattr(_scorer_mod, "load_scorers")
             _stto_fn = getattr(importlib.import_module("tac.tto"), "supervised_tto")
+            # SCORER_AT_INFLATE_WAIVED:env-gated-supervised-tto-if-available
             _fetch_targets = getattr(
                 importlib.import_module("tac.scorer_targets"), "load_posenet_targets"
             )
