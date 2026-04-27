@@ -8,6 +8,31 @@ Read `PROGRAM.md` before making changes.
 
 **Any auth score above 1.0 is UNACCEPTABLE.** Do the math during training. If projected auth > 1.0, something is wrong — stop and fix it before burning more GPU hours. Every training run, TTO, postfilter, and optimization must be evaluated against this target BEFORE launch, not after.
 
+## FORBIDDEN PATTERNS — NON-NEGOTIABLE, READ BEFORE WRITING ANY CODE
+
+These are exact code patterns I have written multiple times despite the rules below saying not to. They are FORBIDDEN at the typing moment. If a default would land here, refuse it before typing — do not "fix it on review."
+
+**Forbidden device-selection defaults (the MPS-fallback trap):**
+```python
+device = "cuda" if torch.cuda.is_available() else "mps" if ... else "cpu"  # FORBIDDEN
+device = torch.device(env.get("DEVICE", "cuda" if cuda.is_available() else "mps"))  # FORBIDDEN
+```
+Correct: default to CUDA-REQUIRED. Raise on no-CUDA. Provide explicit `--device cpu` opt-in with a banner that the bytes/score will differ. (See `feedback_default_to_convenience_trap`.)
+
+**Forbidden CLI flag inventions (the dead-flag trap):**
+Adding `--auth-eval-masks` to a subprocess call without `grep "add_argument" target.py` first. Inventing flag names from intent is FORBIDDEN. Always grep the target's argparse before emitting any flag. (See `feedback_dead_flag_wiring_pattern`.)
+
+**Forbidden silent-skip cascades (the bootstrap trap):**
+Writing `set -uo pipefail` (no `-e`). Calling `zip` shell binary instead of python `zipfile.ZipFile`. Passing empty captured variable to argparse. (See `feedback_zip_dep_bootstrap_trap`.)
+
+**Forbidden score claims:**
+Reporting any score that did not come from contest-CUDA `upstream/evaluate.py` on the EXACT archive bytes that will be submitted. No proxy MSE. No MPS. No "looks reasonable" extrapolation. Tag every reported score `[contest-CUDA]` or `[advisory only]`. (See `feedback_proxy_auth_math_useless`, `feedback_mps_cuda_drift_critical`.)
+
+**Forbidden component-aliasing for baselines:**
+Treating a directory of components as the "baseline" without verifying every file SHA against the archive ZIP that produced the baseline score. Components from different lanes leak into the same dir; SHA-vs-archive is the only check. (See `feedback_phantom_baseline_pattern`.)
+
+**Enforcement:** Before typing ANY of the above patterns, STOP. The non-negotiable wins over the convenient default. This list is in CLAUDE.md so it is loaded into context at session start; if I write one of these patterns anyway, that is a process failure, not an information failure.
+
 ## NEVER invent CLI flags — NON-NEGOTIABLE, HIGHEST EMPHASIS
 
 **Before wiring any flag into `subprocess.run([...])`, READ the target tool's actual `parser.add_argument(...)` list.** Don't invent flag names from intent. Don't trust prior code that "looked like it worked." Verify against argparse. The cost: 30 seconds of `grep "add_argument" target.py`. The cost of NOT doing it: days of wasted GPU + a council review chain that misses the dead-flag bug across multiple rounds.
