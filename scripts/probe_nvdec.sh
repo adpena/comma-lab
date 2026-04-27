@@ -19,10 +19,20 @@
 #
 # Idempotent. Safe to call multiple times.
 #
-# Exit codes:
+# Exit codes (codex R5-r6 #4 — error classification):
 #   0 — NVDEC available, downstream auth eval will work
-#   1 — DALI not installed (dependency error, not a host problem)
-#   2 — NVDEC missing on this host (kill instance, pick a different one)
+#   1 — DALI not installed at all (dependency error, not a host problem)
+#   2 — NVDEC missing on this host (KILL instance, pick a different one)
+#   3 — DALI/dependency build error (NOT a NVDEC-missing problem — investigate)
+#   4 — Embedded MP4 fixture invalid or shape assertion failed (probe bug, not
+#       a host problem; report upstream)
+#   5 — Unknown failure mode — investigate manually, do NOT auto-destroy host
+#
+# Previously every Python failure mapped to exit 2 ("kill the host"). That
+# meant a fixture-corrupt build OR a DALI install issue triggered the same
+# operator response (destroy + relaunch) as a genuine missing-NVDEC host.
+# Real NVDEC-missing failures emit "CUDA_ERROR_NO_DEVICE" / "no CUDA-capable
+# device" / "NVDEC" in the exception text — only those should map to exit 2.
 #
 # Flags:
 #   --ensure-dali  — if DALI is missing, install it and re-check (instead
@@ -75,84 +85,225 @@ fi
 # PyAV (`av`) to synthesize the test MP4 in-memory. On a fresh container
 # without PyAV, the import failed and the probe exit-2'd, falsely
 # reporting "host has no NVDEC" when the real failure was a missing
-# Python dep. Fix: embed a tiny pre-built MP4 (16x16, 2 frames, h264/
-# yuv420p) as base64 — no external Python deps needed beyond DALI's
-# own torch+numpy. The fixture was generated once via:
-#   ffmpeg -y -f lavfi -i color=black:s=16x16:d=2:r=1 \
+# Python dep. Fix: embed a tiny pre-built MP4 as base64 — no external
+# Python deps needed beyond DALI's own torch+numpy.
+#
+# 2026-04-27 Lane D fix: bumped fixture from 16x16 → 64x48 because newer
+# DALI / NVDEC enforces a minimum input size of 48x16 (frames_decoder_gpu.cc
+# line 179). The 16x16 fixture caused a min-size assertion that bash
+# classified as DALI_BUILD (exit 3), wedging Lane D launch on a host where
+# NVDEC was actually fine. Verified manually: this 64x48 fixture decodes
+# successfully with output shape (1, 2, 48, 64, 3). Fixture generated via:
+#   ffmpeg -y -f lavfi -i color=black:s=64x48:d=2:r=1 \
 #     -pix_fmt yuv420p -c:v libx264 -t 2 /tmp/tiny.mp4
 #   base64 /tmp/tiny.mp4
-# Total embedded payload: ~2.1 KiB. Decoded at runtime by stdlib base64.
+# Total embedded payload: ~2.2 KiB. Decoded at runtime by stdlib base64.
+#
+# 2026-04-27 codex R5-r6 #4 fix: classify failures by error text. The
+# previous probe mapped EVERY exception to exit 2 ("host has compute CUDA
+# but NOT NVDEC"). A corrupt fixture OR a DALI build error therefore
+# triggered the same operator response (destroy + relaunch) as a genuine
+# missing-NVDEC host. The Python now prints a CLASSIFICATION line —
+# `PROBE_CLASSIFICATION:<token>` — that bash maps to a specific exit
+# code so the operator gets the right diagnostic and a non-NVDEC issue
+# does NOT cost a relaunch on a healthy host.
 PROBE_OUT=$("$PYBIN" -c "
-import base64, numpy as np
+import base64, sys, traceback
+import numpy as np
 import torch  # noqa: F401  # ensure CUDA context inits before DALI
 
-# Pre-built tiny MP4 (16x16, 2 frames @ 1 fps, yuv420p, h264). Generated
+# Pre-built tiny MP4 (64x48, 2 frames @ 1 fps, yuv420p, h264). Generated
 # locally with ffmpeg; never regenerated at runtime. Forces NVDEC to
 # actually decode something rather than just allocate handles. PyAV is
 # NOT imported here — that would make a missing PyAV install masquerade
 # as a missing-NVDEC host failure (codex R5-4 #1).
+# Bumped from 16x16 to 64x48 on 2026-04-27: newer DALI/NVDEC requires
+# minimum 48x16 dimensions; 16x16 hit a min-size assertion at runtime
+# that misclassified as DALI_BUILD on healthy hosts (Lane D Norway).
 TINY_MP4_B64 = (
-    'AAAAIGZ0eXBpc29tAAACAGlzb21pc28yYXZjMW1wNDEAAAAIZnJlZQAAAtltZGF0AAACrQYF'
-    '//+p3EXpvebZSLeWLNgg2SPu73gyNjQgLSBjb3JlIDE2NSByMzIyMiBiMzU2MDVhIC0gSC4y'
-    'NjQvTVBFRy00IEFWQyBjb2RlYyAtIENvcHlsZWZ0IDIwMDMtMjAyNSAtIGh0dHA6Ly93d3cu'
-    'dmlkZW9sYW4ub3JnL3gyNjQuaHRtbCAtIG9wdGlvbnM6IGNhYmFjPTEgcmVmPTMgZGVibG9j'
-    'az0xOjA6MCBhbmFseXNlPTB4MzoweDExMyBtZT1oZXggc3VibWU9NyBwc3k9MSBwc3lfcmQ9'
-    'MS4wMDowLjAwIG1peGVkX3JlZj0xIG1lX3JhbmdlPTE2IGNocm9tYV9tZT0xIHRyZWxsaXM9'
-    'MSA4eDhkY3Q9MSBjcW09MCBkZWFkem9uZT0yMSwxMSBmYXN0X3Bza2lwPTEgY2hyb21hX3Fw'
-    'X29mZnNldD0tMiB0aHJlYWRzPTEgbG9va2FoZWFkX3RocmVhZHM9MSBzbGljZWRfdGhyZWFk'
-    'cz0wIG5yPTAgZGVjaW1hdGU9MSBpbnRlcmxhY2VkPTAgYmx1cmF5X2NvbXBhdD0wIGNvbnN0'
-    'cmFpbmVkX2ludHJhPTAgYmZyYW1lcz0zIGJfcHlyYW1pZD0yIGJfYWRhcHQ9MSBiX2JpYXM9'
-    'MCBkaXJlY3Q9MSB3ZWlnaHRiPTEgb3Blbl9nb3A9MCB3ZWlnaHRwPTIga2V5aW50PTI1MCBr'
-    'ZXlpbnRfbWluPTEgc2NlbmVjdXQ9NDAgaW50cmFfcmVmcmVzaD0wIHJjX2xvb2thaGVhZD00'
-    'MCByYz1jcmYgbWJ0cmVlPTEgY3JmPTIzLjAgcWNvbXA9MC42MCBxcG1pbj0wIHFwbWF4PTY5'
-    'IHFwc3RlcD00IGlwX3JhdGlvPTEuNDAgYXE9MToxLjAwAIAAAAAQZYiEABb//vfTP8yy7Jol'
-    'gQAAAAhBmiFsQV/+8AAAAzFtb292AAAAbG12aGQAAAAAAAAAAAAAAAAAAAPoAAAH0AABAAAB'
-    'AAAAAAAAAAAAAAAAAQAAAAAAAAAAAAAAAAAAAAEAAAAAAAAAAAAAAAAAAEAAAAAAAAAAAAAA'
-    'AAAAAAAAAAAAAAAAAAAAAAAAAAACAAACW3RyYWsAAABcdGtoZAAAAAMAAAAAAAAAAAAAAAEA'
-    'AAAAAAAH0AAAAAAAAAAAAAAAAAAAAAAAAQAAAAAAAAAAAAAAAAAAAAEAAAAAAAAAAAAAAAAA'
-    'AEAAAAAAEAAAABAAAAAAACRlZHRzAAAAHGVsc3QAAAAAAAAAAQAAB9AAAAAAAAEAAAAAAdNt'
-    'ZGlhAAAAIG1kaGQAAAAAAAAAAAAAAAAAAEAAAACAAFXEAAAAAAAtaGRscgAAAAAAAAAAdmlk'
-    'ZQAAAAAAAAAAAAAAAFZpZGVvSGFuZGxlcgAAAAF+bWluZgAAABR2bWhkAAAAAQAAAAAAAAAA'
-    'AAAAJGRpbmYAAAAcZHJlZgAAAAAAAAABAAAADHVybCAAAAABAAABPnN0YmwAAAC+c3RzZAAA'
-    'AAAAAAABAAAArmF2YzEAAAAAAAAAAQAAAAAAAAAAAAAAAAAAAAAAEAAQAEgAAABIAAAAAAAA'
-    'AAEVTGF2YzYyLjI4LjEwMCBsaWJ4MjY0AAAAAAAAAAAAAAAY//8AAAA0YXZjQwFkAAr/4QAX'
-    'Z2QACqzZXsBEAAADAAQAAAMACDxIllgBAAZo6+PLIsD9+PgAAAAAEHBhc3AAAAABAAAAAQAA'
-    'ABRidHJ0AAAAAAAAC0QAAAAAAAAAGHN0dHMAAAAAAAAAAQAAAAIAAEAAAAAAFHN0c3MAAAAA'
-    'AAAAAQAAAAEAAAAcc3RzYwAAAAAAAAABAAAAAQAAAAIAAAABAAAAHHN0c3oAAAAAAAAAAAAA'
-    'AAIAAALFAAAADAAAABRzdGNvAAAAAAAAAAEAAAAwAAAAYnVkdGEAAABabWV0YQAAAAAAAAAh'
-    'aGRscgAAAAAAAAAAbWRpcmFwcGwAAAAAAAAAAAAAAAAtaWxzdAAAACWpdG9vAAAAHWRhdGEA'
-    'AAABAAAAAExhdmY2Mi4xMi4xMDA='
+    'AAAAIGZ0eXBpc29tAAACAGlzb21pc28yYXZjMW1wNDEAAAAIZnJlZQAAAuptZGF0AAACrQYF//+p'
+    '3EXpvebZSLeWLNgg2SPu73gyNjQgLSBjb3JlIDE2MyByMzA2MCA1ZGI2YWE2IC0gSC4yNjQvTVBF'
+    'Ry00IEFWQyBjb2RlYyAtIENvcHlsZWZ0IDIwMDMtMjAyMSAtIGh0dHA6Ly93d3cudmlkZW9sYW4u'
+    'b3JnL3gyNjQuaHRtbCAtIG9wdGlvbnM6IGNhYmFjPTEgcmVmPTMgZGVibG9jaz0xOjA6MCBhbmFs'
+    'eXNlPTB4MzoweDExMyBtZT1oZXggc3VibWU9NyBwc3k9MSBwc3lfcmQ9MS4wMDowLjAwIG1peGVk'
+    'X3JlZj0xIG1lX3JhbmdlPTE2IGNocm9tYV9tZT0xIHRyZWxsaXM9MSA4eDhkY3Q9MSBjcW09MCBk'
+    'ZWFkem9uZT0yMSwxMSBmYXN0X3Bza2lwPTEgY2hyb21hX3FwX29mZnNldD0tMiB0aHJlYWRzPTEg'
+    'bG9va2FoZWFkX3RocmVhZHM9MSBzbGljZWRfdGhyZWFkcz0wIG5yPTAgZGVjaW1hdGU9MSBpbnRl'
+    'cmxhY2VkPTAgYmx1cmF5X2NvbXBhdD0wIGNvbnN0cmFpbmVkX2ludHJhPTAgYmZyYW1lcz0zIGJf'
+    'cHlyYW1pZD0yIGJfYWRhcHQ9MSBiX2JpYXM9MCBkaXJlY3Q9MSB3ZWlnaHRiPTEgb3Blbl9nb3A9'
+    'MCB3ZWlnaHRwPTIga2V5aW50PTI1MCBrZXlpbnRfbWluPTEgc2NlbmVjdXQ9NDAgaW50cmFfcmVm'
+    'cmVzaD0wIHJjX2xvb2thaGVhZD00MCByYz1jcmYgbWJ0cmVlPTEgY3JmPTIzLjAgcWNvbXA9MC42'
+    'MCBxcG1pbj0wIHFwbWF4PTY5IHFwc3RlcD00IGlwX3JhdGlvPTEuNDAgYXE9MToxLjAwAIAAAAAf'
+    'ZYiEABb//vfTP8yy7JokteOo96Kci/PTPylRonyCeQAAAApBmiFsQV/+1qkOAAADMm1vb3YAAABs'
+    'bXZoZAAAAAAAAAAAAAAAAAAAA+gAAAfQAAEAAAEAAAAAAAAAAAAAAAABAAAAAAAAAAAAAAAAAAAA'
+    'AQAAAAAAAAAAAAAAAAAAQAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAIAAAJcdHJhawAA'
+    'AFx0a2hkAAAAAwAAAAAAAAAAAAAAAQAAAAAAAAfQAAAAAAAAAAAAAAAAAAAAAAABAAAAAAAAAAAA'
+    'AAAAAAAAAQAAAAAAAAAAAAAAAAAAQAAAAABAAAAAMAAAAAAAJGVkdHMAAAAcZWxzdAAAAAAAAAAB'
+    'AAAH0AAAAAAAAQAAAAAB1G1kaWEAAAAgbWRoZAAAAAAAAAAAAAAAAAAAQAAAAIAAVcQAAAAAAC1o'
+    'ZGxyAAAAAAAAAAB2aWRlAAAAAAAAAAAAAAAAVmlkZW9IYW5kbGVyAAAAAX9taW5mAAAAFHZtaGQA'
+    'AAABAAAAAAAAAAAAAAAkZGluZgAAABxkcmVmAAAAAAAAAAEAAAAMdXJsIAAAAAEAAAE/c3RibAAA'
+    'AL9zdHNkAAAAAAAAAAEAAACvYXZjMQAAAAAAAAABAAAAAAAAAAAAAAAAAAAAAABAADAASAAAAEgA'
+    'AAAAAAAAAQAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAABj//wAAADVhdmNDAWQACv/h'
+    'ABhnZAAKrNlEewEQAAADABAAAAMAIPEiWWABAAZo6+PLIsD9+PgAAAAAEHBhc3AAAAABAAAAAQAA'
+    'ABRidHJ0AAAAAAAAC4gAAAuIAAAAGHN0dHMAAAAAAAAAAQAAAAIAAEAAAAAAFHN0c3MAAAAAAAAA'
+    'AQAAAAEAAAAcc3RzYwAAAAAAAAABAAAAAQAAAAIAAAABAAAAHHN0c3oAAAAAAAAAAAAAAAIAAALU'
+    'AAAADgAAABRzdGNvAAAAAAAAAAEAAAAwAAAAYnVkdGEAAABabWV0YQAAAAAAAAAhaGRscgAAAAAA'
+    'AAAAbWRpcmFwcGwAAAAAAAAAAAAAAAAtaWxzdAAAACWpdG9vAAAAHWRhdGEAAAABAAAAAExhdmY1'
+    'OC43Ni4xMDA='
 )
-video_bytes = base64.b64decode(TINY_MP4_B64)
 
-from nvidia.dali import pipeline_def, fn
-import nvidia.dali.types as dali_types
-@pipeline_def(batch_size=1, num_threads=1, device_id=0)
-def p():
-    return fn.experimental.inputs.video(name='x', sequence_length=2, device='mixed')
-pipe = p()
-pipe.build()
-# RUNTIME verification — this is what the previous probe missed.
-pipe.feed_input('x', [np.frombuffer(video_bytes, dtype=np.uint8)])
-pipe.schedule_run()
-out = pipe.share_outputs()
-shape = out[0].shape()
-pipe.release_outputs()
-assert shape == (1, 2, 16, 16, 3), f'unexpected NVDEC output shape: {shape}'
-print('NVDEC_OK')
+
+def _classify(exc_text: str) -> str:
+    '''Map exception text to one of the PROBE_CLASSIFICATION tokens.
+
+    Tokens:
+      NVDEC_MISSING — host has compute CUDA but no NVDEC (kill instance)
+      DALI_BUILD    — DALI installed but pipeline build failed (dep issue)
+      FIXTURE       — embedded MP4 fixture invalid / shape assertion (probe bug)
+      UNKNOWN       — none of the above (do NOT auto-destroy host)
+    '''
+    t = exc_text.lower()
+    # Order matters: NVDEC markers win over DALI markers, since DALI
+    # surfaces NVDEC failures via its own Pipeline class.
+    nvdec_markers = (
+        'cuda_error_no_device',
+        'no cuda-capable device',
+        'nvdec',
+        'nvcuvid',
+        'no nvidia driver on your system',
+    )
+    if any(m in t for m in nvdec_markers):
+        return 'NVDEC_MISSING'
+    fixture_markers = (
+        'unexpected nvdec output shape',
+        'unexpected fixture',
+        'fixture too small',
+        'invalid mp4 fixture',
+    )
+    if any(m in t for m in fixture_markers):
+        return 'FIXTURE'
+    dali_markers = (
+        'nvidia.dali',
+        'dalierror',
+        'pipeline',
+        'experimental.inputs.video',
+        'fn.experimental',
+    )
+    if any(m in t for m in dali_markers):
+        return 'DALI_BUILD'
+    return 'UNKNOWN'
+
+
+# Stage 0: validate the embedded MP4 fixture BEFORE trying to use it.
+# A corrupt base64 / truncated MP4 must not be reported as a NVDEC failure.
+try:
+    video_bytes = base64.b64decode(TINY_MP4_B64)
+    if len(video_bytes) < 1024:
+        raise ValueError(
+            f'fixture too small: got {len(video_bytes)} bytes (expected >= 1024); '
+            f'invalid mp4 fixture'
+        )
+    if video_bytes[:4] != b'\x00\x00\x00\x20' and video_bytes[4:8] != b'ftyp':
+        # Standard ISO BMFF / MP4 starts with a size box then 'ftyp'.
+        if b'ftyp' not in video_bytes[:32]:
+            raise ValueError(
+                f'invalid mp4 fixture: no ftyp box in first 32 bytes'
+            )
+except Exception as e:
+    print(f'PROBE_CLASSIFICATION:FIXTURE')
+    print(f'PROBE_ERROR:{type(e).__name__}: {e}')
+    sys.exit(0)  # bash dispatcher reads classification, not exit code
+
+# Stage 1: actually exercise the NVDEC hardware decode path.
+try:
+    from nvidia.dali import pipeline_def, fn
+    import nvidia.dali.types as dali_types
+
+    @pipeline_def(batch_size=1, num_threads=1, device_id=0)
+    def p():
+        return fn.experimental.inputs.video(name='x', sequence_length=2, device='mixed')
+    pipe = p()
+    pipe.build()
+    # RUNTIME verification — this is what the previous probe missed.
+    pipe.feed_input('x', [np.frombuffer(video_bytes, dtype=np.uint8)])
+    pipe.schedule_run()
+    out = pipe.share_outputs()
+    shape = out[0].shape()
+    pipe.release_outputs()
+    if shape != [(2, 48, 64, 3)]:
+        # Re-raise as a fixture-class error so we don't blame the host.
+        raise AssertionError(f'unexpected NVDEC output shape: {shape}')
+    print('PROBE_CLASSIFICATION:OK')
+    print('NVDEC_OK')
+except Exception as e:
+    tb = traceback.format_exc()
+    classification = _classify(str(e) + ' ' + tb)
+    print(f'PROBE_CLASSIFICATION:{classification}')
+    print(f'PROBE_ERROR:{type(e).__name__}: {e}')
+    print(f'PROBE_TRACEBACK_TAIL:{tb.splitlines()[-3:] if tb else []}')
+    sys.exit(0)  # bash dispatcher reads classification, not exit code
 " 2>&1) || {
-    echo "[probe_nvdec] FATAL: NVDEC probe failed on this host." >&2
+    # Python crashed *outside* of any try/except (e.g., import torch failed).
+    # No classification token will be present; treat as UNKNOWN per
+    # codex R5-r6 #4 — DO NOT default to NVDEC_MISSING.
+    echo "[probe_nvdec] FATAL: probe crashed before classification could run." >&2
     echo "[probe_nvdec]   Output: $PROBE_OUT" >&2
-    echo "[probe_nvdec]   This Vast.ai host has compute CUDA but NOT NVDEC." >&2
-    echo "[probe_nvdec]   DALI's video MIXED operator will fail at upstream/evaluate.py." >&2
-    echo "[probe_nvdec]   Action: vastai destroy instance \$INSTANCE_ID && pick a different host." >&2
-    echo "[probe_nvdec]   Reference: feedback_vastai_nvdec_host_variation memory entry." >&2
-    exit 2
+    echo "[probe_nvdec]   Classification: UNKNOWN (do not auto-destroy host)." >&2
+    echo "[probe_nvdec]   Action: investigate the python crash before reusing this host." >&2
+    exit 5
 }
 
-if [[ "$PROBE_OUT" != *"NVDEC_OK"* ]]; then
-    echo "[probe_nvdec] FATAL: probe exit OK but no NVDEC_OK marker — output: $PROBE_OUT" >&2
-    exit 2
+# Dispatch on classification token.
+CLASSIFICATION=$(echo "$PROBE_OUT" | grep -E "^PROBE_CLASSIFICATION:" | tail -1 | sed 's/^PROBE_CLASSIFICATION://')
+
+if [ -z "$CLASSIFICATION" ]; then
+    echo "[probe_nvdec] FATAL: no PROBE_CLASSIFICATION token in output." >&2
+    echo "[probe_nvdec]   Output: $PROBE_OUT" >&2
+    echo "[probe_nvdec]   Classification: UNKNOWN (treat as exit 5, do NOT auto-destroy)." >&2
+    exit 5
 fi
 
-echo "[probe_nvdec] OK (NVDEC exposed, DALI video pipeline buildable)"
+case "$CLASSIFICATION" in
+    OK)
+        if [[ "$PROBE_OUT" != *"NVDEC_OK"* ]]; then
+            echo "[probe_nvdec] FATAL: probe reported OK but no NVDEC_OK marker — output: $PROBE_OUT" >&2
+            exit 5
+        fi
+        echo "[probe_nvdec] OK (NVDEC exposed, DALI video pipeline buildable)"
+        exit 0
+        ;;
+    NVDEC_MISSING)
+        echo "[probe_nvdec] FATAL: NVDEC missing on this host." >&2
+        echo "[probe_nvdec]   Output: $PROBE_OUT" >&2
+        echo "[probe_nvdec]   This Vast.ai host has compute CUDA but NOT NVDEC." >&2
+        echo "[probe_nvdec]   DALI's video MIXED operator will fail at upstream/evaluate.py." >&2
+        echo "[probe_nvdec]   Action: vastai destroy instance \$INSTANCE_ID && pick a different host." >&2
+        echo "[probe_nvdec]   Reference: feedback_vastai_nvdec_host_variation memory entry." >&2
+        exit 2
+        ;;
+    DALI_BUILD)
+        echo "[probe_nvdec] FATAL: DALI/dependency build error (NOT a host problem)." >&2
+        echo "[probe_nvdec]   Output: $PROBE_OUT" >&2
+        echo "[probe_nvdec]   Action: investigate the dependency / DALI install — host is likely fine." >&2
+        echo "[probe_nvdec]   Reuse the host after fixing the dep, do NOT auto-destroy." >&2
+        exit 3
+        ;;
+    FIXTURE)
+        echo "[probe_nvdec] FATAL: embedded MP4 fixture invalid OR shape assertion failed." >&2
+        echo "[probe_nvdec]   Output: $PROBE_OUT" >&2
+        echo "[probe_nvdec]   This is a probe BUG, not a host problem." >&2
+        echo "[probe_nvdec]   Action: report upstream + reuse host." >&2
+        exit 4
+        ;;
+    UNKNOWN)
+        echo "[probe_nvdec] FATAL: unknown failure mode — investigate before reusing host." >&2
+        echo "[probe_nvdec]   Output: $PROBE_OUT" >&2
+        echo "[probe_nvdec]   Classification: UNKNOWN (do NOT auto-destroy)." >&2
+        exit 5
+        ;;
+    *)
+        echo "[probe_nvdec] FATAL: unrecognized classification token: $CLASSIFICATION" >&2
+        echo "[probe_nvdec]   Output: $PROBE_OUT" >&2
+        exit 5
+        ;;
+esac

@@ -60,6 +60,12 @@ PYBIN=/opt/conda/bin/python
 source "$WORKSPACE/env.sh"
 cd "$WORKSPACE"
 export PYTHONHASHSEED=1234
+# 2026-04-27 fix: train_renderer.py defaults to
+# $REPO/workspace/upstream/comma_video_compression_challenge/models for scorer
+# weights. On the canonical Vast.ai layout the scorers live at
+# /workspace/pact/upstream/models, so override TAC_UPSTREAM_DIR — same as
+# remote_train_bootstrap.sh and remote_pose_tto_bootstrap.sh do.
+export TAC_UPSTREAM_DIR="${TAC_UPSTREAM_DIR:-$WORKSPACE/upstream}"
 
 LOG_DIR="$WORKSPACE/lane_d_results"
 mkdir -p "$LOG_DIR"
@@ -131,7 +137,7 @@ log "    masks into 50% of batches — no separate half-frame mask precompute ne
 log "  profile: dilated_h64_half_frame"
 log "  tag:     $TAG"
 log "  schedule: 400ep P1 + 1080ep P2 + 200ep P3 + 200ep P4 + 100ep P5 = 1980 epochs"
-log "  estimated wall clock on 4090: ~5h ($1.25 at \$0.25/hr)"
+log "  estimated wall clock on 4090: ~5h (\$1.25 at \$0.25/hr)"
 
 # Smoke-kill metadata sidecar so the watchdog can read targets externally
 cat > "$LOG_DIR/kill_targets.json" <<'EOF'

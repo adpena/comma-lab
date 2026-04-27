@@ -1264,6 +1264,12 @@ def train(args: argparse.Namespace):
         # flags. Previously use_zoom_flow / use_dsconv / padding_mode /
         # use_dilation / pose_dim were silently dropped here, causing the DEN
         # checkpoint to mismatch consumer expectations and waste 1.2h of GPU.
+        # 2026-04-27 Lane D fix: every other variant in this dispatch imports
+        # its build_* locally; the default `dilated`/`asym` path was missing
+        # its import, causing UnboundLocalError on Lane D launch. The auth-eval
+        # block at line ~2262 imports build_renderer separately; making this
+        # block self-sufficient avoids a NameError before training begins.
+        from tac.renderer import build_renderer
         model = build_renderer(
             num_classes=5,
             embed_dim=args.embed_dim,
@@ -1771,7 +1777,7 @@ def train(args: argparse.Namespace):
                 # failure mode per CLAUDE.md "Critical Lessons". Use the SegNet-
                 # only helper that returns ONLY T²-scaled seg_kl.
                 if args.kl_distill_weight > 0:
-                    kl_loss, _kl_seg = kl_distill_segnet_only(
+                    kl_loss, _kl_seg = kl_distill_segnet_only(  # KL_RAW_PAIRS_OK:rendered_pair was reassigned to roundtripped output at L1642
                         rendered_pair, gt_pair, segnet,
                         temperature=args.kl_distill_temperature,
                     )
