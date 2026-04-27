@@ -4,11 +4,12 @@
 # of the standard scorer loss. Predicted: -0.05 to -0.15 distortion vs
 # Lane A's 1.15 baseline.
 #
-# V2 DELTA from V1: --kl-distill-weight 1.0 → 0.01. V1's 1.0 dominated the
-# loss ~14000× over the scorer hinge — the renderer optimized for KL fidelity
-# instead of scorer score, defeating the purpose. 0.01 keeps KL as an
-# AUXILIARY signal in the same OOM as the hinge term. Plus codex round-6 fix
-# #2 (commit a03ff214) closed the KL-roundtrip distribution-mismatch bug.
+# V3 DELTA from V2: --kl-distill-weight 0.01 → 5e-6. V2 confirmed 0.01 still
+# dominated the loss ~4000× over the scorer terms (raw KL ≈ 20000, scorer ≈
+# 0.05). 5e-6 makes KL contribution (5e-6 × 20000 = 0.1) MATCH the scorer
+# scale (~0.05) so KL is a true auxiliary signal, not the dominant term.
+# V2 history: --kl-distill-weight 1.0 → 0.01 (V1→V2). V1's 1.0 dominated
+# ~14000×; V2's 0.01 still dominated ~4000×; V3's 5e-6 finally matches scale.
 # Same warm-start poses, same 600 pairs × 500 steps, same eval_roundtrip + noise.
 #
 # Per CLAUDE.md non-negotiable (NEVER invent CLI flags): the flag names
@@ -22,7 +23,7 @@ PYBIN=/opt/conda/bin/python
 source "$WORKSPACE/env.sh"
 cd "$WORKSPACE"
 
-LOG_DIR="$WORKSPACE/lane_g_v2_results"
+LOG_DIR="$WORKSPACE/lane_g_v3_results"
 mkdir -p "$LOG_DIR"
 
 log() { echo "[lane-g] $(date -u +%FT%TZ) $*" | tee -a "$LOG_DIR/run.log"; }
@@ -47,7 +48,7 @@ prov = {
     'cuda_available': torch.cuda.is_available(),
     'lane_script': 'scripts/remote_lane_g_kldistill_pose_tto.sh',
     'output_dir': '$LOG_DIR',
-    'kl_distill_weight': 0.01,
+    'kl_distill_weight': 5e-6,
     'kl_distill_temperature': 2.0,
 }
 with open('$PROVENANCE', 'w') as f:
@@ -99,7 +100,7 @@ cd "$WORKSPACE"
 log "=== Stage 2: pose TTO (Lane A flow) + KL-distill SegNet auxiliary ==="
 log "   --gt-poses-path = submissions/baseline_dilated_h64_0_90/optimized_poses.pt"
 log "   --eval-roundtrip + --posetto-noise-std=0.5 (Fridrich C1 fixes)"
-log "   --kl-distill-weight=0.01  --kl-distill-temperature=2.0  (LANE G V2 delta)"
+log "   --kl-distill-weight=5e-6  --kl-distill-temperature=2.0  (LANE G V3 delta — match scorer scale O(0.05))"
 # Determinism: pin seeds + cublas + python hash (CLAUDE.md non-negotiable).
 export PYTHONHASHSEED=1234
 # 2026-04-27 launch finding: KL distill auxiliary loss adds a SECOND SegNet
@@ -118,7 +119,7 @@ export PYTORCH_CUDA_ALLOC_CONF=expandable_segments:True
     --batch-pairs 4 \
     --eval-roundtrip \
     --posetto-noise-std 0.5 \
-    --kl-distill-weight 0.01 \
+    --kl-distill-weight 5e-6 \
     --kl-distill-temperature 2.0 \
     --output-dir "$LOG_DIR" 2>&1 | tee "$LOG_DIR/optimize_poses.log" | tail -30
 
@@ -131,7 +132,7 @@ mkdir -p "$LOG_DIR/iter_0"
 cp submissions/baseline_dilated_h64_0_90/renderer.bin "$LOG_DIR/iter_0/renderer.bin"
 cp "$LOG_DIR/extracted/masks.mkv" "$LOG_DIR/iter_0/masks.mkv"
 [ -f "$LOG_DIR/optimized_poses.pt" ] && cp "$LOG_DIR/optimized_poses.pt" "$LOG_DIR/iter_0/optimized_poses.pt"
-ARCHIVE="$LOG_DIR/archive_lane_g_v2.zip"
+ARCHIVE="$LOG_DIR/archive_lane_g_v3.zip"
 "$PYBIN" -c "
 import zipfile, os
 src = '$LOG_DIR/iter_0'
