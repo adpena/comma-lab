@@ -298,6 +298,26 @@ def preflight_all(
         check_training_scripts_have_auth_eval(strict=False, verbose=verbose)
         check_no_disable_eval_roundtrip_flag(strict=False, verbose=verbose)
 
+        # 2026-04-27 (this commit): wire the 3 follow-on meta-bug checks
+        # (codex R5-3 #2 + #11 + NVDEC probe gap from commits a1128fd9 /
+        # eef64293) into preflight_all WARN-ONLY. Live counts on this
+        # codebase at wire-in time:
+        #   check_no_pack_sparse_delta_approved_outside_promotion_tool: 0
+        #     (eligible for strict promotion once verified to stay at 0
+        #      across a Lane C cycle)
+        #   check_inflate_sh_handles_br_centrally:                     0
+        #     (robust_current/inflate.sh has the Stage 0 block per
+        #      a1128fd9; exact_current/inflate.sh is a 5-line passthrough
+        #      with no PYTHON_INFLATE dispatch — soft-skipped; eligible
+        #      for strict promotion)
+        #   check_remote_scripts_have_nvdec_probe:                     3
+        #     (remote_pose_tto_bootstrap.sh, remote_setup_full.sh,
+        #      remote_train_bootstrap.sh — all do GPU work; either add
+        #      probe call or NO_NVDEC_NEEDED header)
+        check_no_pack_sparse_delta_approved_outside_promotion_tool(strict=False, verbose=verbose)
+        check_inflate_sh_handles_br_centrally(strict=False, verbose=verbose)
+        check_remote_scripts_have_nvdec_probe(strict=False, verbose=verbose)
+
     # 2. Training inputs (only if profile + tto_frames provided)
     if profile_name and tto_frames_path and gt_poses_path and masks_path and profile_arch:
         preflight_training_inputs(
@@ -2565,9 +2585,519 @@ def check_no_disable_eval_roundtrip_flag(
     return violations
 
 
+# ── Check 9: pack_sparse_delta(compliance_status='approved') outside promo ───
+#
+# Reference: codex R5-3 finding #2. The library function
+# `tac.uniward_delta.pack_sparse_delta` accepts `compliance_status='approved'`
+# only when paired with the constant-time-HMAC `_internal_promotion_token`.
+# The runtime check exists, but a static scan catches the same bug class
+# earlier (preflight time vs runtime). Any caller passing the literal
+# 'approved' (or the COMPLIANCE_APPROVED constant) outside the canonical
+# promotion tool / test-fixture surface is a violation: the operator-controlled
+# attestation flow goes exclusively through `tools/promote_lane_c_to_approved.py`,
+# which patches the wire header in-place rather than re-packing.
+
+# The single permitted non-test caller. Anything else passing the approved
+# literal/constant to pack_sparse_delta is a violation.
+_PACK_SPARSE_DELTA_APPROVED_PROMO_FILE = "tools/promote_lane_c_to_approved.py"
+# Token names that mean "approved" to pack_sparse_delta. We accept both the
+# string literal "approved" and references to the constant COMPLIANCE_APPROVED
+# (which equals "approved"). Both must be considered violations outside the
+# canonical promotion tool.
+_APPROVED_LITERAL = "approved"
+_APPROVED_CONST_NAMES = {"COMPLIANCE_APPROVED"}
+
+
+def _resolve_pack_sparse_delta_aliases(tree: ast.AST) -> set[str]:
+    """Collect every name `pack_sparse_delta` is bound to in this module.
+
+    Handles:
+      - `from tac.uniward_delta import pack_sparse_delta` → {"pack_sparse_delta"}
+      - `from tac.uniward_delta import pack_sparse_delta as pkt` → {"pkt"}
+      - `import tac.uniward_delta as uwd` → {"uwd.pack_sparse_delta"} (we
+        track the module alias and match `<alias>.pack_sparse_delta`)
+      - bare `pack_sparse_delta(` calls (defensive: also include the literal
+        name even if the import is somewhere else / wildcard / re-export)
+    Returns a set of acceptable callable string forms.
+    """
+    aliases: set[str] = {"pack_sparse_delta"}
+    module_aliases: set[str] = set()
+    for node in ast.walk(tree):
+        if isinstance(node, ast.ImportFrom):
+            mod = node.module or ""
+            if "uniward_delta" in mod or mod.endswith("tac"):
+                for alias in node.names:
+                    if alias.name == "pack_sparse_delta":
+                        aliases.add(alias.asname or alias.name)
+        elif isinstance(node, ast.Import):
+            for alias in node.names:
+                if alias.name in ("tac.uniward_delta", "tac"):
+                    module_aliases.add(alias.asname or alias.name)
+    # Also accept attribute calls like `<module_alias>.pack_sparse_delta(...)`.
+    aliases.update(f"{m}.pack_sparse_delta" for m in module_aliases)
+    return aliases
+
+
+def _call_func_str(call: ast.Call) -> str:
+    """Render the function expression of a Call to its source-level string,
+    handling Name + Attribute chains. Best-effort, returns "" on failure."""
+    try:
+        if hasattr(ast, "unparse"):
+            return ast.unparse(call.func)
+    except Exception:
+        pass
+    if isinstance(call.func, ast.Name):
+        return call.func.id
+    if isinstance(call.func, ast.Attribute):
+        # Walk chain to root Name.
+        parts: list[str] = [call.func.attr]
+        cur: ast.AST = call.func.value
+        while isinstance(cur, ast.Attribute):
+            parts.append(cur.attr)
+            cur = cur.value
+        if isinstance(cur, ast.Name):
+            parts.append(cur.id)
+        return ".".join(reversed(parts))
+    return ""
+
+
+def _kwarg_value_is_approved(kw: ast.keyword) -> bool:
+    """True if kw.value is the string literal 'approved' OR a Name whose
+    id is in `_APPROVED_CONST_NAMES`. Conservative: anything we can't
+    constant-fold (function call, ternary, formatted string) is treated as
+    NOT approved (would otherwise be caught by the runtime gate).
+    """
+    v = kw.value
+    if isinstance(v, ast.Constant) and isinstance(v.value, str):
+        return v.value == _APPROVED_LITERAL
+    if isinstance(v, ast.Name) and v.id in _APPROVED_CONST_NAMES:
+        return True
+    if isinstance(v, ast.Attribute) and v.attr in _APPROVED_CONST_NAMES:
+        return True
+    return False
+
+
+def _scan_python_for_pack_sparse_delta_approved(
+    path: Path, repo_root: Path
+) -> list[str]:
+    """Find every call to pack_sparse_delta(..., compliance_status='approved'/COMPLIANCE_APPROVED, ...)
+    in `path`. The promotion-tool / test-fixture filter is applied by the
+    caller (since this function returns ALL hits; the caller decides which
+    are exempt)."""
+    rel = path.relative_to(repo_root) if path.is_absolute() else path
+    try:
+        text = path.read_text()
+    except (UnicodeDecodeError, FileNotFoundError):
+        return []
+    try:
+        tree = ast.parse(text, filename=str(rel))
+    except SyntaxError:
+        return []
+    aliases = _resolve_pack_sparse_delta_aliases(tree)
+    violations: list[str] = []
+    for node in ast.walk(tree):
+        if not isinstance(node, ast.Call):
+            continue
+        func_str = _call_func_str(node)
+        if func_str not in aliases:
+            continue
+        for kw in node.keywords:
+            if kw.arg == "compliance_status" and _kwarg_value_is_approved(kw):
+                violations.append(
+                    f"{rel}:{node.lineno}: pack_sparse_delta(compliance_status="
+                    f"'approved' | COMPLIANCE_APPROVED) outside the canonical "
+                    f"promotion tool ({_PACK_SPARSE_DELTA_APPROVED_PROMO_FILE}). "
+                    f"Lane C δ.bin promotion goes through "
+                    f"tools/promote_lane_c_to_approved.py, which patches the "
+                    f"wire header in-place after attestation verification — "
+                    f"NOT by re-packing with compliance_status='approved'. "
+                    f"(codex R5-3 #2.)"
+                )
+                break
+    return violations
+
+
+def check_no_pack_sparse_delta_approved_outside_promotion_tool(
+    repo_root: Path | None = None,
+    strict: bool = True,
+    verbose: bool = True,
+) -> list[str]:
+    """Catch pack_sparse_delta(compliance_status='approved') outside the
+    canonical promotion tool.
+
+    Reference: codex R5-3 finding #2 + tac.lane_c_compliance INTERNAL_PROMOTION_TOKEN
+    + tools/promote_lane_c_to_approved.py. The runtime check refuses to
+    write 'approved' without a constant-time HMAC token; this static scan
+    catches the same bug class at preflight time. Test fixtures that
+    construct approved blobs (with the internal token) are explicitly
+    permitted via path filter.
+
+    Returns list of violations. Raises MetaBugViolation if strict and any.
+    """
+    root = repo_root or REPO_ROOT
+    violations: list[str] = []
+    n_scanned = 0
+    # Scan both the standard meta dirs AND tools/ (the promotion tool lives
+    # in tools/ and any future tools-side caller would be covered there too).
+    scan_dirs = list(_META_PY_SCAN_DIRS) + ["tools"]
+    for py in _iter_python_files(root, scan_dirs):
+        n_scanned += 1
+        rel = py.relative_to(root) if py.is_absolute() else py
+        rel_str = rel.as_posix()
+        # Exempt the canonical promotion tool itself.
+        if rel_str == _PACK_SPARSE_DELTA_APPROVED_PROMO_FILE:
+            continue
+        # Exempt every test file under src/tac/tests/ (test fixtures legitimately
+        # use the internal token to construct approved blobs for negative-path
+        # coverage).
+        if rel_str.startswith("src/tac/tests/") and rel.name.startswith("test_"):
+            continue
+        violations.extend(_scan_python_for_pack_sparse_delta_approved(py, root))
+
+    if verbose and violations:
+        print(
+            f"  [no-pack-sparse-delta-approved] {len(violations)} violation(s) "
+            f"across {n_scanned} files:"
+        )
+        for v in violations:
+            print(f"    • {v}")
+    elif verbose:
+        print(f"  [no-pack-sparse-delta-approved] OK: {n_scanned} files scanned")
+
+    if violations and strict:
+        raise MetaBugViolation(
+            "PACK_SPARSE_DELTA APPROVED OUTSIDE PROMOTION TOOL violations:\n"
+            + "\n".join(f"  • {v}" for v in violations)
+            + "\n\nLane C promotion uses tools/promote_lane_c_to_approved.py "
+            "(codex R5-3 #2)."
+        )
+    return violations
+
+
+# ── Check 10: inflate.sh handles .br centrally before PYTHON_INFLATE dispatch ─
+#
+# Reference: codex R5-3 finding #11 + commit a1128fd9. Every PYTHON_INFLATE
+# branch must see the archive in fully-decompressed form. The fix added a
+# Stage 0 brotli decompression block BEFORE branch dispatch. This scanner
+# enforces the block exists and is positioned correctly for any inflate.sh
+# that performs PYTHON_INFLATE branch dispatch.
+
+# Markers that identify the centralized brotli stage.
+_BROTLI_BLOCK_MARKERS = ("brotli stage 0", "Stage 0")
+# The brotli pull token: `--with brotli` is what the centralized block uses
+# in the `uv run` invocation. This identifies the actual decompression path
+# (vs a comment that mentions brotli without acting on it).
+_BROTLI_WITH_TOKEN = "--with brotli"
+# The br-file glob detector that triggers the block. Either the literal
+# `compgen -G ...*.br` form OR a `*.br` file-test guard counts.
+_BROTLI_BR_GLOB_TOKEN_RE = re.compile(r"\.br\b")
+# Identifies the branch-dispatch line. Matches `if [ "$PYTHON_INFLATE" = ...`,
+# `case "$PYTHON_INFLATE"`, etc.
+_PYTHON_INFLATE_DISPATCH_RE = re.compile(
+    r"""
+    (
+        \[\s*"\$PYTHON_INFLATE"   # if [ "$PYTHON_INFLATE" = ...
+        |
+        case\s+"\$PYTHON_INFLATE" # case "$PYTHON_INFLATE" in
+    )
+    """,
+    re.VERBOSE,
+)
+
+
+def _scan_inflate_sh_for_centralized_brotli(
+    path: Path, repo_root: Path
+) -> list[str]:
+    """Validate that path is either (a) a trivial passthrough with no
+    PYTHON_INFLATE dispatch (PASS), or (b) contains a centralized brotli
+    Stage 0 block BEFORE the PYTHON_INFLATE dispatch line (PASS), else
+    a violation."""
+    rel = path.relative_to(repo_root) if path.is_absolute() else path
+    try:
+        text = path.read_text()
+    except (UnicodeDecodeError, FileNotFoundError):
+        return []
+
+    lines = text.splitlines()
+    # Locate first PYTHON_INFLATE dispatch line.
+    dispatch_lineno: int | None = None
+    for i, line in enumerate(lines, start=1):
+        if _PYTHON_INFLATE_DISPATCH_RE.search(line):
+            dispatch_lineno = i
+            break
+
+    if dispatch_lineno is None:
+        # No branch dispatch → trivial passthrough. Skip.
+        return []
+
+    # Find the centralized brotli block. Three signals must all be present
+    # AND must precede the dispatch line:
+    #   1. A `Stage 0`/`brotli stage 0` marker (comment or echo).
+    #   2. A `*.br` glob/file-test (compgen / [ -e ...*.br ] / similar).
+    #   3. An `--with brotli` invocation of `uv run`.
+    marker_lineno: int | None = None
+    br_glob_lineno: int | None = None
+    with_brotli_lineno: int | None = None
+    for i, line in enumerate(lines, start=1):
+        if i >= dispatch_lineno:
+            break
+        if marker_lineno is None and any(
+            m.lower() in line.lower() for m in _BROTLI_BLOCK_MARKERS
+        ):
+            # Confirm it's a brotli marker (not e.g. "Stage 0" referring to
+            # something else — require co-occurrence with "brotli" within ±10
+            # lines OR on the same line).
+            if "brotli" in line.lower():
+                marker_lineno = i
+            else:
+                # Check ±10 line window for "brotli".
+                window = "\n".join(
+                    lines[max(0, i - 10): min(len(lines), i + 10)]
+                ).lower()
+                if "brotli" in window:
+                    marker_lineno = i
+        if br_glob_lineno is None and _BROTLI_BR_GLOB_TOKEN_RE.search(line):
+            br_glob_lineno = i
+        if with_brotli_lineno is None and _BROTLI_WITH_TOKEN in line:
+            with_brotli_lineno = i
+
+    violations: list[str] = []
+    if marker_lineno is None or br_glob_lineno is None or with_brotli_lineno is None:
+        # Block missing entirely. Determine which signal(s) are absent for
+        # a precise diagnostic.
+        missing: list[str] = []
+        if marker_lineno is None:
+            missing.append("'Stage 0'/'brotli stage 0' marker comment")
+        if br_glob_lineno is None:
+            missing.append("'*.br' file-glob guard")
+        if with_brotli_lineno is None:
+            missing.append("'--with brotli' uv-run invocation")
+        violations.append(
+            f"{rel}:{dispatch_lineno}: PYTHON_INFLATE dispatch present but "
+            f"centralized brotli Stage 0 block is incomplete (missing: "
+            f"{', '.join(missing)}). Every PYTHON_INFLATE branch must see "
+            f"the archive in fully-decompressed form. Add the Stage 0 block "
+            f"BEFORE the dispatch (codex R5-3 #11, commit a1128fd9)."
+        )
+        return violations
+
+    # All three signals present BEFORE dispatch → PASS. Position is implicitly
+    # validated by the loop (we stop at dispatch_lineno).
+
+    # ALSO: detect the after-dispatch case. If a brotli block ALSO appears
+    # AFTER dispatch (e.g. inside a branch arm) without the centralized one
+    # before, the loop above already caught the centralized-missing case.
+    # The spec calls out "probe-too-late" as a violation; the symmetric
+    # check here is "brotli-block-too-late". We flag any --with brotli that
+    # appears AFTER dispatch UNLESS a centralized one also exists before.
+    # (Centralized-before passes; we have it, so no further work.)
+
+    return violations
+
+
+def check_inflate_sh_handles_br_centrally(
+    repo_root: Path | None = None,
+    strict: bool = True,
+    verbose: bool = True,
+) -> list[str]:
+    """Catch inflate.sh files where .br decompression is missing or runs
+    AFTER the PYTHON_INFLATE branch dispatch.
+
+    Reference: codex R5-3 finding #11 + commit a1128fd9. Without the
+    centralized Stage 0 block, any non-renderer PYTHON_INFLATE branch on
+    a Lane B-alt archive fails later as a missing renderer.bin / masks.mkv
+    with no actionable hint. Trivial passthrough inflate.sh (no
+    PYTHON_INFLATE dispatch) is a soft pass — the block is unnecessary.
+
+    Returns list of violations. Raises MetaBugViolation if strict and any.
+    """
+    root = repo_root or REPO_ROOT
+    violations: list[str] = []
+    n_scanned = 0
+    submissions = root / "submissions"
+    if submissions.exists():
+        for sub_dir in sorted(submissions.iterdir()):
+            if not sub_dir.is_dir():
+                continue
+            for p in sorted(sub_dir.glob("inflate.sh")):
+                n_scanned += 1
+                violations.extend(_scan_inflate_sh_for_centralized_brotli(p, root))
+
+    if verbose and violations:
+        print(
+            f"  [inflate-br-central] {len(violations)} violation(s) across "
+            f"{n_scanned} inflate.sh file(s):"
+        )
+        for v in violations:
+            print(f"    • {v}")
+    elif verbose:
+        print(f"  [inflate-br-central] OK: {n_scanned} inflate.sh file(s) scanned")
+
+    if violations and strict:
+        raise MetaBugViolation(
+            "INFLATE.SH BROTLI CENTRALIZATION violations:\n"
+            + "\n".join(f"  • {v}" for v in violations)
+            + "\n\nAdd Stage 0 brotli block before PYTHON_INFLATE dispatch "
+            "(codex R5-3 #11, commit a1128fd9)."
+        )
+    return violations
+
+
+# ── Check 11: scripts/remote_*.sh must run NVDEC probe at Stage 0 ────────────
+#
+# Reference: feedback_vastai_nvdec_host_variation + commit eef64293. NVDEC
+# host availability is host-dependent on Vast.ai 4090s — same image, same
+# driver, different host = `CUDA_ERROR_NO_DEVICE` from DALI's video MIXED
+# operator. The probe catches the bad-host case in 5 seconds. Every remote
+# script that does GPU work MUST run `scripts/probe_nvdec.sh` BEFORE any
+# GPU spend (training, pose TTO, archive build, evaluate.py, nvidia-smi
+# query against driver).
+
+# Token strings that identify a probe invocation. We match all three
+# documented forms in the spec.
+_NVDEC_PROBE_TOKENS = (
+    "scripts/probe_nvdec.sh",  # bash $WORKSPACE/scripts/probe_nvdec.sh
+    "probe_nvdec.sh",          # bash probe_nvdec.sh (relative)
+)
+# Comment header that explicitly opts out of the requirement. Operator's
+# declaration that this script does no DALI / NVDEC video work.
+_NVDEC_OPT_OUT_TOKEN = "NO_NVDEC_NEEDED"
+# GPU-work markers: presence of any of these tokens means a probe call MUST
+# precede them in the file. We accept partial substrings (e.g.
+# `train_renderer.py` matches both `train_renderer.py` and
+# `src/tac/experiments/train_renderer.py`).
+_NVDEC_GPU_WORK_MARKERS = (
+    "train_renderer.py",
+    "optimize_poses.py",
+    "experiments/build_baseline_archive.py",
+    "build_baseline_archive.py",
+    "train_distill.py",
+    "auth_eval_renderer.py",
+    "evaluate.py",
+    "nvidia-smi",
+)
+
+
+def _scan_remote_script_for_nvdec_probe(
+    path: Path, repo_root: Path
+) -> list[str]:
+    """Validate that path either opts out via NO_NVDEC_NEEDED OR contains
+    a probe call BEFORE any GPU-work marker."""
+    rel = path.relative_to(repo_root) if path.is_absolute() else path
+    try:
+        text = path.read_text()
+    except (UnicodeDecodeError, FileNotFoundError):
+        return []
+    lines = text.splitlines()
+
+    # Opt-out: search the first 30 lines for the NO_NVDEC_NEEDED comment
+    # header. Anywhere in the file would also work, but a header makes the
+    # operator's intent reviewable.
+    header = "\n".join(lines[:30])
+    if _NVDEC_OPT_OUT_TOKEN in header:
+        return []
+
+    # Find earliest GPU-work marker line (1-indexed; None if no GPU work).
+    gpu_work_lineno: int | None = None
+    for i, line in enumerate(lines, start=1):
+        # Skip comment-only lines for marker detection.
+        stripped = line.lstrip()
+        if stripped.startswith("#"):
+            continue
+        if any(tok in line for tok in _NVDEC_GPU_WORK_MARKERS):
+            gpu_work_lineno = i
+            break
+
+    # Find earliest probe-call line.
+    probe_lineno: int | None = None
+    for i, line in enumerate(lines, start=1):
+        stripped = line.lstrip()
+        if stripped.startswith("#"):
+            continue
+        if any(tok in line for tok in _NVDEC_PROBE_TOKENS):
+            probe_lineno = i
+            break
+
+    violations: list[str] = []
+
+    if gpu_work_lineno is None:
+        # Script does no GPU work and didn't opt out. If the probe is also
+        # absent that's fine — nothing to probe FOR. PASS.
+        return []
+
+    if probe_lineno is None:
+        violations.append(
+            f"{rel}:{gpu_work_lineno}: GPU-work marker present but no NVDEC "
+            f"probe call. Add `bash \"$WORKSPACE/scripts/probe_nvdec.sh\"` "
+            f"as Stage 0 (BEFORE any GPU spend), OR add a "
+            f"`# {_NVDEC_OPT_OUT_TOKEN}` comment header to opt out. "
+            f"(feedback_vastai_nvdec_host_variation, commit eef64293.)"
+        )
+        return violations
+
+    if probe_lineno >= gpu_work_lineno:
+        violations.append(
+            f"{rel}:{probe_lineno}: NVDEC probe call appears AFTER first "
+            f"GPU-work marker (line {gpu_work_lineno}). Probe MUST run "
+            f"BEFORE any GPU spend so a bad-host case is caught in 5s "
+            f"instead of after $0.20+ of work. Move the probe to the top "
+            f"of the script, BEFORE the first GPU-work invocation. "
+            f"(feedback_vastai_nvdec_host_variation, commit eef64293.)"
+        )
+
+    return violations
+
+
+def check_remote_scripts_have_nvdec_probe(
+    repo_root: Path | None = None,
+    strict: bool = True,
+    verbose: bool = True,
+) -> list[str]:
+    """Catch scripts/remote_*.sh that do GPU work without an NVDEC probe.
+
+    Reference: feedback_vastai_nvdec_host_variation memory entry + commit
+    eef64293. The probe catches bad Vast.ai hosts in 5 seconds; without
+    it, training proceeds successfully and only fails at the eval stage,
+    burning $0.20-$10 per occurrence (this happened TWICE on 2026-04-27).
+    Scripts that do no DALI / NVDEC work can opt out via a
+    `# NO_NVDEC_NEEDED` comment header.
+
+    Returns list of violations. Raises MetaBugViolation if strict and any.
+    """
+    root = repo_root or REPO_ROOT
+    violations: list[str] = []
+    n_scanned = 0
+    scripts_dir = root / "scripts"
+    if scripts_dir.exists():
+        for p in sorted(scripts_dir.glob("remote_*.sh")):
+            n_scanned += 1
+            violations.extend(_scan_remote_script_for_nvdec_probe(p, root))
+
+    if verbose and violations:
+        print(
+            f"  [remote-nvdec-probe] {len(violations)} violation(s) across "
+            f"{n_scanned} remote_*.sh file(s):"
+        )
+        for v in violations:
+            print(f"    • {v}")
+    elif verbose:
+        print(f"  [remote-nvdec-probe] OK: {n_scanned} remote_*.sh file(s) scanned")
+
+    if violations and strict:
+        raise MetaBugViolation(
+            "REMOTE NVDEC PROBE violations:\n"
+            + "\n".join(f"  • {v}" for v in violations)
+            + "\n\nAdd Stage 0 NVDEC probe (feedback_vastai_nvdec_host_variation, "
+            "commit eef64293)."
+        )
+    return violations
+
+
 # NOTE: 2026-04-27 codex R5-3 Finding #4 — all 8 meta-bug checks are wired
 # into preflight_all() above (warn-only). See the codex R5-3 #4 comment block
 # in preflight_all() for live-violation counts and per-check promotion plan.
+# The 3 follow-on checks (codex R5-3 #2 + #11 + NVDEC probe gap, commits
+# a1128fd9 / eef64293 + this commit) are wired in the same block.
 
 
 # ── Filename contract validation ──────────────────────────────────────────────

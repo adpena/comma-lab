@@ -15,19 +15,25 @@ import pytest
 from tac.preflight import (
     MetaBugViolation,
     _scan_inflate_for_scorer_load,
+    _scan_inflate_sh_for_centralized_brotli,
     _scan_python_for_disable_eval_roundtrip_flag,
     _scan_python_for_eval_roundtrip_false,
     _scan_python_for_mps_fallback,
+    _scan_python_for_pack_sparse_delta_approved,
+    _scan_remote_script_for_nvdec_probe,
     _scan_shell_for_missing_set_e,
     _scan_shell_for_pipefail_grep_q,
     _scan_shell_for_zip_binary,
     _scan_training_script_for_auth_eval,
+    check_inflate_sh_handles_br_centrally,
     check_no_disable_eval_roundtrip_flag,
     check_no_eval_roundtrip_false,
     check_no_mps_fallback_default,
+    check_no_pack_sparse_delta_approved_outside_promotion_tool,
     check_no_pipefail_grep_q_trap,
     check_no_scorer_load_at_inflate,
     check_no_shell_zip_binary,
+    check_remote_scripts_have_nvdec_probe,
     check_shell_set_e_present,
     check_training_scripts_have_auth_eval,
 )
@@ -1078,6 +1084,364 @@ class TestTrainingAuthEvalAstUpgrade:
         assert v == [], v
 
 
+# ─── Check 9: pack_sparse_delta(compliance_status='approved') outside promo ──
+
+
+class TestNoPackSparseDeltaApprovedOutsidePromotionTool:
+    """codex R5-3 #2: pack_sparse_delta accepts compliance_status='approved'
+    only with the constant-time-HMAC _internal_promotion_token. The runtime
+    check exists; this static scan catches the same bug class earlier.
+    """
+
+    def test_call_in_promotion_tool_passes(self, tmp_path: Path) -> None:
+        # The promotion tool itself is the canonical caller; even if it
+        # someday calls pack_sparse_delta(approved) directly, that's
+        # explicitly permitted by path filter.
+        root = _stub_repo(tmp_path)
+        (root / "tools").mkdir(parents=True, exist_ok=True)
+        promo = root / "tools" / "promote_lane_c_to_approved.py"
+        _write(promo, """
+            from tac.uniward_delta import pack_sparse_delta
+            def main():
+                blob = pack_sparse_delta(
+                    delta, cost,
+                    l_inf_budget=4.0,
+                    compliance_status='approved',
+                    _internal_promotion_token=token,
+                )
+        """)
+        v = check_no_pack_sparse_delta_approved_outside_promotion_tool(
+            repo_root=root, strict=False, verbose=False,
+        )
+        # The promotion-tool path is exempt by check_*; sub-scanner sees
+        # the violation but check_* filters it out.
+        assert v == [], v
+
+    def test_call_in_test_file_passes(self, tmp_path: Path) -> None:
+        # Test fixtures legitimately use the internal token to construct
+        # approved blobs for negative-path coverage.
+        root = _stub_repo(tmp_path)
+        (root / "src" / "tac" / "tests").mkdir(parents=True, exist_ok=True)
+        test = root / "src" / "tac" / "tests" / "test_lane_c_attestation.py"
+        _write(test, """
+            from tac.uniward_delta import pack_sparse_delta, COMPLIANCE_APPROVED
+            def test_promote():
+                blob = pack_sparse_delta(
+                    delta, cost,
+                    l_inf_budget=4.0,
+                    compliance_status=COMPLIANCE_APPROVED,
+                    _internal_promotion_token=token,
+                )
+        """)
+        v = check_no_pack_sparse_delta_approved_outside_promotion_tool(
+            repo_root=root, strict=False, verbose=False,
+        )
+        assert v == [], v
+
+    def test_call_in_arbitrary_experiment_is_caught(self, tmp_path: Path) -> None:
+        root = _stub_repo(tmp_path)
+        bad = root / "experiments" / "bad_promote.py"
+        _write(bad, """
+            from tac.uniward_delta import pack_sparse_delta
+            def evil():
+                blob = pack_sparse_delta(
+                    delta, cost,
+                    l_inf_budget=4.0,
+                    compliance_status='approved',
+                )
+        """)
+        v = _scan_python_for_pack_sparse_delta_approved(bad, root)
+        assert len(v) >= 1, v
+        assert any("compliance_status=" in s for s in v)
+
+    def test_call_with_const_alias_is_caught(self, tmp_path: Path) -> None:
+        # Catch the COMPLIANCE_APPROVED constant form (which equals 'approved').
+        root = _stub_repo(tmp_path)
+        bad = root / "experiments" / "bad_const.py"
+        _write(bad, """
+            from tac.uniward_delta import pack_sparse_delta, COMPLIANCE_APPROVED
+            def evil():
+                blob = pack_sparse_delta(
+                    delta, cost,
+                    l_inf_budget=4.0,
+                    compliance_status=COMPLIANCE_APPROVED,
+                )
+        """)
+        v = _scan_python_for_pack_sparse_delta_approved(bad, root)
+        assert len(v) >= 1, v
+
+    def test_call_with_alias_import_is_caught(self, tmp_path: Path) -> None:
+        # `from tac.uniward_delta import pack_sparse_delta as pkt` aliasing.
+        root = _stub_repo(tmp_path)
+        bad = root / "experiments" / "bad_alias.py"
+        _write(bad, """
+            from tac.uniward_delta import pack_sparse_delta as pkt
+            def evil():
+                blob = pkt(delta, cost, l_inf_budget=4.0, compliance_status='approved')
+        """)
+        v = _scan_python_for_pack_sparse_delta_approved(bad, root)
+        assert len(v) >= 1, v
+
+    def test_call_with_no_kwarg_passes(self, tmp_path: Path) -> None:
+        # Defaults to pending_ruling — nothing to flag.
+        root = _stub_repo(tmp_path)
+        ok = root / "experiments" / "ok_default.py"
+        _write(ok, """
+            from tac.uniward_delta import pack_sparse_delta
+            def ok():
+                blob = pack_sparse_delta(delta, cost, l_inf_budget=4.0)
+        """)
+        v = _scan_python_for_pack_sparse_delta_approved(ok, root)
+        assert v == [], v
+
+    def test_call_with_pending_or_rejected_passes(self, tmp_path: Path) -> None:
+        root = _stub_repo(tmp_path)
+        ok = root / "experiments" / "ok_pending.py"
+        _write(ok, """
+            from tac.uniward_delta import pack_sparse_delta
+            def ok():
+                blob = pack_sparse_delta(
+                    delta, cost,
+                    l_inf_budget=4.0,
+                    compliance_status='pending_ruling',
+                )
+                blob2 = pack_sparse_delta(
+                    delta, cost,
+                    l_inf_budget=4.0,
+                    compliance_status='rejected',
+                )
+        """)
+        v = _scan_python_for_pack_sparse_delta_approved(ok, root)
+        assert v == [], v
+
+    def test_strict_raises(self, tmp_path: Path) -> None:
+        root = _stub_repo(tmp_path)
+        bad = root / "experiments" / "evil.py"
+        _write(bad, """
+            from tac.uniward_delta import pack_sparse_delta
+            blob = pack_sparse_delta(
+                d, c, l_inf_budget=4.0, compliance_status='approved'
+            )
+        """)
+        with pytest.raises(MetaBugViolation):
+            check_no_pack_sparse_delta_approved_outside_promotion_tool(
+                repo_root=root, strict=True, verbose=False,
+            )
+
+
+# ─── Check 10: inflate.sh handles .br centrally before PYTHON_INFLATE ────────
+
+
+class TestInflateShHandlesBrCentrally:
+    """codex R5-3 #11: every PYTHON_INFLATE branch must see the archive
+    fully decompressed. Centralized Stage 0 brotli block before dispatch.
+    """
+
+    def test_centralized_block_before_dispatch_passes(self, tmp_path: Path) -> None:
+        root = _stub_repo(tmp_path)
+        sub = root / "submissions" / "ok_sub"
+        sub.mkdir(parents=True, exist_ok=True)
+        sh = sub / "inflate.sh"
+        _write(sh, """
+            #!/usr/bin/env bash
+            set -euo pipefail
+            ARCHIVE_DIR="$1"
+            # Stage 0: brotli decompression
+            if compgen -G "$ARCHIVE_DIR"/*.br > /dev/null 2>&1; then
+              uv run --with brotli python -c 'import brotli'
+            fi
+            if [ "$PYTHON_INFLATE" = "renderer" ]; then
+              echo do work
+            fi
+        """)
+        v = _scan_inflate_sh_for_centralized_brotli(sh, root)
+        assert v == [], v
+
+    def test_missing_brotli_block_is_caught(self, tmp_path: Path) -> None:
+        root = _stub_repo(tmp_path)
+        sub = root / "submissions" / "bad_missing"
+        sub.mkdir(parents=True, exist_ok=True)
+        sh = sub / "inflate.sh"
+        _write(sh, """
+            #!/usr/bin/env bash
+            set -euo pipefail
+            ARCHIVE_DIR="$1"
+            if [ "$PYTHON_INFLATE" = "renderer" ]; then
+              echo do work
+            fi
+        """)
+        v = _scan_inflate_sh_for_centralized_brotli(sh, root)
+        assert len(v) >= 1, v
+        assert any("brotli" in s.lower() or "Stage 0" in s for s in v)
+
+    def test_brotli_block_after_dispatch_is_caught(self, tmp_path: Path) -> None:
+        # If --with brotli + .br + Stage 0 marker all appear AFTER the
+        # dispatch line, the pre-dispatch loop never sees them → reported
+        # as missing. Same outcome, so this exercises the position check.
+        root = _stub_repo(tmp_path)
+        sub = root / "submissions" / "bad_after"
+        sub.mkdir(parents=True, exist_ok=True)
+        sh = sub / "inflate.sh"
+        _write(sh, """
+            #!/usr/bin/env bash
+            set -euo pipefail
+            ARCHIVE_DIR="$1"
+            if [ "$PYTHON_INFLATE" = "renderer" ]; then
+              # Stage 0: brotli (TOO LATE — inside the branch)
+              if compgen -G "$ARCHIVE_DIR"/*.br > /dev/null 2>&1; then
+                uv run --with brotli python -c 'import brotli'
+              fi
+            fi
+        """)
+        v = _scan_inflate_sh_for_centralized_brotli(sh, root)
+        assert len(v) >= 1, v
+
+    def test_passthrough_inflate_sh_passes(self, tmp_path: Path) -> None:
+        # No PYTHON_INFLATE dispatch → trivial passthrough → no Stage 0
+        # block needed. PASS.
+        root = _stub_repo(tmp_path)
+        sub = root / "submissions" / "passthrough"
+        sub.mkdir(parents=True, exist_ok=True)
+        sh = sub / "inflate.sh"
+        _write(sh, """
+            #!/usr/bin/env bash
+            set -euo pipefail
+            python3 inflate.py "$@"
+        """)
+        v = _scan_inflate_sh_for_centralized_brotli(sh, root)
+        assert v == [], v
+
+    def test_real_robust_current_inflate_sh_passes(self) -> None:
+        """The actual submissions/robust_current/inflate.sh in this repo
+        was fixed in commit a1128fd9. It MUST pass."""
+        from tac.preflight import REPO_ROOT
+        path = REPO_ROOT / "submissions" / "robust_current" / "inflate.sh"
+        if not path.exists():
+            pytest.skip("submissions/robust_current/inflate.sh not present in this checkout")
+        v = _scan_inflate_sh_for_centralized_brotli(path, REPO_ROOT)
+        assert v == [], (
+            "submissions/robust_current/inflate.sh has the Stage 0 block "
+            f"per a1128fd9 — should pass, but got: {v}"
+        )
+
+    def test_strict_raises(self, tmp_path: Path) -> None:
+        root = _stub_repo(tmp_path)
+        sub = root / "submissions" / "bad"
+        sub.mkdir(parents=True, exist_ok=True)
+        sh = sub / "inflate.sh"
+        _write(sh, """
+            #!/usr/bin/env bash
+            if [ "$PYTHON_INFLATE" = "renderer" ]; then
+              echo work
+            fi
+        """)
+        with pytest.raises(MetaBugViolation):
+            check_inflate_sh_handles_br_centrally(
+                repo_root=root, strict=True, verbose=False,
+            )
+
+
+# ─── Check 11: scripts/remote_*.sh must run NVDEC probe at Stage 0 ───────────
+
+
+class TestRemoteScriptsHaveNvdecProbe:
+    """feedback_vastai_nvdec_host_variation + commit eef64293. NVDEC host
+    availability is host-dependent on Vast.ai 4090s; the probe catches
+    bad-host cases in 5s vs failing at the eval stage after $0.20+ of work.
+    """
+
+    def test_probe_at_top_passes(self, tmp_path: Path) -> None:
+        root = _stub_repo(tmp_path)
+        sh = root / "scripts" / "remote_ok.sh"
+        _write(sh, """
+            #!/bin/bash
+            set -euo pipefail
+            bash "$WORKSPACE/scripts/probe_nvdec.sh" || exit 2
+            python experiments/build_baseline_archive.py --foo
+            python -m tac.experiments.train_renderer.py --bar
+        """)
+        v = _scan_remote_script_for_nvdec_probe(sh, root)
+        assert v == [], v
+
+    def test_no_probe_call_is_caught(self, tmp_path: Path) -> None:
+        root = _stub_repo(tmp_path)
+        sh = root / "scripts" / "remote_bad_missing.sh"
+        _write(sh, """
+            #!/bin/bash
+            set -euo pipefail
+            python experiments/optimize_poses.py --foo
+        """)
+        v = _scan_remote_script_for_nvdec_probe(sh, root)
+        assert len(v) >= 1, v
+        assert any("no NVDEC probe" in s for s in v)
+
+    def test_probe_after_gpu_work_is_caught(self, tmp_path: Path) -> None:
+        # Probe MUST precede the first GPU-work marker. Probe at line 5
+        # AFTER `train_renderer.py` at line 3 is a "probe-too-late" violation.
+        root = _stub_repo(tmp_path)
+        sh = root / "scripts" / "remote_bad_late.sh"
+        _write(sh, """
+            #!/bin/bash
+            set -euo pipefail
+            python src/tac/experiments/train_renderer.py --foo
+            echo "now probing — too late"
+            bash "$WORKSPACE/scripts/probe_nvdec.sh" || exit 2
+        """)
+        v = _scan_remote_script_for_nvdec_probe(sh, root)
+        assert len(v) >= 1, v
+        assert any("AFTER" in s for s in v)
+
+    def test_no_nvdec_needed_opt_out_passes(self, tmp_path: Path) -> None:
+        root = _stub_repo(tmp_path)
+        sh = root / "scripts" / "remote_optout.sh"
+        _write(sh, """
+            #!/bin/bash
+            # NO_NVDEC_NEEDED — this script does no DALI / NVDEC video work
+            set -euo pipefail
+            python experiments/build_baseline_archive.py --no-video --foo
+        """)
+        v = _scan_remote_script_for_nvdec_probe(sh, root)
+        assert v == [], v
+
+    def test_no_gpu_work_passes(self, tmp_path: Path) -> None:
+        # Script does no GPU work and didn't opt out → no probe needed.
+        root = _stub_repo(tmp_path)
+        sh = root / "scripts" / "remote_quiet.sh"
+        _write(sh, """
+            #!/bin/bash
+            set -euo pipefail
+            echo "just a deploy / sync script"
+            rsync -a foo bar
+        """)
+        v = _scan_remote_script_for_nvdec_probe(sh, root)
+        assert v == [], v
+
+    def test_real_lane_a_pose_tto_passes(self) -> None:
+        """The actual scripts/remote_lane_a_pose_tto.sh was wired in
+        commit eef64293. It MUST pass."""
+        from tac.preflight import REPO_ROOT
+        path = REPO_ROOT / "scripts" / "remote_lane_a_pose_tto.sh"
+        if not path.exists():
+            pytest.skip("scripts/remote_lane_a_pose_tto.sh not present in this checkout")
+        v = _scan_remote_script_for_nvdec_probe(path, REPO_ROOT)
+        assert v == [], (
+            "scripts/remote_lane_a_pose_tto.sh was wired with the probe "
+            f"in commit eef64293 — should pass, but got: {v}"
+        )
+
+    def test_strict_raises(self, tmp_path: Path) -> None:
+        root = _stub_repo(tmp_path)
+        sh = root / "scripts" / "remote_bad.sh"
+        _write(sh, """
+            #!/bin/bash
+            python experiments/optimize_poses.py --foo
+        """)
+        with pytest.raises(MetaBugViolation):
+            check_remote_scripts_have_nvdec_probe(
+                repo_root=root, strict=True, verbose=False,
+            )
+
+
 # ─── codex R5-3 #4: preflight_all wires every meta-bug check ────────────────
 
 
@@ -1104,6 +1468,10 @@ class TestPreflightAllInvokesMetaBugChecks:
             "check_no_scorer_load_at_inflate",
             "check_training_scripts_have_auth_eval",
             "check_no_disable_eval_roundtrip_flag",
+            # Follow-on (codex R5-3 #2 + #11 + NVDEC probe gap):
+            "check_no_pack_sparse_delta_approved_outside_promotion_tool",
+            "check_inflate_sh_handles_br_centrally",
+            "check_remote_scripts_have_nvdec_probe",
         ]
         missing = [c for c in required_checks if c not in src]
         assert missing == [], (
@@ -1135,6 +1503,10 @@ class TestPreflightAllInvokesMetaBugChecks:
             "check_no_scorer_load_at_inflate",
             "check_training_scripts_have_auth_eval",
             "check_no_disable_eval_roundtrip_flag",
+            # Follow-on (codex R5-3 #2 + #11 + NVDEC probe gap):
+            "check_no_pack_sparse_delta_approved_outside_promotion_tool",
+            "check_inflate_sh_handles_br_centrally",
+            "check_remote_scripts_have_nvdec_probe",
         ]
         for chk in meta_checks:
             # Find the line invoking this check and confirm strict=False.
