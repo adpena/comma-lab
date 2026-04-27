@@ -3885,12 +3885,11 @@ def inflate_renderer_with_tto(
     # AST has no `from tac.scorer import ...` to walk. Functionally identical
     # to a normal import. Reachable only when INFLATE_TTO=1 (default 0); the
     # [strict-scorer-rule] banner above already announced non-compliance.
-    # SCORER_AT_INFLATE_WAIVED:env-gated-INFLATE_TTO=1
+    # codex R5-r6 #1: per-call same-line waiver markers (no lookback).
     try:
         import importlib
-        _scorer_mod = importlib.import_module("tac.scorer")
-        # SCORER_AT_INFLATE_WAIVED:env-gated-INFLATE_TTO=1
-        _load_diff = getattr(_scorer_mod, "load_differentiable_scorers")
+        _scorer_mod = importlib.import_module("tac.scorer")  # SCORER_AT_INFLATE_WAIVED:env-gated-INFLATE_TTO=1
+        _load_diff = getattr(_scorer_mod, "load_differentiable_scorers")  # SCORER_AT_INFLATE_WAIVED:env-gated-INFLATE_TTO=1
         posenet, segnet = _load_diff(upstream_root, device=device)
     except (ImportError, AttributeError):
         print("  FATAL: tac package required for TTO mode", file=sys.stderr)

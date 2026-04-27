@@ -336,7 +336,6 @@ def _enforce_eval_roundtrip(args) -> None:
 def main() -> None:
     """Run the TTO step-vs-improvement curve experiment."""
     args = parse_args()
-    _enforce_eval_roundtrip(args)
 
     # Smoke test overrides
     if args.smoke:
@@ -357,6 +356,8 @@ def main() -> None:
         args.output_dir = f"experiments/results/tto_step_curve_{ts}"
     output_dir = Path(args.output_dir)
     output_dir.mkdir(parents=True, exist_ok=True)
+    # codex R5-r6 #3: gate AFTER output_dir resolution so sidecar lands.
+    _enforce_eval_roundtrip(args)
 
     print(f"[config] device={device}, n_pairs={args.n_pairs}, "
           f"pair_start={args.pair_start}")

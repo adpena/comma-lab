@@ -458,7 +458,6 @@ def _enforce_eval_roundtrip(args) -> None:
 
 def main():
     args = parse_args()
-    _enforce_eval_roundtrip(args)
 
     # Smoke test overrides
     if args.smoke:
@@ -478,6 +477,8 @@ def main():
         args.output_dir = f"experiments/results/renderer_tto_{ts}"
     output_dir = Path(args.output_dir)
     output_dir.mkdir(parents=True, exist_ok=True)
+    # codex R5-r6 #3: gate AFTER output_dir resolution so sidecar lands.
+    _enforce_eval_roundtrip(args)
     video_path = args.video or str(upstream / "videos" / "0.mkv")
 
     print(f"[config] device={device}, n_frames={args.n_frames}, "

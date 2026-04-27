@@ -438,7 +438,6 @@ def _enforce_eval_roundtrip(args) -> None:
 
 def main() -> None:
     args = parse_args()
-    _enforce_eval_roundtrip(args)
     t_start = time.time()
 
     if args.smoke:
@@ -455,6 +454,8 @@ def main() -> None:
         args.output_dir = f"experiments/results/constrained_gen_noise/{ts}"
     output_dir = Path(args.output_dir)
     output_dir.mkdir(parents=True, exist_ok=True)
+    # codex R5-r6 #3: gate AFTER output_dir resolution so sidecar lands.
+    _enforce_eval_roundtrip(args)
 
     # Video path
     video_path = Path(args.video) if args.video else Path(args.upstream) / "videos" / "0.mkv"

@@ -1472,6 +1472,12 @@ class TestPreflightAllInvokesMetaBugChecks:
             "check_no_pack_sparse_delta_approved_outside_promotion_tool",
             "check_inflate_sh_handles_br_centrally",
             "check_remote_scripts_have_nvdec_probe",
+            # codex R5-r6: 5 new checks for round-6 findings (warn-only).
+            "check_no_brittle_six_line_waiver_lookback",
+            "check_kl_distill_uses_roundtripped_frames",
+            "check_eval_roundtrip_gate_called_after_output_dir_resolution",
+            "check_nvdec_probe_has_error_classification",
+            "check_archive_builders_use_deterministic_zip",
         ]
         missing = [c for c in required_checks if c not in src]
         assert missing == [], (
@@ -1510,6 +1516,13 @@ class TestPreflightAllInvokesMetaBugChecks:
             "check_no_pack_sparse_delta_approved_outside_promotion_tool",
             "check_inflate_sh_handles_br_centrally",
             "check_remote_scripts_have_nvdec_probe",
+            # codex R5-r6: 5 new checks promoted directly to strict=True
+            # because all landed at 0 live violations post-fix.
+            "check_no_brittle_six_line_waiver_lookback",
+            "check_kl_distill_uses_roundtripped_frames",
+            "check_eval_roundtrip_gate_called_after_output_dir_resolution",
+            "check_nvdec_probe_has_error_classification",
+            "check_archive_builders_use_deterministic_zip",
         ]
         for chk in meta_checks:
             # Find the line invoking this check and confirm strict=True.
@@ -1672,12 +1685,15 @@ class TestScorerScannerDynamicImports:
         )
         assert any("import_module" in s for s in w), w
 
-    def test_waiver_marker_within_lookback(self, tmp_path: Path) -> None:
+    def test_waiver_marker_above_call_does_NOT_suppress(self, tmp_path: Path) -> None:
+        """codex R5-r6 #1 NEGATIVE: marker on a previous line must NOT
+        waive (lookback is 0 / same-line only). Pinned previously by
+        `test_waiver_marker_within_lookback` which expected the OLD
+        6-line-lookback behaviour."""
         from tac.preflight import _scan_inflate_for_scorer_load_with_waivers
 
         root = _stub_repo(tmp_path)
         inf = root / "submissions" / "robust_current" / "inflate.py"
-        # Marker 3 lines above the call; must still waive.
         _write(inf, """
             import importlib
             # SCORER_AT_INFLATE_WAIVED:env-gated-INFLATE_TTO=1
@@ -1685,28 +1701,45 @@ class TestScorerScannerDynamicImports:
             # extra context line 2
             mod = importlib.import_module("tac.scorer")
         """)
-        u, w = _scan_inflate_for_scorer_load_with_waivers(inf, root)
-        assert u == [], (
-            f"waiver marker within 6-line lookback should suppress; got: {u}"
+        u, _w = _scan_inflate_for_scorer_load_with_waivers(inf, root)
+        assert any("import_module" in s for s in u), (
+            f"codex R5-r6 #1: marker on previous lines must NOT waive; "
+            f"got unwaived={u}"
         )
-        assert len(w) == 1, w
 
-    def test_legacy_noqa_marker_is_recognised(self, tmp_path: Path) -> None:
+    def test_legacy_noqa_marker_only_recognised_on_same_line(
+        self, tmp_path: Path,
+    ) -> None:
+        """The legacy `# noqa: scorer-at-inflate` marker is still
+        recognised, but ONLY on the same line as the offending call
+        (codex R5-r6 #1)."""
         from tac.preflight import _scan_inflate_for_scorer_load_with_waivers
 
         root = _stub_repo(tmp_path)
-        inf = root / "submissions" / "robust_current" / "inflate.py"
-        _write(inf, """
+        # Same-line: waived.
+        inf_same = root / "submissions" / "robust_current" / "inflate.py"
+        _write(inf_same, """
+            import importlib
+            mod = importlib.import_module("tac.scorer")  # noqa: scorer-at-inflate (env-gated, pending-ruling)
+        """)
+        u, w = _scan_inflate_for_scorer_load_with_waivers(inf_same, root)
+        assert u == [], f"same-line legacy noqa must suppress; got: {u}"
+        assert len(w) == 1, w
+
+        # Above call (block-level): NOT waived under same-line policy.
+        inf_above = root / "submissions" / "robust_current" / "inflate2.py"
+        _write(inf_above, """
             import importlib
             # noqa: scorer-at-inflate (env-gated, pending-ruling)
             mod = importlib.import_module("tac.scorer")
         """)
-        u, w = _scan_inflate_for_scorer_load_with_waivers(inf, root)
-        assert u == [], (
-            f"legacy `# noqa: scorer-at-inflate` marker should suppress; "
-            f"got: {u}"
+        u_above, _w_above = _scan_inflate_for_scorer_load_with_waivers(
+            inf_above, root,
         )
-        assert len(w) == 1, w
+        assert any("import_module" in s for s in u_above), (
+            f"codex R5-r6 #1: legacy noqa above-call must NOT waive; "
+            f"got unwaived={u_above}"
+        )
 
     def test_marker_inside_string_is_not_a_waiver(self, tmp_path: Path) -> None:
         """The marker must be inside a comment, not a string literal."""
@@ -1985,3 +2018,519 @@ class TestEvalRoundtripGate:
 
         with pytest.raises(ValueError):
             enforce_eval_roundtrip(write_provenance=False)
+
+    # ─── codex R5-r6 #3: deferred sidecar via callback ───────────────────────
+
+    def test_callback_defers_sidecar_until_write_now(self, tmp_path: Path) -> None:
+        """Sidecar must only be written when write_sidecar_now() is called
+        (codex R5-r6 #3). The gate API was extended so live scripts can
+        defer the sidecar write until AFTER they resolve their default
+        timestamped output_dir.
+        """
+        from tac.eval_roundtrip_gate import enforce_eval_roundtrip
+
+        out = tmp_path / "deferred_run_dir"
+        captured = {"resolved": None}
+
+        def _callback() -> Path:
+            # Simulates the script computing its timestamped default path.
+            captured["resolved"] = out
+            return out
+
+        r = enforce_eval_roundtrip(
+            self._make_args(True),
+            output_dir_callback=_callback,
+            write_provenance=True,
+        )
+        # Sidecar NOT yet written — callback hasn't been invoked.
+        assert not (out / "eval_roundtrip_gate.json").exists()
+        assert r._sidecar_written is False
+
+        # Operator calls .write_sidecar_now() AFTER resolving output_dir.
+        path = r.write_sidecar_now()
+        assert path is not None
+        assert path.exists()
+        assert r._sidecar_written is True
+
+    def test_callback_with_explicit_override_takes_precedence(
+        self, tmp_path: Path,
+    ) -> None:
+        from tac.eval_roundtrip_gate import enforce_eval_roundtrip
+
+        out_a = tmp_path / "from_callback"
+        out_b = tmp_path / "from_override"
+
+        r = enforce_eval_roundtrip(
+            self._make_args(True),
+            output_dir_callback=lambda: out_a,
+            write_provenance=True,
+        )
+        path = r.write_sidecar_now(output_dir=out_b)
+        assert path is not None
+        assert path.parent == out_b
+        assert (out_b / "eval_roundtrip_gate.json").exists()
+        assert not (out_a / "eval_roundtrip_gate.json").exists()
+
+
+# ─── codex R5-r6 #1: same-line waiver enforcement ───────────────────────────
+
+
+class TestWaiverSameLineOnly:
+    """The waiver scanner used to honour markers on any of the previous 6
+    lines. That meant a marker intended for one specific pending-ruling
+    import could waive an UNRELATED scorer load inserted nearby. The fix
+    tightens the lookback to SAME-LINE ONLY so every waiver is structurally
+    attached to its specific call site.
+    """
+
+    def test_same_line_waiver_works(self, tmp_path: Path) -> None:
+        from tac.preflight import _scan_inflate_for_scorer_load_with_waivers
+
+        root = _stub_repo(tmp_path)
+        inf = root / "submissions" / "robust_current" / "inflate.py"
+        _write(inf, """
+            import importlib
+            mod = importlib.import_module("tac.scorer")  # SCORER_AT_INFLATE_WAIVED:env-gated
+        """)
+        u, w = _scan_inflate_for_scorer_load_with_waivers(inf, root)
+        assert u == [], (
+            f"same-line marker must waive; got unwaived={u}"
+        )
+        assert len(w) == 1, w
+
+    def test_marker_one_line_above_does_NOT_waive(self, tmp_path: Path) -> None:
+        """Codex R5-r6 #1 NEGATIVE TEST: marker on the line ABOVE the
+        offending call must NOT suppress strict failure (lookback is 0)."""
+        from tac.preflight import _scan_inflate_for_scorer_load_with_waivers
+
+        root = _stub_repo(tmp_path)
+        inf = root / "submissions" / "robust_current" / "inflate.py"
+        _write(inf, """
+            import importlib
+            # SCORER_AT_INFLATE_WAIVED:env-gated
+            mod = importlib.import_module("tac.scorer")
+        """)
+        u, _w = _scan_inflate_for_scorer_load_with_waivers(inf, root)
+        assert any("import_module" in s for s in u), (
+            f"marker on previous line must NOT waive (codex R5-r6 #1); "
+            f"got unwaived={u}"
+        )
+
+    def test_one_waivered_one_unwaivered_within_6_lines(
+        self, tmp_path: Path,
+    ) -> None:
+        """Critical regression test for Finding #1: the previous 6-line
+        lookback let a single waiver suppress BOTH the intended call AND
+        an unrelated nearby call. With same-line policy, the waivered
+        call must be suppressed and the un-waivered call must still
+        appear in unwaived violations.
+        """
+        from tac.preflight import _scan_inflate_for_scorer_load_with_waivers
+
+        root = _stub_repo(tmp_path)
+        inf = root / "submissions" / "robust_current" / "inflate.py"
+        _write(inf, """
+            import importlib
+            mod1 = importlib.import_module("tac.scorer")  # SCORER_AT_INFLATE_WAIVED:env-gated
+            mod2 = importlib.import_module("tac.scorer_targets")
+        """)
+        u, w = _scan_inflate_for_scorer_load_with_waivers(inf, root)
+        # mod1 waived, mod2 NOT waived — exactly one unwaived violation
+        # mentioning scorer_targets.
+        assert any("scorer_targets" in s for s in u), (
+            f"un-waivered call MUST still surface; got unwaived={u}"
+        )
+        assert not any(
+            "tac.scorer'" in s.replace('"', "'") and "scorer_targets" not in s
+            for s in u
+        ), (
+            f"the intended same-line waiver must suppress its specific "
+            f"call; got unwaived={u}"
+        )
+        assert any("tac.scorer" in s and "scorer_targets" not in s for s in w), w
+
+    def test_lookback_constant_is_zero(self) -> None:
+        """The constant must be 0 (or 1) — the brittle 6-line lookback
+        was the root cause of Finding #1.
+        """
+        from tac.preflight import _WAIVER_LOOKBACK_LINES
+
+        assert _WAIVER_LOOKBACK_LINES <= 1, (
+            f"_WAIVER_LOOKBACK_LINES={_WAIVER_LOOKBACK_LINES} re-introduces "
+            f"the codex R5-r6 #1 brittleness; must be 0 or 1."
+        )
+
+
+# ─── codex R5-r6 #2: KL distill uses roundtripped frames ────────────────────
+
+
+class TestKlDistillUsesRoundtrippedFrames:
+    """Lane G burned $0.85 because optimize_poses.py passed raw `pairs`
+    (renderer output) to kl_distill_segnet_only(...) while the SegNet
+    scoring path had already eval-roundtripped the same frames. The KL
+    gradients pulled the renderer in the wrong direction relative to the
+    scored loss path — net result: pose TTO HURT the score (proxy 0.0007
+    vs auth 0.246 PoseNet, 350x gap; final auth 2.40 vs 0.90 baseline).
+    """
+
+    def test_raw_pairs_first_arg_is_caught(self, tmp_path: Path) -> None:
+        from tac.preflight import _scan_python_for_kl_distill_raw_pairs
+
+        root = _stub_repo(tmp_path)
+        bad = root / "experiments" / "bad_kl.py"
+        _write(bad, """
+            from tac.losses import kl_distill_segnet_only
+            def step(pairs, gt, segnet):
+                kl, _ = kl_distill_segnet_only(pairs, gt, segnet, temperature=2.0)
+                return kl
+        """)
+        v = _scan_python_for_kl_distill_raw_pairs(bad, root)
+        assert any("pairs" in s for s in v), v
+
+    def test_roundtripped_first_arg_is_clean(self, tmp_path: Path) -> None:
+        from tac.preflight import _scan_python_for_kl_distill_raw_pairs
+
+        root = _stub_repo(tmp_path)
+        good = root / "experiments" / "good_kl.py"
+        _write(good, """
+            from tac.losses import kl_distill_segnet_only
+            def step(rendered_pair_hwc_rt, gt, segnet):
+                kl, _ = kl_distill_segnet_only(rendered_pair_hwc_rt, gt, segnet, temperature=2.0)
+                return kl
+        """)
+        v = _scan_python_for_kl_distill_raw_pairs(good, root)
+        assert v == [], f"roundtripped variable must pass; got: {v}"
+
+    def test_complex_first_arg_is_clean(self, tmp_path: Path) -> None:
+        """Inline expressions (.permute, .view, etc.) are presumed to be
+        intentional reshape of roundtripped frames — pass."""
+        from tac.preflight import _scan_python_for_kl_distill_raw_pairs
+
+        root = _stub_repo(tmp_path)
+        good = root / "experiments" / "good_kl_inline.py"
+        _write(good, """
+            from tac.losses import kl_distill_segnet_only
+            def step(frames_chw, gt, segnet):
+                kl, _ = kl_distill_segnet_only(
+                    frames_chw.permute(0, 2, 3, 1).contiguous(), gt, segnet,
+                    temperature=2.0,
+                )
+                return kl
+        """)
+        v = _scan_python_for_kl_distill_raw_pairs(good, root)
+        assert v == [], f"inline-permute first arg must pass; got: {v}"
+
+    def test_same_line_marker_opts_out(self, tmp_path: Path) -> None:
+        from tac.preflight import _scan_python_for_kl_distill_raw_pairs
+
+        root = _stub_repo(tmp_path)
+        ok = root / "experiments" / "kl_test_fixture.py"
+        _write(ok, """
+            from tac.losses import kl_distill_segnet_only
+            def fixture(pairs, gt, segnet):
+                kl, _ = kl_distill_segnet_only(pairs, gt, segnet, temperature=2.0)  # KL_RAW_PAIRS_OK:test fixture
+                return kl
+        """)
+        v = _scan_python_for_kl_distill_raw_pairs(ok, root)
+        assert v == [], (
+            f"same-line KL_RAW_PAIRS_OK marker must opt out; got: {v}"
+        )
+
+    def test_check_function_runs_without_strict_failure(self, tmp_path: Path) -> None:
+        """Sanity: top-level check function callable in warn-only mode."""
+        from tac.preflight import check_kl_distill_uses_roundtripped_frames
+
+        root = _stub_repo(tmp_path)
+        # Empty repo — check passes trivially.
+        v = check_kl_distill_uses_roundtripped_frames(
+            repo_root=root, strict=False, verbose=False,
+        )
+        assert v == [], v
+
+
+# ─── codex R5-r6 #3: gate ordering preflight ────────────────────────────────
+
+
+class TestGateAfterOutputDirResolution:
+    """The eval_roundtrip_gate sidecar JSON used to be silently dropped
+    when args.output_dir was None at call time. Live scripts now resolve
+    args.output_dir BEFORE calling _enforce_eval_roundtrip(args) so the
+    sidecar lands in the timestamped run dir.
+    """
+
+    def test_gate_before_output_dir_assignment_is_caught(
+        self, tmp_path: Path,
+    ) -> None:
+        from tac.preflight import _scan_python_for_gate_before_output_dir
+
+        root = _stub_repo(tmp_path)
+        bad = root / "experiments" / "bad_order.py"
+        _write(bad, """
+            def main():
+                args = parse_args()
+                _enforce_eval_roundtrip(args)
+                if args.output_dir is None:
+                    args.output_dir = "experiments/results/x"
+        """)
+        v = _scan_python_for_gate_before_output_dir(bad, root)
+        assert any("BEFORE" in s for s in v), v
+
+    def test_gate_after_output_dir_assignment_is_clean(
+        self, tmp_path: Path,
+    ) -> None:
+        from tac.preflight import _scan_python_for_gate_before_output_dir
+
+        root = _stub_repo(tmp_path)
+        good = root / "experiments" / "good_order.py"
+        _write(good, """
+            def main():
+                args = parse_args()
+                if args.output_dir is None:
+                    args.output_dir = "experiments/results/x"
+                _enforce_eval_roundtrip(args)
+        """)
+        v = _scan_python_for_gate_before_output_dir(good, root)
+        assert v == [], f"gate AFTER assignment must pass; got: {v}"
+
+    def test_no_assignment_means_clean(self, tmp_path: Path) -> None:
+        """If the script never resolves a default output_dir (CLI default
+        suffices), the order doesn't matter."""
+        from tac.preflight import _scan_python_for_gate_before_output_dir
+
+        root = _stub_repo(tmp_path)
+        ok = root / "experiments" / "no_assign.py"
+        _write(ok, """
+            def main():
+                args = parse_args()
+                _enforce_eval_roundtrip(args)
+                output_dir = Path(args.output_dir)
+        """)
+        v = _scan_python_for_gate_before_output_dir(ok, root)
+        assert v == [], v
+
+
+# ─── codex R5-r6 #4: NVDEC probe error classification ───────────────────────
+
+
+class TestNvdecProbeErrorClassification:
+    """The probe used to map EVERY exception to exit 2 ("kill the host").
+    A corrupt fixture or DALI build error therefore triggered the same
+    operator response (destroy + relaunch) as a genuine missing-NVDEC
+    host. The fix dispatches on a PROBE_CLASSIFICATION token to distinct
+    exit codes (NVDEC=2, DALI=3, FIXTURE=4, UNKNOWN=5).
+    """
+
+    def test_probe_has_classification_marker(self) -> None:
+        from tac.preflight import check_nvdec_probe_has_error_classification
+
+        # Run against the live repo — should pass because we just landed
+        # the codex R5-r6 #4 fix.
+        v = check_nvdec_probe_has_error_classification(
+            strict=False, verbose=False,
+        )
+        assert v == [], (
+            f"live probe_nvdec.sh must pass classification check; got: {v}"
+        )
+
+    def test_missing_classification_is_caught(self, tmp_path: Path) -> None:
+        from tac.preflight import check_nvdec_probe_has_error_classification
+
+        root = _stub_repo(tmp_path)
+        probe = root / "scripts" / "probe_nvdec.sh"
+        probe.write_text(
+            "#!/bin/bash\nset -e\nexit 0\n",
+        )
+        v = check_nvdec_probe_has_error_classification(
+            repo_root=root, strict=False, verbose=False,
+        )
+        assert any("PROBE_CLASSIFICATION" in s for s in v), v
+
+    def test_only_one_distinct_exit_code_is_caught(
+        self, tmp_path: Path,
+    ) -> None:
+        from tac.preflight import check_nvdec_probe_has_error_classification
+
+        root = _stub_repo(tmp_path)
+        probe = root / "scripts" / "probe_nvdec.sh"
+        probe.write_text(
+            "#!/bin/bash\nset -e\n# PROBE_CLASSIFICATION:OK\nexit 2\n",
+        )
+        v = check_nvdec_probe_has_error_classification(
+            repo_root=root, strict=False, verbose=False,
+        )
+        assert any("distinct" in s for s in v), v
+
+    def test_missing_probe_file_is_caught(self, tmp_path: Path) -> None:
+        from tac.preflight import check_nvdec_probe_has_error_classification
+
+        root = _stub_repo(tmp_path)
+        v = check_nvdec_probe_has_error_classification(
+            repo_root=root, strict=False, verbose=False,
+        )
+        assert any("missing" in s.lower() for s in v), v
+
+
+# ─── codex R5-r6 #5: deterministic-zip preflight ────────────────────────────
+
+
+class TestArchiveBuildersUseDeterministicZip:
+    """build_brotli_from_lane_a.py used `ZipFile.write(path, arcname=...)`
+    which embeds the source-file mtime + perm bits. Two consecutive runs
+    with identical inputs produced different archive bytes → no SHA
+    anchoring possible. The fix uses fixed-timestamp ZipInfo + writestr.
+    """
+
+    def test_raw_zipfile_write_is_caught(self, tmp_path: Path) -> None:
+        from tac.preflight import _scan_python_for_nondeterministic_zip
+
+        root = _stub_repo(tmp_path)
+        bad = root / "experiments" / "build_bad.py"
+        _write(bad, """
+            import zipfile
+            from pathlib import Path
+            def main():
+                with zipfile.ZipFile("/tmp/x.zip", "w") as z:
+                    z.write("/tmp/a.bin", arcname="a.bin")
+                    z.write("/tmp/b.bin", arcname="b.bin")
+        """)
+        v = _scan_python_for_nondeterministic_zip(bad, root)
+        assert v != []
+        assert any(".write" in s for s in v), v
+
+    def test_deterministic_helper_is_clean(self, tmp_path: Path) -> None:
+        from tac.preflight import _scan_python_for_nondeterministic_zip
+
+        root = _stub_repo(tmp_path)
+        good = root / "experiments" / "build_good.py"
+        _write(good, """
+            import zipfile
+            def _deterministic_zip_write(z, arcname, src):
+                info = zipfile.ZipInfo(arcname, date_time=(2026, 4, 27, 0, 0, 0))
+                z.writestr(info, b"data")
+            def main():
+                with zipfile.ZipFile("/tmp/x.zip", "w") as z:
+                    z.write("/tmp/a.bin", arcname="a.bin")
+        """)
+        v = _scan_python_for_nondeterministic_zip(good, root)
+        assert v == [], (
+            f"file using ZipInfo helper must pass even with .write() calls; "
+            f"got: {v}"
+        )
+
+    def test_explicit_optout_marker_is_clean(self, tmp_path: Path) -> None:
+        from tac.preflight import _scan_python_for_nondeterministic_zip
+
+        root = _stub_repo(tmp_path)
+        ok = root / "experiments" / "build_optout.py"
+        _write(ok, """
+            # DETERMINISTIC_ZIP_OK — operator opt-out for this builder
+            import zipfile
+            def main():
+                with zipfile.ZipFile("/tmp/x.zip", "w") as z:
+                    z.write("/tmp/a.bin", arcname="a.bin")
+        """)
+        v = _scan_python_for_nondeterministic_zip(ok, root)
+        assert v == [], v
+
+    def test_check_function_runs(self, tmp_path: Path) -> None:
+        """Top-level check is invokable in warn-only mode."""
+        from tac.preflight import check_archive_builders_use_deterministic_zip
+
+        root = _stub_repo(tmp_path)
+        v = check_archive_builders_use_deterministic_zip(
+            repo_root=root, strict=False, verbose=False,
+        )
+        assert v == [], v
+
+    def test_deterministic_zip_helper_produces_byte_identical_archives(
+        self, tmp_path: Path,
+    ) -> None:
+        """End-to-end regression: invoking the helper twice with identical
+        inputs must produce byte-identical archive bytes (codex R5-r6 #5).
+        """
+        import hashlib
+        import zipfile
+
+        # Reproduce the helper inline so this test does not depend on the
+        # build_brotli_from_lane_a.py harness staying importable.
+        DET_DT = (2026, 4, 27, 0, 0, 0)
+        DET_ATTR = (0o644 & 0xFFFF) << 16
+        DET_SYS = 3
+
+        def write_det(z: zipfile.ZipFile, arcname: str, data: bytes) -> None:
+            info = zipfile.ZipInfo(filename=arcname, date_time=DET_DT)
+            info.compress_type = zipfile.ZIP_DEFLATED
+            info.external_attr = DET_ATTR
+            info.create_system = DET_SYS
+            z.writestr(info, data, compress_type=zipfile.ZIP_DEFLATED, compresslevel=9)
+
+        payload_a = b"renderer-bytes-payload-A" * 100
+        payload_b = b"masks-payload-B" * 200
+        entries = sorted(
+            [("renderer.bin.br", payload_a), ("masks.mkv", payload_b)],
+            key=lambda kv: kv[0],
+        )
+
+        def build(out: Path) -> str:
+            with zipfile.ZipFile(out, "w", zipfile.ZIP_DEFLATED) as z:
+                for arc, data in entries:
+                    write_det(z, arc, data)
+            h = hashlib.sha256()
+            h.update(out.read_bytes())
+            return h.hexdigest()
+
+        out1 = tmp_path / "a.zip"
+        out2 = tmp_path / "b.zip"
+        sha1 = build(out1)
+        # Sleep a tiny bit so any wall-clock-based mtime drift would surface.
+        import time
+        time.sleep(1)
+        sha2 = build(out2)
+        assert sha1 == sha2, (
+            f"deterministic-zip helper produced different archives across "
+            f"two runs: {sha1} vs {sha2}. Codex R5-r6 #5 regression."
+        )
+
+    def test_nondeterministic_zfile_write_DOES_drift(
+        self, tmp_path: Path,
+    ) -> None:
+        """Sanity for the test above: confirm vanilla ZipFile.write WOULD
+        drift across runs (so we know the deterministic helper is doing
+        something meaningful, not coincidentally producing the same bytes).
+        """
+        import hashlib
+        import time
+        import zipfile
+
+        src = tmp_path / "input.bin"
+        src.write_bytes(b"x" * 1024)
+        out1 = tmp_path / "a.zip"
+        out2 = tmp_path / "b.zip"
+
+        with zipfile.ZipFile(out1, "w", zipfile.ZIP_DEFLATED) as z:
+            z.write(src, arcname="input.bin")
+        # Touch the source mtime so the second zip embeds a different date.
+        time.sleep(2)
+        new_mtime = src.stat().st_mtime + 60
+        os_utime_supported = True
+        try:
+            import os
+            os.utime(src, (new_mtime, new_mtime))
+        except OSError:
+            os_utime_supported = False
+        if not os_utime_supported:
+            pytest.skip("os.utime not supported on this platform")
+        with zipfile.ZipFile(out2, "w", zipfile.ZIP_DEFLATED) as z:
+            z.write(src, arcname="input.bin")
+
+        sha1 = hashlib.sha256(out1.read_bytes()).hexdigest()
+        sha2 = hashlib.sha256(out2.read_bytes()).hexdigest()
+        # The vanilla path SHOULD have drifted because mtime changed.
+        # If the platform happens to truncate to 2-second precision, the
+        # difference still surfaces because we waited 2s.
+        assert sha1 != sha2, (
+            f"sanity: vanilla ZipFile.write must produce different bytes "
+            f"when source mtime changes (got identical {sha1}). If this "
+            f"asserts cleanly, the deterministic-zip test above is "
+            f"vacuous on this platform."
+        )

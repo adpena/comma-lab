@@ -261,3 +261,42 @@ def test_kl_distill_log_line_includes_kl_when_active():
         "kl_distill_weight > 0 so the operator can see the auxiliary "
         "loss component in real time. CLAUDE.md no-wasted-resources rule."
     )
+
+
+# ───────────────────────────────────────────────────────────────────────
+# Test 6 (codex R5-r6 #2): KL block must NOT pass raw `pairs` to the
+# helper — the SegNet scoring path uses simulate_eval_roundtrip first,
+# so the KL auxiliary must operate on the SAME roundtripped distribution.
+# ───────────────────────────────────────────────────────────────────────
+def test_kl_distill_uses_roundtripped_frames_not_raw_pairs():
+    """codex R5-r6 #2 regression test: feed roundtripped frames to the
+    KL helper, NOT raw renderer output `pairs`. Lane G burned $0.85
+    chasing a 350x proxy-auth gap that this fix closes.
+    """
+    src = SCRIPT.read_text()
+    # The KL block must derive `rendered_pair_hwc_rt` (or any *_rt name)
+    # from frames_chw — NOT pass `pairs` directly.
+    assert "rendered_pair_hwc_rt" in src, (
+        "codex R5-r6 #2 fix missing: optimize_poses.py KL block must "
+        "construct `rendered_pair_hwc_rt` from the SegNet path's "
+        "roundtripped frames_chw. Without this, KL gradients optimise "
+        "for a different rendered distribution than the scored loss path."
+    )
+    # AND the call site must pass that variable to kl_distill_segnet_only.
+    call_re = re.compile(
+        r"kl_distill_segnet_only\s*\(\s*rendered_pair_hwc_rt",
+    )
+    assert call_re.search(src) is not None, (
+        "codex R5-r6 #2 fix missing: kl_distill_segnet_only(...) must "
+        "be called with the roundtripped HWC tensor as the first "
+        "positional arg, not `pairs`."
+    )
+    # Defensive: the OLD wiring `kl_distill_segnet_only(pairs, ...)` (or
+    # the more obvious `rendered_pair_hwc = pairs`) must be GONE.
+    forbidden_aliases = ("rendered_pair_hwc = pairs", "rendered_pair_hwc=pairs")
+    for alias in forbidden_aliases:
+        assert alias not in src, (
+            f"codex R5-r6 #2 regression: forbidden alias `{alias}` "
+            f"remains in optimize_poses.py — KL block reverted to raw "
+            f"renderer output."
+        )

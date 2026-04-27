@@ -34,6 +34,37 @@ REPO = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(REPO / "src"))
 sys.path.insert(0, str(REPO / "upstream"))
 
+# DETERMINISTIC_ZIP_OK — codex R5-r6 #5: this builder uses the
+# deterministic-zip helper below rather than vanilla zipfile.ZipFile.write.
+# Two reruns with identical inputs produce byte-identical archive bytes.
+_DET_ZIP_DATE_TIME = (2026, 4, 27, 0, 0, 0)
+_DET_ZIP_EXTERNAL_ATTR = (0o644 & 0xFFFF) << 16  # rw-r--r--
+_DET_ZIP_CREATE_SYSTEM = 3                       # Unix
+
+
+def _det_zip_write(
+    z: zipfile.ZipFile,
+    arcname: str,
+    src: Path,
+    *,
+    compress_type: int = zipfile.ZIP_DEFLATED,
+    compresslevel: int = 9,
+) -> None:
+    """Codex R5-r6 #5: write src into z with FIXED metadata.
+
+    Vanilla ``z.write(path, arcname=...)`` embeds the source-file mtime +
+    OS-dependent perm bits, so two reruns produce different archive
+    bytes. This wrapper forces a constant date_time + Unix perms so the
+    archive is reproducible from the same inputs.
+    """
+    info = zipfile.ZipInfo(filename=arcname, date_time=_DET_ZIP_DATE_TIME)
+    info.compress_type = compress_type
+    info.external_attr = _DET_ZIP_EXTERNAL_ATTR
+    info.create_system = _DET_ZIP_CREATE_SYSTEM
+    with open(src, "rb") as f:
+        data = f.read()
+    z.writestr(info, data, compress_type=compress_type, compresslevel=compresslevel)
+
 
 def _sha256(path: Path) -> str:
     h = hashlib.sha256()
@@ -508,24 +539,34 @@ def main() -> int:
             sentinel_path.write_bytes(b"")  # 0-byte marker
 
         args.output.parent.mkdir(parents=True, exist_ok=True)
+        # codex R5-r6 #5: collect entries in deterministic (alphabetical)
+        # order, then write via the fixed-timestamp helper so reruns are
+        # byte-identical. Order also matters for archive reproducibility.
+        det_entries: list[tuple[str, Path]] = [
+            (renderer_arcname, renderer_src_for_zip),
+            ("masks.mkv", masks_path),
+        ]
+        if args.use_zero_cost_poses:
+            det_entries.append((ZERO_COST_POSES_SENTINEL, sentinel_path))
+        else:
+            det_entries.append(("optimized_poses.pt", args.poses))
+        if args.with_uniward_delta is not None:
+            det_entries.append(("delta.bin", args.with_uniward_delta))
+        det_entries.sort(key=lambda kv: kv[0])
         with zipfile.ZipFile(args.output, "w", zipfile.ZIP_DEFLATED, compresslevel=9) as z:
-            z.write(renderer_src_for_zip, arcname=renderer_arcname)
-            z.write(masks_path, arcname="masks.mkv")
-            if args.use_zero_cost_poses:
-                z.write(sentinel_path, arcname=ZERO_COST_POSES_SENTINEL)
-                print(
-                    f"[build] Lane M+ ZERO-COST POSES: omitted "
-                    f"optimized_poses.pt ({args.poses.stat().st_size:,} "
-                    f"bytes saved); wrote sentinel "
-                    f"{ZERO_COST_POSES_SENTINEL!r} (0 bytes). Inflate "
-                    f"requires INFLATE_ZERO_COST_POSES=1."
-                )
-            else:
-                z.write(args.poses, arcname="optimized_poses.pt")
-            if args.with_uniward_delta is not None:
-                z.write(args.with_uniward_delta, arcname="delta.bin")
-                print(f"[build] bundled UNIWARD δ from {args.with_uniward_delta} "
-                      f"({args.with_uniward_delta.stat().st_size:,} bytes)")
+            for arcname, src in det_entries:
+                _det_zip_write(z, arcname, src)
+        if args.use_zero_cost_poses:
+            print(
+                f"[build] Lane M+ ZERO-COST POSES: omitted "
+                f"optimized_poses.pt ({args.poses.stat().st_size:,} "
+                f"bytes saved); wrote sentinel "
+                f"{ZERO_COST_POSES_SENTINEL!r} (0 bytes). Inflate "
+                f"requires INFLATE_ZERO_COST_POSES=1."
+            )
+        if args.with_uniward_delta is not None:
+            print(f"[build] bundled UNIWARD δ from {args.with_uniward_delta} "
+                  f"({args.with_uniward_delta.stat().st_size:,} bytes)")
         archive_size = args.output.stat().st_size
         rate_unscaled = archive_size / 37545489
         rate_contribution = 25 * rate_unscaled

@@ -459,13 +459,15 @@ def _enforce_eval_roundtrip(args) -> None:
 def main() -> None:
     """Run the per-pair difficulty map computation."""
     args = parse_args()
-    _enforce_eval_roundtrip(args)
 
     device = torch.device(args.device)
     upstream = Path(args.upstream)
     video_path = args.video or str(upstream / "videos" / "0.mkv")
     output_dir = Path(args.output_dir)
     output_dir.mkdir(parents=True, exist_ok=True)
+    # codex R5-r6 #3: gate AFTER output_dir is materialised so the
+    # sidecar provenance lands in the resolved run directory.
+    _enforce_eval_roundtrip(args)
 
     n_frames = 40 if args.smoke else 1200
 

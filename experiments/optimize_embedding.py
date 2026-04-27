@@ -289,7 +289,6 @@ def _enforce_eval_roundtrip(args) -> None:
 
 def main():
     args = parse_args()
-    _enforce_eval_roundtrip(args)
 
     if args.smoke:
         args.n_frames = 20
@@ -312,6 +311,9 @@ def main():
         args.output_dir = str(RESULTS_DIR / f"embedding_tto_{ts}")
     output_dir = Path(args.output_dir)
     output_dir.mkdir(parents=True, exist_ok=True)
+    # codex R5-r6 #3: gate AFTER output_dir resolution so the sidecar
+    # provenance lands in the resolved (timestamped) run directory.
+    _enforce_eval_roundtrip(args)
 
     video_path = args.video or str(upstream / "videos" / "0.mkv")
 

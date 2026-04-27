@@ -583,12 +583,36 @@ def optimize_poses_batch(
         # Lessons"). Renderer pairs are float 0-255 (rendered_pair.round()
         # .clamp(0,255) contract); GT frames are uint8 0-255 cast to float
         # by the caller; segnet.preprocess_input normalizes both.
+        #
+        # 2026-04-27 codex R5-r6 #2 fix: feed the SAME eval-roundtripped
+        # frames the SegNet scorer path sees — NOT raw `pairs`. The
+        # standard SegNet loss above already calls
+        # `simulate_eval_roundtrip(frames_chw, ...)` before
+        # `segnet.preprocess_input`. The KL auxiliary previously passed
+        # `pairs` (raw, NOT roundtripped) which optimised against logits
+        # for a different rendered distribution than the scored loss path
+        # — meaning Lane G's KL gradients pulled the renderer in the
+        # wrong direction relative to the scoring distribution. Now we
+        # reshape the roundtripped CHW back to HWC and pass that.
+        # The roundtrip is a no-op when eval_roundtrip=False, so the
+        # default-off path is unchanged.
         kl_loss_val = 0.0
         if kl_distill_weight > 0 and gt_frames_pair is not None:
             from tac.losses import kl_distill_segnet_only
-            rendered_pair_hwc = pairs  # (B, 2, H, W, 3) — already HWC
+            # frames_chw is (2*B, 3, H, W) — roundtripped above when
+            # eval_roundtrip=True, raw otherwise. Permute back to HWC
+            # then unflatten the (2*B, ...) axis into (B, 2, ...) so the
+            # shape matches the kl_distill_segnet_only contract
+            # (B, T, H, W, C). Use the SAME simulate_eval_roundtrip
+            # output the SegNet path consumed — do NOT call it again
+            # (would double-roundtrip and add 2x noise + 2x interp loss).
+            B_kl = pairs.shape[0]
+            frames_hwc_rt = frames_chw.permute(0, 2, 3, 1).contiguous()  # (2*B, H, W, 3)
+            rendered_pair_hwc_rt = frames_hwc_rt.view(
+                2, B_kl, frames_hwc_rt.shape[1], frames_hwc_rt.shape[2], 3
+            ).permute(1, 0, 2, 3, 4).contiguous()  # (B, 2, H, W, 3)
             kl_loss, kl_loss_val = kl_distill_segnet_only(
-                rendered_pair_hwc, gt_frames_pair, segnet,
+                rendered_pair_hwc_rt, gt_frames_pair, segnet,
                 temperature=kl_distill_temperature,
             )
             total_loss = total_loss + kl_distill_weight * kl_loss
@@ -744,7 +768,6 @@ def _enforce_eval_roundtrip(args) -> None:
 
 def main():
     args = parse_args()
-    _enforce_eval_roundtrip(args)
 
     # Preflight: catch integration mismatches before burning GPU time
     from tac.preflight import preflight_check
@@ -776,6 +799,10 @@ def main():
         args.output_dir = str(RESULTS_DIR / f"pose_tto_{ts}")
     output_dir = Path(args.output_dir)
     output_dir.mkdir(parents=True, exist_ok=True)
+    # codex R5-r6 #3: gate AFTER output_dir resolution so the
+    # eval_roundtrip_gate.json sidecar lands in the resolved
+    # (timestamped) run directory.
+    _enforce_eval_roundtrip(args)
 
     video_path = args.video or str(upstream / "videos" / "0.mkv")
     # Lane M: pose_dim_internal is the OPTIMIZABLE width (1 for

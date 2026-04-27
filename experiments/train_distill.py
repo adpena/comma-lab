@@ -1583,7 +1583,6 @@ def _enforce_eval_roundtrip(args) -> None:
 
 def main() -> None:
     args = parse_args()
-    _enforce_eval_roundtrip(args)
 
     # Build config from args
     cfg = DistillConfig(
@@ -1678,6 +1677,12 @@ def main() -> None:
         global RESULTS_DIR
         RESULTS_DIR = Path(args.output_dir)
     RESULTS_DIR.mkdir(parents=True, exist_ok=True)
+    # codex R5-r6 #3: gate AFTER output_dir / RESULTS_DIR resolution so
+    # the eval_roundtrip_gate.json sidecar lands in the run dir. Mirror
+    # the resolved RESULTS_DIR back onto args.output_dir for the gate.
+    if not args.output_dir:
+        args.output_dir = str(RESULTS_DIR)
+    _enforce_eval_roundtrip(args)
 
     # Save config
     with open(RESULTS_DIR / "config.json", "w") as f:

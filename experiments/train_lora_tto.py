@@ -151,7 +151,6 @@ def _enforce_eval_roundtrip(args) -> None:
 
 def main() -> None:
     args = parse_args()
-    _enforce_eval_roundtrip(args)
 
     if args.smoke:
         args.epochs = 100
@@ -169,6 +168,10 @@ def main() -> None:
     video_path = Path(args.video) if args.video else upstream / "videos" / "0.mkv"
     output_dir = Path(args.output_dir) if args.output_dir else RESULTS_DIR
     output_dir.mkdir(parents=True, exist_ok=True)
+    # codex R5-r6 #3: gate AFTER output_dir resolution so sidecar lands.
+    if args.output_dir is None:
+        args.output_dir = str(output_dir)
+    _enforce_eval_roundtrip(args)
     checkpoint = Path(args.checkpoint) if args.checkpoint else (
         root / "experiments" / "results" / "v5_lagrangian_renderer" / "renderer_best.pt"
     )
