@@ -5,7 +5,7 @@ import tempfile
 import unittest
 from pathlib import Path
 
-from tac.deploy.kaggle import kaggle_queue_tick as mod
+import tac.deploy.kaggle.kaggle_queue_tick as mod
 
 
 def write_json(path: Path, payload: object) -> None:

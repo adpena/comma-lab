@@ -2,7 +2,7 @@ from __future__ import annotations
 
 import unittest
 
-from tac.deploy.kaggle import build_kaggle_kernels as mod
+import tac.deploy.kaggle.build_kaggle_kernels as mod
 
 
 class BuildKaggleKernelsTests(unittest.TestCase):
@@ -12,8 +12,9 @@ class BuildKaggleKernelsTests(unittest.TestCase):
         dilated = specs["dilated_h64_long1000"]
         segnet = specs["segnet_attack_fixed_h32"]
 
-        self.assertEqual(dilated.dataset_sources, (mod.ASSET_DATASET_REF,))
-        self.assertEqual(segnet.dataset_sources, (mod.ASSET_DATASET_REF,))
+        expected_ref = mod.kaggle_dataset_ref()
+        self.assertEqual(dilated.dataset_sources, (expected_ref,))
+        self.assertEqual(segnet.dataset_sources, (expected_ref,))
         self.assertEqual(dilated.include_paths, ())
         self.assertEqual(segnet.include_paths, ())
         # launch_policy was stripped in round 28 (silently ignored by Kaggle server)

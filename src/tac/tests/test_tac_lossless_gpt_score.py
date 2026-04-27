@@ -28,7 +28,7 @@ class TacLosslessGptScoreTests(unittest.TestCase):
         self.assertEqual(providers, ["CoreMLExecutionProvider", "CPUExecutionProvider"])
 
     def test_load_official_commavq_gpt_onnx_model_prefers_coreml_then_cpu(self) -> None:
-        from tac.lossless import gpt_score as module
+        import tac.lossless.gpt_score as module
 
         fake_session = mock.Mock()
         fake_session.get_inputs.return_value = [SimpleNamespace(name="tokens")]
@@ -67,7 +67,7 @@ class TacLosslessGptScoreTests(unittest.TestCase):
         self.assertEqual(model._tac_model_artifact_url, module.OFFICIAL_COMMAVQ_GPT_ONNX_URL)
 
     def test_load_official_commavq_gpt_onnx_model_accepts_kv_cache_signature(self) -> None:
-        from tac.lossless import gpt_score as module
+        import tac.lossless.gpt_score as module
 
         fake_session = mock.Mock()
         fake_session.get_inputs.return_value = [
@@ -108,7 +108,7 @@ class TacLosslessGptScoreTests(unittest.TestCase):
         np.testing.assert_allclose(logits, np.array([8.0, 9.0, 10.0, 11.0], dtype=np.float32))
 
     def test_load_official_commavq_gpt_model_falls_back_to_torch_when_onnx_unavailable(self) -> None:
-        from tac.lossless import gpt_score as module
+        import tac.lossless.gpt_score as module
 
         expected_model = SimpleNamespace(_tac_model_backend="torch")
 
@@ -135,7 +135,7 @@ class TacLosslessGptScoreTests(unittest.TestCase):
         self.assertIn("onnxruntime missing", model._tac_bridge_fallback_reason)
 
     def test_load_official_commavq_gpt_model_falls_back_to_torch_when_onnx_signature_is_unsupported(self) -> None:
-        from tac.lossless import gpt_score as module
+        import tac.lossless.gpt_score as module
 
         expected_model = SimpleNamespace(_tac_model_backend="torch")
 

@@ -5,7 +5,7 @@ import tempfile
 import unittest
 from pathlib import Path
 
-from tac.deploy.kaggle import kaggle_kernel_builder as mod
+import tac.deploy.kaggle.kaggle_kernel_builder as mod
 
 
 class KaggleKernelBuilderTests(unittest.TestCase):

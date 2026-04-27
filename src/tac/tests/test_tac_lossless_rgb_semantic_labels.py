@@ -290,7 +290,7 @@ class TacLosslessRgbSemanticLabelsTests(unittest.TestCase):
         self.assertEqual(sorted(payload), ["clip_a.npy", "clip_b.npy"])
 
     def test_build_rgb_label_map_sample_requests_streaming_dataset_load(self) -> None:
-        from tac.lossless import rgb_semantic_labels as module
+        import tac.lossless.rgb_semantic_labels as module
 
         calls: list[dict[str, object]] = []
         examples = [
@@ -402,7 +402,7 @@ class TacLosslessRgbSemanticLabelsTests(unittest.TestCase):
         self.assertIn("clip_b.npy", payload)
 
     def test_build_rgb_label_map_sample_prefers_local_cached_shards_over_dataset_loader(self) -> None:
-        from tac.lossless import rgb_semantic_labels as module
+        import tac.lossless.rgb_semantic_labels as module
 
         examples = [
             {
@@ -452,7 +452,7 @@ class TacLosslessRgbSemanticLabelsTests(unittest.TestCase):
         self.assertEqual(sorted(payload), ["clip_a.npy"])
 
     def test_build_rgb_label_map_sample_flushes_partial_progress_before_failure(self) -> None:
-        from tac.lossless import rgb_semantic_labels as module
+        import tac.lossless.rgb_semantic_labels as module
 
         examples = [
             {
@@ -510,7 +510,7 @@ class TacLosslessRgbSemanticLabelsTests(unittest.TestCase):
         self.assertEqual(sorted(payload), ["clip_a.npy"])
 
     def test_build_rgb_label_map_sample_flushes_completed_chunk_before_later_decode_failure(self) -> None:
-        from tac.lossless import rgb_semantic_labels as module
+        import tac.lossless.rgb_semantic_labels as module
 
         examples = [
             {

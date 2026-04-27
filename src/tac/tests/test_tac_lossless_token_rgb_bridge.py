@@ -28,7 +28,7 @@ class TacLosslessTokenRgbBridgeTests(unittest.TestCase):
         self.assertEqual(providers, ["CoreMLExecutionProvider", "CPUExecutionProvider"])
 
     def test_load_official_commavq_onnx_bridge_prefers_coreml_then_cpu(self) -> None:
-        from tac.lossless import token_rgb_bridge as bridge
+        import tac.lossless.token_rgb_bridge as bridge
 
         fake_session = mock.Mock()
         fake_session.get_inputs.return_value = [SimpleNamespace(name="tokens")]
@@ -68,7 +68,7 @@ class TacLosslessTokenRgbBridgeTests(unittest.TestCase):
         self.assertEqual(decoded.shape, (2, 3, 2, 2))
 
     def test_load_official_commavq_bridge_falls_back_to_torch_when_onnx_unavailable(self) -> None:
-        from tac.lossless import token_rgb_bridge as bridge
+        import tac.lossless.token_rgb_bridge as bridge
 
         expected_decoder = object()
         expected_metadata = {
@@ -100,7 +100,7 @@ class TacLosslessTokenRgbBridgeTests(unittest.TestCase):
         self.assertIn("onnxruntime missing", metadata["bridge_fallback_reason"])
 
     def test_load_official_commavq_torch_bridge_prefers_cached_decoder_artifact(self) -> None:
-        from tac.lossless import token_rgb_bridge as bridge
+        import tac.lossless.token_rgb_bridge as bridge
 
         load_calls: list[tuple[str, str]] = []
 
@@ -149,7 +149,7 @@ class TacLosslessTokenRgbBridgeTests(unittest.TestCase):
         self.assertEqual(decoder.loaded[0], {"weights": 1})
 
     def test_load_official_commavq_bridge_falls_back_to_torch_when_onnx_decoder_is_degenerate(self) -> None:
-        from tac.lossless import token_rgb_bridge as bridge
+        import tac.lossless.token_rgb_bridge as bridge
 
         class DegenerateOnnxDecoder:
             _tac_input_kind = "numpy"

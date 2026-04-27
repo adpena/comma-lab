@@ -1454,7 +1454,7 @@ class TestPreflightAllInvokesMetaBugChecks:
 
     def test_preflight_all_invokes_all_meta_bug_checks(self) -> None:
         import inspect
-        from tac import preflight as pf
+        import tac.preflight as pf
 
         # Source-grep preflight_all to verify each check is referenced.
         src = inspect.getsource(pf.preflight_all)
@@ -1501,7 +1501,7 @@ class TestPreflightAllInvokesMetaBugChecks:
         the check back to warn-only.
         """
         import inspect
-        from tac import preflight as pf
+        import tac.preflight as pf
 
         src = inspect.getsource(pf.preflight_all)
         meta_checks = [
