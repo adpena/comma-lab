@@ -265,7 +265,7 @@ def _validate_uncompressed_dir(uncompressed_dir: Path,
     nested layout (videos/0.mkv vs 0.mkv at root)."""
     expected = {n.strip() for n in video_names_file.read_text().splitlines()
                 if n.strip()}
-    # R4 #3: per-name existence check (catches nested-layout mismatch)
+    # R4-3: per-name existence check (catches nested-layout mismatch)
     not_found = [n for n in expected
                  if not (uncompressed_dir / n).exists()]
     if not_found:
@@ -276,43 +276,45 @@ def _validate_uncompressed_dir(uncompressed_dir: Path,
             f"would crash. Check that {uncompressed_dir} contains the "
             f"videos listed in {video_names_file}."
         )
-    # Walk dir and find non-hidden NON-expected files (these would
-    # actually shift the rate denominator vs official scorer).
-    expected_names = {Path(n).name for n in expected}
+    # R5-1 fix: walk the dir and refuse on ANY extra file (including
+    # hidden). Upstream's `rglob('*') if file.is_file()` counts every
+    # file including .DS_Store, so a local .DS_Store WOULD shift the
+    # rate vs a contest dir without it. Refuse so the operator cleans
+    # the dir and gets 100% contest compliance. Also use FULL relative
+    # path (not just .name) so duplicate-named files in subdirs are
+    # caught (not aliased to the expected set).
+    expected_paths = {str(Path(n)) for n in expected}
     extras: list[Path] = []
     for p in uncompressed_dir.rglob("*"):
         if not p.is_file():
             continue
         rel = p.relative_to(uncompressed_dir)
-        # R4 #4: skip hidden files — upstream rglob's them too, no drift.
-        if any(part.startswith(".") for part in rel.parts):
-            continue
-        if rel.name not in expected_names:
+        if str(rel) not in expected_paths:
             extras.append(rel)
     if extras:
         raise RuntimeError(
             f"[evaluate] uncompressed-dir contamination — score would drift "
-            f"vs official scorer (rate denominator off): EXTRA non-hidden "
-            f"files ({len(extras)}): "
-            f"{[str(p) for p in extras[:5]]}{'…' if len(extras)>5 else ''}. "
-            f"Move extras out of {uncompressed_dir} OR pass a clean dir."
+            f"vs official scorer: {len(extras)} EXTRA file(s) including "
+            f"hidden (.DS_Store etc) and any duplicate-named subdir "
+            f"entries: {[str(p) for p in extras[:8]]}"
+            f"{'…' if len(extras)>8 else ''}. Move extras out of "
+            f"{uncompressed_dir} for 100% contest compliance."
         )
 
 
 def _run_upstream_evaluate(upstream_dir: Path, submission_dir: Path,
                            uncompressed_dir: Path, video_names_file: Path,
-                           device: str, *, timeout: int = 1800,
-                           batch_size: int = 16, num_threads: int = 2,
-                           prefetch_queue_depth: int = 4,
-                           seed: int = 1234) -> dict:
+                           device: str, *, timeout: int = 1800) -> dict:
     """Invoke upstream/evaluate.py — the contest scorer. Returns the
     parsed score dict from the report.txt the script writes.
 
-    Council R3 #1 (CRITICAL): all 4 score-affecting args (batch-size,
-    num-threads, prefetch-queue-depth, seed) are pinned EXPLICITLY here
-    so a future upstream default-bump doesn't silently shift our scores.
-    Council R3 #2 (CRITICAL): pre-validate uncompressed-dir for contamination.
-    Council R3 #4 (Medium): set determinism env vars."""
+    R5-2 fix: do NOT pin --batch-size / --num-threads / --prefetch-queue-depth
+    / --seed — let upstream/evaluate.py use its own defaults. Pinning them
+    to specific values would itself be editorializing if the contest
+    scorer ever uses different values. Per "100% contest compliance":
+    pass exactly the args the contest scorer would, no more no less.
+    Determinism env (CUBLAS_WORKSPACE_CONFIG) is set in subprocess env.
+    Council R3 #2: pre-validate uncompressed-dir for contamination."""
     _validate_uncompressed_dir(uncompressed_dir, video_names_file)
 
     report_path = submission_dir / "report.txt"
@@ -323,11 +325,6 @@ def _run_upstream_evaluate(upstream_dir: Path, submission_dir: Path,
         "--video-names-file", str(video_names_file),
         "--device", device,
         "--report", str(report_path),
-        # PIN every contest-default arg explicitly (Council R3 #1):
-        "--seed", str(seed),
-        "--batch-size", str(batch_size),
-        "--num-threads", str(num_threads),
-        "--prefetch-queue-depth", str(prefetch_queue_depth),
     ]
     print(f"[evaluate] cmd: {' '.join(cmd)}")
     t0 = time.monotonic()
@@ -338,10 +335,8 @@ def _run_upstream_evaluate(upstream_dir: Path, submission_dir: Path,
         env["PYTHONPATH"] = f"{upstream_dir}:{pp}" if pp else str(upstream_dir)
     # Determinism env (Council R3 #4) — required per CLAUDE.md
     # "deterministic reproducibility" non-negotiable. CUBLAS_WORKSPACE_CONFIG
-    # is required for torch.use_deterministic_algorithms; PYTHONHASHSEED
-    # affects dict iteration order in Python ≥ 3.6.
+    # is required for torch.use_deterministic_algorithms.
     env.setdefault("CUBLAS_WORKSPACE_CONFIG", ":4096:8")
-    env["PYTHONHASHSEED"] = str(seed)
 
     result = subprocess.run(cmd, timeout=timeout, env=env, capture_output=True, text=True)
     elapsed = time.monotonic() - t0
