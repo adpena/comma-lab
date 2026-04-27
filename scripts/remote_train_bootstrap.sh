@@ -57,8 +57,18 @@ if [ "${1:-}" = "--inner" ]; then
     GIT_HASH=$(cd "$WORKSPACE" && git rev-parse HEAD 2>/dev/null || echo "no-git")
     GPU_NAME=$(nvidia-smi --query-gpu=name --format=csv,noheader 2>&1 | head -1)
     DRIVER_VER=$(nvidia-smi --query-gpu=driver_version --format=csv,noheader 2>&1 | head -1)
+    # DX #6 (2026-04-26): enriched provenance — ffmpeg/svtav1/brotli versions,
+    # env vars, sys.argv, and full resolved profile dict so a CUDA reproduction
+    # is fully self-contained from this JSON. Mirrors _capture_provenance()
+    # in experiments/pipeline.py.
     /opt/conda/bin/python -c "
-import json, time, torch
+import json, os, subprocess, sys, time
+import torch
+def _shell(cmd):
+    try:
+        return subprocess.check_output(cmd, text=True, stderr=subprocess.STDOUT, timeout=10).strip()
+    except Exception as e:
+        return f'<error:{e}>'
 prov = {
     'started_at_utc': time.strftime('%Y-%m-%dT%H:%M:%SZ', time.gmtime()),
     'git_hash': '$GIT_HASH',
@@ -71,7 +81,37 @@ prov = {
     'output_dir': '$LOG_DIR',
     'pipeline': 'remote_train_bootstrap.sh -> train_renderer.py + pipeline.py compress',
     'cublas_workspace_config': '$CUBLAS_WORKSPACE_CONFIG',
+    'sys_argv': ['$0', '--inner', '$PROFILE', '$OUTPUT_SUBDIR'],
 }
+ffv = _shell(['ffmpeg', '-version'])
+prov['ffmpeg_version'] = ffv.splitlines()[0] if ffv and not ffv.startswith('<error') else ffv
+encs = _shell(['ffmpeg', '-encoders'])
+svt = [ln.strip() for ln in encs.splitlines() if 'svtav1' in ln.lower() or 'svt-av1' in ln.lower()]
+prov['libsvtav1_version'] = svt[0] if svt else None
+try:
+    import brotli
+    prov['brotli_version'] = getattr(brotli, '__version__', 'unknown')
+except Exception as e:
+    prov['brotli_version_error'] = str(e)
+prov['env_vars'] = {k: os.environ.get(k) for k in (
+    'LD_LIBRARY_PATH', 'PYTHONPATH', 'CUBLAS_WORKSPACE_CONFIG',
+    'PYTORCH_CUDA_ALLOC_CONF', 'TAC_UPSTREAM_DIR', 'PYTHONHASHSEED',
+    'TAC_MODELS_DIR', 'INFLATE_TTO',
+)}
+try:
+    sys.path.insert(0, '$WORKSPACE/src')
+    from tac.profiles import PROFILES
+    if '$PROFILE' in PROFILES:
+        prof = PROFILES['$PROFILE']
+        def _safe(v):
+            try:
+                json.dumps(v)
+                return v
+            except Exception:
+                return repr(v)
+        prov['profile_dict'] = {k: _safe(v) for k, v in dict(prof).items()}
+except Exception as e:
+    prov['profile_dict_error'] = str(e)
 with open('$PROVENANCE', 'w') as f:
     json.dump(prov, f, indent=2)
 print('provenance:', json.dumps(prov, indent=2))
@@ -143,13 +183,38 @@ print('provenance:', json.dumps(prov, indent=2))
     "$PYBIN" "$WORKSPACE/tools/check_determinism.py" "$PROFILE"
 
     # Stage 3: train_renderer (Phase 1+2+3, produces float .pt checkpoints).
+    # DX #4 (2026-04-26): auto-detect a recent checkpoint and resume. Without
+    # this, every spot-instance preemption + relaunch starts from scratch and
+    # loses 1-16h of training. `train_renderer.py` already supports
+    # `--resume-from`; we just need to find the freshest renderer_*.pt within
+    # the last 6h (older than that is almost certainly a stale prior session
+    # and resuming risks shape/profile drift). `sort | tail -1` gives the
+    # lexicographically last filename which — by tac's epoch-padded naming —
+    # is also the latest-trained checkpoint.
+    RESUME_ARG=""
+    RESUME_CKPT=$(find "$LOG_DIR" -maxdepth 2 -name 'renderer_*.pt' -mmin -360 2>/dev/null | sort | tail -1)
+    if [ -n "$RESUME_CKPT" ]; then
+        echo "[$(date -u +%FT%TZ)] resume detected: $RESUME_CKPT" >> "$HEARTBEAT"
+        echo "Resuming from $RESUME_CKPT"
+        RESUME_ARG="--resume-from $RESUME_CKPT"
+    fi
     echo "=== STAGE 3 ($PROFILE): train_renderer ==="
-    echo "[$(date -u +%FT%TZ)] launching train_renderer.py $PROFILE" >> "$HEARTBEAT"
+    echo "[$(date -u +%FT%TZ)] launching train_renderer.py $PROFILE resume='$RESUME_ARG'" >> "$HEARTBEAT"
+    # shellcheck disable=SC2086 # intentional word-split on $RESUME_ARG
+    # Note: --no-auth-eval-on-best is passed because Stage 5 (pipeline.py
+    # compress) runs its own step_eval against the FULL triple-joint archive
+    # (renderer + masks + poses) at the end of the chain. train_renderer's
+    # built-in auth-eval-on-best fails loud without --auth-eval-masks AND
+    # --auth-eval-poses (Council R3 fix), and at this point in the chain
+    # masks.mkv hasn't been encoded yet and poses haven't been TTO-optimized.
+    # The honest auth measurement comes from Stage 5, not Stage 3.
     "$PYBIN" -u "$WORKSPACE/src/tac/experiments/train_renderer.py" \
         --profile "$PROFILE" \
         --tag "$PROFILE" \
         --device cuda \
-        --output-dir "$OUTPUT_SUBDIR"
+        --output-dir "$OUTPUT_SUBDIR" \
+        --no-auth-eval-on-best \
+        $RESUME_ARG
 
     # Stage 4: probe canonical checkpoint via tac.checkpoint_names registry.
     # ONE source of truth shared with deploy_vastai.py. 2026-04-26: DEN

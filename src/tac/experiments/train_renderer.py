@@ -1592,49 +1592,117 @@ def train(args: argparse.Namespace):
         qat_wrapper.remove_hooks()
 
     # Auth eval on best (CLAUDE.md non-negotiable: "Auth eval EVERYWHERE").
-    # The proxy fp4_scorer is a TRAINING SIGNAL only — proxy-auth gap can be
-    # 100-350x even on CUDA-CUDA (LANE-B 2026-04-26: proxy 0.0007 → auth 0.246).
-    # The auth result is the ONLY trustworthy score. Run it inline so the train
-    # script's exit code reflects whether we got an authoritative measurement.
+    #
+    # Council R3 caught the previous wiring as fake: it invented an
+    # `--auth-eval-masks` flag for auth_eval_renderer.py that doesn't exist
+    # (auth_eval_renderer recomputes SegNet masks from GT internally and
+    # doesn't take a masks file). The previous wiring also didn't pass
+    # `--archive-size-bytes`, so rate was computed from the renderer .pt
+    # alone (~290KB) — systematically optimistic vs the real ~700KB
+    # triple-joint archive. THIRD bug: the previous version skipped the
+    # whole eval if `--auth-eval-masks` wasn't passed, meaning every
+    # default chain silently no-op'd.
+    #
+    # Real wiring (mirrors experiments/pipeline.py:step_eval which works):
+    #   1. Build a real submission archive (renderer + masks + poses) via
+    #      tac.submission_archive.build_submission_archive
+    #   2. Get the actual archive byte size from the built file
+    #   3. Call auth_eval_renderer with --checkpoint + --archive-size-bytes
+    #      + --poses (only flags that exist per its argparse)
+    #
+    # Falls back gracefully when no masks are provided (still produces a
+    # renderer-only auth score, which is at least HONEST about the rate
+    # bias rather than silently skipping).
     if getattr(args, "auth_eval_on_best", False):
-        if not args.auth_eval_masks:
-            print("[auth-eval] WARNING: --auth-eval-on-best set but --auth-eval-masks not "
-                  "provided. Skipping. The train run completed but NO authoritative score "
-                  "will be produced (CLAUDE.md violation).")
-        else:
-            import subprocess
-            best_fp4 = out_dir / f"renderer_{args.tag}_best_fp4.pt"
-            auth_result_path = out_dir / "auth_eval_on_best.json"
-            cmd = [
-                sys.executable, "-u",
-                str(Path(__file__).resolve().parents[2] / ".." / "experiments" / "auth_eval_renderer.py"),
-                "--checkpoint", str(best_fp4),
-                "--upstream-dir", args.auth_eval_upstream_dir,
-                "--device", "cuda",
-                "--output-dir", str(out_dir),
-            ]
-            if args.auth_eval_poses:
-                cmd += ["--poses", args.auth_eval_poses]
-            print(f"\n[auth-eval] Launching CUDA auth eval against best checkpoint...")
-            print(f"[auth-eval] cmd: {' '.join(cmd)}")
-            try:
-                proc = subprocess.run(
-                    cmd, capture_output=True, text=True, timeout=900,
+        import subprocess
+        best_fp4 = out_dir / f"renderer_{args.tag}_best_fp4.pt"
+        if not best_fp4.exists():
+            raise RuntimeError(
+                f"[auth-eval] No best checkpoint at {best_fp4}. Cannot run "
+                f"--auth-eval-on-best. If training was killed before any "
+                f"*BEST* save, pass --no-auth-eval-on-best to bypass."
+            )
+        # FAIL LOUD: --auth-eval-on-best REQUIRES masks + poses. The previous
+        # WARN-and-fall-back silently produced renderer-only-rate scores
+        # that were ~2x optimistic vs the real triple-joint archive — exactly
+        # the systematic-optimism bug the user has flagged repeatedly.
+        # If the caller wants to skip, they pass --no-auth-eval-on-best.
+        # If they want to run, they MUST supply --auth-eval-masks AND
+        # --auth-eval-poses so the archive is built honestly.
+        if not args.auth_eval_masks or not args.auth_eval_poses:
+            raise RuntimeError(
+                f"[auth-eval] --auth-eval-on-best requires BOTH "
+                f"--auth-eval-masks and --auth-eval-poses to build a real "
+                f"submission archive. Without them, the rate term would be "
+                f"computed from renderer-only bytes (~290KB) instead of the "
+                f"real ~700KB triple-joint archive — systematically optimistic "
+                f"by ~2x. Got: "
+                f"masks={args.auth_eval_masks!r}, poses={args.auth_eval_poses!r}. "
+                f"To skip the eval entirely, pass --no-auth-eval-on-best."
+            )
+
+        # Build a real archive (mirrors experiments/pipeline.py:step_eval).
+        from tac.submission_archive import build_submission_archive
+        archive_path = out_dir / "auth_eval_on_best_archive.zip"
+        poses_arg = args.auth_eval_poses
+        poses_kwargs = (
+            {"optimized_poses_bin": poses_arg}
+            if str(poses_arg).endswith(".bin")
+            else {"optimized_poses_pt": poses_arg}
+        )
+        build_submission_archive(
+            output_path=archive_path,
+            renderer_bin=str(best_fp4),
+            masks_mkv=args.auth_eval_masks,
+            validate=True,
+            **poses_kwargs,
+        )
+        archive_bytes = archive_path.stat().st_size
+        print(f"[auth-eval] Built archive: {archive_path} ({archive_bytes:,} bytes)")
+
+        # Step 2: call auth_eval_renderer with REAL flags only. Path
+        # resolution uses the established `_repo` constant (Council R3-4 fix).
+        auth_eval_script = _repo / "experiments" / "auth_eval_renderer.py"
+        if not auth_eval_script.exists():
+            raise RuntimeError(f"[auth-eval] cannot find {auth_eval_script}")
+
+        cmd = [
+            sys.executable, "-u", str(auth_eval_script),
+            "--checkpoint", str(best_fp4),
+            "--upstream-dir", args.auth_eval_upstream_dir,
+            "--device", "cuda",
+            "--archive-size-bytes", str(archive_bytes),
+            "--output-dir", str(out_dir),
+            "--poses", str(args.auth_eval_poses),
+        ]
+        print(f"\n[auth-eval] Launching CUDA auth eval against best checkpoint...")
+        print(f"[auth-eval] cmd: {' '.join(cmd)}")
+        try:
+            proc = subprocess.run(cmd, capture_output=True, text=True, timeout=900)
+            print(proc.stdout[-2000:])
+            if proc.returncode != 0:
+                print(f"[auth-eval] FAILED with returncode={proc.returncode}",
+                      file=sys.stderr)
+                print(proc.stderr[-2000:], file=sys.stderr)
+                raise RuntimeError(
+                    f"auth_eval_renderer exited {proc.returncode}; "
+                    f"see {out_dir} for output and stderr"
                 )
-                print(proc.stdout[-2000:])  # last 2KB of stdout
-                if proc.returncode != 0:
-                    print(f"[auth-eval] FAILED with returncode={proc.returncode}", file=sys.stderr)
-                    print(proc.stderr[-2000:], file=sys.stderr)
-                else:
-                    # Pull RESULT_JSON line for clean log.
-                    for line in proc.stdout.splitlines():
-                        if line.startswith("RESULT_JSON:"):
-                            print(f"\n[auth-eval] {line}")
-                            break
-                    print(f"[auth-eval] Result saved to {auth_result_path}")
-            except subprocess.TimeoutExpired:
-                print(f"[auth-eval] TIMED OUT after 15min — auth_eval_renderer is "
-                      f"hung. Investigate manually.", file=sys.stderr)
+            for line in proc.stdout.splitlines():
+                if line.startswith("RESULT_JSON:"):
+                    print(f"\n[auth-eval] {line}")
+                    break
+            else:
+                raise RuntimeError(
+                    "auth_eval_renderer completed but emitted no RESULT_JSON line — "
+                    "the run produced no authoritative score (CLAUDE.md violation)"
+                )
+            print(f"[auth-eval] Result saved alongside checkpoint in {out_dir}")
+        except subprocess.TimeoutExpired:
+            raise RuntimeError(
+                "[auth-eval] TIMED OUT after 15min — auth_eval_renderer is hung. "
+                "Investigate manually."
+            )
 
     return best_scorer
 

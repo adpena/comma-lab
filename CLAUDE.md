@@ -8,6 +8,22 @@ Read `PROGRAM.md` before making changes.
 
 **Any auth score above 1.0 is UNACCEPTABLE.** Do the math during training. If projected auth > 1.0, something is wrong — stop and fix it before burning more GPU hours. Every training run, TTO, postfilter, and optimization must be evaluated against this target BEFORE launch, not after.
 
+## NEVER invent CLI flags — NON-NEGOTIABLE, HIGHEST EMPHASIS
+
+**Before wiring any flag into `subprocess.run([...])`, READ the target tool's actual `parser.add_argument(...)` list.** Don't invent flag names from intent. Don't trust prior code that "looked like it worked." Verify against argparse. The cost: 30 seconds of `grep "add_argument" target.py`. The cost of NOT doing it: days of wasted GPU + a council review chain that misses the dead-flag bug across multiple rounds.
+
+This rule exists because (2026-04-26 incident, see `feedback_dead_flag_wiring_pattern`):
+- R1 wiring of `train_renderer.py --auth-eval-on-best` invented `--auth-eval-masks` for `auth_eval_renderer.py` which has NO such flag.
+- R2 "fix" didn't catch the dead flag — focused on rate ambiguity.
+- R3 finally caught it (Council R3-1).
+- Every chain that "passed" auth-eval-on-best was actually silently skipping it.
+
+**How to apply:**
+1. Before adding a flag to a subprocess invocation, `grep "add_argument" path/to/target.py` and confirm every flag name you're emitting exists.
+2. Add a regression test that introspects the target's argparse and asserts your call-site flag set is a subset (template: `test_train_renderer_auth_eval_wiring.py`).
+3. Fail loud (raise / non-zero exit), not silent (WARN-and-skip), when required inputs to a subprocess wrapper are missing.
+4. **It is unacceptable to learn the same lesson twice.** Capture the meta-pattern in memory + CLAUDE.md the FIRST time it bites.
+
 ## Auth eval EVERYWHERE — NON-NEGOTIABLE, HIGHEST EMPHASIS
 
 **EVERY chained experiment MUST end with a CUDA auth eval against its best checkpoint.** Tracking only proxy `fp4_scorer` / `pose_loss` / training-loss is a WASTED run unless an authoritative score lands at the end. The proxy-auth gap can be 100-350x even on CUDA-CUDA (LANE-B 2026-04-26: proxy 0.0007 → auth 0.246, 350x). The proxy is a TRAINING SIGNAL, not a measurement.
