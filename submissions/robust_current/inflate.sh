@@ -176,7 +176,17 @@ while IFS= read -r rel; do
     in_path="$ARCHIVE_DIR/$in_rel"
     if [ "$PYTHON_INFLATE" = "renderer" ]; then
       echo "Inflating (neural renderer: mask→frame) $ARCHIVE_DIR -> $INFLATED_DIR"
-      "$UV_BIN" run python "$SELF_DIR/inflate_renderer.py" \
+      # Codex R5-2 #3 fix (2026-04-27, Lane B-alt deployment blocker):
+      # `--with brotli` makes the inflate path dependency-complete in a
+      # CLEAN CONTEST ENVIRONMENT. The contest evaluator invokes inflate.sh
+      # from inside the contest's own pyproject (upstream/pyproject.toml),
+      # so `uv run` discovers THAT project's deps — NOT our `tac` package.
+      # Without --with brotli, any Lane B-alt archive (renderer.bin.br,
+      # masks.mkv.br, …) would fatal-exit at _decompress_brotli_in_archive
+      # the first time .br files are seen. brotli is a tiny pure-C wheel;
+      # the cost of always-pulling is sub-second on T4. `--with av --with
+      # torch --with numpy` mirrors what the canonical PyAV path below does.
+      "$UV_BIN" run --with brotli --with av --with torch --with numpy python "$SELF_DIR/inflate_renderer.py" \
         "$ARCHIVE_DIR" "$INFLATED_DIR" "$VIDEO_NAMES_FILE"
       break
     elif [ "$PYTHON_INFLATE" = "postfilter" ]; then

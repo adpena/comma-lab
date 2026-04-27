@@ -180,21 +180,40 @@ def parse_args() -> argparse.Namespace:
     p.add_argument("--n-frames", type=int, default=NUM_FRAMES,
                    help="Number of frames to render and δ-optimize. Default "
                         "is the full 1200 (600 pairs).")
-    # ── Compliance gate (Codex R5 HIGH) ──────────────────────────────
+    # ── Compliance gate (Codex R5 HIGH + R5-2 #4) ────────────────────
     # Lane C δ.bin is scorer-derived; its contest compliance is unresolved
-    # until the council rules on Yousfi PR #35. We MUST mark every newly-
-    # built δ as PENDING_RULING so the archive builder gates on it. The
-    # override exists ONLY for after the ruling lands — it is illegal to
-    # use this flag preemptively.
+    # until the council rules on Yousfi PR #35. The optimizer MUST mark
+    # every newly-built δ as PENDING_RULING so the archive builder gates
+    # on it.
+    #
+    # CODEX R5-2 #4 fix (2026-04-27): the optimizer can NO LONGER issue
+    # ``approved`` directly. The previous CLI accepted
+    # ``--compliance-status approved`` and the archive builder trusted
+    # that header value, which means an operator could bypass the gate
+    # by self-asserting approval at δ-build time. The trust model was
+    # operator-self-asserted rather than externally-attested.
+    #
+    # New behavior:
+    #   - The optimizer accepts only ``pending_ruling`` (default, safe)
+    #     and ``rejected`` (terminal, never bundle).
+    #   - ``approved`` requires a SIGNED ATTESTATION FILE produced by
+    #     ``tools/sign_lane_c_compliance.py``, written to the canonical
+    #     path ``.omx/state/lane_c_compliance_attestations/<sha256>.json``
+    #     after the actual delta.bin is built. The archive builder
+    #     cross-checks the attestation's delta_sha256 against the bundled
+    #     blob's sha256.
     p.add_argument("--compliance-status", type=str, default="pending_ruling",
-                   choices=["pending_ruling", "approved", "rejected"],
+                   choices=["pending_ruling", "rejected"],
                    help="compliance_status to write into the δ.bin header. "
                         "Default 'pending_ruling' is correct until the "
                         "council ruling on Yousfi PR #35 is recorded in "
-                        ".omx/research/findings.md. 'approved' may ONLY be "
-                        "set after that ruling lands. 'rejected' is reserved "
+                        ".omx/research/findings.md. 'rejected' is reserved "
                         "for forensic re-archival of failed experiments — "
-                        "the archive builder refuses to bundle them.")
+                        "the archive builder refuses to bundle them. "
+                        "'approved' is NOT accepted here; it requires an "
+                        "external attestation produced by "
+                        "tools/sign_lane_c_compliance.py against the built "
+                        "delta.bin's sha256. See Codex R5-2 #4 fix.")
     return p.parse_args()
 
 

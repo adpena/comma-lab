@@ -34,6 +34,19 @@ dependencies = [
     "pydantic>=2.0,<3.0",
     "numpy>=1.24,<3.0",
     "click>=8.0,<9.0",
+    # Codex R5-2 #3 fix (2026-04-27, Lane B-alt deployment blocker):
+    # `brotli` MUST be a guaranteed dependency, not an optional extra.
+    # `submissions/robust_current/inflate.sh` invokes `uv run python
+    # inflate_renderer.py` without a `--with brotli` or runtime extra; in a
+    # clean contest-style env (T4 instance, no `tac[runtime]` pre-install),
+    # `_decompress_brotli_in_archive` would fatal-exit on `import brotli`
+    # the moment a `renderer.bin.br` is present in the archive (which is
+    # the entire point of the Lane B-alt brotli stack). Moving it here
+    # means every install of the `tac` package — including the implicit
+    # one `uv run python <script.py>` does via the project pyproject —
+    # gets brotli automatically. The library is small (~300KB wheel) and
+    # has no native build dependencies on T4 / 4090 wheels.
+    "brotli>=1.0",
 ]
 
 [project.optional-dependencies]
@@ -53,7 +66,10 @@ runtime = [
     "timm>=0.9",
     "einops>=0.7",
     "segmentation-models-pytorch>=0.3",
-    "brotli>=1.0",
+    # Codex R5-2 #3: `brotli` was promoted to the always-installed
+    # `[project].dependencies` list (above). It is intentionally still
+    # NOT listed here so the runtime extra stays a pure GPU/training
+    # superset; pulling `tac` alone gives you brotli for inflate.
 ]
 dev = [
     "pytest>=8.0",

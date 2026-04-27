@@ -272,9 +272,24 @@ def _decompress_brotli_in_archive(archive_dir: str) -> None:
     try:
         import brotli
     except ImportError:
+        # Codex R5-2 #3 fix (2026-04-27): clean-env contest evaluators may
+        # arrive without `brotli` even though `tac` declares it as a
+        # mandatory dep, e.g. when inflate.sh is invoked outside the
+        # `uv run` project context. Print exactly which file triggered the
+        # need so the operator can either (a) `pip install brotli` and
+        # re-run or (b) downgrade to a non-brotli archive build.
+        listing = ", ".join(p.name for p in br_files)
         print(
-            "FATAL: Archive contains Brotli-compressed files (.br) but "
-            "'brotli' package is not installed. Install with: pip install brotli",
+            "FATAL: Archive contains Brotli-compressed files (.br) but the "
+            "'brotli' package is not installed in the active Python "
+            f"environment.\n  Files needing decompression: {listing}\n"
+            "  Fix: `pip install brotli` (or `uv pip install brotli`) in "
+            "the same env that runs inflate.sh.\n"
+            "  Note: `brotli` is declared as a mandatory dependency of the "
+            "`tac` package (pyproject.toml [project].dependencies). If it "
+            "is missing here, this Python env was not provisioned via "
+            "`uv sync` / `uv pip install -e .` against the project; the "
+            "Lane B-alt brotli stack relies on it being present.",
             file=sys.stderr,
         )
         sys.exit(1)

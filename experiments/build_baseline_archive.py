@@ -126,6 +126,7 @@ def main() -> int:
             raise SystemExit(f"--{label} does not exist: {path}")
     # Validate Lane C δ if requested.
     uniward_compliance_status: str | None = None
+    uniward_attestation_info: dict | None = None
     if args.with_uniward_delta is not None:
         if not args.with_uniward_delta.exists():
             raise SystemExit(
@@ -169,9 +170,88 @@ def main() -> int:
                 ".omx/research/findings.md."
             )
         if uniward_compliance_status == _UWD_APPROVED:
+            # CODEX R5-2 #4 fix (2026-04-27): operator-self-asserted
+            # approval is no longer trusted. The δ.bin header alone is
+            # not sufficient to bundle as approved — we ALSO require an
+            # external attestation file at the canonical path
+            # .omx/state/lane_c_compliance_attestations/<sha>.json,
+            # SHA-keyed against the actual δ.bin bytes. This means an
+            # operator cannot bypass the gate by editing the header or
+            # by issuing --compliance-status approved (the optimizer no
+            # longer accepts that value anyway). The attestation must
+            # be produced by tools/sign_lane_c_compliance.py — which
+            # records the approver identity, ruling text, timestamp,
+            # whoami, and git HEAD into the JSON. The verifier here
+            # cross-checks attestation.delta_sha256 vs sha256(blob) to
+            # catch any drift between the δ that was approved and the
+            # δ that ships.
+            from tac.lane_c_compliance import (
+                verify_attestation_for_blob, AttestationMissing,
+                AttestationMismatch, AttestationMalformed,
+                attestation_path_for, compute_blob_sha256,
+            )
+            _uwd_sha = compute_blob_sha256(_uwd_blob)
+            _att_path = attestation_path_for(_uwd_sha, root=REPO)
+            try:
+                _attestation = verify_attestation_for_blob(
+                    _uwd_blob, root=REPO,
+                )
+            except AttestationMissing:
+                raise SystemExit(
+                    f"FATAL: --with-uniward-delta is marked "
+                    f"compliance_status={_UWD_APPROVED!r} but NO "
+                    f"attestation exists at the canonical path:\n"
+                    f"  {_att_path}\n"
+                    f"  δ.bin sha256: {_uwd_sha}\n\n"
+                    "Approval requires an external attestation file "
+                    "produced by:\n"
+                    "  python tools/sign_lane_c_compliance.py \\\n"
+                    f"      --delta-bin {args.with_uniward_delta} \\\n"
+                    "      --approver <yousfi|council|fridrich|...> \\\n"
+                    "      --ruling-text \"<PR #35 ruling URL or text>\"\n\n"
+                    "The bare δ.bin header is OPERATOR-CONTROLLED and "
+                    "thus untrusted; the attestation is the trust anchor. "
+                    "(Codex R5-2 #4)"
+                )
+            except AttestationMismatch as e:
+                raise SystemExit(
+                    "FATAL: --with-uniward-delta has compliance_status="
+                    f"{_UWD_APPROVED!r} but the attestation at the "
+                    "canonical path is for a DIFFERENT δ.bin:\n"
+                    f"  {e}\n"
+                    "Either the δ was re-built after signing (re-run "
+                    "tools/sign_lane_c_compliance.py against the current "
+                    "δ.bin) or the wrong attestation was placed at the "
+                    "canonical path. (Codex R5-2 #4)"
+                )
+            except AttestationMalformed as e:
+                raise SystemExit(
+                    "FATAL: --with-uniward-delta has compliance_status="
+                    f"{_UWD_APPROVED!r} but the attestation file is "
+                    "malformed:\n"
+                    f"  {e}\n"
+                    "Re-sign with tools/sign_lane_c_compliance.py "
+                    "providing a non-empty --ruling-text and "
+                    "--approver. (Codex R5-2 #4)"
+                )
+            uniward_attestation_info = {
+                "attestation_path": str(_att_path),
+                "attestation_sha256": _attestation.delta_sha256,
+                "attestation_approver": _attestation.approver,
+                "attestation_signed_at_utc": _attestation.signed_at_utc,
+                "attestation_signed_by_user": _attestation.signed_by_user,
+                "attestation_git_head": _attestation.git_head,
+                "attestation_ruling_text": _attestation.ruling_text,
+            }
             print(
-                f"[build] Lane C δ compliance_status={_UWD_APPROVED!r} — "
-                f"bundling without override.",
+                f"[build] Lane C δ compliance_status={_UWD_APPROVED!r} "
+                f"VERIFIED against external attestation:\n"
+                f"  attestation: {_att_path}\n"
+                f"  approver:    {_attestation.approver}\n"
+                f"  signed at:   {_attestation.signed_at_utc}\n"
+                f"  signed by:   {_attestation.signed_by_user}\n"
+                f"  git HEAD:    {_attestation.git_head}\n"
+                f"  δ.bin sha:   {_uwd_sha}",
             )
         elif args.allow_pending_compliance:
             print(
@@ -392,6 +472,13 @@ def main() -> int:
                     "allow_pending_compliance_override": bool(
                         args.allow_pending_compliance
                     ),
+                    # CODEX R5-2 #4 fix — for approved δ, record the full
+                    # attestation chain in provenance so a future auditor
+                    # can reconstruct who approved the ship without
+                    # needing to read the attestation JSON separately.
+                    # None for pending/rejected δ — the field's presence
+                    # IS the audit signal.
+                    "external_attestation": uniward_attestation_info,
                 }} if args.with_uniward_delta is not None else {}),
             },
         }
