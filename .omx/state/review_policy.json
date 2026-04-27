@@ -35,6 +35,15 @@
       "scope": ["*"],
       "human": false
     },
+    "codex": {
+      "_description": "External adversarial review via /codex:adversarial-review (challenges assumptions, finds gaps the inner council missed)",
+      "github": null,
+      "url": null,
+      "level": 3,
+      "level_name": "approver",
+      "scope": ["*"],
+      "human": false
+    },
     "council_5369_review": {
       "github": null,
       "url": null,
