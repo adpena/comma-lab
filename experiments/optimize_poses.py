@@ -156,6 +156,19 @@ def parse_args() -> argparse.Namespace:
                    help="Number of epochs over all pairs for embedding optimization")
     p.add_argument("--log-every", type=int, default=25,
                    help="Log metrics every N steps")
+    p.add_argument("--kl-distill-weight", type=float, default=0.0,
+                   help="SegNet KL-distill auxiliary loss weight (default 0 = "
+                        "disabled). Lane G: stack soft-label SegNet KL on top "
+                        "of the standard scorer loss to push the renderer "
+                        "toward GT-frame logit distributions instead of just "
+                        "argmax. Mirrors train_renderer.py wiring (uses "
+                        "tac.losses.kl_distill_segnet_only — the canonical "
+                        "helper that avoids the kl_distill_scorer_loss "
+                        "double-count trap per CLAUDE.md).")
+    p.add_argument("--kl-distill-temperature", type=float, default=2.0,
+                   help="Softmax temperature for KL-distill (Hinton 2015 "
+                        "default 2.0). Loss is multiplied by T² internally "
+                        "to keep gradient magnitude consistent with T=1.")
     return p.parse_args()
 
 
@@ -288,6 +301,9 @@ def optimize_poses_batch(
     batch_pair_indices: torch.Tensor | None = None,
     latent_dim: int = 0,
     log_every: int = 25,
+    gt_frames_pair: torch.Tensor | None = None,
+    kl_distill_weight: float = 0.0,
+    kl_distill_temperature: float = 2.0,
 ) -> tuple[torch.Tensor, dict]:
     """Optimize pose vectors (and optional latent codes) for a batch of pairs.
 
@@ -311,6 +327,16 @@ def optimize_poses_batch(
         flip_budget: fraction of pixels allowed to flip (0.0=strict)
         latent_dim: extra latent dimensions (0 = pose only)
         log_every: logging frequency
+        gt_frames_pair: (B, 2, H, W, 3) float GT frames in 0-255 range,
+            required when kl_distill_weight > 0. Mirrors train_renderer.py's
+            `gt_pair` shape contract — segnet.preprocess_input handles
+            normalization internally.
+        kl_distill_weight: auxiliary SegNet KL-distillation loss weight
+            (default 0 = disabled). Uses tac.losses.kl_distill_segnet_only,
+            same canonical helper as train_renderer (avoids the
+            kl_distill_scorer_loss double-count trap per CLAUDE.md).
+        kl_distill_temperature: softmax temperature for the KL distill
+            (default 2.0, Hinton 2015). Loss is multiplied by T² internally.
 
     Returns:
         (optimized_conditioning, metrics_dict)
@@ -424,6 +450,24 @@ def optimize_poses_batch(
         # Combined loss
         total_loss = seg_weight * seg_loss + pose_weight * pose_loss
 
+        # KL distillation auxiliary — SegNet ONLY (mirrors train_renderer.py
+        # ~L1773-1778). Use the SegNet-only helper, NOT kl_distill_scorer_loss
+        # (the latter returns 100*seg_kl + sqrt(10*pose_dist) and stacking it
+        # double-counts the SegNet term 200x and adds extra PoseNet pressure,
+        # historically causing PoseNet collapse per CLAUDE.md "Critical
+        # Lessons"). Renderer pairs are float 0-255 (rendered_pair.round()
+        # .clamp(0,255) contract); GT frames are uint8 0-255 cast to float
+        # by the caller; segnet.preprocess_input normalizes both.
+        kl_loss_val = 0.0
+        if kl_distill_weight > 0 and gt_frames_pair is not None:
+            from tac.losses import kl_distill_segnet_only
+            rendered_pair_hwc = pairs  # (B, 2, H, W, 3) — already HWC
+            kl_loss, kl_loss_val = kl_distill_segnet_only(
+                rendered_pair_hwc, gt_frames_pair, segnet,
+                temperature=kl_distill_temperature,
+            )
+            total_loss = total_loss + kl_distill_weight * kl_loss
+
         total_loss.backward()
         optimizer.step()
 
@@ -509,8 +553,9 @@ def optimize_poses_batch(
             grad_norm = conditioning.grad.norm().item() if conditioning.grad is not None else 0.0
             pose_change = (conditioning[:, :pose_dim].detach() - init_poses.to(device)).norm(dim=1).mean().item()
             constraint_str = f" rejections={argmax_rejections}" if argmax_constraint else ""
+            kl_str = f" kl={kl_loss_val:.6f}" if kl_distill_weight > 0 else ""
             print(f"  step {step:4d}/{steps}: loss={loss_val:.6f} "
-                  f"(seg={seg_loss.item():.6f}, pose={pose_loss.item():.6f}) "
+                  f"(seg={seg_loss.item():.6f}, pose={pose_loss.item():.6f}{kl_str}) "
                   f"|grad|={grad_norm:.4f} |dpose|={pose_change:.4f}{constraint_str}", flush=True)
 
         if patience_counter >= early_stop_patience:
@@ -532,20 +577,19 @@ def optimize_poses_batch(
 
 def _enforce_eval_roundtrip(args) -> None:
     """CLAUDE.md non-negotiable: eval_roundtrip ALWAYS True; only escape hatch
-    is TAC_ALLOW_NO_ROUNDTRIP=1 env var with loud banner."""
-    if not args.eval_roundtrip:
-        if os.environ.get("TAC_ALLOW_NO_ROUNDTRIP") != "1":
-            raise SystemExit(
-                "FATAL: eval_roundtrip is False but TAC_ALLOW_NO_ROUNDTRIP=1 "
-                "is not set. Set the env var explicitly for diagnostic ablation."
-            )
-        print(
-            "\n" + "!" * 78 + "\n"
-            "DANGER: eval_roundtrip is DISABLED via TAC_ALLOW_NO_ROUNDTRIP=1.\n"
-            "  Proxy-auth gap will be 2-11x. Tag results [no-roundtrip-ablation].\n"
-            + "!" * 78 + "\n",
-            flush=True,
-        )
+    is TAC_ALLOW_NO_ROUNDTRIP=1 env var with loud banner.
+
+    2026-04-27 codex R5-4 #4: delegated to the centralised
+    `tac.eval_roundtrip_gate.enforce_eval_roundtrip` helper. The previous
+    per-script copies were sticky — they only printed the warning when
+    `args.eval_roundtrip` was already False, so a leftover env var in a
+    shell / tmux session silently relaxed later runs without acknowledgement.
+    The centralised helper warns whenever the env var is present and
+    records it in run provenance.
+    """
+    from tac.eval_roundtrip_gate import enforce_eval_roundtrip
+    output_dir = getattr(args, "output_dir", None)
+    enforce_eval_roundtrip(args, output_dir=output_dir, write_provenance=output_dir is not None)
 
 
 def main():
@@ -592,6 +636,8 @@ def main():
     print(f"[config] hinge_margin={args.hinge_margin}, eval_roundtrip={args.eval_roundtrip}", flush=True)
     print(f"[config] argmax_constraint={args.argmax_constraint}, max_retries={args.max_retries}", flush=True)
     print(f"[config] latent_dim={args.latent_dim} (conditioning dim={cond_dim})", flush=True)
+    print(f"[config] kl_distill_weight={args.kl_distill_weight}, "
+          f"kl_distill_temperature={args.kl_distill_temperature}", flush=True)
     print(f"[config] checkpoint={args.checkpoint}", flush=True)
     print(f"[config] output_dir={output_dir}", flush=True)
 
@@ -825,6 +871,21 @@ def main():
         batch_pose_targets = pose_targets[pair_start:pair_end]
         batch_init_poses = init_poses[pair_start:pair_end]
 
+        # Lane G: build (B, 2, H, W, 3) GT-pair tensor for KL-distill auxiliary
+        # loss. Only materialize when actually needed — gt_frames are uint8
+        # (H, W, 3) per frame from load_gt_video; we cast to float so the
+        # tensor matches the renderer's float-0-255 output range that
+        # kl_distill_segnet_only's _hwc_to_chw expects.
+        batch_gt_frames_pair = None
+        if args.kl_distill_weight > 0:
+            pair_t = torch.stack(
+                [gt_frames[i].float() for i in range(frame_start, frame_end, 2)]
+            )
+            pair_t1 = torch.stack(
+                [gt_frames[i].float() for i in range(frame_start + 1, frame_end + 1, 2)]
+            )
+            batch_gt_frames_pair = torch.stack([pair_t, pair_t1], dim=1).to(device)
+
         t0 = time.monotonic()
         optimized_cond, batch_metrics = optimize_poses_batch(
             renderer=renderer,
@@ -851,6 +912,9 @@ def main():
             log_every=args.log_every,
             zoom_warp=zoom_warp,
             batch_pair_indices=torch.arange(pair_start, pair_end, device=device),
+            gt_frames_pair=batch_gt_frames_pair,
+            kl_distill_weight=args.kl_distill_weight,
+            kl_distill_temperature=args.kl_distill_temperature,
         )
         dt = time.monotonic() - t0
 
