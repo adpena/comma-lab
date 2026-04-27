@@ -5574,14 +5574,36 @@ def _extract_profile_keys() -> set[str] | None:
 
 
 def _scan_for_resolver_keys(text: str) -> set[str]:
-    """Pull every `cfg.<KEY> = ...` assignment + `args.<KEY>` read."""
+    """Pull every `cfg.<KEY> = ...` assignment + `args.<KEY>` read.
+
+    Also catches a wide variety of profile-key access patterns so a key
+    used anywhere in the codebase (not just in train_renderer) counts as
+    'resolved'. The intent is to flag keys that have ZERO consumers, which
+    is the actual bug class — not to require a specific resolver pattern.
+    """
     out: set[str] = set()
     for m in re.finditer(r"\bcfg\.([A-Za-z_][A-Za-z0-9_]*)\s*=", text):
         out.add(m.group(1))
     for m in re.finditer(r"\bargs\.([A-Za-z_][A-Za-z0-9_]*)\b", text):
         out.add(m.group(1))
-    # Also catch `profile["<KEY>"]` and `profile.get("<KEY>")` reads.
-    for m in re.finditer(r'profile(?:\.get)?\(?\s*\[?\s*["\']([A-Za-z_][A-Za-z0-9_]*)["\']', text):
+    # `profile["<KEY>"]` / `profile.get("<KEY>")` / `prof["<KEY>"]` /
+    # `p["<KEY>"]` / `cfg["<KEY>"]` — all dict-access patterns.
+    for m in re.finditer(
+        r'\b(?:profile|prof|p|cfg|config|hp|params|arch_dict|arch)'
+        r'(?:\.get)?\s*[(\[]\s*["\']([A-Za-z_][A-Za-z0-9_]*)["\']',
+        text,
+    ):
+        out.add(m.group(1))
+    # Bare attribute access `cfg.<KEY>` (read, not assignment).
+    for m in re.finditer(r"\bcfg\.([A-Za-z_][A-Za-z0-9_]*)\b", text):
+        out.add(m.group(1))
+    # `kwargs.get("<KEY>")` and `setattr(.., "<KEY>", ..)`.
+    for m in re.finditer(r'\bkwargs\.get\s*\(\s*["\']([A-Za-z_][A-Za-z0-9_]*)["\']', text):
+        out.add(m.group(1))
+    for m in re.finditer(r'\bsetattr\s*\([^,]+,\s*["\']([A-Za-z_][A-Za-z0-9_]*)["\']', text):
+        out.add(m.group(1))
+    # `getattr(<x>, "<KEY>"...)` reads.
+    for m in re.finditer(r'\bgetattr\s*\([^,]+,\s*["\']([A-Za-z_][A-Za-z0-9_]*)["\']', text):
         out.add(m.group(1))
     return out
 
@@ -5600,29 +5622,41 @@ def check_profile_keys_have_resolvers(
     """
     root = repo_root or REPO_ROOT
     violations: list[str] = []
+    # If the provided repo_root has no profiles.py, skip — tests use this
+    # path with a stub repo and we don't want them to pull live PROFILES.
+    if not (root / "src" / "tac" / "profiles.py").exists():
+        if verbose:
+            print(f"  [profile-resolver] SKIP: {root}/src/tac/profiles.py not found")
+        return []
     keys = _extract_profile_keys()
     if keys is None:
         if verbose:
             print(f"  [profile-resolver] SKIP: PROFILES not importable")
         return []
-    # Resolver candidates: train_renderer, train_distill, training, build_renderer.
-    resolver_files = [
-        "src/tac/experiments/train_renderer.py",
-        "experiments/train_distill.py",
-        "src/tac/training.py",
-        "src/tac/architectures/build_renderer.py",
-        "src/tac/profiles.py",  # the profile system itself reads keys
-    ]
+    # Resolver search: the profile-key consumer can be ANY file under
+    # src/tac/ or experiments/. The original narrow list (train_renderer +
+    # train_distill + training + build_renderer + profiles) missed legit
+    # consumers — e.g. T_max is used by the cosine scheduler in
+    # train_renderer.py:1356, but the regex matched the assignment not the
+    # use. Cast a wide net: if a key appears as a dict-access ANYWHERE in
+    # src/tac or experiments, count it as resolved. This makes the gate
+    # find the actual bug class — keys with ZERO consumers — without
+    # producing false positives on widely-used keys.
+    resolver_search_dirs = ["src/tac", "experiments"]
     resolved: set[str] = set()
-    for r in resolver_files:
-        p = root / r
-        if not p.exists():
+    for d in resolver_search_dirs:
+        d_path = root / d
+        if not d_path.exists():
             continue
-        try:
-            text = p.read_text()
-        except (UnicodeDecodeError, FileNotFoundError):
-            continue
-        resolved.update(_scan_for_resolver_keys(text))
+        for p in d_path.rglob("*.py"):
+            if "__pycache__" in p.parts:
+                continue
+            try:
+                text = p.read_text()
+            except (UnicodeDecodeError, FileNotFoundError):
+                continue
+            resolved.update(_scan_for_resolver_keys(text))
+    resolver_files = ["src/tac/", "experiments/"]  # for error message
     missing = sorted(keys - resolved)
     for k in missing:
         violations.append(

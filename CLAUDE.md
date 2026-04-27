@@ -571,3 +571,52 @@ Treat files and git as memory.
 Each iteration should be resumable from disk.
 Do not rely on long chat context for continuity.
 Commit after every meaningful file change — git history is the research timeline.
+
+## Meta-bug class catalog (strict-mode preflight)
+
+This catalog lists every meta-bug class that is structurally extinct in this
+codebase via a static-detectable preflight check. Operators can audit this
+list to see exactly which bug classes can no longer ship without an explicit
+override. Each entry: `<check_function>` — what it prevents — memory ref / cost.
+
+**Strict (in `preflight_all()` — fail-loud):**
+
+1. `check_no_mps_fallback_default` — `device = "cuda" if ... else "mps" else "cpu"` ternary that silently falls back to MPS when CUDA missing → produces invalid scores. Memory: `feedback_default_to_convenience_trap`.
+2. `check_shell_set_e_present` — `set -uo pipefail` (no `-e`) bootstraps cascade silent failures. LANE-B post-mortem: 6.5h + $2 wasted. Memory: `feedback_zip_dep_bootstrap_trap`.
+3. `check_no_shell_zip_binary` — PyTorch container has no `zip`; use python `zipfile.ZipFile`. Memory: `feedback_zip_dep_bootstrap_trap`.
+4. `check_no_pipefail_grep_q_trap` — `set -o pipefail` + `grep -q` causes SIGPIPE-induced failures. Memory: `feedback_pipefail_grep_q_trap`.
+5. `check_no_eval_roundtrip_false` — `eval_roundtrip=False` produces 2-11x proxy-auth gap. CLAUDE.md non-negotiable.
+6. `check_no_scorer_load_at_inflate` — Scorer load at inflate violates strict-scorer-rule (~73MB rate hit). Memory: `feedback_strict_scorer_rule`.
+7. `check_training_scripts_have_auth_eval` — Every training script must end with CUDA auth eval. CLAUDE.md non-negotiable.
+8. `check_no_disable_eval_roundtrip_flag` — `--no-eval-roundtrip` CLI flag is forbidden. Lane C R5 fix (commit 9d71ec5d).
+9. `check_no_pack_sparse_delta_approved_outside_promotion_tool` — `pack_sparse_delta_approved` may only be called from the canonical promotion path. Lane C compliance gate.
+10. `check_inflate_sh_handles_br_centrally` — `inflate.sh` must centralize `.br` decompression in Stage 1. Codex R5-2 #11.
+11. `check_remote_scripts_have_nvdec_probe` — Remote DALI scripts must run NVDEC probe at Stage 0. Memory: `feedback_vastai_nvdec_host_variation`.
+12. `preflight_arity` — subprocess flag set must be a subset of target's argparse. Memory: `feedback_dead_flag_wiring_pattern`.
+13. `preflight_dead_resolvers` — parse_args entries must map to a profile key (orphan-flag scanner). Commit 040030df.
+14. `preflight_loader_format_safety` — `torch.load(weights_only=False)` allowlist enforcement. Mario R2 CRITICAL.
+
+**Codex R5-r6 (warn-only initially, owned by codex-fix subagent):**
+
+15. `check_no_brittle_six_line_waiver_lookback` — Waiver markers must be SAME-LINE; the previous 6-line lookback could waive unrelated calls. R5-r6 #1.
+16. `check_kl_distill_uses_roundtripped_frames` — KL distillation must use roundtripped frames not raw GT. R5-r6 #2.
+17. `check_eval_roundtrip_gate_called_after_output_dir_resolution` — Gate ordering correctness. R5-r6 #3.
+18. `check_nvdec_probe_has_error_classification` — NVDEC probe must classify NoDevice / DriverMismatch / etc. R5-r6 #4.
+19. `check_archive_builders_use_deterministic_zip` — `ZipFile.write` is non-deterministic; use ZipInfo + writestr with fixed timestamp. R5-r6 #5.
+
+**Additive 2026-04-27 (12 new, NOT YET wired into `preflight_all()`):**
+
+A. `check_vastai_create_has_label` — Every `vastai create instance` call must pass `--label`. Orphan instances accrue cost silently (today: instance 35707822, ~$0.05 wasted). Live count: 0.
+B. `check_vastai_create_writes_tracker` — Every Vast.ai launch must register the instance ID to `.omx/state/vastai_active_instances.json` so cleanup scripts can detect orphans. Live count: 2.
+C. `check_subagent_prompts_no_cpu_fallback` — Subagent prompts must not allow `--device cpu` without a `deterministic-bytes acceptable` caveat. CPU fallback in byte-deterministic build = invalid archive. Live count: 1.
+D. `check_scores_have_lane_tag` — Every numeric score in `run_log.md`/`findings.md`/`BATTLE_PLAN.md` must carry a lane tag (`[contest-CUDA]`, `[advisory only]`, `[MPS-PROXY]`, …). MPS-CUDA drift = 23x. Live count: 20.
+E. `check_waivers_specify_env_gate` — `# SCORER_AT_INFLATE_WAIVED` markers must name an env-gate (`env-gated-INFLATE_TTO=1`) so operators can audit which env-vars enable scorer-at-inflate paths. Live count: 0.
+F. `check_halfframe_archive_uses_trained_profile` — `--half-frame` archive builds must use a renderer trained for it (profile with `mask_half_sim_prob>0` OR `use_zoom_flow=True`). Memory: `feedback_half_frame_breaks_posenet`. Verified 2026-04-27 score 17.55. Live count: 2.
+G. `check_profile_keys_have_resolvers` — Bidirectional companion to dead-resolver scanner: every PROFILES key must be consumed somewhere in src/tac or experiments. Live count: 91 (real cleanup target).
+H. `check_inflate_scorer_load_has_runtime_banner` — Inflate files loading scorers must `print('[strict-scorer-rule] ...')` at runtime so the score can be tagged `[scorer-at-inflate-noncompliant]`. Live count: 0.
+I. `check_test_files_imports_resolve` — Test files importing from `tac.*` must resolve to actual symbols. Existing dead-import scanner skips test dirs; this complement catches broken tests that silently skip at collection. Live count: 25.
+J. `check_vastai_prompts_have_cost_cap` — Subagent prompts mentioning Vast.ai must mention a `$` cap, `budget`, or `destroy instance`. Memory: `feedback_vastai_cost_paranoia`. Live count: 0.
+K. `check_uniward_delta_has_attestation_gate` — `--with-uniward-delta` invocations must include `--allow-pending-compliance` OR an attestation file reference. Lane C R5 (commit ef8a9a1b). Live count: 6.
+L. `check_remote_scripts_write_provenance` — Every `scripts/remote_*.sh` must write `provenance.json`. Memory: `feedback_canonical_remote_bootstraps`. Live count: 5 (Lanes A/B/D/G).
+
+**Promotion path:** A new check starts `strict=False`, the live violation count is fixed across the codebase, then it is flipped `strict=True` in `preflight_all()`. The promotion pattern is documented in commit 7f2740e4 (the strict-flip of checks 1-11). Reverting any strict check will fail at commit/PR/run time.

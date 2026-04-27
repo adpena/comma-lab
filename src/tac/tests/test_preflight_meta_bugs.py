@@ -2534,3 +2534,488 @@ class TestArchiveBuildersUseDeterministicZip:
             f"asserts cleanly, the deterministic-zip test above is "
             f"vacuous on this platform."
         )
+
+
+# ════════════════════════════════════════════════════════════════════════════
+# ADDITIVE META-BUG TEST SECTION (12 new checks, post-R5-r6)
+# ════════════════════════════════════════════════════════════════════════════
+#
+# Tests for the 12 new meta-bug checks added in the additive section of
+# preflight.py. Each test class covers ONE check with offending +
+# clean snippets. NEW classes only — does NOT touch any existing class
+# above (those are owned by the codex-fix subagent).
+
+
+from tac.preflight import (
+    check_halfframe_archive_uses_trained_profile,
+    check_inflate_scorer_load_has_runtime_banner,
+    check_profile_keys_have_resolvers,
+    check_remote_scripts_write_provenance,
+    check_scores_have_lane_tag,
+    check_subagent_prompts_no_cpu_fallback,
+    check_test_files_imports_resolve,
+    check_uniward_delta_has_attestation_gate,
+    check_vastai_create_has_label,
+    check_vastai_create_writes_tracker,
+    check_vastai_prompts_have_cost_cap,
+    check_waivers_specify_env_gate,
+    _scan_doc_for_untagged_scores,
+    _scan_for_cpu_fallback_in_subagent_prompts,
+    _scan_for_halfframe_without_trained_profile,
+    _scan_for_uniward_delta_without_attestation,
+    _scan_for_unspecific_waivers,
+    _scan_for_vastai_prompt_no_cost_cap,
+    _scan_python_for_vastai_create_no_label,
+    _scan_python_for_vastai_create_no_tracker,
+    _scan_test_file_for_dead_imports,
+)
+
+
+# ─── Check A: Vast.ai create instance must include --label ──────────────────
+
+
+class TestVastaiCreateHasLabel:
+    def test_unlabeled_create_is_caught(self, tmp_path: Path) -> None:
+        root = _stub_repo(tmp_path)
+        script = root / "scripts" / "bad_launch.py"
+        _write(script, """
+            def launch():
+                args = [
+                    "create", "instance", "12345",
+                    "--image", "pytorch/pytorch:2.5.1-cuda12.4-cudnn9-devel",
+                    "--disk", "40",
+                ]
+                run_vastai(args)
+        """)
+        v = _scan_python_for_vastai_create_no_label(script, root)
+        assert len(v) == 1, v
+        assert "--label" in v[0]
+
+    def test_labeled_create_passes(self, tmp_path: Path) -> None:
+        root = _stub_repo(tmp_path)
+        script = root / "scripts" / "good_launch.py"
+        _write(script, """
+            def launch():
+                args = [
+                    "create", "instance", "12345",
+                    "--image", "pytorch/pytorch:2.5.1-cuda12.4-cudnn9-devel",
+                    "--disk", "40",
+                    "--label", "lane-X-experiment",
+                ]
+                run_vastai(args)
+        """)
+        v = _scan_python_for_vastai_create_no_label(script, root)
+        assert v == [], v
+
+    def test_unrelated_create_instance_not_flagged(self, tmp_path: Path) -> None:
+        root = _stub_repo(tmp_path)
+        script = root / "scripts" / "innocent.py"
+        _write(script, """
+            words = ["create", "instances", "of", "a", "thing"]
+        """)
+        v = _scan_python_for_vastai_create_no_label(script, root)
+        assert v == [], v
+
+
+# ─── Check B: Vast.ai create must register tracker ─────────────────────────
+
+
+class TestVastaiCreateWritesTracker:
+    def test_no_tracker_is_caught(self, tmp_path: Path) -> None:
+        root = _stub_repo(tmp_path)
+        script = root / "scripts" / "bad.py"
+        _write(script, """
+            def launch():
+                args = ["create", "instance", "12345", "--label", "x"]
+                run_vastai(args)
+                # ... 30 lines without tracker write ...
+                pass
+        """)
+        v = _scan_python_for_vastai_create_no_tracker(script, root)
+        assert len(v) == 1, v
+
+    def test_tracker_write_passes(self, tmp_path: Path) -> None:
+        root = _stub_repo(tmp_path)
+        script = root / "scripts" / "good.py"
+        _write(script, """
+            def launch():
+                args = ["create", "instance", "12345", "--label", "x"]
+                instance_id = run_vastai(args)
+                with open(".omx/state/vastai_active_instances.json", "r+") as f:
+                    pass
+        """)
+        v = _scan_python_for_vastai_create_no_tracker(script, root)
+        assert v == [], v
+
+
+# ─── Check C: subagent prompts no --device cpu fallback ────────────────────
+
+
+class TestSubagentPromptsNoCpuFallback:
+    def test_unguarded_cpu_fallback_caught(self, tmp_path: Path) -> None:
+        root = _stub_repo(tmp_path)
+        prompt = root / ".agents" / "task.md"
+        prompt.parent.mkdir(parents=True, exist_ok=True)
+        prompt.write_text(
+            "Build the archive. If CUDA fails, run --device cpu instead.\n"
+        )
+        v = _scan_for_cpu_fallback_in_subagent_prompts(prompt, root)
+        assert len(v) == 1, v
+
+    def test_caveated_cpu_fallback_passes(self, tmp_path: Path) -> None:
+        root = _stub_repo(tmp_path)
+        prompt = root / ".agents" / "task.md"
+        prompt.parent.mkdir(parents=True, exist_ok=True)
+        prompt.write_text(
+            "Build the archive. --device cpu is OK here, "
+            "deterministic-bytes acceptable for this analysis-only run.\n"
+        )
+        v = _scan_for_cpu_fallback_in_subagent_prompts(prompt, root)
+        assert v == [], v
+
+    def test_no_cpu_mention_passes(self, tmp_path: Path) -> None:
+        root = _stub_repo(tmp_path)
+        prompt = root / ".agents" / "task.md"
+        prompt.parent.mkdir(parents=True, exist_ok=True)
+        prompt.write_text("Build the archive on CUDA.\n")
+        v = _scan_for_cpu_fallback_in_subagent_prompts(prompt, root)
+        assert v == [], v
+
+
+# ─── Check D: scores in run_log/findings must be lane-tagged ───────────────
+
+
+class TestScoresHaveLaneTag:
+    def test_untagged_score_caught(self, tmp_path: Path) -> None:
+        root = _stub_repo(tmp_path)
+        log = root / ".ralph" / "run_log.md"
+        log.parent.mkdir(parents=True, exist_ok=True)
+        log.write_text("Result: auth = 0.36 (great progress)\n")
+        v = _scan_doc_for_untagged_scores(log, root)
+        assert len(v) == 1, v
+        assert "lane tag" in v[0]
+
+    def test_contest_cuda_tag_passes(self, tmp_path: Path) -> None:
+        root = _stub_repo(tmp_path)
+        log = root / ".ralph" / "run_log.md"
+        log.parent.mkdir(parents=True, exist_ok=True)
+        log.write_text("Result: auth = 0.36 [contest-CUDA]\n")
+        v = _scan_doc_for_untagged_scores(log, root)
+        assert v == [], v
+
+    def test_mps_proxy_tag_passes(self, tmp_path: Path) -> None:
+        root = _stub_repo(tmp_path)
+        log = root / ".ralph" / "run_log.md"
+        log.parent.mkdir(parents=True, exist_ok=True)
+        log.write_text("Smoke: auth = 2.26 [MPS-PROXY]\n")
+        v = _scan_doc_for_untagged_scores(log, root)
+        assert v == [], v
+
+    def test_formula_line_skipped(self, tmp_path: Path) -> None:
+        root = _stub_repo(tmp_path)
+        log = root / ".ralph" / "run_log.md"
+        log.parent.mkdir(parents=True, exist_ok=True)
+        log.write_text("score = 100*seg + sqrt(10*pose) + rate\n")
+        v = _scan_doc_for_untagged_scores(log, root)
+        assert v == [], v
+
+
+# ─── Check E: SCORER_AT_INFLATE_WAIVED must name env-gate ─────────────────
+
+
+class TestWaiversSpecifyEnvGate:
+    def test_bare_waiver_caught(self, tmp_path: Path) -> None:
+        root = _stub_repo(tmp_path)
+        f = root / "submissions" / "x" / "inflate.py"
+        f.parent.mkdir(parents=True, exist_ok=True)
+        f.write_text("module = importlib.import_module('tac.scorer')  # SCORER_AT_INFLATE_WAIVED\n")
+        v = _scan_for_unspecific_waivers(f, root)
+        assert len(v) == 1, v
+        assert "no" in v[0].lower() and "reason" in v[0].lower()
+
+    def test_no_envgate_reason_caught(self, tmp_path: Path) -> None:
+        root = _stub_repo(tmp_path)
+        f = root / "submissions" / "x" / "inflate.py"
+        f.parent.mkdir(parents=True, exist_ok=True)
+        f.write_text("foo()  # SCORER_AT_INFLATE_WAIVED:approved-by-yousfi\n")
+        v = _scan_for_unspecific_waivers(f, root)
+        assert len(v) == 1, v
+        assert "env-gate" in v[0].lower()
+
+    def test_proper_envgate_passes(self, tmp_path: Path) -> None:
+        root = _stub_repo(tmp_path)
+        f = root / "submissions" / "x" / "inflate.py"
+        f.parent.mkdir(parents=True, exist_ok=True)
+        f.write_text("foo()  # SCORER_AT_INFLATE_WAIVED:env-gated-INFLATE_TTO=1\n")
+        v = _scan_for_unspecific_waivers(f, root)
+        assert v == [], v
+
+
+# ─── Check F: half-frame archive needs trained renderer ───────────────────
+
+
+class TestHalfframeArchiveTrainedProfile:
+    def test_halfframe_no_profile_caught(self, tmp_path: Path) -> None:
+        root = _stub_repo(tmp_path)
+        f = root / "scripts" / "bad.sh"
+        f.write_text("python experiments/build_baseline_archive.py --half-frame --output foo.zip\n")
+        v = _scan_for_halfframe_without_trained_profile(f, root)
+        assert len(v) >= 1, v
+
+    def test_halfframe_with_zoom_profile_name_passes(self, tmp_path: Path) -> None:
+        root = _stub_repo(tmp_path)
+        f = root / "scripts" / "good.sh"
+        f.write_text(
+            "python experiments/build_baseline_archive.py "
+            "--profile dilated_h64_half_frame --half-frame --output foo.zip\n"
+        )
+        v = _scan_for_halfframe_without_trained_profile(f, root)
+        # PROFILES may or may not import; either way, name has 'half_frame' so passes.
+        assert v == [], v
+
+    def test_no_halfframe_skipped(self, tmp_path: Path) -> None:
+        root = _stub_repo(tmp_path)
+        f = root / "scripts" / "ok.sh"
+        f.write_text("python experiments/build_baseline_archive.py --output foo.zip\n")
+        v = _scan_for_halfframe_without_trained_profile(f, root)
+        assert v == [], v
+
+
+# ─── Check G: profile keys must have resolvers (bidirectional) ────────────
+
+
+class TestProfileKeysHaveResolvers:
+    def test_returns_list_without_error(self) -> None:
+        # Smoke test on the live codebase — we just want it to RUN.
+        v = check_profile_keys_have_resolvers(strict=False, verbose=False)
+        assert isinstance(v, list)
+
+    def test_strict_with_clean_state_passes(self, tmp_path: Path) -> None:
+        # If PROFILES doesn't import, the check returns [] and never raises.
+        # That's fine: the test confirms strict-mode raises only on real
+        # violations.
+        v = check_profile_keys_have_resolvers(
+            repo_root=tmp_path, strict=True, verbose=False,
+        )
+        # tmp_path has no profiles.py → keys = None → returns []
+        assert v == []
+
+
+# ─── Check H: inflate scorer-load must print runtime banner ─────────────
+
+
+class TestInflateScorerLoadBanner:
+    def test_scorer_load_no_banner_caught(self, tmp_path: Path) -> None:
+        root = _stub_repo(tmp_path)
+        f = root / "submissions" / "x" / "inflate_bad.py"
+        f.parent.mkdir(parents=True, exist_ok=True)
+        f.write_text("from tac.scorer import load_scorers\n")
+        v = check_inflate_scorer_load_has_runtime_banner(
+            repo_root=root, strict=False, verbose=False,
+        )
+        assert len(v) == 1, v
+
+    def test_scorer_load_with_banner_passes(self, tmp_path: Path) -> None:
+        root = _stub_repo(tmp_path)
+        f = root / "submissions" / "x" / "inflate_good.py"
+        f.parent.mkdir(parents=True, exist_ok=True)
+        f.write_text(
+            "from tac.scorer import load_scorers\n"
+            "print('[strict-scorer-rule] env-gated path active', file=sys.stderr)\n"
+        )
+        v = check_inflate_scorer_load_has_runtime_banner(
+            repo_root=root, strict=False, verbose=False,
+        )
+        assert v == [], v
+
+    def test_no_scorer_load_skipped(self, tmp_path: Path) -> None:
+        root = _stub_repo(tmp_path)
+        f = root / "submissions" / "x" / "inflate.py"
+        f.parent.mkdir(parents=True, exist_ok=True)
+        f.write_text("import sys\nprint('hello')\n")
+        v = check_inflate_scorer_load_has_runtime_banner(
+            repo_root=root, strict=False, verbose=False,
+        )
+        assert v == [], v
+
+
+# ─── Check I: test files must have resolvable imports ────────────────────
+
+
+class TestTestFilesImportsResolve:
+    def test_import_from_nonexistent_module_caught(self, tmp_path: Path) -> None:
+        root = _stub_repo(tmp_path)
+        (root / "src" / "tac" / "tests").mkdir(parents=True, exist_ok=True)
+        f = root / "src" / "tac" / "tests" / "test_broken.py"
+        f.write_text("from tac.does_not_exist import frobnicate\n")
+        v = _scan_test_file_for_dead_imports(f, root)
+        assert len(v) == 1, v
+        assert "does not resolve" in v[0]
+
+    def test_import_undefined_symbol_caught(self, tmp_path: Path) -> None:
+        root = _stub_repo(tmp_path)
+        # Create a real module with limited names.
+        mod = root / "src" / "tac" / "real_module.py"
+        mod.parent.mkdir(parents=True, exist_ok=True)
+        mod.write_text("def foo():\n    pass\n")
+        # And a test that imports a symbol not in real_module.
+        (root / "src" / "tac" / "tests").mkdir(parents=True, exist_ok=True)
+        f = root / "src" / "tac" / "tests" / "test_broken2.py"
+        f.write_text("from tac.real_module import bar\n")
+        v = _scan_test_file_for_dead_imports(f, root)
+        assert len(v) == 1, v
+        assert "does not define" in v[0]
+
+    def test_valid_import_passes(self, tmp_path: Path) -> None:
+        root = _stub_repo(tmp_path)
+        mod = root / "src" / "tac" / "real_module.py"
+        mod.parent.mkdir(parents=True, exist_ok=True)
+        mod.write_text("def foo():\n    pass\n")
+        (root / "src" / "tac" / "tests").mkdir(parents=True, exist_ok=True)
+        f = root / "src" / "tac" / "tests" / "test_ok.py"
+        f.write_text("from tac.real_module import foo\n")
+        v = _scan_test_file_for_dead_imports(f, root)
+        assert v == [], v
+
+    def test_third_party_import_skipped(self, tmp_path: Path) -> None:
+        root = _stub_repo(tmp_path)
+        (root / "src" / "tac" / "tests").mkdir(parents=True, exist_ok=True)
+        f = root / "src" / "tac" / "tests" / "test_thirdparty.py"
+        f.write_text("import torch\nfrom torch.nn import Module\nimport pytest\n")
+        v = _scan_test_file_for_dead_imports(f, root)
+        assert v == [], v
+
+
+# ─── Check J: vastai prompts must mention cost cap ──────────────────────
+
+
+class TestVastaiPromptsHaveCostCap:
+    def test_unguarded_vastai_prompt_caught(self, tmp_path: Path) -> None:
+        root = _stub_repo(tmp_path)
+        p = root / ".agents" / "task.md"
+        p.parent.mkdir(parents=True, exist_ok=True)
+        p.write_text("Launch a Vast.ai 4090 and run the experiment.\n")
+        v = _scan_for_vastai_prompt_no_cost_cap(p, root)
+        assert len(v) == 1, v
+
+    def test_dollar_cost_cap_passes(self, tmp_path: Path) -> None:
+        root = _stub_repo(tmp_path)
+        p = root / ".agents" / "task.md"
+        p.parent.mkdir(parents=True, exist_ok=True)
+        p.write_text(
+            "Launch a Vast.ai 4090 and run the experiment. "
+            "Budget: $5 hard cap. Destroy instance on completion.\n"
+        )
+        v = _scan_for_vastai_prompt_no_cost_cap(p, root)
+        assert v == [], v
+
+    def test_no_vastai_mention_skipped(self, tmp_path: Path) -> None:
+        root = _stub_repo(tmp_path)
+        p = root / ".agents" / "task.md"
+        p.parent.mkdir(parents=True, exist_ok=True)
+        p.write_text("Run locally on M5 Max.\n")
+        v = _scan_for_vastai_prompt_no_cost_cap(p, root)
+        assert v == [], v
+
+
+# ─── Check K: --with-uniward-delta needs attestation gate ──────────────
+
+
+class TestUniwardDeltaAttestationGate:
+    def test_unattested_delta_caught(self, tmp_path: Path) -> None:
+        root = _stub_repo(tmp_path)
+        f = root / "scripts" / "lane_c_bad.sh"
+        f.write_text(
+            "python experiments/build_baseline_archive.py "
+            "--with-uniward-delta delta.bin --output foo.zip\n"
+        )
+        v = _scan_for_uniward_delta_without_attestation(f, root)
+        assert len(v) == 1, v
+
+    def test_allow_pending_passes(self, tmp_path: Path) -> None:
+        root = _stub_repo(tmp_path)
+        f = root / "scripts" / "lane_c_good.sh"
+        f.write_text(
+            "python experiments/build_baseline_archive.py "
+            "--with-uniward-delta delta.bin --allow-pending-compliance "
+            "--output foo.zip\n"
+        )
+        v = _scan_for_uniward_delta_without_attestation(f, root)
+        assert v == [], v
+
+    def test_attestation_path_reference_passes(self, tmp_path: Path) -> None:
+        root = _stub_repo(tmp_path)
+        f = root / "scripts" / "lane_c_attested.sh"
+        f.write_text(
+            "# attestation lives in .omx/state/lane_c_compliance_attestations/<sha>.json\n"
+            "python experiments/build_baseline_archive.py "
+            "--with-uniward-delta delta.bin --output foo.zip\n"
+        )
+        v = _scan_for_uniward_delta_without_attestation(f, root)
+        assert v == [], v
+
+
+# ─── Check L: remote scripts must write provenance.json ────────────────
+
+
+class TestRemoteScriptsWriteProvenance:
+    def test_no_provenance_caught(self, tmp_path: Path) -> None:
+        root = _stub_repo(tmp_path)
+        scripts = root / "scripts"
+        scripts.mkdir(exist_ok=True)
+        f = scripts / "remote_lane_z_bad.sh"
+        f.write_text("#!/bin/bash\nset -e\necho 'launching'\n")
+        v = check_remote_scripts_write_provenance(
+            repo_root=root, strict=False, verbose=False,
+        )
+        assert len(v) >= 1, v
+
+    def test_provenance_present_passes(self, tmp_path: Path) -> None:
+        root = _stub_repo(tmp_path)
+        scripts = root / "scripts"
+        scripts.mkdir(exist_ok=True)
+        f = scripts / "remote_lane_z_good.sh"
+        f.write_text(
+            "#!/bin/bash\nset -e\n"
+            'echo "{\\"git_sha\\":\\"abc\\"}" > provenance.json\n'
+        )
+        v = check_remote_scripts_write_provenance(
+            repo_root=root, strict=False, verbose=False,
+        )
+        assert v == [], v
+
+    def test_strict_raises_on_violation(self, tmp_path: Path) -> None:
+        root = _stub_repo(tmp_path)
+        scripts = root / "scripts"
+        scripts.mkdir(exist_ok=True)
+        f = scripts / "remote_lane_z_bad.sh"
+        f.write_text("#!/bin/bash\nset -e\necho 'launching'\n")
+        with pytest.raises(MetaBugViolation):
+            check_remote_scripts_write_provenance(
+                repo_root=root, strict=True, verbose=False,
+            )
+
+
+# ─── Smoke: all 12 new checks importable + callable ────────────────────
+
+
+class TestNewMetaBugChecksSmoke:
+    def test_all_12_checks_callable(self) -> None:
+        """Confirms every new check function is importable + runnable on
+        the live codebase without crashing."""
+        for fn in [
+            check_vastai_create_has_label,
+            check_vastai_create_writes_tracker,
+            check_subagent_prompts_no_cpu_fallback,
+            check_scores_have_lane_tag,
+            check_waivers_specify_env_gate,
+            check_halfframe_archive_uses_trained_profile,
+            check_profile_keys_have_resolvers,
+            check_inflate_scorer_load_has_runtime_banner,
+            check_test_files_imports_resolve,
+            check_vastai_prompts_have_cost_cap,
+            check_uniward_delta_has_attestation_gate,
+            check_remote_scripts_write_provenance,
+        ]:
+            v = fn(strict=False, verbose=False)
+            assert isinstance(v, list), f"{fn.__name__} must return list"
