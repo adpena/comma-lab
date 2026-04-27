@@ -233,7 +233,7 @@ The FiLM conditioning space (6D per pair) is 196,608× smaller than pixel space.
    - Phase transition at ~100 steps confirmed with correct checkpoint (cff8dca4).
 
 4. **Augmented Lagrangian for rate-distortion** [Balle et al., extended by Fridrich constraints]
-   - Our v5 Lagrangian annealing achieved auth=0.87 baseline. Foundation for all TTO work.
+   - Our v5 Lagrangian annealing achieved auth=0.87 [advisory only] baseline. Foundation for all TTO work.
    - Key finding: drift at ep16999 suggests the Lagrangian multiplier needs slow rho growth.
 
 5. **Depthwise Separable Convolutions (DSConv)** [MobileNet heritage, used by Quantizr PR#55]
@@ -264,7 +264,7 @@ Based on literature survey and Quantizr PR#55, three previously deprioritized te
 
 ## 2026-04-16 [EXPERIMENT] Hinge loss breakthrough + correct checkpoint re-validation
 
-**Context**: All prior Vast.ai experiments used wrong checkpoint (5-epoch smoke model, MD5:a9aee326). Re-ran with correct auth=0.87 renderer (MD5:cff8dca4).
+**Context**: All prior Vast.ai experiments used wrong checkpoint (5-epoch smoke model, MD5:a9aee326). Re-ran with correct auth=0.87 [advisory only] renderer (MD5:cff8dca4).
 
 ### Key Results
 1. **Hinge loss is strictly better than xent** from 50+ TTO steps:
@@ -400,11 +400,11 @@ Based on literature survey and Quantizr PR#55, three previously deprioritized te
 - Human's insistence on extreme paranoia adversarial review created the conditions for discovery. Neither the human nor the AI council would have found this alone.
 
 **Impact on prior results**:
-- TTO v1 (auth=0.74): SegNet-only optimization. PoseNet "improvement" was noise.
+- TTO v1 (auth=0.74) [advisory only]: SegNet-only optimization. PoseNet "improvement" was noise.
 - TTO v2: Same.
 - TTO v3 (embedding loss): Embedding loss couldn't help because PoseNet had no gradient signal. The entire experiment was invalid.
 - TTO v4 (running): Running with the same bug. Results will be invalid for PoseNet.
-- Renderer training (auth=0.87): UNAFFECTED — training pipeline had the fix.
+- Renderer training (auth=0.87) [advisory only]: UNAFFECTED — training pipeline had the fix.
 
 **Projected impact of fix**:
 - Renderer baseline: PoseNet=0.031 contributes ~0.56 to auth score (sqrt(10*0.031)=0.56)
@@ -494,7 +494,7 @@ DP-SIMS needs 100+ more Phase 2 epochs (only got 1 before Modal died). CPU needs
 ## 2026-04-12 [discovery] DP-SIMS SegNet matches CPU best at 0.006 with only 9 scorer epochs
 
 The mask2mask approach (DP-SIMS with SPADE) achieves SegNet 0.006 — equal to our promoted 1.33 CPU result — after just 9 Phase 2 epochs. This validates Yousfi trick #7 (SegNet argmax insight) and #11 (extreme SegNet reward). The architecture guarantees near-perfect semantic preservation. PoseNet at 0.53 needs 100+ more epochs. Proxy 2.93 projected to sub-1.5 by ep 150.
-- Score: 2.93
+- Score: 2.93 [advisory only]
 - Variant: dp_sims
 
 ## 2026-04-12 [technique] Yousfi tricks 32-35: Pedernales insights — theoretical floor 0.18
@@ -504,7 +504,7 @@ Trick 32: backward delta generation (ONE perfect last frame + 1199 tiny deltas).
 ## 2026-04-12 [breakthrough] DP-SIMS SegNet 0.003 TIES Quantizr after only 89 Phase 2 epochs
 
 FP4-quantized DP-SIMS achieves SegNet 0.003 — identical to Quantizr (0.60 score). Entire remaining gap is PoseNet (0.482 vs 0.001 = 480x) and rate (2.2MB vs 386KB = 5.7x). Path to sub-0.60: (1) train 1000+ P2 epochs for PoseNet, (2) shrink model to 500KB, (3) add cross-frame attention. Architecture validated.
-- Score: 2.5
+- Score: 2.5 [advisory only]
 - Variant: dp_sims
 
 ## 2026-04-12 [decision] Noise strategy must be configurable via toggles
@@ -546,7 +546,7 @@ The definitive fix is to run CUDA+DALI scoring (requires GPU), or to submit.
 ## 2026-04-12 [breakthrough] Yousfi GPU eureka: no renderer needed — constrained optimization from noise
 
 GPU Eureka 1-4: (1) Generate in scorer-input space, invert preprocessing. (2) Pre-compute expected PoseNet output from ego-motion trajectory. (3) Frame generation as constrained optimization: minimize rate subject to PoseNet=expected + SegNet argmax=masks. (4) No neural renderer needed — start from noise seed, run 1000 gradient descent steps against constraints. Archive: masks 239B + targets 7KB + seed 64B = 8KB total. Score projection: 0.135. Fits in 50 seconds on T4.
-- Score: 0.135
+- Score: 0.135 [advisory only]
 
 ## 2026-04-20 [BREAKTHROUGH] Fourth Lane: Constrained Generation from Noise with Mini-Scorers
 

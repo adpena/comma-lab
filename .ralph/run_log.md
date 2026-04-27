@@ -169,7 +169,7 @@ CONTRARIAN VINDICATED: yesterday's veto saved us from spending hours optimizing 
 
 **What was broken**: Every TTO run (v1, v2, v3, v4) optimized with SegNet+rate gradients only. PoseNet was invisible to the optimizer. The "PoseNet improvements" in TTO logs were random noise.
 
-**What was NOT broken**: Renderer training (auth=0.87) used a different code path that had the fix. The 0.87 baseline is valid.
+**What was NOT broken**: Renderer training (auth=0.87) [advisory only] used a different code path that had the fix. The 0.87 baseline is valid.
 
 **Root cause**: `@torch.no_grad()` decorator on `rgb_to_yuv6()` in upstream `frame_utils.py`. PoseNet calls this in its preprocessing. The decorator severs the gradient tape silently — no error, no warning.
 
@@ -212,7 +212,7 @@ Coupled trajectory (4D-Var): PoseNet CONVERGES 0.39→0.27 in 200 steps, still t
 
 ## 2026-04-14T16:00:00Z — λ-SWEEP COMPLETE: 0.87 is architectural ceiling
 
-λ_cap sweep from v5-best (auth=0.87): {500→0.90, 750→0.87, 1000→0.87, 1500→0.90, 2000→0.87}
+λ_cap sweep from v5-best (auth=0.87) [advisory only]: {500→0.90, 750→0.87, 1000→0.87, 1500→0.90, 2000→0.87}
 Score plateaus at 0.87 across 3 different λ_cap values. Ceiling is architectural, not optimization.
 Quantizr at 0.60 has 47x better PoseNet (0.00066 vs 0.031) — architecture gap, not tuning gap.
 Council decision: kill λ-sweep path, pivot to constrained generation (joint frame pair output).
@@ -229,9 +229,9 @@ Sweet spot: ep12500-15000 (all < 1.00, beating v3). Two local minima at ep12600 
 Collapse onset: ep15500 (SegNet and PoseNet both degrade under weak Lagrangian).
 Cost: 9 × $0.29 = $2.61. High information density — maps full Pareto drift trajectory.
 
-## 2026-04-14T13:20:00Z — NEW BEST: asym_v5_lagrangian_fixed renderer_best auth=0.8700
+## 2026-04-14T13:20:00Z — NEW BEST: asym_v5_lagrangian_fixed renderer_best auth=0.8700 [advisory only]
 
-- **auth=0.8700** — 13% improvement over v3 baseline (1.00 -> 0.87)
+- **auth=0.8700** [advisory only] — 13% improvement over v3 baseline (1.00 -> 0.87)
 - Checkpoint: renderer_best.pt at ep12600 (only 200 epochs after resume from v3)
 - PoseNet: 0.031 (35% better than v3's 0.048) — the big mover
 - SegNet: 0.00217 (held flat vs v3's 0.00210)
@@ -240,11 +240,11 @@ Cost: 9 × $0.29 = $2.61. High information density — maps full Pareto drift tr
   where the over-constrained v3 model found a better PoseNet basin before drifting
 - Late checkpoint ep16999 REGRESSED to 1.37 — weaker constraints let model drift
 - Council implication: short-horizon fine-tuning with reduced Lagrangian > long training
-- v5 constraints_met ep16999: auth=1.37 (SegNet 0.004, PoseNet 0.075) — drift confirmed
+- v5 constraints_met ep16999: auth=1.37 [advisory only] (SegNet 0.004, PoseNet 0.075) — drift confirmed
 
-## 2026-04-14T01:00:00Z — PRE-SUPERVISION BASELINE CONFIRMED: asym_v3_longer_tight auth=1.0000
+## 2026-04-14T01:00:00Z — PRE-SUPERVISION BASELINE CONFIRMED: asym_v3_longer_tight auth=1.0000 [advisory only]
 
-- **auth=1.0000** — BEST RESULT TO DATE on asymmetric warp architecture
+- **auth=1.0000** [advisory only] — BEST RESULT TO DATE on asymmetric warp architecture
 - seg=0.002104, pose=0.047917, rate=0.100355
 - checkpoint: asym_v3_longer_tight/renderer_best.pt (pre-supervision, ~ep12400)
 - CONFIRMED: supervision 7600 epochs starting from 1.0 regressed to 1.79–2.87
@@ -258,7 +258,7 @@ Cost: 9 × $0.29 = $2.61. High information density — maps full Pareto drift tr
 
 ## 2026-04-14T00:30:00Z — asym_v4_supervised best_proxy_constraints_met AUTH EVAL
 
-- **auth=2.8700** (CONFIRMED: supervised training collapses PoseNet)
+- **auth=2.8700** [advisory only] (CONFIRMED: supervised training collapses PoseNet)
 - seg=0.3002, pose=2.4707, rate=0.1004
 - checkpoint: renderer_epoch16800_constraints_met.pt (selected by best_proxy_constraints_met strategy)
 - proxy_score=0.7266 (score_projection, fallback — full_eval_score absent due to OOM)
@@ -267,10 +267,10 @@ Cost: 9 × $0.29 = $2.61. High information density — maps full Pareto drift tr
 - KEY FINDING: score_projection is NOT a reliable proxy for auth score when PoseNet collapses —
   it was tracking SegNet improvement (×33 better) while completely missing PoseNet collapse (×16 worse).
   score_projection as training proxy = useless for PoseNet-dominated regime.
-- COMPARISON TABLE (asym_v4 supervised):
-  ep16800 (best proxy): seg=0.003, pose=2.47  → total=2.87 ← best_proxy_constraints_met selected this
-  ep19999 (periodic):   seg=0.566, pose=1.12  → total=1.79 ← randomly landed on more balanced epoch
-  dilated_h64 baseline: seg=0.006, pose=0.060 → total=1.33 ← current best
+- COMPARISON TABLE (asym_v4 supervised) [advisory only]:
+  ep16800 (best proxy): seg=0.003, pose=2.47  → total=2.87 [advisory only] ← best_proxy_constraints_met selected this
+  ep19999 (periodic):   seg=0.566, pose=1.12  → total=1.79 [advisory only] ← randomly landed on more balanced epoch
+  dilated_h64 baseline: seg=0.006, pose=0.060 → total=1.33 [advisory only] ← current best
 - INVALIDATED: both supervised checkpoints are worse than dilated baseline; supervised approach FAILS
 - AWAITING: raft_only (Kaggle v6) for valid A/B comparison on same architecture
 - saved: /results/asym_v4_supervised/auth_eval_renderer_epoch16800_constraints_met.json
@@ -292,7 +292,7 @@ Cost: 9 × $0.29 = $2.61. High information density — maps full Pareto drift tr
 
 ## 2026-04-13T21:25:00Z — asym_v4_supervised ep19999 AUTH EVAL
 
-- **auth=1.7900** (REGRESSION from baseline ~1.0 at ep12400)
+- **auth=1.7900** [advisory only] (REGRESSION from baseline ~1.0 at ep12400)
 - seg=0.5664, pose=1.1188, rate=0.1004
 - archive=150,715 bytes, 287,019 params
 - checkpoint: renderer_epoch19999.pt (periodic, NOT best — best_score=0.6019 never updated = resume floor never beaten)
