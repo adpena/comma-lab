@@ -102,6 +102,35 @@ The path to sub-0.33 is **A1 + A2 + B1 + C1** stacked. None require fundamentall
 - Destroy Vast.ai instances IMMEDIATELY after download — $24 hard cap.
 - 5 consecutive clean adversarial review passes before final PR.
 
+## 2026-04-27 Council verdict: Lane G KL-distill at pose TTO — ABANDONED
+
+Council vote 5/5 against Lane G as a score-optimization technique (full deliberation in `.omx/research/findings.md` under "2026-04-27 Council on Lane G KL-distill at pose TTO"). Summary:
+
+- **Yousfi**: KL on SegNet logits is orthogonal to FiLM-pose conditioning manifold. Low-leverage. Adds fragility tax against scorer drift.
+- **Fridrich**: KL-distill is teacher→student compression objective; we have no teacher/student at pose TTO. Anti-aligned with 2 of 4 inverse-steganalysis principles (UNIWARD, L∞ spreading). Suppresses CNN-blind-spot exploitation.
+- **Hotz**: $0.85 for V3 vs $0.30 for Lane M. EV per dollar 10×+ worse. Lane M radial-zoom is a measured-physics prediction; Lane G is a hyperparameter search with bounded-near-zero ceiling.
+- **Quantizr**: Their KL is training-time, alongside MSE+adversarial+soft-argmax — never inference-time. Lifting it into our pose TTO is a cargo-cult category error. KL-confidence-pressure on argmax-correct cells is wasted work.
+- **Contrarian**: V3 weight 5e-6 is post-hoc normalization, not a hypothesis. Even successful V3 outcomes do not justify cost vs Lane M alternative. Pre-registered prediction band [1.12, 1.18] kills Lane G in all three outcomes.
+
+**Falsifiable prediction (only if V3 ever runs as null-measurement):** at `--kl-distill-weight 5e-6`, `--kl-distill-temperature 2.0`, single seed, contest-CUDA auth ∈ [Lane A − 0.03, Lane A + 0.03] = [1.12, 1.18]. Inside band → KL is a no-op (most likely outcome). Below 1.12 → marginally helpful but still cost-dominated by Lane M. Above 1.18 → actively harmful.
+
+**Kill criteria during V3 (if ever launched):**
+1. Proxy KL term magnitude diverges by >100× from pre-launch estimate within first 50 steps.
+2. Proxy total scorer-hinge term *increases* between step 0 and step 100.
+3. Vast.ai instance loading exceeds 10 min (per `feedback_vastai_correct_launch_pattern`).
+4. Hard cost cap $1.00.
+
+**Recommended pivot order (replaces all Lane G investment):**
+
+| # | Lane | Cost | Predicted Δ vs Lane A 1.15 | Status |
+|---|------|------|----------------------------|--------|
+| 1 | **Lane M** (radial-zoom 1-DOF, FoE (256,174)) | $0.30 | −0.15 to −0.30 → 0.85–1.00 | UNTESTED, code on disk, COUNCIL #1 PRIORITY |
+| 2 | **Lane M+** (zero-cost poses, archive bytes win) | ~$0 (local) | −0.01 to −0.02 (rate only) | UNTESTED, code on disk, run after Lane M |
+| 3 | **Lane N** (L∞ pose penalty per Fridrich principle 3) | $0.10 | small positive | one-line code change pending |
+| 4 | Lane G V3 (deferred null-measurement) | $0.85 | band-inside most likely | DEFER — only run after Lane M lands AND budget surplus exists |
+
+**Why this matters:** The "lift competitor's training-stage trick into our inference-stage pipeline without re-deriving why it would work in our setting" pattern is a recurring failure mode (Hinton T² adaptive weights, eval_roundtrip default, KL distill as primary loss). Adding it to memory as a binding pattern via the council's deliberation. See findings.md for the full 5-position record.
+
 ## RE-TEST REQUIRED — invalidated by 2026-04-27 dead-resolver bug class
 
 The R5 codex review + scanner (commit 040030df) confirmed 12 dead-resolver sites in `src/tac/experiments/train_renderer.py` for profile fields the bootstrap was supposed to read but never did. Already-fixed: `pose_dim` (FiLM disabled across SHIRAZ/DEN/WILDE/GREEN, fixed 0746a803/46e2ab6d), `segnet_uncertainty_weighted_loss` (undefined import, added 46e2ab6d), `args.uncertainty_loss_floor` (dead resolver, fixed 46e2ab6d). Still warn-only in preflight (resolvers NOT yet added): `blend_mode` (spatial→scalar fallback), `motion_type` (depth_aware→learned_cnn fallback), `noise_mode`, `beta_start`/`beta_end`. The findings below all measured a model that was missing one or more of these features at training time.

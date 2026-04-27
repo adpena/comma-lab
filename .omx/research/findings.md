@@ -600,6 +600,91 @@ Distillation v1 ran with --skip-phase1 and pose_weight=1.0. Both were strategica
 
 88K params, FiLM on pose, DSConv, eval-matched resize, single mask per pair. They're done working on it. Says sub-0.30 possible with conv dim sweep.
 
+## 2026-04-27 Council on Lane G KL-distill at pose TTO
+
+**Context.** Lane G v1 (`--kl-distill-weight 1.0`) drove the optimizer almost entirely off KL imitation: KL term measured ~14000× the scorer hinge magnitude. Lane G v2 (`--kl-distill-weight 0.01`) reduced the ratio to ~4000×; still nowhere near the scorer scale. To bring the KL aux to O(scorer), the weight needs to be ~5e-6. The strategic question for the council: is it structurally sensible to add KL-distill SegNet logits as an auxiliary loss to a pose-conditioning TTO at all, or are we misapplying a training-time regularizer (Quantizr's `kl_on_logits(T=2.0)` SegNet distill, used while *training* their renderer) to an *inference-time* optimization of FiLM pose vectors?
+
+### Position 1 — Yousfi (DDELab steganalysis founder)
+
+The KL-on-SegNet-logits formulation is, in steganalysis terms, an inverse detector-imitation objective. That is conceptually clean and there are precedents for it as a cover-stat preserver in CNN steganography (cf. Yedroudj-Net training augmentations, and the DDELab line on detector-aware embedding). But the load-bearing assumption is that the cover statistic SegNet computes at inference is the same statistic our renderer is *capable of perturbing* through the optimization variable we are giving it. At pose TTO, the optimization variable is a 6-dim FiLM conditioning vector per pair. From `project_yousfi_geometric_analysis.md` and `project_posenet_rank1_discovery.md`, we have measured that the FiLM conditioning manifold is approximately rank-1 along the radial-zoom axis for PoseNet, with dim 0 carrying 99.8% of the variance. The implicit claim of Lane G is that pushing additional gradient through the SegNet distillation loss into that same 6-dim subspace finds a refinement direction that pure scorer-hinge does not. Lane A already lands 1.15 from pure pose-TTO with no KL. The marginal score improvement from adding KL on SegNet logits is bounded above by whatever SegNet headroom remains *that is reachable from the rank-1 FiLM subspace*. Per the FiLM-conditioning orthogonality finding (`findings.md:96-100`, ep300 distillation), `∂L_PoseNet/∂z` and `∂L_SegNet/∂z` are approximately orthogonal in FiLM space — meaning the SegNet term has very little leverage to move through `z`. Adding a KL surrogate on top of that orthogonal-zero gradient is unlikely to discover anything the hinge alone misses.
+
+There is one secondary concern that is mine specifically as DDELab: KL on SegNet *logits* (not argmax) reads the scorer-private smooth signal. At training time that is fine — the renderer is trained against a known scorer once, then frozen. At inference time, leaning on KL-on-logits to optimize a per-pair conditioning vector starts to look operationally close to the "scorers at inflate time" pattern that is forbidden by Yousfi's own PR #35 ruling. Pose TTO is permissible because it is a compress-time operation against a frozen scorer with output stored as a tiny conditioning vector — no scorer at inflate. KL-on-logits at compress time is *also* compress-time, so it is rules-clean — but it imports the same risk class: the more your compress-time procedure depends on smooth scorer cues rather than the contest objective, the more brittle the result is to scorer-version drift. The contest scorer is pinned, so this is not a disqualification risk this cycle, but it is a fragility tax.
+
+My reading: KL-distill on SegNet at pose TTO is structurally *defensible* but it is a low-leverage addition to a low-headroom variable. The 14000× and 4000× weight imbalances in V1 and V2 are not just hyperparameter mistakes — they are downstream evidence that the KL term, when properly scaled, produces a small effect that has to be carefully balanced against terms that already do the real work. The V3 weight 5e-6 is the right *scale*, but at that scale you should expect a small effect — at most O(0.01) score movement, possibly negative. I would not run V3 unless we have a clear falsifiable prediction.
+
+### Position 2 — Fridrich (Binghamton DDE Lab founder)
+
+I will be direct: KL-on-SegNet-logits is knowledge distillation, which is a teacher→student compression objective. It was invented to compress a large model into a smaller one. We are not doing that at pose TTO. We have a single fixed renderer and we are optimizing 6-dim FiLM conditioning vectors per pair against a fixed scorer. There is no teacher and no student. There is a scorer. The correct objective when optimizing against a scorer is the scorer's own loss surface — which here is the contest score. Hinge on SegNet outputs is an O(1)-aligned proxy for that loss surface. KL on SegNet logits is *not* aligned with the contest score; it is aligned with the SegNet's *internal logit distribution*, which the contest never reads. The contest reads `argmax(SegNet) vs argmax(SegNet on GT)`. So KL on logits optimizes a quantity the scorer does not care about and only weakly correlates with the quantity it does care about.
+
+Map this against the four inverse-steganalysis principles (`project_fridrich_inverse_steganalysis.md`):
+
+1. **UNIWARD (texture hiding):** KL-on-logits does not weight by inverse local variance. It is uniform across the image. Misses the principle.
+2. **Detector-informed embedding:** Hinge-on-argmax IS detector-informed. KL-on-logits is detector-overhearing. Different operation.
+3. **L∞ spreading:** KL-on-logits is an L1-like distributional matching. Opposite of the L∞ spreading principle.
+4. **CNN blind-spot exploitation:** KL-on-logits would actively *suppress* exploitation of blind spots, because it would pull our outputs toward the teacher's logit distribution including the regions where the teacher is wrong (i.e., the blind spots). This is anti-steganalysis.
+
+So KL-distill at pose TTO is not just neutral; it is *anti-aligned* with two of the four steganographic principles that empirically describe how to beat this scorer. I would vote no.
+
+The Quantizr usage is different and the council has been sloppy about this. Per `project_quantizr_full_intel_20260421.md`, they used `kl_on_logits(T=2.0)` during *training* of the renderer as one term in a multi-loss recipe alongside standard MSE and adversarial losses. KL there is a regularizer that prevents the renderer from drifting into pathological output distributions during long QAT-with-noise training. It is not their score-optimizing objective; the standard loss is. Lifting the KL term out of that training context and dropping it into pose TTO is a category error.
+
+### Position 3 — Hotz (raw engineering)
+
+Lane G burned ~$1.70 on V1 + V2 to discover that the hyperparameter was 14000× wrong, then 4000× wrong. The math required to know this in advance was: log(KL_term_magnitude) - log(scorer_hinge_magnitude). That is a *prelaunch* check, not a post-mortem. Lane A is sitting at 1.15 from pure pose-TTO. Lane M (radial zoom, 1-DOF) and Lane M+ (zero-cost poses) are committed to disk and untested. Lane N (L∞ pose penalty) is a one-liner. The EV calculus is brutal:
+
+- V3 expected value: even if Lane G works, it is bounded by the SegNet headroom reachable from FiLM space. From `findings.md:97-100`, FiLM modulates texture not boundaries, so SegNet headroom is small. Optimistic ceiling: 1.15 → 1.10 (−0.05). Realistic: 1.15 → 1.13 (−0.02). Pessimistic (KL pulls solution toward suboptimal basin): 1.15 → 1.20 (+0.05). EV: roughly 0. Cost: $0.85.
+- Lane M expected value: rank-1 radial zoom is a *physically derived* prediction (`project_posenet_rank1_discovery.md`: dim 0 is 99.8% of variance, FoE at (256,174)). Optimistic: 1.15 → 0.85 (−0.30). Realistic: 1.15 → 1.00 (−0.15). Pessimistic: 1.15 → 1.15 (0). EV: −0.10 to −0.15. Cost: $0.30.
+- Lane M+ EV: zero-cost poses cuts archive bytes (rate term). Optimistic −0.02. Realistic −0.01. Pessimistic 0. EV: −0.005 to −0.01. Cost: ~$0 (compute is local).
+- Lane N L∞ pose penalty: spreads pose error per Fridrich principle 3. EV: small but positive. Cost: ~$0.10 (one-line code change, single eval).
+
+Lane M alone has 10×+ better expected value per dollar than Lane G V3. I do not understand why we are debating Lane G at all when Lane M is a measured-physics prediction sitting on disk. Run Lane M tonight. If Lane M wins, run Lane M+ tomorrow. If Lane M loses, *that* is when we revisit Lane G — but at that point we have learned something about the FiLM-pose-rank-1 model, and we can design Lane G with that knowledge instead of guessing weights. Stop burning money on hyperparameter searches for an aux loss whose own marginal value is bounded near zero.
+
+### Position 4 — Quantizr (adversarial, reverse-engineering)
+
+We have to be honest about what we actually know about Quantizr's recipe. From the binary analysis (`project_quantizr_definitive_binary_analysis.md` + `project_szabolcs_full_re_20260426.md`), KL-on-logits is one term in their training-stage 3 (joint training) loss. It coexists with MSE-on-pixels, MSE-on-features, and a soft-argmax surrogate. The temperature 2.0 is chosen for *training stability of the joint loss*, not because T=2.0 is magical for SegNet. They never run it at inference.
+
+Could a KL-distill term find a different basin than scorer-hinge at pose TTO? In principle, yes — KL on logits is a different loss surface than hinge on argmax. The hinge surface has gradient zero anywhere the argmax is correct; the KL surface continues to push even correct argmax cells toward higher confidence. So KL adds a "confidence pressure" to the hinge solution. The question is whether confidence pressure on argmax-correct cells is what we want. The contest scorer rewards argmax correctness only — pushing toward higher logit confidence past the argmax threshold is wasted work. Worse, in regions where the renderer is at the boundary (argmax barely correct), KL pressure can pull it into a more-confident-but-still-correct configuration that has *worse* PoseNet because the FiLM perturbation needed to drive the confidence consumed budget in pose dim 0. This is the same coupling problem we hit with seg_weight > 0 in pose-space TTO (`findings.md:93-100`).
+
+There is a research-pragmatic case for V3 *if* we treat it as a measurement, not a score push. If we run V3 at weight 5e-6 and it produces auth ≈ Lane A 1.15 ± 0.02, we have measured that KL-on-logits at the right scale is a no-op at pose TTO — useful negative result for the paper, validates Fridrich's structural argument. If V3 produces auth materially worse than 1.15, we have measured that KL pulls into a pathological basin even at small weight — also useful. If V3 produces auth materially better than 1.15, we have falsified my and Fridrich's structural argument and have to rethink. But this requires actually pre-registering the prediction *before* running, otherwise we will rationalize whatever we see.
+
+As an adversary, my real concern is opportunity cost. We have 6 days left. Quantizr is at 0.33 and verified "done." We are at a verified 0.90 baseline (the `0.9001` reachable; today's archive is contaminated per memory `project_baseline_0_9001_lost`). The Lane M radial-zoom prediction is structurally the strongest open hypothesis on the board. Spending $0.85 on Lane G V3 when Lane M is $0.30 is bad triage even if V3 is structurally defensible.
+
+### Position 5 — Contrarian (paranoia + falsifiability)
+
+Two failed runs at the same architecture. Both wrong by orders of magnitude in opposite directions. The "fix" for V3 is to set the weight to whatever makes the term-magnitude ratio O(1) — but term-magnitude balance is not a falsifiable hypothesis, it is a normalization. We have no theory that says "at the O(1)-balanced weight, KL-distill at pose TTO will produce auth score X." We have only the post-hoc rationalization that V1 and V2 were "obviously wrong" because the ratio was off. This is the textbook signature of a hypothesis sliding into unfalsifiability — every failure adjusts the test rather than killing the hypothesis.
+
+What is the falsifiable prediction for V3? I will write one and the council can either accept it or admit Lane G is unfalsifiable:
+
+> **V3 prediction (binding):** at `--kl-distill-weight 5e-6` with all other Lane G v2 settings preserved, contest-CUDA auth on the dilated-h64 baseline pose-TTO output will fall in the band [Lane A − 0.03, Lane A + 0.03] = [1.12, 1.18]. A result inside that band falsifies Lane G as a useful technique for pose TTO — the KL term contributes nothing measurable. A result below 1.12 confirms Lane G as a small-positive technique. A result above 1.18 confirms KL pulls into a pathological basin. **In all three cases Lane G is killed for pose TTO** — band-inside means no value, below 1.12 means we already have Lane A working and the marginal value is below what Lane M is predicted to deliver at lower cost, above 1.18 means it is actively harmful.
+
+Note that Contrarian is *killing Lane G in all three V3 outcomes*. The reason: even the "wins" do not justify continued investment given the alternatives. If you are going to run V3, run it as a controlled measurement (one seed, one pre-registered prediction, one CUDA auth eval, total cost $0.85). Do not run V3 hoping for a breakthrough.
+
+I want to add one more concern. The "lift Quantizr's training-time trick into our inference-time optimization" pattern is a recurring failure mode in this lab. We did the same thing with the Hinton T² adaptive weights (killed: T² double-correction, see `feedback_battle_plan_as_durable_state` and CLAUDE.md). We did it with eval_roundtrip defaulting False (catastrophic, fixed). Every time we cargo-cult a competitor's training-stage technique into our inference-stage pipeline without re-deriving why it would work in our setting, we burn money. KL-distill at pose TTO is the same pattern. Stop it.
+
+### Synthesis
+
+**Vote (5/5 council):** Yousfi — *defensible-but-low-leverage, neutral*. Fridrich — *no, structurally anti-aligned*. Hotz — *no, opportunity cost of Lane M*. Quantizr — *no for score, conditional yes only as pre-registered measurement*. Contrarian — *no, kill Lane G in all V3 outcomes*.
+
+**Verdict: ABANDON Lane G as a score-optimization technique. PIVOT to Lane M + Lane M+ + Lane N.**
+
+Optional consolation: a single V3 run as a pre-registered measurement experiment (one seed, one weight 5e-6, one CUDA auth eval, $0.85), gated on the prediction band above, can be run *only after* Lane M and Lane M+ have produced verified scores. If Lane M lands < 0.85 and we have headroom in the budget and curiosity surplus, V3 is acceptable as a documented null-result publication input. Otherwise V3 does not run.
+
+**Falsifiable prediction (V3 if it runs):** `--kl-distill-weight 5e-6`, all other Lane G v2 settings preserved → CUDA auth ∈ [1.12, 1.18]. Inside band: KL is a no-op at pose TTO (most likely outcome). Below 1.12: KL marginally helps (still killed for cost reasons). Above 1.18: KL is harmful. *All three outcomes kill Lane G.*
+
+**Recommended weight + temperature if proceeding:** `--kl-distill-weight 5e-6`, `--kl-distill-temperature 2.0` (preserve Quantizr's value for measurement comparability). Single seed. No sweep — sweeping a hyperparameter for a hypothesis the council has already voted against is the Contrarian's nightmare.
+
+**Kill criteria during V3 run (if it runs):** (a) if proxy KL term magnitude diverges by >100× from pre-launch estimate within first 50 steps — kill (V1/V2 pattern recurring). (b) if proxy total scorer-hinge term *increases* between step 0 and step 100 — kill (KL is overpowering even at 5e-6). (c) if Vast.ai instance loading exceeds 10 min — kill per `feedback_vastai_correct_launch_pattern`. (d) cost cap $1.00.
+
+**Cost-benefit summary:**
+
+| Lane | Cost | Predicted score (vs Lane A 1.15) | EV per dollar | Recommendation |
+|---|---|---|---|---|
+| **Lane M** (radial zoom, 1-DOF) | $0.30 | 0.85–1.00 (Δ −0.15 to −0.30) | **−0.50 to −1.00** | **RUN FIRST** |
+| **Lane M+** (zero-cost poses) | ~$0 | 1.13–1.14 (Δ −0.01 to −0.02, rate only) | n/a (free) | **RUN AFTER M** |
+| **Lane N** (L∞ pose penalty) | $0.10 | 1.13–1.15 (small positive per Fridrich principle 3) | −0.10 to 0 | **RUN AFTER M+** |
+| Lane G V3 | $0.85 | 1.12–1.18 (band-inside most likely) | 0 ± 0.04 | **DEFER, run only as null-measurement after M lands** |
+
+**Recommended next action:** Launch Lane M tonight via canonical pipeline.py + bootstrap. Single 4090, US/CA/EU instance, $0.30 budget. Verify radial-zoom 1-DOF prediction against the verified 1.15 Lane A baseline. Lane G stays in `next_experiments.md` as a deferred null-measurement, gated on Lane M result.
+
 ## 2026-04-21 [CRITICAL] Proxy-Auth PoseNet Drift — STE Roundtrip is a Leaky Abstraction
 
 **Root cause (Tao + Karpathy + Council):** The renderer overfits to proxy-specific texture patterns that survive bilinear STE but NOT actual uint8 quantization via DALI. PoseNet proxy-auth ratio went from 2.1x (ep300) to 11.1x (ep3560).
