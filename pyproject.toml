@@ -47,6 +47,18 @@ dependencies = [
     # gets brotli automatically. The library is small (~300KB wheel) and
     # has no native build dependencies on T4 / 4090 wheels.
     "brotli>=1.0",
+    # Codex R5-3 #1 fix (2026-04-27): the Lane C compliance gate uses
+    # Ed25519 detached signatures over a canonical-JSON serialization of
+    # the attestation's trust-bearing fields. `cryptography` ships
+    # Ed25519PrivateKey / Ed25519PublicKey via the stdlib-style
+    # `cryptography.hazmat.primitives.asymmetric.ed25519` module; we
+    # depend on it both for signing (tools/sign_lane_c_compliance.py,
+    # tools/lane_c_keygen.py) and verifying
+    # (experiments/build_baseline_archive.py, src/tac/lane_c_compliance.py).
+    # Including here as a hard dep means EVERY install of `tac` can run
+    # the compliance gate. The wheel is ~3MB on standard wheels and has
+    # binary builds for T4 / 4090 / macOS — no native compile required.
+    "cryptography>=41.0",
 ]
 
 [project.optional-dependencies]

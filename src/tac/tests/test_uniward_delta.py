@@ -878,16 +878,26 @@ def test_codex_r5_compliance_status_round_trips_for_all_values() -> None:
     """REGRESSION (Codex R5 HIGH — Issue 2): each valid compliance_status
     must round-trip exactly through pack → unpack. Regression-protects
     the wire format from silently dropping the field.
+
+    Codex R5-3 #2 update: writing compliance_status=APPROVED requires
+    the internal promotion token (the dedicated promotion tool is the
+    only legitimate caller; tests pass the token explicitly to exercise
+    the same codepath the gate validates).
     """
     from tac.uniward_delta import (
         COMPLIANCE_PENDING, COMPLIANCE_APPROVED, COMPLIANCE_REJECTED,
     )
+    from tac.lane_c_compliance import INTERNAL_PROMOTION_TOKEN
     delta, cost = _random_delta(n_frames=2, H=8, W=8, sparsity=0.1, seed=22)
     for status in (COMPLIANCE_PENDING, COMPLIANCE_APPROVED, COMPLIANCE_REJECTED):
-        blob = pack_sparse_delta(
-            delta, cost, l_inf_budget=4.0, target_bytes=2000,
-            compliance_status=status,
-        )
+        kwargs = {
+            "l_inf_budget": 4.0,
+            "target_bytes": 2000,
+            "compliance_status": status,
+        }
+        if status == COMPLIANCE_APPROVED:
+            kwargs["_internal_promotion_token"] = INTERNAL_PROMOTION_TOKEN
+        blob = pack_sparse_delta(delta, cost, **kwargs)
         spec = unpack_sparse_delta(blob)
         assert spec.compliance_status == status, (
             f"compliance_status round-trip failed: packed {status!r}, "

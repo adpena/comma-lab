@@ -1,24 +1,32 @@
 #!/usr/bin/env python3
-"""sign_lane_c_compliance.py — write a Lane C δ.bin compliance attestation.
+"""sign_lane_c_compliance.py — write a SIGNED Lane C δ.bin compliance attestation.
 
-CODEX R5-2 #4 fix (2026-04-27): the Lane C compliance gate trusts the δ.bin
-header's ``compliance_status`` field for ``rejected``/``pending_ruling`` (the
-optimizer can write either) but REQUIRES an external attestation file for
-``approved``. This tool is the only way to produce that attestation.
+Codex R5-3 #1 fix (2026-04-27): attestations now carry a mandatory Ed25519
+detached signature over the canonical-JSON serialization of the trust-bearing
+fields. The signing key is loaded from a PEM file OUTSIDE the repo (default
+``~/.config/pact/lane_c_signing_key.pem``); only the matching pubkey is
+committed (in
+``.omx/state/lane_c_compliance_attestations/trust_root_pubkeys.json``).
+
+Without ``--private-key`` pointing at a valid Ed25519 PEM, this tool refuses
+to write — there is intentionally no fallback to "structure only" attestations
+because that was the bypass.
 
 Usage
 -----
     python tools/sign_lane_c_compliance.py \\
         --delta-bin path/to/delta.bin \\
         --approver yousfi \\
-        --ruling-text "PR #35 ruling: Lane C δ approved as in-archive bundle"
+        --ruling-text "PR #35 ruling: Lane C δ approved as in-archive bundle" \\
+        --private-key ~/.config/pact/lane_c_signing_key.pem
 
 The attestation is written to:
     .omx/state/lane_c_compliance_attestations/<sha256>.json
 
 where ``<sha256>`` is the SHA256 of the δ.bin bytes. The archive builder
-``experiments/build_baseline_archive.py`` cross-checks this file before
-allowing a δ marked ``compliance_status="approved"`` into the archive.
+``experiments/build_baseline_archive.py`` cross-checks this file (Ed25519
+sig + approver allowlist + δ-sha cross-check) before allowing a δ marked
+``compliance_status="approved"`` into the archive.
 
 Hard refusals
 -------------
@@ -26,41 +34,29 @@ Hard refusals
   approved (PR URL, council decision, etc). A bare timestamp is not
   enough forensic evidence.
 - Empty ``--approver``: must record the identity (council, yousfi, …).
+- Missing or unreadable ``--private-key`` PEM file.
 - Pre-existing attestation at the target path: pass ``--overwrite`` to
   replace; doing so loses forensic history of the previous ruling.
 - Missing or empty ``--delta-bin`` path.
 
 What this tool does NOT do
 --------------------------
-- It does not modify the δ.bin's wire-format header. The optimizer is
-  the only writer for that field and can only set ``pending_ruling`` or
-  ``rejected``. To MOVE a δ from pending to approved, you sign here AND
-  re-build the archive with a δ whose header still says
-  ``pending_ruling`` plus the matching attestation; the archive
-  builder reads BOTH.
+- It does not modify the δ.bin's wire-format header. To produce an
+  approved δ.bin (status='approved' in the wire header), the workflow is:
 
-  Wait — that's not quite right. The archive builder reads the δ.bin
-  header's ``compliance_status``. If you want the archive to ship as
-  approved, the header must say ``approved``. Since the optimizer
-  refuses to write ``approved``, the operator MUST use a small post-
-  processing step to flip the header on a pending δ AFTER signing.
-  Right now the simplest way is to re-pack the δ via
-  ``tac.uniward_delta.pack_sparse_delta(..., compliance_status="approved")``
-  using the in-memory tensors — but that recomputes the bytes and
-  invalidates the SHA. The cleanest workflow today is:
+      1. Build a pending δ.bin via experiments/optimize_uniward_delta.py.
+      2. Sign attestation against THAT pending δ's sha (this tool).
+      3. Run tools/promote_lane_c_to_approved.py with the pending δ + the
+         attestation. The promoter verifies the attestation against the
+         trust root, then re-emits a NEW δ.bin with header
+         compliance_status='approved'. The new δ has a DIFFERENT sha.
+      4. Sign a fresh attestation against the promoted δ.bin's sha.
+      5. Bundle the promoted δ.bin + matching attestation into the
+         archive via experiments/build_baseline_archive.py.
 
-      1. Build δ → δ.bin with header pending_ruling.
-      2. Sign attestation against THAT δ's sha (this tool).
-      3. To bundle: pass ``--with-uniward-delta delta.bin
-         --allow-pending-compliance`` to the archive builder, which
-         records both the pending status AND the attestation in
-         provenance.
-
-  In other words: signing alone does not promote a δ to approved at
-  the wire level. Promotion requires either a header-rewrite tool
-  (intentionally not provided — see Codex R5-2 #4 reasoning) or
-  re-packing. The attestation IS however the trust anchor for any
-  build that ships an approved δ.
+  The promotion tool is the ONLY caller that may write
+  compliance_status='approved' into a δ.bin wire header. This is the
+  Codex R5-3 #2 fix.
 """
 from __future__ import annotations
 
@@ -132,6 +128,17 @@ def main() -> int:
                    help="Override the auto-detected user (defaults to "
                         "getpass.getuser()). Useful for paper-trail "
                         "rebuilds; production use should leave it auto.")
+    p.add_argument("--private-key", type=Path,
+                   default=Path.home() / ".config" / "pact"
+                   / "lane_c_signing_key.pem",
+                   help="Path to the PEM-encoded Ed25519 private key used "
+                        "to sign the attestation. Default: "
+                        "~/.config/pact/lane_c_signing_key.pem. The matching "
+                        "public key MUST be registered in the trust root "
+                        "(.omx/state/lane_c_compliance_attestations/"
+                        "trust_root_pubkeys.json) under the same approver_id "
+                        "as --approver, otherwise the attestation will not "
+                        "verify. Generate keys via tools/lane_c_keygen.py.")
     args = p.parse_args()
 
     # Pre-flight: refuse empty strings BEFORE doing any I/O. (write_attestation
@@ -167,6 +174,56 @@ def main() -> int:
         )
         return 2
 
+    # Codex R5-3 #1: load the Ed25519 private key from PEM.
+    if not args.private_key.exists():
+        print(
+            f"FATAL: --private-key file does not exist: {args.private_key}. "
+            f"Generate one via 'python tools/lane_c_keygen.py "
+            f"--approver-id {args.approver}' (the private key MUST live "
+            "OUTSIDE the repo).",
+            file=sys.stderr,
+        )
+        return 2
+    try:
+        from cryptography.hazmat.primitives import serialization
+        from cryptography.hazmat.primitives.asymmetric.ed25519 import (
+            Ed25519PrivateKey,
+        )
+    except ImportError:
+        print(
+            "FATAL: 'cryptography' library required. Install via "
+            "'uv pip install cryptography'.",
+            file=sys.stderr,
+        )
+        return 2
+    try:
+        pem_bytes = args.private_key.read_bytes()
+    except OSError as e:
+        print(
+            f"FATAL: failed to read --private-key {args.private_key}: {e!r}",
+            file=sys.stderr,
+        )
+        return 2
+    try:
+        private_key = serialization.load_pem_private_key(
+            pem_bytes, password=None,
+        )
+    except Exception as e:
+        print(
+            f"FATAL: failed to parse --private-key {args.private_key} as "
+            f"PEM: {e!r}. Did you generate it with tools/lane_c_keygen.py?",
+            file=sys.stderr,
+        )
+        return 2
+    if not isinstance(private_key, Ed25519PrivateKey):
+        print(
+            f"FATAL: --private-key {args.private_key} is not an Ed25519 "
+            f"key (got {type(private_key).__name__}). Lane C attestations "
+            "MUST use Ed25519. Re-generate via tools/lane_c_keygen.py.",
+            file=sys.stderr,
+        )
+        return 2
+
     sha = compute_blob_sha256(blob)
     target_path = attestation_path_for(sha, root=args.root)
 
@@ -181,6 +238,7 @@ def main() -> int:
             ruling_text=args.ruling_text,
             signed_by_user=signed_by_user,
             git_head=git_head,
+            private_key=private_key,
             delta_path_at_signing=str(args.delta_bin.resolve()),
             root=args.root,
             signed_at_utc=signed_at,
@@ -200,6 +258,51 @@ def main() -> int:
         print(f"FATAL: {e}", file=sys.stderr)
         return 2
 
+    # Codex R5-3 #1: surface trust-root verification proactively so the
+    # operator catches an "I signed but the pubkey is not registered"
+    # mistake at sign time rather than at archive-build time.
+    from tac.lane_c_compliance import (  # noqa: E402
+        load_trust_root, TrustRootMissing, TrustRootMalformed,
+    )
+    trust_status = "verified"
+    trust_detail = ""
+    try:
+        keys = load_trust_root(args.root)
+        if args.approver not in keys:
+            trust_status = "WARNING: approver NOT in trust root"
+            trust_detail = (
+                f"  → registered approvers: {sorted(keys.keys())!r}\n"
+                f"  → add {args.approver}'s pubkey to "
+                f"{args.root}/.omx/state/lane_c_compliance_attestations/"
+                f"trust_root_pubkeys.json before bundling, otherwise "
+                "verify_attestation_for_blob will refuse this attestation."
+            )
+        else:
+            # Verify the signature we just wrote actually validates against
+            # the registered pubkey. Catches "wrong key for this approver".
+            from tac.lane_c_compliance import (
+                verify_attestation_for_blob, AttestationSignatureInvalid,
+            )
+            try:
+                verify_attestation_for_blob(blob, root=args.root)
+                trust_status = "VERIFIED via trust root"
+            except AttestationSignatureInvalid as e:
+                trust_status = "ERROR: signature does not verify against trust root"
+                trust_detail = (
+                    f"  → signed with key whose pubkey doesn't match the "
+                    f"one registered for approver={args.approver!r}.\n"
+                    f"  → {e}"
+                )
+    except TrustRootMissing:
+        trust_status = "WARNING: trust root file missing"
+        trust_detail = (
+            "  → bootstrap via 'python tools/lane_c_keygen.py "
+            f"--approver-id {args.approver}' and paste the printed "
+            "snippet into the trust root file."
+        )
+    except TrustRootMalformed as e:
+        trust_status = f"ERROR: trust root malformed: {e}"
+
     print(f"=== Lane C compliance attestation written ===")
     print(f"  delta.bin:    {args.delta_bin}")
     print(f"  delta size:   {len(blob):,} bytes")
@@ -211,13 +314,23 @@ def main() -> int:
     print(f"  ruling:       {args.ruling_text[:120]}"
           + ("…" if len(args.ruling_text) > 120 else ""))
     print(f"  attestation:  {path}")
+    print(f"  trust root:   {trust_status}")
+    if trust_detail:
+        print(trust_detail)
     print()
     print("Next steps:")
     print("  - Commit the attestation file so it lands in the audit trail:")
-    print(f"      git add {path.relative_to(args.root)}")
+    # ``path`` may be a resolved (canonical) absolute path while ``args.root``
+    # may not; normalize both before computing the display-only relative.
+    try:
+        rel = path.resolve().relative_to(args.root.resolve())
+    except ValueError:
+        rel = path  # fall back to absolute display
+    print(f"      git add {rel}")
     print("  - When bundling this δ into a submission archive, the")
     print("    archive builder will cross-check delta.bin sha against this")
-    print("    attestation. If they match, an approved-status δ may ship.")
+    print("    attestation AND verify the Ed25519 signature against the")
+    print("    trust root. If both match, an approved-status δ may ship.")
     return 0
 
 

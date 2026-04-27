@@ -188,6 +188,9 @@ def main() -> int:
             from tac.lane_c_compliance import (
                 verify_attestation_for_blob, AttestationMissing,
                 AttestationMismatch, AttestationMalformed,
+                AttestationSignatureInvalid,
+                AttestationApproverNotInTrustRoot,
+                TrustRootMissing, TrustRootMalformed,
                 attestation_path_for, compute_blob_sha256,
             )
             _uwd_sha = compute_blob_sha256(_uwd_blob)
@@ -208,10 +211,11 @@ def main() -> int:
                     "  python tools/sign_lane_c_compliance.py \\\n"
                     f"      --delta-bin {args.with_uniward_delta} \\\n"
                     "      --approver <yousfi|council|fridrich|...> \\\n"
-                    "      --ruling-text \"<PR #35 ruling URL or text>\"\n\n"
+                    "      --ruling-text \"<PR #35 ruling URL or text>\" \\\n"
+                    "      --private-key ~/.config/pact/lane_c_signing_key.pem\n\n"
                     "The bare δ.bin header is OPERATOR-CONTROLLED and "
                     "thus untrusted; the attestation is the trust anchor. "
-                    "(Codex R5-2 #4)"
+                    "(Codex R5-2 #4 + R5-3 #1)"
                 )
             except AttestationMismatch as e:
                 raise SystemExit(
@@ -232,16 +236,93 @@ def main() -> int:
                     f"  {e}\n"
                     "Re-sign with tools/sign_lane_c_compliance.py "
                     "providing a non-empty --ruling-text and "
-                    "--approver. (Codex R5-2 #4)"
+                    "--approver and --private-key. (Codex R5-2 #4)"
                 )
+            except TrustRootMissing as e:
+                raise SystemExit(
+                    "FATAL: --with-uniward-delta has compliance_status="
+                    f"{_UWD_APPROVED!r} but the trust root pubkey "
+                    "registry is missing:\n"
+                    f"  {e}\n"
+                    "Bootstrap the trust root via "
+                    "'python tools/lane_c_keygen.py --approver-id <id>' "
+                    "and paste the pubkey hex into the registry file. "
+                    "(Codex R5-3 #1)"
+                )
+            except TrustRootMalformed as e:
+                raise SystemExit(
+                    "FATAL: --with-uniward-delta has compliance_status="
+                    f"{_UWD_APPROVED!r} but the trust root pubkey "
+                    "registry is malformed:\n"
+                    f"  {e}\n"
+                    "Fix the JSON or restore from git history. "
+                    "(Codex R5-3 #1)"
+                )
+            except AttestationApproverNotInTrustRoot as e:
+                raise SystemExit(
+                    "FATAL: --with-uniward-delta has compliance_status="
+                    f"{_UWD_APPROVED!r} but the attestation's approver "
+                    "is not in the trust root:\n"
+                    f"  {e}\n"
+                    "Only allowlisted approvers (council members whose "
+                    "pubkeys are committed in trust_root_pubkeys.json) "
+                    "can issue Lane C compliance attestations. "
+                    "(Codex R5-3 #1)"
+                )
+            except AttestationSignatureInvalid as e:
+                raise SystemExit(
+                    "FATAL: --with-uniward-delta has compliance_status="
+                    f"{_UWD_APPROVED!r} but the Ed25519 signature on "
+                    "the attestation FAILED to verify:\n"
+                    f"  {e}\n"
+                    "The attestation has been tampered with (ruling "
+                    "text or approver swapped after signing) OR was not "
+                    "signed by the registered key holder. The δ MAY NOT "
+                    "be bundled. (Codex R5-3 #1)"
+                )
+            # Codex R5-3 #5 fix (2026-04-27): provenance now records the
+            # FULL attestation record (so an offline auditor can re-run
+            # canonical_signed_payload + verify the signature without
+            # touching .omx) plus the on-disk attestation file SHA (so
+            # file-level integrity is captured) plus an explicit
+            # ``delta_sha256`` field (the previous ``attestation_sha256``
+            # was misnamed — it was the δ hash, not the file hash).
+            try:
+                _att_record = json.loads(_att_path.read_text())
+            except (OSError, json.JSONDecodeError) as e:  # pragma: no cover — load_attestation already passed
+                raise SystemExit(
+                    f"FATAL: failed to re-read attestation at {_att_path} "
+                    f"for provenance recording: {e!r}. The attestation "
+                    "passed verification; this is a filesystem race or "
+                    "permissions change between verify and provenance read."
+                )
+            _att_file_bytes = _att_path.read_bytes()
+            _att_file_sha = hashlib.sha256(_att_file_bytes).hexdigest()
             uniward_attestation_info = {
                 "attestation_path": str(_att_path),
-                "attestation_sha256": _attestation.delta_sha256,
+                # Field rename (Codex R5-3 #5): delta_sha256 is the SHA of
+                # the δ.bin bytes; attestation_file_sha256 is the SHA of
+                # the on-disk attestation JSON. Backward-compat alias
+                # kept for one release so existing audit tooling does not
+                # silently break.
+                "delta_sha256": _attestation.delta_sha256,
+                "attestation_sha256": _attestation.delta_sha256,  # DEPRECATED alias
+                "attestation_file_sha256": _att_file_sha,
+                "attestation_schema_version": _attestation.schema_version,
                 "attestation_approver": _attestation.approver,
                 "attestation_signed_at_utc": _attestation.signed_at_utc,
                 "attestation_signed_by_user": _attestation.signed_by_user,
                 "attestation_git_head": _attestation.git_head,
                 "attestation_ruling_text": _attestation.ruling_text,
+                "attestation_signature_hex": _attestation.signature_hex,
+                "attestation_delta_size_bytes":
+                    _attestation.delta_size_bytes,
+                "attestation_delta_path_at_signing":
+                    _attestation.delta_path_at_signing,
+                # Full record (sorted-keys JSON) so an offline auditor can
+                # reconstruct canonical_signed_payload byte-exactly and
+                # verify the signature without needing the original file.
+                "attestation_record": _att_record,
             }
             print(
                 f"[build] Lane C δ compliance_status={_UWD_APPROVED!r} "

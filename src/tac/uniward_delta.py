@@ -243,6 +243,7 @@ def pack_sparse_delta(
     seed: int = 1234,
     extra_provenance: dict[str, Any] | None = None,
     compliance_status: str = COMPLIANCE_PENDING,
+    _internal_promotion_token: str | None = None,
 ) -> bytes:
     """Pack a dense δ tensor into the sparse UWD1 wire format.
 
@@ -308,9 +309,32 @@ def pack_sparse_delta(
         raise ValueError(
             f"compliance_status must be one of {sorted(_VALID_COMPLIANCE_STATUSES)}; "
             f"got {compliance_status!r}. Default is {COMPLIANCE_PENDING!r}; only "
-            f"set {COMPLIANCE_APPROVED!r} after explicit council ruling is "
-            f"recorded in .omx/research/findings.md."
+            f"set {COMPLIANCE_APPROVED!r} via the dedicated promotion tool "
+            f"(tools/promote_lane_c_to_approved.py)."
         )
+    # Codex R5-3 #2 fix (2026-04-27): writing compliance_status='approved'
+    # is no longer reachable from any caller other than the dedicated
+    # promotion tool. The promotion tool is the only place where the
+    # internal token is supplied. Tests that need to forge an approved
+    # blob for negative-path testing also pass the token explicitly —
+    # this is intentional because the test exercises the SAME codepath
+    # the promotion tool uses, so the gate cannot be bypassed by a
+    # library refactor that quietly drops the token check.
+    if compliance_status == COMPLIANCE_APPROVED:
+        from tac.lane_c_compliance import verify_internal_promotion_token
+        if not verify_internal_promotion_token(_internal_promotion_token):
+            raise ValueError(
+                f"Codex R5-3 #2: compliance_status={COMPLIANCE_APPROVED!r} is "
+                "no longer accepted from library callers. Use the dedicated "
+                "promotion tool which verifies a trust-rooted attestation "
+                "before re-emitting the δ.bin with approved status:\n"
+                "  python tools/promote_lane_c_to_approved.py \\\n"
+                "      --pending-delta-bin <pending.bin> \\\n"
+                "      --attestation <.omx/state/.../<sha>.json>\n"
+                "Tests that need to forge an approved blob for negative-"
+                "path testing must import INTERNAL_PROMOTION_TOKEN from "
+                "tac.lane_c_compliance and pass it as _internal_promotion_token."
+            )
 
     n_frames, _, H, W = delta_bchw.shape
     device = delta_bchw.device
