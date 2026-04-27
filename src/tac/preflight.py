@@ -317,14 +317,17 @@ def preflight_all(
         check_waivers_specify_env_gate(strict=True, verbose=verbose)
         check_inflate_scorer_load_has_runtime_banner(strict=True, verbose=verbose)
         check_vastai_prompts_have_cost_cap(strict=True, verbose=verbose)
-        check_vastai_create_writes_tracker(strict=False, verbose=verbose)
-        check_subagent_prompts_no_cpu_fallback(strict=False, verbose=verbose)
-        check_scores_have_lane_tag(strict=False, verbose=verbose)
-        check_halfframe_archive_uses_trained_profile(strict=False, verbose=verbose)
-        check_profile_keys_have_resolvers(strict=False, verbose=verbose)
-        check_test_files_imports_resolve(strict=False, verbose=verbose)
-        check_uniward_delta_has_attestation_gate(strict=False, verbose=verbose)
-        check_remote_scripts_write_provenance(strict=False, verbose=verbose)
+        # 2026-04-27 final cleanup pass: 8 warn-only checks now at 0
+        # live violations (commits eb985e40 + 17e5f903 + 676bf206 + this).
+        # Promoted to strict — bug classes structurally extinct.
+        check_vastai_create_writes_tracker(strict=True, verbose=verbose)
+        check_subagent_prompts_no_cpu_fallback(strict=True, verbose=verbose)
+        check_scores_have_lane_tag(strict=True, verbose=verbose)
+        check_halfframe_archive_uses_trained_profile(strict=True, verbose=verbose)
+        check_profile_keys_have_resolvers(strict=True, verbose=verbose)
+        check_test_files_imports_resolve(strict=True, verbose=verbose)
+        check_uniward_delta_has_attestation_gate(strict=True, verbose=verbose)
+        check_remote_scripts_write_provenance(strict=True, verbose=verbose)
 
     # 2. Training inputs (only if profile + tto_frames provided)
     if profile_name and tto_frames_path and gt_poses_path and masks_path and profile_arch:

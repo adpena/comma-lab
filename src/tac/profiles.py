@@ -352,7 +352,6 @@ MASK_RENDERER_SMOKE = {
     "hard_frame_ratio": 0.0,
     "eval_every": 10,
     "accum_steps": 2,
-    "quantize_mode": "fp4",  # use FP4 instead of int8
     "pretrain_epochs": 100,  # Phase 1: L1+edge loss (no scorer)
 }
 
@@ -379,7 +378,6 @@ MASK_RENDERER_FULL = {
     "eval_every": 5,
     "accum_steps": 4,
     "use_swa": True,
-    "quantize_mode": "fp4",
     "pretrain_epochs": 500,  # Phase 1: L1+edge loss (no scorer)
 }
 
@@ -407,7 +405,6 @@ MASK_RENDERER_WIDE = {
     "eval_every": 5,
     "accum_steps": 4,
     "use_swa": True,
-    "quantize_mode": "fp4",
     "pretrain_epochs": 500,
 }
 
@@ -442,7 +439,6 @@ WAVELET_RENDERER_SMOKE = {
     "hard_frame_ratio": 0.0,
     "eval_every": 10,
     "accum_steps": 2,
-    "quantize_mode": "fp4",
     "pretrain_epochs": 50,  # Phase 1: L1+edge loss (no scorer)
 }
 
@@ -468,7 +464,6 @@ WAVELET_RENDERER_FULL = {
     "eval_every": 5,
     "accum_steps": 4,
     "use_swa": True,
-    "quantize_mode": "fp4",
     "pretrain_epochs": 200,  # Phase 1: longer warm-up for wavelet basis
 }
 
@@ -565,7 +560,6 @@ DP_SIMS_SMOKE = {
     "hard_frame_ratio": 0.0,
     "eval_every": 10,
     "accum_steps": 2,
-    "quantize_mode": "fp4",
     "pretrain_epochs": 100,  # Phase 1: L1+edge loss (no scorer)
 }
 
@@ -593,7 +587,6 @@ DP_SIMS_FULL = {
     "eval_every": 5,
     "accum_steps": 4,
     "use_swa": True,
-    "quantize_mode": "fp4",
     "pretrain_epochs": 500,  # Phase 1: L1+edge loss (no scorer)
 }
 
@@ -627,7 +620,6 @@ DP_SIMS_SMALL_SMOKE = {
     "hard_frame_ratio": 0.0,
     "eval_every": 10,
     "accum_steps": 2,
-    "quantize_mode": "fp4",
     "pretrain_epochs": 100,
 }
 
@@ -655,7 +647,6 @@ DP_SIMS_SMALL_FULL = {
     "eval_every": 5,
     "accum_steps": 4,
     "use_swa": True,
-    "quantize_mode": "fp4",
     "pretrain_epochs": 500,  # Phase 2: 500 epochs scorer-guided
 }
 
@@ -900,7 +891,6 @@ DEPTHWISE_RENDERER_SMOKE = {
     "hard_frame_ratio": 0.0,
     "eval_every": 10,
     "accum_steps": 2,
-    "quantize_mode": "fp4",
     "pretrain_epochs": 100,
 }
 
@@ -923,7 +913,6 @@ CHANNEL_RECURRENT_SMOKE = {
     "hard_frame_ratio": 0.0,
     "eval_every": 10,
     "accum_steps": 2,
-    "quantize_mode": "fp4",
     "pretrain_epochs": 100,
 }
 
@@ -946,7 +935,6 @@ COORD_RENDERER_SMOKE = {
     "hard_frame_ratio": 0.0,
     "eval_every": 10,
     "accum_steps": 2,
-    "quantize_mode": "fp4",
     "pretrain_epochs": 100,
 }
 
@@ -972,7 +960,6 @@ COOLCHIC_RENDERER_SMOKE = {
     "hard_frame_ratio": 0.0,
     "eval_every": 10,
     "accum_steps": 2,
-    "quantize_mode": "fp4",
     "pretrain_epochs": 100,
     "seed": 42,
     "deterministic": True,
@@ -1096,7 +1083,6 @@ OVERFIT_GPU = {
     "eval_every": 10,
     "accum_steps": 4,
     "use_swa": True,
-    "quantize_mode": "fp4",
     "even_frame_skip_seg": True,  # Trick 3: skip SegNet on even frames
     "use_frequency_loss": True,  # Trick 2: wavelet domain shaping
     "frequency_loss_weight": 0.1,
@@ -1181,7 +1167,6 @@ UINT8_STE_SMOKE = {
     "loss_mode": "standard",
     "alpha": 20.0,
     "sal_lambda": 0.1,
-    "use_uint8_ste": True,  # flag for Trainer to apply Uint8STE after model forward
 }
 
 # ── Migrated Legacy Loss Technique Profiles ─────────────────────────────
@@ -1270,7 +1255,6 @@ DP_SIMS_V2_SMOKE = {
     "hard_frame_ratio": 0.0,
     "eval_every": 10,
     "accum_steps": 2,
-    "quantize_mode": "fp4",
     "pretrain_epochs": 100,
 }
 
@@ -1296,7 +1280,6 @@ DP_SIMS_V2_FULL = {
     "eval_every": 5,
     "accum_steps": 4,
     "use_swa": True,
-    "quantize_mode": "fp4",
     "pretrain_epochs": 500,
 }
 
@@ -1401,8 +1384,6 @@ FINANCE_SMOKE = {
     "noise_seed": 42,
     "scorer_space": False,
     "log_every": 25,
-    "finance_optimizer": "risk_parity",
-    "finance_config": {"base_lr": 0.5, "ema_decay": 0.95},
 }
 
 FINANCE_ENSEMBLE = {
@@ -1416,15 +1397,6 @@ FINANCE_ENSEMBLE = {
     "noise_seed": 42,
     "scorer_space": False,
     "log_every": 100,
-    "finance_optimizer": "ensemble",
-    "finance_config": {
-        "optimizers": [
-            {"name": "risk_parity", "weight": 2.0, "config": {"base_lr": 1.0}},
-            {"name": "order_book", "weight": 1.5, "config": {"base_lr": 1.0, "top_fraction": 0.3}},
-            {"name": "implied_vol", "weight": 1.0, "config": {"base_lr": 1.0, "power": 0.5}},
-        ],
-        "blend_mode": "weighted_average",
-    },
 }
 
 FINANCE_HFT = {
@@ -1438,15 +1410,6 @@ FINANCE_HFT = {
     "noise_seed": 42,
     "scorer_space": False,
     "log_every": 50,
-    "finance_optimizer": "ensemble",
-    "finance_config": {
-        "optimizers": [
-            {"name": "order_book", "weight": 2.0, "config": {"base_lr": 0.5, "top_fraction": 0.4}},
-            {"name": "almgren_chriss", "weight": 1.0, "config": {"total_steps": 500, "base_lr": 0.5}},
-            {"name": "momentum_reversion", "weight": 1.0, "config": {"base_lr": 0.5}},
-        ],
-        "blend_mode": "round_robin",
-    },
 }
 
 CONSTRAINED_GEN_FULL = {
@@ -1468,13 +1431,10 @@ CONSTRAINED_GEN_FULL = {
 VARIATIONAL_SMOKE = {
     "experiment_type": "gpu_lane",
     "variant": "variational_gen",
-    "variational_steps": 50,
-    "variational_lr": 0.5,
     "lambda_smooth": 0.01,
     "lambda_rate": 0.1,
     "lambda_grad": 1.0,
     "lambda_lap": 0.1,
-    "use_line_search": False,
     "grad_clip": 10.0,
     "convergence_tol": 1e-6,
 }
@@ -1485,13 +1445,8 @@ VARIATIONAL_SMOKE = {
 LAGRANGIAN_DUAL_SMOKE = {
     "experiment_type": "gpu_lane",
     "variant": "lagrangian_dual",
-    "dual_steps": 100,
-    "dual_primal_lr": 0.5,
-    "dual_dual_lr": 0.01,
     "rate_budget": 0.01,
-    "lambda_init": 25.0,
     "lambda_smooth": 0.01,
-    "kkt_tol": 1e-4,
     "grad_clip": 10.0,
 }
 
@@ -1501,13 +1456,6 @@ LAGRANGIAN_DUAL_SMOKE = {
 PARETO_TRACE = {
     "experiment_type": "gpu_lane",
     "variant": "pareto_trace",
-    "num_pareto_points": 10,
-    "rate_range_min": 0.001,
-    "rate_range_max": 0.05,
-    "dual_steps": 200,
-    "dual_primal_lr": 0.3,
-    "dual_dual_lr": 0.01,
-    "lambda_init": 25.0,
     "lambda_smooth": 0.01,
 }
 
@@ -1548,15 +1496,6 @@ CONSTRAINED_GEN_FULL_PIPELINE = {
 CROSS_DISC_SMOKE = {
     "experiment_type": "gpu_lane",
     "variant": "cross_disciplinary",
-    "optimizer_names": [
-        "simulated_annealing", "hmc", "langevin", "replica_exchange",
-        "cma_es", "differential_evolution", "pso",
-        "metadynamics", "basin_hopping",
-        "fwi", "seismic_multigrid",
-        "enkf", "4dvar",
-        "nested_sampling", "multigrid_relaxation",
-        "quantum_annealing",
-    ],
     "num_steps": 10,
     "pop_size": 4,
     "num_particles": 4,
@@ -1580,10 +1519,6 @@ CROSS_DISC_SMOKE = {
 CROSS_DISC_ENSEMBLE = {
     "experiment_type": "gpu_lane",
     "variant": "cross_disciplinary",
-    "optimizer_names": [
-        "simulated_annealing", "basin_hopping", "cma_es",
-        "langevin", "4dvar", "fwi",
-    ],
     "num_steps": 500,
     "pop_size": 16,
     "num_particles": 16,
@@ -1600,7 +1535,6 @@ CROSS_DISC_ENSEMBLE = {
 CROSS_DISC_ANNEALING = {
     "experiment_type": "gpu_lane",
     "variant": "cross_disciplinary",
-    "optimizer_names": ["simulated_annealing", "basin_hopping"],
     "num_steps": 1000,
     "T0": 100.0,
     "alpha": 0.997,
@@ -1619,7 +1553,6 @@ CROSS_DISC_ANNEALING = {
 CROSS_DISC_EVOLUTIONARY = {
     "experiment_type": "gpu_lane",
     "variant": "cross_disciplinary",
-    "optimizer_names": ["cma_es", "differential_evolution"],
     "num_steps": 500,
     "pop_size": 24,
     "n_components": 48,
@@ -1635,7 +1568,6 @@ CROSS_DISC_EVOLUTIONARY = {
 CROSS_DISC_PHYSICS = {
     "experiment_type": "gpu_lane",
     "variant": "cross_disciplinary",
-    "optimizer_names": ["hmc", "langevin", "replica_exchange"],
     "num_steps": 500,
     "step_size": 0.01,
     "num_leapfrog_steps": 15,
@@ -1656,7 +1588,6 @@ CROSS_DISC_PHYSICS = {
 CROSS_DISC_GEOPHYSICS = {
     "experiment_type": "gpu_lane",
     "variant": "cross_disciplinary",
-    "optimizer_names": ["fwi", "seismic_multigrid", "4dvar"],
     "num_steps": 500,
     "scales": [0.25, 0.5, 1.0],
     "steps_per_scale": 150,
@@ -1680,87 +1611,24 @@ CROSS_DISC_GEOPHYSICS = {
 DOMAIN_SMOKE = {
     "experiment_type": "gpu_lane",
     "variant": "domain_solver",
-    "solver_names": [
-        "ego_motion_flow", "road_plane_homography", "vanishing_point",
-        "matched_filter", "kalman_smoother", "compressed_sensing",
-        "trajectory", "adaptive_optics", "ofdm", "turbo_scorer",
-    ],
-    "ego_motion_config": {"num_steps": 5},
-    "road_plane_config": {"num_steps": 5},
-    "vanishing_point_config": {"vp_weight": 1.0},
-    "matched_filter_config": {"num_iterations": 5, "max_jacobian_outputs": 8},
-    "kalman_config": {"pca_components": 10, "num_iterations": 1},
-    "compressed_sensing_config": {"num_iterations": 5, "sparsity_lambda": 0.01},
-    "trajectory_config": {"num_shooting_iterations": 5},
-    "adaptive_optics_config": {"num_modes": 10, "num_iterations": 5},
-    "ofdm_config": {"num_frequencies": 32, "num_iterations": 5},
-    "turbo_config": {"num_turbo_iterations": 2, "pose_steps": 3, "seg_steps": 3},
 }
 
 # Self-driving domain solvers only (ego-motion + road plane + vanishing point)
 DOMAIN_DRIVING = {
     "experiment_type": "gpu_lane",
     "variant": "domain_solver",
-    "solver_names": ["ego_motion_flow", "road_plane_homography", "vanishing_point"],
-    "ego_motion_config": {
-        "focal_length": 910.0,
-        "principal_point": [256.0, 192.0],
-        "num_steps": 100,
-        "flow_weight": 10.0,
-    },
-    "road_plane_config": {
-        "camera_height": 1.2,
-        "camera_pitch": 0.02,
-        "num_steps": 50,
-    },
-    "vanishing_point_config": {
-        "vp_weight": 2.0,
-        "min_line_length": 20,
-        "angular_tolerance": 0.15,
-    },
 }
 
 # Signal processing solvers (matched filter + compressed sensing + OFDM)
 DOMAIN_SIGNAL = {
     "experiment_type": "gpu_lane",
     "variant": "domain_solver",
-    "solver_names": ["matched_filter", "compressed_sensing", "ofdm"],
-    "matched_filter_config": {
-        "regularization_lambda": 1e-3,
-        "step_size": 0.1,
-        "num_iterations": 20,
-    },
-    "compressed_sensing_config": {
-        "sparsity_lambda": 0.01,
-        "num_iterations": 50,
-        "wavelet_type": "haar",
-    },
-    "ofdm_config": {
-        "num_frequencies": 256,
-        "water_fill_power_budget": 1e6,
-        "sensitivity_threshold": 0.01,
-    },
 }
 
 # Full ensemble: all 10 solvers with production settings
 DOMAIN_FULL = {
     "experiment_type": "gpu_lane",
     "variant": "domain_solver",
-    "solver_names": [
-        "ego_motion_flow", "road_plane_homography", "vanishing_point",
-        "matched_filter", "kalman_smoother", "compressed_sensing",
-        "trajectory", "adaptive_optics", "ofdm", "turbo_scorer",
-    ],
-    "ego_motion_config": {"num_steps": 100, "focal_length": 910.0},
-    "road_plane_config": {"camera_height": 1.2, "num_steps": 50},
-    "vanishing_point_config": {"vp_weight": 2.0},
-    "matched_filter_config": {"num_iterations": 20, "step_size": 0.1},
-    "kalman_config": {"pca_components": 50, "num_iterations": 3},
-    "compressed_sensing_config": {"num_iterations": 50, "sparsity_lambda": 0.01},
-    "trajectory_config": {"num_shooting_iterations": 30, "control_penalty": 0.01},
-    "adaptive_optics_config": {"num_modes": 50, "num_iterations": 100},
-    "ofdm_config": {"num_frequencies": 256},
-    "turbo_config": {"num_turbo_iterations": 10, "damping_factor": 0.5},
 }
 
 # ── Eureka Constrained Optimization smoke profiles ────────────────────────
@@ -1843,12 +1711,6 @@ NEWTON_QUADRATIC_SMOKE = {
     "eval_every": 10,
     "accum_steps": 2,
     # Newton-CG refinement at inflate time
-    "newton_refine": True,
-    "newton_max_steps": 5,
-    "newton_cg_iters": 3,
-    "newton_trust_radius": 0.05,
-    "newton_max_step_norm": 0.5,
-    "newton_top_k_pairs": 10,  # only refine hardest 10 pairs
 }
 
 NEWTON_QUADRATIC_FULL = {
@@ -1869,12 +1731,6 @@ NEWTON_QUADRATIC_FULL = {
     "accum_steps": 4,
     "use_swa": True,
     # Newton-CG refinement at inflate time
-    "newton_refine": True,
-    "newton_max_steps": 10,
-    "newton_cg_iters": 5,
-    "newton_trust_radius": 0.05,
-    "newton_max_step_norm": 0.5,
-    "newton_top_k_pairs": 60,  # refine top 10% of 600 pairs
 }
 
 # ── Fridrich steganalysis-inspired profiles ─────────────────────────────
@@ -1892,14 +1748,6 @@ FRIDRICH_SMOKE = {
     "accum_steps": 2,
     "loss_mode": "standard",
     # Fridrich pipeline settings
-    "fridrich_cost_method": "uniward",  # fast, no Jacobian computation
-    "fridrich_num_probes": 5,
-    "fridrich_max_magnitude": 10.0,
-    "fridrich_opt_steps": 50,
-    "fridrich_opt_lr": 0.05,
-    "fridrich_rate_reduction": 0.1,
-    "fridrich_subsample_frames": 4,
-    "fridrich_jacobian_probes": 2,
 }
 
 FRIDRICH_FULL = {
@@ -1920,14 +1768,6 @@ FRIDRICH_FULL = {
     "accum_steps": 4,
     "use_swa": True,
     # Fridrich pipeline settings
-    "fridrich_cost_method": "hybrid",
-    "fridrich_num_probes": 20,
-    "fridrich_max_magnitude": 30.0,
-    "fridrich_opt_steps": 500,
-    "fridrich_opt_lr": 0.01,
-    "fridrich_rate_reduction": 0.1,
-    "fridrich_subsample_frames": 1,
-    "fridrich_jacobian_probes": 8,
 }
 
 FRIDRICH_CPU_POSTFILTER = {
@@ -1945,16 +1785,7 @@ FRIDRICH_CPU_POSTFILTER = {
     "eval_every": 5,
     "accum_steps": 4,
     # CPU postfilter: precompute cost map, apply at inflate via lookup
-    "fridrich_cost_method": "hybrid",
-    "fridrich_num_probes": 20,
-    "fridrich_max_magnitude": 30.0,
-    "fridrich_boundary_fraction": 0.8,
-    "fridrich_rate_reduction": 0.1,
-    "fridrich_subsample_frames": 2,
-    "fridrich_jacobian_probes": 4,
     # Skip heavy GPU optimization, rely on postfilter + cost weighting
-    "fridrich_skip_optimize": True,
-    "fridrich_skip_stc": False,
 }
 
 # ── GPU Lane: Full Pipeline profiles ─���────────────────────────────────
@@ -2041,8 +1872,6 @@ ENTROPY_ARCHIVE_SMOKE = {
     "lr": 1e-3,
     "loss_mode": "standard",
     "num_symbols": 256,
-    "entropy_context_size": 4,
-    "entropy_hidden": 16,
     "entropy_epochs": 200,
 }
 
@@ -2063,7 +1892,6 @@ NETWORK_CODEC_SMOKE = {
     "batch_pixels": 1024,
     "lambda_smooth": 0.1,
     "pos_encoding_freqs": 4,
-    "use_self_compress_codec": False,
     "target_size_kb": 10,
 }
 
@@ -2083,7 +1911,6 @@ NETWORK_CODEC_FULL = {
     "lambda_rate_end": 1.0,
     "ramp_start_frac": 0.5,
     "pos_encoding_freqs": 6,
-    "use_self_compress_codec": True,
     "target_size_kb": 50,
 }
 
@@ -2234,8 +2061,6 @@ WILDE = {
     "phase1_batch_size": 16,
     "phase2_batch_size": 8,
     "phase3_batch_size": 8,
-    "phase4_batch_size": 8,
-    "phase5_batch_size": 8,
     "checkpoint_every": 100,
     "eval_every": 50,
     "log_every": 25,
@@ -2373,8 +2198,6 @@ SHIRAZ = {
     "phase1_batch_size": 16,
     "phase2_batch_size": 8,
     "phase3_batch_size": 8,
-    "phase4_batch_size": 8,
-    "phase5_batch_size": 8,
     # Hard-frame curriculum
     "hard_frame_ratio": 0.3,
     "error_replay_every": 100,
@@ -2603,8 +2426,6 @@ DEN = {
     "phase1_batch_size": 16,
     "phase2_batch_size": 8,
     "phase3_batch_size": 8,
-    "phase4_batch_size": 8,
-    "phase5_batch_size": 8,
     # 5-stage quantization config — our advantage over Quantizr's vanilla.
     "fp4_codebook": "residual",     # RESIDUAL codebook beats uniform
     "fp4_robust_scale": True,       # robust per-channel scaling
@@ -2749,8 +2570,6 @@ DILATED_H64_HALF_FRAME = {
     "phase1_batch_size": 16,
     "phase2_batch_size": 8,
     "phase3_batch_size": 8,
-    "phase4_batch_size": 8,
-    "phase5_batch_size": 8,
     # Hard-frame curriculum
     "hard_frame_ratio": 0.3,
     "error_replay_every": 100,
