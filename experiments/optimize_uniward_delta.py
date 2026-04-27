@@ -180,6 +180,21 @@ def parse_args() -> argparse.Namespace:
     p.add_argument("--n-frames", type=int, default=NUM_FRAMES,
                    help="Number of frames to render and δ-optimize. Default "
                         "is the full 1200 (600 pairs).")
+    # ── Compliance gate (Codex R5 HIGH) ──────────────────────────────
+    # Lane C δ.bin is scorer-derived; its contest compliance is unresolved
+    # until the council rules on Yousfi PR #35. We MUST mark every newly-
+    # built δ as PENDING_RULING so the archive builder gates on it. The
+    # override exists ONLY for after the ruling lands — it is illegal to
+    # use this flag preemptively.
+    p.add_argument("--compliance-status", type=str, default="pending_ruling",
+                   choices=["pending_ruling", "approved", "rejected"],
+                   help="compliance_status to write into the δ.bin header. "
+                        "Default 'pending_ruling' is correct until the "
+                        "council ruling on Yousfi PR #35 is recorded in "
+                        ".omx/research/findings.md. 'approved' may ONLY be "
+                        "set after that ruling lands. 'rejected' is reserved "
+                        "for forensic re-archival of failed experiments — "
+                        "the archive builder refuses to bundle them.")
     return p.parse_args()
 
 
@@ -479,7 +494,40 @@ def main() -> int:
                 perturbed_round = perturbed
 
             # SegNet path
-            seg_in = segnet.preprocess_input(perturbed_round.unsqueeze(1))
+            # CRITICAL (Codex R5 HIGH fix — SegNet wrong-frame-order):
+            #   ``perturbed`` (and therefore ``perturbed_round``) is in BATCHED
+            #   layout [p0_t, p1_t, ..., p(n-1)_t, p0_t+1, p1_t+1, ..., p(n-1)_t+1]
+            #   because it inherits ``base_chw`` which was built via
+            #   ``cat([base_pairs[:, 0], base_pairs[:, 1]], dim=0)``.
+            #   But ``gt_pair_masks = gt_segnet_masks[fs:fe]`` slices the global
+            #   per-frame mask tensor in PAIR-INTERLEAVED layout
+            #   [p0_t, p0_t+1, p1_t, p1_t+1, ...]. For batch_pairs > 1 this
+            #   means SegNet logits at row 1 (which is p1_t) get compared against
+            #   gt_pair_masks[1] (which is p0_t+1) — the gradient is computed
+            #   against the WRONG frame's labels, silently corrupting the SegNet
+            #   loss for every batch-of-2-or-more.
+            #
+            #   Fix: interleave perturbed_round into pair order BEFORE the SegNet
+            #   forward. Reshape (2*B, 3, H, W) [t-half, t+1-half] →
+            #   (2, B, 3, H, W) → transpose to (B, 2, 3, H, W) → flatten to
+            #   (2*B, 3, H, W) in [p0_t, p0_t+1, p1_t, p1_t+1, ...] order.
+            #   Gradients flow back through the views into the original
+            #   ``delta`` tensor unchanged — no impact on the C1 writeback,
+            #   which still maps the BATCHED ``delta`` to global frames.
+            #
+            #   For batch_pairs == 1 the interleave is a no-op (the two layouts
+            #   coincide), so existing single-pair behaviour is preserved bit-
+            #   exactly. The new test_codex_r5_segnet_pair_order_with_batch2
+            #   regression locks this against silent re-introduction.
+            n_half = perturbed_round.shape[0] // 2  # == n_bp
+            perturbed_round_pair_order = (
+                perturbed_round
+                .reshape(2, n_half, *perturbed_round.shape[1:])
+                .transpose(0, 1)
+                .reshape(perturbed_round.shape)
+                .contiguous()
+            )
+            seg_in = segnet.preprocess_input(perturbed_round_pair_order.unsqueeze(1))
             seg_logits = segnet(seg_in)
             # CRITICAL (C2 fix): if the SegNet upstream resize differs from the
             # mask resolution we extracted, the hinge loss silently broadcasts
@@ -489,6 +537,16 @@ def main() -> int:
                 f"SegNet logits/GT-mask spatial mismatch: "
                 f"logits={tuple(seg_logits.shape)} vs gt={tuple(gt_pair_masks.shape)}. "
                 f"Both must be (..., {SEGNET_INPUT_H}, {SEGNET_INPUT_W})."
+            )
+            # CRITICAL (Codex R5 HIGH fix, continued): assert leading-dim parity
+            # so any future renderer or roundtrip change that desynchronises
+            # SegNet inputs vs labels surfaces here, not as a silent score
+            # regression in CUDA auth eval.
+            assert seg_logits.shape[0] == gt_pair_masks.shape[0], (
+                f"SegNet logits/GT-mask batch mismatch: "
+                f"logits.batch={seg_logits.shape[0]} vs gt.batch={gt_pair_masks.shape[0]}. "
+                f"perturbed_round_pair_order must contain 2*batch_pairs frames "
+                f"in pair-interleaved order matching gt_segnet_masks[fs:fe]."
             )
             seg_loss = _segnet_hinge_loss(
                 seg_logits, gt_pair_masks, margin=args.hinge_margin,
@@ -547,6 +605,7 @@ def main() -> int:
         })
 
         del base_pairs, base_hwc, base_chw, perturbed, perturbed_round
+        del perturbed_round_pair_order
         del seg_in, seg_logits, pairs_chw, pose_in, pose_out, delta_final
         if device.type == "cuda":
             torch.cuda.empty_cache()
@@ -581,6 +640,10 @@ def main() -> int:
         target_bytes=args.target_bytes,
         seed=args.seed,
         extra_provenance=provenance_inputs,
+        # Codex R5 HIGH: propagate compliance gate into wire format so
+        # downstream archive build can fail closed without an explicit
+        # operator override.
+        compliance_status=args.compliance_status,
     )
     delta_path = args.output_dir / "delta.bin"
     delta_path.write_bytes(blob)
@@ -631,7 +694,9 @@ def main() -> int:
             "eval_roundtrip": args.eval_roundtrip,
             "posetto_noise_std": args.posetto_noise_std,
             "n_frames": args.n_frames,
+            "compliance_status": args.compliance_status,
         },
+        "compliance_status": args.compliance_status,
         "metrics": metrics,
     }
     prov_path = args.output_dir / "delta.provenance.json"

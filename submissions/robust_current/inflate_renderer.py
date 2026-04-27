@@ -2485,13 +2485,40 @@ def inflate_renderer(
     uniward_delta_path = Path(archive_dir) / "delta.bin"
     if uniward_delta_path.exists():
         try:
-            from tac.uniward_delta import unpack_sparse_delta as _unpack_uwd
+            from tac.uniward_delta import (
+                unpack_sparse_delta as _unpack_uwd,
+                COMPLIANCE_PENDING as _UWD_COMPLIANCE_PENDING,
+            )
             blob = uniward_delta_path.read_bytes()
             uniward_delta_spec = _unpack_uwd(blob, device=device)
             print(f"  Loaded UNIWARD δ: n_kept={uniward_delta_spec.n_kept:,} "
                   f"(L∞={uniward_delta_spec.l_inf_budget:.1f}, "
-                  f"{len(blob):,} bytes) from {uniward_delta_path.name}",
+                  f"{len(blob):,} bytes, "
+                  f"compliance={uniward_delta_spec.compliance_status}) "
+                  f"from {uniward_delta_path.name}",
                   file=sys.stderr)
+            # Codex R5 HIGH fix — silent contest-noncompliance gate. Print a
+            # loud banner that surfaces in eval logs whenever a PENDING_RULING
+            # δ is being applied. The exact tag string [lane-c-pending-ruling]
+            # is what operators grep for in the run-log to flag affected
+            # scores. Includes Yousfi PR #35 reference so the reader knows
+            # which strict-scorer-rule clause is in play.
+            if uniward_delta_spec.compliance_status == _UWD_COMPLIANCE_PENDING:
+                banner = (
+                    "\n" + "!" * 78 + "\n"
+                    "[lane-c-pending-ruling] Applying a δ.bin marked "
+                    "compliance_status=pending_ruling.\n"
+                    "  Lane C δ is a SCORER-DERIVED artifact (compress-time "
+                    "PoseNet+SegNet gradients).\n"
+                    "  Yousfi PR #35 strict-scorer-rule may classify this as "
+                    "non-compliant.\n"
+                    "  Tag any resulting score [lane-c-pending-ruling] in "
+                    "the run log / report.\n"
+                    "  DO NOT submit a contest PR using this δ until the "
+                    "council ruling is recorded.\n"
+                    + "!" * 78 + "\n"
+                )
+                print(banner, file=sys.stderr, flush=True)
         except Exception as e:
             print(f"  WARNING: delta.bin present but unpack failed ({e!r}); "
                   f"skipping Lane C δ application.", file=sys.stderr)

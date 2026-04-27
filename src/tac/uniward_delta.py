@@ -98,6 +98,9 @@ import torch.nn.functional as F
 __all__ = [
     "MAGIC",
     "SCHEMA_VERSION",
+    "COMPLIANCE_PENDING",
+    "COMPLIANCE_APPROVED",
+    "COMPLIANCE_REJECTED",
     "compute_uniward_cost_map",
     "pack_sparse_delta",
     "unpack_sparse_delta",
@@ -107,7 +110,30 @@ __all__ = [
 
 
 MAGIC = b"UWD1"  # UniWard Delta v1
-SCHEMA_VERSION = 1
+SCHEMA_VERSION = 2  # bumped from 1 in the Codex R5 HIGH fix below.
+
+# ── Compliance gate (Codex R5 HIGH — silent contest-noncompliance) ──────
+#
+# Lane C δ.bin is a SCORER-DERIVED artifact (compress-time PoseNet+SegNet
+# gradients on the GT video). Yousfi PR #35 strict-scorer-rule may class
+# this as "derived asset" → contest-noncompliant. Until the council issues
+# a binding ruling, every produced δ.bin must be marked PENDING_RULING in
+# the wire-format header. The archive builder hard-fails when bundling
+# such a δ unless --allow-pending-compliance is passed (and recorded into
+# provenance). The inflate path prints a [lane-c-pending-ruling] banner
+# whenever a pending-ruling δ is loaded so eval logs carry the audit trail.
+#
+# Allowed values: "pending_ruling", "approved", "rejected". The first is
+# the safe default for any newly-built δ. "approved" requires explicit
+# council action. "rejected" is reserved for archived experiments that
+# turned out to violate the rule — kept only so we can re-load and inspect
+# them without crashing.
+COMPLIANCE_PENDING = "pending_ruling"
+COMPLIANCE_APPROVED = "approved"
+COMPLIANCE_REJECTED = "rejected"
+_VALID_COMPLIANCE_STATUSES = frozenset({
+    COMPLIANCE_PENDING, COMPLIANCE_APPROVED, COMPLIANCE_REJECTED,
+})
 
 
 @dataclass(frozen=True)
@@ -128,6 +154,12 @@ class DeltaSpec:
         scale: int8 dequant scale (max |δ| in float units).
         n_kept: total non-zero pixel-channels across all frames.
         any_delta: ``False`` ⇒ caller can skip the apply path entirely.
+        compliance_status: one of ``"pending_ruling"`` (default for any new
+            δ until council ruling lands), ``"approved"`` (explicit council
+            sign-off recorded), or ``"rejected"`` (kept for forensics only,
+            never bundle). Legacy v1 blobs that lack the field decode as
+            ``"pending_ruling"`` so old-format δ also fail closed in the
+            archive builder.
     """
 
     n_frames: int
@@ -139,6 +171,7 @@ class DeltaSpec:
     scale: float
     n_kept: int
     any_delta: bool
+    compliance_status: str = COMPLIANCE_PENDING
 
 
 # ── 1. Cost map (re-uses tac.fridrich.compute_pixel_cost_map for parity) ──
@@ -209,6 +242,7 @@ def pack_sparse_delta(
     target_bytes: int | None = None,
     seed: int = 1234,
     extra_provenance: dict[str, Any] | None = None,
+    compliance_status: str = COMPLIANCE_PENDING,
 ) -> bytes:
     """Pack a dense δ tensor into the sparse UWD1 wire format.
 
@@ -270,6 +304,13 @@ def pack_sparse_delta(
         )
     if l_inf_budget <= 0.0:
         raise ValueError(f"l_inf_budget must be > 0; got {l_inf_budget}")
+    if compliance_status not in _VALID_COMPLIANCE_STATUSES:
+        raise ValueError(
+            f"compliance_status must be one of {sorted(_VALID_COMPLIANCE_STATUSES)}; "
+            f"got {compliance_status!r}. Default is {COMPLIANCE_PENDING!r}; only "
+            f"set {COMPLIANCE_APPROVED!r} after explicit council ruling is "
+            f"recorded in .omx/research/findings.md."
+        )
 
     n_frames, _, H, W = delta_bchw.shape
     device = delta_bchw.device
@@ -344,6 +385,10 @@ def pack_sparse_delta(
             "scale": float(l_inf_budget),
             "seed": int(seed),
             "layout": "frame_y_x_c",
+            # Codex R5 HIGH fix: machine-readable compliance gate. Defaults
+            # to PENDING for any newly-built δ; the archive builder fails
+            # closed on this value unless --allow-pending-compliance is set.
+            "compliance_status": str(compliance_status),
         }
         if extra_provenance:
             header["provenance"] = extra_provenance
@@ -441,10 +486,15 @@ def unpack_sparse_delta(
         raise ValueError("UWD payload truncated in header")
     header = json.loads(raw[8:8 + header_len].decode("utf-8"))
 
-    if int(header.get("schema_version", -1)) != SCHEMA_VERSION:
+    # Codex R5 HIGH backward-compat: v1 blobs (no compliance_status field)
+    # are accepted and DECODE AS PENDING_RULING — fail-safe. Anything newer
+    # than the current SCHEMA_VERSION is rejected so a future-format δ
+    # cannot be silently mis-parsed.
+    blob_schema = int(header.get("schema_version", -1))
+    if blob_schema not in (1, SCHEMA_VERSION):
         raise ValueError(
             f"UWD schema mismatch: got v{header.get('schema_version')}, "
-            f"this build supports v{SCHEMA_VERSION}"
+            f"this build supports v1 (legacy) and v{SCHEMA_VERSION}"
         )
 
     n_frames = int(header["n_frames"])
@@ -457,6 +507,16 @@ def unpack_sparse_delta(
         raise ValueError(
             f"unsupported quantize_bits={quantize_bits}; only 8 is wire-stable"
         )
+
+    # Default to PENDING_RULING when the field is absent (v1 blobs predate
+    # the gate; treat them as untrusted just like a freshly-built δ).
+    compliance_status = str(
+        header.get("compliance_status", COMPLIANCE_PENDING)
+    )
+    if compliance_status not in _VALID_COMPLIANCE_STATUSES:
+        # Unknown values are coerced to PENDING (fail-safe). Don't crash
+        # the loader; the archive builder will refuse to bundle anyway.
+        compliance_status = COMPLIANCE_PENDING
 
     off = 8 + header_len
     idx_bytes = n_kept * 4  # uint32
@@ -480,6 +540,7 @@ def unpack_sparse_delta(
             per_frame_dequant=[None] * n_frames,
             l_inf_budget=float(header["l_inf_budget"]),
             scale=scale, n_kept=0, any_delta=False,
+            compliance_status=compliance_status,
         )
 
     # Indices are pre-sorted by pack; verify (cheap O(n)) so corrupt
@@ -512,6 +573,7 @@ def unpack_sparse_delta(
         per_frame_dequant=per_frame_dequant,
         l_inf_budget=float(header["l_inf_budget"]),
         scale=scale, n_kept=n_kept, any_delta=True,
+        compliance_status=compliance_status,
     )
 
 

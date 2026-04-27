@@ -80,7 +80,28 @@ def main() -> int:
                         "inflate — pure additive lookup table). Council "
                         "Lane C target: ≤5KB blob, +0.003 rate cost, "
                         "predicted -0.05 to -0.20 distortion when stacked "
-                        "with Lane A pose-TTO.")
+                        "with Lane A pose-TTO. NOTE: by default, a δ marked "
+                        "compliance_status=pending_ruling will be REFUSED — "
+                        "see --allow-pending-compliance for the explicit "
+                        "override.")
+    # Codex R5 HIGH — silent contest-noncompliance gate. Lane C δ.bin is a
+    # scorer-derived artifact; without an explicit council ruling, bundling
+    # it into a submission archive risks shipping a non-compliant entry.
+    # We make that risk an EXPLICIT operator decision instead of a silent
+    # default. The flag must be passed every time, and is recorded into
+    # provenance so audit logs show it.
+    p.add_argument("--allow-pending-compliance", action="store_true",
+                   default=False,
+                   help="Override the pending-ruling refusal for Lane C δ. "
+                        "Required to bundle a δ.bin whose header carries "
+                        "compliance_status=pending_ruling (the default for "
+                        "any newly-built δ). Without this flag the script "
+                        "exits non-zero. The override is recorded in the "
+                        "provenance JSON so any downstream auditor can see "
+                        "that the operator explicitly opted in. ONLY pass "
+                        "this for diagnostic / paper-figure builds — never "
+                        "for a contest submission until the Yousfi PR #35 "
+                        "strict-scorer-rule ruling is in.")
     args = p.parse_args()
 
     for label, path in (("renderer", args.renderer), ("poses", args.poses),
@@ -88,9 +109,71 @@ def main() -> int:
         if not path.exists():
             raise SystemExit(f"--{label} does not exist: {path}")
     # Validate Lane C δ if requested.
-    if args.with_uniward_delta is not None and not args.with_uniward_delta.exists():
-        raise SystemExit(
-            f"--with-uniward-delta does not exist: {args.with_uniward_delta}"
+    uniward_compliance_status: str | None = None
+    if args.with_uniward_delta is not None:
+        if not args.with_uniward_delta.exists():
+            raise SystemExit(
+                f"--with-uniward-delta does not exist: {args.with_uniward_delta}"
+            )
+        # Codex R5 HIGH fix — silent contest-noncompliance gate. Read the
+        # δ.bin header BEFORE we open the SegNet / write the archive so the
+        # operator wastes no work on a build that would be refused anyway.
+        from tac.uniward_delta import (
+            unpack_sparse_delta as _uwd_unpack_for_check,
+            COMPLIANCE_PENDING as _UWD_PENDING,
+            COMPLIANCE_APPROVED as _UWD_APPROVED,
+            COMPLIANCE_REJECTED as _UWD_REJECTED,
+        )
+        try:
+            _uwd_blob = args.with_uniward_delta.read_bytes()
+            _uwd_spec_check = _uwd_unpack_for_check(_uwd_blob, device="cpu")
+        except Exception as e:  # pragma: no cover — corrupt input
+            raise SystemExit(
+                f"FATAL: --with-uniward-delta could not be parsed: {e!r}. "
+                f"Refusing to bundle an unverifiable δ into the archive."
+            )
+        uniward_compliance_status = _uwd_spec_check.compliance_status
+        if uniward_compliance_status == _UWD_REJECTED:
+            raise SystemExit(
+                f"FATAL: --with-uniward-delta is marked "
+                f"compliance_status={_UWD_REJECTED!r}. This δ has been "
+                f"explicitly flagged as non-compliant by the council and "
+                f"may NEVER be bundled. Build aborted."
+            )
+        if uniward_compliance_status == _UWD_PENDING and not args.allow_pending_compliance:
+            raise SystemExit(
+                "FATAL: --with-uniward-delta is marked "
+                f"compliance_status={_UWD_PENDING!r}. Lane C δ.bin is a "
+                "SCORER-DERIVED artifact; Yousfi PR #35 strict-scorer-rule "
+                "may class this as non-compliant. Refusing to bundle.\n"
+                "  To proceed for a diagnostic / paper-figure build only, "
+                "pass --allow-pending-compliance — the override is recorded "
+                "in the archive provenance JSON for audit. DO NOT use this "
+                "for a contest submission until the council ruling lands in "
+                ".omx/research/findings.md."
+            )
+        if uniward_compliance_status == _UWD_APPROVED:
+            print(
+                f"[build] Lane C δ compliance_status={_UWD_APPROVED!r} — "
+                f"bundling without override.",
+            )
+        elif args.allow_pending_compliance:
+            print(
+                f"\n{'=' * 78}\n"
+                f"[build] WARNING: bundling δ with compliance_status="
+                f"{uniward_compliance_status!r} via "
+                f"--allow-pending-compliance override.\n"
+                f"  This archive is NOT contest-compliant until council "
+                f"ruling on Yousfi PR #35.\n"
+                f"  Tag any score [lane-c-pending-ruling] in the run-log.\n"
+                f"{'=' * 78}\n",
+            )
+    elif args.allow_pending_compliance:
+        # Catch the operator-error case: --allow-pending-compliance set but
+        # no δ to compliance-gate. Surface it loudly rather than silently no-op.
+        print(
+            "[build] NOTE: --allow-pending-compliance was passed but "
+            "--with-uniward-delta is None — flag has no effect.",
         )
 
     import os
@@ -246,6 +329,17 @@ def main() -> int:
                     "size_bytes": args.with_uniward_delta.stat().st_size,
                     "sha256": _sha256(args.with_uniward_delta),
                     "kind": "lane_c_uniward_sparse_delta",
+                    # Codex R5 HIGH fix — record the compliance gate state
+                    # so any future auditor reading provenance.json can see
+                    # whether this build went through the pending-ruling
+                    # override path. The flag MUST appear in the audit
+                    # trail; CLAUDE.md "Strategic Secrecy" rule means we
+                    # never ship a non-compliant archive without showing
+                    # exactly when and how the override was approved.
+                    "compliance_status": uniward_compliance_status,
+                    "allow_pending_compliance_override": bool(
+                        args.allow_pending_compliance
+                    ),
                 }} if args.with_uniward_delta is not None else {}),
             },
         }
