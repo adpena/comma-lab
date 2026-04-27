@@ -74,22 +74,27 @@ import hashlib
 with open('$ARCHIVE_INPUT', 'rb') as f:
     print(hashlib.sha256(f.read()).hexdigest())
 ")
+# Per-run pinned archive identity. Env-var overrides allow this script to be
+# reused for any archive (Lane A baseline, Lane A+brotli, future lanes) while
+# still failing loud on rsync truncation or wrong-archive uploads.
+# Defaults are Lane A's 1.15 archive (the original use case).
+EXPECTED_BYTES="${EXPECTED_BYTES:-694045}"
+EXPECTED_SHA="${EXPECTED_SHA:-a9921cd3b974ff0a7c37b39e7af22d9b75802f1219fc46aecb6eb8eaa7a08e84}"
 log "  archive: $ARCHIVE_INPUT"
-log "  bytes:   $ARCHIVE_BYTES (expected 694045)"
+log "  bytes:   $ARCHIVE_BYTES (expected $EXPECTED_BYTES)"
 log "  sha256:  $ARCHIVE_SHA"
-if [ "$ARCHIVE_BYTES" != "694045" ]; then
+if [ "$ARCHIVE_BYTES" != "$EXPECTED_BYTES" ]; then
     log "FATAL: archive bytes mismatch — refusing to ship a score for the"
-    log "       wrong archive. Expected 694045, got $ARCHIVE_BYTES."
+    log "       wrong archive. Expected $EXPECTED_BYTES, got $ARCHIVE_BYTES."
     exit 1
 fi
-EXPECTED_SHA="a9921cd3b974ff0a7c37b39e7af22d9b75802f1219fc46aecb6eb8eaa7a08e84"
 if [ "$ARCHIVE_SHA" != "$EXPECTED_SHA" ]; then
     log "FATAL: archive sha256 mismatch."
     log "       Expected: $EXPECTED_SHA"
     log "       Got:      $ARCHIVE_SHA"
     exit 1
 fi
-log "  archive bytes + sha verified — same EXACT artifact as Lane A pose TTO output."
+log "  archive bytes + sha verified — same EXACT artifact as expected pinned archive."
 
 # Verify upstream + inflate.sh present on this host.
 for f in submissions/robust_current/inflate.sh \
