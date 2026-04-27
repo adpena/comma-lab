@@ -248,6 +248,16 @@ def preflight_all(
     if check_codebase:
         check_codebase_drift(strict=True)
         preflight_arity(strict=True, verbose=verbose)
+        # TODO(2026-04-27): flip to strict=True after cleaning up the 19
+        # known violations the scanner surfaced in the R5 pass (chiefly the
+        # blend_mode / noise_mode / motion_type / beta_* cluster in
+        # train_renderer.py — same dead-resolver class as pose_dim, every
+        # profile sets these but parse_args drops them; plus 7 dead imports
+        # of names since-renamed in tac.{losses,scorer,camera,fridrich,
+        # mlx_renderer}). Keeping warn-only avoids breaking the in-flight
+        # Lane A pipeline. See feedback_dead_resolver_violations memory entry
+        # for the full list.
+        preflight_dead_resolvers(strict=False, verbose=verbose)
         preflight_profiles(strict=True, verbose=verbose)
         preflight_arch_consistency(strict=True, verbose=verbose)
         preflight_filename_contract(strict=True, verbose=verbose)
@@ -1100,6 +1110,299 @@ def preflight_arity(
             + "\n".join(f"  • {v}" for v in violations)
             + "\n\nFix every violation. Each one is a real bug class that has "
             "burned GPU money in this repo (see CLAUDE.md SHIRAZ A100 incident)."
+        )
+    return violations
+
+
+# ── Dead-resolver / dead-import validation ────────────────────────────────────
+#
+# Bug class this catches: code that reads a profile-derived value via
+# `getattr(args, "X", DEFAULT)` (or `args.X`) but the script never actually
+# resolves X into the argparse Namespace — so the silent default fires every
+# time and the profile's value is dead. Caught manually three times in the
+# 2026-04-27 R5 codex review:
+#   - pose_dim: every SHIRAZ/DEN/WILDE/GREEN run silently trained pose_dim=0
+#     (FiLM disabled) because parse_args never copied profile.pose_dim into
+#     the Namespace. (Lane D incidental fix, commit 0746a803.)
+#   - segnet_uncertainty_weighted_loss: imported in train_renderer but never
+#     defined in tac.losses. Hidden by stale .pyc caches; would have crashed
+#     Lane D at runtime. (Lane D R5, commit 46e2ab6d.)
+#   - args.uncertainty_loss_floor: referenced at train_renderer:1614 with no
+#     CLI flag and no resolver call. (Lane D R5.)
+#
+# This validator catches all three at preflight time so they never ship.
+
+class DeadResolverViolation(Exception):
+    """A script reads args.X with no flag + no resolver, OR imports a name
+    that does not exist in the source module."""
+
+
+def _flag_to_attr(flag: str) -> str:
+    """Convert '--motion-hidden' to 'motion_hidden' (argparse default rule)."""
+    return flag.lstrip("-").replace("-", "_")
+
+
+def _collect_assigned_args_attrs(tree: ast.Module) -> set[str]:
+    """Walk the AST for every `args.X = ...` (Assign) and `args.X += ...`
+    (AugAssign) site. Returns the set of attribute names assigned anywhere
+    in the module — this is the resolver-side ground truth."""
+    out: set[str] = set()
+    for node in ast.walk(tree):
+        if isinstance(node, ast.Assign):
+            for tgt in node.targets:
+                if (isinstance(tgt, ast.Attribute)
+                        and isinstance(tgt.value, ast.Name)
+                        and tgt.value.id == "args"):
+                    out.add(tgt.attr)
+        elif isinstance(node, ast.AugAssign):
+            tgt = node.target
+            if (isinstance(tgt, ast.Attribute)
+                    and isinstance(tgt.value, ast.Name)
+                    and tgt.value.id == "args"):
+                out.add(tgt.attr)
+    return out
+
+
+def _scan_python_for_dead_resolvers(
+    path: Path,
+    repo_root: Path,
+) -> list[str]:
+    """Find `getattr(args, 'X', ...)` references where X has neither a
+    `--X` argparse flag in the same file nor an `args.X = ...` assignment
+    anywhere in the same file.
+
+    Conservative scope by design: only the literal getattr-with-args idiom
+    is flagged. Plain `args.X` reads are too noisy (every CLI program reads
+    its own args). The getattr form specifically encodes a silent-default
+    contract that the bug class exploits.
+    """
+    try:
+        tree = ast.parse(path.read_text(), filename=str(path))
+    except (SyntaxError, UnicodeDecodeError):
+        return []
+
+    sig = _parse_argparse_signature(path) or {}
+    flag_attrs = {_flag_to_attr(f) for f in sig.keys()}
+    assigned_attrs = _collect_assigned_args_attrs(tree)
+    known_attrs = flag_attrs | assigned_attrs
+
+    rel = path.relative_to(repo_root) if path.is_absolute() else path
+    violations: list[str] = []
+    for node in ast.walk(tree):
+        if not isinstance(node, ast.Call):
+            continue
+        if not (isinstance(node.func, ast.Name) and node.func.id == "getattr"):
+            continue
+        if len(node.args) < 2:
+            continue
+        target_node = node.args[0]
+        attr_node = node.args[1]
+        if not (isinstance(target_node, ast.Name) and target_node.id == "args"):
+            continue
+        if not (isinstance(attr_node, ast.Constant)
+                and isinstance(attr_node.value, str)):
+            continue
+        attr_name = attr_node.value
+        if attr_name.startswith("_"):
+            # Private-by-convention; usually internal helpers, skip.
+            continue
+        if attr_name in known_attrs:
+            continue
+        violations.append(
+            f"{rel}:{node.lineno}: getattr(args, {attr_name!r}, ...) but no "
+            f"--{attr_name.replace('_', '-')!r} argparse flag and no "
+            f"`args.{attr_name} = ...` assignment found anywhere in the "
+            f"file. DEAD RESOLVER: silent default reads will mask any "
+            f"profile value the operator thinks they set. "
+            f"(pose_dim / uncertainty_loss_floor bug class.)"
+        )
+    return violations
+
+
+def _module_top_level_names(mod_path: Path) -> set[str]:
+    """Return every name defined or re-exported at module top level.
+
+    Handles: function/class defs, simple assignments, AnnAssign, ImportFrom
+    re-exports, and Import. Does NOT execute the module.
+    """
+    try:
+        tree = ast.parse(mod_path.read_text(), filename=str(mod_path))
+    except (SyntaxError, UnicodeDecodeError):
+        return set()
+    names: set[str] = set()
+    for node in tree.body:
+        if isinstance(node, (ast.FunctionDef, ast.AsyncFunctionDef, ast.ClassDef)):
+            names.add(node.name)
+        elif isinstance(node, ast.Assign):
+            for tgt in node.targets:
+                if isinstance(tgt, ast.Name):
+                    names.add(tgt.id)
+        elif isinstance(node, ast.AnnAssign) and isinstance(node.target, ast.Name):
+            names.add(node.target.id)
+        elif isinstance(node, ast.ImportFrom):
+            for alias in node.names:
+                if alias.name == "*":
+                    continue
+                names.add(alias.asname or alias.name)
+        elif isinstance(node, ast.Import):
+            for alias in node.names:
+                names.add(alias.asname or alias.name.split(".")[0])
+    return names
+
+
+def _resolve_tac_module_path(module: str, repo_root: Path) -> Path | None:
+    """Resolve `tac.X.Y` to the on-disk file path. Handles package __init__
+    and bare modules. Returns None if not found in this repo."""
+    if not module.startswith("tac."):
+        return None
+    rel = module.replace(".", "/")
+    candidate = repo_root / "src" / f"{rel}.py"
+    if candidate.exists():
+        return candidate
+    candidate = repo_root / "src" / rel / "__init__.py"
+    if candidate.exists():
+        return candidate
+    return None
+
+
+def _is_resolvable_submodule(parent_module: str, name: str, repo_root: Path) -> bool:
+    """True if `from <parent_module> import <name>` would resolve `name` as
+    a submodule of <parent_module>. Handles e.g.
+    `from tac.lossless import next_frame_coder` where next_frame_coder is
+    a `.py` file inside src/tac/lossless/."""
+    if not parent_module.startswith("tac."):
+        return False
+    parent_rel = parent_module.replace(".", "/")
+    candidate = repo_root / "src" / parent_rel / f"{name}.py"
+    if candidate.exists():
+        return True
+    candidate = repo_root / "src" / parent_rel / name / "__init__.py"
+    return candidate.exists()
+
+
+def _import_inside_try_handler(tree: ast.Module, target: ast.ImportFrom) -> bool:
+    """True if `target` (an ImportFrom node) is lexically inside a `try:` body
+    whose handlers catch ImportError (or bare except). Such imports are
+    intentional graceful-fallback patterns and should not be flagged."""
+    for node in ast.walk(tree):
+        if not isinstance(node, ast.Try):
+            continue
+        # Walk just the try-body (not the handlers / else / finally) for the target.
+        for body_node in node.body:
+            if any(child is target for child in ast.walk(body_node)):
+                # Now check the handlers — at least one must catch ImportError
+                # (or be a bare except).
+                for handler in node.handlers:
+                    if handler.type is None:
+                        return True  # bare `except:`
+                    # Handle `except ImportError`, `except (ImportError, ...)`,
+                    # `except ModuleNotFoundError`, etc.
+                    candidates: list[ast.AST] = []
+                    if isinstance(handler.type, ast.Tuple):
+                        candidates.extend(handler.type.elts)
+                    else:
+                        candidates.append(handler.type)
+                    for c in candidates:
+                        name = ast.unparse(c) if hasattr(ast, "unparse") else ""
+                        if "ImportError" in name or "ModuleNotFoundError" in name:
+                            return True
+    return False
+
+
+def _scan_python_for_dead_imports(path: Path, repo_root: Path) -> list[str]:
+    """Find `from tac.X import Y` where Y is not defined at top level in
+    tac.X AND Y is not a resolvable submodule. Skips imports inside
+    try/except ImportError blocks (intentional graceful fallback).
+
+    Catches the segnet_uncertainty_weighted_loss class — runtime
+    NameError masked by stale .pyc caches.
+    """
+    try:
+        tree = ast.parse(path.read_text(), filename=str(path))
+    except (SyntaxError, UnicodeDecodeError):
+        return []
+
+    rel = path.relative_to(repo_root) if path.is_absolute() else path
+    violations: list[str] = []
+    for node in ast.walk(tree):
+        if not isinstance(node, ast.ImportFrom):
+            continue
+        if not node.module:
+            continue
+        mod_path = _resolve_tac_module_path(node.module, repo_root)
+        if mod_path is None:
+            continue
+        if _import_inside_try_handler(tree, node):
+            continue
+        defined = _module_top_level_names(mod_path)
+        for alias in node.names:
+            if alias.name == "*":
+                continue
+            if alias.name in defined:
+                continue
+            if _is_resolvable_submodule(node.module, alias.name, repo_root):
+                continue
+            violations.append(
+                f"{rel}:{node.lineno}: imports {alias.name!r} from "
+                f"{node.module} but that name is NOT defined at the top "
+                f"level of {mod_path.relative_to(repo_root)} and is not a "
+                f"resolvable submodule. DEAD IMPORT: runtime NameError when "
+                f".pyc cache is invalidated. "
+                f"(segnet_uncertainty_weighted_loss bug class.)"
+            )
+    return violations
+
+
+def preflight_dead_resolvers(
+    repo_root: Path | None = None,
+    target_dirs: list[str] | None = None,
+    strict: bool = True,
+    verbose: bool = True,
+) -> list[str]:
+    """Scan target scripts for dead-resolver and dead-import bug patterns.
+
+    Two rules:
+      A. Every `getattr(args, 'X', DEFAULT)` reference must have a corresponding
+         `--X` argparse flag OR an explicit `args.X = ...` assignment somewhere
+         in the same file. Otherwise the silent default masks profile values.
+         (pose_dim / uncertainty_loss_floor bug class.)
+      B. Every `from tac.X import Y` must resolve — Y must actually be defined
+         at top level in tac.X. Otherwise stale .pyc caches mask a runtime
+         NameError. (segnet_uncertainty_weighted_loss bug class.)
+
+    Returns list of human-readable violations. Raises DeadResolverViolation
+    if strict and any are found.
+    """
+    root = repo_root or REPO_ROOT
+    target_dirs = target_dirs or TARGET_DIRS
+
+    violations: list[str] = []
+    n_scanned = 0
+
+    for d in target_dirs:
+        d_path = root / d
+        if not d_path.exists():
+            continue
+        for py in sorted(d_path.glob("*.py")):
+            n_scanned += 1
+            violations.extend(_scan_python_for_dead_resolvers(py, root))
+            violations.extend(_scan_python_for_dead_imports(py, root))
+
+    if verbose and violations:
+        print(f"  [dead-resolvers] {len(violations)} violation(s) across {n_scanned} files:")
+        for v in violations:
+            print(f"    • {v}")
+    elif verbose:
+        print(f"  [dead-resolvers] OK: {n_scanned} files scanned")
+
+    if violations and strict:
+        raise DeadResolverViolation(
+            "DEAD-RESOLVER / DEAD-IMPORT violations:\n"
+            + "\n".join(f"  • {v}" for v in violations)
+            + "\n\nFix every violation. Each one is a real bug class that has "
+            "burned GPU money in this repo (pose_dim, "
+            "segnet_uncertainty_weighted_loss, uncertainty_loss_floor — "
+            "2026-04-27 R5 codex review)."
         )
     return violations
 
