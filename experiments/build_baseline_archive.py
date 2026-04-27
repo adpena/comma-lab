@@ -64,12 +64,34 @@ def main() -> int:
                         "the only fully reproducible choice.")
     p.add_argument("--seed", type=int, default=1234,
                    help="Random seed (matches upstream/evaluate.py default).")
+    p.add_argument("--half-frame", action="store_true", default=False,
+                   help="Quantizr trick: encode only 600 ODD-frame masks "
+                        "(frames 1, 3, 5, ..., 1199) instead of 1200. The "
+                        "inflate path detects this and warps to recover even "
+                        "frames. Roughly halves the mask byte count. Required "
+                        "to reach the historical 0.9001 archive size (~338KB).")
+    p.add_argument("--with-uniward-delta", type=Path, default=None,
+                   help="Path to a Lane C delta.bin produced by "
+                        "experiments/optimize_uniward_delta.py. If set, the "
+                        "file is bundled into the archive at the canonical "
+                        "name 'delta.bin'. The inflate path detects it and "
+                        "applies a sparse, L∞-bounded perturbation to the "
+                        "rendered frames BEFORE upscale (no scorer at "
+                        "inflate — pure additive lookup table). Council "
+                        "Lane C target: ≤5KB blob, +0.003 rate cost, "
+                        "predicted -0.05 to -0.20 distortion when stacked "
+                        "with Lane A pose-TTO.")
     args = p.parse_args()
 
     for label, path in (("renderer", args.renderer), ("poses", args.poses),
                         ("gt-video", args.gt_video)):
         if not path.exists():
             raise SystemExit(f"--{label} does not exist: {path}")
+    # Validate Lane C δ if requested.
+    if args.with_uniward_delta is not None and not args.with_uniward_delta.exists():
+        raise SystemExit(
+            f"--with-uniward-delta does not exist: {args.with_uniward_delta}"
+        )
 
     import os
     import torch
@@ -139,6 +161,16 @@ def main() -> int:
     masks = extract_gt_masks(frames, segnet, device, batch_size=8)
     print(f"[build] masks shape={tuple(masks.shape)} in {time.monotonic()-t0:.1f}s")
 
+    # Half-frame mode: keep only ODD-indexed frames (1, 3, 5, ..., 1199).
+    # The inflate side detects 600-mask input and reconstructs even frames
+    # via zoom-flow warp (see submissions/robust_current/inflate_renderer.py
+    # _expand_half_frame_masks). This is the Quantizr trick — roughly halves
+    # the mask byte count without quality loss because the renderer's motion
+    # predictor handles the t -> t+1 warp anyway.
+    if args.half_frame:
+        masks = masks[1::2]  # frames 1, 3, 5, ..., 1199 → 600 frames
+        print(f"[build] HALF-FRAME mode: kept odd-indexed only, shape={tuple(masks.shape)}")
+
     # Stage 3: encode masks as AV1 at requested CRF
     with tempfile.TemporaryDirectory() as td:
         td_path = Path(td)
@@ -154,6 +186,10 @@ def main() -> int:
             z.write(args.renderer, arcname="renderer.bin")
             z.write(masks_path, arcname="masks.mkv")
             z.write(args.poses, arcname="optimized_poses.pt")
+            if args.with_uniward_delta is not None:
+                z.write(args.with_uniward_delta, arcname="delta.bin")
+                print(f"[build] bundled UNIWARD δ from {args.with_uniward_delta} "
+                      f"({args.with_uniward_delta.stat().st_size:,} bytes)")
         archive_size = args.output.stat().st_size
         rate_unscaled = archive_size / 37545489
         rate_contribution = 25 * rate_unscaled
@@ -205,6 +241,12 @@ def main() -> int:
                     "size_bytes": args.poses.stat().st_size,
                     "sha256": _sha256(args.poses),
                 },
+                **({"delta.bin": {
+                    "source": str(args.with_uniward_delta),
+                    "size_bytes": args.with_uniward_delta.stat().st_size,
+                    "sha256": _sha256(args.with_uniward_delta),
+                    "kind": "lane_c_uniward_sparse_delta",
+                }} if args.with_uniward_delta is not None else {}),
             },
         }
         prov_path = args.output.with_suffix(".provenance.json")

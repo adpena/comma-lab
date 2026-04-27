@@ -86,6 +86,11 @@ def _apply_gradient_corrections(
 ) -> np.ndarray:
     """Apply pre-computed gradient corrections to rendered frames (no scorer needed).
 
+    Numpy convenience entry-point — tests use this. The HOT inflate path uses
+    :func:`_prepare_gradient_corrections` + :func:`_apply_gradient_corrections_device`
+    instead, which keeps everything on-device for the entire 1200-frame loop
+    (Hotz R1 #1 fix, 2026-04-26).
+
     Args:
         frames: (N, H, W, 3) float32 rendered frames
         corrections: dict from _unpack_sparse_corrections()
@@ -119,6 +124,132 @@ def _apply_gradient_corrections(
     flat_frames = np.clip(flat_frames, 0, 255)
 
     return flat_frames.reshape(N, H, W, C)
+
+
+def _prepare_gradient_corrections(
+    corrections: dict,
+    n_frames: int,
+    H: int,
+    W: int,
+    device,
+) -> dict:
+    """Hot-path preprocessing for inflate-time gradient corrections.
+
+    Hotz R1 #1 fix (2026-04-26 council 5/0): the legacy inflate path was doing
+    1 D2H + 1 H2D copy per frame (2400 round trips for 1200 frames) AND
+    re-scanning the global `gc_indices` array N times (O(N²)). Both eliminated
+    by:
+
+      1. Sort indices ONCE here, partition into per-frame buckets via
+         np.searchsorted (O(N + F) instead of O(N·F)).
+      2. Dequantize ONCE here, push values to ``device`` as float32.
+      3. Convert each bucket's local pixel index into an int64 device tensor
+         once. The hot loop then does a single torch.scatter_add_ per frame —
+         zero CPU↔device traffic except the final f.write at the very end.
+
+    Args:
+        corrections: dict from _unpack_sparse_corrections().
+        n_frames:    total number of frames being rendered (== shape[0]).
+        H, W:        per-frame spatial dims at renderer resolution.
+        device:      torch device for the values tensors.
+
+    Returns:
+        dict with:
+            "per_frame_local_idx":   list[Tensor(K_i, dtype=int64) on device]
+            "per_frame_dequant":     list[Tensor(K_i, 3, dtype=float32) on device]
+            "n_total":               int (sanity check matches n_frames*H*W)
+            "any_corrections":       bool (False → caller can skip)
+    """
+    indices = np.asarray(corrections["indices"], dtype=np.int64)
+    values = corrections["values"]
+    scale = float(corrections["scale"])
+    qbits = int(corrections["quantize_bits"])
+    expected_total = n_frames * H * W
+    if int(corrections["n_total"]) != expected_total:
+        raise ValueError(
+            f"Gradient corrections n_total={corrections['n_total']} but "
+            f"frame stack expects {expected_total} pixels "
+            f"({n_frames}×{H}×{W}). Resolution mismatch — refusing to apply."
+        )
+
+    if qbits == 8:
+        dequant = values.astype(np.float32) / 127.0 * scale
+    elif qbits == 4:
+        dequant = values.astype(np.float32) / 7.0 * scale
+    elif qbits == 16:
+        dequant = values.astype(np.float32)
+    else:
+        raise ValueError(f"Unsupported quantize_bits={qbits}")
+
+    if indices.size == 0:
+        return {
+            "per_frame_local_idx": [None] * n_frames,
+            "per_frame_dequant": [None] * n_frames,
+            "n_total": expected_total,
+            "any_corrections": False,
+        }
+
+    # Sort indices ONCE (with a co-permutation of dequant) so per-frame
+    # partitioning is a contiguous slice via searchsorted.
+    order = np.argsort(indices, kind="stable")
+    indices_sorted = indices[order]
+    dequant_sorted = dequant[order]
+
+    hw = H * W
+    # Frame boundaries in the global pixel index space:
+    # frame f owns indices in [f*hw, (f+1)*hw).
+    # searchsorted returns the slice boundaries in O(F log N).
+    frame_starts = np.searchsorted(indices_sorted, np.arange(n_frames + 1) * hw,
+                                   side="left")
+
+    per_frame_local_idx: list = [None] * n_frames
+    per_frame_dequant: list = [None] * n_frames
+    any_corr = False
+    for f in range(n_frames):
+        s, e = int(frame_starts[f]), int(frame_starts[f + 1])
+        if s == e:
+            continue
+        local_np = indices_sorted[s:e] - (f * hw)
+        per_frame_local_idx[f] = torch.from_numpy(local_np.astype(np.int64)).to(
+            device=device, non_blocking=True
+        )
+        per_frame_dequant[f] = torch.from_numpy(dequant_sorted[s:e].astype(np.float32)).to(
+            device=device, non_blocking=True
+        )
+        any_corr = True
+
+    return {
+        "per_frame_local_idx": per_frame_local_idx,
+        "per_frame_dequant": per_frame_dequant,
+        "n_total": expected_total,
+        "any_corrections": any_corr,
+    }
+
+
+def _apply_gradient_corrections_device(
+    frame_hwc: torch.Tensor,
+    prepared: dict,
+    frame_index: int,
+    alpha: float = 1.0,
+) -> torch.Tensor:
+    """Single-frame on-device application. Returns the (H, W, 3) tensor with
+    corrections added in-place semantics (the input is cloned so callers that
+    hold the renderer output aren't mutated).
+
+    Hotz R1 #1: zero CPU↔device traffic. ``frame_hwc`` is expected to already
+    live on the same device as ``prepared["per_frame_local_idx"][frame_index]``.
+    """
+    local_idx = prepared["per_frame_local_idx"][frame_index]
+    if local_idx is None:
+        return frame_hwc  # no corrections for this frame — pass through
+    dequant = prepared["per_frame_dequant"][frame_index]
+    H, W, C = frame_hwc.shape
+    flat = frame_hwc.reshape(-1, C).clone().float()
+    # Per-channel scatter_add: expand local_idx to (K, C) for the channel dim.
+    src = dequant.to(flat.dtype) * float(alpha)
+    flat.scatter_add_(0, local_idx.unsqueeze(-1).expand(-1, C), src)
+    flat.clamp_(0.0, 255.0)
+    return flat.reshape(H, W, C)
 
 
 # ============================================================
@@ -1726,6 +1857,7 @@ def _generate_and_write(
     gradient_corrections: dict | None = None,
     gradient_alpha: float = 1.0,
     zoom_warp: "nn.Module | None" = None,
+    uniward_delta_spec: "object | None" = None,
 ) -> int:
     """Generate frames from masks via renderer, upscale, and write raw RGB.
 
@@ -1751,6 +1883,12 @@ def _generate_and_write(
         gradient_corrections: optional dict from _unpack_sparse_corrections(),
             applied AFTER rendering, BEFORE upscale (at renderer resolution)
         gradient_alpha: step size for gradient corrections (default 1.0)
+        uniward_delta_spec: optional DeltaSpec from
+            tac.uniward_delta.unpack_sparse_delta(); a sparse, L∞-bounded
+            additive perturbation optimized at compress-time against the
+            actual scorer Jacobian. Applied AFTER rendering and AFTER any
+            gradient corrections, BEFORE the camera-resolution upscale.
+            Pure additive lookup — NO scorer required.
 
     Returns:
         Number of frames written
@@ -1762,6 +1900,30 @@ def _generate_and_write(
 
     # Deterministic seed for reproducible output (noise injectors use torch.randn)
     torch.manual_seed(42)
+
+    # Hotz R1 #1 fix (2026-04-26 council 5/0): pre-process gradient corrections
+    # ONCE before the loop. Sort indices, partition by frame via searchsorted,
+    # dequantize, and push values to `device` as float32. The hot loop now does
+    # zero D2H/H2D copies for the corrections and zero global re-scans. Without
+    # this, 1200 frames meant 1200 D2H + 1200 H2D + 1200 O(N) numpy boolean
+    # masks of the global indices array — measurably stuttery on T4.
+    prepared_corrections = None
+    if gradient_corrections is not None:
+        gc_H = int(gradient_corrections["shape"][1])
+        gc_W = int(gradient_corrections["shape"][2])
+        gc_N = int(gradient_corrections["shape"][0])
+        try:
+            prepared_corrections = _prepare_gradient_corrections(
+                gradient_corrections, n_frames=gc_N, H=gc_H, W=gc_W,
+                device=device,
+            )
+        except ValueError as e:
+            # Resolution mismatch — skip corrections rather than crash inflate.
+            # The renderer output is still valid; we just can't apply deltas
+            # captured at a different resolution.
+            print(f"  WARNING: skipping gradient corrections — {e}",
+                  file=sys.stderr)
+            prepared_corrections = None
 
     if is_asymmetric:
         print(f"  Mode: asymmetric pair generation ({N} masks -> {N} frames "
@@ -1840,35 +2002,38 @@ def _generate_and_write(
                         for frame_idx in range(2):  # frame_t then frame_t1
                             frame_hwc = pairs[p, frame_idx]  # (H, W, 3)
 
-                            # Apply per-frame gradient correction BEFORE upscale
-                            if gradient_corrections is not None:
-                                frame_np = frame_hwc.cpu().float().numpy()
-                                gc_H, gc_W = gradient_corrections["shape"][1], gradient_corrections["shape"][2]
-                                f_H, f_W = frame_np.shape[0], frame_np.shape[1]
+                            # Apply per-frame gradient correction BEFORE upscale.
+                            # Hotz R1 #1: on-device scatter_add via the pre-
+                            # partitioned indices/values dict. Zero CPU<->device
+                            # copies; zero global rescans.
+                            if prepared_corrections is not None:
+                                f_H, f_W = frame_hwc.shape[0], frame_hwc.shape[1]
                                 if f_H == gc_H and f_W == gc_W:
-                                    hw_pixels = f_H * f_W
-                                    gc_indices = gradient_corrections["indices"]
-                                    # Filter to indices belonging to this frame
-                                    frame_global_start = n_written * hw_pixels
-                                    frame_global_end = frame_global_start + hw_pixels
-                                    mask = (gc_indices >= frame_global_start) & (gc_indices < frame_global_end)
-                                    if mask.any():
-                                        local_idx = gc_indices[mask] - frame_global_start
-                                        gc_vals = gradient_corrections["values"][mask]
-                                        gc_scale = gradient_corrections["scale"]
-                                        qbits = gradient_corrections["quantize_bits"]
-                                        if qbits == 8:
-                                            dequant = gc_vals.astype(np.float32) / 127.0 * gc_scale
-                                        elif qbits == 4:
-                                            dequant = gc_vals.astype(np.float32) / 7.0 * gc_scale
-                                        elif qbits == 16:
-                                            dequant = gc_vals.astype(np.float32)
-                                        else:
-                                            raise ValueError(f"Unsupported quantize_bits={qbits}")
-                                        flat_frame = frame_np.reshape(-1, 3)
-                                        flat_frame[local_idx] += gradient_alpha * dequant
-                                        frame_np = np.clip(flat_frame.reshape(f_H, f_W, 3), 0, 255)
-                                    frame_hwc = torch.from_numpy(frame_np).to(device=device)
+                                    frame_hwc = _apply_gradient_corrections_device(
+                                        frame_hwc.float(),
+                                        prepared_corrections,
+                                        frame_index=n_written,
+                                        alpha=gradient_alpha,
+                                    )
+
+                            # Apply Lane C UNIWARD δ (compress-time-optimized
+                            # sparse perturbation). Pure additive lookup — NO
+                            # scorer at inflate. Applied AFTER gradient
+                            # corrections so the two stack cleanly. Frame
+                            # shape must match the spec (renderer native res).
+                            if uniward_delta_spec is not None and uniward_delta_spec.any_delta:
+                                f_H, f_W = frame_hwc.shape[0], frame_hwc.shape[1]
+                                if (
+                                    n_written < uniward_delta_spec.n_frames
+                                    and f_H == uniward_delta_spec.H
+                                    and f_W == uniward_delta_spec.W
+                                ):
+                                    from tac.uniward_delta import apply_delta_to_frame as _apply_uwd
+                                    frame_hwc = _apply_uwd(
+                                        frame_hwc.float(),
+                                        uniward_delta_spec,
+                                        frame_index=n_written,
+                                    )
 
                             # Convert HWC -> CHW for interpolation
                             frame_chw = frame_hwc.permute(2, 0, 1).unsqueeze(0)  # (1, 3, H, W)
@@ -1911,6 +2076,27 @@ def _generate_and_write(
 
                     # Generate frames at SegNet resolution (384x512)
                     frames = renderer(batch_masks)  # (B, 3, 384, 512)
+
+                    # Apply Lane C UNIWARD δ at renderer res, BEFORE upscale.
+                    # Per-frame loop because the spec is per-frame indexed
+                    # (matches gradient_corrections layout). Skipped if no δ.
+                    if uniward_delta_spec is not None and uniward_delta_spec.any_delta:
+                        if (
+                            frames.shape[2] == uniward_delta_spec.H
+                            and frames.shape[3] == uniward_delta_spec.W
+                        ):
+                            from tac.uniward_delta import apply_delta_to_frame as _apply_uwd
+                            for fi, global_fi in enumerate(range(i, end)):
+                                if global_fi >= uniward_delta_spec.n_frames:
+                                    break
+                                # frames[fi] is (3, H, W); apply expects (H, W, 3).
+                                frame_hwc = frames[fi].permute(1, 2, 0).contiguous()
+                                frame_hwc = _apply_uwd(
+                                    frame_hwc.float(),
+                                    uniward_delta_spec,
+                                    frame_index=global_fi,
+                                )
+                                frames[fi] = frame_hwc.permute(2, 0, 1).contiguous().to(frames.dtype)
 
                     # Upscale to output resolution
                     frames_up = F.interpolate(
@@ -2289,6 +2475,28 @@ def inflate_renderer(
         print(f"  Loaded gradient corrections: {grad_corrections['n_kept']:,} pixels "
               f"from {grad_corr_path.name}", file=sys.stderr)
 
+    # ---- Load Lane C UNIWARD δ (compress-time-optimized sparse perturbation) ----
+    # Pure additive lookup table — NO scorer loaded at inflate time. Strict
+    # scorer rule (CLAUDE.md non-negotiable) preserved. Applied at renderer
+    # native resolution, BEFORE the camera-resolution upscale, to maximise
+    # PoseNet pose-error cancellation while staying invisible to SegNet's
+    # stride-2 stem.
+    uniward_delta_spec = None
+    uniward_delta_path = Path(archive_dir) / "delta.bin"
+    if uniward_delta_path.exists():
+        try:
+            from tac.uniward_delta import unpack_sparse_delta as _unpack_uwd
+            blob = uniward_delta_path.read_bytes()
+            uniward_delta_spec = _unpack_uwd(blob, device=device)
+            print(f"  Loaded UNIWARD δ: n_kept={uniward_delta_spec.n_kept:,} "
+                  f"(L∞={uniward_delta_spec.l_inf_budget:.1f}, "
+                  f"{len(blob):,} bytes) from {uniward_delta_path.name}",
+                  file=sys.stderr)
+        except Exception as e:
+            print(f"  WARNING: delta.bin present but unpack failed ({e!r}); "
+                  f"skipping Lane C δ application.", file=sys.stderr)
+            uniward_delta_spec = None
+
     # ---- Process each video ----
     output_path = Path(inflated_dir)
     output_path.mkdir(parents=True, exist_ok=True)
@@ -2379,6 +2587,7 @@ def inflate_renderer(
             poses=poses,
             gradient_corrections=grad_corrections,
             zoom_warp=zoom_warp,
+            uniward_delta_spec=uniward_delta_spec,
         )
 
         if not use_archive_masks:

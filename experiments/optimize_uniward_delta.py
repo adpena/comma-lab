@@ -1,0 +1,563 @@
+#!/usr/bin/env python3
+"""Lane C: optimize a sparse, UNIWARD-weighted, L∞-bounded δ to add to
+renderer output at inflate-time. Detector-informed embedding (Yousfi 2022)
+on a contest where the detector IS the scorer.
+
+Algorithm
+---------
+1. Load FROZEN renderer + masks (from archive masks.mkv) + poses (optimized
+   FiLM conditioning vectors).
+2. Render all 600 pairs deterministically. Capture rendered frames at the
+   renderer's native resolution (384x512).
+3. Extract GT pose targets from upstream/videos/0.mkv via PoseNet (cached).
+4. Compute per-frame UNIWARD cost map (textured = high "embedding capacity").
+5. Initialise δ = 0 with shape matching renderer output.
+6. Optimize δ (Adam) to minimize the COMBINED scorer loss:
+       L = pose_weight * MSE(PoseNet(rendered + δ), pose_targets)
+         + seg_weight * hinge(SegNet(rendered + δ), gt_masks)
+   subject to per-pixel L∞ ≤ l_inf_budget * (1 - cost_norm) + ε.
+   The simulate_eval_roundtrip wrapper (CRITICAL — see CLAUDE.md
+   non-negotiable rule on eval_roundtrip) is applied to BOTH the SegNet
+   and PoseNet paths every step.
+7. Pack the dense δ to sparse UWD1 wire format with target_bytes ≤ ~5KB.
+8. Write delta.bin + provenance JSON.
+
+Determinism (CLAUDE.md non-negotiable)
+--------------------------------------
+- CUDA-required (MPS produces 23x PoseNet drift per CLAUDE.md).
+- ``CUBLAS_WORKSPACE_CONFIG=:4096:8`` set BEFORE any cuBLAS call.
+- ``torch.manual_seed`` + ``cuda.manual_seed_all`` + ``np.random.seed``.
+- ``torch.use_deterministic_algorithms(True, warn_only=True)`` — warn-only
+  because some Conv2d backwards on EfficientNet-B2 lack a deterministic
+  kernel; we accept the bit-noise floor in those layers (it is well
+  below the int8 quantization step).
+- Sorted batch indices, fixed batch size — no shuffling.
+- All random ops (warm-start jitter) seeded from the CLI ``--seed``.
+- The same (renderer, masks, poses, seed, GPU model, torch+CUDA versions)
+  → same delta.bin bytes. The provenance JSON records all five so a
+  future rebuild can detect drift.
+
+Cost estimate (Vast.ai 4090, end-to-end)
+----------------------------------------
+- Rendering 600 pairs: ~10 s
+- GT pose extraction (cached): ~30 s first run, 0 s thereafter
+- δ optimization @ 200 steps × 10 batches of 60 pairs: ~6 min
+- Pack + write: ~2 s
+- Wall clock: ~7 min total. At $0.25/hr → ~$0.03 per run.
+- Add ~3 min Vast bootstrap → ~$0.05 amortized per experiment.
+
+Usage
+-----
+    python experiments/optimize_uniward_delta.py \
+        --renderer submissions/baseline_dilated_h64_0_90/renderer.bin \
+        --masks    submissions/baseline_dilated_h64_0_90/masks.mkv \
+        --poses    submissions/baseline_dilated_h64_0_90/optimized_poses.pt \
+        --upstream upstream \
+        --output-dir experiments/results/uniward_delta_v1
+
+The default ``--target-bytes 5000`` gives the council's predicted Lane C
+operating point (Quantizr-killing zone when stacked with Lane A pose-TTO).
+"""
+from __future__ import annotations
+
+# Line-buffer stdout for live progress (matches optimize_poses.py pattern).
+import sys as _dx_sys
+try:
+    _dx_sys.stdout.reconfigure(line_buffering=True)  # type: ignore[attr-defined]
+    _dx_sys.stderr.reconfigure(line_buffering=True)  # type: ignore[attr-defined]
+except (AttributeError, OSError):
+    pass
+
+import argparse
+import json
+import math
+import os
+import random
+import sys
+import time
+from pathlib import Path
+
+import numpy as np
+import torch
+import torch.nn.functional as F
+
+
+# ---------------------------------------------------------------------------
+# Path setup (must run before tac imports — mirrors optimize_poses.py).
+# ---------------------------------------------------------------------------
+REPO = Path(__file__).resolve().parents[1]
+_CANDIDATE_UPSTREAM = [
+    Path(os.environ["TAC_UPSTREAM_DIR"]) if os.environ.get("TAC_UPSTREAM_DIR") else None,
+    Path(os.environ["UPSTREAM_ROOT"]) if os.environ.get("UPSTREAM_ROOT") else None,
+    REPO / "upstream",
+]
+UPSTREAM_ROOT: Path | None = None
+for _p in _CANDIDATE_UPSTREAM:
+    if _p is not None and (_p / "modules.py").exists():
+        UPSTREAM_ROOT = _p
+        break
+if UPSTREAM_ROOT is not None and str(UPSTREAM_ROOT) not in sys.path:
+    sys.path.insert(0, str(UPSTREAM_ROOT))
+sys.path.insert(0, str(REPO / "src"))
+
+
+SEGNET_INPUT_H, SEGNET_INPUT_W = 384, 512
+NUM_FRAMES = 1200
+NUM_PAIRS = NUM_FRAMES // 2
+
+
+def parse_args() -> argparse.Namespace:
+    p = argparse.ArgumentParser(
+        description="Lane C: UNIWARD δ-injection on rendered frames at compress-time.",
+        formatter_class=argparse.ArgumentDefaultsHelpFormatter,
+    )
+    p.add_argument("--renderer", type=Path, required=True,
+                   help="Path to renderer .bin (or .pt). Must match the renderer "
+                        "shipped in archive.zip — δ depends on its pixel-level output.")
+    p.add_argument("--masks", type=Path, required=True,
+                   help="Path to masks.mkv (or .amrc/.pt). Must match archive masks "
+                        "exactly — δ depends on the renderer's mask-driven output.")
+    p.add_argument("--poses", type=Path, required=True,
+                   help="Path to optimized_poses.pt (or .bin). Must match archive "
+                        "poses exactly — δ depends on FiLM conditioning.")
+    p.add_argument("--upstream", type=Path, default=None,
+                   help="Path to upstream repo (auto-detected if None).")
+    p.add_argument("--gt-video", type=Path, default=None,
+                   help="GT video for pose-target extraction. Defaults to "
+                        "upstream/videos/0.mkv.")
+    p.add_argument("--output-dir", type=Path, required=True,
+                   help="Output directory. delta.bin + provenance.json land here.")
+    # ── Optimization knobs ────────────────────────────────────────────
+    p.add_argument("--steps", type=int, default=200,
+                   help="Adam steps per pair-batch.")
+    p.add_argument("--lr", type=float, default=0.5,
+                   help="Adam LR for δ. Higher than pose-TTO LR because δ is "
+                        "bounded; the L∞ clip is the regulariser.")
+    p.add_argument("--batch-pairs", type=int, default=20,
+                   help="Pairs per optimization batch. 4090 24GB VRAM cap "
+                        "(EfficientNet-B2 backward grad-graph dominates).")
+    p.add_argument("--seg-weight", type=float, default=100.0,
+                   help="SegNet hinge loss weight (mirrors scoring formula).")
+    p.add_argument("--pose-weight", type=float, default=10.0,
+                   help="PoseNet MSE loss weight (mirrors scoring formula).")
+    p.add_argument("--hinge-margin", type=float, default=0.5,
+                   help="Margin for SegNet hinge loss.")
+    # ── δ knobs ──────────────────────────────────────────────────────
+    p.add_argument("--l-inf-budget", type=float, default=4.0,
+                   help="Per-pixel L∞ cap on |δ| in [0, 255] units. Council "
+                        "default 4 ≈ 4/255 = sub-(256,192) blind to SegNet's "
+                        "stride-2 stem (Fridrich principle 1).")
+    p.add_argument("--target-bytes", type=int, default=5000,
+                   help="Hard cap on the compressed delta.bin size. "
+                        "Council Lane-C target ≤5KB (~+0.003 rate cost).")
+    p.add_argument("--uniward-sigma", type=float, default=1e-4,
+                   help="UNIWARD wavelet stabilizer (matches fridrich default).")
+    # ── Determinism + provenance ─────────────────────────────────────
+    p.add_argument("--seed", type=int, default=1234,
+                   help="Master seed (matches upstream/evaluate.py default).")
+    p.add_argument("--device", type=str, default="cuda", choices=["cuda", "cpu"],
+                   help="cuda is the only contest-faithful target. cpu is for "
+                        "smoke tests only — δ bytes will NOT match a CUDA run.")
+    # ── Roundtrip (CLAUDE.md non-negotiable) ─────────────────────────
+    p.add_argument("--eval-roundtrip", action="store_true", default=True,
+                   help="Simulate contest eval resolution roundtrip in loss.")
+    p.add_argument("--no-eval-roundtrip", dest="eval_roundtrip",
+                   action="store_false",
+                   help="DISABLE eval-roundtrip — for diagnostic ablations only. "
+                        "WARNING: every TTO without this has 2-11x proxy-auth gap.")
+    p.add_argument("--posetto-noise-std", type=float, default=0.5,
+                   help="Hotz STE noise std applied DURING simulate_eval_roundtrip. "
+                        "0.5 closes the proxy-CUDA gap on PoseNet (CLAUDE.md).")
+    # ── Frame range (smoke testing) ──────────────────────────────────
+    p.add_argument("--n-frames", type=int, default=NUM_FRAMES,
+                   help="Number of frames to render and δ-optimize. Default "
+                        "is the full 1200 (600 pairs).")
+    return p.parse_args()
+
+
+def _set_determinism(seed: int) -> None:
+    """CLAUDE.md non-negotiable determinism setup. Must be called BEFORE any
+    cuBLAS / cuDNN call. Matches build_baseline_archive.py and
+    optimize_poses.py conventions.
+    """
+    os.environ.setdefault("CUBLAS_WORKSPACE_CONFIG", ":4096:8")
+    torch.manual_seed(seed)
+    np.random.seed(seed)
+    random.seed(seed)
+    if torch.cuda.is_available():
+        torch.cuda.manual_seed_all(seed)
+    # warn_only=True: EfficientNet-B2 has some Conv2d backward kernels that
+    # lack deterministic CUDA implementations (cudnn.deterministic = False).
+    # We accept this — the bit-noise floor in those backward passes is well
+    # below our int8 quantization step (1 / 127 of the L∞ budget).
+    torch.use_deterministic_algorithms(True, warn_only=True)
+
+
+def _load_masks(masks_path: Path) -> torch.Tensor:
+    """Load mask tensor from .pt OR .mkv (AV1 5-class). Mirrors the loader
+    in experiments/optimize_poses.py — keep them in sync if you change one.
+    Returns (N, H, W) long tensor. Upsamples to (384, 512) if smaller.
+    """
+    if masks_path.suffix == ".pt":
+        gt_masks = torch.load(str(masks_path), weights_only=True).long()
+    elif masks_path.suffix in (".mkv", ".mp4"):
+        import subprocess
+        cmd = ["ffmpeg", "-v", "quiet", "-i", str(masks_path),
+               "-f", "rawvideo", "-pix_fmt", "gray", "pipe:1"]
+        proc = subprocess.run(cmd, capture_output=True, check=True)
+        probe = subprocess.run(
+            ["ffprobe", "-v", "quiet", "-select_streams", "v:0",
+             "-show_entries", "stream=width,height", "-of", "csv=p=0", str(masks_path)],
+            capture_output=True, text=True, check=True,
+        )
+        w, h = map(int, probe.stdout.strip().split(","))
+        pixels = np.frombuffer(proc.stdout, dtype=np.uint8).reshape(-1, h, w)
+        scale = 255 // 4  # 5-class palette: 0, 64, 128, 191, 255 → /63 ≈ /63
+        masks_np = np.clip(np.round(pixels.astype(np.float32) / scale).astype(np.int64), 0, 4)
+        gt_masks = torch.from_numpy(masks_np)
+    else:
+        raise ValueError(f"Unknown mask format: {masks_path.suffix}")
+    if gt_masks.shape[1] < SEGNET_INPUT_H or gt_masks.shape[2] < SEGNET_INPUT_W:
+        gt_masks = F.interpolate(
+            gt_masks.float().unsqueeze(1),
+            size=(SEGNET_INPUT_H, SEGNET_INPUT_W), mode="nearest",
+        ).squeeze(1).long()
+    return gt_masks
+
+
+def _segnet_hinge_loss(
+    logits: torch.Tensor, gt_masks: torch.Tensor, *, margin: float = 0.5,
+) -> torch.Tensor:
+    """SegNet hinge loss — copy of optimize_poses.segnet_hinge_loss to keep
+    this script self-contained. Penalises pixels at risk of argmax flip.
+    """
+    correct = logits.gather(1, gt_masks.unsqueeze(1)).squeeze(1)
+    mask_inf = torch.zeros_like(logits)
+    mask_inf.scatter_(1, gt_masks.unsqueeze(1), float("-inf"))
+    runner_up = (logits + mask_inf).max(dim=1).values
+    return F.relu(margin - (correct - runner_up)).mean()
+
+
+def main() -> int:
+    args = parse_args()
+
+    # ─── Determinism FIRST (before any torch/cuBLAS call) ────────────
+    _set_determinism(args.seed)
+
+    # ─── Resolve paths ───────────────────────────────────────────────
+    upstream = args.upstream or UPSTREAM_ROOT
+    if upstream is None or not (upstream / "modules.py").exists():
+        raise SystemExit(
+            "FATAL: --upstream not set and auto-detection failed. Pass "
+            "--upstream <path-to-upstream-repo>."
+        )
+    upstream = Path(upstream)
+    if str(upstream) not in sys.path:
+        sys.path.insert(0, str(upstream))
+
+    gt_video = args.gt_video or (upstream / "videos" / "0.mkv")
+    for label, path in (("renderer", args.renderer), ("masks", args.masks),
+                        ("poses", args.poses), ("gt-video", gt_video)):
+        if not path.exists():
+            raise SystemExit(f"--{label} does not exist: {path}")
+
+    args.output_dir.mkdir(parents=True, exist_ok=True)
+
+    # ─── Device check (CUDA-required per CLAUDE.md) ──────────────────
+    if args.device == "cuda" and not torch.cuda.is_available():
+        raise SystemExit(
+            "FATAL: --device cuda but CUDA not available. Lane C MUST run on "
+            "CUDA — MPS produces 23x PoseNet drift (CLAUDE.md non-negotiable). "
+            "Pass --device cpu only for code-correctness smoke tests; the "
+            "resulting delta.bn bytes will NOT match a CUDA-built one."
+        )
+    device = torch.device(args.device)
+    print(f"[config] device={device}, seed={args.seed}", flush=True)
+    print(f"[config] renderer={args.renderer}", flush=True)
+    print(f"[config] masks={args.masks}, poses={args.poses}", flush=True)
+    print(f"[config] l_inf_budget={args.l_inf_budget}, target_bytes={args.target_bytes}", flush=True)
+    print(f"[config] steps={args.steps}, lr={args.lr}, batch_pairs={args.batch_pairs}", flush=True)
+    print(f"[config] eval_roundtrip={args.eval_roundtrip}, posetto_noise_std={args.posetto_noise_std}", flush=True)
+
+    t_total = time.monotonic()
+
+    # ─── Step 1: Load scorers (differentiable) ───────────────────────
+    print("\n[1/7] Loading differentiable scorers...", flush=True)
+    t0 = time.monotonic()
+    from tac.scorer import load_differentiable_scorers, extract_gt_pose_targets, extract_gt_masks
+    posenet, segnet = load_differentiable_scorers(upstream, device=str(device))
+    print(f"[1/7] Scorers loaded in {time.monotonic() - t0:.1f}s", flush=True)
+
+    # ─── Step 2: Load renderer ───────────────────────────────────────
+    print("\n[2/7] Loading renderer...", flush=True)
+    t0 = time.monotonic()
+    # Re-use the canonical renderer loader from optimize_poses (handles
+    # ASYM, FP4A, .pt with config). This keeps Lane C consistent with
+    # Lane A so we never have a second loader that diverges.
+    sys.path.insert(0, str(REPO / "experiments"))
+    from optimize_poses import load_renderer  # type: ignore[import-not-found]
+    renderer = load_renderer(str(args.renderer), device).eval()
+    for p_param in renderer.parameters():
+        p_param.requires_grad = False
+    renderer_pose_dim = getattr(renderer, "pose_dim", 0)
+    print(f"[2/7] Renderer loaded in {time.monotonic() - t0:.1f}s "
+          f"(pose_dim={renderer_pose_dim})", flush=True)
+
+    # ─── Step 3: Load masks + poses ──────────────────────────────────
+    print("\n[3/7] Loading archive masks + poses...", flush=True)
+    t0 = time.monotonic()
+    masks = _load_masks(args.masks)[: args.n_frames]
+    n_frames_actual = masks.shape[0]
+    n_pairs = n_frames_actual // 2
+    print(f"  masks: {tuple(masks.shape)}", flush=True)
+
+    from tac.submission_archive import load_optimized_poses
+    poses = load_optimized_poses(args.poses, pose_dim=max(renderer_pose_dim, 1))
+    poses = poses[:n_pairs]
+    print(f"  poses: {tuple(poses.shape)}", flush=True)
+    print(f"[3/7] Loaded archive inputs in {time.monotonic() - t0:.1f}s", flush=True)
+
+    # ─── Step 4: GT video → pose targets (cached) ────────────────────
+    print("\n[4/7] Decoding GT video + extracting pose targets...", flush=True)
+    t0 = time.monotonic()
+    from tac.data import load_gt_video
+    gt_frames = load_gt_video(str(gt_video), n_frames=n_frames_actual)
+    cache_path = args.output_dir / "gt_pose_targets.pt"
+    if cache_path.exists():
+        pose_targets = torch.load(cache_path, weights_only=True).float()
+        print(f"  Loaded cached pose targets: {tuple(pose_targets.shape)}", flush=True)
+    else:
+        pose_targets = extract_gt_pose_targets(gt_frames, posenet, device)[:n_pairs]
+        torch.save(pose_targets, cache_path)
+        print(f"  Computed + cached pose targets: {tuple(pose_targets.shape)}", flush=True)
+    gt_segnet_masks = extract_gt_masks(gt_frames, segnet, device)[:n_frames_actual]
+    print(f"  GT segnet masks: {tuple(gt_segnet_masks.shape)}", flush=True)
+    print(f"[4/7] Targets ready in {time.monotonic() - t0:.1f}s", flush=True)
+
+    # ─── Step 5: Allocate δ. Stored on CPU; per-batch slice → device. ─
+    # Shape (n_frames, 3, H, W) at the renderer's native resolution.
+    H, W = SEGNET_INPUT_H, SEGNET_INPUT_W
+    print(f"\n[5/7] Allocating δ ({n_frames_actual}, 3, {H}, {W}) on CPU...", flush=True)
+    delta_full = torch.zeros(n_frames_actual, 3, H, W, dtype=torch.float32)
+    cost_map_full = torch.zeros(n_frames_actual, H, W, dtype=torch.float32)
+    print(f"  δ allocated: {delta_full.numel() * 4 / 2**20:.1f} MB", flush=True)
+
+    # ─── Step 6: Optimize δ batch-by-batch ───────────────────────────
+    print(f"\n[6/7] Optimizing δ in {math.ceil(n_pairs / args.batch_pairs)} batches "
+          f"of {args.batch_pairs} pairs × {args.steps} steps...", flush=True)
+    from tac.renderer import simulate_eval_roundtrip
+    from tac.uniward_delta import compute_uniward_cost_map
+
+    n_batches = math.ceil(n_pairs / args.batch_pairs)
+    metrics = {"per_batch": []}
+    t_opt = time.monotonic()
+
+    for batch_idx in range(n_batches):
+        ps = batch_idx * args.batch_pairs
+        pe = min(ps + args.batch_pairs, n_pairs)
+        fs, fe = 2 * ps, 2 * pe
+        n_bp = pe - ps
+
+        masks_t = masks[fs:fe:2].to(device, dtype=torch.long)
+        masks_t1 = masks[fs + 1:fe + 1:2].to(device, dtype=torch.long)
+        gt_pair_masks = gt_segnet_masks[fs:fe].to(device, dtype=torch.long)
+        batch_pose_targets = pose_targets[ps:pe].to(device)
+        batch_film = poses[ps:pe].to(device) if renderer_pose_dim > 0 else None
+
+        # Render once; δ is added on top each step (renderer is FROZEN so
+        # the rendered base does not move).
+        fwd_kwargs: dict = {}
+        if batch_film is not None:
+            fwd_kwargs["pose"] = batch_film
+        with torch.inference_mode():
+            base_pairs = renderer(masks_t, masks_t1, **fwd_kwargs)  # (B, 2, H, W, 3)
+        # Flatten to per-frame (2*B, H, W, 3) and convert to CHW
+        base_hwc = torch.cat([base_pairs[:, 0], base_pairs[:, 1]], dim=0).contiguous()
+        base_chw = base_hwc.permute(0, 3, 1, 2).contiguous().float()  # (2*B, 3, H, W)
+        # We need .clone().requires_grad_(True) for δ; base is frozen.
+        base_chw = base_chw.detach()
+
+        # Compute UNIWARD cost on the rendered base (not GT) — this aligns
+        # the embedding capacity with the actual frames we are perturbing.
+        with torch.no_grad():
+            cost = compute_uniward_cost_map(base_chw, sigma=args.uniward_sigma)
+        # Stash for the pack step.
+        cost_map_full[fs:fe] = cost.cpu()
+
+        # ── Init δ for this batch (zeros) ────────────────────────────
+        delta = torch.zeros_like(base_chw, requires_grad=True)
+        optimizer = torch.optim.Adam([delta], lr=args.lr)
+
+        initial_loss = None
+        for step in range(args.steps):
+            optimizer.zero_grad(set_to_none=True)
+
+            # Apply δ + L∞ clip via a soft tanh (differentiable). The hard
+            # clip happens at pack time; here we use tanh to keep gradients
+            # flowing near the boundary.
+            perturbed = base_chw + args.l_inf_budget * torch.tanh(delta / args.l_inf_budget)
+
+            # Eval roundtrip (CLAUDE.md non-negotiable).
+            if args.eval_roundtrip:
+                perturbed_round = simulate_eval_roundtrip(
+                    perturbed, noise_std=args.posetto_noise_std,
+                )
+            else:
+                perturbed_round = perturbed
+
+            # SegNet path
+            seg_in = segnet.preprocess_input(perturbed_round.unsqueeze(1))
+            seg_logits = segnet(seg_in)
+            seg_loss = _segnet_hinge_loss(
+                seg_logits, gt_pair_masks, margin=args.hinge_margin,
+            )
+
+            # PoseNet path — needs (B, 2, 3, H, W) pair layout.
+            # Re-pair the perturbed frames; first half is t, second half is t+1
+            ft = perturbed[:n_bp]
+            ft1 = perturbed[n_bp:]
+            pairs_chw = torch.stack([ft, ft1], dim=1)  # (B, 2, 3, H, W)
+            if args.eval_roundtrip:
+                Bp, Tp, Cp, Hp, Wp = pairs_chw.shape
+                flat = pairs_chw.reshape(Bp * Tp, Cp, Hp, Wp)
+                flat = simulate_eval_roundtrip(flat, noise_std=args.posetto_noise_std)
+                pairs_chw = flat.reshape(Bp, Tp, Cp, Hp, Wp)
+            pose_in = posenet.preprocess_input(pairs_chw)
+            pose_out = posenet(pose_in)["pose"][..., :6]
+            pose_loss = F.mse_loss(pose_out, batch_pose_targets[:pose_out.shape[0]])
+
+            total = args.seg_weight * seg_loss + args.pose_weight * pose_loss
+            if initial_loss is None:
+                initial_loss = float(total.item())
+            total.backward()
+            optimizer.step()
+
+            if step == args.steps - 1 or (step + 1) % max(args.steps // 4, 1) == 0:
+                print(f"    [batch {batch_idx + 1}/{n_batches} step {step + 1}/{args.steps}] "
+                      f"total={total.item():.6f}, seg={seg_loss.item():.6f}, "
+                      f"pose={pose_loss.item():.6f}", flush=True)
+
+        # Materialize the final L∞-clipped δ.
+        with torch.no_grad():
+            delta_final = args.l_inf_budget * torch.tanh(delta / args.l_inf_budget)
+            delta_full[fs:fe] = delta_final.detach().cpu()
+
+        metrics["per_batch"].append({
+            "batch_idx": batch_idx,
+            "pair_range": [ps, pe],
+            "initial_loss": initial_loss,
+            "final_loss": float(total.item()),
+            "improvement_pct": (
+                100.0 * (initial_loss - float(total.item())) / max(initial_loss, 1e-12)
+                if initial_loss is not None else 0.0
+            ),
+            "delta_l_inf_max": float(delta_final.detach().abs().max().item()),
+            "delta_nonzero_frac": float(
+                (delta_final.detach().abs() > 1e-6).float().mean().item()
+            ),
+        })
+
+        del base_pairs, base_hwc, base_chw, perturbed, perturbed_round
+        del seg_in, seg_logits, pairs_chw, pose_in, pose_out, delta_final
+        if device.type == "cuda":
+            torch.cuda.empty_cache()
+
+    print(f"\n[6/7] δ optimization done in {time.monotonic() - t_opt:.1f}s "
+          f"({(time.monotonic() - t_opt) / max(n_batches, 1):.1f}s per batch)",
+          flush=True)
+
+    # ─── Step 7: Pack + write δ ──────────────────────────────────────
+    print(f"\n[7/7] Packing δ to UWD1 wire format (target ≤ {args.target_bytes} B)...",
+          flush=True)
+    t0 = time.monotonic()
+    from tac.uniward_delta import (
+        pack_sparse_delta, unpack_sparse_delta, fingerprint_inputs,
+    )
+    provenance_inputs = {
+        "renderer_sha256": fingerprint_inputs(args.renderer),
+        "masks_sha256": fingerprint_inputs(args.masks),
+        "poses_sha256": fingerprint_inputs(args.poses),
+        "n_pairs": int(n_pairs),
+        "n_frames": int(n_frames_actual),
+        "tool": "experiments/optimize_uniward_delta.py",
+        "torch_version": torch.__version__,
+        "cuda_version": getattr(torch.version, "cuda", None),
+        "gpu_model": (
+            torch.cuda.get_device_name(0) if torch.cuda.is_available() else None
+        ),
+    }
+    blob = pack_sparse_delta(
+        delta_full, cost_map_full,
+        l_inf_budget=args.l_inf_budget,
+        target_bytes=args.target_bytes,
+        seed=args.seed,
+        extra_provenance=provenance_inputs,
+    )
+    delta_path = args.output_dir / "delta.bin"
+    delta_path.write_bytes(blob)
+    print(f"  Wrote {delta_path}: {len(blob):,} bytes", flush=True)
+
+    # Verify round-trip (sanity check before shipping).
+    spec = unpack_sparse_delta(blob)
+    print(f"  Round-trip OK: n_kept={spec.n_kept}, "
+          f"any_delta={spec.any_delta}, scale={spec.scale:.4f}", flush=True)
+
+    # Provenance JSON (separate from the wire-format header so external
+    # tools can `jq` it without zlib-decompressing).
+    prov = {
+        "schema_version": 1,
+        "tool": "experiments/optimize_uniward_delta.py",
+        "built_at_utc": time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime()),
+        "device": str(device),
+        "seed": args.seed,
+        "torch_version": torch.__version__,
+        "cuda_version": getattr(torch.version, "cuda", None),
+        "gpu_model": (
+            torch.cuda.get_device_name(0) if torch.cuda.is_available() else None
+        ),
+        "inputs": {
+            "renderer": str(args.renderer),
+            "masks": str(args.masks),
+            "poses": str(args.poses),
+            "gt_video": str(gt_video),
+        },
+        "input_sha256": provenance_inputs,
+        "delta_bytes": len(blob),
+        "delta_sha256": __import__("hashlib").sha256(blob).hexdigest(),
+        "n_kept": spec.n_kept,
+        "n_total_pixel_channels": int(n_frames_actual * H * W * 3),
+        "sparsity_pct": (
+            100.0 * spec.n_kept / max(n_frames_actual * H * W * 3, 1)
+        ),
+        "l_inf_budget": args.l_inf_budget,
+        "target_bytes": args.target_bytes,
+        "args": {
+            "steps": args.steps,
+            "lr": args.lr,
+            "batch_pairs": args.batch_pairs,
+            "seg_weight": args.seg_weight,
+            "pose_weight": args.pose_weight,
+            "hinge_margin": args.hinge_margin,
+            "uniward_sigma": args.uniward_sigma,
+            "eval_roundtrip": args.eval_roundtrip,
+            "posetto_noise_std": args.posetto_noise_std,
+            "n_frames": args.n_frames,
+        },
+        "metrics": metrics,
+    }
+    prov_path = args.output_dir / "delta.provenance.json"
+    with open(prov_path, "w") as f:
+        json.dump(prov, f, indent=2)
+    print(f"  Wrote {prov_path}", flush=True)
+    print(f"[7/7] Pack done in {time.monotonic() - t0:.1f}s", flush=True)
+
+    print(f"\n=== Lane C complete: {time.monotonic() - t_total:.1f}s wall ===", flush=True)
+    print(f"  delta.bin: {len(blob):,} bytes "
+          f"(target ≤ {args.target_bytes:,})", flush=True)
+    print(f"  sparsity:  {prov['sparsity_pct']:.4f}% "
+          f"({spec.n_kept:,} / {prov['n_total_pixel_channels']:,} pixel-channels)", flush=True)
+    return 0
+
+
+if __name__ == "__main__":
+    raise SystemExit(main())
