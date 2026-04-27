@@ -2042,6 +2042,74 @@ def train(args: argparse.Namespace):
                 f"To skip the eval entirely, pass --no-auth-eval-on-best."
             )
 
+        # Codex R-Lane-D-followup 2026-04-27: best_fp4 (.pt) is a torch.save
+        # dict of FP4-packed scales/indices, NOT the FP4A magic-byte .bin
+        # format that auth_eval_renderer.py and build_submission_archive
+        # require. Without this conversion the entire --auth-eval-on-best
+        # block was a silent no-op (or hard-failed at archive validation).
+        # Mirror the bootstrap pattern: load the FP32 .pt sibling + arch_meta,
+        # build a fresh model, export real FP4A .bin via the canonical path.
+        fp32_path = out_dir / f"renderer_{args.tag}_best_fp32.pt"
+        if not fp32_path.exists():
+            raise RuntimeError(
+                f"[auth-eval] FP32 sidecar missing at {fp32_path}; cannot "
+                f"export FP4A .bin (the .pt at {best_fp4} is FP4-packed but "
+                f"lacks magic bytes). The save site at line ~1877 should "
+                f"have written this file alongside the .pt — investigate."
+            )
+        fp32_payload = torch.load(str(fp32_path), map_location="cpu", weights_only=False)
+        if not isinstance(fp32_payload, dict) or "model_state_dict" not in fp32_payload \
+                or "__meta__" not in fp32_payload:
+            raise RuntimeError(
+                f"[auth-eval] FP32 sidecar at {fp32_path} is malformed "
+                f"(expected dict with 'model_state_dict' and '__meta__' keys; "
+                f"got keys={list(fp32_payload.keys()) if isinstance(fp32_payload, dict) else type(fp32_payload).__name__})"
+            )
+        arch = fp32_payload["__meta__"]
+        state = fp32_payload["model_state_dict"]
+        if arch.get("variant", "default") not in ("default", None):
+            raise RuntimeError(
+                f"[auth-eval] FP4A export only supports variant='default' "
+                f"(AsymmetricPairGenerator). Got variant={arch.get('variant')!r}. "
+                f"Pass --no-auth-eval-on-best for non-default variants and run "
+                f"a separate eval suited to the variant."
+            )
+        from tac.renderer import build_renderer
+        from tac.renderer_export import export_asymmetric_checkpoint_fp4
+        bin_model = build_renderer(
+            num_classes=5,
+            embed_dim=arch["embed_dim"],
+            base_ch=arch["base_ch"],
+            mid_ch=arch["mid_ch"],
+            motion_hidden=arch["motion_hidden"],
+            depth=arch["depth"],
+            blend_mode=arch.get("blend_mode", "scalar"),
+            noise_mode=arch.get("noise_mode", "deterministic"),
+            motion_type=arch.get("motion_type", "learned_cnn"),
+            use_zoom_flow=arch["use_zoom_flow"],
+            use_dsconv=arch["use_dsconv"],
+            padding_mode=arch["padding_mode"],
+            use_dilation=arch["use_dilation"],
+            pose_dim=arch.get("pose_dim", 0) or 0,
+        )
+        missing, unexpected = bin_model.load_state_dict(state, strict=False)
+        if missing or unexpected:
+            raise RuntimeError(
+                f"[auth-eval] state_dict shape mismatch loading {fp32_path}: "
+                f"missing={list(missing)[:5]} unexpected={list(unexpected)[:5]}. "
+                f"This is the SHIRAZ-class arch-drift bug — the saved arch_meta "
+                f"does not match the model the .pt was trained with."
+            )
+        bin_path = out_dir / f"renderer_{args.tag}_best.bin"
+        nbytes = export_asymmetric_checkpoint_fp4(
+            bin_model, bin_path,
+            codebook_name=arch.get("fp4_codebook", "default"),
+            robust_scale=arch.get("fp4_robust_scale", False),
+        )
+        print(f"[auth-eval] Exported FP4A: {bin_path} ({nbytes:,} bytes; "
+              f"codebook={arch.get('fp4_codebook')}, robust={arch.get('fp4_robust_scale')})")
+        best_fp4 = bin_path  # downstream archive + auth eval consume the .bin
+
         # Build a real archive (mirrors experiments/pipeline.py:step_eval).
         from tac.submission_archive import build_submission_archive
         archive_path = out_dir / "auth_eval_on_best_archive.zip"

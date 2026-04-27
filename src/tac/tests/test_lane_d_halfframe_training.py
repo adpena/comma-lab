@@ -883,3 +883,73 @@ def test_bootstrap_script_has_dead_flag_preflight() -> None:
         "bootstrap missing inline dead-flag preflight — Codex R-Lane-D-Issue3 "
         "defensive measure. Add a python -c block that introspects argparse."
     )
+
+
+# ── 11. Codex follow-up: --auth-eval-on-best converts .pt → .bin ──────────
+
+
+def test_auth_eval_on_best_converts_pt_to_fp4a_bin() -> None:
+    """Codex R-Lane-D-followup: train_renderer's --auth-eval-on-best block
+    USED to pass best_fp4 (a torch.save .pt of FP4-packed scales/indices)
+    directly to build_submission_archive and auth_eval_renderer, both of
+    which require FP4A magic-byte .bin format. The fix: load the FP32 .pt
+    sidecar, rebuild the model from arch_meta, and call
+    export_asymmetric_checkpoint_fp4 to produce a real .bin BEFORE the
+    archive build."""
+    src = (REPO / "src" / "tac" / "experiments" / "train_renderer.py").read_text()
+    # The fix must call the canonical FP4A export inside the auth-eval block.
+    assert "from tac.renderer_export import export_asymmetric_checkpoint_fp4" in src, (
+        "auth-eval-on-best must call export_asymmetric_checkpoint_fp4 to "
+        "produce a real FP4A .bin — Codex R-Lane-D-followup."
+    )
+    assert "best_fp4 = bin_path" in src, (
+        "auth-eval-on-best must reassign best_fp4 to the .bin output path "
+        "before the build_submission_archive call — Codex R-Lane-D-followup."
+    )
+
+
+def test_auth_eval_on_best_loads_fp32_sidecar_for_arch_meta() -> None:
+    """Codex R-Lane-D-followup: the export needs the model's arch_meta
+    (which lives in the FP32 sidecar's __meta__ key, not the FP4-packed .pt
+    that lacks structure beyond opaque tensors). The auth-eval block must
+    read the FP32 sidecar and use its __meta__ to rebuild the model."""
+    src = (REPO / "src" / "tac" / "experiments" / "train_renderer.py").read_text()
+    assert 'best_fp32.pt' in src and 'fp32_payload["__meta__"]' in src, (
+        "auth-eval-on-best must load the FP32 sidecar and use __meta__ to "
+        "rebuild the model — Codex R-Lane-D-followup."
+    )
+    # And the rebuild must use build_renderer with all arch fields the meta
+    # carries, not just a subset.
+    for field in (
+        "arch[\"embed_dim\"]", "arch[\"base_ch\"]", "arch[\"motion_hidden\"]",
+        "arch[\"use_zoom_flow\"]", "arch[\"padding_mode\"]",
+    ):
+        assert field in src, (
+            f"auth-eval-on-best rebuild must thread {field} from arch_meta "
+            f"(SHIRAZ-class drift risk if any field is dropped)."
+        )
+
+
+def test_auth_eval_on_best_fails_loud_on_non_default_variant() -> None:
+    """Codex R-Lane-D-followup defensive: only variant='default'
+    (AsymmetricPairGenerator) has a working FP4A export path. For other
+    variants (c3_residual_renderer, vqvae, diffusion_teacher) the auth
+    eval block must raise rather than silently produce a bogus .bin."""
+    src = (REPO / "src" / "tac" / "experiments" / "train_renderer.py").read_text()
+    assert "FP4A export only supports variant='default'" in src, (
+        "auth-eval-on-best must fail loudly for non-default variants — "
+        "silently exporting an invalid .bin would corrupt the rate calc."
+    )
+
+
+def test_auth_eval_on_best_fails_loud_on_arch_drift_mismatch() -> None:
+    """Codex R-Lane-D-followup defensive: if the loaded state_dict has
+    missing or unexpected keys vs the rebuilt model, the auth-eval block
+    must raise — that's the SHIRAZ arch-drift signal. Silent strict=False
+    loading would ship a partially-initialized model and produce wrong
+    scores."""
+    src = (REPO / "src" / "tac" / "experiments" / "train_renderer.py").read_text()
+    assert "SHIRAZ-class arch-drift bug" in src, (
+        "auth-eval-on-best must raise on missing/unexpected keys with a "
+        "SHIRAZ-class diagnostic — silent strict=False would corrupt scores."
+    )
