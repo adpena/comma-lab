@@ -2171,11 +2171,16 @@ WILDE = {
     # to texture_loss — that down-weights L1 in textured regions, this
     # actively trains for noise robustness in the same regions where the
     # FP4/mask codecs will inject quantization error at inflate time.
+    # 2026-04-26 (PM): Fridrich R2 C2 fix landed — `variance_noise_mode`
+    # now defaults to 'wavelet_db4' (un-decimated Daubechies-8 sub-band
+    # energy per Holub & Fridrich 2014 §III.B), and the train_renderer
+    # resolver re-wires the keys end-to-end. The legacy 'box' / 'variance'
+    # mode remains accepted for A/B comparison only.
     "use_variance_noise": True,
     "variance_noise_weight": 0.1,
     "variance_noise_base_std": 2.0,
     "variance_noise_kernel": 8,
-    "variance_noise_mode": "variance",
+    "variance_noise_mode": "wavelet_db4",
     # Yousfi #5: ScanNet-style spatial uncertainty maps. Up-weights pixel
     # loss in regions SegNet is most confident about (low GT entropy).
     # Kept light (weight 0.05) to avoid amplifying the same signal as
@@ -2211,15 +2216,26 @@ WILDE = {
     "ema_decay": 0.997,
     "use_per_class_weights": True,  # Lane markings 15x (Yousfi: 1.2% but critical)
     "use_swa": True,               # Wider minima, better FP4 survival (Polyak 1992)
+    # 5-phase Quantizr-adapted QAT schedule (Quantizr R2 C3 architectural
+    # fix 2026-04-26). Phases 1-3 retain WILDE's tuned epoch budgets;
+    # Phase 4 (QAT) and Phase 5 (final hard-pair polish) added per
+    # Quantizr's published recipe so the schedule is no longer fictional.
+    # train_renderer.has_5phase_schedule() activates when ANY phaseN > 0.
     "phase1_epochs": 600,  # Pixel warmup (200) + anchor (400)
     "phase2_epochs": 880,  # Anchor boost (80) + joint (800)
-    "phase3_epochs": 200,  # Hard-pair fine-tune
+    "phase3_epochs": 200,  # Hard-pair fine-tune (legacy "Phase 3")
+    "phase4_epochs": 200,  # QAT fine-tune (FakeQuantFP4 enabled)
+    "phase5_epochs": 100,  # Final consolidation, hard-pair sampling
     "phase1_lr": 1e-3,
     "phase2_lr": 3e-4,
     "phase3_lr": 1e-4,
+    "phase4_lr": 5e-5,    # 0.1× base for QAT (Lin et al. 2017)
+    "phase5_lr": 1e-5,
     "phase1_batch_size": 16,
     "phase2_batch_size": 8,
     "phase3_batch_size": 8,
+    "phase4_batch_size": 8,
+    "phase5_batch_size": 8,
     "checkpoint_every": 100,
     "eval_every": 50,
     "log_every": 25,
@@ -2308,11 +2324,16 @@ SHIRAZ = {
     "use_markov_loss": True,       # HUGO: preserve local gradient statistics
     "markov_weight": 0.1,
     # Yousfi #3: UNIWARD-aligned spatially-adaptive quant noise.
+    # 2026-04-26 (PM): Fridrich R2 C2 fix landed — `variance_noise_mode`
+    # now defaults to 'wavelet_db4' (un-decimated Daubechies-8 sub-band
+    # energy per Holub & Fridrich 2014 §III.B), and the train_renderer
+    # resolver re-wires the keys end-to-end. The legacy 'box' / 'variance'
+    # mode remains accepted for A/B comparison only.
     "use_variance_noise": True,
     "variance_noise_weight": 0.1,
     "variance_noise_base_std": 2.0,
     "variance_noise_kernel": 8,
-    "variance_noise_mode": "variance",
+    "variance_noise_mode": "wavelet_db4",
     # Yousfi #5: ScanNet-style spatial uncertainty maps (light weight,
     # see WILDE / DEN comments for full provenance and council notes).
     "use_uncertainty_loss": True,
@@ -2335,16 +2356,25 @@ SHIRAZ = {
     # NO freeze/unfreeze — continuous adaptive training
     "freeze_motion_phase2": False,
     "freeze_renderer_phase3": False,
-    # Training schedule (same total epochs as WILDE for fair comparison)
+    # 5-phase Quantizr-adapted QAT schedule (Quantizr R2 C3 architectural
+    # fix 2026-04-26). Same total budget arms as WILDE for fair A/B; adds
+    # Phase 4 (QAT) and Phase 5 (final polish) so the train_renderer
+    # 5-phase loop has all five phases declared explicitly.
     "phase1_epochs": 400,           # pixel warmup
     "phase2_epochs": 1080,          # scorer-guided (continuous, no anchor/boost split)
-    "phase3_epochs": 200,           # hard-pair fine-tune
+    "phase3_epochs": 200,           # hard-pair fine-tune (legacy "Phase 3")
+    "phase4_epochs": 200,           # QAT fine-tune (FakeQuantFP4 enabled)
+    "phase5_epochs": 100,           # Final consolidation, hard-pair sampling
     "phase1_lr": 1e-3,
     "phase2_lr": 3e-4,
     "phase3_lr": 1e-4,
+    "phase4_lr": 5e-5,              # 0.1× base for QAT (Lin et al. 2017)
+    "phase5_lr": 1e-5,
     "phase1_batch_size": 16,
     "phase2_batch_size": 8,
     "phase3_batch_size": 8,
+    "phase4_batch_size": 8,
+    "phase5_batch_size": 8,
     # Hard-frame curriculum
     "hard_frame_ratio": 0.3,
     "error_replay_every": 100,
@@ -2518,11 +2548,16 @@ DEN = {
     "use_markov_loss": True,
     "markov_weight": 0.1,
     # Yousfi #3: UNIWARD-aligned spatially-adaptive quant noise.
+    # 2026-04-26 (PM): Fridrich R2 C2 fix landed — `variance_noise_mode`
+    # now defaults to 'wavelet_db4' (un-decimated Daubechies-8 sub-band
+    # energy per Holub & Fridrich 2014 §III.B), and the train_renderer
+    # resolver re-wires the keys end-to-end. The legacy 'box' / 'variance'
+    # mode remains accepted for A/B comparison only.
     "use_variance_noise": True,
     "variance_noise_weight": 0.1,
     "variance_noise_base_std": 2.0,
     "variance_noise_kernel": 8,
-    "variance_noise_mode": "variance",
+    "variance_noise_mode": "wavelet_db4",
     # Yousfi #5: ScanNet-style spatial uncertainty maps. DEN runs KL distill
     # on SegNet (kl_distill_weight=1.0 below) which directly targets the
     # softmax distribution and largely subsumes the uncertainty signal —
@@ -2598,6 +2633,144 @@ DEN = {
 }
 
 
+# ── LANE D: dilated-h64 retrain for half-frame masks ───────────────────
+# Council 2026-04-27 (5/0). The verified 0.9001 baseline renderer ships in
+# ASYM format with arch (base_ch=36, mid_ch=60, motion_hidden=32, depth=1,
+# embed_dim=6, pose_dim=6, use_dsconv=False, use_zoom_flow=False). When fed
+# half-frame masks at inflate (warp-expansion via RadialZoomWarp.warp_inverse_masks)
+# it produces PoseNet=28.7 vs baseline 0.011 — a 2,600x explosion. Diagnosis
+# (memory feedback_half_frame_breaks_posenet, 2026-04-27): the MotionPredictor
+# uses (e_t1 - e_t).abs() as a diff feature; when mask_t is reconstructed via
+# warp instead of independently SegNet-extracted, the diff feature becomes
+# near-zero and motion prediction collapses.
+#
+# This profile retrains the same arch family with the warp-expansion injected
+# into the training data path (mask_half_sim_prob=0.5, use_zoom_flow=True).
+# Half the batches see (mask_t = warp(mask_t1)), half see (mask_t, mask_t1)
+# from independent SegNet extraction. The motion module learns BOTH
+# distributions, robust to whichever wins at inflate.
+#
+# Architecture parity with baseline 0.9001:
+#   * base_ch=36, mid_ch=60, motion_hidden=32, depth=1
+#   * embed_dim=6, pose_dim=6 (FiLM modulation, retained)
+#   * use_dsconv=False, use_dilation=False (matches baseline exactly)
+# Architecture DELTA from baseline (the only change needed for half-frame):
+#   * use_zoom_flow=True (motion outputs gate+residual=4ch instead of flow+gate+residual=6ch)
+#   * mask_half_sim_prob=0.5 (training-time half-frame simulation, 50% of batches)
+# Net param delta: ~-14K (motion drops 2 channels of conv output).
+#
+# 5-phase Quantizr-style schedule (matches SHIRAZ budget for fair A/B):
+#   Phase 1 (400ep): pixel L1+edge warmup
+#   Phase 2 (1080ep): scorer-guided + Fridrich aux losses
+#   Phase 3 (200ep): hard-pair fine-tune
+#   Phase 4 (200ep): QAT (FakeQuantFP4)
+#   Phase 5 (100ep): final consolidation
+# Total ~1980 epochs ≈ 5h on RTX 4090 ($1.25 @ $0.25/hr).
+#
+# Smoke kill protocol (see scripts/remote_lane_d_halfframe_retrain.sh):
+#   * Phase 1 end (~1h): pixel L1 < 12 (baseline plateaus 5-7)
+#   * Phase 2 ep200 (~2h): scorer < 8.0 (kill if higher)
+#   * Phase 2 ep800 (~3.5h): scorer < 3.0 (must beat the broken 17.55 baseline)
+#   * Phase 4 end (~5h): scorer < 1.5 (target 0.55-0.75)
+#
+# Predicted score landing zone:
+#   - Half-frame archive saves ~0.20-0.32 in rate vs full-frame baseline (0.46 → 0.14-0.26)
+#   - PoseNet should recover from 28.7 → 0.05-0.10 (10x worse than baseline 0.011 is
+#     acceptable — warp introduces motion noise that pure-SegNet extraction doesn't)
+#   - SegNet stays at ~0.003 (already excellent at half-frame)
+#   - Standalone score: 0.55-0.75. Stacked with Lane A pose TTO + Lane C δ: 0.40-0.55.
+DILATED_H64_HALF_FRAME = {
+    "experiment_type": "renderer_training",
+    # Architecture: matches the verified 0.9001 baseline ASYM arch byte-for-byte
+    # (header inspected from submissions/baseline_dilated_h64_0_90/renderer.bin).
+    # variant="dilated" keeps lineage with PROVEN_BASELINE / SHIRAZ / DEN naming
+    # (all use the same build_renderer() path; "dilated" is a label, not a kernel
+    # property — actual dilation is controlled by use_dilation below).
+    "variant": "dilated",
+    "base_ch": 36,
+    "mid_ch": 60,
+    "motion_hidden": 32,
+    "embed_dim": 6,
+    "depth": 1,
+    "pose_dim": 6,                 # FiLM modulation retained (baseline parity)
+    "use_dsconv": False,
+    "padding_mode": "zeros",       # baseline arch — no replicate padding
+    "use_dilation": False,         # baseline ASYM has no dilation flag
+    # Lane D mandate: this is the WHOLE POINT — joint-train motion module on
+    # warp-expanded even-frame masks so it doesn't collapse at inflate.
+    "use_zoom_flow": True,         # motion: 4ch (gate+residual), flow comes from RadialZoomWarp
+    "mask_half_sim_prob": 0.5,     # 50% of batches: mask_t = inverse_warp(mask_t1)
+    "eval_roundtrip": True,        # NON-NEGOTIABLE per CLAUDE.md
+    # Loss configuration — same as SHIRAZ for direct A/B comparability
+    "loss_mode": "focal_ste",
+    "segnet_loss_mode": "hinge",
+    "hinge_margin": 1.0,
+    "focal_gamma": 2.0,
+    "error_boost": 1.0,
+    # Fridrich inverse steganalysis (matches WILDE/SHIRAZ recipe)
+    "use_texture_loss": True,
+    "texture_loss_weight": 0.5,
+    "use_linf_penalty": True,
+    "linf_weight": 0.01,
+    "use_markov_loss": True,
+    "markov_weight": 0.1,
+    "use_variance_noise": True,
+    "variance_noise_weight": 0.1,
+    "variance_noise_base_std": 2.0,
+    "variance_noise_kernel": 8,
+    "variance_noise_mode": "wavelet_db4",
+    "use_uncertainty_loss": True,
+    "uncertainty_loss_weight": 0.05,
+    "uncertainty_loss_floor": 0.1,
+    # Quantizr KL distillation on SegNet (T=2.0, weight=1.0)
+    "kl_distill_weight": 1.0,
+    "kl_distill_temperature": 2.0,
+    # Score weights — SegNet dominates per scoring math (77x more important)
+    "pose_weight": 10.0,
+    "seg_weight": 100.0,
+    "pixel_weight": 0.1,
+    "ema_decay": 0.997,
+    "use_per_class_weights": True,  # lane markings 15x (Yousfi)
+    "use_swa": True,                # SWA for wider minima → FP4 survival
+    # No freeze/unfreeze — continuous adaptive training
+    "freeze_motion_phase2": False,
+    "freeze_renderer_phase3": False,
+    # 5-phase QAT schedule — same shape and budget as SHIRAZ for fair comparison
+    "phase1_epochs": 400,
+    "phase2_epochs": 1080,
+    "phase3_epochs": 200,
+    "phase4_epochs": 200,
+    "phase5_epochs": 100,
+    "phase1_lr": 1e-3,
+    "phase2_lr": 3e-4,
+    "phase3_lr": 1e-4,
+    "phase4_lr": 5e-5,
+    "phase5_lr": 1e-5,
+    "phase1_batch_size": 16,
+    "phase2_batch_size": 8,
+    "phase3_batch_size": 8,
+    "phase4_batch_size": 8,
+    "phase5_batch_size": 8,
+    # Hard-frame curriculum
+    "hard_frame_ratio": 0.3,
+    "error_replay_every": 100,
+    "checkpoint_every": 100,
+    "eval_every": 50,
+    "log_every": 25,
+    # 5-stage quantization config (our advantage over Quantizr's vanilla)
+    "fp4_codebook": "residual",
+    "fp4_robust_scale": True,
+    "fp4_stochastic": True,
+    # Mask augmentation: train on mixed CRF so we don't overfit one mask encoding
+    "mask_noise_prob": 0.5,
+    # Deterministic reproducibility — pinned via configure_reproducibility().
+    # Same-seed re-runs on the same GPU SKU + PyTorch version produce
+    # bit-exact checkpoints (see CLAUDE.md canonical pipeline standard).
+    "seed": 42,
+    "deterministic": True,
+}
+
+
 PROFILES = {
     "council_v1": COUNCIL_V1,
     "council_v2_adaptive": COUNCIL_V2_ADAPTIVE,
@@ -2620,6 +2793,10 @@ PROFILES = {
     "green": GREEN,
     "shiraz": SHIRAZ,
     "den": DEN,
+    # Lane D: dilated-h64 baseline arch retrained for half-frame masks
+    # (warp-expansion injected into training data path so motion module
+    # learns the inflate-time mask distribution).
+    "dilated_h64_half_frame": DILATED_H64_HALF_FRAME,
     "wilde_v2": WILDE_V2,
     "green_v2": GREEN_V2,
     "shiraz_v2": SHIRAZ_V2,

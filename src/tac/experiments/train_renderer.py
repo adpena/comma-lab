@@ -181,7 +181,11 @@ def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
     # Zoom scalars come from analytical lane-mark-speed estimation (no GT
     # poses needed — the masks themselves are sufficient per Hotz). The
     # warp uses tac.radial_zoom.RadialZoomWarp.warp_inverse_masks.
-    p.add_argument("--mask-half-sim-prob", type=float, default=0.0,
+    # default=None so the profile resolver can override (Lane D 2026-04-27 fix).
+    # With default=0.0 the profile value was DEAD CODE: _resolve() only falls
+    # through to the profile when cli_val is None. Same class of bug as KL
+    # distill (commit 38a250b8) and Yousfi #5 uncertainty loss (R2 C1 audit).
+    p.add_argument("--mask-half-sim-prob", type=float, default=None,
                    help="Probability of replacing mask_t with inverse-warp("
                         "mask_t1) during training (default 0.0 = off). Set to "
                         "0.5 when shipping a half-frame archive (Quantizr "
@@ -367,6 +371,14 @@ def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
                                 "use_dsconv", False)
     args.use_zoom_flow = _resolve(getattr(args, "use_zoom_flow", None),
                                    "use_zoom_flow", False)
+    # Lane D council 2026-04-27: pose_dim was being read from profile via
+    # getattr() at the build site (line ~928) but never resolved on args,
+    # making it silently invisible to anything inspecting the parsed
+    # Namespace (tests, logs, snapshots). Same dead-resolver pattern that
+    # killed Yousfi #5 uncertainty loss — fix it here so Lane D's required
+    # pose_dim=6 (FiLM modulation, baseline arch parity) is observable.
+    args.pose_dim = _resolve(getattr(args, "pose_dim", None),
+                              "pose_dim", 0)
     # Fridrich inverse-steganalysis losses (WILDE / SHIRAZ "competitive
     # advantage" — were silently disabled by missing resolver):
     args.use_texture_loss = _resolve(getattr(args, "use_texture_loss", None),
@@ -526,12 +538,19 @@ def evaluate_fp4(
     *,
     fp4_codebook: str = "default",
     fp4_robust_scale: bool = False,
+    sim_zoom_warp=None,
+    use_zoom_flow: bool = False,
 ) -> tuple[float, float, float]:
     """Evaluate the EMA model after FP4 round-trip quantization.
 
     R-FP4-fix: codebook + robust_scale must match the QAT wrapper used during
     training. Mismatched eval-time quantization gives a misleading FP4 scorer
     (that's how the trend report's 93.44 plateau hid the real float→FP4 gap).
+
+    Lane D (2026-04-27): when the model was built with use_zoom_flow=True
+    (AsymmetricPairGenerator with 4-channel motion output), forward() requires
+    an ego_flow tensor. Pass the same RadialZoomWarp used during training so
+    the FP4 evaluation reflects the inflate-time motion structure.
 
     Returns: (scorer, avg_pose, avg_seg)
     """
@@ -566,7 +585,19 @@ def evaluate_fp4(
 
             gt_pair = pair_from_frames(gt_frames, start).to(device)
 
-            rendered_pair = model(mask_t, mask_t1)  # (1, 2, H, W, 3)
+            # Lane D: ego_flow plumbing for use_zoom_flow=True models. Eval
+            # path mirrors training path — same RadialZoomWarp, same per-pair
+            # scalar lookup. No flip aug at eval time so no flow mirroring.
+            ego_flow = None
+            if use_zoom_flow and sim_zoom_warp is not None:
+                pair_idx_t = torch.tensor([start // 2], device=device, dtype=torch.long)
+                H_m, W_m = mask_t1.shape[-2], mask_t1.shape[-1]
+                ego_flow = sim_zoom_warp(pair_idx_t, H_m, W_m)
+
+            if ego_flow is not None:
+                rendered_pair = model(mask_t, mask_t1, ego_flow=ego_flow)
+            else:
+                rendered_pair = model(mask_t, mask_t1)  # (1, 2, H, W, 3)
             # uint8 round-trip to match official scorer pipeline
             rendered_pair = rendered_pair.round().clamp(0, 255).to(torch.uint8).float()
 
@@ -777,15 +808,29 @@ def train(args: argparse.Namespace):
         print(f"[masks] Noisy-mask augmentation enabled "
               f"(prob={args.mask_noise_prob}, disagreement vs GT={disagree:.4f})")
 
-    # Half-frame mask simulation precompute. When --mask-half-sim-prob > 0,
-    # we periodically replace mask_t with inverse_warp(mask_t1, zoom[k]) so
-    # the renderer learns the same distribution it sees at inflate. Compute
-    # the analytical zoom scalars once from the masks themselves (Hotz: lane
-    # markings encode forward speed → radial zoom from FoE), no GT poses
-    # needed. RadialZoomWarp + warp_inverse_masks come from tac.radial_zoom.
+    # Zoom warp precompute. The same RadialZoomWarp object serves TWO purposes:
+    #
+    #   (1) Training-time half-frame mask simulation (Lane D2) — when
+    #       --mask-half-sim-prob > 0, periodically replace mask_t with
+    #       inverse_warp(mask_t1, zoom[k]) so the renderer learns the same
+    #       mask distribution it sees at inflate.
+    #
+    #   (2) ego_flow input to AsymmetricPairGenerator (Lane D, council 2026-04-27).
+    #       When --use-zoom-flow is set, the model expects an ego_flow tensor
+    #       in forward(). We compute it from the SAME zoom_warp on a per-pair
+    #       basis so train and inflate distributions match exactly.
+    #
+    # Either trigger forces construction. The zoom scalars come from analytical
+    # lane-mark-speed estimation (Hotz: lane markings encode forward speed →
+    # radial zoom from FoE), no GT poses needed. RadialZoomWarp +
+    # warp_inverse_masks come from tac.radial_zoom.
     sim_zoom_warp = None
     sim_warp_cache: dict[int, torch.Tensor] = {}
-    if getattr(args, "mask_half_sim_prob", 0.0) > 0:
+    _need_zoom_warp = (
+        getattr(args, "mask_half_sim_prob", 0.0) > 0
+        or getattr(args, "use_zoom_flow", False)
+    )
+    if _need_zoom_warp:
         from tac.lane_mark_speed import zoom_from_masks
         from tac.radial_zoom import RadialZoomWarp
         n_sim_pairs = all_masks.shape[0] // 2
@@ -795,10 +840,20 @@ def train(args: argparse.Namespace):
             sim_zoom_warp.zoom_scalars.data.copy_(
                 sim_zooms.clamp(-sim_zoom_warp.max_zoom_log, sim_zoom_warp.max_zoom_log)
             )
-        print(f"[masks] Half-frame simulation enabled "
-              f"(prob={args.mask_half_sim_prob}, "
-              f"zoom mean={sim_zooms.mean():.4f}, std={sim_zooms.std():.4f}, "
-              f"n_pairs={n_sim_pairs})")
+        # Freeze zoom scalars during training — they're analytical, not learned.
+        # The renderer adapts to THEM, not the other way around. (Pose TTO at
+        # compress time may further refine these scalars later.)
+        for p in sim_zoom_warp.parameters():
+            p.requires_grad_(False)
+        sim_zoom_warp.eval()
+        roles = []
+        if getattr(args, "mask_half_sim_prob", 0.0) > 0:
+            roles.append(f"half-frame sim (prob={args.mask_half_sim_prob})")
+        if getattr(args, "use_zoom_flow", False):
+            roles.append("ego_flow input")
+        print(f"[masks] RadialZoomWarp constructed for: {', '.join(roles)} "
+              f"— zoom mean={sim_zooms.mean():.4f}, std={sim_zooms.std():.4f}, "
+              f"n_pairs={n_sim_pairs}")
 
     # Build model (dispatch by variant)
     if args.variant == "wavelet_renderer":
@@ -1138,7 +1193,14 @@ def train(args: argparse.Namespace):
             mask_t = mask_t.to(device)
             mask_t1 = mask_t1.to(device)
 
-            # Half-frame mask simulation (Quantizr paradigm). With prob
+            # Compute pair index ONCE (shared by half-frame sim AND ego_flow).
+            # Pairs are formed as (frame[2k], frame[2k+1]); pair_starts is
+            # range(0, n_frames-1, SEQ_LEN=2), so pair_idx = start // 2.
+            pair_idx_int = start // 2
+            pair_idx_t = torch.tensor([pair_idx_int], device=device,
+                                      dtype=torch.long)
+
+            # Half-frame mask simulation (Quantizr paradigm, Lane D2). With prob
             # --mask-half-sim-prob, replace mask_t with inverse_warp(mask_t1)
             # so this pair simulates inflate-time conditions where only the
             # odd-frame mask was archived. The GT pair (gt_pair below) is
@@ -1146,14 +1208,12 @@ def train(args: argparse.Namespace):
             # frames; only the mask INPUT distribution shifts.
             if (sim_zoom_warp is not None
                     and random.random() < args.mask_half_sim_prob):
-                pair_idx_int = start // 2
-                pair_idx_t = torch.tensor([pair_idx_int], device=device,
-                                          dtype=torch.long)
                 mask_t = sim_zoom_warp.warp_inverse_masks(mask_t1, pair_idx_t)
 
             gt_pair = pair_from_frames(gt_frames, start).to(device)
 
             # Horizontal flip augmentation (50% probability)
+            flipped_h = False
             if random.random() < 0.5:
                 # mask shape is (B, H, W) so W is dim -1;
                 # gt_pair shape is (B, 2, H, W, 3) so W is dim -2
@@ -1161,9 +1221,38 @@ def train(args: argparse.Namespace):
                 mask_t = mask_t.flip(-1)
                 mask_t1 = mask_t1.flip(-1)
                 gt_pair = gt_pair.flip(-2)
+                flipped_h = True
 
-            # Forward: render pair from masks
-            rendered_pair = model(mask_t, mask_t1)  # (1, 2, H, W, 3)
+            # ego_flow plumbing (Lane D, council 2026-04-27). When the model
+            # was built with use_zoom_flow=True (AsymmetricPairGenerator with
+            # 4-channel motion output), forward() REQUIRES an ego_flow tensor.
+            # Compute it from the same RadialZoomWarp used for half-frame sim
+            # so train and inflate see identical motion structure.
+            #
+            # Horizontal-flip handling: a mirrored pair has its motion x-axis
+            # negated (motion that went right now goes left). We mirror the
+            # flow field on dim=-1 (W) AND negate the x-component (channel 0).
+            ego_flow = None
+            if (sim_zoom_warp is not None
+                    and getattr(args, "use_zoom_flow", False)):
+                with torch.no_grad():
+                    H_m, W_m = mask_t1.shape[-2], mask_t1.shape[-1]
+                    ego_flow = sim_zoom_warp(pair_idx_t, H_m, W_m)  # (1, 2, H, W)
+                if flipped_h:
+                    ego_flow = ego_flow.flip(-1)
+                    ego_flow = torch.stack(
+                        [-ego_flow[:, 0], ego_flow[:, 1]], dim=1
+                    )
+
+            # Forward: render pair from masks. Only AsymmetricPairGenerator
+            # accepts ego_flow (see renderer.py:1035-1100); the legacy
+            # PairGenerator.forward() takes only (mask_t, mask_t1). Branch on
+            # presence of ego_flow rather than model class so this stays
+            # variant-agnostic.
+            if ego_flow is not None:
+                rendered_pair = model(mask_t, mask_t1, ego_flow=ego_flow)
+            else:
+                rendered_pair = model(mask_t, mask_t1)  # (1, 2, H, W, 3)
 
             if in_pretrain:
                 # Phase 1: L1 + edge loss only -- no scorer, much faster
@@ -1394,6 +1483,11 @@ def train(args: argparse.Namespace):
                 all_pair_starts, posenet, segnet, device,
                 fp4_codebook=args.fp4_codebook,
                 fp4_robust_scale=args.fp4_robust_scale,
+                # Lane D: pass the same RadialZoomWarp used during training
+                # so the FP4 evaluator sees the same ego_flow structure that
+                # the model was trained on (use_zoom_flow=True path).
+                sim_zoom_warp=sim_zoom_warp,
+                use_zoom_flow=getattr(args, "use_zoom_flow", False),
             )
         else:
             # scorer_val is stale (carried from last eval) on non-eval epochs
@@ -1482,6 +1576,22 @@ def train(args: argparse.Namespace):
             fp4_size = fp4_path.stat().st_size
             param_count = sum(p.numel() for p in model.parameters())
             print(f"[fp4] Saved {param_count:,} params to {fp4_path} ({fp4_size:,} bytes)")
+
+            # Lane D 2026-04-27: when use_zoom_flow=True the inflate side
+            # NEEDS the per-pair zoom scalars to compute ego_flow consistently
+            # with how the renderer was trained. Without zoom_scalars in the
+            # archive, inflate falls back to identity zoom (scalars=0) which
+            # is a train/inflate mismatch that re-introduces the very bug
+            # Lane D was built to fix. Save once next to the FP4 checkpoint
+            # so the bootstrap script can copy it into the archive.
+            if sim_zoom_warp is not None and args.use_zoom_flow:
+                zoom_scalars_path = out_dir / "zoom_scalars.pt"
+                # Save the full state_dict so the inflate-side
+                # RadialZoomWarp.load_state_dict() works without surgery.
+                torch.save(sim_zoom_warp.state_dict(), zoom_scalars_path)
+                zs_size = zoom_scalars_path.stat().st_size
+                print(f"[zoom] Saved zoom_scalars.pt to {zoom_scalars_path} "
+                      f"({zs_size:,} bytes; n_pairs={sim_zoom_warp.n_pairs})")
 
             # Also save EMA fp32 for resuming
             fp32_path = out_dir / f"renderer_{args.tag}_best_fp32.pt"
