@@ -8,6 +8,27 @@ Read `PROGRAM.md` before making changes.
 
 **Any auth score above 1.0 is UNACCEPTABLE.** Do the math during training. If projected auth > 1.0, something is wrong — stop and fix it before burning more GPU hours. Every training run, TTO, postfilter, and optimization must be evaluated against this target BEFORE launch, not after.
 
+## Auth eval EVERYWHERE — NON-NEGOTIABLE, HIGHEST EMPHASIS
+
+**EVERY chained experiment MUST end with a CUDA auth eval against its best checkpoint.** Tracking only proxy `fp4_scorer` / `pose_loss` / training-loss is a WASTED run unless an authoritative score lands at the end. The proxy-auth gap can be 100-350x even on CUDA-CUDA (LANE-B 2026-04-26: proxy 0.0007 → auth 0.246, 350x). The proxy is a TRAINING SIGNAL, not a measurement.
+
+This applies to:
+- `experiments/pipeline.py compress` (HAS step_eval at end ✓)
+- `scripts/remote_train_bootstrap.sh` (HAS Stage 5 auth eval ✓)
+- `scripts/remote_pose_tto_bootstrap.sh` (HAS Stage 4 auth eval ✓)
+- `scripts/remote_pose_tto_only_bootstrap.sh` (HAS Stage 4 auth eval ✓ as of 2026-04-26)
+- `src/tac/experiments/train_renderer.py` — **GAP: NO auth eval on best.** Must be added: when a `*BEST*` checkpoint is saved, run a background CUDA auth eval and log the result alongside the proxy.
+- ANY new training script, TTO loop, postfilter, or experiment runner.
+
+**Pre-launch checklist (mandatory):**
+1. Does the experiment end with `auth_eval_renderer.py` on the best checkpoint?
+2. Is the auth eval result captured (RESULT_JSON or .json file) and surfaced to the operator?
+3. If a chain has multiple "best" candidates (e.g., proxy-best, kl-best, hinge-best), does each get an auth eval?
+
+**Pose TTO specifically:** the TTO loop MUST run a smoke auth eval at step 100 (and every 200 steps after) so the proxy-auth gap is detected within $0.50 of GPU spend, not at $5+ end-of-run.
+
+**The authoritative measurement loop is:** contest-CUDA `inflate.sh` → `upstream/evaluate.py` on the EXACT archive bytes. Nothing else counts. Memory: `feedback_proxy_auth_math_useless`.
+
 ## eval_roundtrip — NON-NEGOTIABLE, HIGHEST EMPHASIS
 
 **EVERY training path MUST use eval_roundtrip.** There are ZERO exceptions. This includes:

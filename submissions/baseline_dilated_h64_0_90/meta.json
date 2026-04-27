@@ -1,0 +1,48 @@
+{
+  "name": "dilated_h64_0_90",
+  "description": "The 0.9001 contest-CUDA baseline (2026-04-25). Dilated h=64 renderer + matched poses + AV1 CRF=50 masks.",
+  "auth_score": {
+    "final": 0.9001,
+    "PoseNet_dist": 0.0107,
+    "SegNet_dist": 0.00240,
+    "rate": 0.225,
+    "device": "cuda",
+    "scorer": "upstream/evaluate.py",
+    "measured_on": "2026-04-25",
+    "verified_twice": true
+  },
+  "artifacts": {
+    "renderer.bin": {
+      "size_bytes": 296776,
+      "sha256_prefix": "08f12d722dd33f9061deee72f49d7820",
+      "format": "ASYM (magic bytes ASYM\\xfa\\x15\\x00\\x00)",
+      "arch_family": "dilated_h64"
+    },
+    "optimized_poses.bin": {
+      "size_bytes": 7200,
+      "sha256_prefix": "aacbcd572abe7936c1dd438243c56a1d",
+      "format": "raw fp16, (600, 6) on load",
+      "stats": {
+        "mean": 5.225,
+        "std": 11.682,
+        "min": -0.203,
+        "max": 35.031,
+        "note": "Distribution is LARGE-VALUED (max 35, std 11). These are NOT raw frame-pair PoseNet outputs (which would be ~0±1). They look like cumulative trajectory or specially-scaled FiLM conditioning values. Critical: any pose TTO that re-initializes from extract_gt_pose_targets() instead of these poses will land in the wrong distribution and produce 23x worse PoseNet (LANE-B 2026-04-26 confirmed this)."
+      }
+    },
+    "masks.mkv": {
+      "note": "NOT SAVED HERE (411KB, regenerable from upstream SegNet on GT video at CRF=50). To rebuild: see scripts/build_baseline_masks.sh."
+    }
+  },
+  "provenance": {
+    "source_dir": "experiments/results/e2e_crf63_gating_20260425/current_archive_contents/",
+    "saved_to_canonical_path_on": "2026-04-26",
+    "reason": "User invoked durability-guarantee on baseline poses after LANE-B (2026-04-26) wasted 6.5h initializing TTO from the wrong pose distribution. Original location was untracked (experiments/results/ is gitignored)."
+  },
+  "lane_b_post_mortem": {
+    "what_lane_b_did_wrong": "Initialized init_poses = extract_gt_pose_targets(gt_frames, posenet) — frame-pair PoseNet outputs, distribution ~0±1. The renderer expects FiLM conditioning in the LARGE distribution shown above (mean 5.2, max 35). The 1000-step Adam couldn't recover from the orders-of-magnitude wrong init.",
+    "what_lane_b_should_have_done": "Pass --gt-poses-path submissions/baseline_dilated_h64_0_90/optimized_poses.bin to the bootstrap. optimize_poses.py line 690-692 honors this and uses the canonical poses as warm start.",
+    "auth_score_with_wrong_init": 2.3954,
+    "delta_vs_baseline": "+1.495 worse"
+  }
+}
