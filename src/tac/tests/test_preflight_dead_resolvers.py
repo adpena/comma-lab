@@ -385,3 +385,58 @@ def test_segnet_uncertainty_weighted_loss_no_longer_dead_in_train_renderer() -> 
         f"segnet_uncertainty_weighted_loss should be defined in tac.losses "
         f"post-R5 but scanner flagged: {target}"
     )
+
+
+# ── Codex R5-2 Finding #2 strict-mode flip regressions ───────────────────────
+#
+# The 2026-04-27 codex R5-2 review surfaced the scanner running with
+# strict=False inside preflight_all() despite 19 known violations, defeating
+# the entire point of the scanner. After fixing every violation, preflight_all
+# was flipped to strict=True. The tests below pin both halves of that flip:
+# (1) the live codebase has zero violations and (2) preflight_all() actually
+# calls the scanner in strict mode.
+
+
+def test_preflight_dead_resolvers_strict_passes_on_real_codebase() -> None:
+    """Real-world contract: the live codebase MUST scan clean under
+    `strict=True`. A failure here means a new resolver dropped a profile knob
+    silently OR a refactor renamed a tac.X export — both are the same bug
+    class as pose_dim / luma_local_variance / uniward_quant_noise_loss.
+
+    Codex R5-2 Finding #2 (2026-04-27): all 19 known violations were fixed
+    before flipping preflight_all() to strict=True; this test guards against
+    regression."""
+    violations = preflight_dead_resolvers(strict=False, verbose=False)
+    assert violations == [], (
+        f"Codex R5-2 Finding #2: {len(violations)} dead-resolver/dead-import "
+        f"violations in the live codebase. preflight_all() runs the scanner in "
+        f"strict mode now, so any violation BLOCKS launch:\n\n"
+        + "\n".join(f"  • {v}" for v in violations)
+    )
+
+
+def test_preflight_all_invokes_dead_resolvers_strict() -> None:
+    """Source-level pin: preflight_all MUST pass strict=True to
+    preflight_dead_resolvers. If someone reverts to strict=False (or removes
+    the call), the silent-default bug class regresses to warn-only and the
+    scanner's value collapses."""
+    import inspect
+
+    from tac.preflight import preflight_all
+    src = inspect.getsource(preflight_all)
+    # The literal call must appear with strict=True. We don't trust comment
+    # text alone — a regex match against the actual call.
+    import re
+    matches = re.findall(
+        r"preflight_dead_resolvers\s*\(\s*strict\s*=\s*(True|False)",
+        src,
+    )
+    assert matches, (
+        "preflight_all does not call preflight_dead_resolvers — codex R5-2 "
+        "Finding #2 regressed (or the call was deleted)."
+    )
+    assert all(m == "True" for m in matches), (
+        f"preflight_all calls preflight_dead_resolvers with strict={matches!r}; "
+        f"codex R5-2 Finding #2 requires strict=True (warn-only defeats the "
+        f"silent-default bug class the scanner exists to catch)."
+    )

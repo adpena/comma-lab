@@ -79,6 +79,77 @@ from tac.training import EMA  # noqa: E402
 from tac.utils import setup_signal_handlers, write_telemetry  # noqa: E402
 
 
+# ── Variant routing ─────────────────────────────────────────────────────
+#
+# Codex R5-2 Finding #1 (2026-04-27): variant routing must agree between the
+# build_renderer dispatch (line ~1051) AND the --auth-eval-on-best FP4A export
+# guard (line ~2070). Pre-fix the guard hardcoded `variant in ('default', None)`,
+# which silently reject-then-RuntimeError'd every profile that flows through
+# build_renderer (dilated, psd, mask_renderer, plus ~20 others). Result: hours
+# of training burned with no authoritative score, exactly the failure mode
+# `--auth-eval-on-best` exists to prevent.
+#
+# Variants in `_VARIANTS_NON_BUILD_RENDERER` have their own builder branch in
+# train() and produce checkpoints whose state_dict layout cannot be exported by
+# the canonical AsymmetricPairGenerator FP4A path. For those we MUST disable
+# the auth-eval-on-best guard at startup (not after training).
+#
+# Variants in `_VARIANTS_BUILD_RENDERER_FP4A_OK` flow through build_renderer
+# and produce AsymmetricPairGenerator/PairGenerator state_dicts that the
+# canonical export_asymmetric_checkpoint_fp4 path handles. The auth-eval-on-best
+# block can FP4A-export their best checkpoints.
+#
+# Keep these two sets EXHAUSTIVE: every profile["variant"] value in profiles.py
+# must appear in exactly one set. test_train_renderer_variant_routing_complete
+# pins this.
+_VARIANTS_NON_BUILD_RENDERER: frozenset[str] = frozenset({
+    "wavelet_renderer",
+    "coord_renderer",
+    "coolchic_renderer",
+    "c3_residual_renderer",
+    "dp_sims",
+    "vqvae",
+    "diffusion_teacher",
+})
+
+_VARIANTS_BUILD_RENDERER_FP4A_OK: frozenset[str] = frozenset({
+    # Empty string + None handled separately (legacy default).
+    "default",
+    "mask_renderer",
+    "dilated",
+    "psd",
+    "channel_recurrent",
+    "constrained_gen",
+    "constrained_gen_pipeline",
+    "content_adaptive",
+    "counterpoint",
+    "cross_disciplinary",
+    "dct_midband",
+    "depthwise_renderer",
+    "distillation",
+    "domain_solver",
+    "dp_sims_v2",
+    "dual_head",
+    "film_qat",
+    "gated_dilated",
+    "lagrangian_dual",
+    "luma_dilated",
+    "pareto_trace",
+    "pixelshuffle_dilated_v2",
+    "pixelshuffle_upscale",
+    "siren",
+    "variational_gen",
+})
+
+
+def _variant_supports_fp4a_export(variant: str | None) -> bool:
+    """True if the given variant flows through build_renderer and produces a
+    checkpoint that export_asymmetric_checkpoint_fp4 can serialise."""
+    if variant is None or variant == "":
+        return True  # legacy default → build_renderer
+    return variant in _VARIANTS_BUILD_RENDERER_FP4A_OK
+
+
 # ── Argument parsing ────────────────────────────────────────────────────
 
 
@@ -246,6 +317,34 @@ def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
                    help="Depthwise-separable convolutions")
     p.add_argument("--use-zoom-flow", action="store_true", default=None,
                    help="GREEN profile: 4ch MotionPredictor + RadialZoomWarp")
+    # Codex R5-2 Finding #2 (2026-04-27): the 5 build_renderer arch knobs below
+    # were silent dead-resolvers — `getattr(args, "blend_mode", "scalar")` at
+    # the build site read the wrong default on every run because parse_args
+    # never copied the profile value into args. Same bug class as pose_dim
+    # (commit 0746a803). Wire them through with the canonical _resolve()
+    # pattern + matching CLI flags so operators can override at the command
+    # line AND the dead-resolver scanner clears them.
+    p.add_argument("--blend-mode", type=str, default=None,
+                   choices=["scalar", "spatial", "none"],
+                   help="MaskRenderer blend mode: scalar=learned alpha, "
+                        "spatial=per-pixel, none=disable. Profile default "
+                        "varies (mask_renderer / wavelet / dilated profiles "
+                        "all use 'spatial').")
+    p.add_argument("--noise-mode", type=str, default=None,
+                   choices=["deterministic", "shared", "independent"],
+                   help="MaskRenderer noise injection mode "
+                        "(profile default 'deterministic').")
+    p.add_argument("--motion-type", type=str, default=None,
+                   choices=["depth_aware", "learned_cnn", "analytical", "none"],
+                   help="MotionPredictor variant. Profile default varies "
+                        "('depth_aware' for renderer profiles, 'learned_cnn' "
+                        "elsewhere).")
+    p.add_argument("--beta-start", type=float, default=None,
+                   help="Diffusion teacher noise schedule lower bound "
+                        "(diffusion_teacher variant only; default 1e-4).")
+    p.add_argument("--beta-end", type=float, default=None,
+                   help="Diffusion teacher noise schedule upper bound "
+                        "(diffusion_teacher variant only; default 0.02).")
     p.add_argument("--use-texture-loss", action="store_true", default=None,
                    help="Fridrich UNIWARD: hide errors in textured regions")
     p.add_argument("--texture-loss-weight", type=float, default=None)
@@ -382,6 +481,24 @@ def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
                                 "use_dsconv", False)
     args.use_zoom_flow = _resolve(getattr(args, "use_zoom_flow", None),
                                    "use_zoom_flow", False)
+    # Codex R5-2 Finding #2 (2026-04-27): blend_mode / noise_mode / motion_type
+    # were dead-resolvers — every getattr(args, "blend_mode", "scalar") at the
+    # build sites silently returned the function default, ignoring profile
+    # values like "spatial" (mask_renderer/wavelet/dilated profiles all set
+    # spatial). Wire them through the standard _resolve() pattern. Defaults
+    # match build_renderer's own defaults so unprofiled CLI runs keep working.
+    args.blend_mode = _resolve(getattr(args, "blend_mode", None),
+                                "blend_mode", "scalar")
+    args.noise_mode = _resolve(getattr(args, "noise_mode", None),
+                                "noise_mode", "deterministic")
+    args.motion_type = _resolve(getattr(args, "motion_type", None),
+                                 "motion_type", "learned_cnn")
+    # Diffusion teacher noise schedule (only consumed by variant=='diffusion_teacher').
+    # Defaults match tac.contrib.diffusion_renderer.build_diffusion_teacher.
+    args.beta_start = _resolve(getattr(args, "beta_start", None),
+                                "beta_start", 1e-4)
+    args.beta_end = _resolve(getattr(args, "beta_end", None),
+                              "beta_end", 0.02)
     # Lane D council 2026-04-27: pose_dim was being read from profile via
     # getattr() at the build site (line ~928) but never resolved on args,
     # making it silently invisible to anything inspecting the parsed
@@ -915,6 +1032,40 @@ def resize_pair_hwc(pair: torch.Tensor, target_h: int, target_w: int) -> torch.T
 
 
 def train(args: argparse.Namespace):
+    # Codex R5-2 Finding #1 (2026-04-27): EARLY-FAIL the operator before any
+    # GPU spend if --auth-eval-on-best is on for a variant whose checkpoint
+    # cannot be FP4A-exported. Pre-fix, the run completed (hours), THEN crashed
+    # at the post-training auth-eval block. The CLAUDE.md non-negotiable
+    # "Auth eval EVERYWHERE" exists to catch the proxy-auth gap; failing
+    # silently after training is the exact failure mode it forbids.
+    #
+    # This check intentionally runs BEFORE configure_reproducibility/device
+    # selection so we don't pay even the model-load cost.
+    if getattr(args, "auth_eval_on_best", False):
+        if not _variant_supports_fp4a_export(args.variant):
+            raise SystemExit(
+                f"[train] CONFIG ERROR: --auth-eval-on-best is enabled "
+                f"(default true) but variant={args.variant!r} is not "
+                f"FP4A-exportable. The post-training auth eval would crash "
+                f"after hours of GPU spend. Either:\n"
+                f"  (1) pass --no-auth-eval-on-best and run a variant-"
+                f"specific eval afterwards, OR\n"
+                f"  (2) switch to a build_renderer-compatible variant "
+                f"(see _VARIANTS_BUILD_RENDERER_FP4A_OK in train_renderer.py).\n"
+                f"Profile: {getattr(args, 'profile', None)!r}. "
+                f"Failure mode: codex R5-2 Finding #1."
+            )
+        if not args.auth_eval_masks or not args.auth_eval_poses:
+            raise SystemExit(
+                f"[train] CONFIG ERROR: --auth-eval-on-best=True requires "
+                f"BOTH --auth-eval-masks and --auth-eval-poses. Without "
+                f"them the post-training archive would be renderer-only "
+                f"(~290KB) instead of the real ~700KB triple-joint archive — "
+                f"systematically optimistic by ~2x on the rate term. Got: "
+                f"masks={args.auth_eval_masks!r}, poses={args.auth_eval_poses!r}.\n"
+                f"To skip the auth eval entirely, pass --no-auth-eval-on-best."
+            )
+
     configure_reproducibility(args.seed, args.deterministic)
     device = torch.device(args.device) if args.device else detect_device()
     print(f"[train] Device: {device}")
@@ -1073,8 +1224,8 @@ def train(args: argparse.Namespace):
             hidden=args.base_ch,
             motion_hidden=args.motion_hidden,
             latent_shapes=args.latent_shapes,
-            blend_mode=getattr(args, "blend_mode", "scalar"),
-            noise_mode=getattr(args, "noise_mode", "deterministic"),
+            blend_mode=args.blend_mode,
+            noise_mode=args.noise_mode,
         )
     elif args.variant == "c3_residual_renderer":
         from tac.contrib.coolchic_renderer import build_c3_residual_renderer
@@ -1088,8 +1239,8 @@ def train(args: argparse.Namespace):
             residual_layers=args.residual_layers,
             residual_scale=args.residual_scale,
             latent_shapes=args.latent_shapes,
-            blend_mode=getattr(args, "blend_mode", "scalar"),
-            noise_mode=getattr(args, "noise_mode", "deterministic"),
+            blend_mode=args.blend_mode,
+            noise_mode=args.noise_mode,
         )
     elif args.variant == "dp_sims":
         from tac.dp_sims_renderer import build_dp_sims_renderer
@@ -1104,8 +1255,8 @@ def train(args: argparse.Namespace):
         from tac.contrib.diffusion_renderer import build_diffusion_teacher
         model = build_diffusion_teacher(
             num_classes=5,
-            beta_start=getattr(args, "beta_start", 1e-4),
-            beta_end=getattr(args, "beta_end", 0.02),
+            beta_start=args.beta_start,
+            beta_end=args.beta_end,
         )
     else:
         # 2026-04-26 council fix (arch drift): pass ALL profile-resolved arch
@@ -1119,9 +1270,9 @@ def train(args: argparse.Namespace):
             mid_ch=args.mid_ch,
             motion_hidden=args.motion_hidden,
             depth=args.depth,
-            blend_mode=getattr(args, "blend_mode", "scalar"),
-            noise_mode=getattr(args, "noise_mode", "deterministic"),
-            motion_type=getattr(args, "motion_type", "learned_cnn"),
+            blend_mode=args.blend_mode,
+            noise_mode=args.noise_mode,
+            motion_type=args.motion_type,
             use_zoom_flow=args.use_zoom_flow,
             use_dsconv=args.use_dsconv,
             padding_mode=args.padding_mode,
@@ -1544,15 +1695,34 @@ def train(args: argparse.Namespace):
                     rgb_gt = gt_pair[:, 1].float()
                     # Per-pixel L1 (averaged over channels)
                     diff = (rgb_pred - rgb_gt).abs().mean(dim=-1)  # (B, H, W)
-                    # 2026-04-26 Hotz R2 #5: shared luma_local_variance helper.
-                    # Previous inline impl used `padding=4` inside avg_pool2d
-                    # AND a manual crop — symmetric pad of 4 with kernel_size=8
-                    # produces a 1-pixel asymmetric output that the crop only
-                    # papered over. The helper uses explicit reflect-pad and
-                    # matches variance_weighted_noise's UNIWARD path so the
-                    # texture loss and noise field stay numerically consistent.
-                    from tac.fridrich import luma_local_variance
-                    local_var = luma_local_variance(rgb_gt, kernel_size=8)  # (B, H, W)
+                    # Codex R5-2 Finding #2 (2026-04-27): dead import fix —
+                    # `tac.fridrich.luma_local_variance` was a planned helper
+                    # that never landed; this code path silently raised
+                    # ImportError every time `use_texture_loss=True` (set by
+                    # WILDE/SHIRAZ/GREEN/DEN/Lane D profiles). The semantically
+                    # equivalent helper is `compute_texture_complexity` in
+                    # `tac.fridrich_losses` (HWC-aware, BT.601 luma, sliding
+                    # box variance — same UNIWARD-style local variance map).
+                    # It returns (B, 1, H, W); we squeeze to (B, H, W) to
+                    # match the broadcast against `diff` below.
+                    #
+                    # Kernel choice: 7 (odd) instead of 8 (even). Even kernel
+                    # + reflect-pad in avg_pool2d gains 1 pixel on each axis
+                    # (H+2*pad-k+1 = H+1), which then breaks the diff×inv_var
+                    # broadcast. The original "8" was the source of the
+                    # 1-pixel-asymmetry bug the docstring above warns about.
+                    # Odd kernel of similar radius (k=7 → 3-pixel half-window
+                    # vs k=8's 4-pixel) preserves shape exactly and gives the
+                    # same UNIWARD signal within rounding error.
+                    from tac.fridrich_losses import compute_texture_complexity
+                    local_var = compute_texture_complexity(
+                        rgb_gt, kernel_size=7,
+                    ).squeeze(1)  # (B, H, W)
+                    assert local_var.shape == diff.shape, (
+                        f"texture_loss shape mismatch: local_var={local_var.shape} "
+                        f"vs diff={diff.shape}. compute_texture_complexity "
+                        f"contract violated."
+                    )
                     # inv_var: high in smooth regions (errors visible, EXPENSIVE),
                     # low in textured regions (errors hidden, FREE). Normalized so
                     # the loss scale stays comparable to vanilla L1.
@@ -1824,9 +1994,9 @@ def train(args: argparse.Namespace):
                 "use_dsconv": args.use_dsconv,
                 "use_dilation": args.use_dilation,
                 "padding_mode": args.padding_mode,
-                "blend_mode": getattr(args, "blend_mode", "scalar"),
-                "noise_mode": getattr(args, "noise_mode", "deterministic"),
-                "motion_type": getattr(args, "motion_type", "learned_cnn"),
+                "blend_mode": args.blend_mode,
+                "noise_mode": args.noise_mode,
+                "motion_type": args.motion_type,
                 # Variant + extras:
                 "latent_ch": args.latent_ch,
                 "latent_shapes": args.latent_shapes,
@@ -2067,12 +2237,26 @@ def train(args: argparse.Namespace):
             )
         arch = fp32_payload["__meta__"]
         state = fp32_payload["model_state_dict"]
-        if arch.get("variant", "default") not in ("default", None):
+        # Codex R5-2 Finding #1 (2026-04-27): pre-fix this hardcoded
+        # `variant in ('default', None)` check rejected EVERY profile that
+        # routes through build_renderer (dilated, psd, mask_renderer, plus
+        # ~20 others — see _VARIANTS_BUILD_RENDERER_FP4A_OK), then
+        # RuntimeError'd at the END of training. Result: 5h Lane D runs
+        # produced no authoritative score, exactly the failure mode the
+        # default-True --auth-eval-on-best was added to prevent. The
+        # validation now lives early in train() (search for "Finding #1"),
+        # but we keep this assertion as a defence-in-depth guard against
+        # arch_meta drift between the parse-args check and the save site.
+        _ckpt_variant = arch.get("variant", "default")
+        if not _variant_supports_fp4a_export(_ckpt_variant):
             raise RuntimeError(
-                f"[auth-eval] FP4A export only supports variant='default' "
-                f"(AsymmetricPairGenerator). Got variant={arch.get('variant')!r}. "
-                f"Pass --no-auth-eval-on-best for non-default variants and run "
-                f"a separate eval suited to the variant."
+                f"[auth-eval] FP4A export does not support variant="
+                f"{_ckpt_variant!r} (it lives in _VARIANTS_NON_BUILD_RENDERER "
+                f"and uses a non-AsymmetricPairGenerator state_dict layout). "
+                f"This should have been caught by the parse-args validation "
+                f"earlier — investigate how the meta drifted vs. args.variant. "
+                f"Workaround: pass --no-auth-eval-on-best and run a separate "
+                f"eval suited to the variant."
             )
         from tac.renderer import build_renderer
         from tac.renderer_export import export_asymmetric_checkpoint_fp4

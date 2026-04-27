@@ -931,14 +931,28 @@ def test_auth_eval_on_best_loads_fp32_sidecar_for_arch_meta() -> None:
 
 
 def test_auth_eval_on_best_fails_loud_on_non_default_variant() -> None:
-    """Codex R-Lane-D-followup defensive: only variant='default'
-    (AsymmetricPairGenerator) has a working FP4A export path. For other
-    variants (c3_residual_renderer, vqvae, diffusion_teacher) the auth
-    eval block must raise rather than silently produce a bogus .bin."""
+    """Codex R-Lane-D-followup defensive: only variants in
+    `_VARIANTS_BUILD_RENDERER_FP4A_OK` have a working FP4A export path. For
+    other variants (c3_residual_renderer, vqvae, diffusion_teacher) the auth
+    eval block must raise rather than silently produce a bogus .bin.
+
+    Codex R5-2 Finding #1 (2026-04-27): the original implementation
+    hardcoded `variant in ('default', None)` — too narrow, rejected real
+    profiles like 'dilated' and 'psd'. The fix moved the check to the
+    `_variant_supports_fp4a_export()` helper backed by exhaustive routing
+    tables; this test now pins the helper invocation rather than the old
+    error message."""
     src = (REPO / "src" / "tac" / "experiments" / "train_renderer.py").read_text()
-    assert "FP4A export only supports variant='default'" in src, (
-        "auth-eval-on-best must fail loudly for non-default variants — "
-        "silently exporting an invalid .bin would corrupt the rate calc."
+    assert "_variant_supports_fp4a_export(_ckpt_variant)" in src, (
+        "auth-eval-on-best must call _variant_supports_fp4a_export() to gate "
+        "the FP4A path — codex R5-2 Finding #1. Hardcoded variant literals are "
+        "the original Finding #1 bug."
+    )
+    # Defence-in-depth: the error message must explicitly reference the
+    # NON-build_renderer set so operators know the remediation.
+    assert "_VARIANTS_NON_BUILD_RENDERER" in src, (
+        "auth-eval-on-best error message must reference the routing-table "
+        "constant so operators can find the variant landscape quickly."
     )
 
 
@@ -952,4 +966,182 @@ def test_auth_eval_on_best_fails_loud_on_arch_drift_mismatch() -> None:
     assert "SHIRAZ-class arch-drift bug" in src, (
         "auth-eval-on-best must raise on missing/unexpected keys with a "
         "SHIRAZ-class diagnostic — silent strict=False would corrupt scores."
+    )
+
+
+# ── 12. Codex R5-2 Finding #1: variant-aware auth-eval-on-best ───────────
+#
+# Pre-fix the auth-eval-on-best block hardcoded `variant in ('default', None)`.
+# Profiles that flow through build_renderer (dilated, psd, mask_renderer,
+# Lane D's `dilated`, plus ~20 others) all hit this guard and RuntimeError'd
+# AFTER hours of training. The fix:
+#   (1) early-fail in train() with a clear SystemExit + remediation, so we
+#       never even start training when the config is broken
+#   (2) routing tables (_VARIANTS_BUILD_RENDERER_FP4A_OK +
+#       _VARIANTS_NON_BUILD_RENDERER) that are partition-exhaustive over
+#       every variant declared in any profile.
+
+
+def test_variant_routing_constants_exist() -> None:
+    """The two routing tables must exist and be frozenset[str]."""
+    from tac.experiments.train_renderer import (
+        _VARIANTS_BUILD_RENDERER_FP4A_OK,
+        _VARIANTS_NON_BUILD_RENDERER,
+    )
+    assert isinstance(_VARIANTS_BUILD_RENDERER_FP4A_OK, frozenset)
+    assert isinstance(_VARIANTS_NON_BUILD_RENDERER, frozenset)
+    # Common-sense guards.
+    assert "default" in _VARIANTS_BUILD_RENDERER_FP4A_OK
+    assert "dilated" in _VARIANTS_BUILD_RENDERER_FP4A_OK
+    assert "diffusion_teacher" in _VARIANTS_NON_BUILD_RENDERER
+
+
+def test_variant_routing_partitions_all_known_variants() -> None:
+    """Codex R5-2 Finding #1: every variant declared in any profile must
+    appear in EXACTLY one of the two routing tables. A variant that's in
+    neither would silently fall through to the build_renderer branch (where
+    it might crash with an unexpected kwarg) OR to the auth-eval guard
+    (where it would RuntimeError after training). A variant in both is a
+    routing-bug waiting to happen."""
+    from tac.experiments.train_renderer import (
+        _VARIANTS_BUILD_RENDERER_FP4A_OK,
+        _VARIANTS_NON_BUILD_RENDERER,
+    )
+    from tac.profiles import PROFILES
+
+    declared = {p.get("variant") for p in PROFILES.values() if p.get("variant")}
+    declared.discard(None)
+    overlap = _VARIANTS_BUILD_RENDERER_FP4A_OK & _VARIANTS_NON_BUILD_RENDERER
+    assert overlap == set(), (
+        f"variants in both routing tables: {sorted(overlap)}. "
+        f"Each variant must be in EXACTLY one set."
+    )
+    union = _VARIANTS_BUILD_RENDERER_FP4A_OK | _VARIANTS_NON_BUILD_RENDERER
+    missing = declared - union
+    assert missing == set(), (
+        f"variants declared in profiles.py but missing from BOTH routing "
+        f"tables: {sorted(missing)}. Add each to "
+        f"_VARIANTS_BUILD_RENDERER_FP4A_OK or _VARIANTS_NON_BUILD_RENDERER "
+        f"in src/tac/experiments/train_renderer.py."
+    )
+
+
+def test_variant_supports_fp4a_export_dilated() -> None:
+    """Codex R5-2 Finding #1: the dilated variant (every Lane A/B baseline,
+    Lane D, the verified 0.9001 archive) MUST be FP4A-exportable. Pre-fix
+    the auth-eval guard rejected it, killing the auth-eval-on-best contract
+    for every dilated training run."""
+    from tac.experiments.train_renderer import _variant_supports_fp4a_export
+    assert _variant_supports_fp4a_export("dilated") is True
+    assert _variant_supports_fp4a_export("psd") is True
+    assert _variant_supports_fp4a_export("mask_renderer") is True
+    assert _variant_supports_fp4a_export("default") is True
+    assert _variant_supports_fp4a_export(None) is True
+    assert _variant_supports_fp4a_export("") is True
+
+
+def test_variant_supports_fp4a_export_rejects_non_build_renderer() -> None:
+    """The variants with their own builder branch MUST report False —
+    they cannot be FP4A-exported via export_asymmetric_checkpoint_fp4."""
+    from tac.experiments.train_renderer import _variant_supports_fp4a_export
+    for v in (
+        "wavelet_renderer",
+        "coord_renderer",
+        "coolchic_renderer",
+        "c3_residual_renderer",
+        "dp_sims",
+        "vqvae",
+        "diffusion_teacher",
+    ):
+        assert _variant_supports_fp4a_export(v) is False, (
+            f"variant={v!r} reported FP4A-exportable but lives in "
+            f"_VARIANTS_NON_BUILD_RENDERER and does not have an "
+            f"export_asymmetric_checkpoint_fp4 path."
+        )
+
+
+def test_train_early_fails_on_dilated_with_no_auth_inputs(monkeypatch) -> None:
+    """Codex R5-2 Finding #1: train() must SystemExit at startup (before any
+    GPU work) when --auth-eval-on-best is True (default) AND
+    --auth-eval-masks/poses are missing. Pre-fix this only failed AFTER
+    training completed — burning hours of compute to discover a config bug.
+
+    We trigger it on a real build_renderer-compatible variant (dilated) to
+    pin both halves of the validation: variant supports FP4A AND the inputs
+    are missing."""
+    train_renderer = pytest.importorskip("tac.experiments.train_renderer")
+    args = train_renderer.parse_args([
+        "--profile", "dilated_h64_half_frame",
+        "--tag", "_unit_test_early_fail",
+        # --auth-eval-on-best defaults True, intentionally NOT passing
+        # --auth-eval-masks / --auth-eval-poses to trigger the guard.
+    ])
+    # Sanity: this is the case the guard targets.
+    assert args.auth_eval_on_best is True
+    assert args.auth_eval_masks is None
+    assert args.auth_eval_poses is None
+    # train() should SystemExit IMMEDIATELY — before configure_reproducibility
+    # or any GPU work. No mock/stub needed because the guard fires before
+    # device selection.
+    with pytest.raises(SystemExit) as ei:
+        train_renderer.train(args)
+    msg = str(ei.value)
+    assert "auth-eval-on-best" in msg, msg
+    assert "Codex R5-2" in msg or "R5-2" in msg or "auth-eval-masks" in msg, msg
+
+
+def test_train_early_fails_on_non_fp4a_variant_with_auth_eval(monkeypatch) -> None:
+    """Codex R5-2 Finding #1: if a non-FP4A variant is paired with
+    --auth-eval-on-best, train() must SystemExit at startup with a clear
+    'switch variant or pass --no-auth-eval-on-best' message.
+
+    Synthesise the failure mode by handcrafting an args namespace (no profile
+    sets a non-FP4A variant + auth-eval-on-best together by default — the
+    diffusion_teacher / vqvae profiles don't set Lane-D-style auth eval)."""
+    train_renderer = pytest.importorskip("tac.experiments.train_renderer")
+    import argparse
+
+    # Build a namespace that satisfies the second guard (masks + poses present)
+    # but fails the variant guard.
+    args = argparse.Namespace(
+        auth_eval_on_best=True,
+        auth_eval_masks="/tmp/fake_masks.mkv",
+        auth_eval_poses="/tmp/fake_poses.bin",
+        variant="diffusion_teacher",  # in _VARIANTS_NON_BUILD_RENDERER
+        profile="diffusion_teacher_smoke",
+    )
+    with pytest.raises(SystemExit) as ei:
+        train_renderer.train(args)
+    msg = str(ei.value)
+    assert "diffusion_teacher" in msg, msg
+    assert "FP4A" in msg or "auth-eval-on-best" in msg, msg
+
+
+def test_train_early_validation_skipped_when_auth_eval_disabled() -> None:
+    """When --no-auth-eval-on-best is passed, the early-fail guard must NOT
+    fire — operators running smoke tests legitimately want to skip auth eval
+    and the guard would block their workflow.
+
+    Source-level pin (instead of full train() smoke): assert the guard is
+    explicitly conditioned on `auth_eval_on_best`."""
+    src = (REPO / "src" / "tac" / "experiments" / "train_renderer.py").read_text()
+    # The guard MUST be wrapped in `if getattr(args, "auth_eval_on_best", False):`
+    # — without that conditional, every train() call would hit the
+    # masks/poses requirement, breaking smoke tests.
+    assert 'if getattr(args, "auth_eval_on_best"' in src, (
+        "early-fail guard must be conditional on auth_eval_on_best — "
+        "unconditional guard would break --no-auth-eval-on-best smoke tests."
+    )
+
+
+def test_auth_eval_on_best_uses_helper_for_variant_check() -> None:
+    """Source-level pin: the post-training auth-eval block must use the
+    canonical helper (not a hardcoded literal). If someone reverts to
+    `variant in ('default', None)` the routing-table abstraction collapses
+    back to the original Finding #1 bug."""
+    src = (REPO / "src" / "tac" / "experiments" / "train_renderer.py").read_text()
+    assert "_variant_supports_fp4a_export(" in src, (
+        "auth-eval-on-best block must call _variant_supports_fp4a_export() "
+        "for the variant check (codex R5-2 Finding #1). Hardcoded variant "
+        "literals are forbidden — they desync from build_renderer dispatch."
     )

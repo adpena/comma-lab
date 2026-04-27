@@ -248,16 +248,14 @@ def preflight_all(
     if check_codebase:
         check_codebase_drift(strict=True)
         preflight_arity(strict=True, verbose=verbose)
-        # TODO(2026-04-27): flip to strict=True after cleaning up the 19
-        # known violations the scanner surfaced in the R5 pass (chiefly the
-        # blend_mode / noise_mode / motion_type / beta_* cluster in
-        # train_renderer.py — same dead-resolver class as pose_dim, every
-        # profile sets these but parse_args drops them; plus 7 dead imports
-        # of names since-renamed in tac.{losses,scorer,camera,fridrich,
-        # mlx_renderer}). Keeping warn-only avoids breaking the in-flight
-        # Lane A pipeline. See feedback_dead_resolver_violations memory entry
-        # for the full list.
-        preflight_dead_resolvers(strict=False, verbose=verbose)
+        # 2026-04-27 codex R5-2 Finding #2: scanner flipped to strict after
+        # all 19 known violations were fixed (12 dead resolvers in
+        # train_renderer.py + 7 dead imports across test_fp4_quality /
+        # train_distill / benchmark_mlx / train_renderer). The scanner now
+        # blocks the same silent-default class it was added to prevent.
+        # See feedback_dead_resolver_violations_20260427 memory entry +
+        # test_preflight_dead_resolvers_strict_passes_on_real_codebase.
+        preflight_dead_resolvers(strict=True, verbose=verbose)
         preflight_profiles(strict=True, verbose=verbose)
         preflight_arch_consistency(strict=True, verbose=verbose)
         preflight_filename_contract(strict=True, verbose=verbose)

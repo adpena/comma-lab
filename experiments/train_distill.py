@@ -541,12 +541,20 @@ def compute_scorer_loss(
                 pred_frames_for_loss, gt_frames_for_loss,
             )
         if cfg.use_variance_noise and cfg.variance_noise_weight > 0:
-            from tac.losses import uniward_quant_noise_loss
-            fridrich_extra = fridrich_extra + cfg.variance_noise_weight * uniward_quant_noise_loss(
-                pred_frames_for_loss, gt_frames_for_loss,
-                base_std=cfg.variance_noise_base_std,
-                kernel_size=cfg.variance_noise_kernel,
-                mode=cfg.variance_noise_mode,
+            # Codex R5-2 Finding #2 (2026-04-27): the planned
+            # `tac.losses.uniward_quant_noise_loss` helper never landed —
+            # this branch silently reached an ImportError on every run that
+            # enabled it. Profiles WILDE/SHIRAZ/GREEN/DEN/Lane D all set
+            # use_variance_noise=True. Until the helper is implemented per
+            # the wavelet_db4 design (see tac.wavelet_variance.wavelet_variance_map
+            # for the supporting math), fail loudly here so the operator
+            # knows their requested loss is not active. Do NOT silently
+            # `pass` — that would be the same dead-default class as pose_dim.
+            raise NotImplementedError(
+                "use_variance_noise=True but tac.losses.uniward_quant_noise_loss "
+                "is not implemented (codex R5-2 Finding #2). Either implement "
+                "the helper using tac.wavelet_variance.wavelet_variance_map, "
+                "or set use_variance_noise=False in the profile."
             )
         # Yousfi #5: ScanNet-style spatial uncertainty-weighted reconstruction.
         # Costs an extra SegNet forward pass on the (detached) GT frames.
@@ -635,17 +643,15 @@ def compute_scorer_loss(
         fridrich_metrics["markov_loss"] = mc_loss.item()
 
     if cfg.use_variance_noise and cfg.variance_noise_weight > 0:
-        from tac.losses import uniward_quant_noise_loss
-        # pred_frames_for_loss is (B, H, W, C) HWC — uniward_quant_noise_loss
-        # auto-detects HWC and converts internally.
-        vn_loss = uniward_quant_noise_loss(
-            pred_frames_for_loss, gt_frames_for_loss,
-            base_std=cfg.variance_noise_base_std,
-            kernel_size=cfg.variance_noise_kernel,
-            mode=cfg.variance_noise_mode,
+        # Codex R5-2 Finding #2 (2026-04-27): see the matching block above —
+        # tac.losses.uniward_quant_noise_loss never landed. Fail loud rather
+        # than silent ImportError. (Same dead-default bug class as pose_dim.)
+        raise NotImplementedError(
+            "use_variance_noise=True but tac.losses.uniward_quant_noise_loss "
+            "is not implemented (codex R5-2 Finding #2). Either implement "
+            "the helper using tac.wavelet_variance.wavelet_variance_map, "
+            "or set use_variance_noise=False in the profile."
         )
-        total = total + cfg.variance_noise_weight * vn_loss
-        fridrich_metrics["variance_noise_loss"] = vn_loss.item()
 
     # Yousfi #5: ScanNet-style spatial uncertainty-weighted reconstruction.
     # Same HWC → CHW auto-detection. Costs an extra SegNet forward pass.

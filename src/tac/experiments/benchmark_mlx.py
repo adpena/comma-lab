@@ -35,7 +35,10 @@ from tac.mlx_renderer import (
     haar_dwt2d,
     haar_idwt2d,
     _warp_with_flow,
-    _bilinear_upsample_2x,
+    # Codex R5-2 Finding #2 (2026-04-27): dead-import cleanup. The MLX
+    # renderer only ships nearest-neighbour upsample (`_nearest_upsample_2x`);
+    # the `_bilinear_upsample_2x` symbol never existed. Use the real one.
+    _nearest_upsample_2x,
 )
 
 from tac.camera import FRAME_H as H, FRAME_W as W, NUM_CLASSES
@@ -545,13 +548,13 @@ def bench_ops():
         mx.eval(out)
     time_fn(bench_bottleneck, label="Bottleneck ResBlock(60ch)")
 
-    # Bilinear upsample 2x
+    # Upsample 2x (nearest, MLX renderer only ships nearest)
     half = renderer.bottleneck(down, mask)
     mx.eval(half)
     def bench_upsample():
-        out = _bilinear_upsample_2x(half)
+        out = _nearest_upsample_2x(half)
         mx.eval(out)
-    time_fn(bench_upsample, label="Bilinear upsample 2x (192x256 -> 384x512)")
+    time_fn(bench_upsample, label="Nearest upsample 2x (192x256 -> 384x512)")
 
     # Haar DWT
     img = mx.array(np.random.rand(1, H, W, 3).astype(np.float32))
@@ -675,7 +678,7 @@ def main():
     1. Batch size 2: ~1.07x throughput (3.6 vs 3.4 pairs/sec)
        -> Default in train_renderer_mlx.py --batch-size 2
     2. Faster upsample: reshape+broadcast replaces mx.repeat (2x faster op)
-       -> Applied in mlx_renderer.py _bilinear_upsample_2x
+       -> Applied in mlx_renderer.py _nearest_upsample_2x
     3. Pre-converted MLX data slicing: 2.2x faster data fetch
        -> Already implemented (load_data_as_mlx converts upfront)
     4. fp32 loss reduction: prevents fp16 overflow in accumulation
