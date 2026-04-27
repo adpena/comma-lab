@@ -296,6 +296,36 @@ def preflight_all(
         check_nvdec_probe_has_error_classification(strict=True, verbose=verbose)
         check_archive_builders_use_deterministic_zip(strict=True, verbose=verbose)
 
+        # 2026-04-27 meta-bug audit (commit a57731a0): 12 NEW checks for
+        # additional bug classes from session + memory. 4 land at 0 live
+        # violations and go straight to strict; the other 8 have real
+        # existing violations and stay warn-only until a cleanup pass.
+        # Per-check live counts at wire-in time:
+        #   check_vastai_create_has_label                 0  → STRICT
+        #   check_waivers_specify_env_gate                0  → STRICT
+        #   check_inflate_scorer_load_has_runtime_banner  0  → STRICT
+        #   check_vastai_prompts_have_cost_cap            0  → STRICT
+        #   check_vastai_create_writes_tracker            2  warn
+        #   check_subagent_prompts_no_cpu_fallback        1  warn
+        #   check_scores_have_lane_tag                   20  warn (run_log/findings cleanup)
+        #   check_halfframe_archive_uses_trained_profile  2  warn
+        #   check_profile_keys_have_resolvers            91  warn (real audit needed — same class as pose_dim)
+        #   check_test_files_imports_resolve             25  warn (broken-test cleanup)
+        #   check_uniward_delta_has_attestation_gate      6  warn
+        #   check_remote_scripts_write_provenance         5  warn (Lane provenance write)
+        check_vastai_create_has_label(strict=True, verbose=verbose)
+        check_waivers_specify_env_gate(strict=True, verbose=verbose)
+        check_inflate_scorer_load_has_runtime_banner(strict=True, verbose=verbose)
+        check_vastai_prompts_have_cost_cap(strict=True, verbose=verbose)
+        check_vastai_create_writes_tracker(strict=False, verbose=verbose)
+        check_subagent_prompts_no_cpu_fallback(strict=False, verbose=verbose)
+        check_scores_have_lane_tag(strict=False, verbose=verbose)
+        check_halfframe_archive_uses_trained_profile(strict=False, verbose=verbose)
+        check_profile_keys_have_resolvers(strict=False, verbose=verbose)
+        check_test_files_imports_resolve(strict=False, verbose=verbose)
+        check_uniward_delta_has_attestation_gate(strict=False, verbose=verbose)
+        check_remote_scripts_write_provenance(strict=False, verbose=verbose)
+
     # 2. Training inputs (only if profile + tto_frames provided)
     if profile_name and tto_frames_path and gt_poses_path and masks_path and profile_arch:
         preflight_training_inputs(
