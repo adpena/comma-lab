@@ -1407,6 +1407,780 @@ def preflight_dead_resolvers(
     return violations
 
 
+# ── Meta-bug pattern checks ───────────────────────────────────────────────────
+#
+# Each check below catches a CLAUDE.md "FORBIDDEN PATTERNS" bug class that has
+# bitten this project at least once and cost real GPU money. These are
+# additive, defensive scaffolds: each starts in warn-only mode (strict=False)
+# until it surfaces zero true-positive violations on the live codebase, then
+# is flipped strict=True in preflight_all() (see TODO at end of section).
+#
+# Pattern → memory entry mapping:
+#   1. MPS-fallback device default       → feedback_default_to_convenience_trap
+#   2. set -uo pipefail (no -e)          → feedback_zip_dep_bootstrap_trap
+#   3. shell `zip` binary                → feedback_zip_dep_bootstrap_trap
+#   4. pipefail + grep -q SIGPIPE        → feedback_pipefail_grep_q_trap
+#   5. eval_roundtrip=False              → CLAUDE.md "eval_roundtrip" rule
+#   6. scorer load at inflate            → feedback_strict_scorer_rule
+#   7. training script no auth eval      → CLAUDE.md "Auth eval EVERYWHERE"
+#   8. --no-eval-roundtrip CLI flag      → Lane C R5 fix (commit 9d71ec5d)
+
+
+class MetaBugViolation(Exception):
+    """A meta-bug pattern (CLAUDE.md FORBIDDEN PATTERNS) detected."""
+
+
+# Directories scanned for Python meta-bug patterns. Mirrors TARGET_DIRS but
+# adds scripts/ for shell-adjacent Python launchers.
+_META_PY_SCAN_DIRS = ["src/tac", "experiments", "scripts"]
+# Directories scanned for shell meta-bug patterns.
+_META_SH_SCAN_DIRS = ["scripts", "submissions/robust_current"]
+
+
+def _iter_python_files(root: Path, dirs: list[str]) -> list[Path]:
+    """Collect every .py file under `dirs` (recursively). Skips __pycache__."""
+    out: list[Path] = []
+    for d in dirs:
+        d_path = root / d
+        if not d_path.exists():
+            continue
+        for p in d_path.rglob("*.py"):
+            if "__pycache__" in p.parts:
+                continue
+            out.append(p)
+    return sorted(out)
+
+
+def _iter_shell_files(root: Path, dirs: list[str]) -> list[Path]:
+    """Collect every .sh file under `dirs` (recursively)."""
+    out: list[Path] = []
+    for d in dirs:
+        d_path = root / d
+        if not d_path.exists():
+            continue
+        for p in d_path.rglob("*.sh"):
+            out.append(p)
+    return sorted(out)
+
+
+# ── Check 1: MPS-fallback device default ──────────────────────────────────────
+
+
+def _scan_python_for_mps_fallback(path: Path, repo_root: Path) -> list[str]:
+    """Detect `... else "mps" ...` ternaries triggered when CUDA is missing.
+
+    Two layers:
+      A. AST: an IfExp where the test calls `.cuda.is_available()` and the
+         orelse contains the literal `"mps"` (either directly or as a nested
+         IfExp orelse leaf).
+      B. Text: a regex backup catches one-liners that span multiple ternaries,
+         covering the common `"cuda" if ... else "mps" if ... else "cpu"`.
+
+    Tests / smoke files are skipped — they may legitimately probe MPS.
+    """
+    rel = path.relative_to(repo_root) if path.is_absolute() else path
+    rel_s = str(rel)
+    if "/tests/" in rel_s or "test_" in path.name or "/smoke" in rel_s.lower():
+        return []
+    try:
+        text = path.read_text()
+        tree = ast.parse(text, filename=str(path))
+    except (SyntaxError, UnicodeDecodeError):
+        return []
+
+    violations: list[str] = []
+
+    def _orelse_mentions_mps(node: ast.AST) -> bool:
+        for sub in ast.walk(node):
+            if isinstance(sub, ast.Constant) and sub.value == "mps":
+                return True
+        return False
+
+    def _test_checks_cuda(node: ast.AST) -> bool:
+        s = ast.unparse(node) if hasattr(ast, "unparse") else ""
+        return "cuda.is_available" in s or "torch.cuda.is_available" in s
+
+    for node in ast.walk(tree):
+        if isinstance(node, ast.IfExp):
+            if _test_checks_cuda(node.test) and _orelse_mentions_mps(node.orelse):
+                violations.append(
+                    f"{rel}:{node.lineno}: ternary `cuda.is_available() ... "
+                    f"else \"mps\" ...` — MPS-fallback device default. "
+                    f"FORBIDDEN per CLAUDE.md (feedback_default_to_convenience_trap). "
+                    f"Default to CUDA-required; raise on no-CUDA; provide "
+                    f"explicit `--device cpu` opt-in."
+                )
+
+    # Text backup: one-line chains that AST already caught are deduped by lineno.
+    seen_lines = {int(v.split(":")[1]) for v in violations}
+    pat = re.compile(r'"cuda".*cuda\.is_available\(\).*else\s*"mps"')
+    for i, line in enumerate(text.splitlines(), start=1):
+        if i in seen_lines:
+            continue
+        if pat.search(line):
+            violations.append(
+                f"{rel}:{i}: chained ternary with `\"cuda\" if "
+                f"cuda.is_available() else \"mps\"` — MPS-fallback device "
+                f"default. FORBIDDEN per CLAUDE.md "
+                f"(feedback_default_to_convenience_trap)."
+            )
+    return violations
+
+
+def check_no_mps_fallback_default(
+    repo_root: Path | None = None,
+    strict: bool = True,
+    verbose: bool = True,
+) -> list[str]:
+    """Catch the MPS-fallback device default bug class.
+
+    Reference: feedback_default_to_convenience_trap (CLAUDE.md FORBIDDEN
+    PATTERNS). Defaulting to "mps" when CUDA is unavailable produces silent
+    drift (23x PoseNet error verified 2026-04-25). Default must be
+    CUDA-required; opt-in to CPU/MPS only via explicit flag with banner.
+
+    Returns list of violations. Raises MetaBugViolation if strict and any.
+    """
+    root = repo_root or REPO_ROOT
+    violations: list[str] = []
+    n_scanned = 0
+    for py in _iter_python_files(root, _META_PY_SCAN_DIRS):
+        n_scanned += 1
+        violations.extend(_scan_python_for_mps_fallback(py, root))
+
+    if verbose and violations:
+        print(f"  [no-mps-fallback] {len(violations)} violation(s) across {n_scanned} files:")
+        for v in violations:
+            print(f"    • {v}")
+    elif verbose:
+        print(f"  [no-mps-fallback] OK: {n_scanned} files scanned")
+
+    if violations and strict:
+        raise MetaBugViolation(
+            "MPS-FALLBACK DEFAULT violations:\n"
+            + "\n".join(f"  • {v}" for v in violations)
+            + "\n\nMPS auth eval is NOISE — see CLAUDE.md "
+            "feedback_default_to_convenience_trap. Default to CUDA-required."
+        )
+    return violations
+
+
+# ── Check 2: shell `set -uo pipefail` without `set -e` ────────────────────────
+
+
+def _scan_shell_for_missing_set_e(path: Path, repo_root: Path) -> list[str]:
+    """Find `set -` lines that include `u` or `o pipefail` but NOT `e`."""
+    rel = path.relative_to(repo_root) if path.is_absolute() else path
+    try:
+        text = path.read_text()
+    except (UnicodeDecodeError, FileNotFoundError):
+        return []
+    violations: list[str] = []
+    # We accept any `set` line as long as somewhere in the file `set -e`
+    # (or set -euo / -ex etc.) is present. Track presence first.
+    has_e_anywhere = False
+    set_lines: list[tuple[int, str]] = []
+    for i, line in enumerate(text.splitlines(), start=1):
+        stripped = line.strip()
+        if not stripped.startswith("set "):
+            continue
+        # Drop comments after `#`
+        no_comment = stripped.split("#", 1)[0].strip()
+        # Detect short flags like `-e`, `-eu`, `-euo`
+        m = re.match(r"set\s+-([a-zA-Z]+)", no_comment)
+        if m and "e" in m.group(1):
+            has_e_anywhere = True
+        # Or `set -o errexit`
+        if "errexit" in no_comment:
+            has_e_anywhere = True
+        set_lines.append((i, no_comment))
+
+    if has_e_anywhere:
+        return []
+
+    for lineno, line in set_lines:
+        # Only flag lines that USE u or pipefail (the dangerous combo).
+        m = re.match(r"set\s+-([a-zA-Z]+)", line)
+        flags = m.group(1) if m else ""
+        uses_u = "u" in flags
+        uses_pipefail = "o" in flags and "pipefail" in line
+        if uses_u or uses_pipefail:
+            violations.append(
+                f"{rel}:{lineno}: `{line}` uses `u`/`pipefail` without `e`. "
+                f"Silent failure cascade: a failing command does not abort "
+                f"the script — empty captures pass to argparse and crash "
+                f"30 minutes later. Use `set -euo pipefail`. "
+                f"(feedback_zip_dep_bootstrap_trap.)"
+            )
+    return violations
+
+
+def check_shell_set_e_present(
+    repo_root: Path | None = None,
+    strict: bool = True,
+    verbose: bool = True,
+) -> list[str]:
+    """Catch `set -uo pipefail` without `set -e` shell footgun.
+
+    Reference: feedback_zip_dep_bootstrap_trap. Without `-e`, a failing
+    `zip` or `python` command does not abort the script. Empty captured
+    variables flow downstream and crash auth_eval 30 minutes later.
+
+    Returns list of violations. Raises MetaBugViolation if strict and any.
+    """
+    root = repo_root or REPO_ROOT
+    violations: list[str] = []
+    n_scanned = 0
+    for sh in _iter_shell_files(root, _META_SH_SCAN_DIRS):
+        n_scanned += 1
+        violations.extend(_scan_shell_for_missing_set_e(sh, root))
+
+    if verbose and violations:
+        print(f"  [set-e-required] {len(violations)} violation(s) across {n_scanned} files:")
+        for v in violations:
+            print(f"    • {v}")
+    elif verbose:
+        print(f"  [set-e-required] OK: {n_scanned} files scanned")
+
+    if violations and strict:
+        raise MetaBugViolation(
+            "SHELL `set -e` MISSING violations:\n"
+            + "\n".join(f"  • {v}" for v in violations)
+            + "\n\nUse `set -euo pipefail` (feedback_zip_dep_bootstrap_trap)."
+        )
+    return violations
+
+
+# ── Check 3: shell `zip` binary use ───────────────────────────────────────────
+
+
+# Match `zip` (whitespace-bounded) but NOT `zipfile`, `unzip`, `gunzip`,
+# `gzip`, `bzip2`, `gunzip2`, etc. We require `zip` to appear after a
+# command boundary (start of line, `;`, `&&`, `||`, `|`, `(`, or `$(`)
+# OPTIONALLY preceded by env vars / sudo, and followed by whitespace.
+_ZIP_BIN_RE = re.compile(
+    r'(?:^|[;&|()`]|\$\()\s*(?:[A-Z_][A-Z0-9_]*=\S+\s+)*(?:sudo\s+)?zip(?=[\s\\])'
+)
+
+
+def _scan_shell_for_zip_binary(path: Path, repo_root: Path) -> list[str]:
+    """Find use of the shell `zip` binary (which is missing on PyTorch
+    container images). Allow `python -c '...zipfile...'` and `unzip`."""
+    rel = path.relative_to(repo_root) if path.is_absolute() else path
+    try:
+        text = path.read_text()
+    except (UnicodeDecodeError, FileNotFoundError):
+        return []
+    violations: list[str] = []
+    for i, line in enumerate(text.splitlines(), start=1):
+        stripped = line.strip()
+        if not stripped or stripped.startswith("#"):
+            continue
+        # Skip lines that are clearly invoking python with zipfile
+        if "zipfile" in stripped:
+            continue
+        if _ZIP_BIN_RE.search(stripped):
+            violations.append(
+                f"{rel}:{i}: shell `zip` binary not present on PyTorch "
+                f"container images. Use `python -c \"import zipfile; ...\"` "
+                f"instead. (feedback_zip_dep_bootstrap_trap.)"
+            )
+    return violations
+
+
+def check_no_shell_zip_binary(
+    repo_root: Path | None = None,
+    strict: bool = True,
+    verbose: bool = True,
+) -> list[str]:
+    """Catch shell `zip` binary use (missing on PyTorch container images).
+
+    Reference: feedback_zip_dep_bootstrap_trap. The PyTorch base container
+    has no `zip` (but `unzip` is separate and OK). Use `python zipfile`.
+
+    Returns list of violations. Raises MetaBugViolation if strict and any.
+    """
+    root = repo_root or REPO_ROOT
+    violations: list[str] = []
+    n_scanned = 0
+    for sh in _iter_shell_files(root, _META_SH_SCAN_DIRS):
+        n_scanned += 1
+        violations.extend(_scan_shell_for_zip_binary(sh, root))
+
+    if verbose and violations:
+        print(f"  [no-shell-zip] {len(violations)} violation(s) across {n_scanned} files:")
+        for v in violations:
+            print(f"    • {v}")
+    elif verbose:
+        print(f"  [no-shell-zip] OK: {n_scanned} files scanned")
+
+    if violations and strict:
+        raise MetaBugViolation(
+            "SHELL `zip` BINARY violations:\n"
+            + "\n".join(f"  • {v}" for v in violations)
+            + "\n\nUse `python -c \"import zipfile\"` "
+            "(feedback_zip_dep_bootstrap_trap)."
+        )
+    return violations
+
+
+# ── Check 4: pipefail + `grep -q` SIGPIPE trap ────────────────────────────────
+
+
+def _scan_shell_for_pipefail_grep_q(path: Path, repo_root: Path) -> list[str]:
+    """Find `... | grep -q PATTERN` lines under `set -e`/`pipefail`.
+
+    grep -q closes stdin after first match; the upstream cmd then SIGPIPEs;
+    pipefail propagates that as failure; `set -e` aborts the script.
+    Remediation: capture-first idiom (`OUT=$(cmd); echo "$OUT" | grep -q ...`).
+    """
+    rel = path.relative_to(repo_root) if path.is_absolute() else path
+    try:
+        text = path.read_text()
+    except (UnicodeDecodeError, FileNotFoundError):
+        return []
+    # Only fire if file has set -e or pipefail somewhere.
+    has_pipefail_or_e = False
+    for line in text.splitlines():
+        stripped = line.strip()
+        if not stripped.startswith("set "):
+            continue
+        no_comment = stripped.split("#", 1)[0].strip()
+        m = re.match(r"set\s+-([a-zA-Z]+)", no_comment)
+        if m and "e" in m.group(1):
+            has_pipefail_or_e = True
+        if "pipefail" in no_comment or "errexit" in no_comment:
+            has_pipefail_or_e = True
+    if not has_pipefail_or_e:
+        return []
+
+    violations: list[str] = []
+    for i, line in enumerate(text.splitlines(), start=1):
+        # Skip comments
+        if line.lstrip().startswith("#"):
+            continue
+        # Look for `| grep -q` (allow `-qE`, `-qi`, etc.)
+        if re.search(r"\|\s*grep\s+-[a-zA-Z]*q", line):
+            violations.append(
+                f"{rel}:{i}: `| grep -q` under `set -e`/`pipefail` triggers "
+                f"SIGPIPE on the upstream command — pipeline aborts the "
+                f"script. Capture-first idiom: "
+                f"`OUT=$(cmd 2>&1); echo \"$OUT\" | grep -q ...`. "
+                f"(feedback_pipefail_grep_q_trap.)"
+            )
+    return violations
+
+
+def check_no_pipefail_grep_q_trap(
+    repo_root: Path | None = None,
+    strict: bool = True,
+    verbose: bool = True,
+) -> list[str]:
+    """Catch `pipefail + grep -q` SIGPIPE trap.
+
+    Reference: feedback_pipefail_grep_q_trap. `cmd | grep -q PAT` under
+    `set -euo pipefail` SIGPIPEs the upstream when grep stops reading
+    after first match. Whole pipeline reports failure → script aborts.
+
+    Returns list of violations. Raises MetaBugViolation if strict and any.
+    """
+    root = repo_root or REPO_ROOT
+    violations: list[str] = []
+    n_scanned = 0
+    for sh in _iter_shell_files(root, _META_SH_SCAN_DIRS):
+        n_scanned += 1
+        violations.extend(_scan_shell_for_pipefail_grep_q(sh, root))
+
+    if verbose and violations:
+        print(f"  [no-pipefail-grep-q] {len(violations)} violation(s) across {n_scanned} files:")
+        for v in violations:
+            print(f"    • {v}")
+    elif verbose:
+        print(f"  [no-pipefail-grep-q] OK: {n_scanned} files scanned")
+
+    if violations and strict:
+        raise MetaBugViolation(
+            "PIPEFAIL + GREP -Q violations:\n"
+            + "\n".join(f"  • {v}" for v in violations)
+            + "\n\nUse capture-first idiom (feedback_pipefail_grep_q_trap)."
+        )
+    return violations
+
+
+# ── Check 5: eval_roundtrip=False anywhere ────────────────────────────────────
+
+
+def _scan_python_for_eval_roundtrip_false(path: Path, repo_root: Path) -> list[str]:
+    """Detect:
+      A. `eval_roundtrip=False` keyword in any call.
+      B. `def foo(..., eval_roundtrip: bool = False, ...)` default.
+      C. `def foo(..., eval_roundtrip = False, ...)` default (untyped).
+    Test/smoke files are exempt.
+    """
+    rel = path.relative_to(repo_root) if path.is_absolute() else path
+    rel_s = str(rel)
+    if "/tests/" in rel_s or "test_" in path.name:
+        return []
+    try:
+        tree = ast.parse(path.read_text(), filename=str(path))
+    except (SyntaxError, UnicodeDecodeError):
+        return []
+    violations: list[str] = []
+
+    # A. Keyword-arg call sites: foo(..., eval_roundtrip=False, ...)
+    for node in ast.walk(tree):
+        if isinstance(node, ast.Call):
+            for kw in node.keywords:
+                if kw.arg == "eval_roundtrip" and isinstance(kw.value, ast.Constant) \
+                        and kw.value.value is False:
+                    violations.append(
+                        f"{rel}:{node.lineno}: call passes "
+                        f"`eval_roundtrip=False`. NON-NEGOTIABLE per CLAUDE.md: "
+                        f"every training path must use eval_roundtrip. Only "
+                        f"escape hatch is env var TAC_ALLOW_NO_ROUNDTRIP=1."
+                    )
+
+    # B/C. Function defaults
+    for node in ast.walk(tree):
+        if not isinstance(node, (ast.FunctionDef, ast.AsyncFunctionDef)):
+            continue
+        args = node.args
+        # Combine positional and keyword-only with their defaults.
+        all_args = list(args.args) + list(args.kwonlyargs)
+        # positional defaults align to the TAIL of args.args
+        pos_defaults = [None] * (len(args.args) - len(args.defaults)) + list(args.defaults)
+        kw_defaults = list(args.kw_defaults)
+        all_defaults = pos_defaults + kw_defaults
+        for a, d in zip(all_args, all_defaults):
+            if a.arg != "eval_roundtrip" or d is None:
+                continue
+            if isinstance(d, ast.Constant) and d.value is False:
+                violations.append(
+                    f"{rel}:{node.lineno}: function `{node.name}` defaults "
+                    f"`eval_roundtrip=False`. NON-NEGOTIABLE per CLAUDE.md: "
+                    f"default must be True; only escape hatch is env var "
+                    f"TAC_ALLOW_NO_ROUNDTRIP=1."
+                )
+    return violations
+
+
+def check_no_eval_roundtrip_false(
+    repo_root: Path | None = None,
+    strict: bool = True,
+    verbose: bool = True,
+) -> list[str]:
+    """Catch eval_roundtrip=False anywhere (call site or function default).
+
+    Reference: CLAUDE.md "eval_roundtrip — NON-NEGOTIABLE". Without
+    eval_roundtrip, proxy-auth gap is 2-6x on PoseNet. Every training run
+    without it is a wasted run.
+
+    Returns list of violations. Raises MetaBugViolation if strict and any.
+    """
+    root = repo_root or REPO_ROOT
+    violations: list[str] = []
+    n_scanned = 0
+    for py in _iter_python_files(root, _META_PY_SCAN_DIRS):
+        n_scanned += 1
+        violations.extend(_scan_python_for_eval_roundtrip_false(py, root))
+
+    if verbose and violations:
+        print(f"  [no-eval-roundtrip-false] {len(violations)} violation(s) across {n_scanned} files:")
+        for v in violations:
+            print(f"    • {v}")
+    elif verbose:
+        print(f"  [no-eval-roundtrip-false] OK: {n_scanned} files scanned")
+
+    if violations and strict:
+        raise MetaBugViolation(
+            "eval_roundtrip=False violations:\n"
+            + "\n".join(f"  • {v}" for v in violations)
+            + "\n\neval_roundtrip is non-negotiable (CLAUDE.md)."
+        )
+    return violations
+
+
+# ── Check 6: scorer load at inflate time ──────────────────────────────────────
+
+
+# Patterns indicating a scorer is being loaded at inflate time. Per
+# feedback_strict_scorer_rule, NO scorers may be loaded at inflate.
+_SCORER_LOAD_NAMES = (
+    "load_scorers", "load_posenet", "load_segnet",
+    "load_differentiable_scorers",
+    "PoseNet(", "SegNet(",  # direct instantiation
+)
+_SCORER_NAME_LITERALS_RE = re.compile(r"\b(posenet|segnet)\b", re.IGNORECASE)
+
+
+def _scan_inflate_for_scorer_load(path: Path, repo_root: Path) -> list[str]:
+    """Detect scorer-load patterns in inflate*.py files."""
+    rel = path.relative_to(repo_root) if path.is_absolute() else path
+    try:
+        text = path.read_text()
+        tree = ast.parse(text, filename=str(path))
+    except (SyntaxError, UnicodeDecodeError):
+        # .sh files won't parse — fall back to text scan.
+        text = ""
+        try:
+            text = path.read_text()
+        except (UnicodeDecodeError, FileNotFoundError):
+            return []
+        tree = None
+
+    violations: list[str] = []
+
+    if tree is not None:
+        # AST: detect imports / calls referencing scorer loaders.
+        for node in ast.walk(tree):
+            if isinstance(node, ast.ImportFrom) and node.module:
+                if "tac.scorer" in node.module or node.module == "tac.scorer":
+                    for alias in node.names:
+                        violations.append(
+                            f"{rel}:{node.lineno}: imports {alias.name!r} from "
+                            f"{node.module} at inflate time. Strict scorer rule "
+                            f"(CLAUDE.md feedback_strict_scorer_rule): NO scorer "
+                            f"load at inflate; ~73MB destroys the rate term."
+                        )
+            if isinstance(node, ast.Call):
+                func_str = ast.unparse(node.func) if hasattr(ast, "unparse") else ""
+                for name in ("load_scorers", "load_posenet", "load_segnet",
+                             "load_differentiable_scorers"):
+                    if func_str.endswith(name):
+                        violations.append(
+                            f"{rel}:{node.lineno}: calls `{func_str}(...)` at "
+                            f"inflate time. Strict scorer rule (CLAUDE.md "
+                            f"feedback_strict_scorer_rule): NO scorer load at "
+                            f"inflate."
+                        )
+                        break
+    else:
+        # Shell file fallback: any line mentioning posenet.bin / segnet.bin
+        # / safetensors.load near scorer keywords.
+        for i, line in enumerate(text.splitlines(), start=1):
+            low = line.lower()
+            if "scorer" in low and ("load" in low or "import" in low):
+                violations.append(
+                    f"{rel}:{i}: shell line references scorer load at "
+                    f"inflate time (CLAUDE.md feedback_strict_scorer_rule)."
+                )
+    return violations
+
+
+def check_no_scorer_load_at_inflate(
+    repo_root: Path | None = None,
+    strict: bool = True,
+    verbose: bool = True,
+) -> list[str]:
+    """Catch any scorer load at inflate time.
+
+    Reference: feedback_strict_scorer_rule (CLAUDE.md "Strict scorer rule").
+    NO PoseNet/SegNet load at inflate — those weights would have to live
+    in archive.zip per Yousfi PR #35, destroying the rate term.
+
+    Scans `submissions/*/inflate*.py` and `submissions/*/inflate.sh`.
+    Returns list of violations. Raises MetaBugViolation if strict and any.
+    """
+    root = repo_root or REPO_ROOT
+    violations: list[str] = []
+    n_scanned = 0
+    submissions = root / "submissions"
+    if submissions.exists():
+        for sub_dir in sorted(submissions.iterdir()):
+            if not sub_dir.is_dir():
+                continue
+            for p in sorted(sub_dir.glob("inflate*.py")):
+                n_scanned += 1
+                violations.extend(_scan_inflate_for_scorer_load(p, root))
+            for p in sorted(sub_dir.glob("inflate*.sh")):
+                n_scanned += 1
+                violations.extend(_scan_inflate_for_scorer_load(p, root))
+
+    if verbose and violations:
+        print(f"  [no-scorer-at-inflate] {len(violations)} violation(s) across {n_scanned} files:")
+        for v in violations:
+            print(f"    • {v}")
+    elif verbose:
+        print(f"  [no-scorer-at-inflate] OK: {n_scanned} inflate files scanned")
+
+    if violations and strict:
+        raise MetaBugViolation(
+            "SCORER LOAD AT INFLATE violations:\n"
+            + "\n".join(f"  • {v}" for v in violations)
+            + "\n\nNo scorer at inflate time (feedback_strict_scorer_rule)."
+        )
+    return violations
+
+
+# ── Check 7: training scripts MUST end with auth eval ─────────────────────────
+
+
+# Markers indicating a script either runs auth_eval as a subprocess or
+# imports/calls a tac auth_eval helper.
+_AUTH_EVAL_TOKENS = (
+    "auth_eval_renderer.py",   # subprocess invocation
+    "auth_eval_renderer",      # bare module ref
+    "from tac.auth_eval",      # import
+    "auth_eval(",              # function call
+    "run_auth_eval(",          # canonical helper
+    "--no-auth-eval-on-best",  # explicit operator opt-out (still satisfies)
+)
+# Hints that the script saves a model checkpoint (so it definitely produces
+# something that should be auth-evaluated).
+_SAVE_HINT_RE = re.compile(
+    r'torch\.save\([^)]*?(?:renderer|checkpoint|best|model|state_dict)',
+    re.IGNORECASE,
+)
+
+
+def _scan_training_script_for_auth_eval(path: Path, repo_root: Path) -> list[str]:
+    """Flag a training script that saves a checkpoint but never references
+    any auth-eval invocation."""
+    rel = path.relative_to(repo_root) if path.is_absolute() else path
+    try:
+        text = path.read_text()
+    except (UnicodeDecodeError, FileNotFoundError):
+        return []
+    if not _SAVE_HINT_RE.search(text):
+        # Doesn't look like it produces a checkpoint — skip.
+        return []
+    if any(tok in text for tok in _AUTH_EVAL_TOKENS):
+        return []
+    return [
+        f"{rel}: training script saves a checkpoint but references NO "
+        f"auth-eval invocation (auth_eval_renderer.py / tac.auth_eval / "
+        f"--no-auth-eval-on-best). Per CLAUDE.md \"Auth eval EVERYWHERE\": "
+        f"every chained experiment MUST end with a CUDA auth eval against "
+        f"its best checkpoint. Tracking only proxy is a wasted run "
+        f"(proxy-auth gap can be 100-350x even on CUDA-CUDA)."
+    ]
+
+
+def check_training_scripts_have_auth_eval(
+    repo_root: Path | None = None,
+    strict: bool = True,
+    verbose: bool = True,
+) -> list[str]:
+    """Catch training scripts that save a model but never auth-eval it.
+
+    Reference: CLAUDE.md "Auth eval EVERYWHERE — NON-NEGOTIABLE". Scans
+    `experiments/train_*.py` and `src/tac/experiments/train_*.py`.
+
+    Returns list of violations. Raises MetaBugViolation if strict and any.
+    """
+    root = repo_root or REPO_ROOT
+    violations: list[str] = []
+    n_scanned = 0
+    candidates: list[Path] = []
+    for d in ("experiments", "src/tac/experiments"):
+        d_path = root / d
+        if not d_path.exists():
+            continue
+        for p in sorted(d_path.glob("train_*.py")):
+            candidates.append(p)
+    for p in candidates:
+        n_scanned += 1
+        violations.extend(_scan_training_script_for_auth_eval(p, root))
+
+    if verbose and violations:
+        print(f"  [training-needs-auth-eval] {len(violations)} violation(s) across {n_scanned} files:")
+        for v in violations:
+            print(f"    • {v}")
+    elif verbose:
+        print(f"  [training-needs-auth-eval] OK: {n_scanned} training scripts scanned")
+
+    if violations and strict:
+        raise MetaBugViolation(
+            "TRAINING SCRIPT MISSING AUTH EVAL violations:\n"
+            + "\n".join(f"  • {v}" for v in violations)
+            + "\n\nAuth eval EVERYWHERE (CLAUDE.md non-negotiable)."
+        )
+    return violations
+
+
+# ── Check 8: --no-eval-roundtrip CLI flag definition ──────────────────────────
+
+
+def _scan_python_for_disable_eval_roundtrip_flag(
+    path: Path, repo_root: Path,
+) -> list[str]:
+    """Detect `add_argument("--no-eval-roundtrip"...)` literals."""
+    rel = path.relative_to(repo_root) if path.is_absolute() else path
+    rel_s = str(rel)
+    if "/tests/" in rel_s or "test_" in path.name:
+        return []
+    try:
+        tree = ast.parse(path.read_text(), filename=str(path))
+    except (SyntaxError, UnicodeDecodeError):
+        return []
+    violations: list[str] = []
+    for node in ast.walk(tree):
+        if not isinstance(node, ast.Call):
+            continue
+        func_str = ast.unparse(node.func) if hasattr(ast, "unparse") else ""
+        if not func_str.endswith(".add_argument"):
+            continue
+        for arg in node.args:
+            if isinstance(arg, ast.Constant) and isinstance(arg.value, str):
+                if arg.value == "--no-eval-roundtrip":
+                    violations.append(
+                        f"{rel}:{node.lineno}: defines `--no-eval-roundtrip` "
+                        f"argparse flag. FORBIDDEN per CLAUDE.md: eval_roundtrip "
+                        f"is non-negotiable; the only escape hatch is env var "
+                        f"TAC_ALLOW_NO_ROUNDTRIP=1. Remove the flag."
+                    )
+    return violations
+
+
+def check_no_disable_eval_roundtrip_flag(
+    repo_root: Path | None = None,
+    strict: bool = True,
+    verbose: bool = True,
+) -> list[str]:
+    """Catch `--no-eval-roundtrip` argparse definitions.
+
+    Reference: Lane C R5 fix (commit 9d71ec5d removed --no-eval-roundtrip
+    from optimize_uniward_delta.py). The only escape hatch is env var.
+
+    Returns list of violations. Raises MetaBugViolation if strict and any.
+    """
+    root = repo_root or REPO_ROOT
+    violations: list[str] = []
+    n_scanned = 0
+    for py in _iter_python_files(root, _META_PY_SCAN_DIRS):
+        n_scanned += 1
+        violations.extend(_scan_python_for_disable_eval_roundtrip_flag(py, root))
+
+    if verbose and violations:
+        print(f"  [no-disable-eval-roundtrip-flag] {len(violations)} violation(s) across {n_scanned} files:")
+        for v in violations:
+            print(f"    • {v}")
+    elif verbose:
+        print(f"  [no-disable-eval-roundtrip-flag] OK: {n_scanned} files scanned")
+
+    if violations and strict:
+        raise MetaBugViolation(
+            "--no-eval-roundtrip CLI FLAG violations:\n"
+            + "\n".join(f"  • {v}" for v in violations)
+            + "\n\nRemove the flag (CLAUDE.md non-negotiable)."
+        )
+    return violations
+
+
+# TODO(2026-04-27 follow-up): wire the new meta-bug checks into preflight_all()
+# AFTER the parallel subagent's preflight_all strict=True flip lands. Order:
+#   check_no_mps_fallback_default
+#   check_shell_set_e_present
+#   check_no_shell_zip_binary
+#   check_no_pipefail_grep_q_trap
+#   check_no_eval_roundtrip_false
+#   check_no_scorer_load_at_inflate
+#   check_training_scripts_have_auth_eval
+#   check_no_disable_eval_roundtrip_flag
+# All start strict=False; flip individually as each surfaces zero true-positive
+# violations on the live codebase.
+
+
 # ── Filename contract validation ──────────────────────────────────────────────
 #
 # Bug class this catches: a consumer script (pipeline.py) constructs a path
