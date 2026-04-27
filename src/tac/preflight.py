@@ -264,59 +264,27 @@ def preflight_all(
         preflight_build_renderer_signature(strict=True, verbose=verbose)
         preflight_bootstrap_safety(strict=True, verbose=verbose)
 
-        # 2026-04-27 codex R5-3 Finding #4: wire the 8 meta-bug checks
-        # (FORBIDDEN PATTERNS / CLAUDE.md) into preflight_all WARN-ONLY.
-        # All 8 currently have non-zero live-codebase counts; flipping any
-        # to strict before fixing those would break Lane A's downstream
-        # eval. After fixes #5/#6/#7/#8 in the same commit, current live
-        # counts (per `python -c '... check_*(strict=False)'`):
-        #   check_no_mps_fallback_default:           1
-        #   check_shell_set_e_present:               1
-        #   check_no_shell_zip_binary:               1
-        #   check_no_pipefail_grep_q_trap:           1
-        #   check_no_eval_roundtrip_false:           0  (eligible for strict
-        #                                                once verified to
-        #                                                stay at 0 across
-        #                                                a Lane A cycle)
-        #   check_no_scorer_load_at_inflate:        13
-        #   check_training_scripts_have_auth_eval:   0  (eligible for strict
-        #                                                once verified to
-        #                                                stay at 0; AST-
-        #                                                upgraded in same
-        #                                                commit, no FPs)
-        #   check_no_disable_eval_roundtrip_flag:   16
-        # Promotion plan: each check flips to strict=True INDIVIDUALLY
-        # after operator confirms zero live violations on a clean Lane A
-        # cycle. Mirrors the pattern used for preflight_dead_resolvers
-        # (commit add2def5: warn-only → fixes → strict-flip).
-        check_no_mps_fallback_default(strict=False, verbose=verbose)
-        check_shell_set_e_present(strict=False, verbose=verbose)
-        check_no_shell_zip_binary(strict=False, verbose=verbose)
-        check_no_pipefail_grep_q_trap(strict=False, verbose=verbose)
-        check_no_eval_roundtrip_false(strict=False, verbose=verbose)
-        check_no_scorer_load_at_inflate(strict=False, verbose=verbose)
-        check_training_scripts_have_auth_eval(strict=False, verbose=verbose)
-        check_no_disable_eval_roundtrip_flag(strict=False, verbose=verbose)
-
-        # 2026-04-27 (this commit): wire the 3 follow-on meta-bug checks
-        # (codex R5-3 #2 + #11 + NVDEC probe gap from commits a1128fd9 /
-        # eef64293) into preflight_all WARN-ONLY. Live counts on this
-        # codebase at wire-in time:
-        #   check_no_pack_sparse_delta_approved_outside_promotion_tool: 0
-        #     (eligible for strict promotion once verified to stay at 0
-        #      across a Lane C cycle)
-        #   check_inflate_sh_handles_br_centrally:                     0
-        #     (robust_current/inflate.sh has the Stage 0 block per
-        #      a1128fd9; exact_current/inflate.sh is a 5-line passthrough
-        #      with no PYTHON_INFLATE dispatch — soft-skipped; eligible
-        #      for strict promotion)
-        #   check_remote_scripts_have_nvdec_probe:                     3
-        #     (remote_pose_tto_bootstrap.sh, remote_setup_full.sh,
-        #      remote_train_bootstrap.sh — all do GPU work; either add
-        #      probe call or NO_NVDEC_NEEDED header)
-        check_no_pack_sparse_delta_approved_outside_promotion_tool(strict=False, verbose=verbose)
-        check_inflate_sh_handles_br_centrally(strict=False, verbose=verbose)
-        check_remote_scripts_have_nvdec_probe(strict=False, verbose=verbose)
+        # 2026-04-27 codex R5-3 Finding #4 + R5-3-r3: wire all 11 meta-bug
+        # checks (FORBIDDEN PATTERNS / CLAUDE.md) into preflight_all STRICT.
+        # Live-codebase counts went 40 → 0 across F1 (commit 7d2b5299), F2
+        # (commit a94a9325), and the codex-round-4 probe-before-DALI fix.
+        # Every entry point — pre-commit hook (tools/preflight_hook.py), CI
+        # (.github/workflows/ci.yml), and any direct preflight_all caller —
+        # now BLOCKS at commit/PR/run time on any new violation. The bug
+        # classes that wasted days of GPU time + multiple rounds of council
+        # rework are now structurally extinct. Reverting any of these fixes
+        # will fail strict here.
+        check_no_mps_fallback_default(strict=True, verbose=verbose)
+        check_shell_set_e_present(strict=True, verbose=verbose)
+        check_no_shell_zip_binary(strict=True, verbose=verbose)
+        check_no_pipefail_grep_q_trap(strict=True, verbose=verbose)
+        check_no_eval_roundtrip_false(strict=True, verbose=verbose)
+        check_no_scorer_load_at_inflate(strict=True, verbose=verbose)
+        check_training_scripts_have_auth_eval(strict=True, verbose=verbose)
+        check_no_disable_eval_roundtrip_flag(strict=True, verbose=verbose)
+        check_no_pack_sparse_delta_approved_outside_promotion_tool(strict=True, verbose=verbose)
+        check_inflate_sh_handles_br_centrally(strict=True, verbose=verbose)
+        check_remote_scripts_have_nvdec_probe(strict=True, verbose=verbose)
 
     # 2. Training inputs (only if profile + tto_frames provided)
     if profile_name and tto_frames_path and gt_poses_path and masks_path and profile_arch:

@@ -1480,20 +1480,24 @@ class TestPreflightAllInvokesMetaBugChecks:
             f"preflight_all (warn-only is OK, but must be called)."
         )
 
-    def test_preflight_all_calls_meta_checks_warn_only(self) -> None:
-        """Pin that the wiring is currently strict=False (warn-only) — the
-        live codebase has 30+ violations across these checks; flipping any
-        to strict before fixing them would break Lane A. When an operator
-        fixes a check's violations to zero and is ready to flip it to
-        strict, this test must be updated alongside that change.
+    def test_preflight_all_calls_meta_checks_strict(self) -> None:
+        """Post-cleanup (commits 7d2b5299 + a94a9325): all 11 meta-bug
+        checks now have ZERO live-codebase violations and are wired
+        strict=True. Reverting any check to warn-only here means the
+        bug class can silently land in a future commit — the gate must
+        stay strict.
+
+        If a future codebase change introduces a real violation that
+        can't be fixed (e.g., a new submission strategy that requires
+        scorer-at-inflate by design), the operator should add an
+        explicit opt-out marker (NO_NVDEC_NEEDED, # noqa: scorer-at-
+        inflate, etc.) recognized by the relevant scanner — NOT flip
+        the check back to warn-only.
         """
         import inspect
         from tac import preflight as pf
 
         src = inspect.getsource(pf.preflight_all)
-        # Each check must currently be invoked with strict=False.
-        # If a check is later promoted to strict, the operator must update
-        # this assertion to reflect the partition.
         meta_checks = [
             "check_no_mps_fallback_default",
             "check_shell_set_e_present",
@@ -1503,19 +1507,20 @@ class TestPreflightAllInvokesMetaBugChecks:
             "check_no_scorer_load_at_inflate",
             "check_training_scripts_have_auth_eval",
             "check_no_disable_eval_roundtrip_flag",
-            # Follow-on (codex R5-3 #2 + #11 + NVDEC probe gap):
             "check_no_pack_sparse_delta_approved_outside_promotion_tool",
             "check_inflate_sh_handles_br_centrally",
             "check_remote_scripts_have_nvdec_probe",
         ]
         for chk in meta_checks:
-            # Find the line invoking this check and confirm strict=False.
+            # Find the line invoking this check and confirm strict=True.
             for line in src.splitlines():
                 if chk + "(" in line and "def " not in line:
-                    assert "strict=False" in line, (
-                        f"{chk} must be invoked with strict=False in "
-                        f"preflight_all (warn-only); found: {line.strip()}. "
-                        f"If you intend to flip to strict, update this "
-                        f"test to whitelist {chk}."
+                    assert "strict=True" in line, (
+                        f"{chk} must be invoked with strict=True in "
+                        f"preflight_all (the bug class is structurally "
+                        f"closed by 7d2b5299 + a94a9325); found: "
+                        f"{line.strip()}. Add an opt-out marker for any "
+                        f"new legitimate violation rather than reverting "
+                        f"to warn-only."
                     )
                     break
