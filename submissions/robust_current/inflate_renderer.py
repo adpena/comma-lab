@@ -2245,6 +2245,13 @@ def inflate_renderer(
     t_total_start = time.monotonic()
 
     # ---- Brotli decompression: decompress any .br files from archive ----
+    # Codex R5-3 (2026-04-27): the canonical .br -> sibling decompression
+    # is now done UP FRONT in inflate.sh's "Stage 0" before PYTHON_INFLATE
+    # branch dispatch, so by the time we get here in the renderer arm there
+    # should be no .br files left. This inline call is kept as defense-in-
+    # depth for direct python invocations of inflate_renderer.py that do
+    # NOT go through inflate.sh (e.g. local debugging, unit tests). It is a
+    # no-op when no .br files are present, so the cost is one Path.glob().
     _decompress_brotli_in_archive(archive_dir)
 
     # ---- Device detection ----
@@ -3540,6 +3547,11 @@ def inflate_renderer_with_tto(
         INFLATE_CG_BATCH_PAIRS:     pairs per batch (default 20)
     """
     # ---- Brotli decompression: decompress any .br files from archive ----
+    # Codex R5-3 (2026-04-27): the canonical .br -> sibling decompression
+    # is now done UP FRONT in inflate.sh's "Stage 0" before PYTHON_INFLATE
+    # branch dispatch. This call is defense-in-depth for direct python
+    # invocations of inflate_renderer_with_tto() that bypass inflate.sh.
+    # No-op when no .br files are present.
     _decompress_brotli_in_archive(archive_dir)
 
     inflate_tto = os.environ.get("INFLATE_TTO", "0") == "1"

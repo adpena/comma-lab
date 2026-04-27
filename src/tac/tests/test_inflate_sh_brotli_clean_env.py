@@ -223,3 +223,143 @@ def test_inflate_renderer_brotli_helper_lists_missing_files(tmp_path: Path) -> N
         "FATAL message must point at the canonical fix (pyproject dep / "
         "uv sync) rather than generic pip-installation instructions."
     )
+
+
+# ============================================================
+# Codex R5-3 #1 (MEDIUM): brotli .br detection + decompression must
+# fire BEFORE PYTHON_INFLATE branch dispatch, not only on the
+# renderer arm. Below tests pin the centralized "Stage 0" step.
+# ============================================================
+def test_inflate_sh_has_centralized_brotli_stage_before_branch_dispatch() -> None:
+    """The Stage 0 brotli decompression block in inflate.sh must appear
+    BEFORE the `while IFS= read -r rel; do` loop that contains the
+    PYTHON_INFLATE branch dispatch.
+
+    Without this ordering, any non-renderer branch (PYTHON_INFLATE=1 /
+    postfilter / grain_mask / future variants) that received a .br
+    archive would fail later as a missing renderer.bin / masks.mkv
+    rather than the actionable Stage 0 diagnostic.
+    """
+    text = INFLATE_SH.read_text()
+    stage0_marker = text.find("Stage 0: brotli decompression")
+    assert stage0_marker != -1, (
+        "inflate.sh missing 'Stage 0: brotli decompression' centralized "
+        "block; codex R5-3 fix regressed."
+    )
+    while_marker = text.find("while IFS= read -r rel; do")
+    assert while_marker != -1, "inflate.sh missing the per-video while loop"
+    assert stage0_marker < while_marker, (
+        "Stage 0 brotli block must appear BEFORE the PYTHON_INFLATE branch "
+        "dispatch (the while loop). Currently Stage 0 is at offset "
+        f"{stage0_marker} and the while loop starts at {while_marker}."
+    )
+
+
+def test_inflate_sh_stage0_passes_with_brotli_to_uv_run() -> None:
+    """Stage 0 invokes `uv run` to do the decompression; it MUST pass
+    `--with brotli` so a clean contest env (no tac wheel installed) can
+    still resolve the brotli wheel. Without this flag we'd fall back to
+    whatever pyproject `uv run` happened to discover, which in a contest
+    evaluator is the contest's pyproject — NOT ours.
+    """
+    text = INFLATE_SH.read_text()
+    # Carve out the Stage 0 block (between the Stage 0 banner comment and
+    # the next `upscale_rgb_base_filter()` definition).
+    block_match = re.search(
+        r"Stage 0: brotli decompression.*?upscale_rgb_base_filter\(\)",
+        text, flags=re.DOTALL,
+    )
+    assert block_match is not None, "Stage 0 block bounds not found"
+    block = block_match.group(0)
+    assert "uv run --with brotli" in block or '"$UV_BIN" run --with brotli' in block, (
+        "Stage 0 must pass `--with brotli` to `uv run`. The clean-contest-env "
+        "guarantee depends on this."
+    )
+
+
+def test_inflate_sh_stage0_runs_for_all_branches_not_just_renderer(tmp_path: Path) -> None:
+    """The Stage 0 decompression must NOT be guarded by PYTHON_INFLATE — it
+    must execute regardless of which branch the dispatch later picks.
+
+    We assert this via the source structure: the Stage 0 block must NOT
+    appear inside any `if [ "$PYTHON_INFLATE" = "..." ]` branch — i.e. it
+    is unconditional with respect to PYTHON_INFLATE.
+    """
+    text = INFLATE_SH.read_text()
+    stage0_marker = text.find("Stage 0: brotli decompression")
+    assert stage0_marker != -1
+    # Find all PYTHON_INFLATE branch openings (the if/elif chain inside
+    # the per-video loop). All of them must come AFTER Stage 0.
+    branch_offsets = [
+        m.start() for m in re.finditer(r'\$PYTHON_INFLATE"\s*=\s*"', text)
+    ]
+    assert branch_offsets, "PYTHON_INFLATE branch dispatch not found"
+    for offset in branch_offsets:
+        assert offset > stage0_marker, (
+            "Stage 0 must precede every PYTHON_INFLATE branch check. Found "
+            f"a branch at offset {offset} before Stage 0 at {stage0_marker}."
+        )
+
+
+def test_inflate_sh_stage0_skips_when_no_br_files(tmp_path: Path) -> None:
+    """The Stage 0 block must be guarded so it is a true no-op when no
+    .br files exist (the common Lane A path). We assert via the source
+    structure: the block opens with a `compgen -G` (or equivalent) test
+    on `*.br` and only runs the uv invocation when a match is found.
+    """
+    text = INFLATE_SH.read_text()
+    block_match = re.search(
+        r"Stage 0: brotli decompression.*?upscale_rgb_base_filter\(\)",
+        text, flags=re.DOTALL,
+    )
+    assert block_match is not None
+    block = block_match.group(0)
+    assert "compgen -G" in block and "*.br" in block, (
+        "Stage 0 must guard the uv run invocation behind a `compgen -G "
+        "\"$ARCHIVE_DIR\"/*.br` (or equivalent) so non-brotli archives "
+        "don't pay uv cold-start cost."
+    )
+
+
+def test_inflate_sh_stage0_inline_python_uses_brotli_directly(tmp_path: Path) -> None:
+    """Stage 0's inline python should NOT depend on `tac.submission_archive`
+    — in a clean contest env `tac` may not be installed at all. The
+    `--with brotli` flag only guarantees `brotli` is importable. The Stage 0
+    inline must use `import brotli` directly, not `from tac.submission_archive
+    import decompress_brotli_files_in_dir`.
+    """
+    text = INFLATE_SH.read_text()
+    block_match = re.search(
+        r"Stage 0: brotli decompression.*?upscale_rgb_base_filter\(\)",
+        text, flags=re.DOTALL,
+    )
+    assert block_match is not None
+    block = block_match.group(0)
+    assert "import brotli" in block, (
+        "Stage 0 inline must `import brotli` directly. Without this it "
+        "depends on `tac` being installed in the uv-resolved env, which "
+        "breaks the clean-contest-env guarantee."
+    )
+    assert "from tac.submission_archive" not in block, (
+        "Stage 0 inline must NOT depend on `tac.submission_archive` — "
+        "that import is unsafe in a contest env that resolves the "
+        "contest's pyproject (no tac installed)."
+    )
+
+
+def test_inflate_sh_renderer_branch_still_calls_inline_brotli_helper() -> None:
+    """Defense-in-depth: even after the Stage 0 centralization, the renderer
+    branch's inline `_decompress_brotli_in_archive(archive_dir)` call MUST
+    remain so direct python invocation paths (unit tests, local debugging
+    that bypasses inflate.sh) still work. The helper is a no-op when no .br
+    files are present, so this is cheap.
+    """
+    text = INFLATE_PY.read_text()
+    # There are TWO call sites historically (inflate_renderer + inflate_renderer_with_tto).
+    call_count = text.count("_decompress_brotli_in_archive(archive_dir)")
+    assert call_count >= 2, (
+        f"Expected the inline brotli helper to be called at >=2 sites in "
+        f"inflate_renderer.py (defense-in-depth for direct python use); "
+        f"found {call_count}. If you removed a call site you also broke "
+        f"the non-inflate.sh codepaths."
+    )

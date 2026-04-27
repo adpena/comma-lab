@@ -72,6 +72,90 @@ require_ffmpeg_parity() {
 require_ffmpeg_parity
 
 
+# ============================================================
+# Stage 0: brotli decompression (codex R5-3 fix, 2026-04-27)
+# Centralized .br -> sibling decompression BEFORE PYTHON_INFLATE
+# branch dispatch. Previously --with brotli + the actionable
+# ImportError diagnostic existed only on the PYTHON_INFLATE=renderer
+# arm; any other branch (1 / postfilter / grain_mask / future) that
+# encountered a .br archive would fail later as a missing
+# renderer.bin / masks.mkv with no actionable hint.
+#
+# OPTION A (centralized): we decompress all .br -> sibling files in
+# $ARCHIVE_DIR up front using a small inline python that imports
+# only `brotli` (NOT `tac`, so it works in any clean contest env
+# where `uv run` resolves the contest's pyproject, not ours).
+# After this step every downstream branch sees the archive in its
+# fully-decompressed form regardless of build mode.
+#
+# This is a no-op when no .br files exist (the `if` guard avoids the
+# uv-cold-start cost on the common Lane A path). The renderer branch
+# keeps its inline _decompress_brotli_in_archive() call as defense-
+# in-depth for direct python invocation paths.
+# ============================================================
+if compgen -G "$ARCHIVE_DIR"/*.br > /dev/null 2>&1 \
+    || compgen -G "$ARCHIVE_DIR"/**/*.br > /dev/null 2>&1; then
+  echo "[brotli stage 0] .br files detected in $ARCHIVE_DIR; decompressing before inflate dispatch..." >&2
+  if ! "$UV_BIN" run --with brotli python - "$ARCHIVE_DIR" <<'PY'
+import sys
+from pathlib import Path
+
+archive_dir = Path(sys.argv[1])
+if not archive_dir.is_dir():
+    print(f"FATAL: archive dir does not exist: {archive_dir}", file=sys.stderr)
+    sys.exit(2)
+
+br_files = sorted(archive_dir.rglob("*.br"))
+if not br_files:
+    print("[brotli stage 0] no .br files at decompress time (race?)", file=sys.stderr)
+    sys.exit(0)
+
+try:
+    import brotli
+except ImportError:
+    listing = ", ".join(str(p.relative_to(archive_dir)) for p in br_files)
+    print(
+        "FATAL: Archive contains Brotli-compressed files (.br) but the "
+        "'brotli' package is not installed in the active Python "
+        f"environment.\n  Files needing decompression: {listing}\n"
+        "  Fix: `pip install brotli` (or `uv pip install brotli`) in "
+        "the same env that runs inflate.sh.\n"
+        "  Note: `brotli` is declared as a mandatory dependency of the "
+        "`tac` package (pyproject.toml [project].dependencies). The "
+        "inflate.sh Stage 0 invocation also passes `--with brotli` to "
+        "`uv run` for clean contest envs; if you see this in such an env, "
+        "uv may have failed to install the wheel — re-run with "
+        "`UV_BIN=$(which uv) bash inflate.sh ...` and inspect uv output.",
+        file=sys.stderr,
+    )
+    sys.exit(1)
+
+n = 0
+for br_file in br_files:
+    out_path = br_file.with_suffix("")  # strip .br
+    data = br_file.read_bytes()
+    decompressed = brotli.decompress(data)
+    out_path.write_bytes(decompressed)
+    ratio = (len(data) / len(decompressed) * 100) if len(decompressed) else 0.0
+    print(
+        f"  {br_file.relative_to(archive_dir)} -> {out_path.relative_to(archive_dir)}: "
+        f"{len(data):,}B -> {len(decompressed):,}B ({ratio:.1f}%)",
+        file=sys.stderr,
+    )
+    br_file.unlink()
+    n += 1
+print(f"[brotli stage 0] decompressed {n} file(s)", file=sys.stderr)
+PY
+  then
+    echo "FATAL: brotli stage 0 decompression failed; refusing to dispatch inflate." >&2
+    echo "       See diagnostic above. This is the codex R5-3 centralized" >&2
+    echo "       brotli step; without it any non-renderer PYTHON_INFLATE branch" >&2
+    echo "       would fail later with a less actionable 'missing file' error." >&2
+    exit 1
+  fi
+fi
+
+
 upscale_rgb_base_filter() {
   local width="$1"
   local height="$2"
