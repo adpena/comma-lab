@@ -14,6 +14,14 @@ mkdir -p "$LOG_DIR"
 
 log() { echo "[lane-b] $(date -u +%FT%TZ) $*" | tee -a "$LOG_DIR/run.log"; }
 
+# Stage 0 (2026-04-27): NVDEC probe BEFORE any GPU spend. Catches bad-host
+# case in 5 seconds. Reference: feedback_vastai_nvdec_host_variation.
+log "=== Stage 0: NVDEC probe ==="
+bash "$WORKSPACE/scripts/probe_nvdec.sh" || {
+    log "FATAL: NVDEC probe failed — destroy this instance and pick a different host."
+    exit 2
+}
+
 # Pre-flight
 for f in submissions/baseline_dilated_h64_0_90/renderer.bin \
          submissions/baseline_dilated_h64_0_90/optimized_poses.pt \

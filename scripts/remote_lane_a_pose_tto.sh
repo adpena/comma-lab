@@ -15,6 +15,19 @@ mkdir -p "$LOG_DIR"
 
 log() { echo "[lane-a] $(date -u +%FT%TZ) $*" | tee -a "$LOG_DIR/run.log"; }
 
+# Stage 0 (2026-04-27): NVDEC probe BEFORE any GPU spend. The Texas instance
+# (35691284) ran 3.4h of pose TTO successfully then crashed at upstream/
+# evaluate.py with CUDA_ERROR_NO_DEVICE because NVDEC was missing on that
+# host. The probe catches the bad-host case in 5 seconds. Reference:
+# feedback_vastai_nvdec_host_variation memory entry.
+log "=== Stage 0: NVDEC probe ==="
+bash "$WORKSPACE/scripts/probe_nvdec.sh" || {
+    log "FATAL: NVDEC probe failed — refusing to spend GPU on a host that"
+    log "       cannot run upstream/evaluate.py at the end. Destroy this"
+    log "       Vast.ai instance and pick a different host."
+    exit 2
+}
+
 # Pre-flight: required artifacts present
 for f in submissions/baseline_dilated_h64_0_90/renderer.bin \
          submissions/baseline_dilated_h64_0_90/optimized_poses.pt \

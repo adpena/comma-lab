@@ -67,6 +67,14 @@ TAG="lane_d_halfframe"
 
 log() { echo "[lane-d] $(date -u +%FT%TZ) $*" | tee -a "$LOG_DIR/run.log"; }
 
+# Stage 0 (2026-04-27): NVDEC probe BEFORE any GPU spend. Catches the
+# bad-host case in 5 seconds. Reference: feedback_vastai_nvdec_host_variation.
+log "=== Stage 0: NVDEC probe ==="
+bash "$WORKSPACE/scripts/probe_nvdec.sh" || {
+    log "FATAL: NVDEC probe failed — destroy this instance and pick a different host."
+    exit 2
+}
+
 # Pre-flight: required artifacts present
 for f in upstream/videos/0.mkv \
          upstream/models/segnet.safetensors \

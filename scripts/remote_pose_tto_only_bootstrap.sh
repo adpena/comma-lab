@@ -55,6 +55,17 @@ if [ "${1:-}" = "--inner" ]; then
     PROVENANCE="$LOG_DIR/provenance.json"
     mkdir -p "$LOG_DIR"
 
+    # ── Stage 0a: NVDEC probe (2026-04-27) — BEFORE any GPU spend ───────────
+    # Lane A's Texas instance burned 3.4h of pose TTO then crashed at
+    # auth_eval because NVDEC was missing on that host. This 5-second probe
+    # catches the bad-host case BEFORE we burn $3-4 of GPU time.
+    # Reference: feedback_vastai_nvdec_host_variation memory entry.
+    bash "$WORKSPACE/scripts/probe_nvdec.sh" || {
+        echo "[pose_tto_only] FATAL: NVDEC probe failed — destroy this Vast.ai" >&2
+        echo "[pose_tto_only]   instance and pick a different host." >&2
+        exit 2
+    }
+
     # ── Stage 0: deterministic-reproducibility env (REQUIRED before cuBLAS) ─
     export PATH=/root/.local/bin:$PATH
     export PYTHONPATH=src:upstream:$PWD
