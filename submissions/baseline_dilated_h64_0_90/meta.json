@@ -5,11 +5,16 @@
     "final": 0.9001,
     "PoseNet_dist": 0.0107,
     "SegNet_dist": 0.00240,
-    "rate": 0.225,
+    "score_pose_contribution": 0.327,
+    "score_seg_contribution": 0.240,
+    "score_rate_contribution": 0.225,
+    "rate_unscaled_bytes_ratio_note": "Council R2 caught a reporting ambiguity: auth_eval_renderer prints 'Rate: 0.225' as the SCORE CONTRIBUTION (= 25 * archive_bytes / gt_bytes). The unscaled bytes-ratio is 0.225/25 = 0.009. Always report the SCORE CONTRIBUTION to avoid confusion.",
     "device": "cuda",
     "scorer": "upstream/evaluate.py",
     "measured_on": "2026-04-25",
-    "verified_twice": true
+    "verified_twice": true,
+    "upstream_commit": "11ad728f563d8970929e8947a1cf6124ee6303e4",
+    "upstream_repo": "comma-pinned-snapshot at upstream/"
   },
   "artifacts": {
     "renderer.bin": {

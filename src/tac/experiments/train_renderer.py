@@ -307,6 +307,23 @@ def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
                    default=str(_repo / "experiments" / "postfilter_weights"))
     p.add_argument("--device", type=str, default=None)
 
+    # Auth eval (CLAUDE.md non-negotiable: "Auth eval EVERYWHERE")
+    p.add_argument("--auth-eval-on-best", action="store_true", default=False,
+                   help="At end of training, run CUDA auth eval against the best "
+                        "fp4 checkpoint. The proxy fp4_scorer is a TRAINING SIGNAL "
+                        "only — proxy-auth gap can be 100-350x even on CUDA-CUDA "
+                        "(LANE-B 2026-04-26). The auth result is the ONLY trustworthy "
+                        "score. Result is saved as <out_dir>/auth_eval_on_best.json.")
+    p.add_argument("--auth-eval-masks", type=str, default=None,
+                   help="Path to masks.mkv for auth eval. Required with --auth-eval-on-best.")
+    p.add_argument("--auth-eval-poses", type=str, default=None,
+                   help="Path to optimized_poses.bin for FiLM models. If the trained "
+                        "renderer has pose_dim>0, this MUST be passed (auth_eval_renderer.py "
+                        "hard-fails on FiLM + no poses, see feedback_film_eval_no_poses_critical).")
+    p.add_argument("--auth-eval-upstream-dir", type=str,
+                   default=str(_upstream),
+                   help="Path to upstream/ for auth eval (defaults to repo upstream).")
+
     args = p.parse_args(argv)
 
     # Apply profile defaults, then CLI overrides
@@ -1564,6 +1581,51 @@ def train(args: argparse.Namespace):
     # Clean up QAT hooks
     if qat_wrapper is not None:
         qat_wrapper.remove_hooks()
+
+    # Auth eval on best (CLAUDE.md non-negotiable: "Auth eval EVERYWHERE").
+    # The proxy fp4_scorer is a TRAINING SIGNAL only — proxy-auth gap can be
+    # 100-350x even on CUDA-CUDA (LANE-B 2026-04-26: proxy 0.0007 → auth 0.246).
+    # The auth result is the ONLY trustworthy score. Run it inline so the train
+    # script's exit code reflects whether we got an authoritative measurement.
+    if getattr(args, "auth_eval_on_best", False):
+        if not args.auth_eval_masks:
+            print("[auth-eval] WARNING: --auth-eval-on-best set but --auth-eval-masks not "
+                  "provided. Skipping. The train run completed but NO authoritative score "
+                  "will be produced (CLAUDE.md violation).")
+        else:
+            import subprocess
+            best_fp4 = out_dir / f"renderer_{args.tag}_best_fp4.pt"
+            auth_result_path = out_dir / "auth_eval_on_best.json"
+            cmd = [
+                sys.executable, "-u",
+                str(Path(__file__).resolve().parents[2] / ".." / "experiments" / "auth_eval_renderer.py"),
+                "--checkpoint", str(best_fp4),
+                "--upstream-dir", args.auth_eval_upstream_dir,
+                "--device", "cuda",
+                "--output-dir", str(out_dir),
+            ]
+            if args.auth_eval_poses:
+                cmd += ["--poses", args.auth_eval_poses]
+            print(f"\n[auth-eval] Launching CUDA auth eval against best checkpoint...")
+            print(f"[auth-eval] cmd: {' '.join(cmd)}")
+            try:
+                proc = subprocess.run(
+                    cmd, capture_output=True, text=True, timeout=900,
+                )
+                print(proc.stdout[-2000:])  # last 2KB of stdout
+                if proc.returncode != 0:
+                    print(f"[auth-eval] FAILED with returncode={proc.returncode}", file=sys.stderr)
+                    print(proc.stderr[-2000:], file=sys.stderr)
+                else:
+                    # Pull RESULT_JSON line for clean log.
+                    for line in proc.stdout.splitlines():
+                        if line.startswith("RESULT_JSON:"):
+                            print(f"\n[auth-eval] {line}")
+                            break
+                    print(f"[auth-eval] Result saved to {auth_result_path}")
+            except subprocess.TimeoutExpired:
+                print(f"[auth-eval] TIMED OUT after 15min — auth_eval_renderer is "
+                      f"hung. Investigate manually.", file=sys.stderr)
 
     return best_scorer
 
