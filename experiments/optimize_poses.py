@@ -169,6 +169,52 @@ def parse_args() -> argparse.Namespace:
                    help="Softmax temperature for KL-distill (Hinton 2015 "
                         "default 2.0). Loss is multiplied by T² internally "
                         "to keep gradient magnitude consistent with T=1.")
+    # Lane M: radial-zoom-only pose mode. Per memory
+    # `project_posenet_rank1_discovery`, PoseNet's Jacobian is rank ≈ 1.008
+    # with 99.8% variance in dim 0 — a scalar radial zoom from the
+    # Focus-of-Expansion is the information-theoretic minimum. The 6-DOF
+    # representation is grossly over-parameterized; the auxiliary 5 dims
+    # add optimizer noise without scoring signal. When `radial-zoom` is
+    # selected the optimizable parameter is (N, 1) (the canonical "z
+    # forward" component) and is projected back to (N, 6) by zero-padding
+    # the other 5 dims before the renderer call. The (N, 1) tensor is
+    # persisted to disk; the inflate-side reader expands it back.
+    p.add_argument("--pose-mode", type=str, default="full-6dof",
+                   choices=["full-6dof", "radial-zoom"],
+                   help="Pose representation. 'full-6dof' (default) "
+                        "preserves the original (N, 6) optimizable. "
+                        "'radial-zoom' optimizes (N, 1) radial-zoom "
+                        "scalars only, projecting to 6D as "
+                        "[zoom, 0, 0, 0, 0, 0] before render. "
+                        "Per memory project_posenet_rank1_discovery the "
+                        "Jacobian is rank-1 — the other 5 dims add noise.")
+    # Lane N: Fridrich L∞ auxiliary penalty. Per memory
+    # `project_fridrich_inverse_steganalysis` Principle 3 ("spread small
+    # errors, don't concentrate large ones"), penalizing the L∞ norm of
+    # the (current_pose - baseline_pose) delta keeps the per-dim
+    # perturbation bounded — PoseNet's detector is sensitive to
+    # concentrated changes, so a soft L∞-ball constraint biases the
+    # optimizer toward uniformly small perturbations. The helper is
+    # `tac.fridrich.linf_pose_penalty` (see memory
+    # feedback_existing_fridrich_code — Fridrich code already exists,
+    # don't rebuild). Defaults preserve the baseline call path
+    # byte-identically.
+    p.add_argument("--linf-pose-weight", type=float, default=0.0,
+                   help="Lane N: Fridrich L∞ pose-perturbation penalty "
+                        "weight (default 0.0 = disabled). When > 0, "
+                        "penalizes per-dim |current_pose - baseline_pose| "
+                        "above --linf-pose-budget via "
+                        "tac.fridrich.linf_pose_penalty. Spreads "
+                        "perturbations uniformly so PoseNet (which detects "
+                        "concentrated changes) cannot single any one dim "
+                        "out.")
+    p.add_argument("--linf-pose-budget", type=float, default=0.05,
+                   help="Lane N: per-dim L∞ ball radius around "
+                        "baseline_pose. Default 0.05 — small enough not to "
+                        "perturb the rank-1 dominant dim "
+                        "(project_posenet_rank1_discovery), large enough "
+                        "to allow exploration on aux dims. Only takes "
+                        "effect when --linf-pose-weight > 0.")
     return p.parse_args()
 
 
@@ -304,6 +350,9 @@ def optimize_poses_batch(
     gt_frames_pair: torch.Tensor | None = None,
     kl_distill_weight: float = 0.0,
     kl_distill_temperature: float = 2.0,
+    pose_mode: str = "full-6dof",
+    linf_pose_weight: float = 0.0,
+    linf_pose_budget: float = 0.05,
 ) -> tuple[torch.Tensor, dict]:
     """Optimize pose vectors (and optional latent codes) for a batch of pairs.
 
@@ -337,10 +386,30 @@ def optimize_poses_batch(
             kl_distill_scorer_loss double-count trap per CLAUDE.md).
         kl_distill_temperature: softmax temperature for the KL distill
             (default 2.0, Hinton 2015). Loss is multiplied by T² internally.
+        pose_mode: 'full-6dof' (default) or 'radial-zoom'. With
+            'radial-zoom', the optimizable parameter is (B, 1) (the
+            canonical "z forward" component); it is projected to 6-DOF
+            via [zoom, 0, 0, 0, 0, 0] before being passed to the
+            renderer. The renderer was trained on 6-DOF input so the
+            projection is mandatory. Per memory
+            project_posenet_rank1_discovery the PoseNet Jacobian is
+            rank ≈ 1.008 — only the radial-zoom dim carries scoring
+            signal; optimizing 6 params adds noise.
+        linf_pose_weight: Lane N — Fridrich L∞ penalty weight on
+            (current_pose - baseline_pose). Default 0.0 = disabled.
+            When > 0, an auxiliary penalty
+            ``linf_pose_weight * sum(max(0, |delta| - budget))`` is
+            added to total_loss to bias toward uniformly small
+            perturbations (PoseNet detects concentrated changes).
+        linf_pose_budget: per-dim L∞ ball radius for the Lane N
+            penalty (default 0.05). Only takes effect when
+            linf_pose_weight > 0.
 
     Returns:
         (optimized_conditioning, metrics_dict)
-        conditioning is (B, pose_dim + latent_dim)
+        conditioning is (B, pose_dim_internal + latent_dim) where
+        pose_dim_internal is 1 for pose_mode='radial-zoom' and pose_dim
+        otherwise.
     """
     B = masks_t.shape[0]
     pose_dim = init_poses.shape[1]
@@ -353,12 +422,46 @@ def optimize_poses_batch(
             f"conditioning in the renderer architecture first."
         )
 
-    cond_dim = pose_dim + latent_dim
+    # Lane M: in 'radial-zoom' mode the optimizable param is (B, 1) — the
+    # scalar radial-zoom component (canonical pose dim 0, "z forward" per
+    # FastViT-T12 PoseNet convention). It is projected to (B, pose_dim)
+    # before being fed to the renderer (the renderer was trained on
+    # 6-DOF; projecting padding the other 5 dims with 0 keeps the FiLM
+    # input shape contract). pose_dim_internal = number of optimizable
+    # values per pair; pose_dim = number expected by the renderer's FiLM
+    # input.
+    if pose_mode == "radial-zoom":
+        pose_dim_internal = 1
+    elif pose_mode == "full-6dof":
+        pose_dim_internal = pose_dim
+    else:
+        raise ValueError(
+            f"Unknown pose_mode={pose_mode!r}. Expected 'full-6dof' or "
+            f"'radial-zoom'."
+        )
+
+    cond_dim = pose_dim_internal + latent_dim
 
     # Initialize conditioning vector: [pose (warm start) | latent (zeros)]
     conditioning = torch.zeros(B, cond_dim, device=device, dtype=torch.float32)
-    conditioning[:, :pose_dim] = init_poses[:B].to(device)
+    if pose_mode == "radial-zoom":
+        # Warm-start the 1-DOF zoom from the canonical dim-0 of the GT
+        # pose target. The remaining 5 GT dims are dropped (per the rank-1
+        # discovery, they carry < 0.2% variance). This is also the
+        # `RadialZoomWarp` zero-init convention (identity zoom).
+        conditioning[:, 0] = init_poses[:B, 0].to(device)
+    else:
+        conditioning[:, :pose_dim] = init_poses[:B].to(device)
     conditioning.requires_grad_(True)
+
+    # Lane N: cache the baseline pose tensor (in 6-DOF for full mode,
+    # 1-DOF for radial-zoom mode — matches the optimizable shape so the
+    # delta is well-defined). Detached so the L∞ penalty's gradient flows
+    # only into `conditioning`.
+    if pose_mode == "radial-zoom":
+        baseline_pose_for_linf = init_poses[:B, 0:1].detach().to(device)
+    else:
+        baseline_pose_for_linf = init_poses[:B, :pose_dim].detach().to(device)
 
     optimizer = torch.optim.Adam([conditioning], lr=lr)
 
@@ -398,6 +501,26 @@ def optimize_poses_batch(
         "argmax_rejections": 0,
     }
 
+    def _project_to_renderer_pose(cond: torch.Tensor) -> torch.Tensor:
+        """Lane M projection: extract optimizable pose and lift to 6-DOF.
+
+        Renderer's FiLM layer was trained on (B, pose_dim) input. In
+        radial-zoom mode the optimizable is (B, 1); we zero-pad the
+        remaining ``pose_dim - 1`` dims so the FiLM activation matches
+        the training distribution as closely as possible (only the dim
+        that PoseNet's Jacobian actually responds to is non-zero).
+        """
+        opt_part = cond[:, :pose_dim_internal]
+        if pose_mode == "radial-zoom" and pose_dim_internal != pose_dim:
+            zeros_pad = torch.zeros(
+                opt_part.shape[0],
+                pose_dim - pose_dim_internal,
+                device=opt_part.device,
+                dtype=opt_part.dtype,
+            )
+            return torch.cat([opt_part, zeros_pad], dim=-1)
+        return opt_part
+
     for step in range(steps):
         # Save state before step (for argmax constraint rollback)
         if argmax_constraint:
@@ -406,8 +529,10 @@ def optimize_poses_batch(
 
         optimizer.zero_grad()
 
-        # Extract pose part of conditioning
-        pose_part = conditioning[:, :pose_dim]
+        # Extract pose part of conditioning (projected to renderer's
+        # native pose_dim — Lane M radial-zoom mode lifts (B, 1) → (B, 6)
+        # by zero-padding the auxiliary dims).
+        pose_part = _project_to_renderer_pose(conditioning)
 
         # Forward: renderer produces (B, 2, H, W, 3) HWC pairs
         fwd_kwargs = {"pose": pose_part}
@@ -468,6 +593,24 @@ def optimize_poses_batch(
             )
             total_loss = total_loss + kl_distill_weight * kl_loss
 
+        # Lane N: Fridrich L∞ pose-perturbation penalty. Operates on the
+        # OPTIMIZABLE pose tensor (1-DOF in radial-zoom mode, 6-DOF in
+        # full mode) so the penalty shape matches the parameter shape and
+        # the gradient flows back into `conditioning`. Helper:
+        # tac.fridrich.linf_pose_penalty (per CLAUDE.md "Fridrich Code
+        # Already Exists" — don't rebuild).
+        linf_loss_val = 0.0
+        if linf_pose_weight > 0:
+            from tac.fridrich import linf_pose_penalty
+            optimizable_pose = conditioning[:, :pose_dim_internal]
+            linf_violation = linf_pose_penalty(
+                optimizable_pose,
+                baseline_pose_for_linf,
+                budget=linf_pose_budget,
+            )
+            linf_loss_val = linf_violation.item()
+            total_loss = total_loss + linf_pose_weight * linf_violation
+
         total_loss.backward()
         optimizer.step()
 
@@ -475,7 +618,7 @@ def optimize_poses_batch(
         if argmax_constraint:
             with torch.no_grad():
                 # Re-forward to check argmax after optimizer step
-                check_pose = conditioning[:, :pose_dim]
+                check_pose = _project_to_renderer_pose(conditioning)
                 check_kwargs = {"pose": check_pose}
                 if zoom_warp is not None and batch_pair_indices is not None:
                     check_kwargs["ego_flow"] = zoom_warp(batch_pair_indices, masks_t.shape[1], masks_t.shape[2])
@@ -505,7 +648,7 @@ def optimize_poses_batch(
                                 pre_step_cond + alpha * (conditioning.detach() - pre_step_cond)
                             )
                         # Check argmax again
-                        check_pose2 = conditioning[:, :pose_dim]
+                        check_pose2 = _project_to_renderer_pose(conditioning)
                         check_kwargs2 = {"pose": check_pose2}
                         if zoom_warp is not None and batch_pair_indices is not None:
                             check_kwargs2["ego_flow"] = zoom_warp(batch_pair_indices, masks_t.shape[1], masks_t.shape[2])
@@ -551,11 +694,18 @@ def optimize_poses_batch(
 
         if step % log_every == 0 or step == steps - 1:
             grad_norm = conditioning.grad.norm().item() if conditioning.grad is not None else 0.0
-            pose_change = (conditioning[:, :pose_dim].detach() - init_poses.to(device)).norm(dim=1).mean().item()
+            # |dpose| is computed on the optimizable shape (1-DOF in
+            # radial-zoom, full pose_dim otherwise) so the L2 norm is
+            # well-defined regardless of pose_mode.
+            pose_change = (
+                conditioning[:, :pose_dim_internal].detach()
+                - baseline_pose_for_linf
+            ).norm(dim=1).mean().item()
             constraint_str = f" rejections={argmax_rejections}" if argmax_constraint else ""
             kl_str = f" kl={kl_loss_val:.6f}" if kl_distill_weight > 0 else ""
+            linf_str = f" linf={linf_loss_val:.6f}" if linf_pose_weight > 0 else ""
             print(f"  step {step:4d}/{steps}: loss={loss_val:.6f} "
-                  f"(seg={seg_loss.item():.6f}, pose={pose_loss.item():.6f}{kl_str}) "
+                  f"(seg={seg_loss.item():.6f}, pose={pose_loss.item():.6f}{kl_str}{linf_str}) "
                   f"|grad|={grad_norm:.4f} |dpose|={pose_change:.4f}{constraint_str}", flush=True)
 
         if patience_counter >= early_stop_patience:
@@ -628,7 +778,11 @@ def main():
     output_dir.mkdir(parents=True, exist_ok=True)
 
     video_path = args.video or str(upstream / "videos" / "0.mkv")
-    cond_dim = 6 + args.latent_dim
+    # Lane M: pose_dim_internal is the OPTIMIZABLE width (1 for
+    # radial-zoom, 6 for full-6dof). The renderer always consumes 6-DOF
+    # pose; the projection happens inside optimize_poses_batch.
+    pose_dim_internal = 1 if args.pose_mode == "radial-zoom" else 6
+    cond_dim = pose_dim_internal + args.latent_dim
 
     print(f"[config] device={device}, n_frames={args.n_frames}, steps={args.steps}", flush=True)
     print(f"[config] lr={args.lr}, batch_pairs={args.batch_pairs}", flush=True)
@@ -638,6 +792,17 @@ def main():
     print(f"[config] latent_dim={args.latent_dim} (conditioning dim={cond_dim})", flush=True)
     print(f"[config] kl_distill_weight={args.kl_distill_weight}, "
           f"kl_distill_temperature={args.kl_distill_temperature}", flush=True)
+    # Lane M: explicit banner so the operator sees the pose-mode at-a-
+    # glance (per CLAUDE.md "no wasted resources" — silent mode flips
+    # are how 6h GPU runs go off-target).
+    if args.pose_mode == "radial-zoom":
+        print(f"[pose-mode] using radial-zoom (1-DOF, projected to 6-DOF before render)", flush=True)
+    else:
+        print(f"[pose-mode] using {args.pose_mode}", flush=True)
+    # Lane N: Fridrich L∞ banner when active.
+    if args.linf_pose_weight > 0:
+        print(f"[linf] Fridrich L∞ pose penalty active: weight={args.linf_pose_weight}, "
+              f"budget={args.linf_pose_budget}", flush=True)
     print(f"[config] checkpoint={args.checkpoint}", flush=True)
     print(f"[config] output_dir={output_dir}", flush=True)
 
@@ -915,6 +1080,9 @@ def main():
             gt_frames_pair=batch_gt_frames_pair,
             kl_distill_weight=args.kl_distill_weight,
             kl_distill_temperature=args.kl_distill_temperature,
+            pose_mode=args.pose_mode,
+            linf_pose_weight=args.linf_pose_weight,
+            linf_pose_budget=args.linf_pose_budget,
         )
         dt = time.monotonic() - t0
 
@@ -955,8 +1123,13 @@ def main():
     print("RESULTS: GT poses vs optimized poses", flush=True)
     print("=" * 70, flush=True)
 
-    # Save optimized poses (both formats for compatibility)
-    optimized_poses = all_optimized[:, :6]  # pose part only
+    # Save optimized poses (both formats for compatibility). Lane M:
+    # in radial-zoom mode the saved tensor is (N, 1) — the inflate-side
+    # adapter reads `pose_mode` from the meta sidecar and lifts back to
+    # 6-DOF before the renderer call. Slicing `[:, :pose_dim_internal]`
+    # works for both modes (pose_dim_internal=1 for radial-zoom, =6 for
+    # full-6dof).
+    optimized_poses = all_optimized[:, :pose_dim_internal]  # pose part only
     torch.save(optimized_poses, output_dir / "optimized_poses.pt")
     pt_size = (output_dir / "optimized_poses.pt").stat().st_size
     # Also save compact binary format (raw fp16, ~53% smaller). This is the
@@ -965,13 +1138,19 @@ def main():
     from tac.submission_archive import save_poses_binary
     bin_size = save_poses_binary(optimized_poses, output_dir / "optimized_poses.bin")
     # Emit completion sidecar so consumers can distinguish final vs partial
-    # without trusting filename conventions.
+    # without trusting filename conventions. Lane M: include `pose_mode`
+    # so the inflate-side adapter knows whether to lift (N, 1) → (N, 6)
+    # before renderer call. Without this field the inflate side would
+    # silently feed a (N, 1) tensor into a FiLM layer that expects
+    # (N, 6) and crash with a shape mismatch — which is the *correct*
+    # failure mode (per CLAUDE.md hard-error not silent-skip).
     import json as _json
     (output_dir / "optimized_poses.meta").write_text(_json.dumps({
         "n_pairs_complete": int(optimized_poses.shape[0]),
         "n_pairs_total": int(optimized_poses.shape[0]),
         "is_final": True,
         "pose_dim": int(optimized_poses.shape[1]),
+        "pose_mode": args.pose_mode,
     }))
     # Atomically remove the partial markers — if both `optimized_poses.bin`
     # and `optimized_poses_partial.pt` exist, downstream tooling has to guess.
@@ -984,7 +1163,11 @@ def main():
     print(f"  Saved optimized_poses.bin: {optimized_poses.shape} ({bin_size:,} bytes, -{100*(1-bin_size/pt_size):.0f}%)", flush=True)
 
     if args.latent_dim > 0:
-        optimized_latents = all_optimized[:, 6:]
+        # Latent slot starts at pose_dim_internal (1 for radial-zoom, 6
+        # for full-6dof). Note: optimize_poses_batch currently raises
+        # NotImplementedError for latent_dim>0, but keep this slice
+        # correct so when latent FiLM lands the save path works.
+        optimized_latents = all_optimized[:, pose_dim_internal:]
         torch.save(optimized_latents, output_dir / "optimized_latents.pt")
         print(f"  Saved optimized_latents.pt: {optimized_latents.shape}", flush=True)
 
@@ -992,14 +1175,27 @@ def main():
     print("\n  Computing proxy scores (GT poses vs optimized poses)...", flush=True)
     from tac.scorer import compute_proxy_score
 
-    # Generate frames with GT poses
+    # Lane M: project saved 1-DOF poses → 6-DOF for the renderer call.
+    # The renderer was trained on 6-DOF input so generating frames with
+    # raw (N, 1) would shape-mismatch the FiLM layer. The save format
+    # stays 1-DOF; this projection only happens in-memory for the
+    # subsequent proxy scoring + downstream usage in this script.
+    if args.pose_mode == "radial-zoom" and optimized_poses.shape[1] == 1:
+        zeros_pad = torch.zeros(
+            optimized_poses.shape[0], 6 - 1, dtype=optimized_poses.dtype,
+        )
+        optimized_poses_for_render = torch.cat([optimized_poses, zeros_pad], dim=-1)
+    else:
+        optimized_poses_for_render = optimized_poses
+
+    # Generate frames with GT poses (always 6-DOF — init_poses is GT)
     gt_pose_frames = _generate_frames(renderer, gt_masks, init_poses[:n_pairs], device, args.batch_pairs, zoom_warp=zoom_warp)
     gt_score = compute_proxy_score(
         gt_pose_frames, gt_frames, posenet, segnet, device, rate=0.0,
     )
 
-    # Generate frames with optimized poses
-    opt_pose_frames = _generate_frames(renderer, gt_masks, optimized_poses, device, args.batch_pairs, zoom_warp=zoom_warp)
+    # Generate frames with optimized poses (always 6-DOF after Lane M projection)
+    opt_pose_frames = _generate_frames(renderer, gt_masks, optimized_poses_for_render, device, args.batch_pairs, zoom_warp=zoom_warp)
     opt_score = compute_proxy_score(
         opt_pose_frames, gt_frames, posenet, segnet, device, rate=0.0,
     )
@@ -1012,8 +1208,12 @@ def main():
           f"(pose: {opt_score['pose'] - gt_score['pose']:+.6f}, "
           f"seg: {opt_score['seg'] - gt_score['seg']:+.6f})", flush=True)
 
-    # Pose vector statistics
-    pose_delta = (optimized_poses - init_poses[:n_pairs]).norm(dim=1)
+    # Pose vector statistics — compare on the OPTIMIZABLE shape so
+    # radial-zoom (N, 1) vs full-6dof (N, 6) both have well-defined L2
+    # norms. Compare against the matching slice of init_poses.
+    pose_delta = (
+        optimized_poses - init_poses[:n_pairs, :pose_dim_internal]
+    ).norm(dim=1)
     print(f"\n  Pose delta: mean={pose_delta.mean():.4f}, "
           f"max={pose_delta.max():.4f}, min={pose_delta.min():.4f}", flush=True)
 

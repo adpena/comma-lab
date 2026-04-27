@@ -51,7 +51,57 @@ __all__ = [
     "apply_cost_weighted_postfilter",
     "optimal_quantization_stc",
     "fridrich_pipeline",
+    "linf_pose_penalty",
 ]
+
+
+# ── Lane N: L∞ pose-perturbation penalty ────────────────────────────────
+
+
+def linf_pose_penalty(
+    current_pose: torch.Tensor,
+    baseline_pose: torch.Tensor,
+    budget: float = 0.05,
+) -> torch.Tensor:
+    """Fridrich Principle 3: L∞-bounded pose perturbation penalty.
+
+    Per `feedback_existing_fridrich_code` + `project_fridrich_inverse_steganalysis`:
+    "spread small errors (L∞ penalty), don't concentrate large ones." Applied to
+    pose TTO, this penalizes the per-dimension L∞ norm of the (current - baseline)
+    delta. PoseNet detects concentrated perturbations; an L∞ budget keeps the
+    per-dim change uniformly small (under the detection threshold) and forces
+    the optimizer to spread information across dimensions.
+
+    The penalty is the sum of per-element overshoots beyond ``budget``:
+
+        violation = sum( max(0, |current - baseline| - budget) )
+
+    This is the standard L∞ ball-projection penalty (a.k.a. "soft L∞ box
+    constraint"): zero gradient inside the L∞-ball of radius `budget` around
+    the baseline, linear gradient outside. It is shape-agnostic — works for
+    both full-6dof (N, 6) and radial-zoom (N, 1) pose tensors.
+
+    Args:
+        current_pose: ``(B, D)`` current per-pair pose (D=6 for full-6dof,
+            D=1 for radial-zoom). May require gradient.
+        baseline_pose: ``(B, D)`` warm-start poses (typically GT poses
+            loaded via `--gt-poses-path`). Detached from the graph.
+        budget: Maximum tolerated per-dim L∞ deviation. Default 0.05 is
+            small enough not to perturb the dominant Jacobian direction
+            (per `project_posenet_rank1_discovery` dim-0 carries 99.8%
+            variance) but large enough to allow exploration on auxiliary
+            dims. Set to 0.0 for a hard "stay at baseline" constraint
+            (degenerate; not recommended).
+
+    Returns:
+        Scalar tensor (sum of L∞ violations across the batch). Multiply
+        by the caller's `linf_pose_weight` and add to the total loss.
+    """
+    pose_delta = current_pose - baseline_pose.detach()
+    # max(0, |delta| - budget) — soft L∞-ball penalty. ``.clamp(min=0)`` is
+    # the standard differentiable hinge.
+    violation = (pose_delta.abs() - budget).clamp(min=0.0).sum()
+    return violation
 
 
 # ── Helpers ──────────────────────────────────────────────────────────────
