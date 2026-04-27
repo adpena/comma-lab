@@ -2998,11 +2998,24 @@ def _scan_remote_script_for_nvdec_probe(
         return []
 
     # Find earliest GPU-work marker line (1-indexed; None if no GPU work).
+    # Refinement (2026-04-27):
+    #   - `nvidia-smi --query-gpu=...` is a 100ms info read, NOT GPU spend.
+    #   - Descriptive log/echo/printf lines (e.g. `log "=== Stage 3:
+    #     evaluate.py ..."`) frequently mention marker names without
+    #     actually invoking them. Exempt these.
     gpu_work_lineno: int | None = None
     for i, line in enumerate(lines, start=1):
         # Skip comment-only lines for marker detection.
         stripped = line.lstrip()
         if stripped.startswith("#"):
+            continue
+        # Exempt `nvidia-smi --query-...` info queries (sub-100ms, no spend).
+        if "nvidia-smi --query-" in line:
+            continue
+        # Exempt descriptive log/echo/printf lines (operator-readable text
+        # mentioning marker names doesn't run them).
+        first_token = stripped.split(None, 1)[0] if stripped else ""
+        if first_token in ("log", "echo", "printf"):
             continue
         if any(tok in line for tok in _NVDEC_GPU_WORK_MARKERS):
             gpu_work_lineno = i

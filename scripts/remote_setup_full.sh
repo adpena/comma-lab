@@ -33,13 +33,13 @@ log "=== Stage 3: nvidia-dali-cuda120 (for upstream/evaluate.py DaliVideoDataset
 "$PYBIN" -m pip install -q --extra-index-url https://developer.download.nvidia.com/compute/redist nvidia-dali-cuda120 2>&1 | tail -2
 
 log "=== Stage 4: NVDEC probe (must pass — kill instance if not) ==="
-"$PYBIN" -c "
-from nvidia.dali import pipeline_def, fn
-@pipeline_def(batch_size=1, num_threads=1, device_id=0)
-def p():
-    return fn.experimental.inputs.video(name='x', sequence_length=2, device='mixed')
-pipe = p(); pipe.build(); print('NVDEC_OK')
-" 2>&1 | tail -3
+# Refactored 2026-04-27: delegate to scripts/probe_nvdec.sh — the canonical
+# probe shared with all lane scripts. Single source of truth means the probe
+# logic only needs to be tuned in one place.
+bash "$WORKSPACE/scripts/probe_nvdec.sh" || {
+    log "FATAL: NVDEC probe failed — destroy this instance and pick a different host."
+    exit 2
+}
 
 log "=== Stage 5: uv + venv + av (for inflate_renderer.py) ==="
 curl -LsSf https://astral.sh/uv/install.sh | sh 2>&1 | tail -1
