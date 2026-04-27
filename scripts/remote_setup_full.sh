@@ -84,4 +84,44 @@ export FFMPEG_BIN=$FFMPEG_NEW
 EOF
 log "  env.sh written — source before running experiments"
 
+log "=== Stage 8: setup provenance.json ==="
+# Per CLAUDE.md canonical pipeline standard + memory
+# feedback_canonical_remote_bootstraps: every remote script must emit
+# provenance.json so a fresh agent can reconstruct the host configuration
+# (driver versions, ffmpeg build, DALI install state) without re-probing.
+SETUP_LOG_DIR="$WORKSPACE/.setup_provenance"
+mkdir -p "$SETUP_LOG_DIR"
+PROVENANCE="$SETUP_LOG_DIR/provenance.json"
+GIT_HASH=$(cd "$WORKSPACE" && git rev-parse HEAD 2>/dev/null || echo "no-git")
+GPU_NAME=$(nvidia-smi --query-gpu=name --format=csv,noheader 2>&1 | head -1)
+DRIVER_VER=$(nvidia-smi --query-gpu=driver_version --format=csv,noheader 2>&1 | head -1)
+"$PYBIN" -c "
+import json, os, subprocess, time, torch
+def _shell(cmd):
+    try:
+        return subprocess.check_output(cmd, text=True, stderr=subprocess.STDOUT, timeout=10).strip()
+    except Exception as e:
+        return f'<error:{e}>'
+prov = {
+    'completed_at_utc': time.strftime('%Y-%m-%dT%H:%M:%SZ', time.gmtime()),
+    'git_hash': '$GIT_HASH',
+    'gpu_name': '$GPU_NAME',
+    'driver_version': '$DRIVER_VER',
+    'torch_version': torch.__version__,
+    'cuda_version': getattr(torch.version, 'cuda', None),
+    'cuda_available': torch.cuda.is_available(),
+    'lane_script': 'scripts/remote_setup_full.sh',
+    'workspace': '$WORKSPACE',
+    'ffmpeg_path': '$FFMPEG_NEW',
+}
+ffv = _shell(['$FFMPEG_NEW', '-version'])
+prov['ffmpeg_version'] = ffv.splitlines()[0] if ffv and not ffv.startswith('<error') else ffv
+encs = _shell(['$FFMPEG_NEW', '-encoders'])
+svt = [ln.strip() for ln in encs.splitlines() if 'svtav1' in ln.lower() or 'svt-av1' in ln.lower()]
+prov['libsvtav1_version'] = svt[0] if svt else None
+with open('$PROVENANCE', 'w') as f:
+    json.dump(prov, f, indent=2)
+print('setup-provenance:', '$PROVENANCE')
+"
+
 log "=== SETUP_COMPLETE ==="

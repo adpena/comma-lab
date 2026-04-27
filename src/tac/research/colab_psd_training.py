@@ -105,9 +105,11 @@ from pathlib import Path
 # so the MPS branch was dead code AND a forbidden default per
 # `feedback_default_to_convenience_trap`.
 #
-# Default: CUDA-required. Raise on no-CUDA. Explicit `--device cpu` opt-in
-# is available below for code-correctness checks only — bytes/score will NOT
-# match a CUDA run.
+# BUILD ON CUDA ONLY. CPU SegNet output ≠ CUDA SegNet output → renderer's
+# motion module sees different mask bytes than it was trained on →
+# catastrophic PoseNet collapse (Lane H CRF56 incident: 1.15 → 3.20, PoseNet
+# exploded 104×). The opt-in below is for code-correctness smoke ONLY —
+# deterministic-bytes acceptable is FALSE, never use for any reported score.
 _device_override = os.environ.get('TAC_DEVICE_OVERRIDE')  # 'cpu' for smoke only
 if _device_override == 'cpu':
     print("!" * 78)

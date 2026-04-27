@@ -26,6 +26,41 @@ mkdir -p "$LOG_DIR"
 
 log() { echo "[lane-h-v2] $(date -u +%FT%TZ) $*" | tee -a "$LOG_DIR/run.log"; }
 
+# Provenance + heartbeat (CLAUDE.md canonical pipeline standard +
+# memory feedback_canonical_remote_bootstraps): every remote run must
+# emit provenance.json so a fresh agent can reconstruct the experiment.
+PROVENANCE="$LOG_DIR/provenance.json"
+HEARTBEAT="$LOG_DIR/heartbeat.log"
+GIT_HASH=$(cd "$WORKSPACE" && git rev-parse HEAD 2>/dev/null || echo "no-git")
+GPU_NAME=$(nvidia-smi --query-gpu=name --format=csv,noheader 2>&1 | head -1)
+DRIVER_VER=$(nvidia-smi --query-gpu=driver_version --format=csv,noheader 2>&1 | head -1)
+"$PYBIN" -c "
+import json, time, torch
+prov = {
+    'started_at_utc': time.strftime('%Y-%m-%dT%H:%M:%SZ', time.gmtime()),
+    'git_hash': '$GIT_HASH',
+    'gpu_name': '$GPU_NAME',
+    'driver_version': '$DRIVER_VER',
+    'torch_version': torch.__version__,
+    'cuda_version': getattr(torch.version, 'cuda', None),
+    'cuda_available': torch.cuda.is_available(),
+    'lane_script': 'scripts/remote_lane_h_crf56_v2.sh',
+    'output_dir': '$LOG_DIR',
+    'crf': 56,
+    'note': 'Lane H tests masks-only effect (no pose TTO); reuses Lane A poses.',
+}
+with open('$PROVENANCE', 'w') as f:
+    json.dump(prov, f, indent=2)
+print('provenance:', json.dumps(prov))
+"
+( while true; do
+    GPU=$(nvidia-smi --query-gpu=utilization.gpu,memory.used --format=csv,noheader 2>&1 | tr '\n' ' ')
+    echo "[$(date -u +%FT%TZ)] lane=H gpu=$GPU" >> "$HEARTBEAT"
+    sleep 60
+  done ) &
+HB_PID=$!
+trap 'kill $HB_PID 2>/dev/null || true' EXIT
+
 # Stage 0: NVDEC probe BEFORE any GPU spend (saves $3-4 per bad host).
 log "=== Stage 0: NVDEC probe (--ensure-dali) ==="
 bash "$WORKSPACE/scripts/probe_nvdec.sh" --ensure-dali || {

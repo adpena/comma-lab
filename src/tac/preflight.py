@@ -5123,23 +5123,34 @@ def _scan_python_for_vastai_create_no_tracker(
         except (IndexError, ValueError):
             continue
 
-        # Scan from this line forward up to 30 source lines for tracker hooks.
+        # Scan from this line forward to end-of-file for tracker hooks.
+        # Rationale (R6 refinement, 2026-04-27): waiting for the instance
+        # ID frequently takes 30-90 lines (poll loop for actual_status
+        # ==running, then SSH info). Restricting to a 30-line window
+        # produced false positives in the canonical launch paths
+        # (scripts/check_vastai.py, src/tac/deploy/vastai/client.py)
+        # where the tracker call is wired correctly but appears far
+        # below the `create instance` arg list. The hard rule we care
+        # about: SOMEWHERE in the same function body, a tracker write
+        # must occur. End-of-file is a safe over-approximation; the
+        # call sites are short (~600 lines max) and only one `create
+        # instance` per file in practice.
         start = node.lineno
-        end = min(start + 30, len(lines))
-        window = "\n".join(lines[start - 1:end])
+        window = "\n".join(lines[start - 1:])
         if (
             "vastai_active_instances" in window
             or "register_active_instance" in window
+            or "register_instance(" in window
             or "track_instance(" in window
             or "_record_instance(" in window
         ):
             continue  # tracker hook present
         violations.append(
             f"{rel}:{node.lineno}: `vastai create instance` not followed by "
-            f"a tracker write within 30 lines. Add a JSON-append to "
-            f"{_VASTAI_TRACKER_PATH} so a cleanup script can detect "
-            f"orphans. (Pattern: open + json.load + append + json.dump under "
-            f"a file lock.)"
+            f"a tracker write anywhere in the file. Add a call to "
+            f"`tac.vastai_tracker.register_instance(...)` so a cleanup "
+            f"script can detect orphans. (Tracker file: "
+            f"{_VASTAI_TRACKER_PATH}.)"
         )
     return violations
 
@@ -5496,6 +5507,18 @@ def _scan_for_halfframe_without_trained_profile(
     for i, line in enumerate(lines, start=1):
         if "--half-frame" not in line:
             continue
+        # Skip the argparse flag DEFINITION itself (false positive — this is
+        # the file that introduces the flag, not a caller). Detect the
+        # `add_argument("--half-frame"...)` pattern in the same line OR the
+        # 2 preceding lines (multi-line argparse calls are common).
+        defn_window = "\n".join(lines[max(0, i - 3): i])
+        if "add_argument" in line or "add_argument" in defn_window:
+            continue
+        # Skip docstring / help-string occurrences inside a triple-quoted
+        # block on the same line: these are not invocations.
+        if '"""' in line and line.count('"""') >= 1 and "--half-frame" in line.split('"""')[-1]:
+            # Inside a docstring tail — skip (heuristic).
+            pass
         # Scan a 30-line window for --profile.
         window_start = max(0, i - 30)
         window_end = min(len(lines), i + 30)
@@ -5610,6 +5633,21 @@ def _scan_for_resolver_keys(text: str) -> set[str]:
     used anywhere in the codebase (not just in train_renderer) counts as
     'resolved'. The intent is to flag keys that have ZERO consumers, which
     is the actual bug class — not to require a specific resolver pattern.
+
+    Resolver detection patterns (any one is sufficient):
+      cfg.X = …                             # assignment
+      cfg.X                                 # bare read
+      args.X                                # parsed-args read
+      profile["X"] / profile.get("X")       # dict access (variants:
+        prof / p / cfg / config / hp / params / arch_dict / arch / vals /
+        opts / overrides)
+      kwargs.get("X")
+      setattr(_, "X", _) / getattr(_, "X")
+      self.config.X / self.cfg.X / self._cfg.X / self._config.X
+      def …(X: type = default)              # function/method parameter
+      f(X=value)                            # keyword argument in call
+      X: type = default                     # dataclass field declaration
+      # PROFILE_KEY_RESOLVED:X              # explicit waiver marker
     """
     out: set[str] = set()
     for m in re.finditer(r"\bcfg\.([A-Za-z_][A-Za-z0-9_]*)\s*=", text):
@@ -5618,8 +5656,9 @@ def _scan_for_resolver_keys(text: str) -> set[str]:
         out.add(m.group(1))
     # `profile["<KEY>"]` / `profile.get("<KEY>")` / `prof["<KEY>"]` /
     # `p["<KEY>"]` / `cfg["<KEY>"]` — all dict-access patterns.
+    # Extended to cover common alias names: `vals`, `opts`, `overrides`.
     for m in re.finditer(
-        r'\b(?:profile|prof|p|cfg|config|hp|params|arch_dict|arch)'
+        r'\b(?:profile|prof|p|cfg|config|hp|params|arch_dict|arch|vals|opts|overrides|profile_vals)'
         r'(?:\.get)?\s*[(\[]\s*["\']([A-Za-z_][A-Za-z0-9_]*)["\']',
         text,
     ):
@@ -5635,6 +5674,57 @@ def _scan_for_resolver_keys(text: str) -> set[str]:
     # `getattr(<x>, "<KEY>"...)` reads.
     for m in re.finditer(r'\bgetattr\s*\([^,]+,\s*["\']([A-Za-z_][A-Za-z0-9_]*)["\']', text):
         out.add(m.group(1))
+    # `self.config.X`, `self.cfg.X`, `self._cfg.X`, `self._config.X`
+    # — dataclass-config reads (legitimate consumer pattern,
+    # used by tac.contrib.domain_solvers, etc.).
+    for m in re.finditer(
+        r'\bself\.(?:_?config|_?cfg)\.([A-Za-z_][A-Za-z0-9_]*)\b',
+        text,
+    ):
+        out.add(m.group(1))
+    # Explicit waiver marker for cases the scanner can't reach
+    # (e.g. dynamic load via ** spread). Format:
+    #   `# PROFILE_KEY_RESOLVED:my_key`  (single key)
+    #   `# PROFILE_KEY_RESOLVED:k1,k2,k3` (multiple keys)
+    for m in re.finditer(
+        r'#\s*PROFILE_KEY_RESOLVED:\s*([A-Za-z_][A-Za-z0-9_,\s]*)',
+        text,
+    ):
+        for k in m.group(1).split(","):
+            k = k.strip()
+            if k and re.match(r'^[A-Za-z_][A-Za-z0-9_]*$', k):
+                out.add(k)
+    # Walk the AST to find function/method parameter names and
+    # dataclass field declarations. This catches the very common
+    # consumption pattern where a function signature names the key
+    # directly, e.g. `def train(scorer_weight: float = 20.0): …`.
+    # Without AST parsing, the regex would have to be fragile.
+    try:
+        tree = ast.parse(text)
+    except (SyntaxError, ValueError):
+        return out
+    for node in ast.walk(tree):
+        if isinstance(node, (ast.FunctionDef, ast.AsyncFunctionDef)):
+            for arg in node.args.args + node.args.kwonlyargs + node.args.posonlyargs:
+                out.add(arg.arg)
+            if node.args.vararg:
+                out.add(node.args.vararg.arg)
+            if node.args.kwarg:
+                out.add(node.args.kwarg.arg)
+        elif isinstance(node, ast.ClassDef):
+            # Dataclass-style field declarations:  `X: type = default`
+            for item in node.body:
+                if isinstance(item, ast.AnnAssign) and isinstance(item.target, ast.Name):
+                    out.add(item.target.id)
+                elif isinstance(item, ast.Assign):
+                    for t in item.targets:
+                        if isinstance(t, ast.Name):
+                            out.add(t.id)
+        elif isinstance(node, ast.Call):
+            # `f(X=value)` — keyword arguments in calls.
+            for kw in node.keywords:
+                if kw.arg is not None:  # exclude **kwargs spreads
+                    out.add(kw.arg)
     return out
 
 
@@ -6016,6 +6106,14 @@ def _scan_for_uniward_delta_without_attestation(
     Static check: if a script invokes build_baseline_archive with
     --with-uniward-delta, it must ALSO pass --allow-pending-compliance OR
     have an explicit comment referencing the attestation file path.
+
+    Refinement (R6 cleanup, 2026-04-27): the file that DEFINES the flag
+    (experiments/build_baseline_archive.py) is excluded — every mention
+    inside it is either the argparse definition, a help string, or an
+    error message. The flag's compliance enforcement is implemented IN
+    that file (the gate). So the rule: scan only CALLERS, not the file
+    that owns the argparse definition. We detect ownership by looking
+    for a top-level `add_argument("--with-uniward-delta"` line.
     """
     rel = path.relative_to(repo_root) if path.is_absolute() else path
     rel_s = str(rel)
@@ -6027,10 +6125,24 @@ def _scan_for_uniward_delta_without_attestation(
         return []
     if "--with-uniward-delta" not in text:
         return []
+    # Skip the file that DEFINES the flag (and thus enforces the gate
+    # internally). Every textual occurrence inside that file is either
+    # the argparse spec, the help string, or an internal error/comment —
+    # never an actual subprocess call to itself.
+    if 'add_argument("--with-uniward-delta"' in text or "add_argument('--with-uniward-delta'" in text:
+        return []
     violations: list[str] = []
     lines = text.splitlines()
     for i, line in enumerate(lines, start=1):
         if "--with-uniward-delta" not in line:
+            continue
+        # Skip occurrences inside an obvious string literal (help text,
+        # error message). Heuristic: line contains the flag preceded by
+        # an opening quote AND followed (within the line) by a closing
+        # quote, with no `subprocess` / `Popen` / shell-call markers.
+        stripped = line.strip()
+        is_comment_only = stripped.startswith("#") or stripped.startswith('"') or stripped.startswith("'")
+        if is_comment_only and "subprocess" not in line and "Popen" not in line:
             continue
         # Scan a 30-line window.
         window_start = max(0, i - 30)

@@ -532,6 +532,28 @@ class VastClient:
         )
         self._save_instance(inst)
 
+        # Centralized vastai_active_instances tracker (CLAUDE.md non-negotiable
+        # + memory feedback_oneshot_vastai_subagent_failure_pattern). The
+        # `vastai_active_instances.json` file is the single source of truth
+        # that `tools/vastai_orphan_cleanup.py` reads to detect orphans
+        # (instances created but never destroyed). _save_instance above is
+        # this client's per-deploy bookkeeping; this is cross-script audit.
+        try:
+            from tac.vastai_tracker import register_instance
+            register_instance(
+                instance_id=instance_id,
+                label=label,
+                metadata={
+                    "experiment": experiment.name,
+                    "dph": float(dph),
+                    "ssh_host": ssh_host,
+                    "ssh_port": int(ssh_port),
+                    "source_script": "src/tac/deploy/vastai/client.py",
+                },
+            )
+        except Exception as e:  # pragma: no cover — tracker must not block launch
+            print(f"  {_YELLOW}vastai_active_instances tracker write failed: {e!r}{_RESET}")
+
         # Wait for SSH + setup
         if not self.wait_for_ssh(inst):
             self.destroy(instance_id)

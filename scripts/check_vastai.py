@@ -522,6 +522,30 @@ def cmd_create(args: argparse.Namespace) -> int:
     }
     _save_instances(instances)
 
+    # Centralized vastai_active_instances tracker (CLAUDE.md non-negotiable +
+    # memory feedback_oneshot_vastai_subagent_failure_pattern). The
+    # `vastai_active_instances.json` file is the single source of truth that
+    # `tools/vastai_orphan_cleanup.py` reads to detect orphans (instances
+    # that were created but never destroyed). The local `instances.json`
+    # write above is per-script bookkeeping; this one is cross-script.
+    try:
+        sys.path.insert(0, str(REPO_ROOT / "src"))
+        from tac.vastai_tracker import register_instance
+        register_instance(
+            instance_id=iid,
+            label=label,
+            metadata={
+                "experiment": experiment,
+                "dph": float(dph),
+                "ssh_host": ssh_host,
+                "ssh_port": int(ssh_port),
+                "source_script": "scripts/check_vastai.py",
+            },
+            repo_root=REPO_ROOT,
+        )
+    except Exception as e:  # pragma: no cover — never block launch on tracker
+        print(f"  {_YELLOW}vastai_active_instances tracker write failed: {e!r}{_RESET}")
+
     # Wait for onstart setup script to complete (venv, deps, upstream clone)
     print(f"  Waiting for setup script (venv + deps + upstream clone)...")
     key = None

@@ -73,6 +73,41 @@ TAG="lane_d_halfframe"
 
 log() { echo "[lane-d] $(date -u +%FT%TZ) $*" | tee -a "$LOG_DIR/run.log"; }
 
+# Provenance + heartbeat (CLAUDE.md canonical pipeline standard +
+# memory feedback_canonical_remote_bootstraps): every remote run must
+# emit provenance.json so a fresh agent can reconstruct the experiment.
+PROVENANCE="$LOG_DIR/provenance.json"
+HEARTBEAT="$LOG_DIR/heartbeat.log"
+GIT_HASH=$(cd "$WORKSPACE" && git rev-parse HEAD 2>/dev/null || echo "no-git")
+GPU_NAME=$(nvidia-smi --query-gpu=name --format=csv,noheader 2>&1 | head -1)
+DRIVER_VER=$(nvidia-smi --query-gpu=driver_version --format=csv,noheader 2>&1 | head -1)
+"$PYBIN" -c "
+import json, time, torch
+prov = {
+    'started_at_utc': time.strftime('%Y-%m-%dT%H:%M:%SZ', time.gmtime()),
+    'git_hash': '$GIT_HASH',
+    'gpu_name': '$GPU_NAME',
+    'driver_version': '$DRIVER_VER',
+    'torch_version': torch.__version__,
+    'cuda_version': getattr(torch.version, 'cuda', None),
+    'cuda_available': torch.cuda.is_available(),
+    'lane_script': 'scripts/remote_lane_d_halfframe_retrain.sh',
+    'output_dir': '$LOG_DIR',
+    'tag': '$TAG',
+    'profile': 'dilated_h64_half_frame',
+}
+with open('$PROVENANCE', 'w') as f:
+    json.dump(prov, f, indent=2)
+print('provenance:', json.dumps(prov))
+"
+( while true; do
+    GPU=$(nvidia-smi --query-gpu=utilization.gpu,memory.used --format=csv,noheader 2>&1 | tr '\n' ' ')
+    echo "[$(date -u +%FT%TZ)] lane=D gpu=$GPU" >> "$HEARTBEAT"
+    sleep 60
+  done ) &
+HB_PID=$!
+trap 'kill $HB_PID 2>/dev/null || true' EXIT
+
 # Stage 0 (2026-04-27): NVDEC probe BEFORE any GPU spend. Catches the
 # bad-host case in 5 seconds. Reference: feedback_vastai_nvdec_host_variation.
 log "=== Stage 0: NVDEC probe ==="
@@ -227,7 +262,24 @@ print(f'WROTE {out_bin}: {nbytes} bytes (codebook={fp4_codebook}, robust={fp4_ro
 [ -f "$LOG_DIR/iter_0/renderer.bin" ] || { echo "FATAL: FP4A export failed" >&2; exit 2; }
 
 log "=== Stage 2: build half-frame archive (renderer + 600 odd masks + poses + zoom_scalars) ==="
-# Build half-frame masks (600 odd-frame masks only) — Quantizr paradigm
+# Build half-frame masks (600 odd-frame masks only) — Quantizr paradigm.
+#
+# Half-frame archive REQUIRES a renderer trained with
+#     --profile dilated_h64_half_frame
+# (mask_half_sim_prob>0 AND use_zoom_flow=True). Stage 1 above already
+# trained with that profile; the assertion below is a belt-and-braces
+# hard check so this script cannot ever be repurposed against a
+# non-half-frame renderer without flagging the violation. Per memory
+# feedback_half_frame_breaks_posenet: half-frame on dilated-h64 baseline
+# collapses PoseNet (0.011 → 28.7, score 17.55).
+"$PYBIN" -c "
+from tac.profiles import PROFILES
+p = PROFILES.get('dilated_h64_half_frame')
+assert p is not None, 'PROFILES is missing dilated_h64_half_frame'
+assert p.get('mask_half_sim_prob', 0) > 0 or p.get('use_zoom_flow', False), \
+    'profile dilated_h64_half_frame must have mask_half_sim_prob>0 OR use_zoom_flow=True'
+print('halfframe-profile-assertion OK: dilated_h64_half_frame')
+"
 "$PYBIN" experiments/build_baseline_archive.py \
     --device cuda --crf 50 --half-frame \
     --output "$LOG_DIR/archive_halfframe_seed.zip" 2>&1 | tee "$LOG_DIR/build.log" | tail -5
