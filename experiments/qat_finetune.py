@@ -164,24 +164,35 @@ def create_model(cfg: QATConfig, device: torch.device) -> nn.Module:
     return model.to(device)
 
 
-def load_float_checkpoint(model: nn.Module, path: str, device: torch.device) -> None:
-    """Load the float checkpoint from distillation training or ASYM .bin export."""
+def load_float_checkpoint(model: nn.Module, path: str, device: torch.device) -> nn.Module:
+    """Load the float checkpoint from distillation training or ASYM .bin export.
+
+    Returns the model that should be used for QAT (may differ from the input
+    `model` for ASYM/FP4A paths — those formats know their own arch and we
+    must use the LOADED model's arch, not the one constructed from CLI args).
+
+    Council R-arch-drift fix (2026-04-27): ASYM/FP4A binaries embed arch in
+    their header. The previous code constructed `model` from CLI defaults
+    (e.g. motion.head=[4]) and then tried to load a state_dict with a
+    different arch (e.g. motion.head=[6]) → catastrophic shape-mismatch.
+    Now we trust the binary's arch and return the loaded model directly.
+    The .pt path keeps the construct-then-load behavior since .pt has no
+    arch header.
+    """
     from pathlib import Path
     raw = Path(path).read_bytes()
 
     # Detect format by magic bytes
     if raw[:4] == b"ASYM":
-        # ASYM .bin format — load via renderer_export
         from tac.renderer_export import load_asymmetric_checkpoint
         loaded = load_asymmetric_checkpoint(raw, device=str(device))
-        model.load_state_dict(loaded.state_dict(), strict=True)
-        print(f"  Loaded ASYM checkpoint from {path}")
+        print(f"  Loaded ASYM checkpoint from {path} (using loaded arch, not CLI defaults)")
+        return loaded
     elif raw[:4] == b"FP4A":
-        # FP4A .bin format — dequantize to float
         from tac.renderer_export import load_asymmetric_checkpoint_fp4
         loaded = load_asymmetric_checkpoint_fp4(raw, device=str(device))
-        model.load_state_dict(loaded.state_dict(), strict=True)
-        print(f"  Loaded FP4A checkpoint from {path}")
+        print(f"  Loaded FP4A checkpoint from {path} (using loaded arch, not CLI defaults)")
+        return loaded
     else:
         # PyTorch .pt format (from training)
         ckpt = torch.load(path, map_location=device, weights_only=False)
@@ -229,6 +240,7 @@ def load_float_checkpoint(model: nn.Module, path: str, device: torch.device) -> 
                 f"AsymmetricPairGenerator (use_zoom_flow=True) has [6]."
             )
         print(f"  Loaded .pt checkpoint from {path}")
+    return model
 
 
 def apply_int8_fake_quant(model: nn.Module) -> list[tuple[nn.Module, str]]:
@@ -733,7 +745,13 @@ def main() -> None:
             n_params = sum(p.numel() for p in model.parameters())
             print(f"  Recreated model: {n_params:,} parameters")
 
-    load_float_checkpoint(model, cfg.checkpoint_path, device)
+    # ASYM/FP4A binaries embed their arch in the header — load_float_checkpoint
+    # may return a model with DIFFERENT arch than the one we built from CLI
+    # defaults. Trust the loaded one (council R-arch-drift fix 2026-04-27).
+    model = load_float_checkpoint(model, cfg.checkpoint_path, device)
+    n_params_loaded = sum(p.numel() for p in model.parameters())
+    print(f"  Loaded model: {n_params_loaded:,} parameters (motion.head shape "
+          f"{tuple(model.motion.head.weight.shape)})")
 
     # ── Prepare training data at scorer resolution ─────────────────────
     from tac.camera import SEGNET_INPUT_H, SEGNET_INPUT_W
