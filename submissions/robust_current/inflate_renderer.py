@@ -2413,6 +2413,97 @@ def inflate_renderer(
         poses = _load_poses(poses_bin_path, pose_dim=_renderer_pose_dim)
         print(f"  Loaded GT poses: {tuple(poses.shape)} from archive (bin)", file=sys.stderr)
 
+    # ---- Lane M+ ZERO-COST POSES (env-gated, sentinel-detected) ----
+    # When the archive carries the zero_cost_poses_v1 sentinel AND no pose
+    # file was found above AND INFLATE_ZERO_COST_POSES=1, compute the per-
+    # pair pose tensor at inflate from lane-mark mask displacement. This
+    # eliminates the ~7-15 KB optimized_poses.pt artifact entirely.
+    #
+    # Strict-scorer-rule compliance: NO scorers loaded. Pure mask-derived
+    # geometric centroid + affine map to PoseNet dim 0. See
+    # src/tac/lane_mark_pose.py for the canonical math.
+    _zero_cost_sentinel_path = (
+        Path(archive_dir) / "zero_cost_poses_v1"
+    )
+    _zero_cost_env_enabled = os.environ.get(
+        "INFLATE_ZERO_COST_POSES", "0"
+    ) not in ("", "0", "false", "False", "no", "NO")
+    if (
+        poses is None
+        and _renderer_pose_dim > 0
+        and _zero_cost_sentinel_path.exists()
+        and _zero_cost_env_enabled
+        and masks is not None
+    ):
+        try:
+            from tac.lane_mark_pose import compute_zero_cost_poses_from_masks
+            # Lane M+ requires a 6-DOF pose convention (PoseNet first 6
+            # dims). The renderer's pose_dim is hard-pinned to 6 in every
+            # FiLM-conditioned config we ship; refuse to silently truncate
+            # if some future config uses a different width.
+            if _renderer_pose_dim != 6:
+                print(
+                    f"  WARNING: zero-cost-poses sentinel found but "
+                    f"renderer pose_dim={_renderer_pose_dim} (expected 6). "
+                    f"Skipping zero-cost path; renderer will run unconditioned.",
+                    file=sys.stderr,
+                )
+            else:
+                # Compute on CPU (cheap, 600 pairs) then move once.
+                # masks may be a half-frame tensor at this point — the
+                # half-frame WARP path runs LATER in the function, so the
+                # current shape determines pair count.
+                _masks_for_zoom = masks
+                if getattr(masks, "_half_frame_only", False):
+                    # Half-frame: each entry IS one pair's t+1 mask. We
+                    # need pairs; duplicate to (mask, mask) so the
+                    # zero-displacement fallback kicks in (no zoom). This
+                    # is a degraded but safe path; full-frame archives are
+                    # the supported configuration for Lane M+.
+                    print(
+                        "  WARNING: zero-cost-poses + half-frame masks: "
+                        "duplicating each mask into a pair for zoom "
+                        "estimation (zero-displacement fallback per pair).",
+                        file=sys.stderr,
+                    )
+                    _masks_for_zoom = (
+                        masks.repeat_interleave(2, dim=0)
+                    )
+                _t_zcp = time.monotonic()
+                poses = compute_zero_cost_poses_from_masks(
+                    _masks_for_zoom.to(dtype=torch.long, device="cpu"),
+                )
+                _dt_zcp = time.monotonic() - _t_zcp
+                print(
+                    f"  [zero-cost-poses] computed {poses.shape[0]} poses "
+                    f"from lane marks in {_dt_zcp:.2f}s "
+                    f"(dim0 mean={poses[:, 0].mean().item():.3f} "
+                    f"std={poses[:, 0].std().item():.3f}) "
+                    f"sentinel={_zero_cost_sentinel_path.name}",
+                    file=sys.stderr,
+                )
+        except ImportError as _e:
+            print(
+                f"  WARNING: zero-cost-poses sentinel found but "
+                f"tac.lane_mark_pose unavailable ({_e!r}); renderer "
+                f"will run unconditioned.",
+                file=sys.stderr,
+            )
+    elif (
+        poses is None
+        and _zero_cost_sentinel_path.exists()
+        and not _zero_cost_env_enabled
+    ):
+        # Sentinel present but env gate not set — surface this so the
+        # operator does not silently fall through to unconditioned rendering.
+        print(
+            "  WARNING: archive has zero_cost_poses_v1 sentinel but "
+            "INFLATE_ZERO_COST_POSES is not enabled. Set "
+            "INFLATE_ZERO_COST_POSES=1 to compute poses from lane marks. "
+            "Renderer will run UNCONDITIONED (likely catastrophic).",
+            file=sys.stderr,
+        )
+
     # ---- Load zoom warp scalars (for use_zoom_flow models) ----
     zoom_warp = None
     if hasattr(renderer, 'use_zoom_flow') and renderer.use_zoom_flow:
@@ -2839,15 +2930,14 @@ def _adaptive_tto_phase(
     # AST has no `from tac.scorer import ...` to walk. This whole function is
     # ONLY reachable when INFLATE_TTO=1 (default 0). The wrapper that calls us
     # already prints the [strict-scorer-rule] non-compliance banner.
-    # SCORER_AT_INFLATE_WAIVED:env-gated-INFLATE_TTO=1
+    # codex R5-r6 #1: per-call same-line waiver markers (no lookback).
     try:
         import importlib
-        coupled_trajectory_optimize = importlib.import_module(
+        coupled_trajectory_optimize = importlib.import_module(  # SCORER_AT_INFLATE_WAIVED:env-gated-INFLATE_TTO=1
             "tac.constrained_gen"
         ).coupled_trajectory_optimize
-        # SCORER_AT_INFLATE_WAIVED:env-gated-INFLATE_TTO=1
-        extract_gt_pose_targets = getattr(
-            importlib.import_module("tac.scorer"), "extract_gt_pose_targets"
+        extract_gt_pose_targets = getattr(  # SCORER_AT_INFLATE_WAIVED:env-gated-INFLATE_TTO=1
+            importlib.import_module("tac.scorer"), "extract_gt_pose_targets"  # SCORER_AT_INFLATE_WAIVED:env-gated-INFLATE_TTO=1
         )
     except (ImportError, AttributeError) as e:
         print(f"  WARNING: tac package not available for TTO ({e}). "
@@ -3396,6 +3486,63 @@ def _inflate_renderer_with_mini_tto(
     elif poses_bin_path.exists() and _renderer_pose_dim > 0:
         poses = _load_poses(poses_bin_path, pose_dim=_renderer_pose_dim)
         print(f"  Loaded GT poses: {tuple(poses.shape)} from archive (bin)", file=sys.stderr)
+
+    # ---- Lane M+ ZERO-COST POSES (mini-TTO inflate path) ----
+    # Mirror of the env-gated sentinel detection in run_inflate(). Mini-TTO
+    # inflate uses the same renderer + masks, so the analytical pose path
+    # applies identically. See compute_zero_cost_poses_from_masks() and
+    # the run_inflate() variant above for full rationale.
+    _zero_cost_sentinel_path = (
+        archive_path / "zero_cost_poses_v1"
+    )
+    _zero_cost_env_enabled = os.environ.get(
+        "INFLATE_ZERO_COST_POSES", "0"
+    ) not in ("", "0", "false", "False", "no", "NO")
+    if (
+        poses is None
+        and _renderer_pose_dim > 0
+        and _zero_cost_sentinel_path.exists()
+        and _zero_cost_env_enabled
+        and masks is not None
+    ):
+        try:
+            from tac.lane_mark_pose import compute_zero_cost_poses_from_masks
+            if _renderer_pose_dim != 6:
+                print(
+                    f"  WARNING: zero-cost-poses sentinel found but "
+                    f"renderer pose_dim={_renderer_pose_dim} (expected 6). "
+                    f"Skipping zero-cost path; renderer will run unconditioned.",
+                    file=sys.stderr,
+                )
+            else:
+                _t_zcp = time.monotonic()
+                poses = compute_zero_cost_poses_from_masks(
+                    masks.to(dtype=torch.long, device="cpu"),
+                )
+                _dt_zcp = time.monotonic() - _t_zcp
+                print(
+                    f"  [zero-cost-poses] (mini-TTO) computed {poses.shape[0]} "
+                    f"poses from lane marks in {_dt_zcp:.2f}s",
+                    file=sys.stderr,
+                )
+        except ImportError as _e:
+            print(
+                f"  WARNING: zero-cost-poses sentinel found but "
+                f"tac.lane_mark_pose unavailable ({_e!r}); renderer "
+                f"will run unconditioned.",
+                file=sys.stderr,
+            )
+    elif (
+        poses is None
+        and _zero_cost_sentinel_path.exists()
+        and not _zero_cost_env_enabled
+    ):
+        print(
+            "  WARNING: (mini-TTO) archive has zero_cost_poses_v1 sentinel "
+            "but INFLATE_ZERO_COST_POSES is not enabled. Set "
+            "INFLATE_ZERO_COST_POSES=1 to compute poses from lane marks.",
+            file=sys.stderr,
+        )
 
     # ---- Generate renderer frames ----
     print("Stage 1: Generating renderer frames...", file=sys.stderr)

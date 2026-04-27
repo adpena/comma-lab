@@ -118,10 +118,40 @@ def main() -> int:
                    help="Brotli quality level 0-11 (default 11 = max, "
                         "matches Quantizr). Higher = smaller archive but "
                         "slower compress. Decompress speed is independent.")
+    # Lane M+ 2026-04-27: zero-archive-cost poses computed at inflate from
+    # lane-mark mask displacement. The optimized_poses.pt artifact (~7-15KB)
+    # is omitted entirely; a 0-byte sentinel ZERO_COST_POSES_SENTINEL is
+    # written so the inflate side knows to call
+    # tac.lane_mark_pose.compute_zero_cost_poses_from_masks() instead of
+    # erroring out on missing poses. Inflate side requires
+    # INFLATE_ZERO_COST_POSES=1 to actually compute (env gate prevents
+    # silent activation on stale archives).
+    #
+    # Net rate impact: -7-15KB → roughly -0.005 score contribution.
+    # Distortion impact: untested vs baseline; council Lane A variant.
+    p.add_argument("--use-zero-cost-poses", action="store_true", default=False,
+                   help="Lane M+: omit optimized_poses.pt from the archive "
+                        "and write a zero_cost_poses_v1 sentinel instead. "
+                        "Inflate side computes per-pair 6-DOF poses from "
+                        "lane-mark mask displacement (zero archive bytes). "
+                        "Requires INFLATE_ZERO_COST_POSES=1 at inflate. "
+                        "Saves ~7-15KB → -0.005 score contribution. "
+                        "Distortion impact is untested vs baseline; treat "
+                        "as a Lane A archive variant. See "
+                        "src/tac/lane_mark_pose.py for the analytical math.")
     args = p.parse_args()
 
-    for label, path in (("renderer", args.renderer), ("poses", args.poses),
-                        ("gt-video", args.gt_video)):
+    # When --use-zero-cost-poses is set, the poses file is OMITTED from
+    # the archive (Lane M+: computed at inflate from lane-mark masks). We
+    # still validate the path exists if the operator passed a non-default
+    # --poses, so a typo on the CLI is not silently swallowed by the flag.
+    _required_inputs = [
+        ("renderer", args.renderer),
+        ("gt-video", args.gt_video),
+    ]
+    if not args.use_zero_cost_poses:
+        _required_inputs.append(("poses", args.poses))
+    for label, path in _required_inputs:
         if not path.exists():
             raise SystemExit(f"--{label} does not exist: {path}")
     # Validate Lane C δ if requested.
@@ -466,11 +496,32 @@ def main() -> int:
             )
 
         # Stage 4: build archive.zip
+        # Lane M+ (--use-zero-cost-poses): skip optimized_poses.pt entirely
+        # and write a 0-byte sentinel ZERO_COST_POSES_SENTINEL so the
+        # inflate side can switch to the analytical path. The sentinel
+        # filename + the env-gate (INFLATE_ZERO_COST_POSES=1) together
+        # ensure no silent activation on a stale archive.
+        from tac.lane_mark_pose import ZERO_COST_POSES_SENTINEL
+        sentinel_path: Path | None = None
+        if args.use_zero_cost_poses:
+            sentinel_path = td_path / ZERO_COST_POSES_SENTINEL
+            sentinel_path.write_bytes(b"")  # 0-byte marker
+
         args.output.parent.mkdir(parents=True, exist_ok=True)
         with zipfile.ZipFile(args.output, "w", zipfile.ZIP_DEFLATED, compresslevel=9) as z:
             z.write(renderer_src_for_zip, arcname=renderer_arcname)
             z.write(masks_path, arcname="masks.mkv")
-            z.write(args.poses, arcname="optimized_poses.pt")
+            if args.use_zero_cost_poses:
+                z.write(sentinel_path, arcname=ZERO_COST_POSES_SENTINEL)
+                print(
+                    f"[build] Lane M+ ZERO-COST POSES: omitted "
+                    f"optimized_poses.pt ({args.poses.stat().st_size:,} "
+                    f"bytes saved); wrote sentinel "
+                    f"{ZERO_COST_POSES_SENTINEL!r} (0 bytes). Inflate "
+                    f"requires INFLATE_ZERO_COST_POSES=1."
+                )
+            else:
+                z.write(args.poses, arcname="optimized_poses.pt")
             if args.with_uniward_delta is not None:
                 z.write(args.with_uniward_delta, arcname="delta.bin")
                 print(f"[build] bundled UNIWARD δ from {args.with_uniward_delta} "
@@ -512,6 +563,7 @@ def main() -> int:
             "segnet_weights_sha256": _sha256(segnet_path) if segnet_path.exists() else None,
             "use_brotli": bool(args.use_brotli),
             "brotli_quality": int(args.brotli_quality) if args.use_brotli else None,
+            "use_zero_cost_poses": bool(args.use_zero_cost_poses),
             "components": {
                 renderer_arcname: {
                     "source": str(args.renderer),
@@ -532,11 +584,28 @@ def main() -> int:
                     "size_bytes": size,
                     "sha256": _sha256(masks_path),
                 },
-                "optimized_poses.pt": {
-                    "source": str(args.poses),
-                    "size_bytes": args.poses.stat().st_size,
-                    "sha256": _sha256(args.poses),
-                },
+                **({
+                    ZERO_COST_POSES_SENTINEL: {
+                        "source": "lane-mark mask displacement (computed at inflate)",
+                        "size_bytes": 0,
+                        "sha256": (
+                            "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934"
+                            "ca495991b7852b855"  # SHA256 of empty bytes
+                        ),
+                        "kind": "lane_m_plus_zero_cost_pose_sentinel",
+                        "note": (
+                            "Inflate computes per-pair 6-DOF poses via "
+                            "tac.lane_mark_pose.compute_zero_cost_poses_from_masks. "
+                            "Requires env INFLATE_ZERO_COST_POSES=1."
+                        ),
+                    }
+                } if args.use_zero_cost_poses else {
+                    "optimized_poses.pt": {
+                        "source": str(args.poses),
+                        "size_bytes": args.poses.stat().st_size,
+                        "sha256": _sha256(args.poses),
+                    },
+                }),
                 **({"delta.bin": {
                     "source": str(args.with_uniward_delta),
                     "size_bytes": args.with_uniward_delta.stat().st_size,
