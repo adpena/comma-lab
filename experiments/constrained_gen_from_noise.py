@@ -49,6 +49,7 @@ from __future__ import annotations
 import argparse
 import json
 import logging
+import os
 import sys
 import time
 from datetime import datetime
@@ -121,10 +122,13 @@ def parse_args() -> argparse.Namespace:
                    help="Apply YUV null space projection for free SegNet improvement")
     p.add_argument("--null-space-every", type=int, default=10)
     p.add_argument("--null-space-step", type=float, default=0.5)
+    # CLAUDE.md non-negotiable: eval_roundtrip is ALWAYS True. The previous
+    # `--no-eval-roundtrip` CLI flag was removed (dead-flag trap); the only
+    # ablation escape hatch is env var TAC_ALLOW_NO_ROUNDTRIP=1, which leaves
+    # a clear forensic trail via the loud banner printed at startup.
     p.add_argument("--eval-roundtrip", action="store_true", default=True,
-                   help="Simulate scorer resize roundtrip in loss (default: on)")
-    p.add_argument("--no-eval-roundtrip", dest="eval_roundtrip", action="store_false",
-                   help="Disable eval roundtrip simulation")
+                   help="Simulate scorer resize roundtrip in loss. ALWAYS True; "
+                        "disabling requires TAC_ALLOW_NO_ROUNDTRIP=1.")
     p.add_argument("--early-stop-patience", type=int, default=200,
                    help="Early stop on PoseNet plateau (higher for from-noise)")
     p.add_argument("--antialias-weight", type=float, default=0.2,
@@ -415,8 +419,29 @@ def compare_gradient_directions(
     return results
 
 
+def _enforce_eval_roundtrip(args) -> None:
+    """CLAUDE.md non-negotiable: eval_roundtrip is ALWAYS True. The only escape
+    hatch is the TAC_ALLOW_NO_ROUNDTRIP=1 env var, which leaves a clear audit
+    trail via the loud banner. Without roundtrip, proxy-auth gap is 2-11x on
+    PoseNet and the run is wasted GPU spend."""
+    if not args.eval_roundtrip:
+        if os.environ.get("TAC_ALLOW_NO_ROUNDTRIP") != "1":
+            raise SystemExit(
+                "FATAL: eval_roundtrip is False but TAC_ALLOW_NO_ROUNDTRIP=1 "
+                "is not set. Set the env var explicitly for diagnostic ablation."
+            )
+        print(
+            "\n" + "!" * 78 + "\n"
+            "DANGER: eval_roundtrip is DISABLED via TAC_ALLOW_NO_ROUNDTRIP=1.\n"
+            "  Proxy-auth gap will be 2-11x. Tag results [no-roundtrip-ablation].\n"
+            + "!" * 78 + "\n",
+            flush=True,
+        )
+
+
 def main() -> None:
     args = parse_args()
+    _enforce_eval_roundtrip(args)
     t_start = time.time()
 
     if args.smoke:

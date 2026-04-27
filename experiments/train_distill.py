@@ -1438,8 +1438,11 @@ def parse_args() -> argparse.Namespace:
     # Training
     p.add_argument("--device", type=str, default="cuda", choices=["cuda", "mps", "cpu"])
     p.add_argument("--seed", type=int, default=42)
-    p.add_argument("--eval-roundtrip", action="store_true", default=True)
-    p.add_argument("--no-eval-roundtrip", action="store_true")
+    # CLAUDE.md non-negotiable: eval_roundtrip ALWAYS True. Removed
+    # `--no-eval-roundtrip` flag; only escape hatch is TAC_ALLOW_NO_ROUNDTRIP=1.
+    p.add_argument("--eval-roundtrip", action="store_true", default=True,
+                   help="Simulate contest eval resize chain. ALWAYS True; "
+                        "disabling requires TAC_ALLOW_NO_ROUNDTRIP=1.")
     p.add_argument("--segnet-loss-mode", type=str, default="hinge", choices=["hinge", "xent"])
     p.add_argument("--hinge-margin", type=float, default=0.5)
     p.add_argument("--error-boost", type=float, default=1.0,
@@ -1561,8 +1564,27 @@ def parse_args() -> argparse.Namespace:
     return p.parse_args()
 
 
+def _enforce_eval_roundtrip(args) -> None:
+    """CLAUDE.md non-negotiable: eval_roundtrip ALWAYS True; only escape hatch
+    is TAC_ALLOW_NO_ROUNDTRIP=1 env var with loud banner."""
+    if not args.eval_roundtrip:
+        if os.environ.get("TAC_ALLOW_NO_ROUNDTRIP") != "1":
+            raise SystemExit(
+                "FATAL: eval_roundtrip is False but TAC_ALLOW_NO_ROUNDTRIP=1 "
+                "is not set. Set the env var explicitly for diagnostic ablation."
+            )
+        print(
+            "\n" + "!" * 78 + "\n"
+            "DANGER: eval_roundtrip is DISABLED via TAC_ALLOW_NO_ROUNDTRIP=1.\n"
+            "  Proxy-auth gap will be 2-11x. Tag results [no-roundtrip-ablation].\n"
+            + "!" * 78 + "\n",
+            flush=True,
+        )
+
+
 def main() -> None:
     args = parse_args()
+    _enforce_eval_roundtrip(args)
 
     # Build config from args
     cfg = DistillConfig(
@@ -1585,7 +1607,7 @@ def main() -> None:
         padding_mode=args.padding_mode,
         use_dilation=args.use_dilation,
         use_zoom_flow=args.use_zoom_flow,
-        eval_roundtrip=args.eval_roundtrip and not args.no_eval_roundtrip,
+        eval_roundtrip=args.eval_roundtrip,
         segnet_loss_mode=args.segnet_loss_mode,
         hinge_margin=args.hinge_margin,
         error_boost=args.error_boost,

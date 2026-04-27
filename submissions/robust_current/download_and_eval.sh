@@ -61,7 +61,12 @@ echo "  Archive: ${ARCHIVE_SIZE} bytes"
 # 5. Verify archive contains postfilter
 echo ""
 echo "[4/5] Verifying archive compliance..."
-if unzip -l "$SELF_DIR/archive.zip" | grep -q postfilter_int8.pt; then
+# Per CLAUDE.md non-negotiable (feedback_pipefail_grep_q_trap): under
+# `set -euo pipefail`, `unzip -l ... | grep -q PATTERN` triggers SIGPIPE on
+# unzip when grep stops reading the first match — pipefail then aborts the
+# script with no useful error. Capture-first idiom avoids the trap.
+ARCHIVE_LIST=$(unzip -l "$SELF_DIR/archive.zip" 2>&1)
+if echo "$ARCHIVE_LIST" | grep -q postfilter_int8.pt; then
     echo "  postfilter_int8.pt: BUNDLED ✓"
 else
     echo "  ERROR: postfilter_int8.pt NOT in archive!"

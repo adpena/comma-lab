@@ -123,10 +123,11 @@ def parse_args() -> argparse.Namespace:
                         "Generate with: extract_gt_pose_targets() and torch.save().")
     p.add_argument("--smoke", action="store_true",
                    help="Smoke test: 20 frames, 100 steps")
+    # CLAUDE.md non-negotiable: eval_roundtrip ALWAYS True. Removed
+    # `--no-eval-roundtrip` flag; only escape hatch is TAC_ALLOW_NO_ROUNDTRIP=1.
     p.add_argument("--eval-roundtrip", action="store_true", default=True,
-                   help="Simulate contest eval resolution roundtrip in loss (default: on)")
-    p.add_argument("--no-eval-roundtrip", dest="eval_roundtrip", action="store_false",
-                   help="Disable contest eval resolution roundtrip")
+                   help="Simulate contest eval resolution roundtrip in loss. "
+                        "ALWAYS True; disabling requires TAC_ALLOW_NO_ROUNDTRIP=1.")
     p.add_argument("--posetto-noise-std", type=float, default=0.5,
                    help="Hotz STE: gaussian noise std added DURING simulate_eval_roundtrip "
                         "(default 0.5). 2026-04-26 Fridrich council CRITICAL: prior default "
@@ -529,8 +530,27 @@ def optimize_poses_batch(
     return best_cond.cpu(), metrics
 
 
+def _enforce_eval_roundtrip(args) -> None:
+    """CLAUDE.md non-negotiable: eval_roundtrip ALWAYS True; only escape hatch
+    is TAC_ALLOW_NO_ROUNDTRIP=1 env var with loud banner."""
+    if not args.eval_roundtrip:
+        if os.environ.get("TAC_ALLOW_NO_ROUNDTRIP") != "1":
+            raise SystemExit(
+                "FATAL: eval_roundtrip is False but TAC_ALLOW_NO_ROUNDTRIP=1 "
+                "is not set. Set the env var explicitly for diagnostic ablation."
+            )
+        print(
+            "\n" + "!" * 78 + "\n"
+            "DANGER: eval_roundtrip is DISABLED via TAC_ALLOW_NO_ROUNDTRIP=1.\n"
+            "  Proxy-auth gap will be 2-11x. Tag results [no-roundtrip-ablation].\n"
+            + "!" * 78 + "\n",
+            flush=True,
+        )
+
+
 def main():
     args = parse_args()
+    _enforce_eval_roundtrip(args)
 
     # Preflight: catch integration mismatches before burning GPU time
     from tac.preflight import preflight_check

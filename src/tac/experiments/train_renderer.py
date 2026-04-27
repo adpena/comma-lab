@@ -377,10 +377,11 @@ def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
                    "(SegNet only evaluates odd frames in the scorer)")
     p.add_argument("--frequency-loss-weight", type=float, default=None,
                    help="Trick 2: wavelet frequency-domain loss weight (0=disabled)")
+    # CLAUDE.md non-negotiable: eval_roundtrip ALWAYS True. Removed
+    # `--no-eval-roundtrip` flag; only escape hatch is TAC_ALLOW_NO_ROUNDTRIP=1.
     p.add_argument("--eval-roundtrip", action="store_true", default=True,
-                   help="Simulate contest eval resize chain in scorer loss (default: on)")
-    p.add_argument("--no-eval-roundtrip", dest="eval_roundtrip", action="store_false",
-                   help="Disable eval roundtrip simulation")
+                   help="Simulate contest eval resize chain in scorer loss. "
+                        "ALWAYS True; disabling requires TAC_ALLOW_NO_ROUNDTRIP=1.")
 
     # Data
     p.add_argument("--precomputed", type=str,
@@ -2421,7 +2422,26 @@ def main():
         describe = "--describe" in _sys.argv
         raise SystemExit(_list_profiles_table(describe=describe))
     args = parse_args()
+    _enforce_eval_roundtrip(args)
     return train(args)
+
+
+def _enforce_eval_roundtrip(args) -> None:
+    """CLAUDE.md non-negotiable: eval_roundtrip ALWAYS True; only escape hatch
+    is TAC_ALLOW_NO_ROUNDTRIP=1 env var with loud banner."""
+    if not args.eval_roundtrip:
+        if _os.environ.get("TAC_ALLOW_NO_ROUNDTRIP") != "1":
+            raise SystemExit(
+                "FATAL: eval_roundtrip is False but TAC_ALLOW_NO_ROUNDTRIP=1 "
+                "is not set. Set the env var explicitly for diagnostic ablation."
+            )
+        print(
+            "\n" + "!" * 78 + "\n"
+            "DANGER: eval_roundtrip is DISABLED via TAC_ALLOW_NO_ROUNDTRIP=1.\n"
+            "  Proxy-auth gap will be 2-11x. Tag results [no-roundtrip-ablation].\n"
+            + "!" * 78 + "\n",
+            flush=True,
+        )
 
 
 if __name__ == "__main__":

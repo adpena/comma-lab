@@ -34,6 +34,7 @@ from __future__ import annotations
 import argparse
 import json
 import math
+import os
 import sys
 import time
 from pathlib import Path
@@ -94,12 +95,12 @@ def parse_args() -> argparse.Namespace:
     p.add_argument("--phase2-steps", type=int, default=200,
                    help="Number of Phase 2 SegNet-only steps (only used with "
                         "--tto-phase2-segnet-only).")
+    # CLAUDE.md non-negotiable: eval_roundtrip ALWAYS True. Removed
+    # `--no-eval-roundtrip` flag; only escape hatch is TAC_ALLOW_NO_ROUNDTRIP=1.
     p.add_argument("--eval-roundtrip", action="store_true", default=True,
                    help="Simulate contest eval resolution roundtrip (384->874->uint8->384) "
-                        "in TTO loss (default: on). Makes gradients compensate for "
-                        "resampling+quantization artifacts during official evaluation.")
-    p.add_argument("--no-eval-roundtrip", dest="eval_roundtrip", action="store_false",
-                   help="Disable eval roundtrip simulation.")
+                        "in TTO loss. ALWAYS True; disabling requires "
+                        "TAC_ALLOW_NO_ROUNDTRIP=1.")
     p.add_argument("--use-null-space", action="store_true",
                    help="Apply YUV null space projection to improve SegNet without "
                         "affecting PoseNet. PoseNet uses 4:2:0 chroma subsampling; "
@@ -438,8 +439,27 @@ def run_batched_tto(
     return refined_frames
 
 
+def _enforce_eval_roundtrip(args) -> None:
+    """CLAUDE.md non-negotiable: eval_roundtrip ALWAYS True; only escape hatch
+    is TAC_ALLOW_NO_ROUNDTRIP=1 env var with loud banner."""
+    if not args.eval_roundtrip:
+        if os.environ.get("TAC_ALLOW_NO_ROUNDTRIP") != "1":
+            raise SystemExit(
+                "FATAL: eval_roundtrip is False but TAC_ALLOW_NO_ROUNDTRIP=1 "
+                "is not set. Set the env var explicitly for diagnostic ablation."
+            )
+        print(
+            "\n" + "!" * 78 + "\n"
+            "DANGER: eval_roundtrip is DISABLED via TAC_ALLOW_NO_ROUNDTRIP=1.\n"
+            "  Proxy-auth gap will be 2-11x. Tag results [no-roundtrip-ablation].\n"
+            + "!" * 78 + "\n",
+            flush=True,
+        )
+
+
 def main():
     args = parse_args()
+    _enforce_eval_roundtrip(args)
 
     # Smoke test overrides
     if args.smoke:

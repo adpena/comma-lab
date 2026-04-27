@@ -131,10 +131,11 @@ def parse_args() -> argparse.Namespace:
     p.add_argument("--dilation", type=int, default=2, help="Middle conv dilation")
     p.add_argument("--seg-weight", type=float, default=100.0, help="SegNet loss weight")
     p.add_argument("--pose-weight", type=float, default=10.0, help="PoseNet loss weight")
+    # CLAUDE.md non-negotiable: eval_roundtrip ALWAYS True. Removed
+    # `--no-eval-roundtrip` flag; only escape hatch is TAC_ALLOW_NO_ROUNDTRIP=1.
     p.add_argument("--eval-roundtrip", action="store_true", default=True,
-                   help="Simulate contest eval resize chain in scorer loss (default: on)")
-    p.add_argument("--no-eval-roundtrip", dest="eval_roundtrip", action="store_false",
-                   help="Disable eval roundtrip simulation")
+                   help="Simulate contest eval resize chain in scorer loss. "
+                        "ALWAYS True; disabling requires TAC_ALLOW_NO_ROUNDTRIP=1.")
     p.add_argument("--segnet-loss-mode", type=str, default="hinge",
                    choices=["xent", "hinge"], help="SegNet loss function")
     p.add_argument("--hinge-margin", type=float, default=0.5, help="Hinge loss margin")
@@ -146,8 +147,27 @@ def parse_args() -> argparse.Namespace:
     return p.parse_args()
 
 
+def _enforce_eval_roundtrip(args) -> None:
+    """CLAUDE.md non-negotiable: eval_roundtrip ALWAYS True; only escape hatch
+    is TAC_ALLOW_NO_ROUNDTRIP=1 env var with loud banner."""
+    if not args.eval_roundtrip:
+        if os.environ.get("TAC_ALLOW_NO_ROUNDTRIP") != "1":
+            raise SystemExit(
+                "FATAL: eval_roundtrip is False but TAC_ALLOW_NO_ROUNDTRIP=1 "
+                "is not set. Set the env var explicitly for diagnostic ablation."
+            )
+        print(
+            "\n" + "!" * 78 + "\n"
+            "DANGER: eval_roundtrip is DISABLED via TAC_ALLOW_NO_ROUNDTRIP=1.\n"
+            "  Proxy-auth gap will be 2-11x. Tag results [no-roundtrip-ablation].\n"
+            + "!" * 78 + "\n",
+            flush=True,
+        )
+
+
 def main() -> None:
     args = parse_args()
+    _enforce_eval_roundtrip(args)
 
     if args.smoke:
         args.epochs = 200

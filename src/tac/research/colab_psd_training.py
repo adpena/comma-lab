@@ -96,7 +96,34 @@ import gc
 import argparse
 from pathlib import Path
 
-DEVICE = torch.device('cuda' if torch.cuda.is_available() else 'mps' if torch.backends.mps.is_available() else 'cpu')
+# Device selection — CUDA-required, no MPS fallback.
+#
+# Per CLAUDE.md "MPS auth eval is NOISE": local MPS produces a 23x PoseNet
+# distortion drift vs. CUDA (likely FastViT-T12 attention softmax + YUV6
+# numerics). MPS auth is forbidden for any strategy/ranking/shipping decision.
+# This script is a Colab notebook (Colab is CUDA-only — Tesla T4/V100/A100),
+# so the MPS branch was dead code AND a forbidden default per
+# `feedback_default_to_convenience_trap`.
+#
+# Default: CUDA-required. Raise on no-CUDA. Explicit `--device cpu` opt-in
+# is available below for code-correctness checks only — bytes/score will NOT
+# match a CUDA run.
+_device_override = os.environ.get('TAC_DEVICE_OVERRIDE')  # 'cpu' for smoke only
+if _device_override == 'cpu':
+    print("!" * 78)
+    print("DANGER: TAC_DEVICE_OVERRIDE=cpu — CPU device requested.")
+    print("  Bytes/score will NOT match a CUDA run. Code-correctness only.")
+    print("!" * 78)
+    DEVICE = torch.device('cpu')
+elif torch.cuda.is_available():
+    DEVICE = torch.device('cuda')
+else:
+    raise SystemExit(
+        "FATAL: CUDA is not available. This script requires CUDA per CLAUDE.md "
+        "(MPS produces 23x PoseNet distortion drift; CPU bytes will not match "
+        "the contest scorer). To run on CPU for code-correctness only, set "
+        "TAC_DEVICE_OVERRIDE=cpu explicitly."
+    )
 print(f"Device: {DEVICE}")
 if DEVICE.type == 'cuda':
     print(f"GPU: {torch.cuda.get_device_name(0)}")

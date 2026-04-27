@@ -748,11 +748,20 @@ fi
 # Fallback: manual zip (used when Python builder is disabled or fails,
 # and for non-renderer inflate paths that don't have the required artifacts)
 if [ "$_python_archive_built" = "0" ]; then
-  echo "[compress] Building archive via zip -9 -r (manual fallback)"
-  (
-    cd "$ARCHIVE_DIR"
-    zip -9 -r "$ARCHIVE_ZIP_TMP" .
-  )
+  # Per CLAUDE.md non-negotiable (feedback_zip_dep_bootstrap_trap): the PyTorch
+  # container has no `zip` binary. Use python `zipfile.ZipFile` (always
+  # present) to avoid the Lane-B silent-cascade bootstrap trap.
+  echo "[compress] Building archive via python zipfile (manual fallback)"
+  python3 - "$ARCHIVE_DIR" "$ARCHIVE_ZIP_TMP" <<'PYEOF'
+import os, sys, zipfile
+src_dir, out_zip = sys.argv[1], sys.argv[2]
+with zipfile.ZipFile(out_zip, 'w', zipfile.ZIP_DEFLATED, compresslevel=9) as zf:
+    for root, _dirs, files in os.walk(src_dir):
+        for name in files:
+            full = os.path.join(root, name)
+            arcname = os.path.relpath(full, src_dir)
+            zf.write(full, arcname)
+PYEOF
   mv "$ARCHIVE_ZIP_TMP" "$ARCHIVE_ZIP"
 fi
 

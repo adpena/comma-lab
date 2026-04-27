@@ -124,10 +124,11 @@ def parse_args() -> argparse.Namespace:
                    help="Path to GT video (default: upstream/videos/0.mkv)")
     p.add_argument("--smoke", action="store_true",
                    help="Smoke test: 20 frames")
+    # CLAUDE.md non-negotiable: eval_roundtrip ALWAYS True. Removed
+    # `--no-eval-roundtrip` flag; only escape hatch is TAC_ALLOW_NO_ROUNDTRIP=1.
     p.add_argument("--eval-roundtrip", action="store_true", default=True,
-                   help="Simulate contest eval resolution roundtrip in loss (default: on)")
-    p.add_argument("--no-eval-roundtrip", dest="eval_roundtrip", action="store_false",
-                   help="Disable eval roundtrip simulation")
+                   help="Simulate contest eval resolution roundtrip in loss. "
+                        "ALWAYS True; disabling requires TAC_ALLOW_NO_ROUNDTRIP=1.")
     p.add_argument("--gt-poses-path", type=str, default=None,
                    help="Path to GT or optimized poses")
     p.add_argument("--quantize-bits", type=int, default=8,
@@ -532,8 +533,27 @@ def apply_corrections(
     return flat_frames.reshape(N, H, W, C)
 
 
+def _enforce_eval_roundtrip(args) -> None:
+    """CLAUDE.md non-negotiable: eval_roundtrip ALWAYS True; only escape hatch
+    is TAC_ALLOW_NO_ROUNDTRIP=1 env var with loud banner."""
+    if not args.eval_roundtrip:
+        if os.environ.get("TAC_ALLOW_NO_ROUNDTRIP") != "1":
+            raise SystemExit(
+                "FATAL: eval_roundtrip is False but TAC_ALLOW_NO_ROUNDTRIP=1 "
+                "is not set. Set the env var explicitly for diagnostic ablation."
+            )
+        print(
+            "\n" + "!" * 78 + "\n"
+            "DANGER: eval_roundtrip is DISABLED via TAC_ALLOW_NO_ROUNDTRIP=1.\n"
+            "  Proxy-auth gap will be 2-11x. Tag results [no-roundtrip-ablation].\n"
+            + "!" * 78 + "\n",
+            flush=True,
+        )
+
+
 def main():
     args = parse_args()
+    _enforce_eval_roundtrip(args)
 
     if args.smoke:
         args.n_frames = 20
