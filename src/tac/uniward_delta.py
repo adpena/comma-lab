@@ -360,7 +360,21 @@ def pack_sparse_delta(
 
     # 3. Choose n_kept — explicit budget or natural top-1%.
     if target_bytes is None:
-        n_kept = max(1, n_total // 100)  # ~1% sparsity
+        # M1 fix: the natural ~1% top-K explodes the rate term. For a
+        # 1200-frame 384x512 input n_total=7M → n_kept=70k → ~100KB
+        # compressed, which wipes any score win Lane C could give.
+        # Library callers (chiefly tests) may still want this codepath,
+        # so we keep it but emit a loud warning. Production callers MUST
+        # pass an explicit target_bytes. The CLI script enforces this.
+        import warnings
+        n_kept = max(1, n_total // 100)
+        warnings.warn(
+            "pack_sparse_delta called with target_bytes=None — defaulting "
+            f"to n_kept={n_kept} (~1% sparsity). On full Lane C inputs this "
+            "produces ~100KB blobs that wipe the score win. Pass an explicit "
+            "target_bytes (council target ≤5000 B) for any production run.",
+            stacklevel=2,
+        )
         return _pack_for_n_kept(n_kept)
 
     # Binary search for the largest n_kept that fits in target_bytes.
@@ -548,7 +562,17 @@ def apply_delta_to_frame(
     # local_idx is the FLAT (y * W * 3 + x * 3 + c) position; matches the
     # natural memory layout of an HWC frame view.
     flat.scatter_add_(0, local_idx, dequant.to(flat.dtype))
-    flat.clamp_(0.0, 255.0)
+    # CRITICAL (C3 fix): only clamp at the modified positions. The previous
+    # implementation called ``flat.clamp_(0, 255)`` over the WHOLE frame,
+    # which mutates non-perturbed pixels whenever the renderer ever produces
+    # a value slightly outside [0, 255] (e.g. mild overshoot from bilinear
+    # interpolation on the upstream side). That created a sharp δ-on vs
+    # δ-off behaviour difference even on frames with n_kept=0 entries —
+    # equivalent to a hidden global clip whose presence depended on the
+    # δ codepath being installed. The downstream uint8 conversion clamps
+    # the full frame anyway, so the apply path only needs to clamp the
+    # specific positions it actually touched.
+    flat[local_idx] = flat[local_idx].clamp(0.0, 255.0)
     return flat.reshape(spec.H, spec.W, 3).to(frame_hwc.dtype)
 
 

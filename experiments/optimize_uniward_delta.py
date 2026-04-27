@@ -149,7 +149,12 @@ def parse_args() -> argparse.Namespace:
                         "stride-2 stem (Fridrich principle 1).")
     p.add_argument("--target-bytes", type=int, default=5000,
                    help="Hard cap on the compressed delta.bin size. "
-                        "Council Lane-C target ≤5KB (~+0.003 rate cost).")
+                        "Council Lane-C target ≤5KB (~+0.003 rate cost). "
+                        "DO NOT raise without re-doing the rate-vs-distortion "
+                        "tradeoff math — a 100KB delta wipes the score win. "
+                        "M1 footgun guard: the underlying library defaults to "
+                        "~1% sparsity (~100KB) when target_bytes is unset; the "
+                        "CLI default of 5000 keeps us in the council range.")
     p.add_argument("--uniward-sigma", type=float, default=1e-4,
                    help="UNIWARD wavelet stabilizer (matches fridrich default).")
     # ── Determinism + provenance ─────────────────────────────────────
@@ -159,12 +164,15 @@ def parse_args() -> argparse.Namespace:
                    help="cuda is the only contest-faithful target. cpu is for "
                         "smoke tests only — δ bytes will NOT match a CUDA run.")
     # ── Roundtrip (CLAUDE.md non-negotiable) ─────────────────────────
+    # M2 fix: the CLAUDE.md rule "EVERY training path MUST use eval_roundtrip"
+    # is a hard non-negotiable. The previous --no-eval-roundtrip flag let any
+    # caller silently violate it. The escape hatch is now an environment
+    # variable (TAC_ALLOW_NO_ROUNDTRIP=1) so it cannot land in a tmux command
+    # by accident or sit unnoticed in a profile dict; it leaves a clear
+    # forensic trail in the run log via the loud banner.
     p.add_argument("--eval-roundtrip", action="store_true", default=True,
-                   help="Simulate contest eval resolution roundtrip in loss.")
-    p.add_argument("--no-eval-roundtrip", dest="eval_roundtrip",
-                   action="store_false",
-                   help="DISABLE eval-roundtrip — for diagnostic ablations only. "
-                        "WARNING: every TTO without this has 2-11x proxy-auth gap.")
+                   help="Simulate contest eval resolution roundtrip in loss. "
+                        "ALWAYS True; disabling requires TAC_ALLOW_NO_ROUNDTRIP=1.")
     p.add_argument("--posetto-noise-std", type=float, default=0.5,
                    help="Hotz STE noise std applied DURING simulate_eval_roundtrip. "
                         "0.5 closes the proxy-CUDA gap on PoseNet (CLAUDE.md).")
@@ -241,8 +249,50 @@ def _segnet_hinge_loss(
 def main() -> int:
     args = parse_args()
 
+    # ─── M2 fix: enforce eval_roundtrip non-negotiable ───────────────
+    # CLAUDE.md: EVERY training path MUST use eval_roundtrip. The only escape
+    # hatch is the TAC_ALLOW_NO_ROUNDTRIP=1 environment variable, which
+    # leaves a clear audit trail.
+    if not args.eval_roundtrip:
+        if os.environ.get("TAC_ALLOW_NO_ROUNDTRIP") != "1":
+            raise SystemExit(
+                "FATAL: eval_roundtrip is False but TAC_ALLOW_NO_ROUNDTRIP=1 "
+                "is not set. The CLAUDE.md non-negotiable rule "
+                "'EVERY training path MUST use eval_roundtrip' applies to "
+                "Lane C. Without it, the proxy-auth gap is 2-11x on PoseNet "
+                "and the run is a wasted Vast.ai dollar. Set the env var "
+                "explicitly if doing a diagnostic ablation."
+            )
+        print(
+            "\n" + "!" * 78 + "\n"
+            "DANGER: eval_roundtrip is DISABLED via TAC_ALLOW_NO_ROUNDTRIP=1.\n"
+            "  Proxy-auth gap will be 2-11x on PoseNet. This run is for\n"
+            "  ablation/diagnostic ONLY — DO NOT report any score from it as\n"
+            "  contest-compliant. Tag results [no-roundtrip-ablation].\n"
+            + "!" * 78 + "\n",
+            flush=True,
+        )
+
     # ─── Determinism FIRST (before any torch/cuBLAS call) ────────────
     _set_determinism(args.seed)
+
+    # ─── C4 fix: compliance warning banner ───────────────────────────
+    # δ.bin is derived from PoseNet/SegNet gradients at compress time. Per
+    # Yousfi PR #35 strict-scorer-rule, scorer-derived artefacts in the
+    # archive may not be contest-compliant. Until the council issues a
+    # binding ruling, every score from this pipeline must be tagged
+    # [lane-c-pending-ruling] in the run log / report / commit.
+    print(
+        "\n" + "=" * 78 + "\n"
+        "WARNING: Lane C δ contest-compliance is PENDING council ruling.\n"
+        "  δ.bin is a SCORER-DERIVED artifact (compress-time PoseNet+SegNet\n"
+        "  gradients). Yousfi PR #35 strict-scorer-rule may class this as\n"
+        "  non-compliant. Tag any score downstream as [lane-c-pending-ruling]\n"
+        "  until the council ruling is recorded in .omx/research/findings.md.\n"
+        "  DO NOT submit a contest PR using this δ until the ruling is in.\n"
+        + "=" * 78 + "\n",
+        flush=True,
+    )
 
     # ─── Resolve paths ───────────────────────────────────────────────
     upstream = args.upstream or UPSTREAM_ROOT
@@ -276,6 +326,20 @@ def main() -> int:
     print(f"[config] renderer={args.renderer}", flush=True)
     print(f"[config] masks={args.masks}, poses={args.poses}", flush=True)
     print(f"[config] l_inf_budget={args.l_inf_budget}, target_bytes={args.target_bytes}", flush=True)
+    # M1 banner: target_bytes is THE rate-cost knob. Surface it loudly so
+    # operators don't accidentally ship a 100KB blob.
+    if args.target_bytes > 10_000:
+        print(
+            f"  WARNING: target_bytes={args.target_bytes:,} exceeds the council "
+            f"Lane-C ceiling of 10,000 B. Expect a meaningful rate-term hit.",
+            flush=True,
+        )
+    elif args.target_bytes > 5_000:
+        print(
+            f"  NOTE: target_bytes={args.target_bytes:,} above council target "
+            f"5,000 B. Re-run rate/distortion tradeoff before shipping.",
+            flush=True,
+        )
     print(f"[config] steps={args.steps}, lr={args.lr}, batch_pairs={args.batch_pairs}", flush=True)
     print(f"[config] eval_roundtrip={args.eval_roundtrip}, posetto_noise_std={args.posetto_noise_std}", flush=True)
 
@@ -382,7 +446,16 @@ def main() -> int:
         with torch.no_grad():
             cost = compute_uniward_cost_map(base_chw, sigma=args.uniward_sigma)
         # Stash for the pack step.
-        cost_map_full[fs:fe] = cost.cpu()
+        # CRITICAL (C1 fix): base_chw is concatenated as
+        #   [p0_t, p1_t, ..., p(N-1)_t, p0_t+1, p1_t+1, ..., p(N-1)_t+1]
+        # but the inflate path expects the canonical pair-interleaved layout
+        #   [p0_t, p0_t+1, p1_t, p1_t+1, ..., p(N-1)_t, p(N-1)_t+1].
+        # Writing `cost_map_full[fs:fe] = cost` directly would put p1_t into
+        # the global slot for p0_t+1 — silent data corruption that destroys
+        # the score during inflate. Interleave the two halves.
+        cost_cpu = cost.cpu()
+        cost_map_full[fs:fe:2] = cost_cpu[:n_bp]      # t-frames → even slots
+        cost_map_full[fs + 1:fe:2] = cost_cpu[n_bp:]  # t+1-frames → odd slots
 
         # ── Init δ for this batch (zeros) ────────────────────────────
         delta = torch.zeros_like(base_chw, requires_grad=True)
@@ -408,6 +481,15 @@ def main() -> int:
             # SegNet path
             seg_in = segnet.preprocess_input(perturbed_round.unsqueeze(1))
             seg_logits = segnet(seg_in)
+            # CRITICAL (C2 fix): if the SegNet upstream resize differs from the
+            # mask resolution we extracted, the hinge loss silently broadcasts
+            # over wrong spatial dims and the optimizer gets nonsense
+            # gradients. Hard-fail here so the bug surfaces immediately.
+            assert seg_logits.shape[-2:] == gt_pair_masks.shape[-2:], (
+                f"SegNet logits/GT-mask spatial mismatch: "
+                f"logits={tuple(seg_logits.shape)} vs gt={tuple(gt_pair_masks.shape)}. "
+                f"Both must be (..., {SEGNET_INPUT_H}, {SEGNET_INPUT_W})."
+            )
             seg_loss = _segnet_hinge_loss(
                 seg_logits, gt_pair_masks, margin=args.hinge_margin,
             )
@@ -440,7 +522,14 @@ def main() -> int:
         # Materialize the final L∞-clipped δ.
         with torch.no_grad():
             delta_final = args.l_inf_budget * torch.tanh(delta / args.l_inf_budget)
-            delta_full[fs:fe] = delta_final.detach().cpu()
+            # CRITICAL (C1 fix): delta_final is in the [t-frames..., t+1-frames...]
+            # layout (matching base_chw). The inflate path reads frames in
+            # the pair-interleaved layout [p0_t, p0_t+1, p1_t, p1_t+1, ...].
+            # Interleave when writing to global frame indices, otherwise δ
+            # for pair 1's t-frame lands on pair 0's t+1-frame at inflate.
+            delta_final_cpu = delta_final.detach().cpu()
+            delta_full[fs:fe:2] = delta_final_cpu[:n_bp]      # t-frames
+            delta_full[fs + 1:fe:2] = delta_final_cpu[n_bp:]  # t+1-frames
 
         metrics["per_batch"].append({
             "batch_idx": batch_idx,

@@ -310,3 +310,281 @@ def test_delta_spec_fields_are_consistent_after_unpack() -> None:
         for t in spec.per_frame_local_idx
     )
     assert counted == spec.n_kept
+
+
+# ── Council-review regression tests (Bugs C1, C2, C3, C4, M1, M2) ────────
+
+
+def test_c1_optimizer_writeback_interleaves_pair_layout() -> None:
+    """REGRESSION (Bug C1): the optimizer batched [t-frames, t+1-frames]
+    in the inner loop but the inflate path consumes frames in
+    pair-interleaved [p0_t, p0_t+1, p1_t, p1_t+1, ...] order. If the
+    write-back ``delta_full[fs:fe] = delta_final`` runs linearly, pair 0's
+    t+1-frame ends up where pair 1's t-frame should be. This test bakes in
+    a per-pair sentinel and verifies the right global frame got it.
+
+    If you ever re-introduce the linear write-back, this test fires with a
+    precise ``(pair, frame_in_pair) → expected vs got`` mismatch.
+    """
+    H, W = 4, 4
+    n_pairs = 4
+    n_frames = 2 * n_pairs
+
+    # SIMULATE the optimizer's batch loop layout:
+    # base_pairs has shape (B, 2, H, W, 3); base_hwc =
+    # cat([base_pairs[:, 0], base_pairs[:, 1]]) yields
+    # [p0_t, p1_t, p2_t, p3_t, p0_t+1, p1_t+1, p2_t+1, p3_t+1].
+    # We use a per-pair sentinel that varies across pairs so any cross-pair
+    # leak is detectable. We ONLY perturb pixel (0, 0, 0) on each frame.
+    delta_batch = torch.zeros(2 * n_pairs, 3, H, W)
+    sentinels = torch.tensor([1.0, 2.0, 3.0, 4.0])  # one per pair
+    for p in range(n_pairs):
+        # t-frame of pair p is index p in the [t-frames-first] batch layout.
+        delta_batch[p, 0, 0, 0] = sentinels[p]
+        # t+1-frame of pair p is index n_pairs + p.
+        delta_batch[n_pairs + p, 0, 0, 0] = sentinels[p]
+
+    # Replicate the FIXED write-back from optimize_uniward_delta.py:
+    #   delta_full[fs:fe:2]   = delta_batch[:n_pairs]      (t-frames)
+    #   delta_full[fs+1:fe:2] = delta_batch[n_pairs:]      (t+1-frames)
+    delta_full = torch.zeros(n_frames, 3, H, W)
+    fs, fe = 0, 2 * n_pairs
+    delta_full[fs:fe:2] = delta_batch[:n_pairs]
+    delta_full[fs + 1:fe:2] = delta_batch[n_pairs:]
+
+    cost_full = torch.ones(n_frames, H, W)
+    # Use a generous target_bytes so all n_frames sentinel positions are
+    # retained (not just top-K via the silent ~1% default).
+    blob = pack_sparse_delta(
+        delta_full, cost_full, l_inf_budget=4.0, target_bytes=10_000,
+    )
+    spec = unpack_sparse_delta(blob)
+    # Sanity: every frame must have its sentinel kept.
+    assert spec.n_kept >= n_frames, (
+        f"test setup error: only {spec.n_kept} entries kept, need {n_frames}"
+    )
+
+    # Apply each global frame and verify the SENTINEL of the owning pair
+    # ended up at (0, 0, 0). If the bug is reintroduced, frame 1 (which
+    # SHOULD be pair 0's t+1-frame) would carry the sentinel of pair 1.
+    for global_idx in range(n_frames):
+        owning_pair = global_idx // 2
+        expected_sentinel = float(sentinels[owning_pair].item())
+        base = torch.zeros(H, W, 3)
+        out = apply_delta_to_frame(base, spec, frame_index=global_idx)
+        got = float(out[0, 0, 0].item())
+        assert got == pytest.approx(expected_sentinel, abs=4.0 / 127.0 + 1e-5), (
+            f"C1 layout drift at global frame {global_idx} "
+            f"(owning pair {owning_pair}): expected sentinel "
+            f"{expected_sentinel}, got {got}. The optimizer write-back "
+            f"must interleave [t, t+1, t, t+1, ...]."
+        )
+
+
+def test_c1_buggy_writeback_would_corrupt() -> None:
+    """REGRESSION GUARD (Bug C1, negative direction): demonstrate that the
+    BUGGY linear write-back ``delta_full[fs:fe] = delta_batch`` produces
+    wrong frame ownership. Locks the failure mode in tests so the bug
+    cannot silently come back. Marked as a *positive* assertion on the
+    detected mismatch, not a failure to compute.
+    """
+    H, W = 4, 4
+    n_pairs = 4
+    n_frames = 2 * n_pairs
+
+    delta_batch = torch.zeros(2 * n_pairs, 3, H, W)
+    sentinels = torch.tensor([1.0, 2.0, 3.0, 4.0])
+    for p in range(n_pairs):
+        delta_batch[p, 0, 0, 0] = sentinels[p]
+        delta_batch[n_pairs + p, 0, 0, 0] = sentinels[p]
+
+    # BUG path: linear copy.
+    buggy = torch.zeros(n_frames, 3, H, W)
+    buggy[0:2 * n_pairs] = delta_batch
+    cost_full = torch.ones(n_frames, H, W)
+    # Generous target_bytes so all n_frames sentinel positions are kept.
+    blob = pack_sparse_delta(buggy, cost_full, l_inf_budget=4.0, target_bytes=10_000)
+    spec = unpack_sparse_delta(blob)
+    assert spec.n_kept >= n_frames, (
+        f"test setup error: only {spec.n_kept} entries kept, need {n_frames}"
+    )
+
+    # Frame index 1 (global) is "pair 0, t+1-frame" per inflate convention.
+    # In the buggy write-back, that slot was filled by delta_batch[1] which
+    # is pair 1's t-frame → sentinel 2, NOT sentinel 1. The fix would put
+    # sentinel 1 there. We assert the bug-version produces the WRONG value
+    # (sentinel 2). If anyone "fixes" the bug to silently match here, this
+    # test fails and the C1 fix is no longer locked in.
+    base = torch.zeros(H, W, 3)
+    out = apply_delta_to_frame(base, spec, frame_index=1)
+    got = float(out[0, 0, 0].item())
+    # Sentinel 2.0 expected from the BUG, not sentinel 1.0 (the correct one).
+    assert got == pytest.approx(2.0, abs=4.0 / 127.0 + 1e-5), (
+        "C1 buggy-path locked: linear write-back should put pair 1's "
+        f"t-frame sentinel (=2.0) at global frame 1, got {got}. If this "
+        "fails, the layout convention has changed — re-validate test_c1_*."
+    )
+
+
+def test_c2_segnet_shape_assertion_message_format() -> None:
+    """REGRESSION (Bug C2): the optimizer's SegNet hinge-loss path must
+    hard-fail when SegNet output spatial dims diverge from the GT mask
+    dims. Without this, gradients silently broadcast over wrong dims and
+    the optimizer learns garbage. We can't easily import the optimizer
+    main() (it imports CUDA scorers), so we replicate the assertion
+    contract here and verify the assert behaviour matches expectations.
+    """
+    # Simulate the assertion in isolation. If the assert in
+    # optimize_uniward_delta.py is removed, this test still passes — but
+    # the test_c2_assertion_present_in_optimizer_source test below catches
+    # the source-level drift directly.
+    seg_logits_good = torch.zeros(1, 5, 8, 8)
+    gt_masks_good = torch.zeros(1, 8, 8, dtype=torch.long)
+    assert seg_logits_good.shape[-2:] == gt_masks_good.shape[-2:]
+
+    seg_logits_bad = torch.zeros(1, 5, 16, 16)
+    gt_masks_bad = torch.zeros(1, 8, 8, dtype=torch.long)
+    assert seg_logits_bad.shape[-2:] != gt_masks_bad.shape[-2:]
+
+
+def test_c2_assertion_present_in_optimizer_source() -> None:
+    """REGRESSION (Bug C2, source-level): grep the optimizer source to
+    ensure the seg-shape assertion is present. This is a forensic guard:
+    if anyone deletes the assertion, this test fires immediately (no
+    GPU required to catch it).
+    """
+    from pathlib import Path
+    src = Path(__file__).resolve().parents[3] / "experiments" / "optimize_uniward_delta.py"
+    text = src.read_text()
+    assert "seg_logits.shape[-2:] == gt_pair_masks.shape[-2:]" in text, (
+        "Bug C2 fix removed: optimize_uniward_delta.py no longer asserts "
+        "SegNet logits / GT mask spatial dims. Without this, broadcasting "
+        "silently corrupts the hinge-loss gradient. Restore the assert."
+    )
+
+
+def test_c3_apply_does_not_mutate_non_perturbed_pixels() -> None:
+    """REGRESSION (Bug C3): the in-apply ``flat.clamp_(0, 255)`` previously
+    clamped the WHOLE frame, so a renderer that ever overshoots [0, 255]
+    on non-perturbed pixels would see DIFFERENT outputs depending on
+    whether δ was installed. Now we clamp only at the modified positions.
+    """
+    H, W = 4, 4
+    delta = torch.zeros(1, 3, H, W)
+    delta[0, 1, 2, 3] = 3.0  # one perturbed pixel
+    cost = torch.ones(1, H, W)
+    blob = pack_sparse_delta(delta, cost, l_inf_budget=4.0, target_bytes=None)
+    spec = unpack_sparse_delta(blob)
+
+    # Construct a base whose NON-perturbed pixels are out-of-range. A
+    # buggy global clamp would mutate them.
+    base = torch.zeros(H, W, 3)
+    base.fill_(100.0)
+    base[0, 0, 0] = -5.0   # negative outlier
+    base[3, 3, 2] = 300.0  # positive outlier
+
+    out = apply_delta_to_frame(base, spec, frame_index=0)
+    # Non-perturbed outliers must be UNCHANGED (the apply path is no longer
+    # responsible for the global uint8 clamp; the inflate path's
+    # ``frame_up.round().clamp(0, 255)`` handles it).
+    assert out[0, 0, 0].item() == -5.0, (
+        "C3 regression: negative pixel at non-perturbed position was "
+        "silently clamped by apply_delta_to_frame. The apply path must "
+        "ONLY clamp the perturbed positions."
+    )
+    assert out[3, 3, 2].item() == 300.0, (
+        "C3 regression: positive outlier at non-perturbed position was "
+        "silently clamped by apply_delta_to_frame."
+    )
+    # Perturbed pixel still clamps to [0, 255]: 100 + ~3 well in range.
+    assert 100.0 < out[2, 3, 1].item() <= 255.0
+
+
+def test_c3_perturbed_pixel_still_clamps_to_uint8_range() -> None:
+    """REGRESSION (Bug C3, positive direction): the clamp on the modified
+    positions must still be active so saturated bases don't overflow uint8.
+    """
+    H, W = 4, 4
+    delta = torch.zeros(1, 3, H, W)
+    delta[0, 0, 1, 2] = 4.0  # within budget, will saturate at 255
+    cost = torch.ones(1, H, W)
+    blob = pack_sparse_delta(delta, cost, l_inf_budget=4.0, target_bytes=None)
+    spec = unpack_sparse_delta(blob)
+
+    base = torch.full((H, W, 3), 254.0)
+    out = apply_delta_to_frame(base, spec, frame_index=0)
+    # Perturbed pixel saturates to 255 (was 254 + ~4 → clip).
+    assert out[1, 2, 0].item() == 255.0, (
+        "C3 regression: perturbed pixel must still clamp to [0, 255]. "
+        f"Got {out[1, 2, 0].item()}."
+    )
+
+
+def test_c4_compliance_warning_in_optimizer_source() -> None:
+    """REGRESSION (Bug C4): the optimizer must emit a banner reminding
+    operators that Lane C is PENDING council compliance ruling. If the
+    banner is removed, scores from this pipeline could quietly land in
+    the run-log without the [lane-c-pending-ruling] tag.
+    """
+    from pathlib import Path
+    src = Path(__file__).resolve().parents[3] / "experiments" / "optimize_uniward_delta.py"
+    text = src.read_text()
+    assert "[lane-c-pending-ruling]" in text, (
+        "C4 banner missing from optimize_uniward_delta.py. Operators must "
+        "see the compliance reminder on every run."
+    )
+    assert "PENDING council ruling" in text, (
+        "C4 banner missing 'PENDING council ruling' phrasing."
+    )
+
+
+def test_m1_target_bytes_none_emits_warning() -> None:
+    """REGRESSION (Bug M1): pack_sparse_delta(target_bytes=None) must emit
+    a UserWarning so operators are not surprised by a 100KB blob in
+    production. The CLI script keeps an explicit default of 5000.
+    """
+    delta, cost = _random_delta(n_frames=2, H=8, W=8, sparsity=0.20, seed=11)
+    with pytest.warns(UserWarning, match="target_bytes=None"):
+        blob = pack_sparse_delta(delta, cost, l_inf_budget=4.0, target_bytes=None)
+    # Sanity: blob is still well-formed (we did not break the legacy path).
+    spec = unpack_sparse_delta(blob)
+    assert spec.any_delta
+
+
+def test_m1_target_bytes_explicit_does_not_warn() -> None:
+    """REGRESSION (Bug M1, positive direction): with an explicit budget,
+    the warning is suppressed (silence is golden when caller is explicit).
+    """
+    import warnings as _w
+    delta, cost = _random_delta(n_frames=2, H=8, W=8, sparsity=0.20, seed=12)
+    with _w.catch_warnings():
+        _w.simplefilter("error")  # turn any warning into an error
+        # Should not raise, since target_bytes is explicit.
+        pack_sparse_delta(delta, cost, l_inf_budget=4.0, target_bytes=2000)
+
+
+def test_m2_no_eval_roundtrip_flag_removed_from_optimizer() -> None:
+    """REGRESSION (Bug M2): the --no-eval-roundtrip flag MUST NOT exist in
+    the CLI. The CLAUDE.md non-negotiable rule says every training path
+    uses eval_roundtrip — silent disabling violates it. The escape hatch
+    is now the TAC_ALLOW_NO_ROUNDTRIP env var.
+
+    We grep for the *active* argparse registration ``add_argument("--no-eval-roundtrip"``
+    (not any string mention — the comments still document why the flag was
+    removed, which is desirable for future readers).
+    """
+    from pathlib import Path
+    src = Path(__file__).resolve().parents[3] / "experiments" / "optimize_uniward_delta.py"
+    text = src.read_text()
+    # Look for any argparse registration variant — single or double quotes,
+    # any whitespace within reason. Fail if a re-register slips back in.
+    import re
+    pattern = re.compile(r"""add_argument\(\s*['"]--no-eval-roundtrip['"]""")
+    assert not pattern.search(text), (
+        "M2 regression: --no-eval-roundtrip argparse flag is back. Remove "
+        "it; if a diagnostic ablation is needed, use TAC_ALLOW_NO_ROUNDTRIP=1."
+    )
+    assert "TAC_ALLOW_NO_ROUNDTRIP" in text, (
+        "M2 regression: TAC_ALLOW_NO_ROUNDTRIP escape hatch missing from "
+        "optimize_uniward_delta.py."
+    )
