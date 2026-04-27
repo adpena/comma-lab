@@ -23,14 +23,43 @@
 #   0 — NVDEC available, downstream auth eval will work
 #   1 — DALI not installed (dependency error, not a host problem)
 #   2 — NVDEC missing on this host (kill instance, pick a different one)
+#
+# Flags:
+#   --ensure-dali  — if DALI is missing, install it and re-check (instead
+#                    of exit 1). Use this from bootstraps that run on a
+#                    fresh container that hasn't run remote_setup_full.sh.
+#                    Codex R5-3-round-4 fix: closes the probe-before-DALI
+#                    gap that bricked remote_train_bootstrap.sh and
+#                    remote_pose_tto_bootstrap.sh on fresh hosts.
 set -euo pipefail
+
+ENSURE_DALI=0
+for arg in "$@"; do
+    case "$arg" in
+        --ensure-dali) ENSURE_DALI=1 ;;
+        *) echo "[probe_nvdec] unknown arg: $arg" >&2; exit 1 ;;
+    esac
+done
 
 PYBIN="${PYBIN:-/opt/conda/bin/python}"
 
 if ! "$PYBIN" -c "import nvidia.dali" 2>/dev/null; then
-    echo "[probe_nvdec] FATAL: nvidia.dali not installed on $PYBIN" >&2
-    echo "[probe_nvdec]   Run: $PYBIN -m pip install --extra-index-url https://developer.download.nvidia.com/compute/redist nvidia-dali-cuda120" >&2
-    exit 1
+    if [ "$ENSURE_DALI" = "1" ]; then
+        echo "[probe_nvdec] DALI missing; --ensure-dali set, installing..." >&2
+        "$PYBIN" -m pip install -q --extra-index-url \
+            https://developer.download.nvidia.com/compute/redist \
+            nvidia-dali-cuda120 2>&1 | tail -3 >&2
+        if ! "$PYBIN" -c "import nvidia.dali" 2>/dev/null; then
+            echo "[probe_nvdec] FATAL: install completed but import still fails" >&2
+            exit 1
+        fi
+        echo "[probe_nvdec] DALI installed; continuing to probe..." >&2
+    else
+        echo "[probe_nvdec] FATAL: nvidia.dali not installed on $PYBIN" >&2
+        echo "[probe_nvdec]   Run: $PYBIN -m pip install --extra-index-url https://developer.download.nvidia.com/compute/redist nvidia-dali-cuda120" >&2
+        echo "[probe_nvdec]   OR call this script with --ensure-dali to auto-install" >&2
+        exit 1
+    fi
 fi
 
 # The actual probe: build a minimal DALI pipeline that exercises the video

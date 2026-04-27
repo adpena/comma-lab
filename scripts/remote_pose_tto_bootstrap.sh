@@ -48,8 +48,11 @@ if [ "${1:-}" = "--inner" ]; then
     export CUBLAS_WORKSPACE_CONFIG=:4096:8
 
     # NVDEC probe (2026-04-27) — BEFORE any GPU spend / nvidia-smi telemetry.
+    # --ensure-dali auto-installs nvidia-dali-cuda120 if missing (fresh
+    # hosts haven't run remote_setup_full.sh yet, so DALI may not be there).
+    # Codex R5-3-round-4 fix: closes the probe-before-DALI gap.
     # Reference: feedback_vastai_nvdec_host_variation memory entry.
-    bash "$WORKSPACE/scripts/probe_nvdec.sh" || {
+    bash "$WORKSPACE/scripts/probe_nvdec.sh" --ensure-dali || {
         echo "[pose_tto_bootstrap] FATAL: NVDEC probe failed — destroy this Vast.ai instance" >&2
         exit 2
     }
