@@ -102,6 +102,22 @@ def main() -> int:
                         "this for diagnostic / paper-figure builds — never "
                         "for a contest submission until the Yousfi PR #35 "
                         "strict-scorer-rule ruling is in.")
+    # Lane B-alt 2026-04-27: brotli-compress renderer.bin into the archive.
+    # Inflate side already supports renderer.bin.br auto-decompression
+    # (submissions/robust_current/inflate_renderer.py
+    # _decompress_brotli_in_archive). Local measurement: q=11 saves ~35KB on
+    # the dilated-h64 296KB renderer → ~-0.023 score. Pure rate-side win,
+    # contest-compliant under PR #35.
+    p.add_argument("--use-brotli", action="store_true", default=False,
+                   help="Brotli-compress renderer.bin → renderer.bin.br "
+                        "before adding to the archive. Inflate side auto-"
+                        "decompresses on extract. Saves ~12%% / ~35KB on "
+                        "the 296KB dilated-h64 renderer → -0.023 score "
+                        "contribution. (Lane B-alt.)")
+    p.add_argument("--brotli-quality", type=int, default=11,
+                   help="Brotli quality level 0-11 (default 11 = max, "
+                        "matches Quantizr). Higher = smaller archive but "
+                        "slower compress. Decompress speed is independent.")
     args = p.parse_args()
 
     for label, path in (("renderer", args.renderer), ("poses", args.poses),
@@ -263,10 +279,35 @@ def main() -> int:
         size = encode_masks(masks, masks_path, crf=args.crf, fps=20)
         print(f"[build] masks.mkv = {size:,} bytes in {time.monotonic()-t0:.1f}s")
 
+        # Lane B-alt 2026-04-27: optional brotli-compress renderer.bin → .br.
+        # Done in Stage 3.5 (in the same TemporaryDirectory) so the .br file
+        # is gone after the archive is sealed; only the renderer.bin source
+        # path persists. Inflate side auto-decompresses .br files.
+        renderer_arcname = "renderer.bin"
+        renderer_src_for_zip = args.renderer
+        renderer_compressed_size: int | None = None
+        if args.use_brotli:
+            from tac.submission_archive import compress_file_brotli
+            renderer_br_path = td_path / "renderer.bin.br"
+            compress_file_brotli(
+                args.renderer, renderer_br_path,
+                quality=args.brotli_quality,
+            )
+            renderer_compressed_size = renderer_br_path.stat().st_size
+            renderer_arcname = "renderer.bin.br"
+            renderer_src_for_zip = renderer_br_path
+            saved = args.renderer.stat().st_size - renderer_compressed_size
+            print(
+                f"[build] Lane B-alt brotli q={args.brotli_quality}: "
+                f"renderer.bin {args.renderer.stat().st_size:,} → .br "
+                f"{renderer_compressed_size:,} bytes (saved {saved:,}, "
+                f"-{saved / 37545489 * 25:.4f} score contribution)"
+            )
+
         # Stage 4: build archive.zip
         args.output.parent.mkdir(parents=True, exist_ok=True)
         with zipfile.ZipFile(args.output, "w", zipfile.ZIP_DEFLATED, compresslevel=9) as z:
-            z.write(args.renderer, arcname="renderer.bin")
+            z.write(renderer_src_for_zip, arcname=renderer_arcname)
             z.write(masks_path, arcname="masks.mkv")
             z.write(args.poses, arcname="optimized_poses.pt")
             if args.with_uniward_delta is not None:
@@ -308,11 +349,22 @@ def main() -> int:
             "rate_unscaled": rate_unscaled,
             "rate_score_contribution": rate_contribution,
             "segnet_weights_sha256": _sha256(segnet_path) if segnet_path.exists() else None,
+            "use_brotli": bool(args.use_brotli),
+            "brotli_quality": int(args.brotli_quality) if args.use_brotli else None,
             "components": {
-                "renderer.bin": {
+                renderer_arcname: {
                     "source": str(args.renderer),
-                    "size_bytes": args.renderer.stat().st_size,
-                    "sha256": _sha256(args.renderer),
+                    "size_bytes_uncompressed": args.renderer.stat().st_size,
+                    "size_bytes_in_archive": (
+                        renderer_compressed_size
+                        if renderer_compressed_size is not None
+                        else args.renderer.stat().st_size
+                    ),
+                    "sha256_uncompressed": _sha256(args.renderer),
+                    "compression": (
+                        f"brotli-q{args.brotli_quality}"
+                        if args.use_brotli else "none"
+                    ),
                 },
                 "masks.mkv": {
                     "source": "rebuilt from GT via SegNet at 384x512 CRF=50",
