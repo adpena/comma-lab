@@ -308,12 +308,21 @@ def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
     p.add_argument("--device", type=str, default=None)
 
     # Auth eval (CLAUDE.md non-negotiable: "Auth eval EVERYWHERE")
-    p.add_argument("--auth-eval-on-best", action="store_true", default=False,
+    # Council R2 (2026-04-26): default flipped to TRUE because opt-in violates
+    # the CLAUDE.md non-negotiable. Every memory entry from the past 2 weeks
+    # has a "wasted GPU because we didn't auth-eval" footnote. Use
+    # --no-auth-eval-on-best for the rare smoke-test case.
+    p.add_argument("--auth-eval-on-best", action="store_true", default=True,
                    help="At end of training, run CUDA auth eval against the best "
-                        "fp4 checkpoint. The proxy fp4_scorer is a TRAINING SIGNAL "
-                        "only — proxy-auth gap can be 100-350x even on CUDA-CUDA "
-                        "(LANE-B 2026-04-26). The auth result is the ONLY trustworthy "
-                        "score. Result is saved as <out_dir>/auth_eval_on_best.json.")
+                        "fp4 checkpoint. DEFAULT TRUE per CLAUDE.md non-negotiable. "
+                        "The proxy fp4_scorer is a TRAINING SIGNAL only — proxy-auth "
+                        "gap can be 100-350x even on CUDA-CUDA (LANE-B 2026-04-26). "
+                        "The auth result is the ONLY trustworthy score. Result is "
+                        "saved as <out_dir>/auth_eval_on_best.json.")
+    p.add_argument("--no-auth-eval-on-best", dest="auth_eval_on_best", action="store_false",
+                   help="Skip the auth eval (smoke tests / dry runs only). Using this "
+                        "flag means the run produces NO authoritative score — the "
+                        "proxy fp4_scorer alone is not a measurement.")
     p.add_argument("--auth-eval-masks", type=str, default=None,
                    help="Path to masks.mkv for auth eval. Required with --auth-eval-on-best.")
     p.add_argument("--auth-eval-poses", type=str, default=None,
