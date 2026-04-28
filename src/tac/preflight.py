@@ -348,6 +348,17 @@ def preflight_all(
         # `feedback_silent_default_masquerading_as_negative_result`.
         check_no_silent_auto_discovery_with_warn(strict=True, verbose=verbose)
 
+        # 2026-04-27: 3 new meta-bug checks (30, 31, 32) for DX hardening.
+        # Check 30 (executable-bit): STRICT — Lane GH bug + 6 historical
+        # violations all fixed in this commit.
+        # Checks 31-32 (predicted_band, contest-cuda-tag): WARN-only
+        # initially per canonical promotion pattern. Live violation counts
+        # are 14 (predicted_band) and unknown (contest-cuda-tag); fix in
+        # a follow-on sweep then flip strict.
+        check_remote_scripts_executable_bit(strict=True, verbose=verbose)
+        check_remote_scripts_record_predicted_band(strict=False, verbose=verbose)
+        check_remote_scripts_tag_contest_cuda_at_completion(strict=False, verbose=verbose)
+
     # 2. Training inputs (only if profile + tto_frames provided)
     if profile_name and tto_frames_path and gt_poses_path and masks_path and profile_arch:
         preflight_training_inputs(
@@ -6718,6 +6729,150 @@ def check_no_silent_auto_discovery_with_warn(
             "Documented opt-out: same-function `# AUTO_DISCOVERY_OK:<reason>` "
             "marker. See findings.md and memory "
             "`feedback_silent_default_masquerading_as_negative_result`."
+        )
+    return violations
+
+
+# ════════════════════════════════════════════════════════════════════════════
+# Check N+1 (30th meta-bug): remote scripts must have executable bit
+# ════════════════════════════════════════════════════════════════════════════
+#
+# 2026-04-27: Lane GH script was committed without +x bit; the audit subagent
+# caught it via test_remote_lane_gh_script.py::test_script_is_executable.
+# This preflight check generalizes the protection.
+def check_remote_scripts_executable_bit(strict: bool = False, verbose: bool = False) -> list[str]:
+    """Every scripts/remote_*.sh must have the executable bit set so
+    ``bash`` invocations + tmux dispatch work without requiring chmod first.
+    """
+    violations: list[str] = []
+    repo_root = Path(__file__).resolve().parent.parent.parent
+    scripts_dir = repo_root / "scripts"
+    if not scripts_dir.is_dir():
+        if verbose:
+            print(f"  [executable-bit] OK: scripts dir not found, skipped")
+        return violations
+    for script_path in sorted(scripts_dir.glob("remote_*.sh")):
+        st = script_path.stat()
+        if not (st.st_mode & 0o111):
+            violations.append(
+                f"{script_path}: not executable (mode {oct(st.st_mode)}). "
+                f"Run `chmod +x {script_path}` to fix. Required for bash + "
+                f"tmux dispatch."
+            )
+    if verbose:
+        n_scripts = len(list(scripts_dir.glob("remote_*.sh")))
+        if violations:
+            print(f"  [executable-bit] {len(violations)} violation(s) across {n_scripts} remote_*.sh")
+        else:
+            print(f"  [executable-bit] OK: {n_scripts} remote_*.sh script(s) all executable")
+    if strict and violations:
+        raise PreflightError(
+            "REMOTE SCRIPT EXECUTABLE BIT VIOLATIONS — at least one "
+            f"scripts/remote_*.sh lacks +x bit:\n  • " + "\n  • ".join(violations) +
+            "\nFix: chmod +x on each. Required so bash dispatch works "
+            "without manual chmod intervention. (Lane GH bug 2026-04-27.)"
+        )
+    return violations
+
+
+# ════════════════════════════════════════════════════════════════════════════
+# Check N+2 (31st meta-bug): remote scripts must record predicted_band
+# ════════════════════════════════════════════════════════════════════════════
+#
+# 2026-04-27: every remote_*.sh script today documents predicted_band in
+# provenance JSON for empirical calibration of council intuition. Without
+# the metadata, post-hoc analysis can't answer "did this lane land within
+# the council's predicted range?" — losing crucial signal.
+def check_remote_scripts_record_predicted_band(strict: bool = False, verbose: bool = False) -> list[str]:
+    """Every scripts/remote_*.sh that emits provenance.json must include
+    a 'predicted_band' field for empirical calibration.
+    """
+    violations: list[str] = []
+    repo_root = Path(__file__).resolve().parent.parent.parent
+    scripts_dir = repo_root / "scripts"
+    if not scripts_dir.is_dir():
+        if verbose:
+            print(f"  [predicted-band] OK: scripts dir not found, skipped")
+        return violations
+    n_scripts = 0
+    n_with_provenance = 0
+    for script_path in sorted(scripts_dir.glob("remote_*.sh")):
+        n_scripts += 1
+        text = script_path.read_text(errors="ignore")
+        if "provenance.json" not in text and "PROVENANCE" not in text:
+            continue  # script doesn't emit provenance, exempt
+        n_with_provenance += 1
+        if "predicted_band" not in text:
+            violations.append(
+                f"{script_path}: emits provenance.json but no "
+                f"'predicted_band' metadata. Add to the python json.dump "
+                f"block: `'predicted_band': [LOW, HIGH]`. Required for "
+                f"council prediction calibration."
+            )
+    if verbose:
+        if violations:
+            print(f"  [predicted-band] {len(violations)}/{n_with_provenance} provenance-emitting script(s) missing predicted_band")
+        else:
+            print(f"  [predicted-band] OK: {n_with_provenance}/{n_scripts} remote_*.sh script(s) record predicted_band")
+    if strict and violations:
+        raise PreflightError(
+            "PREDICTED BAND METADATA VIOLATIONS — at least one "
+            f"scripts/remote_*.sh emits provenance but lacks predicted_band:\n  • "
+            + "\n  • ".join(violations) +
+            "\nFix: add 'predicted_band': [LOW, HIGH] to each provenance JSON "
+            "for council calibration. (no-signal-loss CLAUDE.md rule.)"
+        )
+    return violations
+
+
+# ════════════════════════════════════════════════════════════════════════════
+# Check N+3 (32nd meta-bug): remote scripts must tag completion [contest-CUDA]
+# ════════════════════════════════════════════════════════════════════════════
+#
+# 2026-04-27: per CLAUDE.md FORBIDDEN PATTERNS rule, every score must carry
+# a lane tag (contest-CUDA / advisory / MPS-PROXY). Remote script completion
+# logs are the canonical place for the tag. Currently checked only via
+# per-script test files — generalize via preflight.
+def check_remote_scripts_tag_contest_cuda_at_completion(strict: bool = False, verbose: bool = False) -> list[str]:
+    """Every scripts/remote_*.sh that runs contest_auth_eval must include
+    '[contest-CUDA]' literal in the completion log line so reports are
+    self-tagging per CLAUDE.md score-tag rule.
+    """
+    violations: list[str] = []
+    repo_root = Path(__file__).resolve().parent.parent.parent
+    scripts_dir = repo_root / "scripts"
+    if not scripts_dir.is_dir():
+        if verbose:
+            print(f"  [completion-tag] OK: scripts dir not found, skipped")
+        return violations
+    n_scripts = 0
+    n_with_eval = 0
+    for script_path in sorted(scripts_dir.glob("remote_*.sh")):
+        n_scripts += 1
+        text = script_path.read_text(errors="ignore")
+        if "contest_auth_eval" not in text:
+            continue
+        n_with_eval += 1
+        # Look for [contest-CUDA] tag literal anywhere in the script.
+        if "[contest-CUDA]" not in text:
+            violations.append(
+                f"{script_path}: invokes contest_auth_eval but completion "
+                f"log lacks '[contest-CUDA]' tag. Add the literal string "
+                f"to the LANE_X_DONE log line so produced scores are "
+                f"self-tagging per CLAUDE.md score-tag rule."
+            )
+    if verbose:
+        if violations:
+            print(f"  [completion-tag] {len(violations)}/{n_with_eval} eval script(s) missing [contest-CUDA] tag")
+        else:
+            print(f"  [completion-tag] OK: {n_with_eval}/{n_scripts} remote_*.sh script(s) tag completion")
+    if strict and violations:
+        raise PreflightError(
+            "COMPLETION TAG VIOLATIONS — at least one scripts/remote_*.sh "
+            f"runs contest_auth_eval but lacks '[contest-CUDA]' tag:\n  • "
+            + "\n  • ".join(violations) +
+            "\nFix: add '[contest-CUDA]' literal to the completion log line "
+            "(LANE_X_DONE marker) so scores are self-tagging."
         )
     return violations
 
