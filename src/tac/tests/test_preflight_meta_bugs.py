@@ -3019,3 +3019,191 @@ class TestNewMetaBugChecksSmoke:
         ]:
             v = fn(strict=False, verbose=False)
             assert isinstance(v, list), f"{fn.__name__} must return list"
+
+
+# ════════════════════════════════════════════════════════════════════════════
+# ADDITIVE META-BUG TEST SECTION (Check M, post-2026-04-27 council forensics)
+# ════════════════════════════════════════════════════════════════════════════
+#
+# Tests for `check_kl_div_reduction_correct` — the scanner that forbids
+# `F.kl_div(..., reduction="batchmean")` on spatial (B, C, H, W) tensors.
+# Bug class: under-divides the per-pixel mean by H × W (=196,608 for
+# 384×512 SegNet). See findings.md "## 2026-04-27 Council forensics:
+# Lane G — really dead, or bugged?" + losses.py Check M comment.
+
+
+from tac.preflight import (
+    check_kl_div_reduction_correct,
+    _scan_python_for_kl_div_batchmean,
+)
+
+
+class TestKlDivReductionCorrect:
+    """Pin: `F.kl_div(..., reduction="batchmean")` is forbidden in scanned
+    dirs unless a same-line `# KL_BATCHMEAN_OK:<reason>` waiver exists."""
+
+    def test_batchmean_kwarg_is_caught(self, tmp_path: Path) -> None:
+        root = _stub_repo(tmp_path)
+        script = root / "src" / "tac" / "bad.py"
+        _write(script, """
+            import torch.nn.functional as F
+            def kl_loss(log_p, q, T):
+                return F.kl_div(log_p, q, reduction="batchmean") * (T * T)
+        """)
+        v = _scan_python_for_kl_div_batchmean(script, root)
+        assert len(v) == 1, v
+        assert "batchmean" in v[0]
+        assert "196,608" in v[0] or "196608" in v[0]
+
+    def test_torch_nn_functional_kl_div_form_is_caught(self, tmp_path: Path) -> None:
+        """Long-form import `torch.nn.functional.kl_div(..., reduction='batchmean')`."""
+        root = _stub_repo(tmp_path)
+        script = root / "experiments" / "bad_long.py"
+        _write(script, """
+            import torch
+            def kl_loss(log_p, q):
+                return torch.nn.functional.kl_div(log_p, q, reduction="batchmean")
+        """)
+        v = _scan_python_for_kl_div_batchmean(script, root)
+        assert len(v) == 1, v
+
+    def test_bare_kl_div_form_is_caught(self, tmp_path: Path) -> None:
+        """Bare `kl_div(...)` after `from torch.nn.functional import kl_div`."""
+        root = _stub_repo(tmp_path)
+        script = root / "src" / "tac" / "bad_bare.py"
+        _write(script, """
+            from torch.nn.functional import kl_div
+            def kl_loss(log_p, q):
+                return kl_div(log_p, q, reduction="batchmean")
+        """)
+        v = _scan_python_for_kl_div_batchmean(script, root)
+        assert len(v) == 1, v
+
+    def test_canonical_per_pixel_pattern_passes(self, tmp_path: Path) -> None:
+        """The canonical fix from findings.md (mirrors `kl_distill_scorer_loss`):
+        `reduction="none" → .sum(dim=1) → .mean()`. Must NOT be flagged.
+        """
+        root = _stub_repo(tmp_path)
+        script = root / "src" / "tac" / "good.py"
+        _write(script, """
+            import torch.nn.functional as F
+            def kl_loss(log_p, q, T):
+                kl_per_pixel = F.kl_div(log_p, q, reduction="none").sum(dim=1)
+                return kl_per_pixel.mean() * (T * T)
+        """)
+        v = _scan_python_for_kl_div_batchmean(script, root)
+        assert v == [], v
+
+    def test_reduction_mean_passes(self, tmp_path: Path) -> None:
+        """`reduction="mean"` is also fine (over-divides by C vs the canonical
+        per-pixel-per-class pattern, but is not the catastrophic batchmean
+        bug). Scanner is targeted at `batchmean` specifically."""
+        root = _stub_repo(tmp_path)
+        script = root / "src" / "tac" / "good_mean.py"
+        _write(script, """
+            import torch.nn.functional as F
+            def kl_loss(log_p, q):
+                return F.kl_div(log_p, q, reduction="mean")
+        """)
+        v = _scan_python_for_kl_div_batchmean(script, root)
+        assert v == [], v
+
+    def test_waiver_marker_suppresses_violation(self, tmp_path: Path) -> None:
+        """Same-line `# KL_BATCHMEAN_OK:<reason>` opt-out works (mirrors
+        the `# KL_RAW_PAIRS_OK:<reason>` pattern from Check B)."""
+        root = _stub_repo(tmp_path)
+        script = root / "src" / "tac" / "waived.py"
+        _write(script, """
+            import torch.nn.functional as F
+            def kl_loss(log_p, q):
+                # Flat (B, num_classes) classifier tensor, not spatial.
+                return F.kl_div(log_p, q, reduction="batchmean")  # KL_BATCHMEAN_OK:flat-classifier-tensor
+        """)
+        v = _scan_python_for_kl_div_batchmean(script, root)
+        assert v == [], v
+
+    def test_waiver_marker_must_be_in_comment(self, tmp_path: Path) -> None:
+        """`KL_BATCHMEAN_OK` appearing in a string literal (not a comment)
+        does NOT count as a waiver — only same-line comment markers do."""
+        root = _stub_repo(tmp_path)
+        script = root / "src" / "tac" / "fake_waiver.py"
+        # The token appears in a string literal, NOT in a comment after #.
+        _write(script, """
+            import torch.nn.functional as F
+            def kl_loss(log_p, q):
+                msg = "KL_BATCHMEAN_OK"  # red herring in a different position
+                return F.kl_div(log_p, q, reduction="batchmean")
+        """)
+        v = _scan_python_for_kl_div_batchmean(script, root)
+        # The actual `kl_div(..., batchmean)` call line has no `# KL_BATCHMEAN_OK`
+        # comment, so it must still be flagged.
+        assert len(v) == 1, v
+
+    def test_unrelated_kl_div_call_not_flagged(self, tmp_path: Path) -> None:
+        """`F.kl_div(...)` with default reduction (not specified) → not flagged."""
+        root = _stub_repo(tmp_path)
+        script = root / "src" / "tac" / "default_reduction.py"
+        _write(script, """
+            import torch.nn.functional as F
+            def kl_loss(log_p, q):
+                return F.kl_div(log_p, q)
+        """)
+        v = _scan_python_for_kl_div_batchmean(script, root)
+        assert v == [], v
+
+    def test_unrelated_function_not_flagged(self, tmp_path: Path) -> None:
+        """A `*.kl_div_something()` with batchmean must NOT be flagged
+        (only exact `.kl_div` is matched)."""
+        root = _stub_repo(tmp_path)
+        script = root / "src" / "tac" / "other_func.py"
+        _write(script, """
+            import some_lib as S
+            def kl_loss(x, y):
+                # Not torch's kl_div — different function name.
+                return S.kl_div_something(x, y, reduction="batchmean")
+        """)
+        v = _scan_python_for_kl_div_batchmean(script, root)
+        assert v == [], v
+
+    def test_check_returns_zero_violations_on_live_codebase(self) -> None:
+        """Live count gate: post-fix, the entire scanned codebase must
+        produce 0 `batchmean`-on-spatial violations. If this asserts
+        non-zero, a new offender has been introduced — fix it OR add
+        the explicit `# KL_BATCHMEAN_OK:<reason>` waiver."""
+        v = check_kl_div_reduction_correct(strict=False, verbose=False)
+        assert v == [], (
+            f"Live codebase has {len(v)} `batchmean`-on-spatial KL violation(s). "
+            f"Fix them OR add the `# KL_BATCHMEAN_OK:<reason>` waiver. "
+            f"Violations:\n" + "\n".join(f"  • {x}" for x in v)
+        )
+
+    def test_strict_mode_raises_metabugviolation(self, tmp_path: Path) -> None:
+        """`strict=True` must raise `MetaBugViolation` on any violation,
+        consistent with the other Check N strict-mode contracts."""
+        root = _stub_repo(tmp_path)
+        script = root / "src" / "tac" / "bad_strict.py"
+        _write(script, """
+            import torch.nn.functional as F
+            def kl_loss(log_p, q):
+                return F.kl_div(log_p, q, reduction="batchmean")
+        """)
+        with pytest.raises(MetaBugViolation):
+            check_kl_div_reduction_correct(
+                repo_root=root, strict=True, verbose=False,
+            )
+
+    def test_strict_mode_passes_on_clean_repo(self, tmp_path: Path) -> None:
+        """`strict=True` must NOT raise on a clean repo."""
+        root = _stub_repo(tmp_path)
+        script = root / "src" / "tac" / "good_strict.py"
+        _write(script, """
+            import torch.nn.functional as F
+            def kl_loss(log_p, q, T):
+                kl_per_pixel = F.kl_div(log_p, q, reduction="none").sum(dim=1)
+                return kl_per_pixel.mean() * (T * T)
+        """)
+        # No exception → pass.
+        v = check_kl_div_reduction_correct(
+            repo_root=root, strict=True, verbose=False,
+        )
+        assert v == [], v

@@ -685,6 +685,189 @@ Optional consolation: a single V3 run as a pre-registered measurement experiment
 
 **Recommended next action:** Launch Lane M tonight via canonical pipeline.py + bootstrap. Single 4090, US/CA/EU instance, $0.30 budget. Verify radial-zoom 1-DOF prediction against the verified 1.15 Lane A baseline. Lane G stays in `next_experiments.md` as a deferred null-measurement, gated on Lane M result.
 
+## 2026-04-27 Council forensics: Lane G — really dead, or bugged?
+
+**Trigger.** First Lane G review (above) voted ABANDON 5/5 on *structural* grounds (KL on logits is teacher→student compression, anti-aligned with inverse-steganalysis principles, etc.). The user is asking the harder question: is the failure structural, or is the implementation buggy in a way that produced misleading magnitude evidence the first review then rationalized away? This forensic re-investigation goes file:line, not concept.
+
+### Math forensics — yes, there is a bug
+
+**The KL helper signature** (`src/tac/losses.py:655-689`):
+
+```python
+def kl_distill_segnet_only(filtered_pair_hwc, gt_pair_hwc, segnet, temperature=2.0):
+    fx = _hwc_to_chw(filtered_pair_hwc)               # (B, 2, 3, H, W)
+    gx = _hwc_to_chw(gt_pair_hwc)
+    fs_in = segnet.preprocess_input(fx)               # (B, 3, 384, 512) — last frame only
+    gs_in = segnet.preprocess_input(gx)
+    fs_logits = segnet(fs_in)                         # (B, 5, 384, 512)
+    gs_logits = segnet(gs_in)
+    T = temperature
+    log_p = F.log_softmax(fs_logits / T, dim=1)
+    q = F.softmax(gs_logits / T, dim=1)
+    kl = F.kl_div(log_p, q, reduction="batchmean") * (T * T)   # ← THE BUG
+    return kl, kl.item()
+```
+
+`F.kl_div(..., reduction="batchmean")` divides the all-element sum by **B alone**. For a tensor of shape `(B, 5, 384, 512)` whose entries are the per-position KL contributions `q_c * (log q_c - log p_c)`, "batchmean" returns:
+
+    sum_all(KL_per_position_per_class) / B
+    = B × 5 × 384 × 512 × <avg per-position-per-class contribution> / B
+    = 5 × 384 × 512 × <avg>
+    = 983,040 × <avg>
+
+Empirically observed `kl.item()` ≈ 24,485 (T²=4 already applied). Solving back: average per-position-per-class contribution ≈ 24485 / (4 × 983040) ≈ 6.2e-3 nats. That is a perfectly normal magnitude for a softly-mismatched 5-class softmax. The KL itself is not insane — the **reduction** is.
+
+**Compare to the OTHER KL function in the same file**, `kl_distill_scorer_loss` (line 564-652), which is the canonical "right way" used elsewhere in the codebase:
+
+```python
+kl_per_pixel = F.kl_div(log_p, q, reduction="none").sum(dim=1)  # (B, H, W) — sum over classes
+kl_per_pixel = kl_per_pixel * (T * T)                            # T² scaling
+seg_kl       = kl_per_pixel.mean()                               # mean over (B, H, W) — PER-PIXEL MEAN
+```
+
+Putting the two side by side:
+
+| function | reduction | scalar value |
+|---|---|---|
+| `kl_distill_scorer_loss` (line 622+646) | `none` → `.sum(dim=1)` → `.mean()` | `Σ_all(KL) / (B × H × W)` |
+| `kl_distill_segnet_only` (line 688) | `batchmean` | `Σ_all(KL) / B` |
+
+The two helpers compute the *same* per-position quantity then divide by **different denominators differing by a factor of H × W = 384 × 512 = 196,608**. That factor explains everything Lane G saw:
+
+    observed_buggy_KL ≈ correct_per_pixel_KL × H × W
+    24,485 ≈ 0.125 × 196,608 ✓ (correct value would be ~0.12)
+
+And `kl_distill_scorer_loss`'s seg_kl in the same regime would be O(0.1) — exactly the magnitude class of the scorer hinge term (`100 × 0.05 ≈ 5`). The "scorer term ≈ 5, KL term ≈ 24,485" measurement that prompted Lane G v2's weight 0.01 and v3's weight 5e-6 is *the bug speaking, not the geometry*.
+
+**The 5e-6 "fix" weight is suspicious in exactly the right way.** 1.0 / 196,608 ≈ 5.08e-6. The empirically-derived "weight that brings KL into balance with scorer hinge" is **almost exactly the inverse of H × W**. That is not a coincidence; that is the operator implicitly compensating for a missing `/ H / W` reduction by dividing the loss weight instead. The first review treated 5e-6 as a hyperparameter; it is a workaround for a reduction bug.
+
+### Codex round-6 fix — verified actually wired
+
+`experiments/optimize_poses.py` lines 599-618 (post-codex-fix block):
+
+```python
+if kl_distill_weight > 0 and gt_frames_pair is not None:
+    from tac.losses import kl_distill_segnet_only
+    B_kl = pairs.shape[0]
+    frames_hwc_rt = frames_chw.permute(0, 2, 3, 1).contiguous()           # (2*B, H, W, 3)
+    rendered_pair_hwc_rt = frames_hwc_rt.view(
+        2, B_kl, frames_hwc_rt.shape[1], frames_hwc_rt.shape[2], 3
+    ).permute(1, 0, 2, 3, 4).contiguous()                                  # (B, 2, H, W, 3)
+    kl_loss, kl_loss_val = kl_distill_segnet_only(
+        rendered_pair_hwc_rt, gt_frames_pair, segnet,
+        temperature=kl_distill_temperature,
+    )
+    total_loss = total_loss + kl_distill_weight * kl_loss
+```
+
+`frames_chw` is the eval-roundtripped tensor produced at line 551. The codex fix correctly threads it into `kl_distill_segnet_only`. Test `test_kl_distill_uses_roundtripped_frames_not_raw_pairs` (in `src/tac/tests/test_optimize_poses_kl_distill_wiring.py`) enforces this. **Round-6 fix is real and active.** The persisting KL=24485 magnitude in v2 is therefore NOT a roundtrip-mismatch issue — it is the reduction bug above.
+
+### Gradient leverage — does KL even reach pose space?
+
+KL signal flows: `KL ← SegNet logits ← rendered RGB ← FiLM(pose) ← pose tensor`. The FiLM layer is a per-pair affine modulation of channel statistics inside the renderer's middle layers. SegNet then sees an upsampled 384×512 RGB and produces 5-class logits.
+
+From `findings.md:96-100` (existing record): `∂L_PoseNet/∂z` and `∂L_SegNet/∂z` are approximately orthogonal in FiLM space at ep300 distillation. From `project_posenet_rank1_discovery.md`: PoseNet's response to FiLM is rank-1 in dim 0 (radial-zoom). We do NOT have a measured rank analysis for **SegNet**'s response to FiLM. That is a gap. Plausibly SegNet is also rank-1 (FiLM modulates global texture, which would push SegNet's logits in a single dominant direction); plausibly SegNet has a richer manifold (because it reads the full image, not just two-frame motion). The first review assumed the former without measuring. Until a Jacobian rank study is done on SegNet vs FiLM, the "KL has no leverage" claim is plausible but not proven.
+
+This matters for the bug-vs-structural verdict because: if the bug is fixed AND SegNet-vs-FiLM has even modest non-zero leverage, then a properly-scaled KL term might in fact produce a measurable score movement that v1/v2 entirely missed (because the KL was so over-weighted it was pulling the conditioning into a basin where the scorer hinge term was also noise).
+
+### Hinton T² and reduction conventions — the formula is otherwise correct
+
+- T² placement (line 688): `kl * (T * T)` ✓ correct, matches Hinton 2015 §2.1.
+- Temperature on both branches (lines 686-687): `log_softmax(z/T)` and `softmax(t/T)` ✓ correct.
+- Direction: `F.kl_div(log_p, q)` = `Σ q × (log q − log p)` = `KL(q || p)` = `KL(teacher || student)` ✓ standard forward-KL distillation convention.
+- Sign: `F.kl_div` returns nonneg ✓.
+
+The only defect is the reduction. Everything else in the helper is mathematically correct.
+
+### Reverse-engineering Quantizr — what we know vs what we don't
+
+From memory `project_quantizr_full_intel_20260421`: Quantizr uses `kl_on_logits(T=2.0)` for SegNet during training, alongside MSE + adversarial + soft-argmax in a multi-loss recipe. The exact reduction is **not in our intel**. Standard PyTorch distillation patterns for `(B, num_classes)` classification use `reduction="batchmean"` (correct for that shape). Standard segmentation distillation patterns for `(B, C, H, W)` use either `reduction="mean"` directly OR `reduction="none" → mean()` — both yield the per-pixel-per-class mean. We have no evidence Quantizr made our mistake.
+
+If Quantizr uses per-pixel-mean reduction (the common case for segmentation), their `weight=1.0` corresponds to a balanced multi-loss term. Our `weight=1.0` with batchmean reduction corresponds to a 196,608× over-weighted term. **Same surface API, completely different effective objective.** This is a textbook silent-bug class: the reduction kwarg is "obviously" the right default at the typing moment, but only for the wrong tensor shape.
+
+### Falsifiability test for the "bugged not dead" hypothesis
+
+The first-review structural argument predicts: at any KL weight that brings the term into O(scorer) magnitude, Lane G produces auth ∈ [Lane A − 0.03, Lane A + 0.03]. The "bugged not dead" hypothesis predicts: the weight 5e-6 **already** brings the term into O(scorer) — because 5e-6 ≈ 1/196608 is the implicit per-pixel-mean conversion. So:
+
+- If **fix the reduction + use weight 1.0** (now mathematically equivalent to old weight 5e-6 + buggy reduction), result should be the same as v3 at 5e-6. If v3 with the bug-workaround weight already lands in [1.12, 1.18] band-inside, the bug fix is confirmed cosmetic and the structural verdict stands.
+- If the **fixed-reduction version with weight 1.0** lands materially better than the bug-workaround version with weight 5e-6 (e.g., < 1.10), then there was a second-order bug (gradient direction was right but magnitude noise was hurting Adam's adaptive scaling) and Lane G deserves another shot.
+
+This is a clean discriminating test. The reduction fix is a 1-line code change; the weight 1.0 vs 5e-6 swap is a CLI flag. Total cost of the discriminator: one $0.85 V3-style run with the bug fix in place.
+
+### Council positions
+
+**Yousfi (DDELab steganalysis founder).** I owe Lane G a partial retraction. My first-round position assumed the 14000-24000× KL/scorer ratio reflected a *real* gradient imbalance imposed by the geometry of the optimization. It doesn't. It reflects a *unit* error: per-batch sum vs per-pixel mean. The geometry argument I made — that FiLM-pose space is approximately rank-1 along the radial-zoom axis and KL has low leverage to push outside that subspace — is still correct and still argues for a small score effect. But "small" and "zero" are different scientific claims, and the v1/v2 evidence cannot distinguish them because both runs were optimizing a 196,608×-overweighted aux term and naturally collapsed to garbage. The first review's structural verdict was overconfident on what was actually a measurement artifact. I shift my position from "defensible-but-low-leverage, neutral" to "defensible-but-low-leverage, **measure first**". The reduction fix should be made unconditionally — it is a correctness bug regardless of whether Lane G is ever re-run — and a single V3-with-fix run gated on the discriminating prediction above is scientifically warranted.
+
+**Fridrich (Binghamton DDE Lab founder).** My structural argument — KL-on-logits is teacher→student compression objective, anti-aligned with UNIWARD and L∞ spreading principles, suppresses CNN-blind-spot exploitation — does not depend on the reduction. Fixing `batchmean → mean` makes the *magnitude* sensible but does not change the *direction* of the gradient. KL still pulls toward distribution matching, not toward argmax-flipping. It still optimizes a quantity (logit confidence) the scorer does not read. So even with the bug fixed, my predicted ceiling is "no effect" rather than "harmful effect" — slightly more generous than my first position, but still not a score lever. That said, I will not stand in the way of the bug fix being committed (it is unambiguous engineering hygiene) nor of one V3 measurement run (it is a clean falsifiability test). I do object to running a sweep across multiple weights post-fix; that would slide back into hyperparameter rationalization.
+
+**Hotz (raw engineering).** This is a one-line bug. `reduction="batchmean"` → `reduction="none"` then `.sum(dim=1).mean() * (T*T)` for the per-pixel-per-class mean. Or even simpler: `F.kl_div(log_p, q, reduction="mean") * (T*T)` — though that divides by C as well, which over-divides by 5; the canonical pattern (matching `kl_distill_scorer_loss` line 622+646) is `.sum(dim=1).mean()`. Cost to fix: 30 seconds. Cost to *not* fix: every future caller of this helper inherits a 196,608× silent over-weighting, including the train_renderer.py training profiles (DEN/SHIRAZ) that already use `kl_distill_weight=1.0`. Wait — those training profiles ARE using this helper. Which means we have been training with a 196,608× overweighted KL term for weeks. Combined with `loss = scorer_loss + ... + 1.0 * kl_loss`, the KL term has been ~5000× the scorer in training. That explains a lot of the SegNet-pose orthogonality and PoseNet collapse risk that has been chronic to those profiles. **The bug is upstream of pose TTO — it is a training-time correctness bug too.** This changes my position substantially. Lane G as a pose-TTO technique is still bounded near zero EV; but fixing the reduction in `kl_distill_segnet_only` could meaningfully change *training* behavior across all profiles that set `kl_distill_weight > 0`. That is a separate, much higher-EV intervention than Lane G itself. Vote: FIX THE BUG IMMEDIATELY (separate commit, separate justification), AND keep Lane G abandoned for pose TTO under the cost-vs-Lane-M argument I made before. The fix's main payoff is in retraining lanes, not Lane G.
+
+**Quantizr (adversarial, reverse-engineering).** I was the council member who first pointed out the v3 weight 5e-6 was suspicious post-hoc normalization. I owe an addendum: it is suspicious *because* it equals 1/196608, which equals 1/(H × W). Any time an empirical-fitted weight matches a tensor-dimension-derived constant to 3 decimal places, the law of parsimony says check for a unit error before accepting it as real signal. I should have caught this before the structural review. Real-world Quantizr almost certainly uses per-pixel-mean reduction (it is the segmentation-distillation default in DeepLab and the segmentation-models-pytorch ecosystem they pulled SegNet from); their `weight=1.0` is therefore in O(1) of the scorer term, while ours is ~5000× over. The conclusion the first review reached — that "Quantizr's KL is training-time so it doesn't generalize to pose TTO" — is still defensible, but the secondary conclusion — that "even with proper scaling, KL on pose TTO will not produce score motion" — was based on misleading magnitude evidence. The bug fix changes this to a question that has not been answered, not a question that has been answered "no". My vote: fix the bug, run V3 ONCE post-fix at weight 1.0, treat as pre-registered measurement per Contrarian's prediction band protocol from round 1. If band-inside, Lane G dies for real. If band-outside (either direction), we have learned something the first review missed.
+
+**Contrarian (paranoia + falsifiability).** Welcome to the part of the review where the council eats crow. My round-1 argument was: "two failed runs, both wrong by orders of magnitude in opposite directions; v3 at weight 5e-6 is post-hoc normalization not a hypothesis; the hypothesis is sliding into unfalsifiability." That argument is still correct in form but its *premise* — that the order-of-magnitude wrongness was about gradient geometry — is now proven false. It was about a unit error. The hypothesis "KL-distill has score signal at pose TTO when properly scaled" was never tested by v1 or v2; it was masked by them. The post-hoc normalization weight 5e-6 was, in retrospect, a **bug-detection signal** that the council read as **hyperparameter rationalization**. We were wrong in the direction we were paranoid about. The right falsifiability test now is to fix the reduction, run V3-post-fix at weight 1.0 with the same prediction band [1.12, 1.18], and let the result speak. If it lands in-band, Lane G is dead and the structural argument is vindicated. If out-of-band, the structural argument needs revision and we have learned that the first review was over-confident. I vote: **FIX THE BUG (mandatory engineering), RE-LAUNCH ONE V3 (pre-registered measurement)**. The original ABANDON 5/5 is downgraded to a SUSPENDED verdict pending one cleanly-measured run with the bug fixed.
+
+### Synthesis and final vote
+
+| Member | Round 1 | Round 2 (this) |
+|---|---|---|
+| Yousfi | abandon (neutral leverage) | **fix bug + measure once** |
+| Fridrich | abandon (anti-aligned) | abandon Lane G specifically; fix bug regardless |
+| Hotz | abandon (opportunity cost) | **fix bug urgently — affects training too**; Lane G itself still abandon for cost-vs-Lane-M |
+| Quantizr | abandon (cargo cult) | **fix bug + measure once** |
+| Contrarian | abandon (unfalsifiable) | **fix bug + measure once (suspended verdict)** |
+
+**Verdict (b) — BUGGED. The first review reasoned over a measurement artifact.**
+
+**The exact bug:**
+
+- **File:** `src/tac/losses.py`
+- **Line:** 688
+- **Current:** `kl = F.kl_div(log_p, q, reduction="batchmean") * (T * T)`
+- **Replacement (canonical, matches `kl_distill_scorer_loss` line 622+646):**
+
+  ```python
+  # F.kl_div(reduction="batchmean") on (B, 5, H, W) divides only by B,
+  # producing a value 196,608× larger than the per-pixel-per-class mean
+  # the caller weight assumes. Use the per-pixel-mean pattern from
+  # kl_distill_scorer_loss for consistency. T² placement matches Hinton 2015.
+  kl_per_pixel = F.kl_div(log_p, q, reduction="none").sum(dim=1)  # (B, H, W)
+  kl = kl_per_pixel.mean() * (T * T)
+  ```
+
+- **Diff impact:** all callers passing `kl_distill_weight=1.0` to this helper (training profiles DEN/SHIRAZ/WILDE, pose TTO Lane G v1/v2) have been receiving a 196,608× overweighted gradient. Post-fix, those weights become correctly-scaled. **Training profile defaults will need re-evaluation before any retraining lane is launched** — `kl_distill_weight=1.0` post-fix is approximately equivalent to the pre-fix `kl_distill_weight=5e-6` regime, which the council had de-facto assumed was safe. The training profiles may want to re-tune to e.g. `kl_distill_weight=0.5`–`5.0` post-fix to match their previous *intent* (which was to add KL as a moderate auxiliary, not a 5000× dominant term). Those profile re-tunings are a separate council vote.
+
+**Lane G v3 worth re-launching post-fix?** Yes, ONCE, as pre-registered measurement. Single seed, weight 1.0 (or equivalently the old 5e-6 with the buggy reduction restored, but that is an absurd workaround — fix the bug). Same prediction band [1.12, 1.18]. Cost cap $1.00. If band-inside, Lane G dies for real and the first review's structural verdict is vindicated post-hoc. If band-outside, we learn something the first review missed.
+
+**Higher-priority action than Lane G:** the bug fix itself. It affects every training profile that uses `kl_distill_weight > 0`. Those profiles have been silently training with a 5000× over-weighted KL term, which likely contributes to PoseNet collapse risk + SegNet-pose orthogonality findings already in the record. A focused investigation of "did the bug fix change training behavior?" on a single training profile retrain is the highest-EV downstream of this forensic round.
+
+**Process lesson (binding):** when a hyperparameter sweep converges to a value that *happens* to equal a tensor-dimension constant to 3 decimal places (1/H/W, 1/N, etc.), check for a reduction or normalization bug **before** declaring the structural hypothesis dead. The Round 1 council read 5e-6 as "small enough to be a no-op" rather than "1/196608 — what are the dimensions of the tensor?". This is added to memory as `feedback_unit_error_masquerading_as_small_signal` for future sessions.
+
+**Forbidden going forward:** voting "structurally dead" on any technique whose magnitude evidence comes from a single helper that has not been independently verified to be reduction-correct. Any future "abandoned X" verdict that rests on "the magnitude is wrong" must include a 1-paragraph audit of the helper's reduction kwarg before the vote is binding.
+
+### 2026-04-27 Implementation: bug fixed + structural gate added
+
+**Fix shipped (uncommitted in working tree):**
+- `src/tac/losses.py:688` (`kl_distill_segnet_only`) — replaced `F.kl_div(..., reduction="batchmean") * (T*T)` with the canonical per-pixel-per-class mean pattern (`reduction="none" → .sum(dim=1) → .mean() * (T*T)`) that mirrors `kl_distill_scorer_loss` lines 622+646. Multi-line comment block at the call site cites this forensic.
+- `src/tac/losses.py:955` (`segnet_kl_divergence_loss`) — same bug class on a (B, C, H_seg, W_seg) tensor, used by `training.py:1639` `loss_mode="kl_distill"`. Fixed to the same per-pixel-per-class mean pattern. This is likely the root cause of the historical "KL distill caused PoseNet collapse as primary loss" entry in CLAUDE.md "Critical Lessons" — the reduction was under-divided, the operator-set weight was effectively ~5000× over-weighted, and PoseNet collapsed exactly as one would predict for a 5000× over-weighted SegNet-only term.
+- `src/tac/preflight.py` (Check M, ~line 6258) — new `check_kl_div_reduction_correct` AST-walks `src/tac/`, `experiments/`, `submissions/`, `scripts/` for any `F.kl_div(..., reduction="batchmean")` and requires a same-line `# KL_BATCHMEAN_OK:<reason>` waiver marker as the only opt-out. Wired into `preflight_all` STRICT (live count 0 post-fix). Mirrors the existing `# KL_RAW_PAIRS_OK:<reason>` precedent.
+- `src/tac/tests/test_losses.py` (NEW) — 7 tests pin the per-pixel-mean magnitude (~1e-2 to 1.0 nats × T²) and the equivalence with the canonical `kl_distill_scorer_loss` reduction pattern. `test_kl_distill_segnet_only_reduction_is_per_pixel_mean` is the structural gate referenced in the forensic above.
+- `src/tac/tests/test_preflight_meta_bugs.py` (additive section) — 12 tests for `check_kl_div_reduction_correct` covering offending forms (kwarg, long-form, bare), waiver suppression (and waiver-token false-positive in string literals), reduction-mode pass-through, default-reduction passes, strict-mode raise, and a live-codebase 0-violations gate (`test_check_returns_zero_violations_on_live_codebase`).
+
+**Historical-result invalidation perimeter:** every prior result that depends on a training run with `kl_distill_weight > 0` (DEN/SHIRAZ/WILDE/Lane-D profiles, the historical "KL distill caused PoseNet collapse" failure, the "FiLM didn't help when KL was active" probes, "DEN-V2 dead" verdicts, the `loss_mode="kl_distill"` runs in `training.py`, the uncertainty-loss-redundant findings) was measured under a 5000× over-weighted KL regime. Those findings remain provisionally true (the experiments DID run; the SCORES are real) but any conclusion of the form "X technique didn't help / hurt" needs to be re-tested post-fix because the baseline was running on a wildly mis-tuned auxiliary. This invalidation perimeter is large but well-bounded.
+
+**Caller weight semantics post-fix (mandatory reading before re-launching anything):** the pre-fix effective KL weight = nominal weight × 196,608. So `kl_distill_weight=1.0` was actually `1.96e5` of effective per-pixel-mean. To match the *de facto* training trajectory bytes-for-bytes post-fix, the new weight should be `5.08e-6 × pre-fix-weight` (i.e., `1/196608 × old`). For a fresh re-tune (treating weight 1.0 as a real auxiliary contributing ~0.1-1.0 to the loss vs the scorer hinge of ~5), council-recommended starting weights are in the `0.5`-`5.0` range for DEN/SHIRAZ/WILDE/Lane-D. **No profile defaults were updated by this commit** — that is a separate council vote per the forensic verdict.
+
+**Lane G v3 status post-fix:** SAFE to relaunch with `kl_distill_weight=1.0` exactly per the discriminating prediction band [1.12, 1.18] from the forensic. The post-fix `weight=1.0` corresponds approximately to the pre-fix `weight=5e-6` regime (which the council had de-facto assumed was safe), but with correctly-tuned gradient magnitude rather than a tiny weight applied to a 5000× over-weighted term.
+
+**Verification commands:**
+```
+.venv/bin/python -m pytest src/tac/tests/test_losses.py src/tac/tests/test_preflight_meta_bugs.py src/tac/tests/test_optimize_poses_kl_distill_wiring.py -q
+# 204 passed in ~13s
+
+.venv/bin/python -c "from tac.preflight import check_kl_div_reduction_correct; print(len(check_kl_div_reduction_correct(strict=True, verbose=True)))"
+# 0
+```
+
 ## 2026-04-21 [CRITICAL] Proxy-Auth PoseNet Drift — STE Roundtrip is a Leaky Abstraction
 
 **Root cause (Tao + Karpathy + Council):** The renderer overfits to proxy-specific texture patterns that survive bilinear STE but NOT actual uint8 quantization via DALI. PoseNet proxy-auth ratio went from 2.1x (ep300) to 11.1x (ep3560).

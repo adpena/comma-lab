@@ -329,6 +329,15 @@ def preflight_all(
         check_uniward_delta_has_attestation_gate(strict=True, verbose=verbose)
         check_remote_scripts_write_provenance(strict=True, verbose=verbose)
 
+        # 2026-04-27 council forensics (findings.md "Lane G — really dead,
+        # or bugged?"): forbid `F.kl_div(..., reduction="batchmean")` on
+        # spatial tensors. The bug under-divides the per-pixel mean by
+        # H × W (=196,608 for 384×512 SegNet), silently over-weighting
+        # every caller. Lands at 0 live violations after the losses.py
+        # fix → straight to strict per the Lane A pattern. See Check M
+        # comment block above the function definition.
+        check_kl_div_reduction_correct(strict=True, verbose=verbose)
+
     # 2. Training inputs (only if profile + tto_frames provided)
     if profile_name and tto_frames_path and gt_poses_path and masks_path and profile_arch:
         preflight_training_inputs(
@@ -6251,6 +6260,146 @@ def check_remote_scripts_write_provenance(
         raise MetaBugViolation(
             "REMOTE SCRIPTS WITHOUT PROVENANCE.JSON:\n"
             + "\n".join(f"  • {v}" for v in violations)
+        )
+    return violations
+
+
+# ── Check M: F.kl_div(reduction="batchmean") on spatial tensors ────────────
+#
+# Bug class (2026-04-27 council forensics, findings.md "Lane G — really
+# dead, or bugged?"): `F.kl_div(..., reduction="batchmean")` divides only
+# by the batch dim. On a (B, C, H, W) segmentation logit tensor that
+# under-divides the canonical per-pixel mean by H × W (= 196,608 for
+# 384 × 512 SegNet). The same surface API silently fits two completely
+# different objectives depending on tensor shape — exactly the silent-
+# default class CLAUDE.md FORBIDDEN PATTERNS warns against.
+#
+# Live failure: every caller of `kl_distill_segnet_only` passing
+# `kl_distill_weight=1.0` (DEN/SHIRAZ/WILDE/Lane-D training profiles,
+# Lane G pose TTO v1/v2) ran with a ~5000× over-weighted KL term.
+#
+# Defense: forbid `reduction="batchmean"` outright in the scanned dirs,
+# require a `# KL_BATCHMEAN_OK:<reason>` waiver marker on the call line
+# justifying that the input is provably a flat (B, num_classes) classifier
+# tensor (the only shape for which `batchmean` matches the user's intent).
+# Mirrors the existing `# KL_RAW_PAIRS_OK:<reason>` waiver pattern from
+# Check B above.
+
+
+def _scan_python_for_kl_div_batchmean(path: Path, repo_root: Path) -> list[str]:
+    """Detect any `F.kl_div(..., reduction="batchmean")` call without a
+    same-line `# KL_BATCHMEAN_OK:<reason>` waiver marker.
+
+    Heuristic: matches calls whose function reference ends in `kl_div`
+    (covers `F.kl_div`, `torch.nn.functional.kl_div`, and bare
+    `kl_div` after `from torch.nn.functional import kl_div`). Only the
+    exact `reduction="batchmean"` keyword form is flagged — positional
+    `reduction` is rare in this API but still caught when the value is
+    a string constant `"batchmean"`.
+    """
+    rel = path.relative_to(repo_root) if path.is_absolute() else path
+    try:
+        text = path.read_text()
+        tree = ast.parse(text, filename=str(path))
+    except (SyntaxError, UnicodeDecodeError, FileNotFoundError):
+        return []
+    lines = text.splitlines()
+    violations: list[str] = []
+    for node in ast.walk(tree):
+        if not isinstance(node, ast.Call):
+            continue
+        try:
+            func_str = ast.unparse(node.func) if hasattr(ast, "unparse") else ""
+        except Exception:
+            func_str = ""
+        # Match `F.kl_div`, `torch.nn.functional.kl_div`, bare `kl_div`.
+        if not (func_str == "kl_div" or func_str.endswith(".kl_div")):
+            continue
+        # Look for reduction=... keyword.
+        is_batchmean = False
+        for kw in node.keywords:
+            if kw.arg == "reduction" and isinstance(kw.value, ast.Constant) \
+                    and kw.value.value == "batchmean":
+                is_batchmean = True
+                break
+        # Positional fallback: kl_div(input, target, size_average, reduce, reduction)
+        # The 5th positional (index 4) is `reduction`. We only flag if it is a
+        # string literal "batchmean"; anything else (variable, missing) is fine.
+        if not is_batchmean and len(node.args) >= 5:
+            arg5 = node.args[4]
+            if isinstance(arg5, ast.Constant) and arg5.value == "batchmean":
+                is_batchmean = True
+        if not is_batchmean:
+            continue
+        # Same-line waiver opt-out.
+        ln = node.lineno
+        if 0 < ln <= len(lines):
+            comment_idx = lines[ln - 1].find("#")
+            if comment_idx >= 0 and "KL_BATCHMEAN_OK" in lines[ln - 1][comment_idx:]:
+                continue
+        violations.append(
+            f"{rel}:{node.lineno}: `F.kl_div(..., reduction=\"batchmean\")` "
+            f"detected. On a spatial (B, C, H, W) tensor this under-divides "
+            f"the canonical per-pixel mean by H × W (=196,608 for 384x512 "
+            f"SegNet — see findings.md \"Lane G — really dead, or bugged?\"). "
+            f"Use `F.kl_div(..., reduction=\"none\").sum(dim=1).mean()` for "
+            f"per-pixel-per-class mean (canonical pattern: "
+            f"`kl_distill_scorer_loss` line 622+646). If the input is "
+            f"provably a flat (B, num_classes) classifier tensor and "
+            f"`batchmean` is intended, add `# KL_BATCHMEAN_OK:<reason>` "
+            f"on this line."
+        )
+    return violations
+
+
+def check_kl_div_reduction_correct(
+    repo_root: Path | None = None,
+    strict: bool = False,
+    verbose: bool = True,
+) -> list[str]:
+    """Forbid `F.kl_div(..., reduction="batchmean")` without explicit waiver.
+
+    See module-level Check M comment + findings.md
+    "## 2026-04-27 Council forensics: Lane G — really dead, or bugged?"
+    for the full math derivation. The scanner walks `src/tac/`,
+    `experiments/`, `submissions/`, and `scripts/` for offending calls
+    and requires a same-line `# KL_BATCHMEAN_OK:<reason>` marker as the
+    only opt-out (mirrors the `# KL_RAW_PAIRS_OK:<reason>` pattern in
+    Check B above).
+
+    Returns list of violations. Raises MetaBugViolation if strict and any.
+    """
+    root = repo_root or REPO_ROOT
+    violations: list[str] = []
+    n_scanned = 0
+    scan_dirs = ["src/tac", "experiments", "scripts", "submissions"]
+    for d in scan_dirs:
+        d_path = root / d
+        if not d_path.exists():
+            continue
+        for p in d_path.rglob("*.py"):
+            if "__pycache__" in p.parts:
+                continue
+            n_scanned += 1
+            violations.extend(_scan_python_for_kl_div_batchmean(p, root))
+
+    if verbose and violations:
+        print(f"  [no-kl-div-batchmean] {len(violations)} violation(s) across {n_scanned} files:")
+        for v in violations:
+            print(f"    • {v}")
+    elif verbose:
+        print(f"  [no-kl-div-batchmean] OK: {n_scanned} files scanned")
+
+    if violations and strict:
+        raise MetaBugViolation(
+            "F.kl_div(reduction=\"batchmean\") on spatial tensors:\n"
+            + "\n".join(f"  • {v}" for v in violations)
+            + "\n\nSee findings.md \"Lane G — really dead, or bugged?\" "
+            "for the math (1/H/W silent under-division). Use "
+            "`reduction=\"none\"` → `.sum(dim=1).mean()` (canonical pattern "
+            "in kl_distill_scorer_loss line 622+646), OR add a same-line "
+            "`# KL_BATCHMEAN_OK:<reason>` marker if the input is provably "
+            "a flat (B, num_classes) classifier tensor."
         )
     return violations
 

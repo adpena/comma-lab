@@ -685,7 +685,25 @@ def kl_distill_segnet_only(
     T = temperature
     log_p = F.log_softmax(fs_logits / T, dim=1)
     q = F.softmax(gs_logits / T, dim=1)
-    kl = F.kl_div(log_p, q, reduction="batchmean") * (T * T)
+    # 2026-04-27 council forensics (findings.md "Lane G — really dead, or
+    # bugged?"): the prior `reduction="batchmean"` on a (B, 5, H, W)
+    # SegNet logit tensor divides only by B, producing a value
+    # H × W = 384 × 512 = 196,608 larger than the per-pixel-per-class
+    # mean the caller-weight contract assumes. (`batchmean` already
+    # sums-over-class internally, so the missing divisor is exactly
+    # H × W, not H × W × C.) Empirical kl.item() ≈ 24,485 vs the true
+    # per-pixel-per-class mean of ~6.2e-3 nats. Every caller passing
+    # kl_distill_weight=1.0 (DEN/SHIRAZ/WILDE/Lane-D training, Lane G
+    # pose TTO v1/v2) was implicitly running at ~5000× the intended
+    # weight. Fix mirrors the canonical pattern in
+    # `kl_distill_scorer_loss` (line 622+646): `reduction="none"` →
+    # `.sum(dim=1)` (over class) → `.mean()` (over B, H, W). T² scaling
+    # placement preserved per Hinton 2015 §2.1. See
+    # `feedback_unit_error_masquerading_as_small_signal` for the
+    # process lesson + `test_kl_distill_segnet_only_reduction_is_per_pixel_mean`
+    # for the structural gate.
+    kl_per_pixel = F.kl_div(log_p, q, reduction="none").sum(dim=1)  # (B, H, W)
+    kl = kl_per_pixel.mean() * (T * T)
     return kl, kl.item()
 
 
@@ -935,9 +953,20 @@ def segnet_kl_divergence_loss(
     filtered_log_probs = F.log_softmax(fs_out, dim=1)
     gt_log_probs_dev = gt_logprobs.to(fx.device)
 
-    # KL(GT || filtered) with log_target=True since both are log-probabilities
-    seg_kl = F.kl_div(filtered_log_probs, gt_log_probs_dev,
-                      reduction='batchmean', log_target=True)
+    # KL(GT || filtered) with log_target=True since both are log-probabilities.
+    # 2026-04-27 council forensics (same bug class as kl_distill_segnet_only,
+    # see findings.md "Lane G — really dead, or bugged?" + Check M in
+    # preflight.py): `reduction="batchmean"` on a (B, C, H_seg, W_seg)
+    # tensor under-divides by H_seg × W_seg vs the canonical per-pixel
+    # mean. Likely contributor to the historical "KL distill caused
+    # PoseNet collapse as primary loss" failure mode in CLAUDE.md
+    # Critical Lessons. Switched to per-pixel-per-class mean to match
+    # `kl_distill_scorer_loss` line 622+646 + `kl_distill_segnet_only`.
+    kl_per_pixel = F.kl_div(
+        filtered_log_probs, gt_log_probs_dev,
+        reduction="none", log_target=True,
+    ).sum(dim=1)  # (B, H_seg, W_seg) — sum over class dim
+    seg_kl = kl_per_pixel.mean()
 
     # Argmax mismatch for monitoring
     with torch.no_grad():
