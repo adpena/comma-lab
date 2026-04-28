@@ -49,6 +49,7 @@ for downstream stacking. Sidecars are byte-additive to the archive.
 | Lane Ω-V2 | renderer + Hessian | per-weight bit allocation table | renderer-encoder |
 | Lane W | renderer + scorer | hard_pair_weights.npy (signal-only) | signal-sidecar |
 | Lane F-V5 | renderer | FP8 renderer.bin (hardware-disclosed) | renderer-encoder |
+| Lane J-NWCS-EC (NEW) | renderer + Lane W signal + GT pairs | composed archive (NWCS renderer + EC sidecar) | renderer-encoder + sidecar-additive |
 
 ---
 
@@ -90,6 +91,18 @@ to the rate term. They are independent.
 
 All three can be stacked in a single archive. Each carries its own
 inflate-time decoder hook in `inflate.sh`.
+
+**Renderer-encoder × sidecar-additive composition rule (explicit
+example)**: a renderer-encoder lane (Lane J-NWC, J-NWCS, Ω-V2, F-V5)
+produces a `renderer.bin` whose magic bytes are in the strict-scorer-rule
+allowlist; a sidecar-additive lane (EC, MOS, HF) produces a single
+load-bearing artifact discovered by name. These two slots NEVER
+conflict at the inflate dispatcher (the renderer arm reads
+`renderer.bin`, the sidecar arm reads a different file). Therefore any
+renderer-encoder × any sidecar-additive composition is structurally
+clean and can be assembled by `tac.stack_compositions`. The first
+concrete instance is `compose_jnwcs_with_ec` (J-NWCS renderer-encoder ×
+Lane EC sidecar) — see section 4 "J-NWCS + EC" stack candidate.
 
 ### 3d. Pose replacers (mutually exclusive — pick ONE)
 
@@ -133,6 +146,29 @@ Conservative stack
 
 Estimated archive: ~580 KB. Risk: medium — Lane EC and Lane HF interact
 with mask quality; needs an integration auth-eval.
+
+### J-NWCS + EC + Lane G v3 anchor — predicted [0.78, 0.92]
+
+```
+Lane G v3 renderer (renderer-base, anchor)
+  → re-encoded with Lane J-NWCS (renderer-encoder)
+  + Lane EC gradient corrections (sidecar-additive)
+```
+
+Estimated archive: ~480 KB at default split (4 bits/weight × 30KB EC).
+Cost ~$9 / 14h on RTX 4090. Cycle position: #3 (after the conservative
+and aggressive stacks have measured their integration baselines).
+Composed via `tac.stack_compositions.compose_jnwcs_with_ec` and deployed
+via `scripts/remote_lane_j_nwcs_ec_stack.sh`. The two artifacts attack
+the rate wedge from STRUCTURALLY ORTHOGONAL layers — J-NWCS at the
+weight-bit allocation layer, EC at the inflate-time pixel residual
+layer — so the composition is COMPLEMENTARY, not redundant. The user's
+"perhaps lane j-nwcs might be supplemented by engineered corrections /
+or maybe that's accomplished by the hard-pair-aware codec retraining"
+question resolves to: J-NWCS handles weight-bit allocation
+(hard-pair-aware retraining of the WEIGHT codec); EC handles per-pixel
+inflate-time residuals (a SCORER-derived signal that bypasses the
+weight codec entirely). Both belong in the stack.
 
 ### Moonshot stack — predicted [0.40, 0.65]
 
