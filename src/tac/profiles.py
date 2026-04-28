@@ -2713,6 +2713,67 @@ DILATED_H64_HALF_FRAME_V3_ANNEALED_KLDISTILL = {
 }
 
 
+# ── LANE H-V3: half-frame revival via JOINT warp-expansion training ──────────
+# Council 2026-04-28 evening (forensic audit of killed lanes V/V-V2/D-V3).
+# Anchored on Lane G v3 = 1.05 [contest-CUDA] (DILATED_H64_HALF_FRAME_V3_ANNEALED_KLDISTILL).
+#
+# WHY: Quantizr ships half-frame at 0.33 and beats us 0.33 vs 1.05. Our 4
+# prior half-frame attempts (Lane D V1/V2/V3, Lane V V1/V2) all failed because
+# we never properly implemented JOINT warp-expansion training — they were
+# either RETROFITS onto a renderer locked into (e_t1-e_t).abs() diff features
+# (Lane D), had train/inflate distribution mismatch (Lane D-V3 endpoint=0.5
+# vs inflate=1.0), or had channel-broadcast bugs in the 88K DSConv path
+# (Lane V). Lane H-V3 fixes ALL three failure modes:
+#   1. Curriculum from 0.0 → 1.0 (joint training from epoch 0; the renderer
+#      sees warped masks AS A FIRST-CLASS DISTRIBUTION, with a brief warmup
+#      phase to establish a strong full-frame initialisation first).
+#   2. Train endpoint = inflate distribution (1.0 = always-on warp). Fixes
+#      Lane D-V3's distribution mismatch (Check 42 train_inference_parity bug class).
+#   3. 288K dilated-h64 arch (NOT 88K DSConv) — bypasses the channel-broadcast
+#      bug from Lane V. Known-working pipeline at 1.05.
+#
+# Curriculum schedule (1980 total epochs):
+#   * Epochs 0-99 (5%):       full-frame warmup (mask_half_sim_prob=0.0)
+#   * Epochs 99-297 (5-15%):  linear ramp 0.0 → 1.0 (200 epochs)
+#   * Epochs 297-1980 (rest): half-frame endpoint (mask_half_sim_prob=1.0)
+#
+# The 5-15% ramp is INTENTIONALLY AGGRESSIVE (vs Lane V-V2's 30-70%) because
+# the goal is to spend most training epochs at the inflate-time distribution.
+# The warmup buys a strong init; the rest is endpoint convergence.
+#
+# Predicted band [0.55, 0.95] [contest-CUDA] per the council:
+#   * Floor 0.55: joint training works. Half-frame archive saves ~0.20 in
+#     rate vs Lane G v3's full-frame; renderer trained for warp-expansion
+#     holds PoseNet ≤ 0.020 + SegNet ≤ 0.005. 1.05 - 0.20 (rate) - 0.30
+#     (PoseNet headroom from joint training) ~ 0.55.
+#   * Ceiling 0.95: curriculum buys nothing; renderer learns the wrong
+#     distribution well in warmup and the late transition is too abrupt.
+#     Score lands ~ Lane G v3 - small rate gain.
+#
+# Cost: 4090 @ $0.25/hr × ~5h = ~$1.25 (matches Lane D-V3 schedule).
+# Plus ~30min pose TTO + ~15min auth eval = $1.50 total.
+H_V3_JOINT_HALFFRAME = {
+    **DILATED_H64_HALF_FRAME_V3_ANNEALED_KLDISTILL,  # inherit Lane G v3 anchor
+    # Override 1: train endpoint matches inflate-time distribution.
+    # Lane D-V3 had endpoint=0.5 vs inflate=1.0 (distribution mismatch =
+    # Lane M-V2 BUG-1 class). Lane H-V3 fixes by using endpoint=1.0.
+    "mask_half_sim_prob": 1.0,
+    # Override 2: curriculum 0.0 → 1.0 with aggressive ramp (5%-15% of epochs).
+    # The brief warmup establishes a full-frame init; the rest converges on
+    # the inflate-time distribution. Different from Lane V-V2 (30%-70%) because
+    # the goal here is endpoint training, not smooth interpolation.
+    "mask_half_sim_prob_anneal": {
+        "start_value": 0.0,
+        "end_value": 1.0,
+        "ramp_start_frac": 0.05,
+        "ramp_end_frac": 0.15,
+    },
+    # Different seed so Lane H-V3 explores a different RNG basin from Lane G v3
+    # (seed=43) and Lane V-V2 (seed=1235).
+    "seed": 67,
+}
+
+
 # ── LANE J-JBL: Jaccard Metric Loss + Boundary Label Smoothing distillation ──
 # Jack-from-skunkworks Cycle 1 TOP-1 (research file
 # .omx/research/jack_skunkworks_segnet_rate_research_20260428.md §S1).
@@ -3646,6 +3707,13 @@ PROFILES = {
     "dilated_h64_half_frame_v3_annealed_kldistill": (
         DILATED_H64_HALF_FRAME_V3_ANNEALED_KLDISTILL
     ),
+    # Lane H-V3 (forensic-audit revival): half-frame revival via JOINT
+    # warp-expansion training. Anchored on Lane G v3 1.05; curriculum
+    # mask_half_sim_prob 0.0 → 1.0 with aggressive 5%-15% ramp. Endpoint=1.0
+    # matches inflate distribution (fixes Lane D-V3 mismatch). 288K dilated-h64
+    # arch (NOT 88K DSConv) bypasses Lane V channel bug. Predicted band
+    # [0.55, 0.95] [contest-CUDA] per project_lane_h_v3_revival_design_20260428.
+    "h_v3_joint_halfframe": H_V3_JOINT_HALFFRAME,
     # Lane J-JBL (Jack Cycle 1 TOP-1): Jaccard Metric Loss + Boundary Label
     # Smoothing distillation, anchored on Lane G v3. Predicted band
     # [0.92, 1.02] per .omx/research/jack_skunkworks_segnet_rate_research_20260428.md §S1.

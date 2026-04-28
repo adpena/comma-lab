@@ -460,6 +460,26 @@ def preflight_all(
         check_quantizer_modules_have_round_trip_test(strict=True, verbose=verbose)
         check_lane_deploy_scripts_have_archive_size_assertion(strict=True, verbose=verbose)
 
+        # 2026-04-28 evening: 3 NEW meta-bug checks (48, 49, 50) from the
+        # killed-lanes forensic audit. Reference:
+        # project_killed_lanes_forensic_audit_20260428.
+        # All 3 ship WARN-only initially because the live codebase has real
+        # violations the user may want to fix incrementally:
+        # - Check 48 (orphan-src-tac-modules): catches Lane V class — silent
+        #   modules added but never wired into a profile / CLI / script.
+        # - Check 49 (profile-loss-mode-allowlist-parity): catches Lane J-JBL
+        #   class — profile loss_mode value not in train_renderer.py
+        #   _VALID_LOSS_MODES allowlist. Live count: 2 (posenet_embedding,
+        #   segnet_kl in profiles that may not actively dispatch through
+        #   train_renderer.py). Promote to STRICT after audit + fix.
+        # - Check 50 (deploy-script-profile-exists): catches typo'd or
+        #   missing PROFILES registrations. Live count: 4 (one false-positive
+        #   in a comment, two profiles needing registration). Promote to
+        #   STRICT after lane script cleanup.
+        check_no_orphan_src_tac_modules(strict=False, verbose=verbose)
+        check_profile_loss_modes_in_validator_allowlist(strict=False, verbose=verbose)
+        check_deploy_script_profiles_exist_in_registry(strict=False, verbose=verbose)
+
     # 2. Training inputs (only if profile + tto_frames provided)
     if profile_name and tto_frames_path and gt_poses_path and masks_path and profile_arch:
         preflight_training_inputs(
@@ -9129,6 +9149,357 @@ def check_lane_deploy_scripts_have_archive_size_assertion(
     if violations and strict:
         raise MetaBugViolation(
             "LANE SCRIPTS MISSING ARCHIVE-SIZE ASSERTION:\n"
+            + "\n".join(f"  • {v}" for v in violations[:50])
+        )
+    return violations
+
+
+# ── Check 48: orphan src/tac modules (no profile / CLI / script reference) ──
+#
+# CATCHES: a contributor adds src/tac/new_thing.py, never wires it into a
+# profile, CLI flag, or deploy script — silent dead code that bloats the
+# wheel and confuses future agents about what's actually shipped. Live at
+# session start (2026-04-28 evening): unknown count; check ships warn-only
+# initially because the audit is a real cleanup task, not a regression
+# blocker. Promotion to STRICT once the violation count is driven to 0.
+#
+# Reference: project_killed_lanes_forensic_audit_20260428 (Lane V channel
+# bug shipped because the 88K DSConv path was orphaned from real testing).
+
+
+# Modules that are intentionally library-only (imported by other tac
+# modules but not user-facing via a profile / CLI / script). Excluding
+# these prevents false positives — they're EXPECTED to be referenced only
+# via Python imports, not via a deploy script or profile knob.
+_ORPHAN_CHECK_EXEMPT_MODULES = {
+    "__init__", "__main__",
+    # Top-level entry / config modules (referenced by name from many places,
+    # not via `tac.<name>` import — exempt from this check's grep heuristic).
+    "profiles", "preflight", "cli", "entrypoints", "__main__",
+    # Library helpers / utilities (imported by other tac.* modules)
+    "bootstrap_codegen", "checkpoint_names", "cost_tracker",
+    "data", "models", "checkpoint", "evaluate", "parametrize_strip",
+}
+
+
+def check_no_orphan_src_tac_modules(
+    repo_root: Path | None = None,
+    strict: bool = False,
+    verbose: bool = True,
+) -> list[str]:
+    """Catch src/tac/*.py modules with no profile / CLI / script reference.
+
+    For every src/tac/<name>.py (excluding tests/, tools/, experiments/, and
+    library-only exempts), at least one of the following must reference it:
+      1. An import inside src/tac/profiles.py (e.g., a profile knob calls it)
+      2. An import inside src/tac/experiments/train_renderer.py (CLI dispatch)
+      3. A `from tac.<name>` or `import tac.<name>` in any
+         scripts/remote_lane_*.sh's inline Python OR any experiments/*.py
+         actively used by remote scripts.
+
+    Returns list of violations. Raises MetaBugViolation if strict and any.
+    """
+    root = repo_root or REPO_ROOT
+    src_tac = root / "src" / "tac"
+    if not src_tac.is_dir():
+        return []
+
+    # Enumerate candidate modules.
+    candidates: list[str] = []
+    for p in sorted(src_tac.glob("*.py")):
+        stem = p.stem
+        if stem in _ORPHAN_CHECK_EXEMPT_MODULES:
+            continue
+        if stem.startswith("_"):
+            continue
+        candidates.append(stem)
+
+    # Build the union of all reference texts.
+    profiles_text = ""
+    train_text = ""
+    profiles_path = src_tac / "profiles.py"
+    train_path = src_tac / "experiments" / "train_renderer.py"
+    try:
+        profiles_text = profiles_path.read_text()
+    except (OSError, UnicodeDecodeError):
+        pass
+    try:
+        train_text = train_path.read_text()
+    except (OSError, UnicodeDecodeError):
+        pass
+
+    scripts_text = ""
+    scripts_dir = root / "scripts"
+    if scripts_dir.is_dir():
+        for sh in sorted(scripts_dir.glob("remote_lane_*.sh")):
+            try:
+                scripts_text += sh.read_text() + "\n"
+            except (OSError, UnicodeDecodeError):
+                continue
+    experiments_text = ""
+    exp_dir = root / "experiments"
+    if exp_dir.is_dir():
+        for py in sorted(exp_dir.glob("*.py")):
+            try:
+                experiments_text += py.read_text() + "\n"
+            except (OSError, UnicodeDecodeError):
+                continue
+
+    haystack = profiles_text + "\n" + train_text + "\n" + scripts_text + "\n" + experiments_text
+    violations: list[str] = []
+    for name in candidates:
+        # Match `tac.<name>` (import / from-import) — covers all 4 reference types.
+        pattern = rf"\btac\.{re.escape(name)}\b"
+        if not re.search(pattern, haystack):
+            violations.append(
+                f"src/tac/{name}.py: no reference in profiles.py / train_renderer.py / "
+                f"remote_lane_*.sh / experiments/*.py — orphan module suspected. "
+                f"If intentional library-only helper, add to _ORPHAN_CHECK_EXEMPT_MODULES."
+            )
+
+    if verbose:
+        if violations:
+            print(
+                f"  [no-orphan-src-tac] {len(violations)} violation(s) "
+                f"across {len(candidates)} candidate module(s):"
+            )
+            for v in violations[:20]:
+                print(f"    • {v}")
+            if len(violations) > 20:
+                print(f"    … and {len(violations) - 20} more")
+        else:
+            print(
+                f"  [no-orphan-src-tac] OK: {len(candidates)} module(s) all referenced"
+            )
+
+    if violations and strict:
+        raise MetaBugViolation(
+            "ORPHAN SRC/TAC MODULES (no profile / CLI / script reference):\n"
+            + "\n".join(f"  • {v}" for v in violations[:50])
+        )
+    return violations
+
+
+# ── Check 49: every profile loss_mode must be in train_renderer validator ──
+#
+# CATCHES: the Lane J-JBL exit class. A profile sets loss_mode="jbl" but
+# train_renderer.py's _VALID_LOSS_MODES allowlist (~line 888) doesn't
+# include "jbl" — the validator raises SystemExit at boot, the lane exits
+# unexpectedly. Lane J-JBL hit this on 2026-04-28; ~$0.05 burned + 1
+# debugging cycle. Catching at preflight time means the violation surfaces
+# at commit/PR, not after deploy.
+#
+# Reference: project_killed_lanes_forensic_audit_20260428 (Lane J-JBL section).
+
+
+def check_profile_loss_modes_in_validator_allowlist(
+    repo_root: Path | None = None,
+    strict: bool = True,
+    verbose: bool = True,
+) -> list[str]:
+    """Catch profile.loss_mode values not in train_renderer.py allowlist.
+
+    Iterate every PROFILES entry; if it sets loss_mode, the value MUST
+    appear in _VALID_LOSS_MODES inside train_renderer.py. Otherwise the
+    validator raises at boot and the lane exits silently.
+
+    Returns list of violations. Raises MetaBugViolation if strict and any.
+    """
+    root = repo_root or REPO_ROOT
+    train_path = root / "src" / "tac" / "experiments" / "train_renderer.py"
+    profiles_path = root / "src" / "tac" / "profiles.py"
+    if not train_path.is_file() or not profiles_path.is_file():
+        return []
+
+    try:
+        train_text = train_path.read_text()
+    except (OSError, UnicodeDecodeError):
+        return []
+    # Extract the _VALID_LOSS_MODES tuple via regex (multi-line tuple support).
+    m = re.search(
+        r"_VALID_LOSS_MODES\s*=\s*\(([^)]*)\)",
+        train_text,
+        re.DOTALL,
+    )
+    if not m:
+        # Allowlist not present — can't validate. Treat as a warning, not a
+        # failure (the allowlist itself is enforced by code review).
+        if verbose:
+            print(
+                "  [profile-loss-mode-allowlist] WARN: _VALID_LOSS_MODES "
+                "tuple not found in train_renderer.py — skipping check"
+            )
+        return []
+    allowlist_raw = m.group(1)
+    allowed = set(re.findall(r'["\']([a-zA-Z_][a-zA-Z0-9_]*)["\']', allowlist_raw))
+
+    # Import-time profile loading is fragile from preflight (heavy deps).
+    # Static-scan profiles.py for `"loss_mode":\s*"<value>"` literal pairs.
+    try:
+        profiles_text = profiles_path.read_text()
+    except (OSError, UnicodeDecodeError):
+        return []
+
+    violations: list[str] = []
+    seen_values: set[str] = set()
+    # Match e.g. `"loss_mode": "jbl"` or `"loss_mode":"jbl"`.
+    for m2 in re.finditer(
+        r'["\']loss_mode["\']\s*:\s*["\']([a-zA-Z_][a-zA-Z0-9_]*)["\']',
+        profiles_text,
+    ):
+        val = m2.group(1)
+        seen_values.add(val)
+    for val in sorted(seen_values):
+        if val not in allowed:
+            violations.append(
+                f"profiles.py declares loss_mode={val!r} but "
+                f"train_renderer.py _VALID_LOSS_MODES = {sorted(allowed)} "
+                f"does NOT include it. Profile will SystemExit at boot. "
+                f"Add {val!r} to _VALID_LOSS_MODES OR remove from profile."
+            )
+
+    if verbose:
+        if violations:
+            print(
+                f"  [profile-loss-mode-allowlist] {len(violations)} "
+                f"violation(s) — allowed: {sorted(allowed)}"
+            )
+            for v in violations:
+                print(f"    • {v}")
+        else:
+            print(
+                f"  [profile-loss-mode-allowlist] OK: profile loss_mode "
+                f"values {sorted(seen_values)} all in allowlist {sorted(allowed)}"
+            )
+
+    if violations and strict:
+        raise MetaBugViolation(
+            "PROFILE LOSS_MODE NOT IN VALIDATOR ALLOWLIST:\n"
+            + "\n".join(f"  • {v}" for v in violations)
+        )
+    return violations
+
+
+# ── Check 50: every deploy script --profile X must reference a real profile ──
+#
+# CATCHES: a deploy script passes `--profile some_typo` that never existed
+# in PROFILES; train_renderer.py raises KeyError after 5+ minutes of setup
+# burn (NVDEC probe, env init, package install). Catching at preflight
+# means the violation surfaces at commit time, before any GPU spend.
+#
+# Reference: project_killed_lanes_forensic_audit_20260428 (Lane H-V3
+# revival authoring required this check to land before the launch).
+
+
+def check_deploy_script_profiles_exist_in_registry(
+    repo_root: Path | None = None,
+    strict: bool = True,
+    verbose: bool = True,
+) -> list[str]:
+    """Catch deploy scripts whose --profile X references unknown PROFILES.
+
+    For every scripts/remote_lane_*.sh file, extract every `--profile X`
+    invocation and verify X exists as a key in PROFILES (parsed statically
+    from src/tac/profiles.py — no Python import to keep preflight cheap).
+
+    Returns list of violations. Raises MetaBugViolation if strict and any.
+    """
+    root = repo_root or REPO_ROOT
+    profiles_path = root / "src" / "tac" / "profiles.py"
+    if not profiles_path.is_file():
+        return []
+
+    try:
+        profiles_text = profiles_path.read_text()
+    except (OSError, UnicodeDecodeError):
+        return []
+
+    # Static-extract every PROFILES key. Match patterns like:
+    #   "h_v3_joint_halfframe": H_V3_JOINT_HALFFRAME,
+    # Inside the PROFILES dict.
+    # Conservative: just extract every double-quoted key from the file. A
+    # false-positive registration is acceptable (profile MIGHT exist); a
+    # false-negative is the bug class we want to catch.
+    registered: set[str] = set()
+    # Find the PROFILES = { ... } block bounds (best-effort: from PROFILES = { to the matching closing brace).
+    pm = re.search(r"PROFILES\s*=\s*\{", profiles_text)
+    if pm:
+        # Walk char-by-char to find the matching brace.
+        start = pm.end() - 1
+        depth = 0
+        end = len(profiles_text)
+        for i in range(start, len(profiles_text)):
+            c = profiles_text[i]
+            if c == "{":
+                depth += 1
+            elif c == "}":
+                depth -= 1
+                if depth == 0:
+                    end = i + 1
+                    break
+        block = profiles_text[start:end]
+        # Extract keys: matching `"<name>":` at start of trimmed lines (best-effort).
+        for m2 in re.finditer(r'^\s*["\']([a-z_][a-z0-9_]*)["\']\s*:', block, re.MULTILINE):
+            registered.add(m2.group(1))
+
+    if not registered:
+        if verbose:
+            print(
+                "  [deploy-script-profile-exists] WARN: failed to "
+                "extract PROFILES keys — skipping check"
+            )
+        return []
+
+    scripts_dir = root / "scripts"
+    if not scripts_dir.is_dir():
+        return []
+
+    violations: list[str] = []
+    n_scanned = 0
+    for sh in sorted(scripts_dir.glob("remote_lane_*.sh")):
+        n_scanned += 1
+        try:
+            text = sh.read_text()
+        except (OSError, UnicodeDecodeError):
+            continue
+        rel = sh.relative_to(root)
+        # Match `--profile <name>` (next-token). Also match
+        # `--profile=<name>` and bash interpolations starting with $.
+        for m3 in re.finditer(
+            r"--profile[\s=]+([a-zA-Z0-9_\$\{\}-]+)",
+            text,
+        ):
+            ref = m3.group(1)
+            # Skip bash interpolations (operator-supplied at runtime).
+            if "$" in ref:
+                continue
+            # Skip dynamic placeholders.
+            if not re.fullmatch(r"[a-z_][a-z0-9_]*", ref):
+                continue
+            if ref not in registered:
+                violations.append(
+                    f"{rel}: --profile {ref!r} not in PROFILES registry. "
+                    f"Add to src/tac/profiles.py PROFILES dict OR fix typo. "
+                    f"Available: {sorted(registered)[:5]}…"
+                )
+
+    if verbose:
+        if violations:
+            print(
+                f"  [deploy-script-profile-exists] {len(violations)} "
+                f"violation(s) across {n_scanned} remote_lane_*.sh:"
+            )
+            for v in violations[:20]:
+                print(f"    • {v}")
+        else:
+            print(
+                f"  [deploy-script-profile-exists] OK: {n_scanned} "
+                f"remote_lane_*.sh scanned, all --profile X resolve in PROFILES"
+            )
+
+    if violations and strict:
+        raise MetaBugViolation(
+            "DEPLOY SCRIPT --profile X REFERENCES MISSING PROFILE:\n"
             + "\n".join(f"  • {v}" for v in violations[:50])
         )
     return violations
