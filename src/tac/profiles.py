@@ -2590,6 +2590,97 @@ DILATED_H64_HALF_FRAME = {
 }
 
 
+# ── LANE D-V3: dilated-h64 half-frame retrain — annealed warp + KL distill ──
+# Council 2026-04-27. Lane D-V1 was killed at ep 1230/1980 (62%) with proxy
+# fp4_scorer plateaued at ~40 since ep ~700. Lane D-V2 (in flight) tries
+# CHOICE B = higher per-phase LR floor (P2 3e-4 → 5e-4, P3 1e-4 → 2e-4,
+# P4 5e-5 → 1e-4, P5 1e-5 → 2e-5). Lane D-V3 STACKS V2's LR fix with two
+# additional levers borrowed from Lane V-V2 + the post-fix KL distill:
+#
+#   1. ANNEALED mask_half_sim_prob 0.0 → 0.5 (NOT 1.0 — Lane D's arch is
+#      retrofit at 0.5, not a from-scratch 88K like Lane V which goes 1.0).
+#      Schedule: 0.0 for first 30% of epochs (P1+early P2 warmup on full-
+#      frame), linear ramp 0.0 → 0.5 from 30% to 70% of epochs, then 0.5
+#      for last 30%. The hypothesis: V1's plateau at ep 700 (~35% through
+#      training) coincides with the early-phase optimisation difficulty of
+#      learning from a half/half mask distribution from epoch 0. Annealing
+#      lets the renderer first lock in the easier full-frame distribution,
+#      THEN smoothly transition to the half-frame regime as the optimiser
+#      settles. Same paradigm as Lane V-V2 (which scored higher than V1
+#      cold-start in the V2 design analysis), adapted for Lane D's 0.5
+#      retrofit endpoint.
+#
+#   2. KL DISTILL WEIGHT REDUCED 1.0 → 0.002 (post-bug-fix value). The
+#      original V1 weight=1.0 was set BEFORE the 2026-04-27 reduction fix
+#      in kl_distill_segnet_only (losses.py:705) which divides by H*W. With
+#      the reduction fix in place, raw KL ≈ 6.2e-3 × T² ≈ 0.025; weight=1.0
+#      means KL contributes 0.025 (~5x scorer loss), DROWNING the scorer
+#      signal. The correct post-fix weight is 0.002 so KL contribution is
+#      ~5e-5 (~1% of scorer loss) — this matches Lane V's value (memory:
+#      project_lane_v_quantizr_replica_88k_halfframe.md).
+#
+# Mechanism verification (Phase-0 instrumentation, this run only):
+#   * train_renderer.py per-epoch logs: hf_fires=N/M, hf_warp_diff=X
+#   * Verifies the half-frame branch fires at the annealed rate AND that
+#     warp_inverse_masks produces non-trivial mask perturbations (a degenerate
+#     identity warp would have hf_warp_diff~0 even when hf_fires=N/M).
+#
+# All other knobs identical to Lane D-V1 / D-V2 for direct A/B traceability.
+# The CLI flag --mask-half-sim-prob-schedule overrides the profile schedule
+# at launch time (Lane V-V2 wired this resolver in train_renderer.py:802).
+#
+# Predicted band [1.50, 2.50] [contest-CUDA] (wider than V2 [1.50, 3.00]
+# because V3 introduces TWO new variables — annealing + KL-weight fix —
+# on top of V2's LR floor). Council pre-registration:
+#   * Floor 1.50: V3 stacks address 3 distinct V1 failure modes (LR
+#     starvation + cold-start optimisation difficulty + KL loss drowning
+#     scorer signal). If all 3 contributed, V3 should land in the 1.5-2.0
+#     band. Beats Lane A's 1.15 = STRETCH GOAL (would require all 3
+#     mechanisms to contribute additively).
+#   * Ceiling 2.50: even if KL fix is the only useful lever, V3 should
+#     match V2's projected ceiling (LR fix alone gets to 2.5-3.0 per
+#     V2 prediction); V3 won't be WORSE than V2 with two strict
+#     improvements.
+#
+# Cost: 4090 @ $0.25/hr × ~5h = ~$1.25 (same as V2; no schedule change).
+DILATED_H64_HALF_FRAME_V3_ANNEALED_KLDISTILL = {
+    **DILATED_H64_HALF_FRAME,  # inherit ALL knobs (arch, Fridrich aux, phases)
+    # Override 1: annealed mask_half_sim_prob 0.0 → 0.5 over training.
+    # The static value below is the END (post-ramp) value (= 0.5). When
+    # the schedule is set, the per-epoch value is computed via
+    # mask_half_sim_prob_for_epoch() in train_renderer.py and the inner
+    # step loop reads `current_mask_half_sim_prob` instead of the static.
+    "mask_half_sim_prob": 0.5,
+    "mask_half_sim_prob_anneal": {
+        "start_value": 0.0,
+        "end_value": 0.5,
+        "ramp_start_frac": 0.30,
+        "ramp_end_frac": 0.70,
+    },
+    # Override 2: KL distill weight 1.0 → 0.002 (post-bug-fix value, matches
+    # Lane V — see V1 kl_distill_weight=1.0 in DILATED_H64_HALF_FRAME).
+    # This is the SCALAR weight applied to the SegNet-only KL term inside
+    # the training loss; KL contribution = weight × T² × raw_seg_kl.
+    # Pre-fix raw_seg_kl was unreduced ≈ 5000× larger; post-fix it is
+    # divided by H*W so weight=0.002 gives the intended 1%-of-scorer-loss
+    # contribution.
+    "kl_distill_weight": 0.002,
+    # Override 3: V2's LR floor fix (CHOICE B per remote_lane_d_v2_*.sh).
+    # P1 unchanged (pixel warmup converges fast).
+    # P2 raised 1.67× to fix the ep 700 plateau (cosine_lr eta_min=1e-6
+    # starves the optimiser at the back half of P2 with V1's 3e-4 base).
+    # P3-P5 raised 2.0× proportionally.
+    "phase1_lr": 1e-3,
+    "phase2_lr": 5e-4,
+    "phase3_lr": 2e-4,
+    "phase4_lr": 1e-4,
+    "phase5_lr": 2e-5,
+    # Different seed so V1/V2/V3 explore different RNG basins (same
+    # convention as Lane V-V2 vs Lane V-V1).
+    "seed": 43,
+}
+
+
 # ── LANE V: Quantizr-replica 88K half-frame, joint-trained from epoch 0 ──
 # Council 2026-04-27. Lane D tried to RETROFIT half-frame onto the dilated-h64
 # baseline (mask_half_sim_prob=0.5 mid-train) and FAILED — joint training
@@ -3387,6 +3478,15 @@ PROFILES = {
     # (warp-expansion injected into training data path so motion module
     # learns the inflate-time mask distribution).
     "dilated_h64_half_frame": DILATED_H64_HALF_FRAME,
+    # Lane D-V3: same Lane D dilated-h64 half-frame retrain but stacks
+    # V2's higher per-phase LR floor + Lane V-V2's annealed
+    # mask_half_sim_prob (0.0 → 0.5 over 30%→70%) + post-fix KL distill
+    # weight (1.0 → 0.002). Predicted band [1.50, 2.50] — wider than V2
+    # because V3 introduces TWO new variables (annealing + KL fix) on
+    # top of V2's LR fix.
+    "dilated_h64_half_frame_v3_annealed_kldistill": (
+        DILATED_H64_HALF_FRAME_V3_ANNEALED_KLDISTILL
+    ),
     # Lane V: Quantizr-replica (88K params, DSConv + FiLM + KL distill) with
     # mask_half_sim_prob=1.0 (always-on warp expansion) joint-trained from
     # epoch 0. The biggest-swing council bet — vs Lane D's 0.5 retrofit which

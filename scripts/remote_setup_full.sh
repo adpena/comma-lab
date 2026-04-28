@@ -82,6 +82,15 @@ if ! echo "$ENCODERS" | grep -qi svtav1; then
 fi
 log "  ffmpeg-master OK at $FFMPEG_NEW"
 
+log "=== Stage 6.5: strip macOS AppleDouble files from upstream/videos ==="
+# 2026-04-28: SCP'd tarball can carry `._0.mkv` AppleDouble files alongside
+# `0.mkv`. contest_auth_eval._validate_uncompressed_dir treats these as
+# "uncompressed-dir contamination" and crashes. Strip once here so every
+# downstream lane script doesn't need its own cleanup. Per preflight
+# check_lane_scripts_strip_macos_resource_forks (Check 37).
+find "$WORKSPACE/upstream/videos" -type f -name '._*' -delete 2>/dev/null || true
+log "  ._* AppleDouble files purged from upstream/videos"
+
 log "=== Stage 7: env exports for downstream scripts ==="
 cat > "$WORKSPACE/env.sh" <<EOF
 export PATH=\$HOME/.local/bin:\$PATH

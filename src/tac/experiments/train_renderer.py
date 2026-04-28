@@ -2066,6 +2066,18 @@ def train(args: argparse.Namespace):
             perm = torch.randperm(n_total)[:train_size]
 
         total_loss, total_pose, total_seg = 0.0, 0.0, 0.0
+        # Lane D-V3 (2026-04-27) Phase-0 instrumentation: count how many
+        # batches in this epoch actually fire the half-frame warp branch
+        # and accumulate motion-module activation stats. Verifies the
+        # mechanism end-to-end (a triggered branch must produce a non-zero
+        # warped-mask diff to be useful — if the warp returns identity or
+        # zeros, the renderer is training on an unintended distribution).
+        # Logged once per epoch in the [train] line below at log_every cadence.
+        # Zero-overhead when sim_zoom_warp is None (Lane D / Lane V profiles
+        # only).
+        halfframe_branch_fires = 0
+        halfframe_warp_diff_sum = 0.0
+        halfframe_warp_diff_count = 0
         optimizer.zero_grad(set_to_none=True)
         accum = args.accum_steps
 
@@ -2106,7 +2118,20 @@ def train(args: argparse.Namespace):
             # interpolated value when ``mask_half_sim_prob_anneal`` is active.
             if (sim_zoom_warp is not None
                     and random.random() < current_mask_half_sim_prob):
+                # Lane D-V3 instrumentation: capture pre-warp mask for diff stat.
+                # mask_t at this point is from independent SegNet extraction
+                # (or the noisy AV1 variant); mask_t (post-warp) replaces it
+                # with warp_inverse(mask_t1). The renderer must learn to handle
+                # the difference. If diff~0 the warp is degenerate (zero zoom,
+                # identity motion) and the half-frame branch is a no-op.
+                _premask_for_diff = mask_t.detach().float()
                 mask_t = sim_zoom_warp.warp_inverse_masks(mask_t1, pair_idx_t)
+                halfframe_branch_fires += 1
+                with torch.no_grad():
+                    _diff = (mask_t.detach().float() - _premask_for_diff).abs().mean()
+                    halfframe_warp_diff_sum += float(_diff.item())
+                    halfframe_warp_diff_count += 1
+                _premask_for_diff = None
 
             gt_pair = pair_from_frames(gt_frames, start).to(device)
 
@@ -2727,15 +2752,31 @@ def train(args: argparse.Namespace):
         # Epoch log with timing (Feature 7)
         eta_hours = epoch_sec * (args.epochs - epoch - 1) / 3600
         phase_tag = f"P{phase_idx}" if use_5phase else ("P1" if in_pretrain else "P2")
+        # Lane D-V3 (2026-04-27) Phase-0 instrumentation: per-epoch
+        # half-frame branch trigger rate + warp-diff stats. Empty string when
+        # the half-frame branch never fires (sim_zoom_warp is None or
+        # current_mask_half_sim_prob == 0), so log lines for full-frame
+        # profiles are byte-identical to pre-V3.
+        if halfframe_branch_fires > 0:
+            _hf_rate = halfframe_branch_fires / max(len(perm), 1)
+            _hf_diff_mean = (halfframe_warp_diff_sum
+                             / max(halfframe_warp_diff_count, 1))
+            hf_metric = (
+                f" hf_fires={halfframe_branch_fires}/{len(perm)} "
+                f"({_hf_rate:.2f}) hf_warp_diff={_hf_diff_mean:.4f} "
+                f"hf_target_prob={current_mask_half_sim_prob:.3f}"
+            )
+        else:
+            hf_metric = ""
         if is_eval_epoch:
             print(f"[ep {epoch:4d}/{args.epochs} {phase_tag}] loss={avg_loss:.4f} "
                   f"pose={avg_pose:.6f} seg={avg_seg:.6f} "
                   f"fp4_scorer={scorer_val:.4f} best={best_scorer:.4f} "
-                  f"lr={lr:.6f} {epoch_sec:.1f}s/ep ETA={eta_hours:.1f}h{marker}")
+                  f"lr={lr:.6f} {epoch_sec:.1f}s/ep ETA={eta_hours:.1f}h{hf_metric}{marker}")
         elif epoch % 10 == 0:
             print(f"[ep {epoch:4d}/{args.epochs} {phase_tag}] loss={avg_loss:.4f} "
                   f"pose={avg_pose:.6f} seg={avg_seg:.6f} lr={lr:.6f} "
-                  f"{epoch_sec:.1f}s/ep ETA={eta_hours:.1f}h")
+                  f"{epoch_sec:.1f}s/ep ETA={eta_hours:.1f}h{hf_metric}")
 
         # JSONL telemetry (Feature 1)
         if is_eval_epoch:
@@ -2777,6 +2818,24 @@ def train(args: argparse.Namespace):
                     if scorer_val_half is not None else None
                 ),
                 "best_gate": "half_frame" if _halfframe_eval_active else "full_frame",
+                # Lane D-V3 (2026-04-27) Phase-0 mechanism telemetry: pin
+                # the per-epoch warp prob, trigger count, and warp-diff
+                # stat in JSONL so post-hoc analysis can verify the half-
+                # frame branch is actually firing AND producing meaningful
+                # mask perturbations (not identity).
+                "halfframe_target_prob": round(
+                    float(current_mask_half_sim_prob), 6,
+                ),
+                "halfframe_branch_fires": halfframe_branch_fires,
+                "halfframe_step_count": len(perm),
+                "halfframe_warp_diff_mean": (
+                    round(
+                        halfframe_warp_diff_sum
+                        / max(halfframe_warp_diff_count, 1),
+                        6,
+                    )
+                    if halfframe_warp_diff_count > 0 else None
+                ),
             }
             write_telemetry(out_dir / f"{args.tag}_telemetry.jsonl", telemetry)
 

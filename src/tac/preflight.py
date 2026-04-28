@@ -375,6 +375,14 @@ def preflight_all(
         check_no_tmux_kill_server_in_lane_scripts(strict=True, verbose=verbose)
         check_no_unconditional_ensurepip(strict=True, verbose=verbose)
 
+        # 2026-04-28 evening: 2 more checks (37, 38) from today's overnight wave.
+        # macOS resource forks crash auth_eval; SSH no-timeout hangs parent agent.
+        # Both STRICT after setup_full purge-once landed (Check 37 satisfied
+        # via canonical bootstrap path); SSH check has 0 violations (no
+        # script in repo uses ssh — it's all parent-agent invoked).
+        check_lane_scripts_strip_macos_resource_forks(strict=True, verbose=verbose)
+        check_ssh_commands_have_connect_timeout(strict=True, verbose=verbose)
+
     # 2. Training inputs (only if profile + tto_frames provided)
     if profile_name and tto_frames_path and gt_poses_path and masks_path and profile_arch:
         preflight_training_inputs(
@@ -7180,6 +7188,162 @@ def check_no_unconditional_ensurepip(strict: bool = False, verbose: bool = False
             "UNCONDITIONAL ENSUREPIP VIOLATIONS — at least one script "
             f"calls ensurepip --upgrade without a pip-check guard:\n  • "
             + "\n  • ".join(violations)
+        )
+    return violations
+
+
+# ════════════════════════════════════════════════════════════════════════════
+# Check 37 (37th meta-bug): lane scripts that contest_auth_eval must
+#                          first remove macOS AppleDouble resource forks
+#                          (`._*.mkv`) from upstream/videos to prevent
+#                          contest-CUDA "extra-file contamination" failure.
+# ════════════════════════════════════════════════════════════════════════════
+#
+# 2026-04-27: Lane F-V2 auth eval CRASHED at completion because the SCP'd
+# tarball brought macOS `._0.mkv` AppleDouble files alongside `0.mkv`.
+# `experiments/contest_auth_eval.py::_validate_uncompressed_dir` raises
+# "uncompressed-dir contamination" with exit non-zero. Lost ~30s of GPU
+# spend per occurrence + cognitive load to debug.
+def check_lane_scripts_strip_macos_resource_forks(strict: bool = False, verbose: bool = False) -> list[str]:
+    """Lane scripts running contest_auth_eval must ensure macOS AppleDouble
+    files are purged from upstream/videos. Two valid patterns:
+    (a) lane script does its own `rm -f upstream/videos/._*.mkv` before eval
+    (b) setup_full.sh purges them once at bootstrap (and lane script depends
+        on setup_full having been run via canonical bootstrap)
+    """
+    EXEMPT_SUFFIXES = (
+        "_bootstrap.sh", "_setup_full.sh", "_setup.sh",
+        "_sweep.sh", "_optimized.sh", "_auth_eval_only.sh",
+    )
+    violations: list[str] = []
+    repo_root = Path(__file__).resolve().parent.parent.parent
+    scripts_dir = repo_root / "scripts"
+    if not scripts_dir.is_dir():
+        return violations
+    # Check if setup_full.sh has the canonical purge — if so, lane scripts
+    # that follow the canonical bootstrap path are exempt.
+    setup_full = scripts_dir / "remote_setup_full.sh"
+    setup_full_purges = False
+    if setup_full.exists():
+        setup_text = setup_full.read_text(errors="ignore")
+        setup_full_purges = (
+            "find" in setup_text and "upstream/videos" in setup_text
+            and "'._*'" in setup_text
+        ) or "rm -f upstream/videos/._" in setup_text
+    n_scripts = 0
+    n_with_eval = 0
+    for script_path in sorted(scripts_dir.glob("remote_lane_*.sh")):
+        if any(script_path.name.endswith(suf) for suf in EXEMPT_SUFFIXES):
+            continue
+        n_scripts += 1
+        text = script_path.read_text(errors="ignore")
+        if "contest_auth_eval" not in text:
+            continue
+        n_with_eval += 1
+        # Look for `rm -f` of `._*.mkv` or equivalent before contest_auth_eval
+        # OR a `find ... -name '._*'` cleanup. Permissive — accept any of:
+        # - `rm -f upstream/videos/._*.mkv`
+        # - `rm -f upstream/videos/._*`
+        # - `find upstream/videos -name '._*' -delete`
+        cleanup_markers = [
+            "rm -f upstream/videos/._",
+            "rm -f \"upstream/videos/._",
+            "find upstream/videos -name '._",
+            "find upstream/videos -name \"._",
+            "find upstream/videos -type f -name '._",
+        ]
+        # If setup_full purges, AND this script sources env.sh / runs after
+        # setup_full, accept that as satisfying the rule.
+        depends_on_setup_full = "source" in text and "env.sh" in text
+        if setup_full_purges and depends_on_setup_full:
+            continue
+        if not any(m in text for m in cleanup_markers):
+            violations.append(
+                f"{script_path}: invokes contest_auth_eval but doesn't strip "
+                f"macOS AppleDouble files (._*.mkv) from upstream/videos. "
+                f"Add `rm -f upstream/videos/._*.mkv` BEFORE the eval call to "
+                f"prevent contamination-error crashes (Lane F-V2 bug 2026-04-27)."
+            )
+    if verbose:
+        if violations:
+            print(f"  [strip-resource-forks] {len(violations)}/{n_with_eval} eval script(s) lack ._* cleanup")
+        else:
+            print(f"  [strip-resource-forks] OK: {n_with_eval}/{n_scripts} script(s) strip macOS resource forks")
+    if strict and violations:
+        raise PreflightError(
+            "macOS RESOURCE FORK CLEANUP VIOLATIONS — at least one lane "
+            f"script invokes contest_auth_eval without ._* cleanup:\n  • "
+            + "\n  • ".join(violations)
+        )
+    return violations
+
+
+# ════════════════════════════════════════════════════════════════════════════
+# Check 38 (38th meta-bug): SSH commands in shell scripts must specify
+#                          ConnectTimeout to prevent infinite hangs.
+# ════════════════════════════════════════════════════════════════════════════
+#
+# 2026-04-27/28: SSH commands without ConnectTimeout can hang for 60+
+# seconds when the host is briefly unreachable. In overnight wave loops,
+# this stalls the parent agent + accumulates dead connections. Standard
+# is `-o ConnectTimeout=10`.
+def check_ssh_commands_have_connect_timeout(strict: bool = False, verbose: bool = False) -> list[str]:
+    """Bash scripts using `ssh -o` for remote execution must specify
+    `ConnectTimeout=N` to prevent indefinite hangs on bad hosts.
+    """
+    violations: list[str] = []
+    repo_root = Path(__file__).resolve().parent.parent.parent
+    scripts_dir = repo_root / "scripts"
+    if not scripts_dir.is_dir():
+        return violations
+    n_scripts = 0
+    n_with_ssh = 0
+    for script_path in sorted(scripts_dir.glob("*.sh")):
+        n_scripts += 1
+        text = script_path.read_text(errors="ignore")
+        non_comment_text = "\n".join(
+            line if not line.lstrip().startswith("#") else " " * len(line)
+            for line in text.split("\n")
+        )
+        # Look for `ssh ` invocations (remote execution) — but not in
+        # `ssh-keygen`, `ssh-add`, etc.
+        # Scan line by line for executable ssh calls
+        lines = non_comment_text.split("\n")
+        has_ssh_call = False
+        for i, line in enumerate(lines):
+            stripped = line.strip()
+            if not stripped:
+                continue
+            # Match `ssh ` (with space) but not `sshd`, `ssh-keygen`, `ssh-add`,
+            # or `ssh://`. Also accept `ssh\` (continuation).
+            if "ssh " in line or stripped.endswith("ssh"):
+                # Filter out common non-execution forms
+                if any(m in line for m in ("ssh://", "sshd", "ssh-keygen", "ssh-add", "ssh-copy-id", "$SSH_", '"ssh"', "'ssh'")):
+                    continue
+                # Must be an ssh that includes flags or remote target
+                if "@" not in line and "-p " not in line and "-o " not in line:
+                    continue  # not a remote-exec form
+                has_ssh_call = True
+                if "ConnectTimeout" not in line:
+                    # Check next 3 lines (for line continuations via \)
+                    window = "\n".join(lines[i:min(i+3, len(lines))])
+                    if "ConnectTimeout" not in window:
+                        violations.append(
+                            f"{script_path}:{i+1}: SSH command without "
+                            f"`ConnectTimeout=N`. Add `-o ConnectTimeout=10` "
+                            f"to prevent indefinite hangs on bad hosts."
+                        )
+        if has_ssh_call:
+            n_with_ssh += 1
+    if verbose:
+        if violations:
+            print(f"  [ssh-timeout] {len(violations)}/{n_with_ssh} ssh-using script(s) violate")
+        else:
+            print(f"  [ssh-timeout] OK: {n_with_ssh}/{n_scripts} script(s) use SSH timeouts")
+    if strict and violations:
+        raise PreflightError(
+            "SSH CONNECT TIMEOUT VIOLATIONS — at least one script uses "
+            f"`ssh` without ConnectTimeout:\n  • " + "\n  • ".join(violations)
         )
     return violations
 
