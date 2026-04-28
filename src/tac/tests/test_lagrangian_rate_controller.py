@@ -176,12 +176,13 @@ def test_compute_penalty_accepts_controller_instance():
     ctrl = LagrangianRateController(
         target_bits_per_weight=2.0, eta=0.1, initial_lambda=2.0,
     )
+    # Round 13 (C-1): controller path passes target_bits_per_weight=None;
+    # the controller's stored target (2.0) is the source of truth.
     pen = compute_learnable_bit_rate_penalty(
-        model, target_bits_per_weight=999.0,  # ignored when ctrl used
-        lambda_rate=ctrl,
+        model, target_bits_per_weight=None, lambda_rate=ctrl,
     )
-    # The penalty uses the controller's target (2.0), not the float
-    # arg above. mean_bits ≈ 8 → residual ≈ 6 → pen ≈ 2.0 · 6 = 12.
+    # The penalty uses the controller's target (2.0).
+    # mean_bits ≈ 8 → residual ≈ 6 → pen ≈ 2.0 · 6 = 12.
     assert pen.item() == pytest.approx(12.0, rel=1e-4)
 
 
@@ -191,7 +192,7 @@ def test_compute_penalty_zero_when_lambda_zero():
         target_bits_per_weight=2.0, eta=0.1, initial_lambda=0.0,
     )
     pen = compute_learnable_bit_rate_penalty(
-        model, target_bits_per_weight=2.0, lambda_rate=ctrl,
+        model, target_bits_per_weight=None, lambda_rate=ctrl,
     )
     assert pen.item() == 0.0
 
@@ -343,8 +344,9 @@ def test_primal_penalty_is_negative_under_slack():
     controller = LagrangianRateController(
         target_bits_per_weight=target, initial_lambda=lam,
     )
+    # Round 13 (C-1): controller path passes target_bits_per_weight=None.
     pen = compute_learnable_bit_rate_penalty(
-        model, target_bits_per_weight=target, lambda_rate=controller,
+        model, target_bits_per_weight=None, lambda_rate=controller,
     )
     expected = lam * (current_mean - target)
     assert expected < 0, (
@@ -442,8 +444,9 @@ def test_dual_ascent_converges_mean_bits_to_target():
         diff_mean_bits = sum(L.total_weight_bits() for L in layers) / n_total
         distortion = (distortion_pref - diff_mean_bits) ** 2
 
+        # Round 13 (C-1): controller path passes target_bits_per_weight=None.
         pen = compute_learnable_bit_rate_penalty(
-            model, target_bits_per_weight=target, lambda_rate=ctrl,
+            model, target_bits_per_weight=None, lambda_rate=ctrl,
         )
         loss = distortion + pen
         optimizer.zero_grad(set_to_none=True)
@@ -488,8 +491,9 @@ def test_dual_ascent_under_severe_violation_drives_bits_down():
     ]
     optimizer = torch.optim.SGD(bits_params, lr=0.5)
     for _ in range(50):
+        # Round 13 (C-1): controller path passes target_bits_per_weight=None.
         pen = compute_learnable_bit_rate_penalty(
-            model, target_bits_per_weight=target, lambda_rate=ctrl,
+            model, target_bits_per_weight=None, lambda_rate=ctrl,
         )
         optimizer.zero_grad(set_to_none=True)
         if pen.requires_grad:

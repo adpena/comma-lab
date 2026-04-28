@@ -52,25 +52,28 @@ import torch.nn.functional as F
 
 __all__ = [
     "LearnableClassWeights",
+    "compute_class_weight_dual_update",
     "compute_class_weight_equalisation_penalty",
+    "compute_class_weighted_primal_loss",
     "save_learnable_class_weights",
     "load_learnable_class_weights",
 ]
 
 
 class LearnableClassWeights(nn.Module):
-    """Learnable per-class SegNet loss weights via softmax.
+    """Per-class dual multipliers for SegNet distortion pressure.
 
     Args:
         num_classes: number of SegNet classes (5 for the comma SegNet).
         warm_start: optional ``(num_classes,)`` non-negative tensor to
             initialise the weights. ``None`` ⇒ uniform (all = 1/num_classes).
             Common warm-start: the Lane PS-V1 ``[1, 5, 5, 1, 1]`` vector
-            (re-normalised to sum=1 via softmax-inverse).
+            re-normalised to sum=1.
 
-    The single nn.Parameter is ``self.raw_logits`` of shape
-    ``(num_classes,)``. The forward call returns ``softmax(raw_logits)``,
-    a probability simplex.
+    ``base_weights`` and ``lambda_class`` are buffers, not Parameters.
+    Optimizers must not update them by backprop. The only mutating path is
+    :meth:`dual_update`, which applies
+    ``λ_c <- max(0, λ_c + η * (distortion_c - target))``.
     """
 
     def __init__(
@@ -83,7 +86,7 @@ class LearnableClassWeights(nn.Module):
         if num_classes <= 0:
             raise ValueError(f"num_classes must be positive, got {num_classes}")
         if warm_start is None:
-            raw = torch.zeros(num_classes, dtype=torch.float32)
+            base = torch.full((num_classes,), 1.0 / float(num_classes), dtype=torch.float32)
         else:
             if not isinstance(warm_start, torch.Tensor):
                 raise TypeError(
@@ -98,71 +101,107 @@ class LearnableClassWeights(nn.Module):
             if (warm_start < 0).any():
                 raise ValueError("warm_start must be non-negative")
             ws = warm_start.detach().to(torch.float32).clamp_min(1e-9)
-            # Inverse-softmax: raw = log(p) - mean(log(p)) (mean shift is
-            # softmax-invariant, but produces the canonical zero-mean form).
-            ws_norm = ws / ws.sum()
-            raw = torch.log(ws_norm)
-            raw = raw - raw.mean()
-        self.raw_logits = nn.Parameter(raw.clone())
+            base = ws / ws.sum()
+        self.register_buffer("base_weights", base.clone())
+        self.register_buffer("lambda_class", torch.zeros(num_classes, dtype=torch.float32))
+        self.register_buffer(
+            "running_target_distortion",
+            torch.tensor(float("nan"), dtype=torch.float32),
+        )
+        self.register_buffer("dual_step", torch.tensor(0, dtype=torch.long))
         self.num_classes = int(num_classes)
 
     # ── Accessors ────────────────────────────────────────────────────────
 
     def forward(self) -> torch.Tensor:
-        """Return the (num_classes,) softmax probability vector."""
-        return F.softmax(self.raw_logits, dim=0)
+        """Return detached base weights amplified by ``1 + λ_c``."""
+        return self.base_weights * (1.0 + self.lambda_class)
 
     def weights(self) -> torch.Tensor:
         """Alias for ``forward()`` — explicit call site."""
         return self.forward()
 
+    def lambdas(self) -> torch.Tensor:
+        """Return the nonnegative class dual multipliers λ_c."""
+        return self.lambda_class
+
     def csv(self) -> str:
         """Compatibility: emit a CSV string in the same format as the
-        ``--segnet-class-weights`` flag. The values sum to 1 (softmax)
-        not to 5 (Lane PS-V1's hard-coded ``[1,5,5,1,1]`` sums to 13);
-        the loss helpers L1-normalise internally so this is fine."""
-        w = self.weights().detach().cpu().tolist()
+        ``--segnet-class-weights`` flag.
+
+        Round 13 (I-1): the emitted vector is L1-renormalised to sum
+        to 1.0. The raw ``self.weights() = base_weights * (1 + λ_c)``
+        sums to ``1 + sum(base_weights * λ_c)`` after dual updates,
+        which can exceed 1; downstream consumers that read the CSV as
+        a probability distribution would otherwise see an invalid
+        normalisation. This guarantees the long-standing docstring
+        contract that the values sum to 1.
+        """
+        raw = self.weights().detach().cpu()
+        total = raw.sum().clamp_min(1e-12)
+        w = (raw / total).tolist()
         return ",".join(f"{v:.6f}" for v in w)
 
     def state_for_save(self) -> dict:
         return {
-            "schema_version": 1,
+            "schema_version": 2,
             "module": "tac.learnable_class_weights.LearnableClassWeights",
             "num_classes": self.num_classes,
-            "raw_logits": self.raw_logits.detach().cpu().clone(),
+            "base_weights": self.base_weights.detach().cpu().clone(),
+            "lambda_class": self.lambda_class.detach().cpu().clone(),
             "weights": self.weights().detach().cpu().clone(),
+            "running_target_distortion": self.running_target_distortion.detach().cpu().clone(),
+            "dual_step": self.dual_step.detach().cpu().clone(),
         }
 
+    @torch.no_grad()
+    def dual_update(
+        self,
+        per_class_distortion: torch.Tensor,
+        *,
+        eta: float,
+        target: torch.Tensor | float | None = None,
+        running_mean_momentum: float = 0.99,
+    ) -> torch.Tensor:
+        """Apply projected dual ascent to class lambdas."""
+        if eta <= 0:
+            raise ValueError(f"eta must be > 0, got {eta}")
+        if not 0.0 <= running_mean_momentum < 1.0:
+            raise ValueError(
+                f"running_mean_momentum must be in [0, 1), got {running_mean_momentum}"
+            )
+        distortion = per_class_distortion.detach().to(
+            device=self.lambda_class.device,
+            dtype=self.lambda_class.dtype,
+        )
+        _validate_distortion_shape(self, distortion)
 
-def compute_class_weight_equalisation_penalty(
+        if target is None:
+            target_t = distortion.mean()
+        else:
+            target_t = torch.as_tensor(
+                target, device=distortion.device, dtype=distortion.dtype,
+            )
+        self.lambda_class.add_(float(eta) * (distortion - target_t))
+        self.lambda_class.clamp_(min=0.0)
+        if bool(torch.isnan(self.running_target_distortion)):
+            running = target_t
+        else:
+            running = (
+                float(running_mean_momentum) * self.running_target_distortion.to(
+                    distortion.device, distortion.dtype
+                )
+                + (1.0 - float(running_mean_momentum)) * target_t
+            )
+        self.running_target_distortion.copy_(running.detach())
+        self.dual_step.add_(1)
+        return self.lambda_class
+
+
+def _validate_distortion_shape(
     class_weights: LearnableClassWeights,
     per_class_distortion: torch.Tensor,
-    *,
-    lambda_var: float = 1.0,
-) -> torch.Tensor:
-    """Lagrangian penalty on per-class distortion VARIANCE.
-
-    Args:
-        class_weights: the LearnableClassWeights module (used so the
-            penalty's gradient flows back into the raw logits — the
-            weighted distortion is computed inside this function).
-        per_class_distortion: ``(num_classes,)`` tensor of per-class
-            distortion estimates (e.g., per-class argmax-disagreement
-            rate). MUST already be detached from the renderer/scorer
-            graph so the Lagrangian penalty doesn't double-count the
-            primary loss.
-        lambda_var: Lagrangian multiplier on the variance term. Annealed
-            via dual ascent in the training loop — start low so early
-            training isn't bottlenecked by the equalisation constraint.
-
-    Returns:
-        Scalar tensor with grad wrt. class_weights.raw_logits. The
-        penalty is the WEIGHTED variance of the per-class distortion,
-        which is what equalises the *contribution* of each class to the
-        total loss (a class with tiny weight × tiny distortion is no
-        priority; a class with large weight × large distortion is the
-        bottleneck the optimiser should attack).
-    """
+) -> None:
     if per_class_distortion.shape != (class_weights.num_classes,):
         raise ValueError(
             f"per_class_distortion shape {tuple(per_class_distortion.shape)} != "
@@ -171,13 +210,61 @@ def compute_class_weight_equalisation_penalty(
     if not torch.isfinite(per_class_distortion).all():
         raise ValueError(
             "per_class_distortion contains NaN/Inf — refuse to compute "
-            "Lagrangian penalty against a corrupt distortion vector."
+            "dual update against a corrupt distortion vector."
         )
-    w = class_weights()
-    contrib = w * per_class_distortion.detach().to(w.dtype).to(w.device)
-    # Variance of the per-class contribution; minimised when all classes
-    # carry equal weight × distortion (Pareto optimum).
-    return float(lambda_var) * contrib.var(unbiased=False)
+
+
+def compute_class_weight_dual_update(
+    class_weights: LearnableClassWeights,
+    per_class_distortion: torch.Tensor,
+    *,
+    eta: float,
+    target: torch.Tensor | float | None = None,
+) -> torch.Tensor:
+    """Functional wrapper for :meth:`LearnableClassWeights.dual_update`."""
+    return class_weights.dual_update(
+        per_class_distortion,
+        eta=eta,
+        target=target,
+    )
+
+
+def compute_class_weighted_primal_loss(
+    class_weights: LearnableClassWeights,
+    per_class_loss: torch.Tensor,
+) -> torch.Tensor:
+    """Primal loss using detached multipliers ``(1 + λ_c) * weight_c``."""
+    if per_class_loss.shape != (class_weights.num_classes,):
+        raise ValueError(
+            f"per_class_loss shape {tuple(per_class_loss.shape)} != "
+            f"({class_weights.num_classes},)"
+        )
+    multiplier = class_weights().detach().to(
+        device=per_class_loss.device,
+        dtype=per_class_loss.dtype,
+    )
+    return (multiplier * per_class_loss).sum()
+
+
+def compute_class_weight_equalisation_penalty(
+    class_weights: LearnableClassWeights,
+    per_class_distortion: torch.Tensor,
+    *,
+    lambda_var: float = 1.0,
+) -> torch.Tensor:
+    """Retired compatibility shim.
+
+    Round 10 replaced variance minimisation with projected dual ascent.
+    This function validates inputs and returns a zero-valued tensor so old
+    imports do not reintroduce backprop-updated class weights.
+    """
+    del lambda_var
+    distortion = per_class_distortion.detach().to(
+        device=class_weights.lambda_class.device,
+        dtype=class_weights.lambda_class.dtype,
+    )
+    _validate_distortion_shape(class_weights, distortion)
+    return class_weights.lambda_class.sum() * 0.0
 
 
 def save_learnable_class_weights(
@@ -210,15 +297,23 @@ def load_learnable_class_weights(
             f"learnable-class-weights file {p} has renderer magic {_magic!r} — "
             f"expected pytorch pickle. Wrong file?"
         )
+    # WEIGHTS_ONLY_FALSE_ALLOWED: the magic-byte guard above rejects every
+    # known renderer .bin format (FP4A/ASYM/DPSM/I4LZ/CCh1/C3R1/SCv1/OMG1)
+    # BEFORE we hit torch.load, so the DEN-V2 pickle-on-renderer-bin crash
+    # cannot fire here. The state dict we serialise contains plain tensors
+    # + python ints/floats (no custom classes), so weights_only=False is
+    # only required because the legacy snapshot dict layout pre-dates
+    # PyTorch's safer weights_only path. Safe per check_loader_format_safety.
     state = torch.load(p, map_location=map_location, weights_only=False)
     if not isinstance(state, dict):
         raise TypeError(
             f"{p} is not a learnable-class-weights snapshot "
             f"(got {type(state).__name__})"
         )
-    if state.get("schema_version") != 1:
+    schema_version = state.get("schema_version")
+    if schema_version not in (1, 2):
         raise ValueError(
-            f"{p} schema_version={state.get('schema_version')} != 1"
+            f"{p} schema_version={state.get('schema_version')} not in (1, 2)"
         )
     if state.get("module") != "tac.learnable_class_weights.LearnableClassWeights":
         raise ValueError(
@@ -227,5 +322,24 @@ def load_learnable_class_weights(
         )
     nc = int(state["num_classes"])
     cw = LearnableClassWeights(nc)
-    cw.raw_logits.data.copy_(state["raw_logits"].to(cw.raw_logits.dtype))
+    if schema_version == 2:
+        cw.base_weights.copy_(state["base_weights"].to(cw.base_weights.dtype))
+        cw.lambda_class.copy_(state["lambda_class"].to(cw.lambda_class.dtype))
+        if "running_target_distortion" in state:
+            cw.running_target_distortion.copy_(
+                state["running_target_distortion"].to(
+                    cw.running_target_distortion.dtype
+                )
+            )
+        if "dual_step" in state:
+            cw.dual_step.copy_(state["dual_step"].to(cw.dual_step.dtype))
+    else:
+        if "raw_logits" in state:
+            base = F.softmax(state["raw_logits"].to(torch.float32), dim=0)
+        elif "weights" in state:
+            weights = state["weights"].to(torch.float32).clamp_min(1e-9)
+            base = weights / weights.sum()
+        else:
+            raise ValueError(f"{p} v1 snapshot has neither 'raw_logits' nor 'weights'")
+        cw.base_weights.copy_(base.to(cw.base_weights.dtype))
     return cw

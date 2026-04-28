@@ -181,6 +181,46 @@ def test_csv_returns_5_comma_separated_floats():
     assert sum(vals) == pytest.approx(1.0, abs=1e-3)
 
 
+def test_class_weights_csv_sums_to_one_after_dual_update():
+    """Round 13 (I-1): csv() must L1-renormalise to maintain the
+    long-standing 'sums to 1' invariant after dual updates have driven
+    λ_c above zero. Pre-fix, csv() returned base * (1 + λ) which sums
+    to 1 + sum(base * λ) > 1 — breaking downstream consumers that
+    read the CSV as a probability distribution."""
+    cw = LearnableClassWeights(5)
+    # Drive lambda above zero on a single bottleneck class.
+    distortion = torch.tensor([0.5, 0.01, 0.01, 0.01, 0.01])
+    for _ in range(50):
+        compute_class_weight_dual_update(cw, distortion, eta=0.5)
+    # Confirm the dual update actually moved lambda — otherwise the test
+    # would trivially pass (λ=0 ⇒ weights = base which already sums to 1).
+    assert cw.lambdas().sum().item() > 0.0
+    # Now csv() must still sum to 1 within float rounding.
+    parts = cw.csv().split(",")
+    vals = [float(p) for p in parts]
+    assert sum(vals) == pytest.approx(1.0, abs=1e-5), (
+        f"csv() must L1-renormalise after dual update; got sum={sum(vals)}"
+    )
+    # Sanity: the raw weights() (UN-renormalised) DO exceed 1 after the
+    # dual update; this proves the csv() renormalisation is load-bearing.
+    raw = cw.weights().detach()
+    assert raw.sum().item() > 1.0
+
+
+def test_class_weights_csv_non_negative_after_dual_update():
+    """The renormalisation must keep all entries >= 0 (probabilities).
+    Combined with the sum=1 invariant this is the standard simplex
+    contract."""
+    cw = LearnableClassWeights(5, warm_start=torch.tensor([1.0, 5.0, 5.0, 1.0, 1.0]))
+    distortion = torch.tensor([0.05, 0.5, 0.05, 0.05, 0.05])
+    for _ in range(20):
+        compute_class_weight_dual_update(cw, distortion, eta=0.3)
+    parts = cw.csv().split(",")
+    vals = [float(p) for p in parts]
+    for v in vals:
+        assert v >= 0.0, f"csv() entry must be non-negative; got {v}"
+
+
 # ── Save / load round-trip ───────────────────────────────────────────────
 
 

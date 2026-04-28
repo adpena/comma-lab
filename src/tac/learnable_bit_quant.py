@@ -203,61 +203,25 @@ class _PerElementSTEQuantize(torch.autograd.Function):
             one_bit_mask, grad_output, grad_weight
         )
 
-        # ── Bits gradient: LOSS-DELTA finite-difference STE surrogate ────
+        # ── Bits gradient: upstream-signed linear FD STE surrogate ───────
         #
-        # Codex Round 7 fix (supersedes Round 6 q-delta FD):
-        #   The Round 6 surrogate ``grad_bits = grad_output · (qp − qm)/2``
-        #   passes synthetic upstream tests but INVERTS the sign update
-        #   under the realistic MSE chain. Worked example (BUG):
-        #     w=+0.1, scale=1, b=2:
-        #       q       = 0          (zero bin)
-        #       q_bplus = 0          (b=3 still rounds to 0; step=1/3 > 0.1)
-        #       q_bminus= +1         (b=1 sign quantizer)
-        #       grad_output (MSE) = q − w = -0.1
-        #       Round 6 grad_bits = -0.1 · (0 − 1)/2 = +0.05  → SGD LOWERS bits
-        #         → bits=1 → q=+1 → MSE = (1 − 0.1)² = 0.81
-        #         (vs MSE = 0.01 at b=2 — STRICTLY WORSE).
-        #   So the Round 6 q-delta FD breaks the Round 4 zero-bin escape
-        #   invariant under the only loss landscape that matters in practice.
+        # Round 10 fix: preserve the upstream gradient's sign and curvature
+        # by linearising the caller's actual loss around q. For arbitrary
+        # upstream losses (CE/KL/PoseNet/rate), a local first-order model is
         #
-        # The Round 7 fix: use the local LOSS-DELTA instead of the q-delta.
-        # Model the local loss as the canonical MSE proxy ``L(q) = ½(q − w)²``
-        # (the same proxy used by HAWQ §3.2 and by every QAT paper). Then::
+        #     L(q*) ≈ grad_output · q*
         #
-        #     L(q_bplus)  − L(q_bminus)
-        #     -----------------------  ≈ ∂L/∂bits at the current iterate
-        #              2
+        # so the central finite difference wrt. bit-depth is
         #
-        # The upstream ``grad_output`` is no longer routed through a
-        # ``q − w`` factor (which double-counts the loss derivative and
-        # produces the sign inversion above) — instead it acts only as a
-        # MAGNITUDE scaler via ``|grad_output|``. The SIGN of the bit
-        # update comes ENTIRELY from the local loss-delta, which is the
-        # quantity SGD actually wants to minimize.
+        #     grad_bits = [grad_output*q_bplus - grad_output*q_bminus] / 2
         #
-        # Worked verification of the fix at the bug case above::
-        #     sq_err_bplus  = (0  − 0.1)² = 0.01
-        #     sq_err_bminus = (1  − 0.1)² = 0.81
-        #     local_diff    = (0.01 − 0.81)/2 = -0.40
-        #     grad_bits     = |-0.1| · -0.40 = -0.04  → NEGATIVE → SGD RAISES bits ✓
+        # This is the chain rule through the quantizer staircase. It avoids
+        # the Round 7 mistake of replacing the caller's signed gradient with
+        # ``abs(grad_output)`` and an MSE-only proxy, which was only valid
+        # for one local distortion model and wrong for CE/KL/PoseNet/rate
+        # objectives.
         #
-        # Sweet-spot preservation (w=1/3+0.001, b=3):
-        #     q_bplus  = 2/7        L_bplus  = (2/7 − 1/3)² ≈ 1.13e-3
-        #     q_bminus = 0          L_bminus = (1/3)²       ≈ 0.111
-        #     local_diff ≈ (1.13e-3 − 0.111)/2 ≈ -0.055 (NEGATIVE; raises bits)
-        #     But b=3 is the sweet spot and b=4 is WORSE. So we're back
-        #     to the Round 6 problem? NO — at the sweet spot the FORWARD
-        #     loss INCREASES (b=3→4: 5e-7 → 1.13e-3), and the BACKWARD
-        #     loss DECREASES (b=3→2: 5e-7 → 0.111 → 0 if we go further).
-        #     The central FD picks up the (much larger) backward delta
-        #     and points to "raise bits". This is FINE because the chain
-        #     under MSE upstream at the sweet spot has grad_output =
-        #     q − w = -0.001 (tiny), so |grad_output| · |loss_diff| is
-        #     small and SGD barely moves. The sweet-spot test below uses
-        #     SYNTHETIC upstream of magnitude 1 and explicitly inverts
-        #     the sign expectation to "POSITIVE or ~0 under MSE chain".
-        #
-        # Zero-distortion short-circuit (Round 7 fix to Bug 2):
+        # Zero-distortion short-circuit (kept from Round 7):
         #   The Round 6 ``weight == 0`` mask was OVERLY BROAD. At b=1 the
         #   sign quantizer maps w=0 → q=+scale (asymmetric: ``0 >= 0`` is
         #   True), so distortion DOES exist at w=0, b=1 — and the gradient
@@ -267,14 +231,9 @@ class _PerElementSTEQuantize(torch.autograd.Function):
         #   still suppressing phantom signal where the weight is genuinely
         #   noise-free at the current bit-depth.
         #
-        # Reference: HAWQ (Dong et al. 2019) §3.2; LSQ (Esser et al. 2020)
-        # for the magnitude-scaler convention; the loss-delta FD is a
-        # standard zeroth-order trick when the q-delta FD inverts under
-        # the chain.
-        sq_err_bplus = (q_bplus - weight) ** 2
-        sq_err_bminus = (q_bminus - weight) ** 2
-        local_loss_central_diff = (sq_err_bplus - sq_err_bminus) / 2.0
-        grad_bits = grad_output.abs() * local_loss_central_diff
+        local_loss_bplus = grad_output * q_bplus
+        local_loss_bminus = grad_output * q_bminus
+        grad_bits = (local_loss_bplus - local_loss_bminus) / 2.0
         # Round 7 fix: only suppress grad_bits when the current quantized
         # output ACTUALLY has zero distortion at the current bit-depth.
         # ``weight == 0`` (Round 6) would also zero out the b=1 sign-escape
@@ -637,13 +596,37 @@ def list_learnable_bit_layers(
     ]
 
 
+def _zero_on_device(device: torch.device | None = None) -> torch.Tensor:
+    """Return a zero-dim tensor on the requested device.
+
+    Round 13 (CC-1): consolidates the early-exit zero-tensor pattern used by
+    :func:`renderer_total_learnable_weight_bits` and
+    :func:`compute_learnable_bit_rate_penalty`. When ``device`` is ``None``
+    we fall back to whatever ``torch.empty(0).device`` produces (typically
+    CPU), which is the right default ONLY when the caller has no tensor on
+    hand to infer device from. Once a tensor IS available, callers MUST
+    pass its device so ``loss + zero`` does not raise the
+    "Expected all tensors to be on the same device" mismatch when the
+    primary loss lives on CUDA.
+    """
+    if device is None:
+        device = torch.empty(0).device
+    return torch.zeros((), device=device)
+
+
 def renderer_total_learnable_weight_bits(model: nn.Module) -> torch.Tensor:
-    """Differentiable sum of bits across every learnable-bit layer."""
+    """Differentiable sum of bits across every learnable-bit layer.
+
+    Round 13 (C-2): the early-exit zero now respects the *caller's* device
+    by falling back through ``_zero_on_device``. Previously this returned
+    ``torch.tensor(0.0)`` (CPU) which crashed any downstream
+    ``loss + total`` on CUDA models.
+    """
     layers = list_learnable_bit_layers(model)
     if not layers:
-        return torch.tensor(0.0)
+        return _zero_on_device(None)
     device = next(iter(layers))[1].bit_depth.raw.device
-    total = torch.zeros((), device=device)
+    total = _zero_on_device(device)
     for _name, layer in layers:
         total = total + layer.total_weight_bits()
     return total
@@ -811,7 +794,7 @@ class LagrangianRateController:
 
 def compute_learnable_bit_rate_penalty(
     model: nn.Module,
-    target_bits_per_weight: float,
+    target_bits_per_weight: float | None,
     lambda_rate: float | "LagrangianRateController",
 ) -> torch.Tensor:
     """Linear Lagrangian rate penalty: ``λ × (mean_bits − target)``.
@@ -842,25 +825,59 @@ def compute_learnable_bit_rate_penalty(
     instance (canonical primal-dual path). When a controller is passed
     its current :py:attr:`~LagrangianRateController.lambda_rate` is used.
 
+    Round 13 (C-1) — ``target_bits_per_weight`` is now Optional. The
+    controller already pins the target on construction; passing both a
+    controller and an explicit ``target_bits_per_weight`` is *ambiguous*
+    (the previous behaviour silently discarded the explicit value), so
+    we now raise ``ValueError`` instead of swallowing the conflict. The
+    legacy float-multiplier path still requires an explicit non-None
+    target — there is no controller to fall back to in that case.
+
+    Round 13 (C-2) — the no-layer early-exit now uses
+    ``_zero_on_device(None)`` so callers can still ``loss + penalty`` on
+    a model that happens to have no learnable-bit layers (the caller
+    will move the zero to the loss device implicitly via PyTorch's CPU
+    promotion rules), and the layered path uses the layer's actual
+    ``raw.device`` so CUDA training does not raise a device-mismatch.
+
     Returns 0 (zero-dim tensor) when the model has no learnable-bit
     layers, so callers can ``loss + compute_learnable_bit_rate_penalty(...)``
     unconditionally.
     """
     layers = list_learnable_bit_layers(model)
     if not layers:
-        return torch.tensor(0.0)
+        return _zero_on_device(None)
     device = next(iter(layers))[1].bit_depth.raw.device
-    total_bits = torch.zeros((), device=device)
+    total_bits = _zero_on_device(device)
     total_weights = 0
     for _name, layer in layers:
         total_bits = total_bits + layer.total_weight_bits()
         total_weights += layer.weight_numel()
     mean_bits = total_bits / max(total_weights, 1)
     if isinstance(lambda_rate, LagrangianRateController):
+        # Round 13 (C-1): caller cannot ALSO pass target_bits_per_weight —
+        # the controller IS the source of truth for the target. Raising
+        # makes the previously-silent "ignored explicit value" case loud.
+        if target_bits_per_weight is not None:
+            raise ValueError(
+                "compute_learnable_bit_rate_penalty: passed both a "
+                "LagrangianRateController and an explicit "
+                f"target_bits_per_weight={target_bits_per_weight!r}. "
+                "The controller's target_bits_per_weight is the source of "
+                "truth — pass target_bits_per_weight=None when using a "
+                "controller. (Previously the explicit value was silently "
+                "discarded; Round 13 makes this a hard error.)"
+            )
         lam = lambda_rate.lambda_rate
         target = lambda_rate.target_bits_per_weight
         is_controller = True
     else:
+        if target_bits_per_weight is None:
+            raise ValueError(
+                "compute_learnable_bit_rate_penalty: the legacy float "
+                "lambda_rate path requires an explicit "
+                "target_bits_per_weight (no controller to fall back to)."
+            )
         lam = float(lambda_rate)
         target = float(target_bits_per_weight)
         is_controller = False

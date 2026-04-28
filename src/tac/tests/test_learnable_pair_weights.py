@@ -284,3 +284,52 @@ def test_rate_penalty_is_zero_valued_shim():
     pen = compute_pair_weight_rate_penalty(pw, target_sum=8.0, lambda_rate=1.0)
     assert pen.item() == 0.0
     assert pen.requires_grad is False
+
+
+# ── Round 13 (R12-CC-2) — CUDA integration test ─────────────────────────
+
+
+@pytest.mark.skipif(not torch.cuda.is_available(), reason="CUDA required")
+def test_r13_cc2_cuda_pair_weights_full_chain_on_cuda():
+    """End-to-end CUDA chain:
+    (LearnablePairWeights → dual_update → compute_pair_weighted_primal_loss
+    → backward). Verifies:
+      1. ``lambda_pair`` buffer stays on CUDA after ``.to('cuda')``.
+      2. ``dual_update`` keeps ``lambda_pair`` on CUDA.
+      3. ``compute_pair_weighted_primal_loss`` on CUDA pair_losses
+         produces a CUDA loss tensor.
+      4. ``loss.backward()`` propagates to CUDA pair_losses (the
+         multipliers are detached buffers so they don't get grad).
+    This is the smallest end-to-end test that catches the device-mismatch
+    bug class (covered for the bit-quant module by the C-2 fixes).
+    """
+    n_pairs = 8
+    pw = LearnablePairWeights(n_pairs).to("cuda")
+    assert pw.lambda_pair.device.type == "cuda", (
+        f".to('cuda') must move lambda_pair to CUDA; got {pw.lambda_pair.device}"
+    )
+
+    # Drive a single dual update and confirm the buffer stays on CUDA.
+    distortion = torch.linspace(0.1, 0.9, n_pairs, device="cuda")
+    pw.dual_update(distortion, eta=0.5)
+    assert pw.lambda_pair.device.type == "cuda", (
+        f"dual_update must leave lambda_pair on CUDA; got {pw.lambda_pair.device}"
+    )
+    assert pw.lambda_pair.sum().item() > 0.0, (
+        "expected at least one above-mean pair to have non-zero λ"
+    )
+
+    # Forward a CUDA pair_losses tensor through the primal loss.
+    pair_losses = torch.linspace(
+        0.1, 0.9, n_pairs, device="cuda", requires_grad=True,
+    )
+    loss = compute_pair_weighted_primal_loss(pw, pair_losses)
+    assert loss.device.type == "cuda"
+
+    # Backward must produce a CUDA gradient on pair_losses (no
+    # device-mismatch crash). The multipliers are detached buffers so
+    # they receive no grad.
+    loss.backward()
+    assert pair_losses.grad is not None
+    assert pair_losses.grad.device.type == "cuda"
+    assert torch.isfinite(pair_losses.grad).all()

@@ -271,10 +271,10 @@ def test_rate_penalty_negative_when_under_target_controller():
     controller = LagrangianRateController(
         target_bits_per_weight=8.0, initial_lambda=1.0,
     )
-    # When using a controller, target_bits_per_weight from the controller
-    # overrides the positional arg (kept for legacy float signature).
+    # Round 13 (C-1): controller path requires target_bits_per_weight=None;
+    # the controller's stored target is the ONLY source of truth.
     pen = compute_learnable_bit_rate_penalty(
-        model, target_bits_per_weight=8.0, lambda_rate=controller,
+        model, target_bits_per_weight=None, lambda_rate=controller,
     )
     mean_bits = renderer_average_learnable_bits_per_weight(model)
     expected = 1.0 * (mean_bits - 8.0)

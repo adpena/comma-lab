@@ -467,8 +467,11 @@ def run_qat(args: argparse.Namespace) -> dict:
 
         # Rate penalty (Lagrangian on bits/weight) — linear in residual,
         # gradient at boundary = λ (NOT 0 like the squared-hinge form).
+        # Round 13 (C-1): pass target=None with a controller — the
+        # controller already pins the target on construction and the
+        # function now refuses double-specification.
         rate_loss = compute_learnable_bit_rate_penalty(
-            model, args.target_bits, lambda_rate=rate_controller,
+            model, target_bits_per_weight=None, lambda_rate=rate_controller,
         )
 
         # KL distill (post-fix weight = 0.002): we use the scorer-loss

@@ -12,6 +12,8 @@ Pins:
   8. bits_rounded() → uint8 in [1, 8].
   9. LearnableBitConv2d wraps a Conv2d, forward matches manual fake-quant.
  10. Determinism: same seed → identical outputs.
+ 11. Round 13 (C-1): controller + explicit target raises ValueError.
+ 12. Round 13 (C-2): rate penalty zero-tensor inherits the model's device.
 """
 from __future__ import annotations
 
@@ -21,10 +23,15 @@ import torch.nn as nn
 import torch.nn.functional as F
 
 from tac.learnable_bit_quant import (
+    LagrangianRateController,
     LearnableBitConv2d,
     LearnablePerElementBitDepth,
     _PerElementSTEQuantize,
     _ste_per_element_quantize,
+    _zero_on_device,
+    compute_learnable_bit_rate_penalty,
+    renderer_total_learnable_weight_bits,
+    swap_renderer_convs_with_learnable_bits,
 )
 
 
@@ -286,3 +293,189 @@ def test_outputs_finite_at_all_bit_levels():
         bd = LearnablePerElementBitDepth(w.shape, init_bits=b)
         q = bd(w)
         assert torch.isfinite(q).all()
+
+
+# ── Round 10 upstream-signed bit-gradient chain rule ─────────────────────
+
+
+def test_round10_zero_bin_mse_upstream_preserves_sign():
+    """w=0.1, b=2 gives q=0, q_bplus=0, q_bminus=+1.
+    A small bit decrease increases the local proxy MSE, so the STE
+    gradient wrt bits must be negative and SGD must raise bits."""
+    scale = torch.ones(1, dtype=torch.float64)
+    weight = torch.tensor([[[[0.1]]]], dtype=torch.float64, requires_grad=True)
+    bits = torch.tensor([[[[2.0]]]], dtype=torch.float64, requires_grad=True)
+    q = _PerElementSTEQuantize.apply(weight, scale, bits)
+
+    loss = 0.5 * ((q - weight) ** 2).sum()
+    loss.backward()
+
+    with torch.no_grad():
+        q_decrease = _PerElementSTEQuantize.apply(weight.detach(), scale, bits.detach() - 1.0)
+        loss_decrease = 0.5 * ((q_decrease - weight.detach()) ** 2).sum()
+
+    assert bits.grad is not None
+    assert loss_decrease.item() > loss.item()
+    assert bits.grad.item() < 0.0
+    assert bits.grad.item() == pytest.approx(-0.04, abs=1e-12)
+
+
+def test_round10_synthetic_ce_like_upstream_sign_flips_grad_bits():
+    """The MSE proxy uses abs(upstream) as a scale; equal-magnitude
+    synthetic upstream signs should not invert the bit-depth direction."""
+    scale = torch.ones(2, dtype=torch.float64)
+    weight = torch.tensor([[[[0.1]]], [[[0.1]]]], dtype=torch.float64, requires_grad=True)
+    bits = torch.full_like(weight, 2.0, requires_grad=True)
+    q = _PerElementSTEQuantize.apply(weight, scale, bits)
+
+    q.backward(torch.tensor([[[[2.0]]], [[[-2.0]]]], dtype=torch.float64))
+
+    assert bits.grad is not None
+    assert bits.grad[0].item() == pytest.approx(-0.8, abs=1e-12)
+    assert bits.grad[1].item() == pytest.approx(-0.8, abs=1e-12)
+
+
+def test_round10_random_bit_gradient_descent_reduces_local_loss_expectation():
+    g = torch.Generator().manual_seed(2026_04_28)
+    scale = torch.ones(20, dtype=torch.float64)
+    weight = (torch.rand(20, 1, 1, 1, generator=g, dtype=torch.float64) * 1.6 - 0.8)
+    bits = (2.0 + 2.0 * torch.rand_like(weight, generator=g)).detach()
+
+    def loss_at(bits_value: torch.Tensor) -> torch.Tensor:
+        q = _PerElementSTEQuantize.apply(weight, scale, bits_value)
+        return 0.5 * ((q - weight) ** 2).mean()
+
+    initial = float(loss_at(bits).item())
+    bits_param = bits.clone().requires_grad_(True)
+    for _ in range(80):
+        if bits_param.grad is not None:
+            bits_param.grad.zero_()
+        loss = loss_at(bits_param)
+        loss.backward()
+        with torch.no_grad():
+            bits_param.sub_(0.2 * bits_param.grad)
+            bits_param.clamp_(1.0, 8.0)
+
+    final = float(loss_at(bits_param.detach()).item())
+    assert final <= initial
+
+
+# ── Round 13 R12-C1: controller + explicit target is an error ───────────
+
+
+def _build_tiny_swapped_model() -> nn.Module:
+    """Tiny renderer-shaped Sequential with a swapped LearnableBitConv2d
+    so the rate-penalty / total-bits helpers have something to count."""
+    return nn.Sequential(
+        LearnableBitConv2d(4, 4, 3, padding=1, init_bits=8.0),
+        nn.ReLU(),
+        LearnableBitConv2d(4, 4, 3, padding=1, init_bits=8.0),
+    )
+
+
+def test_r13_c1_controller_with_explicit_target_raises_value_error():
+    """C-1 regression: passing a controller AND an explicit
+    ``target_bits_per_weight`` is now a hard ValueError. Previously the
+    explicit value was silently discarded — making downstream call sites
+    look correct in code review while the function ignored their input.
+    """
+    model = _build_tiny_swapped_model()
+    ctrl = LagrangianRateController(target_bits_per_weight=2.0, eta=0.1)
+    with pytest.raises(ValueError, match="LagrangianRateController"):
+        compute_learnable_bit_rate_penalty(
+            model,
+            target_bits_per_weight=4.0,  # contradicts the controller
+            lambda_rate=ctrl,
+        )
+
+
+def test_r13_c1_controller_with_none_target_works():
+    """C-1 contract: passing target=None with a controller is the
+    canonical happy path. The controller's stored target (2.0) drives
+    the residual."""
+    model = _build_tiny_swapped_model()
+    ctrl = LagrangianRateController(
+        target_bits_per_weight=2.0, eta=0.1, initial_lambda=1.0,
+    )
+    pen = compute_learnable_bit_rate_penalty(
+        model, target_bits_per_weight=None, lambda_rate=ctrl,
+    )
+    # mean_bits ≈ 8 → residual ≈ 6 → pen ≈ 1.0 · 6 = 6.
+    assert pen.item() == pytest.approx(6.0, rel=1e-4)
+
+
+def test_r13_c1_legacy_float_path_requires_explicit_target():
+    """C-1 contract: legacy float-multiplier callers must STILL pass an
+    explicit ``target_bits_per_weight`` (no controller to fall back on)."""
+    model = _build_tiny_swapped_model()
+    with pytest.raises(ValueError, match="legacy float"):
+        compute_learnable_bit_rate_penalty(
+            model, target_bits_per_weight=None, lambda_rate=1.0,
+        )
+
+
+# ── Round 13 R12-C2: zero-tensor early-exit respects device ─────────────
+
+
+def test_r13_c2_zero_on_device_helper_default():
+    """``_zero_on_device(None)`` returns a zero-dim tensor on the default
+    (typically CPU) device."""
+    z = _zero_on_device(None)
+    assert z.dim() == 0
+    assert z.item() == 0.0
+
+
+def test_r13_c2_zero_on_device_helper_meta():
+    """``_zero_on_device('meta')`` allows callers to construct a
+    device-specific zero without instantiating a full tensor on
+    accelerator hardware."""
+    z = _zero_on_device(torch.device("meta"))
+    assert z.dim() == 0
+    assert z.device.type == "meta"
+
+
+def test_r13_c2_renderer_total_bits_lives_on_layer_device():
+    """C-2 regression: when a model is moved to a device, the total-bits
+    helper must return a tensor on the SAME device — otherwise
+    ``loss_on_X + total_bits`` raises a device mismatch."""
+    model = _build_tiny_swapped_model().to(torch.device("meta"))
+    total = renderer_total_learnable_weight_bits(model)
+    assert total.device.type == "meta", (
+        f"total_bits should follow layer device; got {total.device}"
+    )
+
+
+def test_r13_c2_rate_penalty_lives_on_layer_device():
+    """C-2 regression: the rate penalty's residual + scalar arithmetic
+    must stay on the layer's raw.device. Previously the no-layer
+    early-exit and the in-loop ``torch.zeros((), device=device)`` were
+    out of sync — the early-exit forced CPU."""
+    model = _build_tiny_swapped_model().to(torch.device("meta"))
+    ctrl = LagrangianRateController(
+        target_bits_per_weight=2.0, initial_lambda=1.0,
+    )
+    pen = compute_learnable_bit_rate_penalty(
+        model, target_bits_per_weight=None, lambda_rate=ctrl,
+    )
+    assert pen.device.type == "meta", (
+        f"rate penalty should follow layer device; got {pen.device}"
+    )
+
+
+def test_r13_c2_rate_penalty_no_layers_returns_zero_tensor():
+    """C-2 contract: the no-layer early-exit must STILL return a
+    zero-dim tensor so callers can ``loss + penalty`` unconditionally."""
+    plain_model = nn.Sequential(nn.Linear(4, 4))
+    pen = compute_learnable_bit_rate_penalty(
+        plain_model, target_bits_per_weight=2.0, lambda_rate=1.0,
+    )
+    assert pen.dim() == 0
+    assert pen.item() == 0.0
+
+
+def test_r13_c2_total_bits_no_layers_returns_zero_tensor():
+    """C-2 contract: empty-model early-exit returns a zero-dim tensor."""
+    plain_model = nn.Sequential(nn.Linear(4, 4))
+    total = renderer_total_learnable_weight_bits(plain_model)
+    assert total.dim() == 0
+    assert total.item() == 0.0

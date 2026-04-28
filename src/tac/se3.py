@@ -59,6 +59,55 @@ SMALL_ANGLE_THRESHOLD: float = 1.0e-6
 NEAR_PI_THRESHOLD: float = 1.0e-3
 
 
+# Round 13 (I-2): sentinel attribute name stamped onto tensors / tangent
+# tuples that have been verified to live in se(3) Lie-algebra
+# coordinates. ``geodesic_step`` checks this attribute and refuses to
+# consume a Cartesian translation gradient. See the contract docstring
+# of ``geodesic_step`` for the call-site rules.
+_LIE_ALGEBRA_SENTINEL: str = "_se3_tangent_is_lie_algebra"
+
+
+def mark_tangent_as_lie_algebra(
+    tangent: "Tuple[torch.Tensor, torch.Tensor] | torch.Tensor",
+) -> "Tuple[torch.Tensor, torch.Tensor] | torch.Tensor":
+    """Stamp the Lie-algebra sentinel on a tangent tensor / tuple.
+
+    Round 13 (I-2): callers that construct an se(3) tangent directly
+    (without going through :func:`riemannian_gradient_se3`) must opt in
+    to ``geodesic_step`` consumption by stamping this sentinel. Use
+    cases include:
+
+      * the batched optimiser hot path
+        (:class:`tac.riemannian_pose_optimizer.RiemannianSGD`) that
+        operates on packed ``(omega, t)`` tensors and skips the
+        per-element projection for performance;
+      * tests that exercise the geodesic update directly with a known
+        Lie-algebra tangent.
+
+    Returns the input unchanged (after stamping the attribute in place
+    on the underlying ``torch.Tensor`` objects). For tuple inputs the
+    sentinel is stamped on the *translation* tensor (index 1) AND on
+    the tuple itself, so either lookup path in ``geodesic_step``
+    succeeds.
+    """
+    if isinstance(tangent, tuple):
+        # Stamp the translation tensor — that is the load-bearing one.
+        try:
+            object.__setattr__(tangent[1], _LIE_ALGEBRA_SENTINEL, True)
+        except (AttributeError, TypeError):
+            # Some autograd-graph tensors disallow attribute setting; in
+            # that case the tuple-level attribute below is the only path.
+            pass
+        # Also stamp the tuple object itself (cheaper alternate lookup).
+        try:
+            object.__setattr__(tangent, _LIE_ALGEBRA_SENTINEL, True)
+        except (AttributeError, TypeError):
+            pass
+        return tangent
+    object.__setattr__(tangent, _LIE_ALGEBRA_SENTINEL, True)
+    return tangent
+
+
 # ──────────────────────────────────────────────────────────────────────────
 # SE(3) element dataclass
 # ──────────────────────────────────────────────────────────────────────────
@@ -74,12 +123,26 @@ class SE3Element:
         Axis-angle rotation (i.e. ``log_map_so3(R)``). The Lie algebra
         coordinate of the rotation component.
     t : torch.Tensor of shape (3,)
-        Translation vector in ℝ³. Note that this is the *Cartesian*
+        Translation vector in ℝ³. **CRITICAL**: this is the *Cartesian*
         translation (the "t" in the matrix [R t; 0 1]); it is NOT the
         "v" of the SE(3) Lie algebra coordinate. We chose this convention
         because the renderer's pose head produces a Cartesian translation,
         not the tangent-space ``v``. Conversion between them is handled by
         ``exp_map_se3`` / ``log_map_se3`` when needed.
+
+        Round 13 (R12-I-2): this Cartesian-vs-Lie-algebra distinction
+        propagates into ``geodesic_step``: the ``tangent[1]`` argument
+        there is the Lie-algebra ``v`` (post ``J_l(ω)^-1`` projection),
+        NOT the raw Cartesian translation gradient. A caller building
+        ``tangent = (grad_omega, grad_t_cartesian)`` from raw autograd
+        gradients and feeding that directly into ``geodesic_step`` will
+        SYSTEMATICALLY mis-update the translation (the rotation
+        increment couples through ``J_l(ω)`` so the tangent must already
+        be in Lie-algebra coordinates). Use either
+        :func:`riemannian_gradient_se3` (returns Lie-algebra tangent
+        with sentinel) or the convenience wrapper
+        :func:`geodesic_step_from_euclidean` (does the projection
+        internally).
 
     Notes
     -----
@@ -360,6 +423,40 @@ def left_jacobian_so3(omega: torch.Tensor) -> torch.Tensor:
     return eye + a * omega_hat + b * omega_hat_sq
 
 
+def inverse_left_jacobian_so3(omega: torch.Tensor) -> torch.Tensor:
+    """Inverse left Jacobian of SO(3).
+
+    Sola et al. (2018) §4.5 gives the closed-form SE(3) Jacobian. Its
+    inverse is
+
+        J_l(ω)^-1 = I - 1/2 ω̂
+                    + (1/θ² - (1 + cosθ)/(2 θ sinθ)) ω̂²
+
+    with Taylor coefficient ``1/12 + θ²/720`` near zero.
+    """
+    if omega.shape[-1] != 3:
+        raise ValueError(
+            f"inverse_left_jacobian_so3 expects last dim 3, got {tuple(omega.shape)}"
+        )
+
+    theta = torch.linalg.norm(omega, dim=-1, keepdim=True)
+    theta_sq = theta * theta
+    safe_theta = theta.clamp(min=SMALL_ANGLE_THRESHOLD)
+    safe_sin = torch.sin(safe_theta).clamp(min=SMALL_ANGLE_THRESHOLD)
+
+    a_closed = (
+        1.0 / (safe_theta * safe_theta)
+        - (1.0 + torch.cos(safe_theta)) / (2.0 * safe_theta * safe_sin)
+    )
+    a_taylor = (1.0 / 12.0) + theta_sq / 720.0
+    a = torch.where(theta < SMALL_ANGLE_THRESHOLD, a_taylor, a_closed).unsqueeze(-1)
+
+    omega_hat = hat_so3(omega)
+    omega_hat_sq = omega_hat @ omega_hat
+    eye = torch.eye(3, dtype=omega.dtype, device=omega.device).expand_as(omega_hat)
+    return eye - 0.5 * omega_hat + a * omega_hat_sq
+
+
 def exp_map_se3(omega: torch.Tensor, v: torch.Tensor) -> Tuple[torch.Tensor, torch.Tensor]:
     """Closed-form SE(3) exponential map (Sola Eq. 172)::
 
@@ -393,6 +490,28 @@ def exp_map_se3(omega: torch.Tensor, v: torch.Tensor) -> Tuple[torch.Tensor, tor
     return R, t
 
 
+def log_map_se3(R: torch.Tensor, t: torch.Tensor) -> Tuple[torch.Tensor, torch.Tensor]:
+    """Closed-form SE(3) logarithm map.
+
+    Given ``T = [R t; 0 1]``, recover ``(ω, v)`` such that
+    ``R = exp(ω̂)`` and ``t = J_l(ω) v``. This is the inverse of
+    :func:`exp_map_se3` under the same Sola 2018 §4.5 convention.
+    """
+    if R.shape[-2:] != (3, 3):
+        raise ValueError(f"log_map_se3 expects R (..., 3, 3), got {tuple(R.shape)}")
+    if t.shape[-1] != 3:
+        raise ValueError(f"log_map_se3 expects t last dim 3, got {tuple(t.shape)}")
+    if R.shape[:-2] != t.shape[:-1]:
+        raise ValueError(
+            f"log_map_se3 batch shapes differ: R={tuple(R.shape)} t={tuple(t.shape)}"
+        )
+
+    omega = log_map_so3(R)
+    Jl_inv = inverse_left_jacobian_so3(omega)
+    v = (Jl_inv @ t.unsqueeze(-1)).squeeze(-1)
+    return omega, v
+
+
 # ──────────────────────────────────────────────────────────────────────────
 # Riemannian gradient projection
 # ──────────────────────────────────────────────────────────────────────────
@@ -404,11 +523,9 @@ def riemannian_gradient_se3(
 ) -> Tuple[torch.Tensor, torch.Tensor]:
     """Project a Euclidean gradient onto the tangent space of SE(3).
 
-    For SE(3) with the *left-invariant* metric (the canonical choice in
-    Absil-Mahony-Sepulchre §3.6.1 and Boumal §3.7), the tangent space at
-    every point is canonically isomorphic to se(3), so the projection is
-    the identity: the Euclidean gradient on the parameter
-    ``(omega, t) ∈ ℝ⁶`` is already in the tangent space.
+    The rotation component stays in the axis-angle chart. The translation
+    component is pulled back through ``J_l(ω)^-1`` so it matches the SE(3)
+    retraction convention used by :func:`geodesic_step`.
 
     The current point is accepted as an argument because the abstraction
     needs a hook for non-trivial metrics (e.g. weighted SE(3) metrics or
@@ -424,14 +541,18 @@ def riemannian_gradient_se3(
     Returns
     -------
     Tuple[torch.Tensor, torch.Tensor]
-        Riemannian gradient in se(3) coordinates.
+    Riemannian gradient in se(3) coordinates.
     """
     grad_omega, grad_t = euclidean_grad
     if grad_omega.shape != (3,) or grad_t.shape != (3,):
         raise ValueError(
             "riemannian_gradient_se3 expects shape (3,) for each component"
         )
-    return grad_omega, grad_t
+    Jl_inv = inverse_left_jacobian_so3(current.omega)
+    grad_v = (Jl_inv @ grad_t.unsqueeze(-1)).squeeze(-1)
+    # Round 13 (I-2): stamp the Lie-algebra sentinel so geodesic_step
+    # accepts this tangent without raising.
+    return mark_tangent_as_lie_algebra((grad_omega, grad_v))
 
 
 # ──────────────────────────────────────────────────────────────────────────
@@ -447,15 +568,11 @@ def geodesic_step(
     """Take a geodesic step on SE(3): retraction via the exponential map.
 
     Boumal §3.6 (retractions): ``Retr_x(η) = exp_x(η)`` is the canonical
-    second-order retraction on a Lie group. For SE(3) this is::
+    second-order retraction on a Lie group. For SE(3), Sola 2018 §4.5
+    Eq.173 gives::
 
         new_R = current_R · exp_so3(step · η_ω)
-        new_t = current_t + step · η_v       (Cartesian translation; the
-                                              tangent's translational
-                                              component IS the Cartesian
-                                              displacement when the
-                                              left-invariant metric is
-                                              chosen on ℝ³).
+        new_t = current_t + current_R · (J_l(step · η_ω) · step · η_v)
 
     The rotation update is the *exponential map composition* on SO(3); the
     rotation matrix is recomposed via ``R_new = R · exp(η̂)`` so the result
@@ -463,12 +580,32 @@ def geodesic_step(
     property that Euclidean SGD on the (axis-angle, t) parameterisation
     fails to provide (it accumulates orthogonality drift on each step).
 
+    Round 13 (I-2) — CONTRACT: ``tangent[1]`` MUST be the Lie-algebra
+    coordinate ``v`` (the post-``J_l(ω)^-1`` translation gradient), NOT
+    the raw Cartesian translation gradient ``∂L/∂t``. SE3Element.t is
+    Cartesian by convention (see SE3Element docstring), so the most
+    common mistake is to feed ``(grad_omega, grad_t_cartesian)`` directly
+    here and silently mis-update the translation. Always pre-project
+    Euclidean gradients through :func:`riemannian_gradient_se3` first
+    OR use the convenience wrapper
+    :func:`geodesic_step_from_euclidean`, which does the projection
+    explicitly and stamps a sentinel attribute on the tangent so
+    misuse becomes detectable downstream.
+
+    The runtime check at the top of this function looks for either
+    (a) a sentinel attribute set by :func:`riemannian_gradient_se3` /
+    :func:`geodesic_step_from_euclidean`, OR (b) an explicit waiver via
+    :func:`mark_tangent_as_lie_algebra` (for callers like the batched
+    optimiser hot path that construct tangents in vectorised form).
+    Lacking both raises ``RuntimeError`` to fail loud, not silent.
+
     Parameters
     ----------
     current : SE3Element
     tangent : tuple of (η_ω, η_v) tensors of shape (3,)
         The Riemannian gradient (after projection); see
-        ``riemannian_gradient_se3``.
+        ``riemannian_gradient_se3``. ``η_v`` is the Lie-algebra
+        translation coordinate, NOT the Cartesian translation gradient.
     step_size : float
         Geodesic step length (negative for descent).
 
@@ -476,8 +613,41 @@ def geodesic_step(
     -------
     SE3Element
         The new point on SE(3).
+
+    Raises
+    ------
+    RuntimeError
+        If ``tangent`` was not produced by ``riemannian_gradient_se3``
+        / ``geodesic_step_from_euclidean`` and is not explicitly waived
+        via ``mark_tangent_as_lie_algebra``.
     """
     eta_omega, eta_v = tangent
+
+    # Round 13 (I-2): runtime check — refuse to silently consume a
+    # Cartesian translation gradient.
+    _validated = (
+        getattr(eta_v, _LIE_ALGEBRA_SENTINEL, False)
+        or getattr(tangent, _LIE_ALGEBRA_SENTINEL, False)
+    )
+    if not _validated:
+        raise RuntimeError(
+            "geodesic_step: tangent[1] must be the Lie-algebra translation "
+            "coordinate `v` (post-J_l^-1), NOT the raw Cartesian "
+            "gradient ∂L/∂t. SE3Element.t is Cartesian, so feeding "
+            "raw (grad_omega, grad_t_cartesian) here mis-updates the "
+            "translation. Either:\n"
+            "  (a) project the Euclidean gradient through "
+            "`riemannian_gradient_se3(...)` first, OR\n"
+            "  (b) use the convenience wrapper "
+            "`geodesic_step_from_euclidean(current, grad_omega, "
+            "grad_t_cartesian, step_size)`, OR\n"
+            "  (c) if you intentionally constructed the tangent in "
+            "Lie-algebra coordinates (e.g., the batched optimiser hot "
+            "path), call `mark_tangent_as_lie_algebra(tangent)` to "
+            "stamp the sentinel. This contract was added in Round 13 "
+            "(R12-I-2) to catch the SE3Element-Cartesian-vs-Lie-algebra "
+            "ambiguity that has bitten downstream callers."
+        )
 
     # Map the current axis-angle to the rotation matrix, compose with the
     # exponential of the geodesic increment, then read back the axis-angle.
@@ -486,13 +656,58 @@ def geodesic_step(
     R_new = R_current @ delta_R
     omega_new = log_map_so3(R_new)
 
-    # Translation is updated by a straight Euclidean step in ℝ³ — this is
-    # the geodesic on (ℝ³, standard metric), which is the canonical metric
-    # on the translational factor of SE(3) in the left-invariant
-    # decomposition.
-    t_new = current.t + step_size * eta_v
+    # Sola 2018 §4.5 Eq.173: the translational tangent is body-frame and
+    # couples to the rotational increment through J_l(delta_omega).
+    delta_omega = step_size * eta_omega
+    delta_v = step_size * eta_v
+    body_delta_t = (left_jacobian_so3(delta_omega) @ delta_v.unsqueeze(-1)).squeeze(-1)
+    t_new = current.t + (R_current @ body_delta_t.unsqueeze(-1)).squeeze(-1)
 
     return SE3Element(omega=omega_new, t=t_new)
+
+
+def geodesic_step_from_euclidean(
+    current: SE3Element,
+    grad_omega: torch.Tensor,
+    grad_t_cartesian: torch.Tensor,
+    step_size: float,
+) -> SE3Element:
+    """Convenience wrapper: take a geodesic step from a *Euclidean* gradient.
+
+    Round 13 (I-2): callers that have a raw Cartesian translation
+    gradient (the ``∂L/∂t`` produced by autograd against an
+    SE3Element.t Cartesian-translation parameter) should use this
+    wrapper. It performs the explicit pull-back through ``J_l(ω)^-1``
+    so the resulting tangent lives in the Lie algebra, then dispatches
+    to :func:`geodesic_step`. This is the safe alternative to calling
+    ``geodesic_step((grad_omega, grad_t_cartesian), …)`` which now
+    raises a ``RuntimeError`` (the previous silent mis-update was the
+    R12-I-2 finding).
+
+    Parameters
+    ----------
+    current : SE3Element
+        The current pose.
+    grad_omega : torch.Tensor of shape (3,)
+        Euclidean gradient w.r.t. the axis-angle rotation parameter.
+    grad_t_cartesian : torch.Tensor of shape (3,)
+        Euclidean gradient w.r.t. the Cartesian translation
+        parameter ``current.t``.
+    step_size : float
+        Geodesic step length (negative for descent).
+
+    Returns
+    -------
+    SE3Element
+        The new pose, equivalent to
+        ``geodesic_step(current,
+        riemannian_gradient_se3((grad_omega, grad_t_cartesian), current),
+        step_size)``.
+    """
+    riem_tangent = riemannian_gradient_se3(
+        (grad_omega, grad_t_cartesian), current,
+    )
+    return geodesic_step(current, riem_tangent, step_size)
 
 
 # ──────────────────────────────────────────────────────────────────────────
@@ -532,8 +747,12 @@ def batched_geodesic_step_axis_angle(
         )
 
     R_current = exp_map_so3(omega_batch)         # (..., 3, 3)
-    delta_R = exp_map_so3(step_size * grad_omega)  # (..., 3, 3)
+    delta_omega = step_size * grad_omega
+    delta_v = step_size * grad_t
+    delta_R = exp_map_so3(delta_omega)  # (..., 3, 3)
     R_new = R_current @ delta_R                  # (..., 3, 3)
     omega_new = log_map_so3(R_new)               # (..., 3)
-    t_new = t_batch + step_size * grad_t         # (..., 3)
+    body_delta_t = (left_jacobian_so3(delta_omega) @ delta_v.unsqueeze(-1)).squeeze(-1)
+    world_delta_t = (R_current @ body_delta_t.unsqueeze(-1)).squeeze(-1)
+    t_new = t_batch + world_delta_t              # (..., 3)
     return omega_new, t_new

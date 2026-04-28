@@ -43,13 +43,18 @@ from tac.se3 import (
     NEAR_PI_THRESHOLD,
     SE3Element,
     SMALL_ANGLE_THRESHOLD,
+    _LIE_ALGEBRA_SENTINEL,
     batched_geodesic_step_axis_angle,
     exp_map_se3,
     exp_map_so3,
     geodesic_step,
+    geodesic_step_from_euclidean,
     hat_so3,
+    inverse_left_jacobian_so3,
     left_jacobian_so3,
+    log_map_se3,
     log_map_so3,
+    mark_tangent_as_lie_algebra,
     riemannian_gradient_se3,
     vee_so3,
 )
@@ -336,6 +341,15 @@ def test_left_jacobian_well_conditioned_at_small_angles():
     assert torch.allclose(Jl, torch.eye(3, dtype=torch.float64), atol=1e-8)
 
 
+def test_left_jacobian_tends_to_identity_for_tiny_rotation_round10():
+    omega = torch.tensor([1e-10, -2e-10, 3e-10], dtype=torch.float64)
+    Jl = left_jacobian_so3(omega)
+    Jinv = inverse_left_jacobian_so3(omega)
+    eye = torch.eye(3, dtype=torch.float64)
+    assert torch.allclose(Jl, eye, atol=1e-9)
+    assert torch.allclose(Jinv, eye, atol=1e-9)
+
+
 # ──────────────────────────────────────────────────────────────────────────
 # exp_map_se3
 # ──────────────────────────────────────────────────────────────────────────
@@ -370,6 +384,20 @@ def test_exp_map_se3_rejects_shape_mismatch():
         exp_map_se3(torch.zeros(3), torch.zeros(2))
 
 
+def test_exp_log_se3_round_trip_random_pose_round10():
+    """Sola 2018 §4.5: exp_se3(log_se3(T)) should reconstruct both
+    rotation and translation for non-zero rotation and translation."""
+    omega = torch.tensor([0.3, -0.4, 0.2], dtype=torch.float64)
+    v = torch.tensor([1.0, -0.5, 0.25], dtype=torch.float64)
+    R, t = exp_map_se3(omega, v)
+
+    omega_rt, v_rt = log_map_se3(R, t)
+    R_rt, t_rt = exp_map_se3(omega_rt, v_rt)
+
+    assert torch.allclose(R_rt, R, atol=1e-10)
+    assert torch.allclose(t_rt, t, atol=1e-10)
+
+
 # ──────────────────────────────────────────────────────────────────────────
 # Riemannian gradient projection
 # ──────────────────────────────────────────────────────────────────────────
@@ -384,6 +412,22 @@ def test_riemannian_gradient_se3_is_identity_under_left_invariant_metric():
     proj = riemannian_gradient_se3((grad_omega, grad_t), elem)
     assert torch.equal(proj[0], grad_omega)
     assert torch.equal(proj[1], grad_t)
+
+
+def test_riemannian_gradient_translation_uses_inverse_left_jacobian_round10():
+    current = SE3Element(
+        omega=torch.tensor([0.2, -0.1, 0.3], dtype=torch.float64),
+        t=torch.zeros(3, dtype=torch.float64),
+    )
+    tangent_v = torch.tensor([0.4, -0.2, 0.1], dtype=torch.float64)
+    grad_t = left_jacobian_so3(current.omega) @ tangent_v
+
+    _grad_omega, grad_v = riemannian_gradient_se3(
+        (torch.zeros(3, dtype=torch.float64), grad_t),
+        current,
+    )
+
+    assert torch.allclose(grad_v, tangent_v, atol=1e-10)
 
 
 def test_riemannian_gradient_se3_rejects_bad_shapes():
@@ -411,7 +455,12 @@ def test_geodesic_step_preserves_orthogonality_across_many_steps():
     for k in range(1000):
         eta_omega = torch.randn(3, dtype=torch.float64) * 0.05
         eta_v = torch.randn(3, dtype=torch.float64) * 0.05
-        elem = geodesic_step(elem, (eta_omega, eta_v), step_size=-0.01)
+        # Round 13 (I-2): tangent is constructed in Lie-algebra
+        # coordinates by design (random direction, no Cartesian
+        # interpretation). Stamp the sentinel so geodesic_step accepts
+        # it without raising.
+        tangent = mark_tangent_as_lie_algebra((eta_omega, eta_v))
+        elem = geodesic_step(elem, tangent, step_size=-0.01)
         R = exp_map_so3(elem.omega)
         assert _is_so3(R, atol=1e-9), (
             f"orthogonality drift detected at step {k}: ω={elem.omega.tolist()}"
@@ -423,21 +472,43 @@ def test_geodesic_step_zero_tangent_is_no_op():
         omega=torch.tensor([0.1, 0.2, 0.3], dtype=torch.float64),
         t=torch.tensor([0.4, 0.5, 0.6], dtype=torch.float64),
     )
-    new = geodesic_step(elem,
-                        (torch.zeros(3, dtype=torch.float64),
-                         torch.zeros(3, dtype=torch.float64)),
-                        step_size=-0.5)
+    tangent = mark_tangent_as_lie_algebra((
+        torch.zeros(3, dtype=torch.float64),
+        torch.zeros(3, dtype=torch.float64),
+    ))
+    new = geodesic_step(elem, tangent, step_size=-0.5)
     assert torch.allclose(new.omega, elem.omega, atol=1e-10)
     assert torch.allclose(new.t, elem.t, atol=1e-10)
 
 
 def test_geodesic_step_returns_new_instance():
     elem = SE3Element(omega=torch.zeros(3), t=torch.zeros(3))
-    new = geodesic_step(elem, (torch.ones(3) * 0.01, torch.ones(3) * 0.01),
-                        step_size=-0.1)
+    tangent = mark_tangent_as_lie_algebra(
+        (torch.ones(3) * 0.01, torch.ones(3) * 0.01)
+    )
+    new = geodesic_step(elem, tangent, step_size=-0.1)
     assert new is not elem
     # And the original is unchanged (frozen dataclass).
     assert torch.equal(elem.omega, torch.zeros(3))
+
+
+def test_se3_retraction_differs_from_product_space_translation_round10():
+    """A non-zero rotation must rotate the translational increment; the old
+    product-space update t + step*v would leave it in world coordinates."""
+    elem = SE3Element(
+        omega=torch.tensor([0.0, 0.0, math.pi / 2.0], dtype=torch.float64),
+        t=torch.tensor([1.0, 2.0, 3.0], dtype=torch.float64),
+    )
+    tangent = mark_tangent_as_lie_algebra((
+        torch.tensor([0.0, 0.0, 0.2], dtype=torch.float64),
+        torch.tensor([1.0, 0.0, 0.0], dtype=torch.float64),
+    ))
+    step = 0.5
+
+    new = geodesic_step(elem, tangent, step)
+    old_product_t = elem.t + step * tangent[1]
+
+    assert not torch.allclose(new.t, old_product_t, atol=1e-8)
 
 
 # ──────────────────────────────────────────────────────────────────────────
@@ -459,9 +530,15 @@ def test_batched_geodesic_step_matches_per_element():
     )
 
     # Compare element-by-element against the dataclass path.
+    # The batched helper consumes raw (grad_omega, grad_t) directly per
+    # the optimiser hot path convention — those tensors ARE in
+    # Lie-algebra coordinates by construction (the optimiser packed
+    # them that way). For the per-element path we stamp the sentinel
+    # explicitly to satisfy the Round 13 contract.
     for i in range(N):
         elem = SE3Element(omega=omega_b[i].clone(), t=t_b[i].clone())
-        new = geodesic_step(elem, (grad_omega[i], grad_t[i]), step)
+        tangent = mark_tangent_as_lie_algebra((grad_omega[i], grad_t[i]))
+        new = geodesic_step(elem, tangent, step)
         assert torch.allclose(omega_new_b[i], new.omega, atol=1e-12)
         assert torch.allclose(t_new_b[i], new.t, atol=1e-12)
 
@@ -507,3 +584,91 @@ def test_thresholds_are_documented_and_positive():
     assert NEAR_PI_THRESHOLD > 0
     # And SMALL_ANGLE_THRESHOLD is loose enough for float32 (≈ 1e-7 eps).
     assert SMALL_ANGLE_THRESHOLD >= 1e-7
+
+
+# ──────────────────────────────────────────────────────────────────────────
+# Round 13 (R12-I-2) — geodesic_step refuses raw Cartesian translation
+# ──────────────────────────────────────────────────────────────────────────
+
+
+def test_r13_i2_geodesic_step_refuses_raw_cartesian_tangent():
+    """R12-I-2 regression: feeding ``geodesic_step`` a raw
+    (grad_omega, grad_t_cartesian) tuple — i.e. without going through
+    ``riemannian_gradient_se3`` or ``mark_tangent_as_lie_algebra`` —
+    must now raise ``RuntimeError``. Previously this silently
+    mis-updated the translation because ``geodesic_step`` interprets
+    ``tangent[1]`` as the Lie-algebra ``v``, not the Cartesian ``∂L/∂t``.
+    """
+    elem = SE3Element(
+        omega=torch.tensor([0.1, 0.2, 0.3], dtype=torch.float64),
+        t=torch.tensor([0.4, 0.5, 0.6], dtype=torch.float64),
+    )
+    raw_grad_omega = torch.tensor([0.01, 0.02, 0.03], dtype=torch.float64)
+    raw_grad_t = torch.tensor([0.05, 0.06, 0.07], dtype=torch.float64)
+    with pytest.raises(RuntimeError, match="Lie-algebra"):
+        geodesic_step(elem, (raw_grad_omega, raw_grad_t), step_size=-0.1)
+
+
+def test_r13_i2_riemannian_gradient_stamps_sentinel():
+    """``riemannian_gradient_se3`` must stamp the Lie-algebra sentinel
+    on its returned tangent so downstream ``geodesic_step`` accepts it
+    without raising."""
+    elem = SE3Element(
+        omega=torch.tensor([0.1, 0.2, 0.3], dtype=torch.float64),
+        t=torch.tensor([0.4, 0.5, 0.6], dtype=torch.float64),
+    )
+    raw_grad_omega = torch.tensor([0.01, 0.02, 0.03], dtype=torch.float64)
+    raw_grad_t = torch.tensor([0.05, 0.06, 0.07], dtype=torch.float64)
+    riem = riemannian_gradient_se3((raw_grad_omega, raw_grad_t), elem)
+    assert getattr(riem, _LIE_ALGEBRA_SENTINEL, False) or getattr(
+        riem[1], _LIE_ALGEBRA_SENTINEL, False
+    ), "riemannian_gradient_se3 must stamp the Lie-algebra sentinel"
+    # And geodesic_step must accept it without raising.
+    new = geodesic_step(elem, riem, step_size=-0.1)
+    assert isinstance(new, SE3Element)
+
+
+def test_r13_i2_geodesic_step_from_euclidean_round_trips():
+    """``geodesic_step_from_euclidean`` must accept raw Cartesian
+    gradients and produce the SAME pose as the manual
+    ``riemannian_gradient_se3`` → ``geodesic_step`` chain."""
+    elem = SE3Element(
+        omega=torch.tensor([0.1, 0.2, 0.3], dtype=torch.float64),
+        t=torch.tensor([0.4, 0.5, 0.6], dtype=torch.float64),
+    )
+    raw_grad_omega = torch.tensor([0.01, 0.02, 0.03], dtype=torch.float64)
+    raw_grad_t = torch.tensor([0.05, 0.06, 0.07], dtype=torch.float64)
+    step = -0.1
+
+    via_wrapper = geodesic_step_from_euclidean(
+        elem, raw_grad_omega, raw_grad_t, step
+    )
+    via_manual = geodesic_step(
+        elem,
+        riemannian_gradient_se3((raw_grad_omega, raw_grad_t), elem),
+        step,
+    )
+    assert torch.allclose(via_wrapper.omega, via_manual.omega, atol=1e-12)
+    assert torch.allclose(via_wrapper.t, via_manual.t, atol=1e-12)
+
+
+def test_r13_i2_mark_tangent_as_lie_algebra_explicit_waiver():
+    """Callers that genuinely construct an se(3) tangent (e.g. the
+    batched optimiser hot path or a synthetic test) can opt in via
+    ``mark_tangent_as_lie_algebra`` without going through
+    ``riemannian_gradient_se3``."""
+    elem = SE3Element(
+        omega=torch.zeros(3, dtype=torch.float64),
+        t=torch.zeros(3, dtype=torch.float64),
+    )
+    eta = (
+        torch.tensor([0.0, 0.0, 0.1], dtype=torch.float64),
+        torch.tensor([0.1, 0.0, 0.0], dtype=torch.float64),
+    )
+    # Without the marker → RuntimeError.
+    with pytest.raises(RuntimeError, match="Lie-algebra"):
+        geodesic_step(elem, eta, step_size=-0.1)
+    # With the marker → succeeds.
+    marked = mark_tangent_as_lie_algebra(eta)
+    new = geodesic_step(elem, marked, step_size=-0.1)
+    assert isinstance(new, SE3Element)
