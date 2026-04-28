@@ -337,6 +337,14 @@ def _faugeras_recover_R_t(
     # quadratic form below is the canonical scalar that breaks the tie.
     # (R17 finding 1 — replaces the legacy hardcoded depth=1.0 that made the
     # cheirality tie-break collapse to rotation magnitude alone.)
+    #
+    # R19 finding 2 [IMPORTANT — non-blocking]: under small rotations
+    # (n^T R n ≈ 1) this scalar approximates 1 + (n·t)/d, which is monotone
+    # in d and thus serves as a valid tie-break key.  For LARGE rotations
+    # (|ω| > ~0.1 rad) the n^T R n term diverges from 1 and the depth
+    # ordering can become non-monotone.  For the comma.ai per-frame regime
+    # |ω| ≲ 0.05 rad this is fine; for arbitrary use callers should verify
+    # via an explicit |ω| check before trusting the tie-break.
     depth = float((n @ (Hc @ n)).item())
     return R, t, depth
 
