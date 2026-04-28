@@ -1646,11 +1646,18 @@ def _inline_load_int4_lzma2(raw_bytes: bytes, device: str = "cpu") -> dict:
 def _load_renderer(renderer_path: str, device: str) -> nn.Module:
     """Load renderer from a .bin or .pt checkpoint.
 
-    Supports four checkpoint formats:
+    Supports six checkpoint formats:
         1. DPSM binary: DPSIMSRenderer (magic b"DPSM")
         2. ASYM binary: AsymmetricPairGenerator (magic b"ASYM")
-        3. INT4_LZMA2 binary: int4+LZMA2 compressed (magic b"I4LZ")
-        4. PyTorch pickle: state_dict or PairGenerator checkpoint
+        3. FP4A binary: FP4-quantized AsymmetricPairGenerator (magic b"FP4A")
+        4. INT4_LZMA2 binary: int4+LZMA2 compressed (magic b"I4LZ")
+        5. CCh1 binary (Lane I): Cool-Chic PairGenerator (magic b"CCh1")
+        6. C3R1 binary (Lane I): C3 residual PairGenerator (magic b"C3R1")
+        7. PyTorch pickle: state_dict or PairGenerator checkpoint
+
+    All variants produce the same `(B, 2, H, W, 3)` HWC pair output via
+    `model(mask_t, mask_t1)`, so the rest of the inflate pipeline (mask
+    decode → renderer → frame production) is unchanged across formats.
 
     Config metadata is read from the checkpoint's header/config key.
     """
@@ -1734,6 +1741,53 @@ def _load_renderer(renderer_path: str, device: str) -> nn.Module:
             model = _inline_load_fp4a(raw_bytes, device=device)
         elapsed = time.monotonic() - t0
         print(f"  Loaded FP4 AsymmetricPairGenerator from .bin ({len(raw_bytes):,} bytes, {elapsed:.1f}s)",
+              file=sys.stderr)
+        return model
+
+    # ── CCh1 format (Lane I): Cool-Chic PairGenerator ──
+    # 2026-04-27: replaces renderer.bin entirely for the Cool-Chic lane. The
+    # CCh1 .bin packs the synthesis decoder + multi-resolution latent grids +
+    # standard MotionPredictor in FP4 with an explicit `latents.<i>` blob
+    # entry per resolution (the latents are nn.Parameter inside a
+    # ParameterList, NOT nn.Conv2d, so the FP4A walk does not pick them up).
+    # The contest scorer machine MUST have the tac package installed for
+    # this format — there is no inline fallback (the latent ParameterList
+    # construction is non-trivial vs the standard conv-only walk).
+    if magic == b"CCh1":
+        try:
+            from tac.renderer_export import load_coolchic_renderer
+        except ImportError as exc:
+            raise RuntimeError(
+                "CCh1 (Cool-Chic) format requires the tac package "
+                "(tac.renderer_export.load_coolchic_renderer). The inflate "
+                "container must include the tac wheel for Lane I archives. "
+                f"Underlying error: {exc!r}"
+            )
+        model = load_coolchic_renderer(raw_bytes, device=device)
+        elapsed = time.monotonic() - t0
+        print(f"  Loaded Cool-Chic PairGenerator from .bin ({len(raw_bytes):,} bytes, {elapsed:.1f}s)",
+              file=sys.stderr)
+        return model
+
+    # ── C3R1 format (Lane I): C3 residual PairGenerator ──
+    # 2026-04-27: same lane as CCh1 but with the residual head added on top
+    # of a Cool-Chic base. The header records `residual_quant_bits` so the
+    # loader knows whether the residual head is FP4 (legacy, destroys gain)
+    # or int8 mixed-precision (preserves the float-path SegNet gain per
+    # reports/local_trend_coolchic_c3_20260425.md).
+    if magic == b"C3R1":
+        try:
+            from tac.renderer_export import load_c3_residual_renderer
+        except ImportError as exc:
+            raise RuntimeError(
+                "C3R1 (C3 residual) format requires the tac package "
+                "(tac.renderer_export.load_c3_residual_renderer). The "
+                "inflate container must include the tac wheel for Lane I "
+                f"archives. Underlying error: {exc!r}"
+            )
+        model = load_c3_residual_renderer(raw_bytes, device=device)
+        elapsed = time.monotonic() - t0
+        print(f"  Loaded C3 residual PairGenerator from .bin ({len(raw_bytes):,} bytes, {elapsed:.1f}s)",
               file=sys.stderr)
         return model
 

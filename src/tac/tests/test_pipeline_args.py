@@ -12,22 +12,40 @@ from pathlib import Path
 class TestPipelineSubprocessArgs(unittest.TestCase):
     """Verify pipeline.py's subprocess commands parse without error."""
 
-    def test_launch_script_flags_exist_in_train_distill(self):
-        """Every flag in launch_wilde_shiraz.sh exists in train_distill.py argparse."""
-        launch_src = Path("experiments/launch_wilde_shiraz.sh").read_text()
-        distill_src = Path("experiments/train_distill.py").read_text()
+    def test_pipeline_train_distill_flags_exist_in_train_distill(self):
+        """Every --flag pipeline.py passes to train_distill.py exists in its argparse.
 
-        launch_flags = set(re.findall(r'--([a-z][a-z0-9-]+)', launch_src))
+        Replaces the old launch_wilde_shiraz.sh test (script killed in commit 04392166
+        when ad-hoc deployment was retired in favor of the canonical pipeline).
+        """
+        repo_root = Path(__file__).resolve().parents[3]
+        pipeline_path = repo_root / "experiments" / "pipeline.py"
+        distill_path = repo_root / "experiments" / "train_distill.py"
+        if not pipeline_path.exists() or not distill_path.exists():
+            self.skipTest("pipeline.py or train_distill.py not present")
+
+        pipeline_src = pipeline_path.read_text()
+        distill_src = distill_path.read_text()
+
+        # Find each `cmd = [...]` (or `cmd_train = [...]` etc.) literal-list block whose
+        # contents reference train_distill.py and harvest only that block's --flags.
+        # This avoids cross-contamination with neighboring qat_finetune.py / archive blocks.
+        list_block = re.compile(r'\b\w*cmd\w*\s*=\s*\[(.*?)\]', re.DOTALL)
+        used_flags: set[str] = set()
+        for m in list_block.finditer(pipeline_src):
+            block = m.group(1)
+            if 'train_distill.py' not in block:
+                continue
+            used_flags.update(re.findall(r'"--([a-z][a-z0-9-]+)"', block))
+            used_flags.update(re.findall(r"'--([a-z][a-z0-9-]+)'", block))
+
         distill_flags = set(re.findall(r'add_argument\(["\']--([a-z][a-z0-9-]+)', distill_src))
 
-        # Non-training flags (SSH, rsync, vastai, etc.)
-        infra_flags = {'image', 'disk', 'progress', 'exclude', 'include', 'delete',
-                       'masks', 'gt-poses', 'upstream', 'tto-frames', 'output-dir',
-                       'device', 'seed', 'checkpoint-every', 'eval-every', 'log-every',
-                       'checkpoint'}
-        real_missing = launch_flags - distill_flags - infra_flags
-        self.assertEqual(real_missing, set(),
-                         f"Launch script flags not in train_distill.py: {real_missing}")
+        real_missing = used_flags - distill_flags
+        self.assertEqual(
+            real_missing, set(),
+            f"pipeline.py passes flags to train_distill.py that argparse does not accept: {real_missing}",
+        )
 
     def test_no_known_bad_flags_in_pipeline(self):
         """pipeline.py does NOT contain known-wrong flags for any subprocess."""

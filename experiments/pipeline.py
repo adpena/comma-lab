@@ -242,6 +242,28 @@ class PipelineConfig:
     # or "auto" (try int4_lzma2 first, fall back to fp4 if quality degrades too much)
     weight_compression: str = "fp4"
 
+    # Lane I (Cool-Chic / C3 residual neural-mask renderers, 2026-04-27).
+    # When `variant` is set, step_export dispatches to the matching builder
+    # + serializer (CCh1 / C3R1) instead of the canonical AsymmetricPair-
+    # Generator + FP4A path. Empty string / None → legacy ASYM/FP4A path.
+    # The trainer's checkpoint __meta__ also carries `variant`; that wins
+    # over the cfg value (mirrors the fp4_codebook precedence).
+    variant: str = ""
+    # Cool-Chic / C3 architecture knobs — used by the rebuild side when the
+    # __meta__ doesn't carry them (legacy training checkpoints). New
+    # checkpoints embed all of these in __meta__.
+    latent_ch: int = 8
+    latent_shapes: tuple = ((6, 8), (12, 16), (24, 32))
+    residual_hidden: int = 32
+    residual_layers: int = 2
+    residual_scale: float = 16.0
+    # Phase 3 of Lane I: when set, the C3 residual head ships at int{N}
+    # per-channel uniform quantization instead of FP4. Hypothesis: FP4's
+    # per-block max-scaling collapses the small-magnitude residual signal
+    # to 0; int8 preserves it at a tiny rate cost (~3.6% on the smoke
+    # config). None = legacy pure-FP4 path. Set to 8 to enable.
+    residual_quant_bits: int | None = None
+
     # Iterative refinement — convergence-driven, not arbitrary count
     max_iterations: int = 10          # safety bound (convergence stops earlier)
     convergence_tol: float = 0.01     # stop when score improvement < tol between cycles
@@ -387,8 +409,6 @@ def step_export(cfg: PipelineConfig, iteration: int = 0) -> Path:
             _log(f"Export marker unreadable + bin missing, forcing re-export", "WARN")
 
     _log("Exporting checkpoint to FP4")
-    from tac.renderer import build_renderer
-    from tac.renderer_export import export_asymmetric_checkpoint_fp4
 
     ckpt = torch.load(cfg.checkpoint, map_location="cpu", weights_only=False)
     state = ckpt.get("model_state_dict", ckpt) if isinstance(ckpt, dict) else ckpt
@@ -430,6 +450,98 @@ def step_export(cfg: PipelineConfig, iteration: int = 0) -> Path:
     # Take arch from __meta__ when present, fall back to cfg defaults.
     def _arch(key, default):
         return meta.get(key, getattr(cfg, key, default)) if meta else getattr(cfg, key, default)
+
+    # ── Lane I dispatch (2026-04-27) ────────────────────────────────────
+    # When the trainer's __meta__ records variant ∈ {coolchic_renderer,
+    # c3_residual_renderer}, the canonical build_renderer + FP4A path does
+    # NOT apply: those variants build PairGenerators wrapping a
+    # CoolChicLatentRenderer / C3ResidualRenderer with latent
+    # ParameterLists that the FP4A walk does not pick up. Dispatch to the
+    # CCh1 / C3R1 export instead. cfg.variant wins when __meta__ is absent
+    # (e.g. legacy checkpoints saved before the variant key was added).
+    variant = _arch("variant", getattr(cfg, "variant", "") or "")
+    if variant in ("coolchic_renderer", "c3_residual_renderer"):
+        from tac.renderer_export import (
+            export_coolchic_renderer,
+            export_c3_residual_renderer,
+        )
+        # Cool-Chic / C3 latent_shapes is stored as a list-of-lists in JSON
+        # (the trainer saves a tuple-of-tuples; torch.save round-trips it).
+        latent_shapes_raw = _arch("latent_shapes", getattr(cfg, "latent_shapes", ((6, 8), (12, 16), (24, 32))))
+        latent_shapes = tuple(tuple(s) for s in latent_shapes_raw)
+
+        if variant == "coolchic_renderer":
+            from tac.contrib.coolchic_renderer import build_coolchic_renderer
+            model = build_coolchic_renderer(
+                num_classes=int(_arch("num_classes", 5)),
+                embed_dim=int(_arch("embed_dim", 6)),
+                latent_ch=int(_arch("latent_ch", getattr(cfg, "latent_ch", 8))),
+                hidden=int(_arch("base_ch", 32)),
+                motion_hidden=int(_arch("motion_hidden", 32)),
+                latent_shapes=latent_shapes,
+                blend_mode=str(_arch("blend_mode", "scalar")),
+                noise_mode=str(_arch("noise_mode", "deterministic")),
+            )
+        else:  # c3_residual_renderer
+            from tac.contrib.coolchic_renderer import build_c3_residual_renderer
+            model = build_c3_residual_renderer(
+                num_classes=int(_arch("num_classes", 5)),
+                embed_dim=int(_arch("embed_dim", 6)),
+                latent_ch=int(_arch("latent_ch", getattr(cfg, "latent_ch", 6))),
+                hidden=int(_arch("base_ch", 24)),
+                motion_hidden=int(_arch("motion_hidden", 32)),
+                residual_hidden=int(_arch("residual_hidden", getattr(cfg, "residual_hidden", 32))),
+                residual_layers=int(_arch("residual_layers", getattr(cfg, "residual_layers", 2))),
+                residual_scale=float(_arch("residual_scale", getattr(cfg, "residual_scale", 16.0))),
+                latent_shapes=latent_shapes,
+                blend_mode=str(_arch("blend_mode", "scalar")),
+                noise_mode=str(_arch("noise_mode", "deterministic")),
+            )
+
+        missing, unexpected = model.load_state_dict(state, strict=False)
+        if missing or unexpected:
+            raise RuntimeError(
+                f"Checkpoint shape mismatch on Lane I variant={variant!r} — "
+                f"refuse to export wrong arch. "
+                f"missing={list(missing)[:5]} unexpected={list(unexpected)[:5]}. "
+                f"Verify latent_shapes={latent_shapes}, latent_ch=..., "
+                f"residual_hidden=... match training."
+            )
+        n_params = sum(p.numel() for p in model.parameters())
+
+        renderer_bin = iter_dir / "renderer.bin"
+        residual_quant_bits = _arch("residual_quant_bits",
+                                    getattr(cfg, "residual_quant_bits", None))
+        _log(
+            f"  Lane I export: variant={variant} codebook={fp4_codebook} "
+            f"robust_scale={fp4_robust_scale} "
+            f"residual_quant_bits={residual_quant_bits}"
+        )
+        if variant == "coolchic_renderer":
+            nbytes = export_coolchic_renderer(
+                model, str(renderer_bin),
+                codebook_name=fp4_codebook,
+                robust_scale=fp4_robust_scale,
+            )
+        else:
+            nbytes = export_c3_residual_renderer(
+                model, str(renderer_bin),
+                codebook_name=fp4_codebook,
+                robust_scale=fp4_robust_scale,
+                residual_quant_bits=residual_quant_bits,
+            )
+        _log(f"  {n_params:,} params → {nbytes:,} bytes ({nbytes/1024:.1f} KB)")
+        _mark_done(iter_dir, "export", {
+            "params": n_params, "bytes": nbytes,
+            "fp4_codebook": fp4_codebook, "fp4_robust_scale": fp4_robust_scale,
+            "variant": variant,
+            "residual_quant_bits": residual_quant_bits,
+        })
+        return renderer_bin
+
+    # ── Legacy ASYM / FP4A path (default) ───────────────────────────────
+    from tac.renderer import build_renderer
+    from tac.renderer_export import export_asymmetric_checkpoint_fp4
 
     # 2026-04-26 third-layer arch-drift fix: route through build_renderer
     # — the SAME function train_renderer uses — so PairGenerator vs

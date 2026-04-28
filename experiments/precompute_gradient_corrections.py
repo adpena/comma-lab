@@ -157,6 +157,11 @@ _RENDERER_MAGIC_FP4A = b"FP4A"
 _RENDERER_MAGIC_ASYM = b"ASYM"
 _RENDERER_MAGIC_DPSM = b"DPSM"
 _RENDERER_MAGIC_INT4_LZMA2 = b"I4LZ"
+# Lane I (Cool-Chic / C3 residual) — added 2026-04-27. Both formats route
+# through tac.renderer_export.load_any_renderer_checkpoint which dispatches
+# to load_coolchic_renderer / load_c3_residual_renderer respectively.
+_RENDERER_MAGIC_COOLCHIC = b"CCh1"
+_RENDERER_MAGIC_C3_RESIDUAL = b"C3R1"
 _RENDERER_PICKLE_MAGICS = (
     b"\x80\x02",      # pickle protocol 2
     b"\x80\x03",      # pickle protocol 3
@@ -209,15 +214,16 @@ def load_renderer(checkpoint_path: str, device: torch.device) -> torch.nn.Module
     if len(magic) < 4:
         raise RuntimeError(
             f"Renderer checkpoint {ckpt_path} is too short ({len(magic)}B); "
-            f"expected at least 4 magic bytes (FP4A/ASYM/DPSM/I4LZ) or a "
-            f"PyTorch pickle/zip header."
+            f"expected at least 4 magic bytes (FP4A/ASYM/DPSM/I4LZ/CCh1/C3R1) "
+            f"or a PyTorch pickle/zip header."
         )
 
     # Branch A: native binary export formats. Defer to the canonical
     # auto-detecting loader so I4LZ/ASYM/DPSM/FP4A all stay correct without
     # us reimplementing arch inference here.
     if magic in (_RENDERER_MAGIC_FP4A, _RENDERER_MAGIC_ASYM,
-                 _RENDERER_MAGIC_DPSM, _RENDERER_MAGIC_INT4_LZMA2):
+                 _RENDERER_MAGIC_DPSM, _RENDERER_MAGIC_INT4_LZMA2,
+                 _RENDERER_MAGIC_COOLCHIC, _RENDERER_MAGIC_C3_RESIDUAL):
         from tac.renderer_export import load_any_renderer_checkpoint
         device_str = str(device) if not isinstance(device, str) else device
         model = load_any_renderer_checkpoint(ckpt_path, device=device_str).eval()
@@ -270,7 +276,7 @@ def load_renderer(checkpoint_path: str, device: torch.device) -> torch.nn.Module
     raise RuntimeError(
         f"Unrecognized renderer checkpoint format at {ckpt_path}: "
         f"magic bytes {magic!r}. Accepted formats: "
-        f"FP4A/ASYM/DPSM/I4LZ binary exports, or a PyTorch pickle/zip "
+        f"FP4A/ASYM/DPSM/I4LZ/CCh1/C3R1 binary exports, or a PyTorch pickle/zip "
         f"(magics {[m for m in _RENDERER_PICKLE_MAGICS]}). "
         f"This is the 2026-04-26 DEN-V2 bug class — do NOT add a fallback to "
         f"torch.load; instead fix the producer or register a new magic in "

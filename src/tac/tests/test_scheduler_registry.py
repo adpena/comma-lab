@@ -72,7 +72,10 @@ class SchedulerRegistryTests(unittest.TestCase):
             registry = load_platform_registry(registry_path)
 
         self.assertEqual(registry.version, 1)
-        self.assertEqual(sorted(registry.platforms), ["remote-gpu", "coiled", "kaggle", "local", "modal"])
+        self.assertEqual(
+            sorted(registry.platforms),
+            sorted(["remote-gpu", "coiled", "kaggle", "local", "modal"]),
+        )
         self.assertEqual(registry.platforms["local"].budget.max_runs, 3)
         self.assertEqual(registry.platforms["local"].budget.max_archive_bytes, 2000000)
         self.assertEqual(
@@ -130,7 +133,7 @@ class SchedulerRegistryTests(unittest.TestCase):
         self.assertEqual(registry.version, 1)
         self.assertEqual(
             sorted(registry.platforms),
-            ["remote-gpu", "coiled", "kaggle", "local", "modal"],
+            sorted(["remote-gpu", "coiled", "kaggle", "local", "modal"]),
         )
         self.assertEqual(registry.platforms["local"].result_devices, ("cpu", "mps"))
         self.assertIn(".omx/logs/remote_jobs/remote-gpu-*.json", registry.platforms["remote-gpu"].manifest_globs)

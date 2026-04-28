@@ -1194,6 +1194,14 @@ def build_renderer(
     padding_mode: str = "zeros",
     use_dilation: bool = False,
     pose_dim: int = 0,
+    # 2026-04-27 cleanup: AsymmetricPairGenerator accepts max_flow_px /
+    # max_residual but build_renderer was dropping them, so train_distill.py
+    # (which calls AsymmetricPairGenerator directly with cfg.max_flow_px)
+    # silently diverged from qat_finetune.py / pipeline.py / train_renderer.py
+    # (which all call build_renderer and got the constant 20.0 default).
+    # Forward them explicitly so all four call sites resolve the same value.
+    max_flow_px: float = 20.0,
+    max_residual: float = 20.0,
 ) -> PairGenerator:
     """Build the full mask-to-pair rendering pipeline.
 
@@ -1239,6 +1247,8 @@ def build_renderer(
             mid_ch=mid_ch,
             motion_hidden=motion_hidden,
             depth=depth,
+            max_flow_px=max_flow_px,
+            max_residual=max_residual,
             pose_dim=pose_dim,
             use_dsconv=use_dsconv,
             padding_mode=padding_mode,
@@ -1266,6 +1276,9 @@ def build_renderer(
             embed_dim=embed_dim,
             hidden=motion_hidden,
             embedding=shared_embed,
+            max_flow_px=max_flow_px,
+            max_residual=max_residual,
+            padding_mode=padding_mode,
         )
     elif motion_type == "analytical":
         motion = AnalyticalMotionPredictor(

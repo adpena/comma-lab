@@ -45,6 +45,11 @@ __all__ = [
     "load_asymmetric_checkpoint",
     "export_asymmetric_checkpoint_fp4",
     "load_asymmetric_checkpoint_fp4",
+    # Lane I (Cool-Chic / C3 residual neural-mask renderers, 2026-04-27)
+    "export_coolchic_renderer",
+    "load_coolchic_renderer",
+    "export_c3_residual_renderer",
+    "load_c3_residual_renderer",
 ]
 
 
@@ -705,6 +710,19 @@ def _infer_asymmetric_config(model: nn.Module) -> dict:
     # Same use_zoom_flow value, different shapes. Dispatch on class identity.
     pair_mode = "asymmetric" if isinstance(model, AsymmetricPairGenerator) else "pair_generator"
 
+    # Codex round-7 fix #3: serialize blend_mode/noise_mode/motion_type so
+    # the loader can reconstruct non-default profiles correctly. Profiles
+    # set these to "spatial" / "deterministic" / "depth_aware" — without
+    # serialization the loader rebuilt with build_renderer's defaults
+    # ("scalar" / "deterministic" / "learned_cnn"), causing silent arch
+    # drift OR shape-mismatch crash on load_state_dict.
+    blend_mode = getattr(model, "blend_mode",
+                         getattr(renderer, "blend_mode", "scalar"))
+    noise_mode = getattr(model, "noise_mode",
+                         getattr(renderer, "noise_mode", "deterministic"))
+    motion_type = getattr(model, "motion_type",
+                          getattr(motion, "motion_type", "learned_cnn"))
+
     return {
         "num_classes": num_classes,
         "embed_dim": embed_dim,
@@ -724,6 +742,9 @@ def _infer_asymmetric_config(model: nn.Module) -> dict:
         "padding_mode": padding_mode,
         "use_dilation": use_dilation,
         "pair_mode": pair_mode,
+        "blend_mode": blend_mode,
+        "noise_mode": noise_mode,
+        "motion_type": motion_type,
     }
 
 
@@ -978,6 +999,11 @@ def load_asymmetric_checkpoint(
         # use_zoom_flow=False is passed (returns PairGenerator wrapping
         # MaskRenderer + MotionPredictor with default output_channels=2).
         from tac.renderer import build_renderer
+        # Codex round-7 fix #3: thread blend_mode/noise_mode/motion_type
+        # from the binary header. Profiles can set non-defaults (e.g.
+        # blend_mode="spatial", motion_type="depth_aware"); without
+        # threading them, the loader rebuilt a default-args
+        # PairGenerator whose state_dict didn't match the saved model.
         model = build_renderer(
             num_classes=header.get("num_classes", 5),
             embed_dim=header.get("embed_dim", 6),
@@ -990,6 +1016,9 @@ def load_asymmetric_checkpoint(
             padding_mode=header.get("padding_mode", "zeros"),
             use_dilation=header.get("use_dilation", False),
             use_zoom_flow=bool(header.get("use_zoom_flow") or False),
+            blend_mode=header.get("blend_mode", "scalar"),
+            noise_mode=header.get("noise_mode", "deterministic"),
+            motion_type=header.get("motion_type", "learned_cnn"),
         )
 
     # Build name -> module lookups
@@ -1411,6 +1440,11 @@ def load_asymmetric_checkpoint_fp4(
         # that through. Today no caller does — every step_export produces
         # pair_mode="asymmetric".
         from tac.renderer import build_renderer
+        # Codex round-7 fix #3: thread blend_mode/noise_mode/motion_type
+        # from the binary header. Profiles can set non-defaults (e.g.
+        # blend_mode="spatial", motion_type="depth_aware"); without
+        # threading them, the loader rebuilt a default-args
+        # PairGenerator whose state_dict didn't match the saved model.
         model = build_renderer(
             num_classes=header.get("num_classes", 5),
             embed_dim=header.get("embed_dim", 6),
@@ -1423,6 +1457,9 @@ def load_asymmetric_checkpoint_fp4(
             padding_mode=header.get("padding_mode", "zeros"),
             use_dilation=header.get("use_dilation", False),
             use_zoom_flow=bool(header.get("use_zoom_flow") or False),
+            blend_mode=header.get("blend_mode", "scalar"),
+            noise_mode=header.get("noise_mode", "deterministic"),
+            motion_type=header.get("motion_type", "learned_cnn"),
         )
 
     # Build name -> module lookups
@@ -1540,6 +1577,8 @@ def detect_checkpoint_type(data_or_path: Union[bytes, Path]) -> str:
         "dpsm" for DPSIMSRenderer, "asymmetric" for AsymmetricPairGenerator,
         "asymmetric_fp4" for FP4-quantized AsymmetricPairGenerator,
         "int4_lzma2" for int4 per-tensor + LZMA2 compressed,
+        "coolchic" for CoolChic PairGenerator (CCh1 magic),
+        "c3_residual" for C3 residual PairGenerator (C3R1 magic),
         "pytorch" for raw PyTorch checkpoints.
     """
     if isinstance(data_or_path, (str, Path)):
@@ -1555,6 +1594,10 @@ def detect_checkpoint_type(data_or_path: Union[bytes, Path]) -> str:
         return "asymmetric"
     elif data[:4] == b"I4LZ":
         return "int4_lzma2"
+    elif data[:4] == _COOLCHIC_MAGIC:
+        return "coolchic"
+    elif data[:4] == _C3_RESIDUAL_MAGIC:
+        return "c3_residual"
     else:
         return "pytorch"
 
@@ -1578,6 +1621,10 @@ def load_any_renderer_checkpoint(
         return load_asymmetric_checkpoint_fp4(data_or_path, device=device)
     elif fmt == "asymmetric":
         return load_asymmetric_checkpoint(data_or_path, device=device)
+    elif fmt == "coolchic":
+        return load_coolchic_renderer(data_or_path, device=device)
+    elif fmt == "c3_residual":
+        return load_c3_residual_renderer(data_or_path, device=device)
     elif fmt == "int4_lzma2":
         from tac.mixed_precision_export import load_int4_lzma2
         from tac.renderer import AsymmetricPairGenerator
@@ -1619,6 +1666,772 @@ def load_any_renderer_checkpoint(
             f"Raw PyTorch checkpoint detected — use _load_renderer() in "
             f"inflate_renderer.py for .pt format support."
         )
+
+
+# ── Lane I: Cool-Chic / C3 residual exports ─────────────────────────────
+#
+# 2026-04-27: Cool-Chic (`CoolChicLatentRenderer`) and C3 residual
+# (`C3ResidualRenderer`) wrap a small synthesis decoder + multi-resolution
+# learned latent grids. The latent grids are `nn.ParameterList` entries (one
+# per resolution), NOT `nn.Conv2d` weights, so the existing FP4A/ASYM
+# layer-walk (`_collect_all_conv_layers`) does not pick them up. We add a
+# parallel format that:
+#
+#   * Uses the same FP4 block-quantization primitives (block_size=32, default
+#     codebook) as `export_asymmetric_checkpoint_fp4` for everything that
+#     IS a conv/linear/embedding layer.
+#   * Adds explicit `latent_tensors` blob entries that quantize each
+#     `latents.<i>` parameter as a single flat tensor with its shape
+#     recorded in the JSON header.
+#   * Supports per-tensor MIXED PRECISION via `residual_quant_bits` (Phase
+#     3 of the Lane I work). The hypothesis from
+#     `reports/local_trend_coolchic_c3_20260425.md` is that FP4 destroys
+#     C3's residual-net float-path SegNet gain because the residual head is
+#     zero-init and learns small corrections that quantize to 0 under FP4's
+#     per-block scaling. Allowing residual_net + class_embed (the
+#     small-magnitude tail of the network) to ship at int8 per-channel —
+#     same scheme as `export_asymmetric_checkpoint` — preserves the gain at
+#     a tiny rate cost (~2 bits/param × ~3K params ≈ 0.75KB).
+#
+# Magic bytes: `CCh1` for `CoolChicLatentRenderer`-only PairGenerator,
+# `C3R1` for `C3ResidualRenderer` PairGenerator. The downstream inflate
+# pipeline produces `(B, 2, H, W, 3)` HWC pairs from
+# `pair_gen(mask_t, mask_t1)` exactly as for AsymmetricPairGenerator —
+# `_load_renderer_and_masks` does not need to special-case the variant.
+
+_COOLCHIC_MAGIC = b"CCh1"
+_C3_RESIDUAL_MAGIC = b"C3R1"
+_COOLCHIC_FORMAT_VERSION = 1
+_C3_RESIDUAL_FORMAT_VERSION = 1
+
+
+def _is_coolchic_renderer(model: nn.Module) -> bool:
+    """True if `model.renderer` is a CoolChicLatentRenderer (no residual head)."""
+    from tac.contrib.coolchic_renderer import CoolChicLatentRenderer, C3ResidualRenderer
+    inner = getattr(model, "renderer", None)
+    return isinstance(inner, CoolChicLatentRenderer) and not isinstance(inner, C3ResidualRenderer)
+
+
+def _is_c3_residual_renderer(model: nn.Module) -> bool:
+    """True if `model.renderer` is a C3ResidualRenderer."""
+    from tac.contrib.coolchic_renderer import C3ResidualRenderer
+    return isinstance(getattr(model, "renderer", None), C3ResidualRenderer)
+
+
+def _quantize_block_fp4(
+    flat: torch.Tensor,
+    codebook: torch.Tensor,
+    block_size: int,
+    robust_scale: bool = False,
+) -> tuple[bytes, int]:
+    """FP4 block-quantize a flat tensor; return (blob, original_numel).
+
+    Blob layout matches `export_asymmetric_checkpoint_fp4`:
+        [n_blocks × float16 scale] [packed nibbles, 2 weights/byte]
+    Caller is responsible for storing `numel` and `block_size` in the header
+    so the inverse operation can recover the flat tensor.
+    """
+    from tac.fp4_quantize import _quantize_block, _pack_indices_signs
+
+    numel = int(flat.numel())
+    flat = flat.detach().cpu().float().reshape(-1)
+    pad_len = (block_size - numel % block_size) % block_size
+    if pad_len > 0:
+        flat = torch.cat([flat, torch.zeros(pad_len)])
+
+    all_packed: list[torch.Tensor] = []
+    all_scales: list[float] = []
+    for start in range(0, flat.shape[0], block_size):
+        block = flat[start:start + block_size]
+        indices, signs, scale = _quantize_block(block, codebook, robust_scale=robust_scale)
+        packed = _pack_indices_signs(indices, signs)
+        all_packed.append(packed)
+        all_scales.append(float(scale) if isinstance(scale, torch.Tensor) else scale)
+
+    blob = bytearray()
+    for s in all_scales:
+        blob.extend(struct.pack("<e", s))
+    for p in all_packed:
+        blob.extend(p.numpy().tobytes())
+    return bytes(blob), numel
+
+
+def _dequantize_block_fp4(
+    blob: bytes,
+    numel: int,
+    block_size: int,
+    codebook: torch.Tensor,
+) -> torch.Tensor:
+    """Inverse of `_quantize_block_fp4`; returns a flat float32 tensor of `numel`."""
+    from tac.fp4_quantize import _unpack_indices_signs, _dequantize_block
+
+    padded_numel = numel + (block_size - numel % block_size) % block_size
+    n_blocks = padded_numel // block_size
+
+    scales_bytes = n_blocks * 2
+    scales = []
+    for i in range(n_blocks):
+        s = struct.unpack("<e", blob[i * 2:(i + 1) * 2])[0]
+        scales.append(s)
+
+    bytes_per_block = block_size // 2
+    total_packed = n_blocks * bytes_per_block
+    packed_raw = bytes(blob[scales_bytes:scales_bytes + total_packed])
+
+    all_values = []
+    for i in range(n_blocks):
+        block_packed = torch.tensor(
+            list(packed_raw[i * bytes_per_block:(i + 1) * bytes_per_block]),
+            dtype=torch.uint8,
+        )
+        indices, signs = _unpack_indices_signs(block_packed, block_size)
+        scale_t = torch.tensor(scales[i], dtype=torch.float32)
+        block_values = _dequantize_block(indices, signs, scale_t, codebook)
+        all_values.append(block_values)
+
+    return torch.cat(all_values)[:numel]
+
+
+def _quantize_int_per_channel(
+    weight: torch.Tensor,
+    bits: int,
+    transposed: bool,
+) -> bytes:
+    """Per-channel uniform int quantization (matches `export_asymmetric_checkpoint`).
+
+    Blob layout per channel:
+        [float16 scale] [packed values at `bits` per value]
+    """
+    if transposed:
+        C_out = weight.shape[1]
+    else:
+        C_out = weight.shape[0]
+    packed = bytearray()
+    for ch_idx in range(C_out):
+        ch_weight = (weight[:, ch_idx] if transposed else weight[ch_idx]).reshape(-1)
+        scale, unsigned = _quantize_tensor_uniform(ch_weight, bits)
+        packed.extend(struct.pack("<e", scale))
+        _pack_values(packed, unsigned, bits)
+    return bytes(packed)
+
+
+def _dequantize_int_per_channel(
+    blob: bytes,
+    shape: list[int],
+    bits: int,
+    transposed: bool,
+) -> torch.Tensor:
+    """Inverse of `_quantize_int_per_channel`."""
+    if transposed:
+        C_out = shape[1]
+        ch_shape = [shape[0]] + list(shape[2:])
+    else:
+        C_out = shape[0]
+        ch_shape = list(shape[1:])
+    fan_in = 1
+    for s in ch_shape:
+        fan_in *= s
+
+    out = torch.zeros(shape, dtype=torch.float32)
+    w_offset = 0
+    for ch_idx in range(C_out):
+        scale = struct.unpack("<e", blob[w_offset:w_offset + 2])[0]
+        w_offset += 2
+        values, w_offset = _unpack_values(blob, w_offset, fan_in, bits)
+        dequant = _dequantize_values(values, bits, scale)
+        if transposed:
+            out[:, ch_idx] = dequant.reshape(ch_shape)
+        else:
+            out[ch_idx] = dequant.reshape(ch_shape)
+    return out
+
+
+def _infer_coolchic_config(model: nn.Module) -> dict:
+    """Infer constructor args for a CoolChic PairGenerator (CoolChicLatentRenderer + MotionPredictor)."""
+    from tac.contrib.coolchic_renderer import CoolChicLatentRenderer
+
+    renderer = model.renderer
+    motion = model.motion
+    assert isinstance(renderer, CoolChicLatentRenderer), \
+        f"_infer_coolchic_config expects CoolChicLatentRenderer, got {type(renderer).__name__}"
+
+    # Motion-predictor hidden width (mirrors _infer_asymmetric_config)
+    motion_hidden = 32
+    if hasattr(motion, "stem") and isinstance(motion.stem, nn.Sequential) and len(motion.stem) > 0:
+        first = motion.stem[0]
+        if isinstance(first, nn.Conv2d):
+            motion_hidden = first.out_channels
+
+    return {
+        "num_classes": int(renderer.num_classes),
+        "embed_dim": int(renderer.class_embed_dim),
+        "latent_ch": int(renderer.latent_ch),
+        "hidden": int(renderer.hidden),
+        "motion_hidden": int(motion_hidden),
+        "latent_shapes": [list(s) for s in renderer.latent_shapes],
+        "blend_mode": getattr(model, "blend_mode", "scalar"),
+        "noise_mode": getattr(model, "noise_mode", "deterministic"),
+    }
+
+
+def _infer_c3_residual_config(model: nn.Module) -> dict:
+    """Infer constructor args for a C3 residual PairGenerator."""
+    from tac.contrib.coolchic_renderer import C3ResidualRenderer
+
+    renderer = model.renderer
+    motion = model.motion
+    assert isinstance(renderer, C3ResidualRenderer), \
+        f"_infer_c3_residual_config expects C3ResidualRenderer, got {type(renderer).__name__}"
+    base = renderer.base_renderer
+
+    motion_hidden = 32
+    if hasattr(motion, "stem") and isinstance(motion.stem, nn.Sequential) and len(motion.stem) > 0:
+        first = motion.stem[0]
+        if isinstance(first, nn.Conv2d):
+            motion_hidden = first.out_channels
+
+    return {
+        "num_classes": int(renderer.num_classes),
+        # `embed_dim` here refers to the BASE renderer's class_embed_dim, which
+        # build_c3_residual_renderer uses as the canonical embed_dim arg.
+        "embed_dim": int(base.class_embed_dim),
+        "latent_ch": int(base.latent_ch),
+        "hidden": int(base.hidden),
+        "motion_hidden": int(motion_hidden),
+        "residual_hidden": int(renderer.residual_hidden),
+        "residual_layers": int(renderer.residual_layers),
+        "residual_scale": float(renderer.residual_scale),
+        "num_bands": int(renderer.num_bands),
+        "latent_shapes": [list(s) for s in base.latent_shapes],
+        "blend_mode": getattr(model, "blend_mode", "scalar"),
+        "noise_mode": getattr(model, "noise_mode", "deterministic"),
+    }
+
+
+# Names (under `model.renderer.`) that should ship at higher precision when
+# `residual_quant_bits` is non-None. These are the C3 residual-net params and
+# its dedicated class embedding — the float→FP4 collapse hypothesized in
+# `reports/local_trend_coolchic_c3_20260425.md`.
+def _is_c3_residual_param_name(full_name: str) -> bool:
+    """True for parameters that belong to the C3 residual head (NOT the base CoolChic)."""
+    return (
+        full_name.startswith("renderer.residual_net.")
+        or full_name == "renderer.class_embed.weight"
+    )
+
+
+def _export_coolchic_or_c3(
+    model: nn.Module,
+    output_path: Path,
+    *,
+    is_c3: bool,
+    block_size: int = 32,
+    codebook_name: str = "default",
+    robust_scale: bool = False,
+    residual_quant_bits: int | None = None,
+) -> int:
+    """Shared serializer for CoolChic / C3 residual PairGenerators.
+
+    Args:
+        model: PairGenerator wrapping CoolChicLatentRenderer (CCh1) or
+            C3ResidualRenderer (C3R1).
+        output_path: destination .bin path.
+        block_size: FP4 block size (default 32, matches FP4A).
+        codebook_name: "default" or "residual" (FP4 codebook selection).
+        robust_scale: per-block p99.5 scale instead of max.
+        residual_quant_bits: if not None, all params matching
+            `_is_c3_residual_param_name(...)` are stored at INT-`residual_quant_bits`
+            per-channel uniform quantization instead of FP4. Only meaningful
+            for C3R1 (no-op for CCh1 since the predicate matches nothing in
+            CoolChic state). Common values: 8 (preserves float-path gain) or
+            None (legacy, all FP4 — proven to destroy float-path gain).
+    """
+    from tac.fp4_quantize import DEFAULT_CODEBOOK, RESIDUAL_CODEBOOK
+
+    model.eval()
+    if is_c3:
+        config = _infer_c3_residual_config(model)
+        magic = _C3_RESIDUAL_MAGIC
+        version = _C3_RESIDUAL_FORMAT_VERSION
+    else:
+        config = _infer_coolchic_config(model)
+        magic = _COOLCHIC_MAGIC
+        version = _COOLCHIC_FORMAT_VERSION
+        # Mixed-precision residual quant is C3-only — silently noop on CCh.
+        residual_quant_bits = None
+
+    codebook = (RESIDUAL_CODEBOOK if codebook_name == "residual" else DEFAULT_CODEBOOK).clone()
+
+    # Walk the model: split params into three buckets by routing rule.
+    #   1. Latent grids (nn.Parameter inside `latents` ParameterList): FP4
+    #      block-quantized as flat tensors with explicit shape preservation.
+    #   2. Embeddings (nn.Embedding): FP4 block-quantized (or int8/int{N}
+    #      per-channel if residual_quant_bits set AND name matches).
+    #   3. Conv/Linear weights+biases: FP4 block (default) OR int per-channel
+    #      (when residual_quant_bits set AND name matches).
+    layers_meta: list[dict] = []
+    weight_blobs: list[bytes] = []
+
+    # Find the latent ParameterList path. CoolChic: model.renderer.latents.{i}.
+    # C3: model.renderer.base_renderer.latents.{i}.
+    if is_c3:
+        latent_owner = model.renderer.base_renderer
+        latent_owner_path = "renderer.base_renderer"
+    else:
+        latent_owner = model.renderer
+        latent_owner_path = "renderer"
+
+    # Ordered iteration of the ParameterList preserves the resolution order
+    # the constructor will reproduce.
+    for i, latent in enumerate(latent_owner.latents):
+        full_name = f"{latent_owner_path}.latents.{i}"
+        blob, numel = _quantize_block_fp4(
+            latent.detach().cpu(), codebook, block_size, robust_scale=robust_scale
+        )
+        weight_blobs.append(blob)
+        layers_meta.append({
+            "name": full_name,
+            "kind": "latent",
+            "shape": list(latent.shape),
+            "numel": numel,
+            "block_size": block_size,
+            "bits": 4,
+        })
+
+    # Embeddings — dedupe by id() (mirrors FP4A pattern).
+    seen_emb_ids: set[int] = set()
+    embedding_layers: list[tuple[str, nn.Embedding]] = []
+    for name, module in model.named_modules():
+        if isinstance(module, nn.Embedding):
+            if id(module) not in seen_emb_ids:
+                embedding_layers.append((name, module))
+                seen_emb_ids.add(id(module))
+
+    for emb_name, emb_module in embedding_layers:
+        full_name = f"{emb_name}.weight"
+        weight = emb_module.weight.detach().cpu().float()
+        # Mixed-precision check (C3-only): name lives at "renderer.class_embed.weight"
+        # → ships at int{bits} when residual_quant_bits is set.
+        if residual_quant_bits is not None and _is_c3_residual_param_name(full_name):
+            # 2D embedding tables: per-channel along dim 0 (the vocab dim).
+            blob = _quantize_int_per_channel(weight, residual_quant_bits, transposed=False)
+            weight_blobs.append(blob)
+            layers_meta.append({
+                "name": emb_name,
+                "kind": "embedding_int",
+                "shape": list(weight.shape),
+                "bits": int(residual_quant_bits),
+                "transposed": False,
+            })
+        else:
+            flat = weight.reshape(-1)
+            blob, numel = _quantize_block_fp4(
+                flat, codebook, block_size, robust_scale=robust_scale
+            )
+            weight_blobs.append(blob)
+            layers_meta.append({
+                "name": emb_name,
+                "kind": "embedding_fp4",
+                "shape": list(weight.shape),
+                "numel": numel,
+                "block_size": block_size,
+                "bits": 4,
+            })
+
+    # Conv2d / ConvTranspose2d / Linear — same walk as FP4A.
+    conv_layers = _collect_all_conv_layers(model)
+    for layer_info in conv_layers:
+        name = layer_info["name"]
+        module = layer_info["module"]
+        transposed = layer_info["transposed"]
+        is_linear = layer_info.get("is_linear", False)
+
+        weight = module.weight.detach().cpu().float()
+        bias = module.bias.detach().cpu().float() if module.bias is not None else None
+        has_bias = bias is not None
+
+        # Mixed-precision: residual_net.* layers ship at int{bits} per-channel.
+        weight_full_name = f"{name}.weight"
+        use_int = (residual_quant_bits is not None
+                   and _is_c3_residual_param_name(weight_full_name))
+
+        if use_int:
+            weight_blob = _quantize_int_per_channel(weight, residual_quant_bits, transposed)
+            # Bias: same int{bits} per-channel (matches export_asymmetric_checkpoint).
+            bias_blob = bytearray()
+            if has_bias:
+                C_out = weight.shape[1] if transposed else weight.shape[0]
+                n_levels = 2 ** residual_quant_bits
+                half = n_levels // 2
+                for ch_idx in range(C_out):
+                    b_val = bias[ch_idx].item()
+                    abs_max_b = max(abs(b_val), 6.2e-5)
+                    q = int(round(b_val / abs_max_b * (half - 1)))
+                    q = max(-(half - 1), min(half - 1, q))
+                    u = q + half
+                    bias_blob.extend(struct.pack("<e", abs_max_b))
+                    bias_blob.extend(struct.pack("<H", u))
+            weight_blobs.append(weight_blob)
+            weight_blobs.append(bytes(bias_blob))
+            layers_meta.append({
+                "name": name,
+                "kind": "conv_int",
+                "shape": list(weight.shape),
+                "bits": int(residual_quant_bits),
+                "transposed": transposed,
+                "is_linear": is_linear,
+                "has_bias": has_bias,
+                "bias_blob_len": len(bias_blob),
+            })
+        else:
+            flat = weight.reshape(-1)
+            weight_blob, numel = _quantize_block_fp4(
+                flat, codebook, block_size, robust_scale=robust_scale
+            )
+            # Bias: float16 per channel (matches FP4A).
+            bias_blob = bytearray()
+            if has_bias:
+                for ch_idx in range(bias.shape[0]):
+                    bias_blob.extend(struct.pack("<e", bias[ch_idx].item()))
+            weight_blobs.append(weight_blob)
+            weight_blobs.append(bytes(bias_blob))
+            layers_meta.append({
+                "name": name,
+                "kind": "conv_fp4",
+                "shape": list(weight.shape),
+                "numel": numel,
+                "block_size": block_size,
+                "bits": 4,
+                "transposed": transposed,
+                "is_linear": is_linear,
+                "has_bias": has_bias,
+                "bias_blob_len": len(bias_blob),
+            })
+
+    # Scalar params (e.g. PairGenerator.blend_logit) — same convention as FP4A.
+    scalar_params: dict[str, float] = {}
+    layer_names = {meta["name"] for meta in layers_meta}
+    for pname, param in model.named_parameters():
+        if param.numel() == 1:
+            # Skip params already covered by a layer (e.g. someone added a
+            # 1-elem weight inside a Conv that we walked above).
+            owns = False
+            for ln in layer_names:
+                if pname.startswith(ln):
+                    owns = True
+                    break
+            if not owns:
+                scalar_params[pname] = float(param.item())
+
+    header = {
+        "version": version,
+        "format": "coolchic" if not is_c3 else "c3_residual",
+        "quantization": "fp4_mixed" if residual_quant_bits else "fp4",
+        "block_size": block_size,
+        "codebook": codebook.tolist(),
+        "codebook_name": codebook_name,
+        "robust_scale": robust_scale,
+        "residual_quant_bits": residual_quant_bits,
+        **config,
+        "layers": layers_meta,
+        "scalar_params": scalar_params,
+    }
+    header_json = json.dumps(header, separators=(",", ":")).encode("utf-8")
+
+    buf = bytearray()
+    buf.extend(magic)
+    buf.extend(struct.pack("<I", len(header_json)))
+    buf.extend(header_json)
+    for blob in weight_blobs:
+        buf.extend(struct.pack("<I", len(blob)))
+        buf.extend(blob)
+
+    output_path = Path(output_path)
+    output_path.parent.mkdir(parents=True, exist_ok=True)
+    output_path.write_bytes(bytes(buf))
+
+    n_params = sum(p.numel() for p in model.parameters())
+    fmt_label = ("c3_residual" if is_c3 else "coolchic")
+    mp_label = (f" residual_int{residual_quant_bits}" if residual_quant_bits else "")
+    print(
+        f"[{fmt_label}-export]{mp_label} {n_params:,} params → {len(buf):,} bytes "
+        f"({len(buf) / max(n_params, 1) * 8:.2f} bits/param)"
+    )
+    return len(buf)
+
+
+def export_coolchic_renderer(
+    model: nn.Module,
+    output_path: Path,
+    *,
+    block_size: int = 32,
+    codebook_name: str = "default",
+    robust_scale: bool = False,
+) -> int:
+    """Serialize a Cool-Chic PairGenerator (CoolChicLatentRenderer + MotionPredictor) to .bin.
+
+    Format magic: `b"CCh1"`. See `_export_coolchic_or_c3` for the on-disk
+    layout. The latent ParameterList is captured as explicit `latent` blobs
+    (not pulled in by the conv-layer walk).
+    """
+    if not _is_coolchic_renderer(model):
+        raise TypeError(
+            f"export_coolchic_renderer expects a PairGenerator wrapping "
+            f"CoolChicLatentRenderer (and NOT C3ResidualRenderer). "
+            f"Got renderer={type(getattr(model, 'renderer', None)).__name__}"
+        )
+    return _export_coolchic_or_c3(
+        model, output_path,
+        is_c3=False,
+        block_size=block_size,
+        codebook_name=codebook_name,
+        robust_scale=robust_scale,
+        residual_quant_bits=None,
+    )
+
+
+def export_c3_residual_renderer(
+    model: nn.Module,
+    output_path: Path,
+    *,
+    block_size: int = 32,
+    codebook_name: str = "default",
+    robust_scale: bool = False,
+    residual_quant_bits: int | None = None,
+) -> int:
+    """Serialize a C3 residual PairGenerator (C3ResidualRenderer + MotionPredictor) to .bin.
+
+    Format magic: `b"C3R1"`. When `residual_quant_bits` is set (typical: 8),
+    the residual head's conv weights/biases and dedicated class embedding
+    ship at int{N} per-channel uniform quantization while the underlying
+    Cool-Chic base + motion predictor stay in FP4. This is Phase 3 of the
+    Lane I work — it is the SCIENCE blocker the trend report identified
+    (FP4 destroys C3's residual-net float-path SegNet gain).
+
+    Args mirror `export_asymmetric_checkpoint_fp4` plus `residual_quant_bits`.
+    """
+    if not _is_c3_residual_renderer(model):
+        raise TypeError(
+            f"export_c3_residual_renderer expects a PairGenerator wrapping "
+            f"C3ResidualRenderer. Got renderer={type(getattr(model, 'renderer', None)).__name__}"
+        )
+    return _export_coolchic_or_c3(
+        model, output_path,
+        is_c3=True,
+        block_size=block_size,
+        codebook_name=codebook_name,
+        robust_scale=robust_scale,
+        residual_quant_bits=residual_quant_bits,
+    )
+
+
+def _load_coolchic_or_c3(
+    data_or_path: Union[bytes, Path],
+    *,
+    is_c3: bool,
+    device: str = "cpu",
+) -> nn.Module:
+    """Shared deserializer for CCh1 / C3R1. Returns a PairGenerator in eval mode."""
+    if isinstance(data_or_path, (str, Path)):
+        data = Path(data_or_path).read_bytes()
+    else:
+        data = bytes(data_or_path)
+
+    expected_magic = _C3_RESIDUAL_MAGIC if is_c3 else _COOLCHIC_MAGIC
+    expected_version = _C3_RESIDUAL_FORMAT_VERSION if is_c3 else _COOLCHIC_FORMAT_VERSION
+    fmt_label = "c3_residual" if is_c3 else "coolchic"
+
+    offset = 0
+    if data[offset:offset + 4] != expected_magic:
+        raise ValueError(
+            f"Not a {fmt_label} ({expected_magic!r}) binary; "
+            f"got magic {data[offset:offset+4]!r}"
+        )
+    offset += 4
+
+    header_len = struct.unpack("<I", data[offset:offset + 4])[0]
+    offset += 4
+    header = json.loads(data[offset:offset + header_len].decode("utf-8"))
+    offset += header_len
+
+    version = header.get("version", 0)
+    if version != expected_version:
+        raise ValueError(
+            f"Unsupported {fmt_label} export version {version} "
+            f"(expected {expected_version})"
+        )
+
+    block_size = int(header["block_size"])
+    codebook = torch.tensor(header["codebook"], dtype=torch.float32)
+
+    # Construct the PairGenerator from the recorded config. This must mirror
+    # `build_coolchic_renderer` / `build_c3_residual_renderer` exactly.
+    if is_c3:
+        from tac.contrib.coolchic_renderer import build_c3_residual_renderer
+        latent_shapes = tuple(tuple(s) for s in header["latent_shapes"])
+        model = build_c3_residual_renderer(
+            num_classes=int(header.get("num_classes", 5)),
+            embed_dim=int(header.get("embed_dim", 6)),
+            latent_ch=int(header.get("latent_ch", 6)),
+            hidden=int(header.get("hidden", 24)),
+            motion_hidden=int(header.get("motion_hidden", 32)),
+            residual_hidden=int(header.get("residual_hidden", 32)),
+            residual_layers=int(header.get("residual_layers", 2)),
+            residual_scale=float(header.get("residual_scale", 16.0)),
+            latent_shapes=latent_shapes,
+            blend_mode=str(header.get("blend_mode", "scalar")),
+            noise_mode=str(header.get("noise_mode", "deterministic")),
+        )
+    else:
+        from tac.contrib.coolchic_renderer import build_coolchic_renderer
+        latent_shapes = tuple(tuple(s) for s in header["latent_shapes"])
+        model = build_coolchic_renderer(
+            num_classes=int(header.get("num_classes", 5)),
+            embed_dim=int(header.get("embed_dim", 6)),
+            latent_ch=int(header.get("latent_ch", 8)),
+            hidden=int(header.get("hidden", 32)),
+            motion_hidden=int(header.get("motion_hidden", 32)),
+            latent_shapes=latent_shapes,
+            blend_mode=str(header.get("blend_mode", "scalar")),
+            noise_mode=str(header.get("noise_mode", "deterministic")),
+        )
+
+    # Build name → module/parameter lookups.
+    embedding_lookup: dict[str, nn.Embedding] = {}
+    conv_lookup: dict[str, nn.Module] = {}
+    for name, module in model.named_modules():
+        if isinstance(module, nn.Embedding):
+            embedding_lookup[name] = module
+        elif isinstance(module, (nn.Conv2d, nn.ConvTranspose2d, nn.Linear)):
+            conv_lookup[name] = module
+
+    # Iterate layers in header order; restore weights.
+    for layer_meta in header["layers"]:
+        name = layer_meta["name"]
+        kind = layer_meta["kind"]
+
+        blob_len = struct.unpack("<I", data[offset:offset + 4])[0]
+        offset += 4
+        blob = data[offset:offset + blob_len]
+        offset += blob_len
+
+        if kind == "latent":
+            shape = layer_meta["shape"]
+            numel = layer_meta["numel"]
+            blk = layer_meta.get("block_size", block_size)
+            flat = _dequantize_block_fp4(blob, numel, blk, codebook)
+            tensor = flat.reshape(shape)
+            # Walk attribute path: the latent owner is `renderer` (CCh) or
+            # `renderer.base_renderer` (C3); the suffix is `latents.<i>`.
+            # Use direct attribute walk so we update the actual nn.Parameter
+            # storage rather than registering a new one.
+            obj = model
+            parts = name.split(".")
+            for p in parts[:-2]:
+                obj = getattr(obj, p)
+            # obj is now the renderer; obj.latents is ParameterList.
+            idx = int(parts[-1])
+            with torch.no_grad():
+                obj.latents[idx].data.copy_(tensor)
+            continue
+
+        if kind == "embedding_fp4":
+            shape = layer_meta["shape"]
+            numel = layer_meta["numel"]
+            blk = layer_meta.get("block_size", block_size)
+            flat = _dequantize_block_fp4(blob, numel, blk, codebook)
+            with torch.no_grad():
+                embedding_lookup[name].weight.copy_(flat.reshape(shape))
+            continue
+
+        if kind == "embedding_int":
+            shape = layer_meta["shape"]
+            bits = int(layer_meta["bits"])
+            transposed = bool(layer_meta.get("transposed", False))
+            tensor = _dequantize_int_per_channel(blob, shape, bits, transposed)
+            with torch.no_grad():
+                embedding_lookup[name].weight.copy_(tensor)
+            continue
+
+        # Conv-like layers: read bias blob next.
+        bias_blob_len = struct.unpack("<I", data[offset:offset + 4])[0]
+        offset += 4
+        bias_blob = data[offset:offset + bias_blob_len]
+        offset += bias_blob_len
+
+        module = conv_lookup[name]
+        shape = layer_meta["shape"]
+        transposed = bool(layer_meta.get("transposed", False))
+        has_bias = bool(layer_meta.get("has_bias", False))
+
+        if kind == "conv_fp4":
+            numel = layer_meta["numel"]
+            blk = layer_meta.get("block_size", block_size)
+            flat = _dequantize_block_fp4(blob, numel, blk, codebook)
+            with torch.no_grad():
+                module.weight.copy_(flat.reshape(shape))
+                if has_bias and bias_blob:
+                    C_out = shape[1] if transposed else shape[0]
+                    for ch_idx in range(C_out):
+                        b_val = struct.unpack("<e", bias_blob[ch_idx * 2:(ch_idx + 1) * 2])[0]
+                        module.bias[ch_idx] = b_val
+            continue
+
+        if kind == "conv_int":
+            bits = int(layer_meta["bits"])
+            tensor = _dequantize_int_per_channel(blob, shape, bits, transposed)
+            with torch.no_grad():
+                module.weight.copy_(tensor)
+                if has_bias and bias_blob:
+                    C_out = shape[1] if transposed else shape[0]
+                    n_levels = 2 ** bits
+                    half = n_levels // 2
+                    b_offset = 0
+                    for ch_idx in range(C_out):
+                        scale_b = struct.unpack("<e", bias_blob[b_offset:b_offset + 2])[0]
+                        b_offset += 2
+                        u_val = struct.unpack("<H", bias_blob[b_offset:b_offset + 2])[0]
+                        b_offset += 2
+                        q = u_val - half
+                        module.bias[ch_idx] = q / max(half - 1, 1) * scale_b
+            continue
+
+        raise ValueError(f"Unknown layer kind {kind!r} in {fmt_label} binary at offset {offset}")
+
+    # Restore scalar params (e.g. blend_logit).
+    scalar_params = header.get("scalar_params", {})
+    if scalar_params:
+        param_dict = dict(model.named_parameters())
+        with torch.no_grad():
+            for pname, pval in scalar_params.items():
+                if pname in param_dict:
+                    param_dict[pname].fill_(pval)
+
+    # Defense: every byte must be consumed (mirrors FP4A loader contract).
+    if offset != len(data):
+        raise ValueError(
+            f"Trailing data: {len(data) - offset} bytes unread (expected 0) in {fmt_label} binary"
+        )
+
+    model = model.to(device)
+    model.eval()
+    return model
+
+
+def load_coolchic_renderer(
+    data_or_path: Union[bytes, Path],
+    device: str = "cpu",
+) -> nn.Module:
+    """Deserialize a Cool-Chic PairGenerator from a `b"CCh1"` .bin."""
+    return _load_coolchic_or_c3(data_or_path, is_c3=False, device=device)
+
+
+def load_c3_residual_renderer(
+    data_or_path: Union[bytes, Path],
+    device: str = "cpu",
+) -> nn.Module:
+    """Deserialize a C3 residual PairGenerator from a `b"C3R1"` .bin."""
+    return _load_coolchic_or_c3(data_or_path, is_c3=True, device=device)
 
 
 # ── Smoke test ─────────────────────────────────────────────────────────
