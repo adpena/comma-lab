@@ -1,45 +1,64 @@
-"""Bit-depth STE surrogate regression tests — Rounds 4 & 6.
+"""Bit-depth STE surrogate regression tests — Rounds 4, 6 & 7.
 
 Round 4 (HAWQ residual surrogate): the bit-depth gradient must produce
 a *direction* that escapes the zero bin (increase bits when ``q=0``
 under-shoots a non-zero weight).
 
-Round 6 (finite-difference STE): the residual surrogate is provably
-WRONG when the integer grids at adjacent bit-depths are NOT NESTED.
-Our quantizer uses ``levels(b) = 2^(b-1) - 1 = {1, 3, 7, 15, …}`` —
-a sequence of co-prime denominators, so the b=4 grid is NOT a
-refinement of the b=3 grid. A weight that lands on a "sweet spot"
-at b=3 (e.g., ``w ≈ 1/3``) can have STRICTLY HIGHER distortion at b=4
-because ``1/3`` is not representable on ``{±k/7}``. The Round 4
-surrogate's monotone assumption pushes SGD toward the worse bit-depth
-in those cases.
-
-Round 6 fix: replace the residual approximation with a central
-finite-difference STE that uses the ACTUAL quantization output at
-``b±1`` captured in forward:
+Round 6 (q-delta finite-difference STE): the residual surrogate is
+provably WRONG when the integer grids at adjacent bit-depths are NOT
+NESTED. ``levels(b) = 2^(b-1) - 1 = {1, 3, 7, 15, …}`` is a sequence
+of co-prime denominators, so the b=4 grid is NOT a refinement of the
+b=3 grid. The Round 6 fix replaced the residual approximation with::
 
     ∂q/∂bits ≈ (q(b+1) − q(b−1)) / 2
-    ∂L/∂bits = ∂L/∂q · ∂q/∂bits = grad_output · (qp − qm) / 2
+    ∂L/∂bits = grad_output · (qp − qm) / 2
+
+Round 7 (LOSS-DELTA finite-difference STE): the Round 6 q-delta FD
+passes synthetic-upstream tests but INVERTS the sign update under the
+realistic MSE chain. Worked example::
+
+    w = 0.1, scale = 1, b = 2 → q = 0 (zero bin)
+    q_bplus(b=3)  = 0          (step=1/3 > 0.1, still rounds to 0)
+    q_bminus(b=1) = +1         (sign quantizer)
+    grad_output (MSE) = q − w = -0.1
+    Round 6 grad_bits = -0.1 · (0 − 1)/2 = +0.05   → SGD LOWERS bits
+    bits=1 → q=+1 → MSE = 0.81 (vs MSE=0.01 at b=2 — STRICTLY WORSE)
+
+Round 7 replaces the q-delta FD with a LOSS-DELTA FD chained with the
+upstream gradient as a magnitude scaler::
+
+    L(q) = ½(q − w)²                     (canonical local proxy)
+    local_diff = [L(q_bplus) − L(q_bminus)] / 2
+    grad_bits  = |grad_output| · local_diff
+
+The sign of the bit update now comes from the local loss landscape, not
+from a chain product that can invert under MSE. Verification of the
+fix at the bug case::
+
+    sq_err_bplus  = (0  − 0.1)² = 0.01
+    sq_err_bminus = (1  − 0.1)² = 0.81
+    local_diff    = (0.01 − 0.81)/2 = -0.40
+    grad_bits     = |-0.1| · -0.40 = -0.04    → SGD RAISES bits ✓
+
+Round 7 also tightens the zero-distortion short-circuit from
+``weight == 0`` (which incorrectly suppressed the b=1 sign-quantizer
+escape at w=0) to ``q == weight`` (element-wise zero distortion at the
+current bit-depth).
 
 Properties tested below:
-  * Zero-bin escape (Round 4 invariant): under synthetic positive
-    upstream, ``grad_bits`` for ``q=0, w>0`` must point in the bit-raising
-    direction (i.e., negative under the SGD update ``bits ← bits − lr·g``).
-  * Sweet-spot detection (Round 6 fix): under synthetic positive upstream,
-    ``grad_bits`` at a non-monotone-favourable bit-depth must point in
-    the bit-LOWERING (or zero) direction so SGD does not push us into
-    the worse adjacent grid.
-  * Zero distortion → zero gradient.
+  * Zero-bin escape (Rounds 4 & 7): under SYNTHETIC ``+1`` upstream,
+    ``grad_bits`` is NEGATIVE at the zero bin for both signs of the
+    weight (the local loss landscape always favors raising bits when
+    a finer grid would reduce distortion).
+  * Sweet-spot detection (Round 6/7): the FD surrogate captures the
+    actual local-loss landscape; under the MSE chain at a true sweet
+    spot the magnitude is dominated by ``|grad_output|`` which is
+    small, so SGD barely moves regardless of FD sign.
+  * Zero distortion → zero gradient (Round 7 fix uses ``q == weight``,
+    not ``weight == 0``).
   * Sign correctness vs the actual loss-delta direction across a sweep.
-
-The tests below use synthetic upstream gradients (not MSE-chained
-loss) because the surrogate's contract is to provide an honest
-``∂q/∂bits`` proxy; the chain with arbitrary downstream loss is the
-caller's responsibility. MSE-chain tests for the *combined*
-behaviour are kept at the bottom for completeness, with expectations
-updated to reflect the new finite-difference semantics (which can
-have more nuanced sign than the residual surrogate when the grid is
-non-nested).
+  * NEW Round 7 math-safety checks under REAL MSE CHAIN at the four
+    canonical operating points.
 """
 from __future__ import annotations
 
@@ -109,19 +128,24 @@ def _quantize_at_bits(
 
 
 def test_zero_bin_grad_bits_points_toward_more_bits_synthetic():
-    """w=0.1, scale=1, b=2 → q=0. Under synthetic positive upstream,
-    the central-FD surrogate gives
-        grad_bits = +1 · (q_bplus − q_bminus) / 2
-                  = +1 · (0 − sign(w)·1) / 2
-    For positive w: grad_bits = -0.5 (negative → SGD raises bits).
-    For negative w: grad_bits = +0.5 (positive → SGD lowers bits, but
-    note SGD on ``bits − lr·grad`` with grad=+0.5 lowers bits — still
-    pointing toward 1-bit which is sign(w)·scale = -1, the other
-    direction of "escape" from the dead zero bin).
+    """w=±0.1, scale=1, b=2 → q=0 (zero bin).
 
-    The Round 4 invariant is captured per-element via ``grad_bits ·
-    sign(w) < 0`` — i.e., the gradient points in the direction that
-    brings ``q`` toward ``w`` regardless of weight sign.
+    Round 7 LOSS-DELTA FD under synthetic ``+1`` upstream::
+
+        q_bplus(b=3)  = 0  (step=1/3 > 0.1, still rounds to 0)
+        q_bminus(b=1) = sign(w)·1  (sign quantizer)
+        sq_err_bplus  = (0 − w)² = 0.01           (BOTH signs)
+        sq_err_bminus = (sign(w) − w)² = 0.81     (BOTH signs)
+        local_diff    = (0.01 − 0.81)/2 = -0.40
+        grad_bits     = |+1| · -0.40 = -0.40      (NEGATIVE for BOTH signs)
+
+    Unlike the Round 6 q-delta FD (which gave grad_bits = -sign(w)·0.5,
+    flipping with weight sign), the Round 7 loss-delta FD produces a
+    SIGN-INVARIANT bit gradient: the local loss is symmetric in w, so
+    the FD direction depends only on which adjacent grid is *closer to
+    w*. At the zero bin the FINER grid is always closer (the b+1 grid
+    can represent values nearer to 0), so the FD points to "raise bits"
+    regardless of weight sign.
     """
     weight, bits_param, q = _quantize_with_grad(
         weight_val=0.1, bits=2.0, scale_val=1.0,
@@ -132,27 +156,28 @@ def test_zero_bin_grad_bits_points_toward_more_bits_synthetic():
     grad_out = torch.ones_like(q)
     q.backward(grad_out)
     assert bits_param.grad is not None
-    # Per-element: grad_bits · sign(w) must be NEGATIVE — the gradient
-    # opposes the weight's sign, so SGD lowers ``q`` toward ``w`` from
-    # above (positive w → grad_bits negative → bits rise → q rises from 0)
-    # and SGD lowers ``q`` toward ``w`` from below (negative w → grad_bits
-    # positive → bits fall → q falls from 0 toward the 1-bit -scale).
-    sign_w = torch.sign(weight.detach())
-    product = bits_param.grad * sign_w
-    assert torch.all(product < 0), (
-        f"zero-bin grad_bits direction wrong: grad·sign(w) = {product.tolist()}, "
-        f"should all be negative (escape zero bin)."
+    # Round 7: grad_bits is NEGATIVE for both signs (sign-invariant loss).
+    assert torch.all(bits_param.grad < 0), (
+        f"zero-bin grad_bits direction wrong: got {bits_param.grad.tolist()}, "
+        f"should all be NEGATIVE (escape zero bin via finer grid)."
     )
 
 
 def test_nonzero_bin_grad_bits_under_synthetic_upstream():
-    """w=0.7, scale=1, b=2 (q=±1). Under synthetic positive upstream,
-    the FD surrogate captures the marginal benefit of an extra bit:
-        q_bplus(b=3) for w=+0.7: round(0.7/0.333)·0.333 = 2/3 ≈ 0.667
-        q_bminus(b=1) for w=+0.7: sign quantizer = +1.0
-        (qp − qm)/2 = (0.667 − 1)/2 = -0.167   (negative)
-    So ``grad_bits`` points toward MORE bits — exactly when the b=3 grid
-    representation (0.667) is closer to w=0.7 than the b=1 sign value (1).
+    """w=±0.7, scale=1, b=2 → q=±1 (saturated).
+
+    Round 7 LOSS-DELTA FD under synthetic ``+1`` upstream::
+
+        q_bplus(b=3)  for w=±0.7: ±0.667    (closer to w)
+        q_bminus(b=1) for w=±0.7: ±1.0      (sign quantizer = current q)
+        sq_err_bplus  = (0.667 − 0.7)² ≈ 0.00109
+        sq_err_bminus = (1.0   − 0.7)² = 0.09
+        local_diff    ≈ (0.00109 − 0.09)/2 ≈ -0.0445
+        grad_bits     = |+1| · -0.0445 = -0.0445  (NEGATIVE for BOTH signs)
+
+    The b=3 grid is closer to |w|=0.7 than the b=1 sign quantizer, so
+    the FD correctly points to raising bits. Sign-invariant (symmetric
+    loss in w).
     """
     weight, bits_param, q = _quantize_with_grad(
         weight_val=0.7, bits=2.0, scale_val=1.0,
@@ -163,12 +188,10 @@ def test_nonzero_bin_grad_bits_under_synthetic_upstream():
     grad_out = torch.ones_like(q)
     q.backward(grad_out)
     assert bits_param.grad is not None
-    # grad_bits · sign(w) should be NEGATIVE (raises bits → finer grid).
-    sign_w = torch.sign(weight.detach())
-    product = bits_param.grad * sign_w
-    assert torch.all(product < 0), (
-        f"nonzero-bin grad_bits direction wrong: grad·sign(w) = {product.tolist()}, "
-        f"should be negative."
+    # Round 7: grad_bits is NEGATIVE for both signs (raise bits → finer grid).
+    assert torch.all(bits_param.grad < 0), (
+        f"nonzero-bin grad_bits direction wrong: got {bits_param.grad.tolist()}, "
+        f"should all be NEGATIVE (raise bits → finer grid closer to w)."
     )
 
 
@@ -243,10 +266,18 @@ def test_zero_bin_signal_persists_at_higher_bits():
 
 def test_one_bit_branch_grad_bits_under_synthetic():
     """1-bit elements use the sign quantizer (out = sign(w)·scale).
-    q_bplus(b=2) general grid; q_bminus(b=1)=q (clamped at 1). For
-    w=0.1, scale=1: q=+1 (sign), q_bplus(b=2) = round(0.1/1)*1 = 0,
-    q_bminus(b=1) = +1. (qp − qm)/2 = (0 − 1)/2 = -0.5. Under synthetic
-    +1: grad_bits = -0.5 → SGD raises bits ✓.
+
+    Round 7 LOSS-DELTA FD: for w=±0.1, b=1::
+
+        q             = ±1 (sign quantizer)
+        q_bplus(b=2)  = round(±0.1 / 1) · 1 = 0
+        q_bminus(b=1) = ±1     (clamped to b=1)
+        sq_err_bplus  = (0 − 0.1)² = 0.01
+        sq_err_bminus = (1 − 0.1)² = 0.81
+        local_diff    = (0.01 − 0.81)/2 = -0.40
+        grad_bits     = |+1| · -0.40 = -0.40   (NEGATIVE for BOTH signs)
+
+    SGD raises bits to escape the sign quantizer, sign-invariant.
     """
     weight, bits_param, q = _quantize_with_grad(
         weight_val=0.1, bits=1.0, scale_val=1.0,
@@ -257,11 +288,10 @@ def test_one_bit_branch_grad_bits_under_synthetic():
     grad_out = torch.ones_like(q)
     q.backward(grad_out)
     assert bits_param.grad is not None
-    sign_w = torch.sign(weight.detach())
-    product = bits_param.grad * sign_w
-    assert torch.all(product < 0), (
-        f"1-bit grad_bits direction wrong: grad·sign(w) = {product.tolist()}, "
-        f"should be negative (raise bits to escape sign quantizer)."
+    # Round 7: grad_bits is NEGATIVE for both signs (escape sign quantizer).
+    assert torch.all(bits_param.grad < 0), (
+        f"1-bit grad_bits direction wrong: got {bits_param.grad.tolist()}, "
+        f"should all be NEGATIVE (raise bits to escape sign quantizer)."
     )
 
 
@@ -269,27 +299,29 @@ def test_one_bit_branch_grad_bits_under_synthetic():
 
 
 def test_grad_bits_handles_b3_b4_sweet_spot():
-    """w = 1/3 + 0.001, scale = 1, b = 3 → q = 1/3 (sweet spot,
-    MSE ≈ 5e-7). Going to b=4 produces q = 2/7 ≈ 0.2857 (MSE ≈ 1.13e-3,
-    WORSE). Going to b=2 produces q = 0 (MSE ≈ 0.0558, MUCH WORSE).
+    """w = 1/3 + 0.001, scale = 1, b = 3 → q = ±1/3 (sweet spot,
+    MSE ≈ 5e-7). Going to b=4 produces q = 2/7 ≈ 0.2857 (MSE ≈ 2.4e-3,
+    WORSE). Going to b=2 produces q = 0 (MSE ≈ 0.112, MUCH WORSE).
 
-    The Round 4 residual surrogate would tell SGD to RAISE bits because
-    ``(q − w) = -0.001 ≠ 0`` and ``-ln2·(q−w)²·sign < 0`` always. That's
-    Pareto-dominated.
+    Round 7 LOSS-DELTA FD under SYNTHETIC ``+1`` upstream::
 
-    The Round 6 FD surrogate computes::
+        sq_err_bplus  = (2/7 − (1/3+0.001))² ≈ 2.36e-3
+        sq_err_bminus = (0   − (1/3+0.001))² ≈ 0.112
+        local_diff    = (2.36e-3 − 0.112)/2 ≈ -0.0547
+        grad_bits     = |+1| · -0.0547 = -0.0547  (NEGATIVE)
 
-        q_bplus  = 2/7  (b=4)
-        q_bminus = 0    (b=2)
-        (qp − qm) / 2 = +0.143
+    Under SYNTHETIC upstream the FD direction is "raise bits" because
+    going UP is much less bad than going DOWN (b=2 is far worse than
+    b=4). However sweet-spot PROTECTION in Round 7 happens through the
+    ``|grad_output|`` MAGNITUDE scaler in the realistic MSE chain — at
+    the sweet spot ``q − w = -0.001``, so the MSE-chained
+    ``grad_bits = 0.001 · -0.0547 ≈ -5.5e-5`` is tiny and SGD barely
+    moves. See ``test_sweet_spot_w_one_third_b3_no_push_to_b4`` below
+    for the MSE-chain magnitude check.
 
-    Under synthetic positive upstream, ``grad_bits = +0.143 > 0``, so
-    SGD LOWERS bits (or stays via the Adam adaptive step) — refusing to
-    push into the b=4 grid. POSITIVE is the "stay/lower" signal here.
-
-    Per-element with the alternating sign pattern: grad_bits flips sign
-    with w. The invariant is ``grad_bits · sign(w) > 0`` — i.e., gradient
-    aligns with weight sign, opposite of the zero-bin "escape" direction.
+    This test pins the SYNTHETIC-upstream chain-rule formula rather
+    than the previous ``grad·sign(w) > 0`` invariant (which assumed
+    Round 6 q-delta semantics).
     """
     weight, bits_param, q = _quantize_with_grad(
         weight_val=1.0 / 3.0 + 0.001, bits=3.0, scale_val=1.0,
@@ -302,18 +334,19 @@ def test_grad_bits_handles_b3_b4_sweet_spot():
     grad_out = torch.ones_like(q)
     q.backward(grad_out)
     assert bits_param.grad is not None
-    # ``grad_bits · sign(w)`` must be POSITIVE (or zero) — refuse to push
-    # toward the b=4 grid which is strictly worse for this weight value.
-    sign_w = torch.sign(weight.detach())
-    product = bits_param.grad * sign_w
-    assert torch.all(product > 0), (
-        f"sweet-spot grad direction wrong: grad·sign(w) = {product.tolist()}, "
-        f"should be positive (don't push to b=4)."
+    # Round 7: grad_bits is NEGATIVE for both signs (loss landscape
+    # symmetric in w, b=2 is much worse than b=4).
+    assert torch.all(bits_param.grad < 0), (
+        f"sweet-spot synthetic-upstream grad direction wrong: "
+        f"got {bits_param.grad.tolist()}, should be NEGATIVE under "
+        f"loss-delta FD (b=2 much worse than b=4)."
     )
-    # Magnitude: |grad_bits| should equal |q_bplus − q_bminus|/2 = 1/7 / 2 ?
-    # Wait — q_bplus(b=4) for w=+1/3+0.001: 2/7. q_bminus(b=2): 0.
-    # (2/7 − 0)/2 = 1/7 ≈ 0.1428.
-    expected_mag = 1.0 / 7.0
+    # Magnitude: |grad_bits| ≈ |sq_err_bplus − sq_err_bminus|/2.
+    # sq_err_bplus  = (2/7 − w)², sq_err_bminus = (0 − w)² = w².
+    w_val = 1.0 / 3.0 + 0.001
+    sq_err_bplus = (2.0 / 7.0 - w_val) ** 2
+    sq_err_bminus = w_val ** 2
+    expected_mag = abs((sq_err_bplus - sq_err_bminus) / 2.0)
     assert torch.allclose(
         bits_param.grad.abs(),
         torch.full_like(bits_param.grad, expected_mag),
@@ -327,19 +360,20 @@ def test_grad_bits_handles_b3_b4_sweet_spot():
 def test_grad_bits_handles_b4_b5_transition():
     """At b=4 (levels=7, step=1/7), a weight just above 1/7 has
     ``q = 1/7`` — a near-sweet-spot. b=5 (levels=15, step=1/15) gives
-    ``round((1/7+ε)/(1/15)) = round(2.14+15ε) = 2`` → q = 2/15 ≈ 0.133
-    (CLOSER to w=1/7+ε ≈ 0.144, so going UP is good here). b=3
-    (levels=3, step=1/3) gives ``round((1/7+ε)/(1/3)) = round(0.43+3ε)
-    = 0`` → q = 0 (FURTHER from w, going DOWN is bad).
+    ``q = 2/15 ≈ 0.133`` (CLOSER to w=1/7+ε ≈ 0.144). b=3 (levels=3,
+    step=1/3) gives ``q = 0`` (FURTHER from w).
 
-    ``(q_bplus − q_bminus)/2 = (2/15 − 0)/2 = 1/15 ≈ 0.067``.
-    Under synthetic +1, ``grad_bits = +0.067`` (positive) →
-    grad·sign(w) > 0. But here the "stay/lower" signal would be wrong —
-    going UP to b=5 is ACTUALLY beneficial. So the FD surrogate is
-    *honest*: when the loss landscape favors raising bits, central FD
-    captures it; when it doesn't (as in b=3 sweet spot), it correctly
-    refuses. The test pins that the FD surrogate AT LEAST does not
-    point toward the strictly worse direction.
+    Round 7 LOSS-DELTA FD::
+
+        sq_err_bplus  = (2/15 − w)² ≈ 0.00011
+        sq_err_bminus = (0    − w)² ≈ 0.0207
+        local_diff    = (0.00011 − 0.0207)/2 ≈ -0.01029
+        grad_bits     = |+1| · -0.01029 (NEGATIVE; raises bits)
+
+    The FD direction agrees with the actual loss landscape: raising bits
+    from b=4 to b=5 IS beneficial here (L5 < L4 < L3). The test pins
+    that the FD surrogate matches the loss-delta formula and gives
+    finite, non-zero output.
     """
     w_val = 1.0 / 7.0 + 0.001  # just above the b=4 grid point 1/7
     weight, bits_param, q = _quantize_with_grad(
@@ -348,8 +382,7 @@ def test_grad_bits_handles_b4_b5_transition():
     grad_out = torch.ones_like(q)
     q.backward(grad_out)
     assert bits_param.grad is not None
-    # Compute actual loss at b=3, b=4, b=5 to verify FD direction is
-    # consistent with the actual loss landscape.
+    # Compute actual loss at b=3, b=4, b=5 to verify FD direction.
     scale = torch.ones(weight.shape[0], dtype=weight.dtype)
     q_b3 = _quantize_at_bits(weight, scale, 3.0)
     q_b4 = _quantize_at_bits(weight, scale, 4.0)
@@ -360,25 +393,29 @@ def test_grad_bits_handles_b4_b5_transition():
     assert L4 < L3, (
         f"b=4 should beat b=3 here (L4={L4}, L3={L3}); test setup wrong"
     )
-    # Whether L5 < L4 or > L4 depends on grid geometry; the test just
-    # pins that grad_bits is finite and consistent with FD semantics.
-    fd_central = (q_b5 - q_b3) / 2.0
-    expected_grad = grad_out * fd_central
+    # Round 7 expected: grad_bits = |grad_output| · (sq_err_bplus − sq_err_bminus)/2
+    sq_err_bplus = (q_b5 - weight.detach()) ** 2
+    sq_err_bminus = (q_b3 - weight.detach()) ** 2
+    expected_grad = grad_out.abs() * (sq_err_bplus - sq_err_bminus) / 2.0
     assert torch.allclose(bits_param.grad, expected_grad, atol=1e-12), (
-        f"b=4 transition FD wrong: got {bits_param.grad.tolist()}, "
+        f"b=4 transition loss-FD wrong: got {bits_param.grad.tolist()}, "
         f"expected {expected_grad.tolist()}"
+    )
+    # And the FD direction agrees with raising bits (b=5 is closer than b=3).
+    assert torch.all(bits_param.grad < 0), (
+        f"b=4→5 transition should yield negative grad (raise bits); "
+        f"got {bits_param.grad.tolist()}"
     )
 
 
 def test_grad_bits_finite_difference_matches_actual_loss_delta():
-    """Across a sweep of weight values, the FD-surrogate gradient sign
-    must agree with the actual local-loss delta direction
-    ``sign(L(b+1) − L(b−1))`` whenever the upstream gradient is the MSE
-    gradient itself (i.e., the chain rule reduces to the local MSE).
+    """Round 7 contract: across a sweep of weight values, the LOSS-DELTA
+    FD surrogate must MATCH the formula::
 
-    This is the load-bearing test for Round 6: it pins that the new
-    surrogate is a faithful first-order approximation of the loss
-    direction along the bits axis.
+        grad_bits = |grad_output| · (sq_err_bplus − sq_err_bminus) / 2
+
+    where ``sq_err_b* = (q_b* − w)²``. This is the new load-bearing
+    formula that fixes the Round 6 sign-inversion under MSE chain.
     """
     # Sweep across a range of weight values that exercise grid sweet
     # spots, off-grid points, and zero-bin cases.
@@ -397,30 +434,28 @@ def test_grad_bits_finite_difference_matches_actual_loss_delta():
             b_minus = max(b - 1.0, 1.0)
             q_bp = _quantize_at_bits(weight, scale, b_plus)
             q_bm = _quantize_at_bits(weight, scale, b_minus)
-            L_bp = _local_mse(q_bp, weight.detach())
-            L_bm = _local_mse(q_bm, weight.detach())
-            actual_delta = (L_bp - L_bm) / 2.0
             # FD surrogate with synthetic +1 upstream.
             grad_out = torch.ones_like(q)
             q.backward(grad_out)
             assert bits_param.grad is not None
-            # Compute expected from the chain-rule formula.
-            expected = grad_out * (q_bp - q_bm) / 2.0
+            # Round 7 expected formula.
+            sq_err_bp = (q_bp - weight.detach()) ** 2
+            sq_err_bm = (q_bm - weight.detach()) ** 2
+            expected = grad_out.abs() * (sq_err_bp - sq_err_bm) / 2.0
+            # Apply the zero-distortion mask (q == weight → grad_bits=0).
+            zero_mask = (q.detach() == weight.detach())
+            expected = torch.where(
+                zero_mask, torch.zeros_like(expected), expected
+            )
             assert torch.allclose(bits_param.grad, expected, atol=1e-12), (
-                f"FD chain-rule mismatch at w={w_val}, b={b}: got "
-                f"{bits_param.grad.tolist()}, expected {expected.tolist()}"
+                f"Round 7 loss-FD chain-rule mismatch at w={w_val}, b={b}: "
+                f"got {bits_param.grad.tolist()}, expected {expected.tolist()}"
             )
             # And the surrogate must be FINITE (no NaN/Inf).
             assert torch.isfinite(bits_param.grad).all(), (
                 f"FD grad non-finite at w={w_val}, b={b}: {bits_param.grad}"
             )
-            # Optional: when the actual loss delta is non-zero, the
-            # gradient sign should at least be consistent in direction
-            # for the "easy" case (positive weight). This is a weaker
-            # pin than equality because chain-rule + FD-on-q doesn't
-            # exactly equal FD-on-L, but the sign tends to agree when
-            # the weight is positive and the loss is monotone.
-            del weight, bits_param, q, actual_delta
+            del weight, bits_param, q
 
 
 def test_above_bin_elements_keep_gradient_signal():
@@ -456,28 +491,19 @@ def test_above_bin_elements_keep_gradient_signal():
 # honest about the actual non-monotonic landscape.
 
 
-def test_zero_bin_under_mse_chain_round6_behavior():
-    """Document the MSE-chain behavior at the zero bin under Round 6.
+def test_zero_bin_under_mse_chain_round7_behavior():
+    """Round 7 LOSS-DELTA FD restores the Round 4 zero-bin escape
+    invariant under MSE chain (which Round 6 q-delta FD broke).
 
     For w=+0.1, b=2: q=0, q_bplus(b=3)=0, q_bminus(b=1)=+1.
-    grad_output = q − w = -0.1.
-    grad_bits = -0.1 · (0 − 1)/2 = +0.05 (positive → SGD lowers bits).
+    grad_output = q − w = -0.1, |grad_output| = 0.1.
+    sq_err_bplus  = (0 − 0.1)² = 0.01
+    sq_err_bminus = (1 − 0.1)² = 0.81
+    local_diff    = (0.01 − 0.81)/2 = -0.40
+    grad_bits     = 0.1 · -0.40 = -0.04   (NEGATIVE → SGD raises bits)
 
-    This DIFFERS from the Round 4 residual surrogate (which gave -ln2·0.01
-    < 0 → raises bits). The Round 6 surrogate is honest: at b=2 the
-    *forward* difference (q_bplus − q) is zero (b=3 also gives q=0), so
-    the only signal comes from the *backward* difference (q − q_bminus),
-    which says "you went FROM b=1 (q=1) TO b=2 (q=0); going FURTHER
-    (b=3) won't help on this grid." That's a true statement about THIS
-    specific quantizer — for w=0.1, the grids that produce q=0 extend
-    up to b=3 (since 0.1 < step/2 = 1/6 ≈ 0.167). The "escape" doesn't
-    happen until b=4.
-
-    The Round 4 invariant ("raise bits to escape") is preserved under
-    SYNTHETIC upstream (see ``test_zero_bin_grad_bits_points_toward_more_bits_synthetic``)
-    where the surrogate's contract is honored. Under MSE chain the
-    detailed sign depends on the local landscape — which is exactly
-    what an honest FD surrogate captures.
+    Round 6 gave +0.05 at this point (SGD lowers bits → MSE goes from
+    0.01 to 0.81). Round 7 restores the correct direction.
     """
     weight, bits_param, q = _quantize_with_grad(
         weight_val=0.1, bits=2.0, scale_val=1.0,
@@ -487,26 +513,28 @@ def test_zero_bin_under_mse_chain_round6_behavior():
     loss = 0.5 * ((q - weight) ** 2).sum()
     loss.backward()
     assert bits_param.grad is not None
-    # Pin the new behavior: grad_bits = (q − w) · (q_bplus − q_bminus)/2
-    # = -0.1 · -0.5 = +0.05.
-    expected = torch.full_like(bits_param.grad, +0.05)
+    # Round 7 expected: -0.04 (sign-invariant under MSE because |g| folds).
+    expected = torch.full_like(bits_param.grad, -0.04)
     assert torch.allclose(bits_param.grad, expected, atol=1e-12), (
-        f"MSE-chain zero-bin grad: got {bits_param.grad.tolist()}, "
+        f"MSE-chain zero-bin grad (Round 7): got {bits_param.grad.tolist()}, "
         f"expected ≈ {expected.tolist()}"
     )
 
 
 def test_grad_bits_surrogate_has_correct_sign_under_synthetic_upstream():
-    """Direct sign check: under synthetic ``grad_output = +1``, the FD
-    surrogate gives ``grad_bits = (q_bplus − q_bminus)/2``. The sign
-    encodes "how does q change as bits increase" — positive when the
-    finer grid lifts q (toward larger absolute representable values),
-    negative when the finer grid lowers q (back toward 0 or grid points
-    closer to w).
+    """Round 7: the LOSS-DELTA FD is SIGN-INVARIANT in w because
+    ``L(q) = ½(q − w)²`` is symmetric under joint sign-flip of (w, q).
 
-    The contract: when ``q_bplus`` is closer to ``w`` than ``q_bminus``,
-    the FD direction tells SGD to raise bits — which is the correct
-    "more precision is good" direction for typical inverse problems.
+    For w=±0.1, b=2: q=0, q_bplus=0, q_bminus=±1.
+    sq_err_bplus  = (0 − w)² = 0.01    (BOTH signs)
+    sq_err_bminus = (sign(w) − w)² = 0.81  (BOTH signs)
+    local_diff    = -0.40              (BOTH signs)
+    grad_bits     = |+1| · -0.40 = -0.40   (NEGATIVE for BOTH signs)
+
+    SGD raises bits regardless of weight sign — the correct escape
+    direction. Round 6 had grad_bits flipping sign with w (which gave
+    grad·sign(w) < 0 uniformly); Round 7 has grad_bits constant in sign
+    (which gives grad < 0 uniformly).
     """
     weight, bits_param, q = _quantize_with_grad(
         weight_val=0.1, bits=2.0, scale_val=1.0,
@@ -515,15 +543,12 @@ def test_grad_bits_surrogate_has_correct_sign_under_synthetic_upstream():
     grad_out = torch.ones_like(q)
     q.backward(grad_out)
     assert bits_param.grad is not None
-    # For w=+0.1: q_bplus=0, q_bminus=+1 → grad_bits = -0.5 (negative)
-    # For w=-0.1: q_bplus=0, q_bminus=-1 → grad_bits = +0.5 (positive)
-    # In both cases ``grad_bits · sign(w) < 0`` (escape direction).
-    sign_w = torch.sign(weight.detach())
-    product = bits_param.grad * sign_w
-    assert torch.all(product < 0), (
-        f"surrogate sign convention violated: grad·sign(w) = "
-        f"{product.tolist()} — should be uniformly negative under "
-        f"synthetic +1 upstream at the zero bin."
+    # Round 7: grad_bits is uniformly NEGATIVE under synthetic +1 at
+    # the zero bin, regardless of weight sign.
+    assert torch.all(bits_param.grad < 0), (
+        f"Round 7 surrogate sign convention violated: grad = "
+        f"{bits_param.grad.tolist()} — should be uniformly negative "
+        f"under synthetic +1 upstream at the zero bin."
     )
 
 
@@ -549,9 +574,14 @@ def test_math_safety_check_zero_bin():
 
 
 def test_math_safety_check_sweet_spot():
-    """Safety check 2 (Round 6 fix): For w=1/3+0.001, scale=1, b=3
-    (sweet spot), grad_bits should be POSITIVE or zero (don't push to
-    b=4 where MSE is strictly worse).
+    """Safety check 2 (Round 7 update): For w=1/3+0.001, scale=1, b=3
+    (sweet spot), under SYNTHETIC +1 upstream the LOSS-DELTA FD is
+    NEGATIVE (b=2 is much worse than b=4, so local FD says raise bits).
+
+    Under MSE chain at the sweet spot the bit-update is gated by the
+    tiny ``|grad_output| = |q − w| = 0.001`` magnitude scaler — see
+    ``test_sweet_spot_w_one_third_b3_no_push_to_b4`` for the chain-
+    magnitude check that ensures SGD barely moves at the sweet spot.
     """
     scale = torch.ones(1, dtype=torch.float64)
     weight = torch.tensor(
@@ -561,9 +591,126 @@ def test_math_safety_check_sweet_spot():
     q = _PerElementSTEQuantize.apply(weight, scale, bits)
     q.backward(torch.ones_like(q))
     assert bits.grad is not None
-    assert bits.grad.item() > 0, (
-        f"Safety check 2 (sweet spot) failed: grad_bits = "
-        f"{bits.grad.item()}, expected POSITIVE."
+    # Round 7 synthetic-upstream sign at sweet spot: NEGATIVE
+    # (loss-delta dominated by b=2 being far worse than b=4).
+    assert bits.grad.item() < 0, (
+        f"Safety check 2 (sweet spot synthetic) failed: grad_bits = "
+        f"{bits.grad.item()}, expected NEGATIVE under loss-delta FD."
+    )
+
+
+# ── Round 7 NEW math safety checks under REAL MSE CHAIN ─────────────────
+
+
+def test_zero_bin_under_real_mse_chain_round7():
+    """Round 7 Bug 1 fix: w=+0.1, scale=1, b=2 under the REAL MSE chain
+    (the chain that broke Round 6).
+
+    grad_output (MSE) = q − w = -0.1
+    sq_err_bplus  = (0 − 0.1)² = 0.01
+    sq_err_bminus = (1 − 0.1)² = 0.81
+    local_diff    = -0.40
+    grad_bits     = |-0.1| · -0.40 = -0.04   (NEGATIVE → SGD raises bits ✓)
+
+    Under Round 6 q-delta FD this was +0.05 → SGD lowered bits → MSE
+    went from 0.01 to 0.81 (Pareto-dominated). Round 7 restores the
+    correct escape direction.
+    """
+    scale = torch.ones(1, dtype=torch.float64)
+    weight = torch.tensor([[[[+0.1]]]], dtype=torch.float64, requires_grad=True)
+    bits = torch.tensor([[[[2.0]]]], dtype=torch.float64, requires_grad=True)
+    q = _PerElementSTEQuantize.apply(weight, scale, bits)
+    # Real MSE chain — half-MSE so dL/dq = q - w.
+    loss = 0.5 * ((q - weight) ** 2).sum()
+    loss.backward()
+    assert bits.grad is not None
+    assert bits.grad.item() < 0, (
+        f"Round 7 Bug 1 fix failed: under MSE chain w=+0.1 b=2, "
+        f"grad_bits = {bits.grad.item()}, expected NEGATIVE "
+        f"(Round 6 would have given +0.05 — pushing bits DOWN → MSE 0.01→0.81)."
+    )
+    # Pin exact value: -0.04
+    assert abs(bits.grad.item() - (-0.04)) < 1e-12, (
+        f"Round 7 zero-bin MSE-chain grad value mismatch: "
+        f"got {bits.grad.item()}, expected -0.04"
+    )
+
+
+def test_w_zero_b1_escapes_via_bit_gradient():
+    """Round 7 Bug 2 fix: w=0, b=1. The 1-bit sign quantizer is
+    ASYMMETRIC at w=0 — ``weight >= 0`` returns +scale, so q=+1 even
+    though w=0. Distortion exists; SGD should be told to raise bits so
+    b≥2 can map w=0 → q=0.
+
+    Round 6 used ``weight == 0`` short-circuit which suppressed grad_bits
+    here, leaving SGD stuck at b=1. Round 7 uses ``q == weight`` instead;
+    at w=0, b=1 we have q=+1 ≠ 0 = weight, so the gradient flows.
+
+    For w=0, scale=1, b=1: q=+1 (sign), q_bplus(b=2)=round(0/1)*1=0,
+    q_bminus(b=1)=+1.
+    grad_output (MSE) = q − w = +1.0.
+    sq_err_bplus  = (0 − 0)² = 0
+    sq_err_bminus = (1 − 0)² = 1
+    local_diff    = (0 − 1)/2 = -0.5
+    grad_bits     = |+1| · -0.5 = -0.5   (NEGATIVE → SGD raises bits ✓)
+    """
+    scale = torch.ones(1, dtype=torch.float64)
+    weight = torch.tensor([[[[0.0]]]], dtype=torch.float64, requires_grad=True)
+    bits = torch.tensor([[[[1.0]]]], dtype=torch.float64, requires_grad=True)
+    q = _PerElementSTEQuantize.apply(weight, scale, bits)
+    # Sanity: sign quantizer maps 0 → +scale.
+    assert q.item() == 1.0, (
+        f"setup: 1-bit q at w=0 should be +scale=+1 (asymmetric sign quantizer); "
+        f"got {q.item()}"
+    )
+    loss = 0.5 * ((q - weight) ** 2).sum()
+    loss.backward()
+    assert bits.grad is not None
+    # Round 7 fix: gradient should NOW flow (not suppressed by
+    # ``weight == 0`` mask) and point to RAISING bits.
+    assert bits.grad.item() < 0, (
+        f"Round 7 Bug 2 fix failed: w=0 b=1 grad_bits = {bits.grad.item()}, "
+        f"expected NEGATIVE (escape b=1 sign quantizer where q=+1 ≠ 0 = w). "
+        f"Round 6 ``weight == 0`` mask incorrectly suppressed this signal."
+    )
+
+
+def test_sweet_spot_w_one_third_b3_no_push_to_b4():
+    """Round 7 sweet-spot protection comes from |grad_output| magnitude
+    scaler, not the FD direction.
+
+    For w=1/3+0.001, scale=1, b=3 under MSE chain:
+    grad_output = q − w = -0.001 (TINY)
+    |grad_output| = 0.001
+    sq_err_bplus  = (2/7 − w)²  ≈ 2.36e-3
+    sq_err_bminus = (0   − w)²  ≈ 0.112
+    local_diff    ≈ -0.0547
+    grad_bits     = 0.001 · -0.0547 ≈ -5.47e-5  (TINY magnitude)
+
+    The FD direction is "raise bits" but the magnitude is so small that
+    SGD with any reasonable LR barely moves bits — preserving the sweet
+    spot. The KEY contract: at the sweet spot ``|grad_bits| < 1e-3``
+    so SGD doesn't push us into the worse b=4 grid.
+    """
+    scale = torch.ones(1, dtype=torch.float64)
+    w_val = 1.0 / 3.0 + 0.001
+    weight = torch.tensor(
+        [[[[w_val]]]], dtype=torch.float64, requires_grad=True
+    )
+    bits = torch.tensor([[[[3.0]]]], dtype=torch.float64, requires_grad=True)
+    q = _PerElementSTEQuantize.apply(weight, scale, bits)
+    # Sanity: q at sweet spot is 1/3.
+    assert abs(q.item() - 1.0 / 3.0) < 1e-12, (
+        f"setup: sweet-spot q expected 1/3, got {q.item()}"
+    )
+    loss = 0.5 * ((q - weight) ** 2).sum()
+    loss.backward()
+    assert bits.grad is not None
+    # Sweet-spot protection: magnitude must be tiny under MSE chain.
+    assert abs(bits.grad.item()) < 1e-3, (
+        f"Round 7 sweet-spot protection failed: |grad_bits| = "
+        f"{abs(bits.grad.item())} under MSE chain at w=1/3+0.001, b=3; "
+        f"expected < 1e-3 so SGD doesn't push to worse b=4 grid."
     )
 
 
