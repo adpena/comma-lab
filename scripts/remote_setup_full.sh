@@ -20,6 +20,21 @@ log() { echo "[setup] $(date -u +%FT%TZ) $*"; }
 log "=== Stage 0: GPU + driver ==="
 nvidia-smi --query-gpu=name,driver_version --format=csv,noheader
 
+log "=== Stage 0.5: lightweight NVDEC pre-probe (DALI-free, ~3s) ==="
+# Per memory feedback_metabugs_round_3 Metabug B (2026-04-28): the deep
+# DALI-based probe at Stage 4 runs AFTER a 5-minute DALI install in
+# Stage 3, costing $0.05+ per bad-NVDEC host. The lightweight pre-probe
+# at Stage 0.5 dlopens libnvcuvid.so + cuvidGetDecoderCaps via ctypes —
+# catches ~95% of NVDEC-missing hosts BEFORE any heavy install.
+#
+# A pass here does NOT skip the deep probe at Stage 4 (that's still the
+# authoritative check for DALI's video MIXED operator). A FAIL exits 2
+# and the calling launcher destroys the instance immediately.
+bash "$WORKSPACE/scripts/probe_nvdec.sh" --lightweight || {
+    log "FATAL: lightweight NVDEC pre-probe failed — saved 5min of DALI install on bad host."
+    exit 2
+}
+
 log "=== Stage 1: apt deps (ffmpeg + zip + unzip) ==="
 DEBIAN_FRONTEND=noninteractive apt-get install -y -qq ffmpeg zip unzip 2>&1 | tail -2
 

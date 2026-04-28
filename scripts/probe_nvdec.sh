@@ -41,17 +41,158 @@
 #                    Codex R5-3-round-4 fix: closes the probe-before-DALI
 #                    gap that bricked remote_train_bootstrap.sh and
 #                    remote_pose_tto_bootstrap.sh on fresh hosts.
+#   --lightweight  — DALI-FREE pre-check via libnvcuvid.so + ctypes. Catches
+#                    the most common Vast.ai failure mode (compute CUDA
+#                    works but NVDEC missing) in ~3 seconds, BEFORE the
+#                    5-minute DALI install. Per memory feedback_metabugs_round_3
+#                    Metabug B (2026-04-28). Saves $0.05+ per bad host.
+#                    Use this from setup_full.sh Stage 0.5; the full
+#                    DALI-based probe still runs later as the deep check.
 set -euo pipefail
 
 ENSURE_DALI=0
+LIGHTWEIGHT=0
 for arg in "$@"; do
     case "$arg" in
         --ensure-dali) ENSURE_DALI=1 ;;
+        --lightweight) LIGHTWEIGHT=1 ;;
         *) echo "[probe_nvdec] unknown arg: $arg" >&2; exit 1 ;;
     esac
 done
 
 PYBIN="${PYBIN:-/opt/conda/bin/python}"
+
+# ---------------------------------------------------------------------------
+# Lightweight pre-DALI NVDEC check via libnvcuvid.so + ctypes.
+# Per memory feedback_metabugs_round_3 Metabug B (2026-04-28).
+# ---------------------------------------------------------------------------
+# The DALI-based probe below is correct but runs AFTER a 5-minute DALI install
+# in setup_full.sh, costing $0.05+ per bad host. The lightweight path catches
+# ~95% of NVDEC-missing hosts in ~3 seconds with ZERO install cost by:
+#   1. dlopen()'ing libnvcuvid.so.1 (always shipped with NVIDIA driver)
+#   2. Calling cuvidGetDecoderCaps() against a CUDA context
+#   3. Verifying H264 decoder is supported on device 0
+# A pass here does NOT guarantee DALI's video MIXED operator will work (that's
+# what the deep probe is for), but a FAIL guarantees the host is broken.
+if [ "$LIGHTWEIGHT" = "1" ]; then
+    LIGHT_OUT=$("$PYBIN" -c "
+import ctypes, sys, traceback
+
+def _exit_classified(token, msg):
+    print(f'PROBE_CLASSIFICATION:{token}')
+    print(f'PROBE_ERROR:{msg}')
+    sys.exit(0)
+
+# Step 1: load libnvcuvid (NVDEC userspace library shipped with driver).
+try:
+    nvcuvid = ctypes.CDLL('libnvcuvid.so.1')
+except OSError as e:
+    _exit_classified('NVDEC_MISSING', f'libnvcuvid.so.1 dlopen failed: {e}')
+
+# Step 2: load libcuda (CUDA driver — always present on a CUDA host).
+try:
+    cuda = ctypes.CDLL('libcuda.so.1')
+except OSError as e:
+    _exit_classified('UNKNOWN', f'libcuda.so.1 dlopen failed (this should never happen): {e}')
+
+# Step 3: cuInit + cuDeviceGet + cuCtxCreate to get a usable CUcontext.
+CUresult = ctypes.c_int
+CUdevice = ctypes.c_int
+CUcontext = ctypes.c_void_p
+
+cuda.cuInit.argtypes = [ctypes.c_uint]; cuda.cuInit.restype = CUresult
+cuda.cuDeviceGet.argtypes = [ctypes.POINTER(CUdevice), ctypes.c_int]; cuda.cuDeviceGet.restype = CUresult
+cuda.cuCtxCreate_v2.argtypes = [ctypes.POINTER(CUcontext), ctypes.c_uint, CUdevice]
+cuda.cuCtxCreate_v2.restype = CUresult
+cuda.cuCtxDestroy_v2.argtypes = [CUcontext]; cuda.cuCtxDestroy_v2.restype = CUresult
+
+rc = cuda.cuInit(0)
+if rc != 0:
+    _exit_classified('UNKNOWN', f'cuInit failed: rc={rc}')
+
+dev = CUdevice()
+rc = cuda.cuDeviceGet(ctypes.byref(dev), 0)
+if rc != 0:
+    _exit_classified('NVDEC_MISSING', f'cuDeviceGet(0) failed: rc={rc} (CUDA_ERROR_NO_DEVICE=100)')
+
+ctx = CUcontext()
+rc = cuda.cuCtxCreate_v2(ctypes.byref(ctx), 0, dev)
+if rc != 0:
+    _exit_classified('NVDEC_MISSING', f'cuCtxCreate failed: rc={rc}')
+
+# Step 4: cuvidGetDecoderCaps for H264 / 8-bit / 4:2:0 — the most common path.
+class CUVIDDECODECAPS(ctypes.Structure):
+    _fields_ = [
+        ('eCodecType', ctypes.c_int),
+        ('eChromaFormat', ctypes.c_int),
+        ('nBitDepthMinus8', ctypes.c_uint),
+        ('reserved1', ctypes.c_uint * 3),
+        ('bIsSupported', ctypes.c_uint8),
+        ('nNumNVDECs', ctypes.c_uint8),
+        ('nOutputFormatMask', ctypes.c_uint16),
+        ('nMaxWidth', ctypes.c_uint),
+        ('nMaxHeight', ctypes.c_uint),
+        ('nMaxMBCount', ctypes.c_uint),
+        ('nMinWidth', ctypes.c_uint16),
+        ('nMinHeight', ctypes.c_uint16),
+        ('bIsHistogramSupported', ctypes.c_uint8),
+        ('nCounterBitDepth', ctypes.c_uint8),
+        ('nMaxHistogramBins', ctypes.c_uint16),
+        ('reserved3', ctypes.c_uint * 10),
+    ]
+
+try:
+    nvcuvid.cuvidGetDecoderCaps.argtypes = [ctypes.POINTER(CUVIDDECODECAPS)]
+    nvcuvid.cuvidGetDecoderCaps.restype = CUresult
+except AttributeError as e:
+    cuda.cuCtxDestroy_v2(ctx)
+    _exit_classified('NVDEC_MISSING', f'cuvidGetDecoderCaps symbol missing: {e}')
+
+caps = CUVIDDECODECAPS()
+caps.eCodecType = 4  # cudaVideoCodec_H264
+caps.eChromaFormat = 1  # cudaVideoChromaFormat_420
+caps.nBitDepthMinus8 = 0
+rc = nvcuvid.cuvidGetDecoderCaps(ctypes.byref(caps))
+cuda.cuCtxDestroy_v2(ctx)
+
+if rc != 0:
+    _exit_classified('NVDEC_MISSING', f'cuvidGetDecoderCaps rc={rc} (NVDEC subsystem not exposed)')
+
+if not caps.bIsSupported:
+    _exit_classified('NVDEC_MISSING', f'H264/8bit/4:2:0 not supported (bIsSupported=0, nNumNVDECs={caps.nNumNVDECs})')
+
+if caps.nNumNVDECs < 1:
+    _exit_classified('NVDEC_MISSING', f'nNumNVDECs={caps.nNumNVDECs} (host has 0 NVDEC engines)')
+
+print('PROBE_CLASSIFICATION:OK')
+print(f'NVDEC_OK_LIGHTWEIGHT:nNumNVDECs={caps.nNumNVDECs} maxWidth={caps.nMaxWidth} maxHeight={caps.nMaxHeight}')
+" 2>&1) || {
+        echo "[probe_nvdec][lightweight] FATAL: probe crashed before classification." >&2
+        echo "[probe_nvdec][lightweight]   Output: $LIGHT_OUT" >&2
+        exit 5
+    }
+
+    LIGHT_CLASS=$(echo "$LIGHT_OUT" | grep -E "^PROBE_CLASSIFICATION:" | tail -1 | sed 's/^PROBE_CLASSIFICATION://')
+    case "$LIGHT_CLASS" in
+        OK)
+            echo "[probe_nvdec][lightweight] OK ($(echo "$LIGHT_OUT" | grep NVDEC_OK_LIGHTWEIGHT))"
+            exit 0
+            ;;
+        NVDEC_MISSING)
+            echo "[probe_nvdec][lightweight] FATAL: NVDEC missing on this host (caught BEFORE DALI install)." >&2
+            echo "[probe_nvdec][lightweight]   Output: $LIGHT_OUT" >&2
+            echo "[probe_nvdec][lightweight]   Saved ~5 min of DALI install on a known-bad host." >&2
+            echo "[probe_nvdec][lightweight]   Action: vastai destroy instance \$INSTANCE_ID && pick a different host." >&2
+            echo "[probe_nvdec][lightweight]   Reference: feedback_vastai_nvdec_host_variation + feedback_metabugs_round_3 Metabug B." >&2
+            exit 2
+            ;;
+        UNKNOWN|*)
+            echo "[probe_nvdec][lightweight] FATAL: unexpected classification: $LIGHT_CLASS" >&2
+            echo "[probe_nvdec][lightweight]   Output: $LIGHT_OUT" >&2
+            exit 5
+            ;;
+    esac
+fi
 
 if ! "$PYBIN" -c "import nvidia.dali" 2>/dev/null; then
     if [ "$ENSURE_DALI" = "1" ]; then
