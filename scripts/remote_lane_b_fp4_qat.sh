@@ -1,7 +1,12 @@
 #!/bin/bash
-# Lane B: FP4 QAT of the dilated-h64 renderer (~290KB → ~165KB).
-# Predicted: 2.29 → 2.18 (rate -0.108). Single variable: renderer bytes only.
-# Distortion expected unchanged (FP4 noise is imperceptible in inference).
+# Lane F-V2 (formerly Lane B retry): FP4 QAT of Lane A's renderer.
+# Anchored on Lane A 1.15 [contest-CUDA] (NOT baseline 2.29) per
+# findings.md "Lane F regression — bugged or dead?" (2026-04-27).
+# Three council-mandated fixes vs the original Lane B:
+#   1. Threads --poses Lane A's optimized_poses.pt (Bug 1: silent zero-pose).
+#   2. --fp4-epochs 500 (Bug 2: was 50 = 5% of canonical recipe).
+#   3. Anchor on Lane A's renderer + poses (Bug 3: wrong baseline).
+# Predicted: [1.05, 1.30] [contest-CUDA] — could beat Lane A 1.15.
 set -euo pipefail
 WORKSPACE=/workspace/pact
 PYBIN=/opt/conda/bin/python
@@ -9,10 +14,10 @@ source "$WORKSPACE/env.sh"
 cd "$WORKSPACE"
 export PYTHONHASHSEED=1234
 
-LOG_DIR="$WORKSPACE/lane_b_results"
+LOG_DIR="$WORKSPACE/lane_f_v2_results"
 mkdir -p "$LOG_DIR"
 
-log() { echo "[lane-b] $(date -u +%FT%TZ) $*" | tee -a "$LOG_DIR/run.log"; }
+log() { echo "[lane-f-v2] $(date -u +%FT%TZ) $*" | tee -a "$LOG_DIR/run.log"; }
 
 # Provenance + heartbeat (CLAUDE.md canonical pipeline standard +
 # memory feedback_canonical_remote_bootstraps): every remote run must
@@ -33,6 +38,11 @@ prov = {
     'cuda_version': getattr(torch.version, 'cuda', None),
     'cuda_available': torch.cuda.is_available(),
     'lane_script': 'scripts/remote_lane_b_fp4_qat.sh',
+    'lane_name': 'lane_f_v2_fp4_qat_on_lane_a',
+    'anchor_renderer': 'experiments/results/lane_a_landed/iter_0/renderer.bin',
+    'anchor_poses': 'experiments/results/lane_a_landed/optimized_poses.pt',
+    'anchor_score_baseline': 1.15,
+    'predicted_band': [1.05, 1.30],
     'output_dir': '$LOG_DIR',
 }
 with open('$PROVENANCE', 'w') as f:
@@ -41,7 +51,7 @@ print('provenance:', json.dumps(prov))
 "
 ( while true; do
     GPU=$(nvidia-smi --query-gpu=utilization.gpu,memory.used --format=csv,noheader 2>&1 | tr '\n' ' ')
-    echo "[$(date -u +%FT%TZ)] lane=B gpu=$GPU" >> "$HEARTBEAT"
+    echo "[$(date -u +%FT%TZ)] lane=F-V2 gpu=$GPU" >> "$HEARTBEAT"
     sleep 60
   done ) &
 HB_PID=$!
@@ -55,34 +65,42 @@ bash "$WORKSPACE/scripts/probe_nvdec.sh" || {
     exit 2
 }
 
-# Pre-flight
-for f in submissions/baseline_dilated_h64_0_90/renderer.bin \
-         submissions/baseline_dilated_h64_0_90/optimized_poses.pt \
+# Pre-flight: anchor on Lane A (1.15 [contest-CUDA]), NOT baseline 2.29.
+# Lane A artifacts are committed to the repo at experiments/results/lane_a_landed/.
+ANCHOR_RENDERER="experiments/results/lane_a_landed/iter_0/renderer.bin"
+ANCHOR_POSES="experiments/results/lane_a_landed/optimized_poses.pt"
+ANCHOR_MASKS="experiments/results/lane_a_landed/extracted/masks.mkv"
+for f in "$ANCHOR_RENDERER" \
+         "$ANCHOR_POSES" \
+         "$ANCHOR_MASKS" \
          upstream/videos/0.mkv \
          upstream/models/posenet.safetensors; do
     [ -f "$f" ] || { echo "FATAL: missing $f" >&2; exit 1; }
 done
+log "  anchor_renderer: $ANCHOR_RENDERER"
+log "  anchor_poses:    $ANCHOR_POSES"
+log "  anchor_masks:    $ANCHOR_MASKS"
 
-log "=== Stage 1: rebuild full-res masks (so this lane is fully reproducible from-scratch) ==="
-"$PYBIN" experiments/build_baseline_archive.py \
-    --device cuda --crf 50 \
-    --output "$LOG_DIR/archive_baseline_seed.zip" 2>&1 | tee "$LOG_DIR/build.log" | tail -5
+log "=== Stage 1: stage Lane A masks (no rebuild — we anchor on Lane A's exact bytes) ==="
 mkdir -p "$LOG_DIR/extracted"
-cd "$LOG_DIR/extracted" && unzip -o "$LOG_DIR/archive_baseline_seed.zip" 2>&1 | tail -3
-cd "$WORKSPACE"
+cp "$ANCHOR_MASKS" "$LOG_DIR/extracted/masks.mkv"
+log "  staged $(stat -c '%s' "$LOG_DIR/extracted/masks.mkv") bytes of Lane A masks"
 
-log "=== Stage 2: FP4 QAT fine-tune ==="
-log "  input: submissions/baseline_dilated_h64_0_90/renderer.bin (FP32 ASYM)"
+log "=== Stage 2: FP4 QAT fine-tune on Lane A renderer ==="
+log "  input: $ANCHOR_RENDERER (FP32 ASYM, 290KB)"
+log "  poses: $ANCHOR_POSES (Lane A optimized_poses.pt)"
 log "  output: $LOG_DIR/qat/renderer_fp4.bin"
+log "  fp4_epochs: 500 (Bug 2 fix: was 50 in original Lane B)"
 "$PYBIN" -u experiments/qat_finetune.py \
-    --checkpoint submissions/baseline_dilated_h64_0_90/renderer.bin \
+    --checkpoint "$ANCHOR_RENDERER" \
+    --poses "$ANCHOR_POSES" \
     --upstream upstream \
     --output-dir "$LOG_DIR/qat" \
     --device cuda \
     --base-ch 36 --mid-ch 60 --pose-dim 6 --motion-hidden 32 --depth 1 --embed-dim 6 \
     --use-zoom-flow --padding-mode zeros \
     --skip-int8-warmup \
-    --fp4-epochs 50 \
+    --fp4-epochs 500 \
     --lr 5e-5 \
     --batch-size 4 2>&1 | tee "$LOG_DIR/qat.log" | tail -30
 
@@ -92,12 +110,12 @@ FP4_BIN=$(find "$LOG_DIR/qat" -name "renderer_fp4.bin" -o -name "*_fp4*.bin" 2>/
 FP4_SIZE=$(stat -c '%s' "$FP4_BIN")
 log "  FP4 binary: $FP4_BIN ($FP4_SIZE bytes vs FP32 290KB original)"
 
-log "=== Stage 3: build NEW archive (FP4 renderer + same masks + same poses) ==="
+log "=== Stage 3: build NEW archive (FP4 renderer + Lane A masks + Lane A poses) ==="
 mkdir -p "$LOG_DIR/iter_0"
 cp "$FP4_BIN" "$LOG_DIR/iter_0/renderer.bin"
 cp "$LOG_DIR/extracted/masks.mkv" "$LOG_DIR/iter_0/masks.mkv"
-cp submissions/baseline_dilated_h64_0_90/optimized_poses.pt "$LOG_DIR/iter_0/optimized_poses.pt"
-ARCHIVE="$LOG_DIR/archive_lane_b.zip"
+cp "$ANCHOR_POSES" "$LOG_DIR/iter_0/optimized_poses.pt"
+ARCHIVE="$LOG_DIR/archive_lane_f_v2.zip"
 "$PYBIN" -c "
 import zipfile, os
 src = '$LOG_DIR/iter_0'
@@ -110,7 +128,7 @@ with zipfile.ZipFile(dst, 'w', zipfile.ZIP_DEFLATED, compresslevel=9) as z:
 print(f'archive {dst}: {os.path.getsize(dst)} bytes')
 "
 
-log "=== Stage 4: contest_auth_eval on Lane B archive ==="
+log "=== Stage 4: contest_auth_eval on Lane F-V2 archive ==="
 rm -rf "$LOG_DIR/eval_work"
 "$PYBIN" -u experiments/contest_auth_eval.py \
     --archive "$ARCHIVE" \
@@ -120,4 +138,4 @@ rm -rf "$LOG_DIR/eval_work"
     --keep-work-dir \
     --work-dir "$LOG_DIR/eval_work" 2>&1 | tee "$LOG_DIR/auth_eval.log" | tail -15
 
-log "=== LANE_B_DONE ==="
+log "=== LANE_F_V2_DONE ==="

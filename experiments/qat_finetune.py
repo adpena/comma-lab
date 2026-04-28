@@ -631,6 +631,16 @@ def main() -> None:
     parser.add_argument("--fp4-epochs", type=int, default=250)
     parser.add_argument("--lr", type=float, default=3e-5)
     parser.add_argument("--batch-size", type=int, default=4)
+    parser.add_argument("--poses", type=str, default=None,
+                        help="Path to optimized_poses.pt to thread to QAT loop. "
+                             "REQUIRED for renderers with pose_dim>0. Auto-discovery "
+                             "of upstream/gt_poses.pt is intentionally NOT done — "
+                             "explicit > implicit per CLAUDE.md FORBIDDEN PATTERNS. "
+                             "See findings.md 'Lane F regression' (2026-04-27): "
+                             "the silent fallback to zero poses caused a +58% PoseNet "
+                             "regression on Lane F because the renderer was QAT-trained "
+                             "against zero poses then deployed against real poses (per "
+                             "memory project_baseline_poses_load_bearing).")
 
     # Control
     parser.add_argument("--skip-int8-warmup", action="store_true",
@@ -666,6 +676,31 @@ def main() -> None:
     # Preflight
     from tac.preflight import preflight_check
     preflight_check(renderer_path=cfg.checkpoint_path)
+
+    # ── Bug 1 fix (Lane F regression, 2026-04-27): fail FAST if pose_dim>0
+    # but no --poses. We do this BEFORE data loading + scorer init so the
+    # operator (and the regression test) can falsify the silent-WARN bug
+    # within seconds, not minutes. The full path-load + shape validation
+    # still runs below after data loading, but any missing-arg error is
+    # raised here at the cheapest possible point.
+    if cfg.pose_dim > 0 and not args.poses:
+        raise SystemExit(
+            "FATAL: renderer has pose_dim={} but --poses was not provided.\n"
+            "       Pass `--poses <path-to-optimized_poses.pt>` explicitly.\n"
+            "       Auto-discovery of gt_poses.pt is intentionally NOT done\n"
+            "       (CLAUDE.md FORBIDDEN PATTERNS + findings.md Lane F\n"
+            "       regression 2026-04-27). The renderer + poses are a JOINT\n"
+            "       artifact; training against zero poses while deploying\n"
+            "       against real poses degrades PoseNet by 23x (memory:\n"
+            "       project_baseline_poses_load_bearing).".format(cfg.pose_dim)
+        )
+    if cfg.pose_dim > 0 and args.poses and not Path(args.poses).exists():
+        raise SystemExit(
+            f"FATAL: --poses path does not exist: {args.poses}\n"
+            "       Verify the path. Common locations:\n"
+            "       - submissions/baseline_dilated_h64_0_90/optimized_poses.pt\n"
+            "       - experiments/results/lane_a_landed/optimized_poses.pt"
+        )
 
     out_dir = Path(cfg.output_dir)
     out_dir.mkdir(parents=True, exist_ok=True)
@@ -703,19 +738,32 @@ def main() -> None:
     upstream_dir = str(UPSTREAM_ROOT) if UPSTREAM_ROOT else cfg.upstream_dir
     posenet, segnet = load_differentiable_scorers(upstream_dir, device=device)
 
-    # GT poses
+    # GT poses — explicit only (per CLAUDE.md FORBIDDEN PATTERNS + findings.md
+    # "Lane F regression" 2026-04-27). The fail-fast missing-arg/path checks
+    # ran already above; here we load + shape-validate. The previous
+    # auto-discovery was REMOVED — see Bug 1 commit for context.
     poses = None
-    for poses_path in [
-        Path("experiments/results/gt_poses.pt"),
-        Path(cfg.upstream_dir) / "gt_poses.pt",
-    ]:
-        if poses_path.exists():
-            poses = torch.load(str(poses_path), map_location="cpu", weights_only=True)
-            if isinstance(poses, dict):
-                poses = poses.get("poses", poses.get("gt_poses"))
-            poses = poses.float()
-            print(f"  Poses: {poses.shape}")
-            break
+    if cfg.pose_dim > 0:
+        # Both args.poses and Path(args.poses).exists() were validated above;
+        # an invariant failure here is a programming bug, not a user error.
+        poses_path = Path(args.poses)
+        assert poses_path.exists(), f"invariant violated: {poses_path}"
+        poses = torch.load(str(poses_path), map_location="cpu", weights_only=True)
+        if isinstance(poses, dict):
+            poses = poses.get("poses", poses.get("gt_poses"))
+        if poses is None:
+            raise SystemExit(
+                f"FATAL: --poses dict has neither 'poses' nor 'gt_poses' key: {poses_path}"
+            )
+        poses = poses.float()
+        if poses.ndim != 2 or poses.shape[1] != 6:
+            raise SystemExit(
+                f"FATAL: --poses wrong shape {tuple(poses.shape)} (expected (N, 6)): {poses_path}"
+            )
+        print(f"  Poses: {poses.shape} (loaded from --poses {poses_path})")
+    elif args.poses:
+        # pose_dim=0 renderer cannot use poses — accept --poses but warn.
+        print(f"  [INFO] --poses {args.poses} provided but renderer has pose_dim=0; ignoring.")
 
     # ── Create model and load float weights ───────────────────────────
     print("Creating model...")

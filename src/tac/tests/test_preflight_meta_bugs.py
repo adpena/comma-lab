@@ -3207,3 +3207,229 @@ class TestKlDivReductionCorrect:
             repo_root=root, strict=True, verbose=False,
         )
         assert v == [], v
+
+
+# ════════════════════════════════════════════════════════════════════════════
+# ADDITIVE META-BUG TEST SECTION (Check N, post-2026-04-27 Lane F forensic)
+# ════════════════════════════════════════════════════════════════════════════
+#
+# Tests for `check_no_silent_auto_discovery_with_warn` — the 29th meta-bug
+# scanner that catches the silent-default-masquerading-as-negative-result
+# pattern. Bug class: missing CLI flag → auto-discover from N hardcoded
+# paths → none exist → print [WARN] → proceed silently → operator sees the
+# result land as a negative outcome and concludes "this lane is dead."
+#
+# Real-world incidents (2-in-2-days, 2026-04-27):
+#   • Lane F v1 (qat_finetune.py) — auto-discovered gt_poses.pt, fell back
+#     to zero poses, +58% PoseNet regression reported as "FP4 quant is dead."
+#   • Lane G v1 (kl_distill_weight) — silent-batchmean over-weighting,
+#     reported as "KL distill killed PoseNet" when it was a 5000x bug.
+#
+# See findings.md "Lane F regression — bugged or dead?" + memory
+# `feedback_silent_default_masquerading_as_negative_result`.
+
+
+from tac.preflight import (
+    check_no_silent_auto_discovery_with_warn,
+    _scan_python_for_silent_auto_discovery,
+)
+
+
+class TestNoSilentAutoDiscoveryWithWarn:
+    """Pin: forbid the `for x in [Path(...), Path(...)]: ... print('[WARN]')`
+    + proceed-without-raise pattern. Either RAISE or add an
+    `# AUTO_DISCOVERY_OK:<reason>` waiver."""
+
+    def test_lane_f_qat_finetune_pattern_is_caught(self, tmp_path: Path) -> None:
+        """The exact pre-fix Lane F pattern from qat_finetune.py."""
+        root = _stub_repo(tmp_path)
+        script = root / "experiments" / "bad_qat.py"
+        _write(script, """
+            from pathlib import Path
+
+            def load_poses(cfg):
+                poses = None
+                for poses_path in [
+                    Path("experiments/results/gt_poses.pt"),
+                    Path(cfg.upstream_dir) / "gt_poses.pt",
+                ]:
+                    if poses_path.exists():
+                        poses = poses_path
+                        break
+                if poses is None:
+                    print("[WARN] Renderer has pose_dim>0 but no poses_path provided — will use zero poses")
+                return poses
+        """)
+        v = _scan_python_for_silent_auto_discovery(script, root)
+        assert len(v) == 1, v
+        assert "load_poses" in v[0]
+        assert "AUTO_DISCOVERY_OK" in v[0]
+
+    def test_raise_after_loop_passes(self, tmp_path: Path) -> None:
+        """Same auto-discovery, but raises SystemExit on no-match → CLEAN."""
+        root = _stub_repo(tmp_path)
+        script = root / "experiments" / "good_raise.py"
+        _write(script, """
+            from pathlib import Path
+
+            def load_poses(cfg):
+                poses = None
+                for poses_path in [
+                    Path("experiments/results/gt_poses.pt"),
+                    Path(cfg.upstream_dir) / "gt_poses.pt",
+                ]:
+                    if poses_path.exists():
+                        poses = poses_path
+                        break
+                if poses is None:
+                    raise SystemExit("FATAL: no poses found, pass --poses explicitly")
+                return poses
+        """)
+        v = _scan_python_for_silent_auto_discovery(script, root)
+        assert v == [], v
+
+    def test_sys_exit_after_warn_passes(self, tmp_path: Path) -> None:
+        """A `print('[WARN]')` + `sys.exit(...)` is guarded → CLEAN."""
+        root = _stub_repo(tmp_path)
+        script = root / "experiments" / "good_sysexit.py"
+        _write(script, """
+            import sys
+            from pathlib import Path
+
+            def load_poses(cfg):
+                poses = None
+                for poses_path in [
+                    Path("a.pt"),
+                    Path("b.pt"),
+                ]:
+                    if poses_path.exists():
+                        poses = poses_path
+                        break
+                if poses is None:
+                    print("[WARN] no poses")
+                    sys.exit(2)
+                return poses
+        """)
+        v = _scan_python_for_silent_auto_discovery(script, root)
+        assert v == [], v
+
+    def test_function_waiver_marker_suppresses_violation(self, tmp_path: Path) -> None:
+        """Same-function `# AUTO_DISCOVERY_OK:<reason>` opt-out works."""
+        root = _stub_repo(tmp_path)
+        script = root / "experiments" / "waived.py"
+        _write(script, """
+            from pathlib import Path
+
+            def load_optional_resource(cfg):
+                # AUTO_DISCOVERY_OK:resource is genuinely optional, fallback is documented
+                resource = None
+                for path in [
+                    Path("a.bin"),
+                    Path("b.bin"),
+                ]:
+                    if path.exists():
+                        resource = path
+                        break
+                if resource is None:
+                    print("[WARN] optional resource not found, continuing")
+                return resource
+        """)
+        v = _scan_python_for_silent_auto_discovery(script, root)
+        assert v == [], v
+
+    def test_no_warn_call_is_clean(self, tmp_path: Path) -> None:
+        """Auto-discovery + return None silently (no [WARN] print) → CLEAN.
+
+        This is a different bug class (silent return) but is NOT caught by
+        this scanner — only the WARN-then-proceed flavor. Documented gap."""
+        root = _stub_repo(tmp_path)
+        script = root / "experiments" / "no_warn.py"
+        _write(script, """
+            from pathlib import Path
+            def load_poses(cfg):
+                for path in [Path("a.pt"), Path("b.pt")]:
+                    if path.exists():
+                        return path
+                return None
+        """)
+        v = _scan_python_for_silent_auto_discovery(script, root)
+        assert v == [], v
+
+    def test_test_files_are_skipped(self, tmp_path: Path) -> None:
+        """Test files (paths containing `tests` or filenames starting `test_`)
+        are skipped — they intentionally exercise the bug pattern."""
+        root = _stub_repo(tmp_path)
+        # filename starts with test_
+        (root / "src" / "tac" / "tests").mkdir(parents=True, exist_ok=True)
+        script = root / "src" / "tac" / "tests" / "test_pattern.py"
+        _write(script, """
+            from pathlib import Path
+            def load_poses(cfg):
+                for poses_path in [Path("a.pt"), Path("b.pt")]:
+                    if poses_path.exists():
+                        return poses_path
+                print("[WARN] no poses")
+                return None
+        """)
+        v = _scan_python_for_silent_auto_discovery(script, root)
+        assert v == [], "test files must be skipped"
+
+    def test_check_strict_raises_on_violation(self, tmp_path: Path) -> None:
+        root = _stub_repo(tmp_path)
+        _write(root / "experiments" / "bad.py", """
+            from pathlib import Path
+            def load_poses(cfg):
+                poses = None
+                for poses_path in [Path("a.pt"), Path("b.pt")]:
+                    if poses_path.exists():
+                        poses = poses_path
+                        break
+                if poses is None:
+                    print("[WARN] no poses found, using zero poses")
+                return poses
+        """)
+        with pytest.raises(MetaBugViolation):
+            check_no_silent_auto_discovery_with_warn(repo_root=root, strict=True, verbose=False)
+
+    def test_check_warn_only_returns_list(self, tmp_path: Path) -> None:
+        root = _stub_repo(tmp_path)
+        _write(root / "experiments" / "bad.py", """
+            from pathlib import Path
+            def load_poses(cfg):
+                poses = None
+                for poses_path in [Path("a.pt"), Path("b.pt")]:
+                    if poses_path.exists():
+                        poses = poses_path
+                        break
+                if poses is None:
+                    print("[WARN] no poses found")
+                return poses
+        """)
+        v = check_no_silent_auto_discovery_with_warn(repo_root=root, strict=False, verbose=False)
+        assert len(v) == 1, v
+
+    def test_check_returns_zero_on_live_codebase(self) -> None:
+        """Live count gate: post-fix the entire codebase produces 0 violations.
+        If non-zero, a new offender has been introduced — fix it OR add the
+        `# AUTO_DISCOVERY_OK:<reason>` waiver. (qat_finetune.py was the only
+        known instance and was fixed in the same Lane F-V2 patch.)"""
+        v = check_no_silent_auto_discovery_with_warn(strict=False, verbose=False)
+        assert v == [], (
+            f"Live codebase has {len(v)} silent-auto-discovery violation(s). "
+            f"See findings.md 'Lane F regression — bugged or dead?' (2026-04-27).\n"
+            + "\n".join(f"  • {x}" for x in v)
+        )
+
+    def test_qat_finetune_post_fix_passes(self) -> None:
+        """Specific regression test: `experiments/qat_finetune.py` must NOT
+        be flagged after the Bug 1 fix (the pre-fix file WOULD have been
+        flagged). This is the one offender we fixed in the same patch."""
+        from pathlib import Path as _P
+        from tac.preflight import REPO_ROOT
+        target = REPO_ROOT / "experiments" / "qat_finetune.py"
+        assert target.exists(), f"qat_finetune.py missing: {target}"
+        v = _scan_python_for_silent_auto_discovery(target, REPO_ROOT)
+        assert v == [], (
+            "qat_finetune.py is being flagged — Bug 1 fix has regressed.\n"
+            + "\n".join(f"  • {x}" for x in v)
+        )

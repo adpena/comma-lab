@@ -429,3 +429,115 @@ def test_real_dilated_h64_baseline_fp4_roundtrip():
     # is fully convolutional so any divisible shape works).
     out_shape = _smoke_forward(loaded)
     assert out_shape == (1, 2, 32, 48, 3)
+
+
+# ════════════════════════════════════════════════════════════════════════════
+# Lane F regression tests (post-2026-04-27 forensic council)
+# ════════════════════════════════════════════════════════════════════════════
+#
+# These tests pin the Bug 1 fix from findings.md "## 2026-04-27 Council audit:
+# Lane F regression — bugged or dead?" — qat_finetune.py MUST have an explicit
+# `--poses` CLI argument and MUST raise SystemExit (not silently warn) when
+# pose_dim>0 but --poses is missing.
+#
+# History: Lane F v1 silently fell back to zero poses when --poses was not
+# threaded, then deployed against real poses → +58% PoseNet regression
+# misreported as "FP4 quantization is dead." The structural fix is the
+# explicit --poses arg + raise. This is the test gate that prevents regression.
+
+
+import argparse
+import subprocess
+import sys
+
+
+def test_qat_finetune_argparse_has_poses_flag():
+    """The argparse parser of qat_finetune.py MUST register --poses.
+    Mirrors the test pattern from test_train_renderer_auth_eval_wiring.py
+    (CLAUDE.md NEVER invent CLI flags rule).
+    """
+    qat_path = REPO / "experiments" / "qat_finetune.py"
+    assert qat_path.exists(), f"qat_finetune.py missing: {qat_path}"
+    text = qat_path.read_text()
+    assert '"--poses"' in text, (
+        "qat_finetune.py argparse missing --poses flag. "
+        "Required per findings.md 'Lane F regression' (2026-04-27). "
+        "Bug 1 fix has regressed."
+    )
+
+
+def test_qat_finetune_argparse_has_poses_help_text_warning():
+    """The --poses help text must mention that auto-discovery is intentionally
+    NOT done (so a future agent reading the help doesn't reintroduce the bug)."""
+    qat_path = REPO / "experiments" / "qat_finetune.py"
+    text = qat_path.read_text()
+    # The help text should be substantive (not a placeholder)
+    assert "Auto-discovery" in text or "auto-discovery" in text, (
+        "--poses help text should warn that auto-discovery is intentionally "
+        "NOT done (per CLAUDE.md FORBIDDEN PATTERNS)."
+    )
+    assert "FORBIDDEN PATTERNS" in text or "explicit > implicit" in text, (
+        "--poses help text should reference CLAUDE.md FORBIDDEN PATTERNS."
+    )
+
+
+def test_qat_finetune_raises_on_missing_poses_for_pose_dim_gt_0():
+    """Subprocess test: qat_finetune.py MUST exit non-zero when checkpoint has
+    pose_dim>0 and --poses is not provided. This is the falsifiable assertion
+    that the silent-WARN fallback is gone.
+
+    We use a real on-disk pose_dim>0 checkpoint (the dilated-h64 baseline),
+    which is the same one Lane F v1 catastrophically miscompiled."""
+    baseline = REPO / "submissions/baseline_dilated_h64_0_90/renderer.bin"
+    if not baseline.exists():
+        pytest.skip("dilated-h64 baseline binary not present in this checkout")
+    qat_path = REPO / "experiments" / "qat_finetune.py"
+    # Use --device cpu + --upstream a nonexistent path so we don't burn GPU
+    # or require upstream/. We expect the script to fail at the --poses check
+    # BEFORE it reaches scorer load (which is what would crash from the bad
+    # upstream path). This is a mid-script-fail test, not an end-to-end test.
+    result = subprocess.run(
+        [
+            sys.executable, str(qat_path),
+            "--checkpoint", str(baseline),
+            "--upstream", "/tmp/nonexistent_upstream_for_test",
+            "--output-dir", "/tmp/qat_finetune_pose_test",
+            "--device", "cpu",
+            "--base-ch", "36", "--mid-ch", "60", "--pose-dim", "6",
+            "--motion-hidden", "32", "--depth", "1", "--embed-dim", "6",
+            "--use-zoom-flow", "--padding-mode", "zeros",
+            "--skip-int8-warmup",
+            "--fp4-epochs", "1",
+            "--lr", "5e-5",
+            "--batch-size", "1",
+            # NOTE: deliberately NOT passing --poses to trigger the raise.
+        ],
+        capture_output=True, text=True, timeout=120,
+    )
+    assert result.returncode != 0, (
+        f"qat_finetune.py exited 0 with pose_dim=6 but no --poses. "
+        f"The silent-WARN fallback regressed.\nstdout: {result.stdout}\n"
+        f"stderr: {result.stderr}"
+    )
+    combined = result.stdout + result.stderr
+    # The fatal message should mention --poses to give the operator a clear fix.
+    assert "--poses" in combined, (
+        f"Error message must mention --poses. Got:\n{combined[-2000:]}"
+    )
+
+
+def test_qat_finetune_no_silent_auto_discovery_pattern():
+    """Final structural gate: scan the qat_finetune.py source for the
+    silent-auto-discovery pattern using the meta-bug check. Must return
+    0 violations after Bug 1 fix."""
+    from tac.preflight import (
+        _scan_python_for_silent_auto_discovery,
+        REPO_ROOT,
+    )
+    qat_path = REPO_ROOT / "experiments" / "qat_finetune.py"
+    v = _scan_python_for_silent_auto_discovery(qat_path, REPO_ROOT)
+    assert v == [], (
+        f"qat_finetune.py has silent-auto-discovery violation(s). "
+        f"Bug 1 fix regressed. Findings:\n"
+        + "\n".join(f"  • {x}" for x in v)
+    )

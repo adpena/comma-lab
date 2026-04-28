@@ -338,6 +338,16 @@ def preflight_all(
         # comment block above the function definition.
         check_kl_div_reduction_correct(strict=True, verbose=verbose)
 
+        # 2026-04-27 forensic council (findings.md "Lane F regression"):
+        # 29th meta-bug check. Forbid the silent-default-masquerading-as-
+        # negative-result pattern (auto-discover from N hardcoded paths +
+        # WARN-and-proceed instead of raise). Lane F (qat_finetune.py) +
+        # Lane G (kl_distill_weight default) are the 2 known instances —
+        # both fixed; live count after qat_finetune.py fix should be 0.
+        # See Check N comment block above the function definition + memory
+        # `feedback_silent_default_masquerading_as_negative_result`.
+        check_no_silent_auto_discovery_with_warn(strict=True, verbose=verbose)
+
     # 2. Training inputs (only if profile + tto_frames provided)
     if profile_name and tto_frames_path and gt_poses_path and masks_path and profile_arch:
         preflight_training_inputs(
@@ -6411,6 +6421,305 @@ def check_kl_div_reduction_correct(
 # violation counts above ran clean. TODO removed; if a future check needs to
 # be deferred, add it directly to preflight_all() at strict=False with a
 # one-line note linking the audit that promotes it.
+
+
+# ════════════════════════════════════════════════════════════════════════════
+# Check N (29th meta-bug): silent-default-masquerading-as-negative-result
+# ════════════════════════════════════════════════════════════════════════════
+#
+# The bug class — a CLI flag is missing, the script auto-discovers from a list
+# of N hardcoded fallback paths, none exist, the script prints a `[WARN] ...`
+# line and proceeds with a silent default (None / zero / empty). The operator
+# sees the script "succeed" but the produced artifact was trained against the
+# wrong inputs. The result then enters the council deliberation as if it were
+# a real negative result, leading to "this lane is dead" misjudgments.
+#
+# Real-world incidents (2 in 2 days, 2026-04-27):
+#   • Lane G v1 — `kl_distill_weight` defaulted to 5e-6 with batchmean reduction;
+#     reported "KL distill killed PoseNet" when in fact the gradient was 5000x
+#     over-weighted. (See findings.md "Lane G — really dead, or bugged?")
+#   • Lane F v1 — `qat_finetune.py` had no `--poses` arg, auto-discovered from
+#     `experiments/results/gt_poses.pt` + `upstream/gt_poses.pt`, neither
+#     existed, printed `[WARN] ... will use zero poses` and proceeded. Renderer
+#     was QAT-trained against zero poses, deployed against real poses, +58%
+#     PoseNet regression reported as "FP4 quantization is dead." (See findings.md
+#     "Lane F regression — bugged or dead?")
+#
+# The structural fix: forbid the pattern `for x in [Path(...), Path(...)]:
+# if x.exists(): ... ; print("[WARN] ... not found"); return None` (or
+# equivalent). Either RAISE (preferred) or document the silent fallback with
+# an `# AUTO_DISCOVERY_OK:<reason>` waiver marker on the loop or warn line.
+#
+# Detection (combined AST + text):
+#   1. AST-find every `for ... in [<list of Path/str literals>]:` loop body
+#      that contains `if <var>.exists():` AND a `break` / `return` / assignment.
+#   2. Look in the *same containing function* for a subsequent print-or-log call
+#      whose string argument contains `[WARN]` (case-insensitive `WARN`).
+#   3. If the function does NOT raise / sys.exit after the warn, flag it.
+#   4. Same-line waiver `# AUTO_DISCOVERY_OK:<reason>` on either the for loop
+#      header OR the warn line opts out.
+
+
+_AUTO_DISCOVERY_WAIVER_TOKEN = "AUTO_DISCOVERY_OK"
+
+
+def _line_has_waiver(lines: list[str], lineno: int) -> bool:
+    """Return True if `lines[lineno-1]` has a `# AUTO_DISCOVERY_OK:` comment."""
+    if not (0 < lineno <= len(lines)):
+        return False
+    src_line = lines[lineno - 1]
+    comment_idx = src_line.find("#")
+    if comment_idx < 0:
+        return False
+    return _AUTO_DISCOVERY_WAIVER_TOKEN in src_line[comment_idx:]
+
+
+def _function_has_waiver(lines: list[str], fn_node: ast.AST) -> bool:
+    """Return True if any line in the function body has the waiver marker.
+
+    Permissive: a single waiver anywhere in the function exempts the function.
+    Lets callers waive a multi-line auto-discovery block without picking the
+    exact line."""
+    if not hasattr(fn_node, "lineno") or not hasattr(fn_node, "end_lineno"):
+        return False
+    start, end = fn_node.lineno, fn_node.end_lineno or fn_node.lineno
+    for ln in range(start, end + 1):
+        if _line_has_waiver(lines, ln):
+            return True
+    return False
+
+
+def _list_is_path_candidates(node: ast.AST) -> bool:
+    """Detect `[Path("..."), Path(...) / "...", Path(cfg.x) / "..."]` literal.
+
+    The list must contain >=2 elements that are either Path() calls, BinOp /
+    expressions involving Path, or string literals that look like file paths
+    (have a "/" or end with .pt/.bin/.json). Lenient on the exact form to
+    handle the patterns we've seen in the wild.
+    """
+    if not isinstance(node, (ast.List, ast.Tuple)):
+        return False
+    if len(node.elts) < 2:
+        return False
+    n_path_like = 0
+    for elt in node.elts:
+        # Path("...") or Path(...) / "..."
+        text = ""
+        try:
+            text = ast.unparse(elt) if hasattr(ast, "unparse") else ""
+        except Exception:
+            pass
+        if "Path(" in text:
+            n_path_like += 1
+            continue
+        # bare string with path-like marker
+        if isinstance(elt, ast.Constant) and isinstance(elt.value, str):
+            v = elt.value
+            if "/" in v or v.endswith((".pt", ".bin", ".json", ".mkv", ".pth", ".safetensors")):
+                n_path_like += 1
+    return n_path_like >= 2
+
+
+def _function_warns_then_proceeds(fn_node: ast.AST, lines: list[str]) -> tuple[bool, int]:
+    """Scan a function body for a `print/log("[WARN] ...")`-style call that is
+    NOT followed by `raise` / `sys.exit` / `SystemExit` in the same function.
+
+    Returns (has_silent_warn, warn_lineno). `has_silent_warn` is True when the
+    warn is unguarded. lineno=0 when no warn found.
+    """
+    warn_calls: list[tuple[int, ast.Call]] = []
+    raise_or_exit_after: dict[int, bool] = {}
+
+    # First pass: collect warn print/log calls.
+    for sub in ast.walk(fn_node):
+        if not isinstance(sub, ast.Call):
+            continue
+        # Only top-of-string literal argument check.
+        for a in sub.args:
+            if isinstance(a, ast.Constant) and isinstance(a.value, str):
+                # Case-insensitive: `[WARN]`, `WARNING`, `WARN:`.
+                up = a.value.upper()
+                if "[WARN]" in up or "WARNING:" in up or up.startswith("WARN "):
+                    # Filter by function name to avoid false positives like
+                    # `assert "[WARN]" in ...` (those are ast.Compare, not Call).
+                    func_text = ""
+                    try:
+                        func_text = ast.unparse(sub.func) if hasattr(ast, "unparse") else ""
+                    except Exception:
+                        pass
+                    # Match `print`, `*.print`, `log`, `*.log`, `_warn`,
+                    # `*.warn`, `*.warning`, `logger.warning`, etc.
+                    func_lower = func_text.lower()
+                    if any(tok in func_lower for tok in (
+                        "print", "log", "warn", "_warn", "echo",
+                    )):
+                        warn_calls.append((sub.lineno, sub))
+                        break
+
+    if not warn_calls:
+        return (False, 0)
+
+    # Second pass: for each warn, check if a `raise` / `sys.exit` / `SystemExit`
+    # appears in the function body AFTER the warn line.
+    for warn_ln, _ in warn_calls:
+        guarded = False
+        for sub in ast.walk(fn_node):
+            if isinstance(sub, ast.Raise) and sub.lineno > warn_ln:
+                guarded = True
+                break
+            if isinstance(sub, ast.Call):
+                func_text = ""
+                try:
+                    func_text = ast.unparse(sub.func) if hasattr(ast, "unparse") else ""
+                except Exception:
+                    pass
+                if sub.lineno > warn_ln and func_text in (
+                    "sys.exit", "exit", "SystemExit", "os._exit",
+                ):
+                    guarded = True
+                    break
+        raise_or_exit_after[warn_ln] = guarded
+
+    # Silent warn = warn that is NOT guarded.
+    for warn_ln, _ in warn_calls:
+        if not raise_or_exit_after.get(warn_ln, False):
+            return (True, warn_ln)
+    return (False, 0)
+
+
+def _scan_python_for_silent_auto_discovery(path: Path, repo_root: Path) -> list[str]:
+    """Detect the silent-default-masquerading-as-negative-result pattern.
+
+    Looks for functions containing BOTH:
+      (a) a `for x in [<list of >=2 Path-like literals>]:` loop body that
+          conditionally uses the candidate via `<x>.exists()`, AND
+      (b) somewhere later in the same function, an unguarded `print/log/warn`
+          call whose first string literal contains `[WARN]` / `WARNING:` /
+          `WARN ` (case-insensitive), with no following `raise` / `sys.exit`.
+
+    The opt-out marker is `# AUTO_DISCOVERY_OK:<reason>` placed anywhere in
+    the offending function (typically on the for-loop header or the warn line).
+    """
+    rel = path.relative_to(repo_root) if path.is_absolute() else path
+    # Skip test files (they intentionally exercise the bug pattern).
+    if "tests" in rel.parts or rel.name.startswith("test_"):
+        return []
+    try:
+        text = path.read_text()
+        tree = ast.parse(text, filename=str(path))
+    except (SyntaxError, UnicodeDecodeError, FileNotFoundError):
+        return []
+    lines = text.splitlines()
+    violations: list[str] = []
+
+    for fn_node in ast.walk(tree):
+        if not isinstance(fn_node, (ast.FunctionDef, ast.AsyncFunctionDef)):
+            continue
+        if _function_has_waiver(lines, fn_node):
+            continue
+
+        # (a) Find a for-loop with Path-list iter + .exists() check in body.
+        has_path_list_loop = False
+        loop_lineno = 0
+        for sub in ast.walk(fn_node):
+            if not isinstance(sub, ast.For):
+                continue
+            if not _list_is_path_candidates(sub.iter):
+                continue
+            # Body must contain `<var>.exists()` Attribute call.
+            uses_exists = False
+            for body_sub in ast.walk(sub):
+                if isinstance(body_sub, ast.Call):
+                    func_text = ""
+                    try:
+                        func_text = ast.unparse(body_sub.func) if hasattr(ast, "unparse") else ""
+                    except Exception:
+                        pass
+                    if func_text.endswith(".exists"):
+                        uses_exists = True
+                        break
+            if uses_exists:
+                has_path_list_loop = True
+                loop_lineno = sub.lineno
+                break
+
+        if not has_path_list_loop:
+            continue
+
+        # (b) Function must contain an unguarded warn call.
+        has_silent_warn, warn_lineno = _function_warns_then_proceeds(fn_node, lines)
+        if not has_silent_warn:
+            continue
+
+        violations.append(
+            f"{rel}:{loop_lineno}: function `{fn_node.name}` uses Path-list "
+            f"auto-discovery (loop at line {loop_lineno}) followed by an unguarded "
+            f"`[WARN]` print at line {warn_lineno}, with no `raise`/`sys.exit` "
+            f"after it. This is the SILENT-DEFAULT-MASQUERADING bug class — "
+            f"the script proceeds with a wrong default that produces an invalid "
+            f"result without operator awareness. See findings.md "
+            f"\"Lane F regression — bugged or dead?\" (2026-04-27) and memory "
+            f"`feedback_silent_default_masquerading_as_negative_result`. Fix: "
+            f"raise SystemExit on missing input OR add a same-function "
+            f"`# AUTO_DISCOVERY_OK:<reason>` marker on the loop or warn line."
+        )
+
+    return violations
+
+
+def check_no_silent_auto_discovery_with_warn(
+    repo_root: Path | None = None,
+    strict: bool = True,
+    verbose: bool = True,
+) -> list[str]:
+    """29th meta-bug check: silent-default-masquerading-as-negative-result.
+
+    Catches functions that auto-discover from a list of hardcoded paths,
+    print a `[WARN]` line when none exist, and proceed without raising.
+    The operator sees the script "succeed" but the artifact was built with
+    the wrong inputs — leading to "this lane is dead" misjudgments.
+
+    Real-world incidents:
+      • Lane F v1 (qat_finetune.py): auto-discovered gt_poses.pt from 2 paths,
+        printed [WARN] ... will use zero poses, trained renderer with wrong
+        conditioning. Reported as "FP4 quantization is dead." (BUGGED.)
+      • Lane G v1 (kl_distill_weight defaulted with batchmean reduction):
+        same class — silent bad default reported as "KL distill is dead."
+
+    Reference: findings.md "Lane F regression — bugged or dead?" + memory
+    `feedback_silent_default_masquerading_as_negative_result`.
+
+    Returns list of violations. Raises MetaBugViolation if strict and any.
+    """
+    root = repo_root or REPO_ROOT
+    violations: list[str] = []
+    n_scanned = 0
+    for py in _iter_python_files(root, _META_PY_SCAN_DIRS):
+        n_scanned += 1
+        violations.extend(_scan_python_for_silent_auto_discovery(py, root))
+
+    if verbose and violations:
+        print(f"  [no-silent-auto-discovery] {len(violations)} violation(s) across {n_scanned} files:")
+        for v in violations:
+            print(f"    • {v}")
+    elif verbose:
+        print(f"  [no-silent-auto-discovery] OK: {n_scanned} files scanned")
+
+    if violations and strict:
+        raise MetaBugViolation(
+            "SILENT-DEFAULT-MASQUERADING-AS-NEGATIVE-RESULT violations:\n"
+            + "\n".join(f"  • {v}" for v in violations)
+            + "\n\nThis is the 2-in-2-days bug class (Lane G + Lane F, "
+            "2026-04-27). The pattern is: missing CLI flag → auto-discover "
+            "from N hardcoded paths → none exist → print [WARN] → proceed "
+            "with silent default → operator sees the result land as a "
+            "negative outcome. Fix: replace the auto-discovery + warn with "
+            "an explicit `--<flag>` argument that RAISES on missing input. "
+            "Documented opt-out: same-function `# AUTO_DISCOVERY_OK:<reason>` "
+            "marker. See findings.md and memory "
+            "`feedback_silent_default_masquerading_as_negative_result`."
+        )
+    return violations
 
 
 if __name__ == "__main__":
