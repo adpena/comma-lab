@@ -203,23 +203,59 @@ class _PerElementSTEQuantize(torch.autograd.Function):
             one_bit_mask, grad_output, grad_weight
         )
 
-        # ── Bits gradient: upstream-signed linear FD STE surrogate ───────
+        # ── Bits gradient: LOSS-DELTA finite-difference STE surrogate ────
         #
-        # Round 10 fix: preserve the upstream gradient's sign and curvature
-        # by linearising the caller's actual loss around q. For arbitrary
-        # upstream losses (CE/KL/PoseNet/rate), a local first-order model is
+        # Round 21 fix (REVERTS the Round 10 regression, RESTORES Round 7):
+        #   Round 10 replaced the Round 7 loss-delta FD with a
+        #   "linearise the upstream loss as L(q*) ≈ grad_output · q*"
+        #   surrogate. The justification was "preserves CE/KL sign". The
+        #   bug: the linear model ASSUMES L is locally linear in q across
+        #   the FD probe interval [q_bminus, q_bplus]. For our quantizer
+        #   levels(b) = 2^(b-1) - 1 = {1, 3, 7, 15, ...} that interval
+        #   spans an O(1) jump (e.g. b=2→1: q goes from 0 to ±scale). So
+        #   the linearisation breaks WHEREVER the loss has noticeable
+        #   curvature in the probe range — which is exactly the canonical
+        #   MSE chain (Lane Ω-V2's actual training objective via the rate
+        #   penalty + downstream distortion proxies).
         #
-        #     L(q*) ≈ grad_output · q*
+        # Worked counter-example (the bug Round 10 introduced):
+        #     w=+0.1, scale=1, b=2:
+        #       q       = 0          (zero bin)
+        #       q_bplus = 0          (b=3 still rounds to 0; step=1/3 > 0.1)
+        #       q_bminus= +1         (b=1 sign quantizer)
+        #       grad_output (MSE) = q − w = -0.1
+        #       Round 10 grad_bits = -0.1 · (0 − 1)/2 = +0.05  → SGD LOWERS bits
+        #         → bits=1 → q=+1 → MSE = (1 − 0.1)² = 0.81
+        #         (vs MSE = 0.01 at b=2 — STRICTLY WORSE).
+        #     True central FD on L(b):
+        #       L(b=1)=0.405, L(b=2)=0.005, L(b=3)=0.005
+        #       ∂L/∂b ≈ (L(b=3) − L(b=1))/2 = -0.20  (NEGATIVE)
+        #     Round 10 returned the OPPOSITE sign of the true gradient.
+        #   Tests `test_round10_zero_bin_mse_upstream_preserves_sign` and
+        #   `test_round10_synthetic_ce_like_upstream_sign_flips_grad_bits`
+        #   are the correct pins for this property; Round 10 silently
+        #   invalidated them and 4+ rounds of review dismissed the
+        #   failures as "stale Round 7 tests" without re-deriving the
+        #   chain rule from first principles.
         #
-        # so the central finite difference wrt. bit-depth is
+        # Round 21 restores the Round 7 loss-delta FD:
+        #     L(q) ≈ ½(q − w)²                           (canonical MSE proxy)
+        #     ∂L/∂b ≈ [L(q_bplus) − L(q_bminus)] / 2     (central FD)
+        #     grad_bits = |grad_output| · ∂L/∂b
+        # The upstream gradient acts as a MAGNITUDE scaler only; the SIGN
+        # of the bit update comes from the local proxy distortion delta,
+        # which is the rate-distortion quantity the Lagrangian wants to
+        # minimise. For our actual training objective (PoseNet/SegNet
+        # distortion + rate + KL) the proxy is the right local model
+        # because the quantizer's effect on downstream loss IS the
+        # weight-perturbation distortion `(q − w)²` propagated through
+        # the network — not a single linear coefficient at q.
         #
-        #     grad_bits = [grad_output*q_bplus - grad_output*q_bminus] / 2
-        #
-        # This is the chain rule through the quantizer staircase. It avoids
-        # the Round 7 mistake of replacing the caller's signed gradient with
-        # ``abs(grad_output)`` and an MSE-only proxy, which was only valid
-        # for one local distortion model and wrong for CE/KL/PoseNet/rate
-        # objectives.
+        # Verification of the fix at the bug case::
+        #     sq_err_bplus  = (0  − 0.1)² = 0.01
+        #     sq_err_bminus = (1  − 0.1)² = 0.81
+        #     local_diff    = (0.01 − 0.81)/2 = -0.40
+        #     grad_bits     = |-0.1| · -0.40 = -0.04  → NEGATIVE → SGD RAISES bits ✓
         #
         # Zero-distortion short-circuit (kept from Round 7):
         #   The Round 6 ``weight == 0`` mask was OVERLY BROAD. At b=1 the
@@ -231,9 +267,15 @@ class _PerElementSTEQuantize(torch.autograd.Function):
         #   still suppressing phantom signal where the weight is genuinely
         #   noise-free at the current bit-depth.
         #
-        local_loss_bplus = grad_output * q_bplus
-        local_loss_bminus = grad_output * q_bminus
-        grad_bits = (local_loss_bplus - local_loss_bminus) / 2.0
+        # Reference: HAWQ (Dong et al. 2019) §3.2 uses the same MSE proxy
+        # for per-layer Hessian-aware bit allocation; LSQ (Esser et al.
+        # 2020) for the magnitude-scaler convention; the loss-delta FD is
+        # a standard zeroth-order trick when the q-delta FD inverts under
+        # the chain.
+        sq_err_bplus = (q_bplus - weight) ** 2
+        sq_err_bminus = (q_bminus - weight) ** 2
+        local_loss_central_diff = (sq_err_bplus - sq_err_bminus) / 2.0
+        grad_bits = grad_output.abs() * local_loss_central_diff
         # Round 7 fix: only suppress grad_bits when the current quantized
         # output ACTUALLY has zero distortion at the current bit-depth.
         # ``weight == 0`` (Round 6) would also zero out the b=1 sign-escape

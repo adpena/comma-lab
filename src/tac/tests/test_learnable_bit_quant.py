@@ -300,8 +300,22 @@ def test_outputs_finite_at_all_bit_levels():
 
 def test_round10_zero_bin_mse_upstream_preserves_sign():
     """w=0.1, b=2 gives q=0, q_bplus=0, q_bminus=+1.
+
     A small bit decrease increases the local proxy MSE, so the STE
-    gradient wrt bits must be negative and SGD must raise bits."""
+    gradient wrt bits must be negative and SGD must raise bits.
+
+    Round 21 derivation (anti-arbitrariness):
+      step = 1/(2^(b-1)-1) = 1 at b=2, so q = round(0.1)*1 = 0.
+      q_bplus  (b=3): step=1/3, round(0.3)*1/3 = 0.
+      q_bminus (b=1): sign quantizer, w=0.1>=0 → q_bminus = +1.
+      grad_output (∂L/∂q for L=½(q-w)²) = q-w = -0.1.
+      sq_err_bplus  = (0  - 0.1)² = 0.01
+      sq_err_bminus = (1  - 0.1)² = 0.81
+      local_diff    = (0.01 - 0.81)/2 = -0.40
+      grad_bits     = |-0.1| · -0.40 = -0.04   ← expected
+      True L(b=1)=0.405, L(b=2)=0.005, L(b=3)=0.005. SGD on negative
+      gradient pushes b up; b=2 is already optimal so step is small.
+    """
     scale = torch.ones(1, dtype=torch.float64)
     weight = torch.tensor([[[[0.1]]]], dtype=torch.float64, requires_grad=True)
     bits = torch.tensor([[[[2.0]]]], dtype=torch.float64, requires_grad=True)
@@ -322,7 +336,18 @@ def test_round10_zero_bin_mse_upstream_preserves_sign():
 
 def test_round10_synthetic_ce_like_upstream_sign_flips_grad_bits():
     """The MSE proxy uses abs(upstream) as a scale; equal-magnitude
-    synthetic upstream signs should not invert the bit-depth direction."""
+    synthetic upstream signs should not invert the bit-depth direction.
+
+    Round 21 derivation (anti-arbitrariness):
+      Two elements, both w=0.1, b=2 → same q, q_bplus, q_bminus as above.
+      sq_err_bplus  = 0.01, sq_err_bminus = 0.81, local_diff = -0.40.
+      Element 0: grad_output=+2.0 → grad_bits = |+2.0| · -0.40 = -0.80.
+      Element 1: grad_output=-2.0 → grad_bits = |-2.0| · -0.40 = -0.80.
+      Both negative because the local distortion landscape rewards
+      raising bits regardless of upstream sign — the upstream is just
+      a magnitude scaler. This is the canonical Round 7 invariant the
+      Round 10 linearisation broke (it returned ±1.0 instead of -0.80).
+    """
     scale = torch.ones(2, dtype=torch.float64)
     weight = torch.tensor([[[[0.1]]], [[[0.1]]]], dtype=torch.float64, requires_grad=True)
     bits = torch.full_like(weight, 2.0, requires_grad=True)
