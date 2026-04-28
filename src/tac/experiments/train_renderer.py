@@ -316,6 +316,26 @@ def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
     p.add_argument("--kl-distill-temperature", type=float, default=None,
                    help="Softmax temperature for KL distillation (default: from "
                         "profile, else 2.0).")
+    # Lane J-JBL (Jack Cycle 1 TOP-1, 2026-04-28): swap the SegNet KL distill
+    # auxiliary for Jaccard Metric Loss + Boundary Label Smoothing per
+    # Wang et al. NeurIPS 2023 (arXiv 2302.05666). loss_mode="jbl" replaces
+    # kl_distill_segnet_only with combined_jbl_distill_loss in the auxiliary
+    # add. loss_mode="standard" / "kl" keeps the historical behaviour.
+    # Default None lets the profile resolver win; effective default is
+    # "standard" so unprofiled CLI runs are byte-identical to the legacy
+    # path. See tac.losses_jbl for the math + .omx/research/jack_skunkworks
+    # _segnet_rate_research_20260428.md §S1 for the wedge attribution.
+    p.add_argument("--loss-mode", type=str, default=None,
+                   choices=["standard", "kl", "jbl"],
+                   help="Auxiliary distillation loss family. 'standard'/'kl' = "
+                        "Hinton KL distill (default, the Lane G v3 recipe). "
+                        "'jbl' = Lane J-JBL Jaccard + Boundary Label Smoothing.")
+    p.add_argument("--boundary-weight", type=float, default=None,
+                   help="Lane J-JBL: per-pixel weight multiplier on boundary "
+                        "pixels inside the BLS+CE channel (default 3.0).")
+    p.add_argument("--bls-smoothing", type=float, default=None,
+                   help="Lane J-JBL: label-smoothing epsilon applied at "
+                        "boundary pixels only (default 0.1).")
     # Lane PS (per-class SegNet weighting). Per memory
     # `project_research_survey_20260420` — research-grade, never
     # implemented. SegNet predicts 5-class segmentation; cheap classes
@@ -822,6 +842,21 @@ def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
                                        "kl_distill_weight", 0.0)
     args.kl_distill_temperature = _resolve(getattr(args, "kl_distill_temperature", None),
                                             "kl_distill_temperature", 2.0)
+    # Lane J-JBL (Jack Cycle 1 TOP-1) resolvers — see CLI add_argument block
+    # for context. Default loss_mode "standard" keeps the auxiliary KL
+    # distill path byte-identical to Lane G v3 unless a profile / CLI
+    # opts in to "jbl".
+    args.loss_mode = _resolve(getattr(args, "loss_mode", None),
+                              "loss_mode", "standard")
+    if args.loss_mode not in ("standard", "kl", "jbl"):
+        raise SystemExit(
+            f"FATAL: --loss-mode={args.loss_mode!r} unrecognised; "
+            "valid: 'standard', 'kl', 'jbl'."
+        )
+    args.boundary_weight = _resolve(getattr(args, "boundary_weight", None),
+                                     "boundary_weight", 3.0)
+    args.bls_smoothing = _resolve(getattr(args, "bls_smoothing", None),
+                                   "bls_smoothing", 0.1)
     # Lane PS (per-class SegNet weighting) resolver. Default sentinel is
     # ``None`` / empty string. Profile key + CLI flag share the standard
     # _resolve() rules (CLI > profile > default). Parsed lazily into a
@@ -2846,15 +2881,53 @@ def train(args: argparse.Namespace):
                 # That matches the historical "KL distill caused PoseNet collapse"
                 # failure mode per CLAUDE.md "Critical Lessons". Use the SegNet-
                 # only helper that returns ONLY T²-scaled seg_kl.
+                #
+                # Lane J-JBL (Jack Cycle 1 TOP-1, 2026-04-28): when loss_mode
+                # is "jbl", swap the KL distill auxiliary for the combined
+                # Jaccard Metric Loss + Boundary Label Smoothing distillation
+                # (Wang et al. NeurIPS 2023). The kl_distill_weight knob is
+                # repurposed as the JBL master scalar so the wiring stays
+                # byte-identical to Lane G v3 except for the loss family.
+                # See tac.losses_jbl + .omx/research/jack_skunkworks_segnet_
+                # rate_research_20260428.md §S1 for the wedge attribution.
                 if args.kl_distill_weight > 0:
-                    kl_loss, _kl_seg = kl_distill_segnet_only(  # KL_RAW_PAIRS_OK:rendered_pair was reassigned to roundtripped output at L1642
-                        rendered_pair, gt_pair, segnet,
-                        temperature=args.kl_distill_temperature,
-                        class_weights=getattr(
-                            args, "_segnet_class_weights_tensor", None,
-                        ),
-                    )
-                    loss = loss + args.kl_distill_weight * kl_loss
+                    if args.loss_mode == "jbl":
+                        from tac.losses_jbl import combined_jbl_distill_loss
+                        # Forward both student (renderer-rendered) and teacher
+                        # (GT) frames through SegNet to obtain logits. Mirrors
+                        # the no-grad teacher pattern in kl_distill_segnet_only.
+                        from tac.losses import _hwc_to_chw  # internal helper
+                        fx = _hwc_to_chw(rendered_pair)  # KL_RAW_PAIRS_OK:rendered_pair was reassigned to roundtripped output at L1642
+                        gx = _hwc_to_chw(gt_pair)
+                        fs_in = segnet.preprocess_input(fx)
+                        with torch.no_grad():
+                            gs_in = segnet.preprocess_input(gx)
+                        student_logits = segnet(fs_in)
+                        with torch.no_grad():
+                            teacher_logits = segnet(gs_in)
+                        # GT mask = teacher argmax (5-class). The teacher-as-GT
+                        # pattern is the canonical contest-eval surrogate; the
+                        # teacher itself is the upstream SegNet's argmax.
+                        gt_mask = teacher_logits.argmax(dim=1)  # (B, H, W)
+                        jbl_loss, _jbl_tel = combined_jbl_distill_loss(
+                            student_logits, teacher_logits, gt_mask,
+                            num_classes=5,
+                            jaccard_weight=1.0,
+                            bls_weight=0.5,
+                            boundary_pixel_weight=args.boundary_weight,
+                            bls_smoothing=args.bls_smoothing,
+                            teacher_temperature=args.kl_distill_temperature,
+                        )
+                        loss = loss + args.kl_distill_weight * jbl_loss
+                    else:
+                        kl_loss, _kl_seg = kl_distill_segnet_only(  # KL_RAW_PAIRS_OK:rendered_pair was reassigned to roundtripped output at L1642
+                            rendered_pair, gt_pair, segnet,
+                            temperature=args.kl_distill_temperature,
+                            class_weights=getattr(
+                                args, "_segnet_class_weights_tensor", None,
+                            ),
+                        )
+                        loss = loss + args.kl_distill_weight * kl_loss
 
                 # Yousfi #5 (council 5/0 vote 2026-04-26): inverse-SegNet-
                 # entropy weighted L1 on the SegNet-evaluated frame (index 1

@@ -2713,6 +2713,50 @@ DILATED_H64_HALF_FRAME_V3_ANNEALED_KLDISTILL = {
 }
 
 
+# ── LANE J-JBL: Jaccard Metric Loss + Boundary Label Smoothing distillation ──
+# Jack-from-skunkworks Cycle 1 TOP-1 (research file
+# .omx/research/jack_skunkworks_segnet_rate_research_20260428.md §S1).
+#
+# Anchored on Lane G v3 1.05 [contest-CUDA] (DILATED_H64_HALF_FRAME_V3_ANNEALED_KLDISTILL).
+# Replaces the SegNet KL distillation auxiliary (Hinton 2015) with the JBL
+# combined loss from Wang et al. (NeurIPS 2023, arXiv 2302.05666):
+#   * Jaccard Metric Loss on student vs teacher soft labels (subsumes
+#     Lovász-Softmax, +2-5 mIoU near boundaries on EfficientNet — directly
+#     relevant to the comma SegNet's EfficientNet-B2 backbone).
+#   * Boundary Label Smoothing on GT cross-entropy with boundary pixels
+#     weighted 3× interior pixels.
+#
+# loss_mode="jbl" is the dispatch hook in train_renderer.py; the dispatch
+# replaces the kl_distill_segnet_only auxiliary with combined_jbl_distill_loss
+# (defined in tac.losses_jbl). The kl_distill_weight knob is repurposed as
+# the JBL master scalar so the wiring is byte-identical to Lane G v3 except
+# for the loss family.
+#
+# Predicted band [0.92, 1.02] per Jack §S1 (lowest cost, highest confidence
+# SegNet attack). At anchor 1.05, the conservative case is +20% reduction in
+# SegNet distortion (0.004 -> 0.0032 -> -0.08 score = 0.97).
+#
+# CLAUDE.md compliance:
+#   * eval_roundtrip remains True (inherited from Lane G v3).
+#   * No scorer at inflate (loss is compress-time only).
+#   * Auth eval at end (driven by remote_lane_j_jbl_jaccard_bls.sh).
+J_JBL_DILATED_H64 = {
+    **DILATED_H64_HALF_FRAME_V3_ANNEALED_KLDISTILL,
+    # Loss-mode dispatch: train_renderer.py reads args.loss_mode and
+    # picks combined_jbl_distill_loss when this is "jbl". Default
+    # remains "standard" everywhere else.
+    "loss_mode": "jbl",
+    # Boundary pixel weight inside the BLS+CE channel (3× the interior
+    # weight; middle of the paper's 3-5x recommendation).
+    "boundary_weight": 3.0,
+    # Label-smoothing epsilon applied at boundary pixels only (Wang et al.
+    # canonical default).
+    "bls_smoothing": 0.1,
+    # Different seed so JBL and Lane G v3 explore different RNG basins.
+    "seed": 47,
+}
+
+
 # ── LANE V: Quantizr-replica 88K half-frame, joint-trained from epoch 0 ──
 # Council 2026-04-27. Lane D tried to RETROFIT half-frame onto the dilated-h64
 # baseline (mask_half_sim_prob=0.5 mid-train) and FAILED — joint training
@@ -3558,6 +3602,10 @@ PROFILES = {
     "dilated_h64_half_frame_v3_annealed_kldistill": (
         DILATED_H64_HALF_FRAME_V3_ANNEALED_KLDISTILL
     ),
+    # Lane J-JBL (Jack Cycle 1 TOP-1): Jaccard Metric Loss + Boundary Label
+    # Smoothing distillation, anchored on Lane G v3. Predicted band
+    # [0.92, 1.02] per .omx/research/jack_skunkworks_segnet_rate_research_20260428.md §S1.
+    "j_jbl_dilated_h64": J_JBL_DILATED_H64,
     # Lane V: Quantizr-replica (88K params, DSConv + FiLM + KL distill) with
     # mask_half_sim_prob=1.0 (always-on warp expansion) joint-trained from
     # epoch 0. The biggest-swing council bet — vs Lane D's 0.5 retrofit which
