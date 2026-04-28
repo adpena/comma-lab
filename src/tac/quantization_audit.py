@@ -3,6 +3,13 @@
 Audits layerwise fp32->int8 quantization error for saved best-checkpoint
 artifacts. Useful for diagnosing whether quantization is silently degrading
 model quality.
+
+# ROUNDTRIP_NOT_REQUIRED: this is a drift-MEASUREMENT module, not a quantizer.
+# It loads ALREADY-quantized .pt files and compares them to a paired fp32
+# checkpoint. There is no encode/decode pair to roundtrip — the encoding
+# happens upstream (in qat_finetune.py / fp4_codebook etc.) and those
+# modules carry their own roundtrip tests. Adding a synthetic roundtrip
+# here would test torch arithmetic, not this module's logic.
 """
 from __future__ import annotations
 

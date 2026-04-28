@@ -453,11 +453,11 @@ def preflight_all(
         # Per-check live counts at wire-in time + promotion plan:
         #   Check 44 (gradient-direction-tests-exist)             0  → STRICT
         #   Check 45 (loss-convergence-tests)                     0  → STRICT
-        #   Check 46 (quantizer-roundtrip-tests)                  6  warn (real exploratory module gap; no mass-waive)
+        #   Check 46 (quantizer-roundtrip-tests)                  0  → STRICT (R25 promotion: 5 test files added covering archive_codec/entropy_archive/mask_entropy_coder/network_codec/semantic_quantization; quantization_audit waived as drift-MEASUREMENT module not a quantizer)
         #   Check 47 (lane-archive-size-assertion)                0  → STRICT
         check_gradient_direction_tests_exist(strict=True, verbose=verbose)
         check_test_assertion_strength_for_loss_functions(strict=True, verbose=verbose)
-        check_quantizer_modules_have_round_trip_test(strict=False, verbose=verbose)
+        check_quantizer_modules_have_round_trip_test(strict=True, verbose=verbose)
         check_lane_deploy_scripts_have_archive_size_assertion(strict=True, verbose=verbose)
 
     # 2. Training inputs (only if profile + tto_frames provided)
