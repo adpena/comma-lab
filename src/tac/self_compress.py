@@ -44,6 +44,13 @@ __all__ = [
     "train_self_compressing",
     "export_compressed_checkpoint",
     "load_compressed_checkpoint",
+    # Lane S renderer integration (2026-04-27)
+    "SC_PROTECTED_NAME_PATTERNS",
+    "swap_renderer_convs_with_self_compress",
+    "list_self_compress_layers",
+    "renderer_total_weight_bits",
+    "renderer_average_bits_per_weight",
+    "compute_renderer_rate_penalty",
 ]
 
 
@@ -197,13 +204,23 @@ class SelfCompressingConv2d(nn.Module):
     Wraps nn.Conv2d but quantizes weights on-the-fly during forward pass
     using the learned bit-depth per output channel.
 
+    Lane S extension (2026-04-27): now accepts the full nn.Conv2d kwargs
+    surface (``stride``, ``groups``, ``padding_mode``) so it can be used
+    as a drop-in replacement for the renderer's ResBlocks, downsample
+    convs, and 1x1 fusion convs. The backing nn.Conv2d carries the real
+    state; ``SelfCompressingConv2d`` only adds ``bit_depth`` (a tiny
+    nn.Embedding-shaped LearnableBitDepth tensor).
+
     Args:
         in_channels: input channels.
         out_channels: output channels.
         kernel_size: convolution kernel size.
+        stride: convolution stride.
         padding: convolution padding.
         dilation: convolution dilation.
+        groups: convolution groups (1 for standard, in_channels for depthwise).
         bias: whether to use bias.
+        padding_mode: 'zeros' | 'reflect' | 'replicate' | 'circular'.
         init_bits: initial bit-depth per channel.
     """
 
@@ -212,24 +229,31 @@ class SelfCompressingConv2d(nn.Module):
         in_channels: int,
         out_channels: int,
         kernel_size: int = 3,
+        stride: int = 1,
         padding: int = 1,
         dilation: int = 1,
+        groups: int = 1,
         bias: bool = True,
+        padding_mode: str = "zeros",
         init_bits: float = 8.0,
     ):
         super().__init__()
         self.conv = nn.Conv2d(
             in_channels, out_channels, kernel_size,
-            padding=padding, dilation=dilation, bias=bias,
+            stride=stride, padding=padding, dilation=dilation,
+            groups=groups, bias=bias, padding_mode=padding_mode,
         )
         self.bit_depth = LearnableBitDepth(out_channels, init_bits=init_bits)
         # Store architecture params for serialization
         self.in_channels = in_channels
         self.out_channels = out_channels
         self.kernel_size = kernel_size
+        self.stride = stride
         self.padding = padding
         self.dilation = dilation
+        self.groups = groups
         self.has_bias = bias
+        self.padding_mode = padding_mode
 
     def forward(self, x: torch.Tensor) -> torch.Tensor:
         """Forward with self-compressed weights."""
@@ -244,15 +268,39 @@ class SelfCompressingConv2d(nn.Module):
             ).squeeze(1)
         else:
             q_bias = None
+        # Use the same padding-mode pipeline as the underlying conv. The
+        # plain F.conv2d() path only handles 'zeros'; for non-zeros modes
+        # we fall back to F.pad → F.conv2d(padding=0) like nn.Conv2d does.
+        if self.conv.padding_mode != "zeros":
+            pad = self.conv.padding
+            if isinstance(pad, int):
+                pad_tuple = (pad, pad, pad, pad)
+            else:
+                pad_tuple = (pad[1], pad[1], pad[0], pad[0])
+            x = F.pad(x, pad_tuple, mode=self.conv.padding_mode)
+            return F.conv2d(
+                x, q_weight, q_bias,
+                stride=self.conv.stride, padding=0,
+                dilation=self.conv.dilation, groups=self.conv.groups,
+            )
         return F.conv2d(
             x, q_weight, q_bias,
             stride=self.conv.stride, padding=self.conv.padding,
             dilation=self.conv.dilation, groups=self.conv.groups,
         )
 
+    def weight_numel(self) -> int:
+        """Total number of weights (channels * fan_in)."""
+        fan_in = (self.in_channels // self.groups) * self.kernel_size * self.kernel_size
+        return self.out_channels * fan_in
+
     def weight_bits(self) -> torch.Tensor:
-        """Total bits for this layer's weights (differentiable)."""
-        fan_in = self.in_channels * self.kernel_size * self.kernel_size
+        """Total bits for this layer's weights (differentiable).
+
+        For grouped convolutions each output channel only sees
+        ``in_channels // groups`` input channels.
+        """
+        fan_in = (self.in_channels // self.groups) * self.kernel_size * self.kernel_size
         per_channel_bits = self.bit_depth.bits.clamp(0.0, 8.0)  # (C_out,)
         # Each channel stores fan_in weights at its bit-depth
         return (per_channel_bits * fan_in).sum()
@@ -262,6 +310,10 @@ class SelfCompressingConv2d(nn.Module):
         if not self.has_bias:
             return torch.tensor(0.0, device=self.bit_depth.bits.device)
         return self.bit_depth.bits.clamp(0.0, 8.0).sum()
+
+    def effective_bits_per_weight(self) -> float:
+        """Mean bit-depth across all channels (non-differentiable)."""
+        return float(self.bit_depth.bits.detach().clamp(0.0, 8.0).mean().item())
 
 
 # ── Self-compressing postfilter ─────────────────────────────────────────
@@ -828,6 +880,262 @@ def _smoke_test() -> None:
     print(f"  pruned round-trip: OK (max diff={( y3 - model(x)).abs().max().item():.2f})")
 
     print("self_compress: all smoke tests passed")
+
+
+# ── Lane S renderer integration (2026-04-27) ─────────────────────────────
+#
+# The renderer must NOT swap every Conv2d uniformly: per Lane F findings the
+# decoder's RGB head + motion's flow head + FiLM layers are scorer-sensitive
+# at 100-1000x the rate of the rest of the network (PoseNet sees the YUV6
+# residual; even a 1-bit perturbation on the head bias shows up as 0.5 in
+# auth PoseNet score). So we hold those FP32 and only quantize the bulk
+# feature-extraction convs.
+#
+# Architectural rationale (load-bearing — see report at the end of this
+# task for full alternatives + why this won):
+#   * Bulk convs (~95% of weights) → SelfCompressingConv2d. Carry the
+#     learned-bit-depth load.
+#   * Head convs (renderer.head, motion.head) → FP32 nn.Conv2d. <1% of
+#     weights but >50% of scorer sensitivity per local SC postfilter
+#     experiments and Lane F's same-arch FP4 regression of +0.44.
+#   * FiLMLayer.scale / FiLMLayer.shift → FP32 nn.Linear. Tiny (12K params)
+#     and modulate the entire bottleneck.
+#   * 1x1 fuse_conv / fuse2_conv → FP32. Per-pixel mixing; sensitive.
+#   * nn.ConvTranspose2d (up_conv / up2_conv) → FP32. Different gradient
+#     profile from Conv2d STE; also small (~5% of weights).
+#
+# The swap is done POST-CONSTRUCTION via name-pattern matching so the rest
+# of the renderer's architecture code stays unchanged. Profiles opt in with
+# `use_self_compress_codec=True`.
+
+# Name patterns that MUST stay FP32 (regex-style suffix or substring match).
+# Concrete suffixes are checked first; if a layer's full dotted name ends
+# with any of these, it stays FP32. See test_self_compress_renderer.py for
+# the regression test that pins this list.
+SC_PROTECTED_NAME_PATTERNS: tuple[str, ...] = (
+    # Decoder RGB head — last conv before sigmoid output. PoseNet-sensitive.
+    "renderer.head",
+    # Motion flow / gate / residual head — sensitive to bit-quantization
+    # because warp coordinates need sub-pixel precision.
+    "motion.head",
+    # FiLM modulation linear layers — small, scorer-sensitive.
+    "film_bottleneck.scale",
+    "film_bottleneck.shift",
+    "film_decoder.scale",
+    "film_decoder.shift",
+    # 1x1 skip-fusion convs — per-pixel mixing, sensitive to quantization.
+    "fuse_conv",
+    "fuse2_conv",
+    # Per-class CLADE embedding-driven affine — already small + sensitive.
+    # (Embedding is not Conv2d so won't be swapped, but classify_gamma /
+    # class_beta would be.)
+)
+
+
+def _is_protected_name(qualified_name: str) -> bool:
+    """Return True iff a layer name should stay FP32.
+
+    Matches by suffix. ``model.renderer.head`` matches pattern
+    ``renderer.head`` because the suffix matches. We use suffix matching
+    (not full-name) so the protection works regardless of how the
+    AsymmetricPairGenerator nests its modules (model.renderer.head vs
+    model.head, depending on caller).
+    """
+    for pat in SC_PROTECTED_NAME_PATTERNS:
+        if qualified_name == pat or qualified_name.endswith("." + pat):
+            return True
+    return False
+
+
+def swap_renderer_convs_with_self_compress(
+    model: nn.Module,
+    *,
+    init_bits: float = 8.0,
+    skip_transposed: bool = True,
+    skip_groupwise: bool = False,
+    extra_protected_patterns: tuple[str, ...] = (),
+) -> dict:
+    """Swap eligible nn.Conv2d layers in a renderer with SelfCompressingConv2d.
+
+    Operates in-place on ``model``. The swap walks ``named_modules`` and
+    replaces each ``nn.Conv2d`` whose qualified name is NOT in
+    ``SC_PROTECTED_NAME_PATTERNS`` with a ``SelfCompressingConv2d`` of the
+    same shape, copying the original weights and bias. The ``LearnableBitDepth``
+    starts at ``init_bits`` (default 8 = full precision); the Lagrangian
+    rate penalty during training drives bit-depth down toward the target.
+
+    Args:
+        model: a build_renderer(...) output (PairGenerator or
+            AsymmetricPairGenerator).
+        init_bits: initial bit-depth for swapped layers.
+        skip_transposed: leave nn.ConvTranspose2d FP32 (recommended; STE
+            backward through stride-2 transposed conv is ill-behaved in
+            our experiments).
+        skip_groupwise: leave grouped convs (e.g. depthwise) FP32. Default
+            False — depthwise convs are tiny and benefit from SC.
+        extra_protected_patterns: caller-supplied additional name suffixes
+            to protect. Useful for ablations.
+
+    Returns:
+        Dict with diagnostics: ``{"swapped": list[str], "protected": list[str],
+        "skipped": list[str], "total_swapped_params": int}``.
+    """
+    swapped: list[str] = []
+    protected: list[str] = []
+    skipped: list[str] = []
+    total_swapped_params = 0
+
+    protected_patterns = tuple(SC_PROTECTED_NAME_PATTERNS) + tuple(extra_protected_patterns)
+
+    def _is_protected_with_extras(name: str) -> bool:
+        if _is_protected_name(name):
+            return True
+        for pat in extra_protected_patterns:
+            if name == pat or name.endswith("." + pat):
+                return True
+        return False
+
+    # Collect (parent_module, child_name, full_name, child_module) so we can
+    # safely setattr after iterating (mutating during iteration corrupts
+    # the named_modules walk).
+    candidates: list[tuple[nn.Module, str, str, nn.Module]] = []
+    parents: dict[str, nn.Module] = {"": model}
+    for full_name, module in model.named_modules():
+        parents[full_name] = module
+    for full_name, module in model.named_modules():
+        # nn.ConvTranspose2d does NOT subclass nn.Conv2d in modern torch
+        # (verified 2026-04-27 against torch 2.x). It is collected separately
+        # below so we can decide whether to skip.
+        if isinstance(module, nn.ConvTranspose2d):
+            if skip_transposed:
+                skipped.append(full_name + " (transposed)")
+            else:
+                skipped.append(full_name + " (transposed; SC for transposed not yet implemented)")
+            continue
+        if not isinstance(module, nn.Conv2d):
+            continue
+        if skip_groupwise and module.groups != 1 and module.groups != module.in_channels:
+            # Skip non-trivial grouped convs (depthwise is fine, mid-grouped
+            # is unusual and the SC rate accounting may be off).
+            skipped.append(full_name + f" (groups={module.groups})")
+            continue
+        if _is_protected_with_extras(full_name):
+            protected.append(full_name)
+            continue
+        # Find parent and child name
+        if "." in full_name:
+            parent_name, child_name = full_name.rsplit(".", 1)
+            parent = parents[parent_name]
+        else:
+            parent = model
+            child_name = full_name
+        candidates.append((parent, child_name, full_name, module))
+
+    for parent, child_name, full_name, conv in candidates:
+        # nn.Conv2d kwargs we need to mirror
+        kernel_size = conv.kernel_size[0] if isinstance(conv.kernel_size, tuple) else conv.kernel_size
+        stride = conv.stride[0] if isinstance(conv.stride, tuple) else conv.stride
+        padding = conv.padding[0] if isinstance(conv.padding, tuple) else conv.padding
+        dilation = conv.dilation[0] if isinstance(conv.dilation, tuple) else conv.dilation
+
+        sc = SelfCompressingConv2d(
+            in_channels=conv.in_channels,
+            out_channels=conv.out_channels,
+            kernel_size=kernel_size,
+            stride=stride,
+            padding=padding,
+            dilation=dilation,
+            groups=conv.groups,
+            bias=conv.bias is not None,
+            padding_mode=conv.padding_mode,
+            init_bits=init_bits,
+        )
+        with torch.no_grad():
+            sc.conv.weight.copy_(conv.weight)
+            if conv.bias is not None and sc.conv.bias is not None:
+                sc.conv.bias.copy_(conv.bias)
+        # Preserve dtype + device of the original conv
+        sc = sc.to(conv.weight.device).to(conv.weight.dtype)
+        setattr(parent, child_name, sc)
+        swapped.append(full_name)
+        total_swapped_params += sc.weight_numel() + (sc.out_channels if sc.has_bias else 0)
+
+    return {
+        "swapped": swapped,
+        "protected": protected,
+        "skipped": skipped,
+        "total_swapped_params": total_swapped_params,
+    }
+
+
+def list_self_compress_layers(model: nn.Module) -> list[tuple[str, "SelfCompressingConv2d"]]:
+    """Return the list of (qualified_name, layer) for SC layers in model."""
+    out: list[tuple[str, SelfCompressingConv2d]] = []
+    for name, module in model.named_modules():
+        if isinstance(module, SelfCompressingConv2d):
+            out.append((name, module))
+    return out
+
+
+def renderer_total_weight_bits(model: nn.Module) -> torch.Tensor:
+    """Sum of weight_bits across all SC layers (differentiable).
+
+    Returns 0 (zero-dim tensor on cpu) when there are no SC layers — this
+    keeps the rate-penalty call site safe to invoke unconditionally.
+    """
+    sc_layers = list_self_compress_layers(model)
+    if not sc_layers:
+        return torch.tensor(0.0)
+    device = next(iter(sc_layers))[1].bit_depth.bits.device
+    total = torch.zeros((), device=device)
+    for _name, layer in sc_layers:
+        total = total + layer.weight_bits() + layer.bias_bits()
+    return total
+
+
+def renderer_average_bits_per_weight(model: nn.Module) -> float:
+    """Mean bits per weight across all SC layers (non-differentiable)."""
+    sc_layers = list_self_compress_layers(model)
+    if not sc_layers:
+        return 0.0
+    total_bits = 0.0
+    total_weights = 0
+    for _name, layer in sc_layers:
+        total_bits += float(layer.weight_bits().detach().item())
+        total_weights += layer.weight_numel()
+    return total_bits / max(total_weights, 1)
+
+
+def compute_renderer_rate_penalty(
+    model: nn.Module,
+    target_bits_per_weight: float,
+    lambda_rate: float,
+) -> torch.Tensor:
+    """Compute the Lagrangian rate penalty for a self-compressed renderer.
+
+    Penalty form (smooth hinge above target)::
+
+        excess_bits = ReLU(total_bits - target_bits_per_weight * total_weights)
+        rate_penalty = lambda_rate * excess_bits / total_weights  # normalized to bits/weight
+
+    Normalising by total_weights makes the loss magnitude scale-invariant
+    so the same ``lambda_rate`` works across renderer sizes.
+
+    Returns 0 (zero-dim tensor) when the model has no SC layers, so the
+    caller can `loss + compute_renderer_rate_penalty(...)` unconditionally.
+    """
+    sc_layers = list_self_compress_layers(model)
+    if not sc_layers:
+        return torch.tensor(0.0)
+    device = next(iter(sc_layers))[1].bit_depth.bits.device
+    total_bits = torch.zeros((), device=device)
+    total_weights = 0
+    for _name, layer in sc_layers:
+        total_bits = total_bits + layer.weight_bits() + layer.bias_bits()
+        total_weights += layer.weight_numel()
+    target_total = float(target_bits_per_weight) * float(total_weights)
+    excess = F.relu(total_bits - target_total)
+    return lambda_rate * (excess / max(total_weights, 1))
 
 
 if __name__ == "__main__":

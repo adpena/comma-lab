@@ -50,6 +50,9 @@ __all__ = [
     "load_coolchic_renderer",
     "export_c3_residual_renderer",
     "load_c3_residual_renderer",
+    # Lane S (Self-Compression renderer, 2026-04-27)
+    "export_self_compressed_renderer",
+    "load_self_compressed_renderer",
 ]
 
 
@@ -1594,6 +1597,8 @@ def detect_checkpoint_type(data_or_path: Union[bytes, Path]) -> str:
         return "asymmetric"
     elif data[:4] == b"I4LZ":
         return "int4_lzma2"
+    elif data[:4] == b"SCv1":
+        return "self_compress_v1"
     elif data[:4] == _COOLCHIC_MAGIC:
         return "coolchic"
     elif data[:4] == _C3_RESIDUAL_MAGIC:
@@ -1625,6 +1630,8 @@ def load_any_renderer_checkpoint(
         return load_coolchic_renderer(data_or_path, device=device)
     elif fmt == "c3_residual":
         return load_c3_residual_renderer(data_or_path, device=device)
+    elif fmt == "self_compress_v1":
+        return load_self_compressed_renderer(data_or_path, device=device)
     elif fmt == "int4_lzma2":
         from tac.mixed_precision_export import load_int4_lzma2
         from tac.renderer import AsymmetricPairGenerator
@@ -2606,6 +2613,644 @@ def _smoke_test() -> None:
     tmp_path.unlink()
 
     print("\nrenderer_export: all smoke tests passed")
+
+
+# ── Lane S: Self-Compression export / load (SCv1 magic) ────────────────
+#
+# Format design (2026-04-27, Lane S):
+#
+#   Magic (4B): b"SCv1"
+#   Header length (4B little-endian uint32)
+#   Header JSON (UTF-8)
+#   Body length (4B little-endian uint32)
+#   Body bytes (LZMA-compressed concatenation of layer blobs)
+#
+# Header schema:
+#   {
+#     "version": 1,
+#     "arch": { ... AsymmetricPairGenerator constructor kwargs ... },
+#     "layers": [
+#       {
+#         "name": "renderer.stem_conv",
+#         "kind": "self_compress" | "fp16_conv" | "fp16_convt" | "fp16_linear" | "fp16_emb",
+#         "shape": [c_out, c_in_per_group, kH, kW],
+#         "bias": bool,
+#         # SC-only:
+#         "bits_per_channel": [int, ...],   # length C_out, each in [0, 8]
+#         "scale_per_channel": [float16, ...] (stored as raw bytes in body),
+#         "bias_scale_per_channel": [float16, ...] (stored in body),
+#       },
+#       ...
+#     ],
+#     "scalar_params": {name: float, ...}  # nn.Parameter(scalar) restoration
+#   }
+#
+# Body layout (concat then LZMA-compress):
+#   For each layer (in header order):
+#     SC layer:
+#       [scales_w  : C_out × float16]
+#       [packed_weights : sum_over_active_channels(ceil(fan_in × bits / 8)) bytes]
+#       [scales_b  : C_out × float16]              (only if has_bias)
+#       [packed_biases : sum_over_active_channels(ceil(bits / 8)) bytes]   (only if has_bias)
+#     FP16 layer (conv / convt / linear / embedding):
+#       [weights : numel × float16]
+#       [bias    : C_out × float16]                (only if has_bias)
+#
+# Channels with bits == 0 are PRUNED — no per-channel scale or packed data
+# stored. The header's bits_per_channel encodes the prune mask. At load
+# time pruned channels are reconstructed as zeros.
+#
+# Why LZMA: the per-channel scale field has high entropy (float16) but the
+# packed weight bytes have moderate entropy (often biased toward 0 because
+# the bit_depth tensor concentrates near 2-3 bits → many low-magnitude
+# nibbles). LZMA gets ~10-15% on top of the raw bit-packing; tested on
+# self-compressing postfilters in src/tac/self_compress.py.
+
+
+def _sc_pack_per_channel_weights(
+    weight: torch.Tensor,  # (C_out, C_in_per_group, kH, kW) float32
+    bits_per_channel: list[int],
+) -> tuple[bytes, list[float]]:
+    """Pack per-channel quantized weights at variable bit-depth.
+
+    Returns (packed_bytes, scales) where scales is len-C_out list of float scales
+    (one per channel; pruned channels get scale=0.0). The packed bytes
+    concatenate all active channels' bit-packed weights.
+    """
+    flat_weight = weight.reshape(weight.shape[0], -1).cpu().float()
+    fan_in = flat_weight.shape[1]
+    scales: list[float] = []
+    packed = bytearray()
+
+    for ch_idx, bits in enumerate(bits_per_channel):
+        if bits <= 0:
+            scales.append(0.0)
+            continue
+        # 1-bit channels are promoted to 2-bit in the export (training STE
+        # supports 1-bit at half_levels=0.5 clamped, but 1-bit packing has
+        # the same divide-by-zero edge case; use 2-bit as the floor — same
+        # rule as self_compress.export_compressed_checkpoint).
+        bits_export = max(int(bits), 2)
+        ch_w = flat_weight[ch_idx]
+        abs_max = float(ch_w.abs().max().clamp(min=1e-10).item())
+        scales.append(abs_max)
+        n_levels = 2 ** bits_export
+        half = n_levels // 2
+        # Quantize to signed [-(half-1), half-1], shift to unsigned [0, n_levels-1]
+        quantized = (ch_w / abs_max * (half - 1)).round().clamp(-(half - 1), half - 1).long()
+        unsigned = (quantized + half).clamp(0, n_levels - 1).tolist()
+        # Bit-pack into the body
+        bit_buffer = 0
+        bits_in_buffer = 0
+        for v in unsigned:
+            bit_buffer |= (v & ((1 << bits_export) - 1)) << bits_in_buffer
+            bits_in_buffer += bits_export
+            while bits_in_buffer >= 8:
+                packed.append(bit_buffer & 0xFF)
+                bit_buffer >>= 8
+                bits_in_buffer -= 8
+        if bits_in_buffer > 0:
+            packed.append(bit_buffer & 0xFF)
+    return bytes(packed), scales
+
+
+def _sc_unpack_per_channel_weights(
+    packed: bytes,
+    bits_per_channel: list[int],
+    fan_in: int,
+    scales: list[float],
+) -> torch.Tensor:
+    """Reverse of _sc_pack_per_channel_weights.
+
+    Returns a (C_out, fan_in) float32 tensor (caller reshapes to weight shape).
+    """
+    n_out = len(bits_per_channel)
+    out = torch.zeros((n_out, fan_in), dtype=torch.float32)
+    offset_bytes = 0
+    for ch_idx, bits in enumerate(bits_per_channel):
+        if bits <= 0:
+            continue
+        bits_export = max(int(bits), 2)
+        n_levels = 2 ** bits_export
+        half = n_levels // 2
+        total_bits = fan_in * bits_export
+        total_bytes = (total_bits + 7) // 8
+        raw = packed[offset_bytes:offset_bytes + total_bytes]
+        offset_bytes += total_bytes
+
+        bit_buffer = 0
+        for i, b in enumerate(raw):
+            bit_buffer |= b << (i * 8)
+        mask = (1 << bits_export) - 1
+        values: list[int] = []
+        for _ in range(fan_in):
+            values.append(bit_buffer & mask)
+            bit_buffer >>= bits_export
+        scale = scales[ch_idx]
+        # Dequantize
+        ch_t = torch.tensor(
+            [(v - half) / max(half - 1, 1) * scale for v in values],
+            dtype=torch.float32,
+        )
+        out[ch_idx] = ch_t
+    return out
+
+
+def _sc_pack_per_channel_biases(
+    bias: torch.Tensor,  # (C_out,)
+    bits_per_channel: list[int],
+) -> tuple[bytes, list[float]]:
+    """Pack per-channel biases at the same bit-depths as weights."""
+    bias_cpu = bias.detach().cpu().float()
+    scales: list[float] = []
+    packed = bytearray()
+    for ch_idx, bits in enumerate(bits_per_channel):
+        if bits <= 0:
+            scales.append(0.0)
+            continue
+        bits_export = max(int(bits), 2)
+        b_val = float(bias_cpu[ch_idx].item())
+        abs_max = max(abs(b_val), 1e-10)
+        scales.append(abs_max)
+        n_levels = 2 ** bits_export
+        half = n_levels // 2
+        q = int(round(b_val / abs_max * (half - 1)))
+        q = max(-(half - 1), min(half - 1, q))
+        u = q + half
+        # One bias value per channel; pack as 1-2 bytes depending on bits.
+        if bits_export <= 8:
+            packed.append(u & 0xFF)
+        else:
+            packed.append(u & 0xFF)
+            packed.append((u >> 8) & 0xFF)
+    return bytes(packed), scales
+
+
+def _sc_unpack_per_channel_biases(
+    packed: bytes,
+    bits_per_channel: list[int],
+    scales: list[float],
+) -> torch.Tensor:
+    """Reverse of _sc_pack_per_channel_biases."""
+    n_out = len(bits_per_channel)
+    out = torch.zeros((n_out,), dtype=torch.float32)
+    offset = 0
+    for ch_idx, bits in enumerate(bits_per_channel):
+        if bits <= 0:
+            continue
+        bits_export = max(int(bits), 2)
+        n_levels = 2 ** bits_export
+        half = n_levels // 2
+        if bits_export <= 8:
+            u = packed[offset]
+            offset += 1
+        else:
+            u = packed[offset] | (packed[offset + 1] << 8)
+            offset += 2
+        q = u - half
+        scale = scales[ch_idx]
+        out[ch_idx] = q / max(half - 1, 1) * scale
+    return out
+
+
+def export_self_compressed_renderer(
+    model: nn.Module,
+    output_path: Path,
+    *,
+    use_lzma: bool = True,
+    arch_extra: dict | None = None,
+) -> int:
+    """Serialize a self-compressed renderer to a compact .bin file (SCv1 magic).
+
+    The renderer must have been built with ``use_self_compress_codec=True``
+    (i.e., ``swap_renderer_convs_with_self_compress`` was applied). All
+    SelfCompressingConv2d layers are packed at their LEARNED per-channel
+    bit-depth; protected layers (FP32 nn.Conv2d, nn.ConvTranspose2d,
+    nn.Linear, nn.Embedding) are stored as float16.
+
+    Args:
+        model: AsymmetricPairGenerator (or PairGenerator) with SC layers swapped in.
+        output_path: where to write the .bin file.
+        use_lzma: if True, LZMA-compress the body. Disable only for debugging.
+        arch_extra: optional extra metadata to include in the arch header
+            (e.g. variant name). Caller-provided overrides win.
+
+    Returns:
+        Number of bytes written.
+    """
+    import json
+    import lzma
+    import struct
+
+    from tac.self_compress import SelfCompressingConv2d
+
+    model.eval()
+    arch = _infer_asymmetric_config(model)
+    if arch_extra:
+        arch.update(arch_extra)
+
+    layers_meta: list[dict] = []
+    body_chunks: list[bytes] = []
+
+    # Iterate ALL parameter-bearing modules. Order is fixed by named_modules
+    # walk so the loader can reconstruct deterministically. We must SKIP
+    # the inner nn.Conv2d that lives inside each SelfCompressingConv2d —
+    # otherwise the SC weight gets stored TWICE (once compressed via the
+    # SC branch, once as fp16 via the Conv2d branch). This was the
+    # 574KB-vs-67KB byte-explosion bug caught during smoke testing.
+    sc_inner_module_ids: set[int] = set()
+    for _name, _module in model.named_modules():
+        if isinstance(_module, SelfCompressingConv2d):
+            sc_inner_module_ids.add(id(_module.conv))
+
+    seen_emb_ids: set[int] = set()
+    for name, module in model.named_modules():
+        # Skip inner Conv2d wrapped by a SelfCompressingConv2d
+        if id(module) in sc_inner_module_ids:
+            continue
+        if isinstance(module, SelfCompressingConv2d):
+            bits = module.bit_depth.bits.detach().cpu().clamp(0.0, 8.0)
+            bits_per_channel = [int(b.round().item()) for b in bits]
+            # Promote 1-bit to 2-bit at export (matches packer).
+            bits_per_channel = [max(b, 2) if b > 0 else 0 for b in bits_per_channel]
+
+            weight = module.conv.weight.detach()
+            packed_w, scales_w = _sc_pack_per_channel_weights(weight, bits_per_channel)
+
+            # Pack scales as float16 prefix in the body
+            scales_w_bytes = b"".join(struct.pack("<e", s) for s in scales_w)
+
+            bias_packed = b""
+            scales_b_bytes = b""
+            has_bias = module.conv.bias is not None
+            if has_bias:
+                packed_b, scales_b = _sc_pack_per_channel_biases(
+                    module.conv.bias.detach(), bits_per_channel,
+                )
+                bias_packed = packed_b
+                scales_b_bytes = b"".join(struct.pack("<e", s) for s in scales_b)
+
+            layer_blob = scales_w_bytes + packed_w + scales_b_bytes + bias_packed
+            body_chunks.append(layer_blob)
+            layers_meta.append({
+                "name": name,
+                "kind": "self_compress",
+                "shape": list(module.conv.weight.shape),
+                "in_channels": module.in_channels,
+                "out_channels": module.out_channels,
+                "kernel_size": module.kernel_size,
+                "stride": module.stride,
+                "padding": module.padding,
+                "dilation": module.dilation,
+                "groups": module.groups,
+                "padding_mode": module.padding_mode,
+                "has_bias": has_bias,
+                "bits_per_channel": bits_per_channel,
+                "scales_w_len": len(scales_w_bytes),
+                "packed_w_len": len(packed_w),
+                "scales_b_len": len(scales_b_bytes),
+                "packed_b_len": len(bias_packed),
+            })
+            continue
+
+        if isinstance(module, nn.Embedding):
+            if id(module) in seen_emb_ids:
+                continue
+            seen_emb_ids.add(id(module))
+            arr = module.weight.detach().cpu().float().numpy()
+            blob = arr.astype("float16").tobytes()
+            body_chunks.append(blob)
+            layers_meta.append({
+                "name": name,
+                "kind": "fp16_emb",
+                "shape": list(module.weight.shape),
+                "blob_len": len(blob),
+            })
+            continue
+
+        if isinstance(module, nn.ConvTranspose2d):
+            arr = module.weight.detach().cpu().float().numpy()
+            blob = arr.astype("float16").tobytes()
+            bias_blob = b""
+            if module.bias is not None:
+                bias_blob = module.bias.detach().cpu().float().numpy().astype("float16").tobytes()
+            body_chunks.append(blob + bias_blob)
+            layers_meta.append({
+                "name": name,
+                "kind": "fp16_convt",
+                "shape": list(module.weight.shape),
+                "stride": module.stride[0] if isinstance(module.stride, tuple) else module.stride,
+                "padding": module.padding[0] if isinstance(module.padding, tuple) else module.padding,
+                "has_bias": module.bias is not None,
+                "weight_blob_len": len(blob),
+                "bias_blob_len": len(bias_blob),
+            })
+            continue
+
+        if isinstance(module, nn.Conv2d):
+            # Plain (non-SC) Conv2d → fp16
+            arr = module.weight.detach().cpu().float().numpy()
+            blob = arr.astype("float16").tobytes()
+            bias_blob = b""
+            if module.bias is not None:
+                bias_blob = module.bias.detach().cpu().float().numpy().astype("float16").tobytes()
+            body_chunks.append(blob + bias_blob)
+            layers_meta.append({
+                "name": name,
+                "kind": "fp16_conv",
+                "shape": list(module.weight.shape),
+                "stride": module.stride[0] if isinstance(module.stride, tuple) else module.stride,
+                "padding": module.padding[0] if isinstance(module.padding, tuple) else module.padding,
+                "dilation": module.dilation[0] if isinstance(module.dilation, tuple) else module.dilation,
+                "groups": module.groups,
+                "padding_mode": module.padding_mode,
+                "has_bias": module.bias is not None,
+                "weight_blob_len": len(blob),
+                "bias_blob_len": len(bias_blob),
+            })
+            continue
+
+        if isinstance(module, nn.Linear):
+            arr = module.weight.detach().cpu().float().numpy()
+            blob = arr.astype("float16").tobytes()
+            bias_blob = b""
+            if module.bias is not None:
+                bias_blob = module.bias.detach().cpu().float().numpy().astype("float16").tobytes()
+            body_chunks.append(blob + bias_blob)
+            layers_meta.append({
+                "name": name,
+                "kind": "fp16_linear",
+                "shape": list(module.weight.shape),
+                "has_bias": module.bias is not None,
+                "weight_blob_len": len(blob),
+                "bias_blob_len": len(bias_blob),
+            })
+            continue
+
+    # Collect scalar nn.Parameters (e.g. blend_logit, noise_scale) that are
+    # NOT inside any of the above modules. These are tiny but load-bearing.
+    scalar_params: dict[str, float] = {}
+    captured_module_param_ids: set[int] = set()
+    for _name, module in model.named_modules():
+        if isinstance(module, SelfCompressingConv2d):
+            # SC submodule captures: inner Conv2d weight/bias + bit_depth.bits
+            captured_module_param_ids.add(id(module.conv.weight))
+            if module.conv.bias is not None:
+                captured_module_param_ids.add(id(module.conv.bias))
+            captured_module_param_ids.add(id(module.bit_depth.bits))
+        elif isinstance(module, (nn.Conv2d, nn.ConvTranspose2d, nn.Linear, nn.Embedding)):
+            for p in module.parameters(recurse=False):
+                captured_module_param_ids.add(id(p))
+    for pname, param in model.named_parameters():
+        if id(param) in captured_module_param_ids:
+            continue
+        if param.numel() == 1:
+            scalar_params[pname] = float(param.item())
+
+    body = b"".join(body_chunks)
+    if use_lzma:
+        body_compressed = lzma.compress(body, preset=9 | lzma.PRESET_EXTREME)
+    else:
+        body_compressed = body
+
+    header = {
+        "version": 1,
+        "format": "self_compress_renderer_v1",
+        "use_lzma": bool(use_lzma),
+        "arch": arch,
+        "layers": layers_meta,
+        "scalar_params": scalar_params,
+        "body_uncompressed_len": len(body),
+        "body_compressed_len": len(body_compressed),
+    }
+    header_json = json.dumps(header, separators=(",", ":")).encode("utf-8")
+
+    buf = bytearray()
+    buf.extend(b"SCv1")
+    buf.extend(struct.pack("<I", len(header_json)))
+    buf.extend(header_json)
+    buf.extend(struct.pack("<I", len(body_compressed)))
+    buf.extend(body_compressed)
+
+    output_path = Path(output_path)
+    output_path.parent.mkdir(parents=True, exist_ok=True)
+    output_path.write_bytes(bytes(buf))
+
+    n_total_params = sum(p.numel() for p in model.parameters())
+    bits_per_param = (len(buf) * 8) / max(n_total_params, 1)
+    print(
+        f"[scv1-export] {n_total_params:,} params → {len(buf):,} bytes "
+        f"({bits_per_param:.2f} bits/param) | "
+        f"body uncompressed={len(body):,} compressed={len(body_compressed):,}"
+    )
+    return len(buf)
+
+
+def load_self_compressed_renderer(
+    data_or_path,
+    device: str = "cpu",
+):
+    """Reverse of export_self_compressed_renderer.
+
+    Returns: AsymmetricPairGenerator (or PairGenerator) in eval mode with
+    weights restored to their per-channel-quantized values.
+    """
+    import json
+    import lzma
+    import struct
+
+    from tac.renderer import AsymmetricPairGenerator, build_renderer
+    from tac.self_compress import (
+        SelfCompressingConv2d,
+        swap_renderer_convs_with_self_compress,
+    )
+
+    if isinstance(data_or_path, (str, Path)):
+        data = Path(data_or_path).read_bytes()
+    else:
+        data = bytes(data_or_path)
+
+    if data[:4] != b"SCv1":
+        raise ValueError(
+            f"Not a SCv1 self-compressed renderer (expected magic b'SCv1', "
+            f"got {data[:4]!r})"
+        )
+
+    offset = 4
+    header_len = struct.unpack("<I", data[offset:offset + 4])[0]
+    offset += 4
+    header = json.loads(data[offset:offset + header_len].decode("utf-8"))
+    offset += header_len
+
+    if header.get("version") != 1:
+        raise ValueError(
+            f"Unsupported SCv1 version {header.get('version')} (expected 1)"
+        )
+
+    body_len = struct.unpack("<I", data[offset:offset + 4])[0]
+    offset += 4
+    body_compressed = data[offset:offset + body_len]
+    if header.get("use_lzma", True):
+        body = lzma.decompress(body_compressed)
+    else:
+        body = body_compressed
+
+    arch = header["arch"]
+    pair_mode = arch.get("pair_mode", "asymmetric")
+
+    # Reconstruct the model skeleton with the SAME constructor kwargs the
+    # exporter saw, then apply the SC swap so all SelfCompressingConv2d
+    # layers exist in the right places. The swap uses the SAME name-pattern
+    # protection list so the (swapped vs FP32) split is byte-exact.
+    if pair_mode == "asymmetric":
+        model = AsymmetricPairGenerator(
+            num_classes=arch.get("num_classes", 5),
+            embed_dim=arch.get("embed_dim", 6),
+            base_ch=arch.get("base_ch", 36),
+            mid_ch=arch.get("mid_ch", 60),
+            motion_hidden=arch.get("motion_hidden", 32),
+            depth=arch.get("depth", 1),
+            max_flow_px=arch.get("max_flow_px", 20.0),
+            max_residual=arch.get("max_residual", 20.0),
+            flow_only=arch.get("flow_only", False),
+            pose_dim=arch.get("pose_dim", 0),
+            use_dsconv=arch.get("use_dsconv", False),
+            use_zoom_flow=bool(arch.get("use_zoom_flow") or False),
+            padding_mode=arch.get("padding_mode", "zeros"),
+            use_dilation=arch.get("use_dilation", False),
+        )
+    else:
+        model = build_renderer(
+            num_classes=arch.get("num_classes", 5),
+            embed_dim=arch.get("embed_dim", 6),
+            base_ch=arch.get("base_ch", 36),
+            mid_ch=arch.get("mid_ch", 60),
+            motion_hidden=arch.get("motion_hidden", 32),
+            depth=arch.get("depth", 1),
+            pose_dim=arch.get("pose_dim", 0),
+            use_dsconv=arch.get("use_dsconv", False),
+            padding_mode=arch.get("padding_mode", "zeros"),
+            use_dilation=arch.get("use_dilation", False),
+            use_zoom_flow=bool(arch.get("use_zoom_flow") or False),
+            blend_mode=arch.get("blend_mode", "scalar"),
+            noise_mode=arch.get("noise_mode", "deterministic"),
+            motion_type=arch.get("motion_type", "learned_cnn"),
+        )
+
+    swap_renderer_convs_with_self_compress(model, init_bits=8.0)
+
+    # Build module lookup for restoration
+    name_to_module: dict[str, nn.Module] = dict(model.named_modules())
+    body_offset = 0
+
+    seen_emb_ids: set[int] = set()
+    for layer_meta in header["layers"]:
+        name = layer_meta["name"]
+        kind = layer_meta["kind"]
+        module = name_to_module.get(name)
+        if module is None:
+            raise RuntimeError(
+                f"SCv1 load: layer {name!r} not found in reconstructed model. "
+                f"Header arch was {arch}; the model construction path must "
+                f"match the export-time path exactly."
+            )
+
+        if kind == "self_compress":
+            assert isinstance(module, SelfCompressingConv2d), (
+                f"Header says {name} is SC but loaded module is "
+                f"{type(module).__name__}"
+            )
+            bits_per_channel = layer_meta["bits_per_channel"]
+            scales_w_len = layer_meta["scales_w_len"]
+            packed_w_len = layer_meta["packed_w_len"]
+            scales_b_len = layer_meta["scales_b_len"]
+            packed_b_len = layer_meta["packed_b_len"]
+
+            scales_w_bytes = body[body_offset:body_offset + scales_w_len]
+            body_offset += scales_w_len
+            packed_w = body[body_offset:body_offset + packed_w_len]
+            body_offset += packed_w_len
+            scales_b_bytes = body[body_offset:body_offset + scales_b_len]
+            body_offset += scales_b_len
+            packed_b = body[body_offset:body_offset + packed_b_len]
+            body_offset += packed_b_len
+
+            n_out = len(bits_per_channel)
+            scales_w = [
+                struct.unpack("<e", scales_w_bytes[i * 2:(i + 1) * 2])[0]
+                for i in range(n_out)
+            ]
+            shape = layer_meta["shape"]
+            fan_in = shape[1] * shape[2] * shape[3]  # (C_out, C_in_pg, kH, kW)
+            flat = _sc_unpack_per_channel_weights(
+                packed_w, bits_per_channel, fan_in, scales_w,
+            )
+            with torch.no_grad():
+                module.conv.weight.copy_(flat.reshape(shape))
+                # Restore bit_depth tensor with the loaded values
+                module.bit_depth.bits.copy_(
+                    torch.tensor([float(b) for b in bits_per_channel])
+                )
+                if layer_meta["has_bias"] and module.conv.bias is not None:
+                    scales_b = [
+                        struct.unpack("<e", scales_b_bytes[i * 2:(i + 1) * 2])[0]
+                        for i in range(n_out)
+                    ]
+                    bias_t = _sc_unpack_per_channel_biases(
+                        packed_b, bits_per_channel, scales_b,
+                    )
+                    module.conv.bias.copy_(bias_t)
+        elif kind == "fp16_emb":
+            if id(module) in seen_emb_ids:
+                # Shared embedding — we already restored it via the renderer's
+                # own copy. Still advance the offset.
+                blob_len = layer_meta["blob_len"]
+                body_offset += blob_len
+                continue
+            seen_emb_ids.add(id(module))
+            blob_len = layer_meta["blob_len"]
+            blob = body[body_offset:body_offset + blob_len]
+            body_offset += blob_len
+            import numpy as np
+            arr = np.frombuffer(blob, dtype=np.float16).astype(np.float32).copy()
+            with torch.no_grad():
+                module.weight.copy_(torch.from_numpy(arr).reshape(layer_meta["shape"]))
+        elif kind in ("fp16_conv", "fp16_convt", "fp16_linear"):
+            w_len = layer_meta["weight_blob_len"]
+            b_len = layer_meta["bias_blob_len"]
+            w_blob = body[body_offset:body_offset + w_len]
+            body_offset += w_len
+            b_blob = body[body_offset:body_offset + b_len]
+            body_offset += b_len
+            import numpy as np
+            w_arr = np.frombuffer(w_blob, dtype=np.float16).astype(np.float32).copy()
+            with torch.no_grad():
+                module.weight.copy_(torch.from_numpy(w_arr).reshape(layer_meta["shape"]))
+                if layer_meta["has_bias"] and module.bias is not None:
+                    b_arr = np.frombuffer(b_blob, dtype=np.float16).astype(np.float32).copy()
+                    module.bias.copy_(torch.from_numpy(b_arr))
+        else:
+            raise ValueError(f"SCv1 load: unknown layer kind {kind!r}")
+
+    # Restore scalar parameters
+    scalar_params = header.get("scalar_params", {})
+    if scalar_params:
+        param_dict = dict(model.named_parameters())
+        with torch.no_grad():
+            for pname, pval in scalar_params.items():
+                if pname in param_dict:
+                    param_dict[pname].fill_(pval)
+
+    # Verify shared embedding invariant survived
+    if hasattr(model, "renderer") and hasattr(model, "motion"):
+        r_emb = getattr(model.renderer, "embedding", None)
+        m_emb = getattr(model.motion, "embedding", None)
+        if r_emb is not None and m_emb is not None:
+            assert r_emb is m_emb, "SCv1 load: shared embedding invariant violated"
+
+    model = model.to(device)
+    model.eval()
+    return model
 
 
 if __name__ == "__main__":

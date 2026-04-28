@@ -317,6 +317,27 @@ def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
                    help="Depthwise-separable convolutions")
     p.add_argument("--use-zoom-flow", action="store_true", default=None,
                    help="GREEN profile: 4ch MotionPredictor + RadialZoomWarp")
+    # Lane S (2026-04-27): self-compressing renderer (Szabolcs 2301.13142).
+    # When True, AFTER build_renderer the eligible Conv2d layers are swapped
+    # with SelfCompressingConv2d (per-channel learnable bit-depth via STE).
+    # The Lagrangian rate penalty drives bit-depth toward target during
+    # training. Protected layers (renderer.head, motion.head, FiLM, fuse_conv)
+    # stay FP32 per Lane F's scorer-sensitivity finding.
+    p.add_argument("--use-self-compress-codec", action="store_true", default=None,
+                   help="Lane S: swap bulk Conv2d for SelfCompressingConv2d "
+                        "with per-channel learnable bit-depth.")
+    p.add_argument("--self-compress-init-bits", type=float, default=None,
+                   help="Initial bit-depth for SC layers (default 8.0 = full "
+                        "precision; rate penalty anneals toward target).")
+    p.add_argument("--self-compress-target-bits", type=float, default=None,
+                   help="Target average bit-depth for SC weights (default 2.5). "
+                        "Lagrangian penalty kicks in above this.")
+    p.add_argument("--self-compress-lambda-start", type=float, default=None,
+                   help="Initial Lagrangian rate-penalty multiplier (default 0.0).")
+    p.add_argument("--self-compress-lambda-end", type=float, default=None,
+                   help="Final Lagrangian rate-penalty multiplier (default 1.0).")
+    p.add_argument("--self-compress-lambda-ramp-start-frac", type=float, default=None,
+                   help="Fraction of training before lambda ramp begins (0.3 default).")
     # Codex R5-2 Finding #2 (2026-04-27): the 5 build_renderer arch knobs below
     # were silent dead-resolvers — `getattr(args, "blend_mode", "scalar")` at
     # the build site read the wrong default on every run because parse_args
@@ -482,6 +503,31 @@ def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
                                 "use_dsconv", False)
     args.use_zoom_flow = _resolve(getattr(args, "use_zoom_flow", None),
                                    "use_zoom_flow", False)
+    # Lane S: SC codec resolution (2026-04-27)
+    args.use_self_compress_codec = _resolve(
+        getattr(args, "use_self_compress_codec", None),
+        "use_self_compress_codec", False,
+    )
+    args.self_compress_init_bits = _resolve(
+        getattr(args, "self_compress_init_bits", None),
+        "self_compress_init_bits", 8.0,
+    )
+    args.self_compress_target_bits = _resolve(
+        getattr(args, "self_compress_target_bits", None),
+        "self_compress_target_bits", 2.5,
+    )
+    args.self_compress_lambda_start = _resolve(
+        getattr(args, "self_compress_lambda_start", None),
+        "self_compress_lambda_start", 0.0,
+    )
+    args.self_compress_lambda_end = _resolve(
+        getattr(args, "self_compress_lambda_end", None),
+        "self_compress_lambda_end", 1.0,
+    )
+    args.self_compress_lambda_ramp_start_frac = _resolve(
+        getattr(args, "self_compress_lambda_ramp_start_frac", None),
+        "self_compress_lambda_ramp_start_frac", 0.3,
+    )
     # Codex R5-2 Finding #2 (2026-04-27): blend_mode / noise_mode / motion_type
     # were dead-resolvers — every getattr(args, "blend_mode", "scalar") at the
     # build sites silently returned the function default, ignoring profile
@@ -1042,6 +1088,24 @@ def train(args: argparse.Namespace):
     #
     # This check intentionally runs BEFORE configure_reproducibility/device
     # selection so we don't pay even the model-load cost.
+    # Lane S: when SC codec is on, we cannot FP4A-export (the SC weights
+    # are stored as full nn.Conv2d.weight + a per-channel bit_depth tensor;
+    # FP4A would round-trip through full precision and lose all SC gain).
+    # Disable auth_eval_on_best up-front so the masks/poses requirement
+    # check below does not kill an otherwise valid SC training run. The
+    # SCv1 inflate path is the long-term auth path for these models.
+    if (
+        getattr(args, "use_self_compress_codec", False)
+        and getattr(args, "auth_eval_on_best", False)
+    ):
+        print(
+            "[lane-s] startup gate: --auth-eval-on-best disabled because "
+            "use_self_compress_codec=True. SC weights cannot be FP4A-exported "
+            "without losing the rate gain. Use SCv1 export + a separate auth "
+            "eval after training."
+        )
+        args.auth_eval_on_best = False
+
     if getattr(args, "auth_eval_on_best", False):
         if not _variant_supports_fp4a_export(args.variant):
             raise SystemExit(
@@ -1286,6 +1350,43 @@ def train(args: argparse.Namespace):
             use_dilation=args.use_dilation,
             pose_dim=getattr(args, "pose_dim", 0) or 0,
         )
+
+    # Lane S: post-construction SC codec swap. We do this BEFORE moving to
+    # device so the new SelfCompressingConv2d submodules inherit the same
+    # device move below. The swap is in-place — `model` is mutated.
+    if getattr(args, "use_self_compress_codec", False):
+        from tac.self_compress import (
+            swap_renderer_convs_with_self_compress,
+            renderer_average_bits_per_weight,
+        )
+        diag = swap_renderer_convs_with_self_compress(
+            model,
+            init_bits=float(args.self_compress_init_bits),
+        )
+        avg = renderer_average_bits_per_weight(model)
+        print(
+            f"[lane-s] SC codec ENABLED — swapped {len(diag['swapped'])} layers "
+            f"({diag['total_swapped_params']:,} params) | "
+            f"protected {len(diag['protected'])} | "
+            f"skipped {len(diag['skipped'])} | "
+            f"init_bits={args.self_compress_init_bits} avg={avg:.2f}"
+        )
+        if diag["protected"]:
+            print(f"[lane-s] Protected (FP32): {diag['protected']}")
+        # The auth-eval-on-best path exports via FP4A; if SC weights are not
+        # convertible into the FP4A blob format we MUST disable auth eval at
+        # the start (per the canonical pre-flight pattern), not crash hours
+        # in. The SCv1 magic byte path is the long-term fix; until that
+        # lands in pipeline.py we just disable.
+        if getattr(args, "auth_eval_on_best", False):
+            print(
+                "[lane-s] WARN: --auth-eval-on-best is set but SC codec is on. "
+                "FP4A export of SC weights would round-trip through full-precision "
+                "and lose the SC rate gain. Use SCv1 export + pipeline.py auth "
+                "after this run completes. Forcing auth_eval_on_best=False."
+            )
+            args.auth_eval_on_best = False
+
     model = model.to(device)
     # channels_last memory format: 10-30% speedup for conv2d on CUDA
     if device.type == "cuda":
@@ -1801,6 +1902,33 @@ def train(args: argparse.Namespace):
                     )
                     loss = loss + args.uncertainty_loss_weight * uncert_loss
 
+            # Lane S: Lagrangian rate penalty on per-channel bit-depth.
+            # Active only when the SC codec is on. λ ramps from start to end
+            # over training so the renderer learns scorer-sensitive features
+            # before being forced to compress them. The penalty itself is
+            # normalized by total weights (bits/weight) so the magnitude
+            # stays comparable across renderer sizes.
+            if getattr(args, "use_self_compress_codec", False):
+                from tac.self_compress import compute_renderer_rate_penalty
+                _total_epochs = max(1, args.epochs)
+                _progress = epoch / max(_total_epochs - 1, 1)
+                _ramp_start = float(args.self_compress_lambda_ramp_start_frac)
+                if _progress < _ramp_start:
+                    _lambda = float(args.self_compress_lambda_start)
+                else:
+                    _ramp_progress = (_progress - _ramp_start) / max(1.0 - _ramp_start, 1e-6)
+                    _lambda = (
+                        float(args.self_compress_lambda_start)
+                        + (float(args.self_compress_lambda_end) - float(args.self_compress_lambda_start))
+                        * min(1.0, _ramp_progress)
+                    )
+                _rate_pen = compute_renderer_rate_penalty(
+                    model,
+                    target_bits_per_weight=float(args.self_compress_target_bits),
+                    lambda_rate=_lambda,
+                )
+                loss = loss + _rate_pen
+
             scaled_loss = loss / accum
 
             try:
@@ -1835,6 +1963,12 @@ def train(args: argparse.Namespace):
                 optimizer.step()
                 ema.update(model)
                 optimizer.zero_grad(set_to_none=True)
+                # Lane S: clamp bit-depth tensor to [0, 8] after each opt step
+                if getattr(args, "use_self_compress_codec", False):
+                    from tac.self_compress import list_self_compress_layers
+                    with torch.no_grad():
+                        for _name, _layer in list_self_compress_layers(model):
+                            _layer.bit_depth.bits.clamp_(0.0, 8.0)
 
             mask_t = mask_t1 = gt_pair = rendered_pair = None
 

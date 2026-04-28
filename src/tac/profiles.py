@@ -2590,6 +2590,181 @@ DILATED_H64_HALF_FRAME = {
 }
 
 
+# ── Lane S: Self-Compression renderer (Szabolcs / 2301.13142) ─────────
+#
+# Builds the dilated-h64 architecture but swaps every bulk Conv2d with a
+# SelfCompressingConv2d (per-channel learnable bit-depth via STE) — the
+# RGB head, motion head, FiLM linears, fuse_conv stay FP32 per Lane F's
+# finding that those layers carry >50% of scorer sensitivity at <5% of
+# the parameters.
+#
+# The Lagrangian rate penalty drives the average bit-depth from 8 (init)
+# down to ~2.5 over training. Predicted byte count: ~16-20KB renderer.bin
+# (vs 119-180KB FP4-QAT for the same arch). Stacked with full-frame
+# masks (~125KB AV1) and poses (~15KB), total archive = ~160KB. Rate
+# component drops from baseline 1.74 → ~0.11.
+#
+# Smoke profile: 100 epochs total, no scorer loss, just verifies the
+# code path. Full profile mirrors DILATED_H64_HALF_FRAME for fair A/B.
+
+SELF_COMPRESS_RENDERER_SMOKE = {
+    "experiment_type": "renderer_training",
+    "variant": "dilated",
+    # Lane S engineering kwarg. Triggered by train_renderer.py to call
+    # swap_renderer_convs_with_self_compress() after build_renderer.
+    "use_self_compress_codec": True,
+    "self_compress_init_bits": 8.0,
+    "self_compress_target_bits": 4.0,    # smoke: aim wider so it converges fast
+    "self_compress_lambda_start": 0.0,
+    "self_compress_lambda_end": 0.5,
+    "self_compress_lambda_ramp_start_frac": 0.3,
+    # Architecture matches the verified dilated-h64 baseline byte-for-byte
+    "base_ch": 36,
+    "mid_ch": 60,
+    "motion_hidden": 32,
+    "embed_dim": 6,
+    "depth": 1,
+    "pose_dim": 6,
+    "use_dsconv": False,
+    "padding_mode": "zeros",
+    "use_dilation": False,
+    "use_zoom_flow": True,
+    "mask_half_sim_prob": 0.5,
+    "eval_roundtrip": True,
+    "loss_mode": "focal_ste",
+    "segnet_loss_mode": "hinge",
+    "hinge_margin": 1.0,
+    "focal_gamma": 2.0,
+    "error_boost": 1.0,
+    "pose_weight": 10.0,
+    "seg_weight": 100.0,
+    "pixel_weight": 0.1,
+    "ema_decay": 0.997,
+    # 5-phase short for smoke: 100 epochs total
+    "phase1_epochs": 30,
+    "phase2_epochs": 50,
+    "phase3_epochs": 10,
+    "phase4_epochs": 10,
+    "phase5_epochs": 0,
+    "phase1_lr": 1e-3,
+    "phase2_lr": 3e-4,
+    "phase3_lr": 1e-4,
+    "phase4_lr": 5e-5,
+    "phase5_lr": 1e-5,
+    "phase1_batch_size": 16,
+    "phase2_batch_size": 8,
+    "phase3_batch_size": 8,
+    "checkpoint_every": 25,
+    "eval_every": 25,
+    "log_every": 10,
+    # Smoke does NOT auth-eval: the SC renderer.bin format is new and the
+    # auth_eval_renderer.py round-trip via FP4A would fail. Use smoke for
+    # code-path validation only.
+    "auth_eval_on_best": False,
+    "fp4_codebook": "residual",
+    "fp4_robust_scale": True,
+    "fp4_stochastic": True,
+    "mask_noise_prob": 0.5,
+    "seed": 42,
+    "deterministic": True,
+}
+
+
+# Full profile: 1980 epochs (matches SHIRAZ / DILATED_H64_HALF_FRAME budget
+# for direct A/B comparability). Predicted score landing: with 16-20KB
+# renderer.bin the rate drops by 0.18+ vs same-arch FP4 baseline. If
+# PoseNet stays within 2x of baseline (Lane F's risk: protected layers
+# may be insufficient), score lands in 0.85-1.10 range standalone. With
+# Lane A pose TTO stack: 0.55-0.75. With aggressive rate (target_bits=2.0)
+# and Lane I half-frame masks: sub-0.50 plausible.
+
+SELF_COMPRESS_RENDERER_FULL = {
+    "experiment_type": "renderer_training",
+    "variant": "dilated",
+    "use_self_compress_codec": True,
+    # Bit budget: start at 8 (full precision), anneal toward 2.5 (Szabolcs
+    # mean from 2301.13142 §4.3 with rate-distortion λ tuned for image
+    # compression). The Lagrangian penalty ramps from 0 to 1.0 starting at
+    # 30% of training so the renderer learns scorer-sensitive features
+    # before being forced to compress them.
+    "self_compress_init_bits": 8.0,
+    "self_compress_target_bits": 2.5,
+    "self_compress_lambda_start": 0.0,
+    "self_compress_lambda_end": 1.0,
+    "self_compress_lambda_ramp_start_frac": 0.3,
+    # Architecture: identical to DILATED_H64_HALF_FRAME for byte-for-byte A/B
+    "base_ch": 36,
+    "mid_ch": 60,
+    "motion_hidden": 32,
+    "embed_dim": 6,
+    "depth": 1,
+    "pose_dim": 6,
+    "use_dsconv": False,
+    "padding_mode": "zeros",
+    "use_dilation": False,
+    "use_zoom_flow": True,
+    "mask_half_sim_prob": 0.5,
+    "eval_roundtrip": True,
+    "loss_mode": "focal_ste",
+    "segnet_loss_mode": "hinge",
+    "hinge_margin": 1.0,
+    "focal_gamma": 2.0,
+    "error_boost": 1.0,
+    "use_texture_loss": True,
+    "texture_loss_weight": 0.5,
+    "use_linf_penalty": True,
+    "linf_weight": 0.01,
+    "use_markov_loss": True,
+    "markov_weight": 0.1,
+    "use_variance_noise": True,
+    "variance_noise_weight": 0.1,
+    "variance_noise_base_std": 2.0,
+    "variance_noise_kernel": 8,
+    "variance_noise_mode": "wavelet_db4",
+    "use_uncertainty_loss": True,
+    "uncertainty_loss_weight": 0.05,
+    "uncertainty_loss_floor": 0.1,
+    "kl_distill_weight": 1.0,
+    "kl_distill_temperature": 2.0,
+    "pose_weight": 10.0,
+    "seg_weight": 100.0,
+    "pixel_weight": 0.1,
+    "ema_decay": 0.997,
+    "use_per_class_weights": True,
+    "use_swa": True,
+    "freeze_motion_phase2": False,
+    "freeze_renderer_phase3": False,
+    "phase1_epochs": 400,
+    "phase2_epochs": 1080,
+    "phase3_epochs": 200,
+    "phase4_epochs": 200,
+    "phase5_epochs": 100,
+    "phase1_lr": 1e-3,
+    "phase2_lr": 3e-4,
+    "phase3_lr": 1e-4,
+    "phase4_lr": 5e-5,
+    "phase5_lr": 1e-5,
+    "phase1_batch_size": 16,
+    "phase2_batch_size": 8,
+    "phase3_batch_size": 8,
+    "hard_frame_ratio": 0.3,
+    "error_replay_every": 100,
+    "checkpoint_every": 100,
+    "eval_every": 50,
+    "log_every": 25,
+    # Lane S full requires auth eval — but only after the SCv1 inflate
+    # path lands in production. Until then, the auth eval needs an FP4A
+    # fallback export of the float weights for measurement only.
+    "auth_eval_on_best": True,
+    "fp4_codebook": "residual",
+    "fp4_robust_scale": True,
+    "fp4_stochastic": True,
+    "mask_noise_prob": 0.5,
+    "seed": 42,
+    "deterministic": True,
+}
+
+
 PROFILES = {
     "council_v1": COUNCIL_V1,
     "council_v2_adaptive": COUNCIL_V2_ADAPTIVE,
@@ -2729,6 +2904,9 @@ PROFILES = {
     "gpu_lane_full": GPU_LANE_FULL,
     # Technique 1: Self-compressing postfilter (Szabolcs)
     "self_compress_smoke": SELF_COMPRESS_SMOKE,
+    # Lane S: Self-compressing renderer (Szabolcs 2301.13142 in renderer)
+    "self_compress_renderer_smoke": SELF_COMPRESS_RENDERER_SMOKE,
+    "self_compress_renderer_full": SELF_COMPRESS_RENDERER_FULL,
     # Technique 2: Entropy-coded archive (Shannon)
     "entropy_archive_smoke": ENTROPY_ARCHIVE_SMOKE,
     # Technique 3: Network-as-codec (SIREN video memorization)

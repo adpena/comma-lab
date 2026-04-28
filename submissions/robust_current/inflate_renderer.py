@@ -1646,14 +1646,16 @@ def _inline_load_int4_lzma2(raw_bytes: bytes, device: str = "cpu") -> dict:
 def _load_renderer(renderer_path: str, device: str) -> nn.Module:
     """Load renderer from a .bin or .pt checkpoint.
 
-    Supports six checkpoint formats:
+    Supports seven checkpoint formats:
         1. DPSM binary: DPSIMSRenderer (magic b"DPSM")
         2. ASYM binary: AsymmetricPairGenerator (magic b"ASYM")
         3. FP4A binary: FP4-quantized AsymmetricPairGenerator (magic b"FP4A")
         4. INT4_LZMA2 binary: int4+LZMA2 compressed (magic b"I4LZ")
         5. CCh1 binary (Lane I): Cool-Chic PairGenerator (magic b"CCh1")
         6. C3R1 binary (Lane I): C3 residual PairGenerator (magic b"C3R1")
-        7. PyTorch pickle: state_dict or PairGenerator checkpoint
+        7. SCv1 binary (Lane S): Self-Compressing AsymmetricPairGenerator
+           (magic b"SCv1") — per-channel learnable bit-depth + LZMA body.
+        8. PyTorch pickle: state_dict or PairGenerator checkpoint
 
     All variants produce the same `(B, 2, H, W, 3)` HWC pair output via
     `model(mask_t, mask_t1)`, so the rest of the inflate pipeline (mask
@@ -1767,6 +1769,33 @@ def _load_renderer(renderer_path: str, device: str) -> nn.Module:
         elapsed = time.monotonic() - t0
         print(f"  Loaded Cool-Chic PairGenerator from .bin ({len(raw_bytes):,} bytes, {elapsed:.1f}s)",
               file=sys.stderr)
+        return model
+
+    # ── SCv1 format (Lane S): Self-Compressing AsymmetricPairGenerator ──
+    # 2026-04-27: per-channel learnable bit-depth (Szabolcs 2301.13142)
+    # applied to all eligible Conv2d layers in the dilated-h64 baseline
+    # arch. Protected layers (renderer.head, motion.head, FiLM linears,
+    # fuse_conv) stay FP32 per Lane F's scorer-sensitivity finding. Body
+    # is LZMA-compressed; tac.renderer_export.load_self_compressed_renderer
+    # is the only loader (no inline fallback because the SC quant scheme
+    # is non-trivial — every load path must include the tac wheel).
+    if magic == b"SCv1":
+        try:
+            from tac.renderer_export import load_self_compressed_renderer
+        except ImportError as exc:
+            raise RuntimeError(
+                "SCv1 (Self-Compressing renderer) format requires the tac "
+                "package (tac.renderer_export.load_self_compressed_renderer). "
+                "The inflate container must include the tac wheel for Lane S "
+                f"archives. Underlying error: {exc!r}"
+            )
+        model = load_self_compressed_renderer(raw_bytes, device=device)
+        elapsed = time.monotonic() - t0
+        print(
+            f"  Loaded Self-Compressing AsymmetricPairGenerator from .bin "
+            f"({len(raw_bytes):,} bytes, {elapsed:.1f}s)",
+            file=sys.stderr,
+        )
         return model
 
     # ── C3R1 format (Lane I): C3 residual PairGenerator ──
