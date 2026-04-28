@@ -163,8 +163,12 @@ def test_missing_supercombo_without_allow_fallback_exits_nonzero(
     )
 
 
-def test_fallback_without_masks_exits_nonzero(tmp_path: Path) -> None:
-    """--allow-fallback but no --masks → exit 1."""
+def test_fallback_lane_mark_without_masks_exits_nonzero(tmp_path: Path) -> None:
+    """--allow-fallback --fallback-mode=lane_mark without --masks → exit 1.
+
+    V2: the masks requirement only applies when --fallback-mode=lane_mark
+    (the default --fallback-mode=baseline does not need masks).
+    """
     output_path = tmp_path / "seed_poses.pt"
     fake_supercombo = tmp_path / "missing.onnx"
 
@@ -175,6 +179,10 @@ def test_fallback_without_masks_exits_nonzero(tmp_path: Path) -> None:
             "--output", str(output_path),
             "--device", "cpu",
             "--allow-fallback",
+            "--fallback-mode", "lane_mark",
+            # Point baseline-poses at a non-existent path so the default
+            # baseline fallback doesn't shadow the lane_mark code path.
+            "--baseline-poses", str(tmp_path / "no_baseline.pt"),
         ],
         capture_output=True, text=True, timeout=30,
     )

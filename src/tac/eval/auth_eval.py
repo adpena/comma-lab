@@ -800,6 +800,7 @@ class AuthEvaluator:
             flow_only=config.get("flow_only", False),
             pose_dim=config.get("pose_dim", 0),
             use_dsconv=config.get("use_dsconv", False),
+            use_ghost=config.get("use_ghost", False),
         )
 
     # ------------------------------------------------------------------
@@ -1341,6 +1342,7 @@ def _inline_load_asym(raw_bytes: bytes, device: str = "cpu") -> nn.Module:
         flow_only=header.get("flow_only", False),
         pose_dim=header.get("pose_dim", 0),
         use_dsconv=header.get("use_dsconv", False),
+        use_ghost=header.get("use_ghost", False),
     )
 
     # Build name -> module lookups

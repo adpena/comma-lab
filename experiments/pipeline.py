@@ -558,6 +558,7 @@ def step_export(cfg: PipelineConfig, iteration: int = 0) -> Path:
         depth=_arch("depth", 1),
         pose_dim=_arch("pose_dim", 0),
         use_dsconv=_arch("use_dsconv", False),
+        use_ghost=_arch("use_ghost", False),
         padding_mode=_arch("padding_mode", "zeros"),
         use_dilation=_arch("use_dilation", False),
         use_zoom_flow=_arch("use_zoom_flow", False),

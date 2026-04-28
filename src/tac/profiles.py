@@ -2752,6 +2752,66 @@ QUANTIZR_REPLICA_88K_HALFFRAME = {
 }
 
 
+# ── LANE V-V2: Quantizr-replica 88K HALF-FRAME with ANNEALED warp prob ──
+# Council 2026-04-27. Lane V-V1's mask_half_sim_prob=1.0 from epoch 0 was
+# a cold-start: the renderer's randomly-initialised motion module had to
+# learn the warp-expansion distribution from the very first batch, with
+# no preview of the easier full-frame baseline. The hypothesis was that
+# the renderer would converge anyway because (a) mask_half_sim_prob=0.5
+# in Lane D's RETROFIT failed because the motion module was already locked
+# in, and (b) starting from random would force convergence on the warp
+# premise. That bet paid off (Lane V's predicted band was [0.50, 1.10])
+# but the optimisation was high-variance.
+#
+# Lane V-V2 oversight fix: ANNEAL mask_half_sim_prob from 0.0 → 1.0 over
+# training. The early epochs (warmup phase) train against the full-frame
+# distribution where the gradient signal is strong + clear. As warmup
+# completes, the warp probability ramps linearly to 1.0; the rest of
+# training converges to the same Lane V endpoint but with a smoother
+# trajectory.
+#
+# Annealing schedule (encoded in mask_half_sim_prob_anneal dict):
+#   * 0.0 for first 30% of epochs (warmup on full-frame)
+#   * Linear ramp 0.0 → 1.0 from 30% to 70% of epochs (transition)
+#   * 1.0 for last 30% of epochs (Lane V endpoint distribution)
+#
+# Total epochs = sum of phase1..phase5 = 3000 (matches Lane V-V1):
+#   * Warmup full-frame:  epoch 0..900     (900 epochs, 30%)
+#   * Linear ramp:         epoch 900..2100  (1200 epochs, 40%)
+#   * Lane V endpoint:    epoch 2100..3000 (900 epochs, 30%)
+#
+# Predicted band: [0.45, 1.05] [contest-CUDA].
+#   * Slightly tighter than V1's [0.50, 1.10] because annealing removes
+#     the early-epoch optimisation variance and lets the renderer track a
+#     smoother loss landscape into the warp-expansion regime.
+#   * Floor 0.45: optimal annealing finds a better local minimum than V1's
+#     cold-start — the warmup full-frame phase establishes a strong
+#     initialisation that survives the transition.
+#   * Ceiling 1.05: annealing buys nothing — the warmup phase wasted 900
+#     epochs on the wrong distribution; final convergence matches V1.
+#
+# All other knobs identical to QUANTIZR_REPLICA_88K_HALFFRAME so the only
+# difference vs Lane V-V1 is the annealing schedule (single-variable A/B).
+# Different seed (1235) so the two runs explore different RNG basins.
+QUANTIZR_REPLICA_88K_HALFFRAME_ANNEALED = {
+    **QUANTIZR_REPLICA_88K_HALFFRAME,  # inherit all knobs from V1
+    # Override the cold-start prob with the annealing schedule. The training
+    # loop reads mask_half_sim_prob_anneal first; if present, the per-epoch
+    # warp probability is computed from the schedule and the static
+    # mask_half_sim_prob value below is the END value (= 1.0). When the
+    # schedule is missing, the static value is used unchanged (V1 path).
+    "mask_half_sim_prob": 1.0,
+    "mask_half_sim_prob_anneal": {
+        "start_value": 0.0,
+        "end_value": 1.0,
+        "ramp_start_frac": 0.30,
+        "ramp_end_frac": 0.70,
+    },
+    # Different seed so V1 vs V2 are not RNG-twins.
+    "seed": 1235,
+}
+
+
 # ── Lane K: DSConv Quantizr-killer (88K params from-scratch, FULL-FRAME) ──
 # Council brief 2026-04-27. Lane A holds the 1.15 [contest-CUDA] frontier with
 # the dilated-h64 baseline arch (288K params, ~290KB FP32 renderer.bin, total
@@ -3333,6 +3393,13 @@ PROFILES = {
     # FAILED, Lane V's bet is that JOINT training never seeing the unwarped
     # distribution forces convergence on the warp-expansion premise.
     "quantizr_replica_88k_halfframe": QUANTIZR_REPLICA_88K_HALFFRAME,
+    # Lane V-V2: same Quantizr-replica 88K half-frame but with mask_half_sim_prob
+    # ANNEALED 0.0 → 1.0 over training (warmup full-frame → linear ramp →
+    # endpoint half-frame). Predicted band [0.45, 1.05] (tighter than V1
+    # [0.50, 1.10] because annealing reduces optimisation variance).
+    "quantizr_replica_88k_halfframe_annealed": (
+        QUANTIZR_REPLICA_88K_HALFFRAME_ANNEALED
+    ),
     # Lane K: Quantizr-class 88K from-scratch retrain on FULL-frame masks.
     # Orthogonal to Lane V (half-frame) and Lane S (self-compression). Same
     # arch (88,996 params, DSConv + FiLM + Fridrich + KL distill) but ships

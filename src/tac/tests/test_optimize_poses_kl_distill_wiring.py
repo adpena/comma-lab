@@ -211,13 +211,18 @@ def test_kl_distill_does_not_break_existing_call_path():
     test_train_renderer_auth_eval_wiring.py."""
     src = SCRIPT.read_text()
 
-    # (a) The gate `if kl_distill_weight > 0 and gt_frames_pair is not None`
-    # — this is the explicit zero-overhead path.
+    # (a) The gate `if <effective>weight > 0 and gt_frames_pair is not None`
+    # — this is the explicit zero-overhead path. After Lane G V3-V2 the
+    # effective weight is computed via `_effective_kl_weight = (
+    # kl_distill_snr_controller.weight if ... else kl_distill_weight)`, so
+    # accept either the original direct gate OR the post-V2 indirect gate.
     gate_re = re.compile(
-        r"if\s+kl_distill_weight\s*>\s*0\s+and\s+gt_frames_pair\s+is\s+not\s+None\s*:",
+        r"if\s+(?:_effective_kl_weight|kl_distill_weight)\s*>\s*0"
+        r"\s+and\s+gt_frames_pair\s+is\s+not\s+None\s*:",
     )
     assert gate_re.search(src) is not None, (
-        "KL-distill block must be gated on `if kl_distill_weight > 0 and "
+        "KL-distill block must be gated on "
+        "`if (_effective_kl_weight | kl_distill_weight) > 0 and "
         "gt_frames_pair is not None:` — without the gate, default callers "
         "(weight=0.0) would hit the import + branch and pay overhead, and "
         "without the `gt_frames_pair is not None` half a misconfiguration "

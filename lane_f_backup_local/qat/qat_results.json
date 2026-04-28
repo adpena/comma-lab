@@ -1,0 +1,66 @@
+{
+  "baseline": {
+    "pose_d": 37.72755846977234,
+    "seg_d": 0.006451670429669321,
+    "distortion": 20.06875025250176
+  },
+  "qat_float": {
+    "pose_d": 5.641445505619049,
+    "seg_d": 0.006722768349573016,
+    "distortion": 8.183232503591652
+  },
+  "fp4_roundtrip": {
+    "pose_d": 4.5667386770248415,
+    "seg_d": 0.0076260886853560805,
+    "distortion": 7.520373792698656
+  },
+  "fp4_degradation": -12.548376459803105,
+  "fp4_size_bytes": 169975,
+  "n_params": 287785,
+  "config": {
+    "embed_dim": 6,
+    "base_ch": 36,
+    "mid_ch": 60,
+    "motion_hidden": 32,
+    "depth": 1,
+    "pose_dim": 6,
+    "max_flow_px": 20.0,
+    "max_residual": 20.0,
+    "use_dsconv": false,
+    "padding_mode": "zeros",
+    "use_dilation": false,
+    "use_zoom_flow": true,
+    "checkpoint_path": "submissions/baseline_dilated_h64_0_90/renderer.bin",
+    "upstream_dir": "upstream",
+    "mixed_precision_json": "",
+    "output_dir": "/workspace/pact/lane_b_results/qat",
+    "int8_warmup_epochs": 0,
+    "fp4_epochs": 50,
+    "base_lr": 5e-05,
+    "lr_min_ratio": 0.0,
+    "warmup_steps": 20,
+    "batch_size": 4,
+    "grad_clip": 1.0,
+    "fp4_block_size": 32,
+    "seg_weight": 100.0,
+    "pose_weight": 10.0,
+    "segnet_loss_mode": "hinge",
+    "hinge_margin": 0.5,
+    "eval_roundtrip": true,
+    "noise_std": 0.5,
+    "eval_every": 25,
+    "log_every": 5,
+    "checkpoint_every": 50,
+    "device": "cuda",
+    "seed": 42
+  },
+  "history": [
+    {
+      "phase": "fp4",
+      "epoch": 25,
+      "pose_d": 4.399976913134257,
+      "seg_d": 0.007758924861749014,
+      "distortion": 7.409124664483042
+    }
+  ]
+}

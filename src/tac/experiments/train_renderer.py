@@ -261,6 +261,22 @@ def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
                         "mask_t1) during training (default 0.0 = off). Set to "
                         "0.5 when shipping a half-frame archive (Quantizr "
                         "paradigm) so train/inflate distributions match.")
+    # Lane V-V2 (2026-04-27) annealing schedule for the half-frame warp prob.
+    # Format: "start_value,ramp_start_frac,end_value,ramp_end_frac" (4 floats).
+    # Schedule: prob = start_value for epoch_frac < ramp_start_frac,
+    #           linear ramp to end_value over [ramp_start_frac, ramp_end_frac],
+    #           prob = end_value for epoch_frac > ramp_end_frac.
+    # Example "0,0.3,1.0,0.7" = warmup full-frame for 30%, ramp 30%→70%,
+    #                            half-frame 70%→100%.
+    # When supplied, OVERRIDES the static --mask-half-sim-prob /
+    # profile mask_half_sim_prob value.
+    p.add_argument("--mask-half-sim-prob-schedule", type=str, default=None,
+                   help="Lane V-V2 annealing schedule. Format: "
+                        "'start,ramp_start_frac,end,ramp_end_frac'. Example: "
+                        "'0,0.3,1.0,0.7' = full-frame warmup for first 30%% "
+                        "of epochs, linear ramp to half-frame between 30%% "
+                        "and 70%%, half-frame for last 30%%. Overrides the "
+                        "static --mask-half-sim-prob value when supplied.")
 
     # KL distillation: Quantizr's secret sauce per CLAUDE.md. Adds Hinton-style
     # KL divergence on SegNet soft distributions ALONGSIDE the standard scorer
@@ -357,6 +373,35 @@ def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
                    help="Final Lagrangian rate-penalty multiplier (default 1.0).")
     p.add_argument("--self-compress-lambda-ramp-start-frac", type=float, default=None,
                    help="Fraction of training before lambda ramp begins (0.3 default).")
+    # Lane S V2 (auto-warmup): replace the hand-coded ramp_start_frac
+    # with the SAGA-style scorer-loss convergence detector
+    # (`tac.training.scorer_loss_convergence_detector`). When enabled,
+    # the per-epoch scorer loss is fed to the detector; once the
+    # OLS-slope plateau is detected the Lagrangian rate ramp is allowed
+    # to begin (instead of waiting for the static fraction). Default
+    # OFF (False) for backward compat — every existing profile keeps
+    # its --self-compress-lambda-ramp-start-frac semantics.
+    p.add_argument("--auto-warmup-lambda", action="store_true", default=False,
+                   help="Lane S V2: auto-detect scorer-loss convergence "
+                        "and start the Lagrangian rate ramp THEN, instead "
+                        "of at the hand-coded "
+                        "--self-compress-lambda-ramp-start-frac fraction. "
+                        "Uses tac.training.scorer_loss_convergence_detector "
+                        "(OLS-slope plateau detector with a 50-epoch "
+                        "sliding window, slope tolerance 1e-4 / epoch, "
+                        "min_warmup_epochs floor of 50).")
+    p.add_argument("--auto-warmup-window", type=int, default=50,
+                   help="Lane S V2: sliding window size for the auto-"
+                        "warmup detector (default 50 epochs).")
+    p.add_argument("--auto-warmup-slope-tol", type=float, default=1e-4,
+                   help="Lane S V2: slope tolerance (loss-units per epoch) "
+                        "for the auto-warmup plateau test (default 1e-4).")
+    p.add_argument("--auto-warmup-min-epochs", type=int, default=50,
+                   help="Lane S V2: minimum epoch count before the "
+                        "auto-warmup detector is allowed to fire (default "
+                        "50). Hard floor; even on a synthetically-flat "
+                        "loss curve, the rate ramp cannot start before "
+                        "this epoch.")
     # Codex R5-2 Finding #2 (2026-04-27): the 5 build_renderer arch knobs below
     # were silent dead-resolvers — `getattr(args, "blend_mode", "scalar")` at
     # the build site read the wrong default on every run because parse_args
@@ -502,6 +547,52 @@ def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
                         "experiments/profile_pair_sensitivity.py. When set, per-step "
                         "loss is scaled by pair_loss_weights[pair_idx_int]. The shape "
                         "MUST match the dataset's n_total pairs (typically 600).")
+
+    # Lane W-V2 (2026-04-27): make --pair-loss-weights LEARNABLE. The per-
+    # pair weights become a TRAINABLE parameter group (LearnablePairWeights)
+    # whose values are warm-started from --pair-loss-weights. A Lagrangian
+    # rate penalty drives sum(weights) toward N_pairs (mean=1) so the loss
+    # scale stays comparable to the unweighted run while the optimiser
+    # redistributes weight mass to the hardest pairs. See
+    # tac.learnable_pair_weights and project_arbitrary_vs_learnable_taxonomy.
+    p.add_argument("--learnable-pair-weights", action="store_true",
+                   default=False,
+                   help="Lane W-V2: turn the --pair-loss-weights tensor into "
+                        "a LEARNABLE parameter group (LearnablePairWeights). "
+                        "Requires --pair-loss-weights as the warm-start. "
+                        "Adds a Lagrangian rate penalty so sum(weights) "
+                        "≈ N_pairs (mean=1).")
+    p.add_argument("--learnable-pair-weights-lr", type=float, default=1e-3,
+                   help="Lane W-V2: learning rate for the LearnablePairWeights "
+                        "parameter group. Default 1e-3 (small — these are "
+                        "scalars, not weight tensors).")
+    p.add_argument("--learnable-pair-weights-rate-lambda", type=float,
+                   default=1e-4,
+                   help="Lane W-V2: Lagrangian multiplier on the "
+                        "sum(weights)≈N_pairs constraint. Small (1e-4) so "
+                        "the constraint doesn't dominate the primary loss.")
+
+    # Lane PS-V2 (2026-04-27): make --segnet-class-weights LEARNABLE. The
+    # 5-class weight vector becomes a softmax-parameterised parameter
+    # (LearnableClassWeights). A Lagrangian penalty equalises per-class
+    # contribution variance — Pareto-optimal under the score formula. See
+    # tac.learnable_class_weights and project_arbitrary_vs_learnable_taxonomy.
+    p.add_argument("--learnable-segnet-class-weights", action="store_true",
+                   default=False,
+                   help="Lane PS-V2: replace the static --segnet-class-weights "
+                        "CSV with a LEARNABLE softmax-parameterised "
+                        "5-vector. When set, --segnet-class-weights provides "
+                        "the warm-start; the optimiser then equalises "
+                        "per-class distortion variance via a Lagrangian "
+                        "penalty.")
+    p.add_argument("--learnable-segnet-class-weights-lr", type=float,
+                   default=1e-2,
+                   help="Lane PS-V2: learning rate for the "
+                        "LearnableClassWeights parameter group.")
+    p.add_argument("--learnable-segnet-class-weights-var-lambda", type=float,
+                   default=1.0,
+                   help="Lane PS-V2: Lagrangian multiplier on the per-class "
+                        "distortion variance penalty (equalisation term).")
 
     args = p.parse_args(argv)
 
@@ -702,6 +793,55 @@ def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
         getattr(args, "mask_half_sim_prob", None),
         "mask_half_sim_prob", 0.0,
     )
+    # Lane V-V2 (2026-04-27): optional annealing schedule for the half-frame
+    # warp probability. When set, the per-epoch warp prob is computed via
+    # mask_half_sim_prob_for_epoch() instead of using the static value.
+    # CLI override path: --mask-half-sim-prob-schedule "S,RS,E,RE" parses
+    # into the 4-key dict below. Profile path: the dict is read directly
+    # from PROFILES[<name>]["mask_half_sim_prob_anneal"].
+    cli_anneal_str = getattr(args, "mask_half_sim_prob_schedule", None)
+    if cli_anneal_str:
+        parts = [p.strip() for p in cli_anneal_str.split(",")]
+        if len(parts) != 4:
+            raise SystemExit(
+                f"FATAL: --mask-half-sim-prob-schedule expects 4 comma-"
+                f"separated floats (start_value,ramp_start_frac,end_value,"
+                f"ramp_end_frac), got {cli_anneal_str!r}"
+            )
+        args.mask_half_sim_prob_anneal = {
+            "start_value": float(parts[0]),
+            "ramp_start_frac": float(parts[1]),
+            "end_value": float(parts[2]),
+            "ramp_end_frac": float(parts[3]),
+        }
+    else:
+        args.mask_half_sim_prob_anneal = profile_vals.get(
+            "mask_half_sim_prob_anneal", None,
+        )
+    if args.mask_half_sim_prob_anneal is not None:
+        sched = args.mask_half_sim_prob_anneal
+        required_keys = {
+            "start_value", "ramp_start_frac",
+            "end_value", "ramp_end_frac",
+        }
+        missing = required_keys - set(sched.keys())
+        if missing:
+            raise SystemExit(
+                f"FATAL: mask_half_sim_prob_anneal missing required keys "
+                f"{sorted(missing)}; have {sorted(sched.keys())}"
+            )
+        for key, val in sched.items():
+            if not isinstance(val, (int, float)) or not (0.0 <= val <= 1.0):
+                raise SystemExit(
+                    f"FATAL: mask_half_sim_prob_anneal[{key!r}]={val!r} "
+                    f"must be a float in [0, 1]"
+                )
+        if sched["ramp_start_frac"] > sched["ramp_end_frac"]:
+            raise SystemExit(
+                f"FATAL: mask_half_sim_prob_anneal ramp_start_frac="
+                f"{sched['ramp_start_frac']} > ramp_end_frac="
+                f"{sched['ramp_end_frac']} — schedule would ramp backwards"
+            )
     args.latent_ch = _resolve(args.latent_ch, "latent_ch", 8)
     args.latent_shapes = profile_vals.get("latent_shapes", ((6, 8), (12, 16), (24, 32)))
     args.residual_hidden = _resolve(args.residual_hidden, "residual_hidden", 32)
@@ -758,6 +898,57 @@ def configure_reproducibility(seed: int, deterministic: bool) -> None:
     if hasattr(torch.backends, "cudnn"):
         torch.backends.cudnn.benchmark = not deterministic
         torch.backends.cudnn.deterministic = deterministic
+
+
+# ── Lane V-V2: half-frame warp probability annealing ─────────────────────
+
+
+def mask_half_sim_prob_for_epoch(
+    epoch: int,
+    total_epochs: int,
+    *,
+    static_prob: float,
+    schedule: dict | None,
+) -> float:
+    """Compute the per-epoch ``mask_half_sim_prob`` value.
+
+    When ``schedule`` is None, returns ``static_prob`` unchanged (the V1
+    behaviour). When supplied, reads the 4-key annealing schedule and
+    returns:
+
+      * ``start_value`` for ``epoch_frac < ramp_start_frac``
+      * linear interpolation ``start_value → end_value`` for
+        ``ramp_start_frac <= epoch_frac < ramp_end_frac``
+      * ``end_value`` for ``epoch_frac >= ramp_end_frac``
+
+    where ``epoch_frac = epoch / max(total_epochs, 1)``.
+
+    The schedule was validated at parse-time (see ``parse_args`` /
+    ``_resolve``); this function trusts the keys are present and the
+    floats are in [0, 1].
+    """
+    if schedule is None:
+        return float(static_prob)
+    if total_epochs <= 0:
+        # Degenerate: if total_epochs is 0 the loop won't run anyway, but
+        # don't divide by zero — return the start value.
+        return float(schedule["start_value"])
+    epoch_frac = float(epoch) / float(total_epochs)
+    rs = float(schedule["ramp_start_frac"])
+    re = float(schedule["ramp_end_frac"])
+    sv = float(schedule["start_value"])
+    ev = float(schedule["end_value"])
+    if epoch_frac < rs:
+        return sv
+    if epoch_frac >= re:
+        return ev
+    if re <= rs:
+        # Defensive: validator forbids this but if it slipped through,
+        # fall back to end_value (the operator's intended endpoint).
+        return ev
+    # Linear ramp.
+    t = (epoch_frac - rs) / (re - rs)
+    return sv + (ev - sv) * t
 
 
 # ── Data loading ────────────────────────────────────────────────────────
@@ -1687,11 +1878,131 @@ def train(args: argparse.Namespace):
             f"hard={(pair_loss_weights > 1.0).sum().item()} pairs"
         )
 
+    # Lane W-V2 (2026-04-27): wrap pair_loss_weights in a learnable
+    # parameter group when --learnable-pair-weights is set. The static
+    # tensor becomes the warm-start; the LearnablePairWeights module
+    # provides differentiable per-pair scalars + a Lagrangian rate
+    # penalty so the optimiser redistributes weight mass during training.
+    learnable_pair_weights = None
+    if getattr(args, "learnable_pair_weights", False):
+        if pair_loss_weights is None:
+            raise ValueError(
+                "--learnable-pair-weights requires --pair-loss-weights "
+                "as the warm-start (Lane W-V2 cannot bootstrap a "
+                "continuous weight distribution from scratch)."
+            )
+        from tac.learnable_pair_weights import LearnablePairWeights
+        learnable_pair_weights = LearnablePairWeights(
+            n_pairs=n_total, warm_start=pair_loss_weights,
+        ).to(device)
+        print(
+            f"[train] Lane W-V2: --learnable-pair-weights ACTIVE — "
+            f"wrapped {n_total} per-pair weights in LearnablePairWeights "
+            f"(lr={args.learnable_pair_weights_lr}, "
+            f"rate_lambda={args.learnable_pair_weights_rate_lambda}). "
+            f"Static --pair-loss-weights tensor IGNORED at runtime; "
+            f"warm-start applied at module init."
+        )
+
+    # Lane PS-V2 (2026-04-27): wrap --segnet-class-weights in a learnable
+    # softmax-parameterised parameter group. Warm-start = the parsed CSV
+    # tensor (or uniform when no CSV supplied). The optimiser equalises
+    # per-class distortion variance via a Lagrangian penalty.
+    learnable_segnet_class_weights = None
+    if getattr(args, "learnable_segnet_class_weights", False):
+        from tac.learnable_class_weights import LearnableClassWeights
+        ws = getattr(args, "_segnet_class_weights_tensor", None)
+        learnable_segnet_class_weights = LearnableClassWeights(
+            num_classes=5, warm_start=ws,
+        ).to(device)
+        print(
+            f"[train] Lane PS-V2: --learnable-segnet-class-weights ACTIVE "
+            f"— softmax-parameterised 5-vector "
+            f"(lr={args.learnable_segnet_class_weights_lr}, "
+            f"var_lambda={args.learnable_segnet_class_weights_var_lambda}, "
+            f"warm_start={None if ws is None else ws.tolist()})."
+        )
+
+    # Add the learnable parameter groups to the optimiser. We use a
+    # dedicated AdamW group per learnable Lagrangian parameter set so its
+    # learning rate can be tuned independently from the renderer's main
+    # group (the Lane Ω-V2 pattern). The optimiser is rebuilt here only
+    # when at least one learnable group is active; otherwise the original
+    # optimizer is left untouched (byte-identical legacy behaviour).
+    _extra_groups = []
+    if learnable_pair_weights is not None:
+        _extra_groups.append({
+            "params": list(learnable_pair_weights.parameters()),
+            "lr": float(args.learnable_pair_weights_lr),
+            "weight_decay": 0.0,
+        })
+    if learnable_segnet_class_weights is not None:
+        _extra_groups.append({
+            "params": list(learnable_segnet_class_weights.parameters()),
+            "lr": float(args.learnable_segnet_class_weights_lr),
+            "weight_decay": 0.0,
+        })
+    if _extra_groups:
+        for g in _extra_groups:
+            optimizer.add_param_group(g)
+        print(
+            f"[train] Lane W-V2/PS-V2: added {len(_extra_groups)} learnable "
+            f"parameter group(s) to optimizer."
+        )
+
+    # Lane S V2 (auto-warmup): scorer-loss convergence detector. Built only
+    # when both --use-self-compress-codec AND --auto-warmup-lambda are set.
+    # When constructed, takes precedence over the static
+    # --self-compress-lambda-ramp-start-frac fraction (the per-epoch SC
+    # block below checks `auto_warmup_detector` first, falling back to the
+    # static fraction otherwise so existing profiles stay byte-identical).
+    auto_warmup_detector = None
+    if (
+        getattr(args, "use_self_compress_codec", False)
+        and getattr(args, "auto_warmup_lambda", False)
+    ):
+        # Note: helper lives at tac.scorer_loss_convergence_detector
+        # because src/tac/training.py is a flat module; the canonical
+        # `tac.training.ScorerLossConvergenceDetector` re-export is
+        # active too (training.py bottom).
+        from tac.scorer_loss_convergence_detector import (
+            ScorerLossConvergenceDetector,
+        )
+        auto_warmup_detector = ScorerLossConvergenceDetector(
+            window=int(args.auto_warmup_window),
+            slope_tolerance=float(args.auto_warmup_slope_tol),
+            min_warmup_epochs=int(args.auto_warmup_min_epochs),
+            require_decreasing=True,
+        )
+        print(
+            f"[lane-s-v2] AUTO-WARMUP LAGRANGIAN ACTIVE: "
+            f"window={args.auto_warmup_window} "
+            f"slope_tol={args.auto_warmup_slope_tol} "
+            f"min_warmup_epochs={args.auto_warmup_min_epochs} "
+            f"(static --self-compress-lambda-ramp-start-frac="
+            f"{args.self_compress_lambda_ramp_start_frac} is now an "
+            f"UPPER-BOUND fallback; the detector fires earlier when the "
+            f"scorer loss has actually plateaued — Csefalvay 2023 §3.2 "
+            f"+ Polyak-Juditsky 1992)",
+            flush=True,
+        )
+
     for epoch in range(start_epoch, args.epochs):
         current_epoch = epoch
         epoch_start = time.monotonic()
         model.train()
         in_pretrain = has_pretrain and epoch < args.pretrain_epochs
+
+        # Lane V-V2 (2026-04-27): compute the per-epoch half-frame warp
+        # probability ONCE per epoch (the inner step loop reads
+        # `current_mask_half_sim_prob` so the schedule applies uniformly
+        # across all batches in the epoch). When no schedule is set, this
+        # equals the static profile/CLI value (V1 behaviour, byte-identical).
+        current_mask_half_sim_prob = mask_half_sim_prob_for_epoch(
+            epoch, args.epochs,
+            static_prob=float(getattr(args, "mask_half_sim_prob", 0.0) or 0.0),
+            schedule=getattr(args, "mask_half_sim_prob_anneal", None),
+        )
 
         # 5-phase Quantizr schedule: derive phase + per-phase LR from cosine
         # within the current phase. Each phase has its own optimizer.lr
@@ -1788,8 +2099,13 @@ def train(args: argparse.Namespace):
             # odd-frame mask was archived. The GT pair (gt_pair below) is
             # unchanged — we still measure renderer output against the true
             # frames; only the mask INPUT distribution shifts.
+            #
+            # Lane V-V2: ``current_mask_half_sim_prob`` is computed once per
+            # epoch (above the step loop) — it equals the static profile/CLI
+            # value when no annealing schedule is set, OR the per-epoch
+            # interpolated value when ``mask_half_sim_prob_anneal`` is active.
             if (sim_zoom_warp is not None
-                    and random.random() < args.mask_half_sim_prob):
+                    and random.random() < current_mask_half_sim_prob):
                 mask_t = sim_zoom_warp.warp_inverse_masks(mask_t1, pair_idx_t)
 
             gt_pair = pair_from_frames(gt_frames, start).to(device)
@@ -2032,7 +2348,21 @@ def train(args: argparse.Namespace):
                 from tac.self_compress import compute_renderer_rate_penalty
                 _total_epochs = max(1, args.epochs)
                 _progress = epoch / max(_total_epochs - 1, 1)
-                _ramp_start = float(args.self_compress_lambda_ramp_start_frac)
+                # Lane S V2: when the auto-warmup detector has fired, the
+                # ramp_start is the fraction at which the detector
+                # triggered (computed once at fire-time and cached on the
+                # detector object). Otherwise fall back to the static
+                # --self-compress-lambda-ramp-start-frac.
+                if (
+                    auto_warmup_detector is not None
+                    and auto_warmup_detector.converged_at is not None
+                ):
+                    _ramp_start = (
+                        auto_warmup_detector.converged_at
+                        / max(_total_epochs - 1, 1)
+                    )
+                else:
+                    _ramp_start = float(args.self_compress_lambda_ramp_start_frac)
                 if _progress < _ramp_start:
                     _lambda = float(args.self_compress_lambda_start)
                 else:
@@ -2054,7 +2384,28 @@ def train(args: argparse.Namespace):
             # by pair_loss_weights[pair_idx_int] so the per-channel learnable
             # bit-depth allocation is steered to protect the hardest pairs.
             # No-op when --pair-loss-weights wasn't passed.
-            if pair_loss_weights is not None:
+            #
+            # Lane W-V2: when --learnable-pair-weights is set, the
+            # LearnablePairWeights module replaces the static tensor.
+            # Its forward returns a differentiable scalar so the gradient
+            # flows back into the per-pair raw parameter. A Lagrangian
+            # rate penalty is added once per step to drive sum(weights)
+            # toward N_pairs.
+            if learnable_pair_weights is not None:
+                _w = learnable_pair_weights.weight_for_pair(pair_idx_int)
+                loss = loss * _w
+                # Lagrangian rate penalty: divide by accum so the per-step
+                # contribution doesn't compound across the gradient
+                # accumulation buffer.
+                from tac.learnable_pair_weights import (
+                    compute_pair_weight_rate_penalty,
+                )
+                _pw_rate = compute_pair_weight_rate_penalty(
+                    learnable_pair_weights,
+                    lambda_rate=float(args.learnable_pair_weights_rate_lambda),
+                ) / float(accum)
+                loss = loss + _pw_rate
+            elif pair_loss_weights is not None:
                 _w = pair_loss_weights[pair_idx_int]
                 # Cast on-device so we don't add a CPU/CUDA sync per step.
                 loss = loss * _w.to(loss.device)
@@ -2115,6 +2466,25 @@ def train(args: argparse.Namespace):
         avg_pose = total_pose / max(n_steps, 1)
         avg_seg = total_seg / max(n_steps, 1)
         lr = optimizer.param_groups[0]["lr"]
+
+        # Lane S V2: feed the per-epoch scorer-loss observation to the
+        # auto-warmup detector. Once the detector fires, the SC ramp
+        # logic above starts the rate penalty on the NEXT epoch.
+        if auto_warmup_detector is not None:
+            _just_fired = auto_warmup_detector.observe(epoch, float(avg_loss))
+            if (
+                _just_fired
+                and auto_warmup_detector.converged_at == epoch
+            ):
+                print(
+                    f"[lane-s-v2] AUTO-WARMUP TRIGGERED at epoch {epoch} "
+                    f"(slope={auto_warmup_detector.last_slope:.2e} < "
+                    f"tol={args.auto_warmup_slope_tol}); Lagrangian rate "
+                    f"ramp begins now (would have started at epoch "
+                    f"{int(args.self_compress_lambda_ramp_start_frac * args.epochs)} "
+                    f"under the static fraction).",
+                    flush=True,
+                )
 
         # Per-epoch timing (Feature 7)
         epoch_sec = time.monotonic() - epoch_start

@@ -273,11 +273,14 @@ def _rle_decode_bool(blob: bytes, total: int) -> torch.Tensor:
 
 def apply_saliency_weighted_compression(
     masks: torch.Tensor,
-    saliency_inv: torch.Tensor,
+    saliency_inv: torch.Tensor | None = None,
     high_crf: int = 50,
     low_crf: int = 30,
     *,
     encoder: Callable[[torch.Tensor, int], bytes] | None = None,
+    saliency: torch.Tensor | None = None,
+    target_bytes: int | None = None,
+    target_bytes_tolerance: float = 256.0,
 ) -> bytes:
     """Encode mask frames with two CRFs split by saliency.
 
@@ -289,14 +292,24 @@ def apply_saliency_weighted_compression(
     The packed bytes carry a small header describing the region mask so
     an inflate-time decoder can recombine the two streams.
 
+    Lane SI-V2 (``target_bytes`` mode): when ``target_bytes`` is provided
+    the threshold is OPTIMISED via Lagrangian dual ascent on the byte
+    budget instead of taken as a fixed quantile (Lane SI-V1's
+    hard-coded 0.5). The encoder is probed at two thresholds, a linear
+    rate model is fit, then the optimal threshold is computed in closed
+    form. ``saliency`` (the raw, non-thresholded saliency map) MUST be
+    supplied in this mode (the threshold derives a NEW
+    ``saliency_inv``).
+
     Parameters
     ----------
     masks : torch.Tensor
         ``(N, H, W)`` uint8 mask frames (5-class argmax outputs from
         SegNet, values in [0, 4]).
-    saliency_inv : torch.Tensor
+    saliency_inv : torch.Tensor, optional
         Boolean ``(H, W)`` mask from ``compute_inverse_saliency_mask``.
-        ``True`` ⇒ blind-spot ⇒ compress at ``high_crf``.
+        ``True`` ⇒ blind-spot ⇒ compress at ``high_crf``. Required when
+        ``target_bytes`` is None; ignored when ``target_bytes`` is set.
     high_crf : int
         CRF for the blind-spot region (higher = more aggressive).
     low_crf : int
@@ -305,6 +318,18 @@ def apply_saliency_weighted_compression(
         ``encoder(masks, crf) -> bytes`` for the actual codec. Defaults
         to a zlib-on-raw-uint8 fallback so unit tests have no av1
         dependency. The remote script substitutes a real AV1 encoder.
+    saliency : torch.Tensor, optional
+        Raw saliency map ``(H, W)`` normalised to ``[0, 1]``. Required
+        when ``target_bytes`` is set so the Lagrangian threshold can
+        index into the saliency distribution.
+    target_bytes : int, optional
+        Lane SI-V2 byte budget. When provided the threshold is learned
+        via Lagrangian dual ascent (see
+        ``tac.learnable_saliency_threshold``). When ``None`` (default),
+        Lane SI-V1 behaviour: use the supplied ``saliency_inv`` as-is.
+    target_bytes_tolerance : float
+        Acceptable |encoded_bytes - target_bytes| in bytes. Default 256
+        (typical zlib payload variance for our mask frames).
 
     Returns
     -------
@@ -314,6 +339,75 @@ def apply_saliency_weighted_compression(
     if masks.ndim != 3 or masks.dtype != torch.uint8:
         raise ValueError(
             f"masks must be (N, H, W) uint8; got {tuple(masks.shape)} {masks.dtype}"
+        )
+    if not 0 <= low_crf <= high_crf <= 63:
+        raise ValueError(
+            f"CRF must satisfy 0 <= low_crf ({low_crf}) <= high_crf "
+            f"({high_crf}) <= 63"
+        )
+
+    if encoder is None:
+        encoder = _default_zlib_encoder
+
+    # Lane SI-V2: derive saliency_inv from a learnable Lagrangian threshold.
+    if target_bytes is not None:
+        if saliency is None:
+            raise ValueError(
+                "target_bytes requires `saliency` (the raw saliency map). "
+                "Lane SI-V1 used a fixed quantile; Lane SI-V2 needs the "
+                "saliency distribution to derive the optimal threshold."
+            )
+        if saliency.ndim != 2:
+            raise ValueError(
+                f"saliency must be 2-D (H, W); got {tuple(saliency.shape)}"
+            )
+        if saliency.shape != masks.shape[1:]:
+            raise ValueError(
+                f"shape mismatch: masks {tuple(masks.shape)} vs saliency "
+                f"{tuple(saliency.shape)}"
+            )
+        # Normalise saliency into [0, 1] so the threshold is a quantile.
+        sal_n = saliency.detach().float().cpu()
+        sal_min = float(sal_n.min().item())
+        sal_max = float(sal_n.max().item())
+        if sal_max > sal_min:
+            sal_norm = (sal_n - sal_min) / (sal_max - sal_min)
+        else:
+            sal_norm = torch.full_like(sal_n, 0.5)
+
+        def _bytes_at_threshold(t: float) -> int:
+            mask_inv_t = (sal_norm <= float(t)).bool()
+            payload = _encode_with_inv(
+                masks=masks, saliency_inv=mask_inv_t,
+                high_crf=high_crf, low_crf=low_crf, encoder=encoder,
+            )
+            return len(payload)
+
+        from tac.learnable_saliency_threshold import (
+            fit_linear_rate_model, optimise_threshold_for_target_bytes,
+        )
+        slope, intercept = fit_linear_rate_model(
+            _bytes_at_threshold, sample_thresholds=(0.3, 0.7),
+        )
+        result = optimise_threshold_for_target_bytes(
+            target_bytes=int(target_bytes),
+            rate_slope=slope,
+            rate_intercept=intercept,
+            init_threshold=0.5,
+            tolerance_bytes=float(target_bytes_tolerance),
+        )
+        # Re-encode with the chosen threshold and return the payload.
+        chosen_inv = (sal_norm <= result.threshold).bool()
+        return _encode_with_inv(
+            masks=masks, saliency_inv=chosen_inv,
+            high_crf=high_crf, low_crf=low_crf, encoder=encoder,
+        )
+
+    # Lane SI-V1 (legacy path) — saliency_inv supplied directly.
+    if saliency_inv is None:
+        raise ValueError(
+            "Either saliency_inv (Lane SI-V1) or (saliency + target_bytes) "
+            "(Lane SI-V2) must be provided."
         )
     if saliency_inv.dtype != torch.bool or saliency_inv.ndim != 2:
         raise ValueError(
@@ -325,14 +419,24 @@ def apply_saliency_weighted_compression(
             f"shape mismatch: masks {tuple(masks.shape)} vs saliency_inv "
             f"{tuple(saliency_inv.shape)}"
         )
-    if not 0 <= low_crf <= high_crf <= 63:
-        raise ValueError(
-            f"CRF must satisfy 0 <= low_crf ({low_crf}) <= high_crf "
-            f"({high_crf}) <= 63"
-        )
 
-    if encoder is None:
-        encoder = _default_zlib_encoder
+    return _encode_with_inv(
+        masks=masks, saliency_inv=saliency_inv,
+        high_crf=high_crf, low_crf=low_crf, encoder=encoder,
+    )
+
+
+def _encode_with_inv(
+    masks: torch.Tensor,
+    saliency_inv: torch.Tensor,
+    high_crf: int,
+    low_crf: int,
+    encoder: Callable[[torch.Tensor, int], bytes],
+) -> bytes:
+    """Internal: pack masks + saliency_inv into the SLI1 container.
+    Shared by Lane SI-V1 (caller-supplied inv) and Lane SI-V2 (Lagrangian-
+    derived inv).
+    """
 
     # Move to CPU (codec libs are CPU-bound)
     masks_c = masks.detach().cpu()

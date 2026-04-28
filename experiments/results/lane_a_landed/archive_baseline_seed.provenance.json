@@ -1,0 +1,35 @@
+{
+  "schema_version": 1,
+  "tool": "experiments/build_baseline_archive.py",
+  "built_at_utc": "2026-04-27T15:16:24Z",
+  "device": "cuda",
+  "gpu_model": "NVIDIA GeForce RTX 4090",
+  "torch_version": "2.5.1+cu124",
+  "cuda_version": "12.4",
+  "crf": 50,
+  "seed": 1234,
+  "cublas_workspace_config": ":4096:8",
+  "archive_path": "/workspace/pact/lane_a_results/archive_baseline_seed.zip",
+  "archive_size_bytes": 693855,
+  "archive_sha256": "813fef4f432aa888fcd95b7031b7b38bd3da8a7c96949b4b0bc696200e3f81f9",
+  "rate_unscaled": 0.018480382556743367,
+  "rate_score_contribution": 0.46200956391858417,
+  "segnet_weights_sha256": "68956e328d4c5d875389a1a444870e6bac1c052c9986123827af95c07c6991b6",
+  "components": {
+    "renderer.bin": {
+      "source": "/workspace/pact/submissions/baseline_dilated_h64_0_90/renderer.bin",
+      "size_bytes": 296776,
+      "sha256": "08f12d722dd33f9061deee72f49d782035597f78cd65ed1463a241ab430a7529"
+    },
+    "masks.mkv": {
+      "source": "rebuilt from GT via SegNet at 384x512 CRF=50",
+      "size_bytes": 421483,
+      "sha256": "c07bd465b0091282d8d0577e04118c68b3433d50327d993192e3a52e3d343515"
+    },
+    "optimized_poses.pt": {
+      "source": "/workspace/pact/submissions/baseline_dilated_h64_0_90/optimized_poses.pt",
+      "size_bytes": 15645,
+      "sha256": "9624b96c7304ecac9aa7c06703413893a5c467350b86b8e9c2b37449288ff3af"
+    }
+  }
+}

@@ -501,9 +501,21 @@ def load_optimized_poses(
         # (N, pose_dim) transparently so downstream consumers see a vanilla
         # tensor and need no LoRA awareness. See src/tac/lora_pose.py for
         # the on-disk schema.
+        #
+        # Lane LR-V2 (2026-04-27): "lora_pose_v2" is the LEARNABLE-rank
+        # variant — same materialisation contract (base + U@V), but the
+        # ranks were data-driven via per-rank gates during training and
+        # gated/pruned at serialisation time. The reader does not need to
+        # know about the gate; U has the gate already absorbed.
         from tac.lora_pose import decode_lora_poses_dict, is_lora_poses_dict
+        from tac.lora_pose_v2 import (
+            decode_lora_v2_poses_dict,
+            is_lora_v2_poses_dict,
+        )
         if is_lora_poses_dict(obj):
             poses = decode_lora_poses_dict(obj, pose_dim=pose_dim)
+        elif is_lora_v2_poses_dict(obj):
+            poses = decode_lora_v2_poses_dict(obj, pose_dim=pose_dim)
         elif not isinstance(obj, torch.Tensor):
             raise ValueError(
                 f"Pose file {p.name} is a pickle but contains "

@@ -1655,7 +1655,10 @@ def _load_renderer(renderer_path: str, device: str) -> nn.Module:
         6. C3R1 binary (Lane I): C3 residual PairGenerator (magic b"C3R1")
         7. SCv1 binary (Lane S): Self-Compressing AsymmetricPairGenerator
            (magic b"SCv1") — per-channel learnable bit-depth + LZMA body.
-        8. PyTorch pickle: state_dict or PairGenerator checkpoint
+        8. SZv1 binary (Lane SZ): szabolcs no-masks SegMap renderer
+           (magic b"SZv1") — block-FP weights + tar.xz outer compression;
+           reconstructs class-prob LUT in code rather than from masks.mkv.
+        9. PyTorch pickle: state_dict or PairGenerator checkpoint
 
     All variants produce the same `(B, 2, H, W, 3)` HWC pair output via
     `model(mask_t, mask_t1)`, so the rest of the inflate pipeline (mask
@@ -1820,6 +1823,35 @@ def _load_renderer(renderer_path: str, device: str) -> nn.Module:
         print(
             f"  Loaded Omega Hessian-Quantized AsymmetricPairGenerator from "
             f".bin ({len(raw_bytes):,} bytes, {elapsed:.1f}s)",
+            file=sys.stderr,
+        )
+        return model
+
+    # ── SZv1 format (Lane SZ): szabolcs no-masks SegMap renderer ──
+    # 2026-04-27 Phase 2: replicates szabolcs-cs PR#56 paradigm. The renderer
+    # reconstructs the per-class probability map FROM LUMA via a fixed
+    # Gaussian softmax LUT — therefore the archive contains NO masks.mkv and
+    # NO optimized_poses.pt (the renderer holds a per-frame 6-DoF affine
+    # embedding internally). Body weights are block-FP packed and the tar.xz
+    # outer wrapper achieves close to Shannon entropy on the ternary stream.
+    # Strict-scorer-rule: the loader does not import upstream/scorer modules.
+    # The runtime banner ("[szabolcs] inflated SZv1 renderer …") is printed
+    # by tac.contrib.szabolcs_renderer.load_szabolcs_renderer.
+    if magic == b"SZv1":
+        try:
+            from tac.contrib.szabolcs_renderer import load_szabolcs_renderer
+        except ImportError as exc:
+            raise RuntimeError(
+                "SZv1 (szabolcs no-masks SegMap) format requires the tac "
+                "package (tac.contrib.szabolcs_renderer.load_szabolcs_renderer). "
+                "The inflate container must include the tac wheel for Lane SZ "
+                f"archives. Underlying error: {exc!r}"
+            )
+        model = load_szabolcs_renderer(raw_bytes, device=device)
+        elapsed = time.monotonic() - t0
+        print(
+            f"  Loaded szabolcs SegMap renderer from .bin "
+            f"({len(raw_bytes):,} bytes, {elapsed:.1f}s) — strict-scorer-rule OK",
             file=sys.stderr,
         )
         return model

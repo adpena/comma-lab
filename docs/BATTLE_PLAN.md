@@ -188,3 +188,115 @@ Several months of "X didn't help" / "Y didn't help" / "architecture is undermatc
 Full audit trail: `feedback_dead_resolver_violations_20260427.md` (memory) and the scanner output in commit 040030df.
 
 **Blocking constraint**: the `blend_mode` / `motion_type` / `beta_start` / `beta_end` resolver gaps are still warn-only in preflight. They MUST have resolvers added to `parse_args` before any of the re-tests above are launched, or the same silent-default bug recurs and we waste another $5-10 of GPU time measuring the same misconfigured stub. The `pose_dim` and `uncertainty_loss_floor` fixes (already landed) are necessary but not sufficient.
+
+## 2026-04-27 Council verdict: Lane F (FP4 QAT) — BUGGED, not dead
+
+**Vote 5/5: (b) BUGGED — fix the bug + retry.** Full deliberation in `.omx/research/findings.md` under "## 2026-04-27 Council audit: Lane F regression — bugged or dead?". Summary:
+
+Lane F's first-round verdict ("regression vs baseline 2.29, abandon") was conditioned on a measurement artifact, not the actual FP4 effect. Three concrete bugs:
+
+1. **CRITICAL — pose threading missing.** `experiments/qat_finetune.py` has no `--poses` CLI arg. The trainer auto-discovers `experiments/results/gt_poses.pt` / `upstream/gt_poses.pt`, neither of which is the load-bearing `optimized_poses.pt` artifact. Lane F's QAT trained against **zero poses** (preflight WARNed but didn't raise), then bundled `optimized_poses.pt` at archive time. Per memory `project_baseline_poses_load_bearing`, renderer + poses are JOINT artifact; pose-init mismatch → 23× PoseNet degrade. Lane F's PoseNet 0.247 → 0.391 (+58%) is the pose-bug fingerprint; SegNet stayed at floor (0.00365 ≈ baseline). FP4 weight quantization of 290K params can account for at most +0.020 PoseNet noise — observed +0.144 is two orders of magnitude over budget.
+2. **Significant — under-trained QAT.** 50 epochs × batch_size=4 = 200 pair-samples vs 600 in the dataset (67% of pairs unseen). 47s wall time confirms 1 batch/epoch; consistent with smoke-run not real-experiment compute. Recommended re-launch: `--fp4-epochs 500` (10×, ~10 min wall, $0.10).
+3. **Strategic — wrong baseline anchor.** Lane F was anchored to baseline 2.29; our verified best is Lane A 1.15. Even a perfectly-fixed Lane F-on-baseline lands at predicted 2.22 (still 0.87 worse than Lane A). The interesting experiment is **FP4 on Lane A** (predicted 1.05-1.30 [contest-CUDA], a measured rate win or marginal regression worth knowing).
+
+**Recommended next action:**
+
+| # | Lane | Cost | Predicted Δ vs Lane A 1.15 | Status |
+|---|------|------|----------------------------|--------|
+| 1 | **Lane F-V2** (FP4 QAT on Lane A renderer + Lane A poses, after `--poses` CLI fix lands) | $0.30 | predicted [1.05, 1.30] | BLOCKED on `qat_finetune.py --poses` arg + regression test |
+
+**Required code changes BEFORE re-launch (estimated ~30 min):**
+- Add `--poses` CLI arg to `experiments/qat_finetune.py` after line 633.
+- Replace lines 706-718 (auto-discovery block) so explicit `--poses` is checked first; if `pose_dim > 0` and no poses found anywhere, **raise** rather than warn.
+- New regression test `src/tac/tests/test_qat_finetune_pose_wiring.py` introspecting the argparse and asserting one-step training-loss differs between `--poses` set vs unset.
+- New bootstrap script `scripts/remote_lane_f_fp4_qat_on_lane_a.sh` (copy of `remote_lane_b_fp4_qat.sh` with checkpoint, poses, archive paths repointed to `experiments/results/lane_a_landed/`).
+
+**Falsifiability prediction (pre-registered):** Lane F-V2 contest-CUDA score ∈ [1.05, 1.30]. Inside band → FP4-on-Lane-A is a measured rate win/marginal-regression. Below 1.05 → outright win; investigate. Above 1.30 → FP4 noise steeper than expected at low PoseNet baselines; revisit codebook + epoch budget.
+
+**Process lesson added to memory perimeter:** this is the *second* "declared dead, found bugged" in 2 days (Lane G yesterday, Lane F today). The forbidden pattern: voting "abandon" on a single subagent's regression result without auditing every `--*` flag against the target tool's argparse AND every config-derived auto-discovery path for "does that file actually exist on the target host." Future "abandon" verdicts that skip this audit must be marked `SUSPENDED PENDING AUDIT`, not `ABANDON`. Filed as `feedback_silent_default_masquerading_as_negative_result`.
+
+## 2026-04-27 Lane S landed: Self-Compressing renderer codec ready to launch
+
+**Status: ENGINEERING COMPLETE — ready for first Vast.ai dispatch.**
+
+Lane S adapts Szabolcs Csefalvay's self-compression idea (arXiv 2301.13142, *"Self-Compressing Neural Networks"*) — already proven on the standalone postfilter in `src/tac/self_compress.py` — to the dilated-h64 baseline renderer. Per-channel learnable bit-depth via STE + Lagrangian rate penalty drives the average bit-depth from 8 (init) toward 2.5 (target) during training. Result: per-channel bit allocation rather than the uniform-4-bits FP4 scheme.
+
+### What landed (working tree, uncommitted):
+
+- `src/tac/self_compress.py` — `SelfCompressingConv2d` extended with stride/groups/padding_mode kwargs; new helpers `swap_renderer_convs_with_self_compress`, `list_self_compress_layers`, `renderer_total_weight_bits`, `compute_renderer_rate_penalty`, plus the protected-name pattern list (`SC_PROTECTED_NAME_PATTERNS`).
+- `src/tac/renderer_export.py` — new `SCv1` magic format: header JSON (per-channel bit-depths + arch) + LZMA-compressed body. `export_self_compressed_renderer` / `load_self_compressed_renderer` round-trip is byte-exact (verified). `detect_checkpoint_type` and `load_any_renderer_checkpoint` recognize the new magic.
+- `submissions/robust_current/inflate_renderer.py` — new `b"SCv1"` dispatch branch (CRITICAL tier). Uses the canonical `tac.renderer_export.load_self_compressed_renderer`; raises a clear RuntimeError if tac is missing (no silent fallback).
+- `src/tac/profiles.py` — two new profiles:
+  - `self_compress_renderer_smoke` (100 epochs, target_bits=4.0, no auth-eval — code-path validation only)
+  - `self_compress_renderer_full` (1980 epochs, target_bits=2.5, full Quantizr-style 5-phase schedule, mirror of `dilated_h64_half_frame` for direct A/B)
+- `src/tac/experiments/train_renderer.py` — argparse + resolver wiring for `--use-self-compress-codec` and the four tuning knobs (`--self-compress-init-bits`, `--self-compress-target-bits`, `--self-compress-lambda-start`, `--self-compress-lambda-end`, `--self-compress-lambda-ramp-start-frac`); post-build SC swap; in-loop Lagrangian rate penalty; bit_depth clamping after each opt step; **automatic disable of `--auth-eval-on-best` when SC is on** (FP4A export would lose all SC gain).
+- `src/tac/tests/test_self_compress_renderer.py` — 24 tests covering SC primitives, swap helper, SCv1 export/load round-trip, byte-stability, FP4-vs-SC byte comparison, inflate dispatch source + e2e load, Lagrangian rate-penalty correctness, and profile sanity.
+
+### Architecture decision: which layers stay FP32?
+
+Per Lane F's PoseNet regression finding (FP4-QAT on dilated-h64 caused +0.144 PoseNet vs floor) and the standalone postfilter experiments showing FiLM is "3rd most scorer-sensitive," the swap helper PROTECTS these layers (kept FP32):
+
+- `renderer.head` (final RGB conv before sigmoid output) — PoseNet sensitive
+- `motion.head` (flow/gate/residual head) — sub-pixel warp coordinates
+- `*.fuse_conv` / `*.fuse2_conv` (1×1 skip-mixing convs) — per-pixel sensitive
+- `film_*.scale` / `film_*.shift` (FiLM linears) — tiny + scorer-sensitive
+- All `nn.ConvTranspose2d` (up_conv, up2_conv) — STE backward through stride-2 transposed conv is ill-behaved + small param count
+
+For the dilated-h64 baseline (288K params): **16 layers swapped (243K params, 84%), 3 layers protected (FP32), 1 ConvTranspose2d skipped (FP32).**
+
+### Predicted byte counts (verified by smoke-test export of the same arch):
+
+| Variant | Bytes | bits/param | Note |
+|---|---|---|---|
+| Float baseline (FP32) | ~1.15 MB | 32.0 | not shippable |
+| FP4-QAT (uniform 4 bits) | ~144 KB | 4.00 | current frontier |
+| **SCv1 @ 2.5 mean SC bits** | **~115 KB** | **3.20** | -20% vs FP4 |
+| SCv1 @ 2.0 mean SC bits + 25% pruning | ~92 KB | 2.55 | aggressive |
+
+(SCv1 byte count exceeds raw `bits/param × n_params / 8` because protected FP16 layers + ConvTranspose contribute ~50KB regardless of SC bit budget — that's ceiling unless those layers are also redesigned.)
+
+### Recommended Lane S launch config (first dispatch):
+
+| Param | Value | Rationale |
+|---|---|---|
+| Profile | `self_compress_renderer_full` | 1980 epochs Quantizr-style 5-phase; mirror of dilated_h64_half_frame |
+| GPU | RTX 4090 on Vast.ai | $0.25/hr; ~5h wall = ~$1.25 |
+| `target_bits` | 2.5 | matches Szabolcs's 2301.13142 §4.3 image-compression target |
+| `init_bits` | 8.0 | full precision at init; rate penalty drives down |
+| `lambda_start` | 0.0 | no rate pressure during phase-1 anchor |
+| `lambda_end` | 1.0 | full rate pressure by phase-3 joint |
+| `lambda_ramp_start_frac` | 0.30 | 30% of training at init_bits before pressure |
+| Mask format | half-frame (Quantizr trick) | ~125 KB AV1 vs 250 KB full-frame |
+| Pose artifact | reuse Lane A's optimized_poses.bin | ~15 KB |
+| **Predicted archive** | **~255 KB** | renderer 115 + masks 125 + poses 15 |
+| **Predicted score band** | **0.85-1.10 contest-CUDA** | best-case beats baseline by 0.05; worst-case +0.20 |
+
+### Falsifiability checks for the first launch (kill criteria):
+
+1. **Phase 1 end (~1h)**: pixel L1 < 12 AND avg SC bits == 8.0 (lambda not active yet).
+2. **Phase 2 mid (~3h)**: avg SC bits monotonically decreasing AND scorer < 8.0.
+3. **Phase 4 end (~5h)**: avg SC bits ≈ target_bits ± 0.5 AND fp4_scorer < 1.5 AND total renderer.bin < 130KB.
+4. **Auth eval (separate launch using SCv1 inflate path)**: contest-CUDA score < 1.20.
+
+If any of #1-#3 fail, kill the run; the rate penalty + SC machinery has a configuration bug.
+If #4 fails (contest > 1.20), Lane S is BUGGED, not DEAD — audit pose threading + protected-layer set first per the Lane F-V2 protocol.
+
+### Engineering risks (rank-ordered):
+
+1. **The protected-layer set may be insufficient.** If PoseNet regresses more than expected (e.g. > 0.10 vs baseline 0.011), the candidate next-protections are: `*.bottleneck.conv2` (the deepest residual block), `motion.up_conv`. Add the next layer to the protected list, retrain, re-measure.
+2. **The Lagrangian schedule may need re-tuning.** If avg SC bits doesn't reach target by phase-4 end, increase `lambda_end` to 2.0. If it crashes too fast (avg < 1.5 by phase-2), reduce `lambda_end` to 0.5.
+3. **The SC pack/unpack assumes inner Conv2d state.** This works because `swap_renderer_convs_with_self_compress` always creates the SC layer with an inner `nn.Conv2d`. If a future arch path replaces inner conv with a different module, the swap and the export must be jointly updated.
+4. **The `bit_depth.bits` tensor is in the optimizer's param list (it's an `nn.Parameter`).** When `lr_bits` differs from `lr_weights` (as in the standalone postfilter trainer), separate param groups are needed. The current train_renderer.py uses ONE optimizer for all params — this means SC bit-depth uses the same LR as the conv weights (typically 1e-3 → 5e-5 across phases). That is FINE for the rate penalty schedule (the penalty's gradient magnitude is much smaller than scorer loss, so a smaller `lr_bits` is automatic via the gradient itself). Future work: split into two param groups for finer control.
+
+### Cost & ETA for first dispatch:
+
+- **Setup**: bootstrap script + smoke probe ~10 min
+- **Training**: 1980 epochs on RTX 4090 ≈ 5h
+- **Auth eval**: separate dispatch using `inflate_renderer.py SCv1 dispatch` + `evaluate.py` ~30 min
+- **Total**: ~6h wall, ~$1.50 on Vast.ai
+
+### Concurrency-safe to ship:
+
+- Lane S engineering work is in NON-OVERLAPPING files with the in-flight Lane F audit (`experiments/qat_finetune.py`, `src/tac/quantization.py`, `scripts/remote_lane_b_fp4_qat.sh` — all read-only here).
+- All changes uncommitted in working tree per task instructions.
+- 24 new tests passing; 7 existing Lane I dispatch tests still passing; original `self_compress.py` smoke still passing; original `renderer_export.py` smoke still passing.

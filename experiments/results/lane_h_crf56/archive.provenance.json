@@ -1,0 +1,39 @@
+{
+  "schema_version": 1,
+  "tool": "experiments/build_baseline_archive.py",
+  "built_at_utc": "2026-04-27T20:36:39Z",
+  "device": "cpu",
+  "gpu_model": null,
+  "torch_version": "2.11.0",
+  "cuda_version": null,
+  "crf": 56,
+  "seed": 1234,
+  "cublas_workspace_config": ":4096:8",
+  "archive_path": "experiments/results/lane_h_crf56/archive.zip",
+  "archive_size_bytes": 559250,
+  "archive_sha256": "4829ff9fd6c6a9ad3a4d0eeb4d083e569a7770f97ad8cca0503e6c42ee6900f5",
+  "rate_unscaled": 0.014895264781342973,
+  "rate_score_contribution": 0.37238161953357435,
+  "segnet_weights_sha256": "68956e328d4c5d875389a1a444870e6bac1c052c9986123827af95c07c6991b6",
+  "use_brotli": false,
+  "brotli_quality": null,
+  "components": {
+    "renderer.bin": {
+      "source": "submissions/baseline_dilated_h64_0_90/renderer.bin",
+      "size_bytes_uncompressed": 296776,
+      "size_bytes_in_archive": 296776,
+      "sha256_uncompressed": "08f12d722dd33f9061deee72f49d782035597f78cd65ed1463a241ab430a7529",
+      "compression": "none"
+    },
+    "masks.mkv": {
+      "source": "rebuilt from GT via SegNet at 384x512 CRF=50",
+      "size_bytes": 287592,
+      "sha256": "418e543d256bec79284babd46546170b2ef2b2a6c77b59f30d03ce2756f37870"
+    },
+    "optimized_poses.pt": {
+      "source": "experiments/results/lane_a_landed/optimized_poses.pt",
+      "size_bytes": 15620,
+      "sha256": "e0cd8ccb29bb3cd8613285e1633a6466f8a01f5df101d80243ec52d50d2fb85b"
+    }
+  }
+}

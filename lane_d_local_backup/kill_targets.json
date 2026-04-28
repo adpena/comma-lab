@@ -1,0 +1,11 @@
+{
+  "phase1_end_epoch": 400,
+  "phase1_pixel_l1_max": 12.0,
+  "phase2_smoke_epoch": 600,
+  "phase2_smoke_scorer_max": 8.0,
+  "phase2_mid_epoch": 1200,
+  "phase2_mid_scorer_max": 3.0,
+  "phase4_end_epoch": 1880,
+  "phase4_end_scorer_max": 1.5,
+  "comment": "Hard kill targets per scripts/remote_lane_d_halfframe_retrain.sh header. The watchdog should tail eval logs and SIGTERM the train job when any threshold is exceeded."
+}

@@ -1,0 +1,9 @@
+[
+  {
+    "tag": "smoke_pipeline",
+    "cmd": "experiments/pipeline.py compress --profile smoke --device mps",
+    "platform": "mps",
+    "status": "running",
+    "priority": 1
+  }
+]

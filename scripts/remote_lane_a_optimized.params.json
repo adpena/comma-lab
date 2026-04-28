@@ -1,0 +1,17 @@
+{
+  "best_params": {
+    "tto_steps": 800,
+    "batch_pairs": 12,
+    "tto_lr": 0.005,
+    "posetto_noise_std": 0.4,
+    "eval_roundtrip": true,
+    "device": "cuda"
+  },
+  "best_value": 1.05,
+  "sweep_name": "lane_a_pose_tto",
+  "predicted_band": [
+    0.95,
+    1.15
+  ],
+  "baseline_hand_tuned": 1.15
+}

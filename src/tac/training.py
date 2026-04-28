@@ -2064,3 +2064,12 @@ class Trainer:
         self.model.load_state_dict(orig_state)
         self.model.train()
         return scorer
+
+
+# ── Re-exports (Lane S V2) ──────────────────────────────────────────────
+# The scorer-loss convergence detector logically belongs in this module
+# but is implemented as a top-level file (`tac.scorer_loss_convergence_detector`)
+# because `src/tac/training.py` exists as a flat module rather than a
+# package. Re-export it here so callers can use the canonical
+# `from tac.training import ScorerLossConvergenceDetector` import path.
+from tac.scorer_loss_convergence_detector import ScorerLossConvergenceDetector  # noqa: E402,F401

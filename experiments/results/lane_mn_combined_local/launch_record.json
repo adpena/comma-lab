@@ -1,0 +1,31 @@
+{
+  "lane": "MN_combined",
+  "experiment": "Lane M (radial-zoom 1-DOF) + Lane N (Fridrich L∞ pose penalty)",
+  "predicted": "1.05-1.10 vs Lane A 1.15",
+  "instance_id": 35716364,
+  "ssh_host": "ssh1.vast.ai",
+  "ssh_port": 36364,
+  "country": "ES (Spain)",
+  "offer_id_used": 28154465,
+  "dph": 0.3416666666666667,
+  "reliability": 0.9986,
+  "inet_down_mbps": 826,
+  "gpu": "RTX 4090",
+  "driver": "590.48.01",
+  "label": "lane_mn_combined",
+  "tmux_session": "lane_mn",
+  "remote_workspace": "/workspace/pact",
+  "remote_log_dir": "/workspace/pact/lane_mn_combined_results",
+  "lane_script_local": "scripts/remote_lane_mn_combined.sh",
+  "lane_m_pose_mode": "radial-zoom",
+  "lane_n_linf_pose_weight": 1.0,
+  "lane_n_linf_pose_budget": 0.05,
+  "nvdec_attempts": [
+    {"instance": 35715898, "offer": 32213287, "country": "HU", "result": "NVDEC_MISSING_destroyed"},
+    {"instance": 35716364, "offer": 28154465, "country": "ES", "result": "NVDEC_OK_setup_complete"}
+  ],
+  "launched_at_utc": "2026-04-28T00:08:41Z",
+  "estimated_duration_hours": 3.4,
+  "estimated_cost_usd": 1.16,
+  "cost_cap_usd": 1.50
+}

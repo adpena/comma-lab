@@ -79,6 +79,9 @@ from tac.lane_mark_pose import (  # noqa: E402
     ZERO_COST_POSES_SENTINEL,
     compute_zero_cost_poses_from_masks,
 )
+from tac.lane_mark_pose_v2 import (  # noqa: E402
+    compute_endpoint_tracking_poses_from_masks,
+)
 
 # Reuse build_baseline_archive's deterministic-zip helper so the output
 # bytes are reproducible across reruns (codex R5-r6 #5).
@@ -176,6 +179,8 @@ def _correlation(a: torch.Tensor, b: torch.Tensor) -> float:
 def _calibration_report(
     masks: torch.Tensor,
     lane_a_poses: torch.Tensor | None,
+    *,
+    method: str = "endpoint",
 ) -> dict:
     """Compute lane-mark-derived poses + sanity-check vs Lane A baseline.
 
@@ -183,10 +188,32 @@ def _calibration_report(
     ``lane_a_poses`` is supplied, includes a correlation report between
     lane-mark dim 0 and Lane A's optimized dim 0; otherwise reports only
     the derived statistics.
+
+    Parameters
+    ----------
+    masks : torch.Tensor
+        ``(N, H, W)`` int masks decoded from the source archive.
+    lane_a_poses : torch.Tensor or None
+        Optional Lane A optimised poses for sanity-check correlation.
+    method : str
+        ``"centroid"`` (Lane LM-V1) or ``"endpoint"`` (Lane LM-V2).
+        Endpoint is the V2 default — higher per-pair accuracy because
+        radial displacement of the bottom dash endpoint is decoupled from
+        lateral car drift (the V1 centroid math conflated the two).
     """
-    derived = compute_zero_cost_poses_from_masks(masks)
+    if method == "endpoint":
+        derived = compute_endpoint_tracking_poses_from_masks(
+            masks, baseline_poses=lane_a_poses,
+        )
+    elif method == "centroid":
+        derived = compute_zero_cost_poses_from_masks(masks)
+    else:
+        raise SystemExit(
+            f"FATAL: unknown --method {method!r}; expected 'centroid' or 'endpoint'"
+        )
     derived_dim0 = derived[:, 0]
     report: dict = {
+        "method": method,
         "num_pairs": int(derived.shape[0]),
         "pose_dim": int(derived.shape[1]),
         "derived_dim0_mean": float(derived_dim0.mean().item()),
@@ -255,6 +282,16 @@ def main() -> int:
              "explicitly accepts the predicted PoseNet regression (e.g. for "
              "calibration sweeps where the rate-side win is the focus).",
     )
+    p.add_argument(
+        "--method",
+        choices=("centroid", "endpoint"),
+        default="endpoint",
+        help="Lane LM compute method. 'endpoint' (default, Lane LM-V2) tracks "
+             "lane-mark dash endpoint radial displacement (correlation 0.30+ "
+             "vs Lane A poses on the contest clip). 'centroid' (Lane LM-V1) "
+             "tracks lane-mark mass centroid (correlation 0.017 — calibration "
+             "FAILED). V2 is preferred unless explicitly A/B-comparing.",
+    )
     args = p.parse_args()
 
     if not args.lane_a_archive.exists():
@@ -315,7 +352,14 @@ def main() -> int:
                 file=sys.stderr,
             )
 
-        report = _calibration_report(masks, lane_a_poses_tensor)
+        report = _calibration_report(
+            masks, lane_a_poses_tensor, method=args.method,
+        )
+        print(
+            f"[build-zcp] method={args.method} "
+            f"({'Lane LM-V2 endpoint tracking' if args.method == 'endpoint' else 'Lane LM-V1 centroid'})",
+            file=sys.stderr,
+        )
         corr = report.get("correlation_dim0")
         if corr is not None:
             print(
@@ -387,6 +431,7 @@ def main() -> int:
             "rate_score_contribution": rate_contribution,
             "min_correlation_gate": args.min_correlation,
             "allow_low_correlation": bool(args.allow_low_correlation),
+            "method": args.method,
             "calibration_report": report,
             "components": {
                 "renderer.bin": {

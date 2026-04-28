@@ -1,0 +1,93 @@
+{
+  "n_frames": 1200,
+  "resolution": [
+    384,
+    512
+  ],
+  "rate_denominator_bytes": 37545489,
+  "results": [
+    {
+      "codec": "av1_monochrome",
+      "mode": "full",
+      "crf": 63,
+      "size_bytes": 108758,
+      "rate_term": 0.07241748802366112,
+      "disagreement": 0.007410265505313873,
+      "encode_s": 35.5,
+      "frames_encoded": 1200
+    },
+    {
+      "codec": "av1_monochrome",
+      "mode": "half",
+      "crf": 50,
+      "size_bytes": 234351,
+      "rate_term": 0.15604471152313398,
+      "disagreement": 0.0056668855249881744,
+      "encode_s": 15.5,
+      "frames_encoded": 600
+    },
+    {
+      "codec": "av1_monochrome",
+      "mode": "full",
+      "crf": 56,
+      "size_bytes": 287001,
+      "rate_term": 0.1911021854050163,
+      "disagreement": 0.003389549208804965,
+      "encode_s": 31.5,
+      "frames_encoded": 1200
+    },
+    {
+      "codec": "av1_monochrome",
+      "mode": "full",
+      "crf": 50,
+      "size_bytes": 421054,
+      "rate_term": 0.28036257564790273,
+      "disagreement": 0.0021956805139780045,
+      "encode_s": 29.2,
+      "frames_encoded": 1200
+    },
+    {
+      "codec": "entropy_lossless_lzma",
+      "mode": "half",
+      "crf": null,
+      "size_bytes": 582559,
+      "rate_term": 0.38790212587189904,
+      "disagreement": 0.004321068525314331,
+      "encode_s": 3.7,
+      "frames_encoded": 600
+    },
+    {
+      "codec": "entropy_lossless_brotli11",
+      "mode": "half",
+      "crf": null,
+      "size_bytes": 583465,
+      "rate_term": 0.3885053940834277,
+      "disagreement": 0.004321068525314331,
+      "encode_s": 61.8,
+      "frames_encoded": 600,
+      "compression_method": "sparse",
+      "_disagreement_note": "Lossless src; disagreement = naive even-from-odd reconstruction error vs full GT (matches LZMA-half)"
+    },
+    {
+      "codec": "entropy_lossless_brotli11",
+      "mode": "full",
+      "crf": null,
+      "size_bytes": 984525,
+      "rate_term": 0.6555547858226057,
+      "disagreement": 0.0,
+      "encode_s": 98.7,
+      "frames_encoded": 1200,
+      "compression_method": "sparse"
+    },
+    {
+      "codec": "entropy_lossless_lzma",
+      "mode": "full",
+      "crf": null,
+      "size_bytes": 990483,
+      "rate_term": 0.6595219734653076,
+      "disagreement": 0.0,
+      "encode_s": 6.4,
+      "frames_encoded": 1200
+    }
+  ]
+}

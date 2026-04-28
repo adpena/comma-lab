@@ -189,8 +189,24 @@ def profile(
     top_k: int,
     hard_weight: float,
     batch_size: int,
+    mode: str = "topk",
+    continuous_normalize: bool = True,
 ) -> dict:
-    """Run the per-pair sensitivity sweep and write pair_weights.pt + JSON."""
+    """Run the per-pair sensitivity sweep and write pair_weights.pt + JSON.
+
+    Args:
+        mode: ``"topk"`` (default; Lane W-V1: top-K hard + uniform-1) or
+            ``"continuous"`` (Lane W-V2: weights ∝ contribution, normalised
+            so mean = 1). Continuous mode preserves the per-pair gradient
+            signal across all pairs and is the warm-start input for
+            ``train_renderer.py --learnable-pair-weights``.
+        continuous_normalize: when ``mode='continuous'`` and True (default),
+            re-scales the contribution-proportional weights so their mean
+            is 1.0. This keeps the loss-scale comparable to the unweighted
+            run; the SC Lagrangian rate penalty + the
+            LearnablePairWeights' own rate Lagrangian then steer the
+            distribution further during training.
+    """
     if device == "cuda" and not torch.cuda.is_available():
         raise RuntimeError(
             "CUDA required (--device cuda) — MPS PoseNet drift is 23x, "
@@ -311,15 +327,42 @@ def profile(
     # contrib_i = (100 * seg_i + sqrt(10 * pose_i)) — rank by this scalar.
     contrib = 100.0 * seg_dists + (10.0 * pose_dists).sqrt()
 
-    # Build weights: default 1.0, top-K get hard_weight
+    # Build weights based on mode.
+    #   topk        — Lane W-V1: top-K hard + uniform-1 (legacy).
+    #   continuous  — Lane W-V2: weights ∝ contribution + (mean=1)
+    #                 normalisation. Used as warm-start for
+    #                 LearnablePairWeights.
+    if mode not in ("topk", "continuous"):
+        raise ValueError(f"mode must be 'topk' or 'continuous'; got {mode!r}")
     weights = torch.ones(n_pairs, dtype=torch.float32)
     k = max(0, min(int(top_k), n_pairs))
-    if k > 0:
-        topk_idx = torch.topk(contrib, k, largest=True).indices
-        weights[topk_idx] = float(hard_weight)
-        hardest_indices = sorted(topk_idx.tolist())
-    else:
-        hardest_indices = []
+    if mode == "topk":
+        if k > 0:
+            topk_idx = torch.topk(contrib, k, largest=True).indices
+            weights[topk_idx] = float(hard_weight)
+            hardest_indices = sorted(topk_idx.tolist())
+        else:
+            hardest_indices = []
+    else:  # continuous
+        # weights_i = 1 + scale * (contrib_i - mean_contrib) / std_contrib
+        # scale = (hard_weight - 1) so the heaviest pair stays close to
+        # hard_weight (V1 parity at the tail) while every pair carries
+        # SOME signal. Clamped to [0.1, ∞) — never zero a pair entirely
+        # (the LearnablePairWeights softmax-init still works, but
+        # zero-weight pairs degenerate the warm-start).
+        contrib_mean = contrib.mean().clamp_min(1e-9)
+        contrib_std = contrib.std().clamp_min(1e-9)
+        z = (contrib - contrib_mean) / contrib_std
+        scale = max(0.0, float(hard_weight) - 1.0)
+        cont_w = (1.0 + scale * z).clamp_min(0.1)
+        if continuous_normalize:
+            cont_w = cont_w * (float(n_pairs) / cont_w.sum().clamp_min(1e-9))
+        weights = cont_w.to(torch.float32)
+        # Hardest indices reported for parity with topk-mode metadata.
+        hardest_indices = sorted(
+            torch.topk(contrib, max(1, k), largest=True).indices.tolist()
+        )
+        topk_idx = torch.topk(contrib, max(1, k), largest=True).indices
 
     # Persist
     output.parent.mkdir(parents=True, exist_ok=True)
@@ -330,6 +373,8 @@ def profile(
     summary = {
         "schema_version": 1,
         "lane": "W",
+        "mode": mode,
+        "continuous_normalize": bool(continuous_normalize),
         "n_pairs": int(n_pairs),
         "top_k": k,
         "hard_weight": float(hard_weight),
@@ -394,6 +439,21 @@ def main(argv: list[str] | None = None) -> int:
                    help="Torch device (CUDA REQUIRED — MPS drift is 23x)")
     p.add_argument("--batch-size", type=int, default=1,
                    help="Pair batch size (currently unused; reserved for future)")
+    # Lane W-V2 (2026-04-27): continuous-mode profiler output. The default
+    # 'topk' mode preserves Lane W-V1 byte-output for reproducibility; the
+    # 'continuous' mode emits a (mean=1)-normalised contribution-proportional
+    # weight tensor used as the warm-start for
+    # train_renderer.py --learnable-pair-weights.
+    p.add_argument("--mode", choices=("topk", "continuous"), default="topk",
+                   help="Output weighting mode. 'topk' (Lane W-V1) = top-K "
+                        "hard + uniform-1 (legacy). 'continuous' (Lane W-V2) "
+                        "= weights ∝ contribution + (mean=1) normalisation.")
+    p.add_argument("--continuous-normalize", dest="continuous_normalize",
+                   action="store_true", default=True,
+                   help="Lane W-V2: normalise continuous weights so mean=1. "
+                        "Default True. --no-continuous-normalize disables.")
+    p.add_argument("--no-continuous-normalize", dest="continuous_normalize",
+                   action="store_false")
     args = p.parse_args(argv)
 
     profile(
@@ -407,6 +467,8 @@ def main(argv: list[str] | None = None) -> int:
         top_k=int(args.top_k),
         hard_weight=float(args.hard_weight),
         batch_size=int(args.batch_size),
+        mode=str(args.mode),
+        continuous_normalize=bool(args.continuous_normalize),
     )
     return 0
 

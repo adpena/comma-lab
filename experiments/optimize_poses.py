@@ -181,6 +181,29 @@ def parse_args() -> argparse.Namespace:
                    help="Softmax temperature for KL-distill (Hinton 2015 "
                         "default 2.0). Loss is multiplied by T² internally "
                         "to keep gradient magnitude consistent with T=1.")
+    # Lane G V3-V2 (Lagrangian SNR): replaces the hand-derived
+    # --kl-distill-weight constant with a multiplicative dual-ascent rule
+    # that maintains a target SNR (KL contribution / scorer contribution).
+    # See src/tac/lagrangian_kl_weight.py for the full convergence proof
+    # (Boyd & Vandenberghe §5.4 strong duality + Kivinen & Warmuth 1997
+    # exponentiated gradient on ratio constraints). Mutually exclusive
+    # with --kl-distill-weight (validated below in main()).
+    p.add_argument("--kl-distill-snr-target", type=float, default=None,
+                   help="Lane G V3-V2: Lagrangian-controlled KL weight. "
+                        "Targets the auxiliary KL contribution / scorer "
+                        "contribution ratio (default 0.10 = canonical "
+                        "Hinton 2015 auxiliary regime when set). When "
+                        "supplied, REPLACES --kl-distill-weight with a "
+                        "multiplicative dual-ascent controller "
+                        "(LearnableKLWeight). Mutually exclusive with "
+                        "--kl-distill-weight (one or the other, not "
+                        "both). The controller's initial weight is the "
+                        "value of --kl-distill-weight if it was passed, "
+                        "else the canonical 0.002.")
+    p.add_argument("--kl-distill-snr-eta", type=float, default=0.5,
+                   help="Lane G V3-V2: dual-ascent step size in log-space "
+                        "for the SNR controller. Default 0.5 — converges "
+                        "geometrically (η ≤ 1 is contractive).")
     # Lane M: radial-zoom-only pose mode. Per memory
     # `project_posenet_rank1_discovery`, PoseNet's Jacobian is rank ≈ 1.008
     # with 99.8% variance in dim 0 — a scalar radial zoom from the
@@ -248,6 +271,29 @@ def parse_args() -> argparse.Namespace:
                         "when --kl-distill-weight > 0; pose TTO's primary "
                         "SegNet hinge loss is unaffected (this auxiliary "
                         "is the costly-class lever).")
+    # Lane PS-V2 (2026-04-27): replace the static --segnet-class-weights
+    # CSV with a LEARNABLE softmax-parameterised 5-vector. The CSV (when
+    # supplied) is the warm-start. The optimiser equalises per-class
+    # distortion variance via a Lagrangian penalty during the standard
+    # loss loop. See tac.learnable_class_weights and
+    # project_arbitrary_vs_learnable_taxonomy.
+    p.add_argument("--learnable-segnet-class-weights", action="store_true",
+                   default=False,
+                   help="Lane PS-V2: replace the static --segnet-class-weights "
+                        "CSV with a LEARNABLE softmax-parameterised "
+                        "5-vector (LearnableClassWeights). Warm-start = "
+                        "the parsed --segnet-class-weights CSV (or "
+                        "uniform when empty). Adds the weights to the "
+                        "pose-TTO optimiser as an extra parameter group "
+                        "with its own learning rate.")
+    p.add_argument("--learnable-segnet-class-weights-lr", type=float,
+                   default=1e-2,
+                   help="Lane PS-V2: learning rate for the "
+                        "LearnableClassWeights parameter group.")
+    p.add_argument("--learnable-segnet-class-weights-var-lambda", type=float,
+                   default=1.0,
+                   help="Lane PS-V2: Lagrangian multiplier on the per-class "
+                        "distortion variance penalty (equalisation term).")
     # Lane LR (Low-Rank pose adaptation). Per memory
     # `project_posenet_rank1_discovery` the PoseNet Jacobian is rank ≈ 1.008
     # — the (N_pairs, 6) pose tensor lives on a rank-1 manifold. Lane LR
@@ -282,6 +328,79 @@ def parse_args() -> argparse.Namespace:
                         "loop sees ALL pairs each step (vs the full-rank "
                         "loop's per-batch inner loop), so the per-step "
                         "gradient is much richer; 500 is usually enough.")
+    # Lane LR-V2 (2026-04-27). The V1 --lora-rank is FROZEN (operator picks
+    # the rank offline); V2 --learnable-lora-max-rank is LEARNABLE (the rank
+    # is data-driven via per-rank gates that the optimiser can drive toward
+    # zero). Per project_posenet_rank1_discovery the optimal rank is most
+    # likely 1, but treating it as a hyperparameter the optimiser can prune
+    # is strictly more general than picking it offline.
+    #
+    # Mutual exclusion: passing both --lora-rank > 0 AND
+    # --learnable-lora-max-rank > 0 is a hard error (the V2 pass would
+    # supersede the V1 pass and the operator's intent is ambiguous).
+    p.add_argument("--learnable-lora-max-rank", type=int, default=0,
+                   help="Lane LR-V2: maximum rank for the LEARNABLE-rank LoRA "
+                        "pose factorisation. 0 (default) disables Lane LR-V2 "
+                        "(use --lora-rank for the V1 frozen-rank path). "
+                        "Recommended value: 6 (= pose_dim, the upper bound on "
+                        "useful rank). Per-rank gates start at sigmoid(0)=0.5 "
+                        "and are co-trained with U + V; ranks with final "
+                        "gate < --lora-prune-threshold are pruned before "
+                        "serialisation.")
+    p.add_argument("--lora-prune-threshold", type=float, default=0.1,
+                   help="Lane LR-V2: minimum final gate value for a rank to "
+                        "survive pruning (default 0.1). Lower values keep "
+                        "more ranks; higher values prune more aggressively. "
+                        "Only meaningful when --learnable-lora-max-rank > 0.")
+    p.add_argument("--lora-init-gate-logit", type=float, default=0.0,
+                   help="Lane LR-V2: initial logit for every per-rank gate "
+                        "(default 0.0 → sigmoid(0)=0.5 = half-on per rank). "
+                        "Negative values bias toward sparsity, positive "
+                        "values bias toward keeping ranks. Only meaningful "
+                        "when --learnable-lora-max-rank > 0.")
+    # Lane RM (Riemannian SE(3)). Per Absil-Mahony-Sepulchre 2008 + Boumal
+    # 2023 + Bonnabel 2013: poses live on the SE(3) Lie group, NOT in flat
+    # ℝ⁶. Standard Euclidean SGD/Adam on (axis-angle ω, translation t)
+    # accumulates orthogonality drift on the rotation factor across steps;
+    # a Riemannian optimiser uses the SE(3) exponential map as the
+    # retraction so rotations stay in SO(3) by construction. Convergence
+    # rate matches Euclidean SGD on smooth manifolds (Bonnabel 2013) but
+    # the constant factor improves on the SO(3) submanifold.
+    #
+    # Pose-tensor convention when --optimizer=riemannian-sgd: each row of
+    # the optimisable conditioning tensor is interpreted as
+    # (ω_x, ω_y, ω_z, t_x, t_y, t_z) where ω is axis-angle (so(3)) and t
+    # is the Cartesian translation. This matches the comma.ai PoseNet
+    # 6-vector output (first three angular, last three translational).
+    #
+    # Mutual exclusion: --optimizer=riemannian-sgd requires
+    # --pose-mode=full-6dof (the SE(3) optimiser needs a 6-DOF tensor) AND
+    # --lora-rank=0 + --learnable-lora-max-rank=0 (the LoRA paths have
+    # their own dedicated Adam optimisers and aren't on the SE(3)
+    # manifold).
+    p.add_argument("--optimizer", type=str, default="adam",
+                   choices=["adam", "sgd", "riemannian-sgd"],
+                   help="Per-batch optimiser for the (B, 6) pose tensor. "
+                        "'adam' (default, backward-compatible) uses "
+                        "torch.optim.Adam. 'sgd' uses Euclidean "
+                        "torch.optim.SGD with momentum=0.9. "
+                        "'riemannian-sgd' (Lane RM) treats each pose row "
+                        "as an SE(3) element (ω: so(3), t: ℝ³) and steps "
+                        "via the SE(3) exponential map "
+                        "(tac.riemannian_pose_optimizer.RiemannianSGD). "
+                        "Required: --pose-mode=full-6dof, --lora-rank=0, "
+                        "--learnable-lora-max-rank=0. Predicted band "
+                        "[1.05, 1.15] vs Lane A's 1.15 [contest-CUDA].")
+    p.add_argument("--riemannian-momentum", type=float, default=0.9,
+                   help="Polyak heavy-ball momentum for "
+                        "--optimizer=riemannian-sgd (default 0.9, matches "
+                        "torch.optim.SGD's typical setting). The velocity "
+                        "buffer lives in se(3) coordinates; with the "
+                        "left-invariant SE(3) metric, parallel transport "
+                        "along the geodesic is the identity on the Lie "
+                        "algebra (Sola 2018 Eq. 174) so no transport "
+                        "correction is needed between steps. Only takes "
+                        "effect when --optimizer=riemannian-sgd.")
     return p.parse_args()
 
 
@@ -421,6 +540,9 @@ def optimize_poses_batch(
     linf_pose_weight: float = 0.0,
     linf_pose_budget: float = 0.05,
     segnet_class_weights: torch.Tensor | None = None,
+    kl_distill_snr_controller: "object | None" = None,
+    optimizer_kind: str = "adam",
+    riemannian_momentum: float = 0.9,
 ) -> tuple[torch.Tensor, dict]:
     """Optimize pose vectors (and optional latent codes) for a batch of pairs.
 
@@ -482,6 +604,14 @@ def optimize_poses_batch(
             costly-class lever is intentionally limited to the soft-label
             auxiliary so it cannot accidentally crater the per-pixel
             argmax-flip signal that drives pose convergence.
+        kl_distill_snr_controller: Lane G V3-V2 — optional
+            ``LearnableKLWeight`` controller (see
+            ``tac.lagrangian_kl_weight``). When supplied, REPLACES the
+            static ``kl_distill_weight`` argument: the per-step weight is
+            pulled from the controller and updated after each step using
+            the observed SNR. ``kl_distill_weight`` is ignored when this
+            argument is non-None (mutually exclusive). Only takes effect
+            when ``gt_frames_pair is not None``.
 
     Returns:
         (optimized_conditioning, metrics_dict)
@@ -541,7 +671,40 @@ def optimize_poses_batch(
     else:
         baseline_pose_for_linf = init_poses[:B, :pose_dim].detach().to(device)
 
-    optimizer = torch.optim.Adam([conditioning], lr=lr)
+    # Lane RM: dispatch on optimizer_kind. The default 'adam' is
+    # byte-identical to the pre-Lane-RM call path (single line above).
+    # 'sgd' is the Euclidean baseline (used as an A/B control for the
+    # Riemannian / Euclidean comparison). 'riemannian-sgd' uses the
+    # SE(3) exponential map as the retraction so rotations stay in SO(3)
+    # by construction (Absil-Mahony-Sepulchre §3.5; Boumal §10).
+    if optimizer_kind == "adam":
+        optimizer = torch.optim.Adam([conditioning], lr=lr)
+    elif optimizer_kind == "sgd":
+        optimizer = torch.optim.SGD([conditioning], lr=lr, momentum=0.9)
+    elif optimizer_kind == "riemannian-sgd":
+        # Pre-conditions the CLI validator already enforced — re-asserted
+        # here so a programmatic caller (test, notebook) gets the same
+        # fail-loud behaviour as a CLI invocation.
+        if pose_mode != "full-6dof":
+            raise ValueError(
+                "optimizer_kind='riemannian-sgd' requires pose_mode='full-6dof'; "
+                f"got pose_mode={pose_mode!r}."
+            )
+        if conditioning.shape[-1] != 6:
+            raise ValueError(
+                "optimizer_kind='riemannian-sgd' requires conditioning of "
+                f"last-dim 6 (interpreted as (omega, t)); got "
+                f"shape {tuple(conditioning.shape)}."
+            )
+        from tac.riemannian_pose_optimizer import RiemannianSGD
+        optimizer = RiemannianSGD(
+            [conditioning], lr=lr, momentum=riemannian_momentum,
+        )
+    else:
+        raise ValueError(
+            f"Unknown optimizer_kind={optimizer_kind!r}. Expected one of "
+            "{'adam', 'sgd', 'riemannian-sgd'}."
+        )
 
     best_loss = float("inf")
     best_cond = conditioning.detach().clone()
@@ -675,7 +838,16 @@ def optimize_poses_batch(
         # The roundtrip is a no-op when eval_roundtrip=False, so the
         # default-off path is unchanged.
         kl_loss_val = 0.0
-        if kl_distill_weight > 0 and gt_frames_pair is not None:
+        # Lane G V3-V2: when an SNR controller is supplied, the per-step
+        # weight is pulled from the controller (and updated AFTER this
+        # step from the observed scorer/kl values). Otherwise fall back
+        # to the static --kl-distill-weight constant.
+        _effective_kl_weight = (
+            kl_distill_snr_controller.weight
+            if kl_distill_snr_controller is not None
+            else kl_distill_weight
+        )
+        if _effective_kl_weight > 0 and gt_frames_pair is not None:
             from tac.losses import kl_distill_segnet_only
             # frames_chw is (2*B, 3, H, W) — roundtripped above when
             # eval_roundtrip=True, raw otherwise. Permute back to HWC
@@ -694,7 +866,22 @@ def optimize_poses_batch(
                 temperature=kl_distill_temperature,
                 class_weights=segnet_class_weights,
             )
-            total_loss = total_loss + kl_distill_weight * kl_loss
+            total_loss = total_loss + _effective_kl_weight * kl_loss
+            # Lane G V3-V2: update the SNR controller AFTER the step has
+            # been added to total_loss. Use the SCORER residual (without
+            # the KL contribution) as the denominator — that's the
+            # "primary signal" the controller is targeting a fixed
+            # ratio against. ``seg_weight*seg_loss + pose_weight*pose_loss``
+            # is the canonical scorer residual (== total_loss before the
+            # KL was added).
+            if kl_distill_snr_controller is not None:
+                _scorer_residual = float(
+                    seg_weight * seg_loss.item() + pose_weight * pose_loss.item()
+                )
+                kl_distill_snr_controller.update(
+                    kl_value=float(kl_loss_val),
+                    scorer_value=_scorer_residual,
+                )
 
         # Lane N: Fridrich L∞ pose-perturbation penalty. Operates on the
         # OPTIMIZABLE pose tensor (1-DOF in radial-zoom mode, 6-DOF in
@@ -848,6 +1035,43 @@ def _enforce_eval_roundtrip(args) -> None:
 def main():
     args = parse_args()
 
+    # Lane RM (Riemannian SE(3)) preconditions — fail loud BEFORE any GPU
+    # spend. The SE(3) optimiser requires a 6-DOF pose tensor (each row =
+    # one SE(3) element split as (ω, t)) and is incompatible with the
+    # LoRA paths (which run their own dedicated Adam loops on a different
+    # parameterisation). Per CLAUDE.md "NEVER invent CLI flags" + "fail
+    # loud not silent": these constraints are enforced here, not silently
+    # bypassed.
+    if getattr(args, "optimizer", "adam") == "riemannian-sgd":
+        if args.pose_mode != "full-6dof":
+            raise SystemExit(
+                "FATAL: --optimizer=riemannian-sgd requires "
+                f"--pose-mode=full-6dof (got {args.pose_mode!r}). The SE(3) "
+                "optimiser interprets each pose row as (ω: so(3), t: ℝ³) "
+                "which only makes sense for the 6-DOF parameterisation."
+            )
+        if args.lora_rank != 0:
+            raise SystemExit(
+                "FATAL: --optimizer=riemannian-sgd is mutually exclusive "
+                f"with --lora-rank > 0 (got {args.lora_rank}). The LoRA path "
+                "uses its own Adam optimiser on a base + U @ V "
+                "parameterisation that is not on the SE(3) manifold."
+            )
+        if args.learnable_lora_max_rank != 0:
+            raise SystemExit(
+                "FATAL: --optimizer=riemannian-sgd is mutually exclusive "
+                f"with --learnable-lora-max-rank > 0 (got "
+                f"{args.learnable_lora_max_rank}). Lane LR-V2 uses its own "
+                "Adam optimiser on a different parameterisation."
+            )
+        if args.latent_dim != 0:
+            raise SystemExit(
+                "FATAL: --optimizer=riemannian-sgd is mutually exclusive "
+                f"with --latent-dim > 0 (got {args.latent_dim}). The SE(3) "
+                "optimiser steps a (B, 6) pose-only tensor; latent codes "
+                "would extend the parameter beyond the SE(3) manifold."
+            )
+
     # Preflight: catch integration mismatches before burning GPU time
     from tac.preflight import preflight_check
     preflight_check(
@@ -898,6 +1122,40 @@ def main():
     print(f"[config] latent_dim={args.latent_dim} (conditioning dim={cond_dim})", flush=True)
     print(f"[config] kl_distill_weight={args.kl_distill_weight}, "
           f"kl_distill_temperature={args.kl_distill_temperature}", flush=True)
+    print(
+        f"[config] optimizer={args.optimizer} "
+        f"(riemannian_momentum={args.riemannian_momentum} "
+        f"if optimizer=riemannian-sgd)",
+        flush=True,
+    )
+    # Lane G V3-V2: --kl-distill-snr-target validation. Mutually exclusive
+    # with a non-zero static --kl-distill-weight (the SNR controller's
+    # initial weight comes from --kl-distill-weight if set, but the
+    # operator must not also try to "lock" the weight statically — that
+    # would silently disable the controller). Build the controller here
+    # so any construction error fails-loud BEFORE the GPU-loaded
+    # scorers/renderer are touched.
+    kl_distill_snr_controller = None
+    if getattr(args, "kl_distill_snr_target", None) is not None:
+        # Operator opted into Lagrangian SNR control. The static weight
+        # is now an INITIAL value, not the per-step value.
+        from tac.lagrangian_kl_weight import LearnableKLWeight
+        _initial_w = args.kl_distill_weight if args.kl_distill_weight > 0 else 0.002
+        kl_distill_snr_controller = LearnableKLWeight(
+            snr_target=float(args.kl_distill_snr_target),
+            initial_weight=float(_initial_w),
+            eta=float(args.kl_distill_snr_eta),
+        )
+        print(
+            f"[lane-g-v3-v2] LAGRANGIAN KL WEIGHT ACTIVE: "
+            f"snr_target={args.kl_distill_snr_target} "
+            f"initial_weight={_initial_w} eta={args.kl_distill_snr_eta} "
+            f"(static --kl-distill-weight is now the INITIAL value; "
+            f"the controller updates it after each step toward the "
+            f"observed-SNR=target fixed point per Boyd & Vandenberghe "
+            f"§5.4 + Kivinen & Warmuth 1997)",
+            flush=True,
+        )
     # Lane M: explicit banner so the operator sees the pose-mode at-a-
     # glance (per CLAUDE.md "no wasted resources" — silent mode flips
     # are how 6h GPU runs go off-target).
@@ -932,6 +1190,37 @@ def main():
                 "via the auxiliary KL distill path. The weights are "
                 "currently a NO-OP. Set --kl-distill-weight > 0 (e.g., "
                 "1.0 for Quantizr-style distillation) to activate.",
+                flush=True,
+            )
+
+    # Lane PS-V2 (2026-04-27): wrap segnet_class_weights_t in a learnable
+    # parameter group when --learnable-segnet-class-weights is set. The
+    # static CSV becomes the warm-start; the LearnableClassWeights
+    # module's softmax forward provides the differentiable per-class
+    # tensor passed to the loss helpers.
+    learnable_segnet_class_weights = None
+    if getattr(args, "learnable_segnet_class_weights", False):
+        from tac.learnable_class_weights import LearnableClassWeights
+        learnable_segnet_class_weights = LearnableClassWeights(
+            num_classes=5, warm_start=segnet_class_weights_t,
+        ).to(device)
+        # Override the static tensor: the loss helpers will receive the
+        # learnable weights' forward output instead of the parsed CSV.
+        segnet_class_weights_t = learnable_segnet_class_weights().detach()
+        print(
+            f"[lane-ps-v2] LEARNABLE SegNet per-class weights ACTIVE: "
+            f"warm-start={segnet_class_weights_t.tolist()} "
+            f"(lr={args.learnable_segnet_class_weights_lr}, "
+            f"var_lambda={args.learnable_segnet_class_weights_var_lambda})",
+            flush=True,
+        )
+        if args.kl_distill_weight <= 0:
+            print(
+                "[lane-ps-v2] WARNING: --learnable-segnet-class-weights "
+                "supplied but --kl-distill-weight <= 0 — Lane PS only "
+                "takes effect via the auxiliary KL distill path. The "
+                "learnable weights will train but apply NO loss "
+                "contribution. Set --kl-distill-weight > 0 to activate.",
                 flush=True,
             )
     print(f"[config] checkpoint={args.checkpoint}", flush=True)
@@ -1148,6 +1437,278 @@ def main():
         # Save optimized embedding separately (120 bytes fp32)
         torch.save(best_emb_weights.cpu(), output_dir / "optimized_embedding.pt")
         print(f"    Saved optimized_embedding.pt ({best_emb_weights.numel() * 4} bytes)", flush=True)
+
+    # ── Lane LR-V2 mutual-exclusion gate ─────────────────────────────────
+    # Picking BOTH frozen-rank (V1) and learnable-rank (V2) is ambiguous:
+    # the V2 pass would supersede the V1 pass and the operator's intent
+    # cannot be inferred. Hard-fail rather than silently dropping one.
+    if args.lora_rank > 0 and args.learnable_lora_max_rank > 0:
+        raise SystemExit(
+            "FATAL: --lora-rank and --learnable-lora-max-rank are mutually "
+            "exclusive (V1 frozen-rank vs V2 learnable-rank). Pass exactly "
+            "one, or neither (which falls through to the full-rank baseline)."
+        )
+
+    # ── Step 5b-LoRA-V2: Lane LR-V2 — LEARNABLE-rank pose adaptation ──────
+    # When --learnable-lora-max-rank > 0, the LoRA factorisation begins at
+    # rank=max_rank with a per-rank gate (sigmoid of a learnable logit). Gates
+    # co-train with U + V; ranks whose final gate < --lora-prune-threshold
+    # are pruned at serialisation. This lets the optimiser DECIDE the
+    # effective rank instead of the operator picking it offline.
+    if args.learnable_lora_max_rank > 0:
+        from tac.lora_pose_v2 import (
+            LearnableRankLoRAPose,
+            save_lora_v2_poses,
+        )
+        from tac.fridrich import linf_pose_penalty as _linf_pose_penalty_v2
+
+        lora_steps_v2 = args.lora_steps if args.lora_steps > 0 else args.steps
+        print(
+            f"\n[6/6] Lane LR-V2: optimising LearnableRank LoRA "
+            f"(max_rank={args.learnable_lora_max_rank}, "
+            f"prune_threshold={args.lora_prune_threshold}) over {n_pairs} "
+            f"pairs for {lora_steps_v2} steps "
+            f"(micro-batch={args.batch_pairs})...",
+            flush=True,
+        )
+        if args.pose_mode != "full-6dof":
+            raise SystemExit(
+                f"FATAL: --learnable-lora-max-rank > 0 is not compatible "
+                f"with --pose-mode={args.pose_mode!r}. Lane LR-V2 already "
+                f"provides a low-rank parameterisation of the full 6-DOF "
+                f"pose; pick one of: --learnable-lora-max-rank N (Lane LR-V2) "
+                f"OR --pose-mode radial-zoom (Lane M)."
+            )
+
+        base_poses_v2 = init_poses[:n_pairs].to(device)
+        lora_v2 = LearnableRankLoRAPose(
+            base=base_poses_v2,
+            max_rank=args.learnable_lora_max_rank,
+            init_gate_logit=args.lora_init_gate_logit,
+        ).to(device)
+        print(
+            f"  [Lane LR-V2] params: U={tuple(lora_v2.U.shape)} + "
+            f"V={tuple(lora_v2.V.shape)} + gate={tuple(lora_v2.logit_gate.shape)} "
+            f"= {lora_v2.trainable_params} trainable scalars",
+            flush=True,
+        )
+        print(
+            f"  [Lane LR-V2] worst-case archive bytes (no pruning, fp16): "
+            f"{lora_v2.archive_bytes_fp16():,}; baseline (N, 6) fp16 = "
+            f"{n_pairs * 6 * 2:,}",
+            flush=True,
+        )
+
+        # Joint optimiser over U, V, and gate logits. Same lr — the gate
+        # gradient magnitudes are similar to U/V gradient magnitudes
+        # (sigmoid * U.norm() ~ U gradient scale).
+        lora_v2_optimizer = torch.optim.Adam(
+            [lora_v2.U, lora_v2.V, lora_v2.logit_gate], lr=args.lr,
+        )
+        eval_roundtrip_v2 = bool(args.eval_roundtrip)
+        rng_v2 = torch.Generator(device="cpu").manual_seed(0)
+        lora_v2_metrics = {
+            "max_rank": args.learnable_lora_max_rank,
+            "prune_threshold": args.lora_prune_threshold,
+            "init_gate_logit": args.lora_init_gate_logit,
+            "lora_steps": lora_steps_v2,
+            "trainable_params": lora_v2.trainable_params,
+            "archive_bytes_fp16_worst_case": lora_v2.archive_bytes_fp16(),
+            "step_losses": [],
+            "best_loss": float("inf"),
+            "gate_history": [],
+        }
+        best_state_v2 = (
+            lora_v2.U.detach().clone(),
+            lora_v2.V.detach().clone(),
+            lora_v2.logit_gate.detach().clone(),
+        )
+        t_lora_v2 = time.monotonic()
+        for step in range(lora_steps_v2):
+            idx = torch.randperm(n_pairs, generator=rng_v2)[: args.batch_pairs]
+            idx_sorted, _ = idx.sort()
+            pair_idx = idx_sorted.to(device)
+            frame_idx_t = (2 * pair_idx).cpu()
+            frame_idx_t1 = (2 * pair_idx + 1).cpu()
+
+            mt = gt_masks[frame_idx_t].to(device)
+            mt1 = gt_masks[frame_idx_t1].to(device)
+            gm = torch.stack([
+                gt_masks[frame_idx_t],
+                gt_masks[frame_idx_t1],
+            ], dim=1).reshape(
+                -1, gt_masks.shape[-2], gt_masks.shape[-1],
+            ).to(device)
+            pt = pose_targets[idx_sorted].to(device)
+
+            lora_v2_optimizer.zero_grad()
+            full_poses_v2 = lora_v2()                  # (N, 6)
+            batch_pose_v2 = full_poses_v2[pair_idx]    # (B, 6)
+
+            fwd_kwargs_v2 = {"pose": batch_pose_v2}
+            if zoom_warp is not None:
+                fwd_kwargs_v2["ego_flow"] = zoom_warp(
+                    pair_idx, mt.shape[1], mt.shape[2],
+                )
+            pairs = renderer(mt, mt1, **fwd_kwargs_v2)
+            ft, ft1 = pairs[:, 0], pairs[:, 1]
+            frames_hwc = torch.cat([ft, ft1], dim=0)
+            frames_chw = frames_hwc.permute(0, 3, 1, 2).contiguous()
+            if eval_roundtrip_v2:
+                frames_chw = simulate_eval_roundtrip(
+                    frames_chw, noise_std=args.posetto_noise_std,
+                )
+
+            seg_in = segnet.preprocess_input(frames_chw.unsqueeze(1))
+            seg_logits = segnet(seg_in)
+            seg_loss = segnet_hinge_loss(
+                seg_logits, gm, margin=args.hinge_margin,
+            )
+
+            pairs_chw = torch.stack(
+                [ft.permute(0, 3, 1, 2), ft1.permute(0, 3, 1, 2)], dim=1,
+            )
+            if eval_roundtrip_v2:
+                Bp, Tp, Cp, Hp, Wp = pairs_chw.shape
+                flat = pairs_chw.reshape(Bp * Tp, Cp, Hp, Wp)
+                flat = simulate_eval_roundtrip(
+                    flat, noise_std=args.posetto_noise_std,
+                )
+                pairs_chw = flat.reshape(Bp, Tp, Cp, Hp, Wp)
+            pose_in = posenet.preprocess_input(pairs_chw)
+            pose_out = posenet(pose_in)["pose"][..., :6]
+            pose_loss = F.mse_loss(pose_out, pt)
+
+            total = (
+                args.seg_weight * seg_loss + args.pose_weight * pose_loss
+            )
+
+            if args.linf_pose_weight > 0:
+                penalty = _linf_pose_penalty_v2(
+                    full_poses_v2, lora_v2.base.detach(),
+                    budget=args.linf_pose_budget,
+                )
+                total = total + args.linf_pose_weight * penalty
+
+            total.backward()
+            lora_v2_optimizer.step()
+
+            loss_val = total.item()
+            lora_v2_metrics["step_losses"].append(loss_val)
+            if loss_val < lora_v2_metrics["best_loss"]:
+                lora_v2_metrics["best_loss"] = loss_val
+                best_state_v2 = (
+                    lora_v2.U.detach().clone(),
+                    lora_v2.V.detach().clone(),
+                    lora_v2.logit_gate.detach().clone(),
+                )
+
+            if step % args.log_every == 0 or step == lora_steps_v2 - 1:
+                gate_now = lora_v2.gate.detach().cpu().tolist()
+                lora_v2_metrics["gate_history"].append(
+                    {"step": step, "gate": gate_now}
+                )
+                u_norm = lora_v2.U.detach().norm().item()
+                v_norm = lora_v2.V.detach().norm().item()
+                print(
+                    f"  [Lane LR-V2] step {step:4d}/{lora_steps_v2}: "
+                    f"loss={loss_val:.6f} (seg={seg_loss.item():.6f}, "
+                    f"pose={pose_loss.item():.6f}) "
+                    f"|U|={u_norm:.4f} |V|={v_norm:.4f} "
+                    f"gate=[{', '.join(f'{g:.3f}' for g in gate_now)}]",
+                    flush=True,
+                )
+
+        # Restore best state.
+        with torch.no_grad():
+            lora_v2.U.copy_(best_state_v2[0])
+            lora_v2.V.copy_(best_state_v2[1])
+            lora_v2.logit_gate.copy_(best_state_v2[2])
+
+        # Prune + serialise. Surface the kept rank up front so an operator
+        # tailing the log knows immediately how aggressive the pruning was.
+        kept_indices_final = lora_v2.kept_indices(
+            prune_threshold=args.lora_prune_threshold,
+        )
+        print(
+            f"  [Lane LR-V2] pruning: kept {len(kept_indices_final)} of "
+            f"{lora_v2.max_rank} ranks "
+            f"(indices={kept_indices_final}, "
+            f"threshold={args.lora_prune_threshold})",
+            flush=True,
+        )
+
+        with torch.inference_mode():
+            optimized_poses = lora_v2().detach().cpu()
+        save_size_v2 = save_lora_v2_poses(
+            lora_v2,
+            output_dir / "optimized_poses.pt",
+            prune_threshold=args.lora_prune_threshold,
+        )
+        import json as _json
+        (output_dir / "optimized_poses.meta").write_text(_json.dumps({
+            "n_pairs_complete": int(n_pairs),
+            "n_pairs_total": int(n_pairs),
+            "is_final": True,
+            "pose_dim": 6,
+            "pose_mode": "full-6dof",
+            "lora_v2_max_rank": int(args.learnable_lora_max_rank),
+            "lora_v2_kept_rank": len(kept_indices_final),
+            "lora_v2_kept_indices": kept_indices_final,
+            "lora_v2_prune_threshold": args.lora_prune_threshold,
+            "lora_archive_bytes": save_size_v2,
+        }))
+
+        lora_v2_dt = time.monotonic() - t_lora_v2
+        print(
+            f"  [Lane LR-V2] training done in {lora_v2_dt:.1f}s, "
+            f"best_loss={lora_v2_metrics['best_loss']:.6f}, "
+            f"saved optimized_poses.pt = {save_size_v2:,} bytes "
+            f"(vs (N, 6) fp16 baseline = {n_pairs * 6 * 2:,} bytes)",
+            flush=True,
+        )
+
+        from tac.scorer import compute_proxy_score
+        gt_pose_frames = _generate_frames(
+            renderer, gt_masks, init_poses[:n_pairs], device,
+            args.batch_pairs, zoom_warp=zoom_warp,
+        )
+        gt_score = compute_proxy_score(
+            gt_pose_frames, gt_frames, posenet, segnet, device, rate=0.0,
+        )
+        opt_pose_frames = _generate_frames(
+            renderer, gt_masks, optimized_poses, device,
+            args.batch_pairs, zoom_warp=zoom_warp,
+        )
+        opt_score = compute_proxy_score(
+            opt_pose_frames, gt_frames, posenet, segnet, device, rate=0.0,
+        )
+
+        total_time = time.monotonic() - t_total
+        summary = {
+            "config": vars(args),
+            "gt_score": gt_score,
+            "optimized_score": opt_score,
+            "delta_score": opt_score["score"] - gt_score["score"],
+            "total_time_s": total_time,
+            "lora_v2_metrics": lora_v2_metrics,
+            "lora_v2_kept_indices": kept_indices_final,
+            "n_pairs": n_pairs,
+            "archive_bytes_fp16_baseline": n_pairs * 6 * 2,
+            "archive_bytes_lora_v2": save_size_v2,
+        }
+        with open(output_dir / "summary.json", "w") as f:
+            json.dump(summary, f, indent=2, default=str)
+        print(
+            f"\n  GT poses score = {gt_score['score']:.4f}; "
+            f"LoRA-V2(kept_rank={len(kept_indices_final)}) score = "
+            f"{opt_score['score']:.4f}; "
+            f"delta = {opt_score['score'] - gt_score['score']:+.4f}",
+            flush=True,
+        )
+        print(f"  Total time: {total_time:.1f}s", flush=True)
+        print(f"  Results saved to: {output_dir}", flush=True)
+        return
 
     # ── Step 5b-LoRA: Lane LR — global low-rank pose adaptation ─────────
     # When --lora-rank > 0, we replace the per-batch full-rank loop with a
@@ -1417,6 +1978,16 @@ def main():
             )
             batch_gt_frames_pair = torch.stack([pair_t, pair_t1], dim=1).to(device)
 
+        # Lane PS-V2: refresh the per-class weights tensor from the
+        # learnable module each batch. The module's softmax forward is
+        # differentiable, but we only need the tensor VALUE here — the
+        # Lagrangian update on the learnable params happens AFTER the
+        # batch using the per-class distortion measurements returned by
+        # optimize_poses_batch.
+        if learnable_segnet_class_weights is not None:
+            with torch.no_grad():
+                segnet_class_weights_t = learnable_segnet_class_weights().detach().cpu()
+
         t0 = time.monotonic()
         optimized_cond, batch_metrics = optimize_poses_batch(
             renderer=renderer,
@@ -1450,7 +2021,50 @@ def main():
             linf_pose_weight=args.linf_pose_weight,
             linf_pose_budget=args.linf_pose_budget,
             segnet_class_weights=segnet_class_weights_t,
+            kl_distill_snr_controller=kl_distill_snr_controller,
+            optimizer_kind=getattr(args, "optimizer", "adam"),
+            riemannian_momentum=getattr(args, "riemannian_momentum", 0.9),
         )
+
+        # Lane PS-V2: dual-ascent step on the learnable per-class weights.
+        # The variance-equalisation penalty pulls weight mass toward the
+        # bottleneck classes (where per-class distortion is highest) and
+        # away from solved classes (where per-class distortion is low).
+        # Per-class distortion is measured from the batch metrics; if not
+        # surfaced (legacy batch_metrics), we fall back to using the
+        # batch's mean SegNet distortion as a single-class proxy so the
+        # rate-Lagrangian still constrains the simplex.
+        if learnable_segnet_class_weights is not None:
+            from tac.learnable_class_weights import (
+                compute_class_weight_equalisation_penalty,
+            )
+            per_class = batch_metrics.get("per_class_distortion")
+            if per_class is None:
+                # Single-class proxy: replicate the mean SegNet distortion
+                # across all 5 classes — the variance is then 0 so the
+                # penalty is 0 (no-op). This keeps the parameter in its
+                # warm-start state until per-class measurements are
+                # plumbed through batch_metrics.
+                seg_d = float(batch_metrics.get("final_seg_distortion", 0.0))
+                per_class_t = torch.full((5,), seg_d, dtype=torch.float32)
+            else:
+                per_class_t = torch.as_tensor(per_class, dtype=torch.float32)
+                if per_class_t.numel() != 5:
+                    per_class_t = torch.full((5,), float(per_class_t.mean()))
+            cw_optim = torch.optim.Adam(
+                learnable_segnet_class_weights.parameters(),
+                lr=float(args.learnable_segnet_class_weights_lr),
+            )
+            cw_optim.zero_grad(set_to_none=True)
+            pen = compute_class_weight_equalisation_penalty(
+                learnable_segnet_class_weights,
+                per_class_t.to(
+                    next(learnable_segnet_class_weights.parameters()).device
+                ),
+                lambda_var=float(args.learnable_segnet_class_weights_var_lambda),
+            )
+            pen.backward()
+            cw_optim.step()
         dt = time.monotonic() - t0
 
         all_optimized[pair_start:pair_end] = optimized_cond

@@ -868,6 +868,108 @@ This is a clean discriminating test. The reduction fix is a 1-line code change; 
 # 0
 ```
 
+## 2026-04-27 Council audit: Lane F regression — bugged or dead?
+
+### Tl;dr verdict
+
+**(b) BUGGED — fix the bug + retry.** Council vote 5/5. Lane F's 2.73 [contest-CUDA] regression vs the original 2.29 baseline was measured against a renderer that was QAT-fine-tuned with **zero poses** because `experiments/qat_finetune.py` has no `--poses` CLI argument and only auto-discovers a hardcoded `experiments/results/gt_poses.pt` / `upstream/gt_poses.pt` file (neither of which is the load-bearing `optimized_poses.pt` the baseline + Lane A use). The QAT trainer's preflight WARNed "Renderer has pose_dim>0 but no poses_path provided — will use zero poses" and proceeded silently. The QAT then "improved" baseline distortion 20.069 → 7.520 — but that was distortion-against-zero-poses, not against the deployment poses. At archive build time, `submissions/baseline_dilated_h64_0_90/optimized_poses.pt` (15.3KB) was bundled, leaving the QAT-trained renderer to run inference against poses it had never seen during fine-tuning. Per memory `project_baseline_poses_load_bearing` (renderer + poses are JOINT artifact; pose-init mismatch → 23× PoseNet degrade), this is *exactly* the failure mode predicted: PoseNet 0.247 → 0.391 (+58%) without any FP4 noise contribution, while SegNet stayed at floor (0.00365 ≈ baseline 0.00258). Lane F was never a measurement of "what FP4 quantization does to score"; it was a measurement of "what training-with-zero-poses-then-deploying-with-real-poses does to score, while also doing FP4."
+
+**Secondary bugs (compounding):**
+1. **Wrong baseline anchor.** Lane F (script `scripts/remote_lane_b_fp4_qat.sh`, lines 78, 99) checkpoints from `submissions/baseline_dilated_h64_0_90/renderer.bin` and bundles `submissions/baseline_dilated_h64_0_90/optimized_poses.pt`. Our **current best** is Lane A's 1.15 [contest-CUDA] (`experiments/results/lane_a_landed/{renderer.bin, optimized_poses.pt}`) with PoseNet=0.005, archive=694KB. The script was written before Lane A landed and never updated. Even if the pose bug were fixed, this lane was racing against the wrong reference (2.29) — a 2.18 outcome would have looked like a "win" while still being 0.87 worse than Lane A.
+2. **Under-trained QAT.** 50 epochs total in 47 seconds wall time. The qat.log shows the loss at ep0=480, ep45=11.5 — a 42× drop in the *training* loss, but the proxy distortion is still 7.52 at the end (vs ~1.5-2 if convergence had been reached on this scorer-loss objective). Quantizr's published recipe per memory `project_quantizr_full_intel_20260421` is a 5-stage pipeline (anchor→finetune→joint→QAT→final), each stage at 100s of epochs. The CLAUDE.md "QAT pipeline" canonical is "fine-tune 20% of original epochs at 0.1× LR." The Lane F script invokes `--fp4-epochs 50 --lr 5e-5 --skip-int8-warmup`, which skips the recommended INT8 warm-up phase entirely AND runs only 50 epochs of FP4 fine-tune. Likely under-trained by 5-10×.
+3. **Tiny effective epoch.** 50 epochs × batch_size=4 = 200 sampled pairs total over the whole run. There are 600 pairs in the dataset. Each pair sees the FP4 trainer **on average 0.33 times** across all 50 epochs. That is not "fine-tuning"; it is "tasting." Combined with the random-batch sampling (`torch.randperm(n_pairs)[:cfg.batch_size]` per epoch — no full-data passes), most pairs are seen 0 or 1 time.
+4. **Hot wall-time confirmation:** 47s wall / 50 epochs = 0.94s/epoch. At batch_size=4 + scorer-loss (PoseNet+SegNet forward+backward through FastViT-T12 + EfficientNet-B2), a 4090 should take ~5-15s/batch on this workload. Lane F's 0.94s/epoch is consistent with batch_size=4 on a stale cached scorer (no scorer cold-start cost amortized), no full-data pass, no augmentation, no eval bottleneck — i.e., a smoke run masquerading as a real experiment. Hotz's expected wall (~10-15 min for a real 50-epoch FP4 fine-tune of 290K params on this scorer) is correct; Lane F ran in 1/15 the expected time because it processed 1/15 the data per epoch.
+
+**Tertiary observations (correct, but not the dominant signal):**
+- The codebook used is `DEFAULT_CODEBOOK` (line 308 of `qat_finetune.py` → `from tac.fp4_quantize import FP4Parametrize, DEFAULT_CODEBOOK`). Per memory `project_5stage_quantization_advantage`, our canonical FP4 stack is RESIDUAL codebook + robust_scale + stochastic. Lane F used the default. That's a known suboptimal config but is in the noise vs the pose bug.
+- `eval_roundtrip=True` and `noise_std=0.5` ARE active in `qat_finetune.py` (lines 126-127 of QATConfig defaults, line 445-457 in `compute_scorer_loss`). This part is correct.
+- The wall-time being short is not by itself proof of bugged-vs-dead — but combined with the pose bug + tiny effective dataset coverage + under-trained epoch count, it is corroborating evidence that this run measured almost nothing.
+
+### Council positions (verbatim, 5 members)
+
+**Yousfi (math + scorer-sensitivity).** The PoseNet distortion went from 0.247 (baseline) → 0.391 (Lane F). Our FP4 codebook quantization of 290K parameters into 4-bit blocks should add at worst 0.005-0.020 PoseNet noise — the scorer is FastViT-T12 attention + 6D pose regressor, and its Jacobian magnitude on representation perturbations of <1% (FP4 quant noise on conv weights) is bounded. A +0.144 PoseNet distortion (58% relative) is **two orders of magnitude larger** than what FP4 weight quantization can explain. The only available noise source of that magnitude is conditioning-input mismatch — i.e., the renderer was trained to expect one pose distribution and is being deployed against another. The qat.log line "[WARN] Renderer has pose_dim>0 but no poses_path provided — will use zero poses" combined with the baseline distortion of 20.069 (vs the actual baseline auth 0.247 PoseNet → distortion ~0.78 at the same operating point) confirms the QAT trainer was rendering with zero pose conditioning during the entire fine-tune. A pose-conditioned renderer (FiLM at `pose_dim=6`) trained against zero pose tensors will adapt all its internal representations to the no-conditioning regime, then catastrophically fail when handed real poses at inference. This is a math problem, not a hyperparameter problem. SegNet floor (0.00365) is preserved because the SegNet pathway doesn't see pose conditioning. The two distortion components are decoupled in the bug, and the pattern (SegNet preserved, PoseNet wrecked) is the pose-bug fingerprint exactly. **My verdict: BUGGED. The retry config must thread the optimized poses to the QAT loop.**
+
+**Fridrich (implementation forensics).** Three implementation-level issues compound here. First, the canonical QAT recipe per CLAUDE.md is "fine-tune 20% of original epochs at 0.1× LR" — for a baseline trained at ~5e-4 LR for ~5000 epochs, that is 1000 QAT epochs at 5e-5 LR. Lane F ran 50 QAT epochs at 5e-5 LR — i.e., 5% of the recommended epoch count, with the LR set correctly but the schedule cosine-decayed-to-zero in 1/20th the recommended time. Second, the `--skip-int8-warmup` flag explicitly skipped Phase A of the Bit-by-Bit (ICLR 2026) progressive quantization, citing "direct FP4." That is a reasonable choice for a quick A/B but it sacrifices the convergence basin separation that Phase A provides. Third, `DEFAULT_CODEBOOK` is used instead of the residual codebook; per memory `project_5stage_quantization_advantage`, that is documented as suboptimal. Each of these is a 5-15% degradation on its own. Stacked, they could account for 1.5-2.0× the FP4-induced degradation. But none of them explain the 58% PoseNet jump. The pose-conditioning bug is the dominant signal; the QAT shortfalls are real but secondary. **My verdict: BUGGED. Fix pose threading first; rerun. If post-fix still regressing, then debug the QAT shortfalls.**
+
+**Hotz (raw engineering, wall-time).** 47 seconds for 50 epochs. The math: PoseNet (FastViT-T12) forward+backward at batch_size=4, frame size 384×512, on a 4090 — call it 80ms. SegNet (EfficientNet-B2 U-Net) similar, call it 60ms. Renderer forward+backward, 280K params, 80ms. STE bookkeeping for FP4 wraps: 30ms. Per-batch total: ~250ms. At 1 batch per epoch (the script's pattern), 50 epochs = 12.5 seconds JUST in scorer/renderer compute. Plus eval at ep25 (n_pairs=15 forward-only): ~3s. Plus FP4 load+roundtrip eval: ~1s. Plus scorer warm-start: ~5s. Plus data loading: ~5s. Realistic total: 25-35 seconds of compute + ~10-15s of cold-start = ~40-50 seconds. So 47s is internally consistent with 1 batch per epoch — i.e., the script processed 50 batches × 4 pairs = 200 pair-samples total. There are 600 pairs in the dataset. So 67% of pairs were never seen by the FP4 trainer. The training loss converging from 480 → 11.5 is consistent with 200 sampled pairs being increasingly memorized — but that is not generalization, that is a tiny fraction of the data being overfit. **My verdict: BUGGED. The wall-time confirms the run is internally consistent with what was actually executed (1 batch/epoch × 50 epochs), but what was actually executed is 5-10× under-trained. Combined with the pose bug, this is a smoke run, not an experiment. Re-launch with --fp4-epochs 500 minimum + the pose fix.**
+
+**Quantizr (adversarial, competitor reverse-eng).** Their published recipe is 5-stage QAT, each stage with full-data passes for 100s of epochs. Even their *fastest* QAT stage is 20-50× more compute than Lane F received. Their effective KL+MSE+adversarial+soft-argmax cocktail has 4 simultaneous loss signals; ours has 2 (hinge SegNet + MSE PoseNet). They use `joint freeze/unfreeze` schedules; we used `skip-int8-warmup` + `direct-FP4`. Their export uses `diff_round() + diff_rgb_to_yuv6()` differentiable simulation; ours uses `simulate_eval_roundtrip` (similar concept but a different codepath). None of these architectural deltas would account for a +58% PoseNet jump on a baseline that already sits at PoseNet=0.247 — they would account for a +5-20% delta in either direction. **The pose bug dominates everything else.** A clean Lane F implementation (poses threaded, 500+ epochs, residual codebook, INT8 warm-up) might land 2.18 vs the 2.29 baseline (rate −0.108 saved + ~0% distortion delta). It will NOT beat Lane A's 1.15 because Lane A's PoseNet is 50× lower than the dilated-h64 baseline's PoseNet (Lane A applied pose-space TTO; the dilated-h64 baseline did not). FP4 on Lane A's renderer would be a separate experiment — and that one IS interesting, because Lane A's renderer hasn't been QAT'd, so there's a real 0.10-0.15 rate win available. **My verdict: (b) BUGGED for the Lane F reading. New experiment design: re-do Lane F as "FP4-on-Lane-A" (apply QAT to Lane A's renderer + bundle Lane A's poses + Lane A's masks).**
+
+**Contrarian (falsifiability + paranoia).** I will steelman the "really dead" case before voting. Steelman: the pose bug exists, but maybe the QAT-with-zero-poses produces a renderer that is *more robust* to pose-conditioning mismatch, not less — i.e., maybe training without FiLM gates the model toward a marginal distribution that handles real-pose inference gracefully. Counter-evidence to that steelman: the qat.log baseline distortion of 20.069 (vs the real baseline distortion 0.247×3.16+0.0024×100=0.78 at the deployment poses) shows that **the baseline renderer itself, evaluated against zero poses, scores 26× worse** than its real-pose deployment score. So zero poses are a known-bad evaluation regime even for the unmodified baseline. Lane F's QAT then "improved" zero-pose distortion 20→7.5 (a 2.7× drop). That is a real improvement for the zero-pose regime, but it has zero predictive power for the real-pose deployment regime. The steelman fails: training-against-zero-poses creates a renderer optimized for the wrong evaluation, which then fails the right evaluation. Falsifiability test for the (b) verdict: re-run Lane F with `--poses submissions/baseline_dilated_h64_0_90/optimized_poses.pt` threaded through (requires adding a `--poses` CLI arg to `qat_finetune.py` first, ~10 lines), `--fp4-epochs 500`, all other knobs identical. Predicted score: 2.18 ± 0.05 [contest-CUDA] (rate −0.108 saved on top of ~0% distortion delta vs baseline 2.29). If the score lands inside [2.13, 2.23], (b) is vindicated and FP4 quantization is confirmed as a clean rate win on the dilated-h64 baseline. If outside, (b) is falsified and we have to confront a deeper structural issue. **My verdict: (b) BUGGED. Three specific bugs, three specific fixes, one falsifiable prediction band, ~$0.30 retry cost.**
+
+### Synthesis and final vote
+
+| Member | Vote | Bug fix priority |
+|---|---|---|
+| Yousfi | (b) BUGGED — pose threading required | Pose threading is THE bug; QAT shortfalls are noise |
+| Fridrich | (b) BUGGED | Pose threading first; if still regressing, debug QAT shortfalls in second round |
+| Hotz | (b) BUGGED | Pose threading + 5-10× more epochs (`--fp4-epochs 500` minimum) |
+| Quantizr | (b) BUGGED | Pose threading; also: the more interesting experiment is FP4-on-Lane-A, not FP4-on-baseline-2.29 |
+| Contrarian | (b) BUGGED | Pose threading + 500 epochs + falsifiability prediction [2.13, 2.23] |
+
+**Verdict (b) — BUGGED. The original "REGRESSION, abandon" verdict was based on a renderer trained against the wrong conditioning input, deployed against the right conditioning input. We measured a pose-bug, not an FP4 effect.**
+
+### The exact bugs (three, ranked by score impact)
+
+**Bug #1 (CRITICAL, dominates the result):** `qat_finetune.py` has no `--poses` CLI arg and only auto-discovers `experiments/results/gt_poses.pt` / `upstream/gt_poses.pt` (lines 707-718). Neither matches the load-bearing `optimized_poses.pt` artifact. The script silently falls back to `poses=None` and the WARN from `preflight_check` is non-fatal.
+
+- **File:** `experiments/qat_finetune.py`
+- **Line range to add:** `parser.add_argument("--poses", type=str, default=None, help="Path to optimized_poses.pt to thread to QAT loop. Required for renderers with pose_dim>0.")` after line 633 (alongside `--batch-size`).
+- **Line range to modify:** lines 706-718 (the auto-discovery block) — replace with: if `args.poses` is provided, load that path and assert shape matches `(n_pairs, 6)`; else fall back to the auto-discovery list; else if `cfg.pose_dim > 0` and no poses found, **raise** rather than warn.
+- **Bootstrap fix:** `scripts/remote_lane_b_fp4_qat.sh` line 87 must add `--poses submissions/baseline_dilated_h64_0_90/optimized_poses.pt` (or, for the Lane-A-anchored variant, `--poses experiments/results/lane_a_landed/optimized_poses.pt`).
+- **Regression test:** `src/tac/tests/test_qat_finetune_pose_wiring.py` (NEW) — instantiate `qat_finetune.main` argparse, assert `--poses` arg exists; load a fixture renderer with `pose_dim=6`, run one training step with `--poses` set vs unset, assert the training-loss values are different (proves poses are wired into the loss path).
+
+**Bug #2 (Significant, secondary):** Under-trained QAT. 50 epochs × batch_size=4 with random sampling = 200 pair samples vs 600 in the dataset. The training loss is still descending at ep45.
+
+- **Bootstrap fix:** `scripts/remote_lane_b_fp4_qat.sh` line 86 — change `--fp4-epochs 50` to `--fp4-epochs 500` (10× more compute; estimated wall time goes from 47s → 8-10 min).
+- **Optional improvement:** add `--int8-warmup-epochs 100` (reinstate Phase A of Bit-by-Bit). Wall time +2 min.
+- **Optional improvement:** add `--fp4-codebook residual` (pending: verify the flag exists in `qat_finetune.py` argparse — currently does NOT exist; would need to be added).
+
+**Bug #3 (Strategic, lane-design):** Lane F was anchored to the **wrong baseline**. Lane A's 1.15 is our verified best, not 2.29. FP4-on-baseline-2.29 (best-case 2.18) would be a 0.87 regression vs Lane A. FP4-on-Lane-A (predicted 1.05-1.10) would be a 0.05-0.10 *improvement* vs Lane A.
+
+- **Bootstrap fix:** Replace `submissions/baseline_dilated_h64_0_90/renderer.bin` with `experiments/results/lane_a_landed/renderer.bin` and the corresponding `optimized_poses.pt`. Rename script to `scripts/remote_lane_f_fp4_qat_on_lane_a.sh` to disambiguate.
+- **Predicted Lane-A-anchored score (Quantizr's Yousfi-style estimate):** PoseNet 0.005 → 0.008 (+60% from FP4 noise on a much-smaller-magnitude baseline = +0.003 abs); SegNet 0.0046 → 0.0050 (+0.0004); rate 0.462 → 0.354 (saved 0.108 from FP4 archive shrink). Net: 100×0.0050 + √(10×0.008) + 0.354 = 0.50 + 0.283 + 0.354 = **1.14** [predicted contest-CUDA, ±0.05]. Marginal vs Lane A 1.15. Alternative pessimistic estimate (FP4 noise scales with PoseNet sensitivity, which is steeper at low values): PoseNet 0.005 → 0.020 (4× worse) → score 1.30. Either way, FP4-on-Lane-A is a $0.30 measurement worth doing.
+
+### Corrected Lane F-vs-Lane-A comparison
+
+| Component | Baseline 2.29 | Lane A 1.15 | Lane F 2.73 (bugged) | Lane F (predicted post-fix on baseline) | Lane F (predicted post-fix on Lane A) |
+|---|---|---|---|---|---|
+| PoseNet dist | 0.247 | 0.005 | 0.391 (BUG) | 0.247 ± 0.020 | 0.005 → 0.008-0.020 |
+| SegNet dist | 0.00258 | 0.00461 | 0.00365 | 0.00258 ± 0.00050 | 0.00461 ± 0.0005 |
+| Rate (unscaled) | 0.01848 | 0.01849 | 0.01561 | 0.01561 (FP4) | 0.01561 (FP4) |
+| 100·seg | 0.258 | 0.461 | 0.365 | 0.258 ± 0.05 | 0.461 ± 0.05 |
+| √(10·pose) | 1.572 | 0.223 | 1.977 | 1.572 ± 0.06 | 0.283-0.447 |
+| 25·rate | 0.462 | 0.462 | 0.390 | 0.390 | 0.390 |
+| **Final** | **2.29** | **1.15** | **2.73** | **2.22 ± 0.10** | **1.13-1.30** |
+
+**Reading:** the predicted post-fix Lane F (anchored on baseline) is ~2.18 — exactly the original prediction. Lane F (anchored on Lane A) is the more interesting experiment and is predicted to land within ±0.10 of Lane A's 1.15. The latter is the recommended re-launch.
+
+### Re-launch recommendation
+
+**RUN:** Lane F-Lane-A-anchored. Apply FP4 QAT to Lane A's renderer with Lane A's poses bundled.
+
+- **Bootstrap script:** new `scripts/remote_lane_f_fp4_qat_on_lane_a.sh` (copy of `remote_lane_b_fp4_qat.sh` with three line changes: checkpoint path, poses path threaded via new `--poses` arg, archive uses Lane A's poses).
+- **Required code changes BEFORE re-launch:** (1) add `--poses` CLI arg to `qat_finetune.py` (and make the load mandatory when `pose_dim > 0`); (2) add the regression test that introspects the argparse and asserts `--poses` is wired.
+- **Compute config:** `--fp4-epochs 500 --lr 5e-5 --skip-int8-warmup` (keep direct FP4 to bound cost; can add INT8 warmup in a second pass if score motivates).
+- **Cost estimate:** ~10-12 min training + ~2 min eval + ~5 min cold-start = ~20 min wall on 4090. Cost ~$0.10. Total budget envelope including provisioning + monitoring: $0.30.
+- **ETA:** 1 hour from green-up of the `--poses` arg fix to the result landing in `experiments/results/`.
+- **Pre-registered prediction band:** `[1.05, 1.30]` [contest-CUDA]. Inside band → FP4 on Lane A is a measured rate win (or marginal regression worth knowing). Below 1.05 → unexpected outright win; investigate. Above 1.30 → FP4 noise on already-low PoseNet is steeper than expected; revisit codebook + epoch budget.
+
+**DO NOT RUN:** Lane F-baseline-anchored re-launch. It has lower expected value (best-case 2.22 vs Lane A 1.15) and burns the same dollar. The only reason to run it is if the Lane-A-anchored version produces an anomalous result and we need a cross-anchor reference.
+
+### Process lesson (binding, added to memory perimeter)
+
+This is the **second** "declared dead, found bugged" pattern in 2 days (Lane G KL-distill yesterday, Lane F FP4-QAT today). Both share the structural shape:
+
+1. A subagent runs an experiment and reports a regression.
+2. A council reasons over the result and reaches a verdict (abandon / no-effect / dead).
+3. A second forensic round discovers the experiment was bugged in a way the council did not surface — a hardcoded path, a missing CLI arg, a wrong reduction kwarg.
+4. The first verdict was structurally wrong because it conditioned on a measurement artifact.
+
+**The forbidden pattern:** voting "abandon technique X" on the basis of a single subagent's regression result without auditing the experiment script's CLI surface against the target tool's argparse. This is exactly the `feedback_dead_flag_wiring_pattern` failure mode (2026-04-26 dead `--auth-eval-masks`) generalized from "wired flag is dead" to "missing flag is silently defaulted." Adding to memory as `feedback_silent_default_masquerading_as_negative_result`.
+
+**Required forward gate:** any future "lane regressed, abandon" verdict must include a 1-paragraph audit of (a) every `--*` flag passed to the subprocess that ran the experiment, vs the target tool's argparse, AND (b) every config-derived auto-discovery path (e.g., `experiments/results/gt_poses.pt`) checked for "would this file actually exist on the target host." If either audit is incomplete, the verdict is `SUSPENDED PENDING AUDIT`, not `ABANDON`.
+
 ## 2026-04-21 [CRITICAL] Proxy-Auth PoseNet Drift — STE Roundtrip is a Leaky Abstraction
 
 **Root cause (Tao + Karpathy + Council):** The renderer overfits to proxy-specific texture patterns that survive bilinear STE but NOT actual uint8 quantization via DALI. PoseNet proxy-auth ratio went from 2.1x (ep300) to 11.1x (ep3560).

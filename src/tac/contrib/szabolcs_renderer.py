@@ -466,6 +466,78 @@ def build_szabolcs_renderer(
     )
 
 
+# ── SZv1 binary loader (Phase 2) ───────────────────────────────────────────
+
+
+def load_szabolcs_renderer(
+    data: "bytes | str | object",
+    device: str | torch.device = "cpu",
+) -> SzabolcsRenderer:
+    """Inflate a SZv1 binary into a ready-to-run ``SzabolcsRenderer``.
+
+    Args:
+        data: Either raw SZv1 bytes (as produced by
+            ``pack_szabolcs_archive``) or a path to a SZv1 file on disk.
+        device: Target device for the loaded model (default CPU; the inflate
+            wrapper passes the inflate-time device).
+
+    Returns:
+        A ``SzabolcsRenderer`` in eval mode with all weights restored from
+        the block-FP-packed payload. No scorers are loaded — the szabolcs
+        renderer reconstructs class probability maps from luma via the fixed
+        Gaussian LUT, so strict-scorer-rule is satisfied trivially.
+
+    The runtime banner printed by this loader (``[szabolcs] inflated …``) is
+    used by the inflate dispatcher to tag the score lane.
+    """
+    # Imported lazily so that the szabolcs_renderer module remains importable
+    # when only the architecture is needed (e.g. unit tests that don't touch
+    # the archive packer).
+    from tac.szabolcs_archive import unpack_szabolcs_archive
+
+    contents = unpack_szabolcs_archive(data)
+    cfg = contents.config
+
+    model = SzabolcsRenderer(
+        hidden=int(cfg["hidden"]),
+        block_hidden=int(cfg.get("block_hidden") or cfg["hidden"]),
+        num_blocks=int(cfg["num_blocks"]),
+        max_frame_index=int(cfg["max_frame_index"]),
+        affine_max_zoom_delta=float(cfg.get("affine_max_zoom_delta", 0.12)),
+        affine_max_aspect_delta=float(cfg.get("affine_max_aspect_delta", 0.03)),
+        affine_max_shear=float(cfg.get("affine_max_shear", 0.03)),
+        affine_max_translation=float(cfg.get("affine_max_translation", 0.08)),
+        latent_input_scale=float(cfg.get("latent_input_scale", 1.0)),
+        shared_latent_channels=int(cfg.get("shared_latent_channels", 3)),
+        shared_latent_height=int(cfg.get("shared_latent_height", 30)),
+        shared_latent_width=int(cfg.get("shared_latent_width", 40)),
+        latent_canvas_scale=float(cfg.get("latent_canvas_scale", 1.25)),
+        num_classes=int(cfg.get("num_classes", 5)),
+    )
+    missing, unexpected = model.load_state_dict(contents.state_dict, strict=False)
+    if missing or unexpected:
+        # We tolerate a handful of "extra" keys (none expected today) but
+        # missing keys are a hard error: the renderer would silently zero-init.
+        if missing:
+            raise RuntimeError(
+                f"load_szabolcs_renderer: SZv1 state_dict missing keys "
+                f"{sorted(missing)[:8]} — refusing to inflate a partially "
+                f"initialized renderer."
+            )
+    model = model.eval().to(device)
+    for p in model.parameters():
+        p.requires_grad_(False)
+
+    print(
+        f"[szabolcs] inflated SZv1 renderer "
+        f"({contents.header.get('param_count', 'n/a')} params, "
+        f"packed_bytes={contents.header.get('tarxz_nbytes', 'n/a')}, "
+        f"predicted_band={contents.header.get('predicted_band')})",
+        flush=True,
+    )
+    return model
+
+
 __all__ = [
     "CAMERA_SIZE",
     "SEGMAP_INPUT_SIZE",
@@ -477,4 +549,5 @@ __all__ = [
     "create_gaussian_softmax_lut",
     "encode_luma_to_probability_map",
     "build_szabolcs_renderer",
+    "load_szabolcs_renderer",
 ]
