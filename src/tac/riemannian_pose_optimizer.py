@@ -67,7 +67,11 @@ from typing import Iterable
 import torch
 from torch.optim.optimizer import Optimizer
 
-from .se3 import batched_geodesic_step_axis_angle
+from .se3 import (
+    batched_geodesic_step_axis_angle,
+    inverse_left_jacobian_so3,
+    mark_tangent_as_lie_algebra,
+)
 
 
 # ──────────────────────────────────────────────────────────────────────────
@@ -176,16 +180,30 @@ class RiemannianSGD(Optimizer):
                 # The descent direction is -grad, so we pass step = -lr to
                 # the batched geodesic helper.
                 grad_omega = grad[..., 0:3]
-                grad_t = grad[..., 3:6]
+                grad_t_cartesian = grad[..., 3:6]
 
                 omega_current = param[..., 0:3]
                 t_current = param[..., 3:6]
+
+                # Round 14 finding 2 (R15) — project the Cartesian
+                # translation gradient through ``J_l(ω)^-1`` so the
+                # increment lives in se(3) coordinates, matching the
+                # Sola §4.5 retraction convention that
+                # ``batched_geodesic_step_axis_angle`` applies. Without
+                # this projection the batched helper composes two J_l's
+                # and silently mis-updates the translation. Mirrors the
+                # per-element ``riemannian_gradient_se3`` projection.
+                Jl_inv = inverse_left_jacobian_so3(omega_current)  # (..., 3, 3)
+                grad_v = (Jl_inv @ grad_t_cartesian.unsqueeze(-1)).squeeze(-1)
+                # Stamp the Lie-algebra sentinel so the batched helper's
+                # contract check accepts the tangent without raising.
+                mark_tangent_as_lie_algebra(grad_v)
 
                 omega_new, t_new = batched_geodesic_step_axis_angle(
                     omega_current,
                     t_current,
                     grad_omega,
-                    grad_t,
+                    grad_v,
                     step_size=-lr,
                 )
 

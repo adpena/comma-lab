@@ -88,6 +88,12 @@ dev = [
     "pytest-timeout>=2.0",
     "hypothesis>=6.0",
     "ruff>=0.4",
+    # Round 14 finding 1 (R15): src/tac/tests/test_se3.py uses
+    # scipy.spatial.transform.Rotation as the golden Rodrigues reference.
+    # Without it test collection hard-crashes on every remote (Vast.ai,
+    # Kaggle, Modal, CI). Pinning scipy>=1.10 because earlier versions
+    # have a Rotation API that differs subtly from what the test asserts.
+    "scipy>=1.10",
 ]
 
 [project.scripts]

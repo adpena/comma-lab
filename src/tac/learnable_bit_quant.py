@@ -614,6 +614,26 @@ def _zero_on_device(device: torch.device | None = None) -> torch.Tensor:
     return torch.zeros((), device=device)
 
 
+def _infer_model_device(model: nn.Module) -> torch.device | None:
+    """Best-effort inference of the device a model lives on.
+
+    Round 14 finding 3 (R15): the no-layer early-exit branches in
+    :func:`renderer_total_learnable_weight_bits` and
+    :func:`compute_learnable_bit_rate_penalty` need to return a zero
+    tensor on the SAME device as the caller's loss. When the model
+    has no learnable-bit layers we cannot read ``raw.device``, so we
+    walk the model's parameters / buffers and return the first device
+    we find. Returns ``None`` for an empty model (e.g. a freshly
+    constructed ``nn.Sequential()``), in which case
+    :func:`_zero_on_device` falls back to the default CPU device.
+    """
+    for param in model.parameters():
+        return param.device
+    for buf in model.buffers():
+        return buf.device
+    return None
+
+
 def renderer_total_learnable_weight_bits(model: nn.Module) -> torch.Tensor:
     """Differentiable sum of bits across every learnable-bit layer.
 
@@ -621,10 +641,17 @@ def renderer_total_learnable_weight_bits(model: nn.Module) -> torch.Tensor:
     by falling back through ``_zero_on_device``. Previously this returned
     ``torch.tensor(0.0)`` (CPU) which crashed any downstream
     ``loss + total`` on CUDA models.
+
+    Round 14 finding 3 (R15): the no-layer early-exit now infers the
+    device from the FIRST parameter / buffer of ``model`` (best-effort)
+    so a model with zero learnable-bit layers but on CUDA does not
+    crash on ``cuda_loss + cpu_zero``. If the model has neither
+    parameters nor buffers (e.g. a freshly-instantiated empty
+    ``nn.Sequential()``) we fall back to the default CPU device.
     """
     layers = list_learnable_bit_layers(model)
     if not layers:
-        return _zero_on_device(None)
+        return _zero_on_device(_infer_model_device(model))
     device = next(iter(layers))[1].bit_depth.raw.device
     total = _zero_on_device(device)
     for _name, layer in layers:
@@ -833,12 +860,20 @@ def compute_learnable_bit_rate_penalty(
     legacy float-multiplier path still requires an explicit non-None
     target — there is no controller to fall back to in that case.
 
-    Round 13 (C-2) — the no-layer early-exit now uses
-    ``_zero_on_device(None)`` so callers can still ``loss + penalty`` on
-    a model that happens to have no learnable-bit layers (the caller
-    will move the zero to the loss device implicitly via PyTorch's CPU
-    promotion rules), and the layered path uses the layer's actual
+    Round 13 (C-2) — the layered path uses the layer's actual
     ``raw.device`` so CUDA training does not raise a device-mismatch.
+
+    Round 14 finding 3 (R15) — the no-layer early-exit now ALSO infers
+    the device from the FIRST parameter / buffer of ``model`` (via
+    :func:`_infer_model_device`), so a CUDA caller with a zero-layer
+    model does not crash on ``cuda_loss + cpu_zero``. PyTorch does
+    NOT silently promote across devices for binary ops (only across
+    dtypes), so the previous ``_zero_on_device(None)`` early-exit
+    would have raised a "Expected all tensors to be on the same
+    device" error the moment a model with zero learnable-bit layers
+    was on CUDA — which is the canonical first-test-on-GPU
+    configuration. Round 13 fixed the layered path; Round 14
+    finding 3 closes the no-layer gap.
 
     Returns 0 (zero-dim tensor) when the model has no learnable-bit
     layers, so callers can ``loss + compute_learnable_bit_rate_penalty(...)``
@@ -846,7 +881,11 @@ def compute_learnable_bit_rate_penalty(
     """
     layers = list_learnable_bit_layers(model)
     if not layers:
-        return _zero_on_device(None)
+        # Round 14 finding 3 (R15): infer device from the first
+        # parameter/buffer of ``model`` so a CUDA caller doesn't crash
+        # on ``cuda_loss + cpu_zero``. Mirrors the same fix applied to
+        # ``renderer_total_learnable_weight_bits``.
+        return _zero_on_device(_infer_model_device(model))
     device = next(iter(layers))[1].bit_depth.raw.device
     total_bits = _zero_on_device(device)
     total_weights = 0

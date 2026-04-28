@@ -525,6 +525,12 @@ def test_batched_geodesic_step_matches_per_element():
     grad_t = torch.randn(N, 3, dtype=torch.float64) * 0.1
     step = -0.05
 
+    # Round 14 finding 2 (R15): the batched helper now requires opt-in
+    # (sentinel attribute or _lie_algebra_assumed=True) to consume a
+    # tangent. We stamp the sentinel here because the test constructs
+    # ``grad_t`` synthetically and is free to declare it lives in
+    # Lie-algebra coordinates.
+    mark_tangent_as_lie_algebra(grad_t)
     omega_new_b, t_new_b = batched_geodesic_step_axis_angle(
         omega_b, t_b, grad_omega, grad_t, step
     )
@@ -544,11 +550,100 @@ def test_batched_geodesic_step_matches_per_element():
 
 
 def test_batched_geodesic_step_rejects_shape_mismatch():
+    grad_t = torch.zeros(2, 3)
+    mark_tangent_as_lie_algebra(grad_t)
     with pytest.raises(ValueError):
         batched_geodesic_step_axis_angle(
             torch.zeros(2, 3), torch.zeros(2, 3), torch.zeros(3, 3),
-            torch.zeros(2, 3), -0.1,
+            grad_t, -0.1,
         )
+
+
+# ──────────────────────────────────────────────────────────────────────────
+# Round 14 finding 2 (R15) — batched_geodesic_step contract enforcement
+# ──────────────────────────────────────────────────────────────────────────
+
+
+def test_round15_finding2_batched_geodesic_step_refuses_cartesian_input():
+    """R14-2 regression: feeding ``batched_geodesic_step_axis_angle`` a
+    raw Cartesian translation gradient (no sentinel attribute, no
+    ``_lie_algebra_assumed=True`` flag) must now raise ``RuntimeError``.
+    Previously the batched hot path silently consumed Cartesian
+    translation gradients and mis-updated the translation by composing
+    two ``J_l``'s. The per-element ``geodesic_step`` already enforced
+    this via R12-I-2; this regression test pins the same contract on
+    the batched helper.
+    """
+    omega_b = torch.zeros(3, 3, dtype=torch.float64)
+    t_b = torch.zeros(3, 3, dtype=torch.float64)
+    grad_omega = torch.zeros(3, 3, dtype=torch.float64)
+    grad_t_cartesian = torch.tensor(
+        [[0.1, 0.2, 0.3], [0.4, 0.5, 0.6], [0.7, 0.8, 0.9]],
+        dtype=torch.float64,
+    )
+    # No sentinel stamped, no _lie_algebra_assumed flag → must raise.
+    with pytest.raises(RuntimeError, match="Lie-algebra"):
+        batched_geodesic_step_axis_angle(
+            omega_b, t_b, grad_omega, grad_t_cartesian, step_size=-0.1,
+        )
+
+
+def test_round15_finding2_batched_geodesic_step_accepts_lie_algebra():
+    """R14-2 contract: the batched helper accepts a tangent that has
+    been stamped via ``mark_tangent_as_lie_algebra`` OR was opted in
+    via the explicit ``_lie_algebra_assumed=True`` keyword flag.
+    """
+    omega_b = torch.zeros(3, 3, dtype=torch.float64)
+    t_b = torch.zeros(3, 3, dtype=torch.float64)
+    grad_omega = torch.zeros(3, 3, dtype=torch.float64)
+    grad_v = torch.tensor(
+        [[0.01, 0.02, 0.03], [0.04, 0.05, 0.06], [0.07, 0.08, 0.09]],
+        dtype=torch.float64,
+    )
+
+    # (a) Sentinel-stamped path mirrors RiemannianSGD hot path.
+    grad_v_stamped = grad_v.clone()
+    mark_tangent_as_lie_algebra(grad_v_stamped)
+    omega_new_a, t_new_a = batched_geodesic_step_axis_angle(
+        omega_b, t_b, grad_omega, grad_v_stamped, step_size=-0.1,
+    )
+    assert omega_new_a.shape == omega_b.shape
+    assert t_new_a.shape == t_b.shape
+
+    # (b) Explicit keyword-flag path.
+    omega_new_b, t_new_b = batched_geodesic_step_axis_angle(
+        omega_b, t_b, grad_omega, grad_v, step_size=-0.1,
+        _lie_algebra_assumed=True,
+    )
+    # Both opt-in paths must produce IDENTICAL output (the runtime
+    # check is the only thing that differs between them).
+    assert torch.allclose(omega_new_a, omega_new_b, atol=1e-15)
+    assert torch.allclose(t_new_a, t_new_b, atol=1e-15)
+
+
+def test_round15_finding2_riemannian_sgd_does_not_raise():
+    """R14-2 plumbing test: ``RiemannianSGD.step`` must project the
+    Cartesian translation gradient through ``inverse_left_jacobian_so3``
+    and stamp the sentinel BEFORE calling the batched helper, otherwise
+    the contract check fires. This regression pins the optimiser
+    integration so a future refactor cannot accidentally drop the
+    projection (which would silently mis-update the translation again).
+    """
+    from tac.riemannian_pose_optimizer import RiemannianSGD
+
+    pose = torch.zeros(2, 6, dtype=torch.float64, requires_grad=True)
+    # Synthesise a non-trivial Cartesian translation gradient.
+    pose.grad = torch.tensor(
+        [[0.0, 0.0, 0.0, 0.1, 0.2, 0.3],
+         [0.0, 0.0, 0.0, 0.4, 0.5, 0.6]],
+        dtype=torch.float64,
+    )
+    opt = RiemannianSGD([pose], lr=0.01)
+    # Must NOT raise — the optimiser is responsible for projecting +
+    # stamping before invoking the batched helper.
+    opt.step()
+    # And the parameter must have been updated (translation moved).
+    assert not torch.allclose(pose[..., 3:6], torch.zeros_like(pose[..., 3:6]))
 
 
 # ──────────────────────────────────────────────────────────────────────────

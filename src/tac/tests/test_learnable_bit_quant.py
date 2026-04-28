@@ -479,3 +479,82 @@ def test_r13_c2_total_bits_no_layers_returns_zero_tensor():
     total = renderer_total_learnable_weight_bits(plain_model)
     assert total.dim() == 0
     assert total.item() == 0.0
+
+
+# ── Round 14 finding 3 (R15) — zero-layer model device inference ────────
+
+
+def test_round15_finding3_zero_layer_total_bits_inherits_model_device():
+    """R14-3 regression: a model with ZERO LearnableBitConv2d layers
+    that has been moved to a non-CPU device must still have its
+    ``renderer_total_learnable_weight_bits`` return a tensor on the
+    model's device — otherwise ``loss_on_X + total_bits`` raises
+    a device-mismatch crash. Round 13 fixed this for the LAYERED
+    path; Round 14 closes the no-layer early-exit gap.
+    """
+    plain_model = nn.Sequential(nn.Linear(4, 4)).to(torch.device("meta"))
+    total = renderer_total_learnable_weight_bits(plain_model)
+    assert total.device.type == "meta", (
+        f"zero-layer total_bits should follow model device; got "
+        f"{total.device}"
+    )
+
+
+def test_round15_finding3_zero_layer_rate_penalty_inherits_model_device():
+    """R14-3 regression: same as above but for
+    ``compute_learnable_bit_rate_penalty`` — the no-layer early-exit
+    must return a tensor on the model's device so a CUDA-resident
+    model doesn't crash on ``cuda_loss + cpu_zero``.
+    """
+    plain_model = nn.Sequential(nn.Linear(4, 4)).to(torch.device("meta"))
+    pen = compute_learnable_bit_rate_penalty(
+        plain_model, target_bits_per_weight=2.0, lambda_rate=1.0,
+    )
+    assert pen.device.type == "meta", (
+        f"zero-layer rate penalty should follow model device; got "
+        f"{pen.device}"
+    )
+
+
+def test_round15_finding3_completely_empty_model_falls_back_to_cpu():
+    """R14-3 contract: a model with NO parameters AND NO buffers
+    (e.g. a freshly-constructed empty Sequential) cannot have its
+    device inferred — fall back to the default CPU device rather
+    than raising. The caller's downstream binary op may still
+    crash, but at least the helper itself does not.
+    """
+    empty_model = nn.Sequential()
+    total = renderer_total_learnable_weight_bits(empty_model)
+    assert total.dim() == 0
+    assert total.item() == 0.0
+    # Default device — for a typical workstation this is CPU.
+    pen = compute_learnable_bit_rate_penalty(
+        empty_model, target_bits_per_weight=2.0, lambda_rate=1.0,
+    )
+    assert pen.dim() == 0
+    assert pen.item() == 0.0
+
+
+@pytest.mark.skipif(
+    not torch.cuda.is_available(),
+    reason="CUDA-only regression test for the device-mismatch crash.",
+)
+def test_round15_finding3_zero_layer_model_on_cuda_no_device_mismatch():
+    """R14-3 regression: the actual real-CUDA path. A zero-layer model
+    on CUDA, plus a CUDA loss, plus the rate penalty — must NOT raise
+    a device-mismatch. This is the user-facing crash that finding 3
+    catches: under the previous code ``cuda_loss + _zero_on_device(None)``
+    crashed because the zero was on CPU.
+    """
+    cuda = torch.device("cuda")
+    plain_model = nn.Sequential(nn.Linear(4, 4)).to(cuda)
+    cuda_loss = torch.tensor(1.0, device=cuda)
+    total = renderer_total_learnable_weight_bits(plain_model)
+    pen = compute_learnable_bit_rate_penalty(
+        plain_model, target_bits_per_weight=2.0, lambda_rate=1.0,
+    )
+    # The load-bearing assertion: this addition must not crash.
+    out_total = cuda_loss + total
+    out_pen = cuda_loss + pen
+    assert out_total.device == cuda
+    assert out_pen.device == cuda

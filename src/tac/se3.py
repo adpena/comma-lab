@@ -721,6 +721,8 @@ def batched_geodesic_step_axis_angle(
     grad_omega: torch.Tensor,
     grad_t: torch.Tensor,
     step_size: float,
+    *,
+    _lie_algebra_assumed: bool = False,
 ) -> Tuple[torch.Tensor, torch.Tensor]:
     """Vectorised geodesic step for a batch of SE(3) elements.
 
@@ -728,8 +730,33 @@ def batched_geodesic_step_axis_angle(
     (axis-angle / translation). This avoids the Python-level loop inside
     the optimizer for performance.
 
-    Returns updated ``(omega, t)`` tensors with the same shape as the
-    inputs.
+    Round 14 finding 2 (R15) — CONTRACT: ``grad_t`` MUST be the
+    Lie-algebra translation coordinate ``v`` (the post-``J_l(ω)^-1``
+    translation gradient), NOT the raw Cartesian translation gradient
+    ``∂L/∂t``. The internal update applies ``J_l(δω)`` to the increment,
+    matching the SE(3) retraction convention (Sola 2018 §4.5 Eq.173).
+    Feeding a raw Cartesian translation gradient here silently
+    mis-updates the translation by composing two J_l's instead of one
+    — the per-element ``geodesic_step`` already enforces this via a
+    sentinel attribute (Round 13 R12-I-2); the batched hot path now
+    enforces the same contract.
+
+    Two ways to satisfy the contract:
+
+    * (a) Stamp the Lie-algebra sentinel on ``grad_t`` (or on the
+      tuple) via :func:`mark_tangent_as_lie_algebra` BEFORE calling.
+      This is the canonical path for the optimiser hot path
+      (:class:`tac.riemannian_pose_optimizer.RiemannianSGD`), which
+      pre-projects each parameter's translation gradient through
+      ``inverse_left_jacobian_so3`` and stamps the result.
+    * (b) Pass ``_lie_algebra_assumed=True`` as an explicit keyword
+      flag. This is for callers that have a structural reason to
+      know the increment is in Lie-algebra coordinates but cannot
+      stamp attributes on the tensors (e.g. tensors produced by an
+      autograd graph that disallows ``__setattr__``). The flag
+      makes the assumption auditable in code review.
+
+    Lacking both raises ``RuntimeError`` to fail loud, not silent.
     """
     if omega_batch.shape != grad_omega.shape:
         raise ValueError(
@@ -744,6 +771,31 @@ def batched_geodesic_step_axis_angle(
     if omega_batch.shape[-1] != 3:
         raise ValueError(
             f"last dim must be 3, got {tuple(omega_batch.shape)}"
+        )
+
+    # Round 14 finding 2 (R15): runtime check — refuse to silently consume
+    # a Cartesian translation gradient. Mirrors the per-element
+    # ``geodesic_step`` sentinel pattern (R12-I-2).
+    _validated = (
+        _lie_algebra_assumed
+        or getattr(grad_t, _LIE_ALGEBRA_SENTINEL, False)
+    )
+    if not _validated:
+        raise RuntimeError(
+            "batched_geodesic_step_axis_angle: grad_t must be the "
+            "Lie-algebra translation coordinate `v` (post-J_l^-1), NOT "
+            "the raw Cartesian gradient ∂L/∂t. Feeding a raw Cartesian "
+            "gradient here mis-updates the translation by composing two "
+            "J_l's. Either:\n"
+            "  (a) project the Euclidean gradient through "
+            "`inverse_left_jacobian_so3(omega) @ grad_t_cartesian` first "
+            "and stamp the result via `mark_tangent_as_lie_algebra(...)`, "
+            "OR\n"
+            "  (b) pass `_lie_algebra_assumed=True` as a keyword flag if "
+            "the caller has a structural reason to know the increment is "
+            "already in Lie-algebra coordinates. This contract was added "
+            "in Round 14 finding 2 (R15) to close the gap that R12-I-2 "
+            "left in the batched optimiser hot path."
         )
 
     R_current = exp_map_so3(omega_batch)         # (..., 3, 3)
