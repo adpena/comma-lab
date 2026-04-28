@@ -196,6 +196,10 @@ with zipfile.ZipFile(dst, 'w', zipfile.ZIP_DEFLATED, compresslevel=9) as z:
         z.write(p, arcname=n)
 print(f'archive {dst}: {os.path.getsize(dst)} bytes')
 "
+ARCHIVE_BYTES=$(stat -c%s "$ARCHIVE" 2>/dev/null || stat -f%z "$ARCHIVE")
+[ "$ARCHIVE_BYTES" -gt 0 ] || { echo "FATAL: archive empty" >&2; exit 1; }
+[ "$ARCHIVE_BYTES" -lt 5000000 ] || { echo "FATAL: archive >5MB ($ARCHIVE_BYTES) — composition bug" >&2; exit 1; }
+log "archive size guard: $ARCHIVE_BYTES bytes (within sanity bounds)"
 
 # Stage 5: contest-CUDA auth eval on the EXACT archive bytes submitted.
 # CLAUDE.md "Auth eval EVERYWHERE" non-negotiable + "Auth eval measurement"
