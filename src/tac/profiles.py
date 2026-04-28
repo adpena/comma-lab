@@ -2757,6 +2757,50 @@ J_JBL_DILATED_H64 = {
 }
 
 
+# ── LANE MAE-V: Masked Autoencoder Variant on input mask patches ──────────
+# Council 2026-04-28 (Cosmos research synthesis,
+# .omx/research/jack_skunkworks_segnet_rate_research_20260428.md).
+#
+# Anchored on Lane G v3 1.05 [contest-CUDA] (DILATED_H64_HALF_FRAME_V3_ANNEALED_KLDISTILL).
+# Drops in `MAEMaskAugmenter` (src/tac/mae_mask_aug.py) BEFORE the renderer
+# during training: a fraction of input mask patches are replaced with a
+# Gumbel-softmax sample drawn from a learnable categorical "mask token"
+# (5-class). This forces the renderer to reconstruct missing patches from
+# context — a denoising / sparser-representation pressure analogous to He
+# et al. 2021 (MAE for vision transformers) but adapted to our 5-class
+# categorical mask vocabulary.
+#
+# Eval-mode is a passthrough (the augmenter only fires under .train()) so
+# the inference distribution remains exactly what the contest scorer sees.
+#
+# Hyperparameters (per the module docstring + Cosmos research):
+#   * mask_ratio = 0.25 (vs MAE's 0.75 — our renderer is small, denoising
+#     signal only, not aggressive reconstruction)
+#   * patch_size = 16 (matches typical MAE patch grid; 384×512 mask gives
+#     24×32 = 768 patches per frame, ample sampling diversity)
+#
+# Predicted band [0.85, 1.10] per Cosmos synthesis. Composes with Lane SAUG-V2
+# (orthogonal: SAUG perturbs renderer-input numerics; MAE-V perturbs mask
+# patch occupancy). Composes with Lane J-JBL (orthogonal: JBL is a loss
+# family, MAE-V is an input-distribution augmentation).
+#
+# CLAUDE.md compliance:
+#   * eval_roundtrip remains True (inherited from Lane G v3 anchor).
+#   * No scorer at inflate (augmentation is compress-time only, eval mode
+#     is a strict passthrough).
+#   * Auth eval at end (driven by remote_lane_mae_v.sh Stage 4 contest_auth_eval).
+MAE_V_DILATED_H64 = {
+    **DILATED_H64_HALF_FRAME_V3_ANNEALED_KLDISTILL,
+    # Lane MAE-V switches: MAE patch augmentation on training input masks.
+    "use_mae_mask_aug": True,
+    "mae_mask_ratio": 0.25,
+    "mae_patch_size": 16,
+    # Different seed so MAE-V and Lane G v3 explore different RNG basins
+    # (same convention as Lane J-JBL seed=47 vs Lane G v3 seed=43).
+    "seed": 49,
+}
+
+
 # ── LANE V: Quantizr-replica 88K half-frame, joint-trained from epoch 0 ──
 # Council 2026-04-27. Lane D tried to RETROFIT half-frame onto the dilated-h64
 # baseline (mask_half_sim_prob=0.5 mid-train) and FAILED — joint training
@@ -3606,6 +3650,11 @@ PROFILES = {
     # Smoothing distillation, anchored on Lane G v3. Predicted band
     # [0.92, 1.02] per .omx/research/jack_skunkworks_segnet_rate_research_20260428.md §S1.
     "j_jbl_dilated_h64": J_JBL_DILATED_H64,
+    # Lane MAE-V (Cosmos research synthesis): Masked Autoencoder Variant
+    # — random patch masking with learnable Gumbel-softmax mask token
+    # during training only (eval mode is a strict passthrough). Anchored
+    # on Lane G v3 1.05 [contest-CUDA]. Predicted band [0.85, 1.10].
+    "mae_v_dilated_h64": MAE_V_DILATED_H64,
     # Lane V: Quantizr-replica (88K params, DSConv + FiLM + KL distill) with
     # mask_half_sim_prob=1.0 (always-on warp expansion) joint-trained from
     # epoch 0. The biggest-swing council bet — vs Lane D's 0.5 retrofit which

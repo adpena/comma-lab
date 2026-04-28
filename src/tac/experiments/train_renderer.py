@@ -80,6 +80,10 @@ from tac.self_augmentation_v2 import (  # noqa: E402
     HighSigmaStrategyConfig,
     apply_sigma_noise_to_input,
 )
+from tac.mae_mask_aug import (  # noqa: E402
+    MAEMaskAugConfig,
+    MAEMaskAugmenter,
+)
 from tac.contrib.wavelet_renderer import build_wavelet_renderer  # noqa: E402
 from tac.scorer import detect_device, load_scorers  # noqa: E402
 from tac.training import EMA  # noqa: E402
@@ -263,6 +267,21 @@ def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
     p.add_argument("--saug-v2-normal-sigma-max", type=float, default=None,
                    help="SAUG-V2 normal-sigma log-uniform upper bound "
                         "(default 80.0).")
+
+    # Lane MAE-V: Masked Autoencoder Variant on input mask patches. Drops a
+    # MAEMaskAugmenter (src/tac/mae_mask_aug.py) into the per-step pair
+    # construction so a fraction of mask patches are replaced by a Gumbel-
+    # softmax sample from a learnable categorical mask token. Eval-mode is
+    # a passthrough, so the inference distribution matches what the contest
+    # scorer sees. Predicted band [0.85, 1.10] per Cosmos research synthesis.
+    p.add_argument("--use-mae-mask-aug", action="store_true", default=None,
+                   help="Lane MAE-V: enable MAE-style random patch masking on "
+                        "input masks during training (eval is passthrough).")
+    p.add_argument("--mae-mask-ratio", type=float, default=None,
+                   help="MAE-V probability per patch of being replaced by the "
+                        "learnable mask token (default 0.25).")
+    p.add_argument("--mae-patch-size", type=int, default=None,
+                   help="MAE-V patch size in pixels (default 16).")
 
     # Half-frame mask simulation: replace mask_t with inverse-warp(mask_t1)
     # so the renderer learns the same mask distribution it sees at inflate
@@ -753,6 +772,19 @@ def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
         getattr(args, "saug_v2_normal_sigma_max", None),
         "saug_v2_normal_sigma_max", 80.0,
     )
+    # Lane MAE-V resolvers (mirror SAUG-V2 wiring pattern).
+    args.use_mae_mask_aug = _resolve(
+        getattr(args, "use_mae_mask_aug", None),
+        "use_mae_mask_aug", False,
+    )
+    args.mae_mask_ratio = _resolve(
+        getattr(args, "mae_mask_ratio", None),
+        "mae_mask_ratio", 0.25,
+    )
+    args.mae_patch_size = _resolve(
+        getattr(args, "mae_patch_size", None),
+        "mae_patch_size", 16,
+    )
     # Lane S: SC codec resolution (2026-04-27)
     args.use_self_compress_codec = _resolve(
         getattr(args, "use_self_compress_codec", None),
@@ -848,10 +880,20 @@ def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
     # opts in to "jbl".
     args.loss_mode = _resolve(getattr(args, "loss_mode", None),
                               "loss_mode", "standard")
-    if args.loss_mode not in ("standard", "kl", "jbl"):
+    # 2026-04-28 widening: the original Lane J-JBL validator only allowed
+    # ('standard','kl','jbl') which crashed every Lane D / Lane G v3 / Lane V /
+    # Lane MAE-V profile (all of which inherit loss_mode='focal_ste' from
+    # DILATED_H64_HALF_FRAME). The historical valid set in tac.cli line 112
+    # is the source of truth — keep it in sync here.
+    _VALID_LOSS_MODES = (
+        "standard", "kl", "jbl",
+        "temperature", "focal_ste", "kl_distill", "pcgrad",
+        "feature_match",
+    )
+    if args.loss_mode not in _VALID_LOSS_MODES:
         raise SystemExit(
             f"FATAL: --loss-mode={args.loss_mode!r} unrecognised; "
-            "valid: 'standard', 'kl', 'jbl'."
+            f"valid: {_VALID_LOSS_MODES}."
         )
     args.boundary_weight = _resolve(getattr(args, "boundary_weight", None),
                                      "boundary_weight", 3.0)
@@ -1789,6 +1831,30 @@ def train(args: argparse.Namespace):
             f"{saug_v2_config.high_sigma_max}]"
         )
 
+    # Lane MAE-V: MAEMaskAugmenter on input mask patches (training-only).
+    # Eval mode is a strict passthrough — see MAEMaskAugmenter.forward —
+    # so the inference distribution exactly matches the contest scorer's.
+    mae_mask_augmenter = None
+    if getattr(args, "use_mae_mask_aug", False):
+        mae_cfg = MAEMaskAugConfig(
+            mask_ratio=float(args.mae_mask_ratio),
+            patch_size=int(args.mae_patch_size),
+            num_classes=5,
+            enabled=True,
+        )
+        mae_generator = _saug_v2_generator_for_device(
+            device, int(args.seed) + 30_028,
+        )
+        mae_mask_augmenter = MAEMaskAugmenter(
+            mae_cfg, generator=mae_generator,
+        ).to(device)
+        mae_mask_augmenter.train()
+        print(
+            "[lane-mae-v] MAEMaskAugmenter ACTIVE: "
+            f"mask_ratio={mae_cfg.mask_ratio} "
+            f"patch_size={mae_cfg.patch_size}"
+        )
+
     # Load scorer models (respect TAC_MODELS_DIR env var for Modal/remote deploys)
     _models_dir = Path(_os.environ.get("TAC_MODELS_DIR", str(_upstream / "models")))
     posenet_path = _models_dir / "posenet.safetensors"
@@ -2665,6 +2731,14 @@ def train(args: argparse.Namespace):
                 )
                 mask_t = _apply_saug_v2_to_renderer_input(mask_t, saug_v2_sigmas)
                 mask_t1 = _apply_saug_v2_to_renderer_input(mask_t1, saug_v2_sigmas)
+
+            # Lane MAE-V: train-only patch masking with learnable token.
+            # Eval-mode passthrough is enforced inside the augmenter.
+            # MAEMaskAugmenter expects (B, H, W) long; both mask_t and mask_t1
+            # already have that shape after mask_pair_from_index.
+            if mae_mask_augmenter is not None:
+                mask_t, _ = mae_mask_augmenter(mask_t)
+                mask_t1, _ = mae_mask_augmenter(mask_t1)
 
             # Forward: render pair from masks. Only AsymmetricPairGenerator
             # accepts ego_flow (see renderer.py:1035-1100); the legacy
