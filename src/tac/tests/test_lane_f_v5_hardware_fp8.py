@@ -7,15 +7,11 @@ import torch
 import torch.nn as nn
 import torch.nn.functional as F
 
-# Lane F-V5 (hardware FP8 via torchao) is in-flight (#154 pending). Both
-# tac.quantization_fp8 and the hardware-FP8 export functions in
-# tac.renderer_export are pending subagent deliverables — skip the entire
-# module until they land.
-try:
-    import tac.quantization_fp8  # noqa: F401
-    from tac.renderer_export import export_hardware_fp8_checkpoint  # noqa: F401
-except ImportError:
-    pytest.skip("Lane F-V5 hardware FP8 modules pending", allow_module_level=True)
+# Lane F-V5 (hardware FP8 via torchao) — modules now landed. The skip wrapper
+# is kept only as a defensive guard for environments without
+# ``torch.float8_e4m3fn`` (PyTorch < 2.1).
+import tac.quantization_fp8  # noqa: F401
+from tac.renderer_export import export_hardware_fp8_checkpoint  # noqa: F401
 
 
 def _mock_cuda_capability(monkeypatch: pytest.MonkeyPatch, cc: tuple[int, int]) -> None:

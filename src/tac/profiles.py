@@ -66,6 +66,28 @@ PROVEN_BASELINE = {
     "accum_steps": 4,
 }
 
+EBR_DILATED_H64 = {
+    **PROVEN_BASELINE,
+    "use_entropy_bottleneck": True,
+    "eb_lambda": 0.01,
+    "eb_num_channels": 64,
+}
+
+T2_XPRED = {
+    **PROVEN_BASELINE,
+    "use_t2_xpred_loss": True,
+    "t2_xpred_sigma": 1.0,
+    "t2_xpred_weighting": "v",
+}
+
+T2_MASK = {
+    **PROVEN_BASELINE,
+    "use_t2_mask": True,
+    "t2_mask_p": 0.5,
+    "t2_mask_ratio": 0.15,
+    "t2_mask_apply_fraction": 0.4,
+}
+
 # Boundary-aware variant of proven_baseline (Trick 7: boundary retraining)
 # Same architecture and hyperparameters, but boundary pixels get 5x gradient.
 # This steers the model to allocate more correction capacity to class edges
@@ -151,6 +173,16 @@ PSD_STANDARD_ADAPTIVE = {
     "error_replay_every": 200,
     "eval_every": 5,
     "use_swa": True,
+}
+
+SAUG_V2_DILATED_H64 = {
+    **PROVEN_BASELINE,
+    "use_saug_v2": True,
+    "saug_v2_redraw_fraction": 0.05,
+    "saug_v2_high_sigma_min": 80.0,
+    "saug_v2_high_sigma_max": 2000.0,
+    "saug_v2_normal_sigma_min": 0.5,
+    "saug_v2_normal_sigma_max": 80.0,
 }
 
 # Pareto frontier explorer: PCGrad + MRS-adaptive weights
@@ -3451,15 +3483,54 @@ SELF_COMPRESS_RENDERER_FULL = {
     "deterministic": True,
 }
 
+WC_DILATED_H64 = {
+    **SELF_COMPRESS_RENDERER_FULL,
+    "pair_weights_path": "results/lane_wc/pair_weights.pt",
+}
+
+
+# ── Lane F-V5: Hardware FP8 (e4m3fn) on dilated-h64 ───────────────────────
+#
+# Lane F (FakeQuantFP4) regressed +0.44 vs baseline; FP4 is not hardware-
+# supported on RTX 4090 (CC 8.9 < Blackwell CC 10.0). Lane F-V5 swaps for
+# hardware-native FP8 (float8_e4m3fn) which IS supported on Ada/Lovelace.
+# Memory: project_lane_f_v2_fp4_architectural_bottleneck_20260427.
+#
+# qat_warmup_batches drives HardwareFP8Quantizer calibration (50 batches of
+# real activations before scales freeze).  loss_mode/quantization_mode are
+# the discriminating fields the test asserts on.
+
+F_V5_HARDWARE_FP8_DILATED_H64 = {
+    **DILATED_H64_HALF_FRAME,
+    # Lane F-V5 swaps the quantization story; everything else inherits the
+    # baseline dilated-h64 arch + Fridrich + KL distill recipe.
+    "loss_mode": "standard",
+    "quantization_mode": "hardware_fp8",
+    "qat_warmup_batches": 50,
+    # ``hidden`` here names the renderer hidden width (64) — the "h64" in the
+    # profile name. Distinct from ``motion_hidden`` (32) which is the motion
+    # predictor's stem width. Tests assert on ``hidden``.
+    "hidden": 64,
+    # FP4 codebook knobs are not used here; keep them off so train_renderer
+    # doesn't accidentally activate FakeQuantFP4 alongside FP8 calibration.
+    "fp4_codebook": "default",
+    "fp4_robust_scale": False,
+    "fp4_stochastic": False,
+}
+
 
 PROFILES = {
     "council_v1": COUNCIL_V1,
     "council_v2_adaptive": COUNCIL_V2_ADAPTIVE,
     "segnet_attack": SEGNET_ATTACK,
     "proven_baseline": PROVEN_BASELINE,
+    "ebr_dilated_h64": EBR_DILATED_H64,
+    "t2_xpred": T2_XPRED,
+    "t2_mask": T2_MASK,
     "h96_council": H96_COUNCIL,
     "smoke": SMOKE,
     "psd_standard_adaptive": PSD_STANDARD_ADAPTIVE,
+    "saug_v2_dilated_h64": SAUG_V2_DILATED_H64,
     "pareto_pcgrad": PARETO_PCGRAD,
     "extreme_posenet": EXTREME_POSENET,
     "extreme_segnet": EXTREME_SEGNET,
@@ -3629,6 +3700,11 @@ PROFILES = {
     # Lane S: Self-compressing renderer (Szabolcs 2301.13142 in renderer)
     "self_compress_renderer_smoke": SELF_COMPRESS_RENDERER_SMOKE,
     "self_compress_renderer_full": SELF_COMPRESS_RENDERER_FULL,
+    # Lane WC: Lane W-style per-pair weighting from independent SegNet
+    # feature geometry, not circular pair-loss difficulty.
+    "wc_dilated_h64": WC_DILATED_H64,
+    # Lane F-V5: hardware FP8 (e4m3fn) replacing simulated FP4
+    "f_v5_hardware_fp8_dilated_h64": F_V5_HARDWARE_FP8_DILATED_H64,
     # Technique 2: Entropy-coded archive (Shannon)
     "entropy_archive_smoke": ENTROPY_ARCHIVE_SMOKE,
     # Technique 3: Network-as-codec (SIREN video memorization)

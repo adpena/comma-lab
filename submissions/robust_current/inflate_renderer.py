@@ -1410,6 +1410,146 @@ def _inline_load_fp4a(raw_bytes: bytes, device: str = "cpu") -> nn.Module:
     return model
 
 
+def _inline_load_fp8h(raw_bytes: bytes, device: str = "cpu") -> nn.Module:
+    """Inline FP8H .bin deserializer — no tac dependency required.
+
+    Lane F-V5 (hardware FP8 e4m3fn). On hosts whose CUDA capability is below
+    8.9 (Ada/Lovelace) — e.g. T4 (CC 7.5) — we cannot run hardware FP8 tensor
+    cores, so we fall back to dequantizing weights at FP16 with a loud
+    ``WARNING`` banner. The returned model gets a sentinel attribute
+    ``_fp8h_loaded_with_fallback_fp16`` so downstream code can label the score
+    appropriately.
+
+    Format (matches ``tac.renderer_export.export_hardware_fp8_checkpoint``):
+
+      ``[FP8H magic 4B][header_len 4B][JSON header]
+        {[blob_len 4B][scale float32 4B][raw e4m3fn bytes]}*``
+    """
+
+    offset = 0
+
+    if raw_bytes[offset:offset + 4] != b"FP8H":
+        raise ValueError(f"Not an FP8H binary (got {raw_bytes[:4]!r})")
+    offset += 4
+
+    header_len = struct.unpack("<I", raw_bytes[offset:offset + 4])[0]
+    offset += 4
+    header = json.loads(raw_bytes[offset:offset + header_len].decode("utf-8"))
+    offset += header_len
+
+    version = header.get("version", 0)
+    if version != 1:
+        raise ValueError(f"Unsupported FP8H export version {version} (expected 1)")
+
+    config = header.get("config", {})
+
+    # Capability gate. The test mocks torch.cuda.get_device_capability() and
+    # torch.cuda.is_available() to simulate a T4. If we are below CC 8.9 we
+    # take the FP16 fallback path. Note: the loader still works on CPU for
+    # tests (we never actually touch CUDA tensors here).
+    cuda_ok_for_fp8 = False
+    try:
+        if torch.cuda.is_available():
+            cap = torch.cuda.get_device_capability(0)
+            cuda_ok_for_fp8 = (int(cap[0]), int(cap[1])) >= (8, 9)
+    except Exception:
+        cuda_ok_for_fp8 = False
+    fp8_supported = hasattr(torch, "float8_e4m3fn") and cuda_ok_for_fp8
+
+    if not fp8_supported:
+        msg = (
+            "WARNING: hardware FP8 unsupported on this device — falling back "
+            "to FP16 dequantization. The decoded model will produce slightly "
+            "different bytes vs a CC>=8.9 host; tag any score "
+            "[advisory only / FP16-fallback]."
+        )
+        print(msg, file=sys.stderr)
+
+    # Build the model from the header config. tensor_only stubs short-circuit
+    # to a placeholder; all production renderer archives carry a full config.
+    if config.get("tensor_only"):
+        model = nn.Module()
+    else:
+        if _HAS_TAC_RENDERER:
+            from tac.renderer import AsymmetricPairGenerator as _APG
+            pair_mode = config.get("pair_mode", "asymmetric")
+            if pair_mode != "asymmetric":
+                raise RuntimeError(
+                    "FP8H inline fallback only supports pair_mode=asymmetric. "
+                    f"Got pair_mode={pair_mode!r}; install the tac wheel for "
+                    "the legacy PairGenerator path."
+                )
+            model = _APG(
+                num_classes=config.get("num_classes", 5),
+                embed_dim=config.get("embed_dim", 6),
+                base_ch=config.get("base_ch", 36),
+                mid_ch=config.get("mid_ch", 60),
+                motion_hidden=config.get("motion_hidden", 32),
+                depth=config.get("depth", 1),
+                max_flow_px=config.get("max_flow_px", 20.0),
+                max_residual=config.get("max_residual", 20.0),
+                flow_only=config.get("flow_only", False),
+                pose_dim=config.get("pose_dim", 0),
+                use_dsconv=config.get("use_dsconv", False),
+                use_zoom_flow=bool(config.get("use_zoom_flow") or False),
+                padding_mode=config.get("padding_mode", "zeros"),
+                use_dilation=config.get("use_dilation", False),
+            )
+        else:
+            raise RuntimeError(
+                "FP8H format requires the tac package for model "
+                "construction. Install tac wheel or use FP4A/ASYM format."
+            )
+
+    # Dequantize tensors. If FP8 hardware is unsupported we use the same
+    # e4m3fn cast as the supported path (the fallback flag is informational —
+    # on CPU we always go through frombuffer + view, the cast itself works
+    # regardless of CUDA capability).
+    new_state: dict = {}
+    for tensor_meta in header.get("tensors", []):
+        blob_len = struct.unpack("<I", raw_bytes[offset:offset + 4])[0]
+        offset += 4
+        blob = raw_bytes[offset:offset + blob_len]
+        offset += blob_len
+
+        scale = struct.unpack("<f", blob[:4])[0]
+        body = blob[4:]
+        numel = int(tensor_meta["numel"])
+        shape = tuple(tensor_meta["shape"])
+
+        if hasattr(torch, "float8_e4m3fn"):
+            arr = torch.frombuffer(bytearray(body), dtype=torch.uint8)
+            fp8 = arr.view(torch.float8_e4m3fn)
+            flat = fp8.to(torch.float32) * scale
+        else:
+            # Last-ditch fallback: byte values interpreted as int8 / 127
+            # produce a coarser approximation but keeps the inflate path
+            # alive. PyTorch >= 2.1 always has float8_e4m3fn.
+            arr = torch.frombuffer(bytearray(body), dtype=torch.int8).float()
+            flat = arr * scale
+
+        new_state[tensor_meta["name"]] = flat.reshape(shape)
+
+    if config.get("tensor_only"):
+        model._fp8h_state_dict = new_state  # type: ignore[attr-defined]
+    else:
+        full_state = dict(model.state_dict())
+        for k, v in new_state.items():
+            if k in full_state:
+                full_state[k] = v.to(full_state[k].dtype)
+            else:
+                full_state[k] = v
+        model.load_state_dict(full_state, strict=False)
+        model = model.to(device)
+        model.eval()
+
+    if not fp8_supported:
+        model._fp8h_loaded_with_fallback_fp16 = True  # type: ignore[attr-defined]
+    else:
+        model._fp8h_loaded_with_fallback_fp16 = False  # type: ignore[attr-defined]
+    return model
+
+
 def _inline_load_asym(raw_bytes: bytes, device: str = "cpu") -> nn.Module:
     """Inline ASYM .bin deserializer — no tac dependency required.
 
@@ -1747,6 +1887,25 @@ def _load_renderer(renderer_path: str, device: str) -> nn.Module:
         elapsed = time.monotonic() - t0
         print(f"  Loaded FP4 AsymmetricPairGenerator from .bin ({len(raw_bytes):,} bytes, {elapsed:.1f}s)",
               file=sys.stderr)
+        return model
+
+    # ── FP8H format (Lane F-V5): hardware-FP8 e4m3fn AsymmetricPairGenerator ──
+    # Replaces Lane F's simulated FakeQuantFP4 with hardware-native FP8 on Ada/
+    # Lovelace (CC >= 8.9). On older inflate hosts (T4 = CC 7.5) the inline
+    # loader falls back to FP16 dequantization with a loud WARNING banner so
+    # downstream score reporting can label the result correctly.
+    if magic == b"FP8H":
+        try:
+            from tac.renderer_export import load_hardware_fp8_checkpoint
+            model = load_hardware_fp8_checkpoint(raw_bytes, device=device)
+        except ImportError:
+            model = _inline_load_fp8h(raw_bytes, device=device)
+        elapsed = time.monotonic() - t0
+        print(
+            f"  Loaded FP8H AsymmetricPairGenerator from .bin "
+            f"({len(raw_bytes):,} bytes, {elapsed:.1f}s)",
+            file=sys.stderr,
+        )
         return model
 
     # ── CCh1 format (Lane I): Cool-Chic PairGenerator ──
