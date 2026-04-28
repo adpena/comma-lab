@@ -144,13 +144,16 @@ def test_invokes_profile_scorer_saliency_with_real_flags(script_src) -> None:
 
 
 def test_invokes_contest_auth_eval_with_real_flags(script_src) -> None:
-    eval_block = re.search(r"contest_auth_eval\.py(.+?)2>&1", script_src, re.DOTALL)
-    assert eval_block is not None
-    flags = set(re.findall(r"--[\w-]+", eval_block.group(1)))
+    """Extract flags from EXACTLY the contest_auth_eval invocation block
+    (a single backslash-continued shell call)."""
+    pat = r"contest_auth_eval\.py.+?(?=\n\S|\Z)"
+    m = re.search(pat, script_src, re.DOTALL)
+    assert m is not None
+    flags = set(re.findall(r"\s(--[\w-]+)", m.group(0)))
     real_flags = {
         "--archive", "--inflate-sh", "--upstream-dir", "--video-names-file",
         "--device", "--work-dir", "--inflate-timeout", "--evaluate-timeout",
         "--keep-work-dir",
     }
     invented = flags - real_flags
-    assert not invented
+    assert not invented, f"Invented flags: {invented}"

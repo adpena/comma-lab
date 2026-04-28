@@ -185,13 +185,26 @@ def test_script_does_not_invoke_codex_or_subagent(script_src):
 # ── Argparse-grep verification (NEVER invent CLI flags) ────────────────
 
 
+def _extract_invocation_flags(src: str, marker: str) -> set[str]:
+    """Extract --flags from a single shell invocation block.
+
+    A shell invocation in our scripts is a backslash-continued list of
+    lines that starts after `marker` and ends at the FIRST line not
+    ending in a backslash. This regex captures exactly that block, so
+    flags from later invocations don't leak in.
+    """
+    # Find marker, then capture everything until the first non-backslash line.
+    pat = rf"{re.escape(marker)}.+?(?=\n\S|\Z)"
+    m = re.search(pat, src, re.DOTALL)
+    if m is None:
+        return set()
+    return set(re.findall(r"\s--([a-z][a-z0-9-]+)", m.group(0)))
+
+
 def test_train_renderer_flags_are_real(script_src, train_renderer_flags):
     """Every --flag passed to train_renderer must exist in its argparse."""
-    train_block = re.search(
-        r"tac\.experiments\.train_renderer(.+?)tee", script_src, re.DOTALL
-    )
-    assert train_block is not None
-    flags = set(re.findall(r"--([a-z][a-z0-9-]+)", train_block.group(1)))
+    flags = _extract_invocation_flags(script_src, "tac.experiments.train_renderer")
+    assert flags, "Could not extract flags from train_renderer invocation"
     missing = flags - train_renderer_flags
     assert not missing, (
         f"Lane W-V2 invokes train_renderer with invented flags: {missing}. "
@@ -201,11 +214,8 @@ def test_train_renderer_flags_are_real(script_src, train_renderer_flags):
 
 def test_profile_pair_sensitivity_flags_are_real(script_src, profile_pair_flags):
     """Every --flag passed to profile_pair_sensitivity must exist."""
-    profile_block = re.search(
-        r"profile_pair_sensitivity\.py(.+?)tee", script_src, re.DOTALL
-    )
-    assert profile_block is not None
-    flags = set(re.findall(r"--([a-z][a-z0-9-]+)", profile_block.group(1)))
+    flags = _extract_invocation_flags(script_src, "profile_pair_sensitivity.py")
+    assert flags, "Could not extract flags from profile_pair_sensitivity invocation"
     missing = flags - profile_pair_flags
     assert not missing, (
         f"Lane W-V2 invokes profile_pair_sensitivity with invented flags: "
@@ -215,9 +225,8 @@ def test_profile_pair_sensitivity_flags_are_real(script_src, profile_pair_flags)
 
 def test_contest_auth_eval_flags_are_real(script_src):
     """Whitelist for contest_auth_eval.py argparse (verified 2026-04-27)."""
-    eval_block = re.search(r"contest_auth_eval\.py(.+?)tee", script_src, re.DOTALL)
-    assert eval_block is not None
-    flags = set(re.findall(r"--([a-z][a-z0-9-]+)", eval_block.group(1)))
+    flags = _extract_invocation_flags(script_src, "contest_auth_eval.py")
+    assert flags, "Could not extract flags from contest_auth_eval invocation"
     real = {
         "archive", "inflate-sh", "upstream-dir", "device",
         "keep-work-dir", "work-dir", "video-names-file",

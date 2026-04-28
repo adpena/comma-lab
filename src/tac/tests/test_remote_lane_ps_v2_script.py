@@ -56,10 +56,16 @@ def test_nvdec_probe_present(script_text):
 
 
 def test_nvdec_probe_before_optimize(script_text):
-    probe_idx = script_text.find("probe_nvdec.sh")
-    optimize_idx = script_text.find("optimize_poses.py")
-    assert probe_idx > 0 and optimize_idx > 0
-    assert probe_idx < optimize_idx
+    """The EXECUTED probe_nvdec.sh must come before the EXECUTED
+    optimize_poses.py invocation. Both names appear earlier in argparse-
+    verification comments — those are docs, not invocations."""
+    probe_match = re.search(r'^\s*bash\s+"\$WORKSPACE/scripts/probe_nvdec\.sh"',
+                            script_text, re.MULTILINE)
+    optimize_match = re.search(r'^\s*"\$PYBIN"\s+-u\s+experiments/optimize_poses\.py',
+                                script_text, re.MULTILINE)
+    assert probe_match is not None
+    assert optimize_match is not None
+    assert probe_match.start() < optimize_match.start()
 
 
 # ── Anchor on Lane A ──────────────────────────────────────────────────
@@ -178,13 +184,19 @@ def test_ends_with_contest_auth_eval(script_text):
 # ── Argparse-grep verification ────────────────────────────────────────
 
 
+def _extract_invocation_flags(src: str, marker: str) -> set[str]:
+    """Extract --flags from a single shell invocation block."""
+    pat = rf"{re.escape(marker)}.+?(?=\n\S|\Z)"
+    m = re.search(pat, src, re.DOTALL)
+    if m is None:
+        return set()
+    return set(re.findall(r"\s--([a-z][a-z0-9-]+)", m.group(0)))
+
+
 def test_optimize_poses_flags_are_real(script_text, optimize_poses_argparse_flags):
     """Every --flag passed to optimize_poses must exist in its argparse."""
-    block = re.search(
-        r"optimize_poses\.py(.+?)tee", script_text, re.DOTALL
-    )
-    assert block is not None
-    flags = set(re.findall(r"--([a-z][a-z0-9-]+)", block.group(1)))
+    flags = _extract_invocation_flags(script_text, "optimize_poses.py")
+    assert flags
     missing = flags - optimize_poses_argparse_flags
     assert not missing, (
         f"Lane PS-V2 invokes optimize_poses with invented flags: {missing}. "
@@ -193,16 +205,15 @@ def test_optimize_poses_flags_are_real(script_text, optimize_poses_argparse_flag
 
 
 def test_contest_auth_eval_flags_are_real(script_text):
-    eval_block = re.search(r"contest_auth_eval\.py(.+?)tee", script_text, re.DOTALL)
-    assert eval_block is not None
-    flags = set(re.findall(r"--([a-z][a-z0-9-]+)", eval_block.group(1)))
+    flags = _extract_invocation_flags(script_text, "contest_auth_eval.py")
+    assert flags
     real = {
         "archive", "inflate-sh", "upstream-dir", "device",
         "keep-work-dir", "work-dir", "video-names-file",
         "inflate-timeout", "evaluate-timeout",
     }
     invented = flags - real
-    assert not invented
+    assert not invented, f"Invented: {invented}"
 
 
 def test_no_codex_subagent(script_text):
