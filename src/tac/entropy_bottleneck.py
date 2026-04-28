@@ -35,7 +35,15 @@ class EntropyBottleneck(nn.Module):
         self.loc = nn.Parameter(torch.zeros(num_channels))
         raw_scale = math.log(math.expm1(float(init_scale)))
         self.raw_scale = nn.Parameter(torch.full((num_channels,), raw_scale))
-        self.raw_shape = nn.Parameter(torch.zeros(num_channels))
+        # Initialize raw_shape so softplus(raw_shape) ≈ 1.0 at construction.
+        # Previously raw_shape inited to 0 → softplus ≈ 0.693 with the +1e-6
+        # epsilon dominating after the (-50.0) collapse path; combined with
+        # `((x − loc)/scale) * shape` this saturated the CDF at init and made
+        # the rate loss meaningless until shape drifted away from zero.  Pure
+        # logistic CDF (Ballé 2018) corresponds to shape = 1, so we anchor the
+        # parameterization there: log(expm1(1.0)) ≈ 0.5413 (R17 finding 2).
+        raw_shape_init = math.log(math.expm1(1.0))
+        self.raw_shape = nn.Parameter(torch.full((num_channels,), raw_shape_init))
         self._last_bits_per_element: Tensor | None = None
 
     def _channel_params(self, y: Tensor) -> tuple[Tensor, Tensor, Tensor]:

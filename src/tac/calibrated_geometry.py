@@ -327,10 +327,17 @@ def _faugeras_recover_R_t(
     A = Hc @ (eye - torch.outer(n, n)) + torch.outer(Rn, n)
     R = _polar_decomposition(A)
     t = (Hc @ n) - (R @ n)
-    # Plane depth: ||t|| in normalized H_c is t / d, so d = 1 by convention
-    # after the SVD median-normalization above.  The cheirality test on n[2]
-    # is the meaningful sign.
-    depth = 1.0
+    # Plane depth in the SVD-normalized (median-singular-value = 1) frame.
+    # Faugeras / Lustman 1988: H_c = R + (t/d) n^T.  Projecting both sides
+    # onto n (unit) gives n^T H_c n = n^T R n + (n·t)/d, and the scalar
+    # n^T H_c n therefore differs PER CANDIDATE because each candidate has
+    # its own (R, n) pair.  Note that ||H_c·n||² = n^T S n is the SAME for
+    # all four candidates whenever they live in the same (u1, u3) eigen-plane
+    # of S = H_c^T H_c, so the obvious "norm" choice is degenerate; the
+    # quadratic form below is the canonical scalar that breaks the tie.
+    # (R17 finding 1 — replaces the legacy hardcoded depth=1.0 that made the
+    # cheirality tie-break collapse to rotation magnitude alone.)
+    depth = float((n @ (Hc @ n)).item())
     return R, t, depth
 
 

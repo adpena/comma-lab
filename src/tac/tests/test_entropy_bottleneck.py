@@ -1,6 +1,9 @@
 from __future__ import annotations
 
+import math
+
 import torch
+import torch.nn.functional as F
 
 from tac.entropy_bottleneck import EntropyBottleneck
 
@@ -175,3 +178,53 @@ def test_rate_decreases_under_optimization_loop() -> None:
         f"Lane EBR did not learn: first5={first:.4f} last5={last:.4f} "
         f"history_min={min(bit_history):.4f} history_max={max(bit_history):.4f}"
     )
+
+
+def test_round18_finding2_entropy_bottleneck_starts_near_logistic() -> None:
+    """R17 finding 2: shape parameter must init near 1.0 (Ballé 2018 logistic CDF).
+
+    With raw_shape inited to zero, softplus(raw_shape) ≈ 0.693 — combined with
+    the legacy ``((x − loc)/scale) * shape`` form, the CDF was nearly flat at
+    init and -log2(likelihood) saturated. The fix initializes raw_shape so
+    softplus(raw_shape) ≈ 1.0 (pure logistic CDF). This regression test
+    asserts:
+
+    1. ``softplus(raw_shape) ≈ 1.0`` at construction time (within 1e-6).
+    2. The mean -log2(p) for an N(0, 1) latent batch sits in [0.5, 5.0] bits
+       at init — saturating to 0 (flat CDF) or huge (degenerate scale) fails.
+    """
+    torch.manual_seed(2027)
+    eb = EntropyBottleneck(num_channels=8, init_scale=10.0)
+
+    # 1. softplus(raw_shape) must start ≈ 1.0 (pure-logistic init).
+    init_shape = F.softplus(eb.raw_shape) + 1e-6
+    assert torch.allclose(
+        init_shape,
+        torch.ones_like(init_shape),
+        atol=1e-5,
+    ), (
+        f"raw_shape init not anchored at logistic CDF: "
+        f"softplus(raw_shape)={init_shape.tolist()}"
+    )
+
+    # 2. Mean rate on N(0,1) latents must land in a sane band, not saturate.
+    #    Use a tighter init_scale so the logistic CDF is well-conditioned at
+    #    unit variance (init_scale=10 gives a flat-prior 5+ bits — sane but
+    #    masks the bug we are guarding against).  With init_scale=1.0 a
+    #    healthy logistic CDF on N(0, 1) latents lands near ~2 bits.
+    eb_tight = EntropyBottleneck(num_channels=8, init_scale=1.0)
+    eb_tight.eval()
+    y = torch.randn(64, 8, 4, 4)
+    _, bits = eb_tight(y)
+    bits_value = float(bits.item())
+    assert math.isfinite(bits_value), f"non-finite bits: {bits_value}"
+    assert 0.5 <= bits_value <= 5.0, (
+        f"entropy bottleneck rate at init = {bits_value:.4f} bits/element; "
+        f"expected [0.5, 5.0] for N(0, 1) latents under logistic CDF init"
+    )
+
+    # 3. Sanity: the bug pattern (raw_shape=0 → softplus=0.693+1e-6) would
+    #    produce the SAME bits within ~5% of the fixed init since logistic
+    #    CDF with `shape=0.693` * the scale=1 ≈ flat-ish but not catastrophic.
+    #    What WOULD catch the original bug is the assertion in step 1: shape
+    #    must equal 1.0 at init, not 0.693.
