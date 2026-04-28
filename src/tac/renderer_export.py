@@ -626,7 +626,17 @@ def load_renderer_checkpoint(
 
 
 def _infer_asymmetric_config(model: nn.Module) -> dict:
-    """Infer architecture config from an AsymmetricPairGenerator instance."""
+    """Infer architecture config from an AsymmetricPairGenerator (or PairGenerator).
+
+    Returns a dict suitable for splatting into the ASYM/FP4A header. Includes
+    `pair_mode` ("asymmetric" for AsymmetricPairGenerator, "pair_generator" for
+    legacy PairGenerator) so loaders can dispatch to the right constructor —
+    AsymmetricPairGenerator(use_zoom_flow=False) has motion.head shape [6,...]
+    while PairGenerator default MotionPredictor has [2,...]. Without the
+    pair_mode key the loader cannot tell them apart and silently builds the
+    wrong arch (fixed 2026-04-27, Bug 2 in qat_finetune chained arch-drift).
+    """
+    from tac.renderer import AsymmetricPairGenerator
     renderer = model.renderer
     motion = model.motion
 
@@ -689,6 +699,12 @@ def _infer_asymmetric_config(model: nn.Module) -> dict:
     padding_mode = getattr(renderer, "padding_mode", "zeros")
     use_dilation = getattr(renderer, "use_dilation", False)
 
+    # pair_mode lets the loader pick the correct constructor.
+    # AsymmetricPairGenerator(use_zoom_flow=False) → motion.head [6,...]
+    # PairGenerator + default MotionPredictor → motion.head [2,...]
+    # Same use_zoom_flow value, different shapes. Dispatch on class identity.
+    pair_mode = "asymmetric" if isinstance(model, AsymmetricPairGenerator) else "pair_generator"
+
     return {
         "num_classes": num_classes,
         "embed_dim": embed_dim,
@@ -707,6 +723,7 @@ def _infer_asymmetric_config(model: nn.Module) -> dict:
         "use_zoom_flow": use_zoom_flow,
         "padding_mode": padding_mode,
         "use_dilation": use_dilation,
+        "pair_mode": pair_mode,
     }
 
 
@@ -848,10 +865,14 @@ def export_asymmetric_checkpoint(
             "is_linear": is_linear,
         })
 
-    # Build header
+    # Build header. pair_mode comes from _infer_asymmetric_config() (it inspects
+    # isinstance(model, AsymmetricPairGenerator)). Don't hardcode "asymmetric"
+    # here — that was the latent bug: a PairGenerator exported as ASYM would
+    # claim pair_mode="asymmetric" but have motion.head shape [2,...] which
+    # the loader (which constructs AsymmetricPairGenerator with [6,...]) cannot
+    # accept. Trust _infer_asymmetric_config.
     header = {
         "version": 2,
-        "pair_mode": "asymmetric",
         **config,
         "layers": layers_meta,
     }
@@ -926,23 +947,50 @@ def load_asymmetric_checkpoint(
     if version != 2:
         raise ValueError(f"Unsupported asymmetric export version {version} (expected 2)")
 
-    # Build fresh AsymmetricPairGenerator
-    model = AsymmetricPairGenerator(
-        num_classes=header.get("num_classes", 5),
-        embed_dim=header.get("embed_dim", 6),
-        base_ch=header.get("base_ch", 36),
-        mid_ch=header.get("mid_ch", 60),
-        motion_hidden=header.get("motion_hidden", 32),
-        depth=header.get("depth", 1),
-        max_flow_px=header.get("max_flow_px", 20.0),
-        max_residual=header.get("max_residual", 20.0),
-        flow_only=header.get("flow_only", False),
-        pose_dim=header.get("pose_dim", 0),
-        use_dsconv=header.get("use_dsconv", False),
-        use_zoom_flow=header.get("use_zoom_flow", False),
-        padding_mode=header.get("padding_mode", "zeros"),
-        use_dilation=header.get("use_dilation", False),
-    )
+    # 2026-04-27 arch-drift fix Bug 2 (mirror of FP4A loader fix above):
+    # dispatch on pair_mode. Older binaries (pre-fix) DON'T carry pair_mode;
+    # default to "asymmetric" since that's what every existing ASYM binary
+    # actually was (the exporter hardcoded it). New binaries from the fixed
+    # _infer_asymmetric_config() carry the true pair_mode.
+    pair_mode = header.get("pair_mode", "asymmetric")
+    if pair_mode == "asymmetric":
+        # Build fresh AsymmetricPairGenerator (the common case — every
+        # AsymmetricPairGenerator-trained renderer including dilated-h64
+        # baseline lands here).
+        model = AsymmetricPairGenerator(
+            num_classes=header.get("num_classes", 5),
+            embed_dim=header.get("embed_dim", 6),
+            base_ch=header.get("base_ch", 36),
+            mid_ch=header.get("mid_ch", 60),
+            motion_hidden=header.get("motion_hidden", 32),
+            depth=header.get("depth", 1),
+            max_flow_px=header.get("max_flow_px", 20.0),
+            max_residual=header.get("max_residual", 20.0),
+            flow_only=header.get("flow_only", False),
+            pose_dim=header.get("pose_dim", 0),
+            use_dsconv=header.get("use_dsconv", False),
+            use_zoom_flow=bool(header.get("use_zoom_flow") or False),
+            padding_mode=header.get("padding_mode", "zeros"),
+            use_dilation=header.get("use_dilation", False),
+        )
+    else:
+        # Legacy PairGenerator path. build_renderer routes correctly when
+        # use_zoom_flow=False is passed (returns PairGenerator wrapping
+        # MaskRenderer + MotionPredictor with default output_channels=2).
+        from tac.renderer import build_renderer
+        model = build_renderer(
+            num_classes=header.get("num_classes", 5),
+            embed_dim=header.get("embed_dim", 6),
+            base_ch=header.get("base_ch", 36),
+            mid_ch=header.get("mid_ch", 60),
+            motion_hidden=header.get("motion_hidden", 32),
+            depth=header.get("depth", 1),
+            pose_dim=header.get("pose_dim", 0),
+            use_dsconv=header.get("use_dsconv", False),
+            padding_mode=header.get("padding_mode", "zeros"),
+            use_dilation=header.get("use_dilation", False),
+            use_zoom_flow=bool(header.get("use_zoom_flow") or False),
+        )
 
     # Build name -> module lookups
     embedding_lookup: dict[str, nn.Embedding] = {}
@@ -1226,10 +1274,10 @@ def export_asymmetric_checkpoint_fp4(
             "block_size": block_size,
         })
 
-    # Build header
+    # Build header. pair_mode comes from _infer_asymmetric_config() (don't
+    # hardcode — see export_asymmetric_checkpoint comment for the latent bug).
     header = {
         "version": 3,
-        "pair_mode": "asymmetric",
         "quantization": "fp4",
         "block_size": block_size,
         "codebook": codebook.tolist(),
@@ -1318,27 +1366,64 @@ def load_asymmetric_checkpoint_fp4(
     block_size = header["block_size"]
     codebook = torch.tensor(header["codebook"], dtype=torch.float32)
 
-    # 2026-04-26 arch-drift fix layer 4: dispatch via build_renderer (the
-    # SAME function used by train_renderer + step_export). PairGenerator
-    # (use_zoom_flow=False) and AsymmetricPairGenerator (=True) have
-    # DIFFERENT module-name structures; named_modules() iteration order
-    # differs. Hardcoding AsymmetricPairGenerator here meant any
-    # PairGenerator .bin produced by step_export crashed in the conv
-    # lookup with KeyError on `renderer.stem_conv.0`. build_renderer
-    # routes correctly; export and inflate now share dispatch.
-    from tac.renderer import build_renderer
-    model = build_renderer(
-        embed_dim=header.get("embed_dim", 6),
-        base_ch=header.get("base_ch", 36),
-        mid_ch=header.get("mid_ch", 60),
-        motion_hidden=header.get("motion_hidden", 32),
-        depth=header.get("depth", 1),
-        pose_dim=header.get("pose_dim", 0),
-        use_dsconv=header.get("use_dsconv", False),
-        padding_mode=header.get("padding_mode", "zeros"),
-        use_dilation=header.get("use_dilation", False),
-        use_zoom_flow=header.get("use_zoom_flow", False),
-    )
+    # 2026-04-27 arch-drift fix Bug 2 (memory feedback_qat_finetune_chained_arch_bugs):
+    # The dilated-h64 baseline ships in ASYM/FP4A format with pair_mode="asymmetric",
+    # use_zoom_flow=False (or absent), and motion.head shape [6, 32, 3, 3] because
+    # AsymmetricPairGenerator(use_zoom_flow=False) sets motion_output_channels=6.
+    # Routing through build_renderer(use_zoom_flow=False) constructs the LEGACY
+    # PairGenerator → MotionPredictor(default output_channels=2) → motion.head
+    # shape [2, 32, 3, 3] → shape mismatch when loading the FP4 blob. The header
+    # ALREADY carries pair_mode and output_channels via _infer_asymmetric_config,
+    # so dispatch on pair_mode: asymmetric → AsymmetricPairGenerator (mirrors the
+    # non-FP4 load_asymmetric_checkpoint at line 888); else → build_renderer for
+    # the legacy step_export PairGenerator path which DOES want use_zoom_flow=False
+    # routing. NEVER default-construct fields that ARE in the header — that's the
+    # exact arch-drift trap Bug 1 fixed in load_float_checkpoint.
+    pair_mode = header.get("pair_mode", "asymmetric")
+    if pair_mode == "asymmetric":
+        from tac.renderer import AsymmetricPairGenerator
+        model = AsymmetricPairGenerator(
+            num_classes=header.get("num_classes", 5),
+            embed_dim=header.get("embed_dim", 6),
+            base_ch=header.get("base_ch", 36),
+            mid_ch=header.get("mid_ch", 60),
+            motion_hidden=header.get("motion_hidden", 32),
+            depth=header.get("depth", 1),
+            max_flow_px=header.get("max_flow_px", 20.0),
+            max_residual=header.get("max_residual", 20.0),
+            flow_only=header.get("flow_only", False),
+            pose_dim=header.get("pose_dim", 0),
+            use_dsconv=header.get("use_dsconv", False),
+            # use_zoom_flow may be missing (None) in older binaries — coerce to bool.
+            # AsymmetricPairGenerator decides motion_output_channels from this:
+            # 4 if True else 6. The dilated-h64 baseline has output_channels=6 →
+            # use_zoom_flow=False (correct).
+            use_zoom_flow=bool(header.get("use_zoom_flow") or False),
+            padding_mode=header.get("padding_mode", "zeros"),
+            use_dilation=header.get("use_dilation", False),
+        )
+    else:
+        # Legacy PairGenerator path (step_export with use_zoom_flow=False).
+        # build_renderer routes to PairGenerator + MotionPredictor here.
+        # Note: this path defaults motion.head to output_channels=2 (legacy
+        # flow-only). If a future caller exports a PairGenerator with a
+        # non-default output_channels, build_renderer will need to thread
+        # that through. Today no caller does — every step_export produces
+        # pair_mode="asymmetric".
+        from tac.renderer import build_renderer
+        model = build_renderer(
+            num_classes=header.get("num_classes", 5),
+            embed_dim=header.get("embed_dim", 6),
+            base_ch=header.get("base_ch", 36),
+            mid_ch=header.get("mid_ch", 60),
+            motion_hidden=header.get("motion_hidden", 32),
+            depth=header.get("depth", 1),
+            pose_dim=header.get("pose_dim", 0),
+            use_dsconv=header.get("use_dsconv", False),
+            padding_mode=header.get("padding_mode", "zeros"),
+            use_dilation=header.get("use_dilation", False),
+            use_zoom_flow=bool(header.get("use_zoom_flow") or False),
+        )
 
     # Build name -> module lookups
     embedding_lookup: dict[str, nn.Embedding] = {}
