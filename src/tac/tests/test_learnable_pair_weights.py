@@ -184,6 +184,9 @@ def test_pair_primal_loss_propagates_grad_into_pair_losses_only():
     primal.backward()
     assert pair_losses.grad is not None
     assert torch.isfinite(pair_losses.grad).all()
+    # Round 28 magnitude anchor: gradient must be NON-ZERO, not just present.
+    # Round-26-class gap: presence-only checks pass with all-zero grads.
+    assert pair_losses.grad.abs().max().item() > 0
 
 
 # ── weight_for_pair ──────────────────────────────────────────────────────

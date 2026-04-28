@@ -248,6 +248,9 @@ def test_learnable_bit_conv2d_gradient_flows_through_bits():
     y.sum().backward()
     assert layer.conv.weight.grad is not None
     assert layer.bit_depth.raw.grad is not None
+    # Round 28 magnitude anchor: gradient must be NON-ZERO, not just present.
+    # Round-26-class gap: presence-only checks pass with all-zero grads.
+    assert layer.bit_depth.raw.grad.abs().max().item() > 0
     # The bias also gets grad
     assert layer.conv.bias.grad is not None
 

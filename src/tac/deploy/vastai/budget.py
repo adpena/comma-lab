@@ -14,13 +14,21 @@ from tac.deploy.base import BudgetState, repo_root
 
 # ── Constants ─────────────────────────────────────────────────────────────────
 
-DEFAULT_HARD_CAP_USD: float = 24.0
-"""Hard spending cap in USD.  Exceeding this blocks new launches."""
+DEFAULT_HARD_CAP_USD: float = 200.0
+"""Hard spending cap in USD.  Exceeding this blocks new launches.
 
-DEFAULT_WARN_THRESHOLD_USD: float = 20.0
-"""Cumulative spend that triggers a warning (but does not block)."""
+Updated 2026-04-28 from 24.0 to 200.0 (per ``feedback_compute_budget_hundreds_of_dollars_20260428``):
+the operator's true compute budget is in the $200-$500 range across Vast.ai +
+AWS + Azure + Modal credits, not the original $25 Vast-only allocation.
+"""
 
-DEFAULT_TOTAL_BUDGET_USD: float = 25.0
+DEFAULT_WARN_THRESHOLD_USD: float = 50.0
+"""Cumulative spend that triggers a warning (but does not block).
+
+Per-instance soft warning threshold; reflects the new $200 hard cap.
+"""
+
+DEFAULT_TOTAL_BUDGET_USD: float = 200.0
 """Informational: total account credit available."""
 
 # ANSI helpers (duplicated intentionally — budget.py must be standalone)
