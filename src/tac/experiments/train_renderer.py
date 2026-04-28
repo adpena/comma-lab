@@ -72,7 +72,14 @@ from tac.losses import (  # noqa: E402
 from tac.mask_codec import extract_masks, mask_pair_from_index  # noqa: E402
 from tac.profiles import PROFILES  # noqa: E402
 from tac.fridrich_losses import dct_quant_loss  # noqa: E402
+from tac.feature_masking import FeatureMasker  # noqa: E402
+from tac.loss_t2_xpred import x_prediction_loss  # noqa: E402
 from tac.renderer import build_renderer, simulate_eval_roundtrip  # noqa: E402
+from tac.self_augmentation_v2 import (  # noqa: E402
+    HighSigmaSampler,
+    HighSigmaStrategyConfig,
+    apply_sigma_noise_to_input,
+)
 from tac.contrib.wavelet_renderer import build_wavelet_renderer  # noqa: E402
 from tac.scorer import detect_device, load_scorers  # noqa: E402
 from tac.training import EMA  # noqa: E402
@@ -238,6 +245,24 @@ def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
     p.add_argument("--mask-noise-prob", type=float, default=0.5,
                    help="Probability of using the noisy mask variant on each "
                         "training step (default 0.5 = 50/50 mix).")
+    p.add_argument("--use-saug-v2", action="store_true", default=None,
+                   help="Lane SAUG-V2: enable Cosmos HighSigmaStrategy-style "
+                        "per-sample renderer-input noise.")
+    p.add_argument("--saug-v2-redraw-fraction", type=float, default=None,
+                   help="SAUG-V2 probability of drawing from the high-sigma "
+                        "range (default 0.05).")
+    p.add_argument("--saug-v2-high-sigma-min", type=float, default=None,
+                   help="SAUG-V2 high-sigma log-uniform lower bound "
+                        "(default 80.0).")
+    p.add_argument("--saug-v2-high-sigma-max", type=float, default=None,
+                   help="SAUG-V2 high-sigma log-uniform upper bound "
+                        "(default 2000.0).")
+    p.add_argument("--saug-v2-normal-sigma-min", type=float, default=None,
+                   help="SAUG-V2 normal-sigma log-uniform lower bound "
+                        "(default 0.5).")
+    p.add_argument("--saug-v2-normal-sigma-max", type=float, default=None,
+                   help="SAUG-V2 normal-sigma log-uniform upper bound "
+                        "(default 80.0).")
 
     # Half-frame mask simulation: replace mask_t with inverse-warp(mask_t1)
     # so the renderer learns the same mask distribution it sees at inflate
@@ -361,6 +386,18 @@ def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
     p.add_argument("--use-self-compress-codec", action="store_true", default=None,
                    help="Lane S: swap bulk Conv2d for SelfCompressingConv2d "
                         "with per-channel learnable bit-depth.")
+    # Lane SG (2026-04-28 council EUREKA #5): re-scope which layers stay FP32
+    # based on which scorer we are protecting. SegNet contributes 100×seg
+    # vs sqrt(10·pose) for PoseNet — at our operating point SegNet is 2-5×
+    # more impactful per unit-distortion. Lane SG protects SegNet-relevant
+    # layers (decoder out_conv, decode_head, class affines) instead of the
+    # PoseNet-relevant layers (FiLM, motion.head, renderer.head).
+    p.add_argument("--protected-pattern-set", type=str, default="posenet_prior",
+                   choices=["posenet_prior", "segnet_prior"],
+                   help="Lane SG: which scorer-prior protection list to use "
+                        "for SC codec swap. 'posenet_prior' = default "
+                        "(SC_PROTECTED_NAME_PATTERNS); 'segnet_prior' = "
+                        "Lane SG (SC_SEGNET_PROTECTED_NAME_PATTERNS).")
     p.add_argument("--self-compress-init-bits", type=float, default=None,
                    help="Initial bit-depth for SC layers (default 8.0 = full "
                         "precision; rate penalty anneals toward target).")
@@ -462,6 +499,39 @@ def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
                    "(SegNet only evaluates odd frames in the scorer)")
     p.add_argument("--frequency-loss-weight", type=float, default=None,
                    help="Trick 2: wavelet frequency-domain loss weight (0=disabled)")
+    # Lane T2-XPRED: Tuna-2 style x-prediction reconstruction objective.
+    # Defaults are resolved after profile loading so named profiles can
+    # activate the lane while unprofiled CLI runs default to disabled.
+    p.add_argument("--use-t2-xpred-loss", action="store_true", default=None,
+                   help="Lane T2-XPRED: replace the primary reconstruction "
+                        "loss with x_prediction_loss.")
+    p.add_argument("--t2-xpred-sigma", type=float, default=None,
+                   help="Lane T2-XPRED: constant sigma for x_prediction_loss "
+                        "(default 1.0).")
+    p.add_argument("--t2-xpred-weighting", type=str, default=None,
+                   choices=["v", "x"],
+                   help="Lane T2-XPRED weighting mode: 'v' or 'x' "
+                        "(default 'v').")
+    # Lane T2-MASK: training-time bottleneck feature masking.
+    p.add_argument("--use-t2-mask", action="store_true", default=None,
+                   help="Lane T2-MASK: enable deterministic bottleneck feature "
+                        "masking during training.")
+    p.add_argument("--t2-mask-p", type=float, default=None,
+                   help="Lane T2-MASK: probability of applying masking to a "
+                        "training batch (default 0.5).")
+    p.add_argument("--t2-mask-ratio", type=float, default=None,
+                   help="Lane T2-MASK: spatial position mask ratio when "
+                        "masking applies (default 0.15).")
+    p.add_argument("--t2-mask-apply-fraction", type=float, default=None,
+                   help="Lane T2-MASK: apply only in this final fraction of "
+                        "training progress (default 0.4).")
+    # Lane T2-DROP: encoder-free renderer ablation. This is informational-only
+    # and not a stacking candidate; it replaces mask-encoder feature tensors
+    # with zeros while preserving the model/state-dict structure.
+    p.add_argument("--no-mask-encoder", action="store_true", default=False,
+                   help="Lane T2-DROP informational-only ablation: zero the "
+                        "mask encoder outputs instead of using encoded mask "
+                        "features. Not a stacking candidate.")
     # CLAUDE.md non-negotiable: eval_roundtrip ALWAYS True. Removed
     # `--no-eval-roundtrip` flag; only escape hatch is TAC_ALLOW_NO_ROUNDTRIP=1.
     p.add_argument("--eval-roundtrip", action="store_true", default=True,
@@ -547,6 +617,11 @@ def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
                         "experiments/profile_pair_sensitivity.py. When set, per-step "
                         "loss is scaled by pair_loss_weights[pair_idx_int]. The shape "
                         "MUST match the dataset's n_total pairs (typically 600).")
+    p.add_argument("--pair-weights-path", type=str, default=None,
+                   help="Lane WC alias for --pair-loss-weights. Intended for "
+                        "results/lane_wc/pair_weights.pt produced by "
+                        "experiments/fit_curator_outlier_weights.py from "
+                        "SegNet feature geometry, not pair training loss.")
 
     # Lane W-V2 (2026-04-27): make --pair-loss-weights LEARNABLE. The per-
     # pair weights become a TRAINABLE parameter group (LearnablePairWeights)
@@ -634,6 +709,30 @@ def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
                                 "use_ghost", False)
     args.use_zoom_flow = _resolve(getattr(args, "use_zoom_flow", None),
                                    "use_zoom_flow", False)
+    args.use_saug_v2 = _resolve(
+        getattr(args, "use_saug_v2", None),
+        "use_saug_v2", False,
+    )
+    args.saug_v2_redraw_fraction = _resolve(
+        getattr(args, "saug_v2_redraw_fraction", None),
+        "saug_v2_redraw_fraction", 0.05,
+    )
+    args.saug_v2_high_sigma_min = _resolve(
+        getattr(args, "saug_v2_high_sigma_min", None),
+        "saug_v2_high_sigma_min", 80.0,
+    )
+    args.saug_v2_high_sigma_max = _resolve(
+        getattr(args, "saug_v2_high_sigma_max", None),
+        "saug_v2_high_sigma_max", 2000.0,
+    )
+    args.saug_v2_normal_sigma_min = _resolve(
+        getattr(args, "saug_v2_normal_sigma_min", None),
+        "saug_v2_normal_sigma_min", 0.5,
+    )
+    args.saug_v2_normal_sigma_max = _resolve(
+        getattr(args, "saug_v2_normal_sigma_max", None),
+        "saug_v2_normal_sigma_max", 80.0,
+    )
     # Lane S: SC codec resolution (2026-04-27)
     args.use_self_compress_codec = _resolve(
         getattr(args, "use_self_compress_codec", None),
@@ -733,6 +832,25 @@ def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
         getattr(args, "segnet_class_weights", None),
         "segnet_class_weights", None,
     )
+    args.pair_loss_weights = _resolve(
+        getattr(args, "pair_loss_weights", None),
+        "pair_loss_weights", None,
+    )
+    args.pair_weights_path = _resolve(
+        getattr(args, "pair_weights_path", None),
+        "pair_weights_path", None,
+    )
+    if (
+        args.pair_loss_weights is not None
+        and args.pair_weights_path is not None
+        and args.pair_loss_weights != args.pair_weights_path
+    ):
+        raise SystemExit(
+            "FATAL: --pair-loss-weights and --pair-weights-path both set "
+            "to different files; pass only one pair-weight source."
+        )
+    if args.pair_loss_weights is None:
+        args.pair_loss_weights = args.pair_weights_path
     # Parse the CSV into a (5,) float tensor (or None for the disabled
     # path). Stored on args under a non-CLI attribute so the loss call
     # sites can fetch it without re-parsing every iteration.
@@ -882,6 +1000,58 @@ def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
     args.frequency_loss_weight = _resolve(
         args.frequency_loss_weight, "frequency_loss_weight", 0.0,
     )
+    args.use_t2_xpred_loss = _resolve(
+        getattr(args, "use_t2_xpred_loss", None),
+        "use_t2_xpred_loss", False,
+    )
+    args.t2_xpred_sigma = _resolve(
+        getattr(args, "t2_xpred_sigma", None),
+        "t2_xpred_sigma", 1.0,
+    )
+    args.t2_xpred_weighting = _resolve(
+        getattr(args, "t2_xpred_weighting", None),
+        "t2_xpred_weighting", "v",
+    )
+    if args.t2_xpred_weighting not in {"v", "x"}:
+        raise SystemExit(
+            f"FATAL: t2_xpred_weighting must be 'v' or 'x', got "
+            f"{args.t2_xpred_weighting!r}"
+        )
+    if float(args.t2_xpred_sigma) <= 0.0:
+        raise SystemExit(
+            f"FATAL: t2_xpred_sigma must be positive, got {args.t2_xpred_sigma}"
+        )
+
+    args.use_t2_mask = _resolve(
+        getattr(args, "use_t2_mask", None),
+        "use_t2_mask", False,
+    )
+    args.t2_mask_p = _resolve(
+        getattr(args, "t2_mask_p", None),
+        "t2_mask_p", 0.5,
+    )
+    args.t2_mask_ratio = _resolve(
+        getattr(args, "t2_mask_ratio", None),
+        "t2_mask_ratio", 0.15,
+    )
+    args.t2_mask_apply_fraction = _resolve(
+        getattr(args, "t2_mask_apply_fraction", None),
+        "t2_mask_apply_fraction", 0.4,
+    )
+    for _name in ("t2_mask_p", "t2_mask_ratio", "t2_mask_apply_fraction"):
+        _val = float(getattr(args, _name))
+        if not (0.0 <= _val <= 1.0):
+            raise SystemExit(f"FATAL: {_name} must be in [0, 1], got {_val}")
+
+    args.use_entropy_bottleneck = profile_vals.get("use_entropy_bottleneck", False)
+    args.eb_lambda = float(profile_vals.get("eb_lambda", 0.0))
+    args.eb_num_channels = int(profile_vals.get("eb_num_channels", args.mid_ch))
+    if args.eb_lambda < 0.0:
+        raise SystemExit(f"FATAL: eb_lambda must be >= 0, got {args.eb_lambda}")
+    if args.eb_num_channels <= 0:
+        raise SystemExit(
+            f"FATAL: eb_num_channels must be positive, got {args.eb_num_channels}"
+        )
 
     return args
 
@@ -1132,6 +1302,153 @@ def pretrain_loss(rendered_pair: torch.Tensor, gt_pair: torch.Tensor) -> torch.T
     return l1 + 0.5 * edge_loss
 
 
+class _T2MaskHook:
+    """Forward-hook controller for training-only bottleneck feature masking."""
+
+    def __init__(self, masker: FeatureMasker) -> None:
+        self.masker = masker
+        self.training_progress = 0.0
+        self.handle = None
+
+    def __call__(self, _module, _inputs, output: torch.Tensor) -> torch.Tensor:
+        return self.masker(output, training_progress=self.training_progress)
+
+    def set_training_progress(self, progress: float) -> None:
+        self.training_progress = float(progress)
+
+
+def _install_t2_feature_masker(
+    model: nn.Module,
+    *,
+    channels: int,
+    p: float,
+    mask_ratio: float,
+    apply_in_final_fraction: float,
+    seed: int,
+) -> _T2MaskHook:
+    """Attach FeatureMasker to ``model.renderer.bottleneck`` as a hook.
+
+    The hook keeps the original bottleneck module in place, so deployment
+    checkpoints retain the standard renderer key layout. The train-time
+    mask token is registered as ``renderer.t2_feature_masker`` so it receives
+    gradients and is saved in training-state checkpoints.
+    """
+    renderer = getattr(model, "renderer", None)
+    if renderer is None:
+        renderer = model
+    bottleneck = getattr(renderer, "bottleneck", None)
+    if bottleneck is None:
+        raise ValueError(
+            "Lane T2-MASK requires a renderer with a bottleneck module; "
+            f"got {type(model).__name__}"
+        )
+    if hasattr(renderer, "t2_feature_masker"):
+        raise ValueError("Lane T2-MASK is already installed on this renderer")
+
+    masker = FeatureMasker(
+        channels=channels,
+        p=p,
+        mask_ratio=mask_ratio,
+        apply_in_final_fraction=apply_in_final_fraction,
+        seed=seed,
+    )
+    renderer.add_module("t2_feature_masker", masker)
+    hook = _T2MaskHook(masker)
+    hook.handle = bottleneck.register_forward_hook(hook)
+    return hook
+
+
+class _EntropyBottleneckHook:
+    """Forward-hook controller for train-time entropy bottleneck regularization."""
+
+    def __init__(self, entropy_bottleneck: nn.Module) -> None:
+        self.entropy_bottleneck = entropy_bottleneck
+        self.handle = None
+
+    def __call__(self, _module, _inputs, output: torch.Tensor) -> torch.Tensor:
+        y_hat, _bits = self.entropy_bottleneck(output)
+        return y_hat
+
+
+def _install_entropy_bottleneck(
+    model: nn.Module,
+    *,
+    channels: int,
+    init_scale: float = 10.0,
+) -> tuple[nn.Module, _EntropyBottleneckHook]:
+    """Attach EntropyBottleneck to ``model.renderer.bottleneck`` as a hook."""
+    from tac.entropy_bottleneck import EntropyBottleneck
+
+    renderer = getattr(model, "renderer", None)
+    if renderer is None:
+        renderer = model
+    bottleneck = getattr(renderer, "bottleneck", None)
+    if bottleneck is None:
+        raise ValueError(
+            "Lane EBR requires a renderer with a bottleneck module; "
+            f"got {type(model).__name__}"
+        )
+    if hasattr(renderer, "entropy_bottleneck"):
+        raise ValueError("Lane EBR entropy bottleneck is already installed")
+
+    eb = EntropyBottleneck(num_channels=channels, init_scale=init_scale)
+    renderer.add_module("entropy_bottleneck", eb)
+    hook = _EntropyBottleneckHook(eb)
+    hook.handle = bottleneck.register_forward_hook(hook)
+    return eb, hook
+
+
+def _strip_t2_training_only_state(
+    state: dict[str, torch.Tensor],
+) -> dict[str, torch.Tensor]:
+    """Drop train-time-only latent regularizer keys before deploy export."""
+    return {
+        k: v for k, v in state.items()
+        if ".t2_feature_masker." not in k
+        and not k.startswith("t2_feature_masker.")
+        and ".entropy_bottleneck." not in k
+        and not k.startswith("entropy_bottleneck.")
+    }
+
+
+def _zero_mask_encoder_hook(
+    _module: nn.Module,
+    _inputs: tuple[torch.Tensor, ...],
+    output: torch.Tensor,
+) -> torch.Tensor:
+    """Forward hook for Lane T2-DROP's informational-only encoder ablation."""
+    return torch.zeros_like(output)
+
+
+def install_no_mask_encoder_hooks(model: nn.Module) -> list:
+    """Zero all 5-class mask embedding outputs without changing state dicts.
+
+    The renderer and motion predictor use shared ``nn.Embedding(5, D)``
+    modules as the mask encoder. Forward hooks keep those modules present for
+    checkpoint compatibility while replacing their encoded features with zeros.
+    """
+    handles = []
+    for module in model.modules():
+        if isinstance(module, nn.Embedding) and module.num_embeddings == 5:
+            handles.append(module.register_forward_hook(_zero_mask_encoder_hook))
+    if not handles:
+        raise ValueError(
+            "Lane T2-DROP --no-mask-encoder found no 5-class nn.Embedding "
+            "mask encoders to ablate"
+        )
+    return handles
+
+
+def apply_no_mask_encoder_if_requested(
+    model: nn.Module,
+    args: argparse.Namespace,
+) -> list:
+    """Install T2-DROP hooks when ``args.no_mask_encoder`` is set."""
+    if not getattr(args, "no_mask_encoder", False):
+        return []
+    return install_no_mask_encoder_hooks(model)
+
+
 # ── Checkpoint arch_meta peek (resume-time pose_dim resolution) ────────
 #
 # Codex R-Lane-D-Issue1 (2026-04-27). Before building the model from the
@@ -1329,6 +1646,28 @@ def resize_pair_hwc(pair: torch.Tensor, target_h: int, target_w: int) -> torch.T
     return flat.permute(0, 2, 3, 1).contiguous().reshape(bsz, frames, target_h, target_w, channels)
 
 
+def _saug_v2_generator_for_device(device: torch.device, seed: int) -> torch.Generator:
+    try:
+        return torch.Generator(device=device).manual_seed(seed)
+    except (RuntimeError, TypeError):
+        return torch.Generator().manual_seed(seed)
+
+
+def _apply_saug_v2_to_renderer_input(x: torch.Tensor, sigmas: torch.Tensor) -> torch.Tensor:
+    """Apply SAUG-V2 to renderer inputs without changing renderer APIs.
+
+    Floating point inputs receive sigmas as supplied. Current renderer masks are
+    categorical class indices, so train_renderer scales the uint8-style Cosmos
+    sigma recipe into class-index units and rounds/clamps back to valid labels.
+    """
+    if torch.is_floating_point(x):
+        return apply_sigma_noise_to_input(x, sigmas)
+
+    scaled_sigmas = sigmas.to(device=x.device, dtype=torch.float32) / 255.0
+    noisy = apply_sigma_noise_to_input(x.to(torch.float32), scaled_sigmas)
+    return noisy.round().clamp(0, 4).to(dtype=x.dtype)
+
+
 # ── Training loop ───────────────────────────────────────────────────────
 
 
@@ -1389,6 +1728,31 @@ def train(args: argparse.Namespace):
     device = torch.device(args.device) if args.device else detect_device()
     print(f"[train] Device: {device}")
     print(f"[train] Reproducibility: seed={args.seed}, deterministic={args.deterministic}")
+
+    saug_v2_sampler = None
+    if getattr(args, "use_saug_v2", False):
+        saug_v2_config = HighSigmaStrategyConfig(
+            redraw_fraction=float(args.saug_v2_redraw_fraction),
+            high_sigma_min=float(args.saug_v2_high_sigma_min),
+            high_sigma_max=float(args.saug_v2_high_sigma_max),
+            normal_sigma_min=float(args.saug_v2_normal_sigma_min),
+            normal_sigma_max=float(args.saug_v2_normal_sigma_max),
+            enabled=True,
+        )
+        saug_v2_generator = _saug_v2_generator_for_device(
+            device, int(args.seed) + 20_026,
+        )
+        saug_v2_sampler = HighSigmaSampler(
+            saug_v2_config, generator=saug_v2_generator,
+        )
+        print(
+            "[lane-saug-v2] HighSigmaStrategy ACTIVE: "
+            f"redraw_fraction={saug_v2_config.redraw_fraction} "
+            f"normal=[{saug_v2_config.normal_sigma_min}, "
+            f"{saug_v2_config.normal_sigma_max}] "
+            f"high=[{saug_v2_config.high_sigma_min}, "
+            f"{saug_v2_config.high_sigma_max}]"
+        )
 
     # Load scorer models (respect TAC_MODELS_DIR env var for Modal/remote deploys)
     _models_dir = Path(_os.environ.get("TAC_MODELS_DIR", str(_upstream / "models")))
@@ -1606,6 +1970,45 @@ def train(args: argparse.Namespace):
             pose_dim=getattr(args, "pose_dim", 0) or 0,
         )
 
+    no_mask_encoder_hooks = apply_no_mask_encoder_if_requested(model, args)
+    if no_mask_encoder_hooks:
+        print(
+            "[lane-t2-drop] INFORMATIONAL-ONLY: --no-mask-encoder active; "
+            "mask encoder outputs are zero-filled. This is not a stacking "
+            "candidate.",
+            flush=True,
+        )
+
+    t2_mask_hook = None
+    if getattr(args, "use_t2_mask", False):
+        t2_mask_hook = _install_t2_feature_masker(
+            model,
+            channels=int(args.mid_ch),
+            p=float(args.t2_mask_p),
+            mask_ratio=float(args.t2_mask_ratio),
+            apply_in_final_fraction=float(args.t2_mask_apply_fraction),
+            seed=int(args.seed),
+        )
+        print(
+            f"[lane-t2-mask] enabled: p={args.t2_mask_p} "
+            f"ratio={args.t2_mask_ratio} "
+            f"apply_final_fraction={args.t2_mask_apply_fraction} "
+            f"channels={args.mid_ch}",
+            flush=True,
+        )
+
+    entropy_bottleneck = None
+    if getattr(args, "use_entropy_bottleneck", False):
+        entropy_bottleneck, _eb_hook = _install_entropy_bottleneck(
+            model,
+            channels=int(args.eb_num_channels),
+        )
+        print(
+            f"[lane-ebr] entropy bottleneck enabled: "
+            f"channels={args.eb_num_channels} lambda={args.eb_lambda}",
+            flush=True,
+        )
+
     # Lane S: post-construction SC codec swap. We do this BEFORE moving to
     # device so the new SelfCompressingConv2d submodules inherit the same
     # device move below. The swap is in-place — `model` is mutated.
@@ -1613,10 +2016,27 @@ def train(args: argparse.Namespace):
         from tac.self_compress import (
             swap_renderer_convs_with_self_compress,
             renderer_average_bits_per_weight,
+            get_protected_patterns,
+            SC_PROTECTED_NAME_PATTERNS,
         )
+        # Lane SG (2026-04-28): pick protection list per chosen scorer prior.
+        # The swap function ALWAYS protects SC_PROTECTED_NAME_PATTERNS
+        # (PoseNet-prior); we add the SegNet-prior list as `extras` only when
+        # segnet_prior is selected, preserving backward-compat for posenet
+        # callers (where the chosen list IS the default).
+        chosen = get_protected_patterns(
+            getattr(args, "protected_pattern_set", "posenet_prior")
+        )
+        extras = tuple(p for p in chosen if p not in SC_PROTECTED_NAME_PATTERNS)
         diag = swap_renderer_convs_with_self_compress(
             model,
             init_bits=float(args.self_compress_init_bits),
+            extra_protected_patterns=extras,
+        )
+        print(
+            f"[lane-s] protected_pattern_set="
+            f"{getattr(args, 'protected_pattern_set', 'posenet_prior')!r} "
+            f"(default {len(SC_PROTECTED_NAME_PATTERNS)} + extras {len(extras)})"
         )
         avg = renderer_average_bits_per_weight(model)
         print(
@@ -1704,7 +2124,21 @@ def train(args: argparse.Namespace):
 
     # Training infrastructure
     ema = EMA(model, decay=args.ema_decay)
-    optimizer = torch.optim.AdamW(model.parameters(), lr=args.lr, weight_decay=1e-4)
+    if entropy_bottleneck is not None:
+        eb_param_ids = {id(p) for p in entropy_bottleneck.parameters()}
+        main_params = [p for p in model.parameters() if id(p) not in eb_param_ids]
+        optimizer = torch.optim.AdamW(
+            [
+                {"params": main_params, "lr": args.lr, "weight_decay": 1e-4},
+                {
+                    "params": list(entropy_bottleneck.parameters()),
+                    "lr": 1e-3,
+                    "weight_decay": 0.0,
+                },
+            ]
+        )
+    else:
+        optimizer = torch.optim.AdamW(model.parameters(), lr=args.lr, weight_decay=1e-4)
     # T_max accounts for both warmup and pretrain phases so the cosine
     # schedule covers only the scorer fine-tuning (Phase 2) epochs.
     _tmax = max(1, args.epochs - args.warmup_epochs - args.pretrain_epochs)
@@ -1723,6 +2157,11 @@ def train(args: argparse.Namespace):
     # Output dir
     out_dir = Path(args.output_dir)
     out_dir.mkdir(parents=True, exist_ok=True)
+    if getattr(args, "no_mask_encoder", False):
+        (out_dir / "T2_DROP_INFORMATIONAL_ONLY.txt").write_text(
+            "informational-only: Lane T2-DROP --no-mask-encoder ablation; "
+            "not a stacking candidate.\n"
+        )
 
     # P0: Precompute GT scorer outputs (constant -- frames and scorers are frozen)
     print("[train] P0: Precomputing GT scorer cache...")
@@ -1784,6 +2223,10 @@ def train(args: argparse.Namespace):
             "padding_mode": args.padding_mode,
             "variant": args.variant,
             "profile": getattr(args, "profile", None),
+            "use_t2_xpred_loss": bool(getattr(args, "use_t2_xpred_loss", False)),
+            "use_t2_mask": bool(getattr(args, "use_t2_mask", False)),
+            "no_mask_encoder": bool(getattr(args, "no_mask_encoder", False)),
+            "informational_only": bool(getattr(args, "no_mask_encoder", False)),
         }
         torch.save({
             "epoch": current_epoch,
@@ -1803,6 +2246,26 @@ def train(args: argparse.Namespace):
 
     # Resume from checkpoint if specified
     if args.resume_from and Path(args.resume_from).exists():
+        # Round 11 Finding 1 fix (2026-04-28): defence-in-depth magic-byte
+        # detection. Lane WC v1 piped renderer.bin (ASYM/FP4A binary) into
+        # --resume-from; torch.load died with an opaque pickle error after
+        # hours of feature extraction. Refuse those magics with a clear
+        # actionable message BEFORE attempting torch.load.
+        _RENDERER_BIN_MAGICS = (
+            b"FP4A", b"ASYM", b"DPSM", b"I4LZ",
+            b"CCh1", b"C3R1", b"SCv1", b"OMG1",
+        )
+        with open(args.resume_from, "rb") as _f:
+            _magic = _f.read(4)
+        if _magic in _RENDERER_BIN_MAGICS:
+            raise ValueError(
+                f"--resume-from {args.resume_from!r} is a quantised renderer "
+                f"binary (magic={_magic!r}); cannot resume from quantised "
+                f"binary. Use the float checkpoint "
+                f"(training_state_*.pt or renderer_*_best_fp32.pt) produced "
+                f"by the original training run instead. (See "
+                f"feedback_dead_flag_wiring_pattern + Round 11 Finding 1.)"
+            )
         state = torch.load(args.resume_from, map_location=device, weights_only=False)
         # R-resume-fix: support both "model" key (training_state save format) AND
         # "model_state_dict" key (fp32 best save format) — Bug A from council R2.
@@ -1923,31 +2386,23 @@ def train(args: argparse.Namespace):
             f"warm_start={None if ws is None else ws.tolist()})."
         )
 
-    # Add the learnable parameter groups to the optimiser. We use a
-    # dedicated AdamW group per learnable Lagrangian parameter set so its
-    # learning rate can be tuned independently from the renderer's main
-    # group (the Lane Ω-V2 pattern). The optimiser is rebuilt here only
-    # when at least one learnable group is active; otherwise the original
-    # optimizer is left untouched (byte-identical legacy behaviour).
-    _extra_groups = []
-    if learnable_pair_weights is not None:
-        _extra_groups.append({
-            "params": list(learnable_pair_weights.parameters()),
-            "lr": float(args.learnable_pair_weights_lr),
-            "weight_decay": 0.0,
-        })
-    if learnable_segnet_class_weights is not None:
-        _extra_groups.append({
-            "params": list(learnable_segnet_class_weights.parameters()),
-            "lr": float(args.learnable_segnet_class_weights_lr),
-            "weight_decay": 0.0,
-        })
-    if _extra_groups:
-        for g in _extra_groups:
-            optimizer.add_param_group(g)
+    # Round 11 Finding 2 fix (2026-04-28, anti-arbitrariness):
+    # LearnablePairWeights and LearnableClassWeights expose ONLY buffers
+    # (lambda_pair, lambda_class) — no nn.Parameter. The Round 10 rewrite
+    # moved them from raw-Parameter softplus/softmax to projected
+    # dual-ascent. Adding `module.parameters()` to the optimiser was a
+    # silent NO-OP (empty list) that hid the fact that nothing learns via
+    # backprop. We now drive adaptation via explicit dual_update() calls
+    # in the per-step loop below (eta = the *_lr argument, reused as the
+    # dual step size). The empty-param-group branch is removed so the
+    # optimiser layout remains unchanged when the flags are off.
+    if learnable_pair_weights is not None or learnable_segnet_class_weights is not None:
         print(
-            f"[train] Lane W-V2/PS-V2: added {len(_extra_groups)} learnable "
-            f"parameter group(s) to optimizer."
+            "[train] Lane W-V2/PS-V2: dual-ascent adaptation ACTIVE — "
+            "lambdas updated via explicit dual_update() per step "
+            f"(pair_eta={float(getattr(args, 'learnable_pair_weights_lr', 0.0))}, "
+            f"class_eta={float(getattr(args, 'learnable_segnet_class_weights_lr', 0.0))}). "
+            "No optimizer param groups added (modules expose only buffers)."
         )
 
     # Lane S V2 (auto-warmup): scorer-loss convergence detector. Built only
@@ -1992,6 +2447,8 @@ def train(args: argparse.Namespace):
         epoch_start = time.monotonic()
         model.train()
         in_pretrain = has_pretrain and epoch < args.pretrain_epochs
+        if t2_mask_hook is not None:
+            t2_mask_hook.set_training_progress(epoch / max(args.epochs, 1))
 
         # Lane V-V2 (2026-04-27): compute the per-epoch half-frame warp
         # probability ONCE per epoch (the inner step loop reads
@@ -2167,6 +2624,13 @@ def train(args: argparse.Namespace):
                         [-ego_flow[:, 0], ego_flow[:, 1]], dim=1
                     )
 
+            if saug_v2_sampler is not None:
+                saug_v2_sigmas = saug_v2_sampler.sample_sigmas(
+                    int(mask_t.shape[0]), device,
+                )
+                mask_t = _apply_saug_v2_to_renderer_input(mask_t, saug_v2_sigmas)
+                mask_t1 = _apply_saug_v2_to_renderer_input(mask_t1, saug_v2_sigmas)
+
             # Forward: render pair from masks. Only AsymmetricPairGenerator
             # accepts ego_flow (see renderer.py:1035-1100); the legacy
             # PairGenerator.forward() takes only (mask_t, mask_t1). Branch on
@@ -2179,7 +2643,14 @@ def train(args: argparse.Namespace):
 
             if in_pretrain:
                 # Phase 1: L1 + edge loss only -- no scorer, much faster
-                loss = pretrain_loss(rendered_pair, gt_pair)
+                if args.use_t2_xpred_loss:
+                    loss = x_prediction_loss(
+                        rendered_pair, gt_pair,
+                        sigma=args.t2_xpred_sigma,
+                        weighting=args.t2_xpred_weighting,
+                    )
+                else:
+                    loss = pretrain_loss(rendered_pair, gt_pair)
                 pd, sd = 0.0, 0.0
             else:
                 # eval_roundtrip: simulate contest eval resize chain before scorer
@@ -2205,19 +2676,59 @@ def train(args: argparse.Namespace):
                 # / byte-identical to baseline). Parsed once at args
                 # resolver time so this is a cheap attribute read.
                 _pcw = getattr(args, "_segnet_class_weights_tensor", None)
-                if _cached_gt is not None:
+                # Round 11 Finding 2 (2026-04-28, anti-arbitrariness): if the
+                # learnable class-weights module is active, OVERRIDE the
+                # static tensor with its current adaptive weights so the
+                # loss actually reflects the learned distribution. Without
+                # this thread the LearnableClassWeights module would be
+                # SILENTLY IGNORED — Lane PS-V2 deploys would have appeared
+                # to learn while their weights never reached the loss.
+                _scorer_aux = None
+                if learnable_segnet_class_weights is not None:
+                    _pcw = learnable_segnet_class_weights.weights().detach()
+                # When either learnable module is active, use the *_with_aux
+                # variant which returns per-pair pose distortion and
+                # per-class SegNet distortion (detached) for the explicit
+                # dual_update calls below. Byte-identical to the legacy path
+                # otherwise (loss/pd/sd identical, no extra compute).
+                _need_aux = (
+                    learnable_pair_weights is not None
+                    or learnable_segnet_class_weights is not None
+                )
+                if args.use_t2_xpred_loss:
+                    loss = x_prediction_loss(
+                        rendered_pair, gt_pair,
+                        sigma=args.t2_xpred_sigma,
+                        weighting=args.t2_xpred_weighting,
+                    )
+                    pd, sd = 0.0, 0.0
+                elif _cached_gt is not None:
                     _gt_pose_6 = _cached_gt["pose_6"].to(device)
                     _gt_seg_soft = _cached_gt["seg_soft"].to(device)
-                    loss, pd, sd = scorer_loss_cached(
-                        rendered_pair, _gt_pose_6, _gt_seg_soft, posenet, segnet,
-                        class_weights=_pcw,
-                    )
+                    if _need_aux:
+                        from tac.losses import scorer_loss_cached_with_aux
+                        loss, pd, sd, _scorer_aux = scorer_loss_cached_with_aux(
+                            rendered_pair, _gt_pose_6, _gt_seg_soft, posenet, segnet,
+                            class_weights=_pcw,
+                        )
+                    else:
+                        loss, pd, sd = scorer_loss_cached(
+                            rendered_pair, _gt_pose_6, _gt_seg_soft, posenet, segnet,
+                            class_weights=_pcw,
+                        )
                     del _gt_pose_6, _gt_seg_soft
                 else:
-                    loss, pd, sd = scorer_loss(
-                        rendered_pair, gt_pair, posenet, segnet,
-                        class_weights=_pcw,
-                    )
+                    if _need_aux:
+                        from tac.losses import scorer_loss_with_aux
+                        loss, pd, sd, _scorer_aux = scorer_loss_with_aux(
+                            rendered_pair, gt_pair, posenet, segnet,
+                            class_weights=_pcw,
+                        )
+                    else:
+                        loss, pd, sd = scorer_loss(
+                            rendered_pair, gt_pair, posenet, segnet,
+                            class_weights=_pcw,
+                        )
 
             # Trick 3: Even-frame SegNet skip
             # If frame_t1 (start+1) is even-indexed, SegNet won't evaluate it.
@@ -2410,30 +2921,52 @@ def train(args: argparse.Namespace):
             # bit-depth allocation is steered to protect the hardest pairs.
             # No-op when --pair-loss-weights wasn't passed.
             #
-            # Lane W-V2: when --learnable-pair-weights is set, the
-            # LearnablePairWeights module replaces the static tensor.
-            # Its forward returns a differentiable scalar so the gradient
-            # flows back into the per-pair raw parameter. A Lagrangian
-            # rate penalty is added once per step to drive sum(weights)
-            # toward N_pairs.
+            # Lane W-V2 + Round 11 Finding 2 fix (2026-04-28): when
+            # --learnable-pair-weights is active, the LearnablePairWeights
+            # module exposes ONLY a buffer (lambda_pair) — no Parameter.
+            # We therefore (a) multiply the loss by the DETACHED
+            # `1+lambda_pair[idx]` scalar so the magnitude is correct
+            # without backprop into the buffer, and (b) drive adaptation
+            # via an EXPLICIT projected dual-ascent update on the observed
+            # per-pair loss. Without (b) this whole branch was a silent
+            # no-op (Codex Round 11 Finding 2: "weights never adapt").
             if learnable_pair_weights is not None:
-                _w = learnable_pair_weights.weight_for_pair(pair_idx_int)
+                _w = learnable_pair_weights.weight_for_pair(pair_idx_int).detach()
                 loss = loss * _w
-                # Lagrangian rate penalty: divide by accum so the per-step
-                # contribution doesn't compound across the gradient
-                # accumulation buffer.
-                from tac.learnable_pair_weights import (
-                    compute_pair_weight_rate_penalty,
+                # Streaming dual-ascent: feed the observed scalar loss
+                # for THIS pair into the module's running-mean dual update.
+                # eta is the *_lr CLI arg (re-purposed; the buffer-only
+                # module has no AdamW state, so the "lr" naming is the
+                # dual step size).
+                _observed = loss.detach().reshape(1)
+                learnable_pair_weights.dual_update(
+                    _observed,
+                    eta=float(args.learnable_pair_weights_lr),
+                    pair_idx=int(pair_idx_int),
                 )
-                _pw_rate = compute_pair_weight_rate_penalty(
-                    learnable_pair_weights,
-                    lambda_rate=float(args.learnable_pair_weights_rate_lambda),
-                ) / float(accum)
-                loss = loss + _pw_rate
             elif pair_loss_weights is not None:
                 _w = pair_loss_weights[pair_idx_int]
                 # Cast on-device so we don't add a CPU/CUDA sync per step.
                 loss = loss * _w.to(loss.device)
+
+            # Round 11 Finding 2 fix (2026-04-28): explicit dual update for
+            # LearnableClassWeights. The per-class distortion vector comes
+            # from the *_with_aux scorer loss (`_scorer_aux`); when it's
+            # missing (e.g. xpred path) we skip silently — the lambdas
+            # simply don't update for that step, which is correct (no
+            # SegNet signal that step).
+            if (learnable_segnet_class_weights is not None
+                    and _scorer_aux is not None
+                    and "per_class_seg_distortion" in _scorer_aux):
+                _per_class_d = _scorer_aux["per_class_seg_distortion"]
+                if torch.isfinite(_per_class_d).all():
+                    learnable_segnet_class_weights.dual_update(
+                        _per_class_d,
+                        eta=float(args.learnable_segnet_class_weights_lr),
+                    )
+
+            if entropy_bottleneck is not None and float(args.eb_lambda) > 0.0:
+                loss = loss + float(args.eb_lambda) * entropy_bottleneck.rate_loss()
 
             scaled_loss = loss / accum
 
@@ -2625,7 +3158,7 @@ def train(args: argparse.Namespace):
             # Save FP4 checkpoint from EMA weights. R-FP4-fix: pass codebook +
             # robust_scale to match what QAT trained against — mismatched
             # quantization at save time silently corrupts the deployed model.
-            save_state = ema.state_dict()
+            save_state = _strip_t2_training_only_state(ema.state_dict())
             fp4_path = out_dir / f"renderer_{args.tag}_best_fp4.pt"
             from tac.fp4_quantize import DEFAULT_CODEBOOK, RESIDUAL_CODEBOOK
             _save_codebook = (RESIDUAL_CODEBOOK if args.fp4_codebook == "residual"
@@ -2676,6 +3209,17 @@ def train(args: argparse.Namespace):
                 # Class name so consumers know which to instantiate.
                 "model_class": "AsymmetricPairGenerator" if args.use_zoom_flow else "PairGenerator",
                 "profile": getattr(args, "profile", None),
+                "use_t2_xpred_loss": bool(getattr(args, "use_t2_xpred_loss", False)),
+                "t2_xpred_sigma": float(getattr(args, "t2_xpred_sigma", 1.0)),
+                "t2_xpred_weighting": getattr(args, "t2_xpred_weighting", "v"),
+                "use_t2_mask": bool(getattr(args, "use_t2_mask", False)),
+                "t2_mask_p": float(getattr(args, "t2_mask_p", 0.5)),
+                "t2_mask_ratio": float(getattr(args, "t2_mask_ratio", 0.15)),
+                "t2_mask_apply_fraction": float(
+                    getattr(args, "t2_mask_apply_fraction", 0.4)
+                ),
+                "no_mask_encoder": bool(getattr(args, "no_mask_encoder", False)),
+                "informational_only": bool(getattr(args, "no_mask_encoder", False)),
             }
             fp4_packed["__meta__"] = _arch_meta
             fp4_tmp = fp4_path.with_suffix(".pt.tmp")
@@ -2746,6 +3290,9 @@ def train(args: argparse.Namespace):
                     "residual_scale": args.residual_scale,
                     "seed": args.seed,
                     "deterministic": args.deterministic,
+                    "no_mask_encoder": bool(getattr(args, "no_mask_encoder", False)),
+                    "informational_only": bool(getattr(args, "no_mask_encoder", False)),
+                    "stacking_candidate": not bool(getattr(args, "no_mask_encoder", False)),
                 },
             }, indent=2))
 

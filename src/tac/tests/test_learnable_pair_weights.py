@@ -1,16 +1,24 @@
-"""Tests for src/tac/learnable_pair_weights.py — Lane W-V2 LearnablePairWeights.
+"""Tests for src/tac/learnable_pair_weights.py — Lane W-V2.
+
+Round 10 (2026-04-27) replaced the softplus(raw)+rate-Lagrangian
+parameterisation with projected dual-ascent on a buffer ``lambda_pair``.
+There is no learnable Parameter; mutation happens only via
+:meth:`LearnablePairWeights.dual_update`. Round 11 Finding 2 (2026-04-28)
+wires explicit ``dual_update`` calls in the training loop and removes the
+empty optimizer-param-group code path. These tests pin the Round 10/11
+contract.
 
 Pins:
-  1. raw is a learnable Parameter with grad enabled.
-  2. softplus keeps weights >= 0 even with very negative raw.
-  3. uniform init: weights ≈ 1.0 everywhere.
-  4. warm_start: weights ≈ warm_start (within softplus rounding).
-  5. gradient flows through self.raw when (weights * losses).sum() is backproped.
-  6. Lagrangian rate penalty drives sum(weights) toward target_sum.
-  7. save/load round-trip preserves raw and weights.
-  8. Corrupt snapshots fail loud (schema_version + module ID checks).
-  9. weight_for_pair returns the same value as full forward.
- 10. Determinism: same warm_start → same raw initial value.
+  1. lambda_pair is a buffer (no Parameter).
+  2. Uniform init: weights ≈ 1.0 everywhere.
+  3. warm_start: nonzero λ floor applied for entries above 1.0.
+  4. Dual update grows λ for above-target pair losses, shrinks for below-target.
+  5. Vector dual update centres on the mean (zero-sum residual ⇒ λ-mass conserved).
+  6. Scalar streaming dual update with running-mean target (no-target-loss path).
+  7. compute_pair_weighted_primal_loss applies (1+λ)/N weighting.
+  8. save/load round-trip preserves lambda_pair.
+  9. Schema/module guards reject corrupt snapshots.
+ 10. Compatibility shim ``compute_pair_weight_rate_penalty`` returns 0 (retired).
 """
 from __future__ import annotations
 
@@ -22,6 +30,8 @@ import torch.nn as nn
 
 from tac.learnable_pair_weights import (
     LearnablePairWeights,
+    compute_pair_weight_dual_update,
+    compute_pair_weighted_primal_loss,
     compute_pair_weight_rate_penalty,
     load_learnable_pair_weights,
     save_learnable_pair_weights,
@@ -29,40 +39,35 @@ from tac.learnable_pair_weights import (
 )
 
 
-# ── Basic shape + parameter properties ───────────────────────────────────
+# ── Module basics (Round 10 buffer-only API) ──────────────────────────────
 
 
-def test_raw_is_learnable_parameter():
+def test_lambda_pair_is_buffer_no_parameters():
     pw = LearnablePairWeights(600)
-    assert isinstance(pw.raw, nn.Parameter)
-    assert pw.raw.requires_grad
-    assert pw.raw.shape == (600,)
+    # No nn.Parameter — Round 10 dropped the softplus(raw) Parameter.
+    assert list(pw.parameters()) == []
+    # lambda_pair is a registered buffer with requires_grad=False.
+    assert "lambda_pair" in dict(pw.named_buffers())
+    assert not pw.lambda_pair.requires_grad
+    assert pw.lambda_pair.shape == (600,)
+    # Round 11 Finding 2: also assert dual-ascent infra buffers exist.
+    assert "running_target_loss" in dict(pw.named_buffers())
+    assert "dual_step" in dict(pw.named_buffers())
 
 
 def test_uniform_init_gives_unit_weights():
     pw = LearnablePairWeights(64)
     w = pw()
-    assert torch.allclose(w, torch.ones(64), atol=1e-4)
+    assert torch.allclose(w, torch.ones(64), atol=1e-6)
 
 
-def test_softplus_keeps_weights_nonneg_even_with_negative_raw():
-    pw = LearnablePairWeights(8)
-    with torch.no_grad():
-        pw.raw.fill_(-100.0)
-    w = pw()
-    assert (w >= 0).all()
-    # softplus(-100) ≈ 0 within float32 precision
-    assert w.max().item() < 1e-3
-
-
-def test_warm_start_preserves_values():
+def test_warm_start_above_one_initialises_lambda_floor():
+    """Warm-start values >1 map to λ = warm-1 (zero-floored) per Round 10."""
     target = torch.tensor([0.5, 1.0, 5.0, 2.5, 0.1, 3.3])
     pw = LearnablePairWeights(6, warm_start=target)
-    w = pw()
-    diff = (w - target).abs()
-    assert diff.max().item() < 1e-3, (
-        f"warm_start mismatch: max diff {diff.max().item()}"
-    )
+    expected_lambda = (target - 1.0).clamp_min(0.0)
+    assert torch.allclose(pw.lambda_pair, expected_lambda, atol=1e-6)
+    assert torch.allclose(pw(), 1.0 + expected_lambda, atol=1e-6)
 
 
 def test_warm_start_shape_mismatch_raises():
@@ -87,69 +92,98 @@ def test_n_pairs_must_be_positive():
         LearnablePairWeights(0)
 
 
-# ── Gradient flow ────────────────────────────────────────────────────────
+# ── Dual-ascent semantics ────────────────────────────────────────────────
 
 
-def test_gradient_flows_through_raw():
-    pw = LearnablePairWeights(8)
-    pair_losses = torch.linspace(0.1, 1.0, 8).requires_grad_(False)
-    weighted = (pw() * pair_losses).sum()
-    weighted.backward()
-    assert pw.raw.grad is not None
-    assert torch.isfinite(pw.raw.grad).all()
-    # Larger losses → larger gradient on raw at uniform init
-    # (∂(softplus(r) * loss)/∂r = sigmoid(r) * loss; same sigmoid factor
-    # means the ranking of |grad| matches the ranking of |loss|).
-    grad_order = pw.raw.grad.argsort()
-    loss_order = pair_losses.argsort()
-    assert torch.equal(grad_order, loss_order)
+def test_vector_dual_update_grows_above_target_shrinks_below_target():
+    """λ_p ← max(0, λ_p + η * (loss_p − target)) with target = mean(loss)."""
+    pw = LearnablePairWeights(3)
+    with torch.no_grad():
+        pw.lambda_pair.copy_(torch.tensor([0.2, 0.2, 0.2]))
+    # losses [0.1, 0.5, 0.9] with explicit target=0.5, eta=0.5
+    compute_pair_weight_dual_update(
+        pw,
+        torch.tensor([0.1, 0.5, 0.9]),
+        eta=0.5,
+        target_loss=torch.tensor(0.5),
+    )
+    # λ_0 = max(0, 0.2 + 0.5 * (0.1-0.5)) = 0.0
+    # λ_1 = max(0, 0.2 + 0.5 * (0.5-0.5)) = 0.2
+    # λ_2 = max(0, 0.2 + 0.5 * (0.9-0.5)) = 0.4
+    expected = torch.tensor([0.0, 0.2, 0.4])
+    assert torch.allclose(pw.lambdas(), expected, atol=1e-7)
 
 
-def test_gradient_zero_when_loss_zero():
-    pw = LearnablePairWeights(4)
-    z = (pw() * torch.zeros(4)).sum()
-    z.backward()
-    assert torch.allclose(pw.raw.grad, torch.zeros(4))
-
-
-# ── Lagrangian rate penalty ──────────────────────────────────────────────
-
-
-def test_rate_penalty_zero_at_target_sum():
-    """At uniform init, sum(weights) = n_pairs ⇒ penalty = 0."""
+def test_dual_ascent_grows_only_hard_pair_lambda():
+    """One above-mean pair eventually has the strictly-largest λ."""
     pw = LearnablePairWeights(10)
-    pen = compute_pair_weight_rate_penalty(pw, target_sum=10.0, lambda_rate=1.0)
-    assert pen.item() == pytest.approx(0.0, abs=1e-5)
+    losses = torch.tensor([0.1] * 9 + [1.0])
+    for _ in range(100):
+        compute_pair_weight_dual_update(pw, losses, eta=0.1)
+    lam = pw.lambdas().detach()
+    weights = pw().detach()
+    assert lam[-1].item() > lam[:-1].max().item()
+    assert weights[-1].item() > weights[:-1].max().item()
 
 
-def test_rate_penalty_positive_when_sum_above_target():
-    pw = LearnablePairWeights(10, warm_start=torch.full((10,), 2.0))
-    # sum = 20, target = 10 ⇒ penalty = 1 * (20 - 10)² = 100
-    pen = compute_pair_weight_rate_penalty(pw, target_sum=10.0, lambda_rate=1.0)
-    assert pen.item() == pytest.approx(100.0, rel=1e-3)
+def test_scalar_streaming_update_running_mean_target():
+    """When target_loss=None, scalar pair_idx updates use a running-mean
+    so a one-shot easy pair doesn't permanently shift the comparison."""
+    pw = LearnablePairWeights(5)
+    # Single observation seeds running mean to that value (so residual=0)
+    compute_pair_weight_dual_update(
+        pw, torch.tensor([0.3]), eta=0.5, pair_idx=2,
+    )
+    assert pw.lambda_pair[2].item() == pytest.approx(0.0, abs=1e-7)
+    # A sequence of HIGH observations on idx 0 should grow lambda[0].
+    for _ in range(50):
+        compute_pair_weight_dual_update(
+            pw, torch.tensor([2.0]), eta=0.05, pair_idx=0,
+        )
+    assert pw.lambda_pair[0].item() > 0.0
+    # Other pairs untouched.
+    assert pw.lambda_pair[1].item() == 0.0
+    assert pw.lambda_pair[3].item() == 0.0
 
 
-def test_rate_penalty_drives_sum_toward_target():
-    """SGD on the penalty alone should move sum(weights) toward target_sum."""
-    pw = LearnablePairWeights(8, warm_start=torch.full((8,), 3.0))
-    optim = torch.optim.SGD([pw.raw], lr=0.05)
-    initial_sum = pw().sum().item()
-    target = 8.0
-    for _ in range(200):
-        optim.zero_grad()
-        pen = compute_pair_weight_rate_penalty(pw, target_sum=target, lambda_rate=0.1)
-        pen.backward()
-        optim.step()
-    final_sum = pw().sum().item()
-    # The constraint should pull final_sum toward target, away from initial.
-    assert abs(final_sum - target) < abs(initial_sum - target)
+def test_eta_must_be_positive():
+    pw = LearnablePairWeights(4)
+    with pytest.raises(ValueError, match="eta must be > 0"):
+        compute_pair_weight_dual_update(
+            pw, torch.zeros(4), eta=0.0,
+        )
 
 
-def test_rate_penalty_default_target_is_n_pairs():
-    pw = LearnablePairWeights(7)
-    pen = compute_pair_weight_rate_penalty(pw, lambda_rate=1.0)
-    # sum(softplus(0.5413)) = 7 * 1.0 ≈ 7 = target ⇒ penalty ≈ 0
-    assert pen.item() == pytest.approx(0.0, abs=1e-3)
+def test_dual_update_rejects_nan_pair_loss():
+    pw = LearnablePairWeights(3)
+    bad = torch.tensor([0.1, float("nan"), 0.1])
+    with pytest.raises(ValueError, match="NaN"):
+        compute_pair_weight_dual_update(pw, bad, eta=0.1)
+
+
+# ── Primal loss helper ───────────────────────────────────────────────────
+
+
+def test_pair_primal_loss_uses_one_plus_lambda_over_n():
+    pw = LearnablePairWeights(3)
+    with torch.no_grad():
+        pw.lambda_pair.copy_(torch.tensor([0.0, 1.0, 3.0]))
+    pair_losses = torch.tensor([1.0, 2.0, 3.0])
+    primal = compute_pair_weighted_primal_loss(pw, pair_losses)
+    # (1*1 + 2*2 + 4*3) / 3 = (1+4+12)/3 = 17/3
+    expected = (pw().detach() * pair_losses).sum() / 3.0
+    assert primal.item() == pytest.approx(expected.item(), rel=1e-6)
+
+
+def test_pair_primal_loss_propagates_grad_into_pair_losses_only():
+    pw = LearnablePairWeights(4)
+    with torch.no_grad():
+        pw.lambda_pair.copy_(torch.tensor([0.5, 0.0, 1.0, 0.0]))
+    pair_losses = torch.linspace(0.1, 0.4, 4).requires_grad_(True)
+    primal = compute_pair_weighted_primal_loss(pw, pair_losses)
+    primal.backward()
+    assert pair_losses.grad is not None
+    assert torch.isfinite(pair_losses.grad).all()
 
 
 # ── weight_for_pair ──────────────────────────────────────────────────────
@@ -160,14 +194,14 @@ def test_weight_for_pair_matches_full_forward():
     pw = LearnablePairWeights(4, warm_start=target)
     full = pw()
     for i in range(4):
-        assert pw.weight_for_pair(i).item() == pytest.approx(full[i].item(), rel=1e-5)
+        assert pw.weight_for_pair(i).item() == pytest.approx(full[i].item(), rel=1e-6)
 
 
 def test_weight_for_pair_with_tensor_index():
     pw = LearnablePairWeights(8)
     idx = torch.tensor(3)
     w = pw.weight_for_pair(idx)
-    assert torch.allclose(w, torch.tensor(1.0), atol=1e-4)
+    assert torch.allclose(w, torch.tensor(1.0), atol=1e-6)
 
 
 # ── Save / load round-trip ───────────────────────────────────────────────
@@ -176,14 +210,15 @@ def test_weight_for_pair_with_tensor_index():
 def test_save_load_roundtrip(tmp_path: Path):
     target = torch.tensor([0.1, 5.0, 2.5, 1.0, 3.3])
     pw = LearnablePairWeights(5, warm_start=target)
+    with torch.no_grad():
+        pw.lambda_pair.copy_(torch.tensor([0.2, 0.0, 0.0, 0.4, 0.0]))
     out = tmp_path / "pw.pt"
     save_learnable_pair_weights(pw, out)
     assert out.exists()
     pw2 = load_learnable_pair_weights(out)
     assert pw2.n_pairs == 5
-    assert torch.allclose(pw.raw, pw2.raw, atol=1e-6)
-    # Forward must match
-    assert torch.allclose(pw(), pw2(), atol=1e-5)
+    assert torch.allclose(pw.lambda_pair, pw2.lambda_pair, atol=1e-6)
+    assert torch.allclose(pw(), pw2(), atol=1e-6)
 
 
 def test_load_missing_file_raises(tmp_path: Path):
@@ -192,12 +227,12 @@ def test_load_missing_file_raises(tmp_path: Path):
 
 
 def test_load_wrong_module_raises(tmp_path: Path):
-    """A snapshot with the wrong module ID must fail loud."""
     bad = {
-        "schema_version": 1,
+        "schema_version": 2,
         "module": "some.other.Module",
         "n_pairs": 5,
-        "raw": torch.zeros(5),
+        "lambda_pair": torch.zeros(5),
+        "weights": torch.ones(5),
     }
     p = tmp_path / "bad.pt"
     torch.save(bad, p)
@@ -210,7 +245,8 @@ def test_load_wrong_schema_version_raises(tmp_path: Path):
         "schema_version": 99,
         "module": "tac.learnable_pair_weights.LearnablePairWeights",
         "n_pairs": 5,
-        "raw": torch.zeros(5),
+        "lambda_pair": torch.zeros(5),
+        "weights": torch.ones(5),
     }
     p = tmp_path / "bad.pt"
     torch.save(bad, p)
@@ -225,7 +261,7 @@ def test_load_non_dict_raises(tmp_path: Path):
         load_learnable_pair_weights(p)
 
 
-# ── Inverse-softplus helper ──────────────────────────────────────────────
+# ── Inverse-softplus helper (kept for v1 snapshot back-compat) ───────────
 
 
 def test_inverse_softplus_round_trip():
@@ -233,16 +269,18 @@ def test_inverse_softplus_round_trip():
     raw = _inverse_softplus(y)
     y_back = torch.nn.functional.softplus(raw)
     diff = (y - y_back).abs()
-    assert diff.max().item() < 1e-3, (
-        f"inverse_softplus round-trip max diff {diff.max().item()}"
-    )
+    assert diff.max().item() < 1e-3
 
 
-# ── Determinism ──────────────────────────────────────────────────────────
+# ── Retired-shim contracts (Round 10) ────────────────────────────────────
 
 
-def test_deterministic_init_for_warm_start():
-    target = torch.tensor([1.0, 5.0, 2.0])
-    pw1 = LearnablePairWeights(3, warm_start=target)
-    pw2 = LearnablePairWeights(3, warm_start=target)
-    assert torch.equal(pw1.raw, pw2.raw)
+def test_rate_penalty_is_zero_valued_shim():
+    """Round 10 retired the softplus rate Lagrangian; the shim returns
+    a zero tensor so legacy imports compile but the term adds no signal
+    to the loss. (Round 11 Finding 2 also dropped its call site from
+    train_renderer.py — it's now genuinely dead.)"""
+    pw = LearnablePairWeights(8, warm_start=torch.full((8,), 3.0))
+    pen = compute_pair_weight_rate_penalty(pw, target_sum=8.0, lambda_rate=1.0)
+    assert pen.item() == 0.0
+    assert pen.requires_grad is False

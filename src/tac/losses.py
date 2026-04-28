@@ -115,6 +115,50 @@ def _apply_class_weights(
     return seg_per_pixel * pixel_w
 
 
+def per_class_seg_distortion(
+    seg_per_pixel: torch.Tensor,
+    gt_logits_or_probs: torch.Tensor,
+    num_classes: int,
+) -> torch.Tensor:
+    """Aggregate per-pixel SegNet loss into a (num_classes,) per-class
+    distortion vector via GT-argmax binning.
+
+    Used by Round 11 Finding 2 fix in train_renderer.py to feed the
+    LearnableClassWeights dual_update with the actual per-class
+    distortion residuals (not a uniform scalar). Mean is taken over all
+    pixels with that argmax label; classes with zero pixels in the batch
+    return 0 (no signal — the dual update naturally ignores them via the
+    target_t centring).
+
+    Args:
+        seg_per_pixel: (B, H, W) per-pixel SegNet loss (soft-cosine, KL).
+        gt_logits_or_probs: (B, C, H, W) GT logits OR softmax probs.
+        num_classes: expected channel count.
+
+    Returns: (num_classes,) tensor on the same device/dtype as ``seg_per_pixel``.
+    """
+    with torch.no_grad():
+        if gt_logits_or_probs.shape[1] != num_classes:
+            raise ValueError(
+                f"gt_logits_or_probs channel dim {gt_logits_or_probs.shape[1]} "
+                f"!= num_classes {num_classes}"
+            )
+        gt_argmax = gt_logits_or_probs.argmax(dim=1)  # (B, H, W)
+        if gt_argmax.shape != seg_per_pixel.shape:
+            raise ValueError(
+                f"GT argmax spatial shape {tuple(gt_argmax.shape)} does not "
+                f"match seg_per_pixel shape {tuple(seg_per_pixel.shape)}"
+            )
+        flat_loss = seg_per_pixel.detach().reshape(-1)
+        flat_idx = gt_argmax.reshape(-1)
+        out = torch.zeros(num_classes, device=flat_loss.device, dtype=flat_loss.dtype)
+        cnt = torch.zeros(num_classes, device=flat_loss.device, dtype=flat_loss.dtype)
+        out.scatter_add_(0, flat_idx, flat_loss)
+        cnt.scatter_add_(0, flat_idx, torch.ones_like(flat_loss))
+        out = out / cnt.clamp(min=1.0)
+    return out
+
+
 def parse_class_weights_csv(
     s: str | None,
     num_classes: int = 5,
@@ -247,6 +291,87 @@ def scorer_loss_cached(
 
     loss = 100.0 * seg_dist + torch.sqrt(10.0 * pose_dist + 1e-8)
     return loss, pose_dist.item(), seg_dist.item()
+
+
+def scorer_loss_with_aux(
+    filtered_pair_hwc: torch.Tensor,
+    gt_pair_hwc: torch.Tensor,
+    posenet,
+    segnet,
+    class_weights: torch.Tensor | None = None,
+    num_classes: int = 5,
+) -> tuple[torch.Tensor, float, float, dict]:
+    """Variant of :func:`scorer_loss` that also returns per-pair pose loss
+    and per-class SegNet distortion for the Round 11 Finding 2 dual-update
+    wiring (Lane W-V2 + Lane PS-V2). Caller passes ``class_weights`` exactly
+    as in :func:`scorer_loss`; the AUX dict carries detached tensors only.
+
+    Returns: (loss, pose_distortion, seg_distortion, aux) where
+        aux = {
+            "pose_dist_per_pair": (B,) per-pair pose loss (detached),
+            "per_class_seg_distortion": (num_classes,) per-class soft-cos (detached),
+        }
+    """
+    fx = _hwc_to_chw(filtered_pair_hwc)
+    gx = _hwc_to_chw(gt_pair_hwc)
+
+    fp_out, fs_out = scorer_forward_pair(fx, posenet, segnet)
+    with torch.no_grad():
+        gp_out, gs_out = scorer_forward_pair(gx, posenet, segnet)
+
+    pose_diff = fp_out["pose"][..., :6] - gp_out["pose"][..., :6]
+    pose_dist = pose_diff.pow(2).mean()
+    # (B,) per-pair pose distortion — collapse pose dims to mean.
+    pose_dist_per_pair = pose_diff.detach().pow(2).mean(dim=tuple(range(1, pose_diff.ndim)))
+
+    pred_soft = F.softmax(fs_out, dim=1)
+    gt_soft = F.softmax(gs_out, dim=1)
+    seg_per_pixel = 1.0 - (pred_soft * gt_soft).sum(dim=1)
+    per_class_d = per_class_seg_distortion(seg_per_pixel, gs_out, num_classes)
+    if class_weights is not None:
+        seg_per_pixel = _apply_class_weights(seg_per_pixel, gs_out, class_weights)
+    seg_dist = seg_per_pixel.mean()
+
+    loss = 100.0 * seg_dist + torch.sqrt(10.0 * pose_dist + 1e-8)
+    aux = {
+        "pose_dist_per_pair": pose_dist_per_pair,
+        "per_class_seg_distortion": per_class_d,
+    }
+    return loss, pose_dist.item(), seg_dist.item(), aux
+
+
+def scorer_loss_cached_with_aux(
+    filtered_pair_hwc: torch.Tensor,
+    gt_pose_6: torch.Tensor,
+    gt_seg_soft: torch.Tensor,
+    posenet,
+    segnet,
+    class_weights: torch.Tensor | None = None,
+    num_classes: int = 5,
+) -> tuple[torch.Tensor, float, float, dict]:
+    """Cached counterpart to :func:`scorer_loss_with_aux`."""
+    fx = _hwc_to_chw(filtered_pair_hwc)
+    fp_out, fs_out = scorer_forward_pair(fx, posenet, segnet)
+
+    pose_diff = fp_out["pose"][..., :6] - gt_pose_6
+    pose_dist = pose_diff.pow(2).mean()
+    pose_dist_per_pair = pose_diff.detach().pow(2).mean(dim=tuple(range(1, pose_diff.ndim)))
+
+    pred_soft = F.softmax(fs_out, dim=1)
+    seg_per_pixel = 1.0 - (pred_soft * gt_seg_soft).sum(dim=1)
+    per_class_d = per_class_seg_distortion(seg_per_pixel, gt_seg_soft, num_classes)
+    if class_weights is not None:
+        seg_per_pixel = _apply_class_weights(
+            seg_per_pixel, gt_seg_soft, class_weights, gt_already_probs=True,
+        )
+    seg_dist = seg_per_pixel.mean()
+
+    loss = 100.0 * seg_dist + torch.sqrt(10.0 * pose_dist + 1e-8)
+    aux = {
+        "pose_dist_per_pair": pose_dist_per_pair,
+        "per_class_seg_distortion": per_class_d,
+    }
+    return loss, pose_dist.item(), seg_dist.item(), aux
 
 
 def scorer_loss_pcgrad(
