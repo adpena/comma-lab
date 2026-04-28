@@ -2655,6 +2655,95 @@ def inflate_renderer(
             "unconditioned and score catastrophically."
         )
 
+    # ---- Lane M-V3 POSE-FROM-EMBEDDING (sentinel-detected, scorer-free) ----
+    # When the archive carries the pose_from_embedding_v1 sentinel AND the
+    # companion weights file AND no pose tensor was loaded above, predict
+    # per-pair 6-DOF poses with the distilled MLP. The MLP is trained at
+    # COMPRESS time with embedding-dropout so the inflate-side path uses
+    # zero embeddings — strict-scorer-rule compliant (NO PoseNet load at
+    # inflate). See src/tac/pose_from_embedding.py for the canonical
+    # architecture + load API.
+    _pose_emb_sentinel_path = (
+        Path(archive_dir) / "pose_from_embedding_v1"
+    )
+    _pose_emb_weights_path = (
+        Path(archive_dir) / "pose_from_embedding_v1.pt"
+    )
+    if (
+        poses is None
+        and _renderer_pose_dim > 0
+        and _pose_emb_sentinel_path.exists()
+        and masks is not None
+    ):
+        if not _pose_emb_weights_path.exists():
+            # Sentinel without companion weights = corrupt archive. HARD FAIL
+            # so we don't silently fall through to unconditioned rendering.
+            raise RuntimeError(
+                "FATAL: archive has pose_from_embedding_v1 sentinel but no "
+                "pose_from_embedding_v1.pt weights file. The Lane M-V3 path "
+                "requires both. Refusing to silently run unconditioned."
+            )
+        try:
+            from tac.pose_from_embedding import (
+                load_mlp as _load_pose_emb_mlp,
+                POSENET_EMBEDDING_DIM as _PNET_EMB_DIM,
+            )
+            if _renderer_pose_dim != 6:
+                print(
+                    f"  WARNING: pose_from_embedding sentinel found but "
+                    f"renderer pose_dim={_renderer_pose_dim} (expected 6). "
+                    f"Skipping pose-from-embedding path; renderer will run "
+                    f"unconditioned.",
+                    file=sys.stderr,
+                )
+            else:
+                _t_pemb = time.monotonic()
+                _pose_emb_mlp = _load_pose_emb_mlp(
+                    _pose_emb_weights_path, device=device,
+                )
+                # Inflate-side: zero embedding (PoseNet not loaded at inflate
+                # per strict-scorer-rule). The MLP was trained with
+                # embedding-dropout so this is the supervised regime.
+                _n_pairs_pemb = masks.shape[0] // 2
+                _zero_emb = torch.zeros(
+                    _n_pairs_pemb, _PNET_EMB_DIM,
+                    device=device, dtype=torch.float32,
+                )
+                # Compute on the inflate device (matches mask tensor device).
+                poses = _pose_emb_mlp.predict_poses_from_masks(
+                    masks.to(device=device, dtype=torch.long),
+                    embedding=_zero_emb,
+                ).detach().to(dtype=torch.float32)
+                _dt_pemb = time.monotonic() - _t_pemb
+                print(
+                    f"  [pose-from-embedding] predicted {poses.shape[0]} "
+                    f"poses from MLP in {_dt_pemb:.2f}s "
+                    f"(dim0 mean={poses[:, 0].mean().item():.3f} "
+                    f"std={poses[:, 0].std().item():.3f}) "
+                    f"sentinel={_pose_emb_sentinel_path.name} "
+                    f"weights_bytes={_pose_emb_weights_path.stat().st_size}",
+                    file=sys.stderr,
+                )
+        except ImportError as _e:
+            print(
+                f"  WARNING: pose_from_embedding sentinel found but "
+                f"tac.pose_from_embedding unavailable ({_e!r}); renderer "
+                f"will run unconditioned.",
+                file=sys.stderr,
+            )
+    elif (
+        poses is None
+        and _pose_emb_sentinel_path.exists()
+        and masks is None
+    ):
+        # Sentinel present but masks weren't loaded — HARD FAIL (pose-from-
+        # embedding requires the mask tensor for the feature extractor).
+        raise RuntimeError(
+            "FATAL: archive has pose_from_embedding_v1 sentinel but masks "
+            "tensor is None. The Lane M-V3 path requires masks for the "
+            "MLP feature extractor. Refusing to silently run unconditioned."
+        )
+
     # ---- Load zoom warp scalars (for use_zoom_flow models) ----
     zoom_warp = None
     if hasattr(renderer, 'use_zoom_flow') and renderer.use_zoom_flow:
@@ -3694,6 +3783,69 @@ def _inflate_renderer_with_mini_tto(
             "INFLATE_ZERO_COST_POSES=1 to compute poses from lane marks.",
             file=sys.stderr,
         )
+
+    # ---- Lane M-V3 POSE-FROM-EMBEDDING (mini-TTO inflate path) ----
+    # Mirror of the run_inflate() block above. The MLP is loaded with
+    # zero PoseNet input (strict-scorer-rule). See the run_inflate()
+    # variant for the full rationale and tac.pose_from_embedding.py for
+    # the canonical architecture.
+    _pose_emb_sentinel_path = (
+        archive_path / "pose_from_embedding_v1"
+    )
+    _pose_emb_weights_path = (
+        archive_path / "pose_from_embedding_v1.pt"
+    )
+    if (
+        poses is None
+        and _renderer_pose_dim > 0
+        and _pose_emb_sentinel_path.exists()
+        and masks is not None
+    ):
+        if not _pose_emb_weights_path.exists():
+            raise RuntimeError(
+                "FATAL: (mini-TTO) archive has pose_from_embedding_v1 "
+                "sentinel but no pose_from_embedding_v1.pt weights file. "
+                "Refusing to silently run unconditioned."
+            )
+        try:
+            from tac.pose_from_embedding import (
+                load_mlp as _load_pose_emb_mlp,
+                POSENET_EMBEDDING_DIM as _PNET_EMB_DIM,
+            )
+            if _renderer_pose_dim != 6:
+                print(
+                    f"  WARNING: (mini-TTO) pose_from_embedding sentinel found "
+                    f"but renderer pose_dim={_renderer_pose_dim} (expected 6). "
+                    f"Skipping pose-from-embedding path.",
+                    file=sys.stderr,
+                )
+            else:
+                _t_pemb = time.monotonic()
+                _pose_emb_mlp = _load_pose_emb_mlp(
+                    _pose_emb_weights_path, device=device,
+                )
+                _n_pairs_pemb = masks.shape[0] // 2
+                _zero_emb = torch.zeros(
+                    _n_pairs_pemb, _PNET_EMB_DIM,
+                    device=device, dtype=torch.float32,
+                )
+                poses = _pose_emb_mlp.predict_poses_from_masks(
+                    masks.to(device=device, dtype=torch.long),
+                    embedding=_zero_emb,
+                ).detach().to(dtype=torch.float32)
+                _dt_pemb = time.monotonic() - _t_pemb
+                print(
+                    f"  [pose-from-embedding] (mini-TTO) predicted "
+                    f"{poses.shape[0]} poses from MLP in {_dt_pemb:.2f}s",
+                    file=sys.stderr,
+                )
+        except ImportError as _e:
+            print(
+                f"  WARNING: pose_from_embedding sentinel found but "
+                f"tac.pose_from_embedding unavailable ({_e!r}); renderer "
+                f"will run unconditioned.",
+                file=sys.stderr,
+            )
 
     # ---- Generate renderer frames ----
     print("Stage 1: Generating renderer frames...", file=sys.stderr)

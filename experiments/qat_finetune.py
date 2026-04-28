@@ -104,6 +104,12 @@ class QATConfig:
     checkpoint_path: str = ""
     upstream_dir: str = "upstream/"
     mixed_precision_json: str = ""  # scorer sensitivity JSON for mixed-precision QAT
+    # Lane F-V4: per-layer FP4 sensitivity profile (from
+    # experiments/profile_fp4_layer_sensitivity.py).
+    mixed_precision_from_sensitivity: str = ""
+    mixed_precision_target_rate: float = 0.70  # fraction of params at bulk_bits (FP4)
+    mixed_precision_bulk_bits: int = 4
+    mixed_precision_critical_bits: int = 16
     output_dir: str = "experiments/results/qat_fp4"
 
     # QAT schedule — research-backed (Apple 2025, Bit-by-Bit 2026)
@@ -311,6 +317,108 @@ def apply_fp4_fake_quant(
 
     print(f"  FP4 parametrized: {len(wrapped)} layers (all Conv/Linear/Embedding)")
     return wrapped
+
+
+def bit_allocation_from_sensitivity(
+    sensitivity_path: str | Path,
+    model: nn.Module,
+    target_rate: float = 0.70,
+    bulk_bits: int = 4,
+    critical_bits: int = 16,
+) -> tuple[dict[str, int], dict[str, float]]:
+    """Build a per-layer bit allocation from a Lane F-V4 sensitivity profile.
+
+    Lane F-V4 design: sort layers by FP4 sensitivity (delta distortion when
+    only that layer is FP4-quantized) ASCENDING. The bottom ``target_rate``
+    fraction by PARAM COUNT (default 70%) gets ``bulk_bits`` (default FP4=4).
+    The remaining ``1 - target_rate`` (top 30% by sensitivity) gets
+    ``critical_bits`` (default FP16=16, i.e. NO quantization).
+
+    The Lagrangian-style ``--mixed-precision-target-rate`` knob lets the
+    council sweep the rate-distortion tradeoff: 1.0 → uniform FP4 (matches
+    Lane F-V3), 0.0 → no FP4 (matches FP32 baseline), intermediate values
+    let mixed-precision land in between.
+
+    Args:
+        sensitivity_path: path to ``layer_sensitivity.pt`` from
+            ``profile_fp4_layer_sensitivity.py``.
+        model: the renderer (used to filter sensitivity entries to layers
+            that actually exist in this model — guards against arch-drift
+            between profile time and QAT time).
+        target_rate: fraction of params (NOT layers) that should be FP4.
+            Default 0.70 = 70% of weight bytes are FP4-quantized, the
+            remaining 30% (the most sensitive layers) stay FP16.
+        bulk_bits: bit depth for the FP4-tolerable layers (default 4).
+        critical_bits: bit depth for the FP4-intolerant layers (default 16,
+            i.e. unchanged FP16 weights).
+
+    Returns:
+        (allocation, sensitivity_used) where allocation maps qualified
+        param names ("foo.bar.weight") to int bit depth, and
+        sensitivity_used maps the same names to the float delta from
+        the profile.
+
+    Council justification (Yousfi + Fridrich + Hotz, 2026-04-28):
+      Uniform FP4 on dilated-h64 ASYM destroyed PoseNet because a small
+      number of layers carry the YUV6 statistics that FastViT-T12
+      attention is sensitive to. The empirical profile identifies them;
+      the bit allocator preserves them.
+    """
+    sensitivity = torch.load(str(sensitivity_path), map_location="cpu", weights_only=False)
+    if "delta" not in sensitivity:
+        raise ValueError(
+            f"sensitivity file {sensitivity_path} missing 'delta' key. "
+            f"Re-run experiments/profile_fp4_layer_sensitivity.py."
+        )
+    delta: dict[str, float] = sensitivity["delta"]
+    profile_param_count: dict[str, int] = sensitivity.get("param_count", {})
+
+    # Map "foo.bar" (module name in profile) to "foo.bar.weight" (param name in QAT)
+    model_params = dict(model.named_parameters())
+    layer_records: list[tuple[str, float, int]] = []  # (param_name, delta, n_params)
+    for module_name, d in delta.items():
+        param_name = module_name + ".weight"
+        if param_name not in model_params:
+            # Layer disappeared from the model (arch drift or rename) — skip
+            continue
+        n = profile_param_count.get(module_name, model_params[param_name].numel())
+        layer_records.append((param_name, float(d), int(n)))
+
+    if not layer_records:
+        raise ValueError(
+            f"No sensitivity entries match this model's parameters. "
+            f"Profile checkpoint may have been built from a different "
+            f"architecture. Sensitivity has {len(delta)} entries; model "
+            f"has {len(model_params)} parameters."
+        )
+
+    # Sort ASCENDING by sensitivity (FP4-tolerable first)
+    layer_records.sort(key=lambda r: r[1])
+
+    total_params = sum(r[2] for r in layer_records)
+    fp4_budget = int(round(total_params * target_rate))
+
+    allocation: dict[str, int] = {}
+    sensitivity_used: dict[str, float] = {}
+    cumulative = 0
+    for param_name, d, n in layer_records:
+        sensitivity_used[param_name] = d
+        if cumulative + n <= fp4_budget:
+            allocation[param_name] = bulk_bits
+            cumulative += n
+        else:
+            allocation[param_name] = critical_bits
+
+    actual_rate = cumulative / max(total_params, 1)
+    print(f"  Mixed-precision allocation built from {sensitivity_path}:")
+    print(f"    total layers: {len(layer_records)}, total params: {total_params:,}")
+    print(f"    target_rate: {target_rate:.2%}, actual: {actual_rate:.2%} "
+          f"({cumulative:,} FP{bulk_bits} / {total_params - cumulative:,} FP{critical_bits})")
+    print(f"    layers FP{bulk_bits}: "
+          f"{sum(1 for v in allocation.values() if v == bulk_bits)}, "
+          f"layers FP{critical_bits}: "
+          f"{sum(1 for v in allocation.values() if v == critical_bits)}")
+    return allocation, sensitivity_used
 
 
 def apply_mixed_precision_quant(
@@ -648,6 +756,24 @@ def main() -> None:
     parser.add_argument("--mixed-precision-json", type=Path, default=None,
                         help="Path to scorer sensitivity JSON for mixed-precision QAT. "
                              "Use experiments/scorer_sensitivity_sweep.py to generate.")
+    # Lane F-V4 mixed-precision FP4 from per-layer sensitivity profile.
+    parser.add_argument("--mixed-precision-from-sensitivity", type=Path, default=None,
+                        help="Path to layer_sensitivity.pt from "
+                             "experiments/profile_fp4_layer_sensitivity.py. "
+                             "Lane F-V4 mixed-precision: bottom "
+                             "--mixed-precision-target-rate fraction of params "
+                             "(by sensitivity ASC) → FP4, rest → FP16.")
+    parser.add_argument("--mixed-precision-target-rate", type=float, default=0.70,
+                        help="Lagrangian-style knob for mixed-precision sweep. "
+                             "Fraction of TOTAL PARAMS that should be FP4-quantized "
+                             "(rest stay FP16). 0.70 = bulk 0.70 FP4 + critical 0.30 "
+                             "FP16. 1.0 = uniform FP4 (matches Lane F-V3). 0.0 = no "
+                             "FP4 (matches FP32 baseline).")
+    parser.add_argument("--mixed-precision-bulk-bits", type=int, default=4,
+                        help="Bit depth for FP4-tolerable bulk layers (default 4).")
+    parser.add_argument("--mixed-precision-critical-bits", type=int, default=16,
+                        help="Bit depth for FP4-intolerant critical layers "
+                             "(default 16 = unchanged FP16).")
 
     args = parser.parse_args()
 
@@ -671,7 +797,30 @@ def main() -> None:
         base_lr=args.lr,
         batch_size=args.batch_size,
         mixed_precision_json=str(args.mixed_precision_json) if args.mixed_precision_json else "",
+        mixed_precision_from_sensitivity=str(args.mixed_precision_from_sensitivity)
+            if args.mixed_precision_from_sensitivity else "",
+        mixed_precision_target_rate=float(args.mixed_precision_target_rate),
+        mixed_precision_bulk_bits=int(args.mixed_precision_bulk_bits),
+        mixed_precision_critical_bits=int(args.mixed_precision_critical_bits),
     )
+
+    # Validate mixed-precision mutual exclusion + range.
+    if args.mixed_precision_from_sensitivity and args.mixed_precision_json:
+        raise SystemExit(
+            "FATAL: --mixed-precision-from-sensitivity and --mixed-precision-json "
+            "are mutually exclusive. Pick ONE source for the bit allocation."
+        )
+    if not (0.0 <= cfg.mixed_precision_target_rate <= 1.0):
+        raise SystemExit(
+            f"FATAL: --mixed-precision-target-rate must be in [0, 1], "
+            f"got {cfg.mixed_precision_target_rate}"
+        )
+    if cfg.mixed_precision_from_sensitivity and not Path(cfg.mixed_precision_from_sensitivity).exists():
+        raise SystemExit(
+            f"FATAL: --mixed-precision-from-sensitivity path does not exist: "
+            f"{cfg.mixed_precision_from_sensitivity}\n"
+            f"       Run experiments/profile_fp4_layer_sensitivity.py first."
+        )
 
     # Preflight
     from tac.preflight import preflight_check
@@ -919,7 +1068,36 @@ def main() -> None:
     print(f"{'='*70}")
 
     mp_json_path = Path(cfg.mixed_precision_json) if cfg.mixed_precision_json else None
-    if mp_json_path and mp_json_path.exists():
+    mp_sens_path = Path(cfg.mixed_precision_from_sensitivity) if cfg.mixed_precision_from_sensitivity else None
+    bit_allocation_v4: dict[str, int] | None = None
+    if mp_sens_path and mp_sens_path.exists():
+        # Lane F-V4: mixed-precision allocation derived from per-layer
+        # FP4 sensitivity profile (experiments/profile_fp4_layer_sensitivity.py).
+        print(f"  Lane F-V4 mixed-precision from {mp_sens_path}")
+        print(f"    target_rate={cfg.mixed_precision_target_rate} "
+              f"bulk={cfg.mixed_precision_bulk_bits}b "
+              f"critical={cfg.mixed_precision_critical_bits}b")
+        bit_allocation_v4, sensitivity_used = bit_allocation_from_sensitivity(
+            mp_sens_path,
+            model,
+            target_rate=cfg.mixed_precision_target_rate,
+            bulk_bits=cfg.mixed_precision_bulk_bits,
+            critical_bits=cfg.mixed_precision_critical_bits,
+        )
+        # Persist the realised allocation alongside the QAT output for the
+        # mixed-precision MXLZ export at end of training.
+        (out_dir / "mixed_precision_allocation.json").write_text(json.dumps({
+            "allocation": bit_allocation_v4,
+            "sensitivity_used": sensitivity_used,
+            "target_rate": cfg.mixed_precision_target_rate,
+            "bulk_bits": cfg.mixed_precision_bulk_bits,
+            "critical_bits": cfg.mixed_precision_critical_bits,
+            "source_profile": str(mp_sens_path),
+        }, indent=2))
+        fp4_wrapped = apply_mixed_precision_quant(
+            model, bit_allocation_v4, block_size=cfg.fp4_block_size,
+        )
+    elif mp_json_path and mp_json_path.exists():
         mp_data = json.loads(mp_json_path.read_text())
         bit_allocation = mp_data.get("allocation", {})
         print(f"  Using scorer-optimal mixed-precision from {mp_json_path}")
@@ -1014,7 +1192,22 @@ def main() -> None:
 
     # ── Export binary ──────────────────────────────────────────────────
     mp_json_path = Path(cfg.mixed_precision_json) if cfg.mixed_precision_json else None
-    if mp_json_path and mp_json_path.exists():
+    mp_sens_path = Path(cfg.mixed_precision_from_sensitivity) if cfg.mixed_precision_from_sensitivity else None
+    if mp_sens_path and mp_sens_path.exists() and bit_allocation_v4 is not None:
+        # Lane F-V4 mixed-precision MXLZ export (matches training allocation).
+        # WARNING: MXLZ format is NOT yet supported by inflate_renderer.py
+        # for contest submission. Use FP4A binary for the archive.
+        print("\nExporting Lane F-V4 mixed-precision MXLZ binary...")
+        print("  WARNING: MXLZ not yet supported by inflate_renderer.py for contest submission")
+        from tac.mixed_precision_export import export_int4_lzma2
+        fp4_path = out_dir / "renderer_mixed.bin"
+        export_int4_lzma2(model, fp4_path, bit_allocation=bit_allocation_v4)
+        # ALSO export FP4A for contest-compliant path
+        fp4a_path = out_dir / "renderer_fp4.bin"
+        from tac.renderer_export import export_asymmetric_checkpoint_fp4
+        export_asymmetric_checkpoint_fp4(model, fp4a_path)
+        print(f"  Also exported FP4A for contest: {fp4a_path.stat().st_size:,} bytes")
+    elif mp_json_path and mp_json_path.exists():
         # Mixed-precision MXLZ export (matches training allocation)
         # WARNING: MXLZ format is NOT yet supported by inflate_renderer.py
         # (standalone contest submission path). Use FP4A for contest submissions.
