@@ -81,6 +81,146 @@ NUM_FRAMES = 1200
 NUM_PAIRS = NUM_FRAMES // 2
 
 
+# ---------------------------------------------------------------------------
+# Lane M-V3-clean: train/inference pose-pad parity helpers
+# ---------------------------------------------------------------------------
+# These module-level helpers are the SHARED pose-projection contract used
+# by both the optimizer (training-time render) and the save block
+# (inflate-time consumed tensor). Putting them here so a single helper is
+# the only producer of the (N, 6) tensor — eliminates BUG-1 (Lane M-V2
+# audit, memory project_lane_m_v2_audit_council_findings_20260428):
+# previously the optimizer fed the renderer ``[zoom, 0, 0, 0, 0, 0]`` while
+# the save block stored ``[zoom, baseline_1..5]`` for inflate. Predicted
+# band for Lane M-V3-clean: [1.05, 1.20] [contest-CUDA].
+#
+# PROJECT_PARITY_WAIVED: inflate reads the raw saved bytes from
+# ``optimized_poses.pt`` — it does NOT call any projection helper because
+# the bytes ARE the (N, 6) renderer-input tensor. Parity is enforced by
+# making the optimizer (training render) and the save block (the file
+# inflate reads) BOTH go through this same module-level
+# ``_project_to_renderer_pose`` helper. The bit-exact equality is asserted
+# by ``test_train_inference_bit_exact_parity`` in
+# ``src/tac/tests/test_lane_m_v3_clean_train_inference_parity.py``.
+# Adding a no-op call from inflate would only obscure that contract.
+def _project_to_renderer_pose(
+    cond: torch.Tensor,
+    baseline: torch.Tensor,
+    *,
+    pose_mode: str,
+    pose_dim_internal: int,
+    pose_dim: int,
+) -> torch.Tensor:
+    """Project optimizable conditioning to the renderer's full 6-DOF pose.
+
+    In ``radial-zoom`` mode the optimizable parameter is (B, 1) — we lift
+    it to (B, pose_dim) by FROZEN-PADDING dims ``pose_dim_internal:pose_dim``
+    with the corresponding columns of ``baseline``. The renderer's FiLM
+    layer was trained on 6-DOF input where dims 1-5 carry per-pair PoseNet
+    auxiliary information (mean ~0, std ~0.05 per the rank-1 discovery),
+    so zero-padding those dims (Lane M-V2 BUG-1) sends the FiLM activation
+    off-manifold and explodes PoseNet distortion. The fix: feed the SAME
+    baseline values the inflate side will read from the saved tensor.
+
+    Parameters
+    ----------
+    cond : torch.Tensor
+        ``(B, cond_dim)`` raw conditioning tensor (optimizer parameter).
+        The first ``pose_dim_internal`` dims are the optimizable pose part.
+    baseline : torch.Tensor
+        ``(B, pose_dim)`` baseline pose tensor — the per-pair frozen pose
+        values that inflate will read from ``optimized_poses.pt``. In
+        ``full-6dof`` mode this is unused (the optimizer drives all
+        ``pose_dim`` dims itself); in ``radial-zoom`` mode dims
+        ``pose_dim_internal:pose_dim`` are pulled from here.
+    pose_mode : str
+        Either ``"full-6dof"`` or ``"radial-zoom"``.
+    pose_dim_internal : int
+        Number of optimizable pose dims (1 for radial-zoom, ``pose_dim``
+        for full-6dof).
+    pose_dim : int
+        Renderer's native FiLM input dim (6 for the canonical PoseNet head).
+
+    Returns
+    -------
+    torch.Tensor
+        ``(B, pose_dim)`` pose tensor in the same layout the inflate-side
+        reader will see. Bit-exact equal to ``baseline`` in dims
+        ``pose_dim_internal:pose_dim`` (frozen pad), and equal to
+        ``cond[:, :pose_dim_internal]`` in dims ``0:pose_dim_internal``.
+    """
+    opt_part = cond[:, :pose_dim_internal]
+    if pose_mode == "radial-zoom" and pose_dim_internal != pose_dim:
+        if baseline.shape[0] != opt_part.shape[0]:
+            raise ValueError(
+                f"baseline batch dim {baseline.shape[0]} != cond batch dim "
+                f"{opt_part.shape[0]} (Lane M-V3-clean parity helper requires "
+                f"per-pair alignment between optimizer cond and saved baseline)"
+            )
+        if baseline.shape[1] < pose_dim:
+            raise ValueError(
+                f"baseline must be (N, {pose_dim}) so dims "
+                f"{pose_dim_internal}:{pose_dim} can be frozen-padded; got "
+                f"shape {tuple(baseline.shape)}"
+            )
+        baseline_pad = baseline[:, pose_dim_internal:pose_dim].to(
+            device=opt_part.device, dtype=opt_part.dtype,
+        )
+        return torch.cat([opt_part, baseline_pad], dim=-1)
+    return opt_part
+
+
+def _posenet_mse_loss(
+    pose_output: torch.Tensor,
+    pose_target: torch.Tensor,
+    dims_to_optimize: list[int] | tuple[int, ...],
+) -> torch.Tensor:
+    """PoseNet MSE that ONLY backprops through the optimizable dims.
+
+    Lane M-V3-clean: we want the gradient for radial-zoom training to
+    come from dim 0 alone (per ``project_posenet_rank1_discovery``: dim 0
+    holds 99.8% of PoseNet's variance, dims 1-5 carry < 0.2%). Including
+    dims 1-5 in the MSE adds ~0% useful signal but does dilute the
+    gradient and inject seed noise during the early steps. Masking dims
+    not in ``dims_to_optimize`` to zero before the squared-error reduction
+    fixes this without removing the constraint that the saved tensor is
+    still (N, 6).
+
+    Parameters
+    ----------
+    pose_output : torch.Tensor
+        ``(B, 6)`` PoseNet head output (first 6 dims).
+    pose_target : torch.Tensor
+        ``(B, 6)`` target pose (typically Lane A's optimized poses).
+    dims_to_optimize : list[int]
+        Indices of pose dims to retain in the loss (e.g., ``[0]`` for
+        radial-zoom, ``[0, 1, 2, 3, 4, 5]`` for full-6dof).
+
+    Returns
+    -------
+    torch.Tensor
+        Scalar loss; dims NOT in ``dims_to_optimize`` contribute zero.
+    """
+    if pose_output.shape != pose_target.shape:
+        raise ValueError(
+            f"pose_output {tuple(pose_output.shape)} vs pose_target "
+            f"{tuple(pose_target.shape)} — shape mismatch"
+        )
+    if not dims_to_optimize:
+        raise ValueError("dims_to_optimize must be non-empty")
+    mask = torch.zeros(
+        pose_output.shape[-1], device=pose_output.device, dtype=pose_output.dtype,
+    )
+    for d in dims_to_optimize:
+        if not 0 <= d < pose_output.shape[-1]:
+            raise ValueError(
+                f"dim index {d} out of range for pose_output with "
+                f"last-dim {pose_output.shape[-1]}"
+            )
+        mask[d] = 1.0
+    sq_err = (pose_output - pose_target) ** 2
+    return (sq_err * mask).sum() / mask.sum().clamp_min(1.0) / pose_output.shape[0]
+
+
 def parse_args() -> argparse.Namespace:
     p = argparse.ArgumentParser(
         description="Pose-Space TTO: optimize FiLM conditioning vectors",
@@ -678,6 +818,13 @@ def optimize_poses_batch(
     else:
         baseline_pose_for_linf = init_poses[:B, :pose_dim].detach().to(device)
 
+    # Lane M-V3-clean: cache the FULL (B, pose_dim) baseline so the
+    # _project_to_renderer_pose helper has the dims 1-5 frozen values to
+    # pad with. This is the SAME tensor the save block uses to compose
+    # the (N, 6) optimized_poses.pt — see BUG-1 fix in module-level
+    # _project_to_renderer_pose.
+    baseline_pose_full = init_poses[:B, :pose_dim].detach().to(device)
+
     # Lane RM: dispatch on optimizer_kind. The default 'adam' is
     # byte-identical to the pre-Lane-RM call path (single line above).
     # 'sgd' is the Euclidean baseline (used as an A/B control for the
@@ -749,25 +896,23 @@ def optimize_poses_batch(
         "argmax_rejections": 0,
     }
 
-    def _project_to_renderer_pose(cond: torch.Tensor) -> torch.Tensor:
-        """Lane M projection: extract optimizable pose and lift to 6-DOF.
-
-        Renderer's FiLM layer was trained on (B, pose_dim) input. In
-        radial-zoom mode the optimizable is (B, 1); we zero-pad the
-        remaining ``pose_dim - 1`` dims so the FiLM activation matches
-        the training distribution as closely as possible (only the dim
-        that PoseNet's Jacobian actually responds to is non-zero).
-        """
-        opt_part = cond[:, :pose_dim_internal]
-        if pose_mode == "radial-zoom" and pose_dim_internal != pose_dim:
-            zeros_pad = torch.zeros(
-                opt_part.shape[0],
-                pose_dim - pose_dim_internal,
-                device=opt_part.device,
-                dtype=opt_part.dtype,
-            )
-            return torch.cat([opt_part, zeros_pad], dim=-1)
-        return opt_part
+    # Lane M-V3-clean (memory project_lane_m_v2_audit_council_findings_20260428):
+    # train + save go through the module-level _project_to_renderer_pose
+    # helper; inflate reads the resulting bytes directly. Predicted band:
+    # [1.05, 1.20] [contest-CUDA]. The closure below is a thin partial-
+    # application that captures (pose_mode, pose_dim_internal, pose_dim,
+    # baseline_pose_full) so the inner step loop reads the same call site
+    # as before.
+    # PROJECT_PARITY_WAIVED: closure delegates to the module-level helper
+    # which is itself parity-waived (see top-of-file rationale).
+    def _project_pose_for_render(cond: torch.Tensor) -> torch.Tensor:
+        return _project_to_renderer_pose(
+            cond,
+            baseline_pose_full,
+            pose_mode=pose_mode,
+            pose_dim_internal=pose_dim_internal,
+            pose_dim=pose_dim,
+        )
 
     for step in range(steps):
         # Save state before step (for argmax constraint rollback)
@@ -778,9 +923,11 @@ def optimize_poses_batch(
         optimizer.zero_grad()
 
         # Extract pose part of conditioning (projected to renderer's
-        # native pose_dim — Lane M radial-zoom mode lifts (B, 1) → (B, 6)
-        # by zero-padding the auxiliary dims).
-        pose_part = _project_to_renderer_pose(conditioning)
+        # native pose_dim — Lane M-V3-clean radial-zoom mode lifts (B, 1)
+        # → (B, 6) by FROZEN-BASELINE-PADDING the auxiliary dims; the
+        # same projection runs at inflate, so optimizer + save + inflate
+        # all see bit-identical (B, 6) tensors).
+        pose_part = _project_pose_for_render(conditioning)
 
         # Forward: renderer produces (B, 2, H, W, 3) HWC pairs
         fwd_kwargs = {"pose": pose_part}
@@ -915,7 +1062,7 @@ def optimize_poses_batch(
         if argmax_constraint:
             with torch.no_grad():
                 # Re-forward to check argmax after optimizer step
-                check_pose = _project_to_renderer_pose(conditioning)
+                check_pose = _project_pose_for_render(conditioning)
                 check_kwargs = {"pose": check_pose}
                 if zoom_warp is not None and batch_pair_indices is not None:
                     check_kwargs["ego_flow"] = zoom_warp(batch_pair_indices, masks_t.shape[1], masks_t.shape[2])
@@ -945,7 +1092,7 @@ def optimize_poses_batch(
                                 pre_step_cond + alpha * (conditioning.detach() - pre_step_cond)
                             )
                         # Check argmax again
-                        check_pose2 = _project_to_renderer_pose(conditioning)
+                        check_pose2 = _project_pose_for_render(conditioning)
                         check_kwargs2 = {"pose": check_pose2}
                         if zoom_warp is not None and batch_pair_indices is not None:
                             check_kwargs2["ego_flow"] = zoom_warp(batch_pair_indices, masks_t.shape[1], masks_t.shape[2])
@@ -2129,22 +2276,32 @@ def main():
     # about the 1-DOF representation.
     pose_part = all_optimized[:, :pose_dim_internal]  # (N, pose_dim_internal)
     if args.pose_mode == "radial-zoom":
-        # Compose (N, 6): dim 0 = optimized scalar; dims 1-5 = frozen
-        # baseline values from init_poses (which was loaded from
-        # --gt-poses-path or extracted from GT frames). init_poses is
-        # ALWAYS (N, 6) per the load block above.
-        baseline_aux = init_poses[:n_pairs, 1:6].detach().cpu().to(pose_part.dtype)
-        if baseline_aux.shape[1] != 5:
+        # Lane M-V3-clean (memory project_lane_m_v2_audit_council_findings_20260428):
+        # the saved (N, 6) tensor is built by the SAME _project_to_renderer_pose
+        # helper the optimizer used at every training step. This guarantees
+        # bit-equality between (a) the renderer input the optimizer's gradient
+        # was computed against and (b) the bytes inflate reads from
+        # optimized_poses.pt. No more BUG-1 train/inference mismatch.
+        if init_poses.shape[1] < 6:
             raise SystemExit(
-                "FATAL: Lane M-V2 expects baseline init_poses to be (N, 6) "
+                "FATAL: Lane M-V3-clean expects baseline init_poses to be (N, 6) "
                 f"so dims 1-5 can be frozen-padded, got shape {tuple(init_poses.shape)}. "
                 "Verify --gt-poses-path points at a (N, 6) tensor (e.g., "
                 "submissions/baseline_dilated_h64_0_90/optimized_poses.pt)."
             )
-        optimized_poses = torch.cat([pose_part[:, :1].cpu(), baseline_aux], dim=-1)
+        baseline_full_save = init_poses[:n_pairs, :6].detach().cpu().to(pose_part.dtype)
+        optimized_poses = _project_to_renderer_pose(
+            pose_part.cpu(),
+            baseline_full_save,
+            pose_mode="radial-zoom",
+            pose_dim_internal=pose_dim_internal,
+            pose_dim=6,
+        )
         print(
-            f"  [Lane M-V2] composed (N, 6) save tensor: dim0=optimized radial-zoom, "
-            f"dims1-5=frozen baseline (from --gt-poses-path)",
+            f"  [Lane M-V3-clean] composed (N, 6) save tensor via shared "
+            f"_project_to_renderer_pose helper: dim0=optimized radial-zoom, "
+            f"dims1-5=frozen baseline (from --gt-poses-path) — train/inference "
+            f"parity guaranteed",
             flush=True,
         )
     else:
