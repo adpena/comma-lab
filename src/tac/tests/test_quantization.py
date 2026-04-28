@@ -31,6 +31,11 @@ class TestFakeQuantSTE:
         q.sum().backward()
         assert w.grad is not None
         assert w.grad.shape == w.shape
+        # Round 22 grad-direction rule (Check 44): straight-through STE
+        # propagates the upstream grad UNCHANGED. .sum().backward() ⇒ ones.
+        assert torch.allclose(w.grad, torch.ones_like(w)), (
+            f"STE pass-through broken: grad={w.grad}"
+        )
 
     def test_gradient_zero_at_saturation(self):
         """Gradient should be zero where abs(w/scale) > 127.5 (truly clipped)."""

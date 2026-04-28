@@ -1,3 +1,7 @@
+# LOSS_CONVERGENCE_NOT_REQUIRED: this is a CLI-wiring test for
+# --pair-loss-weights argparse plumbing (per feedback_dead_flag_wiring_pattern),
+# NOT a loss-function mathematical test. Convergence checks live in the
+# train_renderer integration tests, not here.
 """Lane W: tests for train_renderer.py --pair-loss-weights wiring.
 
 Per memory feedback_dead_flag_wiring_pattern: every CLI flag must be

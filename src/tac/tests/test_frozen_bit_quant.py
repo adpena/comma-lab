@@ -106,6 +106,11 @@ def test_backward_returns_none_for_scale_and_bits():
     # scale is a tensor but never had requires_grad, so .grad stays None
     assert getattr(scale, "grad", None) is None
     assert w.grad is not None
+    # Round 22 grad-direction rule (Check 44): STE pass-through means the
+    # backward must return upstream-grad (here .sum() ⇒ ones) UNCHANGED.
+    assert torch.allclose(w.grad, torch.ones_like(w)), (
+        f"STE pass-through broken: w.grad={w.grad} (expected ones)"
+    )
 
 
 # ── Per-output-channel scale ──────────────────────────────────────────────

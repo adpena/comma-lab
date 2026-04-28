@@ -446,6 +446,20 @@ def preflight_all(
         # methodology guard, not a current correctness blocker.
         check_remote_lane_scripts_have_controlled_baseline(strict=False, verbose=verbose)
 
+        # 2026-04-28 evening: 4 NEW meta-bug checks (44, 45, 46, 47) for
+        # test-assertion strength + archive-size discipline. Ref Round 22
+        # bit-STE sign bug post-mortem (4 review rounds dismissed it because
+        # the only assertion was `grad is not None`).
+        # Per-check live counts at wire-in time + promotion plan:
+        #   Check 44 (gradient-direction-tests-exist)             0  → STRICT
+        #   Check 45 (loss-convergence-tests)                     0  → STRICT
+        #   Check 46 (quantizer-roundtrip-tests)                  6  warn (real exploratory module gap; no mass-waive)
+        #   Check 47 (lane-archive-size-assertion)                0  → STRICT
+        check_gradient_direction_tests_exist(strict=True, verbose=verbose)
+        check_test_assertion_strength_for_loss_functions(strict=True, verbose=verbose)
+        check_quantizer_modules_have_round_trip_test(strict=False, verbose=verbose)
+        check_lane_deploy_scripts_have_archive_size_assertion(strict=True, verbose=verbose)
+
     # 2. Training inputs (only if profile + tto_frames provided)
     if profile_name and tto_frames_path and gt_poses_path and masks_path and profile_arch:
         preflight_training_inputs(
@@ -8357,6 +8371,765 @@ def check_remote_lane_scripts_have_controlled_baseline(
         raise MetaBugViolation(
             "REMOTE LANE SCRIPTS MISSING CONTROLLED BASELINE:\n"
             + "\n".join(f"  • {v}" for v in violations)
+        )
+    return violations
+
+
+# ════════════════════════════════════════════════════════════════════════════
+# Check 44 (2026-04-28): autograd.Function backward tests must check grad
+#                        DIRECTION / VALUE, not just `grad is not None`.
+#
+# Round 22 review meta-bug: the bit-STE Round 12/13/14/18 reviews silently
+# passed because the only assertion on `bits.grad` was
+# `assert bits.grad is not None`. A SIGN bug (positive grad pushing bits
+# down instead of up) hid for 4 review rounds before Round 21 finally caught
+# it. The CLAUDE.md anti-arbitrariness rule: gradient-correctness tests must
+# pin a number, a sign, or a comparison to a reference — finiteness is not
+# a correctness gate.
+#
+# This check scans `src/tac/tests/test_*.py`. For each test that mentions
+# any class extending `torch.autograd.Function`, we require the test to
+# also assert at least one of:
+#   - a numeric value on `.grad` (e.g., `pytest.approx(-0.04, ...)`)
+#   - a sign / comparison on `.grad` (e.g., `grad < 0`, `grad.item() > 0`)
+#   - a tensor comparison (e.g., `torch.allclose(grad, expected)`)
+#
+# Same-line waiver:
+#   `# GRADIENT_DIRECTION_NOT_REQUIRED:<reason>`
+# ════════════════════════════════════════════════════════════════════════════
+
+_GRAD_DIRECTION_WAIVER_TOKEN = "GRADIENT_DIRECTION_NOT_REQUIRED:"
+
+# Patterns that indicate a real gradient-direction / value assertion.
+# We keep this conservative: any of these substrings in the same test
+# function as a `.grad` reference satisfies the gate.
+_GRAD_DIRECTION_PATTERNS = (
+    "pytest.approx",
+    "approx(",  # e.g., `approx(-0.04)` after `from pytest import approx`
+    "torch.allclose",
+    "allclose(",
+    "torch.testing.assert_close",
+    "assert_close(",
+    ".grad <",
+    ".grad >",
+    ".grad.item() <",
+    ".grad.item() >",
+    ".grad ==",
+    ".grad.item() ==",
+    ".grad !=",
+    ".sign()",
+    "torch.sign",
+    "loss_decrease",  # canonical pattern: assert loss after grad-step lower
+    "loss_after",
+    "loss_before",
+    "torch.equal",
+    # Convergence via SGD step: `final <= initial` / `initial >= final`.
+    # Same idea as the loss-convergence patterns in Check 45 but specific
+    # to autograd.Function tests that take a manual gradient step.
+    "final <= initial",
+    "initial >= final",
+    "final < initial",
+    "initial > final",
+    # Indexed grad value/sign checks: `.grad[i].item() == X`,
+    # `.grad[i] < 0`, etc. Catches the canonical Round 22 pattern where
+    # specific elements are anchored. Use a regex below as well.
+)
+
+# Regex: indexed-grad value/sign check, e.g.
+#   `w.grad[0].item() == 1.0` or `bits.grad[1] < 0` or `w.grad[i, j] >= ...`
+_GRAD_DIRECTION_REGEX = re.compile(
+    r"\.grad\[[^\]]*\](?:\.item\(\))?\s*(?:==|!=|<=|>=|<|>)"
+)
+
+# Regex: magnitude check on a grad value, e.g.
+#   `abs(bits.grad.item()) < 1e-3` or `torch.abs(w.grad).max() < 0.5`
+# We use a permissive lookahead: any `abs(...)` containing `.grad` somewhere
+# inside, followed (within ~80 chars) by a comparison operator.
+_GRAD_MAGNITUDE_REGEX = re.compile(
+    r"abs\([^\n]*\.grad[^\n]{0,80}?[<>=!]=?"
+    r"|\.grad\.abs\(\)[^=<>!\n]{0,80}?[<>=!]"
+)
+
+
+def _scan_test_file_for_grad_direction(
+    path: Path, repo_root: Path
+) -> list[str]:
+    """For every test_* function that touches an autograd.Function backward,
+    flag if it does not assert grad direction / value.
+
+    Heuristic:
+      1. Find the imports/use of `torch.autograd.Function` subclasses in the
+         file (grep for `(torch.autograd.Function)` in class defs OR
+         `<Name>.apply(` calls where Name was bound to such a class earlier
+         in the file or imported).
+      2. For each top-level `def test_*` function: if the function body
+         references `.grad` AND any of the autograd.Function symbols, then
+         require one of `_GRAD_DIRECTION_PATTERNS` to also appear in the
+         function body. Otherwise FLAG.
+    """
+    rel = path.relative_to(repo_root) if path.is_absolute() else path
+    rel_s = str(rel)
+    # Only scan test files
+    if "tests/" not in rel_s and "/tests/" not in rel_s:
+        return []
+    if not path.name.startswith("test_"):
+        return []
+
+    try:
+        text = path.read_text()
+    except (UnicodeDecodeError, FileNotFoundError):
+        return []
+    try:
+        tree = ast.parse(text, filename=str(path))
+    except SyntaxError:
+        return []
+
+    # 1. Collect names that are autograd.Function subclasses, either defined
+    #    here or imported. Conservative: any imported name from a *quant*,
+    #    *ste*, *self_compress*, *frozen_bit*, *fp4*, *fp8*, *learnable_bit*
+    #    module is suspicious. Plus any class def that subclasses
+    #    `torch.autograd.Function` or `Function` directly.
+    autograd_function_names: set[str] = set()
+
+    for node in ast.walk(tree):
+        if isinstance(node, ast.ClassDef):
+            for base in node.bases:
+                base_repr = ast.unparse(base) if hasattr(ast, "unparse") else ""
+                if "autograd.Function" in base_repr or base_repr == "Function":
+                    autograd_function_names.add(node.name)
+        elif isinstance(node, ast.ImportFrom):
+            mod = (node.module or "").lower()
+            # Heuristic: imports from known STE-bearing modules.
+            if any(tok in mod for tok in (
+                "quantization", "quant", "ste", "self_compress",
+                "frozen_bit", "fp4", "fp8", "learnable_bit",
+            )):
+                for alias in node.names:
+                    name = alias.asname or alias.name
+                    # Likely STE / Function-shaped name
+                    if (
+                        "STE" in name
+                        or name.endswith("Quantize")
+                        or name.endswith("Quant")
+                        or name.endswith("FakeQuant")
+                        or "Function" in name
+                    ):
+                        autograd_function_names.add(name)
+
+    if not autograd_function_names:
+        return []
+
+    # Build a quick line-table for waiver detection.
+    lines = text.splitlines()
+
+    violations: list[str] = []
+
+    # 2. Walk top-level test_* functions.
+    for node in ast.walk(tree):
+        if not isinstance(node, ast.FunctionDef):
+            continue
+        if not node.name.startswith("test_"):
+            continue
+
+        # Get function source-text body (use line range).
+        start = node.lineno - 1
+        end = (node.end_lineno or node.lineno)
+        body_lines = lines[start:end]
+        body_text = "\n".join(body_lines)
+
+        # Same-line waiver on the def-line itself counts.
+        def_line = lines[start] if start < len(lines) else ""
+        if _GRAD_DIRECTION_WAIVER_TOKEN in def_line:
+            continue
+
+        # Same-line waiver on ANY line inside the function body counts.
+        if _GRAD_DIRECTION_WAIVER_TOKEN in body_text:
+            continue
+
+        # Does the function reference any autograd.Function symbol?
+        touches_function = any(
+            name in body_text for name in autograd_function_names
+        )
+        if not touches_function:
+            continue
+
+        # Does the function reference `.grad`?
+        if ".grad" not in body_text:
+            continue
+
+        # Check: does the body include any direction / value assertion?
+        has_direction = (
+            any(pat in body_text for pat in _GRAD_DIRECTION_PATTERNS)
+            or bool(_GRAD_DIRECTION_REGEX.search(body_text))
+            or bool(_GRAD_MAGNITUDE_REGEX.search(body_text))
+        )
+        if has_direction:
+            continue
+
+        # Acceptable also: a numeric `.grad` index/comparison via subscript
+        # like `grad[0].item() == ...`. The patterns above cover this via
+        # `pytest.approx` / `==` / `<` / `>` etc.
+
+        violations.append(
+            f"{rel}:{node.lineno}: test '{node.name}' touches an autograd."
+            f"Function backward but only checks `grad is not None` / "
+            f"`isfinite(grad)` — NO direction/value assertion. Add one of: "
+            f"`pytest.approx(...)`, `torch.allclose(...)`, `assert grad < 0`, "
+            f"or a loss-decrease check after a gradient step. "
+            f"(Round 22 bit-STE sign bug hid for 4 review rounds because "
+            f"of this exact gap.) Waive with same-line "
+            f"`# {_GRAD_DIRECTION_WAIVER_TOKEN}<reason>`."
+        )
+
+    return violations
+
+
+def check_gradient_direction_tests_exist(
+    repo_root: Path | None = None,
+    strict: bool = False,
+    verbose: bool = True,
+) -> list[str]:
+    """Backward tests for autograd.Function must check grad direction/value.
+
+    Reference: Round 22 bit-STE sign-bug post-mortem. The Round 12/13/14/18
+    council reviews dismissed the sign bug because the only `bits.grad`
+    assertion was `is not None`. Round 21 caught it via a hand-derived
+    numeric value. Structural fix: every test that exercises an autograd.
+    Function backward MUST assert sign, value, or a reference comparison.
+
+    Returns list of violations. Raises MetaBugViolation if strict and any.
+    """
+    root = repo_root or REPO_ROOT
+    violations: list[str] = []
+    n_scanned = 0
+    test_dir = root / "src" / "tac" / "tests"
+    if test_dir.exists():
+        for p in sorted(test_dir.rglob("test_*.py")):
+            if "__pycache__" in p.parts:
+                continue
+            n_scanned += 1
+            violations.extend(_scan_test_file_for_grad_direction(p, root))
+
+    if verbose:
+        if violations:
+            print(
+                f"  [grad-direction-tests] {len(violations)} violation(s) "
+                f"across {n_scanned} test file(s):"
+            )
+            for v in violations[:20]:
+                print(f"    • {v}")
+            if len(violations) > 20:
+                print(f"    … (+{len(violations) - 20} more)")
+        else:
+            print(
+                f"  [grad-direction-tests] OK: {n_scanned} test file(s) "
+                f"scanned"
+            )
+
+    if violations and strict:
+        raise MetaBugViolation(
+            "GRADIENT-DIRECTION TESTS MISSING:\n"
+            + "\n".join(f"  • {v}" for v in violations[:50])
+            + "\n\nRound 22 bit-STE sign bug hid for 4 review rounds because "
+            "the only assertion was `grad is not None`. Add direction/value "
+            "checks (pytest.approx, torch.allclose, sign comparison, or a "
+            "post-step loss-decrease check). Waive on the def-line with "
+            f"`# {_GRAD_DIRECTION_WAIVER_TOKEN}<reason>`."
+        )
+    return violations
+
+
+# ════════════════════════════════════════════════════════════════════════════
+# Check 45 (2026-04-28): tests of *loss* functions/classes must include at
+#                        least one convergence (loss-decrease) check.
+#
+# Companion to Check 44. Loss functions can return finite values that are
+# nonetheless un-minimisable (gradient pointing the wrong way). Tests that
+# only assert `loss.shape == ()` or `torch.isfinite(loss)` cannot detect
+# this. CLAUDE.md anti-arbitrariness: a loss-function test must demonstrate
+# the loss DECREASES under gradient descent (or has a known minimum at a
+# known point).
+#
+# Same-line waiver: `# LOSS_CONVERGENCE_NOT_REQUIRED:<reason>`
+# ════════════════════════════════════════════════════════════════════════════
+
+_LOSS_CONVERGENCE_WAIVER_TOKEN = "LOSS_CONVERGENCE_NOT_REQUIRED:"
+
+# Patterns that indicate a real loss-decrease / convergence assertion at the
+# FILE level. If a loss-touching file has any of these patterns, we accept
+# that file as a whole. Conservative on purpose: false-negatives are okay,
+# false-positives (telling a clean test it's broken) are not.
+_LOSS_CONVERGENCE_PATTERNS = (
+    "loss_after",
+    "loss_before",
+    "loss_decrease",
+    "loss_initial",
+    "loss_final",
+    "after_step",
+    "before_step",
+    "minimize",  # any reference to a minimisation / minimisable claim
+    "monotonic",
+    "decreases",
+    ".step()",  # SGD/Adam step → loss recomputed → can compare
+    "torch.optim",
+    "gradient descent",  # docstring marker
+    "GD step",
+    "convergence",
+    # Numeric anchor patterns (loss known to equal X at known input).
+    "pytest.approx",
+    "approx(",
+    "torch.allclose",
+    "torch.equal",
+    "assert_close",
+)
+
+
+def _scan_test_file_for_loss_convergence(
+    path: Path, repo_root: Path
+) -> list[str]:
+    """For each test file whose name contains 'loss' as a token (case-
+    insensitive), require that the file as a whole demonstrates a
+    convergence check.
+
+    "Loss" must appear as a token, not as a fragment ("lossless" does NOT
+    qualify — that's the lossless-coding test family, not a loss-function
+    test).
+    """
+    rel = path.relative_to(repo_root) if path.is_absolute() else path
+    name = path.name.lower()
+    if not name.startswith("test_"):
+        return []
+    # Tokenize on '_' / '.' boundaries; require "loss" as its own token.
+    # 'lossless' / 'lossy' fragments do NOT count (different bug class).
+    tokens = re.split(r"[_.]", name)
+    if "loss" not in tokens:
+        return []
+
+    try:
+        text = path.read_text()
+    except (UnicodeDecodeError, FileNotFoundError):
+        return []
+
+    # Same-line waiver anywhere in the file for the WHOLE file.
+    if _LOSS_CONVERGENCE_WAIVER_TOKEN in text:
+        return []
+
+    # File-level acceptance: any of the convergence patterns in the file.
+    if any(pat in text for pat in _LOSS_CONVERGENCE_PATTERNS):
+        return []
+
+    # Find the first def test_* line for the violation lineno.
+    lineno = 1
+    for i, line in enumerate(text.splitlines(), start=1):
+        if line.lstrip().startswith("def test_"):
+            lineno = i
+            break
+
+    return [
+        f"{rel}:{lineno}: loss-function test file has no convergence check "
+        f"(no loss_after/loss_before pattern, no `.step()`, no "
+        f"`pytest.approx` / `torch.allclose` numeric anchor). A loss "
+        f"function can return finite values whose gradient still points the "
+        f"wrong way — finiteness is NOT a correctness gate. Add a "
+        f"loss-decrease assertion or a known-minimum numeric check. "
+        f"Waive with `# {_LOSS_CONVERGENCE_WAIVER_TOKEN}<reason>` anywhere "
+        f"in the file."
+    ]
+
+
+def check_test_assertion_strength_for_loss_functions(
+    repo_root: Path | None = None,
+    strict: bool = False,
+    verbose: bool = True,
+) -> list[str]:
+    """Tests of *loss* functions must include a convergence / numeric anchor.
+
+    Companion to Check 44. A finite-but-wrong-direction loss is a known
+    failure mode (Lane B 6.5h proxy-MSE-only TTO produced 0.0007 proxy /
+    0.246 auth = 350× gap). Convergence tests catch this in seconds.
+
+    Returns list of violations. Raises MetaBugViolation if strict and any.
+    """
+    root = repo_root or REPO_ROOT
+    violations: list[str] = []
+    n_scanned = 0
+    test_dir = root / "src" / "tac" / "tests"
+    if test_dir.exists():
+        # Glob is permissive ("loss" anywhere); the scanner enforces the
+        # "loss as a token (not fragment)" rule and discards "lossless" /
+        # "lossy" filenames that are not loss-function tests.
+        for p in sorted(test_dir.rglob("test_*loss*.py")):
+            if "__pycache__" in p.parts:
+                continue
+            v = _scan_test_file_for_loss_convergence(p, root)
+            # Only count files actually validated (token check passed).
+            # Determine that by re-running the token check inline.
+            tokens = re.split(r"[_.]", p.name.lower())
+            if "loss" in tokens:
+                n_scanned += 1
+            violations.extend(v)
+
+    if verbose:
+        if violations:
+            print(
+                f"  [loss-convergence-tests] {len(violations)} violation(s) "
+                f"across {n_scanned} loss-test file(s):"
+            )
+            for v in violations[:20]:
+                print(f"    • {v}")
+        else:
+            print(
+                f"  [loss-convergence-tests] OK: {n_scanned} loss-test file(s) scanned"
+            )
+
+    if violations and strict:
+        raise MetaBugViolation(
+            "LOSS-FUNCTION TESTS MISSING CONVERGENCE CHECK:\n"
+            + "\n".join(f"  • {v}" for v in violations[:50])
+        )
+    return violations
+
+
+# ════════════════════════════════════════════════════════════════════════════
+# Check 46 (2026-04-28): every public quantizer / encoder needs a roundtrip
+#                        test (`unquantize(quantize(x))` ≈ `x`).
+#
+# A quantizer that silently drops dynamic range (or saturates / shifts) can
+# pass forward-shape and finiteness tests but corrupt the artifact at
+# inflate time. Roundtrip tests catch the failure mode in seconds.
+#
+# Same-line waiver: `# ROUNDTRIP_NOT_REQUIRED:<reason>`
+# ════════════════════════════════════════════════════════════════════════════
+
+_ROUNDTRIP_WAIVER_TOKEN = "ROUNDTRIP_NOT_REQUIRED:"
+
+# File-name globs: which modules count as "quantizer / encoder" producers.
+_QUANTIZER_FILE_PATTERNS = (
+    "*quant*.py",
+    "*codec*.py",
+    "*entropy*.py",
+)
+
+# Substrings in the corresponding test file that count as a roundtrip
+# assertion (decode/encode pair on the SAME tensor with allclose / equal).
+_ROUNDTRIP_PATTERNS = (
+    "torch.allclose",
+    "allclose(",
+    "torch.equal",
+    "torch.testing.assert_close",
+    "assert_close(",
+    "round_trip",
+    "roundtrip",
+    "round-trip",
+    "decode(encode",
+    "encode(decode",
+    "unquantize(quantize",
+    "dequantize(quantize",
+    "decompress(compress",
+    "decompress_archive",
+    "inverse_transform",
+)
+
+
+def _module_basename(p: Path) -> str:
+    return p.stem
+
+
+def _quantizer_modules(repo_root: Path) -> list[Path]:
+    out: list[Path] = []
+    src_dir = repo_root / "src" / "tac"
+    if not src_dir.exists():
+        return out
+    seen: set[Path] = set()
+    for pattern in _QUANTIZER_FILE_PATTERNS:
+        for p in src_dir.glob(pattern):
+            if p in seen:
+                continue
+            if p.name.startswith("test_"):
+                continue
+            seen.add(p)
+            out.append(p)
+    return sorted(out)
+
+
+def _has_public_class_or_function(path: Path) -> bool:
+    """True iff the module exposes at least one public top-level class or def."""
+    try:
+        tree = ast.parse(path.read_text(), filename=str(path))
+    except (SyntaxError, UnicodeDecodeError):
+        return False
+    for node in tree.body:
+        if isinstance(node, (ast.ClassDef, ast.FunctionDef)):
+            if not node.name.startswith("_"):
+                return True
+    return False
+
+
+def _find_test_files_for_module(
+    module_path: Path, repo_root: Path
+) -> list[Path]:
+    """Return test files that import from this module."""
+    test_dir = repo_root / "src" / "tac" / "tests"
+    if not test_dir.exists():
+        return []
+    mod_basename = _module_basename(module_path)
+    needle = f"tac.{mod_basename}"
+    out: list[Path] = []
+    # Direct convention: test_<basename>.py
+    direct = test_dir / f"test_{mod_basename}.py"
+    if direct.exists():
+        out.append(direct)
+    # Anything else that imports `tac.<basename>`
+    for p in test_dir.rglob("test_*.py"):
+        if "__pycache__" in p.parts:
+            continue
+        if p in out:
+            continue
+        try:
+            text = p.read_text()
+        except (UnicodeDecodeError, FileNotFoundError):
+            continue
+        if needle in text:
+            out.append(p)
+    return out
+
+
+def _scan_quantizer_for_roundtrip_test(
+    module_path: Path, repo_root: Path
+) -> list[str]:
+    rel = module_path.relative_to(repo_root) if module_path.is_absolute() else module_path
+    if not _has_public_class_or_function(module_path):
+        return []
+
+    # File-level waiver on the module itself.
+    try:
+        mod_text = module_path.read_text()
+    except (UnicodeDecodeError, FileNotFoundError):
+        return []
+    if _ROUNDTRIP_WAIVER_TOKEN in mod_text:
+        return []
+
+    test_files = _find_test_files_for_module(module_path, repo_root)
+    if not test_files:
+        return [
+            f"{rel}: quantizer/encoder module has no test file at "
+            f"src/tac/tests/test_{_module_basename(module_path)}.py and no "
+            f"other test imports it. Add a roundtrip test "
+            f"(`assert torch.allclose(decode(encode(x)), x, atol=...)`) or "
+            f"waive in the module with "
+            f"`# {_ROUNDTRIP_WAIVER_TOKEN}<reason>`."
+        ]
+
+    # If ANY test file for this module has a roundtrip pattern, accept.
+    for tf in test_files:
+        try:
+            ttext = tf.read_text()
+        except (UnicodeDecodeError, FileNotFoundError):
+            continue
+        if _ROUNDTRIP_WAIVER_TOKEN in ttext:
+            return []
+        if any(pat in ttext for pat in _ROUNDTRIP_PATTERNS):
+            return []
+
+    return [
+        f"{rel}: quantizer/encoder module has tests "
+        f"({', '.join(t.name for t in test_files)}) but no roundtrip "
+        f"assertion (no `torch.allclose`, no `decode(encode(...))`, no "
+        f"`roundtrip` substring, no `assert_close`). Add "
+        f"`assert torch.allclose(unquantize(quantize(x)), x, atol=...)` or "
+        f"waive on the module with `# {_ROUNDTRIP_WAIVER_TOKEN}<reason>`."
+    ]
+
+
+def check_quantizer_modules_have_round_trip_test(
+    repo_root: Path | None = None,
+    strict: bool = False,
+    verbose: bool = True,
+) -> list[str]:
+    """Every public quantizer / encoder needs a `decode(encode(x)) ≈ x` test.
+
+    Reference: archive measurement disasters (2026-04-21) — quantizers
+    silently dropped dynamic range, passing forward-shape tests but
+    corrupting the inflated artifact. Roundtrip tests catch this in seconds.
+
+    Returns list of violations. Raises MetaBugViolation if strict and any.
+    """
+    root = repo_root or REPO_ROOT
+    violations: list[str] = []
+    n_scanned = 0
+    for mod in _quantizer_modules(root):
+        n_scanned += 1
+        violations.extend(_scan_quantizer_for_roundtrip_test(mod, root))
+
+    if verbose:
+        if violations:
+            print(
+                f"  [quantizer-roundtrip-tests] {len(violations)} violation(s) "
+                f"across {n_scanned} quantizer/encoder module(s):"
+            )
+            for v in violations[:20]:
+                print(f"    • {v}")
+        else:
+            print(
+                f"  [quantizer-roundtrip-tests] OK: {n_scanned} module(s) scanned"
+            )
+
+    if violations and strict:
+        raise MetaBugViolation(
+            "QUANTIZER MODULES MISSING ROUNDTRIP TEST:\n"
+            + "\n".join(f"  • {v}" for v in violations[:50])
+        )
+    return violations
+
+
+# ════════════════════════════════════════════════════════════════════════════
+# Check 47 (2026-04-28): scripts/remote_lane_*.sh that build an archive must
+#                        ASSERT the archive size BEFORE calling
+#                        contest_auth_eval / inflate.sh.
+#
+# Reference: Lane B class disasters where archive composition silently
+# changed the rate term (renderer-only 119 KB instead of 338 KB full
+# submission → 0.108 rate error per CLAUDE.md). The shell idiom
+# `ARCHIVE_BYTES=$(stat -c '%s' "$ARCHIVE" ...) && [ "$ARCHIVE_BYTES" -gt N ]`
+# OR a Python `os.path.getsize(...) >= N` assertion catches the failure
+# mode at compose time, not after a $0.50 eval.
+#
+# Same-line waiver: `# ARCHIVE_SIZE_NOT_REQUIRED:<reason>`
+# ════════════════════════════════════════════════════════════════════════════
+
+_ARCHIVE_SIZE_WAIVER_TOKEN = "ARCHIVE_SIZE_NOT_REQUIRED:"
+
+# Substrings that indicate the script BUILDS an archive (vs. just consuming
+# one for eval). If none of these patterns appear, the script is exempt.
+_ARCHIVE_BUILD_MARKERS = (
+    "build_archive",
+    "submission_archive",
+    "ZipFile(",
+    "zipfile.ZipFile",
+    "zip.write",
+    "z.write(",
+    "shutil.copy",  # often used to assemble an archive directory
+)
+
+# Substrings that indicate auth eval / inflate is being invoked.
+_AUTH_EVAL_MARKERS = (
+    "contest_auth_eval",
+    "auth_eval_renderer",
+    "inflate.sh",
+    "evaluate.py",
+)
+
+# Substrings that satisfy the size-assertion gate. Either a shell-side
+# `[ "$X" -gt N ]` / `-le 0` style check OR a Python-side numeric compare.
+_ARCHIVE_SIZE_ASSERTION_PATTERNS = (
+    # Shell numeric guards on a captured size variable.
+    'ARCHIVE_BYTES',
+    'ARCHIVE_SIZE',
+    "stat -c '%s'",
+    'stat -c "%s"',
+    "stat -f '%z'",
+    'stat -f "%z"',
+    "wc -c",
+    "du -b",
+    "du -sb",
+    # Python-side: os.path.getsize / Path(...).stat().st_size etc with a
+    # numeric compare (we use the `assert ... getsize` substring as the
+    # gate; printing alone is NOT enough, but most scripts that check size
+    # also assert).
+    "assert os.path.getsize",
+    "assert os.stat",
+    "raise SystemExit",  # often used as size gate in inline Python
+    "size empty or zero",  # canonical lane_a_optimized phrasing
+    "refusing to call auth_eval",
+    " -le 0",
+    " -lt ",
+    " -gt ",
+)
+
+
+def _scan_remote_lane_for_archive_size_assertion(
+    path: Path, repo_root: Path
+) -> list[str]:
+    rel = path.relative_to(repo_root) if path.is_absolute() else path
+    try:
+        text = path.read_text()
+    except (UnicodeDecodeError, FileNotFoundError):
+        return []
+    # File-level waiver.
+    if _ARCHIVE_SIZE_WAIVER_TOKEN in text:
+        return []
+
+    builds = any(m in text for m in _ARCHIVE_BUILD_MARKERS)
+    evals = any(m in text for m in _AUTH_EVAL_MARKERS)
+    if not (builds and evals):
+        return []
+
+    # Does the script include any size-assertion pattern?
+    if any(pat in text for pat in _ARCHIVE_SIZE_ASSERTION_PATTERNS):
+        return []
+
+    # Find the first auth-eval marker line for the violation lineno.
+    lineno = 1
+    for i, line in enumerate(text.splitlines(), start=1):
+        if any(m in line for m in _AUTH_EVAL_MARKERS):
+            lineno = i
+            break
+
+    return [
+        f"{rel}:{lineno}: lane script builds an archive AND invokes auth "
+        f"eval, but does not assert archive byte-size before the eval call. "
+        f"Add a guard like:\n"
+        f"      ARCHIVE_BYTES=$(stat -c '%s' \"$ARCHIVE\" 2>/dev/null || stat -f '%z' \"$ARCHIVE\")\n"
+        f"      [ \"$ARCHIVE_BYTES\" -gt 0 ] || {{ echo 'FATAL: archive empty'; exit 2; }}\n"
+        f"    Lane B-class disasters (renderer-only 119 KB vs 338 KB full "
+        f"submission) cost 0.108 rate points per CLAUDE.md. "
+        f"Waive with `# {_ARCHIVE_SIZE_WAIVER_TOKEN}<reason>`."
+    ]
+
+
+def check_lane_deploy_scripts_have_archive_size_assertion(
+    repo_root: Path | None = None,
+    strict: bool = False,
+    verbose: bool = True,
+) -> list[str]:
+    """Lane scripts that build an archive must assert size before auth eval.
+
+    Reference: CLAUDE.md "Auth eval measurement — non-negotiable" — every
+    auth eval MUST use the EXACT archive that will be submitted, and the
+    archive size must be reported. Lane B's 119 KB renderer-only archive
+    silently inflated the rate term by 0.108 across multiple sessions. A
+    one-line shell guard catches this at compose time.
+
+    Returns list of violations. Raises MetaBugViolation if strict and any.
+    """
+    root = repo_root or REPO_ROOT
+    violations: list[str] = []
+    n_scanned = 0
+    scripts_dir = root / "scripts"
+    if scripts_dir.exists():
+        for p in sorted(scripts_dir.glob("remote_lane_*.sh")):
+            n_scanned += 1
+            violations.extend(
+                _scan_remote_lane_for_archive_size_assertion(p, root)
+            )
+
+    if verbose:
+        if violations:
+            print(
+                f"  [lane-archive-size] {len(violations)} violation(s) "
+                f"across {n_scanned} remote_lane_*.sh file(s):"
+            )
+            for v in violations[:20]:
+                print(f"    • {v}")
+        else:
+            print(
+                f"  [lane-archive-size] OK: {n_scanned} remote_lane_*.sh file(s) scanned"
+            )
+
+    if violations and strict:
+        raise MetaBugViolation(
+            "LANE SCRIPTS MISSING ARCHIVE-SIZE ASSERTION:\n"
+            + "\n".join(f"  • {v}" for v in violations[:50])
         )
     return violations
 
