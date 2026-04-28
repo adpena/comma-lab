@@ -160,6 +160,13 @@ def create_model(cfg: QATConfig, device: torch.device) -> nn.Module:
         padding_mode=cfg.padding_mode,
         use_dilation=cfg.use_dilation,
         use_zoom_flow=cfg.use_zoom_flow,
+        # Bug 3 fix (2026-04-27 audit): forward QATConfig fields previously
+        # advertised but silently dropped. The float checkpoint built by
+        # train_distill.py uses cfg.max_flow_px / cfg.max_residual; not
+        # forwarding them here means a non-default value in train_distill
+        # would silently produce a QAT model with the wrong scale.
+        max_flow_px=cfg.max_flow_px,
+        max_residual=cfg.max_residual,
     )
     return model.to(device)
 

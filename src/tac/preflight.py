@@ -1485,7 +1485,9 @@ def preflight_dead_resolvers(
 # bitten this project at least once and cost real GPU money. These are
 # additive, defensive scaffolds: each starts in warn-only mode (strict=False)
 # until it surfaces zero true-positive violations on the live codebase, then
-# is flipped strict=True in preflight_all() (see TODO at end of section).
+# is flipped strict=True at its preflight_all() call site near the top of
+# preflight_all (the previously-referenced TODO block was removed 2026-04-27
+# after every meta-bug check was promoted).
 #
 # Pattern → memory entry mapping:
 #   1. MPS-fallback device default       → feedback_default_to_convenience_trap
@@ -4969,9 +4971,9 @@ def check_archive_builders_use_deterministic_zip(
 # section + R5-r6 codex-fix subagent additions).
 #
 # These checks live in their own additive section to avoid merge conflict with
-# the codex-fix subagent (currently editing checks 14-18). They are NOT yet
-# wired into preflight_all() — see the TODO block at the bottom of this
-# section. The parent will wire them after the codex-fix lands.
+# past codex-fix subagents that edited checks 14-18. As of 2026-04-27 they are
+# all wired into preflight_all() at strict=True (call sites near the top of
+# preflight_all). New additive checks should land here too, then promoted.
 #
 # Pattern → memory entry mapping:
 #   A. vastai-create-no-label                → orphan-instance prevention (today)
@@ -6404,28 +6406,11 @@ def check_kl_div_reduction_correct(
     return violations
 
 
-# ── TODO (parent): wire the 12 new checks into preflight_all() ──────────────
-#
-# After the codex-fix subagent (ac41f73188bfcc8c1) lands its R5-r6 changes,
-# add the following call block to preflight_all():
-#
-#     check_vastai_create_has_label(strict=False, verbose=verbose)
-#     check_vastai_create_writes_tracker(strict=False, verbose=verbose)
-#     check_subagent_prompts_no_cpu_fallback(strict=False, verbose=verbose)
-#     check_scores_have_lane_tag(strict=False, verbose=verbose)
-#     check_waivers_specify_env_gate(strict=False, verbose=verbose)
-#     check_halfframe_archive_uses_trained_profile(strict=False, verbose=verbose)
-#     check_profile_keys_have_resolvers(strict=False, verbose=verbose)
-#     check_inflate_scorer_load_has_runtime_banner(strict=False, verbose=verbose)
-#     check_test_files_imports_resolve(strict=False, verbose=verbose)
-#     check_vastai_prompts_have_cost_cap(strict=False, verbose=verbose)
-#     check_uniward_delta_has_attestation_gate(strict=False, verbose=verbose)
-#     check_remote_scripts_write_provenance(strict=False, verbose=verbose)
-#
-# Each starts strict=False; promote to strict=True after the live violation
-# count is verified clean (per the established Lane A → strict promotion
-# pattern documented in commit 7f2740e4 + meta-bug class catalog in
-# CLAUDE.md).
+# 2026-04-27 audit: the 12 checks listed in the previous TODO block are now
+# wired into preflight_all() at strict=True (see lines ~316-330 above), the
+# violation counts above ran clean. TODO removed; if a future check needs to
+# be deferred, add it directly to preflight_all() at strict=False with a
+# one-line note linking the audit that promotes it.
 
 
 if __name__ == "__main__":
