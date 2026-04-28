@@ -166,6 +166,17 @@ def test_class_primal_loss_propagates_grad_into_per_class_loss_only():
     primal.backward()
     assert per_class_loss.grad is not None
     assert torch.isfinite(per_class_loss.grad).all()
+    # Round 29 advisory fix: magnitude + sign anchor (matches Round 26 pattern).
+    # Trivial-gradient-today is fine, but if compute_class_weighted_primal_loss
+    # is ever refactored with a non-trivial path, this test would silently
+    # pass a sign-inverted implementation. The grad is `multiplier.detach()`
+    # which is `1 + lambda_class >= 1 > 0` per softmax warm-start; pin both.
+    assert per_class_loss.grad.abs().max().item() > 0, (
+        "per-class loss gradient is identically zero — primal-loss path not flowing"
+    )
+    assert (per_class_loss.grad > 0).all(), (
+        "per-class loss gradient must be non-negative (multiplier = 1+lambda_class >= 1)"
+    )
 
 
 # ── csv() helper ─────────────────────────────────────────────────────────
