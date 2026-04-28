@@ -25,7 +25,15 @@ DEBIAN_FRONTEND=noninteractive apt-get install -y -qq ffmpeg zip unzip 2>&1 | ta
 
 log "=== Stage 2: Python deps via /opt/conda + uv ==="
 cd "$WORKSPACE"
-"$PYBIN" -m ensurepip --upgrade 2>&1 | tail -1
+# 2026-04-28 fix: ensurepip --upgrade fails when pip is already newer than
+# the bundled wheels (e.g., recent PyTorch containers ship pip 26.x but
+# ensurepip carries pip 24.0). Skip ensurepip if pip already importable —
+# the canonical PyTorch base image always has it.
+if "$PYBIN" -c "import pip" 2>/dev/null; then
+    log "  pip already present (skipping ensurepip)"
+else
+    "$PYBIN" -m ensurepip --upgrade 2>&1 | tail -1
+fi
 "$PYBIN" -m pip install -q --upgrade pip 2>&1 | tail -1
 "$PYBIN" -m pip install -q -e ".[runtime]" 2>&1 | tail -2
 

@@ -359,6 +359,13 @@ def preflight_all(
         check_remote_scripts_record_predicted_band(strict=True, verbose=verbose)
         check_remote_scripts_tag_contest_cuda_at_completion(strict=True, verbose=verbose)
 
+        # 2026-04-28: 2 more strict meta-bug checks (33, 34) from overnight
+        # deploy failures. Both STRICT after the comment-stripping fix:
+        # NVDEC 7/12 hosts bad → probe must be Stage 0.
+        # Lane S motion.head 6-vs-4 mismatch → resume needs shape validation.
+        check_remote_scripts_probe_nvdec_early(strict=True, verbose=verbose)
+        check_resume_from_state_dict_shape_compat(strict=True, verbose=verbose)
+
     # 2. Training inputs (only if profile + tto_frames provided)
     if profile_name and tto_frames_path and gt_poses_path and masks_path and profile_arch:
         preflight_training_inputs(
@@ -6891,6 +6898,173 @@ def check_remote_scripts_tag_contest_cuda_at_completion(strict: bool = False, ve
             + "\n  • ".join(violations) +
             "\nFix: add '[contest-CUDA]' literal to the completion log line "
             "(LANE_X_DONE marker) so scores are self-tagging."
+        )
+    return violations
+
+
+# ════════════════════════════════════════════════════════════════════════════
+# Check 33 (33rd meta-bug): remote scripts must NVDEC-probe at Stage 0
+#                          BEFORE any GPU-spend operations
+# ════════════════════════════════════════════════════════════════════════════
+#
+# 2026-04-28: 7/12 overnight Vast.ai instances had compute-CUDA but
+# missing NVDEC. The probe correctly catches this BUT only after Stage 4
+# of setup_full.sh, which has already done apt + pip + DALI install
+# (~5-10 min wasted). The probe MUST run at Stage 0 of every lane script
+# so failures cost <30 seconds, not >5 minutes.
+#
+# This check verifies that every lane script's `bash $WORKSPACE/scripts/probe_nvdec.sh`
+# call appears EARLY (before pip install / archive build / training).
+def check_remote_scripts_probe_nvdec_early(strict: bool = False, verbose: bool = False) -> list[str]:
+    """Every scripts/remote_lane_*.sh that does GPU work must call
+    `bash $WORKSPACE/scripts/probe_nvdec.sh` BEFORE Stage 1 (training,
+    archive build, mask extraction). NVDEC failures should cost <30s,
+    not >5 min of wasted bootstrap.
+    """
+    EXEMPT_SUFFIXES = (
+        "_bootstrap.sh", "_setup_full.sh", "_setup.sh",
+        "_sweep.sh", "_optimized.sh", "_auth_eval_only.sh",
+    )
+    violations: list[str] = []
+    repo_root = Path(__file__).resolve().parent.parent.parent
+    scripts_dir = repo_root / "scripts"
+    if not scripts_dir.is_dir():
+        if verbose:
+            print(f"  [nvdec-early] OK: scripts dir not found, skipped")
+        return violations
+    n_scripts = 0
+    n_with_probe = 0
+    for script_path in sorted(scripts_dir.glob("remote_lane_*.sh")):
+        if any(script_path.name.endswith(suf) for suf in EXEMPT_SUFFIXES):
+            continue
+        n_scripts += 1
+        text = script_path.read_text(errors="ignore")
+        # Strip comment-only lines so header docstrings don't false-positive
+        # the GPU-marker scan. Use line-based filtering: lines starting with #.
+        non_comment_lines = []
+        char_offset = 0
+        non_comment_text_chars = []
+        for line in text.split("\n"):
+            stripped = line.lstrip()
+            if stripped.startswith("#"):
+                # replace comment with same-length spaces to preserve indices
+                non_comment_text_chars.append(" " * len(line))
+            else:
+                non_comment_text_chars.append(line)
+        scan_text = "\n".join(non_comment_text_chars)
+        # Find first probe_nvdec.sh call line and any GPU-cost line
+        probe_idx = scan_text.find("probe_nvdec.sh")
+        # GPU-cost markers: training launch, archive rebuild, mask extract
+        # Match with $PYBIN/$PYTHON prefix or `python` to ensure it's an
+        # executable invocation, not a doc reference.
+        gpu_markers = [
+            "experiments/train_renderer", "experiments/qat_finetune",
+            "experiments/optimize_poses", "experiments/build_baseline_archive",
+            "experiments/contest_auth_eval",
+        ]
+        first_gpu_idx = min(
+            (scan_text.find(m) for m in gpu_markers if scan_text.find(m) >= 0),
+            default=-1,
+        )
+        if probe_idx < 0:
+            violations.append(
+                f"{script_path}: no `probe_nvdec.sh` call. Add Stage 0 "
+                f"NVDEC probe before any GPU-cost operation."
+            )
+            continue
+        n_with_probe += 1
+        if first_gpu_idx >= 0 and first_gpu_idx < probe_idx:
+            violations.append(
+                f"{script_path}: probe_nvdec.sh appears AFTER GPU-cost "
+                f"command (probe@{probe_idx}, first GPU op@{first_gpu_idx}). "
+                f"Move probe to Stage 0 BEFORE any GPU spend."
+            )
+    if verbose:
+        if violations:
+            print(f"  [nvdec-early] {len(violations)}/{n_scripts} script(s) violate early-probe rule")
+        else:
+            print(f"  [nvdec-early] OK: {n_with_probe}/{n_scripts} lane script(s) probe NVDEC at Stage 0")
+    if strict and violations:
+        raise PreflightError(
+            "EARLY NVDEC PROBE VIOLATIONS — at least one lane script "
+            f"doesn't probe NVDEC at Stage 0:\n  • " + "\n  • ".join(violations) +
+            "\nFix: add `bash $WORKSPACE/scripts/probe_nvdec.sh || exit 2` "
+            "BEFORE any train/qat/eval/archive command. Per memory "
+            "feedback_vastai_nvdec_host_variation, NVDEC failure rate is "
+            "~30-50% across host pools; early-probe saves $0.05-0.10 per bad host."
+        )
+    return violations
+
+
+# ════════════════════════════════════════════════════════════════════════════
+# Check 34 (34th meta-bug): remote scripts that --resume-from a checkpoint
+#                          must STATE_DICT-shape-validate the checkpoint
+#                          against the profile-built model BEFORE GPU spend
+# ════════════════════════════════════════════════════════════════════════════
+#
+# 2026-04-28: Lane S overnight dispatch crashed at training launch with
+# motion.head shape mismatch (Lane A renderer has 6-channel motion.head,
+# Lane S profile builds 4-channel). The resume failed AFTER 5+ minutes
+# of mask extraction + scorer cache build (~$0.05 wasted).
+#
+# This check looks for `--resume-from <path>` in lane scripts and ensures
+# either:
+#   (a) the script does a pre-flight shape validation BEFORE training launch
+#       (e.g., `python -c "torch.load(...); model.load_state_dict(...)"`)
+#   (b) the script uses the canonical resume-and-validate helper
+#       `experiments/validate_resume_shapes.py` (TODO if doesn't exist)
+def check_resume_from_state_dict_shape_compat(strict: bool = False, verbose: bool = False) -> list[str]:
+    """Every lane script using `--resume-from <ckpt>` must shape-validate
+    the checkpoint against the profile-built model BEFORE the heavy
+    bootstrap (mask extraction, scorer cache).
+    """
+    violations: list[str] = []
+    repo_root = Path(__file__).resolve().parent.parent.parent
+    scripts_dir = repo_root / "scripts"
+    if not scripts_dir.is_dir():
+        if verbose:
+            print(f"  [resume-shape] OK: scripts dir not found, skipped")
+        return violations
+    n_scripts = 0
+    n_with_resume = 0
+    for script_path in sorted(scripts_dir.glob("remote_lane_*.sh")):
+        text = script_path.read_text(errors="ignore")
+        n_scripts += 1
+        if "--resume-from" not in text:
+            continue
+        n_with_resume += 1
+        # Look for any shape-validation marker:
+        # - "load_state_dict" (inline pyc verification)
+        # - "validate_resume_shapes" (canonical tool)
+        # - "shape" + "validate" within 200 chars of --resume-from
+        validation_markers = [
+            "load_state_dict",
+            "validate_resume_shapes",
+            "validate_shape",
+            "shape_compat",
+            "_shape_check",
+        ]
+        has_validation = any(m in text for m in validation_markers)
+        if not has_validation:
+            violations.append(
+                f"{script_path}: --resume-from present but no state_dict "
+                f"shape validation. Add a pre-flight `python -c 'import torch; "
+                f"torch.load(\"$RESUME_PATH\")'` + model.load_state_dict() "
+                f"check BEFORE the heavy training launch. Lane S motion.head "
+                f"6-vs-4 mismatch wasted ~$0.05 + 5 min when this was missing."
+            )
+    if verbose:
+        if violations:
+            print(f"  [resume-shape] {len(violations)}/{n_with_resume} resume-using script(s) lack shape validation")
+        else:
+            print(f"  [resume-shape] OK: {n_with_resume}/{n_scripts} lane script(s) shape-validate resumes")
+    if strict and violations:
+        raise PreflightError(
+            "RESUME STATE_DICT SHAPE VALIDATION VIOLATIONS — at least one "
+            f"lane script uses --resume-from but doesn't shape-validate:\n  • "
+            + "\n  • ".join(violations) +
+            "\nFix: add a pre-flight shape check before training launch. "
+            "Lane S motion.head bug 2026-04-28."
         )
     return violations
 
