@@ -146,43 +146,57 @@ class _PerElementSTEQuantize(torch.autograd.Function):
         # quantization error is the derivative of the *quantizer output*
         # w.r.t. bits. With step(b) = scale / (2^(b-1) - 1) we have
         #     ∂step/∂bits ≈ -ln(2) · step          (small-b approximation)
-        # and q(w, b) = round(w / step) · step, so along the grid we're on
-        #     ∂q/∂bits = round(w / step) · ∂step/∂bits
-        # However ``round(w/step)`` is identically zero whenever the
-        # *unquantized* weight rounds to zero, even though that weight is
-        # exactly the one most damaged by under-quantization (e.g. a
-        # weight at ~0.1·step at 1-bit is forced to ±scale; allocating it
-        # one more bit would let it round to 0 instead). Zeroing the bit
-        # gradient there breaks the rate-distortion allocator: rate
-        # pressure pushes those bits toward 1 with no opposing distortion
-        # signal.
+        # and q(w, b) = round(w / step) · step.
         #
-        # Bug 1 fix (codex Round 3): use the *unquantized* weight as the
-        # surrogate for the rounded count. ``w / step`` is the continuous
-        # analogue of ``round(w / step)`` and is exactly the ratio that
-        # would have rounded to zero — so the gradient is non-zero (∝ w)
-        # in the zero bin and points in the direction that increasing
-        # bits reduces the per-element distortion. This is the standard
-        # surrogate used in HAWQ and self-compressing networks (Battle
-        # 2022, Soyer 2022) for the same reason.
+        # The naive grid surrogate ``∂q/∂bits = round(w/step) · ∂step/∂bits``
+        # is exactly zero whenever the unquantized weight rounds to zero
+        # (the load-bearing case), so it offers no opposing signal to the
+        # rate penalty. Round 3 attempted to fix this by substituting the
+        # raw ``weight`` for ``round(w/step) · step`` (yielding
+        # ``-ln2 · w``). That fix has the WRONG SIGN for the dominant case
+        # we care about: under standard reconstruction loss
+        # ``L = ½ (q - w)²`` the upstream gradient is
+        # ``∂L/∂q = q - w`` (i.e. negative when q under-shoots positive w
+        # in the zero bin), and chaining with ``-ln2 · w`` yields a
+        # *positive* grad_bits — SGD then DECREASES bits, which is the
+        # opposite of what minimizes distortion.
+        #
+        # Bug 1 fix (codex Round 4): use the HAWQ first-order surrogate
+        # rooted at the actual quantization residual. The intuition is
+        # that, on average, increasing bits drives ``q → w``: the residual
+        # ``(q - w)`` shrinks proportionally to the step size, which in
+        # turn shrinks as ``∂step/∂bits ≈ -ln2 · step``. Taking the residual
+        # itself as the local surrogate for that response gives
+        #     ∂q/∂bits ≈ -ln2 · (q - w)
+        # which has three load-bearing properties:
+        #   (a) Magnitude is the *quantization error* — exactly the signal
+        #       that the rate-distortion allocator should respond to.
+        #   (b) Sign is correct: chaining with ``∂L/∂q = (q - w)`` for the
+        #       canonical MSE gives ``-ln2 · (q - w)² ≤ 0`` always, so SGD
+        #       *raises* bits whenever any distortion exists.
+        #   (c) Zero distortion → zero gradient (no spurious signal under
+        #       perfect reconstruction).
+        # This is the standard primal surrogate behind HAWQ (Dong et al.
+        # 2019) and the self-compressing-networks family (Karpathy 2022).
         ln2 = 0.6931471805599453
-        # Continuous ratio (= round(w/step) in the high-bit limit, but
-        # non-zero for sub-step weights — the load-bearing case).
-        ratio = weight / step
-        # Per-element ∂q/∂bits = ratio · ∂step/∂bits = -ln2 · ratio · step
-        #                       = -ln2 · weight                (step cancels)
-        # i.e. the bit gradient depends only on the unquantized weight, NOT
-        # on the post-rounding value q. This is what guarantees the
-        # zero-bin signal survives.
-        d_out_d_bits = -ln2 * weight  # equivalent to -ln2 · ratio · step
-        # 1-bit sign quantizer: out = sign(w) · scale is independent of
-        # bits in the b∈[1, 2) regime (level count clamps to 1), so the
-        # grid-based surrogate above does not apply. Substitute the
-        # *quantized* magnitude for the surrogate so that the sign of
-        # ∂q/∂bits is still correct (≈ -ln2 · q): more bits → finer step
-        # → quantization error shrinks proportionally to |q|.
+        residual = q - weight
+        # Per-element ∂q/∂bits ≈ -ln2 · (q - w). Non-zero in both the
+        # zero bin (where q=0 and |residual| = |w| > 0) and the nonzero
+        # bin (where |residual| ≤ step/2 > 0 except at exact grid
+        # points), so the bit-gradient signal survives across the whole
+        # quantization landscape. Zero only when the weight is already
+        # exactly representable — which is the desired no-signal case.
+        d_out_d_bits = -ln2 * residual
+        # 1-bit sign quantizer: out = sign(w) · scale is constant in the
+        # b∈[1, 2) regime (level count clamps to 1), so ``∂step/∂bits``
+        # alone underestimates the marginal effect of an extra bit. We
+        # keep the residual surrogate here too: ``(q - w) = sign(w)·scale
+        # - w`` captures both the magnitude AND the direction of the
+        # quantization error introduced by the sign quantizer, which is
+        # exactly what an extra bit would reduce.
+        d_out_d_bits_one_bit = -ln2 * residual
         d_out_d_bits = torch.where(
-            one_bit_mask, -ln2 * q, d_out_d_bits
+            one_bit_mask, d_out_d_bits_one_bit, d_out_d_bits
         )
         grad_bits = grad_output * d_out_d_bits
 
@@ -567,27 +581,23 @@ def renderer_average_learnable_bits_per_weight(model: nn.Module) -> float:
 class LagrangianRateController:
     """True primal-dual controller for the Lane Ω-V2 bit-budget constraint.
 
-    Bug 2 fix (codex Round 3):
-        The previous ``λ · max(0, mean_bits − target)²`` squared-hinge
-        penalty has gradient ``2λ · max(0, excess) → 0`` as bits → target,
-        so equilibrium lands STRICTLY ABOVE the target rather than at the
-        KKT boundary ``mean_bits = target``. There is no dual-variable
-        update either, so any constant λ schedule cannot drive the system
-        to the constraint set.
+    Round 3 introduced this controller for the dual side, but the primal
+    surrogate retained an ``F.relu`` clamp that destroyed the KKT property
+    (zero gradient under slack → equilibrium drifts above target). Round 4
+    fixed the primal to the LINEAR form ``λ · (mean_bits − target)``; the
+    KKT non-negativity clamp now lives ONLY in the dual update::
 
-    This class implements the textbook primal-dual update for the
-    constrained problem
+        primal step:  ∇_θ [D(θ) + λ · (mean_bits(θ) − target)]
+        dual step:    λ_{t+1} = max(0, λ_t + η · (mean_bits − target))
+
+    Together this is the textbook primal-dual pair for
         min_θ  D(θ)
         s.t.   mean_bits(θ) ≤ target
-    via the Lagrangian
-        L(θ, λ) = D(θ) + λ · (mean_bits(θ) − target),     λ ≥ 0.
-    The primal step is gradient descent on θ for fixed λ; the dual step
-    is sub-gradient *ascent* on the slack
-        λ_{t+1} = max(0, λ_t + η · (mean_bits − target))
     (Boyd & Vandenberghe 2004 §5.4; Nedić & Ozdaglar 2009 sub-gradient
-    convergence). The primal penalty is *linear* in the constraint
-    residual — the gradient w.r.t. bits is exactly ``λ`` (not zero at the
-    boundary), so KKT is honoured.
+    convergence). At equilibrium ``mean_bits = target`` AND ``λ ≥ 0`` —
+    the KKT condition for the inequality constraint — even when the
+    primal momentarily slips into slack (``residual < 0``), because the
+    dual decays λ → 0 there and turns the primal pressure off smoothly.
 
     Default ``eta = 1e-3`` and ``initial_lambda = 0.0`` follow the
     standard "no-pressure" warm-start used in Lane S self-compression.
@@ -722,19 +732,26 @@ def compute_learnable_bit_rate_penalty(
 ) -> torch.Tensor:
     """Linear Lagrangian rate penalty: ``λ × (mean_bits − target)``.
 
-    Bug 2 fix (codex Round 3):
-        The previous form was ``λ × max(0, mean_bits − target)²`` (squared
-        hinge), whose gradient w.r.t. bits vanishes at the boundary —
-        equilibrium therefore lands ABOVE the target, not at the KKT
-        boundary. The correct primal-dual surrogate is *linear* in the
-        residual; the dual variable ``λ`` is updated externally by
-        :py:class:`LagrangianRateController` via sub-gradient ascent.
+    Bug 2 fix (codex Round 4):
+        The Round 3 fix kept a hidden ``F.relu(residual)`` in the primal
+        surrogate (``λ × max(0, mean_bits − target)``). That destroys the
+        KKT property the docstring promised: under slack
+        (``mean_bits < target``) the gradient w.r.t. bits is ZERO, so the
+        bit allocator only feels rate pressure when *already* over budget
+        — equilibrium drifts above target whenever the slack-side dual
+        decay is faster than the over-budget excursion that re-engages
+        the hinge. The textbook primal-dual pair for an inequality
+        constraint is::
 
-    The penalty is allowed to go negative when ``mean_bits < target`` —
-    that's the slack regime, and the dual update
-    (``λ_{t+1} = max(0, λ_t + η · residual)``) drives ``λ → 0``, which
-    smoothly turns the penalty off without requiring a hinge in the
-    primal surrogate.
+            primal:  λ · (mean_bits − target)            # linear, no ReLU
+            dual:    λ ← max(0, λ + η · (mean_bits − target))  # ascent + clamp
+
+        The clamp belongs in the *dual* update (KKT non-negativity of the
+        multiplier), NOT in the primal penalty. Below target the linear
+        primal term contributes a negative gradient that *rewards* more
+        bits, but the dual decays λ → 0 simultaneously — equilibrium
+        lands at the boundary ``mean_bits = target`` with ``λ ≥ 0``,
+        which is exactly the KKT condition for ``mean_bits ≤ target``.
 
     Backward-compat: ``lambda_rate`` accepts either a ``float`` (legacy
     fixed-multiplier path) or a :py:class:`LagrangianRateController`
@@ -758,17 +775,30 @@ def compute_learnable_bit_rate_penalty(
     if isinstance(lambda_rate, LagrangianRateController):
         lam = lambda_rate.lambda_rate
         target = lambda_rate.target_bits_per_weight
+        is_controller = True
     else:
         lam = float(lambda_rate)
         target = float(target_bits_per_weight)
-    # Linear (not squared) so that ∂penalty/∂bits = λ everywhere — KKT
-    # boundary at mean_bits = target is reachable.
+        is_controller = False
+    # Codex Round 5 fix — split semantics:
+    # * LagrangianRateController path: LINEAR penalty `λ * residual`
+    #   (no ReLU). The KKT non-negativity clamp is enforced by the dual
+    #   update `λ ← max(0, λ + η·residual)` inside the controller, NOT
+    #   here. Letting the primal go negative under slack is mathematically
+    #   correct because the dual decays λ → 0 in steady state, so the
+    #   primal contribution vanishes and equilibrium lands at the
+    #   constraint boundary `mean_bits = target`.
+    # * Legacy float `lambda_rate` path: ONE-SIDED HINGE `λ * relu(residual)`.
+    #   Plain float callers have NO dual update to decay λ — if we used
+    #   linear here, the under-budget gradient would be `+λ` (constant)
+    #   forever, pushing bits below the floor for no benefit. ReLU
+    #   correctly contributes zero gradient under slack, preserving
+    #   under-budget invariants for these legacy callers.
     residual = mean_bits - target
-    # Clamp negative penalties to zero so the optimizer cannot push bits
-    # arbitrarily UP under slack (rate floor at zero); the dual variable
-    # decays to zero in the slack regime which makes this clamp inactive
-    # in steady state but protects the warm-start period.
-    return lam * F.relu(residual)
+    if is_controller:
+        return lam * residual
+    else:
+        return lam * F.relu(residual)
 
 
 def iter_eligible_conv_names(

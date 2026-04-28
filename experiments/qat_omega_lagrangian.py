@@ -23,7 +23,11 @@ Pipeline (single Python script, no orchestration deps):
                                                      mandatory)
          kl_loss     = KL(student || teacher) on the renderer's RGB output
                        (post-fix weight = 0.002, validated on Lane A path)
-         rate_loss   = λ · max(0, mean(bits) - target_bits)²
+         rate_loss   = λ · (mean(bits) - target_bits)         # linear primal
+                                                              # (Round 4 fix:
+                                                              # no ReLU; KKT
+                                                              # clamp lives
+                                                              # in dual update)
          loss        = scorer_loss + kl_weight * kl_loss + rate_loss
        Backward, optimizer step (separate parameter groups: weights at lr,
        bits at lr * 0.1).
@@ -397,12 +401,16 @@ def run_qat(args: argparse.Namespace) -> dict:
     print(f"[lane-omega-v2] total learnable-bit weights: {n_total_weights:,} "
           f"(target ≈ {n_total_weights * args.target_bits / 8 / 1024:.1f}KB)")
 
-    # Bug 2 fix (codex Round 3): true primal-dual rate controller.
-    # Replaces the previous fixed `λ · relu(excess)²` (squared hinge,
-    # gradient zero at boundary, equilibrium ABOVE target) with the
-    # textbook Lagrangian dual ascent
+    # Bug 2 fix (codex Round 3 + Round 4): true primal-dual rate
+    # controller. Replaces the previous fixed `λ · relu(excess)²`
+    # (squared hinge, gradient zero at boundary, equilibrium ABOVE
+    # target) with the textbook Lagrangian dual ascent
     #     L(θ, λ) = D(θ) + λ · (mean_bits − target),  λ ≥ 0
     #     λ_{t+1} = max(0, λ_t + η · (mean_bits − target))
+    # Round 4 also dropped a residual ReLU from the primal surrogate
+    # itself — the KKT non-negativity clamp belongs ONLY in the dual
+    # update, never in the primal (otherwise gradient is zero under
+    # slack and the bit allocator drifts above target).
     # which converges to the KKT boundary mean_bits = target. The legacy
     # `--lambda-start` / `--lambda-end` ramp is preserved as a *cap* on
     # the dual variable so the operator can still bound the rate

@@ -256,14 +256,48 @@ def test_renderer_average_bits_close_to_init():
     assert abs(mean_bits - 4.0) < 0.01
 
 
-def test_rate_penalty_zero_when_under_target():
-    """If mean_bits ≤ target, rate penalty = 0 (only excess is penalised)."""
+def test_rate_penalty_negative_when_under_target_controller():
+    """Controller path: linear primal penalty is negative under slack.
+    Round 4 (codex) restored linear; the dual decay (λ → 0) is what turns
+    the rate term off in steady state, NOT a primal hinge. THIS path is
+    only valid when lambda_rate is a LagrangianRateController instance
+    (Round 5 split semantics).
+    """
+    from tac.learnable_bit_quant import LagrangianRateController
     model = _ToyRenderer()
     swap_renderer_convs_with_learnable_bits(model, init_bits=4.0)
-    # target above current mean → no penalty
-    pen = compute_learnable_bit_rate_penalty(model, target_bits_per_weight=8.0,
-                                              lambda_rate=1.0)
-    assert pen.item() == 0.0
+    # Set initial_lambda=1.0 (lambda_rate is read-only @property; the
+    # constructor's initial_lambda is the canonical setter).
+    controller = LagrangianRateController(
+        target_bits_per_weight=8.0, initial_lambda=1.0,
+    )
+    # When using a controller, target_bits_per_weight from the controller
+    # overrides the positional arg (kept for legacy float signature).
+    pen = compute_learnable_bit_rate_penalty(
+        model, target_bits_per_weight=8.0, lambda_rate=controller,
+    )
+    mean_bits = renderer_average_learnable_bits_per_weight(model)
+    expected = 1.0 * (mean_bits - 8.0)
+    assert pen.item() == pytest.approx(expected, abs=1e-3)
+    assert pen.item() < 0
+
+
+def test_rate_penalty_zero_under_target_legacy_float():
+    """Legacy float path: ReLU-clamped, ZERO under slack (Round 5 codex fix).
+    Plain float callers have no dual update to decay λ; if linear primal
+    were used here, gradient would be `+λ` constant under slack → SGD would
+    push bits below the floor for no benefit.
+    """
+    model = _ToyRenderer()
+    swap_renderer_convs_with_learnable_bits(model, init_bits=4.0)
+    # mean_bits < target → ReLU clamps to zero
+    pen = compute_learnable_bit_rate_penalty(
+        model, target_bits_per_weight=8.0, lambda_rate=1.0,
+    )
+    assert pen.item() == 0.0, (
+        f"legacy float path must be ReLU-clamped under slack; got {pen.item()} "
+        f"— Round 5 split semantics require ReLU for float, linear for controller."
+    )
 
 
 def test_rate_penalty_positive_when_over_target():
