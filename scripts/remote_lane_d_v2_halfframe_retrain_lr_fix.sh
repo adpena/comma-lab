@@ -346,4 +346,4 @@ rm -rf "$LOG_DIR/eval_work"
     --keep-work-dir \
     --work-dir "$LOG_DIR/eval_work" 2>&1 | tee "$LOG_DIR/auth_eval.log" | tail -20
 
-log "=== LANE_D_V2_DONE — see $LOG_DIR/auth_eval.log for RESULT_JSON ==="
+log "=== LANE_D_V2_DONE — see $LOG_DIR/auth_eval.log for RESULT_JSON [contest-CUDA] ==="

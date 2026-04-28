@@ -140,9 +140,17 @@ def test_seed_pose_tto_shape_validation() -> None:
 
 
 def test_seed_pose_tto_no_baseline_uses_lane_mark_constants() -> None:
-    """Without baseline, dim 0 lands near POSENET_DIM0_MEAN and dims 1-5 are zero."""
+    """Without baseline AND with explicit calibration mode, dim 0 lands near
+    POSENET_DIM0_MEAN and dims 1-5 are zero.
+
+    V2 changed the default from ``scale_to_match=True`` (which fell through
+    to lane_mark constants when no baseline was given) to ``mode='none'``
+    (passthrough — let TTO learn the scale). To exercise the lane-mark
+    constants code path we must now opt in with ``scale_to_match=True``
+    (V1 alias for ``mode='linear'``).
+    """
     raw = torch.randn(100, 6) * 0.5  # arbitrary supercombo-like output
-    out = seed_pose_tto(raw, baseline_poses=None)
+    out = seed_pose_tto(raw, baseline_poses=None, scale_to_match=True)
     assert out.shape == (100, 6)
     # Dim 0 should be centered on POSENET_DIM0_MEAN.
     assert abs(out[:, 0].mean().item() - POSENET_DIM0_MEAN) < 1.0, (
@@ -152,6 +160,13 @@ def test_seed_pose_tto_no_baseline_uses_lane_mark_constants() -> None:
     # Dims 1-5 must be exactly zero.
     for d in range(1, 6):
         assert (out[:, d] == 0.0).all(), f"dim {d} should be zero"
+
+
+def test_seed_pose_tto_no_baseline_no_scale_returns_raw() -> None:
+    """V2 default (mode='none', no baseline) returns raw poses unchanged."""
+    raw = torch.randn(100, 6) * 0.5
+    out = seed_pose_tto(raw, baseline_poses=None)  # V2 default: mode='none'
+    assert torch.allclose(out, raw)
 
 
 def test_seed_pose_tto_baseline_calibration_matches_distribution() -> None:

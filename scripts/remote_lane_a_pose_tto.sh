@@ -33,6 +33,7 @@ prov = {
     'torch_version': torch.__version__,
     'cuda_version': getattr(torch.version, 'cuda', None),
     'cuda_available': torch.cuda.is_available(),
+    'predicted_band': [1.10, 1.20],  # added 2026-04-27 per preflight check 31
     'lane_script': 'scripts/remote_lane_a_pose_tto.sh',
     'output_dir': '$LOG_DIR',
 }
@@ -130,4 +131,4 @@ rm -rf "$LOG_DIR/eval_work"
     --keep-work-dir \
     --work-dir "$LOG_DIR/eval_work" 2>&1 | tee "$LOG_DIR/auth_eval.log" | tail -15
 
-log "=== LANE_A_DONE — see $LOG_DIR/auth_eval.log for RESULT_JSON ==="
+log "=== LANE_A_DONE — see $LOG_DIR/auth_eval.log for RESULT_JSON [contest-CUDA] ==="

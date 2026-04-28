@@ -1,32 +1,31 @@
 #!/bin/bash
-# Lane G V2: Pose TTO warm-started from VERIFIED baseline poses, with the
-# Quantizr-validated SegNet KL-distillation auxiliary loss stacked on top
-# of the standard scorer loss. Predicted: -0.05 to -0.15 distortion vs
-# Lane A's 1.15 baseline.
+# Lane M + Lane N (combined) — radial-zoom 1-DOF poses + Fridrich L∞ pose penalty.
 #
-# V3 DELTA from V2: --kl-distill-weight 0.01 → 5e-6. V2 confirmed 0.01 still
-# dominated the loss ~4000× over the scorer terms (raw KL ≈ 20000, scorer ≈
-# 0.05). 5e-6 makes KL contribution (5e-6 × 20000 = 0.1) MATCH the scorer
-# scale (~0.05) so KL is a true auxiliary signal, not the dominant term.
-# V2 history: --kl-distill-weight 1.0 → 0.01 (V1→V2). V1's 1.0 dominated
-# ~14000×; V2's 0.01 still dominated ~4000×; V3's 5e-6 finally matches scale.
-# Same warm-start poses, same 600 pairs × 500 steps, same eval_roundtrip + noise.
+# Lane M (--pose-mode radial-zoom): per memory project_posenet_rank1_discovery,
+#   PoseNet's Jacobian is rank ≈ 1.008 with 99.8% variance in dim 0 — a scalar
+#   radial zoom is the information-theoretic minimum. Predicted: -0.05 distortion
+#   + ~free pose bytes (1 scalar vs 6).
 #
-# Per CLAUDE.md non-negotiable (NEVER invent CLI flags): the flag names
-# `--kl-distill-weight` / `--kl-distill-temperature` were verified by
-# argparse-grep on experiments/optimize_poses.py L159-171 (commit aed52ead).
-# Loss is `kl_distill_segnet_only` from tac.losses (per-step log will show
-# `kl=<float>` when --kl-distill-weight > 0).
+# Lane N (--linf-pose-weight 1.0): per memory project_fridrich_inverse_steganalysis
+#   Principle 3 ("spread small errors, don't concentrate large ones"). Soft L∞-ball
+#   penalty on (pose - baseline) delta. Predicted: -0.02 variance reduction.
+#
+# Combined target: ~1.05-1.10 vs Lane A's 1.15. Both flags committed in 904eeb05;
+# both default-off so the combined run is the only thing changing.
+#
+# Mirrors scripts/remote_lane_a_pose_tto.sh: Stage 0 NVDEC probe, Stage 1 mask
+# rebuild on host CUDA, Stage 2 pose TTO, Stage 3 archive build, Stage 4
+# contest_auth_eval. Three deltas vs Lane A: LOG_DIR, optimize_poses flags, label.
 set -euo pipefail
 WORKSPACE=/workspace/pact
 PYBIN=/opt/conda/bin/python
 source "$WORKSPACE/env.sh"
 cd "$WORKSPACE"
 
-LOG_DIR="$WORKSPACE/lane_g_v3_results"
+LOG_DIR="$WORKSPACE/lane_mn_combined_results"
 mkdir -p "$LOG_DIR"
 
-log() { echo "[lane-g] $(date -u +%FT%TZ) $*" | tee -a "$LOG_DIR/run.log"; }
+log() { echo "[lane-mn] $(date -u +%FT%TZ) $*" | tee -a "$LOG_DIR/run.log"; }
 
 # Provenance + heartbeat (CLAUDE.md canonical pipeline standard +
 # memory feedback_canonical_remote_bootstraps): every remote run must
@@ -46,11 +45,12 @@ prov = {
     'torch_version': torch.__version__,
     'cuda_version': getattr(torch.version, 'cuda', None),
     'cuda_available': torch.cuda.is_available(),
-    'predicted_band': [1.10, 1.18],  # added 2026-04-27 per preflight check 31
-    'lane_script': 'scripts/remote_lane_g_kldistill_pose_tto.sh',
+    'predicted_band': [1.05, 1.15],  # added 2026-04-27 per preflight check 31
+    'lane_script': 'scripts/remote_lane_mn_combined.sh',
     'output_dir': '$LOG_DIR',
-    'kl_distill_weight': 5e-6,
-    'kl_distill_temperature': 2.0,
+    'lane_m_pose_mode': 'radial-zoom',
+    'lane_n_linf_pose_weight': 1.0,
+    'lane_n_linf_pose_budget': 0.05,
 }
 with open('$PROVENANCE', 'w') as f:
     json.dump(prov, f, indent=2)
@@ -58,21 +58,21 @@ print('provenance:', json.dumps(prov))
 "
 ( while true; do
     GPU=$(nvidia-smi --query-gpu=utilization.gpu,memory.used --format=csv,noheader 2>&1 | tr '\n' ' ')
-    echo "[$(date -u +%FT%TZ)] lane=G gpu=$GPU" >> "$HEARTBEAT"
+    echo "[$(date -u +%FT%TZ)] lane=MN gpu=$GPU" >> "$HEARTBEAT"
     sleep 60
   done ) &
 HB_PID=$!
 trap 'kill $HB_PID 2>/dev/null || true' EXIT
 
-# Stage 0: NVDEC probe BEFORE any GPU spend. --ensure-dali so a fresh
-# container that hasn't run remote_setup_full.sh installs DALI rather
-# than spuriously failing on a missing import. Per
-# feedback_vastai_nvdec_host_variation: same 4090 image / driver, different
-# NVDEC exposure between hosts. The probe catches the bad-host case in 5
-# seconds and saves $3-4 of pose-TTO GPU dollars per catch.
-log "=== Stage 0: NVDEC probe (--ensure-dali) ==="
+# Stage 0 (2026-04-27): NVDEC probe BEFORE any GPU spend. The Texas instance
+# (35691284) ran 3.4h of pose TTO successfully then crashed at upstream/
+# evaluate.py with CUDA_ERROR_NO_DEVICE because NVDEC was missing on that
+# host. The probe catches the bad-host case in 5 seconds. Reference:
+# feedback_vastai_nvdec_host_variation memory entry. --ensure-dali is the
+# strengthened mode (probe DALI MIXED video op, not just nvidia-smi).
+log "=== Stage 0: NVDEC probe (with --ensure-dali) ==="
 bash "$WORKSPACE/scripts/probe_nvdec.sh" --ensure-dali || {
-    log "FATAL: NVDEC probe failed -- refusing to spend GPU on a host that"
+    log "FATAL: NVDEC probe failed — refusing to spend GPU on a host that"
     log "       cannot run upstream/evaluate.py at the end. Destroy this"
     log "       Vast.ai instance and pick a different host."
     exit 2
@@ -98,30 +98,25 @@ mkdir -p "$LOG_DIR/extracted"
 cd "$LOG_DIR/extracted" && unzip -o "$LOG_DIR/archive_baseline_seed.zip" 2>&1 | tail -3
 cd "$WORKSPACE"
 
-log "=== Stage 2: pose TTO (Lane A flow) + KL-distill SegNet auxiliary ==="
+log "=== Stage 2: pose TTO with WARM-START + Lane M (radial-zoom) + Lane N (L∞ penalty) ==="
 log "   --gt-poses-path = submissions/baseline_dilated_h64_0_90/optimized_poses.pt"
+log "   --pose-mode radial-zoom (Lane M, 1-DOF)"
+log "   --linf-pose-weight 1.0 --linf-pose-budget 0.05 (Lane N)"
 log "   --eval-roundtrip + --posetto-noise-std=0.5 (Fridrich C1 fixes)"
-log "   --kl-distill-weight=5e-6  --kl-distill-temperature=2.0  (LANE G V3 delta — match scorer scale O(0.05))"
 # Determinism: pin seeds + cublas + python hash (CLAUDE.md non-negotiable).
 export PYTHONHASHSEED=1234
-# 2026-04-27 launch finding: KL distill auxiliary loss adds a SECOND SegNet
-# forward+backward pass per step (kl_distill_segnet_only computes fs_logits
-# WITH grad in addition to the standard scorer pass). On RTX 4090 24GB this
-# OOMs at --batch-pairs 8 (Lane A's setting) — peak alloc 23GB. Halving to
-# 4 fits in ~13GB. Total work (600 pairs × 500 steps = 300k pair-steps) is
-# unchanged; wall time roughly doubles vs Lane A.
-export PYTORCH_CUDA_ALLOC_CONF=expandable_segments:True
 "$PYBIN" -u experiments/optimize_poses.py \
     --checkpoint submissions/baseline_dilated_h64_0_90/renderer.bin \
     --masks "$LOG_DIR/extracted/masks.mkv" \
     --gt-poses-path submissions/baseline_dilated_h64_0_90/optimized_poses.pt \
     --device cuda \
     --steps 500 \
-    --batch-pairs 4 \
+    --batch-pairs 8 \
     --eval-roundtrip \
     --posetto-noise-std 0.5 \
-    --kl-distill-weight 5e-6 \
-    --kl-distill-temperature 2.0 \
+    --pose-mode radial-zoom \
+    --linf-pose-weight 1.0 \
+    --linf-pose-budget 0.05 \
     --output-dir "$LOG_DIR" 2>&1 | tee "$LOG_DIR/optimize_poses.log" | tail -30
 
 # Validate: did optimize_poses produce the file?
@@ -132,8 +127,9 @@ log "=== Stage 3: build NEW archive (renderer + masks + NEW poses) ==="
 mkdir -p "$LOG_DIR/iter_0"
 cp submissions/baseline_dilated_h64_0_90/renderer.bin "$LOG_DIR/iter_0/renderer.bin"
 cp "$LOG_DIR/extracted/masks.mkv" "$LOG_DIR/iter_0/masks.mkv"
+# Use the .pt format (matches the canonical archive structure)
 [ -f "$LOG_DIR/optimized_poses.pt" ] && cp "$LOG_DIR/optimized_poses.pt" "$LOG_DIR/iter_0/optimized_poses.pt"
-ARCHIVE="$LOG_DIR/archive_lane_g_v3.zip"
+ARCHIVE="$LOG_DIR/archive_lane_mn.zip"
 "$PYBIN" -c "
 import zipfile, os
 src = '$LOG_DIR/iter_0'
@@ -146,7 +142,7 @@ with zipfile.ZipFile(dst, 'w', zipfile.ZIP_DEFLATED, compresslevel=9) as z:
 print(f'archive {dst}: {os.path.getsize(dst)} bytes')
 "
 
-log "=== Stage 4: contest_auth_eval on Lane G archive ==="
+log "=== Stage 4: contest_auth_eval on Lane M+N combined archive ==="
 rm -rf "$LOG_DIR/eval_work"
 "$PYBIN" -u experiments/contest_auth_eval.py \
     --archive "$ARCHIVE" \
@@ -156,4 +152,4 @@ rm -rf "$LOG_DIR/eval_work"
     --keep-work-dir \
     --work-dir "$LOG_DIR/eval_work" 2>&1 | tee "$LOG_DIR/auth_eval.log" | tail -15
 
-log "=== LANE_G_DONE -- see $LOG_DIR/auth_eval.log for RESULT_JSON [contest-CUDA] ==="
+log "=== LANE_MN_DONE — see $LOG_DIR/auth_eval.log for RESULT_JSON [contest-CUDA] ==="

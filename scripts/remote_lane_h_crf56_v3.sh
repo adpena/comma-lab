@@ -44,6 +44,7 @@ prov = {
     'torch_version': torch.__version__,
     'cuda_version': getattr(torch.version, 'cuda', None),
     'cuda_available': torch.cuda.is_available(),
+    'predicted_band': [1.13, 1.20],  # added 2026-04-27 per preflight check 31
     'lane_script': 'scripts/remote_lane_h_crf56_v3.sh',
     'output_dir': '$LOG_DIR',
     'crf': 56,
@@ -122,3 +123,4 @@ rm -rf "$LOG_DIR/eval_work"
     --work-dir "$LOG_DIR/eval_work" 2>&1 | tee "$LOG_DIR/auth_eval.log" | tail -20
 
 log "=== LANE_H_V3_DONE — see $LOG_DIR/auth_eval.log for RESULT_JSON ==="
+log "=== LANE_H_DONE [contest-CUDA] ==="

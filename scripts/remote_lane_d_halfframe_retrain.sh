@@ -91,6 +91,7 @@ prov = {
     'torch_version': torch.__version__,
     'cuda_version': getattr(torch.version, 'cuda', None),
     'cuda_available': torch.cuda.is_available(),
+    'predicted_band': [1.20, 2.00],  # added 2026-04-27 per preflight check 31
     'lane_script': 'scripts/remote_lane_d_halfframe_retrain.sh',
     'output_dir': '$LOG_DIR',
     'tag': '$TAG',
@@ -341,4 +342,4 @@ rm -rf "$LOG_DIR/eval_work"
     --keep-work-dir \
     --work-dir "$LOG_DIR/eval_work" 2>&1 | tee "$LOG_DIR/auth_eval.log" | tail -20
 
-log "=== LANE_D_DONE — see $LOG_DIR/auth_eval.log for RESULT_JSON ==="
+log "=== LANE_D_DONE — see $LOG_DIR/auth_eval.log for RESULT_JSON [contest-CUDA] ==="

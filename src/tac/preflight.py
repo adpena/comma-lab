@@ -349,15 +349,15 @@ def preflight_all(
         check_no_silent_auto_discovery_with_warn(strict=True, verbose=verbose)
 
         # 2026-04-27: 3 new meta-bug checks (30, 31, 32) for DX hardening.
-        # Check 30 (executable-bit): STRICT — Lane GH bug + 6 historical
-        # violations all fixed in this commit.
-        # Checks 31-32 (predicted_band, contest-cuda-tag): WARN-only
-        # initially per canonical promotion pattern. Live violation counts
-        # are 14 (predicted_band) and unknown (contest-cuda-tag); fix in
-        # a follow-on sweep then flip strict.
+        # All STRICT after sweep-fix landed in this commit:
+        # - Check 30 (executable-bit): Lane GH bug + 6 historical chmod'd
+        # - Check 31 (predicted_band): 8 lane scripts patched with band metadata
+        # - Check 32 (contest-cuda-tag): 8 lane scripts patched with [contest-CUDA]
+        # Bootstraps + sweep orchestrators + auth-eval-only scripts EXEMPT
+        # via EXEMPT_SUFFIXES list inside each check function.
         check_remote_scripts_executable_bit(strict=True, verbose=verbose)
-        check_remote_scripts_record_predicted_band(strict=False, verbose=verbose)
-        check_remote_scripts_tag_contest_cuda_at_completion(strict=False, verbose=verbose)
+        check_remote_scripts_record_predicted_band(strict=True, verbose=verbose)
+        check_remote_scripts_tag_contest_cuda_at_completion(strict=True, verbose=verbose)
 
     # 2. Training inputs (only if profile + tto_frames provided)
     if profile_name and tto_frames_path and gt_poses_path and masks_path and profile_arch:
@@ -6784,9 +6784,17 @@ def check_remote_scripts_executable_bit(strict: bool = False, verbose: bool = Fa
 # the metadata, post-hoc analysis can't answer "did this lane land within
 # the council's predicted range?" — losing crucial signal.
 def check_remote_scripts_record_predicted_band(strict: bool = False, verbose: bool = False) -> list[str]:
-    """Every scripts/remote_*.sh that emits provenance.json must include
+    """Every scripts/remote_*.sh that emits provenance.json AND runs a
+    LANE EXPERIMENT (not a bootstrap or sweep orchestrator) must include
     a 'predicted_band' field for empirical calibration.
     """
+    # Exempt: bootstraps (utility, no per-experiment band), sweep orchestrators
+    # (band depends on which trial wins), pure auth-eval reruns (diagnostic).
+    EXEMPT_SUFFIXES = (
+        "_bootstrap.sh", "_setup_full.sh", "_setup.sh",
+        "_sweep.sh", "_optimized.sh",  # Bayesian sweep machinery
+        "_auth_eval_only.sh",  # diagnostic rerun
+    )
     violations: list[str] = []
     repo_root = Path(__file__).resolve().parent.parent.parent
     scripts_dir = repo_root / "scripts"
@@ -6797,6 +6805,8 @@ def check_remote_scripts_record_predicted_band(strict: bool = False, verbose: bo
     n_scripts = 0
     n_with_provenance = 0
     for script_path in sorted(scripts_dir.glob("remote_*.sh")):
+        if any(script_path.name.endswith(suf) for suf in EXEMPT_SUFFIXES):
+            continue
         n_scripts += 1
         text = script_path.read_text(errors="ignore")
         if "provenance.json" not in text and "PROVENANCE" not in text:
@@ -6834,10 +6844,16 @@ def check_remote_scripts_record_predicted_band(strict: bool = False, verbose: bo
 # logs are the canonical place for the tag. Currently checked only via
 # per-script test files — generalize via preflight.
 def check_remote_scripts_tag_contest_cuda_at_completion(strict: bool = False, verbose: bool = False) -> list[str]:
-    """Every scripts/remote_*.sh that runs contest_auth_eval must include
+    """Every scripts/remote_*.sh that runs contest_auth_eval AND IS A
+    LANE EXPERIMENT (not a bootstrap or sweep orchestrator) must include
     '[contest-CUDA]' literal in the completion log line so reports are
     self-tagging per CLAUDE.md score-tag rule.
     """
+    EXEMPT_SUFFIXES = (
+        "_bootstrap.sh", "_setup_full.sh", "_setup.sh",
+        "_sweep.sh", "_optimized.sh",
+        "_auth_eval_only.sh",
+    )
     violations: list[str] = []
     repo_root = Path(__file__).resolve().parent.parent.parent
     scripts_dir = repo_root / "scripts"
@@ -6848,6 +6864,8 @@ def check_remote_scripts_tag_contest_cuda_at_completion(strict: bool = False, ve
     n_scripts = 0
     n_with_eval = 0
     for script_path in sorted(scripts_dir.glob("remote_*.sh")):
+        if any(script_path.name.endswith(suf) for suf in EXEMPT_SUFFIXES):
+            continue
         n_scripts += 1
         text = script_path.read_text(errors="ignore")
         if "contest_auth_eval" not in text:

@@ -43,6 +43,7 @@ prov = {
     'torch_version': torch.__version__,
     'cuda_version': getattr(torch.version, 'cuda', None),
     'cuda_available': torch.cuda.is_available(),
+    'predicted_band': [1.10, 1.30],  # added 2026-04-27 per preflight check 31
     'lane_script': 'scripts/remote_lane_m_plus_eval.sh',
     'output_dir': '$LOG_DIR',
     'experiment': 'lane_m_plus_zero_cost_poses_eval',
@@ -135,3 +136,4 @@ log "=== LANE_M_PLUS_DONE — see $LOG_DIR/auth_eval.log for RESULT_JSON ==="
 log "  archive: $ARCHIVE ($ARCHIVE_SIZE bytes)"
 log "  zero-cost-poses banner in eval log? grep '[zero-cost-poses]'"
 grep -h "zero-cost-poses" "$LOG_DIR/auth_eval.log" 2>/dev/null | head -5 || true
+log "=== LANE_M_DONE [contest-CUDA] ==="
