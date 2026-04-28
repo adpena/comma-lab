@@ -27,6 +27,7 @@ Usage:
 from __future__ import annotations
 
 import ast
+import datetime as _dt
 import re
 import struct
 import subprocess
@@ -382,6 +383,68 @@ def preflight_all(
         # script in repo uses ssh — it's all parent-agent invoked).
         check_lane_scripts_strip_macos_resource_forks(strict=True, verbose=verbose)
         check_ssh_commands_have_connect_timeout(strict=True, verbose=verbose)
+
+        # 2026-04-28 late: Check 39 — undeployed archive-artifact producers.
+        # CATCHES the recurring "code-shipped-never-deployed" failure mode:
+        # tools that produce a registered submission artifact and have a
+        # __main__ entry but no scripts/remote_lane_*.sh invocation. Lane EC
+        # sat unused 2 weeks because of this exact gap. Lands at 0 live
+        # violations after exemption pass for kaggle_kernels (alternative
+        # platform), library helpers (scorer_targets.py), and 2 dead lanes
+        # (mini_tto_inflate, optimize_embedding) — straight to STRICT per
+        # the Lane A pattern. References:
+        # - project_lane_ec_engineered_corrections_20260428
+        # - project_outstanding_work_and_stacks_20260428 TIER 3
+        check_undeployed_archive_artifact_producers(strict=True, verbose=verbose)
+
+        # 2026-04-28 late: Check 40 — FP4 hardware-disclosure markers.
+        # CATCHES the bug class that destroyed Lane F lineage: production
+        # FP4 paths without hardware-capability disclosure. Lane F V1=2.73,
+        # V2=1.79, V3=1.85 were all simulated FakeQuantFP4 in FP32 — 4090
+        # is CC 8.9 and NVFP4 needs Blackwell CC 10.0, so "FP4 architectural
+        # hostility" was unverifiable. Lands at 0 live violations after
+        # adding `# FP4_HARDWARE_DISCLOSED:` markers to the 3 actual
+        # production sites (fp4_quantize.py, profile_fp4_layer_sensitivity.py,
+        # qat_finetune.py). Straight to STRICT — bug class structurally
+        # extinct. Reference: project_cosmos_deep_dive_addendum_20260428.
+        # Lane F-V5 (hardware FP8 via torchao.float8) is the proper rescue
+        # path for Ada/Lovelace+ (CC >= 8.9) hardware.
+        check_fp4_production_paths_disclose_hardware(strict=True, verbose=verbose)
+
+        # 2026-04-28 evening: Check 41 — remote_lane_*.sh heartbeat loop.
+        # CATCHES the silent-non-start failure mode that wasted ~$2.50 today
+        # on instances 35739770/35739771/35739773 (Lane W Iceland, Lane K
+        # Denmark, Lane OS-V2 NC). SSH + clone succeeded but lane script
+        # never executed; no heartbeat.log on disk meant no readiness
+        # verification possible. Lands at 0 live violations with sweep
+        # orchestrators exempted. Reference:
+        # feedback_vastai_launch_returns_success_before_lane_starts.
+        check_remote_lane_scripts_have_heartbeat(strict=True, verbose=verbose)
+
+        # 2026-04-28: Check 42 — pose-projection train/inference parity.
+        # CATCHES the BUG-1 class from Lane M-V2 audit: pose-projection
+        # helpers used at OPTIMIZATION time but NOT at INFLATE time produce
+        # train/inference distribution mismatches. Lane M-V2 lost 5h GPU +
+        # $1.50 to this exact bug (PoseNet 0.076 = 15× Lane A baseline was
+        # signal of the bug, not the architectural premise). 0 live
+        # violations after waivers (BUG-1 marked WAIVED until V3-clean
+        # lands, scorer_exploits gradient projection marked WAIVED for
+        # different domain). STRICT.
+        # Reference: project_lane_m_v2_audit_council_findings_20260428.
+        check_pose_projection_train_inference_parity(strict=True, verbose=verbose)
+
+        # 2026-04-28 PM: Check 43 — launcher tarball must include lane anchors.
+        # CATCHES the bug class where a tarball --exclude pattern wins over
+        # a lane script's anchor reference. 3 lanes lost 2026-04-28 PM
+        # because lane_a_landed/ was excluded but archive_lane_a.zip is the
+        # canonical anchor. STRICT @ 0 violations after launcher fix landed.
+        check_launcher_tarball_includes_lane_anchors(strict=True, verbose=verbose)
+
+        # 2026-04-29: Check 43 — controlled-baseline methodology for new
+        # Tuna-2 lanes. WARN-ONLY initially because it only applies to
+        # remote_lane scripts added/modified after 2026-04-29 and is a
+        # methodology guard, not a current correctness blocker.
+        check_remote_lane_scripts_have_controlled_baseline(strict=False, verbose=verbose)
 
     # 2. Training inputs (only if profile + tto_frames provided)
     if profile_name and tto_frames_path and gt_poses_path and masks_path and profile_arch:
@@ -5966,6 +6029,91 @@ def _collect_module_top_level_names(tree: ast.Module) -> set[str]:
     return out
 
 
+def _collect_importorskip_modules(tree: ast.Module) -> set[str]:
+    """Collect every module name passed to pytest.importorskip(...) at module top.
+
+    Honors the canonical pytest pattern for tests of optional / pending
+    dependencies:
+        pytest.importorskip("tac.self_augmentation")
+        from tac.self_augmentation import foo  # scanner accepts because of skip above
+
+    A test file that opts in this way runs cleanly when the module lands and
+    skips gracefully (with reason) when it's missing — matches industrial
+    pytest workflow for in-flight subagent / staged work.
+    """
+    skipped: set[str] = set()
+    for node in tree.body:
+        # Look for `pytest.importorskip("X")` either as a bare expression
+        # statement or as an assignment RHS (`mod = pytest.importorskip("X")`).
+        call: ast.Call | None = None
+        if isinstance(node, ast.Expr) and isinstance(node.value, ast.Call):
+            call = node.value
+        elif isinstance(node, (ast.Assign, ast.AnnAssign)) and isinstance(
+            getattr(node, "value", None), ast.Call
+        ):
+            call = node.value  # type: ignore[assignment]
+        if call is None:
+            continue
+        func = call.func
+        is_importorskip = (
+            isinstance(func, ast.Attribute)
+            and func.attr == "importorskip"
+            and isinstance(func.value, ast.Name)
+            and func.value.id == "pytest"
+        )
+        if not is_importorskip:
+            continue
+        if not call.args:
+            continue
+        first = call.args[0]
+        if isinstance(first, ast.Constant) and isinstance(first.value, str):
+            skipped.add(first.value)
+    return skipped
+
+
+def _has_module_level_skip(tree: ast.Module) -> bool:
+    """Return True if module body contains `pytest.skip(..., allow_module_level=True)`.
+
+    This is the canonical pytest pattern for "skip the whole module" — see
+    pytest docs on pytest.skip + allow_module_level. The scanner walks the
+    module body (including nested if/try blocks at the top level) for any
+    such call. When found, ALL ImportFrom in the file are tolerated since
+    pytest will refuse to collect the module before any inner import runs.
+    """
+    def _scan(stmts: list[ast.stmt]) -> bool:
+        for node in stmts:
+            call: ast.Call | None = None
+            if isinstance(node, ast.Expr) and isinstance(node.value, ast.Call):
+                call = node.value
+            if call is not None:
+                func = call.func
+                is_skip = (
+                    isinstance(func, ast.Attribute)
+                    and func.attr == "skip"
+                    and isinstance(func.value, ast.Name)
+                    and func.value.id == "pytest"
+                )
+                if is_skip:
+                    for kw in call.keywords:
+                        if (
+                            kw.arg == "allow_module_level"
+                            and isinstance(kw.value, ast.Constant)
+                            and kw.value.value is True
+                        ):
+                            return True
+            # Recurse into top-level if/try blocks (still "module level").
+            if isinstance(node, ast.If) and (_scan(node.body) or _scan(node.orelse)):
+                return True
+            if isinstance(node, ast.Try):
+                if _scan(node.body) or _scan(node.orelse) or _scan(node.finalbody):
+                    return True
+                for handler in node.handlers:
+                    if _scan(handler.body):
+                        return True
+        return False
+    return _scan(tree.body)
+
+
 def _scan_test_file_for_dead_imports(
     path: Path, repo_root: Path,
 ) -> list[str]:
@@ -5975,6 +6123,9 @@ def _scan_test_file_for_dead_imports(
     failures hide there: test_yousfi_*, test_wavelet_variance have been
     broken for sessions. Scan ONLY test files, ONLY for ImportError-class
     issues (target module not found, target name not in module).
+
+    Honors `pytest.importorskip("X")` at module top as a legitimate opt-out
+    for tests of optional / in-flight modules — see _collect_importorskip_modules.
     """
     rel = path.relative_to(repo_root) if path.is_absolute() else path
     try:
@@ -5982,6 +6133,13 @@ def _scan_test_file_for_dead_imports(
         tree = ast.parse(text, filename=str(path))
     except (SyntaxError, UnicodeDecodeError, FileNotFoundError):
         return []
+
+    if _has_module_level_skip(tree):
+        # `pytest.skip(..., allow_module_level=True)` at module top — pytest
+        # refuses to collect the module so no ImportFrom inside ever runs.
+        return []
+
+    importorskip_mods = _collect_importorskip_modules(tree)
 
     violations: list[str] = []
     for node in ast.walk(tree):
@@ -5998,6 +6156,10 @@ def _scan_test_file_for_dead_imports(
             or mod.startswith("comma_lab")
             or mod.startswith("scripts")
         ):
+            continue
+        # Honor pytest.importorskip("X") opt-out: skip imports of X or any
+        # submodule under X.
+        if any(mod == m or mod.startswith(m + ".") for m in importorskip_mods):
             continue
         # Resolve module file.
         mod_path = _resolve_module_to_path(mod, repo_root)
@@ -6019,12 +6181,20 @@ def _scan_test_file_for_dead_imports(
             name = alias.name
             if name == "*":
                 continue
-            if name not in defined:
-                violations.append(
-                    f"{rel}:{node.lineno}: imports {name!r} from {mod!r} "
-                    f"but {mod} does not define it. Test will ImportError "
-                    f"at collection time (silently skipped)."
-                )
+            if name in defined:
+                continue
+            # `from tac import preflight` is a valid submodule import even when
+            # `preflight` isn't a top-level name in `tac/__init__.py`. Python
+            # resolves it to `tac/preflight.py`. Accept the import if the
+            # submodule file exists.
+            sub_path = _resolve_module_to_path(f"{mod}.{name}", repo_root)
+            if sub_path is not None and sub_path.exists():
+                continue
+            violations.append(
+                f"{rel}:{node.lineno}: imports {name!r} from {mod!r} "
+                f"but {mod} does not define it. Test will ImportError "
+                f"at collection time (silently skipped)."
+            )
     return violations
 
 
@@ -7344,6 +7514,849 @@ def check_ssh_commands_have_connect_timeout(strict: bool = False, verbose: bool 
         raise PreflightError(
             "SSH CONNECT TIMEOUT VIOLATIONS — at least one script uses "
             f"`ssh` without ConnectTimeout:\n  • " + "\n  • ".join(violations)
+        )
+    return violations
+
+
+# ════════════════════════════════════════════════════════════════════════════
+# Check 39 (2026-04-28): undeployed archive-artifact producers
+#
+# CATCHES the recurring "code-shipped-never-deployed" failure mode. Pattern:
+# a tool exists at experiments/precompute_*.py or src/tac/*.py that writes a
+# filename listed in submission_archive.py's artifact registry; it has a
+# __main__ entry; it has tests; but no scripts/remote_lane_*.sh ever invokes
+# it. Such a tool is dead code from the lab's perspective — burned engineering
+# hours that never reach a Vast.ai score measurement.
+#
+# Concrete instances this would have caught:
+#   - Lane EC engineered corrections — sat unused 2 weeks (Apr 14 → Apr 28).
+#     33KB precompute_gradient_corrections.py + 60KB trick_stack.py
+#     composition + 444-line test, all shipping `gradient_corrections.bin`,
+#     never deployed until hand-flagged this session.
+#   - Per project_outstanding_work_and_stacks_20260428: Lane Ω-V2, SI-V2,
+#     LR-V2, LM-V2, MOS — same pattern, varying severity.
+# ════════════════════════════════════════════════════════════════════════════
+
+# Artifact filenames recognized as "submission archive output". Mirrored from
+# submission_archive.py's required_files() mapping; if that registry changes,
+# update both places. (A future hardening: parse the AST at runtime.)
+_ARCHIVE_ARTIFACT_FILENAMES = frozenset({
+    "renderer.bin",
+    "masks.mkv",
+    "masks.amrc",
+    "optimized_poses.pt",
+    "optimized_poses.bin",
+    "optimized_embedding.pt",
+    "poses.pt",
+    "corrections.bin",
+    "gradient_corrections.bin",
+    "mini_segnet.bin",
+    "mini_posenet.bin",
+    "posenet_targets.bin",
+    "zoom_scalars.bin",
+    "foveation_params.bin",
+})
+
+# Producers we exempt from the "must be deployed" rule. These are either the
+# registry itself, library helpers consumed inline by already-deployed
+# pipelines, canonical entry points referenced through indirection
+# (subprocess via deploy_vastai.py, pipeline.py, etc.) that grep wouldn't
+# catch, or historically-dead lanes preserved for archeology. EVERY
+# EXEMPTION needs a one-line WHY comment.
+_DEPLOY_SCANNER_EXEMPT_PRODUCERS = frozenset({
+    # Registry itself — it's the source of truth, not a producer
+    "src/tac/submission_archive.py",
+    # Renderer export is invoked from training scripts, never standalone
+    "src/tac/renderer_export.py",
+    # Pose TTO is invoked through pipeline.py compress + remote_pose_tto_bootstrap.sh
+    "src/tac/optimize_poses.py",
+    "experiments/optimize_poses.py",
+    # Mask codec is invoked from compress.sh + canonical archive builders
+    "src/tac/mask_codec.py",
+    "src/tac/mask_entropy_coder.py",
+    # AMRC lossless mask codec — invoked from compress.sh
+    "src/tac/lossless/argmax_codec.py",
+    # Pipeline is itself the orchestrator
+    "experiments/pipeline.py",
+    # Mini scorer training is the deployed lane's entry point itself
+    "experiments/train_mini_scorer.py",
+    # Library used by precompute_corrections.py, domain_solvers.py,
+    # trick_stack.py — not a standalone tool
+    "src/tac/scorer_targets.py",
+    # ARCHEOLOGY: mini-scorer inflate path — strict-scorer-rule (CLAUDE.md)
+    # forbids scorers at inflate time; mini-scorer lane is dead by policy.
+    "experiments/mini_tto_inflate.py",
+    # ARCHEOLOGY: embedding-loss TTO produced auth 0.61 on 2026-04-15 but was
+    # superseded by pose TTO + KL distill collapse; preserved for reference.
+    "experiments/optimize_embedding.py",
+})
+
+# Directory prefixes that run on alternative platforms (NOT Vast.ai), so
+# absence from scripts/remote_lane_*.sh is expected.
+_DEPLOY_SCANNER_EXEMPT_DIR_PREFIXES = (
+    # Kaggle kernels run via `kaggle kernels push`, not via remote_lane scripts
+    "experiments/kaggle_kernels/",
+)
+
+
+def _scan_repo_for_artifact_producers(
+    artifact_name: str, repo_root: Path,
+) -> list[Path]:
+    """Find .py files that LIKELY write `artifact_name` to disk.
+
+    Heuristic: file mentions the literal filename in source AND has at least
+    one of {open(...,"wb"), torch.save, .write_bytes, np.save, pickle.dump,
+    json.dump, zipfile.write*, brotli, gzip}. False positives (mentions in a
+    docstring/comment) are rare and harmless — the deploy check filters them
+    out by requiring __main__ + non-deployment.
+    """
+    producers: list[Path] = []
+    write_markers = (
+        "open(", "torch.save(", ".write_bytes(", "np.save(",
+        "pickle.dump(", "json.dump(", "zipfile.", "brotli.", "gzip.",
+        ".write(", "np.tofile(",
+    )
+    quoted_names = (f'"{artifact_name}"', f"'{artifact_name}'")
+    for py in _iter_python_files(repo_root, ["src/tac", "experiments"]):
+        # Skip tests + caches
+        rel = py.relative_to(repo_root) if py.is_absolute() else py
+        rel_s = str(rel)
+        if "/tests/" in rel_s or "/__pycache__/" in rel_s:
+            continue
+        try:
+            text = py.read_text(errors="ignore")
+        except (FileNotFoundError, PermissionError):
+            continue
+        if not any(q in text for q in quoted_names):
+            continue
+        if not any(m in text for m in write_markers):
+            continue
+        producers.append(py)
+    return producers
+
+
+def _producer_has_main_entry(py: Path) -> bool:
+    """True if file is a script (has __main__) — i.e., not a pure library."""
+    try:
+        text = py.read_text(errors="ignore")
+    except (FileNotFoundError, PermissionError):
+        return False
+    return (
+        'if __name__ == "__main__"' in text
+        or "if __name__ == '__main__'" in text
+    )
+
+
+def _producer_is_deployed(
+    py: Path, artifact: str, repo_root: Path,
+) -> bool:
+    """True if any deployment surface references the producer or its output.
+
+    Three-signal OR across three deployment surfaces:
+      1. scripts/remote_lane_*.sh — Vast.ai lane scripts
+      2. scripts/remote_*_bootstrap.sh — canonical bootstraps (parameterized)
+      3. src/tac/deploy/**/*.py — Vast.ai/Modal/Kaggle deployment registries
+
+    For each surface we accept a match on producer's basename, producer's
+    full repo path, or the artifact filename itself (covers inline producers
+    like `python -c "..." > foo.bin`).
+    """
+    name = py.name
+    rel_s = str(py.relative_to(repo_root) if py.is_absolute() else py)
+
+    def _has_ref(t: str) -> bool:
+        return name in t or rel_s in t or artifact in t
+
+    scripts_dir = repo_root / "scripts"
+    if scripts_dir.is_dir():
+        for pattern in ("remote_lane_*.sh", "remote_*_bootstrap.sh"):
+            for sh in scripts_dir.glob(pattern):
+                try:
+                    if _has_ref(sh.read_text(errors="ignore")):
+                        return True
+                except (FileNotFoundError, PermissionError):
+                    continue
+
+    # Surface 3: deploy registries — train_joint_pair.py is invoked
+    # transparently through src/tac/deploy/vastai/experiments.py, etc.
+    deploy_dir = repo_root / "src" / "tac" / "deploy"
+    if deploy_dir.is_dir():
+        for dp in deploy_dir.rglob("*.py"):
+            try:
+                if _has_ref(dp.read_text(errors="ignore")):
+                    return True
+            except (FileNotFoundError, PermissionError):
+                continue
+    return False
+
+
+def check_undeployed_archive_artifact_producers(
+    repo_root: Path | None = None,
+    strict: bool = False,
+    verbose: bool = True,
+) -> list[str]:
+    """Catch the 'code-shipped-never-deployed' bug class.
+
+    For every filename registered in submission_archive.py's artifact mapping,
+    find tools that produce it (write the filename to disk) and have a
+    __main__ entry. If none of those tools is referenced by any
+    scripts/remote_lane_*.sh (or remote_*_bootstrap.sh), we have a never-
+    deployed lane — engineering hours that never produce a measured score.
+
+    Reference: project_lane_ec_engineered_corrections_20260428 (sat 2 weeks
+    unused). Reference: project_outstanding_work_and_stacks_20260428 TIER 3.
+
+    Returns list of violations. Raises MetaBugViolation if strict and any.
+    """
+    root = repo_root or REPO_ROOT
+    violations: list[str] = []
+    seen_producers: set[Path] = set()
+
+    for artifact in sorted(_ARCHIVE_ARTIFACT_FILENAMES):
+        for py in _scan_repo_for_artifact_producers(artifact, root):
+            if py in seen_producers:
+                continue
+            seen_producers.add(py)
+            rel_s = str(py.relative_to(root) if py.is_absolute() else py)
+            if rel_s in _DEPLOY_SCANNER_EXEMPT_PRODUCERS:
+                continue
+            if any(rel_s.startswith(p) for p in _DEPLOY_SCANNER_EXEMPT_DIR_PREFIXES):
+                continue  # alternative-platform producer (e.g., Kaggle)
+            if not _producer_has_main_entry(py):
+                continue  # pure library — OK
+            if _producer_is_deployed(py, artifact, root):
+                continue
+            violations.append(
+                f"{rel_s}: writes '{artifact}' via __main__ entry but no "
+                f"scripts/remote_lane_*.sh (or remote_*_bootstrap.sh) "
+                f"invokes it. This is the 'code-shipped-never-deployed' "
+                f"pattern (Lane EC sat unused 2 weeks). Either: (a) add a "
+                f"remote_lane_*.sh that runs it; (b) add the file path to "
+                f"_DEPLOY_SCANNER_EXEMPT_PRODUCERS in preflight.py with a "
+                f"WHY comment if the producer is library-only or invoked "
+                f"through indirection."
+            )
+
+    if verbose:
+        if violations:
+            print(f"  [undeployed-producers] {len(violations)} violation(s):")
+            for v in violations:
+                print(f"    • {v}")
+        else:
+            print("  [undeployed-producers] OK: every artifact-producer __main__ has a remote_lane_*.sh invocation")
+
+    if violations and strict:
+        raise MetaBugViolation(
+            "UNDEPLOYED ARCHIVE-ARTIFACT PRODUCERS:\n"
+            + "\n".join(f"  • {v}" for v in violations)
+        )
+    return violations
+
+
+# ════════════════════════════════════════════════════════════════════════════
+# Check 40 (2026-04-28): hardware-quantization capability disclosure
+#
+# CATCHES the bug class that destroyed Lane F lineage: emitting FP4 archives
+# / running FakeQuantFP4 in production code paths WITHOUT disclosing that
+# FP4 hardware acceleration requires Blackwell (CC 10.0) and our reference
+# 4090 hardware (CC 8.9) only supports SIMULATED FP4 via FakeQuantFP4.
+#
+# Memory ref: project_cosmos_deep_dive_addendum_20260428.
+# Lane F V1=2.73, V2=1.79, V3=1.85 all generated by FakeQuantFP4 simulation
+# with NO hardware backing. The "FP4 architecturally hostile" conclusion
+# was unverifiable — could be simulation noise, not architectural. FP8 IS
+# hardware-supported on 4090 via torchao.float8 (Lane F-V5 rescue path).
+# ════════════════════════════════════════════════════════════════════════════
+
+# Files that emit FP4 archives or use FakeQuantFP4 in production paths
+# (not tests, not docs). Either each must add a disclosure marker, or be
+# exempted here with a WHY comment.
+_FP4_DISCLOSURE_EXEMPT = frozenset({
+    # Library that defines the simulation primitive itself; the simulation
+    # IS the unit of the docstring there.
+    "src/tac/quantization.py",
+    # Library export of FP4A format; format definition not a runtime path.
+    "src/tac/renderer_export.py",
+})
+
+
+def _scan_for_fp4_production_paths(repo_root: Path) -> list[str]:
+    """Scan for FP4 production paths missing hardware-disclosure markers.
+
+    A "production path" is a non-test .py file under src/tac/ or experiments/
+    that ACTUALLY INSTANTIATES quantization (not just reads/validates the
+    archive format). Detection signals:
+      (a) constructor call `FakeQuantFP4(...)` (instantiation, not import), OR
+      (b) function call `fake_quant_fp4(...)` (lowercase apply form)
+    AND does NOT contain a hardware-disclosure marker:
+      - "[SIMULATED-FP4]" string literal
+      - "[ADVISORY-FP4]" string literal
+      - "compute_capability" reference (any form)
+      - "get_device_capability" reference
+      - "assert_quantization_hardware_supported" reference
+      - "# FP4_HARDWARE_DISCLOSED:" comment marker
+
+    Reading FP4A magic bytes (loaders/validators/registries) does NOT count
+    as a production path; the magic-byte check is a passive format detection
+    that doesn't make hardware-FP4 claims.
+    """
+    violations: list[str] = []
+    # Constructor-call patterns indicating actual quantization instantiation
+    # (regex-aware): `FakeQuantFP4(`, `FakeQuantFP4.apply(`, `fake_quant_fp4(`
+    instantiation_re = re.compile(
+        r"\b(?:FakeQuantFP4\s*\(|FakeQuantFP4\.apply\s*\(|fake_quant_fp4\s*\()"
+    )
+    disclosure_markers = (
+        "[SIMULATED-FP4]",
+        "[ADVISORY-FP4]",
+        "compute_capability",
+        "get_device_capability",
+        "assert_quantization_hardware_supported",
+        "# FP4_HARDWARE_DISCLOSED:",
+    )
+    for py in _iter_python_files(repo_root, ["src/tac", "experiments"]):
+        rel = py.relative_to(repo_root) if py.is_absolute() else py
+        rel_s = str(rel)
+        if "/tests/" in rel_s or "/__pycache__/" in rel_s:
+            continue
+        if rel_s in _FP4_DISCLOSURE_EXEMPT:
+            continue
+        try:
+            text = py.read_text(errors="ignore")
+        except (FileNotFoundError, PermissionError):
+            continue
+        if not instantiation_re.search(text):
+            continue
+        if any(m in text for m in disclosure_markers):
+            continue
+        violations.append(
+            f"{rel_s}: instantiates FakeQuantFP4 in a production path "
+            f"without a hardware-disclosure marker. FP4 hardware "
+            f"acceleration requires Blackwell (CC 10.0); 4090 (CC 8.9) "
+            f"only supports simulated FP4. Either: (a) add a runtime print "
+            f"'[SIMULATED-FP4] hardware capability < 10.0 — FP4 is "
+            f"simulated via FakeQuantFP4'; (b) add `# FP4_HARDWARE_DISCLOSED: "
+            f"<reason>` comment near the FakeQuantFP4 call; (c) call "
+            f"`assert_quantization_hardware_supported('fp4', device, "
+            f"allow_simulation=True)` from tac.quantization. Reference: "
+            f"project_cosmos_deep_dive_addendum_20260428."
+        )
+    return violations
+
+
+def check_fp4_production_paths_disclose_hardware(
+    repo_root: Path | None = None,
+    strict: bool = False,
+    verbose: bool = True,
+) -> list[str]:
+    """Catch undeclared simulated-FP4 production paths.
+
+    Reference: project_cosmos_deep_dive_addendum_20260428 (4090 is CC 8.9,
+    NVFP4 needs CC 10.0; Lane F results were all simulated FakeQuantFP4
+    with no hardware backing).
+
+    Returns list of violations. Raises MetaBugViolation if strict and any.
+    """
+    root = repo_root or REPO_ROOT
+    violations = _scan_for_fp4_production_paths(root)
+
+    if verbose:
+        if violations:
+            print(f"  [fp4-hw-disclose] {len(violations)} violation(s):")
+            for v in violations:
+                print(f"    • {v}")
+        else:
+            print("  [fp4-hw-disclose] OK: every FP4 production path discloses hardware reality")
+
+    if violations and strict:
+        raise MetaBugViolation(
+            "FP4 PRODUCTION PATHS MISSING HARDWARE DISCLOSURE:\n"
+            + "\n".join(f"  • {v}" for v in violations)
+        )
+    return violations
+
+
+# ════════════════════════════════════════════════════════════════════════════
+# Check 42 (2026-04-28): train/inference pose-projection parity (BUG-1 class)
+#
+# CATCHES the bug class found by Lane M-V2 audit (memory:
+# project_lane_m_v2_audit_council_findings_20260428): a pose-projection
+# helper used at OPTIMIZATION time but NOT at INFLATE time, so the optimizer
+# solves a different problem than what gets evaluated. The Lane M-V2 case:
+#
+#   optimize_poses.py: _project_to_renderer_pose(cond) → [zoom, 0,0,0,0,0]
+#   inflate_renderer: <not called>; uses raw saved tensor → [zoom, baseline]
+#
+# Optimizer was driving a model conditioned on zero-pad; inflate evaluated
+# with frozen-baseline-pad. The 0.076 PoseNet result was signal of the bug,
+# not of the architectural premise. ~$1.50 + 5h GPU wasted before audit.
+#
+# This check enforces: any pose-projection helper (regex
+# `_project.*pose|project_pose`) defined in experiments/ must EITHER be
+# called from submissions/robust_current/inflate_renderer.py OR have an
+# explicit `# PROJECT_PARITY_WAIVED:<reason>` marker near its definition.
+# ════════════════════════════════════════════════════════════════════════════
+
+
+def _scan_pose_projection_helpers(repo_root: Path) -> list[tuple[str, int]]:
+    """Find pose-projection helper definitions in optimize/training scripts.
+
+    Returns list of (file_path, lineno) where a candidate helper is defined.
+    Pattern: `def _project*pose*` or `def project_*_pose` or `def *_pose_pad*`.
+    """
+    helpers: list[tuple[str, int]] = []
+    pattern = re.compile(
+        r"^def\s+(_?project_\w*pose\w*|project_\w*_pose|_?\w*_pose_pad\w*)\s*\(",
+    )
+    for py in _iter_python_files(repo_root, ["experiments", "src/tac"]):
+        rel = py.relative_to(repo_root) if py.is_absolute() else py
+        rel_s = str(rel)
+        if "/tests/" in rel_s or "/inflate_renderer.py" in rel_s:
+            continue
+        try:
+            text = py.read_text(errors="ignore")
+        except (FileNotFoundError, PermissionError):
+            continue
+        for i, line in enumerate(text.splitlines(), start=1):
+            m = pattern.match(line.lstrip())
+            if m:
+                helpers.append((rel_s, i))
+    return helpers
+
+
+def _inflate_calls_helper(helper_name: str, repo_root: Path) -> bool:
+    """True iff inflate_renderer.py calls a function matching `helper_name`."""
+    inflate_path = repo_root / "submissions" / "robust_current" / "inflate_renderer.py"
+    if not inflate_path.exists():
+        return False
+    try:
+        text = inflate_path.read_text(errors="ignore")
+    except (FileNotFoundError, PermissionError):
+        return False
+    # Match either direct call `helper_name(` or import `from X import helper_name`
+    return bool(re.search(rf"\b{re.escape(helper_name)}\s*\(", text)) or bool(
+        re.search(rf"\bimport\s+\w+\s*,?\s*{re.escape(helper_name)}", text)
+    ) or bool(re.search(rf"from\s+\S+\s+import.*\b{re.escape(helper_name)}", text))
+
+
+def _has_parity_waiver(file_path: Path, def_lineno: int) -> bool:
+    """Look for `# PROJECT_PARITY_WAIVED:` marker within 15 lines of def.
+
+    Window is 15 because waiver comments often span multiple lines for
+    explanation (e.g., the BUG-1 waiver at optimize_poses.py:752 needs
+    7+ lines to reference the audit + V3-clean fix path).
+    """
+    try:
+        lines = file_path.read_text(errors="ignore").splitlines()
+    except (FileNotFoundError, PermissionError):
+        return False
+    start = max(0, def_lineno - 15)
+    end = min(len(lines), def_lineno + 6)
+    return any("PROJECT_PARITY_WAIVED:" in line for line in lines[start:end])
+
+
+# ════════════════════════════════════════════════════════════════════════════
+# Check 43 (2026-04-28): launcher tarball must include lane anchor paths
+# ════════════════════════════════════════════════════════════════════════════
+
+
+def check_launcher_tarball_includes_lane_anchors(
+    repo_root: Path | None = None,
+    strict: bool = False,
+    verbose: bool = True,
+) -> list[str]:
+    """Catch the bug class where lane scripts reference anchor files that
+    are EXCLUDED from the launcher's tarball.
+
+    Reference: 2026-04-28 PM, 3 lanes (Ω-V2, EC, SAUG-V2) launched OK via
+    launcher V4 split-mode but FAILED on remote because tarball excluded
+    `experiments/results/lane_a_landed/` (3.4GB) — losing the canonical
+    700KB `archive_lane_a.zip` anchor that all lanes reference. ~$1.50
+    wasted across 3 destroyed instances.
+
+    Returns list of violations. Raises MetaBugViolation if strict and any.
+    """
+    root = repo_root or REPO_ROOT
+    violations: list[str] = []
+
+    scripts_dir = root / "scripts"
+    launcher = root / "scripts" / "launch_lane_on_vastai.py"
+    if not scripts_dir.is_dir() or not launcher.exists():
+        if verbose:
+            print(f"  [tarball-anchor-parity] OK: launcher or scripts dir missing — skipping")
+        return violations
+
+    # Collect anchor paths referenced in remote_lane_*.sh
+    anchor_paths: set[str] = set()
+    pattern = re.compile(
+        r'(?:ANCHOR_\w+|LANE_\w*ARCHIVE\w*|LANE_\w*POSES\w*|LANE_\w*MASKS\w*|LANE_\w*RENDERER\w*)='
+        r'(?:"|\$\{[^:}]+:-)?(experiments/results/[\w./_-]+)'
+    )
+    for sh in scripts_dir.glob("remote_lane_*.sh"):
+        try:
+            text = sh.read_text(errors="ignore")
+        except (FileNotFoundError, PermissionError):
+            continue
+        for m in pattern.finditer(text):
+            anchor_paths.add(m.group(1))
+
+    if not anchor_paths:
+        if verbose:
+            print(f"  [tarball-anchor-parity] OK: no anchor paths to check")
+        return violations
+
+    # Parse launcher includes + excludes
+    try:
+        ltext = launcher.read_text(errors="ignore")
+    except (FileNotFoundError, PermissionError):
+        return violations
+
+    includes: set[str] = set()
+    excludes: list[str] = []
+    for line in ltext.splitlines():
+        s = line.strip()
+        m_ex = re.match(r'"--exclude=([^"]+)"', s)
+        if m_ex:
+            excludes.append(m_ex.group(1))
+            continue
+        m_inc = re.match(r'"(experiments/[^"]+)",?$', s)
+        if m_inc:
+            includes.add(m_inc.group(1))
+
+    for ap in sorted(anchor_paths):
+        if ap in includes:
+            continue
+        # If any exclude pattern would match the anchor path → violation
+        # (unless an include exactly overrides)
+        excluded = False
+        for ex in excludes:
+            ex_clean = ex.rstrip("*").rstrip("/")
+            if not ex_clean:
+                continue
+            if ap.startswith(ex_clean):
+                if any(ap == inc or ap.startswith(inc.rstrip("/") + "/") for inc in includes):
+                    continue
+                excluded = True
+                break
+        if excluded:
+            violations.append(
+                f"{ap}: referenced as anchor in scripts/remote_lane_*.sh but "
+                f"EXCLUDED from launcher tarball. Lanes deployed via "
+                f"scripts/launch_lane_on_vastai.py will FAIL on remote. "
+                f"Add to includes list in `build_tarball()` OR remove the "
+                f"parent --exclude pattern."
+            )
+
+    if verbose:
+        if violations:
+            print(f"  [tarball-anchor-parity] {len(violations)} violation(s):")
+            for v in violations:
+                print(f"    • {v}")
+        else:
+            print(f"  [tarball-anchor-parity] OK: {len(anchor_paths)} anchor path(s) all in tarball")
+
+    if violations and strict:
+        raise MetaBugViolation(
+            "LAUNCHER TARBALL MISSING LANE ANCHORS:\n"
+            + "\n".join(f"  • {v}" for v in violations)
+        )
+    return violations
+
+
+def check_pose_projection_train_inference_parity(
+    repo_root: Path | None = None,
+    strict: bool = False,
+    verbose: bool = True,
+) -> list[str]:
+    """Catch pose-projection helpers used asymmetrically (BUG-1 class).
+
+    Reference: project_lane_m_v2_audit_council_findings_20260428.
+
+    Returns list of violations. Raises MetaBugViolation if strict and any.
+    """
+    root = repo_root or REPO_ROOT
+    violations: list[str] = []
+    helpers = _scan_pose_projection_helpers(root)
+    for rel_s, lineno in helpers:
+        # Extract helper name from def line
+        try:
+            text = (root / rel_s).read_text(errors="ignore")
+            line = text.splitlines()[lineno - 1].lstrip()
+            m = re.match(r"def\s+(\w+)\s*\(", line)
+            if not m:
+                continue
+            helper_name = m.group(1)
+        except (FileNotFoundError, PermissionError, IndexError):
+            continue
+        if _has_parity_waiver(root / rel_s, lineno):
+            continue
+        if _inflate_calls_helper(helper_name, root):
+            continue
+        violations.append(
+            f"{rel_s}:{lineno}: pose-projection helper `{helper_name}` is "
+            f"defined in an optimization script but never called from "
+            f"submissions/robust_current/inflate_renderer.py. This is the "
+            f"BUG-1 class from Lane M-V2 audit "
+            f"(project_lane_m_v2_audit_council_findings_20260428): the "
+            f"optimizer projects pose tensors one way, inflate evaluates "
+            f"with raw saved tensors → train/inference distribution mismatch. "
+            f"Either: (a) call the same helper from inflate_renderer.py to "
+            f"ensure parity; (b) add `# PROJECT_PARITY_WAIVED: <reason>` "
+            f"comment near the def if the helper is intentionally one-sided."
+        )
+
+    if verbose:
+        if violations:
+            print(f"  [pose-parity] {len(violations)} violation(s):")
+            for v in violations:
+                print(f"    • {v}")
+        else:
+            print(f"  [pose-parity] OK: every pose-projection helper has parity or waiver")
+
+    if violations and strict:
+        raise MetaBugViolation(
+            "POSE-PROJECTION TRAIN/INFERENCE PARITY VIOLATIONS:\n"
+            + "\n".join(f"  • {v}" for v in violations)
+        )
+    return violations
+
+
+# ════════════════════════════════════════════════════════════════════════════
+# Check 41 (2026-04-28): remote_lane_*.sh scripts must have heartbeat loop
+#
+# CATCHES the bug class that wasted ~$2.50 on 2026-04-28: 3 Vast.ai instances
+# (W Iceland 35739770, K Denmark 35739771, OS-V2 NC 35739773) where SSH +
+# repo clone succeeded but the lane script never invoked, leaving no
+# heartbeat.log on disk and no GPU activity. The launcher reported success
+# because clone completed, masking the actual non-execution.
+#
+# Memory ref: feedback_vastai_launch_returns_success_before_lane_starts.
+#
+# This check enforces that every remote_lane_*.sh script:
+#   (a) defines HEARTBEAT (or LOG_DIR + heartbeat.log path), AND
+#   (b) writes to that path in a backgrounded loop
+# So a watchdog (or future post-launch verifier) can poll the on-disk
+# heartbeat freshness as the canonical readiness signal.
+#
+# Sweep orchestrators (`*_sweep.sh`) are exempt because they delegate to
+# per-trial scripts that have their own heartbeats.
+# ════════════════════════════════════════════════════════════════════════════
+
+# Sweep / orchestrator scripts that delegate heartbeat to sub-scripts
+_HEARTBEAT_EXEMPT_SUFFIXES = (
+    "_sweep.sh",
+    # Lane A-Sweep template + orchestrator (per file docstring)
+    "remote_lane_a_optimized.sh",
+)
+
+
+def _scan_remote_lane_scripts_missing_heartbeat(repo_root: Path) -> list[str]:
+    """Scan remote_lane_*.sh for missing heartbeat-write pattern.
+
+    Required pattern: file mentions 'heartbeat' (case-insensitive) AND has
+    one of:
+      - `>> "$HEARTBEAT"` (canonical pattern)
+      - `>> $HEARTBEAT`
+      - `>> "$LOG_DIR/heartbeat.log"`
+      - any `heartbeat.log` write
+
+    Sweep orchestrators are exempted via _HEARTBEAT_EXEMPT_SUFFIXES.
+    """
+    violations: list[str] = []
+    scripts_dir = repo_root / "scripts"
+    if not scripts_dir.is_dir():
+        return violations
+    write_patterns = (
+        '>> "$HEARTBEAT"',
+        ">> $HEARTBEAT",
+        '>> "$LOG_DIR/heartbeat.log"',
+        ">> heartbeat.log",
+        '"heartbeat.log"',
+        "'heartbeat.log'",
+    )
+    for sh in sorted(scripts_dir.glob("remote_lane_*.sh")):
+        name = sh.name
+        if any(name.endswith(suf) for suf in _HEARTBEAT_EXEMPT_SUFFIXES):
+            continue
+        try:
+            text = sh.read_text(errors="ignore")
+        except (FileNotFoundError, PermissionError):
+            continue
+        if "heartbeat" not in text.lower():
+            violations.append(
+                f"{sh.relative_to(repo_root)}: no `heartbeat` reference. "
+                f"Lane scripts MUST write a heartbeat.log so the launcher "
+                f"and watchdog can verify the lane actually started "
+                f"(memory: feedback_vastai_launch_returns_success_before_lane_starts). "
+                f"Use the canonical pattern from "
+                f"scripts/remote_lane_lm_zero_cost_poses.sh: "
+                f"`HEARTBEAT=\"$LOG_DIR/heartbeat.log\"` + a backgrounded "
+                f"`while true; do echo ... >> \"$HEARTBEAT\"; sleep 60; done &` "
+                f"loop. If this is an orchestrator that delegates heartbeat "
+                f"to per-trial sub-scripts, add the basename to "
+                f"_HEARTBEAT_EXEMPT_SUFFIXES with a WHY comment."
+            )
+            continue
+        if not any(p in text for p in write_patterns):
+            violations.append(
+                f"{sh.relative_to(repo_root)}: mentions 'heartbeat' but no "
+                f"actual heartbeat-write pattern detected (expected one of: "
+                f"`>> \"$HEARTBEAT\"`, `>> $HEARTBEAT`, `>> \"$LOG_DIR/heartbeat.log\"`, "
+                f"or any `heartbeat.log` write). Add the canonical write "
+                f"loop or update _HEARTBEAT_EXEMPT_SUFFIXES."
+            )
+    return violations
+
+
+def check_remote_lane_scripts_have_heartbeat(
+    repo_root: Path | None = None,
+    strict: bool = False,
+    verbose: bool = True,
+) -> list[str]:
+    """Catch lane scripts missing heartbeat-write pattern.
+
+    Reference: feedback_vastai_launch_returns_success_before_lane_starts.
+    Lane W/K/OS-V2 (2026-04-28) silently never started despite SSH + clone
+    success, wasting ~$2.50. Heartbeat.log freshness is the only ground-
+    truth readiness signal.
+
+    Returns list of violations. Raises MetaBugViolation if strict and any.
+    """
+    root = repo_root or REPO_ROOT
+    violations = _scan_remote_lane_scripts_missing_heartbeat(root)
+
+    if verbose:
+        if violations:
+            print(f"  [lane-heartbeat] {len(violations)} violation(s):")
+            for v in violations:
+                print(f"    • {v}")
+        else:
+            print("  [lane-heartbeat] OK: every remote_lane_*.sh writes a heartbeat (or is sweep-exempt)")
+
+    if violations and strict:
+        raise MetaBugViolation(
+            "REMOTE LANE SCRIPTS MISSING HEARTBEAT:\n"
+            + "\n".join(f"  • {v}" for v in violations)
+        )
+    return violations
+
+
+# ════════════════════════════════════════════════════════════════════════════
+# Check 43 (2026-04-29): new remote_lane_*.sh scripts need controlled baseline
+#
+# Tuna-2 methodology: every new lane should identify a minimal-change
+# controlled baseline so a negative/positive result isolates one mechanism.
+# Scope is intentionally date-gated to scripts added/modified after
+# 2026-04-29. For tracked files we ask git for the latest followed commit; for
+# untracked or temp-repo tests we fall back to file mtime.
+# ════════════════════════════════════════════════════════════════════════════
+
+_CONTROLLED_BASELINE_CUTOFF = _dt.datetime(2026, 4, 29, tzinfo=_dt.timezone.utc)
+
+
+def _parse_git_iso_datetime(text: str) -> _dt.datetime | None:
+    text = text.strip()
+    if not text:
+        return None
+    try:
+        return _dt.datetime.fromisoformat(text.replace("Z", "+00:00"))
+    except ValueError:
+        return None
+
+
+def _remote_lane_script_changed_after_cutoff(
+    sh: Path,
+    repo_root: Path,
+    cutoff: _dt.datetime,
+) -> bool:
+    rel = sh.relative_to(repo_root)
+    changed_at = None
+    try:
+        proc = subprocess.run(
+            [
+                "git",
+                "-C",
+                str(repo_root),
+                "log",
+                "-1",
+                "--follow",
+                "--format=%aI",
+                "--",
+                str(rel),
+            ],
+            capture_output=True,
+            text=True,
+            timeout=5,
+        )
+        if proc.returncode == 0:
+            changed_at = _parse_git_iso_datetime(proc.stdout)
+    except (OSError, subprocess.SubprocessError):
+        changed_at = None
+
+    if changed_at is None:
+        try:
+            changed_at = _dt.datetime.fromtimestamp(
+                sh.stat().st_mtime,
+                tz=_dt.timezone.utc,
+            )
+        except FileNotFoundError:
+            return False
+    if changed_at.tzinfo is None:
+        changed_at = changed_at.replace(tzinfo=_dt.timezone.utc)
+    return changed_at > cutoff
+
+
+def _scan_remote_lane_scripts_missing_controlled_baseline(
+    repo_root: Path,
+    cutoff: _dt.datetime = _CONTROLLED_BASELINE_CUTOFF,
+) -> list[str]:
+    violations: list[str] = []
+    scripts_dir = repo_root / "scripts"
+    if not scripts_dir.is_dir():
+        return violations
+    for sh in sorted(scripts_dir.glob("remote_lane_*.sh")):
+        if not _remote_lane_script_changed_after_cutoff(sh, repo_root, cutoff):
+            continue
+        try:
+            text = sh.read_text(errors="ignore")
+        except (FileNotFoundError, PermissionError):
+            continue
+        if "controlled_baseline" in text:
+            continue
+        violations.append(
+            f"{sh.relative_to(repo_root)}: missing `controlled_baseline` "
+            f"metadata. New Tuna-2 remote lane scripts added/modified after "
+            f"2026-04-29 should name a minimal-change controlled baseline "
+            f"(docs/lane_methodology.md) so lane comparisons isolate one "
+            f"mechanism."
+        )
+    return violations
+
+
+def check_remote_lane_scripts_have_controlled_baseline(
+    repo_root: Path | None = None,
+    strict: bool = False,
+    verbose: bool = True,
+) -> list[str]:
+    """Warn when future remote lane scripts omit controlled_baseline metadata."""
+    root = repo_root or REPO_ROOT
+    violations = _scan_remote_lane_scripts_missing_controlled_baseline(root)
+
+    if verbose:
+        if violations:
+            print(f"  [controlled-baseline] {len(violations)} warning(s):")
+            for v in violations:
+                print(f"    • {v}")
+        else:
+            print(
+                "  [controlled-baseline] OK: qualifying remote_lane_*.sh "
+                "scripts declare controlled_baseline"
+            )
+
+    if violations and strict:
+        raise MetaBugViolation(
+            "REMOTE LANE SCRIPTS MISSING CONTROLLED BASELINE:\n"
+            + "\n".join(f"  • {v}" for v in violations)
         )
     return violations
 
