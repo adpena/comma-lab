@@ -8,8 +8,6 @@ import pytest
 import torch
 import torch.nn as nn
 
-pytest.importorskip("tac.self_augmentation")
-
 
 def test_perturb_poses_is_differentiable() -> None:
     from tac.self_augmentation import SelfAugmentationConfig, SelfAugmenter
