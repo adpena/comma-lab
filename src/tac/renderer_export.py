@@ -700,6 +700,10 @@ def _infer_asymmetric_config(model: nn.Module) -> dict:
     # inflate side built a fatter model whose conv lookup didn't match.
     pose_dim = getattr(model, "pose_dim", getattr(renderer, "pose_dim", 0))
     use_dsconv = getattr(model, "use_dsconv", getattr(renderer, "use_dsconv", False))
+    # Lane GH: GhostConv2d arch flag — same fall-through pattern as use_dsconv
+    # so PairGenerator (stores it on .renderer) and AsymmetricPairGenerator
+    # (stores it on self) both round-trip cleanly.
+    use_ghost = getattr(model, "use_ghost", getattr(renderer, "use_ghost", False))
     use_zoom_flow = getattr(model, "use_zoom_flow", False)
 
     # Conv behavior flags — MUST be serialized to prevent silent corruption
@@ -741,6 +745,7 @@ def _infer_asymmetric_config(model: nn.Module) -> dict:
         "flow_only": flow_only,
         "pose_dim": pose_dim,
         "use_dsconv": use_dsconv,
+        "use_ghost": use_ghost,
         "use_zoom_flow": use_zoom_flow,
         "padding_mode": padding_mode,
         "use_dilation": use_dilation,
@@ -993,6 +998,7 @@ def load_asymmetric_checkpoint(
             flow_only=header.get("flow_only", False),
             pose_dim=header.get("pose_dim", 0),
             use_dsconv=header.get("use_dsconv", False),
+            use_ghost=header.get("use_ghost", False),
             use_zoom_flow=bool(header.get("use_zoom_flow") or False),
             padding_mode=header.get("padding_mode", "zeros"),
             use_dilation=header.get("use_dilation", False),
@@ -1016,6 +1022,7 @@ def load_asymmetric_checkpoint(
             depth=header.get("depth", 1),
             pose_dim=header.get("pose_dim", 0),
             use_dsconv=header.get("use_dsconv", False),
+            use_ghost=header.get("use_ghost", False),
             padding_mode=header.get("padding_mode", "zeros"),
             use_dilation=header.get("use_dilation", False),
             use_zoom_flow=bool(header.get("use_zoom_flow") or False),
@@ -1457,6 +1464,7 @@ def load_asymmetric_checkpoint_fp4(
             depth=header.get("depth", 1),
             pose_dim=header.get("pose_dim", 0),
             use_dsconv=header.get("use_dsconv", False),
+            use_ghost=header.get("use_ghost", False),
             padding_mode=header.get("padding_mode", "zeros"),
             use_dilation=header.get("use_dilation", False),
             use_zoom_flow=bool(header.get("use_zoom_flow") or False),
@@ -1582,6 +1590,8 @@ def detect_checkpoint_type(data_or_path: Union[bytes, Path]) -> str:
         "int4_lzma2" for int4 per-tensor + LZMA2 compressed,
         "coolchic" for CoolChic PairGenerator (CCh1 magic),
         "c3_residual" for C3 residual PairGenerator (C3R1 magic),
+        "self_compress_v1" for SC per-channel learnable bit-depth (SCv1 magic),
+        "omega_v1" for Lane Ω per-weight Hessian-aware bit-depth (OMG1 magic),
         "pytorch" for raw PyTorch checkpoints.
     """
     if isinstance(data_or_path, (str, Path)):
@@ -1599,6 +1609,8 @@ def detect_checkpoint_type(data_or_path: Union[bytes, Path]) -> str:
         return "int4_lzma2"
     elif data[:4] == b"SCv1":
         return "self_compress_v1"
+    elif data[:4] == b"OMG1":
+        return "omega_v1"
     elif data[:4] == _COOLCHIC_MAGIC:
         return "coolchic"
     elif data[:4] == _C3_RESIDUAL_MAGIC:
@@ -1632,6 +1644,8 @@ def load_any_renderer_checkpoint(
         return load_c3_residual_renderer(data_or_path, device=device)
     elif fmt == "self_compress_v1":
         return load_self_compressed_renderer(data_or_path, device=device)
+    elif fmt == "omega_v1":
+        return load_omega_renderer(data_or_path, device=device)
     elif fmt == "int4_lzma2":
         from tac.mixed_precision_export import load_int4_lzma2
         from tac.renderer import AsymmetricPairGenerator
@@ -3102,6 +3116,9 @@ def load_self_compressed_renderer(
     # exporter saw, then apply the SC swap so all SelfCompressingConv2d
     # layers exist in the right places. The swap uses the SAME name-pattern
     # protection list so the (swapped vs FP32) split is byte-exact.
+    # 2026-04-27 codex finding fix: thread use_ghost through both branches.
+    # GhostConv layers serialize as nested Conv2d names (*.primary, *.ghost);
+    # without this, Lane GH + Lane S/Ω composition fails at load time.
     if pair_mode == "asymmetric":
         model = AsymmetricPairGenerator(
             num_classes=arch.get("num_classes", 5),
@@ -3115,6 +3132,7 @@ def load_self_compressed_renderer(
             flow_only=arch.get("flow_only", False),
             pose_dim=arch.get("pose_dim", 0),
             use_dsconv=arch.get("use_dsconv", False),
+            use_ghost=arch.get("use_ghost", False),
             use_zoom_flow=bool(arch.get("use_zoom_flow") or False),
             padding_mode=arch.get("padding_mode", "zeros"),
             use_dilation=arch.get("use_dilation", False),
@@ -3129,6 +3147,7 @@ def load_self_compressed_renderer(
             depth=arch.get("depth", 1),
             pose_dim=arch.get("pose_dim", 0),
             use_dsconv=arch.get("use_dsconv", False),
+            use_ghost=arch.get("use_ghost", False),
             padding_mode=arch.get("padding_mode", "zeros"),
             use_dilation=arch.get("use_dilation", False),
             use_zoom_flow=bool(arch.get("use_zoom_flow") or False),
@@ -3247,6 +3266,634 @@ def load_self_compressed_renderer(
         m_emb = getattr(model.motion, "embedding", None)
         if r_emb is not None and m_emb is not None:
             assert r_emb is m_emb, "SCv1 load: shared embedding invariant violated"
+
+    model = model.to(device)
+    model.eval()
+    return model
+
+
+# ─── Lane Ω: per-weight Hessian-aware quantization (OMG1 magic) ──────────
+#
+# The OMG1 binary format encodes a renderer where each Conv2d / Linear weight
+# in the eligible-layer set has its OWN bit-depth (uint8, 1..8) chosen by the
+# Phase 2 water-fill allocator. Unlike SCv1 (per-channel), this is
+# per-element. Protected layers (renderer.head, motion.head, FiLM linears,
+# fuse_conv) stay FP16 — same protection list as SCv1.
+#
+# Layout:
+#   magic (4B = b"OMG1")
+#   header_len (4B little-endian uint32)
+#   header_json (UTF-8, JSON)
+#   body_len (4B little-endian uint32)
+#   body_compressed (LZMA-compressed body bytes)
+#
+# Body for an "omega" layer:
+#   scales_per_channel (C_out × float16)
+#   bits_lzma (LZMA-compressed uint8 buffer of len = numel(weight))
+#   packed_values (per-element symmetric int values bit-packed, 1..8 bits each)
+#   bias_blob (optional, float16)
+#
+# Per-element bit-packing strategy:
+#   We bit-pack the values in flat row-major order. For each element, with
+#   bit-depth b, we encode the signed integer code in [-(2^(b-1)-1),
+#   2^(b-1)-1] using b bits (sign-magnitude with the convention:
+#     sign bit (1=negative), then (b-1) magnitude bits, OR for b=1:
+#     0 = +scale, 1 = -scale).
+#   We use a hand-rolled bit writer (LSB-first within byte) — simple and
+#   deterministic, no external deps. The writer is also LZMA-compressed
+#   in the body, so coding-overhead efficiency matters less than
+#   correctness.
+
+
+_OMEGA_MAGIC = b"OMG1"
+_OMEGA_VERSION = 1
+
+
+def _bitpack_values_with_bits(
+    values: "list[int] | torch.Tensor",
+    bits: "list[int] | torch.Tensor",
+) -> bytes:
+    """LSB-first variable-width bit-packed encoding of signed integer values.
+
+    For each (value, b) pair:
+        sign_bit = 1 if value < 0 else 0     (b ≥ 2)
+        magnitude = abs(value), 0..(2^(b-1) - 1)
+        encoded = (magnitude << 1) | sign_bit  (b ≥ 2, so total = b bits)
+        encoded = (1 if value < 0 else 0)      (b == 1)
+
+    Bytes are written LSB-first (lowest bit of the first value lands in
+    bit 0 of byte 0).
+
+    Returns: bytes with ceil(sum(bits)/8) bytes.
+    """
+    if isinstance(values, torch.Tensor):
+        values = values.tolist()
+    if isinstance(bits, torch.Tensor):
+        bits = bits.tolist()
+    if len(values) != len(bits):
+        raise ValueError(
+            f"values and bits length mismatch: {len(values)} vs {len(bits)}"
+        )
+
+    total_bits = sum(int(b) for b in bits)
+    out = bytearray((total_bits + 7) // 8)
+    bit_offset = 0
+    for v, b in zip(values, bits):
+        b = int(b)
+        v = int(v)
+        if b == 1:
+            code = 1 if v < 0 else 0
+        else:
+            mag = abs(v)
+            max_mag = (1 << (b - 1)) - 1
+            if mag > max_mag:
+                mag = max_mag
+            sign = 1 if v < 0 else 0
+            code = (mag << 1) | sign
+        # write `b` bits LSB-first starting at bit_offset
+        for i in range(b):
+            bit = (code >> i) & 1
+            byte_idx = (bit_offset + i) >> 3
+            bit_in_byte = (bit_offset + i) & 7
+            out[byte_idx] |= bit << bit_in_byte
+        bit_offset += b
+    return bytes(out)
+
+
+def _bitunpack_values_with_bits(
+    blob: bytes,
+    bits: "list[int] | torch.Tensor",
+) -> list[int]:
+    """Inverse of _bitpack_values_with_bits — recover signed integer codes."""
+    if isinstance(bits, torch.Tensor):
+        bits = bits.tolist()
+    out: list[int] = []
+    bit_offset = 0
+    for b in bits:
+        b = int(b)
+        code = 0
+        for i in range(b):
+            byte_idx = (bit_offset + i) >> 3
+            bit_in_byte = (bit_offset + i) & 7
+            bit = (blob[byte_idx] >> bit_in_byte) & 1
+            code |= bit << i
+        if b == 1:
+            # 1-bit code 0 = +scale (value index +1), code 1 = -scale (value -1).
+            # We never produce value=0 from a 1-bit weight (matches packer +
+            # FrozenBitFakeQuant 1-bit sign-only path).
+            v = -1 if code == 1 else 1
+        else:
+            sign = code & 1
+            mag = code >> 1
+            v = -mag if sign else mag
+        out.append(v)
+        bit_offset += b
+    return out
+
+
+def _omega_quantize_layer(
+    weight: torch.Tensor,
+    bits: torch.Tensor,
+) -> tuple[torch.Tensor, torch.Tensor, list[int]]:
+    """Quantize a weight tensor under per-element bits → (scales, bits_uint8, codes).
+
+    Returns:
+        scales: (C_out,) float16 per-channel scales.
+        bits_uint8: same shape as weight, uint8.
+        codes: list[int] of integer codes (signed), one per weight element,
+            in flat row-major order. The packer turns these into bytes.
+    """
+    if bits.shape != weight.shape:
+        raise ValueError(
+            f"bits shape {tuple(bits.shape)} must match weight shape "
+            f"{tuple(weight.shape)}"
+        )
+    out_dim = weight.shape[0]
+    scales = weight.detach().reshape(out_dim, -1).abs().max(dim=1).values
+    scales = scales.clamp(min=1e-8).to(torch.float32)
+
+    bits_f = bits.to(torch.float32)
+    levels = (2.0 ** (bits_f - 1.0) - 1.0).clamp(min=1.0)
+    scale_b = scales.view(-1, *([1] * (weight.dim() - 1)))
+    step = scale_b / levels
+    # integer code per element
+    codes_f = torch.round(weight.detach() / step)
+    # clip per-element to [-levels, +levels]
+    codes_clipped = torch.where(
+        codes_f > levels, levels, torch.where(codes_f < -levels, -levels, codes_f),
+    )
+    codes_int = codes_clipped.to(torch.int64).reshape(-1).tolist()
+    # For 1-bit weights, the encoding represents the SIGN only:
+    #   value index +1 = +scale (encoded as code 0)
+    #   value index -1 = -scale (encoded as code 1)
+    # If the rounded code lands at 0, snap to +1 (sign of weight, default +).
+    bits_flat = bits.reshape(-1).tolist()
+    weight_flat = weight.detach().reshape(-1).tolist()
+    for i, b in enumerate(bits_flat):
+        if int(b) == 1:
+            codes_int[i] = -1 if weight_flat[i] < 0 else 1
+    return scales.to(torch.float16), bits.to(torch.uint8), codes_int
+
+
+def _omega_dequantize_layer(
+    codes: list[int],
+    bits: torch.Tensor,
+    scales: torch.Tensor,
+    weight_shape: torch.Size,
+) -> torch.Tensor:
+    """Reverse of _omega_quantize_layer — recover float weight."""
+    bits_f = bits.to(torch.float32).reshape(-1)
+    levels = (2.0 ** (bits_f - 1.0) - 1.0).clamp(min=1.0)
+    # Per-element scale (broadcast from per-channel)
+    out_dim = weight_shape[0]
+    scales_f = scales.to(torch.float32).reshape(out_dim, *([1] * (len(weight_shape) - 1)))
+    # Per-element step: scale_per_channel / level_per_element
+    # Build a same-shape scale tensor first.
+    full_scale = scales_f.expand(weight_shape).contiguous().reshape(-1)
+    step = full_scale / levels
+    codes_t = torch.tensor(codes, dtype=torch.float32)
+    # For 1-bit (level=1), codes are -1 or +1 → value = ±scale.
+    # For b≥2, value = code * step.
+    one_bit_mask = (bits_f == 1.0)
+    values_general = codes_t * step
+    values_one = codes_t * full_scale  # ±1 * scale
+    values = torch.where(one_bit_mask, values_one, values_general)
+    return values.reshape(weight_shape)
+
+
+def export_omega_renderer(
+    model: nn.Module,
+    bits_per_weight: dict,
+    output_path: Path,
+    *,
+    use_lzma: bool = True,
+    arch_extra: dict | None = None,
+) -> int:
+    """Serialize a renderer with per-weight Hessian-aware bit-depths to OMG1.
+
+    Args:
+        model: AsymmetricPairGenerator (or build_renderer output) — fp32 weights.
+            The Lane Ω QAT loop has already fine-tuned these weights given
+            the per-element bit-depths.
+        bits_per_weight: dict mapping `<full_name>.weight` → uint8 tensor of
+            same shape as that parameter, values in [1, 8]. Layers NOT in
+            this dict are stored as float16 (= protected / non-quantized).
+        output_path: where to write the .bin file.
+        use_lzma: LZMA-compress the body and the bits buffer.
+        arch_extra: optional extra metadata for the arch header.
+
+    Returns:
+        Number of bytes written.
+    """
+    import json
+    import lzma
+    import struct
+
+    model.eval()
+    arch = _infer_asymmetric_config(model)
+    if arch_extra:
+        arch.update(arch_extra)
+
+    layers_meta: list[dict] = []
+    body_chunks: list[bytes] = []
+
+    seen_emb_ids: set[int] = set()
+    eligible_param_ids: set[int] = set()
+    # Pre-scan: which weight parameter ids are "omega-quantized"?
+    name_to_param: dict[str, nn.Parameter] = {
+        n: p for n, p in model.named_parameters()
+    }
+    for layer_name in bits_per_weight:
+        p = name_to_param.get(layer_name)
+        if p is not None:
+            eligible_param_ids.add(id(p))
+
+    for name, module in model.named_modules():
+        if isinstance(module, nn.Embedding):
+            if id(module) in seen_emb_ids:
+                continue
+            seen_emb_ids.add(id(module))
+            arr = module.weight.detach().cpu().float().numpy()
+            blob = arr.astype("float16").tobytes()
+            body_chunks.append(blob)
+            layers_meta.append({
+                "name": name,
+                "kind": "fp16_emb",
+                "shape": list(module.weight.shape),
+                "blob_len": len(blob),
+            })
+            continue
+
+        if isinstance(module, nn.ConvTranspose2d):
+            arr = module.weight.detach().cpu().float().numpy()
+            blob = arr.astype("float16").tobytes()
+            bias_blob = b""
+            if module.bias is not None:
+                bias_blob = module.bias.detach().cpu().float().numpy().astype("float16").tobytes()
+            body_chunks.append(blob + bias_blob)
+            layers_meta.append({
+                "name": name,
+                "kind": "fp16_convt",
+                "shape": list(module.weight.shape),
+                "stride": module.stride[0] if isinstance(module.stride, tuple) else module.stride,
+                "padding": module.padding[0] if isinstance(module.padding, tuple) else module.padding,
+                "has_bias": module.bias is not None,
+                "weight_blob_len": len(blob),
+                "bias_blob_len": len(bias_blob),
+            })
+            continue
+
+        if isinstance(module, nn.Conv2d):
+            weight_name = f"{name}.weight"
+            if weight_name in bits_per_weight:
+                bits_tensor = bits_per_weight[weight_name].to(torch.uint8)
+                if bits_tensor.shape != module.weight.shape:
+                    raise ValueError(
+                        f"OMG1 export: bits shape {tuple(bits_tensor.shape)} "
+                        f"does not match {weight_name} {tuple(module.weight.shape)}"
+                    )
+                scales_f16, bits_u8, codes = _omega_quantize_layer(module.weight, bits_tensor)
+                bits_blob = bits_u8.contiguous().reshape(-1).numpy().tobytes()
+                bits_blob_compressed = lzma.compress(bits_blob, preset=9) if use_lzma else bits_blob
+                packed_values = _bitpack_values_with_bits(codes, bits_u8.reshape(-1).tolist())
+                scales_blob = scales_f16.contiguous().numpy().tobytes()
+                bias_blob = b""
+                if module.bias is not None:
+                    bias_blob = module.bias.detach().cpu().float().numpy().astype("float16").tobytes()
+
+                layer_blob = (
+                    scales_blob
+                    + struct.pack("<I", len(bits_blob_compressed))
+                    + bits_blob_compressed
+                    + struct.pack("<I", len(packed_values))
+                    + packed_values
+                    + bias_blob
+                )
+                body_chunks.append(layer_blob)
+                layers_meta.append({
+                    "name": name,
+                    "kind": "omega",
+                    "shape": list(module.weight.shape),
+                    "stride": module.stride[0] if isinstance(module.stride, tuple) else module.stride,
+                    "padding": module.padding[0] if isinstance(module.padding, tuple) else module.padding,
+                    "dilation": module.dilation[0] if isinstance(module.dilation, tuple) else module.dilation,
+                    "groups": module.groups,
+                    "padding_mode": module.padding_mode,
+                    "has_bias": module.bias is not None,
+                    "scales_f16_len": len(scales_blob),
+                    "bits_blob_compressed": bool(use_lzma),
+                    "bits_blob_uncompressed_len": len(bits_blob),
+                    "bias_blob_len": len(bias_blob),
+                    "total_bits": int(bits_u8.to(torch.int64).sum().item()),
+                    "n_weights": int(bits_u8.numel()),
+                })
+                continue
+            # Fallthrough: this is an UNEligible Conv2d → store FP16
+            arr = module.weight.detach().cpu().float().numpy()
+            blob = arr.astype("float16").tobytes()
+            bias_blob = b""
+            if module.bias is not None:
+                bias_blob = module.bias.detach().cpu().float().numpy().astype("float16").tobytes()
+            body_chunks.append(blob + bias_blob)
+            layers_meta.append({
+                "name": name,
+                "kind": "fp16_conv",
+                "shape": list(module.weight.shape),
+                "stride": module.stride[0] if isinstance(module.stride, tuple) else module.stride,
+                "padding": module.padding[0] if isinstance(module.padding, tuple) else module.padding,
+                "dilation": module.dilation[0] if isinstance(module.dilation, tuple) else module.dilation,
+                "groups": module.groups,
+                "padding_mode": module.padding_mode,
+                "has_bias": module.bias is not None,
+                "weight_blob_len": len(blob),
+                "bias_blob_len": len(bias_blob),
+            })
+            continue
+
+        if isinstance(module, nn.Linear):
+            weight_name = f"{name}.weight"
+            if weight_name in bits_per_weight:
+                bits_tensor = bits_per_weight[weight_name].to(torch.uint8)
+                scales_f16, bits_u8, codes = _omega_quantize_layer(module.weight, bits_tensor)
+                bits_blob = bits_u8.contiguous().reshape(-1).numpy().tobytes()
+                bits_blob_compressed = lzma.compress(bits_blob, preset=9) if use_lzma else bits_blob
+                packed_values = _bitpack_values_with_bits(codes, bits_u8.reshape(-1).tolist())
+                scales_blob = scales_f16.contiguous().numpy().tobytes()
+                bias_blob = b""
+                if module.bias is not None:
+                    bias_blob = module.bias.detach().cpu().float().numpy().astype("float16").tobytes()
+                layer_blob = (
+                    scales_blob
+                    + struct.pack("<I", len(bits_blob_compressed))
+                    + bits_blob_compressed
+                    + struct.pack("<I", len(packed_values))
+                    + packed_values
+                    + bias_blob
+                )
+                body_chunks.append(layer_blob)
+                layers_meta.append({
+                    "name": name,
+                    "kind": "omega_linear",
+                    "shape": list(module.weight.shape),
+                    "has_bias": module.bias is not None,
+                    "scales_f16_len": len(scales_blob),
+                    "bits_blob_compressed": bool(use_lzma),
+                    "bits_blob_uncompressed_len": len(bits_blob),
+                    "bias_blob_len": len(bias_blob),
+                    "total_bits": int(bits_u8.to(torch.int64).sum().item()),
+                    "n_weights": int(bits_u8.numel()),
+                })
+                continue
+            arr = module.weight.detach().cpu().float().numpy()
+            blob = arr.astype("float16").tobytes()
+            bias_blob = b""
+            if module.bias is not None:
+                bias_blob = module.bias.detach().cpu().float().numpy().astype("float16").tobytes()
+            body_chunks.append(blob + bias_blob)
+            layers_meta.append({
+                "name": name,
+                "kind": "fp16_linear",
+                "shape": list(module.weight.shape),
+                "has_bias": module.bias is not None,
+                "weight_blob_len": len(blob),
+                "bias_blob_len": len(bias_blob),
+            })
+            continue
+
+    # Scalar params (mirrors SCv1)
+    captured_module_param_ids: set[int] = set()
+    for _name, mod in model.named_modules():
+        if isinstance(mod, (nn.Conv2d, nn.ConvTranspose2d, nn.Linear, nn.Embedding)):
+            for p in mod.parameters(recurse=False):
+                captured_module_param_ids.add(id(p))
+    scalar_params: dict[str, float] = {}
+    for pname, param in model.named_parameters():
+        if id(param) in captured_module_param_ids:
+            continue
+        if param.numel() == 1:
+            scalar_params[pname] = float(param.item())
+
+    body = b"".join(body_chunks)
+    body_compressed = lzma.compress(body, preset=9 | lzma.PRESET_EXTREME) if use_lzma else body
+
+    header = {
+        "version": _OMEGA_VERSION,
+        "format": "omega_renderer_v1",
+        "use_lzma": bool(use_lzma),
+        "arch": arch,
+        "layers": layers_meta,
+        "scalar_params": scalar_params,
+        "body_uncompressed_len": len(body),
+        "body_compressed_len": len(body_compressed),
+    }
+    header_json = json.dumps(header, separators=(",", ":")).encode("utf-8")
+
+    buf = bytearray()
+    buf.extend(_OMEGA_MAGIC)
+    buf.extend(struct.pack("<I", len(header_json)))
+    buf.extend(header_json)
+    buf.extend(struct.pack("<I", len(body_compressed)))
+    buf.extend(body_compressed)
+
+    output_path = Path(output_path)
+    output_path.parent.mkdir(parents=True, exist_ok=True)
+    output_path.write_bytes(bytes(buf))
+
+    n_total_params = sum(p.numel() for p in model.parameters())
+    bits_per_param = (len(buf) * 8) / max(n_total_params, 1)
+    print(
+        f"[omg1-export] {n_total_params:,} params → {len(buf):,} bytes "
+        f"({bits_per_param:.2f} bits/param) | "
+        f"body uncompressed={len(body):,} compressed={len(body_compressed):,}"
+    )
+    return len(buf)
+
+
+def load_omega_renderer(
+    data_or_path,
+    device: str = "cpu",
+):
+    """Reverse of export_omega_renderer."""
+    import json
+    import lzma
+    import struct
+
+    from tac.renderer import AsymmetricPairGenerator, build_renderer
+
+    if isinstance(data_or_path, (str, Path)):
+        data = Path(data_or_path).read_bytes()
+    else:
+        data = bytes(data_or_path)
+
+    if data[:4] != _OMEGA_MAGIC:
+        raise ValueError(
+            f"Not an OMG1 omega renderer (expected magic b'OMG1', "
+            f"got {data[:4]!r})"
+        )
+    offset = 4
+    header_len = struct.unpack("<I", data[offset:offset + 4])[0]
+    offset += 4
+    header = json.loads(data[offset:offset + header_len].decode("utf-8"))
+    offset += header_len
+
+    if header.get("version") != _OMEGA_VERSION:
+        raise ValueError(
+            f"Unsupported OMG1 version {header.get('version')} (expected {_OMEGA_VERSION})"
+        )
+
+    body_len = struct.unpack("<I", data[offset:offset + 4])[0]
+    offset += 4
+    body_compressed = data[offset:offset + body_len]
+    body = lzma.decompress(body_compressed) if header.get("use_lzma", True) else body_compressed
+
+    arch = header["arch"]
+    pair_mode = arch.get("pair_mode", "asymmetric")
+    # 2026-04-27 codex finding fix: thread use_ghost through both branches.
+    # GhostConv layers serialize as nested Conv2d names (*.primary, *.ghost);
+    # without this, Lane GH + Lane S/Ω composition fails at load time.
+    if pair_mode == "asymmetric":
+        model = AsymmetricPairGenerator(
+            num_classes=arch.get("num_classes", 5),
+            embed_dim=arch.get("embed_dim", 6),
+            base_ch=arch.get("base_ch", 36),
+            mid_ch=arch.get("mid_ch", 60),
+            motion_hidden=arch.get("motion_hidden", 32),
+            depth=arch.get("depth", 1),
+            max_flow_px=arch.get("max_flow_px", 20.0),
+            max_residual=arch.get("max_residual", 20.0),
+            flow_only=arch.get("flow_only", False),
+            pose_dim=arch.get("pose_dim", 0),
+            use_dsconv=arch.get("use_dsconv", False),
+            use_ghost=arch.get("use_ghost", False),
+            use_zoom_flow=bool(arch.get("use_zoom_flow") or False),
+            padding_mode=arch.get("padding_mode", "zeros"),
+            use_dilation=arch.get("use_dilation", False),
+        )
+    else:
+        model = build_renderer(
+            num_classes=arch.get("num_classes", 5),
+            embed_dim=arch.get("embed_dim", 6),
+            base_ch=arch.get("base_ch", 36),
+            mid_ch=arch.get("mid_ch", 60),
+            motion_hidden=arch.get("motion_hidden", 32),
+            depth=arch.get("depth", 1),
+            pose_dim=arch.get("pose_dim", 0),
+            use_dsconv=arch.get("use_dsconv", False),
+            use_ghost=arch.get("use_ghost", False),
+            padding_mode=arch.get("padding_mode", "zeros"),
+            use_dilation=arch.get("use_dilation", False),
+            use_zoom_flow=bool(arch.get("use_zoom_flow") or False),
+            blend_mode=arch.get("blend_mode", "scalar"),
+            noise_mode=arch.get("noise_mode", "deterministic"),
+            motion_type=arch.get("motion_type", "learned_cnn"),
+        )
+
+    name_to_module: dict[str, nn.Module] = dict(model.named_modules())
+    body_offset = 0
+    seen_emb_ids: set[int] = set()
+    import numpy as np
+
+    for layer_meta in header["layers"]:
+        name = layer_meta["name"]
+        kind = layer_meta["kind"]
+        module = name_to_module.get(name)
+        if module is None:
+            raise RuntimeError(
+                f"OMG1 load: layer {name!r} not found in reconstructed model"
+            )
+
+        if kind == "fp16_emb":
+            blob_len = layer_meta["blob_len"]
+            if id(module) in seen_emb_ids:
+                body_offset += blob_len
+                continue
+            seen_emb_ids.add(id(module))
+            blob = body[body_offset:body_offset + blob_len]
+            body_offset += blob_len
+            arr = np.frombuffer(blob, dtype=np.float16).astype(np.float32).copy()
+            with torch.no_grad():
+                module.weight.copy_(torch.from_numpy(arr).reshape(layer_meta["shape"]))
+
+        elif kind in ("fp16_conv", "fp16_convt", "fp16_linear"):
+            w_len = layer_meta["weight_blob_len"]
+            b_len = layer_meta["bias_blob_len"]
+            w_blob = body[body_offset:body_offset + w_len]
+            body_offset += w_len
+            b_blob = body[body_offset:body_offset + b_len]
+            body_offset += b_len
+            w_arr = np.frombuffer(w_blob, dtype=np.float16).astype(np.float32).copy()
+            with torch.no_grad():
+                module.weight.copy_(torch.from_numpy(w_arr).reshape(layer_meta["shape"]))
+                if layer_meta["has_bias"] and module.bias is not None:
+                    b_arr = np.frombuffer(b_blob, dtype=np.float16).astype(np.float32).copy()
+                    module.bias.copy_(torch.from_numpy(b_arr))
+
+        elif kind in ("omega", "omega_linear"):
+            scales_len = layer_meta["scales_f16_len"]
+            scales_blob = body[body_offset:body_offset + scales_len]
+            body_offset += scales_len
+            bits_compressed_len = struct.unpack("<I", body[body_offset:body_offset + 4])[0]
+            body_offset += 4
+            bits_blob_in = body[body_offset:body_offset + bits_compressed_len]
+            body_offset += bits_compressed_len
+            packed_len = struct.unpack("<I", body[body_offset:body_offset + 4])[0]
+            body_offset += 4
+            packed_blob = body[body_offset:body_offset + packed_len]
+            body_offset += packed_len
+            bias_blob = b""
+            if layer_meta["has_bias"]:
+                bias_len = layer_meta["bias_blob_len"]
+                bias_blob = body[body_offset:body_offset + bias_len]
+                body_offset += bias_len
+
+            shape = torch.Size(layer_meta["shape"])
+            n_weights = int(layer_meta["n_weights"])
+            scales_arr = np.frombuffer(scales_blob, dtype=np.float16).astype(np.float32).copy()
+            scales_t = torch.from_numpy(scales_arr)
+            if scales_t.numel() != shape[0]:
+                raise RuntimeError(
+                    f"OMG1 load: layer {name} scales has {scales_t.numel()} entries, "
+                    f"expected {shape[0]}"
+                )
+            bits_uncompressed = (
+                lzma.decompress(bits_blob_in)
+                if layer_meta.get("bits_blob_compressed", True)
+                else bits_blob_in
+            )
+            if len(bits_uncompressed) != n_weights:
+                raise RuntimeError(
+                    f"OMG1 load: layer {name} bits decompressed to "
+                    f"{len(bits_uncompressed)} bytes, expected {n_weights}"
+                )
+            bits_t = torch.frombuffer(bytearray(bits_uncompressed), dtype=torch.uint8).clone()
+            bits_t = bits_t.reshape(shape)
+
+            codes = _bitunpack_values_with_bits(
+                packed_blob, bits_t.reshape(-1).tolist(),
+            )
+            weight_t = _omega_dequantize_layer(codes, bits_t, scales_t, shape)
+
+            with torch.no_grad():
+                module.weight.copy_(weight_t.to(module.weight.dtype))
+                if layer_meta["has_bias"] and module.bias is not None and bias_blob:
+                    b_arr = np.frombuffer(bias_blob, dtype=np.float16).astype(np.float32).copy()
+                    module.bias.copy_(torch.from_numpy(b_arr))
+        else:
+            raise ValueError(f"OMG1 load: unknown layer kind {kind!r}")
+
+    scalar_params = header.get("scalar_params", {})
+    if scalar_params:
+        param_dict = dict(model.named_parameters())
+        with torch.no_grad():
+            for pname, pval in scalar_params.items():
+                if pname in param_dict:
+                    param_dict[pname].fill_(pval)
+
+    if hasattr(model, "renderer") and hasattr(model, "motion"):
+        r_emb = getattr(model.renderer, "embedding", None)
+        m_emb = getattr(model.motion, "embedding", None)
+        if r_emb is not None and m_emb is not None:
+            assert r_emb is m_emb, "OMG1 load: shared embedding invariant violated"
 
     model = model.to(device)
     model.eval()
