@@ -2590,6 +2590,374 @@ DILATED_H64_HALF_FRAME = {
 }
 
 
+# ── LANE V: Quantizr-replica 88K half-frame, joint-trained from epoch 0 ──
+# Council 2026-04-27. Lane D tried to RETROFIT half-frame onto the dilated-h64
+# baseline (mask_half_sim_prob=0.5 mid-train) and FAILED — joint training
+# never converged because the renderer's MotionPredictor was already locked in
+# to (e_t1 - e_t).abs() diff features that warp-expansion zeroes out (memory:
+# feedback_half_frame_breaks_posenet, verified 17.55 score on the retrofit).
+#
+# Lane V's bet: train from epoch 0 with mask_half_sim_prob=1.0 (always-on
+# half-frame) so the motion module NEVER sees the unwarped distribution and
+# is forced to learn the warp-expansion premise. Combined with Quantizr's
+# full trick stack (88K params, FiLM, KL distill T=2.0, DSConv) this is the
+# biggest single swing in the council's strategy.
+#
+# Architecture (matches Quantizr's 88K target — Lane K-class capacity):
+#   * base_ch=24, mid_ch=32, motion_hidden=16, depth=1
+#   * embed_dim=6, pose_dim=6 (FiLM modulation, joint-trained from epoch 0)
+#   * use_dsconv=True (depthwise-separable, Quantizr trick)
+#   * use_zoom_flow=True (REQUIRED by preflight when mask_half_sim_prob>0;
+#     motion outputs 4ch (gate+residual), flow comes from RadialZoomWarp)
+#   * Measured param count: ~89.3K (matches the 88K Quantizr-class target)
+#
+# Half-frame paradigm:
+#   * mask_half_sim_prob=1.0 — EVERY training batch warp-expands mask_t from
+#     mask_t1. NO mixed-distribution training (vs Lane D's 0.5). Renderer
+#     learns ONLY the inflate-time distribution from epoch 0.
+#
+# Quantizr trick stack:
+#   * KL distillation T=2.0, weight=0.002 — POST-BUG-FIX MATH: the 2026-04-27
+#     reduction fix in kl_distill_segnet_only (losses.py:705) divides by H*W
+#     so raw KL ≈ 6.2e-3 × T² ≈ 0.025. With weight=0.002, KL contribution to
+#     total loss is ~5e-5, ~1% of scorer loss (~0.005). PRE-FIX the same 1.0
+#     weight that DEN/SHIRAZ/Lane D set was effectively running at 5000×
+#     intended; 0.002 is the conservative post-fix landing.
+#   * eval_roundtrip=True (NON-NEGOTIABLE per CLAUDE.md). noise_std=0.5 is
+#     hardcoded in train_renderer.py:1741 (simulate_eval_roundtrip call) so
+#     no separate resolver needed; documented here for transparency.
+#   * posetto_noise_std=0.5 — passed to experiments/optimize_poses.py at
+#     pose-TTO time (Stage 3 of remote_lane_v_*.sh).
+#   * Standard Fridrich aux-loss stack (texture/L∞/Markov/variance/uncertainty)
+#     mirrors Lane D for direct A/B comparability.
+#
+# 5-phase QAT schedule totalling 3000 epochs:
+#   Phase 1 (600ep) anchor: pixel L1 + edge warmup
+#   Phase 2 (1500ep) finetune: scorer + Fridrich + KL distill
+#   Phase 3 (400ep) joint: hard-pair fine-tune
+#   Phase 4 (400ep) QAT: FakeQuantFP4 enable
+#   Phase 5 (100ep) final: consolidation at FP4
+# Total ~3000 epochs ≈ 12h on RTX 4090 ($3.00 @ $0.25/hr) — longer than
+# Lane K because half-frame is harder (renderer must learn warp-expansion
+# from a less-informative training signal).
+#
+# Predicted score landing zone (standalone, no Lane A/C stacking):
+#   * SegNet: ~0.003 (excellent at half-frame after joint training)
+#   * PoseNet: 0.05-0.20 (the open question — JOINT training from epoch 0
+#     should converge whereas RETROFIT did not)
+#   * Rate: ~0.14-0.26 (half-frame archive saves 0.20-0.32 vs full-frame)
+#   * Standalone score: 0.50-1.10 (wide band — true from-scratch rebuild)
+# Stacked with Lane A pose TTO + Lane C δ: 0.30-0.55 (sub-Quantizr territory).
+#
+# Cost paranoia: $4-5 if including pose-TTO + auth-eval. Hard kill targets
+# in scripts/remote_lane_v_quantizr_replica_88k_halfframe.sh.
+QUANTIZR_REPLICA_88K_HALFFRAME = {
+    "experiment_type": "renderer_training",
+    # Architecture: 88K param target, Quantizr-class (Lane K-equivalent).
+    "variant": "dilated",
+    "base_ch": 24,
+    "mid_ch": 32,                  # "hidden_ch" in user spec maps to mid_ch
+    "motion_hidden": 16,
+    "embed_dim": 6,
+    "depth": 1,
+    "pose_dim": 6,                 # FiLM modulation from epoch 0
+    "use_dsconv": True,            # depthwise-separable (Quantizr trick)
+    "padding_mode": "zeros",
+    "use_dilation": False,
+    # Half-frame paradigm — joint-trained from epoch 0 (vs Lane D retrofit 0.5).
+    # use_zoom_flow=True is REQUIRED by preflight when mask_half_sim_prob>0.
+    "use_zoom_flow": True,
+    "mask_half_sim_prob": 1.0,     # ALWAYS-on warp-expansion (Lane V bet)
+    "eval_roundtrip": True,        # NON-NEGOTIABLE per CLAUDE.md
+    # noise_std=0.5 is hardcoded in train_renderer.py simulate_eval_roundtrip
+    # call (line 1741); no separate resolver needed. Documented here for the
+    # operator + the test that pins the contract.
+    # posetto_noise_std=0.5 is consumed by experiments/optimize_poses.py at
+    # pose-TTO stage; surfaced as profile metadata (no train_renderer resolver).
+    "posetto_noise_std": 0.5,
+    # Loss configuration — same Fridrich stack as Lane D for A/B comparability.
+    "loss_mode": "focal_ste",
+    "segnet_loss_mode": "hinge",   # canonical name (user spec: seg_loss_mode)
+    "hinge_margin": 0.5,           # canonical name (user spec: seg_margin)
+    "focal_gamma": 2.0,
+    "error_boost": 1.0,
+    # Score weights — SegNet dominates per scoring math (77x more important).
+    "pose_weight": 10.0,
+    "seg_weight": 100.0,
+    "pixel_weight": 0.1,
+    # Fridrich inverse-steganalysis aux losses (matches Lane D recipe).
+    "use_texture_loss": True,
+    "texture_loss_weight": 0.5,
+    "use_linf_penalty": True,
+    "linf_weight": 0.01,
+    "use_markov_loss": True,
+    "markov_weight": 0.1,
+    "use_variance_noise": True,
+    "variance_noise_weight": 0.1,
+    "variance_noise_base_std": 2.0,
+    "variance_noise_kernel": 8,
+    "variance_noise_mode": "wavelet_db4",
+    "use_uncertainty_loss": True,
+    "uncertainty_loss_weight": 0.05,
+    "uncertainty_loss_floor": 0.1,
+    # Quantizr KL distillation on SegNet — T=2.0, weight=0.002 POST-FIX.
+    # Prior to losses.py:705 reduction fix, raw KL was ~5000× larger; weight
+    # 1.0 was implicitly running at 5000× intended. Post-fix, raw KL ≈ 0.025
+    # so weight=0.002 produces KL contribution ~5e-5 (~1% of scorer loss).
+    "kl_distill_weight": 0.002,
+    "kl_distill_temperature": 2.0,
+    "ema_decay": 0.997,
+    "use_per_class_weights": True,  # lane markings 15x (Yousfi)
+    "use_swa": True,                # SWA for FP4 survival
+    # No freeze/unfreeze — continuous adaptive training
+    "freeze_motion_phase2": False,
+    "freeze_renderer_phase3": False,
+    # 5-phase QAT schedule — 3000 epochs total (matches user spec total_epochs).
+    "phase1_epochs": 600,           # anchor: pixel L1 + edge warmup
+    "phase2_epochs": 1500,          # finetune: scorer + Fridrich + KL
+    "phase3_epochs": 400,           # joint: hard-pair fine-tune
+    "phase4_epochs": 400,           # QAT: FakeQuantFP4 enable
+    "phase5_epochs": 100,           # final: consolidation at FP4
+    # User spec lr=5e-4 → use as phase2_lr (the "main" rate). Phase 1 anchor
+    # uses 2x for warmup; Phase 4 QAT uses 0.1x per Lin et al. 2017.
+    "lr": 5e-4,
+    "phase1_lr": 1e-3,
+    "phase2_lr": 5e-4,
+    "phase3_lr": 1e-4,
+    "phase4_lr": 5e-5,              # 0.1× base for QAT
+    "phase5_lr": 1e-5,
+    # User spec batch_size=8 → applied to all phases (phase1 was 16 in Lane D
+    # but with 88K params and use_zoom_flow we have less VRAM headroom from
+    # the always-on warp computation; 8 is the safe budget).
+    "phase1_batch_size": 8,
+    "phase2_batch_size": 8,
+    "phase3_batch_size": 8,
+    # 5-stage quantization config — our advantage over Quantizr's vanilla.
+    "fp4_codebook": "residual",
+    "fp4_robust_scale": True,
+    "fp4_stochastic": True,
+    # Mask augmentation: train on mixed CRF so we don't overfit one mask encoding
+    "mask_noise_prob": 0.5,
+    # Hard-frame curriculum
+    "hard_frame_ratio": 0.3,
+    "error_replay_every": 100,
+    "checkpoint_every": 100,
+    "eval_every": 50,
+    "log_every": 25,
+    # Deterministic reproducibility — pinned via configure_reproducibility().
+    # User spec seed=1234 (Lane V uses a different seed from Lane D's 42 so
+    # the two from-scratch rebuilds explore different RNG basins).
+    "seed": 1234,
+    "deterministic": True,
+}
+
+
+# ── Lane K: DSConv Quantizr-killer (88K params from-scratch, FULL-FRAME) ──
+# Council brief 2026-04-27. Lane A holds the 1.15 [contest-CUDA] frontier with
+# the dilated-h64 baseline arch (288K params, ~290KB FP32 renderer.bin, total
+# archive 694KB, rate contribution 0.46). The remaining wedge is rate.
+#
+# Quantizr's 0.33 leader uses 88K params + DSConv (depthwise-separable
+# convolutions) + FiLM conditioning. Lane S (Self-Compression) attacks rate
+# via per-channel learnable bit-depth on the same 288K arch; Lane V attacks
+# rate via a from-scratch 88K HALF-frame retrain. Lane K is the orthogonal
+# bet to both: train a NEW renderer FROM SCRATCH at Quantizr-class capacity
+# while shipping FULL-frame masks (no warp-expansion risk). The FP4 byte
+# count drops from 180KB to ~50KB without going through the SC route AND
+# without depending on the half-frame paradigm that broke Lane D.
+#
+# Architecture parity with Quantizr (verified empirically):
+#   * base_ch=24, mid_ch=32, motion_hidden=16 → 88,996 params (matches
+#     Quantizr's 88K target almost exactly). Estimated FP4 size: ~48KB
+#     (vs Quantizr's ~64KB FP4-equivalent — we are smaller because our
+#     embeddings + biases + FP4 block scales are tighter).
+#   * embed_dim=6, depth=1 (single-scale U-Net like the dilated-h64 baseline)
+#   * pose_dim=6 (FiLM modulation on poses from epoch 0 — full conditioning
+#     from training start, NOT a post-hoc bolt-on. The pose_dim resolver is
+#     verified live since commit 0746a803 fixed the dead-resolver class —
+#     memory: feedback_pose_dim_dead_resolver. Past "FiLM didn't help"
+#     conclusions on this arch class are invalid.)
+#   * use_dsconv=True (depthwise-separable convolutions — the Quantizr
+#     trick that lets us widen channels per layer at the same param budget).
+#   * use_zoom_flow=False — uses the legacy PairGenerator path (MaskRenderer
+#     + MotionPredictor with 6-channel motion output: flow + gate + residual).
+#     The renderer_export FP4A path supports both pair_modes (verified at
+#     renderer_export.py:_infer_asymmetric_config + inflate_renderer.py:1860
+#     pair_mode dispatch). Lane K avoids use_zoom_flow because (a) the
+#     RadialZoomWarp.warp_inverse_masks half-frame trick collapses PoseNet
+#     on a from-scratch arch (memory: feedback_half_frame_breaks_posenet);
+#     (b) Lane K's primary win is ARCH SIZE, not mask-byte rate, so we ship
+#     full-frame masks and avoid compounding two un-validated changes.
+#   * padding_mode='zeros' (matches the dilated-h64 baseline byte-for-byte
+#     for the few layers where padding affects FP4 quantization scale).
+#   * use_dilation=False (the dilation cascade is a depth=2 win — at
+#     depth=1 it doesn't change receptive field meaningfully; we keep it
+#     off so any score delta is attributable to DSConv + capacity reduction,
+#     not a confound).
+#
+# All current best-practice training tricks are ON:
+#   * eval_roundtrip=True (CLAUDE.md non-negotiable; without it the
+#     proxy-auth gap can be 11x on PoseNet — memory:
+#     feedback_proxy_auth_math_useless).
+#   * noise_std=0.5 is hardcoded in train_renderer.py simulate_eval_roundtrip
+#     call (line 1741); no separate resolver. Documented here for the
+#     operator + the test that pins the contract.
+#   * posetto_noise_std=0.5 consumed by experiments/optimize_poses.py
+#     during pose-TTO; surfaced as profile metadata.
+#   * segnet_loss_mode='hinge' with hinge_margin=0.5 (the user-specified
+#     "seg_margin=0.5" maps to this — it's the hinge margin between the
+#     correct class logit and the hardest competing class). Tighter than
+#     WILDE/SHIRAZ/DEN's hinge_margin=1.0 because we have fewer params.
+#   * Fridrich inverse-steganalysis losses ON (texture / L∞ / Markov +
+#     wavelet variance noise + uncertainty). Same recipe as SHIRAZ — these
+#     are scorer-arch-specific, not capacity-specific, so they should
+#     transfer cleanly to the smaller arch.
+#   * KL distill on SegNet (Quantizr's #1 SegNet trick), T=2.0, weight 0.002
+#     POST losses.py:705 reduction fix (raw KL ~5000× larger pre-fix; weight
+#     1.0 was implicitly running at 5000× intended).
+#   * Per-class weights (lane markings 15x — Yousfi).
+#   * SWA + EMA (wider minima → FP4 survives the post-training quant pass).
+#
+# 5-phase Quantizr-style schedule (matches Lane V budget for fair A/B):
+#   Phase 1 (600ep): pixel L1+edge anchor warmup
+#   Phase 2 (1500ep): scorer-guided + Fridrich aux losses + KL distill
+#   Phase 3 (400ep): hard-pair fine-tune
+#   Phase 4 (400ep): QAT (FakeQuantFP4 enabled, 0.1× LR)
+#   Phase 5 (100ep): final consolidation at FP4
+# Total ~3000 epochs ≈ 12h on RTX 4090. Cost: ~$3-4 at $0.25/hr.
+#
+# 5-stage quantization config — our advantage over Quantizr's vanilla 5-stage:
+#   * fp4_codebook='residual' (denser-near-zero, 4× better small-magnitude
+#     preservation — critical for an 88K renderer where every weight matters).
+#   * fp4_robust_scale=True (per-block scale via p99.5 quantile).
+#   * fp4_stochastic=True (unbiased dither during training; auto-disabled
+#     in eval mode for inflate determinism).
+#
+# Mask augmentation: train against AV1-quantized masks so the renderer
+# learns the inflate-time mask distribution.
+#
+# Predicted score landing zone [0.85, 1.10]:
+#   - SegNet: ~0.005 (DSConv + capacity reduction may cost 0.001-0.002
+#     vs dilated-h64 baseline's 0.003 — the 3.3× capacity penalty)
+#   - PoseNet: ~0.04-0.10 (smaller motion module + FiLM-from-epoch-0 should
+#     match or improve on dilated-h64 baseline's 0.247 PoseNet because FiLM
+#     gives the renderer per-pair pose conditioning the baseline lacks)
+#   - Rate: ~0.20-0.28 (renderer drops from 290KB → ~50KB FP4 → -0.18 rate;
+#     full-frame masks + poses unchanged — anchored on Lane A's verified
+#     1.15 [contest-CUDA] mask + pose payloads)
+#   - Standalone score: 0.85-1.10. If it lands at 0.95 we BEAT Lane A's 1.15
+#     by 0.20 points. If it lands at 0.85 we beat Lane A by 0.30 — the
+#     orthogonal rate attack to Lane S's self-compression route.
+#
+# Deployment: scripts/remote_lane_k_dsconv_quantizr_killer.sh runs the full
+# from-scratch pipeline (train → FP4A export → archive build → contest auth
+# eval). Anchors masks + poses on Lane A's verified 1.15 artifacts so the
+# only delta is the renderer byte count.
+DSCONV_QUANTIZR_KILLER = {
+    "experiment_type": "renderer_training",
+    # Architecture: 88,996 params verified via build_renderer (Quantizr-class).
+    "base_ch": 24,
+    "mid_ch": 32,                  # "hidden_ch" in user spec maps to mid_ch
+    "motion_hidden": 16,
+    "embed_dim": 6,
+    "depth": 1,
+    "pose_dim": 6,                 # FiLM modulation from epoch 0
+    "use_dsconv": True,            # depthwise-separable (Quantizr trick)
+    "padding_mode": "zeros",       # matches dilated-h64 baseline byte-for-byte
+    "use_dilation": False,         # depth=1 dilation is a no-op for receptive field
+    "use_zoom_flow": False,        # legacy PairGenerator path (full-frame masks)
+    # Lane K is FULL-frame masks; explicit zero defends against any caller
+    # flipping it on by accident (preflight enforces consistency between
+    # mask_half_sim_prob and use_zoom_flow).
+    "mask_half_sim_prob": 0.0,
+    # CLAUDE.md non-negotiable: eval_roundtrip MUST be True on every training
+    # path. Without it the proxy-auth gap can be 2-11x on PoseNet.
+    "eval_roundtrip": True,
+    # noise_std=0.5 is hardcoded in train_renderer.py simulate_eval_roundtrip
+    # call (line 1741); documented here for the operator + the test contract.
+    # posetto_noise_std=0.5 is consumed by experiments/optimize_poses.py at
+    # pose-TTO stage; surfaced as profile metadata (no train_renderer resolver).
+    "posetto_noise_std": 0.5,
+    # Loss configuration — focal STE + hinge SegNet + Fridrich aux losses.
+    "loss_mode": "focal_ste",
+    "segnet_loss_mode": "hinge",   # canonical name (user spec: seg_loss_mode)
+    "hinge_margin": 0.5,           # canonical name (user spec: seg_margin)
+    "focal_gamma": 2.0,
+    "error_boost": 1.0,
+    # Score weights — DOMINATED BY SegNet (77x more important per scoring math).
+    "pose_weight": 10.0,
+    "seg_weight": 100.0,
+    "pixel_weight": 0.1,
+    # Fridrich inverse-steganalysis (full SHIRAZ stack — scorer-arch-specific,
+    # transfers cleanly to the smaller arch).
+    "use_texture_loss": True,
+    "texture_loss_weight": 0.5,
+    "use_linf_penalty": True,
+    "linf_weight": 0.01,
+    "use_markov_loss": True,
+    "markov_weight": 0.1,
+    # Yousfi #3: UNIWARD-aligned spatially-adaptive quant noise (wavelet_db4
+    # mode per Holub & Fridrich 2014 §III.B).
+    "use_variance_noise": True,
+    "variance_noise_weight": 0.1,
+    "variance_noise_base_std": 2.0,
+    "variance_noise_kernel": 8,
+    "variance_noise_mode": "wavelet_db4",
+    # Yousfi #5: ScanNet-style spatial uncertainty maps (light weight).
+    "use_uncertainty_loss": True,
+    "uncertainty_loss_weight": 0.05,
+    "uncertainty_loss_floor": 0.1,
+    # Quantizr KL distillation on SegNet — T=2.0, weight=0.002 POST losses.py:705
+    # reduction fix (raw KL ~5000× larger pre-fix). Same calibration as Lane V.
+    "kl_distill_weight": 0.002,
+    "kl_distill_temperature": 2.0,
+    "ema_decay": 0.997,
+    "use_per_class_weights": True,  # lane markings 15x (Yousfi)
+    "use_swa": True,                # SWA → wider minima → FP4 survives
+    # NO freeze/unfreeze — continuous adaptive training.
+    "freeze_motion_phase2": False,
+    "freeze_renderer_phase3": False,
+    # 5-phase QAT schedule — matches Lane V budget for fair A/B comparison.
+    # Total ~3000 epochs ≈ 12h on 4090 ($3-4 at $0.25/hr).
+    "phase1_epochs": 600,           # anchor: pixel L1 + edge warmup
+    "phase2_epochs": 1500,          # finetune: scorer + Fridrich + KL
+    "phase3_epochs": 400,           # joint: hard-pair fine-tune
+    "phase4_epochs": 400,           # QAT: FakeQuantFP4 enable
+    "phase5_epochs": 100,           # final: consolidation at FP4
+    # User spec lr=5e-4 → use as phase2_lr (the "main" rate). Phase 1 anchor
+    # uses 2× for warmup; Phase 4 QAT uses 0.1× per Lin et al. 2017.
+    "lr": 5e-4,
+    "phase1_lr": 1e-3,
+    "phase2_lr": 5e-4,
+    "phase3_lr": 1e-4,
+    "phase4_lr": 5e-5,              # 0.1× base for QAT (Lin et al. 2017)
+    "phase5_lr": 1e-5,
+    # User spec batch_size=8 → applied to all phases. (Phase 1 was 16 in some
+    # other profiles but with 88K params and the Fridrich aux loss stack we
+    # stay at 8 for VRAM headroom on 24GB 4090.)
+    "phase1_batch_size": 8,
+    "phase2_batch_size": 8,
+    "phase3_batch_size": 8,
+    # 5-stage quantization config — our advantage over Quantizr's vanilla.
+    "fp4_codebook": "residual",     # denser-near-zero, 4× small-mag preservation
+    "fp4_robust_scale": True,       # robust per-block scale (p99.5)
+    "fp4_stochastic": True,         # stochastic rounding in QAT
+    # Mask augmentation: train on mixed CRF (no overfitting to one encoding).
+    "mask_noise_prob": 0.5,
+    # Hard-frame curriculum carried from SHIRAZ.
+    "hard_frame_ratio": 0.3,
+    "error_replay_every": 100,
+    "checkpoint_every": 100,
+    "eval_every": 50,
+    "log_every": 25,
+    # Deterministic reproducibility (CLAUDE.md canonical pipeline standard).
+    # User-specified seed=1234 (matches build_baseline_archive.py default and
+    # PYTHONHASHSEED in the bootstrap script for end-to-end determinism).
+    "seed": 1234,
+    "deterministic": True,
+}
+
+
 # ── Lane S: Self-Compression renderer (Szabolcs / 2301.13142) ─────────
 #
 # Builds the dilated-h64 architecture but swaps every bulk Conv2d with a
@@ -2791,6 +3159,18 @@ PROFILES = {
     # (warp-expansion injected into training data path so motion module
     # learns the inflate-time mask distribution).
     "dilated_h64_half_frame": DILATED_H64_HALF_FRAME,
+    # Lane V: Quantizr-replica (88K params, DSConv + FiLM + KL distill) with
+    # mask_half_sim_prob=1.0 (always-on warp expansion) joint-trained from
+    # epoch 0. The biggest-swing council bet — vs Lane D's 0.5 retrofit which
+    # FAILED, Lane V's bet is that JOINT training never seeing the unwarped
+    # distribution forces convergence on the warp-expansion premise.
+    "quantizr_replica_88k_halfframe": QUANTIZR_REPLICA_88K_HALFFRAME,
+    # Lane K: Quantizr-class 88K from-scratch retrain on FULL-frame masks.
+    # Orthogonal to Lane V (half-frame) and Lane S (self-compression). Same
+    # arch (88,996 params, DSConv + FiLM + Fridrich + KL distill) but ships
+    # full-frame masks anchored on Lane A's verified 1.15 [contest-CUDA]
+    # mask + pose payloads — no half-frame risk. Predicted band [0.85, 1.10].
+    "dsconv_quantizr_killer": DSCONV_QUANTIZR_KILLER,
     "wilde_v2": WILDE_V2,
     "green_v2": GREEN_V2,
     "shiraz_v2": SHIRAZ_V2,

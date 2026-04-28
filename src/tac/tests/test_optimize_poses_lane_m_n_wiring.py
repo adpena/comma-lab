@@ -215,31 +215,48 @@ def test_pose_mode_radial_zoom_projects_to_6dof_before_render():
     )
 
 
-def test_pose_mode_radial_zoom_saves_1dof_with_meta():
-    """When pose_mode='radial-zoom', the saved optimized_poses.pt must
-    be (N, 1) and optimized_poses.meta must record `pose_mode` so the
-    inflate-side adapter (parallel subagent) can lift back to (N, 6).
-    Source-grep the save block to confirm the meta field is written."""
+def test_pose_mode_radial_zoom_saves_6dof_with_frozen_baseline_padding():
+    """Lane M-V2 (2026-04-27): when pose_mode='radial-zoom', the saved
+    optimized_poses.pt must be (N, 6) where dim 0 is the optimized scalar
+    and dims 1-5 are the FROZEN baseline values from `--gt-poses-path`.
+
+    The original Lane M-V1 saved (N, 1) and relied on the inflate side
+    zero-padding dims 1-5. That was the V1 bug: PoseNet's auxiliary 5
+    dims encode the rank-1 information the renderer was trained on, so
+    zero-padding them destroyed the per-pair signal (V1 score 2.35 vs
+    Lane A 1.15).
+
+    V2 fixes this by composing the (N, 6) tensor at SAVE time so the
+    file is consumable by inflate without any pose_mode-aware adapter.
+    """
     src = SCRIPT.read_text()
 
-    # The save slice must use pose_dim_internal (so it adapts to mode),
-    # NOT a hard-coded `:6`. The pre-Lane-M code was `[:, :6]`.
-    assert "all_optimized[:, :pose_dim_internal]" in src, (
-        "Lane M save: must slice `all_optimized[:, :pose_dim_internal]` so "
-        "the saved file is (N, 1) in radial-zoom mode and (N, 6) in "
-        "full-6dof mode. The hard-coded `[:, :6]` would silently produce a "
-        "(N, 6) tensor padded with garbage from the latent slot."
+    # The save block must take the optimized scalar (`pose_part[:, :1]`)
+    # and concatenate it with the frozen baseline aux dims
+    # (`init_poses[:n_pairs, 1:6]`). Source-grep both halves to catch
+    # any silent regression to the V1 behavior (saving (N, 1) directly).
+    assert "init_poses[:n_pairs, 1:6]" in src, (
+        "Lane M-V2 save: must use `init_poses[:n_pairs, 1:6]` to harvest "
+        "the FROZEN baseline aux dims for the (N, 6) save tensor. The V1 "
+        "code zero-padded at inflate; V2 freezes baseline values at save "
+        "time so the saved file IS the canonical 6-DOF pose tensor."
+    )
+    assert 'torch.cat([pose_part[:, :1].cpu(), baseline_aux]' in src, (
+        "Lane M-V2 save: must compose the saved tensor as "
+        "`torch.cat([pose_part[:, :1].cpu(), baseline_aux], dim=-1)` so "
+        "dim 0 = optimized radial-zoom scalar and dims 1-5 = frozen "
+        "baseline. Without this composition the saved file is (N, 1) "
+        "and reproduces the V1 zero-pad bug at inflate."
     )
 
-    # The meta sidecar must include `pose_mode` so the inflate-side
-    # adapter can dispatch correctly. Without this, the inflate side
-    # would silently feed a (N, 1) tensor to a 6-DOF FiLM layer.
+    # The meta sidecar must STILL include `pose_mode` for observability
+    # + paper provenance, even though the saved file is now self-
+    # describing as (N, 6).
     assert '"pose_mode": args.pose_mode' in src, (
-        "Lane M save: optimized_poses.meta must include "
-        "`\"pose_mode\": args.pose_mode` so the inflate-side adapter "
-        "(parallel Lane M+ subagent) knows whether to lift (N, 1) → "
-        "(N, 6) before the renderer call. Without this field the "
-        "inflate side silently mis-shapes the FiLM input."
+        "Lane M-V2 save: optimized_poses.meta must include "
+        "`\"pose_mode\": args.pose_mode` for observability + paper "
+        "provenance (the saved file is (N, 6) but the OPTIMIZATION mode "
+        "is still meaningful metadata)."
     )
 
 

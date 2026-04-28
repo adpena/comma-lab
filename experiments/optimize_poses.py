@@ -146,6 +146,18 @@ def parse_args() -> argparse.Namespace:
     p.add_argument("--gt-poses-path", type=str, default=None,
                    help="Path to pre-extracted GT poses (poses.pt). "
                         "If not provided, extracts from GT video.")
+    p.add_argument("--seed-poses-path", type=str, default=None,
+                   help="Lane OS-A: path to seed poses (.pt) produced by "
+                        "experiments/seed_poses_from_openpilot.py — these "
+                        "are used as the WARM-START init_poses tensor "
+                        "instead of GT poses or PoseNet outputs. Takes "
+                        "precedence over --gt-poses-path when both are set. "
+                        "The shape must be (N_pairs, 6); the file is loaded "
+                        "with weights_only=True. Per memory "
+                        "project_openpilot_seeding_demo, supercombo at "
+                        "compress time is contest-compliant — only the "
+                        "(600, 6) seed tensor is consumed by this loop, "
+                        "supercombo itself is never bundled in the archive.")
     p.add_argument("--optimize-embedding", action="store_true",
                    help="Also optimize the renderer's shared class embedding (30 values, 120 bytes). "
                         "Embedding is GLOBAL (shared across all pairs), optimized once before "
@@ -944,8 +956,16 @@ def main():
     print(f"[4/6] Masks: {gt_masks.shape}, Poses: {pose_targets.shape} in {time.monotonic() - t0:.1f}s", flush=True)
 
     # ── Step 4: Load or extract initial GT poses ────────────────────────
+    # Lane OS-A: --seed-poses-path takes precedence over --gt-poses-path. The
+    # seed file is produced by experiments/seed_poses_from_openpilot.py from
+    # openpilot supercombo (or the lane_mark_pose fallback). It is a
+    # PoseNet-distribution-calibrated warm start, expected to converge faster
+    # than GT/baseline pose warm-start. Memory: project_openpilot_seeding_demo.
     print("\n[5/6] Loading initial pose vectors...", flush=True)
-    if args.gt_poses_path and Path(args.gt_poses_path).exists():
+    if args.seed_poses_path and Path(args.seed_poses_path).exists():
+        init_poses = torch.load(args.seed_poses_path, map_location="cpu", weights_only=True).float()
+        print(f"  [Lane OS-A] Loaded SEED poses from {args.seed_poses_path}: {init_poses.shape}", flush=True)
+    elif args.gt_poses_path and Path(args.gt_poses_path).exists():
         init_poses = torch.load(args.gt_poses_path, map_location="cpu", weights_only=True).float()
         print(f"  Loaded GT poses from {args.gt_poses_path}: {init_poses.shape}", flush=True)
     else:
@@ -1150,13 +1170,41 @@ def main():
     print("RESULTS: GT poses vs optimized poses", flush=True)
     print("=" * 70, flush=True)
 
-    # Save optimized poses (both formats for compatibility). Lane M:
-    # in radial-zoom mode the saved tensor is (N, 1) — the inflate-side
-    # adapter reads `pose_mode` from the meta sidecar and lifts back to
-    # 6-DOF before the renderer call. Slicing `[:, :pose_dim_internal]`
-    # works for both modes (pose_dim_internal=1 for radial-zoom, =6 for
-    # full-6dof).
-    optimized_poses = all_optimized[:, :pose_dim_internal]  # pose part only
+    # Save optimized poses (both formats for compatibility). Lane M-V2
+    # (2026-04-27 fix): in radial-zoom mode we save the FULL (N, 6) tensor
+    # where dim 0 is the optimized radial-zoom scalar and dims 1-5 are
+    # FROZEN at their baseline values (from `--gt-poses-path`). The
+    # original Lane M-V1 saved (N, 1) and relied on the inflate side
+    # zero-padding dims 1-5 — that was the V1 bug: dims 1-5 of the
+    # baseline poses are NOT zero (they encode the auxiliary PoseNet
+    # information the renderer was trained on); zero-padding them at
+    # inflate destroyed PoseNet (V1 score 2.35 vs Lane A 1.15).
+    # Saving (N, 6) here means the file is consumable by inflate /
+    # downstream tooling without any pose_mode-aware adapter — the
+    # bytes ARE the 6-DOF poses, and only the optimization side knew
+    # about the 1-DOF representation.
+    pose_part = all_optimized[:, :pose_dim_internal]  # (N, pose_dim_internal)
+    if args.pose_mode == "radial-zoom":
+        # Compose (N, 6): dim 0 = optimized scalar; dims 1-5 = frozen
+        # baseline values from init_poses (which was loaded from
+        # --gt-poses-path or extracted from GT frames). init_poses is
+        # ALWAYS (N, 6) per the load block above.
+        baseline_aux = init_poses[:n_pairs, 1:6].detach().cpu().to(pose_part.dtype)
+        if baseline_aux.shape[1] != 5:
+            raise SystemExit(
+                "FATAL: Lane M-V2 expects baseline init_poses to be (N, 6) "
+                f"so dims 1-5 can be frozen-padded, got shape {tuple(init_poses.shape)}. "
+                "Verify --gt-poses-path points at a (N, 6) tensor (e.g., "
+                "submissions/baseline_dilated_h64_0_90/optimized_poses.pt)."
+            )
+        optimized_poses = torch.cat([pose_part[:, :1].cpu(), baseline_aux], dim=-1)
+        print(
+            f"  [Lane M-V2] composed (N, 6) save tensor: dim0=optimized radial-zoom, "
+            f"dims1-5=frozen baseline (from --gt-poses-path)",
+            flush=True,
+        )
+    else:
+        optimized_poses = pose_part
     torch.save(optimized_poses, output_dir / "optimized_poses.pt")
     pt_size = (output_dir / "optimized_poses.pt").stat().st_size
     # Also save compact binary format (raw fp16, ~53% smaller). This is the
@@ -1165,12 +1213,10 @@ def main():
     from tac.submission_archive import save_poses_binary
     bin_size = save_poses_binary(optimized_poses, output_dir / "optimized_poses.bin")
     # Emit completion sidecar so consumers can distinguish final vs partial
-    # without trusting filename conventions. Lane M: include `pose_mode`
-    # so the inflate-side adapter knows whether to lift (N, 1) → (N, 6)
-    # before renderer call. Without this field the inflate side would
-    # silently feed a (N, 1) tensor into a FiLM layer that expects
-    # (N, 6) and crash with a shape mismatch — which is the *correct*
-    # failure mode (per CLAUDE.md hard-error not silent-skip).
+    # without trusting filename conventions. Lane M-V2: pose_dim recorded
+    # in meta is now ALWAYS 6 in radial-zoom mode (we save (N, 6) with
+    # frozen baseline dims 1-5), but we still record `pose_mode` for
+    # observability + paper provenance.
     import json as _json
     (output_dir / "optimized_poses.meta").write_text(_json.dumps({
         "n_pairs_complete": int(optimized_poses.shape[0]),
@@ -1202,12 +1248,22 @@ def main():
     print("\n  Computing proxy scores (GT poses vs optimized poses)...", flush=True)
     from tac.scorer import compute_proxy_score
 
-    # Lane M: project saved 1-DOF poses → 6-DOF for the renderer call.
-    # The renderer was trained on 6-DOF input so generating frames with
-    # raw (N, 1) would shape-mismatch the FiLM layer. The save format
-    # stays 1-DOF; this projection only happens in-memory for the
-    # subsequent proxy scoring + downstream usage in this script.
+    # Lane M-V2: optimized_poses is now ALWAYS (N, 6) — in radial-zoom
+    # mode dim 0 is the optimized scalar and dims 1-5 are the frozen
+    # baseline values (composed in the save block above). No projection
+    # needed for the renderer call; we keep the (N, 1) defensive branch
+    # only as a fallback for any future code path that bypasses the
+    # save-block composition (it should never trigger on the canonical
+    # path; if it does we pad with zeros to AT LEAST avoid a shape
+    # mismatch — but the warning prints loud so the operator notices).
     if args.pose_mode == "radial-zoom" and optimized_poses.shape[1] == 1:
+        print(
+            "  [Lane M-V2 WARNING] optimized_poses is (N, 1) at proxy-score time. "
+            "The save-block composition should have produced (N, 6) with frozen "
+            "baseline dims 1-5. Falling back to ZERO pad for the in-memory render "
+            "(this will undercount PoseNet — fix the save-block path).",
+            flush=True,
+        )
         zeros_pad = torch.zeros(
             optimized_poses.shape[0], 6 - 1, dtype=optimized_poses.dtype,
         )
@@ -1237,9 +1293,13 @@ def main():
 
     # Pose vector statistics — compare on the OPTIMIZABLE shape so
     # radial-zoom (N, 1) vs full-6dof (N, 6) both have well-defined L2
-    # norms. Compare against the matching slice of init_poses.
+    # norms. Lane M-V2: optimized_poses is now ALWAYS (N, 6); in
+    # radial-zoom mode dims 1-5 are FROZEN baseline values so their
+    # contribution to the delta is zero, but we slice to the optimizable
+    # dim so the printed L2 norm reflects actual optimizer movement.
+    delta_dim = pose_dim_internal  # 1 for radial-zoom, 6 for full-6dof
     pose_delta = (
-        optimized_poses - init_poses[:n_pairs, :pose_dim_internal]
+        optimized_poses[:, :delta_dim] - init_poses[:n_pairs, :delta_dim]
     ).norm(dim=1)
     print(f"\n  Pose delta: mean={pose_delta.mean():.4f}, "
           f"max={pose_delta.max():.4f}, min={pose_delta.min():.4f}", flush=True)
