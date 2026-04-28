@@ -30,6 +30,7 @@ Dependencies: torch, struct, json only (no numpy).
 
 from __future__ import annotations
 
+import io
 import json
 import struct
 from pathlib import Path
@@ -56,6 +57,9 @@ __all__ = [
     # Lane S (Self-Compression renderer, 2026-04-27)
     "export_self_compressed_renderer",
     "load_self_compressed_renderer",
+    # Lane J-NWC (Neural Weight Compression renderer.bin, arXiv 2510.11234, 2026-04-28)
+    "export_neural_compressed_checkpoint",
+    "load_neural_compressed_checkpoint",
 ]
 
 
@@ -1864,6 +1868,7 @@ def detect_checkpoint_type(data_or_path: Union[bytes, Path]) -> str:
         "c3_residual" for C3 residual PairGenerator (C3R1 magic),
         "self_compress_v1" for SC per-channel learnable bit-depth (SCv1 magic),
         "omega_v1" for Lane Ω per-weight Hessian-aware bit-depth (OMG1 magic),
+        "neural_weight_compression_v1" for Lane J-NWC neural weight codec (NWC1 magic),
         "pytorch" for raw PyTorch checkpoints.
     """
     if isinstance(data_or_path, (str, Path)):
@@ -1885,6 +1890,8 @@ def detect_checkpoint_type(data_or_path: Union[bytes, Path]) -> str:
         return "self_compress_v1"
     elif data[:4] == b"OMG1":
         return "omega_v1"
+    elif data[:4] == b"NWC1":
+        return "neural_weight_compression_v1"
     elif data[:4] == _COOLCHIC_MAGIC:
         return "coolchic"
     elif data[:4] == _C3_RESIDUAL_MAGIC:
@@ -1920,6 +1927,8 @@ def load_any_renderer_checkpoint(
         return load_self_compressed_renderer(data_or_path, device=device)
     elif fmt == "omega_v1":
         return load_omega_renderer(data_or_path, device=device)
+    elif fmt == "neural_weight_compression_v1":
+        return load_neural_compressed_checkpoint(data_or_path, device=device)
     elif fmt == "int4_lzma2":
         from tac.mixed_precision_export import load_int4_lzma2
         from tac.renderer import AsymmetricPairGenerator
@@ -4257,6 +4266,224 @@ def load_omega_renderer(
         if r_emb is not None and m_emb is not None:
             assert r_emb is m_emb, "OMG1 load: shared embedding invariant violated"
 
+    model = model.to(device)
+    model.eval()
+    return model
+
+
+# ─── Lane J-NWC: Neural Weight Compression (NWC1 magic) ──────────────────
+#
+# arXiv 2510.11234 — "Neural Weight Compression for Language Models" (late 2025).
+# Trains a tiny VQ-VAE-style codec on a corpus of small renderers we have
+# already trained (hundreds saved under experiments/results/). At deploy time,
+# the codec is loaded, every floating param tensor in `model.state_dict()` is
+# encoded to (codebook_indices + per-block float16 scales), and the codec
+# weights themselves are bundled into the binary so that
+# `load_neural_compressed_checkpoint` can decode without external state.
+#
+# NWC1 layout:
+#   magic            (4B = b"NWC1")
+#   header_len       (4B little-endian uint32)
+#   header_json      (UTF-8, JSON)
+#       header.config        — nn arch config (from _infer_asymmetric_config)
+#       header.codec_config  — block_size, codebook_size, latent_dim, hidden
+#       header.tensors       — per-tensor metadata: name, shape, blob_len
+#   codec_state_blob_len     (4B uint32) — torch.save bytes (.pt of codec weights)
+#   codec_state_blob         (codec_state_blob_len bytes)
+#   per_tensor_blobs         — sequence of (4B blob_len, blob_bytes) where the
+#                              blob is exactly what `WeightCodec.encode()`
+#                              produced. The order matches header.tensors.
+#
+# The header.tensors metadata lets the loader iterate without scanning blob
+# contents (length-prefixed framing is also defensive against truncation).
+
+_NWC_MAGIC = b"NWC1"
+_NWC_VERSION = 1
+
+
+def _nwc_collect_tensors(model: nn.Module) -> list[tuple[str, torch.Tensor]]:
+    """Walk a renderer and collect every floating-point parameter tensor
+    deterministically (sorted by named_parameters order).
+
+    Skips non-floating-point and zero-element tensors. Uses
+    `state_dict()` keys so buffers (e.g., running stats) are also captured —
+    this matches the FP8H / OMG1 round-trip expectation.
+    """
+    out: list[tuple[str, torch.Tensor]] = []
+    for name, val in model.state_dict().items():
+        if not isinstance(val, torch.Tensor):
+            continue
+        if not torch.is_floating_point(val):
+            continue
+        if val.numel() == 0:
+            continue
+        out.append((name, val.detach().cpu()))
+    return out
+
+
+def export_neural_compressed_checkpoint(
+    model: nn.Module,
+    codec_path: str | Path,
+    output_path: str | Path,
+    *,
+    arch_extra: dict | None = None,
+) -> int:
+    """Compress a renderer with a pre-trained NWC codec → NWC1 binary.
+
+    Args:
+        model: a fp32 renderer (typically AsymmetricPairGenerator) whose
+            state_dict will be encoded tensor-by-tensor through the codec.
+        codec_path: path to the trained `WeightCodec` checkpoint, as written
+            by `experiments/train_neural_weight_codec.py` (a torch.save dict
+            with keys ``codec_state_dict`` and ``codec_config``).
+        output_path: where to write the .bin.
+        arch_extra: optional extra metadata for the arch header.
+
+    Returns: number of bytes written.
+    """
+    from tac.neural_weight_codec import WeightCodec, WeightCodecConfig
+
+    model.eval()
+    try:
+        config = _infer_asymmetric_config(model)
+    except Exception:
+        config = {"tensor_only": True}
+    if arch_extra:
+        config = {**config, **arch_extra}
+
+    codec_blob = Path(codec_path).read_bytes()
+    codec_state = torch.load(io.BytesIO(codec_blob), map_location="cpu", weights_only=False)
+    codec_cfg_dict = codec_state.get("codec_config")
+    if codec_cfg_dict is None:
+        raise ValueError(
+            f"Codec checkpoint at {codec_path} missing 'codec_config' — "
+            "rebuild via experiments/train_neural_weight_codec.py"
+        )
+    codec_config = WeightCodecConfig(**codec_cfg_dict)
+    codec = WeightCodec(codec_config)
+    codec.load_state_dict(codec_state["codec_state_dict"])
+    codec.eval()
+
+    tensors = _nwc_collect_tensors(model)
+    blob_meta: list[dict] = []
+    blobs: list[bytes] = []
+    for name, t in tensors:
+        blob = codec.encode(t)
+        blob_meta.append({
+            "name": name,
+            "shape": list(t.shape),
+            "numel": int(t.numel()),
+            "dtype_in": str(t.dtype).replace("torch.", ""),
+            "blob_len": len(blob),
+        })
+        blobs.append(blob)
+
+    header = {
+        "magic": "NWC1",
+        "version": _NWC_VERSION,
+        "format": "neural_weight_compression",
+        "config": config,
+        "codec_config": codec_cfg_dict,
+        "tensors": blob_meta,
+    }
+    header_json = json.dumps(header, separators=(",", ":")).encode("utf-8")
+
+    buf = bytearray()
+    buf.extend(_NWC_MAGIC)
+    buf.extend(struct.pack("<I", len(header_json)))
+    buf.extend(header_json)
+    buf.extend(struct.pack("<I", len(codec_blob)))
+    buf.extend(codec_blob)
+    for raw in blobs:
+        buf.extend(struct.pack("<I", len(raw)))
+        buf.extend(raw)
+
+    output_path = Path(output_path)
+    output_path.parent.mkdir(parents=True, exist_ok=True)
+    output_path.write_bytes(bytes(buf))
+
+    param_count = sum(p.numel() for p in model.parameters())
+    if param_count > 0:
+        print(
+            f"[nwc-export] {param_count:,} params → {len(buf):,} bytes "
+            f"({len(buf) / param_count * 8:.2f} bits/param incl. codec)"
+        )
+    return len(buf)
+
+
+def load_neural_compressed_checkpoint(
+    data_or_path: Union[bytes, Path, str],
+    device: str = "cpu",
+) -> nn.Module:
+    """Restore a renderer from an NWC1 ``.bin``.
+
+    Reads the embedded codec, decodes every tensor blob, and loads them into a
+    freshly built model whose architecture is inferred from the JSON header.
+    """
+    from tac.neural_weight_codec import WeightCodec, WeightCodecConfig
+
+    if isinstance(data_or_path, (str, Path)):
+        data = Path(data_or_path).read_bytes()
+    else:
+        data = data_or_path
+
+    if data[:4] != _NWC_MAGIC:
+        raise ValueError(
+            f"Not an NWC1 checkpoint (expected magic b'NWC1', got {data[:4]!r})"
+        )
+    offset = 4
+    header_len = struct.unpack_from("<I", data, offset)[0]
+    offset += 4
+    header_json = data[offset : offset + header_len].decode("utf-8")
+    header = json.loads(header_json)
+    offset += header_len
+    if header.get("version") != _NWC_VERSION:
+        raise ValueError(
+            f"Unsupported NWC1 version {header.get('version')} (expected {_NWC_VERSION})"
+        )
+
+    codec_blob_len = struct.unpack_from("<I", data, offset)[0]
+    offset += 4
+    codec_blob = data[offset : offset + codec_blob_len]
+    offset += codec_blob_len
+
+    codec_state = torch.load(io.BytesIO(codec_blob), map_location="cpu", weights_only=False)
+    codec_config = WeightCodecConfig(**codec_state["codec_config"])
+    codec = WeightCodec(codec_config)
+    codec.load_state_dict(codec_state["codec_state_dict"])
+    codec.eval()
+
+    new_state: dict[str, torch.Tensor] = {}
+    for tensor_meta in header["tensors"]:
+        blob_len = struct.unpack_from("<I", data, offset)[0]
+        offset += 4
+        blob = data[offset : offset + blob_len]
+        offset += blob_len
+        decoded = codec.decode(blob)
+        # decoder returns float32 — caller may cast to whatever the model expects
+        new_state[tensor_meta["name"]] = decoded.reshape(tensor_meta["shape"])
+
+    # Build the model. Reuse the FP8H builder which handles either an inferred
+    # asymmetric config or the tensor_only fallback.
+    config = header.get("config", {})
+    if config.get("tensor_only"):
+        # Tensor-only mode: caller supplies their own model and copies state.
+        # Mirror the FP8H tensor_only protocol.
+        from tac.renderer import AsymmetricPairGenerator
+
+        model = AsymmetricPairGenerator()
+        model._nwc_state_dict = new_state  # type: ignore[attr-defined]
+        return model.to(device).eval()
+
+    model = _fp8h_build_model_from_header({"config": config, "tensors": []}, device=device)
+
+    full_state = dict(model.state_dict())
+    for k, v in new_state.items():
+        if k in full_state:
+            full_state[k] = v.to(full_state[k].dtype)
+        else:
+            full_state[k] = v
+    model.load_state_dict(full_state, strict=False)
     model = model.to(device)
     model.eval()
     return model
