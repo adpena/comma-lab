@@ -1,8 +1,14 @@
-"""Tests for tac.lagrangian_kl_weight.LearnableKLWeight.
+"""Tests for tac.lagrangian_kl_weight.KLWeightProportionalController.
 
-Verifies the multiplicative dual-ascent rule converges to the operator-
-specified SNR target on a synthetic problem AND the pathological-input
-guards fire as designed (no silent NaN drift, no log_w runaway).
+(Historically named ``LearnableKLWeight`` — the alias is kept and these
+tests cover both names so callers that still import the old name keep
+working. See Bug 4 / codex Round 3: this is a proportional ratio
+controller, NOT Lagrangian dual ascent.)
+
+Verifies the multiplicative log-space ratio update converges to the
+operator-specified SNR target on a synthetic stationary problem AND the
+pathological-input guards fire as designed (no silent NaN drift, no
+log_w runaway).
 """
 from __future__ import annotations
 
@@ -10,7 +16,15 @@ import math
 
 import pytest
 
-from tac.lagrangian_kl_weight import LearnableKLWeight
+from tac.lagrangian_kl_weight import KLWeightProportionalController, LearnableKLWeight
+
+
+def test_alias_is_proportional_controller():
+    """``LearnableKLWeight`` is the deprecated alias for the renamed
+    :py:class:`KLWeightProportionalController`. Both names must point to
+    the SAME class so existing call sites in ``optimize_poses.py`` and
+    third-party scripts continue to work without a behavioral change."""
+    assert LearnableKLWeight is KLWeightProportionalController
 
 
 # ────────────────────────────────────────────────────────────────────────

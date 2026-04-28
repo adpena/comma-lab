@@ -181,29 +181,35 @@ def parse_args() -> argparse.Namespace:
                    help="Softmax temperature for KL-distill (Hinton 2015 "
                         "default 2.0). Loss is multiplied by T² internally "
                         "to keep gradient magnitude consistent with T=1.")
-    # Lane G V3-V2 (Lagrangian SNR): replaces the hand-derived
-    # --kl-distill-weight constant with a multiplicative dual-ascent rule
-    # that maintains a target SNR (KL contribution / scorer contribution).
-    # See src/tac/lagrangian_kl_weight.py for the full convergence proof
-    # (Boyd & Vandenberghe §5.4 strong duality + Kivinen & Warmuth 1997
-    # exponentiated gradient on ratio constraints). Mutually exclusive
-    # with --kl-distill-weight (validated below in main()).
+    # Lane G V3-V2 (proportional SNR ratio controller): replaces the
+    # hand-derived --kl-distill-weight constant with a multiplicative
+    # log-space ratio update that drives the observed SNR
+    # (KL contribution / scorer contribution) toward a target. See
+    # src/tac/lagrangian_kl_weight.py — note the Bug 4 (codex Round 3)
+    # rename: this is NOT a Lagrangian dual-ascent loop (no explicit
+    # multiplier λ, no constraint residual driven to zero by sub-gradient
+    # ascent), it is a proportional ratio controller that empirically
+    # converges on stationary observations. Mutually exclusive with
+    # --kl-distill-weight (validated below in main()).
     p.add_argument("--kl-distill-snr-target", type=float, default=None,
-                   help="Lane G V3-V2: Lagrangian-controlled KL weight. "
-                        "Targets the auxiliary KL contribution / scorer "
-                        "contribution ratio (default 0.10 = canonical "
-                        "Hinton 2015 auxiliary regime when set). When "
-                        "supplied, REPLACES --kl-distill-weight with a "
-                        "multiplicative dual-ascent controller "
-                        "(LearnableKLWeight). Mutually exclusive with "
+                   help="Lane G V3-V2: SNR-target ratio controller for "
+                        "the KL-distill weight. Targets the auxiliary "
+                        "KL contribution / scorer contribution ratio "
+                        "(default 0.10 = canonical Hinton 2015 "
+                        "auxiliary regime when set). When supplied, "
+                        "REPLACES --kl-distill-weight with a "
+                        "multiplicative log-space ratio controller "
+                        "(KLWeightProportionalController; alias "
+                        "LearnableKLWeight). Mutually exclusive with "
                         "--kl-distill-weight (one or the other, not "
                         "both). The controller's initial weight is the "
                         "value of --kl-distill-weight if it was passed, "
                         "else the canonical 0.002.")
     p.add_argument("--kl-distill-snr-eta", type=float, default=0.5,
-                   help="Lane G V3-V2: dual-ascent step size in log-space "
-                        "for the SNR controller. Default 0.5 — converges "
-                        "geometrically (η ≤ 1 is contractive).")
+                   help="Lane G V3-V2: log-space step size for the "
+                        "ratio controller. Default 0.5 — geometric "
+                        "contraction toward the SNR fixed point on "
+                        "stationary observations (η ≤ 1).")
     # Lane M: radial-zoom-only pose mode. Per memory
     # `project_posenet_rank1_discovery`, PoseNet's Jacobian is rank ≈ 1.008
     # with 99.8% variance in dim 0 — a scalar radial zoom from the
@@ -605,13 +611,14 @@ def optimize_poses_batch(
             auxiliary so it cannot accidentally crater the per-pixel
             argmax-flip signal that drives pose convergence.
         kl_distill_snr_controller: Lane G V3-V2 — optional
-            ``LearnableKLWeight`` controller (see
-            ``tac.lagrangian_kl_weight``). When supplied, REPLACES the
-            static ``kl_distill_weight`` argument: the per-step weight is
-            pulled from the controller and updated after each step using
-            the observed SNR. ``kl_distill_weight`` is ignored when this
-            argument is non-None (mutually exclusive). Only takes effect
-            when ``gt_frames_pair is not None``.
+            :py:class:`KLWeightProportionalController` controller (see
+            ``tac.lagrangian_kl_weight``; ``LearnableKLWeight`` is the
+            deprecated alias). When supplied, REPLACES the static
+            ``kl_distill_weight`` argument: the per-step weight is
+            pulled from the controller and updated after each step
+            using the observed SNR. ``kl_distill_weight`` is ignored
+            when this argument is non-None (mutually exclusive). Only
+            takes effect when ``gt_frames_pair is not None``.
 
     Returns:
         (optimized_conditioning, metrics_dict)
@@ -1137,23 +1144,26 @@ def main():
     # scorers/renderer are touched.
     kl_distill_snr_controller = None
     if getattr(args, "kl_distill_snr_target", None) is not None:
-        # Operator opted into Lagrangian SNR control. The static weight
-        # is now an INITIAL value, not the per-step value.
-        from tac.lagrangian_kl_weight import LearnableKLWeight
+        # Operator opted into the SNR ratio controller. The static
+        # weight is now an INITIAL value, not the per-step value. (Bug 4
+        # codex Round 3: this is a proportional log-space ratio
+        # controller, not Lagrangian dual ascent — see
+        # tac.lagrangian_kl_weight docstring for the full clarification.)
+        from tac.lagrangian_kl_weight import KLWeightProportionalController
         _initial_w = args.kl_distill_weight if args.kl_distill_weight > 0 else 0.002
-        kl_distill_snr_controller = LearnableKLWeight(
+        kl_distill_snr_controller = KLWeightProportionalController(
             snr_target=float(args.kl_distill_snr_target),
             initial_weight=float(_initial_w),
             eta=float(args.kl_distill_snr_eta),
         )
         print(
-            f"[lane-g-v3-v2] LAGRANGIAN KL WEIGHT ACTIVE: "
+            f"[lane-g-v3-v2] SNR RATIO CONTROLLER ACTIVE: "
             f"snr_target={args.kl_distill_snr_target} "
             f"initial_weight={_initial_w} eta={args.kl_distill_snr_eta} "
             f"(static --kl-distill-weight is now the INITIAL value; "
             f"the controller updates it after each step toward the "
-            f"observed-SNR=target fixed point per Boyd & Vandenberghe "
-            f"§5.4 + Kivinen & Warmuth 1997)",
+            f"observed-SNR=target fixed point — proportional log-space "
+            f"ratio update, NOT Lagrangian dual ascent)",
             flush=True,
         )
     # Lane M: explicit banner so the operator sees the pose-mode at-a-

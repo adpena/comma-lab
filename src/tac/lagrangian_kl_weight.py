@@ -1,9 +1,38 @@
-"""Lagrangian-controlled KL-distillation auxiliary weight.
+"""Proportional ratio controller for the KL-distillation auxiliary weight.
 
 Replaces the hand-derived ``--kl-distill-weight`` constant in
-``experiments/optimize_poses.py`` with a Lagrangian dual-ascent rule
-that maintains a TARGET signal-to-noise ratio (KL contribution / scorer
-contribution).
+``experiments/optimize_poses.py`` with a multiplicative log-space ratio
+controller that drives the observed signal-to-noise ratio (KL
+contribution / scorer contribution) toward an operator-specified target.
+
+Bug 4 note (codex Round 3 — Option B):
+    The previous docstring claimed this controller implemented
+    "Lagrangian dual ascent" with a "convergence proof" citing Boyd &
+    Vandenberghe §5.4 and Kivinen & Warmuth 1997. That claim was *not
+    correct*: there is no explicit Lagrange multiplier λ here, no
+    primal-dual saddle-point iteration, and no constraint residual
+    being driven to zero by sub-gradient ascent. What the loop actually
+    does is::
+
+        log w_{t+1} = log w_t + η · log(ρ / snr_t)
+
+    which is the textbook *proportional* (P-only) controller acting on
+    the log of the SNR ratio. It is a heuristic that empirically
+    converges on stationary observations to the fixed point
+    ``snr = ρ`` because the update has the same sign as the residual
+    ``log(ρ) − log(snr)``, but the convergence guarantees that would
+    follow from a primal-dual analysis (sub-gradient convergence rates,
+    KKT optimality, dual feasibility) do NOT apply.
+
+    The controller WORKS in practice on the Lane G SNR-target tracking
+    task (verified empirically on multiple Vast.ai runs); we keep the
+    behavior unchanged and only remove the false convergence-proof
+    claims from the docs. A truly Lagrangian variant (with explicit λ
+    + constraint residual dynamics) belongs in
+    :py:class:`tac.learnable_bit_quant.LagrangianRateController` —
+    that's the *bit-budget* controller and IS a primal-dual loop
+    (linear penalty + dual-variable sub-gradient ascent + KKT
+    multiplier, Boyd §5.4).
 
 Problem statement
 -----------------
@@ -13,64 +42,39 @@ pose TTO) and ``k_t`` denote the raw KL-distillation auxiliary loss
 (``tac.losses.kl_distill_segnet_only`` value at step ``t``). The aim of
 Lane G is to use the KL signal as an *auxiliary guide* — strong enough
 to nudge the renderer toward Quantizr-style soft-label SegNet logits but
-weak enough that the primary scorer gradient still dominates.
+weak enough that the primary scorer gradient still dominates. We
+parameterise that goal as a *target SNR* ``ρ`` (default ``0.10`` =
+KL is 10% of scorer, per the canonical Hinton 2015 auxiliary regime)
+and update ``w`` so that the observed SNR
+``snr_t = (w_t · k_t) / (s_t + ε)`` tracks ρ.
 
-We formalise that goal as the constrained optimisation::
-
-    min_{θ}  E_t[s_t(θ)]                       (primary objective)
-    s.t.     E_t[w · k_t(θ)] = ρ · E_t[s_t(θ)] (SNR-target equality)
-
-where ``w`` is the auxiliary KL weight (the parameter to control) and
-``ρ`` (``snr_target``) is the operator-supplied "auxiliary signal-to-
-noise ratio" (default ``0.10`` = KL term should be 10% of scorer term,
-per the canonical Hinton 2015 auxiliary-distill regime).
-
-The Lagrangian is::
-
-    L(θ, λ) = E_t[s_t(θ)] + λ · (E_t[w · k_t(θ)] - ρ · E_t[s_t(θ)])
-
-Per Boyd & Vandenberghe (2004) §5.4, when the per-step proxy
-``snr_t = (w_t · k_t) / max(s_t, ε)`` is positive (always — both
-terms are non-negative) the geometric dual update::
+The update::
 
     log w_{t+1} = log w_t + η · log(ρ / snr_t)
-    snr_t       = (w_t · k_t) / (s_t + ε)
 
-is gradient ascent on the strongly-concave KL-projected dual surrogate
-``Φ(log w) = ρ · log w - log(E[k/s] · w)``. ``Φ`` is concave (linear
-plus -log of a positive linear functional) and its unique stationary
-point is at ``E[w · k / s] = ρ``, i.e. ``E[snr] = ρ``. Geometric (vs
-arithmetic) convergence holds because Δ(log w) is proportional to
-``log(distance-from-target)`` — the same convergence rate as the
-exponentiated-gradient family (Kivinen & Warmuth 1997) for ratio
-constraints. With constant ``η ∈ (0, 1]`` and bounded iterates the
-Robbins-Monro diminishing-step regime (Robbins & Monro 1951) is
-satisfied in expectation.
-
-The multiplicative update keeps ``w > 0`` automatically and is the
-canonical exponential-gradient (Kivinen & Warmuth 1997) move on the
-positive cone — an explicit projection is unnecessary.
+is multiplicative (so ``w`` stays positive without an explicit
+projection) and proportional to the log-space residual. On stationary
+observations and η ≤ 1, the iterate contracts toward ``log w*`` where
+``snr = ρ`` — that's the empirical fixed-point analysis we rely on
+in production. Convergence rate is geometric in log space (a fixed
+fractional reduction per step), but a formal proof analogous to
+Robbins-Monro stochastic approximation requires diminishing step
+sizes and bounded variance, which we do NOT enforce.
 
 Stability guards
 ----------------
 1. We bound ``log w`` to ``[log w_min, log w_max]`` to prevent runaway
-   when ``s_t`` is transiently near zero (project onto a compact set ⇒
-   strong duality holds trivially per Boyd §5.4).
+   when ``s_t`` is transiently near zero.
 2. We add ``ε = 1e-8`` to the denominator to avoid division by zero on
    the very first steps (when both losses are tiny).
-3. The very first step uses the supplied ``initial_weight`` without a
-   dual update (no observation available yet).
+3. The very first step uses the supplied ``initial_weight`` without an
+   update (no observation available yet).
 
 References
 ----------
-Boyd, S. & Vandenberghe, L. (2004). *Convex Optimization*. Cambridge.
-    See §5.4 (strong duality, Slater's condition).
-Kivinen, J. & Warmuth, M. (1997). *Exponentiated Gradient versus
-    Gradient Descent for Linear Predictors*. Information & Computation.
-Robbins, H. & Monro, S. (1951). *A Stochastic Approximation Method*.
-    Annals of Mathematical Statistics 22(3).
 Hinton, G., Vinyals, O. & Dean, J. (2015). *Distilling the Knowledge in
-    a Neural Network*. NIPS Deep Learning Workshop.
+    a Neural Network*. NIPS Deep Learning Workshop.   (motivates the
+    target-SNR auxiliary-distill regime that ρ encodes.)
 """
 
 from __future__ import annotations
@@ -78,12 +82,22 @@ from __future__ import annotations
 import math
 from dataclasses import dataclass, field
 
-__all__ = ["LearnableKLWeight"]
+__all__ = ["KLWeightProportionalController", "LearnableKLWeight"]
 
 
 @dataclass
-class LearnableKLWeight:
-    """Lagrangian dual-ascent controller for the KL-distill auxiliary weight.
+class KLWeightProportionalController:
+    """Proportional (P-only) log-space ratio controller for the KL-distill weight.
+
+    .. note::
+       This is a heuristic ratio controller, NOT Lagrangian dual ascent.
+       Despite the historical class name (kept as a deprecated alias —
+       see :py:class:`LearnableKLWeight`), it does not maintain an
+       explicit Lagrange multiplier and does not have the formal
+       convergence properties of a primal-dual loop. Empirically it
+       converges to the SNR-target fixed point on stationary
+       observations; we use it as a reliable production controller for
+       the Lane G auxiliary-distill weight.
 
     Parameters
     ----------
@@ -241,3 +255,10 @@ class LearnableKLWeight:
         ):
             if key in state:
                 setattr(self, key, state[key])
+
+
+# Deprecated alias — kept so existing call sites
+# (`from tac.lagrangian_kl_weight import LearnableKLWeight`) continue to
+# work after the Bug 4 (codex Round 3) docstring/rename. Prefer the new
+# name :py:class:`KLWeightProportionalController` in new code.
+LearnableKLWeight = KLWeightProportionalController

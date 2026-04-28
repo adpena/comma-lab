@@ -292,6 +292,7 @@ def run_qat(args: argparse.Namespace) -> dict:
 
     # Swap convs
     from tac.learnable_bit_quant import (
+        LagrangianRateController,
         LearnableBitConv2d,
         compute_learnable_bit_rate_penalty,
         list_learnable_bit_layers,
@@ -373,6 +374,7 @@ def run_qat(args: argparse.Namespace) -> dict:
         "lambda_start": args.lambda_start,
         "lambda_end": args.lambda_end,
         "lambda_ramp_start_frac": args.lambda_ramp_start_frac,
+        "lambda_dual_eta": args.lambda_dual_eta,
         "total_epochs": args.total_epochs,
         "lr": args.lr,
         "bits_lr_scale": args.bits_lr_scale,
@@ -395,6 +397,28 @@ def run_qat(args: argparse.Namespace) -> dict:
     print(f"[lane-omega-v2] total learnable-bit weights: {n_total_weights:,} "
           f"(target ≈ {n_total_weights * args.target_bits / 8 / 1024:.1f}KB)")
 
+    # Bug 2 fix (codex Round 3): true primal-dual rate controller.
+    # Replaces the previous fixed `λ · relu(excess)²` (squared hinge,
+    # gradient zero at boundary, equilibrium ABOVE target) with the
+    # textbook Lagrangian dual ascent
+    #     L(θ, λ) = D(θ) + λ · (mean_bits − target),  λ ≥ 0
+    #     λ_{t+1} = max(0, λ_t + η · (mean_bits − target))
+    # which converges to the KKT boundary mean_bits = target. The legacy
+    # `--lambda-start` / `--lambda-end` ramp is preserved as a *cap* on
+    # the dual variable so the operator can still bound the rate
+    # pressure during phase-1 warm-up.
+    rate_controller = LagrangianRateController(
+        target_bits_per_weight=float(args.target_bits),
+        eta=float(args.lambda_dual_eta),
+        initial_lambda=float(args.lambda_start),
+    )
+    print(
+        f"[lane-omega-v2] Lagrangian rate controller: "
+        f"target={args.target_bits:.3f} eta={args.lambda_dual_eta} "
+        f"initial_lambda={args.lambda_start} (cap from ramp = lambda_end "
+        f"{args.lambda_end:.3f})"
+    )
+
     # Move data to device piecewise per batch (saves VRAM for 1200 frames).
     for epoch in range(args.total_epochs):
         # Random pair index
@@ -406,13 +430,22 @@ def run_qat(args: argparse.Namespace) -> dict:
         gt_t1 = gt_frames_cpu[j + 1:j + 2].float().to(device)
         poses_b = poses[idx:idx + 1] if poses is not None else None
 
-        # Lambda schedule
-        lam = _lambda_for_epoch(
+        # Lambda *cap* schedule (legacy ramp — now bounds the dual variable
+        # rather than directly setting it). The dual ascent inside
+        # ``rate_controller`` does the actual updating; the ramp just
+        # tightens the upper bound on the multiplier so phase-1 warm-up
+        # cannot generate excessive rate pressure.
+        lam_cap = _lambda_for_epoch(
             epoch, args.total_epochs,
             lambda_start=args.lambda_start,
             lambda_end=args.lambda_end,
             ramp_start_frac=args.lambda_ramp_start_frac,
         )
+        rate_controller.lambda_max = float(lam_cap)
+        # Re-clamp current λ to the new cap so ramp tightening takes
+        # effect immediately (without a spurious dual_update step).
+        rate_controller.reclamp_to_lambda_max()
+        lam = rate_controller.lambda_rate
 
         # Forward + scorer loss
         scorer_loss, metrics = _scorer_loss(
@@ -424,9 +457,10 @@ def run_qat(args: argparse.Namespace) -> dict:
             eval_roundtrip=True,  # CLAUDE.md non-negotiable
         )
 
-        # Rate penalty (Lagrangian on bits/weight)
+        # Rate penalty (Lagrangian on bits/weight) — linear in residual,
+        # gradient at boundary = λ (NOT 0 like the squared-hinge form).
         rate_loss = compute_learnable_bit_rate_penalty(
-            model, args.target_bits, lambda_rate=lam,
+            model, args.target_bits, lambda_rate=rate_controller,
         )
 
         # KL distill (post-fix weight = 0.002): we use the scorer-loss
@@ -441,6 +475,13 @@ def run_qat(args: argparse.Namespace) -> dict:
         loss.backward()
         torch.nn.utils.clip_grad_norm_(weight_params + bits_params, 1.0)
         optimizer.step()
+
+        # Bug 2 fix (codex Round 3): dual ascent on the constraint
+        # residual after the primal step. Computes mean_bits from the
+        # *post-step* iterate so the next iteration's λ reflects the
+        # latest constraint slack.
+        post_step_mean_bits = renderer_average_learnable_bits_per_weight(model)
+        rate_controller.dual_update(post_step_mean_bits)
 
         # Logging + checkpointing
         if (epoch % args.log_every == 0) or (epoch == args.total_epochs - 1):
@@ -538,6 +579,12 @@ def main(argv: list[str] | None = None) -> int:
                         help="Final Lagrangian λ after ramp (default 1.0)")
     parser.add_argument("--lambda-ramp-start-frac", type=float, default=0.3,
                         help="Fraction of training before ramp begins (default 0.3)")
+    parser.add_argument("--lambda-dual-eta", type=float, default=1e-3,
+                        help="Dual-ascent step size for the Lagrangian rate "
+                             "controller (default 1e-3 — Boyd & Vandenberghe "
+                             "§5.4 convention; smaller for more conservative "
+                             "λ tracking, larger for faster convergence to "
+                             "the KKT boundary).")
     parser.add_argument("--total-epochs", type=int, default=200,
                         help="Total QAT epochs (default 200)")
     parser.add_argument("--lr", type=float, default=2.5e-6,

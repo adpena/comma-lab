@@ -202,6 +202,122 @@ def test_log_map_so3_near_pi_returns_finite():
 
 
 # ──────────────────────────────────────────────────────────────────────────
+# Bug 3 (codex Round 3) regression: SO(3) log map near π with axes that
+# have *zero* components. The pre-fix near-π branch hard-coded
+# ``sign(u_x) = +1`` and read sign(u_y), sign(u_z) from R[0, 1] / R[0, 2].
+# When the true axis has u_x = 0 those entries are exactly zero and the
+# sign of the y/z relationship encoded in R[1, 2] is silently lost. The
+# post-fix branch picks the *largest-diagonal* anchor and derives the
+# remaining components from the corresponding off-diagonal pair, which
+# is the standard Sola 2018 §4.5.2 construction.
+# ──────────────────────────────────────────────────────────────────────────
+
+
+def _matrix_round_trip_close(omega: torch.Tensor, atol: float = 1e-9) -> None:
+    """Helper: assert exp(log(exp(ω))) reconstructs the SAME rotation.
+
+    We compare *rotation matrices* (not axis-angle vectors) because the
+    axis-angle parameterisation has an antipodal sign ambiguity at θ=π
+    — both ``+ω`` and ``-ω`` produce the same rotation matrix. The
+    matrix equality is the only meaningful round-trip check at θ=π.
+    """
+    R_in = exp_map_so3(omega)
+    omega_rt = log_map_so3(R_in)
+    assert torch.isfinite(omega_rt).all(), (
+        f"log_map produced non-finite output for ω={omega.tolist()}"
+    )
+    R_out = exp_map_so3(omega_rt)
+    assert torch.allclose(R_in, R_out, atol=atol), (
+        f"matrix round-trip failed at ω={omega.tolist()}:\n"
+        f"R_in =\n{R_in}\nR_out =\n{R_out}\n"
+        f"omega_rt = {omega_rt.tolist()}"
+    )
+
+
+def test_log_map_so3_pi_zero_x_axis_component():
+    """Bug 3 core test: axis = (0, 1, -1)/√2 at θ=π. The pre-fix branch
+    derived sign(u_y) and sign(u_z) from R[0,1] and R[0,2] — both zero
+    here — so it lost the genuine sign relationship encoded in R[1,2]."""
+    inv_sqrt2 = 1.0 / math.sqrt(2.0)
+    omega = torch.tensor(
+        [0.0, math.pi * inv_sqrt2, -math.pi * inv_sqrt2], dtype=torch.float64
+    )
+    _matrix_round_trip_close(omega)
+
+
+def test_log_map_so3_pi_about_x_axis():
+    """Cardinal axis: pure +x rotation by π. Anchor selection must pick
+    index 0 (largest diagonal) and return ω = (π, 0, 0)."""
+    omega = torch.tensor([math.pi, 0.0, 0.0], dtype=torch.float64)
+    _matrix_round_trip_close(omega)
+
+
+def test_log_map_so3_pi_about_y_axis():
+    """Pure +y rotation by π. Anchor index 1."""
+    omega = torch.tensor([0.0, math.pi, 0.0], dtype=torch.float64)
+    _matrix_round_trip_close(omega)
+
+
+def test_log_map_so3_pi_about_z_axis():
+    """Pure +z rotation by π. Anchor index 2."""
+    omega = torch.tensor([0.0, 0.0, math.pi], dtype=torch.float64)
+    _matrix_round_trip_close(omega)
+
+
+def test_log_map_so3_pi_axes_with_mixed_signs():
+    """Five hand-picked sign patterns at θ=π that previously hit the
+    sign-loss bug. Each must round-trip exactly (matrix equality)."""
+    inv_sqrt2 = 1.0 / math.sqrt(2.0)
+    inv_sqrt3 = 1.0 / math.sqrt(3.0)
+    cases = [
+        # u_x = 0, mixed y/z signs (the headline failure mode).
+        (0.0, +inv_sqrt2, -inv_sqrt2),
+        (0.0, -inv_sqrt2, +inv_sqrt2),
+        # u_y = 0, mixed x/z signs (symmetric failure mode).
+        (+inv_sqrt2, 0.0, -inv_sqrt2),
+        (-inv_sqrt2, 0.0, +inv_sqrt2),
+        # All-equal axis with mixed signs.
+        (+inv_sqrt3, -inv_sqrt3, +inv_sqrt3),
+    ]
+    for ux, uy, uz in cases:
+        omega = torch.tensor(
+            [math.pi * ux, math.pi * uy, math.pi * uz], dtype=torch.float64
+        )
+        _matrix_round_trip_close(omega)
+
+
+def test_log_map_so3_pi_random_axes():
+    """Stress: 10 random pi-rotations covering arbitrary sign patterns.
+    Matrix round-trip must hold for every one — proves the fix is not
+    over-fitted to the cardinal/diagonal cases."""
+    g = torch.Generator().manual_seed(2026_04_27)
+    n = 10
+    axes = torch.randn(n, 3, generator=g, dtype=torch.float64)
+    axes = axes / axes.norm(dim=-1, keepdim=True)
+    for i in range(n):
+        omega = math.pi * axes[i]
+        _matrix_round_trip_close(omega)
+
+
+def test_log_map_so3_pi_batched_axes():
+    """The fix must vectorise correctly: a batch of pi-rotations should
+    all round-trip in a single call (no per-element Python loop)."""
+    g = torch.Generator().manual_seed(7)
+    axes = torch.randn(8, 3, generator=g, dtype=torch.float64)
+    axes = axes / axes.norm(dim=-1, keepdim=True)
+    omega = math.pi * axes  # (8, 3)
+    R_in = exp_map_so3(omega)
+    omega_rt = log_map_so3(R_in)
+    assert torch.isfinite(omega_rt).all()
+    R_out = exp_map_so3(omega_rt)
+    # Per-batch matrix equality.
+    assert torch.allclose(R_in, R_out, atol=1e-9), (
+        f"batched pi-rotation round-trip failed:\n"
+        f"R_in[0]=\n{R_in[0]}\nR_out[0]=\n{R_out[0]}"
+    )
+
+
+# ──────────────────────────────────────────────────────────────────────────
 # left_jacobian_so3
 # ──────────────────────────────────────────────────────────────────────────
 

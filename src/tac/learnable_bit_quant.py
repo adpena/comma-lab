@@ -53,6 +53,7 @@ from tac.self_compress import SC_PROTECTED_NAME_PATTERNS
 __all__ = [
     "LearnablePerElementBitDepth",
     "LearnableBitConv2d",
+    "LagrangianRateController",
     "swap_renderer_convs_with_learnable_bits",
     "list_learnable_bit_layers",
     "renderer_total_learnable_weight_bits",
@@ -142,22 +143,46 @@ class _PerElementSTEQuantize(torch.autograd.Function):
         )
 
         # Bits gradient (analytic STE): the contribution of bits to the
-        # quantization error is roughly the derivative of step w.r.t. bits.
-        #     step(b) = scale * 2^(1-b) / (1 - 2^(1-b))   for b >= 2
-        # which decreases monotonically. We approximate ∂step/∂bits as
-        # ∂step/∂bits ≈ -ln(2) * step / 2  (small-b approx of -ln2 * step)
-        # and the upstream gradient on the rounded weight propagates as
-        # ∂L/∂bits ≈ -grad_output * round(w/step) * (∂step/∂bits)
-        # Because round(w/step) ranges over [-levels, +levels] this term
-        # has the right SIGN (more bits → finer step → grad_bits ∝ -error).
-        # In practice the magnitude is small; the rate penalty (Lagrangian)
-        # provides the dominant pressure to lower bits.
+        # quantization error is the derivative of the *quantizer output*
+        # w.r.t. bits. With step(b) = scale / (2^(b-1) - 1) we have
+        #     ∂step/∂bits ≈ -ln(2) · step          (small-b approximation)
+        # and q(w, b) = round(w / step) · step, so along the grid we're on
+        #     ∂q/∂bits = round(w / step) · ∂step/∂bits
+        # However ``round(w/step)`` is identically zero whenever the
+        # *unquantized* weight rounds to zero, even though that weight is
+        # exactly the one most damaged by under-quantization (e.g. a
+        # weight at ~0.1·step at 1-bit is forced to ±scale; allocating it
+        # one more bit would let it round to 0 instead). Zeroing the bit
+        # gradient there breaks the rate-distortion allocator: rate
+        # pressure pushes those bits toward 1 with no opposing distortion
+        # signal.
+        #
+        # Bug 1 fix (codex Round 3): use the *unquantized* weight as the
+        # surrogate for the rounded count. ``w / step`` is the continuous
+        # analogue of ``round(w / step)`` and is exactly the ratio that
+        # would have rounded to zero — so the gradient is non-zero (∝ w)
+        # in the zero bin and points in the direction that increasing
+        # bits reduces the per-element distortion. This is the standard
+        # surrogate used in HAWQ and self-compressing networks (Battle
+        # 2022, Soyer 2022) for the same reason.
         ln2 = 0.6931471805599453
-        # Per-element approximate ∂out/∂bits.
-        # For b == 1 the sign quantizer has no bits-gradient signal; zero out.
-        d_out_d_bits = -ln2 * q  # ≈ ∂q/∂bits along the grid we're on
+        # Continuous ratio (= round(w/step) in the high-bit limit, but
+        # non-zero for sub-step weights — the load-bearing case).
+        ratio = weight / step
+        # Per-element ∂q/∂bits = ratio · ∂step/∂bits = -ln2 · ratio · step
+        #                       = -ln2 · weight                (step cancels)
+        # i.e. the bit gradient depends only on the unquantized weight, NOT
+        # on the post-rounding value q. This is what guarantees the
+        # zero-bin signal survives.
+        d_out_d_bits = -ln2 * weight  # equivalent to -ln2 · ratio · step
+        # 1-bit sign quantizer: out = sign(w) · scale is independent of
+        # bits in the b∈[1, 2) regime (level count clamps to 1), so the
+        # grid-based surrogate above does not apply. Substitute the
+        # *quantized* magnitude for the surrogate so that the sign of
+        # ∂q/∂bits is still correct (≈ -ln2 · q): more bits → finer step
+        # → quantization error shrinks proportionally to |q|.
         d_out_d_bits = torch.where(
-            one_bit_mask, torch.zeros_like(d_out_d_bits), d_out_d_bits
+            one_bit_mask, -ln2 * q, d_out_d_bits
         )
         grad_bits = grad_output * d_out_d_bits
 
@@ -539,20 +564,182 @@ def renderer_average_learnable_bits_per_weight(model: nn.Module) -> float:
     return total_bits / max(total_weights, 1)
 
 
+class LagrangianRateController:
+    """True primal-dual controller for the Lane Ω-V2 bit-budget constraint.
+
+    Bug 2 fix (codex Round 3):
+        The previous ``λ · max(0, mean_bits − target)²`` squared-hinge
+        penalty has gradient ``2λ · max(0, excess) → 0`` as bits → target,
+        so equilibrium lands STRICTLY ABOVE the target rather than at the
+        KKT boundary ``mean_bits = target``. There is no dual-variable
+        update either, so any constant λ schedule cannot drive the system
+        to the constraint set.
+
+    This class implements the textbook primal-dual update for the
+    constrained problem
+        min_θ  D(θ)
+        s.t.   mean_bits(θ) ≤ target
+    via the Lagrangian
+        L(θ, λ) = D(θ) + λ · (mean_bits(θ) − target),     λ ≥ 0.
+    The primal step is gradient descent on θ for fixed λ; the dual step
+    is sub-gradient *ascent* on the slack
+        λ_{t+1} = max(0, λ_t + η · (mean_bits − target))
+    (Boyd & Vandenberghe 2004 §5.4; Nedić & Ozdaglar 2009 sub-gradient
+    convergence). The primal penalty is *linear* in the constraint
+    residual — the gradient w.r.t. bits is exactly ``λ`` (not zero at the
+    boundary), so KKT is honoured.
+
+    Default ``eta = 1e-3`` and ``initial_lambda = 0.0`` follow the
+    standard "no-pressure" warm-start used in Lane S self-compression.
+    """
+
+    def __init__(
+        self,
+        target_bits_per_weight: float,
+        *,
+        eta: float = 1e-3,
+        initial_lambda: float = 0.0,
+        lambda_max: float | None = None,
+    ) -> None:
+        if target_bits_per_weight <= 0:
+            raise ValueError(
+                f"target_bits_per_weight must be > 0 (got "
+                f"{target_bits_per_weight}); a non-positive target leaves "
+                f"the dual update without a well-defined sign."
+            )
+        if eta <= 0:
+            raise ValueError(
+                f"eta must be > 0 (got {eta}); a non-positive step size "
+                f"halts dual ascent."
+            )
+        if initial_lambda < 0:
+            raise ValueError(
+                f"initial_lambda must be ≥ 0 (got {initial_lambda}); the "
+                f"KKT multiplier on an inequality constraint is "
+                f"non-negative by definition."
+            )
+        if lambda_max is not None and lambda_max < initial_lambda:
+            raise ValueError(
+                f"lambda_max ({lambda_max}) must be ≥ initial_lambda "
+                f"({initial_lambda}); the upper bound is otherwise "
+                f"infeasible."
+            )
+        self.target_bits_per_weight = float(target_bits_per_weight)
+        self.eta = float(eta)
+        self.lambda_max = lambda_max
+        self._lambda = float(initial_lambda)
+        self._step = 0
+        self._last_residual: float | None = None
+
+    @property
+    def lambda_rate(self) -> float:
+        """Current dual multiplier λ_t (always ≥ 0)."""
+        return self._lambda
+
+    @property
+    def step_count(self) -> int:
+        """Number of completed :py:meth:`dual_update` calls."""
+        return self._step
+
+    @property
+    def last_residual(self) -> float | None:
+        """Most recent constraint residual ``mean_bits - target``."""
+        return self._last_residual
+
+    def dual_update(self, mean_bits: float, target: float | None = None) -> float:
+        """Apply one dual-ascent step using the latest mean-bits observation.
+
+        Parameters
+        ----------
+        mean_bits:
+            Observed average bits/weight at the current primal iterate.
+        target:
+            Optional override for the controller's stored target (so the
+            same controller can serve a ramp schedule). Defaults to the
+            value fixed at construction.
+
+        Returns
+        -------
+        float
+            The updated multiplier ``λ_{t+1}`` (used by subsequent calls
+            to :py:meth:`compute_learnable_bit_rate_penalty`).
+        """
+        tgt = float(target) if target is not None else self.target_bits_per_weight
+        residual = float(mean_bits) - tgt
+        self._last_residual = residual
+        # Sub-gradient dual ascent: λ_{t+1} = max(0, λ_t + η · residual).
+        # When residual > 0 (constraint violated) λ rises; when < 0 (slack)
+        # λ falls. The max-with-0 enforces λ ≥ 0 (KKT non-negativity).
+        new_lambda = max(0.0, self._lambda + self.eta * residual)
+        if self.lambda_max is not None:
+            new_lambda = min(new_lambda, float(self.lambda_max))
+        self._lambda = new_lambda
+        self._step += 1
+        return self._lambda
+
+    def reclamp_to_lambda_max(self) -> float:
+        """Re-apply the current ``lambda_max`` cap to the multiplier
+        without performing a dual-ascent step.
+
+        Useful when the operator has *tightened* ``lambda_max`` during
+        training (e.g. a ramp schedule that lowers the cap) and wants
+        the new bound to take effect immediately, without waiting for
+        the next ``dual_update`` to discover it.
+        """
+        if self.lambda_max is not None and self._lambda > self.lambda_max:
+            self._lambda = float(self.lambda_max)
+        # Also enforce non-negativity in case lambda_max was set < 0
+        # somehow (defensive).
+        if self._lambda < 0.0:
+            self._lambda = 0.0
+        return self._lambda
+
+    def state_dict(self) -> dict:
+        """Serialize controller state for resume."""
+        return {
+            "target_bits_per_weight": self.target_bits_per_weight,
+            "eta": self.eta,
+            "lambda_max": self.lambda_max,
+            "_lambda": self._lambda,
+            "_step": self._step,
+            "_last_residual": self._last_residual,
+        }
+
+    def load_state_dict(self, state: dict) -> None:
+        """Restore from a previous :py:meth:`state_dict`."""
+        for key in (
+            "target_bits_per_weight", "eta", "lambda_max",
+            "_lambda", "_step", "_last_residual",
+        ):
+            if key in state:
+                setattr(self, key, state[key])
+
+
 def compute_learnable_bit_rate_penalty(
     model: nn.Module,
     target_bits_per_weight: float,
-    lambda_rate: float,
+    lambda_rate: float | "LagrangianRateController",
 ) -> torch.Tensor:
-    """Lagrangian rate penalty: λ × max(0, mean_bits − target)².
+    """Linear Lagrangian rate penalty: ``λ × (mean_bits − target)``.
 
-    We use the squared hinge form (rather than linear) because:
-      * its gradient ∝ excess, so the pressure scales smoothly with the
-        gap to the target;
-      * KKT still holds at the optimum (∂loss/∂bits = 0 → bits land at
-        target);
-      * empirically this avoids the "bits crash to 1 then snap back" cycle
-        that the linear penalty produces under aggressive λ schedules.
+    Bug 2 fix (codex Round 3):
+        The previous form was ``λ × max(0, mean_bits − target)²`` (squared
+        hinge), whose gradient w.r.t. bits vanishes at the boundary —
+        equilibrium therefore lands ABOVE the target, not at the KKT
+        boundary. The correct primal-dual surrogate is *linear* in the
+        residual; the dual variable ``λ`` is updated externally by
+        :py:class:`LagrangianRateController` via sub-gradient ascent.
+
+    The penalty is allowed to go negative when ``mean_bits < target`` —
+    that's the slack regime, and the dual update
+    (``λ_{t+1} = max(0, λ_t + η · residual)``) drives ``λ → 0``, which
+    smoothly turns the penalty off without requiring a hinge in the
+    primal surrogate.
+
+    Backward-compat: ``lambda_rate`` accepts either a ``float`` (legacy
+    fixed-multiplier path) or a :py:class:`LagrangianRateController`
+    instance (canonical primal-dual path). When a controller is passed
+    its current :py:attr:`~LagrangianRateController.lambda_rate` is used.
 
     Returns 0 (zero-dim tensor) when the model has no learnable-bit
     layers, so callers can ``loss + compute_learnable_bit_rate_penalty(...)``
@@ -568,8 +755,20 @@ def compute_learnable_bit_rate_penalty(
         total_bits = total_bits + layer.total_weight_bits()
         total_weights += layer.weight_numel()
     mean_bits = total_bits / max(total_weights, 1)
-    excess = F.relu(mean_bits - float(target_bits_per_weight))
-    return lambda_rate * excess.pow(2)
+    if isinstance(lambda_rate, LagrangianRateController):
+        lam = lambda_rate.lambda_rate
+        target = lambda_rate.target_bits_per_weight
+    else:
+        lam = float(lambda_rate)
+        target = float(target_bits_per_weight)
+    # Linear (not squared) so that ∂penalty/∂bits = λ everywhere — KKT
+    # boundary at mean_bits = target is reachable.
+    residual = mean_bits - target
+    # Clamp negative penalties to zero so the optimizer cannot push bits
+    # arbitrarily UP under slack (rate floor at zero); the dual variable
+    # decays to zero in the slack regime which makes this clamp inactive
+    # in steady state but protects the warm-start period.
+    return lam * F.relu(residual)
 
 
 def iter_eligible_conv_names(

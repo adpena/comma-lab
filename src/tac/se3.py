@@ -263,23 +263,55 @@ def log_map_so3(R: torch.Tensor) -> torch.Tensor:
     omega_small = 0.5 * vee_so3(skew)  # (..., 3)
 
     # Near-π fallback: derive the axis from R + I = 2 u uᵀ (Sola Eq. 147).
-    # The diagonal of (R + I) gives the squared components of the axis (up
-    # to sign); we recover the sign from the off-diagonals.
+    #
+    # Bug 3 fix (codex Round 3): the previous implementation hard-coded
+    # ``sign(u_x) = +1`` and read ``sign(u_y) = sign(R[0,1])``,
+    # ``sign(u_z) = sign(R[0,2])``. When the *true* axis has ``u_x = 0``
+    # (e.g. axis = (0, 1, -1)/√2) the entries ``R[0,1]`` and ``R[0,2]``
+    # are exactly ``2 · u_x · u_y = 0`` and ``2 · u_x · u_z = 0``
+    # respectively, so the sign extraction defaults to +1 for both
+    # components — and the genuine sign relationship between ``u_y``
+    # and ``u_z`` (encoded in ``R[1,2] = 2 · u_y · u_z``) is silently
+    # discarded. The reconstructed rotation is then wrong by a sign flip
+    # on one component.
+    #
+    # The standard fix (Sola 2018 §4.5.2; Shoemake 1985 quaternion ↔
+    # rotation matrix; Eberly *Game Engine Geometry* §6.5) is to extract
+    # the axis component with the largest squared magnitude FIRST (call
+    # it index ``i``), use the positive square root for that one, and
+    # derive the remaining components from the corresponding off-diagonal
+    # pair containing ``i``: ``u[j] = R[i, j] / (2 · u[i])`` for j ≠ i.
+    # Picking the largest entry guarantees ``u[i]`` is bounded away from
+    # zero so the division is numerically safe.
     rp = R + torch.eye(3, dtype=R.dtype, device=R.device).expand_as(R)
-    # Squared axis components (clamped non-negative for numerical safety).
-    u_sq = (rp[..., 0, 0] / 2.0, rp[..., 1, 1] / 2.0, rp[..., 2, 2] / 2.0)
-    u_abs = torch.stack([torch.sqrt(c.clamp(min=0.0)) for c in u_sq], dim=-1)
-    # Pick signs from the off-diagonal terms (rp[i, j] = u_i u_j when θ = π):
-    # sign(u_x) = +1 by convention (axis is defined up to ±, choose +x);
-    # sign(u_y) = sign(rp[0, 1]); sign(u_z) = sign(rp[0, 2]).
-    sgn_y = torch.sign(rp[..., 0, 1])
-    sgn_y = torch.where(sgn_y == 0, torch.ones_like(sgn_y), sgn_y)
-    sgn_z = torch.sign(rp[..., 0, 2])
-    sgn_z = torch.where(sgn_z == 0, torch.ones_like(sgn_z), sgn_z)
-    signs = torch.stack(
-        [torch.ones_like(sgn_y), sgn_y, sgn_z], dim=-1
-    )
-    omega_pi = (u_abs * signs) * theta.unsqueeze(-1)
+    # Squared axis components from the diagonal of (R + I) / 2 = u uᵀ.
+    u_sq = torch.stack(
+        [rp[..., 0, 0] / 2.0, rp[..., 1, 1] / 2.0, rp[..., 2, 2] / 2.0],
+        dim=-1,
+    ).clamp(min=0.0)  # (..., 3); negatives are pure floating-point noise.
+    # Index of the largest squared component (per element of the batch).
+    i_max = u_sq.argmax(dim=-1)  # (...,)
+    # Positive sqrt of the largest squared component — the "anchor".
+    u_max = torch.sqrt(u_sq.gather(-1, i_max.unsqueeze(-1))).squeeze(-1)
+    # The two non-anchor components: u[j] = (R+I)[i_max, j] / (2 · u[i_max])
+    # for j ≠ i_max.  Note that for j ≠ i_max we have
+    #     (R+I)[i_max, j] = R[i_max, j] = 2 · u[i_max] · u[j]
+    # so the division is exact. We use rp (= R+I) below for clarity. The
+    # diagonal entry rp[i_max, i_max] is NOT used to derive u[j=i_max] —
+    # that slot is filled by the (positive) sqrt anchor u_max instead, so
+    # the resulting axis exactly satisfies u_axis[i_max] = u_max ≥ 0.
+    expand_idx = i_max.unsqueeze(-1).unsqueeze(-1).expand(*i_max.shape, 1, 3)
+    rp_anchor_row = rp.gather(-2, expand_idx).squeeze(-2)  # (..., 3)
+    # Use 2*u_max with a small floor to avoid div-by-zero on the
+    # vanishingly-rare case θ = π exactly with two equal anchors.
+    safe_anchor = u_max.clamp(min=1e-12).unsqueeze(-1)
+    u_other = rp_anchor_row / (2.0 * safe_anchor)  # (..., 3) — valid for j ≠ i_max
+    # Compose the axis: place +u_max (the positive sqrt) at index i_max
+    # and u_other at every other index. ``scatter_`` handles arbitrary
+    # ``i_max`` per batch element.
+    u_axis = u_other.clone()
+    u_axis.scatter_(-1, i_max.unsqueeze(-1), u_max.unsqueeze(-1))
+    omega_pi = u_axis * theta.unsqueeze(-1)
 
     # Compose the three branches.
     small = (theta < SMALL_ANGLE_THRESHOLD).unsqueeze(-1)  # (..., 1)
