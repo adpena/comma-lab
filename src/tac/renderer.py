@@ -44,6 +44,7 @@ class ArchConfig:
     max_flow_px: float = 20.0
     max_residual: float = 20.0
     use_dsconv: bool = False
+    use_ghost: bool = False  # Lane GH: GhostConv2d (Han et al. 2020)
     padding_mode: str = "zeros"
     use_dilation: bool = False
     use_zoom_flow: bool = False
@@ -52,40 +53,137 @@ class ArchConfig:
 # ── Building blocks ─────────────────────────────────────────────────────
 
 
-def _make_conv(
-    c_in: int, c_out: int, kernel: int, *, use_dsconv: bool = False, **kwargs
-) -> nn.Module:
-    """Create Conv2d or depthwise-separable Conv2d.
+class GhostConv2d(nn.Module):
+    """Ghost convolution (Han et al., "GhostNet", CVPR 2020).
 
-    When ``use_dsconv=True``, replaces a standard ``Conv2d(c_in, c_out, k)``
-    with a depthwise-separable pair::
+    Generates ``c_out`` feature maps from a small primary conv that produces
+    ``ceil(c_out / ratio)`` "intrinsic" maps, then a cheap depthwise conv
+    ("ghost" branch) that derives the remaining maps as redundant linear
+    transforms of the intrinsic ones::
 
-        nn.Sequential(
-            nn.Conv2d(c_in, c_in, k, groups=c_in, bias=False, ...),
-            nn.Conv2d(c_in, c_out, 1, bias=True),
+        intrinsic = primary_conv(x)               # c_in → c_intrinsic
+        ghost     = depthwise(intrinsic)          # c_intrinsic → c_intrinsic
+        out       = concat(intrinsic, ghost)      # → c_out  (slice if needed)
+
+    For ``ratio=2`` this halves the parameters relative to a standard Conv2d
+    of the same I/O shape (the depthwise branch is ~``c_intrinsic * k * k``
+    parameters, vs. ``c_in * c_out * k * k`` for the dense conv it replaces).
+
+    The output shape is identical to ``Conv2d(c_in, c_out, kernel, **kwargs)``
+    so this is a drop-in replacement.
+
+    Args:
+        c_in: input channels
+        c_out: output channels
+        kernel: primary conv kernel size (depthwise uses kernel=3)
+        ratio: ghost ratio (out channels per intrinsic channel). ratio=2
+            halves the parameter count vs a dense Conv2d.
+        stride: stride forwarded to the primary conv
+        padding: padding forwarded to the primary conv
+        bias: bias on the primary conv (depthwise is always bias=False)
+        padding_mode: padding mode forwarded to both convs
+    """
+
+    def __init__(
+        self,
+        c_in: int,
+        c_out: int,
+        kernel: int,
+        *,
+        ratio: int = 2,
+        stride: int = 1,
+        padding: int = 0,
+        bias: bool = True,
+        padding_mode: str = "zeros",
+    ):
+        super().__init__()
+        if ratio < 2:
+            raise ValueError(f"GhostConv2d ratio must be ≥ 2, got {ratio}")
+        # ceil(c_out / ratio) intrinsic maps; ghost branch fills the rest.
+        c_intrinsic = (c_out + ratio - 1) // ratio
+        self.c_out = c_out
+        self.c_intrinsic = c_intrinsic
+        # Primary conv produces the intrinsic feature maps at the requested
+        # spatial resolution (handles stride). Standard Conv2d, NOT depthwise.
+        self.primary = nn.Conv2d(
+            c_in, c_intrinsic, kernel,
+            stride=stride, padding=padding, bias=bias,
+            padding_mode=padding_mode,
+        )
+        # Cheap "ghost" conv: depthwise 3x3 over the intrinsic maps. Stride=1
+        # because the primary conv already handled spatial downsampling.
+        # Per the GhostNet paper (Eq. 1), each intrinsic map produces (ratio-1)
+        # ghost maps via a cheap linear op; we use a single depthwise pass
+        # producing c_intrinsic ghost maps and then slice the concat to c_out.
+        self.ghost = nn.Conv2d(
+            c_intrinsic, c_intrinsic, 3,
+            stride=1, padding=1, groups=c_intrinsic, bias=False,
+            padding_mode=padding_mode,
         )
 
-    DSConv uses ~1/c_out the parameters of a standard conv for 3x3 kernels,
-    enabling wider channels (more expressivity per layer) at the same param
-    budget. See MobileNet v1 (Howard et al., 2017).
+    def forward(self, x: torch.Tensor) -> torch.Tensor:
+        intrinsic = self.primary(x)
+        ghost = self.ghost(intrinsic)
+        out = torch.cat([intrinsic, ghost], dim=1)
+        # Slice to the exact requested c_out (handles odd c_out / ratio).
+        if out.shape[1] != self.c_out:
+            out = out[:, : self.c_out]
+        return out
+
+
+def _make_conv(
+    c_in: int,
+    c_out: int,
+    kernel: int,
+    *,
+    use_dsconv: bool = False,
+    use_ghost: bool = False,
+    **kwargs,
+) -> nn.Module:
+    """Create Conv2d, depthwise-separable Conv2d, or GhostConv2d.
+
+    Mutually-exclusive variants:
+
+    - ``use_dsconv=True`` swaps a standard ``Conv2d(c_in, c_out, k)`` for
+      a depthwise-separable pair (MobileNet v1, Howard et al. 2017).
+    - ``use_ghost=True`` swaps it for a GhostConv2d (GhostNet, Han et al.
+      CVPR 2020) — primary conv to half-channels + cheap depthwise ghost
+      branch. Halves params vs. dense Conv2d at near-equal quality.
+
+    Setting both to True raises ``ValueError`` — they are mutually exclusive.
 
     Args:
         c_in: input channels
         c_out: output channels
         kernel: kernel size
         use_dsconv: if True, use depthwise-separable convolution
-        **kwargs: forwarded to Conv2d (stride, padding, bias, etc.)
+        use_ghost: if True, use GhostConv2d (Lane GH)
+        **kwargs: forwarded to Conv2d (stride, padding, bias, padding_mode)
     """
-    if not use_dsconv:
-        return nn.Conv2d(c_in, c_out, kernel, **kwargs)
+    if use_dsconv and use_ghost:
+        raise ValueError(
+            "use_dsconv and use_ghost are mutually exclusive — pick one"
+        )
 
-    # Extract kwargs for the depthwise conv (no bias) vs pointwise (has bias)
-    dw_kwargs = {k: v for k, v in kwargs.items() if k in ("stride", "padding", "padding_mode")}
-    pw_bias = kwargs.get("bias", True)
-    return nn.Sequential(
-        nn.Conv2d(c_in, c_in, kernel, groups=c_in, bias=False, **dw_kwargs),
-        nn.Conv2d(c_in, c_out, 1, bias=pw_bias),
-    )
+    if use_ghost:
+        # Filter to the kwargs GhostConv2d accepts (ignore dilation etc.;
+        # the dilated cascade lives only inside ResBlock, not here).
+        gc_kwargs = {
+            k: v for k, v in kwargs.items()
+            if k in ("stride", "padding", "bias", "padding_mode")
+        }
+        return GhostConv2d(c_in, c_out, kernel, **gc_kwargs)
+
+    if use_dsconv:
+        # Extract kwargs for the depthwise conv (no bias) vs pointwise (has bias)
+        dw_kwargs = {k: v for k, v in kwargs.items() if k in ("stride", "padding", "padding_mode")}
+        pw_bias = kwargs.get("bias", True)
+        return nn.Sequential(
+            nn.Conv2d(c_in, c_in, kernel, groups=c_in, bias=False, **dw_kwargs),
+            nn.Conv2d(c_in, c_out, 1, bias=pw_bias),
+        )
+
+    return nn.Conv2d(c_in, c_out, kernel, **kwargs)
 
 
 class CLADENorm(nn.Module):
@@ -135,23 +233,59 @@ class ResBlock(nn.Module):
     """
 
     def __init__(self, channels: int, kernel: int = 3, num_classes: int = 5,
-                 padding_mode: str = "zeros", dilation: int = 1):
+                 padding_mode: str = "zeros", dilation: int = 1,
+                 use_ghost: bool = False):
         super().__init__()
         pad = (kernel // 2) * dilation  # scale padding with dilation to preserve spatial dims
         self.use_clade = num_classes > 0
+        self.use_ghost = use_ghost
         if self.use_clade:
             self.norm1 = CLADENorm(channels, num_classes)
             self.norm2 = CLADENorm(channels, num_classes)
         else:
             self.norm1 = nn.GroupNorm(1, channels)
             self.norm2 = nn.GroupNorm(1, channels)
-        self.conv1 = nn.Conv2d(channels, channels, kernel, padding=pad, bias=False,
-                               padding_mode=padding_mode, dilation=dilation)
-        self.conv2 = nn.Conv2d(channels, channels, kernel, padding=pad, bias=False,
-                               padding_mode=padding_mode, dilation=dilation)
+        # Lane GH: when use_ghost=True, swap the (channels → channels) Conv2d
+        # for GhostConv2d. ResBlock convs are where the bulk of MaskRenderer
+        # parameters live (e.g., dilated-h64 baseline: 8 × ~11-32K each), so
+        # the meaningful ~halving of total params requires ghosting these,
+        # not just the encoder _make_conv sites. ConvTranspose2d (up_conv)
+        # stays standard — Ghost's depthwise ghost branch doesn't compose
+        # cleanly with strided transpose semantics.
+        #
+        # Note: dilation > 1 is not forwarded to GhostConv2d. ResBlock's
+        # dilation cascade is a depth=2 win (kaileh57 PR#58); at depth=1
+        # all dilations are 1 anyway, so this is only a constraint for
+        # depth>=2 + use_ghost combos. Lane GH ships at depth=1 so we are
+        # safe; document the constraint for future depth=2 + ghost lanes.
+        if use_ghost:
+            if dilation != 1:
+                raise ValueError(
+                    f"ResBlock(use_ghost=True) does not support dilation>1 "
+                    f"(got {dilation}). Use depth=1 profiles or open an "
+                    f"explicit GhostConv2d-with-dilation extension."
+                )
+            self.conv1 = GhostConv2d(
+                channels, channels, kernel,
+                padding=pad, bias=False, padding_mode=padding_mode,
+            )
+            self.conv2 = GhostConv2d(
+                channels, channels, kernel,
+                padding=pad, bias=False, padding_mode=padding_mode,
+            )
+            # Zero-init the primary conv weight of the second GhostConv2d so
+            # the residual branch starts as identity (matches the dense-conv
+            # behaviour below — without this, training's early-epoch dynamics
+            # would diverge from the dilated-h64 baseline's identity start).
+            nn.init.zeros_(self.conv2.primary.weight)
+        else:
+            self.conv1 = nn.Conv2d(channels, channels, kernel, padding=pad, bias=False,
+                                   padding_mode=padding_mode, dilation=dilation)
+            self.conv2 = nn.Conv2d(channels, channels, kernel, padding=pad, bias=False,
+                                   padding_mode=padding_mode, dilation=dilation)
+            # Zero-init second conv so residual starts as identity
+            nn.init.zeros_(self.conv2.weight)
         self.act = nn.ReLU(inplace=True)
-        # Zero-init second conv so residual starts as identity
-        nn.init.zeros_(self.conv2.weight)
 
     def forward(self, x: torch.Tensor, mask: torch.Tensor | None = None) -> torch.Tensor:
         if self.use_clade and mask is not None:
@@ -210,15 +344,21 @@ class MaskRenderer(nn.Module):
         depth: int = 1,
         pose_dim: int = 0,
         use_dsconv: bool = False,
+        use_ghost: bool = False,
         padding_mode: str = "zeros",
         use_dilation: bool = False,
     ):
         super().__init__()
+        if use_dsconv and use_ghost:
+            raise ValueError(
+                "MaskRenderer: use_dsconv and use_ghost are mutually exclusive"
+            )
         self.num_classes = num_classes
         self.embed_dim = embed_dim
         self.depth = depth
         self.pose_dim = pose_dim
         self.use_dsconv = use_dsconv
+        self.use_ghost = use_ghost
         self.padding_mode = padding_mode
         self.use_dilation = use_dilation
 
@@ -246,32 +386,36 @@ class MaskRenderer(nn.Module):
         # Stem: (embed_dim + coord_channels) → base_ch at full resolution
         self.stem_conv = _make_conv(
             embed_dim + coord_channels, base_ch, 3, padding=1, bias=True,
-            use_dsconv=use_dsconv, padding_mode=pm,
+            use_dsconv=use_dsconv, use_ghost=use_ghost, padding_mode=pm,
         )
         self.stem_res = ResBlock(base_ch, num_classes=num_classes,
-                                 padding_mode=pm, dilation=dilations[0])
+                                 padding_mode=pm, dilation=dilations[0],
+                                 use_ghost=use_ghost)
 
         # Downsample 1: base_ch → mid_ch at half resolution
         self.down_conv = _make_conv(
             base_ch, mid_ch, 3, stride=2, padding=1, bias=True,
-            use_dsconv=use_dsconv, padding_mode=pm,
+            use_dsconv=use_dsconv, use_ghost=use_ghost, padding_mode=pm,
         )
         self.down_res = ResBlock(mid_ch, num_classes=num_classes,
-                                 padding_mode=pm, dilation=dilations[1])
+                                 padding_mode=pm, dilation=dilations[1],
+                                 use_ghost=use_ghost)
 
         if depth >= 2:
             # Downsample 2: mid_ch → mid_ch at quarter resolution
             self.down2_conv = _make_conv(
                 mid_ch, mid_ch, 3, stride=2, padding=1, bias=True,
-                use_dsconv=use_dsconv, padding_mode=pm,
+                use_dsconv=use_dsconv, use_ghost=use_ghost, padding_mode=pm,
             )
             self.down2_res = ResBlock(mid_ch, num_classes=num_classes,
-                                      padding_mode=pm, dilation=dilations[2])
+                                      padding_mode=pm, dilation=dilations[2],
+                                      use_ghost=use_ghost)
 
         # Bottleneck at lowest resolution
         bot_idx = 3 if depth >= 2 else 2
         self.bottleneck = ResBlock(mid_ch, num_classes=num_classes,
-                                   padding_mode=pm, dilation=dilations[bot_idx])
+                                   padding_mode=pm, dilation=dilations[bot_idx],
+                                   use_ghost=use_ghost)
 
         if depth >= 2:
             # Upsample 2: mid_ch → mid_ch back to half resolution
@@ -279,14 +423,16 @@ class MaskRenderer(nn.Module):
             # does NOT cause the boundary artifact Yousfi flagged. Left as-is.
             self.up2_conv = nn.ConvTranspose2d(mid_ch, mid_ch, 4, stride=2, padding=1, bias=True)
             self.up2_res = ResBlock(mid_ch, num_classes=num_classes,
-                                    padding_mode=pm, dilation=dilations[4])
+                                    padding_mode=pm, dilation=dilations[4],
+                                    use_ghost=use_ghost)
             self.fuse2_conv = nn.Conv2d(mid_ch * 2, mid_ch, 1, bias=True)
 
         # Upsample 1: mid_ch → base_ch at full resolution
         self.up_conv = nn.ConvTranspose2d(mid_ch, base_ch, 4, stride=2, padding=1, bias=True)
         up_idx = 5 if depth >= 2 else 3
         self.up_res = ResBlock(base_ch, num_classes=num_classes,
-                               padding_mode=pm, dilation=dilations[up_idx])
+                               padding_mode=pm, dilation=dilations[up_idx],
+                               use_ghost=use_ghost)
 
         # Fusion after skip: base_ch (skip) + base_ch (upsampled) → base_ch
         self.fuse_conv = nn.Conv2d(base_ch * 2, base_ch, 1, bias=True)
@@ -969,13 +1115,19 @@ class AsymmetricPairGenerator(nn.Module):
         flow_only: bool = False,
         pose_dim: int = 0,
         use_dsconv: bool = False,
+        use_ghost: bool = False,
         padding_mode: str = "zeros",
         use_dilation: bool = False,
         use_zoom_flow: bool = False,
     ):
         super().__init__()
+        if use_dsconv and use_ghost:
+            raise ValueError(
+                "AsymmetricPairGenerator: use_dsconv and use_ghost are mutually exclusive"
+            )
         self.pose_dim = pose_dim
         self.use_dsconv = use_dsconv
+        self.use_ghost = use_ghost
         self.padding_mode = padding_mode
         self.use_dilation = use_dilation
         self.use_zoom_flow = use_zoom_flow
@@ -988,6 +1140,7 @@ class AsymmetricPairGenerator(nn.Module):
             'motion_hidden': motion_hidden, 'depth': depth,
             'pose_dim': pose_dim, 'max_flow_px': max_flow_px,
             'max_residual': max_residual, 'use_dsconv': use_dsconv,
+            'use_ghost': use_ghost,
             'padding_mode': padding_mode, 'use_dilation': use_dilation,
             'use_zoom_flow': use_zoom_flow, 'flow_only': flow_only,
         }
@@ -1005,6 +1158,7 @@ class AsymmetricPairGenerator(nn.Module):
             depth=depth,
             pose_dim=pose_dim,
             use_dsconv=use_dsconv,
+            use_ghost=use_ghost,
             padding_mode=padding_mode,
             use_dilation=use_dilation,
         )
@@ -1191,6 +1345,7 @@ def build_renderer(
     # consumers expect). Otherwise legacy PairGenerator.
     use_zoom_flow: bool = False,
     use_dsconv: bool = False,
+    use_ghost: bool = False,
     padding_mode: str = "zeros",
     use_dilation: bool = False,
     pose_dim: int = 0,
@@ -1251,6 +1406,7 @@ def build_renderer(
             max_residual=max_residual,
             pose_dim=pose_dim,
             use_dsconv=use_dsconv,
+            use_ghost=use_ghost,
             padding_mode=padding_mode,
             use_dilation=use_dilation,
             use_zoom_flow=True,
@@ -1265,6 +1421,7 @@ def build_renderer(
         depth=depth,
         pose_dim=pose_dim,
         use_dsconv=use_dsconv,
+        use_ghost=use_ghost,
         padding_mode=padding_mode,
         use_dilation=use_dilation,
     )

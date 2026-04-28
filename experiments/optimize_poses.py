@@ -227,6 +227,61 @@ def parse_args() -> argparse.Namespace:
                         "(project_posenet_rank1_discovery), large enough "
                         "to allow exploration on aux dims. Only takes "
                         "effect when --linf-pose-weight > 0.")
+    # Lane PS (per-class SegNet weighting). Per memory
+    # `project_research_survey_20260420` — research-grade, never
+    # implemented. SegNet predicts 5-class segmentation; cheap classes
+    # (road, sky) and costly classes (lane mark, vehicle) are averaged
+    # uniformly today. When this flag is supplied, the auxiliary KL
+    # distillation loss (kl_distill_segnet_only) multiplies its per-pixel
+    # contribution by the weight at each pixel's GT-argmax class, biasing
+    # the optimiser toward costly classes. Default ``""`` (empty CSV) is a
+    # no-op — byte-identical to baseline. The CSV is parsed via
+    # tac.losses.parse_class_weights_csv (5 floats, non-negative, not all
+    # zero) so the operator catches "5,5,5,5" → 4-class footgun at CLI
+    # parse time, not 30 min into a run.
+    p.add_argument("--segnet-class-weights", type=str, default="",
+                   help="Lane PS: CSV of 5 per-class weights for the "
+                        "auxiliary KL distill SegNet loss "
+                        "(e.g., '1,5,5,1,1' to boost lane + boundary "
+                        "classes). Default '' (empty) = uniform weighting "
+                        "(byte-identical to baseline). Only takes effect "
+                        "when --kl-distill-weight > 0; pose TTO's primary "
+                        "SegNet hinge loss is unaffected (this auxiliary "
+                        "is the costly-class lever).")
+    # Lane LR (Low-Rank pose adaptation). Per memory
+    # `project_posenet_rank1_discovery` the PoseNet Jacobian is rank ≈ 1.008
+    # — the (N_pairs, 6) pose tensor lives on a rank-1 manifold. Lane LR
+    # parameterises poses as base + U @ V where base = warm-start
+    # (frozen), U is (N_pairs, R), V is (R, 6). Optimising U + V instead
+    # of the full (N_pairs, 6) tensor saves rate (R=1: 606 fp16 ≈ 1.2KB
+    # vs 7.2KB baseline → ≈0.004 score improvement on rate alone, with
+    # distortion predicted neutral by the rank-1 hypothesis).
+    #
+    # Implementation contract:
+    #   --lora-rank 0   (default) → full-rank pose TTO, byte-identical to
+    #                                pre-Lane-LR baseline.
+    #   --lora-rank 1+  → all pairs optimised JOINTLY in a single pass
+    #                     (LoRA U is per-pair, V is shared globally — batched
+    #                      per-block optimisation would defeat the global
+    #                      basis sharing).
+    p.add_argument("--lora-rank", type=int, default=0,
+                   help="Lane LR: rank of the U @ V LoRA factorisation of "
+                        "the per-pair pose tensor. 0 (default) disables "
+                        "LoRA — runs the full-rank baseline TTO loop. "
+                        "1, 2, 3 enable LoRA at that rank. The (N, 6) pose "
+                        "tensor is parameterised as base + U @ V where "
+                        "base is the warm-start (frozen), U is (N_pairs, R) "
+                        "and V is (R, 6). Per memory "
+                        "project_posenet_rank1_discovery rank-1 captures "
+                        "99.8%% of PoseNet variance; higher ranks add rate "
+                        "without distortion benefit.")
+    p.add_argument("--lora-steps", type=int, default=0,
+                   help="Lane LR: optimisation steps for the GLOBAL LoRA "
+                        "pass (only meaningful when --lora-rank > 0). "
+                        "0 (default) means inherit from --steps. The LoRA "
+                        "loop sees ALL pairs each step (vs the full-rank "
+                        "loop's per-batch inner loop), so the per-step "
+                        "gradient is much richer; 500 is usually enough.")
     return p.parse_args()
 
 
@@ -365,6 +420,7 @@ def optimize_poses_batch(
     pose_mode: str = "full-6dof",
     linf_pose_weight: float = 0.0,
     linf_pose_budget: float = 0.05,
+    segnet_class_weights: torch.Tensor | None = None,
 ) -> tuple[torch.Tensor, dict]:
     """Optimize pose vectors (and optional latent codes) for a batch of pairs.
 
@@ -416,6 +472,16 @@ def optimize_poses_batch(
         linf_pose_budget: per-dim L∞ ball radius for the Lane N
             penalty (default 0.05). Only takes effect when
             linf_pose_weight > 0.
+        segnet_class_weights: Lane PS — (NUM_CLASSES,) optional per-class
+            weights for the AUXILIARY KL distill SegNet loss (the
+            ``kl_distill_segnet_only`` call). Default ``None`` = uniform
+            weighting (byte-identical to baseline). Only takes effect when
+            ``kl_distill_weight > 0`` AND ``gt_frames_pair is not None``;
+            otherwise the KL block is skipped and the weights are unused.
+            Pose TTO's primary SegNet hinge loss is left untouched — the
+            costly-class lever is intentionally limited to the soft-label
+            auxiliary so it cannot accidentally crater the per-pixel
+            argmax-flip signal that drives pose convergence.
 
     Returns:
         (optimized_conditioning, metrics_dict)
@@ -626,6 +692,7 @@ def optimize_poses_batch(
             kl_loss, kl_loss_val = kl_distill_segnet_only(
                 rendered_pair_hwc_rt, gt_frames_pair, segnet,
                 temperature=kl_distill_temperature,
+                class_weights=segnet_class_weights,
             )
             total_loss = total_loss + kl_distill_weight * kl_loss
 
@@ -842,6 +909,31 @@ def main():
     if args.linf_pose_weight > 0:
         print(f"[linf] Fridrich L∞ pose penalty active: weight={args.linf_pose_weight}, "
               f"budget={args.linf_pose_budget}", flush=True)
+    # Lane PS: parse the per-class SegNet weights CSV (fail loud at parse
+    # time per CLAUDE.md "fail loud, not silent" — a typo in the CSV must
+    # NOT silently fall back to uniform weighting). Sentinel: empty string
+    # → None (disabled, byte-identical to baseline).
+    from tac.losses import parse_class_weights_csv
+    segnet_class_weights_t = parse_class_weights_csv(
+        args.segnet_class_weights or None, num_classes=5,
+    )
+    if segnet_class_weights_t is not None:
+        print(
+            f"[lane-ps] SegNet per-class weights ACTIVE: "
+            f"{segnet_class_weights_t.tolist()} "
+            f"(applies to auxiliary KL distill loss when "
+            f"--kl-distill-weight > 0)",
+            flush=True,
+        )
+        if args.kl_distill_weight <= 0:
+            print(
+                "[lane-ps] WARNING: --segnet-class-weights supplied but "
+                "--kl-distill-weight <= 0 — Lane PS only takes effect "
+                "via the auxiliary KL distill path. The weights are "
+                "currently a NO-OP. Set --kl-distill-weight > 0 (e.g., "
+                "1.0 for Quantizr-style distillation) to activate.",
+                flush=True,
+            )
     print(f"[config] checkpoint={args.checkpoint}", flush=True)
     print(f"[config] output_dir={output_dir}", flush=True)
 
@@ -1057,6 +1149,233 @@ def main():
         torch.save(best_emb_weights.cpu(), output_dir / "optimized_embedding.pt")
         print(f"    Saved optimized_embedding.pt ({best_emb_weights.numel() * 4} bytes)", flush=True)
 
+    # ── Step 5b-LoRA: Lane LR — global low-rank pose adaptation ─────────
+    # When --lora-rank > 0, we replace the per-batch full-rank loop with a
+    # SINGLE global optimisation over (U, V) so the basis V is shared
+    # across all pairs (the rank-1 hypothesis from
+    # project_posenet_rank1_discovery — V is the radial-zoom direction,
+    # U is the per-pair scalar coefficient). Each step samples a random
+    # `--batch-pairs` micro-batch for VRAM fit; (U, V) get gradients only
+    # for the sampled rows of U but the full V on every step.
+    if args.lora_rank > 0:
+        from tac.lora_pose import LoRAPose, save_lora_poses
+        from tac.losses import kl_distill_segnet_only
+        from tac.fridrich import linf_pose_penalty as _linf_pose_penalty
+
+        lora_steps = args.lora_steps if args.lora_steps > 0 else args.steps
+        print(f"\n[6/6] Lane LR: optimising LoRA(rank={args.lora_rank}) "
+              f"over {n_pairs} pairs for {lora_steps} steps "
+              f"(micro-batch={args.batch_pairs})...", flush=True)
+        if args.pose_mode != "full-6dof":
+            # Lane LR factorises the 6-DOF pose; combining it with the
+            # radial-zoom (1-DOF) projection would double-restrict the
+            # parameterisation in incompatible ways. Hard-fail rather
+            # than silently produce poses that ignore one of the two
+            # restrictions.
+            raise SystemExit(
+                f"FATAL: --lora-rank > 0 is not compatible with "
+                f"--pose-mode={args.pose_mode!r}. Lane LR already provides "
+                f"a low-rank parameterisation of the full 6-DOF pose; pick "
+                f"one of: --lora-rank N (Lane LR) OR --pose-mode radial-zoom "
+                f"(Lane M)."
+            )
+
+        base_poses = init_poses[:n_pairs].to(device)
+        lora = LoRAPose(base=base_poses, rank=args.lora_rank).to(device)
+        # Preview the rate budget so the operator sees the saving up front.
+        print(
+            f"  [Lane LR] LoRA params: U={tuple(lora.U.shape)} + "
+            f"V={tuple(lora.V.shape)} = {lora.trainable_params} trainable "
+            f"scalars", flush=True,
+        )
+        print(
+            f"  [Lane LR] predicted archive bytes (fp16, U+V+base): "
+            f"{lora.archive_bytes_fp16():,}; baseline (N, 6) fp16 = "
+            f"{n_pairs * 6 * 2:,}", flush=True,
+        )
+
+        lora_optimizer = torch.optim.Adam(
+            [lora.U, lora.V], lr=args.lr,
+        )
+        # eval-roundtrip is non-negotiable per CLAUDE.md and already
+        # enforced by _enforce_eval_roundtrip(); we still read the flag so
+        # local pyhamic disabling (TAC_ALLOW_NO_ROUNDTRIP=1) is honoured
+        # symmetrically with the full-rank loop.
+        eval_roundtrip = bool(args.eval_roundtrip)
+        rng = torch.Generator(device="cpu").manual_seed(0)
+        lora_metrics = {
+            "lora_rank": args.lora_rank,
+            "lora_steps": lora_steps,
+            "trainable_params": lora.trainable_params,
+            "archive_bytes_fp16": lora.archive_bytes_fp16(),
+            "step_losses": [],
+            "best_loss": float("inf"),
+        }
+        best_state = (lora.U.detach().clone(), lora.V.detach().clone())
+        t_lora = time.monotonic()
+        for step in range(lora_steps):
+            # Random sub-batch of pair indices for this step.
+            idx = torch.randperm(n_pairs, generator=rng)[: args.batch_pairs]
+            idx_sorted, _ = idx.sort()
+            pair_idx = idx_sorted.to(device)
+            frame_idx_t = (2 * pair_idx).cpu()
+            frame_idx_t1 = (2 * pair_idx + 1).cpu()
+
+            mt = gt_masks[frame_idx_t].to(device)
+            mt1 = gt_masks[frame_idx_t1].to(device)
+            # Interleave for the SegNet 2*B contract (t, t1, t, t1, …).
+            gm = torch.stack([
+                gt_masks[frame_idx_t],
+                gt_masks[frame_idx_t1],
+            ], dim=1).reshape(-1, gt_masks.shape[-2], gt_masks.shape[-1]).to(device)
+            pt = pose_targets[idx_sorted].to(device)
+
+            lora_optimizer.zero_grad()
+            full_poses = lora()  # (N, 6) materialised; gradient flows into U + V
+            batch_pose = full_poses[pair_idx]  # (B, 6)
+
+            fwd_kwargs = {"pose": batch_pose}
+            if zoom_warp is not None:
+                fwd_kwargs["ego_flow"] = zoom_warp(pair_idx, mt.shape[1], mt.shape[2])
+            pairs = renderer(mt, mt1, **fwd_kwargs)
+            ft, ft1 = pairs[:, 0], pairs[:, 1]
+            frames_hwc = torch.cat([ft, ft1], dim=0)
+            frames_chw = frames_hwc.permute(0, 3, 1, 2).contiguous()
+            if eval_roundtrip:
+                frames_chw = simulate_eval_roundtrip(
+                    frames_chw, noise_std=args.posetto_noise_std,
+                )
+
+            seg_in = segnet.preprocess_input(frames_chw.unsqueeze(1))
+            seg_logits = segnet(seg_in)
+            seg_loss = segnet_hinge_loss(seg_logits, gm, margin=args.hinge_margin)
+
+            pairs_chw = torch.stack(
+                [ft.permute(0, 3, 1, 2), ft1.permute(0, 3, 1, 2)], dim=1,
+            )
+            if eval_roundtrip:
+                Bp, Tp, Cp, Hp, Wp = pairs_chw.shape
+                flat = pairs_chw.reshape(Bp * Tp, Cp, Hp, Wp)
+                flat = simulate_eval_roundtrip(flat, noise_std=args.posetto_noise_std)
+                pairs_chw = flat.reshape(Bp, Tp, Cp, Hp, Wp)
+            pose_in = posenet.preprocess_input(pairs_chw)
+            pose_out = posenet(pose_in)["pose"][..., :6]
+            pose_loss = F.mse_loss(pose_out, pt)
+
+            total = args.seg_weight * seg_loss + args.pose_weight * pose_loss
+
+            # Optional Lane N L∞ penalty on the LoRA delta from base.
+            if args.linf_pose_weight > 0:
+                lora_delta = (full_poses - lora.base).detach()  # (N, 6)
+                # Use the same helper as the full-rank path; baseline
+                # for the delta is the LoRA base (warm start). Computed
+                # over the FULL (N, 6) tensor so the penalty sees every
+                # pair every step (LoRA's V is global).
+                penalty = _linf_pose_penalty(
+                    full_poses, lora.base.detach(),
+                    budget=args.linf_pose_budget,
+                )
+                total = total + args.linf_pose_weight * penalty
+
+            total.backward()
+            lora_optimizer.step()
+
+            loss_val = total.item()
+            lora_metrics["step_losses"].append(loss_val)
+            if loss_val < lora_metrics["best_loss"]:
+                lora_metrics["best_loss"] = loss_val
+                best_state = (lora.U.detach().clone(), lora.V.detach().clone())
+
+            if step % args.log_every == 0 or step == lora_steps - 1:
+                u_norm = lora.U.detach().norm().item()
+                v_norm = lora.V.detach().norm().item()
+                print(
+                    f"  [Lane LR] step {step:4d}/{lora_steps}: "
+                    f"loss={loss_val:.6f} (seg={seg_loss.item():.6f}, "
+                    f"pose={pose_loss.item():.6f}) "
+                    f"|U|={u_norm:.4f} |V|={v_norm:.4f}",
+                    flush=True,
+                )
+
+        # Restore best state.
+        with torch.no_grad():
+            lora.U.copy_(best_state[0])
+            lora.V.copy_(best_state[1])
+
+        # Materialise final poses and persist BOTH the LoRA dict (.pt) and
+        # the equivalent (N, 6) tensor (.pt with same name? No — keep
+        # canonical: the .pt is the LoRA dict, downstream loaders detect
+        # the format sentinel transparently). The .bin is NOT emitted in
+        # LoRA mode because the .bin format is raw fp16 (N, 6) which
+        # would defeat the rate saving — readers should consume the .pt.
+        with torch.inference_mode():
+            optimized_poses = lora().detach().cpu()
+        save_size = save_lora_poses(lora, output_dir / "optimized_poses.pt")
+        # Sentinel-friendly meta sidecar so external watchdogs can see the
+        # LoRA mode at a glance without unpickling.
+        import json as _json
+        (output_dir / "optimized_poses.meta").write_text(_json.dumps({
+            "n_pairs_complete": int(n_pairs),
+            "n_pairs_total": int(n_pairs),
+            "is_final": True,
+            "pose_dim": 6,
+            "pose_mode": "full-6dof",
+            "lora_rank": args.lora_rank,
+            "lora_archive_bytes": save_size,
+        }))
+
+        lora_dt = time.monotonic() - t_lora
+        print(
+            f"  [Lane LR] LoRA training done in {lora_dt:.1f}s, "
+            f"best_loss={lora_metrics['best_loss']:.6f}, "
+            f"saved optimized_poses.pt = {save_size:,} bytes "
+            f"(vs (N, 6) fp16 baseline = {n_pairs * 6 * 2:,} bytes)",
+            flush=True,
+        )
+
+        # Compute proxy scores for parity with the full-rank summary.
+        from tac.scorer import compute_proxy_score
+        gt_pose_frames = _generate_frames(
+            renderer, gt_masks, init_poses[:n_pairs], device,
+            args.batch_pairs, zoom_warp=zoom_warp,
+        )
+        gt_score = compute_proxy_score(
+            gt_pose_frames, gt_frames, posenet, segnet, device, rate=0.0,
+        )
+        opt_pose_frames = _generate_frames(
+            renderer, gt_masks, optimized_poses, device,
+            args.batch_pairs, zoom_warp=zoom_warp,
+        )
+        opt_score = compute_proxy_score(
+            opt_pose_frames, gt_frames, posenet, segnet, device, rate=0.0,
+        )
+
+        # Summary in the same shape as the full-rank path so downstream
+        # reporters don't branch on lora_rank.
+        total_time = time.monotonic() - t_total
+        summary = {
+            "config": vars(args),
+            "gt_score": gt_score,
+            "optimized_score": opt_score,
+            "delta_score": opt_score["score"] - gt_score["score"],
+            "total_time_s": total_time,
+            "lora_metrics": lora_metrics,
+            "n_pairs": n_pairs,
+            "archive_bytes_fp16_baseline": n_pairs * 6 * 2,
+            "archive_bytes_lora": save_size,
+        }
+        with open(output_dir / "summary.json", "w") as f:
+            json.dump(summary, f, indent=2, default=str)
+        print(
+            f"\n  GT poses score = {gt_score['score']:.4f}; "
+            f"LoRA(rank={args.lora_rank}) score = {opt_score['score']:.4f}; "
+            f"delta = {opt_score['score'] - gt_score['score']:+.4f}",
+            flush=True,
+        )
+        print(f"  Total time: {total_time:.1f}s", flush=True)
+        print(f"  Results saved to: {output_dir}", flush=True)
+        return
+
     # ── Step 5b: Batched pose optimization ────────────────────────────────
     print(f"\n[6/6] Optimizing {n_pairs} pose vectors in batches of {args.batch_pairs}...", flush=True)
     n_batches = math.ceil(n_pairs / args.batch_pairs)
@@ -1130,6 +1449,7 @@ def main():
             pose_mode=args.pose_mode,
             linf_pose_weight=args.linf_pose_weight,
             linf_pose_budget=args.linf_pose_budget,
+            segnet_class_weights=segnet_class_weights_t,
         )
         dt = time.monotonic() - t0
 

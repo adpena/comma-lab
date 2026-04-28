@@ -496,19 +496,29 @@ def load_optimized_poses(
                 f"failed: {e!r}. File size={n_bytes}B. If this was meant to be a "
                 f"raw fp16 archive artifact, regenerate via save_poses_binary()."
             ) from e
-        if not isinstance(obj, torch.Tensor):
+        # Lane LR: LoRA-encoded pose pickle. The top-level object is a dict
+        # with sentinel "format" == "lora_pose_v1" — materialise back to
+        # (N, pose_dim) transparently so downstream consumers see a vanilla
+        # tensor and need no LoRA awareness. See src/tac/lora_pose.py for
+        # the on-disk schema.
+        from tac.lora_pose import decode_lora_poses_dict, is_lora_poses_dict
+        if is_lora_poses_dict(obj):
+            poses = decode_lora_poses_dict(obj, pose_dim=pose_dim)
+        elif not isinstance(obj, torch.Tensor):
             raise ValueError(
                 f"Pose file {p.name} is a pickle but contains "
-                f"{type(obj).__name__}, not Tensor. Wrappers must not pickle "
-                f"dicts/lists into a pose artifact."
+                f"{type(obj).__name__}, not Tensor or LoRA-encoded dict. "
+                f"Wrappers must not pickle arbitrary dicts/lists into a "
+                f"pose artifact."
             )
-        poses = obj.detach().to(torch.float32).cpu()
-        if poses.ndim != 2 or poses.shape[-1] != pose_dim:
-            raise ValueError(
-                f"Pose tensor shape {tuple(poses.shape)} from {p.name} does "
-                f"not match expected (N, {pose_dim}). Wrong pose_dim or "
-                f"transposed export?"
-            )
+        else:
+            poses = obj.detach().to(torch.float32).cpu()
+            if poses.ndim != 2 or poses.shape[-1] != pose_dim:
+                raise ValueError(
+                    f"Pose tensor shape {tuple(poses.shape)} from {p.name} does "
+                    f"not match expected (N, {pose_dim}). Wrong pose_dim or "
+                    f"transposed export?"
+                )
 
     # Branch B: raw fp16 buffer.
     else:

@@ -65,15 +65,121 @@ def _hwc_to_chw(pair_hwc: torch.Tensor) -> torch.Tensor:
     return pair_hwc.float().permute(0, 1, 4, 2, 3).contiguous()
 
 
+def _apply_class_weights(
+    seg_per_pixel: torch.Tensor,
+    gt_logits_or_probs: torch.Tensor,
+    class_weights: torch.Tensor,
+    gt_already_probs: bool = False,
+) -> torch.Tensor:
+    """Lane PS shared kernel — multiply per-pixel SegNet loss by per-class weights.
+
+    Args:
+        seg_per_pixel: (B, H, W) per-pixel SegNet loss (soft-cosine, KL, …).
+        gt_logits_or_probs: (B, C, H, W) GT SegNet logits OR softmax probs;
+            argmax is computed under no_grad to fetch the per-pixel target
+            class. (argmax(logits) == argmax(softmax) — monotone — so the
+            cached softmax path is equivalent to the live-logits path.)
+        class_weights: (NUM_CLASSES,) float tensor of per-class weights.
+            L1-normalised to mean=1 internally so absolute loss magnitude
+            is preserved vs the unweighted call.
+        gt_already_probs: cosmetic flag for caller documentation; argmax
+            behaviour is identical regardless.
+
+    Returns: ``seg_per_pixel * pixel_weights`` (same shape as input).
+
+    Raises:
+        ValueError: if ``class_weights`` shape does not match the channel
+            dim of ``gt_logits_or_probs``.
+    """
+    del gt_already_probs  # kept for caller-side documentation only
+    if class_weights is None:  # defensive — callers should gate this
+        return seg_per_pixel
+    with torch.no_grad():
+        cw = class_weights.to(seg_per_pixel.device, dtype=seg_per_pixel.dtype)
+        if cw.ndim != 1 or cw.shape[0] != gt_logits_or_probs.shape[1]:
+            raise ValueError(
+                f"class_weights shape {tuple(cw.shape)} does not match "
+                f"SegNet num_classes {gt_logits_or_probs.shape[1]}"
+            )
+        cw = cw / cw.mean().clamp(min=1e-8)
+        gt_argmax = gt_logits_or_probs.argmax(dim=1)  # (B, H, W)
+        # Spatial dims of seg_per_pixel may differ if the caller resamples;
+        # the canonical path keeps them aligned (same SegNet logit shape),
+        # so we assert and let mismatches fail loud.
+        if gt_argmax.shape != seg_per_pixel.shape:
+            raise ValueError(
+                f"GT argmax spatial shape {tuple(gt_argmax.shape)} does not "
+                f"match seg_per_pixel shape {tuple(seg_per_pixel.shape)}"
+            )
+        pixel_w = cw[gt_argmax]  # (B, H, W)
+    return seg_per_pixel * pixel_w
+
+
+def parse_class_weights_csv(
+    s: str | None,
+    num_classes: int = 5,
+) -> torch.Tensor | None:
+    """Lane PS — parse a CSV string like ``"1.0,5.0,5.0,1.0,1.0"`` to a tensor.
+
+    Returns ``None`` for ``None`` / empty input (canonical "disabled" sentinel).
+    Used by ``experiments/optimize_poses.py`` and
+    ``src/tac/experiments/train_renderer.py`` to convert the
+    ``--segnet-class-weights`` CLI string into the tensor passed down to
+    the loss helpers. Centralised so both call sites apply the SAME parse
+    + validation rules (catches "5,5,5,5" → 4-class footgun at boot).
+
+    Args:
+        s: CSV string of float weights, or None / empty.
+        num_classes: expected number of classes (5 for the comma SegNet).
+
+    Returns:
+        ``None`` when ``s`` is None / empty; else ``(num_classes,)`` float
+        tensor. Raises ``ValueError`` on shape mismatch / parse error so
+        the operator sees the bug at CLI parse time, not 30 min into a run.
+    """
+    if s is None or not s.strip():
+        return None
+    parts = [p.strip() for p in s.split(",") if p.strip()]
+    if len(parts) != num_classes:
+        raise ValueError(
+            f"--segnet-class-weights expected {num_classes} CSV values, "
+            f"got {len(parts)}: {parts!r}"
+        )
+    try:
+        vals = [float(p) for p in parts]
+    except ValueError as exc:  # pragma: no cover — covered via parametric test
+        raise ValueError(
+            f"--segnet-class-weights could not parse {parts!r} as floats: {exc}"
+        ) from exc
+    if any(v < 0 for v in vals):
+        raise ValueError(
+            f"--segnet-class-weights must be non-negative, got {vals!r}"
+        )
+    if all(v == 0 for v in vals):
+        raise ValueError(
+            "--segnet-class-weights cannot be all zeros (would zero out "
+            "the entire SegNet loss)"
+        )
+    return torch.tensor(vals, dtype=torch.float32)
+
+
 def scorer_loss(
     filtered_pair_hwc: torch.Tensor,
     gt_pair_hwc: torch.Tensor,
     posenet,
     segnet,
+    class_weights: torch.Tensor | None = None,
 ) -> tuple[torch.Tensor, float, float]:
     """Standard scorer loss: 100*seg + sqrt(10*pose).
 
     Uses soft cosine for SegNet (differentiable proxy for argmax disagreement).
+
+    Args:
+        class_weights: (NUM_CLASSES,) optional per-class weights for the
+            soft-cosine SegNet term (Lane PS — per-class SegNet weighting,
+            see ``kl_distill_segnet_only`` docstring). Default ``None`` =
+            uniform weighting (byte-identical to baseline). Weights are
+            L1-normalised internally so the loss scale is preserved.
 
     Returns: (loss, pose_distortion, seg_distortion)
     """
@@ -88,7 +194,10 @@ def scorer_loss(
 
     pred_soft = F.softmax(fs_out, dim=1)
     gt_soft = F.softmax(gs_out, dim=1)
-    seg_dist = 1.0 - (pred_soft * gt_soft).sum(dim=1).mean()
+    seg_per_pixel = 1.0 - (pred_soft * gt_soft).sum(dim=1)  # (B, H, W)
+    if class_weights is not None:
+        seg_per_pixel = _apply_class_weights(seg_per_pixel, gs_out, class_weights)
+    seg_dist = seg_per_pixel.mean()
 
     loss = 100.0 * seg_dist + torch.sqrt(10.0 * pose_dist + 1e-8)
     return loss, pose_dist.item(), seg_dist.item()
@@ -100,6 +209,7 @@ def scorer_loss_cached(
     gt_seg_soft: torch.Tensor,
     posenet,
     segnet,
+    class_weights: torch.Tensor | None = None,
 ) -> tuple[torch.Tensor, float, float]:
     """Standard scorer loss using pre-cached GT scorer outputs.
 
@@ -112,6 +222,10 @@ def scorer_loss_cached(
         gt_seg_soft: cached softmax(SegNet output) for GT pair (on device)
         posenet: frozen PoseNet model
         segnet: frozen SegNet model
+        class_weights: (NUM_CLASSES,) optional per-class weights for the
+            soft-cosine SegNet term (Lane PS). The cached path uses
+            ``gt_seg_soft.argmax`` as the GT class label since the raw
+            logits are not stored. Default ``None`` = uniform weighting.
 
     Returns: (loss, pose_distortion, seg_distortion)
     """
@@ -122,7 +236,14 @@ def scorer_loss_cached(
     pose_dist = (fp_out["pose"][..., :6] - gt_pose_6).pow(2).mean()
 
     pred_soft = F.softmax(fs_out, dim=1)
-    seg_dist = 1.0 - (pred_soft * gt_seg_soft).sum(dim=1).mean()
+    seg_per_pixel = 1.0 - (pred_soft * gt_seg_soft).sum(dim=1)  # (B, H, W)
+    if class_weights is not None:
+        # Cached path: use the cached softmax as the GT-argmax source.
+        # Equivalent to argmax(logits) since softmax is monotone.
+        seg_per_pixel = _apply_class_weights(
+            seg_per_pixel, gt_seg_soft, class_weights, gt_already_probs=True,
+        )
+    seg_dist = seg_per_pixel.mean()
 
     loss = 100.0 * seg_dist + torch.sqrt(10.0 * pose_dist + 1e-8)
     return loss, pose_dist.item(), seg_dist.item()
@@ -657,6 +778,7 @@ def kl_distill_segnet_only(
     gt_pair_hwc: torch.Tensor,
     segnet,
     temperature: float = 2.0,
+    class_weights: torch.Tensor | None = None,
 ) -> tuple[torch.Tensor, float]:
     """SegNet-ONLY KL divergence — auxiliary helper for stacking on top of scorer_loss.
 
@@ -669,6 +791,23 @@ def kl_distill_segnet_only(
 
     This helper returns ONLY the SegNet KL value (multiplied by T² per Hinton 2015).
     The caller chooses the auxiliary weight (typical: 1.0).
+
+    Args:
+        filtered_pair_hwc: (B, T, H, W, C) float pair from renderer.
+        gt_pair_hwc: (B, T, H, W, C) float ground-truth pair.
+        segnet: frozen SegNet scorer.
+        temperature: softmax temperature (Hinton 2015 default 2.0).
+        class_weights: (NUM_CLASSES,) optional float tensor of per-class
+            weights. When provided, the per-pixel KL is multiplied by the
+            weight for that pixel's GT-argmax class, biasing the renderer
+            to spend its capacity on costly classes (e.g., lane marks,
+            vehicles) instead of cheap ones (road, sky). Lane PS — see
+            project_research_survey_20260420 + research_survey memory item
+            "per-class SegNet weighting (research-grade, never implemented)".
+            Default ``None`` (uniform weighting, byte-identical to baseline).
+            The weights are L1-normalised so ``mean == 1`` to keep the loss
+            scale comparable to the unweighted variant. Shape must match
+            ``segnet`` output channel dim (5 classes for the comma SegNet).
 
     Returns: (seg_kl * T², seg_kl_value_unscaled)
     """
@@ -703,6 +842,17 @@ def kl_distill_segnet_only(
     # process lesson + `test_kl_distill_segnet_only_reduction_is_per_pixel_mean`
     # for the structural gate.
     kl_per_pixel = F.kl_div(log_p, q, reduction="none").sum(dim=1)  # (B, H, W)
+
+    # Lane PS (per-class SegNet weighting): when class_weights is supplied,
+    # multiply per-pixel KL by the weight at the GT-argmax class. Uses the
+    # shared kernel _apply_class_weights so the same L1-normalisation +
+    # argmax indexing rules apply across kl_distill_segnet_only / scorer_loss
+    # / scorer_loss_cached. The argmax is taken under no_grad inside the
+    # kernel so the indexing path stays non-differentiable (matches the
+    # upstream SegNet distortion which is itself argmax-based).
+    if class_weights is not None:
+        kl_per_pixel = _apply_class_weights(kl_per_pixel, gs_logits, class_weights)
+
     kl = kl_per_pixel.mean() * (T * T)
     return kl, kl.item()
 

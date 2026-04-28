@@ -2958,6 +2958,174 @@ DSCONV_QUANTIZR_KILLER = {
 }
 
 
+# ── Lane GH: Ghost-module renderer (Han et al. CVPR 2020) ─────────────
+#
+# Council brief 2026-04-27. Lane A holds 1.15 [contest-CUDA] frontier with
+# the dilated-h64 baseline arch (288K params, ~290KB FP32 renderer.bin,
+# total archive 694KB, rate contribution 0.46). Lane GH attacks the same
+# rate wedge as Lane K (DSConv) but via Ghost convolutions instead of
+# depthwise-separable.
+#
+# Why both Lane GH and Lane K? Council "no premature kills" rule:
+# multiple plausible contenders → run them in parallel. DSConv and Ghost
+# are different parameter-reduction primitives (DSConv = depthwise then
+# pointwise; Ghost = primary conv to half-channels then cheap depthwise
+# ghost branch concatenated). They produce DIFFERENT inductive biases:
+#   - DSConv encourages channel-mixing to happen in 1x1 pointwise layers.
+#   - Ghost encourages cheap linear redundancy in feature maps (Han et al.
+#     CVPR 2020 §3.1: "the ghost feature maps are linear transformations
+#     of the intrinsic feature maps").
+# The score is the only valid arbiter (CLAUDE.md "multiple contenders →
+# multiple paths" non-negotiable).
+#
+# Architecture: matches the verified dilated-h64 baseline byte-for-byte
+# EXCEPT every bulk Conv2d in the renderer encoder (stem, down, down2)
+# is swapped with GhostConv2d. ResBlocks keep standard Conv2d (their 3x3
+# kernels are inside the residual; replacing them changes the inductive
+# bias of the residual branch, not just its capacity).
+#   * base_ch=36, mid_ch=60, motion_hidden=32 (dilated-h64 baseline)
+#   * embed_dim=6, depth=1, pose_dim=6 (FiLM modulation from epoch 0)
+#   * use_ghost=True, use_dsconv=False (mutually exclusive — pick one)
+#   * use_zoom_flow=False (legacy PairGenerator path, full-frame masks)
+#   * padding_mode='zeros', use_dilation=False (no confounds)
+#
+# Predicted parameter count: ~144K (288K halved by Ghost on the 3 bulk
+# encoder convs + their depthwise ghost branches). FP4 renderer.bin
+# target: ~75KB (vs Lane A's 180KB FP4-QAT, vs Quantizr's ~64KB).
+#
+# All current best-practice training tricks ON (mirrors DSCONV_QUANTIZR_KILLER):
+#   * eval_roundtrip=True (CLAUDE.md non-negotiable).
+#   * Fridrich inverse-steganalysis losses ON (texture / L∞ / Markov +
+#     wavelet variance noise + uncertainty). Same recipe as SHIRAZ.
+#   * KL distill on SegNet T=2.0, weight=0.002 (POST-FIX math).
+#   * Per-class weights (lane markings 15x — Yousfi).
+#   * SWA + EMA (wider minima → FP4 survives quant).
+#
+# 5-phase Quantizr-style schedule (matches Lane K budget for fair A/B):
+#   Phase 1 (600ep): pixel L1+edge anchor warmup
+#   Phase 2 (1500ep): scorer-guided + Fridrich aux losses + KL distill
+#   Phase 3 (400ep): hard-pair fine-tune
+#   Phase 4 (400ep): QAT (FakeQuantFP4 enabled, 0.1× LR)
+#   Phase 5 (100ep): final consolidation at FP4
+# Total ~3000 epochs ≈ 12h on RTX 4090. Cost: ~$3-4 at $0.25/hr.
+#
+# 5-stage quantization config (our advantage over Quantizr's vanilla):
+#   * fp4_codebook='residual', fp4_robust_scale=True, fp4_stochastic=True
+#
+# Predicted score landing zone [1.05, 1.30]:
+#   - SegNet: ~0.005 (Ghost may cost 0.001 vs dilated-h64 baseline 0.003)
+#   - PoseNet: ~0.20-0.30 (Ghost preserves more channel-mixing capacity
+#     than DSConv per Han et al. §4.3 ImageNet results — should match or
+#     improve on dilated-h64 baseline's 0.247 PoseNet)
+#   - Rate: ~0.30-0.40 (renderer drops from 290KB → ~75KB FP4 → -0.10
+#     rate; full-frame masks + poses unchanged, anchored on Lane A)
+#   - Standalone score: 1.05-1.30. If 1.10 we BEAT Lane A's 1.15 by 0.05;
+#     if 1.05 by 0.10. Less aggressive than Lane K's [0.85, 1.10] band
+#     because Ghost halves params (~144K) vs Lane K's ~3.3× cut to 88K —
+#     more capacity preserved, more chance of matching baseline distortion.
+#
+# Deployment: scripts/remote_lane_gh_ghost_renderer.sh runs the full
+# from-scratch pipeline (train → FP4A export → archive build → contest
+# auth eval). Anchors masks + poses on Lane A's verified 1.15 artifacts.
+DILATED_H64_GHOST = {
+    "experiment_type": "renderer_training",
+    "variant": "dilated",
+    # Architecture: matches dilated-h64 baseline byte-for-byte EXCEPT
+    # use_ghost=True. Param count ~144K vs baseline 288K.
+    "base_ch": 36,
+    "mid_ch": 60,
+    "motion_hidden": 32,
+    "embed_dim": 6,
+    "depth": 1,
+    "pose_dim": 6,                 # FiLM modulation from epoch 0
+    "use_dsconv": False,           # mutually exclusive with use_ghost
+    "use_ghost": True,             # Lane GH: Ghost convolutions (CVPR 2020)
+    "padding_mode": "zeros",       # baseline parity
+    "use_dilation": False,         # depth=1 dilation no-op for receptive field
+    "use_zoom_flow": False,        # legacy PairGenerator (full-frame masks)
+    # Lane GH is FULL-frame masks. Explicit zero defends against any caller
+    # flipping it on by accident (preflight enforces consistency between
+    # mask_half_sim_prob and use_zoom_flow).
+    "mask_half_sim_prob": 0.0,
+    # CLAUDE.md non-negotiable: eval_roundtrip MUST be True on every
+    # training path. Without it the proxy-auth gap can be 2-11x on PoseNet.
+    "eval_roundtrip": True,
+    # noise_std=0.5 hardcoded in train_renderer.py simulate_eval_roundtrip
+    # call; documented here for the operator + the test contract.
+    # posetto_noise_std=0.5 consumed by experiments/optimize_poses.py at
+    # pose-TTO stage; surfaced as profile metadata.
+    "posetto_noise_std": 0.5,
+    # Loss configuration — focal STE + hinge SegNet + Fridrich aux losses.
+    "loss_mode": "focal_ste",
+    "segnet_loss_mode": "hinge",
+    "hinge_margin": 0.5,
+    "focal_gamma": 2.0,
+    "error_boost": 1.0,
+    # Score weights — DOMINATED BY SegNet (77x more important per scoring math)
+    "pose_weight": 10.0,
+    "seg_weight": 100.0,
+    "pixel_weight": 0.1,
+    # Fridrich inverse-steganalysis (full SHIRAZ stack — scorer-arch-specific,
+    # transfers cleanly across capacity).
+    "use_texture_loss": True,
+    "texture_loss_weight": 0.5,
+    "use_linf_penalty": True,
+    "linf_weight": 0.01,
+    "use_markov_loss": True,
+    "markov_weight": 0.1,
+    # Yousfi #3: UNIWARD-aligned spatially-adaptive quant noise (wavelet_db4)
+    "use_variance_noise": True,
+    "variance_noise_weight": 0.1,
+    "variance_noise_base_std": 2.0,
+    "variance_noise_kernel": 8,
+    "variance_noise_mode": "wavelet_db4",
+    # Yousfi #5: ScanNet-style spatial uncertainty maps (light weight).
+    "use_uncertainty_loss": True,
+    "uncertainty_loss_weight": 0.05,
+    "uncertainty_loss_floor": 0.1,
+    # Quantizr KL distillation on SegNet (T=2.0, weight=0.002 POST-FIX).
+    "kl_distill_weight": 0.002,
+    "kl_distill_temperature": 2.0,
+    "ema_decay": 0.997,
+    "use_per_class_weights": True,  # lane markings 15x (Yousfi)
+    "use_swa": True,                # SWA → wider minima → FP4 survives
+    # NO freeze/unfreeze — continuous adaptive training.
+    "freeze_motion_phase2": False,
+    "freeze_renderer_phase3": False,
+    # 5-phase QAT schedule — matches Lane K budget for fair A/B comparison.
+    "phase1_epochs": 600,           # anchor: pixel L1 + edge warmup
+    "phase2_epochs": 1500,          # finetune: scorer + Fridrich + KL
+    "phase3_epochs": 400,           # joint: hard-pair fine-tune
+    "phase4_epochs": 400,           # QAT: FakeQuantFP4 enable
+    "phase5_epochs": 100,           # final: consolidation at FP4
+    "lr": 5e-4,
+    "phase1_lr": 1e-3,
+    "phase2_lr": 5e-4,
+    "phase3_lr": 1e-4,
+    "phase4_lr": 5e-5,              # 0.1× base for QAT (Lin et al. 2017)
+    "phase5_lr": 1e-5,
+    "phase1_batch_size": 8,
+    "phase2_batch_size": 8,
+    "phase3_batch_size": 8,
+    # 5-stage quantization config — our advantage over Quantizr's vanilla.
+    "fp4_codebook": "residual",
+    "fp4_robust_scale": True,
+    "fp4_stochastic": True,
+    # Mask augmentation: train on mixed CRF (no overfitting to one encoding).
+    "mask_noise_prob": 0.5,
+    # Hard-frame curriculum carried from SHIRAZ.
+    "hard_frame_ratio": 0.3,
+    "error_replay_every": 100,
+    "checkpoint_every": 100,
+    "eval_every": 50,
+    "log_every": 25,
+    # Deterministic reproducibility (CLAUDE.md canonical pipeline standard).
+    # seed=1234 matches Lane K + build_baseline_archive.py default.
+    "seed": 1234,
+    "deterministic": True,
+}
+
+
 # ── Lane S: Self-Compression renderer (Szabolcs / 2301.13142) ─────────
 #
 # Builds the dilated-h64 architecture but swaps every bulk Conv2d with a
@@ -3171,6 +3339,13 @@ PROFILES = {
     # full-frame masks anchored on Lane A's verified 1.15 [contest-CUDA]
     # mask + pose payloads — no half-frame risk. Predicted band [0.85, 1.10].
     "dsconv_quantizr_killer": DSCONV_QUANTIZR_KILLER,
+    # Lane GH: Ghost-module renderer (Han et al. CVPR 2020). Mirrors the
+    # dilated-h64 baseline arch but swaps bulk Conv2d for GhostConv2d,
+    # halving renderer params (~144K vs 288K). Orthogonal to Lane K (DSConv,
+    # 88K) — different parameter-reduction primitive, different inductive
+    # bias. Predicted band [1.05, 1.30] — less aggressive than Lane K
+    # because more capacity is preserved.
+    "dilated_h64_ghost": DILATED_H64_GHOST,
     "wilde_v2": WILDE_V2,
     "green_v2": GREEN_V2,
     "shiraz_v2": SHIRAZ_V2,
