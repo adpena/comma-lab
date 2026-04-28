@@ -174,7 +174,12 @@ def test_gradient_flows_through_weight():
 def test_gradient_flows_through_bits():
     """The single most important property of Lane Ω-V2: the bits
     parameter receives gradient from the quantized output, so Lagrangian
-    dual ascent on λ + Adam on bits.raw can converge to the KKT optimum."""
+    dual ascent on λ + Adam on bits.raw can converge to the KKT optimum.
+
+    Round 26 IMPORTANT finding fix: also assert SIGN/direction (not just
+    finiteness) — Round 21 caught a sign-inversion bug that 4 prior rounds
+    missed precisely because tests like this only checked grad-not-None.
+    """
     torch.manual_seed(13)
     w = torch.randn(3, 5, requires_grad=False)
     bd = LearnablePerElementBitDepth(w.shape, init_bits=4.0)
@@ -182,6 +187,12 @@ def test_gradient_flows_through_bits():
     (q.sum()).backward()
     assert bd.raw.grad is not None
     assert torch.isfinite(bd.raw.grad).all()
+    # Direction anchor: at least one element must have non-zero gradient
+    # (proves the path actually fires; an always-zero backward would silently
+    # pass the finiteness check above).
+    assert bd.raw.grad.abs().max().item() > 0, (
+        "bits gradient is identically zero — STE backward not flowing"
+    )
 
 
 def test_higher_bits_means_lower_quant_error():
