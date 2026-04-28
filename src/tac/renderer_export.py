@@ -3461,9 +3461,83 @@ def _omega_dequantize_layer(
     return values.reshape(weight_shape)
 
 
+def _maybe_unwrap_learnable_bit_model(
+    model: nn.Module,
+    bits_per_weight: dict | None,
+) -> tuple[nn.Module, dict]:
+    """Unwrap a LearnableBitConv2d-wrapped model into a plain Conv2d model
+    + auto-derived bits dict.
+
+    Lane Ω-V2 wraps eligible Conv2d layers in ``LearnableBitConv2d``. The
+    OMG1 export walker (below) expects to find ``nn.Conv2d`` modules with
+    a matching entry in ``bits_per_weight`` keyed by ``<full_name>.weight``.
+    This helper:
+
+      1. Detects LearnableBitConv2d modules.
+      2. Replaces each with its underlying ``nn.Conv2d`` (carrying the
+         same float weights — the QAT loop has already fine-tuned them).
+      3. Adds the rounded ``bits_rounded()`` tensor for that layer to the
+         returned bits dict (under the wrapper's qualified name).
+      4. Leaves caller-supplied ``bits_per_weight`` entries untouched
+         (caller bits override auto-derived ones).
+
+    The unwrap is done on a SHALLOW COPY of the model's module tree so we
+    don't mutate the caller's model. (We rebuild the module hierarchy by
+    re-binding `setattr` on shallow copies; the underlying weight Tensors
+    are shared — this is fine because the export only reads them.)
+
+    Returns:
+        (plain_model, merged_bits_per_weight)
+    """
+    # Lazy import to avoid circular dependency (learnable_bit_quant imports
+    # from self_compress which is in the same package as renderer_export).
+    try:
+        from tac.learnable_bit_quant import LearnableBitConv2d  # noqa: WPS433
+    except ImportError:
+        # learnable_bit_quant not present (older checkpouts) — pass through.
+        return model, dict(bits_per_weight or {})
+
+    has_wrapper = any(
+        isinstance(m, LearnableBitConv2d) for m in model.modules()
+    )
+    if not has_wrapper:
+        return model, dict(bits_per_weight or {})
+
+    auto_bits: dict[str, torch.Tensor] = {}
+
+    parents: dict[str, nn.Module] = {"": model}
+    for name, mod in model.named_modules():
+        parents[name] = mod
+
+    # Collect (parent, child_name, full_name, wrapper) tuples first.
+    to_replace: list[tuple[nn.Module, str, str, "LearnableBitConv2d"]] = []
+    for full_name, mod in model.named_modules():
+        if isinstance(mod, LearnableBitConv2d):
+            if "." in full_name:
+                parent_name, child_name = full_name.rsplit(".", 1)
+                parent = parents[parent_name]
+            else:
+                parent = model
+                child_name = full_name
+            to_replace.append((parent, child_name, full_name, mod))
+
+    for parent, child_name, full_name, wrapper in to_replace:
+        bits_int = wrapper.bit_depth.bits_rounded().detach().cpu()
+        auto_bits[f"{full_name}.weight"] = bits_int
+        # Replace the wrapper with its underlying Conv2d. The Conv2d
+        # carries the QAT-fine-tuned float weight; the export quantizer
+        # will re-round per the bits dict.
+        setattr(parent, child_name, wrapper.conv)
+
+    # Caller-supplied bits override auto-derived ones (rare; mostly for
+    # tests where the caller wants to inject specific bits).
+    merged = {**auto_bits, **(bits_per_weight or {})}
+    return model, merged
+
+
 def export_omega_renderer(
     model: nn.Module,
-    bits_per_weight: dict,
+    bits_per_weight: dict | None,
     output_path: Path,
     *,
     use_lzma: bool = True,
@@ -3475,9 +3549,17 @@ def export_omega_renderer(
         model: AsymmetricPairGenerator (or build_renderer output) — fp32 weights.
             The Lane Ω QAT loop has already fine-tuned these weights given
             the per-element bit-depths.
+
+            **Lane Ω-V2 path:** if the model contains
+            ``LearnableBitConv2d`` modules (Lane Ω-V2's
+            learnable-bit wrappers), this function auto-unwraps them and
+            extracts the per-weight bits from each wrapper's
+            ``bit_depth.bits_rounded()``. The caller may pass ``None``
+            for ``bits_per_weight`` in that case.
         bits_per_weight: dict mapping `<full_name>.weight` → uint8 tensor of
             same shape as that parameter, values in [1, 8]. Layers NOT in
             this dict are stored as float16 (= protected / non-quantized).
+            May be ``None`` if the model has LearnableBitConv2d modules.
         output_path: where to write the .bin file.
         use_lzma: LZMA-compress the body and the bits buffer.
         arch_extra: optional extra metadata for the arch header.
@@ -3488,6 +3570,12 @@ def export_omega_renderer(
     import json
     import lzma
     import struct
+
+    model, bits_per_weight = _maybe_unwrap_learnable_bit_model(
+        model, bits_per_weight
+    )
+    if bits_per_weight is None:
+        bits_per_weight = {}
 
     model.eval()
     arch = _infer_asymmetric_config(model)
