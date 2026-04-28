@@ -1798,6 +1798,32 @@ def _load_renderer(renderer_path: str, device: str) -> nn.Module:
         )
         return model
 
+    # ── OMG1 format (Lane Ω): Hessian-aware per-weight bit-depth renderer ──
+    # 2026-04-27: per-WEIGHT (not per-channel) bit allocation driven by hard-pair
+    # Fisher importance. Lane Ω water-fills a fixed bit budget across all
+    # eligible Conv2d/Linear weights; protected layers (renderer.head,
+    # motion.head, FiLM linears, fuse_conv) stay FP16 — same protection list
+    # as SCv1. Body LZMA-compressed; bit-packed values per element.
+    # Strict-scorer-rule compliant: no scorer load at inflate time.
+    if magic == b"OMG1":
+        try:
+            from tac.renderer_export import load_omega_renderer
+        except ImportError as exc:
+            raise RuntimeError(
+                "OMG1 (Lane Ω Hessian-quantized renderer) format requires "
+                "the tac package (tac.renderer_export.load_omega_renderer). "
+                "The inflate container must include the tac wheel for Lane Ω "
+                f"archives. Underlying error: {exc!r}"
+            )
+        model = load_omega_renderer(raw_bytes, device=device)
+        elapsed = time.monotonic() - t0
+        print(
+            f"  Loaded Omega Hessian-Quantized AsymmetricPairGenerator from "
+            f".bin ({len(raw_bytes):,} bytes, {elapsed:.1f}s)",
+            file=sys.stderr,
+        )
+        return model
+
     # ── C3R1 format (Lane I): C3 residual PairGenerator ──
     # 2026-04-27: same lane as CCh1 but with the residual head added on top
     # of a Cool-Chic base. The header records `residual_quant_bits` so the
@@ -2508,14 +2534,24 @@ def inflate_renderer(
     _zero_cost_sentinel_path = (
         Path(archive_dir) / "zero_cost_poses_v1"
     )
-    _zero_cost_env_enabled = os.environ.get(
+    # 2026-04-27 codex finding fix: SENTINEL IS SELF-ACTIVATING. The env-gate
+    # `INFLATE_ZERO_COST_POSES` is no longer REQUIRED — if the archive contains
+    # the sentinel, the zero-cost path activates automatically (contest
+    # invocations don't carry shell env, so requiring it caused catastrophic
+    # silent failures). The env-gate is RETAINED as an opt-in override for
+    # development (e.g., to force-test the path when poses.pt also exists).
+    _zero_cost_env_override = os.environ.get(
         "INFLATE_ZERO_COST_POSES", "0"
     ) not in ("", "0", "false", "False", "no", "NO")
+    _zero_cost_archive_signals = (
+        _zero_cost_sentinel_path.exists() and poses is None
+    )
+    _zero_cost_active = _zero_cost_archive_signals or _zero_cost_env_override
     if (
         poses is None
         and _renderer_pose_dim > 0
         and _zero_cost_sentinel_path.exists()
-        and _zero_cost_env_enabled
+        and _zero_cost_active
         and masks is not None
     ):
         try:
@@ -2575,16 +2611,16 @@ def inflate_renderer(
     elif (
         poses is None
         and _zero_cost_sentinel_path.exists()
-        and not _zero_cost_env_enabled
+        and masks is None
     ):
-        # Sentinel present but env gate not set — surface this so the
-        # operator does not silently fall through to unconditioned rendering.
-        print(
-            "  WARNING: archive has zero_cost_poses_v1 sentinel but "
-            "INFLATE_ZERO_COST_POSES is not enabled. Set "
-            "INFLATE_ZERO_COST_POSES=1 to compute poses from lane marks. "
-            "Renderer will run UNCONDITIONED (likely catastrophic).",
-            file=sys.stderr,
+        # Sentinel present but masks weren't loaded — HARD FAIL because the
+        # zero-cost path requires masks to compute lane-mark displacement.
+        # Without masks the renderer would run unconditioned (catastrophic).
+        raise RuntimeError(
+            "FATAL: archive has zero_cost_poses_v1 sentinel but masks tensor "
+            "is None. The zero-cost-poses code path requires masks to compute "
+            "lane-mark displacement. The renderer would otherwise run "
+            "unconditioned and score catastrophically."
         )
 
     # ---- Load zoom warp scalars (for use_zoom_flow models) ----

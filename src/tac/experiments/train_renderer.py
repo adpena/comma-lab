@@ -275,6 +275,22 @@ def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
     p.add_argument("--kl-distill-temperature", type=float, default=None,
                    help="Softmax temperature for KL distillation (default: from "
                         "profile, else 2.0).")
+    # Lane PS (per-class SegNet weighting). Per memory
+    # `project_research_survey_20260420` — research-grade, never
+    # implemented. SegNet predicts 5-class segmentation; cheap classes
+    # (road, sky) and costly classes (lane mark, vehicle) are averaged
+    # uniformly today. When supplied, the per-pixel SegNet contribution
+    # of `scorer_loss` / `scorer_loss_cached` AND the auxiliary
+    # `kl_distill_segnet_only` are multiplied by the weight at each
+    # pixel's GT-argmax class. The CSV is parsed via
+    # tac.losses.parse_class_weights_csv (5 floats, non-negative, not all
+    # zero) so typo'd values fail loud at boot.
+    p.add_argument("--segnet-class-weights", type=str, default=None,
+                   help="Lane PS: CSV of 5 per-class weights for the "
+                        "SegNet loss term and the auxiliary KL distill "
+                        "(e.g., '1,5,5,1,1' to boost lane + boundary "
+                        "classes). Default None / empty = uniform "
+                        "weighting (byte-identical to baseline).")
 
     p.add_argument("--subsample", type=int, default=4,
                    help="Train on 1/N of pairs per epoch")
@@ -315,6 +331,9 @@ def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
                    help="Conv2d padding mode (profile default 'zeros'; renderer profiles use 'replicate')")
     p.add_argument("--use-dsconv", action="store_true", default=None,
                    help="Depthwise-separable convolutions")
+    p.add_argument("--use-ghost", action="store_true", default=None,
+                   help="Lane GH: GhostConv2d (Han et al. CVPR 2020) — halves "
+                        "renderer params via primary conv + cheap depthwise ghost branch")
     p.add_argument("--use-zoom-flow", action="store_true", default=None,
                    help="GREEN profile: 4ch MotionPredictor + RadialZoomWarp")
     # Lane S (2026-04-27): self-compressing renderer (Szabolcs 2301.13142).
@@ -469,6 +488,21 @@ def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
                    default=str(_upstream),
                    help="Path to upstream/ for auth eval (defaults to repo upstream).")
 
+    # Lane W (2026-04-27): hard-pair weighted self-compression. The
+    # per-pair weight tensor is produced by experiments/profile_pair_sensitivity.py
+    # and is a (N_pairs,) float32 tensor where the top-K hardest pairs (by
+    # 100*seg + sqrt(10*pose) contribution) are weighted ``--hard-weight``
+    # and the rest stay at 1.0. The per-pair scalar multiplies BOTH the
+    # scorer loss AND any added Lagrangian rate penalty (Lane S SC codec)
+    # so the per-channel learnable bit-depth allocation responds to
+    # hard-pair gradient. See feedback_overfit_is_the_goal +
+    # feedback_posenet_tracking + feedback_curriculum_must_use_full_score.
+    p.add_argument("--pair-loss-weights", type=str, default=None,
+                   help="Path to a (N_pairs,) float32 tensor produced by "
+                        "experiments/profile_pair_sensitivity.py. When set, per-step "
+                        "loss is scaled by pair_loss_weights[pair_idx_int]. The shape "
+                        "MUST match the dataset's n_total pairs (typically 600).")
+
     args = p.parse_args(argv)
 
     # Apply profile defaults, then CLI overrides
@@ -501,6 +535,12 @@ def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
                                   "padding_mode", "zeros")
     args.use_dsconv = _resolve(getattr(args, "use_dsconv", None),
                                 "use_dsconv", False)
+    # Lane GH 2026-04-27: GhostConv2d arch flag — same dead-resolver pattern
+    # as use_dsconv. Without this resolver, profiles that set use_ghost=True
+    # would silently train with use_ghost=False (288K dense conv instead of
+    # 144K ghost conv) and the param-count smoke check would fail.
+    args.use_ghost = _resolve(getattr(args, "use_ghost", None),
+                                "use_ghost", False)
     args.use_zoom_flow = _resolve(getattr(args, "use_zoom_flow", None),
                                    "use_zoom_flow", False)
     # Lane S: SC codec resolution (2026-04-27)
@@ -592,6 +632,29 @@ def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
                                        "kl_distill_weight", 0.0)
     args.kl_distill_temperature = _resolve(getattr(args, "kl_distill_temperature", None),
                                             "kl_distill_temperature", 2.0)
+    # Lane PS (per-class SegNet weighting) resolver. Default sentinel is
+    # ``None`` / empty string. Profile key + CLI flag share the standard
+    # _resolve() rules (CLI > profile > default). Parsed lazily into a
+    # tensor below — at parse time we run the same fail-loud validation
+    # as `experiments/optimize_poses.py` so a typo'd CSV trips at boot,
+    # not 30 min into training.
+    args.segnet_class_weights = _resolve(
+        getattr(args, "segnet_class_weights", None),
+        "segnet_class_weights", None,
+    )
+    # Parse the CSV into a (5,) float tensor (or None for the disabled
+    # path). Stored on args under a non-CLI attribute so the loss call
+    # sites can fetch it without re-parsing every iteration.
+    from tac.losses import parse_class_weights_csv as _parse_pcw
+    args._segnet_class_weights_tensor = _parse_pcw(
+        args.segnet_class_weights, num_classes=5,
+    )
+    if args._segnet_class_weights_tensor is not None:
+        print(
+            f"[lane-ps] SegNet per-class weights ACTIVE: "
+            f"{args._segnet_class_weights_tensor.tolist()}",
+            flush=True,
+        )
     # Yousfi #5 council wiring (2026-04-26): WILDE/SHIRAZ/DEN profiles set
     # use_uncertainty_loss=True with weights 0.02-0.05 but train_renderer.py
     # had no resolver — feature was DEAD CODE in profile (same class of bug
@@ -902,7 +965,7 @@ def pretrain_loss(rendered_pair: torch.Tensor, gt_pair: torch.Tensor) -> torch.T
 # build_renderer() at the construction site.
 _RESUMABLE_ARCH_KEYS = (
     "pose_dim", "base_ch", "mid_ch", "embed_dim", "motion_hidden", "depth",
-    "use_zoom_flow", "use_dsconv", "use_dilation", "padding_mode",
+    "use_zoom_flow", "use_dsconv", "use_ghost", "use_dilation", "padding_mode",
 )
 
 
@@ -1346,6 +1409,7 @@ def train(args: argparse.Namespace):
             motion_type=args.motion_type,
             use_zoom_flow=args.use_zoom_flow,
             use_dsconv=args.use_dsconv,
+            use_ghost=args.use_ghost,
             padding_mode=args.padding_mode,
             use_dilation=args.use_dilation,
             pose_dim=getattr(args, "pose_dim", 0) or 0,
@@ -1524,6 +1588,7 @@ def train(args: argparse.Namespace):
             "depth": args.depth,
             "use_zoom_flow": bool(args.use_zoom_flow),
             "use_dsconv": bool(args.use_dsconv),
+            "use_ghost": bool(args.use_ghost),
             "use_dilation": bool(args.use_dilation),
             "padding_mode": args.padding_mode,
             "variant": args.variant,
@@ -1577,6 +1642,50 @@ def train(args: argparse.Namespace):
     # Initialized uniform; updated each epoch from per-step scorer loss.
     pair_difficulty = torch.ones(n_total, dtype=torch.float32)
     last_phase = 0
+
+    # Lane W: optional per-pair loss weights (produced offline by
+    # experiments/profile_pair_sensitivity.py). When None, no scaling is
+    # applied (legacy behaviour). When loaded, the (n_total,) tensor must
+    # match the pair count exactly — the per-step training loop indexes
+    # via pair_idx_int (== start // 2, the canonical 0..n_total-1 pair id).
+    pair_loss_weights: torch.Tensor | None = None
+    pair_loss_weights_path = getattr(args, "pair_loss_weights", None)
+    if pair_loss_weights_path:
+        _plw_p = Path(pair_loss_weights_path)
+        if not _plw_p.exists():
+            raise FileNotFoundError(
+                f"--pair-loss-weights file not found: {_plw_p}"
+            )
+        _plw = torch.load(_plw_p, map_location="cpu", weights_only=False)
+        if not isinstance(_plw, torch.Tensor):
+            raise TypeError(
+                f"--pair-loss-weights at {_plw_p} must be a torch.Tensor, "
+                f"got {type(_plw).__name__}"
+            )
+        if _plw.ndim != 1 or _plw.shape[0] != n_total:
+            raise ValueError(
+                f"--pair-loss-weights shape {tuple(_plw.shape)} does not match "
+                f"dataset's n_total={n_total}. Re-run profile_pair_sensitivity.py "
+                f"on the same masks/video pairing used for training."
+            )
+        if not torch.isfinite(_plw).all():
+            raise ValueError(
+                f"--pair-loss-weights contains non-finite entries (NaN/Inf) at "
+                f"{_plw_p}; refuse to train against a corrupt weight vector."
+            )
+        if (_plw < 0).any():
+            raise ValueError(
+                f"--pair-loss-weights contains negative entries at {_plw_p}; "
+                f"per-pair loss multipliers must be >= 0."
+            )
+        pair_loss_weights = _plw.to(torch.float32)
+        print(
+            f"[train] Lane W: loaded {n_total} per-pair weights from "
+            f"{_plw_p}  min={pair_loss_weights.min().item():.3f} "
+            f"max={pair_loss_weights.max().item():.3f} "
+            f"mean={pair_loss_weights.mean().item():.3f} "
+            f"hard={(pair_loss_weights > 1.0).sum().item()} pairs"
+        )
 
     for epoch in range(start_epoch, args.epochs):
         current_epoch = epoch
@@ -1751,15 +1860,23 @@ def train(args: argparse.Namespace):
                 # computed without roundtrip, so they don't match the roundtripped
                 # gt_pair. Force recomputation through the roundtripped gt_pair.
                 _cached_gt = None if args.eval_roundtrip else gt_scorer_cache.get(start)
+                # Lane PS: per-class SegNet weights tensor (None = uniform
+                # / byte-identical to baseline). Parsed once at args
+                # resolver time so this is a cheap attribute read.
+                _pcw = getattr(args, "_segnet_class_weights_tensor", None)
                 if _cached_gt is not None:
                     _gt_pose_6 = _cached_gt["pose_6"].to(device)
                     _gt_seg_soft = _cached_gt["seg_soft"].to(device)
                     loss, pd, sd = scorer_loss_cached(
                         rendered_pair, _gt_pose_6, _gt_seg_soft, posenet, segnet,
+                        class_weights=_pcw,
                     )
                     del _gt_pose_6, _gt_seg_soft
                 else:
-                    loss, pd, sd = scorer_loss(rendered_pair, gt_pair, posenet, segnet)
+                    loss, pd, sd = scorer_loss(
+                        rendered_pair, gt_pair, posenet, segnet,
+                        class_weights=_pcw,
+                    )
 
             # Trick 3: Even-frame SegNet skip
             # If frame_t1 (start+1) is even-indexed, SegNet won't evaluate it.
@@ -1881,6 +1998,9 @@ def train(args: argparse.Namespace):
                     kl_loss, _kl_seg = kl_distill_segnet_only(  # KL_RAW_PAIRS_OK:rendered_pair was reassigned to roundtripped output at L1642
                         rendered_pair, gt_pair, segnet,
                         temperature=args.kl_distill_temperature,
+                        class_weights=getattr(
+                            args, "_segnet_class_weights_tensor", None,
+                        ),
                     )
                     loss = loss + args.kl_distill_weight * kl_loss
 
@@ -1928,6 +2048,16 @@ def train(args: argparse.Namespace):
                     lambda_rate=_lambda,
                 )
                 loss = loss + _rate_pen
+
+            # Lane W (2026-04-27): per-pair loss weighting. Scales BOTH the
+            # scorer loss AND the SC Lagrangian penalty (already added above)
+            # by pair_loss_weights[pair_idx_int] so the per-channel learnable
+            # bit-depth allocation is steered to protect the hardest pairs.
+            # No-op when --pair-loss-weights wasn't passed.
+            if pair_loss_weights is not None:
+                _w = pair_loss_weights[pair_idx_int]
+                # Cast on-device so we don't add a CPU/CUDA sync per step.
+                loss = loss * _w.to(loss.device)
 
             scaled_loss = loss / accum
 
@@ -2133,6 +2263,7 @@ def train(args: argparse.Namespace):
                 "pose_dim": getattr(args, "pose_dim", 0) or 0,
                 "use_zoom_flow": args.use_zoom_flow,
                 "use_dsconv": args.use_dsconv,
+                "use_ghost": args.use_ghost,
                 "use_dilation": args.use_dilation,
                 "padding_mode": args.padding_mode,
                 "blend_mode": args.blend_mode,
@@ -2413,6 +2544,7 @@ def train(args: argparse.Namespace):
             motion_type=arch.get("motion_type", "learned_cnn"),
             use_zoom_flow=arch["use_zoom_flow"],
             use_dsconv=arch["use_dsconv"],
+            use_ghost=arch.get("use_ghost", False),
             padding_mode=arch["padding_mode"],
             use_dilation=arch["use_dilation"],
             pose_dim=arch.get("pose_dim", 0) or 0,

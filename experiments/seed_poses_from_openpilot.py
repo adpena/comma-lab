@@ -177,13 +177,26 @@ def main() -> int:
             log.error("masks file not found: %s", masks_path)
             return 1
         log.info("loading masks from %s for fallback", masks_path)
-        masks = torch.load(masks_path, map_location="cpu", weights_only=True)
-        # Coerce to long if needed.
-        if masks.dtype != torch.long:
-            masks = masks.long()
-        # If masks have a channel dim (N, 1, H, W) squeeze it.
-        if masks.dim() == 4 and masks.shape[1] == 1:
-            masks = masks.squeeze(1)
+        # 2026-04-27 codex finding fix: support both .mkv (decode) and .pt
+        # (torch.load). The remote_lane_os_supercombo_seed_tto.sh launcher
+        # passes masks.mkv, but the original code only handled torch.load
+        # which crashed on the AV1 video bytes.
+        if masks_path.suffix.lower() in (".mkv", ".mp4", ".webm"):
+            from tac.mask_codec import decode_masks
+            masks = decode_masks(masks_path)
+            # decode_masks returns (N, H, W) long tensor of class indices
+            if masks.dtype != torch.long:
+                masks = masks.long()
+        else:
+            masks = torch.load(
+                masks_path, map_location="cpu", weights_only=True
+            )
+            # Coerce to long if needed.
+            if masks.dtype != torch.long:
+                masks = masks.long()
+            # If masks have a channel dim (N, 1, H, W) squeeze it.
+            if masks.dim() == 4 and masks.shape[1] == 1:
+                masks = masks.squeeze(1)
         seed_poses = fallback_seed_from_masks(masks)
         used_fallback = True
 
