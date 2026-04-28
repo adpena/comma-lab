@@ -167,6 +167,7 @@ class ArchiveManifest:
     # archive_dir/zoom_scalars.bin (lines 2076-2090), but build_submission_archive
     # had no way to put it in the archive. Now wired.
     zoom_scalars_bin: bool = False
+    foveation_params_bin: bool = False
 
     def required_files(self) -> list[str]:
         mapping = {
@@ -183,6 +184,7 @@ class ArchiveManifest:
             "mini_posenet_bin": "mini_posenet.bin",
             "posenet_targets_bin": "posenet_targets.bin",
             "zoom_scalars_bin": "zoom_scalars.bin",
+            "foveation_params_bin": "foveation_params.bin",
         }
         if self.masks_mkv and self.masks_amrc:
             raise ValueError(
@@ -586,6 +588,7 @@ def build_submission_archive(
     optimized_embedding_pt: Path | str | None = None,
     gradient_corrections_bin: Path | str | None = None,
     zoom_scalars_bin: Path | str | None = None,
+    foveation_params_bin: Path | str | None = None,
     manifest: ArchiveManifest = RENDERER_SUBMISSION_MANIFEST,
     validate: bool = True,
     use_brotli: bool = False,
@@ -630,6 +633,7 @@ def build_submission_archive(
         "optimized_embedding.pt": Path(optimized_embedding_pt) if optimized_embedding_pt else None,
         "gradient_corrections.bin": Path(gradient_corrections_bin) if gradient_corrections_bin else None,
         "zoom_scalars.bin": Path(zoom_scalars_bin) if zoom_scalars_bin else None,
+        "foveation_params.bin": Path(foveation_params_bin) if foveation_params_bin else None,
     }
 
     required = set(manifest.required_files())
