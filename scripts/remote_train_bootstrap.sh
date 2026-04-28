@@ -157,8 +157,12 @@ print('provenance:', json.dumps(prov, indent=2))
     [ -f "$WORKSPACE/README.md" ] || { echo "FATAL: README.md missing — setuptools install will fail. rsync the full repo."; exit 1; }
     # 2026-04-26: canonical via pyproject.toml [project.optional-dependencies.runtime]
     # — adding a new dep means editing pyproject.toml, NOT this bootstrap.
-    # ensurepip first so pip exists even on a stripped-down container image.
-    "$PYBIN" -m ensurepip --upgrade 2>&1 | tail -1
+    # 2026-04-28: skip ensurepip if pip already importable (PyTorch container
+    # ships pip 26.x; ensurepip downgrade to 24.0 crashes — see
+    # `feedback_setup_full_ensurepip_crash` memory entry).
+    if ! "$PYBIN" -c "import pip" 2>/dev/null; then
+        "$PYBIN" -m ensurepip --upgrade 2>&1 | tail -1
+    fi
     "$PYBIN" -m pip install -q --upgrade pip 2>&1 | tail -1
     "$PYBIN" -m pip install -q -e ".[runtime]" 2>&1 | tail -3
 

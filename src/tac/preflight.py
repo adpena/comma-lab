@@ -366,6 +366,15 @@ def preflight_all(
         check_remote_scripts_probe_nvdec_early(strict=True, verbose=verbose)
         check_resume_from_state_dict_shape_compat(strict=True, verbose=verbose)
 
+        # 2026-04-28: 2 more strict meta-bug checks (35, 36) from observed
+        # patterns this session:
+        # - tmux kill-server kills OTHER lanes' sessions (would cascade-fail
+        #   shared-host runs; caught myself doing this in quick_setup)
+        # - unconditional ensurepip crashes on PyTorch containers with newer
+        #   pip than the bundled wheels (setup_full bug, just fixed)
+        check_no_tmux_kill_server_in_lane_scripts(strict=True, verbose=verbose)
+        check_no_unconditional_ensurepip(strict=True, verbose=verbose)
+
     # 2. Training inputs (only if profile + tto_frames provided)
     if profile_name and tto_frames_path and gt_poses_path and masks_path and profile_arch:
         preflight_training_inputs(
@@ -7065,6 +7074,112 @@ def check_resume_from_state_dict_shape_compat(strict: bool = False, verbose: boo
             + "\n  • ".join(violations) +
             "\nFix: add a pre-flight shape check before training launch. "
             "Lane S motion.head bug 2026-04-28."
+        )
+    return violations
+
+
+# ════════════════════════════════════════════════════════════════════════════
+# Check 35 (35th meta-bug): scripts must NOT call `tmux kill-server`
+#                          (kills OTHER lanes' tmux sessions on shared host)
+# ════════════════════════════════════════════════════════════════════════════
+#
+# 2026-04-28: I caught myself writing `tmux kill-server` in a quick_setup
+# inline command — it would have killed any other lane's tmux session
+# running on a shared Vast.ai instance. The canonical safe alternative
+# is `tmux kill-session -t <session_name>` for the specific session, or
+# just rely on `tmux new-session -d` to NOT clobber existing.
+def check_no_tmux_kill_server_in_lane_scripts(strict: bool = False, verbose: bool = False) -> list[str]:
+    """Scripts must NOT call ``tmux kill-server`` — kills ALL tmux
+    sessions on the host, not just the lane's. Use
+    ``tmux kill-session -t <name>`` instead, or rely on the absence
+    of a same-named session.
+    """
+    violations: list[str] = []
+    repo_root = Path(__file__).resolve().parent.parent.parent
+    scripts_dir = repo_root / "scripts"
+    if not scripts_dir.is_dir():
+        return violations
+    n_scripts = 0
+    for script_path in sorted(scripts_dir.glob("remote_*.sh")):
+        n_scripts += 1
+        text = script_path.read_text(errors="ignore")
+        non_comment_text = "\n".join(
+            line if not line.lstrip().startswith("#") else " " * len(line)
+            for line in text.split("\n")
+        )
+        if "tmux kill-server" in non_comment_text:
+            violations.append(
+                f"{script_path}: calls 'tmux kill-server' which kills ALL "
+                f"tmux sessions on the host. Use 'tmux kill-session -t <name>' "
+                f"for specific session, or rely on tmux new-session's existing-"
+                f"session detection."
+            )
+    if verbose:
+        if violations:
+            print(f"  [no-tmux-kill-server] {len(violations)}/{n_scripts} script(s) violate")
+        else:
+            print(f"  [no-tmux-kill-server] OK: {n_scripts} script(s) clean")
+    if strict and violations:
+        raise PreflightError(
+            "TMUX KILL-SERVER VIOLATIONS — at least one remote script "
+            f"calls 'tmux kill-server':\n  • " + "\n  • ".join(violations)
+        )
+    return violations
+
+
+# ════════════════════════════════════════════════════════════════════════════
+# Check 36 (36th meta-bug): scripts must NOT unconditionally call
+#                          `python -m ensurepip --upgrade`
+# ════════════════════════════════════════════════════════════════════════════
+#
+# 2026-04-28: setup_full Stage 2 hit `subprocess.CalledProcessError` because
+# the PyTorch container ships pip 26.x but ensurepip carries pip 24.0 wheels
+# — ensurepip refuses to "upgrade" to an older version. The canonical fix
+# is to skip ensurepip if pip is already importable.
+def check_no_unconditional_ensurepip(strict: bool = False, verbose: bool = False) -> list[str]:
+    """Scripts must guard ensurepip --upgrade with an `if ! python -c
+    "import pip"` check, or skip ensurepip entirely on PyTorch containers
+    that ship newer pip than the bundled wheels.
+    """
+    violations: list[str] = []
+    repo_root = Path(__file__).resolve().parent.parent.parent
+    scripts_dir = repo_root / "scripts"
+    if not scripts_dir.is_dir():
+        return violations
+    n_scripts = 0
+    for script_path in sorted(scripts_dir.glob("remote_*.sh")):
+        n_scripts += 1
+        text = script_path.read_text(errors="ignore")
+        non_comment_text = "\n".join(
+            line if not line.lstrip().startswith("#") else " " * len(line)
+            for line in text.split("\n")
+        )
+        if "ensurepip" not in non_comment_text:
+            continue
+        # Find the line(s) containing ensurepip and check if guarded.
+        # Look for `if ! ... pip` or `import pip` within 5 lines BEFORE.
+        lines = non_comment_text.split("\n")
+        for i, line in enumerate(lines):
+            if "ensurepip" in line and "--upgrade" in line:
+                window = "\n".join(lines[max(0, i-5):i+1])
+                if "import pip" not in window and "if !" not in window:
+                    violations.append(
+                        f"{script_path}:{i+1}: unconditional 'ensurepip "
+                        f"--upgrade'. Wrap with `if ! \"$PYBIN\" -c \"import "
+                        f"pip\" 2>/dev/null; then ensurepip; fi`. The "
+                        f"PyTorch container ships pip 26.x; bundled "
+                        f"wheels (pip 24.0) trigger downgrade-refusal crash."
+                    )
+    if verbose:
+        if violations:
+            print(f"  [no-uncond-ensurepip] {len(violations)}/{n_scripts} script(s) violate")
+        else:
+            print(f"  [no-uncond-ensurepip] OK: {n_scripts} script(s) clean")
+    if strict and violations:
+        raise PreflightError(
+            "UNCONDITIONAL ENSUREPIP VIOLATIONS — at least one script "
+            f"calls ensurepip --upgrade without a pip-check guard:\n  • "
+            + "\n  • ".join(violations)
         )
     return violations
 
