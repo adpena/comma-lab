@@ -461,6 +461,9 @@ def preflight_all(
         check_python_files_compile(strict=True, verbose=verbose)
         check_shell_scripts_syntax_clean(strict=True, verbose=verbose)
         check_lane_anchor_files_exist_locally(strict=True, verbose=verbose)
+        # Check 70: pytest --collect-only catches missing imports + fixture errors.
+        # Runs in ~1.3s for 4306 tests. STRICT @ 0.
+        check_pytest_collection_clean(strict=True, verbose=verbose)
 
         # 2026-04-29: Check 43 — controlled-baseline methodology for new
         # Tuna-2 lanes. WARN-ONLY initially because it only applies to
@@ -8246,6 +8249,71 @@ def check_launcher_tarball_includes_lane_anchors(
     if violations and strict:
         raise MetaBugViolation(
             "LAUNCHER TARBALL MISSING LANE ANCHORS:\n"
+            + "\n".join(f"  • {v}" for v in violations)
+        )
+    return violations
+
+
+def check_pytest_collection_clean(
+    repo_root: Path | None = None,
+    strict: bool = False,
+    verbose: bool = True,
+    test_dirs: tuple[str, ...] = ("src/tac/tests",),
+    timeout: int = 60,
+) -> list[str]:
+    """Check 70 — `pytest --collect-only` must succeed cleanly.
+
+    PROACTIVE: catches missing imports, fixture errors, conftest bugs that
+    only surface at test-collection time. py_compile (Check 67) catches
+    syntax; this catches imports + decorator errors.
+
+    Runs in ~1.5s for 4306 tests. STRICT @ 0 collection errors.
+    """
+    import subprocess
+
+    root = repo_root or REPO_ROOT
+    violations: list[str] = []
+    for d in test_dirs:
+        d_path = root / d
+        if not d_path.exists():
+            continue
+        try:
+            proc = subprocess.run(
+                [".venv/bin/python", "-m", "pytest", "--collect-only", "-q",
+                 str(d_path)],
+                cwd=root, capture_output=True, text=True, timeout=timeout,
+            )
+            if proc.returncode != 0:
+                # Extract the error lines (typically prefixed by "ERROR" or "_____ ERRORS _____")
+                err_lines = []
+                in_errors = False
+                for line in (proc.stdout + "\n" + proc.stderr).splitlines():
+                    if "ERROR" in line or "Error" in line or "error" in line[:10]:
+                        in_errors = True
+                    if in_errors:
+                        err_lines.append(line)
+                violations.append(
+                    f"{d}: pytest --collect-only returncode={proc.returncode}. "
+                    f"First 3 errors: " + " | ".join(err_lines[:3])[:300]
+                )
+        except subprocess.TimeoutExpired:
+            violations.append(f"{d}: pytest --collect-only timed out ({timeout}s)")
+        except FileNotFoundError:
+            if verbose:
+                print(f"  [pytest-collect] SKIP: .venv/bin/python missing")
+            return []
+
+    if verbose:
+        if violations:
+            print(f"  [pytest-collect] {len(violations)} violation(s):")
+            for v in violations:
+                print(f"    • {v}")
+        else:
+            print(f"  [pytest-collect] OK: all test dirs collect clean")
+
+    if violations and strict:
+        raise MetaBugViolation(
+            "PYTEST COLLECTION ERRORS:\n"
             + "\n".join(f"  • {v}" for v in violations)
         )
     return violations

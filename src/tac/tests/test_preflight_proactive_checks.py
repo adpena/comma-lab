@@ -152,3 +152,12 @@ def test_check_69_env_default_resolved(tmp_path):
 def test_check_69_real_codebase_clean():
     v = check_lane_anchor_files_exist_locally(strict=False, verbose=False)
     assert v == [], f"unexpected: {v}"
+
+
+# ---------------- Check 70 (pytest --collect-only) ----------------
+
+def test_check_70_real_codebase_collects_clean():
+    """The actual pact test suite must collect without errors."""
+    from tac.preflight import check_pytest_collection_clean
+    v = check_pytest_collection_clean(strict=False, verbose=False)
+    assert v == [], f"unexpected: {v}"
