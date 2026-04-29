@@ -1,0 +1,10 @@
+{
+  "archive_bytes": 694074,
+  "inflate_seconds": 43.294339595000004,
+  "eval_seconds": 551.909899336,
+  "total_seconds": 595.239477847,
+  "posenet_dist": 0.00305354,
+  "segnet_dist": 0.00400711,
+  "rate": 0.01848622,
+  "score": 1.04
+}
