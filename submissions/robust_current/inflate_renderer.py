@@ -1786,7 +1786,7 @@ def _inline_load_int4_lzma2(raw_bytes: bytes, device: str = "cpu") -> dict:
 def _load_renderer(renderer_path: str, device: str) -> nn.Module:
     """Load renderer from a .bin or .pt checkpoint.
 
-    Supports seven checkpoint formats:
+    Supports the following checkpoint formats:
         1. DPSM binary: DPSIMSRenderer (magic b"DPSM")
         2. ASYM binary: AsymmetricPairGenerator (magic b"ASYM")
         3. FP4A binary: FP4-quantized AsymmetricPairGenerator (magic b"FP4A")
@@ -1798,7 +1798,10 @@ def _load_renderer(renderer_path: str, device: str) -> nn.Module:
         8. SZv1 binary (Lane SZ): szabolcs no-masks SegMap renderer
            (magic b"SZv1") — block-FP weights + tar.xz outer compression;
            reconstructs class-prob LUT in code rather than from masks.mkv.
-        9. PyTorch pickle: state_dict or PairGenerator checkpoint
+        9. QFAI binary (Lane Q-FAITHFUL): TRUE 1:1 Quantizr PR #55 replica
+           (magic b"QFAI") — JointFrameGenerator with NO motion/warp,
+           single-mask + FiLM-on-pose dual-head architecture (~88K params).
+       10. PyTorch pickle: state_dict or PairGenerator checkpoint
 
     All variants produce the same `(B, 2, H, W, 3)` HWC pair output via
     `model(mask_t, mask_t1)`, so the rest of the inflate pipeline (mask
@@ -2049,6 +2052,92 @@ def _load_renderer(renderer_path: str, device: str) -> nn.Module:
               file=sys.stderr)
         return model
 
+    # ── QFAI format: Lane Q-FAITHFUL JointFrameGenerator (Quantizr-replica) ──
+    # Layout:
+    #   [4] magic = b"QFAI"
+    #   [4] header_len (uint32 LE)
+    #   [header_len] JSON header with arch fields (num_classes, pose_dim,
+    #       cond_dim, depth_mult)
+    #   [...] torch.save bytes of generator.state_dict() (FP32 or FP4-packed
+    #       per-tensor — the loader detects via header.fp4_packed flag).
+    # No motion module, no warp. The loaded model exposes the standard
+    # `model(mask_t, mask_t1, pose=...)` -> (B, 2, H, W, 3) HWC pair API
+    # via the _QuantizrFaithfulInflateShim wrapper so the rest of the inflate
+    # pipeline (mask loading, pose loading, frame writing, upscale) is
+    # unchanged. mask_t is intentionally discarded — Quantizr's premise is
+    # that mask_t1 + pose6 fully determines both reconstructions.
+    if magic == b"QFAI":
+        import io as _io
+        import struct as _struct
+        from tac.quantizr_faithful_renderer import (
+            build_quantizr_faithful_renderer,
+        )
+
+        offset = 4
+        header_len = _struct.unpack("<I", raw_bytes[offset:offset + 4])[0]
+        offset += 4
+        header = json.loads(raw_bytes[offset:offset + header_len].decode("utf-8"))
+        offset += header_len
+
+        gen = build_quantizr_faithful_renderer(
+            num_classes=int(header.get("num_classes", 5)),
+            pose_dim=int(header.get("pose_dim", 6)),
+            cond_dim=int(header.get("cond_dim", 48)),
+            depth_mult=int(header.get("depth_mult", 1)),
+        )
+        # state_dict body — torch.save'd dict (FP32 weights for V1; future
+        # FP4-packed variant can flip header["fp4_packed"]=True and call the
+        # FP4 dequantizer here).
+        state = torch.load(
+            _io.BytesIO(raw_bytes[offset:]),
+            map_location=device,
+            weights_only=True,
+        )
+        gen.load_state_dict(state, strict=True)
+        gen.to(device).eval()
+
+        class _QuantizrFaithfulInflateShim(torch.nn.Module):
+            """Inflate-side adapter: model(mask_t, mask_t1, pose=...) ->
+            (B, 2, H, W, 3) HWC float pair in [0, 255], matching the
+            AsymmetricPairGenerator output contract.
+
+            mask_t is discarded (Quantizr's design: only mask_t1 enters the
+            shared trunk; both frame1 and frame2 are read off the same
+            embedding via two parallel heads, with frame1 FiLM-conditioned
+            on the pose vector and frame2 unconditional).
+            """
+
+            def __init__(self, gen):
+                super().__init__()
+                self.gen = gen
+                self.pose_dim = int(gen.pose_dim)
+                # Heuristic flags so downstream introspection (e.g.
+                # _is_asymmetric_model) routes us through the pair-generation
+                # path. We need the asym-style invocation since the inflate
+                # loop iterates pairs, not single masks.
+                self.q_faithful = True
+
+            def forward(self, mask_t, mask_t1, pose=None, **_kwargs):
+                _ = mask_t  # unused per Quantizr's premise
+                if pose is None:
+                    pose = torch.zeros(
+                        mask_t1.shape[0], self.pose_dim,
+                        device=mask_t1.device, dtype=torch.float32,
+                    )
+                f1, f2 = self.gen(mask_t1, pose)  # each (B, 3, H, W) [0, 255]
+                pair = torch.stack([f1, f2], dim=1)  # (B, 2, 3, H, W)
+                return pair.permute(0, 1, 3, 4, 2).contiguous()  # (B, 2, H, W, 3)
+
+        wrapped = _QuantizrFaithfulInflateShim(gen).to(device).eval()
+        elapsed = time.monotonic() - t0
+        n_params = sum(p.numel() for p in gen.parameters())
+        print(
+            f"  Loaded QFAI JointFrameGenerator (Quantizr-faithful) from .bin "
+            f"({len(raw_bytes):,} bytes, {n_params:,} params, {elapsed:.1f}s)",
+            file=sys.stderr,
+        )
+        return wrapped
+
     # ── DPSM format: DPSIMSRenderer ──
     if magic == b"DPSM":
         try:
@@ -2157,9 +2246,16 @@ def _load_renderer(renderer_path: str, device: str) -> nn.Module:
 # Frame generation + write
 # ============================================================
 def _is_asymmetric_model(model: nn.Module) -> bool:
-    """Detect whether a loaded model is an AsymmetricPairGenerator."""
+    """Detect whether a loaded model uses the pair-generation API.
+
+    Returns True for AsymmetricPairGenerator AND for the Q-FAITHFUL
+    JointFrameGenerator inflate shim (`q_faithful=True`). Both expose
+    `model(mask_t, mask_t1)` -> `(B, 2, H, W, 3)` HWC pair, so the
+    downstream pair-iteration code path serves both.
+    """
     return (
         type(model).__name__ == "AsymmetricPairGenerator"
+        or getattr(model, "q_faithful", False)
         or (hasattr(model, "renderer") and hasattr(model, "motion")
             and hasattr(model.motion, "output_channels")
             and getattr(model.motion, "output_channels", 2) in (4, 6))

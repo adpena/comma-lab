@@ -3112,6 +3112,118 @@ QUANTIZR_REPLICA_88K_HALFFRAME_ANNEALED = {
 }
 
 
+# ── Lane Q-FAITHFUL: TRUE 1:1 Quantizr PR #55 architecture replica ────────
+# Council brief 2026-04-28. Sherlock audit
+# (.omx/research/quantizr_replica_audit_20260428.md) proved that prior Lane V
+# / Lane K / "DSConv Quantizr-killer" replicas all kept the wrong
+# architectural family (motion module + warp + dual-mask). PR #55's actual
+# architecture, per Quantizr's own description and verbatim from his
+# inflate.py:198-223:
+#
+#   class JointFrameGenerator(nn.Module):
+#       def forward(self, mask2, pose6):
+#           shared_feat = self.shared_trunk(mask2, coords)
+#           pred_frame2 = self.frame2_head(shared_feat)              # static
+#           cond_emb = self.pose_mlp(pose6)
+#           pred_frame1 = self.frame1_head(shared_feat, cond_emb)    # FiLM(pose)
+#           return pred_frame1, pred_frame2
+#
+# NO motion module. NO warp. NO optical flow. NO dual-mask. The PR body
+# verbatim: "dropping optical flow and using Feature-wise Linear Modulation
+# on pose vectors instead of using both masks. As a result the mask video
+# only needs to encode half as many frames."
+#
+# This profile points train_renderer.py at the new
+# `tac.quantizr_faithful_renderer.build_quantizr_faithful_renderer` builder.
+# variant="quantizr_faithful" — train_renderer dispatches to the new arm
+# instead of the build_renderer() warp-based default.
+#
+# Predicted band [0.40, 0.80] [contest-CUDA]:
+#   * Floor 0.40: Quantizr ships at 0.33; we use Lane A's scorer-measured
+#     poses (load-bearing per `project_baseline_poses_load_bearing`) +
+#     DSConv (matches Quantizr) + KL distill T=2.0 (matches) + 5-stage QAT.
+#   * Anchor 0.55: matches Quantizr 0.33 ± 0.5 lane variance — first true
+#     replica should land within his neighborhood.
+#   * Ceiling 0.80: Lane A 1.15 minus rate gain. The 88K renderer (~64KB
+#     FP4) saves ~225KB vs Lane A's 290KB renderer; at 25 bits/byte rate
+#     factor that's a 0.30 rate reduction. Even if PoseNet/SegNet match
+#     Lane A exactly, archive shrinks; ceiling is just rate-floored.
+#
+# Costs: ~$8 for 12h on RTX 4090. Single bet, no in-flight A/B.
+LANE_Q_FAITHFUL_88K = {
+    "experiment_type": "renderer_training",
+    # Architecture dispatch flag — train_renderer must read this to pick the
+    # JointFrameGenerator builder instead of build_renderer().
+    "variant": "quantizr_faithful",
+    # Standard arch keys are NOT consumed by the Q-FAITHFUL builder — its
+    # config is hard-coded inside tac.quantizr_faithful_renderer.
+    # JointFrameGenerator (c1=56, c2=64, cond_dim=48, depth_mult=1) per
+    # Quantizr's exact PR-#55 spec. The values below satisfy preflight's
+    # arch-key validator but are IGNORED at model construction time. The
+    # logical mapping is documented in qf_* keys.
+    "base_ch": 56,                 # IGNORED — maps logically to c1=56
+    "mid_ch": 64,                  # IGNORED — maps logically to c2=64
+    "depth": 1,                    # IGNORED — depth_mult=1 in Q-FAITHFUL
+    "padding_mode": "zeros",       # IGNORED — DSConv uses k//2 padding
+    "pose_dim": 6,                 # CONSULTED — FiLM input vector dim
+    # Documentation-only target params (Quantizr's PR claims 88K; our
+    # build_quantizr_faithful_renderer() lands at 87,836 which is within
+    # the test's 86K-90K band). NOT a profile resolver — the real values
+    # are hard-coded in tac.quantizr_faithful_renderer.JointFrameGenerator
+    # (num_classes=5, cond_dim=48, depth_mult=1).
+    # eval_roundtrip is NON-NEGOTIABLE per CLAUDE.md.
+    "eval_roundtrip": True,
+    "posetto_noise_std": 0.5,
+    # Loss configuration: Quantizr's recipe per his compress.py:
+    #   * KL distill on SegNet logits at T=2.0 — `kl_distill_segnet_only`
+    #   * L1 pixel loss
+    #   * scorer loss (PoseNet+SegNet) for the score-aligned signal
+    "loss_mode": "focal_ste",
+    "segnet_loss_mode": "hinge",
+    "hinge_margin": 0.5,
+    "focal_gamma": 2.0,
+    "error_boost": 1.0,
+    "pose_weight": 10.0,
+    "seg_weight": 100.0,
+    "pixel_weight": 1.0,            # L1 on pixels — Quantizr's primary photometric
+    # KL distill — POST-FIX weight (raw KL ~2.7, scorer ~0.05; weight 0.002
+    # puts KL contribution at ~10% of scorer = canonical Hinton 2015).
+    "kl_distill_weight": 0.002,
+    "kl_distill_temperature": 2.0,
+    # EMA decay 0.997 — Quantizr's 5-stage pipeline uses EMA for FP4 export.
+    "ema_decay": 0.997,
+    "use_per_class_weights": True,   # lane markings 15x (Yousfi)
+    # 5-stage QAT pipeline: anchor -> finetune -> joint -> QAT -> final.
+    # Same epoch budget as Lane V for cost parity (3000 epochs total).
+    "phase1_epochs": 600,            # anchor: pixel L1 + scorer warmup
+    "phase2_epochs": 1500,           # finetune: + KL distill
+    "phase3_epochs": 400,            # joint: hard-pair fine-tune
+    "phase4_epochs": 400,            # QAT: FakeQuantFP4 enable
+    "phase5_epochs": 100,            # final: consolidation at FP4
+    "lr": 5e-4,
+    "phase1_lr": 1e-3,
+    "phase2_lr": 5e-4,
+    "phase3_lr": 1e-4,
+    "phase4_lr": 5e-5,
+    "phase5_lr": 1e-5,
+    "phase1_batch_size": 8,
+    "phase2_batch_size": 8,
+    "phase3_batch_size": 8,
+    # 5-stage quantization (our advantage over Quantizr's vanilla):
+    "fp4_codebook": "residual",
+    "fp4_robust_scale": True,
+    "fp4_stochastic": True,
+    # Hard-frame curriculum (matches Lane V).
+    "hard_frame_ratio": 0.3,
+    "error_replay_every": 100,
+    "checkpoint_every": 100,
+    "eval_every": 50,
+    "log_every": 25,
+    "seed": 1234,
+    "deterministic": True,
+}
+
+
 # ── Lane K: DSConv Quantizr-killer (88K params from-scratch, FULL-FRAME) ──
 # Council brief 2026-04-27. Lane A holds the 1.15 [contest-CUDA] frontier with
 # the dilated-h64 baseline arch (288K params, ~290KB FP32 renderer.bin, total
@@ -3766,6 +3878,12 @@ PROFILES = {
     "quantizr_replica_88k_halfframe_annealed": (
         QUANTIZR_REPLICA_88K_HALFFRAME_ANNEALED
     ),
+    # Lane Q-FAITHFUL: TRUE 1:1 Quantizr PR #55 architecture replica
+    # (JointFrameGenerator, NO motion module, NO warp). The Sherlock audit
+    # (.omx/research/quantizr_replica_audit_20260428.md) proved that Lane V
+    # / Lane K kept the wrong architectural family. This is the corrected
+    # rebuild. Predicted band [0.40, 0.80] [contest-CUDA].
+    "q_faithful_dilated_88k": LANE_Q_FAITHFUL_88K,
     # Lane K: Quantizr-class 88K from-scratch retrain on FULL-frame masks.
     # Orthogonal to Lane V (half-frame) and Lane S (self-compression). Same
     # arch (88,996 params, DSConv + FiLM + Fridrich + KL distill) but ships

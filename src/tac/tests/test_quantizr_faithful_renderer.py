@@ -280,5 +280,132 @@ def test_builder_returns_jointframegenerator() -> None:
     assert FrameHead is FiLMFrameHead
 
 
+# ────────────────────────────────────────────────────────────────────────────
+# QFAI export/load roundtrip + inflate-shim integration
+# ────────────────────────────────────────────────────────────────────────────
+
+
+def test_quantizr_faithful_export_roundtrip(tmp_path) -> None:
+    """save_qfai -> load_qfai produces a model with bit-identical outputs."""
+    from tac.quantizr_faithful_export import load_qfai, save_qfai
+
+    torch.manual_seed(7)
+    model_a = build_quantizr_faithful_renderer().eval()
+    out_path = tmp_path / "model.qfai.bin"
+    n_bytes = save_qfai(model_a, out_path)
+    assert n_bytes > 0
+    # Magic bytes correct
+    assert out_path.read_bytes()[:4] == b"QFAI"
+
+    model_b = load_qfai(out_path, device="cpu").eval()
+
+    # Same arch fields
+    assert model_b.num_classes == model_a.num_classes
+    assert model_b.pose_dim == model_a.pose_dim
+    assert model_b.cond_dim == model_a.cond_dim
+
+    # Bit-identical outputs on a fixed input
+    mask2 = torch.randint(0, 5, (2, 384, 512), dtype=torch.long)
+    pose6 = torch.randn(2, 6)
+    with torch.no_grad():
+        f1_a, f2_a = model_a(mask2, pose6)
+        f1_b, f2_b = model_b(mask2, pose6)
+    assert torch.equal(f1_a, f1_b), (
+        f"frame1 differs after roundtrip; max |diff| = "
+        f"{(f1_a - f1_b).abs().max().item()}"
+    )
+    assert torch.equal(f2_a, f2_b), (
+        f"frame2 differs after roundtrip; max |diff| = "
+        f"{(f2_a - f2_b).abs().max().item()}"
+    )
+
+
+def test_inflate_shim_returns_hwc_pair(tmp_path) -> None:
+    """The QFAI inflate dispatch wraps the model in a shim that returns the
+    AsymmetricPairGenerator-style (B, 2, H, W, 3) HWC pair so the rest of
+    inflate_renderer.py routes through the pair iteration code path
+    unmodified.
+    """
+    from tac.quantizr_faithful_export import save_qfai
+
+    torch.manual_seed(11)
+    model = build_quantizr_faithful_renderer().eval()
+    out_path = tmp_path / "model.qfai.bin"
+    save_qfai(model, out_path)
+
+    # Import the inflate-side loader (it lives in the submission, not tac).
+    import importlib.util
+    inflate_path = (
+        Path(__file__).resolve().parents[3]
+        / "submissions" / "robust_current" / "inflate_renderer.py"
+    )
+    spec = importlib.util.spec_from_file_location("_inflate_under_test", inflate_path)
+    inflate_mod = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(inflate_mod)
+
+    wrapped = inflate_mod._load_renderer(str(out_path), device="cpu")
+
+    # Quack-test: shim flag set, _is_asymmetric_model returns True
+    assert getattr(wrapped, "q_faithful", False)
+    assert inflate_mod._is_asymmetric_model(wrapped)
+    assert wrapped.pose_dim == 6
+
+    # Forward through the asym-style API: (mask_t, mask_t1, pose=...) ->
+    # (B, 2, H, W, 3) HWC float in [0, 255].
+    B = 2
+    mask_t = torch.zeros(B, 384, 512, dtype=torch.long)  # discarded
+    mask_t1 = torch.randint(0, 5, (B, 384, 512), dtype=torch.long)
+    pose = torch.randn(B, 6)
+    with torch.no_grad():
+        pair = wrapped(mask_t, mask_t1, pose=pose)
+    assert pair.shape == (B, 2, 384, 512, 3), pair.shape
+    assert torch.isfinite(pair).all()
+    assert 0.0 <= pair.min().item() and pair.max().item() <= 255.0
+
+
+def test_inflate_shim_drops_mask_t_invariant(tmp_path) -> None:
+    """Strict mask_t-discard invariant via the inflate shim path.
+
+    The inflate shim must EXPLICITLY discard mask_t. Varying mask_t
+    must not change the output (Quantizr's design: only mask_t1 enters
+    the trunk).
+    """
+    from tac.quantizr_faithful_export import save_qfai
+
+    torch.manual_seed(13)
+    model = build_quantizr_faithful_renderer().eval()
+    out_path = tmp_path / "model.qfai.bin"
+    save_qfai(model, out_path)
+
+    import importlib.util
+    inflate_path = (
+        Path(__file__).resolve().parents[3]
+        / "submissions" / "robust_current" / "inflate_renderer.py"
+    )
+    spec = importlib.util.spec_from_file_location("_inflate_under_test_mask_t", inflate_path)
+    inflate_mod = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(inflate_mod)
+
+    wrapped = inflate_mod._load_renderer(str(out_path), device="cpu")
+
+    B = 2
+    mask_t1 = torch.randint(0, 5, (B, 384, 512), dtype=torch.long)
+    pose = torch.zeros(B, 6)
+    mask_t_a = torch.zeros(B, 384, 512, dtype=torch.long)
+    mask_t_b = torch.randint(0, 5, (B, 384, 512), dtype=torch.long)
+    with torch.no_grad():
+        pair_a = wrapped(mask_t_a, mask_t1, pose=pose)
+        pair_b = wrapped(mask_t_b, mask_t1, pose=pose)
+    assert torch.equal(pair_a, pair_b), (
+        "Inflate shim is supposed to discard mask_t, but output changes "
+        "when mask_t is varied — bug in the shim."
+    )
+
+
+# Keep imports needed for the inflate-shim tests at module level so they
+# error early if the path resolves wrong.
+from pathlib import Path  # noqa: E402  (intentional bottom import)
+
+
 if __name__ == "__main__":
     pytest.main([__file__, "-v"])

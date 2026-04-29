@@ -2064,6 +2064,67 @@ def train(args: argparse.Namespace):
             beta_start=args.beta_start,
             beta_end=args.beta_end,
         )
+    elif args.variant == "quantizr_faithful":
+        # Lane Q-FAITHFUL — TRUE 1:1 Quantizr PR #55 replica. Builds a
+        # JointFrameGenerator (NO motion, NO warp, single-mask + FiLM-pose
+        # dual-head) wrapped in a thin shim that exposes the AsymmetricPair
+        # API so the rest of the training loop / loss / scorer plumbing
+        # (which expects model(mask_t, mask_t1) -> (B, 2, H, W, 3) HWC) is
+        # unchanged. The shim discards mask_t (per Quantizr's design — only
+        # mask_t1 is used) and stacks the (frame1, frame2) outputs.
+        from tac.quantizr_faithful_renderer import (
+            build_quantizr_faithful_renderer,
+        )
+
+        class _QuantizrFaithfulShim(torch.nn.Module):
+            """Adapt JointFrameGenerator to the (mask_t, mask_t1) -> pair
+            API the training loop assumes.
+
+            Quantizr's forward(mask2, pose6) -> (frame1, frame2) returns
+            CHW frames in [0, 255]. The training loop expects HWC pairs
+            in (B, 2, H, W, 3). We discard mask_t (Quantizr's premise: the
+            odd-frame mask alone fully determines both reconstructions
+            via the FiLM-conditioned dual head).
+            """
+
+            def __init__(self, gen):
+                super().__init__()
+                self.gen = gen
+                # Surface the FiLM pose contract for downstream introspection.
+                self.pose_dim = int(gen.pose_dim)
+                # Mark this as the Q-FAITHFUL family so inflate / heuristics
+                # can detect it without isinstance brittleness.
+                self.q_faithful = True
+
+            def forward(self, mask_t, mask_t1, pose=None, **_kwargs):
+                # mask_t is intentionally unused — Quantizr's premise is
+                # that mask_t1 (the odd-frame mask) plus pose6 fully
+                # determines both frame reconstructions.
+                _ = mask_t
+                if pose is None:
+                    # Default zero-pose if caller didn't supply one. The
+                    # FiLM bias path keeps frame1 well-defined.
+                    pose = torch.zeros(
+                        mask_t1.shape[0], self.pose_dim,
+                        device=mask_t1.device, dtype=torch.float32,
+                    )
+                f1, f2 = self.gen(mask_t1, pose)  # each (B, 3, H, W) [0, 255]
+                # Stack to (B, 2, 3, H, W) then permute -> (B, 2, H, W, 3)
+                pair = torch.stack([f1, f2], dim=1)
+                pair = pair.permute(0, 1, 3, 4, 2).contiguous()
+                return pair
+
+        gen = build_quantizr_faithful_renderer(
+            num_classes=5,
+            pose_dim=int(getattr(args, "pose_dim", 0) or 6) or 6,
+        )
+        model = _QuantizrFaithfulShim(gen)
+        n_params = sum(p.numel() for p in model.parameters())
+        print(
+            f"[lane-q-faithful] JointFrameGenerator built: {n_params:,} params "
+            f"(target ~88K). NO motion, NO warp, single-mask + FiLM-pose.",
+            flush=True,
+        )
     else:
         # 2026-04-26 council fix (arch drift): pass ALL profile-resolved arch
         # flags. Previously use_zoom_flow / use_dsconv / padding_mode /
