@@ -500,3 +500,24 @@ NUCLEAR experiments queued (zero-GPU, run TODAY):
 1. Half-frame mask AV1 sweep at 384×512 (CRF 24..48) — int8 overflow already fixed in encode_masks_monochrome (R25 reviewer corrected my battleplan claim)
 2. SHIRAZ Phase 3 → immediate auth eval before any v2 deploy
 3. Even-frame-warp-from-odd at inflate (Quantizr paradigm) — same architectural change as #1, NOT additive (R25 reviewer caught my double-counting)
+
+## 2026-04-29 PM — Lane STC FALSIFICATION WITHDRAWN (MPS-PROXY error)
+
+**Process error documented for posterity.**
+
+I declared clean-source STC FALSIFIED based on a local MPS-encoder run that produced 21,270,086 bytes vs Lane A's 421,483 AV1 bytes. Committed memory + commit `ae0a6a54` calling the lane DEAD.
+
+**The measurement was invalid.** The encoder runs SegNet to produce clean argmax, then encodes that argmax via STC. SegNet was running on MPS. CLAUDE.md non-negotiable forbids using MPS-derived measurements for ANY strategic decision: PoseNet drifts 23×, SegNet drifts 2×, final score drifts 2.5× MPS-vs-CUDA (verified 2026-04-25). STC encodes pixel labels → MPS-argmax bytes ≠ CUDA-argmax bytes.
+
+**Falsification withdrawn.** Memory amended:
+- `project_lane_stc_clean_source_FALSIFIED_20260429.md` — frontmatter + status revision section added
+- `MEMORY.md` index entry rewritten
+- `project_grand_council_final_designs_20260429.md` — correction section added
+
+**Required action:** re-run clean-source STC on Modal T4 CUDA (~$0.20, ~10 min) before any kill/keep decision. Council's #1 hope is back on the table.
+
+**Lessons for the bug-class catalog:**
+- Local-machine "smoke" runs of strategic encoders that depend on scorer outputs MUST run on CUDA, not MPS.
+- "It's just a smoke test" is the same rationalization that produced the 23× PoseNet drift incident on 2026-04-25.
+- The strict-mode check `check_no_mps_fallback_default` covers DEFAULT device selection but does not cover EXPLICIT --device mps in CLI invocations. Consider adding a STRICT check that warns when --device mps is passed to any strategic-measurement script.
+
