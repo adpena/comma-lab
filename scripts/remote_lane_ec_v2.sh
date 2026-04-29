@@ -88,8 +88,10 @@ print("cuda:", torch.cuda.get_device_name(0))
 PY
 
 log "=== Stage 0b: sync code and install editable package ==="
-# Nuke local junk from prior failed deploys, then sync to origin/main exactly.
-git fetch origin main && git reset --hard origin/main
+# CODE PARITY: launcher tarball is authoritative — do NOT git reset --hard.
+# Doing so wipes local-only anchor files (archive_lane_a.zip, baseline dirs,
+# etc.) that the launcher just SCP'd. The tarball IS the parity mechanism.
+# (memory: feedback_git_reset_nukes_anchors_20260429)
 "$PYBIN" -m pip install -e .
 
 for f in "$BASE_ARCHIVE" "$CHECKPOINT" "$GT_POSES" "$TAC_UPSTREAM_DIR/videos/0.mkv"; do

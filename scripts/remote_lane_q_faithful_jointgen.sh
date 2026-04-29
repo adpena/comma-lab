@@ -139,14 +139,10 @@ bash "$WORKSPACE/scripts/probe_nvdec.sh" --ensure-dali || {
 
 # Code parity (CLAUDE.md "Remote code parity required"). Pull latest before
 # starting work; if uncommitted local changes exist on remote, abort.
-log "  canonical git sync: fetch origin main + reset --hard origin/main..."
-# Nuke local junk from prior failed deploys, then sync to origin/main exactly.
-cd "$WORKSPACE" && git fetch origin main && git reset --hard origin/main 2>&1 | tee -a "$LOG_DIR/run.log" || {
-    log "FATAL: git fetch/reset failed -- network or upstream issue."
-    exit 2
-}
-NEW_HASH=$(cd "$WORKSPACE" && git rev-parse HEAD 2>/dev/null || echo "no-git")
-log "  remote git HEAD now at: $NEW_HASH"
+# CODE PARITY: launcher tarball is authoritative — do NOT git reset --hard.
+# Doing so wipes local-only anchor files (archive_lane_a.zip, baseline dirs,
+# etc.) that the launcher just SCP'd. The tarball IS the parity mechanism.
+# (memory: feedback_git_reset_nukes_anchors_20260429)
 
 # Pre-flight: required artifacts present. Anchor on Lane A poses (verified
 # 1.15 [contest-CUDA] + scorer-measured + load-bearing).

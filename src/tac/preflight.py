@@ -440,6 +440,13 @@ def preflight_all(
         # canonical anchor. STRICT @ 0 violations after launcher fix landed.
         check_launcher_tarball_includes_lane_anchors(strict=True, verbose=verbose)
 
+        # 2026-04-29 AM: Check 66 (no-git-reset-hard-in-lane-scripts).
+        # `git reset --hard origin/main` in lane Stage-1 wipes local-only
+        # anchor files (archive_lane_a.zip, baseline dirs) that the launcher
+        # just SCP'd. 5/6 TIER-1 lanes crashed 2026-04-29 from this bug.
+        # STRICT @ 0 violations after stripping pattern from all 11 scripts.
+        check_no_git_reset_hard_in_remote_lane_scripts(strict=True, verbose=verbose)
+
         # 2026-04-29: Check 43 — controlled-baseline methodology for new
         # Tuna-2 lanes. WARN-ONLY initially because it only applies to
         # remote_lane scripts added/modified after 2026-04-29 and is a
@@ -536,16 +543,13 @@ def preflight_all(
             strict=True, verbose=verbose,
         )
 
-        # 2026-04-28: Check 57 — lane scripts MUST use canonical
-        # `git fetch origin main && git reset --hard origin/main` for
-        # remote_code_parity, NOT bare `git pull --ff-only`. The latter
-        # aborts on stale Vast.ai workspaces with uncommitted local
-        # changes from prior failed deploys (Lane Q-FAITHFUL crashed
-        # this way). Reference: feedback_canonical_git_sync_pattern_20260428.
-        # Lands at 0 live violations after Fix 1 → straight to STRICT.
-        check_lane_scripts_use_canonical_git_sync(
-            strict=True, verbose=verbose,
-        )
+        # 2026-04-29: Check 57 RETIRED. The pattern it required
+        # (`git fetch origin main && git reset --hard origin/main`) caused
+        # the 2026-04-29 5/6-TIER-1-lane crash by wiping local-only anchor
+        # files SCP'd by the launcher. Replaced by Check 66 which PROHIBITS
+        # the destructive pattern. The launcher tarball is now the canonical
+        # parity mechanism. (memory: feedback_git_reset_nukes_anchors_20260429)
+        # check_lane_scripts_use_canonical_git_sync(strict=True, verbose=verbose)
 
         # 2026-04-28 deep hardening pass 3 dimension 2: 4 NEW meta-bug
         # checks (58, 59, 60, 61). All ship STRICT initially because they
@@ -957,6 +961,8 @@ def _scan_python_for_forbidden(path: Path) -> list[str]:
 def _scan_bash_text_for_forbidden(path: Path) -> list[str]:
     """Scan a bash file for nohup-watcher patterns and ad-hoc python invocations."""
     violations: list[str] = []
+    if path.is_dir() or not path.is_file():
+        return violations
     text = path.read_text()
     if "nohup" in text and "&" in text and "while pgrep" in text:
         violations.append(
@@ -986,6 +992,8 @@ def check_codebase_drift(strict: bool = True) -> list[str]:
 
     # 2. Bash scripts outside whitelist
     for sh_path in REPO_ROOT.glob("experiments/**/*.sh"):
+        if sh_path.is_dir():
+            continue  # recovered_*.sh is a directory, not a script
         rel = str(sh_path.relative_to(REPO_ROOT))
         if rel not in ALLOWED_BASH_PATHS:
             all_violations.append(
@@ -8220,6 +8228,68 @@ def check_launcher_tarball_includes_lane_anchors(
         raise MetaBugViolation(
             "LAUNCHER TARBALL MISSING LANE ANCHORS:\n"
             + "\n".join(f"  • {v}" for v in violations)
+        )
+    return violations
+
+
+def check_no_git_reset_hard_in_remote_lane_scripts(
+    repo_root: Path | None = None,
+    strict: bool = False,
+    verbose: bool = True,
+) -> list[str]:
+    """Check 44 — `git reset --hard origin/main` in remote_lane_*.sh wipes
+    local-only anchor files (archive_lane_a.zip, baseline dirs, etc.) that
+    the launcher just SCP'd. The tarball IS the parity mechanism — never
+    re-sync from origin/main on the remote.
+
+    2026-04-29 incident: 5/6 TIER-1 lanes crashed at Stage 1 with
+    "FATAL: missing Lane G v3 anchor archive" because canonical git-sync
+    pattern (introduced today) ran `git reset --hard origin/main` after
+    extract, deleting the local-only anchor archives the launcher had
+    bundled. ~$1.50 wasted, 0 training output.
+
+    Detects executable `git fetch ... && git reset --hard ...` lines
+    (ignores comments). Returns violations; raises MetaBugViolation if strict.
+    """
+    root = repo_root or REPO_ROOT
+    scripts_dir = root / "scripts"
+    if not scripts_dir.is_dir():
+        if verbose:
+            print(f"  [no-git-reset-hard] OK: scripts/ missing — skipping")
+        return []
+
+    violations: list[str] = []
+    for sh in sorted(scripts_dir.glob("remote_lane_*.sh")):
+        try:
+            text = sh.read_text(errors="ignore")
+        except (FileNotFoundError, PermissionError):
+            continue
+        for lineno, line in enumerate(text.splitlines(), 1):
+            stripped = line.lstrip()
+            if stripped.startswith("#"):
+                continue
+            # Match executable `git reset --hard` (not in comments)
+            if re.search(r"\bgit\s+reset\s+--hard\b", line):
+                violations.append(
+                    f"{sh.relative_to(root)}:{lineno}: executable `git reset --hard` "
+                    f"wipes local-only anchor files SCP'd by launcher. "
+                    f"Trust the tarball — remove this line."
+                )
+
+    if verbose:
+        if violations:
+            print(f"  [no-git-reset-hard] {len(violations)} violation(s):")
+            for v in violations:
+                print(f"    • {v}")
+        else:
+            print(f"  [no-git-reset-hard] OK: 0 lane scripts run `git reset --hard`")
+
+    if violations and strict:
+        raise MetaBugViolation(
+            "LANE SCRIPTS RUNNING `git reset --hard` WILL WIPE LOCAL-ONLY ANCHORS:\n"
+            + "\n".join(f"  • {v}" for v in violations)
+            + "\n\nRemove the `git fetch + git reset --hard` block from each script. "
+            "The launcher tarball is the canonical parity mechanism."
         )
     return violations
 

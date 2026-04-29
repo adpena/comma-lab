@@ -111,9 +111,10 @@ bash "$WORKSPACE/scripts/probe_nvdec.sh" || {
 
 # Stage 1: code parity + install + AppleDouble cleanup.
 cost_guard
-log "=== Stage 1: canonical git sync + pip install -e . ==="
-# Nuke local junk from prior failed deploys, then sync to origin/main exactly.
-git fetch origin main && git reset --hard origin/main
+# CODE PARITY: launcher tarball is authoritative — do NOT git reset --hard.
+# Doing so wipes local-only anchor files (archive_lane_a.zip, baseline dirs,
+# etc.) that the launcher just SCP'd. The tarball IS the parity mechanism.
+# (memory: feedback_git_reset_nukes_anchors_20260429)
 "$PYBIN" -u -m pip install -e .
 
 # AppleDouble cleanup before any GT video access (Lane F-V2 bug).
