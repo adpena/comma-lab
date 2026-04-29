@@ -18,6 +18,7 @@ from __future__ import annotations
 import pytest
 import torch
 
+import tac.bit_allocator as bit_allocator
 from tac.bit_allocator import (
     DEFAULT_ALPHA,
     DEFAULT_MAX_BITS,
@@ -215,3 +216,68 @@ def test_defaults_are_safe():
     assert DEFAULT_MIN_BITS >= 1
     assert DEFAULT_MAX_BITS <= 8
     assert 0 < DEFAULT_ALPHA <= 1.0
+
+
+# ── Round 10 bracket growth regression ───────────────────────────────────
+
+
+def test_round10_counterexample_spends_budget_after_bracket_growth():
+    imp = {"l.weight": torch.tensor([100.0, 1.0])}
+    bits = allocate_bits(imp, total_bits=12, alpha=0.5, min_bits=1, max_bits=8)
+    total = int(bits["l.weight"].sum().item())
+    assert total >= 11
+    assert total <= 12
+
+
+def test_round10_budget_fully_spent_when_no_weight_at_max_bits():
+    imp = {"l.weight": torch.tensor([1.0, 4.0, 9.0, 16.0])}
+    bits = allocate_bits(imp, total_bits=18, alpha=0.5, min_bits=1, max_bits=8)
+    b = bits["l.weight"].to(torch.int64)
+    assert int(b.sum().item()) == 18
+    assert int(b.max().item()) < 8
+
+
+def test_codex_finding3_bracket_grows_when_initial_c_hi_underspends():
+    """Codex finding 3 anchor — VALUE/SIGN regression.
+
+    With importance=[100, 1] and total_bits=12 the previous allocator
+    converged to bits=[8, 1] (sum=9) because c_hi was capped at the value
+    that saturates the highest-importance weight. The bracket-growth fix
+    must spend the full budget by giving the low-importance weight more
+    bits while the high-importance weight stays at max_bits.
+
+    This test pins both the SIGN of the fix (more bits to the low-imp
+    weight) and the VALUE (sum lands within 1 of total_bits).
+    """
+    imp = {"l.weight": torch.tensor([100.0, 1.0])}
+    bits = allocate_bits(imp, total_bits=12, alpha=0.5, min_bits=1, max_bits=8)
+    b = bits["l.weight"].tolist()
+    assert b[0] == 8, f"high-imp weight should saturate at max_bits=8, got {b[0]}"
+    assert b[1] >= 4, f"low-imp weight should rise above min_bits, got {b[1]}"
+    total = b[0] + b[1]
+    assert total >= 11, (
+        f"total bits should approach budget=12 (got {total}); "
+        f"bracket-growth fix is regressed"
+    )
+    assert total <= 12
+
+
+def test_round10_bracket_growth_safety_cap_prevents_infinite_loop(monkeypatch):
+    calls = {"n": 0}
+
+    def fake_bits_for_c(flat_imp, c, alpha, min_bits, max_bits):
+        calls["n"] += 1
+        return torch.full_like(flat_imp, min_bits, dtype=torch.int64)
+
+    monkeypatch.setattr(bit_allocator, "_bits_for_c", fake_bits_for_c)
+    bits = bit_allocator.allocate_bits(
+        {"l.weight": torch.tensor([1.0, 2.0])},
+        total_bits=3,
+        alpha=0.5,
+        min_bits=1,
+        max_bits=8,
+    )
+
+    total = int(bits["l.weight"].sum().item())
+    assert 2 <= total <= 3
+    assert calls["n"] < 120

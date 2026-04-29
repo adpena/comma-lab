@@ -170,7 +170,54 @@ def allocate_bits(
     # Choose c_hi so c_hi * max_imp^alpha = max_bits + 1 (everyone saturates)
     c_hi = float(max_bits + 1) / max(max_imp ** alpha, 1e-30)
 
+    # Round 26 / Codex finding 3 fix — bracket growth.
+    #
+    # The previous bracket had a subtle blind spot: if the highest-importance
+    # weight saturates at max_bits well before c_hi is reached, the search
+    # interval can collapse to a region where the *low-importance* weights
+    # never escape min_bits. Concrete counterexample (importance=[100, 1],
+    # alpha=0.5, total_bits=12, max_bits=8): c_hi was ~0.9, the high-imp
+    # weight already clamped to 8, the low-imp weight stayed at 1, total=9
+    # — leaving 3 bits unspent forever.
+    #
+    # Fix: if c_hi is feasible (sum ≤ total_bits) — meaning even the upper
+    # bracket leaves slack — grow c_hi exponentially until either (a) it
+    # exceeds budget so we have a real upper bound for bisection, or (b)
+    # we hit a hard cap on growth iterations (safety guard for the
+    # all-saturated case where every weight is already at max_bits and
+    # growing c further can never spend more bits).
     best_bits: torch.Tensor | None = None
+    SAFETY_GROWTH_ITERS = 48
+    growth = 0
+    prev_upper_sum: int | None = None
+    while True:
+        upper_candidate = _bits_for_c(flat_imp, c_hi, alpha, min_bits, max_bits)
+        upper_sum = int(upper_candidate.sum().item())
+        if upper_sum > total_bits:
+            break  # bracket is now valid for bisection
+        if upper_sum == ceiling_total:
+            # Every weight already at max_bits — growing c more cannot
+            # increase the sum. Accept this saturated allocation directly.
+            best_bits = upper_candidate
+            c_lo = c_hi  # collapse bracket so the bisection loop is a no-op
+            break
+        # Slack remains AND not all saturated → grow c_hi.
+        # The current c_hi is feasible (sum ≤ total_bits) so it's a valid
+        # candidate; record it as the running best before stretching.
+        best_bits = upper_candidate
+        # If growth doesn't change the sum (e.g. _bits_for_c is degenerate
+        # like a monkeypatched constant), stop — further doubling is wasted.
+        if prev_upper_sum is not None and upper_sum == prev_upper_sum:
+            break
+        prev_upper_sum = upper_sum
+        c_lo = c_hi
+        c_hi *= 2.0
+        growth += 1
+        if growth >= SAFETY_GROWTH_ITERS:
+            # Safety cap. Should be unreachable in practice (each doubling
+            # roughly halves the slack), but guarantees termination.
+            break
+
     for _ in range(bisect_iters):
         c_mid = 0.5 * (c_lo + c_hi)
         candidate = _bits_for_c(flat_imp, c_mid, alpha, min_bits, max_bits)
