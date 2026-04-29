@@ -153,3 +153,43 @@ must be able to distinguish operation-succeeded vs operation-skipped.
 
 Total: 3 HIGH bugs fixed across 3 files. Preflight remains green.
 Review tracker selftest passes (8323 entities, 7/7 tests).
+
+---
+
+## Codex review addendum — 2026-04-28 PM (3 more findings, same patterns)
+
+Lane EC + Lane EBR went LIVE on Vast.ai with all three bugs latent. Codex
+caught them before the lanes hit their failure stages (gradient corruption +
+EMA crash + budget under-spend). Three new commits:
+
+| Commit | File | Bug class | Severity |
+|---|---|---|---|
+| `6de52150` | `src/tac/bit_allocator.py` | Bisection bracket too tight → budget under-spent | MEDIUM |
+| `38f81188` | `experiments/precompute_gradient_corrections.py` | Sign-only int8 writes + fast-model byte budget vs real packed format | HIGH |
+| `fed09e10` | `src/tac/training.py` | Module registered AFTER EMA snapshot → KeyError on update | HIGH |
+
+### Patterns we now catch (regression-test anchored)
+
+1. **"Sign-only quantization throws away gradient magnitude"** — encode the
+   actual gradient values via per-tensor symmetric quantization. Anchor:
+   `test_greedy_preserves_gradient_magnitude_codex_finding1` (asserts SIGN
+   of negative gradient survives + at least one |val| < 127).
+2. **"Closed-form byte estimate vs actual packed format"** — never trust
+   `bytes ≈ overhead + n × per_pixel`. Always feed the result through the
+   actual packer in a drop-tail loop. Anchor:
+   `test_enforce_packed_byte_cap_drops_tail_to_fit_budget_codex_finding1_bug2`.
+3. **"Module registered after EMA/optimizer snapshot"** — register first,
+   snapshot second. Plus harden the snapshot to tolerate late additions.
+   Anchor: `test_codex_finding2_ema_safe_when_module_added_after_construction`.
+4. **"Monotonic bisection bracket on the wrong side of target"** — test the
+   upper bracket value first; grow exponentially until it crosses. Anchor:
+   `test_codex_finding3_bracket_grows_when_initial_c_hi_underspends`.
+
+### Same shape as the prior audit
+Patterns 1, 2, 3 above are all variants of the **silent-success** class from
+the original audit: a tool reports success (returns gradients, packs an
+archive, snapshots EMA) but the underlying state is corrupt. Detection
+requires VALUE/SIGN regression tests at the boundary, not just SUCCESS
+return-code asserts. Going forward: every Codex round 1 of a new lane MUST
+include at least one anchor that asserts a NUMERIC property of the produced
+artifact, not just "returned without exception".
