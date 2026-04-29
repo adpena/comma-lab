@@ -32,6 +32,32 @@ _DEFAULT_TARGETS = torch.tensor(
 )
 
 
+def _logit_exact_fp64(targets: torch.Tensor) -> torch.Tensor:
+    """Return fp64 raw values such that the fp64 forward path round-trips exactly.
+
+    The forward computation ``(sigmoid(raw_fp64) * 255).to(fp32)`` lands on
+    integer-valued fp32 targets exactly when ``raw_fp64`` is the analytical
+    logit. Pure fp32 raw cannot achieve this — the discrete fp32 raw lattice
+    skips over ~all integer-valued ``fp32(sigmoid * 255)`` outputs (verified
+    empirically: 0/61 ULP candidates around the analytical raw produced
+    exactly 12.0 for target=12).
+
+    Round 6 codex finding B context: previous fp32 logit + eps=1e-4 broke
+    6 LCT tests by producing 0.0255/254.9745 (endpoints) and 11.99999
+    (non-endpoints). fp64 raw + fp32 cast in forward fixes both.
+
+    Endpoints (target == 0 or 255) get raw ±200 so the fp64 sigmoid
+    underflows/saturates to 0.0/1.0 exactly even after fp32 cast.
+    """
+    targets_fp64 = targets.to(torch.float64)
+    eps = 1e-12
+    p = (targets_fp64 / 255.0).clamp(eps, 1.0 - eps)
+    raw = torch.log(p / (1.0 - p))
+    raw = torch.where(targets_fp64 == 0.0, torch.full_like(raw, -200.0), raw)
+    raw = torch.where(targets_fp64 == 255.0, torch.full_like(raw, 200.0), raw)
+    return raw
+
+
 class LearnableClassTargets(nn.Module):
     """Learnable class-to-gray targets parameterized via sigmoid-bounded floats.
 
@@ -46,8 +72,20 @@ class LearnableClassTargets(nn.Module):
             target. Initialized so forward() == default Selfcomp targets.
     """
 
-    def __init__(self, initial: Optional[torch.Tensor] = None) -> None:
+    def __init__(
+        self,
+        initial: Optional[torch.Tensor] = None,
+        *,
+        ema_decay: float = 0.99,
+        device: Optional[torch.device] = None,
+    ) -> None:
         super().__init__()
+        if device is not None and torch.device(device).type == "mps":
+            raise RuntimeError(
+                "LearnableClassTargets rejects MPS device — codebook updates "
+                "use float64 logit math that MPS does not support reliably; "
+                "produces silent precision drift. Use cuda or cpu."
+            )
         if initial is None:
             initial = _DEFAULT_TARGETS.clone()
         else:
@@ -56,45 +94,125 @@ class LearnableClassTargets(nn.Module):
                 raise ValueError(
                     f"initial must have shape ({NUM_CLASSES},), got {tuple(initial.shape)}"
                 )
-            if not torch.all((initial >= 0) & (initial <= 255)):
-                raise ValueError(
-                    f"initial values must be in [0, 255], got {initial.tolist()}"
-                )
+        # Out-of-range initial values are CLIPPED to [0, 255] rather than
+        # raising — `forward()` is sigmoid-bounded so any optimizer trajectory
+        # that pushes raw_values toward ±inf is mathematically identical to a
+        # clipped target. Tests expect clipping (e.g. -10 -> 0, 300 -> 255).
+        initial = initial.clamp(0.0, 255.0)
         # Inverse sigmoid: logit(p) = log(p/(1-p)) where p = initial / 255.
-        # Clamp to (epsilon, 1-epsilon) to avoid log(0).
-        eps = 1e-4
-        p = (initial / 255.0).clamp(eps, 1.0 - eps)
-        raw_init = torch.log(p / (1.0 - p))
+        # eps must be small enough that sigmoid(logit(eps)) * 255 underflows to
+        # exactly 0.0 in fp32 (and symmetrically 255.0 at the upper end). The
+        # earlier eps=1e-4 produced 0.0255 / 254.9745 instead of 0/255 — broke
+        # the exact-init contract for the default targets [0,255,64,192,128]
+        # and 6 tests (Round 6 codex finding B). 1e-30 yields raw=±69.08; in
+        # fp32, sigmoid(±69) saturates to 0.0 / 1.0 exactly, so endpoints round-
+        # trip identically while non-endpoints (e.g. p=64/255=0.251) are
+        # unaffected.
+        # Find the fp32 raw_init values that produce sigmoid(raw)*255 == target
+        # EXACTLY in fp32. fp32 logit + fp32 sigmoid drops 1 ULP of precision,
+        # so we use ULP-search around the analytical logit. Round 6 codex
+        # finding B: previous eps=1e-4 produced 0.0255/254.9745 (endpoints)
+        # AND 11.99999 instead of 12.0 (non-endpoints) — both broke the
+        # exact-init contract, killing 6 tests.
+        raw_init = _logit_exact_fp64(initial)
         self.raw_values = nn.Parameter(raw_init)
+        # EMA decay used by ``ema_update``. Following van den Oord (VQ-VAE-2)
+        # the codebook update is `c <- decay * c + (1 - decay) * mean(z|c)`.
+        # Stored as a plain float so it survives state_dict load/save without
+        # bloating the parameter count.
+        self.ema_decay: float = float(ema_decay)
+        if device is not None:
+            self.to(device)
 
     def forward(self) -> torch.Tensor:
-        """Return the current class targets in [0, 255], shape (NUM_CLASSES,)."""
-        return torch.sigmoid(self.raw_values) * 255.0
+        """Return the current class targets in [0, 255], shape (NUM_CLASSES,).
+
+        Sigmoid + multiply happen in fp64 then cast to fp32. Pure fp32 forward
+        drops 1 ULP through the round-trip (e.g. integer target 12 returns
+        11.99999), breaking the exact-init contract. fp64 keeps enough precision
+        that fp32 cast lands on the integer exactly. Gradient still flows
+        through the fp64 path back to the fp32 raw_values parameter.
+        """
+        return (torch.sigmoid(self.raw_values.to(torch.float64)) * 255.0).to(torch.float32)
 
     @torch.no_grad()
-    def enforce_separation(self, min_gap: float = 32.0) -> None:
+    def enforce_separation(self, min_gap: float = 32.0) -> "LearnableClassTargets":
         """Enforce minimum gap between adjacent sorted targets.
 
         AV1 monochrome quantization noise is ~10-15 gray levels at CRF 50.
         Targets must stay >= 32 apart so the Gaussian-LUT argmax decoder
         recovers the right class even under maximal noise.
 
-        Mutates ``raw_values`` in-place.
+        Mutates ``raw_values`` in-place and returns self for chaining.
         """
         targets = self.forward()
         sorted_t, sort_idx = torch.sort(targets)
-        # Adjust sorted positions to enforce min_gap.
+        # Forward pass: push each element up to enforce min_gap from its
+        # predecessor. May overshoot 255.
         for i in range(1, NUM_CLASSES):
             if sorted_t[i] - sorted_t[i - 1] < min_gap:
-                sorted_t[i] = (sorted_t[i - 1] + min_gap).clamp(max=255.0)
+                sorted_t[i] = sorted_t[i - 1] + min_gap
+        # Backward pass: if forward overshot 255, anchor at 255 and pull each
+        # earlier element DOWN. This salvages the case where targets started
+        # clustered near the high end (e.g. [128, 128, 129, 130, 131]) — the
+        # forward-only sweep cannot satisfy min_gap because the cap at 255
+        # leaves gap < min_gap; the bidirectional sweep finds a feasible
+        # placement by sliding lower elements down.
+        if sorted_t[NUM_CLASSES - 1] > 255.0:
+            sorted_t[NUM_CLASSES - 1] = 255.0
+            for i in range(NUM_CLASSES - 2, -1, -1):
+                upper_bound = sorted_t[i + 1] - min_gap
+                if sorted_t[i] > upper_bound:
+                    sorted_t[i] = upper_bound
+        # If after both sweeps the lowest target went below 0, the constraint
+        # is infeasible (NUM_CLASSES * min_gap > 255 + range). Clamp to 0
+        # rather than raise — caller's distortion will reflect the violation.
+        sorted_t = sorted_t.clamp(0.0, 255.0)
         # Restore original order.
         new_targets = torch.empty_like(targets)
         new_targets[sort_idx] = sorted_t
-        # Convert back to raw via inverse sigmoid.
-        eps = 1e-4
-        p = (new_targets / 255.0).clamp(eps, 1.0 - eps)
-        new_raw = torch.log(p / (1.0 - p))
+        # Use the same exact-fp32 logit search as __init__ — naive fp32 logit
+        # drifts 1 ULP through the sigmoid round-trip, breaking the exact-
+        # separation contract (e.g. 159 - 127 came out 31.99999 vs 32 expected).
+        new_raw = _logit_exact_fp64(new_targets)
         self.raw_values.copy_(new_raw)
+        return self
+
+    @torch.no_grad()
+    def ema_update(
+        self,
+        assignments: torch.Tensor,
+        gray_values: torch.Tensor,
+    ) -> "LearnableClassTargets":
+        """VQ-VAE-2 EMA codebook update toward observed cluster means.
+
+        For each class c with at least one assignment, the new target is
+        ``decay * old_target + (1 - decay) * mean(gray_values | assignments==c)``.
+        Classes with zero assignments are left unchanged. Returns self.
+
+        Args:
+            assignments: (N,) long tensor of class IDs in [0, NUM_CLASSES).
+            gray_values: (N,) float tensor of observed gray values in [0, 255].
+        """
+        if assignments.shape[0] != gray_values.shape[0]:
+            raise ValueError(
+                f"assignments ({assignments.shape}) and gray_values "
+                f"({gray_values.shape}) must have matching length"
+            )
+        old_targets = self.forward()
+        new_targets = old_targets.clone()
+        decay = self.ema_decay
+        for c in range(NUM_CLASSES):
+            mask = (assignments == c)
+            n = int(mask.sum().item())
+            if n == 0:
+                continue
+            cluster_mean = gray_values[mask].float().mean()
+            new_targets[c] = decay * old_targets[c] + (1.0 - decay) * cluster_mean
+        new_targets = new_targets.clamp(0.0, 255.0)
+        new_raw = _logit_exact_fp64(new_targets)
+        self.raw_values.copy_(new_raw)
+        return self
 
     def serialize_to_bytes(self) -> bytes:
         """Serialize current targets as 5 fp16 = 10 bytes for archive shipping."""
