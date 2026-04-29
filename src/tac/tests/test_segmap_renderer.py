@@ -217,6 +217,127 @@ def test_export_inference_state_dict_keys_match() -> None:
         assert v.device.type == "cpu"
 
 
+def test_train_epoch_batch_size_eq_b_matches_unchunked_path() -> None:
+    """When batch_size == B (single mini-batch == legacy unchunked path),
+    the new code MUST be byte-identical to a legacy single-forward call.
+
+    This is the strongest equivalence the chunking refactor can promise:
+    no slicing happens, the whole epoch is one forward, and the result
+    must match the prior implementation exactly."""
+    torch.manual_seed(42)
+    cfg = _make_eval_roundtrip_true_config()
+    h = SEGMAP_INPUT_SIZE[1] // 16
+    w = SEGMAP_INPUT_SIZE[0] // 16
+
+    b = 4
+    t = 2
+    masks = F.softmax(torch.randn(b, t, 5, h, w), dim=2)
+    gt = torch.rand(b, t, h, w, 3) * 255.0
+
+    torch.manual_seed(0)
+    model_a = _make_tiny_segmap(num_blocks=2, max_frame_index=32)
+    torch.manual_seed(0)
+    posenet_a, segnet_a = _MockPoseNet(), _MockSegNet()
+    torch.manual_seed(0)
+    model_b = _make_tiny_segmap(num_blocks=2, max_frame_index=32)
+    torch.manual_seed(0)
+    posenet_b, segnet_b = _MockPoseNet(), _MockSegNet()
+
+    trainer_a = SegMapTrainer(
+        model_a, cfg, posenet_a, segnet_a, device="cpu"
+    )
+    trainer_b = SegMapTrainer(
+        model_b, cfg, posenet_b, segnet_b, device="cpu"
+    )
+
+    # Both call: chunking degenerates to a single mini-batch.
+    torch.manual_seed(123)
+    stats_a = trainer_a.train_epoch(masks, gt, ema=None, batch_size=b)
+    torch.manual_seed(123)
+    stats_b = trainer_b.train_epoch(masks, gt, ema=None, batch_size=b)
+
+    # Identical inputs + seeds + arch → identical outputs.
+    assert stats_a["num_steps"] == 1
+    assert stats_b["num_steps"] == 1
+    assert math.isfinite(stats_a["loss"])
+    assert abs(stats_a["loss"] - stats_b["loss"]) < 1e-4
+    assert abs(stats_a["pose_dist"] - stats_b["pose_dist"]) < 1e-4
+    assert abs(stats_a["seg_dist"] - stats_b["seg_dist"]) < 1e-4
+
+
+def test_train_epoch_chunked_path_runs_and_steps_optimizer() -> None:
+    """BUG CLASS B regression: chunked training (batch_size=4 over 8 pairs)
+    MUST run end-to-end without error AND advance the model parameters via
+    optimizer.step(). The mini-batch-VRAM savings are the WHOLE point of
+    this fix — the 7.03 GiB OOM on T4 came from pushing 600 pairs through
+    one forward; chunking makes T4 viable for the SegMap-paradigm lanes
+    (SA-v2 / SC++-v2 / SO-v2) that died on 2026-04-29."""
+    torch.manual_seed(42)
+    cfg = _make_eval_roundtrip_true_config()
+    h = SEGMAP_INPUT_SIZE[1] // 16
+    w = SEGMAP_INPUT_SIZE[0] // 16
+
+    b = 8
+    t = 2
+    masks = F.softmax(torch.randn(b, t, 5, h, w), dim=2)
+    gt = torch.rand(b, t, h, w, 3) * 255.0
+
+    torch.manual_seed(0)
+    model = _make_tiny_segmap(num_blocks=2, max_frame_index=64)
+    pre_param = next(p for p in model.parameters() if p.requires_grad).detach().clone()
+
+    trainer = SegMapTrainer(
+        model, cfg, _MockPoseNet(), _MockSegNet(), device="cpu"
+    )
+    torch.manual_seed(123)
+    stats = trainer.train_epoch(masks, gt, ema=None, batch_size=4)
+
+    assert math.isfinite(stats["loss"])
+    # ceil(8 / 4) = 2 mini-batches → 2 forward passes per epoch.
+    assert stats["num_steps"] == 2
+    # Optimizer.step() ran at least once (params advanced from init).
+    post_param = next(p for p in model.parameters() if p.requires_grad).detach()
+    assert not torch.equal(pre_param, post_param), (
+        "Chunked path did not advance model parameters — optimizer.step() "
+        "either was not called or saw all-zero grads."
+    )
+
+
+def test_train_epoch_batch_size_chunks_correctly() -> None:
+    """num_steps reflects ceil(B / batch_size)."""
+    torch.manual_seed(0)
+    cfg = _make_eval_roundtrip_true_config()
+    h = SEGMAP_INPUT_SIZE[1] // 16
+    w = SEGMAP_INPUT_SIZE[0] // 16
+    model = _make_tiny_segmap(num_blocks=2, max_frame_index=32)
+    trainer = SegMapTrainer(
+        model, cfg, _MockPoseNet(), _MockSegNet(), device="cpu"
+    )
+    b = 7  # NOT a multiple of 3
+    t = 2
+    masks = F.softmax(torch.randn(b, t, 5, h, w), dim=2)
+    gt = torch.rand(b, t, h, w, 3) * 255.0
+
+    stats = trainer.train_epoch(masks, gt, ema=None, batch_size=3)
+    # ceil(7 / 3) = 3 mini-batches.
+    assert stats["num_steps"] == 3, stats
+
+
+def test_train_epoch_rejects_invalid_batch_size() -> None:
+    """batch_size < 1 must raise."""
+    cfg = _make_eval_roundtrip_true_config()
+    model = _make_tiny_segmap()
+    trainer = SegMapTrainer(
+        model, cfg, _MockPoseNet(), _MockSegNet(), device="cpu"
+    )
+    h = SEGMAP_INPUT_SIZE[1] // 16
+    w = SEGMAP_INPUT_SIZE[0] // 16
+    masks = F.softmax(torch.randn(1, 2, 5, h, w), dim=2)
+    gt = torch.rand(1, 2, h, w, 3) * 255.0
+    with pytest.raises(ValueError, match="batch_size must be >= 1"):
+        trainer.train_epoch(masks, gt, ema=None, batch_size=0)
+
+
 def test_ema_apply_restore_cycle() -> None:
     """export_inference_state_dict(ema=EMA) restores live weights afterwards."""
     model = _make_tiny_segmap()

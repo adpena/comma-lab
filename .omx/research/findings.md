@@ -970,6 +970,23 @@ This is the **second** "declared dead, found bugged" pattern in 2 days (Lane G K
 
 **Required forward gate:** any future "lane regressed, abandon" verdict must include a 1-paragraph audit of (a) every `--*` flag passed to the subprocess that ran the experiment, vs the target tool's argparse, AND (b) every config-derived auto-discovery path (e.g., `experiments/results/gt_poses.pt`) checked for "would this file actually exist on the target host." If either audit is incomplete, the verdict is `SUSPENDED PENDING AUDIT`, not `ABANDON`.
 
+## 2026-04-29 Reinit: Lane G v3 is current floor; deployment hygiene is the highest lever
+
+**Current measured floor:** Lane G v3 scored **1.05 [contest-CUDA]** with archive bytes 694,074, SegNet 0.00400846, PoseNet 0.00345458, rate 0.01848622, recomputed score 1.0488665. Evidence: `experiments/results/lane_g_v3_landed/contest_auth_eval.json`. Lane A remains the fallback at 1.15 [contest-CUDA].
+
+**Verification completed locally:** canonical E2E smoke passed for `remote_lane_g_v3_corrected_kl_weight`; focused tests `test_canonical_local_e2e_smoke.py`, `test_check_64_e2e_smoke_proof.py`, and `test_contest_auth_eval.py` passed 34/34. Check 64 has zero violations. Check 65 initially had 12 warning-only lane-class gaps; `.omx/state/lane_class_proofs.json` was backfilled with explicit `canonical-local-smoke` plumbing proofs where no class-specific score exists. These backfills are not score claims.
+
+**Snapshot caveat:** upstream snapshot is not fresh. `comma-lab status` reports snapshot commit `ec82c291ffeae5212e9a38253791d58995518a80` from 2026-04-03, while the live workspace upstream checkout is `cd64c68b740ffbe90c0132ca560a9cefc9d78ac5`; root `upstream/` is a separate dirty checkout at `11ad728f563d8970929e8947a1cf6124ee6303e4`. Rebootstrap deliberately before final reproduction.
+
+**Fresh blocked/negative evidence:**
+- `lane_m_v2_landed`: 1.84 [contest-CUDA], negative vs Lane G v3.
+- `lane_h_crf56`: 3.20 [contest-CUDA], negative vs Lane G v3.
+- `modal_auth_eval_8e331354a6b5`: inflate failed on pose shape `(600, 6)` vs expected `(N, 1)`.
+- Recovered SZ phase2 archive is 3.3KB but fails canonical local smoke because no `masks.mkv` is present; current inflator would fall back to non-compliant scorer-time extraction.
+- First-wave 2026-04-29 Modal lanes exposed setup bugs: MAE-V missing `pydantic`, Omega Hessian CUDA device-side assert, Uniward missing baseline anchor path.
+
+**Decision:** next work should target deployment correctness before new architecture speculation. Highest EV order: Modal dependency install, remote anchor path contracts, Omega tiny Hessian smoke, SZ compliance decision, then upstream snapshot rebootstrap.
+
 ## 2026-04-21 [CRITICAL] Proxy-Auth PoseNet Drift — STE Roundtrip is a Leaky Abstraction
 
 **Root cause (Tao + Karpathy + Council):** The renderer overfits to proxy-specific texture patterns that survive bilinear STE but NOT actual uint8 quantization via DALI. PoseNet proxy-auth ratio went from 2.1x (ep300) to 11.1x (ep3560).

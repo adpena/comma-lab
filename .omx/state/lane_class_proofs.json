@@ -8,7 +8,9 @@
     "  (c) canonical local smoke via experiments/canonical_local_auth_eval_smoke.py.",
     "Every numeric score MUST carry a lane tag per CLAUDE.md non-negotiable",
     "(check_scores_have_lane_tag). Backfill seeded 2026-04-28 from verified",
-    "production landings (Lane G v3, Lane A, Lane M-V2, Lane F-V2, Lane B)."
+    "production landings (Lane G v3, Lane A, Lane M-V2, Lane F-V2, Lane B).",
+    "2026-04-29 reinit: remaining classes are backfilled as plumbing-only",
+    "canonical-local-smoke proofs when no class-specific score exists yet."
   ],
   "renderer-optimized": {
     "proven_by_lane": "lane_a_optimized",
@@ -41,5 +43,101 @@
     "score_lane_tag": "[contest-CUDA]",
     "timestamp_utc": "2026-04-27T00:00:00Z",
     "notes": "Lane F-V2 1.79 -- regression vs Lane A 1.15 by 0.64 (FP4 architectural cost on FastViT/YUV6); recorded as proof of pipeline completeness."
+  },
+  "archive-codec": {
+    "proven_by_lane": "remote_lane_ac_archive_codec",
+    "proof_kind": "canonical-local-smoke",
+    "score": null,
+    "score_lane_tag": null,
+    "timestamp_utc": "2026-04-29T13:40:00Z",
+    "notes": "Plumbing-only Check 65 backfill from canonical_local_auth_eval_smoke using Lane G v3 fixture archive sha256 9b20bdfca246d8e32cc19da966c84cdae7e34f6b247161d107ec43cb9ef6870b. This proves extract/config/inflate dispatch, not archive-codec score."
+  },
+  "calibrated-pe": {
+    "proven_by_lane": "remote_lane_cg_calibrated_pe",
+    "proof_kind": "canonical-local-smoke",
+    "score": null,
+    "score_lane_tag": null,
+    "timestamp_utc": "2026-04-29T13:40:00Z",
+    "notes": "Plumbing-only Check 65 backfill from canonical local smoke; class-specific training/auth evidence still required before promotion."
+  },
+  "entropy-archive": {
+    "proven_by_lane": "remote_lane_ea_entropy_archive",
+    "proof_kind": "canonical-local-smoke",
+    "score": null,
+    "score_lane_tag": null,
+    "timestamp_utc": "2026-04-29T13:40:00Z",
+    "notes": "Plumbing-only Check 65 backfill from canonical local smoke; no entropy-archive score claim."
+  },
+  "fp8-quant": {
+    "proven_by_lane": "remote_lane_f_v5_hardware_fp8",
+    "proof_kind": "canonical-local-smoke",
+    "score": null,
+    "score_lane_tag": null,
+    "timestamp_utc": "2026-04-29T13:40:00Z",
+    "notes": "Plumbing-only Check 65 backfill from canonical local smoke; FP8 class remains unpromoted until contest-CUDA auth evidence exists."
+  },
+  "halfframe-mask": {
+    "proven_by_lane": "remote_lane_d_halfframe_retrain",
+    "proof_kind": "canonical-local-smoke",
+    "score": null,
+    "score_lane_tag": null,
+    "timestamp_utc": "2026-04-29T13:40:00Z",
+    "notes": "Plumbing-only Check 65 backfill from canonical local smoke. Existing lane_h_crf56 auth scored 3.20 and is negative evidence, not a proof of improvement."
+  },
+  "hessian-bit-allocator": {
+    "proven_by_lane": "remote_lane_omega_hessian_qat",
+    "proof_kind": "canonical-local-smoke",
+    "score": null,
+    "score_lane_tag": null,
+    "timestamp_utc": "2026-04-29T13:40:00Z",
+    "notes": "Plumbing-only Check 65 backfill from canonical local smoke. 2026-04-29 Modal attempt hit a CUDA device-side assert during Hessian profiling; fix required before relaunch."
+  },
+  "lagrangian-rate-distortion": {
+    "proven_by_lane": "remote_lane_g_v3_v2_lagrangian_snr",
+    "proof_kind": "canonical-local-smoke",
+    "score": null,
+    "score_lane_tag": null,
+    "timestamp_utc": "2026-04-29T13:40:00Z",
+    "notes": "Plumbing-only Check 65 backfill from canonical local smoke; no class-specific score claim."
+  },
+  "mae-pretrain": {
+    "proven_by_lane": "remote_lane_mae_v",
+    "proof_kind": "canonical-local-smoke",
+    "score": null,
+    "score_lane_tag": null,
+    "timestamp_utc": "2026-04-29T13:40:00Z",
+    "notes": "Plumbing-only Check 65 backfill from canonical local smoke. 2026-04-29 Modal attempt failed before training on missing pydantic in the remote environment."
+  },
+  "self-compress": {
+    "proven_by_lane": "remote_lane_s_self_compress",
+    "proof_kind": "canonical-local-smoke",
+    "score": null,
+    "score_lane_tag": null,
+    "timestamp_utc": "2026-04-29T13:40:00Z",
+    "notes": "Plumbing-only Check 65 backfill from canonical local smoke; class still needs a completed train/archive/auth proof."
+  },
+  "sweep-orchestrator": {
+    "proven_by_lane": "remote_lane_a_sweep",
+    "proof_kind": "canonical-local-smoke",
+    "score": null,
+    "score_lane_tag": null,
+    "timestamp_utc": "2026-04-29T13:40:00Z",
+    "notes": "Plumbing-only Check 65 backfill from canonical local smoke; sweep orchestration is not itself a score claim."
+  },
+  "uncategorized": {
+    "proven_by_lane": "remote_lane_d_v3_full_engineering",
+    "proof_kind": "canonical-local-smoke",
+    "score": null,
+    "score_lane_tag": null,
+    "timestamp_utc": "2026-04-29T13:40:00Z",
+    "notes": "Plumbing-only Check 65 backfill for currently uncategorized lane scripts. Prefer adding explicit class keywords before making this strict."
+  },
+  "uniward-distortion": {
+    "proven_by_lane": "remote_lane_uniward_texture",
+    "proof_kind": "canonical-local-smoke",
+    "score": null,
+    "score_lane_tag": null,
+    "timestamp_utc": "2026-04-29T13:40:00Z",
+    "notes": "Plumbing-only Check 65 backfill from canonical local smoke. 2026-04-29 Modal attempt failed anchor checks because baseline_dilated_h64_0_90 artifacts were not present in the remote path."
   }
 }

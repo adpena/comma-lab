@@ -1598,5 +1598,985 @@
     "registered_at_utc": "2026-04-29T05:09:22Z",
     "registered_by_host": "Primary",
     "registered_by_pid": 0
+  },
+  {
+    "instance_id": "35807921",
+    "label": "lane_j_nwcs_ec",
+    "metadata": {
+      "estimated_cost_usd": 1.5,
+      "predicted_band": [
+        0.78,
+        0.92
+      ],
+      "script": "scripts/remote_lane_j_nwcs_ec_stack.sh",
+      "council_priority": 99,
+      "anchor_dirs": [
+        "experiments/results/lane_a_landed/iter_0"
+      ],
+      "launcher": "scripts/launch_lane_on_vastai.py phase1+phase2"
+    },
+    "registered_at_utc": "2026-04-29T06:24:58Z",
+    "registered_by_host": "Primary",
+    "registered_by_pid": 0
+  },
+  {
+    "instance_id": "35807925",
+    "label": "lane_omega_hessian",
+    "metadata": {
+      "estimated_cost_usd": 2.5,
+      "predicted_band": [
+        0.7,
+        1.05
+      ],
+      "script": "scripts/remote_lane_omega_hessian_qat.sh",
+      "council_priority": 99,
+      "anchor_dirs": [
+        "experiments/results/lane_a_landed/iter_0"
+      ],
+      "launcher": "scripts/launch_lane_on_vastai.py phase1+phase2"
+    },
+    "registered_at_utc": "2026-04-29T06:24:59Z",
+    "registered_by_host": "Primary",
+    "registered_by_pid": 0
+  },
+  {
+    "instance_id": "35807927",
+    "label": "lane_mae_v",
+    "metadata": {
+      "estimated_cost_usd": 4.0,
+      "predicted_band": [
+        0.85,
+        1.1
+      ],
+      "script": "scripts/remote_lane_mae_v.sh",
+      "council_priority": 99,
+      "anchor_dirs": [
+        "experiments/results/lane_a_landed/iter_0"
+      ],
+      "launcher": "scripts/launch_lane_on_vastai.py phase1+phase2"
+    },
+    "registered_at_utc": "2026-04-29T06:25:00Z",
+    "registered_by_host": "Primary",
+    "registered_by_pid": 0
+  },
+  {
+    "instance_id": "35807929",
+    "label": "lane_uniward",
+    "metadata": {
+      "estimated_cost_usd": 0.3,
+      "predicted_band": [
+        1.05,
+        1.18
+      ],
+      "script": "scripts/remote_lane_uniward_texture.sh",
+      "council_priority": 99,
+      "anchor_dirs": [
+        "experiments/results/lane_a_landed/iter_0"
+      ],
+      "launcher": "scripts/launch_lane_on_vastai.py phase1+phase2"
+    },
+    "registered_at_utc": "2026-04-29T06:25:03Z",
+    "registered_by_host": "Primary",
+    "registered_by_pid": 0
+  },
+  {
+    "instance_id": "35807930",
+    "label": "lane_cg",
+    "metadata": {
+      "estimated_cost_usd": 3.0,
+      "predicted_band": [
+        1.0,
+        1.18
+      ],
+      "script": "scripts/remote_lane_cg_calibrated_pe.sh",
+      "council_priority": 99,
+      "anchor_dirs": [
+        "experiments/results/lane_a_landed/iter_0"
+      ],
+      "launcher": "scripts/launch_lane_on_vastai.py phase1+phase2"
+    },
+    "registered_at_utc": "2026-04-29T06:25:04Z",
+    "registered_by_host": "Primary",
+    "registered_by_pid": 0
+  },
+  {
+    "instance_id": "35807933",
+    "label": "lane_hm",
+    "metadata": {
+      "estimated_cost_usd": 4.5,
+      "predicted_band": [
+        1.1,
+        1.4
+      ],
+      "script": "scripts/remote_lane_hm_homography_motion.sh",
+      "council_priority": 99,
+      "anchor_dirs": [
+        "experiments/results/lane_a_landed/iter_0"
+      ],
+      "launcher": "scripts/launch_lane_on_vastai.py phase1+phase2"
+    },
+    "registered_at_utc": "2026-04-29T06:25:05Z",
+    "registered_by_host": "Primary",
+    "registered_by_pid": 0
+  },
+  {
+    "instance_id": "35809375",
+    "label": "lane_j_nwcs_ec_v2",
+    "metadata": {
+      "estimated_cost_usd": 1.5,
+      "predicted_band": [
+        0.78,
+        0.92
+      ],
+      "script": "scripts/remote_lane_j_nwcs_ec_stack.sh",
+      "council_priority": 99,
+      "anchor_dirs": [
+        "experiments/results/lane_a_landed/iter_0"
+      ],
+      "launcher": "scripts/launch_lane_on_vastai.py phase1+phase2"
+    },
+    "registered_at_utc": "2026-04-29T06:48:00Z",
+    "registered_by_host": "Primary",
+    "registered_by_pid": 0
+  },
+  {
+    "instance_id": "35809376",
+    "label": "lane_omega_hessian_v2",
+    "metadata": {
+      "estimated_cost_usd": 2.5,
+      "predicted_band": [
+        0.7,
+        1.05
+      ],
+      "script": "scripts/remote_lane_omega_hessian_qat.sh",
+      "council_priority": 99,
+      "anchor_dirs": [
+        "experiments/results/lane_a_landed/iter_0"
+      ],
+      "launcher": "scripts/launch_lane_on_vastai.py phase1+phase2"
+    },
+    "registered_at_utc": "2026-04-29T06:48:04Z",
+    "registered_by_host": "Primary",
+    "registered_by_pid": 0
+  },
+  {
+    "instance_id": "35809377",
+    "label": "lane_mae_v_retry",
+    "metadata": {
+      "estimated_cost_usd": 4.0,
+      "predicted_band": [
+        0.85,
+        1.1
+      ],
+      "script": "scripts/remote_lane_mae_v.sh",
+      "council_priority": 99,
+      "anchor_dirs": [
+        "experiments/results/lane_a_landed/iter_0"
+      ],
+      "launcher": "scripts/launch_lane_on_vastai.py phase1+phase2"
+    },
+    "registered_at_utc": "2026-04-29T06:48:05Z",
+    "registered_by_host": "Primary",
+    "registered_by_pid": 0
+  },
+  {
+    "instance_id": "35809380",
+    "label": "lane_uniward_v2",
+    "metadata": {
+      "estimated_cost_usd": 0.3,
+      "predicted_band": [
+        1.05,
+        1.18
+      ],
+      "script": "scripts/remote_lane_uniward_texture.sh",
+      "council_priority": 99,
+      "anchor_dirs": [
+        "experiments/results/lane_a_landed/iter_0"
+      ],
+      "launcher": "scripts/launch_lane_on_vastai.py phase1+phase2"
+    },
+    "registered_at_utc": "2026-04-29T06:48:06Z",
+    "registered_by_host": "Primary",
+    "registered_by_pid": 0
+  },
+  {
+    "instance_id": "35809385",
+    "label": "lane_cg_v2",
+    "metadata": {
+      "estimated_cost_usd": 3.0,
+      "predicted_band": [
+        1.0,
+        1.18
+      ],
+      "script": "scripts/remote_lane_cg_calibrated_pe.sh",
+      "council_priority": 99,
+      "anchor_dirs": [
+        "experiments/results/lane_a_landed/iter_0"
+      ],
+      "launcher": "scripts/launch_lane_on_vastai.py phase1+phase2"
+    },
+    "registered_at_utc": "2026-04-29T06:48:09Z",
+    "registered_by_host": "Primary",
+    "registered_by_pid": 0
+  },
+  {
+    "instance_id": "35809387",
+    "label": "lane_hm_v2",
+    "metadata": {
+      "estimated_cost_usd": 4.5,
+      "predicted_band": [
+        1.1,
+        1.4
+      ],
+      "script": "scripts/remote_lane_hm_homography_motion.sh",
+      "council_priority": 99,
+      "anchor_dirs": [
+        "experiments/results/lane_a_landed/iter_0"
+      ],
+      "launcher": "scripts/launch_lane_on_vastai.py phase1+phase2"
+    },
+    "registered_at_utc": "2026-04-29T06:48:10Z",
+    "registered_by_host": "Primary",
+    "registered_by_pid": 0
+  },
+  {
+    "instance_id": "35809819",
+    "label": "lane_j_nwcs_ec_v3",
+    "metadata": {
+      "estimated_cost_usd": 1.5,
+      "predicted_band": [
+        0.78,
+        0.92
+      ],
+      "script": "scripts/remote_lane_j_nwcs_ec_stack.sh",
+      "council_priority": 99,
+      "anchor_dirs": [
+        "experiments/results/lane_a_landed/iter_0"
+      ],
+      "launcher": "scripts/launch_lane_on_vastai.py phase1+phase2"
+    },
+    "registered_at_utc": "2026-04-29T06:57:45Z",
+    "registered_by_host": "Primary",
+    "registered_by_pid": 0
+  },
+  {
+    "instance_id": "35809820",
+    "label": "lane_omega_hessian_v3",
+    "metadata": {
+      "estimated_cost_usd": 2.5,
+      "predicted_band": [
+        0.7,
+        1.05
+      ],
+      "script": "scripts/remote_lane_omega_hessian_qat.sh",
+      "council_priority": 99,
+      "anchor_dirs": [
+        "experiments/results/lane_a_landed/iter_0"
+      ],
+      "launcher": "scripts/launch_lane_on_vastai.py phase1+phase2"
+    },
+    "registered_at_utc": "2026-04-29T06:57:46Z",
+    "registered_by_host": "Primary",
+    "registered_by_pid": 0
+  },
+  {
+    "instance_id": "35809822",
+    "label": "lane_mae_v_v3",
+    "metadata": {
+      "estimated_cost_usd": 4.0,
+      "predicted_band": [
+        0.85,
+        1.1
+      ],
+      "script": "scripts/remote_lane_mae_v.sh",
+      "council_priority": 99,
+      "anchor_dirs": [
+        "experiments/results/lane_a_landed/iter_0"
+      ],
+      "launcher": "scripts/launch_lane_on_vastai.py phase1+phase2"
+    },
+    "registered_at_utc": "2026-04-29T06:57:47Z",
+    "registered_by_host": "Primary",
+    "registered_by_pid": 0
+  },
+  {
+    "instance_id": "35809823",
+    "label": "lane_uniward_v3",
+    "metadata": {
+      "estimated_cost_usd": 0.3,
+      "predicted_band": [
+        1.05,
+        1.18
+      ],
+      "script": "scripts/remote_lane_uniward_texture.sh",
+      "council_priority": 99,
+      "anchor_dirs": [
+        "experiments/results/lane_a_landed/iter_0"
+      ],
+      "launcher": "scripts/launch_lane_on_vastai.py phase1+phase2"
+    },
+    "registered_at_utc": "2026-04-29T06:57:49Z",
+    "registered_by_host": "Primary",
+    "registered_by_pid": 0
+  },
+  {
+    "instance_id": "35809824",
+    "label": "lane_cg_v3",
+    "metadata": {
+      "estimated_cost_usd": 3.0,
+      "predicted_band": [
+        1.0,
+        1.18
+      ],
+      "script": "scripts/remote_lane_cg_calibrated_pe.sh",
+      "council_priority": 99,
+      "anchor_dirs": [
+        "experiments/results/lane_a_landed/iter_0"
+      ],
+      "launcher": "scripts/launch_lane_on_vastai.py phase1+phase2"
+    },
+    "registered_at_utc": "2026-04-29T06:57:50Z",
+    "registered_by_host": "Primary",
+    "registered_by_pid": 0
+  },
+  {
+    "instance_id": "35809825",
+    "label": "lane_hm_v3",
+    "metadata": {
+      "estimated_cost_usd": 4.5,
+      "predicted_band": [
+        1.1,
+        1.4
+      ],
+      "script": "scripts/remote_lane_hm_homography_motion.sh",
+      "council_priority": 99,
+      "anchor_dirs": [
+        "experiments/results/lane_a_landed/iter_0"
+      ],
+      "launcher": "scripts/launch_lane_on_vastai.py phase1+phase2"
+    },
+    "registered_at_utc": "2026-04-29T06:57:51Z",
+    "registered_by_host": "Primary",
+    "registered_by_pid": 0
+  },
+  {
+    "instance_id": "35814245",
+    "label": "lane_j_nwcs_ec_v4_a1",
+    "metadata": {
+      "estimated_cost_usd": 1.5,
+      "predicted_band": [
+        0.78,
+        0.92
+      ],
+      "script": "scripts/remote_lane_j_nwcs_ec_stack.sh",
+      "council_priority": 99,
+      "anchor_dirs": [
+        "experiments/results/lane_a_landed/iter_0"
+      ],
+      "launcher": "scripts/launch_lane_on_vastai.py phase1+phase2"
+    },
+    "registered_at_utc": "2026-04-29T08:27:02Z",
+    "registered_by_host": "Primary",
+    "registered_by_pid": 0
+  },
+  {
+    "instance_id": "35814249",
+    "label": "lane_omega_hessian_v4_a1",
+    "metadata": {
+      "estimated_cost_usd": 2.5,
+      "predicted_band": [
+        0.7,
+        1.05
+      ],
+      "script": "scripts/remote_lane_omega_hessian_qat.sh",
+      "council_priority": 99,
+      "anchor_dirs": [
+        "experiments/results/lane_a_landed/iter_0"
+      ],
+      "launcher": "scripts/launch_lane_on_vastai.py phase1+phase2"
+    },
+    "registered_at_utc": "2026-04-29T08:27:04Z",
+    "registered_by_host": "Primary",
+    "registered_by_pid": 0
+  },
+  {
+    "instance_id": "35814251",
+    "label": "lane_mae_v_v4_a1",
+    "metadata": {
+      "estimated_cost_usd": 4.0,
+      "predicted_band": [
+        0.85,
+        1.1
+      ],
+      "script": "scripts/remote_lane_mae_v.sh",
+      "council_priority": 99,
+      "anchor_dirs": [
+        "experiments/results/lane_a_landed/iter_0"
+      ],
+      "launcher": "scripts/launch_lane_on_vastai.py phase1+phase2"
+    },
+    "registered_at_utc": "2026-04-29T08:27:05Z",
+    "registered_by_host": "Primary",
+    "registered_by_pid": 0
+  },
+  {
+    "instance_id": "35814253",
+    "label": "lane_uniward_v4_a1",
+    "metadata": {
+      "estimated_cost_usd": 0.3,
+      "predicted_band": [
+        1.05,
+        1.18
+      ],
+      "script": "scripts/remote_lane_uniward_texture.sh",
+      "council_priority": 99,
+      "anchor_dirs": [
+        "experiments/results/lane_a_landed/iter_0"
+      ],
+      "launcher": "scripts/launch_lane_on_vastai.py phase1+phase2"
+    },
+    "registered_at_utc": "2026-04-29T08:27:07Z",
+    "registered_by_host": "Primary",
+    "registered_by_pid": 0
+  },
+  {
+    "instance_id": "35814254",
+    "label": "lane_cg_v4_a1",
+    "metadata": {
+      "estimated_cost_usd": 3.0,
+      "predicted_band": [
+        1.0,
+        1.18
+      ],
+      "script": "scripts/remote_lane_cg_calibrated_pe.sh",
+      "council_priority": 99,
+      "anchor_dirs": [
+        "experiments/results/lane_a_landed/iter_0"
+      ],
+      "launcher": "scripts/launch_lane_on_vastai.py phase1+phase2"
+    },
+    "registered_at_utc": "2026-04-29T08:27:09Z",
+    "registered_by_host": "Primary",
+    "registered_by_pid": 0
+  },
+  {
+    "instance_id": "35814256",
+    "label": "lane_hm_v4_a1",
+    "metadata": {
+      "estimated_cost_usd": 4.5,
+      "predicted_band": [
+        1.1,
+        1.4
+      ],
+      "script": "scripts/remote_lane_hm_homography_motion.sh",
+      "council_priority": 99,
+      "anchor_dirs": [
+        "experiments/results/lane_a_landed/iter_0"
+      ],
+      "launcher": "scripts/launch_lane_on_vastai.py phase1+phase2"
+    },
+    "registered_at_utc": "2026-04-29T08:27:10Z",
+    "registered_by_host": "Primary",
+    "registered_by_pid": 0
+  },
+  {
+    "instance_id": "35814459",
+    "label": "lane_j_nwcs_ec_v4_a2",
+    "metadata": {
+      "estimated_cost_usd": 1.5,
+      "predicted_band": [
+        0.78,
+        0.92
+      ],
+      "script": "scripts/remote_lane_j_nwcs_ec_stack.sh",
+      "council_priority": 99,
+      "anchor_dirs": [
+        "experiments/results/lane_a_landed/iter_0"
+      ],
+      "launcher": "scripts/launch_lane_on_vastai.py phase1+phase2"
+    },
+    "registered_at_utc": "2026-04-29T08:28:54Z",
+    "registered_by_host": "Primary",
+    "registered_by_pid": 0
+  },
+  {
+    "instance_id": "35814460",
+    "label": "lane_hm_v4_a2",
+    "metadata": {
+      "estimated_cost_usd": 4.5,
+      "predicted_band": [
+        1.1,
+        1.4
+      ],
+      "script": "scripts/remote_lane_hm_homography_motion.sh",
+      "council_priority": 99,
+      "anchor_dirs": [
+        "experiments/results/lane_a_landed/iter_0"
+      ],
+      "launcher": "scripts/launch_lane_on_vastai.py phase1+phase2"
+    },
+    "registered_at_utc": "2026-04-29T08:28:55Z",
+    "registered_by_host": "Primary",
+    "registered_by_pid": 0
+  },
+  {
+    "instance_id": "35814462",
+    "label": "lane_mae_v_v4_a2",
+    "metadata": {
+      "estimated_cost_usd": 4.0,
+      "predicted_band": [
+        0.85,
+        1.1
+      ],
+      "script": "scripts/remote_lane_mae_v.sh",
+      "council_priority": 99,
+      "anchor_dirs": [
+        "experiments/results/lane_a_landed/iter_0"
+      ],
+      "launcher": "scripts/launch_lane_on_vastai.py phase1+phase2"
+    },
+    "registered_at_utc": "2026-04-29T08:28:56Z",
+    "registered_by_host": "Primary",
+    "registered_by_pid": 0
+  },
+  {
+    "instance_id": "35814494",
+    "label": "lane_omega_hessian_v4_a2",
+    "metadata": {
+      "estimated_cost_usd": 2.5,
+      "predicted_band": [
+        0.7,
+        1.05
+      ],
+      "script": "scripts/remote_lane_omega_hessian_qat.sh",
+      "council_priority": 99,
+      "anchor_dirs": [
+        "experiments/results/lane_a_landed/iter_0"
+      ],
+      "launcher": "scripts/launch_lane_on_vastai.py phase1+phase2"
+    },
+    "registered_at_utc": "2026-04-29T08:29:13Z",
+    "registered_by_host": "Primary",
+    "registered_by_pid": 0
+  },
+  {
+    "instance_id": "35814683",
+    "label": "lane_hm_v4_a3",
+    "metadata": {
+      "estimated_cost_usd": 4.5,
+      "predicted_band": [
+        1.1,
+        1.4
+      ],
+      "script": "scripts/remote_lane_hm_homography_motion.sh",
+      "council_priority": 99,
+      "anchor_dirs": [
+        "experiments/results/lane_a_landed/iter_0"
+      ],
+      "launcher": "scripts/launch_lane_on_vastai.py phase1+phase2"
+    },
+    "registered_at_utc": "2026-04-29T08:30:26Z",
+    "registered_by_host": "Primary",
+    "registered_by_pid": 0
+  },
+  {
+    "instance_id": "35814840",
+    "label": "lane_cg_v4_a2",
+    "metadata": {
+      "estimated_cost_usd": 3.0,
+      "predicted_band": [
+        1.0,
+        1.18
+      ],
+      "script": "scripts/remote_lane_cg_calibrated_pe.sh",
+      "council_priority": 99,
+      "anchor_dirs": [
+        "experiments/results/lane_a_landed/iter_0"
+      ],
+      "launcher": "scripts/launch_lane_on_vastai.py phase1+phase2"
+    },
+    "registered_at_utc": "2026-04-29T08:31:57Z",
+    "registered_by_host": "Primary",
+    "registered_by_pid": 0
+  },
+  {
+    "instance_id": "35814919",
+    "label": "lane_cg_v4_a3",
+    "metadata": {
+      "estimated_cost_usd": 3.0,
+      "predicted_band": [
+        1.0,
+        1.18
+      ],
+      "script": "scripts/remote_lane_cg_calibrated_pe.sh",
+      "council_priority": 99,
+      "anchor_dirs": [
+        "experiments/results/lane_a_landed/iter_0"
+      ],
+      "launcher": "scripts/launch_lane_on_vastai.py phase1+phase2"
+    },
+    "registered_at_utc": "2026-04-29T08:33:21Z",
+    "registered_by_host": "Primary",
+    "registered_by_pid": 0
+  },
+  {
+    "instance_id": "35816356",
+    "label": "lane_uniward_v5_a1",
+    "metadata": {
+      "estimated_cost_usd": 0.3,
+      "predicted_band": [
+        1.05,
+        1.18
+      ],
+      "script": "scripts/remote_lane_uniward_texture.sh",
+      "council_priority": 99,
+      "anchor_dirs": [
+        "experiments/results/lane_a_landed/iter_0"
+      ],
+      "launcher": "scripts/launch_lane_on_vastai.py phase1+phase2"
+    },
+    "registered_at_utc": "2026-04-29T09:00:07Z",
+    "registered_by_host": "Primary",
+    "registered_by_pid": 0
+  },
+  {
+    "instance_id": "35816357",
+    "label": "lane_hm_v5_a1",
+    "metadata": {
+      "estimated_cost_usd": 4.5,
+      "predicted_band": [
+        1.1,
+        1.4
+      ],
+      "script": "scripts/remote_lane_hm_homography_motion.sh",
+      "council_priority": 99,
+      "anchor_dirs": [
+        "experiments/results/lane_a_landed/iter_0"
+      ],
+      "launcher": "scripts/launch_lane_on_vastai.py phase1+phase2"
+    },
+    "registered_at_utc": "2026-04-29T09:00:07Z",
+    "registered_by_host": "Primary",
+    "registered_by_pid": 0
+  },
+  {
+    "instance_id": "35816359",
+    "label": "lane_mae_v_v5_a1",
+    "metadata": {
+      "estimated_cost_usd": 4.0,
+      "predicted_band": [
+        0.85,
+        1.1
+      ],
+      "script": "scripts/remote_lane_mae_v.sh",
+      "council_priority": 99,
+      "anchor_dirs": [
+        "experiments/results/lane_a_landed/iter_0"
+      ],
+      "launcher": "scripts/launch_lane_on_vastai.py phase1+phase2"
+    },
+    "registered_at_utc": "2026-04-29T09:00:08Z",
+    "registered_by_host": "Primary",
+    "registered_by_pid": 0
+  },
+  {
+    "instance_id": "35816360",
+    "label": "lane_omega_hessian_v5_a1",
+    "metadata": {
+      "estimated_cost_usd": 2.5,
+      "predicted_band": [
+        0.7,
+        1.05
+      ],
+      "script": "scripts/remote_lane_omega_hessian_qat.sh",
+      "council_priority": 99,
+      "anchor_dirs": [
+        "experiments/results/lane_a_landed/iter_0"
+      ],
+      "launcher": "scripts/launch_lane_on_vastai.py phase1+phase2"
+    },
+    "registered_at_utc": "2026-04-29T09:00:08Z",
+    "registered_by_host": "Primary",
+    "registered_by_pid": 0
+  },
+  {
+    "instance_id": "35816358",
+    "label": "lane_cg_v5_a1",
+    "metadata": {
+      "estimated_cost_usd": 3.0,
+      "predicted_band": [
+        1.0,
+        1.18
+      ],
+      "script": "scripts/remote_lane_cg_calibrated_pe.sh",
+      "council_priority": 99,
+      "anchor_dirs": [
+        "experiments/results/lane_a_landed/iter_0"
+      ],
+      "launcher": "scripts/launch_lane_on_vastai.py phase1+phase2"
+    },
+    "registered_at_utc": "2026-04-29T09:00:08Z",
+    "registered_by_host": "Primary",
+    "registered_by_pid": 0
+  },
+  {
+    "instance_id": "35816361",
+    "label": "lane_j_nwcs_ec_v5_a1",
+    "metadata": {
+      "estimated_cost_usd": 1.5,
+      "predicted_band": [
+        0.78,
+        0.92
+      ],
+      "script": "scripts/remote_lane_j_nwcs_ec_stack.sh",
+      "council_priority": 99,
+      "anchor_dirs": [
+        "experiments/results/lane_a_landed/iter_0"
+      ],
+      "launcher": "scripts/launch_lane_on_vastai.py phase1+phase2"
+    },
+    "registered_at_utc": "2026-04-29T09:00:08Z",
+    "registered_by_host": "Primary",
+    "registered_by_pid": 0
+  },
+  {
+    "instance_id": "35816457",
+    "label": "lane_uniward_v5_a2",
+    "metadata": {
+      "estimated_cost_usd": 0.3,
+      "predicted_band": [
+        1.05,
+        1.18
+      ],
+      "script": "scripts/remote_lane_uniward_texture.sh",
+      "council_priority": 99,
+      "anchor_dirs": [
+        "experiments/results/lane_a_landed/iter_0"
+      ],
+      "launcher": "scripts/launch_lane_on_vastai.py phase1+phase2"
+    },
+    "registered_at_utc": "2026-04-29T09:01:49Z",
+    "registered_by_host": "Primary",
+    "registered_by_pid": 0
+  },
+  {
+    "instance_id": "35816458",
+    "label": "lane_cg_v5_a2",
+    "metadata": {
+      "estimated_cost_usd": 3.0,
+      "predicted_band": [
+        1.0,
+        1.18
+      ],
+      "script": "scripts/remote_lane_cg_calibrated_pe.sh",
+      "council_priority": 99,
+      "anchor_dirs": [
+        "experiments/results/lane_a_landed/iter_0"
+      ],
+      "launcher": "scripts/launch_lane_on_vastai.py phase1+phase2"
+    },
+    "registered_at_utc": "2026-04-29T09:01:55Z",
+    "registered_by_host": "Primary",
+    "registered_by_pid": 0
+  },
+  {
+    "instance_id": "35816499",
+    "label": "lane_hm_v5_a2",
+    "metadata": {
+      "estimated_cost_usd": 4.5,
+      "predicted_band": [
+        1.1,
+        1.4
+      ],
+      "script": "scripts/remote_lane_hm_homography_motion.sh",
+      "council_priority": 99,
+      "anchor_dirs": [
+        "experiments/results/lane_a_landed/iter_0"
+      ],
+      "launcher": "scripts/launch_lane_on_vastai.py phase1+phase2"
+    },
+    "registered_at_utc": "2026-04-29T09:02:06Z",
+    "registered_by_host": "Primary",
+    "registered_by_pid": 0
+  },
+  {
+    "instance_id": "35816557",
+    "label": "lane_cg_v5_a3",
+    "metadata": {
+      "estimated_cost_usd": 3.0,
+      "predicted_band": [
+        1.0,
+        1.18
+      ],
+      "script": "scripts/remote_lane_cg_calibrated_pe.sh",
+      "council_priority": 99,
+      "anchor_dirs": [
+        "experiments/results/lane_a_landed/iter_0"
+      ],
+      "launcher": "scripts/launch_lane_on_vastai.py phase1+phase2"
+    },
+    "registered_at_utc": "2026-04-29T09:03:42Z",
+    "registered_by_host": "Primary",
+    "registered_by_pid": 0
+  },
+  {
+    "instance_id": "35816564",
+    "label": "lane_hm_v5_a3",
+    "metadata": {
+      "estimated_cost_usd": 4.5,
+      "predicted_band": [
+        1.1,
+        1.4
+      ],
+      "script": "scripts/remote_lane_hm_homography_motion.sh",
+      "council_priority": 99,
+      "anchor_dirs": [
+        "experiments/results/lane_a_landed/iter_0"
+      ],
+      "launcher": "scripts/launch_lane_on_vastai.py phase1+phase2"
+    },
+    "registered_at_utc": "2026-04-29T09:04:07Z",
+    "registered_by_host": "Primary",
+    "registered_by_pid": 0
+  },
+  {
+    "instance_id": "35816577",
+    "label": "lane_omega_hessian_v5_a2",
+    "metadata": {
+      "estimated_cost_usd": 2.5,
+      "predicted_band": [
+        0.7,
+        1.05
+      ],
+      "script": "scripts/remote_lane_omega_hessian_qat.sh",
+      "council_priority": 99,
+      "anchor_dirs": [
+        "experiments/results/lane_a_landed/iter_0"
+      ],
+      "launcher": "scripts/launch_lane_on_vastai.py phase1+phase2"
+    },
+    "registered_at_utc": "2026-04-29T09:04:32Z",
+    "registered_by_host": "Primary",
+    "registered_by_pid": 0
+  },
+  {
+    "instance_id": "35816578",
+    "label": "lane_mae_v_v5_a2",
+    "metadata": {
+      "estimated_cost_usd": 4.0,
+      "predicted_band": [
+        0.85,
+        1.1
+      ],
+      "script": "scripts/remote_lane_mae_v.sh",
+      "council_priority": 99,
+      "anchor_dirs": [
+        "experiments/results/lane_a_landed/iter_0"
+      ],
+      "launcher": "scripts/launch_lane_on_vastai.py phase1+phase2"
+    },
+    "registered_at_utc": "2026-04-29T09:04:32Z",
+    "registered_by_host": "Primary",
+    "registered_by_pid": 0
+  },
+  {
+    "instance_id": "35816602",
+    "label": "lane_j_nwcs_ec_v5_a2",
+    "metadata": {
+      "estimated_cost_usd": 1.5,
+      "predicted_band": [
+        0.78,
+        0.92
+      ],
+      "script": "scripts/remote_lane_j_nwcs_ec_stack.sh",
+      "council_priority": 99,
+      "anchor_dirs": [
+        "experiments/results/lane_a_landed/iter_0"
+      ],
+      "launcher": "scripts/launch_lane_on_vastai.py phase1+phase2"
+    },
+    "registered_at_utc": "2026-04-29T09:04:58Z",
+    "registered_by_host": "Primary",
+    "registered_by_pid": 0
+  },
+  {
+    "instance_id": "35816695",
+    "label": "lane_omega_hessian_v5_a3",
+    "metadata": {
+      "estimated_cost_usd": 2.5,
+      "predicted_band": [
+        0.7,
+        1.05
+      ],
+      "script": "scripts/remote_lane_omega_hessian_qat.sh",
+      "council_priority": 99,
+      "anchor_dirs": [
+        "experiments/results/lane_a_landed/iter_0"
+      ],
+      "launcher": "scripts/launch_lane_on_vastai.py phase1+phase2"
+    },
+    "registered_at_utc": "2026-04-29T09:06:32Z",
+    "registered_by_host": "Primary",
+    "registered_by_pid": 0
+  },
+  {
+    "instance_id": "35816710",
+    "label": "lane_uniward_v5_a3",
+    "metadata": {
+      "estimated_cost_usd": 0.3,
+      "predicted_band": [
+        1.05,
+        1.18
+      ],
+      "script": "scripts/remote_lane_uniward_texture.sh",
+      "council_priority": 99,
+      "anchor_dirs": [
+        "experiments/results/lane_a_landed/iter_0"
+      ],
+      "launcher": "scripts/launch_lane_on_vastai.py phase1+phase2"
+    },
+    "registered_at_utc": "2026-04-29T09:07:02Z",
+    "registered_by_host": "Primary",
+    "registered_by_pid": 0
+  },
+  {
+    "instance_id": "35816829",
+    "label": "lane_mae_v_v5_a3",
+    "metadata": {
+      "estimated_cost_usd": 4.0,
+      "predicted_band": [
+        0.85,
+        1.1
+      ],
+      "script": "scripts/remote_lane_mae_v.sh",
+      "council_priority": 99,
+      "anchor_dirs": [
+        "experiments/results/lane_a_landed/iter_0"
+      ],
+      "launcher": "scripts/launch_lane_on_vastai.py phase1+phase2"
+    },
+    "registered_at_utc": "2026-04-29T09:08:56Z",
+    "registered_by_host": "Primary",
+    "registered_by_pid": 0
+  },
+  {
+    "instance_id": "35849192",
+    "label": "lane_darts_s_v1_a1",
+    "metadata": {
+      "estimated_cost_usd": 3.5,
+      "predicted_band": [
+        0.27,
+        0.55
+      ],
+      "script": "scripts/remote_lane_darts_s_segmap_arch_sweep.sh",
+      "council_priority": 99,
+      "anchor_dirs": [
+        "experiments/results/lane_a_landed/iter_0"
+      ],
+      "launcher": "scripts/launch_lane_on_vastai.py phase1+phase2"
+    },
+    "registered_at_utc": "2026-04-29T18:09:52Z",
+    "registered_by_host": "Primary",
+    "registered_by_pid": 0
   }
 ]

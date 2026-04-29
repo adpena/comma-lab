@@ -333,15 +333,19 @@ def main() -> int:
 
     history: list[dict] = []
     t_start = time.monotonic()
+    # BUG CLASS B fix (2026-04-29): plumb --batch-size into train_epoch so
+    # the legacy "all 600 pairs in one forward = 7.03 GiB OOM on T4" path
+    # is closed. SegMapTrainer.train_epoch chunks pairs into mini-batches
+    # of `batch_size` and accumulates gradients; one optimizer.step() per
+    # epoch preserves the legacy semantics.
+    import inspect as _inspect
+    _train_sig = _inspect.signature(trainer.train_epoch)
+    _supports_batch = "batch_size" in _train_sig.parameters
+    _supports_pair_weights = "pair_weights" in _train_sig.parameters
     for epoch in range(args.epochs):
         kwargs = {}
-        # Forward pair_weights only when the trainer accepts it. Newer
-        # SegMapTrainer accepts the kwarg; older versions raise TypeError.
-        # We probe once (via inspect) and cache the support flag.
         if pair_weights is not None:
-            import inspect
-            sig = inspect.signature(trainer.train_epoch)
-            if "pair_weights" in sig.parameters:
+            if _supports_pair_weights:
                 kwargs["pair_weights"] = pair_weights
             else:
                 # Fail loud on first iteration: silent drop of pair_weights
@@ -352,6 +356,16 @@ def main() -> int:
                         "does not accept the 'pair_weights' kwarg. Wire it in "
                         "or remove --pair-weights."
                     )
+        if _supports_batch:
+            kwargs["batch_size"] = args.batch_size
+        elif epoch == 0:
+            # Older SegMapTrainer without batch chunking → loud warning so
+            # operators see why VRAM may explode under big-batch eval.
+            print(
+                "[train_segmap] WARNING: SegMapTrainer.train_epoch lacks "
+                "batch_size kwarg; running unchunked (T4 may OOM at 600 pairs)",
+                flush=True,
+            )
         epoch_metrics = trainer.train_epoch(
             mask_pairs=mask_pairs,
             gt_pairs=gt_pairs,

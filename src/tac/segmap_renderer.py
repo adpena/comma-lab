@@ -346,8 +346,9 @@ class SegMapTrainer:
         ema: Optional[EMA] = None,
         roundtrip_noise_std: float = 0.5,
         pair_weights: Optional[torch.Tensor] = None,
+        batch_size: int = 8,
     ) -> dict[str, float]:
-        """Run a single pass over (mask_pairs, gt_pairs) and return loss stats.
+        """Run one pass over (mask_pairs, gt_pairs), CHUNKED in mini-batches.
 
         Args:
             mask_pairs: (B, T, NUM_CLASSES, H, W) class-probability maps from
@@ -362,10 +363,23 @@ class SegMapTrainer:
                 weight the pose / seg distortion contributions per pair
                 BEFORE the mean reduction. Must have length == B if
                 supplied; broadcasting is rejected to avoid silent bugs.
+            batch_size: number of pairs per mini-batch forward. Default 8
+                matches the legacy `--batch-size 8` CLI default. Each
+                mini-batch processes batch_size*T scorer frames at once.
+                BUG CLASS B fix (2026-04-29): the previous implementation
+                ran ALL B pairs through a single forward pass (B*T frames
+                = 1200 frames at full res), which OOM'd T4's 14.56GB of
+                VRAM with a 7.03GB allocation. Chunking + gradient
+                accumulation keeps VRAM bounded by batch_size*T, while
+                preserving per-epoch optimizer.step() semantics.
 
         Returns:
             dict with keys ``loss``, ``pose_dist``, ``seg_dist``,
             ``num_steps``, ``kl_aux`` (0.0 if loss_mode != kl_distill).
+            Loss aggregation is SUM-then-divide-by-N over mini-batches
+            (per CLAUDE.md "validate at every boundary"); the optimizer
+            step is taken ONCE per call after all mini-batches accumulate
+            their gradients.
         """
         self.model.train()
         b, t, num_classes, h, w = mask_pairs.shape
@@ -373,6 +387,22 @@ class SegMapTrainer:
             raise ValueError(
                 f"mask_pairs expects NUM_CLASSES=5 channel dim, got {num_classes}"
             )
+        if batch_size < 1:
+            raise ValueError(f"batch_size must be >= 1, got {batch_size}")
+
+        # Validate pair_weights shape ONCE before chunking so the same
+        # contract holds whether or not we hit the Lane WC-S path.
+        pw_full: Optional[torch.Tensor] = None
+        if pair_weights is not None:
+            if pair_weights.numel() != b:
+                raise ValueError(
+                    f"pair_weights length {pair_weights.numel()} != batch {b}; "
+                    f"refusing to broadcast (Lane WC-S contract)."
+                )
+            pw_full = pair_weights.to(self.device, dtype=torch.float32)
+
+        # Pre-zero gradients ONCE; mini-batch backward calls accumulate.
+        self.optimizer.zero_grad(set_to_none=True)
 
         loss_sum = 0.0
         pose_sum = 0.0
@@ -380,118 +410,124 @@ class SegMapTrainer:
         kl_sum = 0.0
         steps = 0
 
-        # Flatten the (B, T) -> single forward, frame indices map per sample.
-        masks_flat = mask_pairs.reshape(b * t, num_classes, h, w).to(self.device)
-        # frame_indices: 2*i, 2*i+1 for each sample i. The trainer is single-
-        # epoch over a static batch, so pair index 0..b-1 -> frames 0..2b-1.
-        # Caller is expected to provide a correctly-sized max_frame_index in
-        # the SegMap; we just produce monotonic indices here.
-        frame_indices = torch.arange(b * t, device=self.device, dtype=torch.long)
+        # Iterate over [0, b) in chunks of batch_size.
+        for start in range(0, b, batch_size):
+            stop = min(start + batch_size, b)
+            mb = stop - start  # mini-batch size in pairs
+            mb_mask = mask_pairs[start:stop]
+            mb_gt = gt_pairs[start:stop]
 
-        rendered = self.model(masks_flat, frame_indices)  # (B*T, 3, H, W) in [0, 255]
-        rendered_btchw = rendered.reshape(b, t, 3, h, w)
-        # Apply roundtrip BEFORE the scorer call. This is the canonical
-        # eval_roundtrip simulation per the CLAUDE.md non-negotiable.
-        rt_btchw = _eval_roundtrip_chain(rendered_btchw)
-
-        # Convert GT pairs (B, T, H, W, 3) -> (B, T, 3, H, W) for the scorer.
-        gt_btchw = gt_pairs.permute(0, 1, 4, 2, 3).contiguous().to(
-            self.device, dtype=torch.float32
-        )
-
-        # Scorer forward — frozen weights, gradients flow through rendered.
-        posenet_out, segnet_out = scorer_forward_pair(
-            rt_btchw, self.posenet, self.segnet
-        )
-        # GT scorer outputs (no grad).
-        with torch.no_grad():
-            gt_pose_out, gt_seg_out = scorer_forward_pair(
-                gt_btchw, self.posenet, self.segnet
+            # Flatten the (mb, T) -> single forward; frame indices preserve
+            # the original global index space so the SegMap's per-frame
+            # affine embedding stays aligned with this pair's true frame
+            # location.
+            masks_flat = mb_mask.reshape(mb * t, num_classes, h, w).to(self.device)
+            # Original-frame-index range for this slice: [2*start, 2*stop).
+            frame_indices = torch.arange(
+                start * t, stop * t, device=self.device, dtype=torch.long
             )
 
-        # PoseNet: MSE on first 6 dims (pose). When pair_weights is supplied
-        # (Lane WC-S Curator outlier weighting), each pair's per-element MSE
-        # is multiplied by its weight before the mean — this elevates hard
-        # pairs (high outlier score → high weight) without distorting the
-        # canonical loss when no weights are passed.
-        pose_diff_sq = (
-            posenet_out["pose"][..., :6] - gt_pose_out["pose"][..., :6]
-        ).pow(2)
-        # SegNet logits.
-        seg_logits_pred = segnet_out
-        with torch.no_grad():
-            seg_logits_gt = gt_seg_out
-            seg_argmax_gt = seg_logits_gt.argmax(dim=1)
-        # Per-element CE so we can apply per-pair weights symmetrically.
-        seg_ce_per = F.cross_entropy(
-            seg_logits_pred, seg_argmax_gt, reduction="none"
-        )
-
-        if pair_weights is not None:
-            if pair_weights.numel() != b:
-                raise ValueError(
-                    f"pair_weights length {pair_weights.numel()} != batch {b}; "
-                    f"refusing to broadcast (Lane WC-S contract)."
-                )
-            pw = pair_weights.to(self.device, dtype=torch.float32)
-            # pose_diff_sq has shape (B*T, ..., 6) where the leading dim is
-            # B*T (one entry per scorer pair). The scorer was called with
-            # rt_btchw of shape (B, T, 3, H, W); scorer_forward_pair returns
-            # one PoseNet output per BATCH element (T frames consumed
-            # together). So pose output leads with B, NOT B*T. Broadcast pw
-            # along the trailing pose dim.
-            if pose_diff_sq.shape[0] != b:
-                raise RuntimeError(
-                    f"pose output batch dim {pose_diff_sq.shape[0]} != B={b}; "
-                    f"cannot apply pair_weights safely."
-                )
-            pose_dist = (pose_diff_sq.mean(dim=tuple(range(1, pose_diff_sq.ndim))) * pw).sum() / pw.sum().clamp_min(1e-8)
-            # SegNet preprocess takes the LAST frame, so seg_ce_per leads with B.
-            if seg_ce_per.shape[0] != b:
-                raise RuntimeError(
-                    f"seg CE batch dim {seg_ce_per.shape[0]} != B={b}; "
-                    f"cannot apply pair_weights safely."
-                )
-            seg_dist = (seg_ce_per.mean(dim=tuple(range(1, seg_ce_per.ndim))) * pw).sum() / pw.sum().clamp_min(1e-8)
-        else:
-            pose_dist = pose_diff_sq.mean()
-            seg_dist = seg_ce_per.mean()
-
-        # Standard scorer loss formula (mirrors training.py / losses.py):
-        #   total = segnet_weight * seg + sqrt(10 * pose + 1e-8)
-        loss = (
-            self.config.segnet_loss_weight * seg_dist
-            + torch.sqrt(10.0 * pose_dist + 1e-8)
-        )
-
-        # Optional KL-distill auxiliary on SegNet (Hinton T=2 regime).
-        kl_aux_value = 0.0
-        if self.config.loss_mode == "kl_distill":
-            # Use the dedicated SegNet-only helper to avoid the double-PoseNet
-            # gradient path (per losses.py docstring + Lane G v3 history).
-            # Pass the SAME roundtripped rendered + GT pairs in HWC layout —
-            # kl_distill_segnet_only normalises shape internally.
-            rt_hwc = rt_btchw.permute(0, 1, 3, 4, 2).contiguous()
-            gt_hwc = gt_btchw.permute(0, 1, 3, 4, 2).contiguous()
-            kl_loss, kl_value = kl_distill_segnet_only(
-                rt_hwc, gt_hwc, self.segnet,
-                temperature=self.config.temperature_start,
+            rendered = self.model(masks_flat, frame_indices)  # (mb*T, 3, H, W) in [0,255]
+            rendered_btchw = rendered.reshape(mb, t, 3, h, w)
+            # Apply roundtrip BEFORE the scorer call. CLAUDE.md non-negotiable.
+            rt_btchw = _eval_roundtrip_chain(
+                rendered_btchw, noise_std=roundtrip_noise_std
             )
-            loss = loss + 0.002 * kl_loss  # canonical Lane G v3 weight
-            kl_aux_value = float(kl_value)
 
-        self.optimizer.zero_grad(set_to_none=True)
-        loss.backward()
+            # Convert GT pairs (mb, T, H, W, 3) -> (mb, T, 3, H, W).
+            gt_btchw = mb_gt.permute(0, 1, 4, 2, 3).contiguous().to(
+                self.device, dtype=torch.float32
+            )
+
+            # Scorer forward — frozen weights, gradients flow through rendered.
+            posenet_out, segnet_out = scorer_forward_pair(
+                rt_btchw, self.posenet, self.segnet
+            )
+            with torch.no_grad():
+                gt_pose_out, gt_seg_out = scorer_forward_pair(
+                    gt_btchw, self.posenet, self.segnet
+                )
+
+            pose_diff_sq = (
+                posenet_out["pose"][..., :6] - gt_pose_out["pose"][..., :6]
+            ).pow(2)
+            seg_logits_pred = segnet_out
+            with torch.no_grad():
+                seg_argmax_gt = gt_seg_out.argmax(dim=1)
+            seg_ce_per = F.cross_entropy(
+                seg_logits_pred, seg_argmax_gt, reduction="none"
+            )
+
+            if pw_full is not None:
+                pw_mb = pw_full[start:stop]
+                if pose_diff_sq.shape[0] != mb:
+                    raise RuntimeError(
+                        f"pose output batch dim {pose_diff_sq.shape[0]} != "
+                        f"mb={mb}; cannot apply pair_weights safely."
+                    )
+                if seg_ce_per.shape[0] != mb:
+                    raise RuntimeError(
+                        f"seg CE batch dim {seg_ce_per.shape[0]} != mb={mb}; "
+                        f"cannot apply pair_weights safely."
+                    )
+                pose_dist = (
+                    pose_diff_sq.mean(dim=tuple(range(1, pose_diff_sq.ndim)))
+                    * pw_mb
+                ).sum() / pw_mb.sum().clamp_min(1e-8)
+                seg_dist = (
+                    seg_ce_per.mean(dim=tuple(range(1, seg_ce_per.ndim)))
+                    * pw_mb
+                ).sum() / pw_mb.sum().clamp_min(1e-8)
+            else:
+                pose_dist = pose_diff_sq.mean()
+                seg_dist = seg_ce_per.mean()
+
+            # Standard scorer loss formula (mirrors training.py / losses.py):
+            #   total = segnet_weight * seg + sqrt(10 * pose + 1e-8)
+            loss = (
+                self.config.segnet_loss_weight * seg_dist
+                + torch.sqrt(10.0 * pose_dist + 1e-8)
+            )
+
+            kl_aux_value = 0.0
+            if self.config.loss_mode == "kl_distill":
+                # Use the SegNet-only helper to avoid the double-PoseNet
+                # gradient path. CLAUDE.md feedback_kl_distill_uses_roundtripped_frames
+                # is satisfied because we pass the SAME rt_btchw used above.
+                rt_hwc = rt_btchw.permute(0, 1, 3, 4, 2).contiguous()
+                gt_hwc = gt_btchw.permute(0, 1, 3, 4, 2).contiguous()
+                kl_loss, kl_value = kl_distill_segnet_only(
+                    rt_hwc, gt_hwc, self.segnet,
+                    temperature=self.config.temperature_start,
+                )
+                loss = loss + 0.002 * kl_loss  # canonical Lane G v3 weight
+                kl_aux_value = float(kl_value)
+
+            # Gradient accumulation: scale by 1/N_minibatches so that the
+            # SUMMED gradient over the epoch matches the gradient of the
+            # MEAN-of-mini-batch losses. This makes mini-batched training
+            # mathematically equivalent (modulo BN stats) to the legacy
+            # single-forward path when batch_size == b.
+            n_minibatches_estimate = (b + batch_size - 1) // batch_size
+            (loss / n_minibatches_estimate).backward()
+
+            loss_sum += float(loss.item())
+            pose_sum += float(pose_dist.item())
+            seg_sum += float(seg_dist.item())
+            kl_sum += kl_aux_value
+            steps += 1
+
+            # Free intermediate activations between mini-batches.
+            del rendered, rendered_btchw, rt_btchw, gt_btchw
+            del posenet_out, segnet_out, gt_pose_out, gt_seg_out
+            del pose_diff_sq, seg_logits_pred, seg_ce_per, seg_argmax_gt
+            del loss, pose_dist, seg_dist
+
+        # Single optimizer.step() per epoch over accumulated gradients.
         torch.nn.utils.clip_grad_norm_(self.model.parameters(), self.config.grad_clip)
         self.optimizer.step()
         if ema is not None:
             ema.update(self.model)
-
-        loss_sum += float(loss.item())
-        pose_sum += float(pose_dist.item())
-        seg_sum += float(seg_dist.item())
-        kl_sum += kl_aux_value
-        steps += 1
 
         return {
             "loss": loss_sum / max(steps, 1),

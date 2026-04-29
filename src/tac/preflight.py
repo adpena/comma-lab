@@ -249,6 +249,24 @@ def preflight_all(
     if check_codebase:
         check_codebase_drift(strict=True)
         preflight_arity(strict=True, verbose=verbose)
+        # Check 72 (2026-04-29): close BUG CLASS A — invented CLI flags inside
+        # remote_lane_*.sh shell-script invocations of experiments/*.py. The
+        # existing preflight_arity walks Python launchers (subprocess.run +
+        # bash -c strings); the bare shell pattern was a structural blind spot.
+        # Live-codebase scan finds 0 violations across 84 scripts × ~170
+        # invocations, so flips straight to STRICT. Memory ref: the 2026-04-29
+        # Lane MM/SA-v2/SC++-v2/SO-v2 ~$3 Modal incident.
+        preflight_shell_lane_arity(strict=True, verbose=verbose)
+        # Check 73 (2026-04-29): close BUG CLASS B — unchunked SegMap /
+        # renderer training that OOMs T4 (7.03 GiB allocation in 14.56 GiB
+        # of VRAM, 11.66 GiB already in use). Lane scripts invoking
+        # experiments/train_segmap.py or experiments/train_renderer.py MUST
+        # pass --batch-size <= 32 OR export GPU_TIER_HINT to opt out of T4.
+        # The matching code-side fix is the new chunked train_epoch
+        # (segmap_renderer.py SegMapTrainer.train_epoch + the train_segmap.py
+        # main-loop wiring of args.batch_size). Live-codebase scan: 0
+        # violations → straight to STRICT.
+        preflight_t4_oom_training_guard(strict=True, verbose=verbose)
         # 2026-04-27 codex R5-2 Finding #2: scanner flipped to strict after
         # all 19 known violations were fixed (12 dead resolvers in
         # train_renderer.py + 7 dead imports across test_fp4_quality /
@@ -1530,6 +1548,283 @@ def preflight_arity(
             + "\n".join(f"  • {v}" for v in violations)
             + "\n\nFix every violation. Each one is a real bug class that has "
             "burned GPU money in this repo (see CLAUDE.md SHIRAZ A100 incident)."
+        )
+    return violations
+
+
+# ── Shell-lane arity validation (Check 72) ────────────────────────────────────
+#
+# Bug class this catches: a remote_lane_*.sh file invokes
+#   "$PYBIN" -u experiments/<file>.py --some-flag VALUE \
+#       --other-flag VALUE
+# where --some-flag does not exist on <file>.py's argparse. preflight_arity
+# only walks Python launchers (subprocess.run + bash -c strings); the bare
+# shell-script invocation pattern was a structural blind spot.
+#
+# Real incident (2026-04-29, Lane MM): an INLINE Python -c regex scanner in
+# build_lane_mm_archive.py matched a comment containing "--hard" (in
+# "NEVER git pull / git reset --hard"), captured it as an "invented flag"
+# argument, and every Modal dispatch failed rc=3 in 4 seconds. Today's bug
+# was inverted (false positive) but the same scanner gap means a real
+# invented flag in a remote_lane_*.sh would silently ship.
+#
+# This scanner walks every scripts/remote_lane_*.sh, finds each python
+# invocation of an experiments/*.py target (handling backslash line
+# continuations), extracts --flag tokens, and checks them against the
+# target's argparse signature.
+
+_SHELL_INVOKE_RE = re.compile(
+    r'(?:"\$PYBIN"|\$PYBIN|python3?|/[\w/]+/python\d?)\s+(?:-\w+\s+)*'
+    r'(experiments/[\w/]+\.py)\b'
+)
+_SHELL_FLAG_RE = re.compile(r'(--[\w][\w-]*)')
+
+
+def _collapse_shell_continuations(text: str) -> str:
+    """Join shell lines ending in `\\\\\\n` into a single logical line.
+
+    This is the same convention bash uses for line continuation. Without
+    this step, multi-line lane invocations (very common pattern) would
+    have their flags split across multiple "lines" we couldn't see.
+    """
+    return re.sub(r'\\\s*\n[ \t]*', ' ', text)
+
+
+def _scan_shell_lane_invocations(
+    shell_path: Path,
+) -> list[tuple[int, str, list[str]]]:
+    """Return [(approx_lineno, target, flags_used)] for each python invocation
+    of an experiments/*.py target inside a shell script.
+
+    Only the FIRST python-experiments invocation per logical line is captured;
+    chained pipelines (`python a.py | python b.py`) are split conservatively
+    on the first pipe / redirect / semicolon / `&&` boundary so flags from
+    later commands in the same line cannot pollute the first invocation's
+    flag set.
+
+    The lineno is the line where the invocation token first appears in the
+    ORIGINAL (un-collapsed) source, so violation reports point an operator
+    at a real line in the .sh file.
+    """
+    raw = shell_path.read_text()
+    raw_lines = raw.splitlines()
+    collapsed = _collapse_shell_continuations(raw)
+
+    invocations: list[tuple[int, str, list[str]]] = []
+    for logical_line in collapsed.splitlines():
+        m = _SHELL_INVOKE_RE.search(logical_line)
+        if m is None:
+            continue
+        target = m.group(1)
+        # Find approximate lineno: first raw line that mentions the target.
+        approx_lineno = 1
+        for i, raw_line in enumerate(raw_lines, start=1):
+            if target in raw_line:
+                approx_lineno = i
+                break
+        # Conservative split: stop at the first pipe / semicolon / && / >.
+        invocation = re.split(r'(?:\|\||\||>|;|&&)', logical_line)[0]
+        target_idx = invocation.find(target)
+        tail = invocation[target_idx + len(target):]
+        flags_used = sorted(set(_SHELL_FLAG_RE.findall(tail)))
+        invocations.append((approx_lineno, target, flags_used))
+    return invocations
+
+
+def preflight_shell_lane_arity(
+    repo_root: Path | None = None,
+    shell_files: list[str] | None = None,
+    strict: bool = True,
+    verbose: bool = True,
+) -> list[str]:
+    """Validate every `experiments/*.py` invocation inside scripts/remote_lane_*.sh.
+
+    Same Rule A as preflight_arity (every --flag passed must exist on the
+    target's argparse). Rules B/C/D (required-arg / arch-flag / boolean
+    silent-default) are NOT applied here because shell-script lane scripts
+    routinely run partial experiments (e.g. inflate-only, eval-only) where
+    "missing" flags are intentional. We only catch the dead-flag bug class
+    that has actually burned GPU money in this repo.
+
+    Returns list of human-readable violations. Raises ArityViolation if strict.
+    """
+    root = repo_root or REPO_ROOT
+    if shell_files is None:
+        shell_files = sorted(
+            str(p.relative_to(root))
+            for p in (root / "scripts").glob("remote_lane_*.sh")
+        )
+
+    sigs = _build_target_signatures(root)
+    violations: list[str] = []
+
+    n_invocations = 0
+    for shell_rel in shell_files:
+        shell_path = root / shell_rel
+        if not shell_path.exists():
+            continue
+        for lineno, target, flags_used in _scan_shell_lane_invocations(shell_path):
+            n_invocations += 1
+            target_sig = sigs.get(target)
+            if target_sig is None:
+                # Target not parseable or no argparse → skip silently.
+                continue
+            target_flags = set(target_sig.keys())
+            unknown = set(flags_used) - target_flags
+            for f in sorted(unknown):
+                violations.append(
+                    f"{shell_rel}:{lineno}: passes {f!r} to {target} "
+                    f"but target has no such argparse arg "
+                    f"(BUG CLASS A — invented CLI flag in shell script)"
+                )
+
+    if verbose and violations:
+        print(f"  [shell-lane-arity] {len(violations)} violation(s):")
+        for v in violations:
+            print(f"    • {v}")
+    elif verbose:
+        n_scripts = sum(1 for f in shell_files if (root / f).exists())
+        print(
+            f"  [shell-lane-arity] OK: {n_scripts} lane scripts × "
+            f"{n_invocations} invocations clean"
+        )
+
+    if violations and strict:
+        raise ArityViolation(
+            "SHELL-LANE ARITY MISMATCH between remote_lane_*.sh and "
+            "experiments/*.py target(s):\n"
+            + "\n".join(f"  • {v}" for v in violations)
+            + "\n\nFix every violation. Each one is a Bug Class A regression "
+            "(the dead-flag-in-shell pattern that burned ~$3 of Modal time on "
+            "2026-04-29 across Lanes MM/SA-v2/SC++-v2/SO-v2)."
+        )
+    return violations
+
+
+# ── T4-OOM training-batch guard (Check 73) ────────────────────────────────────
+#
+# Bug class this catches: a remote_lane_*.sh invokes
+#   "$PYBIN" -u experiments/train_segmap.py ... [no --batch-size]
+# OR
+#   "$PYBIN" -u experiments/train_segmap.py ... --batch-size 64  (or larger)
+# and gets dispatched to a 14.56-GiB T4 where the unchunked / over-large
+# forward needs 7.03 GiB just for activations and OOMs in 126 s.
+#
+# Real incident (2026-04-29): Lane SA-v2 / SC++-v2 / SO-v2 each hit:
+#   torch.OutOfMemoryError: CUDA out of memory. Tried to allocate 7.03 GiB.
+#   GPU 0 has a total capacity of 14.56 GiB of which 2.90 GiB is free.
+#   Process has 11.66 GiB memory in use.
+# The matching code-side fix is BUG CLASS B (segmap_renderer.py
+# train_epoch() now mini-batches via the batch_size kwarg). This preflight
+# guards against future scripts that forget --batch-size or set it too
+# high.
+#
+# Conservative threshold: --batch-size <= 32. With T=2 frames per pair,
+# 32 pairs = 64 scorer-forward frames per mini-batch — the activations
+# stay under ~2 GiB even at full 384x512.
+
+_T4_OOM_TRAINING_TARGETS = {
+    "experiments/train_segmap.py",
+    "experiments/train_renderer.py",
+}
+_T4_BATCH_SIZE_CAP = 32
+# When the lane script EXPORTS this env var, the dispatcher (e.g.
+# scripts/launch_lane_on_vastai.py / experiments/modal_train_lane.py) is
+# expected to refuse anything below the named GPU tier. Lane scripts that
+# SET this var opt out of the batch-size cap.
+_GPU_TIER_HINT_VAR = "GPU_TIER_HINT"
+
+
+def preflight_t4_oom_training_guard(
+    repo_root: Path | None = None,
+    shell_files: list[str] | None = None,
+    strict: bool = True,
+    verbose: bool = True,
+) -> list[str]:
+    """Refuse remote_lane_*.sh scripts that invoke a T4-OOM-prone training
+    target without either bounding --batch-size or declaring a GPU_TIER_HINT.
+
+    Two acceptable patterns:
+      1) `--batch-size N` is passed AND N <= 32 (T4-safe under the new
+         BUG-CLASS-B chunked train_epoch).
+      2) The lane script exports `GPU_TIER_HINT=A10G` (or higher), opting
+         out of T4 dispatch entirely.
+
+    Anything else is a violation.
+    """
+    root = repo_root or REPO_ROOT
+    if shell_files is None:
+        shell_files = sorted(
+            str(p.relative_to(root))
+            for p in (root / "scripts").glob("remote_lane_*.sh")
+        )
+
+    violations: list[str] = []
+    n_invocations_checked = 0
+
+    for shell_rel in shell_files:
+        shell_path = root / shell_rel
+        if not shell_path.exists():
+            continue
+        raw = shell_path.read_text()
+        # GPU_TIER_HINT export anywhere in the file → opt out.
+        has_tier_hint = bool(
+            re.search(rf'(?:^|\n)\s*export\s+{_GPU_TIER_HINT_VAR}=', raw)
+        )
+        if has_tier_hint:
+            continue
+
+        for lineno, target, flags_used in _scan_shell_lane_invocations(shell_path):
+            if target not in _T4_OOM_TRAINING_TARGETS:
+                continue
+            n_invocations_checked += 1
+            # Find the --batch-size value, if present. Re-walk the collapsed
+            # logical line to extract the literal that follows --batch-size.
+            collapsed = _collapse_shell_continuations(raw)
+            bs_value: int | None = None
+            for logical_line in collapsed.splitlines():
+                if target not in logical_line:
+                    continue
+                m = re.search(r'--batch-size\s+(\d+)', logical_line)
+                if m:
+                    bs_value = int(m.group(1))
+                    break
+            if bs_value is None:
+                violations.append(
+                    f"{shell_rel}:{lineno}: invokes {target} without "
+                    f"--batch-size N. Without explicit batch chunking the "
+                    f"unchunked forward OOMs T4 (BUG CLASS B). Pass "
+                    f"`--batch-size <= {_T4_BATCH_SIZE_CAP}` OR add "
+                    f"`export {_GPU_TIER_HINT_VAR}=A10G` to the script."
+                )
+            elif bs_value > _T4_BATCH_SIZE_CAP:
+                violations.append(
+                    f"{shell_rel}:{lineno}: invokes {target} with "
+                    f"--batch-size {bs_value} > T4 cap "
+                    f"{_T4_BATCH_SIZE_CAP}. Either reduce or add "
+                    f"`export {_GPU_TIER_HINT_VAR}=A10G` (opts out of T4)."
+                )
+
+    if verbose and violations:
+        print(f"  [t4-oom-guard] {len(violations)} violation(s):")
+        for v in violations:
+            print(f"    • {v}")
+    elif verbose:
+        print(
+            f"  [t4-oom-guard] OK: "
+            f"{n_invocations_checked} T4-sensitive training invocations clean"
+        )
+
+    if violations and strict:
+        raise PreflightError(
+            "T4-OOM TRAINING GUARD: lane scripts invoke a T4-OOM-prone "
+            "training target without bounded --batch-size or GPU_TIER_HINT:\n"
+            + "\n".join(f"  • {v}" for v in violations)
+            + "\n\nMemory: BUG CLASS B (2026-04-29 Lane SA-v2/SC++-v2/SO-v2 "
+            "incident) — unchunked SegMap train_epoch needed 7.03 GiB on a "
+            "14.56-GiB T4 and OOM'd in 126 s. The chunked train_epoch fix "
+            "(Check 73) is wired but only effective when --batch-size is "
+            "passed."
         )
     return violations
 

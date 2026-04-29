@@ -1,6 +1,6 @@
 {
   "ara_version": "0.1",
-  "compiled_at": "2026-04-29T16:47:59.023372Z",
+  "compiled_at": "2026-04-29T16:51:36.246001Z",
   "findings": [
     {
       "code": "code_dangling",
