@@ -464,6 +464,12 @@ def preflight_all(
         # Check 70: pytest --collect-only catches missing imports + fixture errors.
         # Runs in ~1.3s for 4306 tests. STRICT @ 0.
         check_pytest_collection_clean(strict=True, verbose=verbose)
+        # Check 71: shadowed-module-import inside function body (causes
+        # UnboundLocalError when the name is used before the inner import).
+        # 2026-04-29: train_renderer.py crashed all 4 v4 lanes with this exact
+        # bug. py_compile + pytest-collect couldn't catch (legal syntax, only
+        # surfaces when the function path is exercised). STRICT @ 0.
+        check_no_shadowed_module_import_used_before_local_import(strict=True, verbose=verbose)
 
         # 2026-04-29: Check 43 — controlled-baseline methodology for new
         # Tuna-2 lanes. WARN-ONLY initially because it only applies to
@@ -8250,6 +8256,99 @@ def check_launcher_tarball_includes_lane_anchors(
         raise MetaBugViolation(
             "LAUNCHER TARBALL MISSING LANE ANCHORS:\n"
             + "\n".join(f"  • {v}" for v in violations)
+        )
+    return violations
+
+
+def check_no_shadowed_module_import_used_before_local_import(
+    repo_root: Path | None = None,
+    strict: bool = False,
+    verbose: bool = True,
+    scan_dirs: tuple[str, ...] = ("src/tac", "experiments", "tools"),
+) -> list[str]:
+    """Check 71 — UnboundLocalError trap from `from X import Y` inside a
+    function body shadowing a module-level `from X import Y`, when Y is
+    used in that function body BEFORE the local import line.
+
+    2026-04-29 incident: src/tac/experiments/train_renderer.py line 3057
+    had `from tac.losses import _hwc_to_chw` inside `def train()`, which
+    Python compiled as making `_hwc_to_chw` local-throughout-train. The
+    same function used `_hwc_to_chw` at line 2357 → UnboundLocalError.
+    All v4 TIER-1 lanes crashed at this exact line. ~$1+ wasted.
+
+    py_compile (Check 67) doesn't catch this (legal syntax).
+    pytest-collect (Check 70) doesn't catch this (only fails if test
+    actually exercises the function path).
+
+    Detects: imports at module level whose names are ALSO imported inside
+    a function body, AND used in that function body before the local
+    import line number.
+    """
+    import ast
+
+    root = repo_root or REPO_ROOT
+    skip_parts = {"__pycache__", ".venv", ".git", ".pytest_cache",
+                  "build", "dist", "tests"}
+
+    violations: list[str] = []
+    for d in scan_dirs:
+        d_path = root / d
+        if not d_path.exists():
+            continue
+        for py in d_path.rglob("*.py"):
+            if any(p in skip_parts for p in py.parts):
+                continue
+            try:
+                tree = ast.parse(py.read_text())
+            except SyntaxError:
+                continue
+            # Module-level imports
+            mod_imports: set[str] = set()
+            for node in tree.body:
+                if isinstance(node, ast.ImportFrom):
+                    for n in node.names:
+                        mod_imports.add(n.asname or n.name)
+            # Walk each function/method
+            for node in ast.walk(tree):
+                if not isinstance(node, (ast.FunctionDef, ast.AsyncFunctionDef)):
+                    continue
+                # Find local re-imports of module-level names + earliest use lines
+                local_imports: dict[str, int] = {}  # name → import lineno
+                first_use: dict[str, int] = {}  # name → first reference lineno
+                for sub in ast.walk(node):
+                    if sub is node:
+                        continue
+                    if isinstance(sub, ast.ImportFrom):
+                        for n in sub.names:
+                            name = n.asname or n.name
+                            if name in mod_imports and name not in local_imports:
+                                local_imports[name] = sub.lineno
+                    elif isinstance(sub, ast.Name):
+                        if sub.id in mod_imports and sub.id not in first_use:
+                            first_use[sub.id] = sub.lineno
+                for name, imp_line in local_imports.items():
+                    use_line = first_use.get(name)
+                    if use_line is not None and use_line < imp_line:
+                        violations.append(
+                            f"{py.relative_to(root)}:{imp_line}: "
+                            f"`from ... import {name}` inside `{node.name}()` "
+                            f"shadows module-level import. {name} is also "
+                            f"used at line {use_line} (BEFORE the local import) "
+                            f"→ UnboundLocalError. Remove the inner import."
+                        )
+
+    if verbose:
+        if violations:
+            print(f"  [shadowed-import-before-use] {len(violations)} violation(s):")
+            for v in violations[:20]:
+                print(f"    • {v}")
+        else:
+            print(f"  [shadowed-import-before-use] OK")
+
+    if violations and strict:
+        raise MetaBugViolation(
+            "SHADOWED IMPORT TRIGGERS UnboundLocalError:\n"
+            + "\n".join(f"  • {v}" for v in violations[:20])
         )
     return violations
 

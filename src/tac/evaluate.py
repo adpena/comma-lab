@@ -162,8 +162,7 @@ def canonical_score(
         f"total={timing['total_s']}s"
     )
 
-    from .models import ScoreResult
-
+    # ScoreResult imported at module level (L30); no need to re-import.
     return ScoreResult(
         score=score,
         pose=avg_pose,

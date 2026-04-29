@@ -3054,7 +3054,10 @@ def train(args: argparse.Namespace):
                         # Forward both student (renderer-rendered) and teacher
                         # (GT) frames through SegNet to obtain logits. Mirrors
                         # the no-grad teacher pattern in kl_distill_segnet_only.
-                        from tac.losses import _hwc_to_chw  # internal helper
+                        # NOTE: _hwc_to_chw is imported at module level (L63);
+                        # do NOT re-import inside train() — it would shadow the
+                        # module-level binding and cause UnboundLocalError at
+                        # earlier uses (L2357 P0 cache).
                         fx = _hwc_to_chw(rendered_pair)  # KL_RAW_PAIRS_OK:rendered_pair was reassigned to roundtripped output at L1642
                         gx = _hwc_to_chw(gt_pair)
                         fs_in = segnet.preprocess_input(fx)
