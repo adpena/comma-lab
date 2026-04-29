@@ -980,9 +980,11 @@ def main() -> int:
     p = argparse.ArgumentParser()
     sub = p.add_subparsers(dest="cmd")
 
-    # Common args helper
-    def add_common(p_):
-        p_.add_argument("--lane-script", required=True,
+    # Common args helper. `--lane-script` required for stages that NEED it
+    # (build tarball, ship code, launch). phase2-wait only polls SSH and
+    # doesn't need it. Caller can override via add_common(p, lane_required=False).
+    def add_common(p_, lane_required: bool = True):
+        p_.add_argument("--lane-script", required=lane_required,
                        help="Path to remote_lane_*.sh (relative to repo root)")
         p_.add_argument("--anchor-dirs", nargs="*",
                        default=["experiments/results/lane_a_landed/iter_0"],
@@ -1007,7 +1009,7 @@ def main() -> int:
 
     # phase2-wait — just status + ssh ready, idempotent (re-run if needed)
     p2w = sub.add_parser("phase2-wait", help="Wait for instance ready (~3-5 min, idempotent)")
-    add_common(p2w)
+    add_common(p2w, lane_required=False)
     p2w.add_argument("--instance-id", required=True)
 
     # phase2-deploy (legacy combined, kept for backward compat)
