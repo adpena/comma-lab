@@ -47,6 +47,10 @@ image = (
 
 eval_image = (
     image
+    # tac package source so SZv1 (szabolcs no-masks SegMap) renderers can load.
+    # 2026-04-29: add_local_dir of src/tac → /root/tac + sys.path injection
+    # in run_auth_eval(). Avoids wheel-rebuild friction; matches Lane G v3 path.
+    .add_local_dir("src/tac", remote_path="/root/tac")
     .add_local_dir("upstream", remote_path="/root/upstream")
     .add_local_dir("submissions/robust_current", remote_path="/root/submission")
 )
@@ -112,9 +116,11 @@ def run_auth_eval(archive_bytes: bytes) -> dict:
     # Run inflate_renderer.py directly (simpler than inflate.sh)
     print("\n=== INFLATE ===")
     t_inflate = time.monotonic()
+    # Note: /root parent of /root/tac added so `import tac` resolves.
+    # Required by SZv1 renderer load path (Lane SZ archives).
     env = {
         **os.environ,
-        "PYTHONPATH": f"/root/submission:/root/upstream:{work}",
+        "PYTHONPATH": f"/root:/root/submission:/root/upstream:{work}",
     }
     proc = subprocess.run(
         [
