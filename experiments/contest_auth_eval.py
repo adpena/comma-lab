@@ -174,6 +174,68 @@ def _extract_archive(archive: Path, dest: Path) -> list[str]:
     return members
 
 
+# 2026-04-28 deep hardening pass 3 dimension 3: Whitelist-based archive
+# validation. Catches the bug class where unexpected files in the archive
+# (stale TTO frames, debug snapshots, .DS_Store from macOS) silently inflate
+# the rate term. Memory: feedback_catastrophic_failures_20260421 (Auto-bundle
+# by file existence — compress.sh auto-included any .pt/.bin file sitting
+# next to the submission).
+_KNOWN_ARCHIVE_SUFFIXES = (
+    ".bin", ".bin.br",          # renderer (raw or brotli'd)
+    ".mkv", ".mp4",             # mask video (svtav1 / h264 / etc.)
+    ".pt",                       # poses, optionally other state dicts
+    ".json", ".txt",             # manifests / pose metadata
+    ".bin.zst", ".bin.lzma",    # alternative compressors
+    ".npy", ".npz",             # numpy state if used
+)
+_FORBIDDEN_ARCHIVE_NAMES = (
+    ".DS_Store", "__MACOSX", "._",  # macOS resource forks
+    "Thumbs.db",                     # Windows
+)
+
+
+def _validate_archive_members(members: list[str]) -> None:
+    """Whitelist-based archive content validator.
+
+    Raises RuntimeError if the archive contains files outside the known
+    submission contract OR forbidden housekeeping files (macOS resource forks
+    inflate rate by ~5-10KB silently). Called BEFORE eval so a corrupt
+    archive fails fast instead of producing wrong scores.
+    """
+    if not members:
+        raise RuntimeError(
+            "[archive-validate] EMPTY archive — no members extracted. "
+            "Likely corruption or wrong path."
+        )
+    forbidden_found: list[str] = []
+    unknown_found: list[str] = []
+    for member in members:
+        # Forbidden housekeeping markers anywhere in the path
+        for forbidden in _FORBIDDEN_ARCHIVE_NAMES:
+            if forbidden in member:
+                forbidden_found.append(member)
+                break
+        else:
+            # Whitelist by suffix
+            lower = member.lower()
+            if not any(lower.endswith(s) for s in _KNOWN_ARCHIVE_SUFFIXES):
+                unknown_found.append(member)
+    if forbidden_found:
+        raise RuntimeError(
+            f"[archive-validate] FORBIDDEN files in archive: {forbidden_found}. "
+            f"macOS resource forks / Windows housekeeping silently inflate the "
+            f"rate term. Re-build the archive with the canonical zip helper "
+            f"(see scripts/zip_archive.py) which strips these."
+        )
+    if unknown_found:
+        raise RuntimeError(
+            f"[archive-validate] UNKNOWN file types in archive: {unknown_found}. "
+            f"Allowed suffixes: {_KNOWN_ARCHIVE_SUFFIXES}. If a new artifact "
+            f"type was added intentionally, append its suffix to "
+            f"_KNOWN_ARCHIVE_SUFFIXES in experiments/contest_auth_eval.py."
+        )
+
+
 def _run_inflate(inflate_sh: Path, archive_dir: Path, inflated_dir: Path,
                  video_names_file: Path, *, timeout: int = 1800) -> None:
     """Invoke the submission's inflate.sh. Contest budget: 30 min on T4.
@@ -574,6 +636,12 @@ def main() -> int:
         extracted = work_dir / "extracted"
         members = _extract_archive(archive_in_work, extracted)
         print(f"[contest_auth_eval] extracted {len(members)} member(s): {members}")
+
+        # Stage 1b (deep hardening pass 3 dim 3): whitelist-based archive
+        # validation. Catches stale debug artifacts, macOS resource forks,
+        # and unknown file types BEFORE eval so wrong scores never escape.
+        _validate_archive_members(members)
+        print("[contest_auth_eval] archive members validated against whitelist")
 
         # Stage 2: run submission's inflate.sh on the extracted archive dir
         inflated = work_dir / "inflated"

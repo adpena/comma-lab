@@ -1225,6 +1225,21 @@ class Trainer:
                 if self.entropy_bottleneck is not None and cfg.eb_lambda > 0.0:
                     total = total + cfg.eb_lambda * self.entropy_bottleneck.rate_loss()
 
+                # 2026-04-28 deep hardening pass 3 dimension 3: assert finite
+                # loss BEFORE backward. NaN/inf propagates silently through
+                # backward + optimizer.step, corrupting weights for the rest
+                # of training. Fail loud at the first non-finite step so the
+                # operator can see exactly which loss term blew up. Cheap:
+                # one host-device sync per step but only on .item() of a 0-d
+                # tensor.
+                _loss_val = total.item()
+                if not (_loss_val == _loss_val and abs(_loss_val) != float("inf")):
+                    raise RuntimeError(
+                        f"[Trainer] non-finite loss at epoch step: total={_loss_val} "
+                        f"loss={loss.item()} pd={pd} sd={sd}. "
+                        f"Aborting before backward to preserve weights."
+                    )
+
                 self.optimizer.zero_grad(set_to_none=True)
                 total.backward()
                 torch.nn.utils.clip_grad_norm_(self.model.parameters(), cfg.grad_clip)
@@ -1829,6 +1844,14 @@ class Trainer:
                 if self.entropy_bottleneck is not None and cfg.eb_lambda > 0.0:
                     total_unscaled = total_unscaled + cfg.eb_lambda * self.entropy_bottleneck.rate_loss()
                 total = total_unscaled / accum
+                # Deep hardening pass 3 dim 3: assert finite loss before backward.
+                _loss_val = total.item()
+                if not (_loss_val == _loss_val and abs(_loss_val) != float("inf")):
+                    raise RuntimeError(
+                        f"[Trainer-lazy] non-finite loss at step {step}: "
+                        f"total={_loss_val} loss={loss.item()} sal={sal_recon.item()}. "
+                        f"Aborting before backward to preserve weights."
+                    )
                 try:
                     total.backward()
                 except torch.cuda.OutOfMemoryError:
