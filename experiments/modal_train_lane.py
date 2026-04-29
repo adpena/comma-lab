@@ -409,81 +409,38 @@ def main(
     if max_seconds < 60:
         max_seconds = 60
     if max_seconds > 14 * 3600:
-        # Modal @app.function timeout is the hard cap (14h). Per-call subprocess
-        # timeout cannot exceed that or it would never trigger before Modal kills.
         max_seconds = 14 * 3600
     print(f"  per-lane timeout: {max_seconds}s ({timeout_hours:.1f}h)")
-    result = fn.remote(lane_script, label, overrides, max_seconds)
 
-    # Save artifacts locally
-    out_dir = repo_root / "experiments" / "results" / f"lane_{label}_modal"
-    out_dir.mkdir(parents=True, exist_ok=True)
-    for path, data in result["artifacts"].items():
-        full = out_dir / path
-        full.parent.mkdir(parents=True, exist_ok=True)
-        full.write_bytes(data)
-    print(f"Saved {len(result['artifacts'])} artifacts to {out_dir}")
+    # CRITICAL: use .spawn() not .remote() for detached runs.
+    # `.remote()` is cancelled when the local CLI disconnects, even with
+    # --detach (Modal's warning: ".remote() calls in detached apps may be
+    # canceled when the local caller disconnects. Use .spawn() for detached
+    # or background work."). Tonight's first 3 dispatches all got killed at
+    # 4-6s by this exact issue.
+    #
+    # .spawn() returns a FunctionCall handle. We save it so the user can
+    # poll later with `modal call get <id>`.
+    fn_call = fn.spawn(lane_script, label, overrides, max_seconds)
+    call_id = fn_call.object_id
 
-    # Save metadata
-    meta = {
+    print(f"\n✓ DISPATCHED via .spawn() — call_id={call_id}")
+    print(f"  Poll status:    modal call get {call_id}")
+    print(f"  Stream logs:    modal app logs <app_id> (see modal app list)")
+    print(f"  Get result:     modal call get {call_id} (after completion)")
+    print(f"\n  Local entrypoint exiting; remote training continues for up to {timeout_hours:.0f}h.")
+
+    # Save call_id to a sentinel file so a later script can recover artifacts.
+    sentinel_dir = repo_root / "experiments" / "results" / f"lane_{label}_modal"
+    sentinel_dir.mkdir(parents=True, exist_ok=True)
+    (sentinel_dir / "modal_call_id.txt").write_text(call_id + "\n")
+    (sentinel_dir / "modal_metadata.json").write_text(json.dumps({
         "lane_script": lane_script,
         "label": label,
         "gpu": gpu,
-        "returncode": result["returncode"],
-        "elapsed_seconds": result.get("elapsed_seconds"),
-        "n_artifacts": len(result["artifacts"]),
-        "stdout_tail": result.get("stdout_tail", "")[-2000:],
-    }
-    (out_dir / "modal_metadata.json").write_text(json.dumps(meta, indent=2))
-
-    # Auto-extract score from any of the canonical sources:
-    #   1. *.json files containing 'score' or 'final_score' field
-    #   2. *.log files with `RESULT_JSON: {...}` line (contest_auth_eval.py emits this)
-    score_found = False
-    import re as _re
-    for path, data_bytes in result["artifacts"].items():
-        if score_found:
-            break
-        # Try JSON file
-        if path.endswith(".json"):
-            try:
-                data = json.loads(data_bytes.decode())
-                if isinstance(data, dict):
-                    score = data.get("score") or data.get("final_score")
-                    if score is not None:
-                        print(f"\n=== AUTH SCORE: {score} [Modal-{gpu}-{(overrides.get('AUTH_EVAL_DEVICE') or 'cpu').upper()}] ({label}) ===")
-                        print(f"  source:  {path}")
-                        print(f"  PoseNet: {data.get('pose') or data.get('pose_dist')}")
-                        print(f"  SegNet:  {data.get('seg') or data.get('seg_dist')}")
-                        print(f"  Rate:    {data.get('rate')}")
-                        score_found = True
-            except Exception:
-                pass
-        # Try RESULT_JSON: in log files
-        elif path.endswith(".log"):
-            try:
-                text = data_bytes.decode(errors="ignore")
-                m = _re.search(r"RESULT_JSON:\s*(\{[^\n]+\})", text)
-                if m:
-                    data = json.loads(m.group(1))
-                    score = data.get("score") or data.get("final_score")
-                    if score is not None:
-                        print(f"\n=== AUTH SCORE: {score} [Modal-{gpu}-{(overrides.get('AUTH_EVAL_DEVICE') or 'cpu').upper()}] ({label}) ===")
-                        print(f"  source:  {path} (RESULT_JSON line)")
-                        print(f"  PoseNet: {data.get('pose')}")
-                        print(f"  SegNet:  {data.get('seg')}")
-                        print(f"  Rate:    {data.get('rate')}")
-                        score_found = True
-            except Exception:
-                pass
-    if not score_found and result["returncode"] == 0:
-        print(f"\n  WARNING: no auth score extracted from artifacts (lane succeeded but eval not detected).")
-        print(f"  Inspect {out_dir}/ manually for the lane's auth_eval output.")
-
-    if result["returncode"] != 0:
-        print(f"\n✗ Lane FAILED with rc={result['returncode']}", file=sys.stderr)
-        print(f"  stdout tail (last 2000B):", file=sys.stderr)
-        print(result.get("stdout_tail", "")[-2000:], file=sys.stderr)
-        sys.exit(result["returncode"])
-
-    print(f"\n✓ Lane SUCCESS")
+        "max_seconds": max_seconds,
+        "call_id": call_id,
+        "dispatched_at": __import__("datetime").datetime.now().isoformat(),
+    }, indent=2))
+    print(f"  call_id saved:  {sentinel_dir}/modal_call_id.txt")
+    print(f"\n  Use experiments/modal_recover_lane.py to fetch artifacts when complete.")
