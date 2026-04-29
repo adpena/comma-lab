@@ -1,0 +1,8 @@
+{
+  "lane_script": "scripts/remote_lane_gp_gaussian_process_pose.sh",
+  "label": "lane_gp_v3",
+  "gpu": "T4",
+  "max_seconds": 14400,
+  "call_id": "fc-01KQCTA49BTVP1XBATRGNS5XRJ",
+  "dispatched_at": "2026-04-29T09:29:27.044322"
+}
