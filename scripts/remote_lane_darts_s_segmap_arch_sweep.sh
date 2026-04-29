@@ -62,6 +62,7 @@ prov = {
     'variant': 'kl_distill',
     'predicted_band': [0.27, 0.55],
     'anchor_dir': 'experiments/results/lane_a_landed/iter_0',
+    'controlled_baseline': 'lane_sc_plus_plus_kl_distill (single mechanism: hidden/block_hidden/num_blocks sweep; default config matches SC++ exactly)',
     'paradigm': 'segmap_arch_sweep',
 }
 with open('$PROVENANCE', 'w') as f:

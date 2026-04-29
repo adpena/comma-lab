@@ -52,6 +52,7 @@ prov = {
     'kl_distill_temperature': 2.0,
     'predicted_band': [0.32, 0.45],
     'anchor_dir': 'experiments/results/lane_a_landed/iter_0',
+    'controlled_baseline': 'lane_sc_plus_plus_kl_distill (single mechanism: 6-DOF affine -> 8-DOF perspective homography frame embedding)',
     'paradigm': 'segmap_homography_8dof',
 }
 with open('$PROVENANCE', 'w') as f:

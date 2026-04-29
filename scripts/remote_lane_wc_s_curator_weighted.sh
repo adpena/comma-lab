@@ -60,6 +60,7 @@ prov = {
     'curator_outlier_quantile': 0.95,
     'predicted_band': [0.26, 0.34],
     'anchor_dir': 'experiments/results/lane_a_landed/iter_0',
+    'controlled_baseline': 'lane_sc_plus_plus_kl_distill (single mechanism: per-pair Curator outlier loss weighting in train_segmap.py)',
     'paradigm': 'segmap_clone_with_kl_distill_and_curator_outlier_weighting',
 }
 with open('$PROVENANCE', 'w') as f:

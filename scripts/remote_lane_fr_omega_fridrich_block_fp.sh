@@ -61,6 +61,7 @@ prov = {
     'fridrich_qint_alloc': {'top25': 15, 'mid50': 7, 'low25': 1},
     'predicted_band': [0.25, 0.32],
     'anchor_dir': 'experiments/results/lane_a_landed/iter_0',
+    'controlled_baseline': 'lane_sc_plus_plus_kl_distill (single mechanism: Fridrich-cost-driven per-channel qint_max in block-FP export)',
     'paradigm': 'segmap_clone_with_kl_distill_and_fridrich_block_fp',
 }
 with open('$PROVENANCE', 'w') as f:
