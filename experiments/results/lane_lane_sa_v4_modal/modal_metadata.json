@@ -1,0 +1,8 @@
+{
+  "lane_script": "scripts/remote_lane_sa_segmap_clone.sh",
+  "label": "lane_sa_v4",
+  "gpu": "A10G",
+  "max_seconds": 46800,
+  "call_id": "fc-01KQD5WXJXAK8CV82BFSKPJA7V",
+  "dispatched_at": "2026-04-29T12:51:57.016790"
+}

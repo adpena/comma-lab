@@ -1,0 +1,8 @@
+{
+  "lane_script": "scripts/remote_lane_so_hessian_block_fp.sh",
+  "label": "lane_so",
+  "gpu": "T4",
+  "max_seconds": 50400,
+  "call_id": "fc-01KQCZW7BJWHWMKQ3BDC5N6P0Q",
+  "dispatched_at": "2026-04-29T11:06:42.884799"
+}

@@ -1,0 +1,26 @@
+{
+  "started_at_utc": "2026-04-29T11:38:49Z",
+  "git_hash": "no-git",
+  "gpu_name": "Tesla T4",
+  "driver_version": "580.95.05",
+  "torch_version": "2.5.1+cu124",
+  "cuda_version": "12.4",
+  "cuda_available": true,
+  "lane_script": "scripts/remote_lane_omega_hessian_qat.sh",
+  "lane_name": "lane_omega_hessian_qat_on_lane_a",
+  "anchor_renderer": "experiments/results/lane_a_landed/iter_0/renderer.bin",
+  "anchor_poses": "experiments/results/lane_a_landed/iter_0/optimized_poses.pt",
+  "anchor_masks": "experiments/results/lane_a_landed/iter_0/masks.mkv",
+  "anchor_score_baseline": 1.15,
+  "predicted_band": [
+    0.7,
+    1.05
+  ],
+  "rationale": "Per-WEIGHT Hessian-aware bit allocation. Water-fill 600k bits across all eligible Conv2d/Linear weights. Critical weights (high Fisher importance) keep 6-8 bits; bulk weights drop to 1-2 bits. Protected layers (head/motion/FiLM/fuse_conv) stay FP16 \u2014 same protection list as Lane S.",
+  "target_total_bits": 600000,
+  "alpha": 0.5,
+  "min_bits": 1,
+  "max_bits": 8,
+  "output_dir": "/tmp/pact/lane_omega_results",
+  "tag": "lane_omega_hessian_qat"
+}

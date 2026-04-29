@@ -1,0 +1,13 @@
+{
+  "anchor_archive": "experiments/results/lane_a_landed/archive_lane_a.zip",
+  "anchor_archive_bytes": 694045,
+  "anchor_masks_bytes": 421483,
+  "stcb_bytes": 21270086,
+  "output_archive": "experiments/results/lane_stc_clean_local/archive_lane_stc_clean.zip",
+  "output_archive_bytes": 7912014,
+  "rate_delta_bytes_masks_layer": 20848603,
+  "rate_delta_bytes_archive": 7217969,
+  "boundary_fraction": 0.05,
+  "predicted_score_delta": 4.806149282008286,
+  "device": "mps"
+}
