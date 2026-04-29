@@ -49,7 +49,11 @@ export TAC_UPSTREAM_DIR="${TAC_UPSTREAM_DIR:-$WORKSPACE/upstream}"
 LOG_DIR="${LOG_DIR:-$WORKSPACE/lane_uniward_results}"
 ITER_DIR="$LOG_DIR/iter_0"
 TAG="${TAG:-lane_uniward}"
-ANCHOR_DIR="${ANCHOR_DIR:-submissions/baseline_dilated_h64_0_90}"
+# Anchor switched 2026-04-29 PM: submissions/baseline_dilated_h64_0_90/
+# has 64×48 masks (1/8 res) — Lane UNIWARD v7 scored 53.61 from this exact
+# bug (matches historical 2026-04-21 disaster). lane_a_landed/iter_0/ has
+# full 384×512 masks. Check 76 STRICT enforces.
+ANCHOR_DIR="${ANCHOR_DIR:-experiments/results/lane_a_landed/iter_0}"
 LANE_A_ARCHIVE="${LANE_A_ARCHIVE:-experiments/results/lane_a_landed/archive_lane_a.zip}"
 
 mkdir -p "$LOG_DIR" "$ITER_DIR"

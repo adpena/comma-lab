@@ -494,6 +494,14 @@ def preflight_all(
         # this exact bug. 9 live violations: needs audit + waivers before
         # STRICT promotion. See project_lane_gp_v2_audit_20260429.
         check_no_off_manifold_pose_zeros(strict=False, verbose=verbose)
+        # Check 76 WARN-ONLY: every masks.mkv referenced as a lane anchor
+        # SHOULD be full resolution (≥384×512). Lane UNIWARD v7 = 53.61
+        # (anchored on 64×48 masks), matches historical 2026-04-21 disaster
+        # (score 103.27). Currently warn-only because submissions/
+        # baseline_dilated_h64_0_90/masks.mkv (1 site) still exists and
+        # 10+ scripts reference its directory (some only for renderer.bin,
+        # not masks). Promote to STRICT after triage of remaining scripts.
+        check_lane_anchor_masks_full_resolution(strict=False, verbose=verbose)
 
         # 2026-04-29: Check 43 — controlled-baseline methodology for new
         # Tuna-2 lanes. WARN-ONLY initially because it only applies to
@@ -8279,6 +8287,106 @@ def check_launcher_tarball_includes_lane_anchors(
     if violations and strict:
         raise MetaBugViolation(
             "LAUNCHER TARBALL MISSING LANE ANCHORS:\n"
+            + "\n".join(f"  • {v}" for v in violations)
+        )
+    return violations
+
+
+def check_lane_anchor_masks_full_resolution(
+    repo_root: Path | None = None,
+    strict: bool = False,
+    verbose: bool = True,
+) -> list[str]:
+    """Check 76 — every masks.mkv referenced as a lane anchor must be at
+    full resolution (≥384×512) to match renderer training.
+
+    HISTORICAL BUG, RECURRING:
+      - 2026-04-21 (memory feedback_catastrophic_failures_20260421):
+        "MASKS.MKV AT 48x64 DESTROYED THE SCORE." Score 103.27 vs ~0.71.
+      - 2026-04-29 (Lane UNIWARD v7): same bug, different anchor.
+        score 53.61 (vs predicted [1.00, 1.13]) because lane bundled
+        submissions/baseline_dilated_h64_0_90/masks.mkv (64x48 1/8 res).
+
+    Renderer is trained on 384×512 inputs. Sub-resolution masks force
+    the renderer to upscale/extrapolate → catastrophic distortion.
+
+    This check probes every masks.mkv referenced as an ANCHOR_* /
+    LANE_*_MASKS / ANCHOR_DIR path in remote_lane_*.sh, opens it via
+    av/ffmpeg, and fails if width × height < 384 × 512.
+    """
+    try:
+        import av
+    except ImportError:
+        if verbose:
+            print(f"  [anchor-masks-fullres] SKIP: av not installed")
+        return []
+
+    root = repo_root or REPO_ROOT
+    scripts_dir = root / "scripts"
+    if not scripts_dir.is_dir():
+        return []
+
+    # Find all masks.mkv paths referenced (directly or via ANCHOR_DIR/...)
+    pattern = re.compile(
+        r'(?:ANCHOR_\w*MASKS\w*|LANE_\w*MASKS\w*|ANCHOR_DIR)\s*='
+        r'"?'
+        r'(?:\$\{[^:}]+:-)?'
+        r'(experiments/results/[\w./_-]+|submissions/[\w./_-]+|upstream/[\w./_-]+)'
+    )
+    masks_referenced: set[Path] = set()
+    for sh in scripts_dir.glob("remote_lane_*.sh"):
+        try:
+            text = sh.read_text(errors="ignore")
+        except (FileNotFoundError, PermissionError):
+            continue
+        for m in pattern.finditer(text):
+            anchor_path = root / m.group(1)
+            # Direct masks.mkv path
+            if anchor_path.is_file() and anchor_path.suffix == ".mkv":
+                masks_referenced.add(anchor_path)
+            # ANCHOR_DIR pointing at a directory containing masks.mkv
+            elif anchor_path.is_dir():
+                masks_path = anchor_path / "masks.mkv"
+                if masks_path.is_file():
+                    masks_referenced.add(masks_path)
+
+    violations: list[str] = []
+    n_checked = 0
+    for masks_path in sorted(masks_referenced):
+        try:
+            container = av.open(str(masks_path))
+            stream = container.streams.video[0]
+            w, h = stream.width, stream.height
+            container.close()
+            n_checked += 1
+            if w * h < 384 * 512:
+                violations.append(
+                    f"{masks_path.relative_to(root)}: resolution {w}×{h} "
+                    f"(< full 384×512). Lanes anchoring this WILL score "
+                    f"catastrophically (Lane UNIWARD v7 = 53.61 from this "
+                    f"exact bug, score 103.27 historical 2026-04-21). "
+                    f"Use experiments/results/lane_a_landed/iter_0/masks.mkv "
+                    f"or experiments/results/lane_g_v3_landed/iter_0/masks.mkv."
+                )
+        except Exception as e:
+            violations.append(
+                f"{masks_path.relative_to(root)}: could not probe "
+                f"({type(e).__name__}: {e})"
+            )
+
+    if verbose:
+        if violations:
+            print(f"  [anchor-masks-fullres] {len(violations)} violation(s) "
+                  f"({n_checked} checked):")
+            for v in violations:
+                print(f"    • {v}")
+        else:
+            print(f"  [anchor-masks-fullres] OK: {n_checked} masks.mkv "
+                  f"all ≥ 384×512")
+
+    if violations and strict:
+        raise MetaBugViolation(
+            "LANE ANCHOR MASKS BELOW FULL RESOLUTION:\n"
             + "\n".join(f"  • {v}" for v in violations)
         )
     return violations
