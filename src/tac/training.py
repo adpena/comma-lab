@@ -150,6 +150,12 @@ class TrainConfig(BaseModel):
         "0.25 = production mode (25% held-out eval split).",
     )
     use_lsq: bool = Field(False, description="Enable Learned Step Size Quantization")
+    use_entropy_bottleneck: bool = Field(
+        False,
+        description="Enable train-time entropy bottleneck rate regularization.",
+    )
+    eb_lambda: float = Field(0.0, ge=0.0, description="Entropy bottleneck rate loss weight")
+    eb_num_channels: int = Field(64, ge=1, description="Entropy bottleneck latent channels")
 
     # Eval-matched roundtrip (MANDATORY for auth-faithful training)
     eval_roundtrip: bool = Field(
@@ -341,6 +347,15 @@ class EMA:
     def update(self, model: nn.Module):
         with torch.no_grad():
             for k, v in model.state_dict().items():
+                # Codex finding 2 hardening: if a module was added to the
+                # model AFTER EMA construction (e.g. a late-bound entropy
+                # bottleneck), seed its shadow entry from the live tensor
+                # instead of KeyError-ing. This keeps EMA correct without
+                # requiring every call site to remember the registration
+                # ordering invariant.
+                if k not in self.shadow:
+                    self.shadow[k] = v.clone().detach()
+                    continue
                 if not v.is_floating_point():
                     # Non-float buffers (e.g. BN num_batches_tracked, int masks):
                     # EMA decay on integers produces garbage — copy directly instead.
@@ -478,7 +493,44 @@ class Trainer:
             self.model = self.model.to(memory_format=torch.channels_last)
         self.config = config
         self.device = device
-        self.ema = EMA(model, decay=config.ema_decay)
+        # Codex finding 2 fix (2026-04-28):
+        #   The entropy bottleneck MUST be installed on the model BEFORE the
+        #   EMA snapshot is taken, otherwise EMA.shadow lacks the
+        #   ``entropy_bottleneck.*`` keys and the first ``EMA.update(self.model)``
+        #   would KeyError on the new keys (or, depending on the EMA impl,
+        #   silently skip them and produce stale EMA weights).
+        self.entropy_bottleneck: nn.Module | None = None
+        self._entropy_bottleneck_handle = None
+
+        if config.use_entropy_bottleneck:
+            from .entropy_bottleneck import EntropyBottleneck
+
+            renderer = getattr(self.model, "renderer", self.model)
+            bottleneck = getattr(renderer, "bottleneck", None)
+            if bottleneck is None:
+                raise ValueError(
+                    "use_entropy_bottleneck=True requires a model with a "
+                    "bottleneck module"
+                )
+            self.entropy_bottleneck = EntropyBottleneck(
+                num_channels=config.eb_num_channels,
+            ).to(device)
+            renderer.add_module("entropy_bottleneck", self.entropy_bottleneck)
+
+            def _eb_hook(_module, _inputs, output):
+                y_hat, _bits = self.entropy_bottleneck(output)
+                return y_hat
+
+            self._entropy_bottleneck_handle = bottleneck.register_forward_hook(_eb_hook)
+            print(
+                f"[trainer] Entropy bottleneck enabled "
+                f"(channels={config.eb_num_channels}, lambda={config.eb_lambda})"
+            )
+
+        # EMA constructed AFTER entropy bottleneck is installed so its shadow
+        # contains all the keys that ``self.model.state_dict()`` will produce
+        # during training (codex finding 2).
+        self.ema = EMA(self.model, decay=config.ema_decay)
         self.best_scorer = float("inf")
         self.best_epoch = -1
         self._patched_scorers = False
@@ -512,7 +564,21 @@ class Trainer:
             self._adaptive = AdaptiveWeights(boundary_fraction=beta)
             print(f"[trainer] Adaptive weights enabled (beta={beta})")
 
-        self.optimizer = torch.optim.AdamW(model.parameters(), lr=config.lr, weight_decay=config.weight_decay)
+        if self.entropy_bottleneck is not None:
+            eb_param_ids = {id(p) for p in self.entropy_bottleneck.parameters()}
+            main_params = [p for p in model.parameters() if id(p) not in eb_param_ids]
+            self.optimizer = torch.optim.AdamW(
+                [
+                    {"params": main_params, "lr": config.lr, "weight_decay": config.weight_decay},
+                    {
+                        "params": list(self.entropy_bottleneck.parameters()),
+                        "lr": 1e-3,
+                        "weight_decay": 0.0,
+                    },
+                ]
+            )
+        else:
+            self.optimizer = torch.optim.AdamW(model.parameters(), lr=config.lr, weight_decay=config.weight_decay)
 
         # LSQ: Learned Step Size Quantization
         self._lsq_scales: dict[str, nn.Module] | None = None
@@ -940,14 +1006,27 @@ class Trainer:
         int8_path = out_dir / f"postfilter_{tag}_best_int8.pt"
         meta_path = out_dir / f"postfilter_{tag}_best_meta.json"
 
+        # Codex finding 2 fix: training-only ``entropy_bottleneck.*`` keys
+        # are NOT part of the deployed renderer (the bottleneck is replaced
+        # by quantization at inflate). Strip them from BOTH the fp32 and
+        # int8 archives so that a deployment loader doesn't see phantom
+        # entries (and so the int8 archive size doesn't include them).
+        ema_state = {
+            k: v for k, v in self.ema.state_dict().items()
+            if not k.startswith("entropy_bottleneck.")
+            and "entropy_bottleneck." not in k
+        }
+
         # Save EMA fp32 (atomic)
         fp32_tmp = fp32_path.with_suffix(".pt.tmp")
-        torch.save(self.ema.state_dict(), fp32_tmp)
+        torch.save(ema_state, fp32_tmp)
         fp32_tmp.rename(fp32_path)
 
         # Save int8 per-channel (atomic) — better precision for multi-channel convs
         int8_state = {}
         for name, param in self.ema.shadow.items():
+            if name.startswith("entropy_bottleneck.") or "entropy_bottleneck." in name:
+                continue  # codex finding 2: training-only key
             p = param.detach().cpu().float()
             if p.ndim >= 2 and "weight" in name:
                 # Per-channel: scale per output channel (dim 0)
@@ -1143,6 +1222,8 @@ class Trainer:
                 sal_recon = saliency_reconstruction_loss(filtered_bchw, comp_bchw, sal_w_pair)
 
                 total = loss + cfg.sal_lambda * sal_recon
+                if self.entropy_bottleneck is not None and cfg.eb_lambda > 0.0:
+                    total = total + cfg.eb_lambda * self.entropy_bottleneck.rate_loss()
 
                 self.optimizer.zero_grad(set_to_none=True)
                 total.backward()
@@ -1744,7 +1825,10 @@ class Trainer:
                     loss = w_pose * loss
                     sal_recon = w_seg * sal_recon
 
-                total = (loss + cfg.sal_lambda * sal_recon) / accum
+                total_unscaled = loss + cfg.sal_lambda * sal_recon
+                if self.entropy_bottleneck is not None and cfg.eb_lambda > 0.0:
+                    total_unscaled = total_unscaled + cfg.eb_lambda * self.entropy_bottleneck.rate_loss()
+                total = total_unscaled / accum
                 try:
                     total.backward()
                 except torch.cuda.OutOfMemoryError:

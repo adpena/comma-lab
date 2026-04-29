@@ -35,6 +35,46 @@ class TestEMA:
                 diff = (ema.shadow[k] - orig[k]).abs().max().item()
                 assert diff < 2.0, f"High-decay EMA moved too much on {k}"
 
+    def test_codex_finding2_ema_safe_when_module_added_after_construction(self):
+        """Codex finding 2 hardening — VALUE/SIGN regression.
+
+        If a module is added to the model AFTER EMA snapshot (e.g. an
+        entropy bottleneck registered later in __init__), EMA.update used to
+        KeyError on the new keys. The hardened update path must:
+            1. NOT raise (positive sign).
+            2. Correctly track the new keys (value sanity).
+        """
+        import torch.nn as nn
+
+        model = build_postfilter("standard", hidden=8)
+        ema = EMA(model, decay=0.5)
+
+        # Add a brand-new module post-snapshot.
+        new_module = nn.Linear(4, 4)
+        with torch.no_grad():
+            new_module.weight.fill_(7.0)
+            new_module.bias.fill_(-3.0)
+        model.add_module("late_added", new_module)
+
+        # SHOULD NOT raise (the bug-class anchor).
+        ema.update(model)
+
+        # New keys should now be in shadow.
+        assert "late_added.weight" in ema.shadow
+        assert "late_added.bias" in ema.shadow
+        # First-time seed equals the live tensor (no decay yet — it was
+        # missing). VALUE anchor.
+        assert ema.shadow["late_added.weight"].abs().sum().item() > 0
+        # Subsequent update should now apply decay normally.
+        with torch.no_grad():
+            new_module.weight.fill_(0.0)
+        ema.update(model)
+        # decay=0.5 + previous=7 + new=0 → mean = 3.5
+        assert torch.allclose(
+            ema.shadow["late_added.weight"],
+            torch.full_like(ema.shadow["late_added.weight"], 3.5),
+        ), f"second update produced {ema.shadow['late_added.weight'].mean().item()}"
+
 
 class TestTrainerConstruction:
     def test_creates_with_defaults(self):
