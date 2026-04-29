@@ -156,6 +156,9 @@ log "  --gt-poses-path=baseline optimized_poses (so renderer FiLM matches eval)"
     --gt-poses-path "$STAGED_DIR/optimized_poses.pt" \
     --max-artifact-bytes 51200 \
     --output-dir "$LOG_DIR/corrections" 2>&1 | tee "$LOG_DIR/engineered_quant_noise.log" | tail -30
+    if [ "${PIPESTATUS[0]}" -ne 0 ]; then
+        echo "FATAL: previous pipeline exited rc=${PIPESTATUS[0]}" >&2; exit "${PIPESTATUS[0]}"
+    fi
 
 CORRECTIONS_BIN="$LOG_DIR/corrections/gradient_corrections.bin"
 if [ ! -f "$CORRECTIONS_BIN" ]; then
@@ -241,6 +244,9 @@ rm -rf "$LOG_DIR/eval_work"
     --device "${AUTH_EVAL_DEVICE:-cuda}" \
     --keep-work-dir \
     --work-dir "$LOG_DIR/eval_work" 2>&1 | tee "$LOG_DIR/auth_eval.log" | tail -20
+    if [ "${PIPESTATUS[0]}" -ne 0 ]; then
+        echo "FATAL: previous pipeline exited rc=${PIPESTATUS[0]}" >&2; exit "${PIPESTATUS[0]}"
+    fi
 
 grep -q '^RESULT_JSON' "$LOG_DIR/auth_eval.log" || {
     log "FATAL: auth_eval did not produce RESULT_JSON — invalid measurement"

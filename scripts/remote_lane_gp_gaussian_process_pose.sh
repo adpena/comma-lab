@@ -172,6 +172,9 @@ RECON_POSES="$LOG_DIR/optimized_poses.pt"
     --poses "$ANCHOR_POSES" \
     --output "$POSE_GP_BIN" \
     --n-pairs 600 2>&1 | tee "$LOG_DIR/fit_pose_gp.log" | tail -10
+    if [ "${PIPESTATUS[0]}" -ne 0 ]; then
+        echo "FATAL: previous pipeline exited rc=${PIPESTATUS[0]}" >&2; exit "${PIPESTATUS[0]}"
+    fi
 [ -f "$POSE_GP_BIN" ] || { echo "FATAL: fit_pose_gp produced no $POSE_GP_BIN" >&2; exit 3; }
 
 export POSE_GP_BIN RECON_POSES ANCHOR_POSES
@@ -259,6 +262,9 @@ rm -f upstream/videos/._*.mkv
     --device "${AUTH_EVAL_DEVICE:-cuda}" \
     --keep-work-dir \
     --work-dir "$EVAL_WORK" 2>&1 | tee "$LOG_DIR/auth_eval.log" | tail -30
+    if [ "${PIPESTATUS[0]}" -ne 0 ]; then
+        echo "FATAL: previous pipeline exited rc=${PIPESTATUS[0]}" >&2; exit "${PIPESTATUS[0]}"
+    fi
 
 if [ -f "$EVAL_WORK/contest_auth_eval.json" ]; then
     cp "$EVAL_WORK/contest_auth_eval.json" "$RESULT_JSON"

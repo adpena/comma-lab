@@ -163,6 +163,9 @@ python3 -u experiments/fit_curator_outlier_weights.py \
     --segnet-features "$FEATURES" \
     --n-pairs 600 \
     --output-dir "$LOG_DIR" 2>&1 | tee "$LOG_DIR/fit_curator_outlier_weights.log"
+    if [ "${PIPESTATUS[0]}" -ne 0 ]; then
+        echo "FATAL: previous pipeline exited rc=${PIPESTATUS[0]}" >&2; exit "${PIPESTATUS[0]}"
+    fi
 PAIR_WEIGHTS="$LOG_DIR/pair_weights.pt"
 SCORER_STATE="$LOG_DIR/curator_outlier_scorer.pt"
 [ -f "$PAIR_WEIGHTS" ] || { echo "FATAL: missing $PAIR_WEIGHTS" >&2; exit 2; }
@@ -220,6 +223,9 @@ python3 -u -m tac.experiments.train_renderer \
     --epochs 500 \
     --lr 5e-5 \
     --no-auth-eval-on-best 2>&1 | tee "$LOG_DIR/train.log" | tail -40
+    if [ "${PIPESTATUS[0]}" -ne 0 ]; then
+        echo "FATAL: previous pipeline exited rc=${PIPESTATUS[0]}" >&2; exit "${PIPESTATUS[0]}"
+    fi
 
 BEST_FP32="$(ls -t "$TRAIN_OUT"/renderer_*_best_fp32.pt 2>/dev/null | head -1)"
 [ -n "$BEST_FP32" ] && [ -f "$BEST_FP32" ] || {
@@ -246,6 +252,9 @@ python3 -u experiments/optimize_poses.py \
     --upstream upstream \
     --output-dir "$POSE_OUT" \
     --eval-roundtrip 2>&1 | tee "$LOG_DIR/pose_tto.log" | tail -40
+    if [ "${PIPESTATUS[0]}" -ne 0 ]; then
+        echo "FATAL: previous pipeline exited rc=${PIPESTATUS[0]}" >&2; exit "${PIPESTATUS[0]}"
+    fi
 OPTIMIZED_POSES="$POSE_OUT/optimized_poses.pt"
 [ -f "$OPTIMIZED_POSES" ] || { echo "FATAL: Pose TTO produced no optimized_poses.pt" >&2; exit 2; }
 
@@ -321,6 +330,9 @@ python3 -u experiments/contest_auth_eval.py \
     --device "${AUTH_EVAL_DEVICE:-cuda}" \
     --keep-work-dir \
     --work-dir "$EVAL_WORK" 2>&1 | tee "$LOG_DIR/auth_eval.log" | tail -30
+    if [ "${PIPESTATUS[0]}" -ne 0 ]; then
+        echo "FATAL: previous pipeline exited rc=${PIPESTATUS[0]}" >&2; exit "${PIPESTATUS[0]}"
+    fi
 if [ -f "$EVAL_WORK/contest_auth_eval.json" ]; then
     cp "$EVAL_WORK/contest_auth_eval.json" "$RESULT_JSON"
 elif [ -f "$LOG_DIR/auth_eval/contest_auth_eval.json" ]; then

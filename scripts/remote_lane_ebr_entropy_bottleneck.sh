@@ -179,6 +179,9 @@ mkdir -p "$TRAIN_OUT"
     --auth-eval-poses "$LANE_A_POSES" \
     --auth-eval-upstream-dir upstream \
     2>&1 | tee "$LOG_DIR/train_renderer.log" | tail -60
+    if [ "${PIPESTATUS[0]}" -ne 0 ]; then
+        echo "FATAL: previous pipeline exited rc=${PIPESTATUS[0]}" >&2; exit "${PIPESTATUS[0]}"
+    fi
 
 # Stage 2 verifies: train_renderer.py with --auth-eval-on-best produces
 # the canonical FP4A renderer.bin via export_asymmetric_checkpoint_fp4
@@ -275,6 +278,9 @@ rm -rf "$LOG_DIR/eval_work"
     --device "${AUTH_EVAL_DEVICE:-cuda}" \
     --keep-work-dir \
     --work-dir "$LOG_DIR/eval_work" 2>&1 | tee "$LOG_DIR/auth_eval.log" | tail -20
+    if [ "${PIPESTATUS[0]}" -ne 0 ]; then
+        echo "FATAL: previous pipeline exited rc=${PIPESTATUS[0]}" >&2; exit "${PIPESTATUS[0]}"
+    fi
 
 grep -q '^RESULT_JSON' "$LOG_DIR/auth_eval.log" || {
     log "FATAL: auth_eval did not produce RESULT_JSON — invalid measurement"

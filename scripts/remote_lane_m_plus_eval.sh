@@ -89,6 +89,9 @@ log "   --use-zero-cost-poses → omits optimized_poses.pt, writes sentinel"
     --device cuda --crf 50 \
     --use-zero-cost-poses \
     --output "$LOG_DIR/archive_lane_m_plus.zip" 2>&1 | tee "$LOG_DIR/build.log" | tail -10
+    if [ "${PIPESTATUS[0]}" -ne 0 ]; then
+        echo "FATAL: previous pipeline exited rc=${PIPESTATUS[0]}" >&2; exit "${PIPESTATUS[0]}"
+    fi
 
 ARCHIVE="$LOG_DIR/archive_lane_m_plus.zip"
 [ -f "$ARCHIVE" ] || { echo "FATAL: build did not produce $ARCHIVE" >&2; exit 2; }
@@ -131,6 +134,9 @@ log "   INFLATE_ZERO_COST_POSES=$INFLATE_ZERO_COST_POSES"
     --device "${AUTH_EVAL_DEVICE:-cuda}" \
     --keep-work-dir \
     --work-dir "$LOG_DIR/eval_work" 2>&1 | tee "$LOG_DIR/auth_eval.log" | tail -20
+    if [ "${PIPESTATUS[0]}" -ne 0 ]; then
+        echo "FATAL: previous pipeline exited rc=${PIPESTATUS[0]}" >&2; exit "${PIPESTATUS[0]}"
+    fi
 
 log "=== LANE_M_PLUS_DONE — see $LOG_DIR/auth_eval.log for RESULT_JSON ==="
 log "  archive: $ARCHIVE ($ARCHIVE_SIZE bytes)"

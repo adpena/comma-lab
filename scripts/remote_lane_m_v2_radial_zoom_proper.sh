@@ -126,6 +126,9 @@ log "   --eval-roundtrip + --posetto-noise-std=0.5 (Fridrich C1 fixes)"
     --posetto-noise-std 0.5 \
     --pose-mode radial-zoom \
     --output-dir "$LOG_DIR" 2>&1 | tee "$LOG_DIR/optimize_poses.log" | tail -30
+    if [ "${PIPESTATUS[0]}" -ne 0 ]; then
+        echo "FATAL: previous pipeline exited rc=${PIPESTATUS[0]}" >&2; exit "${PIPESTATUS[0]}"
+    fi
 
 # Validate: did optimize_poses produce the file?
 [ -f "$LOG_DIR/optimized_poses.bin" ] || { echo "FATAL: optimize_poses didn't produce optimized_poses.bin"; exit 2; }
@@ -175,5 +178,8 @@ rm -rf "$LOG_DIR/eval_work"
     --device "${AUTH_EVAL_DEVICE:-cuda}" \
     --keep-work-dir \
     --work-dir "$LOG_DIR/eval_work" 2>&1 | tee "$LOG_DIR/auth_eval.log" | tail -15
+    if [ "${PIPESTATUS[0]}" -ne 0 ]; then
+        echo "FATAL: previous pipeline exited rc=${PIPESTATUS[0]}" >&2; exit "${PIPESTATUS[0]}"
+    fi
 
 log "=== LANE_M_V2_DONE — see $LOG_DIR/auth_eval.log for RESULT_JSON ==="

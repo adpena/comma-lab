@@ -280,6 +280,9 @@ print('halfframe-profile-assertion OK: quantizr_replica_88k_halfframe_annealed')
 "$PYBIN" experiments/build_baseline_archive.py \
     --device cuda --crf 50 --half-frame \
     --output "$LOG_DIR/archive_halfframe_seed.zip" 2>&1 | tee "$LOG_DIR/build.log" | tail -5
+    if [ "${PIPESTATUS[0]}" -ne 0 ]; then
+        echo "FATAL: previous pipeline exited rc=${PIPESTATUS[0]}" >&2; exit "${PIPESTATUS[0]}"
+    fi
 mkdir -p "$LOG_DIR/extracted"
 cd "$LOG_DIR/extracted" && unzip -o "$LOG_DIR/archive_halfframe_seed.zip" 2>&1 | tail -5
 cd "$WORKSPACE"
@@ -296,6 +299,9 @@ log "=== Stage 3: pose TTO with the new annealed half-frame renderer ==="
     --eval-roundtrip \
     --posetto-noise-std 0.5 \
     --output-dir "$LOG_DIR" 2>&1 | tee "$LOG_DIR/optimize_poses.log" | tail -30
+    if [ "${PIPESTATUS[0]}" -ne 0 ]; then
+        echo "FATAL: previous pipeline exited rc=${PIPESTATUS[0]}" >&2; exit "${PIPESTATUS[0]}"
+    fi
 
 [ -f "$LOG_DIR/optimized_poses.pt" ] || { echo "FATAL: optimize_poses didn't produce optimized_poses.pt"; exit 3; }
 cp "$LOG_DIR/optimized_poses.pt" "$LOG_DIR/iter_0/optimized_poses.pt"
@@ -336,6 +342,9 @@ rm -rf "$LOG_DIR/eval_work"
     --device "${AUTH_EVAL_DEVICE:-cuda}" \
     --keep-work-dir \
     --work-dir "$LOG_DIR/eval_work" 2>&1 | tee "$LOG_DIR/auth_eval.log" | tail -20
+    if [ "${PIPESTATUS[0]}" -ne 0 ]; then
+        echo "FATAL: previous pipeline exited rc=${PIPESTATUS[0]}" >&2; exit "${PIPESTATUS[0]}"
+    fi
 
 # RESULT_JSON guard.
 if ! grep -q "RESULT_JSON" "$LOG_DIR/auth_eval.log"; then

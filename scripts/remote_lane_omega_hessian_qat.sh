@@ -158,6 +158,9 @@ HESSIAN_PT="$LOG_DIR/hessian_per_weight.pt"
     --all-pairs \
     --device cuda \
     --pair-batch 4 2>&1 | tee "$LOG_DIR/profile.log" | tail -30
+    if [ "${PIPESTATUS[0]}" -ne 0 ]; then
+        echo "FATAL: previous pipeline exited rc=${PIPESTATUS[0]}" >&2; exit "${PIPESTATUS[0]}"
+    fi
 [ -f "$HESSIAN_PT" ] || { echo "FATAL: profiler didn't produce $HESSIAN_PT"; exit 2; }
 log "  hessian profile: $HESSIAN_PT ($(stat -c '%s' "$HESSIAN_PT") bytes)"
 
@@ -250,6 +253,9 @@ rm -rf "$LOG_DIR/eval_work"
     --device "${AUTH_EVAL_DEVICE:-cuda}" \
     --keep-work-dir \
     --work-dir "$LOG_DIR/eval_work" 2>&1 | tee "$LOG_DIR/auth_eval.log" | tail -20
+    if [ "${PIPESTATUS[0]}" -ne 0 ]; then
+        echo "FATAL: previous pipeline exited rc=${PIPESTATUS[0]}" >&2; exit "${PIPESTATUS[0]}"
+    fi
 
 # Sanity-check the auth eval emitted RESULT_JSON (catches silent crashes,
 # LANE-B 2026-04-26 cascade pattern).

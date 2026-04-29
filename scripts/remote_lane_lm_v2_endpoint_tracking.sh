@@ -154,6 +154,9 @@ ARCHIVE="$LOG_DIR/archive_lane_lm_v2.zip"
     --method endpoint \
     --min-correlation 0.30 \
     2>&1 | tee "$LOG_DIR/build.log" | tail -30
+    if [ "${PIPESTATUS[0]}" -ne 0 ]; then
+        echo "FATAL: previous pipeline exited rc=${PIPESTATUS[0]}" >&2; exit "${PIPESTATUS[0]}"
+    fi
 
 # Validate: did the builder produce the file?
 [ -f "$ARCHIVE" ] || { echo "FATAL: build_zero_cost_pose_archive didn't produce $ARCHIVE"; exit 2; }
@@ -200,6 +203,9 @@ INFLATE_ZERO_COST_POSES=1 "$PYBIN" -u experiments/contest_auth_eval.py \
     --device "${AUTH_EVAL_DEVICE:-cuda}" \
     --keep-work-dir \
     --work-dir "$LOG_DIR/eval_work" 2>&1 | tee "$LOG_DIR/auth_eval.log" | tail -20
+    if [ "${PIPESTATUS[0]}" -ne 0 ]; then
+        echo "FATAL: previous pipeline exited rc=${PIPESTATUS[0]}" >&2; exit "${PIPESTATUS[0]}"
+    fi
 
 # RESULT_JSON guard.
 if ! grep -q "RESULT_JSON" "$LOG_DIR/auth_eval.log"; then

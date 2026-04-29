@@ -97,6 +97,9 @@ print('provenance:', json.dumps(prov))
         --n-trials 30 \
         --objective auth_score \
         --output-dir "$LOG_DIR" 2>&1 | tee "$LOG_DIR/sweep.log" | tail -50
+        if [ "${PIPESTATUS[0]}" -ne 0 ]; then
+            echo "FATAL: previous pipeline exited rc=${PIPESTATUS[0]}" >&2; exit "${PIPESTATUS[0]}"
+        fi
 
     # Stage 4: run the OPTIMIZED config as the official Lane A-Sweep result.
     OPT_SCRIPT="$WORKSPACE/scripts/remote_lane_a_optimized.sh"
@@ -106,6 +109,9 @@ print('provenance:', json.dumps(prov))
     }
     echo "=== Stage 4: official Lane A-Sweep result (best-trial archive) ==="
     bash "$OPT_SCRIPT" 2>&1 | tee "$LOG_DIR/optimized.log" | tail -30
+    if [ "${PIPESTATUS[0]}" -ne 0 ]; then
+        echo "FATAL: previous pipeline exited rc=${PIPESTATUS[0]}" >&2; exit "${PIPESTATUS[0]}"
+    fi
 
     # Validate the official result has a RESULT_JSON (no-wasted-resources rule).
     grep -q '^RESULT_JSON' "$LOG_DIR/optimized.log" || {
@@ -158,6 +164,9 @@ log "=== rebuild masks (same as Lane A baseline) ==="
 "$PYBIN" experiments/build_baseline_archive.py \
     --device __PARAM_DEVICE__ --crf 50 \
     --output "$LOG_DIR/archive_baseline_seed.zip" 2>&1 | tee "$LOG_DIR/build.log" | tail -3
+    if [ "${PIPESTATUS[0]}" -ne 0 ]; then
+        echo "FATAL: previous pipeline exited rc=${PIPESTATUS[0]}" >&2; exit "${PIPESTATUS[0]}"
+    fi
 
 mkdir -p "$LOG_DIR/extracted"
 cd "$LOG_DIR/extracted" && unzip -o "$LOG_DIR/archive_baseline_seed.zip" 2>&1 | tail -3
@@ -177,6 +186,9 @@ log "  tto_lr=__PARAM_TTO_LR__ posetto_noise_std=__PARAM_POSETTO_NOISE_STD__"
     --eval-roundtrip \
     --posetto-noise-std __PARAM_POSETTO_NOISE_STD__ \
     --output-dir "$LOG_DIR" 2>&1 | tee "$LOG_DIR/optimize_poses.log" | tail -20
+    if [ "${PIPESTATUS[0]}" -ne 0 ]; then
+        echo "FATAL: previous pipeline exited rc=${PIPESTATUS[0]}" >&2; exit "${PIPESTATUS[0]}"
+    fi
 
 [ -f "$LOG_DIR/optimized_poses.pt" ] || { echo "FATAL: missing optimized_poses.pt"; exit 2; }
 
@@ -212,6 +224,9 @@ rm -rf "$LOG_DIR/eval_work"
     --device __PARAM_DEVICE__ \
     --keep-work-dir \
     --work-dir "$LOG_DIR/eval_work" 2>&1 | tee "$LOG_DIR/auth_eval.log" | tail -10
+    if [ "${PIPESTATUS[0]}" -ne 0 ]; then
+        echo "FATAL: previous pipeline exited rc=${PIPESTATUS[0]}" >&2; exit "${PIPESTATUS[0]}"
+    fi
 
 grep -q '^RESULT_JSON' "$LOG_DIR/auth_eval.log" || {
     echo "FATAL: auth_eval did not produce RESULT_JSON"

@@ -112,6 +112,9 @@ log "=== Stage 1: precompute greedy gradient corrections ==="
     --video "$TAC_UPSTREAM_DIR/videos/0.mkv" \
     --output-dir "$CORR_DIR" \
     2>&1 | tee "$LOG_DIR/precompute_gradient_corrections.log"
+    if [ "${PIPESTATUS[0]}" -ne 0 ]; then
+        echo "FATAL: previous pipeline exited rc=${PIPESTATUS[0]}" >&2; exit "${PIPESTATUS[0]}"
+    fi
 
 CORRECTIONS_BIN="$CORR_DIR/gradient_corrections.bin"
 CORRECTION_MAP="$CORR_DIR/correction_map.npy"
@@ -156,6 +159,9 @@ rm -rf "$LOG_DIR/eval_work"
     --keep-work-dir \
     --work-dir "$LOG_DIR/eval_work" \
     2>&1 | tee "$LOG_DIR/auth_eval.log"
+    if [ "${PIPESTATUS[0]}" -ne 0 ]; then
+        echo "FATAL: previous pipeline exited rc=${PIPESTATUS[0]}" >&2; exit "${PIPESTATUS[0]}"
+    fi
 
 grep -q '^RESULT_JSON' "$LOG_DIR/auth_eval.log" || {
     log "FATAL: auth eval did not produce RESULT_JSON"

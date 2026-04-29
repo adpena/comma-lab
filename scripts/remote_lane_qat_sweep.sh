@@ -79,6 +79,9 @@ print('provenance:', json.dumps(prov))
         --n-trials 30 \
         --objective auth_score \
         --output-dir "$LOG_DIR" 2>&1 | tee "$LOG_DIR/sweep.log" | tail -50
+        if [ "${PIPESTATUS[0]}" -ne 0 ]; then
+            echo "FATAL: previous pipeline exited rc=${PIPESTATUS[0]}" >&2; exit "${PIPESTATUS[0]}"
+        fi
 
     OPT_SCRIPT="$WORKSPACE/scripts/remote_lane_qat_optimized.sh"
     [ -f "$OPT_SCRIPT" ] || {
@@ -87,6 +90,9 @@ print('provenance:', json.dumps(prov))
     }
     echo "=== Stage 4: official Lane QAT-Sweep result ==="
     bash "$OPT_SCRIPT" 2>&1 | tee "$LOG_DIR/optimized.log" | tail -30
+    if [ "${PIPESTATUS[0]}" -ne 0 ]; then
+        echo "FATAL: previous pipeline exited rc=${PIPESTATUS[0]}" >&2; exit "${PIPESTATUS[0]}"
+    fi
 
     grep -q '^RESULT_JSON' "$LOG_DIR/optimized.log" || {
         echo "FATAL: optimized run did not produce RESULT_JSON"
@@ -152,6 +158,9 @@ log "  lr=__PARAM_LR__ lr_schedule=__PARAM_LR_SCHEDULE__ (provenance only — fl
     --fp4-epochs __PARAM_FP4_EPOCHS__ \
     --lr __PARAM_LR__ \
     --batch-size 4 2>&1 | tee "$LOG_DIR/qat.log" | tail -20
+    if [ "${PIPESTATUS[0]}" -ne 0 ]; then
+        echo "FATAL: previous pipeline exited rc=${PIPESTATUS[0]}" >&2; exit "${PIPESTATUS[0]}"
+    fi
 
 FP4_BIN=$(find "$LOG_DIR/qat" -name "renderer_fp4.bin" -o -name "*_fp4*.bin" 2>/dev/null | head -1)
 [ -n "$FP4_BIN" ] && [ -f "$FP4_BIN" ] || { echo "FATAL: qat_finetune didn't produce FP4 binary"; ls -la "$LOG_DIR/qat/"; exit 2; }
@@ -188,6 +197,9 @@ rm -rf "$LOG_DIR/eval_work"
     --device __PARAM_DEVICE__ \
     --keep-work-dir \
     --work-dir "$LOG_DIR/eval_work" 2>&1 | tee "$LOG_DIR/auth_eval.log" | tail -10
+    if [ "${PIPESTATUS[0]}" -ne 0 ]; then
+        echo "FATAL: previous pipeline exited rc=${PIPESTATUS[0]}" >&2; exit "${PIPESTATUS[0]}"
+    fi
 
 grep -q '^RESULT_JSON' "$LOG_DIR/auth_eval.log" || {
     echo "FATAL: auth_eval did not produce RESULT_JSON"

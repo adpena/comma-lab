@@ -152,6 +152,9 @@ log "=== Stage 1: rebuild full-res masks (same as Lane A baseline) ==="
 "$PYBIN" experiments/build_baseline_archive.py \
     --device cuda --crf 50 \
     --output "$LOG_DIR/archive_baseline_seed.zip" 2>&1 | tee "$LOG_DIR/build.log" | tail -5
+    if [ "${PIPESTATUS[0]}" -ne 0 ]; then
+        echo "FATAL: previous pipeline exited rc=${PIPESTATUS[0]}" >&2; exit "${PIPESTATUS[0]}"
+    fi
 
 # Extract just masks for optimize_poses input
 mkdir -p "$LOG_DIR/extracted"
@@ -181,6 +184,9 @@ export PYTORCH_CUDA_ALLOC_CONF=expandable_segments:True
     --kl-distill-weight 0.002 \
     --kl-distill-temperature 2.0 \
     --output-dir "$LOG_DIR" 2>&1 | tee "$LOG_DIR/optimize_poses.log" | tail -30
+    if [ "${PIPESTATUS[0]}" -ne 0 ]; then
+        echo "FATAL: previous pipeline exited rc=${PIPESTATUS[0]}" >&2; exit "${PIPESTATUS[0]}"
+    fi
 
 # Validate: did optimize_poses produce the file?
 [ -f "$LOG_DIR/optimized_poses.bin" ] || { echo "FATAL: optimize_poses didn't produce optimized_poses.bin"; exit 2; }
@@ -213,5 +219,8 @@ rm -rf "$LOG_DIR/eval_work"
     --device "${AUTH_EVAL_DEVICE:-cuda}" \
     --keep-work-dir \
     --work-dir "$LOG_DIR/eval_work" 2>&1 | tee "$LOG_DIR/auth_eval.log" | tail -15
+    if [ "${PIPESTATUS[0]}" -ne 0 ]; then
+        echo "FATAL: previous pipeline exited rc=${PIPESTATUS[0]}" >&2; exit "${PIPESTATUS[0]}"
+    fi
 
 log "=== LANE_G_V3_DONE -- see $LOG_DIR/auth_eval.log for RESULT_JSON ==="

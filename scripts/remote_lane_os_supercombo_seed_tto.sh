@@ -99,6 +99,9 @@ log "=== Stage 1: rebuild full-res masks (same as 2.29 / Lane A baseline) ==="
 "$PYBIN" experiments/build_baseline_archive.py \
     --device cuda --crf 50 \
     --output "$LOG_DIR/archive_baseline_seed.zip" 2>&1 | tee "$LOG_DIR/build.log" | tail -5
+    if [ "${PIPESTATUS[0]}" -ne 0 ]; then
+        echo "FATAL: previous pipeline exited rc=${PIPESTATUS[0]}" >&2; exit "${PIPESTATUS[0]}"
+    fi
 
 # Extract just masks for optimize_poses + supercombo seed.
 mkdir -p "$LOG_DIR/extracted"
@@ -129,6 +132,9 @@ SEED_POSES="$LOG_DIR/seed_poses.pt"
     --n-frames 1200 \
     --masks "$LOG_DIR/extracted/masks.mkv" \
     --allow-fallback 2>&1 | tee "$LOG_DIR/seed.log" | tail -15
+    if [ "${PIPESTATUS[0]}" -ne 0 ]; then
+        echo "FATAL: previous pipeline exited rc=${PIPESTATUS[0]}" >&2; exit "${PIPESTATUS[0]}"
+    fi
 
 [ -f "$SEED_POSES" ] || { echo "FATAL: seed_poses.pt not produced" >&2; exit 2; }
 log "  produced $SEED_POSES ($(stat -c '%s' "$SEED_POSES") bytes)"
@@ -148,6 +154,9 @@ export PYTHONHASHSEED=1234
     --eval-roundtrip \
     --posetto-noise-std 0.5 \
     --output-dir "$LOG_DIR" 2>&1 | tee "$LOG_DIR/optimize_poses.log" | tail -30
+    if [ "${PIPESTATUS[0]}" -ne 0 ]; then
+        echo "FATAL: previous pipeline exited rc=${PIPESTATUS[0]}" >&2; exit "${PIPESTATUS[0]}"
+    fi
 
 # Validate: did optimize_poses produce the file?
 [ -f "$LOG_DIR/optimized_poses.bin" ] || { echo "FATAL: optimize_poses didn't produce optimized_poses.bin"; exit 2; }
@@ -181,5 +190,8 @@ rm -rf "$LOG_DIR/eval_work"
     --device "${AUTH_EVAL_DEVICE:-cuda}" \
     --keep-work-dir \
     --work-dir "$LOG_DIR/eval_work" 2>&1 | tee "$LOG_DIR/auth_eval.log" | tail -15
+    if [ "${PIPESTATUS[0]}" -ne 0 ]; then
+        echo "FATAL: previous pipeline exited rc=${PIPESTATUS[0]}" >&2; exit "${PIPESTATUS[0]}"
+    fi
 
 log "=== LANE_OS_DONE — see $LOG_DIR/auth_eval.log for RESULT_JSON ==="

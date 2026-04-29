@@ -124,6 +124,9 @@ log "  lr: 2.5e-6 (V3 — V2 was 5e-5; 20x reduction prevents PoseNet collapse)"
     --fp4-epochs 500 \
     --lr 2.5e-6 \
     --batch-size 4 2>&1 | tee "$LOG_DIR/qat.log" | tail -30
+    if [ "${PIPESTATUS[0]}" -ne 0 ]; then
+        echo "FATAL: previous pipeline exited rc=${PIPESTATUS[0]}" >&2; exit "${PIPESTATUS[0]}"
+    fi
 
 # qat_finetune saves renderer_fp4.bin in output-dir per its convention
 FP4_BIN=$(find "$LOG_DIR/qat" -name "renderer_fp4.bin" -o -name "*_fp4*.bin" 2>/dev/null | head -1)
@@ -158,5 +161,8 @@ rm -rf "$LOG_DIR/eval_work"
     --device "${AUTH_EVAL_DEVICE:-cuda}" \
     --keep-work-dir \
     --work-dir "$LOG_DIR/eval_work" 2>&1 | tee "$LOG_DIR/auth_eval.log" | tail -15
+    if [ "${PIPESTATUS[0]}" -ne 0 ]; then
+        echo "FATAL: previous pipeline exited rc=${PIPESTATUS[0]}" >&2; exit "${PIPESTATUS[0]}"
+    fi
 
 log "=== LANE_F_V3_DONE ==="

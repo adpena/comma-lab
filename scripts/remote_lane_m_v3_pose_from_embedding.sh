@@ -126,6 +126,9 @@ log "=== Stage 2: distill pose-from-embedding MLP (compress-time PoseNet load) =
     --lr 3e-3 \
     --embedding-dropout-p 0.5 \
     --log-interval 20 2>&1 | tee "$LOG_DIR/distill_full.log" | tail -30
+    if [ "${PIPESTATUS[0]}" -ne 0 ]; then
+        echo "FATAL: previous pipeline exited rc=${PIPESTATUS[0]}" >&2; exit "${PIPESTATUS[0]}"
+    fi
 
 # Validate: distill produced both the MLP weights and the sentinel.
 [ -f "$LOG_DIR/pose_from_embedding_v1.pt" ] || {
@@ -216,6 +219,9 @@ rm -rf "$LOG_DIR/eval_work"
     --device "${AUTH_EVAL_DEVICE:-cuda}" \
     --keep-work-dir \
     --work-dir "$LOG_DIR/eval_work" 2>&1 | tee "$LOG_DIR/auth_eval.log" | tail -20
+    if [ "${PIPESTATUS[0]}" -ne 0 ]; then
+        echo "FATAL: previous pipeline exited rc=${PIPESTATUS[0]}" >&2; exit "${PIPESTATUS[0]}"
+    fi
 
 log "=== LANE_M_V3_DONE — see $LOG_DIR/auth_eval.log for RESULT_JSON ==="
 log "    archive: $ARCHIVE"

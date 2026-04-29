@@ -107,6 +107,9 @@ log "=== Stage 2: sweep run ==="
     --auth-eval-poses "$ANCHOR_POSES" \
     --auth-eval-upstream-dir upstream \
     2>&1 | tee "$LOG_DIR/sweep.log"
+    if [ "${PIPESTATUS[0]}" -ne 0 ]; then
+        echo "FATAL: previous pipeline exited rc=${PIPESTATUS[0]}" >&2; exit "${PIPESTATUS[0]}"
+    fi
 
 RESULTS_JSON="$SWEEP_DIR/sweep_seg_weight_results.json"
 [ -f "$RESULTS_JSON" ] || { echo "FATAL: missing $RESULTS_JSON" >&2; exit 2; }
@@ -157,6 +160,9 @@ rm -rf "$LOG_DIR/eval_work"
     --keep-work-dir \
     --work-dir "$LOG_DIR/eval_work" \
     2>&1 | tee "$LOG_DIR/auth_eval_best.log"
+    if [ "${PIPESTATUS[0]}" -ne 0 ]; then
+        echo "FATAL: previous pipeline exited rc=${PIPESTATUS[0]}" >&2; exit "${PIPESTATUS[0]}"
+    fi
 
 grep -q '^RESULT_JSON' "$LOG_DIR/auth_eval_best.log" || {
     log "FATAL: final contest-CUDA auth eval emitted no RESULT_JSON"

@@ -193,6 +193,9 @@ SZV1_BIN="$LOG_DIR/renderer_szabolcs.bin"
     --predicted-band-low 0.30 \
     --predicted-band-high 0.50 \
     2>&1 | tee "$LOG_DIR/export.log"
+    if [ "${PIPESTATUS[0]}" -ne 0 ]; then
+        echo "FATAL: previous pipeline exited rc=${PIPESTATUS[0]}" >&2; exit "${PIPESTATUS[0]}"
+    fi
 
 [ -f "$SZV1_BIN" ] || { echo "FATAL: SZv1 export failed" >&2; exit 2; }
 SZV1_BYTES=$(stat -c '%s' "$SZV1_BIN" 2>/dev/null || stat -f '%z' "$SZV1_BIN")
@@ -226,6 +229,9 @@ rm -rf "$LOG_DIR/eval_work"
     --device "${AUTH_EVAL_DEVICE:-cuda}" \
     --keep-work-dir \
     --work-dir "$LOG_DIR/eval_work" 2>&1 | tee "$LOG_DIR/auth_eval.log" | tail -20
+    if [ "${PIPESTATUS[0]}" -ne 0 ]; then
+        echo "FATAL: previous pipeline exited rc=${PIPESTATUS[0]}" >&2; exit "${PIPESTATUS[0]}"
+    fi
 
 # ── Validate auth eval emitted a RESULT_JSON. ──────────────────────────
 if ! grep -q "RESULT_JSON" "$LOG_DIR/auth_eval.log"; then

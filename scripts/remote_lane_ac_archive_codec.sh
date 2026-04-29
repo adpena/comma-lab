@@ -111,6 +111,9 @@ log "=== Stage 2: encode AC payloads (texture atoms + motion + corrections) ==="
 AC_META="$LOG_DIR/ac_meta.json"
 export AC_META ANCHOR_DIR
 "$PYBIN" -u - <<'PY' 2>&1 | tee "$LOG_DIR/ac.log"
+if [ "${PIPESTATUS[0]}" -ne 0 ]; then
+    echo "FATAL: previous pipeline exited rc=${PIPESTATUS[0]}" >&2; exit "${PIPESTATUS[0]}"
+fi
 import json, os, sys
 import av, torch
 sys.path.insert(0, "src"); sys.path.insert(0, "upstream")
@@ -182,6 +185,9 @@ rm -rf "$LOG_DIR/eval_work"
     --keep-work-dir \
     --work-dir "$LOG_DIR/eval_work" \
     2>&1 | tee "$LOG_DIR/auth_eval.log"
+    if [ "${PIPESTATUS[0]}" -ne 0 ]; then
+        echo "FATAL: previous pipeline exited rc=${PIPESTATUS[0]}" >&2; exit "${PIPESTATUS[0]}"
+    fi
 grep -q '^RESULT_JSON' "$LOG_DIR/auth_eval.log" || { log "FATAL: no RESULT_JSON"; exit 5; }
 grep '^RESULT_JSON' "$LOG_DIR/auth_eval.log" | tail -1 > "$LOG_DIR/RESULT_JSON"
 log "  RESULT_JSON: $LOG_DIR/RESULT_JSON"
