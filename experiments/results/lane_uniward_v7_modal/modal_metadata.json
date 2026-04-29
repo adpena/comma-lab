@@ -1,0 +1,8 @@
+{
+  "lane_script": "scripts/remote_lane_uniward_texture.sh",
+  "label": "uniward_v7",
+  "gpu": "T4",
+  "max_seconds": 14400,
+  "call_id": "fc-01KQCS2QR22NPGAH5GTM6RWFKY",
+  "dispatched_at": "2026-04-29T09:07:56.227588"
+}
