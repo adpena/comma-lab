@@ -74,6 +74,16 @@ def _parse_args() -> argparse.Namespace:
              "Saves ~50%% on pose storage (~7.2KB vs ~15KB).",
     )
     p.add_argument(
+        "--pose-delta", action="store_true",
+        help="Encode poses as anchor + int8 deltas (Lane PD, "
+             "src/tac/pose_delta_codec.py). Driving poses are smooth so "
+             "delta range is ~10x smaller than absolute range; quantising "
+             "deltas to int8 saves ~49%% vs fp16 absolute (3.7KB vs 7.2KB "
+             "for 600 pairs). Decoder is pure-Python in submission_archive."
+             ".load_optimized_poses (already wired). Mutually exclusive "
+             "with --binary-poses.",
+    )
+    p.add_argument(
         "--brotli", action="store_true",
         help="Apply Brotli compression to renderer.bin before archiving "
              "(requires brotli package).",
@@ -174,6 +184,52 @@ def _convert_poses_to_binary(
     return bin_path
 
 
+def _convert_poses_to_pose_delta(
+    poses_path: Path,
+    output_dir: Path,
+) -> Path:
+    """Convert poses (.pt or .bin) to Lane PD pose-delta encoding.
+
+    Selfcomp/Quantizr/Lane A all ship optimized_poses.pt as ABSOLUTE poses
+    of shape (N_pairs, 6) in fp16. Driving poses are SMOOTH — consecutive
+    pose vectors differ by tiny deltas. Lane PD stores frame-0 absolute +
+    (N-1) int8 deltas, saving ~49% vs fp16 absolute.
+
+    Math: 600 pairs * 6 dims * fp16 = 7200 B → anchor (12 B) + delta_scale
+    (12 B) + 599*6 int8 deltas (3594 B) ≈ 3618 B + dict overhead. Score
+    delta: 25 * (7200 - 3618) / 37545489 ≈ -0.0024. Mutually exclusive
+    with --binary-poses.
+
+    Output is written as optimized_poses.pt (a torch-saved dict carrying
+    the format='pose_delta_v1' sentinel) so the existing decoder in
+    submission_archive.load_optimized_poses picks it up automatically.
+
+    Returns: Path to the saved .pt file.
+    """
+    import torch
+    from tac.pose_delta_codec import encode_pose_deltas
+
+    if poses_path.suffix == ".bin":
+        # Load raw fp16 binary back to a torch tensor.
+        from tac.submission_archive import load_poses_binary
+        poses = load_poses_binary(poses_path).float()
+    else:
+        poses = torch.load(
+            str(poses_path), map_location="cpu", weights_only=True
+        ).float()
+
+    obj = encode_pose_deltas(poses)
+    pt_path = output_dir / "optimized_poses.pt"
+    torch.save(obj, str(pt_path))
+    print(
+        f"    Encoded poses (Lane PD): {poses_path.name} "
+        f"({poses_path.stat().st_size:,} bytes) -> pose_delta_v1 .pt "
+        f"({pt_path.stat().st_size:,} bytes, {poses.shape})",
+        file=sys.stderr,
+    )
+    return pt_path
+
+
 
 def main() -> int:
     args = _parse_args()
@@ -235,12 +291,24 @@ def main() -> int:
         else:
             print("Step 1: Using full-frame masks (no half-frame extraction)", file=sys.stderr)
 
-        # Step 2: Binary pose conversion (if requested)
+        # Step 2: Pose conversion (binary fp16 OR Lane PD pose-delta OR none)
         final_poses_pt = None
         final_poses_bin = None
+        if args.binary_poses and args.pose_delta:
+            raise SystemExit(
+                "ERROR: --binary-poses and --pose-delta are mutually exclusive "
+                "(both are pose-encoding choices). Pick one. Lane PD's "
+                "savings (~49%) are larger than --binary-poses (~50% vs .pt "
+                "but reaches the same fp16 floor); for new builds, prefer "
+                "--pose-delta. For pinned-baseline reproductions where the "
+                "decoder might be old, use --binary-poses."
+            )
         if args.binary_poses:
             print("Step 2: Converting poses to binary format ...", file=sys.stderr)
             final_poses_bin = _convert_poses_to_binary(poses_path, tmpdir_path)
+        elif args.pose_delta:
+            print("Step 2: Encoding poses as Lane PD anchor+deltas ...", file=sys.stderr)
+            final_poses_pt = _convert_poses_to_pose_delta(poses_path, tmpdir_path)
         else:
             print("Step 2: Using .pt poses (no binary conversion)", file=sys.stderr)
             final_poses_pt = poses_path
