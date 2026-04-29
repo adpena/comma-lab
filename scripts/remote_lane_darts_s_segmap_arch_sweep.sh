@@ -133,10 +133,10 @@ print('grayscale.mkv bytes:', os.path.getsize(out_path))
 
 # Sweep loop. Configs declared as parallel arrays (bash 4 has no
 # associative arrays portably); index aligns name/hidden/block_hidden/num_blocks.
-NAMES=(small default wide deep xwide)
-HIDDEN_ARR=(16 24 32 24 40)
-BHIDDEN_ARR=(16 24 32 24 40)
-NBLOCKS_ARR=(4 8 8 12 8)
+NAMES=(default wide deep)
+HIDDEN_ARR=(24 32 24)
+BHIDDEN_ARR=(24 32 24)
+NBLOCKS_ARR=(8 8 12)
 EPOCHS=400  # per-config — slightly under Lane SC++'s 600 to fit total budget
 
 SWEEP_RESULTS_JSON="$LOG_DIR/sweep_summary.json"
