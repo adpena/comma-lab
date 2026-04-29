@@ -57,6 +57,7 @@ image = (
         "scipy",
         "numpy<2.0",
         "Pillow",
+        "pydantic>=2.0",
     )
     # Install ffmpeg-master from BtbN nightly (has in_primaries + libsvtav1).
     # Mirrors `scripts/remote_setup_full.sh` Stage 6 EXACTLY — johnvansickle
@@ -89,7 +90,9 @@ training_image = (
     image
     .add_local_dir("src", remote_path="/workspace/pact/src")
     .add_local_dir("scripts", remote_path="/workspace/pact/scripts")
-    .add_local_dir("submissions/robust_current", remote_path="/workspace/pact/submissions/robust_current")
+    # Mount entire submissions/ — lanes anchor on different baselines
+    # (UNIWARD uses submissions/baseline_dilated_h64_0_90/, etc.)
+    .add_local_dir("submissions", remote_path="/workspace/pact/submissions")
     .add_local_dir("upstream", remote_path="/workspace/pact/upstream")
     .add_local_dir("experiments", remote_path="/workspace/pact/experiments")
     .add_local_dir("tools", remote_path="/workspace/pact/tools")
