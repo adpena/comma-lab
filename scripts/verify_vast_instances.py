@@ -114,17 +114,31 @@ def _ssh_check_heartbeat(host: str, port: int) -> tuple[Optional[float], Optiona
 def classify(
     age_min: Optional[float], gpu_util: Optional[float],
     crash_signal: Optional[str], stale_minutes: float,
+    ssh_succeeded: bool = True,
 ) -> str:
+    """Classify instance health. Distinguishes:
+    - SSH_FAILED (genuinely unreachable) → UNREACHABLE
+    - SSH succeeded but heartbeat absent (lane still in setup_full.sh) → SETUP
+    - Heartbeat fresh + GPU active → HEALTHY
+    - Heartbeat stale > stale_minutes → IDLE
+    - GPU 0% > 20min after first heartbeat → IDLE (genuinely stuck)
+    - Crash signal in logs → CRASHED
+    """
     if crash_signal and crash_signal.startswith("SSH_FAILED"):
         return "UNREACHABLE"
     if crash_signal and crash_signal not in (None, ""):
         return "CRASHED"
     if age_min is None:
+        if ssh_succeeded:
+            # SSH OK but no heartbeat yet — lane in early setup_full.sh
+            return "SETUP"
         return "UNREACHABLE"
     if age_min > stale_minutes:
         return "IDLE"
-    if gpu_util is not None and gpu_util < 5.0 and age_min > 5.0:
-        # Possible auth eval phase OR genuinely stuck
+    if gpu_util is not None and gpu_util < 5.0 and age_min > 20.0:
+        # GPU util 0% with heartbeat > 20 min indicates genuinely stuck
+        # (DALI install + setup takes ~10 min; 20 min gives safety margin).
+        # Lower threshold (5 min) caused false-positive destroys during setup.
         return "IDLE"
     return "HEALTHY"
 
@@ -172,12 +186,15 @@ def main() -> int:
         if host and port:
             age_min, crash_sig = _ssh_check_heartbeat(host, int(port))
 
-        cls = classify(age_min, gpu_util, crash_sig, args.stale_minutes)
+        # ssh_succeeded if crash_sig is None or non-SSH-error (heartbeat absent
+        # is NOT an SSH failure; only "SSH_FAILED:" prefix is)
+        ssh_ok = not (crash_sig and crash_sig.startswith("SSH_FAILED"))
+        cls = classify(age_min, gpu_util, crash_sig, args.stale_minutes, ssh_ok)
         healths.append(InstanceHealth(
             instance_id=iid, label=label, classification=cls,
             last_heartbeat_age_minutes=age_min, gpu_util_pct=gpu_util,
             ssh_host=host, ssh_port=port, crash_signal=crash_sig,
-            notes=meta.get("status_msg", "")[:80],
+            notes=(meta.get("status_msg") or "")[:80],
         ))
 
     # Output
@@ -188,7 +205,7 @@ def main() -> int:
         for h in healths:
             age_s = f"{h.last_heartbeat_age_minutes:.1f}min" if h.last_heartbeat_age_minutes is not None else "?"
             util_s = f"{h.gpu_util_pct:.0f}%" if isinstance(h.gpu_util_pct, (int, float)) else "?"
-            tag = {"HEALTHY": "✓", "IDLE": "⚠", "CRASHED": "✗", "UNREACHABLE": "?", "GONE": "·"}.get(h.classification, "·")
+            tag = {"HEALTHY": "✓", "IDLE": "⚠", "CRASHED": "✗", "UNREACHABLE": "?", "GONE": "·", "SETUP": "○"}.get(h.classification, "·")
             print(f"  {tag} {h.instance_id:>10} {h.label:<32} {h.classification:<12} hb={age_s:<8} util={util_s:<5}")
             if h.crash_signal and not h.crash_signal.startswith("SSH_FAILED"):
                 print(f"      crash: {h.crash_signal[:100]}")
