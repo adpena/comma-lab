@@ -168,6 +168,12 @@ fi
     --output-dir "$TRAIN_DIR" \
     --no-auth-eval-on-best \
     2>&1 | tee "$LOG_DIR/train.log"
+# Check first stage of pipe (train_renderer) — `tee` always exits 0, swallowing
+# train crash under set -e + pipefail. Round 8 catch.
+if [ "${PIPESTATUS[0]}" -ne 0 ]; then
+    echo "FATAL: train_renderer.py exited non-zero (rc=${PIPESTATUS[0]})" >&2
+    exit "${PIPESTATUS[0]}"
+fi
 
 BEST_FP32="$TRAIN_DIR/renderer_${TAG}_best_fp32.pt"
 [ -f "$BEST_FP32" ] || {

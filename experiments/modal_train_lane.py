@@ -419,7 +419,7 @@ def main(
                 if isinstance(data, dict):
                     score = data.get("score") or data.get("final_score")
                     if score is not None:
-                        print(f"\n=== AUTH SCORE: {score} [Modal-{gpu}-CUDA] ({label}) ===")
+                        print(f"\n=== AUTH SCORE: {score} [Modal-{gpu}-{(overrides.get('AUTH_EVAL_DEVICE') or 'cpu').upper()}] ({label}) ===")
                         print(f"  source:  {path}")
                         print(f"  PoseNet: {data.get('pose') or data.get('pose_dist')}")
                         print(f"  SegNet:  {data.get('seg') or data.get('seg_dist')}")
@@ -436,7 +436,7 @@ def main(
                     data = json.loads(m.group(1))
                     score = data.get("score") or data.get("final_score")
                     if score is not None:
-                        print(f"\n=== AUTH SCORE: {score} [Modal-{gpu}-CUDA] ({label}) ===")
+                        print(f"\n=== AUTH SCORE: {score} [Modal-{gpu}-{(overrides.get('AUTH_EVAL_DEVICE') or 'cpu').upper()}] ({label}) ===")
                         print(f"  source:  {path} (RESULT_JSON line)")
                         print(f"  PoseNet: {data.get('pose')}")
                         print(f"  SegNet:  {data.get('seg')}")
