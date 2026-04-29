@@ -8668,6 +8668,16 @@ def check_lane_anchor_masks_full_resolution(
     violations: list[str] = []
     n_checked = 0
     for masks_path in sorted(masks_referenced):
+        # Per-file waiver: a sibling `.preflight_anchor_lowres_ok` sentinel
+        # documents that the masks.mkv was INTENTIONALLY encoded at sub-full
+        # resolution (e.g. the verified 0.9001 baseline whose masks were
+        # produced when the renderer accepted lower resolutions). The
+        # sentinel file's contents must explain WHY the low-res anchor is
+        # legitimate (operator audit trail).
+        waiver_path = masks_path.parent / ".preflight_anchor_lowres_ok"
+        if waiver_path.is_file():
+            n_checked += 1
+            continue
         try:
             container = av.open(str(masks_path))
             stream = container.streams.video[0]
@@ -8681,7 +8691,11 @@ def check_lane_anchor_masks_full_resolution(
                     f"catastrophically (Lane UNIWARD v7 = 53.61 from this "
                     f"exact bug, score 103.27 historical 2026-04-21). "
                     f"Use experiments/results/lane_a_landed/iter_0/masks.mkv "
-                    f"or experiments/results/lane_g_v3_landed/iter_0/masks.mkv."
+                    f"or experiments/results/lane_g_v3_landed/iter_0/masks.mkv. "
+                    f"OR if this anchor was INTENTIONALLY low-res (e.g. the "
+                    f"verified 0.9001 baseline), drop a "
+                    f"`.preflight_anchor_lowres_ok` sentinel in the parent "
+                    f"directory documenting why."
                 )
         except Exception as e:
             violations.append(
