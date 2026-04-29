@@ -197,7 +197,11 @@ def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
     p.add_argument("--epochs", type=int, default=None)
     p.add_argument("--lr", type=float, default=None)
     p.add_argument("--ema-decay", type=float, default=None)
-    p.add_argument("--grad-clip", type=float, default=1.0)
+    # 2026-04-29 silent-default audit fix: argparse default=1.0 silently
+    # overrode profile's grad_clip=10.0 in 2 profiles (KL distill bug class).
+    # Pass None so _resolve() consults profile, falling back to 1.0 only when
+    # neither CLI nor profile set it.
+    p.add_argument("--grad-clip", type=float, default=None)
     p.add_argument("--accum-steps", type=int, default=None)
     p.add_argument("--warmup-epochs", type=int, default=10)
     p.add_argument("--pretrain-epochs", type=int, default=None,
@@ -393,8 +397,15 @@ def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
     # R-FP4-fix CLI: opt-in robustness flags for FP4 QAT. Defaults match the
     # legacy behaviour to avoid surprising old runs. Set all three for residual
     # heads (Cool-Chic / C3) to close the float-FP4 gap.
+    # 2026-04-29 silent-default audit fix: argparse default='default' silently
+    # overrode profile's fp4_codebook='residual' in 14 profiles (1 profile sets
+    # 'default', 14 set 'residual'). Pass None so _resolve consults profile,
+    # falling back to 'default' only when neither CLI nor profile set it.
+    # Without this fix, every 'residual'-profile training run was silently
+    # using the wrong codebook (potentially 4× worse small-magnitude weight
+    # preservation, which is exactly the bug the codebook was meant to fix).
     p.add_argument("--fp4-codebook", choices=("default", "residual"),
-                   default="default",
+                   default=None,
                    help="FP4 codebook: 'default' = mask2mask uniform spacing, "
                         "'residual' = denser-near-zero (4× better small-mag preservation). "
                         "Use 'residual' for renderers with a correction head.")
@@ -593,7 +604,12 @@ def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
                    help="Batch size for SegNet mask extraction")
 
     # Resilience
-    p.add_argument("--wall-clock-timeout", type=int, default=0,
+    # 2026-04-29 silent-default audit fix: argparse default=0 (no limit)
+    # silently overrode profile's wall_clock_timeout=39600 (11h cap) in 2
+    # profiles. A modal lane configured for 11h timeout would silently get
+    # no timeout — pre-running budget on dead-ended experiments. Pass None
+    # so _resolve consults profile.
+    p.add_argument("--wall-clock-timeout", type=int, default=None,
                    help="Max wall-clock seconds before emergency save + clean exit (0=no limit)")
     p.add_argument("--resume-from", type=str, default=None,
                    help="Path to training_state_*.pt checkpoint to resume from")
@@ -813,6 +829,13 @@ def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
         getattr(args, "self_compress_target_bits", None),
         "self_compress_target_bits", 2.5,
     )
+    # 2026-04-29 silent-default audit fix: grad_clip default was 1.0 but
+    # 2 profiles set 10.0 — the argparse default silently won. Now the CLI
+    # default is None so _resolve consults the profile (10.0 when present)
+    # before falling back to 1.0.
+    args.grad_clip = _resolve(args.grad_clip, "grad_clip", 1.0)
+    args.fp4_codebook = _resolve(args.fp4_codebook, "fp4_codebook", "default")
+    args.wall_clock_timeout = _resolve(args.wall_clock_timeout, "wall_clock_timeout", 0)
     args.self_compress_lambda_start = _resolve(
         getattr(args, "self_compress_lambda_start", None),
         "self_compress_lambda_start", 0.0,
