@@ -1,0 +1,57 @@
+STAGE 3 of Lane STC — VERIFICATION (read-only sandbox).
+
+Read first:
+- docs/paper/lane_stc_boundary_coding_design_20260429.md
+- src/tac/stc_boundary_codec.py
+- src/tac/tests/test_stc_boundary_codec.py
+- experiments/build_lane_stc_archive.py
+- scripts/remote_lane_stc_boundary_coding.sh
+
+YOUR JOB: VERIFY everything works end-to-end. Report findings; do NOT modify any code.
+
+Run these checks (cd to /Users/adpena/Projects/pact for each):
+
+1. Tests: .venv/bin/python -m pytest src/tac/tests/test_stc_boundary_codec.py -v 2>&1 | tail -40
+   Report: PASS_COUNT / TOTAL_COUNT and any failures.
+
+2. Lane script syntax: bash -n scripts/remote_lane_stc_boundary_coding.sh
+   Report: PASS or FAIL with the exact error.
+
+3. Lane script forbidden patterns:
+   - grep -E '^set -uo' scripts/remote_lane_stc_boundary_coding.sh && echo VIOLATES_CHECK_2 || echo OK
+   - grep -E '\bzip\s+-' scripts/remote_lane_stc_boundary_coding.sh && echo VIOLATES_CHECK_3 || echo OK
+   - grep 'git reset' scripts/remote_lane_stc_boundary_coding.sh && echo VIOLATES_GIT_RESET || echo OK
+   - grep 'git pull' scripts/remote_lane_stc_boundary_coding.sh && echo VIOLATES_GIT_PULL || echo OK
+
+4. Archive size measurement (REAL, not synthetic):
+   - Find Lane A anchor archive: ls -la experiments/results/lane_a_landed/archive_lane_a.zip 2>&1
+   - If exists, measure mask payload size BEFORE: python -c "import zipfile; z=zipfile.ZipFile('experiments/results/lane_a_landed/archive_lane_a.zip'); [print(i.filename, i.file_size) for i in z.infolist()]"
+   - Build STC archive: .venv/bin/python experiments/build_lane_stc_archive.py --anchor-archive experiments/results/lane_a_landed/archive_lane_a.zip --output /tmp/archive_lane_stc.zip 2>&1 | tail -20
+   - Measure mask payload size AFTER: python -c "import zipfile; z=zipfile.ZipFile('/tmp/archive_lane_stc.zip'); [print(i.filename, i.file_size) for i in z.infolist()]"
+   - Compute bytes saved and project rate-term Delta: 25 * (saved_bytes) / 37545489
+
+5. Preflight STRICT checks: cd /Users/adpena/Projects/pact && .venv/bin/python -c "from tac.preflight import preflight_all; preflight_all()" 2>&1 | tail -20
+   Report: any new violations introduced by Lane STC files.
+
+6. Module import sanity: .venv/bin/python -c "from tac.stc_boundary_codec import detect_boundary_pixels, encode_stc_syndrome, decode_stc_syndrome, encode_mask_video_stc, decode_mask_video_stc; print('imports_ok')"
+
+7. Mark .py files reviewed (do not run; just emit the commands the parent should run):
+   - tools/review_tracker.py mark-file src/tac/stc_boundary_codec.py --reviewer codex --status reviewed
+   - tools/review_tracker.py mark-file src/tac/tests/test_stc_boundary_codec.py --reviewer codex --status reviewed
+   - tools/review_tracker.py mark-file experiments/build_lane_stc_archive.py --reviewer codex --status reviewed
+
+OUTPUT FORMAT (under 500 words):
+- TESTS: X/Y passing
+- LANE_SCRIPT_SYNTAX: PASS/FAIL
+- FORBIDDEN_PATTERNS: clean / violations listed
+- ARCHIVE_SIZE_BEFORE: bytes
+- ARCHIVE_SIZE_AFTER: bytes (if buildable)
+- BYTES_SAVED: int
+- PROJECTED_RATE_DELTA: float
+- PROJECTED_SCORE_DELTA: float (rate-only)
+- PREFLIGHT_VIOLATIONS: 0 or list
+- IMPORT_SANITY: PASS/FAIL
+- BLOCKING_ISSUES: any reasons NOT to dispatch to Modal/Vast.ai
+- OPEN_QUESTIONS: any unknowns the parent should resolve before deploy
+
+Then exit.

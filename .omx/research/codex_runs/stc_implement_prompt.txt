@@ -1,0 +1,82 @@
+STAGE 2 of Lane STC — IMPLEMENTATION (workspace-write sandbox).
+
+Read first:
+- docs/paper/lane_stc_boundary_coding_design_20260429.md (Stage 1 design — your own output)
+- /Users/adpena/Projects/pact/CLAUDE.md (operating non-negotiables)
+- src/tac/fridrich.py (existing optimal_quantization_stc and compute_pixel_cost_map — reuse cost-map pattern, but write a NEW mask-class codec)
+- src/tac/mask_codec.py (interface to mirror — encode_masks_auto / decode_masks_auto signature)
+- src/tac/mask_grayscale_lut.py (Selfcomp class targets reference)
+- src/tac/arithmetic_qint_codec.py (arithmetic coder primitives — REUSE for the syndrome bitstream)
+- experiments/build_lane_mm_archive.py (CLI driver pattern to mirror for build_lane_stc_archive.py)
+- scripts/remote_lane_a_optimized.sh (5-stage Vast.ai/Modal lane script pattern to mirror)
+
+YOUR JOB: write 4 files. NO scope creep. NO emojis. NO premature optimization.
+
+FILE 1: src/tac/stc_boundary_codec.py (~250-350 lines)
+Contract:
+  - detect_boundary_pixels(mask_class_ids: torch.Tensor[N,H,W] int, threshold_quantile: float = 0.95) -> torch.Tensor[N,H,W] bool
+      Boundary detection from class-ID maps via Sobel-magnitude on argmax (no scorer needed at decode). Returns top-(1 - threshold_quantile) fraction of pixels by gradient magnitude.
+  - encode_stc_syndrome(boundary_pixels: torch.Tensor[N,H,W] bool, class_ids: torch.Tensor[N,H,W] int, num_classes: int = 5) -> bytes
+      Encodes ONLY the class IDs at boundary positions via arithmetic coding (using arithmetic_qint_codec primitives if available, otherwise inline a stable binary arithmetic coder with a 5-symbol model). Bitstream format: header (N, H, W, num_classes, boundary_count) + boundary bitmap (run-length encoded) + class-ID arithmetic stream for boundary positions only.
+  - decode_stc_syndrome(payload: bytes, fill_class: int = 0) -> torch.Tensor[N,H,W] int
+      Reverses encode. Non-boundary pixels filled with fill_class (operator can post-process by majority-class-fill from neighbors, but default is constant-fill). NOTE: for true lossless, fill_class should be derived per-pixel from the dominant class — simpler approach for v1: encode majority class per N x M tile (tile_size=32) as a small auxiliary table, fill non-boundary pixels from tile majority.
+  - encode_mask_video_stc(masks: torch.Tensor[N,H,W] int, output_path: Path, num_classes: int = 5, threshold_quantile: float = 0.95) -> int (bytes_written)
+  - decode_mask_video_stc(input_path: Path) -> torch.Tensor[N,H,W] int
+  Top-level interface mirrors mask_codec.encode_masks_auto / decode_masks_auto signatures.
+
+Critical:
+  - Bitexact: encode then decode must yield IDENTICAL class IDs at boundary positions
+  - For non-boundary positions, the recovered ID must match the tile-majority encoding (test with majority-class-only frames returns 100 percent recovery)
+  - All numeric ops on CPU (uint8/int32 only). NO float intermediate states in the codec path.
+  - Use Python stdlib (struct, zlib) plus numpy plus torch only. No new third-party deps.
+  - Header is little-endian, 4-byte magic 'STCB', 4 x uint16 fields (N, H, W, num_classes), 4-byte uint32 boundary_count, 1-byte uint8 tile_size_log2.
+  - Add a top-level docstring referencing Filler/Pevny/Fridrich 2011 STC paper and noting this is an STC-INSPIRED encoding (true syndrome trellis is overkill for v1 — we use boundary-restricted arithmetic coding which captures 80 percent of the wins per the design doc).
+
+FILE 2: src/tac/tests/test_stc_boundary_codec.py (~200-300 lines)
+Required tests (10):
+  - test_detect_boundary_density_typical_mask: synthesize a mask with diagonal class boundary, assert ~5 percent of pixels detected at threshold_quantile=0.95
+  - test_encode_decode_roundtrip_boundary_pixels: random 5-class mask, encode then decode, boundary pixels recovered EXACTLY
+  - test_byte_budget_respected: 1200 frames at 384x512 should yield <= 100KB encoded payload (target 60-80KB)
+  - test_non_boundary_pixels_recovered_via_tile_majority: constant-class regions recover at 100 percent
+  - test_stc_meets_shannon_bound_within_15pct: compute H(boundary_class_ids) and assert encoded size <= 1.15 * H_bits/8
+  - test_lossless_argmax_recovery_on_synthetic_mask: synthetic mask where ALL pixels are boundary => 100 percent recovery
+  - test_deterministic: encode same mask twice yields identical bytes
+  - test_empty_mask_edge_case: all-zero mask encodes to small constant header + empty payload
+  - test_all_boundary_edge_case: every pixel marked boundary; decoder works
+  - test_interface_matches_mask_codec_signature: verify encode_mask_video_stc / decode_mask_video_stc signatures match expectations
+Use synthetic masks (torch.zeros / arange patterns); do NOT load real data in unit tests.
+
+FILE 3: experiments/build_lane_stc_archive.py (~150-250 lines)
+Mirror experiments/build_lane_mm_archive.py structure exactly:
+  - Argparse: --anchor-archive (path to archive_lane_a.zip), --output (path to archive_lane_stc.zip), --threshold-quantile (default 0.95)
+  - Decode masks.mkv from anchor archive (reuse the _decode_legacy_masks_mkv helper pattern; class IDs only, no float)
+  - Encode via tac.stc_boundary_codec.encode_mask_video_stc to a 'masks.stc' bytes payload
+  - Repackage zip: renderer.bin (unchanged) + masks.stc (new) + optimized_poses.pt (unchanged)
+  - Print byte-savings summary: original masks.mkv bytes vs new masks.stc bytes
+  - REQUIRED: assert output zip total size <= input zip total size (fail loud if STC made things WORSE)
+
+FILE 4: scripts/remote_lane_stc_boundary_coding.sh (~250-400 lines)
+Mirror scripts/remote_lane_a_optimized.sh structure:
+  - set -euo pipefail (NOT set -uo pipefail — meta-bug check 2)
+  - Uses python zipfile (NOT shell zip binary — meta-bug check 3)
+  - Stage 0: NVDEC probe (meta-bug check 11; not strictly needed for STC since we don't decode video on remote, but keep for parity)
+  - Stage 1: clone tarball setup (NOT git pull/reset — see CLAUDE.md NEVER git reset)
+  - Stage 2: setup_full.sh (NOT setup_full.sh — use remote_setup_full.sh per memory)
+  - Stage 3: build STC archive via experiments/build_lane_stc_archive.py
+  - Stage 4: inflate.sh on the new archive
+  - Stage 5: upstream/evaluate.py with --device cuda. RESULT_JSON output. Tag [contest-CUDA].
+  - Heartbeat every 60s to /tmp/heartbeat_lane_stc.log
+  - Provenance: write provenance.json with git hash, GPU info, archive bytes before/after
+  - Anchor path: experiments/results/lane_a_landed/archive_lane_a.zip (verify exists in tarball)
+  - WAIVE the inflate-time scorer load check (we DO NOT load scorers; pure decode)
+  - Lane label includes 'lane-stc-v1' for vastai instance tracking
+
+Fail-loud everywhere. No silent skips. No fallbacks to MPS or CPU for the auth eval (CUDA-only per CLAUDE.md non-negotiable).
+
+After writing all four files, run:
+  - cd /Users/adpena/Projects/pact && .venv/bin/python -m pytest src/tac/tests/test_stc_boundary_codec.py -x -q 2>&1 | tail -30
+  - cd /Users/adpena/Projects/pact && bash -n scripts/remote_lane_stc_boundary_coding.sh
+  - cd /Users/adpena/Projects/pact && .venv/bin/python -c "import experiments.build_lane_stc_archive" 2>&1 | tail -5
+Report PASS/FAIL count and any tracebacks.
+
+Then exit. Do NOT commit (parent shell handles commits).

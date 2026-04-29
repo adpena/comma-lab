@@ -1,0 +1,58 @@
+STAGE 1 of Lane STC (Syndrome-Trellis Codes for boundary mask coding) — DESIGN ONLY (read-only sandbox).
+
+CONTEXT FILES (read these first):
+- /Users/adpena/Projects/pact/CLAUDE.md
+- /Users/adpena/.claude/projects/-Users-adpena-Projects-pact/memory/MEMORY.md
+- /Users/adpena/.claude/projects/-Users-adpena-Projects-pact/memory/project_senior_engineer_review_floor_revised_245_20260429.md
+- /Users/adpena/.claude/projects/-Users-adpena-Projects-pact/memory/project_selfcomp_reverse_engineered_20260429.md
+- /Users/adpena/.claude/projects/-Users-adpena-Projects-pact/memory/project_codex_theoretical_floor_brutal_20260429.md
+
+EXISTING MODULES TO AUDIT:
+- src/tac/fridrich.py: optimal_quantization_stc at line 907, compute_pixel_cost_map at line 578. The existing optimal_quantization_stc operates on FRAMES (RGB pixels for ceil/floor rounding), NOT on mask classes. Assess whether it can be REUSED for the mask-class STC syndrome path or if a NEW codec is required.
+- src/tac/mask_grayscale_lut.py: Selfcomp 5-class encoding via Gaussian softmax LUT
+- src/tac/mask_codec.py: current AV1 monochrome mask path
+- src/tac/arithmetic_qint_codec.py: arithmetic coder hitting Shannon bound
+- src/tac/fridrich_losses.py: Fridrich/UNIWARD lineage
+
+YOUR JOB: write design doc to docs/paper/lane_stc_boundary_coding_design_20260429.md.
+
+The doc must include:
+
+1. Mathematical formulation:
+   - Pixel-cost map rho(x,y) = gradient-magnitude on SegNet logit map (cheap, deterministic — encoder-time only, NO scorer load at inflate per strict-scorer-rule)
+   - Boundary detection threshold: top-5 percent pixels by rho (configurable)
+   - STC syndrome: boundary class IDs encoded at H(boundary) bits via Filler/Pevny/Fridrich 2011 STC
+   - Non-boundary pixels: encoded as constant-class run-length OR delta from majority class (near-zero cost)
+   - Total bytes approximately equal to H(boundary) + tiny non-boundary overhead
+
+2. Audit verdict for src/tac/fridrich.py optimal_quantization_stc:
+   - Is it production-ready as-is?
+   - Or does it need wrapping/rewriting? (Spoiler: it operates on continuous RGB pixels for quantization, not 5-class discrete IDs — so likely needs a NEW mask-class codec but can SHARE the cost-map computation pattern.)
+
+3. Stack composition with Lane MM (mask majority-class) and Lane SH (selfcomp half-frame):
+   - Do they overlap?
+   - Note: STC REPLACES the AV1 monochrome path entirely in mask_codec.py
+   - Lane MM stacks (additive on residual)
+   - Lane SH is orthogonal (frame count reduction, applies before STC)
+
+4. Predicted byte savings: current AV1 monochrome path is around 200KB for 1200 mask frames. STC target: 60-80KB savings, yielding 120-140KB final mask payload. Rate term Delta = 25 * 60000 / 37545489 approximately equals -0.04. Score Delta standalone: -0.03 to -0.04 vs Lane G v3 baseline 1.05.
+
+5. Boundary detection algorithm:
+   - Input: SegNet logits (N, 5, H, W) — but at inflate time we DO NOT have SegNet (strict-scorer-rule)
+   - Boundary must be detected from MASK CLASS IDs themselves at decode time, OR encoded into the bitstream at encode time
+   - Recommended: encode-time boundary computed from logits via Sobel on argmax-class-ID map (cheap, no scorer needed at decode), then stored as a bit-mask preamble in the syndrome bitstream
+   - Decode side reads boundary bitmap, reconstructs cost-map structure, decodes STC syndrome
+
+6. Stage 2/3 task list (concrete file:function entries):
+   - src/tac/stc_boundary_codec.py: detect_boundary_pixels, encode_stc_syndrome, decode_stc_syndrome, plus top-level encode_mask_video_stc / decode_mask_video_stc pair mirroring mask_codec.py interface
+   - src/tac/tests/test_stc_boundary_codec.py: ~10 tests (boundary density ~5 percent, encode/decode roundtrip, byte-budget respected, non-boundary pixels recovered at zero cost, STC meets Shannon bound within 15 percent, lossless argmax recovery, deterministic, edge cases empty/all-boundary)
+   - experiments/build_lane_stc_archive.py: CLI wrapping Lane A archive, swap mask payload from AV1 to STC, repackage zip
+   - scripts/remote_lane_stc_boundary_coding.sh: 5-stage Modal/Vast.ai script (clone tarball, setup_full, build STC archive on Lane A anchor, inflate.sh, upstream/evaluate.py with [contest-CUDA] tag)
+
+7. Risks and known unknowns:
+   - STC achievable rate vs Shannon bound (typically within 5-15 percent per literature; empirical TBD)
+   - Boundary fraction may exceed 5 percent on motion-heavy frames — need adaptive threshold
+   - AV1 was bitexact-deterministic; STC encoder/decoder must be bitexact too (no float roundoff)
+   - eval_roundtrip impact: NONE (encoder-time only, decoder is deterministic)
+
+After writing the design doc, exit. Do NOT touch code in this stage. Do NOT modify any file other than docs/paper/lane_stc_boundary_coding_design_20260429.md.
