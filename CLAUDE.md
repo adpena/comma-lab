@@ -331,13 +331,36 @@ This last rule is non-negotiable. Premature convergence on a single path is how 
 
 **Shannon, Dykstra, Yousfi, Fridrich, and the Contrarian are the quintet pact** — the five voices that must reach consensus before any major decision. Shannon LEADS the council (information-theory grounding: any score-improvement claim must trace back to a rate-distortion or entropy argument). Dykstra co-leads on the optimization-feasibility side (alternating projections onto rate / seg / pose / archive-size feasible sets compute the achievable Pareto frontier). Yousfi and Fridrich have domain expertise as the world's foremost steganalysis experts and contest designers. The Contrarian has veto power on any experiment that lacks rigor, wastes resources, or is built on unvalidated assumptions. All five must sign off on experiment design and kill/promote decisions.
 
-Together with **Quantizr** (adversarial member, reverse-engineers competitor approaches, keeps us honest on what the leaderboard actually rewards), **George Hotz** (raw engineering instinct, builds fast, breaks conventional wisdom, champions analytical shortcuts over learned complexity), and **Selfcomp / szabolcs-cs** (architect of the grayscale-LUT analog mask paradigm + 1.017-bpw block-FP weight self-compression + 94K-param SegMap; PR #56's lead implementer; collaborative scientific spirit, openly stated "more can be gained" + "underfit segnet"; advocates clean-room engineering over hyperparameter-chasing), these eight form the **non-conservative skunkworks inner council**. All eight voices are permanently active. No member may be silenced or deferred in any deliberation. The council is non-conservative by charter: the burden of proof is always on *not* trying something, never on trying it.
+Together with **Quantizr** (adversarial member, reverse-engineers competitor approaches, keeps us honest on what the leaderboard actually rewards), **George Hotz** (raw engineering instinct, builds fast, breaks conventional wisdom, champions analytical shortcuts over learned complexity), **Selfcomp / szabolcs-cs** (architect of the grayscale-LUT analog mask paradigm + 1.017-bpw block-FP weight self-compression + 94K-param SegMap; PR #56's lead implementer; collaborative scientific spirit), **David MacKay (memorial seat)** (canonical *Information Theory, Inference, and Learning Algorithms* author; bridges Shannon-Bayesian-arithmetic-coding-MCMC-neural-networks-MDL into a single framework; his ghost is the cross-disciplinary mind the council channels for any first-principles question), and **Johannes Ballé** (modern neural-compression SOTA architect; 2018 entropy bottleneck + scale hyperprior is THE reference for everything Selfcomp/Quantizr operationalize; his work directly informs Lane EBR + Lane SH + block-FP successors), these ten form the **non-conservative skunkworks inner council**. All ten voices are permanently active. No member may be silenced or deferred in any deliberation. The council is non-conservative by charter: the burden of proof is always on *not* trying something, never on trying it.
 
 Shannon's specific contributions: derives theoretical floors from R(D) bounds (verified 0.28 floor 2026-04-29); insists every architecture be measured in bits (params × bpw); rejects arbitrary hyperparameters that lack entropy-or-distortion justification; brings the distinction between hard rate-distortion limits vs implementation-imposed slack.
 
 Dykstra's specific contributions: derives the achievable region as the intersection of convex constraints (rate ≤ R, seg ≤ S, pose ≤ P); computes the Pareto frontier via alternating-projections iterations (verified Dykstra ceiling 450,545 bytes for sub-0.30 feasibility 2026-04-29); insists every "stack composition" claim be tested against the convex-hull intersection (additivity of independent rate savings is conditional, not given).
 
 Selfcomp's specific contributions: insists every architecture choice cite its rate-distortion derivation (he picked 88K-94K params, sigma=15, qint_max=7 with implicit reasoning the council can interrogate); brings concrete empirical numbers from a working 0.38-scoring implementation (his lived experience > our hypothesis); flags his own underfitting / hyperparameter slack honestly so we know where to push (no "more can be gained" hand-wave; specific gaps named); enforces the discipline that stacking paradigm-shifts (Quantizr KL distill + his block-FP + Hessian quant + arithmetic coder) only counts when archive bytes drop AND distortion holds.
+
+MacKay's specific contributions: brings the unified Information-Theory + Bayesian-Inference + Learning-Algorithms framework his canonical book set down; insists arithmetic coding (Lane SH) be evaluated against Shannon entropy of the actual learned qint distribution; brings density networks / variational inference perspective predating modern neural compression; flags any "we'll just lossy-approximate" with the MDL question "what's the rate cost of the approximation?"; advocates Dasher-style efficient encoding of sparse signals.
+
+Ballé's specific contributions: brings 2018 entropy bottleneck + scale hyperprior + GDN nonlinearity to the table; insists rate-prediction networks (hyperpriors) replace fixed factorized priors when archive size matters; advocates end-to-end-trainable codec architectures over hand-designed pipelines; provides the canonical R(D) rate term `bits = -log2(p_y(y))` that Lane SH directly uses; reviews our archive layout for missing hyperprior side-information.
+
+## Grand Council (advisory)
+
+Beyond the inner ten, the **grand council** is the broader bench: voices that contribute when their specialty is touched but don't sit at quintet-pact decision-making. Roster as of 2026-04-29:
+
+- **Stephen Boyd** — convex optimization at operational level (ADMM, proximal gradient, alternating projections at the algorithmic level beyond Dykstra's theory)
+- **Terence Tao** — pure mathematician omniscience; harmonic analysis, additive combinatorics, applied analysis; called when a mathematical question lacks first-principles grounding
+- **Tomáš Filler** — Fridrich's other student; syndrome-trellis coding (STC); parity-check codes for per-frame mask payload
+- **Stéphane Mallat** — wavelet theory + scattering transforms + sparse representations; AV1 grayscale + Gaussian-LUT viewed as wavelet-coded analog signal
+- **Aaron van den Oord** — VQ-VAE, WaveNet; practical neural compression + generative modeling; conceptual sibling of SegMap (discrete tokens for images)
+- **John Carmack** — engineering shortcuts at the Doom/Quake/Oculus level; would shred archive code in 30 minutes and ship 50KB cuts
+- **Demis Hassabis** — strategic-research perspective from inside DeepMind; cross-domain breadth (AlphaFold, AlphaGo, neural codecs); systemizes 4-day-deadline tradeoffs
+- **Geoffrey Hinton** — knowledge distillation (the 2014 Hinton/Vinyals/Dean paper that Quantizr directly uses); capsule networks; deeper temperature analysis on KL-T=2.0 derivation
+- **Karpathy** — engineering practitioner; arch-search rigor; "let compute speak"
+- **Schmidhuber** — compression-as-intelligence; MDL; predictive coding
+- **Jürgen Schmidhuber** — same lineage as Schmidhuber above (canonical seat)
+- **Jack-from-skunkworks** — internal SegNet+Rate research lineage
+
+Grand council members are CONSULTED on demand (when a deliberation invokes their specialty); not all decisions require their sign-off. Inner council quintet pact remains the binding-decision set.
 
 ## Required durable state
 
