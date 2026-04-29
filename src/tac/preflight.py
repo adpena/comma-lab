@@ -580,6 +580,18 @@ def preflight_all(
         # post-F5 fix → ships STRICT immediately.
         check_lane_scripts_set_up_inflate_environment(strict=True, verbose=verbose)
 
+        # 2026-04-28 Check 64 — lane scripts must have a recent E2E smoke
+        # proof. Closes the structural gap that cost Lane RM-d 3.5h GPU:
+        # 63 STATIC preflight checks above all guard CODE PATTERNS, none
+        # actually run the deploy → inflate → contest_auth_eval pipeline
+        # locally. Check 64 enforces every remote_lane_*.sh has an entry
+        # in .omx/state/lane_e2e_smoke_proofs.json that is < 7 days old,
+        # written by experiments/canonical_local_auth_eval_smoke.py.
+        # Promoted to STRICT after the backfill landed all 70 existing
+        # lanes at 0 live violations. Reference:
+        # feedback_canonical_e2e_smoke_PERMANENT_GUARD_20260428.
+        check_lane_scripts_have_e2e_smoke_proof(strict=True, verbose=verbose)
+
     # 2. Training inputs (only if profile + tto_frames provided)
     if profile_name and tto_frames_path and gt_poses_path and masks_path and profile_arch:
         preflight_training_inputs(
@@ -7723,6 +7735,11 @@ _DEPLOY_SCANNER_EXEMPT_PRODUCERS = frozenset({
     # ARCHEOLOGY: embedding-loss TTO produced auth 0.61 on 2026-04-15 but was
     # superseded by pose TTO + KL distill collapse; preserved for reference.
     "experiments/optimize_embedding.py",
+    # Canonical local E2E auth-eval smoke (Check 64). Mentions 'masks.amrc' in
+    # its archive whitelist string but is itself a LOCAL preflight tool, not
+    # a producer — it never writes the artifact, only validates archives that
+    # contain it. Invoked by operators before lane dispatch + by Check 64.
+    "experiments/canonical_local_auth_eval_smoke.py",
 })
 
 # Directory prefixes that run on alternative platforms (NOT Vast.ai), so
@@ -10943,6 +10960,181 @@ def check_lane_scripts_set_up_inflate_environment(
     if violations and strict:
         raise MetaBugViolation(
             "LANE SCRIPTS MUST SET UP INFLATE ENV (Codex F5 2026-04-28).\n"
+            + "\n".join(f"  • {v}" for v in violations[:50])
+        )
+    return violations
+
+
+# ── Check 64: lane scripts must have a recent E2E smoke proof ─────────────────
+#
+# Reference: feedback_canonical_e2e_smoke_PERMANENT_GUARD_20260428.
+#
+# The structural gap this check closes: 63 STRICT preflight checks before
+# Check 64 are STATIC analysis — code-pattern guards. None of them actually
+# run the deploy → inflate → contest_auth_eval pipeline locally. A lane can
+# pass every static check and still ship to Vast.ai with a broken pipeline.
+#
+# Lane RM-d (2026-04-28) is the canonical example: trained 3.5h on Vast.ai,
+# built archive successfully, then crashed at Stage 3 because the inflate.sh
+# ffmpeg path tried to read extracted/0.mkv (file that never exists in a
+# renderer archive). The F5 fix in contest_auth_eval.py closes that specific
+# bug, but the structural gap — "we never proved the lane will actually
+# inflate end-to-end before dispatch" — remained.
+#
+# Check 64 enforces: every scripts/remote_lane_*.sh must have an entry in
+# .omx/state/lane_e2e_smoke_proofs.json that is < 7 days old. The proof is
+# written by experiments/canonical_local_auth_eval_smoke.py, which runs the
+# full pipeline locally against a known-good fixture archive.
+#
+# Operators MUST run the smoke before dispatching a new lane. Without a
+# proof, the preflight FAILS, blocking the dispatch.
+
+
+SMOKE_PROOFS_REL = ".omx/state/lane_e2e_smoke_proofs.json"
+SMOKE_PROOF_MAX_AGE_DAYS = 7
+
+
+def check_lane_scripts_have_e2e_smoke_proof(
+    repo_root: Path | None = None,
+    strict: bool = True,
+    verbose: bool = True,
+) -> list[str]:
+    """Verify every scripts/remote_lane_*.sh has a recent E2E smoke proof.
+
+    A smoke proof is an entry in .omx/state/lane_e2e_smoke_proofs.json
+    written by experiments/canonical_local_auth_eval_smoke.py. Each proof
+    asserts the lane's archive would inflate cleanly through the canonical
+    pipeline (extract → whitelist → renderer-magic → masks → config.env →
+    inflate.sh dispatch → inflate_renderer.py imports → upstream/evaluate.py
+    arity → GT video present → launcher includes .env).
+
+    Acceptance paths per lane:
+      (a) Proof exists with timestamp_utc < SMOKE_PROOF_MAX_AGE_DAYS old.
+      (b) Lane script has same-line `# E2E_SMOKE_OPT_OUT:<reason>` comment
+          (for lanes that genuinely cannot be smoke-tested locally — e.g.
+          require 60GB GPU memory for archive build).
+
+    Otherwise the lane FAILS this check.
+
+    Returns list of violations. Raises MetaBugViolation if strict and any.
+    """
+    import datetime as _dt
+    import json as _json
+
+    root = repo_root or REPO_ROOT
+    scripts_dir = root / "scripts"
+    proofs_path = root / SMOKE_PROOFS_REL
+    violations: list[str] = []
+    n_scanned = 0
+    n_proven = 0
+    n_waived = 0
+
+    if not scripts_dir.is_dir():
+        if verbose:
+            print("  [e2e-smoke-proof] SKIP: scripts/ not present")
+        return violations
+
+    # Load proofs file (may not exist on a fresh repo). A missing file means
+    # ZERO proofs — every lane will violate. That is by design: the operator
+    # must run canonical_local_auth_eval_smoke.py at least once.
+    proofs: dict = {}
+    if proofs_path.exists():
+        try:
+            proofs = _json.loads(proofs_path.read_text())
+            if not isinstance(proofs, dict):
+                proofs = {}
+        except (_json.JSONDecodeError, OSError):
+            proofs = {}
+
+    now = _dt.datetime.now(_dt.timezone.utc)
+    cutoff = now - _dt.timedelta(days=SMOKE_PROOF_MAX_AGE_DAYS)
+
+    for path in sorted(scripts_dir.glob("remote_lane_*.sh")):
+        n_scanned += 1
+        lane_name = path.stem  # e.g. "remote_lane_g_v3_corrected_kl_weight"
+        rel = str(path.relative_to(root))
+
+        # Acceptance path (b): same-line opt-out waiver
+        try:
+            text = path.read_text(errors="ignore")
+        except OSError:
+            text = ""
+        if "# E2E_SMOKE_OPT_OUT:" in text:
+            # Require a non-empty reason after the colon (anchor: at least 4
+            # chars to discourage `# E2E_SMOKE_OPT_OUT:.` placeholder).
+            import re as _re
+            m = _re.search(r"#\s*E2E_SMOKE_OPT_OUT:\s*(\S.*)", text)
+            if m and len(m.group(1).strip()) >= 4:
+                n_waived += 1
+                continue
+            violations.append(
+                f"{rel}: has '# E2E_SMOKE_OPT_OUT:' marker but no reason "
+                f"(must be at least 4 chars)"
+            )
+            continue
+
+        # Acceptance path (a): proof exists + recent
+        proof = proofs.get(lane_name)
+        if proof is None:
+            violations.append(
+                f"{rel}: no smoke proof in {SMOKE_PROOFS_REL} "
+                f"(run: python experiments/canonical_local_auth_eval_smoke.py "
+                f"--lane {lane_name})"
+            )
+            continue
+
+        ts_str = proof.get("timestamp_utc")
+        if not ts_str:
+            violations.append(
+                f"{rel}: proof exists but missing 'timestamp_utc' field "
+                f"(corrupt proof — re-run smoke)"
+            )
+            continue
+
+        try:
+            # Parse the canonical UTC ISO timestamp written by the smoke tool.
+            ts = _dt.datetime.strptime(ts_str, "%Y-%m-%dT%H:%M:%SZ")
+            ts = ts.replace(tzinfo=_dt.timezone.utc)
+        except ValueError:
+            violations.append(
+                f"{rel}: proof has malformed timestamp_utc={ts_str!r} "
+                f"(re-run smoke)"
+            )
+            continue
+
+        if ts < cutoff:
+            age_days = (now - ts).days
+            violations.append(
+                f"{rel}: smoke proof too old ({age_days} days, max "
+                f"{SMOKE_PROOF_MAX_AGE_DAYS}). Re-run: python "
+                f"experiments/canonical_local_auth_eval_smoke.py --lane "
+                f"{lane_name}"
+            )
+            continue
+
+        n_proven += 1
+
+    if verbose:
+        if violations:
+            print(f"  [e2e-smoke-proof] {len(violations)} violation(s) across "
+                  f"{n_scanned} remote_lane_*.sh file(s) "
+                  f"(proven={n_proven} waived={n_waived}):")
+            for v in violations[:20]:
+                print(f"    • {v}")
+            if len(violations) > 20:
+                print(f"    ... and {len(violations) - 20} more")
+        else:
+            print(f"  [e2e-smoke-proof] OK: {n_scanned} remote_lane_*.sh "
+                  f"scripts checked (proven={n_proven} waived={n_waived})")
+
+    if violations and strict:
+        raise MetaBugViolation(
+            "LANE SCRIPTS MUST HAVE E2E SMOKE PROOF (Check 64 — closes the "
+            "static-vs-pipeline gap that cost Lane RM-d 3.5h GPU on the "
+            "0.mkv crash). Run:\n"
+            "  python experiments/canonical_local_auth_eval_smoke.py "
+            "--backfill-all\n"
+            "to regenerate proofs for every lane.\n\nViolations:\n"
             + "\n".join(f"  • {v}" for v in violations[:50])
         )
     return violations
