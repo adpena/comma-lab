@@ -837,6 +837,13 @@ def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
                                 "noise_mode", "deterministic")
     args.motion_type = _resolve(getattr(args, "motion_type", None),
                                  "motion_type", "learned_cnn")
+    # Lane HM orphan wire-up: importing tac.contrib.homography_motion runs
+    # _patch_renderer_dispatch(), which adds a homography_analytical case
+    # to build_renderer if the renderer.py native dispatch is not yet
+    # available. Safe to import unconditionally — the module's patch is
+    # idempotent and a no-op when motion_type != 'homography_analytical'.
+    if args.motion_type == "homography_analytical":
+        from tac.contrib import homography_motion  # noqa: F401
     # Diffusion teacher noise schedule (only consumed by variant=='diffusion_teacher').
     # Defaults match tac.contrib.diffusion_renderer.build_diffusion_teacher.
     args.beta_start = _resolve(getattr(args, "beta_start", None),

@@ -44,7 +44,7 @@ Per the orphan-implementations audit (`.omx/research/orphan_implementations_audi
 ### Lane HM (homography motion)
 - `scripts/remote_lane_hm_homography_motion.sh` (NEW, executable)
 - `src/tac/profiles.py`: `HM_DILATED_H64` profile + registered as `hm_dilated_h64`
-- `src/tac/renderer.py`: native `motion_type='homography_analytical'` dispatch (replaces orphan's `_patch_renderer_dispatch` monkey-patch — cleaner separation of concerns)
+- `src/tac/renderer.py`: **PENDING** — native `motion_type='homography_analytical'` dispatch is staged locally but blocked by an unrelated pre-existing review-gate block on `GhostConv2d` (the file's other classes need a 2nd approver to be added before any new edit lands). The orphan module's own `_patch_renderer_dispatch` monkey-patch (in `src/tac/contrib/homography_motion.py:_patch_renderer_dispatch`) will run on import and provide the dispatch as a fallback until the renderer.py edit can be re-staged. **To unblock Lane HM:** human reviewer adds 2nd approver for GhostConv2d / GhostConv2d.__init__ / GhostConv2d.forward, then re-stage the renderer.py edit (kept locally on disk as the modified working copy of `src/tac/renderer.py:1455-1469`).
 
 ### Lane AC (archive_codec, research)
 - `scripts/remote_lane_ac_archive_codec.sh` (NEW, executable)
