@@ -331,6 +331,28 @@ while IFS= read -r rel; do
       "$UV_BIN" run --with brotli --with av --with torch --with numpy python "$SELF_DIR/inflate_segmap.py" \
         "$ARCHIVE_DIR" "$INFLATED_DIR" "$VIDEO_NAMES_FILE"
       break
+    elif [ "$PYTHON_INFLATE" = "segmap_film_canvas" ]; then
+      # Lane FC dispatch arm (EUREKA #5, 2026-04-29).
+      # Same archive layout as segmap, but the state_dict carries a
+      # `film_table.weight` Embedding key so SegMap is loaded as
+      # SegMapFilmCanvas with per-frame FiLM modulation on layer_in.
+      # Auto-falls back to vanilla SegMap if the film_table key is absent.
+      # CLAUDE.md strict-scorer-rule honored: inflate_segmap_film_canvas.py loads ONLY the SegMap renderer. # SCORER_AT_INFLATE_WAIVED: documentation-line referencing strict-scorer-rule by name; no actual scorer load happens here.
+      echo "Inflating (Lane FC: SegMap+FiLM-Canvas) $ARCHIVE_DIR -> $INFLATED_DIR"
+      "$UV_BIN" run --with brotli --with av --with torch --with numpy python "$SELF_DIR/inflate_segmap_film_canvas.py" \
+        "$ARCHIVE_DIR" "$INFLATED_DIR" "$VIDEO_NAMES_FILE"
+      break
+    elif [ "$PYTHON_INFLATE" = "segmap_arithmetic" ]; then
+      # Lane SH dispatch arm (Shannon arithmetic coding, 2026-04-29).
+      # Same archive layout as segmap, except the SegMap weights are
+      # arithmetic-coded into payload.bin instead of tar.xz; the payload is
+      # decompressed via tac.arithmetic_qint_codec, then handed to the
+      # standard SegMap renderer.
+      # CLAUDE.md strict-scorer-rule honored: inflate_segmap_arithmetic.py loads ONLY the SegMap renderer. # SCORER_AT_INFLATE_WAIVED: documentation-line referencing strict-scorer-rule by name; no actual scorer load happens here.
+      echo "Inflating (Lane SH: arithmetic-coded SegMap weights) $ARCHIVE_DIR -> $INFLATED_DIR"
+      "$UV_BIN" run --with brotli --with av --with torch --with numpy python "$SELF_DIR/inflate_segmap_arithmetic.py" \
+        "$ARCHIVE_DIR" "$INFLATED_DIR" "$VIDEO_NAMES_FILE"
+      break
     elif [ "$PYTHON_INFLATE" = "1" ]; then
       echo "Inflating (canonical PyAV + torch bicubic) $ARCHIVE_DIR -> $INFLATED_DIR"
       "$UV_BIN" run --with av --with torch --with numpy python "$SELF_DIR/inflate.py" \
