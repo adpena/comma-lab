@@ -116,6 +116,23 @@ Rules:
 
 This is the 6th catastrophic operational pattern. The cost: $3-10 per occurrence in idle GPU time + multi-day delays in measurement. Build the protocol so it never happens again.
 
+## Codex CLI invocation — NON-NEGOTIABLE, HIGHEST EMPHASIS
+
+**NEVER invoke `codex exec` from the `Bash` tool with `run_in_background: true`. ALWAYS dispatch codex CLI through the `Agent` tool wrapper.**
+
+The bash harness silently kills long-running BG bash processes with SIGURG (exit 144) at ~3 minutes. Codex `exec` with `model_reasoning_effort=xhigh` typically takes 2-5 minutes. Every BG-bash codex spawn produced 0-line output before being killed (verified across 3+ separate sessions on 2026-04-29). Six wasted attempts before this rule was codified.
+
+**Rules**:
+1. ALL `codex exec` calls go through `Agent` tool wrapper (`subagent_type: general-purpose`, `run_in_background: true`). The Agent tool runs in its own bash that does NOT inherit our session's harness timeout.
+2. NEVER `Bash run_in_background: true` to launch `codex exec` — the SIGURG-144 trap is deterministic.
+3. Foreground `codex exec` (no `run_in_background`) is acceptable for prompts that genuinely complete in <2min, but Agent wrapper is still preferred to avoid blocking the conversation.
+4. Capture codex output in the Agent's prompt instructions (e.g. `> /tmp/codex_<label>.log` inside the Agent's bash invocation). The Agent reads the log + returns it.
+5. The Agent tool's prompt to codex must include all relevant memory file paths, research doc paths, and CLAUDE.md non-negotiables — codex sandbox starts fresh each time.
+
+**This is the 7th catastrophic operational pattern.** Cost: 6+ failed BG-bash codex spawns ate forward velocity. Save BG-bash for short shell commands; reserve codex CLI for Agent wrapper exclusively.
+
+Memory: `feedback_bash_harness_kills_long_running_tasks_20260428.md`, `feedback_persistent_codex_review_protocol_20260429.md`.
+
 ## Primary duties
 
 1. Keep `submissions/exact_current` runnable under the current published workflow.
