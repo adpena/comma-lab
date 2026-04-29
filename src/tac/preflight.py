@@ -547,6 +547,30 @@ def preflight_all(
             strict=True, verbose=verbose,
         )
 
+        # 2026-04-28 deep hardening pass 3 dimension 2: 4 NEW meta-bug
+        # checks (58, 59, 60, 61). All ship STRICT initially because they
+        # land at 0 live violations on the current codebase per the Lane A
+        # pattern (commit 7d2b5299). Reference:
+        # feedback_deep_hardening_pass_3_patterns_20260428.
+        # - Check 58 (launcher-max-dph-floor): forbid hardcoded --max-dph
+        #   below 0.40, which over-restricts the host pool and starves the
+        #   search after NVDEC_BAD attrition (today wasted ~$10).
+        # - Check 59 (phase2-extract-cleanup): cmd_phase2_extract MUST call
+        #   destroy_instance() on CUDA-probe failure to stop cost accrual.
+        # - Check 60 (memory-md-size): MEMORY.md > 250 lines silently
+        #   truncates context loading. Today's session triggered the
+        #   200-line warning; 250 gives a 50-line buffer.
+        # - Check 61 (bootstrap-provenance): canonical bootstrap scripts
+        #   MUST write provenance.json (git_hash + gpu_name) for post-mortem
+        #   traceability per feedback_canonical_remote_bootstraps.
+        check_launcher_max_dph_floor(strict=True, verbose=verbose)
+        check_phase2_extract_destroys_on_failure(strict=True, verbose=verbose)
+        # Check 60 ships warn-only because MEMORY.md is a user-controlled
+        # file and the operator should fix it on their own cadence (this
+        # session: 234 lines, under the 250 ceiling — currently 0 violations).
+        check_memory_md_size_under_ceiling(strict=False, verbose=verbose)
+        check_canonical_bootstraps_write_provenance(strict=True, verbose=verbose)
+
     # 2. Training inputs (only if profile + tto_frames provided)
     if profile_name and tto_frames_path and gt_poses_path and masks_path and profile_arch:
         preflight_training_inputs(
@@ -10459,6 +10483,353 @@ def check_lane_scripts_use_canonical_git_sync(
             "`git fetch origin main && git reset --hard origin/main` "
             "(NOT bare `git pull --ff-only` which crashes on stale "
             "Vast.ai workspaces).\n"
+            + "\n".join(f"  • {v}" for v in violations[:50])
+        )
+    return violations
+
+
+# ════════════════════════════════════════════════════════════════════════════
+# Check 58 (58th meta-bug): launcher offer-search --max-dph must NOT be
+#                          hardcoded below 0.40, which would over-restrict
+#                          the host pool and starve the search (today's
+#                          NVDEC_BAD on 87% of 4090s burned ~$10 because
+#                          the survivor pool was tiny).
+# ════════════════════════════════════════════════════════════════════════════
+#
+# 2026-04-28: deep hardening pass 3 dimension 2. The launcher's
+# argparse default (`p1.add_argument("--max-dph", type=float, default=0.50)`)
+# is broad enough that the search returns ~5 offers reliably. But operators
+# (or downstream calling scripts) sometimes hardcode a tighter cap to chase
+# cheaper instances; this check forbids that for any value below 0.40 so the
+# survivor pool is always > ~3 hosts even after NVDEC_BAD attrition.
+#
+# Static scan only: looks for `--max-dph <value>` and `max_dph=<value>` in
+# scripts/launch_lane_on_vastai.py and any caller under scripts/. Same-line
+# `# MAX_DPH_OK:<reason>` waiver allowed for known-safe cases.
+
+def check_launcher_max_dph_floor(
+    repo_root: Path | None = None,
+    strict: bool = False,
+    verbose: bool = True,
+    floor: float = 0.40,
+) -> list[str]:
+    """Forbid hardcoded launcher --max-dph below the floor (default 0.40).
+
+    Scans scripts/launch_lane_on_vastai.py + scripts/*.sh for hardcoded
+    --max-dph or max_dph= values; flags any below the floor without a
+    same-line `# MAX_DPH_OK:<reason>` waiver.
+
+    Returns list of violations. Raises MetaBugViolation if strict and any.
+    """
+    root = repo_root or REPO_ROOT
+    scripts_dir = root / "scripts"
+    violations: list[str] = []
+    if not scripts_dir.is_dir():
+        if verbose:
+            print(f"  [launcher-max-dph-floor] SKIP: {scripts_dir} not present")
+        return violations
+
+    import re as _re
+    pat_cli = _re.compile(r"--max-dph[= ]([0-9]+\.?[0-9]*)")
+    pat_kw = _re.compile(r"\bmax_dph\s*=\s*([0-9]+\.?[0-9]*)")
+    # argparse default like `default=0.30` (only when --max-dph is on the same line)
+    pat_default = _re.compile(r"--max-dph.*?\bdefault\s*=\s*([0-9]+\.?[0-9]*)")
+    waiver = "# MAX_DPH_OK:"
+
+    targets = sorted(scripts_dir.glob("launch_lane_on_vastai.py")) + sorted(
+        scripts_dir.glob("*.sh")
+    )
+    for path in targets:
+        try:
+            text = path.read_text(errors="ignore")
+        except OSError:
+            continue
+        for lineno, raw_line in enumerate(text.splitlines(), start=1):
+            stripped = raw_line.lstrip()
+            if stripped.startswith("#"):
+                continue
+            if waiver in raw_line:
+                continue
+            matched = False
+            for pat in (pat_cli, pat_kw, pat_default):
+                m = pat.search(raw_line)
+                if not m:
+                    continue
+                try:
+                    val = float(m.group(1))
+                except ValueError:
+                    continue
+                if val < floor:
+                    violations.append(
+                        f"{path.relative_to(root)}:{lineno}: hardcoded "
+                        f"--max-dph={val} is below the {floor} floor — too few "
+                        f"hosts after NVDEC_BAD attrition. Raise the cap or add "
+                        f"same-line `{waiver}<reason>` waiver. Line: {raw_line.strip()}"
+                    )
+                    matched = True
+                    break  # don't double-report the same line
+            if matched:
+                continue
+
+    if verbose:
+        if violations:
+            print(f"  [launcher-max-dph-floor] {len(violations)} violation(s):")
+            for v in violations[:10]:
+                print(f"    • {v}")
+        else:
+            print(
+                f"  [launcher-max-dph-floor] OK: no hardcoded --max-dph below "
+                f"{floor} across launcher + lane scripts"
+            )
+
+    if violations and strict:
+        raise MetaBugViolation(
+            f"LAUNCHER --max-dph BELOW FLOOR ({floor}) — pool too small for "
+            f"NVDEC attrition. Raise cap or waive.\n"
+            + "\n".join(f"  • {v}" for v in violations[:50])
+        )
+    return violations
+
+
+# ════════════════════════════════════════════════════════════════════════════
+# Check 59 (59th meta-bug): launcher cmd_phase2_extract MUST auto-destroy
+#                          the instance on CUDA-probe failure (idle cost
+#                          accrues otherwise).
+# ════════════════════════════════════════════════════════════════════════════
+#
+# 2026-04-28: deep hardening pass 3 dimension 2. The launcher's
+# phase2-extract calls `lightweight_nvdec_probe(host, port)` and on failure
+# MUST call `destroy_instance(instance_id)` (unless --no-destroy-on-fail
+# is explicitly set). Today's session lost an instance ~$0.05 because an
+# earlier version of the function let the operator's terminal session end
+# without destroying.
+#
+# Static scan: parse cmd_phase2_extract function body and verify both
+# `lightweight_nvdec_probe` AND `destroy_instance` are referenced inside
+# the function.
+
+def check_phase2_extract_destroys_on_failure(
+    repo_root: Path | None = None,
+    strict: bool = False,
+    verbose: bool = True,
+) -> list[str]:
+    """Verify cmd_phase2_extract destroys the instance on CUDA-probe failure.
+
+    Returns list of violations. Raises MetaBugViolation if strict and any.
+    """
+    root = repo_root or REPO_ROOT
+    launcher = root / "scripts" / "launch_lane_on_vastai.py"
+    violations: list[str] = []
+    if not launcher.exists():
+        if verbose:
+            print("  [phase2-extract-cleanup] SKIP: launcher not present")
+        return violations
+    try:
+        text = launcher.read_text()
+    except OSError:
+        return violations
+    # Find the function body for cmd_phase2_extract
+    import re as _re
+    m = _re.search(
+        r"def cmd_phase2_extract\([^)]*\)[^:]*:\n((?:    [^\n]*\n|\n)+)",
+        text,
+    )
+    if not m:
+        violations.append(
+            "scripts/launch_lane_on_vastai.py: cmd_phase2_extract function "
+            "definition not found — has the launcher been refactored? Update "
+            "this check or restore the function."
+        )
+    else:
+        body = m.group(1)
+        if "lightweight_nvdec_probe" not in body:
+            violations.append(
+                "scripts/launch_lane_on_vastai.py:cmd_phase2_extract: missing "
+                "`lightweight_nvdec_probe(...)` call — Stage 2 CUDA probe is "
+                "the canonical NVDEC_BAD detection step."
+            )
+        if "destroy_instance" not in body:
+            violations.append(
+                "scripts/launch_lane_on_vastai.py:cmd_phase2_extract: missing "
+                "`destroy_instance(...)` call — failed CUDA probe must auto-"
+                "destroy the instance to stop cost accrual (unless "
+                "--no-destroy-on-fail is set explicitly)."
+            )
+
+    if verbose:
+        if violations:
+            print(f"  [phase2-extract-cleanup] {len(violations)} violation(s):")
+            for v in violations:
+                print(f"    • {v}")
+        else:
+            print(
+                "  [phase2-extract-cleanup] OK: cmd_phase2_extract probes NVDEC "
+                "AND destroys on failure"
+            )
+
+    if violations and strict:
+        raise MetaBugViolation(
+            "PHASE2-EXTRACT MUST AUTO-DESTROY ON CUDA-PROBE FAILURE.\n"
+            + "\n".join(f"  • {v}" for v in violations[:50])
+        )
+    return violations
+
+
+# ════════════════════════════════════════════════════════════════════════════
+# Check 60 (60th meta-bug): MEMORY.md must stay under 250 lines (warns
+#                          when exceeded — the auto-memory file accumulates
+#                          across sessions and silently bloats context).
+# ════════════════════════════════════════════════════════════════════════════
+#
+# 2026-04-28: deep hardening pass 3 dimension 2. The Claude Code system
+# message warns at 200 lines: "Only part of it was loaded. Keep index
+# entries to one line under ~200 chars; move detail into topic files." We
+# adopt 250 as a soft ceiling (50-line buffer) so the operator gets warned
+# before the loader truncates context silently.
+#
+# Heuristic: hunt for MEMORY.md under either Claude home (`~/.claude/...`)
+# or repo root. Flag if line count > ceiling.
+
+def check_memory_md_size_under_ceiling(
+    repo_root: Path | None = None,
+    strict: bool = False,
+    verbose: bool = True,
+    ceiling: int = 250,
+) -> list[str]:
+    """Warn when MEMORY.md exceeds the soft line-count ceiling.
+
+    Returns list of violations. Raises MetaBugViolation if strict and any.
+    """
+    import os
+    candidates: list[Path] = []
+    home_memory = (
+        Path.home()
+        / ".claude" / "projects"
+        / "-Users-adpena-Projects-pact" / "memory" / "MEMORY.md"
+    )
+    if home_memory.exists():
+        candidates.append(home_memory)
+    root = repo_root or REPO_ROOT
+    repo_memory = root / "MEMORY.md"
+    if repo_memory.exists():
+        candidates.append(repo_memory)
+
+    violations: list[str] = []
+    for path in candidates:
+        try:
+            n = sum(1 for _ in path.open("r", errors="ignore"))
+        except OSError:
+            continue
+        if n > ceiling:
+            violations.append(
+                f"{path}: {n} lines (> {ceiling} ceiling). Consolidate index "
+                f"entries to one line each (move detail into topic files), or "
+                f"prune obsolete entries to keep context windows from "
+                f"silently truncating the file."
+            )
+
+    if verbose:
+        if violations:
+            print(f"  [memory-md-size] {len(violations)} violation(s):")
+            for v in violations:
+                print(f"    • {v}")
+        else:
+            if candidates:
+                print(
+                    f"  [memory-md-size] OK: {len(candidates)} MEMORY.md file(s) "
+                    f"all under {ceiling} lines"
+                )
+            else:
+                print("  [memory-md-size] SKIP: no MEMORY.md found")
+
+    if violations and strict:
+        raise MetaBugViolation(
+            f"MEMORY.md EXCEEDS {ceiling}-LINE CEILING.\n"
+            + "\n".join(f"  • {v}" for v in violations[:5])
+        )
+    return violations
+
+
+# ════════════════════════════════════════════════════════════════════════════
+# Check 61 (61st meta-bug): canonical lane bootstraps (remote_train_bootstrap.sh
+#                          + remote_pose_tto_bootstrap.sh) MUST write
+#                          provenance.json (git_hash + gpu_name + cost_cap +
+#                          predicted_band fields).
+# ════════════════════════════════════════════════════════════════════════════
+#
+# 2026-04-28: deep hardening pass 3 dimension 2. Memory:
+# `feedback_canonical_remote_bootstraps`. The 2 canonical bootstrap scripts
+# (and any new variants) MUST write a provenance.json file at the START of
+# their run so post-mortem analysis on Vast.ai instances has a deterministic
+# anchor. Lane scripts (remote_lane_*.sh) call these bootstraps; the
+# bootstrap is responsible for writing provenance.
+#
+# Static scan: look for `provenance.json` writes in canonical bootstrap
+# scripts. Currently warn-only since broader audit needed for all
+# remote_lane_*.sh that bypass the canonical bootstraps.
+
+def check_canonical_bootstraps_write_provenance(
+    repo_root: Path | None = None,
+    strict: bool = False,
+    verbose: bool = True,
+) -> list[str]:
+    """Verify canonical bootstrap scripts write provenance.json.
+
+    Returns list of violations. Raises MetaBugViolation if strict and any.
+    """
+    root = repo_root or REPO_ROOT
+    scripts_dir = root / "scripts"
+    violations: list[str] = []
+    if not scripts_dir.is_dir():
+        if verbose:
+            print("  [bootstrap-provenance] SKIP: scripts/ not present")
+        return violations
+    canonical = [
+        "remote_train_bootstrap.sh",
+        "remote_pose_tto_bootstrap.sh",
+        "remote_pose_tto_only_bootstrap.sh",
+    ]
+    n_checked = 0
+    for name in canonical:
+        path = scripts_dir / name
+        if not path.exists():
+            continue
+        n_checked += 1
+        try:
+            text = path.read_text(errors="ignore")
+        except OSError:
+            continue
+        if "provenance.json" not in text:
+            violations.append(
+                f"scripts/{name}: does not write provenance.json — required "
+                f"for post-mortem traceability per "
+                f"feedback_canonical_remote_bootstraps."
+            )
+            continue
+        # Look for the required fields anywhere in the script body.
+        required_fields = ["git_hash", "gpu_name"]
+        missing = [f for f in required_fields if f not in text]
+        if missing:
+            violations.append(
+                f"scripts/{name}: provenance.json write is present but missing "
+                f"fields {missing}. Required: git_hash, gpu_name. "
+                f"Recommended: cost_cap, predicted_band (lane-specific)."
+            )
+
+    if verbose:
+        if violations:
+            print(f"  [bootstrap-provenance] {len(violations)} violation(s):")
+            for v in violations:
+                print(f"    • {v}")
+        else:
+            print(
+                f"  [bootstrap-provenance] OK: {n_checked} canonical bootstrap(s) "
+                f"write provenance.json with required fields"
+            )
+
+    if violations and strict:
+        raise MetaBugViolation(
+            "CANONICAL BOOTSTRAPS MUST WRITE provenance.json.\n"
             + "\n".join(f"  • {v}" for v in violations[:50])
         )
     return violations
