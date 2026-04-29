@@ -144,11 +144,13 @@ log "  pair_weights: $PAIR_WEIGHTS ($(stat -c '%s' "$PAIR_WEIGHTS") bytes)"
 log "=== Stage 2: train_renderer.py SC + per-pair weighted ==="
 TRAIN_OUT="$LOG_DIR/train"
 mkdir -p "$TRAIN_OUT"
+# --resume-from removed: ANCHOR_RENDERER is the quantized .bin (ASYM magic),
+# not a float checkpoint. train_renderer rejects quantized binaries (Round 11
+# Finding 1). Train from scratch with self-compress codec + per-pair weights.
 "$PYBIN" -u -m tac.experiments.train_renderer \
     --tag lane_w_hard_pair \
     --output-dir "$TRAIN_OUT" \
     --device cuda \
-    --resume-from "$ANCHOR_RENDERER" \
     --use-self-compress-codec \
     --pair-loss-weights "$PAIR_WEIGHTS" \
     --epochs 500 \

@@ -101,7 +101,11 @@ def save_pose_gp(model: PoseGPModel, path: str | Path) -> None:
 
     out_path = Path(path)
     out_path.parent.mkdir(parents=True, exist_ok=True)
-    values = torch.cat([model.poly_coeffs, model.sigma]).to(torch.float16).tolist()
+    # Move both tensors to CPU before cat — avoids "Expected all tensors on
+    # same device" when poly_coeffs is on cuda but sigma on cpu (or vice versa).
+    coeffs = model.poly_coeffs.detach().cpu()
+    sigma = model.sigma.detach().cpu()
+    values = torch.cat([coeffs, sigma]).to(torch.float16).tolist()
     payload = POSE_GP_SENTINEL + struct.pack(_POSE_GP_STRUCT, *values)
     out_path.write_bytes(payload)
 
