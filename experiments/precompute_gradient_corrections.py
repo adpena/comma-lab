@@ -45,6 +45,7 @@ except (AttributeError, OSError):
 
 
 import argparse
+import heapq
 import json
 import math
 import os
@@ -112,6 +113,13 @@ def parse_args() -> argparse.Namespace:
                    help="Margin for SegNet hinge loss")
     p.add_argument("--top-k-pct", type=float, default=5.0,
                    help="Keep top K%% of pixels by gradient magnitude")
+    p.add_argument("--allocation-strategy", type=str, default="greedy",
+                   choices=["greedy", "fixed-budget"],
+                   help="Pixel correction allocation strategy. 'fixed-budget' "
+                        "preserves V1 top-k behavior; 'greedy' performs "
+                        "rate-capped water-fill by gain/byte.")
+    p.add_argument("--rate-cap-bytes", type=int, default=50000,
+                   help="Estimated byte cap for greedy correction allocation")
     p.add_argument("--alpha", type=float, default=1.0,
                    help="Step size for gradient correction (applied at inflate time)")
     p.add_argument("--n-steps", type=int, default=1,
@@ -362,17 +370,153 @@ def compute_frame_gradients(
     return grad
 
 
+def estimated_sparse_bytes(
+    sparse_data: dict,
+    byte_overhead: int = 100,
+    byte_per_pixel: int = 1,
+) -> int:
+    """Estimate sparse correction bytes using the EC-V2 arithmetic model."""
+    n_kept = int(sparse_data.get("n_kept", len(sparse_data.get("indices", []))))
+    return int(byte_overhead + n_kept * byte_per_pixel)
+
+
+def greedy_waterfill_correction_map(
+    gradients: np.ndarray,
+    rate_cap_bytes: int = 50000,
+    margin_deltas: np.ndarray | None = None,
+    byte_overhead: int = 100,
+    byte_per_pixel: int = 1,
+    return_metadata: bool = False,
+):
+    """Allocate int8 pixel corrections by descending gain/byte.
+
+    The gain proxy is ``abs(margin_deltas)`` when supplied, otherwise the
+    per-pixel gradient magnitude. Byte cost follows the lane spec's fast
+    arithmetic model: ``byte_overhead`` fixed bytes plus ``byte_per_pixel``
+    bytes per kept pixel.
+
+    Codex finding 1 fix (2026-04-28):
+        * The dense ``corrections`` map now stores the **original gradient
+          values** for selected pixels (cast back to ``int8`` via per-tensor
+          symmetric quantization), NOT sign-only ±127. The previous code
+          discarded magnitude → ``apply_corrections`` clamped pixels to
+          ±127 instead of nudging them by the gradient direction.
+        * The ``rate_cap_bytes`` accounting argument matches the *fast*
+          per-pixel arithmetic model used during the greedy selection;
+          callers who need the cap to track the real packed format
+          (uint32 index + ``C`` int8 channels + JSON header) should pass
+          ``byte_per_pixel=4 + C`` and adjust ``byte_overhead`` for the
+          header. ``sparsify_and_quantize`` performs an additional drop-
+          tail-and-repack pass on the actual ``pack_sparse_corrections``
+          output to enforce a hard byte cap end-to-end.
+    """
+    gradients = np.asarray(gradients)
+    if gradients.ndim != 4:
+        raise ValueError(f"gradients must have shape (N,H,W,C), got {gradients.shape}")
+    if byte_per_pixel <= 0:
+        raise ValueError("byte_per_pixel must be positive")
+
+    N, H, W, C = gradients.shape
+    corrections = np.zeros((N, H, W, C), dtype=np.int8)
+    cap = int(rate_cap_bytes)
+
+    if margin_deltas is None:
+        gains = np.sqrt((gradients.astype(np.float32) ** 2).sum(axis=-1))
+    else:
+        gains = np.abs(np.asarray(margin_deltas, dtype=np.float32))
+        if gains.shape != gradients.shape[:-1]:
+            raise ValueError(
+                f"margin_deltas must have shape {gradients.shape[:-1]}, got {gains.shape}"
+            )
+
+    flat_gains = gains.reshape(-1)
+    flat_grads = gradients.reshape(-1, C)
+    # Per-tensor symmetric quantization scale across all candidate gradient
+    # magnitudes. Using a single scale lets the dense int8 map preserve
+    # *relative* gradient magnitude across selected pixels — required for
+    # apply_corrections to perform a real gradient step (codex finding 1).
+    grad_max = float(np.abs(flat_grads).max()) if flat_grads.size else 0.0
+    quant_scale = grad_max if grad_max > 1e-12 else 1.0
+
+    heap: list[tuple[float, int, np.ndarray, float]] = []
+    for flat_idx, gain in enumerate(flat_gains):
+        gain_f = float(gain)
+        if not math.isfinite(gain_f) or gain_f <= 0.0:
+            continue
+        raw = flat_grads[flat_idx]
+        if not np.any(raw):
+            continue
+        # Preserve gradient magnitude (codex finding 1): quantize the original
+        # gradient values to int8 using a shared symmetric scale, instead of
+        # writing sign-only ±127.
+        encoded = np.clip(
+            np.round(raw.astype(np.float32) / quant_scale * 127.0),
+            -127,
+            127,
+        ).astype(np.int8)
+        ratio = gain_f / float(byte_per_pixel)
+        # heapq is a min-heap. Negate ratio for max-heap behavior and include
+        # flat_idx as the next tuple item for deterministic tie-breaking.
+        heapq.heappush(heap, (-ratio, flat_idx, encoded, gain_f))
+
+    selected: list[int] = []
+    total_gain = 0.0
+    used_bytes = int(byte_overhead)
+    flat_corr = corrections.reshape(-1, C)
+    while heap:
+        _neg_ratio, flat_idx, encoded, gain_f = heapq.heappop(heap)
+        next_bytes = used_bytes + int(byte_per_pixel)
+        if next_bytes > cap:
+            break
+        flat_corr[flat_idx] = encoded
+        used_bytes = next_bytes
+        total_gain += gain_f
+        selected.append(int(flat_idx))
+
+    meta = {
+        "selected_indices": selected,
+        "estimated_bytes": used_bytes,
+        "total_gain": float(total_gain),
+        "byte_overhead": int(byte_overhead),
+        "byte_per_pixel": int(byte_per_pixel),
+        "rate_cap_bytes": cap,
+        "quant_scale": float(quant_scale),
+    }
+    if return_metadata:
+        return corrections, meta
+    return corrections
+
+
+def sparse_to_dense_int8(sparse_data: dict) -> np.ndarray:
+    """Return a dense int8 correction map from a sparse correction dict."""
+    shape = tuple(sparse_data["shape"])
+    if len(shape) != 4:
+        raise ValueError(f"sparse shape must be 4D, got {shape}")
+    dense = np.zeros(shape, dtype=np.int8)
+    if sparse_data["n_kept"] == 0:
+        return dense
+    flat = dense.reshape(-1, shape[-1])
+    values = sparse_data["values"]
+    if values.dtype != np.int8:
+        values = np.clip(np.rint(values.astype(np.float32)), -127, 127).astype(np.int8)
+    flat[sparse_data["indices"]] = np.clip(values, -127, 127).astype(np.int8)
+    return dense
+
+
 def sparsify_and_quantize(
     gradients: np.ndarray,
     top_k_pct: float = 5.0,
     quantize_bits: int = 8,
+    allocation_strategy: str = "greedy",
+    rate_cap_bytes: int = 50000,
 ) -> dict:
     """Sparsify gradient tensor and quantize to low precision.
 
     Args:
         gradients: (N, H, W, 3) float32 gradient tensor
-        top_k_pct: keep top K% of pixels by gradient magnitude
+        top_k_pct: keep top K% of pixels by gradient magnitude (fixed-budget)
         quantize_bits: 4, 8, or 16 bit quantization
+        allocation_strategy: "greedy" for EC-V2, "fixed-budget" for V1
 
     Returns:
         dict with sparse representation:
@@ -384,23 +528,43 @@ def sparsify_and_quantize(
     """
     N, H, W, C = gradients.shape
 
-    # Compute per-pixel gradient magnitude
+    if allocation_strategy not in {"greedy", "fixed-budget"}:
+        raise ValueError(
+            "allocation_strategy must be 'greedy' or 'fixed-budget', "
+            f"got {allocation_strategy!r}"
+        )
+
     magnitudes = np.sqrt((gradients ** 2).sum(axis=-1))  # (N, H, W)
     flat_mags = magnitudes.reshape(-1)
     flat_grads = gradients.reshape(-1, C)
 
-    # Keep top K% by magnitude
-    k = max(1, int(len(flat_mags) * top_k_pct / 100.0))
-    # Use argpartition for O(n) instead of O(n log n) full sort
-    top_k_indices = np.argpartition(flat_mags, -k)[-k:]
-    # Sort the top-k indices by magnitude (descending) for better compression
-    sorted_order = np.argsort(flat_mags[top_k_indices])[::-1]
-    top_k_indices = top_k_indices[sorted_order]
-
-    kept_grads = flat_grads[top_k_indices]  # (K, 3)
+    if allocation_strategy == "greedy":
+        correction_map, greedy_meta = greedy_waterfill_correction_map(
+            gradients,
+            rate_cap_bytes=rate_cap_bytes,
+            margin_deltas=magnitudes,
+            return_metadata=True,
+        )
+        top_k_indices = np.asarray(greedy_meta["selected_indices"], dtype=np.uint32)
+        k = int(top_k_indices.size)
+        # Codex finding 1 fix: pull the ORIGINAL gradient values for the
+        # selected indices, not the int8 dense map (which was previously
+        # ±127 sign-only and discarded magnitude). The downstream quantize
+        # step now operates on real gradient magnitudes.
+        kept_grads = flat_grads[top_k_indices].astype(np.float32)
+    else:
+        greedy_meta = None
+        # Keep top K% by magnitude. This is the V1 fixed-budget behavior.
+        k = max(1, int(len(flat_mags) * top_k_pct / 100.0))
+        # Use argpartition for O(n) instead of O(n log n) full sort
+        top_k_indices = np.argpartition(flat_mags, -k)[-k:]
+        # Sort the top-k indices by magnitude (descending) for better compression
+        sorted_order = np.argsort(flat_mags[top_k_indices])[::-1]
+        top_k_indices = top_k_indices[sorted_order]
+        kept_grads = flat_grads[top_k_indices]  # (K, 3)
 
     # Quantize
-    scale = np.abs(kept_grads).max()
+    scale = np.abs(kept_grads).max() if k > 0 else 0.0
     if scale < 1e-10:
         scale = 1.0  # avoid division by zero
 
@@ -414,7 +578,7 @@ def sparsify_and_quantize(
     else:
         raise ValueError(f"Unsupported quantize_bits={quantize_bits}")
 
-    return {
+    out = {
         "indices": top_k_indices.astype(np.uint32),
         "values": normalized,
         "scale": float(scale),
@@ -423,7 +587,82 @@ def sparsify_and_quantize(
         "quantize_bits": quantize_bits,
         "n_kept": k,
         "n_total": len(flat_mags),
+        "allocation_strategy": allocation_strategy,
+        "estimated_bytes": None,
+        "total_gain": float(flat_mags[top_k_indices].sum()) if k > 0 else 0.0,
     }
+    out["estimated_bytes"] = (
+        greedy_meta["estimated_bytes"]
+        if greedy_meta is not None
+        else estimated_sparse_bytes(out)
+    )
+    if greedy_meta is not None:
+        out["total_gain"] = greedy_meta["total_gain"]
+        out["rate_cap_bytes"] = int(rate_cap_bytes)
+
+    # Codex finding 1 bug 2 fix: enforce a HARD cap on the actual packed-byte
+    # size by dropping tail entries (lowest magnitude first) and repacking
+    # until ``len(pack_sparse_corrections(...)) <= rate_cap_bytes``. The
+    # greedy allocator's internal accounting uses a fast 1-byte-per-pixel
+    # arithmetic model; the real packed format is 4-byte uint32 indices
+    # plus C-byte int8 channels plus a JSON header — typically ~7×–13×
+    # the fast model. Without this loop a 50 KB cap could materialise as
+    # ~350 KB on disk, silently busting the archive size.
+    out["packed_bytes"] = enforce_packed_byte_cap(out, rate_cap_bytes=rate_cap_bytes)
+    return out
+
+
+def enforce_packed_byte_cap(
+    sparse_data: dict,
+    rate_cap_bytes: int,
+    compression: str = "zlib",
+    max_iters: int = 64,
+) -> int:
+    """Drop tail entries until the packed (and optionally zlib-compressed)
+    correction blob fits inside ``rate_cap_bytes``.
+
+    Mutates ``sparse_data`` in place (``indices``, ``values``, ``n_kept``).
+    Returns the final packed byte size. Idempotent if already under cap.
+
+    The "tail" is defined as the entries with the smallest absolute value
+    (l-infinity over channels), which are the lowest-gain selections per
+    the EC-V2 greedy ranking. Dropping them preserves the highest-gain
+    corrections.
+    """
+    if rate_cap_bytes <= 0 or sparse_data["n_kept"] == 0:
+        sparse_data["packed_bytes"] = 0
+        return 0
+    indices = np.asarray(sparse_data["indices"]).copy()
+    values = np.asarray(sparse_data["values"]).copy()
+    # Rank by gain (max abs across channels). Smallest = candidate to drop.
+    if values.ndim == 1:
+        gain = np.abs(values).astype(np.float32)
+    else:
+        gain = np.abs(values).max(axis=-1).astype(np.float32)
+    order = np.argsort(-gain)  # descending: highest gain first
+    indices = indices[order]
+    values = values[order]
+    n = int(indices.shape[0])
+
+    for _ in range(max_iters):
+        sparse_data["indices"] = indices[:n]
+        sparse_data["values"] = values[:n]
+        sparse_data["n_kept"] = n
+        packed = pack_sparse_corrections(sparse_data, compression=compression)
+        size = len(packed)
+        if size <= rate_cap_bytes or n <= 0:
+            sparse_data["packed_bytes"] = size
+            return size
+        # Drop ~10% of remaining entries (at least 1) and try again.
+        drop = max(1, n // 10)
+        n = max(0, n - drop)
+    # Final state.
+    sparse_data["indices"] = indices[:n]
+    sparse_data["values"] = values[:n]
+    sparse_data["n_kept"] = n
+    packed = pack_sparse_corrections(sparse_data, compression=compression)
+    sparse_data["packed_bytes"] = len(packed)
+    return len(packed)
 
 
 def pack_sparse_corrections(sparse_data: dict, compression: str = "zlib") -> bytes:
@@ -588,6 +827,8 @@ def main():
     print(f"[config] batch_pairs={args.batch_pairs}, n_steps={args.n_steps}")
     print(f"[config] seg_weight={args.seg_weight}, pose_weight={args.pose_weight}")
     print(f"[config] top_k_pct={args.top_k_pct}%, quantize_bits={args.quantize_bits}")
+    print(f"[config] allocation_strategy={args.allocation_strategy}, "
+          f"rate_cap_bytes={args.rate_cap_bytes}")
     print(f"[config] alpha={args.alpha}, compression={args.compression}")
     print(f"[config] checkpoint={args.checkpoint}")
     print(f"[config] output_dir={output_dir}")
@@ -723,6 +964,8 @@ def main():
         all_grads_np,
         top_k_pct=args.top_k_pct,
         quantize_bits=args.quantize_bits,
+        allocation_strategy=args.allocation_strategy,
+        rate_cap_bytes=args.rate_cap_bytes,
     )
 
     packed = pack_sparse_corrections(sparse_data, compression=args.compression)
@@ -730,7 +973,9 @@ def main():
 
     print(f"  Raw gradient: {all_grads_np.nbytes:,} bytes")
     print(f"  Sparse ({sparse_data['n_kept']:,} / {sparse_data['n_total']:,} pixels, "
-          f"{args.top_k_pct}%)")
+          f"{args.top_k_pct}% / {args.allocation_strategy})")
+    print(f"  Estimated sparse bytes: {sparse_data['estimated_bytes']:,} "
+          f"(cap={args.rate_cap_bytes:,})")
     print(f"  Packed: {packed_size:,} bytes ({packed_size / 1024:.1f} KB)")
     print(f"  Compression ratio: {all_grads_np.nbytes / max(packed_size, 1):.0f}x")
 
@@ -739,6 +984,9 @@ def main():
     with open(corrections_path, "wb") as f:
         f.write(packed)
     print(f"  Saved: {corrections_path}")
+    correction_map_path = output_dir / "correction_map.npy"
+    np.save(correction_map_path, sparse_to_dense_int8(sparse_data))
+    print(f"  Saved dense int8 correction map: {correction_map_path}")
 
     # -- Step 6: Validate by applying corrections --
     print("\n  Validating corrections (apply + re-score)...")
@@ -796,6 +1044,10 @@ def main():
             "n_total": sparse_data["n_total"],
             "sparsity_pct": args.top_k_pct,
             "scale": sparse_data["scale"],
+            "allocation_strategy": args.allocation_strategy,
+            "estimated_bytes": sparse_data["estimated_bytes"],
+            "rate_cap_bytes": args.rate_cap_bytes,
+            "total_gain": sparse_data.get("total_gain", 0.0),
         },
         "gradient_stats": batch_stats,
         "total_time_s": total_time,
