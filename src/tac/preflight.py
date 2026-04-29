@@ -483,6 +483,12 @@ def preflight_all(
         # `train_renderer.py: error: --tag required` because no preflight
         # check covered that surface. STRICT @ 0 after fixing 3 scripts.
         check_remote_lane_argparse_arity(strict=True, verbose=verbose)
+        # Check 74: heredoc undefined-name detection. AST-walks every python
+        # heredoc, finds Name references not satisfied by imports/locals/
+        # builtins. Catches the dumb-but-easy "missing import" class that
+        # crashed UNIWARD 3+ times tonight (sys, json). Bash-injected $VAR
+        # tokens are stubbed before parsing.
+        check_python_heredocs_no_undefined_names(strict=True, verbose=verbose)
 
         # 2026-04-29: Check 43 — controlled-baseline methodology for new
         # Tuna-2 lanes. WARN-ONLY initially because it only applies to
@@ -8271,6 +8277,176 @@ def check_launcher_tarball_includes_lane_anchors(
             + "\n".join(f"  • {v}" for v in violations)
         )
     return violations
+
+
+def check_python_heredocs_no_undefined_names(
+    repo_root: Path | None = None,
+    strict: bool = False,
+    verbose: bool = True,
+    scan_dirs: tuple[str, ...] = ("scripts", "experiments", "tools"),
+) -> list[str]:
+    """Check 74 — Python heredocs in shell scripts must not reference
+    undefined names (missing imports).
+
+    2026-04-29 incidents (multiple lane crashes from this exact bug class):
+      - UNIWARD heredoc used `sys.path.insert` without `import sys` → NameError
+      - UNIWARD Stage 3 used `json.dump` without `import json` → NameError
+    User: "not importing libraries needed is so dumb. how are you not
+    catching these beforehand. permanently protect against all bug classes."
+
+    Approach: AST-walk every python-heredoc body, collect all loaded Name
+    references, subtract (imported names ∪ defined names ∪ builtins ∪
+    common-shell-env-vars). Anything left is an UndefinedName risk.
+
+    Common shell-injected vars (UW_PAYLOAD, GIT_HASH, etc) get treated
+    as `os.environ` keys at runtime — substitute and skip.
+    """
+    import ast
+    import builtins as _builtins
+
+    root = repo_root or REPO_ROOT
+    skip_parts = {"__pycache__", ".venv", ".git", ".pytest_cache",
+                  "build", "dist", "node_modules"}
+
+    builtin_names = set(dir(_builtins))
+    # Common patterns the heredoc treats as runtime-injected (env vars
+    # bash-substituted in via export + os.environ).
+    runtime_injected = {"prov"}
+
+    heredoc_re = re.compile(
+        r'(?:"?\$PYBIN"?|python3?)\s+[^<\n]*?<<\s*'
+        r"['\"]?(?P<tag>[A-Z_][A-Z0-9_]*)['\"]?[^\n]*\n"
+        r'(?P<body>.*?)\n^(?P=tag)\s*$',
+        re.MULTILINE | re.DOTALL,
+    )
+
+    violations: list[str] = []
+    for d in scan_dirs:
+        d_path = root / d
+        if not d_path.exists():
+            continue
+        for sh in d_path.rglob("*.sh"):
+            if sh.is_dir() or any(p in skip_parts for p in sh.parts):
+                continue
+            try:
+                text = sh.read_text(errors="ignore")
+            except (FileNotFoundError, PermissionError):
+                continue
+            for m in heredoc_re.finditer(text):
+                body = m.group("body")
+                lineno = text[:m.start("body")].count("\n") + 1
+                # Substitute $VAR and ${VAR} → 'shellvar' string so AST parses
+                stub = re.sub(r"\$\{?(\w+)\}?", r"'shellvar'", body)
+                try:
+                    tree = ast.parse(stub)
+                except (SyntaxError, IndentationError):
+                    # Already covered by Check 72
+                    continue
+
+                # Collect imported names + assigned names + function/class defs
+                defined: set[str] = set()
+                # First pass: imports + top-level assignments + function/class defs
+                for node in ast.walk(tree):
+                    if isinstance(node, ast.ImportFrom):
+                        for n in node.names:
+                            defined.add(n.asname or n.name)
+                    elif isinstance(node, ast.Import):
+                        for n in node.names:
+                            defined.add((n.asname or n.name).split(".")[0])
+                    elif isinstance(node, ast.Assign):
+                        for tgt in node.targets:
+                            if isinstance(tgt, ast.Name):
+                                defined.add(tgt.id)
+                            elif isinstance(tgt, (ast.Tuple, ast.List)):
+                                for elt in tgt.elts:
+                                    if isinstance(elt, ast.Name):
+                                        defined.add(elt.id)
+                    elif isinstance(node, ast.AugAssign) and isinstance(node.target, ast.Name):
+                        defined.add(node.target.id)
+                    elif isinstance(node, (ast.FunctionDef, ast.AsyncFunctionDef, ast.ClassDef)):
+                        defined.add(node.name)
+                    elif isinstance(node, ast.For):
+                        if isinstance(node.target, ast.Name):
+                            defined.add(node.target.id)
+                        elif isinstance(node.target, (ast.Tuple, ast.List)):
+                            for elt in node.target.elts:
+                                if isinstance(elt, ast.Name):
+                                    defined.add(elt.id)
+                    elif isinstance(node, ast.With):
+                        for item in node.items:
+                            if item.optional_vars and isinstance(item.optional_vars, ast.Name):
+                                defined.add(item.optional_vars.id)
+                    elif isinstance(node, ast.comprehension):
+                        # Comprehension target: name OR tuple/list of names
+                        def _capture_target(t):
+                            if isinstance(t, ast.Name):
+                                defined.add(t.id)
+                            elif isinstance(t, (ast.Tuple, ast.List)):
+                                for e in t.elts:
+                                    _capture_target(e)
+                        _capture_target(node.target)
+                    elif isinstance(node, (ast.ListComp, ast.SetComp, ast.DictComp,
+                                            ast.GeneratorExp)):
+                        # Walk all generators to capture their targets
+                        for gen in node.generators:
+                            def _capture_target2(t):
+                                if isinstance(t, ast.Name):
+                                    defined.add(t.id)
+                                elif isinstance(t, (ast.Tuple, ast.List)):
+                                    for e in t.elts:
+                                        _capture_target2(e)
+                            _capture_target2(gen.target)
+                    elif isinstance(node, ast.ExceptHandler) and node.name:
+                        defined.add(node.name)
+                # Function-arg names
+                for node in ast.walk(tree):
+                    if isinstance(node, (ast.FunctionDef, ast.AsyncFunctionDef, ast.Lambda)):
+                        for arg in node.args.args + node.args.kwonlyargs:
+                            defined.add(arg.arg)
+                        if node.args.vararg:
+                            defined.add(node.args.vararg.arg)
+                        if node.args.kwarg:
+                            defined.add(node.args.kwarg.arg)
+
+                # Find all Loaded Name references
+                for node in ast.walk(tree):
+                    if isinstance(node, ast.Name) and isinstance(node.ctx, ast.Load):
+                        name = node.id
+                        if name in defined or name in builtin_names or name in runtime_injected:
+                            continue
+                        # Skip common module-attribute access roots that ARE imported
+                        # (e.g., 'os.environ' — `os` should be in defined if imported).
+                        # If we get here, name isn't defined → flag it.
+                        violations.append(
+                            f"{sh.relative_to(root)}:{lineno + node.lineno - 1}: "
+                            f"heredoc <<'{m.group('tag')}' references "
+                            f"undefined name {name!r} — missing import?"
+                        )
+
+    # Dedupe identical violations (one per occurrence)
+    seen: set[str] = set()
+    deduped: list[str] = []
+    for v in violations:
+        if v not in seen:
+            seen.add(v)
+            deduped.append(v)
+
+    if verbose:
+        if deduped:
+            print(f"  [heredoc-undefined-names] {len(deduped)} violation(s):")
+            for v in deduped[:20]:
+                print(f"    • {v}")
+            if len(deduped) > 20:
+                print(f"    ... and {len(deduped) - 20} more")
+        else:
+            print(f"  [heredoc-undefined-names] OK")
+
+    if deduped and strict:
+        raise MetaBugViolation(
+            "PYTHON HEREDOCS REFERENCE UNDEFINED NAMES (likely missing imports):\n"
+            + "\n".join(f"  • {v}" for v in deduped[:20])
+        )
+    return deduped
 
 
 def check_remote_lane_argparse_arity(
