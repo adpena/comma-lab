@@ -170,6 +170,7 @@ UW_PAYLOAD="$LOG_DIR/masks_uniward.sli1"
 UW_META="$LOG_DIR/uniward_meta.json"
 export UW_PAYLOAD UW_META ANCHOR_DIR
 "$PYBIN" -u - <<'PY' 2>&1 | tee -a "$LOG_DIR/texture.log"
+import os, sys
 import av, torch
 import torch.nn.functional as F
 
