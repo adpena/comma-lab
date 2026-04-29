@@ -480,6 +480,12 @@ def fake_quant_fp4(
     """
     if codebook is None:
         codebook = DEFAULT_CODEBOOK.to(t.device)
+    # FP4_HARDWARE_DISCLOSED: NVFP4 hardware needs Blackwell (CC >= 10.0).
+    # On RTX 4090 (CC 8.9) and earlier, FakeQuantFP4 SIMULATES FP4 via
+    # codebook lookup in FP32 — the inflate-time inference still runs at
+    # FP32 (we just store the 4-bit codebook indices in the archive).
+    # See project_cosmos_deep_dive_addendum_20260428 for the rescue path
+    # (Lane F-V5: hardware FP8 via torchao.float8 on 4090).
     return FakeQuantFP4.apply(t, codebook, block_size, stochastic, robust_scale)
 
 

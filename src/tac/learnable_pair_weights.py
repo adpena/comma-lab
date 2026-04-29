@@ -50,6 +50,8 @@ import torch.nn.functional as F
 
 __all__ = [
     "LearnablePairWeights",
+    "compute_pair_weight_dual_update",
+    "compute_pair_weighted_primal_loss",
     "compute_pair_weight_rate_penalty",
     "save_learnable_pair_weights",
     "load_learnable_pair_weights",
@@ -70,24 +72,20 @@ def _inverse_softplus(y: torch.Tensor) -> torch.Tensor:
 
 
 class LearnablePairWeights(nn.Module):
-    """Per-pair learnable loss-weight vector parameterised via softplus.
+    """Per-pair dual multipliers for hard-pair weighting.
 
     Args:
         n_pairs: number of contest pairs (typically 600 = 1200//2).
         warm_start: optional ``(n_pairs,)`` float tensor to initialise the
-            weights. ``None`` ⇒ all weights = 1.0 (uniform). Common
+            multipliers. ``None`` ⇒ all λ = 0 and weights = 1.0. Common
             warm-start: the Lane W-V1 (top-K hard + uniform-1) tensor
             from ``experiments/profile_pair_sensitivity.py``.
 
-    Forward returns the ``(n_pairs,)`` weight tensor (positive floats).
-    The single nn.Parameter is ``self.raw`` of shape ``(n_pairs,)``; the
-    forward call applies ``softplus``.
-
-    The forward pass is differentiable wrt. self.raw, so
-    ``loss = (weights * pair_losses).sum()`` propagates gradient back
-    into ``self.raw``. Combined with ``compute_pair_weight_rate_penalty``,
-    this enables Lagrangian dual ascent on the constraint
-    ``sum(weights) == n_pairs``.
+    Forward returns ``1 + λ_p`` for each pair. The λ vector is a buffer,
+    not an ``nn.Parameter``: optimizers must not update it by backprop.
+    The only mutating path is :meth:`dual_update`, which applies the
+    projected dual-ascent rule
+    ``λ_p <- max(0, λ_p + η * (loss_p - target_loss))``.
     """
 
     def __init__(
@@ -101,8 +99,7 @@ class LearnablePairWeights(nn.Module):
             raise ValueError(f"n_pairs must be positive, got {n_pairs}")
 
         if warm_start is None:
-            # softplus(raw) = 1 ⇒ raw = log(exp(1) - 1) ≈ 0.5413
-            init_y = torch.ones(n_pairs, dtype=torch.float32)
+            lambda_init = torch.zeros(n_pairs, dtype=torch.float32)
         else:
             if not isinstance(warm_start, torch.Tensor):
                 raise TypeError(
@@ -115,39 +112,162 @@ class LearnablePairWeights(nn.Module):
                 )
             if (warm_start < 0).any():
                 raise ValueError(
-                    "warm_start must be non-negative (softplus codomain is [0, ∞))"
+                    "warm_start must be non-negative"
                 )
-            init_y = warm_start.detach().to(torch.float32).clamp_min(1e-9)
+            # Warm-start values historically represented direct loss
+            # multipliers. The dual formulation can only amplify hard
+            # pairs, so values below 1 map to λ=0.
+            lambda_init = (warm_start.detach().to(torch.float32) - 1.0).clamp_min(0.0)
 
-        raw_init = _inverse_softplus(init_y)
-        self.raw = nn.Parameter(raw_init.clone())
+        self.register_buffer("lambda_pair", lambda_init.clone())
+        self.register_buffer(
+            "running_target_loss",
+            torch.tensor(float("nan"), dtype=torch.float32),
+        )
+        self.register_buffer("dual_step", torch.tensor(0, dtype=torch.long))
         self.n_pairs = int(n_pairs)
 
     # ── Forward / accessors ──────────────────────────────────────────────
 
     def forward(self) -> torch.Tensor:
-        """Return the (n_pairs,) softplus-positive weight vector."""
-        return F.softplus(self.raw)
+        """Return the ``(n_pairs,)`` loss multipliers ``1 + λ_p``."""
+        return 1.0 + self.lambda_pair
 
     def weights(self) -> torch.Tensor:
         """Alias for ``forward()`` — explicit call site."""
         return self.forward()
 
+    def lambdas(self) -> torch.Tensor:
+        """Return the nonnegative dual multipliers λ_p."""
+        return self.lambda_pair
+
     def weight_for_pair(self, pair_idx: int | torch.Tensor) -> torch.Tensor:
-        """Return the differentiable scalar weight for ``pair_idx``."""
-        return F.softplus(self.raw[pair_idx])
+        """Return the scalar multiplier ``1 + λ_p`` for ``pair_idx``."""
+        return self.forward()[pair_idx]
+
+    @torch.no_grad()
+    def dual_update(
+        self,
+        pair_losses: torch.Tensor,
+        *,
+        eta: float,
+        target_loss: torch.Tensor | float | None = None,
+        pair_idx: int | torch.Tensor | None = None,
+        running_mean_momentum: float = 0.99,
+    ) -> torch.Tensor:
+        """Apply projected dual ascent to λ.
+
+        ``target_loss`` defaults to the current vector mean for full-vector
+        updates. For scalar ``pair_idx`` updates, a running mean target is
+        maintained so streaming training loops can update one pair at a
+        time without making easy pairs attract mass.
+        """
+        if eta <= 0:
+            raise ValueError(f"eta must be > 0, got {eta}")
+        if not 0.0 <= running_mean_momentum < 1.0:
+            raise ValueError(
+                f"running_mean_momentum must be in [0, 1), got {running_mean_momentum}"
+            )
+
+        losses = pair_losses.detach().to(
+            device=self.lambda_pair.device,
+            dtype=self.lambda_pair.dtype,
+        )
+        if not torch.isfinite(losses).all():
+            raise ValueError("pair_losses contains NaN/Inf")
+
+        if pair_idx is None:
+            if losses.shape != (self.n_pairs,):
+                raise ValueError(
+                    f"pair_losses shape {tuple(losses.shape)} != ({self.n_pairs},)"
+                )
+            target = losses.mean() if target_loss is None else torch.as_tensor(
+                target_loss, device=losses.device, dtype=losses.dtype,
+            )
+            self.lambda_pair.add_(float(eta) * (losses - target))
+            self.lambda_pair.clamp_(min=0.0)
+            self.running_target_loss.copy_(target.detach())
+            self.dual_step.add_(1)
+            return self.lambda_pair
+
+        if losses.numel() != 1:
+            raise ValueError(
+                "scalar pair_idx updates require pair_losses with one element"
+            )
+        idx = int(pair_idx.item()) if isinstance(pair_idx, torch.Tensor) else int(pair_idx)
+        if not 0 <= idx < self.n_pairs:
+            raise IndexError(f"pair_idx {idx} out of range [0, {self.n_pairs})")
+
+        observed = losses.reshape(())
+        if target_loss is None:
+            if bool(torch.isnan(self.running_target_loss)):
+                target = observed
+            else:
+                target = self.running_target_loss.to(losses.device, losses.dtype)
+            new_running = (
+                float(running_mean_momentum) * target
+                + (1.0 - float(running_mean_momentum)) * observed
+            )
+            self.running_target_loss.copy_(new_running.detach())
+        else:
+            target = torch.as_tensor(target_loss, device=losses.device, dtype=losses.dtype)
+            self.running_target_loss.copy_(target.detach())
+
+        self.lambda_pair[idx].add_(float(eta) * (observed - target))
+        self.lambda_pair[idx].clamp_(min=0.0)
+        self.dual_step.add_(1)
+        return self.lambda_pair
 
     # ── Persistence ──────────────────────────────────────────────────────
 
     def state_for_save(self) -> dict:
         """Plain-dict snapshot. Use with ``save_learnable_pair_weights``."""
         return {
-            "schema_version": 1,
+            "schema_version": 2,
             "module": "tac.learnable_pair_weights.LearnablePairWeights",
             "n_pairs": self.n_pairs,
-            "raw": self.raw.detach().cpu().clone(),
+            "lambda_pair": self.lambda_pair.detach().cpu().clone(),
             "weights": self.weights().detach().cpu().clone(),
+            "running_target_loss": self.running_target_loss.detach().cpu().clone(),
+            "dual_step": self.dual_step.detach().cpu().clone(),
         }
+
+
+def compute_pair_weight_dual_update(
+    pair_weights: LearnablePairWeights,
+    pair_losses: torch.Tensor,
+    *,
+    eta: float,
+    target_loss: torch.Tensor | float | None = None,
+    pair_idx: int | torch.Tensor | None = None,
+) -> torch.Tensor:
+    """Functional wrapper for :meth:`LearnablePairWeights.dual_update`."""
+    return pair_weights.dual_update(
+        pair_losses,
+        eta=eta,
+        target_loss=target_loss,
+        pair_idx=pair_idx,
+    )
+
+
+def compute_pair_weighted_primal_loss(
+    pair_weights: LearnablePairWeights,
+    pair_losses: torch.Tensor,
+) -> torch.Tensor:
+    """Primal loss ``Σ_p (1 + λ_p) loss_p / N``.
+
+    The dual multipliers are detached buffers by construction, so gradient
+    flows only into ``pair_losses`` and upstream model parameters.
+    """
+    if pair_losses.shape != (pair_weights.n_pairs,):
+        raise ValueError(
+            f"pair_losses shape {tuple(pair_losses.shape)} != ({pair_weights.n_pairs},)"
+        )
+    multipliers = pair_weights().detach().to(
+        device=pair_losses.device,
+        dtype=pair_losses.dtype,
+    )
+    return (multipliers * pair_losses).sum() / float(pair_weights.n_pairs)
 
 
 def compute_pair_weight_rate_penalty(
@@ -156,28 +276,15 @@ def compute_pair_weight_rate_penalty(
     target_sum: float | None = None,
     lambda_rate: float = 1.0,
 ) -> torch.Tensor:
-    """Lagrangian rate penalty: ``λ · (sum(weights) − target_sum)²``.
+    """Retired compatibility shim.
 
-    Drives the average weight toward 1.0 (target_sum = n_pairs by default)
-    so the loss scale stays comparable to the unweighted run. The squared
-    form is symmetric — both over- and under-shoot are penalised — which
-    is what we want: free up weight mass on easy pairs AND constrain the
-    total magnitude.
-
-    Args:
-        pair_weights: the LearnablePairWeights module.
-        target_sum: desired sum-of-weights. Default ``n_pairs`` ⇒ mean = 1.
-        lambda_rate: Lagrangian multiplier. Annealed via dual ascent in the
-            training loop — start at 0, ramp to ~1 after the warmup.
-
-    Returns:
-        Scalar tensor with grad wrt. pair_weights.raw.
+    Round 10 replaced the old softplus + sum-to-N penalty with projected
+    dual ascent on λ_p. Keeping this function as a zero-valued tensor lets
+    older call sites import it without reintroducing optimizer-controlled
+    pair weights.
     """
-    if target_sum is None:
-        target_sum = float(pair_weights.n_pairs)
-    w = pair_weights()
-    # squared deviation of the constraint sum(w) - target_sum
-    return float(lambda_rate) * (w.sum() - float(target_sum)).pow(2)
+    del target_sum, lambda_rate
+    return pair_weights.lambda_pair.sum() * 0.0
 
 
 def save_learnable_pair_weights(
@@ -221,9 +328,10 @@ def load_learnable_pair_weights(
         raise TypeError(
             f"{p} is not a learnable-pair-weights snapshot (got {type(state).__name__})"
         )
-    if state.get("schema_version") != 1:
+    schema_version = state.get("schema_version")
+    if schema_version not in (1, 2):
         raise ValueError(
-            f"{p} schema_version={state.get('schema_version')} != 1; "
+            f"{p} schema_version={state.get('schema_version')} not in (1, 2); "
             "refuse to load incompatible snapshot."
         )
     if state.get("module") != "tac.learnable_pair_weights.LearnablePairWeights":
@@ -233,5 +341,20 @@ def load_learnable_pair_weights(
         )
     n_pairs = int(state["n_pairs"])
     pw = LearnablePairWeights(n_pairs)
-    pw.raw.data.copy_(state["raw"].to(pw.raw.dtype))
+    if schema_version == 2:
+        pw.lambda_pair.copy_(state["lambda_pair"].to(pw.lambda_pair.dtype))
+        if "running_target_loss" in state:
+            pw.running_target_loss.copy_(
+                state["running_target_loss"].to(pw.running_target_loss.dtype)
+            )
+        if "dual_step" in state:
+            pw.dual_step.copy_(state["dual_step"].to(pw.dual_step.dtype))
+    else:
+        if "raw" in state:
+            weights = F.softplus(state["raw"].to(torch.float32))
+        elif "weights" in state:
+            weights = state["weights"].to(torch.float32)
+        else:
+            raise ValueError(f"{p} v1 snapshot has neither 'raw' nor 'weights'")
+        pw.lambda_pair.copy_((weights - 1.0).clamp_min(0.0).to(pw.lambda_pair.dtype))
     return pw

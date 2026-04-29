@@ -1,0 +1,45 @@
+{
+  "_doc": [
+    "Lane CLASS proofs for preflight Check 65.",
+    "Each entry asserts that a complete dispatch -> train -> archive -> auth_eval",
+    "cycle has been demonstrated for that lane class. Proofs land via:",
+    "  (a) production deploy that produced a contest-CUDA score,",
+    "  (b) Modal dry-run via experiments/modal_auth_eval.py, or",
+    "  (c) canonical local smoke via experiments/canonical_local_auth_eval_smoke.py.",
+    "Every numeric score MUST carry a lane tag per CLAUDE.md non-negotiable",
+    "(check_scores_have_lane_tag). Backfill seeded 2026-04-28 from verified",
+    "production landings (Lane G v3, Lane A, Lane M-V2, Lane F-V2, Lane B)."
+  ],
+  "renderer-optimized": {
+    "proven_by_lane": "lane_a_optimized",
+    "proof_kind": "production-deploy",
+    "score": 1.15,
+    "score_lane_tag": "[contest-CUDA]",
+    "timestamp_utc": "2026-04-28T12:00:00Z",
+    "notes": "Lane A landed 1.15 -- baseline beat by Lane G v3 0.10 later same day."
+  },
+  "kl-distill": {
+    "proven_by_lane": "lane_g_v3_corrected_kl_weight",
+    "proof_kind": "production-deploy",
+    "score": 1.05,
+    "score_lane_tag": "[contest-CUDA]",
+    "timestamp_utc": "2026-04-28T22:07:00Z",
+    "notes": "Lane G v3 verified 1.05 -- KL weight 0.002 + pose TTO retry on Lane A anchor."
+  },
+  "pose-tto": {
+    "proven_by_lane": "lane_a_pose_tto",
+    "proof_kind": "production-deploy",
+    "score": 1.15,
+    "score_lane_tag": "[contest-CUDA]",
+    "timestamp_utc": "2026-04-28T12:00:00Z",
+    "notes": "Pose TTO retry from Lane A anchor produces the 1.15 baseline."
+  },
+  "fp4-qat": {
+    "proven_by_lane": "lane_b_fp4_qat",
+    "proof_kind": "production-deploy",
+    "score": 1.79,
+    "score_lane_tag": "[contest-CUDA]",
+    "timestamp_utc": "2026-04-27T00:00:00Z",
+    "notes": "Lane F-V2 1.79 -- regression vs Lane A 1.15 by 0.64 (FP4 architectural cost on FastViT/YUV6); recorded as proof of pipeline completeness."
+  }
+}

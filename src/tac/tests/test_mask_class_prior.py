@@ -7,21 +7,15 @@ import numpy as np
 import pytest
 import torch
 
-# Lane MOS / mask-class-prior is in-flight (#150). Module + experiment
-# script are pending subagent deliverables — skip the entire test file
-# until they land.
-try:
-    from experiments.build_mask_class_prior import (
-        build_mask_class_prior,
-        write_prior_npz,
-    )
-    from tac.mask_prior import (
-        apply_prior_weighting,
-        load_prior,
-        save_prior_to_archive,
-    )
-except ImportError:
-    pytest.skip("Lane MOS mask-class-prior modules pending", allow_module_level=True)
+from experiments.build_mask_class_prior import (
+    build_mask_class_prior,
+    write_prior_npz,
+)
+from tac.mask_prior import (
+    apply_prior_weighting,
+    load_prior,
+    save_prior_to_archive,
+)
 
 
 def _toy_masks() -> torch.Tensor:

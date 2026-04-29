@@ -61,21 +61,36 @@ def src_text() -> str:
 
 
 def test_save_uses_baseline_init_poses_aux_dims(src_text: str):
-    """T1: the save block must slice init_poses to harvest frozen dims 1-5."""
-    assert "init_poses[:n_pairs, 1:6]" in src_text, (
-        "Lane M-V2 save: must use `init_poses[:n_pairs, 1:6]` to harvest "
-        "the FROZEN baseline aux dims for the (N, 6) save tensor. "
-        "Without this slice the saved file regresses to (N, 1) and "
-        "reproduces the V1 zero-pad bug at inflate."
+    """T1: the save block must reach init_poses[:, :6] (Lane M-V3-clean
+    passes the full baseline through the shared helper instead of slicing
+    [:, 1:6] inline; both idioms preserve the frozen aux dims at inflate)."""
+    has_v2_slice = "init_poses[:n_pairs, 1:6]" in src_text
+    has_v3_full = "init_poses[:n_pairs, :6]" in src_text
+    assert has_v2_slice or has_v3_full, (
+        "save block must source the FROZEN baseline aux dims from "
+        "init_poses (V2: [:n_pairs, 1:6], V3-clean: [:n_pairs, :6] "
+        "passed to _project_to_renderer_pose). Without one of these "
+        "the saved file regresses to (N, 1) and reproduces the V1 "
+        "zero-pad bug at inflate."
     )
 
 
 def test_save_composes_n6_via_torch_cat(src_text: str):
-    """T2: the save block must compose (N, 6) via torch.cat([scalar, aux])."""
-    assert "torch.cat([pose_part[:, :1].cpu(), baseline_aux]" in src_text, (
-        "Lane M-V2 save: must compose the saved tensor as "
-        "`torch.cat([pose_part[:, :1].cpu(), baseline_aux], dim=-1)`. "
-        "dim 0 = optimized radial-zoom scalar, dims 1-5 = frozen baseline."
+    """T2: the save block must compose (N, 6) — either inline torch.cat
+    (V2 idiom) or by calling the shared _project_to_renderer_pose helper
+    (V3-clean idiom). Both bind dim 0 to the optimized scalar and dims
+    1-5 to the frozen baseline."""
+    v2_inline = "torch.cat([pose_part[:, :1].cpu(), baseline_aux]" in src_text
+    v3_helper = bool(re.search(
+        r'optimized_poses\s*=\s*_project_to_renderer_pose\(\s*pose_part\.cpu\(\)',
+        src_text,
+    ))
+    assert v2_inline or v3_helper, (
+        "save block must compose (N, 6) either via "
+        "`torch.cat([pose_part[:, :1].cpu(), baseline_aux], dim=-1)` (V2) "
+        "or via `_project_to_renderer_pose(pose_part.cpu(), ...)` "
+        "(V3-clean). dim 0 = optimized radial-zoom scalar, dims 1-5 = "
+        "frozen baseline."
     )
 
 
@@ -204,21 +219,31 @@ def test_save_block_behavioral_synthesis():
 def test_full_6dof_mode_save_path_preserved(src_text: str):
     """T7: in full-6dof mode (the default), the save must be identical to
     pre-V2 behavior — the radial-zoom branch must be GATED on
-    `args.pose_mode == "radial-zoom"`."""
-    # The save block must have an explicit `if args.pose_mode == "radial-zoom"`
-    # gate. The else branch must fall back to the original `pose_part` slice.
-    gated_save = re.search(
+    `args.pose_mode == "radial-zoom"`. V3-clean replaces the inline
+    `torch.cat` with a call to `_project_to_renderer_pose` but the gate
+    + else fallthrough must remain identical."""
+    # Either V2 idiom (torch.cat) or V3-clean idiom (helper call) is
+    # acceptable — the test pins the GATE structure, not the body.
+    gated_save_v2 = re.search(
         r'if args\.pose_mode == "radial-zoom":.*?'
         r'optimized_poses = torch\.cat.*?'
         r'else:.*?'
         r'optimized_poses = pose_part',
         src_text, re.DOTALL,
     )
-    assert gated_save is not None, (
+    gated_save_v3 = re.search(
+        r'if args\.pose_mode == "radial-zoom":.*?'
+        r'optimized_poses = _project_to_renderer_pose\(.*?'
+        r'else:.*?'
+        r'optimized_poses = pose_part',
+        src_text, re.DOTALL,
+    )
+    assert gated_save_v2 is not None or gated_save_v3 is not None, (
         "the (N, 6) composition must be gated on "
         "`args.pose_mode == \"radial-zoom\"` so full-6dof mode (the "
         "default) saves the (N, 6) tensor unchanged. Without the gate "
-        "the full-6dof path could regress."
+        "the full-6dof path could regress. Accepts either the V2 "
+        "torch.cat idiom or the V3-clean _project_to_renderer_pose helper."
     )
 
 
@@ -241,10 +266,12 @@ def test_save_block_validates_init_poses_shape(src_text: str):
     by mistake), the save block must raise SystemExit with a useful
     message — NOT silently produce a (N, 2) tensor by concatenating
     a 1-DOF baseline_aux."""
-    # Look for a SystemExit guard in the save block area that mentions
-    # baseline shape.
+    # Either V2 wording ("Lane M-V2 expects baseline init_poses to be (N, 6)")
+    # or V3-clean wording ("Lane M-V3-clean expects baseline init_poses to be (N, 6)")
+    # is acceptable — both raise SystemExit with the (N, 6) shape guidance.
     has_shape_guard = (
         "FATAL: Lane M-V2 expects baseline init_poses to be (N, 6)" in src_text
+        or "FATAL: Lane M-V3-clean expects baseline init_poses to be (N, 6)" in src_text
     )
     assert has_shape_guard, (
         "the save block must raise SystemExit with a meaningful message "

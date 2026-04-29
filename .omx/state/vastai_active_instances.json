@@ -1498,5 +1498,105 @@
     "registered_at_utc": "2026-04-29T04:17:14Z",
     "registered_by_host": "Primary",
     "registered_by_pid": 0
+  },
+  {
+    "instance_id": "35802676",
+    "label": "lane_rm_v2",
+    "metadata": {
+      "estimated_cost_usd": 1.5,
+      "predicted_band": [
+        1.0,
+        1.1
+      ],
+      "script": "scripts/remote_lane_rm_riemannian_pose_tto.sh",
+      "council_priority": 99,
+      "anchor_dirs": [
+        "experiments/results/lane_a_landed/iter_0"
+      ],
+      "launcher": "scripts/launch_lane_on_vastai.py phase1+phase2"
+    },
+    "registered_at_utc": "2026-04-29T04:52:41Z",
+    "registered_by_host": "Primary",
+    "registered_by_pid": 0
+  },
+  {
+    "instance_id": "35802727",
+    "label": "lane_f_v5_b_retry",
+    "metadata": {
+      "estimated_cost_usd": 2.0,
+      "predicted_band": [
+        0.95,
+        1.2
+      ],
+      "script": "scripts/remote_lane_f_v5_hardware_fp8.sh",
+      "council_priority": 99,
+      "anchor_dirs": [
+        "experiments/results/lane_a_landed/iter_0"
+      ],
+      "launcher": "scripts/launch_lane_on_vastai.py phase1+phase2"
+    },
+    "registered_at_utc": "2026-04-29T04:54:04Z",
+    "registered_by_host": "Primary",
+    "registered_by_pid": 0
+  },
+  {
+    "instance_id": "35802893",
+    "label": "lane_h_v3_b_retry",
+    "metadata": {
+      "estimated_cost_usd": 2.5,
+      "predicted_band": [
+        0.85,
+        1.05
+      ],
+      "script": "scripts/remote_lane_h_v3_jointly_trained_halfframe.sh",
+      "council_priority": 99,
+      "anchor_dirs": [
+        "experiments/results/lane_a_landed/iter_0"
+      ],
+      "launcher": "scripts/launch_lane_on_vastai.py phase1+phase2"
+    },
+    "registered_at_utc": "2026-04-29T04:57:34Z",
+    "registered_by_host": "Primary",
+    "registered_by_pid": 0
+  },
+  {
+    "instance_id": "35803182",
+    "label": "lane_rm_v2_retry",
+    "metadata": {
+      "estimated_cost_usd": 1.5,
+      "predicted_band": [
+        1.0,
+        1.1
+      ],
+      "script": "scripts/remote_lane_rm_riemannian_pose_tto.sh",
+      "council_priority": 99,
+      "anchor_dirs": [
+        "experiments/results/lane_a_landed/iter_0"
+      ],
+      "launcher": "scripts/launch_lane_on_vastai.py phase1+phase2"
+    },
+    "registered_at_utc": "2026-04-29T05:03:21Z",
+    "registered_by_host": "Primary",
+    "registered_by_pid": 0
+  },
+  {
+    "instance_id": "35803440",
+    "label": "lane_q_faithful_f",
+    "metadata": {
+      "estimated_cost_usd": 8.0,
+      "predicted_band": [
+        0.4,
+        0.8
+      ],
+      "script": "scripts/remote_lane_q_faithful_jointgen.sh",
+      "council_priority": 99,
+      "anchor_dirs": [
+        "experiments/results/lane_a_landed/iter_0"
+      ],
+      "launcher": "scripts/launch_lane_on_vastai.py phase1+phase2"
+    },
+    "registered_at_utc": "2026-04-29T05:09:22Z",
+    "registered_by_host": "Primary",
+    "registered_by_pid": 0
   }
 ]

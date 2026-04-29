@@ -205,13 +205,18 @@ def test_pose_mode_radial_zoom_projects_to_6dof_before_render():
     )
 
     # The renderer call must consume the projected value, not the raw
-    # 1-DOF slice. Look for the new pose_part assignment that uses the
-    # helper (replacing the old `conditioning[:, :pose_dim]` extraction).
-    assert "_project_to_renderer_pose(conditioning)" in src, (
+    # 1-DOF slice. Either the closure idiom (V2:
+    # `_project_to_renderer_pose(conditioning)`) or the V3-clean idiom
+    # (`_project_pose_for_render(conditioning)`, a thin partial-application
+    # of the module-level helper) is acceptable.
+    has_v2_closure = "_project_to_renderer_pose(conditioning)" in src
+    has_v3_partial = "_project_pose_for_render(conditioning)" in src
+    assert has_v2_closure or has_v3_partial, (
         "Lane M body missing: the renderer forward must consume the "
-        "projected pose (use `_project_to_renderer_pose(conditioning)` to "
-        "lift radial-zoom to 6-DOF). Without it pose_part is (B, 1) and the "
-        "renderer crashes immediately."
+        "projected pose. Accepts either V2 closure "
+        "`_project_to_renderer_pose(conditioning)` or V3-clean partial "
+        "`_project_pose_for_render(conditioning)`. Without one of these, "
+        "pose_part is (B, 1) and the renderer crashes immediately."
     )
 
 
@@ -231,22 +236,30 @@ def test_pose_mode_radial_zoom_saves_6dof_with_frozen_baseline_padding():
     """
     src = SCRIPT.read_text()
 
-    # The save block must take the optimized scalar (`pose_part[:, :1]`)
-    # and concatenate it with the frozen baseline aux dims
-    # (`init_poses[:n_pairs, 1:6]`). Source-grep both halves to catch
-    # any silent regression to the V1 behavior (saving (N, 1) directly).
-    assert "init_poses[:n_pairs, 1:6]" in src, (
-        "Lane M-V2 save: must use `init_poses[:n_pairs, 1:6]` to harvest "
-        "the FROZEN baseline aux dims for the (N, 6) save tensor. The V1 "
-        "code zero-padded at inflate; V2 freezes baseline values at save "
-        "time so the saved file IS the canonical 6-DOF pose tensor."
+    # The save block must source the FROZEN baseline aux dims from
+    # init_poses. Lane M-V2 used `init_poses[:n_pairs, 1:6]` inline;
+    # Lane M-V3-clean passes the full `init_poses[:n_pairs, :6]` tensor
+    # through the shared `_project_to_renderer_pose` helper. Either is
+    # acceptable — both compose the same (N, 6) bytes.
+    has_v2_slice = "init_poses[:n_pairs, 1:6]" in src
+    has_v3_full = "init_poses[:n_pairs, :6]" in src
+    assert has_v2_slice or has_v3_full, (
+        "save block must source the FROZEN baseline aux dims from "
+        "init_poses (V2: [:n_pairs, 1:6], V3-clean: [:n_pairs, :6] passed "
+        "to _project_to_renderer_pose). Without one of these the saved "
+        "file regresses to (N, 1) and reproduces the V1 zero-pad bug."
     )
-    assert 'torch.cat([pose_part[:, :1].cpu(), baseline_aux]' in src, (
-        "Lane M-V2 save: must compose the saved tensor as "
-        "`torch.cat([pose_part[:, :1].cpu(), baseline_aux], dim=-1)` so "
-        "dim 0 = optimized radial-zoom scalar and dims 1-5 = frozen "
-        "baseline. Without this composition the saved file is (N, 1) "
-        "and reproduces the V1 zero-pad bug at inflate."
+    has_v2_cat = 'torch.cat([pose_part[:, :1].cpu(), baseline_aux]' in src
+    has_v3_helper = bool(re.search(
+        r'optimized_poses\s*=\s*_project_to_renderer_pose\(\s*pose_part\.cpu\(\)',
+        src,
+    ))
+    assert has_v2_cat or has_v3_helper, (
+        "save block must compose (N, 6) — either V2 inline "
+        "`torch.cat([pose_part[:, :1].cpu(), baseline_aux], dim=-1)` or "
+        "V3-clean `_project_to_renderer_pose(pose_part.cpu(), ...)`. "
+        "Without this composition the saved file is (N, 1) and reproduces "
+        "the V1 zero-pad bug at inflate."
     )
 
     # The meta sidecar must STILL include `pose_mode` for observability

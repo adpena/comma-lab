@@ -262,6 +262,25 @@ model = build_coolchic_renderer(
 )
 print(f'[stage3] rebuilt CoolChic PairGenerator: {sum(p.numel() for p in model.parameters()):,} params')
 
+# 2026-04-28 Lane I crash fix (memory: project_lane_i_crashed_parametrize_strip_20260428)
+# Strip torch.nn.utils.parametrize hooks before load — train_renderer can save
+# checkpoints with `<layer>.parametrizations.weight.original` keys when self-
+# compress / FakeQuant codecs are active. The fresh model (no hooks) expects
+# plain `<layer>.weight`. Mirror the canonical strip from qat_finetune.py:218-238.
+if any('.parametrizations.' in k for k in state.keys()):
+    normalized = {}
+    for k, v in state.items():
+        if '.parametrizations.' not in k:
+            normalized[k] = v
+            continue
+        head, _, tail = k.partition('.parametrizations.')
+        name, _, suffix = tail.partition('.')
+        if suffix == 'original':
+            normalized[f'{head}.{name}'] = v
+        # else: drop codebook + other parametrize internals
+    print(f'[stage3] stripped parametrize hooks: {len(state)} -> {len(normalized)} keys')
+    state = normalized
+
 missing, unexpected = model.load_state_dict(state, strict=False)
 if missing or unexpected:
     print(f'[stage3] load mismatch: missing={list(missing)[:6]} unexpected={list(unexpected)[:6]}')

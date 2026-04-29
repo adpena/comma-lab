@@ -974,16 +974,11 @@ def train_joint_pair(cfg: JointPairConfig) -> dict[str, Any]:
         try:
             export_model.load_state_dict(best_state)
         except RuntimeError:
-            # Parametrized keys — extract .original weights
-            clean_state = {}
-            for k, v in best_state.items():
-                if ".parametrizations.weight.original" in k:
-                    clean_state[k.replace(".parametrizations.weight.original", ".weight")] = v
-                elif ".parametrizations.weight.0.codebook" in k:
-                    continue
-                else:
-                    clean_state[k] = v
-            export_model.load_state_dict(clean_state)
+            # Parametrized keys — use canonical strip helper (factored
+            # 2026-04-28, hardened Round 11 for root-level keys + multi-
+            # original weight_norm + nested chains).
+            from tac.parametrize_strip import strip_parametrize_hooks
+            export_model.load_state_dict(strip_parametrize_hooks(best_state))
 
         from tac.fp4_quantize import save_fp4
         fp4_path = results_dir / "joint_pair_best_fp4.pt"

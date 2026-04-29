@@ -123,6 +123,12 @@ def quantize_one_layer_fp4(module: nn.Module, block_size: int = 32) -> torch.Ten
     original = module.weight.detach().clone()
     with torch.no_grad():
         codebook = DEFAULT_CODEBOOK.to(module.weight.device)
+        # FP4_HARDWARE_DISCLOSED: this profiler measures the simulated-FP4
+        # round-trip noise (FakeQuantFP4 in FP32). NVFP4 hardware needs
+        # Blackwell (CC >= 10.0); 4090 is CC 8.9 → FP4 inference is always
+        # simulated. The profile predicts the LANDED archive's noise but
+        # NOT actual hardware-FP4 behavior. See Lane F-V5 (hardware FP8
+        # rescue path) in project_cosmos_deep_dive_addendum_20260428.
         # fake_quant_fp4 with stochastic=False + robust_scale=False matches
         # the export-time deterministic round-trip (matches what
         # export_asymmetric_checkpoint_fp4 produces). This is what we want

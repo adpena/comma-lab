@@ -1,0 +1,18 @@
+{
+  "archive_zip": null,
+  "artifacts": [],
+  "completed_at_utc": "2026-04-29T05:52:09.682385+00:00",
+  "elapsed_seconds": 0.00013449999096337706,
+  "instance_id": 99999,
+  "lane_label": "phantom",
+  "masks_mkv": null,
+  "notes": [
+    "Could not resolve SSH details (vastai show failed or instance already gone). Skipping recovery."
+  ],
+  "poses_pt": null,
+  "recovery_dir": "/Users/adpena/Projects/pact/experiments/results/recovered_99999_phantom",
+  "renderer_bin": null,
+  "skipped_patterns": [],
+  "ssh_reachable": false,
+  "started_at_utc": "2026-04-29T05:52:09.682246+00:00"
+}

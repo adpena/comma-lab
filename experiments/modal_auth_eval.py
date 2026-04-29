@@ -3,10 +3,23 @@
 This is the DEFINITIVE score — matches the contest evaluation environment.
 Uploads the submission archive, runs inflate.sh → evaluate.py on a T4 GPU.
 
+Modal is the RELIABILITY-FIRST eval surface: same image every run, no NVDEC
+host variability, no Korea-region 4090 failures, no SSH rate-limiting. Cost
+is higher per hour ($0.59 vs $0.25 on Vast.ai 4090) but variance is near zero.
+For long training runs (>6h) where a re-run costs more than the price delta,
+prefer Modal. For cheap moonshots (<2h), Vast.ai 4090 still wins on cost.
+
 Usage:
+    # Default archive path (matches local pipeline output):
+    PYTHONPATH=src:upstream:$PWD .venv/bin/modal run experiments/modal_auth_eval.py
+
+    # Override archive path:
     PYTHONPATH=src:upstream:$PWD .venv/bin/modal run experiments/modal_auth_eval.py \
-        --archive /tmp/modal_submission/archive.zip \
-        --submission-dir submissions/robust_current
+        --archive experiments/results/recovered_12345_lane_rm_d/archive.zip
+
+References:
+  - project_modal_vs_vastai_reliability_analysis_20260428
+  - feedback_artifact_recovery_canonical_workflow_20260428
 """
 from __future__ import annotations
 
@@ -210,8 +223,12 @@ def main(archive: str = "/tmp/modal_submission/archive.zip"):
         print(f"  ERROR: {result.get('error', 'unknown')}")
     print(f"{'='*60}")
 
-    # Save result
+    # Save result. Use a per-archive sidecar so multiple Modal invocations
+    # don't clobber each other.
+    import hashlib
     import json
-    result_path = Path("experiments/results/modal_auth_eval.json")
+    archive_sha = hashlib.sha256(archive_bytes).hexdigest()[:12]
+    result_path = Path(f"experiments/results/modal_auth_eval_{archive_sha}.json")
+    result_path.parent.mkdir(parents=True, exist_ok=True)
     result_path.write_text(json.dumps(result, indent=2))
     print(f"Saved to {result_path}")

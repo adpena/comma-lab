@@ -592,6 +592,16 @@ def preflight_all(
         # feedback_canonical_e2e_smoke_PERMANENT_GUARD_20260428.
         check_lane_scripts_have_e2e_smoke_proof(strict=True, verbose=verbose)
 
+        # 2026-04-28 PM: Check 65 — lane CLASSES (not just per-lane scripts)
+        # must have at least one complete-pipeline proof on file. Closes the
+        # Lane RM-d structural gap: new lane classes shipping without ever
+        # demonstrating dispatch → train → archive → auth_eval cycle. Ships
+        # WARN-ONLY initially so the existing 70 lanes have a backfill window;
+        # promotion plan (Lane A pattern): backfill .omx/state/
+        # lane_class_proofs.json, then flip strict=True. Reference:
+        # feedback_artifact_recovery_canonical_workflow_20260428.
+        check_lane_classes_have_pipeline_proof(strict=False, verbose=verbose)
+
     # 2. Training inputs (only if profile + tto_frames provided)
     if profile_name and tto_frames_path and gt_poses_path and masks_path and profile_arch:
         preflight_training_inputs(
@@ -11135,6 +11145,188 @@ def check_lane_scripts_have_e2e_smoke_proof(
             "  python experiments/canonical_local_auth_eval_smoke.py "
             "--backfill-all\n"
             "to regenerate proofs for every lane.\n\nViolations:\n"
+            + "\n".join(f"  • {v}" for v in violations[:50])
+        )
+    return violations
+
+
+# ----------------------------------------------------------------------------
+# Check 65 — lane-class auto-scan for pipeline proof
+# ----------------------------------------------------------------------------
+# Background: Lane RM-d (2026-04-28) crashed at the auth_eval stage AFTER 3.5h
+# of training on a remote Vast.ai instance. The crash exposed a structural
+# gap: while we have ~64 STATIC preflight checks for code patterns, no check
+# verifies that a NEW LANE CLASS (e.g., the first "renderer-replacement" or
+# "pose-replacement" lane) actually completed a full
+# dispatch → train → archive → auth_eval cycle anywhere on record. New lane
+# classes can ship into the codebase, run for hours on Vast.ai, and crash at
+# auth_eval — and no preflight catches that BEFORE the GPU spend.
+#
+# Check 65 enforces: every lane CLASS in scripts/remote_lane_*.sh must have at
+# least one proof in .omx/state/lane_class_proofs.json showing a complete
+# pipeline cycle. The proof can come from (a) a real production deploy that
+# landed an authoritative score or (b) a `--proof-only` Modal/local dry-run
+# that demonstrated the pipeline end-to-end.
+
+LANE_CLASS_PROOFS_REL = ".omx/state/lane_class_proofs.json"
+
+# Mapping from filename keyword to canonical lane class. Edit here when new
+# classes emerge; the scanner picks the FIRST match in declaration order, so
+# put more-specific keywords above generic ones.
+_LANE_CLASS_KEYWORDS: tuple[tuple[str, str], ...] = (
+    ("pose_tto", "pose-tto"),
+    ("pose_replacement", "pose-replacement"),
+    ("posenet_distill", "pose-distill"),
+    ("renderer_replacement", "renderer-replacement"),
+    ("renderer_distill", "renderer-distill"),
+    ("halfframe", "halfframe-mask"),
+    ("entropy_archive", "entropy-archive"),
+    ("archive_codec", "archive-codec"),
+    ("cool_chic", "cool-chic-sidecar"),
+    ("self_compress", "self-compress"),
+    ("uniward", "uniward-distortion"),
+    ("calibrated_pe", "calibrated-pe"),
+    ("hessian", "hessian-bit-allocator"),
+    ("lagrangian", "lagrangian-rate-distortion"),
+    ("kl_distill", "kl-distill"),
+    ("kl_weight", "kl-distill"),
+    ("kldistill", "kl-distill"),
+    ("fp4_qat", "fp4-qat"),
+    ("fp8", "fp8-quant"),
+    ("mae", "mae-pretrain"),
+    ("optimized", "renderer-optimized"),
+    ("sweep", "sweep-orchestrator"),
+    ("rescue", "rescue-recovery"),
+    ("training", "training-baseline"),
+    ("smoke", "smoke-only"),
+)
+
+
+def _classify_lane_script(path: Path) -> str:
+    """Return the canonical lane class for a remote_lane_*.sh path.
+
+    Heuristic: lowercase the stem, normalize separators, and pick the first
+    matching keyword from _LANE_CLASS_KEYWORDS. Falls back to "uncategorized"
+    so the check always assigns a class (the proof still has to exist).
+    """
+    stem = path.stem.lower().replace("-", "_")
+    for kw, cls in _LANE_CLASS_KEYWORDS:
+        if kw in stem:
+            return cls
+    return "uncategorized"
+
+
+def check_lane_classes_have_pipeline_proof(
+    repo_root: Path | None = None,
+    strict: bool = False,
+    verbose: bool = True,
+) -> list[str]:
+    """Verify every lane CLASS has at least one complete-pipeline proof.
+
+    Acceptance: a class is "proven" when ``.omx/state/lane_class_proofs.json``
+    contains an entry like::
+
+        {
+          "renderer-replacement": {
+            "proven_by_lane": "lane_d_v3_full_engineering",
+            "proof_kind": "production-deploy",       // or "modal-dry-run"
+            "score": 1.05,                           // optional but recommended
+            "score_lane_tag": "[contest-CUDA]",      // CLAUDE.md non-neg
+            "timestamp_utc": "2026-04-28T22:07:00Z",
+            "notes": "Lane G v3 corrected KL weight, archive 694 KB"
+          },
+          ...
+        }
+
+    A new lane CLASS without a proof = FAIL. This catches the Lane RM-d class
+    of bug PERMANENTLY: the first time a brand-new lane class ships, the
+    operator MUST register a proof or the launcher refuses to deploy.
+
+    SHIPS WARN-ONLY initially (strict=False) so the existing 70 lanes have
+    a backfill window. Promotion plan: backfill _LANE_CLASS_PROOFS_REL with
+    one proof per existing class (~10-15 entries), then flip strict=True via
+    the standard Lane A → strict pattern.
+    """
+    import json as _json
+
+    root = repo_root or REPO_ROOT
+    scripts_dir = root / "scripts"
+    proofs_path = root / LANE_CLASS_PROOFS_REL
+    violations: list[str] = []
+
+    if not scripts_dir.is_dir():
+        if verbose:
+            print("  [lane-class-proof] SKIP: scripts/ not present")
+        return violations
+
+    # Collect (class -> example_lane) for every remote_lane_*.sh.
+    classes: dict[str, list[str]] = {}
+    for path in sorted(scripts_dir.glob("remote_lane_*.sh")):
+        cls = _classify_lane_script(path)
+        classes.setdefault(cls, []).append(path.stem)
+
+    if not classes:
+        if verbose:
+            print("  [lane-class-proof] SKIP: no remote_lane_*.sh found")
+        return violations
+
+    # Load proofs (missing file => zero proofs => every class violates).
+    proofs: dict = {}
+    if proofs_path.exists():
+        try:
+            data = _json.loads(proofs_path.read_text())
+            if isinstance(data, dict):
+                proofs = data
+        except (_json.JSONDecodeError, OSError):
+            proofs = {}
+
+    n_proven = 0
+    for cls, lanes in sorted(classes.items()):
+        proof = proofs.get(cls)
+        if not proof or not isinstance(proof, dict):
+            example = lanes[0]
+            violations.append(
+                f"lane class {cls!r} has no proof in {LANE_CLASS_PROOFS_REL} "
+                f"(example lane: {example}). Register one via Modal "
+                f"(experiments/modal_auth_eval.py) or canonical local smoke."
+            )
+            continue
+        # Soft schema: require proven_by_lane + timestamp_utc at minimum.
+        if not proof.get("proven_by_lane"):
+            violations.append(
+                f"lane class {cls!r} proof missing 'proven_by_lane' field"
+            )
+            continue
+        if not proof.get("timestamp_utc"):
+            violations.append(
+                f"lane class {cls!r} proof missing 'timestamp_utc' field"
+            )
+            continue
+        n_proven += 1
+
+    if verbose:
+        if violations:
+            print(
+                f"  [lane-class-proof] {len(violations)} violation(s) across "
+                f"{len(classes)} lane class(es) (proven={n_proven}):"
+            )
+            for v in violations[:20]:
+                print(f"    • {v}")
+            if len(violations) > 20:
+                print(f"    ... and {len(violations) - 20} more")
+        else:
+            print(
+                f"  [lane-class-proof] OK: {len(classes)} lane class(es) "
+                f"all proven"
+            )
+
+    if violations and strict:
+        raise MetaBugViolation(
+            "LANE CLASSES MUST HAVE PIPELINE PROOF (Check 65 — closes the "
+            "Lane RM-d class of bug). New lane classes shipping without a "
+            "complete dispatch → train → archive → auth_eval proof on file. "
+            "Add an entry to .omx/state/lane_class_proofs.json — see check "
+            "docstring for schema.\n\nViolations:\n"
             + "\n".join(f"  • {v}" for v in violations[:50])
         )
     return violations

@@ -153,8 +153,47 @@ def get_ssh_details(instance_id: int) -> tuple[str, int]:
     return host, int(port)
 
 
-def destroy_instance(instance_id: int) -> None:
-    """Destroy a Vast.ai instance (best-effort, no-raise)."""
+def destroy_instance(
+    instance_id: int,
+    *,
+    recover: bool = True,
+    lane_label: str | None = None,
+    recovery_timeout_s: int = 600,
+) -> None:
+    """Destroy a Vast.ai instance (best-effort, no-raise).
+
+    By default attempts artifact recovery FIRST via
+    ``tools.recover_lane_artifacts.recover_before_destroy`` so we never lose a
+    crashed-at-auth-eval training run again (Lane RM-d 2026-04-28 incident).
+    Pass ``recover=False`` to force an immediate destroy when the instance is
+    known-unreachable. Recovery failures are best-effort and never block
+    destroy.
+
+    Memory: ``feedback_artifact_recovery_canonical_workflow_20260428``.
+    """
+    if recover:
+        try:
+            sys.path.insert(0, str(REPO_ROOT))
+            from tools.recover_lane_artifacts import recover_before_destroy
+            label = lane_label or f"instance_{instance_id}"
+            print(
+                f"[destroy_instance] attempting artifact recovery from "
+                f"instance={instance_id} label={label} before destroy "
+                f"(timeout={recovery_timeout_s}s, --no-recover to skip)",
+                file=sys.stderr,
+            )
+            report = recover_before_destroy(
+                instance_id=instance_id,
+                lane_label=label,
+                overall_timeout_s=recovery_timeout_s,
+            )
+            if report is not None:
+                print(report.summary(), file=sys.stderr)
+        except (ImportError, AttributeError) as e:
+            sys.stderr.write(
+                f"[destroy_instance] recovery module unavailable ({e}); "
+                f"proceeding to destroy.\n"
+            )
     cmd = [
         "bash", "-c",
         f"echo y | {shlex.quote(str(VASTAI))} destroy instance {instance_id}",
@@ -786,7 +825,13 @@ def cmd_phase2_extract(args) -> int:
     if not ok:
         print(f"FATAL: CUDA probe failed: {msg}", file=sys.stderr)
         if not getattr(args, "no_destroy_on_fail", False):
-            destroy_instance(instance_id)
+            # CUDA probe failure means instance never produced artifacts — skip
+            # recovery (no training output yet). Instance label not relevant.
+            destroy_instance(
+                instance_id,
+                recover=not getattr(args, "no_recover", False),
+                lane_label=getattr(args, "label", None) or args.lane_script,
+            )
         return 1
     print(f"\n✓ phase2-extract SUCCESS")
     print(f"\nNext step:")
@@ -852,7 +897,11 @@ def cmd_phase2_launch(args) -> int:
     if not execute_lane_in_tmux(host, port, args.lane_script):
         print("FATAL: launch failed", file=sys.stderr)
         if not getattr(args, "no_destroy_on_fail", False):
-            destroy_instance(instance_id)
+            destroy_instance(
+                instance_id,
+                recover=not getattr(args, "no_recover", False),
+                lane_label=getattr(args, "label", None) or args.lane_script,
+            )
         return 1
 
     # Stage 2: post-launch verification poll (~60s) for NVDEC_BAD or SETUP_COMPLETE.
@@ -865,7 +914,12 @@ def cmd_phase2_launch(args) -> int:
             print(f"FATAL: setup_full.sh hit NVDEC_BAD on this host — auto-destroying", file=sys.stderr)
             print(f"  Instance had no NVDEC despite passing offer filter.", file=sys.stderr)
             print(f"  Per memory feedback_vastai_nvdec_host_variation: same image, different host = different NVDEC.", file=sys.stderr)
-            destroy_instance(instance_id)
+            # NVDEC_BAD => no training output, skip recovery (no point).
+            destroy_instance(
+                instance_id,
+                recover=False,
+                lane_label=getattr(args, "label", None) or args.lane_script,
+            )
             print(f"\nRetry: re-run phase1 + phase2 to get a fresh host.", file=sys.stderr)
             return 2
         elif outcome == "SETUP_COMPLETE":
@@ -967,12 +1021,24 @@ def main() -> int:
     add_common(p2e)
     p2e.add_argument("--instance-id", required=True)
     p2e.add_argument("--no-destroy-on-fail", action="store_true")
+    p2e.add_argument(
+        "--no-recover", action="store_true",
+        help=(
+            "Skip artifact recovery before destroy (use only when instance "
+            "is known-unreachable). Default: recover first via "
+            "tools/recover_lane_artifacts.py."
+        ),
+    )
 
     # phase2-launch — atomic subshell-detach SSH (~10s)
     p2l = sub.add_parser("phase2-launch", help="Subshell-detach launch lane (~10s)")
     add_common(p2l)
     p2l.add_argument("--instance-id", required=True)
     p2l.add_argument("--no-destroy-on-fail", action="store_true")
+    p2l.add_argument(
+        "--no-recover", action="store_true",
+        help="Skip artifact recovery before destroy (see phase2-extract).",
+    )
     # Explicit fire-and-forget opt-out for the Stage 2 setup.log poll.
     # Default OFF so the canonical workflow always polls + auto-destroys
     # NVDEC_BAD hosts. Per preflight Check 54
