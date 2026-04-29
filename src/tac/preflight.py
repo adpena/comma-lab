@@ -571,6 +571,15 @@ def preflight_all(
         check_memory_md_size_under_ceiling(strict=False, verbose=verbose)
         check_canonical_bootstraps_write_provenance(strict=True, verbose=verbose)
 
+        # 2026-04-28 Codex F5 (5-finding adversarial review): every lane
+        # script that calls contest_auth_eval MUST either use the canonical
+        # experiments/contest_auth_eval.py module (which has the F5 guard
+        # for missing config.env) OR check PYTHON_INFLATE=renderer locally.
+        # Lane RM-d burned 1+ hour discovering the canonical inflate env
+        # was missing on the remote tarball. Lands at 0 live violations
+        # post-F5 fix → ships STRICT immediately.
+        check_lane_scripts_set_up_inflate_environment(strict=True, verbose=verbose)
+
     # 2. Training inputs (only if profile + tto_frames provided)
     if profile_name and tto_frames_path and gt_poses_path and masks_path and profile_arch:
         preflight_training_inputs(
@@ -10830,6 +10839,110 @@ def check_canonical_bootstraps_write_provenance(
     if violations and strict:
         raise MetaBugViolation(
             "CANONICAL BOOTSTRAPS MUST WRITE provenance.json.\n"
+            + "\n".join(f"  • {v}" for v in violations[:50])
+        )
+    return violations
+
+
+# ════════════════════════════════════════════════════════════════════════════
+# Check 63 (63rd meta-bug): every lane script that calls contest_auth_eval.py
+#                          MUST verify config.env exists with PYTHON_INFLATE=
+#                          renderer BEFORE the call (or rely on the canonical
+#                          guard inside contest_auth_eval.py itself, which
+#                          F5 added).
+# ════════════════════════════════════════════════════════════════════════════
+#
+# 2026-04-28: Codex F5. Lane RM-d ran 1+ hour pose TTO, built archive, then
+# crashed at Stage 3 contest_auth_eval because submissions/robust_current/
+# config.env was not on the remote (the launcher tarball silently excluded
+# .env files). inflate.sh fell into its ffmpeg path and tried to open
+# extracted/0.mkv which never exists in a renderer-archive layout.
+#
+# The canonical fix is now layered:
+#  1. scripts/launch_lane_on_vastai.py includes .env in the tarball suffix list
+#  2. experiments/contest_auth_eval.py hard-fails if config.env is missing
+#  3. THIS CHECK ensures lane scripts call the GUARDED contest_auth_eval (not
+#     a stale local copy) and don't try to bypass the guard.
+#
+# Static scan: grep every scripts/remote_lane_*.sh for `contest_auth_eval`
+# and verify the script either (a) calls the canonical
+# experiments/contest_auth_eval.py (which has the guard) OR (b) has its own
+# `config.env` / `PYTHON_INFLATE` precondition check before the eval call.
+#
+# Live count at wire-in: 0 (verified post-F5 fix). Ships STRICT.
+
+def check_lane_scripts_set_up_inflate_environment(
+    repo_root: Path | None = None,
+    strict: bool = True,
+    verbose: bool = True,
+) -> list[str]:
+    """Verify lane scripts that call contest_auth_eval set up the env correctly.
+
+    Every scripts/remote_lane_*.sh that invokes contest_auth_eval MUST
+    either:
+      (a) Call experiments/contest_auth_eval.py (which has the F5 guard
+          for missing config.env), OR
+      (b) Have its own pre-check that verifies submissions/robust_current/
+          config.env exists with PYTHON_INFLATE=renderer.
+
+    Catches the F5 bug class: lanes that train + build archive successfully
+    but crash at Stage 3 because the inflate environment is incomplete.
+    Reference: feedback_codex_review_5_findings_FIXED_20260428 +
+    Lane RM-d 0.mkv crash post-mortem.
+
+    Returns list of violations. Raises MetaBugViolation if strict and any.
+    """
+    root = repo_root or REPO_ROOT
+    scripts_dir = root / "scripts"
+    violations: list[str] = []
+    n_scanned = 0
+    if not scripts_dir.is_dir():
+        if verbose:
+            print("  [lane-inflate-env] SKIP: scripts/ not present")
+        return violations
+
+    canonical_module_substr = "experiments/contest_auth_eval.py"
+    canonical_guard_grep = "PYTHON_INFLATE=renderer"
+
+    for path in sorted(scripts_dir.glob("remote_lane_*.sh")):
+        n_scanned += 1
+        try:
+            text = path.read_text(errors="ignore")
+        except OSError:
+            continue
+        # Skip scripts that do NOT invoke contest_auth_eval at all
+        if "contest_auth_eval" not in text:
+            continue
+        # Acceptance path (a): calls the canonical experiments/contest_auth_eval.py
+        # which has the F5 guard built in.
+        if canonical_module_substr in text:
+            continue
+        # Acceptance path (b): has its own PYTHON_INFLATE=renderer pre-check
+        if canonical_guard_grep in text:
+            continue
+        # Otherwise this lane bypasses both guards — flag it.
+        rel = str(path.relative_to(root))
+        violations.append(
+            f"{rel}: calls contest_auth_eval but neither (a) routes through "
+            f"experiments/contest_auth_eval.py (which has the F5 config.env "
+            f"guard) nor (b) checks PYTHON_INFLATE=renderer locally. The lane "
+            f"may train successfully then crash at Stage 3 with extracted/0.mkv "
+            f"missing. See Codex F5 (2026-04-28)."
+        )
+
+    if verbose:
+        if violations:
+            print(f"  [lane-inflate-env] {len(violations)} violation(s) across "
+                  f"{n_scanned} remote_lane_*.sh file(s):")
+            for v in violations:
+                print(f"    • {v}")
+        else:
+            print(f"  [lane-inflate-env] OK: {n_scanned} remote_lane_*.sh "
+                  f"scripts checked; all set up inflate env correctly")
+
+    if violations and strict:
+        raise MetaBugViolation(
+            "LANE SCRIPTS MUST SET UP INFLATE ENV (Codex F5 2026-04-28).\n"
             + "\n".join(f"  • {v}" for v in violations[:50])
         )
     return violations

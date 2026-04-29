@@ -594,6 +594,36 @@ def main() -> int:
             f"--upstream-dir missing evaluate.py: {upstream_dir}. "
             f"Did you forget to clone the pinned upstream snapshot?"
         )
+
+    # Codex F5 fix (2026-04-28, canonical guard for all lanes): the
+    # submission's inflate.sh sources $SELF_DIR/config.env to read
+    # PYTHON_INFLATE. If config.env is missing, inflate.sh falls into the
+    # legacy ffmpeg path and tries to read extracted/0.mkv, which never
+    # exists in a renderer-archive layout. Lane RM-d burned $1+ discovering
+    # this; the launcher tarball used to silently exclude .env files
+    # (fixed in scripts/launch_lane_on_vastai.py). Guard here so any future
+    # lane reusing contest_auth_eval gets a clear error instead of an
+    # opaque ffmpeg "No such file or directory" 200 lines downstream.
+    # Placed AFTER the upstream check so existing tests that pass a fake
+    # inflate.sh in tmp_path get the upstream-missing error first (the
+    # config.env check fires only when --inflate-sh resolves to a real
+    # submission directory that COULD have config.env).
+    inflate_dir = inflate_sh.parent
+    config_env = inflate_dir / "config.env"
+    if not config_env.exists():
+        raise SystemExit(
+            f"FATAL: {config_env} missing -- inflate.sh would fall into the\n"
+            f"       ffmpeg path and crash on extracted/0.mkv. Re-deploy with\n"
+            f"       the fixed launcher (Codex F5 2026-04-28) which includes\n"
+            f"       .env files via the .env suffix in _enumerate_python_and_shell."
+        )
+    config_text = config_env.read_text()
+    if "PYTHON_INFLATE=renderer" not in config_text:
+        raise SystemExit(
+            f"FATAL: {config_env} exists but does not set PYTHON_INFLATE=renderer.\n"
+            f"       inflate.sh would call its ffmpeg path which crashes on\n"
+            f"       renderer archives (no extracted/0.mkv). Update config.env."
+        )
     video_names_file = args.video_names_file.resolve()
     if not video_names_file.exists():
         # Common alt path

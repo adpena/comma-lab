@@ -183,6 +183,27 @@ print(f'archive {dst}: {os.path.getsize(dst)} bytes')
 
 log "=== Stage 3: contest_auth_eval on Lane RM archive ==="
 rm -rf "$LOG_DIR/eval_work"
+
+# Codex F5 fix (2026-04-28): canonical pre-flight for inflate.sh's
+# PYTHON_INFLATE env. Without config.env (which sets PYTHON_INFLATE=renderer),
+# inflate.sh falls into the ffmpeg path and crashes opening extracted/0.mkv
+# (which never exists in a renderer archive). The launcher tarball used to
+# silently exclude .env files; that's fixed in scripts/launch_lane_on_vastai.py
+# but we also defend in-script so any lane reusing this template is safe
+# even if the deploy path regresses.
+[ -f submissions/robust_current/config.env ] || {
+    log "FATAL: submissions/robust_current/config.env missing -- inflate.sh"
+    log "       will not know PYTHON_INFLATE=renderer and contest_auth_eval"
+    log "       will crash opening extracted/0.mkv. Re-deploy with the fixed"
+    log "       launcher (Codex F5 2026-04-28) which includes .env files."
+    exit 3
+}
+grep -q '^PYTHON_INFLATE=renderer' submissions/robust_current/config.env || {
+    log "FATAL: submissions/robust_current/config.env exists but does not set"
+    log "       PYTHON_INFLATE=renderer. inflate.sh would call ffmpeg path."
+    exit 3
+}
+
 "$PYBIN" -u experiments/contest_auth_eval.py \
     --archive "$ARCHIVE" \
     --inflate-sh submissions/robust_current/inflate.sh \

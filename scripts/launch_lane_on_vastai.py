@@ -337,10 +337,17 @@ def _autodiscover_referenced_files(paths: set[str], max_iter: int = 4) -> set[st
 
 
 def _enumerate_python_and_shell(root_subdir: str, max_total_mb: int = 50) -> list[str]:
-    """Enumerate all .py + .sh + .json + .toml + .md files under a subdir.
+    """Enumerate all .py + .sh + .json + .toml + .md + .txt + .env files under a subdir.
 
     Excludes __pycache__, *.pyc. Returns paths relative to REPO_ROOT.
     Caps cumulative size at `max_total_mb` to avoid runaway includes.
+
+    Codex F5 fix (2026-04-28): added .env to the suffix list because
+    submissions/robust_current/config.env is REQUIRED at remote eval time
+    (it's the file that sets PYTHON_INFLATE=renderer for inflate.sh; without
+    it, inflate.sh falls into the ffmpeg path and tries to read 0.mkv from
+    extracted/, which doesn't exist in the archive). Lane RM-d burned $1+
+    discovering this. Also added .env.example for completeness.
     """
     base = REPO_ROOT / root_subdir
     if not base.is_dir():
@@ -348,6 +355,7 @@ def _enumerate_python_and_shell(root_subdir: str, max_total_mb: int = 50) -> lis
     out: list[str] = []
     total_bytes = 0
     cap = max_total_mb * 1024 * 1024
+    allowed_suffixes = (".py", ".sh", ".json", ".toml", ".md", ".txt", ".env")
     for p in sorted(base.rglob("*")):
         if not p.is_file():
             continue
@@ -357,7 +365,7 @@ def _enumerate_python_and_shell(root_subdir: str, max_total_mb: int = 50) -> lis
             continue
         # Only ship code/config files from these dirs; data artifacts come
         # via explicit anchor includes
-        if p.suffix not in (".py", ".sh", ".json", ".toml", ".md", ".txt"):
+        if p.suffix not in allowed_suffixes:
             continue
         try:
             sz = p.stat().st_size
