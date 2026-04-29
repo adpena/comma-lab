@@ -12,10 +12,128 @@ from __future__ import annotations
 
 import math
 import os
+import sys
+import warnings
 from typing import Any
 
 import torch
 import torch.nn as nn
+
+
+def _normalize_quantization_mode(mode: str) -> str:
+    """Map user/profile spellings onto hardware capability names."""
+    normalized = mode.lower().replace("-", "_")
+    aliases = {
+        "hardware_fp4": "fp4",
+        "float4": "fp4",
+        "fp4_qat": "fp4",
+        "fake_fp4": "fp4",
+        "simulated_fp4": "fp4",
+        "hardware_fp8": "fp8",
+        "float8": "fp8",
+        "fp8_e4m3": "fp8",
+        "fp8_e4m3fn": "fp8",
+        "int8_qat": "int8",
+        "bf16_qat": "bf16",
+        "fp16_qat": "fp16",
+    }
+    return aliases.get(normalized, normalized)
+
+
+def _format_cuda_capability(device: torch.device) -> str:
+    try:
+        major, minor = torch.cuda.get_device_capability(device)
+        name = torch.cuda.get_device_name(device)
+        return f"CC {major}.{minor} ({name})"
+    except Exception:
+        return "CUDA capability unavailable"
+
+
+def get_supported_quantization_modes(device) -> set[str]:
+    """Return hardware quantization modes supported by a CUDA device.
+
+    Capability mapping:
+      * fp16: any CUDA device with detectable compute capability.
+      * bf16: CC >= 8.0 (Ampere+; A100/A6000/RTX 30-series/40-series).
+        T4 (CC 7.5) and P100 (CC 6.0) do NOT have hardware BF16 — Codex F4
+        (2026-04-28) caught this: previous code added bf16 to every CUDA
+        device, so a BF16 cast on T4 silently fell back to FP32 (or errored
+        in some torch versions), defeating the fail-fast gate that made
+        callers think they were getting deterministic BF16 bytes.
+      * int8: CC >= 7.5 (Turing+).
+      * fp8: CC >= 8.9 (Ada/Lovelace+; RTX 4090 is CC 8.9).
+      * fp4: CC >= 10.0 (Blackwell+).
+
+    If CUDA or compute-capability detection is unavailable, returns an empty
+    set rather than guessing.
+    """
+    dev = torch.device(device)
+    if dev.type != "cuda" or not torch.cuda.is_available():
+        return set()
+    try:
+        major, minor = torch.cuda.get_device_capability(dev)
+    except Exception:
+        return set()
+
+    # FP16 has hardware backing on every CUDA device we run on (CC >= 5.3
+    # really; the lowest CC we touch is P100 at 6.0). BF16 needs Ampere+.
+    modes = {"fp16"}
+    cc = (int(major), int(minor))
+    if cc >= (7, 5):
+        modes.add("int8")
+    if cc >= (8, 0):
+        modes.add("bf16")  # F4 fix: gate on CC >= 8.0 (Ampere+)
+    if cc >= (8, 9):
+        modes.add("fp8")
+    if cc >= (10, 0):
+        modes.add("fp4")
+    return modes
+
+
+def assert_quantization_hardware_supported(
+    mode: str,
+    device,
+    allow_simulation: bool = False,
+) -> None:
+    """Fail fast when a requested quantization mode is not hardware-backed.
+
+    ``allow_simulation=True`` is only for explicitly simulated research paths.
+    It emits a loud warning banner so logs cannot confuse simulated FP4/FP8
+    with hardware-supported execution.
+    """
+    dev = torch.device(device)
+    normalized = _normalize_quantization_mode(mode)
+    supported = get_supported_quantization_modes(dev)
+    if normalized in supported:
+        return
+
+    details = _format_cuda_capability(dev) if dev.type == "cuda" else f"device={dev}"
+    requirements = {
+        "fp4": "FP4 requires Blackwell-class CUDA hardware (CC >= 10.0).",
+        "fp8": "FP8 requires Ada/Lovelace-class CUDA hardware (CC >= 8.9).",
+        "int8": "INT8 tensor-core deployment requires Turing-class CUDA hardware (CC >= 7.5).",
+        "fp16": "FP16 requires a detectable CUDA device in this gate.",
+        "bf16": "BF16 requires Ampere-class CUDA hardware (CC >= 8.0). "
+                "T4 (CC 7.5) and P100 (CC 6.0) do NOT support hardware BF16.",
+    }
+    message = (
+        f"Quantization mode {mode!r} normalized to {normalized!r} is not "
+        f"hardware-supported on {details}. Supported modes: {sorted(supported)}. "
+        f"{requirements.get(normalized, '')}".strip()
+    )
+    if not allow_simulation:
+        raise ValueError(message)
+
+    banner = (
+        "\n" + "!" * 78 + "\n"
+        "WARNING: QUANTIZATION SIMULATION ENABLED\n"
+        f"{message}\n"
+        "This run is NOT hardware-backed for that mode; do not compare it as "
+        "a hardware QAT result.\n"
+        + "!" * 78
+    )
+    print(banner, file=sys.stderr)
+    warnings.warn(banner, RuntimeWarning, stacklevel=2)
 
 # ── Fake Quantization (for training) ─────────────────────────────────────
 
