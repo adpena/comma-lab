@@ -849,34 +849,55 @@ def cmd_phase2_extract(args) -> int:
 
 def _poll_setup_log_for_outcome(host: str, port: int, instance_id: int,
                                  timeout_seconds: int = 60) -> str:
-    """SSH-poll the remote setup.log for one of three outcomes:
+    """SSH-poll the remote setup.log for one of four outcomes:
     - "NVDEC_BAD" — Stage 0.5 lightweight NVDEC probe failed
+    - "LANE_CRASHED" — lane script ran but exited (no python process alive,
+      and run.log shows neither SETUP_COMPLETE nor active progress)
     - "SETUP_COMPLETE" — setup_full.sh wrote the SETUP_COMPLETE marker
-    - "RUNNING" — neither marker present (still running, no decision yet)
+    - "RUNNING" — still running, no decision yet
     - "SSH_FAILED" — couldn't reach the instance
 
-    Cheap (~10s). Used by phase2-launch to fail-fast on bad-NVDEC hosts so
-    operators don't burn $0.27/hr × hours on hosts that can't run our workload.
+    2026-04-29: extended LANE_CRASHED detection after v4 dispatches showed
+    UnboundLocalError-class crashes that occurred AFTER setup_full.sh
+    completed. setup.log alone was insufficient — added pgrep + run.log
+    timestamp check.
     """
     import time
     deadline = time.time() + timeout_seconds
     while time.time() < deadline:
+        # Probe: check setup.log markers + check for python process alive.
+        # If python died AND run.log hasn't grown for 30s, assume CRASHED.
         cmd = [
             "ssh", "-o", "StrictHostKeyChecking=no",
             "-o", "UserKnownHostsFile=/dev/null",
             "-o", "ConnectTimeout=5", "-o", "LogLevel=ERROR",
             "-p", str(port), f"root@{host}",
+            # Detection logic:
+            #   - NVDEC_BAD: setup.log shows NVDEC missing
+            #   - SETUP_COMPLETE: setup.log has SETUP_COMPLETE marker AND
+            #     run.log was modified in last 2 min (lane is alive)
+            #   - LANE_CRASHED: SETUP_COMPLETE but run.log stale ≥2 min
+            #     (python process died — UnboundLocalError, OOM, etc.)
+            #   - RUNNING: still in setup
+            # Avoids `pgrep -f` (would self-match this regex). Uses
+            # run.log freshness as the canonical liveness signal.
             ("if grep -q 'NVDEC missing\\|NVDEC_MISSING' /workspace/setup.log 2>/dev/null; then "
-             "echo NVDEC_BAD; "
+             "  echo NVDEC_BAD; "
              "elif grep -q 'SETUP_COMPLETE' /workspace/setup.log 2>/dev/null; then "
-             "echo SETUP_COMPLETE; "
-             "else echo RUNNING; fi"),
+             "  if find /workspace/pact -name run.log -mmin -2 2>/dev/null | grep -q .; then "
+             "    echo SETUP_COMPLETE; "
+             "  else "
+             "    echo LANE_CRASHED; "
+             "  fi; "
+             "else "
+             "  echo RUNNING; "
+             "fi"),
         ]
         try:
             r = subprocess.run(cmd, capture_output=True, text=True, timeout=15)
             if r.returncode == 0:
                 outcome = r.stdout.strip().splitlines()[-1] if r.stdout.strip() else "RUNNING"
-                if outcome in ("NVDEC_BAD", "SETUP_COMPLETE"):
+                if outcome in ("NVDEC_BAD", "LANE_CRASHED", "SETUP_COMPLETE"):
                     return outcome
         except subprocess.SubprocessError:
             return "SSH_FAILED"
@@ -910,17 +931,19 @@ def cmd_phase2_launch(args) -> int:
             )
         return 1
 
-    # Stage 2: post-launch verification poll (~60s) for NVDEC_BAD or SETUP_COMPLETE.
-    # This closes the "phase2-launch returns success but lane never starts" gap
-    # that burned $$ on idle bad-NVDEC hosts.
+    # Stage 2: post-launch verification poll (~240s).
+    # 2026-04-29: extended from 60s to 240s + LANE_CRASHED detection after
+    # v4 dispatches showed UnboundLocalError-class crashes that occurred
+    # AFTER setup_full.sh completed but before any heartbeat. The new poll
+    # detects: NVDEC_BAD (Stage 0.5) | LANE_CRASHED (python died early) |
+    # SETUP_COMPLETE (with python still running OR run.log fresh).
     if not getattr(args, "skip_post_verify", False):
-        print("=== phase2-launch Stage 2: Post-launch outcome poll (~60s) ===")
-        outcome = _poll_setup_log_for_outcome(host, port, instance_id, timeout_seconds=60)
+        print("=== phase2-launch Stage 2: Post-launch outcome poll (~240s) ===")
+        outcome = _poll_setup_log_for_outcome(host, port, instance_id, timeout_seconds=240)
         if outcome == "NVDEC_BAD":
             print(f"FATAL: setup_full.sh hit NVDEC_BAD on this host — auto-destroying", file=sys.stderr)
             print(f"  Instance had no NVDEC despite passing offer filter.", file=sys.stderr)
             print(f"  Per memory feedback_vastai_nvdec_host_variation: same image, different host = different NVDEC.", file=sys.stderr)
-            # NVDEC_BAD => no training output, skip recovery (no point).
             destroy_instance(
                 instance_id,
                 recover=False,
@@ -928,8 +951,20 @@ def cmd_phase2_launch(args) -> int:
             )
             print(f"\nRetry: re-run phase1 + phase2 to get a fresh host.", file=sys.stderr)
             return 2
+        elif outcome == "LANE_CRASHED":
+            print(f"FATAL: lane script crashed early — python process gone, run.log stale.", file=sys.stderr)
+            print(f"  Likely a code bug surfaced at training startup (e.g., UnboundLocalError, missing dep).", file=sys.stderr)
+            print(f"  Recovering artifacts before destroy...", file=sys.stderr)
+            # Lane crashed → likely no training output, but recover anyway in case
+            # any logs/artifacts were written.
+            destroy_instance(
+                instance_id,
+                recover=True,
+                lane_label=getattr(args, "label", None) or args.lane_script,
+            )
+            return 3
         elif outcome == "SETUP_COMPLETE":
-            print(f"  outcome=SETUP_COMPLETE (setup_full.sh done)")
+            print(f"  outcome=SETUP_COMPLETE (setup_full.sh done, lane process verified alive)")
         elif outcome == "SSH_FAILED":
             print(f"  WARNING: SSH probe failed during post-launch verify; lane may still be running. Verify manually.")
         else:
