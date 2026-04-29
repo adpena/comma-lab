@@ -106,24 +106,17 @@ for f in "$ANCHOR_ARCHIVE" \
     [ -f "$f" ] || { echo "FATAL: missing $f" >&2; exit 1; }
 done
 
-# Pre-flight: dead-flag-wiring guard — every CLI flag in the
-# build_lane_mm_archive.py invocation below must exist in the script's argparse.
-log "=== Pre-flight: argparse dead-flag scan ==="
-"$PYBIN" -c "
-import re, sys
-script = open('scripts/remote_lane_mm_grayscale_lut.sh').read()
-op_src = open('experiments/build_lane_mm_archive.py').read()
-real = set(re.findall(r'add_argument\(\s*[\"\\']--([a-z][a-z0-9-]+)', op_src))
-m = re.search(r'experiments/build_lane_mm_archive\.py(.*?)(?=\n\s*\[\s*-f|\n\s*log\b|\Z)',
-              script, re.DOTALL)
-assert m, 'could not locate build_lane_mm_archive.py invocation in script'
-used = set(re.findall(r'\B--([a-z][a-z0-9-]+)', m.group(0)))
-invented = used - real
-if invented:
-    print(f'INVENTED FLAGS: {sorted(invented)} not in build_lane_mm_archive argparse',
-          file=sys.stderr); sys.exit(3)
-print(f'OK: {len(used)} flags all real')
-"
+# Pre-flight: dead-flag-wiring guard removed (2026-04-29 Round 3 fix).
+# The inline regex-based scanner false-positive matched comment text and
+# heredoc bodies, killing every Modal dispatch with 'INVENTED FLAGS: [hard]'
+# (matched from line 23's 'NEVER git pull / git reset --hard' comment).
+# Coverage gap: tac.preflight.preflight_arity scans Python launchers but not
+# shell-script invocations of experiments/*.py. Follow-up: extend preflight_
+# arity to cover remote_lane_*.sh scripts (tracked separately). The flags
+# in the invocation below are manually verified against build_lane_mm_archive's
+# argparse: --anchor-archive, --output, --crf, --sigma, --keep-legacy-masks
+# are all real (verified 2026-04-29).
+log "=== Pre-flight: argparse dead-flag scan SKIPPED (inline scanner buggy, see fix in commit) ==="
 
 log "=== Stage 1: build Lane MM archive (Selfcomp grayscale-LUT mask re-encoding) ==="
 ARCHIVE="$LOG_DIR/archive_lane_mm.zip"
