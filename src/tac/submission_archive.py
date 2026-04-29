@@ -514,7 +514,15 @@ def load_optimized_poses(
             decode_lora_v2_poses_dict,
             is_lora_v2_poses_dict,
         )
-        if is_lora_poses_dict(obj):
+        from tac.pose_delta_codec import (
+            decode_pose_deltas,
+            is_pose_delta_dict,
+        )
+        if is_pose_delta_dict(obj):
+            # Lane PD: per-pair pose deltas + anchor + per-channel scale.
+            # See src/tac/pose_delta_codec.py for the on-disk schema.
+            poses = decode_pose_deltas(obj, pose_dim=pose_dim)
+        elif is_lora_poses_dict(obj):
             poses = decode_lora_poses_dict(obj, pose_dim=pose_dim)
         elif is_lora_v2_poses_dict(obj):
             poses = decode_lora_v2_poses_dict(obj, pose_dim=pose_dim)

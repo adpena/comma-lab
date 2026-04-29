@@ -1,0 +1,200 @@
+# trace/exploration_tree.yaml
+#
+# The exploration graph for the pact lab's comma.ai challenge entry,
+# encoded as a DAG via nesting + also_depends_on cross-references.
+#
+# Node types: question | decision | experiment | dead_end | pivot | observation
+# Edge types: implicit (parent->child via nesting) and explicit
+#             (also_depends_on for convergence points).
+
+ara_version: 0.1
+last_updated: 2026-04-29
+maintained_by: tools/ara_compile.py (semi-automated)
+
+root_question:
+  id: Q0
+  text: "What is the lowest score achievable on the comma.ai compression
+         challenge given the strict-scorer-rule and 30-min CPU inflate budget?"
+  era_partition:
+    - era1: codec + post-filter (4.06 -> 1.73)
+    - era2: neural renderer (1.73 -> 1.05)
+    - era3: Selfcomp paradigm (live, no scores reported here)
+
+era1:
+  question:
+    id: Q1
+    text: "Can a tiny learned post-filter beat hand-tuned codec parameters?"
+    parent: Q0
+
+  decisions:
+    - id: D1.1
+      type: decision
+      text: "Use SVT-AV1 with film-grain synthesis, not x265"
+      alternatives_rejected:
+        - {kind: x265, reason: "honest floor 3.25; does not reach the byte budget"}
+        - {kind: ffv1, reason: "lossless; archive too large"}
+      evidence: ../evidence/era1/codec_comparison/baseline_floors.csv
+
+    - id: D1.2
+      type: decision
+      text: "Backpropagate through frozen PoseNet+SegNet rather than optimize PSNR"
+      rationale: "scorer is a perception loss, not a pixel loss"
+      evidence: ../evidence/era1/sensitivity_analysis/dS_dseg_dS_dpose.json
+
+    - id: D1.3
+      type: decision
+      text: "Best-checkpoint int8 selection (the trick)"
+      rationale: "QAT alone leaves a 2.25x train-to-deploy gap on PoseNet"
+      evidence: ../evidence/era1/qat_ema_best_checkpoint/gap_summary.json
+      also_depends_on: [E5]
+
+  experiments:
+    - id: E1
+      tests_claim: C1
+      result: "effective rank ~1.008/6, condition number ~399"
+      evidence: ../evidence/jacobian/svd_summary.json
+    - id: E2
+      tests_claim: C2
+      result: "trust radius < 1e-4 px RMS; pseudoinverse fails"
+      evidence: ../evidence/jacobian/trust_region_sweep.json
+    - id: E3
+      tests_claim: C3
+      result: "56.6% of pixels moved; 90.3% energy mid-band"
+      evidence: ../evidence/cnn_residual/karpathy_signature.json
+    - id: E4
+      tests_claim: C4
+      result: "log-linear fit R^2 > 0.97; score = -0.159 ln(h) + 2.382"
+      evidence: ../evidence/era1/width_scaling/summary.csv
+
+  dead_ends:
+    - id: DE1.1
+      hypothesis: "single-step Moore-Penrose pseudoinverse correction"
+      failure_mode: "trust radius too small; pose 0.074 -> 0.235 (3x worse)"
+      lesson: "any closed-form / single-step approach is mathematically dead"
+      evidence: ../evidence/jacobian/pseudoinverse_failure.json
+    - id: DE1.2
+      hypothesis: "Gaussian blur outside 7%-saliency corridor"
+      failure_mode: "PoseNet +90%; chroma-only variant +105%"
+      lesson: "all spatial preprocessing kills PoseNet"
+      evidence: ../evidence/era1/preprocessing_dead_ends/blur_chroma_results.json
+    - id: DE1.3
+      hypothesis: "ROI-trained post-filter on wrong archive distribution"
+      failure_mode: "scored 2.35 vs 2.05 baseline"
+      lesson: "always train on frames decoded from the EXACT submission archive"
+      evidence: ../evidence/era1/distribution_shift/wrong_archive_score.json
+
+  observation_to_pivot:
+    - id: O1
+      text: "Era 1 plateaued at 1.73 even after week-long width-scaling sweeps;
+             SegNet term refuses to drop below 0.006 (soft-vs-hard argmax gap)."
+
+era2:
+  pivot:
+    id: P1
+    parent: O1
+    type: pivot
+    trigger: "1.73 plateau on the post-filter approach + hypothesis that the
+              codec floor is the bottleneck, not the architecture"
+    rationale: "if AV1 destroys the mid-frequency structure that PoseNet reads,
+                synthesizing frames from per-pair embeddings could bypass that
+                destruction entirely"
+
+  question:
+    id: Q2
+    text: "Can a 287K-param renderer that takes per-pair pose+mask embeddings
+           and emits pixels beat the codec+post-filter floor?"
+    parent: P1
+
+  decisions:
+    - id: D2.1
+      type: decision
+      text: "Architecture: dilated-h64 AsymmetricPairGenerator"
+      alternatives_rejected:
+        - {kind: PSD, reason: "alternate, advisory only"}
+        - {kind: PixelShuffle, reason: "spatial rearrangement hurts PoseNet"}
+      evidence: ../evidence/era2/architecture_sweep/summary.csv
+    - id: D2.2
+      type: decision
+      text: "Per-pair pose TTO at compress time, warm-started from baseline poses"
+      rationale: "rank-1 Jacobian basin (C1, C2) is razor-sharp; warm start is
+                  the only viable initialization"
+      evidence: ../evidence/era2/lane_a_landed/contest_auth_eval.json
+    - id: D2.3
+      type: decision
+      text: "KL distill on SegNet logits at T=2.0, weight=0.002"
+      rationale: "weights >= 0.01 collapse PoseNet; 0.002 is the upper bound
+                  that sustains the SegNet boundary signal without overwhelming
+                  the renderer's pose path"
+      evidence: ../evidence/era2/lane_g_v3_landed/contest_auth_eval.json
+
+  pivots_inside_era2:
+    - id: P2
+      type: pivot
+      trigger: "MPS-vs-CUDA 23x PoseNet drift discovery (2026-04-25)"
+      rationale: "ALL prior 'auth' scores were measurement artifacts; the true
+                  baseline is 0.90 and contest-CUDA is the ONLY valid measurement
+                  surface from this point forward"
+      consequence:
+        - new_constraint: "ALL auth eval on CUDA"
+        - new_static_check: "check_no_mps_fallback_default (#1 STRICT)"
+        - retroactive_invalidation: "every Era 1 'auth' number > 1.73 is now
+                                     [MPS-PROXY] advisory only"
+      evidence: ../evidence/era2/mps_cuda_drift/summary_2026-04-25.json
+
+  experiments:
+    - id: E7
+      tests_claim: C7
+      result: "1.15 [contest-CUDA] (694KB)"
+      evidence: ../evidence/era2/lane_a_landed/contest_auth_eval.json
+    - id: E8
+      tests_claim: C8
+      result: "1.05 [contest-CUDA] (Vast.ai 4090); 1.04 [Modal-T4-CUDA] repro"
+      evidence: ../evidence/era2/lane_g_v3_landed/contest_auth_eval.json
+    - id: E10
+      tests_claim: C10
+      result: "78 STRICT checks as of 2026-04-29"
+      evidence: ../evidence/preflight/strict_check_catalog.json
+
+  dead_ends:
+    - id: DE2.1
+      hypothesis: "radial-zoom 1-DOF pose representation (Lane M-V2)"
+      failure_mode: "scored 1.84; train/inference pose-pad asymmetry confounder"
+      lesson: "rank-1 PoseNet OUTPUT sensitivity != rank-1 renderer INPUT
+               subspace; Check 42 STRICT prevents future asymmetry bugs"
+      revisit_protocol: "Lane M-V3 clean retest (E9 PENDING)"
+      evidence: ../evidence/era2/lane_m_v2_audit/council_findings.md
+    - id: DE2.2
+      hypothesis: "degree-10 polynomial fit to pose trajectory (Lane GP v3)"
+      failure_mode: "scored 89.67; textbook Runge phenomenon at endpoints"
+      lesson: "polynomial basis cannot represent the trajectory at degree 10;
+               revive with DCT or B-spline if the rate gain (~2%) is worth it"
+      evidence: ../evidence/era2/lane_gp_v3_runge/contest_auth_eval.json
+    - id: DE2.3
+      hypothesis: "UNIWARD-style cost-weighted encoding (Lane UNIWARD v8)"
+      failure_mode: "scored 1.14 ~= Lane A noise; encoder is no-op on bitstream
+                     without an SLI1 inflate-time decoder"
+      lesson: "future encoder-only experiments must declare an expected
+               bitstream delta as a precondition"
+      evidence: ../evidence/era2/lane_uniward_v8/contest_auth_eval.json
+
+era3:
+  question:
+    id: Q3
+    text: "Can the Selfcomp 0.38 paradigm (block-FP self-compression,
+           grayscale-LUT masks, analytical pose) close the gap to sub-0.50?"
+    parent: P1
+    status: live; no [contest-CUDA] scores reported here per CLAUDE.md
+            non-negotiable; eight Modal lanes in flight.
+
+# Cross-era observation
+meta_observations:
+  - id: M1
+    text: "Each era abandons an assumption of the previous: codec-as-bottleneck
+           (Era 1->2), pixel-space TTO (Era 2->3 conditioning-space TTO),
+           uniform precision (Era 3 block-FP). Score makes a discrete jump at
+           each transition (1.73 -> 1.15 -> 1.05 -> ?)."
+  - id: M2
+    text: "The most consequential discovery in the project was a measurement
+           bug, not a model improvement (P2: MPS-CUDA drift). The lab-rigor
+           narrative under the score narrative is publishable independent of
+           any further score change."
