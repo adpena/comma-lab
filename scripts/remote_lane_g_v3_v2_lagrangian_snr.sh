@@ -37,9 +37,9 @@
 # `--kl-distill-snr-target` and `--kl-distill-snr-eta` are verified
 # against optimize_poses.py argparse below in the dead-flag scan.
 set -euo pipefail
-WORKSPACE=/workspace/pact
-PYBIN=/opt/conda/bin/python
-source "$WORKSPACE/env.sh"
+WORKSPACE="${WORKSPACE:-/workspace/pact}"
+PYBIN="${PYBIN:-/opt/conda/bin/python}"
+[ -f "$WORKSPACE/env.sh" ] && source "$WORKSPACE/env.sh"
 cd "$WORKSPACE"
 
 LOG_DIR="$WORKSPACE/lane_g_v3_v2_results"

@@ -29,9 +29,9 @@
 # Anchor:         Lane A's 1.15 [contest-CUDA] artifacts at
 #                 experiments/results/lane_a_landed/.
 set -euo pipefail
-WORKSPACE=/workspace/pact
-PYBIN=/opt/conda/bin/python
-source "$WORKSPACE/env.sh"
+WORKSPACE="${WORKSPACE:-/workspace/pact}"
+PYBIN="${PYBIN:-/opt/conda/bin/python}"
+[ -f "$WORKSPACE/env.sh" ] && source "$WORKSPACE/env.sh"
 cd "$WORKSPACE"
 
 LOG_DIR="$WORKSPACE/lane_rm_results"

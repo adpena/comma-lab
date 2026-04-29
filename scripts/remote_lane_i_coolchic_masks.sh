@@ -49,9 +49,9 @@
 #                                          FP4A export, not CCh1. Stage 3
 #                                          handles export, Stage 5 the eval.)
 set -euo pipefail
-WORKSPACE=/workspace/pact
-PYBIN=/opt/conda/bin/python
-source "$WORKSPACE/env.sh"
+WORKSPACE="${WORKSPACE:-/workspace/pact}"
+PYBIN="${PYBIN:-/opt/conda/bin/python}"
+[ -f "$WORKSPACE/env.sh" ] && source "$WORKSPACE/env.sh"
 cd "$WORKSPACE"
 export PYTHONHASHSEED=1234
 # 2026-04-27 lesson (Lane D + Lane S): force upstream dir for scorer search.

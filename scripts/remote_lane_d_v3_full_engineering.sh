@@ -55,9 +55,9 @@
 # contest_auth_eval.py was verified by argparse-grep on the target sources
 # (the in-script dead-flag scanner re-validates this at launch time).
 set -euo pipefail
-WORKSPACE=/workspace/pact
-PYBIN=/opt/conda/bin/python
-source "$WORKSPACE/env.sh"
+WORKSPACE="${WORKSPACE:-/workspace/pact}"
+PYBIN="${PYBIN:-/opt/conda/bin/python}"
+[ -f "$WORKSPACE/env.sh" ] && source "$WORKSPACE/env.sh"
 cd "$WORKSPACE"
 # Profile uses seed=43 (V1=42, V2=42) — different RNG basin than V1/V2.
 export PYTHONHASHSEED=43

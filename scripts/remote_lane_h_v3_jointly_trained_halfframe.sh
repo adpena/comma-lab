@@ -27,9 +27,9 @@
 # CLI flag verification (per memory feedback_dead_flag_wiring_pattern):
 # the in-script dead-flag scanner re-validates this at launch time.
 set -euo pipefail
-WORKSPACE=/workspace/pact
-PYBIN=/opt/conda/bin/python
-source "$WORKSPACE/env.sh"
+WORKSPACE="${WORKSPACE:-/workspace/pact}"
+PYBIN="${PYBIN:-/opt/conda/bin/python}"
+[ -f "$WORKSPACE/env.sh" ] && source "$WORKSPACE/env.sh"
 cd "$WORKSPACE"
 export PYTHONHASHSEED=67
 export TAC_UPSTREAM_DIR="${TAC_UPSTREAM_DIR:-$WORKSPACE/upstream}"

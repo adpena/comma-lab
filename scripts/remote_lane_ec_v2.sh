@@ -7,7 +7,7 @@ PYBIN="${PYBIN:-python3}"
 cd "$WORKSPACE"
 if [ -f "$WORKSPACE/env.sh" ]; then
     # shellcheck disable=SC1091
-    source "$WORKSPACE/env.sh"
+    [ -f "$WORKSPACE/env.sh" ] && source "$WORKSPACE/env.sh"
 fi
 
 export PYTHONPATH="src:upstream:${PYTHONPATH:-}"

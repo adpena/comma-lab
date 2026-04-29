@@ -51,9 +51,9 @@
 # `kl_distill_segnet_only` from tac.losses (per-step log shows
 # `kl=<float>` when --kl-distill-weight > 0).
 set -euo pipefail
-WORKSPACE=/workspace/pact
-PYBIN=/opt/conda/bin/python
-source "$WORKSPACE/env.sh"
+WORKSPACE="${WORKSPACE:-/workspace/pact}"
+PYBIN="${PYBIN:-/opt/conda/bin/python}"
+[ -f "$WORKSPACE/env.sh" ] && source "$WORKSPACE/env.sh"
 cd "$WORKSPACE"
 
 LOG_DIR="$WORKSPACE/lane_g_v3_results"

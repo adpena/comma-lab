@@ -45,8 +45,8 @@
 #   --kl-distill-weight     train_renderer.py:~313 (verified, repurposed scalar)
 #   --kl-distill-temperature train_renderer.py:~316 (verified)
 set -euo pipefail
-WORKSPACE=/workspace/pact
-PYBIN=/opt/conda/bin/python
+WORKSPACE="${WORKSPACE:-/workspace/pact}"
+PYBIN="${PYBIN:-/opt/conda/bin/python}"
 LANE_LABEL=lane-j-jbl
 LOG_DIR="$WORKSPACE/lane_j_jbl_results"
 HEARTBEAT="/tmp/heartbeat_lane_j_jbl.log"

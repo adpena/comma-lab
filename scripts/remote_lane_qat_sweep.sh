@@ -18,9 +18,9 @@
 #   __SWEEP_TRIAL_NUMBER__       -> e.g. "0017" or "BEST"
 #   __SWEEP_SEARCH_SPACE_HASH__  -> SHA256[:16] for reproducibility
 set -euo pipefail
-WORKSPACE=/workspace/pact
-PYBIN=/opt/conda/bin/python
-source "$WORKSPACE/env.sh"
+WORKSPACE="${WORKSPACE:-/workspace/pact}"
+PYBIN="${PYBIN:-/opt/conda/bin/python}"
+[ -f "$WORKSPACE/env.sh" ] && source "$WORKSPACE/env.sh"
 cd "$WORKSPACE"
 export PYTHONHASHSEED=1234
 

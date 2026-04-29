@@ -119,7 +119,7 @@ def create_instance(offer_id: int, label: str) -> int:
         "--disk", "35",
         "--label", label,
         "--ssh",
-        "--env", "-e NVIDIA_DRIVER_CAPABILITIES=all",
+        "--env", "NVIDIA_DRIVER_CAPABILITIES=all",
         "--raw",
     ]
     rc, out, err = run(cmd, timeout=60)

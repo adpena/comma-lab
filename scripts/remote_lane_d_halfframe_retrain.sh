@@ -55,9 +55,9 @@
 #       pipeline.py:step_export uses, so we get bit-identical bytes to
 #       the canonical chain.
 set -euo pipefail
-WORKSPACE=/workspace/pact
-PYBIN=/opt/conda/bin/python
-source "$WORKSPACE/env.sh"
+WORKSPACE="${WORKSPACE:-/workspace/pact}"
+PYBIN="${PYBIN:-/opt/conda/bin/python}"
+[ -f "$WORKSPACE/env.sh" ] && source "$WORKSPACE/env.sh"
 cd "$WORKSPACE"
 export PYTHONHASHSEED=1234
 # 2026-04-27 fix: train_renderer.py defaults to

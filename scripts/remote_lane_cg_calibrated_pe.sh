@@ -26,7 +26,7 @@ set -euo pipefail
 WORKSPACE="${WORKSPACE:-/workspace/pact}"
 cd "$WORKSPACE"
 if [ -f "$WORKSPACE/env.sh" ]; then
-    source "$WORKSPACE/env.sh"
+    [ -f "$WORKSPACE/env.sh" ] && source "$WORKSPACE/env.sh"
 fi
 
 export PYTHONHASHSEED=1234

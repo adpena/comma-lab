@@ -27,9 +27,9 @@
 #                 auxiliary KL distill path, so kl_distill_weight > 0
 #                 is mandatory for the technique to fire)
 set -euo pipefail
-WORKSPACE=/workspace/pact
-PYBIN=/opt/conda/bin/python
-source "$WORKSPACE/env.sh"
+WORKSPACE="${WORKSPACE:-/workspace/pact}"
+PYBIN="${PYBIN:-/opt/conda/bin/python}"
+[ -f "$WORKSPACE/env.sh" ] && source "$WORKSPACE/env.sh"
 cd "$WORKSPACE"
 export PYTHONHASHSEED=1234
 

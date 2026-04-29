@@ -8,9 +8,9 @@
 #   3. Anchor on Lane A's renderer + poses (Bug 3: wrong baseline).
 # Predicted: [1.05, 1.30] [contest-CUDA] — could beat Lane A 1.15.
 set -euo pipefail
-WORKSPACE=/workspace/pact
-PYBIN=/opt/conda/bin/python
-source "$WORKSPACE/env.sh"
+WORKSPACE="${WORKSPACE:-/workspace/pact}"
+PYBIN="${PYBIN:-/opt/conda/bin/python}"
+[ -f "$WORKSPACE/env.sh" ] && source "$WORKSPACE/env.sh"
 cd "$WORKSPACE"
 export PYTHONHASHSEED=1234
 

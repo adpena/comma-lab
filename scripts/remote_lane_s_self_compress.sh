@@ -46,9 +46,9 @@
 #   * --phase[1-5]-epochs            ✓ argparse lines 204-212
 #   * --phase[1-5]-lr                ✓ argparse lines 214-222
 set -euo pipefail
-WORKSPACE=/workspace/pact
-PYBIN=/opt/conda/bin/python
-source "$WORKSPACE/env.sh"
+WORKSPACE="${WORKSPACE:-/workspace/pact}"
+PYBIN="${PYBIN:-/opt/conda/bin/python}"
+[ -f "$WORKSPACE/env.sh" ] && source "$WORKSPACE/env.sh"
 cd "$WORKSPACE"
 export PYTHONHASHSEED=1234
 # 2026-04-27 lesson (Lane D): train_renderer.py defaults its scorer-weight

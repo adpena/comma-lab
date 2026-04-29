@@ -63,9 +63,9 @@
 # ANCHOR_LANE_A_BASELINE=submissions/baseline_dilated_h64_0_90  # for tarball auto-discovery
 
 set -euo pipefail
-WORKSPACE=/workspace/pact
-PYBIN=/opt/conda/bin/python
-source "$WORKSPACE/env.sh"
+WORKSPACE="${WORKSPACE:-/workspace/pact}"
+PYBIN="${PYBIN:-/opt/conda/bin/python}"
+[ -f "$WORKSPACE/env.sh" ] && source "$WORKSPACE/env.sh"
 cd "$WORKSPACE"
 
 LOG_DIR="$WORKSPACE/lane_ebr_entropy_bottleneck_results"

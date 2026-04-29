@@ -31,9 +31,9 @@
 #   - masks: experiments/results/lane_a_landed/extracted/masks.mkv
 #   - GT video: upstream/videos/0.mkv (for PoseNet embedding extraction)
 set -euo pipefail
-WORKSPACE=/workspace/pact
-PYBIN=/opt/conda/bin/python
-source "$WORKSPACE/env.sh"
+WORKSPACE="${WORKSPACE:-/workspace/pact}"
+PYBIN="${PYBIN:-/opt/conda/bin/python}"
+[ -f "$WORKSPACE/env.sh" ] && source "$WORKSPACE/env.sh"
 cd "$WORKSPACE"
 export PYTHONHASHSEED=1234
 

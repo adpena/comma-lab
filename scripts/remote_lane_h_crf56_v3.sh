@@ -16,9 +16,9 @@
 # Reference: feedback_dead_flag_wiring_pattern (--crf verified via grep
 # add_argument experiments/build_baseline_archive.py: line 86, default=50).
 set -euo pipefail
-WORKSPACE=/workspace/pact
-PYBIN=/opt/conda/bin/python
-source "$WORKSPACE/env.sh"
+WORKSPACE="${WORKSPACE:-/workspace/pact}"
+PYBIN="${PYBIN:-/opt/conda/bin/python}"
+[ -f "$WORKSPACE/env.sh" ] && source "$WORKSPACE/env.sh"
 cd "$WORKSPACE"
 
 LOG_DIR="$WORKSPACE/lane_h_crf56_v3_results"

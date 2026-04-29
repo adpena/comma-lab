@@ -5,9 +5,9 @@
 # Critical: --gt-poses-path points to the VERIFIED baseline poses (the ones that
 # scored well in the 2.29 archive), NOT extract_gt_pose_targets (the LANE-B trap).
 set -euo pipefail
-WORKSPACE=/workspace/pact
-PYBIN=/opt/conda/bin/python
-source "$WORKSPACE/env.sh"
+WORKSPACE="${WORKSPACE:-/workspace/pact}"
+PYBIN="${PYBIN:-/opt/conda/bin/python}"
+[ -f "$WORKSPACE/env.sh" ] && source "$WORKSPACE/env.sh"
 cd "$WORKSPACE"
 
 LOG_DIR="$WORKSPACE/lane_a_results"

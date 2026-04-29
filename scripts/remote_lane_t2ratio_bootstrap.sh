@@ -20,7 +20,7 @@ set -euo pipefail
 WORKSPACE=${WORKSPACE:-/workspace/pact}
 PYBIN=${PYBIN:-/opt/conda/bin/python}
 cd "$WORKSPACE"
-source "$WORKSPACE/env.sh"
+[ -f "$WORKSPACE/env.sh" ] && source "$WORKSPACE/env.sh"
 export PYTHONHASHSEED=1234
 
 LOG_DIR="$WORKSPACE/lane_t2ratio_results"

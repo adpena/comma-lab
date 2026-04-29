@@ -59,9 +59,9 @@
 #     CLI flags, memory: feedback_dead_flag_wiring_pattern)
 
 set -euo pipefail
-WORKSPACE=/workspace/pact
-PYBIN=/opt/conda/bin/python
-source "$WORKSPACE/env.sh"
+WORKSPACE="${WORKSPACE:-/workspace/pact}"
+PYBIN="${PYBIN:-/opt/conda/bin/python}"
+[ -f "$WORKSPACE/env.sh" ] && source "$WORKSPACE/env.sh"
 cd "$WORKSPACE"
 export PYTHONHASHSEED=1234
 # train_renderer.py defaults to $REPO/workspace/upstream/comma_video_compression_challenge/models
