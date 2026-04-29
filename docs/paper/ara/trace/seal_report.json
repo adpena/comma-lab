@@ -1,0 +1,66 @@
+{
+  "ara_version": "0.1",
+  "compiled_at": "2026-04-29T16:47:59.023372Z",
+  "findings": [
+    {
+      "code": "code_dangling",
+      "message": "C1 code pointer does not resolve",
+      "pointer": "experiments/jacobian_svd_analysis.py",
+      "severity": "warn"
+    },
+    {
+      "code": "code_dangling",
+      "message": "C2 code pointer does not resolve",
+      "pointer": "experiments/jacobian_optimal.py",
+      "severity": "warn"
+    },
+    {
+      "code": "code_dangling",
+      "message": "C3 code pointer does not resolve",
+      "pointer": "experiments/karpathy_cnn_residual_analysis.py",
+      "severity": "warn"
+    },
+    {
+      "code": "code_dangling",
+      "message": "C4 code pointer does not resolve",
+      "pointer": "src/comma_lab/task_codec/training.py",
+      "severity": "warn"
+    },
+    {
+      "code": "code_dangling",
+      "message": "C6 code pointer does not resolve",
+      "pointer": "src/comma_lab/preflight/strict_checks.py:check_no_mps_fallback_default",
+      "severity": "warn"
+    },
+    {
+      "code": "code_dangling",
+      "message": "C7 code pointer does not resolve",
+      "pointer": "src/tac/optimize_poses.py",
+      "severity": "warn"
+    },
+    {
+      "code": "code_dangling",
+      "message": "C8 code pointer does not resolve",
+      "pointer": "src/tac/training.py`, `src/tac/profiles.py",
+      "severity": "warn"
+    },
+    {
+      "code": "code_dangling",
+      "message": "C9 code pointer does not resolve",
+      "pointer": "src/tac/optimize_poses.py",
+      "severity": "warn"
+    },
+    {
+      "code": "code_dangling",
+      "message": "C10 code pointer does not resolve",
+      "pointer": "src/comma_lab/preflight/strict_checks.py",
+      "severity": "warn"
+    }
+  ],
+  "level": "1 (structural integrity)",
+  "summary": {
+    "error": 0,
+    "ok": 0,
+    "warn": 9
+  }
+}

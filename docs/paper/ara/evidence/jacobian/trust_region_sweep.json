@@ -1,0 +1,18 @@
+{
+  "_pending_provenance": {
+    "status": "pending — to be populated by experiments/trust_region_sweep.py",
+    "compiler": "tools/ara_compile.py",
+    "claim_id": "C2",
+    "experiment_id": "E2",
+    "expected_schema": {
+      "perturbation_magnitudes_pixels_rms": "list[float] in (1e-5, 1e-3)",
+      "median_relative_linearization_error": "list[float], expected >= 1.0 at 1e-4",
+      "trust_radius_knee_pixels_rms": "float, expected ~1e-4"
+    },
+    "headline_value": "trust radius < 1e-4 px RMS; pseudoinverse correction degrades pose 0.0742 -> 0.2349 (3x worse)",
+    "next_step": "regenerate with `experiments/trust_region_sweep.py --output evidence/jacobian/trust_region_sweep.json`",
+    "related_evidence": ["evidence/jacobian/pseudoinverse_failure.json"],
+    "ara_version": "0.1",
+    "compiled_at": "2026-04-29"
+  }
+}

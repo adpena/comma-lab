@@ -1,0 +1,18 @@
+{
+  "_pending_provenance": {
+    "status": "pending — to be populated by experiments/karpathy_cnn_residual_analysis.py",
+    "compiler": "tools/ara_compile.py",
+    "claim_id": "C3",
+    "experiment_id": "E3",
+    "expected_schema": {
+      "renderer_profile": "era1_h32_post_filter",
+      "moved_pixel_fraction_above_0_5lsb": "float, expected ~0.566",
+      "luma_residual_energy_in_4_to_32_cycles_per_frame_band": "float, expected ~0.903",
+      "pairs_analyzed": "int"
+    },
+    "headline_value": "56.6% of pixels moved by > 0.5 LSB; 90.3% of luma residual energy in 4-32 cycles/frame mid-band",
+    "next_step": "regenerate with `experiments/karpathy_cnn_residual_analysis.py --output evidence/cnn_residual/karpathy_signature.json`",
+    "ara_version": "0.1",
+    "compiled_at": "2026-04-29"
+  }
+}

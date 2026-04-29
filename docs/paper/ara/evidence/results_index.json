@@ -1,0 +1,139 @@
+{
+  "ara_version": "0.1",
+  "compiled_at": "2026-04-29T16:47:59.006197Z",
+  "record_count": 12,
+  "records": [
+    {
+      "archive_bytes": null,
+      "artifact_path": "experiments/results/lane_a_landed/contest_auth_eval.json",
+      "captured_at": "2026-04-27T19:53:07Z",
+      "lane": "lane_a_landed",
+      "posenet": null,
+      "rate": null,
+      "score": 1.15,
+      "score_lane": "[contest-CUDA]",
+      "segnet": null
+    },
+    {
+      "archive_bytes": null,
+      "artifact_path": "experiments/results/lane_g_v3_landed/contest_auth_eval.json",
+      "captured_at": "2026-04-28T18:22:02.760329Z",
+      "lane": "lane_g_v3_landed",
+      "posenet": null,
+      "rate": null,
+      "score": 1.05,
+      "score_lane": "[contest-CUDA]",
+      "segnet": null
+    },
+    {
+      "archive_bytes": null,
+      "artifact_path": "experiments/results/lane_h_crf56/auth_eval/contest_auth_eval.json",
+      "captured_at": "2026-04-27T21:50:22Z",
+      "lane": "auth_eval",
+      "posenet": null,
+      "rate": null,
+      "score": 3.2,
+      "score_lane": "[contest-CUDA]",
+      "segnet": null
+    },
+    {
+      "archive_bytes": null,
+      "artifact_path": "experiments/results/lane_h_crf56/auth_eval/eval_work/contest_auth_eval.json",
+      "captured_at": "2026-04-27T21:50:22Z",
+      "lane": "eval_work",
+      "posenet": null,
+      "rate": null,
+      "score": 3.2,
+      "score_lane": "[contest-CUDA]",
+      "segnet": null
+    },
+    {
+      "archive_bytes": null,
+      "artifact_path": "experiments/results/lane_lane_gp_v2_modal/lane_gp_results/eval_work/contest_auth_eval.json",
+      "captured_at": "2026-04-29T14:12:25.071226Z",
+      "lane": "eval_work",
+      "posenet": null,
+      "rate": null,
+      "score": 89.66,
+      "score_lane": "[Modal-T4-CUDA]",
+      "segnet": null
+    },
+    {
+      "archive_bytes": null,
+      "artifact_path": "experiments/results/lane_lane_gp_v3_modal/lane_gp_results/eval_work/contest_auth_eval.json",
+      "captured_at": "2026-04-29T14:46:36.513203Z",
+      "lane": "eval_work",
+      "posenet": null,
+      "rate": null,
+      "score": 89.67,
+      "score_lane": "[Modal-T4-CUDA]",
+      "segnet": null
+    },
+    {
+      "archive_bytes": null,
+      "artifact_path": "experiments/results/lane_m_v2_landed/contest_auth_eval.json",
+      "captured_at": "2026-04-28T18:22:02.760840Z",
+      "lane": "lane_m_v2_landed",
+      "posenet": null,
+      "rate": null,
+      "score": 1.84,
+      "score_lane": "[contest-CUDA]",
+      "segnet": null
+    },
+    {
+      "archive_bytes": null,
+      "artifact_path": "experiments/results/lane_uniward_v7_modal/lane_uniward_results/eval_work/contest_auth_eval.json",
+      "captured_at": "2026-04-29T14:46:54.786302Z",
+      "lane": "eval_work",
+      "posenet": null,
+      "rate": null,
+      "score": 53.61,
+      "score_lane": "[Modal-T4-CUDA]",
+      "segnet": null
+    },
+    {
+      "archive_bytes": null,
+      "artifact_path": "experiments/results/lane_uniward_v8_modal/lane_uniward_results/eval_work/contest_auth_eval.json",
+      "captured_at": "2026-04-29T14:54:17.200817Z",
+      "lane": "eval_work",
+      "posenet": null,
+      "rate": null,
+      "score": 1.14,
+      "score_lane": "[Modal-T4-CUDA]",
+      "segnet": null
+    },
+    {
+      "archive_bytes": 539217,
+      "artifact_path": "experiments/results/modal_auth_eval.json",
+      "captured_at": "2026-04-23T04:04:04.132561Z",
+      "lane": "modal_auth_eval",
+      "posenet": null,
+      "rate": 0.0143617,
+      "score": 3.93,
+      "score_lane": "[Modal-T4-CUDA]",
+      "segnet": null
+    },
+    {
+      "archive_bytes": null,
+      "artifact_path": "experiments/results/modal_auth_eval_8e331354a6b5.json",
+      "captured_at": "2026-04-29T15:36:26.651151Z",
+      "lane": "modal_auth_eval_8e331354a6b5",
+      "posenet": null,
+      "rate": null,
+      "score": null,
+      "score_lane": "[Modal-T4-CUDA]",
+      "segnet": null
+    },
+    {
+      "archive_bytes": 694074,
+      "artifact_path": "experiments/results/modal_auth_eval_9b20bdfca246.json",
+      "captured_at": "2026-04-29T10:05:29.129400Z",
+      "lane": "modal_auth_eval_9b20bdfca246",
+      "posenet": null,
+      "rate": 0.01848622,
+      "score": 1.04,
+      "score_lane": "[Modal-T4-CUDA]",
+      "segnet": null
+    }
+  ]
+}

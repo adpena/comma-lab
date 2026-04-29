@@ -1,0 +1,51 @@
+{
+  "title": "STRICT preflight check catalog (the rigor moat)",
+  "claim_id": "C10",
+  "as_of": "2026-04-29",
+  "headline": "78 STRICT checks; every documented catastrophic measurement-bug class has a corresponding static-detectable check.",
+  "growth": {
+    "2026-04-21": 14,
+    "2026-04-26": 32,
+    "2026-04-27": 36,
+    "2026-04-28": 64,
+    "2026-04-29": 78
+  },
+  "categories": [
+    {
+      "category": "device safety",
+      "anchor_check": "check_no_mps_fallback_default",
+      "memory_ref": "feedback_default_to_convenience_trap",
+      "structural_extinction_target": "MPS-fallback ternary that produces invalid scores"
+    },
+    {
+      "category": "shell bootstrap safety",
+      "anchor_checks": ["check_shell_set_e_present", "check_no_shell_zip_binary", "check_no_pipefail_grep_q_trap"],
+      "memory_ref": "feedback_zip_dep_bootstrap_trap",
+      "structural_extinction_target": "silent-cascade shell bugs"
+    },
+    {
+      "category": "training-loop hygiene",
+      "anchor_checks": ["check_no_eval_roundtrip_false", "check_no_disable_eval_roundtrip_flag", "check_training_scripts_have_auth_eval"],
+      "memory_ref": "feedback_proxy_auth_math_useless",
+      "structural_extinction_target": "proxy-only score reporting"
+    },
+    {
+      "category": "subprocess wiring",
+      "anchor_checks": ["preflight_arity", "preflight_dead_resolvers"],
+      "memory_ref": "feedback_dead_flag_wiring_pattern",
+      "structural_extinction_target": "invented CLI flags and orphan profile keys"
+    },
+    {
+      "category": "lifecycle and cost",
+      "anchor_checks": ["check_vastai_create_has_label", "check_vastai_create_writes_tracker", "check_vastai_prompts_have_cost_cap"],
+      "memory_ref": "feedback_vastai_cost_paranoia",
+      "structural_extinction_target": "orphan GPU instances accruing cost"
+    }
+  ],
+  "_pending_provenance": {
+    "status": "summarized from CLAUDE.md; full machine-readable catalog lives at `src/comma_lab/preflight/strict_checks.py`",
+    "regenerate_with": "python -m comma_lab.preflight.strict_checks --emit-catalog",
+    "ara_version": "0.1",
+    "compiled_at": "2026-04-29"
+  }
+}

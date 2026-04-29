@@ -1,0 +1,33 @@
+{
+  "title": "MPS-vs-CUDA scorer drift on the dilated-h64 + CRF=50 pinned baseline",
+  "measured_on": "2026-04-25",
+  "claim_id": "C6",
+  "headline": "PoseNet on Apple MPS produces pose distortion 23x larger than CUDA on identical model artifacts; final score drift is ~2.5x.",
+  "side_by_side": {
+    "local_mps": {
+      "posenet_distortion": 0.245,
+      "segnet_distortion": 0.0024,
+      "final_score": 2.26,
+      "lane_tag": "[MPS-PROXY] — advisory only"
+    },
+    "contest_cuda_a100": {
+      "posenet_distortion": 0.0107,
+      "segnet_distortion": 0.00116,
+      "final_score": 0.90,
+      "lane_tag": "[contest-CUDA]"
+    },
+    "drift": {
+      "posenet_ratio": 22.9,
+      "segnet_ratio": 2.07,
+      "final_score_ratio": 2.51
+    }
+  },
+  "likely_root_cause": "FastViT-T12 attention softmax + YUV6 chroma plane numerics differ between MPS and CUDA float16",
+  "structural_remediation": "preflight Check 1: check_no_mps_fallback_default — STRICT @ 0 violations",
+  "retroactive_invalidation": "every Era 1 'auth' number > 1.73 measured on MPS is now [MPS-PROXY] advisory only",
+  "_pending_provenance": {
+    "status": "manually transcribed from session notes; raw measurement logs need to be located and committed",
+    "ara_version": "0.1",
+    "compiled_at": "2026-04-29"
+  }
+}

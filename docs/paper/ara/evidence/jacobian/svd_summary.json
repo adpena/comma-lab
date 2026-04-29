@@ -1,0 +1,19 @@
+{
+  "_pending_provenance": {
+    "status": "pending — to be populated by experiments/jacobian_svd_analysis.py",
+    "compiler": "tools/ara_compile.py",
+    "claim_id": "C1",
+    "experiment_id": "E1",
+    "expected_schema": {
+      "n_pairs": "int (number of frame pairs sampled)",
+      "effective_rank_mean": "float (entropy-based effective rank, expected ~1.008)",
+      "effective_rank_max": "float",
+      "top_singular_value_ratio": "float (top σ / second σ, expected ~45)",
+      "condition_number": "float (expected ~399)"
+    },
+    "headline_value": "effective rank ~1.008 / 6, top σ 45× larger than second",
+    "next_step": "regenerate with `experiments/jacobian_svd_analysis.py --pairs 30 --output evidence/jacobian/svd_summary.json`",
+    "ara_version": "0.1",
+    "compiled_at": "2026-04-29"
+  }
+}

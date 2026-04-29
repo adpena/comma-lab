@@ -1,0 +1,23 @@
+{
+  "_pending_provenance": {
+    "status": "pending — to be populated by `src/comma_lab/task_codec/quantization.py` evaluation harness",
+    "compiler": "tools/ara_compile.py",
+    "claim_id": "C5",
+    "expected_schema": {
+      "without_best_checkpoint_selection": {
+        "fp32_pose_distortion": "float",
+        "deployed_int8_pose_distortion": "float",
+        "ratio": "float, expected up to 2.25"
+      },
+      "with_best_checkpoint_selection": {
+        "fp32_pose_distortion": "float",
+        "deployed_int8_pose_distortion": "float",
+        "ratio": "float, expected ~1.0 at the noise floor"
+      }
+    },
+    "headline_value": "deployed-int8 / fp32 ratio collapses from up to 2.25x to noise floor with best-checkpoint selection",
+    "next_step": "regenerate from QAT logs in `experiments/results/era1/` and emit JSON",
+    "ara_version": "0.1",
+    "compiled_at": "2026-04-29"
+  }
+}

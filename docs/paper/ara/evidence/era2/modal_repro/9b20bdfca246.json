@@ -1,0 +1,21 @@
+{
+  "_pending_provenance": {
+    "status": "pending — to be populated from Modal app run 9b20bdfca246 logs (2026-04-29)",
+    "compiler": "tools/ara_compile.py",
+    "claim_id": "C8",
+    "headline": "Modal T4 reproduction of Lane G v3 within 0.01 noise floor",
+    "expected_schema": {
+      "platform": "Modal-T4",
+      "lane": "g_v3_corrected_kl_weight",
+      "kl_weight": 0.002,
+      "kl_temperature": 2.0,
+      "score_contest_cuda": "float, expected ~1.04",
+      "vast_ai_reference_score": 1.05,
+      "delta": "float, expected |delta| < 0.01"
+    },
+    "next_step": "fetch from Modal volume + commit",
+    "lane_tag": "[Modal-T4-CUDA]",
+    "ara_version": "0.1",
+    "compiled_at": "2026-04-29"
+  }
+}
