@@ -134,13 +134,20 @@ class LearnableClassTargets(nn.Module):
             initial_targets = (
                 torch.sigmoid(self.raw_values.to(torch.float64)) * 255.0
             ).to(torch.float32)
+        # ema_count and ema_sum are float64 — float32 silently saturates at
+        # 2^24=16,777,216 via scatter_add_. Our actual batch is ~236M
+        # assignments (1200 frames × 384 × 512), and the dominant class
+        # accumulates well beyond fp32 exact-integer range. Round 2 codex
+        # finding (Quantizr/Tao Critical): with fp32 buffers and a single
+        # class taking 50M assignments, count saturates at 16.7M and sum
+        # quantizes hard enough to turn gray=90 into centroid=128.
         self.register_buffer(
             "ema_count",
-            torch.ones(NUM_CLASSES, dtype=torch.float32),
+            torch.ones(NUM_CLASSES, dtype=torch.float64),
         )
         self.register_buffer(
             "ema_sum",
-            initial_targets.clone(),
+            initial_targets.clone().to(torch.float64),
         )
         if device is not None:
             self.to(device)
@@ -197,6 +204,13 @@ class LearnableClassTargets(nn.Module):
         # separation contract (e.g. 159 - 127 came out 31.99999 vs 32 expected).
         new_raw = _logit_exact_fp64(new_targets)
         self.raw_values.copy_(new_raw)
+        # Round 2 codex composition bug: the EMA buffers must be rewritten
+        # to reflect post-separation targets, otherwise the next ema_update()
+        # decays the OLD ema_sum (still encoding pre-separation centroids)
+        # and the centroid recomputation undoes the separation. Set
+        # ema_sum = ema_count * new_targets to preserve accumulated count
+        # weight while shifting the centroid to the enforced value.
+        self.ema_sum.copy_(self.ema_count * new_targets.to(torch.float64))
         return self
 
     @torch.no_grad()
@@ -250,15 +264,19 @@ class LearnableClassTargets(nn.Module):
                 f"min={assignments.min().item()}, max={assignments.max().item()}"
             )
         decay = self.ema_decay
-        gray_values = gray_values.to(torch.float32)
+        # Cast gray_values to fp64 so scatter_add_ doesn't lose precision at
+        # the 236M-assignment scale of our actual batches. Round 2 codex
+        # finding: fp32 scatter_add saturates at 2^24=16,777,216 — our
+        # dominant class blows past that and produces wildly biased centroids.
+        gray_values = gray_values.to(torch.float64)
         # Per-class assignment count and accumulated sum for THIS batch.
         # scatter_add for efficient O(N) computation regardless of NUM_CLASSES.
         ones = torch.ones_like(gray_values)
         batch_count = torch.zeros(
-            NUM_CLASSES, dtype=torch.float32, device=gray_values.device
+            NUM_CLASSES, dtype=torch.float64, device=gray_values.device
         )
         batch_sum = torch.zeros(
-            NUM_CLASSES, dtype=torch.float32, device=gray_values.device
+            NUM_CLASSES, dtype=torch.float64, device=gray_values.device
         )
         batch_count.scatter_add_(0, assignments.long(), ones)
         batch_sum.scatter_add_(0, assignments.long(), gray_values)
@@ -270,7 +288,9 @@ class LearnableClassTargets(nn.Module):
         # avoid division-by-zero on cold-start classes that have never been
         # assigned. eps=1e-6 is small enough not to bias the centroid.
         new_targets = (self.ema_sum / (self.ema_count + 1e-6)).clamp(0.0, 255.0)
-        new_raw = _logit_exact_fp64(new_targets)
+        # Cast to fp32 for _logit_exact_fp64's `targets == 0/255` endpoint
+        # check — the helper compares against fp32 literals.
+        new_raw = _logit_exact_fp64(new_targets.to(torch.float32))
         self.raw_values.copy_(new_raw)
         return self
 
