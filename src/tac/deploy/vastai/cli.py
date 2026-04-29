@@ -126,7 +126,19 @@ def cmd_status(client: VastClient, args: argparse.Namespace) -> int:
     instances_to_destroy: list[str] = []
 
     for iid, inst in instances.items():
-        created = datetime.fromisoformat(inst.created_at)
+        # Defensive: created_at may be missing/None for instances persisted by
+        # an older client version. Fall back to "now" so the loop continues
+        # rather than crashing the entire status command. The elapsed=0
+        # produces a $0 estimated cost for that instance — the operator gets
+        # a visible warning instead of a silent crash mid-fleet.
+        try:
+            created = datetime.fromisoformat(inst.created_at)
+        except (TypeError, ValueError):
+            print(
+                f"  {_YELLOW}[warn] {iid}: missing/invalid created_at "
+                f"({inst.created_at!r}); using now() — cost estimate will read 0{_RESET}"
+            )
+            created = now
         elapsed_hours = (now - created).total_seconds() / 3600
         estimated_cost = inst.dph * elapsed_hours
 
@@ -213,7 +225,19 @@ def cmd_results(client: VastClient, args: argparse.Namespace) -> int:
             print(f"    {_GREEN}Results saved to {local_dir}{_RESET}")
 
             if inst.status == "completed":
-                created = datetime.fromisoformat(inst.created_at)
+                try:
+                    created = datetime.fromisoformat(inst.created_at)
+                except (TypeError, ValueError):
+                    print(
+                        f"    {_YELLOW}[warn] missing/invalid created_at "
+                        f"({inst.created_at!r}); skipping cost record{_RESET}"
+                    )
+                    created = None
+                if created is None:
+                    if not args.keep:
+                        print("    Destroying instance...")
+                        client.destroy(iid)
+                    continue
                 elapsed_hours = (datetime.now(timezone.utc) - created).total_seconds() / 3600
                 final_cost = inst.dph * elapsed_hours
                 client.budget.record_spend(
@@ -258,7 +282,17 @@ def cmd_destroy(client: VastClient, args: argparse.Namespace) -> int:
         experiment_name = inst.experiment if inst else "unknown"
 
         if inst and inst.dph > 0:
-            created = datetime.fromisoformat(inst.created_at)
+            try:
+                created = datetime.fromisoformat(inst.created_at)
+            except (TypeError, ValueError):
+                # Skip cost record but still destroy — see status() handler.
+                print(
+                    f"  {_YELLOW}[warn] {iid}: missing/invalid created_at "
+                    f"({inst.created_at!r}); destroying without cost record{_RESET}"
+                )
+                client.destroy(iid)
+                print(f"  {_GREEN}Destroyed {iid} ({experiment_name}){_RESET}")
+                continue
             elapsed_hours = (datetime.now(timezone.utc) - created).total_seconds() / 3600
             final_cost = inst.dph * elapsed_hours
             # Only record if not already recorded
