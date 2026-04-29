@@ -480,6 +480,26 @@ def preflight_all(
         check_profile_loss_modes_in_validator_allowlist(strict=False, verbose=verbose)
         check_deploy_script_profiles_exist_in_registry(strict=False, verbose=verbose)
 
+        # 2026-04-28 deep DX hardening pass 2: 3 NEW meta-bug checks
+        # (51, 52, 53) for silent-swallow / unchecked-subprocess /
+        # operator-discoverability. All ship WARN-only initially. Promote
+        # to STRICT after one-time cleanup pass per the established
+        # warn-only → strict pattern (see Lane A pattern in checks 1-11).
+        # Reference: feedback_deep_hardening_pass_2_patterns_20260428.
+        # - Check 51 (no-bare-except): catches `except:` and
+        #   `except Exception: pass`. Same class as the
+        #   tools/fleet_dashboard_live.py bug fixed in this pass.
+        # - Check 52 (subprocess-run-checked): catches subprocess.run()
+        #   without check=True or returncode check. Same class as the
+        #   LANE-B silent-cascade trap (feedback_zip_dep_bootstrap_trap)
+        #   but at the Python level.
+        # - Check 53 (tools-have-argparse): operator-discoverability:
+        #   tools/*.py + scripts/*.py with __main__ entry must wire
+        #   argparse or click for --help.
+        check_no_bare_except(strict=False, verbose=verbose)
+        check_subprocess_run_checked(strict=False, verbose=verbose)
+        check_tools_have_argparse(strict=False, verbose=verbose)
+
     # 2. Training inputs (only if profile + tto_frames provided)
     if profile_name and tto_frames_path and gt_poses_path and masks_path and profile_arch:
         preflight_training_inputs(
@@ -9500,6 +9520,308 @@ def check_deploy_script_profiles_exist_in_registry(
     if violations and strict:
         raise MetaBugViolation(
             "DEPLOY SCRIPT --profile X REFERENCES MISSING PROFILE:\n"
+            + "\n".join(f"  • {v}" for v in violations[:50])
+        )
+    return violations
+
+
+# ── Check 51: bare `except:` and `except Exception: pass` ─────────────────────
+#
+# CATCHES the silent-swallow bug class: any handler that catches all
+# exceptions without logging or re-raising hides bugs forever. We saw this
+# in tools/fleet_dashboard_live.py (commit on 2026-04-28) where a
+# `try: tag = cmd.split("--tag")[1].strip().split()[0]; except: pass` masked
+# real failures. This check forbids:
+#   - Bare `except:` (catches BaseException including KeyboardInterrupt)
+#   - `except Exception: pass` (silent-swallow with no log)
+#
+# Allowed:
+#   - Specific exceptions: `except IndexError:`, `except (OSError, ValueError):`
+#   - Bare `except Exception` followed by logging / re-raise / clear handling
+#
+# Exemptions: tests/, vendored upstream/, this preflight.py file itself
+# (where regex pattern strings include `except:` literal text), and any line
+# with a SAME-LINE waiver marker `# noqa: E722` or `# silent-swallow-OK:`.
+#
+# Reference: feedback_deep_hardening_pass_2_patterns_20260428 +
+# 2026-04-28 deep DX hardening pass.
+
+_BARE_EXCEPT_RE = re.compile(r"^\s*except\s*:\s*(?:#.*)?$")
+_EXCEPT_EXCEPTION_PASS_RE = re.compile(
+    r"^\s*except\s+Exception\s*(?:as\s+\w+)?\s*:\s*pass\s*(?:#.*)?$"
+)
+
+
+def check_no_bare_except(
+    repo_root: Path | None = None,
+    strict: bool = False,
+    verbose: bool = True,
+) -> list[str]:
+    """Forbid bare except: and `except Exception: pass`.
+
+    Returns list of violations. Raises MetaBugViolation if strict and any.
+    """
+    root = repo_root or REPO_ROOT
+    violations: list[str] = []
+    n_scanned = 0
+    skip_dirs = {
+        "tests", "test", "upstream", "node_modules", ".venv", "venv",
+        "build", "dist", "__pycache__",
+    }
+    for py_path in sorted(root.rglob("*.py")):
+        # Skip the preflight file itself (contains regex patterns like
+        # `except:` as string literals that would false-positive).
+        if py_path.resolve() == Path(__file__).resolve():
+            continue
+        # Skip vendored / test / build dirs.
+        rel_parts = py_path.relative_to(root).parts
+        if any(p in skip_dirs for p in rel_parts):
+            continue
+        # Only scan src/tac, scripts/, tools/, experiments/.
+        top = rel_parts[0] if rel_parts else ""
+        if top not in {"src", "scripts", "tools", "experiments"}:
+            continue
+        try:
+            text = py_path.read_text()
+        except (OSError, UnicodeDecodeError):
+            continue
+        n_scanned += 1
+        for i, line in enumerate(text.splitlines(), start=1):
+            # Honor same-line waiver markers.
+            if "# noqa: E722" in line or "# silent-swallow-OK" in line:
+                continue
+            if _BARE_EXCEPT_RE.match(line):
+                rel = py_path.relative_to(root)
+                violations.append(
+                    f"{rel}:{i}: bare `except:` — catches BaseException "
+                    f"including KeyboardInterrupt. Use specific exception type "
+                    f"OR add `# noqa: E722` if intentional."
+                )
+            elif _EXCEPT_EXCEPTION_PASS_RE.match(line):
+                rel = py_path.relative_to(root)
+                violations.append(
+                    f"{rel}:{i}: `except Exception: pass` silently swallows "
+                    f"errors. Log the exception OR catch a specific subclass "
+                    f"OR add `# silent-swallow-OK: <reason>`."
+                )
+
+    if verbose:
+        if violations:
+            print(
+                f"  [no-bare-except] {len(violations)} violation(s) "
+                f"across {n_scanned} files:"
+            )
+            for v in violations[:10]:
+                print(f"    • {v}")
+            if len(violations) > 10:
+                print(f"    … and {len(violations) - 10} more")
+        else:
+            print(f"  [no-bare-except] OK: {n_scanned} files clean")
+
+    if violations and strict:
+        raise MetaBugViolation(
+            "BARE EXCEPT / SILENT-SWALLOW VIOLATIONS:\n"
+            + "\n".join(f"  • {v}" for v in violations[:50])
+        )
+    return violations
+
+
+# ── Check 52: subprocess.run() returncode must be checked ─────────────────────
+#
+# CATCHES the silent-success bug class: `result = subprocess.run(...)` with
+# no `.returncode` check downstream, no `check=True`, and no explicit
+# discard. This is exactly how the LANE-B `set -uo pipefail` cascade hid
+# silent failures (memory: feedback_zip_dep_bootstrap_trap). At Python
+# level the equivalent is:
+#
+#   result = subprocess.run([...])
+#   # ... no result.returncode check anywhere ...
+#
+# Allowed:
+#   - `subprocess.run([...], check=True)` — raises CalledProcessError
+#   - `r = subprocess.run([...]); if r.returncode != 0: ...` — explicit
+#   - `subprocess.run([...], check=False)` — explicit opt-out
+#   - Same-line `# subprocess-no-check-OK: <reason>` waiver
+#
+# Heuristic: scan for `subprocess.run(` and verify ONE of:
+#   1. `check=True` in the call's parens (single-line)
+#   2. The return value is captured AND `.returncode` appears within the
+#      next 50 lines.
+#   3. Same-line waiver.
+#
+# This is intentionally a loose check (warn-only initially) because perfect
+# AST analysis of variable lifetimes is brittle. Promote to strict after
+# a one-time cleanup pass.
+
+def check_subprocess_run_checked(
+    repo_root: Path | None = None,
+    strict: bool = False,
+    verbose: bool = True,
+) -> list[str]:
+    """Warn on `subprocess.run(...)` without check=True or returncode check.
+
+    Returns list of violations. Raises MetaBugViolation if strict and any.
+    """
+    root = repo_root or REPO_ROOT
+    violations: list[str] = []
+    n_scanned = 0
+    skip_dirs = {
+        "tests", "test", "upstream", "node_modules", ".venv", "venv",
+        "build", "dist", "__pycache__",
+    }
+    for py_path in sorted(root.rglob("*.py")):
+        if py_path.resolve() == Path(__file__).resolve():
+            continue
+        rel_parts = py_path.relative_to(root).parts
+        if any(p in skip_dirs for p in rel_parts):
+            continue
+        top = rel_parts[0] if rel_parts else ""
+        if top not in {"src", "scripts", "tools", "experiments"}:
+            continue
+        try:
+            text = py_path.read_text()
+        except (OSError, UnicodeDecodeError):
+            continue
+        n_scanned += 1
+        lines = text.splitlines()
+        for i, line in enumerate(lines):
+            if "subprocess.run(" not in line:
+                continue
+            # Same-line waiver
+            if "# subprocess-no-check-OK" in line:
+                continue
+            # Common safe patterns on the same line
+            if "check=True" in line or "check = True" in line:
+                continue
+            # Multi-line call: scan next 8 lines for check=True
+            window = "\n".join(lines[i:i + 8])
+            if "check=True" in window or "check = True" in window:
+                continue
+            if "check=False" in window or "check = False" in window:
+                # Explicit opt-out — accept (operator made an active choice).
+                continue
+            # If the return value is captured (e.g., `r =` or `result =`),
+            # look forward up to 50 lines for a `.returncode` reference.
+            assignment = re.match(r"^\s*(\w+)\s*=\s*subprocess\.run", line)
+            if assignment:
+                varname = assignment.group(1)
+                lookahead = "\n".join(lines[i:i + 50])
+                if f"{varname}.returncode" in lookahead:
+                    continue
+                if f"{varname}.check_returncode" in lookahead:
+                    continue
+            else:
+                # Not assigned — if the call discards the result and is in a
+                # context where failures don't matter (e.g., bootstrap script),
+                # the operator should waive explicitly.
+                pass
+            rel = py_path.relative_to(root)
+            violations.append(
+                f"{rel}:{i + 1}: subprocess.run() without check=True or "
+                f"returncode check. Use check=True OR capture + check "
+                f"`.returncode` OR add `# subprocess-no-check-OK: <reason>`."
+            )
+
+    if verbose:
+        if violations:
+            print(
+                f"  [subprocess-run-checked] {len(violations)} violation(s) "
+                f"across {n_scanned} files (warn-only — promote after cleanup):"
+            )
+            for v in violations[:10]:
+                print(f"    • {v}")
+            if len(violations) > 10:
+                print(f"    … and {len(violations) - 10} more")
+        else:
+            print(f"  [subprocess-run-checked] OK: {n_scanned} files clean")
+
+    if violations and strict:
+        raise MetaBugViolation(
+            "SUBPROCESS.RUN WITHOUT CHECK= VIOLATIONS:\n"
+            + "\n".join(f"  • {v}" for v in violations[:50])
+        )
+    return violations
+
+
+# ── Check 53: tools/*.py must have non-empty --help ───────────────────────────
+#
+# CATCHES the operator-discoverability bug: a tool ships without argparse
+# wired up, so `--help` either errors or prints nothing. Operators then
+# can't find the tool's options without reading the source. This check
+# verifies every executable script under tools/ AND scripts/*.py
+# (excluding bootstrap shell scripts) accepts `--help` AND emits non-empty
+# output.
+#
+# Heuristic: STATIC scan only (no subprocess invocation at preflight time
+# because that would require imports to succeed and may have side effects).
+# Verify that the file contains either:
+#   - `argparse.ArgumentParser(`
+#   - `import argparse` AND `add_argument(`
+#   - `import click` (click auto-generates --help)
+#   - Same-line `# no-argparse-OK: <reason>` waiver in a top-level comment
+#
+# Skipped: __init__.py, anything starting with `_`.
+
+def check_tools_have_argparse(
+    repo_root: Path | None = None,
+    strict: bool = False,
+    verbose: bool = True,
+) -> list[str]:
+    """Verify tools/*.py have argparse / click for --help discoverability.
+
+    Returns list of violations. Raises MetaBugViolation if strict and any.
+    """
+    root = repo_root or REPO_ROOT
+    violations: list[str] = []
+    n_scanned = 0
+    for tools_dir_name in ("tools", "scripts"):
+        tools_dir = root / tools_dir_name
+        if not tools_dir.is_dir():
+            continue
+        for py_path in sorted(tools_dir.glob("*.py")):
+            if py_path.name.startswith("_") or py_path.name == "__init__.py":
+                continue
+            try:
+                text = py_path.read_text()
+            except (OSError, UnicodeDecodeError):
+                continue
+            n_scanned += 1
+            # Same-line waiver in any top-level comment within the first 30 lines.
+            head = "\n".join(text.splitlines()[:30])
+            if "# no-argparse-OK" in head:
+                continue
+            # Must have a `__main__` entry to be a CLI.
+            if "__name__" not in text or "__main__" not in text:
+                continue  # library helper, not a CLI
+            has_argparse = "ArgumentParser(" in text or (
+                "import argparse" in text and "add_argument(" in text
+            )
+            has_click = "import click" in text or "from click" in text
+            if not (has_argparse or has_click):
+                rel = py_path.relative_to(root)
+                violations.append(
+                    f"{rel}: __main__ entry but no argparse/click — operators "
+                    f"can't discover options via --help. Add an "
+                    f"argparse.ArgumentParser OR `# no-argparse-OK: <reason>` "
+                    f"in the top docstring."
+                )
+
+    if verbose:
+        if violations:
+            print(
+                f"  [tools-have-argparse] {len(violations)} violation(s) "
+                f"across {n_scanned} CLI scripts:"
+            )
+            for v in violations[:10]:
+                print(f"    • {v}")
+            if len(violations) > 10:
+                print(f"    … and {len(violations) - 10} more")
+        else:
+            print(f"  [tools-have-argparse] OK: {n_scanned} CLI scripts clean")
+
+    if violations and strict:
+        raise MetaBugViolation(
+            "CLI SCRIPTS WITHOUT --help:\n"
             + "\n".join(f"  • {v}" for v in violations[:50])
         )
     return violations
