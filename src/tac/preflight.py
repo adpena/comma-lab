@@ -314,6 +314,11 @@ def preflight_all(
         check_eval_roundtrip_gate_called_after_output_dir_resolution(strict=True, verbose=verbose)
         check_nvdec_probe_has_error_classification(strict=True, verbose=verbose)
         check_archive_builders_use_deterministic_zip(strict=True, verbose=verbose)
+        # 2026-04-29 PM: silent-default override class. Audit hardened in
+        # commit 4eeb6452 (246 noisy → 0 actionable); 3 real bugs fixed in
+        # commit 256c5e42. Lands STRICT directly at 0 live violations.
+        # Memory: feedback_silent_default_bug_class_findings_20260429.md.
+        check_silent_default_audit_clean(strict=True, verbose=verbose)
 
         # 2026-04-27 meta-bug audit (commit a57731a0): 12 NEW checks for
         # additional bug classes from session + memory. 4 land at 0 live
@@ -5635,6 +5640,89 @@ def check_archive_builders_use_deterministic_zip(
 # All twelve start strict=False and must be promoted manually after the live
 # violation count is verified clean (per the established Lane A → strict
 # promotion pattern documented in commit 7f2740e4).
+
+
+# ── Check 81: silent-default override audit must produce 0 CRITICAL ───────
+#
+# CATCHES: the KL distill bug class — a non-None argparse default in a
+# profile-using script silently overrides the profile's value when the
+# resolver doesn't special-case it. Today's session found 3 real bugs of
+# this shape in train_renderer.py (--fp4-codebook silently using 'default'
+# instead of profile's 'residual' for 14 profiles, --grad-clip 1.0 vs
+# profile's 10.0, --wall-clock-timeout 0 vs profile's 39600). The Lane GP
+# fit_pose_gp:33 baseline_poses bug was a sister class.
+#
+# Memory: feedback_silent_default_bug_class_findings_20260429.md.
+# Memory: feedback_silent_default_bug_class_findings_20260429.md.
+
+
+def check_silent_default_audit_clean(
+    *, strict: bool = False, verbose: bool = False, repo_root: Path | None = None,
+) -> list[str]:
+    """Wrap tools/audit_silent_defaults.py — fail strict if CRITICAL > 0.
+
+    The audit tool already filters scripts without a profile mechanism,
+    scripts using _resolve()/_apply_profile()/_user_provided_flags(), and
+    structurally-correct action="store_true"+default=False patterns. After
+    those filters, any CRITICAL finding is a real silent-override bug.
+
+    Live count after today's commits (4eeb6452 audit hardening + 256c5e42
+    train_renderer.py fixes): 0 CRITICAL. Lands strict at 0.
+    """
+    root = repo_root or REPO_ROOT
+    audit_script = root / "tools" / "audit_silent_defaults.py"
+    if not audit_script.is_file():
+        if verbose:
+            print(
+                "  [silent-default-audit] WARN: tools/audit_silent_defaults.py "
+                "not found — skipping check"
+            )
+        return []
+    # Run audit as subprocess to avoid coupling preflight to its imports.
+    import subprocess
+    try:
+        result = subprocess.run(
+            [sys.executable, str(audit_script)],
+            cwd=root, capture_output=True, text=True, timeout=60,
+        )
+    except (subprocess.TimeoutExpired, OSError) as exc:
+        if verbose:
+            print(f"  [silent-default-audit] WARN: audit failed to run: {exc}")
+        return []
+    output = (result.stdout or "") + (result.stderr or "")
+    # Audit prints e.g. "(0 critical, 0 suspicious, 1189 safe)".
+    m = re.search(r"\((\d+)\s+critical", output)
+    if not m:
+        if verbose:
+            print(
+                "  [silent-default-audit] WARN: could not parse audit output: "
+                + output[:200]
+            )
+        return []
+    n_critical = int(m.group(1))
+    violations: list[str] = []
+    if n_critical > 0:
+        violations.append(
+            f"{n_critical} CRITICAL silent-default override(s) — see "
+            f"reports/silent_defaults.md. Pattern: argparse default=X with "
+            f"matching profile key silently overrides profile values. Fix: "
+            f"change default to None and resolve in body via profile."
+        )
+    if verbose:
+        if violations:
+            print(
+                f"  [silent-default-audit] {len(violations)} violation(s)"
+            )
+            for v in violations:
+                print(f"    • {v}")
+        else:
+            print("  [silent-default-audit] OK: 0 CRITICAL")
+    if violations and strict:
+        raise MetaBugViolation(
+            "SILENT-DEFAULT OVERRIDE DETECTED:\n"
+            + "\n".join(f"  • {v}" for v in violations)
+        )
+    return violations
 
 
 # ── Check A: Vast.ai `create instance` invocation must include --label ───────
