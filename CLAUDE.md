@@ -116,22 +116,52 @@ Rules:
 
 This is the 6th catastrophic operational pattern. The cost: $3-10 per occurrence in idle GPU time + multi-day delays in measurement. Build the protocol so it never happens again.
 
-## Codex CLI invocation — NON-NEGOTIABLE, HIGHEST EMPHASIS
+## Codex CLI invocation — NON-NEGOTIABLE, HIGHEST EMPHASIS (REVISED 2026-04-29 PM)
 
-**NEVER invoke `codex exec` from the `Bash` tool with `run_in_background: true`. ALWAYS dispatch codex CLI through the `Agent` tool wrapper.**
+The bash harness sends SIGURG (exit 144) to BG bash processes at ~3 minutes. The earlier rule "always use Agent wrapper" was directionally right but UNDER-PRECISE. The real issue is process-group inheritance: any child of the dying bash dies too. **The fix is proper detachment — codex CAN run for hours from BG bash if launched correctly.**
 
-The bash harness silently kills long-running BG bash processes with SIGURG (exit 144) at ~3 minutes. Codex `exec` with `model_reasoning_effort=xhigh` typically takes 2-5 minutes. Every BG-bash codex spawn produced 0-line output before being killed (verified across 3+ separate sessions on 2026-04-29). Six wasted attempts before this rule was codified.
+**Two valid invocation patterns**:
+
+### Pattern A — Detached BG bash (preferred for non-interactive runs)
+
+```bash
+mkdir -p /tmp/codex_runs
+nohup bash -c '
+  codex exec --skip-git-repo-check --sandbox read-only \
+    -m gpt-5.5 -c model_reasoning_effort=xhigh \
+    -o /tmp/codex_runs/<label>.last.txt \
+    "<prompt>" \
+    2>&1 | tee /tmp/codex_runs/<label>.log > /dev/null
+' < /dev/null > /tmp/codex_runs/<label>.outer.log 2>&1 &
+disown
+```
+
+Why this survives:
+- `nohup` — ignore SIGHUP from terminal hangup
+- `bash -c '...'` subshell — wraps the pipe so `tee` captures stdout properly even if outer dies
+- `< /dev/null` — close stdin so codex doesn't wait for input
+- `2>&1 | tee` — capture stdout+stderr to log file with explicit flushing
+- `> outer.log 2>&1 &` — redirect immediate parent's output, fork to background
+- `disown` — remove from job table so parent shell exit can't reach it
+- `-o /tmp/.../<label>.last.txt` — codex's own guaranteed final-message capture (survives even if log file pipe breaks)
+
+**Verified 2026-04-29**: detached sanity test produced 11,449-token response in ~10s with no harness interference.
+
+### Pattern B — Agent tool wrapper (preferred for interactive multi-step orchestration)
+
+When the codex session needs to be orchestrated through multiple stages (read context → reason → write code → verify), use the `Agent` tool. The Agent has its own bash environment plus poll-and-wait logic.
 
 **Rules**:
-1. ALL `codex exec` calls go through `Agent` tool wrapper (`subagent_type: general-purpose`, `run_in_background: true`). The Agent tool runs in its own bash that does NOT inherit our session's harness timeout.
-2. NEVER `Bash run_in_background: true` to launch `codex exec` — the SIGURG-144 trap is deterministic.
-3. Foreground `codex exec` (no `run_in_background`) is acceptable for prompts that genuinely complete in <2min, but Agent wrapper is still preferred to avoid blocking the conversation.
-4. Capture codex output in the Agent's prompt instructions (e.g. `> /tmp/codex_<label>.log` inside the Agent's bash invocation). The Agent reads the log + returns it.
-5. The Agent tool's prompt to codex must include all relevant memory file paths, research doc paths, and CLAUDE.md non-negotiables — codex sandbox starts fresh each time.
+1. NEVER bare `Bash run_in_background: true` to launch `codex exec`. The bash inherits our process group and dies at SIGURG-144.
+2. ALWAYS use Pattern A (`nohup` + `bash -c '...'` + `disown`) OR Pattern B (`Agent` tool wrapper).
+3. Codex MCP-plugin (rmcp) auth may be expired separately from core codex API. If you see `TokenRefreshFailed` in stderr, codex SAFE FUNCTIONS still work — only MCP-augmented features fail. Re-auth via `codex login` if needed.
+4. ALWAYS use `-o /tmp/.../<label>.last.txt` flag — guarantees final-message capture even if pipe breaks.
+5. Long codex sessions (xhigh, large context) may take 5-30+ minutes. Use Pattern A and poll the log file periodically; do NOT assume codex is dead until process actually exits.
+6. The Agent tool's prompt to codex must include all relevant memory file paths and CLAUDE.md non-negotiables — codex sandbox starts fresh each time.
 
-**This is the 7th catastrophic operational pattern.** Cost: 6+ failed BG-bash codex spawns ate forward velocity. Save BG-bash for short shell commands; reserve codex CLI for Agent wrapper exclusively.
+**This is the 7th catastrophic operational pattern (now structurally extinct via Pattern A).** Cost before fix: 6+ failed BG-bash codex spawns ate forward velocity over 4 hours.
 
-Memory: `feedback_bash_harness_kills_long_running_tasks_20260428.md`, `feedback_persistent_codex_review_protocol_20260429.md`.
+Memory: `feedback_bash_harness_kills_long_running_tasks_20260428.md`, `feedback_persistent_codex_review_protocol_20260429.md`, `feedback_codex_detach_pattern_works_20260429` (the verified detach test).
 
 ## Primary duties
 
