@@ -51,6 +51,12 @@ __all__ = [
     "renderer_total_weight_bits",
     "renderer_average_bits_per_weight",
     "compute_renderer_rate_penalty",
+    # Lane SG (2026-04-28) — protected-pattern-set selector
+    "SC_SEGNET_PROTECTED_NAME_PATTERNS",
+    "get_protected_patterns",
+    # Lane SG (2026-04-28) — measured-sensitivity helper (anti-arbitrariness)
+    "attribute_score_sensitivity_per_layer",
+    "patterns_from_measured_sensitivity",
 ]
 
 
@@ -947,6 +953,63 @@ def _is_protected_name(qualified_name: str) -> bool:
     return False
 
 
+# Lane SG (2026-04-28 council EUREKA #5): re-scope which layers stay FP32
+# based on which scorer we are protecting. The asymmetric scoring formula
+# (100·seg + sqrt(10·pose) + 25·rate) makes SegNet 2-5× more impactful per
+# unit-distortion at our operating point. The default protection list above
+# (`posenet_prior`) was chosen for the FP4 → ASYM PoseNet path; the SegNet
+# path needs a different set targeting the renderer layers that drive
+# semantic-class boundaries (decoder out_conv, decode_head).
+#
+# These two sets are DISJOINT by construction: a layer protected for SegNet
+# was unprotected for PoseNet and vice versa. The Lane SG hypothesis is that
+# protecting SegNet-relevant layers at FP32 (while bulk decoder reaches 2.5
+# bits avg) preserves the dominant 100·seg score component.
+SC_SEGNET_PROTECTED_NAME_PATTERNS: tuple[str, ...] = (
+    # Decoder RGB output convs — drive per-pixel semantic boundaries
+    # that SegNet argmax flips on. Higher-precision here directly reduces
+    # SegNet distortion (the 100× term).
+    "out_conv",
+    "decode_head",
+    # Class-conditional gamma/beta affine — the per-class signal the SegNet
+    # encoder reads through its EfficientNet-B2 stem.
+    "class_gamma",
+    "class_beta",
+    # Decoder upsample 1x1 convs — semantic-mask-aware mixing
+    "seg_fuse",
+    "seg_skip_fuse",
+)
+
+
+def get_protected_patterns(pattern_set: str) -> list[str]:
+    """Return the layer-name protection list for a given prior.
+
+    Lane SG (2026-04-28): allows training/QAT to choose which scorer's
+    sensitive layers stay FP32. The asymmetric scoring formula motivates
+    different protection sets per scorer:
+
+    - ``"posenet_prior"`` (legacy default): protects the FiLM bottleneck +
+      motion head + decoder head — the layers Lane S identified as
+      PoseNet-sensitive in the FP4 ASYM path.
+    - ``"segnet_prior"`` (Lane SG): protects the decoder RGB output convs +
+      class-conditional affines — the layers driving SegNet argmax.
+
+    The two pattern sets are guaranteed disjoint so a Lane SG run cannot
+    accidentally protect PoseNet-only layers (which would dilute the
+    SegNet-sensitivity signal).
+
+    Raises ValueError on unknown pattern set.
+    """
+    if pattern_set == "posenet_prior":
+        return list(SC_PROTECTED_NAME_PATTERNS)
+    if pattern_set == "segnet_prior":
+        return list(SC_SEGNET_PROTECTED_NAME_PATTERNS)
+    raise ValueError(
+        f"Unknown pattern_set={pattern_set!r}; "
+        f"expected one of: 'posenet_prior', 'segnet_prior'"
+    )
+
+
 def swap_renderer_convs_with_self_compress(
     model: nn.Module,
     *,
@@ -954,15 +1017,16 @@ def swap_renderer_convs_with_self_compress(
     skip_transposed: bool = True,
     skip_groupwise: bool = False,
     extra_protected_patterns: tuple[str, ...] = (),
+    protected_patterns: tuple[str, ...] | None = None,
 ) -> dict:
     """Swap eligible nn.Conv2d layers in a renderer with SelfCompressingConv2d.
 
     Operates in-place on ``model``. The swap walks ``named_modules`` and
-    replaces each ``nn.Conv2d`` whose qualified name is NOT in
-    ``SC_PROTECTED_NAME_PATTERNS`` with a ``SelfCompressingConv2d`` of the
-    same shape, copying the original weights and bias. The ``LearnableBitDepth``
-    starts at ``init_bits`` (default 8 = full precision); the Lagrangian
-    rate penalty during training drives bit-depth down toward the target.
+    replaces each ``nn.Conv2d`` whose qualified name is NOT in the active
+    protection list with a ``SelfCompressingConv2d`` of the same shape,
+    copying the original weights and bias. The ``LearnableBitDepth`` starts
+    at ``init_bits`` (default 8 = full precision); the Lagrangian rate
+    penalty during training drives bit-depth down toward the target.
 
     Args:
         model: a build_renderer(...) output (PairGenerator or
@@ -973,24 +1037,41 @@ def swap_renderer_convs_with_self_compress(
             our experiments).
         skip_groupwise: leave grouped convs (e.g. depthwise) FP32. Default
             False — depthwise convs are tiny and benefit from SC.
-        extra_protected_patterns: caller-supplied additional name suffixes
-            to protect. Useful for ablations.
+        extra_protected_patterns: ADDITIONAL name suffixes to protect on
+            top of ``SC_PROTECTED_NAME_PATTERNS``. Useful for ablations
+            that want PoseNet protections + a few extra layers.
+        protected_patterns: REPLACEMENT protection list. When provided
+            (non-None), the legacy hardcoded ``SC_PROTECTED_NAME_PATTERNS``
+            list is BYPASSED and only ``protected_patterns`` (plus any
+            ``extra_protected_patterns``) is used. This is the canonical
+            way to switch between scorer-prior protection sets — Lane SG
+            (``segnet_prior``) needs SegNet-only protection, NOT
+            posenet-prior + segnet (which is what
+            ``extra_protected_patterns=segnet_list`` would have produced
+            by mistake; see Codex F3 2026-04-28).
 
     Returns:
         Dict with diagnostics: ``{"swapped": list[str], "protected": list[str],
-        "skipped": list[str], "total_swapped_params": int}``.
+        "skipped": list[str], "total_swapped_params": int,
+        "protected_patterns_used": list[str]}``.
     """
     swapped: list[str] = []
     protected: list[str] = []
     skipped: list[str] = []
     total_swapped_params = 0
 
-    protected_patterns = tuple(SC_PROTECTED_NAME_PATTERNS) + tuple(extra_protected_patterns)
+    # F3 fix (2026-04-28): the active protection list can be EITHER the
+    # legacy default (when caller passes nothing or only extras) OR a full
+    # replacement (when caller passes protected_patterns=). The replacement
+    # path is what Lane SG needs to protect SegNet-only layers without
+    # also protecting the disjoint PoseNet-prior set.
+    if protected_patterns is None:
+        active_protected: tuple[str, ...] = tuple(SC_PROTECTED_NAME_PATTERNS) + tuple(extra_protected_patterns)
+    else:
+        active_protected = tuple(protected_patterns) + tuple(extra_protected_patterns)
 
     def _is_protected_with_extras(name: str) -> bool:
-        if _is_protected_name(name):
-            return True
-        for pat in extra_protected_patterns:
+        for pat in active_protected:
             if name == pat or name.endswith("." + pat):
                 return True
         return False
@@ -1065,6 +1146,10 @@ def swap_renderer_convs_with_self_compress(
         "protected": protected,
         "skipped": skipped,
         "total_swapped_params": total_swapped_params,
+        # F3 fix: surface which protection list was used so ops can audit
+        # post-hoc whether Lane SG actually protected SegNet-only layers
+        # (NOT PoseNet ∪ SegNet, which the old additive code produced).
+        "protected_patterns_used": list(active_protected),
     }
 
 
@@ -1136,6 +1221,261 @@ def compute_renderer_rate_penalty(
     target_total = float(target_bits_per_weight) * float(total_weights)
     excess = F.relu(total_bits - target_total)
     return lambda_rate * (excess / max(total_weights, 1))
+
+
+# ── Lane SG (2026-04-28) — measured per-layer sensitivity ───────────────
+#
+# THIS IS THE ANTI-ARBITRARINESS PIECE.
+#
+# `SC_PROTECTED_NAME_PATTERNS` and `SC_SEGNET_PROTECTED_NAME_PATTERNS` above
+# are HEURISTIC pattern strings derived from architectural intuition. Per
+# CLAUDE.md and the Lane G v3 wedge attribution council
+# (`.omx/research/lane_g_v3_stacking_skunkworks_20260428.md` §1.4), heuristic
+# patterns are exactly the kind of arbitrary choice this codebase warns
+# against. The pattern sets must be VALIDATED by measurement before they are
+# trusted to drive a multi-hour Vast.ai training run.
+#
+# `attribute_score_sensitivity_per_layer` implements that measurement:
+# perturb each layer's weights by a calibrated fraction, propagate through the
+# renderer + scorer fns, and return the resulting Δ(seg_score) and Δ(pose_score)
+# normalized per parameter. Layers with the highest sensitivity per parameter
+# are the ones whose protection actually buys score; everything else can be
+# self-compressed without measurable distortion impact.
+#
+# Output:
+#     {
+#       "renderer.head":     {"seg_dscore": 0.0123, "pose_dscore": 0.0008,
+#                             "n_params": 111, "rate_per_param": 0.0001},
+#       "renderer.fuse_conv":{"seg_dscore": 0.0034, "pose_dscore": 0.0002, ...},
+#       ...
+#     }
+#
+# The companion helper `patterns_from_measured_sensitivity` then takes that
+# dict + a target ("segnet" | "posenet" | "both") + a top-K cutoff and emits
+# a list of layer-name patterns that can be passed as
+# `extra_protected_patterns` to `swap_renderer_convs_with_self_compress`.
+#
+# Usage::
+#
+#     sens = attribute_score_sensitivity_per_layer(
+#         renderer, seg_score_fn, pose_score_fn, samples,
+#         delta_frac=0.05, n_repeats=2, device="cpu",
+#     )
+#     extra = patterns_from_measured_sensitivity(sens, target="segnet", top_k=4)
+#     swap_renderer_convs_with_self_compress(
+#         renderer, extra_protected_patterns=tuple(extra),
+#     )
+
+
+def _flatten_to_2d(x: torch.Tensor) -> torch.Tensor:
+    """Reshape an arbitrary-shape tensor into 2D (batch, features).
+
+    Helper for treating renderer outputs as opaque feature vectors so the
+    measurement helper can be called with toy scorer functions in tests.
+    """
+    return x.detach().reshape(x.shape[0], -1)
+
+
+def attribute_score_sensitivity_per_layer(
+    model: nn.Module,
+    seg_score_fn,  # callable(model_output) -> scalar Tensor
+    pose_score_fn,  # callable(model_output) -> scalar Tensor
+    samples,  # iterable of args; each item is passed as model(*args)
+    *,
+    delta_frac: float = 0.05,
+    n_repeats: int = 2,
+    device: str | torch.device = "cpu",
+    skip_protected: bool = False,
+    seed: int = 0,
+) -> dict[str, dict[str, float]]:
+    """Measure per-layer ΔSegNet vs ΔPoseNet score sensitivity.
+
+    For each ``nn.Conv2d`` (or ``SelfCompressingConv2d.conv``) layer in
+    ``model``, perturb the weight tensor by Gaussian noise of std =
+    ``delta_frac * weight.abs().mean()``, re-evaluate the model on
+    ``samples``, and record the absolute change in ``seg_score_fn`` and
+    ``pose_score_fn`` averaged over ``n_repeats`` perturbation seeds.
+
+    The perturbation is RESTORED after each measurement so the model state
+    is unchanged on return.
+
+    Args:
+        model: a renderer (PairGenerator or AsymmetricPairGenerator).
+        seg_score_fn: callable taking the model output and returning a scalar
+            tensor. Tests can pass a simple ``output.mean()``-style stand-in;
+            production callers should pass a real SegNet score function.
+        pose_score_fn: same signature, for PoseNet.
+        samples: iterable of tuples; each tuple is unpacked as ``model(*sample)``.
+        delta_frac: perturbation magnitude as a fraction of mean abs weight.
+            0.05 (default) is small enough to stay in the linear regime for
+            most renderer convs; raise to 0.1 for noisier signal.
+        n_repeats: number of independent perturbation seeds to average.
+        device: compute device; weights moved as-needed.
+        skip_protected: if True, also skip layers already in
+            ``SC_PROTECTED_NAME_PATTERNS`` ∪ ``SC_SEGNET_PROTECTED_NAME_PATTERNS``.
+            Default False — measure every layer so the result can be cross-
+            checked against the heuristic lists.
+        seed: torch RNG seed base. Each repeat uses ``seed + repeat_idx``.
+
+    Returns:
+        ``dict[layer_name, dict[str, float]]`` with keys:
+          - ``seg_dscore``: mean |Δ seg_score_fn| under perturbation
+          - ``pose_dscore``: mean |Δ pose_score_fn| under perturbation
+          - ``n_params``: number of weights in the perturbed layer
+          - ``rate_per_param``: 1/n_params (rate cost of NOT compressing this
+            layer; useful for ranking sensitivity-per-byte)
+    """
+    model = model.to(device)
+    model.eval()
+
+    # 1. Baseline scores (no perturbation), averaged across samples.
+    baseline_seg = 0.0
+    baseline_pose = 0.0
+    n_samples = 0
+    sample_list = list(samples)
+    if not sample_list:
+        return {}
+
+    with torch.no_grad():
+        for sample in sample_list:
+            sample_args = tuple(s.to(device) if torch.is_tensor(s) else s for s in sample)
+            out = model(*sample_args)
+            baseline_seg += float(seg_score_fn(out).detach().item())
+            baseline_pose += float(pose_score_fn(out).detach().item())
+            n_samples += 1
+    baseline_seg /= max(n_samples, 1)
+    baseline_pose /= max(n_samples, 1)
+
+    # 2. Identify candidate Conv2d layers (mirror swap_renderer_convs logic).
+    candidates: list[tuple[str, nn.Conv2d]] = []
+    for full_name, module in model.named_modules():
+        if isinstance(module, nn.ConvTranspose2d):
+            continue
+        if isinstance(module, SelfCompressingConv2d):
+            # For SC layers, perturb the underlying conv.weight.
+            candidates.append((full_name, module.conv))
+            continue
+        if isinstance(module, nn.Conv2d):
+            if skip_protected and (
+                _is_protected_name(full_name)
+                or any(full_name.endswith("." + p) or full_name == p
+                       for p in SC_SEGNET_PROTECTED_NAME_PATTERNS)
+            ):
+                continue
+            candidates.append((full_name, module))
+
+    if not candidates:
+        return {}
+
+    # 3. Perturb each layer and measure score deltas.
+    results: dict[str, dict[str, float]] = {}
+    rng = torch.Generator(device="cpu")
+
+    for full_name, conv in candidates:
+        weight = conv.weight
+        n_params = int(weight.numel())
+        # Calibrate noise scale to weight magnitude to keep perturbation
+        # in linear regime regardless of layer init.
+        weight_scale = float(weight.detach().abs().mean().item())
+        if weight_scale < 1e-12:
+            # Zero-init layers (e.g., renderer.head) — use a tiny absolute std
+            # so we still get measurable but bounded deltas.
+            std = max(delta_frac * 1e-3, 1e-6)
+        else:
+            std = delta_frac * weight_scale
+
+        seg_deltas: list[float] = []
+        pose_deltas: list[float] = []
+
+        for repeat_idx in range(n_repeats):
+            rng.manual_seed(seed + repeat_idx)
+            noise = torch.randn(weight.shape, generator=rng, dtype=weight.dtype) * std
+            noise = noise.to(weight.device)
+
+            with torch.no_grad():
+                weight.add_(noise)
+
+            with torch.no_grad():
+                seg_p = 0.0
+                pose_p = 0.0
+                for sample in sample_list:
+                    sample_args = tuple(
+                        s.to(device) if torch.is_tensor(s) else s for s in sample
+                    )
+                    out = model(*sample_args)
+                    seg_p += float(seg_score_fn(out).detach().item())
+                    pose_p += float(pose_score_fn(out).detach().item())
+                seg_p /= max(n_samples, 1)
+                pose_p /= max(n_samples, 1)
+
+            seg_deltas.append(abs(seg_p - baseline_seg))
+            pose_deltas.append(abs(pose_p - baseline_pose))
+
+            # Restore weight (subtract the noise we just added)
+            with torch.no_grad():
+                weight.sub_(noise)
+
+        seg_dscore = sum(seg_deltas) / max(len(seg_deltas), 1)
+        pose_dscore = sum(pose_deltas) / max(len(pose_deltas), 1)
+        results[full_name] = {
+            "seg_dscore": seg_dscore,
+            "pose_dscore": pose_dscore,
+            "n_params": n_params,
+            "rate_per_param": 1.0 / max(n_params, 1),
+        }
+
+    return results
+
+
+def patterns_from_measured_sensitivity(
+    sensitivity: dict[str, dict[str, float]],
+    *,
+    target: str = "segnet",
+    top_k: int = 4,
+    min_dscore: float = 0.0,
+) -> list[str]:
+    """Convert a sensitivity dict into a protected-layer name pattern list.
+
+    Top-K layers (ranked by ``{target}_dscore``) become the protected list.
+    Returned strings are FULL qualified names — the swap helper matches by
+    suffix so passing them as ``extra_protected_patterns`` will protect
+    exactly those layers.
+
+    Args:
+        sensitivity: output of ``attribute_score_sensitivity_per_layer``.
+        target: ``"segnet"`` (Lane SG default), ``"posenet"`` (legacy),
+            or ``"both"`` (rank by ``seg_dscore + pose_dscore``).
+        top_k: number of layers to protect.
+        min_dscore: skip layers whose target dscore is below this floor;
+            useful to avoid protecting layers that have effectively zero
+            measured impact.
+
+    Raises:
+        ValueError: on unknown ``target``.
+
+    Returns:
+        List of qualified layer names ranked by descending sensitivity.
+    """
+    if target == "segnet":
+        key = lambda v: v["seg_dscore"]
+    elif target == "posenet":
+        key = lambda v: v["pose_dscore"]
+    elif target == "both":
+        key = lambda v: v["seg_dscore"] + v["pose_dscore"]
+    else:
+        raise ValueError(
+            f"Unknown target={target!r}; expected 'segnet'|'posenet'|'both'"
+        )
+
+    ranked = sorted(sensitivity.items(), key=lambda item: key(item[1]), reverse=True)
+    out: list[str] = []
+    for name, vals in ranked:
+        if key(vals) < min_dscore:
+            continue
+        out.append(name)
+        if len(out) >= top_k:
+            break
+    return out
 
 
 if __name__ == "__main__":

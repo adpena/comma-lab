@@ -2203,24 +2203,25 @@ def train(args: argparse.Namespace):
             get_protected_patterns,
             SC_PROTECTED_NAME_PATTERNS,
         )
-        # Lane SG (2026-04-28): pick protection list per chosen scorer prior.
-        # The swap function ALWAYS protects SC_PROTECTED_NAME_PATTERNS
-        # (PoseNet-prior); we add the SegNet-prior list as `extras` only when
-        # segnet_prior is selected, preserving backward-compat for posenet
-        # callers (where the chosen list IS the default).
-        chosen = get_protected_patterns(
-            getattr(args, "protected_pattern_set", "posenet_prior")
-        )
-        extras = tuple(p for p in chosen if p not in SC_PROTECTED_NAME_PATTERNS)
+        # Lane SG (2026-04-28, hardened by Codex F3 2026-04-28): pick the
+        # protection list per chosen scorer prior and pass it as a
+        # REPLACEMENT (not extras). The previous additive wiring made
+        # Lane SG protect PoseNet-prior layers AND SegNet-prior layers,
+        # which dilutes the SegNet-only sensitivity signal Lane SG is
+        # specifically testing. The two pattern sets are disjoint by
+        # construction (see SC_SEGNET_PROTECTED_NAME_PATTERNS docstring),
+        # so additive == both-sets-protected, replacement == only-chosen-set.
+        pattern_set_name = getattr(args, "protected_pattern_set", "posenet_prior")
+        chosen = get_protected_patterns(pattern_set_name)
         diag = swap_renderer_convs_with_self_compress(
             model,
             init_bits=float(args.self_compress_init_bits),
-            extra_protected_patterns=extras,
+            protected_patterns=tuple(chosen),
         )
         print(
-            f"[lane-s] protected_pattern_set="
-            f"{getattr(args, 'protected_pattern_set', 'posenet_prior')!r} "
-            f"(default {len(SC_PROTECTED_NAME_PATTERNS)} + extras {len(extras)})"
+            f"[lane-s] protected_pattern_set={pattern_set_name!r} "
+            f"REPLACES default — protected layers in active list: {len(chosen)} "
+            f"({'PoseNet-prior' if pattern_set_name == 'posenet_prior' else 'SegNet-prior'})"
         )
         avg = renderer_average_bits_per_weight(model)
         print(
