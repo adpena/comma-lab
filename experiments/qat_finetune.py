@@ -110,6 +110,16 @@ class QATConfig:
     mixed_precision_target_rate: float = 0.70  # fraction of params at bulk_bits (FP4)
     mixed_precision_bulk_bits: int = 4
     mixed_precision_critical_bits: int = 16
+    # Lane SG (Codex F2 2026-04-28): which scorer-prior protection list
+    # forces layers to ``mixed_precision_critical_bits`` regardless of
+    # what the FP4-sensitivity profile said. Two valid values:
+    # "posenet_prior" (legacy, FiLM/motion/head protected) and
+    # "segnet_prior" (Lane SG, decoder/class-affine protected). Threaded
+    # from --protected-pattern-set into the bit allocator below so the
+    # operator's stated hypothesis is actually applied (the prior wiring
+    # parsed the flag but never threaded it, making Lane SG runs byte-
+    # identical to legacy QAT).
+    protected_pattern_set: str = "posenet_prior"
     output_dir: str = "experiments/results/qat_fp4"
 
     # QAT schedule — research-backed (Apple 2025, Bit-by-Bit 2026)
@@ -218,24 +228,15 @@ def load_float_checkpoint(model: nn.Module, path: str, device: torch.device) -> 
 
         # Fourth-layer arch-drift fix (mirrors pipeline.step_export from
         # c5214993): train_renderer can save with torch.nn.utils.parametrize
-        # hooks attached for self-compression / fake-quantization. State
-        # keys look like `<layer>.parametrizations.weight.original` and a
-        # fresh model (no hooks) expects plain `<layer>.weight`. Normalize
-        # so the .pt loads cleanly. Drop codebook tensors — those are QAT
-        # internals not part of the plain weight tensor.
-        if any(".parametrizations." in k for k in state.keys()):
-            normalized = {}
-            for k, v in state.items():
-                if ".parametrizations." not in k:
-                    normalized[k] = v
-                    continue
-                head, _, tail = k.partition(".parametrizations.")
-                name, _, suffix = tail.partition(".")
-                if suffix == "original":
-                    normalized[f"{head}.{name}"] = v
-                # else: drop codebook + other parametrize internals
-            print(f"  Stripped parametrize hooks: {len(state)} → {len(normalized)} keys")
-            state = normalized
+        # hooks attached for self-compression / fake-quantization. Use the
+        # canonical strip helper (factored 2026-04-28 from this very block,
+        # then hardened for root-level keys + multi-original weight_norm +
+        # nested chains via Round 11 codex review).
+        from tac.parametrize_strip import strip_parametrize_hooks, has_parametrize_keys
+        if has_parametrize_keys(state):
+            n_before = len(state)
+            state = strip_parametrize_hooks(state)
+            print(f"  Stripped parametrize hooks: {n_before} → {len(state)} keys")
 
         # strict=False so we surface missing/unexpected lists; raise with a
         # helpful error if either is non-empty (equivalent to strict=True
@@ -325,6 +326,7 @@ def bit_allocation_from_sensitivity(
     target_rate: float = 0.70,
     bulk_bits: int = 4,
     critical_bits: int = 16,
+    protected_pattern_set: str = "posenet_prior",
 ) -> tuple[dict[str, int], dict[str, float]]:
     """Build a per-layer bit allocation from a Lane F-V4 sensitivity profile.
 
@@ -392,6 +394,24 @@ def bit_allocation_from_sensitivity(
             f"has {len(model_params)} parameters."
         )
 
+    # F2 fix (Codex 2026-04-28): resolve the scorer-prior protection list
+    # BEFORE allocation so we can FORCE protected layers to critical_bits
+    # regardless of what sensitivity profile claimed. This is what the
+    # operator's --protected-pattern-set flag is supposed to do — without
+    # this guard, segnet_prior would have been byte-identical to the
+    # posenet_prior default whenever the sensitivity profile happened to
+    # rank PoseNet-prior layers as low-sensitivity.
+    from tac.self_compress import get_protected_patterns
+    protection_list = get_protected_patterns(protected_pattern_set)
+    def _is_protected_layer(param_name: str) -> bool:
+        # param_name is "module.foo.bar.weight"; strip ".weight" suffix
+        # and match by full-name OR suffix against each protection pattern.
+        module_name = param_name[:-len(".weight")] if param_name.endswith(".weight") else param_name
+        for pat in protection_list:
+            if module_name == pat or module_name.endswith("." + pat):
+                return True
+        return False
+
     # Sort ASCENDING by sensitivity (FP4-tolerable first)
     layer_records.sort(key=lambda r: r[1])
 
@@ -400,9 +420,19 @@ def bit_allocation_from_sensitivity(
 
     allocation: dict[str, int] = {}
     sensitivity_used: dict[str, float] = {}
+    forced_protected: list[str] = []  # F2: surface for diagnostics + tests
     cumulative = 0
     for param_name, d, n in layer_records:
         sensitivity_used[param_name] = d
+        # F2: protected layers ALWAYS get critical_bits (typically FP16),
+        # bypassing the sensitivity-based budget. They still consume budget
+        # accounting downstream so subsequent layers can fill the remaining
+        # FP4 quota — this matches the operator's mental model: "protect
+        # these layers, then FP4-quantize the rest up to the budget."
+        if _is_protected_layer(param_name):
+            allocation[param_name] = critical_bits
+            forced_protected.append(param_name)
+            continue
         if cumulative + n <= fp4_budget:
             allocation[param_name] = bulk_bits
             cumulative += n
@@ -411,6 +441,9 @@ def bit_allocation_from_sensitivity(
 
     actual_rate = cumulative / max(total_params, 1)
     print(f"  Mixed-precision allocation built from {sensitivity_path}:")
+    print(f"    protected_pattern_set: {protected_pattern_set!r} "
+          f"({len(protection_list)} patterns; {len(forced_protected)} layers "
+          f"forced to FP{critical_bits})")
     print(f"    total layers: {len(layer_records)}, total params: {total_params:,}")
     print(f"    target_rate: {target_rate:.2%}, actual: {actual_rate:.2%} "
           f"({cumulative:,} FP{bulk_bits} / {total_params - cumulative:,} FP{critical_bits})")
@@ -418,6 +451,9 @@ def bit_allocation_from_sensitivity(
           f"{sum(1 for v in allocation.values() if v == bulk_bits)}, "
           f"layers FP{critical_bits}: "
           f"{sum(1 for v in allocation.values() if v == critical_bits)}")
+    if forced_protected:
+        print(f"    forced-protected ({protected_pattern_set}): {forced_protected[:10]}"
+              f"{'…' if len(forced_protected) > 10 else ''}")
     return allocation, sensitivity_used
 
 
@@ -455,6 +491,13 @@ def apply_mixed_precision_quant(
             if self.bits >= 16:
                 return w
             if self.bits == 4:
+                # FP4_HARDWARE_DISCLOSED: NVFP4 hardware needs Blackwell
+                # (CC >= 10.0). RTX 4090 is CC 8.9 → fake_quant_fp4 SIMULATES
+                # FP4 in FP32. The renderer's inflate-time inference still
+                # runs at FP32 — only the archive bytes are 4-bit packed.
+                # See Lane F-V5 (hardware FP8 via torchao) for the proper
+                # rescue path on Ada/Lovelace+ hardware. Reference:
+                # project_cosmos_deep_dive_addendum_20260428.
                 from tac.fp4_quantize import fake_quant_fp4
                 return fake_quant_fp4(w, self.codebook, self.blk_size)
             # For other bit-depths: uniform symmetric quantization with STE
@@ -733,6 +776,17 @@ def main() -> None:
                         help="Embedding dim (must match training)")
     parser.add_argument("--use-zoom-flow", action="store_true",
                         help="Enable RadialZoomWarp (4ch MotionPredictor)")
+    # Lane SG (2026-04-28 council EUREKA #5): re-scope which layers stay FP32
+    # in QAT based on which scorer we are protecting. SegNet contributes
+    # 100×seg vs sqrt(10·pose) — SegNet is 2-5× more impactful per unit
+    # distortion at our operating point. Lane SG protects SegNet-relevant
+    # decoder layers instead of PoseNet-relevant FiLM/motion layers.
+    parser.add_argument("--protected-pattern-set", type=str,
+                        default="posenet_prior",
+                        choices=["posenet_prior", "segnet_prior"],
+                        help="Lane SG: which scorer-prior protection list "
+                             "to use during QAT. 'posenet_prior' = legacy "
+                             "default; 'segnet_prior' = Lane SG.")
 
     # QAT schedule
     parser.add_argument("--int8-warmup-epochs", type=int, default=50)
@@ -802,6 +856,11 @@ def main() -> None:
         mixed_precision_target_rate=float(args.mixed_precision_target_rate),
         mixed_precision_bulk_bits=int(args.mixed_precision_bulk_bits),
         mixed_precision_critical_bits=int(args.mixed_precision_critical_bits),
+        # F2 fix (2026-04-28): thread --protected-pattern-set into QATConfig
+        # so the bit allocator below can FORCE protected layers to critical_bits.
+        # Without this thread, the flag is parsed + logged but produces no
+        # behavior change — Lane SG runs were byte-identical to legacy QAT.
+        protected_pattern_set=str(args.protected_pattern_set),
     )
 
     # Validate mixed-precision mutual exclusion + range.
@@ -1083,6 +1142,11 @@ def main() -> None:
             target_rate=cfg.mixed_precision_target_rate,
             bulk_bits=cfg.mixed_precision_bulk_bits,
             critical_bits=cfg.mixed_precision_critical_bits,
+            # F2 (Codex 2026-04-28): the operator's --protected-pattern-set
+            # selection lands here so segnet_prior actually FORCES SegNet
+            # decoder layers to FP16, even when the sensitivity profile
+            # ranked them as FP4-tolerable.
+            protected_pattern_set=cfg.protected_pattern_set,
         )
         # Persist the realised allocation alongside the QAT output for the
         # mixed-precision MXLZ export at end of training.
@@ -1092,6 +1156,7 @@ def main() -> None:
             "target_rate": cfg.mixed_precision_target_rate,
             "bulk_bits": cfg.mixed_precision_bulk_bits,
             "critical_bits": cfg.mixed_precision_critical_bits,
+            "protected_pattern_set": cfg.protected_pattern_set,
             "source_profile": str(mp_sens_path),
         }, indent=2))
         fp4_wrapped = apply_mixed_precision_quant(
