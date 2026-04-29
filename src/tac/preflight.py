@@ -528,6 +528,17 @@ def preflight_all(
             strict=True, verbose=verbose,
         )
 
+        # 2026-04-28: Check 57 — lane scripts MUST use canonical
+        # `git fetch origin main && git reset --hard origin/main` for
+        # remote_code_parity, NOT bare `git pull --ff-only`. The latter
+        # aborts on stale Vast.ai workspaces with uncommitted local
+        # changes from prior failed deploys (Lane Q-FAITHFUL crashed
+        # this way). Reference: feedback_canonical_git_sync_pattern_20260428.
+        # Lands at 0 live violations after Fix 1 → straight to STRICT.
+        check_lane_scripts_use_canonical_git_sync(
+            strict=True, verbose=verbose,
+        )
+
     # 2. Training inputs (only if profile + tto_frames provided)
     if profile_name and tto_frames_path and gt_poses_path and masks_path and profile_arch:
         preflight_training_inputs(
@@ -10274,6 +10285,168 @@ def check_verify_vast_setup_stuck_dual_threshold(
             "heartbeat freshness) AND --setup-stale-minutes "
             "(SETUP first-seen age). Dropping either half re-introduces "
             "the SETUP-stuck cost-leak class.\n"
+            + "\n".join(f"  • {v}" for v in violations[:50])
+        )
+    return violations
+
+
+# ════════════════════════════════════════════════════════════════════════════
+# Check 57 (57th meta-bug): scripts/remote_lane_*.sh git-sync MUST use the
+#                          canonical fetch+reset pattern, NOT bare
+#                          `git pull --ff-only`.
+# ════════════════════════════════════════════════════════════════════════════
+#
+# 2026-04-28: Lane Q-FAITHFUL (highest-EV lane, predicted [0.40, 0.80]) crashed
+# with `FATAL: git pull failed -- remote has uncommitted/conflicting changes`
+# after Vast.ai reused a workspace from a prior failed deploy. `git pull
+# --ff-only` aborts on uncommitted local junk; the canonical fix is
+#
+#   git fetch origin main && git reset --hard origin/main
+#
+# which discards local divergence and syncs to origin/main exactly. ANY future
+# refactor that re-introduces bare `git pull --ff-only` (without a SAME-LINE
+# `# GIT_SYNC_OPT_OUT:<reason>` waiver) fails preflight at commit/PR time.
+#
+# This check enforces:
+#   1. Any lane script that performs git sync (uses `git pull`, `git fetch`,
+#      OR `git reset` against origin) MUST use the canonical fetch+reset
+#      pattern.
+#   2. Bare `git pull --ff-only` is FORBIDDEN unless a SAME-LINE waiver
+#      `# GIT_SYNC_OPT_OUT:<reason>` is present.
+#   3. Lane scripts that do NO git sync at all are exempt (they trust the
+#      parent launcher to deploy a clean checkout).
+#
+# Live count after Fix 1 (canonical-pattern landing): 0.
+
+def check_lane_scripts_use_canonical_git_sync(
+    repo_root: Path | None = None,
+    strict: bool = False,
+    verbose: bool = True,
+) -> list[str]:
+    """Forbid lane scripts from using fragile `git pull --ff-only` which
+    aborts on stale Vast.ai workspaces. Require the canonical
+    `git fetch origin main && git reset --hard origin/main` pattern.
+
+    Scans ``scripts/remote_lane_*.sh``.
+
+    Waiver: same-line ``# GIT_SYNC_OPT_OUT:<reason>`` marker on the bare
+    `git pull --ff-only` line.
+
+    Returns list of violations. Raises MetaBugViolation if strict and any.
+    """
+    root = repo_root or REPO_ROOT
+    scripts_dir = root / "scripts"
+    violations: list[str] = []
+
+    if not scripts_dir.is_dir():
+        if verbose:
+            print(
+                f"  [canonical-git-sync] SKIP: "
+                f"{scripts_dir} not present"
+            )
+        return violations
+
+    lane_scripts = sorted(scripts_dir.glob("remote_lane_*.sh"))
+    if not lane_scripts:
+        if verbose:
+            print(
+                f"  [canonical-git-sync] SKIP: "
+                f"no remote_lane_*.sh scripts found"
+            )
+        return violations
+
+    # Accept both bare form and `git -C <path>` form (e.g.,
+    # `git -C "$WORKSPACE" fetch origin main`).
+    import re as _re
+    canonical_re_a = _re.compile(r"\bgit(?:\s+-C\s+\S+)?\s+fetch\s+origin\s+main\b")
+    canonical_re_b = _re.compile(r"\bgit(?:\s+-C\s+\S+)?\s+reset\s+--hard\s+origin/main\b")
+    waiver_substr = "# GIT_SYNC_OPT_OUT:"
+
+    for script in lane_scripts:
+        try:
+            text = script.read_text(errors="ignore")
+        except OSError as e:
+            violations.append(
+                f"{script.relative_to(root)}: cannot read — {e}"
+            )
+            continue
+
+        # Walk lines and flag any non-comment `git pull --ff-only` that
+        # lacks a same-line waiver. Track waivered lines separately so a
+        # file-level waiver also exempts the file-level canonical-pattern
+        # check below.
+        offending_lines: list[tuple[int, str]] = []
+        file_has_waiver = False
+        for lineno, raw_line in enumerate(text.splitlines(), start=1):
+            stripped = raw_line.lstrip()
+            # Skip pure-comment lines — they're documentation, not code.
+            if stripped.startswith("#"):
+                continue
+            if "git pull --ff-only" not in raw_line:
+                continue
+            # Same-line waiver allows opt-out.
+            if waiver_substr in raw_line:
+                file_has_waiver = True
+                continue
+            offending_lines.append((lineno, raw_line.strip()))
+
+        if offending_lines:
+            for lineno, line in offending_lines:
+                violations.append(
+                    f"{script.relative_to(root)}:{lineno}: bare "
+                    f"`git pull --ff-only` is FORBIDDEN — replace with "
+                    f"`git fetch origin main && git reset --hard origin/main` "
+                    f"or add same-line `# GIT_SYNC_OPT_OUT:<reason>` waiver. "
+                    f"Line: {line}"
+                )
+            continue
+
+        # If a same-line waiver was found, the operator has explicitly
+        # opted out of the canonical pattern — exempt the file.
+        if file_has_waiver:
+            continue
+
+        # If the script does ANY git sync (pull/fetch/reset against origin),
+        # enforce that the canonical pattern is present.
+        does_git_sync = (
+            "git pull" in text
+            or "git fetch" in text
+            or ("git reset" in text and "origin" in text)
+        )
+        if not does_git_sync:
+            # Lane script trusts parent launcher — fine.
+            continue
+
+        if not (canonical_re_a.search(text) and canonical_re_b.search(text)):
+            violations.append(
+                f"{script.relative_to(root)}: performs git sync but does "
+                f"NOT use the canonical `git fetch origin main && "
+                f"git reset --hard origin/main` pattern. Stale Vast.ai "
+                f"workspaces will crash on bare `git pull --ff-only` "
+                f"(memory: feedback_canonical_git_sync_pattern_20260428)."
+            )
+
+    if verbose:
+        if violations:
+            print(
+                f"  [canonical-git-sync] "
+                f"{len(violations)} violation(s):"
+            )
+            for v in violations:
+                print(f"    • {v}")
+        else:
+            print(
+                f"  [canonical-git-sync] OK: "
+                f"all {len(lane_scripts)} lane script(s) either skip git "
+                f"sync OR use canonical fetch+reset pattern"
+            )
+
+    if violations and strict:
+        raise MetaBugViolation(
+            "CANONICAL GIT SYNC VIOLATIONS — lane scripts must use "
+            "`git fetch origin main && git reset --hard origin/main` "
+            "(NOT bare `git pull --ff-only` which crashes on stale "
+            "Vast.ai workspaces).\n"
             + "\n".join(f"  • {v}" for v in violations[:50])
         )
     return violations
