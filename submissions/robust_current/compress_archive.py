@@ -81,7 +81,20 @@ def _parse_args() -> argparse.Namespace:
              "deltas to int8 saves ~49%% vs fp16 absolute (3.7KB vs 7.2KB "
              "for 600 pairs). Decoder is pure-Python in submission_archive."
              ".load_optimized_poses (already wired). Mutually exclusive "
-             "with --binary-poses.",
+             "with --binary-poses and --pose-delta-v2.",
+    )
+    p.add_argument(
+        "--pose-delta-v2", action="store_true",
+        help="Lane PD-V2: V1 (anchor + int8 deltas) PLUS static-histogram "
+             "arithmetic coding of the int8 stream "
+             "(src/tac/pose_delta_codec_v2.py). [prediction] +7-11 basis "
+             "points deterministic vs V1 (grand-council stacking codex "
+             "memory project_codec_stacking_composition_canonical_orders"
+             "_20260429.md). Includes a hard overhead gate that falls back "
+             "to V1 transparently if the AC blob is no smaller than V1 — "
+             "degenerate inputs (constant pose) silently land as V1 so a "
+             "regression cannot ship. Mutually exclusive with "
+             "--binary-poses and --pose-delta.",
     )
     p.add_argument(
         "--brotli", action="store_true",
@@ -230,6 +243,54 @@ def _convert_poses_to_pose_delta(
     return pt_path
 
 
+def _convert_poses_to_pose_delta_v2(
+    poses_path: Path,
+    output_dir: Path,
+) -> Path:
+    """Convert poses (.pt or .bin) to Lane PD-V2 arithmetic-coded format.
+
+    [prediction] +7-11 basis points deterministic vs V1 (grand-council
+    stacking codex 2026-04-29). The hard overhead gate inside
+    ``encode_pose_delta_v2_or_fallback`` falls back to V1 transparently if
+    V2 fails to beat V1's torch.save bytes — so degenerate inputs (constant
+    pose) cannot ship a regression. Mutually exclusive with
+    ``--binary-poses`` and ``--pose-delta``.
+
+    Output is written as optimized_poses.pt (a torch-saved dict carrying
+    EITHER the format='pose_delta_v2' sentinel + AC blob, OR the V1
+    sentinel after fallback) so the existing decoder in
+    submission_archive.load_optimized_poses picks it up automatically.
+
+    Returns: Path to the saved .pt file.
+    """
+    import torch
+    from tac.pose_delta_codec_v2 import (
+        POSE_DELTA_FORMAT_SENTINEL_V2,
+        encode_pose_delta_v2_or_fallback,
+    )
+
+    if poses_path.suffix == ".bin":
+        from tac.submission_archive import load_poses_binary
+        poses = load_poses_binary(poses_path).float()
+    else:
+        poses = torch.load(
+            str(poses_path), map_location="cpu", weights_only=True
+        ).float()
+
+    obj = encode_pose_delta_v2_or_fallback(poses)
+    pt_path = output_dir / "optimized_poses.pt"
+    torch.save(obj, str(pt_path))
+    used_v2 = obj.get("format") == POSE_DELTA_FORMAT_SENTINEL_V2
+    label = "pose_delta_v2" if used_v2 else "pose_delta_v1 (overhead-gate fallback)"
+    print(
+        f"    Encoded poses (Lane PD-V2 / {label}): {poses_path.name} "
+        f"({poses_path.stat().st_size:,} bytes) -> "
+        f"{pt_path.stat().st_size:,} bytes, {poses.shape}",
+        file=sys.stderr,
+    )
+    return pt_path
+
+
 
 def main() -> int:
     args = _parse_args()
@@ -291,21 +352,29 @@ def main() -> int:
         else:
             print("Step 1: Using full-frame masks (no half-frame extraction)", file=sys.stderr)
 
-        # Step 2: Pose conversion (binary fp16 OR Lane PD pose-delta OR none)
+        # Step 2: Pose conversion (binary fp16 OR Lane PD pose-delta OR
+        # Lane PD-V2 arithmetic-coded pose-delta OR none).
         final_poses_pt = None
         final_poses_bin = None
-        if args.binary_poses and args.pose_delta:
+        pose_flag_count = sum(
+            int(bool(x))
+            for x in (args.binary_poses, args.pose_delta, args.pose_delta_v2)
+        )
+        if pose_flag_count > 1:
             raise SystemExit(
-                "ERROR: --binary-poses and --pose-delta are mutually exclusive "
-                "(both are pose-encoding choices). Pick one. Lane PD's "
-                "savings (~49%) are larger than --binary-poses (~50% vs .pt "
-                "but reaches the same fp16 floor); for new builds, prefer "
-                "--pose-delta. For pinned-baseline reproductions where the "
-                "decoder might be old, use --binary-poses."
+                "ERROR: --binary-poses, --pose-delta, and --pose-delta-v2 are "
+                "mutually exclusive (all three are pose-encoding choices). "
+                "Pick exactly one. Lane PD-V2 [prediction] +7-11 bp over "
+                "Lane PD V1 (grand-council stacking codex). For pinned-"
+                "baseline reproductions where the decoder might be old, "
+                "use --binary-poses."
             )
         if args.binary_poses:
             print("Step 2: Converting poses to binary format ...", file=sys.stderr)
             final_poses_bin = _convert_poses_to_binary(poses_path, tmpdir_path)
+        elif args.pose_delta_v2:
+            print("Step 2: Encoding poses as Lane PD-V2 (AC + anchor+deltas) ...", file=sys.stderr)
+            final_poses_pt = _convert_poses_to_pose_delta_v2(poses_path, tmpdir_path)
         elif args.pose_delta:
             print("Step 2: Encoding poses as Lane PD anchor+deltas ...", file=sys.stderr)
             final_poses_pt = _convert_poses_to_pose_delta(poses_path, tmpdir_path)
