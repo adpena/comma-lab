@@ -1,0 +1,8 @@
+{
+  "lane_script": "scripts/remote_lane_w_hard_pair_self_compress.sh",
+  "label": "lane_w",
+  "gpu": "T4",
+  "max_seconds": 28800,
+  "call_id": "fc-01KQCQ0A6W804Y7Y4N93AF7SJF",
+  "dispatched_at": "2026-04-29T08:31:39.608914"
+}

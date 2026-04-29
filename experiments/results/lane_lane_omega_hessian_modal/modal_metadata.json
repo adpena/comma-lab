@@ -1,0 +1,8 @@
+{
+  "lane_script": "scripts/remote_lane_omega_hessian_qat.sh",
+  "label": "lane_omega_hessian",
+  "gpu": "T4",
+  "max_seconds": 36000,
+  "call_id": "fc-01KQCJ7J556562CSNMM7CZH801",
+  "dispatched_at": "2026-04-29T07:08:14.321058"
+}

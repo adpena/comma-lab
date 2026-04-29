@@ -1,0 +1,8 @@
+{
+  "lane_script": "scripts/remote_lane_q_faithful_jointgen.sh",
+  "label": "q_faithful_v2",
+  "gpu": "T4",
+  "max_seconds": 43200,
+  "call_id": "fc-01KQCQ5R4GH7ZYHB5GWJ6VW8B6",
+  "dispatched_at": "2026-04-29T08:34:37.725887"
+}

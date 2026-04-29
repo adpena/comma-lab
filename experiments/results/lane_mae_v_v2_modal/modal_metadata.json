@@ -1,0 +1,8 @@
+{
+  "lane_script": "scripts/remote_lane_mae_v.sh",
+  "label": "mae_v_v2",
+  "gpu": "T4",
+  "max_seconds": 50400,
+  "call_id": "fc-01KQCP43HDQZ9SE53HE90N550A",
+  "dispatched_at": "2026-04-29T08:16:15.298784"
+}

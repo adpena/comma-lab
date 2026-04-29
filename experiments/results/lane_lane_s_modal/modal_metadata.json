@@ -1,0 +1,8 @@
+{
+  "lane_script": "scripts/remote_lane_s_self_compress.sh",
+  "label": "lane_s",
+  "gpu": "T4",
+  "max_seconds": 28800,
+  "call_id": "fc-01KQCQ10HX6W62B7BHA3NN88ZQ",
+  "dispatched_at": "2026-04-29T08:32:02.491718"
+}

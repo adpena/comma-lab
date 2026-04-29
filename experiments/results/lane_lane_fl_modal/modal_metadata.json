@@ -1,0 +1,8 @@
+{
+  "lane_script": "scripts/remote_lane_fl_raft_derived_poses.sh",
+  "label": "lane_fl",
+  "gpu": "T4",
+  "max_seconds": 14400,
+  "call_id": "fc-01KQCQ2AN6RGFNSRQ8HTBRZY86",
+  "dispatched_at": "2026-04-29T08:32:45.608424"
+}
