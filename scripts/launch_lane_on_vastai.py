@@ -129,7 +129,13 @@ def create_instance(offer_id: int, label: str) -> int:
             f"  [warn] vastai create returned success=False but contract={instance_id}; "
             f"will verify state via wait_for_vastai_ready.\n"
         )
-    return int(instance_id)
+    try:
+        return int(instance_id)
+    except (TypeError, ValueError) as e:
+        raise RuntimeError(
+            f"vastai create returned non-numeric instance ID "
+            f"(value={instance_id!r}): {e}"
+        ) from e
 
 
 def get_ssh_details(instance_id: int) -> tuple[str, int]:
@@ -481,8 +487,18 @@ def extract_remote(host: str, port: int) -> None:
         "echo extracted"
     )]
     rc, out, err = run(cmd, timeout=120)
+    # Distinguish timeout (rc=-1, err=='TIMEOUT') from other failures so the
+    # caller log line is actionable rather than "extract failed: TIMEOUT".
+    if rc == -1 and err.strip() == "TIMEOUT":
+        raise RuntimeError(
+            f"extract timed out after 120s (tarball may be huge or remote disk slow); "
+            f"manually verify /workspace/pact/ before retrying"
+        )
     if rc != 0 or "extracted" not in out:
-        raise RuntimeError(f"extract failed: {err.strip()}")
+        raise RuntimeError(
+            f"extract failed: rc={rc} stderr={err.strip()[:200]} "
+            f"stdout={out.strip()[:200]}"
+        )
 
 
 def lightweight_nvdec_probe(host: str, port: int) -> tuple[bool, str]:
@@ -684,8 +700,28 @@ def cmd_phase2_wait(args) -> int:
 def _resolve_host_port(instance_id: int) -> tuple[str, int]:
     info = _vast_show_instance_dict(str(instance_id))
     if not info or info.get("actual_status") != "running":
-        raise RuntimeError(f"instance {instance_id} not in running state — re-run phase2-wait")
-    return info["ssh_host"], int(info["ssh_port"])
+        actual = info.get("actual_status") if info else None
+        raise RuntimeError(
+            f"instance {instance_id} not in running state "
+            f"(actual_status={actual!r}) — re-run phase2-wait"
+        )
+    # Guard against partial state where the instance is "running" but ssh
+    # fields haven't propagated yet (Vast.ai race condition seen 2026-04-28).
+    host = info.get("ssh_host")
+    port = info.get("ssh_port")
+    if not host or port is None:
+        raise RuntimeError(
+            f"instance {instance_id} actual_status=running but ssh fields "
+            f"missing (host={host!r} port={port!r}) — re-run phase2-wait"
+        )
+    try:
+        port_int = int(port)
+    except (TypeError, ValueError) as e:
+        raise RuntimeError(
+            f"instance {instance_id} ssh_port not convertible to int "
+            f"(value={port!r}): {e}"
+        ) from e
+    return host, port_int
 
 
 def cmd_phase2_scp(args) -> int:
