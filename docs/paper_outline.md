@@ -2,9 +2,11 @@
 
 **Title:** Task-Aware Post-Filtering for Perception-Optimized Video Compression
 
-**Subtitle:** Backpropagating Through Frozen Scorer Networks
+**Subtitle:** Backpropagating Through Frozen Scorer Networks (Era 1) → Bypassing the Codec via Neural Renderer (Era 2)
 
-**Target venues:** comma.ai $1000 writeup prize, arXiv preprint, author portfolio
+**Target venues:** comma.ai writeup prize, arXiv preprint, author portfolio
+
+> **2026-04-29 status update.** This outline was originally written for Era 1 (the AV1 + tiny CNN post-filter arc, peak `1.73`). The lab has since traversed an entire second paradigm (Era 2 — neural renderer that bypasses the codec entirely, contest-CUDA peak `1.05`) and is mid-flight on a third (Era 3 — Selfcomp paradigm shift). The outline below remains valid as the Era 1 narrative spine; the Section 11 addendum at the bottom of this file captures the Era 2/Era 3 material that the final paper will need to absorb.
 
 ---
 
@@ -450,3 +452,77 @@
 ## Appendix C: Negative Result Details
 
 - Extended discussion of each of the 18 negative results with exact configurations, scores, and diagnostic analysis.
+
+---
+
+## Section 11 (addendum, 2026-04-29): Era 2 — neural renderer that bypasses the codec
+
+The post-filter approach above plateaued at `1.73`. Era 2 abandons the codec entirely. This section is internal/draft and will be folded into Section 4/5/6 of the final paper.
+
+### 11.1 The MPS-vs-CUDA discovery (the most consequential measurement bug)
+
+For weeks the lab measured "auth" scores on local Apple Silicon (MPS). On 2026-04-25, side-by-side comparison against the CUDA A100 contest hardware revealed:
+
+| Metric | Local MPS | CUDA A100 | Drift |
+|---|---|---|---|
+| PoseNet distortion | 0.245 | 0.0107 | 23x worse on MPS |
+| SegNet distortion | 0.0024 | 0.00116 | 2x worse on MPS |
+| Final score | 2.26 | 0.90 | 2.5x worse on MPS |
+
+Likely cause: FastViT-T12 attention softmax + YUV6 chroma plane numerics differ between MPS and CUDA float16. The lab's first reproducible-from-saved-artifacts contest-CUDA score was `0.90` (pinned dilated h64 + CRF=50 + matched poses); every prior "auth" reading was a measurement artifact. New non-negotiable in the operating model: ALL auth eval on CUDA, MPS scores tagged `[MPS-PROXY]` and treated as advisory only.
+
+### 11.2 Architecture: neural renderer (dilated-h64)
+
+- 287K parameters, dilated convolutions, h=64 hidden width
+- Input: per-pair embeddings (6-DOF pose) + lower-resolution mask channel
+- Output: rendered frame at 384x512 (PoseNet's native operating resolution)
+- AV1 only carries the mask; the renderer reconstructs the full frame from per-pair embeddings
+- Trained directly against frozen scorer gradients (PoseNet + SegNet)
+
+### 11.3 Pose TTO at compress time (Lane A: 1.15 [contest-CUDA])
+
+- 6-DOF pose embeddings are optimized at compress time per-pair via gradient descent against the frozen PoseNet
+- Critical: warm-start from the baseline poses (rank-1 init), not zero or random
+- The Era 1 SVD analysis (effective rank ~1, condition number ~399) explains why the basin is razor-sharp: cold-started TTO does not work
+- PoseNet 0.247 → 0.0034 (73x improvement)
+- Archive grew by 401KB (the optimized pose tensor); contest-CUDA score 1.15 at 694KB
+
+### 11.4 KL distill weight=0.002 (Lane G v3: 1.05 [contest-CUDA])
+
+- Knowledge distillation on the SegNet logits with T=2.0
+- Critical observation: weight matters more than choice. Earlier KL attempts at weight ≥ 0.01 collapsed PoseNet because KL signal overpowered the renderer's pose path. Weight=0.002 is small enough that KL never wins the gradient competition, but provides a sustained nudge on the boundary classes that the standard SegNet loss undersamples.
+- Combined with a fresh pose-TTO retry on the Lane A anchor: PoseNet 0.0034 (-31% vs Lane A) and SegNet 0.0040 (-13% vs Lane A) BOTH improve at the SAME rate term.
+- Modal T4 reproduction within 0.01 of Vast.ai 4090 (1.04 vs 1.05) confirms the score is contest-equivalent.
+
+### 11.5 Era 2 negatives
+
+- **Lane M-V2 radial-zoom rank-1** (`1.84`): rank-1 PoseNet OUTPUT sensitivity ≠ rank-1 renderer INPUT subspace. The 6-DOF-trained renderer goes off-manifold when fed 1-DOF poses padded with zeros. Train/inference pose-pad asymmetry now gated by Check 42 STRICT.
+- **Lane GP v3 polynomial pose-fit** (`89.67`): textbook Runge phenomenon at degree-10 polynomial. Endpoint oscillations at 1e6 magnitude with destructive cancellation. RMSE ≈ pose signal magnitude itself. Lane GP polynomial path dead at this basis; could be revived with DCT or B-spline.
+- **Lane UNIWARD v8** (`1.14`): encoder pipeline is no-op on the archive bitstream without an SLI1 inflate-time decoder. Council 5/5 KILLED standalone.
+
+## Section 12 (addendum, 2026-04-29): Era 3 — the Selfcomp paradigm shift (live work)
+
+Selfcomp 0.38 (PR #56, leaderboard #2) uses paradigms we have not used. Reverse-engineered from PR #56 inflate.py, five concrete shifts:
+
+1. **Grayscale-LUT mask encoding**: 1ch smooth values + Gaussian softmax LUT (vs our 3ch discrete-class)
+2. **Single-mask-per-pair + 6-DOF affine duality**: one mask warps to both frames via affine_delta (vs our 2 masks per pair)
+3. **Analytical pose via affine_delta**: 6-DOF tanh-bounded, stored as embedding (no PoseNet predictor)
+4. **Block-FP weight self-compression** at ~1.017 bpw: qint × 2^exponents, HWOI permute (vs our FP4 at 4-8 bpw)
+5. **94K-param SegMap**: smaller, channel-light vs our 287K-param ASYM
+
+Eight Modal lanes are in flight to validate each shift in isolation and stack:
+- MM (grayscale-LUT mask), SA (94K SegMap clone), SC++ (SA + KL distill T=2.0), SO (SC++ + Hessian-aware block-FP)
+- in parallel: q_faithful_v3 (Quantizr 1:1 replica), sz_phase2_v2 (dilated moonshot), mae_v_v2 (mask-augment), lane_w_v2 (hard-pair self-compress)
+
+These are advisory predictions only — the paper will report only [contest-CUDA] landings.
+
+## Section 13 (addendum, 2026-04-29): the engineering rigor that made Era 2 possible
+
+- 78 STRICT preflight checks (was 36 a week ago). Every catastrophic measurement-bug class got a static check.
+- `eval_roundtrip` non-negotiable everywhere: closes the 2-11x proxy-auth gap on PoseNet
+- Strict-scorer rule: no PoseNet/SegNet weights at inflate time, ever
+- Mask resolution check: 48x64 vs 384x512 catastrophically scored 53.61 instead of 1.15 — gated by Check 76 STRICT
+- Vast.ai NVDEC roulette (~85% bad-host rate on some nights): Pre-DALI NVDEC probe (Stage 0.5) + Modal pivot for >2h jobs; Modal T4 is now canonical for long training jobs
+- Subagent recursive skill stall, bash harness exit-144 SIGURG, codex sandbox DNS block, launcher tarball anchor parity — all detected and structurally extinct via dedicated checks
+
+This rigor section is publishable independent of any further score. It is the operational moat under the result moat.

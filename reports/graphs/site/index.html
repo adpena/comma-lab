@@ -386,15 +386,28 @@
       </div>
     </section>
 
-    <section class="summary-shell" aria-label="Current state">
+    <section class="summary-shell" aria-label="Era 2 state (current frontier)">
+      <p class="footnote" style="margin-bottom: 0.5em;"><strong>Era 2 — neural renderer (current frontier, contest-CUDA verified):</strong></p>
+      <div class="summary-grid">
+        <div class="summary-stat"><div class="summary-label">Lane G v3 contest-CUDA</div><div class="summary-value">1.05</div><div class="summary-meta">694,074 bytes</div></div>
+        <div class="summary-stat"><div class="summary-label">Modal T4 reproduction</div><div class="summary-value">1.04</div><div class="summary-meta">drift 0.01 within noise</div></div>
+        <div class="summary-stat"><div class="summary-label">Fallback floor (Lane A)</div><div class="summary-value">1.15</div><div class="summary-meta">694,074 bytes</div></div>
+        <div class="summary-stat"><div class="summary-label">Era 2 baseline (CUDA-true)</div><div class="summary-value">0.90</div><div class="summary-meta">293 KB</div></div>
+      </div>
+      <p class="footnote">Recipe: dilated-h64 neural renderer + KL distill weight=0.002 + pose TTO retry on Lane A anchor. PoseNet 0.0034 / SegNet 0.0040 / Rate 0.0185. Live work targets sub-0.30 (eight Modal lanes in flight on the Selfcomp paradigm portfolio).</p>
+      <p class="config-line" aria-label="Era 2 method">dilated-h64 renderer · CRF=50 mask · KL distill T=2.0 weight=0.002 · pose TTO from baseline poses · contest-CUDA inflate.sh → upstream/evaluate.py</p>
+    </section>
+
+    <section class="summary-shell" aria-label="Era 1 state (historical, codec + post-filter arc)">
+      <p class="footnote" style="margin-bottom: 0.5em;"><strong>Era 1 — codec + tiny CNN post-filter (historical Track B arc):</strong></p>
       <div class="summary-grid">
         <div class="summary-stat"><div class="summary-label">Track B current_workflow</div><div class="summary-value">1.73</div><div class="summary-meta">864,167 bytes</div></div>
         <div class="summary-stat"><div class="summary-label">Track B rule_faithful</div><div class="summary-value">1.795</div><div class="summary-meta">966,071 bytes</div></div>
         <div class="summary-stat"><div class="summary-label">Delta vs published baseline</div><div class="summary-value">-2.66</div><div class="summary-meta">4.39 → 1.73</div></div>
         <div class="summary-stat"><div class="summary-label">Delta vs prior floor</div><div class="summary-value">-0.11</div><div class="summary-meta">-1 bytes</div></div>
       </div>
-      <p class="footnote">Track A remains separate: `current_workflow` 0.00 at 167 bytes. The robust run ledger currently contains 46 measured runs, 18 promotions, and 18 explicit rejections.</p>
-      <p class="config-line" aria-label="Current promoted method">robust_current · libsvtav1 · 524x394 · film-grain=22 · lanczos/long1000-qat-ema-postfilter-h64 · long1000 QAT+EMA learned int8 post-filter h64</p>
+      <p class="footnote">Track A remains separate: `current_workflow` 0.00 at 167 bytes. The robust run ledger currently contains 46 measured runs, 18 promotions, and 18 explicit rejections. The Era 1 floor (1.73) was eclipsed by Era 2 once the lab abandoned the codec entirely; the AV1+post-filter mathematical investigation (Jacobian rank-1, CNN residual mid-frequency analysis) is preserved below as historical narrative.</p>
+      <p class="config-line" aria-label="Era 1 promoted method">robust_current · libsvtav1 · 524x394 · film-grain=22 · lanczos/long1000-qat-ema-postfilter-h64 · long1000 QAT+EMA learned int8 post-filter h64</p>
     </section>
 
     <section class="panel" id="concepts" aria-labelledby="concepts-title">

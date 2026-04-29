@@ -13,30 +13,60 @@
   Section 10: Discussion
 -->
 
-## Abstract
+> **2026-04-29 status update.** This draft contains historical claims that have been invalidated by the MPS-vs-CUDA drift discovery (2026-04-25): every "auth" score reported below in the legacy draft body that was measured on MPS is `[advisory only]` and ~2.5x optimistic. The lab's first reproducible-from-saved-artifacts contest-CUDA baseline is `0.90` (2026-04-25). Current contest-CUDA floor is **`1.05`** (Lane G v3 = dilated-h64 renderer + KL distill weight=0.002 + pose TTO retry, verified 2026-04-28; Modal T4 reproduction `1.04` on 2026-04-29 within 0.01 noise). The Era 2 + Era 3 narrative is summarized in `docs/paper_outline.md` Sections 11-13 (addendum). Live leaderboard: Quantizr 0.33 #1, Selfcomp 0.38 #2, Mask2mask 0.60 #3. Sub-0.30 is the user-set non-negotiable goal, deadline May 3.
 
-We present a system for task-aware video compression that achieves a score of 0.37 on comma.ai's video compression challenge, approaching the current leader (0.33) through a fundamentally different paradigm than traditional codecs. Our approach evolved through three phases: (1) a CNN post-filter on codec output (1.33), (2) a neural renderer with asymmetric warp architecture that bypasses the codec entirely (0.87), and (3) test-time optimization (TTO) that fine-tunes per-frame embeddings against the frozen scorers at compress time (0.37). The key technical contributions are: discovery of a gradient obstruction in the upstream scorer's YUV preprocessing that invalidated all prior PoseNet optimization (fixing it alone improved the score from 0.70 to 0.43); a hinge loss formulation for SegNet that provides 25% better convergence than cross-entropy by sustaining gradient pressure past the decision boundary; and the TTO paradigm itself, which treats compress time as an optimization opportunity rather than a fixed encoding step. The contest-compliant path (no TTO at inflate time) scores 0.87; the unlimited-compute path (TTO at compress time, distilled into the renderer) is projected to reach sub-0.33. We report 30+ negative results and analyze the scoring formula's geometry to explain why PoseNet optimization exhibits a sharp phase transition while SegNet requires sustained optimization.
+## Abstract (current — to be revised before submission)
 
-**Current best: 0.37** [unlimited-compute] | seg=0.00094, pose=0.00250, rate=0.005
-**Contest-compliant: 0.61** [distillation ep300 / pose TTO] | seg=~0.0020, pose=~0.007, rate=0.004
-**Contest-compliant baseline: 0.87** | seg=0.00217, pose=0.031, rate=0.004
+We present a system for task-aware video compression that achieves a contest-CUDA score of `1.05` on comma.ai's video compression challenge through a paradigm shift from codec post-filtering to neural rendering. Our approach evolved through two paradigms and a third in active development: (Era 1) a CNN post-filter on codec output reaching `1.73` while bound to AV1; (Era 2) a neural renderer with dilated-h64 architecture that bypasses the codec entirely, with pose TTO at compress time and KL distillation on the SegNet logits at weight=0.002, reaching `1.05` [contest-CUDA] verified on the EXACT submission archive bytes; (Era 3, live) the Selfcomp-paradigm portfolio (grayscale-LUT mask, single-mask + 6-DOF affine duality, analytical pose, block-FP weight self-compression at 1.017 bpw, 94K-param SegMap) — eight Modal lanes in flight as of submission deadline. Key technical contributions are: discovery of a 23x MPS-vs-CUDA PoseNet drift that invalidated months of MPS-measured scores; the rank-1 PoseNet Jacobian analysis showing why pose TTO must warm-start from baseline poses; the KL distillation weight sensitivity result (≥ 0.01 collapses PoseNet, 0.002 sustains the boundary signal); and the engineering-rigor catalog of 78 strict preflight checks that made every score reproducible. We report 30+ negative results including the catastrophic 53.61 mask-resolution disaster (48x64 instead of 384x512), the Lane GP Runge phenomenon at degree-10 polynomial, and the UNIWARD encoder no-op finding.
+
+**Current best (verified): 1.05** [contest-CUDA] | seg=0.0040, pose=0.0034, rate=0.0185 (694KB archive)
+**Modal reproduction: 1.04** [Modal-T4-CUDA] | identical archive bytes, drift 0.01 within noise
+**Fallback floor: 1.15** [contest-CUDA] | Lane A (pose TTO from baseline poses)
+**Era 1 historical floor: 1.73** [Era 1 / Track B / current_workflow] | h64 long-horizon QAT+EMA learned int8 post-filter
 
 ---
 
-## Score Evolution
+## Legacy abstract (Era 1 + draft narrative, kept for historical context)
 
-| Stage | Score | Lane | Key Technique | Insight |
-|-------|-------|------|---------------|---------|
-| H.265 baseline | 1.97 | — | CRF 28, no processing | Starting point |
-| CNN postfilter | 1.33 | — | Dilated conv, scorer gradients | CPU-lane ceiling |
-| Neural renderer | 0.87 | Contest | Asymmetric warp + Lagrangian | Bypass codec entirely |
-| TTO (gradient fix) | 0.43 | Unlimited | Differentiable BT.601 YUV | Just correct gradients |
-| TTO (hinge loss) | 0.37 | Unlimited | Margin-based SegNet loss | Sustained gradient pressure |
-| Pose TTO + Distillation ep300 | 0.61 | Contest | FiLM conditioning space | 196K:1 optimization compression |
-| Distillation ep900 (running) | ~0.47* | Contest | Renderer learns TTO frames | Compress-time intelligence |
-| Full stack (projected) | ~0.25 | Contest | Distilled + pose TTO + FP4 + MiniSegNet | All components combined |
+The legacy abstract below was the working narrative through April 25 and references scores measured on MPS that were subsequently invalidated. It is preserved for the writeup arc but should not be cited as authoritative.
 
-*Projected from proxy trajectory (0.338 at ep900, still converging).
+> We present a system for task-aware video compression that achieves a score of 0.37 on comma.ai's video compression challenge, approaching the current leader (0.33) through a fundamentally different paradigm than traditional codecs. Our approach evolved through three phases: (1) a CNN post-filter on codec output (1.33), (2) a neural renderer with asymmetric warp architecture that bypasses the codec entirely (0.87), and (3) test-time optimization (TTO) that fine-tunes per-frame embeddings against the frozen scorers at compress time (0.37).
+
+> Note: every score in the legacy abstract above was measured on MPS prior to the 2026-04-25 CUDA-vs-MPS comparison. PoseNet drifts 23x; final scores drift ~2.5x. The "0.37" reading on MPS corresponds to roughly `0.93-1.0` on CUDA. Treat as `[advisory only]`.
+
+**Legacy-tagged readings (advisory only — do NOT cite as authoritative):**
+- Current best: 0.37 [advisory only — MPS]
+- Contest-compliant: 0.61 [advisory only — MPS]
+- Contest-compliant baseline: 0.87 [advisory only — MPS]
+
+---
+
+## Score Evolution (current — contest-CUDA only above the line)
+
+| Stage | Score | Lane | Tag | Key Technique | Insight |
+|-------|-------|------|-----|---------------|---------|
+| Era 1 H.265 baseline | 1.97 | — | [Era 1] | CRF 28, no processing | Starting point |
+| Era 1 CNN postfilter (h64) | 1.73 | Track B | [Era 1] | dilated conv, QAT+EMA, scorer gradients | Width scaling + best-ckpt int8 |
+| Era 2 baseline | 0.90 | — | [contest-CUDA] | dilated-h64 renderer + CRF=50 + matched poses | First reproducible from saved artifacts (2026-04-25) |
+| Era 2 Lane A | 1.15 | Renderer | [contest-CUDA] | + pose TTO from baseline poses (rank-1 init) | PoseNet 0.247 → 0.0034 (73x) |
+| Era 2 Lane G v3 | **1.05** | Renderer | [contest-CUDA] | + KL distill weight=0.002 + pose TTO retry | Both PoseNet and SegNet improve at same rate (current floor) |
+| Era 2 Lane G v3 (Modal repro) | 1.04 | Renderer | [Modal-T4-CUDA] | identical archive | Modal reproduces within 0.01 noise |
+| Era 3 portfolio (in flight) | TBD | Selfcomp paradigm | live | grayscale-LUT mask, block-FP, 94K SegMap, KL T=2.0 | Sub-0.30 target |
+
+### Historical / advisory-only readings (preserved for the arc — do not cite as authoritative)
+
+These scores are pre-MPS-discovery and were ~2.5x optimistic relative to contest-CUDA reality.
+
+| Stage | Score | Tag | Notes |
+|-------|-------|-----|-------|
+| Era 1.5 Neural renderer | 0.87 | [advisory only — MPS] | true CUDA equivalent ≈ ~2.0 |
+| Era 1.5 TTO (gradient fix) | 0.43 | [advisory only — MPS] | true CUDA equivalent ≈ ~1.0 |
+| Era 1.5 TTO (hinge loss) | 0.37 | [advisory only — MPS] | true CUDA equivalent ≈ ~0.95 |
+| Era 1.5 Pose TTO + Distillation ep300 | 0.61 | [advisory only — MPS] | unverified on CUDA |
+| Era 1.5 Distillation ep900 | ~0.47* | [advisory only — MPS] | unverified on CUDA |
+| Era 1.5 Full stack (projected) | ~0.25 | [advisory only — MPS] | extrapolation from MPS readings |
+
+*Projected from proxy trajectory (0.338 at ep900, still converging on MPS).
 
 The story is one of successive paradigm shifts, each abandoning assumptions of the previous stage. The postfilter assumes a codec exists. The renderer removes the codec. TTO removes the constraint that compression is a single forward pass. Pose-space TTO removes the constraint that TTO must operate in pixel space. Distillation removes the constraint that TTO must run at inflate time.
 
