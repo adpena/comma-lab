@@ -216,6 +216,7 @@ export PYTORCH_CUDA_ALLOC_CONF=expandable_segments:True
     --device cuda \
     --seed 1234 \
     --tag q_faithful_modal \
+    --no-auth-eval-on-best \
     --output-dir "$LOG_DIR/train" 2>&1 | tee "$LOG_DIR/train.log" | tail -50
     PIPE_RC=("${PIPESTATUS[@]}")
     if [ "${PIPE_RC[0]}" -ne 0 ]; then
