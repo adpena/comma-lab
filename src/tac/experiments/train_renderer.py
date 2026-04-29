@@ -911,7 +911,15 @@ def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
         "standard", "kl", "jbl",
         "temperature", "focal_ste", "kl_distill", "pcgrad",
         "feature_match",
+        "posenet_embedding",
+        "segnet_kl",
     )
+    # NOTE: keep the _VALID_LOSS_MODES tuple ABOVE this comment paren-free.
+    # Preflight regex `_VALID_LOSS_MODES \s*=\s*\([^)]*\)` truncates at the
+    # first `)`, so any closing paren inside the tuple body — including in
+    # comments — masks later entries from the profile-loss-mode-allowlist
+    # static scan. Lane M-V3 posenet_embedding + SC++/g_v3 segnet_kl were
+    # added 2026-04-29 to fix that allowlist gap.
     if args.loss_mode not in _VALID_LOSS_MODES:
         raise SystemExit(
             f"FATAL: --loss-mode={args.loss_mode!r} unrecognised; "
