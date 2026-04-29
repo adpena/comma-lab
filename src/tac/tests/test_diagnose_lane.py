@@ -139,3 +139,24 @@ def test_run_returns_exception_classification(monkeypatch):
     assert rc == -1
     assert err.startswith("EXC:")
     assert "permission denied" in err
+
+
+def test_lane_diagnosis_field_renamed_to_accrued_upload_cost_usd():
+    """R32 Finding 2: prior field `accrued_cost_usd` was misleading —
+    it stored vast_info.get('inet_up_cost'), the upload-network cost,
+    NOT the accrued GPU compute spend. Downstream JSON consumers got a
+    near-zero number that they mistook for GPU cost. The fix renames
+    the field so the name matches what Vast.ai actually returns.
+
+    Anchor: the misleading name must be GONE; the descriptive name must
+    be PRESENT.
+    """
+    fields = {f.name for f in diagnose_lane.LaneDiagnosis.__dataclass_fields__.values()}
+    assert "accrued_cost_usd" not in fields, (
+        "the misleading field name `accrued_cost_usd` must not exist — "
+        "it implied GPU compute cost but stored upload-network cost"
+    )
+    assert "accrued_upload_cost_usd" in fields, (
+        "expected renamed field `accrued_upload_cost_usd` describing what "
+        "Vast.ai's `inet_up_cost` actually returns"
+    )

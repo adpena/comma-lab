@@ -56,6 +56,27 @@ def test_fails_on_missing_renderer(tmp_path):
     assert any("renderer.bin" in f for f in res.failures)
 
 
+def test_missing_renderer_failure_message_is_not_duplicated(tmp_path):
+    """R32 Finding 1: prior code appended `missing required member: renderer.bin`
+    once via the dedicated check (line ~133) AND a second time via the
+    required_members loop (line ~152). The fix skips renderer.bin in the
+    required_members loop. Anchor: exactly ONE occurrence in res.failures.
+    """
+    archive = _make_archive(tmp_path, {
+        "masks.mkv": b"\x00" * 500,
+        "optimized_poses.pt": b"\x00" * 200,
+    })
+    res = audit_archive.audit(archive)
+    renderer_failures = [
+        f for f in res.failures
+        if "missing required member: renderer.bin" in f
+    ]
+    assert len(renderer_failures) == 1, (
+        f"expected exactly 1 renderer.bin failure (no duplicate), "
+        f"got {len(renderer_failures)}: {renderer_failures}"
+    )
+
+
 def test_fails_on_unknown_renderer_magic(tmp_path):
     archive = _make_archive(tmp_path, {
         "renderer.bin": b"BADX" + b"\x00" * 1000,  # unknown magic

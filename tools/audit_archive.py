@@ -148,6 +148,11 @@ def audit(
                 if required == "gradient_corrections.bin":
                     # Optional sidecar — not required for non-EC archives.
                     continue
+                if required == "renderer.bin":
+                    # Already covered by the dedicated renderer.bin check
+                    # above (line ~133); skip to avoid duplicate failure
+                    # message in res.failures (R32 Finding 1).
+                    continue
                 if required not in res.members:
                     res.failures.append(f"missing required member: {required}")
 

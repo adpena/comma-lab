@@ -518,6 +518,16 @@ def preflight_all(
         check_phase2_launch_polls_setup_log(strict=True, verbose=verbose)
         check_setup_full_probe_before_dali(strict=True, verbose=verbose)
 
+        # 2026-04-28: Check 56 — verify_vast_instances.py auto-destroy
+        # path must enforce BOTH IDLE-stale-minutes AND SETUP-stale-
+        # minutes. Without the SETUP timer, a TRULY hung setup_full.sh
+        # accrues cost forever (no heartbeat ever lands → IDLE timer
+        # never fires). Reference: feedback_setup_stuck_cost_leak_FIXED_20260428.
+        # Lands at 0 live violations → straight to STRICT.
+        check_verify_vast_setup_stuck_dual_threshold(
+            strict=True, verbose=verbose,
+        )
+
     # 2. Training inputs (only if profile + tto_frames provided)
     if profile_name and tto_frames_path and gt_poses_path and masks_path and profile_arch:
         preflight_training_inputs(
@@ -10122,6 +10132,148 @@ def check_setup_full_probe_before_dali(
             "NVDEC pre-probe must run BEFORE Stage 3 DALI install. "
             "Without it, every bad-NVDEC host pays the 5-minute DALI "
             "install cost before failing.\n"
+            + "\n".join(f"  • {v}" for v in violations[:50])
+        )
+    return violations
+
+
+# ════════════════════════════════════════════════════════════════════════════
+# Check 56 (56th meta-bug): scripts/verify_vast_instances.py auto-destroy
+#                          path must use BOTH IDLE stale-minutes AND
+#                          SETUP setup-stale-minutes thresholds.
+# ════════════════════════════════════════════════════════════════════════════
+#
+# 2026-04-28: companion to the R31 cross-cutting SETUP-stuck cost-leak
+# fix. The verify script's --auto-destroy-stale path originally only
+# fired on IDLE/CRASHED — but a TRULY hung setup_full.sh (deadlocked,
+# no heartbeat ever written) is classified SETUP, not IDLE. The IDLE
+# stale-minutes threshold compares heartbeat freshness; with no
+# heartbeat, that comparison never fires, so the instance accrues
+# cost silently forever.
+#
+# This check enforces the dual-threshold pattern: any future refactor
+# that drops EITHER the IDLE timer OR the SETUP timer fails preflight.
+# Class of bug: heuristic-based health classifier with no timeout for
+# the in-flight SETUP state.
+
+def check_verify_vast_setup_stuck_dual_threshold(
+    repo_root: Path | None = None,
+    strict: bool = False,
+    verbose: bool = True,
+) -> list[str]:
+    """Forbid verify_vast_instances.py refactors that drop the
+    SETUP-stale or IDLE-stale half of the dual-threshold auto-destroy.
+
+    Scans ``scripts/verify_vast_instances.py`` for:
+      1. CLI flag definition: ``--setup-stale-minutes``
+      2. CLI flag definition: ``--stale-minutes``
+      3. Auto-destroy path consults SETUP age (``setup_age_minutes``
+         or ``setup_stale_minutes`` referenced inside the
+         ``auto_destroy_stale`` branch)
+      4. Auto-destroy path consults IDLE/CRASHED classification
+
+    A repo missing the file is exempt (skip).
+
+    Returns list of violations. Raises MetaBugViolation if strict and any.
+    """
+    root = repo_root or REPO_ROOT
+    target = root / "scripts" / "verify_vast_instances.py"
+    violations: list[str] = []
+
+    if not target.is_file():
+        if verbose:
+            print(
+                f"  [verify-vast-dual-threshold] SKIP: "
+                f"{target} not present"
+            )
+        return violations
+
+    try:
+        text = target.read_text(errors="ignore")
+    except OSError as e:
+        violations.append(f"{target.relative_to(root)}: cannot read — {e}")
+        if strict:
+            raise MetaBugViolation(violations[0])
+        return violations
+
+    # 1. CLI flag definitions.
+    if '"--setup-stale-minutes"' not in text and "'--setup-stale-minutes'" not in text:
+        violations.append(
+            f"{target.relative_to(root)}: missing CLI flag "
+            f"`--setup-stale-minutes` definition. Without it, SETUP-"
+            f"stuck instances (deadlocked setup_full.sh, never write "
+            f"heartbeat) accrue cost silently forever — the IDLE "
+            f"timer never fires because there's no heartbeat to be "
+            f"stale. See feedback_setup_stuck_cost_leak_FIXED_20260428."
+        )
+    if '"--stale-minutes"' not in text and "'--stale-minutes'" not in text:
+        violations.append(
+            f"{target.relative_to(root)}: missing CLI flag "
+            f"`--stale-minutes` definition (IDLE heartbeat-age "
+            f"threshold). Half of the dual-threshold pattern."
+        )
+
+    # 2. Locate the auto-destroy block. Tolerate either snake_case
+    # (args.auto_destroy_stale) or hyphenated CLI form references in
+    # comments/strings; only the snake_case attribute matters.
+    if "args.auto_destroy_stale" not in text:
+        violations.append(
+            f"{target.relative_to(root)}: missing "
+            f"`args.auto_destroy_stale` branch — the auto-destroy "
+            f"path is the only place the dual-threshold matters."
+        )
+    else:
+        # Slice from the auto_destroy_stale branch onwards. We don't
+        # need exact AST analysis — substring presence in the rest of
+        # the file is sufficient evidence the path consults each
+        # threshold.
+        idx = text.find("args.auto_destroy_stale")
+        tail = text[idx:]
+
+        # 3. SETUP-side: must reference either the per-health setup
+        # age field OR the CLI flag.
+        if (
+            "setup_age_minutes" not in tail
+            and "setup_stale_minutes" not in tail
+        ):
+            violations.append(
+                f"{target.relative_to(root)}: auto-destroy branch "
+                f"doesn't reference `setup_age_minutes` or "
+                f"`setup_stale_minutes` — SETUP-stuck instances "
+                f"will leak cost. Add a stuck-SETUP filter to the "
+                f"to_destroy list."
+            )
+
+        # 4. IDLE-side: must still classify on IDLE/CRASHED.
+        if '"IDLE"' not in tail and "'IDLE'" not in tail:
+            violations.append(
+                f"{target.relative_to(root)}: auto-destroy branch "
+                f"doesn't reference the IDLE classification — half of "
+                f"the dual-threshold pattern is gone."
+            )
+
+    if verbose:
+        if violations:
+            print(
+                f"  [verify-vast-dual-threshold] "
+                f"{len(violations)} violation(s):"
+            )
+            for v in violations:
+                print(f"    • {v}")
+        else:
+            print(
+                f"  [verify-vast-dual-threshold] OK: "
+                f"--stale-minutes (IDLE) AND --setup-stale-minutes "
+                f"(SETUP) both wired into auto-destroy"
+            )
+
+    if violations and strict:
+        raise MetaBugViolation(
+            "VERIFY_VAST_INSTANCES DUAL-THRESHOLD VIOLATIONS — the "
+            "auto-destroy path must use BOTH --stale-minutes (IDLE "
+            "heartbeat freshness) AND --setup-stale-minutes "
+            "(SETUP first-seen age). Dropping either half re-introduces "
+            "the SETUP-stuck cost-leak class.\n"
             + "\n".join(f"  • {v}" for v in violations[:50])
         )
     return violations

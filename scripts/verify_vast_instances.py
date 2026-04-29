@@ -4,19 +4,28 @@
 For each registered instance in `.omx/state/vastai_active_instances.json`:
   1. Confirm Vast.ai still reports it alive
   2. SSH in (with timeout) and check heartbeat.log freshness + GPU activity
-  3. Classify: HEALTHY / IDLE / CRASHED / UNREACHABLE / GONE
+  3. Classify: HEALTHY / IDLE / CRASHED / UNREACHABLE / SETUP / GONE
 
 Usage:
     python scripts/verify_vast_instances.py
-    python scripts/verify_vast_instances.py --auto-destroy-stale --stale-minutes 30
+    python scripts/verify_vast_instances.py --auto-destroy-stale \\
+        --stale-minutes 30 --setup-stale-minutes 90
 
 Emits a JSON report to stdout + (optional) destroys CRASHED/IDLE instances
-older than the threshold.
+older than the threshold AND SETUP instances stuck > --setup-stale-minutes
+(R31 cross-cutting fix: SETUP that's TRULY hung — setup_full.sh deadlocked,
+never writes heartbeat — would otherwise accrue cost forever, since the
+existing --stale-minutes only fires on IDLE).
+
+State tracking for SETUP-first-seen lives in
+``.omx/state/instance_setup_first_seen.json`` so we know when each instance
+was first observed in SETUP and can age it past --setup-stale-minutes.
 
 Reference memories:
   - feedback_vastai_launch_returns_success_before_lane_starts
   - feedback_vastai_cost_paranoia
   - feedback_canonical_remote_bootstraps
+  - feedback_setup_stuck_cost_leak_FIXED_20260428
 """
 from __future__ import annotations
 
@@ -32,6 +41,7 @@ from typing import Optional
 
 REPO_ROOT = Path(__file__).resolve().parent.parent
 TRACKER_PATH = REPO_ROOT / ".omx/state/vastai_active_instances.json"
+SETUP_FIRST_SEEN_PATH = REPO_ROOT / ".omx/state/instance_setup_first_seen.json"
 VASTAI_BIN = REPO_ROOT / ".venv/bin/vastai"
 SSH_BASE = [
     "ssh",
@@ -42,17 +52,44 @@ SSH_BASE = [
 ]
 
 
+def _load_setup_first_seen() -> dict[str, float]:
+    """Read the SETUP-first-seen tracker.
+
+    Map of instance_id (str) → unix timestamp (float) of first SETUP
+    observation. Used to age SETUP instances past --setup-stale-minutes.
+    """
+    if not SETUP_FIRST_SEEN_PATH.exists():
+        return {}
+    try:
+        data = json.loads(SETUP_FIRST_SEEN_PATH.read_text())
+        if isinstance(data, dict):
+            return {str(k): float(v) for k, v in data.items()}
+    except (json.JSONDecodeError, ValueError, TypeError):
+        pass
+    return {}
+
+
+def _save_setup_first_seen(data: dict[str, float]) -> None:
+    SETUP_FIRST_SEEN_PATH.parent.mkdir(parents=True, exist_ok=True)
+    SETUP_FIRST_SEEN_PATH.write_text(json.dumps(data, indent=2, sort_keys=True))
+
+
 @dataclass
 class InstanceHealth:
     instance_id: str
     label: str
-    classification: str  # HEALTHY / IDLE / CRASHED / UNREACHABLE / GONE
+    classification: str  # HEALTHY / IDLE / CRASHED / UNREACHABLE / SETUP / GONE
     last_heartbeat_age_minutes: Optional[float]
     gpu_util_pct: Optional[float]
     ssh_host: Optional[str]
     ssh_port: Optional[int]
     crash_signal: Optional[str]
     notes: str
+    # R31 cross-cutting: SETUP-stuck cost-leak detection. age_in_setup
+    # is None when the instance is NOT classified SETUP. When SETUP, it
+    # is the minutes since this instance was first observed in SETUP
+    # (read/written to .omx/state/instance_setup_first_seen.json).
+    setup_age_minutes: Optional[float] = None
 
 
 def _run(cmd: list[str], timeout: int = 30) -> tuple[int, str, str]:
@@ -146,9 +183,23 @@ def classify(
 def main() -> int:
     p = argparse.ArgumentParser()
     p.add_argument("--auto-destroy-stale", action="store_true",
-                   help="Destroy IDLE/CRASHED instances older than --stale-minutes")
+                   help=(
+                       "Destroy IDLE/CRASHED instances older than "
+                       "--stale-minutes AND SETUP instances stuck longer "
+                       "than --setup-stale-minutes (R31 SETUP-stuck "
+                       "cost-leak fix)."
+                   ))
     p.add_argument("--stale-minutes", type=float, default=30.0,
                    help="Heartbeat older than this is IDLE (default: 30)")
+    p.add_argument("--setup-stale-minutes", type=float, default=90.0,
+                   help=(
+                       "SETUP classification older than this counts as "
+                       "stuck-in-setup (default: 90). DALI install + "
+                       "Stage 0..N typically finishes within 15 min on a "
+                       "good host; 90 min is well past max install time, "
+                       "so anything beyond is a TRULY hung setup_full.sh "
+                       "deadlock that would otherwise accrue cost forever."
+                   ))
     p.add_argument("--json", action="store_true", help="Emit JSON only")
     args = p.parse_args()
 
@@ -160,6 +211,14 @@ def main() -> int:
         if not args.json:
             print("Tracker is empty — no instances to verify.")
         return 0
+
+    # R31 SETUP-stuck tracking — load prior first-seen times, prune
+    # entries for instances no longer in the tracker so the file doesn't
+    # grow unbounded.
+    setup_first_seen = _load_setup_first_seen()
+    tracked_ids = {str(entry["instance_id"]) for entry in data}
+    setup_first_seen = {k: v for k, v in setup_first_seen.items() if k in tracked_ids}
+    now_ts = datetime.now(timezone.utc).timestamp()
 
     healths: list[InstanceHealth] = []
     for entry in data:
@@ -190,12 +249,29 @@ def main() -> int:
         # is NOT an SSH failure; only "SSH_FAILED:" prefix is)
         ssh_ok = not (crash_sig and crash_sig.startswith("SSH_FAILED"))
         cls = classify(age_min, gpu_util, crash_sig, args.stale_minutes, ssh_ok)
+
+        # R31 SETUP-stuck tracking: record first-seen-as-SETUP timestamp
+        # so we can age it past --setup-stale-minutes and auto-destroy.
+        # Drop the entry once the instance leaves SETUP (it's no longer
+        # the in-flight state we're trying to time-box).
+        setup_age_min: Optional[float] = None
+        if cls == "SETUP":
+            if iid not in setup_first_seen:
+                setup_first_seen[iid] = now_ts
+            setup_age_min = (now_ts - setup_first_seen[iid]) / 60.0
+        else:
+            setup_first_seen.pop(iid, None)
+
         healths.append(InstanceHealth(
             instance_id=iid, label=label, classification=cls,
             last_heartbeat_age_minutes=age_min, gpu_util_pct=gpu_util,
             ssh_host=host, ssh_port=port, crash_signal=crash_sig,
             notes=(meta.get("status_msg") or "")[:80],
+            setup_age_minutes=setup_age_min,
         ))
+
+    # Persist SETUP-first-seen tracker for the next verify pass.
+    _save_setup_first_seen(setup_first_seen)
 
     # Output
     if args.json:
@@ -211,12 +287,34 @@ def main() -> int:
                 print(f"      crash: {h.crash_signal[:100]}")
 
     # Auto-destroy
+    # R31 cross-cutting fix: dual-threshold auto-destroy. IDLE/CRASHED
+    # are time-boxed by --stale-minutes (heartbeat freshness); SETUP is
+    # time-boxed independently by --setup-stale-minutes (first-seen-in-
+    # SETUP age). Without the SETUP timer, a TRULY hung setup_full.sh
+    # (deadlocked, never writes heartbeat) accrues cost forever — the
+    # IDLE timer never fires because there's no heartbeat to be stale.
     if args.auto_destroy_stale:
-        to_destroy = [h for h in healths if h.classification in ("IDLE", "CRASHED")]
+        to_destroy = [
+            h for h in healths
+            if h.classification in ("IDLE", "CRASHED")
+        ]
+        stuck_setup = [
+            h for h in healths
+            if h.classification == "SETUP"
+            and h.setup_age_minutes is not None
+            and h.setup_age_minutes > args.setup_stale_minutes
+        ]
+        to_destroy.extend(stuck_setup)
         if to_destroy:
             print(f"\n=== Auto-destroying {len(to_destroy)} stale instance(s) ===")
             for h in to_destroy:
-                print(f"  destroying {h.instance_id} ({h.label}, {h.classification})...")
+                reason = h.classification
+                if h in stuck_setup:
+                    reason = (
+                        f"SETUP-STUCK (>{args.setup_stale_minutes:.0f}min "
+                        f"in setup, age={h.setup_age_minutes:.1f}min)"
+                    )
+                print(f"  destroying {h.instance_id} ({h.label}, {reason})...")
                 rc, out, err = _run([
                     "bash", "-c",
                     f"echo y | {VASTAI_BIN} destroy instance {h.instance_id}",

@@ -57,7 +57,13 @@ class LaneDiagnosis:
     actual_status: str | None = None
     gpu_util_pct: float | None = None
     dph: float | None = None
-    accrued_cost_usd: float | None = None
+    # R32 Finding 2: this field is the upload-network cost reported by
+    # `vastai show instance` (`inet_up_cost`), NOT the accrued GPU spend.
+    # Renamed from `accrued_cost_usd` so downstream JSON consumers don't
+    # mistake a near-zero upload-network cost for the GPU compute spend.
+    # If/when Vast.ai exposes a real cumulative compute-cost field, add a
+    # second field — do not silently overload this name again.
+    accrued_upload_cost_usd: float | None = None
     heartbeat_age_minutes: float | None = None
     log_tails: dict[str, str] = field(default_factory=dict)
     archive_bytes: int | None = None
@@ -193,7 +199,15 @@ def _final_score(score_section: str) -> float | None:
 def diagnose(instance_id: str, tail_lines: int = DEFAULT_TAIL_LINES) -> LaneDiagnosis:
     diag = LaneDiagnosis(instance_id=instance_id)
     tracker = _load_tracker()
-    info = tracker.get(instance_id, {})
+    # Tracker is a LIST of {instance_id, label, metadata, ...} dicts, not a dict.
+    info: dict = {}
+    if isinstance(tracker, list):
+        for entry in tracker:
+            if isinstance(entry, dict) and str(entry.get("instance_id")) == str(instance_id):
+                info = entry
+                break
+    elif isinstance(tracker, dict):
+        info = tracker.get(instance_id, {}) or {}
     diag.label = info.get("label")
 
     # Vast.ai metadata.
@@ -205,7 +219,10 @@ def diagnose(instance_id: str, tail_lines: int = DEFAULT_TAIL_LINES) -> LaneDiag
     diag.actual_status = vast_info.get("actual_status")
     diag.gpu_util_pct = vast_info.get("gpu_util")
     diag.dph = vast_info.get("dph_total") or vast_info.get("dph")
-    diag.accrued_cost_usd = vast_info.get("inet_up_cost")  # placeholder
+    # R32 Finding 2: upload-network cost ≠ GPU compute cost. Read into a
+    # field whose name describes what Vast.ai actually returns. If you
+    # need GPU spend, derive it from `dph * uptime_hours` at the call site.
+    diag.accrued_upload_cost_usd = vast_info.get("inet_up_cost")
     diag.ssh_host = vast_info.get("ssh_host")
     raw_port = vast_info.get("ssh_port")
     if raw_port is not None:
