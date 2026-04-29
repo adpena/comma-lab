@@ -97,7 +97,8 @@ training_image = (
 )
 
 
-def _run_lane_inner(lane_script: str, label: str, env_overrides: dict) -> dict:
+def _run_lane_inner(lane_script: str, label: str, env_overrides: dict,
+                    max_seconds: int = 14 * 3600) -> dict:
     """Container-side execution. Imports MUST be local (Modal serialization)."""
     import json
     import os
@@ -194,10 +195,10 @@ def _run_lane_inner(lane_script: str, label: str, env_overrides: dict) -> dict:
         py_link.unlink()
     py_link.symlink_to(sys.executable)
 
-    # Make a stub for git (some scripts run git rev-parse HEAD)
-    git_stub = workspace / "_git_stub.sh"
-    git_stub.write_text("#!/bin/bash\necho modal-no-git\n")
-    git_stub.chmod(0o755)
+    # NOTE: git is installed via apt_install (line 43). Lane scripts that
+    # run `git rev-parse HEAD` get real git output. Round 13 caught that
+    # the previous "_git_stub.sh" was written but never placed on PATH —
+    # removed since lane scripts already have `|| echo no-git` fallbacks.
 
     # Sentinel that this is Modal (skip Vast.ai-specific paths)
     (workspace / ".MODAL_RUNTIME").write_text("1\n")
@@ -245,14 +246,27 @@ def _run_lane_inner(lane_script: str, label: str, env_overrides: dict) -> dict:
     t0 = time.monotonic()
 
     log_path = workspace / f"modal_lane_{label}.log"
+    timed_out = False
     with log_path.open("w") as logf:
-        proc = subprocess.run(
-            ["bash", str(lane_path)],
-            env=env, cwd=workspace,
-            stdout=logf, stderr=subprocess.STDOUT,
-        )
+        try:
+            proc = subprocess.run(
+                ["bash", str(lane_path)],
+                env=env, cwd=workspace,
+                stdout=logf, stderr=subprocess.STDOUT,
+                timeout=max_seconds,
+                check=False,
+            )
+            rc = proc.returncode
+        except subprocess.TimeoutExpired:
+            # Hit per-lane timeout (set via --timeout-hours). Round 13: this was
+            # previously dead-code (Modal @app.function timeout was the only
+            # cap and was hardcoded at 14h). Now the user-supplied timeout
+            # actually triggers and we still collect partial artifacts.
+            timed_out = True
+            rc = 124
+            print(f"[modal-train-lane] TIMEOUT after {max_seconds}s — collecting partial artifacts")
     elapsed = time.monotonic() - t0
-    print(f"[modal-train-lane] finished in {elapsed:.1f}s rc={proc.returncode}")
+    print(f"[modal-train-lane] finished in {elapsed:.1f}s rc={rc} timed_out={timed_out}")
 
     # Collect output artifacts. Lane scripts write to varied locations:
     #   - $WORKSPACE/results/<label>/  (canonical, used by some)
@@ -317,7 +331,8 @@ def _run_lane_inner(lane_script: str, label: str, env_overrides: dict) -> dict:
             pass
 
     return {
-        "returncode": proc.returncode,
+        "returncode": rc,
+        "timed_out": timed_out,
         "artifacts": artifacts,
         "stdout_tail": stdout_tail,
         "elapsed_seconds": elapsed,
@@ -330,8 +345,9 @@ def _run_lane_inner(lane_script: str, label: str, env_overrides: dict) -> dict:
     gpu="T4",
     timeout=14 * 3600,  # 14h max — covers MAE-V (estimate)
 )
-def run_lane_training_t4(lane_script: str, label: str, env_overrides: dict) -> dict:
-    return _run_lane_inner(lane_script, label, env_overrides)
+def run_lane_training_t4(lane_script: str, label: str, env_overrides: dict,
+                          max_seconds: int = 14 * 3600) -> dict:
+    return _run_lane_inner(lane_script, label, env_overrides, max_seconds=max_seconds)
 
 
 @app.function(
@@ -339,8 +355,9 @@ def run_lane_training_t4(lane_script: str, label: str, env_overrides: dict) -> d
     gpu="A10G",
     timeout=14 * 3600,
 )
-def run_lane_training_a10g(lane_script: str, label: str, env_overrides: dict) -> dict:
-    return _run_lane_inner(lane_script, label, env_overrides)
+def run_lane_training_a10g(lane_script: str, label: str, env_overrides: dict,
+                            max_seconds: int = 14 * 3600) -> dict:
+    return _run_lane_inner(lane_script, label, env_overrides, max_seconds=max_seconds)
 
 
 @app.local_entrypoint()
@@ -388,7 +405,15 @@ def main(
         sys.exit(2)
 
     print(f"=== modal_train_lane: {lane_script} → {label} on {gpu} ===")
-    result = fn.remote(lane_script, label, overrides)
+    max_seconds = int(timeout_hours * 3600)
+    if max_seconds < 60:
+        max_seconds = 60
+    if max_seconds > 14 * 3600:
+        # Modal @app.function timeout is the hard cap (14h). Per-call subprocess
+        # timeout cannot exceed that or it would never trigger before Modal kills.
+        max_seconds = 14 * 3600
+    print(f"  per-lane timeout: {max_seconds}s ({timeout_hours:.1f}h)")
+    result = fn.remote(lane_script, label, overrides, max_seconds)
 
     # Save artifacts locally
     out_dir = repo_root / "experiments" / "results" / f"lane_{label}_modal"
