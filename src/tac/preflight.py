@@ -320,6 +320,17 @@ def preflight_all(
         # Memory: feedback_silent_default_bug_class_findings_20260429.md.
         check_silent_default_audit_clean(strict=True, verbose=verbose)
 
+        # 2026-04-29 Round 3 grand-council prescription: 3 active bug
+        # classes get STRICT preflight checks. All 3 land at 0 live
+        # violations after their fixes (commits 8746793e Lane GP callsite,
+        # cc1ba193 STC FALSIFICATION withdrawn, ef8592d9 Lane PD docstring).
+        # check_empirical_claims_have_evidence is wired warn-only first
+        # because tagging discipline across legacy docs/reports needs a
+        # cleanup pass — promote to strict after the 0-count sweep.
+        # Memory: feedback_three_active_bug_classes_needing_strict_checks_20260429.md.
+        check_callsite_contracts_satisfied(strict=True, verbose=verbose)
+        check_no_proxy_metric_drives_decision(strict=True, verbose=verbose)
+
         # 2026-04-27 meta-bug audit (commit a57731a0): 12 NEW checks for
         # additional bug classes from session + memory. 4 land at 0 live
         # violations and go straight to strict; the other 8 have real
@@ -5721,6 +5732,266 @@ def check_silent_default_audit_clean(
         raise MetaBugViolation(
             "SILENT-DEFAULT OVERRIDE DETECTED:\n"
             + "\n".join(f"  • {v}" for v in violations)
+        )
+    return violations
+
+
+# ── Check 82 (Round 3 council): callsite contracts for dangerous helpers ─────
+#
+# Sister bug class to silent-default-audit (Check 81). Where Check 81 catches
+# `argparse default=X` overriding profile values, this check catches
+# "kwarg omitted at call site → defaults to a stale baked-in value".
+#
+# Incident (2026-04-29): Lane GP added `baseline_poses=` kwarg to
+# `tac.pose_gaussian_process.reconstruct_poses` so dims 1-5 would be preserved
+# instead of zero-padded. The helper change landed in src/tac. The call site
+# at experiments/fit_pose_gp.py:33 (now :41) was NEVER updated to pass the
+# kwarg — for ~2 weeks the pipeline silently produced zero-padded poses,
+# CATASTROPHICALLY degrading Lane GP scores. Finally fixed in commit 8746793e.
+#
+# Memory: feedback_three_active_bug_classes_needing_strict_checks_20260429.md.
+
+# Registry of (module.callable, required_kwargs_set). Add entries as the
+# class of bug is rediscovered. Each entry guards future regressions.
+CALLSITE_CONTRACTS: dict[str, set[str]] = {
+    "reconstruct_poses": {"baseline_poses"},
+}
+
+# Files that are EXEMPT (intentional negative-path tests, etc.).
+_CALLSITE_CONTRACT_EXEMPT_FILES: set[str] = {
+    "src/tac/tests/test_pose_gaussian_process.py",  # tests the no-baseline path
+}
+
+
+def _scan_python_for_callsite_contract_violations(
+    path: Path, repo_root: Path,
+) -> list[str]:
+    """AST-scan a Python file for callers of contract-registered helpers
+    that omit any of the required kwargs."""
+    rel = path.relative_to(repo_root) if path.is_absolute() else path
+    rel_s = str(rel)
+    if rel_s in _CALLSITE_CONTRACT_EXEMPT_FILES:
+        return []
+    try:
+        text = path.read_text()
+        tree = ast.parse(text, filename=str(path))
+    except (SyntaxError, UnicodeDecodeError, FileNotFoundError):
+        return []
+
+    violations: list[str] = []
+    for node in ast.walk(tree):
+        if not isinstance(node, ast.Call):
+            continue
+        # Resolve the callable's short name (Attribute or Name).
+        callee_name: str | None = None
+        if isinstance(node.func, ast.Name):
+            callee_name = node.func.id
+        elif isinstance(node.func, ast.Attribute):
+            callee_name = node.func.attr
+        if callee_name is None or callee_name not in CALLSITE_CONTRACTS:
+            continue
+        required = CALLSITE_CONTRACTS[callee_name]
+        provided = {kw.arg for kw in node.keywords if kw.arg is not None}
+        # If **kwargs is splatted, treat as opaque — assume satisfied.
+        if any(kw.arg is None for kw in node.keywords):
+            continue
+        missing = required - provided
+        if missing:
+            line = getattr(node, "lineno", "?")
+            violations.append(
+                f"{rel_s}:{line}: {callee_name}(...) missing required "
+                f"kwarg(s) {sorted(missing)} — see CALLSITE_CONTRACTS."
+            )
+    return violations
+
+
+def check_callsite_contracts_satisfied(
+    *, strict: bool = False, verbose: bool = False, repo_root: Path | None = None,
+) -> list[str]:
+    """Verify every caller of a contract-registered helper passes its
+    required kwargs. Catches the Lane-GP-style "fix lands in helper but
+    not at call site" bug class."""
+    root = repo_root or REPO_ROOT
+    scan_dirs = ["src/tac", "experiments", "scripts", "submissions"]
+    violations: list[str] = []
+    for sd in scan_dirs:
+        sd_path = root / sd
+        if not sd_path.is_dir():
+            continue
+        for py in sd_path.rglob("*.py"):
+            violations.extend(
+                _scan_python_for_callsite_contract_violations(py, root)
+            )
+    if verbose:
+        if violations:
+            print(
+                f"  [callsite-contracts] {len(violations)} violation(s)"
+            )
+            for v in violations:
+                print(f"    • {v}")
+        else:
+            print(
+                f"  [callsite-contracts] OK: 0 violations across "
+                f"{len(CALLSITE_CONTRACTS)} contract(s)"
+            )
+    if violations and strict:
+        raise MetaBugViolation(
+            "CALLSITE-CONTRACT VIOLATION DETECTED:\n"
+            + "\n".join(f"  • {v}" for v in violations)
+            + "\n\nFix: pass the listed kwarg(s) at every call site, OR "
+            "remove the entry from CALLSITE_CONTRACTS if the contract is "
+            "no longer required."
+        )
+    return violations
+
+
+# ── Check 83 (Round 3 council): MPS-derived strategic decisions ──────────────
+#
+# Sister bug class to "scores have lane tag" (Check D). That check catches
+# untagged scores; this one catches DECISIONS based on MPS-tagged scores.
+#
+# Incident (2026-04-29): STC clean-source pipeline was declared FALSIFIED
+# based on local MPS encoder argmax. User correctly objected: "MPS is trash
+# and nowhere close to auth eval." FALSIFICATION withdrawn (commit cc1ba193).
+# CLAUDE.md non-negotiable: PoseNet drift on MPS is 23×, score drift 2.5×.
+#
+# A `[contest-CUDA]` artifact reference must appear within ±10 lines of any
+# decision verb (GREEN, RED, KILL, killed, promote, promoted, FALSIFIED,
+# FALSIFICATION, dispatched, blessed) when MPS / CPU / [MPS-PROXY] also
+# appears in the same paragraph. Without it, fail loud.
+#
+# Memory: feedback_three_active_bug_classes_needing_strict_checks_20260429.md.
+
+_MPS_DECISION_VERBS = re.compile(
+    r"\b(GREEN|RED|KILL|killed|promote|promoted|"
+    r"FALSIFIED|FALSIFICATION|dispatched|blessed)\b"
+)
+_MPS_PROXY_TOKENS = re.compile(
+    r"\b(\[MPS-PROXY\]|MPS-PROXY|MPS-derived|MPS\b|CPU\b|advisory only)"
+)
+_CONTEST_CUDA_TAG = re.compile(r"\[contest-CUDA\]|contest-CUDA")
+
+# Files that are EXEMPT from this check:
+# - the canonical extinction list itself (CLAUDE.md FORBIDDEN PATTERNS)
+# - the check definition + its own memory pointer
+# - the canonical no-MPS rule memory file (defines the rule, not violates it)
+_MPS_DECISION_EXEMPT_FILES: set[str] = {
+    "CLAUDE.md",
+    "src/tac/preflight.py",
+    "src/tac/tests/test_callsite_contracts.py",
+    "src/tac/tests/test_no_mps_decision_check.py",
+    "src/tac/tests/test_callsite_contracts_and_no_mps_decision.py",
+}
+_MPS_DECISION_EXEMPT_PATH_PARTS: tuple[str, ...] = (
+    "/.claude/projects/",   # user-private memory, not deployable
+    "/memory/",             # auto-memory directory
+    "MEMORY.md",            # auto-memory index
+    ".omx/context/",        # frozen historical context snapshots
+    ".omx/research/",       # research findings (catalog, not decisions)
+    "reports/graphs/",      # judging surface; figure captions cite history
+)
+
+# Tags that, when present in the same paragraph, mark the entry as a
+# post-mortem / corrective record DOCUMENTING the rule rather than violating
+# it. The STC FALSIFICATION WITHDRAWN entry uses this pattern.
+_MPS_DECISION_EXEMPT_TAGS = re.compile(
+    r"\[(WITHDRAWN|POST-MORTEM|HISTORICAL|ARCHIVED|advisory only|MPS-PROXY)\]"
+    r"|\bWITHDRAWN\b"
+    r"|\bPOST-MORTEM\b"
+    r"|FALSIFICATION WITHDRAWN"
+)
+
+
+def _check_mps_decision_in_text(
+    text: str, rel_s: str,
+) -> list[str]:
+    """Scan a doc/script for paragraphs that contain a decision verb +
+    MPS/CPU token but no nearby [contest-CUDA] tag or post-mortem tag."""
+    violations: list[str] = []
+    lines = text.splitlines()
+    n = len(lines)
+    for i, line in enumerate(lines):
+        if not _MPS_DECISION_VERBS.search(line):
+            continue
+        if not _MPS_PROXY_TOKENS.search(line):
+            continue
+        # Paragraph window: ±10 lines.
+        lo = max(0, i - 10)
+        hi = min(n, i + 11)
+        window = "\n".join(lines[lo:hi])
+        if _CONTEST_CUDA_TAG.search(window):
+            continue
+        # Post-mortem / withdrawn / advisory-only entries are documenting
+        # the rule, not violating it.
+        if _MPS_DECISION_EXEMPT_TAGS.search(window):
+            continue
+        snippet = line.strip()[:140]
+        violations.append(
+            f"{rel_s}:{i + 1}: decision verb + MPS/CPU token without "
+            f"nearby [contest-CUDA] tag: '{snippet}'"
+        )
+    return violations
+
+
+def check_no_proxy_metric_drives_decision(
+    *, strict: bool = False, verbose: bool = False, repo_root: Path | None = None,
+) -> list[str]:
+    """Forbid GREEN/RED/KILL/promote/falsify decisions in records that
+    cite MPS/CPU/MPS-PROXY without a [contest-CUDA] artifact in the same
+    paragraph. CLAUDE.md non-negotiable: MPS is unfit for strategy."""
+    root = repo_root or REPO_ROOT
+    scan_dirs = [
+        "docs", "reports", "scripts", "src/tac", "experiments",
+        "submissions", ".ralph", ".omx", "BATTLE_PLAN.md", "PROGRAM.md",
+    ]
+    target_suffixes = (".md", ".sh", ".py")
+    violations: list[str] = []
+    for entry in scan_dirs:
+        p = root / entry
+        if p.is_file():
+            files = [p]
+        elif p.is_dir():
+            files = [
+                f for f in p.rglob("*")
+                if f.is_file() and f.suffix in target_suffixes
+            ]
+        else:
+            continue
+        for f in files:
+            try:
+                rel = f.relative_to(root)
+            except ValueError:
+                continue
+            rel_s = str(rel)
+            if rel_s in _MPS_DECISION_EXEMPT_FILES:
+                continue
+            if any(part in rel_s for part in _MPS_DECISION_EXEMPT_PATH_PARTS):
+                continue
+            try:
+                text = f.read_text()
+            except (UnicodeDecodeError, OSError):
+                continue
+            violations.extend(_check_mps_decision_in_text(text, rel_s))
+    if verbose:
+        if violations:
+            print(
+                f"  [no-mps-decision] {len(violations)} violation(s)"
+            )
+            for v in violations[:10]:
+                print(f"    • {v}")
+            if len(violations) > 10:
+                print(f"    … and {len(violations) - 10} more")
+        else:
+            print("  [no-mps-decision] OK: 0 violations")
+    if violations and strict:
+        raise MetaBugViolation(
+            "MPS-DERIVED STRATEGIC DECISION DETECTED:\n"
+            + "\n".join(f"  • {v}" for v in violations[:20])
+            + (f"\n  … and {len(violations) - 20} more"
+               if len(violations) > 20 else "")
+            + "\n\nFix: either remove the decision verb (kill/promote/etc) "
+            "from the record, or attach a [contest-CUDA] artifact reference "
+            "in the same paragraph (within ±10 lines)."
         )
     return violations
 

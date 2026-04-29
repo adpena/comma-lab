@@ -33,6 +33,15 @@ Treating a directory of components as the "baseline" without verifying every fil
 
 **Enforcement:** Before typing ANY of the above patterns, STOP. The non-negotiable wins over the convenient default. This list is in CLAUDE.md so it is loaded into context at session start; if I write one of these patterns anyway, that is a process failure, not an information failure.
 
+**Forbidden empirical-claim-without-evidence-tag (the docstring-overstatement trap):**
+Writing "saves 49%" / "improves N%" / "beats baseline" / "verified" in a docstring/report/script without an adjacent `[empirical:<artifact path>]` or `[contest-CUDA]` or `[prediction]` tag. Lane PD docstring stated 49% savings; empirical regression test caught actual 18.5%. The 49% was a derivation, not a measurement. Tag every claim. (See `feedback_three_active_bug_classes_needing_strict_checks_20260429.md`.)
+
+**Forbidden fix-lands-in-helper-but-not-callsite (the dangling-helper trap):**
+Adding a kwarg to a helper without grepping for callers and updating each. Lane GP added `baseline_poses=` to `reconstruct_poses()` but the actual call at `experiments/fit_pose_gp.py:33` never passed it for ~2 weeks. After adding any kwarg with non-trivial semantics, register it in `CALLSITE_CONTRACTS` and run the AST scanner to enforce all callers pass it. (See `feedback_three_active_bug_classes_needing_strict_checks_20260429.md`.)
+
+**Forbidden MPS-derived strategic decision (the MPS-falsification trap):**
+Writing "GREEN" / "RED" / "KILL" / "promoted" / "FALSIFIED" in any record where the supporting evidence is an MPS or CPU forward pass through SegNet/PoseNet/renderer/distilled scorer. MPS PoseNet drift is 23×; SegNet 2×; score 2.5×. STC clean-source FALSIFICATION was made on MPS encoder; user correctly objected; withdrawn. Strategic decisions REQUIRE a `[contest-CUDA]` artifact in the same record/section. (See `feedback_no_local_mps_for_authoritative_kill_or_promote_20260429.md`.)
+
 ## NEVER invent CLI flags — NON-NEGOTIABLE, HIGHEST EMPHASIS
 
 **Before wiring any flag into `subprocess.run([...])`, READ the target tool's actual `parser.add_argument(...)` list.** Don't invent flag names from intent. Don't trust prior code that "looked like it worked." Verify against argparse. The cost: 30 seconds of `grep "add_argument" target.py`. The cost of NOT doing it: days of wasted GPU + a council review chain that misses the dead-flag bug across multiple rounds.

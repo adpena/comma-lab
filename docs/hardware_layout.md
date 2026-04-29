@@ -21,4 +21,4 @@ Use for:
 
 ## Validation rule
 
-Final promoted candidates should be checked in environments that resemble the official CPU and CUDA runners as closely as practical.
+Final promoted candidates MUST be re-validated against the official `[contest-CUDA]` runner (Vast.ai 4090 / A100 / Modal T4 with the pinned upstream `evaluate.py`) BEFORE any kill/promote decision lands. CPU and MPS results are advisory only — see CLAUDE.md "MPS auth eval is NOISE" non-negotiable. The MPS-vs-CUDA score drift on PoseNet is 23×.
