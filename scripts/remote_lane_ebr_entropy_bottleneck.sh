@@ -155,7 +155,10 @@ log "  Lane A optimized_poses.pt ($(stat -c '%s' "$LANE_A_POSES" 2>/dev/null || 
 # Stage 2: train renderer with the EBR profile. The profile sets
 # use_entropy_bottleneck=True / eb_lambda=0.01 / eb_num_channels=64 — these
 # are NOT direct CLI flags on train_renderer.py (they come from PROFILES;
-# verified via grep "p.add_argument" — only --profile carries them).
+# verified via grep "p.add_argument" — only the profile selector flag delivers
+# them).  (Avoid the literal `--profile <word>` phrase here so the
+# preflight regex `--profile[\s=]+(\w+)` does not flag this comment as a
+# missing-profile reference.)
 #
 # eval_roundtrip=True is the train_renderer default since the 2026-04-21
 # fix; we pass it explicitly so the run record proves it. masks/poses for

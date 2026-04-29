@@ -34,16 +34,18 @@
 #   * Dead-flag-wiring guard: every CLI flag below is verified against
 #     train_renderer.py argparse before launch.
 #
-# CLI flag verification (per memory feedback_dead_flag_wiring_pattern):
-#   --profile               train_renderer.py:~270  (verified)
-#   --device                train_renderer.py:~250  (verified)
-#   --epochs                train_renderer.py:~290  (verified)
-#   --output-dir            train_renderer.py:~260  (verified)
-#   --loss-mode             train_renderer.py NEW (Lane J-JBL flag, this commit)
-#   --boundary-weight       train_renderer.py NEW (Lane J-JBL flag, this commit)
-#   --bls-smoothing         train_renderer.py NEW (Lane J-JBL flag, this commit)
-#   --kl-distill-weight     train_renderer.py:~313 (verified, repurposed scalar)
-#   --kl-distill-temperature train_renderer.py:~316 (verified)
+# CLI flag verification (per memory feedback_dead_flag_wiring_pattern).
+# Use `--PROFILE` (uppercase) when DOCUMENTING flags so the preflight
+# regex `--profile[\s=]+(\w+)` does not parse comments as profile refs.
+#   --PROFILE               train_renderer.py:~270  (verified)
+#   --DEVICE                train_renderer.py:~250  (verified)
+#   --EPOCHS                train_renderer.py:~290  (verified)
+#   --OUTPUT-DIR            train_renderer.py:~260  (verified)
+#   --LOSS-MODE             train_renderer.py NEW (Lane J-JBL flag, this commit)
+#   --BOUNDARY-WEIGHT       train_renderer.py NEW (Lane J-JBL flag, this commit)
+#   --BLS-SMOOTHING         train_renderer.py NEW (Lane J-JBL flag, this commit)
+#   --KL-DISTILL-WEIGHT     train_renderer.py:~313 (verified, repurposed scalar)
+#   --KL-DISTILL-TEMPERATURE train_renderer.py:~316 (verified)
 set -euo pipefail
 WORKSPACE="${WORKSPACE:-/workspace/pact}"
 PYBIN="${PYBIN:-/opt/conda/bin/python}"

@@ -2846,6 +2846,31 @@ J_JBL_DILATED_H64 = {
 }
 
 
+# ── LANE J-IMP: Iterative Magnitude Pruning (Frankle & Carbin 2018) ──────
+# Outer-loop driver lives in experiments/train_imp_cycle.py; the per-cycle
+# fine-tune borrows the dilated-h64 baseline arch + standard renderer-loss
+# settings, but the script also passes the exact arch via CLI flags
+# (--base-ch / --mid-ch / --motion-hidden / --depth / --embed-dim /
+# --pose-dim / --padding-mode), so this PROFILE is mostly a registry entry
+# satisfying preflight `check_deploy_script_profiles_exist_in_registry`.
+# The actual prune+rewind schedule lives in train_imp_cycle.py:
+#   * --target-sparsity 0.20 per cycle, 10 cycles → 89% final sparsity
+#   * Standard CE+MSE renderer loss (no JBL / no KL distill auxiliary —
+#     IMP's value comes from sparsity, not loss family).
+IMP_CYCLE_DILATED_H64 = {
+    **PROVEN_BASELINE,
+    # IMP intentionally trains short per-cycle (200ep) so the lottery
+    # ticket lottery has ~10 cycles within the GPU budget.
+    "epochs": 200,
+    "lr": 1e-4,
+    "batch_size": 4,
+    "loss_mode": "standard",
+    # Different seed so IMP explores a different RNG basin from Lane A
+    # (seed=42) while the prune+rewind schedule supplies the lane novelty.
+    "seed": 89,
+}
+
+
 # ── LANE MAE-V: Masked Autoencoder Variant on input mask patches ──────────
 # Council 2026-04-28 (Cosmos research synthesis,
 # .omx/research/jack_skunkworks_segnet_rate_research_20260428.md).
@@ -3860,6 +3885,12 @@ PROFILES = {
     # Smoothing distillation, anchored on Lane G v3. Predicted band
     # [0.92, 1.02] per .omx/research/jack_skunkworks_segnet_rate_research_20260428.md §S1.
     "j_jbl_dilated_h64": J_JBL_DILATED_H64,
+    # Lane J-IMP (Iterative Magnitude Pruning, Frankle & Carbin 2018):
+    # outer driver experiments/train_imp_cycle.py runs 10 cycles of
+    # prune+rewind+fine-tune to 89% sparsity. Profile is mostly a registry
+    # entry; arch is overridden via CLI in
+    # scripts/remote_lane_j_imp_iterative_magnitude_pruning.sh.
+    "imp_cycle_dilated_h64": IMP_CYCLE_DILATED_H64,
     # Lane MAE-V (Cosmos research synthesis): Masked Autoencoder Variant
     # — random patch masking with learnable Gumbel-softmax mask token
     # during training only (eval mode is a strict passthrough). Anchored
