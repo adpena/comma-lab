@@ -387,7 +387,7 @@ def train_mini_posenet(
 
     # ── Step 1: Generate teacher pose targets ────────────────────────
     logger.info("[mini-posenet] Generating teacher targets from full PoseNet (%d pairs)...", P)
-    all_poses = torch.zeros(P, 6)
+    all_poses = torch.zeros(P, 6)  # OFF_MANIFOLD_OK: pre-allocated buffer; ALL 6 dims filled by full PoseNet teacher in the loop below (line 405: `all_poses[start:end] = pose.cpu()` writes the full 6-vector).
 
     full_posenet.eval()
     with torch.no_grad():
@@ -408,7 +408,7 @@ def train_mini_posenet(
 
     # ── Step 2: Prepare concatenated pairs at mini resolution ────────
     # Pre-compute all pairs as (P, 6, H, W) concatenated tensors
-    all_pair_inputs = torch.zeros(P, 6, MINI_POSE_H, MINI_POSE_W)
+    all_pair_inputs = torch.zeros(P, 6, MINI_POSE_H, MINI_POSE_W)  # OFF_MANIFOLD_OK: NOT a pose tensor — this is a (P, 6_channels=2_frames*3_RGB, H, W) IMAGE buffer for the MiniPoseNet input; the 6 is RGB channels stacked, not pose-DOFs.
     for k in range(P):
         f1 = frames_chw[2 * k]    # (3, H, W)
         f2 = frames_chw[2 * k + 1]  # (3, H, W)

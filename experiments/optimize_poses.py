@@ -2365,9 +2365,7 @@ def main():
             "(this will undercount PoseNet — fix the save-block path).",
             flush=True,
         )
-        zeros_pad = torch.zeros(
-            optimized_poses.shape[0], 6 - 1, dtype=optimized_poses.dtype,
-        )
+        zeros_pad = torch.zeros(optimized_poses.shape[0], 6 - 1, dtype=optimized_poses.dtype)  # OFF_MANIFOLD_OK: warned-fallback path for radial-zoom save-block bug; emits explicit "[Lane M-V2 WARNING]" so the operator knows the score is undercounted (proxy-only, never used in archive).
         optimized_poses_for_render = torch.cat([optimized_poses, zeros_pad], dim=-1)
     else:
         optimized_poses_for_render = optimized_poses

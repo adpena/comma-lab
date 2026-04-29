@@ -759,7 +759,7 @@ def estimate_expected_pose(
     P = N // 2
 
     if P == 0:
-        return torch.zeros(0, 6, device=device)
+        return torch.zeros(0, 6, device=device)  # OFF_MANIFOLD_OK: empty-tensor sentinel (P=0); no rows so no off-manifold conditioning possible.
 
     # Compute class centroids per frame
     # centroid_y, centroid_x for each class in each frame
@@ -808,7 +808,7 @@ def estimate_expected_pose(
     }
     w = {**_defaults, **(pose_heuristic_weights or {})}
 
-    poses = torch.zeros(P, 6, device=device)
+    poses = torch.zeros(P, 6, device=device)  # OFF_MANIFOLD_OK: heuristic constructor — ALL 6 dims populated immediately below from centroid deltas (see lines 812-817).
     poses[:, 0] = road_dx * w["tx_road_dx"]            # tx: lateral from road shift
     poses[:, 1] = road_dy * w["ty_road_dy"]             # ty: vertical from road shift
     poses[:, 2] = w["tz_baseline"] + road_dy * w["tz_road_dy"]  # tz: forward (baseline + road growth)

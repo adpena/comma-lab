@@ -45,7 +45,7 @@ class LearnableAffineFlow(nn.Module):
         # so zero flow = zero gradient for ego_flow params. A small initial
         # displacement ensures the warp samples across pixel boundaries from
         # the very first step, providing gradient signal.
-        init = torch.zeros(n_pairs, 6)
+        init = torch.zeros(n_pairs, 6)  # OFF_MANIFOLD_OK: not a PoseNet-input pose — these are AffineFlowField parameters (rotation+translation+shear), an independent 6-DOF affine warp space, not the 6-DOF PoseNet pose vector. Renderer never sees this tensor as `pose=`.
         # Small random translation (channels 2=tx, 5=ty) ~0.5 pixel equivalent
         init[:, 2] = torch.randn(n_pairs) * 0.3  # tx
         init[:, 5] = torch.randn(n_pairs) * 0.3  # ty

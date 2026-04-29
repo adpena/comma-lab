@@ -233,7 +233,7 @@ def compute_zero_cost_poses_from_masks(
     pose_dim0 = posenet_dim0_mean + posenet_dim0_per_logzoom * log_zoom
     pose_dim0 = pose_dim0.clamp(min=posenet_dim0_min, max=posenet_dim0_max)
 
-    poses = torch.zeros(num_pairs, 6, dtype=torch.float32)
+    poses = torch.zeros(num_pairs, 6, dtype=torch.float32)  # OFF_MANIFOLD_OK: rank-1 lane-mark pose builder; dim 0 IS the projection — caller must pass baseline_poses dim 1-5 separately if used with a 6-DOF renderer (see compute_endpoint_tracking_pose_dim0 docstring).
     poses[:, 0] = pose_dim0.to(torch.float32)
     return poses
 

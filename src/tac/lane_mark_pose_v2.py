@@ -366,7 +366,7 @@ def compute_endpoint_tracking_poses_from_masks(
         foe_w=foe_w, foe_h=foe_h, smoothing=smoothing,
         lane_mark_class=lane_mark_class, use_top=use_top,
     )
-    poses = torch.zeros(num_pairs, 6, dtype=torch.float32)
+    poses = torch.zeros(num_pairs, 6, dtype=torch.float32)  # OFF_MANIFOLD_OK: rank-1 lane-mark pose builder (V2); dim 0 IS the projection — caller must pass baseline_poses dim 1-5 separately if used with a 6-DOF renderer.
     poses[:, 0] = pose_dim0.to(torch.float32)
     return poses
 

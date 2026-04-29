@@ -118,7 +118,7 @@ def _run_posenet(gt_pairs: torch.Tensor, posenet, device: torch.device,
                  batch: int = 8) -> torch.Tensor:
     """Forward all GT pairs through frozen PoseNet -> (n_pairs, 6) pose tensor."""
     n_pairs = gt_pairs.shape[0]
-    out = torch.zeros(n_pairs, 6, dtype=torch.float32)
+    out = torch.zeros(n_pairs, 6, dtype=torch.float32)  # OFF_MANIFOLD_OK: pre-allocated buffer; ALL 6 dims filled by frozen PoseNet teacher inside the with-no_grad loop below (line 132: `out[start:end] = pose6` writes the full 6-vector).
     with torch.no_grad():
         for start in range(0, n_pairs, batch):
             end = min(start + batch, n_pairs)
@@ -196,7 +196,7 @@ def _seed_affine_embedding(
     # Replicate across both frames in the pair (frames 2*i and 2*i+1 share pose i).
     raw_per_frame = raw_per_pair.unsqueeze(1).expand(-1, 2, -1).reshape(-1, 6)
     # raw_per_frame: (2*n_pairs, 6). Pad to max_frame_index with zeros if needed.
-    out = torch.zeros(max_frame_index, 6, dtype=torch.float32)
+    out = torch.zeros(max_frame_index, 6, dtype=torch.float32)  # OFF_MANIFOLD_OK: SegMap.frame_affine_embedding zero-pad sentinel — these are AFFINE EMBEDDING values (zoom/aspect/shear/translation), NOT PoseNet poses. The next line copies arctanh-projected pose values for the first n_pairs*2 rows; remaining rows = identity affine (tanh(0)=0 → no-op affine).
     out[: raw_per_frame.shape[0]] = raw_per_frame
 
     with torch.no_grad():

@@ -129,7 +129,7 @@ def main():
             # Quick forward pass to measure output difference
             with torch.inference_mode():
                 mask = torch.randint(0, 5, (1, 384, 512), device=device)
-                pose = torch.zeros(1, 6, device=device) if hasattr(model, 'pose_dim') and model.pose_dim > 0 else None
+                pose = torch.zeros(1, 6, device=device) if hasattr(model, 'pose_dim') and model.pose_dim > 0 else None  # OFF_MANIFOLD_OK: per-layer-quantization sensitivity probe — outputs are diffed (out_quant - out_float) so absolute pose value cancels; only quantization-induced renderer drift is measured.
                 kwargs = {"pose": pose} if pose is not None else {}
                 out_quant = model(mask, mask, **kwargs)
 
