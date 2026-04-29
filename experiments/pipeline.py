@@ -239,8 +239,16 @@ class PipelineConfig:
     mask_codec: str = "av1_monochrome"
 
     # Weight compression: "fp4" (current FP4+codebook), "int4_lzma2" (int4+LZMA2),
-    # or "auto" (try int4_lzma2 first, fall back to fp4 if quality degrades too much)
+    # "nwc" (Lane J-NWC neural weight compression — requires a trained codec
+    # checkpoint at `weight_codec_path`), or "auto" (try int4_lzma2 first, fall
+    # back to fp4 if quality degrades too much). Default stays "fp4" so the
+    # canonical pipeline is unchanged unless an operator opts in.
     weight_compression: str = "fp4"
+    # Lane J-NWC: path to a trained WeightCodec checkpoint produced by
+    # experiments/train_neural_weight_codec.py. REQUIRED when
+    # weight_compression == "nwc". Empty string disables the NWC branch and
+    # the pipeline falls back to FP4 with a warning if NWC was requested.
+    weight_codec_path: str = ""
 
     # Lane I (Cool-Chic / C3 residual neural-mask renderers, 2026-04-27).
     # When `variant` is set, step_export dispatches to the matching builder
@@ -1231,6 +1239,66 @@ def step_compress_weights(
             return checkpoint_path
 
     mode = cfg.weight_compression
+
+    # ── Lane J-NWC neural-weight-compression branch ─────────────────────
+    # Gate analogous to I4LZ: NWC1 *can* faithfully roundtrip arch flags
+    # because the header carries `_infer_asymmetric_config(model)` (which
+    # records padding_mode / use_dilation / use_zoom_flow / depth / channels)
+    # — UNLIKE I4LZ which has no header. The gate that matters for NWC is
+    # the codec-checkpoint requirement: without a trained codec we fall back
+    # to FP4 with a warning rather than silently shipping a stub.
+    if mode == "nwc":
+        codec_path = cfg.weight_codec_path or ""
+        if not codec_path or not Path(codec_path).exists():
+            _log(
+                f"Weight compression: NWC requested but weight_codec_path "
+                f"({codec_path!r}) does not exist. Falling back to FP4 (the "
+                f"NWC codec MUST be trained ahead of time via "
+                f"experiments/train_neural_weight_codec.py). [Memory: "
+                f"feedback_canonical_remote_bootstraps]",
+                "WARN",
+            )
+            _mark_done(iter_dir, step_name, {
+                "mode": "fp4_fallback",
+                "reason": "nwc_codec_missing",
+                "weight_codec_path": codec_path,
+            })
+            return checkpoint_path
+
+        _log(f"Weight compression: NWC (codec={codec_path})")
+        from tac.renderer import AsymmetricPairGenerator
+        from tac.renderer_export import export_neural_compressed_checkpoint
+
+        ckpt = torch.load(str(checkpoint_path), map_location="cpu", weights_only=True)
+        state = ckpt.get("model_state_dict", ckpt)
+        model = AsymmetricPairGenerator(
+            num_classes=5, embed_dim=cfg.embed_dim,
+            base_ch=cfg.base_ch, mid_ch=cfg.mid_ch,
+            motion_hidden=cfg.motion_hidden, depth=cfg.depth,
+            pose_dim=cfg.pose_dim, use_dsconv=cfg.use_dsconv,
+            padding_mode=cfg.padding_mode, use_dilation=cfg.use_dilation,
+            use_zoom_flow=cfg.use_zoom_flow,
+        )
+        missing, unexpected = model.load_state_dict(state, strict=False)
+        if missing or unexpected:
+            raise RuntimeError(
+                f"step_compress_weights (NWC): shape mismatch on {checkpoint_path}. "
+                f"missing={list(missing)[:5]} unexpected={list(unexpected)[:5]}."
+            )
+        model.eval()
+
+        nwc_path = iter_dir / "renderer_nwc.bin"
+        nwc_bytes = export_neural_compressed_checkpoint(
+            model, codec_path=codec_path, output_path=nwc_path,
+        )
+        _log(f"  NWC: {nwc_bytes:,} bytes ({nwc_bytes/1024:.1f} KB)")
+        _mark_done(iter_dir, step_name, {
+            "mode": "nwc",
+            "bytes": nwc_bytes,
+            "weight_codec_path": codec_path,
+        })
+        return nwc_path
+
     if mode == "fp4":
         _log("Weight compression: FP4 (default, no additional compression)")
         _mark_done(iter_dir, step_name, {"mode": "fp4", "skipped": True})

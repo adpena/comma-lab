@@ -1854,7 +1854,10 @@ def _load_renderer(renderer_path: str, device: str) -> nn.Module:
         9. QFAI binary (Lane Q-FAITHFUL): TRUE 1:1 Quantizr PR #55 replica
            (magic b"QFAI") — JointFrameGenerator with NO motion/warp,
            single-mask + FiLM-on-pose dual-head architecture (~88K params).
-       10. PyTorch pickle: state_dict or PairGenerator checkpoint
+       10. NWC1 binary (Lane J-NWC): Neural Weight Compression
+           (magic b"NWC1") — VQ-VAE codec encodes every state-dict tensor
+           to (codebook_index + per-block scale); codec weights bundled in.
+       11. PyTorch pickle: state_dict or PairGenerator checkpoint
 
     All variants produce the same `(B, 2, H, W, 3)` HWC pair output via
     `model(mask_t, mask_t1)`, so the rest of the inflate pipeline (mask
@@ -2012,6 +2015,37 @@ def _load_renderer(renderer_path: str, device: str) -> nn.Module:
         print(
             f"  Loaded Self-Compressing AsymmetricPairGenerator from .bin "
             f"({len(raw_bytes):,} bytes, {elapsed:.1f}s)",
+            file=sys.stderr,
+        )
+        return model
+
+    # ── NWC1 format (Lane J-NWC): Neural Weight Compression renderer ──
+    # 2026-04-29: Lane J-NWC tiny VQ-VAE-style codec (block_size=16, codebook
+    # K=64, latent=16). The codec weights themselves are bundled INSIDE the
+    # NWC1 binary so the loader is fully self-contained — no external codec
+    # asset required at inflate time. Strict-scorer-rule compliant: the
+    # codec is a small autoencoder for weight blocks, NOT a SegNet/PoseNet
+    # forward pass; no scorer load occurs at inflate time. The tac wheel
+    # is required because the WeightCodec module + AsymmetricPairGenerator
+    # constructor are non-trivial (200+ LOC each); there is no inline
+    # fallback (matches the SCv1/OMG1/CCh1/SZv1 lane policy).
+    if magic == b"NWC1":
+        try:
+            from tac.renderer_export import load_neural_compressed_checkpoint
+        except ImportError as exc:
+            raise RuntimeError(
+                "NWC1 (Lane J-NWC neural weight compression) format requires "
+                "the tac package (tac.renderer_export.load_neural_compressed_checkpoint). "
+                "The inflate container must include the tac wheel for Lane J-NWC "
+                f"archives. Underlying error: {exc!r}"
+            )
+        model = load_neural_compressed_checkpoint(raw_bytes, device=device)
+        elapsed = time.monotonic() - t0
+        n_params = sum(p.numel() for p in model.parameters())
+        print(
+            f"  Loaded NWC1 (Neural-Weight-Compressed) AsymmetricPairGenerator "
+            f"from .bin ({len(raw_bytes):,} bytes, {n_params:,} params, "
+            f"{elapsed:.1f}s) — strict-scorer-rule OK",
             file=sys.stderr,
         )
         return model
