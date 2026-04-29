@@ -116,11 +116,32 @@ class LearnableClassTargets(nn.Module):
         # exact-init contract, killing 6 tests.
         raw_init = _logit_exact_fp64(initial)
         self.raw_values = nn.Parameter(raw_init)
-        # EMA decay used by ``ema_update``. Following van den Oord (VQ-VAE-2)
-        # the codebook update is `c <- decay * c + (1 - decay) * mean(z|c)`.
-        # Stored as a plain float so it survives state_dict load/save without
-        # bloating the parameter count.
+        if not (0.0 < ema_decay < 1.0):
+            raise ValueError(
+                f"ema_decay must be in (0.0, 1.0); got {ema_decay}"
+            )
         self.ema_decay: float = float(ema_decay)
+        # van den Oord (2017) VQ-VAE persistent-buffer EMA. The naive
+        # `c <- decay * c + (1 - decay) * mean(z|c)` weights every batch
+        # equally regardless of the number of assignments — a batch with
+        # 1 sample has the same EMA weight as a batch with 100 samples
+        # (Fridrich Round 1 finding). The persistent variant tracks per-class
+        # count `N_c` and accumulated sum `m_c`, producing centroid
+        # `c = m_c / N_c`. This is what Quantizr uses.
+        # Initialize the buffers from the current target so the first
+        # update doesn't kick the codebook far from initialization.
+        with torch.no_grad():
+            initial_targets = (
+                torch.sigmoid(self.raw_values.to(torch.float64)) * 255.0
+            ).to(torch.float32)
+        self.register_buffer(
+            "ema_count",
+            torch.ones(NUM_CLASSES, dtype=torch.float32),
+        )
+        self.register_buffer(
+            "ema_sum",
+            initial_targets.clone(),
+        )
         if device is not None:
             self.to(device)
 
@@ -184,32 +205,71 @@ class LearnableClassTargets(nn.Module):
         assignments: torch.Tensor,
         gray_values: torch.Tensor,
     ) -> "LearnableClassTargets":
-        """VQ-VAE-2 EMA codebook update toward observed cluster means.
+        """van den Oord (2017) VQ-VAE persistent-buffer EMA codebook update.
 
-        For each class c with at least one assignment, the new target is
-        ``decay * old_target + (1 - decay) * mean(gray_values | assignments==c)``.
-        Classes with zero assignments are left unchanged. Returns self.
+        Maintains per-class running stats:
+
+            N_c <- decay * N_c + (1 - decay) * count(assignments == c)
+            m_c <- decay * m_c + (1 - decay) * sum(gray_values[assignments == c])
+            c   <- m_c / N_c
+
+        Unlike the naive ``decay * c + (1-decay) * mean(z|c)`` form, this
+        weights each batch by its actual contribution: a batch with 1 sample
+        moves the codebook less than a batch with 100 samples assigned to
+        the same class. Quantizr uses exactly this rule (Hinton/Vinyals/Dean
+        2014 KL distill in their pipeline assumes a properly-tracked codebook).
+        Round 1 codex review (Fridrich) flagged the previous batch-mean
+        implementation as Medium severity — fixed here.
+
+        Classes with zero assignments do NOT update their target this
+        iteration; their N_c and m_c are still decayed (so targets gravitate
+        slowly toward the existing centroid in the limit), preserving the
+        VQ-VAE-2 dead-codebook handling.
 
         Args:
             assignments: (N,) long tensor of class IDs in [0, NUM_CLASSES).
             gray_values: (N,) float tensor of observed gray values in [0, 255].
+
+        Returns: self (for chaining).
         """
+        if assignments.dim() != 1 or gray_values.dim() != 1:
+            raise ValueError(
+                f"assignments and gray_values must be 1-D; got "
+                f"{assignments.shape} and {gray_values.shape}"
+            )
         if assignments.shape[0] != gray_values.shape[0]:
             raise ValueError(
                 f"assignments ({assignments.shape}) and gray_values "
                 f"({gray_values.shape}) must have matching length"
             )
-        old_targets = self.forward()
-        new_targets = old_targets.clone()
+        if assignments.numel() == 0:
+            return self
+        if not torch.all((assignments >= 0) & (assignments < NUM_CLASSES)):
+            raise ValueError(
+                f"assignments must be in [0, {NUM_CLASSES}); got "
+                f"min={assignments.min().item()}, max={assignments.max().item()}"
+            )
         decay = self.ema_decay
-        for c in range(NUM_CLASSES):
-            mask = (assignments == c)
-            n = int(mask.sum().item())
-            if n == 0:
-                continue
-            cluster_mean = gray_values[mask].float().mean()
-            new_targets[c] = decay * old_targets[c] + (1.0 - decay) * cluster_mean
-        new_targets = new_targets.clamp(0.0, 255.0)
+        gray_values = gray_values.to(torch.float32)
+        # Per-class assignment count and accumulated sum for THIS batch.
+        # scatter_add for efficient O(N) computation regardless of NUM_CLASSES.
+        ones = torch.ones_like(gray_values)
+        batch_count = torch.zeros(
+            NUM_CLASSES, dtype=torch.float32, device=gray_values.device
+        )
+        batch_sum = torch.zeros(
+            NUM_CLASSES, dtype=torch.float32, device=gray_values.device
+        )
+        batch_count.scatter_add_(0, assignments.long(), ones)
+        batch_sum.scatter_add_(0, assignments.long(), gray_values)
+        # Persistent EMA buffers — full-tensor decay even for unobserved
+        # classes so the running stats forget stale data over time.
+        self.ema_count.mul_(decay).add_(batch_count, alpha=1.0 - decay)
+        self.ema_sum.mul_(decay).add_(batch_sum, alpha=1.0 - decay)
+        # Centroid = sum / count. Laplace-smooth count by a small epsilon to
+        # avoid division-by-zero on cold-start classes that have never been
+        # assigned. eps=1e-6 is small enough not to bias the centroid.
+        new_targets = (self.ema_sum / (self.ema_count + 1e-6)).clamp(0.0, 255.0)
         new_raw = _logit_exact_fp64(new_targets)
         self.raw_values.copy_(new_raw)
         return self
