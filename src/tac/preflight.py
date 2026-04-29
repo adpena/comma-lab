@@ -662,6 +662,26 @@ def preflight_all(
         # feedback_artifact_recovery_canonical_workflow_20260428.
         check_lane_classes_have_pipeline_proof(strict=False, verbose=verbose)
 
+        # 2026-04-29: Selfcomp / Lane MM checks. 2 STRICT + 1 warn-only.
+        # All three guard the new grayscale-LUT + block-FP paradigm:
+        #   * grayscale-LUT consistency: archives shipping grayscale.mkv must
+        #     dispatch via PYTHON_INFLATE=segmap or =renderer_grayscale.
+        #     Otherwise legacy ffmpeg arm reads masks.mkv (missing) and
+        #     silently emits blank .raw -> 100x score.
+        #   * block-FP qint/exp pairing: any code reading weight_qint must
+        #     also read weight_exponents (decoder invariant from Selfcomp
+        #     inflate.py L168-169). Reading qint alone -> 64x error band.
+        #   * segmap-export verify_roundtrip: WARN-only initially, flip
+        #     STRICT after first SegMap-paradigm lane lands.
+        # All grayscale-LUT-paradigm scripts (SA / SC++ / SO via parallel
+        # commit 7ca6680f + Lane MM) now set CONFIG_ENV_PATH to a config
+        # that exports PYTHON_INFLATE=segmap or =renderer_grayscale.
+        # Lands at 0 live violations -> straight to STRICT per Lane A pattern.
+        check_segmap_grayscale_lut_consistency(strict=True, verbose=verbose)
+        check_block_fp_exponents_alongside_qint(strict=True, verbose=verbose)
+        # WARN-only: flip STRICT once first SegMap-paradigm encoder lane lands.
+        check_segmap_export_calls_verify_roundtrip(strict=False, verbose=verbose)
+
     # 2. Training inputs (only if profile + tto_frames provided)
     if profile_name and tto_frames_path and gt_poses_path and masks_path and profile_arch:
         preflight_training_inputs(
@@ -12444,6 +12464,209 @@ def check_lane_classes_have_pipeline_proof(
             "Add an entry to .omx/state/lane_class_proofs.json — see check "
             "docstring for schema.\n\nViolations:\n"
             + "\n".join(f"  • {v}" for v in violations[:50])
+        )
+    return violations
+
+
+# ════════════════════════════════════════════════════════════════════════════
+# Selfcomp / Lane MM checks (2026-04-29)
+# ════════════════════════════════════════════════════════════════════════════
+#
+# Two new STRICT checks land at 0 live violations after the Selfcomp paradigm
+# port. Reference: project session 2026-04-29 forking Selfcomp 0.38.
+#   * grayscale-LUT consistency: any archive that ships grayscale.mkv must
+#     dispatch via the segmap or renderer_grayscale arm in inflate.sh
+#     (otherwise the legacy ffmpeg path tries to read masks.mkv that
+#     doesn't exist and silently writes a blank .raw -> 100x score).
+#   * block-FP qint/exp pairing: weight_qint without a sibling
+#     weight_exponents reference cannot reconstruct -- any code that
+#     reads ``weight_qint`` from a payload must also read ``weight_exponents``
+#     in the same dict access (Selfcomp inflate.py L168-169 invariant).
+
+
+def check_segmap_grayscale_lut_consistency(
+    repo_root: Path | None = None,
+    strict: bool = True,
+    verbose: bool = True,
+) -> list[str]:
+    """Archives shipping grayscale.mkv must use the segmap/renderer_grayscale arm.
+
+    Scans every remote_lane_*.sh that builds an archive containing
+    grayscale.mkv (or the segmap PYTHON_INFLATE arm), and verifies that
+    the inflate config for that lane sets PYTHON_INFLATE to either
+    ``segmap`` or ``renderer_grayscale``. The legacy ffmpeg / renderer
+    arms expect masks.mkv and would silently produce a blank output if
+    handed a grayscale.mkv-only archive.
+
+    Returns list of violations. Raises PreflightError if strict and any.
+    """
+    root = repo_root or REPO_ROOT
+    scripts_dir = root / "scripts"
+    violations: list[str] = []
+    n_scanned = 0
+    if scripts_dir.is_dir():
+        for sh in sorted(scripts_dir.glob("remote_lane_*.sh")):
+            n_scanned += 1
+            try:
+                txt = sh.read_text()
+            except OSError:
+                continue
+            ships_grayscale = (
+                "grayscale.mkv" in txt
+                or "PYTHON_INFLATE=segmap" in txt
+                or "PYTHON_INFLATE=renderer_grayscale" in txt
+            )
+            if not ships_grayscale:
+                continue
+            uses_correct_arm = (
+                "PYTHON_INFLATE=segmap" in txt
+                or "PYTHON_INFLATE=renderer_grayscale" in txt
+            )
+            if not uses_correct_arm:
+                violations.append(
+                    f"{sh.relative_to(root)}: ships grayscale.mkv but does not set "
+                    f"PYTHON_INFLATE=segmap or PYTHON_INFLATE=renderer_grayscale. "
+                    f"The legacy ffmpeg / renderer arms read masks.mkv and would "
+                    f"silently emit blank output. Set PYTHON_INFLATE accordingly "
+                    f"in the lane's config.env override."
+                )
+    if verbose:
+        if violations:
+            print(f"  [grayscale-lut-consistency] {len(violations)} violation(s) across {n_scanned} script(s):")
+            for v in violations:
+                print(f"    • {v}")
+        else:
+            print(f"  [grayscale-lut-consistency] OK: {n_scanned} remote_lane_*.sh script(s) clean")
+    if violations and strict:
+        raise PreflightError(
+            "GRAYSCALE-LUT CONSISTENCY violations:\n"
+            + "\n".join(f"  • {v}" for v in violations)
+            + "\n\nLane MM / Selfcomp paradigm guard: any archive that contains "
+            "grayscale.mkv must be inflated through the segmap or "
+            "renderer_grayscale PYTHON_INFLATE arm. Otherwise the legacy "
+            "ffmpeg path tries to read masks.mkv that does not exist and "
+            "silently writes blank frames -> catastrophic score. "
+            "Reference: 2026-04-29 Selfcomp port."
+        )
+    return violations
+
+
+def check_block_fp_exponents_alongside_qint(
+    repo_root: Path | None = None,
+    strict: bool = True,
+    verbose: bool = True,
+) -> list[str]:
+    """Any code reading ``weight_qint`` from a dict must also read ``weight_exponents``.
+
+    The Selfcomp block-FP codec stores per-channel exponents alongside the
+    int8 qint tensor; reconstruction is ``weight = qint * 2 ** exponents``
+    (see tac.block_fp_codec.decode_conv_weight + Selfcomp inflate.py
+    L167-172). Reading ONLY weight_qint produces nonsense (off by 2**exp
+    per channel, typically a 64x error band).
+
+    Returns list of violations. Raises PreflightError if strict and any.
+    """
+    root = repo_root or REPO_ROOT
+    violations: list[str] = []
+    n_scanned = 0
+    for py in _iter_python_files(root, _META_PY_SCAN_DIRS + ["submissions/robust_current"]):
+        try:
+            text = py.read_text()
+        except (OSError, UnicodeDecodeError):
+            continue
+        n_scanned += 1
+        # Skip the codec module itself: it DEFINES the pair semantics
+        # (encoder writes one and reader of weight_qint without exponents
+        # is by definition the codec implementation).
+        rel = py.relative_to(root) if py.is_absolute() else py
+        rel_str = str(rel)
+        if rel_str.endswith("block_fp_codec.py") or rel_str.endswith("test_block_fp_codec.py"):
+            continue
+        # Skip test files in general — tests may reference qint without
+        # exp for the encoder/decoder boundary verification.
+        if "/tests/" in rel_str:
+            continue
+        if "weight_qint" in text:
+            if "weight_exponents" not in text:
+                violations.append(
+                    f"{rel}: references 'weight_qint' but not 'weight_exponents'. "
+                    f"The block-FP codec invariant requires both: weight = qint * 2^exp. "
+                    f"Reading qint alone produces 64x-error-band output."
+                )
+    if verbose:
+        if violations:
+            print(f"  [block-fp-qint-exp-pair] {len(violations)} violation(s) across {n_scanned} files:")
+            for v in violations:
+                print(f"    • {v}")
+        else:
+            print(f"  [block-fp-qint-exp-pair] OK: {n_scanned} file(s) scanned")
+    if violations and strict:
+        raise PreflightError(
+            "BLOCK-FP QINT/EXP PAIRING violations:\n"
+            + "\n".join(f"  • {v}" for v in violations)
+            + "\n\nThe Selfcomp block-FP codec stores int8 qint + int32 "
+            "exponents per output channel; reconstruction is "
+            "weight = qint * 2 ** exponents. Any consumer reading "
+            "weight_qint without weight_exponents produces 64x-error-band "
+            "output. See tac.block_fp_codec.decode_conv_weight."
+        )
+    return violations
+
+
+def check_segmap_export_calls_verify_roundtrip(
+    repo_root: Path | None = None,
+    strict: bool = False,
+    verbose: bool = True,
+) -> list[str]:
+    """SegMap export sites SHOULD call verify_roundtrip before shipping.
+
+    WARN-ONLY initially per the Lane A pattern: this is the gate that
+    catches block-FP encoder bugs (e.g. wrong exponent picker, HWOI
+    permute confusion) before they ship a lane archive. Promotion plan:
+    flip strict=True after the first SegMap-paradigm lane lands and the
+    pattern is established.
+    """
+    root = repo_root or REPO_ROOT
+    violations: list[str] = []
+    n_scanned = 0
+    for py in _iter_python_files(root, ["src/tac", "experiments", "submissions/robust_current"]):
+        try:
+            text = py.read_text()
+        except (OSError, UnicodeDecodeError):
+            continue
+        n_scanned += 1
+        rel = py.relative_to(root) if py.is_absolute() else py
+        rel_str = str(rel)
+        if rel_str.endswith("block_fp_codec.py") or rel_str.endswith("segmap_renderer.py"):
+            continue
+        if "/tests/" in rel_str:
+            continue
+        # Heuristic: any file that CALLS pack_payload_tar_xz() (not unpack,
+        # not just docstring mention) should also call verify_roundtrip()
+        # in the same module so a broken codec cannot silently degrade an
+        # archive. Use a regex so 'unpack_payload_tar_xz' does not match.
+        import re as _re
+        calls_pack = bool(_re.search(r"\bpack_payload_tar_xz\s*\(", text))
+        if calls_pack and "verify_roundtrip" not in text:
+            violations.append(
+                f"{rel}: calls pack_payload_tar_xz but does not call verify_roundtrip. "
+                f"The codec roundtrip gate is the only thing standing between a "
+                f"broken encoder and a shipped archive."
+            )
+    if verbose:
+        if violations:
+            print(f"  [segmap-export-verify-roundtrip] {len(violations)} warn(s) across {n_scanned} files:")
+            for v in violations:
+                print(f"    • {v}")
+        else:
+            print(f"  [segmap-export-verify-roundtrip] OK: {n_scanned} file(s) scanned")
+    if violations and strict:
+        raise PreflightError(
+            "SEGMAP-EXPORT-VERIFY-ROUNDTRIP violations:\n"
+            + "\n".join(f"  • {v}" for v in violations)
+            + "\n\nEvery pack_payload_tar_xz call site should be paired with "
+            "verify_roundtrip(state_dict, payload_path) BEFORE the archive "
+            "ships, so a broken codec cannot silently degrade auth eval."
         )
     return violations
 
