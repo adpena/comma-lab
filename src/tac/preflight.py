@@ -447,6 +447,21 @@ def preflight_all(
         # STRICT @ 0 violations after stripping pattern from all 11 scripts.
         check_no_git_reset_hard_in_remote_lane_scripts(strict=True, verbose=verbose)
 
+        # 2026-04-29 AM: Check 67 (python-files-compile) + Check 68 (shell-syntax)
+        # + Check 69 (anchor files exist locally).
+        # PROACTIVE: catches SyntaxError + IndentationError + bash syntax bugs
+        # + missing anchor files BEFORE they ship to remote and crash deploy.
+        # User demand: "preflight needs to include a python compile step of all so
+        # we can identify any python errors without deploying" + "autodetect and
+        # permanently prevent all bugs possible to anticipate".
+        # 631 .py files compile in ~0.75s; 109 shell scripts in ~0.45s; 72
+        # anchor refs scanned in <0.1s. Total proactive cost: ~1.3s.
+        # Check 69 caught 8 real bugs on first run (Lane F-V5 + Lane J-IMP +
+        # Lane J-JBL all referenced non-existent lane_g_v3_landed/iter_0/).
+        check_python_files_compile(strict=True, verbose=verbose)
+        check_shell_scripts_syntax_clean(strict=True, verbose=verbose)
+        check_lane_anchor_files_exist_locally(strict=True, verbose=verbose)
+
         # 2026-04-29: Check 43 — controlled-baseline methodology for new
         # Tuna-2 lanes. WARN-ONLY initially because it only applies to
         # remote_lane scripts added/modified after 2026-04-29 and is a
@@ -8228,6 +8243,219 @@ def check_launcher_tarball_includes_lane_anchors(
         raise MetaBugViolation(
             "LAUNCHER TARBALL MISSING LANE ANCHORS:\n"
             + "\n".join(f"  • {v}" for v in violations)
+        )
+    return violations
+
+
+def check_lane_anchor_files_exist_locally(
+    repo_root: Path | None = None,
+    strict: bool = False,
+    verbose: bool = True,
+) -> list[str]:
+    """Check 69 — every `ANCHOR_*` / `LANE_*_ARCHIVE` path referenced in
+    `remote_lane_*.sh` must EXIST in the local working tree.
+
+    Check 43 verifies launcher tarball INCLUDES the path. This check is
+    complementary: if the file doesn't exist locally, the tarball ships
+    nothing, the lane crashes on remote with `[ -f "$ANCHOR_..." ]` failure.
+
+    Skips paths that are env-overridable to placeholders (ANCHOR_FOO=${BAR:-})
+    when no resolvable default exists in the file.
+    """
+    root = repo_root or REPO_ROOT
+    scripts_dir = root / "scripts"
+    if not scripts_dir.is_dir():
+        if verbose:
+            print(f"  [anchor-exists-locally] OK: scripts/ missing — skipping")
+        return []
+
+    pattern = re.compile(
+        r'(?:ANCHOR_\w+|LANE_\w*ARCHIVE\w*|LANE_\w*POSES\w*|LANE_\w*MASKS\w*|LANE_\w*RENDERER\w*)='
+        r'(?:"|\$\{[^:}]+:-)?(experiments/results/[\w./_-]+|submissions/[\w./_-]+|upstream/[\w./_-]+)'
+    )
+
+    violations: list[str] = []
+    n_checked = 0
+    for sh in sorted(scripts_dir.glob("remote_lane_*.sh")):
+        try:
+            text = sh.read_text(errors="ignore")
+        except (FileNotFoundError, PermissionError):
+            continue
+        for m in pattern.finditer(text):
+            anchor_path = m.group(1)
+            n_checked += 1
+            full = root / anchor_path
+            if not full.exists():
+                violations.append(
+                    f"{sh.relative_to(root)}: ANCHOR `{anchor_path}` does NOT "
+                    f"exist locally — launcher tarball will ship nothing, "
+                    f"lane will crash at `[ -f $ANCHOR_... ]` check on remote."
+                )
+
+    if verbose:
+        if violations:
+            print(f"  [anchor-exists-locally] {len(violations)} violation(s) "
+                  f"({n_checked} anchor refs scanned):")
+            for v in violations[:20]:
+                print(f"    • {v}")
+        else:
+            print(f"  [anchor-exists-locally] OK: {n_checked} anchor refs all exist locally")
+
+    if violations and strict:
+        raise MetaBugViolation(
+            "LANE ANCHOR FILES DO NOT EXIST LOCALLY:\n"
+            + "\n".join(f"  • {v}" for v in violations[:20])
+        )
+    return violations
+
+
+def check_python_files_compile(
+    repo_root: Path | None = None,
+    strict: bool = False,
+    verbose: bool = True,
+    scan_dirs: tuple[str, ...] = ("src/tac", "scripts", "experiments", "tools"),
+) -> list[str]:
+    """Check 67 — every `.py` file in `scan_dirs` must parse + compile.
+
+    PROACTIVE: catches SyntaxError + IndentationError + obvious typos
+    BEFORE they ship to a remote and crash the lane after 5 minutes of
+    deploy. Uses `py_compile.compile(doraise=True)` which exercises the
+    full grammar without importing the module (so no import side-effects).
+
+    2026-04-29: added per user demand "preflight needs to include a python
+    compile step of all so we can identify any python errors without
+    deploying" + "autodetect and permanently prevent all bugs possible
+    to anticipate".
+
+    Skips: __pycache__, .venv, .git, .pytest_cache, build/, dist/, node_modules.
+    """
+    import py_compile
+
+    root = repo_root or REPO_ROOT
+    skip_parts = {"__pycache__", ".venv", ".git", ".pytest_cache",
+                  "build", "dist", "node_modules", ".eggs"}
+
+    violations: list[str] = []
+    n_compiled = 0
+    for d in scan_dirs:
+        d_path = root / d
+        if not d_path.exists():
+            continue
+        for py in d_path.rglob("*.py"):
+            if any(p in skip_parts for p in py.parts):
+                continue
+            try:
+                py_compile.compile(str(py), doraise=True)
+                n_compiled += 1
+            except py_compile.PyCompileError as e:
+                violations.append(
+                    f"{py.relative_to(root)}: {type(e).__name__}: "
+                    f"{str(e).strip()[:200]}"
+                )
+            except (SyntaxError, IndentationError) as e:
+                violations.append(
+                    f"{py.relative_to(root)}: {type(e).__name__} at "
+                    f"line {e.lineno}: {e.msg}"
+                )
+            except Exception as e:  # pragma: no cover  unexpected
+                violations.append(
+                    f"{py.relative_to(root)}: {type(e).__name__}: {e}"
+                )
+
+    if verbose:
+        if violations:
+            print(f"  [python-compile] {len(violations)} violation(s) "
+                  f"({n_compiled} files compiled OK):")
+            for v in violations[:20]:
+                print(f"    • {v}")
+            if len(violations) > 20:
+                print(f"    ... and {len(violations) - 20} more")
+        else:
+            print(f"  [python-compile] OK: {n_compiled} files compile clean")
+
+    if violations and strict:
+        raise MetaBugViolation(
+            "PYTHON FILES FAIL TO COMPILE — would crash on import at deploy:\n"
+            + "\n".join(f"  • {v}" for v in violations[:20])
+            + (f"\n  ... and {len(violations) - 20} more" if len(violations) > 20 else "")
+        )
+    return violations
+
+
+def check_shell_scripts_syntax_clean(
+    repo_root: Path | None = None,
+    strict: bool = False,
+    verbose: bool = True,
+    scan_dirs: tuple[str, ...] = ("scripts", "submissions", "experiments", "tools"),
+) -> list[str]:
+    """Check 68 — every `*.sh` file in `scan_dirs` must pass `bash -n`.
+
+    PROACTIVE bash syntax check (no execution). Catches unclosed quotes,
+    bad heredocs, unmatched braces — bugs that would otherwise crash 30s
+    into a remote deploy.
+
+    Skips: directories that happen to end in .sh (recovered_*.sh, etc.)
+    """
+    import shutil
+    import subprocess
+
+    bash = shutil.which("bash")
+    if not bash:
+        if verbose:
+            print(f"  [shell-syntax] SKIP: bash not found on PATH")
+        return []
+
+    root = repo_root or REPO_ROOT
+    skip_parts = {"__pycache__", ".venv", ".git", ".pytest_cache",
+                  "build", "dist", "node_modules"}
+
+    violations: list[str] = []
+    n_checked = 0
+    for d in scan_dirs:
+        d_path = root / d
+        if not d_path.exists():
+            continue
+        for sh in d_path.rglob("*.sh"):
+            if sh.is_dir() or not sh.is_file():
+                continue
+            if any(p in skip_parts for p in sh.parts):
+                continue
+            try:
+                proc = subprocess.run(
+                    [bash, "-n", str(sh)],
+                    capture_output=True, text=True, timeout=10,
+                )
+                n_checked += 1
+                if proc.returncode != 0:
+                    err = proc.stderr.strip().splitlines()
+                    msg = err[0] if err else f"non-zero exit {proc.returncode}"
+                    violations.append(
+                        f"{sh.relative_to(root)}: bash syntax error: {msg[:200]}"
+                    )
+            except subprocess.TimeoutExpired:
+                violations.append(
+                    f"{sh.relative_to(root)}: bash -n timed out (10s)"
+                )
+            except Exception as e:  # pragma: no cover
+                violations.append(
+                    f"{sh.relative_to(root)}: {type(e).__name__}: {e}"
+                )
+
+    if verbose:
+        if violations:
+            print(f"  [shell-syntax] {len(violations)} violation(s) "
+                  f"({n_checked} scripts checked):")
+            for v in violations[:20]:
+                print(f"    • {v}")
+            if len(violations) > 20:
+                print(f"    ... and {len(violations) - 20} more")
+        else:
+            print(f"  [shell-syntax] OK: {n_checked} scripts pass `bash -n`")
+
+    if violations and strict:
+        raise MetaBugViolation(
+            "SHELL SCRIPTS FAIL `bash -n` SYNTAX CHECK:\n"
+            + "\n".join(f"  • {v}" for v in violations[:20])
         )
     return violations
 
