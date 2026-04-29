@@ -788,10 +788,50 @@ def cmd_phase2_extract(args) -> int:
     return 0
 
 
-def cmd_phase2_launch(args) -> int:
-    """Phase 2-launch: subshell-detach launch lane via SSH. ~10s.
+def _poll_setup_log_for_outcome(host: str, port: int, instance_id: int,
+                                 timeout_seconds: int = 60) -> str:
+    """SSH-poll the remote setup.log for one of three outcomes:
+    - "NVDEC_BAD" — Stage 0.5 lightweight NVDEC probe failed
+    - "SETUP_COMPLETE" — setup_full.sh wrote the SETUP_COMPLETE marker
+    - "RUNNING" — neither marker present (still running, no decision yet)
+    - "SSH_FAILED" — couldn't reach the instance
 
-    Atomic. Just one SSH command that backgrounds the lane wrapper.
+    Cheap (~10s). Used by phase2-launch to fail-fast on bad-NVDEC hosts so
+    operators don't burn $0.27/hr × hours on hosts that can't run our workload.
+    """
+    import time
+    deadline = time.time() + timeout_seconds
+    while time.time() < deadline:
+        cmd = [
+            "ssh", "-o", "StrictHostKeyChecking=no",
+            "-o", "UserKnownHostsFile=/dev/null",
+            "-o", "ConnectTimeout=5", "-o", "LogLevel=ERROR",
+            "-p", str(port), f"root@{host}",
+            ("if grep -q 'NVDEC missing\\|NVDEC_MISSING' /workspace/setup.log 2>/dev/null; then "
+             "echo NVDEC_BAD; "
+             "elif grep -q 'SETUP_COMPLETE' /workspace/setup.log 2>/dev/null; then "
+             "echo SETUP_COMPLETE; "
+             "else echo RUNNING; fi"),
+        ]
+        try:
+            r = subprocess.run(cmd, capture_output=True, text=True, timeout=15)
+            if r.returncode == 0:
+                outcome = r.stdout.strip().splitlines()[-1] if r.stdout.strip() else "RUNNING"
+                if outcome in ("NVDEC_BAD", "SETUP_COMPLETE"):
+                    return outcome
+        except subprocess.SubprocessError:
+            return "SSH_FAILED"
+        time.sleep(5)
+    return "RUNNING"  # timeout — neither marker yet, give up polling
+
+
+def cmd_phase2_launch(args) -> int:
+    """Phase 2-launch: subshell-detach launch lane via SSH + post-launch
+    verification poll for ~60s to auto-destroy NVDEC-bad hosts.
+
+    Atomic execution part: one SSH that backgrounds the lane wrapper.
+    Post-launch verification: poll setup.log for NVDEC_BAD or SETUP_COMPLETE.
+    On NVDEC_BAD → auto-destroy + retry guidance.
     """
     instance_id = int(args.instance_id)
     try:
@@ -806,6 +846,27 @@ def cmd_phase2_launch(args) -> int:
         if not getattr(args, "no_destroy_on_fail", False):
             destroy_instance(instance_id)
         return 1
+
+    # Stage 2: post-launch verification poll (~60s) for NVDEC_BAD or SETUP_COMPLETE.
+    # This closes the "phase2-launch returns success but lane never starts" gap
+    # that burned $$ on idle bad-NVDEC hosts.
+    if not getattr(args, "skip_post_verify", False):
+        print("=== phase2-launch Stage 2: Post-launch outcome poll (~60s) ===")
+        outcome = _poll_setup_log_for_outcome(host, port, instance_id, timeout_seconds=60)
+        if outcome == "NVDEC_BAD":
+            print(f"FATAL: setup_full.sh hit NVDEC_BAD on this host — auto-destroying", file=sys.stderr)
+            print(f"  Instance had no NVDEC despite passing offer filter.", file=sys.stderr)
+            print(f"  Per memory feedback_vastai_nvdec_host_variation: same image, different host = different NVDEC.", file=sys.stderr)
+            destroy_instance(instance_id)
+            print(f"\nRetry: re-run phase1 + phase2 to get a fresh host.", file=sys.stderr)
+            return 2
+        elif outcome == "SETUP_COMPLETE":
+            print(f"  outcome=SETUP_COMPLETE (setup_full.sh done)")
+        elif outcome == "SSH_FAILED":
+            print(f"  WARNING: SSH probe failed during post-launch verify; lane may still be running. Verify manually.")
+        else:
+            print(f"  outcome=RUNNING (still in setup_full.sh; verify in 5-15min)")
+
     print(f"\n✓ phase2-launch SUCCESS")
     print(f"  instance_id={instance_id}  ssh=root@{host}:{port}")
     print(f"\nVerify heartbeat in 5 min:")
