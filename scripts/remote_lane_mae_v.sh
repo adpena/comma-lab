@@ -150,14 +150,21 @@ log "  anchor masks.mkv: $(stat -c '%s' "$EXTRACT_DIR/masks.mkv") bytes"
 log "  anchor optimized_poses.pt: $(stat -c '%s' "$EXTRACT_DIR/optimized_poses.pt") bytes"
 
 log "=== Stage 2: train_renderer.py --profile mae_v_dilated_h64 --use-mae-mask-aug ==="
-python3 -u src/tac/experiments/train_renderer.py \
+# --precomputed only when the cache exists locally; otherwise skip the flag
+# so train_renderer falls back to GT video decode. (Modal containers don't
+# carry experiments/precomputed_local — that's a local dev cache.)
+PRECOMPUTED_FLAG=""
+if [ -d "experiments/precomputed_local" ]; then
+    PRECOMPUTED_FLAG="--precomputed experiments/precomputed_local"
+fi
+"$PYBIN" -u src/tac/experiments/train_renderer.py \
     --profile mae_v_dilated_h64 \
     --use-mae-mask-aug \
     --mae-mask-ratio 0.25 \
     --mae-patch-size 16 \
     --tag "$TAG" \
     --device cuda \
-    --precomputed experiments/precomputed_local \
+    $PRECOMPUTED_FLAG \
     --output-dir "$TRAIN_DIR" \
     --no-auth-eval-on-best \
     2>&1 | tee "$LOG_DIR/train.log"
@@ -171,7 +178,7 @@ BEST_FP32="$TRAIN_DIR/renderer_${TAG}_best_fp32.pt"
 
 RENDERER_BIN="$ITER_DIR/renderer.bin"
 export BEST_FP32 RENDERER_BIN
-python3 -u - <<'PY'
+"$PYBIN" -u - <<'PY'
 import os
 import sys
 
