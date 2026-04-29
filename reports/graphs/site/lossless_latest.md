@@ -1,6 +1,6 @@
 # Lossless Latest
 
-Current promoted lossless baseline is **`1.5947`** via `lzma_baseline` using `lzma`.
+Current promoted lossless baseline is **`1.5947`** via `lzma_baseline` using `lzma`. Lossless work is preserved as a separate side track and is not the live frontier. The video-compression challenge is dominated by the Era 2 / Era 3 lossy renderer work; `reports/latest.md` is canonical.
 
 ## promoted result
 
