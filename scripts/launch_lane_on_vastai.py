@@ -611,11 +611,9 @@ def execute_lane_in_tmux(
         "LANE_RC=$?\n"
         "echo \"setup_rc=$SETUP_RC lane_rc=$LANE_RC\" >> /workspace/lane.log\n"
     )
-    # SSH heredoc to write wrapper + setsid+nohup execute
-    write_cmd = ["ssh"] + SSH_OPTS + ["-p", str(port), f"root@{host}",
-                                      "cat > /workspace/run_lane.sh"]
-    rc1, _, err1 = run(write_cmd, timeout=30)
-    # NOTE: above cmd needs stdin piped, easier via shell:
+    # SSH heredoc to write wrapper + setsid+nohup execute via shell.
+    # (Round 12 caught: prior code had a dead `run(write_cmd, ...)` call
+    # that wrote an empty file before this real write — removed.)
     write_via_bash = ["bash", "-c",
                       f'cat <<\'EOSCRIPT\' | ssh {" ".join(SSH_OPTS)} '
                       f'-p {port} root@{host} "cat > /workspace/run_lane.sh"\n'

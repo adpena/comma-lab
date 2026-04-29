@@ -7,12 +7,19 @@ in commit fc26b800). Time to pivot training to Modal too.
 
 Pattern mirrors `experiments/modal_auth_eval.py` (commit 11d56896).
 
-Usage:
-    PYTHONPATH=src:upstream:$PWD .venv/bin/modal run experiments/modal_train_lane.py \
-        --lane-script scripts/remote_lane_omega_hessian_qat.sh \
-        --label lane_omega_hessian \
-        --gpu T4 \
-        --timeout-hours 10
+USAGE — RECOMMENDED (`--detach` for unattended training):
+    PYTHONPATH=src:upstream:$PWD .venv/bin/modal run --detach \\
+        experiments/modal_train_lane.py \\
+        --lane-script scripts/remote_lane_omega_hessian_qat.sh \\
+        --label lane_omega_hessian --gpu T4 --timeout-hours 10
+
+Without `--detach` the local CLI blocks for the full 8-14h training duration
+— terminal disconnect = lost job. With `--detach`, Modal keeps the run
+alive and you can poll via `modal app logs <id>`. Round 12 caught this.
+
+For PARALLEL dispatch of multiple lanes, fire 6 separate `modal run --detach`
+in background (each gets its own container — Modal handles concurrency
+natively).
 
 Output: artifacts saved to `experiments/results/lane_<label>_modal/`. Score
 auto-extracted from `contest_auth_eval.json` if the lane completes auth eval.
