@@ -17,7 +17,7 @@ quality, because:
 1. Single-channel video skips chroma planes (3-channel YUV would otherwise
    waste bits on monochrome chroma).
 2. The 5 grayscale targets [0, 64, 128, 192, 255] are spread across the full
-   8-bit range, so AV1's quantizer has 51-pixel gaps to absorb noise — the
+   8-bit range, so AV1's quantizer has 64-pixel gaps (3) and 63-pixel gap (1) to absorb noise — the
    noisy decode still nearest-neighbours back to the correct class.
 3. The Gaussian-softmax LUT (sigma=15) at inflate time is a pure soft-max
    over (gray - target)^2 / (2 sigma^2); it provides graceful degradation:

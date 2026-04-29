@@ -10,7 +10,7 @@ re-encoded as grayscale.mkv using the Selfcomp class targets
 The renderer + poses are unchanged. The hypothesis (per Lane MM
 provenance): grayscale.mkv ~50% smaller than masks.mkv at the same
 quality due to (1) AV1 monochrome skipping chroma planes and (2) the
-Selfcomp targets being 51-pixel-spaced so AV1's quantizer can absorb
+Selfcomp targets being 64-pixel-spaced (3 gaps) plus 63-pixel-spaced (1 gap) so AV1's quantizer can absorb
 ~10-15 levels of noise without flipping the nearest-neighbour class.
 
 Outputs:

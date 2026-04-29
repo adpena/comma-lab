@@ -4,7 +4,7 @@
 # Hypothesis: replace Lane A's masks.mkv (legacy [0,63,127,191,255] linear
 # ramp) with grayscale.mkv using Selfcomp's class targets [0,255,64,192,128]
 # + Gaussian softmax LUT (sigma=15) at inflate time. AV1 monochrome encoding
-# of the spread targets (51-pixel gaps) absorbs ~10-15 levels of quantizer
+# of the spread targets (64-pixel gaps) absorbs ~10-15 levels of quantizer
 # noise without flipping the nearest-neighbour class — predicted ~50% mask
 # byte savings with no quality loss.
 #
