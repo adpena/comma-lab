@@ -1,37 +1,90 @@
-# Latest Report — 2026-04-25 (Rounds 23-26 hardening)
+# Latest Report — 2026-04-29 endgame status (4 days to deadline)
 
-## Status
-- Last verified contest-compliant auth: 2.01 (April 21 e2e through inflate.sh → upstream evaluate.py)
-- SHIRAZ A100 mid-training (Phase 3 ETA ~30 min from 14:41Z)
-- WILDE+GREEN killed earlier today after WILDE failure mode (TTO frames at GT range) discovered
+## Current Floor (the ONLY scores we report)
 
-## Round 23-26 hardening complete
-- 19 CRITICAL bugs fixed in the deployment chain
-- 23/23 preflight tests pass
-- preflight_arity + preflight_profiles + check_codebase_drift clean against live repo
-- `pipeline.py compress --profile X --video Y --checkpoint Z` is the canonical entry point
-- Explicit CLI flags now correctly win over profile values
-- Typo'd profile keys fail loud (no more silent-drop SHIRAZ class)
-- I4LZ weight compression guarded (no arch header → falls back to FP4 for non-default arch)
-- Full provenance in pipeline_config.json (git hash + GPU + PyTorch + platform + timestamp)
-- deploy_vastai.py preflight check 6 detects stale ad-hoc run_pipeline.sh on remote
+**Best contest-CUDA artifact: Lane G v3 = 1.05 [contest-CUDA]** (2026-04-28 verified, reproduced 1.04 on Modal T4 2026-04-29).
 
-## Open architectural gaps (planned)
-- train_distill.py has no --profile flag (profile dicts are documentation today)
-- No deterministic CUDA / numpy / random seeding
-- No data hashes / no uv.lock
-- No CI runs the new tests
-- No deploy_vastai.py download subcommand
+- Evidence: `experiments/results/lane_g_v3_landed/contest_auth_eval.json`
+- Modal reproduction: `experiments/results/modal_auth_eval_9b20bdfca246.json` (1.04, drift 0.01 on PoseNet)
+- Archive: `experiments/results/lane_g_v3_landed/archive_lane_g_v3.zip` (694,074 bytes)
+- SegNet: 0.00400846 / PoseNet: 0.00345458 / Rate: 0.01848622
+- Recipe: KL distill weight=0.002 + pose TTO retry on Lane A anchor
+- Beats Lane A (1.15) by 0.10 at the same archive size
 
-## NUCLEAR queue (zero-GPU, run today)
-1. Half-frame mask AV1 sweep at 384×512 (CRF 24..48)
-2. SHIRAZ Phase 3 → immediate auth eval
-3. Even-from-odd warp at inflate (Quantizr paradigm)
+**Fallback floor: Lane A = 1.15 [contest-CUDA]** (`experiments/results/lane_a_landed/contest_auth_eval.json`).
 
-## Score projections (honest)
-- Realistic best stacked with current architectures in 8 days: 0.8-1.4
-- Beating Quantizr (0.33) needs new architecture family or training breakthrough
-- Half-frame masks: rate -0.12 to -0.18 (high confidence)
-- MXLZ renderer: rate -0.06 to -0.09 (medium confidence; arch_header guard added)
-- Engineered corrections: SegNet -0.05 to -0.10 (low confidence, no auth validation yet)
-- v2 beneficial_quant_noise: SegNet -0.10 to -0.20 (speculative, zero empirical backing)
+## Live leaderboard (fetched 2026-04-29 ~10am)
+
+| Rank | Score | Entry | PR | Notes |
+|------|-------|-------|----|-------|
+| 1 | 0.33 | Quantizr | #55 | FiLM CNN 88K + KL-T2 + AV1 |
+| 2 | **0.38** | **Selfcomp** | **#56** | self-compression ~1.017 bpw + analytical-pose affine |
+| 3 | **0.60** | **Mask2mask** | **#53** | "slightly different arch" (obfuscated) |
+| 4 | 1.89 | neural_inflate | #49 | |
+| 5 | 1.91 | svtav1_dilated_renderer | #58 | |
+| ours | 1.04 | Lane G v3 | not submitted | would rank ~4th if we shipped today |
+
+User-set NON-NEGOTIABLE goal: **sub-0.30**. Deadline May 3.
+
+## Modal pipeline TRUSTED (canonical for >2h training)
+
+Modal T4 reproduced the Vast.ai Lane G v3 score within the noise floor (1.04 vs 1.05). For training jobs >2h, Modal is now canonical. Vast.ai 4090 NVDEC roulette has been ~85% bad-host rate this week; ~$5 burned across 5 dispatch rounds for 0 trained lanes on the bad nights. Modal's slightly higher per-hour cost is dominated by reliability — Modal wins on expected $ per successful lane.
+
+## Active portfolio (as of 2026-04-29 PM)
+
+In-flight on Modal (re-dispatched after Round 1 council fixes):
+- q_faithful_v3 (true Quantizr 1:1 replica)
+- sz_phase2_v2 (dilated moonshot)
+- mae_v_v2 (mask-augment)
+- lane_w_v2 (hard-pair self-compress)
+- Lane MM (grayscale-LUT mask encoding)
+- Lane SA (94K-param SegMap clone — Selfcomp paradigm)
+- Lane SC++ (SA + KL distill T=2.0 — sub-Quantizr stack candidate)
+- Lane SO (SC++ + Hessian-aware block-FP)
+
+In implementation (5 sweep + 5 EUREKA lanes):
+- FR-Ω, HM-S, DARTS-S, WC-S, FR-MM (sweep)
+- PA, FC, SH, TR, PD (EUREKA bench: Shannon, Ballé, Karpathy, Schmidhuber, Carmack, Toderici, Olah)
+
+## Negative / blocked evidence (recent)
+
+- Lane M-V2 (radial-zoom rank-1 hypothesis): 1.84 [contest-CUDA], regression vs Lane A 1.15. Train/inference pose-pad asymmetry confirmed (Check 42).
+- Lane H CRF56: 3.20 [contest-CUDA].
+- Lane GP v3 (Gaussian-process pose fit): 89.67 [Modal-T4-CPU]. Runge phenomenon at degree-10 polynomial; off-manifold hypothesis disproved. Lane GP polynomial path is dead — DCT or B-spline if revived.
+- Lane UNIWARD v8: 1.14 [Modal-T4-CPU], identical to Lane A noise floor. Encoder pipeline is no-op on the bitstream without an SLI1 inflate-time decoder. Council 5/5 KILLED standalone (2026-04-29).
+- Lane V (Quantizr halfframe joint-from-epoch-0): crashed at ~7.6h on channel mismatch.
+- 2026-04-29 Modal first-wave failures: MAE-V missing pydantic; Omega Hessian CUDA assert; UNIWARD missing baseline; pose tensor shape (600,6) vs (N,1) on one inflate.
+
+## Catastrophic-failure protections landed (past 7 days)
+
+| Bug class | Detection | First incident |
+|-----------|-----------|----------------|
+| 48x64 mask resolution → score 53.61 | Check 76 STRICT (anchor mask resolution) | Lane UNIWARD v7 |
+| Wrong archive bytes used in eval | `submission_archive.require_valid_archive()` | Multi-week regression |
+| Overlapping pose pairs vs 600 non-overlap | Diff against upstream evaluate.py | Multi-week |
+| eval_roundtrip defaulted False | CLAUDE.md non-negotiable, all paths True | TTO/training |
+| Auto-bundle by file existence | All archive contents now require explicit flags | Compress.sh |
+| Lane GP Runge polynomial blow-up | Surface fit-quality RMSE in RESULT_JSON | Lane GP v2/v3 |
+| Vast.ai NVDEC roulette | Pre-DALI NVDEC probe (Stage 0.5) + Modal pivot | Multiple lanes |
+
+Total STRICT preflight checks: **78** (was 36 a week ago). Catalog in CLAUDE.md.
+
+## Verification notes
+
+- `comma-lab doctor`: required local tools present.
+- `canonical_local_auth_eval_smoke.py --lane g_v3_corrected_kl_weight --quiet`: PASS (10 stages, 0.02s).
+- Focused test slice: 34 passed in 2.00s.
+- Check 64 E2E smoke proof scan: 0 violations.
+
+## Caveats
+
+- Upstream snapshot is stale/ambiguous: `comma-lab status` reports snapshot `ec82c291...` from 2026-04-03 while live workspace upstream is `cd64c68...`; root `upstream/` is `11ad728...` with local modifications. Deliberate rebootstrap pending.
+- ALL "1.04 vs 1.05" Modal-T4 vs Vast-4090 drift is within noise; both are contest-equivalent.
+- Internal "predicted X.XX" stack projections in this report are advisory only — only [contest-CUDA] or [Modal-T4-CUDA] tagged scores are real.
+
+## Next queue
+
+1. Land the Selfcomp-paradigm portfolio (MM → SA → SC++ → SO).
+2. Sub-0.30 frontier: stack SC++ + FR-Ω + DARTS-S; predicted ~0.25 if additivity holds.
+3. Submission PR gate: 5-pass clean adversarial review (stricter than the standard 3-pass) before any May 3 push.
+4. Strategic-secrecy audit on writeup/site files before any public surface gets the Lane G v3 details.
