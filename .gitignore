@@ -19,6 +19,15 @@ workspace/upstream_snapshot.json
 .wrangler/cache/
 .tooling/node_modules/
 
+# Live Vast.ai instance tracker — per-machine operational state, NEVER commit.
+# Sharing it across checkouts/CI risks foreign automation destroying live
+# instances ($0.20-$0.40/hr each). The file STAYS LOCAL with current records;
+# this rule simply prevents it from leaking into the shared repo. (Codex F1
+# 2026-04-28: tracker had grown to 75 records / ~$305 active spend before
+# being caught.)
+.omx/state/vastai_active_instances.json
+.omx/state/instance_setup_first_seen.json
+
 # Large binary files (GitHub 100MB limit)
 *.raw
 *.npy

@@ -1,1 +1,1502 @@
-[]
+[
+  {
+    "instance_id": "35762147",
+    "label": "lane_omega_v2",
+    "metadata": {
+      "estimated_cost_usd": 1.5,
+      "predicted_band": [
+        0.7,
+        0.95
+      ],
+      "script": "scripts/remote_lane_omega_v2_lagrangian.sh",
+      "council_priority": 1,
+      "anchor_dirs": [
+        "experiments/results/lane_a_landed/iter_0"
+      ],
+      "launcher": "scripts/launch_lane_on_vastai.py phase1+phase2"
+    },
+    "registered_at_utc": "2026-04-28T17:34:49Z",
+    "registered_by_host": "Primary",
+    "registered_by_pid": 0
+  },
+  {
+    "instance_id": "35762694",
+    "label": "lane_saug_v2",
+    "metadata": {
+      "estimated_cost_usd": 4.32,
+      "predicted_band": [
+        0.6,
+        0.9
+      ],
+      "script": "scripts/remote_lane_saug_v2.sh",
+      "council_priority": 3,
+      "anchor_dirs": [
+        "experiments/results/lane_a_landed/iter_0"
+      ],
+      "launcher": "scripts/launch_lane_on_vastai.py phase1+phase2"
+    },
+    "registered_at_utc": "2026-04-28T17:44:22Z",
+    "registered_by_host": "Primary",
+    "registered_by_pid": 0
+  },
+  {
+    "instance_id": "35781543",
+    "label": "lane_j_jbl",
+    "metadata": {
+      "estimated_cost_usd": 1.5,
+      "predicted_band": [
+        0.92,
+        1.02
+      ],
+      "script": "scripts/remote_lane_j_jbl_jaccard_bls.sh",
+      "council_priority": 99,
+      "anchor_dirs": [
+        "experiments/results/lane_a_landed/iter_0"
+      ],
+      "launcher": "scripts/launch_lane_on_vastai.py phase1+phase2"
+    },
+    "registered_at_utc": "2026-04-28T23:00:09Z",
+    "registered_by_host": "Primary",
+    "registered_by_pid": 0
+  },
+  {
+    "instance_id": "35781594",
+    "label": "lane_j_nwc",
+    "metadata": {
+      "estimated_cost_usd": 5.0,
+      "predicted_band": [
+        0.92,
+        1.02
+      ],
+      "script": "scripts/remote_lane_j_nwc_neural_weight_compression.sh",
+      "council_priority": 99,
+      "anchor_dirs": [
+        "experiments/results/lane_a_landed/iter_0"
+      ],
+      "launcher": "scripts/launch_lane_on_vastai.py phase1+phase2"
+    },
+    "registered_at_utc": "2026-04-28T23:00:20Z",
+    "registered_by_host": "Primary",
+    "registered_by_pid": 0
+  },
+  {
+    "instance_id": "35781603",
+    "label": "lane_j_imp",
+    "metadata": {
+      "estimated_cost_usd": 25.0,
+      "predicted_band": [
+        0.85,
+        1.0
+      ],
+      "script": "scripts/remote_lane_j_imp_iterative_magnitude_pruning.sh",
+      "council_priority": 99,
+      "anchor_dirs": [
+        "experiments/results/lane_a_landed/iter_0"
+      ],
+      "launcher": "scripts/launch_lane_on_vastai.py phase1+phase2"
+    },
+    "registered_at_utc": "2026-04-28T23:00:29Z",
+    "registered_by_host": "Primary",
+    "registered_by_pid": 0
+  },
+  {
+    "instance_id": "35781604",
+    "label": "lane_j_nwcs",
+    "metadata": {
+      "estimated_cost_usd": 8.0,
+      "predicted_band": [
+        0.85,
+        0.98
+      ],
+      "script": "scripts/remote_lane_j_nwcs_sensitivity_aware_codec.sh",
+      "council_priority": 99,
+      "anchor_dirs": [
+        "experiments/results/lane_a_landed/iter_0"
+      ],
+      "launcher": "scripts/launch_lane_on_vastai.py phase1+phase2"
+    },
+    "registered_at_utc": "2026-04-28T23:00:30Z",
+    "registered_by_host": "Primary",
+    "registered_by_pid": 0
+  },
+  {
+    "instance_id": "35781754",
+    "label": "lane_omega_v2",
+    "metadata": {
+      "estimated_cost_usd": 5.0,
+      "predicted_band": [
+        0.85,
+        1.05
+      ],
+      "script": "scripts/remote_lane_omega_v2_lagrangian.sh",
+      "council_priority": 99,
+      "anchor_dirs": [
+        "experiments/results/lane_a_landed/iter_0"
+      ],
+      "launcher": "scripts/launch_lane_on_vastai.py phase1+phase2"
+    },
+    "registered_at_utc": "2026-04-28T23:04:13Z",
+    "registered_by_host": "Primary",
+    "registered_by_pid": 0
+  },
+  {
+    "instance_id": "35781755",
+    "label": "lane_saug_v2",
+    "metadata": {
+      "estimated_cost_usd": 4.0,
+      "predicted_band": [
+        0.7,
+        1.0
+      ],
+      "script": "scripts/remote_lane_saug_v2.sh",
+      "council_priority": 99,
+      "anchor_dirs": [
+        "experiments/results/lane_a_landed/iter_0"
+      ],
+      "launcher": "scripts/launch_lane_on_vastai.py phase1+phase2"
+    },
+    "registered_at_utc": "2026-04-28T23:04:14Z",
+    "registered_by_host": "Primary",
+    "registered_by_pid": 0
+  },
+  {
+    "instance_id": "35781756",
+    "label": "lane_w",
+    "metadata": {
+      "estimated_cost_usd": 4.0,
+      "predicted_band": [
+        0.85,
+        1.05
+      ],
+      "script": "scripts/remote_lane_w_hard_pair_self_compress.sh",
+      "council_priority": 99,
+      "anchor_dirs": [
+        "experiments/results/lane_a_landed/iter_0"
+      ],
+      "launcher": "scripts/launch_lane_on_vastai.py phase1+phase2"
+    },
+    "registered_at_utc": "2026-04-28T23:04:15Z",
+    "registered_by_host": "Primary",
+    "registered_by_pid": 0
+  },
+  {
+    "instance_id": "35781757",
+    "label": "lane_m_v3",
+    "metadata": {
+      "estimated_cost_usd": 1.5,
+      "predicted_band": [
+        1.0,
+        1.15
+      ],
+      "script": "scripts/remote_lane_m_v3_pose_from_embedding.sh",
+      "council_priority": 99,
+      "anchor_dirs": [
+        "experiments/results/lane_a_landed/iter_0"
+      ],
+      "launcher": "scripts/launch_lane_on_vastai.py phase1+phase2"
+    },
+    "registered_at_utc": "2026-04-28T23:04:17Z",
+    "registered_by_host": "Primary",
+    "registered_by_pid": 0
+  },
+  {
+    "instance_id": "35781763",
+    "label": "lane_ec",
+    "metadata": {
+      "estimated_cost_usd": 1.0,
+      "predicted_band": [
+        0.85,
+        1.1
+      ],
+      "script": "scripts/remote_lane_ec_engineered_corrections.sh",
+      "council_priority": 99,
+      "anchor_dirs": [
+        "experiments/results/lane_a_landed/iter_0"
+      ],
+      "launcher": "scripts/launch_lane_on_vastai.py phase1+phase2"
+    },
+    "registered_at_utc": "2026-04-28T23:04:33Z",
+    "registered_by_host": "Primary",
+    "registered_by_pid": 0
+  },
+  {
+    "instance_id": "35781764",
+    "label": "lane_wc",
+    "metadata": {
+      "estimated_cost_usd": 3.0,
+      "predicted_band": [
+        0.78,
+        1.05
+      ],
+      "script": "scripts/remote_lane_wc_curator_outlier.sh",
+      "council_priority": 99,
+      "anchor_dirs": [
+        "experiments/results/lane_a_landed/iter_0"
+      ],
+      "launcher": "scripts/launch_lane_on_vastai.py phase1+phase2"
+    },
+    "registered_at_utc": "2026-04-28T23:04:34Z",
+    "registered_by_host": "Primary",
+    "registered_by_pid": 0
+  },
+  {
+    "instance_id": "35781765",
+    "label": "lane_sz_phase2",
+    "metadata": {
+      "estimated_cost_usd": 5.0,
+      "predicted_band": [
+        0.3,
+        0.5
+      ],
+      "script": "scripts/remote_lane_sz_phase2_full.sh",
+      "council_priority": 99,
+      "anchor_dirs": [
+        "experiments/results/lane_a_landed/iter_0"
+      ],
+      "launcher": "scripts/launch_lane_on_vastai.py phase1+phase2"
+    },
+    "registered_at_utc": "2026-04-28T23:04:36Z",
+    "registered_by_host": "Primary",
+    "registered_by_pid": 0
+  },
+  {
+    "instance_id": "35781775",
+    "label": "lane_ebr",
+    "metadata": {
+      "estimated_cost_usd": 2.0,
+      "predicted_band": [
+        0.9,
+        1.1
+      ],
+      "script": "scripts/remote_lane_ebr_entropy_bottleneck.sh",
+      "council_priority": 99,
+      "anchor_dirs": [
+        "experiments/results/lane_a_landed/iter_0"
+      ],
+      "launcher": "scripts/launch_lane_on_vastai.py phase1+phase2"
+    },
+    "registered_at_utc": "2026-04-28T23:04:48Z",
+    "registered_by_host": "Primary",
+    "registered_by_pid": 0
+  },
+  {
+    "instance_id": "35781777",
+    "label": "lane_gp",
+    "metadata": {
+      "estimated_cost_usd": 1.0,
+      "predicted_band": [
+        1.05,
+        1.2
+      ],
+      "script": "scripts/remote_lane_gp_gaussian_process_pose.sh",
+      "council_priority": 99,
+      "anchor_dirs": [
+        "experiments/results/lane_a_landed/iter_0"
+      ],
+      "launcher": "scripts/launch_lane_on_vastai.py phase1+phase2"
+    },
+    "registered_at_utc": "2026-04-28T23:04:49Z",
+    "registered_by_host": "Primary",
+    "registered_by_pid": 0
+  },
+  {
+    "instance_id": "35781778",
+    "label": "lane_fl",
+    "metadata": {
+      "estimated_cost_usd": 1.0,
+      "predicted_band": [
+        1.1,
+        1.25
+      ],
+      "script": "scripts/remote_lane_fl_raft_derived_poses.sh",
+      "council_priority": 99,
+      "anchor_dirs": [
+        "experiments/results/lane_a_landed/iter_0"
+      ],
+      "launcher": "scripts/launch_lane_on_vastai.py phase1+phase2"
+    },
+    "registered_at_utc": "2026-04-28T23:04:50Z",
+    "registered_by_host": "Primary",
+    "registered_by_pid": 0
+  },
+  {
+    "instance_id": "35781781",
+    "label": "lane_v",
+    "metadata": {
+      "estimated_cost_usd": 5.0,
+      "predicted_band": [
+        0.5,
+        1.1
+      ],
+      "script": "scripts/remote_lane_v_quantizr_replica_88k_halfframe.sh",
+      "council_priority": 99,
+      "anchor_dirs": [
+        "experiments/results/lane_a_landed/iter_0"
+      ],
+      "launcher": "scripts/launch_lane_on_vastai.py phase1+phase2"
+    },
+    "registered_at_utc": "2026-04-28T23:04:52Z",
+    "registered_by_host": "Primary",
+    "registered_by_pid": 0
+  },
+  {
+    "instance_id": "35781793",
+    "label": "lane_t2drop",
+    "metadata": {
+      "estimated_cost_usd": 1.5,
+      "predicted_band": [
+        1.0,
+        1.07
+      ],
+      "script": "scripts/remote_lane_t2drop_bootstrap.sh",
+      "council_priority": 99,
+      "anchor_dirs": [
+        "experiments/results/lane_a_landed/iter_0"
+      ],
+      "launcher": "scripts/launch_lane_on_vastai.py phase1+phase2"
+    },
+    "registered_at_utc": "2026-04-28T23:05:06Z",
+    "registered_by_host": "Primary",
+    "registered_by_pid": 0
+  },
+  {
+    "instance_id": "35781799",
+    "label": "lane_t2ratio",
+    "metadata": {
+      "estimated_cost_usd": 9.0,
+      "predicted_band": [
+        0.97,
+        1.05
+      ],
+      "script": "scripts/remote_lane_t2ratio_bootstrap.sh",
+      "council_priority": 99,
+      "anchor_dirs": [
+        "experiments/results/lane_a_landed/iter_0"
+      ],
+      "launcher": "scripts/launch_lane_on_vastai.py phase1+phase2"
+    },
+    "registered_at_utc": "2026-04-28T23:05:07Z",
+    "registered_by_host": "Primary",
+    "registered_by_pid": 0
+  },
+  {
+    "instance_id": "35781802",
+    "label": "lane_ec_v2",
+    "metadata": {
+      "estimated_cost_usd": 1.5,
+      "predicted_band": [
+        0.75,
+        1.0
+      ],
+      "script": "scripts/remote_lane_ec_v2.sh",
+      "council_priority": 99,
+      "anchor_dirs": [
+        "experiments/results/lane_a_landed/iter_0"
+      ],
+      "launcher": "scripts/launch_lane_on_vastai.py phase1+phase2"
+    },
+    "registered_at_utc": "2026-04-28T23:05:08Z",
+    "registered_by_host": "Primary",
+    "registered_by_pid": 0
+  },
+  {
+    "instance_id": "35781804",
+    "label": "lane_rm",
+    "metadata": {
+      "estimated_cost_usd": 1.5,
+      "predicted_band": [
+        1.0,
+        1.1
+      ],
+      "script": "scripts/remote_lane_rm_riemannian_pose_tto.sh",
+      "council_priority": 99,
+      "anchor_dirs": [
+        "experiments/results/lane_a_landed/iter_0"
+      ],
+      "launcher": "scripts/launch_lane_on_vastai.py phase1+phase2"
+    },
+    "registered_at_utc": "2026-04-28T23:05:09Z",
+    "registered_by_host": "Primary",
+    "registered_by_pid": 0
+  },
+  {
+    "instance_id": "35782010",
+    "label": "lane_i_coolchic",
+    "metadata": {
+      "estimated_cost_usd": 4.0,
+      "predicted_band": [
+        0.95,
+        1.3
+      ],
+      "script": "scripts/remote_lane_i_coolchic_masks.sh",
+      "council_priority": 99,
+      "anchor_dirs": [
+        "experiments/results/lane_a_landed/iter_0"
+      ],
+      "launcher": "scripts/launch_lane_on_vastai.py phase1+phase2"
+    },
+    "registered_at_utc": "2026-04-28T23:09:26Z",
+    "registered_by_host": "Primary",
+    "registered_by_pid": 0
+  },
+  {
+    "instance_id": "35782052",
+    "label": "lane_g_v3_v2",
+    "metadata": {
+      "estimated_cost_usd": 4.5,
+      "predicted_band": [
+        0.85,
+        1.0
+      ],
+      "script": "scripts/remote_lane_g_v3_v2_lagrangian_snr.sh",
+      "council_priority": 99,
+      "anchor_dirs": [
+        "experiments/results/lane_a_landed/iter_0"
+      ],
+      "launcher": "scripts/launch_lane_on_vastai.py phase1+phase2"
+    },
+    "registered_at_utc": "2026-04-28T23:10:15Z",
+    "registered_by_host": "Primary",
+    "registered_by_pid": 0
+  },
+  {
+    "instance_id": "35782053",
+    "label": "lane_omega_v3",
+    "metadata": {
+      "estimated_cost_usd": 7.0,
+      "predicted_band": [
+        0.8,
+        1.05
+      ],
+      "script": "scripts/remote_lane_omega_v3_rate_frontier.sh",
+      "council_priority": 99,
+      "anchor_dirs": [
+        "experiments/results/lane_a_landed/iter_0"
+      ],
+      "launcher": "scripts/launch_lane_on_vastai.py phase1+phase2"
+    },
+    "registered_at_utc": "2026-04-28T23:10:16Z",
+    "registered_by_host": "Primary",
+    "registered_by_pid": 0
+  },
+  {
+    "instance_id": "35782055",
+    "label": "lane_v_v2",
+    "metadata": {
+      "estimated_cost_usd": 5.0,
+      "predicted_band": [
+        0.5,
+        1.0
+      ],
+      "script": "scripts/remote_lane_v_v2_annealed_halfframe.sh",
+      "council_priority": 99,
+      "anchor_dirs": [
+        "experiments/results/lane_a_landed/iter_0"
+      ],
+      "launcher": "scripts/launch_lane_on_vastai.py phase1+phase2"
+    },
+    "registered_at_utc": "2026-04-28T23:10:18Z",
+    "registered_by_host": "Primary",
+    "registered_by_pid": 0
+  },
+  {
+    "instance_id": "35782057",
+    "label": "lane_w_v2",
+    "metadata": {
+      "estimated_cost_usd": 4.0,
+      "predicted_band": [
+        0.85,
+        1.0
+      ],
+      "script": "scripts/remote_lane_w_v2_learnable_hardness.sh",
+      "council_priority": 99,
+      "anchor_dirs": [
+        "experiments/results/lane_a_landed/iter_0"
+      ],
+      "launcher": "scripts/launch_lane_on_vastai.py phase1+phase2"
+    },
+    "registered_at_utc": "2026-04-28T23:10:19Z",
+    "registered_by_host": "Primary",
+    "registered_by_pid": 0
+  },
+  {
+    "instance_id": "35782065",
+    "label": "lane_lr_v2",
+    "metadata": {
+      "estimated_cost_usd": 1.5,
+      "predicted_band": [
+        1.0,
+        1.1
+      ],
+      "script": "scripts/remote_lane_lr_v2_learnable_rank.sh",
+      "council_priority": 99,
+      "anchor_dirs": [
+        "experiments/results/lane_a_landed/iter_0"
+      ],
+      "launcher": "scripts/launch_lane_on_vastai.py phase1+phase2"
+    },
+    "registered_at_utc": "2026-04-28T23:10:30Z",
+    "registered_by_host": "Primary",
+    "registered_by_pid": 0
+  },
+  {
+    "instance_id": "35782066",
+    "label": "lane_lm_v2",
+    "metadata": {
+      "estimated_cost_usd": 1.5,
+      "predicted_band": [
+        1.0,
+        1.1
+      ],
+      "script": "scripts/remote_lane_lm_v2_endpoint_tracking.sh",
+      "council_priority": 99,
+      "anchor_dirs": [
+        "experiments/results/lane_a_landed/iter_0"
+      ],
+      "launcher": "scripts/launch_lane_on_vastai.py phase1+phase2"
+    },
+    "registered_at_utc": "2026-04-28T23:10:31Z",
+    "registered_by_host": "Primary",
+    "registered_by_pid": 0
+  },
+  {
+    "instance_id": "35782067",
+    "label": "lane_si_v2",
+    "metadata": {
+      "estimated_cost_usd": 2.0,
+      "predicted_band": [
+        1.0,
+        1.1
+      ],
+      "script": "scripts/remote_lane_si_v2_learnable_threshold.sh",
+      "council_priority": 99,
+      "anchor_dirs": [
+        "experiments/results/lane_a_landed/iter_0"
+      ],
+      "launcher": "scripts/launch_lane_on_vastai.py phase1+phase2"
+    },
+    "registered_at_utc": "2026-04-28T23:10:32Z",
+    "registered_by_host": "Primary",
+    "registered_by_pid": 0
+  },
+  {
+    "instance_id": "35782068",
+    "label": "lane_ps_v2",
+    "metadata": {
+      "estimated_cost_usd": 3.0,
+      "predicted_band": [
+        0.95,
+        1.1
+      ],
+      "script": "scripts/remote_lane_ps_v2_learnable_class_weights.sh",
+      "council_priority": 99,
+      "anchor_dirs": [
+        "experiments/results/lane_a_landed/iter_0"
+      ],
+      "launcher": "scripts/launch_lane_on_vastai.py phase1+phase2"
+    },
+    "registered_at_utc": "2026-04-28T23:10:33Z",
+    "registered_by_host": "Primary",
+    "registered_by_pid": 0
+  },
+  {
+    "instance_id": "35782079",
+    "label": "lane_k",
+    "metadata": {
+      "estimated_cost_usd": 4.0,
+      "predicted_band": [
+        0.85,
+        1.1
+      ],
+      "script": "scripts/remote_lane_k_dsconv_quantizr_killer.sh",
+      "council_priority": 99,
+      "anchor_dirs": [
+        "experiments/results/lane_a_landed/iter_0"
+      ],
+      "launcher": "scripts/launch_lane_on_vastai.py phase1+phase2"
+    },
+    "registered_at_utc": "2026-04-28T23:10:45Z",
+    "registered_by_host": "Primary",
+    "registered_by_pid": 0
+  },
+  {
+    "instance_id": "35782080",
+    "label": "lane_gh",
+    "metadata": {
+      "estimated_cost_usd": 4.0,
+      "predicted_band": [
+        1.05,
+        1.3
+      ],
+      "script": "scripts/remote_lane_gh_ghost_renderer.sh",
+      "council_priority": 99,
+      "anchor_dirs": [
+        "experiments/results/lane_a_landed/iter_0"
+      ],
+      "launcher": "scripts/launch_lane_on_vastai.py phase1+phase2"
+    },
+    "registered_at_utc": "2026-04-28T23:10:46Z",
+    "registered_by_host": "Primary",
+    "registered_by_pid": 0
+  },
+  {
+    "instance_id": "35782081",
+    "label": "lane_d_v3",
+    "metadata": {
+      "estimated_cost_usd": 5.0,
+      "predicted_band": [
+        1.05,
+        1.2
+      ],
+      "script": "scripts/remote_lane_d_v3_full_engineering.sh",
+      "council_priority": 99,
+      "anchor_dirs": [
+        "experiments/results/lane_a_landed/iter_0"
+      ],
+      "launcher": "scripts/launch_lane_on_vastai.py phase1+phase2"
+    },
+    "registered_at_utc": "2026-04-28T23:10:48Z",
+    "registered_by_host": "Primary",
+    "registered_by_pid": 0
+  },
+  {
+    "instance_id": "35782082",
+    "label": "lane_f_v4",
+    "metadata": {
+      "estimated_cost_usd": 4.0,
+      "predicted_band": [
+        1.2,
+        1.8
+      ],
+      "script": "scripts/remote_lane_f_v4_mixed_precision_fp4.sh",
+      "council_priority": 99,
+      "anchor_dirs": [
+        "experiments/results/lane_a_landed/iter_0"
+      ],
+      "launcher": "scripts/launch_lane_on_vastai.py phase1+phase2"
+    },
+    "registered_at_utc": "2026-04-28T23:10:49Z",
+    "registered_by_host": "Primary",
+    "registered_by_pid": 0
+  },
+  {
+    "instance_id": "35782087",
+    "label": "lane_s",
+    "metadata": {
+      "estimated_cost_usd": 3.0,
+      "predicted_band": [
+        0.95,
+        1.1
+      ],
+      "script": "scripts/remote_lane_s_self_compress.sh",
+      "council_priority": 99,
+      "anchor_dirs": [
+        "experiments/results/lane_a_landed/iter_0"
+      ],
+      "launcher": "scripts/launch_lane_on_vastai.py phase1+phase2"
+    },
+    "registered_at_utc": "2026-04-28T23:11:03Z",
+    "registered_by_host": "Primary",
+    "registered_by_pid": 0
+  },
+  {
+    "instance_id": "35782089",
+    "label": "lane_s_v2",
+    "metadata": {
+      "estimated_cost_usd": 3.0,
+      "predicted_band": [
+        0.9,
+        1.05
+      ],
+      "script": "scripts/remote_lane_s_v2_auto_warmup.sh",
+      "council_priority": 99,
+      "anchor_dirs": [
+        "experiments/results/lane_a_landed/iter_0"
+      ],
+      "launcher": "scripts/launch_lane_on_vastai.py phase1+phase2"
+    },
+    "registered_at_utc": "2026-04-28T23:11:05Z",
+    "registered_by_host": "Primary",
+    "registered_by_pid": 0
+  },
+  {
+    "instance_id": "35782094",
+    "label": "lane_os",
+    "metadata": {
+      "estimated_cost_usd": 2.0,
+      "predicted_band": [
+        0.95,
+        1.1
+      ],
+      "script": "scripts/remote_lane_os_supercombo_seed_tto.sh",
+      "council_priority": 99,
+      "anchor_dirs": [
+        "experiments/results/lane_a_landed/iter_0"
+      ],
+      "launcher": "scripts/launch_lane_on_vastai.py phase1+phase2"
+    },
+    "registered_at_utc": "2026-04-28T23:11:06Z",
+    "registered_by_host": "Primary",
+    "registered_by_pid": 0
+  },
+  {
+    "instance_id": "35787704",
+    "label": "lane_q_faithful",
+    "metadata": {
+      "estimated_cost_usd": 8.0,
+      "predicted_band": [
+        0.4,
+        0.8
+      ],
+      "script": "scripts/remote_lane_q_faithful_jointgen.sh",
+      "council_priority": 99,
+      "anchor_dirs": [
+        "experiments/results/lane_a_landed/iter_0"
+      ],
+      "launcher": "scripts/launch_lane_on_vastai.py phase1+phase2"
+    },
+    "registered_at_utc": "2026-04-29T00:45:57Z",
+    "registered_by_host": "Primary",
+    "registered_by_pid": 0
+  },
+  {
+    "instance_id": "35787742",
+    "label": "lane_j_imp_v2",
+    "metadata": {
+      "estimated_cost_usd": 25.0,
+      "predicted_band": [
+        0.85,
+        1.0
+      ],
+      "script": "scripts/remote_lane_j_imp_iterative_magnitude_pruning.sh",
+      "council_priority": 99,
+      "anchor_dirs": [
+        "experiments/results/lane_a_landed/iter_0"
+      ],
+      "launcher": "scripts/launch_lane_on_vastai.py phase1+phase2"
+    },
+    "registered_at_utc": "2026-04-29T00:46:46Z",
+    "registered_by_host": "Primary",
+    "registered_by_pid": 0
+  },
+  {
+    "instance_id": "35787746",
+    "label": "lane_omega_v3_v2",
+    "metadata": {
+      "estimated_cost_usd": 7.0,
+      "predicted_band": [
+        0.8,
+        1.05
+      ],
+      "script": "scripts/remote_lane_omega_v3_rate_frontier.sh",
+      "council_priority": 99,
+      "anchor_dirs": [
+        "experiments/results/lane_a_landed/iter_0"
+      ],
+      "launcher": "scripts/launch_lane_on_vastai.py phase1+phase2"
+    },
+    "registered_at_utc": "2026-04-29T00:46:47Z",
+    "registered_by_host": "Primary",
+    "registered_by_pid": 0
+  },
+  {
+    "instance_id": "35787747",
+    "label": "lane_t2drop_v2",
+    "metadata": {
+      "estimated_cost_usd": 1.5,
+      "predicted_band": [
+        1.0,
+        1.07
+      ],
+      "script": "scripts/remote_lane_t2drop_bootstrap.sh",
+      "council_priority": 99,
+      "anchor_dirs": [
+        "experiments/results/lane_a_landed/iter_0"
+      ],
+      "launcher": "scripts/launch_lane_on_vastai.py phase1+phase2"
+    },
+    "registered_at_utc": "2026-04-29T00:46:48Z",
+    "registered_by_host": "Primary",
+    "registered_by_pid": 0
+  },
+  {
+    "instance_id": "35787748",
+    "label": "lane_t2ratio_v2",
+    "metadata": {
+      "estimated_cost_usd": 9.0,
+      "predicted_band": [
+        0.97,
+        1.05
+      ],
+      "script": "scripts/remote_lane_t2ratio_bootstrap.sh",
+      "council_priority": 99,
+      "anchor_dirs": [
+        "experiments/results/lane_a_landed/iter_0"
+      ],
+      "launcher": "scripts/launch_lane_on_vastai.py phase1+phase2"
+    },
+    "registered_at_utc": "2026-04-29T00:46:49Z",
+    "registered_by_host": "Primary",
+    "registered_by_pid": 0
+  },
+  {
+    "instance_id": "35787749",
+    "label": "lane_wc_v2",
+    "metadata": {
+      "estimated_cost_usd": 3.0,
+      "predicted_band": [
+        0.78,
+        1.05
+      ],
+      "script": "scripts/remote_lane_wc_curator_outlier.sh",
+      "council_priority": 99,
+      "anchor_dirs": [
+        "experiments/results/lane_a_landed/iter_0"
+      ],
+      "launcher": "scripts/launch_lane_on_vastai.py phase1+phase2"
+    },
+    "registered_at_utc": "2026-04-29T00:46:51Z",
+    "registered_by_host": "Primary",
+    "registered_by_pid": 0
+  },
+  {
+    "instance_id": "35788145",
+    "label": "lane_lm_v2_b",
+    "metadata": {
+      "estimated_cost_usd": 1.5,
+      "predicted_band": [
+        1.0,
+        1.1
+      ],
+      "script": "scripts/remote_lane_lm_v2_endpoint_tracking.sh",
+      "council_priority": 99,
+      "anchor_dirs": [
+        "experiments/results/lane_a_landed/iter_0"
+      ],
+      "launcher": "scripts/launch_lane_on_vastai.py phase1+phase2"
+    },
+    "registered_at_utc": "2026-04-29T00:54:34Z",
+    "registered_by_host": "Primary",
+    "registered_by_pid": 0
+  },
+  {
+    "instance_id": "35788146",
+    "label": "lane_si_v2_b",
+    "metadata": {
+      "estimated_cost_usd": 2.0,
+      "predicted_band": [
+        1.0,
+        1.1
+      ],
+      "script": "scripts/remote_lane_si_v2_learnable_threshold.sh",
+      "council_priority": 99,
+      "anchor_dirs": [
+        "experiments/results/lane_a_landed/iter_0"
+      ],
+      "launcher": "scripts/launch_lane_on_vastai.py phase1+phase2"
+    },
+    "registered_at_utc": "2026-04-29T00:54:35Z",
+    "registered_by_host": "Primary",
+    "registered_by_pid": 0
+  },
+  {
+    "instance_id": "35793081",
+    "label": "lane_j_nwc_c",
+    "metadata": {
+      "estimated_cost_usd": 5.0,
+      "predicted_band": [
+        0.92,
+        1.02
+      ],
+      "script": "scripts/remote_lane_j_nwc_neural_weight_compression.sh",
+      "council_priority": 99,
+      "anchor_dirs": [
+        "experiments/results/lane_a_landed/iter_0"
+      ],
+      "launcher": "scripts/launch_lane_on_vastai.py phase1+phase2"
+    },
+    "registered_at_utc": "2026-04-29T02:18:20Z",
+    "registered_by_host": "Primary",
+    "registered_by_pid": 0
+  },
+  {
+    "instance_id": "35793083",
+    "label": "lane_omega_v2_c",
+    "metadata": {
+      "estimated_cost_usd": 5.0,
+      "predicted_band": [
+        0.85,
+        1.05
+      ],
+      "script": "scripts/remote_lane_omega_v2_lagrangian.sh",
+      "council_priority": 99,
+      "anchor_dirs": [
+        "experiments/results/lane_a_landed/iter_0"
+      ],
+      "launcher": "scripts/launch_lane_on_vastai.py phase1+phase2"
+    },
+    "registered_at_utc": "2026-04-29T02:18:21Z",
+    "registered_by_host": "Primary",
+    "registered_by_pid": 0
+  },
+  {
+    "instance_id": "35793086",
+    "label": "lane_w_c",
+    "metadata": {
+      "estimated_cost_usd": 4.0,
+      "predicted_band": [
+        0.85,
+        1.05
+      ],
+      "script": "scripts/remote_lane_w_hard_pair_self_compress.sh",
+      "council_priority": 99,
+      "anchor_dirs": [
+        "experiments/results/lane_a_landed/iter_0"
+      ],
+      "launcher": "scripts/launch_lane_on_vastai.py phase1+phase2"
+    },
+    "registered_at_utc": "2026-04-29T02:18:22Z",
+    "registered_by_host": "Primary",
+    "registered_by_pid": 0
+  },
+  {
+    "instance_id": "35793088",
+    "label": "lane_m_v3_c",
+    "metadata": {
+      "estimated_cost_usd": 1.5,
+      "predicted_band": [
+        1.0,
+        1.15
+      ],
+      "script": "scripts/remote_lane_m_v3_pose_from_embedding.sh",
+      "council_priority": 99,
+      "anchor_dirs": [
+        "experiments/results/lane_a_landed/iter_0"
+      ],
+      "launcher": "scripts/launch_lane_on_vastai.py phase1+phase2"
+    },
+    "registered_at_utc": "2026-04-29T02:18:24Z",
+    "registered_by_host": "Primary",
+    "registered_by_pid": 0
+  },
+  {
+    "instance_id": "35793092",
+    "label": "lane_sz_phase2_c",
+    "metadata": {
+      "estimated_cost_usd": 5.0,
+      "predicted_band": [
+        0.3,
+        0.5
+      ],
+      "script": "scripts/remote_lane_sz_phase2_full.sh",
+      "council_priority": 99,
+      "anchor_dirs": [
+        "experiments/results/lane_a_landed/iter_0"
+      ],
+      "launcher": "scripts/launch_lane_on_vastai.py phase1+phase2"
+    },
+    "registered_at_utc": "2026-04-29T02:18:25Z",
+    "registered_by_host": "Primary",
+    "registered_by_pid": 0
+  },
+  {
+    "instance_id": "35793094",
+    "label": "lane_ebr_c",
+    "metadata": {
+      "estimated_cost_usd": 2.0,
+      "predicted_band": [
+        0.9,
+        1.1
+      ],
+      "script": "scripts/remote_lane_ebr_entropy_bottleneck.sh",
+      "council_priority": 99,
+      "anchor_dirs": [
+        "experiments/results/lane_a_landed/iter_0"
+      ],
+      "launcher": "scripts/launch_lane_on_vastai.py phase1+phase2"
+    },
+    "registered_at_utc": "2026-04-29T02:18:26Z",
+    "registered_by_host": "Primary",
+    "registered_by_pid": 0
+  },
+  {
+    "instance_id": "35793096",
+    "label": "lane_gp_c",
+    "metadata": {
+      "estimated_cost_usd": 1.0,
+      "predicted_band": [
+        1.05,
+        1.2
+      ],
+      "script": "scripts/remote_lane_gp_gaussian_process_pose.sh",
+      "council_priority": 99,
+      "anchor_dirs": [
+        "experiments/results/lane_a_landed/iter_0"
+      ],
+      "launcher": "scripts/launch_lane_on_vastai.py phase1+phase2"
+    },
+    "registered_at_utc": "2026-04-29T02:18:28Z",
+    "registered_by_host": "Primary",
+    "registered_by_pid": 0
+  },
+  {
+    "instance_id": "35793099",
+    "label": "lane_fl_c",
+    "metadata": {
+      "estimated_cost_usd": 1.0,
+      "predicted_band": [
+        1.1,
+        1.25
+      ],
+      "script": "scripts/remote_lane_fl_raft_derived_poses.sh",
+      "council_priority": 99,
+      "anchor_dirs": [
+        "experiments/results/lane_a_landed/iter_0"
+      ],
+      "launcher": "scripts/launch_lane_on_vastai.py phase1+phase2"
+    },
+    "registered_at_utc": "2026-04-29T02:18:29Z",
+    "registered_by_host": "Primary",
+    "registered_by_pid": 0
+  },
+  {
+    "instance_id": "35793100",
+    "label": "lane_ec_v2_c",
+    "metadata": {
+      "estimated_cost_usd": 1.5,
+      "predicted_band": [
+        0.75,
+        1.0
+      ],
+      "script": "scripts/remote_lane_ec_v2.sh",
+      "council_priority": 99,
+      "anchor_dirs": [
+        "experiments/results/lane_a_landed/iter_0"
+      ],
+      "launcher": "scripts/launch_lane_on_vastai.py phase1+phase2"
+    },
+    "registered_at_utc": "2026-04-29T02:18:30Z",
+    "registered_by_host": "Primary",
+    "registered_by_pid": 0
+  },
+  {
+    "instance_id": "35793102",
+    "label": "lane_rm_c",
+    "metadata": {
+      "estimated_cost_usd": 1.5,
+      "predicted_band": [
+        1.0,
+        1.1
+      ],
+      "script": "scripts/remote_lane_rm_riemannian_pose_tto.sh",
+      "council_priority": 99,
+      "anchor_dirs": [
+        "experiments/results/lane_a_landed/iter_0"
+      ],
+      "launcher": "scripts/launch_lane_on_vastai.py phase1+phase2"
+    },
+    "registered_at_utc": "2026-04-29T02:18:31Z",
+    "registered_by_host": "Primary",
+    "registered_by_pid": 0
+  },
+  {
+    "instance_id": "35793104",
+    "label": "lane_i_coolchic_c",
+    "metadata": {
+      "estimated_cost_usd": 4.0,
+      "predicted_band": [
+        0.95,
+        1.3
+      ],
+      "script": "scripts/remote_lane_i_coolchic_masks.sh",
+      "council_priority": 99,
+      "anchor_dirs": [
+        "experiments/results/lane_a_landed/iter_0"
+      ],
+      "launcher": "scripts/launch_lane_on_vastai.py phase1+phase2"
+    },
+    "registered_at_utc": "2026-04-29T02:18:32Z",
+    "registered_by_host": "Primary",
+    "registered_by_pid": 0
+  },
+  {
+    "instance_id": "35793106",
+    "label": "lane_g_v3_v2_c",
+    "metadata": {
+      "estimated_cost_usd": 4.5,
+      "predicted_band": [
+        0.85,
+        1.0
+      ],
+      "script": "scripts/remote_lane_g_v3_v2_lagrangian_snr.sh",
+      "council_priority": 99,
+      "anchor_dirs": [
+        "experiments/results/lane_a_landed/iter_0"
+      ],
+      "launcher": "scripts/launch_lane_on_vastai.py phase1+phase2"
+    },
+    "registered_at_utc": "2026-04-29T02:18:33Z",
+    "registered_by_host": "Primary",
+    "registered_by_pid": 0
+  },
+  {
+    "instance_id": "35793115",
+    "label": "lane_q_faithful_c",
+    "metadata": {
+      "estimated_cost_usd": 8.0,
+      "predicted_band": [
+        0.4,
+        0.8
+      ],
+      "script": "scripts/remote_lane_q_faithful_jointgen.sh",
+      "council_priority": 99,
+      "anchor_dirs": [
+        "experiments/results/lane_a_landed/iter_0"
+      ],
+      "launcher": "scripts/launch_lane_on_vastai.py phase1+phase2"
+    },
+    "registered_at_utc": "2026-04-29T02:18:35Z",
+    "registered_by_host": "Primary",
+    "registered_by_pid": 0
+  },
+  {
+    "instance_id": "35794051",
+    "label": "lane_j_nwc_d",
+    "metadata": {
+      "estimated_cost_usd": 5.0,
+      "predicted_band": [
+        0.92,
+        1.02
+      ],
+      "script": "scripts/remote_lane_j_nwc_neural_weight_compression.sh",
+      "council_priority": 99,
+      "anchor_dirs": [
+        "experiments/results/lane_a_landed/iter_0"
+      ],
+      "launcher": "scripts/launch_lane_on_vastai.py phase1+phase2"
+    },
+    "registered_at_utc": "2026-04-29T02:37:53Z",
+    "registered_by_host": "Primary",
+    "registered_by_pid": 0
+  },
+  {
+    "instance_id": "35794052",
+    "label": "lane_omega_v2_d",
+    "metadata": {
+      "estimated_cost_usd": 5.0,
+      "predicted_band": [
+        0.85,
+        1.05
+      ],
+      "script": "scripts/remote_lane_omega_v2_lagrangian.sh",
+      "council_priority": 99,
+      "anchor_dirs": [
+        "experiments/results/lane_a_landed/iter_0"
+      ],
+      "launcher": "scripts/launch_lane_on_vastai.py phase1+phase2"
+    },
+    "registered_at_utc": "2026-04-29T02:37:55Z",
+    "registered_by_host": "Primary",
+    "registered_by_pid": 0
+  },
+  {
+    "instance_id": "35794053",
+    "label": "lane_w_d",
+    "metadata": {
+      "estimated_cost_usd": 4.0,
+      "predicted_band": [
+        0.85,
+        1.05
+      ],
+      "script": "scripts/remote_lane_w_hard_pair_self_compress.sh",
+      "council_priority": 99,
+      "anchor_dirs": [
+        "experiments/results/lane_a_landed/iter_0"
+      ],
+      "launcher": "scripts/launch_lane_on_vastai.py phase1+phase2"
+    },
+    "registered_at_utc": "2026-04-29T02:37:56Z",
+    "registered_by_host": "Primary",
+    "registered_by_pid": 0
+  },
+  {
+    "instance_id": "35794054",
+    "label": "lane_m_v3_d",
+    "metadata": {
+      "estimated_cost_usd": 1.5,
+      "predicted_band": [
+        1.0,
+        1.15
+      ],
+      "script": "scripts/remote_lane_m_v3_pose_from_embedding.sh",
+      "council_priority": 99,
+      "anchor_dirs": [
+        "experiments/results/lane_a_landed/iter_0"
+      ],
+      "launcher": "scripts/launch_lane_on_vastai.py phase1+phase2"
+    },
+    "registered_at_utc": "2026-04-29T02:37:57Z",
+    "registered_by_host": "Primary",
+    "registered_by_pid": 0
+  },
+  {
+    "instance_id": "35794055",
+    "label": "lane_ebr_d",
+    "metadata": {
+      "estimated_cost_usd": 2.0,
+      "predicted_band": [
+        0.9,
+        1.1
+      ],
+      "script": "scripts/remote_lane_ebr_entropy_bottleneck.sh",
+      "council_priority": 99,
+      "anchor_dirs": [
+        "experiments/results/lane_a_landed/iter_0"
+      ],
+      "launcher": "scripts/launch_lane_on_vastai.py phase1+phase2"
+    },
+    "registered_at_utc": "2026-04-29T02:37:58Z",
+    "registered_by_host": "Primary",
+    "registered_by_pid": 0
+  },
+  {
+    "instance_id": "35794056",
+    "label": "lane_gp_d",
+    "metadata": {
+      "estimated_cost_usd": 1.0,
+      "predicted_band": [
+        1.05,
+        1.2
+      ],
+      "script": "scripts/remote_lane_gp_gaussian_process_pose.sh",
+      "council_priority": 99,
+      "anchor_dirs": [
+        "experiments/results/lane_a_landed/iter_0"
+      ],
+      "launcher": "scripts/launch_lane_on_vastai.py phase1+phase2"
+    },
+    "registered_at_utc": "2026-04-29T02:37:59Z",
+    "registered_by_host": "Primary",
+    "registered_by_pid": 0
+  },
+  {
+    "instance_id": "35794057",
+    "label": "lane_ec_v2_d",
+    "metadata": {
+      "estimated_cost_usd": 1.5,
+      "predicted_band": [
+        0.75,
+        1.0
+      ],
+      "script": "scripts/remote_lane_ec_v2.sh",
+      "council_priority": 99,
+      "anchor_dirs": [
+        "experiments/results/lane_a_landed/iter_0"
+      ],
+      "launcher": "scripts/launch_lane_on_vastai.py phase1+phase2"
+    },
+    "registered_at_utc": "2026-04-29T02:38:00Z",
+    "registered_by_host": "Primary",
+    "registered_by_pid": 0
+  },
+  {
+    "instance_id": "35794059",
+    "label": "lane_rm_d",
+    "metadata": {
+      "estimated_cost_usd": 1.5,
+      "predicted_band": [
+        1.0,
+        1.1
+      ],
+      "script": "scripts/remote_lane_rm_riemannian_pose_tto.sh",
+      "council_priority": 99,
+      "anchor_dirs": [
+        "experiments/results/lane_a_landed/iter_0"
+      ],
+      "launcher": "scripts/launch_lane_on_vastai.py phase1+phase2"
+    },
+    "registered_at_utc": "2026-04-29T02:38:02Z",
+    "registered_by_host": "Primary",
+    "registered_by_pid": 0
+  },
+  {
+    "instance_id": "35794060",
+    "label": "lane_i_coolchic_d",
+    "metadata": {
+      "estimated_cost_usd": 4.0,
+      "predicted_band": [
+        0.95,
+        1.3
+      ],
+      "script": "scripts/remote_lane_i_coolchic_masks.sh",
+      "council_priority": 99,
+      "anchor_dirs": [
+        "experiments/results/lane_a_landed/iter_0"
+      ],
+      "launcher": "scripts/launch_lane_on_vastai.py phase1+phase2"
+    },
+    "registered_at_utc": "2026-04-29T02:38:04Z",
+    "registered_by_host": "Primary",
+    "registered_by_pid": 0
+  },
+  {
+    "instance_id": "35794061",
+    "label": "lane_q_faithful_d",
+    "metadata": {
+      "estimated_cost_usd": 8.0,
+      "predicted_band": [
+        0.4,
+        0.8
+      ],
+      "script": "scripts/remote_lane_q_faithful_jointgen.sh",
+      "council_priority": 99,
+      "anchor_dirs": [
+        "experiments/results/lane_a_landed/iter_0"
+      ],
+      "launcher": "scripts/launch_lane_on_vastai.py phase1+phase2"
+    },
+    "registered_at_utc": "2026-04-29T02:38:05Z",
+    "registered_by_host": "Primary",
+    "registered_by_pid": 0
+  },
+  {
+    "instance_id": "35797189",
+    "label": "lane_q_faithful_e",
+    "metadata": {
+      "estimated_cost_usd": 8.0,
+      "predicted_band": [
+        0.4,
+        0.8
+      ],
+      "script": "scripts/remote_lane_q_faithful_jointgen.sh",
+      "council_priority": 99,
+      "anchor_dirs": [
+        "experiments/results/lane_a_landed/iter_0"
+      ],
+      "launcher": "scripts/launch_lane_on_vastai.py phase1+phase2"
+    },
+    "registered_at_utc": "2026-04-29T03:32:48Z",
+    "registered_by_host": "Primary",
+    "registered_by_pid": 0
+  },
+  {
+    "instance_id": "35799337",
+    "label": "lane_h_v3",
+    "metadata": {
+      "estimated_cost_usd": 1.5,
+      "predicted_band": [
+        0.55,
+        0.95
+      ],
+      "script": "scripts/remote_lane_h_v3_jointly_trained_halfframe.sh",
+      "council_priority": 99,
+      "anchor_dirs": [
+        "experiments/results/lane_a_landed/iter_0"
+      ],
+      "launcher": "scripts/launch_lane_on_vastai.py phase1+phase2"
+    },
+    "registered_at_utc": "2026-04-29T04:07:16Z",
+    "registered_by_host": "Primary",
+    "registered_by_pid": 0
+  },
+  {
+    "instance_id": "35799344",
+    "label": "lane_j_jbl_b",
+    "metadata": {
+      "estimated_cost_usd": 1.5,
+      "predicted_band": [
+        0.92,
+        1.02
+      ],
+      "script": "scripts/remote_lane_j_jbl_jaccard_bls.sh",
+      "council_priority": 99,
+      "anchor_dirs": [
+        "experiments/results/lane_a_landed/iter_0"
+      ],
+      "launcher": "scripts/launch_lane_on_vastai.py phase1+phase2"
+    },
+    "registered_at_utc": "2026-04-29T04:07:17Z",
+    "registered_by_host": "Primary",
+    "registered_by_pid": 0
+  },
+  {
+    "instance_id": "35799829",
+    "label": "lane_f_v5",
+    "metadata": {
+      "estimated_cost_usd": 4.0,
+      "predicted_band": [
+        0.95,
+        1.2
+      ],
+      "script": "scripts/remote_lane_f_v5_hardware_fp8.sh",
+      "council_priority": 99,
+      "anchor_dirs": [
+        "experiments/results/lane_a_landed/iter_0"
+      ],
+      "launcher": "scripts/launch_lane_on_vastai.py phase1+phase2"
+    },
+    "registered_at_utc": "2026-04-29T04:13:45Z",
+    "registered_by_host": "Primary",
+    "registered_by_pid": 0
+  },
+  {
+    "instance_id": "35800069",
+    "label": "lane_h_v3_b",
+    "metadata": {
+      "estimated_cost_usd": 1.5,
+      "predicted_band": [
+        0.55,
+        0.95
+      ],
+      "script": "scripts/remote_lane_h_v3_jointly_trained_halfframe.sh",
+      "council_priority": 99,
+      "anchor_dirs": [
+        "experiments/results/lane_a_landed/iter_0"
+      ],
+      "launcher": "scripts/launch_lane_on_vastai.py phase1+phase2"
+    },
+    "registered_at_utc": "2026-04-29T04:17:11Z",
+    "registered_by_host": "Primary",
+    "registered_by_pid": 0
+  },
+  {
+    "instance_id": "35800070",
+    "label": "lane_j_jbl_c",
+    "metadata": {
+      "estimated_cost_usd": 1.5,
+      "predicted_band": [
+        0.92,
+        1.02
+      ],
+      "script": "scripts/remote_lane_j_jbl_jaccard_bls.sh",
+      "council_priority": 99,
+      "anchor_dirs": [
+        "experiments/results/lane_a_landed/iter_0"
+      ],
+      "launcher": "scripts/launch_lane_on_vastai.py phase1+phase2"
+    },
+    "registered_at_utc": "2026-04-29T04:17:13Z",
+    "registered_by_host": "Primary",
+    "registered_by_pid": 0
+  },
+  {
+    "instance_id": "35800071",
+    "label": "lane_f_v5_b",
+    "metadata": {
+      "estimated_cost_usd": 4.0,
+      "predicted_band": [
+        0.95,
+        1.2
+      ],
+      "script": "scripts/remote_lane_f_v5_hardware_fp8.sh",
+      "council_priority": 99,
+      "anchor_dirs": [
+        "experiments/results/lane_a_landed/iter_0"
+      ],
+      "launcher": "scripts/launch_lane_on_vastai.py phase1+phase2"
+    },
+    "registered_at_utc": "2026-04-29T04:17:14Z",
+    "registered_by_host": "Primary",
+    "registered_by_pid": 0
+  }
+]
