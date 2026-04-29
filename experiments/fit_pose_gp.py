@@ -30,7 +30,15 @@ def main() -> None:
     baseline = _load_pose_tensor(Path(args.poses))
     model = fit_pose_gp(baseline)
     save_pose_gp(model, args.output)
-    reconstructed = reconstruct_poses(model, int(args.n_pairs)).to(baseline.device)
+    # Pass baseline_poses=baseline so dims 1-5 are preserved (NOT zero-padded).
+    # Without this kwarg, reconstruct_poses defaults dims 1-5 to ZERO which is
+    # OFF-MANIFOLD for 6-DOF-trained renderers and CATASTROPHICALLY degrades
+    # scores (Lane GP v2 audit, 2026-04-29). The earlier "Fix A" was advertised
+    # as landed but the fit_pose_gp.py call site never passed the kwarg —
+    # discovered by Lane MM/GP pipeline audit codex 2026-04-29 PM. Lane GP v3
+    # = 89.67 score is partially attributable to this bug, not just the
+    # Runge-phenomenon polynomial-fit limitation.
+    reconstructed = reconstruct_poses(model, int(args.n_pairs), baseline_poses=baseline).to(baseline.device)
     compare_n = min(int(args.n_pairs), baseline.shape[0], reconstructed.shape[0])
     rmse = torch.sqrt(torch.mean((reconstructed[:compare_n, 0] - baseline[:compare_n, 0]).square()))
 
