@@ -58,6 +58,31 @@ This rule exists because (2026-04-26 incident, see `feedback_dead_flag_wiring_pa
 3. Fail loud (raise / non-zero exit), not silent (WARN-and-skip), when required inputs to a subprocess wrapper are missing.
 4. **It is unacceptable to learn the same lesson twice.** Capture the meta-pattern in memory + CLAUDE.md the FIRST time it bites.
 
+## Modal `.spawn()` HARVEST OR LOSE — NON-NEGOTIABLE, HIGHEST EMPHASIS
+
+**Modal `.spawn()` puts artifacts in the FunctionCall return-value cache (~24h TTL), NOT in a Volume.** `experiments/modal_train_lane.py` uses `.spawn()` exclusively. The local-side dispatcher writes `experiments/results/lane_<label>_modal/modal_metadata.json` (with `call_id`) and exits — it does NOT poll for the result. NOTHING is written to a Modal Volume by this path.
+
+**The investigation trap I fell into 2026-04-29 PM**:
+- `modal app list` only shows currently-active apps. Terminated ephemeral apps disappear quickly.
+- `modal app logs <app>` shows the most recent log buffer; earlier successful runs aged out.
+- `modal volume ls` shows nothing because spawn() doesn't write volumes.
+- I wrongly concluded "$0 wasted, all dead" when in fact the dashboard showed $38.80 spent on `modal_train_lane.run_lane_training_t4/a10g` and 31 of 37 dispatched call_ids had artifacts sitting in the result cache about to GC.
+
+**The truth source is per-call**:
+```bash
+.venv/bin/python -c "import modal; r = modal.functions.FunctionCall.from_id('fc-...').get(timeout=2); print(r.get('returncode'), r.get('elapsed_seconds'), len(r.get('artifacts', {})))"
+```
+Browser dashboard: https://modal.com/usage (the only source-of-truth for actual billing).
+
+**Rules**:
+1. Every dispatch via `modal_train_lane.py` MUST be followed by a scheduled harvest within 24h. Reference: `tools/harvest_modal_calls.py` (formerly `/tmp/harvest_modal_calls.py`) iterates every `experiments/results/lane_*_modal/modal_metadata.json` and writes `harvested_artifacts/` next to each.
+2. **NEVER** claim "Modal apps are dead, no artifacts" without first running the harvester. The harvester is the source of truth, not `modal app list`.
+3. **A10G has 22GB shared**; SC++/SA-class lanes that allocate 21+GB will OOM (today's incident: lane_sc_plus_plus_v3 crashed at 140s with `CUDA out of memory. Tried to allocate 21.09 GiB`). For OOM-prone lanes, use Vast.ai 4090 (24GB dedicated, $0.26/hr) instead.
+4. **Modal scheduling can take HOURS** for T4 / A10G during shortages. "waiting to be scheduled" means $0 charged in the wait, but moment-of-schedule starts the meter. Cancel queued functions you no longer want.
+5. Future improvement (issue tracker): change `modal_train_lane.py` to also write artifacts to a Modal Volume so they persist past the result-cache TTL. The `.spawn()` pattern was added for "detached" runs, but the price is orphaned artifacts. Detached + persistent storage requires a Volume, not the result cache.
+
+Memory: `feedback_modal_spawn_result_cache_pattern_20260429.md` documents the full incident + harvest pattern.
+
 ## Auth eval EVERYWHERE — NON-NEGOTIABLE, HIGHEST EMPHASIS
 
 **EVERY chained experiment MUST end with a CUDA auth eval against its best checkpoint.** Tracking only proxy `fp4_scorer` / `pose_loss` / training-loss is a WASTED run unless an authoritative score lands at the end. The proxy-auth gap can be 100-350x even on CUDA-CUDA (LANE-B 2026-04-26: proxy 0.0007 → auth 0.246, 350x). The proxy is a TRAINING SIGNAL, not a measurement.
