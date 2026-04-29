@@ -11,7 +11,7 @@
 #
 # Stages:
 #   0. NVDEC probe (memory feedback_vastai_nvdec_host_variation)
-#   1. git pull --ff-only + pip install -e .
+#   1. canonical git sync (fetch + reset --hard origin/main) + pip install -e .
 #   2. Train base NWC codec on a corpus of saved .pt checkpoints
 #   3. Compute per-block sensitivities on Lane G v3 anchor (Hessian × hard-pair grads)
 #   4. Retrain codec with sensitivity weighting (importance_weight=2.0)
@@ -69,8 +69,9 @@ bash "$WORKSPACE/scripts/probe_nvdec.sh" || {
 
 # Stage 1: code parity + install.
 cost_guard
-log "=== Stage 1: git pull + pip install -e . ==="
-git pull --ff-only
+log "=== Stage 1: canonical git sync + pip install -e . ==="
+# Nuke local junk from prior failed deploys, then sync to origin/main exactly.
+git fetch origin main && git reset --hard origin/main
 python3 -u -m pip install -e .
 
 # Pre-flight: required artifacts.

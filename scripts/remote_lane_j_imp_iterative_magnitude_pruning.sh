@@ -103,10 +103,11 @@ bash "$WORKSPACE/scripts/probe_nvdec.sh" --ensure-dali || {
     exit 2
 }
 
-# Stage 0b: git pull (CLAUDE.md non-negotiable: deployed code parity).
-log "=== Stage 0b: git pull --ff-only ==="
-git -C "$WORKSPACE" pull --ff-only 2>&1 | tail -3 || {
-    log "WARN: git pull failed — continuing with current HEAD ($GIT_HASH)"
+# Stage 0b: canonical git sync (CLAUDE.md non-negotiable: deployed code parity).
+log "=== Stage 0b: canonical git sync (fetch + reset --hard origin/main) ==="
+# Nuke local junk from prior failed deploys, then sync to origin/main exactly.
+git -C "$WORKSPACE" fetch origin main && git -C "$WORKSPACE" reset --hard origin/main 2>&1 | tail -3 || {
+    log "WARN: git fetch/reset failed — continuing with current HEAD ($GIT_HASH)"
 }
 
 # Pre-flight: anchor on Lane G v3 (1.05 [contest-CUDA]).

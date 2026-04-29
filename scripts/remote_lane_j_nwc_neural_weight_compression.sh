@@ -8,7 +8,7 @@
 #
 # Stages:
 #   0. NVDEC probe (memory feedback_vastai_nvdec_host_variation)
-#   1. git pull --ff-only + pip install -e .
+#   1. canonical git sync (fetch + reset --hard origin/main) + pip install -e .
 #   2. Train neural weight codec on a corpus of saved .pt checkpoints
 #   3. Export Lane G v3 renderer via NWC1 → renderer.bin
 #   4. Build archive (renderer.bin + masks.mkv + optimized_poses.pt)
@@ -65,8 +65,9 @@ bash "$WORKSPACE/scripts/probe_nvdec.sh" || {
 
 # Stage 1: code parity + install.
 cost_guard
-log "=== Stage 1: git pull + pip install -e . ==="
-git pull --ff-only
+log "=== Stage 1: canonical git sync + pip install -e . ==="
+# Nuke local junk from prior failed deploys, then sync to origin/main exactly.
+git fetch origin main && git reset --hard origin/main
 python3 -u -m pip install -e .
 
 # Pre-flight: required artifacts.

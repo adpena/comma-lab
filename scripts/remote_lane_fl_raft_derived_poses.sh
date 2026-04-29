@@ -122,8 +122,9 @@ bash "$WORKSPACE/scripts/probe_nvdec.sh" || {
 
 # Stage 1: code parity + editable install.
 cost_guard
-log "=== Stage 1: git pull + pip install -e . ==="
-git pull --ff-only
+log "=== Stage 1: canonical git sync + pip install -e . ==="
+# Nuke local junk from prior failed deploys, then sync to origin/main exactly.
+git fetch origin main && git reset --hard origin/main
 "$PYBIN" -m pip install -e .
 
 # Stage 2: extract Lane A archive (canonical 1.15 [contest-CUDA] anchor).

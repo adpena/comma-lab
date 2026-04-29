@@ -26,7 +26,7 @@
 #
 # Per CLAUDE.md non-negotiables:
 #   * Preflight Stage 0 = NVDEC probe (--ensure-dali) before any GPU spend.
-#   * Stage 1 = git pull --ff-only to enforce remote_code_parity.
+#   * Stage 1 = canonical git fetch + reset --hard origin/main to enforce remote_code_parity.
 #   * Stage N+1 = contest-CUDA auth eval against the EXACT archive bytes
 #     submitted (no proxy, no MPS, label every score [contest-CUDA]).
 #   * Heartbeat every 60s to /tmp/heartbeat_lane_j_jbl.log.
@@ -67,9 +67,10 @@ bash "$WORKSPACE/scripts/probe_nvdec.sh" --ensure-dali || {
 
 # Stage 1: enforce remote_code_parity (CLAUDE.md non-negotiable).
 cd "$WORKSPACE"
-log "=== Stage 1: git pull --ff-only (remote_code_parity gate) ==="
-git pull --ff-only 2>&1 | tail -5 || {
-    log "FATAL: git pull failed — deployed code may be stale, abort."
+log "=== Stage 1: canonical git sync (fetch + reset --hard origin/main) ==="
+# Nuke local junk from prior failed deploys, then sync to origin/main exactly.
+git fetch origin main && git reset --hard origin/main 2>&1 | tail -5 || {
+    log "FATAL: git fetch/reset failed — network or upstream issue, abort."
     exit 3
 }
 GIT_HASH=$(git rev-parse HEAD)

@@ -47,8 +47,9 @@ bash "$WORKSPACE/scripts/probe_nvdec.sh" || {
 
 # Stage 1: code parity.
 cost_guard
-log "=== Stage 1: git pull + pip install -e . ==="
-git pull --ff-only
+log "=== Stage 1: canonical git sync + pip install -e . ==="
+# Nuke local junk from prior failed deploys, then sync to origin/main exactly.
+git fetch origin main && git reset --hard origin/main
 python3 -u -m pip install -e .
 
 # Stage 2: extract Lane A archive as anchor.
@@ -167,8 +168,44 @@ SCORER_STATE="$LOG_DIR/curator_outlier_scorer.pt"
 [ -f "$SCORER_STATE" ] || { echo "FATAL: missing $SCORER_STATE" >&2; exit 2; }
 
 # Stage 5: train renderer with independent pair weights.
+#
+# Round 11 Finding 1 fix (2026-04-28): NEVER pass renderer.bin (ASYM/FP4A
+# binary format) to --resume-from. train_renderer.py expects a torch.save
+# pickle (training_state_*.pt OR renderer_*_best_fp32.pt) and would crash
+# on torch.load of the raw quantised binary.
+#
+# Operator must supply LANE_A_FLOAT_CHECKPOINT pointing at a fp32 PyTorch
+# checkpoint (e.g., a renderer_lane_a_*_best_fp32.pt produced by the Lane
+# A training run). If unset, the lane fails loud here BEFORE Stage 2/3
+# work is wasted — no silent fall-through to a from-scratch run.
 cost_guard
 log "=== Stage 5: train_renderer.py --pair-weights-path ==="
+LANE_A_FLOAT_CHECKPOINT="${LANE_A_FLOAT_CHECKPOINT:-}"
+if [ -z "$LANE_A_FLOAT_CHECKPOINT" ]; then
+    echo "FATAL: LANE_A_FLOAT_CHECKPOINT env var unset." >&2
+    echo "  Lane WC requires a fp32 PyTorch checkpoint to warm-start from." >&2
+    echo "  The Lane A archive's renderer.bin is in ASYM/FP4A binary format" >&2
+    echo "  and CANNOT be loaded by train_renderer.py --resume-from." >&2
+    echo "  Set LANE_A_FLOAT_CHECKPOINT=/path/to/renderer_lane_a_*_best_fp32.pt" >&2
+    echo "  (typically downloaded from the original Lane A training run) and" >&2
+    echo "  re-launch." >&2
+    exit 3
+fi
+if [ ! -f "$LANE_A_FLOAT_CHECKPOINT" ]; then
+    echo "FATAL: LANE_A_FLOAT_CHECKPOINT does not exist: $LANE_A_FLOAT_CHECKPOINT" >&2
+    exit 3
+fi
+# Magic-byte sanity: refuse a renderer .bin even if the env var was wired
+# at the wrong path (defence-in-depth — train_renderer.py also checks).
+_magic="$(head -c 4 "$LANE_A_FLOAT_CHECKPOINT" 2>/dev/null || true)"
+case "$_magic" in
+    FP4A|ASYM|DPSM|I4LZ|CCh1|C3R1|SCv1|OMG1)
+        echo "FATAL: LANE_A_FLOAT_CHECKPOINT looks like a renderer .bin (magic=$_magic)." >&2
+        echo "  Pass a float checkpoint (training_state_*.pt or renderer_*_best_fp32.pt)." >&2
+        exit 3
+        ;;
+esac
+log "Lane WC warm-start from fp32 checkpoint: $LANE_A_FLOAT_CHECKPOINT"
 TRAIN_OUT="$LOG_DIR/train"
 mkdir -p "$TRAIN_OUT"
 python3 -u -m tac.experiments.train_renderer \
@@ -176,7 +213,7 @@ python3 -u -m tac.experiments.train_renderer \
     --tag lane_wc_curator_outlier \
     --output-dir "$TRAIN_OUT" \
     --device cuda \
-    --resume-from "$ANCHOR_RENDERER" \
+    --resume-from "$LANE_A_FLOAT_CHECKPOINT" \
     --use-self-compress-codec \
     --pair-weights-path "$PAIR_WEIGHTS" \
     --epochs 500 \

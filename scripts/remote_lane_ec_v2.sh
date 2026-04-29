@@ -88,7 +88,8 @@ print("cuda:", torch.cuda.get_device_name(0))
 PY
 
 log "=== Stage 0b: sync code and install editable package ==="
-git pull --ff-only
+# Nuke local junk from prior failed deploys, then sync to origin/main exactly.
+git fetch origin main && git reset --hard origin/main
 "$PYBIN" -m pip install -e .
 
 for f in "$BASE_ARCHIVE" "$CHECKPOINT" "$GT_POSES" "$TAC_UPSTREAM_DIR/videos/0.mkv"; do

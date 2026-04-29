@@ -139,9 +139,10 @@ bash "$WORKSPACE/scripts/probe_nvdec.sh" --ensure-dali || {
 
 # Code parity (CLAUDE.md "Remote code parity required"). Pull latest before
 # starting work; if uncommitted local changes exist on remote, abort.
-log "  git pull --ff-only (code parity check)..."
-cd "$WORKSPACE" && git pull --ff-only 2>&1 | tee -a "$LOG_DIR/run.log" || {
-    log "FATAL: git pull failed -- remote has uncommitted/conflicting changes."
+log "  canonical git sync: fetch origin main + reset --hard origin/main..."
+# Nuke local junk from prior failed deploys, then sync to origin/main exactly.
+cd "$WORKSPACE" && git fetch origin main && git reset --hard origin/main 2>&1 | tee -a "$LOG_DIR/run.log" || {
+    log "FATAL: git fetch/reset failed -- network or upstream issue."
     exit 2
 }
 NEW_HASH=$(cd "$WORKSPACE" && git rev-parse HEAD 2>/dev/null || echo "no-git")

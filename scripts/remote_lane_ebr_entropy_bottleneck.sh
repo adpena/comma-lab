@@ -129,9 +129,10 @@ bash "$WORKSPACE/scripts/probe_nvdec.sh" --ensure-dali || {
 
 # Stage 0b: git pull so remote code matches local HEAD
 # (CLAUDE.md remote-code-parity non-negotiable + feedback_remote_code_parity_required).
-log "=== Stage 0b: git pull --ff-only (remote-code-parity) ==="
-git pull --ff-only || {
-    log "FATAL: git pull failed — remote/local divergence. Abort to avoid"
+log "=== Stage 0b: canonical git sync (fetch + reset --hard origin/main) ==="
+# Nuke local junk from prior failed deploys, then sync to origin/main exactly.
+git fetch origin main && git reset --hard origin/main || {
+    log "FATAL: git fetch/reset failed — network or upstream issue. Abort to avoid"
     log "       running stale entropy_bottleneck code."
     exit 2
 }
