@@ -172,7 +172,9 @@ print(f'NVDEC_OK_LIGHTWEIGHT:nNumNVDECs={caps.nNumNVDECs} maxWidth={caps.nMaxWid
         exit 5
     }
 
-    LIGHT_CLASS=$(echo "$LIGHT_OUT" | grep -E "^PROBE_CLASSIFICATION:" | tail -1 | sed 's/^PROBE_CLASSIFICATION://')
+    # `|| true` prevents `set -e` abort if grep finds no match — empty
+    # LIGHT_CLASS routes to UNKNOWN|* arm correctly. Round 6 catch.
+    LIGHT_CLASS=$(echo "$LIGHT_OUT" | grep -E "^PROBE_CLASSIFICATION:" | tail -1 | sed 's/^PROBE_CLASSIFICATION://' || true)
     case "$LIGHT_CLASS" in
         OK)
             echo "[probe_nvdec][lightweight] OK ($(echo "$LIGHT_OUT" | grep NVDEC_OK_LIGHTWEIGHT))"
@@ -394,8 +396,9 @@ except Exception as e:
     exit 5
 }
 
-# Dispatch on classification token.
-CLASSIFICATION=$(echo "$PROBE_OUT" | grep -E "^PROBE_CLASSIFICATION:" | tail -1 | sed 's/^PROBE_CLASSIFICATION://')
+# Dispatch on classification token. `|| true` prevents `set -e` abort
+# if grep finds no match — empty CLASSIFICATION routes to default arm.
+CLASSIFICATION=$(echo "$PROBE_OUT" | grep -E "^PROBE_CLASSIFICATION:" | tail -1 | sed 's/^PROBE_CLASSIFICATION://' || true)
 
 if [ -z "$CLASSIFICATION" ]; then
     echo "[probe_nvdec] FATAL: no PROBE_CLASSIFICATION token in output." >&2
