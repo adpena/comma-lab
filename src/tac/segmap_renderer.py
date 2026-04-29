@@ -389,6 +389,36 @@ class SegMapTrainer:
             their gradients.
         """
         self.model.train()
+        # Lane LCT support: accept either (B, T, NUM_CLASSES, H, W) one-hot
+        # OR (B, T, H, W) uint8 grayscale (when learnable_class_targets is
+        # supplied). The grayscale path projects through the LCT-aware LUT
+        # to get the 5-channel probability map.
+        if mask_pairs.dim() == 4:
+            if self.learnable_class_targets is None:
+                raise ValueError(
+                    f"mask_pairs has 4 dims (B, T, H, W) — "
+                    f"requires learnable_class_targets to project via LUT. "
+                    f"Otherwise pass (B, T, NUM_CLASSES, H, W) one-hot."
+                )
+            from tac.mask_grayscale_lut import create_gaussian_softmax_lut, NUM_CLASSES as _NC
+            b, t, h, w = mask_pairs.shape
+            num_classes = _NC
+            # Compute LUT WITH gradient for raw_values (so backprop reaches
+            # the learnable codebook). Use the trainer's device.
+            targets = self.learnable_class_targets()  # (NUM_CLASSES,) on whatever device
+            targets = targets.to(self.device)
+            # Build the LUT inline (5 classes, sigma=15 per design).
+            x = torch.arange(256, device=self.device, dtype=torch.float32).unsqueeze(1)
+            squared_diff = (x - targets.unsqueeze(0)) ** 2
+            sigma = 15.0
+            logits = -squared_diff / (2.0 * sigma * sigma)
+            lut = torch.softmax(logits, dim=1)  # (256, NUM_CLASSES) — differentiable in targets
+            # mask_pairs uint8 -> long indexer
+            gray_idx = mask_pairs.to(self.device, dtype=torch.long).clamp(0, 255)
+            # Embedding lookup: (B, T, H, W) -> (B, T, H, W, NUM_CLASSES)
+            probs = lut[gray_idx]
+            # Reshape to (B, T, NUM_CLASSES, H, W) channel-first
+            mask_pairs = probs.permute(0, 1, 4, 2, 3).contiguous()
         b, t, num_classes, h, w = mask_pairs.shape
         if num_classes != 5:
             raise ValueError(
