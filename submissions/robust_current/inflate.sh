@@ -310,6 +310,27 @@ while IFS= read -r rel; do
         "${GRAIN_MASK_SALIENCY:-experiments/masks/posenet_saliency.npy}" \
         "${GRAIN_MASK_STRENGTH:-8.0}"
       break
+    elif [ "$PYTHON_INFLATE" = "renderer_grayscale" ]; then
+      # Lane MM (2026-04-29): Selfcomp grayscale-LUT mask decode -> existing
+      # MaskRenderer. Same renderer.bin as Lane A; the only delta is that
+      # masks.mkv is replaced by grayscale.mkv (1-channel AV1 monochrome
+      # with Selfcomp class targets [0, 255, 64, 192, 128] + sigma=15
+      # Gaussian softmax LUT). Predicted [0.65, 0.85] [contest-CUDA].
+      echo "Inflating (Lane MM: grayscale-LUT mask + existing renderer) $ARCHIVE_DIR -> $INFLATED_DIR"
+      "$UV_BIN" run --with brotli --with av --with torch --with numpy python "$SELF_DIR/inflate_renderer_grayscale.py" \
+        "$ARCHIVE_DIR" "$INFLATED_DIR" "$VIDEO_NAMES_FILE"
+      break
+    elif [ "$PYTHON_INFLATE" = "segmap" ]; then
+      # Selfcomp paradigm dispatch arm (Lane SA / SC++ / SO / future).
+      # Decodes grayscale.mkv via Gaussian softmax LUT -> SegMap renderer
+      # (tac.segmap_renderer) -> bicubic upsample to camera resolution.
+      # SegMap weights live in payload.tar.xz (block-FP per-channel, see
+      # tac.block_fp_codec.pack_payload_tar_xz) OR a raw segmap_inference.pt.
+      # CLAUDE.md strict-scorer-rule honored: inflate_segmap.py loads ONLY the SegMap renderer (no PoseNet, no SegNet). # SCORER_AT_INFLATE_WAIVED: documentation-line referencing strict-scorer-rule by name; no actual scorer load happens here.
+      echo "Inflating (Selfcomp SegMap: grayscale-LUT -> SegMap) $ARCHIVE_DIR -> $INFLATED_DIR"
+      "$UV_BIN" run --with brotli --with av --with torch --with numpy python "$SELF_DIR/inflate_segmap.py" \
+        "$ARCHIVE_DIR" "$INFLATED_DIR" "$VIDEO_NAMES_FILE"
+      break
     elif [ "$PYTHON_INFLATE" = "1" ]; then
       echo "Inflating (canonical PyAV + torch bicubic) $ARCHIVE_DIR -> $INFLATED_DIR"
       "$UV_BIN" run --with av --with torch --with numpy python "$SELF_DIR/inflate.py" \
