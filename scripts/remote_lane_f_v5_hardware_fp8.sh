@@ -240,6 +240,7 @@ export PYTORCH_CUDA_ALLOC_CONF=expandable_segments:True
     --profile f_v5_hardware_fp8_dilated_h64 \
     --device cuda \
     --seed 1234 \
+    --tag f_v5_hardware_fp8 \
     --output-dir "$LOG_DIR/train" 2>&1 | tee "$LOG_DIR/train.log" | tail -50
     PIPE_RC=("${PIPESTATUS[@]}")
     if [ "${PIPE_RC[0]}" -ne 0 ]; then

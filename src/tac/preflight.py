@@ -476,6 +476,13 @@ def preflight_all(
         # heredocs causing SyntaxError that no prior check caught. STRICT @ 0
         # after fix-heredoc-pipestatus + uniward dedup.
         check_python_heredocs_in_shell_compile(strict=True, verbose=verbose)
+        # Check 73: remote_lane_*.sh scripts must pass all required argparse
+        # args of the Python scripts they invoke. Existing preflight_arity
+        # only scanned 2 launchers (pipeline.py, deploy_vastai.py) — missing
+        # 70+ remote_lane scripts. Q-FAITHFUL crashed on Modal at 64s with
+        # `train_renderer.py: error: --tag required` because no preflight
+        # check covered that surface. STRICT @ 0 after fixing 3 scripts.
+        check_remote_lane_argparse_arity(strict=True, verbose=verbose)
 
         # 2026-04-29: Check 43 — controlled-baseline methodology for new
         # Tuna-2 lanes. WARN-ONLY initially because it only applies to
@@ -8262,6 +8269,131 @@ def check_launcher_tarball_includes_lane_anchors(
         raise MetaBugViolation(
             "LAUNCHER TARBALL MISSING LANE ANCHORS:\n"
             + "\n".join(f"  • {v}" for v in violations)
+        )
+    return violations
+
+
+def check_remote_lane_argparse_arity(
+    repo_root: Path | None = None,
+    strict: bool = False,
+    verbose: bool = True,
+) -> list[str]:
+    """Check 73 — every `python <script.py>` invocation in a remote_lane_*.sh
+    must pass all required argparse args of <script.py>.
+
+    Why: 2026-04-29 Q-FAITHFUL crashed at 64s on Modal with
+    `train_renderer.py: error: --tag required`. preflight_arity (the
+    existing arity check) only scans `experiments/pipeline.py` and
+    `scripts/deploy_vastai.py` — NOT the 70+ remote_lane_*.sh scripts.
+
+    This check parses every `"$PYBIN"|python|python3 -u <path>.py \\
+    [args...]` invocation across all lane scripts (handles bash line
+    continuation `\\`), then validates each against the target's argparse.
+
+    Catches the meta-bug class where a lane script forgets a required flag
+    that the train script demands.
+    """
+    root = repo_root or REPO_ROOT
+    scripts_dir = root / "scripts"
+    if not scripts_dir.is_dir():
+        return []
+
+    sigs = _build_target_signatures(root)
+    violations: list[str] = []
+
+    # Pattern: invocation start (line begins with optional whitespace,
+    # PYBIN/python/python3, optional -u, then script path .py)
+    invoc_re = re.compile(
+        r'^\s*"?\$PYBIN"?|^\s*python3?\b'
+    )
+
+    for sh in sorted(scripts_dir.glob("remote_lane_*.sh")):
+        try:
+            text = sh.read_text(errors="ignore")
+        except (FileNotFoundError, PermissionError):
+            continue
+
+        # Walk lines, find invocation starts. Handle line-continuation `\`.
+        lines = text.splitlines()
+        i = 0
+        while i < len(lines):
+            line = lines[i]
+            # Skip comments
+            if line.lstrip().startswith("#"):
+                i += 1
+                continue
+            # Detect invocation start with python script .py
+            m = re.search(
+                r'(?:"?\$PYBIN"?|\bpython3?\b)\s+(?:-u\s+)?(?:-m\s+)?'
+                r'(?P<target>[\w./-]+\.py)\b',
+                line,
+            )
+            if not m:
+                i += 1
+                continue
+            target_path = m.group("target")
+            # Normalize relative path. Lane scripts use 'src/tac/experiments/X.py'
+            # and 'experiments/X.py' — both should resolve.
+            invocation_lineno = i + 1
+            # Collect continuation lines (lines ending with `\` are continued)
+            full_cmd = line
+            while line.rstrip().endswith("\\") and i + 1 < len(lines):
+                i += 1
+                line = lines[i]
+                full_cmd += "\n" + line
+
+            # Extract flag tokens from full_cmd; target_sig keys are stored
+            # WITH `--` prefix, so prepend `--` when comparing.
+            flag_tokens = re.findall(r'\B--([a-z][a-z0-9-]+)', full_cmd)
+            passed = {f"--{t}" for t in flag_tokens}
+
+            # Match target to a known argparse signature. Try several path forms.
+            target_sig = None
+            for try_path in (target_path, f"src/tac/experiments/{Path(target_path).name}",
+                             f"experiments/{Path(target_path).name}"):
+                if try_path in sigs:
+                    target_sig = sigs[try_path]
+                    break
+            if target_sig is None:
+                i += 1
+                continue  # target not in our argparse-known set
+
+            target_flags = set(target_sig.keys())
+
+            # Rule A: unknown flag (passes a flag the target doesn't have)
+            unknown = passed - target_flags
+            for f in sorted(unknown):
+                violations.append(
+                    f"{sh.relative_to(root)}:{invocation_lineno}: "
+                    f"passes {f} to {target_path} but target has no such "
+                    f"argparse arg"
+                )
+
+            # Rule B: missing required (target requires a flag the launcher omits)
+            for flag, spec in target_sig.items():
+                if spec.get("required") and flag not in passed:
+                    violations.append(
+                        f"{sh.relative_to(root)}:{invocation_lineno}: "
+                        f"invokes {target_path} but does not pass "
+                        f"required arg {flag}"
+                    )
+
+            i += 1
+
+    if verbose:
+        if violations:
+            print(f"  [remote-lane-arity] {len(violations)} violation(s):")
+            for v in violations[:20]:
+                print(f"    • {v}")
+            if len(violations) > 20:
+                print(f"    ... and {len(violations) - 20} more")
+        else:
+            print(f"  [remote-lane-arity] OK")
+
+    if violations and strict:
+        raise MetaBugViolation(
+            "REMOTE LANE SCRIPT ARGPARSE ARITY VIOLATIONS:\n"
+            + "\n".join(f"  • {v}" for v in violations[:20])
         )
     return violations
 

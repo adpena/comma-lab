@@ -157,6 +157,7 @@ export PYTHONPATH="src:upstream:$WORKSPACE"
 "$PYBIN" -u src/tac/experiments/train_renderer.py \
     --profile j_jbl_dilated_h64 \
     --device cuda \
+    --tag j_jbl \
     --output-dir "$LOG_DIR/train" 2>&1 | tee "$LOG_DIR/train.log" | tail -50
     PIPE_RC=("${PIPESTATUS[@]}")
     if [ "${PIPE_RC[0]}" -ne 0 ]; then
