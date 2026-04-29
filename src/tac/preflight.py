@@ -8171,10 +8171,14 @@ def check_launcher_tarball_includes_lane_anchors(
         return violations
 
     # Collect anchor paths referenced in remote_lane_*.sh
+    # 2026-04-29: regex fix — split optional quote and ${VAR:-` into two
+    # independent groups so `="${VAR:-experiments/...}"` matches.
     anchor_paths: set[str] = set()
     pattern = re.compile(
         r'(?:ANCHOR_\w+|LANE_\w*ARCHIVE\w*|LANE_\w*POSES\w*|LANE_\w*MASKS\w*|LANE_\w*RENDERER\w*)='
-        r'(?:"|\$\{[^:}]+:-)?(experiments/results/[\w./_-]+)'
+        r'"?'
+        r'(?:\$\{[^:}]+:-)?'
+        r'(experiments/results/[\w./_-]+)'
     )
     for sh in scripts_dir.glob("remote_lane_*.sh"):
         try:
@@ -8269,9 +8273,13 @@ def check_lane_anchor_files_exist_locally(
             print(f"  [anchor-exists-locally] OK: scripts/ missing — skipping")
         return []
 
+    # 2026-04-29: regex fix — `="${VAR:-experiments/...}"` form needs two
+    # independent optional groups, not one alternation.
     pattern = re.compile(
         r'(?:ANCHOR_\w+|LANE_\w*ARCHIVE\w*|LANE_\w*POSES\w*|LANE_\w*MASKS\w*|LANE_\w*RENDERER\w*)='
-        r'(?:"|\$\{[^:}]+:-)?(experiments/results/[\w./_-]+|submissions/[\w./_-]+|upstream/[\w./_-]+)'
+        r'"?'
+        r'(?:\$\{[^:}]+:-)?'
+        r'(experiments/results/[\w./_-]+|submissions/[\w./_-]+|upstream/[\w./_-]+)'
     )
 
     violations: list[str] = []

@@ -65,9 +65,8 @@ DRIVER_VER=$(nvidia-smi --query-gpu=driver_version --format=csv,noheader 2>&1 | 
 # archive filename construction split via $EXT to avoid the literal token
 # `z` `i` `p` appearing as a contiguous run in non-comment shell code (test
 # constraint mirrored from test_remote_lane_gp_script.py for consistency).
-EXT="z""ip"
-ANCHOR_ARCHIVE="${ANCHOR_ARCHIVE:-experiments/results/lane_a_landed/archive_lane_a.${EXT}}"
-ARCHIVE="$LOG_DIR/archive_lane_fl.${EXT}"
+ANCHOR_ARCHIVE="${ANCHOR_ARCHIVE:-experiments/results/lane_a_landed/archive_lane_a.zip}"
+ARCHIVE="$LOG_DIR/archive_lane_fl.zip"
 
 export PROVENANCE LOG_DIR GIT_HASH GPU_NAME DRIVER_VER ANCHOR_ARCHIVE ARCHIVE
 "$PYBIN" - <<'PY'

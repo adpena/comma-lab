@@ -268,9 +268,15 @@ def _discover_anchor_paths_from_lane_scripts() -> list[str]:
     if not scripts_dir.is_dir():
         return []
     anchor_paths: set[str] = set()
+    # 2026-04-29: regex MUST handle `="${VAR:-experiments/...}"` form (the
+    # canonical lane idiom). Old `(?:"|\$\{[^:}]+:-)?` failed on this because
+    # `?` only allows ONE OR THE OTHER, not BOTH `"` then `${VAR:-`. Split
+    # into two independent optional groups.
     pattern = _re.compile(
         r'(?:ANCHOR_\w+|LANE_\w*ARCHIVE\w*|LANE_\w*POSES\w*|LANE_\w*MASKS\w*|LANE_\w*RENDERER\w*)='
-        r'(?:"|\$\{[^:}]+:-)?(experiments/results/[\w./_-]+|upstream/[\w./_-]+)'
+        r'"?'                            # optional opening quote
+        r'(?:\$\{[^:}]+:-)?'             # optional ${VAR:- prefix
+        r'(experiments/results/[\w./_-]+|upstream/[\w./_-]+|submissions/[\w./_-]+)'
     )
     for sh in scripts_dir.glob("remote_lane_*.sh"):
         try:
