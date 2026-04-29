@@ -119,7 +119,26 @@ def _decode_grayscale_mkv_to_classes(
 
     # Selfcomp Gaussian-LUT projection -> (N, target_h, target_w, NUM_CLASSES) prob
     # then argmax -> (N, H, W) int64.
-    lut = create_gaussian_softmax_lut()  # (256, 5)
+    # Lane FR-MM (sigma sweep): operator can override LUT sigma via
+    # LANE_MM_SIGMA env var (set by lane scripts, sourced via config.env).
+    # Defaults to LUT_DEFAULT_SIGMA (15.0) for the canonical Lane MM path.
+    sigma_env = os.environ.get("LANE_MM_SIGMA")
+    if sigma_env is not None and sigma_env.strip():
+        try:
+            sigma = float(sigma_env)
+            if sigma <= 0:
+                raise ValueError("sigma must be > 0")
+            lut = create_gaussian_softmax_lut(sigma=sigma)
+            print(
+                f"[inflate-grayscale] LANE_MM_SIGMA override active: sigma={sigma}",
+                file=sys.stderr,
+            )
+        except (ValueError, TypeError) as exc:
+            raise RuntimeError(
+                f"LANE_MM_SIGMA env var present but invalid ({sigma_env!r}): {exc}"
+            ) from exc
+    else:
+        lut = create_gaussian_softmax_lut()  # (256, 5) sigma=LUT_DEFAULT_SIGMA
     gray_long = pixels.to(torch.long)
     probability_map = F.embedding(gray_long, lut)  # (N, H, W, 5)
     masks = probability_map.argmax(dim=-1).to(torch.int64)

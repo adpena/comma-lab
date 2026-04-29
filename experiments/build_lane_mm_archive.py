@@ -130,6 +130,7 @@ def build_lane_mm_archive(
     output: Path,
     crf: int = 50,
     keep_legacy_masks: bool = False,
+    sigma: float = 15.0,
 ) -> dict:
     """Re-encode the anchor archive's masks.mkv into grayscale.mkv (Lane MM).
 
@@ -189,6 +190,7 @@ def build_lane_mm_archive(
         "grayscale_bytes": gray_bytes,
         "output_bytes": output_bytes,
         "rate_delta_bytes": gray_bytes - anchor_masks_bytes,
+        "lane_mm_sigma": float(sigma),
     }
 
 
@@ -210,6 +212,12 @@ def main(argv: list[str] | None = None) -> int:
         "--keep-legacy-masks", action="store_true",
         help="Also include masks.mkv in the output for A/B testing.",
     )
+    p.add_argument(
+        "--sigma", type=float, default=15.0,
+        help="Inflate-time Gaussian-LUT sigma (default: 15.0). Recorded in "
+             "the build manifest for provenance; the inflate path reads "
+             "LANE_MM_SIGMA env var (set by lane scripts) at decode time.",
+    )
     args = p.parse_args(argv)
 
     info = build_lane_mm_archive(
@@ -217,12 +225,14 @@ def main(argv: list[str] | None = None) -> int:
         output=args.output,
         crf=args.crf,
         keep_legacy_masks=args.keep_legacy_masks,
+        sigma=args.sigma,
     )
     print(
         f"[lane-mm] anchor masks.mkv={info['anchor_masks_bytes']:,}B"
         f"  grayscale.mkv={info['grayscale_bytes']:,}B"
         f"  delta={info['rate_delta_bytes']:+,}B"
         f"  output_archive={info['output_bytes']:,}B"
+        f"  sigma={info['lane_mm_sigma']}"
     )
     return 0
 
