@@ -164,7 +164,9 @@ def inflate(archive_dir: Path, inflated_dir: Path, video_names_file: Path,
             rgb_native = F.interpolate(
                 rgb, size=(target_h, target_w), mode="bilinear", align_corners=False
             )
-            rgb_u8 = (rgb_native.clamp(0.0, 1.0) * 255.0 + 0.5).to(torch.uint8)
+            # SegMap.forward returns sigmoid(...) * 255.0 already in [0, 255] range.
+            # Round 1 review CRITICAL: previous clamp(0, 1) * 255 zeroed all output.
+            rgb_u8 = rgb_native.clamp(0.0, 255.0).round().to(torch.uint8)
             rgb_hwc = rgb_u8.permute(0, 2, 3, 1).contiguous().cpu().numpy()
             f.write(rgb_hwc.tobytes())
             n_written += rgb_hwc.shape[0]

@@ -167,7 +167,10 @@ class SegMap(nn.Module):
 # ── Trainer (the lane-side contribution) ─────────────────────────────────
 
 
-def _eval_roundtrip_chain(rgb_pair_btchw: torch.Tensor) -> torch.Tensor:
+def _eval_roundtrip_chain(
+    rgb_pair_btchw: torch.Tensor,
+    noise_std: float = 0.5,
+) -> torch.Tensor:
     """Apply the canonical 384 -> 874 -> uint8 -> 384 contest eval chain.
 
     Mirrors the established roundtrip pattern from src/tac/losses.py / training.
@@ -175,12 +178,20 @@ def _eval_roundtrip_chain(rgb_pair_btchw: torch.Tensor) -> torch.Tensor:
     simulates the lossy decode of the ``.raw`` rgb24 the contest evaluator
     sees. Without this step the proxy-auth gap is 2-11x on PoseNet
     (feedback_proxy_auth_math_useless).
+
+    Round 1 review CRITICAL fix: noise_std (Hotz STE proxy) was previously
+    hardcoded to 0 — the dead-code pattern that burned weeks of LANE-B runs.
+    Now threaded as a kwarg defaulting to 0.5 (matches qat_finetune /
+    optimize_poses canonical noise_std). Caller can override via
+    SegMapTrainer.train_epoch(roundtrip_noise_std=...).
     """
     b, t, c, h, w = rgb_pair_btchw.shape
     # 384x512 (scorer in) -> 874x1164 (camera) -> uint8 -> 384x512.
     flat = rgb_pair_btchw.reshape(b * t, c, h, w)
     up = F.interpolate(flat, size=CAMERA_SIZE[::-1], mode="bicubic", align_corners=False)
     up_u8 = up.clamp(0, 255).round()  # STE-friendly proxy for uint8 cast
+    if noise_std > 0:
+        up_u8 = up_u8 + noise_std * torch.randn_like(up_u8)
     back = F.interpolate(up_u8, size=(h, w), mode="bicubic", align_corners=False)
     return back.clamp(0, 255).reshape(b, t, c, h, w)
 
@@ -244,6 +255,7 @@ class SegMapTrainer:
         mask_pairs: torch.Tensor,
         gt_pairs: torch.Tensor,
         ema: Optional[EMA] = None,
+        roundtrip_noise_std: float = 0.5,
     ) -> dict[str, float]:
         """Run a single pass over (mask_pairs, gt_pairs) and return loss stats.
 

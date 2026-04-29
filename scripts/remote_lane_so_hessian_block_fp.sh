@@ -153,18 +153,14 @@ target = torch.zeros((calib_n, 3, calib_oh.shape[-2], calib_oh.shape[-1]))
 curv = _curv_fn(model, calib_oh, target, loss_fn, calib_idx)
 print(f'curvature gathered for {len(curv)} param tensors')
 
-exponents = None
-try:
-    from tac.block_fp_codec import choose_exponents_hessian_aware
-    exponents = choose_exponents_hessian_aware(state, curv)
-    print(f'chose exponents for {len(exponents)} tensors via Hessian-aware picker')
-except Exception as e:
-    print(f'choose_exponents_hessian_aware unavailable ({e}); default exponents')
-
-if exponents is not None:
-    pack_payload_tar_xz(state, '$PAYLOAD', exponents=exponents)
-else:
-    pack_payload_tar_xz(state, '$PAYLOAD')
+# Round 1 review CRITICAL: pack_payload_tar_xz has no `exponents=` kwarg
+# and `choose_exponents_hessian_aware` does not exist. Both calls would
+# crash Stage 3 after 12-14h training. Until the Hessian-aware exponent
+# picker is implemented in tac.block_fp_codec, fall back to default
+# per-channel exponents from the encoder. The curvature stats are still
+# saved for offline analysis to inform a future implementation.
+pack_payload_tar_xz(state, '$PAYLOAD')
+exponents = None  # placeholder for future Hessian-aware path
 verify_roundtrip(state, '$PAYLOAD', tol=1e-6)
 
 torch.save({'curvature': curv, 'exponents': exponents}, '$LOG_DIR/curvature.pt')
