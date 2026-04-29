@@ -94,18 +94,58 @@ def _parse_default(node: ast.AST) -> str:
         return "<unparseable>"
 
 
+def _file_has_profile_mechanism(text: str) -> tuple[bool, bool]:
+    """Detect whether the script (a) has a --profile argparse flag AND
+    (b) uses a user-provided-flag mechanism that already handles the
+    silent-default-override problem correctly.
+
+    Returns:
+        (has_profile_flag, has_user_provided_flags_mechanism)
+
+    Scripts without a --profile flag CAN'T have silent profile overrides
+    by definition — the audit's CRITICAL classification is a false
+    positive. Scripts WITH a --profile flag AND a _user_provided_flags()
+    style mechanism (or equivalent argparse-namespace inspection) handle
+    the override correctly, so the audit's CRITICAL there is also FALSE.
+    Only scripts with --profile but NO override-detection mechanism are
+    real risks.
+    """
+    # A script must (a) declare --profile AND (b) actually import PROFILES
+    # to be at risk of silent overrides. Some scripts have --profile but
+    # explicitly note it's "informational" and don't load PROFILES (e.g.
+    # experiments/train_imp_cycle.py:114-115). Those are NOT at risk.
+    has_profile_flag = "--profile" in text and (
+        "from tac.profiles import" in text or "tac.profiles import PROFILES" in text
+    )
+    # Heuristic: any of these helper names indicate the script knows about
+    # the silent-override problem and handles it explicitly.
+    has_mechanism = any(
+        marker in text
+        for marker in (
+            "_user_provided_flags",
+            "_apply_profile",
+            "_resolve(args.",
+            "_resolve(getattr(args",
+            "user_set",
+            "argv_flags",
+            "_resolve_pose_dim_for_resume",
+        )
+    )
+    return has_profile_flag, has_mechanism
+
+
 def _scan_file(path: Path) -> list[dict]:
     """Return one record per `add_argument(...)` call in the file.
 
-    Each record carries: file, line, arg_name, default_repr, is_action_flag.
-    Action flags (store_true / store_false / count / append) are tagged so
-    the report can sort them separately — they're rarely a profile-override
-    risk because their default is implied (False / None).
+    Each record carries: file, line, arg_name, default_repr, action_kind,
+    has_profile_flag, has_override_mechanism.
     """
     try:
-        tree = ast.parse(path.read_text(), filename=str(path))
+        text = path.read_text()
+        tree = ast.parse(text, filename=str(path))
     except (SyntaxError, UnicodeDecodeError):
         return []
+    has_profile_flag, has_mechanism = _file_has_profile_mechanism(text)
     records: list[dict] = []
     for node in ast.walk(tree):
         if not isinstance(node, ast.Call):
@@ -136,6 +176,8 @@ def _scan_file(path: Path) -> list[dict]:
             "key": _argname_to_key(arg_name),
             "default_repr": default_repr,
             "action": action_kind,
+            "has_profile_flag": has_profile_flag,
+            "has_override_mechanism": has_mechanism,
         })
     return records
 
@@ -157,17 +199,37 @@ def _is_risky_default(rec: dict) -> bool:
     """True iff the default is non-None and not a placeholder.
 
     A None default means "user didn't pass; resolver wins" — the safe
-    pattern. Action flags whose default is False/None are also safe (the
-    profile resolver can detect "user didn't pass --use-x" via None).
+    pattern. False positives now filtered:
+
+    1. ``store_true`` with default=False is STRUCTURALLY CORRECT (that's
+       what store_true does — flag absent → False). A profile setting it
+       True would force the user to type ``--use-x`` to disable, which is
+       broken UX, so profiles in this codebase don't override store_true
+       defaults. Same for store_false + default=True.
+    2. Files without a ``--profile`` argparse flag CANNOT have silent
+       profile overrides — the audit's CRITICAL is a false positive there.
+    3. Files with a ``--profile`` flag AND a ``_user_provided_flags`` /
+       ``_apply_profile`` / ``_resolve(args.X, ...)`` style mechanism
+       handle the override correctly — false positive.
     """
     repr_str = rec["default_repr"]
     if repr_str in ("None", "<not-set>"):
         return False
-    if rec.get("action") in ("store_true", "store_false") and repr_str in ("False", "True"):
-        # store_true with default=False is the dangerous case ONLY if a profile
-        # would set it True — caller is expected to mark it. Action flags with
-        # default=None are safe; default=False is the "silent override" risk.
-        return repr_str == "False" and rec.get("action") == "store_true"
+    # store_true / store_false with their structurally-correct defaults
+    # are NOT risky — that's the only valid pairing for these actions.
+    action = rec.get("action")
+    if action == "store_true" and repr_str == "False":
+        return False
+    if action == "store_false" and repr_str == "True":
+        return False
+    # File-level filter: scripts without --profile cannot have silent
+    # profile overrides (no profile mechanism exists at all).
+    if not rec.get("has_profile_flag", False):
+        return False
+    # File-level filter: scripts with an override-detection mechanism
+    # already handle the silent-default problem correctly.
+    if rec.get("has_override_mechanism", False):
+        return False
     return True
 
 
