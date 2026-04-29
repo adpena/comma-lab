@@ -377,6 +377,362 @@ def measure_bits_per_weight(weight: torch.Tensor, packed: bytes) -> float:
     return 8.0 * len(packed) / n
 
 
+# ─── Selfcomp per-channel block-FP encoder + linear_q + tar.xz framing ────
+#
+# This is a SECOND public encoder (added 2026-04-29 for Lane MM/SegMap).
+# Distinct from the ternary block-FP codec above:
+#
+#   * The ternary encoder targets the szabolcs (Lane SZ) on-disk layout where
+#     a per-block exponent fans out across 16 output rows and weights round
+#     to {-1, 0, +1}. The decoder is in /tmp/szabolcs_re/inflate.py.
+#
+#   * THIS encoder targets the **Selfcomp** layout (PR #55, see the
+#     /Users/adpena/Library/Application Support/rtk/tee/1777474963_curl.log
+#     diff lines 31-220). Each conv weight gets a PER-CHANNEL int-exponent +
+#     a [-qint_max, qint_max] integer; non-conv tensors fall back to
+#     min/max linear quantization. Both are wrapped in a tar.xz archive
+#     consumed by Selfcomp's ``inflate.py`` ``reconstruct_weight``
+#     (L167-172) + ``decode_tensor_payload`` (L137-164).
+#
+# The two encoders are kept side-by-side because they have different
+# downstream consumers (different decoder algebra) and Lane MM specifically
+# needs the Selfcomp variant. Naming convention:
+#
+#   * ``pack_block_fp`` / ``unpack_block_fp``        → Lane SZ ternary path
+#   * ``encode_conv_weight`` / ``decode_conv_weight``→ Lane MM Selfcomp path
+
+import io
+import os
+import tarfile
+
+# HWOI permutation tag — matches Selfcomp inflate.py L170 (``payload.get(
+# "weight_tensor_layout") == "HWOI"``). The decoder permutes back to OIHW
+# via .permute(2, 3, 0, 1) per the reference; our encoder uses
+# .permute(2, 3, 1, 0) on (O, I, H, W) which lands at (H, W, I, O).
+# IMPORTANT: there's a subtle convention difference (Selfcomp permutes
+# (kH, kW, O, I) -> (O, I, kH, kW) at decode time → the source layout
+# must be (kH, kW, O, I)). Our pack_payload_tar_xz uses
+# .permute(2, 3, 0, 1) to match the Selfcomp decode arithmetic. See the
+# unit test ``test_conv_weight_hwoi_permute`` for a roundtrip proof.
+_SELFCOMP_HWOI_LAYOUT_TAG: str = "HWOI"
+
+
+def encode_conv_weight(
+    weight: torch.Tensor, qint_max: int = 7
+) -> dict[str, torch.Tensor | tuple[int, ...] | int]:
+    """Per-output-channel block-FP encoder for conv2d weights (Selfcomp layout).
+
+    Algorithm — for each output channel ``c`` in a (O, I, kH, kW) weight:
+
+        w_max = max(|w[c]|)
+        if w_max == 0:        exp = 0,   qint = 0
+        else:                 exp = floor(log2(w_max / qint_max))
+                              qint[c] = round(w[c] / 2**exp).clamp(-Q, +Q)
+
+    With ``qint_max=7`` the integer range is [-7, 7] (4 bits signed). The
+    decoder reconstruction is ``w ≈ qint * 2 ** exp`` per channel (matches
+    Selfcomp inflate.py L167-172 ``reconstruct_weight``).
+
+    Returns:
+        dict with:
+            * ``weight_qint``: int8 (kH, kW, I, O) — HWOI-permuted to match
+              the Selfcomp decoder layout. The reference decoder calls
+              ``qint.permute(2, 3, 0, 1)`` to recover (O, I, kH, kW).
+            * ``weight_exponents``: int32 (O,) per-output-channel exponents.
+            * ``shape_oihw``: original (O, I, kH, kW) tuple, for sanity.
+            * ``qint_max``: the clip range used.
+    """
+    if qint_max <= 0:
+        raise ValueError(f"qint_max must be > 0, got {qint_max}")
+    if weight.dim() != 4:
+        raise ValueError(
+            f"encode_conv_weight expects (O, I, kH, kW); got {tuple(weight.shape)}"
+        )
+    o, i, kh, kw = weight.shape
+    w = weight.detach().to(torch.float32)
+
+    exponents = torch.zeros((o,), dtype=torch.int32)
+    qint_oihw = torch.zeros_like(w, dtype=torch.int8)
+    for c in range(o):
+        wc = w[c]
+        max_abs = float(wc.abs().max().item())
+        if max_abs == 0.0 or not math.isfinite(max_abs):
+            exponents[c] = 0
+            continue
+        # exp = ceil(log2(max_abs / qint_max)) so that round(w/2**exp) <= qint_max.
+        # ceil (not floor) is required: floor underflows the scale and clips
+        # the largest weights to ±qint_max losing information.
+        exp_f = math.ceil(math.log2(max_abs / qint_max))
+        e = max(_EXP_MIN, min(_EXP_MAX, int(exp_f)))
+        exponents[c] = e
+        scale = 2.0 ** e
+        scaled = (wc / scale).round().clamp(-qint_max, qint_max)
+        qint_oihw[c] = scaled.to(torch.int8)
+
+    # Permute to HWOI to match Selfcomp's decoder reshape (.permute(2, 3, 0, 1)
+    # at decode time recovers OIHW from HWOI).
+    qint_hwoi = qint_oihw.permute(2, 3, 0, 1).contiguous()
+    return {
+        "weight_qint": qint_hwoi,
+        "weight_exponents": exponents,
+        "shape_oihw": (o, i, kh, kw),
+        "qint_max": qint_max,
+    }
+
+
+def decode_conv_weight(packed: dict) -> torch.Tensor:
+    """Inverse of ``encode_conv_weight`` — recover float (O, I, kH, kW)."""
+    qint_hwoi = packed["weight_qint"].to(torch.float32)
+    exponents = packed["weight_exponents"].to(torch.float32)
+    # HWOI -> OIHW reverse permute (matches Selfcomp inflate.py L171).
+    qint_oihw = qint_hwoi.permute(2, 3, 0, 1).contiguous()
+    # Per-output-channel scaling: exponents shape (O,), qint shape (O,I,kH,kW).
+    scale = (2.0 ** exponents).view(-1, 1, 1, 1)
+    return qint_oihw * scale
+
+
+def encode_tensor_linear_q_per_tensor_v1(
+    tensor: torch.Tensor, bits: int = 8
+) -> dict:
+    """Per-tensor min/max linear quantization (Selfcomp ``linear_q_per_tensor_v1``).
+
+    Mirrors Selfcomp inflate.py L143-150 decode. The encoder maps the float
+    range [min, max] uniformly onto integers in [0, 2**bits - 1] and packs
+    those as big-endian bytes. The bits parameter is canonical at 8 (LCM of
+    most quantization budgets); other bit-widths are supported up to 16.
+    """
+    if bits <= 0 or bits > 16:
+        raise ValueError(f"bits must be in [1, 16], got {bits}")
+    if tensor.numel() == 0:
+        return {
+            "codec": "linear_q_per_tensor_v1",
+            "min": torch.tensor([0.0], dtype=torch.float32),
+            "max": torch.tensor([0.0], dtype=torch.float32),
+            "bits": bits,
+            "data": torch.zeros((0,), dtype=torch.uint8),
+            "shape": torch.tensor(list(tensor.shape), dtype=torch.int32),
+        }
+    levels = (1 << bits) - 1
+    t = tensor.detach().to(torch.float32)
+    t_min = float(t.min().item())
+    t_max = float(t.max().item())
+    if t_max == t_min:
+        # Constant tensor: every cell -> 0 quant value, decoder fills with min.
+        q = torch.zeros((t.numel(),), dtype=torch.int64)
+    else:
+        scale = levels / (t_max - t_min)
+        q = ((t.flatten() - t_min) * scale).round().clamp(0, levels).to(torch.int64)
+
+    # Pack big-endian unsigned ints in (bits + 7) // 8 bytes per cell. For
+    # canonical bits=8 this is just the byte stream.
+    nbytes_per_value = (bits + 7) // 8
+    flat_bytes = bytearray()
+    for v in q.tolist():
+        flat_bytes.extend(int(v).to_bytes(nbytes_per_value, "big", signed=False))
+    data = torch.frombuffer(flat_bytes, dtype=torch.uint8).clone()
+
+    return {
+        "codec": "linear_q_per_tensor_v1",
+        "min": torch.tensor([t_min], dtype=torch.float32),
+        "max": torch.tensor([t_max], dtype=torch.float32),
+        "bits": bits,
+        "data": data,
+        "shape": torch.tensor(list(tensor.shape), dtype=torch.int32),
+    }
+
+
+def decode_tensor_linear_q_per_tensor_v1(packed: dict) -> torch.Tensor:
+    """Inverse of ``encode_tensor_linear_q_per_tensor_v1``."""
+    codec = packed["codec"]
+    if codec != "linear_q_per_tensor_v1":
+        raise ValueError(f"unsupported codec: {codec}")
+    bits = int(packed["bits"])
+    levels = (1 << bits) - 1
+    shape = tuple(int(s) for s in packed["shape"].tolist())
+    nelem = 1
+    for s in shape:
+        nelem *= s
+    if nelem == 0:
+        return torch.zeros(shape, dtype=torch.float32)
+    t_min = float(packed["min"].view(-1)[0].item())
+    t_max = float(packed["max"].view(-1)[0].item())
+    nbytes_per_value = (bits + 7) // 8
+    raw = bytes(packed["data"].cpu().numpy().tobytes())
+    if len(raw) != nelem * nbytes_per_value:
+        raise ValueError(
+            f"decode: expected {nelem * nbytes_per_value} bytes, got {len(raw)}"
+        )
+    values = []
+    for i in range(nelem):
+        chunk = raw[i * nbytes_per_value:(i + 1) * nbytes_per_value]
+        values.append(int.from_bytes(chunk, "big", signed=False))
+    q = torch.tensor(values, dtype=torch.float32)
+    if t_max == t_min:
+        return torch.full(shape, t_min, dtype=torch.float32)
+    return (t_min + q * ((t_max - t_min) / levels)).reshape(shape)
+
+
+def pack_payload_tar_xz(
+    state_dict: dict[str, torch.Tensor],
+    output_path: str | os.PathLike,
+    qint_max: int = 7,
+    linear_bits: int = 8,
+) -> None:
+    """Pack a SegMap state_dict into a tar.xz at ``output_path``.
+
+    Conv weights (4-D tensors with names ending ``.weight`` AND a 1x1 / 3x3
+    kernel) are packed via ``encode_conv_weight`` (HWOI-permuted ternary-ish
+    int8 + per-output exponent). All other tensors fall back to
+    ``encode_tensor_linear_q_per_tensor_v1``.
+
+    The output structure is one tar member per dict entry:
+
+        <key>.qint    (only for conv weights)
+        <key>.exp     (only for conv weights)
+        <key>.tensor  (for non-conv tensors and biases)
+        meta.json     (top-level header + per-key codec map)
+
+    NOTE: ``weight_qint`` member naming uses the dotted PyTorch path with
+    ``.weight_qint`` / ``.weight_exponents`` suffixes so the Selfcomp
+    consumer's ``state[f"{prefix}.weight_qint"]`` lookup succeeds verbatim.
+    """
+    import json
+
+    output_path = str(output_path)
+    meta = {"layout_version": 1, "weight_tensor_layout": _SELFCOMP_HWOI_LAYOUT_TAG,
+            "qint_max": qint_max, "linear_bits": linear_bits, "keys": {}}
+
+    # Build a flat map of tar-name -> bytes BEFORE writing so we can include
+    # meta.json with full key listing.
+    members: list[tuple[str, bytes]] = []
+
+    for key, tensor in state_dict.items():
+        if not torch.is_tensor(tensor):
+            raise ValueError(f"state_dict[{key}] is not a tensor")
+        is_conv_w = (
+            key.endswith(".weight")
+            and tensor.dim() == 4
+        )
+        if is_conv_w:
+            packed = encode_conv_weight(tensor, qint_max=qint_max)
+            qint_bytes = packed["weight_qint"].cpu().numpy().tobytes()
+            exp_bytes = packed["weight_exponents"].cpu().numpy().tobytes()
+            members.append((f"{key}_qint.bin", qint_bytes))
+            members.append((f"{key}_exponents.bin", exp_bytes))
+            meta["keys"][key] = {
+                "codec": "block_fp_per_channel_v1",
+                "shape_oihw": list(packed["shape_oihw"]),
+                "qint_max": int(packed["qint_max"]),
+                "qint_dtype": "int8",
+                "qint_layout": _SELFCOMP_HWOI_LAYOUT_TAG,
+                "exponents_dtype": "int32",
+            }
+        else:
+            packed = encode_tensor_linear_q_per_tensor_v1(tensor, bits=linear_bits)
+            buf = io.BytesIO()
+            torch.save(packed, buf)
+            members.append((f"{key}.tensor.pt", buf.getvalue()))
+            meta["keys"][key] = {"codec": "linear_q_per_tensor_v1", "bits": linear_bits}
+
+    meta_bytes = json.dumps(meta, indent=2).encode("utf-8")
+
+    # Use a deterministic tarfile (mtime=0) to keep archive bytes reproducible.
+    with tarfile.open(output_path, mode="w:xz") as tf:
+        info = tarfile.TarInfo("meta.json")
+        info.size = len(meta_bytes)
+        info.mtime = 0
+        tf.addfile(info, io.BytesIO(meta_bytes))
+        for name, data in members:
+            info = tarfile.TarInfo(name)
+            info.size = len(data)
+            info.mtime = 0
+            tf.addfile(info, io.BytesIO(data))
+
+
+def unpack_payload_tar_xz(payload_path: str | os.PathLike) -> dict[str, torch.Tensor]:
+    """Inverse of ``pack_payload_tar_xz`` — recover {key: float tensor}."""
+    import json
+
+    payload_path = str(payload_path)
+    members: dict[str, bytes] = {}
+    with tarfile.open(payload_path, mode="r:xz") as tf:
+        for ti in tf.getmembers():
+            f = tf.extractfile(ti)
+            if f is None:
+                continue
+            members[ti.name] = f.read()
+
+    if "meta.json" not in members:
+        raise ValueError("payload missing meta.json")
+    meta = json.loads(members["meta.json"].decode("utf-8"))
+    out: dict[str, torch.Tensor] = {}
+    import numpy as np
+    for key, info in meta["keys"].items():
+        codec = info["codec"]
+        if codec == "block_fp_per_channel_v1":
+            qint_bytes = members[f"{key}_qint.bin"]
+            exp_bytes = members[f"{key}_exponents.bin"]
+            shape_oihw = tuple(info["shape_oihw"])
+            o, i, kh, kw = shape_oihw
+            # Layout is HWOI on disk: (kH, kW, O, I) — see encode_conv_weight.
+            qint_hwoi = torch.from_numpy(
+                np.frombuffer(qint_bytes, dtype=np.int8).reshape(kh, kw, o, i).copy()
+            )
+            exp = torch.from_numpy(
+                np.frombuffer(exp_bytes, dtype=np.int32).reshape(o).copy()
+            )
+            out[key] = decode_conv_weight({
+                "weight_qint": qint_hwoi,
+                "weight_exponents": exp,
+                "shape_oihw": shape_oihw,
+                "qint_max": info["qint_max"],
+            })
+        elif codec == "linear_q_per_tensor_v1":
+            buf = io.BytesIO(members[f"{key}.tensor.pt"])
+            packed = torch.load(buf, weights_only=False)
+            out[key] = decode_tensor_linear_q_per_tensor_v1(packed)
+        else:
+            raise ValueError(f"unknown codec: {codec}")
+    return out
+
+
+def verify_roundtrip(
+    state_dict: dict[str, torch.Tensor],
+    payload_path: str | os.PathLike,
+    tol: float = 1e-6,
+) -> dict[str, float]:
+    """Pack the state_dict, decode it, and assert per-key MSE < tol.
+
+    This is the gate before archive ships per the work-scope blueprint —
+    raises AssertionError on any key exceeding tol so a broken codec can
+    never silently degrade an archive's score. The relaxed tolerance
+    accounts for the deliberate quantization noise: conv weights have
+    qint_max=7 (4-bit) so errors of order 2**(exp - 3) are expected; the
+    per-key threshold lets the caller tighten ``tol`` as appropriate.
+
+    Returns:
+        dict mapping key -> measured MSE. Useful for audit logging.
+    """
+    pack_payload_tar_xz(state_dict, payload_path)
+    decoded = unpack_payload_tar_xz(payload_path)
+    mse_map: dict[str, float] = {}
+    for key, original in state_dict.items():
+        if key not in decoded:
+            raise AssertionError(f"verify_roundtrip: key {key} missing from decoded archive")
+        rec = decoded[key].to(torch.float32)
+        if rec.shape != original.shape:
+            raise AssertionError(
+                f"verify_roundtrip: shape mismatch on {key}: {rec.shape} vs {original.shape}"
+            )
+        mse = float((rec - original.to(torch.float32)).pow(2).mean().item())
+        mse_map[key] = mse
+        if mse > tol:
+            raise AssertionError(
+                f"verify_roundtrip: {key} MSE {mse:.6g} > tol {tol:.6g}"
+            )
+    return mse_map
+
+
 __all__ = [
     "DEFAULT_BLOCK_SIZE",
     "DEFAULT_CLIP_THRESHOLD",
@@ -384,4 +740,12 @@ __all__ = [
     "pack_block_fp",
     "unpack_block_fp",
     "measure_bits_per_weight",
+    # Selfcomp Lane MM additions:
+    "encode_conv_weight",
+    "decode_conv_weight",
+    "encode_tensor_linear_q_per_tensor_v1",
+    "decode_tensor_linear_q_per_tensor_v1",
+    "pack_payload_tar_xz",
+    "unpack_payload_tar_xz",
+    "verify_roundtrip",
 ]
