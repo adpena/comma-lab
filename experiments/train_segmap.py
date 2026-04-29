@@ -377,8 +377,13 @@ def main() -> int:
         history.append(epoch_metrics)
         if epoch % max(1, args.epochs // 50) == 0 or epoch == args.epochs - 1:
             loss = epoch_metrics.get("loss", float("nan"))
-            seg = epoch_metrics.get("seg", epoch_metrics.get("seg_loss", float("nan")))
-            pose = epoch_metrics.get("pose", epoch_metrics.get("pose_loss", float("nan")))
+            # SegMapTrainer.train_epoch returns canonical keys "seg_dist" +
+            # "pose_dist". Earlier code read "seg"/"seg_loss"/"pose"/"pose_loss"
+            # which are NEVER produced — display showed NaN for 5h of GPU
+            # training (Lane DARTS-S V1 incident 2026-04-29 PM, $1.41 wasted
+            # on inscrutable output). Check 85 STRICT prevents regression.
+            seg = epoch_metrics.get("seg_dist", float("nan"))
+            pose = epoch_metrics.get("pose_dist", float("nan"))
             print(
                 f"[train_segmap] epoch={epoch} loss={loss:.6f} seg={seg:.6f} pose={pose:.6f}",
                 flush=True,

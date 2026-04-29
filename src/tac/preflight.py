@@ -330,6 +330,13 @@ def preflight_all(
         # Memory: feedback_three_active_bug_classes_needing_strict_checks_20260429.md.
         check_callsite_contracts_satisfied(strict=True, verbose=verbose)
         check_no_proxy_metric_drives_decision(strict=True, verbose=verbose)
+        # Check 85 (DARTS-S NaN-display incident 2026-04-29 PM): epoch_metrics
+        # key references must match TRAINER_RETURN_KEYS. Today's incident:
+        # 5h of GPU compute appeared to show seg=nan/pose=nan because the
+        # printer in train_segmap.py read keys "seg"/"seg_loss" but trainer
+        # returns "seg_dist"/"pose_dist". Lands STRICT @ 0 violations after
+        # train_segmap.py cleanup + DistillTrainer.step keys registered.
+        check_training_script_metric_keys_consistent(strict=True, verbose=verbose)
 
         # 2026-04-27 meta-bug audit (commit a57731a0): 12 NEW checks for
         # additional bug classes from session + memory. 4 land at 0 live
@@ -5992,6 +5999,134 @@ def check_no_proxy_metric_drives_decision(
             + "\n\nFix: either remove the decision verb (kill/promote/etc) "
             "from the record, or attach a [contest-CUDA] artifact reference "
             "in the same paragraph (within ±10 lines)."
+        )
+    return violations
+
+
+# ── Check 85 (DARTS-S NaN-display incident): training-script metric-key
+#    consistency. Catches the "epoch_metrics.get('seg', float('nan'))" bug
+#    where the printer references keys the trainer never returns, silently
+#    masking actual training output as NaN for hours of GPU time.
+#
+# Incident (2026-04-29 PM): scripts/remote_lane_darts_s_segmap_arch_sweep.sh
+# ran for 5 hours on Vast.ai 4090 ($1.41 spent), produced log lines
+# "epoch=0 loss=277 seg=nan pose=nan" through "epoch=399 loss=277 seg=nan
+# pose=nan". The loss WAS finite but the printer at experiments/train_segmap.py
+# read epoch_metrics["seg"] / ["seg_loss"] (with float("nan") fallback) when
+# SegMapTrainer.train_epoch returns "seg_dist" / "pose_dist". Both keys
+# missing → NaN printed → operator believed training was diverged → 5h
+# of GPU compute appeared "wasted" until SSH-debug found the actual
+# pose_dist/seg_dist values frozen (separate bug — model not learning).
+#
+# This check scans every `experiments/train_*.py` file for `epoch_metrics`
+# / `metrics.get(...)` / `history[...]["..."]` style key references and
+# warns if those keys are NOT among the documented return-dict keys for
+# any known trainer. Initial registry: SegMapTrainer.train_epoch returns
+# {"loss", "pose_dist", "seg_dist", "kl_aux", "num_steps"}. Add other
+# trainers as they're discovered.
+
+# Registry of trainer-name → set-of-returned-keys. Populate from each
+# trainer's known docstring + return statement.
+TRAINER_RETURN_KEYS: dict[str, set[str]] = {
+    "SegMapTrainer.train_epoch": {
+        "loss", "pose_dist", "seg_dist", "kl_aux", "num_steps", "epoch",
+    },
+    # train_distill.py uses a separate trainer that returns these keys.
+    "DistillTrainer.step": {
+        "seg_loss", "pose_loss", "pcgrad_conflict", "fridrich_loss",
+        "texture_loss", "linf_penalty", "markov_loss", "uncertainty_loss",
+        "loss", "epoch",
+    },
+    # Add other trainers as preflight encounters new dispatchers.
+}
+
+# Files exempt: legacy training scripts that pre-date the registry can be
+# whitelisted here. Empty by default — every new caller MUST conform.
+_METRIC_KEY_CONSISTENCY_EXEMPT_FILES: set[str] = set()
+
+
+def _scan_train_script_for_metric_key_misses(
+    path: Path, repo_root: Path,
+) -> list[str]:
+    """Scan a Python file for `<dict>.get("key", ...)` calls on names that
+    look like training-metrics dicts (epoch_metrics, metrics, history) and
+    report any keys not in any registered TRAINER_RETURN_KEYS set."""
+    rel = path.relative_to(repo_root) if path.is_absolute() else path
+    rel_s = str(rel)
+    if rel_s in _METRIC_KEY_CONSISTENCY_EXEMPT_FILES:
+        return []
+    try:
+        text = path.read_text()
+        tree = ast.parse(text, filename=str(path))
+    except (SyntaxError, UnicodeDecodeError, FileNotFoundError):
+        return []
+
+    # Union of all known trainer return keys (any trainer's key counts).
+    all_known = set()
+    for ks in TRAINER_RETURN_KEYS.values():
+        all_known.update(ks)
+
+    metric_dict_names = {"epoch_metrics", "metrics"}
+
+    violations: list[str] = []
+    for node in ast.walk(tree):
+        if not isinstance(node, ast.Call):
+            continue
+        if not isinstance(node.func, ast.Attribute):
+            continue
+        if node.func.attr != "get":
+            continue
+        # Receiver name must look like a metric dict.
+        recv = node.func.value
+        if not isinstance(recv, ast.Name) or recv.id not in metric_dict_names:
+            continue
+        if not node.args:
+            continue
+        first_arg = node.args[0]
+        # Constant string key only (skip dynamic).
+        if isinstance(first_arg, ast.Constant) and isinstance(first_arg.value, str):
+            key = first_arg.value
+            if key not in all_known:
+                line = getattr(node, "lineno", "?")
+                violations.append(
+                    f"{rel_s}:{line}: {recv.id}.get({key!r}, ...) — "
+                    f"key not in TRAINER_RETURN_KEYS union "
+                    f"{sorted(all_known)}"
+                )
+    return violations
+
+
+def check_training_script_metric_keys_consistent(
+    *, strict: bool = False, verbose: bool = False, repo_root: Path | None = None,
+) -> list[str]:
+    """Verify training scripts under experiments/train_*.py reference only
+    metric-dict keys that some registered trainer actually returns."""
+    root = repo_root or REPO_ROOT
+    violations: list[str] = []
+    train_files = list((root / "experiments").glob("train_*.py"))
+    for f in sorted(train_files):
+        violations.extend(_scan_train_script_for_metric_key_misses(f, root))
+    if verbose:
+        if violations:
+            print(
+                f"  [training-metric-keys] {len(violations)} violation(s)"
+            )
+            for v in violations[:10]:
+                print(f"    • {v}")
+            if len(violations) > 10:
+                print(f"    … and {len(violations) - 10} more")
+        else:
+            print(
+                f"  [training-metric-keys] OK: 0 violations across "
+                f"{len(train_files)} train_*.py file(s)"
+            )
+    if violations and strict:
+        raise MetaBugViolation(
+            "TRAINING-METRIC-KEY MISMATCH DETECTED:\n"
+            + "\n".join(f"  • {v}" for v in violations[:20])
+            + "\n\nFix: either correct the key name in the print/log to match "
+            "a real trainer return key, OR add the new key to "
+            "TRAINER_RETURN_KEYS for the matching trainer."
         )
     return violations
 
