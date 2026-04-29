@@ -50,6 +50,8 @@ prov = {
     'anchor_dir': 'experiments/results/lane_a_landed/iter_0',
     'design_doc': 'docs/paper/water_filling_design_20260429.md',
     'eval_roundtrip': True,
+    'controlled_baseline': 'lane_a_landed (uniform qint_max=7) — single mechanism: water-filling Lagrangian per-channel qint_max in block-FP export, post-compress only, no retraining',
+    'controlled_baseline_lane': 'lane_a_landed',
 }
 with open('$PROVENANCE', 'w') as f:
     json.dump(prov, f, indent=2)
