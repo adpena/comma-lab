@@ -186,8 +186,9 @@ if [ "${LANE_OMEGA_V2_HESSIAN_INIT:-0}" = "1" ]; then
         --all-pairs \
         --device cuda \
         --pair-batch 4 2>&1 | tee "$LOG_DIR/profile.log" | tail -20
-        if [ "${PIPESTATUS[0]}" -ne 0 ]; then
-            echo "FATAL: previous pipeline exited rc=${PIPESTATUS[0]}" >&2; exit "${PIPESTATUS[0]}"
+        PIPE_RC=("${PIPESTATUS[@]}")
+        if [ "${PIPE_RC[0]}" -ne 0 ]; then
+            echo "FATAL: previous pipeline exited rc=${PIPE_RC[0]}" >&2; exit "${PIPE_RC[0]}"
         fi
     [ -f "$HESSIAN_PT" ] || { echo "FATAL: profiler didn't produce $HESSIAN_PT"; exit 2; }
     log "  hessian profile: $HESSIAN_PT ($(stat -c '%s' "$HESSIAN_PT") bytes)"
@@ -225,8 +226,9 @@ fi
     --seed 1234 \
     --log-every 10 \
     $HESSIAN_FLAG 2>&1 | tee "$LOG_DIR/qat.log" | tail -40
-    if [ "${PIPESTATUS[0]}" -ne 0 ]; then
-        echo "FATAL: previous pipeline exited rc=${PIPESTATUS[0]}" >&2; exit "${PIPESTATUS[0]}"
+    PIPE_RC=("${PIPESTATUS[@]}")
+    if [ "${PIPE_RC[0]}" -ne 0 ]; then
+        echo "FATAL: previous pipeline exited rc=${PIPE_RC[0]}" >&2; exit "${PIPE_RC[0]}"
     fi
 
 # Stage 3 — OMG1 export of best checkpoint.
@@ -272,8 +274,9 @@ rm -rf "$LOG_DIR/eval_work"
     --device "${AUTH_EVAL_DEVICE:-cuda}" \
     --keep-work-dir \
     --work-dir "$LOG_DIR/eval_work" 2>&1 | tee "$LOG_DIR/auth_eval.log" | tail -20
-    if [ "${PIPESTATUS[0]}" -ne 0 ]; then
-        echo "FATAL: previous pipeline exited rc=${PIPESTATUS[0]}" >&2; exit "${PIPESTATUS[0]}"
+    PIPE_RC=("${PIPESTATUS[@]}")
+    if [ "${PIPE_RC[0]}" -ne 0 ]; then
+        echo "FATAL: previous pipeline exited rc=${PIPE_RC[0]}" >&2; exit "${PIPE_RC[0]}"
     fi
 
 # Sanity-check the auth eval emitted RESULT_JSON (catches silent crashes,

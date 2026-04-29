@@ -173,8 +173,9 @@ RAFT_POSES="$LOG_DIR/raft_poses.pt"
     --output "$RAFT_POSES" \
     --device cuda \
     --n-frames 1200 2>&1 | tee "$LOG_DIR/derive_poses_from_raft.log" | tail -15
-    if [ "${PIPESTATUS[0]}" -ne 0 ]; then
-        echo "FATAL: previous pipeline exited rc=${PIPESTATUS[0]}" >&2; exit "${PIPESTATUS[0]}"
+    PIPE_RC=("${PIPESTATUS[@]}")
+    if [ "${PIPE_RC[0]}" -ne 0 ]; then
+        echo "FATAL: previous pipeline exited rc=${PIPE_RC[0]}" >&2; exit "${PIPE_RC[0]}"
     fi
 [ -f "$RAFT_POSES" ] || { echo "FATAL: derive_poses_from_raft produced no $RAFT_POSES" >&2; exit 3; }
 
@@ -224,8 +225,9 @@ rm -f upstream/videos/._*.mkv
     --device "${AUTH_EVAL_DEVICE:-cuda}" \
     --keep-work-dir \
     --work-dir "$EVAL_WORK" 2>&1 | tee "$LOG_DIR/auth_eval.log" | tail -30
-    if [ "${PIPESTATUS[0]}" -ne 0 ]; then
-        echo "FATAL: previous pipeline exited rc=${PIPESTATUS[0]}" >&2; exit "${PIPESTATUS[0]}"
+    PIPE_RC=("${PIPESTATUS[@]}")
+    if [ "${PIPE_RC[0]}" -ne 0 ]; then
+        echo "FATAL: previous pipeline exited rc=${PIPE_RC[0]}" >&2; exit "${PIPE_RC[0]}"
     fi
 
 if [ -f "$EVAL_WORK/contest_auth_eval.json" ]; then

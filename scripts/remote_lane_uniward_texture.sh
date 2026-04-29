@@ -134,8 +134,9 @@ log "=== Stage 2: compute UNIWARD texture probability on GT video ==="
 TEX_OUT="$LOG_DIR/texture_probability.pt"
 export TEX_OUT
 "$PYBIN" -u - <<'PY' 2>&1 | tee "$LOG_DIR/texture.log"
-if [ "${PIPESTATUS[0]}" -ne 0 ]; then
-    echo "FATAL: previous pipeline exited rc=${PIPESTATUS[0]}" >&2; exit "${PIPESTATUS[0]}"
+PIPE_RC=("${PIPESTATUS[@]}")
+if [ "${PIPE_RC[0]}" -ne 0 ]; then
+    echo "FATAL: previous pipeline exited rc=${PIPE_RC[0]}" >&2; exit "${PIPE_RC[0]}"
 fi
 import os, sys, torch
 import av
@@ -272,8 +273,9 @@ rm -rf "$LOG_DIR/eval_work"
     --keep-work-dir \
     --work-dir "$LOG_DIR/eval_work" \
     2>&1 | tee "$LOG_DIR/auth_eval.log"
-    if [ "${PIPESTATUS[0]}" -ne 0 ]; then
-        echo "FATAL: previous pipeline exited rc=${PIPESTATUS[0]}" >&2; exit "${PIPESTATUS[0]}"
+    PIPE_RC=("${PIPESTATUS[@]}")
+    if [ "${PIPE_RC[0]}" -ne 0 ]; then
+        echo "FATAL: previous pipeline exited rc=${PIPE_RC[0]}" >&2; exit "${PIPE_RC[0]}"
     fi
 grep -q '^RESULT_JSON' "$LOG_DIR/auth_eval.log" || {
     log "FATAL: auth eval completed without RESULT_JSON"

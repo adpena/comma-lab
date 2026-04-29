@@ -178,8 +178,9 @@ SENSITIVITY="$LOG_DIR/layer_sensitivity.pt"
     --device cuda \
     --n-pairs 30 \
     --predicted-band 1.20 1.50 2>&1 | tee "$LOG_DIR/profile.log" | tail -40
-    if [ "${PIPESTATUS[0]}" -ne 0 ]; then
-        echo "FATAL: previous pipeline exited rc=${PIPESTATUS[0]}" >&2; exit "${PIPESTATUS[0]}"
+    PIPE_RC=("${PIPESTATUS[@]}")
+    if [ "${PIPE_RC[0]}" -ne 0 ]; then
+        echo "FATAL: previous pipeline exited rc=${PIPE_RC[0]}" >&2; exit "${PIPE_RC[0]}"
     fi
 
 [ -f "$SENSITIVITY" ] || { echo "FATAL: sensitivity profile not produced"; exit 2; }
@@ -209,8 +210,9 @@ log "  mixed-precision target_rate: 0.70 (bulk 70% FP4, critical 30% FP16)"
     --mixed-precision-target-rate 0.70 \
     --mixed-precision-bulk-bits 4 \
     --mixed-precision-critical-bits 16 2>&1 | tee "$LOG_DIR/qat.log" | tail -30
-    if [ "${PIPESTATUS[0]}" -ne 0 ]; then
-        echo "FATAL: previous pipeline exited rc=${PIPESTATUS[0]}" >&2; exit "${PIPESTATUS[0]}"
+    PIPE_RC=("${PIPESTATUS[@]}")
+    if [ "${PIPE_RC[0]}" -ne 0 ]; then
+        echo "FATAL: previous pipeline exited rc=${PIPE_RC[0]}" >&2; exit "${PIPE_RC[0]}"
     fi
 
 # qat_finetune saves renderer_fp4.bin in output-dir per its convention.
@@ -251,8 +253,9 @@ rm -rf "$LOG_DIR/eval_work"
     --device "${AUTH_EVAL_DEVICE:-cuda}" \
     --keep-work-dir \
     --work-dir "$LOG_DIR/eval_work" 2>&1 | tee "$LOG_DIR/auth_eval.log" | tail -15
-    if [ "${PIPESTATUS[0]}" -ne 0 ]; then
-        echo "FATAL: previous pipeline exited rc=${PIPESTATUS[0]}" >&2; exit "${PIPESTATUS[0]}"
+    PIPE_RC=("${PIPESTATUS[@]}")
+    if [ "${PIPE_RC[0]}" -ne 0 ]; then
+        echo "FATAL: previous pipeline exited rc=${PIPE_RC[0]}" >&2; exit "${PIPE_RC[0]}"
     fi
 
 log "=== LANE_F_V4_DONE [contest-CUDA] ==="

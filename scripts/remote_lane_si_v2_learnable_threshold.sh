@@ -129,8 +129,9 @@ SAL_OUT="$LOG_DIR/saliency_maps.pt"
     --upstream-dir upstream \
     --n-pairs 64 \
     --reduce mean 2>&1 | tee "$LOG_DIR/saliency.log" | tail -20
-    if [ "${PIPESTATUS[0]}" -ne 0 ]; then
-        echo "FATAL: previous pipeline exited rc=${PIPESTATUS[0]}" >&2; exit "${PIPESTATUS[0]}"
+    PIPE_RC=("${PIPESTATUS[@]}")
+    if [ "${PIPE_RC[0]}" -ne 0 ]; then
+        echo "FATAL: previous pipeline exited rc=${PIPE_RC[0]}" >&2; exit "${PIPE_RC[0]}"
     fi
 
 [ -f "$SAL_OUT" ] || { log "FATAL: profile_scorer_saliency.py did not produce $SAL_OUT"; exit 2; }
@@ -239,8 +240,9 @@ rm -rf "$LOG_DIR/eval_work"
     --device "${AUTH_EVAL_DEVICE:-cuda}" \
     --keep-work-dir \
     --work-dir "$LOG_DIR/eval_work" 2>&1 | tee "$LOG_DIR/auth_eval.log" | tail -15
-    if [ "${PIPESTATUS[0]}" -ne 0 ]; then
-        echo "FATAL: previous pipeline exited rc=${PIPESTATUS[0]}" >&2; exit "${PIPESTATUS[0]}"
+    PIPE_RC=("${PIPESTATUS[@]}")
+    if [ "${PIPE_RC[0]}" -ne 0 ]; then
+        echo "FATAL: previous pipeline exited rc=${PIPE_RC[0]}" >&2; exit "${PIPE_RC[0]}"
     fi
 
 log "=== LANE_SI_V2_DONE — see $LOG_DIR/auth_eval.log for RESULT_JSON ==="

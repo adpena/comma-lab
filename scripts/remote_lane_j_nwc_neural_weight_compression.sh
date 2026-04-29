@@ -132,8 +132,9 @@ python3 -u experiments/train_neural_weight_codec.py \
     --max-corpus-files 200 \
     --max-blocks-per-ckpt 50000 \
     --seed 1234 2>&1 | tee "$LOG_DIR/train_codec.log" | tail -40
-    if [ "${PIPESTATUS[0]}" -ne 0 ]; then
-        echo "FATAL: previous pipeline exited rc=${PIPESTATUS[0]}" >&2; exit "${PIPESTATUS[0]}"
+    PIPE_RC=("${PIPESTATUS[@]}")
+    if [ "${PIPE_RC[0]}" -ne 0 ]; then
+        echo "FATAL: previous pipeline exited rc=${PIPE_RC[0]}" >&2; exit "${PIPE_RC[0]}"
     fi
 [ -f "$CODEC_PT" ] || { log "FATAL: codec training did not produce $CODEC_PT"; exit 2; }
 
@@ -220,8 +221,9 @@ python3 -u experiments/contest_auth_eval.py \
     --device "${AUTH_EVAL_DEVICE:-cuda}" \
     --keep-work-dir \
     --work-dir "$EVAL_WORK" 2>&1 | tee "$LOG_DIR/auth_eval.log" | tail -30
-    if [ "${PIPESTATUS[0]}" -ne 0 ]; then
-        echo "FATAL: previous pipeline exited rc=${PIPESTATUS[0]}" >&2; exit "${PIPESTATUS[0]}"
+    PIPE_RC=("${PIPESTATUS[@]}")
+    if [ "${PIPE_RC[0]}" -ne 0 ]; then
+        echo "FATAL: previous pipeline exited rc=${PIPE_RC[0]}" >&2; exit "${PIPE_RC[0]}"
     fi
 
 if [ -f "$EVAL_WORK/contest_auth_eval.json" ]; then

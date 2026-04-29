@@ -151,8 +151,9 @@ python3 -u src/tac/experiments/train_renderer.py \
     --output-dir "$TRAIN_DIR" \
     --no-auth-eval-on-best \
     2>&1 | tee "$LOG_DIR/train.log"
-    if [ "${PIPESTATUS[0]}" -ne 0 ]; then
-        echo "FATAL: previous pipeline exited rc=${PIPESTATUS[0]}" >&2; exit "${PIPESTATUS[0]}"
+    PIPE_RC=("${PIPESTATUS[@]}")
+    if [ "${PIPE_RC[0]}" -ne 0 ]; then
+        echo "FATAL: previous pipeline exited rc=${PIPE_RC[0]}" >&2; exit "${PIPE_RC[0]}"
     fi
 
 BEST_FP32="$TRAIN_DIR/renderer_${TAG}_best_fp32.pt"
@@ -218,8 +219,9 @@ python3 -u experiments/optimize_poses.py \
     --posetto-noise-std 0.5 \
     --output-dir "$LOG_DIR" \
     2>&1 | tee "$LOG_DIR/optimize_poses.log"
-    if [ "${PIPESTATUS[0]}" -ne 0 ]; then
-        echo "FATAL: previous pipeline exited rc=${PIPESTATUS[0]}" >&2; exit "${PIPESTATUS[0]}"
+    PIPE_RC=("${PIPESTATUS[@]}")
+    if [ "${PIPE_RC[0]}" -ne 0 ]; then
+        echo "FATAL: previous pipeline exited rc=${PIPE_RC[0]}" >&2; exit "${PIPE_RC[0]}"
     fi
 [ -f "$LOG_DIR/optimized_poses.pt" ] || { echo "FATAL: pose TTO did not produce optimized_poses.pt" >&2; exit 4; }
 
@@ -257,8 +259,9 @@ python3 -u experiments/contest_auth_eval.py \
     --keep-work-dir \
     --work-dir "$LOG_DIR/eval_work" \
     2>&1 | tee "$LOG_DIR/auth_eval.log"
-    if [ "${PIPESTATUS[0]}" -ne 0 ]; then
-        echo "FATAL: previous pipeline exited rc=${PIPESTATUS[0]}" >&2; exit "${PIPESTATUS[0]}"
+    PIPE_RC=("${PIPESTATUS[@]}")
+    if [ "${PIPE_RC[0]}" -ne 0 ]; then
+        echo "FATAL: previous pipeline exited rc=${PIPE_RC[0]}" >&2; exit "${PIPE_RC[0]}"
     fi
 grep -q '^RESULT_JSON' "$LOG_DIR/auth_eval.log" || {
     log "FATAL: auth eval completed without RESULT_JSON"

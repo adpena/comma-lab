@@ -166,8 +166,9 @@ log "=== Stage 1: rate-distortion frontier sweep (5 budgets) ==="
     --device cuda \
     --seed 1234 \
     --log-every 10 2>&1 | tee "$LOG_DIR/sweep.log" | tail -40
-    if [ "${PIPESTATUS[0]}" -ne 0 ]; then
-        echo "FATAL: previous pipeline exited rc=${PIPESTATUS[0]}" >&2; exit "${PIPESTATUS[0]}"
+    PIPE_RC=("${PIPESTATUS[@]}")
+    if [ "${PIPE_RC[0]}" -ne 0 ]; then
+        echo "FATAL: previous pipeline exited rc=${PIPE_RC[0]}" >&2; exit "${PIPE_RC[0]}"
     fi
 
 [ -f "$LOG_DIR/sweep/frontier.csv" ] || { echo "FATAL: sweep didn't produce frontier.csv"; exit 2; }

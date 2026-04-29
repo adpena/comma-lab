@@ -118,8 +118,9 @@ PAIR_WEIGHTS="$LOG_DIR/pair_weights.pt"
     --top-k 30 \
     --hard-weight 5.0 \
     --device cuda 2>&1 | tee "$LOG_DIR/profile.log" | tail -40
-    if [ "${PIPESTATUS[0]}" -ne 0 ]; then
-        echo "FATAL: previous pipeline exited rc=${PIPESTATUS[0]}" >&2; exit "${PIPESTATUS[0]}"
+    PIPE_RC=("${PIPESTATUS[@]}")
+    if [ "${PIPE_RC[0]}" -ne 0 ]; then
+        echo "FATAL: previous pipeline exited rc=${PIPE_RC[0]}" >&2; exit "${PIPE_RC[0]}"
     fi
 [ -f "$PAIR_WEIGHTS" ] || { echo "FATAL: profile_pair_sensitivity didn't produce $PAIR_WEIGHTS"; exit 2; }
 log "  pair_weights: $PAIR_WEIGHTS ($(stat -c '%s' "$PAIR_WEIGHTS") bytes)"
@@ -153,8 +154,9 @@ mkdir -p "$TRAIN_OUT"
     --epochs 500 \
     --lr 5e-5 \
     --no-auth-eval-on-best 2>&1 | tee "$LOG_DIR/train.log" | tail -40
-    if [ "${PIPESTATUS[0]}" -ne 0 ]; then
-        echo "FATAL: previous pipeline exited rc=${PIPESTATUS[0]}" >&2; exit "${PIPESTATUS[0]}"
+    PIPE_RC=("${PIPESTATUS[@]}")
+    if [ "${PIPE_RC[0]}" -ne 0 ]; then
+        echo "FATAL: previous pipeline exited rc=${PIPE_RC[0]}" >&2; exit "${PIPE_RC[0]}"
     fi
 
 # Train script saves renderer_<tag>_best_fp32.pt (full state_dict — preserves
@@ -211,8 +213,9 @@ print(f'load_state_dict: missing={len(missing)} unexpected={len(unexpected)}')
 n = export_self_compressed_renderer(model, out, use_lzma=True)
 print(f'SCv1 exported {n} bytes to {out}')
 " 2>&1 | tee "$LOG_DIR/export.log" | tail -15
-if [ "${PIPESTATUS[0]}" -ne 0 ]; then
-    echo "FATAL: previous pipeline exited rc=${PIPESTATUS[0]}" >&2; exit "${PIPESTATUS[0]}"
+PIPE_RC=("${PIPESTATUS[@]}")
+if [ "${PIPE_RC[0]}" -ne 0 ]; then
+    echo "FATAL: previous pipeline exited rc=${PIPE_RC[0]}" >&2; exit "${PIPE_RC[0]}"
 fi
 [ -f "$SCV1_BIN" ] || { echo "FATAL: SCv1 export produced no $SCV1_BIN"; exit 2; }
 log "  SCv1 binary: $SCV1_BIN ($(stat -c '%s' "$SCV1_BIN") bytes)"
@@ -250,8 +253,9 @@ rm -rf "$LOG_DIR/eval_work"
     --device "${AUTH_EVAL_DEVICE:-cuda}" \
     --keep-work-dir \
     --work-dir "$LOG_DIR/eval_work" 2>&1 | tee "$LOG_DIR/auth_eval.log" | tail -20
-    if [ "${PIPESTATUS[0]}" -ne 0 ]; then
-        echo "FATAL: previous pipeline exited rc=${PIPESTATUS[0]}" >&2; exit "${PIPESTATUS[0]}"
+    PIPE_RC=("${PIPESTATUS[@]}")
+    if [ "${PIPE_RC[0]}" -ne 0 ]; then
+        echo "FATAL: previous pipeline exited rc=${PIPE_RC[0]}" >&2; exit "${PIPE_RC[0]}"
     fi
 
 # Run record (canonical; consumed by remote_pull + monitor scripts).
