@@ -44,7 +44,7 @@ SCORE_HISTORIES: dict[str, list[dict]] = {}
 
 
 def get_processes() -> list[dict]:
-    result = subprocess.run(["ps", "aux"], capture_output=True, text=True)
+    result = subprocess.run(["ps", "aux"], capture_output=True, text=True)  # subprocess-no-check-OK: read-only diagnostic; empty stdout on failure yields empty proc list (safe)
     procs = []
     seen_pids = set()
     for line in result.stdout.splitlines():

@@ -108,7 +108,7 @@ def _run_step(
     _log(f"[{step_name}] $ {cmd_str}")
     try:
         with stderr_log.open("w") as err_f, stdout_log.open("w") as out_f:
-            result = subprocess.run(
+            result = subprocess.run(  # subprocess-no-check-OK: returncode validated below at line 118; caller converts non-zero to RuntimeError per docstring
                 cmd, stdout=out_f, stderr=err_f,
                 timeout=timeout, env=env,
             )

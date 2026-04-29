@@ -21,7 +21,7 @@ WEIGHTS_DIR = REPO / "experiments" / "postfilter_weights"
 
 def get_training_processes() -> list[dict]:
     """Get all active Python training processes."""
-    result = subprocess.run(
+    result = subprocess.run(  # subprocess-no-check-OK: read-only diagnostic; empty stdout on failure yields empty proc list (safe)
         ["ps", "aux"], capture_output=True, text=True
     )
     procs = []

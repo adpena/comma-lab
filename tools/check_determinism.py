@@ -15,15 +15,22 @@ caller automatically.
 """
 from __future__ import annotations
 
+import argparse
 import os
 import sys
 
 
 def main() -> int:
-    if len(sys.argv) < 2:
-        print("usage: check_determinism.py <profile_name>", file=sys.stderr)
-        return 1
-    profile_name = sys.argv[1]
+    parser = argparse.ArgumentParser(
+        description="Determinism preflight: verifies CUDA, CUBLAS_WORKSPACE_CONFIG, and "
+                    "profile seed/deterministic/eval_roundtrip flags BEFORE pipeline launch.",
+    )
+    parser.add_argument(
+        "profile_name",
+        help="profile name from src/tac/profiles.py PROFILES",
+    )
+    args = parser.parse_args()
+    profile_name = args.profile_name
 
     # 1. CUDA availability (CLAUDE.md MPS-NOISE non-negotiable: auth eval
     # must be on CUDA, never MPS).

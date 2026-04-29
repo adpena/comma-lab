@@ -53,7 +53,7 @@ for dep in DEPS:
     )
 
 # Install git-lfs (needed for upstream model weights)
-subprocess.run(
+subprocess.run(  # subprocess-no-check-OK: best-effort lfs install with `||` fallback inside bash; failure logged via subsequent lfs probe
     ["bash", "-c", "command -v git-lfs || (apt-get update -qq && apt-get install -y -qq git-lfs)"],
     stdout=subprocess.DEVNULL,
     stderr=subprocess.DEVNULL,

@@ -9,7 +9,7 @@ from .snapshot import write_snapshot
 
 
 def run(cmd: list[str], cwd: Path | None = None, check: bool = True) -> subprocess.CompletedProcess[str]:
-    return subprocess.run(cmd, cwd=cwd, check=check, text=True)
+    return subprocess.run(cmd, cwd=cwd, check=check, text=True)  # subprocess-no-check-OK: wrapper threads check= keyword (default True per signature)
 
 
 def bootstrap_upstream(dest: Path | None = None, repo_url: str = "https://github.com/commaai/comma_video_compression_challenge.git", do_lfs: bool = True) -> dict:

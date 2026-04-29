@@ -151,7 +151,7 @@ def _find_vastai_bin() -> str:
 def _run_vastai(args: list[str], timeout: int = 60) -> subprocess.CompletedProcess:
     """Run a vastai CLI command."""
     cli = _find_vastai_bin()
-    return subprocess.run([cli] + args, capture_output=True, text=True, timeout=timeout)
+    return subprocess.run([cli] + args, capture_output=True, text=True, timeout=timeout)  # subprocess-no-check-OK: wrapper returns CompletedProcess; every caller inspects .returncode (12 sites verified)
 
 
 def _load_instances() -> dict:
@@ -244,7 +244,7 @@ def _ssh_opts(key_path: str) -> list[str]:
 
 def _ssh_exec(host: str, port: int, key: str, command: str, timeout: int = 60) -> subprocess.CompletedProcess:
     """Execute a command on a remote instance via SSH."""
-    return subprocess.run(
+    return subprocess.run(  # subprocess-no-check-OK: wrapper returns CompletedProcess; every caller inspects .returncode
         ["ssh"] + _ssh_opts(key) + ["-p", str(port), f"root@{host}", command],
         capture_output=True, text=True, timeout=timeout,
     )
@@ -836,7 +836,7 @@ def cmd_download(args: argparse.Namespace) -> int:
         return 1
 
     # Also grab the experiment log
-    subprocess.run(
+    subprocess.run(  # subprocess-no-check-OK: best-effort secondary log fetch — primary download already succeeded
         ["rsync", "-avz", "-e", ssh_cmd,
          f"root@{inst['ssh_host']}:/workspace/experiment_stdout.log",
          str(local_dir) + "/"],

@@ -1,4 +1,5 @@
 #!/usr/bin/env python3
+# no-argparse-OK: zero-argument audit tool — only writes reports/silent_defaults.md
 """Audit argparse defaults that may silently override profile values.
 
 THE BUG PATTERN (fix #1 of the DX hardening pass): an argparse `default=`

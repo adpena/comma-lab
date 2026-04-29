@@ -131,7 +131,7 @@ def _run_with_periodic_commits(cmd: list[str], env: dict, commit_interval: int =
     commit_thread.start()
 
     try:
-        result = subprocess.run(cmd, env=env)
+        result = subprocess.run(cmd, env=env)  # subprocess-no-check-OK: result returned to caller for orchestration; modal app handles non-zero by checkpointing volume
     finally:
         training_done.set()
         results_vol.commit()
@@ -1226,7 +1226,7 @@ def _run_contest_compliant_auth_eval(
             f"  stderr: {unzip_result.stderr[-500:]}"
         )
     # List archive contents for verification
-    ls_result = subprocess.run(["find", archive_dir, "-type", "f"],
+    ls_result = subprocess.run(["find", archive_dir, "-type", "f"],  # subprocess-no-check-OK: best-effort diagnostic listing; failure surfaces as empty stdout in print below
                                capture_output=True, text=True)
     print(f"  Archive contents:\n{ls_result.stdout}")
 

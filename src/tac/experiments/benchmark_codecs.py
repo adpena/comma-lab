@@ -97,7 +97,7 @@ def bench_av1(masks: np.ndarray, crf: int, label_suffix: str = "",
         size = os.path.getsize(out_path)
         cmd_dec = ["ffmpeg", "-i", out_path, "-f", "rawvideo", "-pix_fmt", "gray", "-v", "error", "pipe:1"]
         t0 = time.time()
-        dec = subprocess.run(cmd_dec, capture_output=True, timeout=300)
+        dec = subprocess.run(cmd_dec, capture_output=True, timeout=300, check=True)
         dec_time = time.time() - t0
         decoded_pixels = np.frombuffer(dec.stdout, dtype=np.uint8).reshape(n, h, w)
         decoded_classes = gray_to_classes(decoded_pixels)
@@ -130,7 +130,7 @@ def bench_h265(masks: np.ndarray, crf: int) -> None:
         size = os.path.getsize(out_path)
         cmd_dec = ["ffmpeg", "-i", out_path, "-f", "rawvideo", "-pix_fmt", "gray", "-v", "error", "pipe:1"]
         t0 = time.time()
-        dec = subprocess.run(cmd_dec, capture_output=True, timeout=300)
+        dec = subprocess.run(cmd_dec, capture_output=True, timeout=300, check=True)
         dec_time = time.time() - t0
         decoded_pixels = np.frombuffer(dec.stdout, dtype=np.uint8).reshape(n, h, w)
         decoded_classes = gray_to_classes(decoded_pixels)
@@ -163,7 +163,7 @@ def bench_vvc(masks: np.ndarray, qp: int) -> None:
         size = os.path.getsize(vvc_path)
         cmd_dec = ["vvdecapp", "-b", vvc_path, "-o", dec_yuv_path]
         t0 = time.time()
-        dec = subprocess.run(cmd_dec, capture_output=True, timeout=300)
+        dec = subprocess.run(cmd_dec, capture_output=True, timeout=300)  # subprocess-no-check-OK: returncode checked at next line in benchmark loop
         dec_time = time.time() - t0
         if dec.returncode != 0:
             print(f"  VVC QP={qp} decode FAILED: {dec.stderr.decode('utf-8', errors='replace')[-500:]}")
@@ -210,7 +210,7 @@ def bench_vvc_yuv420(masks: np.ndarray, qp: int) -> None:
         size = os.path.getsize(vvc_path)
         cmd_dec = ["vvdecapp", "-b", vvc_path, "-o", dec_yuv_path]
         t0 = time.time()
-        dec = subprocess.run(cmd_dec, capture_output=True, timeout=300)
+        dec = subprocess.run(cmd_dec, capture_output=True, timeout=300)  # subprocess-no-check-OK: returncode checked at next line in benchmark loop
         dec_time = time.time() - t0
         if dec.returncode != 0:
             print(f"  VVC YUV420 QP={qp} decode FAILED: {dec.stderr.decode('utf-8', errors='replace')[-500:]}")

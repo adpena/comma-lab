@@ -82,7 +82,7 @@ def _modal_bin() -> str:
 def _run_modal(args: list[str], timeout: int = 600) -> subprocess.CompletedProcess:
     """Run a modal CLI command."""
     modal = _modal_bin()
-    return subprocess.run([modal] + args, capture_output=True, text=True, timeout=timeout)
+    return subprocess.run([modal] + args, capture_output=True, text=True, timeout=timeout)  # subprocess-no-check-OK: wrapper returns CompletedProcess; every caller inspects .returncode
 
 
 def _sha256(filepath: Path) -> str:

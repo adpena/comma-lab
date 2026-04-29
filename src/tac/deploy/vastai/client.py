@@ -619,8 +619,8 @@ class VastClient:
         cli = self._find_vastai_bin()
         cmd = [cli] + args
         if capture:
-            return subprocess.run(cmd, capture_output=True, text=True, timeout=timeout)
-        return subprocess.run(cmd, text=True, timeout=timeout)
+            return subprocess.run(cmd, capture_output=True, text=True, timeout=timeout)  # subprocess-no-check-OK: wrapper returns CompletedProcess; every call site inspects .returncode
+        return subprocess.run(cmd, text=True, timeout=timeout)  # subprocess-no-check-OK: wrapper returns CompletedProcess; every call site inspects .returncode
 
     @staticmethod
     def _build_search_query(spec: InstanceSpec) -> str:
@@ -709,7 +709,7 @@ class VastClient:
         timeout: int = 30,
     ) -> subprocess.CompletedProcess:
         """Execute a command on a remote instance via SSH."""
-        return subprocess.run(
+        return subprocess.run(  # subprocess-no-check-OK: wrapper returns CompletedProcess; every caller inspects .returncode
             ["ssh"] + self._ssh_opts(key_path) + [
                 "-p", str(ssh_port),
                 f"root@{ssh_host}",

@@ -1279,19 +1279,11 @@ def train_phase3(
 def _clean_state_dict(state_dict: dict) -> dict:
     """Strip nn.utils.parametrize keys to plain weight keys for clean resume.
 
-    When QAT is active, state_dict has keys like
-    'layer.parametrizations.weight.original' instead of 'layer.weight'.
-    This makes load_state_dict crash on a bare model. Strip them.
+    Delegates to the canonical helper (factored 2026-04-28, hardened Round 11
+    for root-level keys + multi-original weight_norm + nested chains).
     """
-    clean = {}
-    for k, v in state_dict.items():
-        if ".parametrizations.weight.original" in k:
-            clean[k.replace(".parametrizations.weight.original", ".weight")] = v
-        elif ".parametrizations." in k:
-            continue  # skip codebook buffers
-        else:
-            clean[k] = v
-    return clean
+    from tac.parametrize_strip import strip_parametrize_hooks
+    return strip_parametrize_hooks(state_dict)
 
 
 def _save_checkpoint(
@@ -1761,11 +1753,11 @@ def main() -> None:
             import subprocess, numpy as np
             cmd = ["ffmpeg", "-v", "quiet", "-i", str(masks_path),
                    "-f", "rawvideo", "-pix_fmt", "gray", "pipe:1"]
-            proc = subprocess.run(cmd, capture_output=True)
+            proc = subprocess.run(cmd, capture_output=True, check=True)
             probe = subprocess.run(
                 ["ffprobe", "-v", "quiet", "-select_streams", "v:0",
                  "-show_entries", "stream=width,height", "-of", "csv=p=0", str(masks_path)],
-                capture_output=True, text=True)
+                capture_output=True, text=True, check=True)
             w, h = map(int, probe.stdout.strip().split(","))
             pixels = np.frombuffer(proc.stdout, dtype=np.uint8).reshape(-1, h, w)
             scale = 255 // 4

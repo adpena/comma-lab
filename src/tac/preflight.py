@@ -497,8 +497,16 @@ def preflight_all(
         #   tools/*.py + scripts/*.py with __main__ entry must wire
         #   argparse or click for --help.
         check_no_bare_except(strict=False, verbose=verbose)
-        check_subprocess_run_checked(strict=False, verbose=verbose)
-        check_tools_have_argparse(strict=False, verbose=verbose)
+        # 2026-04-28 deep hardening pass 3: Checks 52 + 53 promoted to STRICT
+        # after one-time cleanup pass. Subprocess: 31 violations triaged into
+        # 2 classes — wrappers/best-effort (24 waivers with concrete reason)
+        # vs real bugs (7 fail-loud `check=True` adds for ffmpeg/ffprobe pipes
+        # in hybrid_inflate, optimize_poses, train_distill, benchmark_codecs,
+        # variable_rate). Argparse: 7 violations — 5 hook/dispatcher waivers
+        # + 1 real argparse add (check_determinism.py) + 1 thin-shim waiver.
+        # Bug classes structurally extinct.
+        check_subprocess_run_checked(strict=True, verbose=verbose)
+        check_tools_have_argparse(strict=True, verbose=verbose)
 
         # 2026-04-28 evening: 2 NEW STRICT meta-bug checks (54, 55) for the
         # canonical NVDEC workflow. Today wasted ~$10 on 87% NVDEC_BAD
@@ -9725,6 +9733,10 @@ def check_subprocess_run_checked(
         lines = text.splitlines()
         for i, line in enumerate(lines):
             if "subprocess.run(" not in line:
+                continue
+            # Skip pure-comment lines (text mention, not actual call site).
+            stripped = line.lstrip()
+            if stripped.startswith("#"):
                 continue
             # Same-line waiver
             if "# subprocess-no-check-OK" in line:

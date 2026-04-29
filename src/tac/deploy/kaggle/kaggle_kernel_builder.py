@@ -94,7 +94,7 @@ def ensure_runtime_dependencies() -> None:
         except ImportError:
             subprocess.check_call([sys.executable, "-m", "pip", "install", "-q", dep])
 
-    if subprocess.run(["bash", "-lc", "command -v git-lfs >/dev/null 2>&1"]).returncode != 0:
+    if subprocess.run(["bash", "-lc", "command -v git-lfs >/dev/null 2>&1"]).returncode != 0:  # subprocess-no-check-OK: returncode inspected inline as the if-condition
         subprocess.check_call(["bash", "-lc", "apt-get update && apt-get install -y git-lfs"])
 
 

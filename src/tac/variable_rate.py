@@ -169,7 +169,7 @@ def decode_masks(mask_path: Path) -> torch.Tensor:
         ["ffprobe", "-v", "quiet", "-select_streams", "v:0",
          "-show_entries", "stream=width,height", "-of", "csv=p=0",
          str(mask_path)],
-        capture_output=True, text=True, timeout=30,
+        capture_output=True, text=True, timeout=30, check=True,
     )
     parts = probe.stdout.strip().split(",")
     W, H = int(parts[0]), int(parts[1])

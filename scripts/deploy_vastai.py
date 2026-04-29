@@ -393,7 +393,7 @@ def status() -> None:
 def kill(instance_id: int) -> None:
     """Destroy a Vast.ai instance."""
     print(f"Destroying instance {instance_id}...")
-    proc = subprocess.run(
+    proc = subprocess.run(  # subprocess-no-check-OK: best-effort destroy — already-destroyed instances exit non-zero but that's OK; stdout/stderr printed so operator sees outcome
         [str(REPO_ROOT / ".venv" / "bin" / "vastai"), "destroy", "instance", str(instance_id)],
         input="y\n", capture_output=True, text=True,
     )

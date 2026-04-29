@@ -1,4 +1,5 @@
 #!/usr/bin/env python3
+# no-argparse-OK: zero-argument runner — reads queue from experiments/job_queue.json
 """Experiment runner — automated training loop with job queue.
 
 Reads a YAML-like job queue, launches one job at a time on MPS,
@@ -72,7 +73,7 @@ def _escape_applescript(s: str) -> str:
 def notify(title: str, body: str):
     safe_title = _escape_applescript(title)
     safe_body = _escape_applescript(body)
-    subprocess.run(
+    subprocess.run(  # subprocess-no-check-OK: best-effort macOS notification — silent failure acceptable on Linux/CI hosts
         ["/usr/bin/osascript", "-e",
          f'display notification "{safe_body}" with title "{safe_title}" sound name "Glass"'],
         capture_output=True,

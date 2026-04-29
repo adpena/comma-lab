@@ -1,4 +1,5 @@
 #!/usr/bin/env python3
+# no-argparse-OK: custom subcommand dispatcher — usage in module docstring + per-subcommand validation in handlers
 """AST-powered code review tracker for tac — DuckDB backend.
 
 Parses every Python module, extracts classes/functions with line ranges,

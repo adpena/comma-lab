@@ -64,7 +64,7 @@ def run_ssh(cmd: str, timeout: int = 60, port: int = WSL_PORT) -> subprocess.Com
     full = ["ssh", *_ssh_opts(port), ssh_target(), cmd]
     label = "wsl" if port == WSL_PORT else "win"
     print(f"[bat00:{label}] $ {cmd}")
-    result = subprocess.run(full, capture_output=False, timeout=timeout)
+    result = subprocess.run(full, capture_output=False, timeout=timeout)  # subprocess-no-check-OK: returns CompletedProcess to caller; cmd_ps/cmd_wsl propagate result.returncode as exit code
     return result
 
 
@@ -88,7 +88,7 @@ def cmd_upload(args: argparse.Namespace) -> int:
     dest = args.dest or f"C:/Users/{BAT00_USER}/Desktop/{src.name}"
     scp_cmd = ["scp", *_ssh_opts(WIN_PORT), str(src), f"{ssh_target()}:{dest}"]
     print(f"[bat00] scp {src} -> {dest}")
-    return subprocess.run(scp_cmd).returncode
+    return subprocess.run(scp_cmd).returncode  # subprocess-no-check-OK: returncode propagated to caller as exit code
 
 
 def cmd_status(args: argparse.Namespace) -> int:
@@ -133,7 +133,7 @@ def cmd_sync(args: argparse.Namespace) -> int:
         f"{REPO_ROOT}/", dest,
     ]
     print(f"[bat00] rsync {REPO_ROOT}/ -> {dest}")
-    return subprocess.run(rsync_cmd).returncode
+    return subprocess.run(rsync_cmd).returncode  # subprocess-no-check-OK: returncode propagated to caller as exit code
 
 
 def cmd_run_script(args: argparse.Namespace) -> int:

@@ -63,7 +63,7 @@ def run_repush_command(
     command_runner: Callable[[str], object] | None = None,
 ) -> int:
     if command_runner is None:
-        result = subprocess.run(shlex.split(command), shell=False, text=True, capture_output=True)
+        result = subprocess.run(shlex.split(command), shell=False, text=True, capture_output=True)  # subprocess-no-check-OK: returncode propagated to caller via line below
     else:
         result = command_runner(command)
     returncode = int(getattr(result, "returncode", 0))

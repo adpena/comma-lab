@@ -83,11 +83,11 @@ def main():
     mask_path = archive_dir / "masks.mkv"
     cmd = ["ffmpeg", "-v", "quiet", "-i", str(mask_path),
            "-f", "rawvideo", "-pix_fmt", "gray", "pipe:1"]
-    proc = subprocess.run(cmd, capture_output=True)
+    proc = subprocess.run(cmd, capture_output=True, check=True)
     probe = subprocess.run(
         ["ffprobe", "-v", "quiet", "-select_streams", "v:0",
          "-show_entries", "stream=width,height", "-of", "csv=p=0", str(mask_path)],
-        capture_output=True, text=True)
+        capture_output=True, text=True, check=True)
     w, h = map(int, probe.stdout.strip().split(","))
     pixels = np.frombuffer(proc.stdout, dtype=np.uint8).reshape(-1, h, w)
     scale = 255 // 4

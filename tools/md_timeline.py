@@ -83,7 +83,7 @@ def get_file_at_commit(cwd: str, commit_hash: str, filepath: str) -> str | None:
 
 def get_word_diff(cwd: str, hash_a: str, hash_b: str, filepath: str) -> str:
     """Get word-level diff between two commits for a file."""
-    result = subprocess.run(
+    result = subprocess.run(  # subprocess-no-check-OK: best-effort timeline render; empty stdout on git failure yields empty diff (safe)
         ["git", "diff", "--word-diff=porcelain", f"{hash_a}..{hash_b}", "--", filepath],
         cwd=cwd,
         capture_output=True,

@@ -146,7 +146,7 @@ def _extract_reference_rgb_frames(video: Path, frame_indices: list[int], frame_s
     if not frame_indices:
         return []
     expr = "+".join(f"eq(n\\,{idx})" for idx in frame_indices)
-    cp = subprocess.run(
+    cp = subprocess.run(  # subprocess-no-check-OK: check=True is set on line 175 below — preflight 8-line window misses it
         [
             _ffmpeg_bin(),
             "-v",

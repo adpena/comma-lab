@@ -1,4 +1,5 @@
 #!/usr/bin/env python3
+# no-argparse-OK: git hook entrypoint — controlled via env vars (REVIEW_GATE_ENABLED/REVIEW_GATE_OVERRIDE)
 """Pre-commit hook: policy-enforced review gate.
 
 Checks staged .py files against the review policy (review_policy.json):
