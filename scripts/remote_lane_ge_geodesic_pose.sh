@@ -135,10 +135,6 @@ GEODESIC_META="$LOG_DIR/geodesic_meta.json"
 RECONSTRUCTED_POSES="$ITER_DIR/optimized_poses.pt"
 export GEODESIC_BIN GEODESIC_META RECONSTRUCTED_POSES ANCHOR_DIR
 "$PYBIN" -u - <<'PY' 2>&1 | tee "$LOG_DIR/geodesic.log"
-PIPE_RC=("${PIPESTATUS[@]}")
-if [ "${PIPE_RC[0]}" -ne 0 ]; then
-    echo "FATAL: previous pipeline exited rc=${PIPE_RC[0]}" >&2; exit "${PIPE_RC[0]}"
-fi
 import json, os, sys
 import torch
 
@@ -204,6 +200,10 @@ with open(os.environ["GEODESIC_META"], "w") as f:
 print(f"[lane-ge] meta -> {os.environ['GEODESIC_META']}")
 print(f"[lane-ge] rate_savings_potential: {meta['rate_savings_potential']:.4f} (~{meta['rate_savings_potential']*100:.1f}%)")
 PY
+PIPE_RC=("${PIPESTATUS[@]}")
+if [ "${PIPE_RC[0]}" -ne 0 ]; then
+    echo "FATAL: previous pipeline exited rc=${PIPE_RC[0]}" >&2; exit "${PIPE_RC[0]}"
+fi
 
 [ -f "$RECONSTRUCTED_POSES" ] || { log "FATAL: reconstructed poses not produced"; exit 2; }
 

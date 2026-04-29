@@ -134,10 +134,6 @@ log "=== Stage 2: compute UNIWARD texture probability on GT video ==="
 TEX_OUT="$LOG_DIR/texture_probability.pt"
 export TEX_OUT
 "$PYBIN" -u - <<'PY' 2>&1 | tee "$LOG_DIR/texture.log"
-PIPE_RC=("${PIPESTATUS[@]}")
-if [ "${PIPE_RC[0]}" -ne 0 ]; then
-    echo "FATAL: previous pipeline exited rc=${PIPE_RC[0]}" >&2; exit "${PIPE_RC[0]}"
-fi
 import os, sys, torch
 import av
 sys.path.insert(0, "src"); sys.path.insert(0, "upstream")
@@ -163,6 +159,10 @@ print(f"[lane-uniward] texture map shape={tuple(sigma2.shape)} "
 torch.save({"texture_probability": sigma2.cpu()}, os.environ["TEX_OUT"])
 print(f"[lane-uniward] saved -> {os.environ['TEX_OUT']}")
 PY
+PIPE_RC=("${PIPESTATUS[@]}")
+if [ "${PIPE_RC[0]}" -ne 0 ]; then
+    echo "FATAL: previous pipeline exited rc=${PIPE_RC[0]}" >&2; exit "${PIPE_RC[0]}"
+fi
 [ -f "$TEX_OUT" ] || { log "FATAL: texture map not produced"; exit 2; }
 
 log "=== Stage 3: encode UNIWARD-weighted mask payload ==="
@@ -170,7 +170,6 @@ UW_PAYLOAD="$LOG_DIR/masks_uniward.sli1"
 UW_META="$LOG_DIR/uniward_meta.json"
 export UW_PAYLOAD UW_META ANCHOR_DIR
 "$PYBIN" -u - <<'PY' 2>&1 | tee -a "$LOG_DIR/texture.log"
-import json, os, sys
 import av, torch
 import torch.nn.functional as F
 

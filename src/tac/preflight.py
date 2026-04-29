@@ -470,6 +470,12 @@ def preflight_all(
         # bug. py_compile + pytest-collect couldn't catch (legal syntax, only
         # surfaces when the function path is exercised). STRICT @ 0.
         check_no_shadowed_module_import_used_before_local_import(strict=True, verbose=verbose)
+        # Check 72: Python heredocs embedded in shell scripts must compile.
+        # py_compile (Check 67) only sees .py files. bash -n (Check 68) treats
+        # heredocs as opaque. R9 batch-patch injected bash code INTO python
+        # heredocs causing SyntaxError that no prior check caught. STRICT @ 0
+        # after fix-heredoc-pipestatus + uniward dedup.
+        check_python_heredocs_in_shell_compile(strict=True, verbose=verbose)
 
         # 2026-04-29: Check 43 — controlled-baseline methodology for new
         # Tuna-2 lanes. WARN-ONLY initially because it only applies to
@@ -8256,6 +8262,127 @@ def check_launcher_tarball_includes_lane_anchors(
         raise MetaBugViolation(
             "LAUNCHER TARBALL MISSING LANE ANCHORS:\n"
             + "\n".join(f"  • {v}" for v in violations)
+        )
+    return violations
+
+
+def check_python_heredocs_in_shell_compile(
+    repo_root: Path | None = None,
+    strict: bool = False,
+    verbose: bool = True,
+    scan_dirs: tuple[str, ...] = ("scripts", "experiments", "tools"),
+) -> list[str]:
+    """Check 72 — Python code embedded in shell heredocs must compile.
+
+    py_compile (Check 67) only sees standalone .py files. bash -n (Check 68)
+    treats heredocs as opaque strings. Neither catches Python SyntaxErrors
+    inside `python -u - <<'PY' ... PY` heredocs.
+
+    2026-04-29 incident: R9 batch-patch added bash PIPE_RC guards to lines
+    matching `| tee log` — but the regex hit lines INSIDE python heredocs:
+
+        "$PYBIN" -u - <<'PY' 2>&1 | tee log
+        PIPE_RC=("${PIPESTATUS[@]}")     ← injected INTO heredoc
+        if [ "${PIPE_RC[0]}" -ne 0 ]; then
+            ...
+        fi
+        import torch                       ← actual Python
+        ...
+        PY
+
+    Python interpreter received the bash code as input and crashed with
+    SyntaxError. Both Check 67 and Check 68 passed because each only sees
+    its own language.
+
+    This check extracts every `<<'PY'...PY` (and other quoted-tag heredocs
+    fed to python interpreters) from shell scripts and runs py_compile on
+    the contents. Catches injected-bash-into-python AND any actual Python
+    SyntaxError in heredocs.
+    """
+    import py_compile
+    import tempfile
+
+    root = repo_root or REPO_ROOT
+    skip_parts = {"__pycache__", ".venv", ".git", ".pytest_cache",
+                  "build", "dist", "node_modules"}
+
+    # Match `<command...> <<'TAG' ... TAG` where command invokes python
+    # (PYBIN, python, python3) and TAG is a heredoc terminator.
+    heredoc_re = re.compile(
+        r'(?P<cmd>(?:^|[\s|=&])\s*(?:"?\$PYBIN"?|python3?)\s+[^<\n]*?<<\s*'
+        r"['\"]?(?P<tag>[A-Z_][A-Z0-9_]*)['\"]?[^\n]*\n"
+        r'(?P<body>.*?)\n^(?P=tag)\s*$)',
+        re.MULTILINE | re.DOTALL,
+    )
+
+    violations: list[str] = []
+    n_compiled = 0
+    for d in scan_dirs:
+        d_path = root / d
+        if not d_path.exists():
+            continue
+        for sh in d_path.rglob("*.sh"):
+            if sh.is_dir() or any(p in skip_parts for p in sh.parts):
+                continue
+            try:
+                text = sh.read_text(errors="ignore")
+            except (FileNotFoundError, PermissionError):
+                continue
+            for m in heredoc_re.finditer(text):
+                body = m.group("body")
+                lineno = text[:m.start("body")].count("\n") + 1
+                # Normalize: heredoc bodies often use $VAR which Python won't
+                # like, but only at runtime. Python compilation only cares
+                # about syntax. $VAR is just a $ followed by identifier in
+                # most string contexts → SyntaxError. So we substitute $VAR
+                # → 'VAR' as a parse-only proxy.
+                #
+                # However bash $VAR appears in real Python only inside string
+                # literals (e.g., os.environ["..."]) — bash expands them
+                # BEFORE python sees them. For static parse, treat $VAR as
+                # an identifier.
+                stub = re.sub(r"\$\{?(\w+)\}?", r"_v_\1", body)
+                with tempfile.NamedTemporaryFile(mode="w", suffix=".py",
+                                                  delete=False) as tf:
+                    tf.write(stub)
+                    tmp = tf.name
+                try:
+                    py_compile.compile(tmp, doraise=True)
+                    n_compiled += 1
+                except py_compile.PyCompileError as e:
+                    violations.append(
+                        f"{sh.relative_to(root)}:{lineno}: heredoc "
+                        f"<<'{m.group('tag')}' fails Python compile: "
+                        f"{str(e).strip()[:200]}"
+                    )
+                except (SyntaxError, IndentationError) as e:
+                    violations.append(
+                        f"{sh.relative_to(root)}:{lineno + (e.lineno or 0) - 1}: "
+                        f"heredoc <<'{m.group('tag')}' "
+                        f"{type(e).__name__} at heredoc-line {e.lineno}: {e.msg}"
+                    )
+                except Exception as e:
+                    violations.append(
+                        f"{sh.relative_to(root)}:{lineno}: heredoc "
+                        f"<<'{m.group('tag')}' "
+                        f"{type(e).__name__}: {e}"
+                    )
+                finally:
+                    Path(tmp).unlink(missing_ok=True)
+
+    if verbose:
+        if violations:
+            print(f"  [python-heredocs-compile] {len(violations)} violation(s) "
+                  f"({n_compiled} heredocs OK):")
+            for v in violations[:20]:
+                print(f"    • {v}")
+        else:
+            print(f"  [python-heredocs-compile] OK: {n_compiled} heredocs compile clean")
+
+    if violations and strict:
+        raise MetaBugViolation(
+            "PYTHON HEREDOCS IN SHELL SCRIPTS FAIL TO COMPILE:\n"
+            + "\n".join(f"  • {v}" for v in violations[:20])
         )
     return violations
 

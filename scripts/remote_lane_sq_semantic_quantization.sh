@@ -115,10 +115,6 @@ log "=== Stage 2: semantic-quantize Lane A renderer state_dict ==="
 SQ_META="$LOG_DIR/sq_meta.json"
 export SQ_META ANCHOR_DIR
 "$PYBIN" -u - <<'PY' 2>&1 | tee "$LOG_DIR/sq.log"
-PIPE_RC=("${PIPESTATUS[@]}")
-if [ "${PIPE_RC[0]}" -ne 0 ]; then
-    echo "FATAL: previous pipeline exited rc=${PIPE_RC[0]}" >&2; exit "${PIPE_RC[0]}"
-fi
 import json, os, sys
 import torch
 sys.path.insert(0, "src"); sys.path.insert(0, "upstream")
@@ -153,6 +149,10 @@ with open(os.environ["SQ_META"], "w") as f:
     json.dump(meta_obj, f, indent=2, default=str)
 print(f"[lane-sq] meta -> {os.environ['SQ_META']}")
 PY
+PIPE_RC=("${PIPESTATUS[@]}")
+if [ "${PIPE_RC[0]}" -ne 0 ]; then
+    echo "FATAL: previous pipeline exited rc=${PIPE_RC[0]}" >&2; exit "${PIPE_RC[0]}"
+fi
 
 log "=== Stage 3: build archive (Lane A artifacts — research lane) ==="
 cp "$ANCHOR_DIR/renderer.bin" "$ITER_DIR/renderer.bin"

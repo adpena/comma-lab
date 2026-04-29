@@ -113,10 +113,6 @@ log "=== Stage 2: arithmetic-code Lane A pose targets ==="
 EA_META="$LOG_DIR/ea_meta.json"
 export EA_META ANCHOR_DIR
 "$PYBIN" -u - <<'PY' 2>&1 | tee "$LOG_DIR/ea.log"
-PIPE_RC=("${PIPESTATUS[@]}")
-if [ "${PIPE_RC[0]}" -ne 0 ]; then
-    echo "FATAL: previous pipeline exited rc=${PIPE_RC[0]}" >&2; exit "${PIPE_RC[0]}"
-fi
 import json, os, sys
 import torch
 sys.path.insert(0, "src"); sys.path.insert(0, "upstream")
@@ -154,6 +150,10 @@ with open(os.environ["EA_META"], "w") as f:
     json.dump(meta, f, indent=2)
 print(f"[lane-ea] meta -> {os.environ['EA_META']}")
 PY
+PIPE_RC=("${PIPESTATUS[@]}")
+if [ "${PIPE_RC[0]}" -ne 0 ]; then
+    echo "FATAL: previous pipeline exited rc=${PIPE_RC[0]}" >&2; exit "${PIPE_RC[0]}"
+fi
 
 log "=== Stage 3: build archive (Lane A artifacts — research lane) ==="
 cp "$ANCHOR_DIR/renderer.bin" "$ITER_DIR/renderer.bin"
