@@ -167,9 +167,16 @@ ARCHIVE_BYTES=$(stat -c '%s' "$ARCHIVE" 2>/dev/null || stat -f '%z' "$ARCHIVE")
 [ "$ARCHIVE_BYTES" -gt 0 ] || { echo 'FATAL: archive empty'; exit 2; }
 log "archive_bytes=$ARCHIVE_BYTES"
 
+# config.env override: tell inflate.sh to dispatch via the segmap arm
+# (Selfcomp paradigm: grayscale.mkv + segmap_weights.tar.xz + SegMap renderer).
+INFLATE_CONFIG="$LOG_DIR/lane_sa_config.env"
+cat > "$INFLATE_CONFIG" <<'EOF'
+PYTHON_INFLATE=segmap
+EOF
+
 log "=== Stage 5: contest_auth_eval [contest-CUDA] ==="
 rm -rf "$LOG_DIR/eval_work"
-"$PYBIN" -u experiments/contest_auth_eval.py \
+CONFIG_ENV_PATH="$INFLATE_CONFIG" "$PYBIN" -u experiments/contest_auth_eval.py \
     --archive "$ARCHIVE" \
     --inflate-sh submissions/robust_current/inflate.sh \
     --upstream-dir upstream \
