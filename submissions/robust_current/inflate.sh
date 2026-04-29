@@ -205,6 +205,27 @@ print(max(0, value))
 PY
 }
 
+# 2026-04-28: defense-in-depth root-cause fix for the Lane RM-d 0.mkv crash.
+# If config.env was somehow not sourced (operator bug, deploy regression, or
+# a fresh contest env that doesn't ship config.env), PYTHON_INFLATE defaults
+# to "0" → the ffmpeg branch fires → tries to read $ARCHIVE_DIR/0.mkv →
+# crashes because a renderer archive contains renderer.bin + masks.mkv +
+# optimized_poses.pt, NOT a per-video 0.mkv. Auto-detect this archive shape
+# and refuse to dispatch to ffmpeg with an actionable error pointing at the
+# canonical fix (Codex F5 + Check 64 E2E smoke).
+if [ "$PYTHON_INFLATE" = "0" ] && [ "$ROI_ENABLE" = "0" ]; then
+  if [ -f "$ARCHIVE_DIR/renderer.bin" ] || [ -f "$ARCHIVE_DIR/renderer.bin.br" ]; then
+    echo "FATAL: renderer.bin* present in $ARCHIVE_DIR but PYTHON_INFLATE != renderer." >&2
+    echo "       This is a renderer archive — the ffmpeg branch would crash trying" >&2
+    echo "       to read \$ARCHIVE_DIR/<video>.mkv (Lane RM-d's 0.mkv crash, 2026-04-28)." >&2
+    echo "       Likely cause: config.env missing or PYTHON_INFLATE=renderer not set." >&2
+    echo "       Fix: source $SELF_DIR/config.env OR export PYTHON_INFLATE=renderer." >&2
+    echo "       Permanent guard: experiments/canonical_local_auth_eval_smoke.py" >&2
+    echo "                        (Check 64 — written by canonical_local_auth_eval_smoke.py)." >&2
+    exit 4
+  fi
+fi
+
 while IFS= read -r rel; do
   [ -n "$rel" ] || continue
   stem="${rel%.*}"
