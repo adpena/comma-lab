@@ -204,7 +204,11 @@ if baseline.ndim != 2 or baseline.shape[1] != 6:
 n_pairs = int(baseline.shape[0])
 
 model = load_pose_gp(gp_path)
-recon = reconstruct_poses(model, n_pairs)
+# Fix A (council 2026-04-29 PM): pass baseline_poses so dims 1-5 stay
+# on-manifold for Lane A's 6-DOF-trained renderer. Lane GP v2 with
+# zero dims 1-5 scored 89.66 (pose=149.95). See
+# project_lane_gp_v2_audit_20260429.
+recon = reconstruct_poses(model, n_pairs, baseline_poses=baseline)
 torch.save(recon, out_path)
 
 dim0_rmse = torch.sqrt(torch.mean((recon[:, 0] - baseline[:, 0]).square())).item()

@@ -79,11 +79,23 @@ def fit_pose_gp(baseline_poses: torch.Tensor) -> PoseGPModel:
     )
 
 
-def reconstruct_poses(model: PoseGPModel, n_pairs: int) -> torch.Tensor:
+def reconstruct_poses(
+    model: PoseGPModel,
+    n_pairs: int,
+    baseline_poses: torch.Tensor | None = None,
+) -> torch.Tensor:
     """Reconstruct deterministic FiLM pose conditioning vectors.
 
-    Dim 0 is the polynomial value on ``linspace(0, 1, n_pairs)``. Dims 1-5 are
-    exactly zero to keep contest evaluation deterministic.
+    Dim 0 is the polynomial value on ``linspace(0, 1, n_pairs)``.
+
+    Dims 1-5: if ``baseline_poses`` is provided (recommended), use the
+    baseline values to preserve on-manifold behavior for renderers trained
+    with full 6-DOF FiLM conditioning. If ``None``, dims 1-5 default to zero
+    — but that produces OFF-MANIFOLD inputs for 6-DOF-trained renderers and
+    catastrophically breaks PoseNet/SegNet (Lane GP v2 audit, 2026-04-29:
+    score 89.66 vs predicted [1.05, 1.20], because dims 1-5 = 0 on Lane A's
+    renderer = pose 149.95, seg 0.50). See memory
+    project_lane_mn_radial_zoom_negative + project_lane_gp_v2_audit_20260429.
     """
 
     if n_pairs <= 0:
@@ -91,7 +103,25 @@ def reconstruct_poses(model: PoseGPModel, n_pairs: int) -> torch.Tensor:
     t = np.linspace(0.0, 1.0, int(n_pairs), dtype=np.float64)
     coeffs = model.poly_coeffs.detach().cpu().numpy().astype(np.float64)
     dim0 = np.polyval(coeffs, t).astype(np.float32)
-    poses = torch.zeros(int(n_pairs), 6, dtype=torch.float32)
+    if baseline_poses is None:
+        # Preserve old behavior for tests; warn loudly that this is off-manifold.
+        import warnings
+        warnings.warn(
+            "reconstruct_poses() called without baseline_poses — dims 1-5 "
+            "default to ZERO, which is OFF-MANIFOLD for 6-DOF-trained "
+            "renderers. This catastrophically degrades scores. Pass "
+            "baseline_poses=Lane_A_optimized_poses to preserve dims 1-5.",
+            stacklevel=2,
+        )
+        poses = torch.zeros(int(n_pairs), 6, dtype=torch.float32)
+    else:
+        baseline = torch.as_tensor(baseline_poses, dtype=torch.float32)
+        if baseline.shape != (n_pairs, 6):
+            raise ValueError(
+                f"baseline_poses shape {tuple(baseline.shape)} != "
+                f"({n_pairs}, 6); cannot use for on-manifold reconstruction."
+            )
+        poses = baseline.clone()
     poses[:, 0] = torch.from_numpy(dim0)
     return poses
 

@@ -489,6 +489,11 @@ def preflight_all(
         # crashed UNIWARD 3+ times tonight (sys, json). Bash-injected $VAR
         # tokens are stubbed before parsing.
         check_python_heredocs_no_undefined_names(strict=True, verbose=verbose)
+        # Check 75 WARN-ONLY: detect `torch.zeros(N, 6)` pose-tensor
+        # off-manifold pattern. Lane GP v2 = 89.66, Lane M-V1 = 2.35 from
+        # this exact bug. 9 live violations: needs audit + waivers before
+        # STRICT promotion. See project_lane_gp_v2_audit_20260429.
+        check_no_off_manifold_pose_zeros(strict=False, verbose=verbose)
 
         # 2026-04-29: Check 43 — controlled-baseline methodology for new
         # Tuna-2 lanes. WARN-ONLY initially because it only applies to
@@ -8275,6 +8280,101 @@ def check_launcher_tarball_includes_lane_anchors(
         raise MetaBugViolation(
             "LAUNCHER TARBALL MISSING LANE ANCHORS:\n"
             + "\n".join(f"  • {v}" for v in violations)
+        )
+    return violations
+
+
+def check_no_off_manifold_pose_zeros(
+    repo_root: Path | None = None,
+    strict: bool = False,
+    verbose: bool = True,
+    scan_dirs: tuple[str, ...] = ("src/tac", "experiments", "scripts"),
+) -> list[str]:
+    """Check 75 — `torch.zeros(N, 6)` for pose tensors is off-manifold for
+    6-DOF-trained renderers and CATASTROPHICALLY breaks scores.
+
+    2026-04-29 incidents (verified):
+      - Lane GP v2: torch.zeros(n_pairs, 6) with poses[:, 0]=poly → 89.66
+        (pose=149.95, baseline 0.003 = 50000× worse)
+      - Lane M-V1: same pattern → 2.35 (pose ~16× worse than baseline)
+      - Lane M-V2 fix attempted (preserve dims 1-5) → 1.84 (still worse)
+      - Memory `project_lane_mn_radial_zoom_negative` documents this for 7 days
+    User: "fix and harden all" — make this bug class IMPOSSIBLE to ship again.
+
+    Detects: pattern `torch.zeros(<n>, 6, ...)` followed by assignment to
+    only dim 0 (e.g. `poses[:, 0] = ...`). Requires same-line waiver
+    `# OFF_MANIFOLD_OK: <reason>` to ship — otherwise FAIL.
+
+    Why this is the right surface: any pose tensor that GETS POPULATED with
+    only one dimension is a renderer-input mismatch unless the renderer
+    was DESIGNED to take rank-1 conditioning (Fix B retraining).
+    """
+    root = repo_root or REPO_ROOT
+    skip_parts = {"__pycache__", ".venv", ".git", ".pytest_cache",
+                  "build", "dist", "node_modules", "tests"}
+    # Skip self (preflight.py contains regex patterns as strings)
+    skip_files = {"preflight.py"}
+
+    # Match `torch.zeros(<anything>, 6` (with the 6 as 2nd positional arg).
+    # The trailing context allows extra args (dtype, device, etc).
+    zeros_re = re.compile(
+        r'torch\.zeros\s*\(\s*[^,)]+,\s*6\b',
+    )
+
+    violations: list[str] = []
+    for d in scan_dirs:
+        d_path = root / d
+        if not d_path.exists():
+            continue
+        for f in list(d_path.rglob("*.py")) + list(d_path.rglob("*.sh")):
+            if f.is_dir() or any(p in skip_parts for p in f.parts):
+                continue
+            if f.name in skip_files:
+                continue
+            try:
+                text = f.read_text(errors="ignore")
+            except (FileNotFoundError, PermissionError):
+                continue
+            for m in zeros_re.finditer(text):
+                lineno = text[:m.start()].count("\n") + 1
+                # Get the specific line for waiver detection
+                line_start = text.rfind("\n", 0, m.start()) + 1
+                line_end = text.find("\n", m.end())
+                if line_end == -1:
+                    line_end = len(text)
+                line = text[line_start:line_end]
+                if "OFF_MANIFOLD_OK:" in line:
+                    continue
+                # Skip the canonical reconstruct_poses fallback path —
+                # that one is properly guarded with a `warnings.warn`.
+                if "warnings.warn" in text[max(0, m.start()-200):m.start()]:
+                    continue
+                # Allow if same line has a 6-DOF assignment that fills
+                # all dims (e.g., `torch.zeros(n, 6); poses[:] = ...`)
+                # — but harder to verify, so require waiver.
+                violations.append(
+                    f"{f.relative_to(root)}:{lineno}: `torch.zeros(N, 6)` "
+                    f"creates an OFF-MANIFOLD pose tensor for 6-DOF-trained "
+                    f"renderers. Lane GP v2 = 89.66, Lane M-V1 = 2.35 from "
+                    f"this exact pattern. Either pass baseline_poses to "
+                    f"preserve dims 1-5, OR add `# OFF_MANIFOLD_OK: <reason>` "
+                    f"on the same line if intentional (e.g. unit test, or "
+                    f"rank-1-trained renderer). See "
+                    f"project_lane_gp_v2_audit_20260429."
+                )
+
+    if verbose:
+        if violations:
+            print(f"  [no-off-manifold-pose-zeros] {len(violations)} violation(s):")
+            for v in violations[:10]:
+                print(f"    • {v}")
+        else:
+            print(f"  [no-off-manifold-pose-zeros] OK")
+
+    if violations and strict:
+        raise MetaBugViolation(
+            "OFF-MANIFOLD POSE ZERO PATTERN (Lane GP/M failure mode):\n"
+            + "\n".join(f"  • {v}" for v in violations[:10])
         )
     return violations
 
