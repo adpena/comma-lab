@@ -199,15 +199,16 @@ if tex.shape != masks.shape[1:]:
     print(f"[lane-uniward] resized texture to {tuple(tex.shape)}")
 
 # UNIWARD texture is a saliency-INVERSE signal (high texture = CNN-blind =
-# safe to compress hard). Map directly to saliency_inv kwarg. Normalize to
-# [0, 1] via quantile clipping so high_crf/low_crf split sensibly.
-tex_norm = tex.float()
-tex_lo = torch.quantile(tex_norm, 0.05)
-tex_hi = torch.quantile(tex_norm, 0.95)
-tex_norm = ((tex_norm - tex_lo) / max(tex_hi - tex_lo, 1e-6)).clamp(0.0, 1.0)
+# safe to compress hard). The function requires saliency_inv as 2-D bool —
+# True where compression should be MORE aggressive (the CNN-blind regions).
+# Threshold at the median so half the pixels are aggressively compressed.
+tex_f = tex.float()
+threshold = torch.quantile(tex_f, 0.5)
+tex_bool = (tex_f >= threshold).to(torch.bool)
+print(f"[lane-uniward] saliency_inv bool mask: {tex_bool.sum().item()}/{tex_bool.numel()} pixels (median-thresholded)")
 payload = apply_saliency_weighted_compression(
     masks=masks,
-    saliency_inv=tex_norm,
+    saliency_inv=tex_bool,
     high_crf=50,
     low_crf=30,
 )
