@@ -135,6 +135,16 @@ def create_gaussian_softmax_lut(sigma: float = LUT_DEFAULT_SIGMA) -> torch.Tenso
     x = torch.arange(256, dtype=torch.float32).unsqueeze(1)  # (256, 1)
     targets = _CLASS_TARGETS_TENSOR.unsqueeze(0)  # (1, NUM_CLASSES)
     squared_diff = (x - targets) ** 2
+    # Round 2 review Medium (LUT divergence note): Selfcomp's reference
+    # inflate.py L175-180 softmaxes ``exp(-(d^2)/(2sigma^2))`` (a temperature-
+    # scaled bell curve) directly. We softmax ``-(d^2)/(2sigma^2)`` (negative
+    # log-distance), which is mathematically equivalent for the SAME pixel-
+    # value rankings but produces SHARPER probability ratios (softmax in
+    # log-space vs softmax in odds-space). This is a deliberate fork —
+    # combined with the inflate-side argmax-then-one-hot path, the difference
+    # is invisible in practice. If we ever feed the SOFT probability map to
+    # the renderer (instead of one-hot), we should match Selfcomp's exp()
+    # bell-curve form to preserve numerical equivalence.
     logits = -squared_diff / (2.0 * sigma * sigma)
     return F.softmax(logits, dim=1)
 

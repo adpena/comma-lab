@@ -118,6 +118,7 @@ log "=== Stage 4: build archive (grayscale.mkv + segmap_weights.tar.xz + poses) 
 mkdir -p "$LOG_DIR/archive_src"
 GRAYSCALE_MKV="$LOG_DIR/archive_src/grayscale.mkv"
 "$PYBIN" -c "
+import subprocess
 import torch
 from pathlib import Path
 from tac.mask_codec import decode_masks_auto
@@ -125,25 +126,27 @@ from tac.mask_grayscale_lut import encode_masks_grayscale
 
 mask_classes = decode_masks_auto(Path('$ANCHOR_MASKS'))
 gray = encode_masks_grayscale(mask_classes)
-import av, numpy as np
+import numpy as np
 arr = gray.numpy() if isinstance(gray, torch.Tensor) else np.asarray(gray)
 out_path = Path('$GRAYSCALE_MKV')
-container = av.open(str(out_path), mode='w')
-stream = container.add_stream('libsvtav1', rate=20)
-stream.width = arr.shape[2]
-stream.height = arr.shape[1]
-stream.pix_fmt = 'yuv420p'
-stream.options = {'crf': '50'}
-for i in range(arr.shape[0]):
-    yuv = np.zeros((arr.shape[1] * 3 // 2, arr.shape[2]), dtype='uint8')
-    yuv[:arr.shape[1]] = arr[i]
-    yuv[arr.shape[1]:] = 128
-    frame = av.VideoFrame.from_ndarray(yuv, format='yuv420p')
-    for pkt in stream.encode(frame):
-        container.mux(pkt)
-for pkt in stream.encode():
-    container.mux(pkt)
-container.close()
+n, h, w = arr.shape
+# Round 2 review Medium: yuv420p w/ chroma=128 costs +9.4% vs gray.
+# Use ffmpeg subprocess with -pix_fmt gray to skip chroma planes entirely
+# (matches experiments/build_lane_mm_archive.py canonical encoder).
+cmd = [
+    'ffmpeg', '-y',
+    '-f', 'rawvideo', '-vcodec', 'rawvideo',
+    '-s', f'{w}x{h}', '-pix_fmt', 'gray',
+    '-r', '20', '-i', 'pipe:0',
+    '-c:v', 'libsvtav1',
+    '-crf', '50', '-preset', '6',
+    '-svtav1-params', 'enable-restoration=0:enable-cdef=0',
+    '-pix_fmt', 'gray', '-an',
+    str(out_path),
+]
+proc = subprocess.run(cmd, input=arr.tobytes(), capture_output=True, timeout=300)
+if proc.returncode != 0:
+    raise RuntimeError(f'ffmpeg AV1 encode failed (rc={proc.returncode}): {proc.stderr.decode()[-500:]}')
 import os
 print('grayscale.mkv bytes:', os.path.getsize(out_path))
 "

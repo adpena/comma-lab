@@ -418,20 +418,32 @@ _SELFCOMP_HWOI_LAYOUT_TAG: str = "HWOI"
 
 
 def encode_conv_weight(
-    weight: torch.Tensor, qint_max: int = 7
+    weight: torch.Tensor,
+    qint_max: int = 7,
+    per_channel_qint_max: list[int] | torch.Tensor | None = None,
 ) -> dict[str, torch.Tensor | tuple[int, ...] | int]:
     """Per-output-channel block-FP encoder for conv2d weights (Selfcomp layout).
 
     Algorithm — for each output channel ``c`` in a (O, I, kH, kW) weight:
 
+        Q_c = per_channel_qint_max[c] if provided else qint_max
         w_max = max(|w[c]|)
         if w_max == 0:        exp = 0,   qint = 0
-        else:                 exp = floor(log2(w_max / qint_max))
-                              qint[c] = round(w[c] / 2**exp).clamp(-Q, +Q)
+        else:                 exp = ceil(log2(w_max / Q_c))
+                              qint[c] = round(w[c] / 2**exp).clamp(-Q_c, +Q_c)
 
     With ``qint_max=7`` the integer range is [-7, 7] (4 bits signed). The
     decoder reconstruction is ``w ≈ qint * 2 ** exp`` per channel (matches
     Selfcomp inflate.py L167-172 ``reconstruct_weight``).
+
+    Lane FR-Ω extension: ``per_channel_qint_max`` lets callers spend more
+    bits on Fridrich-cost-critical channels and fewer on cheap ones. The
+    canonical bit budget Q_c maps to ceil(log2(2 * Q_c + 1)) signed bits
+    per integer (e.g. Q=15 → 5 bits, Q=7 → 4 bits, Q=1 → 2 bits). All
+    qints are still stored as int8; the rate savings come from the
+    tar.xz outer compression on the high-redundancy stream of small Q
+    channels. NOTE: the on-disk dtype stays int8; tighter packing would
+    require a custom decoder (out of scope for the additive variant).
 
     Returns:
         dict with:
@@ -440,7 +452,8 @@ def encode_conv_weight(
               ``qint.permute(2, 3, 0, 1)`` to recover (O, I, kH, kW).
             * ``weight_exponents``: int32 (O,) per-output-channel exponents.
             * ``shape_oihw``: original (O, I, kH, kW) tuple, for sanity.
-            * ``qint_max``: the clip range used.
+            * ``qint_max``: the clip range used (scalar) OR the per-channel
+              tensor when per_channel_qint_max is supplied.
     """
     if qint_max <= 0:
         raise ValueError(f"qint_max must be > 0, got {qint_max}")
@@ -450,33 +463,64 @@ def encode_conv_weight(
         )
     o, i, kh, kw = weight.shape
     w = weight.detach().to(torch.float32)
+    # Round 2 review Medium: NaN/Inf weights silently zeroed via the
+    # max_abs == 0.0 branch + filled via NaN MSE comparing > tol as False.
+    # Refuse the input loudly instead.
+    if not torch.isfinite(w).all():
+        n_bad = int((~torch.isfinite(w)).sum().item())
+        raise ValueError(
+            f"encode_conv_weight: weight contains {n_bad} non-finite value(s) "
+            f"(NaN/Inf). Refuse to silently zero them — fix upstream training "
+            f"or use a clean checkpoint."
+        )
+
+    if per_channel_qint_max is not None:
+        if isinstance(per_channel_qint_max, torch.Tensor):
+            pc_q = per_channel_qint_max.detach().to(torch.int64).cpu().tolist()
+        else:
+            pc_q = [int(v) for v in per_channel_qint_max]
+        if len(pc_q) != o:
+            raise ValueError(
+                f"per_channel_qint_max length {len(pc_q)} != output channels {o}"
+            )
+        for v in pc_q:
+            if v <= 0:
+                raise ValueError(f"per_channel_qint_max entries must be > 0, got {v}")
+    else:
+        pc_q = [qint_max] * o
 
     exponents = torch.zeros((o,), dtype=torch.int32)
     qint_oihw = torch.zeros_like(w, dtype=torch.int8)
     for c in range(o):
+        Qc = pc_q[c]
         wc = w[c]
         max_abs = float(wc.abs().max().item())
         if max_abs == 0.0 or not math.isfinite(max_abs):
             exponents[c] = 0
             continue
-        # exp = ceil(log2(max_abs / qint_max)) so that round(w/2**exp) <= qint_max.
+        # exp = ceil(log2(max_abs / Q_c)) so that round(w/2**exp) <= Q_c.
         # ceil (not floor) is required: floor underflows the scale and clips
-        # the largest weights to ±qint_max losing information.
-        exp_f = math.ceil(math.log2(max_abs / qint_max))
+        # the largest weights to ±Q_c losing information.
+        exp_f = math.ceil(math.log2(max_abs / Qc))
         e = max(_EXP_MIN, min(_EXP_MAX, int(exp_f)))
         exponents[c] = e
         scale = 2.0 ** e
-        scaled = (wc / scale).round().clamp(-qint_max, qint_max)
+        scaled = (wc / scale).round().clamp(-Qc, Qc)
         qint_oihw[c] = scaled.to(torch.int8)
 
     # Permute to HWOI to match Selfcomp's decoder reshape (.permute(2, 3, 0, 1)
     # at decode time recovers OIHW from HWOI).
     qint_hwoi = qint_oihw.permute(2, 3, 0, 1).contiguous()
+    qint_max_out: int | torch.Tensor
+    if per_channel_qint_max is not None:
+        qint_max_out = torch.tensor(pc_q, dtype=torch.int32)
+    else:
+        qint_max_out = qint_max
     return {
         "weight_qint": qint_hwoi,
         "weight_exponents": exponents,
         "shape_oihw": (o, i, kh, kw),
-        "qint_max": qint_max,
+        "qint_max": qint_max_out,
     }
 
 
@@ -577,6 +621,7 @@ def pack_payload_tar_xz(
     output_path: str | os.PathLike,
     qint_max: int = 7,
     linear_bits: int = 8,
+    per_key_qint_max: dict[str, list[int] | torch.Tensor] | None = None,
 ) -> None:
     """Pack a SegMap state_dict into a tar.xz at ``output_path``.
 
@@ -595,6 +640,12 @@ def pack_payload_tar_xz(
     NOTE: ``weight_qint`` member naming uses the dotted PyTorch path with
     ``.weight_qint`` / ``.weight_exponents`` suffixes so the Selfcomp
     consumer's ``state[f"{prefix}.weight_qint"]`` lookup succeeds verbatim.
+
+    Lane FR-Ω extension: ``per_key_qint_max`` is an optional mapping from
+    conv-weight key (e.g. ``"layer_in.weight"``) to a list of per-output-
+    channel qint_max values. Channels with high Fridrich cost get larger
+    Q values (more bits); cheap channels get small Q values. Keys not
+    present in the mapping fall back to the scalar ``qint_max``.
     """
     import json
 
@@ -606,6 +657,8 @@ def pack_payload_tar_xz(
     # meta.json with full key listing.
     members: list[tuple[str, bytes]] = []
 
+    pkqm = per_key_qint_max or {}
+
     for key, tensor in state_dict.items():
         if not torch.is_tensor(tensor):
             raise ValueError(f"state_dict[{key}] is not a tensor")
@@ -614,15 +667,24 @@ def pack_payload_tar_xz(
             and tensor.dim() == 4
         )
         if is_conv_w:
-            packed = encode_conv_weight(tensor, qint_max=qint_max)
+            pcq = pkqm.get(key)
+            packed = encode_conv_weight(
+                tensor, qint_max=qint_max, per_channel_qint_max=pcq,
+            )
             qint_bytes = packed["weight_qint"].cpu().numpy().tobytes()
             exp_bytes = packed["weight_exponents"].cpu().numpy().tobytes()
             members.append((f"{key}_qint.bin", qint_bytes))
             members.append((f"{key}_exponents.bin", exp_bytes))
+            qmax_meta: int | list[int]
+            qmax_field = packed["qint_max"]
+            if isinstance(qmax_field, torch.Tensor):
+                qmax_meta = [int(v) for v in qmax_field.tolist()]
+            else:
+                qmax_meta = int(qmax_field)
             meta["keys"][key] = {
                 "codec": "block_fp_per_channel_v1",
                 "shape_oihw": list(packed["shape_oihw"]),
-                "qint_max": int(packed["qint_max"]),
+                "qint_max": qmax_meta,
                 "qint_dtype": "int8",
                 "qint_layout": _SELFCOMP_HWOI_LAYOUT_TAG,
                 "exponents_dtype": "int32",
@@ -725,6 +787,13 @@ def verify_roundtrip(
                 f"verify_roundtrip: shape mismatch on {key}: {rec.shape} vs {original.shape}"
             )
         mse = float((rec - original.to(torch.float32)).pow(2).mean().item())
+        # Round 2 review Medium: NaN > tol is False — a corrupted decode that
+        # produces NaN would silently pass the gate. Assert finite first.
+        if not math.isfinite(mse):
+            raise AssertionError(
+                f"verify_roundtrip: {key} MSE is non-finite ({mse}). The decoder "
+                f"produced NaN/Inf — refusing to ship the archive."
+            )
         mse_map[key] = mse
         if mse > tol:
             raise AssertionError(

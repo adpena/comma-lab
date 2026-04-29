@@ -72,9 +72,32 @@ def _classes_to_one_hot(classes: torch.Tensor) -> torch.Tensor:
 
 def _build_segmap(state_dict: dict, hidden: int, block_hidden: int,
                    num_blocks: int, max_frame_index: int):
-    from tac.segmap_renderer import SegMap
+    """Instantiate the SegMap variant declared by SEGMAP_ARCH env var.
 
-    model = SegMap(
+    Default = canonical SegMap (6-DOF affine, frame_affine_embedding shape (N, 6)).
+    SEGMAP_ARCH=segmap_homography → SegMapHomography (8-DOF perspective,
+        frame_affine_embedding shape (N, 8)). Lane HM-S sets this via
+        config.env so a single inflate dispatcher can cover both archs.
+
+    The state_dict's frame_affine_embedding shape is the source of truth —
+    a mismatch raises strict-load error which surfaces the operator bug
+    rather than silently returning zeros.
+    """
+    import os
+    from tac.segmap_renderer import SegMap, SegMapHomography
+
+    arch = os.environ.get("SEGMAP_ARCH", "segmap").strip().lower() or "segmap"
+    if arch == "segmap_homography":
+        cls = SegMapHomography
+    elif arch == "segmap":
+        cls = SegMap
+    else:
+        raise RuntimeError(
+            f"unknown SEGMAP_ARCH={arch!r}; expected 'segmap' or 'segmap_homography'"
+        )
+    print(f"[inflate-segmap] arch={arch} ({cls.__name__})", file=sys.stderr)
+
+    model = cls(
         hidden=hidden,
         block_hidden=block_hidden,
         num_blocks=num_blocks,
@@ -161,8 +184,12 @@ def inflate(archive_dir: Path, inflated_dir: Path, video_names_file: Path,
             chunk_oh = _classes_to_one_hot(chunk_cls).to(device)
             frame_idx = torch.arange(start, end, device=device, dtype=torch.long)
             rgb = model(chunk_oh, frame_idx)
+            # Round 2 review CRITICAL: training _eval_roundtrip_chain uses
+            # bicubic for 384 -> 874 -> uint8 -> 384. Using bilinear here
+            # breaks train/inference parity and re-introduces proxy-auth
+            # drift. Match the canonical bicubic mode.
             rgb_native = F.interpolate(
-                rgb, size=(target_h, target_w), mode="bilinear", align_corners=False
+                rgb, size=(target_h, target_w), mode="bicubic", align_corners=False
             )
             # SegMap.forward returns sigmoid(...) * 255.0 already in [0, 255] range.
             # Round 1 review CRITICAL: previous clamp(0, 1) * 255 zeroed all output.
@@ -186,6 +213,8 @@ def inflate(archive_dir: Path, inflated_dir: Path, video_names_file: Path,
 
 
 def _cli() -> int:
+    import os as _os
+
     parser = argparse.ArgumentParser(description="Inflate a SegMap archive.")
     parser.add_argument("archive_dir")
     parser.add_argument("inflated_dir")
@@ -193,9 +222,16 @@ def _cli() -> int:
     parser.add_argument("--payload-filename", default="segmap_weights.tar.xz")
     parser.add_argument("--mask-filename", default="grayscale.mkv")
     parser.add_argument("--poses-filename", default="optimized_poses.pt")
-    parser.add_argument("--hidden", type=int, default=24)
-    parser.add_argument("--block-hidden", type=int, default=24)
-    parser.add_argument("--num-blocks", type=int, default=8)
+    # CLI defaults are the canonical Lane SC++/SA arch (hidden=24, block_hidden=24,
+    # num_blocks=8). Lane DARTS-S sweeps over alternative archs and overrides via
+    # SEGMAP_HIDDEN / SEGMAP_BLOCK_HIDDEN / SEGMAP_NUM_BLOCKS env vars (sourced
+    # from config.env per lane). Env wins over default; CLI wins over env.
+    parser.add_argument("--hidden", type=int,
+                        default=int(_os.environ.get("SEGMAP_HIDDEN", "24")))
+    parser.add_argument("--block-hidden", type=int,
+                        default=int(_os.environ.get("SEGMAP_BLOCK_HIDDEN", "24")))
+    parser.add_argument("--num-blocks", type=int,
+                        default=int(_os.environ.get("SEGMAP_NUM_BLOCKS", "8")))
     parser.add_argument("--max-frame-index", type=int, default=NUM_FRAMES)
     parser.add_argument("--target-w", type=int, default=OUT_W)
     parser.add_argument("--target-h", type=int, default=OUT_H)
