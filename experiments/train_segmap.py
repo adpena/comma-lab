@@ -73,6 +73,14 @@ def _parse_args() -> argparse.Namespace:
         choices=("plain", "kl_distill", "hessian_quant"),
         default="plain",
     )
+    p.add_argument(
+        "--arch",
+        type=str,
+        choices=("segmap", "segmap_homography"),
+        default="segmap",
+        help="segmap=canonical 6-DOF affine; segmap_homography=8-DOF "
+             "perspective homography frame embedding (Lane HM-S).",
+    )
     p.add_argument("--kl-distill-weight", type=float, default=0.002,
                    help="Hinton-regime KL distill weight (matches Lane G v3).")
     p.add_argument("--kl-distill-temperature", type=float, default=2.0)
@@ -86,6 +94,14 @@ def _parse_args() -> argparse.Namespace:
 
     p.add_argument("--roundtrip-noise-std", type=float, default=0.5,
                    help="Gaussian noise std after STE quant in eval roundtrip.")
+
+    p.add_argument(
+        "--pair-weights", type=str, default=None,
+        help="Optional .pt file containing a (N_pairs,) float tensor of "
+             "per-pair training weights (Lane WC-S Curator outlier weighting). "
+             "When supplied, each pair's loss is multiplied by its weight; "
+             "must have length == number of training pairs.",
+    )
 
     p.add_argument(
         "--device",
@@ -228,7 +244,7 @@ def main() -> int:
     _seed_all(args.seed)
     device = _resolve_device(args.device)
 
-    from tac.segmap_renderer import SegMap, SegMapTrainer
+    from tac.segmap_renderer import SegMap, SegMapHomography, SegMapTrainer
     from tac.scorer import load_differentiable_scorers
     from tac.training import EMA
 
@@ -237,7 +253,8 @@ def main() -> int:
     # SegMap requires max_frame_index for the per-frame affine embedding.
     # Use 1200 frames (NUM_FRAMES) as the canonical upper bound.
     NUM_FRAMES = 1200
-    model = SegMap(
+    arch_cls = SegMapHomography if args.arch == "segmap_homography" else SegMap
+    model = arch_cls(
         hidden=args.hidden,
         block_hidden=args.block_hidden,
         num_blocks=args.num_blocks,
@@ -281,13 +298,65 @@ def main() -> int:
     print(f"[train_segmap] training pairs: {mask_pairs.shape[0]} (non-overlapping)",
           flush=True)
 
+    # Lane WC-S Curator outlier pair weighting (optional). When supplied, the
+    # weights are checked for shape match and broadcast into the pair loss
+    # path. CLAUDE.md non-negotiable: validate at every boundary — a wrong-
+    # length weight tensor must hard-error, not silently truncate.
+    pair_weights = None
+    if args.pair_weights:
+        pw_path = Path(args.pair_weights)
+        if not pw_path.exists():
+            raise FileNotFoundError(f"--pair-weights not found: {pw_path}")
+        pair_weights = torch.load(pw_path, map_location="cpu", weights_only=False)
+        if isinstance(pair_weights, dict) and "weights" in pair_weights:
+            pair_weights = pair_weights["weights"]
+        if not isinstance(pair_weights, torch.Tensor):
+            raise RuntimeError(
+                f"--pair-weights file must contain a tensor or {{'weights': tensor}}, "
+                f"got {type(pair_weights).__name__}"
+            )
+        if pair_weights.numel() != mask_pairs.shape[0]:
+            raise RuntimeError(
+                f"--pair-weights length {pair_weights.numel()} != n_pairs {mask_pairs.shape[0]}. "
+                f"Refusing to silently broadcast or truncate."
+            )
+        pair_weights = pair_weights.to(torch.float32)
+        if pair_weights.min() < 0:
+            raise RuntimeError(
+                f"--pair-weights must be non-negative; min={float(pair_weights.min())}"
+            )
+        print(
+            f"[train_segmap] pair_weights loaded: n={pair_weights.numel()} "
+            f"min={float(pair_weights.min()):.3f} max={float(pair_weights.max()):.3f}",
+            flush=True,
+        )
+
     history: list[dict] = []
     t_start = time.monotonic()
     for epoch in range(args.epochs):
+        kwargs = {}
+        # Forward pair_weights only when the trainer accepts it. Newer
+        # SegMapTrainer accepts the kwarg; older versions raise TypeError.
+        # We probe once (via inspect) and cache the support flag.
+        if pair_weights is not None:
+            import inspect
+            sig = inspect.signature(trainer.train_epoch)
+            if "pair_weights" in sig.parameters:
+                kwargs["pair_weights"] = pair_weights
+            else:
+                # Fail loud on first iteration: silent drop of pair_weights
+                # would invalidate the lane's hypothesis.
+                if epoch == 0:
+                    raise RuntimeError(
+                        "--pair-weights supplied but SegMapTrainer.train_epoch "
+                        "does not accept the 'pair_weights' kwarg. Wire it in "
+                        "or remove --pair-weights."
+                    )
         epoch_metrics = trainer.train_epoch(
             mask_pairs=mask_pairs,
             gt_pairs=gt_pairs,
             ema=ema,
+            **kwargs,
         )
         epoch_metrics = dict(epoch_metrics)
         epoch_metrics["epoch"] = epoch

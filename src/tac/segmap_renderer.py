@@ -164,6 +164,95 @@ class SegMap(nn.Module):
         return torch.sigmoid(self.layer_out(feat)) * 255.0
 
 
+class SegMapHomography(SegMap):
+    """SegMap variant with 8-DOF perspective homography frame embeddings.
+
+    The 6-DOF affine grid in the canonical SegMap is a strict subset of the
+    8-DOF perspective homography. Adding 2 perspective parameters (the
+    bottom-row entries g, h of the 3x3 homography matrix) lets the per-frame
+    latent capture forward-zoom + tilt patterns that pure affine cannot,
+    which matches the comma.ai dashcam viewing geometry better.
+
+    Tensor delta from base SegMap: ``frame_affine_embedding`` is dim 8
+    (was 6); two extra params per frame; layer_in/blocks/layer_out are
+    UNCHANGED. Total parameter count change is tiny (~2 * max_frame_index).
+
+    Lane HM-S (homography-augmented SegMap) uses this. Predicted band
+    [0.32, 0.45] [contest-CUDA] (small improvement over Lane SC++ via
+    better road-plane perspective tracking).
+    """
+
+    PERSPECTIVE_BOUND: float = 0.05  # max |g|, |h| after tanh activation
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        max_frame_index = self.frame_affine_embedding.num_embeddings
+        # Replace the dim-6 embedding with a dim-8 one (init small).
+        self.frame_affine_embedding = nn.Embedding(max_frame_index, 8)
+        nn.init.normal_(self.frame_affine_embedding.weight, mean=0.0, std=0.01)
+
+    def _build_affine_latent_channel(
+        self, frame_indices: torch.Tensor, output_height: int, output_width: int
+    ) -> torch.Tensor:
+        batch_size = frame_indices.shape[0]
+        canvas_height = math.ceil(output_height * self.latent_canvas_scale)
+        canvas_width = math.ceil(output_width * self.latent_canvas_scale)
+        shared_latent = F.interpolate(
+            self.shared_latent_base,
+            size=(canvas_height, canvas_width),
+            mode="bicubic",
+            align_corners=False,
+        ).expand(batch_size, -1, -1, -1)
+        params = self.frame_affine_embedding(frame_indices)  # (B, 8)
+        zoom = 1.0 + self.max_zoom_delta * torch.tanh(params[:, 0:1])
+        aspect = self.max_aspect_delta * torch.tanh(params[:, 1:2])
+        shear_x = self.max_shear * torch.tanh(params[:, 2:3])
+        shear_y = self.max_shear * torch.tanh(params[:, 3:4])
+        trans_x = self.max_translation * torch.tanh(params[:, 4:5])
+        trans_y = self.max_translation * torch.tanh(params[:, 5:6])
+        # 7th, 8th: perspective row [g, h] of the homography. tanh-bounded
+        # so the homography stays well-conditioned (no division by ≈0).
+        persp_x = self.PERSPECTIVE_BOUND * torch.tanh(params[:, 6:7])
+        persp_y = self.PERSPECTIVE_BOUND * torch.tanh(params[:, 7:8])
+        scale_x = zoom + aspect
+        scale_y = zoom - aspect
+        # Build the 3x3 homography per batch element.
+        ones = torch.ones_like(zoom)
+        H = torch.stack(
+            [
+                torch.cat([scale_x, shear_x, trans_x], dim=1),
+                torch.cat([shear_y, scale_y, trans_y], dim=1),
+                torch.cat([persp_x, persp_y, ones], dim=1),
+            ],
+            dim=1,
+        )  # (B, 3, 3)
+
+        # Build a normalized [-1, 1] sampling grid (target -> source coords).
+        ys = torch.linspace(-1.0, 1.0, output_height, device=H.device, dtype=H.dtype)
+        xs = torch.linspace(-1.0, 1.0, output_width, device=H.device, dtype=H.dtype)
+        yy, xx = torch.meshgrid(ys, xs, indexing="ij")
+        ones_grid = torch.ones_like(xx)
+        target_pts = torch.stack([xx, yy, ones_grid], dim=-1)  # (H, W, 3)
+        target_pts = target_pts.view(-1, 3).T  # (3, H*W)
+
+        # Apply per-batch homography: source = H · target (normalized coords).
+        # H: (B, 3, 3); target_pts: (3, H*W); product is (B, 3, H*W).
+        src_pts = torch.matmul(H, target_pts.unsqueeze(0).expand(batch_size, -1, -1))
+        # Normalize the homogeneous coordinate; clamp the divisor away from 0.
+        denom = src_pts[:, 2:3, :].clamp(min=1e-6)
+        src_pts = src_pts[:, :2, :] / denom
+        # Reshape to grid_sample input layout (B, H, W, 2).
+        src_pts = src_pts.permute(0, 2, 1).reshape(batch_size, output_height, output_width, 2)
+
+        return F.grid_sample(
+            shared_latent,
+            src_pts,
+            mode="bilinear",
+            padding_mode="border",
+            align_corners=False,
+        )
+
+
 # ── Trainer (the lane-side contribution) ─────────────────────────────────
 
 
@@ -256,6 +345,7 @@ class SegMapTrainer:
         gt_pairs: torch.Tensor,
         ema: Optional[EMA] = None,
         roundtrip_noise_std: float = 0.5,
+        pair_weights: Optional[torch.Tensor] = None,
     ) -> dict[str, float]:
         """Run a single pass over (mask_pairs, gt_pairs) and return loss stats.
 
@@ -267,6 +357,11 @@ class SegMapTrainer:
                 float; converted to float internally). Spatial size must
                 match the SegMap output (384x512).
             ema: optional EMA shadow to update after each step.
+            pair_weights: optional (B,) float tensor of per-pair training
+                weights (Lane WC-S Curator outlier weighting). Used to
+                weight the pose / seg distortion contributions per pair
+                BEFORE the mean reduction. Must have length == B if
+                supplied; broadcasting is rejected to avoid silent bugs.
 
         Returns:
             dict with keys ``loss``, ``pose_dist``, ``seg_dist``,
@@ -314,21 +409,53 @@ class SegMapTrainer:
                 gt_btchw, self.posenet, self.segnet
             )
 
-        # PoseNet: MSE on first 6 dims (pose).
-        pose_dist = (
+        # PoseNet: MSE on first 6 dims (pose). When pair_weights is supplied
+        # (Lane WC-S Curator outlier weighting), each pair's per-element MSE
+        # is multiplied by its weight before the mean — this elevates hard
+        # pairs (high outlier score → high weight) without distorting the
+        # canonical loss when no weights are passed.
+        pose_diff_sq = (
             posenet_out["pose"][..., :6] - gt_pose_out["pose"][..., :6]
-        ).pow(2).mean()
-
-        # SegNet: argmax disagreement rate (auth-faithful) — averaged over
-        # spatial + batch. Differentiable via a soft cross-entropy proxy on
-        # the per-class softmax disagreement.
+        ).pow(2)
+        # SegNet logits.
         seg_logits_pred = segnet_out
         with torch.no_grad():
             seg_logits_gt = gt_seg_out
             seg_argmax_gt = seg_logits_gt.argmax(dim=1)
-        # CE between predicted logits and GT argmax — differentiable, and
-        # converges to the auth-eval argmax disagreement at the optimum.
-        seg_dist = F.cross_entropy(seg_logits_pred, seg_argmax_gt)
+        # Per-element CE so we can apply per-pair weights symmetrically.
+        seg_ce_per = F.cross_entropy(
+            seg_logits_pred, seg_argmax_gt, reduction="none"
+        )
+
+        if pair_weights is not None:
+            if pair_weights.numel() != b:
+                raise ValueError(
+                    f"pair_weights length {pair_weights.numel()} != batch {b}; "
+                    f"refusing to broadcast (Lane WC-S contract)."
+                )
+            pw = pair_weights.to(self.device, dtype=torch.float32)
+            # pose_diff_sq has shape (B*T, ..., 6) where the leading dim is
+            # B*T (one entry per scorer pair). The scorer was called with
+            # rt_btchw of shape (B, T, 3, H, W); scorer_forward_pair returns
+            # one PoseNet output per BATCH element (T frames consumed
+            # together). So pose output leads with B, NOT B*T. Broadcast pw
+            # along the trailing pose dim.
+            if pose_diff_sq.shape[0] != b:
+                raise RuntimeError(
+                    f"pose output batch dim {pose_diff_sq.shape[0]} != B={b}; "
+                    f"cannot apply pair_weights safely."
+                )
+            pose_dist = (pose_diff_sq.mean(dim=tuple(range(1, pose_diff_sq.ndim))) * pw).sum() / pw.sum().clamp_min(1e-8)
+            # SegNet preprocess takes the LAST frame, so seg_ce_per leads with B.
+            if seg_ce_per.shape[0] != b:
+                raise RuntimeError(
+                    f"seg CE batch dim {seg_ce_per.shape[0]} != B={b}; "
+                    f"cannot apply pair_weights safely."
+                )
+            seg_dist = (seg_ce_per.mean(dim=tuple(range(1, seg_ce_per.ndim))) * pw).sum() / pw.sum().clamp_min(1e-8)
+        else:
+            pose_dist = pose_diff_sq.mean()
+            seg_dist = seg_ce_per.mean()
 
         # Standard scorer loss formula (mirrors training.py / losses.py):
         #   total = segnet_weight * seg + sqrt(10 * pose + 1e-8)
@@ -418,5 +545,6 @@ __all__ = [
     "SEGMAP_INPUT_SIZE",
     "ResidualBlock",
     "SegMap",
+    "SegMapHomography",
     "SegMapTrainer",
 ]
