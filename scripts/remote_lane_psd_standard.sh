@@ -126,6 +126,54 @@ if invented:
 print(f'dead-flag check: OK (flags used = {len(flags)}, all present in argparse)')
 "
 
+# Stage 0c: write kill_targets.json sidecar AND launch inline watchdog.
+# Council Round 3 (project_phase1_dispatch_verdict_20260429.md) found this
+# was missing — kill thresholds were declared in comments/provenance but
+# NOT enforced during training. The $8/12h spend would proceed even if
+# epoch-200 PoseNet > 0.0045 collapsed. This watchdog fixes that.
+cat > "$LOG_DIR/kill_targets.json" <<'EOF'
+{
+  "epoch_200_pose_max": 0.0045,
+  "epoch_800_score_max": 1.40,
+  "comment": "Hard kill targets per Round-1+3 codex. Watchdog tails train.log + SIGTERMs at threshold."
+}
+EOF
+
+# Watchdog: tail train.log, parse epoch + PoseNet/score lines, SIGTERM the
+# train_renderer.py process when threshold breached. Uses pgrep instead of
+# capturing $! through the pipeline (capturing PID through `tee | grep |
+# tail` is fragile across shells; pgrep against the script path is robust).
+( while true; do
+    sleep 30
+    [ -f "$LOG_DIR/train.log" ] || continue
+    # Format from train_renderer.py: "[eval] epoch=200 ... posenet_distortion=0.0123 ..."
+    line=$(tail -50 "$LOG_DIR/train.log" 2>/dev/null | grep -E "epoch=[0-9]+.*posenet" | tail -1)
+    if [ -z "$line" ]; then continue; fi
+    epoch=$(echo "$line" | grep -oE "epoch=[0-9]+" | head -1 | cut -d= -f2)
+    pose=$(echo "$line" | grep -oE "posenet[_a-z]*=[0-9.]+" | head -1 | cut -d= -f2)
+    if [ -z "$epoch" ] || [ -z "$pose" ]; then continue; fi
+    if [ "$epoch" -ge 200 ] && [ "$epoch" -lt 250 ]; then
+        breached=$(awk -v p="$pose" -v t="0.0045" 'BEGIN{print (p>t)?1:0}')
+        if [ "$breached" = "1" ]; then
+            train_pid=$(pgrep -f "train_renderer.py.*--tag.*$TAG" | head -1)
+            if [ -n "$train_pid" ]; then
+                echo "[watchdog] PSD HARD KILL: epoch=$epoch posenet=$pose > 0.0045 threshold; SIGTERM pid=$train_pid" \
+                    | tee -a "$LOG_DIR/run.log" >&2
+                kill -TERM "$train_pid" 2>/dev/null || true
+                sleep 10
+                kill -KILL "$train_pid" 2>/dev/null || true
+            else
+                echo "[watchdog] PSD HARD KILL threshold breached but pgrep found no train_renderer.py PID for tag=$TAG" \
+                    | tee -a "$LOG_DIR/run.log" >&2
+            fi
+            exit 0
+        fi
+    fi
+done ) &
+WATCHDOG_PID=$!
+trap 'kill $HEARTBEAT_PID $WATCHDOG_PID 2>/dev/null || true' EXIT
+log "  watchdog PID=$WATCHDOG_PID; will SIGTERM at epoch 200 if PoseNet > 0.0045"
+
 # Stage 1: train PSD with hard kill thresholds.
 log "=== Stage 1: train_renderer --profile psd_standard_adaptive ==="
 "$PYBIN" -u src/tac/experiments/train_renderer.py \
