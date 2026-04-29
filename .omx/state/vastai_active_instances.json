@@ -2578,5 +2578,165 @@
     "registered_at_utc": "2026-04-29T18:09:52Z",
     "registered_by_host": "Primary",
     "registered_by_pid": 0
+  },
+  {
+    "instance_id": "35849618",
+    "label": "lane_darts_s_v1_a2",
+    "metadata": {
+      "estimated_cost_usd": 3.5,
+      "predicted_band": [
+        0.27,
+        0.55
+      ],
+      "script": "scripts/remote_lane_darts_s_segmap_arch_sweep.sh",
+      "council_priority": 99,
+      "anchor_dirs": [
+        "experiments/results/lane_a_landed/iter_0"
+      ],
+      "launcher": "scripts/launch_lane_on_vastai.py phase1+phase2"
+    },
+    "registered_at_utc": "2026-04-29T18:15:09Z",
+    "registered_by_host": "Primary",
+    "registered_by_pid": 0
+  },
+  {
+    "instance_id": "35849973",
+    "label": "lane_darts_s_v1_a1",
+    "metadata": {
+      "estimated_cost_usd": 3.5,
+      "predicted_band": [
+        0.27,
+        0.55
+      ],
+      "script": "scripts/remote_lane_darts_s_segmap_arch_sweep.sh",
+      "council_priority": 99,
+      "anchor_dirs": [
+        "experiments/results/lane_a_landed/iter_0"
+      ],
+      "launcher": "scripts/launch_lane_on_vastai.py phase1+phase2"
+    },
+    "registered_at_utc": "2026-04-29T18:18:30Z",
+    "registered_by_host": "Primary",
+    "registered_by_pid": 0
+  },
+  {
+    "instance_id": "35850015",
+    "label": "lane_darts_s_v1_a3",
+    "metadata": {
+      "estimated_cost_usd": 3.5,
+      "predicted_band": [
+        0.27,
+        0.55
+      ],
+      "script": "scripts/remote_lane_darts_s_segmap_arch_sweep.sh",
+      "council_priority": 99,
+      "anchor_dirs": [
+        "experiments/results/lane_a_landed/iter_0"
+      ],
+      "launcher": "scripts/launch_lane_on_vastai.py phase1+phase2"
+    },
+    "registered_at_utc": "2026-04-29T18:19:33Z",
+    "registered_by_host": "Primary",
+    "registered_by_pid": 0
+  },
+  {
+    "instance_id": "35850211",
+    "label": "lane_darts_s_v1_a2",
+    "metadata": {
+      "estimated_cost_usd": 3.5,
+      "predicted_band": [
+        0.27,
+        0.55
+      ],
+      "script": "scripts/remote_lane_darts_s_segmap_arch_sweep.sh",
+      "council_priority": 99,
+      "anchor_dirs": [
+        "experiments/results/lane_a_landed/iter_0"
+      ],
+      "launcher": "scripts/launch_lane_on_vastai.py phase1+phase2"
+    },
+    "registered_at_utc": "2026-04-29T18:21:32Z",
+    "registered_by_host": "Primary",
+    "registered_by_pid": 0
+  },
+  {
+    "instance_id": "35850283",
+    "label": "lane_darts_s_v1_a1",
+    "metadata": {
+      "estimated_cost_usd": 3.5,
+      "predicted_band": [
+        0.27,
+        0.55
+      ],
+      "script": "scripts/remote_lane_darts_s_segmap_arch_sweep.sh",
+      "council_priority": 99,
+      "anchor_dirs": [
+        "experiments/results/lane_a_landed/iter_0"
+      ],
+      "launcher": "scripts/launch_lane_on_vastai.py phase1+phase2"
+    },
+    "registered_at_utc": "2026-04-29T18:23:59Z",
+    "registered_by_host": "Primary",
+    "registered_by_pid": 0
+  },
+  {
+    "instance_id": "35850456",
+    "label": "lane_darts_s_v1_a3",
+    "metadata": {
+      "estimated_cost_usd": 3.5,
+      "predicted_band": [
+        0.27,
+        0.55
+      ],
+      "script": "scripts/remote_lane_darts_s_segmap_arch_sweep.sh",
+      "council_priority": 99,
+      "anchor_dirs": [
+        "experiments/results/lane_a_landed/iter_0"
+      ],
+      "launcher": "scripts/launch_lane_on_vastai.py phase1+phase2"
+    },
+    "registered_at_utc": "2026-04-29T18:26:22Z",
+    "registered_by_host": "Primary",
+    "registered_by_pid": 0
+  },
+  {
+    "instance_id": "35850554",
+    "label": "lane_darts_s_v1_a2",
+    "metadata": {
+      "estimated_cost_usd": 3.5,
+      "predicted_band": [
+        0.27,
+        0.55
+      ],
+      "script": "scripts/remote_lane_darts_s_segmap_arch_sweep.sh",
+      "council_priority": 99,
+      "anchor_dirs": [
+        "experiments/results/lane_a_landed/iter_0"
+      ],
+      "launcher": "scripts/launch_lane_on_vastai.py phase1+phase2"
+    },
+    "registered_at_utc": "2026-04-29T18:28:51Z",
+    "registered_by_host": "Primary",
+    "registered_by_pid": 0
+  },
+  {
+    "instance_id": "35850665",
+    "label": "lane_darts_s_v1_a3",
+    "metadata": {
+      "estimated_cost_usd": 3.5,
+      "predicted_band": [
+        0.27,
+        0.55
+      ],
+      "script": "scripts/remote_lane_darts_s_segmap_arch_sweep.sh",
+      "council_priority": 99,
+      "anchor_dirs": [
+        "experiments/results/lane_a_landed/iter_0"
+      ],
+      "launcher": "scripts/launch_lane_on_vastai.py phase1+phase2"
+    },
+    "registered_at_utc": "2026-04-29T18:30:17Z",
+    "registered_by_host": "Primary",
+    "registered_by_pid": 0
   }
 ]
