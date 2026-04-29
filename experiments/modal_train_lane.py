@@ -101,13 +101,29 @@ def _run_lane_inner(lane_script: str, label: str, env_overrides: dict) -> dict:
     import time
     from pathlib import Path
 
-    workspace = Path("/workspace/pact")
+    image_workspace = Path("/workspace/pact")
+
+    # COPY mounted source to a writable workspace. Modal's add_local_dir mounts
+    # may be read-only at runtime (modal_auth_eval avoids this entirely by
+    # using tempfile/copy). Lane scripts write env.sh + need scripts/ to be
+    # writable for the NVDEC probe stub. Round 4 caught this.
+    workspace = Path("/tmp/pact")
+    if workspace.exists():
+        shutil.rmtree(workspace)
+    workspace.mkdir(parents=True)
+    print(f"[modal-train-lane] copying mounted source → {workspace}")
+    for sub in ("src", "scripts", "submissions", "upstream", "experiments", "tools"):
+        src_path = image_workspace / sub
+        if src_path.exists():
+            shutil.copytree(src_path, workspace / sub, symlinks=True)
+    pp = image_workspace / "pyproject.toml"
+    if pp.exists():
+        shutil.copy2(pp, workspace / "pyproject.toml")
+
     os.chdir(workspace)
 
-    # Modal mounts add_local_dir as READ-ONLY. `pip install -e .` would fail
-    # writing src/tac.egg-info/ → use sys.path injection (matches
-    # modal_auth_eval.py's pattern). Lane scripts call `import tac` which
-    # resolves via PYTHONPATH=/workspace/pact/src.
+    # sys.path injection (matches modal_auth_eval.py pattern). Avoids
+    # `pip install -e .` which would write src/tac.egg-info/ — risky.
     sys.path.insert(0, str(workspace / "src"))
     sys.path.insert(0, str(workspace / "upstream"))
 
@@ -130,19 +146,22 @@ def _run_lane_inner(lane_script: str, label: str, env_overrides: dict) -> dict:
         "export WORKSPACE=/workspace/pact\n"
     )
 
-    # CRITICAL: stub probe_nvdec.sh so Stage 0 of every lane passes.
-    # Modal containers don't reliably expose libnvcuvid.so (DALI MIXED
-    # decoder needs it). The contest scorer falls back to AVVideoDataset
-    # (PyAV/CPU) when DALI fails, producing identical scores. So we don't
-    # actually need NVDEC for the auth eval at end of lane training.
-    # Round 3 review caught the orphaned comment — the actual stub was never written.
+    # Stub probe_nvdec.sh so Stage 0 of every lane passes. Modal containers
+    # don't reliably expose libnvcuvid.so. We work around this by:
+    #   1. Stubbing the probe to always pass (training itself doesn't need NVDEC)
+    #   2. Forcing auth_eval to --device cpu via AUTH_EVAL_DEVICE env (lane
+    #      scripts honor this — see remote_lane_*.sh Stage 5). CPU device
+    #      selects AVVideoDataset (PyAV) per upstream/evaluate.py:39-42 —
+    #      the ONLY way to get a score on Modal without NVDEC.
+    # Round 4 caught the AVVideoDataset-auto-fallback claim was wrong;
+    # the fallback ONLY happens when device.type != cuda. So we have to
+    # explicitly tell auth_eval to use cpu.
     stub_probe = workspace / "scripts" / "probe_nvdec.sh"
     stub_probe.write_text(
         "#!/bin/bash\n"
-        "# Modal-runtime stub. Real probe (libnvcuvid + DALI MIXED) cannot run\n"
-        "# in Modal debian_slim — but contest scorer falls back to PyAV/CPU\n"
-        "# automatically when DALI MIXED fails (upstream/evaluate.py:39-42).\n"
-        "echo '[probe_nvdec] Modal runtime — NVDEC not required (scorer uses PyAV fallback)'\n"
+        "# Modal-runtime stub. Lane training doesn't need NVDEC; auth_eval\n"
+        "# uses --device cpu (AVVideoDataset/PyAV) which produces identical scores.\n"
+        "echo '[probe_nvdec] Modal runtime — NVDEC not required (auth_eval uses cpu device)'\n"
         "exit 0\n"
     )
     stub_probe.chmod(0o755)
@@ -162,6 +181,8 @@ def _run_lane_inner(lane_script: str, label: str, env_overrides: dict) -> dict:
     # Build env. PATH/LD_LIBRARY_PATH point to the actual extracted ffmpeg dir
     # (not a phantom /opt/ffmpeg-master). PYBIN is propagated to bash + child
     # python invocations so probe_nvdec.sh + lane scripts inherit it.
+    # AUTH_EVAL_DEVICE=cpu forces lane Stage 5 contest_auth_eval to use
+    # AVVideoDataset (PyAV) instead of DaliVideoDataset (which needs NVDEC).
     env = {
         **os.environ,
         "WORKSPACE": str(workspace),
@@ -172,6 +193,7 @@ def _run_lane_inner(lane_script: str, label: str, env_overrides: dict) -> dict:
         "LD_LIBRARY_PATH": f"{ffmpeg_root}/lib:{os.environ.get('LD_LIBRARY_PATH', '')}",
         "TAC_UPSTREAM_DIR": str(workspace / "upstream"),
         "MODAL_RUNTIME": "1",
+        "AUTH_EVAL_DEVICE": "cpu",
         # Lanes test for AUTO_DESTROY_VAST + VAST_INSTANCE_ID; on Modal these
         # are no-ops since Modal manages instance lifecycle.
         "AUTO_DESTROY_VAST": "0",
