@@ -312,6 +312,7 @@ class SegMapTrainer:
         posenet,
         segnet,
         device: str | torch.device = "cuda",
+        learnable_class_targets: Optional[nn.Module] = None,
     ):
         # Enforce CLAUDE.md non-negotiables BEFORE any GPU spend.
         if not config.eval_roundtrip:
@@ -333,8 +334,14 @@ class SegMapTrainer:
         self.posenet = posenet
         self.segnet = segnet
         self.device = torch.device(device_str)
+        # Lane LCT (van den Oord VQ-VAE prescription): optional learnable
+        # class-target codebook. When supplied, its parameters are added to
+        # the optimizer so the codebook adapts during training.
+        self.learnable_class_targets = learnable_class_targets
 
         params = [p for p in model.parameters() if p.requires_grad]
+        if learnable_class_targets is not None:
+            params.extend(p for p in learnable_class_targets.parameters() if p.requires_grad)
         self.optimizer = torch.optim.AdamW(
             params, lr=config.lr, weight_decay=config.weight_decay
         )

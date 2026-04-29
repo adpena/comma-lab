@@ -151,18 +151,28 @@ def detect_boundary_pixels(
     gy = F.conv2d(m, sobel_y, padding=1)
     rho = torch.sqrt(gx * gx + gy * gy).squeeze(1)  # (N, H, W)
 
+    # Tie-breaking: integer Sobel magnitudes have many duplicate values
+    # (especially zeros in the interior of constant regions). A naive
+    # "rho >= threshold" returns ALL tied pixels, which can blow the
+    # boundary set up to 100% if the threshold lands on the zero band.
+    # We break ties deterministically by adding a tiny raster-position
+    # tiebreaker before thresholding. This guarantees a unique threshold
+    # at the requested top-K count.
+    pos_idx = torch.arange(h * w, dtype=torch.float32)
+    tie_breaker = pos_idx / float(h * w + 1)  # in [0, 1)
     if per_frame:
-        flat = rho.reshape(n, -1)
+        flat = rho.reshape(n, -1) + tie_breaker.view(1, -1)
         k = max(1, int(round(h * w * boundary_fraction)))
         k_smallest = max(1, h * w - k + 1)
         thresh = flat.kthvalue(k_smallest, dim=1).values  # (N,)
-        boundary = rho >= thresh.view(n, 1, 1)
+        boundary = flat >= thresh.view(n, 1)
+        boundary = boundary.view(n, h, w)
     else:
-        flat = rho.reshape(-1)
+        flat = rho.reshape(-1) + tie_breaker.repeat(n)
         k = max(1, int(round(flat.numel() * boundary_fraction)))
         k_smallest = max(1, flat.numel() - k + 1)
         thresh = flat.kthvalue(k_smallest).values
-        boundary = rho >= thresh
+        boundary = (flat >= thresh).view(n, h, w)
 
     return boundary
 

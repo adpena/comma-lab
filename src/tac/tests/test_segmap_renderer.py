@@ -18,6 +18,7 @@ import torch.nn as nn
 import torch.nn.functional as F
 
 from tac.preflight import PreflightError
+from tac.learnable_class_targets import LearnableClassTargets
 from tac.segmap_renderer import (
     SEGMAP_INPUT_SIZE,
     ResidualBlock,
@@ -150,6 +151,49 @@ def test_segmap_trainer_rejects_mps_device() -> None:
     model = _make_tiny_segmap()
     with pytest.raises(PreflightError, match=r"refuses device='mps'"):
         SegMapTrainer(model, cfg, _MockPoseNet(), _MockSegNet(), device="mps")
+
+
+def test_segmap_trainer_optimizer_includes_learnable_class_targets() -> None:
+    """Passing LearnableClassTargets adds its parameter to the optimizer."""
+    cfg = _make_eval_roundtrip_true_config()
+    model = _make_tiny_segmap()
+    targets = LearnableClassTargets()
+    trainer = SegMapTrainer(
+        model,
+        cfg,
+        _MockPoseNet(),
+        _MockSegNet(),
+        device="cpu",
+        learnable_class_targets=targets,
+    )
+    opt_param_ids = {id(p) for group in trainer.optimizer.param_groups for p in group["params"]}
+    assert id(targets.raw_values) in opt_param_ids
+
+
+def test_segmap_trainer_accepts_grayscale_pairs_with_learnable_targets() -> None:
+    """Optional LCT path converts grayscale pairs into LUT probability maps."""
+    torch.manual_seed(0)
+    cfg = _make_eval_roundtrip_true_config()
+    h = SEGMAP_INPUT_SIZE[1] // 16
+    w = SEGMAP_INPUT_SIZE[0] // 16
+    model = _make_tiny_segmap()
+    targets = LearnableClassTargets()
+    trainer = SegMapTrainer(
+        model,
+        cfg,
+        _MockPoseNet(),
+        _MockSegNet(),
+        device="cpu",
+        learnable_class_targets=targets,
+    )
+    gray = torch.randint(0, 256, (1, 2, h, w), dtype=torch.uint8)
+    gt = torch.rand(1, 2, h, w, 3) * 255.0
+
+    stats = trainer.train_epoch(gray, gt, ema=None, batch_size=1)
+
+    assert math.isfinite(stats["loss"])
+    assert stats["num_steps"] == 1
+    assert targets.raw_values.grad is not None
 
 
 # ─── Trainer integration test ──────────────────────────────────────────

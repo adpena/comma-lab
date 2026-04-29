@@ -898,6 +898,7 @@ def extract_half_masks(
 _AV1_MONOCHROME = "av1_monochrome"
 _ENTROPY_LOSSLESS = "entropy_lossless"
 _ARGMAX_RLE = "argmax_rle"
+_STC_BOUNDARY = "stc_boundary"
 
 # Canonical mask-format identifiers used across the pipeline. Any new
 # codec MUST be added here and routed in encode_masks_auto / decode_masks_auto
@@ -909,6 +910,7 @@ SUPPORTED_MASK_FORMATS = (
     "entropy",             # alias for entropy_lossless
     _ENTROPY_LOSSLESS,
     _ARGMAX_RLE,           # Yousfi council #8 lossless RLE+Huffman+delta codec
+    _STC_BOUNDARY,         # Lane STC boundary-coded class-id codec (lossless)
 )
 
 
@@ -946,6 +948,10 @@ def encode_masks_auto(
         from .lossless.argmax_codec import pack_archive
 
         return pack_archive(masks, output_path)
+    elif codec == _STC_BOUNDARY:
+        from .stc_boundary_codec import encode_mask_video_stc
+
+        return encode_mask_video_stc(masks, output_path, **kwargs)
     else:
         raise ValueError(
             f"Unknown mask codec: {codec!r}. "
@@ -980,6 +986,10 @@ def decode_masks_auto(
         from .lossless.argmax_codec import unpack_archive
 
         return unpack_archive(mask_path)
+    elif codec == _STC_BOUNDARY:
+        from .stc_boundary_codec import decode_mask_video_stc
+
+        return decode_mask_video_stc(mask_path)
     else:
         raise ValueError(
             f"Unknown mask codec: {codec!r}. "
@@ -1009,6 +1019,9 @@ def detect_mask_codec(path: str | Path) -> str:
     # Entropy coder magic from src/tac/mask_entropy_coder.py.
     if head[:4] == b"MSKV":
         return _ENTROPY_LOSSLESS
+    # Lane STC boundary codec magic.
+    if head[:4] == b"STCB":
+        return _STC_BOUNDARY
     # Matroska / WebM EBML header used by AV1 in our pipeline (.mkv files).
     if head[:4] == b"\x1a\x45\xdf\xa3":
         return _AV1_MONOCHROME

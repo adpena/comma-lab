@@ -84,3 +84,19 @@ def test_lut_rejects_zero_sigma() -> None:
     """create_gaussian_softmax_lut rejects sigma <= 0."""
     with pytest.raises(ValueError, match=r"sigma must be positive"):
         create_gaussian_softmax_lut(sigma=0.0)
+
+
+def test_lut_accepts_custom_targets() -> None:
+    """Custom learnable targets preserve LUT shape and argmax locations."""
+    targets = torch.tensor([3.0, 252.0, 70.0, 185.0, 130.0])
+    lut = create_gaussian_softmax_lut(sigma=LUT_DEFAULT_SIGMA, targets=targets)
+    assert lut.shape == (256, NUM_CLASSES)
+    assert torch.equal(lut[targets.long()].argmax(dim=1), torch.arange(NUM_CLASSES))
+
+
+def test_lut_rejects_invalid_custom_targets() -> None:
+    """Custom targets must be one finite in-range value per class."""
+    with pytest.raises(ValueError, match=r"shape"):
+        create_gaussian_softmax_lut(targets=torch.zeros(NUM_CLASSES + 1))
+    with pytest.raises(ValueError, match=r"\[0, 255\]"):
+        create_gaussian_softmax_lut(targets=torch.tensor([0.0, 255.0, -1.0, 192.0, 128.0]))

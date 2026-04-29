@@ -111,7 +111,10 @@ def decode_grayscale_to_classes(gray: torch.Tensor) -> torch.Tensor:
     return distances.argmin(dim=-1).to(torch.int64)
 
 
-def create_gaussian_softmax_lut(sigma: float = LUT_DEFAULT_SIGMA) -> torch.Tensor:
+def create_gaussian_softmax_lut(
+    sigma: float = LUT_DEFAULT_SIGMA,
+    targets: torch.Tensor | None = None,
+) -> torch.Tensor:
     """Build the inflate-time grayscale-to-class-probability LUT.
 
     Mirrors Selfcomp inflate.py L175-180 (``create_gaussian_softmax_lut``):
@@ -123,18 +126,34 @@ def create_gaussian_softmax_lut(sigma: float = LUT_DEFAULT_SIGMA) -> torch.Tenso
             Smaller sigma -> more confident assignments (closer to one-hot).
             sigma=15 (Selfcomp default) gives a smooth transition that recovers
             from AV1 quantization noise of ~10-15 gray levels.
+        targets: Optional custom class-target gray values, shape (NUM_CLASSES,)
+            float, all in [0, 255]. If None, uses Selfcomp's default fixed
+            CLASS_TO_GRAY mapping. Lane LCT supplies a learnable Parameter
+            here so the codebook adapts during SegMap training.
 
     Returns:
         (256, NUM_CLASSES) float32 tensor with each row summing to 1.
 
     Raises:
-        ValueError: if sigma <= 0.
+        ValueError: if sigma <= 0; if targets has wrong shape or out-of-range.
     """
     if sigma <= 0:
         raise ValueError(f"sigma must be positive, got {sigma}")
+    if targets is None:
+        targets_t = _CLASS_TARGETS_TENSOR
+    else:
+        targets_t = torch.as_tensor(targets, dtype=torch.float32)
+        if targets_t.shape != (NUM_CLASSES,):
+            raise ValueError(
+                f"targets must have shape ({NUM_CLASSES},), got {tuple(targets_t.shape)}"
+            )
+        if not torch.all((targets_t >= 0) & (targets_t <= 255)):
+            raise ValueError(
+                f"targets values must be in [0, 255], got {targets_t.tolist()}"
+            )
     x = torch.arange(256, dtype=torch.float32).unsqueeze(1)  # (256, 1)
-    targets = _CLASS_TARGETS_TENSOR.unsqueeze(0)  # (1, NUM_CLASSES)
-    squared_diff = (x - targets) ** 2
+    targets_b = targets_t.unsqueeze(0)  # (1, NUM_CLASSES)
+    squared_diff = (x - targets_b) ** 2
     # Round 2 review Medium (LUT divergence note): Selfcomp's reference
     # inflate.py L175-180 softmaxes ``exp(-(d^2)/(2sigma^2))`` (a temperature-
     # scaled bell curve) directly. We softmax ``-(d^2)/(2sigma^2)`` (negative
