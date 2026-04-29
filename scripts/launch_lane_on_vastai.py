@@ -107,12 +107,19 @@ def create_instance(offer_id: int, label: str) -> int:
     "queued for allocation" (cur_state=stopped). Caller should verify the
     instance transitions to `cur_state=running` via wait_for_vastai_ready.
     """
+    # NVIDIA_DRIVER_CAPABILITIES=all exposes libnvcuvid.so (NVDEC) +
+    # libnvidia-encode.so (NVENC) inside the container. Default pytorch
+    # image only mounts compute,utility — that's WHY ~85% of 4090s tonight
+    # showed "NVDEC missing" / DALI CUDA_ERROR_NO_DEVICE. Setting this on
+    # the Vast.ai onstart env resurrects all those hosts.
+    # Sources: NVIDIA Container Toolkit docs, DALI #4034, nvidia-docker #1001.
     cmd = [
         str(VASTAI), "create", "instance", str(offer_id),
         "--image", "pytorch/pytorch:2.5.1-cuda12.4-cudnn9-devel",
         "--disk", "35",
         "--label", label,
         "--ssh",
+        "--env", "-e NVIDIA_DRIVER_CAPABILITIES=all",
         "--raw",
     ]
     rc, out, err = run(cmd, timeout=60)

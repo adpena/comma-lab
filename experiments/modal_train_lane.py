@@ -52,13 +52,21 @@ image = (
         "Pillow",
     )
     # Install ffmpeg-master from BtbN nightly (has in_primaries + libsvtav1).
-    # Mirrors `scripts/remote_setup_full.sh` Stage 6.
+    # Mirrors `scripts/remote_setup_full.sh` Stage 6 EXACTLY — johnvansickle
+    # builds did NOT have in_primaries (review of 2026-04-29 session showed
+    # `ffmpeg-git-20240629` only had in_color_matrix, missing in_primaries).
+    # The BtbN URL is canonical and includes a build-time verification that
+    # the binary has both in_primaries (needed by inflate.sh:require_ffmpeg_parity)
+    # AND libsvtav1 (needed by mask_codec).
     .run_commands(
-        "wget -q https://johnvansickle.com/ffmpeg/builds/ffmpeg-git-amd64-static.tar.xz -O /tmp/ffmpeg.tar.xz",
-        "mkdir -p /opt/ffmpeg-master && tar xf /tmp/ffmpeg.tar.xz -C /opt/ffmpeg-master --strip-components=1",
-        "ln -sf /opt/ffmpeg-master/ffmpeg /usr/local/bin/ffmpeg-new",
-        "ln -sf /opt/ffmpeg-master/ffmpeg /usr/local/bin/ffmpeg-master",
-        "rm /tmp/ffmpeg.tar.xz",
+        "curl -sL https://github.com/BtbN/FFmpeg-Builds/releases/download/latest/ffmpeg-master-latest-linux64-gpl.tar.xz -o /tmp/ffmpeg-master.tar.xz",
+        "cd /opt && tar xf /tmp/ffmpeg-master.tar.xz",
+        "ln -sf /opt/ffmpeg-master-latest-linux64-gpl/bin/ffmpeg /usr/local/bin/ffmpeg-master",
+        "ln -sf /opt/ffmpeg-master-latest-linux64-gpl/bin/ffmpeg /usr/local/bin/ffmpeg-new",
+        # Build-time gate: fail image build if in_primaries missing.
+        "/usr/local/bin/ffmpeg-master -hide_banner -h filter=scale 2>&1 | grep -q in_primaries || (echo FATAL: ffmpeg-master lacks in_primaries; exit 1)",
+        "/usr/local/bin/ffmpeg-master -encoders 2>&1 | grep -qi svtav1 || (echo FATAL: ffmpeg-master lacks libsvtav1; exit 1)",
+        "rm /tmp/ffmpeg-master.tar.xz",
     )
     # uv (used by inflate.sh)
     .run_commands(
@@ -96,13 +104,12 @@ def _run_lane_inner(lane_script: str, label: str, env_overrides: dict) -> dict:
     workspace = Path("/workspace/pact")
     os.chdir(workspace)
 
-    # Install tac in editable mode so `import tac` resolves
-    print(f"[modal-train-lane] pip install -e .")
-    subprocess.run(
-        [sys.executable, "-m", "pip", "install", "-e", ".", "--quiet",
-         "--root-user-action=ignore"],
-        cwd=workspace, check=True,
-    )
+    # Modal mounts add_local_dir as READ-ONLY. `pip install -e .` would fail
+    # writing src/tac.egg-info/ → use sys.path injection (matches
+    # modal_auth_eval.py's pattern). Lane scripts call `import tac` which
+    # resolves via PYTHONPATH=/workspace/pact/src.
+    sys.path.insert(0, str(workspace / "src"))
+    sys.path.insert(0, str(workspace / "upstream"))
 
     # Write env.sh that lane scripts source. Mirrors the one that
     # remote_setup_full.sh writes on Vast.ai.
@@ -173,36 +180,58 @@ def _run_lane_inner(lane_script: str, label: str, env_overrides: dict) -> dict:
     elapsed = time.monotonic() - t0
     print(f"[modal-train-lane] finished in {elapsed:.1f}s rc={proc.returncode}")
 
-    # Collect output artifacts. Match common lane output patterns.
+    # Collect output artifacts. Lane scripts write to varied locations:
+    #   - $WORKSPACE/results/<label>/  (canonical, used by some)
+    #   - $WORKSPACE/<lane_X>_results/  (used by lane_omega, lane_mae_v, etc.)
+    #   - $WORKSPACE/lane_*_results/  (catch-all for *_results/ siblings)
+    #   - $WORKSPACE/submissions/robust_current/  (archive output sometimes)
+    # Scan the WHOLE workspace for these extensions to avoid silent loss.
     artifacts: dict[str, bytes] = {}
-    artifact_patterns = [
-        ("results", "**/*.bin"),
-        ("results", "**/*.zip"),
-        ("results", "**/*.pt"),
-        ("results", "**/*.mkv"),
-        ("results", "**/*.json"),
-        ("results", "**/*.log"),
-        ("submissions/robust_current", "*.zip"),
-        (".", f"modal_lane_{label}.log"),
+    skipped_large: list[tuple[str, int]] = []
+    extensions = (".bin", ".zip", ".pt", ".mkv", ".json", ".log", ".safetensors")
+    # Top-level dirs to scan (avoid scanning src/ scripts/ etc.)
+    scan_roots = [
+        workspace / "results",
     ]
-    for base, pat in artifact_patterns:
-        base_dir = workspace / base
-        if not base_dir.exists():
+    # Also any */_results/ siblings of workspace root
+    for child in workspace.iterdir():
+        if child.is_dir() and child.name.endswith("_results"):
+            scan_roots.append(child)
+    # Plus archives written into submissions/robust_current
+    scan_roots.append(workspace / "submissions" / "robust_current")
+    # Plus the modal log we wrote at workspace root
+    if log_path.exists():
+        scan_roots.append(log_path)
+
+    for root in scan_roots:
+        if not root.exists():
             continue
-        for fp in base_dir.rglob(pat) if "**" in pat else base_dir.glob(pat):
-            if not fp.is_file():
+        if root.is_file():
+            files = [root]
+        else:
+            files = [p for p in root.rglob("*") if p.is_file()]
+        for fp in files:
+            if not fp.is_file() or not fp.suffix.lower() in extensions:
                 continue
             try:
                 rel = fp.relative_to(workspace)
-                if str(rel) in artifacts:
-                    continue
+            except ValueError:
+                rel = Path(fp.name)
+            rel_str = str(rel)
+            if rel_str in artifacts:
+                continue
+            try:
                 size = fp.stat().st_size
-                # Skip huge files (>100MB) — they're likely intermediate, not final.
-                if size > 100 * 1024 * 1024:
-                    print(f"[modal-train-lane] SKIP large {rel} ({size/1e6:.1f}MB)")
+                # 500MB threshold — covers final .bin (~300KB) AND mid-training
+                # .pt checkpoints (50-200MB) AND large .mkv masks. Anything
+                # bigger is almost certainly intermediate state we don't need.
+                if size > 500 * 1024 * 1024:
+                    skipped_large.append((rel_str, size))
+                    print(f"[modal-train-lane] SKIP large {rel_str} ({size/1e6:.1f}MB)")
                     continue
-                artifacts[str(rel)] = fp.read_bytes()
-            except (FileNotFoundError, PermissionError):
+                artifacts[rel_str] = fp.read_bytes()
+            except (FileNotFoundError, PermissionError) as e:
+                print(f"[modal-train-lane] SKIP unreadable {fp}: {e}")
                 continue
 
     # Tail log files for return value
@@ -218,6 +247,7 @@ def _run_lane_inner(lane_script: str, label: str, env_overrides: dict) -> dict:
         "artifacts": artifacts,
         "stdout_tail": stdout_tail,
         "elapsed_seconds": elapsed,
+        "skipped_large_artifacts": skipped_large,
     }
 
 
@@ -307,19 +337,49 @@ def main(
     }
     (out_dir / "modal_metadata.json").write_text(json.dumps(meta, indent=2))
 
-    # Auto-extract score if the lane produced contest_auth_eval.json
-    for path in result["artifacts"].keys():
-        if path.endswith("contest_auth_eval.json"):
+    # Auto-extract score from any of the canonical sources:
+    #   1. *.json files containing 'score' or 'final_score' field
+    #   2. *.log files with `RESULT_JSON: {...}` line (contest_auth_eval.py emits this)
+    score_found = False
+    import re as _re
+    for path, data_bytes in result["artifacts"].items():
+        if score_found:
+            break
+        # Try JSON file
+        if path.endswith(".json"):
             try:
-                data = json.loads(result["artifacts"][path].decode())
-                score = data.get("score") or data.get("final_score")
-                if score is not None:
-                    print(f"\n=== AUTH SCORE: {score} [Modal-{gpu}-CUDA] ({label}) ===")
-                    print(f"  PoseNet: {data.get('pose')}")
-                    print(f"  SegNet:  {data.get('seg')}")
-                    print(f"  Rate:    {data.get('rate')}")
-            except Exception as e:
-                print(f"  (could not parse score from {path}: {e})")
+                data = json.loads(data_bytes.decode())
+                if isinstance(data, dict):
+                    score = data.get("score") or data.get("final_score")
+                    if score is not None:
+                        print(f"\n=== AUTH SCORE: {score} [Modal-{gpu}-CUDA] ({label}) ===")
+                        print(f"  source:  {path}")
+                        print(f"  PoseNet: {data.get('pose') or data.get('pose_dist')}")
+                        print(f"  SegNet:  {data.get('seg') or data.get('seg_dist')}")
+                        print(f"  Rate:    {data.get('rate')}")
+                        score_found = True
+            except Exception:
+                pass
+        # Try RESULT_JSON: in log files
+        elif path.endswith(".log"):
+            try:
+                text = data_bytes.decode(errors="ignore")
+                m = _re.search(r"RESULT_JSON:\s*(\{[^\n]+\})", text)
+                if m:
+                    data = json.loads(m.group(1))
+                    score = data.get("score") or data.get("final_score")
+                    if score is not None:
+                        print(f"\n=== AUTH SCORE: {score} [Modal-{gpu}-CUDA] ({label}) ===")
+                        print(f"  source:  {path} (RESULT_JSON line)")
+                        print(f"  PoseNet: {data.get('pose')}")
+                        print(f"  SegNet:  {data.get('seg')}")
+                        print(f"  Rate:    {data.get('rate')}")
+                        score_found = True
+            except Exception:
+                pass
+    if not score_found and result["returncode"] == 0:
+        print(f"\n  WARNING: no auth score extracted from artifacts (lane succeeded but eval not detected).")
+        print(f"  Inspect {out_dir}/ manually for the lane's auth_eval output.")
 
     if result["returncode"] != 0:
         print(f"\n✗ Lane FAILED with rc={result['returncode']}", file=sys.stderr)
